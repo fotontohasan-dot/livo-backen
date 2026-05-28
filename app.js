@@ -4,10 +4,10 @@ const app = express();
 
 // ভিউ ইঞ্জিন হিসেবে EJS সেট করা
 app.set("view engine", "ejs");
-app.set("views", path.join(__dirname, "views"));
+app.set("views", __dirname); // সরাসরি মেইন ডিরেক্টরি চুজ করা হলো
 
-// রাউট ফাইল লিংক করা
-const indexRouter = require("./routes/index");
+// রাউট ফাইল লিংক করা (ফোল্ডার ছাড়া সরাসরি নতুন কোড)
+const indexRouter = require("./index"); 
 app.use("/", indexRouter);
 
 // সার্ভার পোর্ট সেট করা
