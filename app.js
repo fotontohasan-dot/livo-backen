@@ -6,7 +6,7 @@ const app = express();
 app.set("view engine", "ejs");
 app.set("views", __dirname); // সরাসরি মেইন ডিরেক্টরি চুজ করা হলো
 
-// রাউট ফাইল লিংক করা (ফোল্ডার ছাড়া সরাসরি নতুন কোড)
+// রাউট ফাইল লিংক করা (সরাসরি নতুন কোড)
 const indexRouter = require("./index"); 
 app.use("/", indexRouter);
 
