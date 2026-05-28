@@ -1,58 +1,61 @@
+require('dotenv').config();
 const express = require('express');
+const mongoose = require('mongoose');
+const path = require('path');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(express.json());
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
-// Static files (যদি পরে CSS/JS যোগ করো)
-app.use(express.static('public'));
+// MongoDB Connection
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('✅ MongoDB Connected'))
+  .catch(err => console.error('❌ MongoDB Error:', err));
 
 // Routes
 app.get('/', (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html lang="bn">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Livo - Live Casino & Sports</title>
-        <style>
-            body {
-                font-family: 'Segoe UI', Arial, sans-serif;
-                text-align: center;
-                padding: 60px 20px;
-                background: linear-gradient(135deg, #0f172a, #1e2937);
-                color: white;
-                margin: 0;
-            }
-            h1 { color: #22c55e; font-size: 2.5rem; }
-            .info { margin: 30px 0; font-size: 1.3rem; }
-            .success { color: #4ade80; }
-        </style>
-    </head>
-    <body>
-        <h1>🌐 Livo - Live Casino & Sports</h1>
-        <div class="info">
-            <p class="success">✅ ওয়েবসাইট সফলভাবে চলছে!</p>
-            <p>👥 Users: 1248 | 📺 Live: 5 | 🎮 Games: 42</p>
-        </div>
-        <p>স্বাগতম! আপনার সাইট এখন সঠিকভাবে লাইভ।</p>
-    </body>
-    </html>
-  `);
+  res.render('index', { 
+    title: "Livo - Live Casino & Sports",
+    user_count: 1248,
+    live_stream: 5,
+    game_count: 42
+  });
 });
 
-app.get('/livo-admin-panel', (req, res) => {
-  res.send('<h2>🔐 Admin Panel - Under Development</h2>');
+app.get('/login', (req, res) => {
+  res.render('login', { title: "Login - Livo" });
 });
 
-// 404 Handler
-app.use((req, res) => {
-  res.status(404).send('<h2>404 - Page Not Found</h2>');
+app.get('/live-games', (req, res) => {
+  res.render('games/live', { 
+    title: "Live Games - Livo" 
+  });
+});
+
+// Admin Panel
+app.get('/admin', (req, res) => {
+  res.render('admin/dashboard', { 
+    title: "Admin Dashboard - Livo" 
+  });
+});
+
+// POST Login (এখন শুধু ডেমো)
+app.post('/login', (req, res) => {
+  const { username, password } = req.body;
+  // পরে রিয়েল অথেনটিকেশন যোগ করব
+  if (username && password) {
+    res.redirect('/admin');
+  } else {
+    res.send('Invalid credentials');
+  }
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 Livo Server running on http://localhost:${PORT}`);
 });
