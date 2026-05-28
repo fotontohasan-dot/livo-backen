@@ -1,98 +1,22 @@
-<!DOCTYPE html>
-<html lang="bn">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= title %></title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: #0b0b0c; color: #fff; display: flex; flex-direction: column; min-height: 100vh; }
-        .header { background: linear-gradient(135deg, #ff4d6d, #c71585); padding: 20px; text-align: center; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; box-shadow: 0 4px 15px rgba(255, 77, 109, 0.3); }
-        .header h1 { font-size: 24px; font-weight: bold; }
-        .container { padding: 20px; flex: 1; display: none; }
-        .container.active { display: block; }
-        .card { background: #16171a; border: 1px solid #292a2d; border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        .card h3 { color: #ff4d6d; font-size: 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
-        .stat-number { font-size: 24px; font-weight: bold; color: #fff; margin-top: 5px; }
-        .btn { background: linear-gradient(135deg, #ff4d6d, #ff758f); color: white; border: none; padding: 12px; width: 100%; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
-        .nav-bar { background: #16171a; border-top: 1px solid #292a2d; display: flex; justify-content: space-around; padding: 10px 0; position: sticky; bottom: 0; width: 100%; }
-        .nav-item { color: #a0a0a5; text-decoration: none; display: flex; flex-direction: column; align-items: center; font-size: 12px; gap: 4px; background: none; border: none; cursor: pointer; }
-        .nav-item.active { color: #ff4d6d; }
-        .nav-item svg { width: 24px; height: 24px; fill: currentColor; }
-        .profile-section { text-align: center; padding: 20px 0; }
-        .avatar { width: 80px; height: 80px; background: #292a2d; border-radius: 50%; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-size: 32px; border: 2px solid #ff4d6d; }
-    </style>
-</head>
-<body>
+const express = require("express");
+const router = express.Router();
 
-    <div class="header">
-        <h1>LIVO</h1>
-    </div>
+// মেইন ওয়েবসাইট লিংক (ইউজারদের জন্য হোম পেজ)
+router.get("/", (req, res) => {
+    res.render("index", {
+        title: "Livo - Live Casino & Sports",
+        user_count: 1248,
+        live_stream_count: 5,
+        pending_bet_count: 42,
+        game_count: 6,
+        book_count: 150,
+        book_instance_available_count: 85
+    });
+});
 
-    <div id="home" class="container active">
-        <div class="card">
-            <h3>🎮 উপলব্ধ গেম সমূহ</h3>
-            <p>লাইভ ক্যাসিনো এবং স্পোর্টস বেটিং এ অংশ নিন।</p>
-            <div class="stat-number"><%= game_count %> টি অ্যাক্টিভ</div>
-        </div>
-        <div class="card">
-            <h3>🔥 লাইভ স্ট্রিম</h3>
-            <p>চলতি ম্যাচগুলোর লাইভ স্কোর ও স্ট্রিমিং দেখুন।</p>
-            <div class="stat-number"><%= live_stream_count %> টি লাইভ</div>
-        </div>
-    </div>
+// আপনার নিজস্ব গোপন অ্যাডমিন প্যানেল লিংক
+router.get("/livo-admin-panel", (req, res) => {
+    res.render("admin");
+});
 
-    <div id="invest" class="container">
-        <div class="card">
-            <h3>💰 পেন্ডিং বেট স্লিপ</h3>
-            <p>আপনার চলমান বেটগুলোর আপডেট এখানে দেখুন।</p>
-            <div class="stat-number"><%= pending_bet_count %> টি চলমান</div>
-        </div>
-    </div>
-
-    <div id="profile" class="container">
-        <div class="profile-section">
-            <div class="avatar">👤</div>
-            <h2>মাই অ্যাকাউন্ট</h2>
-            <p style="color: #a0a0a5; font-size: 14px; margin-bottom: 20px;">আইডি: livo_user_58</p>
-            
-            <div class="card" style="text-align: left;">
-                <p>মোট ইউজার অ্যাক্টিভ: <strong><%= user_count %> জন</strong></p>
-                <p>টোটাল বুক কাউন্ট: <strong><%= book_count %> টি</strong></p>
-            </div>
-
-            <button class="btn" onclick="window.location.href='https://wa.me/8801234567890'">💬 কাস্টমার সাপোর্ট</button>
-
-            <button class="btn" style="background: #1f2026; margin-top: 15px; border: 1px dashed #ff4d6d; color: #ff4d6d;" onclick="window.location.href='/livo-admin-panel'">⚙️ অ্যাডমিন প্যানেল প্রবেশ</button>
-        </div>
-    </div>
-
-    <div class="nav-bar">
-        <button class="nav-item active" onclick="switchTab('home', this)">
-            <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-            হোম
-        </button>
-        <button class="nav-item" onclick="switchTab('invest', this)">
-            <svg viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
-            ইনভেস্ট
-        </button>
-        <button class="nav-item" onclick="switchTab('profile', this)">
-            <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-            আমি
-        </button>
-    </div>
-
-    <script>
-        function switchTab(tabId, element) {
-            // সব কন্টেইনার হাইড করা
-            document.querySelectorAll('.container').forEach(tab => tab.classList.remove('active'));
-            // সব নেভ আইটেম ডিঅ্যাক্টিভেট করা
-            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-            
-            // নির্দিষ্ট ট্যাব শো করা এবং আইটেম অ্যাক্টিভ করা
-            document.getElementById(tabId).classList.add('active');
-            element.classList.add('active');
-        }
-    </script>
-</body>
-</html>
+module.exports = router;
