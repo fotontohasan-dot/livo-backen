@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Games - Livo</title>
+  <style>
+    body { background: #0f172a; color: white; padding: 30px; font-family: Arial; text-align: center; }
+    h1 { color: #22c55e; }
+  </style>
+</head>
+<body>
+  <h1>🎮 Live Games</h1>
+  <p>লাইভ ক্যাসিনো গেমস চলছে...</p>
+  <p>এখানে লাইভ স্ট্রিমিং দেখানো হবে।</p>
+  <a href="/">হোমে ফিরে যান</a>
+</body>
+</html>

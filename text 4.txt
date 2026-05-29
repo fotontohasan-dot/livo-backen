@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - Livo</title>
+  <style>
+    body { background: #0f172a; color: white; padding: 30px; font-family: Arial; }
+    h1 { color: #22c55e; }
+  </style>
+</head>
+<body>
+  <h1>👨‍💼 Admin Dashboard</h1>
+  <p>স্বাগতম Admin!</p>
+  <p>এখানে ইউজার, বেট, গেমস ম্যানেজ করা যাবে।</p>
+  <a href="/">হোমে ফিরে যান</a>
+</body>
+</html>
