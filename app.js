@@ -1,45 +1,41 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
-const path = require('path');   // ← নতুন যোগ করা হয়েছে
+const path = require('path');
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ==================== Middleware ====================
+// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ==================== ROOT ROUTE ====================
-app.get('/', (req, res) => {
-  res.send(`
-    <h1>✅ সার্ভার চলছে!</h1>
-    <p>তোমার Express + MongoDB অ্যাপ সফলভাবে চালু আছে।</p>
-  `);
-});
+// ==================== FRONTEND সার্ভ করা ====================
+app.use(express.static(path.join(__dirname, 'build')));        // প্রথমে build চেক করবে
+app.use(express.static(path.join(__dirname, 'dist')));         // তারপর dist
 
-// ==================== FRONTEND সার্ভ করার জন্য (নতুন যোগ করা) ====================
-app.use(express.static(path.join(__dirname, 'build')));           // সবচেয়ে কমন — 'build' ফোল্ডার
-// app.use(express.static(path.join(__dirname, 'client/build'))); // যদি client/build হয়
-// app.use(express.static(path.join(__dirname, 'dist')));         // যদি dist হয়
-// app.use(express.static(path.join(__dirname, 'public')));       // যদি public হয়
-
-// React / Vite ফ্রন্টএন্ডের জন্য সব রুট একই index.html এ পাঠানো
+// সব রুটে index.html পাঠানো
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'build', 'index.html'));     // ফোল্ডার অনুযায়ী চেঞ্জ করো
+  res.sendFile(path.join(__dirname, 'build', 'index.html'))
+    .catch(() => {
+      res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    });
 });
 
-// MongoDB Connection
+// ROOT ROUTE (টেস্ট)
+app.get('/', (req, res) => {
+  res.send('<h1>✅ সার্ভার চলছে</h1>');
+});
+
+// MongoDB
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB Connected'))
   .catch(err => {
-    console.error('MongoDB Connection Error:', err);
+    console.error('MongoDB Error:', err);
     process.exit(1);
   });
-
-// তোমার অন্যান্য রুট এখানে যোগ করবে
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
