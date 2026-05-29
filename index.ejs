@@ -1,22 +1,5 @@
-const express = require("express");
-const router = express.Router();
-
-// মেইন ওয়েবসাইট লিংক (ইউজারদের জন্য হোম পেজ)
-router.get("/", (req, res) => {
-    res.render("index", {
-        title: "Livo - Live Casino & Sports",
-        user_count: 1248,
-        live_stream_count: 5,
-        pending_bet_count: 42,
-        game_count: 6,
-        book_count: 150,
-        book_instance_available_count: 85
-    });
-});
-
-// আপনার নিজস্ব গোপন অ্যাডমিন প্যানেল লিংক
-router.get("/livo-admin-panel", (req, res) => {
-    res.render("admin");
-});
-
-module.exports = router;
+<!DOCTYPE html>
+<html>
+<head><title>Hello</title></head>
+<body><h1>Server is running</h1></body>
+</html>
