@@ -1,18 +1,22 @@
-const express = require("express");
-const path = require("path");
+const express = require('express');
+const mongoose = require('mongoose');
+const dotenv = require('dotenv');
+
+dotenv.config();   // ← এটা সবার উপরে রাখো
+
 const app = express();
+const PORT = process.env.PORT || 3000;   // ← খুব জরুরি
 
-// ভিউ ইঞ্জিন হিসেবে EJS সেট করা
-app.set("view engine", "ejs");
+// MongoDB Connection
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log('MongoDB Connected'))
+  .catch(err => {
+    console.error('MongoDB Connection Error:', err);
+    process.exit(1);   // এটা না থাকলে ভালো
+  });
 
-// এটিই আপনার সমস্যার আসল সমাধান:
-// এটি রেন্ডারকে বলে দিচ্ছে যে ফাইলগুলো 'views' ফোল্ডারে নেই, বরং মেইন ফোল্ডারেই আছে
-app.set("views", __dirname); 
+// Middleware + Routes ...
 
-const indexRouter = require("./index");
-app.use("/", indexRouter);
-
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
-    console.log(`Livo Server running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {   // '0.0.0.0' Render এর জন্য ভালো
+  console.log(`Server running on port ${PORT}`);
 });
