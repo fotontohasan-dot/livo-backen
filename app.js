@@ -1,14 +1,18 @@
 const express = require("express");
-const app = express();
 const path = require("path");
+const app = express();
 
-app.set("view engine", "ejs"); // এটা খুব জরুরি
-app.set("views", __dirname);   // এটি আপনার ফাইলগুলো মেইন ফোল্ডারে খুঁজবে
+// ভিউ ইঞ্জিন সেট করা
+app.set("view engine", "ejs");
 
-const indexRouter = require("./index"); 
+// এটিই সবচেয়ে গুরুত্বপূর্ণ লাইন: 
+// এটি সার্ভারকে বলবে ফাইলগুলো মেইন ফোল্ডার থেকেই নিতে, আলাদা কোনো 'views' ফোল্ডার খোঁজার দরকার নেই।
+app.set("views", __dirname); 
+
+const indexRouter = require("./index");
 app.use("/", indexRouter);
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+    console.log(`Livo Server running on http://localhost:${PORT}`);
 });
