@@ -2,11 +2,11 @@ const express = require("express");
 const path = require("path");
 const app = express();
 
-// ভিউ ইঞ্জিন সেট করা
+// ভিউ ইঞ্জিন হিসেবে EJS সেট করা
 app.set("view engine", "ejs");
 
-// এটিই সবচেয়ে গুরুত্বপূর্ণ লাইন: 
-// এটি সার্ভারকে বলবে ফাইলগুলো মেইন ফোল্ডার থেকেই নিতে, আলাদা কোনো 'views' ফোল্ডার খোঁজার দরকার নেই।
+// এটিই আপনার সমস্যার আসল সমাধান:
+// এটি রেন্ডারকে বলে দিচ্ছে যে ফাইলগুলো 'views' ফোল্ডারে নেই, বরং মেইন ফোল্ডারেই আছে
 app.set("views", __dirname); 
 
 const indexRouter = require("./index");
