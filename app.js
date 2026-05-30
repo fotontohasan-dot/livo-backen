@@ -1,18 +1,27 @@
 const express = require("express");
 const path = require("path");
+
 const app = express();
-
-// ভিউ ইঞ্জিন হিসেবে EJS সেট করা
-app.set("view engine", "ejs");
-
-// এটিই আসল সমাধান: ফাইলগুলো কোথায় আছে তা সার্ভারকে বলে দেওয়া
-app.set("views", __dirname); 
-
-// আপনার রাউট ফাইল কানেক্ট করা
-const indexRouter = require("./index");
-app.use("/", indexRouter);
-
 const PORT = process.env.PORT || 10000;
+
+// EJS সেটআপ
+app.set("view engine", "ejs");
+app.set("views", __dirname);
+
+// Static files
+app.use(express.static(path.join(__dirname, "public")));
+
+// Home Page
+app.get("/", (req, res) => {
+    res.render("index");
+});
+
+// Admin Page
+app.get("/admin", (req, res) => {
+    res.render("admin");
+});
+
+// Server Start
 app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+    console.log(`✅ Server running on port ${PORT}`);
 });
