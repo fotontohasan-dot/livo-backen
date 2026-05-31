@@ -60,4 +60,20 @@ app.post("/login", async (req, res) => {
         res.send("ভুল ইউজারনেম বা পাসওয়ার্ড!");
     }
 });
+// ম্যাচ তৈরির ফর্ম দেখানোর জন্য
+app.get("/create-match", (req, res) => {
+    res.render("MatchForm");
+});
+
+// ম্যাচ সেভ করার জন্য
+app.post("/create-match", async (req, res) => {
+    try {
+        const newMatch = new Match(req.body);
+        await newMatch.save();
+        res.send("ম্যাচ সফলভাবে তৈরি হয়েছে!");
+    } catch (err) {
+        res.status(500).send("ইরর: " + err.message);
+    }
+});
+
 
