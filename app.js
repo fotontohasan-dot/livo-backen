@@ -47,4 +47,7 @@ app.listen(PORT, () => {
 app.get("/register", (req, res) => {
     res.render("registration");
 });
+mongoose.connect(process.env.MONGO_URI)
+    .then(() => console.log("✅ MongoDB Connected"))
+    .catch(err => console.log("❌ DB Connection Error:", err));
 
