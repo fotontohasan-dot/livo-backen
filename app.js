@@ -44,3 +44,7 @@ app.post("/register", async (req, res) => {
 app.listen(PORT, () => {
     console.log(`✅ Server running on port ${PORT}`);
 });
+app.get("/register", (req, res) => {
+    res.render("registration");
+});
+
