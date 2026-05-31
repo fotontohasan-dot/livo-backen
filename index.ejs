@@ -2,10 +2,24 @@
 <html lang="bn">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Livo</title>
+    <title><%= title %></title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 50px; }
+        .stats { display: flex; justify-content: center; gap: 20px; margin-top: 30px; }
+        .card { border: 1px solid #ccc; padding: 20px; border-radius: 10px; width: 150px; }
+    </style>
 </head>
 <body>
-    <h1>✅ Server is Running Successfully!</h1>
+    <h1>স্বাগতম Livo-তে!</h1>
+    <p>এটি আমাদের লাইভ ক্যাসিনো এবং স্পোর্টস পোর্টাল।</p>
+
+    <div class="stats">
+        <div class="card"><h3><%= user_count %></h3><p>ইউজার</p></div>
+        <div class="card"><h3><%= live_stream %></h3><p>লাইভ স্ট্রিম</p></div>
+        <div class="card"><h3><%= game_count %></h3><p>গেম চলছে</p></div>
+    </div>
+
+    <br><br>
+    <a href="/login">লগইন করুন</a>
 </body>
 </html>
