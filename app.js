@@ -50,4 +50,14 @@ app.get("/register", (req, res) => {
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log("✅ MongoDB Connected"))
     .catch(err => console.log("❌ DB Connection Error:", err));
+// লগইন রুট
+app.post("/login", async (req, res) => {
+    const { username, password } = req.body;
+    const user = await User.findOne({ username, password });
+    if (user) {
+        res.send("লগইন সফল হয়েছে! স্বাগতম " + username);
+    } else {
+        res.send("ভুল ইউজারনেম বা পাসওয়ার্ড!");
+    }
+});
 
