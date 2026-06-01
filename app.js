@@ -1,60 +1,67 @@
 require('dotenv').config();
-const express = require("express");
-const path = require("path");
-const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
+const express = require('express');
+const mongoose = require('mongoose');
+const path = require('path');
+const Match = require('./Match'); 
 
 const app = express();
-const PORT = process.env.PORT || 10000;
-
-// Models
-const User = require('./User');
-const Match = require('./Match');
+const PORT = process.env.PORT || 3000;
 
 // Middleware
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.set("view engine", "ejs");
-app.set("views", __dirname);
-app.use(express.static(path.join(__dirname, "public")));
 
-// MongoDB
-mongoose.connect(process.env.MONGO_URI, { dbName: 'sports_prediction' })
-    .then(() => console.log("✅ MongoDB Connected"))
-    .catch(err => console.log("❌ DB Error:", err));
+// MongoDB Connection
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('✅ MongoDB Connected'))
+  .catch(err => console.error('❌ MongoDB Error:', err));
 
-// --- ROUTES ---
-
-// Home - ডাইনামিক ম্যাচসহ
-app.get("/", async (req, res) => {
-    try {
-        const matches = await Match.find();
-        res.render("index", { title: "Livo", matches });
-    } catch (err) {
-        res.status(500).send("ডাটা লোড করতে সমস্যা হয়েছে");
-    }
+// Routes
+// ১. হোমপেজ রাউট (এখানে ম্যাচ ডাটা লোড হচ্ছে)
+app.get('/', async (req, res) => {
+  try {
+    const matches = await Match.find() || [];
+    console.log("Matches found:", matches);
+    res.render('index', { 
+      title: "Livo - Live Casino & Sports",
+      matches: matches,
+      user_count: 1248,
+      live_stream: 5,
+      game_count: 42
+    });
+  } catch (err) {
+    console.error("Error:", err);
+    res.status(500).send("Server Error");
+  }
 });
 
-app.get("/register", (req, res) => res.render("registration", { title: "Register" }));
-app.get("/login", (req, res) => res.render("login", { title: "Login" }));
-app.get("/admin", (req, res) => res.render("admin", { title: "Admin" }));
+// ২. লগইন ও অ্যাডমিন রাউট
+app.get('/login', (req, res) => res.render('login', { title: "Login - Livo" }));
+app.get('/admin', (req, res) => res.render('admin/dashboard', { title: "Admin Dashboard - Livo" }));
 
-// Admin Route
-app.get('/admin/add-match', (req, res) => res.render('admin', { title: "Add Match" }));
+// ৩. ম্যাচ যোগ করার রুট
 app.post('/admin/add-match', async (req, res) => {
-    try {
-        const { title, status } = req.body;
-        await Match.create({ title, status });
-        res.redirect('/'); // ম্যাচ যোগ করে হোমপেজে রিডাইরেক্ট করবে
-    } catch (err) {
-        res.status(500).send('Error saving match');
-    }
+  try {
+    const { title, status } = req.body;
+    await Match.create({ title, status });
+    res.redirect('/');
+  } catch (err) {
+    res.status(500).send('Error saving match');
+  }
 });
 
-// Auth & Logic
-app.post("/register", async (req, res) => { /* আপনার কোড */ });
-app.post("/login", async (req, res) => { /* আপনার কোড */ });
+app.post('/login', (req, res) => {
+  const { username, password } = req.body;
+  if (username && password) {
+    res.redirect('/admin');
+  } else {
+    res.send('Invalid credentials');
+  }
+});
 
-// Server
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`🚀 Livo Server running on http://localhost:${PORT}`);
+});
