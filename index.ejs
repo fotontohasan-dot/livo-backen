@@ -7,6 +7,9 @@
         body { font-family: sans-serif; text-align: center; padding: 50px; }
         .stats { display: flex; justify-content: center; gap: 20px; margin-top: 30px; }
         .card { border: 1px solid #ccc; padding: 20px; border-radius: 10px; width: 150px; }
+        /* নতুন স্টাইল */
+        .match-list { margin-top: 40px; }
+        .match-item { border: 1px solid #ddd; padding: 15px; margin: 10px auto; width: 300px; border-radius: 8px; }
     </style>
 </head>
 <body>
@@ -17,6 +20,16 @@
         <div class="card"><h3><%= user_count %></h3><p>ইউজার</p></div>
         <div class="card"><h3><%= live_stream %></h3><p>লাইভ স্ট্রিম</p></div>
         <div class="card"><h3><%= game_count %></h3><p>গেম চলছে</p></div>
+    </div>
+
+    <div class="match-list">
+        <h2>চলমান ম্যাচসমূহ:</h2>
+        <% matches.forEach(match => { %>
+            <div class="match-item">
+                <h3><%= match.title %></h3>
+                <p>স্ট্যাটাস: <%= match.status %></p>
+            </div>
+        <% }); %>
     </div>
 
     <br><br>
