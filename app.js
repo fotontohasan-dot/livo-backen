@@ -33,10 +33,22 @@ app.get("/login", (req, res) => res.render("login", { title: "Login" }));
 app.get("/admin", (req, res) => res.render("admin", { title: "Admin" }));
 app.get("/create-match", (req, res) => res.render("MatchForm", { title: "Create Match" }));
 
+// Admin Route (নতুন যোগ করা হয়েছে)
+app.get('/admin/add-match', (req, res) => res.render('admin', { title: "Add Match" }));
+app.post('/admin/add-match', async (req, res) => {
+    try {
+        const { title, status } = req.body;
+        await Match.create({ title, status });
+        res.send('ম্যাচ সফলভাবে যোগ হয়েছে!');
+    } catch (err) {
+        res.status(500).send('Error saving match');
+    }
+});
+
 // Auth & Logic
-app.post("/register", async (req, res) => { /* আপনার দেওয়া রেজিস্টার কোড */ });
-app.post("/login", async (req, res) => { /* আপনার দেওয়া লগইন কোড */ });
-app.post("/create-match", async (req, res) => { /* আপনার দেওয়া ম্যাচ তৈরির কোড */ });
+app.post("/register", async (req, res) => { /* আপনার রেজিস্টার কোড */ });
+app.post("/login", async (req, res) => { /* আপনার লগইন কোড */ });
+app.post("/create-match", async (req, res) => { /* আপনার ম্যাচ তৈরির কোড */ });
 
 // Server
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
