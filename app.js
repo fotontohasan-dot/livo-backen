@@ -26,29 +26,35 @@ mongoose.connect(process.env.MONGO_URI, { dbName: 'sports_prediction' })
 
 // --- ROUTES ---
 
-// Home & Pages
-app.get("/", (req, res) => res.render("index", { title: "Livo", user_count: 1248, live_stream: 5, game_count: 42 }));
+// Home - ডাইনামিক ম্যাচসহ
+app.get("/", async (req, res) => {
+    try {
+        const matches = await Match.find();
+        res.render("index", { title: "Livo", matches });
+    } catch (err) {
+        res.status(500).send("ডাটা লোড করতে সমস্যা হয়েছে");
+    }
+});
+
 app.get("/register", (req, res) => res.render("registration", { title: "Register" }));
 app.get("/login", (req, res) => res.render("login", { title: "Login" }));
 app.get("/admin", (req, res) => res.render("admin", { title: "Admin" }));
-app.get("/create-match", (req, res) => res.render("MatchForm", { title: "Create Match" }));
 
-// Admin Route (নতুন যোগ করা হয়েছে)
+// Admin Route
 app.get('/admin/add-match', (req, res) => res.render('admin', { title: "Add Match" }));
 app.post('/admin/add-match', async (req, res) => {
     try {
         const { title, status } = req.body;
         await Match.create({ title, status });
-        res.send('ম্যাচ সফলভাবে যোগ হয়েছে!');
+        res.redirect('/'); // ম্যাচ যোগ করে হোমপেজে রিডাইরেক্ট করবে
     } catch (err) {
         res.status(500).send('Error saving match');
     }
 });
 
 // Auth & Logic
-app.post("/register", async (req, res) => { /* আপনার রেজিস্টার কোড */ });
-app.post("/login", async (req, res) => { /* আপনার লগইন কোড */ });
-app.post("/create-match", async (req, res) => { /* আপনার ম্যাচ তৈরির কোড */ });
+app.post("/register", async (req, res) => { /* আপনার কোড */ });
+app.post("/login", async (req, res) => { /* আপনার কোড */ });
 
 // Server
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
