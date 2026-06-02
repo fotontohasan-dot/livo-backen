@@ -5,25 +5,31 @@
     <title><%= title %></title>
     <style>
         body { font-family: sans-serif; text-align: center; padding: 20px; }
-        .match-list { margin-top: 40px; }
-        .match-item { border: 1px solid #ddd; padding: 15px; margin: 10px auto; width: 300px; border-radius: 8px; }
+        .stats-container { display: flex; justify-content: center; gap: 20px; margin-bottom: 30px; }
+        .stat-box { border: 1px solid #ccc; padding: 20px; border-radius: 10px; width: 120px; background: #f9f9f9; }
+        .match-item { border: 1px solid #ddd; padding: 15px; margin: 10px auto; width: 300px; border-radius: 8px; box-shadow: 2px 2px 5px #eee; }
     </style>
 </head>
 <body>
-    <h1>স্বাগতম Livo-তে!</h1>
-    <div class="match-list">
-        <h2>চলমান ম্যাচসমূহ:</h2>
-        <% if (matches.length > 0) { %>
-            <% matches.forEach(match => { %>
-                <div class="match-item">
-                    <h3><%= match.teamA %> vs <%= match.teamB %></h3>
-                    <p>অডস: <%= match.oddsA %> | <%= match.oddsB %></p>
-                    <p>স্ট্যাটাস: <%= match.status %></p>
-                </div>
-            <% }); %>
-        <% } else { %>
-            <p>বর্তমানে কোনো ম্যাচ নেই।</p>
-        <% } %>
+    <h1>Livo ড্যাশবোর্ড</h1>
+    
+    <div class="stats-container">
+        <div class="stat-box"><h3><%= user_count %></h3><p>ইউজার</p></div>
+        <div class="stat-box"><h3><%= live_stream %></h3><p>লাইভ</p></div>
+        <div class="stat-box"><h3><%= game_count %></h3><p>গেম</p></div>
     </div>
+
+    <h2>চলমান ম্যাচসমূহ:</h2>
+    <% if (matches && matches.length > 0) { %>
+        <% matches.forEach(match => { %>
+            <div class="match-item">
+                <h3><%= match.teamA %> vs <%= match.teamB %></h3>
+                <p>অডস: <%= match.oddsA %> | <%= match.oddsB %></p>
+                <p>স্ট্যাটাস: <strong><%= match.status %></strong></p>
+            </div>
+        <% }); %>
+    <% } else { %>
+        <p>বর্তমানে কোনো ম্যাচ নেই।</p>
+    <% } %>
 </body>
 </html>
