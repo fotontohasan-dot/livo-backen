@@ -20,17 +20,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// MongoDB Connection with Error Handling
-const connectDB = async () => {
-  try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('✅ MongoDB Connected Successfully');
-  } catch (err) {
-    console.error('❌ MongoDB Connection Error:', err.message);
-  }
-};
-connectDB();
-
 // Routes
 app.get('/', async (req, res) => {
   try {
@@ -52,7 +41,6 @@ app.get('/', async (req, res) => {
   }
 });
 
-// Admin & Auth routes...
 app.get('/admin', (req, res) => 
   res.render('admin/dashboard', { title: "Admin Dashboard - Livo" })
 );
@@ -70,6 +58,20 @@ app.post('/admin/add-match', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Livo Server running on port ${PORT}`);
-});
+// MongoDB Connection and Server Start (ডাটাবেস কানেকশন সফল হলেই সার্ভার চালু হবে)
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log('✅ MongoDB Connected Successfully');
+    
+    // ডাটাবেস কানেকশনের পরেই অ্যাপ লিসেন করা শুরু করবে
+    app.listen(PORT, () => {
+      console.log(`🚀 Livo Server running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error('❌ MongoDB Connection Error:', err.message);
+    process.exit(1);
+  }
+};
+
+connectDB();
