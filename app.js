@@ -38,6 +38,7 @@ const connectDB = async () => {
     console.log('✅ MongoDB Connected');
     app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
   } catch (err) {
+    console.error(err);
     process.exit(1);
   }
 };
