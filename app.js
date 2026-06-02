@@ -26,5 +26,9 @@ app.post('/admin/add-match', async (req, res) => {
     await newMatch.save();
     res.redirect('/');
 });
+// এই কোডটুকু app.js এর শেষে যোগ করুন
+app.get('/admin', (req, res) => {
+    res.render('admin');
+});
 
 app.listen(process.env.PORT || 3000);
