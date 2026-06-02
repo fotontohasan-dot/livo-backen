@@ -1,57 +1,13 @@
 <!DOCTYPE html>
 <html lang="bn">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Livo - Admin Panel</title>
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #0b0b0c; color: #fff; margin: 0; padding: 20px; }
-        .header { color: #ff4d6d; border-bottom: 2px solid #16171a; padding-bottom: 10px; margin-bottom: 20px; }
-        .card { background: #16171a; padding: 15px; border-radius: 10px; border: 1px solid #292a2d; margin-bottom: 15px; }
-        .status { color: #28a745; font-weight: bold; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { border: 1px solid #292a2d; padding: 10px; text-align: left; font-size: 14px; }
-        th { background-color: #1f2026; color: #ff4d6d; }
-    </style>
-</head>
 <body>
-
-    <a href="/" style="text-decoration: none; color: #ff4d6d; font-size: 14px; font-weight: bold; display: inline-block; margin-bottom: 15px;">⬅️ মূল ওয়েবসাইটে ফিরুন</a>
-
-    <div class="header">
-        <h2>🎛️ লিভো - মাস্টার এডমিন প্যানেল</h2>
-        <p>অটোমেটিক গেটওয়ে ও ইউজার ম্যানেজমেন্ট</p>
-    </div>
-
-    <div class="card">
-        <h3>📊 গেটওয়ে স্ট্যাটাস</h3>
-        <p>অটো-ডিপোজিট সিস্টেম: <span class="status">সক্রিয় (Active)</span></p>
-        <p>অটো-উইথড্র সিস্টেম: <span class="status">সক্রিয় (Active)</span></p>
-    </div>
-
-    <div class="card">
-        <h3>👥 ইউজার লেনদেন ট্র্যাকিং (ডেমো ডেটা)</h3>
-        <table>
-            <tr>
-                <th>ইউজার আইডি</th>
-                <th>অ্যাকশন</th>
-                <th>পরিমাণ</th>
-                <th>ব্যালেন্স আপডেট</th>
-            </tr>
-            <tr>
-                <td>User_7845</td>
-                <td style="color:#28a745;">অটো-ডিপোজিট</td>
-                <td>+৫০০ কয়েন</td>
-                <td>অটোমেটিক যুক্ত হয়েছে</td>
-            </tr>
-            <tr>
-                <td>User_3214</td>
-                <td style="color:#dc3545;">অটো-উইথড্র</td>
-                <td>-২০০ কয়েন</td>
-                <td>অটোমেটিক কেটে নেওয়া হয়েছে</td>
-            </tr>
-        </table>
-    </div>
-
+    <h2>ম্যাচ যোগ করুন</h2>
+    <form action="/admin/add-match" method="POST">
+        <input type="text" name="teamA" placeholder="টিম A" required><br>
+        <input type="text" name="teamB" placeholder="টিম B" required><br>
+        <input type="number" step="0.01" name="oddsA" placeholder="অডস A" required><br>
+        <input type="number" step="0.01" name="oddsB" placeholder="অডস B" required><br>
+        <button type="submit">সেভ করুন</button>
+    </form>
 </body>
 </html>
