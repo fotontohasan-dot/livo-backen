@@ -1,76 +1,127 @@
-require('dotenv').config();
-const express = require('express');
-const mongoose = require('mongoose');
-const path = require('path');
-const Match = require('./Match');
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
 
-const app = express();
-const PORT = process.env.PORT || 10000;
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 30px;
+            background: #f5f5f5;
+            margin: 0;
+        }
 
-// কনফিগারেশন চেক
-console.log("Environment check - PORT:", PORT);
-if (!process.env.MONGODB_URI) {
-  console.error("CRITICAL ERROR: MONGODB_URI is not set in Environment Variables!");
-}
+        h1 {
+            color: #0f172a;
+        }
 
-// Middleware
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
 
-// MongoDB Connection
-const connectDB = async () => {
-  try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('✅ MongoDB Connected Successfully');
-  } catch (err) {
-    console.error('❌ MongoDB Connection Error:', err.message);
-  }
-};
-connectDB();
+        .card {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 10px;
+            width: 180px;
+            box-shadow: 0 2px 5px rgba(0,0,0,.1);
+        }
 
-// Routes
-app.get('/', async (req, res) => {
-  try {
-    if (mongoose.connection.readyState !== 1) {
-      throw new Error("Database not connected");
-    }
-    
-    const matches = await Match.find().lean() || [];
-    
-    res.render('index', { 
-      title: "Livo - Live Casino & Sports",
-      matches: matches,
-      user_count: 1248,
-      live_stream: 5,
-      game_count: 42
-    });
-  } catch (err) {
-    console.error("Home Route Error:", err.message);
-    res.status(500).send("Server Error: " + err.message);
-  }
-});
+        .card h3 {
+            margin: 0;
+            color: #16a34a;
+            font-size: 28px;
+        }
 
-// Admin routes
-app.get('/admin', (req, res) => 
-  res.render('admin/dashboard', { title: "Admin Dashboard - Livo" })
-);
+        .match-list {
+            margin-top: 40px;
+        }
 
-app.post('/admin/add-match', async (req, res) => {
-  try {
-    await Match.create({ 
-      title: req.body.title, 
-      status: req.body.status || 'upcoming' 
-    });
-    res.redirect('/');
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Error saving match');
-  }
-});
+        .match-item {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px auto;
+            width: 320px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,.08);
+        }
 
-app.listen(PORT, () => {
-  console.log(`🚀 Livo Server running on port ${PORT}`);
-});
+        .status {
+            color: #16a34a;
+            font-weight: bold;
+        }
+
+        .login-btn {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 12px 25px;
+            background: #16a34a;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+        }
+
+        .login-btn:hover {
+            background: #15803d;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>স্বাগতম Livo-তে!</h1>
+    <p>এটি আমাদের লাইভ ক্যাসিনো এবং স্পোর্টস পোর্টাল।</p>
+
+    <div class="stats">
+        <div class="card">
+            <h3><%= user_count %></h3>
+            <p>ইউজার</p>
+        </div>
+
+        <div class="card">
+            <h3><%= live_stream %></h3>
+            <p>লাইভ স্ট্রিম</p>
+        </div>
+
+        <div class="card">
+            <h3><%= game_count %></h3>
+            <p>গেম চলছে</p>
+        </div>
+    </div>
+
+    <div class="match-list">
+        <h2>চলমান ম্যাচসমূহ</h2>
+
+        <% if (matches && matches.length > 0) { %>
+
+            <% matches.forEach(match => { %>
+
+                <div class="match-item">
+                    <h3><%= match.title %></h3>
+                    <p class="status">স্ট্যাটাস: <%= match.status %></p>
+                </div>
+
+            <% }) %>
+
+        <% } else { %>
+
+            <div class="match-item">
+                <p>বর্তমানে কোনো ম্যাচ নেই।</p>
+            </div>
+
+        <% } %>
+
+    </div>
+
+    <a class="login-btn" href="/login">লগইন করুন</a>
+
+</body>
+</html>
