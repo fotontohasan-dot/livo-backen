@@ -1,13 +1,17 @@
 <!DOCTYPE html>
 <html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Panel</title>
+</head>
 <body>
-    <h2>ম্যাচ যোগ করুন</h2>
+    <h2>নতুন ম্যাচ যোগ করুন</h2>
     <form action="/admin/add-match" method="POST">
-        <input type="text" name="teamA" placeholder="টিম A" required><br>
-        <input type="text" name="teamB" placeholder="টিম B" required><br>
-        <input type="number" step="0.01" name="oddsA" placeholder="অডস A" required><br>
-        <input type="number" step="0.01" name="oddsB" placeholder="অডস B" required><br>
-        <button type="submit">সেভ করুন</button>
+        <input type="text" name="teamA" placeholder="টিম A নাম" required><br><br>
+        <input type="text" name="teamB" placeholder="টিম B নাম" required><br><br>
+        <input type="number" step="0.01" name="oddsA" placeholder="অডস A" required><br><br>
+        <input type="number" step="0.01" name="oddsB" placeholder="অডস B" required><br><br>
+        <button type="submit">ম্যাচ যোগ করুন</button>
     </form>
 </body>
 </html>
