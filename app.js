@@ -9,13 +9,11 @@ const Match = require('./Match');
 app.use(express.urlencoded({ extended: true }));
 app.set('view engine', 'ejs');
 
-// ==================== Views Path Fix ====================
-const viewsPath = path.join(__dirname, '../views');  // src থেকে বের হয়ে views খুঁজবে
+// Views path — src এর ভিতরে views ফোল্ডার
+app.set('views', path.join(__dirname, 'views'));
 
-app.set('views', viewsPath);
-console.log("✅ Views path set to:", viewsPath);
-console.log("Views folder exists?", fs.existsSync(viewsPath));
-// ====================================================
+console.log("✅ Views path set to:", app.get('views'));
+console.log("Views folder exists?", fs.existsSync(app.get('views')));
 
 // ডাটাবেস
 mongoose.connect(process.env.MONGODB_URI)
@@ -45,7 +43,7 @@ app.get('/admin', (req, res) => {
         res.render('admin');
     } catch (err) {
         console.error("Admin Error:", err.message);
-        res.status(500).send("Admin page লোড করতে সমস্যা হয়েছে");
+        res.status(500).send("Admin page লোড করতে সমস্যা");
     }
 });
 
@@ -66,8 +64,8 @@ app.post('/admin/add-match', async (req, res) => {
         const newMatch = new Match({
             teamA: req.body.teamA,
             teamB: req.body.teamB,
-            oddsA: parseFloat(req.body.oddsA),
-            oddsB: parseFloat(req.body.oddsB)
+            oddsA: parseFloat(req.body.oddsA || 0),
+            oddsB: parseFloat(req.body.oddsB || 0)
         });
         await newMatch.save();
         res.redirect('/');
