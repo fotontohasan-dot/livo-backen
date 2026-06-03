@@ -7,7 +7,7 @@ const Match = require('./Match');
 
 app.use(express.urlencoded({ extended: true }));
 app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
+app.set('views', path.join(process.cwd(), 'views'));   // এটা বদলানো হয়েছে
 
 // ডাটাবেস কানেকশন
 mongoose.connect(process.env.MONGODB_URI);
@@ -37,7 +37,10 @@ app.get('/admin', (req, res) => {
 app.get('/test', (req, res) => {
     res.json({
         currentDir: __dirname,
-        views: fs.readdirSync(path.join(__dirname, 'views'))
+        viewsPath: path.join(process.cwd(), 'views'),
+        files: fs.existsSync(path.join(process.cwd(), 'views')) 
+               ? fs.readdirSync(path.join(process.cwd(), 'views')) 
+               : "views folder not found"
     });
 });
 
