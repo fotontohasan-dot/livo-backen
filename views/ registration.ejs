@@ -1,12 +1,30 @@
 <!DOCTYPE html>
-<html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registration - Livo</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 400px; margin: 80px auto; padding: 20px; background: #f4f4f4; }
+        h2 { text-align: center; color: #333; }
+        input, button { width: 100%; padding: 10px; margin: 8px 0; border-radius: 5px; border: 1px solid #ccc; font-size: 16px; box-sizing: border-box; }
+        button { background: #28a745; color: white; border: none; cursor: pointer; }
+        button:hover { background: #218838; }
+        .msg { color: red; text-align: center; }
+        .link { text-align: center; margin-top: 10px; }
+    </style>
+</head>
 <body>
-    <h2>রেজিস্ট্রেশন করুন</h2>
+    <h2>📝 রেজিস্ট্রেশন করুন</h2>
+    <% if (typeof error !== 'undefined') { %>
+        <p class="msg"><%= error %></p>
+    <% } %>
     <form action="/register" method="POST">
-        <input type="text" name="username" placeholder="ইউজারনেম" required><br>
-        <input type="email" name="email" placeholder="ইমেইল" required><br>
-        <input type="password" name="password" placeholder="পাসওয়ার্ড" required><br>
-        <button type="submit">সাবমিট</button>
+        <input type="text" name="username" placeholder="ইউজারনেম" required>
+        <input type="email" name="email" placeholder="ইমেইল" required>
+        <input type="password" name="password" placeholder="পাসওয়ার্ড" required>
+        <button type="submit">রেজিস্ট্রেশন করুন</button>
     </form>
+    <div class="link"><a href="/login">আগে থেকে অ্যাকাউন্ট আছে? লগইন করুন</a></div>
 </body>
 </html>
