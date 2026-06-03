@@ -2,7 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const session = require('express-session');
 
 const app = express();
@@ -27,7 +27,7 @@ mongoose.connect(process.env.MONGODB_URI)
     .then(() => console.log('✅ MongoDB Connected'))
     .catch(err => console.error('❌ MongoDB Error:', err));
 
-// হমপেজ
+// হোমপেজ
 app.get('/', async (req, res) => {
     try {
         const matches = await Match.find();
@@ -82,8 +82,6 @@ app.post('/admin/add-match', async (req, res) => {
     }
 });
 
-// ===== নতুন: Registration & Login =====
-
 // রেজিস্ট্রেশন পেজ
 app.get('/register', (req, res) => res.render('registration'));
 
@@ -92,7 +90,7 @@ app.post('/register', async (req, res) => {
     try {
         const { username, email, password } = req.body;
         const existing = await User.findOne({ email });
-        if (existing) return res.render('registration', { error: 'এই ইমেইল আগে থেকে আছ!' });
+        if (existing) return res.render('registration', { error: 'এই ইমেইল আগে থেকে আছে!' });
         const hashed = await bcrypt.hash(password, 10);
         const user = new User({ username, email, password: hashed });
         await user.save();
