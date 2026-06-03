@@ -2,63 +2,54 @@ const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs');
+
 const app = express();
 const Match = require('./Match');
 
 app.use(express.urlencoded({ extended: true }));
 app.set('view engine', 'ejs');
-app.set('views', path.join(process.cwd(), 'views'));   // এটা বদলানো হয়েছে
 
-// ডাটাবেস কানেকশন
-mongoose.connect(process.env.MONGODB_URI);
+// সবচেয়ে নিরাপদ views path
+app.set('views', path.join(process.cwd(), 'views'));
 
-// হোমপেজ রাউট
+console.log("Views path set to:", path.join(process.cwd(), 'views'));
+
+// ডাটাবেস
+mongoose.connect(process.env.MONGODB_URI)
+    .then(() => console.log('✅ MongoDB Connected'))
+    .catch(err => console.error('❌ MongoDB Error:', err));
+
+// হোমপেজ
 app.get('/', async (req, res) => {
     try {
         const matches = await Match.find();
-        res.render('index', {
-            title: "Livo",
-            matches,
-            user_count: 1248,
-            live_stream: 5,
-            game_count: 42
-        });
+        res.render('index', { title: "Livo", matches, user_count: 1248, live_stream: 5, game_count: 42 });
     } catch (err) {
+        console.error(err);
         res.status(500).send("সার্ভার এরর");
     }
 });
 
-// অ্যাডমিন পেজ রাউট
+// অ্যাডমিন
 app.get('/admin', (req, res) => {
-    res.render('admin');
-});
-
-// টেস্ট রাউট
-app.get('/test', (req, res) => {
-    res.json({
-        currentDir: __dirname,
-        viewsPath: path.join(process.cwd(), 'views'),
-        files: fs.existsSync(path.join(process.cwd(), 'views')) 
-               ? fs.readdirSync(path.join(process.cwd(), 'views')) 
-               : "views folder not found"
-    });
-});
-
-// ম্যাচ যোগ করার রাউট
-app.post('/admin/add-match', async (req, res) => {
     try {
-        const newMatch = new Match({
-            teamA: req.body.teamA,
-            teamB: req.body.teamB,
-            oddsA: req.body.oddsA,
-            oddsB: req.body.oddsB
-        });
-
-        await newMatch.save();
-        res.redirect('/');
+        res.render('admin');
     } catch (err) {
-        res.status(500).send("ম্যাচ সেভ করতে সমস্যা হয়েছে");
+        console.error("Admin Error:", err.message);
+        res.status(500).send("Admin page এ সমস্যা হচ্ছে");
     }
 });
 
-app.listen(process.env.PORT || 3000);
+// টেস্ট
+app.get('/test', (req, res) => {
+    const viewsPath = path.join(process.cwd(), 'views');
+    res.json({
+        cwd: process.cwd(),
+        viewsPath: viewsPath,
+        viewsExists: fs.existsSync(viewsPath),
+        files: fs.existsSync(viewsPath) ? fs.readdirSync(viewsPath) : "Not found"
+    });
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
