@@ -9,10 +9,13 @@ const Match = require('./Match');
 app.use(express.urlencoded({ extended: true }));
 app.set('view engine', 'ejs');
 
-// Force correct views path for Render
-app.set('views', path.join(process.cwd(), '../views'));
+// ==================== Views Path Fix ====================
+const viewsPath = path.join(__dirname, '../views');  // src থেকে বের হয়ে views খুঁজবে
 
-console.log("Views path set to:", app.get('views'));
+app.set('views', viewsPath);
+console.log("✅ Views path set to:", viewsPath);
+console.log("Views folder exists?", fs.existsSync(viewsPath));
+// ====================================================
 
 // ডাটাবেস
 mongoose.connect(process.env.MONGODB_URI)
@@ -42,18 +45,18 @@ app.get('/admin', (req, res) => {
         res.render('admin');
     } catch (err) {
         console.error("Admin Error:", err.message);
-        res.status(500).send("Admin page লোড করতে সমস্যা");
+        res.status(500).send("Admin page লোড করতে সমস্যা হয়েছে");
     }
 });
 
 // টেস্ট
 app.get('/test', (req, res) => {
-    const viewsPath = app.get('views');
     res.json({
         cwd: process.cwd(),
-        viewsPath: viewsPath,
-        viewsExists: fs.existsSync(viewsPath),
-        files: fs.existsSync(viewsPath) ? fs.readdirSync(viewsPath) : "Folder not found"
+        __dirname: __dirname,
+        viewsPath: app.get('views'),
+        viewsExists: fs.existsSync(app.get('views')),
+        files: fs.existsSync(app.get('views')) ? fs.readdirSync(app.get('views')) : "Not found"
     });
 });
 
@@ -75,4 +78,4 @@ app.post('/admin/add-match', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Server running on ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
