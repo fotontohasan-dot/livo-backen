@@ -23,8 +23,8 @@
         .category { margin-top: 70px; padding: 15px; }
         h2 { 
             color: #ffd700; 
-            margin-bottom: 15px; 
-            font-size: 20px;
+            margin-bottom: 12px; 
+            font-size: 19px;
         }
         .game-grid {
             display: grid;
@@ -37,11 +37,16 @@
             overflow: hidden;
             text-align: center;
         }
-        .game-card img { width: 100%; height: 115px; object-fit: cover; }
+        .game-card img { 
+            width: 100%; 
+            height: 115px; 
+            object-fit: cover; 
+        }
         .game-name { 
-            font-size: 13.5px; 
+            font-size: 13px; 
             padding: 10px 5px; 
             color: #ffccff; 
+            font-weight: bold;
         }
     </style>
 </head>
@@ -51,55 +56,43 @@
         <div class="logo">LIVO</div>
     </div>
 
-    <!-- All Games -->
     <div class="category">
         <h2>🎮 All Games</h2>
         <div class="game-grid" id="allGames"></div>
     </div>
 
-    <!-- Slots -->
     <div class="category">
         <h2>🎰 Slots</h2>
         <div class="game-grid" id="slots"></div>
     </div>
 
-    <!-- Live Casino -->
     <div class="category">
         <h2>🎥 Live Casino</h2>
         <div class="game-grid" id="liveCasino"></div>
     </div>
 
-    <!-- Table Games -->
     <div class="category">
         <h2>🃏 Table Games</h2>
         <div class="game-grid" id="tableGames"></div>
     </div>
 
     <script>
-        function addGames(id, games) {
+        function addGames(id, list) {
             const container = document.getElementById(id);
-            games.forEach(name => {
+            list.forEach(name => {
                 const card = document.createElement('div');
                 card.className = 'game-card';
                 card.innerHTML = `
-                    <img src="https://via.placeholder.com/300x180/6b00ff/ffffff?text=${name.replace(/ /g, '+')}" alt="${name}">
+                    <img src="https://picsum.photos/id/${Math.floor(Math.random()*100)+10}/300/180" alt="${name}">
                     <div class="game-name">${name}</div>
                 `;
                 container.appendChild(card);
             });
         }
 
-        // All Games
-        addGames('allGames', ["Teen Patti", "Super Ace", "Crash", "Aviator", "Andar Bahar", "Dragon Tiger", "Roulette", "Blackjack", "Fortune Gems", "Boxing King"]);
-
-        // Slots
-        addGames('slots', ["Super Ace", "Fortune Gems", "Boxing King", "Golden Empire", "Leprechaun", "Fruit Party", "Sweet Bonanza", "Gates of Olympus", "Starlight Princess", "Wild West"]);
-
-        // Live Casino
-        addGames('liveCasino', ["Blackjack Live", "Baccarat Live", "Roulette Live", "Dragon Tiger Live", "Sic Bo Live", "Crazy Time Live"]);
-
-        // Table Games
-        addGames('tableGames', ["Roulette", "Blackjack", "Poker", "Sic Bo", "Baccarat", "Teen Patti Pro"]);
+        addGames('allGames', ["Teen Patti", "Super Ace", "Crash", "Aviator", "Andar Bahar", "Dragon Tiger", "Roulette", "Blackjack", "Fortune Gems", "Boxing King", "Lucky Spin", "Color Prediction" "Super Ace", "Fortune Gems", "Boxing King", "Golden Empire", "Sweet Bonanza", "Gates of Olympus", "Starlight Princess", "Fruit Party" "Blackjack Live", "Baccarat Live", "Roulette Live", "Dragon Tiger Live", "Crazy Time"]);
+        
+        addGames('tableGames', );
     </script>
 
 </body>
