@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Livo - Live Casino</title>
+    <title>Livo - Online Casino</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; background: #0b0b0c; color: white; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f0b1f; color: white; }
         .header {
-            background: linear-gradient(90deg, #ff2d55, #c8102e);
-            padding: 12px 15px;
+            background: linear-gradient(90deg, #6b00ff, #ff00aa);
+            padding: 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -18,28 +18,163 @@
             width: 100%;
             z-index: 100;
         }
-        .logo { font-size: 26px; font-weight: bold; }
-        .logo span { color: #ffd700; }
-        .balance { background: rgba(0,0,0,0.4); padding: 6px 12px; border-radius: 20px; font-weight: bold; }
+        .logo { font-size: 26px; font-weight: bold; color: #ffd700; }
 
+        .category { margin-top: 70px; padding: 15px; }
         h2 { 
-            margin: 25px 12px 12px; 
             color: #ffd700; 
+            margin-bottom: 15px; 
             font-size: 20px;
-            border-left: 4px solid #ff2d55;
-            padding-left: 12px;
+            padding-left: 5px;
         }
         .game-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
             gap: 12px;
-            padding: 0 12px 90px;
         }
         .game-card {
-            background: #1a1a2e;
+            background: #1a1433;
             border-radius: 12px;
             overflow: hidden;
             text-align: center;
         }
-        .game-card img { width: 100%; height: 110px; object-fit: cover; }
-        .game-name { font-size: 13.5px; padding: 10px 5px; color: #ffd700; font-weight
+        .game-card img { width: 100%; height: 115px; object-fit: cover; }
+        .game-name { 
+            font-size: 13.5px; 
+            padding: 10px 5px; 
+            color: #ffccff; 
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background: #0f0b1f;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            border-top: 1px solid #6b00ff;
+        }
+        .nav-item { text-align: center; color: #ccc; font-size: 11px; }
+        .nav-item.active { color: #ff00aa; }
+        .nav-icon { font-size: 24px; display: block; margin-bottom: 3px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="logo">LIVO</div>
+        <div style="display:flex; gap:10px;">
+            <button style="padding:8px 16px; background:#fff; color:#000; border:none; border-radius:6px;">Login</button>
+            <button style="padding:8px 16px; background:#ffd700; color:#000; border:none; border-radius:6px; font-weight:bold;">Register</button>
+        </div>
+    </div>
+
+    <!-- All Games -->
+    <div class="category">
+        <h2>🎮 All Games</h2>
+        <div class="game-grid" id="allGames"></div>
+    </div>
+
+    <!-- Slots -->
+    <div class="category">
+        <h2>🎰 Slots</h2>
+        <div class="game-grid" id="slots"></div>
+    </div>
+
+    <!-- Live Casino -->
+    <div class="category">
+        <h2>🎥 Live Casino</h2>
+        <div class="game-grid" id="liveCasino"></div>
+    </div>
+
+    <!-- Table Games -->
+    <div class="category">
+        <h2>🃏 Table Games</h2>
+        <div class="game-grid" id="tableGames"></div>
+    </div>
+
+    <!-- Card Games -->
+    <div class="category">
+        <h2>🃏 Card Games</h2>
+        <div class="game-grid" id="cardGames"></div>
+    </div>
+
+    <!-- Crash Games -->
+    <div class="category">
+        <h2>🚀 Crash Games</h2>
+        <div class="game-grid" id="crashGames"></div>
+    </div>
+
+    <!-- Fishing Games -->
+    <div class="category">
+        <h2>🎣 Fishing Games</h2>
+        <div class="game-grid" id="fishing"></div>
+    </div>
+
+    <!-- PG Soft -->
+    <div class="category">
+        <h2>🟣 PG Soft</h2>
+        <div class="game-grid" id="pgsoft"></div>
+    </div>
+
+    <!-- JILI -->
+    <div class="category">
+        <h2>🔴 JILI</h2>
+        <div class="game-grid" id="jili"></div>
+    </div>
+
+    <!-- SPRIBE -->
+    <div class="category">
+        <h2>🔵 SPRIBE</h2>
+        <div class="game-grid" id="spribe"></div>
+    </div>
+
+    <div class="bottom-nav">
+        <div class="nav-item active"><span class="nav-icon">🏠</span>হোম</div>
+        <div class="nav-item"><span class="nav-icon">🎮</span>গেমস</div>
+        <div class="nav-item"><span class="nav-icon">👥</span>আমন্ত্রণ</div>
+        <div class="nav-item"><span class="nav-icon">🎁</span>বোনাস</div>
+        <div class="nav-item"><span class="nav-icon">👤</span>আমি</div>
+    </div>
+
+    <script>
+        // Slots এর গেমস
+        const slotsGames = ["Super Ace", "Fortune Gems", "Boxing King", "Jackpot", "Lucky Spin", "Wild West", "Fruit Party", "Sweet Bonanza", "Gates of Olympus", "Starlight Princess"];
+        // Live Casino এর গেমস
+        const liveGames = ["Blackjack Live", "Baccarat Live", "Roulette Live", "Dragon Tiger Live", "Sic Bo Live"];
+        // Card Games
+        const cardGames = ;
+        // Crash Games
+        const crashGamesList = ["Crash", "Aviator", "Mines", "Plinko", "Tower" "Fish Hunter", "Bombing Fishing", "King of Fish", "Deep Sea" "Fortune Tiger", "Fortune Ox", "Ganesha Fortune", "Leprechaun", "Medusa" "Super Ace JILI", "Boxing King JILI", "Golden Empire", "Baccarat JILI"];
+        // SPRIBE
+        const spribeGames = ["Aviator SPRIBE", "Mines SPRIBE", "Goal", "Dice"];
+
+        function addGames(containerId, gameList) {
+            const container = document.getElementById(containerId);
+            gameList.forEach(name => {
+                const card = document.createElement('div');
+                card.className = 'game-card';
+                card.innerHTML = `
+                    <img src="https://via.placeholder.com/300x180/6b00ff/ffffff?text=${name.replace(/ /g, '+')}" alt="${name}">
+                    <div class="game-name">${name}</div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // সবগুলোতে গেম যোগ করা
+        addGames('allGames', [...slotsGames, ...liveGames, ...cardGames, ...crashGamesList, ...fishingGamesList]);
+        addGames('slots', slotsGames);
+        addGames('liveCasino', liveGames);
+        addGames('tableGames', ["Roulette", "Blackjack", "Sic Bo"]);
+        addGames('cardGames', cardGames);
+        addGames('crashGames', crashGamesList);
+        addGames('fishing', fishingGamesList);
+        addGames('pgsoft', pgGames);
+        addGames('jili', jiliGames);
+        addGames('spribe', spribeGames);
+    </script>
+
+</body>
+</html>
