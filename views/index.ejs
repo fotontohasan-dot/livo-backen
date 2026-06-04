@@ -31,78 +31,122 @@
             border-radius: 12px;
             overflow: hidden;
             text-align: center;
+            cursor: pointer;
         }
-        .game-card img { width: 100%; height: 115px; object-fit: cover; }
+        .game-card img {
+            width: 100%;
+            height: 115px;
+            object-fit: cover;
+            background: #2a1a4a;
+        }
+        .game-thumb-fallback {
+            width: 100%;
+            height: 115px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+        }
         .game-name { font-size: 13px; padding: 10px 5px; color: #ffccff; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <div class="logo">LIVO</div>
-    </div>
+<div class="header">
+    <div class="logo">LIVO</div>
+</div>
 
-    <div class="category">
-        <h2>🎮 All Games</h2>
-        <div class="game-grid" id="allGames"></div>
-    </div>
+<div class="category">
+    <h2>🎮 All Games</h2>
+    <div class="game-grid" id="allGames"></div>
+</div>
 
-    <div class="category">
-        <h2>🎰 Slots</h2>
-        <div class="game-grid" id="slots"></div>
-    </div>
+<div class="category">
+    <h2>🎰 Slots</h2>
+    <div class="game-grid" id="slots"></div>
+</div>
 
-    <div class="category">
-        <h2>🎥 Live Casino</h2>
-        <div class="game-grid" id="liveCasino"></div>
-    </div>
+<div class="category">
+    <h2>🎥 Live Casino</h2>
+    <div class="game-grid" id="liveCasino"></div>
+</div>
 
-    <div class="category">
-        <h2>🃏 Table Games</h2>
-        <div class="game-grid" id="tableGames"></div>
-    </div>
+<div class="category">
+    <h2>🃏 Table Games</h2>
+    <div class="game-grid" id="tableGames"></div>
+</div>
 
-    <script>
-        let imgIndex = 10;
+<script>
+    const colors = ["#6b00ff","#ff00aa","#ff6600","#00aaff","#00cc66","#ff3366","#9900ff","#ff9900","#00ffcc","#ff0066","#3366ff","#ff6633"];
+    let colorIndex = 0;
 
-        function addGames(id, list) {
-            const container = document.getElementById(id);
-            list.forEach(name => {
-                const card = document.createElement('div');
-                card.className = 'game-card';
-                card.innerHTML = `
-                    <img src="https://picsum.photos/id/${imgIndex}/300/180" alt="${name}">
-                    <div class="game-name">${name}</div>
-                `;
-                imgIndex++;
-                container.appendChild(card);
-            });
-        }
+    function addGames(id, list) {
+        const container = document.getElementById(id);
+        list.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'game-card';
+            const bg = colors[colorIndex % colors.length];
+            colorIndex++;
+            card.innerHTML = `
+                <img src="${item.img}" alt="${item.name}"
+                     onerror="this.outerHTML='<div class=\'game-thumb-fallback\' style=\'background:${bg}\'>${item.emoji}</div>'">
+                <div class="game-name">${item.name}</div>
+            `;
+            container.appendChild(card);
+        });
+    }
 
-        addGames('allGames', [
-            "Teen Patti", "Super Ace", "Crash", "Aviator", "Andar Bahar",
-            "Dragon Tiger", "Roulette", "Blackjack", "Fortune Gems", "Boxing King",
-            "Lucky Spin", "Color Prediction", "Golden Empire", "Sweet Bonanza",
-            "Gates of Olympus", "Starlight Princess", "Fruit Party",
-            "Blackjack Live", "Baccarat Live", "Roulette Live",
-            "Dragon Tiger Live", "Crazy Time"
-        ]);
+    addGames('allGames', [
+        {name:"Teen Patti",       emoji:"🃏", img:"https://www.pgsoft.com/uploads/games/teen_patti/icon.png"},
+        {name:"Super Ace",        emoji:"🂡", img:"https://www.jili.games/images/games/super-ace.png"},
+        {name:"Crash",            emoji:"🚀", img:"https://spribe.co/wp-content/uploads/2021/07/crash.png"},
+        {name:"Aviator",          emoji:"✈️", img:"https://spribe.co/wp-content/uploads/2021/07/aviator-icon.png"},
+        {name:"Andar Bahar",      emoji:"🎴", img:"https://www.ezugi.com/wp-content/uploads/2022/01/Andar-Bahar.jpg"},
+        {name:"Dragon Tiger",     emoji:"🐉", img:"https://www.ezugi.com/wp-content/uploads/2022/01/Dragon-Tiger.jpg"},
+        {name:"Roulette",         emoji:"🎡", img:"https://www.ezugi.com/wp-content/uploads/2022/01/Roulette.jpg"},
+        {name:"Blackjack",        emoji:"♠️", img:"https://www.ezugi.com/wp-content/uploads/2022/01/Blackjack.jpg"},
+        {name:"Fortune Gems",     emoji:"💎", img:"https://www.jili.games/images/games/fortune-gems.png"},
+        {name:"Boxing King",      emoji:"🥊", img:"https://www.pgsoft.com/uploads/games/boxing_king/icon.png"},
+        {name:"Lucky Spin",       emoji:"🎰", img:"https://www.jili.games/images/games/lucky-spin.png"},
+        {name:"Color Prediction", emoji:"🌈", img:"https://spribe.co/wp-content/uploads/2021/07/color.png"},
+        {name:"Golden Empire",    emoji:"👑", img:"https://www.pgsoft.com/uploads/games/golden_empire/icon.png"},
+        {name:"Sweet Bonanza",    emoji:"🍭", img:"https://demogamesfree.pragmaticplay.com/gs2c/common/lobby_assets/html5/SwBonanza/icon.png"},
+        {name:"Gates of Olympus", emoji:"⚡", img:"https://demogamesfree.pragmaticplay.com/gs2c/common/lobby_assets/html5/vs20olympgate/icon.png"},
+        {name:"Starlight Princess",emoji:"⭐",img:"https://demogamesfree.pragmaticplay.com/gs2c/common/lobby_assets/html5/vs20starlight/icon.png"},
+        {name:"Fruit Party",      emoji:"🍎", img:"https://demogamesfree.pragmaticplay.com/gs2c/common/lobby_assets/html5/vs20fruitparty/icon.png"},
+        {name:"Blackjack Live",   emoji:"♠️", img:"https://www.ezugi.com/wp-content/uploads/2022/01/Blackjack.jpg"},
+        {name:"Baccarat Live",    emoji:"🎰", img:"https://www.ezugi.com/wp-content/uploads/2022/01/Baccarat.jpg"},
+        {name:"Roulette Live",    emoji:"🎡", img:"https://www.ezugi.com/wp-content/uploads/2022/01/Roulette.jpg"},
+        {name:"Dragon Tiger Live",emoji:"🐯", img:"https://www.ezugi.com/wp-content/uploads/2022/01/Dragon-Tiger.jpg"},
+        {name:"Crazy Time",       emoji:"🎪", img:"https://evolution.com/wp-content/uploads/2020/06/crazy-time-icon.png"}
+    ]);
 
-        addGames('slots', [
-            "Fortune Gems", "Golden Empire", "Sweet Bonanza",
-            "Gates of Olympus", "Starlight Princess", "Fruit Party"
-        ]);
+    addGames('slots', [
+        {name:"Fortune Gems",     emoji:"💎", img:"https://www.jili.games/images/games/fortune-gems.png"},
+        {name:"Golden Empire",    emoji:"👑", img:"https://www.pgsoft.com/uploads/games/golden_empire/icon.png"},
+        {name:"Sweet Bonanza",    emoji:"🍭", img:"https://demogamesfree.pragmaticplay.com/gs2c/common/lobby_assets/html5/SwBonanza/icon.png"},
+        {name:"Gates of Olympus", emoji:"⚡", img:"https://demogamesfree.pragmaticplay.com/gs2c/common/lobby_assets/html5/vs20olympgate/icon.png"},
+        {name:"Starlight Princess",emoji:"⭐",img:"https://demogamesfree.pragmaticplay.com/gs2c/common/lobby_assets/html5/vs20starlight/icon.png"},
+        {name:"Fruit Party",      emoji:"🍎", img:"https://demogamesfree.pragmaticplay.com/gs2c/common/lobby_assets/html5/vs20fruitparty/icon.png"}
+    ]);
 
-        addGames('liveCasino', [
-            "Blackjack Live", "Baccarat Live", "Roulette Live",
-            "Dragon Tiger Live", "Crazy Time"
-        ]);
+    addGames('liveCasino', [
+        {name:"Blackjack Live",   emoji:"♠️", img:"https://www.ezugi.com/wp-content/uploads/2022/01/Blackjack.jpg"},
+        {name:"Baccarat Live",    emoji:"🎰", img:"https://www.ezugi.com/wp-content/uploads/2022/01/Baccarat.jpg"},
+        {name:"Roulette Live",    emoji:"🎡", img:"https://www.ezugi.com/wp-content/uploads/2022/01/Roulette.jpg"},
+        {name:"Dragon Tiger Live",emoji:"🐯", img:"https://www.ezugi.com/wp-content/uploads/2022/01/Dragon-Tiger.jpg"},
+        {name:"Crazy Time",       emoji:"🎪", img:"https://evolution.com/wp-content/uploads/2020/06/crazy-time-icon.png"}
+    ]);
 
-        addGames('tableGames', [
-            "Blackjack", "Baccarat", "Roulette",
-            "Teen Patti", "Andar Bahar", "Dragon Tiger"
-        ]);
-    </script>
+    addGames('tableGames', [
+        {name:"Blackjack",   emoji:"♠️", img:"https://www.ezugi.com/wp-content/uploads/2022/01/Blackjack.jpg"},
+        {name:"Baccarat",    emoji:"🎴", img:"https://www.ezugi.com/wp-content/uploads/2022/01/Baccarat.jpg"},
+        {name:"Roulette",    emoji:"🎡", img:"https://www.ezugi.com/wp-content/uploads/2022/01/Roulette.jpg"},
+        {name:"Teen Patti",  emoji:"🃏", img:"https://www.pgsoft.com/uploads/games/teen_patti/icon.png"},
+        {name:"Andar Bahar", emoji:"🎲", img:"https://www.ezugi.com/wp-content/uploads/2022/01/Andar-Bahar.jpg"},
+        {name:"Dragon Tiger",emoji:"🐉", img:"https://www.ezugi.com/wp-content/uploads/2022/01/Dragon-Tiger.jpg"}
+    ]);
+</script>
 
 </body>
 </html>
