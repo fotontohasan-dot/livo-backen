@@ -1,0 +1,92 @@
+<%- include('partials/head') %>
+<%- include('partials/navbar') %>
+<div class="container page">
+  <%- include('partials/flash') %>
+  <div class="layout-main">
+    <div>
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div class="card-header">
+          <%= tournament.name %>
+          <span class="status-badge status-<%= tournament.status %>"><%= tournament.status %></span>
+        </div>
+        <div class="card-body">
+          <div style="display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;">
+            <div class="stat-card" style="flex:1;min-width:100px;">
+              <div class="stat-number" style="color:var(--gold)"><%= tournament.prize_pool %></div>
+              <div class="stat-label">Prize Pool 🏆</div>
+            </div>
+            <div class="stat-card" style="flex:1;min-width:100px;">
+              <div class="stat-number"><%= tournament.entry_fee || 'Free' %></div>
+              <div class="stat-label">Entry Fee</div>
+            </div>
+            <div class="stat-card" style="flex:1;min-width:100px;">
+              <div class="stat-number"><%= participants.length %></div>
+              <div class="stat-label">Participants</div>
+            </div>
+          </div>
+          <p style="color:var(--muted);margin-bottom:1.5rem"><%= tournament.description %></p>
+          <% if(locals.user && !joined && tournament.status !== 'completed') { %>
+            <button onclick="joinTournament()" class="btn btn-primary">🏆 Join Tournament</button>
+          <% } else if(joined) { %>
+            <div class="alert alert-success">✅ You are in this tournament!</div>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">🥇 Leaderboard</div>
+        <table class="table">
+          <thead><tr><th>Rank</th><th>Player</th><th>Points</th></tr></thead>
+          <tbody>
+            <% participants.forEach((p, i) => { %>
+              <tr>
+                <td><span class="rank-<%= i+1 %>">#<%= i+1 %></span></td>
+                <td style="display:flex;align-items:center;gap:.75rem;">
+                  <div class="avatar"><%= p.username[0].toUpperCase() %></div>
+                  <%= p.username %>
+                </td>
+                <td style="color:var(--primary);font-weight:700"><%= p.points %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="card-header">ℹ️ Tournament Info</div>
+        <div class="card-body">
+          <div style="display:flex;flex-direction:column;gap:.75rem;font-size:.85rem;">
+            <div style="display:flex;justify-content:space-between;">
+              <span style="color:var(--muted)">Sport</span>
+              <span><%= tournament.sport %></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;">
+              <span style="color:var(--muted)">Start Date</span>
+              <span><%= new Date(tournament.start_date).toLocaleDateString() %></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;">
+              <span style="color:var(--muted)">End Date</span>
+              <span><%= new Date(tournament.end_date).toLocaleDateString() %></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;">
+              <span style="color:var(--muted)">Max Players</span>
+              <span><%= tournament.max_participants %></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function joinTournament() {
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = '/tournaments/<%= tournament.id %>/join';
+  document.body.appendChild(form);
+  form.submit();
+}
+</script>
+</body></html>
