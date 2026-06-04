@@ -1,0 +1,11 @@
+<%- include('partials/head') %>
+<%- include('partials/navbar') %>
+<div class="container page" style="text-align:center;padding:5rem 0;">
+  <div style="font-size:4rem;margin-bottom:1rem;">⛔</div>
+  <h1 style="font-size:2rem;margin-bottom:.5rem">Access Denied</h1>
+  <p style="color:var(--muted);margin-bottom:2rem">
+    <%= locals.message || 'You do not have permission' %>
+  </p>
+  <a href="/" class="btn btn-primary">Go Home</a>
+</div>
+</body></html>
