@@ -1,30 +1,36 @@
-<!DOCTYPE html>
-<html lang="bn">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Livo</title>
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 400px; margin: 80px auto; padding: 20px; background: #f4f4f4; }
-        h2 { text-align: center; color: #333; }
-        input, button { width: 100%; padding: 10px; margin: 8px 0; border-radius: 5px; border: 1px solid #ccc; font-size: 16px; box-sizing: border-box; }
-        button { background: #007bff; color: white; border: none; cursor: pointer; }
-        button:hover { background: #0056b3; }
-        .msg { color: red; text-align: center; }
-        .link { text-align: center; margin-top: 10px; }
-    </style>
-</head>
-<body>
-    <h2>🔐 লগইন করুন</h2>
-    <% if (typeof error !== 'undefined') { %>
-        <p class="msg"><%= error %></p>
-    <% } %>
-    <form action="/login" method="POST">
-        <input type="email" name="email" placeholder="ইমেইল" required>
-        <input type="password" name="password" placeholder="পাসওয়ার্ড" required>
-        <button type="submit">লগইন</button>
-    </form>
-    <div class="link"><a href="/register">নতুন অ্যাকাউন্ট খুলুন</a></div>
-</body>
-</html>
-
+<%- include('partials/head') %>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--darker);">
+  <div style="width:100%;max-width:400px;padding:1rem;">
+    <div class="card">
+      <div class="card-header" style="justify-content:center;font-size:1.2rem;">🏆 Login to LiveSport</div>
+      <div class="card-body">
+        <%- include('partials/flash') %>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-input" placeholder="your@email.com" id="email">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" class="form-input" placeholder="••••••••" id="password">
+        </div>
+        <button onclick="submitLogin()" class="btn btn-primary" style="width:100%;justify-content:center;">Login</button>
+        <p style="text-align:center;margin-top:1rem;color:var(--muted);font-size:.9rem;">
+          Don't have an account? <a href="/register" style="color:var(--primary)">Register</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function submitLogin() {
+  const form = document.createElement('form');
+  form.method = 'POST'; form.action = '/login';
+  [['email','email'],['password','password']].forEach(([n,id]) => {
+    const i = document.createElement('input');
+    i.name = n; i.value = document.getElementById(id).value;
+    form.appendChild(i);
+  });
+  document.body.appendChild(form); form.submit();
+}
+</script>
+</body></html>
