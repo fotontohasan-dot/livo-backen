@@ -84,3 +84,22 @@ const initDB = async () => {
         is_read BOOLEAN DEFAULT false,
         type VARCHAR(50) DEFAULT 'info',
         created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS news (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(300) NOT NULL,
+        content TEXT NOT NULL,
+        image VARCHAR(255),
+        sport VARCHAR(50),
+        author_id INTEGER REFERENCES users(id),
+        views INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    console.log('✅ Database ready');
+  } finally {
+    client.release();
+  }
+};
+
+module.exports = { pool, initDB };
