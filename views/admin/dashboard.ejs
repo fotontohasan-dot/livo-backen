@@ -1,0 +1,85 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<div class="admin-layout">
+  <div class="admin-sidebar">
+    <div style="padding:0 1.5rem 1rem;font-size:.75rem;color:var(--muted);text-transform:uppercase;">Admin Panel</div>
+    <a href="/admin" class="admin-nav-link active">📊 Dashboard</a>
+    <a href="/admin/users" class="admin-nav-link">👥 Users</a>
+    <a href="/admin/matches" class="admin-nav-link">⚽ Matches</a>
+    <a href="/admin/tournaments" class="admin-nav-link">🏆 Tournaments</a>
+    <a href="/admin/news" class="admin-nav-link">📰 News</a>
+    <a href="/" class="admin-nav-link">🏠 Back to Site</a>
+  </div>
+  <div class="admin-content">
+    <%- include('../partials/flash') %>
+    <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:1.5rem;">📊 Dashboard</h1>
+    <div class="grid grid-4" style="margin-bottom:2rem;">
+      <div class="stat-card"><div class="stat-number"><%= stats.total_users %></div><div class="stat-label">Total Users</div></div>
+      <div class="stat-card"><div class="stat-number" style="color:var(--secondary)"><%= stats.total_matches %></div><div class="stat-label">Total Matches</div></div>
+      <div class="stat-card"><div class="stat-number" style="color:var(--green)"><%= stats.total_predictions %></div><div class="stat-label">Predictions</div></div>
+      <div class="stat-card"><div class="stat-number" style="color:var(--gold)"><%= stats.total_coins_in_system %></div><div class="stat-label">Coins in System</div></div>
+    </div>
+
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-header">👥 Recent Users</div>
+        <table class="table">
+          <thead><tr><th>Username</th><th>Email</th><th>Coins</th><th>Joined</th></tr></thead>
+          <tbody>
+            <% recentUsers.forEach(u => { %>
+              <tr>
+                <td><%= u.username %></td>
+                <td style="font-size:.8rem;color:var(--muted)"><%= u.email %></td>
+                <td style="color:var(--gold)"><%= u.coins %></td>
+                <td style="font-size:.8rem;color:var(--muted)"><%= new Date(u.created_at).toLocaleDateString() %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-header">⚽ Recent Matches</div>
+        <table class="table">
+          <thead><tr><th>Match</th><th>Status</th><th>Date</th></tr></thead>
+          <tbody>
+            <% recentMatches.forEach(m => { %>
+              <tr>
+                <td style="font-size:.85rem"><%= m.team_a %> vs <%= m.team_b %></td>
+                <td><span class="status-badge status-<%= m.status %>"><%= m.status %></span></td>
+                <td style="font-size:.8rem;color:var(--muted)"><%= new Date(m.match_date).toLocaleDateString() %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:1.5rem;">
+      <div class="card-header">📢 Broadcast Notification</div>
+      <div class="card-body">
+        <div class="form-group">
+          <label class="form-label">Title</label>
+          <input type="text" class="form-input" id="notifTitle" placeholder="Notification title">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Message</label>
+          <input type="text" class="form-input" id="notifMsg" placeholder="Message to all users">
+        </div>
+        <button onclick="broadcastNotif()" class="btn btn-primary">📢 Send to All Users</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function broadcastNotif() {
+  const form = document.createElement('form');
+  form.method = 'POST'; form.action = '/admin/notify-all';
+  [['title','notifTitle'],['message','notifMsg']].forEach(([n,id]) => {
+    const i = document.createElement('input');
+    i.name = n; i.value = document.getElementById(id).value;
+    form.appendChild(i);
+  });
+  document.body.appendChild(form); form.submit();
+}
+</script>
+</body></html>
