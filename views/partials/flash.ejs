@@ -1,0 +1,6 @@
+<% if(locals.success && success.length > 0) { %>
+  <div class="alert alert-success">✅ <%= success[0] %></div>
+<% } %>
+<% if(locals.error && error.length > 0) { %>
+  <div class="alert alert-error">❌ <%= error[0] %></div>
+<% } %>
