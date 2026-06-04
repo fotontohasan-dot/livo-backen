@@ -1,0 +1,44 @@
+<%- include('partials/head') %>
+<%- include('partials/navbar') %>
+<div class="container page">
+  <div class="layout-main">
+    <div>
+      <div class="card">
+        <% if(article.image) { %>
+          <img src="<%= article.image %>" style="width:100%;max-height:400px;object-fit:cover;" alt="">
+        <% } %>
+        <div class="card-body">
+          <h1 style="font-size:1.6rem;font-weight:800;margin-bottom:.75rem"><%= article.title %></h1>
+          <div style="display:flex;gap:1rem;font-size:.8rem;color:var(--muted);margin-bottom:1.5rem;">
+            <span>📝 <%= article.author %></span>
+            <span>👁️ <%= article.views %> views</span>
+            <span>📅 <%= new Date(article.created_at).toLocaleDateString() %></span>
+            <span>⚽ <%= article.sport %></span>
+          </div>
+          <div style="line-height:1.8;color:var(--text)">
+            <%- article.content.replace(/\n/g,'<br>') %>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-header">📰 Related News</div>
+        <div class="card-body" style="padding:0;">
+          <% if(related.length === 0) { %>
+            <p style="padding:1rem;color:var(--muted);font-size:.9rem;">No related news</p>
+          <% } %>
+          <% related.forEach(r => { %>
+            <a href="/news/<%= r.id %>" style="display:block;padding:.75rem 1rem;border-bottom:1px solid var(--border);text-decoration:none;color:var(--text);">
+              <div style="font-size:.85rem;font-weight:600"><%= r.title %></div>
+              <div style="font-size:.75rem;color:var(--muted);margin-top:3px">
+                <%= new Date(r.created_at).toLocaleDateString() %>
+              </div>
+            </a>
+          <% }) %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>
