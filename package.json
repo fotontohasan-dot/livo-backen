@@ -1,20 +1,22 @@
 {
-  "name": "livo-backend",
+  "name": "livo-backen",
   "version": "1.0.0",
+  "description": "Sports Match Prediction Platform",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js"
+    "start": "node app.js",
+    "dev": "nodemon app.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
-    "dotenv": "^16.4.5",
-    "ejs": "^3.1.10",
-    "express": "^4.19.2",
-    "express-session": "^1.18.0",
-    "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.4.0"
+    "connect-flash": "^0.1.1",
+    "dotenv": "^16.0.3",
+    "ejs": "^3.1.9",
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
+    "pg": "^8.11.0"
   },
-  "engines": {
-    "node": "18.x"
+  "devDependencies": {
+    "nodemon": "^3.0.1"
   }
 }
