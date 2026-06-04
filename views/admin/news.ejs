@@ -1,0 +1,73 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<div class="admin-layout">
+  <div class="admin-sidebar">
+    <div style="padding:0 1.5rem 1rem;font-size:.75rem;color:var(--muted);text-transform:uppercase;">Admin Panel</div>
+    <a href="/admin" class="admin-nav-link">📊 Dashboard</a>
+    <a href="/admin/users" class="admin-nav-link">👥 Users</a>
+    <a href="/admin/matches" class="admin-nav-link">⚽ Matches</a>
+    <a href="/admin/tournaments" class="admin-nav-link">🏆 Tournaments</a>
+    <a href="/admin/news" class="admin-nav-link active">📰 News</a>
+    <a href="/" class="admin-nav-link">🏠 Back to Site</a>
+  </div>
+  <div class="admin-content">
+    <%- include('../partials/flash') %>
+    <div class="layout-main">
+      <div>
+        <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:1.5rem;">📰 News Management</h1>
+        <div class="card">
+          <table class="table">
+            <thead>
+              <tr><th>Title</th><th>Sport</th><th>Author</th><th>Views</th><th>Date</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+              <% news.forEach(n => { %>
+                <tr>
+                  <td style="font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><%= n.title %></td>
+                  <td><%= n.sport %></td>
+                  <td><%= n.author %></td>
+                  <td><%= n.views %></td>
+                  <td style="font-size:.8rem;color:var(--muted)"><%= new Date(n.created_at).toLocaleDateString() %></td>
+                  <td><button onclick="deleteNews(<%= n.id %>)" class="btn btn-danger btn-sm">Delete</button></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <div class="card-header">📝 Publish News</div>
+          <div class="card-body">
+            <div class="form-group"><label class="form-label">Title</label><input type="text" class="form-input" id="nTitle"></div>
+            <div class="form-group"><label class="form-label">Sport</label><select class="form-input" id="nSport"><option>football</option><option>cricket</option><option>basketball</option><option>tennis</option><option>general</option></select></div>
+            <div class="form-group"><label class="form-label">Image URL (optional)</label><input type="text" class="form-input" id="nImage" placeholder="https://..."></div>
+            <div class="form-group"><label class="form-label">Content</label><textarea class="form-input" id="nContent" rows="8" placeholder="Write article content..."></textarea></div>
+            <button onclick="publishNews()" class="btn btn-primary">Publish Article</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function publishNews() {
+  const form = document.createElement('form');
+  form.method = 'POST'; form.action = '/admin/news';
+  [['title','nTitle'],['sport','nSport'],['image','nImage'],['content','nContent']].forEach(([n,id]) => {
+    const el = document.getElementById(id);
+    const i = document.createElement('input');
+    i.name = n; i.value = el.value;
+    form.appendChild(i);
+  });
+  document.body.appendChild(form); form.submit();
+}
+function deleteNews(id) {
+  if(confirm('Delete this article?')) {
+    const form = document.createElement('form');
+    form.method = 'POST'; form.action = `/admin/news/${id}/delete`;
+    document.body.appendChild(form); form.submit();
+  }
+}
+</script>
+</body></html>
