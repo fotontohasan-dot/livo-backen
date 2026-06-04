@@ -1,1 +1,67 @@
+const express = require('express');
+const router = express.Router();
+const bcrypt = require('bcryptjs');
+const { pool } = require('../db');
+const { isAuth } = require('../middleware/auth');
 
+router.get('/', isAuth, async (req, res) => {
+  try {
+    const matches = await pool.query(`SELECT * FROM matches WHERE status='live' OR (status='upcoming' AND match_date > NOW()) ORDER BY match_date LIMIT 6`);
+    const news = await pool.query(`SELECT n.*, u.username as author FROM news n LEFT JOIN users u ON n.author_id=u.id ORDER BY n.created_at DESC LIMIT 4`);
+    const topUsers = await pool.query(`SELECT username, total_points, avatar FROM users WHERE role='user' ORDER BY total_points DESC LIMIT 5`);
+    res.render('index', { matches: matches.rows, news: news.rows, topUsers: topUsers.rows });
+  } catch (err) {
+    console.error(err);
+    res.render('index', { matches: [], news: [], topUsers: [] });
+  }
+});
+
+router.get('/register', (req, res) => res.render('registration'));
+router.post('/register', async (req, res) => {
+  const { username, email, password } = req.body;
+  try {
+    const hashed = await bcrypt.hash(password, 10);
+    const result = await pool.query(
+      `INSERT INTO users (username, email, password) VALUES ($1,$2,$3) RETURNING *`,
+      [username, email, hashed]
+    );
+    const user = result.rows[0];
+    await pool.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,500,'bonus','Welcome bonus')`, [user.id]);
+    await pool.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'Welcome!','You got 500 coins as welcome bonus','success')`, [user.id]);
+    req.session.user = user;
+    req.flash('success', 'Registration successful! You got 500 welcome coins');
+    res.redirect('/');
+  } catch (err) {
+    req.flash('error', 'Username or email already exists');
+    res.redirect('/register');
+  }
+});
+
+router.get('/login', (req, res) => res.render('login'));
+router.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    const result = await pool.query(`SELECT * FROM users WHERE email=$1`, [email]);
+    const user = result.rows[0];
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      req.flash('error', 'Invalid email or password');
+      return res.redirect('/login');
+    }
+    if (user.is_banned) {
+      req.flash('error', 'Your account has been banned');
+      return res.redirect('/login');
+    }
+    req.session.user = user;
+    res.redirect('/');
+  } catch (err) {
+    req.flash('error', 'Login failed');
+    res.redirect('/login');
+  }
+});
+
+router.get('/logout', (req, res) => {
+  req.session.destroy();
+  res.redirect('/login');
+});
+
+module.exports = router;
