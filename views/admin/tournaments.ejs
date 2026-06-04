@@ -1,0 +1,46 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<div class="admin-layout">
+  <div class="admin-sidebar">
+    <div style="padding:0 1.5rem 1rem;font-size:.75rem;color:var(--muted);text-transform:uppercase;">Admin Panel</div>
+    <a href="/admin" class="admin-nav-link">📊 Dashboard</a>
+    <a href="/admin/users" class="admin-nav-link">👥 Users</a>
+    <a href="/admin/matches" class="admin-nav-link">⚽ Matches</a>
+    <a href="/admin/tournaments" class="admin-nav-link active">🏆 Tournaments</a>
+    <a href="/admin/news" class="admin-nav-link">📰 News</a>
+    <a href="/" class="admin-nav-link">🏠 Back to Site</a>
+  </div>
+  <div class="admin-content">
+    <%- include('../partials/flash') %>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+      <h1 style="font-size:1.5rem;font-weight:800;">🏆 Tournament Management</h1>
+      <button onclick="document.getElementById('addModal').style.display='flex'" class="btn btn-primary">+ Create Tournament</button>
+    </div>
+    <div class="card" style="margin-bottom:1.5rem;">
+      <table class="table">
+        <thead>
+          <tr><th>Name</th><th>Sport</th><th>Entry</th><th>Prize</th><th>Status</th><th>Dates</th></tr>
+        </thead>
+        <tbody>
+          <% tournaments.forEach(t => { %>
+            <tr>
+              <td style="font-weight:600"><%= t.name %></td>
+              <td><%= t.sport %></td>
+              <td style="color:var(--gold)"><%= t.entry_fee || 'Free' %></td>
+              <td style="color:var(--green)"><%= t.prize_pool %></td>
+              <td><span class="status-badge status-<%= t.status %>"><%= t.status %></span></td>
+              <td style="font-size:.8rem;color:var(--muted)">
+                <%= new Date(t.start_date).toLocaleDateString() %> - <%= new Date(t.end_date).toLocaleDateString() %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="addModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#00000080;z-index:999;align-items:center;justify-content:center;">
+      <div class="card" style="width:500px;max-width:95vw;max-height:90vh;overflow-y:auto;">
+        <div class="card-header">
+          + Create Tournament
+          <button onclick="document.getElementById('addModal').style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.2rem;">✕</button>
+        
