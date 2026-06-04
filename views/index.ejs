@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FA999 - Online Casino & Betting</title>
+    <title>Livo - Live Casino</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
             font-family: 'Segoe UI', sans-serif; 
-            background: #0f0f1e; 
+            background: #0b0b0c; 
             color: white; 
         }
         .header {
-            background: linear-gradient(90deg, #ff2d55, #ff8c00);
+            background: linear-gradient(90deg, #ff2d55, #c8102e);
             padding: 15px;
             display: flex;
             justify-content: space-between;
@@ -22,36 +22,35 @@
             width: 100%;
             z-index: 100;
         }
-        .logo { font-size: 28px; font-weight: bold; }
-        .logo span { color: #ffd700; }
-        
-        .banner {
-            margin-top: 60px;
-            padding: 15px;
-            background: linear-gradient(135deg, #1a1a2e, #16213e);
+        .logo { 
+            font-size: 28px; 
+            font-weight: bold; 
+            color: white;
         }
+        
         .game-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
             gap: 12px;
             padding: 15px;
+            margin-top: 70px;
         }
         .game-card {
             background: #1a1a2e;
             border-radius: 12px;
             overflow: hidden;
             text-align: center;
-            padding-bottom: 8px;
         }
         .game-card img {
             width: 100%;
-            height: 110px;
+            height: 120px;
             object-fit: cover;
         }
         .game-name {
             font-size: 14px;
-            margin: 8px 0 4px;
+            padding: 10px 0;
             color: #ffd700;
+            font-weight: bold;
         }
         .bottom-nav {
             position: fixed;
@@ -60,7 +59,7 @@
             background: #111827;
             display: flex;
             justify-content: space-around;
-            padding: 8px 0;
+            padding: 10px 0;
             border-top: 1px solid #333;
         }
         .nav-item {
@@ -68,82 +67,53 @@
             color: #aaa;
             font-size: 12px;
         }
-        .nav-item.active {
-            color: #ff2d55;
+        .nav-item.active { 
+            color: #ff2d55; 
         }
-        .nav-icon {
-            font-size: 24px;
-            display: block;
-            margin-bottom: 4px;
-        }
-        .hot-tag {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            background: #ff2d55;
-            font-size: 10px;
-            padding: 2px 8px;
-            border-radius: 10px;
+        .nav-icon { 
+            font-size: 24px; 
+            display: block; 
+            margin-bottom: 3px; 
         }
     </style>
 </head>
 <body>
 
-    <!-- Header -->
     <div class="header">
-        <div class="logo">FA<span>999</span></div>
-        <div style="display: flex; gap: 10px;">
-            <button style="padding: 8px 16px; background: white; color: black; border: none; border-radius: 6px; font-weight: bold;">লগইন</button>
-            <button style="padding: 8px 16px; background: #ff2d55; border: none; border-radius: 6px; font-weight: bold;">নিবন্ধন</button>
+        <div class="logo">LIVO</div>
+        <div>
+            <button style="padding:8px 16px; background:white; color:black; border:none; border-radius:6px; margin-right:8px;">লগইন</button>
+            <button style="padding:8px 16px; background:#ff2d55; border:none; border-radius:6px;">নিবন্ধন</button>
         </div>
     </div>
 
-    <!-- Banner -->
-    <div class="banner">
-        <img src="https://via.placeholder.com/600x180/16213e/ffffff?text=Welcome+to+FA999" style="width:100%; border-radius:12px;">
-    </div>
-
-    <!-- Games Section -->
-    <div style="padding: 15px 10px 80px;">
-        <h2 style="margin: 15px 10px; color: #ffd700;">🎰 জনপ্রিয় গেমস</h2>
-        
-        <div class="game-grid">
-            <div class="game-card">
-                <div style="position:relative;">
-                    <img src="https://via.placeholder.com/200x110/00cc66/ffffff?text=JL" alt="JL">
-                    <div class="hot-tag">HOT</div>
-                </div>
-                <div class="game-name">Super Ace</div>
-            </div>
-            
-            <div class="game-card">
-                <img src="https://via.placeholder.com/200x110/ff6600/ffffff?text=PG" alt="PG">
-                <div class="game-name">Pocket Games</div>
-            </div>
-            
-            <div class="game-card">
-                <img src="https://via.placeholder.com/200x110/9933ff/ffffff?text=SPRIBE" alt="SPRIBE">
-                <div class="game-name">Aviator</div>
-            </div>
-            
-            <div class="game-card">
-                <img src="https://via.placeholder.com/200x110/ff3366/ffffff?text=JL" alt="JL">
-                <div class="game-name">Fortune Gems</div>
-            </div>
-            
-            <div class="game-card">
-                <img src="https://via.placeholder.com/200x110/00aaff/ffffff?text=FC" alt="FC">
-                <div class="game-name">FC Slot</div>
-            </div>
-            
-            <div class="game-card">
-                <img src="https://via.placeholder.com/200x110/ff9900/ffffff?text=Crash" alt="Crash">
-                <div class="game-name">Crash</div>
-            </div>
+    <div class="game-grid">
+        <div class="game-card">
+            <img src="https://via.placeholder.com/200x120/00cc66/fff?text=Teen+Patti" alt="Teen Patti">
+            <div class="game-name">Teen Patti</div>
+        </div>
+        <div class="game-card">
+            <img src="https://via.placeholder.com/200x120/ff6600/fff?text=Andar+Bahar" alt="Andar Bahar">
+            <div class="game-name">Andar Bahar</div>
+        </div>
+        <div class="game-card">
+            <img src="https://via.placeholder.com/200x120/9933ff/fff?text=Dragon+Tiger" alt="Dragon Tiger">
+            <div class="game-name">Dragon Tiger</div>
+        </div>
+        <div class="game-card">
+            <img src="https://via.placeholder.com/200x120/ff3366/fff?text=Crash" alt="Crash">
+            <div class="game-name">Crash</div>
+        </div>
+        <div class="game-card">
+            <img src="https://via.placeholder.com/200x120/00aaff/fff?text=Roulette" alt="Roulette">
+            <div class="game-name">Roulette</div>
+        </div>
+        <div class="game-card">
+            <img src="https://via.placeholder.com/200x120/ff9900/fff?text=Slots" alt="Slots">
+            <div class="game-name">Lucky Spin</div>
         </div>
     </div>
 
-    <!-- Bottom Navigation -->
     <div class="bottom-nav">
         <div class="nav-item active"><span class="nav-icon">🏠</span>হোম</div>
         <div class="nav-item"><span class="nav-icon">👥</span>আমন্ত্রণ</div>
