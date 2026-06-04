@@ -19,13 +19,8 @@
             z-index: 100;
         }
         .logo { font-size: 26px; font-weight: bold; color: #ffd700; }
-
         .category { margin-top: 70px; padding: 15px; }
-        h2 { 
-            color: #ffd700; 
-            margin-bottom: 12px; 
-            font-size: 19px;
-        }
+        h2 { color: #ffd700; margin-bottom: 12px; font-size: 19px; }
         .game-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
@@ -37,17 +32,8 @@
             overflow: hidden;
             text-align: center;
         }
-        .game-card img { 
-            width: 100%; 
-            height: 115px; 
-            object-fit: cover; 
-        }
-        .game-name { 
-            font-size: 13px; 
-            padding: 10px 5px; 
-            color: #ffccff; 
-            font-weight: bold;
-        }
+        .game-card img { width: 100%; height: 115px; object-fit: cover; }
+        .game-name { font-size: 13px; padding: 10px 5px; color: #ffccff; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -77,22 +63,45 @@
     </div>
 
     <script>
+        let imgIndex = 10;
+
         function addGames(id, list) {
             const container = document.getElementById(id);
             list.forEach(name => {
                 const card = document.createElement('div');
                 card.className = 'game-card';
                 card.innerHTML = `
-                    <img src="https://picsum.photos/id/${Math.floor(Math.random()*100)+10}/300/180" alt="${name}">
+                    <img src="https://picsum.photos/id/${imgIndex}/300/180" alt="${name}">
                     <div class="game-name">${name}</div>
                 `;
+                imgIndex++;
                 container.appendChild(card);
             });
         }
 
-        addGames('allGames', ["Teen Patti", "Super Ace", "Crash", "Aviator", "Andar Bahar", "Dragon Tiger", "Roulette", "Blackjack", "Fortune Gems", "Boxing King", "Lucky Spin", "Color Prediction" "Super Ace", "Fortune Gems", "Boxing King", "Golden Empire", "Sweet Bonanza", "Gates of Olympus", "Starlight Princess", "Fruit Party" "Blackjack Live", "Baccarat Live", "Roulette Live", "Dragon Tiger Live", "Crazy Time"]);
-        
-        addGames('tableGames', );
+        addGames('allGames', [
+            "Teen Patti", "Super Ace", "Crash", "Aviator", "Andar Bahar",
+            "Dragon Tiger", "Roulette", "Blackjack", "Fortune Gems", "Boxing King",
+            "Lucky Spin", "Color Prediction", "Golden Empire", "Sweet Bonanza",
+            "Gates of Olympus", "Starlight Princess", "Fruit Party",
+            "Blackjack Live", "Baccarat Live", "Roulette Live",
+            "Dragon Tiger Live", "Crazy Time"
+        ]);
+
+        addGames('slots', [
+            "Fortune Gems", "Golden Empire", "Sweet Bonanza",
+            "Gates of Olympus", "Starlight Princess", "Fruit Party"
+        ]);
+
+        addGames('liveCasino', [
+            "Blackjack Live", "Baccarat Live", "Roulette Live",
+            "Dragon Tiger Live", "Crazy Time"
+        ]);
+
+        addGames('tableGames', [
+            "Blackjack", "Baccarat", "Roulette",
+            "Teen Patti", "Andar Bahar", "Dragon Tiger"
+        ]);
     </script>
 
 </body>
