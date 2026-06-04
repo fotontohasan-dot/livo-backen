@@ -1,0 +1,117 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<div class="admin-layout">
+  <div class="admin-sidebar">
+    <div style="padding:0 1.5rem 1rem;font-size:.75rem;color:var(--muted);text-transform:uppercase;">Admin Panel</div>
+    <a href="/admin" class="admin-nav-link">📊 Dashboard</a>
+    <a href="/admin/users" class="admin-nav-link">👥 Users</a>
+    <a href="/admin/matches" class="admin-nav-link active">⚽ Matches</a>
+    <a href="/admin/tournaments" class="admin-nav-link">🏆 Tournaments</a>
+    <a href="/admin/news" class="admin-nav-link">📰 News</a>
+    <a href="/" class="admin-nav-link">🏠 Back to Site</a>
+  </div>
+  <div class="admin-content">
+    <%- include('../partials/flash') %>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+      <h1 style="font-size:1.5rem;font-weight:800;">⚽ Match Management</h1>
+      <button onclick="document.getElementById('addModal').style.display='flex'" class="btn btn-primary">+ Add Match</button>
+    </div>
+    <div class="card">
+      <table class="table">
+        <thead>
+          <tr><th>Match</th><th>Sport</th><th>Date</th><th>Status</th><th>Result</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+          <% matches.forEach(m => { %>
+            <tr>
+              <td style="font-weight:600"><%= m.team_a %> vs <%= m.team_b %></td>
+              <td><%= m.sport %></td>
+              <td style="font-size:.8rem;color:var(--muted)"><%= new Date(m.match_date).toLocaleString() %></td>
+              <td><span class="status-badge status-<%= m.status %>"><%= m.status %></span></td>
+              <td><%= m.result || '-' %></td>
+              <td>
+                <% if(m.status !== 'completed') { %>
+                  <button onclick="setResult(<%= m.id %>, '<%= m.team_a %>', '<%= m.team_b %>')" class="btn btn-sm btn-primary">Set Result</button>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="addModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#00000080;z-index:999;align-items:center;justify-content:center;">
+      <div class="card" style="width:480px;max-width:95vw;max-height:90vh;overflow-y:auto;">
+        <div class="card-header">
+          + Add Match
+          <button onclick="document.getElementById('addModal').style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.2rem;">✕</button>
+        </div>
+        <div class="card-body">
+          <div class="form-group"><label class="form-label">Title</label><input type="text" class="form-input" id="mTitle" placeholder="Match title"></div>
+          <div class="form-group"><label class="form-label">Sport</label><select class="form-input" id="mSport"><option>football</option><option>cricket</option><option>basketball</option><option>tennis</option></select></div>
+          <div class="form-group"><label class="form-label">Team A</label><input type="text" class="form-input" id="mTeamA"></div>
+          <div class="form-group"><label class="form-label">Team B</label><input type="text" class="form-input" id="mTeamB"></div>
+          <div class="form-group"><label class="form-label">Match Date & Time</label><input type="datetime-local" class="form-input" id="mDate"></div>
+          <div class="form-group"><label class="form-label">Stream URL (optional)</label><input type="text" class="form-input" id="mStream" placeholder="https://..."></div>
+          <button onclick="submitMatch()" class="btn btn-primary">Create Match</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="resultModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#00000080;z-index:999;align-items:center;justify-content:center;">
+      <div class="card" style="width:380px;">
+        <div class="card-header">🏆 Set Result</div>
+        <div class="card-body">
+          <div class="form-group">
+            <label class="form-label">Winner</label>
+            <select class="form-input" id="resultWinner">
+              <option id="optA"></option>
+              <option id="optB"></option>
+              <option value="draw">Draw</option>
+            </select>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+            <div class="form-group"><label class="form-label">Score A</label><input type="number" class="form-input" id="scoreA" value="0"></div>
+            <div class="form-group"><label class="form-label">Score B</label><input type="number" class="form-input" id="scoreB" value="0"></div>
+          </div>
+          <div style="display:flex;gap:.75rem;">
+            <button onclick="submitResult()" class="btn btn-primary">Save Result</button>
+            <button onclick="document.getElementById('resultModal').style.display='none'" class="btn btn-outline">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+let currentMatchId;
+function submitMatch() {
+  const form = document.createElement('form');
+  form.method = 'POST'; form.action = '/admin/matches';
+  [['title','mTitle'],['sport','mSport'],['team_a','mTeamA'],['team_b','mTeamB'],['match_date','mDate'],['stream_url','mStream']].forEach(([n,id]) => {
+    const i = document.createElement('input');
+    i.name = n; i.value = document.getElementById(id).value;
+    form.appendChild(i);
+  });
+  document.body.appendChild(form); form.submit();
+}
+function setResult(id, teamA, teamB) {
+  currentMatchId = id;
+  document.getElementById('optA').value = teamA;
+  document.getElementById('optA').textContent = teamA;
+  document.getElementById('optB').value = teamB;
+  document.getElementById('optB').textContent = teamB;
+  document.getElementById('resultModal').style.display = 'flex';
+}
+function submitResult() {
+  const form = document.createElement('form');
+  form.method = 'POST'; form.action = `/admin/matches/${currentMatchId}/result`;
+  [['result','resultWinner'],['score_a','scoreA'],['score_b','scoreB']].forEach(([n,id]) => {
+    const i = document.createElement('input');
+    i.name = n; i.value = document.getElementById(id).value;
+    form.appendChild(i);
+  });
+  document.body.appendChild(form); form.submit();
+}
+</script>
+</body></html>
