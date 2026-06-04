@@ -1,0 +1,119 @@
+<%- include('partials/head') %>
+<%- include('partials/navbar') %>
+<div class="container page">
+  <%- include('partials/flash') %>
+  <div class="layout-main">
+    <div>
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div class="card-header">
+          <span>⚽ <%= match.sport %></span>
+          <span class="status-badge status-<%= match.status %>"><%= match.status.toUpperCase() %></span>
+        </div>
+        <div class="card-body">
+          <div class="match-teams" style="margin:1.5rem 0;">
+            <div class="team"><div class="team-name" style="font-size:1.5rem"><%= match.team_a %></div></div>
+            <div class="vs" style="font-size:2rem;">
+              <% if(match.status === 'completed') { %>
+                <span style="color:var(--primary)"><%= match.score_a %> - <%= match.score_b %></span>
+              <% } else { %>VS<% } %>
+            </div>
+            <div class="team"><div class="team-name" style="font-size:1.5rem"><%= match.team_b %></div></div>
+          </div>
+          <div class="match-meta" style="justify-content:center;">
+            <span>📅 <%= new Date(match.match_date).toLocaleString() %></span>
+          </div>
+          <% if(match.result) { %>
+            <div style="text-align:center;margin-top:1rem;">
+              <span style="background:var(--primary)20;color:var(--primary);padding:6px 16px;border-radius:20px;font-weight:600;">🏆 Winner: <%= match.result %></span>
+            </div>
+          <% } %>
+        </div>
+      </div>
+
+      <% if(match.stream_url && match.status === 'live') { %>
+        <div class="card" style="margin-bottom:1.5rem;">
+          <div class="card-header">📺 Live Stream</div>
+          <div class="card-body">
+            <iframe src="<%= match.stream_url %>" width="100%" height="400" frameborder="0" allowfullscreen style="border-radius:8px;"></iframe>
+          </div>
+        </div>
+      <% } %>
+
+      <% if(match.status === 'upcoming' && locals.user) { %>
+        <div class="card" style="margin-bottom:1.5rem;">
+          <div class="card-header">🎯 Make Your Prediction</div>
+          <div class="card-body">
+            <% if(userPrediction) { %>
+              <div class="alert alert-success">✅ You predicted: <strong><%= userPrediction.predicted_winner %></strong> with <strong><%= userPrediction.coins_bet %></strong> coins</div>
+            <% } else { %>
+              <div class="form-group">
+                <label class="form-label">Who will win?</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+                  <button onclick="selectTeam('<%= match.team_a %>')" id="btn-a" class="btn btn-outline" style="padding:1.5rem;">
+                    <%= match.team_a %>
+                  </button>
+                  <button onclick="selectTeam('<%= match.team_b %>')" id="btn-b" class="btn btn-outline" style="padding:1.5rem;">
+                    <%= match.team_b %>
+                  </button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Coins to bet (You have: <%= user.coins %> 🪙)</label>
+                <input type="number" class="form-input" id="coins-input" min="10" max="<%= user.coins %>" value="50">
+              </div>
+              <button onclick="submitPrediction()" class="btn btn-primary" style="width:100%;justify-content:center;">Place Prediction 🎯</button>
+            <% } %>
+          </div>
+        </div>
+      <% } %>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="card-header">📊 Recent Predictions</div>
+        <div class="card-body" style="padding:0;">
+          <% if(predictions.length === 0) { %>
+            <p style="padding:1rem;color:var(--muted);font-size:.9rem;">No predictions yet</p>
+          <% } else { %>
+            <% predictions.forEach(p => { %>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:.75rem 1rem;border-bottom:1px solid var(--border);">
+                <div>
+                  <div style="font-size:.85rem;font-weight:600"><%= p.username %></div>
+                  <div style="font-size:.75rem;color:var(--muted)">→ <%= p.predicted_winner %></div>
+                </div>
+                <span style="color:var(--gold);font-size:.85rem">🪙 <%= p.coins_bet %></span>
+              </div>
+            <% }) %>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+let selectedTeam = '';
+function selectTeam(team) {
+  selectedTeam = team;
+  document.getElementById('btn-a').className = 'btn btn-outline';
+  document.getElementById('btn-b').className = 'btn btn-outline';
+  if(team === '<%= match.team_a %>') {
+    document.getElementById('btn-a').className = 'btn btn-primary';
+  } else {
+    document.getElementById('btn-b').className = 'btn btn-primary';
+  }
+}
+function submitPrediction() {
+  if(!selectedTeam) { alert('Please select a team!'); return; }
+  const coins = document.getElementById('coins-input').value;
+  if(!coins || coins < 10) { alert('Minimum 10 coins!'); return; }
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = '/matches/<%= match.id %>/predict';
+  [['predicted_winner', selectedTeam], ['coins_bet', coins]].forEach(([n,v]) => {
+    const i = document.createElement('input');
+    i.name = n; i.value = v; form.appendChild(i);
+  });
+  document.body.appendChild(form); form.submit();
+}
+</script>
+</body></html>
