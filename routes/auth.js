@@ -4,16 +4,8 @@ const bcrypt = require('bcryptjs');
 const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
 
-router.get('/', isAuth, async (req, res) => {
-  try {
-    const matches = await pool.query(`SELECT * FROM matches WHERE status='live' OR (status='upcoming' AND match_date > NOW()) ORDER BY match_date LIMIT 6`);
-    const news = await pool.query(`SELECT n.*, u.username as author FROM news n LEFT JOIN users u ON n.author_id=u.id ORDER BY n.created_at DESC LIMIT 4`);
-    const topUsers = await pool.query(`SELECT username, total_points, avatar FROM users WHERE role='user' ORDER BY total_points DESC LIMIT 5`);
-    res.render('index', { matches: matches.rows, news: news.rows, topUsers: topUsers.rows });
-  } catch (err) {
-    console.error(err);
-    res.render('index', { matches: [], news: [], topUsers: [] });
-  }
+router.get('/', async (req, res) => {
+  res.render('index');
 });
 
 router.get('/register', (req, res) => res.render('registration'));
