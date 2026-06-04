@@ -1,0 +1,35 @@
+<%- include('partials/head') %>
+<%- include('partials/navbar') %>
+<div class="container page">
+  <h1 style="font-size:1.8rem;font-weight:800;margin-bottom:1.5rem;">🏆 Tournaments</h1>
+  <div class="grid grid-3">
+    <% if(tournaments.length === 0) { %>
+      <div style="color:var(--muted);text-align:center;grid-column:1/-1;padding:3rem">No tournaments available</div>
+    <% } else { %>
+      <% tournaments.forEach(t => { %>
+        <div class="card">
+          <div class="card-header">
+            <%= t.name %>
+            <span class="status-badge status-<%= t.status %>"><%= t.status %></span>
+          </div>
+          <div class="card-body">
+            <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem;">
+              <span class="prize-badge">🏆 Prize: <%= t.prize_pool %> coins</span>
+              <span style="font-size:.8rem;color:var(--muted);background:var(--card2);padding:3px 10px;border-radius:20px">⚽ <%= t.sport %></span>
+            </div>
+            <p style="font-size:.85rem;color:var(--muted);margin-bottom:1rem">
+              <%= t.description || 'Join this tournament and compete!' %>
+            </p>
+            <div style="font-size:.8rem;color:var(--muted);margin-bottom:1rem;">
+              <div>👥 <%= t.participant_count %> / <%= t.max_participants %> participants</div>
+              <div>🎟️ Entry: <%= t.entry_fee > 0 ? t.entry_fee + ' coins' : 'Free' %></div>
+              <div>📅 Starts: <%= new Date(t.start_date).toLocaleDateString() %></div>
+            </div>
+            <a href="/tournaments/<%= t.id %>" class="btn btn-primary btn-sm" style="width:100%;justify-content:center;">View Details</a>
+          </div>
+        </div>
+      <% }) %>
+    <% } %>
+  </div>
+</div>
+</body></html>
