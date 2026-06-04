@@ -1,0 +1,42 @@
+<%- include('partials/head') %>
+<%- include('partials/navbar') %>
+<div class="container page">
+  <h1 style="font-size:1.8rem;font-weight:800;margin-bottom:1.5rem;">🏆 Leaderboard</h1>
+  <div class="card">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>Player</th>
+          <th>Points</th>
+          <th>Wins</th>
+          <th>Total Bets</th>
+          <th>Coins</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% users.forEach((u, i) => { %>
+          <tr>
+            <td>
+              <span class="rank-<%= i+1 %>" style="font-weight:700;font-size:1.1rem">#<%= i+1 %></span>
+            </td>
+            <td style="display:flex;align-items:center;gap:.75rem;">
+              <div class="avatar"><%= u.username[0].toUpperCase() %></div>
+              <div>
+                <div style="font-weight:600"><%= u.username %></div>
+                <% if(i === 0) { %>
+                  <div style="font-size:.7rem;color:var(--gold)">👑 Champion</div>
+                <% } %>
+              </div>
+            </td>
+            <td style="color:var(--primary);font-weight:700"><%= u.total_points %></td>
+            <td style="color:var(--green)">✅ <%= u.wins %></td>
+            <td style="color:var(--muted)"><%= u.total_bets %></td>
+            <td style="color:var(--gold)">🪙 <%= u.coins %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+</body></html>
