@@ -1,0 +1,29 @@
+<%- include('partials/head') %>
+<%- include('partials/navbar') %>
+<div class="container page">
+  <h1 style="font-size:1.8rem;font-weight:800;margin-bottom:1.5rem;">🔔 Notifications</h1>
+  <div class="card">
+    <% if(notifications.length === 0) { %>
+      <div style="text-align:center;padding:3rem;color:var(--muted);">
+        <div style="font-size:3rem;margin-bottom:1rem;">🔔</div>
+        <p>No notifications yet</p>
+      </div>
+    <% } else { %>
+      <% notifications.forEach(n => { %>
+        <div style="display:flex;gap:1rem;align-items:flex-start;padding:1rem;border-bottom:1px solid var(--border);<%= !n.is_read ? 'background:var(--card2);' : '' %>">
+          <div style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.1rem;background:<%= n.type==='success'?'#10b98120':'#3b82f620' %>">
+            <%= n.type==='success'?'✅':n.type==='warning'?'⚠️':'ℹ️' %>
+          </div>
+          <div style="flex:1;">
+            <div style="font-weight:600;font-size:.9rem"><%= n.title %></div>
+            <div style="font-size:.85rem;color:var(--muted);margin-top:2px"><%= n.message %></div>
+            <div style="font-size:.75rem;color:var(--muted);margin-top:4px">
+              <%= new Date(n.created_at).toLocaleString() %>
+            </div>
+          </div>
+        </div>
+      <% }) %>
+    <% } %>
+  </div>
+</div>
+</body></html>
