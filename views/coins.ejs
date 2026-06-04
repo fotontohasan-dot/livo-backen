@@ -1,0 +1,55 @@
+<%- include('partials/head') %>
+<%- include('partials/navbar') %>
+<div class="container page">
+  <%- include('partials/flash') %>
+  <div class="layout-main">
+    <div>
+      <div class="card">
+        <div class="card-header">💰 Transaction History</div>
+        <table class="table">
+          <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Amount</th></tr></thead>
+          <tbody>
+            <% if(transactions.length === 0) { %>
+              <tr><td colspan="4" style="text-align:center;color:var(--muted)">No transactions yet</td></tr>
+            <% } %>
+            <% transactions.forEach(t => { %>
+              <tr>
+                <td style="font-size:.8rem;color:var(--muted)"><%= new Date(t.created_at).toLocaleDateString() %></td>
+                <td><span style="font-size:.75rem;background:var(--card2);padding:3px 8px;border-radius:20px"><%= t.type %></span></td>
+                <td style="font-size:.85rem"><%= t.description %></td>
+                <td class="<%= t.amount > 0 ? 'tx-positive' : 'tx-negative' %>" style="font-weight:700">
+                  <%= t.amount > 0 ? '+' : '' %><%= t.amount %> 🪙
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div>
+      <div class="stat-card" style="margin-bottom:1.5rem;">
+        <div style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem;">💰 Your Balance</div>
+        <div class="stat-number"><%= coins %></div>
+        <div class="stat-label">coins</div>
+      </div>
+      <div class="card">
+        <div class="card-body" style="text-align:center;">
+          <div style="font-size:3rem;margin-bottom:.5rem;">🎁</div>
+          <h3 style="margin-bottom:.5rem;">Daily Bonus</h3>
+          <p style="color:var(--muted);font-size:.85rem;margin-bottom:1rem;">Claim 100 free coins every day!</p>
+          <button onclick="claimBonus()" class="btn btn-gold" style="width:100%;justify-content:center;">Claim +100 Coins</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function claimBonus() {
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = '/coins/daily-bonus';
+  document.body.appendChild(form);
+  form.submit();
+}
+</script>
+</body></html>
