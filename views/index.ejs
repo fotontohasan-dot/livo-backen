@@ -19,15 +19,21 @@
     }
     .category-tabs::-webkit-scrollbar { display: none; }
     .tab {
-        padding: 8px 18px;
+        padding: 10px 22px;
         background: #1f2937;
-        border-radius: 20px;
+        border-radius: 25px;
         white-space: nowrap;
         color: #9ca3af;
         text-decoration: none;
-        font-size: 14px;
-        border: 1px solid transparent;
-        transition: 0.3s;
+        font-size: 15px;
+        font-weight: 500;
+        border: 1px solid #374151;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+    }
+    .tab:hover {
+        background: #374151;
+        color: #fff;
     }
     .tab.active {
         background: linear-gradient(90deg, #6b00ff, #ff00aa);
@@ -48,21 +54,37 @@
         .game-grid { grid-template-columns: repeat(4, 1fr); }
     }
     .game-card {
-        background: #1a1433;
-        border-radius: 12px;
+        background: linear-gradient(145deg, #1a1433, #241b45);
+        border-radius: 15px;
         overflow: hidden;
         position: relative;
-        border: 1px solid #2a2255;
+        border: 1px solid #3b2d7d;
         display: flex;
         flex-direction: column;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .game-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+        border-color: #6b00ff;
     }
     .game-img {
         aspect-ratio: 16/10;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 48px;
-        background: #241b45;
+        font-size: 54px;
+        background: rgba(255,255,255,0.05);
+        position: relative;
+    }
+    .game-img::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 40%;
+        background: linear-gradient(to top, rgba(26,20,51,0.8), transparent);
     }
     .game-info {
         padding: 10px;
@@ -96,13 +118,15 @@
         background: linear-gradient(45deg, #3b006e, #7e22ce);
         border-radius: 15px;
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
         color: #fff;
-        font-size: 20px;
+        font-size: 24px;
         font-weight: bold;
         text-align: center;
         padding: 20px;
+        gap: 8px;
     }
 </style>
 
@@ -113,10 +137,10 @@
 
 <div class="category-tabs" id="tabs">
     <div class="tab active" data-filter="all">All</div>
-    <div class="tab" data-filter="pvp">PVP</div>
     <div class="tab" data-filter="slots">Slots</div>
+    <div class="tab" data-filter="java">Java</div>
     <div class="tab" data-filter="live">Live</div>
-    <div class="tab" data-filter="table">Table</div>
+    <div class="tab" data-filter="sports">Sports</div>
 </div>
 
 <div class="container">
@@ -126,24 +150,22 @@
 
 <script>
     const games = [
-        {name: "Teen Patti", emoji: "🃏", cat: "pvp"},
         {name: "Super Ace", emoji: "🂡", cat: "slots"},
-        {name: "Crash", emoji: "🚀", cat: "pvp"},
-        {name: "Aviator", emoji: "✈️", cat: "pvp"},
-        {name: "Andar Bahar", emoji: "🎲", cat: "table"},
-        {name: "Dragon Tiger", emoji: "🐉", cat: "table"},
-        {name: "Roulette", emoji: "🎡", cat: "live"},
-        {name: "Blackjack", emoji: "♠️", cat: "table"},
         {name: "Fortune Gems", emoji: "💎", cat: "slots"},
         {name: "Boxing King", emoji: "🥊", cat: "slots"},
         {name: "Golden Empire", emoji: "👑", cat: "slots"},
+        {name: "Doodle Jump", emoji: "🦎", cat: "java"},
+        {name: "Diamond Rush", emoji: "💎", cat: "java"},
+        {name: "Bounce Tales", emoji: "🔴", cat: "java"},
+        {name: "Tower Bloxx", emoji: "🏗️", cat: "java"},
+        {name: "Roulette", emoji: "🎡", cat: "live"},
         {name: "Crazy Time", emoji: "🎪", cat: "live"},
         {name: "Mega Ball", emoji: "🎱", cat: "live"},
-        {name: "7 Up Down", emoji: "🎰", cat: "table"},
-        {name: "Mines", emoji: "💣", cat: "pvp"},
-        {name: "Plinko", emoji: "🎾", cat: "pvp"},
-        {name: "Baccarat", emoji: "🎴", cat: "table"},
-        {name: "Color Prediction", emoji: "🌈", cat: "pvp"}
+        {name: "Baccarat", emoji: "🎴", cat: "live"},
+        {name: "Cricket Live", emoji: "🏏", cat: "sports"},
+        {name: "Football Match", emoji: "⚽", cat: "sports"},
+        {name: "Tennis Open", emoji: "🎾", cat: "sports"},
+        {name: "Horse Racing", emoji: "🏇", cat: "sports"}
     ];
 
     const container = document.getElementById('gameContainer');
