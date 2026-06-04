@@ -1,0 +1,95 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<div class="admin-layout">
+  <div class="admin-sidebar">
+    <div style="padding:0 1.5rem 1rem;font-size:.75rem;color:var(--muted);text-transform:uppercase;">Admin Panel</div>
+    <a href="/admin" class="admin-nav-link">📊 Dashboard</a>
+    <a href="/admin/users" class="admin-nav-link active">👥 Users</a>
+    <a href="/admin/matches" class="admin-nav-link">⚽ Matches</a>
+    <a href="/admin/tournaments" class="admin-nav-link">🏆 Tournaments</a>
+    <a href="/admin/news" class="admin-nav-link">📰 News</a>
+    <a href="/" class="admin-nav-link">🏠 Back to Site</a>
+  </div>
+  <div class="admin-content">
+    <%- include('../partials/flash') %>
+    <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:1.5rem;">👥 User Management</h1>
+    <div class="card">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Email</th>
+            <th>Coins</th>
+            <th>Points</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% users.forEach(u => { %>
+            <tr>
+              <td style="font-weight:600"><%= u.username %></td>
+              <td style="font-size:.8rem;color:var(--muted)"><%= u.email %></td>
+              <td style="color:var(--gold)"><%= u.coins %></td>
+              <td style="color:var(--primary)"><%= u.total_points %></td>
+              <td>
+                <span style="color:<%= u.is_banned ? 'var(--red)' : 'var(--green)' %>;font-size:.85rem">
+                  <%= u.is_banned ? '🚫 Banned' : '✅ Active' %>
+                </span>
+              </td>
+              <td style="display:flex;gap:.5rem;flex-wrap:wrap;">
+                <button onclick="banUser(<%= u.id %>)" class="btn btn-sm <%= u.is_banned ? 'btn-outline' : 'btn-danger' %>">
+                  <%= u.is_banned ? 'Unban' : 'Ban' %>
+                </button>
+                <button onclick="showCoins(<%= u.id %>)" class="btn btn-sm btn-gold">+Coins</button>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="coinModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#00000080;z-index:999;align-items:center;justify-content:center;">
+      <div class="card" style="width:350px;">
+        <div class="card-header">💰 Give Coins</div>
+        <div class="card-body">
+          <div class="form-group">
+            <label class="form-label">Amount (negative to deduct)</label>
+            <input type="number" class="form-input" id="coinAmount">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Reason</label>
+            <input type="text" class="form-input" id="coinDesc" placeholder="e.g. Admin bonus">
+          </div>
+          <div style="display:flex;gap:.75rem;">
+            <button onclick="submitCoins()" class="btn btn-primary">Apply</button>
+            <button onclick="document.getElementById('coinModal').style.display='none'" class="btn btn-outline">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+let currentUserId;
+function banUser(id) {
+  const f = document.createElement('form');
+  f.method = 'POST'; f.action = `/admin/users/${id}/ban`;
+  document.body.appendChild(f); f.submit();
+}
+function showCoins(id) {
+  currentUserId = id;
+  document.getElementById('coinModal').style.display = 'flex';
+}
+function submitCoins() {
+  const f = document.createElement('form');
+  f.method = 'POST'; f.action = `/admin/users/${currentUserId}/coins`;
+  [['amount','coinAmount'],['description','coinDesc']].forEach(([n,id]) => {
+    const i = document.createElement('input');
+    i.name = n; i.value = document.getElementById(id).value;
+    f.appendChild(i);
+  });
+  document.body.appendChild(f); f.submit();
+}
+</script>
+</body></html>
