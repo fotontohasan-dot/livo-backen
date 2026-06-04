@@ -1,0 +1,37 @@
+<%- include('partials/head') %>
+<%- include('partials/navbar') %>
+<div class="container page">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
+    <h1 style="font-size:1.8rem;font-weight:800;">📰 Sports News</h1>
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+      <% ['','football','cricket','basketball','tennis'].forEach(s => { %>
+        <a href="/news?sport=<%= s %>" class="btn btn-sm <%= (locals.sport||'')===s?'btn-primary':'btn-outline' %>">
+          <%= s||'All' %>
+        </a>
+      <% }) %>
+    </div>
+  </div>
+  <div class="grid grid-3">
+    <% if(news.length === 0) { %>
+      <p style="color:var(--muted);grid-column:1/-1">No news available</p>
+    <% } %>
+    <% news.forEach(n => { %>
+      <a href="/news/<%= n.id %>" class="news-card">
+        <% if(n.image) { %>
+          <img src="<%= n.image %>" class="news-img" alt="">
+        <% } else { %>
+          <div class="news-img" style="display:flex;align-items:center;justify-content:center;font-size:3rem;">📰</div>
+        <% } %>
+        <div class="news-body">
+          <div class="news-title"><%= n.title %></div>
+          <div class="news-meta" style="margin-top:.5rem;display:flex;gap:.75rem;">
+            <span>📝 <%= n.author %></span>
+            <span>👁️ <%= n.views %></span>
+            <span><%= new Date(n.created_at).toLocaleDateString() %></span>
+          </div>
+        </div>
+      </a>
+    <% }) %>
+  </div>
+</div>
+</body></html>
