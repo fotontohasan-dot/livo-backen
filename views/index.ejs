@@ -25,7 +25,6 @@
             color: #ffd700; 
             margin-bottom: 15px; 
             font-size: 20px;
-            padding-left: 5px;
         }
         .game-grid {
             display: grid;
@@ -44,30 +43,12 @@
             padding: 10px 5px; 
             color: #ffccff; 
         }
-
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            width: 100%;
-            background: #0f0b1f;
-            display: flex;
-            justify-content: space-around;
-            padding: 10px 0;
-            border-top: 1px solid #6b00ff;
-        }
-        .nav-item { text-align: center; color: #ccc; font-size: 11px; }
-        .nav-item.active { color: #ff00aa; }
-        .nav-icon { font-size: 24px; display: block; margin-bottom: 3px; }
     </style>
 </head>
 <body>
 
     <div class="header">
         <div class="logo">LIVO</div>
-        <div style="display:flex; gap:10px;">
-            <button style="padding:8px 16px; background:#fff; color:#000; border:none; border-radius:6px;">Login</button>
-            <button style="padding:8px 16px; background:#ffd700; color:#000; border:none; border-radius:6px; font-weight:bold;">Register</button>
-        </div>
     </div>
 
     <!-- All Games -->
@@ -94,65 +75,10 @@
         <div class="game-grid" id="tableGames"></div>
     </div>
 
-    <!-- Card Games -->
-    <div class="category">
-        <h2>🃏 Card Games</h2>
-        <div class="game-grid" id="cardGames"></div>
-    </div>
-
-    <!-- Crash Games -->
-    <div class="category">
-        <h2>🚀 Crash Games</h2>
-        <div class="game-grid" id="crashGames"></div>
-    </div>
-
-    <!-- Fishing Games -->
-    <div class="category">
-        <h2>🎣 Fishing Games</h2>
-        <div class="game-grid" id="fishing"></div>
-    </div>
-
-    <!-- PG Soft -->
-    <div class="category">
-        <h2>🟣 PG Soft</h2>
-        <div class="game-grid" id="pgsoft"></div>
-    </div>
-
-    <!-- JILI -->
-    <div class="category">
-        <h2>🔴 JILI</h2>
-        <div class="game-grid" id="jili"></div>
-    </div>
-
-    <!-- SPRIBE -->
-    <div class="category">
-        <h2>🔵 SPRIBE</h2>
-        <div class="game-grid" id="spribe"></div>
-    </div>
-
-    <div class="bottom-nav">
-        <div class="nav-item active"><span class="nav-icon">🏠</span>হোম</div>
-        <div class="nav-item"><span class="nav-icon">🎮</span>গেমস</div>
-        <div class="nav-item"><span class="nav-icon">👥</span>আমন্ত্রণ</div>
-        <div class="nav-item"><span class="nav-icon">🎁</span>বোনাস</div>
-        <div class="nav-item"><span class="nav-icon">👤</span>আমি</div>
-    </div>
-
     <script>
-        // Slots এর গেমস
-        const slotsGames = ["Super Ace", "Fortune Gems", "Boxing King", "Jackpot", "Lucky Spin", "Wild West", "Fruit Party", "Sweet Bonanza", "Gates of Olympus", "Starlight Princess"];
-        // Live Casino এর গেমস
-        const liveGames = ["Blackjack Live", "Baccarat Live", "Roulette Live", "Dragon Tiger Live", "Sic Bo Live"];
-        // Card Games
-        const cardGames = ;
-        // Crash Games
-        const crashGamesList = ["Crash", "Aviator", "Mines", "Plinko", "Tower" "Fish Hunter", "Bombing Fishing", "King of Fish", "Deep Sea" "Fortune Tiger", "Fortune Ox", "Ganesha Fortune", "Leprechaun", "Medusa" "Super Ace JILI", "Boxing King JILI", "Golden Empire", "Baccarat JILI"];
-        // SPRIBE
-        const spribeGames = ["Aviator SPRIBE", "Mines SPRIBE", "Goal", "Dice"];
-
-        function addGames(containerId, gameList) {
-            const container = document.getElementById(containerId);
-            gameList.forEach(name => {
+        function addGames(id, games) {
+            const container = document.getElementById(id);
+            games.forEach(name => {
                 const card = document.createElement('div');
                 card.className = 'game-card';
                 card.innerHTML = `
@@ -163,17 +89,17 @@
             });
         }
 
-        // সবগুলোতে গেম যোগ করা
-        addGames('allGames', [...slotsGames, ...liveGames, ...cardGames, ...crashGamesList, ...fishingGamesList]);
-        addGames('slots', slotsGames);
-        addGames('liveCasino', liveGames);
-        addGames('tableGames', ["Roulette", "Blackjack", "Sic Bo"]);
-        addGames('cardGames', cardGames);
-        addGames('crashGames', crashGamesList);
-        addGames('fishing', fishingGamesList);
-        addGames('pgsoft', pgGames);
-        addGames('jili', jiliGames);
-        addGames('spribe', spribeGames);
+        // All Games
+        addGames('allGames', ["Teen Patti", "Super Ace", "Crash", "Aviator", "Andar Bahar", "Dragon Tiger", "Roulette", "Blackjack", "Fortune Gems", "Boxing King"]);
+
+        // Slots
+        addGames('slots', ["Super Ace", "Fortune Gems", "Boxing King", "Golden Empire", "Leprechaun", "Fruit Party", "Sweet Bonanza", "Gates of Olympus", "Starlight Princess", "Wild West"]);
+
+        // Live Casino
+        addGames('liveCasino', ["Blackjack Live", "Baccarat Live", "Roulette Live", "Dragon Tiger Live", "Sic Bo Live", "Crazy Time Live"]);
+
+        // Table Games
+        addGames('tableGames', ["Roulette", "Blackjack", "Poker", "Sic Bo", "Baccarat", "Teen Patti Pro"]);
     </script>
 
 </body>
