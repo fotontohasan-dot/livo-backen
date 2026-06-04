@@ -1,10 +1,8 @@
 const { Pool } = require('pg');
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL && process.env.DATABASE_URL.includes('render.com') 
-    ? { rejectUnauthorized: false } 
-    : false
+  connectionString: 'postgresql://livo_db_opct_user:OFAhdQSwR626wwICIiBMkCIYbTG2Gyvw@dpg-d8ghl7rbc2fs73ej8k70-a/livo_db_opct',
+  ssl: { rejectUnauthorized: false }
 });
 
 const initDB = async () => {
@@ -86,22 +84,3 @@ const initDB = async () => {
         is_read BOOLEAN DEFAULT false,
         type VARCHAR(50) DEFAULT 'info',
         created_at TIMESTAMP DEFAULT NOW()
-      );
-      CREATE TABLE IF NOT EXISTS news (
-        id SERIAL PRIMARY KEY,
-        title VARCHAR(300) NOT NULL,
-        content TEXT NOT NULL,
-        image VARCHAR(255),
-        sport VARCHAR(50),
-        author_id INTEGER REFERENCES users(id),
-        views INTEGER DEFAULT 0,
-        created_at TIMESTAMP DEFAULT NOW()
-      );
-    `);
-    console.log('✅ Database ready');
-  } finally {
-    client.release();
-  }
-};
-
-module.exports = { pool, initDB };
