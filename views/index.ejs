@@ -2,90 +2,134 @@
 <%- include('partials/navbar') %>
 
 <style>
-    .game-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 15px;
-        padding: 20px;
-    }
-    .game-card {
-        background: #1a1433;
-        border-radius: 15px;
-        overflow: hidden;
-        transition: transform 0.3s;
-        cursor: pointer;
-        border: 1px solid #2a2255;
-    }
-    .game-card:hover {
-        transform: translateY(-5px);
-        border-color: var(--primary);
-    }
-    .game-img {
-        width: 100%;
-        height: 120px;
-        background: linear-gradient(135deg, #1a0050, #6b00ff);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 40px;
-    }
-    .game-info {
-        padding: 10px;
-        text-align: center;
-    }
-    .game-name {
-        font-weight: bold;
-        font-size: 14px;
-        color: #fff;
+    body {
+        background-color: #0a0e1a;
+        margin-bottom: 60px; /* Space for bottom nav if added */
     }
     .category-tabs {
         display: flex;
         overflow-x: auto;
         gap: 10px;
-        padding: 10px 20px;
-        background: #0a0e1a;
+        padding: 15px;
+        background: #111827;
         position: sticky;
         top: 65px;
-        z-index: 10;
+        z-index: 100;
+        scrollbar-width: none;
     }
+    .category-tabs::-webkit-scrollbar { display: none; }
     .tab {
-        padding: 8px 20px;
-        background: #1a2235;
+        padding: 8px 18px;
+        background: #1f2937;
         border-radius: 20px;
         white-space: nowrap;
-        color: var(--muted);
+        color: #9ca3af;
         text-decoration: none;
         font-size: 14px;
+        border: 1px solid transparent;
+        transition: 0.3s;
     }
     .tab.active {
-        background: var(--primary);
-        color: #000;
+        background: linear-gradient(90deg, #6b00ff, #ff00aa);
+        color: #fff;
         font-weight: bold;
+        border-color: #ff00aa;
+    }
+    .game-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        padding: 15px;
+    }
+    @media (min-width: 640px) {
+        .game-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (min-width: 1024px) {
+        .game-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+    .game-card {
+        background: #1a1433;
+        border-radius: 12px;
+        overflow: hidden;
+        position: relative;
+        border: 1px solid #2a2255;
+        display: flex;
+        flex-direction: column;
+    }
+    .game-img {
+        aspect-ratio: 16/10;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 48px;
+        background: #241b45;
+    }
+    .game-info {
+        padding: 10px;
+        background: #111827;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .game-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: #e5e7eb;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .play-btn {
+        background: #00d4aa;
+        color: #000;
+        border: none;
+        padding: 4px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+    .promo-banner {
+        width: calc(100% - 30px);
+        margin: 15px;
+        height: 140px;
+        background: linear-gradient(45deg, #3b006e, #7e22ce);
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 20px;
+        font-weight: bold;
+        text-align: center;
+        padding: 20px;
     }
 </style>
 
-<div class="category-tabs">
-    <a href="#" class="tab active">All Games</a>
-    <a href="#" class="tab">Slots</a>
-    <a href="#" class="tab">Live Casino</a>
-    <a href="#" class="tab">Fishing</a>
-    <a href="#" class="tab">Table</a>
+<div class="promo-banner">
+    🎰 Welcome to LIVO <br>
+    <span style="font-size: 14px; color: #fbbf24;">Get 500 Welcome Coins!</span>
+</div>
+
+<div class="category-tabs" id="tabs">
+    <div class="tab active" data-filter="all">All</div>
+    <div class="tab" data-filter="pvp">PVP</div>
+    <div class="tab" data-filter="slots">Slots</div>
+    <div class="tab" data-filter="live">Live</div>
+    <div class="tab" data-filter="table">Table</div>
 </div>
 
 <div class="container">
     <%- include('partials/flash') %>
-
-    <div class="game-grid" id="gameContainer">
-        <!-- Games will be injected here -->
-    </div>
+    <div class="game-grid" id="gameContainer"></div>
 </div>
 
 <script>
     const games = [
-        {name: "Teen Patti", emoji: "🃏", cat: "table"},
+        {name: "Teen Patti", emoji: "🃏", cat: "pvp"},
         {name: "Super Ace", emoji: "🂡", cat: "slots"},
-        {name: "Crash", emoji: "🚀", cat: "special"},
-        {name: "Aviator", emoji: "✈️", cat: "special"},
+        {name: "Crash", emoji: "🚀", cat: "pvp"},
+        {name: "Aviator", emoji: "✈️", cat: "pvp"},
         {name: "Andar Bahar", emoji: "🎲", cat: "table"},
         {name: "Dragon Tiger", emoji: "🐉", cat: "table"},
         {name: "Roulette", emoji: "🎡", cat: "live"},
@@ -96,23 +140,41 @@
         {name: "Crazy Time", emoji: "🎪", cat: "live"},
         {name: "Mega Ball", emoji: "🎱", cat: "live"},
         {name: "7 Up Down", emoji: "🎰", cat: "table"},
-        {name: "Mines", emoji: "💣", cat: "special"},
-        {name: "Plinko", emoji: "🎾", cat: "special"}
+        {name: "Mines", emoji: "💣", cat: "pvp"},
+        {name: "Plinko", emoji: "🎾", cat: "pvp"},
+        {name: "Baccarat", emoji: "🎴", cat: "table"},
+        {name: "Color Prediction", emoji: "🌈", cat: "pvp"}
     ];
 
     const container = document.getElementById('gameContainer');
-    games.forEach(game => {
-        const card = document.createElement('div');
-        card.className = 'game-card';
-        card.innerHTML = `
-            <div class="game-img">${game.emoji}</div>
-            <div class="game-info">
-                <div class="game-name">${game.name}</div>
-            </div>
-        `;
-        container.appendChild(card);
+    const tabs = document.querySelectorAll('.tab');
+
+    function renderGames(filter = 'all') {
+        container.innerHTML = '';
+        const filtered = filter === 'all' ? games : games.filter(g => g.cat === filter);
+        filtered.forEach(game => {
+            const card = document.createElement('div');
+            card.className = 'game-card';
+            card.innerHTML = `
+                <div class="game-img">${game.emoji}</div>
+                <div class="game-info">
+                    <div class="game-name">${game.name}</div>
+                    <button class="play-btn" onclick="location.href='/login'">Play</button>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            renderGames(tab.dataset.filter);
+        });
     });
+
+    renderGames();
 </script>
 
-<%- include('partials/navbar') %> <!-- Added at bottom too for mobile feel if needed, but navbar.ejs is usually at top -->
 </body></html>
