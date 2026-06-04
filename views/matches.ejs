@@ -1,0 +1,54 @@
+<%- include('partials/head') %>
+<%- include('partials/navbar') %>
+<div class="container page">
+  <%- include('partials/flash') %>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
+    <h1 style="font-size:1.8rem;font-weight:800;">⚽ Matches</h1>
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+      <% ['','football','cricket','basketball','tennis'].forEach(s => { %>
+        <a href="/matches?sport=<%= s %>" class="btn btn-sm <%= (locals.sport||'')===s?'btn-primary':'btn-outline' %>">
+          <%= s||'All' %>
+        </a>
+      <% }) %>
+    </div>
+    <div style="display:flex;gap:.75rem;">
+      <% ['','upcoming','live','completed'].forEach(st => { %>
+        <a href="/matches?status=<%= st %>" class="btn btn-sm <%= (locals.status||'')===st?'btn-primary':'btn-outline' %>">
+          <%= st||'All' %>
+        </a>
+      <% }) %>
+    </div>
+  </div>
+
+  <% if(matches.length === 0) { %>
+    <div style="text-align:center;padding:4rem;color:var(--muted);">No matches found</div>
+  <% } else { %>
+    <div class="grid grid-3">
+      <% matches.forEach(m => { %>
+        <div class="match-card">
+          <div style="display:flex;justify-content:space-between;margin-bottom:.5rem;">
+            <span style="font-size:.8rem;color:var(--muted)">⚡ <%= m.sport %></span>
+            <span class="status-badge status-<%= m.status %>"><%= m.status.toUpperCase() %></span>
+          </div>
+          <div class="match-teams">
+            <div class="team"><div class="team-name"><%= m.team_a %></div></div>
+            <div class="vs">
+              <% if(m.status === 'completed') { %>
+                <%= m.score_a %> - <%= m.score_b %>
+              <% } else { %>VS<% } %>
+            </div>
+            <div class="team"><div class="team-name"><%= m.team_b %></div></div>
+          </div>
+          <div class="match-meta" style="margin-bottom:1rem;">
+            <span>📅 <%= new Date(m.match_date).toLocaleDateString() %></span>
+            <span>🕐 <%= new Date(m.match_date).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) %></span>
+          </div>
+          <a href="/matches/<%= m.id %>" class="btn btn-primary btn-sm" style="width:100%;justify-content:center;">
+            <%= m.status === 'live' ? '📺 Watch Live' : m.status === 'completed' ? '📊 View Result' : '🎯 Predict' %>
+          </a>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+</div>
+</body></html>
