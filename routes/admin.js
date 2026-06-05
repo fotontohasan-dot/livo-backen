@@ -5,7 +5,7 @@ const { isAuth, isAdmin } = require('../middleware/auth');
 
 router.use(isAuth, isAdmin);
 
-router.get('/', async (req, res) => {
+router.get('/', async (_req, res) => {
   const stats = await pool.query(`
     SELECT
       (SELECT COUNT(*) FROM users WHERE role='user') as total_users,
@@ -19,7 +19,7 @@ router.get('/', async (req, res) => {
   res.render('admin/dashboard', { stats: stats.rows[0], recentUsers: recentUsers.rows, recentMatches: recentMatches.rows });
 });
 
-router.get('/users', async (req, res) => {
+router.get('/users', async (_req, res) => {
   const users = await pool.query(`SELECT * FROM users ORDER BY created_at DESC`);
   res.render('admin/users', { users: users.rows });
 });
@@ -40,7 +40,7 @@ router.post('/users/:id/coins', async (req, res) => {
   res.redirect('/admin/users');
 });
 
-router.get('/matches', async (req, res) => {
+router.get('/matches', async (_req, res) => {
   const matches = await pool.query(`SELECT * FROM matches ORDER BY match_date DESC`);
   res.render('admin/matches', { matches: matches.rows });
 });
@@ -73,7 +73,7 @@ router.post('/matches/:id/result', async (req, res) => {
   res.redirect('/admin/matches');
 });
 
-router.get('/tournaments', async (req, res) => {
+router.get('/tournaments', async (_req, res) => {
   const tournaments = await pool.query(`SELECT * FROM tournaments ORDER BY created_at DESC`);
   res.render('admin/tournaments', { tournaments: tournaments.rows });
 });
@@ -86,7 +86,7 @@ router.post('/tournaments', async (req, res) => {
   res.redirect('/admin/tournaments');
 });
 
-router.get('/news', async (req, res) => {
+router.get('/news', async (_req, res) => {
   const news = await pool.query(`SELECT n.*, u.username as author FROM news n LEFT JOIN users u ON n.author_id=u.id ORDER BY n.created_at DESC`);
   res.render('admin/news', { news: news.rows });
 });
