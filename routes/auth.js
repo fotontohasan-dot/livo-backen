@@ -2,8 +2,11 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { pool } = require('../db');
+ feat-admin-sync-bengali-ui-5693997354048235964
+router.get('/', (req, res) => {
 
 router.get('/', (_req, res) => {
+ main
   res.render('index');
 });
 
