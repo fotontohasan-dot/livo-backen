@@ -2,157 +2,457 @@
 <html lang="bn">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Livo - Online Casino</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LIVO - সেরা অনলাইন গেমিং প্ল্যাটফর্ম</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f0b1f; color: white; }
+        :root {
+            --primary-gradient: linear-gradient(90deg, #6b00ff, #ff00aa);
+            --bg-dark: #0f0b1f;
+            --card-bg: #1a1433;
+            --text-gold: #ffd700;
+            --text-light: #e0e0e0;
+            --accent: #ff00aa;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-dark);
+            color: white;
+            line-height: 1.6;
+            padding-bottom: 80px;
+        }
+
+        /* Sticky Header */
         .header {
-            background: linear-gradient(90deg, #6b00ff, #ff00aa);
-            padding: 15px;
             position: fixed;
             top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(15, 11, 31, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 900;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 2px;
+        }
+
+        .search-container {
+            flex: 1;
+            margin-left: 15px;
+            position: relative;
+        }
+
+        .search-container input {
             width: 100%;
-            z-index: 100;
+            background: #251d42;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 8px 12px 8px 35px;
+            border-radius: 20px;
+            color: white;
+            font-size: 14px;
+            outline: none;
         }
-        .logo { font-size: 26px; font-weight: bold; color: #ffd700; }
-        .category { margin-top: 70px; padding: 15px; }
-        h2 { color: #ffd700; margin-bottom: 12px; font-size: 19px; }
-        .game-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
-            gap: 12px;
+
+        .search-container i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #888;
         }
-        .game-card {
-            background: #1a1433;
-            border-radius: 12px;
-            overflow: hidden;
-            text-align: center;
-            cursor: pointer;
+
+        /* Banner */
+        .banner-section {
+            margin-top: 65px;
+            padding: 0 15px;
         }
-        .game-thumb {
+
+        .promo-banner {
             width: 100%;
-            height: 115px;
+            height: 140px;
+            background: var(--primary-gradient);
+            border-radius: 15px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 48px;
-            font-weight: bold;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
         }
-        .game-name { font-size: 13px; padding: 10px 5px; color: #ffccff; font-weight: bold; }
+
+        .promo-banner i {
+            position: absolute;
+            font-size: 120px;
+            opacity: 0.1;
+            right: -20px;
+            bottom: -20px;
+            transform: rotate(-15deg);
+        }
+
+        .promo-text {
+            text-align: center;
+            z-index: 2;
+        }
+
+        .promo-text h2 {
+            font-size: 24px;
+            margin-bottom: 5px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .promo-text p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        /* Category Nav */
+        .category-nav {
+            display: flex;
+            overflow-x: auto;
+            padding: 15px;
+            gap: 12px;
+            scrollbar-width: none;
+            position: sticky;
+            top: 58px;
+            background: var(--bg-dark);
+            z-index: 999;
+        }
+
+        .category-nav::-webkit-scrollbar {
+            display: none;
+        }
+
+        .cat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 65px;
+            padding: 10px 5px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .cat-item.active {
+            background: var(--primary-gradient);
+            box-shadow: 0 4px 15px rgba(107, 0, 255, 0.3);
+            border-color: transparent;
+        }
+
+        .cat-item i {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+
+        .cat-item span {
+            font-size: 10px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        /* Game Grid */
+        .game-section {
+            padding: 0 15px;
+        }
+
+        .section-title {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .section-title h3 {
+            font-size: 18px;
+            color: var(--text-gold);
+            display: flex;
+            align-items: center;
+        }
+
+        .section-title h3::before {
+            content: '';
+            width: 4px;
+            height: 18px;
+            background: var(--accent);
+            display: inline-block;
+            margin-right: 8px;
+            border-radius: 2px;
+        }
+
+        .game-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .game-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: 0.3s;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .game-image {
+            width: 100%;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 45px;
+            background: linear-gradient(135deg, #251d42, #1a1433);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .game-info {
+            padding: 8px;
+            text-align: center;
+        }
+
+        .game-name {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: var(--text-light);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .play-btn {
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            padding: 6px 0;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            width: 100%;
+            cursor: pointer;
+        }
+
+        /* Bottom Nav */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #15102a;
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            z-index: 1000;
+        }
+
+        .nav-link {
+            text-decoration: none;
+            color: #888;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 10px;
+            width: 20%;
+        }
+
+        .nav-link i {
+            font-size: 18px;
+            margin-bottom: 2px;
+        }
+
+        .nav-link.active {
+            color: var(--accent);
+        }
+
+        .nav-link.center-link {
+            position: relative;
+            top: -15px;
+        }
+
+        .center-circle {
+            width: 45px;
+            height: 45px;
+            background: var(--primary-gradient);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 22px;
+            box-shadow: 0 5px 15px rgba(255, 0, 170, 0.4);
+            border: 3px solid var(--bg-dark);
+        }
     </style>
 </head>
 <body>
 
-<div class="header">
-    <div class="logo">LIVO</div>
-</div>
+    <header class="header">
+        <div class="logo">LIVO</div>
+        <div class="search-container">
+            <i class="fas fa-search"></i>
+            <input type="text" id="gameSearch" placeholder="গেম খুঁজুন..." onkeyup="filterGames()">
+        </div>
+    </header>
 
-<div class="category">
-    <h2>🎮 All Games</h2>
-    <div class="game-grid" id="allGames"></div>
-</div>
+    <section class="banner-section">
+        <div class="promo-banner">
+            <i class="fas fa-coins"></i>
+            <div class="promo-text">
+                <h2>স্বাগতম LIVO-তে!</h2>
+                <p>১০০% স্বাগতম বোনাস পান</p>
+            </div>
+        </div>
+    </section>
 
-<div class="category">
-    <h2>🎰 Slots</h2>
-    <div class="game-grid" id="slots"></div>
-</div>
+    <nav class="category-nav">
+        <div class="cat-item active" onclick="selectCategory('all', this)">
+            <i class="fas fa-grid-2"></i>
+            <span>সব</span>
+        </div>
+        <div class="cat-item" onclick="selectCategory('slots', this)">
+            <i class="fas fa-slot-machine"></i>
+            <span>স্লট</span>
+        </div>
+        <div class="cat-item" onclick="selectCategory('live', this)">
+            <i class="fas fa-video"></i>
+            <span>লাইভ</span>
+        </div>
+        <div class="cat-item" onclick="selectCategory('fish', this)">
+            <i class="fas fa-fish"></i>
+            <span>মাছ ধরা</span>
+        </div>
+        <div class="cat-item" onclick="selectCategory('table', this)">
+            <i class="fas fa-spade"></i>
+            <span>টেবিল</span>
+        </div>
+    </nav>
 
-<div class="category">
-    <h2>🎥 Live Casino</h2>
-    <div class="game-grid" id="liveCasino"></div>
-</div>
+    <section class="game-section">
+        <div class="section-title">
+            <h3 id="currentCategoryTitle">জনপ্রিয় গেম</h3>
+        </div>
+        <div class="game-grid" id="gameGrid"></div>
+    </section>
 
-<div class="category">
-    <h2>🃏 Table Games</h2>
-    <div class="game-grid" id="tableGames"></div>
-</div>
+    <nav class="bottom-nav">
+        <a href="#" class="nav-link active">
+            <i class="fas fa-home"></i>
+            <span>হোম</span>
+        </a>
+        <a href="#" class="nav-link">
+            <i class="fas fa-gift"></i>
+            <span>প্রমোশন</span>
+        </a>
+        <a href="#" class="nav-link center-link">
+            <div class="center-circle">
+                <i class="fas fa-plus"></i>
+            </div>
+            <span>ডিপোজিট</span>
+        </a>
+        <a href="#" class="nav-link">
+            <i class="fas fa-wallet"></i>
+            <span>ওয়ালেট</span>
+        </a>
+        <a href="#" class="nav-link">
+            <i class="fas fa-user"></i>
+            <span>প্রোফাইল</span>
+        </a>
+    </nav>
 
-<script>
-    const bgColors = [
-        "linear-gradient(135deg,#1a0050,#6b00ff)",
-        "linear-gradient(135deg,#500030,#ff00aa)",
-        "linear-gradient(135deg,#003050,#00aaff)",
-        "linear-gradient(135deg,#502000,#ff6600)",
-        "linear-gradient(135deg,#005030,#00cc66)",
-        "linear-gradient(135deg,#500010,#ff3366)",
-        "linear-gradient(135deg,#300050,#9900ff)",
-        "linear-gradient(135deg,#503000,#ff9900)",
-        "linear-gradient(135deg,#004040,#00ffcc)",
-        "linear-gradient(135deg,#500020,#ff0066)",
-        "linear-gradient(135deg,#001050,#3366ff)",
-        "linear-gradient(135deg,#502010,#ff6633)"
-    ];
-    let ci = 0;
+    <script>
+        const allGames = [
+            { name: "ক্রাশ রকেট", emoji: "🚀", cat: "all" },
+            { name: "টিন পট্টি", emoji: "🃏", cat: "table" },
+            { name: "অন্দর বাহার", emoji: "🎲", cat: "table" },
+            { name: "ড্রাগন টাইগার", emoji: "🐉", cat: "table" },
+            { name: "সুপার এস", emoji: "🂡", cat: "slots" },
+            { name: "এভিয়েটর", emoji: "✈️", cat: "all" },
+            { name: "ফরচুন জেমস", emoji: "💎", cat: "slots" },
+            { name: "বক্সিং কিং", emoji: "🥊", cat: "slots" },
+            { name: "গোল্ডেন এম্পায়ার", emoji: "👑", cat: "slots" },
+            { name: "সুইট বোনানজা", emoji: "🍭", cat: "slots" },
+            { name: "ব্ল্যাকজ্যাক লাইভ", emoji: "♠️", cat: "live" },
+            { name: "ব্যাকারাট লাইভ", emoji: "🃏", cat: "live" },
+            { name: "রুলেট লাইভ", emoji: "🎡", cat: "live" },
+            { name: "ক্রেজি টাইম", emoji: "🎪", cat: "live" },
+            { name: "ফিশিং ওয়ার", emoji: "🔱", cat: "fish" },
+            { name: "ওশান কিং", emoji: "🦈", cat: "fish" }
+        ];
 
-    function addGames(id, list) {
-        const container = document.getElementById(id);
-        list.forEach(item => {
-            const card = document.createElement('div');
-            card.className = 'game-card';
-            const bg = bgColors[ci % bgColors.length];
-            ci++;
-            card.innerHTML = `
-                <div class="game-thumb" style="background:${bg}">
-                    ${item.emoji}
-                </div>
-                <div class="game-name">${item.name}</div>
-            `;
-            container.appendChild(card);
-        });
-    }
+        let currentCategory = 'all';
 
-    addGames('allGames', [
-        {name:"Teen Patti",        emoji:"🃏"},
-        {name:"Super Ace",         emoji:"🂡"},
-        {name:"Crash",             emoji:"🚀"},
-        {name:"Aviator",           emoji:"✈️"},
-        {name:"Andar Bahar",       emoji:"🎴"},
-        {name:"Dragon Tiger",      emoji:"🐉"},
-        {name:"Roulette",          emoji:"🎡"},
-        {name:"Blackjack",         emoji:"♠️"},
-        {name:"Fortune Gems",      emoji:"💎"},
-        {name:"Boxing King",       emoji:"🥊"},
-        {name:"Lucky Spin",        emoji:"🎰"},
-        {name:"Color Prediction",  emoji:"🌈"},
-        {name:"Golden Empire",     emoji:"👑"},
-        {name:"Sweet Bonanza",     emoji:"🍭"},
-        {name:"Gates of Olympus",  emoji:"⚡"},
-        {name:"Starlight Princess",emoji:"⭐"},
-        {name:"Fruit Party",       emoji:"🍎"},
-        {name:"Blackjack Live",    emoji:"♠️"},
-        {name:"Baccarat Live",     emoji:"🎰"},
-        {name:"Roulette Live",     emoji:"🎡"},
-        {name:"Dragon Tiger Live", emoji:"🐯"},
-        {name:"Crazy Time",        emoji:"🎪"}
-    ]);
+        function renderGames(games) {
+            const grid = document.getElementById('gameGrid');
+            grid.innerHTML = '';
+            games.forEach(game => {
+                const card = document.createElement('div');
+                card.className = 'game-card';
+                card.innerHTML = `
+                    <div class="game-image">${game.emoji}</div>
+                    <div class="game-info">
+                        <div class="game-name">${game.name}</div>
+                        <button class="play-btn">এখনি খেলুন</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
 
-    addGames('slots', [
-        {name:"Fortune Gems",      emoji:"💎"},
-        {name:"Golden Empire",     emoji:"👑"},
-        {name:"Sweet Bonanza",     emoji:"🍭"},
-        {name:"Gates of Olympus",  emoji:"⚡"},
-        {name:"Starlight Princess",emoji:"⭐"},
-        {name:"Fruit Party",       emoji:"🍎"}
-    ]);
+        function selectCategory(cat, el) {
+            currentCategory = cat;
+            document.querySelectorAll('.cat-item').forEach(item => item.classList.remove('active'));
+            el.classList.add('active');
 
-    addGames('liveCasino', [
-        {name:"Blackjack Live",    emoji:"♠️"},
-        {name:"Baccarat Live",     emoji:"🎰"},
-        {name:"Roulette Live",     emoji:"🎡"},
-        {name:"Dragon Tiger Live", emoji:"🐯"},
-        {name:"Crazy Time",        emoji:"🎪"}
-    ]);
+            const titles = {
+                'all': 'সব গেম',
+                'slots': 'স্লট গেম',
+                'live': 'লাইভ ক্যাসিনো',
+                'fish': 'মাছ ধরার গেম',
+                'table': 'টেবিল গেম'
+            };
+            document.getElementById('currentCategoryTitle').innerText = titles[cat];
+            filterGames();
+        }
 
-    addGames('tableGames', [
-        {name:"Blackjack",   emoji:"♠️"},
-        {name:"Baccarat",    emoji:"🎴"},
-        {name:"Roulette",    emoji:"🎡"},
-        {name:"Teen Patti",  emoji:"🃏"},
-        {name:"Andar Bahar", emoji:"🎲"},
-        {name:"Dragon Tiger",emoji:"🐉"}
-    ]);
-</script>
+        function filterGames() {
+            const query = document.getElementById('gameSearch').value.toLowerCase();
+            const filtered = allGames.filter(game => {
+                const matchesCat = currentCategory === 'all' || game.cat === currentCategory;
+                const matchesQuery = game.name.toLowerCase().includes(query);
+                return matchesCat && matchesQuery;
+            });
+            renderGames(filtered);
+        }
 
+        // Initial render
+        renderGames(allGames);
+    </script>
 </body>
 </html>
