@@ -1,0 +1,77 @@
+<%- include('partials/head') %>
+<%- include('partials/navbar') %>
+
+<style>
+    .payment-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+        margin: 20px 0;
+    }
+    .payment-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 15px;
+        text-align: center;
+        cursor: pointer;
+        transition: 0.3s;
+    }
+    .payment-card:hover { border-color: var(--secondary); }
+    .payment-card.active { border-color: var(--secondary); background: rgba(255, 0, 170, 0.1); }
+    .payment-name { font-weight: bold; font-size: 14px; }
+</style>
+
+<div class="container page">
+    <%- include('partials/flash') %>
+
+    <div class="card">
+        <div class="card-header">📤 কয়েন উইথড্র করুন</div>
+        <div class="card-body">
+            <p style="color: var(--muted); font-size: 14px; margin-bottom: 20px;">উইথড্র করার মেথড নির্বাচন করুন (আপনার বর্তমান ব্যালেন্স: 🪙 <%= user.coins %>)</p>
+
+            <div class="payment-grid">
+                <div class="payment-card" onclick="selectMethod(this, 'bkash')">
+                    <div style="font-size: 40px;">📱</div>
+                    <div class="payment-name">bKash</div>
+                </div>
+                <div class="payment-card" onclick="selectMethod(this, 'nagad')">
+                    <div style="font-size: 40px;">💳</div>
+                    <div class="payment-name">Nagad</div>
+                </div>
+                <div class="payment-card" onclick="selectMethod(this, 'rocket')">
+                    <div style="font-size: 40px;">🚀</div>
+                    <div class="payment-name">Rocket</div>
+                </div>
+                <div class="payment-card" onclick="selectMethod(this, 'card')">
+                    <div style="font-size: 40px;">💳</div>
+                    <div class="payment-name">Bank Transfer</div>
+                </div>
+            </div>
+
+            <form action="/coins/withdraw" method="POST" id="withdrawForm">
+                <input type="hidden" name="method" id="selectedMethod">
+                <div class="form-group">
+                    <label class="form-label">উইথড্র পরিমাণ (কয়েন)</label>
+                    <input type="number" name="amount" class="form-input" placeholder="যেমন: ১০০০" min="500" max="<%= user.coins %>" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">আপনার অ্যাকাউন্ট নম্বর</label>
+                    <input type="text" name="phone" class="form-input" placeholder="০১৭XXXXXXXX / ব্যাংক অ্যাকাউন্ট নং" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 15px;">উইথড্র রিকোয়েস্ট পাঠান</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function selectMethod(el, method) {
+    document.getElementById('selectedMethod').value = method;
+    document.querySelectorAll('.payment-card').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+}
+</script>
+
+<%- include('partials/bottom-nav', { activePage: 'profile' }) %>
+</body></html>

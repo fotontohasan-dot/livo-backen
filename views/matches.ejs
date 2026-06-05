@@ -1,54 +1,153 @@
 <%- include('partials/head') %>
 <%- include('partials/navbar') %>
-<div class="container page">
-  <%- include('partials/flash') %>
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
-    <h1 style="font-size:1.8rem;font-weight:800;">⚽ Matches</h1>
-    <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
-      <% ['','football','cricket','basketball','tennis'].forEach(s => { %>
-        <a href="/matches?sport=<%= s %>" class="btn btn-sm <%= (locals.sport||'')===s?'btn-primary':'btn-outline' %>">
-          <%= s||'All' %>
-        </a>
-      <% }) %>
-    </div>
-    <div style="display:flex;gap:.75rem;">
-      <% ['','upcoming','live','completed'].forEach(st => { %>
-        <a href="/matches?status=<%= st %>" class="btn btn-sm <%= (locals.status||'')===st?'btn-primary':'btn-outline' %>">
-          <%= st||'All' %>
-        </a>
-      <% }) %>
-    </div>
-  </div>
 
-  <% if(matches.length === 0) { %>
-    <div style="text-align:center;padding:4rem;color:var(--muted);">No matches found</div>
-  <% } else { %>
-    <div class="grid grid-3">
-      <% matches.forEach(m => { %>
-        <div class="match-card">
-          <div style="display:flex;justify-content:space-between;margin-bottom:.5rem;">
-            <span style="font-size:.8rem;color:var(--muted)">⚡ <%= m.sport %></span>
-            <span class="status-badge status-<%= m.status %>"><%= m.status.toUpperCase() %></span>
-          </div>
-          <div class="match-teams">
-            <div class="team"><div class="team-name"><%= m.team_a %></div></div>
-            <div class="vs">
-              <% if(m.status === 'completed') { %>
-                <%= m.score_a %> - <%= m.score_b %>
-              <% } else { %>VS<% } %>
-            </div>
-            <div class="team"><div class="team-name"><%= m.team_b %></div></div>
-          </div>
-          <div class="match-meta" style="margin-bottom:1rem;">
-            <span>📅 <%= new Date(m.match_date).toLocaleDateString() %></span>
-            <span>🕐 <%= new Date(m.match_date).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) %></span>
-          </div>
-          <a href="/matches/<%= m.id %>" class="btn btn-primary btn-sm" style="width:100%;justify-content:center;">
-            <%= m.status === 'live' ? '📺 Watch Live' : m.status === 'completed' ? '📊 View Result' : '🎯 Predict' %>
-          </a>
-        </div>
-      <% }) %>
-    </div>
-  <% } %>
+<style>
+    .sport-tabs {
+        display: flex;
+        overflow-x: auto;
+        gap: 10px;
+        padding: 15px;
+        background: var(--darker);
+        position: sticky;
+        top: 65px;
+        z-index: 100;
+        scrollbar-width: none;
+    }
+    .sport-tabs::-webkit-scrollbar { display: none; }
+    .sport-tab {
+        padding: 8px 18px;
+        background: var(--card2);
+        border-radius: 20px;
+        white-space: nowrap;
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+        border: 1px solid var(--border);
+        transition: 0.3s;
+    }
+    .sport-tab.active {
+        background: var(--primary-gradient);
+        color: #fff;
+        border-color: transparent;
+    }
+
+    .match-list {
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .match-card {
+        background: var(--card);
+        border-radius: 12px;
+        padding: 15px;
+        border: 1px solid var(--border);
+    }
+
+    .match-header {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 10px;
+    }
+
+    .teams-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        text-align: center;
+        margin: 15px 0;
+    }
+
+    .team-box { flex: 1; }
+    .team-icon { font-size: 30px; margin-bottom: 5px; }
+    .team-name { font-weight: bold; font-size: 14px; }
+
+    .vs-box {
+        padding: 0 15px;
+        font-weight: 900;
+        color: var(--secondary);
+        font-style: italic;
+    }
+
+    .match-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid var(--border);
+        padding-top: 10px;
+        margin-top: 10px;
+    }
+
+    .match-time { font-size: 12px; color: var(--muted); }
+</style>
+
+<div class="sport-tabs">
+    <% const sports = [
+        {id: '', name: 'সবগুলো', icon: '🎯'},
+        {id: 'football', name: 'ফুটবল', icon: '⚽'},
+        {id: 'cricket', name: 'ক্রিকেট', icon: '🏏'},
+        {id: 'basketball', name: 'বাস্কেটবল', icon: '🏀'},
+        {id: 'tennis', name: 'টেনিস', icon: '🎾'}
+    ]; %>
+    <% sports.forEach(s => { %>
+        <a href="/matches?sport=<%= s.id %>" class="sport-tab <%= (locals.sport||'')===s.id?'active':'' %>">
+            <%= s.icon %> <%= s.name %>
+        </a>
+    <% }) %>
 </div>
+
+<div class="container page">
+    <%- include('partials/flash') %>
+
+    <div class="section-header" style="padding: 0 15px; margin-bottom: 10px;">
+        <h2 style="color: var(--accent); font-size: 18px;">🔥 লাইভ ও আগামী ম্যাচ</h2>
+    </div>
+
+    <% if(matches.length === 0) { %>
+        <div style="text-align:center;padding:4rem;color:var(--muted);">কোনো ম্যাচ পাওয়া যায়নি</div>
+    <% } else { %>
+        <div class="match-list">
+            <% matches.forEach(m => { %>
+                <div class="match-card">
+                    <div class="match-header">
+                        <span><%= m.sport.toUpperCase() %></span>
+                        <span class="status-badge status-<%= m.status %>">
+                            <%= m.status === 'live' ? 'লাইভ' : m.status === 'upcoming' ? 'আসছে' : 'শেষ' %>
+                        </span>
+                    </div>
+                    <div class="teams-container">
+                        <div class="team-box">
+                            <div class="team-icon">🛡️</div>
+                            <div class="team-name"><%= m.team_a %></div>
+                        </div>
+                        <div class="vs-box">
+                            <% if(m.status === 'completed') { %>
+                                <div style="font-size: 20px; color: var(--text);"><%= m.score_a %> - <%= m.score_b %></div>
+                            <% } else { %>VS<% } %>
+                        </div>
+                        <div class="team-box">
+                            <div class="team-icon">⚔️</div>
+                            <div class="team-name"><%= m.team_b %></div>
+                        </div>
+                    </div>
+                    <div class="match-footer">
+                        <div class="match-time">
+                            📅 <%= new Date(m.match_date).toLocaleDateString('bn-BD') %>
+                            | 🕐 <%= new Date(m.match_date).toLocaleTimeString('bn-BD', {hour:'2-digit',minute:'2-digit'}) %>
+                        </div>
+                        <a href="/matches/<%= m.id %>" class="btn btn-primary btn-sm">
+                            <%= m.status === 'live' ? 'দেখুন' : m.status === 'completed' ? 'রেজাল্ট' : 'প্রেডিকশন' %>
+                        </a>
+                    </div>
+                </div>
+            <% }) %>
+        </div>
+    <% } %>
+</div>
+
+<%- include('partials/bottom-nav', { activePage: 'matches' }) %>
 </body></html>

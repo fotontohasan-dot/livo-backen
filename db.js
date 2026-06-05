@@ -75,6 +75,11 @@ const initDB = async () => {
         amount INTEGER NOT NULL,
         type VARCHAR(50) NOT NULL,
         description VARCHAR(255),
+        status VARCHAR(20) DEFAULT 'completed',
+        txid VARCHAR(100),
+        method VARCHAR(50),
+        phone VARCHAR(20),
+        is_automatic BOOLEAN DEFAULT false,
         created_at TIMESTAMP DEFAULT NOW()
       );
       CREATE TABLE IF NOT EXISTS notifications (

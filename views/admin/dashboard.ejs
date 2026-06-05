@@ -20,6 +20,36 @@
       <div class="stat-card"><div class="stat-number" style="color:var(--gold)"><%= stats.total_coins_in_system %></div><div class="stat-label">Coins in System</div></div>
     </div>
 
+
+    <% if(pendingRequests.length > 0) { %>
+    <div class="card" style="margin-bottom:1.5rem; border-color: var(--secondary);">
+      <div class="card-header" style="background: var(--secondary)20; color: var(--secondary);">💰 Pending Wallet Requests</div>
+      <table class="table">
+        <thead><tr><th>User</th><th>Type</th><th>Amount</th><th>Method</th><th>Info</th><th>Action</th></tr></thead>
+        <tbody>
+          <% pendingRequests.forEach(r => { %>
+            <tr>
+              <td><%= r.username %></td>
+              <td><span class="status-badge <%= r.type === 'deposit' ? 'status-upcoming' : 'status-live' %>"><%= r.type.toUpperCase() %></span></td>
+              <td style="color:var(--gold)">🪙 <%= Math.abs(r.amount) %></td>
+              <td><%= r.method %></td>
+              <td style="font-size:.8rem;color:var(--muted)">
+                <%= r.phone %> <br>
+                <%= r.txid %>
+              </td>
+              <td>
+                <div style="display:flex; gap: 5px;">
+                  <form action="/admin/requests/<%= r.id %>/approve" method="POST"><button class="btn btn-sm btn-primary">Approve</button></form>
+                  <form action="/admin/requests/<%= r.id %>/reject" method="POST"><button class="btn btn-sm btn-outline">Reject</button></form>
+                </div>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <% } %>
+
     <div class="grid grid-2">
       <div class="card">
         <div class="card-header">👥 Recent Users</div>
