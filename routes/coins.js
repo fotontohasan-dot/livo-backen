@@ -27,33 +27,4 @@ router.post('/daily-bonus', isAuth, async (req, res) => {
   res.redirect('/coins');
 });
 
-router.get('/deposit', isAuth, (_req, res) => {
-  res.render('deposit');
-});
-
-router.post('/deposit', isAuth, async (req, res) => {
-  const { method, amount, phone, txid } = req.body;
-  const depositAmount = parseInt(amount);
-  const coins = depositAmount * 10;
-  const userId = req.session.user.id;
-
-  try {
-    // Security: Deposit is now 'pending' until admin approves.
-    await pool.query(
-      `INSERT INTO coin_transactions (user_id, amount, type, description, status, txid, method)
-       VALUES ($1, $2, 'deposit', $3, 'pending', $4, $5)`,
-      [userId, coins, `Deposit via ${method} (${phone})`, txid, method]
-    );
-
-    await pool.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1, 'ডিপোজিট রিকোয়েস্ট', 'আপনার ${coins} কয়েন ডিপোজিট রিকোয়েস্টটি পেন্ডিং আছে। আমাদের প্রতিনিধি এটি যাচাই করবেন।', 'info')`, [userId]);
-
-    req.flash('success', `আপনার ডিপোজিট রিকোয়েস্টটি গ্রহণ করা হয়েছে। যাচাই শেষে কয়েন যোগ করা হবে।`);
-    res.redirect('/');
-  } catch (err) {
-    console.error(err);
-    req.flash('error', 'ডিপোজিট রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে।');
-    res.redirect('/coins/deposit');
-  }
-});
-
 module.exports = router;

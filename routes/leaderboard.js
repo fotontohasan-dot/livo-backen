@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
 
-router.get('/', async (_req, res) => {
+router.get('/', async (req, res) => {
   const users = await pool.query(`
     SELECT
       id, username, avatar, total_points, coins,
