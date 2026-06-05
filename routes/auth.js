@@ -2,13 +2,12 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { pool } = require('../db');
-const { isAuth } = require('../middleware/auth');
 
-router.get('/', async (req, res) => {
+router.get('/', (_req, res) => {
   res.render('index');
 });
 
-router.get('/register', (req, res) => res.render('registration'));
+router.get('/register', (_req, res) => res.render('registration'));
 router.post('/register', async (req, res) => {
   const { username, email, password } = req.body;
   try {
@@ -23,13 +22,13 @@ router.post('/register', async (req, res) => {
     req.session.user = user;
     req.flash('success', 'Registration successful! You got 500 welcome coins');
     res.redirect('/');
-  } catch (err) {
+  } catch (_err) {
     req.flash('error', 'Username or email already exists');
     res.redirect('/register');
   }
 });
 
-router.get('/login', (req, res) => res.render('login'));
+router.get('/login', (_req, res) => res.render('login'));
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   try {
@@ -45,7 +44,7 @@ router.post('/login', async (req, res) => {
     }
     req.session.user = user;
     res.redirect('/');
-  } catch (err) {
+  } catch (_err) {
     req.flash('error', 'Login failed');
     res.redirect('/login');
   }
