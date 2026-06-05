@@ -1,0 +1,237 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+
+<style>
+    :root {
+        --bg-color: #0f0b1f;
+        --card-bg: #1a1433;
+        --primary-gradient: linear-gradient(90deg, #6b00ff, #ff00aa);
+        --accent-color: #ffd700;
+        --text-color: #ffffff;
+    }
+
+    body {
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        margin-bottom: 70px;
+    }
+
+    .game-container {
+        padding: 20px;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .game-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        background: var(--card-bg);
+        padding: 15px;
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .game-title {
+        font-size: 20px;
+        font-weight: bold;
+        color: var(--accent-color);
+    }
+
+    .balance-box {
+        background: rgba(0,0,0,0.3);
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-weight: bold;
+        color: #fbbf24;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .game-canvas-area {
+        width: 100%;
+        aspect-ratio: 16/9;
+        background: #000;
+        border-radius: 12px;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid #6b00ff;
+        box-shadow: 0 0 20px rgba(107, 0, 255, 0.3);
+    }
+
+    .bet-controls {
+        margin-top: 20px;
+        background: var(--card-bg);
+        padding: 20px;
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .bet-input-group {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .bet-input-group label {
+        white-space: nowrap;
+        font-size: 14px;
+    }
+
+    .bet-input-group input {
+        flex: 1;
+        background: rgba(0,0,0,0.3);
+        border: 1px solid rgba(255,255,255,0.2);
+        color: white;
+        padding: 10px;
+        border-radius: 8px;
+        outline: none;
+    }
+
+    .bet-btn {
+        background: var(--primary-gradient);
+        color: white;
+        border: none;
+        padding: 12px;
+        border-radius: 8px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: 0.3s;
+    }
+
+    .bet-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .game-placeholder {
+        text-align: center;
+        padding: 40px;
+    }
+
+    .game-placeholder h3 {
+        margin-bottom: 10px;
+        color: var(--accent-color);
+    }
+</style>
+
+<div class="game-container">
+    <div class="game-header">
+        <div class="game-title"><%= gameDisplayName %></div>
+        <div class="balance-box">
+            🪙 <span id="userBalance"><%= coins %></span>
+        </div>
+    </div>
+
+    <div id="gameCanvas" class="game-canvas-area">
+        <!-- Game-specific UI will be rendered here by the script -->
+        <div id="gameUI">
+            <div class="game-placeholder">
+                <h3><%= gameDisplayName %></h3>
+                <p>গেম লোড হচ্ছে...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bet-controls">
+        <div class="bet-input-group">
+            <label>বাজির পরিমাণ:</label>
+            <input type="number" id="betAmount" value="10" min="10" step="10">
+        </div>
+        <button id="mainGameBtn" class="bet-btn">খেলুন</button>
+    </div>
+</div>
+
+<%- include('../partials/bottom-nav', { activePage: 'home' }) %>
+
+<!-- Core Game Scripts -->
+<script>
+    const gameSlug = '<%= gameSlug %>';
+    let currentBalance = <%= coins %>;
+
+    async function placeBet(amount, selection = null) {
+        try {
+            const response = await fetch('/games/play', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ gameSlug, amount, selection })
+            });
+            const data = await response.json();
+            if (data.success) {
+                updateBalance(data.newBalance);
+                return data;
+            } else {
+                alert(data.message);
+                return false;
+            }
+        } catch (err) {
+            console.error('Play error:', err);
+            return false;
+        }
+    }
+
+    async function recordWin(multiplier) {
+        try {
+            const response = await fetch('/games/cashout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ gameSlug, multiplier })
+            });
+            const data = await response.json();
+            if (data.success) {
+                updateBalance(data.newBalance);
+                return data;
+            } else {
+                alert(data.message);
+                return false;
+            }
+        } catch (err) {
+            console.error('Win error:', err);
+            return false;
+        }
+    }
+
+    function updateBalance(newBalance) {
+        currentBalance = newBalance;
+        document.getElementById('userBalance').innerText = newBalance;
+    }
+</script>
+
+<!-- Game Specific Logic (Included after core UI and scripts) -->
+<% if (gameSlug === 'aviator') { %>
+    <%- include('aviator') %>
+<% } else if (gameSlug === 'slots') { %>
+    <%- include('slots') %>
+<% } else if (gameSlug === 'roulette') { %>
+    <%- include('roulette') %>
+<% } else if (gameSlug === 'andar-bahar') { %>
+    <%- include('andar-bahar') %>
+<% } else if (gameSlug === 'teen-patti') { %>
+    <%- include('teen-patti') %>
+<% } else if (gameSlug === 'blackjack') { %>
+    <%- include('blackjack') %>
+<% } else if (gameSlug === 'poker') { %>
+    <%- include('poker') %>
+<% } else if (gameSlug === 'baccarat') { %>
+    <%- include('baccarat') %>
+<% } else if (gameSlug === 'ludo') { %>
+    <%- include('ludo') %>
+<% } else { %>
+    <script>
+        document.getElementById('gameUI').innerHTML = `
+            <div class="game-placeholder">
+                <h3><%= gameDisplayName %></h3>
+                <p>শীঘ্রই আসছে...</p>
+            </div>
+        `;
+    </script>
+<% } %>

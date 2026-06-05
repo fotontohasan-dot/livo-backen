@@ -1,8 +1,9 @@
+const process = require('node:process');
 const { Pool } = require('pg');
 
 const pool = new Pool({
-  connectionString: 'postgresql://livo_db_opct_user:OFAhdQSwR626wwICIiBMkCIYbTG2Gyvw@dpg-d8ghl7rbc2fs73ej8k70-a/livo_db_opct',
-  ssl: { rejectUnauthorized: false }
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
 
 const initDB = async () => {

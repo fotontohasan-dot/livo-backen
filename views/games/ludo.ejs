@@ -1,0 +1,100 @@
+<style>
+    #ludoGame {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #f8fafc;
+        color: #1e293b;
+    }
+    .dice-container {
+        display: flex;
+        gap: 30px;
+        margin-top: 20px;
+    }
+    .dice-box {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .dice {
+        width: 60px;
+        height: 60px;
+        background: #fff;
+        border: 2px solid #1e293b;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px;
+        font-weight: bold;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        margin-bottom: 10px;
+    }
+    .rolling {
+        animation: roll 0.2s infinite;
+    }
+    @keyframes roll {
+        0% { transform: rotate(0); }
+        50% { transform: rotate(180deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+
+<script>
+    document.getElementById('gameUI').innerHTML = `
+        <div id="ludoGame">
+            <div id="ludoStatus" style="font-weight: bold;">ডাইস রোল করুন!</div>
+            <div class="dice-container">
+                <div class="dice-box">
+                    <div id="dealerDice" class="dice">?</div>
+                    <span>ডিলার</span>
+                </div>
+                <div class="dice-box">
+                    <div id="playerDice" class="dice">?</div>
+                    <span>আপনি</span>
+                </div>
+            </div>
+        </div>
+    `;
+</script>
+
+<script>
+    const ludoStatus = document.getElementById('ludoStatus');
+    const ludoPlayBtn = document.getElementById('mainGameBtn');
+    const pDice = document.getElementById('playerDice');
+    const dDice = document.getElementById('dealerDice');
+
+    async function playLudo() {
+        const amount = parseInt(document.getElementById('betAmount').value);
+        const data = await placeBet(amount);
+        if (!data || !data.success) return;
+
+        ludoPlayBtn.disabled = true;
+        ludoStatus.innerText = 'রোল হচ্ছে...';
+        pDice.classList.add('rolling');
+        dDice.classList.add('rolling');
+
+        setTimeout(() => {
+            pDice.classList.remove('rolling');
+            dDice.classList.remove('rolling');
+
+            pDice.innerText = data.gameResult.playerRoll;
+            dDice.innerText = data.gameResult.dealerRoll;
+
+            if (data.winAmount > 0) {
+                ludoStatus.innerText = `আপনি জিতেছেন! +${data.winAmount}`;
+                ludoStatus.style.color = '#10b981';
+            } else {
+                ludoStatus.innerText = 'আপনি হেরেছেন!';
+                ludoStatus.style.color = '#ef4444';
+            }
+            ludoPlayBtn.disabled = false;
+        }, 1500);
+    }
+
+    ludoPlayBtn.innerText = 'রোল';
+    ludoPlayBtn.onclick = playLudo;
+</script>

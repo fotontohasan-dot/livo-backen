@@ -1,0 +1,108 @@
+<style>
+    #slotsGame {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #000;
+    }
+    .slot-machine {
+        display: flex;
+        gap: 10px;
+        background: #333;
+        padding: 20px;
+        border-radius: 15px;
+        border: 4px solid #ffd700;
+        margin-bottom: 20px;
+    }
+    .reel {
+        width: 60px;
+        height: 80px;
+        background: #fff;
+        border-radius: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 40px;
+        color: #000;
+        overflow: hidden;
+    }
+    .spinning {
+        animation: spin 0.1s infinite linear;
+    }
+    @keyframes spin {
+        0% { transform: translateY(-10px); }
+        100% { transform: translateY(10px); }
+    }
+    #slotResult {
+        font-weight: bold;
+        color: var(--accent-color);
+        height: 24px;
+    }
+</style>
+
+<script>
+    document.getElementById('gameUI').innerHTML = `
+        <div id="slotsGame">
+            <div id="slotResult"></div>
+            <div class="slot-machine">
+                <div id="reel1" class="reel">🍒</div>
+                <div id="reel2" class="reel">🍒</div>
+                <div id="reel3" class="reel">🍒</div>
+            </div>
+        </div>
+    `;
+</script>
+
+<script>
+    const reels = [document.getElementById('reel1'), document.getElementById('reel2'), document.getElementById('reel3')];
+    const resultEl = document.getElementById('slotResult');
+    const playBtn = document.getElementById('mainGameBtn');
+    const betInp = document.getElementById('betAmount');
+
+    let isSpinning = false;
+
+    async function spin() {
+        if (isSpinning) return;
+
+        const amount = parseInt(betInp.value);
+        if (isNaN(amount) || amount < 10) {
+            alert('ন্যূনতম বাজি ১০ কয়েন');
+            return;
+        }
+
+        // Get secure result from server
+        const data = await placeBet(amount);
+        if (!data || !data.success) return;
+
+        isSpinning = true;
+        resultEl.innerText = 'স্পিন হচ্ছে...';
+        playBtn.disabled = true;
+
+        reels.forEach(reel => reel.classList.add('spinning'));
+
+        // Delay to show animation
+        setTimeout(() => {
+            const results = data.gameResult.results;
+
+            reels.forEach((reel, i) => {
+                reel.classList.remove('spinning');
+                reel.innerText = results[i];
+            });
+
+            if (data.winAmount > 0) {
+                resultEl.innerText = `আপনি জিতেছেন! +${data.winAmount} কয়েন`;
+            } else {
+                resultEl.innerText = 'আবার চেষ্টা করুন';
+            }
+
+            isSpinning = false;
+            playBtn.disabled = false;
+        }, 2000);
+    }
+
+    playBtn.innerText = 'স্পিন';
+    playBtn.onclick = spin;
+</script>

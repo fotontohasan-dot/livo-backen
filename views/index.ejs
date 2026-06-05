@@ -221,8 +221,15 @@
 
 <script>
     const games = [
-        {name:"Teen Patti",        emoji:"🃏", type:"pvp"},
-        {name:"Andar Bahar",       emoji:"🎴", type:"pvp"},
+        {name:"Aviator",           emoji:"✈️", type:"pvp", slug: "aviator"},
+        {name:"Teen Patti",        emoji:"🃏", type:"pvp", slug: "teen-patti"},
+        {name:"Andar Bahar",       emoji:"🎴", type:"pvp", slug: "andar-bahar"},
+        {name:"Blackjack",         emoji:"♠️", type:"table", slug: "blackjack"},
+        {name:"Poker",             emoji:"🃏", type:"pvp", slug: "poker"},
+        {name:"Baccarat",          emoji:"🎰", type:"table", slug: "baccarat"},
+        {name:"Roulette",          emoji:"🎡", type:"table", slug: "roulette"},
+        {name:"Slots",             emoji:"🎰", type:"slots", slug: "slots"},
+        {name:"Online Ludo",       emoji:"🎲", type:"pvp", slug: "ludo"},
         {name:"Dragon Tiger",      emoji:"🐉", type:"pvp"},
         {name:"Super Ace",         emoji:"🂡", type:"slots"},
         {name:"Fortune Gems",      emoji:"💎", type:"slots"},
@@ -236,10 +243,6 @@
         {name:"Wolf Gold",         emoji:"🐺", type:"slots"},
         {name:"Joker's Jewels",    emoji:"🤡", type:"slots"},
         {name:"Crash",             emoji:"🚀", type:"pvp"},
-        {name:"Aviator",           emoji:"✈️", type:"pvp"},
-        {name:"Roulette",          emoji:"🎡", type:"table"},
-        {name:"Blackjack",         emoji:"♠️", type:"table"},
-        {name:"Baccarat",          emoji:"🎰", type:"table"},
         {name:"Lucky Spin",        emoji:"🎰", type:"slots"},
         {name:"Color Prediction",  emoji:"🌈", type:"pvp"},
         {name:"Blackjack Live",    emoji:"♠️", type:"live"},
@@ -286,12 +289,13 @@
             card.className = 'game-card';
             card.style.animationDelay = `${index * 0.05}s`;
             const bg = bgColors[index % bgColors.length];
+            const playUrl = item.slug ? `/games/${item.slug}` : '/login';
 
             card.innerHTML = `
                 <div class="game-thumb" style="background: ${bg}">${item.emoji}</div>
                 <div class="game-info">
                     <div class="game-name">${item.name}</div>
-                    <button class="play-btn" onclick="location.href='/login'">খেলুন</button>
+                    <button class="play-btn" onclick="location.href='${playUrl}'">খেলুন</button>
                 </div>
             `;
             container.appendChild(card);
