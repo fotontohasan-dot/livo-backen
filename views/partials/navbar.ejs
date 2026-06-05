@@ -1,25 +1,27 @@
 <nav class="navbar">
-  <a href="/" class="nav-brand">LIVO</a>
-
+  <a href="/" class="nav-brand">🏆 Livo<span>Sport</span></a>
   <div class="nav-links">
-    <a href="/matches">ম্যাচ</a>
-    <a href="/tournaments">টুর্নামেন্ট</a>
-    <a href="/leaderboard">লিডারবোর্ড</a>
+    <a href="/matches">Matches</a>
+    <a href="/tournaments">Tournaments</a>
+    <a href="/news">News</a>
+    <a href="/leaderboard">Leaderboard</a>
     <% if(locals.user && user.role === 'admin') { %>
-      <a href="/admin" style="color:var(--secondary)">এডমিন</a>
+      <a href="/admin" style="color:var(--secondary)">Admin</a>
     <% } %>
   </div>
-
-  <div style="display:flex;align-items:center;gap:0.75rem;">
+  <div style="display:flex;align-items:center;gap:1rem;">
     <% if(locals.user) { %>
-      <a href="/coins/deposit" class="nav-coins" style="text-decoration:none;">🪙 <%= user.coins %> +</a>
-      <a href="/notifications" style="text-decoration:none;font-size:1.2rem;">🔔</a>
+      <span class="nav-coins">🪙 <%= user.coins %></span>
+      <a href="/notifications" style="text-decoration:none;color:var(--muted);font-size:1.2rem;">
+        🔔
+      </a>
       <a href="/profile" style="text-decoration:none;">
         <div class="avatar"><%= user.username[0].toUpperCase() %></div>
       </a>
+      <a href="/logout" class="btn btn-outline btn-sm">Logout</a>
     <% } else { %>
-      <a href="/login" class="btn btn-outline btn-sm">লগইন</a>
-      <a href="/register" class="btn btn-primary btn-sm">রেজিস্ট্রেশন</a>
+      <a href="/login" class="btn btn-outline btn-sm">Login</a>
+      <a href="/register" class="btn btn-primary btn-sm">Register</a>
     <% } %>
   </div>
 </nav>

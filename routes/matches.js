@@ -44,7 +44,7 @@ router.post('/:id/predict', isAuth, async (req, res) => {
     req.session.user.coins -= bet;
     req.flash('success', `Prediction placed! ${bet} coins bet`);
     res.redirect(`/matches/${matchId}`);
-  } catch (_err) {
+  } catch (err) {
     req.flash('error', 'Already predicted this match');
     res.redirect(`/matches/${matchId}`);
   }

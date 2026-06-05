@@ -3,7 +3,7 @@ const router = express.Router();
 const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
 
-router.get('/', async (_req, res) => {
+router.get('/', async (req, res) => {
   const tournaments = await pool.query(`SELECT t.*, COUNT(tp.user_id) as participant_count FROM tournaments t LEFT JOIN tournament_participants tp ON t.id=tp.tournament_id GROUP BY t.id ORDER BY t.start_date DESC`);
   res.render('tournaments', { tournaments: tournaments.rows });
 });
