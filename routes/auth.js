@@ -2,9 +2,12 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { pool } = require('../db');
-const { isAuth } = require('../middleware/auth');
 
+ redesign-game-lobby-12152984542375627571
 router.get('/', async (_req, res) => {
+
+router.get('/', (_req, res) => {
+ main
   res.render('index');
 });
 
@@ -23,7 +26,7 @@ router.post('/register', async (req, res) => {
     req.session.user = user;
     req.flash('success', 'Registration successful! You got 500 welcome coins');
     res.redirect('/');
-  } catch (err) {
+  } catch (_err) {
     req.flash('error', 'Username or email already exists');
     res.redirect('/register');
   }
@@ -45,7 +48,7 @@ router.post('/login', async (req, res) => {
     }
     req.session.user = user;
     res.redirect('/');
-  } catch (err) {
+  } catch (_err) {
     req.flash('error', 'Login failed');
     res.redirect('/login');
   }

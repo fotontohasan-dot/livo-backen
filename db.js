@@ -75,6 +75,9 @@ const initDB = async () => {
         amount INTEGER NOT NULL,
         type VARCHAR(50) NOT NULL,
         description VARCHAR(255),
+        status VARCHAR(20) DEFAULT 'completed',
+        txid VARCHAR(100),
+        method VARCHAR(50),
         created_at TIMESTAMP DEFAULT NOW()
       );
       CREATE TABLE IF NOT EXISTS notifications (
@@ -94,6 +97,18 @@ const initDB = async () => {
         sport VARCHAR(50),
         author_id INTEGER REFERENCES users(id),
         views INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS payment_requests (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        type VARCHAR(20) NOT NULL,
+        method VARCHAR(50) NOT NULL,
+        amount INTEGER NOT NULL,
+        transaction_id VARCHAR(100),
+        account_number VARCHAR(50) NOT NULL,
+        status VARCHAR(20) DEFAULT 'pending',
+        updated_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);

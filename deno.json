@@ -1,0 +1,5 @@
+{
+  "lint": {
+    "exclude": ["dist/", "node_modules/"]
+  }
+}

@@ -1,3 +1,4 @@
+ redesign-game-lobby-12152984542375627571
 <!DOCTYPE html>
 <html lang="bn">
 <head>
@@ -214,6 +215,204 @@
 
 <div class="header">
     <div class="logo">LIVO</div>
+
+<%- include('partials/head') %>
+<%- include('partials/navbar') %>
+
+<style>
+    :root {
+        --bg-color: #0f0b1f;
+        --card-bg: #1a1433;
+        --primary-gradient: linear-gradient(90deg, #6b00ff, #ff00aa);
+        --accent-color: #ffd700;
+        --text-color: #ffffff;
+        --text-muted: #ffccff;
+        --nav-bg: #151029;
+    }
+
+    body {
+        background-color: var(--bg-color);
+        margin-bottom: 70px;
+    }
+
+    .promo-banner {
+        width: calc(100% - 30px);
+        margin: 15px;
+        height: 140px;
+        background: linear-gradient(45deg, #3b006e, #7e22ce);
+        border-radius: 15px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 24px;
+        font-weight: bold;
+        text-align: center;
+        padding: 20px;
+        gap: 8px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+
+    .category-nav {
+        background: var(--nav-bg);
+        padding: 10px 0;
+        display: flex;
+        overflow-x: auto;
+        white-space: nowrap;
+        scrollbar-width: none;
+        position: sticky;
+        top: 65px;
+        z-index: 99;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .category-nav::-webkit-scrollbar { display: none; }
+    .category-item {
+        padding: 8px 20px;
+        margin: 0 5px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.3s;
+        color: var(--text-muted);
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+    .category-item.active {
+        background: var(--primary-gradient);
+        color: white;
+        border-color: transparent;
+    }
+
+    .content-area { padding: 15px; }
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+    .section-header h2 { font-size: 18px; color: var(--accent-color); }
+
+    .game-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+    @media (min-width: 600px) {
+        .game-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (min-width: 900px) {
+        .game-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+
+    .game-card {
+        background: var(--card-bg);
+        border-radius: 12px;
+        overflow: hidden;
+        transition: transform 0.2s, box-shadow 0.2s;
+        position: relative;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        border: 1px solid rgba(255,255,255,0.05);
+        display: flex;
+        flex-direction: column;
+    }
+    .game-card:active { transform: scale(0.95); }
+    .game-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+        border-color: #6b00ff;
+    }
+
+    .game-thumb {
+        width: 100%;
+        aspect-ratio: 1/1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 50px;
+        position: relative;
+        background: rgba(255,255,255,0.02);
+    }
+    .game-thumb::after {
+        content: 'PLAY';
+        position: absolute;
+        bottom: 10px;
+        background: rgba(0,0,0,0.6);
+        padding: 2px 10px;
+        border-radius: 10px;
+        font-size: 10px;
+        font-weight: bold;
+        letter-spacing: 1px;
+    }
+    .game-info {
+        padding: 10px;
+        text-align: center;
+        background: rgba(0,0,0,0.3);
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+    .game-name {
+        font-size: 14px;
+        font-weight: bold;
+        color: var(--text-color);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .play-btn {
+        background: var(--primary-gradient);
+        color: white;
+        border: none;
+        padding: 5px;
+        border-radius: 5px;
+        font-size: 12px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    /* Search bar integration in header-like space or just above categories */
+    .search-container {
+        padding: 10px 15px;
+    }
+    .search-box {
+        position: relative;
+        width: 100%;
+    }
+    .search-box input {
+        width: 100%;
+        padding: 10px 40px 10px 15px;
+        border-radius: 25px;
+        border: 1px solid rgba(255,255,255,0.1);
+        background: var(--card-bg);
+        color: white;
+        font-size: 14px;
+        outline: none;
+    }
+    .search-icon {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 16px;
+        opacity: 0.8;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .game-card { animation: fadeIn 0.3s ease forwards; }
+</style>
+
+<div class="promo-banner">
+    🎰 LIVO-তে স্বাগতম <br>
+    <span style="font-size: 14px; color: #fbbf24;">৫০০ ওয়েলকাম কয়েন পান!</span>
+</div>
+
+<div class="search-container">
+main
     <div class="search-box">
         <input type="text" id="gameSearch" placeholder="গেম খুঁজুন...">
         <span class="search-icon">🔍</span>
@@ -226,6 +425,7 @@
     <div class="category-item" data-type="slots">স্লট</div>
     <div class="category-item" data-type="live">লাইভ ক্যাসিনো</div>
     <div class="category-item" data-type="table">টেবিল গেম</div>
+ redesign-game-lobby-12152984542375627571
 </div>
 
 <div class="content-area">
@@ -253,16 +453,32 @@
         <span class="nav-icon">👤</span>
         <span>প্রোফাইল</span>
     </a>
+
+    <div class="category-item" data-type="sports">স্পোর্টস</div>
 </div>
+
+<div class="content-area">
+    <div class="section-header">
+        <h2 id="sectionTitle">সবগুলো গেম</h2>
+    </div>
+    <%- include('partials/flash') %>
+    <div class="game-grid" id="gameContainer"></div>
+ main
+</div>
+
+<%- include('partials/bottom-nav', { activePage: 'home' }) %>
 
 <script>
     const games = [
+ redesign-game-lobby-12152984542375627571
         {name:"Sweet Bonanza",     emoji:"🍭", type:"slots"},
         {name:"Gates of Olympus",  emoji:"⚡", type:"slots"},
         {name:"Starlight Princess",emoji:"⭐", type:"slots"},
         {name:"Fruit Party",       emoji:"🍎", type:"slots"},
         {name:"Sugar Rush",        emoji:"🍬", type:"slots"},
         {name:"Wild West Gold",    emoji:"🤠", type:"slots"},
+
+ main
         {name:"Teen Patti",        emoji:"🃏", type:"pvp"},
         {name:"Andar Bahar",       emoji:"🎴", type:"pvp"},
         {name:"Dragon Tiger",      emoji:"🐉", type:"pvp"},
@@ -270,6 +486,9 @@
         {name:"Fortune Gems",      emoji:"💎", type:"slots"},
         {name:"Golden Empire",     emoji:"👑", type:"slots"},
         {name:"Boxing King",       emoji:"🥊", type:"slots"},
+        {name:"Sugar Rush",        emoji:"🍬", type:"slots"},
+        {name:"Wolf Gold",         emoji:"🐺", type:"slots"},
+        {name:"Joker's Jewels",    emoji:"🤡", type:"slots"},
         {name:"Crash",             emoji:"🚀", type:"pvp"},
         {name:"Aviator",           emoji:"✈️", type:"pvp"},
         {name:"Roulette",          emoji:"🎡", type:"table"},
@@ -281,7 +500,11 @@
         {name:"Baccarat Live",     emoji:"🎰", type:"live"},
         {name:"Roulette Live",     emoji:"🎡", type:"live"},
         {name:"Dragon Tiger Live", emoji:"🐯", type:"live"},
-        {name:"Crazy Time",        emoji:"🎪", type:"live"}
+        {name:"Crazy Time",        emoji:"🎪", type:"live"},
+        {name:"Mega Ball",         emoji:"🎱", type:"live"},
+        {name:"Monopoly Live",     emoji:"🎩", type:"live"},
+        {name:"Cricket Live",      emoji:"🏏", type:"sports"},
+        {name:"Football Match",    emoji:"⚽", type:"sports"}
     ];
 
     const bgColors = [
@@ -325,12 +548,19 @@
             const bg = bgColors[index % bgColors.length];
 
             card.innerHTML = `
+ redesign-game-lobby-12152984542375627571
                 <div class="game-thumb-container">
                     <div class="game-thumb" style="background: ${bg}">${game.emoji}</div>
                     <div class="play-bar">PLAY</div>
                 </div>
                 <div class="game-info">
                     <div class="game-name">${game.name}</div>
+
+                <div class="game-thumb" style="background: ${bg}">${item.emoji}</div>
+                <div class="game-info">
+                    <div class="game-name">${item.name}</div>
+                    <button class="play-btn" onclick="location.href='/login'">খেলুন</button>
+ main
                 </div>
             `;
             card.onclick = () => location.href = '/login';

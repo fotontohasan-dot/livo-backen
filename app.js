@@ -1,4 +1,5 @@
 require('dotenv').config();
+const process = require('node:process');
 const express = require('express');
 const session = require('express-session');
 const flash = require('connect-flash');
@@ -38,6 +39,7 @@ app.use('/profile', require('./routes/profile'));
 app.use('/leaderboard', require('./routes/leaderboard'));
 app.use('/admin', require('./routes/admin'));
 app.use('/notifications', require('./routes/notifications'));
+app.use('/payment', require('./routes/payment'));
 
 const PORT = process.env.PORT || 3000;
 initDB().then(() => {

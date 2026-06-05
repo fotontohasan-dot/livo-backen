@@ -27,4 +27,5 @@ router.post('/daily-bonus', isAuth, async (req, res) => {
   res.redirect('/coins');
 });
 
+
 module.exports = router;
