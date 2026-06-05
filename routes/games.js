@@ -16,6 +16,25 @@ const supportedGames = {
   'ludo': 'Online Ludo'
 };
 
+// Check game status (for Aviator crash) - MUST BE BEFORE /:gameSlug
+router.get('/status', isAuth, (req, res) => {
+  const gameState = req.session.gameState;
+  if (!gameState) return res.json({ active: false });
+
+  if (gameState.game === 'aviator') {
+    const elapsedTime = (Date.now() - gameState.startTime) / 1000;
+    const currentMultiplier = 1.0 + elapsedTime * 0.1;
+
+    if (currentMultiplier >= gameState.crashPoint) {
+      delete req.session.gameState;
+      return res.json({ active: false, crashed: true, crashPoint: gameState.crashPoint });
+    }
+    return res.json({ active: true, multiplier: currentMultiplier });
+  }
+
+  res.json({ active: true });
+});
+
 // Render the game page
 router.get('/:gameSlug', isAuth, async (req, res) => {
   const { gameSlug } = req.params;
@@ -43,10 +62,9 @@ router.get('/:gameSlug', isAuth, async (req, res) => {
   }
 });
 
-// Handle betting (Withdraw coins from wallet)
-// For Aviator, we also generate the crash point here and store it in session
-router.post('/bet', isAuth, async (req, res) => {
-  const { gameSlug, amount } = req.body;
+// Secure game logic
+router.post('/play', isAuth, async (req, res) => {
+  const { gameSlug, amount, selection } = req.body;
   const userId = req.session.user.id;
   const betAmount = parseInt(amount);
 
@@ -54,25 +72,81 @@ router.post('/bet', isAuth, async (req, res) => {
     return res.status(400).json({ success: false, message: 'সঠিক পরিমাণ প্রদান করুন' });
   }
 
+  const client = await pool.connect();
   try {
-    const userResult = await pool.query('SELECT coins FROM users WHERE id = $1', [userId]);
+    await client.query('BEGIN');
+
+    const userResult = await client.query('SELECT coins FROM users WHERE id = $1 FOR UPDATE', [userId]);
     if (userResult.rows[0].coins < betAmount) {
-      return res.status(400).json({ success: false, message: 'পর্যাপ্ত ব্যালেন্স নেই' });
+        await client.query('ROLLBACK');
+        return res.status(400).json({ success: false, message: 'পর্যাপ্ত ব্যালেন্স নেই' });
     }
 
-    // Deduct coins
-    await pool.query('UPDATE users SET coins = coins - $1 WHERE id = $2', [betAmount, userId]);
-    await pool.query(
-      'INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, $3, $4)',
-      [userId, -betAmount, 'game_bet', `${supportedGames[gameSlug] || gameSlug} গেমে বাজি ধরা হয়েছে`]
-    );
+    let winAmount = 0;
+    let gameResult = {};
 
-    req.session.user.coins -= betAmount;
+    if (gameSlug === 'slots') {
+        const symbols = ["🍒", "🍋", "🍊", "🍇", "🔔", "💎", "7️⃣"];
+        const results = [
+            symbols[Math.floor(Math.random() * symbols.length)],
+            symbols[Math.floor(Math.random() * symbols.length)],
+            symbols[Math.floor(Math.random() * symbols.length)]
+        ];
 
-    // Game-specific logic
-    if (gameSlug === 'aviator') {
-        // Generate crash point server-side: 1.0 to 10.0 (logarithmic or weighted would be better for house edge)
-        // Here we just use a simplified version
+        let multiplier = 0;
+        if (results[0] === results[1] && results[1] === results[2]) {
+            multiplier = 10;
+        } else if (results[0] === results[1] || results[1] === results[2] || results[0] === results[2]) {
+            multiplier = 2;
+        }
+
+        winAmount = betAmount * multiplier;
+        gameResult = { results, multiplier };
+
+    } else if (gameSlug === 'roulette') {
+        const number = Math.floor(Math.random() * 37); // 0-36
+        const redNumbers = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
+        const isRed = redNumbers.includes(number);
+        const isEven = number !== 0 && number % 2 === 0;
+        const isOdd = number !== 0 && number % 2 !== 0;
+
+        let won = false;
+        if (selection === 'Red' && isRed) won = true;
+        if (selection === 'Black' && number !== 0 && !isRed) won = true;
+        if (selection === 'Even' && isEven) won = true;
+        if (selection === 'Odd' && isOdd) won = true;
+
+        if (won) winAmount = betAmount * 2;
+        gameResult = {
+            number,
+            color: number === 0 ? 'Green' : (isRed ? 'Red' : 'Black'),
+            even: isEven,
+            odd: isOdd,
+            result: number === 0 ? '0' : (isRed ? 'Red' : 'Black')
+        };
+
+    } else if (gameSlug === 'andar-bahar') {
+        const winSide = Math.random() < 0.5 ? 'Andar' : 'Bahar';
+        if (selection === winSide) {
+            winAmount = betAmount * 1.9; // Standard payout roughly
+        }
+        gameResult = { winSide };
+    } else if (gameSlug === 'teen-patti' || gameSlug === 'blackjack' || gameSlug === 'poker' || gameSlug === 'baccarat') {
+        // Simple "Higher card" logic for demo completeness
+        const playerCard = Math.floor(Math.random() * 13) + 2;
+        const dealerCard = Math.floor(Math.random() * 13) + 2;
+        if (playerCard > dealerCard) {
+            winAmount = betAmount * 2;
+        }
+        gameResult = { playerCard, dealerCard };
+    } else if (gameSlug === 'ludo') {
+        const playerRoll = Math.floor(Math.random() * 6) + 1;
+        const dealerRoll = Math.floor(Math.random() * 6) + 1;
+        if (playerRoll > dealerRoll) {
+            winAmount = betAmount * 2;
+        }
+        gameResult = { playerRoll, dealerRoll };
+    } else if (gameSlug === 'aviator') {
         const crashPoint = (1 + Math.random() * 9).toFixed(2);
         req.session.gameState = {
             game: 'aviator',
@@ -80,23 +154,42 @@ router.post('/bet', isAuth, async (req, res) => {
             crashPoint: parseFloat(crashPoint),
             startTime: Date.now()
         };
-        console.log(`[Aviator] User ${userId} bet ${betAmount}, Crash at ${crashPoint}`);
+
+        await client.query('UPDATE users SET coins = coins - $1 WHERE id = $2', [betAmount, userId]);
+        await client.query(
+            'INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, $3, $4)',
+            [userId, -betAmount, 'game_bet', `Aviator গেমে বাজি ধরা হয়েছে`]
+        );
+        await client.query('COMMIT');
+        req.session.user.coins -= betAmount;
+        return res.json({ success: true, newBalance: req.session.user.coins });
     } else {
-        // Placeholder for other games
-        req.session.gameState = {
-            game: gameSlug,
-            betAmount: betAmount
-        };
+        await client.query('ROLLBACK');
+        return res.status(400).json({ success: false, message: 'এই গেমটি এখনও সক্রিয় নয়' });
     }
 
-    res.json({ success: true, newBalance: req.session.user.coins });
+    // Update wallet for instant result games
+    const netChange = winAmount - betAmount;
+    await client.query('UPDATE users SET coins = coins + $1 WHERE id = $2', [netChange, userId]);
+    await client.query(
+        'INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, $3, $4)',
+        [userId, netChange, 'game_play', `${supportedGames[gameSlug]} গেম খেলা হয়েছে`]
+    );
+
+    await client.query('COMMIT');
+    req.session.user.coins += netChange;
+    res.json({ success: true, newBalance: req.session.user.coins, winAmount, gameResult });
+
   } catch (err) {
-    console.error('Bet error:', err);
+    if (client) await client.query('ROLLBACK');
+    console.error('Play error:', err);
     res.status(500).json({ success: false, message: 'সার্ভার ত্রুটি' });
+  } finally {
+    if (client) client.release();
   }
 });
 
-// Secure Cash Out (replaces /win for Aviator)
+// Secure Cash Out (for Aviator)
 router.post('/cashout', isAuth, async (req, res) => {
   const { gameSlug, multiplier } = req.body;
   const userId = req.session.user.id;
@@ -104,46 +197,45 @@ router.post('/cashout', isAuth, async (req, res) => {
 
   const gameState = req.session.gameState;
 
-  if (!gameState || gameState.game !== gameSlug) {
+  if (!gameState || gameState.game !== 'aviator' || gameSlug !== 'aviator') {
     return res.status(400).json({ success: false, message: 'সক্রিয় কোনো গেম পাওয়া যায়নি' });
   }
 
-  if (gameSlug === 'aviator') {
-    // 1. Verify if client multiplier is valid (hasn't exceeded crash point)
-    if (clientMultiplier >= gameState.crashPoint) {
-        delete req.session.gameState;
-        return res.status(400).json({ success: false, message: 'দুঃখিত, বিমানটি ইতিমধ্যে চলে গেছে!' });
-    }
+  // Verify if client multiplier is valid
+  if (clientMultiplier >= gameState.crashPoint) {
+    delete req.session.gameState;
+    return res.status(400).json({ success: false, message: 'দুঃখিত, বিমানটি ইতিমধ্যে চলে গেছে!' });
+  }
 
-    // 2. Verify time elapsed matches multiplier (roughly)
-    // Multiplier starts at 1.0 and increases by 0.1 every 1s (simplified)
-    // Client logic: multiplier += 0.01 every 100ms
-    const elapsedTime = (Date.now() - gameState.startTime) / 1000;
-    const expectedMaxMultiplier = 1.0 + elapsedTime * 0.11; // allowing some buffer
+  // Time-based sanity check
+  const elapsedTime = (Date.now() - gameState.startTime) / 1000;
+  const expectedMaxMultiplier = 1.0 + elapsedTime * 0.12;
+  if (clientMultiplier > expectedMaxMultiplier) {
+    delete req.session.gameState;
+    return res.status(400).json({ success: false, message: 'অবৈধ অনুরোধ' });
+  }
 
-    if (clientMultiplier > expectedMaxMultiplier) {
-        delete req.session.gameState;
-        return res.status(400).json({ success: false, message: 'অবৈধ অনুরোধ' });
-    }
+  const winAmount = Math.floor(gameState.betAmount * clientMultiplier);
 
-    const winAmount = Math.floor(gameState.betAmount * clientMultiplier);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('UPDATE users SET coins = coins + $1 WHERE id = $2', [winAmount, userId]);
+    await client.query(
+      'INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, $3, $4)',
+      [userId, winAmount, 'game_win', `Aviator গেম থেকে জয়ী (x${clientMultiplier.toFixed(2)})`]
+    );
 
-    try {
-        await pool.query('UPDATE users SET coins = coins + $1 WHERE id = $2', [winAmount, userId]);
-        await pool.query(
-          'INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, $3, $4)',
-          [userId, winAmount, 'game_win', `Aviator গেম থেকে জয়ী (x${clientMultiplier.toFixed(2)})`]
-        );
-
-        req.session.user.coins += winAmount;
-        delete req.session.gameState;
-        res.json({ success: true, newBalance: req.session.user.coins, winAmount });
-    } catch (err) {
-        console.error('Cashout error:', err);
-        res.status(500).json({ success: false, message: 'সার্ভার ত্রুটি' });
-    }
-  } else {
-    res.status(400).json({ success: false, message: 'এই গেমটির জন্য ক্যাশ আউট সমর্থিত নয়' });
+    await client.query('COMMIT');
+    req.session.user.coins += winAmount;
+    delete req.session.gameState;
+    res.json({ success: true, newBalance: req.session.user.coins, winAmount });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Cashout error:', err);
+    res.status(500).json({ success: false, message: 'সার্ভার ত্রুটি' });
+  } finally {
+    client.release();
   }
 });
 

@@ -133,14 +133,13 @@
     </div>
 
     <div id="gameCanvas" class="game-canvas-area">
-        <% if (gameSlug === 'aviator') { %>
-            <%- include('aviator') %>
-        <% } else { %>
+        <!-- Game-specific UI will be rendered here by the script -->
+        <div id="gameUI">
             <div class="game-placeholder">
                 <h3><%= gameDisplayName %></h3>
-                <p>শীঘ্রই আসছে...</p>
+                <p>গেম লোড হচ্ছে...</p>
             </div>
-        <% } %>
+        </div>
     </div>
 
     <div class="bet-controls">
@@ -148,33 +147,34 @@
             <label>বাজির পরিমাণ:</label>
             <input type="number" id="betAmount" value="10" min="10" step="10">
         </div>
-        <button id="mainGameBtn" class="bet-btn">বাজি ধরুন</button>
+        <button id="mainGameBtn" class="bet-btn">খেলুন</button>
     </div>
 </div>
 
 <%- include('../partials/bottom-nav', { activePage: 'home' }) %>
 
+<!-- Core Game Scripts -->
 <script>
     const gameSlug = '<%= gameSlug %>';
     let currentBalance = <%= coins %>;
 
-    async function placeBet(amount) {
+    async function placeBet(amount, selection = null) {
         try {
-            const response = await fetch('/games/bet', {
+            const response = await fetch('/games/play', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ gameSlug, amount })
+                body: JSON.stringify({ gameSlug, amount, selection })
             });
             const data = await response.json();
             if (data.success) {
                 updateBalance(data.newBalance);
-                return true;
+                return data;
             } else {
                 alert(data.message);
                 return false;
             }
         } catch (err) {
-            console.error('Bet error:', err);
+            console.error('Play error:', err);
             return false;
         }
     }
@@ -205,3 +205,33 @@
         document.getElementById('userBalance').innerText = newBalance;
     }
 </script>
+
+<!-- Game Specific Logic (Included after core UI and scripts) -->
+<% if (gameSlug === 'aviator') { %>
+    <%- include('aviator') %>
+<% } else if (gameSlug === 'slots') { %>
+    <%- include('slots') %>
+<% } else if (gameSlug === 'roulette') { %>
+    <%- include('roulette') %>
+<% } else if (gameSlug === 'andar-bahar') { %>
+    <%- include('andar-bahar') %>
+<% } else if (gameSlug === 'teen-patti') { %>
+    <%- include('teen-patti') %>
+<% } else if (gameSlug === 'blackjack') { %>
+    <%- include('blackjack') %>
+<% } else if (gameSlug === 'poker') { %>
+    <%- include('poker') %>
+<% } else if (gameSlug === 'baccarat') { %>
+    <%- include('baccarat') %>
+<% } else if (gameSlug === 'ludo') { %>
+    <%- include('ludo') %>
+<% } else { %>
+    <script>
+        document.getElementById('gameUI').innerHTML = `
+            <div class="game-placeholder">
+                <h3><%= gameDisplayName %></h3>
+                <p>শীঘ্রই আসছে...</p>
+            </div>
+        `;
+    </script>
+<% } %>

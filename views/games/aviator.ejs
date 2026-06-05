@@ -43,12 +43,16 @@
     }
 </style>
 
-<div id="aviatorGame">
-    <div id="gameStatus">অপেক্ষা করুন...</div>
-    <div id="multiplier">1.00x</div>
-    <div id="plane">✈️</div>
-    <div id="flewAway" class="flew-away">চলে গেছে!</div>
-</div>
+<script>
+    document.getElementById('gameUI').innerHTML = `
+        <div id="aviatorGame">
+            <div id="gameStatus">অপেক্ষা করুন...</div>
+            <div id="multiplier">1.00x</div>
+            <div id="plane">✈️</div>
+            <div id="flewAway" class="flew-away">চলে গেছে!</div>
+        </div>
+    `;
+</script>
 
 <script>
     let isPlaying = false;
@@ -94,22 +98,31 @@
         mainBtn.style.background = '#10b981';
         statusEl.innerText = 'গেম চলছে...';
 
-        // Random crash point between 1.1 and 10.0 (simplified logic)
-        crashPoint = 1.1 + Math.random() * 9;
+        gameInterval = setInterval(async () => {
+            try {
+                const response = await fetch('/games/status');
+                const data = await response.json();
 
-        gameInterval = setInterval(() => {
-            multiplier += 0.01;
-            multiplierEl.innerText = multiplier.toFixed(2) + 'x';
+                if (!data.active && data.crashed) {
+                    multiplier = data.crashPoint;
+                    multiplierEl.innerText = multiplier.toFixed(2) + 'x';
+                    crash();
+                    return;
+                }
 
-            // Move plane
-            const progress = (multiplier - 1) / 5; // Simplified movement
-            planeEl.style.left = (10 + progress * 70) + '%';
-            planeEl.style.bottom = (20 + progress * 50) + '%';
+                if (data.active) {
+                    multiplier = data.multiplier;
+                    multiplierEl.innerText = multiplier.toFixed(2) + 'x';
 
-            if (multiplier >= crashPoint) {
-                crash();
+                    // Move plane
+                    const progress = (multiplier - 1) / 5;
+                    planeEl.style.left = (10 + progress * 70) + '%';
+                    planeEl.style.bottom = (20 + progress * 50) + '%';
+                }
+            } catch (err) {
+                console.error('Status check error:', err);
             }
-        }, 100);
+        }, 500); // Poll every 500ms
     }
 
     async function cashOut() {
