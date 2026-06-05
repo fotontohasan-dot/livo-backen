@@ -39,6 +39,7 @@ app.use('/profile', require('./routes/profile'));
 app.use('/leaderboard', require('./routes/leaderboard'));
 app.use('/admin', require('./routes/admin'));
 app.use('/notifications', require('./routes/notifications'));
+app.use('/payment', require('./routes/payment'));
 
 const PORT = process.env.PORT || 3000;
 initDB().then(() => {
