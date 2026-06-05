@@ -5,7 +5,7 @@ const { isAuth, isAdmin } = require('../middleware/auth');
 
 router.use(isAuth, isAdmin);
 
-router.get('/', async (req, res) => {
+router.get('/', async (_req, res) => {
   const stats = await pool.query(`
     SELECT
       (SELECT COUNT(*) FROM users WHERE role='user') as total_users,
@@ -16,10 +16,31 @@ router.get('/', async (req, res) => {
   `);
   const recentUsers = await pool.query(`SELECT * FROM users ORDER BY created_at DESC LIMIT 5`);
   const recentMatches = await pool.query(`SELECT * FROM matches ORDER BY created_at DESC LIMIT 5`);
-  res.render('admin/dashboard', { stats: stats.rows[0], recentUsers: recentUsers.rows, recentMatches: recentMatches.rows });
+  const pendingDeposits = await pool.query(`SELECT ct.*, u.username FROM coin_transactions ct JOIN users u ON ct.user_id = u.id WHERE ct.status = 'pending' ORDER BY ct.created_at DESC`);
+  res.render('admin/dashboard', { stats: stats.rows[0], recentUsers: recentUsers.rows, recentMatches: recentMatches.rows, pendingDeposits: pendingDeposits.rows });
 });
 
-router.get('/users', async (req, res) => {
+router.post('/deposits/:id/approve', async (req, res) => {
+  const { id } = req.params;
+  const transaction = await pool.query(`SELECT * FROM coin_transactions WHERE id=$1 AND status='pending'`, [id]);
+  if (transaction.rows[0]) {
+    const { user_id, amount } = transaction.rows[0];
+    await pool.query(`UPDATE coin_transactions SET status='completed' WHERE id=$1`, [id]);
+    await pool.query(`UPDATE users SET coins=coins+$1 WHERE id=$2`, [amount, user_id]);
+    await pool.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1, 'ডিপোজিট সফল', 'আপনার ${amount} কয়েন অ্যাকাউন্টে যোগ করা হয়েছে।', 'success')`, [user_id]);
+    req.flash('success', 'Deposit approved!');
+  }
+  res.redirect('/admin');
+});
+
+router.post('/deposits/:id/reject', async (req, res) => {
+  const { id } = req.params;
+  await pool.query(`UPDATE coin_transactions SET status='rejected' WHERE id=$1`, [id]);
+  req.flash('success', 'Deposit rejected');
+  res.redirect('/admin');
+});
+
+router.get('/users', async (_req, res) => {
   const users = await pool.query(`SELECT * FROM users ORDER BY created_at DESC`);
   res.render('admin/users', { users: users.rows });
 });
@@ -40,7 +61,7 @@ router.post('/users/:id/coins', async (req, res) => {
   res.redirect('/admin/users');
 });
 
-router.get('/matches', async (req, res) => {
+router.get('/matches', async (_req, res) => {
   const matches = await pool.query(`SELECT * FROM matches ORDER BY match_date DESC`);
   res.render('admin/matches', { matches: matches.rows });
 });
@@ -73,7 +94,7 @@ router.post('/matches/:id/result', async (req, res) => {
   res.redirect('/admin/matches');
 });
 
-router.get('/tournaments', async (req, res) => {
+router.get('/tournaments', async (_req, res) => {
   const tournaments = await pool.query(`SELECT * FROM tournaments ORDER BY created_at DESC`);
   res.render('admin/tournaments', { tournaments: tournaments.rows });
 });
@@ -86,7 +107,7 @@ router.post('/tournaments', async (req, res) => {
   res.redirect('/admin/tournaments');
 });
 
-router.get('/news', async (req, res) => {
+router.get('/news', async (_req, res) => {
   const news = await pool.query(`SELECT n.*, u.username as author FROM news n LEFT JOIN users u ON n.author_id=u.id ORDER BY n.created_at DESC`);
   res.render('admin/news', { news: news.rows });
 });
