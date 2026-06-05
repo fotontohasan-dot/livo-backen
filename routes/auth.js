@@ -4,11 +4,11 @@ const bcrypt = require('bcryptjs');
 const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
 
-router.get('/', async (req, res) => {
+router.get('/', async (_req, res) => {
   res.render('index');
 });
 
-router.get('/register', (req, res) => res.render('registration'));
+router.get('/register', (_req, res) => res.render('registration'));
 router.post('/register', async (req, res) => {
   const { username, email, password } = req.body;
   try {
@@ -29,7 +29,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-router.get('/login', (req, res) => res.render('login'));
+router.get('/login', (_req, res) => res.render('login'));
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   try {
