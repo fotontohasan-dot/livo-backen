@@ -1,0 +1,161 @@
+<style>
+    #aviatorGame {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    #multiplier {
+        font-size: 60px;
+        font-weight: bold;
+        color: #fff;
+        z-index: 10;
+        text-shadow: 0 0 10px rgba(255,255,255,0.5);
+    }
+
+    #plane {
+        font-size: 50px;
+        position: absolute;
+        bottom: 20%;
+        left: 10%;
+        transition: transform 0.1s;
+        z-index: 5;
+    }
+
+    .flew-away {
+        color: #ef4444;
+        font-size: 24px;
+        font-weight: bold;
+        margin-top: 10px;
+        display: none;
+    }
+
+    #gameStatus {
+        position: absolute;
+        top: 20px;
+        font-weight: bold;
+        color: var(--accent-color);
+    }
+</style>
+
+<div id="aviatorGame">
+    <div id="gameStatus">অপেক্ষা করুন...</div>
+    <div id="multiplier">1.00x</div>
+    <div id="plane">✈️</div>
+    <div id="flewAway" class="flew-away">চলে গেছে!</div>
+</div>
+
+<script>
+    let isPlaying = false;
+    let multiplier = 1.0;
+    let crashPoint = 0;
+    let gameInterval;
+    let currentBet = 0;
+
+    const multiplierEl = document.getElementById('multiplier');
+    const planeEl = document.getElementById('plane');
+    const flewAwayEl = document.getElementById('flewAway');
+    const statusEl = document.getElementById('gameStatus');
+    const mainBtn = document.getElementById('mainGameBtn');
+    const betInput = document.getElementById('betAmount');
+
+    function resetGame() {
+        multiplier = 1.0;
+        multiplierEl.innerText = '1.00x';
+        multiplierEl.style.color = '#fff';
+        planeEl.style.transform = 'translate(0, 0)';
+        planeEl.style.left = '10%';
+        planeEl.style.bottom = '20%';
+        flewAwayEl.style.display = 'none';
+        statusEl.innerText = 'বাজি ধরুন!';
+        mainBtn.disabled = false;
+        mainBtn.innerText = 'বাজি ধরুন';
+        mainBtn.style.background = 'var(--primary-gradient)';
+    }
+
+    async function startGame() {
+        const amount = parseInt(betInput.value);
+        if (isNaN(amount) || amount < 10) {
+            alert('ন্যূনতম বাজি ১০ কয়েন');
+            return;
+        }
+
+        const success = await placeBet(amount);
+        if (!success) return;
+
+        currentBet = amount;
+        isPlaying = true;
+        mainBtn.innerText = 'ক্যাশ আউট';
+        mainBtn.style.background = '#10b981';
+        statusEl.innerText = 'গেম চলছে...';
+
+        // Random crash point between 1.1 and 10.0 (simplified logic)
+        crashPoint = 1.1 + Math.random() * 9;
+
+        gameInterval = setInterval(() => {
+            multiplier += 0.01;
+            multiplierEl.innerText = multiplier.toFixed(2) + 'x';
+
+            // Move plane
+            const progress = (multiplier - 1) / 5; // Simplified movement
+            planeEl.style.left = (10 + progress * 70) + '%';
+            planeEl.style.bottom = (20 + progress * 50) + '%';
+
+            if (multiplier >= crashPoint) {
+                crash();
+            }
+        }, 100);
+    }
+
+    async function cashOut() {
+        if (!isPlaying) return;
+
+        isPlaying = false;
+        clearInterval(gameInterval);
+
+        const data = await recordWin(multiplier);
+        if (data && data.success) {
+            statusEl.innerText = `আপনি জিতেছেন! (+${data.winAmount})`;
+            multiplierEl.style.color = '#10b981';
+        } else {
+            statusEl.innerText = 'ক্যাশ আউট ব্যর্থ হয়েছে!';
+            multiplierEl.style.color = '#ef4444';
+        }
+
+        mainBtn.disabled = true;
+        setTimeout(resetGame, 3000);
+    }
+
+    function crash() {
+        isPlaying = false;
+        clearInterval(gameInterval);
+
+        flewAwayEl.style.display = 'block';
+        multiplierEl.style.color = '#ef4444';
+        statusEl.innerText = 'আপনি হেরেছেন!';
+        mainBtn.disabled = true;
+
+        planeEl.style.transform = 'translate(100px, -100px) rotate(-45deg)';
+        planeEl.style.opacity = '0';
+
+        setTimeout(() => {
+            planeEl.style.opacity = '1';
+            resetGame();
+        }, 3000);
+    }
+
+    mainBtn.addEventListener('click', () => {
+        if (!isPlaying) {
+            startGame();
+        } else {
+            cashOut();
+        }
+    });
+
+    resetGame();
+</script>
