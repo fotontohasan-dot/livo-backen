@@ -2,9 +2,8 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { pool } = require('../db');
-const { isAuth } = require('../middleware/auth');
 
-router.get('/', async (req, res) => {
+router.get('/', (req, res) => {
   res.render('index');
 });
 
