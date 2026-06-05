@@ -1,119 +1,173 @@
 <%- include('partials/head') %>
 <%- include('partials/navbar') %>
+
+<style>
+    .detail-card {
+        background: var(--card);
+        border-radius: 15px;
+        overflow: hidden;
+        margin-bottom: 20px;
+        border: 1px solid var(--border);
+    }
+    .detail-header {
+        background: var(--card2);
+        padding: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--border);
+    }
+    .detail-body { padding: 20px; text-align: center; }
+
+    .prediction-box {
+        background: var(--card2);
+        border-radius: 12px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+
+    .team-select {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin: 20px 0;
+    }
+
+    .team-btn {
+        background: transparent;
+        border: 2px solid var(--border);
+        padding: 20px;
+        border-radius: 12px;
+        color: var(--text);
+        cursor: pointer;
+        transition: 0.3s;
+        font-weight: bold;
+    }
+    .team-btn.selected {
+        border-color: var(--secondary);
+        background: rgba(255, 0, 170, 0.1);
+    }
+</style>
+
 <div class="container page">
-  <%- include('partials/flash') %>
-  <div class="layout-main">
-    <div>
-      <div class="card" style="margin-bottom:1.5rem;">
-        <div class="card-header">
-          <span>⚽ <%= match.sport %></span>
-          <span class="status-badge status-<%= match.status %>"><%= match.status.toUpperCase() %></span>
-        </div>
-        <div class="card-body">
-          <div class="match-teams" style="margin:1.5rem 0;">
-            <div class="team"><div class="team-name" style="font-size:1.5rem"><%= match.team_a %></div></div>
-            <div class="vs" style="font-size:2rem;">
-              <% if(match.status === 'completed') { %>
-                <span style="color:var(--primary)"><%= match.score_a %> - <%= match.score_b %></span>
-              <% } else { %>VS<% } %>
-            </div>
-            <div class="team"><div class="team-name" style="font-size:1.5rem"><%= match.team_b %></div></div>
-          </div>
-          <div class="match-meta" style="justify-content:center;">
-            <span>📅 <%= new Date(match.match_date).toLocaleString() %></span>
-          </div>
-          <% if(match.result) { %>
-            <div style="text-align:center;margin-top:1rem;">
-              <span style="background:var(--primary)20;color:var(--primary);padding:6px 16px;border-radius:20px;font-weight:600;">🏆 Winner: <%= match.result %></span>
-            </div>
-          <% } %>
-        </div>
-      </div>
+    <%- include('partials/flash') %>
 
-      <% if(match.stream_url && match.status === 'live') { %>
-        <div class="card" style="margin-bottom:1.5rem;">
-          <div class="card-header">📺 Live Stream</div>
-          <div class="card-body">
-            <iframe src="<%= match.stream_url %>" width="100%" height="400" frameborder="0" allowfullscreen style="border-radius:8px;"></iframe>
-          </div>
+    <div class="detail-card">
+        <div class="detail-header">
+            <span style="color: var(--muted);">⚽ <%= match.sport.toUpperCase() %></span>
+            <span class="status-badge status-<%= match.status %>">
+                <%= match.status === 'live' ? 'লাইভ' : match.status === 'upcoming' ? 'আসছে' : 'শেষ' %>
+            </span>
         </div>
-      <% } %>
-
-      <% if(match.status === 'upcoming' && locals.user) { %>
-        <div class="card" style="margin-bottom:1.5rem;">
-          <div class="card-header">🎯 Make Your Prediction</div>
-          <div class="card-body">
-            <% if(userPrediction) { %>
-              <div class="alert alert-success">✅ You predicted: <strong><%= userPrediction.predicted_winner %></strong> with <strong><%= userPrediction.coins_bet %></strong> coins</div>
-            <% } else { %>
-              <div class="form-group">
-                <label class="form-label">Who will win?</label>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
-                  <button onclick="selectTeam('<%= match.team_a %>')" id="btn-a" class="btn btn-outline" style="padding:1.5rem;">
-                    <%= match.team_a %>
-                  </button>
-                  <button onclick="selectTeam('<%= match.team_b %>')" id="btn-b" class="btn btn-outline" style="padding:1.5rem;">
-                    <%= match.team_b %>
-                  </button>
+        <div class="detail-body">
+            <div class="teams-container" style="margin: 30px 0;">
+                <div class="team-box">
+                    <div style="font-size: 40px;">🛡️</div>
+                    <div style="font-size: 1.2rem; font-weight: 900;"><%= match.team_a %></div>
                 </div>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Coins to bet (You have: <%= user.coins %> 🪙)</label>
-                <input type="number" class="form-input" id="coins-input" min="10" max="<%= user.coins %>" value="50">
-              </div>
-              <button onclick="submitPrediction()" class="btn btn-primary" style="width:100%;justify-content:center;">Place Prediction 🎯</button>
+                <div class="vs-box" style="font-size: 2rem;">
+                    <% if(match.status === 'completed') { %>
+                        <span style="color: var(--secondary);"><%= match.score_a %> - <%= match.score_b %></span>
+                    <% } else { %>VS<% } %>
+                </div>
+                <div class="team-box">
+                    <div style="font-size: 40px;">⚔️</div>
+                    <div style="font-size: 1.2rem; font-weight: 900;"><%= match.team_b %></div>
+                </div>
+            </div>
+            <div style="color: var(--muted); font-size: 14px;">
+                📅 <%= new Date(match.match_date).toLocaleString('bn-BD') %>
+            </div>
+            <% if(match.result) { %>
+                <div style="margin-top: 20px;">
+                    <span style="background: var(--primary-gradient); padding: 8px 20px; border-radius: 20px; font-weight: bold;">
+                        🏆 বিজয়ী: <%= match.result %>
+                    </span>
+                </div>
             <% } %>
-          </div>
         </div>
-      <% } %>
     </div>
 
-    <div>
-      <div class="card">
-        <div class="card-header">📊 Recent Predictions</div>
-        <div class="card-body" style="padding:0;">
-          <% if(predictions.length === 0) { %>
-            <p style="padding:1rem;color:var(--muted);font-size:.9rem;">No predictions yet</p>
-          <% } else { %>
-            <% predictions.forEach(p => { %>
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:.75rem 1rem;border-bottom:1px solid var(--border);">
-                <div>
-                  <div style="font-size:.85rem;font-weight:600"><%= p.username %></div>
-                  <div style="font-size:.75rem;color:var(--muted)">→ <%= p.predicted_winner %></div>
-                </div>
-                <span style="color:var(--gold);font-size:.85rem">🪙 <%= p.coins_bet %></span>
-              </div>
-            <% }) %>
-          <% } %>
+    <% if(match.stream_url && match.status === 'live') { %>
+        <div class="card" style="margin-bottom: 20px;">
+            <div class="card-header">📺 লাইভ স্ট্রিম</div>
+            <div class="card-body" style="padding: 0;">
+                <iframe src="<%= match.stream_url %>" width="100%" height="250" frameborder="0" allowfullscreen></iframe>
+            </div>
         </div>
-      </div>
+    <% } %>
+
+    <% if(match.status === 'upcoming' && locals.user) { %>
+        <div class="prediction-box">
+            <h3 style="text-align: center; color: var(--accent);">🎯 আপনার প্রেডিকশন দিন</h3>
+            <% if(userPrediction) { %>
+                <div class="alert alert-success" style="text-align: center; margin-top: 15px;">
+                    ✅ আপনি প্রেডিক্ট করেছেন: <strong><%= userPrediction.predicted_winner %></strong> <br>
+                    বেট করেছেন: <strong>🪙 <%= userPrediction.coins_bet %></strong>
+                </div>
+            <% } else { %>
+                <div class="team-select">
+                    <button onclick="selectTeam('<%= match.team_a %>')" id="btn-a" class="team-btn">
+                        <%= match.team_a %>
+                    </button>
+                    <button onclick="selectTeam('<%= match.team_b %>')" id="btn-b" class="team-btn">
+                        <%= match.team_b %>
+                    </button>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">কয়েন সংখ্যা (আপনার কাছে আছে: <%= user.coins %> 🪙)</label>
+                    <input type="number" class="form-input" id="coins-input" min="10" max="<%= user.coins %>" value="50">
+                </div>
+                <button onclick="submitPrediction()" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 15px;">সাবমিট করুন 🎯</button>
+            <% } %>
+        </div>
+    <% } %>
+
+    <div class="card" style="margin-top: 20px;">
+        <div class="card-header">📊 সাম্প্রতিক প্রেডিকশন</div>
+        <div class="card-body" style="padding: 0;">
+            <% if(predictions.length === 0) { %>
+                <p style="padding: 20px; text-align: center; color: var(--muted);">এখনো কোনো প্রেডিকশন নেই</p>
+            <% } else { %>
+                <% predictions.forEach(p => { %>
+                    <div style="display: flex; justify-content: space-between; padding: 12px 15px; border-bottom: 1px solid var(--border);">
+                        <div>
+                            <div style="font-weight: bold; font-size: 14px;"><%= p.username %></div>
+                            <div style="font-size: 12px; color: var(--muted);">→ <%= p.predicted_winner %></div>
+                        </div>
+                        <div style="color: var(--gold); font-weight: bold;">🪙 <%= p.coins_bet %></div>
+                    </div>
+                <% }) %>
+            <% } %>
+        </div>
     </div>
-  </div>
 </div>
+
 <script>
 let selectedTeam = '';
 function selectTeam(team) {
-  selectedTeam = team;
-  document.getElementById('btn-a').className = 'btn btn-outline';
-  document.getElementById('btn-b').className = 'btn btn-outline';
-  if(team === '<%= match.team_a %>') {
-    document.getElementById('btn-a').className = 'btn btn-primary';
-  } else {
-    document.getElementById('btn-b').className = 'btn btn-primary';
-  }
+    selectedTeam = team;
+    document.getElementById('btn-a').classList.remove('selected');
+    document.getElementById('btn-b').classList.remove('selected');
+    if(team === '<%= match.team_a %>') {
+        document.getElementById('btn-a').classList.add('selected');
+    } else {
+        document.getElementById('btn-b').classList.add('selected');
+    }
 }
 function submitPrediction() {
-  if(!selectedTeam) { alert('Please select a team!'); return; }
-  const coins = document.getElementById('coins-input').value;
-  if(!coins || coins < 10) { alert('Minimum 10 coins!'); return; }
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = '/matches/<%= match.id %>/predict';
-  [['predicted_winner', selectedTeam], ['coins_bet', coins]].forEach(([n,v]) => {
-    const i = document.createElement('input');
-    i.name = n; i.value = v; form.appendChild(i);
-  });
-  document.body.appendChild(form); form.submit();
+    if(!selectedTeam) { alert('অনুগ্রহ করে একটি দল নির্বাচন করুন!'); return; }
+    const coins = document.getElementById('coins-input').value;
+    if(!coins || coins < 10) { alert('নূন্যতম ১০ কয়েন!'); return; }
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/matches/<%= match.id %>/predict';
+    [['predicted_winner', selectedTeam], ['coins_bet', coins]].forEach(([n,v]) => {
+        const i = document.createElement('input');
+        i.type = 'hidden'; i.name = n; i.value = v; form.appendChild(i);
+    });
+    document.body.appendChild(form); form.submit();
 }
 </script>
+<%- include('partials/bottom-nav', { activePage: 'matches' }) %>
 </body></html>
