@@ -27,7 +27,7 @@ router.post('/daily-bonus', isAuth, async (req, res) => {
   res.redirect('/coins');
 });
 
-router.get('/deposit', isAuth, (req, res) => {
+router.get('/deposit', isAuth, (_req, res) => {
   res.render('deposit');
 });
 
