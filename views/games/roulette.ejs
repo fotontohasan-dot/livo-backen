@@ -1,0 +1,133 @@
+<style>
+    #rouletteGame {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #064e3b;
+    }
+    .wheel-container {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        border: 5px solid #ffd700;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #000;
+        margin-bottom: 20px;
+        overflow: hidden;
+    }
+    .wheel {
+        width: 100%;
+        height: 100%;
+        transition: transform 4s cubic-bezier(0.1, 0, 0.1, 1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+    }
+    .pointer {
+        position: absolute;
+        top: -10px;
+        width: 20px;
+        height: 20px;
+        background: #ef4444;
+        clip-path: polygon(50% 100%, 0 0, 100% 0);
+        z-index: 10;
+    }
+    .betting-board {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 5px;
+    }
+    .bet-option {
+        padding: 5px 10px;
+        background: #059669;
+        border: 1px solid #fff;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 12px;
+    }
+    .bet-option.active {
+        background: #ffd700;
+        color: #000;
+    }
+</style>
+
+<script>
+    document.getElementById('gameUI').innerHTML = `
+        <div id="rouletteGame">
+            <div id="rouletteStatus" style="color: #ffd700; margin-bottom: 10px;">অপশন বেছে নিন</div>
+            <div class="wheel-container">
+                <div class="pointer"></div>
+                <div id="wheel" class="wheel">🎡</div>
+            </div>
+            <div class="betting-board">
+                <div class="bet-option" onclick="selectOption('Red', this)">লাল</div>
+                <div class="bet-option" onclick="selectOption('Black', this)">কালো</div>
+                <div class="bet-option" onclick="selectOption('Even', this)">জোড়</div>
+                <div class="bet-option" onclick="selectOption('Odd', this)">বিজোড়</div>
+            </div>
+        </div>
+    `;
+</script>
+
+<script>
+    let selectedOption = null;
+    let isSpinningRoulette = false;
+    const wheelEl = document.getElementById('wheel');
+    const statusEl = document.getElementById('rouletteStatus');
+    const playBtn = document.getElementById('mainGameBtn');
+
+    function selectOption(opt, el) {
+        if (isSpinningRoulette) return;
+        selectedOption = opt;
+        document.querySelectorAll('.bet-option').forEach(btn => btn.classList.remove('active'));
+        el.classList.add('active');
+        statusEl.innerText = opt + ' বেছে নেওয়া হয়েছে';
+    }
+
+    async function spinRoulette() {
+        if (isSpinningRoulette || !selectedOption) {
+            alert('একটি অপশন বেছে নিন');
+            return;
+        }
+
+        const amount = parseInt(document.getElementById('betAmount').value);
+
+        // Get secure result from server
+        const data = await placeBet(amount, selectedOption);
+        if (!data || !data.success) return;
+
+        isSpinningRoulette = true;
+        playBtn.disabled = true;
+        statusEl.innerText = 'ঘুরছে...';
+
+        const rotation = 1440 + Math.random() * 360;
+        wheelEl.style.transform = `rotate(${rotation}deg)`;
+
+        setTimeout(() => {
+            const result = data.gameResult.result;
+            statusEl.innerText = 'ফলাফল: ' + result;
+
+            if (data.winAmount > 0) {
+                statusEl.innerText = `আপনি জিতেছেন! +${data.winAmount}`;
+            } else {
+                statusEl.innerText = 'আপনি হেরেছেন!';
+            }
+
+            isSpinningRoulette = false;
+            playBtn.disabled = false;
+            wheelEl.style.transition = 'none';
+            wheelEl.style.transform = 'rotate(0deg)';
+            setTimeout(() => { wheelEl.style.transition = 'transform 4s cubic-bezier(0.1, 0, 0.1, 1)'; }, 50);
+        }, 4000);
+    }
+
+    playBtn.innerText = 'স্পিন';
+    playBtn.onclick = spinRoulette;
+</script>
