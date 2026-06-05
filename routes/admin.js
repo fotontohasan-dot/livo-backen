@@ -16,7 +16,28 @@ router.get('/', async (req, res) => {
   `);
   const recentUsers = await pool.query(`SELECT * FROM users ORDER BY created_at DESC LIMIT 5`);
   const recentMatches = await pool.query(`SELECT * FROM matches ORDER BY created_at DESC LIMIT 5`);
-  res.render('admin/dashboard', { stats: stats.rows[0], recentUsers: recentUsers.rows, recentMatches: recentMatches.rows });
+  const pendingDeposits = await pool.query(`SELECT ct.*, u.username FROM coin_transactions ct JOIN users u ON ct.user_id = u.id WHERE ct.status = 'pending' ORDER BY ct.created_at DESC`);
+  res.render('admin/dashboard', { stats: stats.rows[0], recentUsers: recentUsers.rows, recentMatches: recentMatches.rows, pendingDeposits: pendingDeposits.rows });
+});
+
+router.post('/deposits/:id/approve', async (req, res) => {
+  const { id } = req.params;
+  const transaction = await pool.query(`SELECT * FROM coin_transactions WHERE id=$1 AND status='pending'`, [id]);
+  if (transaction.rows[0]) {
+    const { user_id, amount } = transaction.rows[0];
+    await pool.query(`UPDATE coin_transactions SET status='completed' WHERE id=$1`, [id]);
+    await pool.query(`UPDATE users SET coins=coins+$1 WHERE id=$2`, [amount, user_id]);
+    await pool.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1, 'ডিপোজিট সফল', 'আপনার ${amount} কয়েন অ্যাকাউন্টে যোগ করা হয়েছে।', 'success')`, [user_id]);
+    req.flash('success', 'Deposit approved!');
+  }
+  res.redirect('/admin');
+});
+
+router.post('/deposits/:id/reject', async (req, res) => {
+  const { id } = req.params;
+  await pool.query(`UPDATE coin_transactions SET status='rejected' WHERE id=$1`, [id]);
+  req.flash('success', 'Deposit rejected');
+  res.redirect('/admin');
 });
 
 router.get('/users', async (req, res) => {

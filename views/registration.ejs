@@ -2,34 +2,34 @@
 <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--darker);">
   <div style="width:100%;max-width:420px;padding:1rem;">
     <div class="card">
-      <div class="card-header" style="justify-content:center;font-size:1.2rem;">🚀 Create Account</div>
+      <div class="card-header" style="justify-content:center;font-size:1.2rem;">🚀 অ্যাকাউন্ট তৈরি করুন</div>
       <div class="card-body">
         <%- include('partials/flash') %>
-        <div style="background:#00d4aa10;border:1px solid #00d4aa30;border-radius:8px;padding:.75rem;margin-bottom:1rem;font-size:.85rem;color:var(--primary);">
-          🎁 Get 500 welcome coins on registration!
+        <div style="background:rgba(107, 0, 255, 0.1);border:1px solid rgba(107, 0, 255, 0.3);border-radius:8px;padding:.75rem;margin-bottom:1rem;font-size:.85rem;color:var(--secondary);">
+          🎁 রেজিস্ট্রেশন করলেই ৫০০ ওয়েলকাম কয়েন বোনাস!
         </div>
         <form action="/register" method="POST">
           <div class="form-group">
-            <label class="form-label">Username</label>
-            <input type="text" name="username" class="form-input" placeholder="Choose a username" required>
+            <label class="form-label">ইউজার নেম</label>
+            <input type="text" name="username" class="form-input" placeholder="আপনার নাম লিখুন" required>
           </div>
           <div class="form-group">
-            <label class="form-label">Email</label>
-            <input type="email" name="email" class="form-input" placeholder="your@email.com" required>
+            <label class="form-label">ইমেইল</label>
+            <input type="email" name="email" class="form-input" placeholder="example@email.com" required>
           </div>
           <div class="form-group">
-            <label class="form-label">Password</label>
+            <label class="form-label">পাসওয়ার্ড</label>
             <input type="password" name="password" class="form-input" placeholder="••••••••" required>
           </div>
-          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Create Account 🚀</button>
+          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;">রেজিস্ট্রেশন করুন 🚀</button>
         </form>
         <p style="text-align:center;margin-top:1rem;color:var(--muted);font-size:.9rem;">
-          Already have an account? <a href="/login" style="color:var(--primary)">Login</a>
+          আগে থেকেই অ্যাকাউন্ট আছে? <a href="/login" style="color:var(--secondary)">লগইন করুন</a>
         </p>
       </div>
     </div>
     <p style="text-align:center;margin-top:2rem;">
-      <a href="/" style="color:var(--muted);text-decoration:none;font-size:.85rem;">← Back to Home</a>
+      <a href="/" style="color:var(--muted);text-decoration:none;font-size:.85rem;">← হোমে ফিরে যান</a>
     </p>
   </div>
 </div>
