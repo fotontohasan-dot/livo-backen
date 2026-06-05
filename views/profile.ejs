@@ -1,6 +1,16 @@
 <%- include('partials/head') %>
 <%- include('partials/navbar') %>
 <div class="container page">
+  <% if(locals.user) { %>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+      <a href="/coins/deposit" class="btn btn-primary" style="justify-content: center; padding: 12px; border-radius: 12px; font-weight: 800;">
+          💰 ডিপোজিট
+      </a>
+      <a href="/coins/withdraw" class="btn btn-outline" style="justify-content: center; padding: 12px; border-radius: 12px; font-weight: 800; border-color: var(--secondary); color: var(--secondary);">
+          📤 উইথড্র
+      </a>
+  </div>
+  <% } %>
   <%- include('partials/flash') %>
   <div class="layout-main">
     <div>
