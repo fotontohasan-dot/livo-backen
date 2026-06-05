@@ -1,95 +1,29 @@
-<!DOCTYPE html>
-<html lang="bn">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Livo - Online Casino</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f0b1f; color: white; }
-        .header {
-            background: linear-gradient(90deg, #6b00ff, #ff00aa);
-            padding: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: fixed;
-            top: 0;
-            width: 100%;
-            z-index: 100;
-        }
-        .logo { font-size: 28px; font-weight: bold; color: #ffd700; }
-
-        .category { margin-top: 70px; padding: 15px; }
-        h2 { color: #ffd700; margin-bottom: 15px; font-size: 20px; }
-
-        .game-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
-            gap: 12px;
-        }
-        .game-card {
-            background: #1a1433;
-            border-radius: 12px;
-            overflow: hidden;
-            text-align: center;
-        }
-        .game-card img { 
-            width: 100%; 
-            height: 120px; 
-            object-fit: contain; 
-            padding: 10px;
-            background: #fff;
-        }
-        .game-name { 
-            padding: 10px 5px; 
-            font-size: 14px; 
-            color: #ffccff; 
-            font-weight: bold;
-        }
-    </style>
-</head>
-<body>
-
-    <div class="header">
-        <div class="logo">LIVO</div>
+<%- include('partials/head') %>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--darker);">
+  <div style="width:100%;max-width:400px;padding:1rem;">
+    <div class="card">
+      <div class="card-header" style="justify-content:center;font-size:1.2rem;">🔐 User Login</div>
+      <div class="card-body">
+        <%- include('partials/flash') %>
+        <form action="/login" method="POST">
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" name="email" class="form-input" placeholder="your@email.com" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input type="password" name="password" class="form-input" placeholder="••••••••" required>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Login Now 🚀</button>
+        </form>
+        <p style="text-align:center;margin-top:1rem;color:var(--muted);font-size:.9rem;">
+          Don't have an account? <a href="/register" style="color:var(--primary)">Register</a>
+        </p>
+      </div>
     </div>
-
-    <div class="category">
-        <h2>🎮 All Games</h2>
-        <div class="game-grid" id="allGames"></div>
-    </div>
-
-    <script>
-        const realGames = [
-            {name: "Teen Patti", img: "https://via.placeholder.com/300x180/00cc66/000?text=TEEN+PATTI"},
-            {name: "Super Ace", img: "https://via.placeholder.com/300x180/ff6600/fff?text=SUPER+ACE"},
-            {name: "Crash", img: "https://via.placeholder.com/300x180/ff3366/fff?text=CRASH"},
-            {name: "Aviator", img: "https://via.placeholder.com/300x180/9933ff/fff?text=AVIATOR"},
-            {name: "Andar Bahar", img: "https://via.placeholder.com/300x180/00aaff/fff?text=ANDAR+BAHAR"},
-            {name: "Dragon Tiger", img: "https://via.placeholder.com/300x180/ff9900/fff?text=DRAGON+TIGER"},
-            {name: "Roulette", img: "https://via.placeholder.com/300x180/00cc99/fff?text=ROULETTE"},
-            {name: "Blackjack", img: "https://via.placeholder.com/300x180/993399/fff?text=BLACKJACK"},
-            {name: "Fortune Gems", img: "https://via.placeholder.com/300x180/ff6699/fff?text=FORTUNE+GEMS"},
-            {name: "Boxing King", img: "https://via.placeholder.com/300x180/66ccff/fff?text=BOXING+KING"},
-            {name: "Lucky Spin", img: "https://via.placeholder.com/300x180/ffcc00/000?text=LUCKY+SPIN"},
-            {name: "Color Prediction", img: "https://via.placeholder.com/300x180/00ff99/000?text=COLOR+PREDICTION"},
-            {name: "Mines", img: "https://via.placeholder.com/300x180/3399ff/fff?text=MINES"},
-            {name: "Plinko", img: "https://via.placeholder.com/300x180/ff99cc/fff?text=PLINKO"}
-        ];
-
-        const container = document.getElementById('allGames');
-
-        realGames.forEach(game => {
-            const card = document.createElement('div');
-            card.className = 'game-card';
-            card.innerHTML = `
-                <img src="${game.img}" alt="${game.name}">
-                <div class="game-name">${game.name}</div>
-            `;
-            container.appendChild(card);
-        });
-    </script>
-
-</body>
-</html>
+    <p style="text-align:center;margin-top:2rem;">
+      <a href="/" style="color:var(--muted);text-decoration:none;font-size:.85rem;">← Back to Home</a>
+    </p>
+  </div>
+</div>
+</body></html>
