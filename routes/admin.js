@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
 const { isAuth, isAdmin } = require('../middleware/auth');
+const { syncMatches } = require('../services/matchUpdater');
 
 router.use(isAuth, isAdmin);
 
@@ -50,6 +51,20 @@ router.post('/matches', async (req, res) => {
   await pool.query(`INSERT INTO matches (title, sport, team_a, team_b, match_date, stream_url) VALUES ($1,$2,$3,$4,$5,$6)`,
     [title, sport, team_a, team_b, match_date, stream_url]);
   req.flash('success', 'Match created!');
+  res.redirect('/admin/matches');
+});
+
+router.post('/matches/:id/edit', async (req, res) => {
+  const { title, sport, team_a, team_b, match_date, stream_url, status } = req.body;
+  await pool.query(`UPDATE matches SET title=$1, sport=$2, team_a=$3, team_b=$4, match_date=$5, stream_url=$6, status=$7 WHERE id=$8`,
+    [title, sport, team_a, team_b, match_date, stream_url, status, req.params.id]);
+  req.flash('success', 'Match updated!');
+  res.redirect('/admin/matches');
+});
+
+router.post('/matches/:id/delete', async (req, res) => {
+  await pool.query(`DELETE FROM matches WHERE id=$1`, [req.params.id]);
+  req.flash('success', 'Match deleted!');
   res.redirect('/admin/matches');
 });
 
@@ -103,6 +118,16 @@ router.post('/news/:id/delete', async (req, res) => {
   await pool.query(`DELETE FROM news WHERE id=$1`, [req.params.id]);
   req.flash('success', 'News deleted');
   res.redirect('/admin/news');
+});
+
+router.post('/matches/sync', async (req, res) => {
+  try {
+    const added = await syncMatches();
+    req.flash('success', `${added} টি নতুন ম্যাচ যোগ করা হয়েছে!`);
+  } catch (err) {
+    req.flash('error', 'ম্যাচ সিঙ্ক করতে সমস্যা হয়েছে।');
+  }
+  res.redirect('/admin/matches');
 });
 
 router.post('/notify-all', async (req, res) => {
