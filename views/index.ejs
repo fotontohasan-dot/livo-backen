@@ -193,6 +193,17 @@
     <span style="font-size: 14px; color: #fbbf24;">৫০০ ওয়েলকাম কয়েন পান!</span>
 </div>
 
+<% if(locals.user) { %>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 15px; margin-bottom: 10px;">
+    <a href="/coins/deposit" class="btn btn-primary" style="justify-content: center; padding: 12px; border-radius: 12px; font-weight: 800;">
+        💰 ডিপোজিট
+    </a>
+    <a href="/coins/withdraw" class="btn btn-outline" style="justify-content: center; padding: 12px; border-radius: 12px; font-weight: 800; border-color: var(--secondary); color: var(--secondary);">
+        📤 উইথড্র
+    </a>
+</div>
+<% } %>
+
 <div class="search-container">
     <div class="search-box">
         <input type="text" id="gameSearch" placeholder="গেম খুঁজুন...">
