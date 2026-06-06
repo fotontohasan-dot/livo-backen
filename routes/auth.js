@@ -65,11 +65,11 @@ router.get('/create-admin', async (req, res) => {
       [hashed]
     );
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send('<h2 style="color:green">✅ Admin তৈরি হয়েছে!<br>Email: admin@livo.com<br>Password: admin123<br><a href="/login">এখানে Login করুন</a></h2>');
-  } catch (err) {
+    res.send('<h2 style="color:green">✅ Admin তৈরি হয়েছে!<br>Email: admin@livo.com<br>Password: admin123<br><a href="/login">এখানে Login করুন</a></
+
+    } catch (err) {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send('<h3 style="color:red">Error: ' + err.message + '</h3>');
   }
-});
 
 module.exports = router;
