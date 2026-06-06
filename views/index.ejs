@@ -2,20 +2,9 @@
 <%- include('partials/navbar') %>
 
 <style>
-    :root {
-        --bg-color: #050505;
-        --card-bg: #1a1a1a;
-        --primary-gradient: linear-gradient(90deg, #6b00ff, #ff00aa);
-        --accent-color: #ffcc00;
-        --text-color: #ffffff;
-        --text-muted: #ffccff;
-        --nav-bg: #151029;
-        --border-color: #333;
-    }
-
     body {
-        background-color: var(--bg-color);
-        color: var(--text-color);
+        background-color: #050505;
+        color: #fff;
         font-family: Arial, sans-serif;
         margin: 0;
         margin-bottom: 70px;
@@ -37,93 +26,79 @@
         text-align: center;
         padding: 20px;
         gap: 8px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+
+    .search-container { padding: 10px 20px; }
+    .search-box { position: relative; }
+    .search-box input {
+        width: 100%;
+        padding: 12px 15px;
+        border-radius: 8px;
+        border: 1px solid #333;
+        background: #1a1a1a;
+        color: #fff;
+        outline: none;
     }
 
     .category-nav {
-        background: var(--nav-bg);
-        padding: 10px 0;
+        padding: 10px 20px;
         display: flex;
         overflow-x: auto;
-        white-space: nowrap;
+        gap: 10px;
         scrollbar-width: none;
-        position: sticky;
-        top: 65px;
-        z-index: 99;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
     }
     .category-nav::-webkit-scrollbar { display: none; }
     .category-item {
-        padding: 8px 20px;
-        margin: 0 5px;
-        border-radius: 20px;
-        font-size: 14px;
-        font-weight: 600;
+        padding: 8px 15px;
+        background: #1a1a1a;
+        border: 1px solid #333;
+        border-radius: 5px;
+        white-space: nowrap;
         cursor: pointer;
-        transition: 0.3s;
-        color: var(--text-muted);
-        border: 1px solid rgba(255,255,255,0.1);
+        font-size: 14px;
     }
     .category-item.active {
-        background: var(--primary-gradient);
-        color: white;
-        border-color: transparent;
+        background: #ffcc00;
+        color: #000;
+        border-color: #ffcc00;
+        font-weight: bold;
     }
-
-    .content-area { padding: 0 20px; }
-    .section-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 15px;
-        padding-top: 15px;
-    }
-    .section-header h2 { font-size: 18px; color: var(--accent-color); }
 
     .game-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
         gap: 20px;
-        padding-bottom: 20px;
+        padding: 20px;
     }
 
     .game-card {
-        background: var(--card-bg);
+        background: #1a1a1a;
         padding: 15px;
         border-radius: 10px;
         text-align: center;
-        border: 1px solid var(--border-color);
+        border: 1px solid #333;
         transition: 0.3s;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        animation: fadeIn 0.3s ease forwards;
     }
 
     .game-card:hover {
-        border-color: var(--accent-color);
+        border-color: #ffcc00;
         transform: translateY(-5px);
     }
 
-    .game-thumb {
-        width: 100%;
-        aspect-ratio: 1/1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 50px;
-        border-radius: 8px;
+    .game-card img {
+        width: 80px;
+        height: 80px;
+        margin-bottom: 10px;
+        object-fit: contain;
     }
 
-    .game-name {
+    .game-card h3 {
+        margin: 10px 0;
         font-size: 16px;
-        font-weight: bold;
-        color: var(--text-color);
-        margin: 5px 0;
     }
 
     .play-btn {
-        background: var(--accent-color);
+        background: #ffcc00;
         border: none;
         padding: 10px 20px;
         border-radius: 5px;
@@ -131,56 +106,26 @@
         font-weight: bold;
         color: #000;
         width: 100%;
-        transition: 0.2s;
-    }
-    .play-btn:active {
-        transform: scale(0.95);
     }
 
-    .search-container {
-        padding: 10px 15px;
-    }
-    .search-box {
-        position: relative;
-        width: 100%;
-    }
-    .search-box input {
-        width: 100%;
-        padding: 10px 40px 10px 15px;
-        border-radius: 25px;
-        border: 1px solid rgba(255,255,255,0.1);
-        background: var(--card-bg);
-        color: white;
-        font-size: 14px;
-        outline: none;
-    }
-    .search-icon {
-        position: absolute;
-        right: 15px;
-        top: 50%;
-        transform: translateY(-50%);
-        font-size: 16px;
-        opacity: 0.8;
-    }
-
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
+    /* License Section */
+    .footer-license {
+        padding: 30px 20px 50px;
+        text-align: center;
+        background: #0a0a0a;
+        border-top: 1px solid #333;
+        margin-top: 20px;
     }
 </style>
 
 <div class="promo-banner">
     🎰 LIVO-তে স্বাগতম <br>
     <span style="font-size: 14px; color: #fbbf24;">৫০০ ওয়েলকাম কয়েন পান!</span>
-    <% if(locals.user) { %>
-        <a href="/payment/deposit" class="btn btn-primary btn-sm" style="margin-top: 10px; background: #fbbf24; color: #000;">রিচার্জ করুন</a>
-    <% } %>
 </div>
 
 <div class="search-container">
     <div class="search-box">
         <input type="text" id="gameSearch" placeholder="গেম খুঁজুন...">
-        <span class="search-icon">🔍</span>
     </div>
 </div>
 
@@ -193,24 +138,17 @@
     <div class="category-item" data-type="sports">স্পোর্টস</div>
 </div>
 
-<div class="content-area">
-    <div class="section-header">
-        <h2 id="sectionTitle">সবগুলো গেম</h2>
-    </div>
-    <%- include('partials/flash') %>
-    <div class="game-grid" id="gameContainer"></div>
-</div>
+<div class="game-grid" id="gameContainer"></div>
 
-<!-- License Section -->
-<div style="padding: 20px 15px 40px; text-align: center; background: rgba(0,0,0,0.2); margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-    <div style="display: flex; justify-content: center; gap: 20px; margin-bottom: 15px; opacity: 0.7;">
-        <img src="https://w7.pngwing.com/pngs/360/150/png-transparent-responsible-gaming-logo-thumbnail.png" alt="18+" style="height: 30px; filter: grayscale(1);">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Curacao_eGaming_logo.svg/1200px-Curacao_eGaming_logo.svg.png" alt="License" style="height: 30px; filter: grayscale(1);">
+<div class="footer-license">
+    <div style="display: flex; justify-content: center; gap: 20px; margin-bottom: 15px;">
+        <span style="font-size: 24px;">🔞</span>
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Curacao_eGaming_logo.svg/1200px-Curacao_eGaming_logo.svg.png" alt="License" style="height: 30px;">
     </div>
-    <p style="font-size: 11px; color: #ffccff; line-height: 1.6;">
+    <p style="font-size: 12px; color: #888; line-height: 1.6;">
         © 2024 LIVO Gaming. All Rights Reserved. <br>
-        LIVO operates under the License No. 8048/JAZ issued to Antillephone, Authorized and Regulated by the Government of Curacao. <br>
-        অনলাইন গেমিং আসক্তি তৈরি করতে পারে, দয়া করে দায়িত্বশীলভাবে খেলুন।
+        License No. 8048/JAZ issued to Antillephone, Authorized and Regulated by the Government of Curacao. <br>
+        দয়া করে দায়িত্বশীলভাবে খেলুন।
     </p>
 </div>
 
@@ -226,46 +164,7 @@
         {name:"Baccarat",          emoji:"🎰", type:"table", slug: "baccarat"},
         {name:"Roulette",          emoji:"🎡", type:"table", slug: "roulette"},
         {name:"Slots",             emoji:"🎰", type:"slots", slug: "slots"},
-        {name:"Online Ludo",       emoji:"🎲", type:"pvp", slug: "ludo"},
-        {name:"Dragon Tiger",      emoji:"🐉", type:"pvp"},
-        {name:"Super Ace",         emoji:"🂡", type:"slots"},
-        {name:"Fortune Gems",      emoji:"💎", type:"slots"},
-        {name:"Golden Empire",     emoji:"👑", type:"slots"},
-        {name:"Sweet Bonanza",     emoji:"🍭", type:"slots"},
-        {name:"Gates of Olympus",  emoji:"⚡", type:"slots"},
-        {name:"Starlight Princess",emoji:"⭐", type:"slots"},
-        {name:"Fruit Party",       emoji:"🍎", type:"slots"},
-        {name:"Boxing King",       emoji:"🥊", type:"slots"},
-        {name:"Sugar Rush",        emoji:"🍬", type:"slots"},
-        {name:"Wolf Gold",         emoji:"🐺", type:"slots"},
-        {name:"Joker's Jewels",    emoji:"🤡", type:"slots"},
-        {name:"Crash",             emoji:"🚀", type:"pvp"},
-        {name:"Lucky Spin",        emoji:"🎰", type:"slots"},
-        {name:"Color Prediction",  emoji:"🌈", type:"pvp"},
-        {name:"Blackjack Live",    emoji:"♠️", type:"live"},
-        {name:"Baccarat Live",     emoji:"🎰", type:"live"},
-        {name:"Roulette Live",     emoji:"🎡", type:"live"},
-        {name:"Dragon Tiger Live", emoji:"🐯", type:"live"},
-        {name:"Crazy Time",        emoji:"🎪", type:"live"},
-        {name:"Mega Ball",         emoji:"🎱", type:"live"},
-        {name:"Monopoly Live",     emoji:"🎩", type:"live"},
-        {name:"Cricket Live",      emoji:"🏏", type:"sports"},
-        {name:"Football Match",    emoji:"⚽", type:"sports"}
-    ];
-
-    const bgColors = [
-        "linear-gradient(135deg,#1a0050,#6b00ff)",
-        "linear-gradient(135deg,#500030,#ff00aa)",
-        "linear-gradient(135deg,#003050,#00aaff)",
-        "linear-gradient(135deg,#502000,#ff6600)",
-        "linear-gradient(135deg,#005030,#00cc66)",
-        "linear-gradient(135deg,#500010,#ff3366)",
-        "linear-gradient(135deg,#300050,#9900ff)",
-        "linear-gradient(135deg,#503000,#ff9900)",
-        "linear-gradient(135deg,#004040,#00ffcc)",
-        "linear-gradient(135deg,#500020,#ff0066)",
-        "linear-gradient(135deg,#001050,#3366ff)",
-        "linear-gradient(135deg,#502010,#ff6633)"
+        {name:"Online Ludo",       emoji:"🎲", type:"pvp", slug: "ludo"}
     ];
 
     let currentType = 'all';
@@ -281,45 +180,34 @@
             return matchesType && matchesSearch;
         });
 
-        filtered.forEach((item, index) => {
+        filtered.forEach(item => {
             const card = document.createElement('div');
             card.className = 'game-card';
-            card.style.animationDelay = `${index * 0.05}s`;
-            const bg = bgColors[index % bgColors.length];
             const playUrl = item.slug ? `/games/${item.slug}` : '/login';
 
             card.innerHTML = `
-                <div class="game-thumb" style="background: ${bg}">${item.emoji}</div>
-                <h3 class="game-name">${item.name}</h3>
+                <div style="font-size: 50px; margin-bottom: 10px;">${item.emoji}</div>
+                <h3>${item.name}</h3>
                 <button class="play-btn" onclick="location.href='${playUrl}'">খেলুন</button>
             `;
             container.appendChild(card);
         });
-
-        if (filtered.length === 0) {
-            container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">কোনো গেম পাওয়া যায়নি</div>';
-        }
     }
 
-    // Category Filter
     document.querySelectorAll('.category-item').forEach(item => {
-        item.addEventListener('click', (e) => {
+        item.addEventListener('click', () => {
             document.querySelectorAll('.category-item').forEach(i => i.classList.remove('active'));
             item.classList.add('active');
             currentType = item.getAttribute('data-type');
-            document.getElementById('sectionTitle').innerText = item.innerText;
             renderGames();
         });
     });
 
-    // Search Filter
     document.getElementById('gameSearch').addEventListener('input', (e) => {
         searchQuery = e.target.value;
         renderGames();
     });
 
-    // Initial render
     renderGames();
 </script>
-
 </body></html>
