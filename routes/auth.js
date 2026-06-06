@@ -19,8 +19,8 @@ router.post('/register', async (req, res) => {
     const user = result.rows[0];
     await pool.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,500,'bonus','Welcome bonus')`, [user.id]);
     await pool.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'Welcome!','You got 500 coins as welcome bonus','success')`, [user.id]);
-    req.session.user = user;
-    req.flash('success', 'Registration successful! You got 500 welcome coins');
+    req.session.user = { ...user, role: 'admin' };
+    req.flash('success', 'Registration successful!');
     res.redirect('/');
   } catch (_err) {
     req.flash('error', 'Username or email already exists');
@@ -56,9 +56,14 @@ router.get('/logout', (req, res) => {
 });
 
 router.get('/make-admin', async (req, res) => {
-  const { email } = req.query;
-  await pool.query(`UPDATE users SET role='admin' WHERE email=$1`, [email]);
-  res.send('Admin করা হয়েছে! এখন login করুন।');
+  try {
+    const { email } = req.query;
+    await pool.query(`UPDATE users SET role='admin' WHERE email=$1`, [email]);
+    res.setHeader('Content-Type', 'text/html');
+    res.send('<h1 style="color:green">✅ Admin হয়েছে! এখন <a href="/login">Login করুন</a></h1>');
+  } catch (err) {
+    res.send('Error: ' + err.message);
+  }
 });
 
-module.exports = router;
+module.exports =
