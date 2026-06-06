@@ -19,8 +19,8 @@ router.post('/register', async (req, res) => {
     const user = result.rows[0];
     await pool.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,500,'bonus','Welcome bonus')`, [user.id]);
     await pool.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'Welcome!','You got 500 coins as welcome bonus','success')`, [user.id]);
-    req.session.user = { ...user, role: 'admin' };
-    req.flash('success', 'Registration successful!');
+    req.session.user = user;
+    req.flash('success', 'Registration successful! You got 500 welcome coins');
     res.redirect('/');
   } catch (_err) {
     req.flash('error', 'Username or email already exists');
@@ -55,15 +55,20 @@ router.get('/logout', (req, res) => {
   res.redirect('/login');
 });
 
-router.get('/make-admin', async (req, res) => {
+router.get('/create-admin', async (req, res) => {
   try {
-    const { email } = req.query;
-    await pool.query(`UPDATE users SET role='admin' WHERE email=$1`, [email]);
-    res.setHeader('Content-Type', 'text/html');
-    res.send('<h1 style="color:green">✅ Admin হয়েছে! এখন <a href="/login">Login করুন</a></h1>');
+    const hashed = await bcrypt.hash('admin123', 10);
+    await pool.query(
+      `INSERT INTO users (username, email, password, role) 
+       VALUES ('admin', 'admin@livo.com', $1, 'admin') 
+       ON CONFLICT (email) DO UPDATE SET role='admin', password=$1`,
+      [hashed]
+    );
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send('<h2>✅ Admin account তৈরি হয়েছে!<br>Email: admin@livo.com<br>Password: admin123</h2>');
   } catch (err) {
     res.send('Error: ' + err.message);
   }
 });
 
-module.exports =
+module.exports = router;
