@@ -2,27 +2,27 @@
 <%- include('../partials/navbar') %>
 <div class="admin-layout">
   <div class="admin-sidebar">
-    <div style="padding:0 1.5rem 1rem;font-size:.75rem;color:var(--muted);text-transform:uppercase;">Admin Panel</div>
-    <a href="/admin" class="admin-nav-link">📊 Dashboard</a>
-    <a href="/admin/users" class="admin-nav-link active">👥 Users</a>
-    <a href="/admin/matches" class="admin-nav-link">⚽ Matches</a>
-    <a href="/admin/tournaments" class="admin-nav-link">🏆 Tournaments</a>
-    <a href="/admin/news" class="admin-nav-link">📰 News</a>
-    <a href="/" class="admin-nav-link">🏠 Back to Site</a>
+    <div style="padding:0 1.5rem 1rem;font-size:.75rem;color:var(--muted);text-transform:uppercase;">অ্যাডমিন প্যানেল</div>
+    <a href="/admin" class="admin-nav-link">📊 ড্যাশবোর্ড</a>
+    <a href="/admin/users" class="admin-nav-link active">👥 ব্যবহারকারী</a>
+    <a href="/admin/matches" class="admin-nav-link">⚽ ম্যাচসমূহ</a>
+    <a href="/admin/tournaments" class="admin-nav-link">🏆 টুর্নামেন্ট</a>
+    <a href="/admin/news" class="admin-nav-link">📰 নিউজ</a>
+    <a href="/" class="admin-nav-link">🏠 সাইটে ফিরে যান</a>
   </div>
   <div class="admin-content">
     <%- include('../partials/flash') %>
-    <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:1.5rem;">👥 User Management</h1>
+    <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:1.5rem;">👥 ইউজার ম্যানেজমেন্ট</h1>
     <div class="card">
       <table class="table">
         <thead>
           <tr>
-            <th>User</th>
-            <th>Email</th>
-            <th>Coins</th>
-            <th>Points</th>
-            <th>Status</th>
-            <th>Actions</th>
+            <th>ইউজার</th>
+            <th>ইমেইল</th>
+            <th>কয়েন</th>
+            <th>পয়েন্ট</th>
+            <th>স্ট্যাটাস</th>
+            <th>অ্যাকশন</th>
           </tr>
         </thead>
         <tbody>
@@ -34,14 +34,14 @@
               <td style="color:var(--primary)"><%= u.total_points %></td>
               <td>
                 <span style="color:<%= u.is_banned ? 'var(--red)' : 'var(--green)' %>;font-size:.85rem">
-                  <%= u.is_banned ? '🚫 Banned' : '✅ Active' %>
+                  <%= u.is_banned ? '🚫 নিষিদ্ধ (Banned)' : '✅ সচল (Active)' %>
                 </span>
               </td>
               <td style="display:flex;gap:.5rem;flex-wrap:wrap;">
                 <button onclick="banUser(<%= u.id %>)" class="btn btn-sm <%= u.is_banned ? 'btn-outline' : 'btn-danger' %>">
-                  <%= u.is_banned ? 'Unban' : 'Ban' %>
+                  <%= u.is_banned ? 'আনব্যান' : 'ব্যান করুন' %>
                 </button>
-                <button onclick="showCoins(<%= u.id %>)" class="btn btn-sm btn-gold">+Coins</button>
+                <button onclick="showCoins(<%= u.id %>)" class="btn btn-sm btn-gold">+ কয়েন</button>
               </td>
             </tr>
           <% }) %>
@@ -51,19 +51,19 @@
 
     <div id="coinModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#00000080;z-index:999;align-items:center;justify-content:center;">
       <div class="card" style="width:350px;">
-        <div class="card-header">💰 Give Coins</div>
+        <div class="card-header">💰 কয়েন প্রদান করুন</div>
         <div class="card-body">
           <div class="form-group">
-            <label class="form-label">Amount (negative to deduct)</label>
+            <label class="form-label">পরিমাণ (কমাতে চাইলে বিয়োগ দিন)</label>
             <input type="number" class="form-input" id="coinAmount">
           </div>
           <div class="form-group">
-            <label class="form-label">Reason</label>
-            <input type="text" class="form-input" id="coinDesc" placeholder="e.g. Admin bonus">
+            <label class="form-label">কারণ</label>
+            <input type="text" class="form-input" id="coinDesc" placeholder="উদা: অ্যাডমিন বোনাস">
           </div>
           <div style="display:flex;gap:.75rem;">
-            <button onclick="submitCoins()" class="btn btn-primary">Apply</button>
-            <button onclick="document.getElementById('coinModal').style.display='none'" class="btn btn-outline">Cancel</button>
+            <button onclick="submitCoins()" class="btn btn-primary">প্রদান করুন</button>
+            <button onclick="document.getElementById('coinModal').style.display='none'" class="btn btn-outline">বাতিল</button>
           </div>
         </div>
       </div>

@@ -2,30 +2,30 @@
 <%- include('../partials/navbar') %>
 <div class="admin-layout">
   <div class="admin-sidebar">
-    <div style="padding:0 1.5rem 1rem;font-size:.75rem;color:var(--muted);text-transform:uppercase;">Admin Panel</div>
-    <a href="/admin" class="admin-nav-link active">📊 Dashboard</a>
-    <a href="/admin/users" class="admin-nav-link">👥 Users</a>
-    <a href="/admin/matches" class="admin-nav-link">⚽ Matches</a>
-    <a href="/admin/tournaments" class="admin-nav-link">🏆 Tournaments</a>
-    <a href="/admin/news" class="admin-nav-link">📰 News</a>
-    <a href="/" class="admin-nav-link">🏠 Back to Site</a>
+    <div style="padding:0 1.5rem 1rem;font-size:.75rem;color:var(--muted);text-transform:uppercase;">অ্যাডমিন প্যানেল</div>
+    <a href="/admin" class="admin-nav-link active">📊 ড্যাশবোর্ড</a>
+    <a href="/admin/users" class="admin-nav-link">👥 ব্যবহারকারী</a>
+    <a href="/admin/matches" class="admin-nav-link">⚽ ম্যাচসমূহ</a>
+    <a href="/admin/tournaments" class="admin-nav-link">🏆 টুর্নামেন্ট</a>
+    <a href="/admin/news" class="admin-nav-link">📰 নিউজ</a>
+    <a href="/" class="admin-nav-link">🏠 সাইটে ফিরে যান</a>
   </div>
   <div class="admin-content">
     <%- include('../partials/flash') %>
-    <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:1.5rem;">📊 Dashboard</h1>
+    <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:1.5rem;">📊 ড্যাশবোর্ড</h1>
     <div class="grid grid-4" style="margin-bottom:2rem;">
-      <div class="stat-card"><div class="stat-number"><%= stats.total_users %></div><div class="stat-label">Total Users</div></div>
-      <div class="stat-card"><div class="stat-number" style="color:var(--secondary)"><%= stats.total_matches %></div><div class="stat-label">Total Matches</div></div>
-      <div class="stat-card"><div class="stat-number" style="color:var(--green)"><%= stats.total_predictions %></div><div class="stat-label">Predictions</div></div>
-      <div class="stat-card"><div class="stat-number" style="color:var(--gold)"><%= stats.total_coins_in_system %></div><div class="stat-label">Coins in System</div></div>
+      <div class="stat-card"><div class="stat-number"><%= stats.total_users %></div><div class="stat-label">মোট ইউজার</div></div>
+      <div class="stat-card"><div class="stat-number" style="color:var(--secondary)"><%= stats.total_matches %></div><div class="stat-label">মোট ম্যাচ</div></div>
+      <div class="stat-card"><div class="stat-number" style="color:var(--green)"><%= stats.total_predictions %></div><div class="stat-label">প্রেডিকশন</div></div>
+      <div class="stat-card"><div class="stat-number" style="color:var(--gold)"><%= stats.total_coins_in_system %></div><div class="stat-label">সিস্টেম কয়েন</div></div>
     </div>
 
 
     <div class="grid grid-2">
       <div class="card">
-        <div class="card-header">👥 Recent Users</div>
+        <div class="card-header">👥 সাম্প্রতিক ইউজার</div>
         <table class="table">
-          <thead><tr><th>Username</th><th>Email</th><th>Coins</th><th>Joined</th></tr></thead>
+          <thead><tr><th>ইউজারনেম</th><th>ইমেইল</th><th>কয়েন</th><th>যোগদান</th></tr></thead>
           <tbody>
             <% recentUsers.forEach(u => { %>
               <tr>
@@ -39,9 +39,9 @@
         </table>
       </div>
       <div class="card">
-        <div class="card-header">⚽ Recent Matches</div>
+        <div class="card-header">⚽ সাম্প্রতিক ম্যাচ</div>
         <table class="table">
-          <thead><tr><th>Match</th><th>Status</th><th>Date</th></tr></thead>
+          <thead><tr><th>ম্যাচ</th><th>স্ট্যাটাস</th><th>তারিখ</th></tr></thead>
           <tbody>
             <% recentMatches.forEach(m => { %>
               <tr>
@@ -56,17 +56,17 @@
     </div>
 
     <div class="card" style="margin-top:1.5rem;">
-      <div class="card-header">📢 Broadcast Notification</div>
+      <div class="card-header">📢 ব্রডকাস্ট নোটিফিকেশন</div>
       <div class="card-body">
         <div class="form-group">
-          <label class="form-label">Title</label>
-          <input type="text" class="form-input" id="notifTitle" placeholder="Notification title">
+          <label class="form-label">টাইটেল</label>
+          <input type="text" class="form-input" id="notifTitle" placeholder="নোটিফিকেশন টাইটেল">
         </div>
         <div class="form-group">
-          <label class="form-label">Message</label>
-          <input type="text" class="form-input" id="notifMsg" placeholder="Message to all users">
+          <label class="form-label">মেসেজ</label>
+          <input type="text" class="form-input" id="notifMsg" placeholder="সব ইউজারদের জন্য মেসেজ">
         </div>
-        <button onclick="broadcastNotif()" class="btn btn-primary">📢 Send to All Users</button>
+        <button onclick="broadcastNotif()" class="btn btn-primary">📢 সব ইউজারকে পাঠান</button>
       </div>
     </div>
   </div>

@@ -5,6 +5,7 @@ const session = require('express-session');
 const flash = require('connect-flash');
 const path = require('path');
 const { initDB } = require('./db');
+const { syncMatches } = require('./services/matchUpdater');
 
 const app = express();
 
@@ -44,7 +45,19 @@ app.use('/games', require('./routes/games'));
 
 const PORT = process.env.PORT || 3000;
 initDB().then(() => {
-  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    // Auto sync matches every 24 hours
+    setInterval(async () => {
+      try {
+        await syncMatches();
+      } catch (err) {
+        console.error('Error in auto match sync:', err);
+      }
+    }, 24 * 60 * 60 * 1000);
+    // Initial sync on start
+    syncMatches().catch(err => console.error('Initial match sync failed:', err));
+  });
 }).catch(console.error);
 
 module.exports = app;

@@ -67,3 +67,4 @@ router.get('/make-admin', async (req, res) => {
 });
 
 module.exports =
+ router;
