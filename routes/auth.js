@@ -78,5 +78,7 @@ router.get('/logout', (req, res) => {
     res.send(`<pre style="color:red">${JSON.stringify(err, null, 2)}</pre>`);
   }
 });
+module.exports = router;
+
 
 
