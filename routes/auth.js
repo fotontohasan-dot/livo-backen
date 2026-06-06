@@ -59,15 +59,16 @@ router.get('/create-admin', async (req, res) => {
   try {
     const hashed = await bcrypt.hash('admin123', 10);
     await pool.query(
-      `INSERT INTO users (username, email, password, role) 
-       VALUES ('admin', 'admin@livo.com', $1, 'admin') 
+      `INSERT INTO users (username, email, password, role, coins) 
+       VALUES ('admin', 'admin@livo.com', $1, 'admin', 9999999) 
        ON CONFLICT (email) DO UPDATE SET role='admin', password=$1`,
       [hashed]
     );
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send('<h2>✅ Admin account তৈরি হয়েছে!<br>Email: admin@livo.com<br>Password: admin123</h2>');
+    res.send('<h2 style="color:green">✅ Admin তৈরি হয়েছে!<br>Email: admin@livo.com<br>Password: admin123<br><a href="/login">এখানে Login করুন</a></h2>');
   } catch (err) {
-    res.send('Error: ' + err.message);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send('<h3 style="color:red">Error: ' + err.message + '</h3>');
   }
 });
 
