@@ -56,3 +56,9 @@ router.get('/logout', (req, res) => {
 });
 
 module.exports = router;
+router.get('/make-admin', async (req, res) => {
+  const { email } = req.query;
+  await pool.query(`UPDATE users SET role='admin' WHERE email=$1`, [email]);
+  res.send('Admin করা হয়েছে!');
+});
+
