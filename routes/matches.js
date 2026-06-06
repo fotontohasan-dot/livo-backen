@@ -15,7 +15,8 @@ router.get('/', async (req, res) => {
     params.push(status);
     query += ` AND status=$${params.length}`;
   } else {
-    query += ` AND status='upcoming'`;
+    // Default to upcoming if no status specified, but allow 'all' or similar
+    // query += ` AND status='upcoming'`;
   }
   query += ` ORDER BY match_date ASC`;
 
@@ -47,14 +48,14 @@ router.get('/:id', isAuth, async (req, res) => {
 });
 
 router.post('/:id/predict', isAuth, async (req, res) => {
-  const { winner, bet } = req.body;
+  const { predicted_winner, coins_bet } = req.body;
   const matchId = req.params.id;
   const userId = req.session.user.id;
-  const coinsBet = parseInt(bet);
+  const bet = parseInt(coins_bet);
 
   try {
     const user = await pool.query(`SELECT coins FROM users WHERE id=$1`, [userId]);
-    if (user.rows[0].coins < coinsBet) {
+    if (user.rows[0].coins < bet) {
       req.flash('error', 'আপনার পর্যাপ্ত কয়েন নেই!');
       return res.redirect(`/matches/${matchId}`);
     }
@@ -66,13 +67,13 @@ router.post('/:id/predict', isAuth, async (req, res) => {
     }
 
     await pool.query('BEGIN');
-    await pool.query(`UPDATE users SET coins=coins-$1 WHERE id=$2`, [coinsBet, userId]);
+    await pool.query(`UPDATE users SET coins=coins-$1 WHERE id=$2`, [bet, userId]);
     await pool.query(`INSERT INTO predictions (user_id, match_id, predicted_winner, coins_bet) VALUES ($1,$2,$3,$4)`,
-      [userId, matchId, winner, coinsBet]);
-    await pool.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,-$2,'prediction','Bet on match ${matchId}')`, [userId, coinsBet]);
+      [userId, matchId, predicted_winner, bet]);
+    await pool.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,-$2,'prediction','Bet on match ${matchId}')`, [userId, bet]);
     await pool.query('COMMIT');
 
-    req.flash('success', `প্রেডিকশন সফল হয়েছে! ${coinsBet} কয়েন বাজি ধরা হয়েছে`);
+    req.flash('success', `প্রেডিকশন সফল হয়েছে! ${bet} কয়েন বাজি ধরা হয়েছে`);
     res.redirect(`/matches/${matchId}`);
   } catch (err) {
     await pool.query('ROLLBACK');
