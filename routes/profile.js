@@ -12,6 +12,26 @@ router.get('/', isAuth, async (req, res) => {
   res.render('profile', { profileUser: user.rows[0], predictions: predictions.rows, tournaments: tournaments.rows, stats: stats.rows[0] });
 });
 
+router.get('/betting-record', isAuth, (req, res) => {
+  res.render('extra/placeholder', { title: 'Betting Record', activePage: 'profile' });
+});
+
+router.get('/profit-loss', isAuth, (req, res) => {
+  res.render('extra/placeholder', { title: 'Profit & Loss', activePage: 'profile' });
+});
+
+router.get('/account-record', isAuth, (req, res) => {
+  res.render('extra/placeholder', { title: 'Account Record', activePage: 'profile' });
+});
+
+router.get('/security', isAuth, (req, res) => {
+  res.render('extra/placeholder', { title: 'Security Center', activePage: 'profile' });
+});
+
+router.get('/mission-record', isAuth, (req, res) => {
+  res.render('extra/placeholder', { title: 'Mission Record', activePage: 'profile' });
+});
+
 router.post('/update', isAuth, async (req, res) => {
   const { username } = req.body;
   await pool.query(`UPDATE users SET username=$1 WHERE id=$2`, [username, req.session.user.id]);

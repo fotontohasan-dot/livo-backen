@@ -66,17 +66,24 @@ router.post('/:id/predict', isAuth, async (req, res) => {
       return res.redirect(`/matches/${matchId}`);
     }
 
-    await pool.query('BEGIN');
-    await pool.query(`UPDATE users SET coins=coins-$1 WHERE id=$2`, [bet, userId]);
-    await pool.query(`INSERT INTO predictions (user_id, match_id, predicted_winner, coins_bet) VALUES ($1,$2,$3,$4)`,
-      [userId, matchId, predicted_winner, bet]);
-    await pool.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,-$2,'prediction','Bet on match ${matchId}')`, [userId, bet]);
-    await pool.query('COMMIT');
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(`UPDATE users SET coins=coins-$1 WHERE id=$2`, [bet, userId]);
+      await client.query(`INSERT INTO predictions (user_id, match_id, predicted_winner, coins_bet) VALUES ($1,$2,$3,$4)`,
+        [userId, matchId, predicted_winner, bet]);
+      await client.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,-$2,'prediction','Bet on match ${matchId}')`, [userId, bet]);
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
 
     req.flash('success', `প্রেডিকশন সফল হয়েছে! ${bet} কয়েন বাজি ধরা হয়েছে`);
     res.redirect(`/matches/${matchId}`);
   } catch (err) {
-    await pool.query('ROLLBACK');
     if (err.code === '23505') {
       req.flash('error', 'আপনি ইতিমধ্যে এই ম্যাচে প্রেডিকশন করেছেন');
     } else {

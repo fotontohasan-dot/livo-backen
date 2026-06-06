@@ -1,26 +1,33 @@
 <nav class="navbar">
-  <a href="/" class="nav-brand">LIVO</a>
-
-  <div class="nav-links">
-    <a href="/matches">ম্যাচ</a>
-    <a href="/tournaments">টুর্নামেন্ট</a>
-    <a href="/leaderboard">লিডারবোর্ড</a>
-    <% if(locals.user && user.role === 'admin') { %>
-      <a href="/admin" style="color:var(--secondary)">এডমিন</a>
-    <% } %>
+  <div class="nav-left">
+    <div class="menu-trigger">
+      <i class="fa-solid fa-bars"></i>
+    </div>
+    <a href="/" class="nav-brand">LIVO</a>
   </div>
 
-  <div style="display:flex;align-items:center;gap:0.75rem;">
+  <div class="nav-right">
     <% if(locals.user) { %>
-      <a href="/payment/deposit" class="btn btn-sm" style="background: #fbbf24; color: #000; font-weight: bold;">রিচার্জ</a>
-      <div class="nav-coins">🪙 <%= user.coins %></div>
-      <a href="/notifications" style="text-decoration:none;font-size:1.2rem;">🔔</a>
-      <a href="/profile" style="text-decoration:none;">
-        <div class="avatar"><%= user.username[0].toUpperCase() %></div>
+      <div class="header-balance-wrap">
+        <div class="header-btn-wrap">
+          <a href="/payment/deposit" class="header-btn btn-dep">Deposit</a>
+          <a href="/payment/withdraw" class="header-btn btn-wd">Withdraw</a>
+        </div>
+        <div class="balance-text">৳ <%= user.coins %></div>
+      </div>
+
+      <a href="/notifications" class="nav-icon-btn">
+        <i class="fa-regular fa-bell"></i>
       </a>
+      <a href="/profile#mail" class="nav-icon-btn">
+        <i class="fa-regular fa-envelope"></i>
+      </a>
+      <div class="nav-icon-btn" onclick="location.reload()">
+        <i class="fa-solid fa-rotate"></i>
+      </div>
     <% } else { %>
-      <a href="/login" class="btn btn-outline btn-sm">লগইন</a>
-      <a href="/register" class="btn btn-primary btn-sm">রেজিস্ট্রেশন</a>
+      <a href="/login" class="header-btn btn-dep">Login</a>
+      <a href="/register" class="header-btn btn-wd">Join</a>
     <% } %>
   </div>
 </nav>
