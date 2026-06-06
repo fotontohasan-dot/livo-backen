@@ -9,6 +9,11 @@ router.get('/', isAuth, async (req, res) => {
   res.render('coins', { transactions: transactions.rows, coins: user.rows[0].coins });
 });
 
+router.get('/history', isAuth, async (req, res) => {
+  const transactions = await pool.query(`SELECT * FROM coin_transactions WHERE user_id=$1 ORDER BY created_at DESC`, [req.session.user.id]);
+  res.render('coins', { transactions: transactions.rows, coins: req.session.user.coins });
+});
+
 router.post('/daily-bonus', isAuth, async (req, res) => {
   const userId = req.session.user.id;
   const user = await pool.query(`SELECT * FROM users WHERE id=$1`, [userId]);

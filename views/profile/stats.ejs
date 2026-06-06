@@ -1,0 +1,12 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<div class="container page">
+  <h1 style="margin-bottom: 1.5rem;">Profit & Loss</h1>
+  <div class="grid grid-2">
+    <div class="card"><div class="card-body"><h3>Total Bets</h3><p><%= stats.total %></p></div></div>
+    <div class="card"><div class="card-body"><h3>Wins</h3><p><%= stats.won %></p></div></div>
+    <div class="card"><div class="card-body"><h3>Total Earned</h3><p>🪙 <%= stats.total_earned %></p></div></div>
+  </div>
+</div>
+<%- include('../partials/bottom-nav') %>
+</body></html>

@@ -33,4 +33,17 @@ router.post('/change-password', isAuth, async (req, res) => {
   res.redirect('/profile');
 });
 
+router.get('/history', isAuth, async (req, res) => {
+  const predictions = await pool.query(`SELECT p.*, m.title FROM predictions p JOIN matches m ON p.match_id=m.id WHERE p.user_id=$1 ORDER BY p.created_at DESC`, [req.session.user.id]);
+  res.render('profile/history', { predictions: predictions.rows });
+});
+
+router.get('/stats', isAuth, async (req, res) => {
+  const stats = await pool.query(`SELECT COUNT(*) as total, COUNT(CASE WHEN status='won' THEN 1 END) as won, SUM(CASE WHEN status='won' THEN points_earned ELSE 0 END) as total_earned FROM predictions WHERE user_id=$1`, [req.session.user.id]);
+  res.render('profile/stats', { stats: stats.rows[0] });
+});
+
+router.get('/security', isAuth, (req, res) => res.render('profile/security'));
+router.get('/missions', isAuth, (req, res) => res.render('profile/missions'));
+
 module.exports = router;

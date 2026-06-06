@@ -43,6 +43,8 @@ app.use('/notifications', require('./routes/notifications'));
 app.use('/payment', require('./routes/payment'));
 app.use('/games', require('./routes/games'));
 
+app.get('/app/update', (req, res) => res.render('app/update'));
+
 const PORT = process.env.PORT || 3000;
 initDB().then(() => {
   app.listen(PORT, () => {

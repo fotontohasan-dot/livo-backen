@@ -1,47 +1,22 @@
-<style>
-    .bottom-nav {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 65px;
-        background: #151029;
-        display: flex;
-        justify-content: space-around;
-        align-items: center;
-        border-top: 1px solid rgba(255,255,255,0.1);
-        z-index: 1000;
-        padding-bottom: env(safe-area-inset-bottom);
-    }
-    .nav-link {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        text-decoration: none;
-        color: #ffccff;
-        font-size: 11px;
-        gap: 4px;
-        transition: 0.3s;
-    }
-    .nav-link.active { color: #ff00aa; }
-    .nav-icon { font-size: 20px; }
-</style>
-
 <div class="bottom-nav">
     <a href="/" class="nav-link <%= locals.activePage === 'home' ? 'active' : '' %>">
         <span class="nav-icon">🏠</span>
-        <span>হোম</span>
+        <span>Home</span>
     </a>
-    <a href="/matches" class="nav-link <%= locals.activePage === 'matches' ? 'active' : '' %>">
-        <span class="nav-icon">🏆</span>
-        <span>ম্যাচ</span>
+    <a href="/profile#invite" class="nav-link">
+        <span class="nav-icon">👥</span>
+        <span>Invitation</span>
     </a>
-    <a href="/leaderboard" class="nav-link <%= locals.activePage === 'leaderboard' ? 'active' : '' %>">
-        <span class="nav-icon">📊</span>
-        <span>লিডারবোর্ড</span>
+    <a href="/tournaments" class="nav-link">
+        <span class="nav-icon">🔥</span>
+        <span>Promotion</span>
+    </a>
+    <a href="/profile#support" class="nav-link">
+        <span class="nav-icon">🎧</span>
+        <span>Customer Service</span>
     </a>
     <a href="/profile" class="nav-link <%= locals.activePage === 'profile' ? 'active' : '' %>">
         <span class="nav-icon">👤</span>
-        <span>প্রোফাইল</span>
+        <span>Account</span>
     </a>
 </div>

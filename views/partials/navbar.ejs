@@ -1,26 +1,25 @@
 <nav class="navbar">
-  <a href="/" class="nav-brand">LIVO</a>
-
-  <div class="nav-links">
-    <a href="/matches">ম্যাচ</a>
-    <a href="/tournaments">টুর্নামেন্ট</a>
-    <a href="/leaderboard">লিডারবোর্ড</a>
-    <% if(locals.user && user.role === 'admin') { %>
-      <a href="/admin" style="color:var(--secondary)">এডমিন</a>
-    <% } %>
+  <div style="display:flex;align-items:center;gap:1rem;">
+    <button class="text-white text-2xl">⋮</button>
+    <a href="/" class="nav-brand">LIVO</a>
   </div>
 
-  <div style="display:flex;align-items:center;gap:0.75rem;">
-    <% if(locals.user) { %>
-      <a href="/payment/deposit" class="btn btn-sm" style="background: #fbbf24; color: #000; font-weight: bold;">রিচার্জ</a>
-      <div class="nav-coins">🪙 <%= user.coins %></div>
-      <a href="/notifications" style="text-decoration:none;font-size:1.2rem;">🔔</a>
-      <a href="/profile" style="text-decoration:none;">
-        <div class="avatar"><%= user.username[0].toUpperCase() %></div>
-      </a>
-    <% } else { %>
-      <a href="/login" class="btn btn-outline btn-sm">লগইন</a>
-      <a href="/register" class="btn btn-primary btn-sm">রেজিস্ট্রেশন</a>
-    <% } %>
+  <div style="display:flex;align-items:center;gap:1rem;">
+    <a href="/notifications" class="text-xl">🔔</a>
+    <a href="/news" class="text-xl">✉️</a>
+    <button onclick="window.location.reload()" class="text-xl">🔄</button>
   </div>
 </nav>
+
+<% if(locals.user) { %>
+<div class="top-balance-bar">
+  <div style="display:flex;gap:0.5rem;">
+    <a href="/payment/deposit" class="btn btn-sm btn-primary" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 4px;">Deposit</a>
+    <a href="/payment/withdraw" class="btn btn-sm btn-outline" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 4px;">Withdraw</a>
+  </div>
+  <div class="balance-amount">
+    <span style="font-size: 0.8rem; color: var(--muted); font-weight: 400; margin-right: 4px;">Balance:</span>
+    🪙 <%= user.coins %>
+  </div>
+</div>
+<% } %>
