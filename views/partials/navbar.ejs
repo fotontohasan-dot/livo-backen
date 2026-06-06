@@ -12,6 +12,7 @@
 
   <div style="display:flex;align-items:center;gap:0.75rem;">
     <% if(locals.user) { %>
+      <a href="/payment/deposit" class="btn btn-sm" style="background: #fbbf24; color: #000; font-weight: bold;">রিচার্জ</a>
       <div class="nav-coins">🪙 <%= user.coins %></div>
       <a href="/notifications" style="text-decoration:none;font-size:1.2rem;">🔔</a>
       <a href="/profile" style="text-decoration:none;">

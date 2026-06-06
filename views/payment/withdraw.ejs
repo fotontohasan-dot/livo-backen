@@ -1,0 +1,27 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<div class="container mt-4">
+    <h2>উইথড্র (Withdraw)</h2>
+    <div class="card bg-dark text-white p-4">
+        <form action="/payment/withdraw" method="POST">
+            <div class="mb-3">
+                <label>মেথড</label>
+                <select name="method" class="form-control bg-secondary text-white">
+                    <option value="bkash">bKash</option>
+                    <option value="nagad">Nagad</option>
+                    <option value="rocket">Rocket</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label>পরিমাণ</label>
+                <input type="number" name="amount" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label>পার্সোনাল নম্বর</label>
+                <input type="text" name="account_number" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-danger w-100">উইথড্র রিকোয়েস্ট পাঠান</button>
+        </form>
+    </div>
+</div>
+<%- include('../partials/bottom-nav') %>
