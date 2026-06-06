@@ -53,23 +53,30 @@ router.post('/login', async (req, res) => {
 router.get('/logout', (req, res) => {
   req.session.destroy();
   res.redirect('/login');
-});
-
-router.get('/create-admin', async (req, res) => {
+});router.get('/create-admin', async (req, res) => {
   try {
     const hashed = await bcrypt.hash('admin123', 10);
-    await pool.query(
+    const result = await pool.query(
       `INSERT INTO users (username, email, password, role, coins) 
        VALUES ('admin', 'admin@livo.com', $1, 'admin', 9999999) 
-       ON CONFLICT (email) DO UPDATE SET role='admin', password=$1`,
+       ON CONFLICT (email) DO UPDATE SET role='admin', password=$1
+       RETURNING id, username, email, role`,
       [hashed]
     );
+    const user = result.rows[0];
+    req.session.user = user;
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send('<h2 style="color:green">✅ Admin তৈরি হয়েছে!<br>Email: admin@livo.com<br>Password: admin123<br><a href="/login">এখানে Login করুন</a></
-
-    } catch (err) {
+    res.send(`<h2 style="color:green;font-family:sans-serif">
+      ✅ সফল!<br>
+      ID: ${user.id}<br>
+      Email: ${user.email}<br>
+      Role: ${user.role}<br>
+      <a href="/">হোম যান</a>
+    </h2>`);
+  } catch (err) {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send('<h3 style="color:red">Error: ' + err.message + '</h3>');
+    res.send(`<pre style="color:red">${JSON.stringify(err, null, 2)}</pre>`);
   }
+});
 
-module.exports = router;
+
