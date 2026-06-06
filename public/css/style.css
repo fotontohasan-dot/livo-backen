@@ -1,35 +1,51 @@
 :root {
-  --primary: #6b00ff;
+  --primary: #fbbf24; /* Gold/Yellow accent */
   --secondary: #ff00aa;
-  --accent: #ffd700;
-  --primary-gradient: linear-gradient(90deg, #6b00ff, #ff00aa);
-  --dark: #0f0b1f;
-  --darker: #0a0714;
-  --card: #1a1433;
-  --card2: #241b45;
+  --accent: #fbbf24;
+  --primary-gradient: linear-gradient(90deg, #fbbf24, #f59e0b);
+  --dark: #111111;
+  --darker: #000000;
+  --card: #1f1f1f;
+  --card2: #2a2a2a;
   --text: #ffffff;
-  --muted: #ffccff;
-  --border: rgba(255, 255, 255, 0.1);
-  --gold: #ffd700;
-  --red: #ff3366;
-  --green: #00ffcc;
+  --muted: #a0a0a0;
+  --border: rgba(255, 255, 255, 0.08);
+  --gold: #fbbf24;
+  --red: #ef4444;
+  --green: #10b981;
+  --header-bg: #1a1a1a;
+  --nav-bg: #1a1a1a;
 }
 
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
-body { background:var(--dark); color:var(--text); font-family:'Segoe UI', Roboto, Arial, sans-serif; min-height:100vh; }
+body { background:var(--dark); color:var(--text); font-family:'Segoe UI', Roboto, Arial, sans-serif; min-height:100vh; padding-bottom: 60px; }
 
 .navbar {
-    background: var(--darker);
+    background: var(--header-bg);
     border-bottom: 1px solid var(--border);
-    padding: 0 1.5rem;
+    padding: 0 1rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 65px;
+    height: 60px;
     position: sticky;
     top: 0;
     z-index: 1000;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+.top-balance-bar {
+    background: #262626;
+    padding: 8px 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+}
+
+.balance-amount {
+    font-weight: 700;
+    color: var(--gold);
+    font-size: 1.1rem;
 }
 
 .nav-brand {
@@ -69,7 +85,7 @@ body { background:var(--dark); color:var(--text); font-family:'Segoe UI', Roboto
 .card-header { background:var(--card2); padding:1rem 1.25rem; border-bottom:1px solid var(--border); font-weight:600; display:flex; align-items:center; justify-content:space-between; }
 
 .btn { padding:10px 20px; border:none; border-radius:8px; cursor:pointer; font-weight:600; font-size:.9rem; text-decoration:none; display:inline-flex; align-items:center; gap:6px; transition:.2s; }
-.btn-primary { background:var(--primary-gradient); color:#fff; }
+.btn-primary { background:var(--primary-gradient); color:#000; }
 .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
 .btn-outline { background:transparent; border:1px solid var(--border); color:var(--text); }
 .btn-outline:hover { border-color: var(--secondary); color: var(--secondary); }
@@ -98,3 +114,55 @@ body { background:var(--dark); color:var(--text); font-family:'Segoe UI', Roboto
 .match-teams { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin:1rem 0; }
 .team-name { font-weight:700; font-size:1rem; }
 .vs { color:var(--muted); font-weight:800; font-size:1.1rem; }
+
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: var(--nav-bg);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    border-top: 1px solid var(--border);
+    z-index: 1000;
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+.nav-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: var(--muted);
+    font-size: 10px;
+    gap: 4px;
+    transition: 0.3s;
+}
+.nav-link.active { color: var(--gold); }
+.nav-icon { font-size: 24px; }
+
+.profile-list-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border);
+    text-decoration: none;
+    color: var(--text);
+    transition: background 0.2s;
+}
+.profile-list-item:hover {
+    background: var(--card2);
+}
+.profile-list-icon {
+    width: 24px;
+    margin-right: 12px;
+    text-align: center;
+    font-size: 1.2rem;
+}
+.profile-list-arrow {
+    margin-left: auto;
+    color: var(--muted);
+    font-size: 0.8rem;
+}

@@ -1,0 +1,21 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<div class="container page">
+  <h1 style="margin-bottom: 1.5rem;">Betting Record</h1>
+  <div class="card">
+    <table class="table">
+      <thead><tr><th>Match</th><th>Bet</th><th>Status</th></tr></thead>
+      <tbody>
+        <% predictions.forEach(p => { %>
+          <tr>
+            <td><%= p.title %></td>
+            <td>🪙 <%= p.coins_bet %></td>
+            <td><%= p.status %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<%- include('../partials/bottom-nav') %>
+</body></html>

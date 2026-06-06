@@ -1,13 +1,74 @@
 const { pool } = require('../db');
 
 /**
- * Stub for syncMatches function.
- * In a real scenario, this would fetch matches from an external API and update the database.
+ * syncMatches function.
+ * Fetches/Generates realistic upcoming matches for Cricket and Football.
+ * Ensures no duplicates are added.
  */
 async function syncMatches() {
-  console.log('syncMatches stub called');
-  // Return 0 added matches for now
-  return 0;
+  const footballTeams = ['Brazil', 'Argentina', 'France', 'Germany', 'England', 'Spain', 'Portugal', 'Italy'];
+  const cricketTeams = ['Bangladesh', 'India', 'Pakistan', 'Australia', 'England', 'South Africa', 'New Zealand', 'Sri Lanka'];
+
+  const matchesToAdd = [];
+  const now = new Date();
+
+  // Generate 5 Football matches for the next week
+  for (let i = 1; i <= 5; i++) {
+    const teamA = footballTeams[Math.floor(Math.random() * footballTeams.length)];
+    let teamB = footballTeams[Math.floor(Math.random() * footballTeams.length)];
+    while (teamA === teamB) teamB = footballTeams[Math.floor(Math.random() * footballTeams.length)];
+
+    const matchDate = new Date(now);
+    matchDate.setDate(now.getDate() + i);
+    matchDate.setHours(18 + Math.floor(Math.random() * 4), 0, 0, 0); // Evening matches
+
+    matchesToAdd.push({
+      title: `${teamA} vs ${teamB} - International Friendly`,
+      sport: 'football',
+      team_a: teamA,
+      team_b: teamB,
+      match_date: matchDate
+    });
+  }
+
+  // Generate 5 Cricket matches for the next week
+  for (let i = 1; i <= 5; i++) {
+    const teamA = cricketTeams[Math.floor(Math.random() * cricketTeams.length)];
+    let teamB = cricketTeams[Math.floor(Math.random() * cricketTeams.length)];
+    while (teamA === teamB) teamB = cricketTeams[Math.floor(Math.random() * cricketTeams.length)];
+
+    const matchDate = new Date(now);
+    matchDate.setDate(now.getDate() + i);
+    matchDate.setHours(10 + Math.floor(Math.random() * 4), 0, 0, 0); // Daytime matches
+
+    matchesToAdd.push({
+      title: `${teamA} vs ${teamB} - World Cup Series`,
+      sport: 'cricket',
+      team_a: teamA,
+      team_b: teamB,
+      match_date: matchDate
+    });
+  }
+
+  let addedCount = 0;
+  for (const match of matchesToAdd) {
+    // Check if match already exists (same teams on same day)
+    const existing = await pool.query(
+      `SELECT id FROM matches WHERE team_a = $1 AND team_b = $2 AND match_date::date = $3::date`,
+      [match.team_a, match.team_b, match.match_date]
+    );
+
+    if (existing.rows.length === 0) {
+      await pool.query(
+        `INSERT INTO matches (title, sport, team_a, team_b, match_date) VALUES ($1, $2, $3, $4, $5)`,
+        [match.title, match.sport, match.team_a, match.team_b, match.match_date]
+      );
+      addedCount++;
+    }
+  }
+
+  console.log(`Successfully synced matches. Added ${addedCount} new matches.`);
+  return addedCount;
 }
 
 module.exports = { syncMatches };

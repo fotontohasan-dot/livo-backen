@@ -2,33 +2,33 @@
 <%- include('../partials/navbar') %>
 <div class="admin-layout">
   <div class="admin-sidebar">
-    <div style="padding:0 1.5rem 1rem;font-size:.75rem;color:var(--muted);text-transform:uppercase;">Admin Panel</div>
-    <a href="/admin" class="admin-nav-link">📊 Dashboard</a>
-    <a href="/admin/users" class="admin-nav-link">👥 Users</a>
-    <a href="/admin/matches" class="admin-nav-link">⚽ Matches</a>
-    <a href="/admin/tournaments" class="admin-nav-link active">🏆 Tournaments</a>
-    <a href="/admin/news" class="admin-nav-link">📰 News</a>
-    <a href="/" class="admin-nav-link">🏠 Back to Site</a>
+    <div style="padding:0 1.5rem 1rem;font-size:.75rem;color:var(--muted);text-transform:uppercase;">অ্যাডমিন প্যানেল</div>
+    <a href="/admin" class="admin-nav-link">📊 ড্যাশবোর্ড</a>
+    <a href="/admin/users" class="admin-nav-link">👥 ব্যবহারকারী</a>
+    <a href="/admin/matches" class="admin-nav-link">⚽ ম্যাচসমূহ</a>
+    <a href="/admin/tournaments" class="admin-nav-link active">🏆 টুর্নামেন্ট</a>
+    <a href="/admin/news" class="admin-nav-link">📰 নিউজ</a>
+    <a href="/" class="admin-nav-link">🏠 সাইটে ফিরে যান</a>
   </div>
   <div class="admin-content">
     <%- include('../partials/flash') %>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
-      <h1 style="font-size:1.5rem;font-weight:800;">🏆 Tournament Management</h1>
-      <button onclick="document.getElementById('addModal').style.display='flex'" class="btn btn-primary">+ Create Tournament</button>
+      <h1 style="font-size:1.5rem;font-weight:800;">🏆 টুর্নামেন্ট ম্যানেজমেন্ট</h1>
+      <button onclick="document.getElementById('addModal').style.display='flex'" class="btn btn-primary">+ টুর্নামেন্ট তৈরি করুন</button>
     </div>
     <div class="card" style="margin-bottom:1.5rem;">
       <table class="table">
         <thead>
-          <tr><th>Name</th><th>Sport</th><th>Entry</th><th>Prize</th><th>Status</th><th>Dates</th></tr>
+          <tr><th>নাম</th><th>স্পোর্টস</th><th>এন্ট্রি</th><th>পুরস্কার</th><th>স্ট্যাটাস</th><th>তারিখ</th></tr>
         </thead>
         <tbody>
           <% tournaments.forEach(t => { %>
             <tr>
               <td style="font-weight:600"><%= t.name %></td>
               <td><%= t.sport %></td>
-              <td style="color:var(--gold)"><%= t.entry_fee || 'Free' %></td>
+              <td style="color:var(--gold)"><%= t.entry_fee || 'ফ্রি' %></td>
               <td style="color:var(--green)"><%= t.prize_pool %></td>
-              <td><span class="status-badge status-<%= t.status %>"><%= t.status %></span></td>
+              <td><span class="status-badge status-<%= t.status %>"><%= t.status === 'upcoming' ? 'আসন্ন' : 'চলমান' %></span></td>
               <td style="font-size:.8rem;color:var(--muted)">
                 <%= new Date(t.start_date).toLocaleDateString() %> - <%= new Date(t.end_date).toLocaleDateString() %>
               </td>
@@ -41,6 +41,36 @@
     <div id="addModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#00000080;z-index:999;align-items:center;justify-content:center;">
       <div class="card" style="width:500px;max-width:95vw;max-height:90vh;overflow-y:auto;">
         <div class="card-header">
-          + Create Tournament
+          + টুর্নামেন্ট তৈরি করুন
           <button onclick="document.getElementById('addModal').style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.2rem;">✕</button>
-        
+        </div>
+        <div class="card-body">
+          <div class="form-group"><label class="form-label">নাম</label><input type="text" class="form-input" id="tName"></div>
+          <div class="form-group"><label class="form-label">স্পোর্টস</label><select class="form-input" id="tSport"><option value="football">ফুটবল</option><option value="cricket">ক্রিকেট</option></select></div>
+          <div class="form-group"><label class="form-label">বিবরণ</label><textarea class="form-input" id="tDesc"></textarea></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+            <div class="form-group"><label class="form-label">এন্ট্রি ফি</label><input type="number" class="form-input" id="tEntry" value="0"></div>
+            <div class="form-group"><label class="form-label">পুরস্কার</label><input type="number" class="form-input" id="tPrize" value="0"></div>
+          </div>
+          <div class="form-group"><label class="form-label">সর্বোচ্চ অংশগ্রহণকারী</label><input type="number" class="form-input" id="tMax" value="100"></div>
+          <div class="form-group"><label class="form-label">শুরুর তারিখ</label><input type="datetime-local" class="form-input" id="tStart"></div>
+          <div class="form-group"><label class="form-label">শেষের তারিখ</label><input type="datetime-local" class="form-input" id="tEnd"></div>
+          <button onclick="submitTournament()" class="btn btn-primary">টুর্নামেন্ট তৈরি করুন</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function submitTournament() {
+  const form = document.createElement('form');
+  form.method = 'POST'; form.action = '/admin/tournaments';
+  [['name','tName'],['sport','tSport'],['description','tDesc'],['entry_fee','tEntry'],['prize_pool','tPrize'],['max_participants','tMax'],['start_date','tStart'],['end_date','tEnd']].forEach(([n,id]) => {
+    const i = document.createElement('input');
+    i.name = n; i.value = document.getElementById(id).value;
+    form.appendChild(i);
+  });
+  document.body.appendChild(form); form.submit();
+}
+</script>
+</body></html>

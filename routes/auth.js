@@ -78,7 +78,8 @@ router.get('/logout', (req, res) => {
     res.send(`<pre style="color:red">${JSON.stringify(err, null, 2)}</pre>`);
   }
 });
-module.exports = router;
+module.exports = router;<<<<<<< admin-sync-bengali-16917167872691990126
+module.exports =
+ router;
 
-
-
+ main

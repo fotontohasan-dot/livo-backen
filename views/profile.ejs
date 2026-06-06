@@ -2,122 +2,96 @@
 <%- include('partials/navbar') %>
 <div class="container page">
   <%- include('partials/flash') %>
-  <div class="layout-main">
-    <div>
-      <div class="card" style="margin-bottom:1.5rem;">
-        <div class="card-header">📊 Match History</div>
-        <table class="table">
-          <thead><tr><th>Match</th><th>Predicted</th><th>Bet</th><th>Status</th><th>Earned</th></tr></thead>
-          <tbody>
-            <% if(predictions.length === 0) { %>
-              <tr><td colspan="5" style="text-align:center;color:var(--muted)">No predictions yet</td></tr>
-            <% } %>
-            <% predictions.forEach(p => { %>
-              <tr>
-                <td style="font-size:.85rem"><%= p.title %></td>
-                <td><%= p.predicted_winner %></td>
-                <td style="color:var(--gold)">🪙 <%= p.coins_bet %></td>
-                <td>
-                  <span style="padding:3px 8px;border-radius:20px;font-size:.75rem;
-                    background:<%= p.status==='won'?'#10b98120':p.status==='lost'?'#ef444420':'#00d4aa20' %>;
-                    color:<%= p.status==='won'?'#10b981':p.status==='lost'?'#ef4444':'var(--primary)' %>">
-                    <%= p.status.toUpperCase() %>
-                  </span>
-                </td>
-                <td style="color:var(--green)"><%= p.points_earned > 0 ? '+'+p.points_earned : '-' %></td>
-              </tr>
-            <% }) %>
-          </tbody>
-        </table>
-      </div>
 
-      <div class="card">
-        <div class="card-header">⚙️ Settings</div>
-        <div class="card-body">
-          <div class="form-group">
-            <label class="form-label">Username</label>
-            <input type="text" class="form-input" value="<%= profileUser.username %>" id="newUsername">
-          </div>
-          <button onclick="updateProfile()" class="btn btn-primary btn-sm">Save Changes</button>
-          <hr style="border:1px solid var(--border);margin:1.5rem 0;">
-          <h3 style="margin-bottom:1rem;font-size:1rem;">Change Password</h3>
-          <div class="form-group">
-            <label class="form-label">Current Password</label>
-            <input type="password" class="form-input" id="curPwd" placeholder="••••••••">
-          </div>
-          <div class="form-group">
-            <label class="form-label">New Password</label>
-            <input type="password" class="form-input" id="newPwd" placeholder="••••••••">
-          </div>
-          <button onclick="changePwd()" class="btn btn-outline btn-sm">Change Password</button>
-        </div>
+  <div class="card" style="margin-bottom:1.5rem; background: var(--card2);">
+    <div class="card-body" style="display:flex; align-items:center; gap:1.5rem;">
+      <div class="avatar" style="width:64px;height:64px;font-size:1.5rem;">
+        <%= profileUser.username[0].toUpperCase() %>
       </div>
-    </div>
-
-    <div>
-      <div class="card" style="margin-bottom:1.5rem;">
-        <div class="card-body" style="text-align:center;">
-          <div class="avatar" style="width:64px;height:64px;font-size:1.5rem;margin:0 auto 1rem;">
-            <%= profileUser.username[0].toUpperCase() %>
-          </div>
-          <h2><%= profileUser.username %></h2>
-          <p style="color:var(--muted);font-size:.85rem"><%= profileUser.email %></p>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1.5rem;">
-            <div style="text-align:center;">
-              <div style="font-size:1.5rem;font-weight:800;color:var(--primary)"><%= profileUser.total_points %></div>
-              <div style="font-size:.75rem;color:var(--muted)">Total Points</div>
-            </div>
-            <div style="text-align:center;">
-              <div style="font-size:1.5rem;font-weight:800;color:var(--gold)"><%= profileUser.coins %></div>
-              <div style="font-size:.75rem;color:var(--muted)">Coins</div>
-            </div>
-            <div style="text-align:center;">
-              <div style="font-size:1.5rem;font-weight:800;color:var(--green)"><%= stats.won %></div>
-              <div style="font-size:.75rem;color:var(--muted)">Wins</div>
-            </div>
-            <div style="text-align:center;">
-              <div style="font-size:1.5rem;font-weight:800"><%= stats.total %></div>
-              <div style="font-size:.75rem;color:var(--muted)">Total Bets</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-header">🏆 My Tournaments</div>
-        <div class="card-body" style="padding:0;">
-          <% if(tournaments.length === 0) { %>
-            <p style="padding:1rem;color:var(--muted);font-size:.9rem;">Not joined any tournament</p>
-          <% } else { %>
-            <% tournaments.forEach(t => { %>
-              <div style="padding:.75rem 1rem;border-bottom:1px solid var(--border);">
-                <div style="font-weight:600;font-size:.9rem"><%= t.name %></div>
-                <div style="font-size:.75rem;color:var(--muted)"><%= t.sport %> · <%= t.points %> pts</div>
-              </div>
-            <% }) %>
-          <% } %>
-        </div>
+      <div>
+        <h2 style="margin:0;"><%= profileUser.username %></h2>
+        <p style="color:var(--muted); font-size: 0.85rem; margin-top: 4px;"><%= profileUser.email %></p>
+        <div style="margin-top: 8px; color: var(--gold); font-weight: 700;">🪙 <%= profileUser.coins %></div>
       </div>
     </div>
   </div>
+
+  <div class="card" style="margin-bottom: 2rem;">
+    <div class="card-header">Member Center</div>
+
+    <a href="/leaderboard" class="profile-list-item">
+      <div class="profile-list-icon">🎁</div>
+      <span>Reward Center</span>
+      <div class="profile-list-arrow">❯</div>
+    </a>
+
+    <a href="/profile/history" class="profile-list-item">
+      <div class="profile-list-icon">📝</div>
+      <span>Betting Record</span>
+      <div class="profile-list-arrow">❯</div>
+    </a>
+
+    <a href="/profile/stats" class="profile-list-item">
+      <div class="profile-list-icon">📊</div>
+      <span>Profit & Loss</span>
+      <div class="profile-list-arrow">❯</div>
+    </a>
+
+    <a href="/payment/history" class="profile-list-item">
+      <div class="profile-list-icon">💸</div>
+      <span>Deposit Record / Withdrawal Record</span>
+      <div class="profile-list-arrow">❯</div>
+    </a>
+
+    <a href="/coins/history" class="profile-list-item">
+      <div class="profile-list-icon">💳</div>
+      <span>Account Record</span>
+      <div class="profile-list-arrow">❯</div>
+    </a>
+
+    <a href="/profile/security" class="profile-list-item">
+      <div class="profile-list-icon">🛡️</div>
+      <span>Security Center</span>
+      <div class="profile-list-arrow">❯</div>
+    </a>
+
+    <a href="/profile#invite" class="profile-list-item">
+      <div class="profile-list-icon">👥</div>
+      <span>Invite Friends</span>
+      <div class="profile-list-arrow">❯</div>
+    </a>
+
+    <a href="/profile/missions" class="profile-list-item">
+      <div class="profile-list-icon">🎯</div>
+      <span>Mission Record</span>
+      <div class="profile-list-arrow">❯</div>
+    </a>
+
+    <a href="/notifications" class="profile-list-item">
+      <div class="profile-list-icon">📧</div>
+      <span>Mail</span>
+      <div class="profile-list-arrow">❯</div>
+    </a>
+
+    <a href="/app/update" class="profile-list-item">
+      <div class="profile-list-icon">🆙</div>
+      <span>App Update</span>
+      <div class="profile-list-arrow">❯</div>
+    </a>
+
+    <a href="/profile#support" class="profile-list-item">
+      <div class="profile-list-icon">📞</div>
+      <span>Customer Service / Help Center</span>
+      <div class="profile-list-arrow">❯</div>
+    </a>
+
+    <a href="/logout" class="profile-list-item" style="color: var(--red);">
+      <div class="profile-list-icon">🚪</div>
+      <span>Logout</span>
+      <div class="profile-list-arrow">❯</div>
+    </a>
+  </div>
 </div>
-<script>
-function updateProfile() {
-  const form = document.createElement('form');
-  form.method = 'POST'; form.action = '/profile/update';
-  const i = document.createElement('input');
-  i.name = 'username'; i.value = document.getElementById('newUsername').value;
-  form.appendChild(i); document.body.appendChild(form); form.submit();
-}
-function changePwd() {
-  const form = document.createElement('form');
-  form.method = 'POST'; form.action = '/profile/change-password';
-  [['current_password','curPwd'],['new_password','newPwd']].forEach(([n,id]) => {
-    const i = document.createElement('input');
-    i.name = n; i.value = document.getElementById(id).value;
-    form.appendChild(i);
-  });
-  document.body.appendChild(form); form.submit();
-}
-</script>
+
+<%- include('partials/bottom-nav') %>
 </body></html>
