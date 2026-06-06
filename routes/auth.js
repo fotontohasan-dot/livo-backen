@@ -18,12 +18,12 @@ router.post('/register', async (req, res) => {
     );
     const user = result.rows[0];
     await pool.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,500,'bonus','Welcome bonus')`, [user.id]);
-    await pool.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'Welcome!','You got 500 coins as welcome bonus','success')`, [user.id]);
+    await pool.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'স্বাগতম!','আপনি ৫০০ কয়েন ওয়েলকাম বোনাস পেয়েছেন','success')`, [user.id]);
     req.session.user = user;
-    req.flash('success', 'Registration successful! You got 500 welcome coins');
+    req.flash('success', 'রেজিস্ট্রেশন সফল হয়েছে! আপনি ৫০০ কয়েন বোনাস পেয়েছেন');
     res.redirect('/');
   } catch (_err) {
-    req.flash('error', 'Username or email already exists');
+    req.flash('error', 'ইউজারনেম অথবা ইমেইল ইতিমধ্যে ব্যবহার করা হয়েছে');
     res.redirect('/register');
   }
 });
@@ -35,17 +35,17 @@ router.post('/login', async (req, res) => {
     const result = await pool.query(`SELECT * FROM users WHERE email=$1`, [email]);
     const user = result.rows[0];
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      req.flash('error', 'Invalid email or password');
+      req.flash('error', 'ইমেইল অথবা পাসওয়ার্ড সঠিক নয়');
       return res.redirect('/login');
     }
     if (user.is_banned) {
-      req.flash('error', 'Your account has been banned');
+      req.flash('error', 'আপনার অ্যাকাউন্টটি ব্যান করা হয়েছে');
       return res.redirect('/login');
     }
     req.session.user = user;
     res.redirect('/');
   } catch (_err) {
-    req.flash('error', 'Login failed');
+    req.flash('error', 'লগইন করতে সমস্যা হয়েছে');
     res.redirect('/login');
   }
 });
