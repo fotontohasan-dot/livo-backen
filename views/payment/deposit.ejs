@@ -1,0 +1,27 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<div class="container mt-4">
+    <h2>ডিপোজিট (Deposit)</h2>
+    <div class="card bg-dark text-white p-4">
+        <form action="/payment/deposit" method="POST">
+            <div class="mb-3">
+                <label>পেমেন্ট মেথড সিলেক্ট করুন</label>
+                <select name="method" class="form-control bg-secondary text-white">
+                    <option value="bkash">bKash</option>
+                    <option value="nagad">Nagad</option>
+                    <option value="rocket">Rocket</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label>পরিমাণ (Amount)</label>
+                <input type="number" name="amount" class="form-control" placeholder="মিনিমাম ৫০০" required>
+            </div>
+            <div class="mb-3">
+                <label>ট্রানজেকশন আইডি (Transaction ID)</label>
+                <input type="text" name="transaction_id" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">সাবমিট করুন</button>
+        </form>
+    </div>
+</div>
+<%- include('../partials/bottom-nav') %>

@@ -1,0 +1,43 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<div class="container mt-4">
+    <h2>পেমেন্ট ম্যানেজমেন্ট</h2>
+    <div class="table-responsive">
+        <table class="table table-dark">
+            <thead>
+                <tr>
+                    <th>ইউজার</th>
+                    <th>ধরন</th>
+                    <th>মেথড</th>
+                    <th>পরিমাণ</th>
+                    <th>ট্রানজেকশন আইডি / নম্বর</th>
+                    <th>অ্যাকশন</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% if(locals.requests) { %>
+                    <% requests.forEach(req => { %>
+                        <tr>
+                            <td><%= req.username %></td>
+                            <td><%= req.type %></td>
+                            <td><%= req.method %></td>
+                            <td><%= req.amount %></td>
+                            <td><%= req.transaction_id || req.account_number %></td>
+                            <td>
+                                <form action="/admin/payments/approve" method="POST" style="display:inline;">
+                                    <input type="hidden" name="id" value="<%= req.id %>">
+                                    <button class="btn btn-success btn-sm">Approve</button>
+                                </form>
+                                <form action="/admin/payments/reject" method="POST" style="display:inline;">
+                                    <input type="hidden" name="id" value="<%= req.id %>">
+                                    <button class="btn btn-danger btn-sm">Reject</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <% }) %>
+                <% } %>
+            </tbody>
+        </table>
+    </div>
+</div>
+<%- include('../partials/bottom-nav') %>

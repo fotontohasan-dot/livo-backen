@@ -191,6 +191,9 @@
 <div class="promo-banner">
     🎰 LIVO-তে স্বাগতম <br>
     <span style="font-size: 14px; color: #fbbf24;">৫০০ ওয়েলকাম কয়েন পান!</span>
+    <% if(locals.user) { %>
+        <a href="/payment/deposit" class="btn btn-primary btn-sm" style="margin-top: 10px; background: #fbbf24; color: #000;">রিচার্জ করুন</a>
+    <% } %>
 </div>
 
 <div class="search-container">
@@ -215,6 +218,19 @@
     </div>
     <%- include('partials/flash') %>
     <div class="game-grid" id="gameContainer"></div>
+</div>
+
+<!-- License Section -->
+<div style="padding: 20px 15px 40px; text-align: center; background: rgba(0,0,0,0.2); margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+    <div style="display: flex; justify-content: center; gap: 20px; margin-bottom: 15px; opacity: 0.7;">
+        <img src="https://w7.pngwing.com/pngs/360/150/png-transparent-responsible-gaming-logo-thumbnail.png" alt="18+" style="height: 30px; filter: grayscale(1);">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Curacao_eGaming_logo.svg/1200px-Curacao_eGaming_logo.svg.png" alt="License" style="height: 30px; filter: grayscale(1);">
+    </div>
+    <p style="font-size: 11px; color: #ffccff; line-height: 1.6;">
+        © 2024 LIVO Gaming. All Rights Reserved. <br>
+        LIVO operates under the License No. 8048/JAZ issued to Antillephone, Authorized and Regulated by the Government of Curacao. <br>
+        অনলাইন গেমিং আসক্তি তৈরি করতে পারে, দয়া করে দায়িত্বশীলভাবে খেলুন।
+    </p>
 </div>
 
 <%- include('partials/bottom-nav', { activePage: 'home' }) %>
