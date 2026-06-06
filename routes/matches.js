@@ -4,14 +4,20 @@ const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
 
 router.get('/', async (req, res) => {
-  const { sport, status } = req.query;
-  let query = `SELECT * FROM matches WHERE 1=1`;
-  const params = [];
-  if (sport) { params.push(sport); query += ` AND sport=$${params.length}`; }
-  if (status) { params.push(status); query += ` AND status=$${params.length}`; }
-  query += ` ORDER BY match_date DESC`;
-  const matches = await pool.query(query, params);
-  res.render('matches', { matches: matches.rows, sport, status });
+  try {
+    const { sport, status } = req.query;
+    let query = `SELECT * FROM matches WHERE 1=1`;
+    const params = [];
+    if (sport) { params.push(sport); query += ` AND sport=$${params.length}`; }
+    if (status) { params.push(status); query += ` AND status=$${params.length}`; }
+    query += ` ORDER BY match_date DESC`;
+    const matches = await pool.query(query, params);
+    res.render('matches', { matches: matches.rows, sport, status });
+  } catch (err) {
+    console.error('Matches fetch error:', err);
+    req.flash('error', 'ম্যাচ লোড করতে সমস্যা হয়েছে।');
+    res.render('matches', { matches: [], sport: req.query.sport, status: req.query.status });
+  }
 });
 
 router.get('/:id', isAuth, async (req, res) => {

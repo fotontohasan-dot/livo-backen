@@ -20,10 +20,17 @@ router.post('/register', async (req, res) => {
     await pool.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,500,'bonus','Welcome bonus')`, [user.id]);
     await pool.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'Welcome!','You got 500 coins as welcome bonus','success')`, [user.id]);
     req.session.user = user;
-    req.flash('success', 'Registration successful! You got 500 welcome coins');
+    req.flash('success', 'রেজিস্ট্রেশন সফল হয়েছে! আপনি ৫০০ কয়েন বোনাস পেয়েছেন।');
     res.redirect('/');
-  } catch (_err) {
-    req.flash('error', 'Username or email already exists');
+  } catch (err) {
+    console.error('Registration error:', err);
+    if (err.code === '23505') {
+      req.flash('error', 'এই ইউজারনেম বা ইমেইল দিয়ে ইতিপূর্বে রেজিস্ট্রেশন করা হয়েছে।');
+    } else if (err.code === 'ECONNREFUSED' || err.code === '57P03') {
+      req.flash('error', 'সিস্টেমে যান্ত্রিক ত্রুটি দেখা দিয়েছে। দয়া করে কিছুক্ষণ পর আবার চেষ্টা করুন।');
+    } else {
+      req.flash('error', 'রেজিস্ট্রেশন করতে সমস্যা হয়েছে।');
+    }
     res.redirect('/register');
   }
 });
@@ -35,7 +42,7 @@ router.post('/login', async (req, res) => {
     const result = await pool.query(`SELECT * FROM users WHERE email=$1`, [email]);
     const user = result.rows[0];
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      req.flash('error', 'Invalid email or password');
+      req.flash('error', 'ভুল ইমেইল বা পাসওয়ার্ড');
       return res.redirect('/login');
     }
     if (user.is_banned) {
@@ -44,8 +51,13 @@ router.post('/login', async (req, res) => {
     }
     req.session.user = user;
     res.redirect('/');
-  } catch (_err) {
-    req.flash('error', 'Login failed');
+  } catch (err) {
+    console.error('Login error:', err);
+    if (err.code === 'ECONNREFUSED' || err.code === '57P03') {
+      req.flash('error', 'সিস্টেমে যান্ত্রিক ত্রুটি দেখা দিয়েছে। দয়া করে কিছুক্ষণ পর আবার চেষ্টা করুন।');
+    } else {
+      req.flash('error', 'লগইন করতে সমস্যা হয়েছে।');
+    }
     res.redirect('/login');
   }
 });
