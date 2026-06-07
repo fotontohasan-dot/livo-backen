@@ -5,6 +5,9 @@
   </div>
 
   <div style="display:flex;align-items:center;gap:1rem;">
+    <% if (locals.user && locals.user.role === 'admin') { %>
+      <a href="/admin" title="Admin Panel" style="color: var(--gold); font-size: 1.2rem;">🛠️</a>
+    <% } %>
     <a href="/notifications" class="text-xl">🔔</a>
     <a href="/news" class="text-xl">✉️</a>
     <button onclick="window.location.reload()" class="text-xl">🔄</button>

@@ -41,6 +41,20 @@ router.post('/users/:id/coins', async (req, res) => {
   res.redirect('/admin/users');
 });
 
+router.get('/users/:id/edit', async (req, res) => {
+  const user = await pool.query(`SELECT * FROM users WHERE id=$1`, [req.params.id]);
+  if (!user.rows[0]) return res.redirect('/admin/users');
+  res.render('admin/user-edit', { editUser: user.rows[0] });
+});
+
+router.post('/users/:id/edit', async (req, res) => {
+  const { username, email, coins, role } = req.body;
+  await pool.query(`UPDATE users SET username=$1, email=$2, coins=$3, role=$4 WHERE id=$5`,
+    [username, email, parseInt(coins), role, req.params.id]);
+  req.flash('success', 'ইউজার তথ্য আপডেট করা হয়েছে!');
+  res.redirect('/admin/users');
+});
+
 router.get('/matches', async (_req, res) => {
   const matches = await pool.query(`SELECT * FROM matches ORDER BY match_date DESC`);
   res.render('admin/matches', { matches: matches.rows });

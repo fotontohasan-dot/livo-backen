@@ -1,0 +1,48 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<div class="admin-layout">
+  <div class="admin-sidebar">
+    <div style="padding:0 1.5rem 1rem;font-size:.75rem;color:var(--muted);text-transform:uppercase;">অ্যাডমিন প্যানেল</div>
+    <a href="/admin" class="admin-nav-link">📊 ড্যাশবোর্ড</a>
+    <a href="/admin/users" class="admin-nav-link active">👥 ব্যবহারকারী</a>
+    <a href="/admin/matches" class="admin-nav-link">⚽ ম্যাচসমূহ</a>
+    <a href="/admin/tournaments" class="admin-nav-link">🏆 টুর্নামেন্ট</a>
+    <a href="/admin/news" class="admin-nav-link">📰 নিউজ</a>
+    <a href="/" class="admin-nav-link">🏠 সাইটে ফিরে যান</a>
+  </div>
+  <div class="admin-content">
+    <%- include('../partials/flash') %>
+    <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:1.5rem;">👤 ইউজার এডিট করুন: <%= editUser.username %></h1>
+
+    <div class="card" style="max-width: 600px;">
+      <div class="card-body">
+        <form action="/admin/users/<%= editUser.id %>/edit" method="POST">
+          <div class="form-group">
+            <label class="form-label">ইউজারনেম</label>
+            <input type="text" name="username" class="form-input" value="<%= editUser.username %>" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">ইমেইল</label>
+            <input type="email" name="email" class="form-input" value="<%= editUser.email %>" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">কয়েন</label>
+            <input type="number" name="coins" class="form-input" value="<%= editUser.coins %>" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">রোল (Role)</label>
+            <select name="role" class="form-input">
+              <option value="user" <%= editUser.role === 'user' ? 'selected' : '' %>>User</option>
+              <option value="admin" <%= editUser.role === 'admin' ? 'selected' : '' %>>Admin</option>
+            </select>
+          </div>
+          <div style="display:flex; gap:1rem; margin-top:1.5rem;">
+            <button type="submit" class="btn btn-primary">সংরক্ষণ করুন</button>
+            <a href="/admin/users" class="btn btn-outline">বাতিল</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>

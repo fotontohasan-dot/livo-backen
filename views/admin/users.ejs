@@ -38,6 +38,7 @@
                 </span>
               </td>
               <td style="display:flex;gap:.5rem;flex-wrap:wrap;">
+                <a href="/admin/users/<%= u.id %>/edit" class="btn btn-sm btn-primary">এডিট</a>
                 <button onclick="banUser(<%= u.id %>)" class="btn btn-sm <%= u.is_banned ? 'btn-outline' : 'btn-danger' %>">
                   <%= u.is_banned ? 'আনব্যান' : 'ব্যান করুন' %>
                 </button>

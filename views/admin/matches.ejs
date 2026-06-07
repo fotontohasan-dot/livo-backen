@@ -30,8 +30,8 @@
           <% matches.forEach(m => { %>
             <tr>
               <td style="font-weight:600"><%= m.team_a %> vs <%= m.team_b %></td>
-              <td><%= m.sport %></td>
-              <td style="font-size:.8rem;color:var(--muted)"><%= new Date(m.match_date).toLocaleString() %></td>
+              <td><%= m.sport === 'football' ? 'ফুটবল' : (m.sport === 'cricket' ? 'ক্রিকেট' : m.sport) %></td>
+              <td style="font-size:.8rem;color:var(--muted)"><%= new Date(m.match_date).toLocaleString('bn-BD') %></td>
               <td><span class="status-badge status-<%= m.status %>"><%= m.status === 'upcoming' ? 'আসন্ন' : (m.status === 'live' ? 'লাইভ' : 'সম্পন্ন') %></span></td>
               <td><%= m.result || '-' %></td>
               <td>

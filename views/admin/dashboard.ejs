@@ -32,7 +32,7 @@
                 <td><%= u.username %></td>
                 <td style="font-size:.8rem;color:var(--muted)"><%= u.email %></td>
                 <td style="color:var(--gold)"><%= u.coins %></td>
-                <td style="font-size:.8rem;color:var(--muted)"><%= new Date(u.created_at).toLocaleDateString() %></td>
+                <td style="font-size:.8rem;color:var(--muted)"><%= new Date(u.created_at).toLocaleDateString('bn-BD') %></td>
               </tr>
             <% }) %>
           </tbody>
@@ -46,8 +46,8 @@
             <% recentMatches.forEach(m => { %>
               <tr>
                 <td style="font-size:.85rem"><%= m.team_a %> vs <%= m.team_b %></td>
-                <td><span class="status-badge status-<%= m.status %>"><%= m.status %></span></td>
-                <td style="font-size:.8rem;color:var(--muted)"><%= new Date(m.match_date).toLocaleDateString() %></td>
+                <td><span class="status-badge status-<%= m.status %>"><%= m.status === 'upcoming' ? 'আসন্ন' : (m.status === 'live' ? 'লাইভ' : 'সম্পন্ন') %></span></td>
+                <td style="font-size:.8rem;color:var(--muted)"><%= new Date(m.match_date).toLocaleDateString('bn-BD') %></td>
               </tr>
             <% }) %>
           </tbody>

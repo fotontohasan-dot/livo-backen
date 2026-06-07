@@ -19,6 +19,14 @@
   <div class="card" style="margin-bottom: 2rem;">
     <div class="card-header">Member Center</div>
 
+    <% if (locals.user && locals.user.role === 'admin') { %>
+      <a href="/admin" class="profile-list-item" style="background: rgba(255, 204, 0, 0.1); border-left: 4px solid var(--gold);">
+        <div class="profile-list-icon">🛠️</div>
+        <span style="color: var(--gold); font-weight: 700;">অ্যাডমিন প্যানেল (Admin Panel)</span>
+        <div class="profile-list-arrow">❯</div>
+      </a>
+    <% } %>
+
     <a href="/leaderboard" class="profile-list-item">
       <div class="profile-list-icon">🎁</div>
       <span>Reward Center</span>

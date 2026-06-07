@@ -49,14 +49,14 @@ const PORT = process.env.PORT || 3000;
 initDB().then(() => {
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
-    // Auto sync matches every 24 hours
+    // Auto sync matches every 6 hours
     setInterval(async () => {
       try {
         await syncMatches();
       } catch (err) {
         console.error('Error in auto match sync:', err);
       }
-    }, 24 * 60 * 60 * 1000);
+    }, 6 * 60 * 60 * 1000);
     // Initial sync on start
     syncMatches().catch(err => console.error('Initial match sync failed:', err));
   });
