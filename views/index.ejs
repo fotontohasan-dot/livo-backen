@@ -1,346 +1,480 @@
 <%- include('partials/head') %>
-<%- include('partials/navbar') %>
 
 <style>
-    :root {
-        --bg-color: #0f0b1f;
-        --card-bg: #1a1433;
-        --primary-gradient: linear-gradient(90deg, #6b00ff, #ff00aa);
-        --accent-color: #ffd700;
-        --text-color: #ffffff;
-        --text-muted: #ffccff;
-        --nav-bg: #151029;
-    }
+:root {
+  --gold: #f5c518;
+  --gold2: #e6a800;
+  --red: #e8003d;
+  --dark: #0a0a14;
+  --card-bg: #12121f;
+  --card-border: #1e1e35;
+  --text: #e8e8f0;
+  --muted: #7070a0;
+  --green: #00d26a;
+  --purple: #6b00ff;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#0a0a14; color:var(--text); font-family:'Hind Siliguri',sans-serif; max-width:480px; margin:0 auto; overflow-x:hidden; margin-bottom:70px; }
 
-    body {
-        background-color: var(--bg-color);
-        margin-bottom: 70px;
-    }
+.topbar { background:#0d0d1e; display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-bottom:1px solid #1a1a30; position:sticky; top:0; z-index:100; }
+.logo { font-family:'Teko',sans-serif; font-size:28px; font-weight:700; color:var(--gold); text-shadow:0 0 20px rgba(245,197,24,0.5); }
+.logo span { color:#fff; }
+.topbar-right { display:flex; align-items:center; gap:8px; }
+.coin-box { background:linear-gradient(135deg,#1a1a30,#0d0d1e); border:1px solid var(--gold2); border-radius:20px; padding:4px 10px; font-size:13px; color:var(--gold); display:flex; align-items:center; gap:4px; }
+.btn-auth { border:none; border-radius:20px; padding:6px 14px; font-size:13px; font-weight:700; cursor:pointer; text-decoration:none; }
+.btn-login { background:linear-gradient(135deg,var(--gold),var(--gold2)); color:#000; }
+.btn-reg   { background:linear-gradient(135deg,var(--red),#b00030); color:#fff; }
+.topbar-icons { display:flex; gap:10px; }
+.topbar-icons a { color:#ccc; font-size:18px; text-decoration:none; }
 
-    .promo-banner {
-        width: calc(100% - 30px);
-        margin: 15px;
-        height: 140px;
-        background: linear-gradient(45deg, #3b006e, #7e22ce);
-        border-radius: 15px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        color: #fff;
-        font-size: 24px;
-        font-weight: bold;
-        text-align: center;
-        padding: 20px;
-        gap: 8px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-    }
+.balance-bar { background:#0d0d1e; border-bottom:1px solid #1a1a30; padding:6px 12px; display:flex; align-items:center; justify-content:space-between; }
+.balance-left { display:flex; align-items:center; gap:6px; }
+.balance-left span { font-size:13px; color:var(--muted); }
+.balance-amount { font-family:'Teko',sans-serif; font-size:20px; color:var(--gold); }
+.bal-btns { display:flex; gap:6px; }
+.bal-btn { padding:5px 12px; border-radius:8px; font-size:12px; font-weight:700; border:none; cursor:pointer; text-decoration:none; }
+.bal-btn.dep { background:linear-gradient(135deg,var(--green),#009950); color:#fff; }
+.bal-btn.wit { background:linear-gradient(135deg,#1a6bff,#0044cc); color:#fff; }
 
-    .category-nav {
-        background: var(--nav-bg);
-        padding: 10px 0;
-        display: flex;
-        overflow-x: auto;
-        white-space: nowrap;
-        scrollbar-width: none;
-        position: sticky;
-        top: 65px;
-        z-index: 99;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
-    }
-    .category-nav::-webkit-scrollbar { display: none; }
-    .category-item {
-        padding: 8px 20px;
-        margin: 0 5px;
-        border-radius: 20px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: 0.3s;
-        color: var(--text-muted);
-        border: 1px solid rgba(255,255,255,0.1);
-    }
-    .category-item.active {
-        background: var(--primary-gradient);
-        color: white;
-        border-color: transparent;
-    }
+.marquee-bar { background:#060610; border-bottom:1px solid #1a1a30; padding:5px 0; overflow:hidden; }
+.marquee-inner { display:flex; white-space:nowrap; animation:marquee 28s linear infinite; }
+.marquee-inner span { font-size:12px; color:var(--gold); padding:0 28px; }
+.marquee-inner span em { color:#fff; font-style:normal; }
+@keyframes marquee { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
 
-    .content-area { padding: 15px; }
-    .section-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 15px;
-    }
-    .section-header h2 { font-size: 18px; color: var(--accent-color); }
+.banner { position:relative; overflow:hidden; height:155px; }
+.banner-slide { position:absolute; width:100%; height:100%; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity 0.8s; }
+.banner-slide.active { opacity:1; }
+.bs1 { background:linear-gradient(135deg,#0a0a20,#1a0040,#0a0a20); }
+.bs2 { background:linear-gradient(135deg,#0a1a00,#003020,#0a0a20); }
+.bs3 { background:linear-gradient(135deg,#1a0a00,#300010,#0a0a20); }
+.banner-content { text-align:center; padding:20px; }
+.banner-content h2 { font-family:'Teko',sans-serif; font-size:30px; color:var(--gold); line-height:1; text-shadow:0 0 30px rgba(245,197,24,0.8); }
+.banner-content p { font-size:13px; color:#ccc; margin-top:5px; }
+.banner-btn { display:inline-block; margin-top:10px; background:linear-gradient(135deg,var(--gold),var(--gold2)); color:#000; padding:7px 22px; border-radius:25px; font-weight:700; font-size:13px; cursor:pointer; border:none; text-decoration:none; }
+.banner-dots { position:absolute; bottom:8px; left:50%; transform:translateX(-50%); display:flex; gap:5px; }
+.dot { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,0.3); cursor:pointer; transition:all 0.3s; }
+.dot.active { background:var(--gold); width:16px; border-radius:3px; }
 
-    .game-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
-    }
-    @media (min-width: 600px) {
-        .game-grid { grid-template-columns: repeat(3, 1fr); }
-    }
-    @media (min-width: 900px) {
-        .game-grid { grid-template-columns: repeat(4, 1fr); }
-    }
+.notice { margin:8px; background:rgba(245,197,24,0.07); border:1px solid rgba(245,197,24,0.2); border-radius:8px; padding:8px 12px; display:flex; align-items:center; gap:8px; }
+.notice p { font-size:12px; color:var(--gold); }
+.aff-banner { background:linear-gradient(135deg,#1a0020,#300050); margin:0 8px 8px; border-radius:10px; padding:10px 14px; display:flex; align-items:center; justify-content:space-between; border:1px solid #3a0070; }
+.aff-banner h4 { font-size:13px; color:var(--gold); }
+.aff-banner p  { font-size:11px; color:#aaa; margin-top:2px; }
+.aff-btn { background:linear-gradient(135deg,#7000ff,#4000cc); color:#fff; border:none; border-radius:15px; padding:6px 14px; font-size:12px; cursor:pointer; white-space:nowrap; text-decoration:none; }
 
-    .game-card {
-        background: var(--card-bg);
-        border-radius: 12px;
-        overflow: hidden;
-        transition: transform 0.2s, box-shadow 0.2s;
-        position: relative;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-        border: 1px solid rgba(255,255,255,0.05);
-        display: flex;
-        flex-direction: column;
-    }
-    .game-card:active { transform: scale(0.95); }
-    .game-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.4);
-        border-color: #6b00ff;
-    }
+.stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding:0 8px 8px; }
+.stat-box { background:var(--card-bg); border:1px solid var(--card-border); border-radius:10px; padding:10px; text-align:center; }
+.stat-box h4 { font-family:'Teko',sans-serif; font-size:20px; color:var(--gold); }
+.stat-box p  { font-size:10px; color:var(--muted); margin-top:2px; }
 
-    .game-thumb {
-        width: 100%;
-        aspect-ratio: 1/1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 50px;
-        position: relative;
-        background: rgba(255,255,255,0.02);
-    }
-    .game-thumb::after {
-        content: 'PLAY';
-        position: absolute;
-        bottom: 10px;
-        background: rgba(0,0,0,0.6);
-        padding: 2px 10px;
-        border-radius: 10px;
-        font-size: 10px;
-        font-weight: bold;
-        letter-spacing: 1px;
-    }
-    .game-info {
-        padding: 10px;
-        text-align: center;
-        background: rgba(0,0,0,0.3);
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-    }
-    .game-name {
-        font-size: 14px;
-        font-weight: bold;
-        color: var(--text-color);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
+.cats { display:flex; overflow-x:auto; padding:8px; scrollbar-width:none; }
+.cats::-webkit-scrollbar { display:none; }
+.cat { flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:3px; padding:7px 12px; border-radius:10px; cursor:pointer; transition:all 0.2s; border-bottom:2px solid transparent; }
+.cat.active { border-bottom-color:var(--gold); background:rgba(245,197,24,0.08); }
+.cat-icon  { font-size:20px; }
+.cat-label { font-size:11px; color:var(--muted); white-space:nowrap; }
+.cat.active .cat-label { color:var(--gold); }
 
-    .play-btn {
-        background: var(--primary-gradient);
-        color: white;
-        border: none;
-        padding: 5px;
-        border-radius: 5px;
-        font-size: 12px;
-        font-weight: bold;
-        cursor: pointer;
-    }
+.search-wrap { padding:0 8px 8px; }
+.search-inner { position:relative; }
+.search-inner input { width:100%; padding:9px 40px 9px 14px; border-radius:25px; border:1px solid var(--card-border); background:var(--card-bg); color:#fff; font-size:13px; outline:none; }
+.search-inner span { position:absolute; right:14px; top:50%; transform:translateY(-50%); }
 
-    /* Search bar integration in header-like space or just above categories */
-    .search-container {
-        padding: 10px 15px;
-    }
-    .search-box {
-        position: relative;
-        width: 100%;
-    }
-    .search-box input {
-        width: 100%;
-        padding: 10px 40px 10px 15px;
-        border-radius: 25px;
-        border: 1px solid rgba(255,255,255,0.1);
-        background: var(--card-bg);
-        color: white;
-        font-size: 14px;
-        outline: none;
-    }
-    .search-icon {
-        position: absolute;
-        right: 15px;
-        top: 50%;
-        transform: translateY(-50%);
-        font-size: 16px;
-        opacity: 0.8;
-    }
+.sec-header { display:flex; align-items:center; justify-content:space-between; padding:8px 12px 5px; }
+.sec-header h3 { font-family:'Teko',sans-serif; font-size:19px; color:#fff; display:flex; align-items:center; gap:5px; }
+.see-all { font-size:12px; color:var(--gold); background:rgba(245,197,24,0.1); border:1px solid rgba(245,197,24,0.2); border-radius:12px; padding:3px 10px; cursor:pointer; text-decoration:none; }
 
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    .game-card { animation: fadeIn 0.3s ease forwards; }
+.game-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding:0 8px; }
+.game-card { background:var(--card-bg); border:1px solid var(--card-border); border-radius:10px; overflow:hidden; cursor:pointer; transition:transform 0.2s; }
+.game-card:active { transform:scale(0.96); }
+.game-thumb { width:100%; aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:34px; position:relative; overflow:hidden; }
+.game-thumb::after { content:''; position:absolute; inset:0; background:linear-gradient(to bottom,transparent 50%,rgba(0,0,0,0.65) 100%); }
+.g-badge { position:absolute; top:5px; left:5px; font-size:9px; font-weight:700; padding:2px 6px; border-radius:4px; z-index:2; }
+.badge-hot { background:var(--red); color:#fff; }
+.badge-new { background:var(--green); color:#fff; }
+.badge-pop { background:var(--gold); color:#000; }
+.g-provider { position:absolute; bottom:5px; right:5px; font-size:9px; background:rgba(0,0,0,0.7); color:#aaa; padding:2px 5px; border-radius:4px; z-index:2; }
+.game-info { padding:6px 8px; }
+.game-info h4 { font-size:11px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.game-info p  { font-size:10px; color:var(--muted); margin-top:1px; }
+.no-games { grid-column:1/-1; text-align:center; padding:40px; color:var(--muted); }
+
+.jackpot-sec { margin:12px 8px; background:linear-gradient(135deg,#1a0a00,#3d1a00,#1a0a00); border:1px solid #6d3000; border-radius:12px; padding:16px; text-align:center; position:relative; overflow:hidden; }
+.jackpot-sec::before { content:''; position:absolute; inset:0; background:radial-gradient(ellipse at center,rgba(245,197,24,0.07) 0%,transparent 70%); }
+.jackpot-label { font-size:11px; color:#f90; letter-spacing:3px; text-transform:uppercase; font-weight:700; }
+.jackpot-amount { font-family:'Teko',sans-serif; font-size:42px; color:var(--gold); text-shadow:0 0 30px rgba(245,197,24,0.6); line-height:1; margin:4px 0; }
+.jackpot-sub { font-size:11px; color:#aaa; }
+.jackpot-btn { margin-top:10px; background:linear-gradient(135deg,var(--gold),var(--gold2)); color:#000; border:none; border-radius:25px; padding:10px 28px; font-size:14px; font-weight:700; cursor:pointer; }
+
+.leader-table { margin:0 8px; background:var(--card-bg); border:1px solid var(--card-border); border-radius:10px; overflow:hidden; }
+.leader-head { display:grid; grid-template-columns:40px 1fr 1fr; padding:8px 12px; background:#0d0d1e; font-size:11px; color:var(--muted); font-weight:600; }
+.leader-row { display:grid; grid-template-columns:40px 1fr 1fr; padding:8px 12px; border-top:1px solid var(--card-border); align-items:center; }
+.l-rank { font-family:'Teko',sans-serif; font-size:18px; color:var(--muted); }
+.l-rank.r1{color:var(--gold)} .l-rank.r2{color:#c0c0c0} .l-rank.r3{color:#cd7f32}
+.l-user { font-size:12px; color:var(--text); }
+.l-amt  { font-size:13px; color:var(--green); font-family:'Teko',sans-serif; text-align:right; }
+
+.promo-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:0 8px; }
+.promo-card { border-radius:10px; padding:14px; cursor:pointer; }
+.pc1{background:linear-gradient(135deg,#1a0050,#4000a0);border:1px solid #5000c0}
+.pc2{background:linear-gradient(135deg,#003020,#006040);border:1px solid #008060}
+.pc3{background:linear-gradient(135deg,#300010,#700030);border:1px solid #900040}
+.pc4{background:linear-gradient(135deg,#1a1000,#403000);border:1px solid #605000}
+.promo-card h4 { font-size:13px; color:#fff; font-weight:700; }
+.promo-card p  { font-size:11px; color:rgba(255,255,255,0.6); margin-top:3px; }
+.promo-card .pval { font-family:'Teko',sans-serif; font-size:26px; color:var(--gold); margin-top:4px; }
+
+.pay-row { display:flex; gap:8px; overflow-x:auto; padding:0 8px 8px; scrollbar-width:none; }
+.pay-row::-webkit-scrollbar{display:none}
+.pay-chip { flex:0 0 auto; background:var(--card-bg); border:1px solid var(--card-border); border-radius:8px; padding:6px 12px; font-size:12px; color:var(--muted); }
+
+.site-footer { background:#06060e; border-top:1px solid #1a1a30; padding:16px 12px; text-align:center; }
+.footer-logo { font-family:'Teko',sans-serif; font-size:22px; color:var(--gold); margin-bottom:8px; }
+.footer-links { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:10px; }
+.footer-links a { font-size:11px; color:var(--muted); text-decoration:none; }
+.footer-text { font-size:10px; color:#404060; line-height:1.6; }
+.lic-badges { display:flex; gap:10px; justify-content:center; margin-bottom:10px; }
+.lic-badge { background:var(--card-bg); border:1px solid var(--card-border); border-radius:6px; padding:4px 10px; font-size:10px; color:var(--muted); }
+
+.bottom-nav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:#0d0d1e; border-top:1px solid #1a1a30; display:flex; z-index:100; }
+.nav-link { flex:1; display:flex; flex-direction:column; align-items:center; padding:8px 4px; text-decoration:none; }
+.nav-link .nav-icon { font-size:20px; color:var(--muted); }
+.nav-link span:last-child { font-size:10px; color:var(--muted); margin-top:2px; }
+.nav-link.active .nav-icon, .nav-link.active span:last-child { color:var(--gold); }
+.nav-center-wrap { flex:1; display:flex; flex-direction:column; align-items:center; padding:4px; }
+.nav-center-btn { width:50px; height:50px; background:linear-gradient(135deg,var(--gold),var(--gold2)); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; margin-top:-14px; border:3px solid #0d0d1e; box-shadow:0 0 20px rgba(245,197,24,0.4); text-decoration:none; }
+.nav-center-label { font-size:10px; color:var(--gold); margin-top:1px; }
+
+.divider { height:1px; background:linear-gradient(to right,transparent,#1a1a30,transparent); margin:10px 0; }
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+.live-dot{display:inline-block;width:7px;height:7px;background:var(--red);border-radius:50%;animation:pulse 1.5s infinite;margin-right:4px;}
+
+.gc1{background:linear-gradient(135deg,#1a0050,#400080)}
+.gc2{background:linear-gradient(135deg,#002040,#005090)}
+.gc3{background:linear-gradient(135deg,#300010,#800030)}
+.gc4{background:linear-gradient(135deg,#0a2000,#205000)}
+.gc5{background:linear-gradient(135deg,#201000,#604000)}
+.gc6{background:linear-gradient(135deg,#001020,#003060)}
+.gc7{background:linear-gradient(135deg,#200030,#600090)}
+.gc8{background:linear-gradient(135deg,#101010,#303030)}
+.gc9{background:linear-gradient(135deg,#300000,#900020)}
+.gc10{background:linear-gradient(135deg,#001a30,#004070)}
+.gc11{background:linear-gradient(135deg,#0a0020,#200050)}
+.gc12{background:linear-gradient(135deg,#200010,#500030)}
 </style>
 
-<div class="promo-banner">
-    🎰 LIVO-তে স্বাগতম <br>
-    <span style="font-size: 14px; color: #fbbf24;">৫০০ ওয়েলকাম কয়েন পান!</span>
+<link href="https://fonts.googleapis.com/css2?family=Teko:wght@400;600;700&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo">LI<span>VO</span></div>
+  <div class="topbar-right">
     <% if(locals.user) { %>
-        <a href="/payment/deposit" class="btn btn-primary btn-sm" style="margin-top: 10px; background: #fbbf24; color: #000;">রিচার্জ করুন</a>
+      <div class="coin-box">🪙 <%= user.coins %></div>
+      <div class="topbar-icons">
+        <a href="/notifications">🔔</a>
+        <a href="/news">✉️</a>
+      </div>
+    <% } else { %>
+      <a href="/login" class="btn-auth btn-login">লগইন</a>
+      <a href="/register" class="btn-auth btn-reg">রজিস্টার</a>
     <% } %>
+  </div>
 </div>
 
-<div class="search-container">
-    <div class="search-box">
-        <input type="text" id="gameSearch" placeholder="গেম খুঁজুন...">
-        <span class="search-icon">🔍</span>
+<!-- BALANCE BAR -->
+<% if(locals.user) { %>
+<div class="balance-bar">
+  <div class="balance-left">
+    <span>ব্যালেন্স:</span>
+    <div class="balance-amount">৳ <%= user.coins %></div>
+  </div>
+  <div class="bal-btns">
+    <a href="/payment/deposit"  class="bal-btn dep">ডিপোজট</a>
+    <a href="/payment/withdraw" class="bal-btn wit">উইথড্র</a>
+  </div>
+</div>
+<% } %>
+
+<!-- MARQUEE -->
+<div class="marquee-bar">
+  <div class="marquee-inner">
+    <span>🏆 <em>***৮৮২</em> জিতেছেন ৳১৫,৬৮,৫২৩!</span>
+    <span>🎰 <em>***৯৫৫</em> স্লটে জিতেছেন ৳১০,১২,৮৯৮!</span>
+    <span>🎯 <em>***১১৮</em> লাইভে জিতেছেন ৳৯,৯৮,৫৪১!</span>
+    <span>⚽ <em>***৭৮৯</em> স্পোর্টসে জিতেছেন ৳৩,৮২,০০২!</span>
+    <span>🏆 <em>***৮৮২</em> জিতেছেন ৳১৫,৬৮,৫২৩!</span>
+    <span>🎰 <em>***৯৫৫</em> স্লটে জিতেছেন ৳১০,১২,৮৯৮!</span>
+    <span>🎯 <em>***১১৮</em> লাইভে জিতেছেন ৳৯,৯৮,৫৪১!</span>
+    <span>⚽ <em>***৭৮৯</em> স্র্টসে জিতেছেন ৳৩,৮২,০০২!</span>
+  </div>
+</div>
+
+<!-- BANNER -->
+<div class="banner" id="banner">
+  <div class="banner-slide bs1 active">
+    <div class="banner-content">
+      <h2>🎰 ওয়েলকাম বোনাস</h2>
+      <p>প্রথম ডিপোজিটে ১০০% বোনাস পন</p>
+      <a href="/payment/deposit" class="banner-btn">এখনই নিন</a>
     </div>
-</div>
-
-<div class="category-nav" id="categoryNav">
-    <div class="category-item active" data-type="all">সবগুলো</div>
-    <div class="category-item" data-type="pvp">PVP</div>
-    <div class="category-item" data-type="slots">স্লট</div>
-    <div class="category-item" data-type="live">লাইভ ক্যাসিনো</div>
-    <div class="category-item" data-type="table">টেবিল গেম</div>
-    <div class="category-item" data-type="sports">স্পোর্টস</div>
-</div>
-
-<div class="content-area">
-    <div class="section-header">
-        <h2 id="sectionTitle">সবগুলো গেম</h2>
+  </div>
+  <div class="banner-slide bs2">
+    <div class="banner-content">
+      <h2>⚽ স্পোর্টস বেটিং</h2>
+      <p>লাইভ মচে বেট করুন এবং জিতুন</p>
+      <a href="/matches" class="banner-btn">বট করুন</a>
     </div>
-    <%- include('partials/flash') %>
-    <div class="game-grid" id="gameContainer"></div>
-</div>
-
-<!-- License Section -->
-<div style="padding: 20px 15px 40px; text-align: center; background: rgba(0,0,0,0.2); margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-    <div style="display: flex; justify-content: center; gap: 20px; margin-bottom: 15px; opacity: 0.7;">
-        <img src="https://w7.pngwing.com/pngs/360/150/png-transparent-responsible-gaming-logo-thumbnail.png" alt="18+" style="height: 30px; filter: grayscale(1);">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Curacao_eGaming_logo.svg/1200px-Curacao_eGaming_logo.svg.png" alt="License" style="height: 30px; filter: grayscale(1);">
+  </div>
+  <div class="banner-slide bs3">
+    <div class="banner-content">
+      <h2>🏆 টর্নামেন্ট</h2>
+      <p>প্রতিদিন অংশ নিন, বড় পুরস্কার জিতুন</p>
+      <a href="/tournaments" class="banner-btn">যগ দিন</a>
     </div>
-    <p style="font-size: 11px; color: #ffccff; line-height: 1.6;">
-        © 2024 LIVO Gaming. All Rights Reserved. <br>
-        LIVO operates under the License No. 8048/JAZ issued to Antillephone, Authorized and Regulated by the Government of Curacao. <br>
-        অনলাইন গেমিং আসক্তি তৈরি করতে পারে, দয়া করে দায়িত্বশীলভাবে খেলুন।
-    </p>
+  </div>
+  <div class="banner-dots">
+    <div class="dot active" onclick="goSlide(0)"></div>
+    <div class="dot" onclick="goSlide(1)"></div>
+    <div class="dot" onclick="goSlide(2)"></div>
+  </div>
 </div>
 
-<%- include('partials/bottom-nav', { activePage: 'home' }) %>
+<!-- NOTICE -->
+<div class="notice">
+  <span>📢</span>
+  <p>নতুন সিজন শুরু! এখন রেজিস্টর করলে ৫০০ ফ্রি কয়েন পাবেন।</p>
+</div>
+
+<!-- AFFILIATE -->
+<div class="aff-banner">
+  <div>
+    <h4>🤝 রেফার করুন ও আয় করুন</h4>
+    <p>প্রতি রেফারে ৳৫০০ পরন্ত কমিশন</p>
+  </div>
+  <a href="/profile#invite" class="aff-btn">যোগ দিন</a>
+</div>
+
+<!-- STATS -->
+<div class="stats-row">
+  <div class="stat-box"><h4>৫০০+</h4><p>গেমের সংখ্যা</p></div>
+  <div class="stat-box"><h4>২৪/৭</h4><p>লাইভ সাপোর্ট</p></div>
+  <div class="stat-box"><h4>৳৫মি+</h4><p>পমেন্ট করা</p></div>
+</div>
+
+<!-- CATEGORIES -->
+<div class="cats" id="catNav">
+  <div class="cat active" data-type="all"><div class="cat-icon">🔥</div><div class="cat-label">সবগুলো</div></div>
+  <div class="cat" data-type="pvp"><div class="cat-icon">⚔️</div><div class="cat-label">PVP</div></div>
+  <div class="cat" data-type="slots"><div class="cat-icon">🎰</div><div class="cat-label">স্লট</div></div>
+  <div class="cat" data-type="live"><div class="cat-icon">🎲</div><div class="cat-label">লাইভ</div></div>
+  <div class="cat" data-type="table"><div class="cat-icon">🃏</div><div class="cat-label">টেবল</div></div>
+  <div class="cat" data-type="sports"><div class="cat-icon">⚽</div><div class="cat-label">স্পোর্টস</div></div>
+</div>
+
+<!-- SEARCH -->
+<div class="search-wrap">
+  <div class="search-inner">
+    <input type="text" id="gameSearch" placeholder="গেম খুঁজুন...">
+    <span>🔍</span>
+  </div>
+</div>
+
+<%- include('partials/flash') %>
+
+<!-- SECTION HEADER -->
+<div class="sec-header">
+  <h3><span>🔥</span> <span id="sectionTitle">হট গেমস</span></h3>
+</div>
+
+<!-- GAME GRID -->
+<div class="game-grid" id="gameContainer"></div>
+
+<div class="divider"></div>
+
+<!-- JACKPOT -->
+<div class="jackpot-sec">
+  <div class="jackpot-label">🏆 মেগা জকপট</div>
+  <div class="jackpot-amount">৳ <span id="jp-num">৮৮,৬১৭,৫১৭</span></div>
+  <div class="jackpot-sub">এখন পরন্ত মোট জেতার পরিমাণ</div>
+  <button class="jackpot-btn" onclick="location.href='/games/slots'">জ্যাকপট খেলুন 🎰</button>
+</div>
+
+<!-- LEADERBOARD -->
+<div class="sec-header">
+  <h3><span>🏆</span> বিজয়ী তলিকা</h3>
+  <a href="/leaderboard" class="see-all">সব দেখুন</a>
+</div>
+<div class="leader-table">
+  <div class="leader-head"><div>#</div><div>খেলোয়াড</div><div style="text-align:right">জেতার পরিমাণ</div></div>
+  <div class="leader-row"><div class="l-rank r1">🥇</div><div class="l-user">***৮৮২</div><div class="l-amt">৳১৫,৬৮,৫২৩</div></div>
+  <div class="leader-row"><div class="l-rank r2">🥈</div><div class="l-user">***৭৪২</div><div class="l-amt">৳১১,৪৪,৫৫৬</div></div>
+  <div class="leader-row"><div class="l-rank r3">🥉</div><div class="l-user">***১১৮</div><div class="l-amt">৳৯,৯৮,৫৪১</div></div>
+  <div class="leader-row"><div class="l-rank">4</div><div class="l-user">***৪২</div><div class="l-amt">৳৭,৩২,৩৫২</div></div>
+  <div class="leader-row"><div class="l-rank">5</div><div class="l-user">***৭৮৯</div><div class="l-amt">৳৩,৮২,০০২</div></div>
+</div>
+
+<!-- PROMOTIONS -->
+<div class="sec-header" style="margin-top:12px;">
+  <h3><span>🎁</span> প্রমোশন</h3>
+  <a href="/tournaments" class="see-all">সব দেখুন</a>
+</div>
+<div class="promo-grid">
+  <div class="promo-card pc1" onclick="location.href='/payment/deposit'">
+    <h4>ওয়েলকাম বোনাস</h4><p>প্রথম ডিপোজিটে</p><div class="pval">১০০%</div>
+  </div>
+  <div class="promo-card pc2">
+    <h4>ডেইলি ক্যাশব্যাক</h4><p>প্রতিদিনের লসে</p><div class="pval">১০%</div>
+  </div>
+  <div class="promo-card pc3" onclick="location.href='/profile#invite'">
+    <h4>রেফার বোনাস</h4><p>প্রতি রেফারে</p><div class="pval">৳৫০০</div>
+  </div>
+  <div class="promo-card pc4">
+    <h4>VIP ক্লাব</h4><p>সপ্তাহিক বোনাস</p><div class="pval">৳৫০০০</div>
+  </div>
+</div>
+
+<!-- PAYMENT -->
+<div class="sec-header" style="margin-top:12px;">
+  <h3><span>💳</span> পেমেন্ মেথড</h3>
+</div>
+<div class="pay-row">
+  <div class="pay-chip">💚 bKash</div>
+  <div class="pay-chip">🟠 Nagad</div>
+  <div class="pay-chip">🔵 Rocket</div>
+  <div class="pay-chip">🏦 ব্যাংক</div>
+  <div class="pay-chip">₿ Crypto</div>
+  <div class="pay-chip">💳 VISA</div>
+</div>
+
+<!-- FOOTER -->
+<div class="site-footer">
+  <div class="footer-logo">LIVO</div>
+  <div class="footer-links">
+    <a href="#">সম্পর্কে</a>
+    <a href="#">শর্তাবলী</a>
+    <a href="#">গোপনীয়তা</a>
+    <a href="#">দয়িত্বশীল গেমিং</a>
+    <a href="/profile#support">যোগাযোগ</a>
+  </div>
+  <div class="lic-badges">
+    <div class="lic-badge">🔞 18+</div>
+    <div class="lic-badge">Curacao Licensed</div>
+  </div>
+  <div class="footer-text">
+    © 2024 LIVO Gaming. All Rights Reserved.<br>
+    License No. 8048/JAZ — Antillephone, Curacao.<br>
+    অনলাইন গেমিং আসক্তি তৈরি করতে পরে। দায়িত্বশীলভাবে খলুন।
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <a href="/" class="nav-link <%= locals.activePage === 'home' ? 'active' : '' %>">
+    <span class="nav-icon">🏠</span><span>হোম</span>
+  </a>
+  <a href="/matches" class="nav-link">
+    <span class="nav-icon">🎰</span><span>গেমস</span>
+  </a>
+  <div class="nav-center-wrap">
+    <a href="/payment/deposit" class="nav-center-btn">💰</a>
+    <div class="nav-center-label">ডিপোজিট</div>
+  </div>
+  <a href="/tournaments" class="nav-link">
+    <span class="nav-icon">🔥</span><span>প্রমো</span>
+  </a>
+  <a href="/profile" class="nav-link <%= locals.activePage === 'profile' ? 'active' : '' %>">
+    <span class="nav-icon">👤</span><span>অযাকাউন্ট</span>
+  </a>
+</div>
 
 <script>
-    const games = [
-        {name:"Aviator",           emoji:"✈️", type:"pvp", slug: "aviator"},
-        {name:"Teen Patti",        emoji:"🃏", type:"pvp", slug: "teen-patti"},
-        {name:"Andar Bahar",       emoji:"🎴", type:"pvp", slug: "andar-bahar"},
-        {name:"Blackjack",         emoji:"♠️", type:"table", slug: "blackjack"},
-        {name:"Poker",             emoji:"🃏", type:"pvp", slug: "poker"},
-        {name:"Baccarat",          emoji:"🎰", type:"table", slug: "baccarat"},
-        {name:"Roulette",          emoji:"🎡", type:"table", slug: "roulette"},
-        {name:"Slots",             emoji:"🎰", type:"slots", slug: "slots"},
-        {name:"Online Ludo",       emoji:"🎲", type:"pvp", slug: "ludo"},
-        {name:"Dragon Tiger",      emoji:"🐉", type:"pvp"},
-        {name:"Super Ace",         emoji:"🂡", type:"slots"},
-        {name:"Fortune Gems",      emoji:"💎", type:"slots"},
-        {name:"Golden Empire",     emoji:"👑", type:"slots"},
-        {name:"Sweet Bonanza",     emoji:"🍭", type:"slots"},
-        {name:"Gates of Olympus",  emoji:"⚡", type:"slots"},
-        {name:"Starlight Princess",emoji:"⭐", type:"slots"},
-        {name:"Fruit Party",       emoji:"🍎", type:"slots"},
-        {name:"Boxing King",       emoji:"🥊", type:"slots"},
-        {name:"Sugar Rush",        emoji:"🍬", type:"slots"},
-        {name:"Wolf Gold",         emoji:"🐺", type:"slots"},
-        {name:"Joker's Jewels",    emoji:"🤡", type:"slots"},
-        {name:"Crash",             emoji:"🚀", type:"pvp"},
-        {name:"Lucky Spin",        emoji:"🎰", type:"slots"},
-        {name:"Color Prediction",  emoji:"🌈", type:"pvp"},
-        {name:"Blackjack Live",    emoji:"♠️", type:"live"},
-        {name:"Baccarat Live",     emoji:"🎰", type:"live"},
-        {name:"Roulette Live",     emoji:"🎡", type:"live"},
-        {name:"Dragon Tiger Live", emoji:"🐯", type:"live"},
-        {name:"Crazy Time",        emoji:"🎪", type:"live"},
-        {name:"Mega Ball",         emoji:"🎱", type:"live"},
-        {name:"Monopoly Live",     emoji:"🎩", type:"live"},
-        {name:"Cricket Live",      emoji:"🏏", type:"sports"},
-        {name:"Football Match",    emoji:"⚽", type:"sports"}
-    ];
+const games = [
+  {name:"Aviator",           emoji:"✈️",  type:"pvp",    slug:"aviator",    badge:"hot", provider:"SPRIBE", color:"gc1"},
+  {name:"Teen Patti",        emoji:"🃏",  type:"pvp",    slug:"teen-patti", badge:"pop", provider:"JL",     color:"gc2"},
+  {name:"Andar Bahar",       emoji:"🎴",  type:"pvp",    slug:"andar-bahar",badge:"hot", provider:"JL",     color:"gc3"},
+  {name:"Blackjack",         emoji:"♠️",  type:"table",  slug:"blackjack",  badge:"",   provider:"EVO",    color:"gc4"},
+  {name:"Poker",             emoji:"🃏",  type:"pvp",    slug:"poker",      badge:"",   provider:"JL",     color:"gc5"},
+  {name:"Baccarat",          emoji:"🎰",  type:"table",  slug:"baccarat",   badge:"pop",provider:"EVO",    color:"gc6"},
+  {name:"Roulette",          emoji:"🎡",  type:"table",  slug:"roulette",   badge:"",   provider:"EVO",    color:"gc7"},
+  {name:"Slots",             emoji:"🎰",  type:"slots",  slug:"slots",      badge:"hot",provider:"PG",     color:"gc8"},
+  {name:"Online Ludo",       emoji:"🎲",  type:"pvp",    slug:"ludo",       badge:"new",provider:"JL",     color:"gc9"},
+  {name:"Dragon Tiger",      emoji:"🐉",  type:"pvp",    slug:"",           badge:"pop",provider:"JL",     color:"gc10"},
+  {name:"Super Ace",         emoji:"🂡",  type:"slots",  slug:"",           badge:"hot",provider:"JL",     color:"gc11"},
+  {name:"Fortune Gems",      emoji:"💎",  type:"slots",  slug:"",           badge:"",   provider:"JDB",    color:"gc12"},
+  {name:"Golden Empire",     emoji:"👑",  type:"slots",  slug:"",           badge:"",   provider:"JDB",    color:"gc1"},
+  {name:"Sweet Bonanza",     emoji:"🍭",  type:"slots",  slug:"",           badge:"pop",provider:"PP",     color:"gc2"},
+  {name:"Gates of Olympus",  emoji:"⚡",  type:"slots",  slug:"",           badge:"hot",provider:"PP",     color:"gc3"},
+  {name:"Starlight Princess",emoji:"⭐",  type:"slots",  slug:"",           badge:"new",provider:"PP",     color:"gc4"},
+  {name:"Fruit Party",       emoji:"🍎",  type:"slots",  slug:"",           badge:"",   provider:"PG",     color:"gc5"},
+  {name:"Crash",             emoji:"🚀",  type:"pvp",    slug:"",           badge:"hot",provider:"SPRIBE", color:"gc6"},
+  {name:"Color Prediction",  emoji:"🌈",  type:"pvp",    slug:"",           badge:"new",provider:"JL",     color:"gc7"},
+  {name:"Blackjack Live",    emoji:"♠️",  type:"live",   slug:"",           badge:"",   provider:"EVO",    color:"gc8"},
+  {name:"Baccarat Live",     emoji:"🎰",  type:"live",   slug:"",           badge:"hot",provider:"EVO",    color:"gc9"},
+  {name:"Roulette Live",     emoji:"🎡",  type:"live",   slug:"",           badge:"",   provider:"EVO",    color:"gc10"},
+  {name:"Dragon Tiger Live", emoji:"🐯",  type:"live",   slug:"",           badge:"pop",provider:"EVO",    color:"gc11"},
+  {name:"Crazy Time",        emoji:"🎪",  type:"live",   slug:"",           badge:"new",provider:"EVO",    color:"gc12"},
+  {name:"Cricket Live",      emoji:"🏏",  type:"sports", slug:"",           badge:"hot",provider:"SBOBET", color:"gc1"},
+  {name:"Football Match",    emoji:"⚽",  type:"sports", slug:"",           badge:"",   provider:"SBOBET", color:"gc2"},
+];
 
-    const bgColors = [
-        "linear-gradient(135deg,#1a0050,#6b00ff)",
-        "linear-gradient(135deg,#500030,#ff00aa)",
-        "linear-gradient(135deg,#003050,#00aaff)",
-        "linear-gradient(135deg,#502000,#ff6600)",
-        "linear-gradient(135deg,#005030,#00cc66)",
-        "linear-gradient(135deg,#500010,#ff3366)",
-        "linear-gradient(135deg,#300050,#9900ff)",
-        "linear-gradient(135deg,#503000,#ff9900)",
-        "linear-gradient(135deg,#004040,#00ffcc)",
-        "linear-gradient(135deg,#500020,#ff0066)",
-        "linear-gradient(135deg,#001050,#3366ff)",
-        "linear-gradient(135deg,#502010,#ff6633)"
-    ];
+const badgeClass = {hot:'badge-hot', pop:'badge-pop', new:'badge-new'};
+const badgeText  = {hot:'HOT', pop:'জনপ্রিয়', new:'নতুন'};
+let currentType = 'all', searchQ = '';
 
-    let currentType = 'all';
-    let searchQuery = '';
+function renderGames() {
+  const c = document.getElementById('gameContainer');
+  c.innerHTML = '';
+  const filtered = games.filter(g =>
+    (currentType === 'all' || g.type === currentType) &&
+    g.name.toLowerCase().includes(searchQ.toLowerCase())
+  );
+  if (!filtered.length) { c.innerHTML = '<div class="no-games">কোনো গেম পাওয়া যায়নি</div>'; return; }
+  filtered.forEach(g => {
+    const url = g.slug ? `/games/${g.slug}` : '/login';
+    const bHTML = g.badge ? `<div class="g-badge ${badgeClass[g.badge]}">${badgeText[g.badge]}</div>` : '';
+    c.innerHTML += `
+      <div class="game-card" onclick="location.href='${url}'">
+        <div class="game-thumb ${g.color}">
+          <span>${g.emoji}</span>${bHTML}
+          <div class="g-provider">${g.provider}</div>
+        </div>
+        <div class="game-info"><h4>${g.name}</h4><p>${g.provider}</p></div>
+      </div>`;
+  });
+}
 
-    function renderGames() {
-        const container = document.getElementById('gameContainer');
-        container.innerHTML = '';
-
-        const filtered = games.filter(g => {
-            const matchesType = currentType === 'all' || g.type === currentType;
-            const matchesSearch = g.name.toLowerCase().includes(searchQuery.toLowerCase());
-            return matchesType && matchesSearch;
-        });
-
-        filtered.forEach((item, index) => {
-            const card = document.createElement('div');
-            card.className = 'game-card';
-            card.style.animationDelay = `${index * 0.05}s`;
-            const bg = bgColors[index % bgColors.length];
-            const playUrl = item.slug ? `/games/${item.slug}` : '/login';
-
-            card.innerHTML = `
-                <div class="game-thumb" style="background: ${bg}">${item.emoji}</div>
-                <div class="game-info">
-                    <div class="game-name">${item.name}</div>
-                    <button class="play-btn" onclick="location.href='${playUrl}'">খেলুন</button>
-                </div>
-            `;
-            container.appendChild(card);
-        });
-
-        if (filtered.length === 0) {
-            container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">কোনো গেম পাওয়া যায়নি</div>';
-        }
-    }
-
-    // Category Filter
-    document.querySelectorAll('.category-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-            document.querySelectorAll('.category-item').forEach(i => i.classList.remove('active'));
-            item.classList.add('active');
-            currentType = item.getAttribute('data-type');
-            document.getElementById('sectionTitle').innerText = item.innerText;
-            renderGames();
-        });
-    });
-
-    // Search Filter
-    document.getElementById('gameSearch').addEventListener('input', (e) => {
-        searchQuery = e.target.value;
-        renderGames();
-    });
-
-    // Initial render
+document.querySelectorAll('.cat').forEach(c => {
+  c.addEventListener('click', () => {
+    document.querySelectorAll('.cat').forEach(x => x.classList.remove('active'));
+    c.classList.add('active');
+    currentType = c.dataset.type;
+    const t = {all:'হট গেমস',pvp:'PVP গেমস',slots:'স্লট গেমস',live:'লাইভ ক্যাসিনো',table:'টেবিল গেমস',sports:'স্পোর্স'};
+    document.getElementById('sectionTitle').textContent = t[currentType] || 'সবগুলো গেম';
     renderGames();
+  });
+});
+
+document.getElementById('gameSearch').addEventListener('input', e => { searchQ = e.target.value; renderGames(); });
+
+let slide = 0;
+const slides = document.querySelectorAll('.banner-slide');
+const dots   = document.querySelectorAll('.dot');
+function goSlide(n) {
+  slides[slide].classList.remove('active'); dots[slide].classList.remove('active');
+  slide = n;
+  slides[slide].classList.add('active'); dots[slide].classList.add('active');
+}
+setInterval(() => goSlide((slide + 1) % slides.length), 3500);
+
+let jp = 88617517;
+setInterval(() => {
+  jp += Math.floor(Math.random() * 600 + 100);
+  document.getElementById('jp-num').textContent = jp.toLocaleString('bn-BD');
+}, 2000);
+
+renderGames();
 </script>
 
 </body></html>
