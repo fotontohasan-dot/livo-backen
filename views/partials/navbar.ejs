@@ -1,24 +1,106 @@
 <nav class="navbar">
   <div style="display:flex;align-items:center;gap:1rem;">
-    <button class="text-white text-2xl">⋮</button>
+    <button onclick="toggleMenu()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;">☰</button>
     <a href="/" class="nav-brand">LIVO</a>
   </div>
-
-  <div style="display:flex;align-items:center;gap:1rem;">
-    <a href="/notifications" class="text-xl">🔔</a>
-    <a href="/news" class="text-xl">✉️</a>
-    <button onclick="window.location.reload()" class="text-xl">🔄</button>
+  <div style="display:flex;align-items:center;gap:0.75rem;">
+    <% if(locals.user) { %>
+    <div style="background:#1e1e1e;border:1px solid rgba(230,0,0,0.3);padding:5px 12px;border-radius:20px;font-size:.85rem;color:#ffd700;font-weight:700;">
+      🪙 <%= user.coins %>
+    </div>
+    <% } %>
+    <a href="/notifications" style="color:#fff;font-size:20px;text-decoration:none;">🔔</a>
+    <a href="/news" style="color:#fff;font-size:20px;text-decoration:none;">✉️</a>
+    <button onclick="window.location.reload()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;">🔄</button>
   </div>
 </nav>
+
+<!-- Side Menu -->
+<div id="sideMenu" style="position:fixed;top:0;left:-280px;width:280px;height:100%;background:#0d0d0d;z-index:9999;transition:left 0.3s;border-right:1px solid rgba(230,0,0,0.3);overflow-y:auto;">
+  <div style="padding:20px;border-bottom:1px solid rgba(230,0,0,0.2);display:flex;align-items:center;justify-content:space-between;">
+    <span style="font-size:1.5rem;font-weight:900;color:#e60000;">LIVO</span>
+    <button onclick="toggleMenu()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;">✕</button>
+  </div>
+  <% if(locals.user) { %>
+  <div style="padding:15px 20px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;gap:12px;">
+    <div style="width:45px;height:45px;border-radius:50%;background:linear-gradient(90deg,#e60000,#ff1a1a);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;">
+      <%= user.username[0].toUpperCase() %>
+    </div>
+    <div>
+      <div style="font-weight:700;"><%= user.username %></div>
+      <div style="color:#ffd700;font-size:.85rem;">🪙 <%= user.coins %></div>
+    </div>
+  </div>
+  <% } %>
+  <div style="padding:10px 0;">
+    <a href="/" style="display:flex;align-items:center;gap:12px;padding:13px 20px;color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.05);">
+      <span style="font-size:18px;">🏠</span><span>হোম</span>
+    </a>
+    <a href="/games/aviator" style="display:flex;align-items:center;gap:12px;padding:13px 20px;color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.05);">
+      <span style="font-size:18px;">🚀</span><span>Aviator</span>
+    </a>
+    <a href="/games/slots" style="display:flex;align-items:center;gap:12px;padding:13px 20px;color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.05);">
+      <span style="font-size:18px;">🎰</span><span>Slots</span>
+    </a>
+    <a href="/games/color-prediction" style="display:flex;align-items:center;gap:12px;padding:13px 20px;color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.05);">
+      <span style="font-size:18px;">🌈</span><span>Color Prediction</span>
+    </a>
+    <a href="/matches" style="display:flex;align-items:center;gap:12px;padding:13px 20px;color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.05);">
+      <span style="font-size:18px;">⚽</span><span>স্পোর্টস</span>
+    </a>
+    <a href="/tournaments" style="display:flex;align-items:center;gap:12px;padding:13px 20px;color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.05);">
+      <span style="font-size:18px;">🏆</span><span>টুর্নামেন্ট</span>
+    </a>
+    <a href="/payment/deposit" style="display:flex;align-items:center;gap:12px;padding:13px 20px;color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.05);">
+      <span style="font-size:18px;">💰</span><span>ডিপোজিট</span>
+    </a>
+    <a href="/payment/withdraw" style="display:flex;align-items:center;gap:12px;padding:13px 20px;color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.05);">
+      <span style="font-size:18px;">💸</span><span>উইথড্র</span>
+    </a>
+    <a href="/leaderboard" style="display:flex;align-items:center;gap:12px;padding:13px 20px;color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.05);">
+      <span style="font-size:18px;">🏅</span><span>লিডারবোর্ড</span>
+    </a>
+    <a href="/profile" style="display:flex;align-items:center;gap:12px;padding:13px 20px;color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.05);">
+      <span style="font-size:18px;">👤</span><span>প্রোফাইল</span>
+    </a>
+    <% if(locals.user && user.role === 'admin') { %>
+    <a href="/admin" style="display:flex;align-items:center;gap:12px;padding:13px 20px;color:#e60000;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.05);">
+      <span style="font-size:18px;">⚙️</span><span>এডমিন প্যানেল</span>
+    </a>
+    <% } %>
+    <% if(locals.user) { %>
+    <a href="/logout" style="display:flex;align-items:center;gap:12px;padding:13px 20px;color:#ff4444;text-decoration:none;">
+      <span style="font-size:18px;">🚪</span><span>লগআউট</span>
+    </a>
+    <% } else { %>
+    <a href="/login" style="display:flex;align-items:center;gap:12px;padding:13px 20px;color:#10b981;text-decoration:none;">
+      <span style="font-size:18px;">🔑</span><span>লগইন</span>
+    </a>
+    <% } %>
+  </div>
+</div>
+
+<!-- Overlay -->
+<div id="menuOverlay" onclick="toggleMenu()" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9998;"></div>
+
+<script>
+function toggleMenu() {
+  const menu = document.getElementById('sideMenu');
+  const overlay = document.getElementById('menuOverlay');
+  const isOpen = menu.style.left === '0px';
+  menu.style.left = isOpen ? '-280px' : '0px';
+  overlay.style.display = isOpen ? 'none' : 'block';
+}
+</script>
 
 <% if(locals.user) { %>
 <div class="top-balance-bar">
   <div style="display:flex;gap:0.5rem;">
-    <a href="/payment/deposit" class="btn btn-sm btn-primary" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 4px;">Deposit</a>
-    <a href="/payment/withdraw" class="btn btn-sm btn-outline" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 4px;">Withdraw</a>
+    <a href="/payment/deposit" class="btn btn-sm btn-primary" style="padding:6px 12px;font-size:0.8rem;border-radius:4px;">Deposit</a>
+    <a href="/payment/withdraw" class="btn btn-sm btn-outline" style="padding:6px 12px;font-size:0.8rem;border-radius:4px;">Withdraw</a>
   </div>
   <div class="balance-amount">
-    <span style="font-size: 0.8rem; color: var(--muted); font-weight: 400; margin-right: 4px;">Balance:</span>
+    <span style="font-size:0.8rem;color:var(--muted);font-weight:400;margin-right:4px;">Balance:</span>
     🪙 <%= user.coins %>
   </div>
 </div>
