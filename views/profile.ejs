@@ -3,95 +3,80 @@
 <div class="container page">
   <%- include('partials/flash') %>
 
-  <div class="card" style="margin-bottom:1.5rem; background: var(--card2);">
-    <div class="card-body" style="display:flex; align-items:center; gap:1.5rem;">
+  <div class="card" style="margin-bottom:1.5rem;background:var(--card2);">
+    <div class="card-body" style="display:flex;align-items:center;gap:1.5rem;">
       <div class="avatar" style="width:64px;height:64px;font-size:1.5rem;">
         <%= profileUser.username[0].toUpperCase() %>
       </div>
       <div>
         <h2 style="margin:0;"><%= profileUser.username %></h2>
-        <p style="color:var(--muted); font-size: 0.85rem; margin-top: 4px;"><%= profileUser.email %></p>
-        <div style="margin-top: 8px; color: var(--gold); font-weight: 700;">🪙 <%= profileUser.coins %></div>
+        <p style="color:var(--muted);font-size:.85rem;margin-top:4px;"><%= profileUser.email %></p>
+        <div style="margin-top:8px;color:var(--gold);font-weight:700;">🪙 <%= profileUser.coins %></div>
       </div>
     </div>
   </div>
 
-  <div class="card" style="margin-bottom: 2rem;">
+  <% if(profileUser.referral_code) { %>
+  <div class="card" style="margin-bottom:1.5rem;border:1px solid rgba(230,0,0,0.3);">
+    <div class="card-body" style="text-align:center;">
+      <p style="color:var(--muted);font-size:.85rem;margin-bottom:.5rem;">আপনার রেফারেল কোড</p>
+      <div style="font-size:1.5rem;font-weight:900;color:var(--gold);letter-spacing:3px;margin-bottom:.5rem;">
+        <%= profileUser.referral_code %>
+      </div>
+      <p style="font-size:.75rem;color:var(--muted);margin-bottom:1rem;">বন্ধুকে এই কোড দিন — সে ১০০ কয়েন পাবে, আপনি পাবেন ২০০ কয়েন!</p>
+      <button onclick="copyRef()" class="btn btn-primary" style="font-size:.85rem;padding:8px 20px;">📋 কোড কপি করুন</button>
+      <button onclick="shareRef()" class="btn btn-outline" style="font-size:.85rem;padding:8px 20px;margin-left:8px;">📤 শেয়ার করুন</button>
+    </div>
+  </div>
+  <% } %>
+
+  <div class="card" style="margin-bottom:2rem;">
     <div class="card-header">Member Center</div>
-
     <a href="/leaderboard" class="profile-list-item">
-      <div class="profile-list-icon">🎁</div>
-      <span>Reward Center</span>
-      <div class="profile-list-arrow">❯</div>
+      <div class="profile-list-icon">🎁</div><span>Reward Center</span><div class="profile-list-arrow">❯</div>
     </a>
-
     <a href="/profile/history" class="profile-list-item">
-      <div class="profile-list-icon">📝</div>
-      <span>Betting Record</span>
-      <div class="profile-list-arrow">❯</div>
+      <div class="profile-list-icon">📝</div><span>Betting Record</span><div class="profile-list-arrow">❯</div>
     </a>
-
     <a href="/profile/stats" class="profile-list-item">
-      <div class="profile-list-icon">📊</div>
-      <span>Profit & Loss</span>
-      <div class="profile-list-arrow">❯</div>
+      <div class="profile-list-icon">📊</div><span>Profit & Loss</span><div class="profile-list-arrow">❯</div>
     </a>
-
     <a href="/payment/history" class="profile-list-item">
-      <div class="profile-list-icon">💸</div>
-      <span>Deposit Record / Withdrawal Record</span>
-      <div class="profile-list-arrow">❯</div>
+      <div class="profile-list-icon">💸</div><span>Deposit / Withdrawal Record</span><div class="profile-list-arrow">❯</div>
     </a>
-
     <a href="/coins/history" class="profile-list-item">
-      <div class="profile-list-icon">💳</div>
-      <span>Account Record</span>
-      <div class="profile-list-arrow">❯</div>
+      <div class="profile-list-icon">💳</div><span>Account Record</span><div class="profile-list-arrow">❯</div>
     </a>
-
     <a href="/profile/security" class="profile-list-item">
-      <div class="profile-list-icon">🛡️</div>
-      <span>Security Center</span>
-      <div class="profile-list-arrow">❯</div>
+      <div class="profile-list-icon">🛡️</div><span>Security Center</span><div class="profile-list-arrow">❯</div>
     </a>
-
-    <a href="/profile#invite" class="profile-list-item">
-      <div class="profile-list-icon">👥</div>
-      <span>Invite Friends</span>
-      <div class="profile-list-arrow">❯</div>
-    </a>
-
-    <a href="/profile/missions" class="profile-list-item">
-      <div class="profile-list-icon">🎯</div>
-      <span>Mission Record</span>
-      <div class="profile-list-arrow">❯</div>
-    </a>
-
     <a href="/notifications" class="profile-list-item">
-      <div class="profile-list-icon">📧</div>
-      <span>Mail</span>
-      <div class="profile-list-arrow">❯</div>
+      <div class="profile-list-icon">📧</div><span>Mail</span><div class="profile-list-arrow">❯</div>
     </a>
-
     <a href="/app/update" class="profile-list-item">
-      <div class="profile-list-icon">🆙</div>
-      <span>App Update</span>
-      <div class="profile-list-arrow">❯</div>
+      <div class="profile-list-icon">🆙</div><span>App Update</span><div class="profile-list-arrow">❯</div>
     </a>
-
-    <a href="/profile#support" class="profile-list-item">
-      <div class="profile-list-icon">📞</div>
-      <span>Customer Service / Help Center</span>
-      <div class="profile-list-arrow">❯</div>
-    </a>
-
-    <a href="/logout" class="profile-list-item" style="color: var(--red);">
-      <div class="profile-list-icon">🚪</div>
-      <span>Logout</span>
-      <div class="profile-list-arrow">❯</div>
+    <a href="/logout" class="profile-list-item" style="color:var(--red);">
+      <div class="profile-list-icon">🚪</div><span>Logout</span><div class="profile-list-arrow">❯</div>
     </a>
   </div>
 </div>
+
+<script>
+function copyRef() {
+  navigator.clipboard.writeText('<%= profileUser.referral_code %>');
+  alert('কোড কপি হয়েছে! ✅');
+}
+function shareRef() {
+  if (navigator.share) {
+    navigator.share({
+      title: 'LIVO তে যোগ দিন!',
+      text: 'আমার রেফারেল কোড দিয়ে রেজিস্ট্রেশন করুন: <%= profileUser.referral_code %> — ১০০ এক্সট্রা কয়েন পাবেন!',
+      url: 'https://livo-tx3h.onrender.com/register?ref=<%= profileUser.referral_code %>'
+    });
+  }
+}
+</script>
 
 <%- include('partials/bottom-nav') %>
 </body></html>
