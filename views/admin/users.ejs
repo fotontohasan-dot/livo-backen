@@ -19,6 +19,7 @@
           <tr>
             <th>ইউজার</th>
             <th>ইমেইল</th>
+            <th>রোল</th>
             <th>কয়েন</th>
             <th>পয়েন্ট</th>
             <th>স্ট্যাটাস</th>
@@ -27,19 +28,25 @@
         </thead>
         <tbody>
           <% users.forEach(u => { %>
-            <tr>
+            <tr data-user-id="<%= u.id %>"
+                data-username="<%= u.username %>"
+                data-email="<%= u.email %>"
+                data-role="<%= u.role %>"
+                data-coins="<%= u.coins %>">
               <td style="font-weight:600"><%= u.username %></td>
               <td style="font-size:.8rem;color:var(--muted)"><%= u.email %></td>
+              <td><span class="status-badge" style="background:var(--card2);border:1px solid var(--border);"><%= u.role %></span></td>
               <td style="color:var(--gold)"><%= u.coins %></td>
               <td style="color:var(--primary)"><%= u.total_points %></td>
               <td>
                 <span style="color:<%= u.is_banned ? 'var(--red)' : 'var(--green)' %>;font-size:.85rem">
-                  <%= u.is_banned ? '🚫 নিষিদ্ধ (Banned)' : '✅ সচল (Active)' %>
+                  <%= u.is_banned ? '🚫 নিষিদ্ধ' : '✅ সচল' %>
                 </span>
               </td>
               <td style="display:flex;gap:.5rem;flex-wrap:wrap;">
+                <button onclick="editUser(this.closest('tr'))" class="btn btn-sm btn-outline">সম্পাদনা</button>
                 <button onclick="banUser(<%= u.id %>)" class="btn btn-sm <%= u.is_banned ? 'btn-outline' : 'btn-danger' %>">
-                  <%= u.is_banned ? 'আনব্যান' : 'ব্যান করুন' %>
+                  <%= u.is_banned ? 'আনব্যান' : 'ব্যান' %>
                 </button>
                 <button onclick="showCoins(<%= u.id %>)" class="btn btn-sm btn-gold">+ কয়েন</button>
               </td>
@@ -68,6 +75,37 @@
         </div>
       </div>
     </div>
+
+    <div id="editModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#00000080;z-index:999;align-items:center;justify-content:center;">
+      <div class="card" style="width:400px;max-width:95vw;">
+        <div class="card-header">👤 ইউজার সম্পাদনা</div>
+        <div class="card-body">
+          <div class="form-group">
+            <label class="form-label">ইউজারনেম</label>
+            <input type="text" class="form-input" id="editUsername">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ইমেইল</label>
+            <input type="email" class="form-input" id="editEmail">
+          </div>
+          <div class="form-group">
+            <label class="form-label">রোল</label>
+            <select class="form-input" id="editRole">
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">কয়েন ব্যালেন্স</label>
+            <input type="number" class="form-input" id="editCoins">
+          </div>
+          <div style="display:flex;gap:.75rem;">
+            <button onclick="submitEdit()" class="btn btn-primary">সংরক্ষণ করুন</button>
+            <button onclick="document.getElementById('editModal').style.display='none'" class="btn btn-outline">বাতিল</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 <script>
@@ -85,6 +123,26 @@ function submitCoins() {
   const f = document.createElement('form');
   f.method = 'POST'; f.action = `/admin/users/${currentUserId}/coins`;
   [['amount','coinAmount'],['description','coinDesc']].forEach(([n,id]) => {
+    const i = document.createElement('input');
+    i.name = n; i.value = document.getElementById(id).value;
+    f.appendChild(i);
+  });
+  document.body.appendChild(f); f.submit();
+}
+
+function editUser(tr) {
+  currentUserId = tr.dataset.userId;
+  document.getElementById('editUsername').value = tr.dataset.username;
+  document.getElementById('editEmail').value = tr.dataset.email;
+  document.getElementById('editRole').value = tr.dataset.role;
+  document.getElementById('editCoins').value = tr.dataset.coins;
+  document.getElementById('editModal').style.display = 'flex';
+}
+
+function submitEdit() {
+  const f = document.createElement('form');
+  f.method = 'POST'; f.action = `/admin/users/${currentUserId}/edit`;
+  [['username','editUsername'],['email','editEmail'],['role','editRole'],['coins','editCoins']].forEach(([n,id]) => {
     const i = document.createElement('input');
     i.name = n; i.value = document.getElementById(id).value;
     f.appendChild(i);

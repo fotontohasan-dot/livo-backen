@@ -28,15 +28,16 @@
         </thead>
         <tbody>
           <% matches.forEach(m => { %>
-            <tr>
+            <tr data-id="<%= m.id %>" data-title="<%= m.title %>" data-sport="<%= m.sport %>" data-teama="<%= m.team_a %>" data-teamb="<%= m.team_b %>" data-date="<%= new Date(m.match_date).toISOString().slice(0,16) %>" data-stream="<%= m.stream_url %>" data-status="<%= m.status %>">
               <td style="font-weight:600"><%= m.team_a %> vs <%= m.team_b %></td>
               <td><%= m.sport %></td>
               <td style="font-size:.8rem;color:var(--muted)"><%= new Date(m.match_date).toLocaleString() %></td>
               <td><span class="status-badge status-<%= m.status %>"><%= m.status === 'upcoming' ? 'আসন্ন' : (m.status === 'live' ? 'লাইভ' : 'সম্পন্ন') %></span></td>
               <td><%= m.result || '-' %></td>
-              <td>
+              <td style="display:flex;gap:0.5rem;">
+                <button onclick="editMatch(this.closest('tr'))" class="btn btn-sm btn-outline">সম্পাদনা</button>
                 <% if(m.status !== 'completed') { %>
-                  <button onclick="setResult(<%= m.id %>, '<%= m.team_a %>', '<%= m.team_b %>')" class="btn btn-sm btn-primary">ফলাফল দিন</button>
+                  <button onclick="setResult(<%= m.id %>, '<%= m.team_a %>', '<%= m.team_b %>')" class="btn btn-sm btn-primary">ফলাফল</button>
                 <% } %>
               </td>
             </tr>
@@ -59,6 +60,32 @@
           <div class="form-group"><label class="form-label">ম্যাচের তারিখ ও সময়</label><input type="datetime-local" class="form-input" id="mDate"></div>
           <div class="form-group"><label class="form-label">স্ট্রিম ইউআরএল (ঐচ্ছিক)</label><input type="text" class="form-input" id="mStream" placeholder="https://..."></div>
           <button onclick="submitMatch()" class="btn btn-primary">ম্যাচ তৈরি করুন</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="editMatchModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#00000080;z-index:999;align-items:center;justify-content:center;">
+      <div class="card" style="width:480px;max-width:95vw;max-height:90vh;overflow-y:auto;">
+        <div class="card-header">
+          ✏️ ম্যাচ সম্পাদনা
+          <button onclick="document.getElementById('editMatchModal').style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.2rem;">✕</button>
+        </div>
+        <div class="card-body">
+          <div class="form-group"><label class="form-label">টাইটেল</label><input type="text" class="form-input" id="emTitle"></div>
+          <div class="form-group"><label class="form-label">স্পোর্টস</label><select class="form-input" id="emSport"><option value="football">ফুটবল</option><option value="cricket">ক্রিকেট</option><option value="basketball">বাস্কেটবল</option><option value="tennis">টেনিস</option></select></div>
+          <div class="form-group"><label class="form-label">টিম এ</label><input type="text" class="form-input" id="emTeamA"></div>
+          <div class="form-group"><label class="form-label">টিম বি</label><input type="text" class="form-input" id="emTeamB"></div>
+          <div class="form-group"><label class="form-label">ম্যাচের তারিখ ও সময়</label><input type="datetime-local" class="form-input" id="emDate"></div>
+          <div class="form-group"><label class="form-label">স্ট্রিম ইউআরএল</label><input type="text" class="form-input" id="emStream"></div>
+          <div class="form-group">
+            <label class="form-label">স্ট্যাটাস</label>
+            <select class="form-input" id="emStatus">
+              <option value="upcoming">Upcoming</option>
+              <option value="live">Live</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+          <button onclick="submitEditMatch()" class="btn btn-primary">সংরক্ষণ করুন</button>
         </div>
       </div>
     </div>
@@ -94,6 +121,27 @@ function submitMatch() {
   const form = document.createElement('form');
   form.method = 'POST'; form.action = '/admin/matches';
   [['title','mTitle'],['sport','mSport'],['team_a','mTeamA'],['team_b','mTeamB'],['match_date','mDate'],['stream_url','mStream']].forEach(([n,id]) => {
+    const i = document.createElement('input');
+    i.name = n; i.value = document.getElementById(id).value;
+    form.appendChild(i);
+  });
+  document.body.appendChild(form); form.submit();
+}
+function editMatch(tr) {
+  currentMatchId = tr.dataset.id;
+  document.getElementById('emTitle').value = tr.dataset.title;
+  document.getElementById('emSport').value = tr.dataset.sport;
+  document.getElementById('emTeamA').value = tr.dataset.teama;
+  document.getElementById('emTeamB').value = tr.dataset.teamb;
+  document.getElementById('emDate').value = tr.dataset.date;
+  document.getElementById('emStream').value = tr.dataset.stream;
+  document.getElementById('emStatus').value = tr.dataset.status;
+  document.getElementById('editMatchModal').style.display = 'flex';
+}
+function submitEditMatch() {
+  const form = document.createElement('form');
+  form.method = 'POST'; form.action = `/admin/matches/${currentMatchId}/edit`;
+  [['title','emTitle'],['sport','emSport'],['team_a','emTeamA'],['team_b','emTeamB'],['match_date','emDate'],['stream_url','emStream'],['status','emStatus']].forEach(([n,id]) => {
     const i = document.createElement('input');
     i.name = n; i.value = document.getElementById(id).value;
     form.appendChild(i);
