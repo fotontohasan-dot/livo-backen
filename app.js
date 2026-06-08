@@ -43,16 +43,7 @@ app.use('/notifications', require('./routes/notifications'));
 app.use('/payment', require('./routes/payment'));
 app.use('/games', require('./routes/games'));
 
-app.get('/app/update', (req, res) => res.render('app/update'));
-
-// Secret admin route
-app.get('/make-admin-secret-7749', async (req, res) => {
-  const { pool } = require('./db');
-  const username = req.query.u;
-  if (!username) return res.send('username দিন: ?u=আপনার_username');
-  await pool.query(`UPDATE users SET role='admin' WHERE username=$1`, [username]);
-  res.send(`✅ ${username} এখন Admin! এখন /login এ গিয়ে লগইন করুন, তারপর /admin এ যান।`);
-});
+app.get('/app/update', (req, res) => res.render('app/
 
 const PORT = process.env.PORT || 3000;
 initDB().then(() => {
