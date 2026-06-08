@@ -1,27 +1,32 @@
 <%- include('../partials/head') %>
 <%- include('../partials/navbar') %>
-<div class="container mt-4">
-    <h2>উইথড্র (Withdraw)</h2>
-    <div class="card bg-dark text-white p-4">
-        <form action="/payment/withdraw" method="POST">
-            <div class="mb-3">
-                <label>মেথড</label>
-                <select name="method" class="form-control bg-secondary text-white">
-                    <option value="bkash">bKash</option>
-                    <option value="nagad">Nagad</option>
-                    <option value="rocket">Rocket</option>
-                </select>
-            </div>
-            <div class="mb-3">
-                <label>পরিমাণ</label>
-                <input type="number" name="amount" class="form-control" required>
-            </div>
-            <div class="mb-3">
-                <label>পার্সোনাল নম্বর</label>
-                <input type="text" name="account_number" class="form-control" required>
-            </div>
-            <button type="submit" class="btn btn-danger w-100">উইথড্র রিকোয়েস্ট পাঠান</button>
-        </form>
+<div class="container page">
+  <%- include('../partials/flash') %>
+  <div class="card" style="max-width:500px;margin:0 auto;">
+    <div class="card-header">💸 উইথড্র করুন</div>
+    <div class="card-body">
+      <p style="color:var(--muted);font-size:.85rem;margin-bottom:1rem;">আপনার ব্যালেন্স: <span style="color:var(--gold);font-weight:700;">🪙 <%= coins %></span></p>
+      <form action="/payment/withdraw" method="POST">
+        <div class="form-group" style="margin-bottom:1rem;">
+          <label class="form-label" style="display:block;margin-bottom:.5rem;color:var(--muted);">পেমেন্ট মেথড</label>
+          <select name="method" class="form-input">
+            <option value="bkash">bKash</option>
+            <option value="nagad">Nagad</option>
+            <option value="rocket">Rocket</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:1rem;">
+          <label class="form-label" style="display:block;margin-bottom:.5rem;color:var(--muted);">পরিমাণ (সর্বনিম্ন ২০০)</label>
+          <input type="number" name="amount" class="form-input" placeholder="টাকার পরিমাণ লিখুন" min="200" required>
+        </div>
+        <div class="form-group" style="margin-bottom:1.5rem;">
+          <label class="form-label" style="display:block;margin-bottom:.5rem;color:var(--muted);">আপনার নম্বর</label>
+          <input type="text" name="account_number" class="form-input" placeholder="01XXXXXXXXX" required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">💸 উইথড্র রিকোয়েস্ট পাঠান</button>
+      </form>
     </div>
+  </div>
 </div>
 <%- include('../partials/bottom-nav') %>
+</body></html>
