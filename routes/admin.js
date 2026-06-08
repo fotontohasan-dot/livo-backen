@@ -27,7 +27,7 @@ router.get('/users', async (_req, res) => {
 
 router.post('/users/:id/ban', async (req, res) => {
   await pool.query(`UPDATE users SET is_banned=NOT is_banned WHERE id=$1`, [req.params.id]);
-  req.flash('success', 'ইউজারের স্ট্যাটাস আপডেট করা হয়েছে');
+  req.flash('success', 'User status updated');
   res.redirect('/admin/users');
 });
 
@@ -37,7 +37,7 @@ router.post('/users/:id/coins', async (req, res) => {
   await pool.query(`UPDATE users SET coins=coins+$1 WHERE id=$2`, [coins, req.params.id]);
   await pool.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'admin_grant',$3)`, [req.params.id, coins, description || 'Admin coin grant']);
   await pool.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'Coins Updated','Admin has updated your coins','info')`, [req.params.id]);
-  req.flash('success', 'কয়েন আপডেট করা হয়েছে!');
+  req.flash('success', 'Coins updated!');
   res.redirect('/admin/users');
 });
 
@@ -50,7 +50,7 @@ router.post('/matches', async (req, res) => {
   const { title, sport, team_a, team_b, match_date, stream_url } = req.body;
   await pool.query(`INSERT INTO matches (title, sport, team_a, team_b, match_date, stream_url) VALUES ($1,$2,$3,$4,$5,$6)`,
     [title, sport, team_a, team_b, match_date, stream_url]);
-  req.flash('success', 'ম্যাচ তৈরি করা হয়েছে!');
+  req.flash('success', 'Match created!');
   res.redirect('/admin/matches');
 });
 
@@ -58,13 +58,13 @@ router.post('/matches/:id/edit', async (req, res) => {
   const { title, sport, team_a, team_b, match_date, stream_url, status } = req.body;
   await pool.query(`UPDATE matches SET title=$1, sport=$2, team_a=$3, team_b=$4, match_date=$5, stream_url=$6, status=$7 WHERE id=$8`,
     [title, sport, team_a, team_b, match_date, stream_url, status, req.params.id]);
-  req.flash('success', 'ম্যাচ আপডেট করা হয়েছে!');
+  req.flash('success', 'Match updated!');
   res.redirect('/admin/matches');
 });
 
 router.post('/matches/:id/delete', async (req, res) => {
   await pool.query(`DELETE FROM matches WHERE id=$1`, [req.params.id]);
-  req.flash('success', 'ম্যাচ ডিলিট করা হয়েছে!');
+  req.flash('success', 'Match deleted!');
   res.redirect('/admin/matches');
 });
 
@@ -84,7 +84,7 @@ router.post('/matches/:id/result', async (req, res) => {
       await pool.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'Better luck next time','Your prediction was wrong.','info')`, [pred.user_id]);
     }
   }
-  req.flash('success', 'ফলাফল সেট করা হয়েছে এবং প্রেডিকশন নিষ্পত্তি করা হয়েছে!');
+  req.flash('success', 'Result set and predictions settled!');
   res.redirect('/admin/matches');
 });
 
@@ -97,7 +97,7 @@ router.post('/tournaments', async (req, res) => {
   const { name, sport, description, entry_fee, prize_pool, max_participants, start_date, end_date } = req.body;
   await pool.query(`INSERT INTO tournaments (name, sport, description, entry_fee, prize_pool, max_participants, start_date, end_date) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
     [name, sport, description, entry_fee, prize_pool, max_participants, start_date, end_date]);
-  req.flash('success', 'টুর্নামেন্ট তৈরি করা হয়েছে!');
+  req.flash('success', 'Tournament created!');
   res.redirect('/admin/tournaments');
 });
 
@@ -110,13 +110,13 @@ router.post('/news', async (req, res) => {
   const { title, content, sport, image } = req.body;
   await pool.query(`INSERT INTO news (title, content, sport, image, author_id) VALUES ($1,$2,$3,$4,$5)`,
     [title, content, sport, image, req.session.user.id]);
-  req.flash('success', 'খবর প্রকাশিত হয়েছে!');
+  req.flash('success', 'News published!');
   res.redirect('/admin/news');
 });
 
 router.post('/news/:id/delete', async (req, res) => {
   await pool.query(`DELETE FROM news WHERE id=$1`, [req.params.id]);
-  req.flash('success', 'খবর ডিলিট করা হয়েছে');
+  req.flash('success', 'News deleted');
   res.redirect('/admin/news');
 });
 
@@ -136,7 +136,7 @@ router.post('/notify-all', async (req, res) => {
   for (const u of users.rows) {
     await pool.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,$2,$3,'info')`, [u.id, title, message]);
   }
-  req.flash('success', `${users.rows.length} জন ইউজারকে নোটিফিকেশন পাঠানো হয়েছে!`);
+  req.flash('success', `Notification sent to ${users.rows.length} users!`);
   res.redirect('/admin');
 });
 

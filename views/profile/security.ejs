@@ -1,12 +1,79 @@
 <%- include('../partials/head') %>
 <%- include('../partials/navbar') %>
-<div class="container page">
-  <h1 style="margin-bottom: 1.5rem;">Security Center</h1>
-  <div class="card">
-    <div class="card-body">
-      <p>Your account is secure.</p>
+<style>
+    .security-container {
+        padding: 20px;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+    .security-card {
+        background: #1a1433;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border: 1px solid rgba(255,255,255,0.05);
+    }
+    .form-group {
+        margin-bottom: 15px;
+    }
+    .form-label {
+        display: block;
+        margin-bottom: 5px;
+        color: #ffccff;
+        font-size: 14px;
+    }
+    .form-input {
+        width: 100%;
+        padding: 10px;
+        border-radius: 8px;
+        background: #0f0b1f;
+        border: 1px solid rgba(255,255,255,0.1);
+        color: white;
+        outline: none;
+    }
+    .btn-submit {
+        width: 100%;
+        padding: 12px;
+        border-radius: 8px;
+        border: none;
+        background: linear-gradient(90deg, #6b00ff, #ff00aa);
+        color: white;
+        font-weight: bold;
+        cursor: pointer;
+    }
+</style>
+
+<div class="security-container">
+    <h2 style="color: #ffd700; margin-bottom: 20px;">নিরাপত্তা কেন্দ্র (Security Center)</h2>
+
+    <%- include('../partials/flash') %>
+
+    <div class="security-card">
+        <h3 style="color: white; font-size: 18px; margin-bottom: 15px;">প্রোফাইল আপডেট</h3>
+        <form action="/profile/update" method="POST">
+            <div class="form-group">
+                <label class="form-label">ইউজারনেম</label>
+                <input type="text" name="username" class="form-input" value="<%= locals.user ? locals.user.username : '' %>" required>
+            </div>
+            <button type="submit" class="btn-submit">আপডেট করুন</button>
+        </form>
     </div>
-  </div>
+
+    <div class="security-card">
+        <h3 style="color: white; font-size: 18px; margin-bottom: 15px;">পাসওয়ার্ড পরিবর্তন করুন</h3>
+        <form action="/profile/change-password" method="POST">
+            <div class="form-group">
+                <label class="form-label">বর্তমান পাসওয়ার্ড</label>
+                <input type="password" name="current_password" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">নতুন পাসওয়ার্ড</label>
+                <input type="password" name="new_password" class="form-input" required>
+            </div>
+            <button type="submit" class="btn-submit">পাসওয়ার্ড পরিবর্তন করুন</button>
+        </form>
+    </div>
 </div>
-<%- include('../partials/bottom-nav') %>
+
+<%- include('../partials/bottom-nav', { activePage: 'account' }) %>
 </body></html>

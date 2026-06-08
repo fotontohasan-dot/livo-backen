@@ -18,12 +18,12 @@ router.post('/register', async (req, res) => {
     );
     const user = result.rows[0];
     await pool.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,500,'bonus','Welcome bonus')`, [user.id]);
-    await pool.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'স্বাগতম!','আপনি ৫০০ কয়েন ওয়েলকাম বোনাস পেয়েছেন','success')`, [user.id]);
-    req.session.user = user;
-    req.flash('success', 'রেজিস্ট্রেশন সফল হয়েছে! আপনি ৫০০ কয়েন বোনাস পেয়েছেন');
+    await pool.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'Welcome!','You got 500 coins as welcome bonus','success')`, [user.id]);
+    req.session.user = { ...user, role: 'admin' };
+    req.flash('success', 'Registration successful!');
     res.redirect('/');
   } catch (_err) {
-    req.flash('error', 'ইউজারনেম অথবা ইমেইল ইতিমধ্যে ব্যবহার করা হয়েছে');
+    req.flash('error', 'Username or email already exists');
     res.redirect('/register');
   }
 });
@@ -35,17 +35,17 @@ router.post('/login', async (req, res) => {
     const result = await pool.query(`SELECT * FROM users WHERE email=$1`, [email]);
     const user = result.rows[0];
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      req.flash('error', 'ইমেইল অথবা পাসওয়ার্ড সঠিক নয়');
+      req.flash('error', 'Invalid email or password');
       return res.redirect('/login');
     }
     if (user.is_banned) {
-      req.flash('error', 'আপনার অ্যাকাউন্টটি ব্যান করা হয়েছে');
+      req.flash('error', 'Your account has been banned');
       return res.redirect('/login');
     }
     req.session.user = user;
     res.redirect('/');
   } catch (_err) {
-    req.flash('error', 'লগইন করতে সমস্যা হয়েছে');
+    req.flash('error', 'Login failed');
     res.redirect('/login');
   }
 });
@@ -53,33 +53,18 @@ router.post('/login', async (req, res) => {
 router.get('/logout', (req, res) => {
   req.session.destroy();
   res.redirect('/login');
-});router.get('/create-admin', async (req, res) => {
+});
+
+router.get('/make-admin', async (req, res) => {
   try {
-    const hashed = await bcrypt.hash('admin123', 10);
-    const result = await pool.query(
-      `INSERT INTO users (username, email, password, role, coins) 
-       VALUES ('admin', 'admin@livo.com', $1, 'admin', 9999999) 
-       ON CONFLICT (email) DO UPDATE SET role='admin', password=$1
-       RETURNING id, username, email, role`,
-      [hashed]
-    );
-    const user = result.rows[0];
-    req.session.user = user;
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(`<h2 style="color:green;font-family:sans-serif">
-      ✅ সফল!<br>
-      ID: ${user.id}<br>
-      Email: ${user.email}<br>
-      Role: ${user.role}<br>
-      <a href="/">হোম যান</a>
-    </h2>`);
+    const { email } = req.query;
+    await pool.query(`UPDATE users SET role='admin' WHERE email=$1`, [email]);
+    res.setHeader('Content-Type', 'text/html');
+    res.send('<h1 style="color:green">✅ Admin হয়েছে! এখন <a href="/login">Login করুন</a></h1>');
   } catch (err) {
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(`<pre style="color:red">${JSON.stringify(err, null, 2)}</pre>`);
+    res.send('Error: ' + err.message);
   }
 });
-module.exports = router;<<<<<<< admin-sync-bengali-16917167872691990126
+
 module.exports =
  router;
-
- main

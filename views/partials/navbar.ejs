@@ -14,11 +14,11 @@
 <% if(locals.user) { %>
 <div class="top-balance-bar">
   <div style="display:flex;gap:0.5rem;">
-    <a href="/payment/deposit" class="btn btn-sm btn-primary" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 4px;">Deposit</a>
-    <a href="/payment/withdraw" class="btn btn-sm btn-outline" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 4px;">Withdraw</a>
+    <a href="/payment/deposit" class="btn btn-sm btn-primary" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 4px;">ডিপোজিট</a>
+    <a href="/payment/withdraw" class="btn btn-sm btn-outline" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 4px;">উইথড্র</a>
   </div>
   <div class="balance-amount">
-    <span style="font-size: 0.8rem; color: var(--muted); font-weight: 400; margin-right: 4px;">Balance:</span>
+    <span style="font-size: 0.8rem; color: var(--muted); font-weight: 400; margin-right: 4px;">ব্যালেন্স:</span>
     🪙 <%= user.coins %>
   </div>
 </div>

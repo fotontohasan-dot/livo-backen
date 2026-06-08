@@ -24,10 +24,12 @@
                             <td><%= req.amount %></td>
                             <td><%= req.transaction_id || req.account_number %></td>
                             <td>
-                                <form action="/payment/admin/approve/<%= req.id %>" method="POST" style="display:inline;">
+                                <form action="/admin/payments/approve" method="POST" style="display:inline;">
+                                    <input type="hidden" name="id" value="<%= req.id %>">
                                     <button class="btn btn-success btn-sm">Approve</button>
                                 </form>
-                                <form action="/payment/admin/reject/<%= req.id %>" method="POST" style="display:inline;">
+                                <form action="/admin/payments/reject" method="POST" style="display:inline;">
+                                    <input type="hidden" name="id" value="<%= req.id %>">
                                     <button class="btn btn-danger btn-sm">Reject</button>
                                 </form>
                             </td>

@@ -3,23 +3,10 @@ const { Pool } = require('pg');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: (process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('localhost'))
-    ? { rejectUnauthorized: false }
-    : false
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
 
 const initDB = async () => {
-  if (!process.env.DATABASE_URL) {
-    console.error('❌ FATAL: DATABASE_URL is not set in environment variables!');
-    return;
-  }
-
-  try {
-    const dbUrl = new URL(process.env.DATABASE_URL);
-    console.log(`📡 Attempting to connect to database at: ${dbUrl.hostname}`);
-  } catch (e) {
-    console.warn('⚠️ Could not parse DATABASE_URL for logging, proceeding anyway.');
-  }
   let client;
   try {
     client = await pool.connect();
