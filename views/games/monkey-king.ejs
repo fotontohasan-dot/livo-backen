@@ -1,0 +1,27 @@
+<script>
+document.getElementById('gameUI').innerHTML = `
+  <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:linear-gradient(180deg,#0a0a0a,#1a1000);padding:15px;">
+    <div style="font-size:50px;">🐒</div>
+    <div id="g_status" style="color:#ffd700;font-weight:700;font-size:15px;">Monkey King - বাজি ধরুন!</div>
+    <div id="g_result" style="font-size:30px;font-weight:900;color:#fff;min-height:40px;"></div>
+    <div id="g_btns"></div>
+  </div>
+`;
+<script>
+(function(){
+  document.getElementById('mainGameBtn').addEventListener('click',async()=>{
+    const amount=parseInt(document.getElementById('betAmount').value);
+    if(isNaN(amount)||amount<10){alert('ন্যূনতম বাজি ১০');return;}
+    document.getElementById('mainGameBtn').disabled=true;
+    document.getElementById('g_result').innerText='⏳';
+    document.getElementById('g_status').innerText='খেলা চলছে...';
+    const data=await placeBet(amount);
+    if(!data){document.getElementById('mainGameBtn').disabled=false;return;}
+    setTimeout(()=>{
+      if(data.winAmount>0){document.getElementById('g_status').innerText='🎉 জিতেছেন! +'+data.winAmount+' কয়েন';document.getElementById('g_status').style.color='#10b981';document.getElementById('g_result').innerText='✅';}
+      else{document.getElementById('g_status').innerText='😢 হেরেছেন! -'+amount+' কয়েন';document.getElementById('g_status').style.color='#e60000';document.getElementById('g_result').innerText='❌';}
+      setTimeout(()=>{document.getElementById('g_status').innerText='Monkey King - বাজি ধরুন!';document.getElementById('g_status').style.color='#ffd700';document.getElementById('g_result').innerText='';document.getElementById('mainGameBtn').disabled=false;},2500);
+    },1500);
+  });
+})();
+</script>
