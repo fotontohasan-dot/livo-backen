@@ -1,41 +1,74 @@
 <%- include('../partials/head') %>
 <%- include('../partials/navbar') %>
-<div class="container mt-4">
-    <h2>পেমেন্ট ম্যানেজমেন্ট</h2>
-    <div class="table-responsive">
-        <table class="table table-dark">
-            <thead>
-                <tr>
-                    <th>ইউজার</th>
-                    <th>ধরন</th>
-                    <th>মেথড</th>
-                    <th>পরিমাণ</th>
-                    <th>ট্রানজেকশন আইডি / নম্বর</th>
-                    <th>অ্যাকশন</th>
+<div class="admin-layout">
+  <div class="admin-sidebar">
+    <div style="padding:0 1.5rem 1rem;font-size:.75rem;color:var(--muted);text-transform:uppercase;">অ্যাডমিন প্যানেল</div>
+    <a href="/admin" class="admin-nav-link">📊 ড্যাশবোর্ড</a>
+    <a href="/admin/users" class="admin-nav-link">👥 ব্যবহারকারী</a>
+    <a href="/admin/matches" class="admin-nav-link">⚽ ম্যাচসমূহ</a>
+    <a href="/admin/tournaments" class="admin-nav-link">🏆 টুর্নামেন্ট</a>
+    <a href="/admin/news" class="admin-nav-link">📰 নিউজ</a>
+    <a href="/payment/admin/payments" class="admin-nav-link active">💳 পেমেন্ট</a>
+    <a href="/" class="admin-nav-link">🏠 সাইটে ফিরে যান</a>
+  </div>
+  <div class="admin-content">
+    <%- include('../partials/flash') %>
+    <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:1.5rem;">💳 পেমেন্ট ম্যানেজমেন্ট</h1>
+    <div class="card">
+      <div class="card-body" style="overflow-x:auto;">
+        <table class="table" style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border);">
+              <th style="padding:.75rem;text-align:left;color:var(--muted);font-size:.8rem;">ইউজার</th>
+              <th style="padding:.75rem;text-align:left;color:var(--muted);font-size:.8rem;">ধরন</th>
+              <th style="padding:.75rem;text-align:left;color:var(--muted);font-size:.8rem;">মেথড</th>
+              <th style="padding:.75rem;text-align:left;color:var(--muted);font-size:.8rem;">পরিমাণ</th>
+              <th style="padding:.75rem;text-align:left;color:var(--muted);font-size:.8rem;">TrxID / নম্বর</th>
+              <th style="padding:.75rem;text-align:left;color:var(--muted);font-size:.8rem;">স্ট্যাটাস</th>
+              <th style="padding:.75rem;text-align:left;color:var(--muted);font-size:.8rem;">অ্যাকশন</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if(locals.requests && requests.length > 0) { %>
+              <% requests.forEach(r => { %>
+                <tr style="border-bottom:1px solid var(--border);">
+                  <td style="padding:.75rem;font-weight:600;"><%= r.username %></td>
+                  <td style="padding:.75rem;">
+                    <span style="padding:3px 8px;border-radius:5px;font-size:.75rem;font-weight:600;background:<%= r.type==='deposit' ? 'rgba(16,185,129,0.2)' : 'rgba(230,0,0,0.2)' %>;color:<%= r.type==='deposit' ? '#10b981' : '#ff4444' %>">
+                      <%= r.type === 'deposit' ? '💰 ডিপোজিট' : '💸 উইথড্র' %>
+                    </span>
+                  </td>
+                  <td style="padding:.75rem;text-transform:capitalize;"><%= r.method %></td>
+                  <td style="padding:.75rem;color:var(--gold);font-weight:700;">৳ <%= r.amount %></td>
+                  <td style="padding:.75rem;font-size:.8rem;color:var(--muted);"><%= r.transaction_id || r.account_number %></td>
+                  <td style="padding:.75rem;">
+                    <% if(r.status === 'pending') { %>
+                      <span style="color:#ffd700;font-size:.8rem;">⏳ পেন্ডিং</span>
+                    <% } else if(r.status === 'approved') { %>
+                      <span style="color:#10b981;font-size:.8rem;">✅ অনুমোদিত</span>
+                    <% } else { %>
+                      <span style="color:#ff4444;font-size:.8rem;">❌ বাতিল</span>
+                    <% } %>
+                  </td>
+                  <td style="padding:.75rem;">
+                    <% if(r.status === 'pending') { %>
+                      <form action="/payment/admin/approve/<%= r.id %>" method="POST" style="display:inline;">
+                        <button class="btn" style="padding:5px 12px;font-size:.75rem;background:rgba(16,185,129,0.2);color:#10b981;border:1px solid #10b981;">✅ Approve</button>
+                      </form>
+                      <form action="/payment/admin/reject/<%= r.id %>" method="POST" style="display:inline;margin-left:5px;">
+                        <button class="btn" style="padding:5px 12px;font-size:.75rem;background:rgba(230,0,0,0.2);color:#ff4444;border:1px solid #ff4444;">❌ Reject</button>
+                      </form>
+                    <% } %>
+                  </td>
                 </tr>
-            </thead>
-            <tbody>
-                <% if(locals.requests) { %>
-                    <% requests.forEach(req => { %>
-                        <tr>
-                            <td><%= req.username %></td>
-                            <td><%= req.type %></td>
-                            <td><%= req.method %></td>
-                            <td><%= req.amount %></td>
-                            <td><%= req.transaction_id || req.account_number %></td>
-                            <td>
-                                <form action="/payment/admin/approve/<%= req.id %>" method="POST" style="display:inline;">
-                                    <button class="btn btn-success btn-sm">Approve</button>
-                                </form>
-                                <form action="/payment/admin/reject/<%= req.id %>" method="POST" style="display:inline;">
-                                    <button class="btn btn-danger btn-sm">Reject</button>
-                                </form>
-                            </td>
-                        </tr>
-                    <% }) %>
-                <% } %>
-            </tbody>
+              <% }) %>
+            <% } else { %>
+              <tr><td colspan="7" style="padding:2rem;text-align:center;color:var(--muted);">কোনো পেমেন্ট রিকোয়েস্ট নেই</td></tr>
+            <% } %>
+          </tbody>
         </table>
+      </div>
     </div>
+  </div>
 </div>
-<%- include('../partials/bottom-nav') %>
+</body></html>
