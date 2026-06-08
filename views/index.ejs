@@ -266,10 +266,11 @@ body { background:#0a0a14; color:var(--text); font-family:'Hind Siliguri',sans-s
 <!-- CATEGORIES -->
 <div class="cats" id="catNav">
   <div class="cat active" data-type="all"><div class="cat-icon">🔥</div><div class="cat-label">সবগুলো</div></div>
+  <div class="cat" data-type="pg"><div class="cat-icon">📱</div><div class="cat-label">PG স্লট</div></div>
+  <div class="cat" data-type="live"><div class="cat-icon">🎲</div><div class="cat-label">লাইভ গেম</div></div>
+  <div class="cat" data-type="java"><div class="cat-icon">🕹️</div><div class="cat-label">জাভা গেম</div></div>
   <div class="cat" data-type="pvp"><div class="cat-icon">⚔️</div><div class="cat-label">PVP</div></div>
   <div class="cat" data-type="slots"><div class="cat-icon">🎰</div><div class="cat-label">স্লট</div></div>
-  <div class="cat" data-type="live"><div class="cat-icon">🎲</div><div class="cat-label">লাইভ</div></div>
-  <div class="cat" data-type="table"><div class="cat-icon">🃏</div><div class="cat-label">টেবল</div></div>
   <div class="cat" data-type="sports"><div class="cat-icon">⚽</div><div class="cat-label">স্পোর্টস</div></div>
 </div>
 
@@ -391,30 +392,69 @@ body { background:#0a0a14; color:var(--text); font-family:'Hind Siliguri',sans-s
 
 <script>
 const games = [
-  {name:"Aviator",           emoji:"✈️",  type:"pvp",    slug:"aviator",    badge:"hot", provider:"SPRIBE", color:"gc1"},
-  {name:"Teen Patti",        emoji:"🃏",  type:"pvp",    slug:"teen-patti", badge:"pop", provider:"JL",     color:"gc2"},
-  {name:"Andar Bahar",       emoji:"🎴",  type:"pvp",    slug:"andar-bahar",badge:"hot", provider:"JL",     color:"gc3"},
-  {name:"Blackjack",         emoji:"♠️",  type:"table",  slug:"blackjack",  badge:"",   provider:"EVO",    color:"gc4"},
-  {name:"Poker",             emoji:"🃏",  type:"pvp",    slug:"poker",      badge:"",   provider:"JL",     color:"gc5"},
-  {name:"Baccarat",          emoji:"🎰",  type:"table",  slug:"baccarat",   badge:"pop",provider:"EVO",    color:"gc6"},
-  {name:"Roulette",          emoji:"🎡",  type:"table",  slug:"roulette",   badge:"",   provider:"EVO",    color:"gc7"},
-  {name:"Slots",             emoji:"🎰",  type:"slots",  slug:"slots",      badge:"hot",provider:"PG",     color:"gc8"},
-  {name:"Online Ludo",       emoji:"🎲",  type:"pvp",    slug:"ludo",       badge:"new",provider:"JL",     color:"gc9"},
-  {name:"Dragon Tiger",      emoji:"🐉",  type:"pvp",    slug:"",           badge:"pop",provider:"JL",     color:"gc10"},
-  {name:"Super Ace",         emoji:"🂡",  type:"slots",  slug:"",           badge:"hot",provider:"JL",     color:"gc11"},
-  {name:"Fortune Gems",      emoji:"💎",  type:"slots",  slug:"",           badge:"",   provider:"JDB",    color:"gc12"},
-  {name:"Golden Empire",     emoji:"👑",  type:"slots",  slug:"",           badge:"",   provider:"JDB",    color:"gc1"},
-  {name:"Sweet Bonanza",     emoji:"🍭",  type:"slots",  slug:"",           badge:"pop",provider:"PP",     color:"gc2"},
-  {name:"Gates of Olympus",  emoji:"⚡",  type:"slots",  slug:"",           badge:"hot",provider:"PP",     color:"gc3"},
-  {name:"Starlight Princess",emoji:"⭐",  type:"slots",  slug:"",           badge:"new",provider:"PP",     color:"gc4"},
-  {name:"Fruit Party",       emoji:"🍎",  type:"slots",  slug:"",           badge:"",   provider:"PG",     color:"gc5"},
-  {name:"Crash",             emoji:"🚀",  type:"pvp",    slug:"",           badge:"hot",provider:"SPRIBE", color:"gc6"},
-  {name:"Color Prediction",  emoji:"🌈",  type:"pvp",    slug:"",           badge:"new",provider:"JL",     color:"gc7"},
-  {name:"Blackjack Live",    emoji:"♠️",  type:"live",   slug:"",           badge:"",   provider:"EVO",    color:"gc8"},
-  {name:"Baccarat Live",     emoji:"🎰",  type:"live",   slug:"",           badge:"hot",provider:"EVO",    color:"gc9"},
-  {name:"Roulette Live",     emoji:"🎡",  type:"live",   slug:"",           badge:"",   provider:"EVO",    color:"gc10"},
-  {name:"Dragon Tiger Live", emoji:"🐯",  type:"live",   slug:"",           badge:"pop",provider:"EVO",    color:"gc11"},
-  {name:"Crazy Time",        emoji:"🎪",  type:"live",   slug:"",           badge:"new",provider:"EVO",    color:"gc12"},
+  {name:"Mahjong Ways 2",    emoji:"🀄",  type:"pg",     slug:"mahjong-ways-2",   badge:"hot", provider:"PG",     color:"gc1"},
+  {name:"Treasures of Aztec", emoji:"🗿",  type:"pg",     slug:"treasures-of-aztec", badge:"",    provider:"PG",     color:"gc2"},
+  {name:"Lucky Neko",        emoji:"🐱",  type:"pg",     slug:"lucky-neko",        badge:"pop", provider:"PG",     color:"gc3"},
+  {name:"Wild Bandito",      emoji:"🌵",  type:"pg",     slug:"wild-bandito",      badge:"hot", provider:"PG",     color:"gc4"},
+  {name:"Ganesha Fortune",   emoji:"🐘",  type:"pg",     slug:"ganesha-fortune",   badge:"",    provider:"PG",     color:"gc5"},
+  {name:"Dreams of Macau",   emoji:"🎰",  type:"pg",     slug:"dreams-of-macau",   badge:"pop", provider:"PG",     color:"gc6"},
+  {name:"Double Fortune",    emoji:"🧧",  type:"pg",     slug:"double-fortune",    badge:"",    provider:"PG",     color:"gc7"},
+  {name:"Queen of Bounty",   emoji:"🏴‍☠️",  type:"pg",     slug:"queen-of-bounty",   badge:"new", provider:"PG",     color:"gc8"},
+  {name:"Leprechaun Riches", emoji:"🍀",  type:"pg",     slug:"leprechaun-riches", badge:"",    provider:"PG",     color:"gc9"},
+  {name:"Captain's Bounty",  emoji:"⚓",  type:"pg",     slug:"captains-bounty",  badge:"",    provider:"PG",     color:"gc10"},
+  {name:"Dragon Hatch",      emoji:"🥚",  type:"pg",     slug:"dragon-hatch",      badge:"hot", provider:"PG",     color:"gc11"},
+  {name:"Phoenix Rises",     emoji:"🐦",  type:"pg",     slug:"phoenix-rises",     badge:"",    provider:"PG",     color:"gc12"},
+  {name:"Ways of the Qilin", emoji:"🐉",  type:"pg",     slug:"ways-of-the-qilin", badge:"pop", provider:"PG",     color:"gc1"},
+  {name:"Candy Burst",       emoji:"🍬",  type:"pg",     slug:"candy-burst",       badge:"",    provider:"PG",     color:"gc2"},
+  {name:"Muay Thai Champion",emoji:"🥊",  type:"pg",     slug:"muay-thai-champion",badge:"",    provider:"PG",     color:"gc3"},
+  {name:"Dragon Tiger Luck", emoji:"🐯",  type:"pg",     slug:"dragon-tiger-luck", badge:"",    provider:"PG",     color:"gc4"},
+  {name:"Gem Saviour Sword", emoji:"⚔️",  type:"pg",     slug:"gem-saviour-sword", badge:"",    provider:"PG",     color:"gc5"},
+  {name:"Bikini Paradise",   emoji:"🏝️",  type:"pg",     slug:"bikini-paradise",   badge:"",    provider:"PG",     color:"gc6"},
+  {name:"Shaolin Soccer",    emoji:"⚽",  type:"pg",     slug:"shaolin-soccer",    badge:"",    provider:"PG",     color:"gc7"},
+  {name:"Fortune Mouse",     emoji:"🐭",  type:"pg",     slug:"fortune-mouse",     badge:"new", provider:"PG",     color:"gc8"},
+
+  {name:"Lightning Roulette",emoji:"⚡",  type:"live",   slug:"lightning-roulette",badge:"hot", provider:"EVO",    color:"gc9"},
+  {name:"Crazy Time",        emoji:"🎪",  type:"live",   slug:"crazy-time",        badge:"pop", provider:"EVO",    color:"gc10"},
+  {name:"Monopoly Live",     emoji:"🎩",  type:"live",   slug:"monopoly-live",     badge:"",    provider:"EVO",    color:"gc11"},
+  {name:"Mega Ball",         emoji:"⚽",  type:"live",   slug:"mega-ball",         badge:"",    provider:"EVO",    color:"gc12"},
+  {name:"Dream Catcher",     emoji:"🎡",  type:"live",   slug:"dream-catcher",     badge:"",    provider:"EVO",    color:"gc1"},
+  {name:"Speed Baccarat",    emoji:"🃏",  type:"live",   slug:"speed-baccarat",    badge:"hot", provider:"EVO",    color:"gc2"},
+  {name:"Immersive Roulette",emoji:"🎥",  type:"live",   slug:"immersive-roulette",badge:"",    provider:"EVO",    color:"gc3"},
+  {name:"Casino Hold'em",    emoji:"🃏",  type:"live",   slug:"casino-holdem",     badge:"",    provider:"EVO",    color:"gc4"},
+  {name:"Super Sic Bo",      emoji:"🎲",  type:"live",   slug:"super-sic-bo",      badge:"",    provider:"EVO",    color:"gc5"},
+  {name:"Dragon Tiger Live", emoji:"🐯",  type:"live",   slug:"dragon-tiger-live", badge:"pop", provider:"EVO",    color:"gc6"},
+  {name:"Fan Tan",           emoji:"🪙",  type:"live",   slug:"fan-tan",           badge:"",    provider:"EVO",    color:"gc7"},
+  {name:"Bac Bo",            emoji:"🎲",  type:"live",   slug:"bac-bo",            badge:"",    provider:"EVO",    color:"gc8"},
+  {name:"Peek Baccarat",     emoji:"🫣",  type:"live",   slug:"peek-baccarat",     badge:"",    provider:"EVO",    color:"gc9"},
+  {name:"Golden Wealth",     emoji:"💰",  type:"live",   slug:"golden-wealth",     badge:"new", provider:"EVO",    color:"gc10"},
+  {name:"Football Studio",   emoji:"🏟️",  type:"live",   slug:"football-studio",   badge:"",    provider:"EVO",    color:"gc11"},
+  {name:"Side Bet City",     emoji:"🌃",  type:"live",   slug:"side-bet-city",     badge:"",    provider:"EVO",    color:"gc12"},
+  {name:"Gonzo's Hunt",      emoji:"🗿",  type:"live",   slug:"gonzos-hunt",      badge:"",    provider:"EVO",    color:"gc1"},
+  {name:"Cash or Crash",     emoji:"🚁",  type:"live",   slug:"cash-or-crash",     badge:"",    provider:"EVO",    color:"gc2"},
+  {name:"Deal or No Deal",   emoji:"💼",  type:"live",   slug:"deal-or-no-deal",   badge:"",    provider:"EVO",    color:"gc3"},
+  {name:"Blackjack Live",    emoji:"♠️",  type:"live",   slug:"blackjack-live",    badge:"",    provider:"EVO",    color:"gc4"},
+
+  {name:"Money Coming",      emoji:"💰",  type:"java",   slug:"money-coming",      badge:"hot", provider:"JILI",   color:"gc5"},
+  {name:"Boxing King",       emoji:"🥊",  type:"java",   slug:"boxing-king",       badge:"pop", provider:"JILI",   color:"gc6"},
+  {name:"Golden Empire",     emoji:"🏰",  type:"java",   slug:"golden-empire",     badge:"",    provider:"JILI",   color:"gc7"},
+  {name:"Super Ace",         emoji:"♠️",  type:"java",   slug:"super-ace",         badge:"hot", provider:"JILI",   color:"gc8"},
+  {name:"Fortune Gems",      emoji:"💎",  type:"java",   slug:"fortune-gems",      badge:"",    provider:"JILI",   color:"gc9"},
+  {name:"Crazy Seven",       emoji:"7️⃣",  type:"java",   slug:"crazy-seven",       badge:"",    provider:"JILI",   color:"gc10"},
+  {name:"Charge Buffalo",    emoji:"🐃",  type:"java",   slug:"charge-buffalo",    badge:"",    provider:"JILI",   color:"gc11"},
+  {name:"Jungle King",       emoji:"🦍",  type:"java",   slug:"jungle-king",       badge:"",    provider:"JILI",   color:"gc12"},
+  {name:"Roma",              emoji:"⚔️",  type:"java",   slug:"roma",              badge:"pop", provider:"JDB",    color:"gc1"},
+  {name:"Dragon World",      emoji:"🐉",  type:"java",   slug:"dragon-world",      badge:"",    provider:"JDB",    color:"gc2"},
+
+  {name:"Aviator",           emoji:"✈️",  type:"pvp",    slug:"aviator",    badge:"hot", provider:"SPRIBE", color:"gc3"},
+  {name:"Teen Patti",        emoji:"🃏",  type:"pvp",    slug:"teen-patti", badge:"pop", provider:"JL",     color:"gc4"},
+  {name:"Andar Bahar",       emoji:"🎴",  type:"pvp",    slug:"andar-bahar",badge:"hot", provider:"JL",     color:"gc5"},
+  {name:"Blackjack",         emoji:"♠️",  type:"table",  slug:"blackjack",  badge:"",   provider:"EVO",    color:"gc6"},
+  {name:"Poker",             emoji:"🃏",  type:"pvp",    slug:"poker",      badge:"",   provider:"JL",     color:"gc7"},
+  {name:"Baccarat",          emoji:"🎰",  type:"table",  slug:"baccarat",   badge:"pop",provider:"EVO",    color:"gc8"},
+  {name:"Roulette",          emoji:"🎡",  type:"table",  slug:"roulette",   badge:"",   provider:"EVO",    color:"gc9"},
+  {name:"Slots",             emoji:"🎰",  type:"slots",  slug:"slots",      badge:"hot",provider:"PG",     color:"gc10"},
+  {name:"Online Ludo",       emoji:"🎲",  type:"pvp",    slug:"ludo",       badge:"new",provider:"JL",     color:"gc11"},
+  {name:"Crash",             emoji:"🚀",  type:"pvp",    slug:"",           badge:"hot",provider:"SPRIBE", color:"gc12"},
   {name:"Cricket Live",      emoji:"🏏",  type:"sports", slug:"",           badge:"hot",provider:"SBOBET", color:"gc1"},
   {name:"Football Match",    emoji:"⚽",  type:"sports", slug:"",           badge:"",   provider:"SBOBET", color:"gc2"},
 ];
@@ -450,7 +490,7 @@ document.querySelectorAll('.cat').forEach(c => {
     document.querySelectorAll('.cat').forEach(x => x.classList.remove('active'));
     c.classList.add('active');
     currentType = c.dataset.type;
-    const t = {all:'হট গেমস',pvp:'PVP গেমস',slots:'স্লট গেমস',live:'লাইভ ক্যাসিনো',table:'টেবিল গেমস',sports:'স্পোর্স'};
+    const t = {all:'হট গেমস', pg:'PG স্লট', live:'লাইভ গেম', java:'জাভা গেম', pvp:'PVP গেমস', slots:'স্লট গেমস', table:'টেবিল গেমস', sports:'স্পোর্টস'};
     document.getElementById('sectionTitle').textContent = t[currentType] || 'সবগুলো গেম';
     renderGames();
   });
