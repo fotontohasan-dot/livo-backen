@@ -1,192 +1,127 @@
-const express = require('express');
-const router = express.Router();
-const { pool } = require('../db');
+const { Pool } = require('pg');
 
-// Middleware - login check
-function requireLogin(req, res, next) {
-  if (!req.session.user) return res.redirect('/login');
-  next();
-}
-
-function requireAdmin(req, res, next) {
-  if (!req.session.user || req.session.user.role !== 'admin') return res.redirect('/');
-  next();
-}
-
-// Deposit page
-router.get('/deposit', requireLogin, (req, res) => {
-  res.render('payment/deposit', { user: req.session.user });
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL || 'postgresql://livo_db_opct_user:OFAhdQSwR626wwICIiBMkCIYbTG2Gyvw@dpg-d8ghl7rbc2fs73ej8k70-a.oregon-postgres.render.com/livo_db_opct',
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false' } : false
 });
 
-// Deposit submit
-router.post('/deposit', requireLogin, async (req, res) => {
-  const { method, amount, transaction_id, account_number } = req.body;
-  const userId = req.session.user.id;
-
-  if (!method || !amount || !transaction_id || !account_number) {
-    req.flash('error', 'সব তথ্য দিন');
-    return res.redirect('/payment/deposit');
-  }
-
-  if (amount < 100) {
-    req.flash('error', 'সর্বনিম্ন ডিপোজিট ১০০ টাকা');
-    return res.redirect('/payment/deposit');
-  }
-
+const initDB = async () => {
+  let client;
   try {
-    await pool.query(
-      `INSERT INTO payment_requests 
-       (user_id, type, method, amount, transaction_id, account_number, status) 
-       VALUES ($1, 'deposit', $2, $3, $4, $5, 'pending')`,
-      [userId, method, amount, transaction_id, account_number]
-    );
-    req.flash('success', 'ডিপোজিট রকোয়েস্ট পাঠানো হয়েছে! Admin অনুমোদন করলে কযন যোগ হবে।');
-    res.redirect('/payment/history');
+    client = await pool.connect();
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(50) UNIQUE NOT NULL,
+        email VARCHAR(100) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        coins INTEGER DEFAULT 500,
+        total_points INTEGER DEFAULT 0,
+        avatar VARCHAR(255) DEFAULT '/img/default-avatar.png',
+        role VARCHAR(20) DEFAULT 'user',
+        referral_code VARCHAR(20) UNIQUE,
+        is_banned BOOLEAN DEFAULT false,
+        last_bonus_date DATE,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS matches (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(200) NOT NULL,
+        sport VARCHAR(50) NOT NULL,
+        team_a VARCHAR(100) NOT NULL,
+        team_b VARCHAR(100) NOT NULL,
+        match_date TIMESTAMP NOT NULL,
+        status VARCHAR(20) DEFAULT 'upcoming',
+        result VARCHAR(20),
+        score_a INTEGER,
+        score_b INTEGER,
+        stream_url VARCHAR(500),
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS predictions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        match_id INTEGER REFERENCES matches(id) ON DELETE CASCADE,
+        predicted_winner VARCHAR(100) NOT NULL,
+        coins_bet INTEGER NOT NULL,
+        status VARCHAR(20) DEFAULT 'pending',
+        points_earned INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(user_id, match_id)
+      );
+      CREATE TABLE IF NOT EXISTS tournaments (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(200) NOT NULL,
+        sport VARCHAR(50) NOT NULL,
+        description TEXT,
+        entry_fee INTEGER DEFAULT 0,
+        prize_pool INTEGER DEFAULT 0,
+        max_participants INTEGER DEFAULT 100,
+        start_date TIMESTAMP NOT NULL,
+        end_date TIMESTAMP NOT NULL,
+        status VARCHAR(20) DEFAULT 'upcoming',
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS tournament_participants (
+        id SERIAL PRIMARY KEY,
+        tournament_id INTEGER REFERENCES tournaments(id) ON DELETE CASCADE,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        points INTEGER DEFAULT 0,
+        joined_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(tournament_id, user_id)
+      );
+      CREATE TABLE IF NOT EXISTS coin_transactions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        amount INTEGER NOT NULL,
+        type VARCHAR(50) NOT NULL,
+        description VARCHAR(255),
+        status VARCHAR(20) DEFAULT 'completed',
+        txid VARCHAR(100),
+        method VARCHAR(50),
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        title VARCHAR(200) NOT NULL,
+        message TEXT NOT NULL,
+        is_read BOOLEAN DEFAULT false,
+        type VARCHAR(50) DEFAULT 'info',
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS news (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(300) NOT NULL,
+        content TEXT NOT NULL,
+        image VARCHAR(255),
+        sport VARCHAR(50),
+        author_id INTEGER REFERENCES users(id),
+        views INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS payment_requests (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        type VARCHAR(20) NOT NULL,
+        method VARCHAR(50) NOT NULL,
+        amount INTEGER NOT NULL,
+        transaction_id VARCHAR(100),
+        account_number VARCHAR(50) NOT NULL,
+        status VARCHAR(20) DEFAULT 'pending',
+        updated_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code VARCHAR(20) UNIQUE`);
+
+    console.log('✅ Database ready');
   } catch (err) {
-    console.error(err);
-    req.flash('error', 'সমস্যা হয়েছে, আবার চেষ্টা করুন');
-    res.redirect('/payment/deposit');
+    console.error('❌ Database connection failed:', err.message);
+  } finally {
+    if (client) client.release();
   }
-});
+};
 
-// Withdraw page
-router.get('/withdraw', requireLogin, async (req, res) => {
-  const result = await pool.query('SELECT coins FROM users WHERE id=$1', [req.session.user.id]);
-  const coins = result.rows[0]?.coins || 0;
-  res.render('payment/withdraw', { user: req.session.user, coins });
-});
-
-// Withdraw submit
-router.post('/withdraw', requireLogin, async (req, res) => {
-  const { method, amount, account_number } = req.body;
-  const userId = req.session.user.id;
-
-  if (!method || !amount || !account_number) {
-    req.flash('error', 'সব তথ্য দিন');
-    return res.redirect('/payment/withdraw');
-  }
-
-  if (amount < 200) {
-    req.flash('error', 'সর্বনিম্ন উইথড্র ২০০ টাকা');
-    return res.redirect('/payment/withdraw');
-  }
-
-  try {
-    const result = await pool.query('SELECT coins FROM users WHERE id=$1', [userId]);
-    const coins = result.rows[0]?.coins || 0;
-
-    if (coins < amount) {
-      req.flash('error', 'পর্যাপ্ত কয়েন নেই');
-      return res.redirect('/payment/withdraw');
-    }
-
-    // কয়েন কেট নাও
-    await pool.query('UPDATE users SET coins = coins - $1 WHERE id=$2', [amount, userId]);
-
-    await pool.query(
-      `INSERT INTO payment_requests 
-       (user_id, type, method, amount, account_number, status) 
-       VALUES ($1, 'withdraw', $2, $3, $4, 'pending')`,
-      [userId, method, amount, account_number]
-    );
-
-    req.flash('success', 'উইথড্র রিকোয়েস্ট পাঠানো হয়েছে! ২৪ ঘণ্টার মধ্যে পাবেন।');
-    res.redirect('/payment/history');
-  } catch (err) {
-    console.error(err);
-    req.flash('error', 'সমস্যা হয়েছে');
-    res.redirect('/payment/withdraw');
-  }
-});
-
-// History
-router.get('/history', requireLogin, async (req, res) => {
-  const result = await pool.query(
-    `SELECT * FROM payment_requests WHERE user_id=$1 ORDER BY created_at DESC LIMIT 50`,
-    [req.session.user.id]
-  );
-  res.render('payment/history', { user: req.session.user, requests: result.rows });
-});
-
-// ===== ADMIN =====
-
-// Admin payment list
-router.get('/admin/payments', requireAdmin, async (req, res) => {
-  const result = await pool.query(
-    `SELECT pr.*, u.username FROM payment_requests pr 
-     JOIN users u ON pr.user_id = u.id 
-     ORDER BY pr.created_at DESC`
-  );
-  res.render('payment/admin', { user: req.session.user, requests: result.rows });
-});
-
-// Admin approve
-router.post('/admin/approve/:id', requireAdmin, async (req, res) => {
-  const { id } = req.params;
-  try {
-    const result = await pool.query('SELECT * FROM payment_requests WHERE id=$1', [id]);
-    const request = result.rows[0];
-
-    if (!request || request.status !== 'pending') {
-      req.flash('error', 'রিকোয়েস্ট পওয়া যায়নি');
-      return res.redirect('/payment/admin/payments');
-    }
-
-    if (request.type === 'deposit') {
-      // Deposit হলে কয়েন যোগ করো
-      await pool.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
-    }
-
-    await pool.query(
-      `UPDATE payment_requests SET status='approved', updated_at=NOW() WHERE id=$1`, [id]
-    );
-
-    // Notification পাঠাও
-    const message = request.type === 'deposit'
-      ? `আপনার ${request.amount} টাকার ডিপোজিট অনুমোদন হয়েছে! কয়েন যোগ হয়েছে।`
-      : `আপনার ${request.amount} টাকার উইথড্র অনুমোদন হয়েছে!`;
-
-    await pool.query(
-      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'success')`,
-      [request.user_id, 'পেমেন্ট অনুমোদন', message]
-    );
-
-    req.flash('success', 'অনুমোদন হয়েছে');
-    res.redirect('/payment/admin/payments');
-  } catch (err) {
-    console.error(err);
-    req.flash('error', 'সমস্যা হয়েছে');
-    res.redirect('/payment/admin/payments');
-  }
-});
-
-// Admin reject
-router.post('/admin/reject/:id', requireAdmin, async (req, res) => {
-  const { id } = req.params;
-  try {
-    const result = await pool.query('SELECT * FROM payment_requests WHERE id=$1', [id]);
-    const request = result.rows[0];
-
-    if (request.type === 'withdraw' && request.status === 'pending') {
-      // Withdraw reject হলে কয়েন ফিরিয়ে দাও
-      await pool.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
-    }
-
-    await pool.query(
-      `UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE id=$1`, [id]
-    );
-
-    await pool.query(
-      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'error')`,
-      [request.user_id, 'পমেন্ট বাতিল', `আপনার ${request.amount} টাকার রিকোয়েস্ট বাতিল হয়েছে।`]
-    );
-
-    req.flash('error', 'বাতিল করা হয়েছে');
-    res.redirect('/payment/admin/payments');
-  } catch (err) {
-    console.error(err);
-    res.redirect('/payment/admin/payments');
-  }
-});
-
-module.exports = router;
+module.exports = { pool, initDB };
