@@ -8,6 +8,7 @@
     <a href="/admin/matches" class="admin-nav-link">⚽ ম্যাচসমূহ</a>
     <a href="/admin/tournaments" class="admin-nav-link">🏆 টুর্নামেন্ট</a>
     <a href="/admin/news" class="admin-nav-link">📰 নিউজ</a>
+    <a href="/payment/admin/payments" class="admin-nav-link">💳 পেমেন্ট</a>
     <a href="/" class="admin-nav-link">🏠 সাইটে ফিরে যান</a>
   </div>
   <div class="admin-content">
@@ -17,15 +18,13 @@
       <div class="stat-card"><div class="stat-number"><%= stats.total_users %></div><div class="stat-label">মোট ইউজার</div></div>
       <div class="stat-card"><div class="stat-number" style="color:var(--secondary)"><%= stats.total_matches %></div><div class="stat-label">মোট ম্যাচ</div></div>
       <div class="stat-card"><div class="stat-number" style="color:var(--green)"><%= stats.total_predictions %></div><div class="stat-label">প্রেডিকশন</div></div>
-      <div class="stat-card"><div class="stat-number" style="color:var(--gold)"><%= stats.total_coins_in_system %></div><div class="stat-label">সিস্টেম কয়েন</div></div>
+      <div class="stat-card"><div class="stat-number" style="color:var(--gold)"><%= stats.total_coins_in_system %></div><div class="stat-label">সিস্টেম কয়েন</div></div>
     </div>
-
-
     <div class="grid grid-2">
       <div class="card">
         <div class="card-header">👥 সাম্প্রতিক ইউজার</div>
         <table class="table">
-          <thead><tr><th>ইউজারনেম</th><th>ইমেইল</th><th>কয়েন</th><th>যোগদান</th></tr></thead>
+          <thead><tr><th>ইউজারনেম</th><th>ইমেইল</th><th>কয়েন</th><th>যোগদান</th></tr></thead>
           <tbody>
             <% recentUsers.forEach(u => { %>
               <tr>
@@ -54,7 +53,6 @@
         </table>
       </div>
     </div>
-
     <div class="card" style="margin-top:1.5rem;">
       <div class="card-header">📢 ব্রডকাস্ট নোটিফিকেশন</div>
       <div class="card-body">
