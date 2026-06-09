@@ -32,6 +32,9 @@
         gap: 15px;
         margin: 20px 0;
     }
+    .team-select.has-draw {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
 
     .team-btn {
         background: transparent;
@@ -106,10 +109,15 @@
                     বেট করেছেন: <strong>🪙 <%= userPrediction.coins_bet %></strong>
                 </div>
             <% } else { %>
-                <div class="team-select">
+                <div class="team-select <%= match.sport === 'football' ? 'has-draw' : '' %>">
                     <button onclick="selectTeam('<%= match.team_a %>')" id="btn-a" class="team-btn">
                         <%= match.team_a %>
                     </button>
+                    <% if(match.sport === 'football') { %>
+                        <button onclick="selectTeam('draw')" id="btn-draw" class="team-btn">
+                            ড্র (Draw)
+                        </button>
+                    <% } %>
                     <button onclick="selectTeam('<%= match.team_b %>')" id="btn-b" class="team-btn">
                         <%= match.team_b %>
                     </button>
@@ -147,10 +155,11 @@
 let selectedTeam = '';
 function selectTeam(team) {
     selectedTeam = team;
-    document.getElementById('btn-a').classList.remove('selected');
-    document.getElementById('btn-b').classList.remove('selected');
+    document.querySelectorAll('.team-btn').forEach(b => b.classList.remove('selected'));
     if(team === '<%= match.team_a %>') {
         document.getElementById('btn-a').classList.add('selected');
+    } else if(team === 'draw') {
+        document.getElementById('btn-draw').classList.add('selected');
     } else {
         document.getElementById('btn-b').classList.add('selected');
     }

@@ -42,11 +42,44 @@
                   <%= u.is_banned ? 'আনব্যান' : 'ব্যান করুন' %>
                 </button>
                 <button onclick="showCoins(<%= u.id %>)" class="btn btn-sm btn-gold">+ কয়েন</button>
+                <button onclick="showEdit(this)" data-user="<%= JSON.stringify(u).replace(/"/g, '&quot;') %>" class="btn btn-sm btn-primary">এডিট</button>
               </td>
             </tr>
           <% }) %>
         </tbody>
       </table>
+    </div>
+
+    <div id="editModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#00000080;z-index:999;align-items:center;justify-content:center;">
+      <div class="card" style="width:400px; max-width: 90vw;">
+        <div class="card-header">✏️ ইউজার তথ্য এডিট করুন</div>
+        <div class="card-body">
+          <input type="hidden" id="editUserId">
+          <div class="form-group">
+            <label class="form-label">ইউজারনেম</label>
+            <input type="text" class="form-input" id="editUsername">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ইমেইল</label>
+            <input type="email" class="form-input" id="editEmail">
+          </div>
+          <div class="form-group">
+            <label class="form-label">কয়েন</label>
+            <input type="number" class="form-input" id="editCoins">
+          </div>
+          <div class="form-group">
+            <label class="form-label">রোল (Role)</label>
+            <select class="form-input" id="editRole">
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:.75rem;">
+            <button onclick="submitEdit()" class="btn btn-primary">আপডেট করুন</button>
+            <button onclick="document.getElementById('editModal').style.display='none'" class="btn btn-outline">বাতিল</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div id="coinModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#00000080;z-index:999;align-items:center;justify-content:center;">
@@ -80,6 +113,26 @@ function banUser(id) {
 function showCoins(id) {
   currentUserId = id;
   document.getElementById('coinModal').style.display = 'flex';
+}
+function showEdit(btn) {
+  const user = JSON.parse(btn.getAttribute('data-user'));
+  currentUserId = user.id;
+  document.getElementById('editUserId').value = user.id;
+  document.getElementById('editUsername').value = user.username;
+  document.getElementById('editEmail').value = user.email;
+  document.getElementById('editCoins').value = user.coins;
+  document.getElementById('editRole').value = user.role;
+  document.getElementById('editModal').style.display = 'flex';
+}
+function submitEdit() {
+  const f = document.createElement('form');
+  f.method = 'POST'; f.action = `/admin/users/${currentUserId}/edit`;
+  [['username','editUsername'],['email','editEmail'],['coins','editCoins'],['role','editRole']].forEach(([n,id]) => {
+    const i = document.createElement('input');
+    i.name = n; i.value = document.getElementById(id).value;
+    f.appendChild(i);
+  });
+  document.body.appendChild(f); f.submit();
 }
 function submitCoins() {
   const f = document.createElement('form');
