@@ -38,6 +38,7 @@
                 </span>
               </td>
               <td style="display:flex;gap:.5rem;flex-wrap:wrap;">
+                <button onclick="editUser('<%= JSON.stringify(u).replace(/'/g, "\\'").replace(/"/g, '&quot;') %>')" class="btn btn-sm btn-outline">এডিট</button>
                 <button onclick="banUser(<%= u.id %>)" class="btn btn-sm <%= u.is_banned ? 'btn-outline' : 'btn-danger' %>">
                   <%= u.is_banned ? 'আনব্যান' : 'ব্যান করুন' %>
                 </button>
@@ -47,6 +48,37 @@
           <% }) %>
         </tbody>
       </table>
+    </div>
+
+    <div id="editModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#00000080;z-index:999;align-items:center;justify-content:center;">
+      <div class="card" style="width:400px;max-width:95vw;">
+        <div class="card-header">👤 ইউজার এডিট করুন</div>
+        <div class="card-body">
+          <div class="form-group">
+            <label class="form-label">ইউজারনেম</label>
+            <input type="text" class="form-input" id="editUsername">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ইমেইল</label>
+            <input type="email" class="form-input" id="editEmail">
+          </div>
+          <div class="form-group">
+            <label class="form-label">কয়েন</label>
+            <input type="number" class="form-input" id="editCoins">
+          </div>
+          <div class="form-group">
+            <label class="form-label">রোল (Role)</label>
+            <select class="form-input" id="editRole">
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:.75rem;margin-top:1rem;">
+            <button onclick="submitEdit()" class="btn btn-primary">সংরক্ষণ করুন</button>
+            <button onclick="document.getElementById('editModal').style.display='none'" class="btn btn-outline">বাতিল</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div id="coinModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#00000080;z-index:999;align-items:center;justify-content:center;">
@@ -72,6 +104,28 @@
 </div>
 <script>
 let currentUserId;
+
+function editUser(userJson) {
+  const user = JSON.parse(userJson);
+  currentUserId = user.id;
+  document.getElementById('editUsername').value = user.username;
+  document.getElementById('editEmail').value = user.email;
+  document.getElementById('editCoins').value = user.coins;
+  document.getElementById('editRole').value = user.role;
+  document.getElementById('editModal').style.display = 'flex';
+}
+
+function submitEdit() {
+  const f = document.createElement('form');
+  f.method = 'POST'; f.action = `/admin/users/${currentUserId}/edit`;
+  [['username','editUsername'],['email','editEmail'],['coins','editCoins'],['role','editRole']].forEach(([n,id]) => {
+    const i = document.createElement('input');
+    i.name = n; i.value = document.getElementById(id).value;
+    f.appendChild(i);
+  });
+  document.body.appendChild(f); f.submit();
+}
+
 function banUser(id) {
   const f = document.createElement('form');
   f.method = 'POST'; f.action = `/admin/users/${id}/ban`;
