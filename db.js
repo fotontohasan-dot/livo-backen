@@ -7,4 +7,14 @@ const pool = new Pool({
   }
 });
 
-module.exports = pool;
+async function initDB() {
+  const client = await pool.connect();
+  try {
+    await client.query('SELECT 1');
+    console.log('Database connected successfully');
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = { pool, initDB };
