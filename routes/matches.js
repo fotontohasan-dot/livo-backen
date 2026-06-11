@@ -3,6 +3,27 @@ const router = express.Router();
 const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
 
+router.get('/predictions', isAuth, async (req, res) => {
+  const url = 'https://today-football-prediction.p.rapidapi.com/';
+  const options = {
+    method: 'GET',
+    headers: {
+      'x-rapidapi-key': 'fd215d3ff9mshb341cac3fbaeb72p190b85jsn1fbbc0b7e341',
+      'x-rapidapi-host': 'today-football-prediction.p.rapidapi.com'
+    }
+  };
+
+  try {
+    const response = await fetch(url, options);
+    const result = await response.json();
+    res.render('predictions', { predictions: result.recommendations || [] });
+  } catch (error) {
+    console.error('Prediction fetch error:', error);
+    req.flash('error', 'প্রেডিকশন ডেটা লোড করতে ব্যর্থ হয়েছে।');
+    res.redirect('/matches');
+  }
+});
+
 router.get('/', async (req, res) => {
   const { sport, status } = req.query;
   let query = `SELECT * FROM matches WHERE 1=1`;

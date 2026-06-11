@@ -4,9 +4,112 @@ const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
 
 const supportedGames = {
-  'aviator': 'Aviator', 'slots': 'Slots', 'roulette': 'Roulette',
-  'andar-bahar': 'Andar Bahar', 'teen-patti': 'Teen Patti', 'blackjack': 'Blackjack',
-  'poker': 'Poker', 'baccarat': 'Baccarat', 'crash': 'Crash Game'
+  "aviator": "Aviator",
+  "slots": "Slots",
+  "roulette": "Roulette",
+  "andar-bahar": "Andar Bahar",
+  "teen-patti": "Teen Patti",
+  "blackjack": "Blackjack",
+  "poker": "Poker",
+  "baccarat": "Baccarat",
+  "crash-game": "Crash Game",
+  "starburst": "Starburst",
+  "book-of-dead": "Book of Dead",
+  "gonzos-quest": "Gonzo's Quest",
+  "mega-moolah": "Mega Moolah",
+  "gates-of-olympus": "Gates of Olympus",
+  "sweet-bonanza": "Sweet Bonanza",
+  "legacy-of-dead": "Legacy of Dead",
+  "crazy-time": "Crazy Time",
+  "lightning-roulette": "Lightning Roulette",
+  "monopoly-live": "Monopoly Live",
+  "mega-ball": "Mega Ball",
+  "dream-catcher": "Dream Catcher",
+  "super-sic-bo": "Super Sic Bo",
+  "fan-tan": "Fan Tan",
+  "bac-bo": "Bac Bo",
+  "rummy": "Rummy",
+  "call-break": "Call Break",
+  "dragon-tiger": "Dragon Tiger",
+  "jetx": "JetX",
+  "plinko": "Plinko",
+  "keno": "Keno",
+  "bingo": "Bingo",
+  "5d-lottery": "5D Lottery",
+  "win-go": "Win Go",
+  "coin-flip": "Coin Flip",
+  "dice": "Dice",
+  "fortune-gems": "Fortune Gems",
+  "golden-empire": "Golden Empire",
+  "sugar-rush": "Sugar Rush",
+  "k3-lottery": "K3 Lottery",
+  "spaceman": "Spaceman",
+  "sic-bo": "Sic Bo",
+  "fish-prawn-crab": "Fish Prawn Crab",
+  "fruit-slot": "Fruit Slot",
+  "diamond-slot": "Diamond Slot",
+  "7up-7down": "7up 7down",
+  "triple-card": "Triple Card",
+  "jhandi-munda": "Jhandi Munda",
+  "cricket-war": "Cricket War",
+  "football-war": "Football War",
+  "minesweeper-pro": "Minesweeper Pro",
+  "tower-game": "Tower Game",
+  "limbo": "Limbo",
+  "wheel-pro": "Wheel Pro",
+  "panda-slot": "Panda Slot",
+  "tiger-slot": "Tiger Slot",
+  "dragon-slot": "Dragon Slot",
+  "phoenix-slot": "Phoenix Slot",
+  "lion-slot": "Lion Slot",
+  "coin-master": "Coin Master",
+  "gold-rush": "Gold Rush",
+  "treasure-hunt": "Treasure Hunt",
+  "pirate-gold": "Pirate Gold",
+  "ninja-game": "Ninja Game",
+  "samurai-slot": "Samurai Slot",
+  "mahjong-ways": "Mahjong Ways",
+  "thai-paradise": "Thai Paradise",
+  "monkey-king": "Monkey King",
+  "wild-west": "Wild West",
+  "space-wars": "Space Wars",
+  "ocean-king": "Ocean King",
+  "fire-dice": "Fire Dice",
+  "ice-slot": "Ice Slot",
+  "storm-slot": "Storm Slot",
+  "royal-flush": "Royal Flush",
+  "lucky-7": "Lucky 7",
+  "magic-ball": "Magic Ball",
+  "neon-slots": "Neon Slots",
+  "cash-burst": "Cash Burst",
+  "live-blackjack": "Live Blackjack",
+  "live-roulette": "Live Roulette",
+  "live-baccarat": "Live Baccarat",
+  "live-poker": "Live Poker",
+  "mines": "Mines",
+  "football-studio": "Football Studio",
+  "cash-or-crash": "Cash or Crash",
+  "extra-chill": "Extra Chill",
+  "fire-in-the-hole": "Fire in the Hole",
+  "wanted-dead-or-a-wild": "Wanted Dead or Wild",
+  "mental": "Mental",
+  "razor-shark": "Razor Shark",
+  "jammin-jars": "Jammin Jars",
+  "san-quentin": "San Quentin",
+  "aviator-pro": "Aviator Pro",
+  "jetx-pro": "JetX Pro",
+  "spaceman-pro": "Spaceman Pro",
+  "aviatrix": "Aviatrix",
+  "balloon": "Balloon",
+  "minesweeper": "Minesweeper",
+  "football-x": "Football X",
+  "ludo": "Online Ludo",
+  "color-prediction": "Color Prediction",
+  "mine": "Mine Game",
+  "hilo": "Hi-Lo",
+  "card-war": "Card War",
+  "lucky-spin": "Lucky Spin",
+  "number-guess": "Number Guess"
 };
 
 const gameHandlers = {
@@ -54,6 +157,19 @@ const gameHandlers = {
   }
 };
 
+router.get('/play', isAuth, (req, res) => {
+  const gameSlug = req.query.game || 'slots';
+  if (!supportedGames[gameSlug]) {
+    req.flash('error', 'গেমটি পাওয়া যায়নি');
+    return res.redirect('/');
+  }
+  res.render('games/play', {
+    gameSlug: gameSlug,
+    gameDisplayName: supportedGames[gameSlug],
+    coins: req.session.user.coins
+  });
+});
+
 router.post('/play', isAuth, async (req, res) => {
   const { gameSlug, amount, selection } = req.body;
   const userId = req.session.user.id;
@@ -73,7 +189,7 @@ router.post('/play', isAuth, async (req, res) => {
     let winAmount = 0;
     let gameResult = {};
 
-    if (['aviator', 'crash'].includes(gameSlug)) {
+    if (['aviator', 'crash-game'].includes(gameSlug)) {
       const crashPoint = (1 + Math.random() * 9).toFixed(2);
       req.session.gameState = { game: gameSlug, betAmount, crashPoint: parseFloat(crashPoint), startTime: Date.now() };
       await client.query('UPDATE users SET coins = coins - $1 WHERE id = $2', [betAmount, userId]);

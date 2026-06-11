@@ -1,0 +1,38 @@
+<script>
+document.getElementById('gameUI').innerHTML = `
+  <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:linear-gradient(135deg,#003366,#000033);padding:15px;">
+    <div style="font-size:60px;">🎲🃏</div>
+    <div id="g_status" style="color:#ffd700;font-weight:700;font-size:15px;">Bac Bo - ডাইস বনাম কার্ড!</div>
+    <div id="g_result" style="font-size:30px;font-weight:900;color:#fff;min-height:40px;"></div>
+  </div>
+`;
+(function(){
+  document.getElementById('mainGameBtn').innerText = 'বেট করুন';
+  document.getElementById('mainGameBtn').addEventListener('click',async()=>{
+    const amount=parseInt(document.getElementById('betAmount').value);
+    if(isNaN(amount)||amount<10){alert('ন্যূনতম বাজি ১০');return;}
+    document.getElementById('mainGameBtn').disabled=true;
+    document.getElementById('g_result').innerText='🔄';
+    document.getElementById('g_status').innerText='ডাইস ঝাকানো হচ্ছে...';
+    const data=await placeBet(amount);
+    if(!data){document.getElementById('mainGameBtn').disabled=false;return;}
+    setTimeout(()=>{
+      if(data.winAmount>0){
+        document.getElementById('g_status').innerText='🥇 ব্যাংকার জিতেছে! +'+data.winAmount+' কয়েন';
+        document.getElementById('g_status').style.color='#10b981';
+        document.getElementById('g_result').innerText='12 vs 10';
+      } else {
+        document.getElementById('g_status').innerText='প্লেয়ার হেরেছে';
+        document.getElementById('g_status').style.color='#e60000';
+        document.getElementById('g_result').innerText='8 vs 11';
+      }
+      setTimeout(()=>{
+        document.getElementById('g_status').innerText='Bac Bo - ডাইস বনাম কার্ড!';
+        document.getElementById('g_status').style.color='#ffd700';
+        document.getElementById('g_result').innerText='';
+        document.getElementById('mainGameBtn').disabled=false;
+      },2500);
+    },1500);
+  });
+})();
+</script>
