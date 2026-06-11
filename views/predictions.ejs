@@ -1,0 +1,73 @@
+<%- include('partials/head') %>
+<%- include('partials/navbar') %>
+
+<style>
+    body { background:#0a0a14; color:#e8e8f0; font-family:'Hind Siliguri',sans-serif; margin-bottom:70px; }
+    .container { padding:15px; max-width:600px; margin:0 auto; }
+    .header { margin-bottom:20px; display:flex; align-items:center; gap:10px; }
+    .header h1 { font-size:24px; color:#f5c518; }
+    .prediction-card { background:#12121f; border:1px solid #1e1e35; border-radius:12px; padding:15px; margin-bottom:15px; }
+    .match-time { font-size:12px; color:#7070a0; margin-bottom:8px; }
+    .teams { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+    .team { text-align:center; flex:1; }
+    .team-name { font-weight:700; font-size:15px; margin-top:5px; }
+    .vs { color:#f5c518; font-weight:900; padding:0 10px; }
+    .league { font-size:13px; color:#f5c518; background:rgba(245,197,24,0.1); padding:4px 10px; border-radius:20px; display:inline-block; margin-bottom:10px; }
+    .prediction-details { border-top:1px solid #1a1a30; padding-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .detail-item { font-size:13px; }
+    .detail-label { color:#7070a0; margin-bottom:2px; }
+    .detail-value { font-weight:600; color:#00d26a; }
+    .empty-state { text-align:center; padding:50px 20px; color:#7070a0; }
+</style>
+
+<div class="container">
+    <div class="header">
+        <h1>⚽ ফুটবল প্রেডিকশন</h1>
+    </div>
+
+    <%- include('partials/flash') %>
+
+    <% if (typeof predictions !== 'undefined' && predictions && predictions.length > 0) { %>
+        <% predictions.forEach(item => { %>
+            <div class="prediction-card">
+                <div class="league"><%= item.league %></div>
+                <div class="match-time">📅 <%= item.date %> | 🕒 <%= item.time %></div>
+                <div class="teams">
+                    <div class="team">
+                        <div class="team-name"><%= item.home_team %></div>
+                    </div>
+                    <div class="vs">VS</div>
+                    <div class="team">
+                        <div class="team-name"><%= item.away_team %></div>
+                    </div>
+                </div>
+                <div class="prediction-details">
+                    <div class="detail-item">
+                        <div class="detail-label">প্রেডিকশন:</div>
+                        <div class="detail-value"><%= item.prediction %></div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">সম্ভাব্যতা:</div>
+                        <div class="detail-value"><%= item.probability %>%</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">অডস (Home):</div>
+                        <div class="detail-value"><%= item.odds_home %></div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">অডস (Away):</div>
+                        <div class="detail-value"><%= item.odds_away %></div>
+                    </div>
+                </div>
+            </div>
+        <% }) %>
+    <% } else { %>
+        <div class="empty-state">
+            <div style="font-size:40px;margin-bottom:10px;">🏟️</div>
+            <p>বর্তমানে কোনো প্রেডিকশন ডেটা উপলব্ধ নেই।</p>
+        </div>
+    <% } %>
+</div>
+
+<%- include('partials/bottom-nav', { activePage: 'matches' }) %>
+</body></html>
