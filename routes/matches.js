@@ -3,6 +3,49 @@ const router = express.Router();
 const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
 
+router.get('/stats', isAuth, async (req, res) => {
+  const url = 'https://allsportsapi2.p.rapidapi.com/api/tournament/17/season/76986/statistics/info';
+  const options = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-rapidapi-host': 'allsportsapi2.p.rapidapi.com',
+      'x-rapidapi-key': process.env.RAPIDAPI_KEY
+    }
+  };
+
+  try {
+    const response = await fetch(url, options);
+    const result = await response.json();
+    res.render('stats', { stats: result });
+  } catch (error) {
+    console.error('Stats fetch error:', error);
+    req.flash('error', 'পরিসংখ্যান ডেটা লোড করতে ব্যর্থ হয়েছে।');
+    res.redirect('/matches');
+  }
+});
+
+router.get('/predictions', isAuth, async (req, res) => {
+  const url = 'https://today-football-prediction.p.rapidapi.com/';
+  const options = {
+    method: 'GET',
+    headers: {
+      'x-rapidapi-key': process.env.RAPIDAPI_KEY,
+      'x-rapidapi-host': 'today-football-prediction.p.rapidapi.com'
+    }
+  };
+
+  try {
+    const response = await fetch(url, options);
+    const result = await response.json();
+    res.render('predictions', { predictions: result.recommendations || [] });
+  } catch (error) {
+    console.error('Prediction fetch error:', error);
+    req.flash('error', 'প্রেডিকশন ডেটা লোড করতে ব্যর্থ হয়েছে।');
+    res.redirect('/matches');
+  }
+});
+
 router.get('/', async (req, res) => {
   const { sport, status } = req.query;
   let query = `SELECT * FROM matches WHERE 1=1`;

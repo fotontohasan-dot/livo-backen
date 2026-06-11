@@ -1,0 +1,38 @@
+<script>
+document.getElementById('gameUI').innerHTML = `
+  <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:linear-gradient(180deg,#002c4a,#000a1a);padding:15px;">
+    <div style="font-size:60px;filter:drop-shadow(0 0 15px #00ffff);">⚡</div>
+    <div id="g_status" style="color:#ffd700;font-weight:700;font-size:15px;">Gates of Olympus - জিউসের আশীর্বাদ!</div>
+    <div id="g_result" style="font-size:30px;font-weight:900;color:#fff;min-height:40px;"></div>
+  </div>
+`;
+(function(){
+  document.getElementById('mainGameBtn').innerText = 'বজ্রপাত করুন';
+  document.getElementById('mainGameBtn').addEventListener('click',async()=>{
+    const amount=parseInt(document.getElementById('betAmount').value);
+    if(isNaN(amount)||amount<10){alert('ন্যূনতম বাজি ১০');return;}
+    document.getElementById('mainGameBtn').disabled=true;
+    document.getElementById('g_result').innerText='⚡⚡⚡';
+    document.getElementById('g_status').innerText='জিউস দেখছেন...';
+    const data=await placeBet(amount);
+    if(!data){document.getElementById('mainGameBtn').disabled=false;return;}
+    setTimeout(()=>{
+      if(data.winAmount>0){
+        document.getElementById('g_status').innerText='⚡ মেগা মাল্টিপ্লায়ার! +'+data.winAmount+' কয়েন';
+        document.getElementById('g_status').style.color='#10b981';
+        document.getElementById('g_result').innerText='🔱 500X';
+      } else {
+        document.getElementById('g_status').innerText='জিউস রুষ্ট হয়েছেন';
+        document.getElementById('g_status').style.color='#e60000';
+        document.getElementById('g_result').innerText='☁️';
+      }
+      setTimeout(()=>{
+        document.getElementById('g_status').innerText='Gates of Olympus - জিউসের আশীর্বাদ!';
+        document.getElementById('g_status').style.color='#ffd700';
+        document.getElementById('g_result').innerText='';
+        document.getElementById('mainGameBtn').disabled=false;
+      },2500);
+    },1500);
+  });
+})();
+</script>
