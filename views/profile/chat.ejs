@@ -1,0 +1,93 @@
+<%- include('../partials/head') %>
+<div class="container mx-auto p-4 mb-20 max-w-2xl">
+    <h1 class="text-2xl font-bold mb-4 text-yellow-500">সাপোর্ট চ্যাট</h1>
+
+    <div id="chat-container" class="bg-gray-900 border border-gray-800 rounded-lg h-96 flex flex-col">
+        <div id="messages" class="flex-grow overflow-y-auto p-4 space-y-4">
+            <!-- Messages will appear here -->
+        </div>
+
+        <div class="p-4 border-t border-gray-800 flex gap-2">
+            <input type="text" id="message-input" class="flex-grow bg-gray-800 text-white rounded px-3 py-2 outline-none focus:ring-1 focus:ring-yellow-500" placeholder="আপনার মেসেজ লিখুন...">
+            <button id="send-button" class="bg-yellow-500 text-black px-4 py-2 rounded font-bold">পাঠান</button>
+        </div>
+    </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io();
+    const userId = <%= user.id %>;
+    const messagesDiv = document.getElementById('messages');
+    const messageInput = document.getElementById('message-input');
+    const sendButton = document.getElementById('send-button');
+
+    socket.emit('join', userId);
+
+    // Fetch history
+    fetch('/chat/history')
+        .then(res => res.json())
+        .then(messages => {
+            if (Array.isArray(messages)) {
+                messages.forEach(msg => {
+                    appendMessage(msg.message, msg.is_admin, msg.created_at);
+                });
+                scrollToBottom();
+            }
+        });
+
+    function appendMessage(text, isAdmin, timestamp) {
+        const div = document.createElement('div');
+        div.className = `flex ${isAdmin ? 'justify-start' : 'justify-end'}`;
+
+        const innerDiv = document.createElement('div');
+        innerDiv.className = `max-w-[80%] rounded-lg px-3 py-2 ${isAdmin ? 'bg-gray-700 text-white' : 'bg-yellow-500 text-black'}`;
+
+        const textP = document.createElement('p');
+        textP.textContent = text;
+
+        const timeSpan = document.createElement('span');
+        timeSpan.className = 'text-[10px] opacity-70 block mt-1';
+        timeSpan.textContent = new Date(timestamp).toLocaleTimeString('bn-BD');
+
+        innerDiv.appendChild(textP);
+        innerDiv.appendChild(timeSpan);
+        div.appendChild(innerDiv);
+        messagesDiv.appendChild(div);
+    }
+
+    function scrollToBottom() {
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function sendMessage() {
+        const text = messageInput.value.trim();
+        if (!text) return;
+
+        const data = {
+            senderId: userId,
+            receiverId: null, // Admin will receive it
+            message: text,
+            isAdmin: false
+        };
+
+        socket.emit('send_message', data);
+        appendMessage(text, false, new Date());
+        messageInput.value = '';
+        scrollToBottom();
+    }
+
+    sendButton.addEventListener('click', sendMessage);
+    messageInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendMessage();
+    });
+
+    socket.on('new_message', (data) => {
+        if (data.isAdmin) {
+            appendMessage(data.message, true, data.createdAt);
+            scrollToBottom();
+        }
+    });
+</script>
+
+<%- include('../partials/navbar') %>
