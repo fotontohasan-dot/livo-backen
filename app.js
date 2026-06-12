@@ -1,6 +1,8 @@
 require('dotenv').config();
 const process = require('node:process');
 const express = require('express');
+const http = require('http');
+const { initSocket } = require('./services/socket');
 const session = require('express-session');
 const flash = require('connect-flash');
 const path = require('path');
@@ -8,6 +10,8 @@ const { initDB } = require('./db');
 const { syncMatches } = require('./services/matchUpdater');
 
 const app = express();
+const server = http.createServer(app);
+initSocket(server);
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -42,12 +46,13 @@ app.use('/admin', require('./routes/admin'));
 app.use('/notifications', require('./routes/notifications'));
 app.use('/payment', require('./routes/payment'));
 app.use('/games', require('./routes/games'));
+app.use('/chat', require('./routes/chat'));
 
 app.get('/app/update', (req, res) => res.render('app/update'));
 
 const PORT = process.env.PORT || 3000;
 initDB().then(() => {
-  app.listen(PORT, () => {
+  server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     setInterval(async () => {
       try {
