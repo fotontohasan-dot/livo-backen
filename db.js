@@ -1,15 +1,19 @@
 const process = require('node:process');
 const { Pool } = require('pg');
 
-const isLocalhost = process.env.DATABASE_URL &&
-  (process.env.DATABASE_URL.includes('localhost') || process.env.DATABASE_URL.includes('127.0.0.1'));
+const databaseUrl = process.env.DATABASE_URL;
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: isLocalhost ? false : {
+const poolConfig = {
+  connectionString: databaseUrl,
+};
+
+if (databaseUrl && !databaseUrl.includes('localhost') && !databaseUrl.includes('127.0.0.1')) {
+  poolConfig.ssl = {
     rejectUnauthorized: false
-  }
-});
+  };
+}
+
+const pool = new Pool(poolConfig);
 
 async function initDB() {
   if (!process.env.DATABASE_URL) {
