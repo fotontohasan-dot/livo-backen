@@ -6,6 +6,9 @@ const { pool } = require('../db');
  * Ensures no duplicates are added.
  */
 async function syncMatches() {
+  if (!process.env.DATABASE_URL) {
+    return 0;
+  }
   const footballTeams = ['Brazil', 'Argentina', 'France', 'Germany', 'England', 'Spain', 'Portugal', 'Italy'];
   const cricketTeams = ['Bangladesh', 'India', 'Pakistan', 'Australia', 'England', 'South Africa', 'New Zealand', 'Sri Lanka'];
 
