@@ -46,18 +46,18 @@ app.use('/games', require('./routes/games'));
 app.get('/app/update', (req, res) => res.render('app/update'));
 
 const PORT = process.env.PORT || 3000;
-initDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    setInterval(async () => {
-      try {
-        await syncMatches();
-      } catch (err) {
-        console.error('Error in auto match sync:', err);
-      }
-    }, 24 * 60 * 60 * 1000);
-    syncMatches().catch(err => console.error('Initial match sync failed:', err));
-  });
-}).catch(console.error);
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  initDB().catch(console.error);
+
+  setInterval(async () => {
+    try {
+      await syncMatches();
+    } catch (err) {
+      console.error('Error in auto match sync:', err);
+    }
+  }, 24 * 60 * 60 * 1000);
+  syncMatches().catch(err => console.error('Initial match sync failed:', err));
+});
 
 module.exports = app;

@@ -13,11 +13,21 @@ if (databaseUrl && !databaseUrl.includes('localhost') && !databaseUrl.includes('
   };
 }
 
-const pool = new Pool(poolConfig);
+let pool;
+try {
+  pool = new Pool(poolConfig);
+} catch (err) {
+  console.error('Critical: Failed to create database pool:', err.message);
+}
 
 async function initDB() {
   if (!process.env.DATABASE_URL) {
     console.warn('DATABASE_URL is not set. Database features will be unavailable.');
+    return;
+  }
+
+  if (!pool) {
+    console.error('Database pool was not initialized.');
     return;
   }
 
