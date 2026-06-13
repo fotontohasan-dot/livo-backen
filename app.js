@@ -6,7 +6,7 @@ const { initSocket } = require('./services/socket');
 const session = require('express-session');
 const flash = require('connect-flash');
 const path = require('path');
-const { initDB } = require('./db');
+const { connectDB } = require('./db');
 const { syncMatches } = require('./services/matchUpdater');
 
 const app = express();
@@ -51,7 +51,8 @@ app.use('/chat', require('./routes/chat'));
 app.get('/app/update', (req, res) => res.render('app/update'));
 
 const PORT = process.env.PORT || 3000;
-initDB().then(() => {
+
+connectDB().then(() => {
   server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     setInterval(async () => {
