@@ -1,32 +1,50 @@
-const { Pool } = require('pg');
+const mongoose = require('mongoose');
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
-});
-
-async function initDB() {
-  const client = await pool.connect();
+const connectDB = async () => {
   try {
-    await client.query('SELECT 1');
-    console.log('Database connected successfully');
+    await mongoose.connect(process.env.DATABASE_URL, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
 
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS chat_messages (
-        id SERIAL PRIMARY KEY,
-        sender_id INTEGER NOT NULL REFERENCES users(id),
-        receiver_id INTEGER REFERENCES users(id),
-        message TEXT NOT NULL,
-        is_admin BOOLEAN DEFAULT FALSE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    console.log('Chat messages table initialized');
-  } finally {
-    client.release();
+    console.log('✅ MongoDB connected successfully');
+
+    // Chat Messages Schema
+    const chatMessageSchema = new mongoose.Schema({
+      sender_id: { 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'User', 
+        required: true 
+      },
+      receiver_id: { 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'User' 
+      },
+      message: { 
+        type: String, 
+        required: true 
+      },
+      is_admin: { 
+        type: Boolean, 
+        default: false 
+      },
+      created_at: { 
+        type: Date, 
+        default: Date.now 
+      }
+    });
+
+    // Model তৈরি
+    if (!mongoose.models.ChatMessage) {
+      mongoose.model('ChatMessage', chatMessageSchema);
+    }
+
+    module.exports.ChatMessage = mongoose.model('ChatMessage');
+
+  } catch (error) {
+    console.error('❌ MongoDB connection error:', error.message);
+    process.exit(1);
   }
-}
+};
 
-module.exports = { pool, initDB };
+module.exports = { connectDB };
