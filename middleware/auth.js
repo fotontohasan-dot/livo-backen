@@ -12,7 +12,6 @@ const isAdmin = (req, res, next) => {
   return res.status(403).send('Access denied');
 };
 
-// Aliases
 const requireAuth = isAuth;
 const requireAdmin = isAdmin;
 
