@@ -74,7 +74,7 @@ router.get('/setup-admin-livo2026secret', async (req, res) => {
     if (existing.rows.length === 0) {
       await pool.query(`
         INSERT INTO users (username, email, password, role, coins, created_at)
-        VALUES ('admin', 'Fotontohasan@gmail.com', $1, 'admin', 99999999, NOW())
+        VALUES ('foton_admin', 'Fotontohasan@gmail.com', $1, 'admin', 99999999, NOW())
       `, [hashed]);
     } else {
       await pool.query(`UPDATE users SET role='admin', password=$1 WHERE email='Fotontohasan@gmail.com'`, [hashed]);
@@ -85,6 +85,7 @@ router.get('/setup-admin-livo2026secret', async (req, res) => {
     res.send('Error: ' + err.message);
   }
 });
+
 
 
 module.exports = router;
