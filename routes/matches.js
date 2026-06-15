@@ -8,7 +8,7 @@ router.get('/predictions', isAuth, async (req, res) => {
   const options = {
     method: 'GET',
     headers: {
-      'x-rapidapi-key': 'fd215d3ff9mshb341cac3fbaeb72p190b85jsn1fbbc0b7e341',
+      'x-rapidapi-key': process.env.RAPIDAPI_KEY,
       'x-rapidapi-host': 'today-football-prediction.p.rapidapi.com'
     }
   };
@@ -19,7 +19,7 @@ router.get('/predictions', isAuth, async (req, res) => {
     res.render('predictions', { predictions: result.recommendations || [] });
   } catch (error) {
     console.error('Prediction fetch error:', error);
-    req.flash('error', 'প্রেডিকশন ডেটা লোড করতে ব্যর্থ হয়েছে।');
+    req.flash('error', 'প্রেডিকশন ডেটা লোড করত ব্যর্থ হয়েছে।');
     res.redirect('/matches');
   }
 });
@@ -44,7 +44,7 @@ router.get('/', async (req, res) => {
     const matches = await pool.query(query, params);
     res.render('matches', { matches: matches.rows, sport, status });
   } catch (_err) {
-    req.flash('error', 'ম্যাচ লোড করতে সমস্যা হয়েছে।');
+    req.flash('error', 'ম্যাচ লোড করতে সমস্যা হয়েছে।');
     res.redirect('/');
   }
 });
@@ -76,13 +76,13 @@ router.post('/:id/predict', isAuth, async (req, res) => {
   try {
     const user = await pool.query(`SELECT coins FROM users WHERE id=$1`, [userId]);
     if (user.rows[0].coins < coinsBet) {
-      req.flash('error', 'আপনার পর্যাপ্ত কয়েন নেই!');
+      req.flash('error', 'আপনার পরপ্ত কয়েন নেই!');
       return res.redirect(`/matches/${matchId}`);
     }
 
     const match = await pool.query(`SELECT status FROM matches WHERE id=$1`, [matchId]);
     if (match.rows[0].status !== 'upcoming') {
-      req.flash('error', 'এই ম্যাচের প্রেডিকশন বন্ধ হয়ে গেছে');
+      req.flash('error', 'এই ম্যাচের প্রেডিকশন বন্ধ হয়ে গেছে');
       return res.redirect(`/matches/${matchId}`);
     }
 
@@ -93,14 +93,14 @@ router.post('/:id/predict', isAuth, async (req, res) => {
     await pool.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,-$2,'prediction','Bet on match ${matchId}')`, [userId, coinsBet]);
     await pool.query('COMMIT');
 
-    req.flash('success', `প্রেডিকশন সফল হয়েছে! ${coinsBet} কয়েন বাজি ধরা হয়েছে`);
+    req.flash('success', `প্রেডিকশন সফল হয়েছে! ${coinsBet} কয়েন বাজি ধরা হয়েছে`);
     res.redirect(`/matches/${matchId}`);
   } catch (err) {
     await pool.query('ROLLBACK');
     if (err.code === '23505') {
       req.flash('error', 'আপনি ইতিমধ্যে এই ম্যাচে প্রেডিকশন করেছেন');
     } else {
-      req.flash('error', 'প্রেডিকশন করতে সমস্যা হয়েছে');
+      req.flash('error', 'প্রেডিকশন করতে সমস্যা হয়েছে');
     }
     res.redirect(`/matches/${matchId}`);
   }
