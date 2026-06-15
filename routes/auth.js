@@ -26,7 +26,7 @@ router.post('/register', async (req, res) => {
     res.redirect('/');
   } catch (err) {
     console.error(err);
-    req.flash('error', '❌ রেজিস্ট্রেশন ব্যর্থ হয়েছে। আবার চেষ্টা করুন।');
+    req.flash('error', '❌ রেজিস্ট্রেশন ব্যর হয়েছে। আবার চেষ্টা করুন।');
     res.redirect('/register');
   }
 });
@@ -64,38 +64,6 @@ router.post('/login', async (req, res) => {
 router.get('/logout', (req, res) => {
   req.session.destroy();
   res.redirect('/login');
-});
-
-// Create Admin Route
-router.get('/create-admin', async (req, res) => {
-  try {
-    const hashed = await bcrypt.hash('admin123', 10);
-    const existing = await pool.query('SELECT * FROM users WHERE email = $1', ['admin@livo.com']);
-
-    let admin;
-    if (existing.rows.length === 0) {
-      const result = await pool.query(`
-        INSERT INTO users (username, email, password, role, coins, created_at)
-        VALUES ('admin', 'admin@livo.com', $1, 'admin', 99999999, NOW()) RETURNING *
-      `, [hashed]);
-      admin = result.rows[0];
-    } else {
-      const result = await pool.query(`
-        UPDATE users SET role = $1, password = $2 WHERE email = $3 RETURNING *
-      `, ['admin', hashed, 'admin@livo.com']);
-      admin = result.rows[0];
-    }
-
-    req.session.user = admin;
-    res.send(`<h2 style="color:green;font-family:sans-serif">
-      ✅ Admin Created Successfully!<br>
-      Email: admin@livo.com<br>
-      Password: admin123<br>
-      <a href="/login">Login</a>
-    </h2>`);
-  } catch (err) {
-    res.send(`Error: ${err.message}`);
-  }
 });
 
 module.exports = router;
