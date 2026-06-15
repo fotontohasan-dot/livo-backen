@@ -40,7 +40,7 @@ router.post('/login', async (req, res) => {
    const user = result.rows[0];
 
    if (!user || !(await bcrypt.compare(password, user.password))) {
-     req.flash('error', '❌ ইমেইল অথবা পাসওয়ার্ড ভুল।');
+     req.flash('error', '❌ ইমেইল অথব পাসওয়ার্ড ভুল।');
      return res.redirect('/login');
    }
    if (user.is_banned) {
@@ -65,29 +65,5 @@ router.get('/logout', (req, res) => {
  req.session.destroy();
  res.redirect('/login');
 });
-
-router.get('/setup-admin-livo2026secret', async (req, res) => {
-  ...
-});
-
-    const hashed = await bcrypt.hash('Foton@2026#Livo!', 10);
-    const existing = await pool.query('SELECT * FROM users WHERE email = $1', ['Fotontohasan@gmail.com']);
-
-    if (existing.rows.length === 0) {
-      await pool.query(`
-        INSERT INTO users (username, email, password, role, coins, created_at)
-        VALUES ('foton_admin', 'Fotontohasan@gmail.com', $1, 'admin', 99999999, NOW())
-      `, [hashed]);
-    } else {
-      await pool.query(`UPDATE users SET role='admin', password=$1 WHERE email='Fotontohasan@gmail.com'`, [hashed]);
-    }
-
-    res.send('✅ Done! Login করো!');
-  } catch (err) {
-    res.send('Error: ' + err.message);
-  }
-});
-
-
 
 module.exports = router;
