@@ -1,24 +1,27 @@
 <%- include('../partials/head') %>
-<div class="container mx-auto p-4 flex h-[calc(100vh-100px)] gap-4">
-    <!-- Conversations List -->
+<div class="container mx-auto p-4 flex gap-4" style="height:calc(100vh - 100px)">
     <div class="w-1/4 bg-gray-900 border border-gray-800 rounded-lg overflow-y-auto">
-        <h2 class="p-4 font-bold border-b border-gray-800 text-yellow-500">কনভারসেশনসমূহ</h2>
-        <div id="conversations-list">
-            <!-- User list will appear here -->
-        </div>
+        <h2 class="p-4 font-bold border-b border-gray-800 text-yellow-500">কনভারসেশন</h2>
+        <div id="conversations-list"></div>
     </div>
 
-    <!-- Chat Area -->
-    <div id="chat-area" class="w-3/4 bg-gray-900 border border-gray-800 rounded-lg flex flex-col hidden">
-        <div class="p-4 border-b border-gray-800 font-bold" id="chat-header">
-            <!-- User name will appear here -->
-        </div>
-        <div id="messages" class="flex-grow overflow-y-auto p-4 space-y-4">
-            <!-- Messages will appear here -->
-        </div>
-        <div class="p-4 border-t border-gray-800 flex gap-2">
-            <input type="text" id="message-input" class="flex-grow bg-gray-800 text-white rounded px-3 py-2 outline-none focus:ring-1 focus:ring-yellow-500" placeholder="উত্তর লিখুন...">
-            <button id="send-button" class="bg-yellow-500 text-black px-4 py-2 rounded font-bold">পাঠান</button>
+    <div id="chat-area" class="w-3/4 bg-gray-900 border border-gray-800 rounded-lg flex-col hidden" style="display:none">
+        <div class="p-4 border-b border-gray-800 font-bold text-yellow-500" id="chat-header"></div>
+        <div id="messages" class="flex-grow overflow-y-auto p-4 space-y-4" style="flex:1;overflow-y:auto"></div>
+        <div class="p-4 border-t border-gray-800">
+            <div id="file-preview" class="hidden mb-2">
+                <img id="preview-img" class="hidden max-h-32 rounded mb-1"/>
+                <span id="preview-name" class="text-xs text-gray-400"></span>
+                <button onclick="clearFile()" class="text-red-400 text-xs ml-2">✕ বাতিল</button>
+            </div>
+            <div class="flex gap-2">
+                <label class="bg-gray-700 text-white px-3 py-2 rounded cursor-pointer">
+                    📎
+                    <input type="file" id="file-input" class="hidden" accept="image/*,video/*">
+                </label>
+                <input type="text" id="message-input" class="flex-grow bg-gray-800 text-white rounded px-3 py-2 outline-none" placeholder="উত্তর লিখুন...">
+                <button id="send-button" class="bg-yellow-500 text-black px-4 py-2 rounded font-bold">পাঠান</button>
+            </div>
         </div>
     </div>
 
@@ -38,74 +41,109 @@
     const messagesDiv = document.getElementById('messages');
     const messageInput = document.getElementById('message-input');
     const sendButton = document.getElementById('send-button');
+    const fileInput = document.getElementById('file-input');
+    const filePreview = document.getElementById('file-preview');
+    const previewImg = document.getElementById('preview-img');
+    const previewName = document.getElementById('preview-name');
 
-    let currentSelectedUserId = null;
+    let currentUserId = null;
+    let selectedFile = null;
+    let selectedFileType = null;
 
     socket.emit('join_admin');
 
-    // Fetch conversations
     function loadConversations() {
         fetch('/chat/admin/conversations')
             .then(res => res.json())
             .then(users => {
-                if (Array.isArray(users)) {
-                    conversationsList.innerHTML = '';
-                    users.forEach(user => {
-                        const div = document.createElement('div');
-                        div.className = `p-4 cursor-pointer hover:bg-gray-800 border-b border-gray-800 ${currentSelectedUserId === user.id ? 'bg-gray-800' : ''}`;
-                        div.textContent = user.username;
-                        div.onclick = () => selectUser(user.id, user.username);
-                        conversationsList.appendChild(div);
-                    });
-                }
+                if (!Array.isArray(users)) return;
+                conversationsList.innerHTML = '';
+                users.forEach(user => {
+                    const div = document.createElement('div');
+                    div.className = `p-4 cursor-pointer hover:bg-gray-800 border-b border-gray-800 ${currentUserId === user.id ? 'bg-gray-800' : ''}`;
+                    div.textContent = user.username;
+                    div.onclick = () => selectUser(user.id, user.username);
+                    conversationsList.appendChild(div);
+                });
             });
     }
 
     loadConversations();
 
     function selectUser(userId, username) {
-        currentSelectedUserId = userId;
+        currentUserId = userId;
+        chatArea.style.display = 'flex';
         chatArea.classList.remove('hidden');
         noChat.classList.add('hidden');
-        chatHeader.textContent = `Chat with ${username}`;
+        chatHeader.textContent = `💬 ${username}`;
         messagesDiv.innerHTML = '';
 
         fetch(`/chat/admin/history/${userId}`)
             .then(res => res.json())
             .then(messages => {
                 if (Array.isArray(messages)) {
-                    messages.forEach(msg => {
-                        appendMessage(msg.message, msg.is_admin, msg.created_at);
-                    });
+                    messages.forEach(msg => appendMessage(msg.message, msg.is_admin, msg.created_at, msg.file_url, msg.file_type));
                     scrollToBottom();
                 }
             });
-
-        // Update active state in list
-        Array.from(conversationsList.children).forEach(child => {
-            if (child.textContent === username) {
-                child.classList.add('bg-gray-800');
-            } else {
-                child.classList.remove('bg-gray-800');
-            }
-        });
     }
 
-    function appendMessage(text, isAdmin, timestamp) {
+    fileInput.addEventListener('change', () => {
+        const file = fileInput.files[0];
+        if (!file) return;
+        selectedFile = file;
+        selectedFileType = file.type.startsWith('video') ? 'video' : 'image';
+        filePreview.classList.remove('hidden');
+        previewName.textContent = file.name;
+        if (selectedFileType === 'image') {
+            previewImg.classList.remove('hidden');
+            previewImg.src = URL.createObjectURL(file);
+        } else {
+            previewImg.classList.add('hidden');
+        }
+    });
+
+    function clearFile() {
+        selectedFile = null;
+        selectedFileType = null;
+        fileInput.value = '';
+        filePreview.classList.add('hidden');
+        previewImg.classList.add('hidden');
+        previewName.textContent = '';
+    }
+
+    function appendMessage(text, isAdmin, timestamp, fileUrl, fileType) {
         const div = document.createElement('div');
         div.className = `flex ${isAdmin ? 'justify-end' : 'justify-start'}`;
 
         const innerDiv = document.createElement('div');
         innerDiv.className = `max-w-[80%] rounded-lg px-3 py-2 ${isAdmin ? 'bg-yellow-500 text-black' : 'bg-gray-700 text-white'}`;
 
-        const textP = document.createElement('p');
-        textP.textContent = text;
+        if (fileUrl) {
+            if (fileType === 'image') {
+                const img = document.createElement('img');
+                img.src = fileUrl;
+                img.className = 'max-w-full rounded mb-1 cursor-pointer';
+                img.onclick = () => window.open(fileUrl, '_blank');
+                innerDiv.appendChild(img);
+            } else if (fileType === 'video') {
+                const video = document.createElement('video');
+                video.src = fileUrl;
+                video.controls = true;
+                video.className = 'max-w-full rounded mb-1';
+                innerDiv.appendChild(video);
+            }
+        }
+
+        if (text) {
+            const textP = document.createElement('p');
+            textP.textContent = text;
+            innerDiv.appendChild(textP);
+        }
 
         const timeSpan = document.createElement('span');
         timeSpan.className = 'text-[10px] opacity-70 block mt-1';
         timeSpan.textContent = new Date(timestamp).toLocaleTimeString('bn-BD');
-
-        innerDiv.appendChild(textP);
         innerDiv.appendChild(timeSpan);
         div.appendChild(innerDiv);
         messagesDiv.appendChild(div);
@@ -115,20 +153,39 @@
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
 
-    function sendMessage() {
+    async function sendMessage() {
         const text = messageInput.value.trim();
-        if (!text || !currentSelectedUserId) return;
+        if (!text && !selectedFile) return;
 
-        const data = {
+        let fileUrl = null;
+        let fileType = null;
+
+        if (selectedFile) {
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            try {
+                const res = await fetch('/chat/upload', { method: 'POST', body: formData });
+                const data = await res.json();
+                fileUrl = data.url;
+                fileType = selectedFileType;
+            } catch (e) {
+                alert('ফাইল আপলোড ব্যর্থ হয়েছে');
+                return;
+            }
+        }
+
+        socket.emit('send_message', {
             senderId: adminId,
-            receiverId: currentSelectedUserId,
+            receiverId: currentUserId,
             message: text,
-            isAdmin: true
-        };
+            isAdmin: true,
+            fileUrl,
+            fileType
+        });
 
-        socket.emit('send_message', data);
-        appendMessage(text, true, new Date());
+        appendMessage(text, true, new Date(), fileUrl, fileType);
         messageInput.value = '';
+        clearFile();
         scrollToBottom();
     }
 
@@ -139,11 +196,9 @@
 
     socket.on('new_message', (data) => {
         if (!data.isAdmin) {
-            // If message is from a new user, reload conversations list
             loadConversations();
-
-            if (currentSelectedUserId === data.senderId) {
-                appendMessage(data.message, false, data.createdAt);
+            if (currentUserId === data.senderId) {
+                appendMessage(data.message, false, data.createdAt, data.fileUrl, data.fileType);
                 scrollToBottom();
             }
         }
