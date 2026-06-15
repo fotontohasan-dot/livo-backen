@@ -1,84 +1,101 @@
-Y29uc3QgZXhwcmVzcyA9IHJlcXVpcmUoJ2V4cHJlc3MnKTsKY29uc3Qgcm91
-dGVyID0gZXhwcmVzcy5Sb3V0ZXIoKTsKY29uc3QgYmNyeXB0ID0gcmVxdWly
-ZSgnYmNyeXB0anMnKTsKY29uc3QgeyBwb29sIH0gPSByZXF1aXJlKCcuLi9k
-YicpOwoKcm91dGVyLmdldCgnLycsIChyZXEsIHJlcykgPT4gcmVzLnJlbmRl
-cignaW5kZXgnLCB7IHVzZXI6IHJlcS5zZXNzaW9uLnVzZXIgfHwgbnVsbCB9
-KSk7Cgpyb3V0ZXIuZ2V0KCcvcmVnaXN0ZXInLCAocmVxLCByZXMpID0+IHsK
-ICBjb25zdCByZWYgPSByZXEucXVlcnkucmVmIHx8ICcnOwogIHJlcy5yZW5k
-ZXIoJ3JlZ2lzdHJhdGlvbicsIHsgcmVmIH0pOwp9KTsKCnJvdXRlci5wb3N0
-KCcvcmVnaXN0ZXInLCBhc3luYyAocmVxLCByZXMpID0+IHsKICBjb25zdCB7
-IHVzZXJuYW1lLCBlbWFpbCwgcGFzc3dvcmQsIHJlZmVycmFsX2NvZGUgfSA9
-IHJlcS5ib2R5OwogIHRyeSB7CiAgICBjb25zdCBoYXNoZWQgPSBhd2FpdCBi
-Y3J5cHQuaGFzaChwYXNzd29yZCwgMTApOwogICAgY29uc3QgbXlDb2RlID0g
-dXNlcm5hbWUudG9VcHBlckNhc2UoKS5zbGljZSgwLCA0KSArIE1hdGguZmxv
-b3IoMTAwMCArIE1hdGgucmFuZG9tKCkgKiA5MDAwKTsKCiAgICBjb25zdCBy
-ZXN1bHQgPSBhd2FpdCBwb29sLnF1ZXJ5KAogICAgICBgSU5TRVJUIElOVE8g
-dXNlcnMgKHVzZXJuYW1lLCBlbWFpbCwgcGFzc3dvcmQsIHJvbGUsIGNvaW5z
-LCByZWZlcnJhbF9jb2RlLCBjcmVhdGVkX2F0KQogICAgICAgVkFMVUVTICgk
-MSwgJDIsICQzLCAndXNlcicsIDUwMCwgJDQsIE5PVygpKSBSRVRVUk5JTkcg
-KmAsCiAgICAgIFt1c2VybmFtZSwgZW1haWwsIGhhc2hlZCwgbXlDb2RlXQog
-ICAgKTsKCiAgICByZXEuc2Vzc2lvbi51c2VyID0gcmVzdWx0LnJvd3NbMF07
-CiAgICByZXEuZmxhc2goJ3N1Y2Nlc3MnLCAn4Kaw4KeH4Kac4Ka/4Ka44Ka2
-4KaoIOCmuOCmq+CmsiEg4Ker4Kem4KemIOCmleCmr+CmvOCnh+CmqCDgpqzg
-p4vgpqjgpr7gprgg4Kaq4KeH4Kav4Ka84KeH4Kab4KeH4KaoJyk7CiAgICBy
-ZXMucmVkaXJlY3QoJy8nKTsKICB9IGNhdGNoIChlcnIpIHsKICAgIGNvbnNv
-bGUuZXJyb3IoZXJyKTsKICAgIHJlcS5mbGFzaCgnZXJyb3InLCAn4KaH4KaJ
-4Kac4Ka+4Kaw4Kao4KeH4KauIOCmheCmpeCmrOCmviDgpofgpq7gp4fgpofg
-prIg4KaH4Kak4Ka/4Kau4Kan4KeN4Kav4KeHIOCmrOCmrOCmueCmvuCmsCDg
-ppXgprDgpr4g4Ka54Kav4Ka84KeH4Kab4KeHJyk7CiAgICByZXMucmVkaXJl
-Y3QoJy9yZWdpc3RlcicpOwogIH0KfSk7Cgpyb3V0ZXIuZ2V0KCcvbG9naW4n
-LCAocmVxLCByZXMpID0+IHJlcy5yZW5kZXIoJ2xvZ2luJykpOwoKcm91dGVy
-LnBvc3QoJy9sb2dpbicsIGFzeW5jIChyZXEsIHJlcykgPT4gewogIGNvbnN0
-IHsgZW1haWwsIHBhc3N3b3JkIH0gPSByZXEuYm9keTsKICB0cnkgewogICAg
-Y29uc3QgcmVzdWx0ID0gYXdhaXQgcG9vbC5xdWVyeSgnU0VMRUNUICogRlJP
-TSB1c2VycyBXSEVSRSBlbWFpbCA9ICQxJywgW2VtYWlsXSk7CiAgICBjb25z
-dCB1c2VyID0gcmVzdWx0LnJvd3NbMF07CgogICAgaWYgKCF1c2VyIHx8ICEo
-YXdhaXQgYmNyeXB0LmNvbXBhcmUocGFzc3dvcmQsIHVzZXIucGFzc3dvcmQp
-KSkgewogICAgICByZXEuZmxhc2goJ2Vycm9yJywgJ+Cmh+CmruCnh+Cmh+Cm
-siDgpoXgpqXgpqzgpr4g4Kaq4Ka+4Ka44KaT4Kav4Ka84Ka+4Kaw4KeN4Kah
-IOCmuOCmoOCmv+CmlSDgpqjgpq/gprwnKTsKICAgICAgcmV0dXJuIHJlcy5y
-ZWRpcmVjdCgnL2xvZ2luJyk7CiAgICB9CiAgICBpZiAodXNlci5pc19iYW5u
-ZWQpIHsKICAgICAgcmVxLmZsYXNoKCdlcnJvcicsICfgpobgpqrgpqjgpr7g
-prAg4KaF4KeN4Kav4Ka+4KaV4Ka+4KaJ4Kao4KeN4Kaf4Kaf4Ka/IOCmrOCn
-jeCmr+CmvuCmqCDgppXgprDgpr4g4Ka54Kav4Ka84KeH4Kab4KeHJyk7CiAg
-ICAgIHJldHVybiByZXMucmVkaXJlY3QoJy9sb2dpbicpOwogICAgfQoKICAg
-IHJlcS5zZXNzaW9uLnVzZXIgPSB1c2VyOwoKICAgIC8vIOCmheCnjeCmr+Cm
-vuCmquCmleCnjeCmn+CnhyDgpobgpqrgpqjgpr7gprAg4Ka54Kav4Ka84KeH
-4Kab4KeHIOCmleCmsOCmvuCmlSDgpqzgpr7gpqHgpq7gpr/gpqgg4Kah4KeN
-4Kav4Ka+4Ka24Kas4KeL4Kaw4KeN4Kah4KeHIOCmquCmvuCmoOCmvuCmqAog
-ICAgaWYgKHVzZXIucm9sZSAmJiB1c2VyLnJvbGUudG9Mb3dlckNhc2UoKSA9
-PT0gJ2FkbWluJykgewogICAgICByZXR1cm4gcmVzLnJlZGlyZWN0KCcvYWRt
-aW4nKTsKICAgIH0KICAgIHJlcy5yZWRpcmVjdCgnLycpOwogIH0gY2F0Y2gg
-KGVycikgewogICAgY29uc29sZS5lcnJvcik7CiAgICByZXEuZmxhc2goJ2Vy
-cm9yJywgJ+CmsuCml+Cmh+CmqCDgppXgprDgpqTgp4cg4Ka44Kau4Ka44KeN
-4Kav4Ka+IOCmueCmr+CmvOCnh+Cmm+CnhycpOwogICAgcmVzLnJlZGlyZWN0
-KCcvbG9naW4nKTsKICB9Cn0pOwoKcm91dGVyLmdldCgnL2xvZ291dCcsIChy
-ZXEsIHJlcykgPT4gewogIHJlcS5zZXNzaW9uLmRlc3Ryb3koKTsKICByZXMu
-cmVkaXJlY3QoJy9sb2dpbicpOwp9KTsKCi8vIEFkbWluIOCmpOCniOCmsOCm
-v+CmsCByb3V0ZSAo4KaP4KaV4Kas4Ka+4KawIOCmrOCnjeCmr+CmrOCmueCm
-vuCmsCDgppXgprDgp4Hgpqgg4Kak4Ka+4Kaw4Kaq4KawIOCmruCngeCmm+Cn
-hyDgpqbgpr/gpqgpCnJvdXRlci5nZXQoJy9jcmVhdGUtYWRtaW4nLCBhc3lu
-YyAocmVxLCByZXMpID0+IHsKICB0cnkgewogICAgY29uc3QgaGFzaGVkID0g
-YXdhaXQgYmNyeXB0Lmhhc2goJ2FkbWluMTIzJywgMTApOwogICAgY29uc3Qg
-ZXhpc3RpbmcgPSBhd2FpdCBwb29sLnF1ZXJ5KCdTRUxFQ1QgKiBGUk9NIHVz
-ZXJzIFdIRVJFIGVtYWlsID0gJDEnLCBbJ2FkbWlu@livo.comJ10pOwoKICAg
-IGxldCBhZG1pbjsKICAgIGlmIChleGlzdGluZy5yb3dzLmxlbmd0aCA9PT0g
-MCkgewogICAgICBjb25zdCByZXN1bHQgPSBhd2FpdCBwb29sLnF1ZXJ5KAog
-ICAgICAgIGBJTlNFUlQgSU5UTyB1c2VycyAodXNlcm5hbWUsIGVtYWlsLCBw
-YXNzd29yZCwgcm9sZSwgY29pbnMsIGNyZWF0ZWRfYXQpCiAgICAgICAgIFZB
-TFVFUyAoJ2FkbWluJywgJ2FkbWluQGxpdm8uY29tJywgJDEsICdhZG1pbics
-IDk5OTk5OTk5LCBOT1coKSkgUkVUVVJOSU5HICpgLAogICAgICAgIFtoYXNo
-ZWRdCiAgICAgICk7CiAgICAgIGFkbWluID0gcmVzdWx0LnJvd3NbMF07CiAg
-ICB9IGVsc2UgewogICAgICBjb25zdCByZXN1bHQgPSBhd2FpdCBwb29sLnF1
-ZXJ5KAogICAgICAgICdVUERBVEUgdXNlcnMgU0VUIHJvbGUgPSAkMSwgcGFz
-c3dvcmQgPSAkMiBXSEVSRSBlbWFpbCA9ICQzIFJFVFVSTklORyAqJywKICAg
-ICAgICBbJ2FkbWluJywgaGFzaGVkLCAnYWRtaW5AbGl2by5jb20nXQogICAg
-ICApOwogICAgICBhZG1pbiA9IHJlc3VsdC5yb3dzWzBdOwogICAgfQoKICAg
-IHJlcS5zZXNzaW9uLnVzZXIgPSBhZG1pbiwKICAgIHJlcy5zZW5kKGA8aDIg
-c3R5bGU9ImNvbG9yOmdyZWVuO2ZvbnQtZmFtaWx5OnNhbnMtc2VyaWYiPgog
-ICAgICDinIUgQWRtaW4g4Kak4KeI4Kaw4Ka/IOCmueCmr+CmvOCnh+Cmm+Cn
-hyE8YnI+CiAgICAgIEVtYWlsOiBhZG1pbkBsaXZvLmNvbTxicj4KICAgICAg
-UGFzc3dvcmQ6IGFkbWluMTIzPGJyPgogICAgICA8YSBocmVmPSIvbG9naW4i
-PkxvZ2luIOCmleCmsOCngeCmqDwvYT4KICAgIDwvaDI+YCk7CiAgfSBjYXRj
-aCAoZXJyKSB7CiAgICByZXMuc2VuZChgRXJyb3I6ICR7ZXJyLm1lc3NhZ2V9
-YCk7CiAgfQp9KTsKCm1vZHVsZS5leHBvcnRzID0gcm91dGVyOwo=
+const express = require('express');
+const router = express.Router();
+const bcrypt = require('bcryptjs');
+const { pool } = require('../db');
+
+router.get('/', (req, res) => res.render('index', { user: req.session.user || null }));
+
+router.get('/register', (req, res) => {
+  const ref = req.query.ref || '';
+  res.render('registration', { ref });
+});
+
+router.post('/register', async (req, res) => {
+  const { username, email, password, referral_code } = req.body;
+  try {
+    const hashed = await bcrypt.hash(password, 10);
+    const myCode = username.toUpperCase().slice(0, 4) + Math.floor(1000 + Math.random() * 9000);
+
+    const result = await pool.query(`
+      INSERT INTO users (username, email, password, role, coins, referral_code, created_at)
+      VALUES ($1, $2, $3, 'user', 500, $4, NOW()) RETURNING *
+    `, [username, email, hashed, myCode]);
+
+    req.session.user = result.rows[0];
+    req.flash('success', '✅ রেজিস্ট্রেশন সফল হয়েছে! স্বাগতম!');
+    res.redirect('/');
+  } catch (err) {
+    console.error(err);
+    req.flash('error', '❌ রেজিস্ট্রেশন ব্যর্থ হয়েছে। আবার চেষ্টা করুন।');
+    res.redirect('/register');
+  }
+});
+
+router.get('/login', (req, res) => res.render('login'));
+
+router.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    const user = result.rows[0];
+
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      req.flash('error', '❌ ইমেইল অথবা পাসওয়ার্ড ভুল।');
+      return res.redirect('/login');
+    }
+    if (user.is_banned) {
+      req.flash('error', '❌ আপনার অ্যাকাউন্ট ব্যান করা হয়েছে।');
+      return res.redirect('/login');
+    }
+
+    req.session.user = user;
+
+    if (user.role && user.role.toLowerCase() === 'admin') {
+      return res.redirect('/admin');
+    }
+    res.redirect('/');
+  } catch (err) {
+    console.error(err);
+    req.flash('error', '❌ লগইন ব্যর্থ হয়েছে।');
+    res.redirect('/login');
+  }
+});
+
+router.get('/logout', (req, res) => {
+  req.session.destroy();
+  res.redirect('/login');
+});
+
+// Create Admin Route
+router.get('/create-admin', async (req, res) => {
+  try {
+    const hashed = await bcrypt.hash('admin123', 10);
+    const existing = await pool.query('SELECT * FROM users WHERE email = $1', ['admin@livo.com']);
+
+    let admin;
+    if (existing.rows.length === 0) {
+      const result = await pool.query(`
+        INSERT INTO users (username, email, password, role, coins, created_at)
+        VALUES ('admin', 'admin@livo.com', $1, 'admin', 99999999, NOW()) RETURNING *
+      `, [hashed]);
+      admin = result.rows[0];
+    } else {
+      const result = await pool.query(`
+        UPDATE users SET role = $1, password = $2 WHERE email = $3 RETURNING *
+      `, ['admin', hashed, 'admin@livo.com']);
+      admin = result.rows[0];
+    }
+
+    req.session.user = admin;
+    res.send(`<h2 style="color:green;font-family:sans-serif">
+      ✅ Admin Created Successfully!<br>
+      Email: admin@livo.com<br>
+      Password: admin123<br>
+      <a href="/login">Login</a>
+    </h2>`);
+  } catch (err) {
+    res.send(`Error: ${err.message}`);
+  }
+});
+
+module.exports = router;
