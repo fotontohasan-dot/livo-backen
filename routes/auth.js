@@ -11,7 +11,7 @@ router.get('/register', (req, res) => {
 });
 
 router.post('/register', async (req, res) => {
-  const { username, email, password, referral_code } = req.body;
+  const { username, email, password } = req.body;
   try {
     const hashed = await bcrypt.hash(password, 10);
     const myCode = username.toUpperCase().slice(0, 4) + Math.floor(1000 + Math.random() * 9000);
@@ -22,11 +22,11 @@ router.post('/register', async (req, res) => {
     `, [username, email, hashed, myCode]);
 
     req.session.user = result.rows[0];
-    req.flash('success', '✅ রেজিস্ট্রেশন সফল হয়েছে! স্বাগতম!');
+    req.flash('success', '✅ রেজিস্ট্রেশন সফল হয়েছে! সগতম!');
     res.redirect('/');
   } catch (err) {
     console.error(err);
-    req.flash('error', '❌ রেজিস্ট্রেশন ব্যর হয়েছে। আবার চেষ্টা করুন।');
+    req.flash('error', '❌ রজিস্ট্রেশন ব্যর্থ হয়েছে। আবার চেষ্টা করুন।');
     res.redirect('/register');
   }
 });
