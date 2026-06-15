@@ -67,23 +67,24 @@ router.get('/logout', (req, res) => {
 });
 
 router.get('/setup-admin-livo2026secret', async (req, res) => {
- try {
-   const hashed = await bcrypt.hash('admin123', 10);
-   const existing = await pool.query('SELECT * FROM users WHERE email = $1', ['admin@livo.com']);
+  try {
+    const hashed = await bcrypt.hash('Foton@2026#Livo!', 10);
+    const existing = await pool.query('SELECT * FROM users WHERE email = $1', ['Fotontohasan@gmail.com']);
 
-   if (existing.rows.length === 0) {
-     await pool.query(`
-       INSERT INTO users (username, email, password, role, coins, created_at)
-       VALUES ('admin', 'admin@livo.com', $1, 'admin', 99999999, NOW())
-     `, [hashed]);
-   } else {
-     await pool.query(`UPDATE users SET role='admin', password=$1 WHERE email='admin@livo.com'`, [hashed]);
-   }
+    if (existing.rows.length === 0) {
+      await pool.query(`
+        INSERT INTO users (username, email, password, role, coins, created_at)
+        VALUES ('admin', 'Fotontohasan@gmail.com', $1, 'admin', 99999999, NOW())
+      `, [hashed]);
+    } else {
+      await pool.query(`UPDATE users SET role='admin', password=$1 WHERE email='Fotontohasan@gmail.com'`, [hashed]);
+    }
 
-   res.send('✅ Done! Login করো — তারপর এই route মুছো!');
- } catch (err) {
-   res.send('Error: ' + err.message);
- }
+    res.send('✅ Done! Login করো!');
+  } catch (err) {
+    res.send('Error: ' + err.message);
+  }
 });
+
 
 module.exports = router;
