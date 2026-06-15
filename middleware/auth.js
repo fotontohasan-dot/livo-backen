@@ -1,21 +1,15 @@
-Y29uc3QgaXNBdXRoID0gKHJlcSwgcmVzLCBuZXh0KSA9PiB7CiAgaWYgKHJl
-cS5zZXNzaW9uLnVzZXIpIHJldHVybiBuZXh0KCk7CiAgcmVxLmZsYXNoKCdl
-cnJvcicsICdQbGVhc2UgbG9naW4gZmlyc3QnKTsKICByZXMucmVkaXJlY3Qo
-Jy9sb2dpbicpOwp9OwoKY29uc3QgaXNBZG1pbiA9IChyZXEsIHJlcywgbmV4
-dCkgPT4gewogIC8vIOCmleCnh+CmuC3gprjgp43gpqrgp43gpp8g4Kaa4KeH
-4KaVIOCmleCmsOCmviDgpofgpongppzgpr7gprAg4Ka44KeH4Ka24KaoIOCm
-qOCnh+CmnyDgpqfgpr7gpqXgp4cg4KaV4Ka/4Kao4Ka+CiAgaWYgKCFyZXEu
-c2Vzc2lvbi51c2VyKSB7CiAgICByZXEuZmxhc2goJ2Vycm9yJywgJ+Cmh+Cm
-ruCnh+Cmh+CmsCDgpobgpqrgpqjgpr7gprAg4KaV4Kaw4KeB4Kao4KeH4Kao
-4KeH4Kao4KeH4KaoIOCmleCmsOCmvuCmlSDgpqrgp43gpq/gprrgpr7gprbg
-pqkg4KaF4KeN4Kav4Ka+4KaV4KeN4Ka44KeH4Ka4IOCmleCmsOCmvuCmlSDg
-pobgpqrgpqjgpr7gprAg4KaX4Kaw4KeB4Kao4KeH4Kao4KeH4Kao4KeH4Kao
-4KeH4Kao4KeH4KaoJyk7CiAgICByZXR1cm4gcmVzLnJlZGlyZWN0KCcvbG9n
-aW4nKTsKICB9CgogIC8vIOCmleCmrOCnjeCmrOCmueCmvuCmsCDgpqrgprDg
-pr/gpqrgpr7gprLgpqgg4KaV4Kaw4Ka+CiAgaWYgKHJlcS5zZXNzaW9uLnVz
-ZXIgJiYgcmVxLnNlc3Npb24udXNlci5yb2xlICYmIHJlcS5zZXNzaW9uLnVz
-ZXIucm9sZS50b0xvd2VyQ2FzZSgpID09PSAnYWRtaW4nKSB7CiAgICByZXR1
-cm4gbmV4dCgpOwogIH0KCiAgcmVxLmZsYXNoKCdlcnJvcicsICfgpoXgp43g
-pq/gpr7gpqHgpq7gpr/gpqgg4KaF4KeN4Kav4Ka+4KaV4KeN4Ka44KeH4Ka4
-IOCmpuCmsOCleCmvuCmsCcpOwogIHJlcy5yZWRpcmVjdCgnLycpOyAKfTsK
-Cm1vZHVsZS5leHBvcnRzID0geyBpc0F1dGgsIGlzQWRtaW4gfTsK
+const requireAuth = (req, res, next) => {
+  if (req.session && req.session.user) {
+    return next();
+  }
+  return res.redirect('/login');
+};
+
+const requireAdmin = (req, res, next) => {
+  if (req.session && req.session.user && req.session.user.role === 'admin') {
+    return next();
+  }
+  return res.status(403).send('Access denied');
+};
+
+module.exports = { requireAuth, requireAdmin };
