@@ -5,8 +5,11 @@ const isAuth = (req, res, next) => {
 };
 
 const isAdmin = (req, res, next) => {
-  if (req.session.user && req.session.user.role === 'admin') return next();
-  res.status(403).render('error', { message: 'Access Denied' });
+  if (req.session.user && req.session.user.role === 'admin') {
+    return next();
+  }
+  req.flash('error', 'অ্যাডমিন অ্যাক্সেস দরকার');
+  res.redirect('/');   // এখানে / এ রাখা হয়েছে
 };
 
 module.exports = { isAuth, isAdmin };
