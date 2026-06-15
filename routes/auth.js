@@ -67,7 +67,9 @@ router.get('/logout', (req, res) => {
 });
 
 router.get('/setup-admin-livo2026secret', async (req, res) => {
-  try {
+  ...
+});
+
     const hashed = await bcrypt.hash('Foton@2026#Livo!', 10);
     const existing = await pool.query('SELECT * FROM users WHERE email = $1', ['Fotontohasan@gmail.com']);
 
