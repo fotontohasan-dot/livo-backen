@@ -1,15 +1,11 @@
 const isAuth = (req, res, next) => {
-  if (req.session && req.session.user) {
-    return next();
-  }
-  return res.redirect('/login');
+  if (req.session && req.session.user) return next();
+  res.redirect('/login');
 };
 
 const isAdmin = (req, res, next) => {
-  if (req.session && req.session.user && req.session.user.role === 'admin') {
-    return next();
-  }
-  return res.status(403).send('Access denied');
+  if (req.session && req.session.user && req.session.user.role === 'admin') return next();
+  res.status(403).send('Access denied');
 };
 
 const requireAuth = isAuth;
