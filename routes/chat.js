@@ -1,36 +1,59 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
+const multer = require('multer');
+const path = require('path');
 
-// Middleware to check if user is logged in
 const isAuth = (req, res, next) => {
-  if (req.session.user) {
-    next();
-  } else {
-    res.redirect('/login');
-  }
+  if (req.session.user) return next();
+  res.redirect('/login');
 };
 
-// Middleware to check if user is admin
 const isAdmin = (req, res, next) => {
-  if (req.session.user && req.session.user.role === 'admin') {
-    next();
-  } else {
-    res.status(403).send('অ্যাক্সেস অনুমোদিত নয়');
-  }
+  if (req.session.user && req.session.user.role === 'admin') return next();
+  res.status(403).send('Access denied');
 };
 
-// Render user chat page
+// File upload setup
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'public/uploads/chat');
+  },
+  filename: (req, file, cb) => {
+    const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, unique + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
+  fileFilter: (req, file, cb) => {
+    const allowed = /jpeg|jpg|png|gif|mp4|webm|mov/;
+    const ext = allowed.test(path.extname(file.originalname).toLowerCase());
+    if (ext) return cb(null, true);
+    cb(new Error('শুধু image/video ফাইল আপলোড করা যাবে'));
+  }
+});
+
+// User chat page
 router.get('/', isAuth, (req, res) => {
-  res.render('profile/chat');
+  res.render('profile/chat', { user: req.session.user });
 });
 
-// Render admin chat page
+// Admin chat page
 router.get('/admin', isAdmin, (req, res) => {
-  res.render('admin/chat');
+  res.render('admin/chat', { user: req.session.user });
 });
 
-// Get chat history for a specific user
+// File upload route
+router.post('/upload', isAuth, upload.single('file'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'ফাইল পাওয়া যায়নি' });
+  const url = '/uploads/chat/' + req.file.filename;
+  res.json({ url });
+});
+
+// User chat history
 router.get('/history', isAuth, async (req, res) => {
   try {
     const userId = req.session.user.id;
@@ -40,12 +63,12 @@ router.get('/history', isAuth, async (req, res) => {
     );
     res.json(result.rows);
   } catch (err) {
-    console.error('Error fetching chat history:', err);
+    console.error(err);
     res.status(500).json({ error: 'সার্ভার ত্রুটি' });
   }
 });
 
-// Get all users who have chatted (for admin)
+// Admin: all conversations
 router.get('/admin/conversations', isAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
@@ -56,12 +79,12 @@ router.get('/admin/conversations', isAdmin, async (req, res) => {
     `);
     res.json(result.rows);
   } catch (err) {
-    console.error('Error fetching conversations:', err);
+    console.error(err);
     res.status(500).json({ error: 'সার্ভার ত্রুটি' });
   }
 });
 
-// Get chat history for a specific user (for admin)
+// Admin: specific user history
 router.get('/admin/history/:userId', isAdmin, async (req, res) => {
   try {
     const { userId } = req.params;
@@ -71,7 +94,7 @@ router.get('/admin/history/:userId', isAdmin, async (req, res) => {
     );
     res.json(result.rows);
   } catch (err) {
-    console.error('Error fetching chat history for admin:', err);
+    console.error(err);
     res.status(500).json({ error: 'সার্ভার ত্রুটি' });
   }
 });
