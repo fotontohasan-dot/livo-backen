@@ -6,7 +6,7 @@ const { initSocket } = require('./services/socket');
 const session = require('express-session');
 const flash = require('connect-flash');
 const path = require('path');
-const { initDB, pool } = require('./db');
+const { connectDB, pool } = require('./db');
 const { syncMatches } = require('./services/matchUpdater');
 
 const app = express();
@@ -62,7 +62,7 @@ async function migrateDB() {
   }
 }
 
-initDB().then(async () => {
+connectDB().then(async () => {
   await migrateDB();
   server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
