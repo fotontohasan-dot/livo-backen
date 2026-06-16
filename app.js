@@ -67,11 +67,7 @@ connectDB().then(async () => {
   server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     setInterval(async () => {
-      try {
-        await syncMatches();
-      } catch (err) {
-        console.error('Error in auto match sync:', err);
-      }
+      try { await syncMatches(); } catch (err) { console.error(err); }
     }, 24 * 60 * 60 * 1000);
     syncMatches().catch(err => console.error('Initial match sync failed:', err));
   });
