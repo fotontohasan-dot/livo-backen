@@ -1,9 +1,9 @@
 <%- include('partials/head') %>
 <div class="container mx-auto p-4 max-w-md">
   <div class="bg-white rounded-xl shadow p-6 mt-8">
-    <h2 class="text-2xl font-bold mb-6 text-center">📝 রেজিস্ট্রেশন করুন</h2>
+    <h2 class="text-2xl font-bold mb-6 text-center">📝 রজিস্ট্রেশন করুন</h2>
 
-    <% if (typeof error !== 'undefined' && error.length > 0) { %>
+    <% if (locals.error && error.length > 0) { %>
       <div class="bg-red-100 text-red-700 p-3 rounded mb-4"><%= error %></div>
     <% } %>
 
@@ -22,9 +22,10 @@
         <p id="otp-message" class="text-sm mt-1"></p>
       </div>
 
-      <div id="otp-section" class="hidden">
-        <label class="block text-sm font-medium mb-1">OTP কোড</label>
-        <input type="text" name="otp" id="otp-input" class="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-red-400" placeholder="6 সংখ্যার OTP দিন">
+      <div id="otp-section" style="display:none">
+        <label class="block text-sm font-medium mb-1">OTP কড</label>
+        <input type="text" name="otp" id="otp-input" maxlength="6" class="w-full border-2 border-red-400 rounded-lg px-3 py-3 outline-none text-center text-2xl font-bold tracking-widest" placeholder="● ● ● ● ● ●">
+        <p class="text-green-600 text-sm mt-1">✅ আপনার ইমেইলে OTP পাঠানো হয়েছে</p>
       </div>
 
       <div>
@@ -33,12 +34,12 @@
       </div>
 
       <div>
-        <label class="block text-sm font-medium mb-1">রেফারেল কোড (ঐচ্ছিক)</label>
-        <input type="text" name="referral_code" value="<%= ref %>" class="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-red-400" placeholder="রেফারেল কোড থাকলে দিন">
-        <p class="text-yellow-500 text-sm mt-1">✨ রেফারেল কোড দিলে ১০০ এক্সট্রা কয়েন পাবেন!</p>
+        <label class="block text-sm font-medium mb-1">রেফরেল কোড (ঐচ্ছিক)</label>
+        <input type="text" name="referral_code" value="<%= ref %>" class="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-red-400" placeholder="রেফারেল কোড থাকল দিন">
+        <p class="text-yellow-500 text-sm mt-1">✨ রেফারেল কোড দিল ১০০ এক্সট্রা কযন পাবেন!</p>
       </div>
 
-      <button type="submit" id="submit-btn" disabled class="w-full bg-red-500 text-white py-3 rounded-lg font-bold opacity-50">✅ রেজিস্ট্রেশন করুন</button>
+      <button type="submit" id="submit-btn" class="w-full bg-red-500 text-white py-3 rounded-lg font-bold opacity-50" disabled>✅ রেজিস্ট্শন করুন</button>
 
       <p class="text-center text-sm">আগে থেকে অ্যাকাউন্ট আছে? <a href="/login" class="text-red-500 font-bold">লগইন করুন</a></p>
     </form>
@@ -56,7 +57,7 @@ sendOtpBtn.addEventListener('click', async () => {
   const email = emailInput.value.trim();
   if (!email) {
     otpMessage.textContent = '❌ ইমেইল দিন';
-    otpMessage.className = 'text-sm mt-1 text-red-500';
+    otpMessage.style.color = 'red';
     return;
   }
 
@@ -72,17 +73,17 @@ sendOtpBtn.addEventListener('click', async () => {
     const data = await res.json();
 
     otpMessage.textContent = data.message;
-    otpMessage.className = `text-sm mt-1 ${data.success ? 'text-green-500' : 'text-red-500'}`;
+    otpMessage.style.color = data.success ? 'green' : 'red';
 
     if (data.success) {
-      otpSection.classList.remove('hidden');
+      otpSection.style.display = 'block';
       submitBtn.disabled = false;
       submitBtn.classList.remove('opacity-50');
       emailInput.readOnly = true;
 
       let countdown = 60;
       const interval = setInterval(() => {
-        sendOtpBtn.textContent = `${countdown}s`;
+        sendOtpBtn.textContent = `${countdown}s পরে আবার`;
         countdown--;
         if (countdown < 0) {
           clearInterval(interval);
@@ -96,7 +97,7 @@ sendOtpBtn.addEventListener('click', async () => {
     }
   } catch (err) {
     otpMessage.textContent = '❌ সার্ভার সমস্যা হয়েছে';
-    otpMessage.className = 'text-sm mt-1 text-red-500';
+    otpMessage.style.color = 'red';
     sendOtpBtn.disabled = false;
     sendOtpBtn.textContent = 'OTP পাঠান';
   }
