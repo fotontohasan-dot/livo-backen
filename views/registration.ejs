@@ -1,35 +1,106 @@
 <%- include('partials/head') %>
-<%- include('partials/navbar') %>
-<div class="container page">
-  <%- include('partials/flash') %>
-  <div class="card" style="max-width:450px;margin:0 auto;">
-    <div class="card-header" style="text-align:center;font-size:1.2rem;">📝 রেজিস্ট্রেশন করুন</div>
-    <div class="card-body">
-      <form action="/register" method="POST">
-        <div style="margin-bottom:1rem;">
-          <label style="display:block;margin-bottom:.5rem;color:var(--muted);">ইউজারনেম</label>
-          <input type="text" name="username" class="form-input" placeholder="আপনার নাম লিখুন" required>
+<div class="container mx-auto p-4 max-w-md">
+  <div class="bg-white rounded-xl shadow p-6 mt-8">
+    <h2 class="text-2xl font-bold mb-6 text-center">📝 রেজিস্ট্রেশন করুন</h2>
+
+    <% if (typeof error !== 'undefined' && error.length > 0) { %>
+      <div class="bg-red-100 text-red-700 p-3 rounded mb-4"><%= error %></div>
+    <% } %>
+
+    <form id="register-form" action="/register" method="POST" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium mb-1">ইউজারনেম</label>
+        <input type="text" name="username" required class="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-red-400" placeholder="আপনার নাম">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium mb-1">ইমেইল</label>
+        <div class="flex gap-2">
+          <input type="email" name="email" id="email-input" required class="flex-grow border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-red-400" placeholder="email@example.com">
+          <button type="button" id="send-otp-btn" class="bg-red-500 text-white px-3 py-2 rounded-lg text-sm whitespace-nowrap">OTP পাঠান</button>
         </div>
-        <div style="margin-bottom:1rem;">
-          <label style="display:block;margin-bottom:.5rem;color:var(--muted);">ইমেইল</label>
-          <input type="email" name="email" class="form-input" placeholder="email@example.com" required>
-        </div>
-        <div style="margin-bottom:1rem;">
-          <label style="display:block;margin-bottom:.5rem;color:var(--muted);">পাসওয়ার্ড</label>
-          <input type="password" name="password" class="form-input" placeholder="পাসওয়ার্ড দিন" required>
-        </div>
-        <div style="margin-bottom:1.5rem;">
-          <label style="display:block;margin-bottom:.5rem;color:var(--muted);">রেফারেল কোড (ঐচ্ছিক)</label>
-          <input type="text" name="referral_code" class="form-input" placeholder="রেফারেল কোড থাকলে দিন" value="<%= locals.ref || '' %>">
-          <p style="font-size:.75rem;color:var(--gold);margin-top:.3rem;">✨ রেফারেল কোড দিলে ১০০ এক্সট্রা কয়েন পাবেন!</p>
-        </div>
-        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">✅ রেজিস্ট্রেশন করুন</button>
-      </form>
-      <p style="text-align:center;margin-top:1rem;color:var(--muted);font-size:.85rem;">
-        আগে থেকে অ্যাকাউন্ট আছে? <a href="/login" style="color:var(--secondary);">লগইন করুন</a>
-      </p>
-    </div>
+        <p id="otp-message" class="text-sm mt-1"></p>
+      </div>
+
+      <div id="otp-section" class="hidden">
+        <label class="block text-sm font-medium mb-1">OTP কোড</label>
+        <input type="text" name="otp" id="otp-input" class="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-red-400" placeholder="6 সংখ্যার OTP দিন">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium mb-1">পাসওয়ার্ড</label>
+        <input type="password" name="password" required class="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-red-400" placeholder="পাসওয়ার্ড দিন">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium mb-1">রেফারেল কোড (ঐচ্ছিক)</label>
+        <input type="text" name="referral_code" value="<%= ref %>" class="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-red-400" placeholder="রেফারেল কোড থাকলে দিন">
+        <p class="text-yellow-500 text-sm mt-1">✨ রেফারেল কোড দিলে ১০০ এক্সট্রা কয়েন পাবেন!</p>
+      </div>
+
+      <button type="submit" id="submit-btn" disabled class="w-full bg-red-500 text-white py-3 rounded-lg font-bold opacity-50">✅ রেজিস্ট্রেশন করুন</button>
+
+      <p class="text-center text-sm">আগে থেকে অ্যাকাউন্ট আছে? <a href="/login" class="text-red-500 font-bold">লগইন করুন</a></p>
+    </form>
   </div>
 </div>
-<%- include('partials/bottom-nav') %>
-</body></html>
+
+<script>
+const sendOtpBtn = document.getElementById('send-otp-btn');
+const otpSection = document.getElementById('otp-section');
+const otpMessage = document.getElementById('otp-message');
+const submitBtn = document.getElementById('submit-btn');
+const emailInput = document.getElementById('email-input');
+
+sendOtpBtn.addEventListener('click', async () => {
+  const email = emailInput.value.trim();
+  if (!email) {
+    otpMessage.textContent = '❌ ইমেইল দিন';
+    otpMessage.className = 'text-sm mt-1 text-red-500';
+    return;
+  }
+
+  sendOtpBtn.disabled = true;
+  sendOtpBtn.textContent = 'পাঠাচ্ছে...';
+
+  try {
+    const res = await fetch('/register/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+
+    otpMessage.textContent = data.message;
+    otpMessage.className = `text-sm mt-1 ${data.success ? 'text-green-500' : 'text-red-500'}`;
+
+    if (data.success) {
+      otpSection.classList.remove('hidden');
+      submitBtn.disabled = false;
+      submitBtn.classList.remove('opacity-50');
+      emailInput.readOnly = true;
+
+      let countdown = 60;
+      const interval = setInterval(() => {
+        sendOtpBtn.textContent = `${countdown}s`;
+        countdown--;
+        if (countdown < 0) {
+          clearInterval(interval);
+          sendOtpBtn.disabled = false;
+          sendOtpBtn.textContent = 'আবার পাঠান';
+        }
+      }, 1000);
+    } else {
+      sendOtpBtn.disabled = false;
+      sendOtpBtn.textContent = 'OTP পাঠান';
+    }
+  } catch (err) {
+    otpMessage.textContent = '❌ সার্ভার সমস্যা হয়েছে';
+    otpMessage.className = 'text-sm mt-1 text-red-500';
+    sendOtpBtn.disabled = false;
+    sendOtpBtn.textContent = 'OTP পাঠান';
+  }
+});
+</script>
+
+<%- include('partials/navbar') %>
