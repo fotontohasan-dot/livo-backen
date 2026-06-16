@@ -109,7 +109,19 @@ const supportedGames = {
   "hilo": "Hi-Lo",
   "card-war": "Card War",
   "lucky-spin": "Lucky Spin",
-  "number-guess": "Number Guess"
+  "number-guess": "Number Guess",
+  "age-of-the-gods": "Age of the Gods",
+  "buffalo-blitz": "Buffalo Blitz",
+  "immortal-romance": "Immortal Romance",
+  "thunderstruck-2": "Thunderstruck II",
+  "sugar-pop": "Sugar Pop",
+  "slotfather": "The Slotfather",
+  "valley-of-the-gods": "Valley of the Gods",
+  "vikings-go-berzerk": "Vikings Go Berzerk",
+  "gonzos-quest-megaways": "Gonzo's Quest Megaways",
+  "piggy-riches-megaways": "Piggy Riches Megaways",
+  "big-bad-wolf": "Big Bad Wolf",
+  "sakura-fortune": "Sakura Fortune"
 };
 
 const gameHandlers = {
