@@ -309,9 +309,21 @@ body { background:#f5f5f5; color:var(--text); font-family:'Hind Siliguri',sans-s
   <div class="cat active" data-type="all"><div class="cat-icon">🔥</div><div class="cat-label">সবগুলো</div></div>
   <div class="cat" data-type="pvp"><div class="cat-icon">⚔️</div><div class="cat-label">PVP</div></div>
   <div class="cat" data-type="slots"><div class="cat-icon">🎰</div><div class="cat-label">স্লট</div></div>
-  <div class="cat" data-type="live"><div class="cat-icon">🎲</div><div class="cat-label">লাইভ</div></div>
+  <div class="cat" data-type="live"><div class="cat-icon">🎲</div><div class="cat-label">লাইভ ক্যাসিনো</div></div>
   <div class="cat" data-type="table"><div class="cat-icon">🃏</div><div class="cat-label">টেবল</div></div>
   <div class="cat" data-type="sports"><div class="cat-icon">⚽</div><div class="cat-label">স্পোর্টস</div></div>
+  <div class="cat" data-type="JL"><div class="cat-icon">🎮</div><div class="cat-label">জাভা</div></div>
+  <div class="cat" data-type="PG"><div class="cat-icon">🎰</div><div class="cat-label">পিজি</div></div>
+  <div class="cat" data-type="PP"><div class="cat-icon">🍭</div><div class="cat-label">প্রাগম্যাটিক প্লে</div></div>
+  <div class="cat" data-type="EVO"><div class="cat-icon">🃏</div><div class="cat-label">ইভোলিউশন গেমিং</div></div>
+  <div class="cat" data-type="PT"><div class="cat-icon">🏰</div><div class="cat-label">প্লেটেক</div></div>
+  <div class="cat" data-type="MG"><div class="cat-icon">🛡️</div><div class="cat-label">মাইক্রোগেমিং</div></div>
+  <div class="cat" data-type="NETENT"><div class="cat-icon">✨</div><div class="cat-label">নেটএন্ট</div></div>
+  <div class="cat" data-type="BS"><div class="cat-icon">🎲</div><div class="cat-label">বেটসফট</div></div>
+  <div class="cat" data-type="PNG"><div class="cat-icon">📖</div><div class="cat-label">প্লে'ন গো</div></div>
+  <div class="cat" data-type="YGG"><div class="cat-icon">🏺</div><div class="cat-label">ইগড্রাসিল গেমিং</div></div>
+  <div class="cat" data-type="RT"><div class="cat-icon">🐯</div><div class="cat-label">রেড টাইগার গেমিং</div></div>
+  <div class="cat" data-type="QS"><div class="cat-icon">🐺</div><div class="cat-label">কুইকস্পিন</div></div>
 </div>
 
 <div class="search-wrap">
@@ -462,6 +474,18 @@ const games = [
   {name:"Lightning Roulette",emoji:"⚡",  type:"live",   slug:"lightning-roulette",badge:"hot", provider:"EVO",    color:"gc10"},
   {name:"Wanted Dead or Wild",emoji:"🤠", type:"slots",  slug:"wanted-dead-or-a-wild",badge:"hot", provider:"HACK", color:"gc11"},
   {name:"Mines",             emoji:"💣",  type:"pvp",    slug:"mines",             badge:"new", provider:"SPRIBE", color:"gc12"},
+  {name:"Age of the Gods",   emoji:"🏰",  type:"slots",  slug:"age-of-the-gods",   badge:"hot", provider:"PT",     color:"gc1"},
+  {name:"Buffalo Blitz",     emoji:"🦬",  type:"slots",  slug:"buffalo-blitz",     badge:"",    provider:"PT",     color:"gc2"},
+  {name:"Immortal Romance",  emoji:"🧛",  type:"slots",  slug:"immortal-romance",  badge:"pop", provider:"MG",     color:"gc3"},
+  {name:"Thunderstruck II",  emoji:"⚡",  type:"slots",  slug:"thunderstruck-2",   badge:"",    provider:"MG",     color:"gc4"},
+  {name:"Sugar Pop",         emoji:"🍬",  type:"slots",  slug:"sugar-pop",         badge:"new", provider:"BS",     color:"gc5"},
+  {name:"The Slotfather",    emoji:"🤵",  type:"slots",  slug:"slotfather",        badge:"",    provider:"BS",     color:"gc6"},
+  {name:"Valley of the Gods",emoji:"🏺",  type:"slots",  slug:"valley-of-the-gods",badge:"hot", provider:"YGG",    color:"gc7"},
+  {name:"Vikings Go Berzerk",emoji:"⚔️",  type:"slots",  slug:"vikings-go-berzerk",badge:"",    provider:"YGG",    color:"gc8"},
+  {name:"Gonzo's Quest MW",  emoji:"🗿",  type:"slots",  slug:"gonzos-quest-megaways",badge:"pop",provider:"RT",   color:"gc9"},
+  {name:"Piggy Riches MW",   emoji:"🐷",  type:"slots",  slug:"piggy-riches-megaways",badge:"", provider:"RT",     color:"gc10"},
+  {name:"Big Bad Wolf",      emoji:"🐺",  type:"slots",  slug:"big-bad-wolf",      badge:"new", provider:"QS",     color:"gc11"},
+  {name:"Sakura Fortune",    emoji:"🌸",  type:"slots",  slug:"sakura-fortune",    badge:"",    provider:"QS",     color:"gc12"},
 ];
 
 const badgeClass = {hot:'badge-hot', pop:'badge-pop', new:'badge-new'};
@@ -471,8 +495,9 @@ let currentType = 'all', searchQ = '';
 function renderGames() {
   const c = document.getElementById('gameContainer');
   c.innerHTML = '';
+  const providerList = ['JL','PG','EVO','PP','PT','MG','NETENT','BS','PNG','YGG','RT','QS'];
   const filtered = games.filter(g =>
-    (currentType === 'all' || g.type === currentType) &&
+    (currentType === 'all' || g.type === currentType || (providerList.includes(currentType) && g.provider === currentType)) &&
     g.name.toLowerCase().includes(searchQ.toLowerCase())
   );
   if (!filtered.length) { c.innerHTML = '<div class="no-games">কোনো গেম পাওয়া যায়নি</div>'; return; }
@@ -495,7 +520,12 @@ document.querySelectorAll('.cat').forEach(c => {
     document.querySelectorAll('.cat').forEach(x => x.classList.remove('active'));
     c.classList.add('active');
     currentType = c.dataset.type;
-    const t = {all:'হট গেমস',pvp:'PVP গেমস',slots:'স্লট গেমস',live:'লাইভ ক্যাসিন',table:'টেবিল গেমস',sports:'স্পোর্টস'};
+    const t = {
+      all:'হট গেমস',pvp:'PVP গেমস',slots:'স্লট গেমস',live:'লাইভ ক্যাসিনো',table:'টেবিল গেমস',sports:'স্পোর্টস',
+      JL:'জাভা (Jili)', PG:'পিজি (PG Soft)', EVO:'ইভোলিউশন গেমিং', PP:'প্রাগম্যাটিক প্লে', PT:'প্লেটেক',
+      MG:'মাইক্রোগেমিং', NETENT:'নেটএন্ট', BS:'বেটসফট', PNG:"প্লে'ন গো", YGG:'ইগড্রাসিল গেমিং',
+      RT:'রেড টাইগার গেমিং', QS:'কুইকস্পিন'
+    };
     document.getElementById('sectionTitle').textContent = t[currentType] || 'সবগুলো গেম';
     renderGames();
   });
