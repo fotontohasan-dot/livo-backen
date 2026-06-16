@@ -6,7 +6,7 @@ const { initSocket } = require('./services/socket');
 const session = require('express-session');
 const flash = require('connect-flash');
 const path = require('path');
-const { connectDB } = require('./db');
+const { initDB, pool } = require('./db');
 const { syncMatches } = require('./services/matchUpdater');
 
 const app = express();
@@ -52,7 +52,18 @@ app.get('/app/update', (req, res) => res.render('app/update'));
 
 const PORT = process.env.PORT || 3000;
 
-connectDB().then(() => {
+async function migrateDB() {
+  try {
+    await pool.query(`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS file_url TEXT`);
+    await pool.query(`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS file_type VARCHAR(10)`);
+    console.log('✅ DB migration done');
+  } catch (err) {
+    console.error('Migration error:', err.message);
+  }
+}
+
+initDB().then(async () => {
+  await migrateDB();
   server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     setInterval(async () => {
