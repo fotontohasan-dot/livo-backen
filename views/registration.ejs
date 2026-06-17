@@ -1,67 +1,192 @@
 <%- include('partials/head') %>
-<div class="container mx-auto p-4 max-w-md">
-  <div class="glass rounded-xl p-6 mt-8" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1)">
-    <h2 class="text-2xl font-bold mb-6 text-center" style="color:#fff">📝 রেজিস্ট্রেশন করুন</h2>
+
+<style>
+  .reg-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: #0a0a14;
+  }
+  .reg-box {
+    width: 100%;
+    max-width: 420px;
+    background: #12121f;
+    border: 1px solid #1e1e35;
+    border-radius: 16px;
+    padding: 30px 24px;
+  }
+  .reg-title {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 24px;
+  }
+  .reg-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #a0a0c0;
+    margin-bottom: 7px;
+  }
+  .reg-input {
+    width: 100%;
+    background: #1e1e35;
+    border: 1.5px solid #2a2a50;
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 15px;
+    color: #ffffff !important;
+    outline: none;
+    transition: border 0.2s;
+    -webkit-text-fill-color: #ffffff;
+    caret-color: #f5c518;
+  }
+  .reg-input::placeholder {
+    color: #5a5a80;
+  }
+  .reg-input:focus {
+    border-color: #f5c518;
+    background: #222240;
+  }
+  .reg-input:-webkit-autofill,
+  .reg-input:-webkit-autofill:hover,
+  .reg-input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 100px #1e1e35 inset;
+    -webkit-text-fill-color: #ffffff;
+    caret-color: #ffffff;
+  }
+  .form-row {
+    margin-bottom: 16px;
+  }
+  .email-row {
+    display: flex;
+    gap: 8px;
+  }
+  .email-row .reg-input {
+    flex: 1;
+  }
+  .otp-btn {
+    background: #ef4444;
+    color: #fff;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .otp-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  .otp-input {
+    font-size: 26px;
+    text-align: center;
+    letter-spacing: 12px;
+    border: 2px solid #ef4444 !important;
+  }
+  .submit-btn {
+    width: 100%;
+    background: #ef4444;
+    color: #fff;
+    padding: 14px;
+    border-radius: 10px;
+    border: none;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: opacity 0.2s;
+  }
+  .submit-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .err-box {
+    background: rgba(220,38,38,0.15);
+    color: #fca5a5;
+    border: 1px solid rgba(220,38,38,0.3);
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    font-size: 14px;
+  }
+  .otp-msg { font-size: 13px; margin-top: 6px; }
+  .hint-text { font-size: 13px; color: #f59e0b; margin-top: 4px; }
+  .login-link {
+    text-align: center;
+    color: #7070a0;
+    font-size: 14px;
+    margin-top: 16px;
+  }
+  .login-link a { color: #ef4444; font-weight: 700; text-decoration: none; }
+</style>
+
+<div class="reg-wrapper">
+  <div class="reg-box">
+    <div class="reg-title">📝 রেজিস্ট্রেশন করুন</div>
 
     <% if (locals.error && error.length > 0) { %>
-      <div style="background:rgba(220,38,38,0.2);color:#fca5a5;padding:12px;border-radius:8px;margin-bottom:16px"><%= error %></div>
+      <div class="err-box">⚠️ <%= error %></div>
     <% } %>
 
-    <form id="register-form" action="/register" method="POST" style="display:flex;flex-direction:column;gap:16px">
+    <form id="register-form" action="/register" method="POST">
 
-      <div>
-        <label style="display:block;color:#94a3b8;font-size:14px;margin-bottom:6px">ইউজারনেম</label>
-        <input type="text" name="username" required
-          style="width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 14px;color:#fff;font-size:16px;outline:none"
-          placeholder="আপনার নাম">
+      <div class="form-row">
+        <label class="reg-label">ইউজারনেম</label>
+        <input type="text" name="username" class="reg-input"
+          placeholder="আপনার নাম লিখুন" required>
       </div>
 
-      <div>
-        <label style="display:block;color:#94a3b8;font-size:14px;margin-bottom:6px">ইমেইল</label>
-        <div style="display:flex;gap:8px">
-          <input type="email" name="email" id="email-input" required
-            style="flex:1;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 14px;color:#fff;font-size:16px;outline:none"
-            placeholder="email@example.com">
-          <button type="button" id="send-otp-btn"
-            style="background:#ef4444;color:#fff;padding:10px 14px;border-radius:8px;border:none;cursor:pointer;white-space:nowrap;font-size:14px">
+      <div class="form-row">
+        <label class="reg-label">ইমেইল</label>
+        <div class="email-row">
+          <input type="email" name="email" id="email-input" class="reg-input"
+            placeholder="email@example.com" required>
+          <button type="button" id="send-otp-btn" class="otp-btn">
             OTP পাঠান
           </button>
         </div>
-        <p id="otp-message" style="font-size:13px;margin-top:6px"></p>
+        <p id="otp-message" class="otp-msg"></p>
       </div>
 
-      <div id="otp-section" style="display:none">
-        <label style="display:block;color:#94a3b8;font-size:14px;margin-bottom:6px">OTP কোড</label>
-        <input type="text" name="otp" id="otp-input" maxlength="6"
-          style="width:100%;background:rgba(255,255,255,0.08);border:2px solid #ef4444;border-radius:8px;padding:12px;color:#fff;font-size:24px;text-align:center;letter-spacing:10px;outline:none"
-          placeholder="------">
-        <p style="color:#4ade80;font-size:13px;margin-top:6px">✅ আপনার ইমেইলে OTP পাঠানো হয়েছে</p>
+      <div id="otp-section" class="form-row" style="display:none">
+        <label class="reg-label">OTP কোড</label>
+        <input type="text" name="otp" id="otp-input"
+          class="reg-input otp-input"
+          maxlength="6" placeholder="------">
+        <p style="color:#4ade80;font-size:13px;margin-top:6px">
+          ✅ আপনার ইমেইলে OTP পাঠানো হয়েছে
+        </p>
       </div>
 
-      <div>
-        <label style="display:block;color:#94a3b8;font-size:14px;margin-bottom:6px">পাসওয়ার্ড</label>
-        <input type="password" name="password" required
-          style="width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 14px;color:#fff;font-size:16px;outline:none"
-          placeholder="পাসওয়ার্ড দিন">
+      <div class="form-row">
+        <label class="reg-label">পাসওয়ার্ড</label>
+        <input type="password" name="password" class="reg-input"
+          placeholder="পাসওয়ার্ড দিন" required>
       </div>
 
-      <div>
-        <label style="display:block;color:#94a3b8;font-size:14px;margin-bottom:6px">রেফারেল কোড (ঐচ্ছিক)</label>
-        <input type="text" name="referral_code" value="<%= ref %>"
-          style="width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 14px;color:#fff;font-size:16px;outline:none"
-          placeholder="রেফারেল কোড থাকলে দিন">
-        <p style="color:#f59e0b;font-size:13px;margin-top:4px">✨ রেফারেল কোড দিলে ১০০ এক্সট্রা কয়েন পাবেন!</p>
+      <div class="form-row">
+        <label class="reg-label">রেফারেল কোড (ঐচ্ছিক)</label>
+        <input type="text" name="referral_code" class="reg-input"
+          value="<%= ref %>" placeholder="রেফারেল কোড থাকলে দিন">
+        <p class="hint-text">✨ রেফারেল কোড দিলে ১০০ এক্সট্রা কয়েন পাবেন!</p>
       </div>
 
-      <button type="submit" id="submit-btn" disabled
-        style="width:100%;background:#ef4444;color:#fff;padding:14px;border-radius:8px;border:none;font-size:16px;font-weight:bold;cursor:pointer;opacity:0.5">
+      <button type="submit" id="submit-btn" class="submit-btn" disabled>
         ✅ রেজিস্ট্রেশন করুন
       </button>
 
-      <p style="text-align:center;color:#94a3b8;font-size:14px">
+      <div class="login-link">
         আগে থেকে অ্যাকাউন্ট আছে?
-        <a href="/login" style="color:#ef4444;font-weight:bold">লগইন করুন</a>
-      </p>
+        <a href="/login">লগইন করুন</a>
+      </div>
+
     </form>
   </div>
 </div>
@@ -70,7 +195,7 @@
 const sendOtpBtn = document.getElementById('send-otp-btn');
 const otpSection = document.getElementById('otp-section');
 const otpMessage = document.getElementById('otp-message');
-const submitBtn = document.getElementById('submit-btn');
+const submitBtn  = document.getElementById('submit-btn');
 const emailInput = document.getElementById('email-input');
 
 sendOtpBtn.addEventListener('click', async () => {
@@ -85,7 +210,7 @@ sendOtpBtn.addEventListener('click', async () => {
   sendOtpBtn.textContent = 'পাঠাচ্ছে...';
 
   try {
-    const res = await fetch('/register/send-otp', {
+    const res  = await fetch('/register/send-otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email })
