@@ -61,6 +61,7 @@ body {
         radial-gradient(circle at 100% 100%, rgba(6, 182, 212, 0.15) 0%, transparent 35%);
     color: var(--text-main);
     font-family: 'Hind Siliguri', 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.6;
     min-height: 100vh;
     padding-bottom: 90px !important;   /* ← Fixed: Overlap fix */
     overflow-x: hidden;
@@ -132,7 +133,232 @@ body {
     filter: drop-shadow(0 0 5px var(--primary-glow));
 }
 
-/* Rest of your styles (unchanged) */
-.btn { ... } /* তোমার আগের সব স্টাইল এখানে রাখো */
+/* Rest of your styles */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 20px;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-decoration: none;
+    border: none;
+    gap: 8px;
+    font-size: 0.95rem;
+}
 
-.card, .game-grid, .banner-container, .stats-grid, .match-card, .profile-list-item ইত্যাদি — সব আগের মতোই রাখো।
+.btn-primary {
+    background: var(--grad-primary);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+}
+
+.btn-secondary {
+    background: var(--grad-secondary);
+    color: #fff;
+}
+
+.btn-glow {
+    box-shadow: var(--shadow-neon);
+}
+
+/* Grid System */
+.grid {
+    display: grid;
+    gap: 15px;
+}
+
+.grid-2 { grid-template-columns: 1fr 1fr; }
+.grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+.layout-main {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 20px;
+}
+
+@media (max-width: 768px) {
+    .grid-4 { grid-template-columns: 1fr 1fr; }
+    .layout-main { grid-template-columns: 1fr; }
+}
+
+/* Cards */
+.card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+.card-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--border-glass);
+    font-weight: 700;
+}
+
+/* Stats Grid (Homepage) */
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    padding: 15px 12px;
+}
+
+.stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    padding: 15px 10px;
+    border-radius: 15px;
+    text-align: center;
+}
+
+.stat-value, .stat-number {
+    font-family: 'Teko', sans-serif;
+    font-size: 2.2rem;
+    color: var(--gold);
+    line-height: 1.2;
+}
+
+.stat-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 5px;
+}
+
+/* Game Grid */
+.game-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    padding: 15px 12px;
+}
+
+.game-card {
+    aspect-ratio: 1/1;
+    border-radius: 15px;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    border: 1px solid var(--border-glass);
+}
+
+/* Forms */
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-label {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.form-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-glass);
+    border-radius: 12px;
+    padding: 12px 15px;
+    color: #fff;
+    outline: none;
+    transition: 0.3s;
+}
+
+.form-input:focus {
+    border-color: var(--primary);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* Table */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table th, .table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-glass);
+}
+
+/* Banner */
+.banner-container {
+    padding: 15px 12px;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px 12px 10px;
+}
+
+.section-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.section-title i {
+    color: var(--primary);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 700;
+    color: var(--text-main);
+    line-height: 1.4;
+    margin-bottom: 0.5rem;
+}
+
+p {
+    line-height: 1.6;
+}
+
+.top-balance-bar {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-glass);
+}
+
+.balance-amount {
+    color: var(--gold);
+    font-weight: 700;
+    font-family: 'Teko', sans-serif;
+    font-size: 1.2rem;
+}
+
+.btn-gold {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #fff;
+}
+
+.btn-sm {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    border-radius: 8px;
+}
+
+.tx-positive { color: #10b981; }
+.tx-negative { color: #ef4444; }
+
+.teko {
+    font-family: 'Teko', sans-serif;
+}
