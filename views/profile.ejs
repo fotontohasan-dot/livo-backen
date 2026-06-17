@@ -1,65 +1,107 @@
 <%- include('partials/head') %>
 <%- include('partials/navbar') %>
-<div class="container page">
+<div class="container page" style="padding-top: 15px;">
   <%- include('partials/flash') %>
 
-  <div class="card glass" style="margin-bottom:1.5rem;">
-    <div class="card-body" style="display:flex;align-items:center;gap:1.5rem;">
-      <div class="avatar" style="width:70px;height:70px;font-size:1.8rem;background:var(--grad-primary);box-shadow:0 0 15px var(--primary-glow);">
-        <%= profileUser.username[0].toUpperCase() %>
-      </div>
-      <div>
-        <h2 style="margin:0;color:#fff;"><%= profileUser.username %></h2>
-        <p style="color:var(--text-muted);font-size:.85rem;margin-top:4px;"><%= profileUser.email %></p>
-        <div style="margin-top:8px;color:var(--gold);font-weight:700;font-family:'Teko',sans-serif;font-size:1.2rem;">🪙 <%= profileUser.coins %></div>
-      </div>
+  <!-- Profile Header -->
+  <div class="profile-header glass" style="border-radius: 24px; padding: 30px 20px; margin-bottom: 20px; text-align: center; position: relative; overflow: hidden; border: 1px solid var(--border-glass);">
+    <div style="position: absolute; top: 15px; right: 15px;">
+        <button id="theme-toggle-profile" class="glass" style="width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--gold); border: 1px solid var(--border-glass); cursor: pointer;">
+            <i class="fas fa-moon" id="theme-icon"></i>
+        </button>
+    </div>
+
+    <div class="avatar-wrapper" style="margin-bottom: 15px; display: inline-block; position: relative;">
+        <div class="avatar" style="width:100px; height:100px; font-size:3rem; background:var(--grad-primary); box-shadow:0 0 25px var(--primary-glow); margin: 0 auto; border: 4px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; border-radius: 50%; color: #fff; font-weight: 700;">
+            <%= profileUser.username[0].toUpperCase() %>
+        </div>
+    </div>
+
+    <h2 style="margin:0; color:var(--text-main); font-size: 1.6rem; font-weight: 700;"><%= profileUser.username %></h2>
+    <p style="color:var(--text-muted); font-size:.85rem; margin-top:4px;"><%= profileUser.email %></p>
+
+    <div class="balance-section glass" style="margin-top: 25px; padding: 20px; border-radius: 20px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass);">
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">মোট ব্যালেন্স</p>
+        <div style="color:var(--gold); font-weight:700; font-family:'Teko',sans-serif; font-size:2.8rem; line-height: 1; margin-bottom: 5px;">৳ <%= profileUser.coins %></div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 20px;">
+        <a href="/payment/deposit" class="btn btn-primary" style="padding: 12px 5px; font-size: 0.85rem; flex-direction: column; gap: 6px; border-radius: 15px;">
+            <i class="fas fa-wallet" style="font-size: 1.3rem;"></i>
+            <span>জমা দিন</span>
+        </a>
+        <a href="/payment/withdraw" class="btn glass" style="padding: 12px 5px; font-size: 0.85rem; color: var(--text-main); flex-direction: column; gap: 6px; border: 1px solid var(--border-glass); border-radius: 15px;">
+            <i class="fas fa-money-bill-transfer" style="font-size: 1.3rem;"></i>
+            <span>উত্তোলন</span>
+        </a>
+        <a href="/profile/security" class="btn glass" style="padding: 12px 5px; font-size: 0.85rem; color: var(--text-main); flex-direction: column; gap: 6px; border: 1px solid var(--border-glass); border-radius: 15px;">
+            <i class="fas fa-credit-card" style="font-size: 1.3rem;"></i>
+            <span>আমার কার্ড</span>
+        </a>
     </div>
   </div>
 
+  <!-- Referral Section -->
   <% if(profileUser.referral_code) { %>
-  <div class="card glass" style="margin-bottom:1.5rem;border:1px solid var(--border-glass);">
-    <div class="card-body" style="text-align:center;">
-      <p style="color:var(--text-muted);font-size:.85rem;margin-bottom:.5rem;">আপনার রেফারেল কোড</p>
-      <div style="font-size:1.8rem;font-weight:900;color:var(--gold);letter-spacing:4px;margin-bottom:.5rem;font-family:'Teko',sans-serif;">
-        <%= profileUser.referral_code %>
+  <div class="card glass" style="margin-bottom:20px; border-radius: 20px; border: 1px solid var(--border-glass);">
+    <div class="card-body" style="padding: 18px; display: flex; align-items: center; justify-content: space-between;">
+      <div style="display: flex; align-items: center; gap: 15px;">
+        <div style="width: 45px; height: 45px; border-radius: 12px; background: rgba(245, 158, 11, 0.1); display: flex; align-items: center; justify-content: center; color: var(--gold); font-size: 1.2rem;">
+            <i class="fas fa-users"></i>
+        </div>
+        <div>
+            <p style="color:var(--text-muted); font-size:.75rem; margin-bottom: 2px;">রেফারেল কোড</p>
+            <div style="font-size:1.3rem; font-weight:700; color:var(--gold); font-family:'Teko',sans-serif; letter-spacing: 2px;">
+              <%= profileUser.referral_code %>
+            </div>
+        </div>
       </div>
-      <p style="font-size:.75rem;color:var(--text-muted);margin-bottom:1rem;">বন্ধুকে এই কোড দিন — সে ১০০ কয়েন পাবে, আপনি পাবেন ২০০ কয়েন!</p>
-      <div style="display:flex;gap:10px;justify-content:center;">
-        <button onclick="copyRef()" class="btn btn-primary" style="font-size:.85rem;padding:8px 20px;">📋 কপি</button>
-        <button onclick="shareRef()" class="btn glass" style="font-size:.85rem;padding:8px 20px;color:#fff;">📤 শেয়ার</button>
+      <div style="display:flex; gap:10px;">
+        <button onclick="copyRef()" class="btn glass" style="font-size:.8rem; padding:8px 16px; color: var(--text-main); border: 1px solid var(--border-glass); border-radius: 10px;">কপি</button>
+        <button onclick="shareRef()" class="btn btn-primary" style="font-size:.8rem; padding:8px 16px; border-radius: 10px;">শেয়ার</button>
       </div>
     </div>
   </div>
   <% } %>
 
-  <div class="card glass" style="margin-bottom:2rem;">
-    <div style="padding:12px 16px; border-bottom:1px solid var(--border-glass); font-weight:700; color:var(--primary); font-size:0.9rem;">Member Center</div>
-    <a href="/leaderboard" class="profile-list-item">
-      <div style="width:24px; margin-right:12px; font-size:1.1rem; color:var(--gold);"><i class="fas fa-gift"></i></div><span>Reward Center</span><div style="margin-left:auto; color:var(--text-muted); font-size:0.8rem;">❯</div>
+  <!-- Grid Shortcuts -->
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 40px;">
+    <a href="/profile/history" class="glass" style="padding: 20px 15px; border-radius: 20px; text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 10px; border: 1px solid var(--border-glass);">
+        <div style="width: 50px; height: 50px; border-radius: 15px; background: rgba(139, 92, 246, 0.1); display: flex; align-items: center; justify-content: center; color: var(--primary); font-size: 1.4rem;">
+            <i class="fas fa-history"></i>
+        </div>
+        <span style="color: var(--text-main); font-size: 0.95rem; font-weight: 600;">বেটিং রেকর্ড</span>
     </a>
-    <a href="/profile/history" class="profile-list-item">
-      <div style="width:24px; margin-right:12px; font-size:1.1rem; color:var(--primary);"><i class="fas fa-list-alt"></i></div><span>Betting Record</span><div style="margin-left:auto; color:var(--text-muted); font-size:0.8rem;">❯</div>
+    <a href="/payment/history" class="glass" style="padding: 20px 15px; border-radius: 20px; text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 10px; border: 1px solid var(--border-glass);">
+        <div style="width: 50px; height: 50px; border-radius: 15px; background: rgba(6, 182, 212, 0.1); display: flex; align-items: center; justify-content: center; color: var(--accent); font-size: 1.4rem;">
+            <i class="fas fa-file-invoice-dollar"></i>
+        </div>
+        <span style="color: var(--text-main); font-size: 0.95rem; font-weight: 600;">লেনদেন</span>
     </a>
-    <a href="/profile/stats" class="profile-list-item">
-      <div style="width:24px; margin-right:12px; font-size:1.1rem; color:var(--accent);"><i class="fas fa-chart-pie"></i></div><span>Profit & Loss</span><div style="margin-left:auto; color:var(--text-muted); font-size:0.8rem;">❯</div>
+    <a href="/leaderboard" class="glass" style="padding: 20px 15px; border-radius: 20px; text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 10px; border: 1px solid var(--border-glass);">
+        <div style="width: 50px; height: 50px; border-radius: 15px; background: rgba(245, 158, 11, 0.1); display: flex; align-items: center; justify-content: center; color: var(--gold); font-size: 1.4rem;">
+            <i class="fas fa-gift"></i>
+        </div>
+        <span style="color: var(--text-main); font-size: 0.95rem; font-weight: 600;">পুরস্কার</span>
     </a>
-    <a href="/payment/history" class="profile-list-item">
-      <div style="width:24px; margin-right:12px; font-size:1.1rem; color:var(--primary);"><i class="fas fa-history"></i></div><span>Deposit / Withdrawal Record</span><div style="margin-left:auto; color:var(--text-muted); font-size:0.8rem;">❯</div>
+    <a href="/profile/security" class="glass" style="padding: 20px 15px; border-radius: 20px; text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 10px; border: 1px solid var(--border-glass);">
+        <div style="width: 50px; height: 50px; border-radius: 15px; background: rgba(16, 185, 129, 0.1); display: flex; align-items: center; justify-content: center; color: #10b981; font-size: 1.4rem;">
+            <i class="fas fa-shield-alt"></i>
+        </div>
+        <span style="color: var(--text-main); font-size: 0.95rem; font-weight: 600;">নিরাপত্তা</span>
     </a>
-    <a href="/coins/history" class="profile-list-item">
-      <div style="width:24px; margin-right:12px; font-size:1.1rem; color:var(--gold);"><i class="fas fa-wallet"></i></div><span>Account Record</span><div style="margin-left:auto; color:var(--text-muted); font-size:0.8rem;">❯</div>
+    <a href="/chat" class="glass" style="padding: 20px 15px; border-radius: 20px; text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 10px; border: 1px solid var(--border-glass);">
+        <div style="width: 50px; height: 50px; border-radius: 15px; background: rgba(236, 72, 153, 0.1); display: flex; align-items: center; justify-content: center; color: var(--secondary); font-size: 1.4rem;">
+            <i class="fas fa-headset"></i>
+        </div>
+        <span style="color: var(--text-main); font-size: 0.95rem; font-weight: 600;">সাপোর্ট</span>
     </a>
-    <a href="/profile/security" class="profile-list-item">
-      <div style="width:24px; margin-right:12px; font-size:1.1rem; color:#10b981;"><i class="fas fa-shield-alt"></i></div><span>Security Center</span><div style="margin-left:auto; color:var(--text-muted); font-size:0.8rem;">❯</div>
-    </a>
-    <a href="/notifications" class="profile-list-item">
-      <div style="width:24px; margin-right:12px; font-size:1.1rem; color:var(--primary);"><i class="fas fa-envelope"></i></div><span>Mail</span><div style="margin-left:auto; color:var(--text-muted); font-size:0.8rem;">❯</div>
-    </a>
-    <a href="/chat" class="profile-list-item">
-      <div style="width:24px; margin-right:12px; font-size:1.1rem; color:var(--accent);"><i class="fas fa-comments"></i></div><span>Chat Support</span><div style="margin-left:auto; color:var(--text-muted); font-size:0.8rem;">❯</div>
-    </a>
-    <a href="/logout" class="profile-list-item" style="color:#ef4444;">
-      <div style="width:24px; margin-right:12px; font-size:1.1rem;"><i class="fas fa-sign-out-alt"></i></div><span>Logout</span><div style="margin-left:auto; color:var(--text-muted); font-size:0.8rem;">❯</div>
+    <a href="/logout" class="glass" style="padding: 20px 15px; border-radius: 20px; text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 10px; border: 1px solid var(--border-glass);">
+        <div style="width: 50px; height: 50px; border-radius: 15px; background: rgba(239, 68, 68, 0.1); display: flex; align-items: center; justify-content: center; color: #ef4444; font-size: 1.4rem;">
+            <i class="fas fa-sign-out-alt"></i>
+        </div>
+        <span style="color: var(--text-main); font-size: 0.95rem; font-weight: 600;">লগআউট</span>
     </a>
   </div>
 </div>
@@ -74,10 +116,11 @@ function shareRef() {
     navigator.share({
       title: 'LIVO তে যোগ দিন!',
       text: 'আমার রেফারেল কোড দিয়ে রেজিস্ট্রেশন করুন: <%= profileUser.referral_code %> — ১০০ এক্সট্রা কয়েন পাবেন!',
-      url: 'https://livo-tx3h.onrender.com/register?ref=<%= profileUser.referral_code %>'
+      url: window.location.origin + '/register?ref=<%= profileUser.referral_code %>'
     });
   }
 }
+
 </script>
 
 <%- include('partials/bottom-nav') %>
