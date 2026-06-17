@@ -52,12 +52,17 @@ app.use('/chat', require('./routes/chat'));
 
 app.get('/app/update', (req, res) => res.render('app/update'));
 
+// ── Global Error Handler ──
 app.use((err, req, res, next) => {
   console.error('❌ Unhandled Error:', err.stack);
   res.status(500).render('error', {
-    user: req.session?.user || null,
     message: 'সার্ভারে সমস্যা হয়েছে। একটু পরে আবার চেষ্টা করুন।'
   });
+});
+
+// ── 404 Handler ──
+app.use((req, res) => {
+  res.status(404).render('error', { message: 'পেজটি পাওয়া যায়নি।' });
 });
 
 const PORT = process.env.PORT || 3000;
@@ -65,95 +70,165 @@ const PORT = process.env.PORT || 3000;
 async function migrateDB() {
   try {
     await pool.query(`
+      -- users
       CREATE TABLE IF NOT EXISTS users (
-          id SERIAL PRIMARY KEY,
-          username VARCHAR(50) UNIQUE NOT NULL,
-          email VARCHAR(100) UNIQUE NOT NULL,
-          password VARCHAR(255) NOT NULL,
-          role VARCHAR(20) DEFAULT 'user',
-          coins INT DEFAULT 500,
-          total_points INT DEFAULT 0,
-          avatar TEXT,
-          referral_code VARCHAR(20) UNIQUE,
-          is_banned BOOLEAN DEFAULT false,
-          created_at TIMESTAMP DEFAULT NOW()
-      );
-      CREATE TABLE IF NOT EXISTS matches (
-          id SERIAL PRIMARY KEY,
-          title VARCHAR(255),
-          sport VARCHAR(50),
-          team_a VARCHAR(100),
-          team_b VARCHAR(100),
-          match_date TIMESTAMP,
-          status VARCHAR(20) DEFAULT 'upcoming',
-          winner VARCHAR(100),
-          created_at TIMESTAMP DEFAULT NOW()
-      );
-      CREATE TABLE IF NOT EXISTS predictions (
-          id SERIAL PRIMARY KEY,
-          user_id INT REFERENCES users(id),
-          match_id INT REFERENCES matches(id),
-          predicted_winner VARCHAR(100),
-          coins_bet INT,
-          status VARCHAR(20) DEFAULT 'pending',
-          created_at TIMESTAMP DEFAULT NOW(),
-          UNIQUE(user_id, match_id)
-      );
-      CREATE TABLE IF NOT EXISTS coin_transactions (
-          id SERIAL PRIMARY KEY,
-          user_id INT REFERENCES users(id),
-          amount INT,
-          type VARCHAR(50),
-          description TEXT,
-          created_at TIMESTAMP DEFAULT NOW()
-      );
-      CREATE TABLE IF NOT EXISTS chat_messages (
-          id SERIAL PRIMARY KEY,
-          sender_id INT REFERENCES users(id),
-          receiver_id INT REFERENCES users(id),
-          message TEXT,
-          is_admin BOOLEAN DEFAULT false,
-          file_url TEXT,
-          file_type VARCHAR(20),
-          created_at TIMESTAMP DEFAULT NOW()
-      );
-      CREATE TABLE IF NOT EXISTS notifications (
-          id SERIAL PRIMARY KEY,
-          user_id INT REFERENCES users(id),
-          title VARCHAR(255),
-          message TEXT,
-          is_read BOOLEAN DEFAULT false,
-          created_at TIMESTAMP DEFAULT NOW()
-      );
-      CREATE TABLE IF NOT EXISTS tournaments (
-          id SERIAL PRIMARY KEY,
-          title VARCHAR(255),
-          description TEXT,
-          entry_fee INT,
-          prize_pool INT,
-          start_date TIMESTAMP,
-          status VARCHAR(20) DEFAULT 'upcoming',
-          created_at TIMESTAMP DEFAULT NOW()
-      );
-      CREATE TABLE IF NOT EXISTS tournament_participants (
-          id SERIAL PRIMARY KEY,
-          tournament_id INT REFERENCES tournaments(id),
-          user_id INT REFERENCES users(id),
-          created_at TIMESTAMP DEFAULT NOW(),
-          UNIQUE(tournament_id, user_id)
-      );
-      CREATE TABLE IF NOT EXISTS news (
-          id SERIAL PRIMARY KEY,
-          title TEXT NOT NULL,
-          content TEXT NOT NULL,
-          image_url TEXT,
-          created_at TIMESTAMP DEFAULT NOW()
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(50) UNIQUE NOT NULL,
+        email VARCHAR(100) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        role VARCHAR(20) DEFAULT 'user',
+        coins INT DEFAULT 500,
+        total_points INT DEFAULT 0,
+        avatar TEXT,
+        referral_code VARCHAR(20) UNIQUE,
+        is_banned BOOLEAN DEFAULT false,
+        last_bonus_date DATE,
+        created_at TIMESTAMP DEFAULT NOW()
       );
 
-      ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS file_url TEXT;
-      ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS file_type VARCHAR(20);
+      -- matches
+      CREATE TABLE IF NOT EXISTS matches (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255),
+        sport VARCHAR(50),
+        team_a VARCHAR(100),
+        team_b VARCHAR(100),
+        match_date TIMESTAMP,
+        status VARCHAR(20) DEFAULT 'upcoming',
+        result VARCHAR(20),
+        score_a INTEGER,
+        score_b INTEGER,
+        stream_url VARCHAR(500),
+        winner VARCHAR(100),
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+
+      -- predictions
+      CREATE TABLE IF NOT EXISTS predictions (
+        id SERIAL PRIMARY KEY,
+        user_id INT REFERENCES users(id) ON DELETE CASCADE,
+        match_id INT REFERENCES matches(id) ON DELETE CASCADE,
+        predicted_winner VARCHAR(100),
+        coins_bet INT,
+        status VARCHAR(20) DEFAULT 'pending',
+        points_earned INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(user_id, match_id)
+      );
+
+      -- coin_transactions
+      CREATE TABLE IF NOT EXISTS coin_transactions (
+        id SERIAL PRIMARY KEY,
+        user_id INT REFERENCES users(id) ON DELETE CASCADE,
+        amount INT,
+        type VARCHAR(50),
+        description TEXT,
+        status VARCHAR(20) DEFAULT 'completed',
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+
+      -- notifications
+      CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        user_id INT REFERENCES users(id) ON DELETE CASCADE,
+        title VARCHAR(255),
+        message TEXT,
+        is_read BOOLEAN DEFAULT false,
+        type VARCHAR(50) DEFAULT 'info',
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+
+      -- tournaments
+      CREATE TABLE IF NOT EXISTS tournaments (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255),
+        title VARCHAR(255),
+        sport VARCHAR(50),
+        description TEXT,
+        entry_fee INT DEFAULT 0,
+        prize_pool INT DEFAULT 0,
+        max_participants INT DEFAULT 100,
+        start_date TIMESTAMP,
+        end_date TIMESTAMP,
+        status VARCHAR(20) DEFAULT 'upcoming',
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+
+      -- tournament_participants
+      CREATE TABLE IF NOT EXISTS tournament_participants (
+        id SERIAL PRIMARY KEY,
+        tournament_id INT REFERENCES tournaments(id) ON DELETE CASCADE,
+        user_id INT REFERENCES users(id) ON DELETE CASCADE,
+        points INT DEFAULT 0,
+        joined_at TIMESTAMP DEFAULT NOW(),
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(tournament_id, user_id)
+      );
+
+      -- news
+      CREATE TABLE IF NOT EXISTS news (
+        id SERIAL PRIMARY KEY,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        image_url TEXT,
+        sport VARCHAR(50),
+        author_id INT REFERENCES users(id),
+        views INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+
+      -- payment_requests
+      CREATE TABLE IF NOT EXISTS payment_requests (
+        id SERIAL PRIMARY KEY,
+        user_id INT REFERENCES users(id) ON DELETE CASCADE,
+        type VARCHAR(20) NOT NULL,
+        method VARCHAR(50),
+        amount INT NOT NULL,
+        transaction_id VARCHAR(100),
+        account_number VARCHAR(50),
+        status VARCHAR(20) DEFAULT 'pending',
+        updated_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+
+      -- chat_messages
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id SERIAL PRIMARY KEY,
+        sender_id INT REFERENCES users(id) ON DELETE CASCADE,
+        receiver_id INT REFERENCES users(id) ON DELETE CASCADE,
+        message TEXT,
+        is_admin BOOLEAN DEFAULT false,
+        file_url TEXT,
+        file_type VARCHAR(20),
+        created_at TIMESTAMP DEFAULT NOW()
+      );
     `);
-    console.log('✅ DB migration and schema initialization done');
+
+    // ── ALTER: পুরানো table-এ নতুন column যোগ করা ──
+    await pool.query(`
+      ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS name VARCHAR(255);
+      ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS sport VARCHAR(50);
+      ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS end_date TIMESTAMP;
+      ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS max_participants INT DEFAULT 100;
+      ALTER TABLE tournament_participants ADD COLUMN IF NOT EXISTS points INT DEFAULT 0;
+      ALTER TABLE tournament_participants ADD COLUMN IF NOT EXISTS joined_at TIMESTAMP DEFAULT NOW();
+      ALTER TABLE predictions ADD COLUMN IF NOT EXISTS points_earned INT DEFAULT 0;
+      ALTER TABLE predictions ADD COLUMN IF NOT EXISTS result VARCHAR(20);
+      ALTER TABLE notifications ADD COLUMN IF NOT EXISTS type VARCHAR(50) DEFAULT 'info';
+      ALTER TABLE matches ADD COLUMN IF NOT EXISTS result VARCHAR(20);
+      ALTER TABLE matches ADD COLUMN IF NOT EXISTS score_a INTEGER;
+      ALTER TABLE matches ADD COLUMN IF NOT EXISTS score_b INTEGER;
+      ALTER TABLE matches ADD COLUMN IF NOT EXISTS stream_url VARCHAR(500);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS last_bonus_date DATE;
+      ALTER TABLE coin_transactions ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'completed';
+    `);
+
+    // tournaments.name কে title থেকে sync করা (যদি name null হয়)
+    await pool.query(`
+      UPDATE tournaments SET name = title WHERE name IS NULL AND title IS NOT NULL;
+    `);
+
+    console.log('✅ DB migration done');
   } catch (err) {
     console.error('Migration error:', err.message);
   }
