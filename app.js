@@ -52,7 +52,6 @@ app.use('/chat', require('./routes/chat'));
 
 app.get('/app/update', (req, res) => res.render('app/update'));
 
-// ── Global Error Handler ──
 app.use((err, req, res, next) => {
   console.error('❌ Unhandled Error:', err.stack);
   res.status(500).render('error', {
@@ -60,7 +59,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-// ── 404 Handler ──
 app.use((req, res) => {
   res.status(404).render('error', { message: 'পেজটি পাওয়া যায়নি।' });
 });
@@ -70,7 +68,6 @@ const PORT = process.env.PORT || 3000;
 async function migrateDB() {
   try {
     await pool.query(`
-      -- users
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         username VARCHAR(50) UNIQUE NOT NULL,
@@ -85,8 +82,6 @@ async function migrateDB() {
         last_bonus_date DATE,
         created_at TIMESTAMP DEFAULT NOW()
       );
-
-      -- matches
       CREATE TABLE IF NOT EXISTS matches (
         id SERIAL PRIMARY KEY,
         title VARCHAR(255),
@@ -102,8 +97,6 @@ async function migrateDB() {
         winner VARCHAR(100),
         created_at TIMESTAMP DEFAULT NOW()
       );
-
-      -- predictions
       CREATE TABLE IF NOT EXISTS predictions (
         id SERIAL PRIMARY KEY,
         user_id INT REFERENCES users(id) ON DELETE CASCADE,
@@ -115,8 +108,6 @@ async function migrateDB() {
         created_at TIMESTAMP DEFAULT NOW(),
         UNIQUE(user_id, match_id)
       );
-
-      -- coin_transactions
       CREATE TABLE IF NOT EXISTS coin_transactions (
         id SERIAL PRIMARY KEY,
         user_id INT REFERENCES users(id) ON DELETE CASCADE,
@@ -126,8 +117,6 @@ async function migrateDB() {
         status VARCHAR(20) DEFAULT 'completed',
         created_at TIMESTAMP DEFAULT NOW()
       );
-
-      -- notifications
       CREATE TABLE IF NOT EXISTS notifications (
         id SERIAL PRIMARY KEY,
         user_id INT REFERENCES users(id) ON DELETE CASCADE,
@@ -137,12 +126,9 @@ async function migrateDB() {
         type VARCHAR(50) DEFAULT 'info',
         created_at TIMESTAMP DEFAULT NOW()
       );
-
-      -- tournaments
       CREATE TABLE IF NOT EXISTS tournaments (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255),
-        title VARCHAR(255),
         sport VARCHAR(50),
         description TEXT,
         entry_fee INT DEFAULT 0,
@@ -153,31 +139,23 @@ async function migrateDB() {
         status VARCHAR(20) DEFAULT 'upcoming',
         created_at TIMESTAMP DEFAULT NOW()
       );
-
-      -- tournament_participants
       CREATE TABLE IF NOT EXISTS tournament_participants (
         id SERIAL PRIMARY KEY,
         tournament_id INT REFERENCES tournaments(id) ON DELETE CASCADE,
         user_id INT REFERENCES users(id) ON DELETE CASCADE,
         points INT DEFAULT 0,
         joined_at TIMESTAMP DEFAULT NOW(),
-        created_at TIMESTAMP DEFAULT NOW(),
         UNIQUE(tournament_id, user_id)
       );
-
-      -- news
       CREATE TABLE IF NOT EXISTS news (
         id SERIAL PRIMARY KEY,
         title TEXT NOT NULL,
         content TEXT NOT NULL,
         image_url TEXT,
         sport VARCHAR(50),
-        author_id INT REFERENCES users(id),
         views INT DEFAULT 0,
         created_at TIMESTAMP DEFAULT NOW()
       );
-
-      -- payment_requests
       CREATE TABLE IF NOT EXISTS payment_requests (
         id SERIAL PRIMARY KEY,
         user_id INT REFERENCES users(id) ON DELETE CASCADE,
@@ -190,8 +168,6 @@ async function migrateDB() {
         updated_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT NOW()
       );
-
-      -- chat_messages
       CREATE TABLE IF NOT EXISTS chat_messages (
         id SERIAL PRIMARY KEY,
         sender_id INT REFERENCES users(id) ON DELETE CASCADE,
@@ -204,28 +180,21 @@ async function migrateDB() {
       );
     `);
 
-    // ── ALTER: পুরানো table-এ নতুন column যোগ করা ──
     await pool.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS last_bonus_date DATE;
+      ALTER TABLE matches ADD COLUMN IF NOT EXISTS result VARCHAR(20);
+      ALTER TABLE matches ADD COLUMN IF NOT EXISTS score_a INTEGER;
+      ALTER TABLE matches ADD COLUMN IF NOT EXISTS score_b INTEGER;
+      ALTER TABLE matches ADD COLUMN IF NOT EXISTS stream_url VARCHAR(500);
+      ALTER TABLE predictions ADD COLUMN IF NOT EXISTS points_earned INT DEFAULT 0;
+      ALTER TABLE notifications ADD COLUMN IF NOT EXISTS type VARCHAR(50) DEFAULT 'info';
       ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS name VARCHAR(255);
       ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS sport VARCHAR(50);
       ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS end_date TIMESTAMP;
       ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS max_participants INT DEFAULT 100;
       ALTER TABLE tournament_participants ADD COLUMN IF NOT EXISTS points INT DEFAULT 0;
       ALTER TABLE tournament_participants ADD COLUMN IF NOT EXISTS joined_at TIMESTAMP DEFAULT NOW();
-      ALTER TABLE predictions ADD COLUMN IF NOT EXISTS points_earned INT DEFAULT 0;
-      ALTER TABLE predictions ADD COLUMN IF NOT EXISTS result VARCHAR(20);
-      ALTER TABLE notifications ADD COLUMN IF NOT EXISTS type VARCHAR(50) DEFAULT 'info';
-      ALTER TABLE matches ADD COLUMN IF NOT EXISTS result VARCHAR(20);
-      ALTER TABLE matches ADD COLUMN IF NOT EXISTS score_a INTEGER;
-      ALTER TABLE matches ADD COLUMN IF NOT EXISTS score_b INTEGER;
-      ALTER TABLE matches ADD COLUMN IF NOT EXISTS stream_url VARCHAR(500);
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS last_bonus_date DATE;
       ALTER TABLE coin_transactions ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'completed';
-    `);
-
-    // tournaments.name কে title থেকে sync করা (যদি name null হয়)
-    await pool.query(`
-      UPDATE tournaments SET name = title WHERE name IS NULL AND title IS NOT NULL;
     `);
 
     console.log('✅ DB migration done');
