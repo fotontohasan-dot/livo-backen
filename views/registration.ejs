@@ -1,68 +1,58 @@
 <%- include('partials/head') %>
-<div class="container mx-auto p-4 max-w-md">
-  <div class="glass rounded-xl p-6 mt-8" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1)">
-    <h2 class="text-2xl font-bold mb-6 text-center" style="color:#fff">📝 রেজিস্ট্রেশন করুন</h2>
+<div class="container page">
+  <div style="max-width: 450px; margin: 30px auto;">
+    <div class="card glass">
+      <div class="card-header" style="justify-content:center;font-size:1.2rem;">📝 রেজিস্ট্রেশন করুন</div>
+      <div class="card-body">
+        <%- include('partials/flash') %>
 
-    <% if (locals.error && error.length > 0) { %>
-      <div style="background:rgba(220,38,38,0.2);color:#fca5a5;padding:12px;border-radius:8px;margin-bottom:16px"><%= error %></div>
-    <% } %>
+        <form id="register-form" action="/register" method="POST">
+          <div class="form-group">
+            <label class="form-label">ইউজারনেম</label>
+            <input type="text" name="username" class="form-input" placeholder="আপনার নাম" required>
+          </div>
 
-    <form id="register-form" action="/register" method="POST" style="display:flex;flex-direction:column;gap:16px">
+          <div class="form-group">
+            <label class="form-label">ইমেইল</label>
+            <div style="display:flex;gap:8px">
+              <input type="email" name="email" id="email-input" class="form-input" placeholder="email@example.com" required>
+              <button type="button" id="send-otp-btn" class="btn btn-secondary" style="white-space:nowrap;padding:0 15px;">
+                OTP পাঠান
+              </button>
+            </div>
+            <p id="otp-message" style="font-size:13px;margin-top:6px"></p>
+          </div>
 
-      <div>
-        <label style="display:block;color:#94a3b8;font-size:14px;margin-bottom:6px">ইউজারনেম</label>
-        <input type="text" name="username" required
-          style="width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 14px;color:#fff;font-size:16px;outline:none"
-          placeholder="আপনার নাম">
-      </div>
+          <div id="otp-section" style="display:none" class="form-group">
+            <label class="form-label">OTP কোড</label>
+            <input type="text" name="otp" id="otp-input" maxlength="6" class="form-input"
+              style="font-size:24px;text-align:center;letter-spacing:10px;"
+              placeholder="------">
+            <p style="color:#4ade80;font-size:13px;margin-top:6px">✅ আপনার ইমেইলে OTP পাঠানো হয়েছে</p>
+          </div>
 
-      <div>
-        <label style="display:block;color:#94a3b8;font-size:14px;margin-bottom:6px">ইমেইল</label>
-        <div style="display:flex;gap:8px">
-          <input type="email" name="email" id="email-input" required
-            style="flex:1;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 14px;color:#fff;font-size:16px;outline:none"
-            placeholder="email@example.com">
-          <button type="button" id="send-otp-btn"
-            style="background:#ef4444;color:#fff;padding:10px 14px;border-radius:8px;border:none;cursor:pointer;white-space:nowrap;font-size:14px">
-            OTP পাঠান
+          <div class="form-group">
+            <label class="form-label">পাসওয়ার্ড</label>
+            <input type="password" name="password" class="form-input" placeholder="পাসওয়ার্ড দিন" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">রেফারেল কোড (ঐচ্ছিক)</label>
+            <input type="text" name="referral_code" value="<%= ref %>" class="form-input" placeholder="রেফারেল কোড থাকলে দিন">
+            <p style="color:var(--gold);font-size:13px;margin-top:4px">✨ রেফারেল কোড দিলে ১০০ এক্সট্রা কয়েন পাবেন!</p>
+          </div>
+
+          <button type="submit" id="submit-btn" class="btn btn-primary" style="width:100%;margin-top:10px;" disabled>
+            ✅ রেজিস্ট্রেশন করুন
           </button>
-        </div>
-        <p id="otp-message" style="font-size:13px;margin-top:6px"></p>
+
+          <p style="text-align:center;color:var(--text-muted);font-size:14px;margin-top:20px;">
+            আগে থেকে অ্যাকাউন্ট আছে?
+            <a href="/login" style="color:var(--secondary);font-weight:bold">লগইন করুন</a>
+          </p>
+        </form>
       </div>
-
-      <div id="otp-section" style="display:none">
-        <label style="display:block;color:#94a3b8;font-size:14px;margin-bottom:6px">OTP কোড</label>
-        <input type="text" name="otp" id="otp-input" maxlength="6"
-          style="width:100%;background:rgba(255,255,255,0.08);border:2px solid #ef4444;border-radius:8px;padding:12px;color:#fff;font-size:24px;text-align:center;letter-spacing:10px;outline:none"
-          placeholder="------">
-        <p style="color:#4ade80;font-size:13px;margin-top:6px">✅ আপনার ইমেইলে OTP পাঠানো হয়েছে</p>
-      </div>
-
-      <div>
-        <label style="display:block;color:#94a3b8;font-size:14px;margin-bottom:6px">পাসওয়ার্ড</label>
-        <input type="password" name="password" required
-          style="width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 14px;color:#fff;font-size:16px;outline:none"
-          placeholder="পাসওয়ার্ড দিন">
-      </div>
-
-      <div>
-        <label style="display:block;color:#94a3b8;font-size:14px;margin-bottom:6px">রেফারেল কোড (ঐচ্ছিক)</label>
-        <input type="text" name="referral_code" value="<%= ref %>"
-          style="width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 14px;color:#fff;font-size:16px;outline:none"
-          placeholder="রেফারেল কোড থাকলে দিন">
-        <p style="color:#f59e0b;font-size:13px;margin-top:4px">✨ রেফারেল কোড দিলে ১০০ এক্সট্রা কয়েন পাবেন!</p>
-      </div>
-
-      <button type="submit" id="submit-btn" disabled
-        style="width:100%;background:#ef4444;color:#fff;padding:14px;border-radius:8px;border:none;font-size:16px;font-weight:bold;cursor:pointer;opacity:0.5">
-        ✅ রেজিস্ট্রেশন করুন
-      </button>
-
-      <p style="text-align:center;color:#94a3b8;font-size:14px">
-        আগে থেকে অ্যাকাউন্ট আছে?
-        <a href="/login" style="color:#ef4444;font-weight:bold">লগইন করুন</a>
-      </p>
-    </form>
+    </div>
   </div>
 </div>
 

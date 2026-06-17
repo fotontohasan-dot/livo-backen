@@ -32,6 +32,7 @@ app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.success = req.flash('success');
   res.locals.error = req.flash('error');
+  res.locals.currentPage = req.path === '/' ? 'home' : req.path.split('/')[1] || '';
   next();
 });
 

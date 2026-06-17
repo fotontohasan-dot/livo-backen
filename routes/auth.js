@@ -11,7 +11,14 @@ function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-router.get('/', (req, res) => res.render('index', { user: req.session.user || null }));
+router.get('/', async (req, res) => {
+  try {
+    res.render('index', { user: req.session.user || null });
+  } catch (err) {
+    console.error('Error rendering index:', err);
+    res.status(500).send('Render Error: ' + err.message);
+  }
+});
 
 router.get('/register', (req, res) => {
   const ref = req.query.ref || '';
