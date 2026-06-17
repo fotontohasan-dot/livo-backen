@@ -12,7 +12,15 @@
         </div>
         <div style="margin-bottom:1rem;">
           <label style="display:block;margin-bottom:.5rem;color:var(--muted);">ইমেইল</label>
-          <input type="email" name="email" class="form-input" placeholder="email@example.com" required>
+          <div style="display:flex;gap:8px;">
+            <input type="email" name="email" id="emailInput" class="form-input" placeholder="email@example.com" required>
+            <button type="button" id="sendOtpBtn" class="btn btn-secondary" style="white-space:nowrap;font-size:.85rem;padding:0 12px;">পাঠান</button>
+          </div>
+          <p id="otpMsg" style="font-size:.75rem;margin-top:.3rem;display:none;"></p>
+        </div>
+        <div id="otpSection" style="margin-bottom:1rem;">
+          <label style="display:block;margin-bottom:.5rem;color:var(--muted);">OTP কোড</label>
+          <input type="text" name="otp" class="form-input" placeholder="আপনার ইমেইল থেকে OTP দিন" required>
         </div>
         <div style="margin-bottom:1rem;">
           <label style="display:block;margin-bottom:.5rem;color:var(--muted);">পাসওয়ার্ড</label>
@@ -32,4 +40,62 @@
   </div>
 </div>
 <%- include('partials/bottom-nav') %>
+<script>
+document.getElementById('sendOtpBtn').addEventListener('click', async function() {
+  const email = document.getElementById('emailInput').value;
+  const msgEl = document.getElementById('otpMsg');
+  const btn = this;
+
+  if (!email || !email.includes('@')) {
+    msgEl.style.color = '#cc0000';
+    msgEl.textContent = '❌ সঠিক ইমেইল দিন';
+    msgEl.style.display = 'block';
+    return;
+  }
+
+  try {
+    btn.disabled = true;
+    btn.textContent = 'পাঠাচ্ছে...';
+    msgEl.style.display = 'none';
+
+    const res = await fetch('/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      msgEl.style.color = '#00cc66';
+      msgEl.textContent = '✅ ' + data.message;
+      msgEl.style.display = 'block';
+
+      // Cooldown for button
+      let timeLeft = 60;
+      const timer = setInterval(() => {
+        timeLeft--;
+        btn.textContent = `আবার পাঠান (${timeLeft}s)`;
+        if (timeLeft <= 0) {
+          clearInterval(timer);
+          btn.disabled = false;
+          btn.textContent = 'আবার পাঠান';
+        }
+      }, 1000);
+    } else {
+      msgEl.style.color = '#cc0000';
+      msgEl.textContent = '❌ ' + data.message;
+      msgEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'পাঠান';
+    }
+  } catch (err) {
+    console.error(err);
+    msgEl.style.color = '#cc0000';
+    msgEl.textContent = '❌ সার্ভার সমস্যা হয়েছে';
+    msgEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'পাঠান';
+  }
+});
+</script>
 </body></html>
