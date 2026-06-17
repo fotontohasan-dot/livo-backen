@@ -40,9 +40,54 @@
 
     socket.emit('join', userId);
 
+    window.sendQuickMessage = async function(text) {
+        messageInput.value = text;
+        await sendMessage();
+    };
+
+    function showWelcome() {
+        const welcomeDiv = document.createElement('div');
+        welcomeDiv.className = 'mb-6 max-w-[95%] mx-auto';
+        welcomeDiv.innerHTML = `
+            <div class="bg-white text-black rounded-xl overflow-hidden shadow-lg border border-gray-200">
+                <div class="p-4 bg-gray-50 flex items-center gap-3 border-b border-gray-200">
+                    <div class="w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center text-white font-bold text-xl shadow-inner">L</div>
+                    <div>
+                        <h3 class="font-bold text-gray-800">Livo Support</h3>
+                        <p class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">24/7 অনলাইন গ্রাহক পরিষেবা</p>
+                    </div>
+                </div>
+                <div class="p-4">
+                    <p class="text-sm text-gray-700 leading-relaxed mb-5">
+                        আমাদের Livo ওয়েবসাইটে আপনাকে স্বাগতম। যদি আপনার সাহায্যের প্রয়োজন হয়, তাহলে কেবল এই বার্তার উত্তর দিন এবং আমরা যেকোনো সময় আপনাকে সহায়তা করার জন্য অনলাইনে থাকব।
+                    </p>
+                    <div class="grid gap-2">
+                        <button onclick="sendQuickMessage('$ জমা সমস্যা $')" class="w-full py-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-sm font-bold text-gray-700 flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
+                            $ জমা সমস্যা $
+                        </button>
+                        <button onclick="sendQuickMessage('💦 প্রত্যাহারের সমস্যা 💦')" class="w-full py-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-sm font-bold text-gray-700 flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
+                            💦 প্রত্যাহারের সমস্যা 💦
+                        </button>
+                        <button onclick="sendQuickMessage('💧 অ্যাকাউন্ট প্রশ্ন 💧')" class="w-full py-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-sm font-bold text-gray-700 flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
+                            💧 অ্যাকাউন্ট প্রশ্ন 💧
+                        </button>
+                        <button onclick="sendQuickMessage('🧧 সম্পর্কে প্রশ্ন ঘটনা 🧧')" class="w-full py-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-sm font-bold text-gray-700 flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
+                            🧧 সম্পর্কে প্রশ্ন ঘটনা 🧧
+                        </button>
+                        <button onclick="sendQuickMessage('⚽️ বিশ্বকাপ ইভেন্ট ⚽️')" class="w-full py-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-sm font-bold text-gray-700 flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
+                            ⚽️ বিশ্বকাপ ইভেন্ট ⚽️
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        messagesDiv.appendChild(welcomeDiv);
+    }
+
     fetch('/chat/history')
         .then(res => res.json())
         .then(messages => {
+            showWelcome();
             if (Array.isArray(messages)) {
                 messages.forEach(msg => appendMessage(msg.message, msg.is_admin, msg.created_at, msg.file_url, msg.file_type));
                 scrollToBottom();
