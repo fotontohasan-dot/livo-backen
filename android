@@ -45,3 +45,37 @@ object AuthKeyManager {
         return String(cipher.doFinal(ciphertext))
     }
 }
+// BiometricAuthManager.kt
+class BiometricAuthManager(private val context: Context) {
+
+    fun authenticate(
+        activity: FragmentActivity,
+        title: String = "Libu - Verify Identity",
+        subtitle: String = "Biometric authentication required",
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val executor = ContextCompat.getMainExecutor(context)
+        val biometricPrompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                super.onAuthenticationSucceeded(result)
+                // CryptoObject available for transaction signing if needed
+                onSuccess()
+            }
+
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                super.onAuthenticationError(errorCode, errString)
+                onError(errString.toString())
+            }
+        })
+
+        val promptInfo = BiometricPrompt.PromptInfo.Builder()
+            .setTitle(title)
+            .setSubtitle(subtitle)
+            .setAllowedAuthenticators(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
+            .setConfirmationRequired(true)
+            .build()
+
+        biometricPrompt.authenticate(promptInfo)
+    }
+}
