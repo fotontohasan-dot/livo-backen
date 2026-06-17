@@ -1,11 +1,23 @@
-<%- include('partials/head') %>
-<%- include('partials/navbar') %>
-<div class="container page" style="text-align:center;padding:5rem 0;">
-  <div style="font-size:4rem;margin-bottom:1rem;">⛔</div>
-  <h1 style="font-size:2rem;margin-bottom:.5rem">Access Denied</h1>
-  <p style="color:var(--muted);margin-bottom:2rem">
-    <%= locals.message || 'You do not have permission' %>
-  </p>
-  <a href="/" class="btn btn-primary">Go Home</a>
-</div>
-</body></html>
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <title>Error - LIVO</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 50px;
+      background: #f8f8f8;
+    }
+    h1 { color: #e53e3e; }
+    p { color: #555; }
+    a { color: #e53e3e; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <h1>⚠️ সমস্যা হয়েছে</h1>
+  <p><%= message %></p>
+  <a href="/">← হোমপেজে ফিরে যান</a>
+</body>
+</html>
