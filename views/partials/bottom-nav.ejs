@@ -1,138 +1,29 @@
-:root {
-  --bg-dark: #050505;
-  --bg-surface: #121212;
-  --bg-card: rgba(255, 255, 255, 0.03);
-  --bg-glass: rgba(255, 255, 255, 0.05);
-  --border-glass: rgba(255, 255, 255, 0.1);
+<div class="bottom-nav">
+  <a href="/" class="nav-link <%= currentPage === 'home' ? 'active' : '' %>">
+    <i class="fas fa-home"></i>
+    <span>হোম</span>
+  </a>
 
-  --primary: #8b5cf6;
-  --primary-glow: rgba(139, 92, 246, 0.5);
-  --secondary: #ec4899;
-  --accent: #06b6d4;
-  --gold: #f59e0b;
+  <a href="/profile?tab=invitation" class="nav-link <%= currentPage === 'invitation' ? 'active' : '' %>">
+    <i class="fas fa-user-plus"></i>
+    <span>আমন্ত্রণ</span>
+  </a>
 
-  --grad-primary: linear-gradient(135deg, #8b5cf6, #ec4899);
-  --grad-secondary: linear-gradient(135deg, #06b6d4, #3b82f6);
-  --grad-dark: linear-gradient(180deg, #121212, #050505);
-  --grad-surface: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));
+  <!-- Center Promotion Button -->
+  <div class="promotion-container">
+    <a href="/tournaments" class="btn btn-primary btn-glow promotion-btn">
+      <i class="fas fa-gift"></i>
+    </a>
+    <span class="promotion-label">প্রমোশন</span>
+  </div>
 
-  --text-main: #ffffff;
-  --text-muted: #94a3b8;
+  <a href="/chat" class="nav-link <%= currentPage === 'chat' ? 'active' : '' %>">
+    <i class="fas fa-headset"></i>
+    <span>সেবা</span>
+  </a>
 
-  --shadow-neon: 0 0 15px var(--primary-glow);
-  --glass-blur: blur(12px);
-}
-
-/* Light Mode Variables */
-body.light-mode {
-  --bg-dark: #f0f2f5;
-  --bg-surface: #ffffff;
-  --bg-card: rgba(0, 0, 0, 0.03);
-  --bg-glass: rgba(255, 255, 255, 0.7);
-  --border-glass: rgba(0, 0, 0, 0.1);
-
-  --text-main: #1a1a1a;
-  --text-muted: #64748b;
-  --grad-surface: linear-gradient(135deg, rgba(255,255,255,0.8), rgba(255,255,255,0.4));
-}
-
-body.light-mode {
-    background-image:
-        radial-gradient(circle at 0% 0%, rgba(139, 92, 246, 0.05) 0%, transparent 35%),
-        radial-gradient(circle at 100% 100%, rgba(6, 182, 212, 0.05) 0%, transparent 35%);
-}
-
-body.light-mode .bottom-nav {
-    background: rgba(255, 255, 255, 0.95) !important;
-    border-top: 1px solid rgba(0,0,0,0.1);
-}
-
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    -webkit-tap-highlight-color: transparent;
-}
-
-body {
-    background-color: var(--bg-dark);
-    background-image:
-        radial-gradient(circle at 0% 0%, rgba(139, 92, 246, 0.15) 0%, transparent 35%),
-        radial-gradient(circle at 100% 100%, rgba(6, 182, 212, 0.15) 0%, transparent 35%);
-    color: var(--text-main);
-    font-family: 'Hind Siliguri', 'Segoe UI', Roboto, sans-serif;
-    min-height: 100vh;
-    padding-bottom: 90px !important;   /* ← Fixed: Overlap fix */
-    overflow-x: hidden;
-}
-
-/* Glassmorphism Utility */
-.glass {
-    background: var(--bg-glass);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--border-glass);
-}
-
-.container {
-    max-width: 480px;
-    margin: 0 auto;
-    padding: 0 12px;
-}
-
-/* Navbar */
-.navbar {
-    background: rgba(5, 5, 5, 0.95);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--border-glass);
-    padding: 8px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 60px;
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-}
-
-/* Bottom Nav - Fixed */
-.bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    max-width: 480px;
-    background: rgba(10, 10, 10, 0.98);
-    backdrop-filter: blur(20px);
-    display: flex;
-    justify-content: space-around;
-    padding: 8px 0 18px 0;
-    border-top: 1px solid var(--border-glass);
-    z-index: 1100;
-    box-shadow: 0 -4px 25px rgba(0, 0, 0, 0.6);
-}
-
-.nav-link {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    color: var(--text-muted);
-    text-decoration: none;
-    font-size: 10px;
-    gap: 4px;
-    transition: 0.3s;
-}
-
-.nav-link.active {
-    color: var(--primary);
-}
-
-.nav-link.active i {
-    filter: drop-shadow(0 0 5px var(--primary-glow));
-}
-
-/* Rest of your styles (unchanged) */
-.btn { ... } /* তোমার আগের সব স্টাইল এখানে রাখো */
-
-.card, .game-grid, .banner-container, .stats-grid, .match-card, .profile-list-item ইত্যাদি — সব আগের মতোই রাখো।
+  <a href="/profile" class="nav-link <%= currentPage === 'profile' ? 'active' : '' %>">
+    <i class="fas fa-user-circle"></i>
+    <span>সদস্য</span>
+  </a>
+</div>
