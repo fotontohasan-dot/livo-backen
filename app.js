@@ -65,9 +65,96 @@ const PORT = process.env.PORT || 3000;
 
 async function migrateDB() {
   try {
-    await pool.query(`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS file_url TEXT`);
-    await pool.query(`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS file_type VARCHAR(10)`);
-    console.log('✅ DB migration done');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+          id SERIAL PRIMARY KEY,
+          username VARCHAR(50) UNIQUE NOT NULL,
+          email VARCHAR(100) UNIQUE NOT NULL,
+          password VARCHAR(255) NOT NULL,
+          role VARCHAR(20) DEFAULT 'user',
+          coins INT DEFAULT 500,
+          total_points INT DEFAULT 0,
+          avatar TEXT,
+          referral_code VARCHAR(20) UNIQUE,
+          is_banned BOOLEAN DEFAULT false,
+          created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS matches (
+          id SERIAL PRIMARY KEY,
+          title VARCHAR(255),
+          sport VARCHAR(50),
+          team_a VARCHAR(100),
+          team_b VARCHAR(100),
+          match_date TIMESTAMP,
+          status VARCHAR(20) DEFAULT 'upcoming',
+          winner VARCHAR(100),
+          created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS predictions (
+          id SERIAL PRIMARY KEY,
+          user_id INT REFERENCES users(id),
+          match_id INT REFERENCES matches(id),
+          predicted_winner VARCHAR(100),
+          coins_bet INT,
+          status VARCHAR(20) DEFAULT 'pending',
+          created_at TIMESTAMP DEFAULT NOW(),
+          UNIQUE(user_id, match_id)
+      );
+      CREATE TABLE IF NOT EXISTS coin_transactions (
+          id SERIAL PRIMARY KEY,
+          user_id INT REFERENCES users(id),
+          amount INT,
+          type VARCHAR(50),
+          description TEXT,
+          created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS chat_messages (
+          id SERIAL PRIMARY KEY,
+          sender_id INT REFERENCES users(id),
+          receiver_id INT REFERENCES users(id),
+          message TEXT,
+          is_admin BOOLEAN DEFAULT false,
+          file_url TEXT,
+          file_type VARCHAR(20),
+          created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS notifications (
+          id SERIAL PRIMARY KEY,
+          user_id INT REFERENCES users(id),
+          title VARCHAR(255),
+          message TEXT,
+          is_read BOOLEAN DEFAULT false,
+          created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS tournaments (
+          id SERIAL PRIMARY KEY,
+          title VARCHAR(255),
+          description TEXT,
+          entry_fee INT,
+          prize_pool INT,
+          start_date TIMESTAMP,
+          status VARCHAR(20) DEFAULT 'upcoming',
+          created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS tournament_participants (
+          id SERIAL PRIMARY KEY,
+          tournament_id INT REFERENCES tournaments(id),
+          user_id INT REFERENCES users(id),
+          created_at TIMESTAMP DEFAULT NOW(),
+          UNIQUE(tournament_id, user_id)
+      );
+      CREATE TABLE IF NOT EXISTS news (
+          id SERIAL PRIMARY KEY,
+          title TEXT NOT NULL,
+          content TEXT NOT NULL,
+          image_url TEXT,
+          created_at TIMESTAMP DEFAULT NOW()
+      );
+
+      ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS file_url TEXT;
+      ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS file_type VARCHAR(20);
+    `);
+    console.log('✅ DB migration and schema initialization done');
   } catch (err) {
     console.error('Migration error:', err.message);
   }
