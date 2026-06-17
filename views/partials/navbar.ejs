@@ -1,107 +1,118 @@
-<nav class="navbar">
-  <div style="display:flex;align-items:center;gap:1rem;">
-    <button onclick="toggleMenu()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;">☰</button>
-    <a href="/" class="nav-brand">LIVO</a>
-  </div>
-  <div style="display:flex;align-items:center;gap:0.75rem;">
-    <% if(locals.user) { %>
-    <div style="background:#1e1e1e;border:1px solid rgba(230,0,0,0.3);padding:5px 12px;border-radius:20px;font-size:.85rem;color:#ffd700;font-weight:700;">
-      🪙 <%= user.coins %>
-    </div>
-    <% } %>
-    <a href="/notifications" style="color:#fff;font-size:20px;text-decoration:none;">🔔</a>
-    <a href="/news" style="color:#fff;font-size:20px;text-decoration:none;">✉️</a>
-    <button onclick="window.location.reload()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;">🔄</button>
-  </div>
-</nav>
-
-<!-- Side Menu -->
-<div id="sideMenu" style="position:fixed;top:0;left:-280px;width:280px;height:100%;background:#0d0d0d;z-index:9999;transition:left 0.3s;border-right:1px solid rgba(230,0,0,0.3);overflow-y:auto;">
-  <div style="padding:20px;border-bottom:1px solid rgba(230,0,0,0.2);display:flex;align-items:center;justify-content:space-between;">
-    <span style="font-size:1.5rem;font-weight:900;color:#e60000;">LIVO</span>
+<div class="side-menu" id="sideMenu">
+  <div style="padding:20px;border-bottom:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:space-between;">
+    <span class="nav-brand">LIVO</span>
     <button onclick="toggleMenu()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;">✕</button>
   </div>
   <% if(locals.user) { %>
-  <div style="padding:15px 20px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;gap:12px;">
-    <div style="width:45px;height:45px;border-radius:50%;background:linear-gradient(90deg,#e60000,#ff1a1a);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;">
+  <div style="padding:15px 20px;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;gap:12px;">
+    <div style="width:45px;height:45px;border-radius:50%;background:var(--grad-primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;color:#fff;box-shadow: 0 0 10px var(--primary-glow);">
       <%= user.username[0].toUpperCase() %>
     </div>
     <div>
-      <div style="font-weight:700;"><%= user.username %></div>
-      <div style="color:#ffd700;font-size:.85rem;">🪙 <%= user.coins %></div>
+      <div style="font-weight:700;color:#fff;"><%= user.username %></div>
+      <div style="color:var(--gold);font-size:.85rem;font-family:'Teko',sans-serif;">🪙 <%= user.coins %></div>
     </div>
   </div>
   <% } %>
-  <div style="padding:10px 0;">
-    <a href="/" style="display:flex;align-items:center;gap:12px;padding:13px 20px;color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.05);">
-      <span style="font-size:18px;">🏠</span><span>হোম</span>
-    </a>
-    <a href="/games/aviator" style="display:flex;align-items:center;gap:12px;padding:13px 20px;color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.05);">
-      <span style="font-size:18px;">🚀</span><span>Aviator</span>
-    </a>
-    <a href="/games/slots" style="display:flex;align-items:center;gap:12px;padding:13px 20px;color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.05);">
-      <span style="font-size:18px;">🎰</span><span>Slots</span>
-    </a>
-    <a href="/games/color-prediction" style="display:flex;align-items:center;gap:12px;padding:13px 20px;color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.05);">
-      <span style="font-size:18px;">🌈</span><span>Color Prediction</span>
-    </a>
-    <a href="/matches" style="display:flex;align-items:center;gap:12px;padding:13px 20px;color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.05);">
-      <span style="font-size:18px;">⚽</span><span>স্পোর্টস</span>
-    </a>
-    <a href="/tournaments" style="display:flex;align-items:center;gap:12px;padding:13px 20px;color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.05);">
-      <span style="font-size:18px;">🏆</span><span>টুর্নামেন্ট</span>
-    </a>
-    <a href="/payment/deposit" style="display:flex;align-items:center;gap:12px;padding:13px 20px;color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.05);">
-      <span style="font-size:18px;">💰</span><span>ডিপোজিট</span>
-    </a>
-    <a href="/payment/withdraw" style="display:flex;align-items:center;gap:12px;padding:13px 20px;color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.05);">
-      <span style="font-size:18px;">💸</span><span>উইথড্র</span>
-    </a>
-    <a href="/leaderboard" style="display:flex;align-items:center;gap:12px;padding:13px 20px;color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.05);">
-      <span style="font-size:18px;">🏅</span><span>লিডারবোর্ড</span>
-    </a>
-    <a href="/profile" style="display:flex;align-items:center;gap:12px;padding:13px 20px;color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.05);">
-      <span style="font-size:18px;">👤</span><span>প্রোফাইল</span>
-    </a>
-    <% if(locals.user && user.role === 'admin') { %>
-    <a href="/admin" style="display:flex;align-items:center;gap:12px;padding:13px 20px;color:#e60000;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.05);">
-      <span style="font-size:18px;">⚙️</span><span>এডমিন প্যানেল</span>
-    </a>
-    <% } %>
+  <a href="/" class="menu-item"><i class="fas fa-home"></i> হোম</a>
+  <a href="/games/aviator" class="menu-item"><i class="fas fa-rocket"></i> Aviator</a>
+  <a href="/games/slots" class="menu-item"><i class="fas fa-slot-machine"></i> Slots</a>
+  <a href="/games/color-prediction" class="menu-item"><i class="fas fa-palette"></i> Color Prediction</a>
+  <a href="/matches" class="menu-item"><i class="fas fa-futbol"></i> স্পোর্টস</a>
+  <a href="/tournaments" class="menu-item"><i class="fas fa-trophy"></i> টুর্নামেন্ট</a>
+  <a href="/payment/deposit" class="menu-item"><i class="fas fa-wallet"></i> ডিপোজিট</a>
+  <a href="/payment/withdraw" class="menu-item"><i class="fas fa-money-bill-wave"></i> উইথড্র</a>
+  <a href="/leaderboard" class="menu-item"><i class="fas fa-medal"></i> লিডারবোর্ড</a>
+  <a href="/news" class="menu-item"><i class="fas fa-newspaper"></i> নিউজ</a>
+  <a href="/profile" class="menu-item"><i class="fas fa-user"></i> প্রোফাইল</a>
+  <% if(locals.user && user.role === 'admin') { %>
+  <a href="/admin" class="menu-item" style="color:var(--primary) !important;"><i class="fas fa-cog"></i> এডমিন প্যানেল</a>
+  <% } %>
+  <% if(locals.user) { %>
+  <a href="/logout" class="menu-item" style="color:#ef4444 !important;"><i class="fas fa-sign-out-alt"></i> লগআউট</a>
+  <% } else { %>
+  <a href="/login" class="menu-item" style="color:#10b981 !important;"><i class="fas fa-sign-in-alt"></i> লগইন</a>
+  <a href="/register" class="menu-item" style="color:var(--gold) !important;"><i class="fas fa-user-plus"></i> রেজিস্টার</a>
+  <% } %>
+</div>
+<div class="menu-overlay" id="menuOverlay" onclick="toggleMenu()"></div>
+
+<nav class="navbar">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <button onclick="toggleMenu()" style="background:none;border:none;color:#fff;font-size:24px;cursor:pointer;padding:0;line-height:1;"><i class="fas fa-bars"></i></button>
+    <div class="nav-brand">LIVO</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
     <% if(locals.user) { %>
-    <a href="/logout" style="display:flex;align-items:center;gap:12px;padding:13px 20px;color:#ff4444;text-decoration:none;">
-      <span style="font-size:18px;">🚪</span><span>লগআউট</span>
-    </a>
+      <div class="glass" style="padding:4px 12px;border-radius:20px;font-size:13px;color:var(--gold);display:flex;align-items:center;gap:4px;font-family:'Teko',sans-serif;font-weight:700;">🪙 <%= user.coins %></div>
+      <div style="display:flex;gap:12px;">
+        <a href="/notifications" style="color:#fff;font-size:18px;"><i class="fas fa-bell"></i></a>
+        <a href="/news" style="color:#fff;font-size:18px;"><i class="fas fa-envelope"></i></a>
+      </div>
     <% } else { %>
-    <a href="/login" style="display:flex;align-items:center;gap:12px;padding:13px 20px;color:#10b981;text-decoration:none;">
-      <span style="font-size:18px;">🔑</span><span>লগইন</span>
-    </a>
+      <a href="/login" class="btn btn-primary" style="padding:6px 14px;border-radius:20px;font-size:12px;">লগইন</a>
+      <a href="/register" class="btn btn-secondary" style="padding:6px 14px;border-radius:20px;font-size:12px;">রেজিস্টার</a>
     <% } %>
   </div>
-</div>
-
-<!-- Overlay -->
-<div id="menuOverlay" onclick="toggleMenu()" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9998;"></div>
+</nav>
 
 <script>
 function toggleMenu() {
   const menu = document.getElementById('sideMenu');
   const overlay = document.getElementById('menuOverlay');
-  const isOpen = menu.style.left === '0px';
-  menu.style.left = isOpen ? '-280px' : '0px';
-  overlay.style.display = isOpen ? 'none' : 'block';
+  menu.classList.toggle('open');
+  overlay.classList.toggle('open');
 }
 </script>
 
 <% if(locals.user) { %>
 <div class="top-balance-bar">
-  <div style="display:flex;gap:0.5rem;">
-    <a href="/payment/deposit" class="btn btn-sm btn-primary" style="padding:6px 12px;font-size:0.8rem;border-radius:4px;">Deposit</a>
-    <a href="/payment/withdraw" class="btn btn-sm btn-outline" style="padding:6px 12px;font-size:0.8rem;border-radius:4px;">Withdraw</a>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <span style="font-size:13px;color:var(--text-muted);">ব্যালেন্স:</span>
+    <div class="balance-amount">৳ <%= user.coins %></div>
   </div>
-  <div class="balance-amount">
-    <span style="font-size:0.8rem;color:var(--muted);font-weight:400;margin-right:4px;">Balance:</span>
-    🪙 <%= user.coins %>
+  <div style="display:flex;gap:8px;">
+    <a href="/payment/deposit" class="btn btn-primary" style="padding:5px 12px;font-size:12px;border-radius:8px;">ডিপোজিট</a>
+    <a href="/payment/withdraw" class="btn glass" style="padding:5px 12px;font-size:12px;border-radius:8px;color:#fff;">উইথড্র</a>
   </div>
 </div>
 <% } %>
+
+<style>
+.side-menu {
+  position: fixed;
+  top: 0;
+  left: -280px;
+  width: 280px;
+  height: 100%;
+  background: #0a0a0a;
+  z-index: 9999;
+  transition: left 0.3s;
+  border-right: 1px solid rgba(255,255,255,0.1);
+  overflow-y: auto;
+}
+.side-menu.open { left: 0; }
+.menu-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.7);
+  z-index: 9998;
+}
+.menu-overlay.open { display: block; }
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 20px;
+  color: #94a3b8;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  font-size: 14px;
+}
+.menu-item i { width: 20px; text-align: center; }
+.menu-item:hover { background: rgba(139, 92, 246, 0.1); color: #fff; }
+</style>

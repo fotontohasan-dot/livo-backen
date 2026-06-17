@@ -1,558 +1,231 @@
 <%- include('partials/head') %>
+<%- include('partials/navbar') %>
 
+<div style="background:rgba(245,158,11,0.1);border-bottom:1px solid rgba(245,158,11,0.2);padding:6px 0;overflow:hidden;">
+  <div style="display:flex;white-space:nowrap;animation:marquee 28s linear infinite;">
+    <span style="font-size:12px;color:var(--gold);padding:0 28px;">🏆 <em>***৮৮২</em> জিতেছেন ৳১৫,৬৮,৫২৩!</span>
+    <span style="font-size:12px;color:var(--gold);padding:0 28px;">🎰 <em>***৯৫৫</em> স্লটে জিতেছেন ৳১০,১২,৮৯৮!</span>
+    <span style="font-size:12px;color:var(--gold);padding:0 28px;">🎯 <em>***১১৮</em> লাইভে জিতেছেন ৳৯,৯৮,৫৪১!</span>
+    <span style="font-size:12px;color:var(--gold);padding:0 28px;">⚽ <em>***৭৮৯</em> স্পোর্টসে জিতেছেন ৳৩,৮২,০০২!</span>
+    <span style="font-size:12px;color:var(--gold);padding:0 28px;">🏆 <em>***৮৮২</em> জিতেছেন ৳১৫,৬৮,৫২৩!</span>
+  </div>
+</div>
+<style>@keyframes marquee { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }</style>
+
+<div class="banner-container">
+  <div class="card btn-glow" style="height:160px;background:var(--grad-primary);position:relative;display:flex;align-items:center;padding:20px;">
+    <div style="z-index:1;">
+      <h2 style="font-family:'Teko',sans-serif;font-size:32px;color:#fff;line-height:1;">🎰 ওয়েলকাম বোনাস</h2>
+      <p style="font-size:13px;color:rgba(255,255,255,0.8);margin-top:5px;">প্রথম ডিপোজিটে ১০০% বোনাস পান</p>
+      <a href="/payment/deposit" class="btn btn-secondary" style="margin-top:12px;border-radius:25px;padding:8px 24px;">এখনই নিন</a>
+    </div>
+    <div style="position:absolute;right:10px;font-size:80px;opacity:0.3;">💰</div>
+  </div>
+</div>
+
+<div class="glass" style="margin:8px 12px;border-radius:12px;padding:12px;display:flex;align-items:center;gap:12px;">
+  <div class="live-indicator"></div>
+  <p style="font-size:13px;color:var(--text-muted);"><span style="color:var(--gold);font-weight:700;">ঘোষণা:</span> নতুন সিজন শুরু! এখন রেজিস্টার করলে ৫০০ ফ্রি কয়েন পাবেন।</p>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-value">৫০০+</div>
+    <div class="stat-label">গেমের সংখ্যা</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">২৪/৭</div>
+    <div class="stat-label">সাপোর্ট</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">৳৫মি+</div>
+    <div class="stat-label">পেমেন্ট</div>
+  </div>
+</div>
+
+<div style="display:flex;overflow-x:auto;padding:8px 12px;gap:10px;scrollbar-width:none;" id="catNav">
+  <style>#catNav::-webkit-scrollbar { display:none; }</style>
+  <div class="glass cat-item active" data-type="all" style="flex:0 0 auto;padding:8px 16px;border-radius:12px;cursor:pointer;text-align:center;transition:0.3s;">
+    <div style="font-size:18px;">🔥</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">সবগুলো</div>
+  </div>
+  <div class="glass cat-item" data-type="slots" style="flex:0 0 auto;padding:8px 16px;border-radius:12px;cursor:pointer;text-align:center;transition:0.3s;">
+    <div style="font-size:18px;">🎰</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">স্লট</div>
+  </div>
+  <div class="glass cat-item" data-type="live" style="flex:0 0 auto;padding:8px 16px;border-radius:12px;cursor:pointer;text-align:center;transition:0.3s;">
+    <div style="font-size:18px;">🎲</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">লাইভ</div>
+  </div>
+  <div class="glass cat-item" data-type="pvp" style="flex:0 0 auto;padding:8px 16px;border-radius:12px;cursor:pointer;text-align:center;transition:0.3s;">
+    <div style="font-size:18px;">⚔️</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">PVP</div>
+  </div>
+  <div class="glass cat-item" data-type="sports" style="flex:0 0 auto;padding:8px 16px;border-radius:12px;cursor:pointer;text-align:center;transition:0.3s;">
+    <div style="font-size:18px;">⚽</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">স্পোর্টস</div>
+  </div>
+</div>
 <style>
-:root {
-  --gold: #f5c518;
-  --gold2: #e6a800;
-  --red: #e8003d;
-  --dark: #f5f5f5;
-  --card-bg: #ffffff;
-  --card-border: #e0e0e0;
-  --text: #1a1a2e;
-  --muted: #666688;
-  --green: #00d26a;
-  --purple: #6b00ff;
-}
-* { margin:0; padding:0; box-sizing:border-box; }
-body { background:#f5f5f5; color:var(--text); font-family:'Hind Siliguri',sans-serif; max-width:480px; margin:0 auto; overflow-x:hidden; margin-bottom:70px; }
-
-.topbar { background:#ffffff; display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-bottom:1px solid #e0e0e0; position:sticky; top:0; z-index:100; }
-.logo { font-family:'Teko',sans-serif; font-size:28px; font-weight:700; color:var(--gold); text-shadow:0 0 20px rgba(245,197,24,0.3); }
-.logo span { color:#333; }
-.topbar-right { display:flex; align-items:center; gap:8px; }
-.coin-box { background:linear-gradient(135deg,#fff8e1,#fffde7); border:1px solid var(--gold2); border-radius:20px; padding:4px 10px; font-size:13px; color:var(--gold); display:flex; align-items:center; gap:4px; }
-.btn-auth { border:none; border-radius:20px; padding:6px 14px; font-size:13px; font-weight:700; cursor:pointer; text-decoration:none; }
-.btn-login { background:linear-gradient(135deg,var(--gold),var(--gold2)); color:#000; }
-.btn-reg   { background:linear-gradient(135deg,var(--red),#b00030); color:#fff; }
-.topbar-icons { display:flex; gap:10px; }
-.topbar-icons a { color:#555; font-size:18px; text-decoration:none; }
-
-.balance-bar { background:#ffffff; border-bottom:1px solid #e0e0e0; padding:6px 12px; display:flex; align-items:center; justify-content:space-between; }
-.balance-left { display:flex; align-items:center; gap:6px; }
-.balance-left span { font-size:13px; color:var(--muted); }
-.balance-amount { font-family:'Teko',sans-serif; font-size:20px; color:var(--gold); }
-.bal-btns { display:flex; gap:6px; }
-.bal-btn { padding:5px 12px; border-radius:8px; font-size:12px; font-weight:700; border:none; cursor:pointer; text-decoration:none; }
-.bal-btn.dep { background:linear-gradient(135deg,var(--green),#009950); color:#fff; }
-.bal-btn.wit { background:linear-gradient(135deg,#1a6bff,#0044cc); color:#fff; }
-
-.marquee-bar { background:#fff8e1; border-bottom:1px solid #e0e0e0; padding:5px 0; overflow:hidden; }
-.marquee-inner { display:flex; white-space:nowrap; animation:marquee 28s linear infinite; }
-.marquee-inner span { font-size:12px; color:var(--gold); padding:0 28px; }
-.marquee-inner span em { color:#333; font-style:normal; }
-@keyframes marquee { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
-
-.banner { position:relative; overflow:hidden; height:155px; }
-.banner-slide { position:absolute; width:100%; height:100%; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity 0.8s; }
-.banner-slide.active { opacity:1; }
-.bs1 { background:linear-gradient(135deg,#e8e0ff,#d0b0ff,#e8e0ff); }
-.bs2 { background:linear-gradient(135deg,#e0f5e0,#a0d8a0,#e0f5e0); }
-.bs3 { background:linear-gradient(135deg,#ffe0e8,#ffb0c0,#ffe0e8); }
-.banner-content { text-align:center; padding:20px; }
-.banner-content h2 { font-family:'Teko',sans-serif; font-size:30px; color:#333; line-height:1; }
-.banner-content p { font-size:13px; color:#555; margin-top:5px; }
-.banner-btn { display:inline-block; margin-top:10px; background:linear-gradient(135deg,var(--gold),var(--gold2)); color:#000; padding:7px 22px; border-radius:25px; font-weight:700; font-size:13px; cursor:pointer; border:none; text-decoration:none; }
-.banner-dots { position:absolute; bottom:8px; left:50%; transform:translateX(-50%); display:flex; gap:5px; }
-.dot { width:6px; height:6px; border-radius:50%; background:rgba(0,0,0,0.2); cursor:pointer; transition:all 0.3s; }
-.dot.active { background:var(--gold); width:16px; border-radius:3px; }
-
-.notice { margin:8px; background:rgba(245,197,24,0.1); border:1px solid rgba(245,197,24,0.3); border-radius:8px; padding:8px 12px; display:flex; align-items:center; gap:8px; }
-.notice p { font-size:12px; color:#996600; }
-.aff-banner { background:linear-gradient(135deg,#f0e8ff,#e0d0ff); margin:0 8px 8px; border-radius:10px; padding:10px 14px; display:flex; align-items:center; justify-content:space-between; border:1px solid #c0a0ff; }
-.aff-banner h4 { font-size:13px; color:#5000a0; }
-.aff-banner p  { font-size:11px; color:#7050a0; margin-top:2px; }
-.aff-btn { background:linear-gradient(135deg,#7000ff,#4000cc); color:#fff; border:none; border-radius:15px; padding:6px 14px; font-size:12px; cursor:pointer; white-space:nowrap; text-decoration:none; }
-
-.stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding:0 8px 8px; }
-.stat-box { background:#ffffff; border:1px solid #e0e0e0; border-radius:10px; padding:10px; text-align:center; }
-.stat-box h4 { font-family:'Teko',sans-serif; font-size:20px; color:var(--gold); }
-.stat-box p  { font-size:10px; color:var(--muted); margin-top:2px; }
-
-.cats { display:flex; overflow-x:auto; padding:8px; scrollbar-width:none; }
-.cats::-webkit-scrollbar { display:none; }
-.cat { flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:3px; padding:7px 12px; border-radius:10px; cursor:pointer; transition:all 0.2s; border-bottom:2px solid transparent; }
-.cat.active { border-bottom-color:var(--gold); background:rgba(245,197,24,0.08); }
-.cat-icon  { font-size:20px; }
-.cat-label { font-size:11px; color:var(--muted); white-space:nowrap; }
-.cat.active .cat-label { color:var(--gold); }
-
-.search-wrap { padding:0 8px 8px; }
-.search-inner { position:relative; }
-.search-inner input { width:100%; padding:9px 40px 9px 14px; border-radius:25px; border:1px solid #e0e0e0; background:#ffffff; color:#1a1a2e; font-size:13px; outline:none; }
-.search-inner span { position:absolute; right:14px; top:50%; transform:translateY(-50%); }
-
-.sec-header { display:flex; align-items:center; justify-content:space-between; padding:8px 12px 5px; }
-.sec-header h3 { font-family:'Teko',sans-serif; font-size:19px; color:#1a1a2e; display:flex; align-items:center; gap:5px; }
-.see-all { font-size:12px; color:var(--gold); background:rgba(245,197,24,0.1); border:1px solid rgba(245,197,24,0.2); border-radius:12px; padding:3px 10px; cursor:pointer; text-decoration:none; }
-
-.game-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding:0 8px; }
-.game-card { background:#ffffff; border:1px solid #e0e0e0; border-radius:10px; overflow:hidden; cursor:pointer; transition:transform 0.2s; }
-.game-card:active { transform:scale(0.96); }
-.game-thumb { width:100%; aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:34px; position:relative; overflow:hidden; }
-.game-thumb::after { content:''; position:absolute; inset:0; background:linear-gradient(to bottom,transparent 50%,rgba(0,0,0,0.3) 100%); }
-.g-badge { position:absolute; top:5px; left:5px; font-size:9px; font-weight:700; padding:2px 6px; border-radius:4px; z-index:2; }
-.badge-hot { background:var(--red); color:#fff; }
-.badge-new { background:var(--green); color:#fff; }
-.badge-pop { background:var(--gold); color:#000; }
-.g-provider { position:absolute; bottom:5px; right:5px; font-size:9px; background:rgba(0,0,0,0.4); color:#fff; padding:2px 5px; border-radius:4px; z-index:2; }
-.game-info { padding:6px 8px; }
-.game-info h4 { font-size:11px; color:#1a1a2e; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.game-info p  { font-size:10px; color:var(--muted); margin-top:1px; }
-.no-games { grid-column:1/-1; text-align:center; padding:40px; color:var(--muted); }
-
-.jackpot-sec { margin:12px 8px; background:linear-gradient(135deg,#fff8e1,#fffde7,#fff8e1); border:1px solid #f5c518; border-radius:12px; padding:16px; text-align:center; position:relative; overflow:hidden; }
-.jackpot-label { font-size:11px; color:#996600; letter-spacing:3px; text-transform:uppercase; font-weight:700; }
-.jackpot-amount { font-family:'Teko',sans-serif; font-size:42px; color:var(--gold); line-height:1; margin:4px 0; }
-.jackpot-sub { font-size:11px; color:#996600; }
-.jackpot-btn { margin-top:10px; background:linear-gradient(135deg,var(--gold),var(--gold2)); color:#000; border:none; border-radius:25px; padding:10px 28px; font-size:14px; font-weight:700; cursor:pointer; }
-
-.leader-table { margin:0 8px; background:#ffffff; border:1px solid #e0e0e0; border-radius:10px; overflow:hidden; }
-.leader-head { display:grid; grid-template-columns:40px 1fr 1fr; padding:8px 12px; background:#f5f5f5; font-size:11px; color:var(--muted); font-weight:600; }
-.leader-row { display:grid; grid-template-columns:40px 1fr 1fr; padding:8px 12px; border-top:1px solid #e0e0e0; align-items:center; }
-.l-rank { font-family:'Teko',sans-serif; font-size:18px; color:var(--muted); }
-.l-rank.r1{color:var(--gold)} .l-rank.r2{color:#999} .l-rank.r3{color:#cd7f32}
-.l-user { font-size:12px; color:#1a1a2e; }
-.l-amt  { font-size:13px; color:var(--green); font-family:'Teko',sans-serif; text-align:right; }
-
-.promo-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:0 8px; }
-.promo-card { border-radius:10px; padding:14px; cursor:pointer; }
-.pc1{background:linear-gradient(135deg,#e8d8ff,#c8a0ff);border:1px solid #a070e0}
-.pc2{background:linear-gradient(135deg,#d0f0e0,#a0d8b8);border:1px solid #70b890}
-.pc3{background:linear-gradient(135deg,#ffd8e8,#ffb0c8);border:1px solid #e080a0}
-.pc4{background:linear-gradient(135deg,#fff0c0,#ffe080);border:1px solid #e0c040}
-.promo-card h4 { font-size:13px; color:#333; font-weight:700; }
-.promo-card p  { font-size:11px; color:#666; margin-top:3px; }
-.promo-card .pval { font-family:'Teko',sans-serif; font-size:26px; color:var(--gold); margin-top:4px; }
-
-.pay-row { display:flex; gap:8px; overflow-x:auto; padding:0 8px 8px; scrollbar-width:none; }
-.pay-row::-webkit-scrollbar{display:none}
-.pay-chip { flex:0 0 auto; background:#ffffff; border:1px solid #e0e0e0; border-radius:8px; padding:6px 12px; font-size:12px; color:#555; }
-
-.site-footer { background:#f0f0f0; border-top:1px solid #e0e0e0; padding:16px 12px; text-align:center; }
-.footer-logo { font-family:'Teko',sans-serif; font-size:22px; color:var(--gold); margin-bottom:8px; }
-.footer-links { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:10px; }
-.footer-links a { font-size:11px; color:#666; text-decoration:none; }
-.footer-text { font-size:10px; color:#888; line-height:1.6; }
-.lic-badges { display:flex; gap:10px; justify-content:center; margin-bottom:10px; }
-.lic-badge { background:#ffffff; border:1px solid #e0e0e0; border-radius:6px; padding:4px 10px; font-size:10px; color:#666; }
-
-.bottom-nav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:#ffffff; border-top:1px solid #e0e0e0; display:flex; z-index:100; }
-.nav-link { flex:1; display:flex; flex-direction:column; align-items:center; padding:8px 4px; text-decoration:none; }
-.nav-link .nav-icon { font-size:20px; color:var(--muted); }
-.nav-link span:last-child { font-size:10px; color:var(--muted); margin-top:2px; }
-.nav-link.active .nav-icon, .nav-link.active span:last-child { color:var(--gold); }
-.nav-center-wrap { flex:1; display:flex; flex-direction:column; align-items:center; padding:4px; }
-.nav-center-btn { width:50px; height:50px; background:linear-gradient(135deg,var(--gold),var(--gold2)); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; margin-top:-14px; border:3px solid #ffffff; box-shadow:0 0 20px rgba(245,197,24,0.4); text-decoration:none; }
-.nav-center-label { font-size:10px; color:var(--gold); margin-top:1px; }
-
-.divider { height:1px; background:linear-gradient(to right,transparent,#e0e0e0,transparent); margin:10px 0; }
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
-.live-dot{display:inline-block;width:7px;height:7px;background:var(--red);border-radius:50%;animation:pulse 1.5s infinite;margin-right:4px;}
-
-.gc1{background:linear-gradient(135deg,#e8d8ff,#c8a0ff)}
-.gc2{background:linear-gradient(135deg,#d0e8ff,#a0c8f0)}
-.gc3{background:linear-gradient(135deg,#ffd8e8,#ffb0c8)}
-.gc4{background:linear-gradient(135deg,#d8f0d0,#a8d8a0)}
-.gc5{background:linear-gradient(135deg,#fff0c0,#ffe080)}
-.gc6{background:linear-gradient(135deg,#d0f0ff,#a0d8f0)}
-.gc7{background:linear-gradient(135deg,#f0d8ff,#d0a0ff)}
-.gc8{background:linear-gradient(135deg,#e8e8e8,#d0d0d0)}
-.gc9{background:linear-gradient(135deg,#ffd8d8,#ffb0b0)}
-.gc10{background:linear-gradient(135deg,#d0e8ff,#a0c0e8)}
-.gc11{background:linear-gradient(135deg,#e8d8ff,#c8a0e8)}
-.gc12{background:linear-gradient(135deg,#ffd8e8,#f0a0b8)}
-
-.side-menu { position:fixed; top:0; left:-280px; width:280px; height:100%; background:#ffffff; z-index:9999; transition:left 0.3s; border-right:1px solid #e0e0e0; overflow-y:auto; }
-.side-menu.open { left:0; }
-.menu-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); z-index:9998; }
-.menu-overlay.open { display:block; }
-.menu-item { display:flex; align-items:center; gap:12px; padding:13px 20px; color:#1a1a2e; text-decoration:none; border-bottom:1px solid #f0f0f0; font-size:14px; }
-.menu-item:hover { background:rgba(245,197,24,0.05); }
+.cat-item.active { background:var(--grad-primary); border-color:transparent; }
+.cat-item.active div { color:#fff !important; }
 </style>
 
-<link href="https://fonts.googleapis.com/css2?family=Teko:wght@400;600;700&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
-<div class="side-menu" id="sideMenu">
-  <div style="padding:20px;border-bottom:1px solid #e0e0e0;display:flex;align-items:center;justify-content:space-between;">
-    <span style="font-family:'Teko',sans-serif;font-size:1.8rem;font-weight:900;color:var(--gold);">LIVO</span>
-    <button onclick="toggleMenu()" style="background:none;border:none;color:#333;font-size:22px;cursor:pointer;">✕</button>
-  </div>
-  <% if(locals.user) { %>
-  <div style="padding:15px 20px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:12px;">
-    <div style="width:45px;height:45px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold2));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;color:#000;">
-      <%= user.username[0].toUpperCase() %>
-    </div>
-    <div>
-      <div style="font-weight:700;color:#1a1a2e;"><%= user.username %></div>
-      <div style="color:var(--gold);font-size:.85rem;">🪙 <%= user.coins %></div>
-    </div>
-  </div>
-  <% } %>
-  <a href="/" class="menu-item">🏠 হোম</a>
-  <a href="/games/aviator" class="menu-item">🚀 Aviator</a>
-  <a href="/games/slots" class="menu-item">🎰 Slots</a>
-  <a href="/games/color-prediction" class="menu-item">🌈 Color Prediction</a>
-  <a href="/games/dragon-tiger" class="menu-item">🐉 Dragon Tiger</a>
-  <a href="/games/mine" class="menu-item">💣 Mine Game</a>
-  <a href="/matches" class="menu-item">⚽ স্পোর্টস</a>
-  <a href="/tournaments" class="menu-item">🏆 টুর্নামেন্ট</a>
-  <a href="/payment/deposit" class="menu-item">💰 ডিপোজিট</a>
-  <a href="/payment/withdraw" class="menu-item">💸 উইথড্র</a>
-  <a href="/leaderboard" class="menu-item">🏅 লিডারবোর্ড</a>
-  <a href="/news" class="menu-item">📰 নিউজ</a>
-  <a href="/profile" class="menu-item">👤 প্রোফাইল</a>
-  <% if(locals.user && user.role === 'admin') { %>
-  <a href="/admin" class="menu-item" style="color:var(--gold);">⚙️ এডমিন প্যানেল</a>
-  <% } %>
-  <% if(locals.user) { %>
-  <a href="/logout" class="menu-item" style="color:#cc0000;">🚪 লগআউট</a>
-  <% } else { %>
-  <a href="/login" class="menu-item" style="color:var(--green);">🔑 লগইন</a>
-  <a href="/register" class="menu-item" style="color:var(--gold);">📝 রেজিস্টার</a>
-  <% } %>
-</div>
-<div class="menu-overlay" id="menuOverlay" onclick="toggleMenu()"></div>
-
-<div class="topbar">
-  <div style="display:flex;align-items:center;gap:10px;">
-    <button onclick="toggleMenu()" style="background:none;border:none;color:#333;font-size:24px;cursor:pointer;padding:0;line-height:1;">☰</button>
-    <div class="logo">LI<span>VO</span></div>
-  </div>
-  <div class="topbar-right">
-    <% if(locals.user) { %>
-      <div class="coin-box">🪙 <%= user.coins %></div>
-      <div class="topbar-icons">
-        <a href="/notifications">🔔</a>
-        <a href="/news">✉️</a>
-      </div>
-    <% } else { %>
-      <a href="/login" class="btn-auth btn-login">লগইন</a>
-      <a href="/register" class="btn-auth btn-reg">রেজিস্টার</a>
-    <% } %>
-  </div>
-</div>
-
-<% if(locals.user) { %>
-<div class="balance-bar">
-  <div class="balance-left">
-    <span>ব্যালেন্স:</span>
-    <div class="balance-amount">৳ <%= user.coins %></div>
-  </div>
-  <div class="bal-btns">
-    <a href="/payment/deposit" class="bal-btn dep">ডিপোজিট</a>
-    <a href="/payment/withdraw" class="bal-btn wit">উইথড্র</a>
-  </div>
-</div>
-<% } %>
-
-<div class="marquee-bar">
-  <div class="marquee-inner">
-    <span>🏆 <em>***৮৮২</em> জিতেছেন ৳১৫,৬৮,৫২৩!</span>
-    <span>🎰 <em>***৯৫৫</em> স্লটে জিতেছেন ৳১০,১২,৮৯৮!</span>
-    <span>🎯 <em>***১১৮</em> লাইভে জিতেছেন ৳৯,৯৮,৫৪১!</span>
-    <span>⚽ <em>***৭৮৯</em> স্পোর্টসে জিতেছেন ৳৩,৮২,০০২!</span>
-    <span>🏆 <em>***৮৮২</em> জিতেছেন ৳১৫,৬৮,৫২৩!</span>
-    <span>🎰 <em>***৯৫৫</em> স্লটে জিতেছেন ৳১০,১২,৮৯৮!</span>
-    <span>🎯 <em>***১১৮</em> লাইভে জিতেছেন ৳৯,৯৮,৫৪১!</span>
-    <span>⚽ <em>***৭৮৯</em> স্পোর্টসে জিতেছেন ৳৩,৮২,০০২!</span>
-  </div>
-</div>
-
-<div class="banner" id="banner">
-  <div class="banner-slide bs1 active">
-    <div class="banner-content">
-      <h2>🎰 ওয়েলকাম বোনাস</h2>
-      <p>প্রথম ডিপোজিটে ১০০% বোনাস পান</p>
-      <a href="/payment/deposit" class="banner-btn">এখনই নিন</a>
-    </div>
-  </div>
-  <div class="banner-slide bs2">
-    <div class="banner-content">
-      <h2>⚽ স্পোর্টস বেটিং</h2>
-      <p>লাইভ মাচে বেট করুন এবং জিতুন</p>
-      <a href="/matches" class="banner-btn">বেট করুন</a>
-    </div>
-  </div>
-  <div class="banner-slide bs3">
-    <div class="banner-content">
-      <h2>🏆 টুর্নামেন্ট</h2>
-      <p>প্রতিদিন অংশ নিন, বড় পুরস্কার জিতুন</p>
-      <a href="/tournaments" class="banner-btn">যোগ দিন</a>
-    </div>
-  </div>
-  <div class="banner-dots">
-    <div class="dot active" onclick="goSlide(0)"></div>
-    <div class="dot" onclick="goSlide(1)"></div>
-    <div class="dot" onclick="goSlide(2)"></div>
-  </div>
-</div>
-
-<div class="notice">
-  <span>📢</span>
-  <p>নতুন সিজন শুরু! এখন রেজিস্টার করলে ৫০০ ফ্রি কয়েন পাবেন।</p>
-</div>
-
-<div class="aff-banner">
-  <div>
-    <h4>🤝 রেফার করুন ও আয় করুন</h4>
-    <p>প্রতি রেফারে ৳৫০০ পর্যন্ত কমিশন</p>
-  </div>
-  <a href="/profile" class="aff-btn">যোগ দিন</a>
-</div>
-
-<div class="stats-row">
-  <div class="stat-box"><h4>৫০০+</h4><p>গেমের সংখ্যা</p></div>
-  <div class="stat-box"><h4>২৪/৭</h4><p>লাইভ সাপোর্ট</p></div>
-  <div class="stat-box"><h4>৳৫মি+</h4><p>পেমেন্ট করা</p></div>
-</div>
-
-<div class="cats" id="catNav">
-  <div class="cat active" data-type="all"><div class="cat-icon">🔥</div><div class="cat-label">সবগুলো</div></div>
-  <div class="cat" data-type="pvp"><div class="cat-icon">⚔️</div><div class="cat-label">PVP</div></div>
-  <div class="cat" data-type="slots"><div class="cat-icon">🎰</div><div class="cat-label">স্লট</div></div>
-  <div class="cat" data-type="live"><div class="cat-icon">🎲</div><div class="cat-label">লাইভ ক্যাসিনো</div></div>
-  <div class="cat" data-type="table"><div class="cat-icon">🃏</div><div class="cat-label">টেবল</div></div>
-  <div class="cat" data-type="sports"><div class="cat-icon">⚽</div><div class="cat-label">স্পোর্টস</div></div>
-  <div class="cat" data-type="JL"><div class="cat-icon">🎮</div><div class="cat-label">জাভা</div></div>
-  <div class="cat" data-type="PG"><div class="cat-icon">🎰</div><div class="cat-label">পিজি</div></div>
-  <div class="cat" data-type="PP"><div class="cat-icon">🍭</div><div class="cat-label">প্রাগম্যাটিক প্লে</div></div>
-  <div class="cat" data-type="EVO"><div class="cat-icon">🃏</div><div class="cat-label">ইভোলিউশন গেমিং</div></div>
-  <div class="cat" data-type="PT"><div class="cat-icon">🏰</div><div class="cat-label">প্লেটেক</div></div>
-  <div class="cat" data-type="MG"><div class="cat-icon">🛡️</div><div class="cat-label">মাইক্রোগেমিং</div></div>
-  <div class="cat" data-type="NETENT"><div class="cat-icon">✨</div><div class="cat-label">নেটএন্ট</div></div>
-  <div class="cat" data-type="BS"><div class="cat-icon">🎲</div><div class="cat-label">বেটসফট</div></div>
-  <div class="cat" data-type="PNG"><div class="cat-icon">📖</div><div class="cat-label">প্লে'ন গো</div></div>
-  <div class="cat" data-type="YGG"><div class="cat-icon">🏺</div><div class="cat-label">ইগড্রাসিল গেমিং</div></div>
-  <div class="cat" data-type="RT"><div class="cat-icon">🐯</div><div class="cat-label">রেড টাইগার গেমিং</div></div>
-  <div class="cat" data-type="QS"><div class="cat-icon">🐺</div><div class="cat-label">কুইকস্পিন</div></div>
-</div>
-
-<div class="search-wrap">
-  <div class="search-inner">
-    <input type="text" id="gameSearch" placeholder="গেম খুঁজুন...">
-    <span>🔍</span>
+<div style="padding:0 12px 10px;">
+  <div style="position:relative;">
+    <input type="text" id="gameSearch" class="form-input" placeholder="গেম খুঁজুন..." style="padding-right:45px;">
+    <i class="fas fa-search" style="position:absolute;right:15px;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
   </div>
 </div>
 
 <%- include('partials/flash') %>
 
-<div class="sec-header">
-  <h3><span>🔥</span> <span id="sectionTitle">হট গেমস</span></h3>
+<div class="section-header">
+  <h3 class="section-title"><i class="fas fa-fire"></i> <span id="sectionTitle">হট গেমস</span></h3>
 </div>
 
 <div class="game-grid" id="gameContainer"></div>
 
-<div class="divider"></div>
-
-<div class="jackpot-sec">
-  <div class="jackpot-label">🏆 মেগা জ্যাকপট</div>
-  <div class="jackpot-amount">৳ <span id="jp-num">৮৮,৬১৭,৫১৭</span></div>
-  <div class="jackpot-sub">এখন পর্যন্ত মোট জেতার পরিমাণ</div>
-  <button class="jackpot-btn" onclick="location.href='/games/slots'">জ্যাকপট খেলুন 🎰</button>
-</div>
-
-<div class="sec-header">
-  <h3><span>🏆</span> বিজয়ী তালিকা</h3>
-  <a href="/leaderboard" class="see-all">সব দেখুন</a>
-</div>
-<div class="leader-table">
-  <div class="leader-head"><div>#</div><div>খেলোয়াড</div><div style="text-align:right">জেতার পরিমাণ</div></div>
-  <div class="leader-row"><div class="l-rank r1">🥇</div><div class="l-user">***৮৮২</div><div class="l-amt">৳১৫,৬৮,৫২৩</div></div>
-  <div class="leader-row"><div class="l-rank r2">🥈</div><div class="l-user">***৭৪২</div><div class="l-amt">৳১১,৪৪,৫৫৬</div></div>
-  <div class="leader-row"><div class="l-rank r3">🥉</div><div class="l-user">***১১৮</div><div class="l-amt">৳৯,৯৮,৫৪১</div></div>
-  <div class="leader-row"><div class="l-rank">4</div><div class="l-user">***৪২</div><div class="l-amt">৳৭,৩২,৩৫২</div></div>
-  <div class="leader-row"><div class="l-rank">5</div><div class="l-user">***৭৮৯</div><div class="l-amt">৳৩,৮২,০০২</div></div>
-</div>
-
-<div class="sec-header" style="margin-top:12px;">
-  <h3><span>🎁</span> প্রমোশন</h3>
-  <a href="/tournaments" class="see-all">সব দেখুন</a>
-</div>
-<div class="promo-grid">
-  <div class="promo-card pc1" onclick="location.href='/payment/deposit'">
-    <h4>ওয়েলকাম বোনাস</h4><p>প্রথম ডিপোজিটে</p><div class="pval">১০০%</div>
-  </div>
-  <div class="promo-card pc2">
-    <h4>ডেইলি ক্যাশব্যাক</h4><p>প্রতিদিনের লসে</p><div class="pval">১০%</div>
-  </div>
-  <div class="promo-card pc3" onclick="location.href='/profile'">
-    <h4>রেফার বোনাস</h4><p>প্রতি রেফারে</p><div class="pval">৳৫০০</div>
-  </div>
-  <div class="promo-card pc4">
-    <h4>VIP ক্লাব</h4><p>সপ্তাহিক বোনাস</p><div class="pval">৳৫০০০</div>
+<div class="banner-container" style="margin-top:10px;">
+  <div class="card glass" style="padding:20px;text-align:center;border-color:var(--gold);">
+    <div style="font-size:12px;color:var(--gold);letter-spacing:3px;text-transform:uppercase;font-weight:700;">🏆 মেগা জ্যাকপট</div>
+    <div style="font-family:'Teko',sans-serif;font-size:48px;color:var(--gold);line-height:1;margin:10px 0;text-shadow: 0 0 20px rgba(245,158,11,0.4);">৳ <span id="jp-num">৮৮,৬১৭,৫১৭</span></div>
+    <div style="font-size:11px;color:var(--text-muted);">এখন পর্যন্ত মোট জেতার পরিমাণ</div>
+    <button class="btn btn-primary btn-glow" style="margin-top:15px;border-radius:25px;padding:10px 30px;" onclick="location.href='/games/slots'">জ্যাকপট খেলুন 🎰</button>
   </div>
 </div>
 
-<div class="sec-header" style="margin-top:12px;">
-  <h3><span>💳</span> পেমেন্ট মেথড</h3>
-</div>
-<div class="pay-row">
-  <div class="pay-chip">💚 bKash</div>
-  <div class="pay-chip">🟠 Nagad</div>
-  <div class="pay-chip">🔵 Rocket</div>
-  <div class="pay-chip">🏦 ব্যাংক</div>
-  <div class="pay-chip">₿ Crypto</div>
-  <div class="pay-chip">💳 VISA</div>
+<div class="section-header">
+  <h3 class="section-title"><i class="fas fa-medal"></i> বিজয়ী তালিকা</h3>
+  <a href="/leaderboard" class="btn glass" style="font-size:12px;padding:4px 12px;border-radius:20px;color:var(--text-muted);">সব দেখুন</a>
 </div>
 
-<div class="site-footer">
-  <div class="footer-logo">LIVO</div>
-  <div class="footer-links">
-    <a href="#">সম্পর্কে</a>
-    <a href="#">শর্তাবলী</a>
-    <a href="#">গোপনীয়তা</a>
-    <a href="#">দায়িত্বশীল গেমিং</a>
-    <a href="/profile">যোগাযোগ</a>
+<div style="padding:0 12px;">
+  <div class="card glass">
+    <div style="display:grid;grid-template-columns:40px 1fr 1fr;padding:12px;border-bottom:1px solid var(--border-glass);font-size:11px;color:var(--text-muted);font-weight:600;">
+      <div>#</div><div>খেলোয়াড়</div><div style="text-align:right">জেতার পরিমাণ</div>
+    </div>
+    <div style="display:grid;grid-template-columns:40px 1fr 1fr;padding:12px;align-items:center;border-bottom:1px solid var(--border-glass);">
+      <div style="color:var(--gold);font-family:'Teko',sans-serif;font-size:18px;">🥇</div><div style="font-size:13px;">***৮৮২</div><div style="text-align:right;color:#10b981;font-family:'Teko',sans-serif;font-size:16px;">৳১৫,৬৮,৫২৩</div>
+    </div>
+    <div style="display:grid;grid-template-columns:40px 1fr 1fr;padding:12px;align-items:center;border-bottom:1px solid var(--border-glass);">
+      <div style="color:#94a3b8;font-family:'Teko',sans-serif;font-size:18px;">🥈</div><div style="font-size:13px;">***৭৪২</div><div style="text-align:right;color:#10b981;font-family:'Teko',sans-serif;font-size:16px;">৳১১,৪৪,৫৫৬</div>
+    </div>
+    <div style="display:grid;grid-template-columns:40px 1fr 1fr;padding:12px;align-items:center;">
+      <div style="color:#cd7f32;font-family:'Teko',sans-serif;font-size:18px;">🥉</div><div style="font-size:13px;">***১১৮</div><div style="text-align:right;color:#10b981;font-family:'Teko',sans-serif;font-size:16px;">৳৯,৯৮,৫৪১</div>
+    </div>
   </div>
-  <div class="lic-badges">
-    <div class="lic-badge">🔞 18+</div>
-    <div class="lic-badge">Curacao Licensed</div>
+</div>
+
+<div class="section-header" style="margin-top:15px;">
+  <h3 class="section-title"><i class="fas fa-gift"></i> প্রমোশন</h3>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 12px;">
+  <div class="card glass" style="padding:15px;cursor:pointer;border-left:4px solid var(--primary);" onclick="location.href='/payment/deposit'">
+    <div style="font-size:13px;font-weight:700;">ওয়েলকাম বোনাস</div>
+    <div style="font-family:'Teko',sans-serif;font-size:28px;color:var(--primary);">১০০%</div>
   </div>
-  <div class="footer-text">
+  <div class="card glass" style="padding:15px;cursor:pointer;border-left:4px solid var(--accent);">
+    <div style="font-size:13px;font-weight:700;">ডেইলি ক্যাশব্যাক</div>
+    <div style="font-family:'Teko',sans-serif;font-size:28px;color:var(--accent);">১০%</div>
+  </div>
+</div>
+
+<div class="site-footer" style="margin-top:30px;background:rgba(255,255,255,0.02);padding:30px 20px;text-align:center;border-top:1px solid var(--border-glass);">
+  <div class="nav-brand" style="font-size:2.5rem;margin-bottom:15px;">LIVO</div>
+  <div style="display:flex;flex-wrap:wrap;gap:15px;justify-content:center;margin-bottom:20px;">
+    <a href="#" style="color:var(--text-muted);font-size:12px;text-decoration:none;">সম্পর্কে</a>
+    <a href="#" style="color:var(--text-muted);font-size:12px;text-decoration:none;">শর্তাবলী</a>
+    <a href="#" style="color:var(--text-muted);font-size:12px;text-decoration:none;">গোপনীয়তা</a>
+    <a href="/profile" style="color:var(--text-muted);font-size:12px;text-decoration:none;">যোগাযোগ</a>
+  </div>
+  <div style="display:flex;gap:15px;justify-content:center;margin-bottom:20px;">
+    <div class="glass" style="padding:5px 15px;border-radius:8px;font-size:12px;color:#ef4444;font-weight:700;">🔞 18+</div>
+    <div class="glass" style="padding:5px 15px;border-radius:8px;font-size:12px;color:var(--text-muted);">Curacao Licensed</div>
+  </div>
+  <p style="font-size:11px;color:var(--text-muted);line-height:1.6;">
     © 2024 LIVO Gaming. All Rights Reserved.<br>
     অনলাইন গেমিং আসক্তি তৈরি করতে পারে। দায়িত্বশীলভাবে খেলুন।
-  </div>
+  </p>
 </div>
 
-<div class="bottom-nav">
-  <a href="/" class="nav-link active">
-    <span class="nav-icon">🏠</span><span>হোম</span>
-  </a>
-  <a href="/matches" class="nav-link">
-    <span class="nav-icon">🎰</span><span>গেমস</span>
-  </a>
-  <div class="nav-center-wrap">
-    <a href="/payment/deposit" class="nav-center-btn">💰</a>
-    <div class="nav-center-label">ডিপোজিট</div>
-  </div>
-  <a href="/tournaments" class="nav-link">
-    <span class="nav-icon">🔥</span><span>প্রমো</span>
-  </a>
-  <a href="/profile" class="nav-link">
-    <span class="nav-icon">👤</span><span>অ্যাকাউন্ট</span>
-  </a>
-</div>
+<%- include('partials/bottom-nav') %>
+
 <script>
-function toggleMenu() {
-  document.getElementById('sideMenu').classList.toggle('open');
-  document.getElementById('menuOverlay').classList.toggle('open');
-}
-
 const games = [
-  {name:"Aviator",           emoji:"✈️",  type:"pvp",    slug:"aviator",           badge:"hot", provider:"SPRIBE", color:"gc1"},
-  {name:"Teen Patti",        emoji:"🃏",  type:"pvp",    slug:"teen-patti",        badge:"pop", provider:"JL",     color:"gc2"},
-  {name:"Andar Bahar",       emoji:"🎴",  type:"pvp",    slug:"andar-bahar",       badge:"hot", provider:"JL",     color:"gc3"},
-  {name:"Blackjack",         emoji:"♠️",  type:"table",  slug:"blackjack",         badge:"",    provider:"EVO",    color:"gc4"},
-  {name:"Poker",             emoji:"🃏",  type:"pvp",    slug:"poker",             badge:"",    provider:"JL",     color:"gc5"},
-  {name:"Baccarat",          emoji:"🎰",  type:"table",  slug:"baccarat",          badge:"pop", provider:"EVO",    color:"gc6"},
-  {name:"Roulette",          emoji:"🎡",  type:"table",  slug:"roulette",          badge:"",    provider:"EVO",    color:"gc7"},
-  {name:"Slots",             emoji:"🎰",  type:"slots",  slug:"slots",             badge:"hot", provider:"PG",     color:"gc8"},
-  {name:"Online Ludo",       emoji:"🎲",  type:"pvp",    slug:"ludo",              badge:"new", provider:"JL",     color:"gc9"},
-  {name:"Dragon Tiger",      emoji:"🐉",  type:"pvp",    slug:"dragon-tiger",      badge:"pop", provider:"JL",     color:"gc10"},
-  {name:"Color Prediction",  emoji:"🌈",  type:"pvp",    slug:"color-prediction",  badge:"new", provider:"JL",     color:"gc11"},
-  {name:"Mine Game",         emoji:"💣",  type:"pvp",    slug:"mine",              badge:"hot", provider:"JL",     color:"gc12"},
-  {name:"Coin Flip",         emoji:"🪙",  type:"pvp",    slug:"coin-flip",         badge:"",    provider:"JL",     color:"gc1"},
-  {name:"Dice Roll",         emoji:"🎲",  type:"pvp",    slug:"dice",              badge:"",    provider:"JL",     color:"gc2"},
-  {name:"Hi-Lo",             emoji:"🃏",  type:"pvp",    slug:"hilo",              badge:"new", provider:"JL",     color:"gc3"},
-  {name:"Card War",          emoji:"⚔️",  type:"pvp",    slug:"card-war",          badge:"",    provider:"JL",     color:"gc4"},
-  {name:"Lucky Spin",        emoji:"🎡",  type:"pvp",    slug:"lucky-spin",        badge:"pop", provider:"JL",     color:"gc5"},
-  {name:"Number Guess",      emoji:"🎯",  type:"pvp",    slug:"number-guess",      badge:"",    provider:"JL",     color:"gc6"},
-  {name:"Fortune Gems",      emoji:"💎",  type:"slots",  slug:"fortune-gems",      badge:"hot", provider:"JDB",    color:"gc7"},
-  {name:"Golden Empire",     emoji:"👑",  type:"slots",  slug:"golden-empire",     badge:"",    provider:"JDB",    color:"gc8"},
-  {name:"Sweet Bonanza",     emoji:"🍭",  type:"slots",  slug:"sweet-bonanza",     badge:"pop", provider:"PP",     color:"gc9"},
-  {name:"Sugar Rush",        emoji:"🍬",  type:"slots",  slug:"sugar-rush",        badge:"",    provider:"PP",     color:"gc10"},
-  {name:"Win Go",            emoji:"🎯",  type:"pvp",    slug:"win-go",            badge:"hot", provider:"JL",     color:"gc11"},
-  {name:"Plinko",            emoji:"⚪",  type:"pvp",    slug:"plinko",            badge:"new", provider:"SPRIBE", color:"gc12"},
-  {name:"Mahjong Ways",      emoji:"🀄",  type:"slots",  slug:"mahjong-ways",      badge:"pop", provider:"PG",     color:"gc1"},
-  {name:"Ocean King",        emoji:"🐠",  type:"slots",  slug:"ocean-king",        badge:"hot", provider:"JDB",    color:"gc2"},
-  {name:"Starburst",         emoji:"✨",  type:"slots",  slug:"starburst",         badge:"pop", provider:"NETENT", color:"gc3"},
-  {name:"Book of Dead",      emoji:"📖",  type:"slots",  slug:"book-of-dead",      badge:"hot", provider:"PNG",    color:"gc4"},
-  {name:"Gates of Olympus",  emoji:"⚡",  type:"slots",  slug:"gates-of-olympus",  badge:"hot", provider:"PP",     color:"gc5"},
-  {name:"Crazy Time",        emoji:"🎡",  type:"live",   slug:"crazy-time",        badge:"hot", provider:"EVO",    color:"gc6"},
-  {name:"Mega Ball",         emoji:"🟡",  type:"live",   slug:"mega-ball",         badge:"pop", provider:"EVO",    color:"gc7"},
-  {name:"Rummy",             emoji:"🃏",  type:"pvp",    slug:"rummy",             badge:"hot", provider:"JL",     color:"gc8"},
-  {name:"Call Break",        emoji:"♠️",  type:"pvp",    slug:"call-break",        badge:"pop", provider:"JL",     color:"gc9"},
-  {name:"Lightning Roulette",emoji:"⚡",  type:"live",   slug:"lightning-roulette",badge:"hot", provider:"EVO",    color:"gc10"},
-  {name:"Wanted Dead or Wild",emoji:"🤠", type:"slots",  slug:"wanted-dead-or-a-wild",badge:"hot", provider:"HACK", color:"gc11"},
-  {name:"Mines",             emoji:"💣",  type:"pvp",    slug:"mines",             badge:"new", provider:"SPRIBE", color:"gc12"},
-  {name:"Age of the Gods",   emoji:"🏰",  type:"slots",  slug:"age-of-the-gods",   badge:"hot", provider:"PT",     color:"gc1"},
-  {name:"Buffalo Blitz",     emoji:"🦬",  type:"slots",  slug:"buffalo-blitz",     badge:"",    provider:"PT",     color:"gc2"},
-  {name:"Immortal Romance",  emoji:"🧛",  type:"slots",  slug:"immortal-romance",  badge:"pop", provider:"MG",     color:"gc3"},
-  {name:"Thunderstruck II",  emoji:"⚡",  type:"slots",  slug:"thunderstruck-2",   badge:"",    provider:"MG",     color:"gc4"},
-  {name:"Sugar Pop",         emoji:"🍬",  type:"slots",  slug:"sugar-pop",         badge:"new", provider:"BS",     color:"gc5"},
-  {name:"The Slotfather",    emoji:"🤵",  type:"slots",  slug:"slotfather",        badge:"",    provider:"BS",     color:"gc6"},
-  {name:"Valley of the Gods",emoji:"🏺",  type:"slots",  slug:"valley-of-the-gods",badge:"hot", provider:"YGG",    color:"gc7"},
-  {name:"Vikings Go Berzerk",emoji:"⚔️",  type:"slots",  slug:"vikings-go-berzerk",badge:"",    provider:"YGG",    color:"gc8"},
-  {name:"Gonzo's Quest MW",  emoji:"🗿",  type:"slots",  slug:"gonzos-quest-megaways",badge:"pop",provider:"RT",   color:"gc9"},
-  {name:"Piggy Riches MW",   emoji:"🐷",  type:"slots",  slug:"piggy-riches-megaways",badge:"", provider:"RT",     color:"gc10"},
-  {name:"Big Bad Wolf",      emoji:"🐺",  type:"slots",  slug:"big-bad-wolf",      badge:"new", provider:"QS",     color:"gc11"},
-  {name:"Sakura Fortune",    emoji:"🌸",  type:"slots",  slug:"sakura-fortune",    badge:"",    provider:"QS",     color:"gc12"},
+  {name:"Aviator",           emoji:"🚀",  type:"pvp",    slug:"aviator",           badge:"hot", provider:"SPRIBE"},
+  {name:"Teen Patti",        emoji:"🃏",  type:"pvp",    slug:"teen-patti",        badge:"pop", provider:"JL"},
+  {name:"Andar Bahar",       emoji:"🎴",  type:"pvp",    slug:"andar-bahar",       badge:"hot", provider:"JL"},
+  {name:"Blackjack",         emoji:"♠️",  type:"table",  slug:"blackjack",         badge:"",    provider:"EVO"},
+  {name:"Baccarat",          emoji:"🎰",  type:"table",  slug:"baccarat",          badge:"pop", provider:"EVO"},
+  {name:"Roulette",          emoji:"🎡",  type:"table",  slug:"roulette",          badge:"",    provider:"EVO"},
+  {name:"Slots",             emoji:"🎰",  type:"slots",  slug:"slots",             badge:"hot", provider:"PG"},
+  {name:"Online Ludo",       emoji:"🎲",  type:"pvp",    slug:"ludo",              badge:"new", provider:"JL"},
+  {name:"Dragon Tiger",      emoji:"🐉",  type:"pvp",    slug:"dragon-tiger",      badge:"pop", provider:"JL"},
+  {name:"Color Prediction",  emoji:"🌈",  type:"pvp",    slug:"color-prediction",  badge:"new", provider:"JL"},
+  {name:"Mine Game",         emoji:"💣",  type:"pvp",    slug:"mine",              badge:"hot", provider:"JL"},
+  {name:"Fortune Gems",      emoji:"💎",  type:"slots",  slug:"fortune-gems",      badge:"hot", provider:"JDB"},
+  {name:"Sweet Bonanza",     emoji:"🍭",  type:"slots",  slug:"sweet-bonanza",     badge:"pop", provider:"PP"},
+  {name:"Gates of Olympus",  emoji:"⚡",  type:"slots",  slug:"gates-of-olympus",  badge:"hot", provider:"PP"},
+  {name:"Crazy Time",        emoji:"🎡",  type:"live",   slug:"crazy-time",        badge:"hot", provider:"EVO"},
+  {name:"Mega Ball",         emoji:"🟡",  type:"live",   slug:"mega-ball",         badge:"pop", provider:"EVO"},
+  {name:"Rummy",             emoji:"🃏",  type:"pvp",    slug:"rummy",             badge:"hot", provider:"JL"},
+  {name:"Call Break",        emoji:"♠️",  type:"pvp",    slug:"call-break",        badge:"pop", provider:"JL"},
+  {name:"Lightning Roulette",emoji:"⚡",  type:"live",   slug:"lightning-roulette",badge:"hot", provider:"EVO"},
+  {name:"Mines",             emoji:"💣",  type:"pvp",    slug:"mines",             badge:"new", provider:"SPRIBE"},
+  {name:"Sugar Pop",         emoji:"🍬",  type:"slots",  slug:"sugar-pop",         badge:"new", provider:"BS"},
+  {name:"Big Bad Wolf",      emoji:"🐺",  type:"slots",  slug:"big-bad-wolf",      badge:"new", provider:"QS"},
 ];
-
-const badgeClass = {hot:'badge-hot', pop:'badge-pop', new:'badge-new'};
-const badgeText  = {hot:'HOT', pop:'জনপ্রিয়', new:'নতুন'};
-let currentType = 'all', searchQ = '';
 
 function renderGames() {
   const c = document.getElementById('gameContainer');
+  if(!c) return;
   c.innerHTML = '';
-  const providerList = ['JL','PG','EVO','PP','PT','MG','NETENT','BS','PNG','YGG','RT','QS'];
+  const searchQ = document.getElementById('gameSearch').value.toLowerCase();
+  const catActive = document.querySelector('.cat-item.active');
+  const currentType = catActive ? catActive.dataset.type : 'all';
+
   const filtered = games.filter(g =>
-    (currentType === 'all' || g.type === currentType || (providerList.includes(currentType) && g.provider === currentType)) &&
-    g.name.toLowerCase().includes(searchQ.toLowerCase())
+    (currentType === 'all' || g.type === currentType) &&
+    g.name.toLowerCase().includes(searchQ)
   );
-  if (!filtered.length) { c.innerHTML = '<div class="no-games">কোনো গেম পাওয়া যায়নি</div>'; return; }
+
   filtered.forEach(g => {
-    const url = g.slug ? `/games/${g.slug}` : '/login';
-    const bHTML = g.badge ? `<div class="g-badge ${badgeClass[g.badge]}">${badgeText[g.badge]}</div>` : '';
+    const badgeHTML = g.badge ? `<div style="position:absolute;top:8px;left:8px;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;background:var(--grad-primary);color:#fff;">${g.badge.toUpperCase()}</div>` : '';
     c.innerHTML += `
-      <div class="game-card" onclick="location.href='${url}'">
-        <div class="game-thumb ${g.color}">
-          <span>${g.emoji}</span>${bHTML}
-          <div class="g-provider">${g.provider}</div>
+      <div class="game-card" onclick="location.href='/games/${g.slug}'">
+        <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:40px;background:var(--grad-surface);">
+          ${g.emoji}
+          ${badgeHTML}
+          <div style="position:absolute;bottom:0;left:0;right:0;padding:8px;background:rgba(0,0,0,0.6);backdrop-filter:blur(5px);">
+            <div style="font-size:11px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${g.name}</div>
+            <div style="font-size:9px;color:var(--text-muted);">${g.provider}</div>
+          </div>
         </div>
-        <div class="game-info"><h4>${g.name}</h4><p>${g.provider}</p></div>
       </div>`;
   });
 }
 
-document.querySelectorAll('.cat').forEach(c => {
-  c.addEventListener('click', () => {
-    document.querySelectorAll('.cat').forEach(x => x.classList.remove('active'));
-    c.classList.add('active');
-    currentType = c.dataset.type;
-    const t = {
-      all:'হট গেমস',pvp:'PVP গেমস',slots:'স্লট গেমস',live:'লাইভ ক্যাসিনো',table:'টেবিল গেমস',sports:'স্পোর্টস',
-      JL:'জাভা (Jili)', PG:'পিজি (PG Soft)', EVO:'ইভোলিউশন গেমিং', PP:'প্রাগম্যাটিক প্লে', PT:'প্লেটেক',
-      MG:'মাইক্রোগেমিং', NETENT:'নেটএন্ট', BS:'বেটসফট', PNG:"প্লে'ন গো", YGG:'ইগড্রাসিল গেমিং',
-      RT:'রেড টাইগার গেমিং', QS:'কুইকস্পিন'
-    };
-    document.getElementById('sectionTitle').textContent = t[currentType] || 'সবগুলো গেম';
+document.querySelectorAll('.cat-item').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.cat-item').forEach(x => x.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('sectionTitle').textContent = el.querySelector('div:last-child').textContent + ' গেমস';
     renderGames();
   });
 });
 
-document.getElementById('gameSearch').addEventListener('input', e => {
-  searchQ = e.target.value;
-  renderGames();
-});
-
-let slide = 0;
-const slides = document.querySelectorAll('.banner-slide');
-const dots   = document.querySelectorAll('.dot');
-function goSlide(n) {
-  slides[slide].classList.remove('active'); dots[slide].classList.remove('active');
-  slide = n;
-  slides[slide].classList.add('active'); dots[slide].classList.add('active');
-}
-setInterval(() => goSlide((slide + 1) % slides.length), 3500);
+document.getElementById('gameSearch').addEventListener('input', renderGames);
 
 let jp = 88617517;
 setInterval(() => {
   jp += Math.floor(Math.random() * 600 + 100);
-  document.getElementById('jp-num').textContent = jp.toLocaleString('bn-BD');
+  const jpN = document.getElementById('jp-num');
+  if(jpN) jpN.textContent = jp.toLocaleString('bn-BD');
 }, 2000);
 
-renderGames();
+document.addEventListener('DOMContentLoaded', renderGames);
+renderGames(); // Call immediately just in case
 </script>
 
 </body></html>

@@ -1,42 +1,51 @@
 <%- include('partials/head') %>
 <%- include('partials/navbar') %>
 <div class="container page">
-  <h1 style="font-size:1.8rem;font-weight:800;margin-bottom:1.5rem;">🏆 Leaderboard</h1>
-  <div class="card">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Rank</th>
-          <th>Player</th>
-          <th>Points</th>
-          <th>Wins</th>
-          <th>Total Bets</th>
-          <th>Coins</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% users.forEach((u, i) => { %>
-          <tr>
-            <td>
-              <span class="rank-<%= i+1 %>" style="font-weight:700;font-size:1.1rem">#<%= i+1 %></span>
-            </td>
-            <td style="display:flex;align-items:center;gap:.75rem;">
-              <div class="avatar"><%= u.username[0].toUpperCase() %></div>
-              <div>
-                <div style="font-weight:600"><%= u.username %></div>
-                <% if(i === 0) { %>
-                  <div style="font-size:.7rem;color:var(--gold)">👑 Champion</div>
-                <% } %>
-              </div>
-            </td>
-            <td style="color:var(--primary);font-weight:700"><%= u.total_points %></td>
-            <td style="color:var(--green)">✅ <%= u.wins %></td>
-            <td style="color:var(--muted)"><%= u.total_bets %></td>
-            <td style="color:var(--gold)">🪙 <%= u.coins %></td>
+  <div class="section-header" style="padding:0; margin-bottom:1.5rem;">
+    <h1 class="section-title" style="font-size:1.8rem;"><i class="fas fa-medal"></i> লিডারবোর্ড</h1>
+  </div>
+
+  <div class="card glass">
+    <div style="overflow-x:auto;">
+      <table style="width:100%; border-collapse:collapse; min-width:500px;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border-glass); text-align:left; color:var(--text-muted); font-size:0.85rem;">
+            <th style="padding:15px;">স্থান</th>
+            <th style="padding:15px;">খেলোয়াড়</th>
+            <th style="padding:15px;">পয়েন্ট</th>
+            <th style="padding:15px;">জয়</th>
+            <th style="padding:15px;">মোট বেট</th>
+            <th style="padding:15px;">কয়েন</th>
           </tr>
-        <% }) %>
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          <% users.forEach((u, i) => { %>
+            <tr style="border-bottom:1px solid var(--border-glass); transition:0.2s; background:<%= i===0 ? 'rgba(245,158,11,0.05)' : 'transparent' %>;">
+              <td style="padding:15px;">
+                <span style="font-family:'Teko',sans-serif; font-weight:700; font-size:1.2rem; color:<%= i===0 ? 'var(--gold)' : i===1 ? '#94a3b8' : i===2 ? '#cd7f32' : 'var(--text-muted)' %>">
+                  #<%= i+1 %>
+                </span>
+              </td>
+              <td style="padding:15px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <div class="avatar" style="width:35px; height:35px; font-size:0.9rem; background:var(--grad-primary);"><%= u.username[0].toUpperCase() %></div>
+                  <div>
+                    <div style="font-weight:700; color:#fff; font-size:0.9rem;"><%= u.username %></div>
+                    <% if(i === 0) { %>
+                      <div style="font-size:.7rem; color:var(--gold);"><i class="fas fa-crown"></i> চ্যাম্পিয়ন</div>
+                    <% } %>
+                  </div>
+                </div>
+              </td>
+              <td style="padding:15px; color:var(--primary); font-weight:700; font-family:'Teko',sans-serif; font-size:1.1rem;"><%= u.total_points %></td>
+              <td style="padding:15px; color:#10b981; font-weight:600; font-size:0.85rem;"><i class="fas fa-check-circle"></i> <%= u.wins %></td>
+              <td style="padding:15px; color:var(--text-muted); font-size:0.85rem;"><%= u.total_bets %></td>
+              <td style="padding:15px; color:var(--gold); font-weight:700; font-family:'Teko',sans-serif; font-size:1.1rem;">🪙 <%= u.coins %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 </body></html>
