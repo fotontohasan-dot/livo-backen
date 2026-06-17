@@ -50,21 +50,31 @@ async function syncMatches() {
     });
   }
 
-  let addedCount = 0;
-  for (const match of matchesToAdd) {
-    // Check if match already exists (same teams on same day)
-    const existing = await pool.query(
-      `SELECT id FROM matches WHERE team_a = $1 AND team_b = $2 AND match_date::date = $3::date`,
-      [match.team_a, match.team_b, match.match_date]
-    );
+  if (!pool || !pool.query) {
+    console.warn('⚠️ Match sync skipped: Database pool is not initialized.');
+    return 0;
+  }
 
-    if (existing.rows.length === 0) {
-      await pool.query(
-        `INSERT INTO matches (title, sport, team_a, team_b, match_date) VALUES ($1, $2, $3, $4, $5)`,
-        [match.title, match.sport, match.team_a, match.team_b, match.match_date]
+  let addedCount = 0;
+  try {
+    for (const match of matchesToAdd) {
+      // Check if match already exists (same teams on same day)
+      const existing = await pool.query(
+        `SELECT id FROM matches WHERE team_a = $1 AND team_b = $2 AND match_date::date = $3::date`,
+        [match.team_a, match.team_b, match.match_date]
       );
-      addedCount++;
+
+      if (existing.rows.length === 0) {
+        await pool.query(
+          `INSERT INTO matches (title, sport, team_a, team_b, match_date) VALUES ($1, $2, $3, $4, $5)`,
+          [match.title, match.sport, match.team_a, match.team_b, match.match_date]
+        );
+        addedCount++;
+      }
     }
+  } catch (error) {
+    console.error('❌ Error during match sync:', error.message);
+    return addedCount;
   }
 
   console.log(`Successfully synced matches. Added ${addedCount} new matches.`);
