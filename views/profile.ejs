@@ -3,64 +3,63 @@
 <div class="container page">
   <%- include('partials/flash') %>
 
-  <div class="card" style="margin-bottom:1.5rem;background:var(--card2);">
+  <div class="card glass" style="margin-bottom:1.5rem;">
     <div class="card-body" style="display:flex;align-items:center;gap:1.5rem;">
-      <div class="avatar" style="width:64px;height:64px;font-size:1.5rem;">
+      <div class="avatar" style="width:70px;height:70px;font-size:1.8rem;background:var(--grad-primary);box-shadow:0 0 15px var(--primary-glow);">
         <%= profileUser.username[0].toUpperCase() %>
       </div>
       <div>
-        <h2 style="margin:0;"><%= profileUser.username %></h2>
-        <p style="color:var(--muted);font-size:.85rem;margin-top:4px;"><%= profileUser.email %></p>
-        <div style="margin-top:8px;color:var(--gold);font-weight:700;">🪙 <%= profileUser.coins %></div>
+        <h2 style="margin:0;color:#fff;"><%= profileUser.username %></h2>
+        <p style="color:var(--text-muted);font-size:.85rem;margin-top:4px;"><%= profileUser.email %></p>
+        <div style="margin-top:8px;color:var(--gold);font-weight:700;font-family:'Teko',sans-serif;font-size:1.2rem;">🪙 <%= profileUser.coins %></div>
       </div>
     </div>
   </div>
 
   <% if(profileUser.referral_code) { %>
-  <div class="card" style="margin-bottom:1.5rem;border:1px solid rgba(230,0,0,0.3);">
+  <div class="card glass" style="margin-bottom:1.5rem;border:1px solid var(--border-glass);">
     <div class="card-body" style="text-align:center;">
-      <p style="color:var(--muted);font-size:.85rem;margin-bottom:.5rem;">আপনার রেফারেল কোড</p>
-      <div style="font-size:1.5rem;font-weight:900;color:var(--gold);letter-spacing:3px;margin-bottom:.5rem;">
+      <p style="color:var(--text-muted);font-size:.85rem;margin-bottom:.5rem;">আপনার রেফারেল কোড</p>
+      <div style="font-size:1.8rem;font-weight:900;color:var(--gold);letter-spacing:4px;margin-bottom:.5rem;font-family:'Teko',sans-serif;">
         <%= profileUser.referral_code %>
       </div>
-      <p style="font-size:.75rem;color:var(--muted);margin-bottom:1rem;">বন্ধুকে এই কোড দিন — সে ১০০ কয়েন পাবে, আপনি পাবেন ২০০ কয়েন!</p>
-      <button onclick="copyRef()" class="btn btn-primary" style="font-size:.85rem;padding:8px 20px;">📋 কোড কপি করুন</button>
-      <button onclick="shareRef()" class="btn btn-outline" style="font-size:.85rem;padding:8px 20px;margin-left:8px;">📤 শেয়ার করুন</button>
+      <p style="font-size:.75rem;color:var(--text-muted);margin-bottom:1rem;">বন্ধুকে এই কোড দিন — সে ১০০ কয়েন পাবে, আপনি পাবেন ২০০ কয়েন!</p>
+      <div style="display:flex;gap:10px;justify-content:center;">
+        <button onclick="copyRef()" class="btn btn-primary" style="font-size:.85rem;padding:8px 20px;">📋 কপি</button>
+        <button onclick="shareRef()" class="btn glass" style="font-size:.85rem;padding:8px 20px;color:#fff;">📤 শেয়ার</button>
+      </div>
     </div>
   </div>
   <% } %>
 
-  <div class="card" style="margin-bottom:2rem;">
-    <div class="card-header">Member Center</div>
+  <div class="card glass" style="margin-bottom:2rem;">
+    <div style="padding:12px 16px; border-bottom:1px solid var(--border-glass); font-weight:700; color:var(--primary); font-size:0.9rem;">Member Center</div>
     <a href="/leaderboard" class="profile-list-item">
-      <div class="profile-list-icon">🎁</div><span>Reward Center</span><div class="profile-list-arrow">❯</div>
+      <div style="width:24px; margin-right:12px; font-size:1.1rem; color:var(--gold);"><i class="fas fa-gift"></i></div><span>Reward Center</span><div style="margin-left:auto; color:var(--text-muted); font-size:0.8rem;">❯</div>
     </a>
     <a href="/profile/history" class="profile-list-item">
-      <div class="profile-list-icon">📝</div><span>Betting Record</span><div class="profile-list-arrow">❯</div>
+      <div style="width:24px; margin-right:12px; font-size:1.1rem; color:var(--primary);"><i class="fas fa-list-alt"></i></div><span>Betting Record</span><div style="margin-left:auto; color:var(--text-muted); font-size:0.8rem;">❯</div>
     </a>
     <a href="/profile/stats" class="profile-list-item">
-      <div class="profile-list-icon">📊</div><span>Profit & Loss</span><div class="profile-list-arrow">❯</div>
+      <div style="width:24px; margin-right:12px; font-size:1.1rem; color:var(--accent);"><i class="fas fa-chart-pie"></i></div><span>Profit & Loss</span><div style="margin-left:auto; color:var(--text-muted); font-size:0.8rem;">❯</div>
     </a>
     <a href="/payment/history" class="profile-list-item">
-      <div class="profile-list-icon">💸</div><span>Deposit / Withdrawal Record</span><div class="profile-list-arrow">❯</div>
+      <div style="width:24px; margin-right:12px; font-size:1.1rem; color:var(--primary);"><i class="fas fa-history"></i></div><span>Deposit / Withdrawal Record</span><div style="margin-left:auto; color:var(--text-muted); font-size:0.8rem;">❯</div>
     </a>
     <a href="/coins/history" class="profile-list-item">
-      <div class="profile-list-icon">💳</div><span>Account Record</span><div class="profile-list-arrow">❯</div>
+      <div style="width:24px; margin-right:12px; font-size:1.1rem; color:var(--gold);"><i class="fas fa-wallet"></i></div><span>Account Record</span><div style="margin-left:auto; color:var(--text-muted); font-size:0.8rem;">❯</div>
     </a>
     <a href="/profile/security" class="profile-list-item">
-      <div class="profile-list-icon">🛡️</div><span>Security Center</span><div class="profile-list-arrow">❯</div>
+      <div style="width:24px; margin-right:12px; font-size:1.1rem; color:#10b981;"><i class="fas fa-shield-alt"></i></div><span>Security Center</span><div style="margin-left:auto; color:var(--text-muted); font-size:0.8rem;">❯</div>
     </a>
     <a href="/notifications" class="profile-list-item">
-      <div class="profile-list-icon">📧</div><span>Mail</span><div class="profile-list-arrow">❯</div>
+      <div style="width:24px; margin-right:12px; font-size:1.1rem; color:var(--primary);"><i class="fas fa-envelope"></i></div><span>Mail</span><div style="margin-left:auto; color:var(--text-muted); font-size:0.8rem;">❯</div>
     </a>
     <a href="/chat" class="profile-list-item">
-      <div class="profile-list-icon">💬</div><span>Chat Support</span><div class="profile-list-arrow">❯</div>
+      <div style="width:24px; margin-right:12px; font-size:1.1rem; color:var(--accent);"><i class="fas fa-comments"></i></div><span>Chat Support</span><div style="margin-left:auto; color:var(--text-muted); font-size:0.8rem;">❯</div>
     </a>
-    <a href="/app/update" class="profile-list-item">
-      <div class="profile-list-icon">🆙</div><span>App Update</span><div class="profile-list-arrow">❯</div>
-    </a>
-    <a href="/logout" class="profile-list-item" style="color:var(--red);">
-      <div class="profile-list-icon">🚪</div><span>Logout</span><div class="profile-list-arrow">❯</div>
+    <a href="/logout" class="profile-list-item" style="color:#ef4444;">
+      <div style="width:24px; margin-right:12px; font-size:1.1rem;"><i class="fas fa-sign-out-alt"></i></div><span>Logout</span><div style="margin-left:auto; color:var(--text-muted); font-size:0.8rem;">❯</div>
     </a>
   </div>
 </div>
