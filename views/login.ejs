@@ -1,28 +1,28 @@
 <%- include('partials/head') %>
-<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--darker);">
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg-dark);">
   <div style="width:100%;max-width:400px;padding:1rem;">
     <div class="card">
-      <div class="card-header" style="justify-content:center;font-size:1.2rem;">🔐 লগইন করুন</div>
-      <div class="card-body">
+      <div style="padding: 20px; text-align: center; font-size: 1.5rem; font-weight: 700; color: var(--primary); border-bottom: 1px solid var(--border-glass);">🔐 লগইন করুন</div>
+      <div style="padding: 20px;">
         <%- include('partials/flash') %>
-        <form action="/login" method="POST">
-          <div class="form-group">
+        <form action="/login" method="POST" style="display: flex; flex-direction: column; gap: 16px;">
+          <div>
             <label class="form-label">ইমেইল অ্যাড্রেস</label>
             <input type="email" name="email" class="form-input" placeholder="example@email.com" required>
           </div>
-          <div class="form-group">
+          <div>
             <label class="form-label">পাসওয়ার্ড</label>
             <input type="password" name="password" class="form-input" placeholder="••••••••" required>
           </div>
           <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;">লগইন 🚀</button>
         </form>
-        <p style="text-align:center;margin-top:1rem;color:var(--muted);font-size:.9rem;">
-          অ্যাকাউন্ট নেই? <a href="/register" style="color:var(--secondary)">রেজিস্ট্রেশন করুন</a>
+        <p style="text-align:center;margin-top:1.5rem;color:var(--text-muted);font-size:.9rem;">
+          অ্যাকাউন্ট নেই? <a href="/register" style="color:var(--primary); font-weight: bold;">রেজিস্ট্রেশন করুন</a>
         </p>
       </div>
     </div>
     <p style="text-align:center;margin-top:2rem;">
-      <a href="/" style="color:var(--muted);text-decoration:none;font-size:.85rem;">← হোমে ফিরে যান</a>
+      <a href="/" style="color:var(--text-muted);text-decoration:none;font-size:.85rem;">← হোমে ফিরে যান</a>
     </p>
   </div>
 </div>

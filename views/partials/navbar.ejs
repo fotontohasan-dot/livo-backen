@@ -43,6 +43,9 @@
     <div class="nav-brand">LIVO</div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
+    <button onclick="toggleTheme()" id="themeToggle" style="background:none;border:none;color:var(--text-main);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;" class="glass">
+      <i class="fas fa-moon"></i>
+    </button>
     <% if(locals.user) { %>
       <div class="glass" style="padding:4px 12px;border-radius:20px;font-size:13px;color:var(--gold);display:flex;align-items:center;gap:4px;font-family:'Teko',sans-serif;font-weight:700;">🪙 <%= user.coins %></div>
       <div style="display:flex;gap:12px;">
@@ -63,6 +66,34 @@ function toggleMenu() {
   menu.classList.toggle('open');
   overlay.classList.toggle('open');
 }
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const currentTheme = html.getAttribute('data-theme') || 'dark';
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+  html.setAttribute('data-theme', newTheme);
+  localStorage.setItem('theme', newTheme);
+  updateThemeIcon(newTheme);
+}
+
+function updateThemeIcon(theme) {
+  const icon = document.querySelector('#themeToggle i');
+  if (theme === 'light') {
+    icon.classList.replace('fa-moon', 'fa-sun');
+  } else {
+    icon.classList.replace('fa-sun', 'fa-moon');
+  }
+}
+
+// Initialize theme
+(function() {
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  document.addEventListener('DOMContentLoaded', () => {
+    updateThemeIcon(savedTheme);
+  });
+})();
 </script>
 
 <% if(locals.user) { %>

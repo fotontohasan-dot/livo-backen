@@ -4,9 +4,6 @@ const bcrypt = require('bcryptjs');
 const { pool } = require('../db');
 const { sendOTP } = require('../services/email');
 
-// OTP store (memory)
-const otpStore = {};
-
 function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
@@ -20,42 +17,55 @@ router.get('/register', (req, res) => {
 
 // Step 1: Send OTP
 router.post('/register/send-otp', async (req, res) => {
-  const { email } = req.body;
+  const email = req.body.email ? req.body.email.trim().toLowerCase() : '';
+  if (!email) return res.json({ success: false, message: '❌ ইমেইল প্রদান করুন।' });
+
   try {
     const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
     if (existing.rows.length > 0) {
       return res.json({ success: false, message: '❌ এই ইমেইল আগেই নিবন্ধিত।' });
     }
     const otp = generateOTP();
-    otpStore[email] = { otp, expires: Date.now() + 5 * 60 * 1000 };
+
+    // Store in session for better reliability
+    req.session.otp = otp;
+    req.session.otpEmail = email;
+    req.session.otpExpiry = Date.now() + 5 * 60 * 1000;
+
     await sendOTP(email, otp);
     res.json({ success: true, message: '✅ OTP পাঠানো হয়েছে!' });
   } catch (err) {
-    console.error(err);
-    res.json({ success: false, message: '❌ OTP পাঠাতে ব্যর্থ হয়েছে।' });
+    console.error('OTP Send Error:', err);
+    res.json({ success: false, message: '❌ OTP পাঠাতে ব্যর্থ হয়েছে। ইমেইল সেটিংস চেক করুন।' });
   }
 });
 
 // Step 2: Verify OTP and Register
 router.post('/register', async (req, res) => {
-  const { username, email, password, otp } = req.body;
+  const { username, password, otp } = req.body;
+  const email = req.body.email ? req.body.email.trim().toLowerCase() : '';
+
   try {
-    const stored = otpStore[email];
-    if (!stored) {
-      req.flash('error', '❌ আগে OTP পাঠান।');
+    if (!req.session.otp || req.session.otpEmail !== email) {
+      req.flash('error', '❌ আগে সঠিক ইমেইলে OTP পাঠান।');
       return res.redirect('/register');
     }
-    if (stored.otp !== otp) {
+    if (req.session.otp !== otp) {
       req.flash('error', '❌ OTP ভুল হয়েছে।');
       return res.redirect('/register');
     }
-    if (Date.now() > stored.expires) {
+    if (Date.now() > req.session.otpExpiry) {
       req.flash('error', '❌ OTP মেয়াদ শেষ। আবার চেষ্টা করুন।');
-      delete otpStore[email];
+      delete req.session.otp;
+      delete req.session.otpEmail;
+      delete req.session.otpExpiry;
       return res.redirect('/register');
     }
 
-    delete otpStore[email];
+    // Clear OTP from session
+    delete req.session.otp;
+    delete req.session.otpEmail;
+    delete req.session.otpExpiry;
 
     const hashed = await bcrypt.hash(password, 10);
     const myCode = username.toUpperCase().slice(0, 4) + Math.floor(1000 + Math.random() * 9000);
