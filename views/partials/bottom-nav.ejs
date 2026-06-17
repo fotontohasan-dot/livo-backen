@@ -2,19 +2,19 @@
   <a href="/" class="nav-link <%= (locals.activePage === 'home' || !locals.activePage) ? 'active' : '' %>">
     <i class="fas fa-home" style="font-size:20px;"></i><span>হোম</span>
   </a>
-  <a href="/matches" class="nav-link <%= locals.activePage === 'matches' ? 'active' : '' %>">
-    <i class="fas fa-gamepad" style="font-size:20px;"></i><span>গেমস</span>
+  <a href="/profile?tab=invitation" class="nav-link <%= locals.activePage === 'invitation' ? 'active' : '' %>">
+    <i class="fas fa-user-plus" style="font-size:20px;"></i><span>আমন্ত্রণ</span>
   </a>
   <div style="flex:1;display:flex;flex-direction:column;align-items:center;">
-    <a href="/payment/deposit" class="btn btn-primary btn-glow" style="width:50px;height:50px;border-radius:50%;margin-top:-25px;border:4px solid var(--bg-dark);box-shadow:0 0 20px var(--primary-glow);">
-      <i class="fas fa-plus" style="font-size:20px;"></i>
+    <a href="/tournaments" class="btn btn-primary btn-glow" style="width:50px;height:50px;border-radius:50%;margin-top:-25px;border:4px solid var(--bg-dark);box-shadow:0 0 20px var(--primary-glow); display: flex; align-items: center; justify-content: center; text-decoration: none; color: #fff;">
+      <i class="fas fa-gift" style="font-size:20px;"></i>
     </a>
-    <span style="font-size:10px;color:var(--primary);margin-top:4px;font-weight:700;">ডিপোজিট</span>
+    <span style="font-size:10px;color:var(--primary);margin-top:4px;font-weight:700;">প্রমোশন</span>
   </div>
-  <a href="/tournaments" class="nav-link <%= locals.activePage === 'tournaments' ? 'active' : '' %>">
-    <i class="fas fa-fire" style="font-size:20px;"></i><span>প্রমো</span>
+  <a href="/chat" class="nav-link <%= locals.activePage === 'service' ? 'active' : '' %>">
+    <i class="fas fa-headset" style="font-size:20px;"></i><span>সেবা</span>
   </a>
   <a href="/profile" class="nav-link <%= locals.activePage === 'profile' ? 'active' : '' %>">
-    <i class="fas fa-user-circle" style="font-size:20px;"></i><span>অ্যাকাউন্ট</span>
+    <i class="fas fa-user-circle" style="font-size:20px;"></i><span>সদস্য</span>
   </a>
 </div>

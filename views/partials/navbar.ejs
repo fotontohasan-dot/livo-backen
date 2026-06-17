@@ -43,6 +43,9 @@
     <div class="nav-brand">LIVO</div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
+    <button id="theme-toggle-nav" class="glass" style="width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--gold); border: 1px solid var(--border-glass); cursor: pointer; background: none;">
+      <i class="fas fa-moon nav-theme-icon"></i>
+    </button>
     <% if(locals.user) { %>
       <div class="glass" style="padding:4px 12px;border-radius:20px;font-size:13px;color:var(--gold);display:flex;align-items:center;gap:4px;font-family:'Teko',sans-serif;font-weight:700;">🪙 <%= user.coins %></div>
       <div style="display:flex;gap:12px;">
@@ -57,6 +60,43 @@
 </nav>
 
 <script>
+(function() {
+  const currentTheme = localStorage.getItem('theme') || 'dark';
+  if (currentTheme === 'light') {
+    document.body.classList.add('light-mode');
+  }
+
+  function updateAllThemeIcons(theme) {
+    const icons = document.querySelectorAll('.nav-theme-icon, #theme-icon');
+    icons.forEach(icon => {
+      if (theme === 'light') {
+        icon.classList.remove('fa-moon');
+        icon.classList.add('fa-sun');
+      } else {
+        icon.classList.remove('fa-sun');
+        icon.classList.add('fa-moon');
+      }
+    });
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    updateAllThemeIcons(localStorage.getItem('theme') || 'dark');
+
+    const themeToggles = ['theme-toggle-nav', 'theme-toggle-profile'];
+    themeToggles.forEach(id => {
+      const toggle = document.getElementById(id);
+      if (toggle) {
+        toggle.addEventListener('click', () => {
+          const isLight = document.body.classList.toggle('light-mode');
+          const newTheme = isLight ? 'light' : 'dark';
+          localStorage.setItem('theme', newTheme);
+          updateAllThemeIcons(newTheme);
+        });
+      }
+    });
+  });
+})();
+
 function toggleMenu() {
   const menu = document.getElementById('sideMenu');
   const overlay = document.getElementById('menuOverlay');
