@@ -35,6 +35,8 @@ app.use((req, res, next) => {
   next();
 });
 
+app.get('/health', (req, res) => res.status(200).send('OK'));
+
 app.use('/', require('./routes/auth'));
 app.use('/matches', require('./routes/matches'));
 app.use('/tournaments', require('./routes/tournaments'));
@@ -49,6 +51,14 @@ app.use('/games', require('./routes/games'));
 app.use('/chat', require('./routes/chat'));
 
 app.get('/app/update', (req, res) => res.render('app/update'));
+
+app.use((err, req, res, next) => {
+  console.error('❌ Unhandled Error:', err.stack);
+  res.status(500).render('error', {
+    user: req.session?.user || null,
+    message: 'সার্ভারে সমস্যা হয়েছে। একটু পরে আবার চেষ্টা করুন।'
+  });
+});
 
 const PORT = process.env.PORT || 3000;
 
@@ -65,12 +75,17 @@ async function migrateDB() {
 connectDB().then(async () => {
   await migrateDB();
   server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`✅ Server running on port ${PORT}`);
+    setTimeout(() => {
+      syncMatches().catch(err => console.error('Initial match sync failed:', err));
+    }, 3000);
     setInterval(async () => {
       try { await syncMatches(); } catch (err) { console.error(err); }
     }, 24 * 60 * 60 * 1000);
-    syncMatches().catch(err => console.error('Initial match sync failed:', err));
   });
-}).catch(console.error);
+}).catch((err) => {
+  console.error('❌ Server startup failed:', err);
+  process.exit(1);
+});
 
 module.exports = app;
