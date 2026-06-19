@@ -12,20 +12,26 @@
 </div>
 
 <div class="banner-container">
-  <div class="card btn-glow" style="height:160px;background:var(--grad-primary);position:relative;display:flex;align-items:center;padding:20px;">
+  <div class="card btn-glow" style="height:160px;background:linear-gradient(135deg, #006519, #004d13);position:relative;display:flex;align-items:center;padding:20px;border: 1px solid var(--gold);">
     <div style="z-index:1;">
-      <h2 style="font-family:'Teko',sans-serif;font-size:32px;color:#fff;line-height:1;">🎰 ওয়েলকাম বোনাস</h2>
-      <p style="font-size:13px;color:rgba(255,255,255,0.8);margin-top:5px;">প্রথম ডিপোজিটে ১০০% বোনাস পান</p>
-      <a href="/payment/deposit" class="btn btn-secondary" style="margin-top:12px;border-radius:25px;padding:8px 24px;">এখনই নিন</a>
+      <h2 style="font-family:'Teko',sans-serif;font-size:32px;color:var(--gold);line-height:1;">🎰 ওয়েলকাম বোনাস ৫০%</h2>
+      <p style="font-size:13px;color:rgba(255,255,255,0.9);margin-top:5px;">প্রথম ডিপোজিটে ৫০% পর্যন্ত বোনাস পান</p>
+      <div style="margin-top:5px; font-size: 11px; color: #fff;">প্রতি রেফারেলের জন্য ৩০০০ বোনাস! 🎁</div>
+      <a href="/payment/deposit" class="btn btn-primary" style="margin-top:12px;border-radius:25px;padding:8px 24px;background: var(--grad-gold); color: #000;">এখনই নিন</a>
     </div>
-    <div style="position:absolute;right:10px;font-size:80px;opacity:0.3;">💰</div>
+    <div style="position:absolute;right:10px;font-size:80px;opacity:0.2;">🏆</div>
   </div>
 </div>
 
-<div class="glass" style="margin:8px 12px;border-radius:12px;padding:12px;display:flex;align-items:center;gap:12px;">
-  <div class="live-indicator"></div>
-  <p style="font-size:13px;color:var(--text-muted);"><span style="color:var(--gold);font-weight:700;">ঘোষণা:</span> নতুন সিজন শুরু! এখন রেজিস্টার করলে ৫০০ ফ্রি কয়েন পাবেন।</p>
+<div class="glass" style="margin:8px 12px;border-radius:12px;padding:12px;display:flex;align-items:center;gap:12px;position:relative;">
+  <div style="background:var(--gold);color:#000;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:bold;">News</div>
+  <div style="flex:1;overflow:hidden;">
+    <div style="font-size:12px;color:var(--text-muted);white-space:nowrap;animation:marquee-text 15s linear infinite;">
+      প্রিয় গ্রাহক, LIVO-তে আপনাকে স্বাগতম! নতুন আমানত বোনাস এবং আকর্ষণীয় পুরস্কার পেতে এখনই খেলা শুরু করুন। আমাদের সাথে থাকার জন্য ধন্যবাদ।
+    </div>
+  </div>
 </div>
+<style>@keyframes marquee-text { 0%{transform:translateX(100%)} 100%{transform:translateX(-100%)} }</style>
 
 <div class="stats-grid">
   <div class="stat-card">
@@ -42,10 +48,11 @@
   </div>
 </div>
 
-<div class="category-nav" id="catNav">
-  <div class="cat-item active" data-type="all">
-    <div class="cat-icon">🔥</div>
-    <div class="cat-label">সবগুলো</div>
+<div style="display:flex;overflow-x:auto;padding:8px 12px;gap:10px;scrollbar-width:none;" id="catNav">
+  <style>#catNav::-webkit-scrollbar { display:none; }</style>
+  <div class="glass cat-item active" data-type="all" style="flex:0 0 auto;padding:8px 16px;border-radius:12px;cursor:pointer;text-align:center;transition:0.3s;border: 1px solid var(--gold);">
+    <div style="font-size:18px;">🔥</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">সবগুলো</div>
   </div>
   <div class="cat-item" data-type="slots">
     <div class="cat-icon">🎰</div>
@@ -55,13 +62,17 @@
     <div class="cat-icon">🎲</div>
     <div class="cat-label">লাইভ</div>
   </div>
-  <div class="cat-item" data-type="pvp">
-    <div class="cat-icon">⚔️</div>
-    <div class="cat-label">PVP</div>
+  <div class="glass cat-item" data-type="fishing" style="flex:0 0 auto;padding:8px 16px;border-radius:12px;cursor:pointer;text-align:center;transition:0.3s;">
+    <div style="font-size:18px;">🎣</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">ফিশিং</div>
   </div>
   <div class="cat-item" data-type="sports">
     <div class="cat-icon">⚽</div>
     <div class="cat-label">স্পোর্টস</div>
+  </div>
+  <div class="glass cat-item" data-type="lottery" style="flex:0 0 auto;padding:8px 16px;border-radius:12px;cursor:pointer;text-align:center;transition:0.3s;">
+    <div style="font-size:18px;">🎟️</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">লটারি</div>
   </div>
 </div>
 
@@ -143,6 +154,12 @@
   </p>
 </div>
 
+<div style="position:fixed;right:20px;bottom:100px;z-index:999;display:flex;flex-direction:column;gap:10px;">
+  <a href="/chat" style="width:50px;height:50px;border-radius:50%;background:var(--grad-gold);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px rgba(0,0,0,0.4);text-decoration:none;color:#000;font-size:24px;">
+    <i class="fas fa-headset"></i>
+  </a>
+</div>
+
 <%- include('partials/bottom-nav') %>
 
 <script>
@@ -154,19 +171,19 @@ const games = [
   {name:"Baccarat",          emoji:"🎰",  type:"table",  slug:"baccarat",          badge:"pop", provider:"EVO"},
   {name:"Roulette",          emoji:"🎡",  type:"table",  slug:"roulette",          badge:"",    provider:"EVO"},
   {name:"Slots",             emoji:"🎰",  type:"slots",  slug:"slots",             badge:"hot", provider:"PG"},
-  {name:"Online Ludo",       emoji:"🎲",  type:"pvp",    slug:"ludo",              badge:"new", provider:"JL"},
-  {name:"Dragon Tiger",      emoji:"🐉",  type:"pvp",    slug:"dragon-tiger",      badge:"pop", provider:"JL"},
-  {name:"Color Prediction",  emoji:"🌈",  type:"pvp",    slug:"color-prediction",  badge:"new", provider:"JL"},
-  {name:"Mine Game",         emoji:"💣",  type:"pvp",    slug:"mine",              badge:"hot", provider:"JL"},
+  {name:"Online Ludo",       emoji:"🎲",  type:"slots",  slug:"ludo",              badge:"new", provider:"JL"},
+  {name:"Dragon Tiger",      emoji:"🐉",  type:"live",   slug:"dragon-tiger",      badge:"pop", provider:"JL"},
+  {name:"Color Prediction",  emoji:"🌈",  type:"slots",  slug:"color-prediction",  badge:"new", provider:"JL"},
+  {name:"Mine Game",         emoji:"💣",  type:"slots",  slug:"mine",              badge:"hot", provider:"JL"},
   {name:"Fortune Gems",      emoji:"💎",  type:"slots",  slug:"fortune-gems",      badge:"hot", provider:"JDB"},
   {name:"Sweet Bonanza",     emoji:"🍭",  type:"slots",  slug:"sweet-bonanza",     badge:"pop", provider:"PP"},
   {name:"Gates of Olympus",  emoji:"⚡",  type:"slots",  slug:"gates-of-olympus",  badge:"hot", provider:"PP"},
   {name:"Crazy Time",        emoji:"🎡",  type:"live",   slug:"crazy-time",        badge:"hot", provider:"EVO"},
   {name:"Mega Ball",         emoji:"🟡",  type:"live",   slug:"mega-ball",         badge:"pop", provider:"EVO"},
-  {name:"Rummy",             emoji:"🃏",  type:"pvp",    slug:"rummy",             badge:"hot", provider:"JL"},
-  {name:"Call Break",        emoji:"♠️",  type:"pvp",    slug:"call-break",        badge:"pop", provider:"JL"},
+  {name:"Rummy",             emoji:"🃏",  type:"slots",  slug:"rummy",             badge:"hot", provider:"JL"},
+  {name:"Call Break",        emoji:"♠️",  type:"slots",  slug:"call-break",        badge:"pop", provider:"JL"},
   {name:"Lightning Roulette",emoji:"⚡",  type:"live",   slug:"lightning-roulette",badge:"hot", provider:"EVO"},
-  {name:"Mines",             emoji:"💣",  type:"pvp",    slug:"mines",             badge:"new", provider:"SPRIBE"},
+  {name:"Mines",             emoji:"💣",  type:"slots",  slug:"mines",             badge:"new", provider:"SPRIBE"},
   {name:"Sugar Pop",         emoji:"🍬",  type:"slots",  slug:"sugar-pop",         badge:"new", provider:"BS"},
   {name:"Big Bad Wolf",      emoji:"🐺",  type:"slots",  slug:"big-bad-wolf",      badge:"new", provider:"QS"},
 ];
@@ -185,9 +202,9 @@ function renderGames() {
   );
 
   filtered.forEach(g => {
-    const badgeHTML = g.badge ? `<div style="position:absolute;top:8px;left:8px;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;background:var(--grad-primary);color:#fff;">${g.badge.toUpperCase()}</div>` : '';
+    const badgeHTML = g.badge ? `<div style="position:absolute;top:8px;left:8px;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;background:var(--grad-gold);color:#000;">${g.badge.toUpperCase()}</div>` : '';
     c.innerHTML += `
-      <div class="game-card" onclick="location.href='/games/${g.slug}'">
+      <div class="game-card" onclick="location.href='/games/${g.slug}'" style="border-color: rgba(245, 158, 11, 0.2);">
         <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:40px;background:var(--grad-surface);">
           ${g.emoji}
           ${badgeHTML}

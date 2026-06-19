@@ -2,14 +2,6 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { pool } = require('../db');
-const { sendOTP } = require('../services/email');
-
-// OTP store (memory)
-const otpStore = {};
-
-function generateOTP() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
 
 router.get('/', async (req, res) => {
   try {
@@ -25,52 +17,59 @@ router.get('/register', (req, res) => {
   res.render('registration', { ref });
 });
 
-// Step 1: Send OTP
-router.post('/register/send-otp', async (req, res) => {
-  const { email } = req.body;
-  try {
-    const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
-    if (existing.rows.length > 0) {
-      return res.json({ success: false, message: '❌ এই ইমেইল আগেই নিবন্ধিত।' });
-    }
-    const otp = generateOTP();
-    otpStore[email] = { otp, expires: Date.now() + 5 * 60 * 1000 };
-    await sendOTP(email, otp);
-    res.json({ success: true, message: '✅ OTP পাঠানো হয়েছে!' });
-  } catch (err) {
-    console.error(err);
-    res.json({ success: false, message: '❌ OTP পাঠাতে ব্যর্থ হয়েছে।' });
-  }
-});
-
-// Step 2: Verify OTP and Register
 router.post('/register', async (req, res) => {
-  const { username, email, password, otp } = req.body;
+  const { username, email, phone, password, confirmPassword, referralCode } = req.body;
+
   try {
-    const stored = otpStore[email];
-    if (!stored) {
-      req.flash('error', '❌ আগে OTP পাঠান।');
-      return res.redirect('/register');
-    }
-    if (stored.otp !== otp) {
-      req.flash('error', '❌ OTP ভুল হয়েছে।');
-      return res.redirect('/register');
-    }
-    if (Date.now() > stored.expires) {
-      req.flash('error', '❌ OTP মেয়াদ শেষ। আবার চেষ্টা করুন।');
-      delete otpStore[email];
+    if (!username || !password) {
+      req.flash('error', '❌ ইউজারনেম এবং পাসওয়ার্ড আবশ্যক।');
       return res.redirect('/register');
     }
 
-    delete otpStore[email];
+    if (!email && !phone) {
+      req.flash('error', '❌ ইমেইল অথবা ফোন নাম্বার অন্তত একটি দিতে হবে।');
+      return res.redirect('/register');
+    }
+
+    if (password.length < 8) {
+      req.flash('error', '❌ পাসওয়ার্ড কমপক্ষে ৮ অক্ষর হতে হবে।');
+      return res.redirect('/register');
+    }
+
+    if (confirmPassword && password !== confirmPassword) {
+      req.flash('error', '❌ পাসওয়ার্ড মিলছে না।');
+      return res.redirect('/register');
+    }
+
+    if (email) {
+      const existingEmail = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+      if (existingEmail.rows.length > 0) {
+        req.flash('error', '❌ এই ইমেইল আগেই নিবন্ধিত।');
+        return res.redirect('/register');
+      }
+    }
+
+    if (phone) {
+      const existingPhone = await pool.query('SELECT id FROM users WHERE phone = $1', [phone]);
+      if (existingPhone.rows.length > 0) {
+        req.flash('error', '❌ এই ফোন নাম্বার আগেই নিবন্ধিত।');
+        return res.redirect('/register');
+      }
+    }
 
     const hashed = await bcrypt.hash(password, 10);
     const myCode = username.toUpperCase().slice(0, 4) + Math.floor(1000 + Math.random() * 9000);
 
+    let referredById = null;
+    if (ref) {
+      const referrer = await pool.query('SELECT id FROM users WHERE referral_code = $1', [ref]);
+      if (referrer.rows[0]) referredById = referrer.rows[0].id;
+    }
+
     const result = await pool.query(`
-      INSERT INTO users (username, email, password, role, coins, referral_code, created_at)
-      VALUES ($1, $2, $3, 'user', 500, $4, NOW()) RETURNING *
-    `, [username, email, hashed, myCode]);
+      INSERT INTO users (username, email, phone, password, role, coins, referral_code, created_at)
+      VALUES ($1, $2, $3, $4, 'user', 0, $5, NOW()) RETURNING *
+    `, [username, email || null, phone || null, hashed, myCode]);
 
     req.session.user = result.rows[0];
     req.flash('success', '✅ রেজিস্ট্রেশন সফল হয়েছে! স্বাগতম!');
@@ -85,13 +84,16 @@ router.post('/register', async (req, res) => {
 router.get('/login', (req, res) => res.render('login'));
 
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+  const { identifier, password } = req.body;
   try {
-    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    const result = await pool.query(
+      'SELECT * FROM users WHERE email = $1 OR phone = $1',
+      [identifier]
+    );
     const user = result.rows[0];
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      req.flash('error', '❌ ইমেইল অথবা পাসওয়ার্ড ভুল।');
+      req.flash('error', '❌ তথ্য অথবা পাসওয়ার্ড ভুল।');
       return res.redirect('/login');
     }
     if (user.is_banned) {

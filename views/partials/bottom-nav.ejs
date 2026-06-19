@@ -1,29 +1,26 @@
 <div class="bottom-nav">
-  <a href="/" class="nav-link <%= locals.currentPage === 'home' ? 'active' : '' %>">
+  <a href="/" onclick="location.href='/'; return false;" class="nav-link <%= locals.currentPage === 'home' ? 'active' : '' %>">
     <i class="fas fa-home"></i>
-    <span>হোম</span>
+    <span><%= t.home %></span>
   </a>
 
-  <a href="/profile?tab=invitation" class="nav-link <%= locals.currentPage === 'invitation' ? 'active' : '' %>">
+  <a href="/profile?tab=invitation" onclick="location.href='/profile?tab=invitation'; return false;" class="nav-link <%= locals.currentPage === 'invitation' ? 'active' : '' %>">
     <i class="fas fa-user-plus"></i>
-    <span>আমন্ত্রণ</span>
+    <span><%= t.invite %></span>
   </a>
 
-  <!-- Center Promotion Button -->
-  <div class="promotion-container">
-    <a href="/tournaments" class="btn btn-primary btn-glow promotion-btn">
-      <i class="fas fa-gift"></i>
-    </a>
-    <span class="promotion-label">প্রমোশন</span>
-  </div>
+  <a href="/tournaments" onclick="location.href='/tournaments'; return false;" class="nav-link">
+    <i class="fas fa-gift"></i>
+    <span><%= t.promotion %></span>
+  </a>
 
-  <a href="/chat" class="nav-link <%= locals.currentPage === 'chat' ? 'active' : '' %>">
+  <a href="/chat" onclick="location.href='/chat'; return false;" class="nav-link <%= locals.currentPage === 'chat' ? 'active' : '' %>">
     <i class="fas fa-headset"></i>
-    <span>সবা</span>
+    <span><%= t.support %></span>
   </a>
 
-  <a href="/profile" class="nav-link <%= locals.currentPage === 'profile' ? 'active' : '' %>">
+  <a href="/profile" onclick="location.href='/profile'; return false;" class="nav-link <%= locals.currentPage === 'profile' ? 'active' : '' %>">
     <i class="fas fa-user-circle"></i>
-    <span>সদস্য</span>
+    <span><%= t.member %></span>
   </a>
 </div>
