@@ -28,10 +28,37 @@ app.use(session({
 
 app.use(flash());
 
+// ভাষা (বাংলা / ইংরেজি)
+const translations = {
+  bn: {
+    balance: 'ব্যালেন্স', deposit: 'ডিপোজিট', withdraw: 'উইথড্র',
+    login: 'লগইন', register: 'রজিস্টার', logout: 'লগআউট',
+    home: 'হোম', invite: 'আমন্ত্রণ', promotion: 'প্রমোশন', support: 'সবা', member: 'সদস্য',
+    menu_home: 'হোম', menu_aviator: 'Aviator', menu_slots: 'Slots', menu_color: 'Color Prediction',
+    menu_sports: 'সর্টস', menu_tournament: 'টুর্নামেন্ট', menu_deposit: 'ডিপোজিট', menu_withdraw: 'উইথড্র',
+    menu_leaderboard: 'লিডারবোর্ড', menu_news: 'নিউজ', menu_profile: 'প্রোফাইল', menu_admin: 'এডমিন প্যানেল'
+  },
+  en: {
+    balance: 'Balance', deposit: 'Deposit', withdraw: 'Withdraw',
+    login: 'Login', register: 'Register', logout: 'Logout',
+    home: 'Home', invite: 'Invite', promotion: 'Promotion', support: 'Support', member: 'Profile',
+    menu_home: 'Home', menu_aviator: 'Aviator', menu_slots: 'Slots', menu_color: 'Color Prediction',
+    menu_sports: 'Sports', menu_tournament: 'Tournament', menu_deposit: 'Deposit', menu_withdraw: 'Withdraw',
+    menu_leaderboard: 'Leaderboard', menu_news: 'News', menu_profile: 'Profile', menu_admin: 'Admin Panel'
+  }
+};
+
+app.get('/lang/:code', (req, res) => {
+  req.session.lang = req.params.code === 'en' ? 'en' : 'bn';
+  res.redirect(req.get('Referer') || '/');
+});
+
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.success = req.flash('success');
   res.locals.error = req.flash('error');
+  res.locals.lang = req.session.lang || 'bn';
+  res.locals.t = translations[res.locals.lang];
   next();
 });
 
@@ -55,12 +82,12 @@ app.get('/app/update', (req, res) => res.render('app/update'));
 app.use((err, req, res, next) => {
   console.error('❌ Unhandled Error:', err.stack);
   res.status(500).render('error', {
-    message: 'সার্ভারে সমস্যা হয়ছে। একটু পরে আবার চেষ্টা করুন।'
+    message: 'সার্ভারে সমস্যা হয়েছে। একটু পরে আবার চেষ্টা করুন।'
   });
 });
 
 app.use((req, res) => {
-  res.status(404).render('error', { message: 'পেজটি পাওয়া যায়নি।' });
+  res.status(404).render('error', { message: 'পেজটি পাওয়া যাযনি।' });
 });
 
 const PORT = process.env.PORT || 3000;
@@ -74,7 +101,7 @@ async function migrateDB() {
         email VARCHAR(100) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
         role VARCHAR(20) DEFAULT 'user',
-        coins INT DEFAULT 500,
+        coins INT DEFAULT 0,
         total_points INT DEFAULT 0,
         avatar TEXT,
         referral_code VARCHAR(20) UNIQUE,
