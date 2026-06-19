@@ -13,6 +13,7 @@
 
   --grad-primary: linear-gradient(135deg, #8b5cf6, #ec4899);
   --grad-secondary: linear-gradient(135deg, #06b6d4, #3b82f6);
+  --grad-gold: linear-gradient(135deg, #f59e0b, #fbbf24);
   --grad-dark: linear-gradient(180deg, #121212, #050505);
   --grad-surface: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));
 
@@ -131,6 +132,20 @@ body {
 
 .nav-link.active i {
     filter: drop-shadow(0 0 5px var(--primary-glow));
+}
+
+/* Center Promotion Button — গোল্ডেন কালার */
+.promotion-btn {
+    background: var(--grad-gold) !important;
+    box-shadow: 0 0 18px rgba(245, 158, 11, 0.6) !important;
+}
+
+.promotion-label {
+    color: var(--gold);
+    font-size: 10px;
+    margin-top: 2px;
+    display: block;
+    text-align: center;
 }
 
 /* Rest of your styles */
@@ -361,4 +376,26 @@ p {
 
 .teko {
     font-family: 'Teko', sans-serif;
+}
+
+/* ভাষা টগল বাটন */
+.lang-switch {
+    display: flex;
+    gap: 4px;
+}
+
+.lang-btn {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 10px;
+    border: 1px solid var(--border-glass);
+    font-weight: 600;
+}
+
+.lang-btn.active {
+    background: var(--gold);
+    color: #000;
+    border-color: var(--gold);
 }
