@@ -23,67 +23,33 @@
   --glass-blur: blur(12px);
 }
 
-/* Light Mode Variables */
 body.light-mode {
   --bg-dark: #f0f2f5;
   --bg-surface: #ffffff;
   --bg-card: rgba(0, 0, 0, 0.03);
   --bg-glass: rgba(255, 255, 255, 0.7);
   --border-glass: rgba(0, 0, 0, 0.1);
-
   --text-main: #1a1a1a;
   --text-muted: #64748b;
   --grad-surface: linear-gradient(135deg, rgba(255,255,255,0.8), rgba(255,255,255,0.4));
 }
 
-body.light-mode {
-    background-image:
-        radial-gradient(circle at 0% 0%, rgba(139, 92, 246, 0.05) 0%, transparent 35%),
-        radial-gradient(circle at 100% 100%, rgba(6, 182, 212, 0.05) 0%, transparent 35%);
-}
-
-body.light-mode .bottom-nav {
-    background: rgba(255, 255, 255, 0.95) !important;
-    border-top: 1px solid rgba(0,0,0,0.1);
-}
-
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    -webkit-tap-highlight-color: transparent;
-}
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 body {
     background-color: var(--bg-dark);
-    background-image:
-        radial-gradient(circle at 0% 0%, rgba(139, 92, 246, 0.15) 0%, transparent 35%),
-        radial-gradient(circle at 100% 100%, rgba(6, 182, 212, 0.15) 0%, transparent 35%);
     color: var(--text-main);
-    font-family: 'Hind Siliguri', 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Hind Siliguri', sans-serif;
     min-height: 100vh;
-    padding-bottom: 90px !important;   /* ← Fixed: Overlap fix */
+    padding-bottom: 90px !important;
     overflow-x: hidden;
 }
 
-/* Glassmorphism Utility */
-.glass {
-    background: var(--bg-glass);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--border-glass);
-}
+.glass { background: var(--bg-glass); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border: 1px solid var(--border-glass); }
+.container { max-width: 480px; margin: 0 auto; padding: 0 12px; }
 
-.container {
-    max-width: 480px;
-    margin: 0 auto;
-    padding: 0 12px;
-}
-
-/* Navbar */
 .navbar {
     background: rgba(5, 5, 5, 0.95);
-    backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--border-glass);
     padding: 8px 16px;
     display: flex;
@@ -95,7 +61,8 @@ body {
     z-index: 1000;
 }
 
-/* Bottom Nav - Fixed */
+.nav-brand { font-family: 'Teko', sans-serif; font-size: 28px; font-weight: 700; color: var(--gold); letter-spacing: 2px; }
+
 .bottom-nav {
     position: fixed;
     bottom: 0;
@@ -104,35 +71,42 @@ body {
     width: 100%;
     max-width: 480px;
     background: rgba(10, 10, 10, 0.98);
-    backdrop-filter: blur(20px);
     display: flex;
     justify-content: space-around;
-    padding: 8px 0 18px 0;
+    padding: 10px 0 20px 0;
     border-top: 1px solid var(--border-glass);
     z-index: 1100;
-    box-shadow: 0 -4px 25px rgba(0, 0, 0, 0.6);
 }
 
-.nav-link {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    color: var(--text-muted);
-    text-decoration: none;
-    font-size: 10px;
-    gap: 4px;
-    transition: 0.3s;
-}
+.nav-link { display: flex; flex-direction: column; align-items: center; color: var(--text-muted); text-decoration: none; font-size: 11px; gap: 4px; transition: 0.3s; }
+.nav-link.active { color: var(--gold); }
+.nav-link i { font-size: 18px; }
 
-.nav-link.active {
-    color: var(--primary);
-}
+.promotion-container { position: relative; top: -20px; display: flex; flex-direction: column; align-items: center; z-index: 1101; }
+.promotion-btn { width: 55px; height: 55px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 4px 15px var(--primary-glow); border: 3px solid var(--bg-dark); }
+.promotion-label { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
 
-.nav-link.active i {
-    filter: drop-shadow(0 0 5px var(--primary-glow));
-}
+.btn { display: inline-flex; align-items: center; justify-content: center; border: none; cursor: pointer; transition: 0.3s; text-decoration: none; font-weight: 600; padding: 10px 20px; border-radius: 8px; }
+.btn-primary { background: var(--grad-primary); color: #fff; }
+.btn-secondary { background: var(--grad-secondary); color: #fff; }
+.btn-glow { box-shadow: 0 0 15px var(--primary-glow); }
 
-/* Rest of your styles (unchanged) */
-.btn { ... } /* তোমার আগের সব স্টাইল এখানে রাখো */
+.card { background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 16px; overflow: hidden; margin-bottom: 15px; }
 
-.card, .game-grid, .banner-container, .stats-grid, .match-card, .profile-list-item ইত্যাদি — সব আগের মতোই রাখো।
+.section-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 12px 10px; }
+.section-title { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+
+.game-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; padding: 0 12px; }
+.game-card { aspect-ratio: 1; border-radius: 12px; overflow: hidden; position: relative; cursor: pointer; background: var(--grad-surface); }
+
+.alert { padding: 15px; border-radius: 10px; margin: 10px 12px; font-size: 14px; display: flex; align-items: center; gap: 10px; }
+.alert-success { background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); }
+.alert-error { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
+
+.form-input { width: 100%; background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: 12px; padding: 14px; color: #fff; outline: none; font-size: 15px; }
+.form-input:focus { border-color: var(--primary); }
+
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding: 0 12px; margin: 15px 0; }
+.stat-card { background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px; text-align: center; }
+.stat-value { font-family: 'Teko', sans-serif; font-size: 22px; font-weight: 700; color: var(--gold); }
+.stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }

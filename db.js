@@ -16,8 +16,8 @@ const connectDB = async () => {
       retries--;
       console.error(`❌ PostgreSQL connection error (${5 - retries}/5):`, error.message);
       if (retries === 0) {
-        console.error('❌ Could not connect to database after 5 attempts.');
-        return;
+        console.error('❌ Could not connect to database after 5 attempts. Exiting.');
+        process.exit(1);
       }
       console.log(`⏳ Retrying in 5 seconds...`);
       await new Promise(res => setTimeout(res, 5000));

@@ -32,6 +32,15 @@ app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.success = req.flash('success');
   res.locals.error = req.flash('error');
+
+  const pathParts = req.path.split('/').filter(Boolean);
+  let page = 'home';
+  if (pathParts.length > 0) {
+    if (pathParts[0] === 'extra') page = pathParts[1] || 'home';
+    else page = pathParts[0];
+  }
+  res.locals.currentPage = page;
+
   next();
 });
 
@@ -49,6 +58,7 @@ app.use('/notifications', require('./routes/notifications'));
 app.use('/payment', require('./routes/payment'));
 app.use('/games', require('./routes/games'));
 app.use('/chat', require('./routes/chat'));
+app.use('/extra', require('./routes/extra'));
 
 app.get('/app/update', (req, res) => res.render('app/update'));
 
@@ -75,6 +85,7 @@ async function migrateDB() {
           total_points INT DEFAULT 0,
           avatar TEXT,
           referral_code VARCHAR(20) UNIQUE,
+          referred_by_id INT REFERENCES users(id),
           is_banned BOOLEAN DEFAULT false,
           last_bonus_date TIMESTAMP,
           created_at TIMESTAMP DEFAULT NOW()
@@ -182,6 +193,7 @@ async function migrateDB() {
       ALTER TABLE news ADD COLUMN IF NOT EXISTS sport VARCHAR(50);
       ALTER TABLE news ADD COLUMN IF NOT EXISTS views INT DEFAULT 0;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS last_bonus_date TIMESTAMP;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by_id INT;
       ALTER TABLE matches ADD COLUMN IF NOT EXISTS result VARCHAR(50);
       ALTER TABLE predictions ADD COLUMN IF NOT EXISTS points_earned INT DEFAULT 0;
       ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS name VARCHAR(255);
@@ -195,20 +207,20 @@ async function migrateDB() {
   }
 }
 
-server.listen(PORT, async () => {
-  console.log(`✅ Server running on port ${PORT}`);
-  try {
-    await connectDB();
-    await migrateDB();
+connectDB().then(async () => {
+  await migrateDB();
+  server.listen(PORT, () => {
+    console.log(`✅ Server running on port ${PORT}`);
     setTimeout(() => {
       syncMatches().catch(err => console.error('Initial match sync failed:', err));
     }, 3000);
     setInterval(async () => {
       try { await syncMatches(); } catch (err) { console.error(err); }
     }, 24 * 60 * 60 * 1000);
-  } catch (err) {
-    console.error('❌ Background initialization failed:', err.message);
-  }
+  });
+}).catch((err) => {
+  console.error('❌ Server startup failed:', err);
+  process.exit(1);
 });
 
 module.exports = app;

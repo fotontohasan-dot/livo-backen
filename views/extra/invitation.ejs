@@ -1,0 +1,39 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+
+<div class="container page" style="padding-top: 20px;">
+    <div class="card glass" style="text-align: center; padding: 40px 20px; border-radius: 24px;">
+        <div style="font-size: 60px; margin-bottom: 20px;">✉️</div>
+        <h2 style="color: var(--text-main); margin-bottom: 10px;">বন্ধুদের আমন্ত্রণ জানান</h2>
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 30px;">আপনার বন্ধুদের ইনভাইট করুন এবং প্রতি রেফারেলে জিতে নিন আকর্ষণীয় পুরস্কার!</p>
+
+        <div class="glass" style="padding: 20px; border-radius: 16px; background: rgba(245, 158, 11, 0.05); border: 1px dashed var(--gold);">
+            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">আপনার রেফারেল কোড</p>
+            <div style="font-family: 'Teko', sans-serif; font-size: 36px; color: var(--gold); font-weight: 700; letter-spacing: 4px;">
+                <%= referralCode %>
+            </div>
+            <button onclick="copyRef()" class="btn btn-primary" style="margin-top: 15px; border-radius: 20px; padding: 8px 30px;">কপি করুন</button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 30px;">
+            <div class="stat-card">
+                <div class="stat-value"><%= referralCount %></div>
+                <div class="stat-label">মোট রেফারেল</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">৳ ০</div>
+                <div class="stat-label">অর্জিত বোনাস</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyRef() {
+    navigator.clipboard.writeText('<%= referralCode %>');
+    alert('রেফারেল কোড কপি হয়েছে! ✅');
+}
+</script>
+
+<%- include('../partials/bottom-nav') %>
+</body></html>

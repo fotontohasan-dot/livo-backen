@@ -38,7 +38,7 @@ router.post('/register/send-otp', async (req, res) => {
 
 // Step 2: Verify OTP and Register
 router.post('/register', async (req, res) => {
-  const { username, email, password, otp } = req.body;
+  const { username, email, password, otp, ref } = req.body;
   try {
     const stored = otpStore[email];
     if (!stored) {
@@ -60,10 +60,16 @@ router.post('/register', async (req, res) => {
     const hashed = await bcrypt.hash(password, 10);
     const myCode = username.toUpperCase().slice(0, 4) + Math.floor(1000 + Math.random() * 9000);
 
+    let referredById = null;
+    if (ref) {
+      const referrer = await pool.query('SELECT id FROM users WHERE referral_code = $1', [ref]);
+      if (referrer.rows[0]) referredById = referrer.rows[0].id;
+    }
+
     const result = await pool.query(`
-      INSERT INTO users (username, email, password, role, coins, referral_code, created_at)
-      VALUES ($1, $2, $3, 'user', 500, $4, NOW()) RETURNING *
-    `, [username, email, hashed, myCode]);
+      INSERT INTO users (username, email, password, role, coins, referral_code, referred_by_id, created_at)
+      VALUES ($1, $2, $3, 'user', 500, $4, $5, NOW()) RETURNING *
+    `, [username, email, hashed, myCode, referredById]);
 
     req.session.user = result.rows[0];
     req.flash('success', '✅ রেজিস্ট্রেশন সফল হয়েছে! স্বাগতম!');
