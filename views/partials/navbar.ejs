@@ -1,6 +1,6 @@
 <div class="side-menu" id="sideMenu">
   <div style="padding:20px;border-bottom:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:space-between;">
-    <span class="nav-brand" style="color: var(--gold); font-family: 'Teko', sans-serif; font-size: 1.8rem;">LIVO</span>
+    <span class="nav-brand" style="color: var(--gold); font-family: 'Teko', sans-serif; font-size: 1.8rem;">FA999</span>
     <button onclick="toggleMenu()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;">✕</button>
   </div>
   <% if(locals.user) { %>
@@ -47,7 +47,7 @@
 <nav class="navbar" style="background: var(--grad-primary);">
   <div style="display:flex;align-items:center;gap:12px;">
     <button onclick="toggleMenu()" style="background:none;border:none;color:#fff;font-size:24px;cursor:pointer;padding:0;line-height:1;"><i class="fas fa-bars"></i></button>
-    <div class="nav-brand" style="color: #fff; font-family: 'Teko', sans-serif; font-size: 1.8rem; letter-spacing: 1px;">LIVO</div>
+    <div class="nav-brand" style="color: #fff; font-family: 'Teko', sans-serif; font-size: 1.8rem; letter-spacing: 1px;">FA999</div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <button id="theme-toggle-nav" class="glass" style="width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--gold); border: 1px solid var(--border-glass); cursor: pointer; background: none;">
@@ -120,7 +120,7 @@ function toggleMenu() {
   </div>
   <div style="display:flex;gap:8px;">
     <a href="/payment/deposit" class="btn btn-primary" style="padding:5px 12px;font-size:12px;border-radius:8px;"><%= t.deposit %></a>
-    <a href="/payment/withdraw" class="btn glass" style="padding:5px 12px;font-size:12px;border-radius:8px;color:#fff;"><%= t.withdraw %></a>
+    <a href="/payment/withdraw" class="btn glass" style="padding:5px 12px;font-size:12px;border-radius:8px;color:var(--gold);border-color:rgba(245,158,11,0.3);font-weight:700;"><%= t.withdraw %></a>
   </div>
 </div>
 <% } %>
