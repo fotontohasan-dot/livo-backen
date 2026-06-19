@@ -97,7 +97,8 @@ body {
     z-index: 1000;
 }
 
-/.bottom-nav {
+/* Bottom Nav - Fixed */
+.bottom-nav {
     position: fixed;
     bottom: 0;
     left: 0;
@@ -113,13 +114,7 @@ body {
     border-top: 1px solid var(--border-glass);
     z-index: 1100;
     box-shadow: 0 -4px 25px rgba(0, 0, 0, 0.6);
-    pointer-events: auto;
 }
-
-.bottom-nav a, .bottom-nav .promotion-btn {
-    pointer-events: auto;
-}
-
 
 .nav-link {
     display: flex;
@@ -141,9 +136,20 @@ body {
 }
 
 /* Center Promotion Button — গোল্ডেন কালার */
+.promotion-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: -28px;
+}
+
 .promotion-btn {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
     background: var(--grad-gold) !important;
     box-shadow: 0 0 18px rgba(245, 158, 11, 0.6) !important;
+    font-size: 20px;
 }
 
 .promotion-label {
@@ -404,4 +410,14 @@ p {
     background: var(--gold);
     color: #000;
     border-color: var(--gold);
+}
+
+/* ক্যাটাগরি একটিভ বাটন গোল্ডেন */
+.cat-item.active {
+    background: var(--grad-gold) !important;
+    border-color: transparent !important;
+}
+
+.cat-item.active div {
+    color: #000 !important;
 }
