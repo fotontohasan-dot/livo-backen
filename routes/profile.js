@@ -57,7 +57,7 @@ router.post('/update', isAuth, async (req, res) => {
     req.session.user.username = username;
     req.flash('success', 'প্রোফাইল আপডেট হয়েছে!');
   } catch (err) {
-    req.flash('error', 'আপডেট করতে সমস্যা হযছে।');
+    req.flash('error', 'আপডেট করত সমস্যা হযছে।');
   }
   res.redirect('/profile');
 });
