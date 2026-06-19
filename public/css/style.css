@@ -143,14 +143,24 @@ body {
     margin-top: -28px;
 }
 
-.promotion-btn {
-    width: 54px;
-    height: 54px;
+/* Promotion আইকন গোল্ডেন */
+.promotion-icon {
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
-    background: var(--grad-gold) !important;
-    box-shadow: 0 0 18px rgba(245, 158, 11, 0.6) !important;
-    font-size: 20px;
+    background: var(--grad-gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #000;
+    font-size: 15px;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.6);
 }
+
+.promotion-link span:last-child {
+    color: var(--gold);
+}
+
 
 .promotion-label {
     color: var(--gold);
