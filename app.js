@@ -33,9 +33,9 @@ const translations = {
   bn: {
     balance: 'ব্যালেন্স', deposit: 'ডিপোজিট', withdraw: 'উইথড্র',
     login: 'লগইন', register: 'রজিস্টার', logout: 'লগআউট',
-    home: 'হোম', invite: 'আমন্ত্রণ', promotion: 'প্রমোশন', support: 'সবা', member: 'সদস্য',
+    home: 'হোম', invite: 'আমন্ত্রণ', promotion: 'প্রমোশন', support: 'সেবা', member: 'সদস্য',
     menu_home: 'হোম', menu_aviator: 'Aviator', menu_slots: 'Slots', menu_color: 'Color Prediction',
-    menu_sports: 'সর্টস', menu_tournament: 'টুর্নামেন্ট', menu_deposit: 'ডিপোজিট', menu_withdraw: 'উইথড্র',
+    menu_sports: 'স্পোর্টস', menu_tournament: 'টুর্নামেন্ট', menu_deposit: 'ডিপোজিট', menu_withdraw: 'উইথড্র',
     menu_leaderboard: 'লিডারবোর্ড', menu_news: 'নিউজ', menu_profile: 'প্রোফাইল', menu_admin: 'এডমিন প্যানেল'
   },
   en: {
