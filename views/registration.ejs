@@ -1,134 +1,75 @@
-<!-- ==================== রেজিস্ট্রেশন ফর্ম শুরু ==================== -->
-<div class="max-w-md mx-auto p-4">
-  
-  <form id="registerForm" class="space-y-6">
+<%- include('partials/head') %>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg-dark);">
+  <div style="width:100%;max-width:400px;padding:1rem;">
+    <div class="card glass">
+      <div class="card-header" style="justify-content:center;font-size:1.2rem;">📝 রেজিস্ট্রেশন করুন</div>
+      <div class="card-body">
+        <%- include('partials/flash') %>
+        <form id="registerForm" action="/register" method="POST">
+          <div class="form-group">
+            <label class="form-label">ইউজারনেম</label>
+            <input type="text" name="username" class="form-input" placeholder="আপনার ইউজারনেম" required>
+          </div>
 
-    <!-- Username -->
-    <div>
-      <label class="block text-sm mb-2">ইউজারনেম</label>
-      <input type="text" id="username" 
-             class="w-full bg-gray-800 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500" 
-             placeholder="koy khaan" value="koy khaan">
-    </div>
+          <div class="form-group">
+            <label class="form-label">ইমেইল (ঐচ্ছিক)</label>
+            <input type="email" name="email" class="form-input" placeholder="example@email.com">
+          </div>
 
-    <!-- Email -->
-    <div>
-      <label class="block text-sm mb-2">ইমেইল</label>
-      <div class="flex gap-3">
-        <input type="email" id="email" 
-               class="flex-1 bg-gray-800 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500" 
-               placeholder="tuhinhasan732144@gmail.com" value="tuhinhasan732144@gmail.com">
-        <button type="button" 
-                class="bg-red-600 hover:bg-red-700 px-6 rounded-lg font-medium whitespace-nowrap">
-          OTP পাঠান
-        </button>
+          <div class="form-group">
+            <label class="form-label">ফোন নাম্বার (ঐচ্ছিক)</label>
+            <input type="text" name="phone" class="form-input" placeholder="01XXXXXXXXX">
+          </div>
+          <p style="color:var(--text-muted);font-size:.8rem;margin-top:-8px;margin-bottom:12px;">
+            ইমেইল অথবা ফোন নাম্বার — অন্তত একটি দিতে হবে
+          </p>
+
+          <div class="form-group">
+            <label class="form-label">পাসওয়ার্ড</label>
+            <input type="password" name="password" id="password" class="form-input" placeholder="••••••••" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">কনফার্ম পাসওয়ার্ড</label>
+            <input type="password" name="confirmPassword" id="confirmPassword" class="form-input" placeholder="••••••••" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">রেফারেল কোড (ঐচ্ছিক)</label>
+            <input type="text" name="referralCode" class="form-input" placeholder="রেফারেল কোড থাকলে দিন" value="<%= ref || '' %>">
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;">✅ রেজিস্ট্রেশন করুন</button>
+        </form>
+        <p style="text-align:center;margin-top:1rem;color:var(--text-muted);font-size:.9rem;">
+          অ্যাকাউন্ট আছে? <a href="/login" style="color:var(--secondary)">লগইন করুন</a>
+        </p>
       </div>
     </div>
-
-    <!-- Password -->
-    <div>
-      <label class="block text-sm mb-2">পাসওয়ার্ড</label>
-      <div class="relative">
-        <input type="password" id="password" 
-               class="w-full bg-gray-800 text-white rounded-lg px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-blue-500" 
-               placeholder="••••••••">
-        <button type="button" id="togglePassword" 
-                class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white text-xl">
-          👁️
-        </button>
-      </div>
-      <p id="passwordError" class="text-red-500 text-sm mt-1 hidden"></p>
-    </div>
-
-    <!-- Confirm Password -->
-    <div>
-      <label class="block text-sm mb-2">কনফার্ম পাসওয়ার্ড</label>
-      <div class="relative">
-        <input type="password" id="confirmPassword" 
-               class="w-full bg-gray-800 text-white rounded-lg px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-blue-500" 
-               placeholder="••••••••">
-        <button type="button" id="toggleConfirmPassword" 
-                class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white text-xl">
-          👁️
-        </button>
-      </div>
-      <p id="confirmError" class="text-red-500 text-sm mt-1 hidden"></p>
-    </div>
-
-    <!-- Referral Code -->
-    <div>
-      <label class="block text-sm mb-2">রেফারেল কোড (ঐচ্ছিক)</label>
-      <input type="text" id="referralCode" 
-             class="w-full bg-gray-800 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500" 
-             placeholder="রেফারেল কোড থাকলে দিন">
-    </div>
-
-    <!-- Submit Button -->
-    <button type="submit" 
-            class="w-full bg-green-600 hover:bg-green-700 py-4 rounded-xl font-semibold text-lg">
-      ✅ রেজিস্ট্রেশন করুন
-    </button>
-
-  </form>
+  </div>
 </div>
-<!-- ==================== ফর্ম শেষ ==================== -->
 
 <script>
-// Password Show/Hide
-document.getElementById('togglePassword').addEventListener('click', function() {
-  const passwordField = document.getElementById('password');
-  if (passwordField.type === 'password') {
-    passwordField.type = 'text';
-    this.textContent = '🙈';
-  } else {
-    passwordField.type = 'password';
-    this.textContent = '👁️';
+document.getElementById('registerForm').addEventListener('submit', function (e) {
+  const email = this.email.value.trim();
+  const phone = this.phone.value.trim();
+  const password = this.password.value;
+  const confirmPassword = this.confirmPassword.value;
+
+  if (!email && !phone) {
+    alert('ইমেইল অথবা ফোন নাম্বার অন্তত একটি দিন।');
+    e.preventDefault();
+    return;
   }
-});
-
-document.getElementById('toggleConfirmPassword').addEventListener('click', function() {
-  const confirmField = document.getElementById('confirmPassword');
-  if (confirmField.type === 'password') {
-    confirmField.type = 'text';
-    this.textContent = '🙈';
-  } else {
-    confirmField.type = 'password';
-    this.textContent = '👁️';
-  }
-});
-
-// Form Validation
-const form = document.getElementById('registerForm');
-form.addEventListener('submit', function(e) {
-  e.preventDefault();
-  
-  const password = document.getElementById('password').value;
-  const confirmPassword = document.getElementById('confirmPassword').value;
-  
-  const passwordError = document.getElementById('passwordError');
-  const confirmError = document.getElementById('confirmError');
-  
-  passwordError.classList.add('hidden');
-  confirmError.classList.add('hidden');
-  
-  let isValid = true;
-
   if (password.length < 8) {
-    passwordError.textContent = 'পাসওয়ার্ড কমপক্ষে ৮ অক্ষর হতে হবে';
-    passwordError.classList.remove('hidden');
-    isValid = false;
+    alert('পাসওয়ার্ড কমপক্ষে ৮ অক্ষর হতে হবে।');
+    e.preventDefault();
+    return;
   }
-
   if (password !== confirmPassword) {
-    confirmError.textContent = 'পাসওয়ার্ড মিলছে না';
-    confirmError.classList.remove('hidden');
-    isValid = false;
-  }
-
-  if (isValid) {
-    alert('✅ রেজিস্ট্রেশন সফল হয়েছে! (এখন ব্যাকএন্ড API কলে যোগ করবেন)');
-    // এখানে আপনার ব্যাকএন্ড API কল করবেন
-    // fetch('/api/register', { method: 'POST', body: JSON.stringify(...) })
+    alert('পাসওয়ার্ড মিলছে না।');
+    e.preventDefault();
+    return;
   }
 });
 </script>
