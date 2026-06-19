@@ -5,14 +5,14 @@
   --bg-glass: rgba(255, 255, 255, 0.05);
   --border-glass: rgba(255, 255, 255, 0.1);
 
-  --primary: #8b5cf6;
-  --primary-glow: rgba(139, 92, 246, 0.5);
-  --secondary: #ec4899;
-  --accent: #06b6d4;
+  --primary: #009625;
+  --primary-glow: rgba(0, 150, 37, 0.5);
+  --secondary: #006519;
+  --accent: #f59e0b;
   --gold: #f59e0b;
 
-  --grad-primary: linear-gradient(135deg, #8b5cf6, #ec4899);
-  --grad-secondary: linear-gradient(135deg, #06b6d4, #3b82f6);
+  --grad-primary: linear-gradient(135deg, #009625, #006519);
+  --grad-secondary: linear-gradient(135deg, #006519, #004d13);
   --grad-gold: linear-gradient(135deg, #f59e0b, #fbbf24);
   --grad-dark: linear-gradient(180deg, #121212, #050505);
   --grad-surface: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));
@@ -38,8 +38,8 @@ body.light-mode {
 
 body.light-mode {
     background-image:
-        radial-gradient(circle at 0% 0%, rgba(139, 92, 246, 0.05) 0%, transparent 35%),
-        radial-gradient(circle at 100% 100%, rgba(6, 182, 212, 0.05) 0%, transparent 35%);
+        radial-gradient(circle at 0% 0%, rgba(0, 150, 37, 0.05) 0%, transparent 35%),
+        radial-gradient(circle at 100% 100%, rgba(245, 158, 11, 0.05) 0%, transparent 35%);
 }
 
 body.light-mode .bottom-nav {
@@ -57,8 +57,8 @@ body.light-mode .bottom-nav {
 body {
     background-color: var(--bg-dark);
     background-image:
-        radial-gradient(circle at 0% 0%, rgba(139, 92, 246, 0.15) 0%, transparent 35%),
-        radial-gradient(circle at 100% 100%, rgba(6, 182, 212, 0.15) 0%, transparent 35%);
+        radial-gradient(circle at 0% 0%, rgba(0, 150, 37, 0.1) 0%, transparent 40%),
+        radial-gradient(circle at 100% 100%, rgba(245, 158, 11, 0.05) 0%, transparent 40%);
     color: var(--text-main);
     font-family: 'Hind Siliguri', 'Segoe UI', Roboto, sans-serif;
     line-height: 1.6;
@@ -126,11 +126,11 @@ body {
 }
 
 .nav-link.active {
-    color: var(--primary);
+    color: var(--gold);
 }
 
 .nav-link.active i {
-    filter: drop-shadow(0 0 5px var(--primary-glow));
+    filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.5));
 }
 
 .promotion-icon {
@@ -168,12 +168,12 @@ body {
 .btn-primary {
     background: var(--grad-primary);
     color: #fff;
-    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+    box-shadow: 0 4px 15px rgba(0, 150, 37, 0.3);
 }
 
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+    box-shadow: 0 6px 20px rgba(0, 150, 37, 0.4);
 }
 
 .btn-secondary {
@@ -323,7 +323,7 @@ body {
 }
 
 .section-title i {
-    color: var(--primary);
+    color: var(--gold);
 }
 
 h1, h2, h3, h4, h5, h6 {

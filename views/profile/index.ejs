@@ -2,30 +2,30 @@
 <div class="container" style="padding:16px;padding-bottom:100px">
 
   <!-- Profile Card -->
-  <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:16px;padding:20px;margin-bottom:16px;position:relative;overflow:hidden">
+  <div style="background:linear-gradient(135deg,#002d0b,#004d13);border-radius:16px;padding:20px;margin-bottom:16px;position:relative;overflow:hidden; border: 1px solid rgba(245,158,11,0.3);">
     <div style="display:flex;align-items:center;gap:16px">
-      <div style="width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,#ec4899);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:bold;color:#fff">
+      <div style="width:70px;height:70px;border-radius:50%;background:var(--grad-gold);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:bold;color:#000; box-shadow: 0 0 15px rgba(245,158,11,0.4);">
         <%= user.username.charAt(0).toUpperCase() %>
       </div>
       <div>
         <div style="display:flex;align-items:center;gap:8px">
           <span style="color:#fff;font-size:18px;font-weight:bold"><%= user.username %></span>
-          <span style="background:rgba(255,255,255,0.1);color:#94a3b8;font-size:11px;padding:2px 8px;border-radius:20px">VIP0</span>
+          <span style="background:var(--gold);color:#000;font-size:11px;padding:2px 8px;border-radius:20px; font-weight: bold;">VIP0</span>
         </div>
         <div style="color:#94a3b8;font-size:13px;margin-top:4px">যোগদান: <%= new Date(user.created_at).toLocaleDateString('bn-BD') %></div>
-        <div style="color:#f59e0b;font-size:20px;font-weight:bold;margin-top:4px">💰 <%= t.balance %>: ৳<%= user.coins %></div>
+        <div style="color:var(--gold);font-size:22px;font-weight:bold;margin-top:4px; font-family: 'Teko', sans-serif;">💰 <%= t.balance %>: ৳<%= user.coins %></div>
       </div>
     </div>
 
     <div style="display:flex;gap:8px;margin-top:16px">
-      <a href="/payment/deposit" style="flex:1;background:#ef4444;color:#fff;padding:10px;border-radius:8px;text-align:center;text-decoration:none;font-size:14px;font-weight:bold">জম দিন</a>
+      <a href="/payment/deposit" style="flex:1;background:var(--grad-gold);color:#000;padding:10px;border-radius:8px;text-align:center;text-decoration:none;font-size:14px;font-weight:bold">জমা দিন</a>
       <a href="/payment/withdraw" style="flex:1;background:rgba(255,255,255,0.1);color:#fff;padding:10px;border-radius:8px;text-align:center;text-decoration:none;font-size:14px">উত্তোলন</a>
       <a href="/profile/referral" style="flex:1;background:rgba(255,255,255,0.1);color:#fff;padding:10px;border-radius:8px;text-align:center;text-decoration:none;font-size:14px">রেফারেল</a>
     </div>
   </div>
 
   <!-- Menu Grid -->
-  <div style="background:rgba(255,255,255,0.03);border-radius:16px;padding:16px">
+  <div style="background:rgba(255,255,255,0.03);border-radius:16px;padding:16px; border: 1px solid var(--border-glass);">
     <div style="color:#94a3b8;font-size:13px;margin-bottom:12px">সদস্য সেন্টার</div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px">
 
