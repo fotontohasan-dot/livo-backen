@@ -24,7 +24,6 @@
   --glass-blur: blur(12px);
 }
 
-/* Light Mode Variables */
 body.light-mode {
   --bg-dark: #f0f2f5;
   --bg-surface: #ffffff;
@@ -44,7 +43,7 @@ body.light-mode {
 }
 
 body.light-mode .bottom-nav {
-    background: rgba(255, 255, 255, 0.95) !important;
+    background: rgba(255, 255, 255, 0.98) !important;
     border-top: 1px solid rgba(0,0,0,0.1);
 }
 
@@ -64,11 +63,10 @@ body {
     font-family: 'Hind Siliguri', 'Segoe UI', Roboto, sans-serif;
     line-height: 1.6;
     min-height: 100vh;
-    padding-bottom: 90px !important;   /* ← Fixed: Overlap fix */
+    padding-bottom: 90px !important;
     overflow-x: hidden;
 }
 
-/* Glassmorphism Utility */
 .glass {
     background: var(--bg-glass);
     backdrop-filter: var(--glass-blur);
@@ -82,7 +80,6 @@ body {
     padding: 0 12px;
 }
 
-/* Navbar */
 .navbar {
     background: rgba(5, 5, 5, 0.95);
     backdrop-filter: blur(10px);
@@ -97,7 +94,7 @@ body {
     z-index: 1000;
 }
 
-/* Bottom Nav - Fixed */
+/* Bottom Nav - Fixed, no backdrop-filter (touch bug fix) */
 .bottom-nav {
     position: fixed;
     bottom: 0;
@@ -106,8 +103,7 @@ body {
     margin: 0 auto;
     width: 100%;
     max-width: 480px;
-    background: rgba(10, 10, 10, 0.98);
-    backdrop-filter: blur(20px);
+    background: rgb(10, 10, 10);
     display: flex;
     justify-content: space-around;
     padding: 8px 0 18px 0;
@@ -125,6 +121,8 @@ body {
     font-size: 10px;
     gap: 4px;
     transition: 0.3s;
+    padding: 6px 10px;
+    cursor: pointer;
 }
 
 .nav-link.active {
@@ -135,15 +133,6 @@ body {
     filter: drop-shadow(0 0 5px var(--primary-glow));
 }
 
-/* Center Promotion Button — গোল্ডেন কালার */
-.promotion-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-top: -28px;
-}
-
-/* Promotion আইকন গোল্ডেন */
 .promotion-icon {
     width: 34px;
     height: 34px;
@@ -161,16 +150,6 @@ body {
     color: var(--gold);
 }
 
-
-.promotion-label {
-    color: var(--gold);
-    font-size: 10px;
-    margin-top: 2px;
-    display: block;
-    text-align: center;
-}
-
-/* Rest of your styles */
 .btn {
     display: inline-flex;
     align-items: center;
@@ -206,7 +185,6 @@ body {
     box-shadow: var(--shadow-neon);
 }
 
-/* Grid System */
 .grid {
     display: grid;
     gap: 15px;
@@ -226,7 +204,6 @@ body {
     .layout-main { grid-template-columns: 1fr; }
 }
 
-/* Cards */
 .card {
     background: var(--bg-card);
     border: 1px solid var(--border-glass);
@@ -244,7 +221,6 @@ body {
     font-weight: 700;
 }
 
-/* Stats Grid (Homepage) */
 .stats-grid {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
@@ -273,7 +249,6 @@ body {
     margin-top: 5px;
 }
 
-/* Game Grid */
 .game-grid {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
@@ -290,7 +265,6 @@ body {
     border: 1px solid var(--border-glass);
 }
 
-/* Forms */
 .form-group {
     margin-bottom: 15px;
 }
@@ -318,7 +292,6 @@ body {
     background: rgba(255, 255, 255, 0.08);
 }
 
-/* Table */
 .table {
     width: 100%;
     border-collapse: collapse;
@@ -330,7 +303,6 @@ body {
     border-bottom: 1px solid var(--border-glass);
 }
 
-/* Banner */
 .banner-container {
     padding: 15px 12px;
 }
@@ -400,7 +372,6 @@ p {
     font-family: 'Teko', sans-serif;
 }
 
-/* ভাষা টগল বাটন */
 .lang-switch {
     display: flex;
     gap: 4px;
@@ -422,7 +393,6 @@ p {
     border-color: var(--gold);
 }
 
-/* ক্যাটাগরি একটিভ বাটন গোল্ডেন */
 .cat-item.active {
     background: var(--grad-gold) !important;
     border-color: transparent !important;
