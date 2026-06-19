@@ -24,10 +24,15 @@
   </div>
 </div>
 
-<div class="glass" style="margin:8px 12px;border-radius:12px;padding:12px;display:flex;align-items:center;gap:12px;">
-  <div class="live-indicator"></div>
-  <p style="font-size:13px;color:var(--text-muted);"><span style="color:var(--gold);font-weight:700;">ঘোষণা:</span> নতুন সিজন শুরু হয়েছে! এখনই যোগ দিন এবং খেলা শুরু করুন।</p>
+<div class="glass" style="margin:8px 12px;border-radius:12px;padding:12px;display:flex;align-items:center;gap:12px;position:relative;">
+  <div style="background:var(--gold);color:#000;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:bold;">News</div>
+  <div style="flex:1;overflow:hidden;">
+    <div style="font-size:12px;color:var(--text-muted);white-space:nowrap;animation:marquee-text 15s linear infinite;">
+      প্রিয় গ্রাহক, LIVO-তে আপনাকে স্বাগতম! নতুন আমানত বোনাস এবং আকর্ষণীয় পুরস্কার পেতে এখনই খেলা শুরু করুন। আমাদের সাথে থাকার জন্য ধন্যবাদ।
+    </div>
+  </div>
 </div>
+<style>@keyframes marquee-text { 0%{transform:translateX(100%)} 100%{transform:translateX(-100%)} }</style>
 
 <div class="stats-grid">
   <div class="stat-card">
@@ -58,13 +63,17 @@
     <div style="font-size:18px;">🎲</div>
     <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">লাইভ</div>
   </div>
-  <div class="glass cat-item" data-type="pvp" style="flex:0 0 auto;padding:8px 16px;border-radius:12px;cursor:pointer;text-align:center;transition:0.3s;">
-    <div style="font-size:18px;">⚔️</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">PVP</div>
+  <div class="glass cat-item" data-type="fishing" style="flex:0 0 auto;padding:8px 16px;border-radius:12px;cursor:pointer;text-align:center;transition:0.3s;">
+    <div style="font-size:18px;">🎣</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">ফিশিং</div>
   </div>
   <div class="glass cat-item" data-type="sports" style="flex:0 0 auto;padding:8px 16px;border-radius:12px;cursor:pointer;text-align:center;transition:0.3s;">
     <div style="font-size:18px;">⚽</div>
     <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">স্পোর্টস</div>
+  </div>
+  <div class="glass cat-item" data-type="lottery" style="flex:0 0 auto;padding:8px 16px;border-radius:12px;cursor:pointer;text-align:center;transition:0.3s;">
+    <div style="font-size:18px;">🎟️</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">লটারি</div>
   </div>
 </div>
 <style>
@@ -150,6 +159,12 @@
   </p>
 </div>
 
+<div style="position:fixed;right:20px;bottom:100px;z-index:999;display:flex;flex-direction:column;gap:10px;">
+  <a href="/chat" style="width:50px;height:50px;border-radius:50%;background:var(--grad-gold);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px rgba(0,0,0,0.4);text-decoration:none;color:#000;font-size:24px;">
+    <i class="fas fa-headset"></i>
+  </a>
+</div>
+
 <%- include('partials/bottom-nav') %>
 
 <script>
@@ -161,19 +176,19 @@ const games = [
   {name:"Baccarat",          emoji:"🎰",  type:"table",  slug:"baccarat",          badge:"pop", provider:"EVO"},
   {name:"Roulette",          emoji:"🎡",  type:"table",  slug:"roulette",          badge:"",    provider:"EVO"},
   {name:"Slots",             emoji:"🎰",  type:"slots",  slug:"slots",             badge:"hot", provider:"PG"},
-  {name:"Online Ludo",       emoji:"🎲",  type:"pvp",    slug:"ludo",              badge:"new", provider:"JL"},
-  {name:"Dragon Tiger",      emoji:"🐉",  type:"pvp",    slug:"dragon-tiger",      badge:"pop", provider:"JL"},
-  {name:"Color Prediction",  emoji:"🌈",  type:"pvp",    slug:"color-prediction",  badge:"new", provider:"JL"},
-  {name:"Mine Game",         emoji:"💣",  type:"pvp",    slug:"mine",              badge:"hot", provider:"JL"},
+  {name:"Online Ludo",       emoji:"🎲",  type:"slots",  slug:"ludo",              badge:"new", provider:"JL"},
+  {name:"Dragon Tiger",      emoji:"🐉",  type:"live",   slug:"dragon-tiger",      badge:"pop", provider:"JL"},
+  {name:"Color Prediction",  emoji:"🌈",  type:"slots",  slug:"color-prediction",  badge:"new", provider:"JL"},
+  {name:"Mine Game",         emoji:"💣",  type:"slots",  slug:"mine",              badge:"hot", provider:"JL"},
   {name:"Fortune Gems",      emoji:"💎",  type:"slots",  slug:"fortune-gems",      badge:"hot", provider:"JDB"},
   {name:"Sweet Bonanza",     emoji:"🍭",  type:"slots",  slug:"sweet-bonanza",     badge:"pop", provider:"PP"},
   {name:"Gates of Olympus",  emoji:"⚡",  type:"slots",  slug:"gates-of-olympus",  badge:"hot", provider:"PP"},
   {name:"Crazy Time",        emoji:"🎡",  type:"live",   slug:"crazy-time",        badge:"hot", provider:"EVO"},
   {name:"Mega Ball",         emoji:"🟡",  type:"live",   slug:"mega-ball",         badge:"pop", provider:"EVO"},
-  {name:"Rummy",             emoji:"🃏",  type:"pvp",    slug:"rummy",             badge:"hot", provider:"JL"},
-  {name:"Call Break",        emoji:"♠️",  type:"pvp",    slug:"call-break",        badge:"pop", provider:"JL"},
+  {name:"Rummy",             emoji:"🃏",  type:"slots",  slug:"rummy",             badge:"hot", provider:"JL"},
+  {name:"Call Break",        emoji:"♠️",  type:"slots",  slug:"call-break",        badge:"pop", provider:"JL"},
   {name:"Lightning Roulette",emoji:"⚡",  type:"live",   slug:"lightning-roulette",badge:"hot", provider:"EVO"},
-  {name:"Mines",             emoji:"💣",  type:"pvp",    slug:"mines",             badge:"new", provider:"SPRIBE"},
+  {name:"Mines",             emoji:"💣",  type:"slots",  slug:"mines",             badge:"new", provider:"SPRIBE"},
   {name:"Sugar Pop",         emoji:"🍬",  type:"slots",  slug:"sugar-pop",         badge:"new", provider:"BS"},
   {name:"Big Bad Wolf",      emoji:"🐺",  type:"slots",  slug:"big-bad-wolf",      badge:"new", provider:"QS"},
 ];
