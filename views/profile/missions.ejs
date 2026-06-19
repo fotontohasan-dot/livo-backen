@@ -1,12 +1,73 @@
 <%- include('../partials/head') %>
-<%- include('../partials/navbar') %>
-<div class="container page">
-  <h1 style="margin-bottom: 1.5rem;">Mission Record</h1>
-  <div class="card">
-    <div class="card-body">
-      <p>No active missions.</p>
+<div class="container" style="padding:16px;padding-bottom:100px">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+    <a href="/profile" style="color:#fff;text-decoration:none;font-size:20px">←</a>
+    <h1 style="color:#fff;font-size:18px;font-weight:bold">🎯 মিশন</h1>
+  </div>
+
+  <!-- Daily Missions -->
+  <div style="color:#f59e0b;font-size:14px;font-weight:bold;margin-bottom:12px">📅 দৈনিক মিশন</div>
+
+  <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px">
+    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="font-size:24px">🔐</div>
+        <div>
+          <div style="color:#fff;font-size:14px;font-weight:bold">প্রতিদিন লগইন করুন</div>
+          <div style="color:#94a3b8;font-size:12px">+10 কয়েন</div>
+        </div>
+      </div>
+      <div style="background:#10b981;color:#fff;padding:6px 12px;border-radius:20px;font-size:12px">✅ সম্পন্ন</div>
+    </div>
+
+    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="font-size:24px">⚽</div>
+        <div>
+          <div style="color:#fff;font-size:14px;font-weight:bold">১টি ম্যাচ প্রেডিকশন করুন</div>
+          <div style="color:#94a3b8;font-size:12px">+50 কয়েন</div>
+        </div>
+      </div>
+      <a href="/matches" style="background:#8b5cf6;color:#fff;padding:6px 12px;border-radius:20px;font-size:12px;text-decoration:none">যান →</a>
+    </div>
+
+    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="font-size:24px">👥</div>
+        <div>
+          <div style="color:#fff;font-size:14px;font-weight:bold">১ জন বন্ধুকে আমন্ত্রণ করুন</div>
+          <div style="color:#94a3b8;font-size:12px">+100 কয়েন</div>
+        </div>
+      </div>
+      <a href="/profile/referral" style="background:#f59e0b;color:#fff;padding:6px 12px;border-radius:20px;font-size:12px;text-decoration:none">যান →</a>
+    </div>
+  </div>
+
+  <!-- Weekly Missions -->
+  <div style="color:#8b5cf6;font-size:14px;font-weight:bold;margin-bottom:12px">📆 সাপ্তাহিক মিশন</div>
+
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="font-size:24px">🏆</div>
+        <div>
+          <div style="color:#fff;font-size:14px;font-weight:bold">৫টি ম্যাচ প্রেডিকশন করুন</div>
+          <div style="color:#94a3b8;font-size:12px">+500 কয়েন</div>
+        </div>
+      </div>
+      <a href="/matches" style="background:#8b5cf6;color:#fff;padding:6px 12px;border-radius:20px;font-size:12px;text-decoration:none">যান →</a>
+    </div>
+
+    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="font-size:24px">💬</div>
+        <div>
+          <div style="color:#fff;font-size:14px;font-weight:bold">সাপোর্টে মেসেজ করুন</div>
+          <div style="color:#94a3b8;font-size:12px">+20 কয়েন</div>
+        </div>
+      </div>
+      <a href="/chat" style="background:#06b6d4;color:#fff;padding:6px 12px;border-radius:20px;font-size:12px;text-decoration:none">যান →</a>
     </div>
   </div>
 </div>
-<%- include('../partials/bottom-nav') %>
-</body></html>
+<%- include('../partials/navbar') %>
