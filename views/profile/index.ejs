@@ -13,12 +13,12 @@
           <span style="background:rgba(255,255,255,0.1);color:#94a3b8;font-size:11px;padding:2px 8px;border-radius:20px">VIP0</span>
         </div>
         <div style="color:#94a3b8;font-size:13px;margin-top:4px">যোগদান: <%= new Date(user.created_at).toLocaleDateString('bn-BD') %></div>
-        <div style="color:#f59e0b;font-size:20px;font-weight:bold;margin-top:4px">🪙 <%= user.coins %> কয়েন</div>
+        <div style="color:#f59e0b;font-size:20px;font-weight:bold;margin-top:4px">💰 <%= t.balance %>: ৳<%= user.coins %></div>
       </div>
     </div>
 
     <div style="display:flex;gap:8px;margin-top:16px">
-      <a href="/payment/deposit" style="flex:1;background:#ef4444;color:#fff;padding:10px;border-radius:8px;text-align:center;text-decoration:none;font-size:14px;font-weight:bold">জমা দিন</a>
+      <a href="/payment/deposit" style="flex:1;background:#ef4444;color:#fff;padding:10px;border-radius:8px;text-align:center;text-decoration:none;font-size:14px;font-weight:bold">জম দিন</a>
       <a href="/payment/withdraw" style="flex:1;background:rgba(255,255,255,0.1);color:#fff;padding:10px;border-radius:8px;text-align:center;text-decoration:none;font-size:14px">উত্তোলন</a>
       <a href="/profile/referral" style="flex:1;background:rgba(255,255,255,0.1);color:#fff;padding:10px;border-radius:8px;text-align:center;text-decoration:none;font-size:14px">রেফারেল</a>
     </div>
