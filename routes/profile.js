@@ -17,7 +17,7 @@ router.get('/', isAuth, async (req, res) => {
 
     const tournaments = await pool.query(`
       SELECT
-        COALESCE(t.name, t.title, 'টুর্নামেন্ট') as name,
+        COALESCE(t.name, 'টুর্নামেন্ট') as name,
         COALESCE(t.sport, 'General') as sport,
         COALESCE(tp.points, 0) as points,
         COALESCE(tp.joined_at, tp.created_at) as joined_at
