@@ -10,7 +10,6 @@ router.get('/register', (req, res) => {
   res.render('registration', { ref });
 });
 
-// রেজিস্ট্রেশন (OTP ছাড়া) — ইমেইল অথবা ফোন নাম্বার যেকোনো একটি দিয়ে
 router.post('/register', async (req, res) => {
   const { username, email, phone, password, confirmPassword, referralCode } = req.body;
 
@@ -21,24 +20,24 @@ router.post('/register', async (req, res) => {
     }
 
     if (!email && !phone) {
-      req.flash('error', '❌ ইমেইল অথবা ফোন নাম্বার অন্তত একটি দিত হবে।');
+      req.flash('error', '❌ ইমেইল অথবা ফোন নাম্বার অন্তত একটি দিতে হবে।');
       return res.redirect('/register');
     }
 
     if (password.length < 8) {
-      req.flash('error', '❌ পসওয়ার্ড কমপক্ষে ৮ অক্ষর হতে হবে।');
+      req.flash('error', '❌ পাসওয়ার্ড কমপক্ষে ৮ অক্ষর হতে হবে।');
       return res.redirect('/register');
     }
 
     if (confirmPassword && password !== confirmPassword) {
-      req.flash('error', '❌ পাসওয়ার্ড মিলছ না।');
+      req.flash('error', '❌ পাসওয়ার্ড মিলছে না।');
       return res.redirect('/register');
     }
 
     if (email) {
       const existingEmail = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
       if (existingEmail.rows.length > 0) {
-        req.flash('error', '❌ এই ইমেইল আগেই নবন্ধিত।');
+        req.flash('error', '❌ এই ইমেইল আগেই নিবন্ধিত।');
         return res.redirect('/register');
       }
     }
@@ -46,7 +45,7 @@ router.post('/register', async (req, res) => {
     if (phone) {
       const existingPhone = await pool.query('SELECT id FROM users WHERE phone = $1', [phone]);
       if (existingPhone.rows.length > 0) {
-        req.flash('error', '❌ এই ফোন নাম্বার আগেই নিবন্ত।');
+        req.flash('error', '❌ এই ফোন নাম্বার আগেই নিবন্ধিত।');
         return res.redirect('/register');
       }
     }
@@ -56,7 +55,7 @@ router.post('/register', async (req, res) => {
 
     const result = await pool.query(`
       INSERT INTO users (username, email, phone, password, role, coins, referral_code, created_at)
-      VALUES ($1, $2, $3, $4, 'user', 500, $5, NOW()) RETURNING *
+      VALUES ($1, $2, $3, $4, 'user', 0, $5, NOW()) RETURNING *
     `, [username, email || null, phone || null, hashed, myCode]);
 
     req.session.user = result.rows[0];
@@ -71,7 +70,6 @@ router.post('/register', async (req, res) => {
 
 router.get('/login', (req, res) => res.render('login'));
 
-// লগইন — ইমেইল অথবা ফোন নাম্বার দিয়ে
 router.post('/login', async (req, res) => {
   const { identifier, password } = req.body;
   try {
