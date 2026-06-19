@@ -10,29 +10,36 @@
     </div>
     <div>
       <div style="font-weight:700;color:#fff;"><%= user.username %></div>
-      <div style="color:var(--gold);font-size:.85rem;font-family:'Teko',sans-serif;">🪙 <%= user.coins %></div>
+      <div style="color:var(--gold);font-size:.85rem;font-family:'Teko',sans-serif;">💰 <%= t.balance %>: <%= user.coins %></div>
     </div>
   </div>
   <% } %>
-  <a href="/" class="menu-item"><i class="fas fa-home"></i> হোম</a>
-  <a href="/games/aviator" class="menu-item"><i class="fas fa-rocket"></i> Aviator</a>
-  <a href="/games/slots" class="menu-item"><i class="fas fa-slot-machine"></i> Slots</a>
-  <a href="/games/color-prediction" class="menu-item"><i class="fas fa-palette"></i> Color Prediction</a>
-  <a href="/matches" class="menu-item"><i class="fas fa-futbol"></i> স্পোর্টস</a>
-  <a href="/tournaments" class="menu-item"><i class="fas fa-trophy"></i> টুর্নামেন্ট</a>
-  <a href="/payment/deposit" class="menu-item"><i class="fas fa-wallet"></i> ডিপোজিট</a>
-  <a href="/payment/withdraw" class="menu-item"><i class="fas fa-money-bill-wave"></i> উইথড্র</a>
-  <a href="/leaderboard" class="menu-item"><i class="fas fa-medal"></i> লিডারবোর্ড</a>
-  <a href="/news" class="menu-item"><i class="fas fa-newspaper"></i> নিউজ</a>
-  <a href="/profile" class="menu-item"><i class="fas fa-user"></i> প্রোফাইল</a>
+  <a href="/" class="menu-item"><i class="fas fa-home"></i> <%= t.menu_home %></a>
+  <a href="/games/aviator" class="menu-item"><i class="fas fa-rocket"></i> <%= t.menu_aviator %></a>
+  <a href="/games/slots" class="menu-item"><i class="fas fa-slot-machine"></i> <%= t.menu_slots %></a>
+  <a href="/games/color-prediction" class="menu-item"><i class="fas fa-palette"></i> <%= t.menu_color %></a>
+  <a href="/matches" class="menu-item"><i class="fas fa-futbol"></i> <%= t.menu_sports %></a>
+  <a href="/tournaments" class="menu-item"><i class="fas fa-trophy"></i> <%= t.menu_tournament %></a>
+  <a href="/payment/deposit" class="menu-item"><i class="fas fa-wallet"></i> <%= t.menu_deposit %></a>
+  <a href="/payment/withdraw" class="menu-item"><i class="fas fa-money-bill-wave"></i> <%= t.menu_withdraw %></a>
+  <a href="/leaderboard" class="menu-item"><i class="fas fa-medal"></i> <%= t.menu_leaderboard %></a>
+  <a href="/news" class="menu-item"><i class="fas fa-newspaper"></i> <%= t.menu_news %></a>
+  <a href="/profile" class="menu-item"><i class="fas fa-user"></i> <%= t.menu_profile %></a>
   <% if(locals.user && user.role === 'admin') { %>
-  <a href="/admin" class="menu-item" style="color:var(--primary) !important;"><i class="fas fa-cog"></i> এডমিন প্যানেল</a>
+  <a href="/admin" class="menu-item" style="color:var(--primary) !important;"><i class="fas fa-cog"></i> <%= t.menu_admin %></a>
   <% } %>
+  <div style="padding:13px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,0.05);">
+    <span style="color:#94a3b8;font-size:13px;">🌐</span>
+    <div class="lang-switch">
+      <a href="/lang/bn" class="lang-btn <%= lang === 'bn' ? 'active' : '' %>">বাং</a>
+      <a href="/lang/en" class="lang-btn <%= lang === 'en' ? 'active' : '' %>">EN</a>
+    </div>
+  </div>
   <% if(locals.user) { %>
-  <a href="/logout" class="menu-item" style="color:#ef4444 !important;"><i class="fas fa-sign-out-alt"></i> লগআউট</a>
+  <a href="/logout" class="menu-item" style="color:#ef4444 !important;"><i class="fas fa-sign-out-alt"></i> <%= t.logout %></a>
   <% } else { %>
-  <a href="/login" class="menu-item" style="color:#10b981 !important;"><i class="fas fa-sign-in-alt"></i> লগইন</a>
-  <a href="/register" class="menu-item" style="color:var(--gold) !important;"><i class="fas fa-user-plus"></i> রেজিস্টার</a>
+  <a href="/login" class="menu-item" style="color:#10b981 !important;"><i class="fas fa-sign-in-alt"></i> <%= t.login %></a>
+  <a href="/register" class="menu-item" style="color:var(--gold) !important;"><i class="fas fa-user-plus"></i> <%= t.register %></a>
   <% } %>
 </div>
 <div class="menu-overlay" id="menuOverlay" onclick="toggleMenu()"></div>
@@ -47,14 +54,14 @@
       <i class="fas fa-moon nav-theme-icon"></i>
     </button>
     <% if(locals.user) { %>
-      <div class="glass" style="padding:4px 12px;border-radius:20px;font-size:13px;color:var(--gold);display:flex;align-items:center;gap:4px;font-family:'Teko',sans-serif;font-weight:700;">🪙 <%= user.coins %></div>
+      <div class="glass" style="padding:4px 12px;border-radius:20px;font-size:13px;color:var(--gold);display:flex;align-items:center;gap:4px;font-family:'Teko',sans-serif;font-weight:700;">💰 <%= user.coins %></div>
       <div style="display:flex;gap:12px;">
         <a href="/notifications" style="color:#fff;font-size:18px;"><i class="fas fa-bell"></i></a>
         <a href="/news" style="color:#fff;font-size:18px;"><i class="fas fa-envelope"></i></a>
       </div>
     <% } else { %>
-      <a href="/login" class="btn btn-primary" style="padding:6px 14px;border-radius:20px;font-size:12px;">লগইন</a>
-      <a href="/register" class="btn btn-secondary" style="padding:6px 14px;border-radius:20px;font-size:12px;">রেজিস্টার</a>
+      <a href="/login" class="btn btn-primary" style="padding:6px 14px;border-radius:20px;font-size:12px;"><%= t.login %></a>
+      <a href="/register" class="btn btn-secondary" style="padding:6px 14px;border-radius:20px;font-size:12px;"><%= t.register %></a>
     <% } %>
   </div>
 </nav>
@@ -108,12 +115,12 @@ function toggleMenu() {
 <% if(locals.user) { %>
 <div class="top-balance-bar">
   <div style="display:flex;align-items:center;gap:8px;">
-    <span style="font-size:13px;color:var(--text-muted);">ব্যালেন্স:</span>
+    <span style="font-size:13px;color:var(--text-muted);"><%= t.balance %>:</span>
     <div class="balance-amount">৳ <%= user.coins %></div>
   </div>
   <div style="display:flex;gap:8px;">
-    <a href="/payment/deposit" class="btn btn-primary" style="padding:5px 12px;font-size:12px;border-radius:8px;">ডিপোজিট</a>
-    <a href="/payment/withdraw" class="btn glass" style="padding:5px 12px;font-size:12px;border-radius:8px;color:#fff;">উইথড্র</a>
+    <a href="/payment/deposit" class="btn btn-primary" style="padding:5px 12px;font-size:12px;border-radius:8px;"><%= t.deposit %></a>
+    <a href="/payment/withdraw" class="btn glass" style="padding:5px 12px;font-size:12px;border-radius:8px;color:#fff;"><%= t.withdraw %></a>
   </div>
 </div>
 <% } %>
