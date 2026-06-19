@@ -60,7 +60,7 @@ body {
         radial-gradient(circle at 100% 100%, rgba(245, 158, 11, 0.05) 0%, transparent 40%);
     color: var(--text-main);
     font-family: 'Hind Siliguri', 'Segoe UI', Roboto, sans-serif;
-    line-height: 1.6;
+    line-height: 1.7; /* Increased for Bengali characters */
     min-height: 100vh;
     padding-bottom: 90px !important;
     overflow-x: hidden;

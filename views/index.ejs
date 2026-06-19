@@ -1,16 +1,15 @@
 <%- include('partials/head') %>
 <%- include('partials/navbar') %>
 
-<div style="background:rgba(245,158,11,0.1);border-bottom:1px solid rgba(245,158,11,0.2);padding:6px 0;overflow:hidden;">
-  <div style="display:flex;white-space:nowrap;animation:marquee 28s linear infinite;">
-    <span style="font-size:12px;color:var(--gold);padding:0 28px;">🏆 <em>***৮৮২</em> জিতেছেন ৳১৫,৬৮,৫২৩!</span>
-    <span style="font-size:12px;color:var(--gold);padding:0 28px;">🎰 <em>***৯৫৫</em> স্লটে জিতেছেন ৳১০,১২,৮৯৮!</span>
-    <span style="font-size:12px;color:var(--gold);padding:0 28px;">🎯 <em>***১১৮</em> লাইভে জিতেছেন ৳৯,৯৮,৫৪১!</span>
-    <span style="font-size:12px;color:var(--gold);padding:0 28px;">⚽ <em>***৭৮৯</em> স্পোর্টসে জিতেছেন ৳৩,৮২,০০২!</span>
-    <span style="font-size:12px;color:var(--gold);padding:0 28px;">🏆 <em>***৮৮২</em> জিতেছেন ৳১৫,৬৮,৫২৩!</span>
+<div class="marquee-container">
+  <div class="marquee-content">
+    <span class="marquee-item">🏆 <em>***৮৮২</em> জিতেছেন ৳১৫,৬৮,৫২৩!</span>
+    <span class="marquee-item">🎰 <em>***৯৫৫</em> স্লটে জিতেছেন ৳১০,১২,৮৯৮!</span>
+    <span class="marquee-item">🎯 <em>***১১৮</em> লাইভে জিতেছেন ৳৯,৯৮,৫৪১!</span>
+    <span class="marquee-item">⚽ <em>***৭৮৯</em> স্পোর্টসে জিতেছেন ৳৩,৮২,০০২!</span>
+    <span class="marquee-item">🏆 <em>***৮৮২</em> জিতেছেন ৳১৫,৬৮,৫২৩!</span>
   </div>
 </div>
-<style>@keyframes marquee { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }</style>
 
 <div class="banner-container">
   <div class="card btn-glow" style="height:160px;background:linear-gradient(135deg, #006519, #004d13);position:relative;display:flex;align-items:center;padding:20px;border: 1px solid var(--gold);">
@@ -55,31 +54,27 @@
     <div style="font-size:18px;">🔥</div>
     <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">সবগুলো</div>
   </div>
-  <div class="glass cat-item" data-type="slots" style="flex:0 0 auto;padding:8px 16px;border-radius:12px;cursor:pointer;text-align:center;transition:0.3s;">
-    <div style="font-size:18px;">🎰</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">স্লট</div>
+  <div class="cat-item" data-type="slots">
+    <div class="cat-icon">🎰</div>
+    <div class="cat-label">স্লট</div>
   </div>
-  <div class="glass cat-item" data-type="live" style="flex:0 0 auto;padding:8px 16px;border-radius:12px;cursor:pointer;text-align:center;transition:0.3s;">
-    <div style="font-size:18px;">🎲</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">লাইভ</div>
+  <div class="cat-item" data-type="live">
+    <div class="cat-icon">🎲</div>
+    <div class="cat-label">লাইভ</div>
   </div>
   <div class="glass cat-item" data-type="fishing" style="flex:0 0 auto;padding:8px 16px;border-radius:12px;cursor:pointer;text-align:center;transition:0.3s;">
     <div style="font-size:18px;">🎣</div>
     <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">ফিশিং</div>
   </div>
-  <div class="glass cat-item" data-type="sports" style="flex:0 0 auto;padding:8px 16px;border-radius:12px;cursor:pointer;text-align:center;transition:0.3s;">
-    <div style="font-size:18px;">⚽</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">স্পোর্টস</div>
+  <div class="cat-item" data-type="sports">
+    <div class="cat-icon">⚽</div>
+    <div class="cat-label">স্পোর্টস</div>
   </div>
   <div class="glass cat-item" data-type="lottery" style="flex:0 0 auto;padding:8px 16px;border-radius:12px;cursor:pointer;text-align:center;transition:0.3s;">
     <div style="font-size:18px;">🎟️</div>
     <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">লটারি</div>
   </div>
 </div>
-<style>
-.cat-item.active { background:var(--grad-primary); border-color:transparent; }
-.cat-item.active div { color:#fff !important; }
-</style>
 
 <div style="padding:0 12px 10px;">
   <div style="position:relative;">

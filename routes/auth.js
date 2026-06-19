@@ -3,7 +3,14 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { pool } = require('../db');
 
-router.get('/', (req, res) => res.render('index', { user: req.session.user || null }));
+router.get('/', async (req, res) => {
+  try {
+    res.render('index', { user: req.session.user || null });
+  } catch (err) {
+    console.error('Error rendering index:', err);
+    res.status(500).send('Render Error: ' + err.message);
+  }
+});
 
 router.get('/register', (req, res) => {
   const ref = req.query.ref || '';
