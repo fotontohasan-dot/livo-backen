@@ -97,12 +97,12 @@ body {
     z-index: 1000;
 }
 
-/* Bottom Nav - Fixed */
-.bottom-nav {
+/.bottom-nav {
     position: fixed;
     bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
+    left: 0;
+    right: 0;
+    margin: 0 auto;
     width: 100%;
     max-width: 480px;
     background: rgba(10, 10, 10, 0.98);
@@ -113,7 +113,13 @@ body {
     border-top: 1px solid var(--border-glass);
     z-index: 1100;
     box-shadow: 0 -4px 25px rgba(0, 0, 0, 0.6);
+    pointer-events: auto;
 }
+
+.bottom-nav a, .bottom-nav .promotion-btn {
+    pointer-events: auto;
+}
+
 
 .nav-link {
     display: flex;
