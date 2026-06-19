@@ -1,6 +1,6 @@
 <div class="side-menu" id="sideMenu">
   <div style="padding:20px;border-bottom:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:space-between;">
-    <span class="nav-brand">LIVO</span>
+    <span class="nav-brand" style="color: var(--gold); font-family: 'Teko', sans-serif; font-size: 1.8rem;">LIVO</span>
     <button onclick="toggleMenu()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;">✕</button>
   </div>
   <% if(locals.user) { %>
@@ -44,10 +44,10 @@
 </div>
 <div class="menu-overlay" id="menuOverlay" onclick="toggleMenu()"></div>
 
-<nav class="navbar">
+<nav class="navbar" style="background: var(--grad-primary);">
   <div style="display:flex;align-items:center;gap:12px;">
     <button onclick="toggleMenu()" style="background:none;border:none;color:#fff;font-size:24px;cursor:pointer;padding:0;line-height:1;"><i class="fas fa-bars"></i></button>
-    <div class="nav-brand">LIVO</div>
+    <div class="nav-brand" style="color: #fff; font-family: 'Teko', sans-serif; font-size: 1.8rem; letter-spacing: 1px;">LIVO</div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <button id="theme-toggle-nav" class="glass" style="width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--gold); border: 1px solid var(--border-glass); cursor: pointer; background: none;">
@@ -132,7 +132,7 @@ function toggleMenu() {
   left: -280px;
   width: 280px;
   height: 100%;
-  background: #0a0a0a;
+  background: #002d0b;
   z-index: 9999;
   transition: left 0.3s;
   border-right: 1px solid rgba(255,255,255,0.1);
@@ -161,5 +161,5 @@ function toggleMenu() {
   font-size: 14px;
 }
 .menu-item i { width: 20px; text-align: center; }
-.menu-item:hover { background: rgba(139, 92, 246, 0.1); color: #fff; }
+.menu-item:hover { background: rgba(0, 150, 37, 0.1); color: #fff; }
 </style>
