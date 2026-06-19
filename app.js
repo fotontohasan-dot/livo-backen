@@ -55,7 +55,7 @@ app.get('/app/update', (req, res) => res.render('app/update'));
 app.use((err, req, res, next) => {
   console.error('❌ Unhandled Error:', err.stack);
   res.status(500).render('error', {
-    message: 'সার্ভারে সমস্যা হয়েছে। একটু পরে আবার চেষ্টা করুন।'
+    message: 'সার্ভারে সমস্যা হয়ছে। একটু পরে আবার চেষ্টা করুন।'
   });
 });
 
@@ -182,6 +182,8 @@ async function migrateDB() {
 
     await pool.query(`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS last_bonus_date DATE;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20) UNIQUE;
+      ALTER TABLE users ALTER COLUMN email DROP NOT NULL;
       ALTER TABLE matches ADD COLUMN IF NOT EXISTS result VARCHAR(20);
       ALTER TABLE matches ADD COLUMN IF NOT EXISTS score_a INTEGER;
       ALTER TABLE matches ADD COLUMN IF NOT EXISTS score_b INTEGER;
