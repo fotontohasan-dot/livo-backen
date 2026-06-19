@@ -4,14 +4,24 @@ const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
 
 router.get('/', isAuth, async (req, res) => {
-  const transactions = await pool.query(`SELECT * FROM coin_transactions WHERE user_id=$1 ORDER BY created_at DESC LIMIT 20`, [req.session.user.id]);
-  const user = await pool.query(`SELECT coins FROM users WHERE id=$1`, [req.session.user.id]);
-  res.render('coins', { transactions: transactions.rows, coins: user.rows[0].coins });
+  try {
+    const transactions = await pool.query(`SELECT * FROM coin_transactions WHERE user_id=$1 ORDER BY created_at DESC LIMIT 20`, [req.session.user.id]);
+    const user = await pool.query(`SELECT coins FROM users WHERE id=$1`, [req.session.user.id]);
+    res.render('coins', { transactions: transactions.rows, coins: user.rows[0].coins });
+  } catch (err) {
+    req.flash('error', 'সার্ভার ত্রুটি');
+    res.redirect('/');
+  }
 });
 
 router.get('/history', isAuth, async (req, res) => {
-  const transactions = await pool.query(`SELECT * FROM coin_transactions WHERE user_id=$1 ORDER BY created_at DESC`, [req.session.user.id]);
-  res.render('coins', { transactions: transactions.rows, coins: req.session.user.coins });
+  try {
+    const transactions = await pool.query(`SELECT * FROM coin_transactions WHERE user_id=$1 ORDER BY created_at DESC`, [req.session.user.id]);
+    res.render('coins', { transactions: transactions.rows, coins: req.session.user.coins });
+  } catch (err) {
+    req.flash('error', 'সার্ভার ত্রুটি');
+    res.redirect('/coins');
+  }
 });
 
 router.post('/daily-bonus', isAuth, async (req, res) => {
