@@ -9,13 +9,10 @@
     <span><%= t.invite %></span>
   </a>
 
-  <!-- Center Promotion Button -->
-  <div class="promotion-container">
-    <a href="/tournaments" class="btn btn-primary btn-glow promotion-btn">
-      <i class="fas fa-gift"></i>
-    </a>
-    <span class="promotion-label"><%= t.promotion %></span>
-  </div>
+  <a href="/tournaments" class="nav-link promotion-link">
+    <span class="promotion-icon"><i class="fas fa-gift"></i></span>
+    <span><%= t.promotion %></span>
+  </a>
 
   <a href="/chat" class="nav-link <%= locals.currentPage === 'chat' ? 'active' : '' %>">
     <i class="fas fa-headset"></i>
