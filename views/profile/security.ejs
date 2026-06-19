@@ -1,49 +1,12 @@
 <%- include('../partials/head') %>
-<div class="container" style="padding:16px;padding-bottom:100px">
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-    <a href="/profile" style="color:#fff;text-decoration:none;font-size:20px">←</a>
-    <h1 style="color:#fff;font-size:18px;font-weight:bold">🔒 সুরক্ষা কেন্দ্র</h1>
-  </div>
-
-  <% if (locals.success && success.length > 0) { %>
-    <div style="background:rgba(16,185,129,0.2);color:#6ee7b7;padding:12px;border-radius:8px;margin-bottom:16px"><%= success %></div>
-  <% } %>
-  <% if (locals.error && error.length > 0) { %>
-    <div style="background:rgba(220,38,38,0.2);color:#fca5a5;padding:12px;border-radius:8px;margin-bottom:16px"><%= error %></div>
-  <% } %>
-
-  <!-- Security Score -->
-  <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center">
-    <div style="width:80px;height:80px;border-radius:50%;background:rgba(139,92,246,0.2);border:3px solid #8b5cf6;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:24px;font-weight:bold;color:#8b5cf6">50%</div>
-    <div style="color:#fff;font-weight:bold">নিরাপত্তা স্কোর: মাঝারি</div>
-    <div style="color:#94a3b8;font-size:13px;margin-top:4px">পাসওয়ার্ড পরিবর্তন করুন নিরাপত্তা বাড়ান</div>
-  </div>
-
-  <!-- Change Password -->
-  <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px">
-    <div style="color:#fff;font-weight:bold;margin-bottom:16px">🔑 পাসওয়ার্ড পরিবর্তন</div>
-    <form action="/profile/change-password" method="POST" style="display:flex;flex-direction:column;gap:12px">
-      <div>
-        <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:6px">বর্তমান পাসওয়ার্ড</label>
-        <input type="password" name="currentPassword" required
-          style="width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 14px;color:#fff;font-size:16px;outline:none">
-      </div>
-      <div>
-        <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:6px">নতুন পাসওয়ার্ড</label>
-        <input type="password" name="newPassword" required
-          style="width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 14px;color:#fff;font-size:16px;outline:none">
-      </div>
-      <div>
-        <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:6px">নতুন পাসওয়ার্ড নিশ্চিত করুন</label>
-        <input type="password" name="confirmPassword" required
-          style="width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 14px;color:#fff;font-size:16px;outline:none">
-      </div>
-      <button type="submit"
-        style="background:#8b5cf6;color:#fff;border:none;border-radius:8px;padding:12px;font-size:16px;font-weight:bold;cursor:pointer">
-        পাসওয়ার্ড পরিবর্তন করুন
-      </button>
-    </form>
+<%- include('../partials/navbar') %>
+<div class="container page">
+  <h1 style="margin-bottom: 1.5rem;">Security Center</h1>
+  <div class="card">
+    <div class="card-body">
+      <p>Your account is secure.</p>
+    </div>
   </div>
 </div>
-<%- include('../partials/navbar') %>
-
+<%- include('../partials/bottom-nav') %>
+</body></html>

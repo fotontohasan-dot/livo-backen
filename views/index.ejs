@@ -13,20 +13,19 @@
 <style>@keyframes marquee { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }</style>
 
 <div class="banner-container">
-  <div class="card btn-glow" style="height:160px;background:linear-gradient(135deg, #006519, #004d13);position:relative;display:flex;align-items:center;padding:20px;border: 1px solid var(--gold);">
+  <div class="card btn-glow" style="height:160px;background:var(--grad-primary);position:relative;display:flex;align-items:center;padding:20px;">
     <div style="z-index:1;">
-      <h2 style="font-family:'Teko',sans-serif;font-size:32px;color:var(--gold);line-height:1;">🎰 ওয়েলকাম বোনাস ৫০%</h2>
-      <p style="font-size:13px;color:rgba(255,255,255,0.9);margin-top:5px;">প্রথম ডিপোজিটে ৫০% পর্যন্ত বোনাস পান</p>
-      <div style="margin-top:5px; font-size: 11px; color: #fff;">প্রতি রেফারেলের জন্য ৩০০০ বোনাস! 🎁</div>
-      <a href="/payment/deposit" class="btn btn-primary" style="margin-top:12px;border-radius:25px;padding:8px 24px;background: var(--grad-gold); color: #000;">এখনই নিন</a>
+      <h2 style="font-family:'Teko',sans-serif;font-size:32px;color:#fff;line-height:1;">🎰 ওয়েলকাম বোনাস</h2>
+      <p style="font-size:13px;color:rgba(255,255,255,0.8);margin-top:5px;">প্রথম ডিপোজিটে ১০০% বোনাস পান</p>
+      <a href="/payment/deposit" class="btn btn-secondary" style="margin-top:12px;border-radius:25px;padding:8px 24px;">এখনই নিন</a>
     </div>
-    <div style="position:absolute;right:10px;font-size:80px;opacity:0.2;">🏆</div>
+    <div style="position:absolute;right:10px;font-size:80px;opacity:0.3;">💰</div>
   </div>
 </div>
 
 <div class="glass" style="margin:8px 12px;border-radius:12px;padding:12px;display:flex;align-items:center;gap:12px;">
   <div class="live-indicator"></div>
-  <p style="font-size:13px;color:var(--text-muted);"><span style="color:var(--gold);font-weight:700;">ঘোষণা:</span> নতুন সিজন শুরু হয়েছে! এখনই যোগ দিন এবং খেলা শুরু করুন।</p>
+  <p style="font-size:13px;color:var(--text-muted);"><span style="color:var(--gold);font-weight:700;">ঘোষণা:</span> নতুন সিজন শুরু! এখন রেজিস্টার করলে ৫০০ ফ্রি কয়েন পাবেন।</p>
 </div>
 
 <div class="stats-grid">
@@ -46,7 +45,7 @@
 
 <div style="display:flex;overflow-x:auto;padding:8px 12px;gap:10px;scrollbar-width:none;" id="catNav">
   <style>#catNav::-webkit-scrollbar { display:none; }</style>
-  <div class="glass cat-item active" data-type="all" style="flex:0 0 auto;padding:8px 16px;border-radius:12px;cursor:pointer;text-align:center;transition:0.3s;border: 1px solid var(--gold);">
+  <div class="glass cat-item active" data-type="all" style="flex:0 0 auto;padding:8px 16px;border-radius:12px;cursor:pointer;text-align:center;transition:0.3s;">
     <div style="font-size:18px;">🔥</div>
     <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">সবগুলো</div>
   </div>
@@ -192,9 +191,9 @@ function renderGames() {
   );
 
   filtered.forEach(g => {
-    const badgeHTML = g.badge ? `<div style="position:absolute;top:8px;left:8px;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;background:var(--grad-gold);color:#000;">${g.badge.toUpperCase()}</div>` : '';
+    const badgeHTML = g.badge ? `<div style="position:absolute;top:8px;left:8px;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;background:var(--grad-primary);color:#fff;">${g.badge.toUpperCase()}</div>` : '';
     c.innerHTML += `
-      <div class="game-card" onclick="location.href='/games/${g.slug}'" style="border-color: rgba(245, 158, 11, 0.2);">
+      <div class="game-card" onclick="location.href='/games/${g.slug}'">
         <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:40px;background:var(--grad-surface);">
           ${g.emoji}
           ${badgeHTML}
