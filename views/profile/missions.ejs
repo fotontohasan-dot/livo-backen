@@ -1,73 +1,94 @@
 <%- include('../partials/head') %>
-<div class="container" style="padding:16px;padding-bottom:100px">
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-    <a href="/profile" style="color:#fff;text-decoration:none;font-size:20px">←</a>
-    <h1 style="color:#fff;font-size:18px;font-weight:bold">🎯 মিশন</h1>
+
+<div class="container" style="padding:0; background: var(--bg-dark); min-height: 100vh; padding-bottom: 80px;">
+
+  <!-- Header -->
+  <div style="background: var(--grad-primary); padding: 20px; display: flex; align-items: center; gap: 15px; position: sticky; top: 0; z-index: 100;">
+    <a href="/profile" style="color: #fff; font-size: 20px; text-decoration: none;"><i class="fas fa-arrow-left"></i></a>
+    <h1 style="color: #fff; font-size: 18px; font-weight: bold; margin: 0;">মিশন সেন্টার</h1>
   </div>
 
-  <!-- Daily Missions -->
-  <div style="color:#f59e0b;font-size:14px;font-weight:bold;margin-bottom:12px">📅 দৈনিক মিশন</div>
-
-  <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px">
-    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between">
-      <div style="display:flex;align-items:center;gap:12px">
-        <div style="font-size:24px">🔐</div>
-        <div>
-          <div style="color:#fff;font-size:14px;font-weight:bold">প্রতিদিন লগইন করুন</div>
-          <div style="color:#94a3b8;font-size:12px">+10 কয়েন</div>
-        </div>
-      </div>
-      <div style="background:#10b981;color:#fff;padding:6px 12px;border-radius:20px;font-size:12px">✅ সম্পন্ন</div>
+  <div style="padding: 15px;">
+    <!-- Mission Tabs -->
+    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+      <div style="flex: 1; padding: 10px; background: var(--grad-gold); color: #000; border-radius: 10px; text-align: center; font-weight: bold; font-size: 13px;">দৈনিক মিশন</div>
+      <div style="flex: 1; padding: 10px; background: var(--bg-surface); color: var(--text-muted); border-radius: 10px; text-align: center; font-weight: bold; font-size: 13px; border: 1px solid var(--border-glass);">সাপ্তাহিক মিশন</div>
     </div>
 
-    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between">
-      <div style="display:flex;align-items:center;gap:12px">
-        <div style="font-size:24px">⚽</div>
-        <div>
-          <div style="color:#fff;font-size:14px;font-weight:bold">১টি ম্যাচ প্রেডিকশন করুন</div>
-          <div style="color:#94a3b8;font-size:12px">+50 কয়েন</div>
-        </div>
-      </div>
-      <a href="/matches" style="background:#8b5cf6;color:#fff;padding:6px 12px;border-radius:20px;font-size:12px;text-decoration:none">যান →</a>
-    </div>
+    <!-- Mission List -->
+    <div style="display: flex; flex-direction: column; gap: 15px;">
 
-    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between">
-      <div style="display:flex;align-items:center;gap:12px">
-        <div style="font-size:24px">👥</div>
-        <div>
-          <div style="color:#fff;font-size:14px;font-weight:bold">১ জন বন্ধুকে আমন্ত্রণ করুন</div>
-          <div style="color:#94a3b8;font-size:12px">+100 কয়েন</div>
+      <!-- Mission 1 -->
+      <div style="background: var(--bg-surface); border-radius: 15px; padding: 15px; border: 1px solid var(--border-glass); display: flex; align-items: center; gap: 15px;">
+        <div style="width: 50px; height: 50px; border-radius: 12px; background: rgba(245,158,11,0.1); display: flex; align-items: center; justify-content: center; font-size: 24px;">🎁</div>
+        <div style="flex: 1;">
+          <div style="font-size: 14px; font-weight: bold; color: var(--text-main);">প্রতিদিন লগইন করুন</div>
+          <div style="font-size: 11px; color: var(--gold); margin: 4px 0;">পুরস্কার: ৳ ১০.০০</div>
+          <div style="width: 100%; height: 6px; background: rgba(0,0,0,0.3); border-radius: 10px; overflow: hidden; margin-top: 8px;">
+            <div style="width: 100%; height: 100%; background: #10b981;"></div>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 9px; color: var(--text-muted); margin-top: 4px;">
+            <span>প্রগতি: ১/১</span>
+            <span style="color: #10b981;">সম্পন্ন</span>
+          </div>
         </div>
+        <button style="background: #10b981; color: #fff; border: none; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: not-allowed; opacity: 0.7;">গৃহীত</button>
       </div>
-      <a href="/profile/referral" style="background:#f59e0b;color:#fff;padding:6px 12px;border-radius:20px;font-size:12px;text-decoration:none">যান →</a>
+
+      <!-- Mission 2 -->
+      <div style="background: var(--bg-surface); border-radius: 15px; padding: 15px; border: 1px solid var(--border-glass); display: flex; align-items: center; gap: 15px;">
+        <div style="width: 50px; height: 50px; border-radius: 12px; background: rgba(0,150,37,0.1); display: flex; align-items: center; justify-content: center; font-size: 24px;">🎲</div>
+        <div style="flex: 1;">
+          <div style="font-size: 14px; font-weight: bold; color: var(--text-main);">৩টি স্লট গেম খেলুন</div>
+          <div style="font-size: 11px; color: var(--gold); margin: 4px 0;">পুরস্কার: ৳ ৫০.০০</div>
+          <div style="width: 100%; height: 6px; background: rgba(0,0,0,0.3); border-radius: 10px; overflow: hidden; margin-top: 8px;">
+            <div style="width: 66%; height: 100%; background: var(--grad-primary);"></div>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 9px; color: var(--text-muted); margin-top: 4px;">
+            <span>প্রগতি: ২/৩</span>
+            <span>৬৬%</span>
+          </div>
+        </div>
+        <button onclick="location.href='/games/slots'" style="background: var(--grad-gold); color: #000; border: none; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: bold;">খেলুন</button>
+      </div>
+
+      <!-- Mission 3 -->
+      <div style="background: var(--bg-surface); border-radius: 15px; padding: 15px; border: 1px solid var(--border-glass); display: flex; align-items: center; gap: 15px;">
+        <div style="width: 50px; height: 50px; border-radius: 12px; background: rgba(245,158,11,0.1); display: flex; align-items: center; justify-content: center; font-size: 24px;">💰</div>
+        <div style="flex: 1;">
+          <div style="font-size: 14px; font-weight: bold; color: var(--text-main);">৳ ৫০০ বা তার বেশি ডিপোজিট করুন</div>
+          <div style="font-size: 11px; color: var(--gold); margin: 4px 0;">পুরস্কার: ৳ ১০০.০০</div>
+          <div style="width: 100%; height: 6px; background: rgba(0,0,0,0.3); border-radius: 10px; overflow: hidden; margin-top: 8px;">
+            <div style="width: 0%; height: 100%; background: var(--grad-primary);"></div>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 9px; color: var(--text-muted); margin-top: 4px;">
+            <span>প্রগতি: ০/১</span>
+            <span>০%</span>
+          </div>
+        </div>
+        <button onclick="location.href='/payment/deposit'" style="background: var(--grad-gold); color: #000; border: none; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: bold;">জমা</button>
+      </div>
+
+      <!-- Mission 4 -->
+      <div style="background: var(--bg-surface); border-radius: 15px; padding: 15px; border: 1px solid var(--border-glass); display: flex; align-items: center; gap: 15px;">
+        <div style="width: 50px; height: 50px; border-radius: 12px; background: rgba(139, 92, 246, 0.1); display: flex; align-items: center; justify-content: center; font-size: 24px;">👥</div>
+        <div style="flex: 1;">
+          <div style="font-size: 14px; font-weight: bold; color: var(--text-main);">১ জন বন্ধুকে আমন্ত্রণ জানান</div>
+          <div style="font-size: 11px; color: var(--gold); margin: 4px 0;">পুরস্কার: ৳ ৫০.০০</div>
+          <div style="width: 100%; height: 6px; background: rgba(0,0,0,0.3); border-radius: 10px; overflow: hidden; margin-top: 8px;">
+            <div style="width: 0%; height: 100%; background: var(--grad-primary);"></div>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 9px; color: var(--text-muted); margin-top: 4px;">
+            <span>প্রগতি: ০/১</span>
+            <span>০%</span>
+          </div>
+        </div>
+        <button onclick="location.href='/profile/referral'" style="background: var(--grad-gold); color: #000; border: none; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: bold;">আমন্ত্রণ</button>
+      </div>
+
     </div>
   </div>
 
-  <!-- Weekly Missions -->
-  <div style="color:#8b5cf6;font-size:14px;font-weight:bold;margin-bottom:12px">📆 সাপ্তাহিক মিশন</div>
-
-  <div style="display:flex;flex-direction:column;gap:12px">
-    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between">
-      <div style="display:flex;align-items:center;gap:12px">
-        <div style="font-size:24px">🏆</div>
-        <div>
-          <div style="color:#fff;font-size:14px;font-weight:bold">৫টি ম্যাচ প্রেডিকশন করুন</div>
-          <div style="color:#94a3b8;font-size:12px">+500 কয়েন</div>
-        </div>
-      </div>
-      <a href="/matches" style="background:#8b5cf6;color:#fff;padding:6px 12px;border-radius:20px;font-size:12px;text-decoration:none">যান →</a>
-    </div>
-
-    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between">
-      <div style="display:flex;align-items:center;gap:12px">
-        <div style="font-size:24px">💬</div>
-        <div>
-          <div style="color:#fff;font-size:14px;font-weight:bold">সাপোর্টে মেসেজ করুন</div>
-          <div style="color:#94a3b8;font-size:12px">+20 কয়েন</div>
-        </div>
-      </div>
-      <a href="/chat" style="background:#06b6d4;color:#fff;padding:6px 12px;border-radius:20px;font-size:12px;text-decoration:none">যান →</a>
-    </div>
-  </div>
 </div>
-<%- include('../partials/navbar') %>
+
+<%- include('../partials/bottom-nav') %>

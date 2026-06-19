@@ -9,8 +9,10 @@
     <span><%= t.invite %></span>
   </a>
 
-  <a href="/tournaments" onclick="location.href='/tournaments'; return false;" class="nav-link promotion-link">
-    <span class="promotion-icon"><i class="fas fa-gift"></i></span>
+  <a href="/promotions" onclick="location.href='/promotions'; return false;" class="nav-link <%= locals.currentPage === 'promotion' ? 'active' : '' %>">
+    <div class="promotion-icon">
+      <i class="fas fa-gift"></i>
+    </div>
     <span><%= t.promotion %></span>
   </a>
 
