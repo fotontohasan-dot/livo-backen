@@ -59,111 +59,97 @@
     </div>
   </div>
 
-  <!-- Menu List -->
-  <div style="background: var(--bg-surface); border-radius: 20px; overflow: hidden; border: 1px solid var(--border-glass); box-shadow: 0 5px 20px rgba(0,0,0,0.2);">
+  <!-- Icon Grid Menu -->
+  <div style="background: var(--bg-card); border-radius: 20px; padding: 20px; border: 1px solid var(--border-glass);">
+    <div style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;">সদস্য সেন্টার</div>
 
-    <a href="/profile/security" style="display: flex; align-items: center; padding: 18px 20px; text-decoration: none; color: var(--text-main); border-bottom: 1px solid var(--border-glass);">
-      <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245, 158, 11, 0.1); display: flex; align-items: center; justify-content: center; margin-right: 15px;">
-        <i class="fas fa-user-circle" style="color: var(--gold); font-size: 16px;"></i>
-      </div>
-      <span style="flex: 1; font-size: 14px; font-weight: 600;">আমার তথ্য</span>
-      <i class="fas fa-chevron-right" style="font-size: 12px; color: var(--text-muted);"></i>
-    </a>
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px 10px;">
 
-    <a href="/profile/history" style="display: flex; align-items: center; padding: 18px 20px; text-decoration: none; color: var(--text-main); border-bottom: 1px solid var(--border-glass);">
-      <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245, 158, 11, 0.1); display: flex; align-items: center; justify-content: center; margin-right: 15px;">
-        <i class="fas fa-clipboard-list" style="color: var(--gold); font-size: 16px;"></i>
-      </div>
-      <span style="flex: 1; font-size: 14px; font-weight: 600;">বেট রেকর্ড</span>
-      <i class="fas fa-chevron-right" style="font-size: 12px; color: var(--text-muted);"></i>
-    </a>
+      <a href="/profile/rewards" style="text-decoration:none; text-align:center; position:relative">
+        <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
+          <i class="fas fa-trophy"></i>
+        </div>
+        <div style="color:var(--text-main);font-size:12px;font-weight:600">পুরস্কার সেন্টার</div>
+      </a>
 
-    <a href="/profile/stats" style="display: flex; align-items: center; padding: 18px 20px; text-decoration: none; color: var(--text-main); border-bottom: 1px solid var(--border-glass);">
-      <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245, 158, 11, 0.1); display: flex; align-items: center; justify-content: center; margin-right: 15px;">
-        <i class="fas fa-chart-line" style="color: var(--gold); font-size: 16px;"></i>
-      </div>
-      <span style="flex: 1; font-size: 14px; font-weight: 600;">লাভ এবং লস</span>
-      <i class="fas fa-chevron-right" style="font-size: 12px; color: var(--text-muted);"></i>
-    </a>
+      <a href="/profile/history" style="text-decoration:none; text-align:center">
+        <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
+          <i class="fas fa-clipboard-list"></i>
+        </div>
+        <div style="color:var(--text-main);font-size:12px;font-weight:600">বেট রেকর্ড</div>
+      </a>
 
-    <a href="/profile/transactions" style="display: flex; align-items: center; padding: 18px 20px; text-decoration: none; color: var(--text-main); border-bottom: 1px solid var(--border-glass);">
-      <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245, 158, 11, 0.1); display: flex; align-items: center; justify-content: center; margin-right: 15px;">
-        <i class="fas fa-history" style="color: var(--gold); font-size: 16px;"></i>
-      </div>
-      <span style="flex: 1; font-size: 14px; font-weight: 600;">লেনদেনের রেকর্ড</span>
-      <i class="fas fa-chevron-right" style="font-size: 12px; color: var(--text-muted);"></i>
-    </a>
+      <a href="/profile/stats" style="text-decoration:none; text-align:center">
+        <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
+          <i class="fas fa-chart-line"></i>
+        </div>
+        <div style="color:var(--text-main);font-size:12px;font-weight:600">লাভ এবং লস</div>
+      </a>
 
-    <a href="/profile/missions" style="display: flex; align-items: center; padding: 18px 20px; text-decoration: none; color: var(--text-main); border-bottom: 1px solid var(--border-glass);">
-      <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245, 158, 11, 0.1); display: flex; align-items: center; justify-content: center; margin-right: 15px;">
-        <i class="fas fa-tasks" style="color: var(--gold); font-size: 16px;"></i>
-      </div>
-      <span style="flex: 1; font-size: 14px; font-weight: 600;">মিশন ও অ্যাক্টিভিটি</span>
-      <i class="fas fa-chevron-right" style="font-size: 12px; color: var(--text-muted);"></i>
-    </a>
+      <a href="/profile/transactions" style="text-decoration:none; text-align:center">
+        <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
+          <i class="fas fa-file-invoice-dollar"></i>
+        </div>
+        <div style="color:var(--text-main);font-size:12px;font-weight:600">লেনদেন রেকর্ড</div>
+      </a>
 
-    <a href="/profile/rewards" style="display: flex; align-items: center; padding: 18px 20px; text-decoration: none; color: var(--text-main); border-bottom: 1px solid var(--border-glass);">
-      <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245, 158, 11, 0.1); display: flex; align-items: center; justify-content: center; margin-right: 15px;">
-        <i class="fas fa-crown" style="color: var(--gold); font-size: 16px;"></i>
-      </div>
-      <span style="flex: 1; font-size: 14px; font-weight: 600;">পুরসর সেন্টার</span>
-      <i class="fas fa-chevron-right" style="font-size: 12px; color: var(--text-muted);"></i>
-    </a>
+      <a href="/profile/security" style="text-decoration:none; text-align:center">
+        <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
+          <i class="fas fa-shield-alt"></i>
+        </div>
+        <div style="color:var(--text-main);font-size:12px;font-weight:600">সুরক্ষা কেন্দ্র</div>
+      </a>
 
-    <a href="/profile/security" style="display: flex; align-items: center; padding: 18px 20px; text-decoration: none; color: var(--text-main); border-bottom: 1px solid var(--border-glass);">
-      <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245, 158, 11, 0.1); display: flex; align-items: center; justify-content: center; margin-right: 15px;">
-        <i class="fas fa-shield-alt" style="color: var(--gold); font-size: 16px;"></i>
-      </div>
-      <span style="flex: 1; font-size: 14px; font-weight: 600;">নিরাপত্তা কেন্দ্র</span>
-      <i class="fas fa-chevron-right" style="font-size: 12px; color: var(--text-muted);"></i>
-    </a>
+      <a href="/profile/referral" style="text-decoration:none; text-align:center">
+        <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
+          <i class="fas fa-user-plus"></i>
+        </div>
+        <div style="color:var(--text-main);font-size:12px;font-weight:600">বন্ধু আমন্ত্রণ</div>
+      </a>
 
-    <a href="/notifications" style="display: flex; align-items: center; padding: 18px 20px; text-decoration: none; color: var(--text-main); border-bottom: 1px solid var(--border-glass);">
-      <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245, 158, 11, 0.1); display: flex; align-items: center; justify-content: center; margin-right: 15px;">
-        <i class="fas fa-comment-alt" style="color: var(--gold); font-size: 16px;"></i>
-      </div>
-      <span style="flex: 1; font-size: 14px; font-weight: 600;">মেসেজ সেন্টার</span>
-      <i class="fas fa-chevron-right" style="font-size: 12px; color: var(--text-muted);"></i>
-    </a>
+      <a href="/profile/missions" style="text-decoration:none; text-align:center; position:relative">
+        <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px;position:relative">
+          <i class="fas fa-gift"></i>
+        </div>
+        <div style="color:var(--text-main);font-size:12px;font-weight:600">মিশন</div>
+      </a>
 
-    <a href="/profile/referral" style="display: flex; align-items: center; padding: 18px 20px; text-decoration: none; color: var(--text-main); border-bottom: 1px solid var(--border-glass);">
-      <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245, 158, 11, 0.1); display: flex; align-items: center; justify-content: center; margin-right: 15px;">
-        <i class="fas fa-users" style="color: var(--gold); font-size: 16px;"></i>
-      </div>
-      <span style="flex: 1; font-size: 14px; font-weight: 600;">বন্ধুদের আমন্ত্রণ জানান</span>
-      <i class="fas fa-chevron-right" style="font-size: 12px; color: var(--text-muted);"></i>
-    </a>
+      <a href="/notifications" style="text-decoration:none; text-align:center">
+        <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
+          <i class="fas fa-envelope"></i>
+        </div>
+        <div style="color:var(--text-main);font-size:12px;font-weight:600">মেইল</div>
+      </a>
 
-    <a href="/chat" style="display: flex; align-items: center; padding: 18px 20px; text-decoration: none; color: var(--text-main); border-bottom: 1px solid var(--border-glass);">
-      <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245, 158, 11, 0.1); display: flex; align-items: center; justify-content: center; margin-right: 15px;">
-        <i class="fas fa-headset" style="color: var(--gold); font-size: 16px;"></i>
-      </div>
-      <span style="flex: 1; font-size: 14px; font-weight: 600;">সাপোর্ট</span>
-      <i class="fas fa-chevron-right" style="font-size: 12px; color: var(--text-muted);"></i>
-    </a>
+      <a href="/profile/feedback" style="text-decoration:none; text-align:center">
+        <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
+          <i class="fas fa-comment-alt"></i>
+        </div>
+        <div style="color:var(--text-main);font-size:12px;font-weight:600">পরামর্শ</div>
+      </a>
 
-    <a href="/profile/app-download" style="display: flex; align-items: center; padding: 18px 20px; text-decoration: none; color: var(--text-main); border-bottom: 1px solid var(--border-glass);">
-      <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245, 158, 11, 0.1); display: flex; align-items: center; justify-content: center; margin-right: 15px;">
-        <i class="fas fa-mobile-alt" style="color: var(--gold); font-size: 16px;"></i>
-      </div>
-      <span style="flex: 1; font-size: 14px; font-weight: 600;">অ্যাপ ডাউনলোড করুন</span>
-      <i class="fas fa-chevron-right" style="font-size: 12px; color: var(--text-muted);"></i>
-    </a>
+      <a href="/profile/app-download" style="text-decoration:none; text-align:center">
+        <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
+          <i class="fas fa-mobile-alt"></i>
+        </div>
+        <div style="color:var(--text-main);font-size:12px;font-weight:600">অ্যাপ ডাউনলোড</div>
+      </a>
 
-    <a href="/profile/feedback" style="display: flex; align-items: center; padding: 18px 20px; text-decoration: none; color: var(--text-main); border-bottom: 1px solid var(--border-glass);">
-      <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245, 158, 11, 0.1); display: flex; align-items: center; justify-content: center; margin-right: 15px;">
-        <i class="fas fa-comment-dots" style="color: var(--gold); font-size: 16px;"></i>
-      </div>
-      <span style="flex: 1; font-size: 14px; font-weight: 600;">পরামর্শ</span>
-      <i class="fas fa-chevron-right" style="font-size: 12px; color: var(--text-muted);"></i>
-    </a>
+      <a href="/chat" style="text-decoration:none; text-align:center">
+        <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
+          <i class="fas fa-headset"></i>
+        </div>
+        <div style="color:var(--text-main);font-size:12px;font-weight:600">সাপোর্ট</div>
+      </a>
 
-    <a href="/logout" style="display: flex; align-items: center; padding: 18px 20px; text-decoration: none; color: #ef4444;">
-      <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(239, 68, 68, 0.1); display: flex; align-items: center; justify-content: center; margin-right: 15px;">
-        <i class="fas fa-sign-out-alt" style="font-size: 16px;"></i>
-      </div>
-      <span style="flex: 1; font-size: 14px; font-weight: 600;">লগআউট</span>
-    </a>
+      <a href="/logout" style="text-decoration:none; text-align:center">
+        <div style="width:60px;height:60px;border-radius:50%;background:rgba(239,68,68,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:#ef4444;font-size:24px">
+          <i class="fas fa-sign-out-alt"></i>
+        </div>
+        <div style="color:#ef4444;font-size:12px;font-weight:600">লগআউট</div>
+      </a>
+
+    </div>
   </div>
 
   <div style="text-align: center; margin-top: 30px; padding-bottom: 20px;">
