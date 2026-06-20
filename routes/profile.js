@@ -17,7 +17,7 @@ router.get('/', isAuth, async (req, res) => {
 
     const tournaments = await pool.query(`
       SELECT
-        COALESCE(t.name, 'টুর্নামেন্') as name,
+        COALESCE(t.name, 'টুর্নামেন্ট') as name,
         COALESCE(t.sport, 'General') as sport,
         COALESCE(tp.points, 0) as points,
         tp.joined_at as joined_at
@@ -57,7 +57,7 @@ router.post('/update', isAuth, async (req, res) => {
     req.session.user.username = username;
     req.flash('success', 'প্রোফাইল আপডেট হয়েছে!');
   } catch (err) {
-    req.flash('error', 'আপডেট করত সমস্যা হয়েছে।');
+    req.flash('error', 'আপডেট করতে সমস্যা হয়েছে।');
   }
   res.redirect('/profile');
 });
@@ -114,7 +114,7 @@ router.get('/stats', isAuth, async (req, res) => {
     `, [req.session.user.id]);
     res.render('profile/stats', { stats: stats.rows[0], user: req.session.user });
   } catch (err) {
-    req.flash('error', 'স্টস লোড করতে সমস্যা হয়েছে।');
+    req.flash('error', 'স্ট্যাটস লোড করতে সমস্যা হয়েছে।');
     res.redirect('/profile');
   }
 });
@@ -156,13 +156,6 @@ router.get('/transactions', isAuth, async (req, res) => {
   }
 });
 
-router.get('/chat', isAuth, (req, res) => {
-  res.render('profile/chat', { user: req.session.user });
-});
-
-module.exports = router; 
-
-
 router.get('/account-record', isAuth, async (req, res) => {
   try {
     const result = await pool.query(
@@ -175,3 +168,56 @@ router.get('/account-record', isAuth, async (req, res) => {
   }
 });
 
+router.get('/cards', isAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM bank_cards WHERE user_id = $1 ORDER BY created_at DESC',
+      [req.session.user.id]
+    );
+    res.render('profile/cards', { user: req.session.user, cards: result.rows });
+  } catch (err) {
+    res.render('profile/cards', { user: req.session.user, cards: [] });
+  }
+});
+
+router.post('/cards/add', isAuth, async (req, res) => {
+  try {
+    const { bank_name, account_number, holder_name } = req.body;
+    await pool.query(
+      'INSERT INTO bank_cards (user_id, bank_name, account_number, holder_name) VALUES ($1,$2,$3,$4)',
+      [req.session.user.id, bank_name, account_number, holder_name]
+    );
+    req.flash('success', '✅ কার্ড যোগ করা হয়েছে!');
+  } catch (err) {
+    req.flash('error', '❌ কার্ড যোগ করতে সমস্যা হয়েছে।');
+  }
+  res.redirect('/profile/cards');
+});
+
+router.get('/app-download', isAuth, (req, res) => {
+  res.render('profile/app-download', { user: req.session.user });
+});
+
+router.get('/feedback', isAuth, (req, res) => {
+  res.render('profile/feedback', { user: req.session.user });
+});
+
+router.post('/feedback', isAuth, async (req, res) => {
+  try {
+    const { message } = req.body;
+    await pool.query(
+      'INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, 0, $2, $3)',
+      [req.session.user.id, 'feedback', message]
+    );
+    req.flash('success', '✅ আপনার মতামত পাঠানো হয়েছে। ধন্যবাদ!');
+  } catch (err) {
+    req.flash('error', '❌ মতামত পাঠাতে সমস্যা হয়েছে।');
+  }
+  res.redirect('/profile/feedback');
+});
+
+router.get('/chat', isAuth, (req, res) => {
+  res.render('profile/chat', { user: req.session.user });
+});
+
+module.exports = router;
