@@ -4,6 +4,7 @@ const express = require('express');
 const http = require('http');
 const { initSocket } = require('./services/socket');
 const session = require('express-session');
+const pgSession = require('connect-pg-simple')(session);
 const flash = require('connect-flash');
 const path = require('path');
 const { connectDB, pool } = require('./db');
@@ -20,6 +21,11 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(session({
+  store: new pgSession({
+    pool: pool,
+    tableName: 'user_sessions',
+    createTableIfMissing: true
+  }),
   secret: process.env.SESSION_SECRET || 'livo-secret-key',
   resave: false,
   saveUninitialized: false,
