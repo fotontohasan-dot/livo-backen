@@ -1,12 +1,33 @@
 <%- include('../partials/head') %>
-<%- include('../partials/navbar') %>
-<div class="container page">
-  <h1 style="margin-bottom: 1.5rem;">Profit & Loss</h1>
-  <div class="grid grid-2">
-    <div class="card"><div class="card-body"><h3>Total Bets</h3><p><%= stats.total %></p></div></div>
-    <div class="card"><div class="card-body"><h3>Wins</h3><p><%= stats.won %></p></div></div>
-    <div class="card"><div class="card-body"><h3>Total Earned</h3><p>🪙 <%= stats.total_earned %></p></div></div>
+<div class="container" style="padding:16px;padding-bottom:100px">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+    <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px">←</a>
+    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold">💰 লাভ এবং লস</h1>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+    <div style="background:var(--bg-card);border-radius:16px;padding:20px;text-align:center;border:1px solid var(--border-glass)">
+      <div style="color:var(--text-muted);font-size:12px;margin-bottom:8px">মোট প্রেডিকশন</div>
+      <div style="color:var(--gold);font-size:28px;font-weight:bold"><%= stats.total %></div>
+    </div>
+    <div style="background:var(--bg-card);border-radius:16px;padding:20px;text-align:center;border:1px solid var(--border-glass)">
+      <div style="color:var(--text-muted);font-size:12px;margin-bottom:8px">জয়ী</div>
+      <div style="color:#10b981;font-size:28px;font-weight:bold"><%= stats.won %></div>
+    </div>
+  </div>
+
+  <div style="background:linear-gradient(135deg,#10b981,#059669);border-radius:16px;padding:20px;text-align:center">
+    <div style="color:rgba(255,255,255,0.8);font-size:13px;margin-bottom:6px">মোট অর্জিত পয়েন্ট</div>
+    <div style="color:#fff;font-size:32px;font-weight:bold">+<%= stats.total_earned %></div>
+  </div>
+
+  <% const winRate = stats.total > 0 ? Math.round((stats.won / stats.total) * 100) : 0; %>
+  <div style="background:var(--bg-card);border-radius:16px;padding:20px;margin-top:16px;border:1px solid var(--border-glass)">
+    <div style="color:var(--text-main);font-weight:bold;margin-bottom:12px">জয়ের হার</div>
+    <div style="background:rgba(255,255,255,0.1);border-radius:10px;height:12px;overflow:hidden">
+      <div style="background:var(--grad-gold);height:12px;width:<%= winRate %>%"></div>
+    </div>
+    <div style="text-align:right;color:var(--gold);font-size:14px;margin-top:6px"><%= winRate %>%</div>
   </div>
 </div>
-<%- include('../partials/bottom-nav') %>
-</body></html>
+<%- include('../partials/navbar') %>
