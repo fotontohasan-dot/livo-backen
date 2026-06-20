@@ -17,7 +17,7 @@ router.get('/', isAuth, async (req, res) => {
 
     const tournaments = await pool.query(`
       SELECT
-        COALESCE(t.name, t.title, 'টর্নামেন্ট') as name,
+        COALESCE(t.name, 'টুর্নামেন্') as name,
         COALESCE(t.sport, 'General') as sport,
         COALESCE(tp.points, 0) as points,
         tp.joined_at as joined_at
@@ -45,7 +45,7 @@ router.get('/', isAuth, async (req, res) => {
     });
   } catch (err) {
     console.error('Profile error:', err);
-    req.flash('error', 'প্রোফাইল লড করতে সমস্যা হয়েছে।');
+    req.flash('error', 'প্রোফাইল লোড করতে সমস্যা হয়েছে।');
     res.redirect('/');
   }
 });
@@ -57,7 +57,7 @@ router.post('/update', isAuth, async (req, res) => {
     req.session.user.username = username;
     req.flash('success', 'প্রোফাইল আপডেট হয়েছে!');
   } catch (err) {
-    req.flash('error', 'আপডেট করতে সমস্যা হয়েছে।');
+    req.flash('error', 'আপডেট করত সমস্যা হয়েছে।');
   }
   res.redirect('/profile');
 });
@@ -98,7 +98,7 @@ router.get('/history', isAuth, async (req, res) => {
     `, [req.session.user.id]);
     res.render('profile/history', { predictions: predictions.rows, user: req.session.user });
   } catch (err) {
-    req.flash('error', 'ইতিহাস লোড করতে সমস্ হয়েছে।');
+    req.flash('error', 'ইতিহাস লোড করতে সমস্যা হয়েছে।');
     res.redirect('/profile');
   }
 });
