@@ -2,14 +2,14 @@
 <%- include('../partials/navbar') %>
 <div class="admin-layout">
   <div class="admin-sidebar">
-    <div style="padding:0 1.5rem 1rem;font-size:.75rem;color:var(--muted);text-transform:uppercase;">অ্যাডমিন প্যানেল</div>
+    <div style="padding:0 1.5rem 1rem;font-size:.75rem;color:var(--muted);text-transform:uppercase;">অ্যাডমিন প্যনেল</div>
     <a href="/admin" class="admin-nav-link">📊 ড্যাশবোর্ড</a>
     <a href="/admin/users" class="admin-nav-link active">👥 ব্যবহারকারী</a>
     <a href="/admin/matches" class="admin-nav-link">⚽ ম্যাচসমূহ</a>
     <a href="/admin/tournaments" class="admin-nav-link">🏆 টুর্নামেন্ট</a>
     <a href="/admin/news" class="admin-nav-link">📰 নিউজ</a>
-    <a href="/chat/admin" class="admin-nav-link">💬 সাপোর্ট চ্যাট</a>
-    <a href="/" class="admin-nav-link">🏠 সাইটে ফিরে যান</a>
+    <a href="/chat/admin" class="admin-nav-link">💬 সপোর্ট চ্যাট</a>
+    <a href="/" class="admin-nav-link">🏠 সাইটে ফির যান</a>
   </div>
   <div class="admin-content">
     <%- include('../partials/flash') %>
@@ -54,7 +54,7 @@
     <!-- + কয়েন Modal -->
     <div id="addCoinModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#00000080;z-index:999;align-items:center;justify-content:center;">
       <div class="card" style="width:350px;">
-        <div class="card-header">💰 কয়েন যোগ করুন</div>
+        <div class="card-header">💰 কয়েন যগ করুন</div>
         <div class="card-body">
           <div class="form-group">
             <label class="form-label">পরিমাণ</label>
@@ -108,7 +108,7 @@ function showRemoveCoins(id) {
 
 function submitAddCoins() {
   const amount = document.getElementById('addCoinAmount').value;
-  if (!amount || amount <= 0) { alert('সঠিক পরিমাণ দিন!'); return; }
+  if (!amount || amount <= 0) { alert('সঠিক পরমাণ দিন!'); return; }
   const f = document.createElement('form');
   f.method = 'POST'; f.action = `/admin/users/${currentUserId}/coins/add`;
   const i = document.createElement('input');
@@ -119,7 +119,7 @@ function submitAddCoins() {
 
 function submitRemoveCoins() {
   const amount = document.getElementById('removeCoinAmount').value;
-  if (!amount || amount <= 0) { alert('সঠিক পরিমাণ দিন!'); return; }
+  if (!amount || amount <= 0) { alert('সঠিক পরিমণ দিন!'); return; }
   const f = document.createElement('form');
   f.method = 'POST'; f.action = `/admin/users/${currentUserId}/coins/remove`;
   const i = document.createElement('input');
