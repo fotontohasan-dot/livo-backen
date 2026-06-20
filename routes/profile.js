@@ -62,6 +62,17 @@ router.post('/update', isAuth, async (req, res) => {
   res.redirect('/profile');
 });
 
+router.post('/update-personal', isAuth, async (req, res) => {
+  try {
+    const { full_name, phone } = req.body;
+    await pool.query(`UPDATE users SET full_name=$1, phone=$2 WHERE id=$3`, [full_name, phone, req.session.user.id]);
+    req.flash('success', '✅ তথ্য আপডেট হয়েছে!');
+  } catch (err) {
+    req.flash('error', '❌ আপডেট করতে সমস্যা হয়েছে।');
+  }
+  res.redirect('/profile/security');
+});
+
 router.post('/change-password', isAuth, async (req, res) => {
   try {
     const { current_password, new_password, currentPassword, newPassword, confirmPassword } = req.body;
@@ -119,8 +130,13 @@ router.get('/stats', isAuth, async (req, res) => {
   }
 });
 
-router.get('/security', isAuth, (req, res) => {
-  res.render('profile/security', { user: req.session.user });
+router.get('/security', isAuth, async (req, res) => {
+  try {
+    const cards = await pool.query('SELECT * FROM bank_cards WHERE user_id = $1 ORDER BY created_at DESC', [req.session.user.id]);
+    res.render('profile/security', { user: req.session.user, bankCards: cards.rows });
+  } catch (err) {
+    res.render('profile/security', { user: req.session.user, bankCards: [] });
+  }
 });
 
 router.get('/missions', isAuth, (req, res) => {
