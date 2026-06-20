@@ -1,75 +1,142 @@
 <%- include('../partials/head') %>
-<div class="container" style="padding:16px;padding-bottom:100px">
 
-  <!-- Profile Card -->
-  <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:16px;padding:20px;margin-bottom:16px;position:relative;overflow:hidden">
-    <div style="display:flex;align-items:center;gap:16px">
-      <div style="width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,#ec4899);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:bold;color:#fff">
-        <%= user.username.charAt(0).toUpperCase() %>
+<div class="container" style="padding:0; background: var(--bg-dark); min-height: 100vh; padding-bottom: 80px;">
+
+  <!-- Member Header -->
+  <div style="background: linear-gradient(180deg, #006519 0%, #002d0b 100%); padding: 30px 20px; border-bottom-left-radius: 30px; border-bottom-right-radius: 30px; position: relative;">
+    <div style="display: flex; align-items: center; gap: 15px;">
+      <div style="width: 65px; height: 65px; border-radius: 50%; border: 2px solid var(--gold); overflow: hidden; background: #111; display: flex; align-items: center; justify-content: center;">
+        <span style="font-size: 30px; color: var(--gold);"><i class="fas fa-user"></i></span>
       </div>
       <div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <span style="color:#fff;font-size:18px;font-weight:bold"><%= user.username %></span>
-          <span style="background:rgba(255,255,255,0.1);color:#94a3b8;font-size:11px;padding:2px 8px;border-radius:20px">VIP0</span>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 18px; font-weight: bold; color: #fff;"><%= user.username %></span>
+          <div style="display:flex; align-items:center; gap:2px; background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; font-size: 10px; padding: 1px 8px; border-radius: 20px; font-weight: 900; font-family: 'Teko', sans-serif;">
+            <i class="fas fa-crown" style="font-size: 8px;"></i> VIP 1
+          </div>
         </div>
-        <div style="color:#94a3b8;font-size:13px;margin-top:4px">যোগদান: <%= new Date(user.created_at).toLocaleDateString('bn-BD') %></div>
-        <div style="color:#f59e0b;font-size:20px;font-weight:bold;margin-top:4px">💰 <%= t.balance %>: ৳<%= user.coins %></div>
+        <div style="margin-top: 5px;">
+          <div style="width: 150px; height: 6px; background: rgba(0,0,0,0.3); border-radius: 10px; overflow: hidden; margin-bottom: 4px;">
+            <div style="width: 35%; height: 100%; background: var(--grad-gold);"></div>
+          </div>
+          <div style="display: flex; justify-content: space-between; width: 150px; font-size: 9px; color: rgba(255,255,255,0.6);">
+            <span>XP: 350 / 1000</span>
+            <span>35%</span>
+          </div>
+        </div>
+        <div style="margin-top: 8px;">
+          <div style="color: var(--gold); font-size: 24px; font-weight: bold; font-family: 'Teko', sans-serif; line-height: 1;">৳ <%= user.coins.toLocaleString('bn-BD') %></div>
+        </div>
+      </div>
+      <div style="margin-left: auto;">
+        <button id="theme-toggle-profile" style="background: rgba(255,255,255,0.1); border: none; width: 35px; height: 35px; border-radius: 50%; color: #fff; cursor: pointer;">
+          <i class="fas fa-moon nav-theme-icon"></i>
+        </button>
       </div>
     </div>
-
-    <div style="display:flex;gap:8px;margin-top:16px">
-      <a href="/payment/deposit" style="flex:1;background:#ef4444;color:#fff;padding:10px;border-radius:8px;text-align:center;text-decoration:none;font-size:14px;font-weight:bold">জম দিন</a>
-      <a href="/payment/withdraw" style="flex:1;background:rgba(255,255,255,0.1);color:#fff;padding:10px;border-radius:8px;text-align:center;text-decoration:none;font-size:14px">উত্তোলন</a>
-      <a href="/profile/referral" style="flex:1;background:rgba(255,255,255,0.1);color:#fff;padding:10px;border-radius:8px;text-align:center;text-decoration:none;font-size:14px">রেফারেল</a>
-    </div>
   </div>
 
-  <!-- Menu Grid -->
-  <div style="background:rgba(255,255,255,0.03);border-radius:16px;padding:16px">
-    <div style="color:#94a3b8;font-size:13px;margin-bottom:12px">সদস্য সেন্টার</div>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px">
-
-      <a href="/profile/rewards" style="text-decoration:none;text-align:center">
-        <div style="width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#ef4444);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-size:22px">🏆</div>
-        <div style="color:#fff;font-size:11px">পুরস্কার সেন্টার</div>
-      </a>
-
-      <a href="/profile/missions" style="text-decoration:none;text-align:center">
-        <div style="width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,#6366f1);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-size:22px">🎯</div>
-        <div style="color:#fff;font-size:11px">মিশন</div>
-      </a>
-
-      <a href="/profile/referral" style="text-decoration:none;text-align:center">
-        <div style="width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#10b981,#06b6d4);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-size:22px">👥</div>
-        <div style="color:#fff;font-size:11px">বন্ধু আমন্ত্রণ</div>
-      </a>
-
-      <a href="/profile/security" style="text-decoration:none;text-align:center">
-        <div style="width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#8b5cf6);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-size:22px">🔒</div>
-        <div style="color:#fff;font-size:11px">সুরক্ষা কেন্দ্র</div>
-      </a>
-
-      <a href="/leaderboard" style="text-decoration:none;text-align:center">
-        <div style="width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#fbbf24);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-size:22px">📊</div>
-        <div style="color:#fff;font-size:11px">লিডারবোর্ড</div>
-      </a>
-
-      <a href="/profile/transactions" style="text-decoration:none;text-align:center">
-        <div style="width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#ec4899,#f43f5e);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-size:22px">💳</div>
-        <div style="color:#fff;font-size:11px">লেনদেন</div>
-      </a>
-
-      <a href="/chat" style="text-decoration:none;text-align:center">
-        <div style="width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#06b6d4,#3b82f6);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-size:22px">💬</div>
-        <div style="color:#fff;font-size:11px">সাপোর্ট</div>
-      </a>
-
-      <a href="/logout" style="text-decoration:none;text-align:center">
-        <div style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-size:22px">🚪</div>
-        <div style="color:#94a3b8;font-size:11px">লগআউট</div>
-      </a>
-
-    </div>
+  <!-- Quick Actions Grid -->
+  <div style="margin: -20px 15px 20px; background: var(--bg-surface); border-radius: 15px; padding: 20px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid var(--border-glass);">
+    <a href="/payment/deposit" style="text-decoration: none; text-align: center;">
+      <div style="font-size: 24px; color: var(--gold); margin-bottom: 5px;"><i class="fas fa-wallet"></i></div>
+      <div style="font-size: 11px; color: var(--text-main);">ডিপোজিট</div>
+    </a>
+    <a href="/payment/withdraw" style="text-decoration: none; text-align: center;">
+      <div style="font-size: 24px; color: var(--gold); margin-bottom: 5px;"><i class="fas fa-money-bill-transfer"></i></div>
+      <div style="font-size: 11px; color: var(--text-main);">উইথড্র</div>
+    </a>
+    <a href="/profile/transactions" style="text-decoration: none; text-align: center;">
+      <div style="font-size: 24px; color: var(--gold); margin-bottom: 5px;"><i class="fas fa-hand-holding-dollar"></i></div>
+      <div style="font-size: 11px; color: var(--text-main);">ট্রান্সফার</div>
+    </a>
+    <a href="/profile/history" style="text-decoration: none; text-align: center;">
+      <div style="font-size: 24px; color: var(--gold); margin-bottom: 5px;"><i class="fas fa-clock-rotate-left"></i></div>
+      <div style="font-size: 11px; color: var(--text-main);">হিস্ট্রি</div>
+    </a>
+    <a href="/profile/missions" style="text-decoration: none; text-align: center;">
+      <div style="font-size: 24px; color: var(--gold); margin-bottom: 5px;"><i class="fas fa-calendar-check"></i></div>
+      <div style="font-size: 11px; color: var(--text-main);">অ্যাক্টিভিটি</div>
+    </a>
+    <a href="/promotions" style="text-decoration: none; text-align: center;">
+      <div style="font-size: 24px; color: var(--gold); margin-bottom: 5px;"><i class="fas fa-gift"></i></div>
+      <div style="font-size: 11px; color: var(--text-main);">প্রমোশন</div>
+    </a>
+    <a href="/profile/rewards" style="text-decoration: none; text-align: center;">
+      <div style="font-size: 24px; color: var(--gold); margin-bottom: 5px;"><i class="fas fa-gem"></i></div>
+      <div style="font-size: 11px; color: var(--text-main);">ভিআইপি</div>
+    </a>
+    <a href="/chat" style="text-decoration: none; text-align: center;">
+      <div style="font-size: 24px; color: var(--gold); margin-bottom: 5px;"><i class="fas fa-headset"></i></div>
+      <div style="font-size: 11px; color: var(--text-main);">সাপোর্ট</div>
+    </a>
   </div>
+
+  <!-- Menu List -->
+  <div style="margin: 0 15px; background: var(--bg-surface); border-radius: 15px; overflow: hidden; border: 1px solid var(--border-glass);">
+    <a href="/profile/security" style="display: flex; align-items: center; padding: 15px 20px; text-decoration: none; color: var(--text-main); border-bottom: 1px solid var(--border-glass);">
+      <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245,158,11,0.1); display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+        <i class="fas fa-user-shield" style="font-size: 14px; color: var(--gold);"></i>
+      </div>
+      <span style="flex: 1; font-size: 14px;">আমার তথ্য</span>
+      <i class="fas fa-chevron-right" style="font-size: 12px; color: var(--text-muted);"></i>
+    </a>
+    <a href="/profile/transactions" style="display: flex; align-items: center; padding: 15px 20px; text-decoration: none; color: var(--text-main); border-bottom: 1px solid var(--border-glass);">
+      <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245,158,11,0.1); display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+        <i class="fas fa-wallet" style="font-size: 14px; color: var(--gold);"></i>
+      </div>
+      <span style="flex: 1; font-size: 14px;">আমার ওয়ালেট</span>
+      <i class="fas fa-chevron-right" style="font-size: 12px; color: var(--text-muted);"></i>
+    </a>
+    <a href="/profile/history" style="display: flex; align-items: center; padding: 15px 20px; text-decoration: none; color: var(--text-main); border-bottom: 1px solid var(--border-glass);">
+      <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245,158,11,0.1); display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+        <i class="fas fa-file-invoice-dollar" style="font-size: 14px; color: var(--gold);"></i>
+      </div>
+      <span style="flex: 1; font-size: 14px;">বেট রেকর্ড</span>
+      <i class="fas fa-chevron-right" style="font-size: 12px; color: var(--text-muted);"></i>
+    </a>
+    <a href="/profile/transactions" style="display: flex; align-items: center; padding: 15px 20px; text-decoration: none; color: var(--text-main); border-bottom: 1px solid var(--border-glass);">
+      <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245,158,11,0.1); display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+        <i class="fas fa-list-ul" style="font-size: 14px; color: var(--gold);"></i>
+      </div>
+      <span style="flex: 1; font-size: 14px;">লেনদেনের রেকর্ড</span>
+      <i class="fas fa-chevron-right" style="font-size: 12px; color: var(--text-muted);"></i>
+    </a>
+    <a href="/profile/security" style="display: flex; align-items: center; padding: 15px 20px; text-decoration: none; color: var(--text-main); border-bottom: 1px solid var(--border-glass);">
+      <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245,158,11,0.1); display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+        <i class="fas fa-lock" style="font-size: 14px; color: var(--gold);"></i>
+      </div>
+      <span style="flex: 1; font-size: 14px;">নিরাপত্তা কেন্দ্র</span>
+      <i class="fas fa-chevron-right" style="font-size: 12px; color: var(--text-muted);"></i>
+    </a>
+    <a href="/notifications" style="display: flex; align-items: center; padding: 15px 20px; text-decoration: none; color: var(--text-main); border-bottom: 1px solid var(--border-glass);">
+      <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245,158,11,0.1); display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+        <i class="fas fa-envelope" style="font-size: 14px; color: var(--gold);"></i>
+      </div>
+      <span style="flex: 1; font-size: 14px;">মেসেজ সেন্টার</span>
+      <i class="fas fa-chevron-right" style="font-size: 12px; color: var(--text-muted);"></i>
+    </a>
+    <a href="/profile/referral" style="display: flex; align-items: center; padding: 15px 20px; text-decoration: none; color: var(--text-main); border-bottom: 1px solid var(--border-glass);">
+      <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245,158,11,0.1); display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+        <i class="fas fa-users" style="font-size: 14px; color: var(--gold);"></i>
+      </div>
+      <span style="flex: 1; font-size: 14px;">বন্ধুদের আমন্ত্রণ জানান</span>
+      <i class="fas fa-chevron-right" style="font-size: 12px; color: var(--text-muted);"></i>
+    </a>
+    <a href="#" style="display: flex; align-items: center; padding: 15px 20px; text-decoration: none; color: var(--text-main); border-bottom: 1px solid var(--border-glass);">
+      <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245,158,11,0.1); display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+        <i class="fas fa-info-circle" style="font-size: 14px; color: var(--gold);"></i>
+      </div>
+      <span style="flex: 1; font-size: 14px;">আমাদের সম্পর্কে</span>
+      <i class="fas fa-chevron-right" style="font-size: 12px; color: var(--text-muted);"></i>
+    </a>
+    <a href="/logout" style="display: flex; align-items: center; padding: 15px 20px; text-decoration: none; color: #ef4444;">
+      <i class="fas fa-sign-out-alt" style="width: 25px;"></i>
+      <span style="flex: 1; font-size: 14px;">লগআউট</span>
+    </a>
+  </div>
+
 </div>
+
 <%- include('../partials/navbar') %>
+<%- include('../partials/bottom-nav') %>

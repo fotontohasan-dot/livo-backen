@@ -33,9 +33,9 @@ const translations = {
   bn: {
     balance: 'ব্যালেন্স', deposit: 'ডিপোজিট', withdraw: 'উইথড্র',
     login: 'লগইন', register: 'রজিস্টার', logout: 'লগআউট',
-    home: 'হোম', invite: 'আমন্ত্রণ', promotion: 'প্রমোশন', support: 'সবা', member: 'সদস্য',
+    home: 'হোম', invite: 'আমন্ত্রণ', promotion: 'প্রমোশন', support: 'সেবা', member: 'সদস্য',
     menu_home: 'হোম', menu_aviator: 'Aviator', menu_slots: 'Slots', menu_color: 'Color Prediction',
-    menu_sports: 'সর্টস', menu_tournament: 'টুর্নামেন্ট', menu_deposit: 'ডিপোজিট', menu_withdraw: 'উইথড্র',
+    menu_sports: 'স্পোর্টস', menu_tournament: 'টুর্নামেন্ট', menu_deposit: 'ডিপোজিট', menu_withdraw: 'উইথড্র',
     menu_leaderboard: 'লিডারবোর্ড', menu_news: 'নিউজ', menu_profile: 'প্রোফাইল', menu_admin: 'এডমিন প্যানেল'
   },
   en: {
@@ -54,11 +54,13 @@ app.get('/lang/:code', (req, res) => {
 });
 
 app.use((req, res, next) => {
+  res.locals.baseUrl = req.protocol + '://' + req.get('host');
   res.locals.user = req.session.user || null;
   res.locals.success = req.flash('success');
   res.locals.error = req.flash('error');
   res.locals.lang = req.session.lang || 'bn';
-  res.locals.t = translations[res.locals.lang];
+  res.locals.t = translations[res.locals.lang] || translations.bn;
+  res.locals.siteName = 'Livo';
   next();
 });
 
@@ -67,6 +69,7 @@ app.get('/health', (req, res) => res.status(200).send('OK'));
 app.use('/', require('./routes/auth'));
 app.use('/matches', require('./routes/matches'));
 app.use('/tournaments', require('./routes/tournaments'));
+app.get('/promotions', (req, res) => res.render('promotions', { currentPage: 'promotion' }));
 app.use('/coins', require('./routes/coins'));
 app.use('/news', require('./routes/news'));
 app.use('/profile', require('./routes/profile'));
@@ -82,12 +85,16 @@ app.get('/app/update', (req, res) => res.render('app/update'));
 app.use((err, req, res, next) => {
   console.error('❌ Unhandled Error:', err.stack);
   res.status(500).render('error', {
-    message: 'সার্ভারে সমস্যা হয়েছে। একটু পরে আবার চেষ্টা করুন।'
+    message: 'সার্ভারে সমস্যা হয়েছে। একটু পরে আবার চেষ্টা করুন।',
+    siteName: 'Livo'
   });
 });
 
 app.use((req, res) => {
-  res.status(404).render('error', { message: 'পেজটি পাওয়া যাযনি।' });
+  res.status(404).render('error', {
+    message: 'পেজটি পাওয়া যাযনি।',
+    siteName: 'Livo'
+  });
 });
 
 const PORT = process.env.PORT || 3000;
