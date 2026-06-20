@@ -4,12 +4,12 @@
     <span><%= t.home %></span>
   </a>
 
-  <a href="/profile?tab=invitation" onclick="location.href='/profile?tab=invitation'; return false;" class="nav-link <%= locals.currentPage === 'invitation' ? 'active' : '' %>">
+  <a href="/extra/invitation" onclick="location.href='/extra/invitation'; return false;" class="nav-link <%= locals.currentPage === 'invitation' ? 'active' : '' %>">
     <i class="fas fa-user-plus"></i>
     <span><%= t.invite %></span>
   </a>
 
-  <a href="/tournaments" onclick="location.href='/tournaments'; return false;" class="nav-link">
+  <a href="/extra/promotion" onclick="location.href='/extra/promotion'; return false;" class="nav-link <%= locals.currentPage === 'promotion' ? 'active' : '' %>">
     <i class="fas fa-gift"></i>
     <span><%= t.promotion %></span>
   </a>
