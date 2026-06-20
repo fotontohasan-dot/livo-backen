@@ -114,7 +114,7 @@ function copyRef() {
 function shareRef() {
   if (navigator.share) {
     navigator.share({
-      title: 'LIVO তে যোগ দিন!',
+      title: '<%= siteName %> তে যোগ দিন!',
       text: 'আমার রেফারেল কোড দিয়ে রেজিস্ট্রেশন করুন: <%= profileUser.referral_code %> — ১০০ এক্সট্রা কয়েন পাবেন!',
       url: window.location.origin + '/register?ref=<%= profileUser.referral_code %>'
     });

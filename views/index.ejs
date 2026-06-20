@@ -74,6 +74,19 @@
     <div style="font-size:18px;">🎟️</div>
     <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">লটারি</div>
   </div>
+  <div class="glass cat-item" data-type="lottery" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--border-glass);">
+    <div style="font-size:22px;">🎟️</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">লটারি</div>
+  </div>
+</div>
+
+<div style="display:flex;overflow-x:auto;padding:0 12px 12px;gap:8px;scrollbar-width:none;" id="provNav">
+  <div class="glass prov-item active" data-provider="all" style="flex:0 0 auto;padding:4px 15px;border-radius:20px;font-size:11px;color:var(--text-muted);border:1px solid var(--border-glass);cursor:pointer;">সব প্রোভাইডার</div>
+  <div class="glass prov-item" data-provider="PG" style="flex:0 0 auto;padding:4px 15px;border-radius:20px;font-size:11px;color:var(--text-muted);border:1px solid var(--border-glass);cursor:pointer;">PG Soft</div>
+  <div class="glass prov-item" data-provider="JDB" style="flex:0 0 auto;padding:4px 15px;border-radius:20px;font-size:11px;color:var(--text-muted);border:1px solid var(--border-glass);cursor:pointer;">JDB</div>
+  <div class="glass prov-item" data-provider="PP" style="flex:0 0 auto;padding:4px 15px;border-radius:20px;font-size:11px;color:var(--text-muted);border:1px solid var(--border-glass);cursor:pointer;">Pragmatic</div>
+  <div class="glass prov-item" data-provider="EVO" style="flex:0 0 auto;padding:4px 15px;border-radius:20px;font-size:11px;color:var(--text-muted);border:1px solid var(--border-glass);cursor:pointer;">Evolution</div>
+  <div class="glass prov-item" data-provider="JL" style="flex:0 0 auto;padding:4px 15px;border-radius:20px;font-size:11px;color:var(--text-muted);border:1px solid var(--border-glass);cursor:pointer;">Jili</div>
 </div>
 
 <div style="padding:0 12px 10px;">
@@ -92,11 +105,17 @@
 <div class="game-grid" id="gameContainer"></div>
 
 <div class="banner-container" style="margin-top:10px;">
-  <div class="card glass" style="padding:20px;text-align:center;border-color:var(--gold);">
-    <div style="font-size:12px;color:var(--gold);letter-spacing:3px;text-transform:uppercase;font-weight:700;">🏆 মেগা জ্যাকপট</div>
-    <div style="font-family:'Teko',sans-serif;font-size:48px;color:var(--gold);line-height:1;margin:10px 0;text-shadow: 0 0 20px rgba(245,158,11,0.4);">৳ <span id="jp-num">৮৮,৬১৭,৫১৭</span></div>
-    <div style="font-size:11px;color:var(--text-muted);">এখন পর্যন্ত মোট জেতার পরিমাণ</div>
-    <button class="btn btn-primary btn-glow" style="margin-top:15px;border-radius:25px;padding:10px 30px;" onclick="location.href='/games/slots'">জ্যাকপট খেলুন 🎰</button>
+  <div class="card" style="padding:25px 20px; text-align:center; border: 2px solid var(--gold); background: radial-gradient(circle at center, #1a4a1a 0%, #002d0b 100%); position: relative; overflow: hidden; border-radius: 25px;">
+    <div style="position:absolute; top:-20px; left:-20px; width:100px; height:100px; background:var(--gold); filter:blur(60px); opacity:0.3;"></div>
+    <div style="position:absolute; bottom:-20px; right:-20px; width:100px; height:100px; background:var(--gold); filter:blur(60px); opacity:0.3;"></div>
+
+    <div style="font-size:13px; color:var(--gold); letter-spacing:4px; text-transform:uppercase; font-weight:800; text-shadow: 0 0 10px rgba(245,158,11,0.5);">✨ মেগা জ্যাকপট ✨</div>
+    <div style="font-family:'Teko',sans-serif; font-size:56px; color:var(--gold); line-height:1; margin:15px 0; text-shadow: 0 0 30px rgba(245,158,11,0.6); display: flex; align-items: center; justify-content: center; gap: 10px;">
+        <span style="font-size: 32px; margin-top: 10px;">৳</span>
+        <span id="jp-num">৮৮,৬১৭,৫১৭</span>
+    </div>
+    <div style="font-size:12px; color:rgba(255,255,255,0.7); font-weight: 500;">প্রতিদিন লাকি ড্র জেতার সুযোগ! 🎁</div>
+    <button class="btn btn-glow" style="margin-top:20px; border-radius:30px; padding:12px 40px; background: var(--grad-gold); color: #000; font-weight: 800; border: none;" onclick="location.href='/games/slots'">জ্যাকপট খেলুন 🎰</button>
   </div>
 </div>
 
@@ -137,7 +156,7 @@
 </div>
 
 <div class="site-footer" style="margin-top:30px;background:rgba(255,255,255,0.02);padding:30px 20px;text-align:center;border-top:1px solid var(--border-glass);">
-  <div class="nav-brand" style="font-size:2.5rem;margin-bottom:15px;">LIVO</div>
+  <div class="nav-brand" style="font-size:2.5rem;margin-bottom:15px;"><%= siteName %></div>
   <div style="display:flex;flex-wrap:wrap;gap:15px;justify-content:center;margin-bottom:20px;">
     <a href="#" style="color:var(--text-muted);font-size:12px;text-decoration:none;">সম্পর্কে</a>
     <a href="#" style="color:var(--text-muted);font-size:12px;text-decoration:none;">শর্তাবলী</a>
@@ -149,7 +168,7 @@
     <div class="glass" style="padding:5px 15px;border-radius:8px;font-size:12px;color:var(--text-muted);">Curacao Licensed</div>
   </div>
   <p style="font-size:11px;color:var(--text-muted);line-height:1.6;">
-    © 2024 LIVO Gaming. All Rights Reserved.<br>
+    © 2024 <%= siteName %> Gaming. All Rights Reserved.<br>
     অনলাইন গেমিং আসক্তি তৈরি করতে পারে। দায়িত্বশীলভাবে খেলুন।
   </p>
 </div>
@@ -186,6 +205,10 @@ const games = [
   {name:"Mines",             emoji:"💣",  type:"slots",  slug:"mines",             badge:"new", provider:"SPRIBE"},
   {name:"Sugar Pop",         emoji:"🍬",  type:"slots",  slug:"sugar-pop",         badge:"new", provider:"BS"},
   {name:"Big Bad Wolf",      emoji:"🐺",  type:"slots",  slug:"big-bad-wolf",      badge:"new", provider:"QS"},
+  {name:"Mega Fishing",      emoji:"🎣",  type:"fishing", slug:"mega-fishing",      badge:"hot", provider:"JL"},
+  {name:"Happy Fishing",     emoji:"🐠",  type:"fishing", slug:"happy-fishing",     badge:"new", provider:"JL"},
+  {name:"Win Go",            emoji:"🎟️",  type:"lottery", slug:"win-go",            badge:"hot", provider:"JL"},
+  {name:"Keno",              emoji:"🔢",  type:"lottery", slug:"keno",              badge:"pop", provider:"JL"},
 ];
 
 function renderGames() {
@@ -193,13 +216,23 @@ function renderGames() {
   if(!c) return;
   c.innerHTML = '';
   const searchQ = document.getElementById('gameSearch').value.toLowerCase();
+
   const catActive = document.querySelector('.cat-item.active');
   const currentType = catActive ? catActive.dataset.type : 'all';
 
+  const provActive = document.querySelector('.prov-item.active');
+  const currentProv = provActive ? provActive.dataset.provider : 'all';
+
   const filtered = games.filter(g =>
     (currentType === 'all' || g.type === currentType) &&
+    (currentProv === 'all' || g.provider === currentProv) &&
     g.name.toLowerCase().includes(searchQ)
   );
+
+  if (filtered.length === 0) {
+    c.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">কোনো গেম পাওয়া যায়নি</div>';
+    return;
+  }
 
   filtered.forEach(g => {
     const badgeHTML = g.badge ? `<div style="position:absolute;top:8px;left:8px;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;background:var(--grad-gold);color:#000;">${g.badge.toUpperCase()}</div>` : '';
@@ -208,9 +241,9 @@ function renderGames() {
         <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:40px;background:var(--grad-surface);">
           ${g.emoji}
           ${badgeHTML}
-          <div style="position:absolute;bottom:0;left:0;right:0;padding:8px;background:rgba(0,0,0,0.6);backdrop-filter:blur(5px);">
+          <div style="padding:8px;background:rgba(255,255,255,0.05);border-top:1px solid rgba(255,255,255,0.05);">
             <div style="font-size:11px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${g.name}</div>
-            <div style="font-size:9px;color:var(--text-muted);">${g.provider}</div>
+            <div style="font-size:9px;color:var(--gold);">${g.provider}</div>
           </div>
         </div>
       </div>`;
@@ -222,6 +255,14 @@ document.querySelectorAll('.cat-item').forEach(el => {
     document.querySelectorAll('.cat-item').forEach(x => x.classList.remove('active'));
     el.classList.add('active');
     document.getElementById('sectionTitle').textContent = el.querySelector('div:last-child').textContent + ' গেমস';
+    renderGames();
+  });
+});
+
+document.querySelectorAll('.prov-item').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.prov-item').forEach(x => x.classList.remove('active'));
+    el.classList.add('active');
     renderGames();
   });
 });
