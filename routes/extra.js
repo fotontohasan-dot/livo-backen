@@ -17,7 +17,7 @@ router.get('/invitation', isAuth, async (req, res) => {
 });
 
 router.get('/promotion', isAuth, (req, res) => {
-    res.render('extra/placeholder', { title: 'প্রমোশন' });
+    res.render('extra/promotion');
 });
 
 module.exports = router;

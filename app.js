@@ -205,6 +205,7 @@ async function migrateDB() {
       );
     `);
 
+    await pool.query(`
       ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS file_url TEXT;
       ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS file_type VARCHAR(20);
       ALTER TABLE notifications ADD COLUMN IF NOT EXISTS type VARCHAR(20);
@@ -214,12 +215,24 @@ async function migrateDB() {
       ALTER TABLE news ADD COLUMN IF NOT EXISTS views INT DEFAULT 0;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS last_bonus_date TIMESTAMP;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by_id INT;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(100);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS total_points INT DEFAULT 0;
       ALTER TABLE matches ADD COLUMN IF NOT EXISTS result VARCHAR(50);
       ALTER TABLE predictions ADD COLUMN IF NOT EXISTS points_earned INT DEFAULT 0;
       ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS name VARCHAR(255);
       ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS sport VARCHAR(50);
       ALTER TABLE tournament_participants ADD COLUMN IF NOT EXISTS points INT DEFAULT 0;
       ALTER TABLE tournament_participants ADD COLUMN IF NOT EXISTS joined_at TIMESTAMP DEFAULT NOW();
+
+      CREATE TABLE IF NOT EXISTS bank_cards (
+          id SERIAL PRIMARY KEY,
+          user_id INT REFERENCES users(id) ON DELETE CASCADE,
+          bank_name VARCHAR(100),
+          account_number VARCHAR(50),
+          holder_name VARCHAR(100),
+          created_at TIMESTAMP DEFAULT NOW()
+      );
     `);
 
     console.log('✅ DB migration done');
