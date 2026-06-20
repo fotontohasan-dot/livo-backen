@@ -61,7 +61,7 @@ function copyCode() {
 function shareLink() {
   const link = 'https://livo-backen.onrender.com/register?ref=<%= user.referral_code %>';
   if (navigator.share) {
-    navigator.share({ title: 'LIVO তে যোগ দিন!', url: link });
+    navigator.share({ title: '<%= siteName %> তে যোগ দিন!', url: link });
   } else {
     navigator.clipboard.writeText(link).then(() => {
       alert('লিংক কপি হয়েছে!');
