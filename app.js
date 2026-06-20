@@ -54,6 +54,7 @@ app.get('/lang/:code', (req, res) => {
 });
 
 app.use((req, res, next) => {
+  res.locals.baseUrl = req.protocol + '://' + req.get('host');
   res.locals.user = req.session.user || null;
   res.locals.success = req.flash('success');
   res.locals.error = req.flash('error');
@@ -91,12 +92,16 @@ app.get('/app/update', (req, res) => res.render('app/update'));
 app.use((err, req, res, next) => {
   console.error('❌ Unhandled Error:', err.stack);
   res.status(500).render('error', {
-    message: 'সার্ভারে সমস্যা হয়েছে। একটু পরে আবার চেষ্টা করুন।'
+    message: 'সার্ভারে সমস্যা হয়েছে। একটু পরে আবার চেষ্টা করুন।',
+    siteName: 'Livo'
   });
 });
 
 app.use((req, res) => {
-  res.status(404).render('error', { message: 'পেজটি পাওয়া যাযনি।' });
+  res.status(404).render('error', {
+    message: 'পেজটি পাওয়া যাযনি।',
+    siteName: 'Livo'
+  });
 });
 
 const PORT = process.env.PORT || 3000;

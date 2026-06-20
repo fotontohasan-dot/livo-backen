@@ -28,7 +28,7 @@
     <div style="color:#94a3b8;font-size:13px;margin-bottom:8px">আপনার রেফারেল লিংক</div>
     <div style="display:flex;gap:8px;align-items:center">
       <div style="flex:1;background:rgba(255,255,255,0.1);border-radius:8px;padding:10px;color:#fff;font-size:12px;word-break:break-all" id="ref-link">
-        https://livo-backen.onrender.com/register?ref=<%= user.referral_code %>
+        <%= baseUrl %>/register?ref=<%= user.referral_code %>
       </div>
       <button onclick="shareLink()" style="background:#10b981;color:#fff;border:none;border-radius:8px;padding:12px 16px;cursor:pointer;font-size:14px">শেয়ার</button>
     </div>
@@ -59,7 +59,7 @@ function copyCode() {
 }
 
 function shareLink() {
-  const link = 'https://livo-backen.onrender.com/register?ref=<%= user.referral_code %>';
+  const link = '<%= baseUrl %>/register?ref=<%= user.referral_code %>';
   if (navigator.share) {
     navigator.share({ title: '<%= siteName %> তে যোগ দিন!', url: link });
   } else {
