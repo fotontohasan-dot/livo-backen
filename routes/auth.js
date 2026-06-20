@@ -3,7 +3,14 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { pool } = require('../db');
 
-router.get('/', (req, res) => res.render('index', { user: req.session.user || null }));
+router.get('/', async (req, res) => {
+  try {
+    res.render('index', { user: req.session.user || null });
+  } catch (err) {
+    console.error('Error rendering index:', err);
+    res.status(500).send('Render Error: ' + err.message);
+  }
+});
 
 router.get('/register', (req, res) => {
   const ref = req.query.ref || '';
@@ -52,6 +59,12 @@ router.post('/register', async (req, res) => {
 
     const hashed = await bcrypt.hash(password, 10);
     const myCode = username.toUpperCase().slice(0, 4) + Math.floor(1000 + Math.random() * 9000);
+
+    let referredById = null;
+    if (ref) {
+      const referrer = await pool.query('SELECT id FROM users WHERE referral_code = $1', [ref]);
+      if (referrer.rows[0]) referredById = referrer.rows[0].id;
+    }
 
     const result = await pool.query(`
       INSERT INTO users (username, email, phone, password, role, coins, referral_code, created_at)

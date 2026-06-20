@@ -41,9 +41,13 @@ router.post('/deposit', requireLogin, async (req, res) => {
 });
 
 router.get('/withdraw', requireLogin, async (req, res) => {
-  const result = await pool.query('SELECT coins FROM users WHERE id=$1', [req.session.user.id]);
-  const coins = result.rows[0]?.coins || 0;
-  res.render('payment/withdraw', { user: req.session.user, coins });
+  try {
+    const result = await pool.query('SELECT coins FROM users WHERE id=$1', [req.session.user.id]);
+    const coins = result.rows[0]?.coins || 0;
+    res.render('payment/withdraw', { user: req.session.user, coins });
+  } catch (err) {
+    res.redirect('/');
+  }
 });
 
 router.post('/withdraw', requireLogin, async (req, res) => {
@@ -78,18 +82,26 @@ router.post('/withdraw', requireLogin, async (req, res) => {
 });
 
 router.get('/history', requireLogin, async (req, res) => {
-  const result = await pool.query(
-    `SELECT * FROM payment_requests WHERE user_id=$1 ORDER BY created_at DESC LIMIT 50`,
-    [req.session.user.id]
-  );
-  res.render('payment/history', { user: req.session.user, requests: result.rows });
+  try {
+    const result = await pool.query(
+      `SELECT * FROM payment_requests WHERE user_id=$1 ORDER BY created_at DESC LIMIT 50`,
+      [req.session.user.id]
+    );
+    res.render('payment/history', { user: req.session.user, requests: result.rows });
+  } catch (err) {
+    res.render('payment/history', { user: req.session.user, requests: [] });
+  }
 });
 
 router.get('/admin/payments', requireAdmin, async (req, res) => {
-  const result = await pool.query(
-    `SELECT pr.*, u.username FROM payment_requests pr JOIN users u ON pr.user_id = u.id ORDER BY pr.created_at DESC`
-  );
-  res.render('payment/admin', { user: req.session.user, requests: result.rows });
+  try {
+    const result = await pool.query(
+      `SELECT pr.*, u.username FROM payment_requests pr JOIN users u ON pr.user_id = u.id ORDER BY pr.created_at DESC`
+    );
+    res.render('payment/admin', { user: req.session.user, requests: result.rows });
+  } catch (err) {
+    res.render('payment/admin', { user: req.session.user, requests: [] });
+  }
 });
 
 router.post('/admin/approve/:id', requireAdmin, async (req, res) => {

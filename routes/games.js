@@ -182,6 +182,19 @@ router.get('/play', isAuth, (req, res) => {
   });
 });
 
+router.get('/:slug', isAuth, (req, res) => {
+  const gameSlug = req.params.slug;
+  if (!supportedGames[gameSlug]) {
+    req.flash('error', 'গেমটি পাওয়া যায়নি');
+    return res.redirect('/');
+  }
+  res.render('games/play', {
+    gameSlug: gameSlug,
+    gameDisplayName: supportedGames[gameSlug],
+    coins: req.session.user.coins
+  });
+});
+
 router.post('/play', isAuth, async (req, res) => {
   const { gameSlug, amount, selection } = req.body;
   const userId = req.session.user.id;
