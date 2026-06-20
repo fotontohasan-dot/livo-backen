@@ -160,4 +160,18 @@ router.get('/chat', isAuth, (req, res) => {
   res.render('profile/chat', { user: req.session.user });
 });
 
-module.exports = router;
+module.exports = router; 
+
+
+router.get('/account-record', isAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM coin_transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 100',
+      [req.session.user.id]
+    );
+    res.render('profile/transactions', { user: req.session.user, transactions: result.rows });
+  } catch (err) {
+    res.render('profile/transactions', { user: req.session.user, transactions: [] });
+  }
+});
+
