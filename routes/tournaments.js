@@ -92,7 +92,7 @@ router.post('/:id/join', isAuth, async (req, res) => {
     console.error('Join tournament error:', err);
     req.flash('error', 'আগেই যোগ দিয়েছেন অথবা সমস্যা হয়েছে।');
   }
-  res.redirect(`/tournaments/${tId}`);
+  res.redirect(`/tournaments/${req.params.id}`);
 });
 
 module.exports = router;

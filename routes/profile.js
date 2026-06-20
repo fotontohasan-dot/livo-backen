@@ -119,8 +119,56 @@ router.get('/stats', isAuth, async (req, res) => {
   }
 });
 
-router.get('/security', isAuth, (req, res) => {
-  res.render('profile/security', { user: req.session.user });
+router.get('/security', isAuth, async (req, res) => {
+  try {
+    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [req.session.user.id]);
+    const bankCards = await pool.query('SELECT * FROM bank_cards WHERE user_id = $1', [req.session.user.id]);
+    res.render('profile/security', {
+      user: userResult.rows[0],
+      bankCards: bankCards.rows
+    });
+  } catch (err) {
+    console.error(err);
+    res.render('profile/security', { user: req.session.user, bankCards: [] });
+  }
+});
+
+router.post('/update-personal', isAuth, async (req, res) => {
+  try {
+    const { full_name, phone } = req.body;
+    await pool.query('UPDATE users SET full_name = $1, phone = $2 WHERE id = $3', [full_name, phone, req.session.user.id]);
+    req.flash('success', 'ব্যক্তিগত তথ্য আপডেট করা হয়েছে!');
+    res.redirect('/profile/security');
+  } catch (err) {
+    req.flash('error', 'তথ্য আপডেট করতে সমস্যা হয়েছে।');
+    res.redirect('/profile/security');
+  }
+});
+
+router.post('/add-bank-card', isAuth, async (req, res) => {
+  try {
+    const { bank_name, account_number, holder_name } = req.body;
+    await pool.query(
+      'INSERT INTO bank_cards (user_id, bank_name, account_number, holder_name) VALUES ($1, $2, $3, $4)',
+      [req.session.user.id, bank_name, account_number, holder_name]
+    );
+    req.flash('success', 'ব্যাঙ্ক কার্ড/ওয়ালেট যোগ করা হয়েছে!');
+    res.redirect('/profile/security');
+  } catch (err) {
+    req.flash('error', 'কার্ড যোগ করতে সমস্যা হয়েছে।');
+    res.redirect('/profile/security');
+  }
+});
+
+router.post('/delete-bank-card/:id', isAuth, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM bank_cards WHERE id = $1 AND user_id = $2', [req.params.id, req.session.user.id]);
+    req.flash('success', 'কার্ড মুছে ফেলা হয়েছে।');
+    res.redirect('/profile/security');
+  } catch (err) {
+    req.flash('error', 'মুছে ফেলতে সমস্যা হয়েছে।');
+    res.redirect('/profile/security');
+  }
 });
 
 router.get('/missions', isAuth, (req, res) => {
