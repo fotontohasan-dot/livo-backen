@@ -17,14 +17,14 @@ router.get('/', isAuth, async (req, res) => {
 
     const tournaments = await pool.query(`
       SELECT
-        COALESCE(t.name, 'টুর্নামেন্ট') as name,
+        COALESCE(t.name, t.title, 'টর্নামেন্ট') as name,
         COALESCE(t.sport, 'General') as sport,
         COALESCE(tp.points, 0) as points,
-        COALESCE(tp.joined_at, tp.created_at) as joined_at
+        tp.joined_at as joined_at
       FROM tournament_participants tp
       JOIN tournaments t ON tp.tournament_id = t.id
       WHERE tp.user_id = $1
-      ORDER BY tp.created_at DESC
+      ORDER BY tp.joined_at DESC
     `, [req.session.user.id]);
 
     const stats = await pool.query(`
@@ -45,7 +45,7 @@ router.get('/', isAuth, async (req, res) => {
     });
   } catch (err) {
     console.error('Profile error:', err);
-    req.flash('error', 'পফাইল লোড করতে সমস্যা হয়েছে।');
+    req.flash('error', 'প্রোফাইল লড করতে সমস্যা হয়েছে।');
     res.redirect('/');
   }
 });
@@ -57,7 +57,7 @@ router.post('/update', isAuth, async (req, res) => {
     req.session.user.username = username;
     req.flash('success', 'প্রোফাইল আপডেট হয়েছে!');
   } catch (err) {
-    req.flash('error', 'আপডেট করত সমস্যা হযছে।');
+    req.flash('error', 'আপডেট করতে সমস্যা হয়েছে।');
   }
   res.redirect('/profile');
 });
@@ -69,7 +69,7 @@ router.post('/change-password', isAuth, async (req, res) => {
     const np = new_password || newPassword;
 
     if (confirmPassword && np !== confirmPassword) {
-      req.flash('error', '❌ নতুন পাসওয়ার্ড মিলছ না।');
+      req.flash('error', '❌ নতুন পাসওয়ার্ড মিলছে না।');
       return res.redirect('/profile/security');
     }
 
@@ -80,10 +80,10 @@ router.post('/change-password', isAuth, async (req, res) => {
     }
     const hashed = await bcrypt.hash(np, 10);
     await pool.query(`UPDATE users SET password=$1 WHERE id=$2`, [hashed, req.session.user.id]);
-    req.flash('success', '✅ পাসওযর্ড পরিবর্তন হয়েছে!');
+    req.flash('success', '✅ পাসওয়ার্ড পরিবর্তন হয়েছে!');
     res.redirect('/profile/security');
   } catch (err) {
-    req.flash('error', '❌ পাসওয়র্ড পরিবর্তন করতে সমস্যা হয়েছে।');
+    req.flash('error', '❌ পাসওয়ার্ড পরিবর্তন করতে সমস্যা হয়েছে।');
     res.redirect('/profile/security');
   }
 });
@@ -98,7 +98,7 @@ router.get('/history', isAuth, async (req, res) => {
     `, [req.session.user.id]);
     res.render('profile/history', { predictions: predictions.rows, user: req.session.user });
   } catch (err) {
-    req.flash('error', 'ইতিহাস লোড করতে সমস্যা হয়েছে।');
+    req.flash('error', 'ইতিহাস লোড করতে সমস্ হয়েছে।');
     res.redirect('/profile');
   }
 });
@@ -114,61 +114,13 @@ router.get('/stats', isAuth, async (req, res) => {
     `, [req.session.user.id]);
     res.render('profile/stats', { stats: stats.rows[0], user: req.session.user });
   } catch (err) {
-    req.flash('error', 'স্ট্যাটস লোড করতে সমস্যা হয়েছে।');
+    req.flash('error', 'স্টস লোড করতে সমস্যা হয়েছে।');
     res.redirect('/profile');
   }
 });
 
-router.get('/security', isAuth, async (req, res) => {
-  try {
-    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [req.session.user.id]);
-    const bankCards = await pool.query('SELECT * FROM bank_cards WHERE user_id = $1', [req.session.user.id]);
-    res.render('profile/security', {
-      user: userResult.rows[0],
-      bankCards: bankCards.rows
-    });
-  } catch (err) {
-    console.error(err);
-    res.render('profile/security', { user: req.session.user, bankCards: [] });
-  }
-});
-
-router.post('/update-personal', isAuth, async (req, res) => {
-  try {
-    const { full_name, phone } = req.body;
-    await pool.query('UPDATE users SET full_name = $1, phone = $2 WHERE id = $3', [full_name, phone, req.session.user.id]);
-    req.flash('success', 'ব্যক্তিগত তথ্য আপডেট করা হয়েছে!');
-    res.redirect('/profile/security');
-  } catch (err) {
-    req.flash('error', 'তথ্য আপডেট করতে সমস্যা হয়েছে।');
-    res.redirect('/profile/security');
-  }
-});
-
-router.post('/add-bank-card', isAuth, async (req, res) => {
-  try {
-    const { bank_name, account_number, holder_name } = req.body;
-    await pool.query(
-      'INSERT INTO bank_cards (user_id, bank_name, account_number, holder_name) VALUES ($1, $2, $3, $4)',
-      [req.session.user.id, bank_name, account_number, holder_name]
-    );
-    req.flash('success', 'ব্যাঙ্ক কার্ড/ওয়ালেট যোগ করা হয়েছে!');
-    res.redirect('/profile/security');
-  } catch (err) {
-    req.flash('error', 'কার্ড যোগ করতে সমস্যা হয়েছে।');
-    res.redirect('/profile/security');
-  }
-});
-
-router.post('/delete-bank-card/:id', isAuth, async (req, res) => {
-  try {
-    await pool.query('DELETE FROM bank_cards WHERE id = $1 AND user_id = $2', [req.params.id, req.session.user.id]);
-    req.flash('success', 'কার্ড মুছে ফেলা হয়েছে।');
-    res.redirect('/profile/security');
-  } catch (err) {
-    req.flash('error', 'মুছে ফেলতে সমস্যা হয়েছে।');
-    res.redirect('/profile/security');
-  }
+router.get('/security', isAuth, (req, res) => {
+  res.render('profile/security', { user: req.session.user });
 });
 
 router.get('/missions', isAuth, (req, res) => {
@@ -182,8 +134,8 @@ router.get('/rewards', isAuth, (req, res) => {
 router.get('/referral', isAuth, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT COUNT(*) FROM users WHERE referred_by = $1',
-      [req.session.user.referral_code]
+      'SELECT COUNT(*) FROM users WHERE referred_by_id = $1',
+      [req.session.user.id]
     );
     const referralCount = parseInt(result.rows[0].count);
     res.render('profile/referral', { user: req.session.user, referralCount });
