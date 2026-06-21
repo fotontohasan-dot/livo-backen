@@ -7,6 +7,7 @@ const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
 const flash = require('connect-flash');
 const path = require('path');
+const rateLimit = require('express-rate-limit');
 const { connectDB, pool } = require('./db');
 const { syncMatches } = require('./services/matchUpdater');
 
@@ -34,10 +35,29 @@ app.use(session({
 
 app.use(flash());
 
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+app.use(generalLimiter);
+app.use('/login', loginLimiter);
+app.use('/register', loginLimiter);
+
 // ভাষা (বাংলা / ইংরেজি)
 const translations = {
   bn: {
-    balance: 'ব্যালেন্স', deposit: 'ডিপোজিট', withdraw: 'উইথড্র',
+    balance: 'ব্যালেন্স', deposit: 'ডিপোজট', withdraw: 'উইথড্র',
     login: 'লগইন', register: 'রজিস্টার', logout: 'লগআউট',
     home: 'হোম', invite: 'আমন্ত্রণ', promotion: 'প্রমোশন', support: 'সেবা', member: 'সদস্য',
     menu_home: 'হোম', menu_aviator: 'Aviator', menu_slots: 'Slots', menu_color: 'Color Prediction',
@@ -82,6 +102,10 @@ app.use((req, res, next) => {
 });
 
 app.get('/health', (req, res) => res.status(200).send('OK'));
+app.get('/privacy', (req, res) => res.render('privacy'));
+app.get('/terms', (req, res) => res.render('terms'));
+app.get('/kyc', (req, res) => res.render('kyc'));
+app.get('/rules', (req, res) => res.render('rules'));
 
 app.use('/', require('./routes/auth'));
 app.use('/matches', require('./routes/matches'));
