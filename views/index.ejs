@@ -42,43 +42,30 @@
 
 <div style="display:flex;overflow-x:auto;padding:8px 12px;gap:10px;scrollbar-width:none;" id="catNav">
   <style>#catNav::-webkit-scrollbar { display:none; }</style>
-  <div class="glass cat-item active" data-type="all" style="flex:0 0 auto;padding:8px 16px;border-radius:12px;cursor:pointer;text-align:center;transition:0.3s;border: 1px solid var(--gold);">
-    <div style="font-size:18px;">🔥</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">সবগুলো</div>
+  <div class="glass cat-item active" data-link="/matches" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--gold);">
+    <div style="font-size:22px;">⚽</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">ম্যাচসমূহ</div>
   </div>
-  <div class="cat-item" data-type="slots">
-    <div class="cat-icon">🎰</div>
-    <div class="cat-label">স্লট</div>
+  <div class="glass cat-item" data-link="/tournaments" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--border-glass);">
+    <div style="font-size:22px;">🏆</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">টুর্নামেন্ট</div>
   </div>
-  <div class="cat-item" data-type="live">
-    <div class="cat-icon">🎲</div>
-    <div class="cat-label">লাইভ</div>
+  <div class="glass cat-item" data-link="/leaderboard" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--border-glass);">
+    <div style="font-size:22px;">📊</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">লিডারবোর্ড</div>
   </div>
-  <div class="glass cat-item" data-type="fishing" style="flex:0 0 auto;padding:8px 16px;border-radius:12px;cursor:pointer;text-align:center;transition:0.3s;">
-    <div style="font-size:18px;">🎣</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">ফিশিং</div>
+  <div class="glass cat-item" data-link="/news" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--border-glass);">
+    <div style="font-size:22px;">📰</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">নিউজ</div>
   </div>
-  <div class="cat-item" data-type="sports">
-    <div class="cat-icon">⚽</div>
-    <div class="cat-label">স্পোর্টস</div>
+  <div class="glass cat-item" data-link="/payment/deposit" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--border-glass);">
+    <div style="font-size:22px;">💰</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">ডিপোজিট</div>
   </div>
-  <div class="glass cat-item" data-type="lottery" style="flex:0 0 auto;padding:8px 16px;border-radius:12px;cursor:pointer;text-align:center;transition:0.3s;">
-    <div style="font-size:18px;">🎟️</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">লটারি</div>
+  <div class="glass cat-item" data-link="/chat" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--border-glass);">
+    <div style="font-size:22px;">🎧</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">সাপোর্ট</div>
   </div>
-  <div class="glass cat-item" data-type="lottery" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--border-glass);">
-    <div style="font-size:22px;">🎟️</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">লটারি</div>
-  </div>
-</div>
-
-<div style="display:flex;overflow-x:auto;padding:0 12px 12px;gap:8px;scrollbar-width:none;" id="provNav">
-  <div class="glass prov-item active" data-provider="all" style="flex:0 0 auto;padding:4px 15px;border-radius:20px;font-size:11px;color:var(--text-muted);border:1px solid var(--border-glass);cursor:pointer;">সব প্রোভাইডার</div>
-  <div class="glass prov-item" data-provider="PG" style="flex:0 0 auto;padding:4px 15px;border-radius:20px;font-size:11px;color:var(--text-muted);border:1px solid var(--border-glass);cursor:pointer;">PG Soft</div>
-  <div class="glass prov-item" data-provider="JDB" style="flex:0 0 auto;padding:4px 15px;border-radius:20px;font-size:11px;color:var(--text-muted);border:1px solid var(--border-glass);cursor:pointer;">JDB</div>
-  <div class="glass prov-item" data-provider="PP" style="flex:0 0 auto;padding:4px 15px;border-radius:20px;font-size:11px;color:var(--text-muted);border:1px solid var(--border-glass);cursor:pointer;">Pragmatic</div>
-  <div class="glass prov-item" data-provider="EVO" style="flex:0 0 auto;padding:4px 15px;border-radius:20px;font-size:11px;color:var(--text-muted);border:1px solid var(--border-glass);cursor:pointer;">Evolution</div>
-  <div class="glass prov-item" data-provider="JL" style="flex:0 0 auto;padding:4px 15px;border-radius:20px;font-size:11px;color:var(--text-muted);border:1px solid var(--border-glass);cursor:pointer;">Jili</div>
 </div>
 
 <div style="padding:0 12px 10px;">
@@ -209,17 +196,7 @@ function renderGames() {
   c.innerHTML = '';
   const searchQ = document.getElementById('gameSearch').value.toLowerCase();
 
-  const catActive = document.querySelector('.cat-item.active');
-  const currentType = catActive ? catActive.dataset.type : 'all';
-
-  const provActive = document.querySelector('.prov-item.active');
-  const currentProv = provActive ? provActive.dataset.provider : 'all';
-
-  const filtered = games.filter(g =>
-    (currentType === 'all' || g.type === currentType) &&
-    (currentProv === 'all' || g.provider === currentProv) &&
-    g.name.toLowerCase().includes(searchQ)
-  );
+  const filtered = games.filter(g => g.name.toLowerCase().includes(searchQ));
 
   if (filtered.length === 0) {
     c.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">কোনো গেম পাওয়া যায়নি</div>';
@@ -244,18 +221,8 @@ function renderGames() {
 
 document.querySelectorAll('.cat-item').forEach(el => {
   el.addEventListener('click', () => {
-    document.querySelectorAll('.cat-item').forEach(x => x.classList.remove('active'));
-    el.classList.add('active');
-    document.getElementById('sectionTitle').textContent = el.querySelector('div:last-child').textContent + ' গেমস';
-    renderGames();
-  });
-});
-
-document.querySelectorAll('.prov-item').forEach(el => {
-  el.addEventListener('click', () => {
-    document.querySelectorAll('.prov-item').forEach(x => x.classList.remove('active'));
-    el.classList.add('active');
-    renderGames();
+    const link = el.dataset.link;
+    if (link) location.href = link;
   });
 });
 
@@ -269,7 +236,7 @@ setInterval(() => {
 }, 2000);
 
 document.addEventListener('DOMContentLoaded', renderGames);
-renderGames(); // Call immediately just in case
+renderGames();
 </script>
 
 </body></html>
