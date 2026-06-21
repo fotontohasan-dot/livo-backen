@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
+import multer from 'multer';
 import { z } from 'zod';
 import prisma from '../../utils/prisma';
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 const kycSchema = z.object({
   fullName: z.string().min(3),
@@ -13,7 +16,7 @@ const kycSchema = z.object({
 
 export const submitKyc = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.id || "temp-user-id"; // পরে JWT যোগ হবে
+    const userId = "temp-user-id"; // পরে JWT যোগ হবে
 
     const data = kycSchema.parse(req.body);
 
@@ -23,15 +26,19 @@ export const submitKyc = async (req: Request, res: Response) => {
       create: { userId, ...data, status: 'SUBMITTED' }
     });
 
-    res.status(201).json({ success: true, message: "KYC জমা দেওয়া হয়েছে। রিভিউ চলছে।", data: submission });
+    res.status(201).json({ 
+      success: true, 
+      message: "KYC সফলভাবে জমা দেওয়া হয়েছে। অ্যাডমিন রিভিউ করবে।" 
+    });
   } catch (error: any) {
     res.status(400).json({ success: false, message: error.message });
   }
 };
 
+export { upload };
 export const getKycStatus = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.id || "temp-user-id";
+    const userId = "temp-user-id";
     const kyc = await prisma.kycSubmission.findUnique({ where: { userId } });
     res.json({ success: true, status: kyc?.status || "PENDING" });
   } catch (error) {
