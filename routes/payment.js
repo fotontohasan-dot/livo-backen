@@ -19,6 +19,13 @@ router.get('/deposit', requireLogin, (req, res) => {
 router.post('/deposit', requireLogin, async (req, res) => {
   const { method, amount, transaction_id, account_number } = req.body;
   const userId = req.session.user.id;
+
+  const validMethods = ['bkash', 'nagad', 'rocket', 'crypto'];
+  if (!validMethods.includes(method)) {
+    req.flash('error', 'অকার্যকর পেমেন্ট মেথড');
+    return res.redirect('/payment/deposit');
+  }
+
   if (!method || !amount || !transaction_id || !account_number) {
     req.flash('error', 'সব তথ্য দিন');
     return res.redirect('/payment/deposit');
@@ -53,6 +60,13 @@ router.get('/withdraw', requireLogin, async (req, res) => {
 router.post('/withdraw', requireLogin, async (req, res) => {
   const { method, amount, account_number } = req.body;
   const userId = req.session.user.id;
+
+  const validMethods = ['bkash', 'nagad', 'rocket', 'crypto'];
+  if (!validMethods.includes(method)) {
+    req.flash('error', 'অকার্যকর পেমেন্ট মেথড');
+    return res.redirect('/payment/withdraw');
+  }
+
   if (!method || !amount || !account_number) {
     req.flash('error', 'সব তথ্য দিন');
     return res.redirect('/payment/withdraw');
