@@ -8,12 +8,12 @@ datasource db {
 }
 
 model User {
-  id            String        @id @default(cuid())
-  email         String        @unique
-  kycStatus     KycStatus     @default(PENDING)
+  id            String   @id @default(cuid())
+  email         String   @unique
+  kycStatus     KycStatus @default(PENDING)
   kycSubmission KycSubmission?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 enum KycStatus {
@@ -25,25 +25,25 @@ enum KycStatus {
 }
 
 model KycSubmission {
-  id               String     @id @default(cuid())
-  userId           String     @unique
-  user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String     @id @default(cuid())
+  userId          String     @unique
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  fullName         String
-  dateOfBirth      DateTime
-  nationality      String
-  address          String
-  documentType     String
-  documentNumber   String
+  fullName        String
+  dateOfBirth     DateTime
+  nationality     String
+  address         String
+  documentType    String
+  documentNumber  String
   documentFrontUrl String
   documentBackUrl  String?
-  selfieUrl        String
+  selfieUrl       String
 
-  status           KycStatus  @default(SUBMITTED)
-  reviewNotes      String?
-  reviewedBy       String?
-  reviewedAt       DateTime?
+  status          KycStatus  @default(SUBMITTED)
+  reviewNotes     String?
+  reviewedBy      String?
+  reviewedAt      DateTime?
 
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 }
