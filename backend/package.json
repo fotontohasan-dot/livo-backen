@@ -1,5 +1,5 @@
 {
-  "name": "wisesell-backend",
+  "name": "livo-backen",
   "version": "1.0.0",
   "scripts": {
     "dev": "ts-node-dev src/index.ts",
@@ -12,12 +12,14 @@
     "helmet": "^7.1.0",
     "zod": "^3.23.8",
     "@prisma/client": "^5.15.0",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "multer": "^1.4.5-lts.1"
   },
   "devDependencies": {
     "typescript": "^5.5.3",
     "ts-node-dev": "^2.0.0",
     "@types/express": "^4.17.21",
-    "@types/node": "^20.14.10"
+    "@types/node": "^20.14.10",
+    "@types/multer": "^1.4.12"
   }
 }
