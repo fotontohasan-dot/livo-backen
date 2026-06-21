@@ -18,7 +18,7 @@
     <% news.forEach(n => { %>
       <a href="/news/<%= n.id %>" class="news-card">
         <% if(n.image) { %>
-          <img src="<%= n.image %>" class="news-img" alt="">
+          <img src="<%= n.image %>" class="news-img" alt="" loading="lazy">
         <% } else { %>
           <div class="news-img" style="display:flex;align-items:center;justify-content:center;font-size:3rem;">📰</div>
         <% } %>
