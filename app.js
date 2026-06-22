@@ -9,12 +9,15 @@ const flash = require('connect-flash');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
+const compression = require('compression');
 const { connectDB, pool } = require('./db');
 const { syncMatches } = require('./services/matchUpdater');
 
 const app = express();
 const server = http.createServer(app);
 initSocket(server);
+
+app.use(compression());
 
 app.use(helmet({
   contentSecurityPolicy: {
@@ -33,7 +36,10 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: '7d',
+  etag: true
+}));
 
 app.use(session({
   store: new pgSession({
@@ -68,10 +74,9 @@ app.use(generalLimiter);
 app.use('/login', loginLimiter);
 app.use('/register', loginLimiter);
 
-// ভাষা (বাংলা / ইংরেজি)
 const translations = {
   bn: {
-    balance: 'ব্যালেন্স', deposit: 'ডিপোজট', withdraw: 'উইথড্র',
+    balance: 'ব্যালেন্স', deposit: 'ডিপোজিট', withdraw: 'উইথড্র',
     login: 'লগইন', register: 'রজিস্টার', logout: 'লগআউট',
     home: 'হোম', invite: 'আমন্ত্রণ', promotion: 'প্রমোশন', support: 'সেবা', member: 'সদস্য',
     menu_home: 'হোম', menu_aviator: 'Aviator', menu_slots: 'Slots', menu_color: 'Color Prediction',
