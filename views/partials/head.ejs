@@ -3,20 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title><%= locals.title || 'Livo - সেরা অনলাইন গেমিং প্ল্যাটফর্ম' %></title>
+  <title><%= locals.title || 'Livo - সেরা স্পোর্টস প্রেডিকশন প্ল্যাটফর্ম' %></title>
 
-  <!-- Fonts -->
+  <!-- Preconnect for faster DNS -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Teko:wght@400;600;700&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-  <!-- Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Fonts — async load করা -->
+  <link href="https://fonts.googleapis.com/css2?family=Teko:wght@400;600;700&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript>
+    <link href="https://fonts.googleapis.com/css2?family=Teko:wght@400;600;700&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+  </noscript>
 
-  <!-- Tailwind for utility (optional but kept for compatibility) -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome — async load -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
+  <noscript>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  </noscript>
 
-  <!-- Custom Styles -->
+  <!-- Custom Styles — সবচেয়ে জরুরি, এটা normal রাখো -->
   <link rel="stylesheet" href="/css/style.css">
+
+  <!-- Meta tags for SEO -->
+  <meta name="description" content="LIVO - বাংলাদেশের সেরা স্পোর্টস প্রেডিকশন প্ল্যাটফর্ম। ম্যাচ প্রেডিকশন করুন, কয়েন জিতুন।">
+  <meta name="theme-color" content="#006519">
 </head>
 <body>
