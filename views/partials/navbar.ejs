@@ -1,7 +1,7 @@
 <div class="side-menu" id="sideMenu">
   <div style="padding:20px;border-bottom:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:space-between;">
     <span class="nav-brand" style="color: var(--gold); font-family: 'Teko', sans-serif; font-size: 1.8rem;">LIVO</span>
-    <button onclick="toggleMenu()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;">✕</button>
+    <button onclick="toggleMenu()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer; padding:5px;">✕</button>
   </div>
   <% if(locals.user) { %>
   <div style="padding:15px 20px;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;gap:12px;">
@@ -14,6 +14,7 @@
     </div>
   </div>
   <% } %>
+
   <a href="/" class="menu-item"><i class="fas fa-home"></i> <%= t.menu_home %></a>
   <a href="/games/aviator" class="menu-item"><i class="fas fa-rocket"></i> <%= t.menu_aviator %></a>
   <a href="/games/slots" class="menu-item"><i class="fas fa-slot-machine"></i> <%= t.menu_slots %></a>
@@ -28,6 +29,7 @@
   <% if(locals.user && user.role === 'admin') { %>
   <a href="/admin" class="menu-item" style="color:var(--primary) !important;"><i class="fas fa-cog"></i> <%= t.menu_admin %></a>
   <% } %>
+
   <div style="padding:13px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,0.05);">
     <span style="color:#94a3b8;font-size:13px;">🌐</span>
     <div class="lang-switch">
@@ -35,6 +37,7 @@
       <a href="/lang/en" class="lang-btn <%= lang === 'en' ? 'active' : '' %>">EN</a>
     </div>
   </div>
+
   <% if(locals.user) { %>
   <a href="/logout" class="menu-item" style="color:#ef4444 !important;"><i class="fas fa-sign-out-alt"></i> <%= t.logout %></a>
   <% } else { %>
@@ -42,124 +45,33 @@
   <a href="/register" class="menu-item" style="color:var(--gold) !important;"><i class="fas fa-user-plus"></i> <%= t.register %></a>
   <% } %>
 </div>
+
 <div class="menu-overlay" id="menuOverlay" onclick="toggleMenu()"></div>
 
-<nav class="navbar" style="background: var(--grad-primary);">
+<nav class="navbar" style="background: var(--grad-primary); position: relative; z-index: 10000;">
   <div style="display:flex;align-items:center;gap:12px;">
-    <button onclick="toggleMenu()" style="background:none;border:none;color:#fff;font-size:24px;cursor:pointer;padding:0;line-height:1;"><i class="fas fa-bars"></i></button>
+    <button onclick="toggleMenu()" 
+            style="background:none;border:none;color:#fff;font-size:24px;cursor:pointer;padding:8px 12px; pointer-events: auto;">
+      <i class="fas fa-bars"></i>
+    </button>
     <div class="nav-brand" style="color: #fff; font-family: 'Teko', sans-serif; font-size: 1.8rem; letter-spacing: 1px;">LIVO</div>
   </div>
+
   <div style="display:flex;align-items:center;gap:12px;">
-    <button id="theme-toggle-nav" class="glass" style="width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--gold); border: 1px solid var(--border-glass); cursor: pointer; background: none;">
+    <button id="theme-toggle-nav" class="glass" 
+            style="width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--gold); border: 1px solid var(--border-glass); cursor: pointer; background: none; pointer-events: auto;">
       <i class="fas fa-moon nav-theme-icon"></i>
     </button>
+
     <% if(locals.user) { %>
       <div class="glass" style="padding:4px 12px;border-radius:20px;font-size:13px;color:var(--gold);display:flex;align-items:center;gap:4px;font-family:'Teko',sans-serif;font-weight:700;">💰 <%= user.coins %></div>
       <div style="display:flex;gap:12px;">
-        <a href="/notifications" style="color:#fff;font-size:18px;"><i class="fas fa-bell"></i></a>
-        <a href="/news" style="color:#fff;font-size:18px;"><i class="fas fa-envelope"></i></a>
+        <a href="/notifications" style="color:#fff;font-size:18px; padding:8px; pointer-events: auto;"><i class="fas fa-bell"></i></a>
+        <a href="/news" style="color:#fff;font-size:18px; padding:8px; pointer-events: auto;"><i class="fas fa-envelope"></i></a>
       </div>
     <% } else { %>
-      <a href="/login" class="btn btn-primary" style="padding:6px 14px;border-radius:20px;font-size:12px;"><%= t.login %></a>
-      <a href="/register" class="btn btn-secondary" style="padding:6px 14px;border-radius:20px;font-size:12px;"><%= t.register %></a>
+      <a href="/login" class="btn btn-primary" style="padding:6px 14px;border-radius:20px;font-size:12px; pointer-events: auto;"><%= t.login %></a>
+      <a href="/register" class="btn btn-secondary" style="padding:6px 14px;border-radius:20px;font-size:12px; pointer-events: auto;"><%= t.register %></a>
     <% } %>
   </div>
 </nav>
-
-<script>
-(function() {
-  const currentTheme = localStorage.getItem('theme') || 'dark';
-  if (currentTheme === 'light') {
-    document.body.classList.add('light-mode');
-  }
-
-  function updateAllThemeIcons(theme) {
-    const icons = document.querySelectorAll('.nav-theme-icon, #theme-icon');
-    icons.forEach(icon => {
-      if (theme === 'light') {
-        icon.classList.remove('fa-moon');
-        icon.classList.add('fa-sun');
-      } else {
-        icon.classList.remove('fa-sun');
-        icon.classList.add('fa-moon');
-      }
-    });
-  }
-
-  window.addEventListener('DOMContentLoaded', () => {
-    updateAllThemeIcons(localStorage.getItem('theme') || 'dark');
-
-    const themeToggles = ['theme-toggle-nav', 'theme-toggle-profile'];
-    themeToggles.forEach(id => {
-      const toggle = document.getElementById(id);
-      if (toggle) {
-        toggle.addEventListener('click', () => {
-          const isLight = document.body.classList.toggle('light-mode');
-          const newTheme = isLight ? 'light' : 'dark';
-          localStorage.setItem('theme', newTheme);
-          updateAllThemeIcons(newTheme);
-        });
-      }
-    });
-  });
-})();
-
-function toggleMenu() {
-  const menu = document.getElementById('sideMenu');
-  const overlay = document.getElementById('menuOverlay');
-  menu.classList.toggle('open');
-  overlay.classList.toggle('open');
-}
-</script>
-
-<% if(locals.user) { %>
-<div class="top-balance-bar">
-  <div style="display:flex;align-items:center;gap:8px;">
-    <span style="font-size:13px;color:var(--text-muted);"><%= t.balance %>:</span>
-    <div class="balance-amount">৳ <%= user.coins %></div>
-  </div>
-  <div style="display:flex;gap:8px;">
-    <a href="/payment/deposit" class="btn btn-primary" style="padding:5px 12px;font-size:12px;border-radius:8px;"><%= t.deposit %></a>
-    <a href="/payment/withdraw" class="btn glass" style="padding:5px 12px;font-size:12px;border-radius:8px;color:var(--gold);border-color:rgba(245,158,11,0.3);font-weight:700;"><%= t.withdraw %></a>
-  </div>
-</div>
-<% } %>
-
-<style>
-.side-menu {
-  position: fixed;
-  top: 0;
-  left: -280px;
-  width: 280px;
-  height: 100%;
-  background: #002d0b;
-  z-index: 9999;
-  transition: left 0.3s;
-  border-right: 1px solid rgba(255,255,255,0.1);
-  overflow-y: auto;
-}
-.side-menu.open { left: 0; }
-.menu-overlay {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.7);
-  z-index: 9998;
-}
-.menu-overlay.open { display: block; }
-.menu-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 13px 20px;
-  color: #94a3b8;
-  text-decoration: none;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
-  font-size: 14px;
-}
-.menu-item i { width: 20px; text-align: center; }
-.menu-item:hover { background: rgba(0, 150, 37, 0.1); color: #fff; }
-</style>
