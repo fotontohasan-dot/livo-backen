@@ -66,3 +66,41 @@
     <% } %>
   </div>
 </nav>
+
+<script>
+function toggleMenu() {
+  var menu = document.getElementById('sideMenu');
+  var overlay = document.getElementById('menuOverlay');
+  if (!menu) return;
+  var willOpen = !menu.classList.contains('open');
+  menu.classList.toggle('open', willOpen);
+  if (overlay) overlay.classList.toggle('show', willOpen);
+  document.body.classList.toggle('menu-open', willOpen);
+}
+window.toggleMenu = toggleMenu;
+
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') {
+    var menu = document.getElementById('sideMenu');
+    if (menu && menu.classList.contains('open')) toggleMenu();
+  }
+});
+
+(function () {
+  var btn = document.getElementById('theme-toggle-nav');
+  function applyTheme(theme) {
+    var light = theme === 'light';
+    document.body.classList.toggle('light-mode', light);
+    var icon = document.querySelector('.nav-theme-icon');
+    if (icon) icon.className = 'fas ' + (light ? 'fa-sun' : 'fa-moon') + ' nav-theme-icon';
+  }
+  applyTheme(localStorage.getItem('livo-theme') || 'dark');
+  if (btn) {
+    btn.addEventListener('click', function () {
+      var next = document.body.classList.contains('light-mode') ? 'dark' : 'light';
+      localStorage.setItem('livo-theme', next);
+      applyTheme(next);
+    });
+  }
+})();
+</script>
