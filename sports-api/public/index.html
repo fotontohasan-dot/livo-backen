@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Live Sports + Predictions</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; background: #0f172a; color: #e2e8f0; }
+  header { padding: 16px; background: #1e293b; font-size: 20px; font-weight: 600; }
+  .wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px; }
+  @media (max-width: 800px){ .wrap{ grid-template-columns: 1fr; } }
+  h2 { margin: 0 0 8px; font-size: 16px; color: #94a3b8; }
+  .match { background: #1e293b; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+  .teams { display:flex; justify-content:space-between; font-weight:600; }
+  .score { color:#38bdf8; }
+  .meta { font-size:12px; color:#64748b; margin-top:4px; }
+  .predict button { margin:4px 4px 0 0; padding:6px 10px; border:none; border-radius:6px;
+    background:#334155; color:#e2e8f0; cursor:pointer; font-size:12px; }
+  .predict button:hover { background:#475569; }
+  .tally { font-size:11px; color:#a5b4fc; margin-top:4px; }
+  #status { font-size:12px; padding:4px 16px; color:#64748b; }
+</style>
+</head>
+<body>
+<header>⚽🏏 Live Sports + Predictions</header>
+<div id="status">connecting…</div>
+<div class="wrap">
+  <div><h2>Football (live)</h2><div id="football"></div></div>
+  <div><h2>Cricket (live)</h2><div id="cricket"></div></div>
+</div>
+
+<script>
+const userId = localStorage.getItem("uid") || (() => {
+  const id = "u" + Math.random().toString(36).slice(2,9);
+  localStorage.setItem("uid", id); return id;
+})();
+
+const ws = new WebSocket(`ws://${location.host}`);
+const status = document.getElementById("status");
+ws.onopen = () => status.textContent = "🟢 live connected";
+ws.onclose = () => status.textContent = "🔴 disconnected — reload";
+ws.onmessage = (e) => {
+  const { type, data } = JSON.parse(e.data);
+  if (type === "football") renderFootball(data);
+  if (type === "cricket") renderCricket(data);
+};
+
+function renderFootball(matches) {
+  const el = document.getElementById("football");
+  if (!matches || !matches.length) { el.innerHTML = "<div class='meta'>এখন কোনো লাইভ ম্যাচ নেই</div>"; return; }
+  el.innerHTML = matches.map(m => {
+    const id = m.fixture.id;
+    const h = m.teams.home.name, a = m.teams.away.name;
+    const sh = m.goals.home ?? 0, sa = m.goals.away ?? 0;
+    const min = m.fixture.status.elapsed;
+    return `<div class="match">
+      <div class="teams"><span>${h}</span><span class="score">${sh} - ${sa}</span><span>${a}</span></div>
+      <div class="meta">${min ?? ""}' · ${m.league.name}</div>
+      <div class="predict" data-id="${id}">
+        <button onclick="predict('${id}','${h}')">${h}</button>
+        <button onclick="predict('${id}','Draw')">Draw</button>
+        <button onclick="predict('${id}','${a}')">${a}</button>
+        <div class="tally" id="t-${id}"></div>
+      </div></div>`;
+  }).join("");
+}
+
+function renderCricket(matches) {
+  const el = document.getElementById("cricket");
+  if (!matches || !matches.length) { el.innerHTML = "<div class='meta'>এখন কোনো লাইভ ম্যাচ নেই</div>"; return; }
+  el.innerHTML = matches.slice(0,10).map(m => {
+    const id = m.id;
+    const score = (m.score||[]).map(s => `${s.inning}: ${s.r}/${s.w} (${s.o})`).join("<br>");
+    const teams = (m.teams||[]).join(" vs ");
+    return `<div class="match">
+      <div class="teams"><span>${teams}</span></div>
+      <div class="meta">${m.status||""}</div>
+      <div class="score" style="font-size:12px;margin-top:4px">${score||""}</div>
+      <div class="predict" data-id="${id}">
+        ${(m.teams||[]).map(t=>`<button onclick="predict('${id}','${t}')">${t}</button>`).join("")}
+        <div class="tally" id="t-${id}"></div>
+      </div></div>`;
+  }).join("");
+}
+
+async function predict(matchId, pick) {
+  await fetch("/api/predict", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ matchId, userId, pick })
+  });
+  loadTally(matchId);
+}
+async function loadTally(matchId) {
+  const r = await fetch("/api/predict/" + matchId);
+  const { tally } = await r.json();
+  const el = document.getElementById("t-" + matchId);
+  if (el) el.textContent = Object.entries(tally).map(([k,v])=>`${k}: ${v}`).join(" · ");
+}
+</script>
+</body>
+</html>
