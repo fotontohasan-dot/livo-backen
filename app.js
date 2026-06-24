@@ -199,6 +199,21 @@ async function migrateDB() {
       );
     `);
 
+    // প্রেডিকশন টেবিল (এই অংশটা নতুন)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS predictions (
+          id SERIAL PRIMARY KEY,
+          user_id INT REFERENCES users(id),
+          match_id INT,
+          market VARCHAR(50),
+          pick VARCHAR(100),
+          points INT DEFAULT 0,
+          status VARCHAR(20) DEFAULT 'pending',
+          created_at TIMESTAMP DEFAULT NOW(),
+          UNIQUE(user_id, match_id, market)
+      );
+    `);
+
     // পুরোনো টেবিলে কলাম না থাকলে যোগ করা (এই অংশটা নতুন)
     await pool.query(`
       ALTER TABLE matches ADD COLUMN IF NOT EXISTS overs TEXT;
