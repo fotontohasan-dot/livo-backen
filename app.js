@@ -199,6 +199,16 @@ async function migrateDB() {
       );
     `);
 
+    // পুরোনো টেবিলে কলাম না থাকলে যোগ করা (এই অংশটা নতুন)
+    await pool.query(`
+      ALTER TABLE matches ADD COLUMN IF NOT EXISTS overs TEXT;
+      ALTER TABLE matches ADD COLUMN IF NOT EXISTS score_a TEXT;
+      ALTER TABLE matches ADD COLUMN IF NOT EXISTS score_b TEXT;
+      ALTER TABLE matches ADD COLUMN IF NOT EXISTS result VARCHAR(50);
+      ALTER TABLE matches ADD COLUMN IF NOT EXISTS winner VARCHAR(100);
+      ALTER TABLE matches ADD COLUMN IF NOT EXISTS match_date TIMESTAMP;
+    `);
+
     console.log('✅ DB migration done');
   } catch (err) {
     console.error('Migration error:', err.message);
