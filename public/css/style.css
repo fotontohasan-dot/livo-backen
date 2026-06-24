@@ -203,9 +203,20 @@ body {
 .card {
     background: var(--bg-card);
     border: 1px solid var(--border-glass);
-    border-radius: 20px;
+    border-radius: 16px;
     overflow: hidden;
+    padding: 14px;
+    margin-bottom: 12px;
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
 }
+
+body.light-mode .card {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
 
 .card-body {
     padding: 20px;
