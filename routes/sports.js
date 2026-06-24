@@ -3,13 +3,13 @@ const router = express.Router();
 
 // Sports Hub Main Page
 router.get('/', (req, res) => {
-  res.render('sports/index', {
+  res.render('sports/index', { 
     currentPage: 'sports',
     title: 'Sports Hub'
   });
 });
 
-// Cricket Page
+// Cricket Section
 router.get('/cricket', (req, res) => {
   res.render('matches', { 
     currentPage: 'cricket',
@@ -17,7 +17,7 @@ router.get('/cricket', (req, res) => {
   });
 });
 
-// Football Page (এখনো ডেভেলপমেন্টে)
+// Football Section
 router.get('/football', (req, res) => {
   res.render('sports/index', { 
     currentPage: 'football',
@@ -25,7 +25,7 @@ router.get('/football', (req, res) => {
   });
 });
 
-// Tennis Page
+// Tennis Section
 router.get('/tennis', (req, res) => {
   res.render('sports/index', { 
     currentPage: 'tennis',
