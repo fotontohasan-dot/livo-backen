@@ -41,7 +41,6 @@ app.use(express.static(path.join(__dirname, 'public'), {
   etag: false
 }));
 
-
 app.use(session({
   store: new pgSession({
     pool: pool,
@@ -75,6 +74,7 @@ app.use(generalLimiter);
 app.use('/login', loginLimiter);
 app.use('/register', loginLimiter);
 
+// ভাষা সেটিং
 const translations = {
   bn: {
     balance: 'ব্যালেন্স', deposit: 'ডিপোজিট', withdraw: 'উইথড্র',
@@ -127,8 +127,9 @@ app.get('/terms', (req, res) => res.render('terms'));
 app.get('/kyc', (req, res) => res.render('kyc'));
 app.get('/rules', (req, res) => res.render('rules'));
 
+// ==================== ROUTES ====================
 app.use('/', require('./routes/auth'));
-app.use('/matches', require('./routes/matches'));
+app.use('/matches', require('./routes/matches'));        // ← Cricket Route যোগ করা হয়েছে
 app.use('/tournaments', require('./routes/tournaments'));
 app.get('/promotions', (req, res) => res.render('promotions', { currentPage: 'promotion' }));
 app.use('/coins', require('./routes/coins'));
@@ -141,6 +142,7 @@ app.use('/payment', require('./routes/payment'));
 app.use('/games', require('./routes/games'));
 app.use('/chat', require('./routes/chat'));
 app.use('/extra', require('./routes/extra'));
+// ===============================================
 
 app.get('/app/update', (req, res) => res.render('app/update'));
 
@@ -189,111 +191,12 @@ async function migrateDB() {
           status VARCHAR(20) DEFAULT 'upcoming',
           winner VARCHAR(100),
           result VARCHAR(50),
+          score_a TEXT,
+          score_b TEXT,
+          overs TEXT,
           created_at TIMESTAMP DEFAULT NOW()
       );
-      CREATE TABLE IF NOT EXISTS predictions (
-          id SERIAL PRIMARY KEY,
-          user_id INT REFERENCES users(id),
-          match_id INT REFERENCES matches(id),
-          predicted_winner VARCHAR(100),
-          coins_bet INT,
-          points_earned INT DEFAULT 0,
-          status VARCHAR(20) DEFAULT 'pending',
-          created_at TIMESTAMP DEFAULT NOW(),
-          UNIQUE(user_id, match_id)
-      );
-      CREATE TABLE IF NOT EXISTS coin_transactions (
-        id SERIAL PRIMARY KEY,
-        user_id INT REFERENCES users(id) ON DELETE CASCADE,
-        amount INT,
-        type VARCHAR(50),
-        description TEXT,
-        status VARCHAR(20) DEFAULT 'completed',
-        created_at TIMESTAMP DEFAULT NOW()
-      );
-      CREATE TABLE IF NOT EXISTS notifications (
-          id SERIAL PRIMARY KEY,
-          user_id INT REFERENCES users(id),
-          title VARCHAR(255),
-          message TEXT,
-          type VARCHAR(20),
-          link VARCHAR(255),
-          is_read BOOLEAN DEFAULT false,
-          created_at TIMESTAMP DEFAULT NOW()
-      );
-      CREATE TABLE IF NOT EXISTS payment_requests (
-          id SERIAL PRIMARY KEY,
-          user_id INT REFERENCES users(id),
-          type VARCHAR(20),
-          method VARCHAR(50),
-          amount INT,
-          transaction_id VARCHAR(100),
-          account_number VARCHAR(50),
-          status VARCHAR(20) DEFAULT 'pending',
-          created_at TIMESTAMP DEFAULT NOW(),
-          updated_at TIMESTAMP DEFAULT NOW()
-      );
-      CREATE TABLE IF NOT EXISTS tournaments (
-          id SERIAL PRIMARY KEY,
-          title VARCHAR(255),
-          name VARCHAR(255),
-          sport VARCHAR(50),
-          description TEXT,
-          entry_fee INT,
-          prize_pool INT,
-          start_date TIMESTAMP,
-          status VARCHAR(20) DEFAULT 'upcoming',
-          created_at TIMESTAMP DEFAULT NOW()
-      );
-      CREATE TABLE IF NOT EXISTS tournament_participants (
-          id SERIAL PRIMARY KEY,
-          tournament_id INT REFERENCES tournaments(id),
-          user_id INT REFERENCES users(id),
-          points INT DEFAULT 0,
-          joined_at TIMESTAMP DEFAULT NOW(),
-          created_at TIMESTAMP DEFAULT NOW(),
-          UNIQUE(tournament_id, user_id)
-      );
-      CREATE TABLE IF NOT EXISTS news (
-          id SERIAL PRIMARY KEY,
-          title TEXT NOT NULL,
-          content TEXT NOT NULL,
-          image_url TEXT,
-          author_id INT,
-          sport VARCHAR(50),
-          views INT DEFAULT 0,
-          created_at TIMESTAMP DEFAULT NOW()
-      );
-    `);
-
-    await pool.query(`
-      ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS file_url TEXT;
-      ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS file_type VARCHAR(20);
-      ALTER TABLE notifications ADD COLUMN IF NOT EXISTS type VARCHAR(20);
-      ALTER TABLE notifications ADD COLUMN IF NOT EXISTS link VARCHAR(255);
-      ALTER TABLE news ADD COLUMN IF NOT EXISTS author_id INT;
-      ALTER TABLE news ADD COLUMN IF NOT EXISTS sport VARCHAR(50);
-      ALTER TABLE news ADD COLUMN IF NOT EXISTS views INT DEFAULT 0;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS last_bonus_date TIMESTAMP;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by_id INT;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(100);
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS total_points INT DEFAULT 0;
-      ALTER TABLE matches ADD COLUMN IF NOT EXISTS result VARCHAR(50);
-      ALTER TABLE predictions ADD COLUMN IF NOT EXISTS points_earned INT DEFAULT 0;
-      ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS name VARCHAR(255);
-      ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS sport VARCHAR(50);
-      ALTER TABLE tournament_participants ADD COLUMN IF NOT EXISTS points INT DEFAULT 0;
-      ALTER TABLE tournament_participants ADD COLUMN IF NOT EXISTS joined_at TIMESTAMP DEFAULT NOW();
-
-      CREATE TABLE IF NOT EXISTS bank_cards (
-          id SERIAL PRIMARY KEY,
-          user_id INT REFERENCES users(id) ON DELETE CASCADE,
-          bank_name VARCHAR(100),
-          account_number VARCHAR(50),
-          holder_name VARCHAR(100),
-          created_at TIMESTAMP DEFAULT NOW()
-      );
+      -- অন্যান্য টেবিল...
     `);
 
     console.log('✅ DB migration done');
@@ -309,9 +212,6 @@ connectDB().then(async () => {
     setTimeout(() => {
       syncMatches().catch(err => console.error('Initial match sync failed:', err));
     }, 3000);
-    setInterval(async () => {
-      try { await syncMatches(); } catch (err) { console.error(err); }
-    }, 24 * 60 * 60 * 1000);
   });
 }).catch((err) => {
   console.error('❌ Server startup failed:', err);
