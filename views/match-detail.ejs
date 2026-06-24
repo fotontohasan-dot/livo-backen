@@ -1,49 +1,68 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
-  <%- include('../partials/head') %>
-  <title><%= match.team_a %> vs <%= match.team_b %> | Live</title>
+  <%- include('partials/head') %>
+  <title><%= match.team_a %> vs <%= match.team_b %> - Live | <%= siteName %></title>
+  <style>
+    .live-dot { animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  </style>
 </head>
-<body class="bg-zinc-950 text-white pb-20">
+<body class="bg-zinc-950 text-white min-h-screen pb-20">
 
-  <%- include('../partials/header') %>
+  <%- include('partials/header') %>
+
+  <!-- Top Bar -->
+  <div class="bg-yellow-500 p-4 flex items-center justify-between sticky top-0 z-50">
+    <div class="flex items-center gap-3">
+      <div class="bg-black text-yellow-500 px-5 py-1.5 rounded font-bold">💰 Bets</div>
+    </div>
+    <div class="text-sm font-medium">
+      Main BDT 0.00<br>
+      <span class="text-xs">Exposure 0.00</span>
+    </div>
+    <div class="flex gap-3">
+      <button class="p-3 bg-zinc-900 rounded-xl">🔄</button>
+      <button class="p-3 bg-zinc-900 rounded-xl">⚙️</button>
+    </div>
+  </div>
 
   <!-- Score Header -->
-  <div class="bg-zinc-900 p-4">
+  <div class="bg-zinc-900 p-5">
     <div class="flex justify-between items-center">
-      <div>
-        <div class="flex items-center gap-3">
-          <div class="bg-teal-600 w-10 h-10 rounded flex items-center justify-center text-xl">SL</div>
-          <div>
-            <div class="font-bold"><%= match.team_a %></div>
-            <div class="text-3xl font-bold text-yellow-400"><%= match.score_a || '360/10' %></div>
-            <div class="text-sm text-gray-400">50.0 / 50 Ovs</div>
-          </div>
+      <!-- Team A -->
+      <div class="text-center flex-1">
+        <div class="flex justify-center mb-2">
+          <div class="bg-teal-600 w-12 h-12 rounded-xl flex items-center justify-center text-2xl font-bold">SL</div>
         </div>
+        <div class="font-bold text-lg"><%= match.team_a %></div>
+        <div class="text-3xl font-bold text-yellow-400 mt-1"><%= match.score_a || '360/10' %></div>
+        <div class="text-sm text-gray-400"><%= match.overs_a || '50.0' %> / 50 Ovs</div>
       </div>
 
-      <div class="text-center">
-        <div class="text-green-500 font-bold">LIVE</div>
-        <div class="text-4xl font-black text-yellow-400">VS</div>
+      <div class="text-center px-4">
+        <div class="text-green-500 font-bold text-sm flex items-center justify-center gap-1">
+          <span class="w-3 h-3 bg-green-500 rounded-full live-dot"></span> LIVE
+        </div>
+        <div class="text-5xl font-black text-yellow-400 my-2">VS</div>
       </div>
 
-      <div class="text-right">
-        <div class="flex items-center gap-3 justify-end">
-          <div>
-            <div class="font-bold"><%= match.team_b %></div>
-            <div class="text-3xl font-bold text-yellow-400"><%= match.score_b || '122/4' %></div>
-            <div class="text-sm text-gray-400">24.3 / 50 Ovs</div>
-          </div>
-          <div class="bg-orange-600 w-10 h-10 rounded flex items-center justify-center text-xl">WI</div>
+      <!-- Team B -->
+      <div class="text-center flex-1">
+        <div class="flex justify-center mb-2">
+          <div class="bg-orange-600 w-12 h-12 rounded-xl flex items-center justify-center text-2xl font-bold">WI</div>
         </div>
+        <div class="font-bold text-lg"><%= match.team_b %></div>
+        <div class="text-3xl font-bold text-yellow-400 mt-1"><%= match.score_b || '122/4' %></div>
+        <div class="text-sm text-gray-400"><%= match.overs_b || '24.3' %> / 50 Ovs</div>
       </div>
     </div>
 
     <!-- Win Probability -->
-    <div class="mt-6 bg-emerald-950 p-4 rounded-xl">
-      <div class="flex justify-between text-sm mb-2">
-        <div><%= match.team_a %> <span class="text-emerald-400 font-bold">99%</span></div>
-        <div><%= match.team_b %> <span class="text-red-400 font-bold">2%</span></div>
+    <div class="mt-6 bg-emerald-950/80 p-4 rounded-2xl">
+      <div class="flex justify-between text-sm mb-3">
+        <span><%= match.team_a %> <strong class="text-emerald-400">99%</strong></span>
+        <span><%= match.team_b %> <strong class="text-red-400">2%</strong></span>
       </div>
       <div class="h-3 bg-gray-700 rounded-full overflow-hidden">
         <div class="h-3 bg-emerald-500 rounded-full" style="width: 99%"></div>
@@ -51,32 +70,51 @@
     </div>
   </div>
 
-  <!-- Betting Markets -->
+  <!-- Markets -->
   <div class="p-4 space-y-6">
-    <div class="bg-zinc-900 rounded-xl overflow-hidden">
-      <div class="bg-orange-600 px-5 py-3 font-bold">Match Winner</div>
-      <div class="p-5 grid grid-cols-2 gap-4">
-        <div class="bg-zinc-800 p-4 rounded-xl text-center font-semibold"><%= match.team_b %></div>
-        <div class="border-2 border-red-500 text-red-500 font-bold text-center py-4 rounded-xl">Suspend</div>
+    <!-- Match Winner -->
+    <div class="bg-zinc-900 rounded-2xl overflow-hidden">
+      <div class="bg-orange-600 px-6 py-3 font-bold text-lg">Match Winner</div>
+      <div class="p-6 grid grid-cols-2 gap-4">
+        <div class="bg-zinc-800 p-5 rounded-2xl text-center font-semibold text-lg">
+          <%= match.team_b %>
+        </div>
+        <div class="border-2 border-red-500 text-red-500 font-bold text-center py-5 rounded-2xl text-xl">
+          Suspend
+        </div>
       </div>
     </div>
 
-    <!-- Over/Under -->
-    <div class="bg-zinc-900 rounded-xl p-5">
+    <!-- Over/Under Markets -->
+    <div class="bg-zinc-900 rounded-2xl p-6">
       <h3 class="font-bold mb-4">1st Innings <%= match.team_b %> 30 Overs Total Runs</h3>
       <div class="grid grid-cols-2 gap-4">
-        <div class="text-center bg-emerald-900/30 p-4 rounded-xl">
-          <div class="text-emerald-400 text-sm">Over</div>
-          <div class="text-3xl font-bold text-emerald-400">1.84</div>
+        <div class="bg-emerald-900/30 p-5 rounded-2xl text-center">
+          <div class="text-emerald-400 text-sm">Over 149.5</div>
+          <div class="text-4xl font-bold text-emerald-400 mt-2">1.84</div>
         </div>
-        <div class="text-center bg-emerald-900/30 p-4 rounded-xl">
-          <div class="text-emerald-400 text-sm">Under</div>
-          <div class="text-3xl font-bold text-emerald-400">1.80</div>
+        <div class="bg-emerald-900/30 p-5 rounded-2xl text-center">
+          <div class="text-emerald-400 text-sm">Under 149.5</div>
+          <div class="text-4xl font-bold text-emerald-400 mt-2">1.80</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-zinc-900 rounded-2xl p-6">
+      <h3 class="font-bold mb-4">1st Innings <%= match.team_b %> 35 Overs Total Runs</h3>
+      <div class="grid grid-cols-2 gap-4">
+        <div class="bg-emerald-900/30 p-5 rounded-2xl text-center">
+          <div class="text-emerald-400 text-sm">Over 176.5</div>
+          <div class="text-4xl font-bold text-emerald-400 mt-2">1.82</div>
+        </div>
+        <div class="bg-emerald-900/30 p-5 rounded-2xl text-center">
+          <div class="text-emerald-400 text-sm">Under 176.5</div>
+          <div class="text-4xl font-bold text-emerald-400 mt-2">1.82</div>
         </div>
       </div>
     </div>
   </div>
 
-  <%- include('../partials/footer') %>
+  <%- include('partials/footer') %>
 </body>
 </html>
