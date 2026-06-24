@@ -203,20 +203,9 @@ body {
 .card {
     background: var(--bg-card);
     border: 1px solid var(--border-glass);
-    border-radius: 16px;
+    border-radius: 20px;
     overflow: hidden;
-    padding: 14px;
-    margin-bottom: 12px;
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
 }
-
-body.light-mode .card {
-    background: rgba(255, 255, 255, 0.9);
-    border-color: rgba(0, 0, 0, 0.08);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
 
 .card-body {
     padding: 20px;
@@ -409,14 +398,6 @@ p {
     color: #000 !important;
 }
 
-.cat-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 8px;
-    margin-bottom: 14px;
-}
-
-/* ===== Side Menu (drawer) ===== */
 .side-menu {
     position: fixed;
     top: 0;
@@ -442,8 +423,6 @@ p {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
     z-index: 10000;
     opacity: 0;
     visibility: hidden;
@@ -464,7 +443,7 @@ p {
     text-decoration: none;
     font-size: 15px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    transition: background 0.2s ease, padding-left 0.2s ease;
+    transition: background 0.2s ease;
 }
 
 .menu-item i {
@@ -477,7 +456,6 @@ p {
 .menu-item:hover,
 .menu-item:active {
     background: var(--bg-glass);
-    padding-left: 26px;
 }
 
 body.menu-open {
