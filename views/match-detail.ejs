@@ -1,173 +1,82 @@
-<%- include('partials/head') %>
-<%- include('partials/navbar') %>
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <%- include('../partials/head') %>
+  <title><%= match.team_a %> vs <%= match.team_b %> | Live</title>
+</head>
+<body class="bg-zinc-950 text-white pb-20">
 
-<style>
-    .detail-card {
-        background: var(--card);
-        border-radius: 15px;
-        overflow: hidden;
-        margin-bottom: 20px;
-        border: 1px solid var(--border);
-    }
-    .detail-header {
-        background: var(--card2);
-        padding: 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 1px solid var(--border);
-    }
-    .detail-body { padding: 20px; text-align: center; }
+  <%- include('../partials/header') %>
 
-    .prediction-box {
-        background: var(--card2);
-        border-radius: 12px;
-        padding: 20px;
-        margin-top: 20px;
-    }
-
-    .team-select {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 15px;
-        margin: 20px 0;
-    }
-
-    .team-btn {
-        background: transparent;
-        border: 2px solid var(--border);
-        padding: 20px;
-        border-radius: 12px;
-        color: var(--text);
-        cursor: pointer;
-        transition: 0.3s;
-        font-weight: bold;
-    }
-    .team-btn.selected {
-        border-color: var(--secondary);
-        background: rgba(255, 0, 170, 0.1);
-    }
-</style>
-
-<div class="container page">
-    <%- include('partials/flash') %>
-
-    <div class="detail-card">
-        <div class="detail-header">
-            <span style="color: var(--muted);">⚽ <%= match.sport.toUpperCase() %></span>
-            <span class="status-badge status-<%= match.status %>">
-                <%= match.status === 'live' ? 'লাইভ' : match.status === 'upcoming' ? 'আসছে' : 'শেষ' %>
-            </span>
+  <!-- Score Header -->
+  <div class="bg-zinc-900 p-4">
+    <div class="flex justify-between items-center">
+      <div>
+        <div class="flex items-center gap-3">
+          <div class="bg-teal-600 w-10 h-10 rounded flex items-center justify-center text-xl">SL</div>
+          <div>
+            <div class="font-bold"><%= match.team_a %></div>
+            <div class="text-3xl font-bold text-yellow-400"><%= match.score_a || '360/10' %></div>
+            <div class="text-sm text-gray-400">50.0 / 50 Ovs</div>
+          </div>
         </div>
-        <div class="detail-body">
-            <div class="teams-container" style="margin: 30px 0;">
-                <div class="team-box">
-                    <div style="font-size: 40px;">🛡️</div>
-                    <div style="font-size: 1.2rem; font-weight: 900;"><%= match.team_a %></div>
-                </div>
-                <div class="vs-box" style="font-size: 2rem;">
-                    <% if(match.status === 'completed') { %>
-                        <span style="color: var(--secondary);"><%= match.score_a %> - <%= match.score_b %></span>
-                    <% } else { %>VS<% } %>
-                </div>
-                <div class="team-box">
-                    <div style="font-size: 40px;">⚔️</div>
-                    <div style="font-size: 1.2rem; font-weight: 900;"><%= match.team_b %></div>
-                </div>
-            </div>
-            <div style="color: var(--muted); font-size: 14px;">
-                📅 <%= new Date(match.match_date).toLocaleString('bn-BD') %>
-            </div>
-            <% if(match.result) { %>
-                <div style="margin-top: 20px;">
-                    <span style="background: var(--primary-gradient); padding: 8px 20px; border-radius: 20px; font-weight: bold;">
-                        🏆 বিজয়ী: <%= match.result %>
-                    </span>
-                </div>
-            <% } %>
+      </div>
+
+      <div class="text-center">
+        <div class="text-green-500 font-bold">LIVE</div>
+        <div class="text-4xl font-black text-yellow-400">VS</div>
+      </div>
+
+      <div class="text-right">
+        <div class="flex items-center gap-3 justify-end">
+          <div>
+            <div class="font-bold"><%= match.team_b %></div>
+            <div class="text-3xl font-bold text-yellow-400"><%= match.score_b || '122/4' %></div>
+            <div class="text-sm text-gray-400">24.3 / 50 Ovs</div>
+          </div>
+          <div class="bg-orange-600 w-10 h-10 rounded flex items-center justify-center text-xl">WI</div>
         </div>
+      </div>
     </div>
 
-    <% if(match.stream_url && match.status === 'live') { %>
-        <div class="card" style="margin-bottom: 20px;">
-            <div class="card-header">📺 লাইভ স্ট্রিম</div>
-            <div class="card-body" style="padding: 0;">
-                <iframe src="<%= match.stream_url %>" width="100%" height="250" frameborder="0" allowfullscreen></iframe>
-            </div>
-        </div>
-    <% } %>
-
-    <% if(match.status === 'upcoming' && locals.user) { %>
-        <div class="prediction-box">
-            <h3 style="text-align: center; color: var(--accent);">🎯 আপনার প্রেডিকশন দিন</h3>
-            <% if(userPrediction) { %>
-                <div class="alert alert-success" style="text-align: center; margin-top: 15px;">
-                    ✅ আপনি প্রেডিক্ট করেছেন: <strong><%= userPrediction.predicted_winner %></strong> <br>
-                    বেট করেছেন: <strong>🪙 <%= userPrediction.coins_bet %></strong>
-                </div>
-            <% } else { %>
-                <div class="team-select">
-                    <button onclick="selectTeam('<%= match.team_a %>')" id="btn-a" class="team-btn">
-                        <%= match.team_a %>
-                    </button>
-                    <button onclick="selectTeam('<%= match.team_b %>')" id="btn-b" class="team-btn">
-                        <%= match.team_b %>
-                    </button>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">কয়েন সংখ্যা (আপনার কাছে আছে: <%= user.coins %> 🪙)</label>
-                    <input type="number" class="form-input" id="coins-input" min="10" max="<%= user.coins %>" value="50">
-                </div>
-                <button onclick="submitPrediction()" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 15px;">সাবমিট করুন 🎯</button>
-            <% } %>
-        </div>
-    <% } %>
-
-    <div class="card" style="margin-top: 20px;">
-        <div class="card-header">📊 সাম্প্রতিক প্রেডিকশন</div>
-        <div class="card-body" style="padding: 0;">
-            <% if(predictions.length === 0) { %>
-                <p style="padding: 20px; text-align: center; color: var(--muted);">এখনো কোনো প্রেডিকশন নেই</p>
-            <% } else { %>
-                <% predictions.forEach(p => { %>
-                    <div style="display: flex; justify-content: space-between; padding: 12px 15px; border-bottom: 1px solid var(--border);">
-                        <div>
-                            <div style="font-weight: bold; font-size: 14px;"><%= p.username %></div>
-                            <div style="font-size: 12px; color: var(--muted);">→ <%= p.predicted_winner %></div>
-                        </div>
-                        <div style="color: var(--gold); font-weight: bold;">🪙 <%= p.coins_bet %></div>
-                    </div>
-                <% }) %>
-            <% } %>
-        </div>
+    <!-- Win Probability -->
+    <div class="mt-6 bg-emerald-950 p-4 rounded-xl">
+      <div class="flex justify-between text-sm mb-2">
+        <div><%= match.team_a %> <span class="text-emerald-400 font-bold">99%</span></div>
+        <div><%= match.team_b %> <span class="text-red-400 font-bold">2%</span></div>
+      </div>
+      <div class="h-3 bg-gray-700 rounded-full overflow-hidden">
+        <div class="h-3 bg-emerald-500 rounded-full" style="width: 99%"></div>
+      </div>
     </div>
-</div>
+  </div>
 
-<script>
-let selectedTeam = '';
-function selectTeam(team) {
-    selectedTeam = team;
-    document.getElementById('btn-a').classList.remove('selected');
-    document.getElementById('btn-b').classList.remove('selected');
-    if(team === '<%= match.team_a %>') {
-        document.getElementById('btn-a').classList.add('selected');
-    } else {
-        document.getElementById('btn-b').classList.add('selected');
-    }
-}
-function submitPrediction() {
-    if(!selectedTeam) { alert('অনুগ্রহ করে একটি দল নির্বাচন করুন!'); return; }
-    const coins = document.getElementById('coins-input').value;
-    if(!coins || coins < 10) { alert('নূন্যতম ১০ কয়েন!'); return; }
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '/matches/<%= match.id %>/predict';
-    [['predicted_winner', selectedTeam], ['coins_bet', coins]].forEach(([n,v]) => {
-        const i = document.createElement('input');
-        i.type = 'hidden'; i.name = n; i.value = v; form.appendChild(i);
-    });
-    document.body.appendChild(form); form.submit();
-}
-</script>
-<%- include('partials/bottom-nav', { activePage: 'matches' }) %>
-</body></html>
+  <!-- Betting Markets -->
+  <div class="p-4 space-y-6">
+    <div class="bg-zinc-900 rounded-xl overflow-hidden">
+      <div class="bg-orange-600 px-5 py-3 font-bold">Match Winner</div>
+      <div class="p-5 grid grid-cols-2 gap-4">
+        <div class="bg-zinc-800 p-4 rounded-xl text-center font-semibold"><%= match.team_b %></div>
+        <div class="border-2 border-red-500 text-red-500 font-bold text-center py-4 rounded-xl">Suspend</div>
+      </div>
+    </div>
+
+    <!-- Over/Under -->
+    <div class="bg-zinc-900 rounded-xl p-5">
+      <h3 class="font-bold mb-4">1st Innings <%= match.team_b %> 30 Overs Total Runs</h3>
+      <div class="grid grid-cols-2 gap-4">
+        <div class="text-center bg-emerald-900/30 p-4 rounded-xl">
+          <div class="text-emerald-400 text-sm">Over</div>
+          <div class="text-3xl font-bold text-emerald-400">1.84</div>
+        </div>
+        <div class="text-center bg-emerald-900/30 p-4 rounded-xl">
+          <div class="text-emerald-400 text-sm">Under</div>
+          <div class="text-3xl font-bold text-emerald-400">1.80</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <%- include('../partials/footer') %>
+</body>
+</html>
