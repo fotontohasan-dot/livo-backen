@@ -3,7 +3,7 @@
 
 // ⚠️ TODO: এই key পরে env variable এ সরাব
 // এখন প্রথমে কাজ করানো জরুরি
-const CRICKET_API_KEY = process.env.CRICKET_API_KEY || 11ee3d02-f9eb-4ecf-a9a5-788174dd3fe7;
+const CRICKET_API_KEY = process.env.CRICKET_API_KEY ||'11ee3d02-f9eb-4ecf-a9a5-788174dd3fe7';
 const SPORTSDB_KEY = '123'; // TheSportsDB public free key
 
 // -------- Simple in-memory cache (5 min) --------
