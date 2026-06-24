@@ -324,4 +324,30 @@ function submitPrediction() {
 <%- include('partials/bottom-nav') %>
 
 </body>
+
+<script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+<script>
+  const socket = io();
+  const currentMatchId = "<%= match ? match.id : '' %>";
+
+  if (currentMatchId) {
+    socket.emit("joinMatch", currentMatchId);
+  }
+
+  socket.on("scoreUpdate", function(data) {
+    console.log("🟢 Live Score Update:", data);
+    
+    // Team A Score
+    const scoreAElements = document.querySelectorAll('.score-a');
+    scoreAElements.forEach(el => {
+      if (el) el.textContent = data.score_a || el.textContent;
+    });
+
+    // Team B Score
+    const scoreBElements = document.querySelectorAll('.score-b');
+    scoreBElements.forEach(el => {
+      if (el) el.textContent = data.score_b || el.textContent;
+    });
+  });
+</script>
 </html>
