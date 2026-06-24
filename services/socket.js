@@ -32,13 +32,15 @@ const updateLiveScore = async (matchId, scoreData) => {
   if (!io) return;
 
   try {
-    // ডাটাবেস আপডেট
+    // ডাটাবেস আপডেট (এখানে আগে ভ্যালুগুলো বসানো ছিল না — এখন ঠিক করা হল)
     await pool.query(
-      `UPDATE matches 
-       SET score_a = $1, score_b = $2, overs = $3, status = 'live' 
-       WHERE id = $4`, );
+      `UPDATE matches
+       SET score_a = $1, score_b = $2, overs = $3, status = 'live'
+       WHERE id = $4`,
+      [scoreData.score_a, scoreData.score_b, scoreData.overs, matchId]
+    );
 
-    // সবাইকে লাইভ আপডেট পাঠানো
+    // সবাইকে লাইভ আপডেট পাঠনো
     io.to(`match:${matchId}`).emit("scoreUpdate", {
       matchId,
       ...scoreData,
