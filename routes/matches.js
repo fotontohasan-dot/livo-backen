@@ -126,7 +126,7 @@ router.get('/:id', async (req, res, next) => {
   try {
     const r = await pool.query('SELECT * FROM matches WHERE id = $1', [req.params.id]);
     if (r.rows.length === 0) {
-      return res.status(404).render('error', { message: 'ম্যাচটি পাওয়া যয়নি।', siteName: 'Livo' });
+      return res.status(404).render('error', { message: 'ম্যাচটি পাওয়া যায়নি।', siteName: 'Livo' });
     }
     const match = dbToView(r.rows[0]);
     res.render('match-detail', {
