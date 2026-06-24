@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <%- include('../partials/head') %>
+  <title>Sports - Live Betting | <%= siteName %></title>
+</head>
+<body class="bg-zinc-950 text-white min-h-screen pb-20">
+
+  <%- include('../partials/header') %>
+
+  <!-- Top Bar -->
+  <div class="bg-yellow-500 p-4 flex items-center justify-between sticky top-0 z-50">
+    <div class="bg-black text-yellow-500 px-5 py-2 rounded font-bold">💰 Bets</div>
+    <div class="text-sm">
+      Main BDT 0.00<br>
+      <span class="text-xs">Exposure 0.00</span>
+    </div>
+    <div class="flex gap-3">
+      <button class="p-3 bg-zinc-900 rounded-xl">🔄</button>
+      <button class="p-3 bg-zinc-900 rounded-xl">⚙️</button>
+    </div>
+  </div>
+
+  <div class="p-4">
+    <h1 class="text-2xl font-bold mb-6">Sports Hub</h1>
+
+    <!-- Quick Navigation -->
+    <div class="grid grid-cols-3 gap-3 mb-8">
+      <a href="/sports/cricket" class="bg-gradient-to-br from-green-600 to-emerald-700 p-5 rounded-2xl text-center">
+        <div class="text-4xl mb-2">🏏</div>
+        <div class="font-bold">Cricket</div>
+      </a>
+      <a href="/sports/football" class="bg-gradient-to-br from-blue-600 to-cyan-700 p-5 rounded-2xl text-center">
+        <div class="text-4xl mb-2">⚽</div>
+        <div class="font-bold">Football</div>
+      </a>
+      <a href="/sports/tennis" class="bg-gradient-to-br from-purple-600 to-violet-700 p-5 rounded-2xl text-center">
+        <div class="text-4xl mb-2">🎾</div>
+        <div class="font-bold">Tennis</div>
+      </a>
+    </div>
+
+    <!-- Live Matches Section -->
+    <div class="mb-8">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold flex items-center gap-2">
+          <span class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
+          Live Now
+        </h2>
+        <a href="/matches" class="text-yellow-400 text-sm">সব দেখুন →</a>
+      </div>
+
+      <div id="live-matches" class="space-y-4">
+        <!-- Dynamic content via JS or EJS -->
+      </div>
+    </div>
+
+    <!-- Upcoming Matches -->
+    <div>
+      <h2 class="text-xl font-bold mb-4">Upcoming Matches</h2>
+      <div class="space-y-3 text-gray-400">
+        <!-- Upcoming cards will go here -->
+      </div>
+    </div>
+  </div>
+
+  <%- include('../partials/footer') %>
+
+  <script>
+    // Basic live update simulation
+    setInterval(() => {
+      console.log("🔴 Live score checking...");
+    }, 10000);
+  </script>
+</body>
+</html>
