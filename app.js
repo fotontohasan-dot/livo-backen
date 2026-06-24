@@ -37,9 +37,10 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public'), {
-  maxAge: '7d',
-  etag: true
+  maxAge: '0',
+  etag: false
 }));
+
 
 app.use(session({
   store: new pgSession({
