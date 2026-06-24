@@ -129,10 +129,22 @@ router.get('/:id', async (req, res, next) => {
       return res.status(404).render('error', { message: 'ম্যাচটি পাওয়া যায়নি।', siteName: 'Livo' });
     }
     const match = dbToView(r.rows[0]);
+
+    // ইউজার এই ম্যাচে আগে কী কী প্রেডিকশন করেছে
+    let myPredictions = [];
+    if (req.session.user) {
+      const p = await pool.query(
+        'SELECT market, pick FROM predictions WHERE user_id=$1 AND match_id=$2',
+        [req.session.user.id, req.params.id]
+      );
+      myPredictions = p.rows;
+    }
+
     res.render('match-detail', {
       title: match.name || 'Match Detail',
       currentPage: 'matches',
       match,
+      myPredictions,
       user: req.session.user || null,
     });
   } catch (err) {
@@ -149,6 +161,82 @@ router.get('/api/live', async (req, res) => {
     res.json({ success: true, cricket, football, timestamp: Date.now() });
   } catch (err) {
     res.json({ success: false, error: err.message });
+  }
+});
+
+// ==================== প্রেডিকশন সাবমিট ====================
+// প্রতিটা মার্কেটের জন্য কত পয়েন্ট পাওয়া যাবে
+const MARKET_POINTS = {
+  winner: 10,
+  draw: 20,
+  runs: 15,
+  wickets: 15,
+};
+
+const PREDICT_COST = 10; // প্রতি প্রেডিকশনে কত কয়েন লাগবে
+
+// প্রেডিকশন সাবমিট করা — কয়েন/পয়েন্ট দিয়ে
+router.post('/:id/predict', async (req, res) => {
+  if (!req.session.user) {
+    return res.status(401).json({ success: false, error: 'প্রেডিকশন করতে লগইন করুন।' });
+  }
+
+  const userId = req.session.user.id;
+  const matchId = parseInt(req.params.id, 10);
+  const { market, pick } = req.body;
+
+  if (!market || !pick) {
+    return res.status(400).json({ success: false, error: 'মার্কেট ও পছন্দ দুটোই দরকার।' });
+  }
+
+  const reward = MARKET_POINTS[market] || 10;
+
+  try {
+    // ম্চ আছে কিনা ও শেষ হয়ে গেছে কিনা চেক
+    const mRes = await pool.query('SELECT status FROM matches WHERE id = $1', [matchId]);
+    if (mRes.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'ম্যাচ পাওয়া যায়নি।' });
+    }
+    if (mRes.rows[0].status === 'finished') {
+      return res.status(400).json({ success: false, error: 'এই ম্যাচ শেষ হয়ে গেছে।' });
+    }
+
+    // ইউজারের কযন আছে কিনা
+    const uRes = await pool.query('SELECT coins FROM users WHERE id = $1', [userId]);
+    const coins = uRes.rows[0] ? uRes.rows[0].coins : 0;
+    if (coins < PREDICT_COST) {
+      return res.status(400).json({ success: false, error: 'পরপ্ত কয়েন নেই।' });
+    }
+
+    // আগে একই মার্কেটে প্রেডিকশন করেছে কিনা
+    const existing = await pool.query(
+      'SELECT id FROM predictions WHERE user_id=$1 AND match_id=$2 AND market=$3',
+      [userId, matchId, market]
+    );
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ success: false, error: 'এই মার্কেটে আপনি আগেই প্রেডিকশন করেছেন।' });
+    }
+
+    // কয়েন কাটা + প্রেডিকশন সেভ
+    await pool.query('UPDATE users SET coins = coins - $1 WHERE id = $2', [PREDICT_COST, userId]);
+    await pool.query(
+      `INSERT INTO predictions (user_id, match_id, market, pick, points, status)
+       VALUES ($1,$2,$3,$4,$5,'pending')`,
+      [userId, matchId, market, pick, reward]
+    );
+
+    // সেশনে কয়েন আপডেট
+    req.session.user.coins = coins - PREDICT_COST;
+
+    res.json({
+      success: true,
+      message: 'প্রেডিকশন সাবমিট হয়েছে!',
+      newBalance: coins - PREDICT_COST,
+      reward,
+    });
+  } catch (err) {
+    console.error('Predict error:', err.message);
+    res.status(500).json({ success: false, error: 'সার্ভর সমস্যা হয়েছে।' });
   }
 });
 
