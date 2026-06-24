@@ -1,108 +1,154 @@
+// routes/matches.js
 const express = require('express');
 const router = express.Router();
-const { pool } = require('../db');
-const { isAuth } = require('../middleware/auth');
+const sportsAPI = require('../services/sportsAPI');
 
-router.get('/predictions', isAuth, async (req, res) => {
-  const url = 'https://today-football-prediction.p.rapidapi.com/';
-  const options = {
-    method: 'GET',
-    headers: {
-      'x-rapidapi-key': process.env.RAPIDAPI_KEY,
-      'x-rapidapi-host': 'today-football-prediction.p.rapidapi.com'
-    }
-  };
-
-  try {
-    const response = await fetch(url, options);
-    const result = await response.json();
-    res.render('predictions', { predictions: result.recommendations || [] });
-  } catch (error) {
-    console.error('Prediction fetch error:', error);
-    req.flash('error', 'প্রেডিকশন ডেটা লোড করত ব্যর্থ হয়েছে।');
-    res.redirect('/matches');
-  }
-});
-
+// মূল matches page - সব live + upcoming
 router.get('/', async (req, res) => {
-  const { sport, status } = req.query;
-  let query = `SELECT * FROM matches WHERE 1=1`;
-  const params = [];
-  if (sport) {
-    params.push(sport);
-    query += ` AND sport=$${params.length}`;
-  }
-  if (status) {
-    params.push(status);
-    query += ` AND status=$${params.length}`;
-  } else {
-    query += ` AND status='upcoming'`;
-  }
-  query += ` ORDER BY match_date ASC`;
-
   try {
-    const matches = await pool.query(query, params);
-    res.render('matches', { matches: matches.rows, sport, status });
-  } catch (_err) {
-    req.flash('error', 'ম্যাচ লোড করতে সমস্যা হয়েছে।');
-    res.redirect('/');
+    const sport = req.query.sport || 'all';
+
+    const [cricketLive, cricketUpcoming, footballLive, worldCup] = await Promise.all([
+      sportsAPI.getCricketCurrentMatches(),
+      sportsAPI.getCricketUpcoming(),
+      sportsAPI.getFootballLiveScores(),
+      sportsAPI.getWorldCupFixtures(),
+    ]);
+
+    let liveMatches = [];
+    let upcomingMatches = [];
+
+    if (sport === 'cricket' || sport === 'all') {
+      liveMatches = liveMatches.concat(cricketLive.filter(m => !m.matchEnded));
+      upcomingMatches = upcomingMatches.concat(cricketUpcoming);
+    }
+
+    if (sport === 'football' || sport === 'all') {
+      liveMatches = liveMatches.concat(footballLive);
+      upcomingMatches = upcomingMatches.concat(worldCup);
+    }
+
+    res.render('matches', {
+      title: 'Live Matches',
+      currentPage: 'matches',
+      liveMatches,
+      upcomingMatches,
+      sport,
+      user: req.session.user,
+    });
+  } catch (err) {
+    console.error('Matches route error:', err);
+    req.flash('error', 'ম্যাচ ডেটা লোড করতে সমস্যা হয়েছে।');
+    res.render('matches', {
+      title: 'Live Matches',
+      currentPage: 'matches',
+      liveMatches: [],
+      upcomingMatches: [],
+      sport: 'all',
+      user: req.session.user,
+    });
   }
 });
 
-router.get('/:id', isAuth, async (req, res) => {
+// FIFA World Cup 2026 specific page
+router.get('/worldcup', async (req, res) => {
   try {
-    const match = await pool.query(`SELECT * FROM matches WHERE id=$1`, [req.params.id]);
-    if (!match.rows[0]) return res.redirect('/matches');
+    const fixtures = await sportsAPI.getWorldCupFixtures();
+    const live = await sportsAPI.getFootballLiveScores();
+    const worldCupLive = live.filter(m =>
+      (m.league || '').toLowerCase().includes('world cup')
+    );
 
-    const userPred = await pool.query(`SELECT * FROM predictions WHERE user_id=$1 AND match_id=$2`, [req.session.user.id, req.params.id]);
-    const predictions = await pool.query(`SELECT p.*, u.username FROM predictions p JOIN users u ON p.user_id=u.id WHERE match_id=$1 ORDER BY coins_bet DESC LIMIT 10`, [req.params.id]);
-
-    res.render('match-detail', {
-      match: match.rows[0],
-      userPrediction: userPred.rows[0],
-      predictions: predictions.rows
+    res.render('matches', {
+      title: 'FIFA World Cup 2026',
+      currentPage: 'worldcup',
+      liveMatches: worldCupLive,
+      upcomingMatches: fixtures,
+      sport: 'football',
+      user: req.session.user,
     });
-  } catch (_err) {
+  } catch (err) {
+    console.error('World Cup route error:', err);
     res.redirect('/matches');
   }
 });
 
-router.post('/:id/predict', isAuth, async (req, res) => {
-  const { winner, bet } = req.body;
-  const matchId = req.params.id;
-  const userId = req.session.user.id;
-  const coinsBet = parseInt(bet);
-
+// Cricket specific
+router.get('/cricket', async (req, res) => {
   try {
-    const user = await pool.query(`SELECT coins FROM users WHERE id=$1`, [userId]);
-    if (user.rows[0].coins < coinsBet) {
-      req.flash('error', 'আপনার পরপ্ত কয়েন নেই!');
-      return res.redirect(`/matches/${matchId}`);
-    }
-
-    const match = await pool.query(`SELECT status FROM matches WHERE id=$1`, [matchId]);
-    if (match.rows[0].status !== 'upcoming') {
-      req.flash('error', 'এই ম্যাচের প্রেডিকশন বন্ধ হয়ে গেছে');
-      return res.redirect(`/matches/${matchId}`);
-    }
-
-    await pool.query('BEGIN');
-    await pool.query(`UPDATE users SET coins=coins-$1 WHERE id=$2`, [coinsBet, userId]);
-    await pool.query(`INSERT INTO predictions (user_id, match_id, predicted_winner, coins_bet) VALUES ($1,$2,$3,$4)`,
-      [userId, matchId, winner, coinsBet]);
-    await pool.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,-$2,'prediction','Bet on match ${matchId}')`, [userId, coinsBet]);
-    await pool.query('COMMIT');
-
-    req.flash('success', `প্রেডিকশন সফল হয়েছে! ${coinsBet} কয়েন বাজি ধরা হয়েছে`);
-    res.redirect(`/matches/${matchId}`);
+    const [live, upcoming] = await Promise.all([
+      sportsAPI.getCricketCurrentMatches(),
+      sportsAPI.getCricketUpcoming(),
+    ]);
+    res.render('matches', {
+      title: 'Cricket Matches',
+      currentPage: 'cricket',
+      liveMatches: live,
+      upcomingMatches: upcoming,
+      sport: 'cricket',
+      user: req.session.user,
+    });
   } catch (err) {
-    await pool.query('ROLLBACK');
-    if (err.code === '23505') {
-      req.flash('error', 'আপনি ইতিমধ্যে এই ম্যাচে প্রেডিকশন করেছেন');
-    } else {
-      req.flash('error', 'প্রেডিকশন করতে সমস্যা হয়েছে');
+    res.redirect('/matches');
+  }
+});
+
+// Football specific
+router.get('/football', async (req, res) => {
+  try {
+    const [live, worldCup] = await Promise.all([
+      sportsAPI.getFootballLiveScores(),
+      sportsAPI.getWorldCupFixtures(),
+    ]);
+    res.render('matches', {
+      title: 'Football Matches',
+      currentPage: 'football',
+      liveMatches: live,
+      upcomingMatches: worldCup,
+      sport: 'football',
+      user: req.session.user,
+    });
+  } catch (err) {
+    res.redirect('/matches');
+  }
+});
+
+// Match detail page
+router.get('/cricket/:id', async (req, res) => {
+  try {
+    const match = await sportsAPI.getCricketMatchInfo(req.params.id);
+    if (!match) {
+      req.flash('error', 'ম্যাচ খুঁজে পাওয়া যায়নি।');
+      return res.redirect('/matches/cricket');
     }
-    res.redirect(`/matches/${matchId}`);
+    res.render('match-detail', {
+      title: match.name || 'Match Details',
+      currentPage: 'matches',
+      match,
+      sport: 'cricket',
+      user: req.session.user,
+    });
+  } catch (err) {
+    console.error('Match detail error:', err);
+    res.redirect('/matches/cricket');
+  }
+});
+
+// JSON API endpoint - frontend live update এর জন্য
+router.get('/api/live', async (req, res) => {
+  try {
+    const [cricket, football] = await Promise.all([
+      sportsAPI.getCricketCurrentMatches(),
+      sportsAPI.getFootballLiveScores(),
+    ]);
+    res.json({
+      success: true,
+      cricket,
+      football,
+      timestamp: Date.now(),
+    });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
   }
 });
 
