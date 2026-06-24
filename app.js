@@ -129,7 +129,8 @@ app.get('/rules', (req, res) => res.render('rules'));
 
 // ==================== ROUTES ====================
 app.use('/', require('./routes/auth'));
-app.use('/matches', require('./routes/matches'));        // ← Cricket Route যোগ করা হয়েছে
+app.use('/matches', require('./routes/matches'));
+app.use('/sports', require('./routes/sports'));           // ← Sports Route যোগ করা হয়েছে
 app.use('/tournaments', require('./routes/tournaments'));
 app.get('/promotions', (req, res) => res.render('promotions', { currentPage: 'promotion' }));
 app.use('/coins', require('./routes/coins'));
@@ -196,7 +197,6 @@ async function migrateDB() {
           overs TEXT,
           created_at TIMESTAMP DEFAULT NOW()
       );
-      -- অন্যান্য টেবিল...
     `);
 
     console.log('✅ DB migration done');
