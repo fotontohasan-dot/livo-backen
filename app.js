@@ -12,6 +12,7 @@ const helmet = require('helmet');
 const compression = require('compression');
 const { connectDB, pool } = require('./db');
 const { syncMatches } = require('./services/matchUpdater');
+const runMigrations = require('./migrations');   // ← নতুন যোগ করা হয়েছে
 
 const app = express();
 const server = http.createServer(app);
@@ -130,7 +131,7 @@ app.get('/rules', (req, res) => res.render('rules'));
 // ==================== ROUTES ====================
 app.use('/', require('./routes/auth'));
 app.use('/matches', require('./routes/matches'));
-app.use('/sports', require('./routes/sports'));           // ← Sports Route যোগ করা হয়েছে
+app.use('/sports', require('./routes/sports'));
 app.use('/tournaments', require('./routes/tournaments'));
 app.get('/promotions', (req, res) => res.render('promotions', { currentPage: 'promotion' }));
 app.use('/coins', require('./routes/coins'));
@@ -147,6 +148,7 @@ app.use('/extra', require('./routes/extra'));
 
 app.get('/app/update', (req, res) => res.render('app/update'));
 
+// Error Handling
 app.use((err, req, res, next) => {
   console.error('❌ Unhandled Error:', err.stack);
   res.status(500).render('error', {
@@ -164,105 +166,28 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 3000;
 
-async function migrateDB() {
+async function startServer() {
   try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS users (
-          id SERIAL PRIMARY KEY,
-          username VARCHAR(50) UNIQUE NOT NULL,
-          email VARCHAR(100) UNIQUE NOT NULL,
-          password VARCHAR(255) NOT NULL,
-          role VARCHAR(20) DEFAULT 'user',
-          coins INT DEFAULT 500,
-          total_points INT DEFAULT 0,
-          avatar TEXT,
-          referral_code VARCHAR(20) UNIQUE,
-          referred_by_id INT REFERENCES users(id),
-          is_banned BOOLEAN DEFAULT false,
-          last_bonus_date TIMESTAMP,
-          created_at TIMESTAMP DEFAULT NOW()
-      );
-      CREATE TABLE IF NOT EXISTS matches (
-          id SERIAL PRIMARY KEY,
-          title VARCHAR(255),
-          sport VARCHAR(50),
-          team_a VARCHAR(100),
-          team_b VARCHAR(100),
-          match_date TIMESTAMP,
-          status VARCHAR(20) DEFAULT 'upcoming',
-          winner VARCHAR(100),
-          result VARCHAR(50),
-          score_a TEXT,
-          score_b TEXT,
-          overs TEXT,
-          created_at TIMESTAMP DEFAULT NOW()
-      );
-    `);
+    await connectDB();
+    console.log("✅ PostgreSQL connected successfully");
 
-    // প্রেডিকশন টেবিল
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS predictions (
-          id SERIAL PRIMARY KEY,
-          user_id INT REFERENCES users(id),
-          match_id INT,
-          market VARCHAR(50),
-          pick VARCHAR(100),
-          points INT DEFAULT 0,
-          status VARCHAR(20) DEFAULT 'pending',
-          created_at TIMESTAMP DEFAULT NOW(),
-          UNIQUE(user_id, match_id, market)
-      );
-    `);
+    // Run All Migrations
+    await runMigrations();
+    await migrateDB();        // তোমার আগের মাইগ্রেশনও চলবে
+    console.log("✅ DB migration done");
 
-    // পুরোনো matches টেবিলে কলাম না থাকলে যোগ করা
-    await pool.query(`
-      ALTER TABLE matches ADD COLUMN IF NOT EXISTS overs TEXT;
-      ALTER TABLE matches ADD COLUMN IF NOT EXISTS score_a TEXT;
-      ALTER TABLE matches ADD COLUMN IF NOT EXISTS score_b TEXT;
-      ALTER TABLE matches ADD COLUMN IF NOT EXISTS result VARCHAR(50);
-      ALTER TABLE matches ADD COLUMN IF NOT EXISTS winner VARCHAR(100);
-      ALTER TABLE matches ADD COLUMN IF NOT EXISTS match_date TIMESTAMP;
-    `);
-
-    // স্কোর কলাম integer থাকলে TEXT এ বদলানো
-    await pool.query(`
-      ALTER TABLE matches ALTER COLUMN score_a TYPE TEXT USING score_a::TEXT;
-      ALTER TABLE matches ALTER COLUMN score_b TYPE TEXT USING score_b::TEXT;
-      ALTER TABLE matches ALTER COLUMN overs TYPE TEXT USING overs::TEXT;
-    `);
-
-    // match_date এর NOT NULL নিয়ম সরানো
-    await pool.query(`
-      ALTER TABLE matches ALTER COLUMN match_date DROP NOT NULL;
-    `);
-
-    // পুরোনো predictions টেবিলে মিসিং কলাম যোগ (ম্যাচ পেজ ক্র্যাশ ঠিক করে)
-    await pool.query(`
-      ALTER TABLE predictions ADD COLUMN IF NOT EXISTS market VARCHAR(50);
-      ALTER TABLE predictions ADD COLUMN IF NOT EXISTS pick VARCHAR(100);
-      ALTER TABLE predictions ADD COLUMN IF NOT EXISTS points INT DEFAULT 0;
-      ALTER TABLE predictions ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending';
-      ALTER TABLE predictions ADD COLUMN IF NOT EXISTS match_id INT;
-      ALTER TABLE predictions ADD COLUMN IF NOT EXISTS user_id INT;
-    `);
-
-    console.log('✅ DB migration done');
+    server.listen(PORT, () => {
+      console.log(`✅ Server running on port ${PORT}`);
+      setTimeout(() => {
+        syncMatches().catch(err => console.error('Initial match sync failed:', err));
+      }, 3000);
+    });
   } catch (err) {
-    console.error('Migration error:', err.message);
+    console.error('❌ Server startup failed:', err);
+    process.exit(1);
   }
 }
 
-connectDB().then(async () => {
-  await migrateDB();
-  server.listen(PORT, () => {
-    console.log(`✅ Server running on port ${PORT}`);
-    setTimeout(() => {
-      syncMatches().catch(err => console.error('Initial match sync failed:', err));
-    }, 3000);
-  });
-}).catch((err) => {
-  console.error('❌ Server startup failed:', err);
-  process.exit(1);
-});
+startServer();
 
 module.exports = app;
