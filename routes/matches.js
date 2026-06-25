@@ -4,11 +4,27 @@ const { pool } = require('../db');
 
 router.get('/', async (req, res) => {
   try {
+    const matches = await pool.query('SELECT * FROM matches ORDER BY start_time ASC, id DESC');
+    res.render('matches', { matches: matches.rows, user: req.session.user });
+  } catch (err) {
+    console.error(err);
+    res.render('matches', { matches: [], user: req.session.user });
+  }
+});
+
+// In-Play Route
+router.get('/in-play', async (req, res) => {
+  try {
     const matches = await pool.query(`
       SELECT * FROM matches 
-      ORDER BY start_time ASC, id DESC
+      WHERE status = 'live' OR status ILIKE '%play%' 
+      ORDER BY start_time DESC
     `);
-    res.render('matches', { matches: matches.rows, user: req.session.user });
+    res.render('matches', { 
+      matches: matches.rows, 
+      user: req.session.user,
+      title: 'In-Play - লাইভ ম্যাচসমূহ'
+    });
   } catch (err) {
     console.error(err);
     res.render('matches', { matches: [], user: req.session.user });
@@ -22,7 +38,6 @@ router.get('/:id', async (req, res) => {
 
     if (!match) return res.status(404).send('Match not found');
 
-    // ডাইনামিক মার্কেট লোড
     const marketsRes = await pool.query(`
       SELECT * FROM markets 
       WHERE match_id = $1 AND status = 'open' 
@@ -40,7 +55,6 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// বেট প্লেস রাউট
 router.post('/:id/bet', async (req, res) => {
   if (!req.session.user) return res.json({ success: false, error: 'লগইন করুন' });
 
@@ -70,22 +84,3 @@ router.post('/:id/bet', async (req, res) => {
 });
 
 module.exports = router;
-
-// In-Play পেজ
-router.get('/in-play', async (req, res) => {
-  try {
-    const matches = await pool.query(`
-      SELECT * FROM matches 
-      WHERE status = 'live' 
-      ORDER BY start_time DESC
-    `);
-    res.render('matches', { 
-      matches: matches.rows, 
-      user: req.session.user,
-      title: 'In-Play - লাইভ ম্যাচ'
-    });
-  } catch (err) {
-    console.error(err);
-    res.render('matches', { matches: [], user: req.session.user });
-  }
-});
