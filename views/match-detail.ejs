@@ -1,5 +1,4 @@
 <%- include('partials/head') %>
-
 <%- include('partials/navbar') %>
 
 <style>
@@ -8,306 +7,126 @@
     0%, 100% { opacity: 1; transform: scale(1); }
     50% { opacity: 0.5; transform: scale(1.2); }
   }
+  
+  .market-section { margin-bottom: 20px; }
   .mkt {
     background: var(--bg-card);
     border: 1px solid var(--border-glass);
     border-radius: 14px;
     overflow: hidden;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
   }
   .mkt-head {
-    display: flex; align-items: center; gap: 8px;
-    padding: 12px 14px;
+    padding: 12px 16px;
     background: var(--grad-surface);
     border-bottom: 1px solid var(--border-glass);
-    font-size: 13px; font-weight: 700; color: var(--text-main);
+    font-weight: 700; font-size: 14px; color: var(--text-main);
+    display: flex; align-items: center; gap: 8px;
   }
-  .mkt-head .ico { color: var(--gold); }
   .mkt-row {
-    display: flex; align-items: stretch;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-  }
-  .mkt-row:last-child { border-bottom: none; }
-  .mkt-name {
-    flex: 1; padding: 14px;
     display: flex; align-items: center;
-    font-size: 14px; font-weight: 600; color: var(--text-main);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
   }
-  .mkt-pick {
-    width: 110px;
-    border: none; cursor: pointer;
-    background: rgba(16,185,129,0.12);
-    color: var(--text-main);
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    gap: 2px; padding: 10px 6px;
-    transition: 0.15s;
-    border-left: 1px solid rgba(255,255,255,0.05);
+  .mkt-name {
+    flex: 1; padding: 14px 16px;
+    font-size: 14.5px; font-weight: 600;
   }
-  .mkt-pick:hover { background: rgba(16,185,129,0.25); }
-  .mkt-pick .reward { font-size: 16px; font-weight: 800; color: #10b981; line-height: 1; }
-  .mkt-pick .label { font-size: 10px; color: var(--text-muted); }
-  .mkt-pick.selected { background: var(--grad-gold); }
-  .mkt-pick.selected .reward,
-  .mkt-pick.selected .label { color: #000; }
-  .mkt-pick.locked {
-    background: rgba(255,255,255,0.04);
-    cursor: not-allowed; opacity: 0.6;
+  .odds-btn {
+    min-width: 85px; padding: 12px 8px;
+    text-align: center; border-left: 1px solid rgba(255,255,255,0.08);
+    font-weight: 700; font-size: 15px; cursor: pointer;
+    transition: 0.2s;
   }
-  .mkt-pick.locked .reward { color: var(--text-muted); }
-  .mkt-sub {
-    padding: 8px 14px; font-size: 11px;
-    color: var(--text-muted);
-    background: rgba(255,255,255,0.02);
+  .odds-btn:hover { background: rgba(16,185,129,0.15); }
+  .odds-btn.suspended { opacity: 0.5; cursor: not-allowed; background: #1f2937; }
+  
+  .fancy-row { display: flex; }
+  .fancy-name { flex: 1; padding: 12px 16px; }
+  .fancy-odds {
+    display: flex; width: 180px;
   }
-  .filter-tabs {
-    display: flex; gap: 6px; overflow-x: auto;
-    padding: 4px 0 12px; margin-bottom: 4px;
+  .fancy-odds button {
+    flex: 1; padding: 12px 4px; font-size: 15px; font-weight: 700;
   }
-  .filter-tab {
-    white-space: nowrap;
-    padding: 7px 16px; border-radius: 20px;
-    font-size: 12px; font-weight: 600;
-    background: var(--bg-glass);
-    border: 1px solid var(--border-glass);
-    color: var(--text-muted); cursor: pointer;
-  }
-  .filter-tab.active {
-    background: var(--grad-gold); color: #000; border-color: var(--gold);
-  }
-  #predToast {
-    position: fixed; left: 50%; bottom: 86px; transform: translateX(-50%) translateY(20px);
-    background: #10b981; color: #fff; padding: 12px 22px; border-radius: 30px;
-    font-size: 13px; font-weight: 700; opacity: 0; pointer-events: none;
-    transition: 0.3s; z-index: 999; box-shadow: 0 6px 20px rgba(0,0,0,0.4);
-  }
-  #predToast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-  #predToast.err { background: #ef4444; }
+  .back { background: #10b981; color: white; }
+  .lay { background: #ef4444; color: white; }
 </style>
 
 <div class="container" style="padding-top: 14px;">
 
   <a href="/matches" style="display:inline-flex;align-items:center;gap:6px;color:var(--text-muted);text-decoration:none;font-size:13px;margin-bottom:12px;">
-    ← সব ম্যাচে ফরে যান
+    ← সব ম্যাচে ফিরে যান
   </a>
 
-  <div class="card" style="padding:14px;margin-bottom:12px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-      <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">
-        <i class="fas fa-trophy" style="color:var(--gold);margin-right:5px;"></i>
-        <%= match && match.sport === 'football' ? 'Football' : 'Cricket' %>
-      </div>
-      <% var isLive = match && (match.status || '').toString().toLowerCase().includes('live'); %>
-      <% if (isLive) { %>
-        <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(16,185,129,0.15);color:#10b981;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;">
-          <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#10b981;" class="pulse-live"></span>
-          In Play
-        </span>
-      <% } else { %>
-        <span style="background:rgba(245,158,11,0.12);color:var(--gold);padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;">Upcoming</span>
-      <% } %>
-    </div>
-
-    <% if (match && match.teams && match.teams[0]) { %>
-      <div style="display:flex;align-items:center;gap:12px;padding:8px 0;">
-        <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#0ea5e9,#0284c7);display:flex;align-items:center;justify-content:center;font-size:20px;">🏏</div>
-        <div style="flex:1;"><div style="font-weight:700;font-size:15px;color:var(--text-main);"><%= match.teams[0] %></div></div>
-        <% if (match.score && match.score[0]) { %>
-          <div style="text-align:right;">
-            <div class="score-a" style="font-family:'Teko',sans-serif;font-size:1.5rem;color:var(--text-main);line-height:1;"><%= match.score[0].r %>/<%= match.score[0].w %></div>
-            <div style="font-size:11px;color:var(--text-muted);"><%= match.score[0].o %> ov</div>
-          </div>
-        <% } %>
-      </div>
-    <% } %>
-
-    <% if (match && match.teams && match.teams[1]) { %>
-      <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid rgba(255,255,255,0.05);">
-        <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#f97316,#ea580c);display:flex;align-items:center;justify-content:center;font-size:20px;">🏏</div>
-        <div style="flex:1;"><div style="font-weight:700;font-size:15px;color:var(--text-main);"><%= match.teams[1] %></div></div>
-        <% if (match.score && match.score[1]) { %>
-          <div style="text-align:right;">
-            <div class="score-b" style="font-family:'Teko',sans-serif;font-size:1.5rem;color:var(--text-main);line-height:1;"><%= match.score[1].r %>/<%= match.score[1].w %></div>
-            <div style="font-size:11px;color:var(--text-muted);"><%= match.score[1].o %> ov</div>
-          </div>
-        <% } %>
-      </div>
-    <% } %>
-
-    <% if (match && match.status) { %>
-      <div style="margin-top:12px;padding:10px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:10px;text-align:center;font-size:13px;color:var(--gold);font-weight:600;">
-        <%= match.status %>
-      </div>
-    <% } %>
+  <!-- Match Header -->
+  <div class="card" style="padding:16px;margin-bottom:16px;">
+    <!-- তোমার আগের ম্যাচ হেডার কোড এখানে রাখো (teams + score) -->
+    <%- include('partials/match-header', {match: match}) %>   <!-- যদি আলাদা partial না থাকে তাহলে আগের কোডটা রেখে দাও -->
   </div>
 
-  <% if (locals.user) { %>
-    <div class="card" style="padding:12px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
-      <div style="font-size:13px;color:var(--text-muted);">🎯 প্রতি প্রেডিকশন খরচ <b style="color:var(--text-main);">১০ কয়েন</b></div>
-      <div style="font-size:13px;color:var(--text-muted);">আপনার কয়েন: <span id="coinBal" style="color:var(--gold);font-weight:800;"><%= user.coins %></span></div>
-    </div>
-  <% } %>
-
-  <div class="filter-tabs">
-    <div class="filter-tab active" data-f="all">সব</div>
-    <div class="filter-tab" data-f="match">ম্যাচ</div>
-    <div class="filter-tab" data-f="runs">রান</div>
-    <div class="filter-tab" data-f="wickets">উইকেট</div>
-  </div>
-
-  <% if (match && match.teams && match.teams.length >= 2) { %>
-  <div class="mkt" data-cat="match">
-    <div class="mkt-head"><span class="ico">🏆</span> ম্যাচ উইনার — কোন দল জিতবে?</div>
-    <div class="mkt-row">
-      <div class="mkt-name"><%= match.teams[0] %></div>
-      <button class="mkt-pick" data-market="winner" data-pick="<%= match.teams[0] %>">
-        <span class="reward">+১০</span><span class="label">পয়েন্ট</span>
-      </button>
-    </div>
-    <div class="mkt-row">
-      <div class="mkt-name"><%= match.teams[1] %></div>
-      <button class="mkt-pick" data-market="winner" data-pick="<%= match.teams[1] %>">
-        <span class="reward">+১০</span><span class="label">পয়েন্ট</span>
-      </button>
-    </div>
-    <div class="mkt-row">
-      <div class="mkt-name">ড্র / টাই</div>
-      <button class="mkt-pick" data-market="draw" data-pick="draw">
-        <span class="reward">+২০</span><span class="label">পয়েন্ট</span>
-      </button>
+  <!-- Bookmaker Section -->
+  <div class="market-section">
+    <h5 style="margin: 0 0 12px 4px; color: var(--gold); font-weight: 700;">📌 বুকমেকার মার্কেট</h5>
+    
+    <div class="mkt">
+      <div class="mkt-head"><span>🏆</span> ম্যাচ উইনার</div>
+      <div class="mkt-row">
+        <div class="mkt-name"><%= match?.teams?.[0] || 'Team A' %></div>
+        <div class="odds-btn back" data-market="bookmaker" data-runner="0" data-odd="1.85">1.85</div>
+      </div>
+      <div class="mkt-row">
+        <div class="mkt-name"><%= match?.teams?.[1] || 'Team B' %></div>
+        <div class="odds-btn back" data-market="bookmaker" data-runner="1" data-odd="2.10">2.10</div>
+      </div>
     </div>
   </div>
-  <% } %>
 
-  <div class="mkt" data-cat="runs">
-    <div class="mkt-head"><span class="ico">📊</span> প্রথম ইনিংসে মোট রান</div>
-    <div class="mkt-row">
-      <div class="mkt-name">১৫০ এর নিচে</div>
-      <button class="mkt-pick" data-market="runs" data-pick="below150"><span class="reward">+১৫</span><span class="label">পয়েন্ট</span></button>
-    </div>
-    <div class="mkt-row">
-      <div class="mkt-name">১৫০ – ২০০</div>
-      <button class="mkt-pick" data-market="runs" data-pick="150_200"><span class="reward">+১৫</span><span class="label">পয়েন্ট</span></button>
-    </div>
-    <div class="mkt-row">
-      <div class="mkt-name">২০০ – ২৫০</div>
-      <button class="mkt-pick" data-market="runs" data-pick="200_250"><span class="reward">+১৫</span><span class="label">পয়েন্ট</span></button>
-    </div>
-    <div class="mkt-row">
-      <div class="mkt-name">২৫০ এর বেশি</div>
-      <button class="mkt-pick" data-market="runs" data-pick="above250"><span class="reward">+১৫</span><span class="label">পয়েন্ট</span></button>
-    </div>
-    <div class="mkt-sub">⚠️ প্রতি মার্কেটে একবারই প্রেডিকশন করা যাবে</div>
-  </div>
-
-  <div class="mkt" data-cat="wickets">
-    <div class="mkt-head"><span class="ico">🎳</span> পুরো ম্যাচে মোট উইকেট</div>
-    <div class="mkt-row">
-      <div class="mkt-name">০ – ১০ উইকেট</div>
-      <button class="mkt-pick" data-market="wickets" data-pick="0-10"><span class="reward">+১৫</span><span class="label">পয়েন্ট</span></button>
-    </div>
-    <div class="mkt-row">
-      <div class="mkt-name">১১ – ১৫ উইকেট</div>
-      <button class="mkt-pick" data-market="wickets" data-pick="11-15"><span class="reward">+১৫</span><span class="label">পয়েন্ট</span></button>
-    </div>
-    <div class="mkt-row">
-      <div class="mkt-name">১৬+ উইকেট</div>
-      <button class="mkt-pick" data-market="wickets" data-pick="16+"><span class="reward">+১৫</span><span class="label">পয়েন্ট</span></button>
+  <!-- Fancy Market Section -->
+  <div class="market-section">
+    <h5 style="margin: 0 0 12px 4px; color: var(--gold); font-weight: 700;">⚡ ফ্যান্সি মার্কেট (লাইভ)</h5>
+    
+    <div id="fancyMarkets">
+      <!-- JS দিয়ে ডাইনামিক লোড হবে -->
+      <div class="mkt">
+        <div class="mkt-head"><span>🏏</span> ব্যাটসম্যান রান</div>
+        <!-- উদাহরণ -->
+      </div>
     </div>
   </div>
 
   <% if (!locals.user) { %>
-    <div class="card" style="padding:20px;margin-bottom:12px;text-align:center;border:1px solid var(--gold);">
-      <div style="font-size:32px;margin-bottom:8px;">🎯</div>
-      <div style="font-size:14px;color:var(--text-main);margin-bottom:14px;">প্রেডিকশন করতে লগইন করুন</div>
-      <a href="/login" class="btn btn-gold" style="padding:10px 30px;text-decoration:none;">লগইন</a>
+    <div class="card text-center" style="padding:30px;">
+      <p>বেটিং করতে লগইন করুন</p>
+      <a href="/login" class="btn btn-gold">লগইন করুন</a>
     </div>
   <% } %>
 
 </div>
 
-<div id="predToast"></div>
-
 <script>
-  var alreadyPicked = <%- JSON.stringify(typeof myPredictions !== 'undefined' ? myPredictions : []) %>;
-  var isLoggedIn = <%= locals.user ? 'true' : 'false' %>;
-  var matchId = "<%= match ? match.id : '' %>";
-
-  document.querySelectorAll('.mkt-pick').forEach(function(btn){
-    var m = btn.dataset.market, p = btn.dataset.pick;
-    var done = alreadyPicked.find(function(x){ return x.market === m; });
-    if (done) {
-      if (done.pick === p) { btn.classList.add('selected'); }
-      else { btn.classList.add('locked'); }
-      btn.disabled = true;
+  // বেট প্লেসমেন্ট (পরে backend route তৈরি করব)
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('odds-btn')) {
+      if (!<%= locals.user ? 'true' : 'false' %>) {
+        alert("লগইন করুন");
+        return;
+      }
+      const market = e.target.dataset.market;
+      const runner = e.target.dataset.runner;
+      const odd = parseFloat(e.target.dataset.odd);
+      
+      if (confirm(`এই ওডসে বেট করবেন? Odds: ${odd}`)) {
+        // TODO: fetch('/api/bet/place', { ... })
+        console.log("Bet placed:", {market, runner, odd});
+      }
     }
   });
 
-  function toast(msg, isErr) {
-    var t = document.getElementById('predToast');
-    t.textContent = msg;
-    t.className = isErr ? 'show err' : 'show';
-    setTimeout(function(){ t.className = t.className.replace('show','').trim(); }, 2800);
-  }
-
-  document.querySelectorAll('.mkt-pick').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      if (!isLoggedIn) { window.location.href = '/login'; return; }
-      if (btn.disabled) return;
-      var market = btn.dataset.market;
-      var pick = btn.dataset.pick;
-      btn.disabled = true;
-      fetch('/matches/' + matchId + '/predict', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ market: market, pick: pick })
-      })
-      .then(function(r){ return r.json(); })
-      .then(function(d){
-        if (d.success) {
-          btn.classList.add('selected');
-          document.querySelectorAll('.mkt-pick').forEach(function(b){
-            if (b.dataset.market === market && b !== btn) { b.classList.add('locked'); b.disabled = true; }
-          });
-          var bal = document.getElementById('coinBal');
-          if (bal && typeof d.newBalance !== 'undefined') bal.textContent = d.newBalance;
-          toast('✅ প্রেডিকশন সাবমিট হয়েছে! জিতলে +' + d.reward + ' পয়েন্ট');
-        } else {
-          btn.disabled = false;
-          toast('⚠️ ' + (d.error || 'সমস্যা হয়েছে'), true);
-        }
-      })
-      .catch(function(){
-        btn.disabled = false;
-        toast('⚠️ নেটওয়ার্ক সমস্যা', true);
-      });
-    });
-  });
-
-  document.querySelectorAll('.filter-tab').forEach(function(tab){
-    tab.addEventListener('click', function(){
-      document.querySelectorAll('.filter-tab').forEach(function(t){ t.classList.remove('active'); });
-      tab.classList.add('active');
-      var f = tab.dataset.f;
-      document.querySelectorAll('.mkt').forEach(function(m){
-        m.style.display = (f === 'all' || m.dataset.cat === f) ? 'block' : 'none';
-      });
-    });
-  });
+  // Socket for live fancy update
+  var socket = io();
+  socket.emit("joinMatch", "<%= match ? match.id : '' %>");
 </script>
 
 <%- include('partials/bottom-nav') %>
-
 </body>
-
-<script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
-<script>
-  var socket = io();
-  var liveMatchId = "<%= match ? match.id : '' %>";
-  if (liveMatchId) { socket.emit("joinMatch", liveMatchId); }
-  socket.on("scoreUpdate", function(data){
-    document.querySelectorAll('.score-a').forEach(function(el){ if (data.score_a) el.textContent = data.score_a; });
-    document.querySelectorAll('.score-b').forEach(function(el){ if (data.score_b) el.textContent = data.score_b; });
-  });
-</script>
 </html>
