@@ -3,149 +3,141 @@
 
 <style>
   .pulse-live { animation: pulselive 1.5s ease-in-out infinite; }
-  @keyframes pulselive {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(1.2); }
-  }
-  
-  .market-section { margin-bottom: 20px; }
-  .mkt {
-    background: var(--bg-card);
-    border: 1px solid var(--border-glass);
-    border-radius: 14px;
+  @keyframes pulselive { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  .market-box {
+    background: #1f2937;
+    border-radius: 12px;
+    margin-bottom: 18px;
     overflow: hidden;
-    margin-bottom: 16px;
+    border: 1px solid #334155;
   }
-  .mkt-head {
+  .market-header {
     padding: 12px 16px;
-    background: var(--grad-surface);
-    border-bottom: 1px solid var(--border-glass);
-    font-weight: 700; font-size: 14px; color: var(--text-main);
-    display: flex; align-items: center; gap: 8px;
+    background: #111827;
+    font-weight: 700;
+    font-size: 15px;
+    color: #fbbf24;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
-  .mkt-row {
-    display: flex; align-items: center;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
+  .market-row {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    border-top: 1px solid #334155;
   }
-  .mkt-name {
-    flex: 1; padding: 14px 16px;
-    font-size: 14.5px; font-weight: 600;
+  .market-team {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 600;
   }
-  .odds-btn {
-    min-width: 85px; padding: 14px 8px;
-    text-align: center; border-left: 1px solid rgba(255,255,255,0.08);
-    font-weight: 700; font-size: 15px; cursor: pointer;
-    transition: 0.2s;
+  .odds {
+    padding: 11px 16px;
+    border-radius: 6px;
+    font-weight: 800;
+    font-size: 16px;
+    min-width: 82px;
+    text-align: center;
+    cursor: pointer;
   }
-  .odds-btn:hover { background: rgba(16,185,129,0.15); }
-  .odds-btn.suspended { opacity: 0.5; cursor: not-allowed; background: #1f2937; }
-  
-  .fancy-row { display: flex; }
-  .fancy-name { flex: 1; padding: 12px 16px; font-weight: 500; }
-  .fancy-odds {
-    display: flex; width: 190px;
+  .back { background: #22c55e; color: #000; }
+  .lay { background: #ef4444; color: #fff; }
+
+  .fancy-row {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    border-top: 1px solid #334155;
   }
-  .fancy-odds button {
-    flex: 1; padding: 12px 6px; font-size: 15px; font-weight: 700;
+  .fancy-name {
+    flex: 1;
+    font-size: 14.5px;
   }
-  .back { background: #10b981; color: white; }
-  .lay { background: #ef4444; color: white; }
 </style>
 
-<div class="container" style="padding-top: 14px;">
+<div class="container" style="padding-top: 14px; padding-bottom: 90px;">
 
   <a href="/matches" style="display:inline-flex;align-items:center;gap:6px;color:var(--text-muted);text-decoration:none;font-size:13px;margin-bottom:12px;">
     ← সব ম্যাচে ফিরে যান
   </a>
 
-  <!-- Match Header (আগের কোড থেকে নেওয়া) -->
-  <div class="card" style="padding:14px;margin-bottom:16px;">
+  <!-- Match Header -->
+  <div class="card" style="padding:16px;margin-bottom:20px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-      <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">
-        <i class="fas fa-trophy" style="color:var(--gold);margin-right:5px;"></i>
-        <%= match && match.sport === 'football' ? 'Football' : 'Cricket' %>
+      <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;">
+        CRICKET
       </div>
-      <% var isLive = match && (match.status || '').toString().toLowerCase().includes('live'); %>
+      <% var isLive = match && (match.status || '').toLowerCase().includes('live'); %>
       <% if (isLive) { %>
-        <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(16,185,129,0.15);color:#10b981;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;">
-          <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#10b981;" class="pulse-live"></span>
-          In Play
+        <span style="background:rgba(16,185,129,0.2);color:#22c55e;padding:4px 12px;border-radius:9999px;font-size:12px;font-weight:700;">
+          <span class="pulse-live" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:6px;"></span>
+          LIVE
         </span>
       <% } else { %>
-        <span style="background:rgba(245,158,11,0.12);color:var(--gold);padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;">Upcoming</span>
+        <span style="background:rgba(245,158,11,0.2);color:#fbbf24;padding:4px 12px;border-radius:9999px;font-size:12px;font-weight:700;">UPCOMING</span>
       <% } %>
     </div>
 
-    <% if (match && match.teams && match.teams[0]) { %>
-      <div style="display:flex;align-items:center;gap:12px;padding:8px 0;">
-        <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#0ea5e9,#0284c7);display:flex;align-items:center;justify-content:center;font-size:20px;">🏏</div>
-        <div style="flex:1;"><div style="font-weight:700;font-size:15px;color:var(--text-main);"><%= match.teams[0] %></div></div>
-        <% if (match.score && match.score[0]) { %>
-          <div style="text-align:right;">
-            <div class="score-a" style="font-family:'Teko',sans-serif;font-size:1.5rem;color:var(--text-main);line-height:1;"><%= match.score[0].r %>/<%= match.score[0].w %></div>
-            <div style="font-size:11px;color:var(--text-muted);"><%= match.score[0].o %> ov</div>
-          </div>
-        <% } %>
+    <% if (match && match.teams) { %>
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">
+        <div style="width:52px;height:52px;border-radius:50%;background:#3b82f6;display:flex;align-items:center;justify-content:center;font-size:26px;">🏏</div>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:16.5px;"><%= match.teams[0] %></div>
+          <% if (match.score && match.score[0]) { %>
+            <div style="font-size:1.6rem;font-weight:700;color:#22c55e;"><%= match.score[0].r %>/<%= match.score[0].w %></div>
+          <% } %>
+        </div>
       </div>
-    <% } %>
 
-    <% if (match && match.teams && match.teams[1]) { %>
-      <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid rgba(255,255,255,0.05);">
-        <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#f97316,#ea580c);display:flex;align-items:center;justify-content:center;font-size:20px;">🏏</div>
-        <div style="flex:1;"><div style="font-weight:700;font-size:15px;color:var(--text-main);"><%= match.teams[1] %></div></div>
-        <% if (match.score && match.score[1]) { %>
-          <div style="text-align:right;">
-            <div class="score-b" style="font-family:'Teko',sans-serif;font-size:1.5rem;color:var(--text-main);line-height:1;"><%= match.score[1].r %>/<%= match.score[1].w %></div>
-            <div style="font-size:11px;color:var(--text-muted);"><%= match.score[1].o %> ov</div>
-          </div>
-        <% } %>
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div style="width:52px;height:52px;border-radius:50%;background:#f97316;display:flex;align-items:center;justify-content:center;font-size:26px;">🏏</div>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:16.5px;"><%= match.teams[1] %></div>
+        </div>
       </div>
     <% } %>
 
     <% if (match && match.status) { %>
-      <div style="margin-top:12px;padding:10px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:10px;text-align:center;font-size:13px;color:var(--gold);font-weight:600;">
+      <div style="margin-top:16px;padding:10px;background:rgba(234,179,8,0.1);border-radius:8px;text-align:center;color:#fbbf24;font-weight:600;">
         <%= match.status %>
       </div>
     <% } %>
   </div>
 
-  <!-- Bookmaker Markets -->
-  <div class="market-section">
-    <h5 style="margin: 0 0 12px 4px; color: var(--gold); font-weight: 700;">📌 বুকমেকার মার্কেট</h5>
-    
-    <div class="mkt">
-      <div class="mkt-head"><span>🏆</span> ম্যাচ উইনার</div>
-      <div class="mkt-row">
-        <div class="mkt-name"><%= match?.teams?.[0] || 'Team A' %></div>
-        <div class="odds-btn back" data-market="match-winner" data-runner="0" data-odd="1.85">1.85</div>
-      </div>
-      <div class="mkt-row">
-        <div class="mkt-name"><%= match?.teams?.[1] || 'Team B' %></div>
-        <div class="odds-btn back" data-market="match-winner" data-runner="1" data-odd="2.10">2.10</div>
-      </div>
+  <!-- বুকমেকার মার্কেট -->
+  <div class="market-box">
+    <div class="market-header">
+      🏆 ম্যাচ উইনার
+    </div>
+    <div class="market-row">
+      <div class="market-team"><%= match?.teams?.[0] || 'Team A' %></div>
+      <div class="odds back" data-market="match-winner" data-runner="0" data-odd="1.85">1.85</div>
+    </div>
+    <div class="market-row">
+      <div class="market-team"><%= match?.teams?.[1] || 'Team B' %></div>
+      <div class="odds back" data-market="match-winner" data-runner="1" data-odd="2.10">2.10</div>
     </div>
   </div>
 
-  <!-- Fancy Markets -->
-  <div class="market-section">
-    <h5 style="margin: 0 0 12px 4px; color: var(--gold); font-weight: 700;">⚡ ফ্যান্সি মার্কেট (লাইভ)</h5>
-    <div id="fancyMarkets">
-      <div class="mkt">
-        <div class="mkt-head"><span>🏏</span> ব্যাটসম্যান রান</div>
-        <div class="mkt-row">
-          <div class="fancy-name">কোনো ব্যাটসম্যান ৫০+ রান</div>
-          <div class="fancy-odds">
-            <button class="back" data-market="fancy" data-type="yes">Yes 1.75</button>
-            <button class="lay" data-market="fancy" data-type="no">No 2.05</button>
-          </div>
-        </div>
+  <!-- ফ্যান্সি মার্কেট -->
+  <div class="market-box">
+    <div class="market-header">
+      ⚡ ফ্যান্সি মার্কেট (লাইভ)
+    </div>
+    <div class="fancy-row">
+      <div class="fancy-name">কোনো ব্যাটসম্যান ৫০+ রান করবে</div>
+      <div style="display:flex;gap:6px;">
+        <div class="odds back" data-market="fancy" data-type="yes" data-odd="1.75">Yes 1.75</div>
+        <div class="odds lay" data-market="fancy" data-type="no" data-odd="2.05">No 2.05</div>
       </div>
     </div>
   </div>
 
   <% if (!locals.user) { %>
-    <div class="card" style="padding:25px;text-align:center;">
-      <p style="color:var(--text-muted);">বেটিং করতে লগইন করুন</p>
+    <div class="card text-center" style="padding:40px 20px;margin-top:20px;">
+      <p style="margin-bottom:20px;">বেটিং করতে লগইন করুন</p>
       <a href="/login" class="btn btn-gold">লগইন করুন</a>
     </div>
   <% } %>
@@ -153,22 +145,21 @@
 </div>
 
 <script>
-  document.addEventListener('click', function(e) {
-    if (e.target.classList.contains('odds-btn') || e.target.classList.contains('back') || e.target.classList.contains('lay')) {
+  document.querySelectorAll('.odds').forEach(function(btn) {
+    btn.addEventListener('click', function() {
       if (!<%= locals.user ? 'true' : 'false' %>) {
         alert("বেটিং করতে লগইন করুন");
         return;
       }
-      const market = e.target.dataset.market;
-      const odd = e.target.textContent;
-      if (confirm(`এই ওডসে বেট করবেন? ${odd}`)) {
-        console.log("Bet placed on:", market, odd);
-        // পরে backend route তৈরি করব
+      const odd = this.textContent.trim();
+      if (confirm(`আপনি ${odd} ওডসে বেট করতে চান?`)) {
+        console.log("Bet request:", this.dataset);
+        // পরে backend এ fetch করব
       }
-    }
+    });
   });
 
-  var socket = io();
+  const socket = io();
   socket.emit("joinMatch", "<%= match ? match.id : '' %>");
 </script>
 
