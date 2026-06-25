@@ -199,7 +199,7 @@ async function migrateDB() {
       );
     `);
 
-    // প্রেডিকশন টেবিল (এই অংশটা নতুন)
+    // প্রেডিকশন টেবিল
     await pool.query(`
       CREATE TABLE IF NOT EXISTS predictions (
           id SERIAL PRIMARY KEY,
@@ -214,7 +214,7 @@ async function migrateDB() {
       );
     `);
 
-    // পুরোনো টেবিলে কলাম না থাকলে যোগ করা (এই অংশটা নতুন)
+    // পুরোনো টেবিলে কলাম না থাকলে যোগ করা
     await pool.query(`
       ALTER TABLE matches ADD COLUMN IF NOT EXISTS overs TEXT;
       ALTER TABLE matches ADD COLUMN IF NOT EXISTS score_a TEXT;
@@ -222,6 +222,13 @@ async function migrateDB() {
       ALTER TABLE matches ADD COLUMN IF NOT EXISTS result VARCHAR(50);
       ALTER TABLE matches ADD COLUMN IF NOT EXISTS winner VARCHAR(100);
       ALTER TABLE matches ADD COLUMN IF NOT EXISTS match_date TIMESTAMP;
+    `);
+
+    // স্কোর কলাম integer থাকলে TEXT এ বদলানো (এই অংশটা নতুন — আসল সমস্যা ঠিক করে)
+    await pool.query(`
+      ALTER TABLE matches ALTER COLUMN score_a TYPE TEXT USING score_a::TEXT;
+      ALTER TABLE matches ALTER COLUMN score_b TYPE TEXT USING score_b::TEXT;
+      ALTER TABLE matches ALTER COLUMN overs TYPE TEXT USING overs::TEXT;
     `);
 
     console.log('✅ DB migration done');
