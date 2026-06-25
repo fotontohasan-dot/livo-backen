@@ -151,11 +151,41 @@
         alert("বেটিং করতে লগইন করুন");
         return;
       }
-      const odd = this.textContent.trim();
-      if (confirm(`আপনি ${odd} ওডসে বেট করতে চান?`)) {
-        console.log("Bet request:", this.dataset);
-        // পরে backend এ fetch করব
+
+      const oddText = this.textContent.trim();
+      const stake = prompt("কত কয়েন বেট করবেন? (মিনিমাম ১০)", "50");
+      const stakeAmount = parseInt(stake);
+
+      if (!stakeAmount || stakeAmount < 10) {
+        alert("মিনিমাম ১০ কয়েন বেট করতে হবে");
+        return;
       }
+
+      if (!confirm(`আপনি ${oddText} ওডসে ${stakeAmount} কয়েন বেট করতে চান?`)) return;
+
+      fetch(`/matches/<%= match ? match.id : '' %>/bet`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          market: this.dataset.market,
+          runner: this.dataset.runner || this.dataset.type,
+          odd: parseFloat(this.dataset.odd),
+          stake: stakeAmount
+        })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          alert(data.message || "✅ বেট সফল হয়েছে!");
+          location.reload();
+        } else {
+          alert(data.error || "❌ বেট প্লেস করতে সমস্যা হয়েছে");
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert("নেটওয়ার্ক সমস্যা");
+      });
     });
   });
 
