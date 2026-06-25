@@ -12,7 +12,7 @@ const helmet = require('helmet');
 const compression = require('compression');
 const { connectDB, pool } = require('./db');
 const { syncMatches } = require('./services/matchUpdater');
-const runMigrations = require('./migrations');   // ← নতুন যোগ করা হয়েছে
+const runMigrations = require('./migrations');
 
 const app = express();
 const server = http.createServer(app);
@@ -78,7 +78,7 @@ app.use('/register', loginLimiter);
 // ভাষা সেটিং
 const translations = {
   bn: {
-    balance: 'ব্যালেন্স', deposit: 'ডিপোজিট', withdraw: 'উইথড্র',
+    balance: 'ব্যালেন্স', deposit: 'ডিপোজট', withdraw: 'উইথড্র',
     login: 'লগইন', register: 'রজিস্টার', logout: 'লগআউট',
     home: 'হোম', invite: 'আমন্ত্রণ', promotion: 'প্রমোশন', support: 'সেবা', member: 'সদস্য',
     menu_home: 'হোম', menu_aviator: 'Aviator', menu_slots: 'Slots', menu_color: 'Color Prediction',
@@ -152,7 +152,7 @@ app.get('/app/update', (req, res) => res.render('app/update'));
 app.use((err, req, res, next) => {
   console.error('❌ Unhandled Error:', err.stack);
   res.status(500).render('error', {
-    message: 'সার্ভার সমস্যা হয়েছে। একটু পরে আবার চেষ্টা করুন।',
+    message: 'সর্ভার সমস্যা হয়েছে। একটু পরে আবার চেষ্টা করুন।',
     siteName: 'Livo'
   });
 });
@@ -173,7 +173,6 @@ async function startServer() {
 
     // Run All Migrations
     await runMigrations();
-    await migrateDB();        // তোমার আগের মাইগ্রেশনও চলবে
     console.log("✅ DB migration done");
 
     server.listen(PORT, () => {
