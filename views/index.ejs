@@ -1,68 +1,210 @@
-<div class="sub-header-black" style="background: #000000; padding: 10px 12px; display: flex; align-items: center; gap: 12px; overflow-x: auto; white-space: nowrap; scrollbar-width: none;">
-  <div class="live-badge-item" style="background: #ffb80c; color: #000; padding: 5px 10px; border-radius: 6px; font-weight: 800; font-size: 12px; display: flex; align-items: center; gap: 5px;">
-    🏏 Cricket <span style="background: #000; color: #ffb80c; padding: 1px 6px; border-radius: 4px; font-size: 10px;">13</span>
-  </div>
-  <div style="color: #94a3b8; font-size: 13px; font-weight: 600; padding: 4px 8px;">FIFA World Cup</div>
-  <div style="color: #94a3b8; font-size: 13px; font-weight: 600; padding: 4px 8px;">IPL 2026</div>
-  <div style="color: #94a3b8; font-size: 13px; font-weight: 600; padding: 4px 8px;">Tennis Live</div>
-</div>
+<%- include('partials/header') %>
 
-<div class="highlights-title-bar" style="background: #11324d; color: #fff; text-align: center; padding: 8px 0; font-size: 14px; font-weight: 700; letter-spacing: 0.5px;">
-  HIGHLIGHTS
-</div>
-<div class="filter-tab-container" style="background: #e2e8f0; display: grid; grid-template-columns: 1fr 1fr; padding: 4px; gap: 4px;">
-  <button class="filter-tab-btn active" style="background: #ffffff; border: none; padding: 8px; text-align: center; font-size: 13px; font-weight: 700; color: #000; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">by Time</button>
-  <button class="filter-tab-btn" style="background: transparent; border: none; padding: 8px; text-align: center; font-size: 13px; font-weight: 600; color: #64748b;">by Competition</button>
-</div>
+<div class="container">
+    <nav class="navbar">
+        <div class="nav-left">
+            <button id="menuBtn" style="background:none; border:none; color:var(--text-main); font-size:1.2rem; cursor:pointer;">
+                <i class="fas fa-bars"></i>
+            </button>
+            <span style="font-weight:700; margin-left:10px; font-size:1.1rem; background: var(--grad-gold); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">LIVO</span>
+        </div>
+        <div class="nav-right" style="display:flex; align-items:center; gap:12px;">
+            <div class="lang-switch">
+                <a href="?lang=bn" class="lang-btn <%= lang === 'bn' ? 'active' : '' %>">বাংলা</a>
+                <a href="?lang=en" class="lang-btn <%= lang === 'en' ? 'active' : '' %>">EN</a>
+            </div>
+            <button id="themeToggle" style="background:none; border:none; color:var(--gold); font-size:1.1rem; cursor:pointer;">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+    </nav>
 
-<div class="match-list-section" style="background: #ffffff; color: #1a1a1a; padding-bottom: 5px;">
-  
-  <div class="match-row-item" style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #e2e8f0;">
-    <div class="match-info-left" style="display: flex; flex-direction: column; gap: 4px; width: 55%;">
-      <span class="in-play-tag" style="color: #f97316; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 4px;">
-        <span style="width:6px; height:6px; background:#f97316; border-radius:50%; display:inline-block;"></span> In-Play
-      </span>
-      <span class="match-teams-name" style="color: #0284c7; font-weight: 700; font-size: 13px; line-height: 1.4; word-break: break-word;">
-        Sri Lanka Emerging v West Indies Emerging
-      </span>
+    <div class="top-balance-bar glass" style="margin: 10px 12px; border-radius: 12px;">
+        <div class="bal-details">
+            <div style="font-size:10px; color:var(--text-muted);"><%= t.balance %></div>
+            <div class="balance-amount">৳ <span id="userBalance"><%= user ? user.balance.toFixed(2) : '0.00' %></span></div>
+        </div>
+        <div class="bal-actions" style="display:flex; gap:6px;">
+            <a href="/wallet/deposit" class="btn btn-gold btn-sm"><i class="fas fa-wallet"></i> <%= t.deposit %></a>
+        </div>
     </div>
+
+    <div class="banner-container">
+        <div class="card glass" style="height:130px; display:flex; align-items:center; justify-content:center; background:linear-gradient(45deg, rgba(0,150,37,0.2), rgba(245,158,11,0.1)); position:relative; overflow:hidden;">
+            <div style="position:absolute; inset:0; opacity:0.1; background:url('/images/pattern.png');"></div>
+            <div style="text-align:center; z-index:1;">
+                <h3 style="color:var(--gold); margin-bottom:4px; font-size:1.2rem;"><%= t.welcome_title %></h3>
+                <p style="font-size:11px; color:var(--text-muted);"><%= t.welcome_sub %></p>
+            </div>
+        </div>
+    </div>
+
+    <div style="margin: 0 12px 10px; padding: 6px 12px; background:rgba(255,255,255,0.02); border:1px solid var(--border-glass); border-radius:8px; display:flex; align-items:center; gap:10px; font-size:11px;">
+        <i class="fas fa-volume-up" style="color:var(--gold);"></i>
+        <marquee style="color:var(--text-muted);"><%= t.ticker_text %></marquee>
+    </div>
+
+    <div style="display:flex; gap:8px; overflow-x:auto; padding:5px 12px 15px; -webkit-overflow-scrolling:touch;" class="no-scrollbar">
+        <div class="cat-item active" style="padding:8px 16px; background:var(--bg-card); border:1px solid var(--border-glass); border-radius:20px; flex-shrink:0; display:flex; align-items:center; gap:6px; cursor:pointer;">
+            <i class="fas fa-gamepad" style="color:var(--gold);"></i>
+            <div style="font-size:12px; font-weight:600;"><%= t.all_games %></div>
+        </div>
+        <div class="cat-item" style="padding:8px 16px; background:var(--bg-card); border:1px solid var(--border-glass); border-radius:20px; flex-shrink:0; display:flex; align-items:center; gap:6px; cursor:pointer;">
+            <i class="fas fa-trophy" style="color:var(--text-muted);"></i>
+            <div style="font-size:12px; color:var(--text-muted);"><%= t.sports %></div>
+        </div>
+        <div class="cat-item" style="padding:8px 16px; background:var(--bg-card); border:1px solid var(--border-glass); border-radius:20px; flex-shrink:0; display:flex; align-items:center; gap:6px; cursor:pointer;">
+            <i class="fas fa-bolt" style="color:var(--text-muted);"></i>
+            <div style="font-size:12px; color:var(--text-muted);"><%= t.crash %></div>
+        </div>
+    </div>
+
+    <div class="section-header">
+        <div class="section-title"><i class="fas fa-star"></i> <%= t.popular_games %></div>
+    </div>
+
+    <div class="game-grid">
+        <div class="game-card glass" onclick="location.href='/games/head-tail'">
+            <div style="position:absolute; inset:0; background:linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.9)); z-index:1;"></div>
+            <div style="width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding-bottom:15px;">
+                <i class="fas fa-coins" style="font-size:2.5rem; color:var(--gold); filter:drop-shadow(0 4px 8px rgba(245,158,11,0.3));"></i>
+                <div style="position:absolute; bottom:8px; z-index:2; font-size:11px; font-weight:700; width:100%; text-align:center;"><%= t.game_ht %></div>
+            </div>
+        </div>
+
+        <div class="game-card glass" onclick="location.href='/games/dice'">
+            <div style="position:absolute; inset:0; background:linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.9)); z-index:1;"></div>
+            <div style="width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding-bottom:15px;">
+                <i class="fas fa-dice" style="font-size:2.5rem; color:#10b981; filter:drop-shadow(0 4px 8px rgba(16,185,129,0.3));"></i>
+                <div style="position:absolute; bottom:8px; z-index:2; font-size:11px; font-weight:700; width:100%; text-align:center;"><%= t.game_dice %></div>
+            </div>
+        </div>
+
+        <div class="game-card glass" onclick="location.href='/games/slots'">
+            <div style="position:absolute; inset:0; background:linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.9)); z-index:1;"></div>
+            <div style="width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding-bottom:15px;">
+                <i class="fas fa-cubes" style="font-size:2.5rem; color:#3b82f6; filter:drop-shadow(0 4px 8px rgba(59,130,246,0.3));"></i>
+                <div style="position:absolute; bottom:8px; z-index:2; font-size:11px; font-weight:700; width:100%; text-align:center;"><%= t.game_slots %></div>
+            </div>
+        </div>
+
+        <div class="game-card glass" onclick="location.href='/sports/cricket'">
+            <div style="position:absolute; inset:0; background:linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.9)); z-index:1;"></div>
+            <div style="width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding-bottom:15px;">
+                <i class="fas fa-baseball-ball" style="font-size:2.5rem; color:#ef4444; filter:drop-shadow(0 4px 8px rgba(239,68,68,0.3));"></i>
+                <div style="position:absolute; bottom:8px; z-index:2; font-size:11px; font-weight:700; width:100%; text-align:center;"><%= t.game_cricket %></div>
+            </div>
+        </div>
+
+        <div class="game-card glass" onclick="location.href='/games/penalty'">
+            <div style="position:absolute; inset:0; background:linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.9)); z-index:1;"></div>
+            <div style="width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding-bottom:15px;">
+                <i class="fas fa-futbol" style="font-size:2.5rem; color:#a855f7; filter:drop-shadow(0 4px 8px rgba(168,85,247,0.3));"></i>
+                <div style="position:absolute; bottom:8px; z-index:2; font-size:11px; font-weight:700; width:100%; text-align:center;"><%= t.game_penalty %></div>
+            </div>
+        </div>
+
+        <div class="game-card glass" onclick="location.href='/games/mines'">
+            <div style="position:absolute; inset:0; background:linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.9)); z-index:1;"></div>
+            <div style="width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding-bottom:15px;">
+                <i class="fas fa-land-mine-on" style="font-size:2.5rem; color:#ec4899; filter:drop-shadow(0 4px 8px rgba(236,72,153,0.3));"></i>
+                <div style="position:absolute; bottom:8px; z-index:2; font-size:11px; font-weight:700; width:100%; text-align:center;"><%= t.game_mines %></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card glass">
+            <div class="stat-value" style="color:var(--primary);">24/7</div>
+            <div class="stat-label"><%= t.stat_support %></div>
+        </div>
+        <div class="stat-card glass">
+            <div class="stat-value">10m</div>
+            <div class="stat-label"><%= t.stat_payout %></div>
+        </div>
+        <div class="stat-card glass">
+            <div class="stat-value" style="color:#3b82f6;">100%</div>
+            <div class="stat-label"><%= t.stat_secure %></div>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <a href="/" class="nav-link active">
+            <i class="fas fa-home" style="font-size: 18px;"></i>
+            <span><%= t.nav_home %></span>
+        </a>
+        <a href="/sports" class="nav-link">
+            <i class="fas fa-trophy" style="font-size: 18px;"></i>
+            <span><%= t.nav_sports %></span>
+        </a>
+        <a href="/promotion" class="nav-link promotion-link">
+            <div class="promotion-icon">
+                <i class="fas fa-gift"></i>
+            </div>
+            <span><%= t.nav_promo %></span>
+        </a>
+        <a href="/wallet" class="nav-link">
+            <i class="fas fa-wallet" style="font-size: 18px;"></i>
+            <span><%= t.nav_wallet %></span>
+        </a>
+        <a href="/profile" class="nav-link">
+            <i class="fas fa-user" style="font-size: 18px;"></i>
+            <span><%= t.nav_profile %></span>
+        </a>
+    </div>
+</div>
+
+<div class="menu-overlay" id="menuOverlay"></div>
+<div class="side-menu" id="sideMenu">
+    <div style="padding: 20px; background: var(--grad-dark); border-bottom: 1px solid var(--border-glass); text-align: center;">
+        <div style="width: 60px; height: 60px; border-radius: 50%; background: var(--bg-glass); margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-glass);">
+            <i class="fas fa-user-circle" style="font-size: 2.5rem; color: var(--text-muted);"></i>
+        </div>
+        <div style="font-weight: 700; font-size: 1rem;"><%= user ? user.username : t.guest %></div>
+        <div style="font-size: 11px; color: var(--gold); margin-top: 4px;"><%= user ? user.email : '' %></div>
+    </div>
+    <div style="padding: 10px 0;">
+        <a href="/profile" class="menu-item"><i class="fas fa-user"></i> <span><%= t.nav_profile %></span></a>
+        <a href="/wallet/history" class="menu-item"><i class="fas fa-history"></i> <span><%= t.nav_history %></span></a>
+        <a href="/transactions" class="menu-item"><i class="fas fa-list-alt"></i> <span><%= t.nav_tx %></span></a>
+        <a href="/affiliate" class="menu-item"><i class="fas fa-users"></i> <span><%= t.nav_refer %></span></a>
+        <a href="/support" class="menu-item"><i class="fas fa-headset"></i> <span><%= t.nav_support %></span></a>
+        <% if (user) { %>
+            <a href="/auth/logout" class="menu-item" style="color: #ef4444;"><i class="fas fa-sign-out-alt" style="color: #ef4444;"></i> <span><%= t.logout %></span></a>
+        <% } else { %>
+            <a href="/auth/login" class="menu-item" style="color: var(--primary);"><i class="fas fa-sign-in-alt" style="color: var(--primary);"></i> <span><%= t.login %></span></a>
+        <% } %>
+    </div>
+</div>
+
+<script>
+    // Theme Toggle Functionality
+    const themeToggleBtn = document.getElementById('themeToggle');
+    const bodyEl = document.body;
     
-    <div style="display: flex; gap: 6px; width: 40%; justify-content: flex-end;">
-      <div class="odds-button-green" style="background: #a7f3d0; color: #065f46; font-weight: 800; border: 1px solid #6ee7b7; text-align: center; padding: 8px; border-radius: 6px; min-width: 50px; font-size: 12px; cursor: pointer;">
-        1.84
-      </div>
-      <div class="odds-button-suspend" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; text-align: center; padding: 8px; border-radius: 6px; min-width: 50px; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center;">
-        🔒 Lock
-      </div>
-      <div style="display: flex; align-items: center; padding-left: 4px; color: #94a3b8; cursor: pointer;">
-        <i class="far fa-pin" style="font-size: 14px;">📌</i>
-      </div>
-    </div>
-  </div>
+    themeToggleBtn.addEventListener('click', () => {
+        bodyEl.classList.toggle('light-mode');
+        const icon = themeToggleBtn.querySelector('i');
+        if(bodyEl.classList.contains('light-mode')) {
+            icon.className = 'fas fa-sun';
+        } else {
+            icon.className = 'fas fa-moon';
+        }
+    });
 
-  <div class="live-scorecard-box" style="background: #f8f9fa; border-bottom: 2px solid #e2e8f0; color: #000; padding: 12px; margin: 8px; border-radius: 12px; border: 1px solid #e2e8f0;">
-    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700; color: #475569;">
-      <span>🏏 SL-EM: 360/10 & 122/4</span>
-      <span style="color: #dc2626; background: #fee2e2; padding: 2px 6px; border-radius: 4px;">Live (34.2 Ov)</span>
-    </div>
-    
-    <div style="margin: 8px 0;">
-      <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 600; color: #64748b; margin-bottom: 2px;">
-        <span>SL-EM (98%)</span>
-        <span>WIA (2%)</span>
-      </div>
-      <div class="probability-bar-container" style="background: #cbd5e1; height: 6px; border-radius: 3px; overflow: hidden;">
-        <div class="probability-bar-fill" style="background: #009625; height: 100%; width: 98%;"></div>
-      </div>
-    </div>
+    // Side Menu Drawer Functionality
+    const menuBtn = document.getElementById('menuBtn');
+    const sideMenu = document.getElementById('sideMenu');
+    const menuOverlay = document.getElementById('menuOverlay');
 
-    <div style="display: flex; align-items: center; gap: 6px; margin-top: 6px;">
-      <span style="font-size: 10px; color: #64748b; font-weight: bold;">This Over:</span>
-      <span style="background: #e2e8f0; color: #000; font-size: 10px; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">1</span>
-      <span style="background: #e2e8f0; color: #000; font-size: 10px; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">0</span>
-      <span style="background: #e2e8f0; color: #000; font-size: 10px; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">w</span>
-      <span style="background: #fee2e2; color: #dc2626; font-size: 10px; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">4</span>
-    </div>
-  </div>
+    function toggleMenu() {
+        sideMenu.classList.toggle('open');
+        menuOverlay.classList.toggle('show');
+        bodyEl.classList.toggle('menu-open');
+    }
 
-</div>
+    menuBtn.addEventListener('click', toggleMenu);
+    menuOverlay.addEventListener('click', toggleMenu);
+</script>
+
+<%- include('partials/footer') %>
