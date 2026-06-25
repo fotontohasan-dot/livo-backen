@@ -227,3 +227,82 @@
 </div>
 
 <%- include('partials/bottom-nav') %>
+<script>
+const games = [
+  {name:"Aviator", emoji:"🚀", type:"pvp", slug:"aviator", badge:"hot", provider:"SPRIBE"},
+  {name:"Teen Patti", emoji:"🃏", type:"pvp", slug:"teen-patti", badge:"pop", provider:"JL"},
+  {name:"Andar Bahar", emoji:"🎴", type:"pvp", slug:"andar-bahar", badge:"hot", provider:"JL"},
+  {name:"Blackjack", emoji:"♠️", type:"table", slug:"blackjack", badge:"", provider:"EVO"},
+  {name:"Baccarat", emoji:"🎰", type:"table", slug:"baccarat", badge:"pop", provider:"EVO"},
+  {name:"Roulette", emoji:"🎡", type:"table", slug:"roulette", badge:"", provider:"EVO"},
+  {name:"Slots", emoji:"🎰", type:"slots", slug:"slots", badge:"hot", provider:"PG"},
+  {name:"Online Ludo", emoji:"🎲", type:"slots", slug:"ludo", badge:"new", provider:"JL"},
+  {name:"Dragon Tiger", emoji:"🐉", type:"live", slug:"dragon-tiger", badge:"pop", provider:"JL"},
+  {name:"Color Prediction", emoji:"🌈", type:"slots", slug:"color-prediction", badge:"new", provider:"JL"},
+  {name:"Mine Game", emoji:"💣", type:"slots", slug:"mine", badge:"hot", provider:"JL"},
+  {name:"Fortune Gems", emoji:"💎", type:"slots", slug:"fortune-gems", badge:"hot", provider:"JDB"},
+  {name:"Sweet Bonanza", emoji:"🍭", type:"slots", slug:"sweet-bonanza", badge:"pop", provider:"PP"},
+  {name:"Gates of Olympus", emoji:"⚡", type:"slots", slug:"gates-of-olympus", badge:"hot", provider:"PP"},
+  {name:"Crazy Time", emoji:"🎡", type:"live", slug:"crazy-time", badge:"hot", provider:"EVO"},
+  {name:"Mega Ball", emoji:"🟡", type:"live", slug:"mega-ball", badge:"pop", provider:"EVO"},
+  {name:"Rummy", emoji:"🃏", type:"slots", slug:"rummy", badge:"hot", provider:"JL"},
+  {name:"Call Break", emoji:"♠️", type:"slots", slug:"call-break", badge:"pop", provider:"JL"},
+  {name:"Lightning Roulette", emoji:"⚡", type:"live", slug:"lightning-roulette", badge:"hot", provider:"EVO"},
+  {name:"Mines", emoji:"💣", type:"slots", slug:"mines", badge:"new", provider:"SPRIBE"},
+  {name:"Sugar Pop", emoji:"🍬", type:"slots", slug:"sugar-pop", badge:"new", provider:"BS"},
+  {name:"Big Bad Wolf", emoji:"🐺", type:"slots", slug:"big-bad-wolf", badge:"new", provider:"QS"},
+  {name:"Mega Fishing", emoji:"🎣", type:"fishing", slug:"mega-fishing", badge:"hot", provider:"JL"},
+  {name:"Happy Fishing", emoji:"🐠", type:"fishing", slug:"happy-fishing", badge:"new", provider:"JL"},
+  {name:"Win Go", emoji:"🎟️", type:"lottery", slug:"win-go", badge:"hot", provider:"JL"},
+  {name:"Keno", emoji:"🔢", type:"lottery", slug:"keno", badge:"pop", provider:"JL"},
+];
+
+function renderGames() {
+  const c = document.getElementById('gameContainer');
+  if(!c) return;
+  c.innerHTML = '';
+  const searchQ = document.getElementById('gameSearch').value.toLowerCase();
+  const filtered = games.filter(g => g.name.toLowerCase().includes(searchQ));
+
+  if (filtered.length === 0) {
+    c.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">কোনো গেম পাওয়া যয়নি</div>';
+    return;
+  }
+
+  filtered.forEach(g => {
+    const badgeHTML = g.badge ? `<div style="position:absolute;top:8px;left:8px;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;background:var(--grad-gold);color:#000;">${g.badge.toUpperCase()}</div>` : '';
+    c.innerHTML += `
+      <div class="game-card" onclick="location.href='/games/${g.slug}'" style="border-color: rgba(245, 158, 11, 0.2); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+        <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:40px;background:var(--grad-surface);">
+          <span class="game-emoji">${g.emoji}</span>
+          ${badgeHTML}
+          <div style="padding:8px;background:rgba(255,255,255,0.05);border-top:1px solid rgba(255,255,255,0.05);">
+            <div style="font-size:11px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${g.name}</div>
+            <div style="font-size:9px;color:var(--gold);">${g.provider}</div>
+          </div>
+        </div>
+      </div>`;
+  });
+}
+
+document.querySelectorAll('.cat-item').forEach(el => {
+  el.addEventListener('click', () => {
+    const link = el.dataset.link;
+    if (link) location.href = link;
+  });
+});
+
+document.getElementById('gameSearch').addEventListener('input', renderGames);
+
+let jp = 88617517;
+setInterval(() => {
+  jp += Math.floor(Math.random() * 600 + 100);
+  const jpN = document.getElementById('jp-num');
+  if(jpN) jpN.textContent = jp.toLocaleString('bn-BD');
+}, 2000);
+
+document.addEventListener('DOMContentLoaded', renderGames);
+renderGames();
+</script>
+
+</body></html>
