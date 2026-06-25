@@ -32,7 +32,7 @@
     font-size: 14.5px; font-weight: 600;
   }
   .odds-btn {
-    min-width: 85px; padding: 12px 8px;
+    min-width: 85px; padding: 14px 8px;
     text-align: center; border-left: 1px solid rgba(255,255,255,0.08);
     font-weight: 700; font-size: 15px; cursor: pointer;
     transition: 0.2s;
@@ -41,12 +41,12 @@
   .odds-btn.suspended { opacity: 0.5; cursor: not-allowed; background: #1f2937; }
   
   .fancy-row { display: flex; }
-  .fancy-name { flex: 1; padding: 12px 16px; }
+  .fancy-name { flex: 1; padding: 12px 16px; font-weight: 500; }
   .fancy-odds {
-    display: flex; width: 180px;
+    display: flex; width: 190px;
   }
   .fancy-odds button {
-    flex: 1; padding: 12px 4px; font-size: 15px; font-weight: 700;
+    flex: 1; padding: 12px 6px; font-size: 15px; font-weight: 700;
   }
   .back { background: #10b981; color: white; }
   .lay { background: #ef4444; color: white; }
@@ -58,13 +58,58 @@
     ← সব ম্যাচে ফিরে যান
   </a>
 
-  <!-- Match Header -->
-  <div class="card" style="padding:16px;margin-bottom:16px;">
-    <!-- তোমার আগের ম্যাচ হেডার কোড এখানে রাখো (teams + score) -->
-    <%- include('partials/match-header', {match: match}) %>   <!-- যদি আলাদা partial না থাকে তাহলে আগের কোডটা রেখে দাও -->
+  <!-- Match Header (আগের কোড থেকে নেওয়া) -->
+  <div class="card" style="padding:14px;margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">
+        <i class="fas fa-trophy" style="color:var(--gold);margin-right:5px;"></i>
+        <%= match && match.sport === 'football' ? 'Football' : 'Cricket' %>
+      </div>
+      <% var isLive = match && (match.status || '').toString().toLowerCase().includes('live'); %>
+      <% if (isLive) { %>
+        <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(16,185,129,0.15);color:#10b981;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;">
+          <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#10b981;" class="pulse-live"></span>
+          In Play
+        </span>
+      <% } else { %>
+        <span style="background:rgba(245,158,11,0.12);color:var(--gold);padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;">Upcoming</span>
+      <% } %>
+    </div>
+
+    <% if (match && match.teams && match.teams[0]) { %>
+      <div style="display:flex;align-items:center;gap:12px;padding:8px 0;">
+        <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#0ea5e9,#0284c7);display:flex;align-items:center;justify-content:center;font-size:20px;">🏏</div>
+        <div style="flex:1;"><div style="font-weight:700;font-size:15px;color:var(--text-main);"><%= match.teams[0] %></div></div>
+        <% if (match.score && match.score[0]) { %>
+          <div style="text-align:right;">
+            <div class="score-a" style="font-family:'Teko',sans-serif;font-size:1.5rem;color:var(--text-main);line-height:1;"><%= match.score[0].r %>/<%= match.score[0].w %></div>
+            <div style="font-size:11px;color:var(--text-muted);"><%= match.score[0].o %> ov</div>
+          </div>
+        <% } %>
+      </div>
+    <% } %>
+
+    <% if (match && match.teams && match.teams[1]) { %>
+      <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid rgba(255,255,255,0.05);">
+        <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#f97316,#ea580c);display:flex;align-items:center;justify-content:center;font-size:20px;">🏏</div>
+        <div style="flex:1;"><div style="font-weight:700;font-size:15px;color:var(--text-main);"><%= match.teams[1] %></div></div>
+        <% if (match.score && match.score[1]) { %>
+          <div style="text-align:right;">
+            <div class="score-b" style="font-family:'Teko',sans-serif;font-size:1.5rem;color:var(--text-main);line-height:1;"><%= match.score[1].r %>/<%= match.score[1].w %></div>
+            <div style="font-size:11px;color:var(--text-muted);"><%= match.score[1].o %> ov</div>
+          </div>
+        <% } %>
+      </div>
+    <% } %>
+
+    <% if (match && match.status) { %>
+      <div style="margin-top:12px;padding:10px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:10px;text-align:center;font-size:13px;color:var(--gold);font-weight:600;">
+        <%= match.status %>
+      </div>
+    <% } %>
   </div>
 
-  <!-- Bookmaker Section -->
+  <!-- Bookmaker Markets -->
   <div class="market-section">
     <h5 style="margin: 0 0 12px 4px; color: var(--gold); font-weight: 700;">📌 বুকমেকার মার্কেট</h5>
     
@@ -72,31 +117,35 @@
       <div class="mkt-head"><span>🏆</span> ম্যাচ উইনার</div>
       <div class="mkt-row">
         <div class="mkt-name"><%= match?.teams?.[0] || 'Team A' %></div>
-        <div class="odds-btn back" data-market="bookmaker" data-runner="0" data-odd="1.85">1.85</div>
+        <div class="odds-btn back" data-market="match-winner" data-runner="0" data-odd="1.85">1.85</div>
       </div>
       <div class="mkt-row">
         <div class="mkt-name"><%= match?.teams?.[1] || 'Team B' %></div>
-        <div class="odds-btn back" data-market="bookmaker" data-runner="1" data-odd="2.10">2.10</div>
+        <div class="odds-btn back" data-market="match-winner" data-runner="1" data-odd="2.10">2.10</div>
       </div>
     </div>
   </div>
 
-  <!-- Fancy Market Section -->
+  <!-- Fancy Markets -->
   <div class="market-section">
     <h5 style="margin: 0 0 12px 4px; color: var(--gold); font-weight: 700;">⚡ ফ্যান্সি মার্কেট (লাইভ)</h5>
-    
     <div id="fancyMarkets">
-      <!-- JS দিয়ে ডাইনামিক লোড হবে -->
       <div class="mkt">
         <div class="mkt-head"><span>🏏</span> ব্যাটসম্যান রান</div>
-        <!-- উদাহরণ -->
+        <div class="mkt-row">
+          <div class="fancy-name">কোনো ব্যাটসম্যান ৫০+ রান</div>
+          <div class="fancy-odds">
+            <button class="back" data-market="fancy" data-type="yes">Yes 1.75</button>
+            <button class="lay" data-market="fancy" data-type="no">No 2.05</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
   <% if (!locals.user) { %>
-    <div class="card text-center" style="padding:30px;">
-      <p>বেটিং করতে লগইন করুন</p>
+    <div class="card" style="padding:25px;text-align:center;">
+      <p style="color:var(--text-muted);">বেটিং করতে লগইন করুন</p>
       <a href="/login" class="btn btn-gold">লগইন করুন</a>
     </div>
   <% } %>
@@ -104,25 +153,21 @@
 </div>
 
 <script>
-  // বেট প্লেসমেন্ট (পরে backend route তৈরি করব)
   document.addEventListener('click', function(e) {
-    if (e.target.classList.contains('odds-btn')) {
+    if (e.target.classList.contains('odds-btn') || e.target.classList.contains('back') || e.target.classList.contains('lay')) {
       if (!<%= locals.user ? 'true' : 'false' %>) {
-        alert("লগইন করুন");
+        alert("বেটিং করতে লগইন করুন");
         return;
       }
       const market = e.target.dataset.market;
-      const runner = e.target.dataset.runner;
-      const odd = parseFloat(e.target.dataset.odd);
-      
-      if (confirm(`এই ওডসে বেট করবেন? Odds: ${odd}`)) {
-        // TODO: fetch('/api/bet/place', { ... })
-        console.log("Bet placed:", {market, runner, odd});
+      const odd = e.target.textContent;
+      if (confirm(`এই ওডসে বেট করবেন? ${odd}`)) {
+        console.log("Bet placed on:", market, odd);
+        // পরে backend route তৈরি করব
       }
     }
   });
 
-  // Socket for live fancy update
   var socket = io();
   socket.emit("joinMatch", "<%= match ? match.id : '' %>");
 </script>
