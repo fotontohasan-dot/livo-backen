@@ -1,51 +1,133 @@
 <%- include('partials/head') %>
 <%- include('partials/navbar') %>
-<div class="container page">
-  <div class="section-header" style="padding:0; margin-bottom:1.5rem;">
-    <h1 class="section-title" style="font-size:1.8rem;"><i class="fas fa-medal"></i> লিডারবোর্ড</h1>
+
+<style>
+  .pulse-live { animation: pulselive 1.5s ease-in-out infinite; }
+  @keyframes pulselive { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  .market-box {
+    background: #1f2937;
+    border-radius: 12px;
+    margin-bottom: 18px;
+    overflow: hidden;
+    border: 1px solid #334155;
+  }
+  .market-header {
+    padding: 12px 16px;
+    background: #111827;
+    font-weight: 700;
+    font-size: 15px;
+    color: #fbbf24;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .market-row {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    border-top: 1px solid #334155;
+  }
+  .market-team { flex: 1; font-size: 15px; font-weight: 600; }
+  .odds {
+    padding: 11px 16px;
+    border-radius: 6px;
+    font-weight: 800;
+    font-size: 16px;
+    min-width: 82px;
+    text-align: center;
+    cursor: pointer;
+  }
+  .back { background: #22c55e; color: #000; }
+  .lay { background: #ef4444; color: #fff; }
+</style>
+
+<div class="container" style="padding-top: 14px; padding-bottom: 90px;">
+
+  <a href="/matches">← সব ম্যাচে ফিরে যান</a>
+
+  <!-- Match Header -->
+  <div class="card" style="padding:16px; margin: 20px 0;">
+    <!-- তোমার আগের হেডার কোড এখানে থাকবে -->
+    <h4><%= match.teams ? match.teams[0] + " vs " + match.teams[1] : match.title %></h4>
+    <p><%= match.status || 'Upcoming' %></p>
   </div>
 
-  <div class="card glass">
-    <div style="overflow-x:auto;">
-      <table style="width:100%; border-collapse:collapse; min-width:500px;">
-        <thead>
-          <tr style="border-bottom:1px solid var(--border-glass); text-align:left; color:var(--text-muted); font-size:0.85rem;">
-            <th style="padding:15px;">স্থান</th>
-            <th style="padding:15px;">খেলোয়াড়</th>
-            <th style="padding:15px;">পয়েন্ট</th>
-            <th style="padding:15px;">জয়</th>
-            <th style="padding:15px;">মোট বেট</th>
-            <th style="padding:15px;">কয়েন</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% users.forEach((u, i) => { %>
-            <tr style="border-bottom:1px solid var(--border-glass); transition:0.2s; background:<%= i===0 ? 'rgba(245,158,11,0.05)' : 'transparent' %>;">
-              <td style="padding:15px;">
-                <span style="font-family:'Teko',sans-serif; font-weight:700; font-size:1.2rem; color:<%= i===0 ? 'var(--gold)' : i===1 ? '#94a3b8' : i===2 ? '#cd7f32' : 'var(--text-muted)' %>">
-                  #<%= i+1 %>
-                </span>
-              </td>
-              <td style="padding:15px;">
-                <div style="display:flex; align-items:center; gap:12px;">
-                  <div class="avatar" style="width:35px; height:35px; font-size:0.9rem; background:var(--grad-primary);"><%= u.username[0].toUpperCase() %></div>
-                  <div>
-                    <div style="font-weight:700; color:#fff; font-size:0.9rem;"><%= u.username %></div>
-                    <% if(i === 0) { %>
-                      <div style="font-size:.7rem; color:var(--gold);"><i class="fas fa-crown"></i> চ্যাম্পিয়ন</div>
-                    <% } %>
-                  </div>
-                </div>
-              </td>
-              <td style="padding:15px; color:var(--primary); font-weight:700; font-family:'Teko',sans-serif; font-size:1.1rem;"><%= u.total_points %></td>
-              <td style="padding:15px; color:#10b981; font-weight:600; font-size:0.85rem;"><i class="fas fa-check-circle"></i> <%= u.wins %></td>
-              <td style="padding:15px; color:var(--text-muted); font-size:0.85rem;"><%= u.total_bets %></td>
-              <td style="padding:15px; color:var(--gold); font-weight:700; font-family:'Teko',sans-serif; font-size:1.1rem;">🪙 <%= u.coins %></td>
-            </tr>
-          <% }) %>
-        </tbody>
-      </table>
-    </div>
-  </div>
+  <!-- ডাইনামিক মার্কেটস -->
+  <% if (markets && markets.length > 0) { %>
+    <% markets.forEach(market => { %>
+      <div class="market-box">
+        <div class="market-header">
+          <%= market.type === 'bookmaker' ? '🏆' : '⚡' %> <%= market.name %>
+          <% if (market.status !== 'open') { %><span class="badge bg-danger">SUSPENDED</span><% } %>
+        </div>
+        
+        <% if (market.type === 'bookmaker') { %>
+          <!-- বুকমেকার -->
+          <div class="market-row">
+            <div class="market-team"><%= match.teams ? match.teams[0] : 'Team A' %></div>
+            <div class="odds back" data-market-id="<%= market.id %>" data-runner="0" data-odd="<%= market.odds['0'] || 1.85 %>">
+              <%= market.odds['0'] || 1.85 %>
+            </div>
+          </div>
+          <div class="market-row">
+            <div class="market-team"><%= match.teams ? match.teams[1] : 'Team B' %></div>
+            <div class="odds back" data-market-id="<%= market.id %>" data-runner="1" data-odd="<%= market.odds['1'] || 2.10 %>">
+              <%= market.odds['1'] || 2.10 %>
+            </div>
+          </div>
+        <% } else { %>
+          <!-- ফ্যান্সি -->
+          <div class="market-row">
+            <div class="market-team">Yes</div>
+            <div class="odds back" data-market-id="<%= market.id %>" data-runner="yes" data-odd="<%= market.odds['yes'] || 1.75 %>">
+              <%= market.odds['yes'] || 1.75 %>
+            </div>
+          </div>
+        <% } %>
+      </div>
+    <% }) %>
+  <% } else { %>
+    <p>এই ম্যাচে এখনো কোনো মার্কেট খোলা হয়নি।</p>
+  <% } %>
+
 </div>
-</body></html>
+
+<script>
+  document.querySelectorAll('.odds').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (!<%= locals.user ? 'true' : 'false' %>) {
+        alert("লগইন করুন");
+        return;
+      }
+
+      const stake = prompt("কত কয়েন বেট করবেন? (মিনিমাম ১০)", "50");
+      const stakeAmount = parseInt(stake);
+
+      if (!stakeAmount || stakeAmount < 10) {
+        alert("মিনিমাম ১০ কয়েন লাগবে");
+        return;
+      }
+
+      if (!confirm(`আপনি ${btn.textContent} ওডসে ${stakeAmount} কয়েন বেট করবেন?`)) return;
+
+      fetch(`/matches/<%= match.id %>/bet`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          market_id: btn.dataset.marketId,
+          runner: btn.dataset.runner,
+          odd: parseFloat(btn.dataset.odd),
+          stake: stakeAmount
+        })
+      })
+      .then(r => r.json())
+      .then(data => alert(data.message || data.error))
+      .catch(() => alert("নেটওয়ার্ক এরর"));
+    });
+  });
+</script>
+
+<%- include('partials/bottom-nav') %>
+</body>
+</html>
