@@ -5,10 +5,15 @@ const { pool } = require('../db');
 router.get('/', async (req, res) => {
   try {
     const matches = await pool.query('SELECT * FROM matches ORDER BY start_time ASC, id DESC');
-    res.render('matches', { matches: matches.rows, user: req.session.user });
+    res.render('matches', { 
+      matches: matches.rows, 
+      user: req.session.user,
+      sport: 'all',
+      title: 'সব ম্যাচ'
+    });
   } catch (err) {
     console.error(err);
-    res.render('matches', { matches: [], user: req.session.user });
+    res.render('matches', { matches: [], user: req.session.user, sport: 'all' });
   }
 });
 
@@ -17,17 +22,22 @@ router.get('/in-play', async (req, res) => {
   try {
     const matches = await pool.query(`
       SELECT * FROM matches 
-      WHERE status = 'live' OR status ILIKE '%play%' 
-      ORDER BY start_time DESC
+      ORDER BY start_time DESC 
+      LIMIT 30
     `);
     res.render('matches', { 
       matches: matches.rows, 
       user: req.session.user,
-      title: 'In-Play - লাইভ ম্যাচসমূহ'
+      sport: 'in-play',
+      title: 'In-Play - লাইভ ম্যাচ'
     });
   } catch (err) {
     console.error(err);
-    res.render('matches', { matches: [], user: req.session.user });
+    res.render('matches', { 
+      matches: [], 
+      user: req.session.user,
+      sport: 'in-play' 
+    });
   }
 });
 
@@ -46,7 +56,7 @@ router.get('/:id', async (req, res) => {
 
     res.render('match-detail', { 
       match, 
-      markets: marketsRes.rows,
+      markets: marketsRes.rows || [],
       user: req.session.user 
     });
   } catch (err) {
