@@ -1,10 +1,9 @@
 // services/sportsAPI.js
-// Sports data service — Cricket (CricAPI) + Football (TheSportsDB)
+// Cricket (CricAPI) + Football (RapidAPI: Today Football Prediction)
 
-// ⚠️ TODO: এই key পরে env variable এ সরাব
-// এখন প্রথমে কাজ করানো জরুরি
-const CRICKET_API_KEY = process.env.CRICKET_API_KEY ||'11ee3d02-f9eb-4ecf-a9a5-788174dd3fe7';
-const SPORTSDB_KEY = '123'; // TheSportsDB public free key
+const CRICKET_API_KEY = process.env.CRICKET_API_KEY || '11ee3d02-f9eb-4ecf-a9a5-788174dd3fe7';
+const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY || '';
+const FOOTBALL_HOST = 'today-football-prediction.p.rapidapi.com';
 
 // -------- Simple in-memory cache (5 min) --------
 const cache = new Map();
@@ -96,26 +95,51 @@ async function getCricketMatchInfo(matchId) {
   }
 }
 
-// ================== FOOTBALL ==================
+// ================== FOOTBALL (RapidAPI) ==================
+
+// আজকের তারিখ YYYY-MM-DD আকারে
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
 
 async function getFootballLiveScores() {
   const cached = getCached('football:live');
   if (cached) return cached;
+
+  // key না থাকলে চুপচাপ খালি ফেরত (সার্ভার ক্র্যাশ করবে না)
+  if (!RAPIDAPI_KEY) {
+    console.warn('Football: RAPIDAPI_KEY নেই, স্কিপ করা হল');
+    return [];
+  }
+
   try {
-    const url = `https://www.thesportsdb.com/api/v1/json/${SPORTSDB_KEY}/livescore.php?s=Soccer`;
-    const res = await fetch(url);
+    const url = `https://${FOOTBALL_HOST}/predictions/list?iso_date=${todayISO()}&federation=UEFA&market=classic_1x2`;
+    const res = await fetch(url, {
+      headers: {
+        'x-rapidapi-host': FOOTBALL_HOST,
+        'x-rapidapi-key': RAPIDAPI_KEY,
+      },
+    });
+
+    // JSON না হলে (HTML error পেজ) — নিরাপদে থামা
+    const ct = res.headers.get('content-type') || '';
+    if (!ct.includes('application/json')) {
+      console.error('Football: JSON আসেনি (status ' + res.status + ')');
+      return [];
+    }
+
     const json = await res.json();
-    const matches = (json.events || json.livescore || []).map(m => ({
-      id: m.idEvent,
-      name: `${m.strHomeTeam} vs ${m.strAwayTeam}`,
-      homeTeam: m.strHomeTeam,
-      awayTeam: m.strAwayTeam,
-      homeScore: m.intHomeScore,
-      awayScore: m.intAwayScore,
-      league: m.strLeague,
-      progress: m.strProgress,
-      status: m.strStatus,
-      date: m.dateEvent,
+    const list = json.data || json.predictions || [];
+    const matches = list.map(m => ({
+      id: m.id || `${m.home_team}-${m.away_team}`,
+      name: `${m.home_team || m.homeTeam || ''} vs ${m.away_team || m.awayTeam || ''}`,
+      homeTeam: m.home_team || m.homeTeam || '',
+      awayTeam: m.away_team || m.awayTeam || '',
+      homeScore: null,
+      awayScore: null,
+      league: m.competition_name || m.league || 'Football',
+      status: 'upcoming',
+      date: m.date || todayISO(),
       sport: 'football',
     }));
     setCache('football:live', matches);
@@ -126,47 +150,13 @@ async function getFootballLiveScores() {
   }
 }
 
-// FIFA World Cup 2026 fixtures
+// World Cup fixtures — এই API আলাদা endpoint নেই, তাই আপতত খালি
 async function getWorldCupFixtures() {
-  const cached = getCached('football:worldcup');
-  if (cached) return cached;
-  try {
-    // League ID 4429 = FIFA World Cup in TheSportsDB
-    const url = `https://www.thesportsdb.com/api/v1/json/${SPORTSDB_KEY}/eventsnextleague.php?id=4429`;
-    const res = await fetch(url);
-    const json = await res.json();
-    const matches = (json.events || []).map(m => ({
-      id: m.idEvent,
-      name: `${m.strHomeTeam} vs ${m.strAwayTeam}`,
-      homeTeam: m.strHomeTeam,
-      awayTeam: m.strAwayTeam,
-      league: m.strLeague,
-      date: m.dateEvent,
-      time: m.strTime,
-      venue: m.strVenue,
-      sport: 'football',
-      tournament: 'FIFA World Cup',
-    }));
-    setCache('football:worldcup', matches);
-    return matches;
-  } catch (err) {
-    console.error('World Cup fetch error:', err.message);
-    return [];
-  }
+  return [];
 }
 
-// Search any league by name
-async function searchLeague(name) {
-  try {
-    const url = `https://www.thesportsdb.com/api/v1/json/${SPORTSDB_KEY}/search_all_leagues.php?s=Soccer`;
-    const res = await fetch(url);
-    const json = await res.json();
-    return (json.countries || []).filter(l =>
-      l.strLeague.toLowerCase().includes(name.toLowerCase())
-    );
-  } catch (err) {
-    return [];
-  }
+async function searchLeague() {
+  return [];
 }
 
 module.exports = {
