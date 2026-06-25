@@ -70,3 +70,22 @@ router.post('/:id/bet', async (req, res) => {
 });
 
 module.exports = router;
+
+// In-Play পেজ
+router.get('/in-play', async (req, res) => {
+  try {
+    const matches = await pool.query(`
+      SELECT * FROM matches 
+      WHERE status = 'live' 
+      ORDER BY start_time DESC
+    `);
+    res.render('matches', { 
+      matches: matches.rows, 
+      user: req.session.user,
+      title: 'In-Play - লাইভ ম্যাচ'
+    });
+  } catch (err) {
+    console.error(err);
+    res.render('matches', { matches: [], user: req.session.user });
+  }
+});
