@@ -1,96 +1,41 @@
-const express = require('express');
-const router = express.Router();
-const { pool } = require('../db');
+<%- include('partials/head') %>
+<%- include('partials/navbar') %>
 
-router.get('/', async (req, res) => {
-  try {
-    const matches = await pool.query('SELECT * FROM matches ORDER BY start_time ASC, id DESC');
-    res.render('matches', { 
-      matches: matches.rows, 
-      user: req.session.user,
-      sport: 'all',
-      title: 'সব ম্যাচ'
-    });
-  } catch (err) {
-    console.error(err);
-    res.render('matches', { matches: [], user: req.session.user, sport: 'all' });
-  }
-});
+<div class="container" style="padding-top: 14px;">
 
-// In-Play Route
-router.get('/in-play', async (req, res) => {
-  try {
-    const matches = await pool.query(`
-      SELECT * FROM matches 
-      ORDER BY start_time DESC 
-      LIMIT 30
-    `);
-    res.render('matches', { 
-      matches: matches.rows, 
-      user: req.session.user,
-      sport: 'in-play',
-      title: 'In-Play - লাইভ ম্যাচ'
-    });
-  } catch (err) {
-    console.error(err);
-    res.render('matches', { 
-      matches: [], 
-      user: req.session.user,
-      sport: 'in-play' 
-    });
-  }
-});
+  <h4 style="margin-bottom: 16px; color: var(--gold);">
+    <%= title || 'আসন্ন ম্যাচসমূহ' %>
+  </h4>
 
-router.get('/:id', async (req, res) => {
-  try {
-    const matchRes = await pool.query('SELECT * FROM matches WHERE id = $1', [req.params.id]);
-    const match = matchRes.rows[0];
+  <% if (matches && matches.length > 0) { %>
+    <% matches.forEach(match => { %>
+      <a href="/matches/<%= match.id %>" style="text-decoration: none; color: inherit;">
+        <div class="card" style="margin-bottom: 12px; padding: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-weight: 600; font-size: 15px;">
+                <%= match.teams ? match.teams[0] + ' vs ' + match.teams[1] : match.title %>
+              </div>
+              <div style="font-size: 12px; color: var(--text-muted);">
+                <%= match.sport || 'Cricket' %> • <%= match.league || '' %>
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <span class="badge <%= match.status === 'live' ? 'bg-success' : 'bg-warning' %>">
+                <%= match.status ? match.status.toUpperCase() : 'Upcoming' %>
+              </span>
+            </div>
+          </div>
+        </div>
+      </a>
+    <% }) %>
+  <% } else { %>
+    <div class="card text-center" style="padding: 60px 20px;">
+      <h3>কোনো ম্যাচ পাওয়া যায়নি</h3>
+      <p style="color: var(--text-muted);">এখনো কোনো ম্যাচ আসেনি। কিছুক্ষণ পর আবার চেক করুন।</p>
+    </div>
+  <% } %>
 
-    if (!match) return res.status(404).send('Match not found');
+</div>
 
-    const marketsRes = await pool.query(`
-      SELECT * FROM markets 
-      WHERE match_id = $1 AND status = 'open' 
-      ORDER BY type, name
-    `, [req.params.id]);
-
-    res.render('match-detail', { 
-      match, 
-      markets: marketsRes.rows || [],
-      user: req.session.user 
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server Error');
-  }
-});
-
-router.post('/:id/bet', async (req, res) => {
-  if (!req.session.user) return res.json({ success: false, error: 'লগইন করুন' });
-
-  const { market_id, runner, odd, stake } = req.body;
-  const userId = req.session.user.id;
-
-  if (!stake || stake < 10) return res.json({ success: false, error: 'মিনিমাম ১০ কয়েন' });
-
-  try {
-    const user = await pool.query('SELECT coins FROM users WHERE id = $1', [userId]);
-    if (user.rows[0].coins < stake) {
-      return res.json({ success: false, error: 'পর্যাপ্ত কয়েন নেই' });
-    }
-
-    await pool.query(`
-      INSERT INTO bets (user_id, match_id, market_id, runner, odd, stake, status)
-      VALUES ($1, $2, $3, $4, $5, $6, 'pending')
-    `, [userId, req.params.id, market_id, runner, odd, stake]);
-
-    await pool.query('UPDATE users SET coins = coins - $1 WHERE id = $2', [stake, userId]);
-
-    res.json({ success: true, message: '✅ বেট সফলভাবে প্লেস হয়েছে!' });
-  } catch (err) {
-    console.error(err);
-    res.json({ success: false, error: 'সিস্টেম এরর' });
-  }
-});
-
-module.exports = router;
+<%- include('partials/bottom-nav') %>
