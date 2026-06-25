@@ -27,7 +27,10 @@ async function syncMatches() {
       sport: 'football',
       team_a: teamA,
       team_b: teamB,
-      match_date: matchDate
+      match_date: matchDate,
+      odds_a: (1.5 + Math.random() * 2).toFixed(2),
+      odds_b: (1.5 + Math.random() * 2).toFixed(2),
+      odds_draw: (2.5 + Math.random() * 2).toFixed(2)
     });
   }
 
@@ -46,7 +49,10 @@ async function syncMatches() {
       sport: 'cricket',
       team_a: teamA,
       team_b: teamB,
-      match_date: matchDate
+      match_date: matchDate,
+      odds_a: (1.4 + Math.random() * 1.5).toFixed(2),
+      odds_b: (1.4 + Math.random() * 1.5).toFixed(2),
+      odds_draw: null
     });
   }
 
@@ -60,8 +66,8 @@ async function syncMatches() {
 
     if (existing.rows.length === 0) {
       await pool.query(
-        `INSERT INTO matches (title, sport, team_a, team_b, match_date) VALUES ($1, $2, $3, $4, $5)`,
-        [match.title, match.sport, match.team_a, match.team_b, match.match_date]
+        `INSERT INTO matches (title, sport, team_a, team_b, match_date, odds_a, odds_b, odds_draw) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [match.title, match.sport, match.team_a, match.team_b, match.match_date, match.odds_a, match.odds_b, match.odds_draw]
       );
       addedCount++;
     }

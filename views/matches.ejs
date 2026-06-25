@@ -17,48 +17,137 @@
     <% }) %>
 </div>
 
-<div class="container page">
+<style>
+    .match-ticket {
+        background: var(--bg-card);
+        border: 1px solid var(--border-glass);
+        border-radius: 12px;
+        margin-bottom: 12px;
+        overflow: hidden;
+        animation: fadeIn 0.4s ease-out;
+    }
+    .ticket-header {
+        background: rgba(255,255,255,0.03);
+        padding: 8px 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--border-glass);
+        font-size: 11px;
+        color: var(--text-muted);
+    }
+    .ticket-body {
+        padding: 12px;
+    }
+    .ticket-teams {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+    .ticket-team {
+        flex: 1;
+        font-weight: 700;
+        font-size: 14px;
+    }
+    .ticket-vs {
+        padding: 0 10px;
+        color: var(--gold);
+        font-weight: 800;
+        font-size: 12px;
+    }
+    .ticket-odds {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 8px;
+    }
+    .odd-box {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid var(--border-glass);
+        border-radius: 8px;
+        padding: 8px;
+        text-align: center;
+        cursor: pointer;
+        transition: 0.2s;
+        text-decoration: none;
+        color: var(--text-main);
+    }
+    .odd-box:hover {
+        background: var(--bg-glass);
+        border-color: var(--gold);
+    }
+    .odd-label {
+        display: block;
+        font-size: 10px;
+        color: var(--text-muted);
+        margin-bottom: 2px;
+    }
+    .odd-val {
+        font-family: 'Teko', sans-serif;
+        font-size: 18px;
+        color: var(--gold);
+        font-weight: 600;
+    }
+    .status-badge {
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: bold;
+    }
+    .status-upcoming { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+    .status-live { background: rgba(239, 68, 68, 0.2); color: #f87171; animation: pulse 2s infinite; }
+    .status-completed { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.6; }
+        100% { opacity: 1; }
+    }
+</style>
+
+<div class="container page" style="margin-top: 10px;">
     <%- include('partials/flash') %>
 
-    <div class="section-header" style="padding: 0 15px; margin-bottom: 10px;">
-        <h2 style="color: var(--accent); font-size: 18px;">🔥 লাইভ ও আগামী ম্যাচ</h2>
+    <div class="section-header" style="padding: 0 5px; margin-bottom: 10px;">
+        <h2 style="font-size: 18px;"><i class="fas fa-futbol" style="color: var(--gold);"></i> স্পোর্টস বেটিং</h2>
     </div>
 
     <% if(matches.length === 0) { %>
         <div style="text-align:center;padding:4rem;color:var(--muted);">কোনো ম্যাচ পাওয়া যায়নি</div>
     <% } else { %>
-        <div class="match-list">
+        <div class="ticket-list">
             <% matches.forEach(m => { %>
-                <div class="match-card">
-                    <div class="match-header">
-                        <span><%= m.sport.toUpperCase() %></span>
+                <div class="match-ticket">
+                    <div class="ticket-header">
+                        <div>
+                            <i class="fas fa-calendar-alt"></i>
+                            <%= new Date(m.match_date).toLocaleDateString('bn-BD') %>
+                            <%= new Date(m.match_date).toLocaleTimeString('bn-BD', {hour:'2-digit',minute:'2-digit'}) %>
+                        </div>
                         <span class="status-badge status-<%= m.status %>">
                             <%= m.status === 'live' ? 'লাইভ' : m.status === 'upcoming' ? 'আসছে' : 'শেষ' %>
                         </span>
                     </div>
-                    <div class="teams-container">
-                        <div class="team-box">
-                            <div class="team-icon">🛡️</div>
-                            <div class="team-name"><%= m.team_a %></div>
+                    <div class="ticket-body" onclick="location.href='/matches/<%= m.id %>'" style="cursor: pointer;">
+                        <div class="ticket-teams">
+                            <div class="ticket-team"><%= m.team_a %></div>
+                            <div class="ticket-vs">VS</div>
+                            <div class="ticket-team" style="text-align: right;"><%= m.team_b %></div>
                         </div>
-                        <div class="vs-box">
-                            <% if(m.status === 'completed') { %>
-                                <div style="font-size: 20px; color: var(--text);"><%= m.score_a %> - <%= m.score_b %></div>
-                            <% } else { %>VS<% } %>
+                        <div class="ticket-odds">
+                            <div class="odd-box">
+                                <span class="odd-label">1 (Home)</span>
+                                <span class="odd-val"><%= m.odds_a || '1.90' %></span>
+                            </div>
+                            <div class="odd-box">
+                                <span class="odd-label">X (Draw)</span>
+                                <span class="odd-val"><%= m.odds_draw || (m.sport === 'football' ? '3.20' : '-') %></span>
+                            </div>
+                            <div class="odd-box">
+                                <span class="odd-label">2 (Away)</span>
+                                <span class="odd-val"><%= m.odds_b || '1.90' %></span>
+                            </div>
                         </div>
-                        <div class="team-box">
-                            <div class="team-icon">⚔️</div>
-                            <div class="team-name"><%= m.team_b %></div>
-                        </div>
-                    </div>
-                    <div class="match-footer">
-                        <div class="match-time">
-                            📅 <%= new Date(m.match_date).toLocaleDateString('bn-BD') %>
-                            | 🕐 <%= new Date(m.match_date).toLocaleTimeString('bn-BD', {hour:'2-digit',minute:'2-digit'}) %>
-                        </div>
-                        <a href="/matches/<%= m.id %>" class="btn btn-primary btn-sm">
-                            <%= m.status === 'live' ? 'দেখুন' : m.status === 'completed' ? 'রেজাল্ট' : 'প্রেডিকশন' %>
-                        </a>
                     </div>
                 </div>
             <% }) %>

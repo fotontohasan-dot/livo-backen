@@ -28,24 +28,39 @@
 
     .team-select {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 15px;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 10px;
         margin: 20px 0;
     }
 
     .team-btn {
-        background: transparent;
-        border: 2px solid var(--border);
-        padding: 20px;
-        border-radius: 12px;
-        color: var(--text);
+        background: rgba(255,255,255,0.05);
+        border: 1px solid var(--border-glass);
+        padding: 15px 5px;
+        border-radius: 10px;
+        color: var(--text-main);
         cursor: pointer;
         transition: 0.3s;
-        font-weight: bold;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
     }
     .team-btn.selected {
-        border-color: var(--secondary);
-        background: rgba(255, 0, 170, 0.1);
+        border-color: var(--gold);
+        background: rgba(245, 158, 11, 0.1);
+        box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+    }
+    .team-btn .odd {
+        font-family: 'Teko', sans-serif;
+        font-size: 20px;
+        color: var(--gold);
+    }
+    .team-btn .label {
+        font-size: 10px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        font-weight: bold;
     }
 </style>
 
@@ -107,18 +122,39 @@
                 </div>
             <% } else { %>
                 <div class="team-select">
-                    <button onclick="selectTeam('<%= match.team_a %>')" id="btn-a" class="team-btn">
-                        <%= match.team_a %>
+                    <button onclick="selectTeam('<%= match.team_a %>', <%= match.odds_a %>)" id="btn-a" class="team-btn">
+                        <span class="label">Home</span>
+                        <span class="odd"><%= match.odds_a %></span>
+                        <span style="font-size: 11px; font-weight: bold;"><%= match.team_a %></span>
                     </button>
-                    <button onclick="selectTeam('<%= match.team_b %>')" id="btn-b" class="team-btn">
-                        <%= match.team_b %>
+                    <% if(match.sport === 'football') { %>
+                    <button onclick="selectTeam('Draw', <%= match.odds_draw %>)" id="btn-draw" class="team-btn">
+                        <span class="label">Draw</span>
+                        <span class="odd"><%= match.odds_draw %></span>
+                        <span style="font-size: 11px; font-weight: bold;">X</span>
+                    </button>
+                    <% } %>
+                    <button onclick="selectTeam('<%= match.team_b %>', <%= match.odds_b %>)" id="btn-b" class="team-btn">
+                        <span class="label">Away</span>
+                        <span class="odd"><%= match.odds_b %></span>
+                        <span style="font-size: 11px; font-weight: bold;"><%= match.team_b %></span>
                     </button>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">কয়েন সংখ্যা (আপনার কাছে আছে: <%= user.coins %> 🪙)</label>
-                    <input type="number" class="form-input" id="coins-input" min="10" max="<%= user.coins %>" value="50">
+
+                <div class="glass" style="padding: 15px; border-radius: 12px; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 13px;">
+                        <span style="color: var(--text-muted);">বেট অ্যামাউন্ট (Coins)</span>
+                        <span style="color: var(--gold); font-weight: bold;">ব্যালেন্স: <%= user.coins %> 🪙</span>
+                    </div>
+                    <input type="number" class="form-input" id="coins-input" min="10" max="<%= user.coins %>" value="100" oninput="updatePotential()">
+
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed var(--border-glass); display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 14px; color: var(--text-muted);">সম্ভাব্য জয় (Potential Win)</span>
+                        <span id="potential-win" style="font-family: 'Teko', sans-serif; font-size: 24px; color: #10b981;">0 🪙</span>
+                    </div>
                 </div>
-                <button onclick="submitPrediction()" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 15px;">সাবমিট করুন 🎯</button>
+
+                <button onclick="submitPrediction()" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 15px; border-radius: 12px; font-weight: 800;">প্লেস বেট (PLACE BET) 🚀</button>
             <% } %>
         </div>
     <% } %>
@@ -145,16 +181,34 @@
 
 <script>
 let selectedTeam = '';
-function selectTeam(team) {
+let selectedOdd = 0;
+
+function selectTeam(team, odd) {
     selectedTeam = team;
-    document.getElementById('btn-a').classList.remove('selected');
-    document.getElementById('btn-b').classList.remove('selected');
+    selectedOdd = odd;
+
+    document.querySelectorAll('.team-btn').forEach(btn => btn.classList.remove('selected'));
+
     if(team === '<%= match.team_a %>') {
         document.getElementById('btn-a').classList.add('selected');
+    } else if(team === 'Draw') {
+        document.getElementById('btn-draw').classList.add('selected');
     } else {
         document.getElementById('btn-b').classList.add('selected');
     }
+    updatePotential();
 }
+
+function updatePotential() {
+    const coins = document.getElementById('coins-input').value;
+    const potential = document.getElementById('potential-win');
+    if(selectedOdd > 0 && coins > 0) {
+        potential.textContent = Math.floor(coins * selectedOdd) + ' 🪙';
+    } else {
+        potential.textContent = '0 🪙';
+    }
+}
+
 function submitPrediction() {
     if(!selectedTeam) { alert('অনুগ্রহ করে একটি দল নির্বাচন করুন!'); return; }
     const coins = document.getElementById('coins-input').value;
@@ -162,7 +216,7 @@ function submitPrediction() {
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = '/matches/<%= match.id %>/predict';
-    [['predicted_winner', selectedTeam], ['coins_bet', coins]].forEach(([n,v]) => {
+    [['predicted_winner', selectedTeam], ['coins_bet', coins], ['odds_at_bet', selectedOdd]].forEach(([n,v]) => {
         const i = document.createElement('input');
         i.type = 'hidden'; i.name = n; i.value = v; form.appendChild(i);
     });

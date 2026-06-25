@@ -68,10 +68,10 @@ router.get('/:id', isAuth, async (req, res) => {
 });
 
 router.post('/:id/predict', isAuth, async (req, res) => {
-  const { winner, bet } = req.body;
+  const { predicted_winner, coins_bet, odds_at_bet } = req.body;
   const matchId = req.params.id;
   const userId = req.session.user.id;
-  const coinsBet = parseInt(bet);
+  const coinsBet = parseInt(coins_bet);
 
   try {
     const user = await pool.query(`SELECT coins FROM users WHERE id=$1`, [userId]);
@@ -88,8 +88,8 @@ router.post('/:id/predict', isAuth, async (req, res) => {
 
     await pool.query('BEGIN');
     await pool.query(`UPDATE users SET coins=coins-$1 WHERE id=$2`, [coinsBet, userId]);
-    await pool.query(`INSERT INTO predictions (user_id, match_id, predicted_winner, coins_bet) VALUES ($1,$2,$3,$4)`,
-      [userId, matchId, winner, coinsBet]);
+    await pool.query(`INSERT INTO predictions (user_id, match_id, predicted_winner, coins_bet, odds_at_bet) VALUES ($1,$2,$3,$4,$5)`,
+      [userId, matchId, predicted_winner, coinsBet, odds_at_bet]);
     await pool.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,-$2,'prediction','Bet on match ${matchId}')`, [userId, coinsBet]);
     await pool.query('COMMIT');
 

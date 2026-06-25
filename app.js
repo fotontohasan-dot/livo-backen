@@ -8,12 +8,26 @@ const pgSession = require('connect-pg-simple')(session);
 const flash = require('connect-flash');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
 const { connectDB, pool } = require('./db');
 const { syncMatches } = require('./services/matchUpdater');
 
 const app = express();
 const server = http.createServer(app);
 initSocket(server);
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://cdnjs.cloudflare.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
+      imgSrc: ["'self'", "data:", "https://res.cloudinary.com"],
+      connectSrc: ["'self'", "wss:", "ws:"],
+    },
+  },
+}));
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -260,7 +274,11 @@ async function migrateDB() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
       ALTER TABLE users ADD COLUMN IF NOT EXISTS total_points INT DEFAULT 0;
       ALTER TABLE matches ADD COLUMN IF NOT EXISTS result VARCHAR(50);
+      ALTER TABLE matches ADD COLUMN IF NOT EXISTS odds_a DECIMAL(5,2) DEFAULT 1.90;
+      ALTER TABLE matches ADD COLUMN IF NOT EXISTS odds_b DECIMAL(5,2) DEFAULT 1.90;
+      ALTER TABLE matches ADD COLUMN IF NOT EXISTS odds_draw DECIMAL(5,2) DEFAULT 3.00;
       ALTER TABLE predictions ADD COLUMN IF NOT EXISTS points_earned INT DEFAULT 0;
+      ALTER TABLE predictions ADD COLUMN IF NOT EXISTS odds_at_bet DECIMAL(5,2);
       ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS name VARCHAR(255);
       ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS sport VARCHAR(50);
       ALTER TABLE tournament_participants ADD COLUMN IF NOT EXISTS points INT DEFAULT 0;
