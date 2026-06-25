@@ -214,7 +214,7 @@ async function migrateDB() {
       );
     `);
 
-    // পুরোনো টেবিলে কলাম না থাকলে যোগ করা
+    // পুরোনো matches টেবিলে কলাম না থাকলে যোগ করা
     await pool.query(`
       ALTER TABLE matches ADD COLUMN IF NOT EXISTS overs TEXT;
       ALTER TABLE matches ADD COLUMN IF NOT EXISTS score_a TEXT;
@@ -224,11 +224,26 @@ async function migrateDB() {
       ALTER TABLE matches ADD COLUMN IF NOT EXISTS match_date TIMESTAMP;
     `);
 
-    // স্কোর কলাম integer থাকলে TEXT এ বদলানো (এই অংশটা নতুন — আসল সমস্যা ঠিক করে)
+    // স্কোর কলাম integer থাকলে TEXT এ বদলানো
     await pool.query(`
       ALTER TABLE matches ALTER COLUMN score_a TYPE TEXT USING score_a::TEXT;
       ALTER TABLE matches ALTER COLUMN score_b TYPE TEXT USING score_b::TEXT;
       ALTER TABLE matches ALTER COLUMN overs TYPE TEXT USING overs::TEXT;
+    `);
+
+    // match_date এর NOT NULL নিয়ম সরানো
+    await pool.query(`
+      ALTER TABLE matches ALTER COLUMN match_date DROP NOT NULL;
+    `);
+
+    // পুরোনো predictions টেবিলে মিসিং কলাম যোগ (ম্যাচ পেজ ক্র্যাশ ঠিক করে)
+    await pool.query(`
+      ALTER TABLE predictions ADD COLUMN IF NOT EXISTS market VARCHAR(50);
+      ALTER TABLE predictions ADD COLUMN IF NOT EXISTS pick VARCHAR(100);
+      ALTER TABLE predictions ADD COLUMN IF NOT EXISTS points INT DEFAULT 0;
+      ALTER TABLE predictions ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending';
+      ALTER TABLE predictions ADD COLUMN IF NOT EXISTS match_id INT;
+      ALTER TABLE predictions ADD COLUMN IF NOT EXISTS user_id INT;
     `);
 
     console.log('✅ DB migration done');
