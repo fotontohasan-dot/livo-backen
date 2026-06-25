@@ -1,0 +1,62 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+
+<div class="container" style="padding-top: 20px;">
+  <h2>⚙️ মার্কেট ম্যানেজমেন্ট</h2>
+  <p><strong><%= match.teams ? match.teams[0] + ' vs ' + match.teams[1] : match.title %></strong></p>
+  <a href="/admin/matches" class="btn btn-secondary mb-3">← ম্যাচ লিস্টে ফিরুন</a>
+
+  <!-- নতুন মার্কেট যোগ করার ফর্ম -->
+  <div class="card mb-4">
+    <div class="card-header">নতুন মার্কেট যোগ করুন</div>
+    <div class="card-body">
+      <form action="/admin/markets/update" method="POST">
+        <input type="hidden" name="match_id" value="<%= match.id %>">
+        
+        <div class="row">
+          <div class="col-md-3">
+            <select name="type" class="form-control" required>
+              <option value="bookmaker">বুকমেকার</option>
+              <option value="fancy">ফ্যান্সি</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <input type="text" name="name" class="form-control" placeholder="মার্কেটের নাম যেমন: ম্যাচ উইনার" required>
+          </div>
+          <div class="col-md-3">
+            <input type="text" name="odds" class="form-control" placeholder='{"0":1.85, "1":2.10}' required>
+          </div>
+          <div class="col-md-2">
+            <button type="submit" class="btn btn-success w-100">যোগ করুন</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- বর্তমান মার্কেটসমূহ -->
+  <h5>বর্তমান মার্কেটসমূহ</h5>
+  <% if (markets && markets.length > 0) { %>
+    <% markets.forEach(market => { %>
+    <div class="card mb-3">
+      <div class="card-body">
+        <h6><%= market.name %> 
+          <span class="badge <%= market.status === 'open' ? 'bg-success' : 'bg-danger' %>"><%= market.status %></span>
+        </h6>
+        <pre><%= JSON.stringify(market.odds, null, 2) %></pre>
+
+        <form action="/admin/markets/<%= market.id %>/toggle" method="POST" style="display:inline-block;">
+          <input type="hidden" name="status" value="<%= market.status === 'open' ? 'suspended' : 'open' %>">
+          <button type="submit" class="btn btn-sm <%= market.status === 'open' ? 'btn-warning' : 'btn-success' %>">
+            <%= market.status === 'open' ? 'সাসপেন্ড করুন' : 'ওপেন করুন' %>
+          </button>
+        </form>
+      </div>
+    </div>
+    <% }) %>
+  <% } else { %>
+    <p>এখনো কোনো মার্কেট যোগ করা হয়নি।</p>
+  <% } %>
+</div>
+
+<%- include('../partials/bottom-nav') %>
