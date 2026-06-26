@@ -12,6 +12,24 @@ function sanitizeUser(u) {
   return safe;
 }
 
+// লগইনের সময় IP/ডিভাইস রেকর্ড
+async function recordLogin(req, userId) {
+  try {
+    const ip = (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
+    const ua = req.get('user-agent') || '';
+    await pool.query(
+      `UPDATE users SET last_login = NOW(), last_ip = $1, last_device = $2, login_count = COALESCE(login_count,0) + 1 WHERE id = $3`,
+      [ip, ua, userId]
+    );
+    await pool.query(
+      `INSERT INTO login_logs (user_id, ip, user_agent) VALUES ($1, $2, $3)`,
+      [userId, ip, ua]
+    );
+  } catch (e) {
+    console.error('recordLogin error:', e.message);
+  }
+}
+
 router.get('/', async (req, res) => {
   try {
     res.render('index', { user: req.session.user || null });
@@ -77,6 +95,7 @@ router.post('/register', async (req, res) => {
       VALUES ($1, $2, $3, $4, 'user', 0, $5, $6, NOW()) RETURNING *
     `, [username, email || null, phone || null, hashed, myCode, referredById]);
 
+    await recordLogin(req, result.rows[0].id);
     req.session.user = sanitizeUser(result.rows[0]);
     req.flash('success', '✅ রেজিস্ট্রেশন সফল হয়েছে! স্বাগতম!');
     res.redirect('/');
@@ -107,6 +126,7 @@ router.post('/login', async (req, res) => {
       return res.redirect('/login');
     }
 
+    await recordLogin(req, user.id);
     req.session.user = sanitizeUser(user);
 
     if (user.role && user.role.toLowerCase() === 'admin') {
