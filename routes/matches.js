@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
+const { isAuth } = require('../middleware/auth');
 
 // ====================================================
 //  DB row -> client (matches.ejs) এর জন্য ফরম্যাট
@@ -139,6 +140,75 @@ router.get('/:id', async (req, res) => {
   } catch (err) {
     console.error('match-detail error:', err.message);
     res.redirect('/matches');
+  }
+});
+
+// ====================================================
+//  ম্যাচে বেট/প্রেডিকশন  ->  POST /matches/:id/bet
+//  client পাঠায়: { market_id, runner, odd, stake }
+// ====================================================
+router.post('/:id/bet', isAuth, async (req, res) => {
+  const userId = req.session.user.id;
+  const matchId = req.params.id;
+  const { market_id, runner, odd } = req.body;
+  const stake = parseInt(req.body.stake);
+  const oddNum = parseFloat(odd);
+
+  if (isNaN(stake) || stake < 10) {
+    return res.status(400).json({ success: false, message: 'মিনিমাম ১০ কয়েন বেট করতে হবে' });
+  }
+  if (isNaN(oddNum) || oddNum <= 1) {
+    return res.status(400).json({ success: false, message: 'অকার্যকর ওডস' });
+  }
+  if (!market_id) {
+    return res.status(400).json({ success: false, message: 'মার্কেট পাওয়া যায়নি' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // মার্কেট খোলা আছে কিনা যাচাই
+    const m = await client.query(`SELECT * FROM markets WHERE id = $1`, [market_id]);
+    if (!m.rows[0] || m.rows[0].status !== 'open') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ success: false, message: 'এই মার্কেটে এখন বেট করা যাবে না' });
+    }
+
+    // অ্যাটমিক কয়েন কাটা (পর্যাপ্ত থাকলে তবেই)
+    const upd = await client.query(
+      `UPDATE users SET coins = coins - $1 WHERE id = $2 AND coins >= $1 RETURNING coins`,
+      [stake, userId]
+    );
+    if (upd.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ success: false, message: 'পর্যাপ্ত কয়েন নেই' });
+    }
+
+    // বেট রেকর্ড
+    await client.query(
+      `INSERT INTO bets (user_id, match_id, market_id, market_type, runner, odd, stake, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')`,
+      [userId, matchId, market_id, m.rows[0].type, runner || null, oddNum, stake]
+    );
+
+    // কয়েন লেনদেন রেকর্ড
+    await client.query(
+      `INSERT INTO coin_transactions (user_id, amount, type, description)
+       VALUES ($1, $2, 'bet', $3)`,
+      [userId, -stake, `বেট: ${m.rows[0].name}`]
+    );
+
+    await client.query('COMMIT');
+
+    if (req.session.user) req.session.user.coins = upd.rows[0].coins;
+    res.json({ success: true, message: 'বেট সফল হয়েছে!', newBalance: upd.rows[0].coins });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('bet error:', err.message);
+    res.status(500).json({ success: false, message: 'সার্ভার ত্রুটি' });
+  } finally {
+    client.release();
   }
 });
 
