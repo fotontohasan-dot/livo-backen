@@ -15,7 +15,7 @@
     </div>
 
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
-      <a href="/matches/in-play" style="text-decoration:none;text-align:center;">
+      <a href="/matches" style="text-decoration:none;text-align:center;">
         <div style="background:linear-gradient(135deg,#ef4444,#dc2626);border-radius:12px;padding:14px 6px;position:relative;">
           <div style="font-size:22px;">⏱️</div>
           <div style="position:absolute;top:4px;right:4px;width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 8px #fff;animation:livedot 1.5s infinite;"></div>
@@ -61,7 +61,6 @@
   50% { opacity: 0.3; transform: scale(1.4); }
 }
 @keyframes marquee-text { 0%{transform:translateX(100%)} 100%{transform:translateX(-100%)} }
-.cat-item.active { border: 1px solid var(--gold) !important; }
 </style>
 
 <!-- ===== Welcome Banner ===== -->
@@ -69,7 +68,7 @@
   <div class="card btn-glow" style="height:160px;background:linear-gradient(135deg, #006519, #004d13);position:relative;display:flex;align-items:center;padding:20px;border: 1px solid var(--gold);">
     <div style="z-index:1;">
       <h2 style="font-family:'Teko',sans-serif;font-size:32px;color:var(--gold);line-height:1;">🎰 ওয়েলকাম বনাস ৫০%</h2>
-      <p style="font-size:13px;color:rgba(255,255,255,0.9);margin-top:5px;">পথম ডিপজিটে ৫০% পর্যন্ত বোনাস পন</p>
+      <p style="font-size:13px;color:rgba(255,255,255,0.9);margin-top:5px;">পথম ডিপোজিটে ৫০% পর্যন্ত বোনাস পান</p>
       <div style="margin-top:5px; font-size: 11px; color: #fff;">প্রতি রেফারেলের জন্য ৩০০০ বোনাস! 🎁</div>
       <a href="/payment/deposit" class="btn btn-primary" style="margin-top:12px;border-radius:25px;padding:8px 24px;background: var(--grad-gold); color: #000;">এখনই নন</a>
     </div>
@@ -82,7 +81,7 @@
   <div style="background:var(--gold);color:#000;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:bold;">News</div>
   <div style="flex:1;overflow:hidden;">
     <div style="font-size:12px;color:var(--text-muted);white-space:nowrap;animation:marquee-text 15s linear infinite;">
-      প্রিয় গ্রাহক, LIVO-ত আপনাকে স্বাগতম! নতুন আমানত বোনাস এবং আকর্ষণীয় পুরস্কার পেতে এখনই খেলা শরু করুন। আমাদের সাথে থকার জন্য ধন্যবাদ।
+      প্রিয় গ্রাহক, LIVO-ত আপনাকে স্বাগতম! নতুন আমানত বোনাস এবং আকর্ষণীয় পুরস্কার পেতে এখনই খেলা শরু করুন। আমাদের সাথে থাকার জন্য ধন্যবাদ।
     </div>
   </div>
 </div>
@@ -102,29 +101,40 @@
     <div class="stat-label">পেমেন্ট</div>
   </div>
 </div>
-
 <!-- ===== Category Scrollbar ===== -->
 <div style="display:flex;overflow-x:auto;padding:8px 12px;gap:10px;scrollbar-width:none;" id="catNav">
   <style>#catNav::-webkit-scrollbar { display:none; }</style>
-  <div class="glass cat-item active" data-cat="all" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;">
-    <div style="font-size:22px;">🔥</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">হট</div>
+  <div class="glass cat-item active" data-link="/matches" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--gold);">
+    <div style="font-size:22px;">⚽</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">ম্যাচসমূহ</div>
   </div>
-  <div class="glass cat-item" data-cat="slots" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;">
-    <div style="font-size:22px;">🎰</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">স্লট</div>
+  <div class="glass cat-item" data-link="/tournaments" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--border-glass);">
+    <div style="font-size:22px;">🏆</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">টুর্নামন্ট</div>
   </div>
-  <div class="glass cat-item" data-cat="live" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;">
-    <div style="font-size:22px;">🎲</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">লাইভ</div>
+  <div class="glass cat-item" data-link="/leaderboard" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--border-glass);">
+    <div style="font-size:22px;">📊</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">লডারবোর্ড</div>
   </div>
-  <div class="glass cat-item" data-cat="crash" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;">
-    <div style="font-size:22px;">🚀</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">ক্র্যাশ</div>
+  <div class="glass cat-item" data-link="/news" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--border-glass);">
+    <div style="font-size:22px;">📰</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">নিউজ</div>
   </div>
-  <div class="glass cat-item" data-cat="card" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;">
-    <div style="font-size:22px;">🃏</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">কার্ড</div>
+  <div class="glass cat-item" data-link="/payment/deposit" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--border-glass);">
+    <div style="font-size:22px;">💰</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">ডিপজিট</div>
+  </div>
+  <div class="glass cat-item" data-link="/chat" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--border-glass);">
+    <div style="font-size:22px;">🎧</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">সাপোর্ট</div>
+  </div>
+</div>
+
+<!-- ===== Search ===== -->
+<div style="padding:0 12px 10px;">
+  <div style="position:relative;">
+    <input type="text" id="gameSearch" class="form-input" placeholder="গেম খুঁজুন..." style="padding-right:45px;">
+    <i class="fas fa-search" style="position:absolute;right:15px;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
   </div>
 </div>
 
@@ -133,76 +143,165 @@
 <!-- ===== Hot Games ===== -->
 <div class="section-header">
   <h3 class="section-title"><i class="fas fa-fire"></i> <span id="sectionTitle">হট গেমস</span></h3>
-  <a href="/games/slots" style="font-size:12px;color:var(--text-muted);text-decoration:none;">সব দেখুন →</a>
 </div>
 <div class="game-grid" id="gameContainer"></div>
 
+<!-- ===== Jackpot ===== -->
+<div class="banner-container" style="margin-top:10px;">
+  <div class="card" style="padding:25px 20px; text-align:center; border: 2px solid var(--gold); background: radial-gradient(circle at center, #1a4a1a 0%, #002d0b 100%); position: relative; overflow: hidden; border-radius: 25px;">
+    <div style="position:absolute; top:-20px; left:-20px; width:100px; height:100px; background:var(--gold); filter:blur(60px); opacity:0.3;"></div>
+    <div style="position:absolute; bottom:-20px; right:-20px; width:100px; height:100px; background:var(--gold); filter:blur(60px); opacity:0.3;"></div>
+    <div style="font-size:13px; color:var(--gold); letter-spacing:4px; text-transform:uppercase; font-weight:800; text-shadow: 0 0 10px rgba(245,158,11,0.5);">✨ মেগা জকপট ✨</div>
+    <div style="font-family:'Teko',sans-serif; font-size:56px; color:var(--gold); line-height:1; margin:15px 0; text-shadow: 0 0 30px rgba(245,158,11,0.6); display: flex; align-items: center; justify-content: center; gap: 10px;">
+      <span style="font-size: 32px; margin-top: 10px;">৳</span>
+      <span id="jp-num">৮৮,৬১৭,৫১৭</span>
+    </div>
+    <div style="font-size:12px; color:rgba(255,255,255,0.7); font-weight: 500;">পতিদিন লকি ড্র জেতার সযোগ! 🎁</div>
+    <button class="btn btn-glow" style="margin-top:20px; border-radius:30px; padding:12px 40px; background: var(--grad-gold); color: #000; font-weight: 800; border: none;" onclick="location.href='/games/slots'">জকপট খেলুন 🎰</button>
+  </div>
+</div>
+
+<!-- ===== Winners ===== -->
+<div class="section-header">
+  <h3 class="section-title"><i class="fas fa-medal"></i> বিজয়ী তালিকা</h3>
+  <a href="/leaderboard" class="btn glass" style="font-size:12px;padding:4px 12px;border-radius:20px;color:var(--text-muted);">সব দেখুন</a>
+</div>
+
+<div style="padding:0 12px;">
+  <div class="card glass">
+    <div style="display:grid;grid-template-columns:40px 1fr 1fr;padding:12px;border-bottom:1px solid var(--border-glass);font-size:11px;color:var(--text-muted);font-weight:600;">
+      <div>#</div><div>খেলোয়াড়</div><div style="text-align:right">জতার পরিমাণ</div>
+    </div>
+    <div style="display:grid;grid-template-columns:40px 1fr 1fr;padding:12px;align-items:center;border-bottom:1px solid var(--border-glass);">
+      <div style="color:var(--gold);font-family:'Teko',sans-serif;font-size:18px;">🥇</div><div style="font-size:13px;">***৮৮২</div><div style="text-align:right;color:#10b981;font-family:'Teko',sans-serif;font-size:16px;">৳১৫,৬৮,৫২৩</div>
+    </div>
+    <div style="display:grid;grid-template-columns:40px 1fr 1fr;padding:12px;align-items:center;border-bottom:1px solid var(--border-glass);">
+      <div style="color:#94a3b8;font-family:'Teko',sans-serif;font-size:18px;">🥈</div><div style="font-size:13px;">***৭৪২</div><div style="text-align:right;color:#10b981;font-family:'Teko',sans-serif;font-size:16px;">৳১১,৪৪,৫৫৬</div>
+    </div>
+    <div style="display:grid;grid-template-columns:40px 1fr 1fr;padding:12px;align-items:center;">
+      <div style="color:#cd7f32;font-family:'Teko',sans-serif;font-size:18px;">🥉</div><div style="font-size:13px;">***১১৮</div><div style="text-align:right;color:#10b981;font-family:'Teko',sans-serif;font-size:16px;">৳৯,৯৮,৫৪১</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Promotions ===== -->
+<div class="section-header" style="margin-top:15px;">
+  <h3 class="section-title"><i class="fas fa-gift"></i> প্রমোশন</h3>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 12px;">
+  <div class="card glass" style="padding:15px;cursor:pointer;border-left:4px solid var(--primary);" onclick="location.href='/payment/deposit'">
+    <div style="font-size:13px;font-weight:700;">ওয়েলকাম বোনাস</div>
+    <div style="font-family:'Teko',sans-serif;font-size:28px;color:var(--primary);">১০০%</div>
+  </div>
+  <div class="card glass" style="padding:15px;cursor:pointer;border-left:4px solid var(--accent);">
+    <div style="font-size:13px;font-weight:700;">ডেইলি ক্যাশব্যাক</div>
+    <div style="font-family:'Teko',sans-serif;font-size:28px;color:var(--accent);">১০%</div>
+  </div>
+</div>
+
+<!-- ===== Footer ===== -->
+<div class="site-footer" style="margin-top:30px;background:rgba(255,255,255,0.02);padding:30px 20px;text-align:center;border-top:1px solid var(--border-glass);">
+  <div class="nav-brand" style="font-size:2.5rem;margin-bottom:15px;"><%= siteName %></div>
+  <div style="display:flex;flex-wrap:wrap;gap:15px;justify-content:center;margin-bottom:20px;">
+    <a href="/privacy" style="color:var(--text-muted);font-size:12px;text-decoration:none;">Privacy Policy</a>
+    <a href="/terms" style="color:var(--text-muted);font-size:12px;text-decoration:none;">Terms & Conditions</a>
+    <a href="/rules" style="color:var(--text-muted);font-size:12px;text-decoration:none;">Rules and Regulation</a>
+    <a href="/kyc" style="color:var(--text-muted);font-size:12px;text-decoration:none;">KYC</a>
+  </div>
+  <div style="display:flex;gap:15px;justify-content:center;margin-bottom:20px;">
+    <div class="glass" style="padding:5px 15px;border-radius:8px;font-size:12px;color:#ef4444;font-weight:700;">🔞 18+</div>
+    <div class="glass" style="padding:5px 15px;border-radius:8px;font-size:12px;color:var(--text-muted);">Curacao Licensed</div>
+  </div>
+  <p style="font-size:11px;color:var(--text-muted);line-height:1.6;">
+    © 2024 <%= siteName %> Gaming. All Rights Reserved.<br>
+    অনলাইন গেমিং আসক তৈরি করতে পারে। দয়িত্বশীলভাবে খেলুন।
+  </p>
+</div>
+<!-- ===== Floating Support ===== -->
+<div style="position:fixed;right:20px;bottom:100px;z-index:999;display:flex;flex-direction:column;gap:10px;">
+  <a href="/chat" style="width:50px;height:50px;border-radius:50%;background:var(--grad-gold);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px rgba(0,0,0,0.4);text-decoration:none;color:#000;font-size:24px;">
+    <i class="fas fa-headset"></i>
+  </a>
+</div>
+
 <%- include('partials/bottom-nav') %>
+
 <script>
-// ===== হোম পেজের গেম লিস্ট =====
-var ALL_GAMES = [
-  { slug: 'aviator', name: 'Aviator', icon: '🚀', cat: 'crash', grad: 'linear-gradient(135deg,#ef4444,#b91c1c)' },
-  { slug: 'crash-game', name: 'Crash', icon: '📈', cat: 'crash', grad: 'linear-gradient(135deg,#f97316,#c2410c)' },
-  { slug: 'spaceman', name: 'Spaceman', icon: '👨‍🚀', cat: 'crash', grad: 'linear-gradient(135deg,#6366f1,#4338ca)' },
-  { slug: 'jetx', name: 'JetX', icon: '✈️', cat: 'crash', grad: 'linear-gradient(135deg,#0ea5e9,#0369a1)' },
-  { slug: 'slots', name: 'Slots', icon: '🎰', cat: 'slots', grad: 'linear-gradient(135deg,#8b5cf6,#6d28d9)' },
-  { slug: 'sweet-bonanza', name: 'Sweet Bonanza', icon: '🍬', cat: 'slots', grad: 'linear-gradient(135deg,#ec4899,#be185d)' },
-  { slug: 'gates-of-olympus', name: 'Gates of Olympus', icon: '⚡', cat: 'slots', grad: 'linear-gradient(135deg,#f59e0b,#b45309)' },
-  { slug: 'book-of-dead', name: 'Book of Dead', icon: '📖', cat: 'slots', grad: 'linear-gradient(135deg,#eab308,#a16207)' },
-  { slug: 'roulette', name: 'Roulette', icon: '🎡', cat: 'live', grad: 'linear-gradient(135deg,#dc2626,#7f1d1d)' },
-  { slug: 'crazy-time', name: 'Crazy Time', icon: '🎉', cat: 'live', grad: 'linear-gradient(135deg,#10b981,#047857)' },
-  { slug: 'dragon-tiger', name: 'Dragon Tiger', icon: '🐉', cat: 'live', grad: 'linear-gradient(135deg,#f43f5e,#9f1239)' },
-  { slug: 'andar-bahar', name: 'Andar Bahar', icon: '🎴', cat: 'card', grad: 'linear-gradient(135deg,#3b82f6,#1d4ed8)' },
-  { slug: 'teen-patti', name: 'Teen Patti', icon: '🃏', cat: 'card', grad: 'linear-gradient(135deg,#14b8a6,#0f766e)' },
-  { slug: 'blackjack', name: 'Blackjack', icon: '♠️', cat: 'card', grad: 'linear-gradient(135deg,#64748b,#334155)' },
-  { slug: 'baccarat', name: 'Baccarat', icon: '💎', cat: 'card', grad: 'linear-gradient(135deg,#a855f7,#7e22ce)' },
-  { slug: 'poker', name: 'Poker', icon: '🎰', cat: 'card', grad: 'linear-gradient(135deg,#0891b2,#155e75)' },
-  { slug: 'color-prediction', name: 'Color Prediction', icon: '🎨', cat: 'live', grad: 'linear-gradient(135deg,#d946ef,#a21caf)' },
-  { slug: 'dice', name: 'Dice', icon: '🎲', cat: 'live', grad: 'linear-gradient(135deg,#22c55e,#15803d)' },
-  { slug: 'plinko', name: 'Plinko', icon: '🔵', cat: 'crash', grad: 'linear-gradient(135deg,#06b6d4,#0e7490)' },
-  { slug: 'mines', name: 'Mines', icon: '💣', cat: 'crash', grad: 'linear-gradient(135deg,#475569,#1e293b)' }
+const games = [
+  {name:"Aviator", emoji:"🚀", type:"pvp", slug:"aviator", badge:"hot", provider:"SPRIBE"},
+  {name:"Teen Patti", emoji:"🃏", type:"pvp", slug:"teen-patti", badge:"pop", provider:"JL"},
+  {name:"Andar Bahar", emoji:"🎴", type:"pvp", slug:"andar-bahar", badge:"hot", provider:"JL"},
+  {name:"Blackjack", emoji:"♠️", type:"table", slug:"blackjack", badge:"", provider:"EVO"},
+  {name:"Baccarat", emoji:"🎰", type:"table", slug:"baccarat", badge:"pop", provider:"EVO"},
+  {name:"Roulette", emoji:"🎡", type:"table", slug:"roulette", badge:"", provider:"EVO"},
+  {name:"Slots", emoji:"🎰", type:"slots", slug:"slots", badge:"hot", provider:"PG"},
+  {name:"Online Ludo", emoji:"🎲", type:"slots", slug:"ludo", badge:"new", provider:"JL"},
+  {name:"Dragon Tiger", emoji:"🐉", type:"live", slug:"dragon-tiger", badge:"pop", provider:"JL"},
+  {name:"Color Prediction", emoji:"🌈", type:"slots", slug:"color-prediction", badge:"new", provider:"JL"},
+  {name:"Mine Game", emoji:"💣", type:"slots", slug:"mine", badge:"hot", provider:"JL"},
+  {name:"Fortune Gems", emoji:"💎", type:"slots", slug:"fortune-gems", badge:"hot", provider:"JDB"},
+  {name:"Sweet Bonanza", emoji:"🍭", type:"slots", slug:"sweet-bonanza", badge:"pop", provider:"PP"},
+  {name:"Gates of Olympus", emoji:"⚡", type:"slots", slug:"gates-of-olympus", badge:"hot", provider:"PP"},
+  {name:"Crazy Time", emoji:"🎡", type:"live", slug:"crazy-time", badge:"hot", provider:"EVO"},
+  {name:"Mega Ball", emoji:"🟡", type:"live", slug:"mega-ball", badge:"pop", provider:"EVO"},
+  {name:"Rummy", emoji:"🃏", type:"slots", slug:"rummy", badge:"hot", provider:"JL"},
+  {name:"Call Break", emoji:"♠️", type:"slots", slug:"call-break", badge:"pop", provider:"JL"},
+  {name:"Lightning Roulette", emoji:"⚡", type:"live", slug:"lightning-roulette", badge:"hot", provider:"EVO"},
+  {name:"Mines", emoji:"💣", type:"slots", slug:"mines", badge:"new", provider:"SPRIBE"},
+  {name:"Sugar Pop", emoji:"🍬", type:"slots", slug:"sugar-pop", badge:"new", provider:"BS"},
+  {name:"Big Bad Wolf", emoji:"🐺", type:"slots", slug:"big-bad-wolf", badge:"new", provider:"QS"},
+  {name:"Mega Fishing", emoji:"🎣", type:"fishing", slug:"mega-fishing", badge:"hot", provider:"JL"},
+  {name:"Happy Fishing", emoji:"🐠", type:"fishing", slug:"happy-fishing", badge:"new", provider:"JL"},
+  {name:"Win Go", emoji:"🎟️", type:"lottery", slug:"win-go", badge:"hot", provider:"JL"},
+  {name:"Keno", emoji:"🔢", type:"lottery", slug:"keno", badge:"pop", provider:"JL"},
 ];
 
-var currentCat = 'all';
-
-function buildCard(g) {
-  var a = document.createElement('a');
-  a.href = '/games/' + g.slug;
-  a.style.textDecoration = 'none';
-  a.className = 'game-card';
-  a.style.background = g.grad;
-  a.innerHTML =
-    '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;">' +
-      '<div style="font-size:34px;">' + g.icon + '</div>' +
-      '<div style="font-size:11px;color:#fff;font-weight:700;text-align:center;padding:0 4px;">' + g.name + '</div>' +
-    '</div>';
-  return a;
-}
-
 function renderGames() {
-  var container = document.getElementById('gameContainer');
-  if (!container) return;
-  container.innerHTML = '';
-  var list = currentCat === 'all' ? ALL_GAMES : ALL_GAMES.filter(function (g) { return g.cat === currentCat; });
-  list.forEach(function (g) { container.appendChild(buildCard(g)); });
+  const c = document.getElementById('gameContainer');
+  if(!c) return;
+  c.innerHTML = '';
+  const searchQ = document.getElementById('gameSearch').value.toLowerCase();
+  const filtered = games.filter(g => g.name.toLowerCase().includes(searchQ));
+
+  if (filtered.length === 0) {
+    c.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">কোনো গেম পাওয়া যয়নি</div>';
+    return;
+  }
+
+  filtered.forEach(g => {
+    const badgeHTML = g.badge ? `<div style="position:absolute;top:8px;left:8px;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;background:var(--grad-gold);color:#000;">${g.badge.toUpperCase()}</div>` : '';
+    c.innerHTML += `
+      <div class="game-card" onclick="location.href='/games/${g.slug}'" style="border-color: rgba(245, 158, 11, 0.2); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+        <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:40px;background:var(--grad-surface);">
+          <span class="game-emoji">${g.emoji}</span>
+          ${badgeHTML}
+          <div style="padding:8px;background:rgba(255,255,255,0.05);border-top:1px solid rgba(255,255,255,0.05);">
+            <div style="font-size:11px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${g.name}</div>
+            <div style="font-size:9px;color:var(--gold);">${g.provider}</div>
+          </div>
+        </div>
+      </div>`;
+  });
 }
 
-document.addEventListener('DOMContentLoaded', function () {
-  renderGames();
-  var items = document.querySelectorAll('.cat-item');
-  items.forEach(function (el) {
-    el.addEventListener('click', function () {
-      items.forEach(function (i) { i.classList.remove('active'); });
-      el.classList.add('active');
-      currentCat = el.getAttribute('data-cat') || 'all';
-      var titleMap = { all: 'হট গেমস', slots: 'স্লট গেমস', live: 'লাইভ ক্যাসিনো', crash: 'ক্র্যাশ গেমস', card: 'কার্ড গেমস' };
-      var t = document.getElementById('sectionTitle');
-      if (t) t.textContent = titleMap[currentCat] || 'গেমস';
-      renderGames();
-    });
+document.querySelectorAll('.cat-item').forEach(el => {
+  el.addEventListener('click', () => {
+    const link = el.dataset.link;
+    if (link) location.href = link;
   });
 });
+
+document.getElementById('gameSearch').addEventListener('input', renderGames);
+
+let jp = 88617517;
+setInterval(() => {
+  jp += Math.floor(Math.random() * 600 + 100);
+  const jpN = document.getElementById('jp-num');
+  if(jpN) jpN.textContent = jp.toLocaleString('bn-BD');
+}, 2000);
+
+document.addEventListener('DOMContentLoaded', renderGames);
+renderGames();
 </script>
 
-</body>
-</html>
+</body></html>
