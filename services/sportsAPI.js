@@ -1,14 +1,8 @@
 // services/sportsAPI.js
-// Cricket (CricAPI) + Football (RapidAPI: Today Football Prediction)
-
-// ⚠️ নিরাপত্তা: আগের হার্ডকোডেড API key সরানো হয়েছে।
-// পুরোনো key টি কোডে ফাঁস হয়ে গেছে — CricAPI ড্যাশবোর্ডে গিয়ে সেটি অবশ্যই রিজেনারেট/বাতিল করুন
-// এবং নতুন key শুধু .env ফাইলে CRICKET_API_KEY হিসেবে রাখুন।
 const CRICKET_API_KEY = process.env.CRICKET_API_KEY || '';
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY || '';
 const FOOTBALL_HOST = 'today-football-prediction.p.rapidapi.com';
 
-// -------- Simple in-memory cache (5 min) --------
 const cache = new Map();
 const CACHE_TTL = 5 * 60 * 1000;
 
@@ -32,9 +26,17 @@ async function getCricketCurrentMatches() {
   const cached = getCached('cricket:current');
   if (cached) return cached;
   try {
+    if (!CRICKET_API_KEY) {
+      console.error('Cricket: CRICKET_API_KEY নেই!');
+      return [];
+    }
     const url = `https://api.cricapi.com/v1/currentMatches?apikey=${CRICKET_API_KEY}&offset=0`;
     const res = await fetch(url);
     const json = await res.json();
+
+    // ডিবাগ: API কী বলছে লগে দেখাও
+    console.log('Cricket API status:', json.status, '| message:', json.info ? JSON.stringify(json.info) : (json.reason || 'N/A'));
+
     const matches = (json.data || []).map(m => ({
       id: m.id,
       name: m.name,
@@ -46,9 +48,6 @@ async function getCricketCurrentMatches() {
       teamInfo: m.teamInfo || [],
       score: m.score || [],
       matchType: m.matchType,
-      tossWinner: m.tossWinner,
-      tossChoice: m.tossChoice,
-      matchWinner: m.matchWinner,
       sport: 'cricket',
     }));
     setCache('cricket:current', matches);
@@ -63,6 +62,7 @@ async function getCricketUpcoming() {
   const cached = getCached('cricket:upcoming');
   if (cached) return cached;
   try {
+    if (!CRICKET_API_KEY) return [];
     const url = `https://api.cricapi.com/v1/matches?apikey=${CRICKET_API_KEY}&offset=0`;
     const res = await fetch(url);
     const json = await res.json();
@@ -100,7 +100,6 @@ async function getCricketMatchInfo(matchId) {
 
 // ================== FOOTBALL (RapidAPI) ==================
 
-// আজকের তারিখ YYYY-MM-DD আকারে
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -109,7 +108,6 @@ async function getFootballLiveScores() {
   const cached = getCached('football:live');
   if (cached) return cached;
 
-  // key না থাকলে চুপচাপ খালি ফেরত (সার্ভার ক্র্যাশ করবে না)
   if (!RAPIDAPI_KEY) {
     console.warn('Football: RAPIDAPI_KEY নেই, স্কিপ করা হল');
     return [];
@@ -124,7 +122,6 @@ async function getFootballLiveScores() {
       },
     });
 
-    // JSON না হলে (HTML error পেজ) — নিরাপদে থামা
     const ct = res.headers.get('content-type') || '';
     if (!ct.includes('application/json')) {
       console.error('Football: JSON আসেনি (status ' + res.status + ')');
@@ -153,7 +150,6 @@ async function getFootballLiveScores() {
   }
 }
 
-// World Cup fixtures — এই API আলাদা endpoint নেই, তাই আপতত খালি
 async function getWorldCupFixtures() {
   return [];
 }
