@@ -1,0 +1,44 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+
+<div class="container" style="padding-top: 20px;">
+  <h2>🪪 KYC যাচাই</h2>
+  <a href="/admin" class="btn btn-secondary">← ড্যাশবোর্ড</a>
+
+  <% if (requests.length === 0) { %>
+    <p style="color:#888; margin-top:20px;">কোনো KYC রিকোয়েস্ট নেই।</p>
+  <% } %>
+
+  <% requests.forEach(r => { %>
+    <div class="card" style="margin:15px 0; padding:15px;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <strong><%= r.username %></strong>
+        <span class="badge <%= r.status === 'approved' ? 'bg-success' : (r.status === 'rejected' ? 'bg-danger' : 'bg-warning') %>"><%= r.status %></span>
+      </div>
+
+      <p style="margin:8px 0; font-size:14px; color:#ccc;">
+        নাম: <%= r.full_name %><br>
+        ডকুমেন্ট: <%= r.document_type || 'N/A' %> — <%= r.document_number %>
+      </p>
+
+      <% if (r.document_url) { %>
+        <a href="<%= r.document_url %>" target="_blank" class="btn btn-sm btn-secondary" style="margin-bottom:10px;">📄 ডকুমেন্ট দেখুন</a>
+      <% } %>
+
+      <% if (r.status === 'pending') { %>
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <form action="/admin/kyc/<%= r.id %>/approve" method="POST" style="display:inline;">
+            <button type="submit" class="btn btn-sm btn-success">✅ অনুমোদন</button>
+          </form>
+          <form action="/admin/kyc/<%= r.id %>/reject" method="POST" style="display:inline;"
+                onsubmit="return confirm('এই KYC বাতিল করবেন?');">
+            <button type="submit" class="btn btn-sm btn-danger">❌ বাতিল</button>
+          </form>
+        </div>
+      <% } %>
+    </div>
+  <% }) %>
+
+</div>
+
+<%- include('../partials/bottom-nav') %>
