@@ -9,10 +9,10 @@ async function runMigrations() {
       CREATE TABLE IF NOT EXISTS markets (
         id SERIAL PRIMARY KEY,
         match_id INTEGER REFERENCES matches(id) ON DELETE CASCADE,
-        type VARCHAR(50) NOT NULL,           -- 'bookmaker' or 'fancy'
+        type VARCHAR(50) NOT NULL,
         name TEXT NOT NULL,
         odds JSONB DEFAULT '{}',
-        status VARCHAR(20) DEFAULT 'open',   -- open, suspended, closed
+        status VARCHAR(20) DEFAULT 'open',
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       );
@@ -29,19 +29,41 @@ async function runMigrations() {
         runner TEXT,
         odd NUMERIC(10,2),
         stake INTEGER NOT NULL,
-        status VARCHAR(20) DEFAULT 'pending',   -- pending, won, lost, void
+        status VARCHAR(20) DEFAULT 'pending',
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
 
+    // ===== নতুন: Chat Messages Table (গ্রাহক সেবা চ্যাট) =====
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id SERIAL PRIMARY KEY,
+        sender_id INTEGER,
+        receiver_id INTEGER,
+        message TEXT,
+        is_admin BOOLEAN DEFAULT false,
+        file_url TEXT,
+        file_type VARCHAR(20),
+        is_read BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_chat_sender ON chat_messages(sender_id);
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_chat_receiver ON chat_messages(receiver_id);
+    `);
+
     // Update existing tables if needed
     await pool.query(`
-      ALTER TABLE matches 
+      ALTER TABLE matches
       ADD COLUMN IF NOT EXISTS start_time TIMESTAMP,
       ADD COLUMN IF NOT EXISTS league TEXT;
     `);
 
-    console.log("✅ Markets & Bets tables migration completed successfully");
+    console.log("✅ All tables migration completed successfully");
   } catch (err) {
     console.error("❌ Migration error:", err.message);
   }
