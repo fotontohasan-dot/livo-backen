@@ -4,7 +4,6 @@ async function runMigrations() {
   try {
     console.log("🚀 Running database migrations...");
 
-    // Markets Table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS markets (
         id SERIAL PRIMARY KEY,
@@ -18,7 +17,6 @@ async function runMigrations() {
       );
     `);
 
-    // Bets Table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS bets (
         id SERIAL PRIMARY KEY,
@@ -34,7 +32,6 @@ async function runMigrations() {
       );
     `);
 
-    // Chat Messages Table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS chat_messages (
         id SERIAL PRIMARY KEY,
@@ -48,11 +45,9 @@ async function runMigrations() {
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
-
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_sender ON chat_messages(sender_id);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_receiver ON chat_messages(receiver_id);`);
 
-    // News Table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS news (
         id SERIAL PRIMARY KEY,
@@ -66,7 +61,6 @@ async function runMigrations() {
       );
     `);
 
-    // KYC Requests Table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS kyc_requests (
         id SERIAL PRIMARY KEY,
@@ -82,12 +76,6 @@ async function runMigrations() {
     `);
 
     await pool.query(`
-      ALTER TABLE users
-      ADD COLUMN IF NOT EXISTS kyc_status VARCHAR(20) DEFAULT 'none';
-    `);
-
-    // Error Logs Table
-    await pool.query(`
       CREATE TABLE IF NOT EXISTS error_logs (
         id SERIAL PRIMARY KEY,
         message TEXT,
@@ -99,7 +87,30 @@ async function runMigrations() {
       );
     `);
 
-    // Update existing tables if needed
+    // লগইন লগ টেবিল (IP, ডিভাইস ট্র্যাকিং — জালিয়াতি ধরতে)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS login_logs (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER,
+        ip TEXT,
+        user_agent TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_login_user ON login_logs(user_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_login_ip ON login_logs(ip);`);
+
+    // users টেবিলে নতুন কলাম
+    await pool.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS kyc_status VARCHAR(20) DEFAULT 'none',
+      ADD COLUMN IF NOT EXISTS last_login TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS last_ip TEXT,
+      ADD COLUMN IF NOT EXISTS last_device TEXT,
+      ADD COLUMN IF NOT EXISTS login_count INTEGER DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS admin_note TEXT;
+    `);
+
     await pool.query(`
       ALTER TABLE matches
       ADD COLUMN IF NOT EXISTS start_time TIMESTAMP,
