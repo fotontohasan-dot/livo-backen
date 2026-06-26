@@ -1,177 +1,75 @@
-<%- include('../partials/head') %>
-<%- include('../partials/navbar') %>
-
 <style>
-    body { background:#0a0a0a; color:#fff; margin-bottom:70px; }
-    .game-container { padding:15px; max-width:800px; margin:0 auto; }
-    .game-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; background:#141414; padding:12px 15px; border-radius:12px; border:1px solid rgba(230,0,0,0.2); }
-    .game-title { font-size:18px; font-weight:800; color:#ffd700; }
-    .balance-box { background:rgba(0,0,0,0.5); padding:5px 15px; border-radius:20px; font-weight:700; color:#ffd700; display:flex; align-items:center; gap:5px; border:1px solid rgba(255,215,0,0.3); }
-    .game-canvas-area { width:100%; aspect-ratio:16/9; background:#000; border-radius:12px; position:relative; overflow:hidden; display:flex; flex-direction:column; align-items:center; justify-content:center; border:2px solid rgba(230,0,0,0.4); box-shadow:0 0 20px rgba(230,0,0,0.15); }
-    .bet-controls { margin-top:15px; background:#141414; padding:15px; border-radius:12px; display:flex; flex-direction:column; gap:12px; border:1px solid rgba(255,255,255,0.07); }
-    .bet-input-group { display:flex; gap:10px; align-items:center; }
-    .bet-input-group label { white-space:nowrap; font-size:14px; color:#888; }
-    .bet-input-group input { flex:1; background:#1e1e1e; border:1px solid #333; color:white; padding:10px; border-radius:8px; outline:none; font-size:15px; }
-    .bet-btn { background:linear-gradient(90deg,#e60000,#ff1a1a); color:white; border:none; padding:13px; border-radius:8px; font-weight:700; cursor:pointer; font-size:15px; transition:.2s; }
-    .bet-btn:disabled { opacity:0.5; cursor:not-allowed; }
-    .quick-bet { display:flex; gap:8px; }
-    .quick-btn { padding:6px 12px; background:#1e1e1e; border:1px solid #333; color:#888; border-radius:6px; cursor:pointer; font-size:12px; }
-    .quick-btn:hover { border-color:#e60000; color:#e60000; }
+    #baccaratGame {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #064e3b;
+    }
+    .cards-box { display: flex; gap: 20px; margin-top: 20px; }
+    .player-section { display: flex; flex-direction: column; align-items: center; color: #fff; }
+    .card-display {
+        width: 80px; height: 120px; background: #fff; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 40px; color: #000; margin-bottom: 10px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
 </style>
 
-<div class="game-container">
-    <div class="game-header">
-        <div class="game-title">🎮 <%= gameDisplayName %></div>
-        <div class="balance-box">🪙 <span id="userBalance"><%= coins %></span></div>
-    </div>
-
-    <div id="gameCanvas" class="game-canvas-area">
-        <div id="gameUI">
-            <div style="text-align:center;padding:40px;">
-                <div style="font-size:40px;">🎮</div>
-                <p style="color:#888;margin-top:10px;">গেম লোড হচ্ছে...</p>
+<script>
+(function(){
+    document.getElementById('gameUI').innerHTML = `
+        <div id="baccaratGame">
+            <div id="bcStatus" style="color: #ffd700; font-weight: bold;">বাজি ধরুন!</div>
+            <div class="cards-box">
+                <div class="player-section">
+                    <div id="bcDealerCard" class="card-display">🂠</div>
+                    <span>ব্যাংকার</span>
+                </div>
+                <div class="player-section">
+                    <div id="bcPlayerCard" class="card-display">🂠</div>
+                    <span>প্লেয়ার</span>
+                </div>
             </div>
         </div>
-    </div>
+    `;
 
-    <div class="bet-controls">
-        <div class="quick-bet">
-            <button class="quick-btn" onclick="setBet(10)">১০</button>
-            <button class="quick-btn" onclick="setBet(50)">৫০</button>
-            <button class="quick-btn" onclick="setBet(100)">১০০</button>
-            <button class="quick-btn" onclick="setBet(500)">৫০০</button>
-            <button class="quick-btn" onclick="setBet(1000)">১০০০</button>
-        </div>
-        <div class="bet-input-group">
-            <label>বাজি:</label>
-            <input type="number" id="betAmount" value="10" min="10" step="10">
-        </div>
-        <button id="mainGameBtn" class="bet-btn">খেলুন</button>
-    </div>
-</div>
+    const bcStatus = document.getElementById('bcStatus');
+    const bcPlayBtn = document.getElementById('mainGameBtn');
+    const bcpCard = document.getElementById('bcPlayerCard');
+    const bcdCard = document.getElementById('bcDealerCard');
 
-<%- include('../partials/bottom-nav', { activePage: 'home' }) %>
+    async function playBC() {
+        const amount = parseInt(document.getElementById('betAmount').value);
+        if (isNaN(amount) || amount < 1) { alert('সর্বনিম্ন ১ কয়েন বাজি ধরুন'); return; }
 
-<script>
-    const gameSlug = '<%= gameSlug %>';
-    let currentBalance = <%= coins %>;
+        const data = await placeBet(amount);
+        if (!data || !data.success) return;
 
-    function setBet(amount) { document.getElementById('betAmount').value = amount; }
+        bcPlayBtn.disabled = true;
+        bcStatus.innerText = 'কার্ড ডিল হচ্ছে...';
+        bcStatus.style.color = '#ffd700';
+        bcpCard.innerText = '🂠';
+        bcdCard.innerText = '🂠';
 
-    async function placeBet(amount, selection=null) {
-        try {
-            const response = await fetch('/games/play', {
-                method:'POST',
-                headers:{'Content-Type':'application/json'},
-                body:JSON.stringify({ gameSlug, amount, selection })
-            });
-            const data = await response.json();
-            if (data.success) { updateBalance(data.newBalance); return data; }
-            else { alert(data.message); return false; }
-        } catch(err) { console.error('Play error:',err); return false; }
+        setTimeout(() => {
+            bcpCard.innerText = '🂢';
+            bcdCard.innerText = '🂣';
+
+            if (data.winAmount > 0) {
+                bcStatus.innerText = `আপনি জিতেছেন! +${data.winAmount}`;
+                bcStatus.style.color = '#10b981';
+            } else {
+                bcStatus.innerText = 'আপনি হেরেছেন!';
+                bcStatus.style.color = '#ef4444';
+            }
+            bcPlayBtn.disabled = false;
+        }, 1500);
     }
 
-    async function recordWin(multiplier) {
-        try {
-            const response = await fetch('/games/cashout', {
-                method:'POST',
-                headers:{'Content-Type':'application/json'},
-                body:JSON.stringify({ gameSlug, multiplier })
-            });
-            const data = await response.json();
-            if (data.success) { updateBalance(data.newBalance); return data; }
-            else { alert(data.message); return false; }
-        } catch(err) { console.error('Win error:',err); return false; }
-    }
-
-    function updateBalance(newBalance) {
-        currentBalance = newBalance;
-        document.getElementById('userBalance').innerText = newBalance;
-    }
+    bcPlayBtn.innerText = 'ডিল';
+    bcPlayBtn.onclick = playBC;
+})();
 </script>
-<% if (gameSlug === 'aviator' || gameSlug === 'crash') { %>
-    <%- include('aviator') %>
-<% } else if (gameSlug === 'slots') { %>
-    <%- include('slots') %>
-<% } else if (gameSlug === 'roulette') { %>
-    <%- include('roulette') %>
-<% } else if (gameSlug === 'andar-bahar') { %>
-    <%- include('andar-bahar') %>
-<% } else if (gameSlug === 'teen-patti') { %>
-    <%- include('teen-patti') %>
-<% } else if (gameSlug === 'blackjack') { %>
-    <%- include('blackjack') %>
-<% } else if (gameSlug === 'poker') { %>
-    <%- include('poker') %>
-<% } else if (gameSlug === 'baccarat') { %>
-    <%- include('baccarat') %>
-<% } else if (gameSlug === 'ludo') { %>
-    <%- include('ludo') %>
-<% } else if (gameSlug === 'color-prediction') { %>
-    <%- include('color-prediction') %>
-<% } else if (gameSlug === 'lucky-spin' || gameSlug === 'wheel') { %>
-    <%- include('lucky-spin') %>
-<% } else if (gameSlug === 'mine') { %>
-    <%- include('mine') %>
-<% } else if (gameSlug === 'coin-flip') { %>
-    <%- include('coin-flip') %>
-<% } else if (gameSlug === 'dragon-tiger') { %>
-    <%- include('dragon-tiger') %>
-<% } else if (gameSlug === 'number-guess') { %>
-    <%- include('number-guess') %>
-<% } else if (gameSlug === 'hilo') { %>
-    <%- include('hilo') %>
-<% } else if (gameSlug === 'dice') { %>
-    <%- include('dice') %>
-<% } else if (gameSlug === 'card-war') { %>
-    <%- include('card-war') %>
-<% } else { %>
-    <!-- জেনেরিক গেম টেমপ্লেট: বাকি সব গেমের জন্য -->
-    <script>
-    (function(){
-        var ui = document.getElementById('gameUI');
-        ui.innerHTML =
-            '<div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:linear-gradient(180deg,#0a0a0a,#1a0000);padding:15px;">' +
-                '<div style="font-size:50px;">🎰</div>' +
-                '<div id="g_status" style="color:#ffd700;font-weight:700;font-size:15px;">' + '<%= gameDisplayName %>' + ' - বাজি ধরুন!</div>' +
-                '<div id="g_result" style="font-size:34px;font-weight:900;color:#fff;min-height:44px;"></div>' +
-            '</div>';
-
-        var btn = document.getElementById('mainGameBtn');
-        var statusEl = document.getElementById('g_status');
-        var resultEl = document.getElementById('g_result');
-        var defaultStatus = '<%= gameDisplayName %>' + ' - বাজি ধরুন!';
-
-        btn.addEventListener('click', async function(){
-            var amount = parseInt(document.getElementById('betAmount').value);
-            if (isNaN(amount) || amount < 10) { alert('ন্যূনতম বাজি ১০ কয়েন'); return; }
-
-            btn.disabled = true;
-            resultEl.innerText = '⏳';
-            statusEl.innerText = 'খেলা চলছে...';
-            statusEl.style.color = '#ffd700';
-
-            var data = await placeBet(amount);
-            if (!data) { btn.disabled = false; statusEl.innerText = defaultStatus; resultEl.innerText = ''; return; }
-
-            setTimeout(function(){
-                if (data.winAmount > 0) {
-                    statusEl.innerText = '🎉 জিতেছেন! +' + data.winAmount + ' কয়েন';
-                    statusEl.style.color = '#10b981';
-                    resultEl.innerText = '✅';
-                } else {
-                    statusEl.innerText = '😢 হেরেছেন! -' + amount + ' কয়েন';
-                    statusEl.style.color = '#e60000';
-                    resultEl.innerText = '❌';
-                }
-                setTimeout(function(){
-                    statusEl.innerText = defaultStatus;
-                    statusEl.style.color = '#ffd700';
-                    resultEl.innerText = '';
-                    btn.disabled = false;
-                }, 2500);
-            }, 1200);
-        });
-    })();
-    </script>
-<% } %>
