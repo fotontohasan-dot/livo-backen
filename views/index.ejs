@@ -151,7 +151,7 @@
   <div class="card" style="padding:25px 20px; text-align:center; border: 2px solid var(--gold); background: radial-gradient(circle at center, #1a4a1a 0%, #002d0b 100%); position: relative; overflow: hidden; border-radius: 25px;">
     <div style="position:absolute; top:-20px; left:-20px; width:100px; height:100px; background:var(--gold); filter:blur(60px); opacity:0.3;"></div>
     <div style="position:absolute; bottom:-20px; right:-20px; width:100px; height:100px; background:var(--gold); filter:blur(60px); opacity:0.3;"></div>
-    <div style="font-size:13px; color:var(--gold); letter-spacing:4px; text-transform:uppercase; font-weight:800; text-shadow: 0 0 10px rgba(245,158,11,0.5);">✨ মেগা জকপট ✨</div>
+    <div style="font-size:13px; color:var(--gold); letter-spacing:4px; text-transform:uppercase; font-weight:800; text-shadow: 0 0 10px rgba(245,158,11,0.5);">✨ মেগ জকপট ✨</div>
     <div style="font-family:'Teko',sans-serif; font-size:56px; color:var(--gold); line-height:1; margin:15px 0; text-shadow: 0 0 30px rgba(245,158,11,0.6); display: flex; align-items: center; justify-content: center; gap: 10px;">
       <span style="font-size: 32px; margin-top: 10px;">৳</span>
       <span id="jp-num">৮৮,৬১৭,৫১৭</span>
@@ -190,7 +190,7 @@
 </div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 12px;">
   <div class="card glass" style="padding:15px;cursor:pointer;border-left:4px solid var(--primary);" onclick="location.href='/payment/deposit'">
-    <div style="font-size:13px;font-weight:700;">ওয়েলকাম বোনাস</div>
+    <div style="font-size:13px;font-weight:700;">ওয়েলকম বোনাস</div>
     <div style="font-family:'Teko',sans-serif;font-size:28px;color:var(--primary);">১০০%</div>
   </div>
   <div class="card glass" style="padding:15px;cursor:pointer;border-left:4px solid var(--accent);">
@@ -214,9 +214,10 @@
   </div>
   <p style="font-size:11px;color:var(--text-muted);line-height:1.6;">
     © 2024 <%= siteName %> Gaming. All Rights Reserved.<br>
-    অনলাইন গেমিং আসক তৈরি করতে পারে। দয়িত্বশীলভাবে খেলুন।
+    অনলাইন গেম আসক তৈরি করতে পারে। দয়িত্বশীলভাবে খেলুন।
   </p>
 </div>
+
 <!-- ===== Floating Support ===== -->
 <div style="position:fixed;right:20px;bottom:100px;z-index:999;display:flex;flex-direction:column;gap:10px;">
   <a href="/chat" style="width:50px;height:50px;border-radius:50%;background:var(--grad-gold);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px rgba(0,0,0,0.4);text-decoration:none;color:#000;font-size:24px;">
@@ -225,7 +226,6 @@
 </div>
 
 <%- include('partials/bottom-nav') %>
-
 <script>
 const games = [
   {name:"Aviator", emoji:"🚀", type:"pvp", slug:"aviator", badge:"hot", provider:"SPRIBE"},
@@ -269,9 +269,9 @@ function renderGames() {
   }
 
   filtered.forEach(g => {
-    const badgeHTML = g.badge ? `<div style="position:absolute;top:8px;left:8px;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;background:var(--grad-gold);color:#000;">${g.badge.toUpperCase()}</div>` : '';
+    const badgeHTML = g.badge ? `<div style="position:absolute;top:8px;left:8px;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;background:var(--grad-gold);color:#000;z-index:2;">${g.badge.toUpperCase()}</div>` : '';
     c.innerHTML += `
-      <div class="game-card" onclick="location.href='/games/${g.slug}'" style="border-color: rgba(245, 158, 11, 0.2); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+      <a href="/games/${g.slug}" class="game-card" style="display:block;text-decoration:none;border-color: rgba(245, 158, 11, 0.2); transition: transform 0.2s; position:relative;">
         <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:40px;background:var(--grad-surface);">
           <span class="game-emoji">${g.emoji}</span>
           ${badgeHTML}
@@ -280,7 +280,7 @@ function renderGames() {
             <div style="font-size:9px;color:var(--gold);">${g.provider}</div>
           </div>
         </div>
-      </div>`;
+      </a>`;
   });
 }
 
