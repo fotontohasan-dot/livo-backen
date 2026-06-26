@@ -15,7 +15,6 @@
     </div>
 
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
-      <!-- In-Play লিঙ্ক ঠিক করা হয়েছে -->
       <a href="/matches/in-play" style="text-decoration:none;text-align:center;">
         <div style="background:linear-gradient(135deg,#ef4444,#dc2626);border-radius:12px;padding:14px 6px;position:relative;">
           <div style="font-size:22px;">⏱️</div>
@@ -62,6 +61,7 @@
   50% { opacity: 0.3; transform: scale(1.4); }
 }
 @keyframes marquee-text { 0%{transform:translateX(100%)} 100%{transform:translateX(-100%)} }
+.cat-item.active { border: 1px solid var(--gold) !important; }
 </style>
 
 <!-- ===== Welcome Banner ===== -->
@@ -106,31 +106,102 @@
 <!-- ===== Category Scrollbar ===== -->
 <div style="display:flex;overflow-x:auto;padding:8px 12px;gap:10px;scrollbar-width:none;" id="catNav">
   <style>#catNav::-webkit-scrollbar { display:none; }</style>
-  <div class="glass cat-item active" data-link="/matches" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--gold);">
-    <div style="font-size:22px;">⚽</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">ম্যাচসমহ</div>
+  <div class="glass cat-item active" data-cat="all" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;">
+    <div style="font-size:22px;">🔥</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">হট</div>
   </div>
-  <!-- অন্যান্য ক্যাটাগরি একই রাখা হয়েছে -->
+  <div class="glass cat-item" data-cat="slots" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;">
+    <div style="font-size:22px;">🎰</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">স্লট</div>
+  </div>
+  <div class="glass cat-item" data-cat="live" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;">
+    <div style="font-size:22px;">🎲</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">লাইভ</div>
+  </div>
+  <div class="glass cat-item" data-cat="crash" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;">
+    <div style="font-size:22px;">🚀</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">ক্র্যাশ</div>
+  </div>
+  <div class="glass cat-item" data-cat="card" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;">
+    <div style="font-size:22px;">🃏</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">কার্ড</div>
+  </div>
 </div>
 
-<!-- বাকি অংশ একই রাখা হয়েছে -->
 <%- include('partials/flash') %>
 
 <!-- ===== Hot Games ===== -->
 <div class="section-header">
   <h3 class="section-title"><i class="fas fa-fire"></i> <span id="sectionTitle">হট গেমস</span></h3>
+  <a href="/games/slots" style="font-size:12px;color:var(--text-muted);text-decoration:none;">সব দেখুন →</a>
 </div>
 <div class="game-grid" id="gameContainer"></div>
 
-<!-- ===== Jackpot ===== -->
-<!-- (বাকি কোড একই রাখা হয়েছে - শেষ পর্যন্ত) -->
-
 <%- include('partials/bottom-nav') %>
-
 <script>
-// ... তোমার আগের সব স্ক্রিপ্ট একই রাখা হয়েছে ...
-document.addEventListener('DOMContentLoaded', renderGames);
-renderGames();
+// ===== হোম পেজের গেম লিস্ট =====
+var ALL_GAMES = [
+  { slug: 'aviator', name: 'Aviator', icon: '🚀', cat: 'crash', grad: 'linear-gradient(135deg,#ef4444,#b91c1c)' },
+  { slug: 'crash-game', name: 'Crash', icon: '📈', cat: 'crash', grad: 'linear-gradient(135deg,#f97316,#c2410c)' },
+  { slug: 'spaceman', name: 'Spaceman', icon: '👨‍🚀', cat: 'crash', grad: 'linear-gradient(135deg,#6366f1,#4338ca)' },
+  { slug: 'jetx', name: 'JetX', icon: '✈️', cat: 'crash', grad: 'linear-gradient(135deg,#0ea5e9,#0369a1)' },
+  { slug: 'slots', name: 'Slots', icon: '🎰', cat: 'slots', grad: 'linear-gradient(135deg,#8b5cf6,#6d28d9)' },
+  { slug: 'sweet-bonanza', name: 'Sweet Bonanza', icon: '🍬', cat: 'slots', grad: 'linear-gradient(135deg,#ec4899,#be185d)' },
+  { slug: 'gates-of-olympus', name: 'Gates of Olympus', icon: '⚡', cat: 'slots', grad: 'linear-gradient(135deg,#f59e0b,#b45309)' },
+  { slug: 'book-of-dead', name: 'Book of Dead', icon: '📖', cat: 'slots', grad: 'linear-gradient(135deg,#eab308,#a16207)' },
+  { slug: 'roulette', name: 'Roulette', icon: '🎡', cat: 'live', grad: 'linear-gradient(135deg,#dc2626,#7f1d1d)' },
+  { slug: 'crazy-time', name: 'Crazy Time', icon: '🎉', cat: 'live', grad: 'linear-gradient(135deg,#10b981,#047857)' },
+  { slug: 'dragon-tiger', name: 'Dragon Tiger', icon: '🐉', cat: 'live', grad: 'linear-gradient(135deg,#f43f5e,#9f1239)' },
+  { slug: 'andar-bahar', name: 'Andar Bahar', icon: '🎴', cat: 'card', grad: 'linear-gradient(135deg,#3b82f6,#1d4ed8)' },
+  { slug: 'teen-patti', name: 'Teen Patti', icon: '🃏', cat: 'card', grad: 'linear-gradient(135deg,#14b8a6,#0f766e)' },
+  { slug: 'blackjack', name: 'Blackjack', icon: '♠️', cat: 'card', grad: 'linear-gradient(135deg,#64748b,#334155)' },
+  { slug: 'baccarat', name: 'Baccarat', icon: '💎', cat: 'card', grad: 'linear-gradient(135deg,#a855f7,#7e22ce)' },
+  { slug: 'poker', name: 'Poker', icon: '🎰', cat: 'card', grad: 'linear-gradient(135deg,#0891b2,#155e75)' },
+  { slug: 'color-prediction', name: 'Color Prediction', icon: '🎨', cat: 'live', grad: 'linear-gradient(135deg,#d946ef,#a21caf)' },
+  { slug: 'dice', name: 'Dice', icon: '🎲', cat: 'live', grad: 'linear-gradient(135deg,#22c55e,#15803d)' },
+  { slug: 'plinko', name: 'Plinko', icon: '🔵', cat: 'crash', grad: 'linear-gradient(135deg,#06b6d4,#0e7490)' },
+  { slug: 'mines', name: 'Mines', icon: '💣', cat: 'crash', grad: 'linear-gradient(135deg,#475569,#1e293b)' }
+];
+
+var currentCat = 'all';
+
+function buildCard(g) {
+  var a = document.createElement('a');
+  a.href = '/games/' + g.slug;
+  a.style.textDecoration = 'none';
+  a.className = 'game-card';
+  a.style.background = g.grad;
+  a.innerHTML =
+    '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;">' +
+      '<div style="font-size:34px;">' + g.icon + '</div>' +
+      '<div style="font-size:11px;color:#fff;font-weight:700;text-align:center;padding:0 4px;">' + g.name + '</div>' +
+    '</div>';
+  return a;
+}
+
+function renderGames() {
+  var container = document.getElementById('gameContainer');
+  if (!container) return;
+  container.innerHTML = '';
+  var list = currentCat === 'all' ? ALL_GAMES : ALL_GAMES.filter(function (g) { return g.cat === currentCat; });
+  list.forEach(function (g) { container.appendChild(buildCard(g)); });
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  renderGames();
+  var items = document.querySelectorAll('.cat-item');
+  items.forEach(function (el) {
+    el.addEventListener('click', function () {
+      items.forEach(function (i) { i.classList.remove('active'); });
+      el.classList.add('active');
+      currentCat = el.getAttribute('data-cat') || 'all';
+      var titleMap = { all: 'হট গেমস', slots: 'স্লট গেমস', live: 'লাইভ ক্যাসিনো', crash: 'ক্র্যাশ গেমস', card: 'কার্ড গেমস' };
+      var t = document.getElementById('sectionTitle');
+      if (t) t.textContent = titleMap[currentCat] || 'গেমস';
+      renderGames();
+    });
+  });
+});
 </script>
 
 </body>
