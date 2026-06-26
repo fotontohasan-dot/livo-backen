@@ -151,11 +151,23 @@ app.get('/app/update', (req, res) => res.render('app/update'));
 // Error Handling
 app.use((err, req, res, next) => {
   console.error('❌ Unhandled Error:', err.stack);
+  pool.query(
+    `INSERT INTO error_logs (message, stack, url, method, user_id) VALUES ($1, $2, $3, $4, $5)`,
+    [
+      err.message || 'Unknown error',
+      err.stack || null,
+      req.originalUrl || null,
+      req.method || null,
+      (req.session && req.session.user) ? req.session.user.id : null
+    ]
+  ).catch(() => {});
+
   res.status(500).render('error', {
     message: 'সর্ভার সমস্যা হয়েছে। একটু পরে আবার চেষ্টা করুন।',
     siteName: 'Livo'
   });
 });
+
 
 app.use((req, res) => {
   res.status(404).render('error', {
