@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
 const { isAdmin } = require('../middleware/auth');
+const { syncMatches } = require('../services/matchUpdater');
 
 router.use(isAdmin);
 
@@ -80,7 +81,7 @@ router.post('/users/:id/coins/remove', async (req, res) => {
   res.redirect('/admin/users');
 });
 
-// ==================== MARKET MANAGEMENT ====================
+// ==================== MATCH MANAGEMENT ====================
 router.get('/matches', async (req, res) => {
   try {
     const matches = await pool.query('SELECT * FROM matches ORDER BY start_time DESC');
@@ -91,6 +92,69 @@ router.get('/matches', async (req, res) => {
   }
 });
 
+// ম্যাচ সিঙ্ক (API থেকে)
+router.post('/matches/sync', async (req, res) => {
+  try {
+    await syncMatches();
+    req.flash('success', 'ম্যাচ সিঙ্ক সম্পন্ন হয়েছে!');
+  } catch (err) {
+    console.error('sync error:', err.message);
+    req.flash('error', 'সিঙ্ক করতে সমস্যা হয়েছে!');
+  }
+  res.redirect('/admin/matches');
+});
+
+// নতুন ম্যাচ যোগ
+router.post('/matches/add', async (req, res) => {
+  try {
+    const { title, sport, team_a, team_b, start_time } = req.body;
+    if (!team_a || !team_b) {
+      req.flash('error', 'দুই দলের নাম দিন!');
+      return res.redirect('/admin/matches');
+    }
+    const matchTitle = title || `${team_a} vs ${team_b}`;
+    await pool.query(
+      `INSERT INTO matches (title, sport, team_a, team_b, status, start_time)
+       VALUES ($1, $2, $3, $4, 'upcoming', $5)`,
+      [matchTitle, sport || 'cricket', team_a, team_b, start_time || null]
+    );
+    req.flash('success', 'নতুন ম্যাচ যোগ হয়েছে!');
+  } catch (err) {
+    console.error('match add error:', err.message);
+    req.flash('error', 'ম্যাচ যোগ করতে সমস্যা হয়েছে!');
+  }
+  res.redirect('/admin/matches');
+});
+
+// ম্যাচ ডিলিট
+router.post('/matches/:id/delete', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM matches WHERE id = $1', [req.params.id]);
+    req.flash('success', 'ম্যাচ মুছে ফেলা হয়েছে!');
+  } catch (err) {
+    console.error('match delete error:', err.message);
+    req.flash('error', 'মুছতে সমস্যা হয়েছে!');
+  }
+  res.redirect('/admin/matches');
+});
+
+// ম্যাচের ফলাফল/স্ট্যাটাস আপডেট
+router.post('/matches/:id/status', async (req, res) => {
+  try {
+    const { status, score_a, score_b } = req.body;
+    await pool.query(
+      'UPDATE matches SET status = $1, score_a = $2, score_b = $3 WHERE id = $4',
+      [status || 'live', score_a || null, score_b || null, req.params.id]
+    );
+    req.flash('success', 'ম্যাচ আপডেট হয়েছে!');
+  } catch (err) {
+    console.error('match status error:', err.message);
+    req.flash('error', 'সমস্যা হয়েছে!');
+  }
+  res.redirect('/admin/matches');
+});
+
+// ==================== MARKET MANAGEMENT ====================
 router.get('/markets/:matchId', async (req, res) => {
   try {
     const matchResult = await pool.query('SELECT * FROM matches WHERE id = $1', [req.params.matchId]);
