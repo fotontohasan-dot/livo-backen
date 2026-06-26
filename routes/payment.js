@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
+const { createBonus, canWithdraw } = require('../services/turnover');
 
 function requireLogin(req, res, next) {
   if (!req.session.user) return res.redirect('/login');
@@ -18,7 +19,6 @@ function parseAmount(raw) {
   return n;
 }
 
-// সব অ্যাডমিনকে নোটিফিকেশন পাঠানর হেল্পার
 async function notifyAdmins(title, message) {
   try {
     const admins = await pool.query("SELECT id FROM users WHERE role = 'admin'");
@@ -33,7 +33,7 @@ async function notifyAdmins(title, message) {
   }
 }
 
-// ডিপোজিট নাম্বর তালিকা — প্রতিবার পালা করে (rotate) দেখাবে
+// ডিপোজিট নাম্বার তালিকা — প্রতিবার পালা করে (rotate) দেখাবে
 const DEPOSIT_NUMBERS = [
   '01781732144',
   '01714275156',
@@ -50,6 +50,7 @@ router.get('/deposit', requireLogin, (req, res) => {
 
 router.post('/deposit', requireLogin, async (req, res) => {
   const { method, transaction_id, account_number } = req.body;
+  const wantBonus = req.body.want_bonus === 'yes';
   const amount = parseAmount(req.body.amount);
   const userId = req.session.user.id;
 
@@ -68,10 +69,9 @@ router.post('/deposit', requireLogin, async (req, res) => {
   }
   try {
     await pool.query(
-      `INSERT INTO payment_requests (user_id, type, method, amount, transaction_id, account_number, status) VALUES ($1, 'deposit', $2, $3, $4, $5, 'pending')`,
-      [userId, method, amount, transaction_id, account_number]
+      `INSERT INTO payment_requests (user_id, type, method, amount, transaction_id, account_number, status, want_bonus) VALUES ($1, 'deposit', $2, $3, $4, $5, 'pending', $6)`,
+      [userId, method, amount, transaction_id, account_number, wantBonus]
     );
-    // অ্যাডমিনকে নোটিফিকেশন
     await notifyAdmins('নতুন ডিপোজিট রিকোয়েস্ট', `${req.session.user.username} ${amount} টাকা ডিপোজিট চেয়েছে (${method})।`);
     req.flash('success', 'ডিপোজিট রিকোয়েস্ট পাঠানো হয়েছে!');
     res.redirect('/payment/history');
@@ -111,6 +111,25 @@ router.post('/withdraw', requireLogin, async (req, res) => {
     return res.redirect('/payment/withdraw');
   }
 
+  // ==================== টার্নওভার চেক ====================
+  // কোনো active বোনাস (অসম্পূর্ণ টার্নওভার) থাকলে উইথড্র আটকাবে
+  try {
+    const check = await canWithdraw(userId);
+    if (!check.allowed) {
+      let msg = 'উত্তোলনের আগে বোনাসের টার্নওভার পূরণ করুন। বাকি: ';
+      const parts = [];
+      check.pending.forEach(p => {
+        if (p.sportsLeft > 0) parts.push(`স্পোর্টস ${p.sportsLeft.toFixed(0)}`);
+        if (p.casinoLeft > 0) parts.push(`ক্যাসিনো ${p.casinoLeft.toFixed(0)}`);
+      });
+      msg += parts.join(', ');
+      req.flash('error', msg);
+      return res.redirect('/payment/withdraw');
+    }
+  } catch (e) {
+    console.error('turnover check error:', e.message);
+  }
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -122,7 +141,7 @@ router.post('/withdraw', requireLogin, async (req, res) => {
 
     if (upd.rowCount === 0) {
       await client.query('ROLLBACK');
-      req.flash('error', 'পরপ্ত কয়েন নেই');
+      req.flash('error', 'পর্যাপ্ত কয়েন নেই');
       return res.redirect('/payment/withdraw');
     }
 
@@ -135,7 +154,6 @@ router.post('/withdraw', requireLogin, async (req, res) => {
 
     if (req.session.user) req.session.user.coins = upd.rows[0].coins;
 
-    // অ্যাডমিনকে নোটিফিকেশন
     await notifyAdmins('নতুন উইথড্র রিকোয়েস্ট', `${req.session.user.username} ${amount} টাকা উইথড্র চেয়েছে (${method})।`);
 
     req.flash('success', 'উইথড্র রিকোয়েস্ট পাঠানো হয়েছে!');
@@ -182,16 +200,31 @@ router.post('/admin/approve/:id', requireAdmin, async (req, res) => {
     const request = result.rows[0];
     if (!request || request.status !== 'pending') {
       await client.query('ROLLBACK');
-      req.flash('error', 'রিকোয়েস্ট পওয়া যায়নি অথবা আগেই প্রসস হয়েছে');
+      req.flash('error', 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে');
       return res.redirect('/payment/admin/payments');
     }
+
     if (request.type === 'deposit') {
+      // আসল কয়েন যোগ
       await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
+
+      // বোনাস নিয়ে থাকলে — সমপরিমাণ বোনাস কয়েন + টার্নওভার রেকর্ড
+      if (request.want_bonus) {
+        await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
+        await createBonus(client, request.user_id, 'deposit', request.amount);
+      }
     }
+
     await client.query(`UPDATE payment_requests SET status='approved', updated_at=NOW() WHERE id=$1`, [id]);
-    const message = request.type === 'deposit'
-      ? `আপনার ${request.amount} টাকার ডপোজিট অনুমোদন হয়েছে! কয়েন যোগ হয়েছে।`
-      : `আপনার ${request.amount} টাকার উইথড্র অনুমোদন হয়েছে!`;
+
+    let message;
+    if (request.type === 'deposit') {
+      message = request.want_bonus
+        ? `আপনার ${request.amount} টাকার ডিপোজিট + ${request.amount} বোনাস যোগ হয়েছে! (টার্নওভার প্রযোজ্য)`
+        : `আপনার ${request.amount} টাকার ডিপোজিট অনুমোদন হয়েছে!`;
+    } else {
+      message = `আপনার ${request.amount} টাকার উইথড্র অনুমোদন হয়েছে!`;
+    }
     await client.query(
       `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'success')`,
       [request.user_id, 'পেমেন্ট অনুমোদন', message]
@@ -230,7 +263,7 @@ router.post('/admin/reject/:id', requireAdmin, async (req, res) => {
       [request.user_id, 'পেমেন্ট বাতিল', `আপনার ${request.amount} টাকার রিকোয়েস্ট বাতিল হয়েছে।`]
     );
     await client.query('COMMIT');
-    req.flash('error', 'বাতল করা হয়েছে');
+    req.flash('error', 'বাতিল করা হয়েছে');
     res.redirect('/payment/admin/payments');
   } catch (err) {
     await client.query('ROLLBACK');
