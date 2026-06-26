@@ -172,7 +172,7 @@ const gameHandlers = {
 router.get('/play', isAuth, (req, res) => {
   const gameSlug = req.query.game || 'slots';
   if (!supportedGames[gameSlug]) {
-    req.flash('error', 'গেমটি পাওয়া যায়নি');
+    req.flash('error', 'গেমটি পাওয়া যায়নি');
     return res.redirect('/');
   }
   res.render('games/play', {
@@ -185,7 +185,7 @@ router.get('/play', isAuth, (req, res) => {
 router.get('/:slug', isAuth, (req, res) => {
   const gameSlug = req.params.slug;
   if (!supportedGames[gameSlug]) {
-    req.flash('error', 'গেমটি পাওয়া যায়নি');
+    req.flash('error', 'গেমটি পাওয়া যায়নি');
     return res.redirect('/');
   }
   res.render('games/play', {
@@ -240,6 +240,73 @@ router.post('/play', isAuth, async (req, res) => {
 
   } catch (err) {
     await client.query('ROLLBACK');
+    res.status(500).json({ success: false, message: 'সার্ভার ত্রুটি' });
+  } finally {
+    client.release();
+  }
+});
+
+// ==================== AVIATOR / CRASH ক্যাশআউট ====================
+// client পাঠায় { gameSlug, multiplier } — যে multiplier-এ সে ক্যাশআউট করেছে।
+// নিরাপত্তা: সার্ভারে রাখা crashPoint-এর সাথে মিলিয়ে দেখা হয়,
+// যাতে কেউ ভুয়া বড় multiplier পাঠিয়ে চিট করতে না পারে।
+router.post('/cashout', isAuth, async (req, res) => {
+  const userId = req.session.user.id;
+  const { gameSlug, multiplier } = req.body;
+
+  const state = req.session.gameState;
+
+  // চলমান গেম নেই, অথবা ভিন্ন গেম
+  if (!state || state.game !== gameSlug) {
+    return res.status(400).json({ success: false, message: 'কোনো চলমান গেম নেই' });
+  }
+
+  const cashMultiplier = parseFloat(multiplier);
+  if (isNaN(cashMultiplier) || cashMultiplier < 1) {
+    return res.status(400).json({ success: false, message: 'অকার্যকর মাল্টিপ্লায়ার' });
+  }
+
+  // গেম স্টেট সাথে সাথে মুছে ফেলা হচ্ছে — যাতে একই রাউন্ডে দুবার ক্যাশআউট না করা যায়
+  req.session.gameState = null;
+
+  // ⚠️ চিট প্রতিরোধ: ইউজার যদি crashPoint-এর পরে ক্যাশআউট দাবি করে, সে আসলে হেরেছে
+  if (cashMultiplier > state.crashPoint) {
+    return res.json({
+      success: true,
+      crashed: true,
+      winAmount: 0,
+      newBalance: req.session.user.coins,
+      message: `উড়োজাহাজ ${state.crashPoint}x-এ ক্র্যাশ করেছে!`
+    });
+  }
+
+  // জেতা পরিমাণ = বেট × ক্যাশআউট মাল্টিপ্লায়ার (পূর্ণসংখ্যা)
+  const winAmount = Math.floor(state.betAmount * cashMultiplier);
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const upd = await client.query(
+      'UPDATE users SET coins = coins + $1 WHERE id = $2 RETURNING coins',
+      [userId, winAmount].reverse()
+    );
+    await client.query(
+      'INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, $3, $4)',
+      [userId, winAmount, 'game_win', `${supportedGames[gameSlug] || gameSlug} ক্যাশআউট ${cashMultiplier}x`]
+    );
+    await client.query('COMMIT');
+
+    req.session.user.coins = upd.rows[0].coins;
+    res.json({
+      success: true,
+      crashed: false,
+      winAmount,
+      multiplier: cashMultiplier,
+      newBalance: req.session.user.coins
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('cashout error:', err.message);
     res.status(500).json({ success: false, message: 'সার্ভার ত্রুটি' });
   } finally {
     client.release();
