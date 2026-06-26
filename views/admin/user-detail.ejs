@@ -1,0 +1,134 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<div class="admin-content" style="padding:16px; padding-bottom:90px;">
+  <%- include('../partials/flash') %>
+
+  <a href="/admin/users" class="btn btn-outline btn-sm">← ইউজার লিস্ট</a>
+
+  <h1 style="font-size:1.4rem;font-weight:800;margin:16px 0;">👤 <%= u.username %></h1>
+
+  <!-- মূল তথ্য -->
+  <div class="card" style="padding:16px;margin-bottom:16px;">
+    <h3 style="color:var(--gold);margin-bottom:10px;">📋 মূল তথ্য</h3>
+    <p>ইউজারনেম: <strong><%= u.username %></strong></p>
+    <p>ইমেইল: <strong><%= u.email || '—' %></strong></p>
+    <p>ফোন: <strong><%= u.phone || '—' %></strong></p>
+    <p>রেজিস্ট্রেশন: <strong><%= u.created_at ? new Date(u.created_at).toLocaleString('bn-BD') : '—' %></strong></p>
+    <p>স্ট্যাটাস: <strong style="color:<%= u.is_banned ? 'var(--red)' : 'var(--green)' %>"><%= u.is_banned ? '🚫 নিষিদ্ধ' : '✅ সচল' %></strong></p>
+    <p>KYC: <strong><%= u.kyc_status || 'none' %></strong></p>
+    <p>রেফারেল কোড: <strong><%= u.referral_code || '—' %></strong></p>
+    <p>যত জনকে রেফার করেছে: <strong><%= referralCount %></strong></p>
+  </div>
+
+  <!-- আর্থিক -->
+  <div class="card" style="padding:16px;margin-bottom:16px;">
+    <h3 style="color:var(--gold);margin-bottom:10px;">💰 আর্থিক হিসাব</h3>
+    <p>বর্তমান ব্যালেন্স: <strong style="color:var(--gold)"><%= u.coins %></strong> কয়েন</p>
+    <p>মোট ডিপোজিট: <strong style="color:var(--green)">৳<%= stats.totalDeposit || 0 %></strong></p>
+    <p>মোট উইথড্র: <strong style="color:#f97316">৳<%= stats.totalWithdraw || 0 %></strong></p>
+    <p>মোট বেট: <strong><%= stats.totalBet || 0 %></strong> কয়েন (<%= stats.betCount || 0 %> টি)</p>
+  </div>
+
+  <!-- কার্যকলাপ -->
+  <div class="card" style="padding:16px;margin-bottom:16px;">
+    <h3 style="color:var(--gold);margin-bottom:10px;">📡 কার্যকলাপ</h3>
+    <p>শেষ লগইন: <strong><%= u.last_login ? new Date(u.last_login).toLocaleString('bn-BD') : '—' %></strong></p>
+    <p>মোট লগইন: <strong><%= u.login_count || 0 %></strong> বার</p>
+    <p>শেষ IP: <strong><%= u.last_ip || '—' %></strong></p>
+    <p style="font-size:.8rem;color:var(--muted);word-break:break-all;">ডিভাইস: <%= u.last_device || '—' %></p>
+  </div>
+
+  <!-- জালিয়াতি সতর্কতা -->
+  <% if (sameIp && sameIp.length > 0) { %>
+  <div class="card" style="padding:16px;margin-bottom:16px;border:1px solid var(--red);">
+    <h3 style="color:var(--red);margin-bottom:10px;">⚠️ একই IP থেকে অন্য অ্যাকাউন্ট (<%= sameIp.length %>)</h3>
+    <% sameIp.forEach(s => { %>
+      <p><a href="/admin/users/<%= s.id %>" style="color:var(--gold)"><%= s.username %></a> — <%= s.email || '—' %></p>
+    <% }) %>
+    <small style="color:var(--muted)">⚠️ মাল্টি-অ্যাকাউন্ট সন্দেহ থাকলে যাচাই করুন।</small>
+  </div>
+  <% } %>
+
+  <!-- অ্যাডমিন অ্যাকশন -->
+  <div class="card" style="padding:16px;margin-bottom:16px;">
+    <h3 style="color:var(--gold);margin-bottom:10px;">⚙️ অ্যাকশন</h3>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:14px;">
+      <form action="/admin/users/<%= u.id %>/ban" method="POST" onsubmit="return confirm('স্ট্যাটাস বদলাবেন?')">
+        <button class="btn btn-sm <%= u.is_banned ? 'btn-outline' : 'btn-danger' %>"><%= u.is_banned ? 'আনব্যান' : 'ব্যান/সাসপেন্ড' %></button>
+      </form>
+      <form action="/admin/users/<%= u.id %>/delete" method="POST" onsubmit="return confirm('সত্যিই ডিলিট করবেন? এটা ফেরানো যাবে না।')">
+        <button class="btn btn-sm btn-danger">🗑️ ডিলিট</button>
+      </form>
+    </div>
+
+    <!-- কয়েন -->
+    <form action="/admin/users/<%= u.id %>/coins/add" method="POST" style="display:flex;gap:.5rem;margin-bottom:8px;">
+      <input type="number" name="amount" class="form-input" placeholder="কয়েন" min="1" style="flex:1;">
+      <button class="btn btn-sm btn-gold">+ যোগ</button>
+    </form>
+    <form action="/admin/users/<%= u.id %>/coins/remove" method="POST" style="display:flex;gap:.5rem;margin-bottom:14px;">
+      <input type="number" name="amount" class="form-input" placeholder="কয়েন" min="1" style="flex:1;">
+      <button class="btn btn-sm btn-danger">- কমান</button>
+    </form>
+
+    <!-- নোটিফিকেশন পাঠানো -->
+    <form action="/admin/users/<%= u.id %>/notify" method="POST" style="margin-bottom:14px;">
+      <input type="text" name="title" class="form-input" placeholder="মেসেজের শিরোনাম" style="margin-bottom:6px;width:100%;">
+      <textarea name="message" class="form-input" placeholder="মেসেজ লিখুন..." rows="2" style="width:100%;margin-bottom:6px;"></textarea>
+      <button class="btn btn-sm btn-primary">📨 মেসেজ পাঠান</button>
+    </form>
+
+    <!-- ম্যানুয়াল নোট -->
+    <form action="/admin/users/<%= u.id %>/note" method="POST">
+      <textarea name="note" class="form-input" placeholder="অ্যাডমিন নোট (যেমন: সন্দেহজনক)" rows="2" style="width:100%;margin-bottom:6px;"><%= u.admin_note || '' %></textarea>
+      <button class="btn btn-sm btn-outline">💾 নোট সেভ</button>
+    </form>
+  </div>
+
+  <!-- বেট হিস্টরি -->
+  <div class="card" style="padding:16px;margin-bottom:16px;">
+    <h3 style="color:var(--gold);margin-bottom:10px;">🎯 বেট হিস্টরি</h3>
+    <% if (bets.length === 0) { %>
+      <p style="color:var(--muted)">কোনো বেট নেই।</p>
+    <% } else { %>
+      <% bets.forEach(b => { %>
+        <div style="border-bottom:1px solid #333;padding:8px 0;font-size:.85rem;">
+          <%= b.match_title || 'ম্যাচ' %> — <%= b.stake %> কয়েন @ <%= b.odd %>
+          <span style="color:<%= b.status === 'won' ? 'var(--green)' : (b.status === 'lost' ? 'var(--red)' : 'var(--muted)') %>"> [<%= b.status %>]</span>
+        </div>
+      <% }) %>
+    <% } %>
+  </div>
+
+  <!-- কয়েন লেনদেন -->
+  <div class="card" style="padding:16px;margin-bottom:16px;">
+    <h3 style="color:var(--gold);margin-bottom:10px;">💳 কয়েন লেনদেন</h3>
+    <% if (transactions.length === 0) { %>
+      <p style="color:var(--muted)">কোনো লেনদেন নেই।</p>
+    <% } else { %>
+      <% transactions.forEach(t => { %>
+        <div style="border-bottom:1px solid #333;padding:8px 0;font-size:.85rem;">
+          <%= t.description || t.type %> :
+          <span style="color:<%= t.amount >= 0 ? 'var(--green)' : 'var(--red)' %>"><%= t.amount %></span>
+        </div>
+      <% }) %>
+    <% } %>
+  </div>
+
+  <!-- পেমেন্ট রিকোয়েস্ট -->
+  <div class="card" style="padding:16px;margin-bottom:16px;">
+    <h3 style="color:var(--gold);margin-bottom:10px;">🏦 ডিপোজিট/উইথড্র</h3>
+    <% if (payments.length === 0) { %>
+      <p style="color:var(--muted)">কোনো রিকোয়েস্ট নেই।</p>
+    <% } else { %>
+      <% payments.forEach(p => { %>
+        <div style="border-bottom:1px solid #333;padding:8px 0;font-size:.85rem;">
+          <%= p.type %> — ৳<%= p.amount %> (<%= p.method %>)
+          <span style="color:var(--muted)"> [<%= p.status %>]</span>
+        </div>
+      <% }) %>
+    <% } %>
+  </div>
+
+</div>
+</body></html>
