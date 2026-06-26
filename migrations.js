@@ -34,7 +34,7 @@ async function runMigrations() {
       );
     `);
 
-    // ===== নতুন: Chat Messages Table (গ্রাহক সেবা চ্যাট) =====
+    // Chat Messages Table (গ্রাহক সেবা চ্যাট)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS chat_messages (
         id SERIAL PRIMARY KEY,
@@ -54,6 +54,20 @@ async function runMigrations() {
     `);
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_chat_receiver ON chat_messages(receiver_id);
+    `);
+
+    // News Table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS news (
+        id SERIAL PRIMARY KEY,
+        title TEXT NOT NULL,
+        content TEXT,
+        image_url TEXT,
+        sport VARCHAR(50),
+        author_id INTEGER,
+        views INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
     `);
 
     // Update existing tables if needed
