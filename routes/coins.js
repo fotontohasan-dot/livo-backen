@@ -26,21 +26,48 @@ router.get('/history', isAuth, async (req, res) => {
 
 router.post('/daily-bonus', isAuth, async (req, res) => {
   const userId = req.session.user.id;
-  const user = await pool.query(`SELECT * FROM users WHERE id=$1`, [userId]);
-  const today = new Date().toDateString();
-  const lastBonus = user.rows[0].last_bonus_date ? new Date(user.rows[0].last_bonus_date).toDateString() : null;
-  if (lastBonus === today) {
-    req.flash('error', 'Already claimed today! Come back tomorrow');
-    return res.redirect('/coins');
-  }
   const bonusAmount = 100;
-  await pool.query(`UPDATE users SET coins=coins+$1, last_bonus_date=NOW() WHERE id=$2`, [bonusAmount, userId]);
-  await pool.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'daily_bonus','Daily login bonus')`, [userId, bonusAmount]);
-  await pool.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'Daily Bonus!','You claimed 100 daily coins','success')`, [userId]);
-  req.session.user.coins += bonusAmount;
-  req.flash('success', `Daily bonus claimed! +${bonusAmount} coins`);
-  res.redirect('/coins');
-});
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
 
+    const upd = await client.query(
+      `UPDATE users
+         SET coins = coins + $1, last_bonus_date = NOW()
+       WHERE id = $2
+         AND (last_bonus_date IS NULL OR last_bonus_date::date < CURRENT_DATE)
+       RETURNING coins`,
+      [bonusAmount, userId]
+    );
+
+    if (upd.rowCount === 0) {
+      await client.query('ROLLBACK');
+      req.flash('error', 'আজকের বোনাস আগেই নেওয়া হয়েছে! আগামীকাল আবার আসুন।');
+      return res.redirect('/coins');
+    }
+
+    await client.query(
+      `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'daily_bonus','Daily login bonus')`,
+      [userId, bonusAmount]
+    );
+    await client.query(
+      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'Daily Bonus!','You claimed 100 daily coins','success')`,
+      [userId]
+    );
+
+    await client.query('COMMIT');
+
+    if (req.session.user) req.session.user.coins = upd.rows[0].coins;
+    req.flash('success', `Daily bonus claimed! +${bonusAmount} coins`);
+    res.redirect('/coins');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('daily-bonus error:', err.message);
+    req.flash('error', 'সার্ভার ত্রুটি');
+    res.redirect('/coins');
+  } finally {
+    client.release();
+  }
+});
 
 module.exports = router;
