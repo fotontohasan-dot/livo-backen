@@ -137,7 +137,8 @@ app.use((req, res, next) => {
 app.get('/health', (req, res) => res.status(200).send('OK'));
 app.get('/privacy', (req, res) => res.render('privacy'));
 app.get('/terms', (req, res) => res.render('terms'));
-app.get('/kyc', (req, res) => res.render('kyc'));
+app.get('/kyc', (req, res) => res.redirect('/extra/kyc'));
+
 app.get('/rules', (req, res) => res.render('rules'));
 
 // ==================== CSRF সুরক্ষা (Origin যাচাই) ====================
