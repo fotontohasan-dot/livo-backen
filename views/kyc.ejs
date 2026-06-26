@@ -3,20 +3,48 @@
 
 <div style="padding:20px;padding-bottom:100px;max-width:700px;margin:0 auto">
   <h1 style="color:var(--gold);font-size:24px;font-weight:800;margin-bottom:6px">KYC (পরিচয় যাচাইকরণ)</h1>
-  <p style="color:var(--text-muted);font-size:12px;margin-bottom:24px">সর্বশেষ আপডেট: ২১ জুন, ২০২৬</p>
+
+  <% if (kyc && kyc.status === 'approved') { %>
+    <div class="card" style="padding:16px;background:rgba(16,185,129,0.15);border:1px solid #10b981;margin-bottom:16px;">
+      <strong style="color:#10b981;">✅ আপনার KYC অনুমোদিত হয়েছে।</strong>
+    </div>
+  <% } else if (kyc && kyc.status === 'pending') { %>
+    <div class="card" style="padding:16px;background:rgba(234,179,8,0.15);border:1px solid #eab308;margin-bottom:16px;">
+      <strong style="color:#eab308;">⏳ আপনার KYC যাচাইয়ের অপেক্ষায় আছে।</strong>
+    </div>
+  <% } else if (kyc && kyc.status === 'rejected') { %>
+    <div class="card" style="padding:16px;background:rgba(239,68,68,0.15);border:1px solid #ef4444;margin-bottom:16px;">
+      <strong style="color:#ef4444;">❌ আপনার KYC বাতিল হয়েছে। আবার চেষ্টা করুন।</strong>
+    </div>
+  <% } %>
+
+  <% if (!kyc || kyc.status === 'rejected') { %>
+  <div class="card" style="padding:20px;margin-bottom:20px;">
+    <h3 style="color:var(--gold);font-size:16px;margin-bottom:12px;">আপনার তথ্য জমা দিন</h3>
+    <form action="/extra/kyc" method="POST">
+      <input type="text" name="full_name" placeholder="পূর্ণ নাম (NID অনুযায়ী)" required class="form-control" style="margin-bottom:10px;">
+
+      <select name="document_type" class="form-control" style="margin-bottom:10px;">
+        <option value="nid">জাতীয় পরিচয়পত্র (NID)</option>
+        <option value="passport">পাসপোর্ট</option>
+        <option value="driving">ড্রাইভিং লাইসেন্স</option>
+      </select>
+
+      <input type="text" name="document_number" placeholder="ডকুমেন্ট নাম্বার" required class="form-control" style="margin-bottom:10px;">
+
+      <input type="text" name="document_url" placeholder="ডকুমেন্ট ছবির লিংক (ঐচ্ছিক)" class="form-control" style="margin-bottom:10px;">
+
+      <button type="submit" class="btn btn-success" style="width:100%;">জমা দিন</button>
+    </form>
+  </div>
+  <% } %>
 
   <div style="color:var(--text-main);font-size:14px;line-height:1.8">
-    <h3 style="color:var(--gold);font-size:16px;margin:20px 0 8px">১. KYC কেন প্রয়োজন</h3>
-    <p>আপনার অ্যাকাউন্টের নিরাপত্তা নিশ্চিত করতে এবং জালিয়াতি প্রতিরোধে আমরা মাঝে মাঝে পরিচয় যাচাই করতে পারি।</p>
+    <h3 style="color:var(--gold);font-size:16px;margin:20px 0 8px">KYC কেন প্রয়োজন</h3>
+    <p>আপনার অ্যাকাউন্টের নিরাপত্তা ও জালিয়াতি প্রতিরোধে পরিচয় যাচাই করা হয়।</p>
 
-    <h3 style="color:var(--gold);font-size:16px;margin:20px 0 8px">২. কী প্রয়োজন হতে পারে</h3>
-    <p>সম্পূর্ণ নাম, সক্রিয় ইমেইল ঠিকানা, এবং প্রয়োজনে যোগাযোগের নম্বর।</p>
-
-    <h3 style="color:var(--gold);font-size:16px;margin:20px 0 8px">৩. তথ্যের সুরক্ষা</h3>
-    <p>আপনার দেওয়া তথ্য সম্পূর্ণ গোপনীয় রাখা হয় এবং শুধুমাত্র যাচাইকরণের উদ্দেশ্যে ব্যবহৃত হয়।</p>
-
-    <h3 style="color:var(--gold);font-size:16px;margin:20px 0 8px">৪. যোগাযোগ</h3>
-    <p>KYC সংক্রান্ত কোনো প্রশ্ন থাকলে সাপোর্ট চ্যাটে যোগাযোগ করুন।</p>
+    <h3 style="color:var(--gold);font-size:16px;margin:20px 0 8px">তথ্যের সুরক্ষা</h3>
+    <p>আপনার দেওয়া তথ্য গোপনীয় রাখা হয় এবং শুধু যাচাইয়ের উদ্দেশ্যে ব্যবহৃত হয়।</p>
   </div>
 </div>
 
