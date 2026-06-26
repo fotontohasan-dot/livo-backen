@@ -18,8 +18,19 @@ function parseAmount(raw) {
   return n;
 }
 
+// ডিপোজিট নাম্বার তালিকা — প্রতিবার পালা করে (rotate) দেখাবে
+const DEPOSIT_NUMBERS = [
+  '01781732144',
+  '01714275156',
+  '01840199199',
+  '01620992072'
+];
+let depositRotation = 0;
+
 router.get('/deposit', requireLogin, (req, res) => {
-  res.render('payment/deposit', { user: req.session.user });
+  const current = DEPOSIT_NUMBERS[depositRotation % DEPOSIT_NUMBERS.length];
+  depositRotation = (depositRotation + 1) % DEPOSIT_NUMBERS.length;
+  res.render('payment/deposit', { user: req.session.user, payNumber: current });
 });
 
 router.post('/deposit', requireLogin, async (req, res) => {
