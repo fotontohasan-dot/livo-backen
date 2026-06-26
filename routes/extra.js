@@ -20,4 +20,8 @@ router.get('/promotion', isAuth, (req, res) => {
     res.render('extra/promotion');
 });
 
+router.get('/faq', (req, res) => {
+    res.render('extra/faq');
+});
+
 module.exports = router;
