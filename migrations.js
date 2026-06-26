@@ -81,10 +81,22 @@ async function runMigrations() {
       );
     `);
 
-    // users টেবিলে kyc_status কলাম
     await pool.query(`
       ALTER TABLE users
       ADD COLUMN IF NOT EXISTS kyc_status VARCHAR(20) DEFAULT 'none';
+    `);
+
+    // Error Logs Table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS error_logs (
+        id SERIAL PRIMARY KEY,
+        message TEXT,
+        stack TEXT,
+        url TEXT,
+        method VARCHAR(10),
+        user_id INTEGER,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
     `);
 
     // Update existing tables if needed
