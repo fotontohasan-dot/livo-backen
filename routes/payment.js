@@ -18,7 +18,22 @@ function parseAmount(raw) {
   return n;
 }
 
-// ডিপোজিট নাম্বার তালিকা — প্রতিবার পালা করে (rotate) দেখাবে
+// সব অ্যাডমিনকে নোটিফিকেশন পাঠানর হেল্পার
+async function notifyAdmins(title, message) {
+  try {
+    const admins = await pool.query("SELECT id FROM users WHERE role = 'admin'");
+    for (const a of admins.rows) {
+      await pool.query(
+        `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'info')`,
+        [a.id, title, message]
+      );
+    }
+  } catch (e) {
+    console.error('notifyAdmins error:', e.message);
+  }
+}
+
+// ডিপোজিট নাম্বর তালিকা — প্রতিবার পালা করে (rotate) দেখাবে
 const DEPOSIT_NUMBERS = [
   '01781732144',
   '01714275156',
@@ -56,6 +71,8 @@ router.post('/deposit', requireLogin, async (req, res) => {
       `INSERT INTO payment_requests (user_id, type, method, amount, transaction_id, account_number, status) VALUES ($1, 'deposit', $2, $3, $4, $5, 'pending')`,
       [userId, method, amount, transaction_id, account_number]
     );
+    // অ্যাডমিনকে নোটিফিকেশন
+    await notifyAdmins('নতুন ডিপোজিট রিকোয়েস্ট', `${req.session.user.username} ${amount} টাকা ডিপোজিট চেয়েছে (${method})।`);
     req.flash('success', 'ডিপোজিট রিকোয়েস্ট পাঠানো হয়েছে!');
     res.redirect('/payment/history');
   } catch (err) {
@@ -105,7 +122,7 @@ router.post('/withdraw', requireLogin, async (req, res) => {
 
     if (upd.rowCount === 0) {
       await client.query('ROLLBACK');
-      req.flash('error', 'পর্যাপ্ত কয়েন নেই');
+      req.flash('error', 'পরপ্ত কয়েন নেই');
       return res.redirect('/payment/withdraw');
     }
 
@@ -117,6 +134,9 @@ router.post('/withdraw', requireLogin, async (req, res) => {
     await client.query('COMMIT');
 
     if (req.session.user) req.session.user.coins = upd.rows[0].coins;
+
+    // অ্যাডমিনকে নোটিফিকেশন
+    await notifyAdmins('নতুন উইথড্র রিকোয়েস্ট', `${req.session.user.username} ${amount} টাকা উইথড্র চেয়েছে (${method})।`);
 
     req.flash('success', 'উইথড্র রিকোয়েস্ট পাঠানো হয়েছে!');
     res.redirect('/payment/history');
@@ -162,7 +182,7 @@ router.post('/admin/approve/:id', requireAdmin, async (req, res) => {
     const request = result.rows[0];
     if (!request || request.status !== 'pending') {
       await client.query('ROLLBACK');
-      req.flash('error', 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে');
+      req.flash('error', 'রিকোয়েস্ট পওয়া যায়নি অথবা আগেই প্রসস হয়েছে');
       return res.redirect('/payment/admin/payments');
     }
     if (request.type === 'deposit') {
@@ -170,7 +190,7 @@ router.post('/admin/approve/:id', requireAdmin, async (req, res) => {
     }
     await client.query(`UPDATE payment_requests SET status='approved', updated_at=NOW() WHERE id=$1`, [id]);
     const message = request.type === 'deposit'
-      ? `আপনার ${request.amount} টাকার ডিপোজিট অনুমোদন হয়েছে!`
+      ? `আপনার ${request.amount} টাকার ডপোজিট অনুমোদন হয়েছে! কয়েন যোগ হয়েছে।`
       : `আপনার ${request.amount} টাকার উইথড্র অনুমোদন হয়েছে!`;
     await client.query(
       `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'success')`,
@@ -210,7 +230,7 @@ router.post('/admin/reject/:id', requireAdmin, async (req, res) => {
       [request.user_id, 'পেমেন্ট বাতিল', `আপনার ${request.amount} টাকার রিকোয়েস্ট বাতিল হয়েছে।`]
     );
     await client.query('COMMIT');
-    req.flash('error', 'বাতিল করা হয়েছে');
+    req.flash('error', 'বাতল করা হয়েছে');
     res.redirect('/payment/admin/payments');
   } catch (err) {
     await client.query('ROLLBACK');
