@@ -134,7 +134,7 @@ router.post('/markets/:marketId/toggle', async (req, res) => {
   }
 });
 
-// ==================== বেট সেটেল (জয়ী নির্ধারণ) ====================
+// ==================== বেট সেটেল ====================
 router.post('/markets/:marketId/settle', async (req, res) => {
   const marketId = req.params.marketId;
   const { winning_runner } = req.body;
@@ -227,6 +227,63 @@ router.post('/news/:id/delete', async (req, res) => {
     console.error('news delete error:', err.message);
     req.flash('error', 'মুছতে সমস্যা হয়েছে!');
     res.redirect('/admin/news');
+  }
+});
+
+// ==================== KYC ম্যানেজমেন্ট ====================
+router.get('/kyc', async (req, res) => {
+  try {
+    const requests = await pool.query(`
+      SELECT k.*, u.username FROM kyc_requests k
+      JOIN users u ON k.user_id = u.id
+      ORDER BY CASE WHEN k.status = 'pending' THEN 0 ELSE 1 END, k.created_at DESC
+    `);
+    res.render('admin/kyc', { requests: requests.rows });
+  } catch (err) {
+    console.error('admin kyc error:', err.message);
+    res.render('admin/kyc', { requests: [] });
+  }
+});
+
+router.post('/kyc/:id/approve', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT * FROM kyc_requests WHERE id = $1', [req.params.id]);
+    const kyc = r.rows[0];
+    if (kyc) {
+      await pool.query(`UPDATE kyc_requests SET status = 'approved', updated_at = NOW() WHERE id = $1`, [req.params.id]);
+      await pool.query("UPDATE users SET kyc_status = 'approved' WHERE id = $1", [kyc.user_id]);
+      await pool.query(
+        `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, 'KYC অনুমোদিত', 'আপনার পরিচয় যাচাই সম্পন্ন হয়েছে!', 'success')`,
+        [kyc.user_id]
+      );
+    }
+    req.flash('success', 'KYC অনুমোদিত হয়েছে!');
+    res.redirect('/admin/kyc');
+  } catch (err) {
+    console.error('kyc approve error:', err.message);
+    req.flash('error', 'সমস্যা হয়েছে!');
+    res.redirect('/admin/kyc');
+  }
+});
+
+router.post('/kyc/:id/reject', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT * FROM kyc_requests WHERE id = $1', [req.params.id]);
+    const kyc = r.rows[0];
+    if (kyc) {
+      await pool.query(`UPDATE kyc_requests SET status = 'rejected', updated_at = NOW() WHERE id = $1`, [req.params.id]);
+      await pool.query("UPDATE users SET kyc_status = 'rejected' WHERE id = $1", [kyc.user_id]);
+      await pool.query(
+        `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, 'KYC বাতিল', 'আপনার KYC বাতিল হয়েছে। আবার চেষ্টা করুন।', 'error')`,
+        [kyc.user_id]
+      );
+    }
+    req.flash('error', 'KYC বাতিল করা হয়েছে।');
+    res.redirect('/admin/kyc');
+  } catch (err) {
+    console.error('kyc reject error:', err.message);
+    req.flash('error', 'সমস্যা হয়েছে!');
+    res.redirect('/admin/kyc');
   }
 });
 
