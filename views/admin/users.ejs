@@ -35,12 +35,13 @@
               <td style="color:var(--primary)"><%= u.total_points %></td>
               <td>
                 <span style="color:<%= u.is_banned ? 'var(--red)' : 'var(--green)' %>;font-size:.85rem">
-                  <%= u.is_banned ? '🚫 নিষিদ্ধ (Banned)' : '✅ সচল (Active)' %>
+                  <%= u.is_banned ? '🚫 নিষিদ্ধ' : '✅ সচল' %>
                 </span>
               </td>
-              <td style="display:flex;gap:.5rem;flex-wrap:wrap;">
+              <td style="display:flex;gap:.4rem;flex-wrap:wrap;">
+                <a href="/admin/users/<%= u.id %>" class="btn btn-sm btn-primary">👁️ বিস্তারিত</a>
                 <button onclick="banUser(<%= u.id %>)" class="btn btn-sm <%= u.is_banned ? 'btn-outline' : 'btn-danger' %>">
-                  <%= u.is_banned ? 'আনব্যান' : 'ব্যান করুন' %>
+                  <%= u.is_banned ? 'আনব্যান' : 'ব্যান' %>
                 </button>
                 <button onclick="showAddCoins(<%= u.id %>)" class="btn btn-sm btn-gold">+ কয়েন</button>
                 <button onclick="showRemoveCoins(<%= u.id %>)" class="btn btn-sm btn-danger">- কয়েন</button>
@@ -51,36 +52,24 @@
       </table>
     </div>
 
-    <!-- + কয়েন Modal -->
-    <div id="addCoinModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#00000080;z-index:999;align-items:center;justify-content:center;">
-      <div class="card" style="width:350px;">
-        <div class="card-header">💰 কয়েন যগ করুন</div>
-        <div class="card-body">
-          <div class="form-group">
-            <label class="form-label">পরিমাণ</label>
-            <input type="number" class="form-input" id="addCoinAmount" min="1" placeholder="যত কয়েন দিতে চান">
-          </div>
-          <div style="display:flex;gap:.75rem;margin-top:1rem;">
-            <button onclick="submitAddCoins()" class="btn btn-primary">✅ যোগ করুন</button>
-            <button onclick="document.getElementById('addCoinModal').style.display='none'" class="btn btn-outline">বাতিল</button>
-          </div>
+    <div id="addCoinModal" style="display:none;position:fixed;inset:0;background:#000000aa;z-index:9999;align-items:center;justify-content:center;">
+      <div class="card" style="width:90%;max-width:350px;padding:20px;">
+        <h3 style="color:var(--gold);margin-bottom:12px;">💰 কয়েন যোগ করুন</h3>
+        <input type="number" class="form-input" id="addCoinAmount" min="1" placeholder="যত কয়েন দিতে চান" style="margin-bottom:12px;width:100%;">
+        <div style="display:flex;gap:.5rem;">
+          <button onclick="submitAddCoins()" class="btn btn-primary">✅ যোগ করুন</button>
+          <button onclick="closeModals()" class="btn btn-outline">বাতিল</button>
         </div>
       </div>
     </div>
 
-    <!-- - কয়েন Modal -->
-    <div id="removeCoinModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#00000080;z-index:999;align-items:center;justify-content:center;">
-      <div class="card" style="width:350px;">
-        <div class="card-header" style="color:var(--red)">🔻 কয়েন কমান</div>
-        <div class="card-body">
-          <div class="form-group">
-            <label class="form-label">পরিমাণ</label>
-            <input type="number" class="form-input" id="removeCoinAmount" min="1" placeholder="যত কয়েন কমাতে চান">
-          </div>
-          <div style="display:flex;gap:.75rem;margin-top:1rem;">
-            <button onclick="submitRemoveCoins()" class="btn btn-danger">🔻 কমান</button>
-            <button onclick="document.getElementById('removeCoinModal').style.display='none'" class="btn btn-outline">বাতিল</button>
-          </div>
+    <div id="removeCoinModal" style="display:none;position:fixed;inset:0;background:#000000aa;z-index:9999;align-items:center;justify-content:center;">
+      <div class="card" style="width:90%;max-width:350px;padding:20px;">
+        <h3 style="color:var(--red);margin-bottom:12px;">🔻 কয়েন কমান</h3>
+        <input type="number" class="form-input" id="removeCoinAmount" min="1" placeholder="যত কয়েন কমাতে চান" style="margin-bottom:12px;width:100%;">
+        <div style="display:flex;gap:.5rem;">
+          <button onclick="submitRemoveCoins()" class="btn btn-danger">🔻 কমান</button>
+          <button onclick="closeModals()" class="btn btn-outline">বাতিল</button>
         </div>
       </div>
     </div>
@@ -90,42 +79,50 @@
 <script>
 let currentUserId;
 
-function banUser(id) {
+function closeModals() {
+  document.getElementById('addCoinModal').style.display = 'none';
+  document.getElementById('removeCoinModal').style.display = 'none';
+}
+
+function postForm(action, fields) {
   const f = document.createElement('form');
-  f.method = 'POST'; f.action = `/admin/users/${id}/ban`;
-  document.body.appendChild(f); f.submit();
+  f.method = 'POST'; f.action = action;
+  for (const k in fields) {
+    const i = document.createElement('input');
+    i.type = 'hidden'; i.name = k; i.value = fields[k];
+    f.appendChild(i);
+  }
+  document.body.appendChild(f);
+  f.submit();
+}
+
+function banUser(id) {
+  if (!confirm('স্ট্যাটাস পরিবর্তন করবেন?')) return;
+  postForm(`/admin/users/${id}/ban`, {});
 }
 
 function showAddCoins(id) {
   currentUserId = id;
+  document.getElementById('addCoinAmount').value = '';
   document.getElementById('addCoinModal').style.display = 'flex';
 }
 
 function showRemoveCoins(id) {
   currentUserId = id;
+  document.getElementById('removeCoinAmount').value = '';
   document.getElementById('removeCoinModal').style.display = 'flex';
 }
 
 function submitAddCoins() {
   const amount = document.getElementById('addCoinAmount').value;
-  if (!amount || amount <= 0) { alert('সঠিক পরমাণ দিন!'); return; }
-  const f = document.createElement('form');
-  f.method = 'POST'; f.action = `/admin/users/${currentUserId}/coins/add`;
-  const i = document.createElement('input');
-  i.name = 'amount'; i.value = amount;
-  f.appendChild(i);
-  document.body.appendChild(f); f.submit();
+  if (!amount || amount <= 0) { alert('সঠিক পরিমাণ দিন!'); return; }
+  postForm(`/admin/users/${currentUserId}/coins/add`, { amount });
 }
 
 function submitRemoveCoins() {
   const amount = document.getElementById('removeCoinAmount').value;
-  if (!amount || amount <= 0) { alert('সঠিক পরিমণ দিন!'); return; }
-  const f = document.createElement('form');
-  f.method = 'POST'; f.action = `/admin/users/${currentUserId}/coins/remove`;
-  const i = document.createElement('input');
-  i.name = 'amount'; i.value = amount;
-  f.appendChild(i);
-  document.body.appendChild(f); f.submit();
+  if (!amount || amount <= 0) { alert('সঠিক পরিমাণ দিন!'); return; }
+  postForm(`/admin/users/${currentUserId}/coins/remove`, { amount });
 }
 </script>
 </body></html>
