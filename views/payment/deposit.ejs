@@ -30,10 +30,25 @@
           <label class="form-label" style="display:block;margin-bottom:.5rem;color:var(--muted);">ট্রানজেকশন আইডি</label>
           <input type="text" name="transaction_id" class="form-input" placeholder="TrxID লিখুন" required>
         </div>
-        <div class="form-group" style="margin-bottom:1.5rem;">
+        <div class="form-group" style="margin-bottom:1rem;">
           <label class="form-label" style="display:block;margin-bottom:.5rem;color:var(--muted);">আপনার নম্বর (যেটা থেকে পাঠিয়েছেন)</label>
           <input type="text" name="account_number" class="form-input" placeholder="01XXXXXXXXX" required>
         </div>
+
+        <!-- বোনাস অপশন -->
+        <div style="background:rgba(245,158,11,0.08);border:1px solid var(--gold);border-radius:10px;padding:12px;margin-bottom:1.5rem;">
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
+            <input type="checkbox" name="want_bonus" value="yes" style="margin-top:3px;width:18px;height:18px;">
+            <span>
+              <span style="font-weight:700;color:var(--gold);">🎁 ১০০% ডিপোজিট বোনাস নিন</span>
+              <span style="display:block;font-size:.78rem;color:var(--muted);margin-top:3px;">
+                বোনাস নিলে সমপরিমাণ অতিরিক্ত কয়েন পাবেন। তবে উত্তোলনের আগে টার্নওভার পূরণ করতে হবে
+                (স্পোর্টস ৫x অথবা ক্যাসিনো ৩৫x)। বোনাস না নিলে কোনো শর্ত ছাড়াই উত্তোলন করতে পারবেন।
+              </span>
+            </span>
+          </label>
+        </div>
+
         <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">✅ সাবমিট করুন</button>
       </form>
     </div>
