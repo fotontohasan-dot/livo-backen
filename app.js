@@ -18,6 +18,13 @@ const app = express();
 const server = http.createServer(app);
 initSocket(server);
 
+app.set('trust proxy', 1);
+
+const SESSION_SECRET = process.env.SESSION_SECRET || require('crypto').randomBytes(32).toString('hex');
+if (!process.env.SESSION_SECRET) {
+  console.warn('⚠️ SESSION_SECRET সেট করা নেই — সাময়িক র্‍যান্ডম সিক্রেট ব্যবহার হচ্ছে। প্রোডাকশনে অবশ্যই SESSION_SECRET সেট করুন।');
+}
+
 app.use(compression());
 
 app.use(helmet({
@@ -48,10 +55,15 @@ app.use(session({
     tableName: 'user_sessions',
     createTableIfMissing: true
   }),
-  secret: process.env.SESSION_SECRET || 'livo-secret-key',
+  secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 7 * 24 * 60 * 60 * 1000 }
+  cookie: {
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax'
+  }
 }));
 
 app.use(flash());
@@ -128,6 +140,23 @@ app.get('/terms', (req, res) => res.render('terms'));
 app.get('/kyc', (req, res) => res.render('kyc'));
 app.get('/rules', (req, res) => res.render('rules'));
 
+// ==================== CSRF সুরক্ষা (Origin যাচাই) ====================
+app.use((req, res, next) => {
+  if (!['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) return next();
+  const host = req.get('host');
+  const origin = req.get('origin');
+  const referer = req.get('referer');
+  if (origin) {
+    try { if (new URL(origin).host === host) return next(); } catch (e) {}
+    return res.status(403).send('Invalid request origin');
+  }
+  if (referer) {
+    try { if (new URL(referer).host === host) return next(); } catch (e) {}
+    return res.status(403).send('Invalid request origin');
+  }
+  return next();
+});
+
 // ==================== ROUTES ====================
 app.use('/', require('./routes/auth'));
 app.use('/matches', require('./routes/matches'));
@@ -168,7 +197,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-
 app.use((req, res) => {
   res.status(404).render('error', {
     message: 'পেজটি পাওয়া যায়নি।',
@@ -183,7 +211,6 @@ async function startServer() {
     await connectDB();
     console.log("✅ PostgreSQL connected successfully");
 
-    // Run All Migrations
     await runMigrations();
     console.log("✅ DB migration done");
 
