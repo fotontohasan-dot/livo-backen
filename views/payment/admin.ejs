@@ -2,11 +2,11 @@
 <%- include('../partials/navbar') %>
 <div class="admin-layout">
   <div class="admin-sidebar">
-    <div style="padding:0 1.5rem 1rem;font-size:.75rem;color:var(--muted);text-transform:uppercase;">অ্যাডমিন প্যানেল</div>
+    <div style="padding:0 1.5rem 1rem;font-size:.75rem;color:var(--muted);text-transform:uppercase;">অযাডমিন প্যানেল</div>
     <a href="/admin" class="admin-nav-link">📊 ড্যাশবোর্ড</a>
     <a href="/admin/users" class="admin-nav-link">👥 ব্যবহারকারী</a>
     <a href="/admin/matches" class="admin-nav-link">⚽ ম্যাচসমূহ</a>
-    <a href="/admin/tournaments" class="admin-nav-link">🏆 টুর্নামেন্ট</a>
+    <a href="/admin/tournaments" class="admin-nav-link">🏆 টুর্নামন্ট</a>
     <a href="/admin/news" class="admin-nav-link">📰 নিউজ</a>
     <a href="/payment/admin/payments" class="admin-nav-link active">💳 পেমেন্ট</a>
     <a href="/" class="admin-nav-link">🏠 সাইটে ফিরে যান</a>
@@ -23,7 +23,8 @@
               <th style="padding:.75rem;text-align:left;color:var(--muted);font-size:.8rem;">ধরন</th>
               <th style="padding:.75rem;text-align:left;color:var(--muted);font-size:.8rem;">মেথড</th>
               <th style="padding:.75rem;text-align:left;color:var(--muted);font-size:.8rem;">পরিমাণ</th>
-              <th style="padding:.75rem;text-align:left;color:var(--muted);font-size:.8rem;">TrxID / নম্বর</th>
+              <th style="padding:.75rem;text-align:left;color:var(--muted);font-size:.8rem;">TrxID</th>
+              <th style="padding:.75rem;text-align:left;color:var(--muted);font-size:.8rem;">যে নম্বর থেকে</th>
               <th style="padding:.75rem;text-align:left;color:var(--muted);font-size:.8rem;">স্ট্যাটাস</th>
               <th style="padding:.75rem;text-align:left;color:var(--muted);font-size:.8rem;">অ্যাকশন</th>
             </tr>
@@ -40,10 +41,11 @@
                   </td>
                   <td style="padding:.75rem;text-transform:capitalize;"><%= r.method %></td>
                   <td style="padding:.75rem;color:var(--gold);font-weight:700;">৳ <%= r.amount %></td>
-                  <td style="padding:.75rem;font-size:.8rem;color:var(--muted);"><%= r.transaction_id || r.account_number %></td>
+                  <td style="padding:.75rem;font-size:.8rem;color:var(--muted);"><%= r.transaction_id || '—' %></td>
+                  <td style="padding:.75rem;font-size:.85rem;color:#fff;font-weight:600;"><%= r.account_number || '—' %></td>
                   <td style="padding:.75rem;">
                     <% if(r.status === 'pending') { %>
-                      <span style="color:#ffd700;font-size:.8rem;">⏳ পেন্ডিং</span>
+                      <span style="color:#ffd700;font-size:.8rem;">⏳ পেন্ড</span>
                     <% } else if(r.status === 'approved') { %>
                       <span style="color:#10b981;font-size:.8rem;">✅ অনুমোদিত</span>
                     <% } else { %>
@@ -63,7 +65,7 @@
                 </tr>
               <% }) %>
             <% } else { %>
-              <tr><td colspan="7" style="padding:2rem;text-align:center;color:var(--muted);">কোনো পেমেন্ট রিকোয়েস্ট নেই</td></tr>
+              <tr><td colspan="8" style="padding:2rem;text-align:center;color:var(--muted);">কোনো পেমেন্ট রিকোয়েস্ট নেই</td></tr>
             <% } %>
           </tbody>
         </table>
