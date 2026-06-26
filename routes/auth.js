@@ -3,12 +3,21 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { pool } = require('../db');
 
+function sanitizeUser(u) {
+  if (!u) return null;
+  const safe = { ...u };
+  delete safe.password;
+  delete safe.reset_token;
+  delete safe.reset_token_expiry;
+  return safe;
+}
+
 router.get('/', async (req, res) => {
   try {
     res.render('index', { user: req.session.user || null });
   } catch (err) {
     console.error('Error rendering index:', err);
-    res.status(500).send('Render Error: ' + err.message);
+    res.status(500).send('Render Error');
   }
 });
 
@@ -19,23 +28,21 @@ router.get('/register', (req, res) => {
 
 router.post('/register', async (req, res) => {
   const { username, email, phone, password, confirmPassword, referralCode } = req.body;
+  const ref = referralCode || req.query.ref || '';
 
   try {
     if (!username || !password) {
       req.flash('error', '❌ ইউজারনেম এবং পাসওয়ার্ড আবশ্যক।');
       return res.redirect('/register');
     }
-
     if (!email && !phone) {
       req.flash('error', '❌ ইমেইল অথবা ফোন নাম্বার অন্তত একটি দিতে হবে।');
       return res.redirect('/register');
     }
-
     if (password.length < 8) {
       req.flash('error', '❌ পাসওয়ার্ড কমপক্ষে ৮ অক্ষর হতে হবে।');
       return res.redirect('/register');
     }
-
     if (confirmPassword && password !== confirmPassword) {
       req.flash('error', '❌ পাসওয়ার্ড মিলছে না।');
       return res.redirect('/register');
@@ -48,7 +55,6 @@ router.post('/register', async (req, res) => {
         return res.redirect('/register');
       }
     }
-
     if (phone) {
       const existingPhone = await pool.query('SELECT id FROM users WHERE phone = $1', [phone]);
       if (existingPhone.rows.length > 0) {
@@ -67,11 +73,11 @@ router.post('/register', async (req, res) => {
     }
 
     const result = await pool.query(`
-      INSERT INTO users (username, email, phone, password, role, coins, referral_code, created_at)
-      VALUES ($1, $2, $3, $4, 'user', 0, $5, NOW()) RETURNING *
-    `, [username, email || null, phone || null, hashed, myCode]);
+      INSERT INTO users (username, email, phone, password, role, coins, referral_code, referred_by_id, created_at)
+      VALUES ($1, $2, $3, $4, 'user', 0, $5, $6, NOW()) RETURNING *
+    `, [username, email || null, phone || null, hashed, myCode, referredById]);
 
-    req.session.user = result.rows[0];
+    req.session.user = sanitizeUser(result.rows[0]);
     req.flash('success', '✅ রেজিস্ট্রেশন সফল হয়েছে! স্বাগতম!');
     res.redirect('/');
   } catch (err) {
@@ -101,7 +107,7 @@ router.post('/login', async (req, res) => {
       return res.redirect('/login');
     }
 
-    req.session.user = user;
+    req.session.user = sanitizeUser(user);
 
     if (user.role && user.role.toLowerCase() === 'admin') {
       return res.redirect('/admin');
@@ -115,8 +121,7 @@ router.post('/login', async (req, res) => {
 });
 
 router.get('/logout', (req, res) => {
-  req.session.destroy();
-  res.redirect('/login');
+  req.session.destroy(() => res.redirect('/login'));
 });
 
 module.exports = router;
