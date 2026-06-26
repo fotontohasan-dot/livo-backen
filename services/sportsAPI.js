@@ -1,7 +1,10 @@
 // services/sportsAPI.js
 // Cricket (CricAPI) + Football (RapidAPI: Today Football Prediction)
 
-const CRICKET_API_KEY = process.env.CRICKET_API_KEY || '11ee3d02-f9eb-4ecf-a9a5-788174dd3fe7';
+// ⚠️ নিরাপত্তা: আগের হার্ডকোডেড API key সরানো হয়েছে।
+// পুরোনো key টি কোডে ফাঁস হয়ে গেছে — CricAPI ড্যাশবোর্ডে গিয়ে সেটি অবশ্যই রিজেনারেট/বাতিল করুন
+// এবং নতুন key শুধু .env ফাইলে CRICKET_API_KEY হিসেবে রাখুন।
+const CRICKET_API_KEY = process.env.CRICKET_API_KEY || '';
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY || '';
 const FOOTBALL_HOST = 'today-football-prediction.p.rapidapi.com';
 
