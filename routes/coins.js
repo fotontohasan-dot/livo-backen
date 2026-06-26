@@ -19,8 +19,20 @@ router.get('/history', isAuth, async (req, res) => {
     const transactions = await pool.query(`SELECT * FROM coin_transactions WHERE user_id=$1 ORDER BY created_at DESC`, [req.session.user.id]);
     res.render('coins', { transactions: transactions.rows, coins: req.session.user.coins });
   } catch (err) {
-    req.flash('error', 'সার্ভার ত্রুটি');
+    req.flash('error', 'সার্র ত্রুটি');
     res.redirect('/coins');
+  }
+});
+
+// রিয়েল-টাইম ব্যালেন্স (navbar এই endpoint থেকে আপডেট নেয়)
+router.get('/balance', isAuth, async (req, res) => {
+  try {
+    const r = await pool.query('SELECT coins FROM users WHERE id=$1', [req.session.user.id]);
+    const coins = r.rows[0] ? r.rows[0].coins : 0;
+    if (req.session.user) req.session.user.coins = coins;
+    res.json({ success: true, coins });
+  } catch (err) {
+    res.json({ success: false, coins: null });
   }
 });
 
@@ -42,7 +54,7 @@ router.post('/daily-bonus', isAuth, async (req, res) => {
 
     if (upd.rowCount === 0) {
       await client.query('ROLLBACK');
-      req.flash('error', 'আজকের বোনাস আগেই নেওয়া হয়েছে! আগামীকাল আবার আসুন।');
+      req.flash('error', 'আজকের বোনাস আগেই নওয়া হয়েছে! আগামীকাল আবার আসুন।');
       return res.redirect('/coins');
     }
 
