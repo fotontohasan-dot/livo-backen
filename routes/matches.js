@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
+const { addTurnover } = require('../services/turnover');
 
 // ====================================================
 //  DB row -> client (matches.ejs) এর জন্য ফরম্যাট
@@ -69,8 +70,6 @@ router.get('/football', (req, res) => {
 
 // ====================================================
 //  API রাউট  ->  GET /matches/api/live
-//  matches.ejs এর fetch('/matches/api/live') এখানে আসে
-//  রিটার্ন: { success, cricket: [...], football: [...] }
 // ====================================================
 router.get('/api/live', async (req, res) => {
   try {
@@ -88,20 +87,18 @@ router.get('/api/live', async (req, res) => {
     for (const row of result.rows) {
       const m = formatMatch(row);
       if (m.sport === 'football') football.push(m);
-      else cricket.push(m); // cricket + অন্য সব
+      else cricket.push(m);
     }
 
     res.json({ success: true, cricket, football });
   } catch (err) {
     console.error('matches/api/live error:', err.message);
-    // DB না থাকলেও ক্লায়েন্ট ক্র্যাশ করবে না
     res.json({ success: true, cricket: [], football: [] });
   }
 });
 
 // ====================================================
 //  একক ম্যাচ ডিটেইল  ->  GET /matches/:id
-//  (এটা সবসময় শেষে রাখতে হবে, না হলে উপরের রাউটগুলো ধরে ফেলবে)
 // ====================================================
 router.get('/:id', async (req, res) => {
   try {
@@ -142,7 +139,6 @@ router.get('/:id', async (req, res) => {
     res.redirect('/matches');
   }
 });
-
 // ====================================================
 //  ম্যাচে বেট/প্রেডিকশন  ->  POST /matches/:id/bet
 //  client পাঠায়: { market_id, runner, odd, stake }
@@ -202,6 +198,10 @@ router.post('/:id/bet', isAuth, async (req, res) => {
     await client.query('COMMIT');
 
     if (req.session.user) req.session.user.coins = upd.rows[0].coins;
+
+    // টার্নওভার আপডেট (স্পোর্টস) — বেটের পরিমাণ গণনা
+    addTurnover(userId, 'sports', stake).catch(e => console.error('turnover:', e.message));
+
     res.json({ success: true, message: 'বেট সফল হয়েছে!', newBalance: upd.rows[0].coins });
   } catch (err) {
     await client.query('ROLLBACK');
