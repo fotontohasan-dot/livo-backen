@@ -6,12 +6,12 @@
     <div class="card-header">💰 ডিপোজিট করুন</div>
     <div class="card-body">
       <div style="background:var(--card2);border-radius:10px;padding:1rem;margin-bottom:1.5rem;border:1px solid rgba(230,0,0,0.2);">
-        <p style="color:var(--muted);font-size:.8rem;margin-bottom:.5rem;">পাঠানোর নম্বর:</p>
-        <p style="font-size:1.1rem;font-weight:700;color:var(--gold);">bKash: 01XXXXXXXXX</p>
-        <p style="font-size:1.1rem;font-weight:700;color:var(--gold);">Nagad: 01XXXXXXXXX</p>
-        <p style="font-size:1.1rem;font-weight:700;color:var(--gold);">Rocket: 01XXXXXXXXX</p>
-        <p style="font-size:1.1rem;font-weight:700;color:var(--gold);">USDT (TRC20): TXXXXXXXXXXXXXXXXXXXXX</p>
-        <p style="font-size:.8rem;color:var(--muted);margin-top:.5rem;">⚠️ Send Money/Transfer করুন</p>
+        <p style="color:var(--muted);font-size:.8rem;margin-bottom:.5rem;">নিচের নম্বরে টাকা পাঠান:</p>
+        <p style="font-size:1.3rem;font-weight:800;color:var(--gold);letter-spacing:1px;"><%= payNumber %></p>
+        <p style="font-size:.85rem;color:#fff;margin-top:.3rem;">📲 bKash Personal</p>
+        <p style="font-size:.85rem;color:#fff;">📲 Nagad Personal</p>
+        <p style="font-size:.85rem;color:#fff;">📲 Rocket Personal</p>
+        <p style="font-size:.8rem;color:var(--muted);margin-top:.6rem;">⚠️ Send Money করুন, তারপর নিচের ফর্ম পূরণ করুন। প্রতিবার নতুন নম্বর আসতে পারে — যে নম্বর দেখছেন সেখানেই পাঠান।</p>
       </div>
       <form action="/payment/deposit" method="POST">
         <div class="form-group" style="margin-bottom:1rem;">
@@ -20,7 +20,6 @@
             <option value="bkash">bKash</option>
             <option value="nagad">Nagad</option>
             <option value="rocket">Rocket</option>
-            <option value="crypto">USDT (TRC20)</option>
           </select>
         </div>
         <div class="form-group" style="margin-bottom:1rem;">
