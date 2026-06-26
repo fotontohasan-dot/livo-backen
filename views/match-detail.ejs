@@ -94,8 +94,17 @@
     <% }) %>
   <% } else { %>
     <div class="card text-center" style="padding:50px 20px;">
-      <p>এই ম্যাচে এখনো কোনো মার্কেট খোলা হয়নি।</p>
-      <small>অ্যাডমিন প্যানেল থেকে মার্কেট যোগ করুন</small>
+      <div style="font-size:40px; margin-bottom:12px;">⏳</div>
+      <p style="font-size:16px; font-weight:600;">এই ম্যাচের বেটিং অপশন শীঘ্রই আসছে</p>
+      <small style="color: var(--text-muted);">একটু পরে আবার দেখুন</small>
+
+      <% if (locals.user && user.role === 'admin') { %>
+        <div style="margin-top:20px; padding-top:16px; border-top:1px dashed #334155;">
+          <a href="/admin/markets/<%= match.id %>" class="btn btn-primary" style="border-radius:8px; padding:10px 20px;">
+            ⚙️ মার্কেট যোগ করুন (অ্যাডমিন)
+          </a>
+        </div>
+      <% } %>
     </div>
   <% } %>
 
