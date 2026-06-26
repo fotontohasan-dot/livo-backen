@@ -1,7 +1,7 @@
 const { pool } = require('../db');
 const sportsAPI = require('./sportsAPI');
 
-// ক্রিকেট ম্যাচ API থেকে এনে ডাটাবেসে রাখা
+// ক্রিকেট ম্যাচ API থেকে এনে ডাটবেসে রাখা
 async function syncCricket() {
   try {
     const matches = await sportsAPI.getCricketCurrentMatches();
@@ -50,11 +50,11 @@ const syncMatches = async () => {
   await syncCricket();
   await syncFootball();
 
-  // প্রতি ৫ মিনিটে আবার সিঙ্ক (free tier বাঁচাতে)
+  // প্রতি ১৫ মিনিটে আবার সিঙ্ক (দিনে ৯৬ বার, ফ লিমিট ১০০ এর নিচে)
   setInterval(async () => {
     await syncCricket();
     await syncFootball();
-  }, 5 * 60 * 1000);
+  }, 15 * 60 * 1000);
 };
 
 module.exports = { syncMatches };
