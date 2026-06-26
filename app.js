@@ -22,7 +22,7 @@ app.set('trust proxy', 1);
 
 const SESSION_SECRET = process.env.SESSION_SECRET || require('crypto').randomBytes(32).toString('hex');
 if (!process.env.SESSION_SECRET) {
-  console.warn('⚠️ SESSION_SECRET সেট করা নেই — সাময়িক র্‍যান্ডম সিক্রেট ব্যবহার হচ্ছে। প্রোডাকশনে অবশ্যই SESSION_SECRET সেট করুন।');
+  console.warn('⚠️ SESSION_SECRET সেট করা নেই — সামযক র্‍যান্ডম সিক্রট ব্যবহার হচ্ছে। প্রোডাকশনে অবশ্যই SESSION_SECRET সেট করুন।');
 }
 
 app.use(compression());
@@ -71,7 +71,7 @@ app.use(flash());
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
-  message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
+  message: 'অনেকবার চেষ্ট করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
   standardHeaders: true,
   legacyHeaders: false
 });
@@ -90,7 +90,7 @@ app.use('/register', loginLimiter);
 // ভাষা সেটিং
 const translations = {
   bn: {
-    balance: 'ব্যালেন্স', deposit: 'ডিপোজট', withdraw: 'উইথড্র',
+    balance: 'ব্যালেন্স', deposit: 'ডিপোজট', withdraw: 'উইথড',
     login: 'লগইন', register: 'রজিস্টার', logout: 'লগআউট',
     home: 'হোম', invite: 'আমন্ত্রণ', promotion: 'প্রমোশন', support: 'সেবা', member: 'সদস্য',
     menu_home: 'হোম', menu_aviator: 'Aviator', menu_slots: 'Slots', menu_color: 'Color Prediction',
@@ -138,7 +138,6 @@ app.get('/health', (req, res) => res.status(200).send('OK'));
 app.get('/privacy', (req, res) => res.render('privacy'));
 app.get('/terms', (req, res) => res.render('terms'));
 app.get('/kyc', (req, res) => res.redirect('/extra/kyc'));
-
 app.get('/rules', (req, res) => res.render('rules'));
 
 // ==================== CSRF সুরক্ষা (Origin যাচাই) ====================
@@ -146,14 +145,13 @@ app.use((req, res, next) => {
   if (!['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) return next();
   const host = req.get('host');
   const origin = req.get('origin');
-  const referer = req.get('referer');
+  // শুধু Origin থাকলে এবং ভুল হলে আটকাবে; না থাকলে ছেড়ে দেবে
   if (origin) {
-    try { if (new URL(origin).host === host) return next(); } catch (e) {}
-    return res.status(403).send('Invalid request origin');
-  }
-  if (referer) {
-    try { if (new URL(referer).host === host) return next(); } catch (e) {}
-    return res.status(403).send('Invalid request origin');
+    try {
+      if (new URL(origin).host !== host) {
+        return res.status(403).send('Invalid request origin');
+      }
+    } catch (e) {}
   }
   return next();
 });
@@ -200,7 +198,7 @@ app.use((err, req, res, next) => {
 
 app.use((req, res) => {
   res.status(404).render('error', {
-    message: 'পেজটি পাওয়া যায়নি।',
+    message: 'পেজটি পওয়া যায়নি।',
     siteName: 'Livo'
   });
 });
