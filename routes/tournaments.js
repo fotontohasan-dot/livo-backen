@@ -59,38 +59,63 @@ router.get('/:id', isAuth, async (req, res) => {
 router.post('/:id/join', isAuth, async (req, res) => {
   const tId = req.params.id;
   const userId = req.session.user.id;
+  const client = await pool.connect();
   try {
-    const t = await pool.query(`SELECT * FROM tournaments WHERE id=$1`, [tId]);
+    await client.query('BEGIN');
+
+    const t = await client.query(`SELECT * FROM tournaments WHERE id=$1`, [tId]);
     const tournament = t.rows[0];
-    if (!tournament) return res.redirect('/tournaments');
+    if (!tournament) {
+      await client.query('ROLLBACK');
+      return res.redirect('/tournaments');
+    }
 
-    const user = await pool.query(`SELECT * FROM users WHERE id=$1`, [userId]);
-    const entryFee = tournament.entry_fee || 0;
-
-    if (user.rows[0].coins < entryFee) {
-      req.flash('error', 'যথেষ্ট কয়েন নেই!');
+    const already = await client.query(
+      `SELECT 1 FROM tournament_participants WHERE tournament_id=$1 AND user_id=$2`,
+      [tId, userId]
+    );
+    if (already.rows[0]) {
+      await client.query('ROLLBACK');
+      req.flash('error', 'আপনি আগেই এই টুর্নামেন্টে যোগ দিয়েছেন।');
       return res.redirect(`/tournaments/${tId}`);
     }
 
-    await pool.query(`
-      INSERT INTO tournament_participants (tournament_id, user_id, points, joined_at)
-      VALUES ($1, $2, 0, NOW())
-    `, [tId, userId]);
+    const entryFee = parseInt(tournament.entry_fee) || 0;
 
     if (entryFee > 0) {
-      await pool.query(`UPDATE users SET coins = coins - $1 WHERE id=$2`, [entryFee, userId]);
-      await pool.query(`
-        INSERT INTO coin_transactions (user_id, amount, type, description)
-        VALUES ($1, $2, 'tournament_entry', 'Joined tournament')
-      `, [userId, -entryFee]);
-      req.session.user.coins -= entryFee;
+      const upd = await client.query(
+        `UPDATE users SET coins = coins - $1 WHERE id=$2 AND coins >= $1 RETURNING coins`,
+        [entryFee, userId]
+      );
+      if (upd.rowCount === 0) {
+        await client.query('ROLLBACK');
+        req.flash('error', 'যথেষ্ট কয়েন নেই!');
+        return res.redirect(`/tournaments/${tId}`);
+      }
+      await client.query(
+        `INSERT INTO coin_transactions (user_id, amount, type, description)
+         VALUES ($1, $2, 'tournament_entry', 'Joined tournament')`,
+        [userId, -entryFee]
+      );
+      if (req.session.user) req.session.user.coins = upd.rows[0].coins;
     }
+
+    await client.query(
+      `INSERT INTO tournament_participants (tournament_id, user_id, points, joined_at)
+       VALUES ($1, $2, 0, NOW())`,
+      [tId, userId]
+    );
+
+    await client.query('COMMIT');
 
     const name = tournament.name || tournament.title || 'টুর্নামেন্ট';
     req.flash('success', `${name}-এ যোগ দিয়েছেন!`);
   } catch (err) {
-    console.error('Join tournament error:', err);
-    req.flash('error', 'আগেই যোগ দিয়েছেন অথবা সমস্যা হয়েছে।');
+    await client.query('ROLLBACK');
+    console.error('Join tournament error:', err.message);
+    req.flash('error', 'যোগ দিতে সমস্যা হয়েছে।');
+  } finally {
+    client.release();
   }
   res.redirect(`/tournaments/${req.params.id}`);
 });
