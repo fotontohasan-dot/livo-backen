@@ -87,7 +87,6 @@ async function runMigrations() {
       );
     `);
 
-    // লগইন লগ টেবিল (IP, ডিভাইস ট্র্যাকিং — জালিয়াতি ধরতে)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS login_logs (
         id SERIAL PRIMARY KEY,
@@ -100,6 +99,29 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_login_user ON login_logs(user_id);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_login_ip ON login_logs(ip);`);
 
+    // ==================== বোনাস / টার্নওভার টেবিল ====================
+    // এক টেবিলেই সব বোনাস: ডিপোজিট বোনাস ও দৈনিক রিওয়ার্ড।
+    // bonus_type = 'deposit'  → sports = bonus×5,  casino = bonus×35
+    // bonus_type = 'daily'    → sports = bonus×3,  casino = 0 (শুধু স্পোর্টস)
+    // উইথড্রর সময় কোনো 'active' বোনাস থাকলে উইথড্র আটকাবে।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS bonuses (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        bonus_type VARCHAR(20) NOT NULL,          -- 'deposit' বা 'daily'
+        bonus_amount INTEGER NOT NULL,            -- বোনাসের পরিমাণ
+        sports_required NUMERIC(12,2) DEFAULT 0,  -- স্পোর্টস টার্নওভার দরকার
+        sports_done NUMERIC(12,2) DEFAULT 0,      -- স্পোর্টসে এ পর্যন্ত হয়েছে
+        casino_required NUMERIC(12,2) DEFAULT 0,  -- ক্যাসিনো টার্নওভার দরকার
+        casino_done NUMERIC(12,2) DEFAULT 0,      -- ক্যাসিনোতে এ পর্যন্ত হয়েছে
+        status VARCHAR(20) DEFAULT 'active',       -- active / completed / cancelled
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bonus_user ON bonuses(user_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bonus_status ON bonuses(status);`);
+
     // users টেবিলে নতুন কলাম
     await pool.query(`
       ALTER TABLE users
@@ -108,7 +130,8 @@ async function runMigrations() {
       ADD COLUMN IF NOT EXISTS last_ip TEXT,
       ADD COLUMN IF NOT EXISTS last_device TEXT,
       ADD COLUMN IF NOT EXISTS login_count INTEGER DEFAULT 0,
-      ADD COLUMN IF NOT EXISTS admin_note TEXT;
+      ADD COLUMN IF NOT EXISTS admin_note TEXT,
+      ADD COLUMN IF NOT EXISTS last_reward_date DATE;
     `);
 
     await pool.query(`
