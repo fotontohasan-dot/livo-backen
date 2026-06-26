@@ -34,7 +34,7 @@ async function runMigrations() {
       );
     `);
 
-    // Chat Messages Table (গ্রাহক সেবা চ্যাট)
+    // Chat Messages Table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS chat_messages (
         id SERIAL PRIMARY KEY,
@@ -49,12 +49,8 @@ async function runMigrations() {
       );
     `);
 
-    await pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_chat_sender ON chat_messages(sender_id);
-    `);
-    await pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_chat_receiver ON chat_messages(receiver_id);
-    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_sender ON chat_messages(sender_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_receiver ON chat_messages(receiver_id);`);
 
     // News Table
     await pool.query(`
@@ -68,6 +64,27 @@ async function runMigrations() {
         views INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT NOW()
       );
+    `);
+
+    // KYC Requests Table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS kyc_requests (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        full_name TEXT NOT NULL,
+        document_type VARCHAR(50),
+        document_number TEXT,
+        document_url TEXT,
+        status VARCHAR(20) DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    // users টেবিলে kyc_status কলাম
+    await pool.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS kyc_status VARCHAR(20) DEFAULT 'none';
     `);
 
     // Update existing tables if needed
