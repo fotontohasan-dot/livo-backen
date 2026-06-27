@@ -3,6 +3,7 @@ const router = express.Router();
 const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
 const bcrypt = require('bcryptjs');
+const { getTodayReward, claimDailyReward } = require('../services/dailyReward');
 
 router.get('/', isAuth, async (req, res) => {
   try {
@@ -98,7 +99,6 @@ router.post('/change-password', isAuth, async (req, res) => {
     res.redirect('/profile/security');
   }
 });
-
 router.get('/history', isAuth, async (req, res) => {
   try {
     const predictions = await pool.query(`
@@ -143,8 +143,31 @@ router.get('/missions', isAuth, (req, res) => {
   res.render('profile/missions', { user: req.session.user });
 });
 
-router.get('/rewards', isAuth, (req, res) => {
-  res.render('profile/rewards', { user: req.session.user });
+// ==================== দৈনিক রিওয়ার্ড পেজ ====================
+router.get('/rewards', isAuth, async (req, res) => {
+  try {
+    const reward = await getTodayReward(req.session.user.id);
+    res.render('profile/rewards', { user: req.session.user, reward });
+  } catch (err) {
+    console.error('rewards page error:', err.message);
+    res.render('profile/rewards', { user: req.session.user, reward: null });
+  }
+});
+
+// ==================== দৈনিক রিওয়ার্ড ক্লেইম ====================
+router.post('/rewards/claim', isAuth, async (req, res) => {
+  try {
+    const result = await claimDailyReward(req.session.user.id);
+    if (result.success) {
+      req.flash('success', result.message);
+    } else {
+      req.flash('error', result.message);
+    }
+  } catch (err) {
+    console.error('claim error:', err.message);
+    req.flash('error', 'সার্ভার ত্রুটি।');
+  }
+  res.redirect('/profile/rewards');
 });
 
 router.get('/referral', isAuth, async (req, res) => {
@@ -183,7 +206,6 @@ router.get('/account-record', isAuth, async (req, res) => {
     res.render('profile/transactions', { user: req.session.user, transactions: [] });
   }
 });
-
 router.get('/cards', isAuth, async (req, res) => {
   try {
     const result = await pool.query(
