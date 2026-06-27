@@ -1,0 +1,168 @@
+<%- include('partials/head') %>
+<%- include('partials/navbar') %>
+<div class="container" style="padding:16px;padding-bottom:120px;max-width:600px;margin:0 auto;">
+  <%- include('partials/flash') %>
+
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+    <a href="/matches" style="color:#fff;text-decoration:none;font-size:20px;">←</a>
+    <h1 style="color:#fff;font-size:18px;font-weight:bold;">🎯 অ্যাকুমুলেটর বেট</h1>
+  </div>
+
+  <!-- ব্যানার -->
+  <div style="background:linear-gradient(135deg,#7c3aed,#5b21b6);border-radius:16px;padding:16px;margin-bottom:16px;text-align:center;">
+    <div style="color:#fff;font-size:15px;font-weight:bold;">একসাথে একাধিক বাজি, বড় জয়!</div>
+    <div style="color:rgba(255,255,255,0.9);font-size:12px;margin-top:4px;">
+      ৩টি সিলেকশনে +১০%, ৪টিতে +২০%, ৫+ এ +৩০% বুস্ট
+    </div>
+  </div>
+
+  <% if (matches && matches.length > 0) { %>
+    <div style="color:#94a3b8;font-size:13px;margin-bottom:10px;">সলেকশন বাছুন (প্রতি ম্যাচ থেকে একটি):</div>
+
+    <% matches.forEach(m => { %>
+      <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:14px;margin-bottom:12px;">
+        <div style="color:#fff;font-size:14px;font-weight:600;margin-bottom:10px;"><%= m.title %> <span style="color:#64748b;font-size:11px;">(<%= m.sport %>)</span></div>
+        <% m.markets.forEach(mk => {
+          const runners = mk.odds && typeof mk.odds === 'object' ? Object.keys(mk.odds) : [];
+        %>
+          <div style="margin-bottom:8px;">
+            <div style="color:#94a3b8;font-size:12px;margin-bottom:5px;"><%= mk.market_name %></div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;">
+              <% runners.forEach(rn => {
+                const odd = mk.odds[rn];
+              %>
+                <button type="button" class="acca-pick"
+                        data-match="<%= m.match_id %>"
+                        data-market="<%= mk.market_id %>"
+                        data-mname="<%= mk.market_name %>"
+                        data-runner="<%= rn %>"
+                        data-odd="<%= odd %>"
+                        style="background:#1e1e1e;border:1px solid #333;color:#fff;border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer;">
+                  <%= rn %> <span style="color:#f59e0b;font-weight:bold;"><%= odd %></span>
+                </button>
+              <% }) %>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% }) %>
+  <% } else { %>
+    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:30px;text-align:center;color:#94a3b8;">
+      এখন কোনো ওপেন মার্কেট নেই। পরে আবার দেখুন।
+    </div>
+  <% } %>
+
+  <!-- আমার অ্যাকুমুলেটর হিস -->
+  <% if (myAccas && myAccas.length > 0) { %>
+    <div style="margin-top:24px;">
+      <div style="color:#fff;font-weight:bold;margin-bottom:10px;">📜 আমার অ্যাকুমুলেটর</div>
+      <% myAccas.forEach(a => {
+        const color = a.status === 'won' ? '#10b981' : a.status === 'lost' ? '#ef4444' : '#f59e0b';
+        const label = a.status === 'won' ? 'জিতেছেন' : a.status === 'lost' ? 'হেরেছেন' : 'চলমান';
+      %>
+        <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:14px;margin-bottom:10px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+            <span style="color:#fff;font-size:13px;font-weight:600;"><%= a.selection_count %> সিলেকশন <%= a.boost_percent > 0 ? '(+' + a.boost_percent + '% বুস্ট)' : '' %></span>
+            <span style="color:<%= color %>;font-size:12px;font-weight:bold;"><%= label %></span>
+          </div>
+          <div style="color:#94a3b8;font-size:11px;">
+            স্টেক: <%= a.stake %> · মোট অডস: <%= a.total_odd %> · সম্ভাব্য জয়: <span style="color:#f59e0b;"><%= a.potential_win %></span>
+          </div>
+          <div style="margin-top:8px;">
+            <% a.selections.forEach(s => {
+              const sc = s.status === 'won' ? '#10b981' : s.status === 'lost' ? '#ef4444' : '#94a3b8';
+            %>
+              <div style="font-size:11px;color:<%= sc %>;padding:2px 0;">• <%= s.market_name %> — <%= s.runner %> (<%= s.odd %>)</div>
+            <% }) %>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+
+</div>
+
+<!-- বট স্লিপ (নিচে ভাসমান) -->
+<div id="betSlip" style="position:fixed;bottom:60px;left:0;right:0;background:#111;border-top:2px solid #f59e0b;padding:14px 16px;display:none;z-index:100;max-width:600px;margin:0 auto;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+    <span style="color:#fff;font-weight:bold;font-size:14px;">বেট স্লিপ (<span id="slipCount">0</span>)</span>
+    <button onclick="clearSlip()" style="background:none;border:none;color:#ef4444;font-size:12px;cursor:pointer;">সব মুছুন</button>
+  </div>
+  <div id="slipItems" style="max-height:120px;overflow-y:auto;margin-bottom:8px;"></div>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <input type="number" id="slipStake" placeholder="স্টেক" min="10" style="flex:1;background:#1e1e1e;border:1px solid #333;color:#fff;padding:10px;border-radius:8px;">
+    <button onclick="placeAcca()" style="background:#f59e0b;color:#000;border:none;border-radius:8px;padding:10px 16px;font-weight:bold;font-size:13px;cursor:pointer;">বাজি ধরুন</button>
+  </div>
+  <div id="slipInfo" style="color:#94a3b8;font-size:11px;margin-top:6px;text-align:center;"></div>
+</div>
+
+<script>
+let slip = [];
+
+function boostFor(n){ if(n>=5) return 30; if(n===4) return 20; if(n===3) return 10; return 0; }
+
+function renderSlip() {
+  const box = document.getElementById('betSlip');
+  const items = document.getElementById('slipItems');
+  document.getElementById('slipCount').innerText = slip.length;
+  if (slip.length === 0) { box.style.display='none'; return; }
+  box.style.display='block';
+  items.innerHTML = slip.map((s,i) =>
+    '<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;color:#cbd5e1;">'
+    + '<span>'+s.mname+' — '+s.runner+' <span style="color:#f59e0b;">'+s.odd+'</span></span>'
+    + '<span onclick="removePick('+i+')" style="color:#ef4444;cursor:pointer;">✕</span></div>'
+  ).join('');
+
+  let totalOdd = slip.reduce((a,s)=>a*parseFloat(s.odd),1);
+  const boost = boostFor(slip.length);
+  const stake = parseFloat(document.getElementById('slipStake').value) || 0;
+  const win = Math.floor(stake * totalOdd * (1 + boost/100));
+  document.getElementById('slipInfo').innerText =
+    'মোট অডস: ' + totalOdd.toFixed(2) + (boost>0?(' · বুস্ট +'+boost+'%'):'') + (stake>0?(' · সম্ভাব্য জয়: '+win):'');
+}
+
+function removePick(i){ slip.splice(i,1); document.querySelectorAll('.acca-pick').forEach(b=>b.style.borderColor=isPicked(b)?'#f59e0b':'#333'); renderSlip(); }
+function clearSlip(){ slip=[]; document.querySelectorAll('.acca-pick').forEach(b=>b.style.borderColor='#333'); renderSlip(); }
+function isPicked(btn){ return slip.some(s=>s.market==btn.dataset.market && s.runner==btn.dataset.runner); }
+
+document.querySelectorAll('.acca-pick').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const d = btn.dataset;
+    // একই ম্যাচ থেকে আগের সিলেকশন থাকলে সরাও
+    const existIdx = slip.findIndex(s => s.match === d.match);
+    if (existIdx >= 0 && slip[existIdx].market === d.market && slip[existIdx].runner === d.runner) {
+      slip.splice(existIdx,1); // আবার চাপল বাদ
+    } else {
+      if (existIdx >= 0) slip.splice(existIdx,1); // ওই ম্যাচের পুরোনো বাদ
+      slip.push({ match:d.match, market:d.market, mname:d.mname, runner:d.runner, odd:d.odd });
+    }
+    document.querySelectorAll('.acca-pick').forEach(b=>b.style.borderColor=isPicked(b)?'#f59e0b':'#333');
+    renderSlip();
+  });
+});
+
+document.getElementById('slipStake').addEventListener('input', renderSlip);
+
+async function placeAcca() {
+  const stake = parseInt(document.getElementById('slipStake').value);
+  if (!stake || stake < 10) { alert('সর্বনম্ন স্টেক ১০ কয়েন।'); return; }
+  if (slip.length < 2) { alert('কমপক্ষে ২টি সিলেকশন লাগবে।'); return; }
+
+  const selections = slip.map(s => ({ match_id:s.match, market_id:s.market, market_name:s.mname, runner:s.runner, odd:s.odd }));
+
+  try {
+    const res = await fetch('/accumulator/place', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ stake, selections })
+    });
+    const data = await res.json();
+    alert(data.message);
+    if (data.success) location.reload();
+  } catch(e) {
+    alert('সমস্যা হয়েছে, আবার চষ্টা করুন।');
+  }
+}
+</script>
+<%- include('partials/bottom-nav') %>
+</body></html>
