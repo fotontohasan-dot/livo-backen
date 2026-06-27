@@ -15,6 +15,7 @@ const { getBadges } = require('../services/badges');
 const { getAllFreeBets, claimFreeBet } = require('../services/freebet');
 const { getWeeklyStatus, claimWeekly, getMonthlyStatus, claimMonthly } = require('../services/periodicReward');
 const { getShareStatus, claimShare } = require('../services/social');
+const { getLeaderboard } = require('../services/contest');
 
 router.get('/', isAuth, async (req, res) => {
   try {
@@ -29,7 +30,7 @@ router.get('/', isAuth, async (req, res) => {
 
     const tournaments = await pool.query(`
       SELECT
-        COALESCE(t.name, 'টুর্নামেন্ট') as name,
+        COALESCE(t.name, 'টুর্নমেন্ট') as name,
         COALESCE(t.sport, 'General') as sport,
         COALESCE(tp.points, 0) as points,
         tp.joined_at as joined_at
@@ -92,7 +93,7 @@ router.post('/change-password', isAuth, async (req, res) => {
     const np = new_password || newPassword;
 
     if (confirmPassword && np !== confirmPassword) {
-      req.flash('error', '❌ নতুন পাসওয়ার্ড মিলছে না।');
+      req.flash('error', '❌ নতুন পাসওয়ার মিলছে না।');
       return res.redirect('/profile/security');
     }
 
@@ -173,7 +174,7 @@ router.post('/responsible/deposit-limit', isAuth, async (req, res) => {
       return res.redirect('/profile/responsible');
     }
     await pool.query(`UPDATE users SET daily_deposit_limit = $1 WHERE id = $2`, [limit, req.session.user.id]);
-    req.flash('success', limit ? `দৈনিক ডিপোজিট সীমা ${limit} টাকা সেট হয়েছে।` : 'ডিপোজিট সীমা সরানো হয়েছে।');
+    req.flash('success', limit ? `দৈনিক ডিপোজট সীমা ${limit} টাকা সেট হয়েছে।` : 'ডিপোজিট সীমা সরানো হয়েছে।');
   } catch (err) {
     console.error('deposit-limit error:', err.message);
     req.flash('error', 'সমস্যা হয়েছে।');
@@ -191,7 +192,7 @@ router.post('/responsible/self-exclude', isAuth, async (req, res) => {
     const until = new Date();
     until.setDate(until.getDate() + days);
     await pool.query(`UPDATE users SET self_exclude_until = $1 WHERE id = $2`, [until, req.session.user.id]);
-    req.flash('success', `আপনার অ্যাকাউন্ট ${days} দিনের জন্য বন্ধ করা হয়েছে।`);
+    req.flash('success', `আপনার অ্যাকাউন্ট ${days} দিনের জন্য বন্ধ করা হযছে।`);
     return req.session.destroy(() => res.redirect('/login'));
   } catch (err) {
     console.error('self-exclude error:', err.message);
@@ -266,7 +267,7 @@ router.post('/rewards/claim', isAuth, async (req, res) => {
   res.redirect('/profile/rewards');
 });
 
-// ==================== ক্যাশব্যাক ====================
+// ==================== ক্যাশবক ====================
 router.get('/cashback', isAuth, async (req, res) => {
   try {
     const cashback = await getCashbackStatus(req.session.user.id);
@@ -431,7 +432,7 @@ router.get('/streak', isAuth, async (req, res) => {
   }
 });
 
-// ==================== ব্যাজ ও অর্জন ====================
+// ==================== ব্যাজ ও অরন ====================
 router.get('/badges', isAuth, async (req, res) => {
   try {
     const badges = await getBadges(req.session.user.id);
@@ -520,6 +521,17 @@ router.post('/share/claim', isAuth, async (req, res) => {
     req.flash('error', 'সার্ভার ত্রুটি।');
   }
   res.redirect('/profile/share');
+});
+
+// ==================== রেফারেল কনটেস্ট ====================
+router.get('/contest', isAuth, async (req, res) => {
+  try {
+    const contest = await getLeaderboard(req.session.user.id);
+    res.render('profile/contest', { user: req.session.user, contest });
+  } catch (err) {
+    console.error('contest page error:', err.message);
+    res.render('profile/contest', { user: req.session.user, contest: null });
+  }
 });
 
 module.exports = router;
