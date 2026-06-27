@@ -231,7 +231,7 @@ async function runMigrations() {
         INSERT INTO mission_defs (title, target_type, target_value, reward) VALUES
         ('আজ ৩টি বাজি ধরুন', 'bet_count', 3, 50),
         ('আজ ১০টি বাজি ধরুন', 'bet_count', 10, 150),
-        ('আজ মট ১০০০ টার্নওভার করুন', 'turnover', 1000, 100),
+        ('আজ মোট ১০০০ টার্নওভার করুন', 'turnover', 1000, 100),
         ('আজ মোট ৫০০০ টার্নওভার করুন', 'turnover', 5000, 400);
       `);
     }
@@ -314,6 +314,19 @@ async function runMigrations() {
       );
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_periodic_user ON periodic_claims(user_id);`);
+
+    // সোশ্যাল শেয়ার
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS social_shares (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        share_date DATE NOT NULL,
+        bonus INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE (user_id, share_date)
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_social_user ON social_shares(user_id);`);
 
     await pool.query(`
       ALTER TABLE users
