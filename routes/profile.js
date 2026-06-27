@@ -22,7 +22,7 @@ router.get('/', isAuth, async (req, res) => {
 
     const tournaments = await pool.query(`
       SELECT
-        COALESCE(t.name, 'টুর্নামেন্ট') as name,
+        COALESCE(t.name, 'টর্নামেন্ট') as name,
         COALESCE(t.sport, 'General') as sport,
         COALESCE(tp.points, 0) as points,
         tp.joined_at as joined_at
@@ -62,7 +62,7 @@ router.post('/update', isAuth, async (req, res) => {
     req.session.user.username = username;
     req.flash('success', 'প্রোফাইল আপডেট হয়েছে!');
   } catch (err) {
-    req.flash('error', 'আপডেট করতে সমস্যা হয়েছে।');
+    req.flash('error', 'আপডেট করত সমস্যা হয়েছে।');
   }
   res.redirect('/profile');
 });
@@ -91,15 +91,15 @@ router.post('/change-password', isAuth, async (req, res) => {
 
     const user = await pool.query(`SELECT * FROM users WHERE id=$1`, [req.session.user.id]);
     if (!(await bcrypt.compare(cp, user.rows[0].password))) {
-      req.flash('error', '❌ বর্তমান পাসওয়ার্ড ভুল।');
+      req.flash('error', '❌ বরমান পাসওয়ার্ড ভুল।');
       return res.redirect('/profile/security');
     }
     const hashed = await bcrypt.hash(np, 10);
     await pool.query(`UPDATE users SET password=$1 WHERE id=$2`, [hashed, req.session.user.id]);
-    req.flash('success', '✅ পাসওয়ার্ড পরিবর্তন হয়েছে!');
+    req.flash('success', '✅ পাসওয়ার পরিবর্তন হয়েছে!');
     res.redirect('/profile/security');
   } catch (err) {
-    req.flash('error', '❌ পাসওয়ার্ড পরিবর্তন করতে সমস্যা হয়েছে।');
+    req.flash('error', '❌ পাসওযর্ড পরিবর্তন করতে সমস্যা হয়েছে।');
     res.redirect('/profile/security');
   }
 });
@@ -144,6 +144,57 @@ router.get('/security', isAuth, async (req, res) => {
   }
 });
 
+// ==================== দায়িত্বশীল গেমিং ====================
+router.get('/responsible', isAuth, async (req, res) => {
+  try {
+    const u = await pool.query(
+      `SELECT daily_deposit_limit, self_exclude_until FROM users WHERE id = $1`,
+      [req.session.user.id]
+    );
+    res.render('profile/responsible', { user: req.session.user, rg: u.rows[0] || {} });
+  } catch (err) {
+    console.error('responsible page error:', err.message);
+    res.render('profile/responsible', { user: req.session.user, rg: {} });
+  }
+});
+
+router.post('/responsible/deposit-limit', isAuth, async (req, res) => {
+  try {
+    const limit = req.body.limit ? parseInt(req.body.limit) : null;
+    if (limit !== null && (isNaN(limit) || limit < 0)) {
+      req.flash('error', 'সঠিক সীমা দিন।');
+      return res.redirect('/profile/responsible');
+    }
+    await pool.query(`UPDATE users SET daily_deposit_limit = $1 WHERE id = $2`, [limit, req.session.user.id]);
+    req.flash('success', limit ? `দৈনিক ডিপোজিট সীমা ${limit} টাকা সেট হয়েছে।` : 'ডিপোজিট সীমা সরানো হয়েছে।');
+  } catch (err) {
+    console.error('deposit-limit error:', err.message);
+    req.flash('error', 'সমস্যা হয়েছে।');
+  }
+  res.redirect('/profile/responsible');
+});
+
+router.post('/responsible/self-exclude', isAuth, async (req, res) => {
+  try {
+    const days = parseInt(req.body.days);
+    if (isNaN(days) || days < 1) {
+      req.flash('error', 'সঠিক দিন সংখ্যা দিন।');
+      return res.redirect('/profile/responsible');
+    }
+    const until = new Date();
+    until.setDate(until.getDate() + days);
+    await pool.query(`UPDATE users SET self_exclude_until = $1 WHERE id = $2`, [until, req.session.user.id]);
+
+    // সাথে সাথে লগআউট
+    req.flash('success', `আপনার অ্যাকউন্ট ${days} দিনের জন্য বন্ধ করা হয়েছে।`);
+    return req.session.destroy(() => res.redirect('/login'));
+  } catch (err) {
+    console.error('self-exclude error:', err.message);
+    req.flash('error', 'সমস্যা হয়েছে।');
+    res.redirect('/profile/responsible');
+  }
+});
+
 // ==================== ডেইলি মিশন ====================
 router.get('/missions', isAuth, async (req, res) => {
   try {
@@ -161,7 +212,7 @@ router.post('/missions/claim/:id', isAuth, async (req, res) => {
     req.flash(result.success ? 'success' : 'error', result.message);
   } catch (err) {
     console.error('mission claim error:', err.message);
-    req.flash('error', 'সার্ভার ত্রুটি।');
+    req.flash('error', 'সারর ত্রুটি।');
   }
   res.redirect('/profile/missions');
 });
@@ -188,7 +239,7 @@ router.post('/rewards/claim', isAuth, async (req, res) => {
   res.redirect('/profile/rewards');
 });
 
-// ==================== ক্যাশব্যাক ====================
+// ==================== ক্যশব্যাক ====================
 router.get('/cashback', isAuth, async (req, res) => {
   try {
     const cashback = await getCashbackStatus(req.session.user.id);
