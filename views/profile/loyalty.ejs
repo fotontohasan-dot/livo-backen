@@ -1,0 +1,74 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto;">
+  <%- include('../partials/flash') %>
+
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+    <a href="/profile" style="color:#fff;text-decoration:none;font-size:20px;">←</a>
+    <h1 style="color:#fff;font-size:18px;font-weight:bold;">⭐ লয়্যালটি পয়েন্ট</h1>
+  </div>
+
+  <% if (loyalty) { %>
+    <!-- পয়েন্ট কার্ড -->
+    <div style="background:linear-gradient(135deg,#7c3aed,#a855f7);border-radius:16px;padding:24px;margin-bottom:16px;text-align:center;">
+      <div style="font-size:40px;margin-bottom:4px;">⭐</div>
+      <div style="color:rgba(255,255,255,0.9);font-size:13px;">আপনার পয়েন্ট</div>
+      <div style="color:#fff;font-size:34px;font-weight:900;"><%= Number(loyalty.points).toLocaleString('bn-BD') %></div>
+      <div style="color:rgba(255,255,255,0.9);font-size:13px;margin-top:4px;">
+        = <%= Number(loyalty.coinValue).toLocaleString('bn-BD') %> কয়েন মূল্য
+      </div>
+    </div>
+
+    <!-- রূপান্তর -->
+    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;margin-bottom:16px;">
+      <div style="color:#fff;font-weight:bold;margin-bottom:6px;">🔄 পয়েন্ট কয়েনে রূপান্তর</div>
+      <div style="color:#94a3b8;font-size:12px;margin-bottom:12px;">
+        ১০০ পয়েন্ট = ১০ কয়েন। সর্বনিম্ন <%= loyalty.minRedeem %> পয়েন্ট রূপান্তর করা যায়।
+      </div>
+      <% if (loyalty.points >= loyalty.minRedeem) { %>
+        <form action="/profile/loyalty/redeem" method="POST">
+          <input type="number" name="points" placeholder="কত পয়েন্ট রূপান্তর করবেন" min="<%= loyalty.minRedeem %>" max="<%= loyalty.points %>" required
+                 style="width:100%;background:#1e1e1e;border:1px solid #333;color:#fff;padding:12px;border-radius:8px;margin-bottom:10px;">
+          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">🔄 রূপান্তর করুন</button>
+        </form>
+      <% } else { %>
+        <div style="background:rgba(148,163,184,0.1);border-radius:8px;padding:12px;color:#94a3b8;font-size:13px;text-align:center;">
+          রূপান্তরের জন্য কমপক্ষে <%= loyalty.minRedeem %> পয়েন্ট দরকার। আরও খেলুন!
+        </div>
+      <% } %>
+    </div>
+
+    <!-- হিস্ট্রি -->
+    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;">
+      <div style="color:#fff;font-weight:bold;margin-bottom:12px;">📜 পয়েন্ট হিস্ট্রি</div>
+      <% if (loyalty.history && loyalty.history.length > 0) { %>
+        <% loyalty.history.forEach(h => { %>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+            <div>
+              <div style="color:#fff;font-size:13px;"><%= h.reason === 'earn' ? '🎮 খেলে অর্জন' : '🔄 রূপান্তর' %></div>
+              <div style="color:#64748b;font-size:11px;"><%= new Date(h.created_at).toLocaleDateString('bn-BD') %></div>
+            </div>
+            <div style="font-size:14px;font-weight:bold;color:<%= h.points >= 0 ? '#10b981' : '#ef4444' %>;">
+              <%= h.points >= 0 ? '+' : '' %><%= h.points %>
+            </div>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <div style="color:#94a3b8;font-size:13px;text-align:center;padding:10px;">এখনো কোনো পয়েন্ট হিস্ট্রি নেই।</div>
+      <% } %>
+    </div>
+
+    <p style="font-size:.75rem;color:#94a3b8;text-align:center;margin-top:1rem;line-height:1.6;">
+      প্রতি ১০০ বাজিতে ১ পয়েন্ট জমা হয়।<br>
+      গেম ও স্পোর্টস — দুটোতেই পয়েন্ট পাওয়া যায়।
+    </p>
+
+  <% } else { %>
+    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:30px;text-align:center;color:#94a3b8;">
+      পয়েন্ট তথ্য লোড করা যায়নি। পরে আবার চেষ্টা করুন।
+    </div>
+  <% } %>
+
+</div>
+<%- include('../partials/bottom-nav') %>
+</body></html>
