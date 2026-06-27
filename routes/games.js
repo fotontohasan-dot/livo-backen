@@ -9,6 +9,7 @@ const { addVipTurnover } = require('../services/vip');
 const { updateMissionProgress } = require('../services/missions');
 const { addPoints } = require('../services/loyalty');
 const { recordGameResult } = require('../services/streak');
+const { checkBadges } = require('../services/badges');
 
 const supportedGames = {
   "aviator": "Aviator",
@@ -233,6 +234,7 @@ router.post('/play', isAuth, async (req, res) => {
       addVipTurnover(userId, betAmount).catch(e => console.error('vip:', e.message));
       updateMissionProgress(userId, betAmount).catch(e => console.error('mission:', e.message));
       addPoints(userId, betAmount).catch(e => console.error('loyalty:', e.message));
+      checkBadges(userId).catch(e => console.error('badges:', e.message));
 
       return res.json({ success: true, message: 'গেম শুরু হয়েছে' });
     }
@@ -259,6 +261,7 @@ router.post('/play', isAuth, async (req, res) => {
     updateMissionProgress(userId, betAmount).catch(e => console.error('mission:', e.message));
     addPoints(userId, betAmount).catch(e => console.error('loyalty:', e.message));
     recordGameResult(userId, winAmount > 0).catch(e => console.error('streak:', e.message));
+    checkBadges(userId).catch(e => console.error('badges:', e.message));
     if (winAmount > 0) addWin(userId, winAmount).catch(e => console.error('cashback:', e.message));
 
     res.json({ success: true, newBalance: req.session.user.coins, winAmount, gameResult });
@@ -317,6 +320,7 @@ router.post('/cashout', isAuth, async (req, res) => {
     req.session.user.coins = upd.rows[0].coins;
 
     recordGameResult(userId, true).catch(e => console.error('streak:', e.message));
+    checkBadges(userId).catch(e => console.error('badges:', e.message));
     if (winAmount > 0) addWin(userId, winAmount).catch(e => console.error('cashback:', e.message));
 
     res.json({
