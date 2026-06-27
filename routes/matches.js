@@ -9,6 +9,7 @@ const { addBet } = require('../services/cashback');
 const { addVipTurnover } = require('../services/vip');
 const { updateMissionProgress } = require('../services/missions');
 const { addPoints } = require('../services/loyalty');
+const { checkBadges } = require('../services/badges');
 
 function formatMatch(row) {
   return {
@@ -188,6 +189,7 @@ router.post('/:id/bet', isAuth, async (req, res) => {
     addVipTurnover(userId, stake).catch(e => console.error('vip:', e.message));
     updateMissionProgress(userId, stake).catch(e => console.error('mission:', e.message));
     addPoints(userId, stake).catch(e => console.error('loyalty:', e.message));
+    checkBadges(userId).catch(e => console.error('badges:', e.message));
 
     res.json({ success: true, message: 'বেট সফল হয়েছে!', newBalance: upd.rows[0].coins });
   } catch (err) {
