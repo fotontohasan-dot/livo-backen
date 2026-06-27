@@ -3,6 +3,7 @@ const router = express.Router();
 const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
 const { addTurnover } = require('../services/turnover');
+const { distributeCommission } = require('../services/referral');
 
 const supportedGames = {
   "aviator": "Aviator",
@@ -169,10 +170,11 @@ const gameHandlers = {
     return { winAmount, gameResult: { outcome } };
   }
 };
+
 router.get('/play', isAuth, (req, res) => {
   const gameSlug = req.query.game || 'slots';
   if (!supportedGames[gameSlug]) {
-    req.flash('error', 'গেমটি পাওয়া যায়নি');
+    req.flash('error', 'গেমটি পওয়া যায়নি');
     return res.redirect('/');
   }
   res.render('games/play', {
@@ -200,7 +202,7 @@ router.post('/play', isAuth, async (req, res) => {
   const userId = req.session.user.id;
   const betAmount = parseInt(amount);
 
-  if (isNaN(betAmount) || betAmount <= 0) return res.status(400).json({ success: false, message: 'সঠিক পরিমাণ দিন' });
+  if (isNaN(betAmount) || betAmount <= 0) return res.status(400).json({ success: false, message: 'সঠিক পরিমাণ দন' });
 
   const client = await pool.connect();
   try {
@@ -220,8 +222,8 @@ router.post('/play', isAuth, async (req, res) => {
       await client.query('UPDATE users SET coins = coins - $1 WHERE id = $2', [betAmount, userId]);
       await client.query('COMMIT');
 
-      // টার্নওভার আপডেট (ক্যাসিন) — বেট রাখার সময়
       addTurnover(userId, 'casino', betAmount).catch(e => console.error('turnover:', e.message));
+      distributeCommission(userId, betAmount).catch(e => console.error('commission:', e.message));
 
       return res.json({ success: true, message: 'গেম শুরু হয়েছে' });
     }
@@ -241,8 +243,8 @@ router.post('/play', isAuth, async (req, res) => {
     await client.query('COMMIT');
     req.session.user.coins += netChange;
 
-    // টার্নওভার আপডেট (ক্যাসিনো) — বেটের পরিমাণ গণনা
     addTurnover(userId, 'casino', betAmount).catch(e => console.error('turnover:', e.message));
+    distributeCommission(userId, betAmount).catch(e => console.error('commission:', e.message));
 
     res.json({ success: true, newBalance: req.session.user.coins, winAmount, gameResult });
 
@@ -255,9 +257,6 @@ router.post('/play', isAuth, async (req, res) => {
 });
 
 // ==================== AVIATOR / CRASH ক্যাশআউট ====================
-// client পাঠায় { gameSlug, multiplier } — যে multiplier-এ সে ক্যাশআউট করেছে।
-// নিরাপত্তা: সার্ভারে রখা crashPoint-এর সাথে মিলিয়ে দেখা হয়,
-// যাতে কেউ ভুয বড় multiplier পাঠিয়ে চিট করতে না পারে।
 router.post('/cashout', isAuth, async (req, res) => {
   const userId = req.session.user.id;
   const { gameSlug, multiplier } = req.body;
@@ -273,17 +272,15 @@ router.post('/cashout', isAuth, async (req, res) => {
     return res.status(400).json({ success: false, message: 'অকার্যকর মাল্টিপ্লায়ার' });
   }
 
-  // গেম স্টেট সাথে সাথে মুছ ফেলা — একই রাউন্ডে দুবার ক্যাশআউট ঠেকাতে
   req.session.gameState = null;
 
-  // চিট প্রতিরোধ: crashPoint-এর পরে ক্যাশআউট দাবি করলে হার
   if (cashMultiplier > state.crashPoint) {
     return res.json({
       success: true,
       crashed: true,
       winAmount: 0,
       newBalance: req.session.user.coins,
-      message: `উড়োজাহাজ ${state.crashPoint}x-এ ক্র্যাশ করেছে!`
+      message: `উডজাহাজ ${state.crashPoint}x-এ ক্র্যাশ করেছে!`
     });
   }
 
