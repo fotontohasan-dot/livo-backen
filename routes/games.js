@@ -8,6 +8,7 @@ const { addBet, addWin } = require('../services/cashback');
 const { addVipTurnover } = require('../services/vip');
 const { updateMissionProgress } = require('../services/missions');
 const { addPoints } = require('../services/loyalty');
+const { recordGameResult } = require('../services/streak');
 
 const supportedGames = {
   "aviator": "Aviator",
@@ -247,7 +248,7 @@ router.post('/play', isAuth, async (req, res) => {
     const netChange = winAmount - betAmount;
     await client.query('UPDATE users SET coins = coins + $1 WHERE id = $2', [netChange, userId]);
     await client.query('INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, $3, $4)', 
-                       [userId, netChange, 'game_play', `${supportedGames[gameSlug] || gameSlug} গম`]);
+                       [userId, netChange, 'game_play', `${supportedGames[gameSlug] || gameSlug} গেম`]);
     await client.query('COMMIT');
     req.session.user.coins += netChange;
 
@@ -257,6 +258,7 @@ router.post('/play', isAuth, async (req, res) => {
     addVipTurnover(userId, betAmount).catch(e => console.error('vip:', e.message));
     updateMissionProgress(userId, betAmount).catch(e => console.error('mission:', e.message));
     addPoints(userId, betAmount).catch(e => console.error('loyalty:', e.message));
+    recordGameResult(userId, winAmount > 0).catch(e => console.error('streak:', e.message));
     if (winAmount > 0) addWin(userId, winAmount).catch(e => console.error('cashback:', e.message));
 
     res.json({ success: true, newBalance: req.session.user.coins, winAmount, gameResult });
@@ -287,12 +289,13 @@ router.post('/cashout', isAuth, async (req, res) => {
   req.session.gameState = null;
 
   if (cashMultiplier > state.crashPoint) {
+    recordGameResult(userId, false).catch(e => console.error('streak:', e.message));
     return res.json({
       success: true,
       crashed: true,
       winAmount: 0,
       newBalance: req.session.user.coins,
-      message: `উডজাহাজ ${state.crashPoint}x-এ ক্র্যাশ করেছে!`
+      message: `উড়োজাহাজ ${state.crashPoint}x-এ ক্র্যাশ করেছে!`
     });
   }
 
@@ -313,6 +316,7 @@ router.post('/cashout', isAuth, async (req, res) => {
 
     req.session.user.coins = upd.rows[0].coins;
 
+    recordGameResult(userId, true).catch(e => console.error('streak:', e.message));
     if (winAmount > 0) addWin(userId, winAmount).catch(e => console.error('cashback:', e.message));
 
     res.json({
