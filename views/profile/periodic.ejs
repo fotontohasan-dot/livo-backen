@@ -1,0 +1,92 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto;">
+  <%- include('../partials/flash') %>
+
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+    <a href="/profile" style="color:#fff;text-decoration:none;font-size:20px;">←</a>
+    <h1 style="color:#fff;font-size:18px;font-weight:bold;">📅 সাপ্তাহিক ও মাসিক রিওয়ার্ড</h1>
+  </div>
+
+  <!-- সাপ্তাহিক ক্যাশব্যাক -->
+  <div style="background:linear-gradient(135deg,#0ea5e9,#0284c7);border-radius:16px;padding:20px;margin-bottom:16px;">
+    <div style="color:#fff;font-size:16px;font-weight:bold;margin-bottom:4px;">🗓️ সাপ্তাহিক ক্যাশব্যাক</div>
+    <div style="color:rgba(255,255,255,0.9);font-size:12px;margin-bottom:14px;">গত ৭ দিনের নিট লসের ১০% (সর্বোচ্চ ৫০,০০০)</div>
+
+    <% if (weekly) { %>
+      <div style="background:rgba(0,0,0,0.2);border-radius:10px;padding:12px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;padding:4px 0;">
+          <span style="color:rgba(255,255,255,0.85);font-size:13px;">গত ৭ দিনের নিট লস</span>
+          <span style="color:#fff;font-size:13px;font-weight:bold;"><%= Number(weekly.netLoss).toLocaleString('bn-BD') %></span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:4px 0;">
+          <span style="color:rgba(255,255,255,0.85);font-size:13px;">ক্যাশব্যাক (১০%)</span>
+          <span style="color:#fff;font-size:15px;font-weight:bold;"><%= Number(weekly.amount).toLocaleString('bn-BD') %> কয়েন</span>
+        </div>
+      </div>
+      <% if (weekly.claimed) { %>
+        <div style="text-align:center;color:#d1fae5;font-size:13px;font-weight:bold;">✅ এই সপ্তাহের ক্যাশব্যাক নেওয়া হয়েছে</div>
+      <% } else if (weekly.available) { %>
+        <form action="/profile/periodic/weekly" method="POST" style="margin:0;">
+          <button type="submit" style="width:100%;background:#fff;color:#0284c7;border:none;border-radius:10px;padding:12px;font-weight:bold;font-size:14px;cursor:pointer;">
+            🗓️ সাপ্তাহিক ক্যাশব্যাক ক্লেইম করুন
+          </button>
+        </form>
+      <% } else { %>
+        <div style="text-align:center;color:rgba(255,255,255,0.85);font-size:12px;">এই সপ্তাহে ক্যাশব্যাক পাওয়ার মতো যথেষ্ট লস হয়নি।</div>
+      <% } %>
+    <% } else { %>
+      <div style="color:rgba(255,255,255,0.85);font-size:13px;text-align:center;">তথ্য লোড করা যায়নি।</div>
+    <% } %>
+  </div>
+
+  <!-- মাসিক রিওয়ার্ড -->
+  <div style="background:linear-gradient(135deg,#7c3aed,#5b21b6);border-radius:16px;padding:20px;margin-bottom:16px;">
+    <div style="color:#fff;font-size:16px;font-weight:bold;margin-bottom:4px;">📆 মাসিক রিওয়ার্ড</div>
+    <div style="color:rgba(255,255,255,0.9);font-size:12px;margin-bottom:14px;">গত মাসের মোট বাজির উপর টিয়ার বোনাস</div>
+
+    <% if (monthly) { %>
+      <div style="background:rgba(0,0,0,0.2);border-radius:10px;padding:12px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;padding:4px 0;">
+          <span style="color:rgba(255,255,255,0.85);font-size:13px;">গত মাসের মোট বাজি</span>
+          <span style="color:#fff;font-size:13px;font-weight:bold;"><%= Number(monthly.turnover).toLocaleString('bn-BD') %></span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:4px 0;">
+          <span style="color:rgba(255,255,255,0.85);font-size:13px;">প্রাপ্য বোনাস</span>
+          <span style="color:#fff;font-size:15px;font-weight:bold;"><%= Number(monthly.bonus).toLocaleString('bn-BD') %> কয়েন</span>
+        </div>
+      </div>
+
+      <% if (monthly.claimed) { %>
+        <div style="text-align:center;color:#ddd6fe;font-size:13px;font-weight:bold;">✅ গত মাসের রিওয়ার্ড নেওয়া হয়েছে</div>
+      <% } else if (monthly.available) { %>
+        <form action="/profile/periodic/monthly" method="POST" style="margin:0;">
+          <button type="submit" style="width:100%;background:#fff;color:#5b21b6;border:none;border-radius:10px;padding:12px;font-weight:bold;font-size:14px;cursor:pointer;">
+            📆 মাসিক রিওয়ার্ড ক্লেইম করুন
+          </button>
+        </form>
+      <% } else { %>
+        <div style="text-align:center;color:rgba(255,255,255,0.85);font-size:12px;">গত মাসে যথেষ্ট বাজি হয়নি।</div>
+      <% } %>
+
+      <!-- টিয়ার তালিকা -->
+      <div style="margin-top:14px;border-top:1px solid rgba(255,255,255,0.15);padding-top:12px;">
+        <% monthly.tiers.forEach(t => { %>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;">
+            <span style="color:rgba(255,255,255,0.8);"><%= Number(t.min).toLocaleString('bn-BD') %>+ বাজি</span>
+            <span style="color:#fde68a;font-weight:bold;"><%= t.bonus %> কয়েন</span>
+          </div>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <div style="color:rgba(255,255,255,0.85);font-size:13px;text-align:center;">তথ্য লোড করা যায়নি।</div>
+    <% } %>
+  </div>
+
+  <p style="font-size:.75rem;color:#94a3b8;text-align:center;line-height:1.6;">
+    সাপ্তাহিক ক্যাশব্যাক সপ্তাহে একবার, মাসিক রিওয়ার্ড মাসে একবার ক্লেইম করা যায়।
+  </p>
+
+</div>
+<%- include('../partials/bottom-nav') %>
+</body></html>
