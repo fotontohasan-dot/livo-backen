@@ -22,7 +22,7 @@ app.set('trust proxy', 1);
 
 const SESSION_SECRET = process.env.SESSION_SECRET || require('crypto').randomBytes(32).toString('hex');
 if (!process.env.SESSION_SECRET) {
-  console.warn('⚠️ SESSION_SECRET সেট করা নেই — সামযক র্‍যান্ডম সিক্রট ব্যবহার হচ্ছে। প্রোডাকশনে অবশ্যই SESSION_SECRET সেট করুন।');
+  console.warn('⚠️ SESSION_SECRET সেট করা নেই — সাময়িক র‍্যানম সিক্রেট ব্যবহার হচ্ছে। প্রোডকশনে অবশ্যই SESSION_SECRET সেট করুন।');
 }
 
 app.use(compression());
@@ -71,7 +71,7 @@ app.use(flash());
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
-  message: 'অনেকবার চেষ্ট করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
+  message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
   standardHeaders: true,
   legacyHeaders: false
 });
@@ -90,12 +90,12 @@ app.use('/register', loginLimiter);
 // ভাষা সেটিং
 const translations = {
   bn: {
-    balance: 'ব্যালেন্স', deposit: 'ডিপোজট', withdraw: 'উইথড',
-    login: 'লগইন', register: 'রজিস্টার', logout: 'লগআউট',
+    balance: 'ব্যালেন', deposit: 'ডিপোজিট', withdraw: 'উইথড্র',
+    login: 'লগইন', register: 'রেজস্টার', logout: 'লগআউট',
     home: 'হোম', invite: 'আমন্ত্রণ', promotion: 'প্রমোশন', support: 'সেবা', member: 'সদস্য',
     menu_home: 'হোম', menu_aviator: 'Aviator', menu_slots: 'Slots', menu_color: 'Color Prediction',
     menu_sports: 'স্পোর্টস', menu_tournament: 'টুর্নামেন্ট', menu_deposit: 'ডিপোজিট', menu_withdraw: 'উইথড্র',
-    menu_leaderboard: 'লিডারবোর্ড', menu_news: 'নিউজ', menu_profile: 'প্রোফাইল', menu_admin: 'এডমিন পনেল'
+    menu_leaderboard: 'লিডারবোর্ড', menu_news: 'নিউজ', menu_profile: 'প্রোফাইল', menu_admin: 'এডমিন প্যানেল'
   },
   en: {
     balance: 'Balance', deposit: 'Deposit', withdraw: 'Withdraw',
@@ -153,7 +153,10 @@ app.use((req, res, next) => {
       }
     } catch (e) {}
   }
-  return // ==================== ROUTES ====================
+  return next();
+});
+
+// ==================== ROUTES ====================
 app.use('/', require('./routes/auth'));
 app.use('/matches', require('./routes/matches'));
 app.use('/sports', require('./routes/sports'));
@@ -172,7 +175,6 @@ app.use('/chat', require('./routes/chat'));
 app.use('/extra', require('./routes/extra'));
 // ===============================================
 
-
 app.get('/app/update', (req, res) => res.render('app/update'));
 
 // Error Handling
@@ -190,14 +192,14 @@ app.use((err, req, res, next) => {
   ).catch(() => {});
 
   res.status(500).render('error', {
-    message: 'সর্ভার সমস্যা হয়েছে। একটু পরে আবার চেষ্টা করুন।',
+    message: 'সার্ভার সমস্যা হয়েছে। একটু পরে আবার চেষ্টা করুন।',
     siteName: 'Livo'
   });
 });
 
 app.use((req, res) => {
   res.status(404).render('error', {
-    message: 'পেজটি পওয়া যায়নি।',
+    message: 'পেজটি পাওয়া যায়নি।',
     siteName: 'Livo'
   });
 });
