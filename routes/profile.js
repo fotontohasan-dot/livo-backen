@@ -6,6 +6,7 @@ const bcrypt = require('bcryptjs');
 const { getTodayReward, claimDailyReward } = require('../services/dailyReward');
 const { getReferralStats } = require('../services/referral');
 const { getCashbackStatus, claimCashback } = require('../services/cashback');
+const { getVipStatus } = require('../services/vip');
 
 router.get('/', isAuth, async (req, res) => {
   try {
@@ -188,6 +189,17 @@ router.post('/cashback/claim', isAuth, async (req, res) => {
     req.flash('error', 'সার্ভার ত্রুটি।');
   }
   res.redirect('/profile/cashback');
+});
+
+// ==================== VIP ====================
+router.get('/vip', isAuth, async (req, res) => {
+  try {
+    const vip = await getVipStatus(req.session.user.id);
+    res.render('profile/vip', { user: req.session.user, vip });
+  } catch (err) {
+    console.error('vip page error:', err.message);
+    res.render('profile/vip', { user: req.session.user, vip: null });
+  }
 });
 
 // ==================== রেফারেল ====================
