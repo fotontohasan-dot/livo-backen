@@ -12,6 +12,7 @@ const { getSegments, canSpin, spin } = require('../services/wheel');
 const { getLoyalty, redeemPoints } = require('../services/loyalty');
 const { getStreak } = require('../services/streak');
 const { getBadges } = require('../services/badges');
+const { getAllFreeBets, claimFreeBet } = require('../services/freebet');
 
 router.get('/', isAuth, async (req, res) => {
   try {
@@ -437,6 +438,28 @@ router.get('/badges', isAuth, async (req, res) => {
     console.error('badges page error:', err.message);
     res.render('profile/badges', { user: req.session.user, badges: [] });
   }
+});
+
+// ==================== ফ্রি বেট ====================
+router.get('/freebet', isAuth, async (req, res) => {
+  try {
+    const freebets = await getAllFreeBets(req.session.user.id);
+    res.render('profile/freebet', { user: req.session.user, freebets });
+  } catch (err) {
+    console.error('freebet page error:', err.message);
+    res.render('profile/freebet', { user: req.session.user, freebets: [] });
+  }
+});
+
+router.post('/freebet/claim/:id', isAuth, async (req, res) => {
+  try {
+    const result = await claimFreeBet(req.session.user.id, parseInt(req.params.id));
+    req.flash(result.success ? 'success' : 'error', result.message);
+  } catch (err) {
+    console.error('freebet claim error:', err.message);
+    req.flash('error', 'সার্ভার ত্রুটি।');
+  }
+  res.redirect('/profile/freebet');
 });
 
 module.exports = router;
