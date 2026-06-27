@@ -193,4 +193,95 @@ async function runMigrations() {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS vip_levels (
         id SERIAL PRIMARY KEY,
-        level
+        level INTEGER NOT NULL,
+        name VARCHAR(40) NOT NULL,
+        min_turnover NUMERIC(16,2) NOT NULL,
+        upgrade_bonus INTEGER DEFAULT 0,
+        weekly_bonus INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    const vipCount = await pool.query(`SELECT COUNT(*) FROM vip_levels`);
+    if (parseInt(vipCount.rows[0].count) === 0) {
+      await pool.query(`
+        INSERT INTO vip_levels (level, name, min_turnover, upgrade_bonus, weekly_bonus) VALUES
+        (0, 'Bronze', 0, 0, 0),
+        (1, 'Silver', 50000, 200, 50),
+        (2, 'Gold', 200000, 800, 200),
+        (3, 'Platinum', 500000, 2000, 500),
+        (4, 'Diamond', 1500000, 6000, 1500),
+        (5, 'Elite', 5000000, 20000, 5000);
+      `);
+    }
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS mission_defs (
+        id SERIAL PRIMARY KEY,
+        title TEXT NOT NULL,
+        target_type VARCHAR(20) NOT NULL,
+        target_value NUMERIC(14,2) NOT NULL,
+        reward INTEGER NOT NULL,
+        active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    const missionCount = await pool.query(`SELECT COUNT(*) FROM mission_defs`);
+    if (parseInt(missionCount.rows[0].count) === 0) {
+      await pool.query(`
+        INSERT INTO mission_defs (title, target_type, target_value, reward) VALUES
+        ('আজ ৩টি বাজি ধরুন', 'bet_count', 3, 50),
+        ('আজ ১০টি বাজি ধরুন', 'bet_count', 10, 150),
+        ('আজ মোট ১০০০ টার্নওভার করুন', 'turnover', 1000, 100),
+        ('আজ মোট ৫০০০ টার্নওভার করুন', 'turnover', 5000, 400);
+      `);
+    }
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS user_missions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        mission_date DATE NOT NULL,
+        bet_count INTEGER DEFAULT 0,
+        turnover NUMERIC(14,2) DEFAULT 0,
+        claimed_ids INTEGER[] DEFAULT '{}',
+        UNIQUE (user_id, mission_date)
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_umission_user_date ON user_missions(user_id, mission_date);`);
+
+    // users টেবিলে নতুন কলাম (responsible gaming সহ)
+    await pool.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS kyc_status VARCHAR(20) DEFAULT 'none',
+      ADD COLUMN IF NOT EXISTS last_login TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS last_ip TEXT,
+      ADD COLUMN IF NOT EXISTS last_device TEXT,
+      ADD COLUMN IF NOT EXISTS login_count INTEGER DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS admin_note TEXT,
+      ADD COLUMN IF NOT EXISTS last_reward_date DATE,
+      ADD COLUMN IF NOT EXISTS first_deposit_done BOOLEAN DEFAULT false,
+      ADD COLUMN IF NOT EXISTS total_deposited NUMERIC(14,2) DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS total_turnover NUMERIC(16,2) DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS vip_level INTEGER DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS daily_deposit_limit NUMERIC(14,2),
+      ADD COLUMN IF NOT EXISTS self_exclude_until TIMESTAMP;
+    `);
+
+    await pool.query(`
+      ALTER TABLE payment_requests
+      ADD COLUMN IF NOT EXISTS want_bonus BOOLEAN DEFAULT false;
+    `);
+
+    await pool.query(`
+      ALTER TABLE matches
+      ADD COLUMN IF NOT EXISTS start_time TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS league TEXT;
+    `);
+
+    console.log("✅ All tables migration completed successfully");
+  } catch (err) {
+    console.error("❌ Migration error:", err.message);
+  }
+}
+
+module.exports = runMigrations;
