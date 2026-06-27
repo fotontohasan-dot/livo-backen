@@ -5,10 +5,8 @@ const { isAuth } = require('../middleware/auth');
 const { addTurnover } = require('../services/turnover');
 const { updateDailyTurnover } = require('../services/dailyReward');
 const { distributeCommission } = require('../services/referral');
+const { addBet } = require('../services/cashback');
 
-// ====================================================
-//  DB row -> client (matches.ejs) এর জন্য ফরম্যাট
-// ====================================================
 function formatMatch(row) {
   return {
     id: row.id,
@@ -25,10 +23,6 @@ function formatMatch(row) {
     date: row.start_time || null
   };
 }
-
-// ====================================================
-//  পেজ রাউটগুলো
-// ====================================================
 
 router.get('/', (req, res) => {
   res.render('matches', {
@@ -66,9 +60,6 @@ router.get('/football', (req, res) => {
   });
 });
 
-// ====================================================
-//  API রাউট  ->  GET /matches/api/live
-// ====================================================
 router.get('/api/live', async (req, res) => {
   try {
     const result = await pool.query(
@@ -95,9 +86,6 @@ router.get('/api/live', async (req, res) => {
   }
 });
 
-// ====================================================
-//  একক ম্যাচ ডিটেইল  ->  GET /matches/:id
-// ====================================================
 router.get('/:id', async (req, res) => {
   try {
     const matchRes = await pool.query(`SELECT * FROM matches WHERE id = $1`, [req.params.id]);
@@ -138,10 +126,6 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// ====================================================
-//  ম্যাচে বেট/প্রেডিকশন  ->  POST /matches/:id/bet
-//  client পাঠায়: { market_id, runner, odd, stake }
-// ====================================================
 router.post('/:id/bet', isAuth, async (req, res) => {
   const userId = req.session.user.id;
   const matchId = req.params.id;
@@ -175,7 +159,7 @@ router.post('/:id/bet', isAuth, async (req, res) => {
     );
     if (upd.rowCount === 0) {
       await client.query('ROLLBACK');
-      return res.status(400).json({ success: false, message: 'পর্যাপ কয়েন নেই' });
+      return res.status(400).json({ success: false, message: 'পর্যাপ্ত কয়েন নেই' });
     }
 
     await client.query(
@@ -194,14 +178,10 @@ router.post('/:id/bet', isAuth, async (req, res) => {
 
     if (req.session.user) req.session.user.coins = upd.rows[0].coins;
 
-    // টার্নওভার (স্পোর্টস) — বোনাস টার্নওভার
     addTurnover(userId, 'sports', stake).catch(e => console.error('turnover:', e.message));
-
-    // দৈনক টিয়ার রিওয়ার্ডের জন্য স্পোরস টার্নওভার
     updateDailyTurnover(userId, stake).catch(e => console.error('dailyReward:', e.message));
-
-    // রেফারেল মাল্টি-লেভেল কমিশন
     distributeCommission(userId, stake).catch(e => console.error('commission:', e.message));
+    addBet(userId, stake).catch(e => console.error('cashback:', e.message));
 
     res.json({ success: true, message: 'বেট সফল হয়েছে!', newBalance: upd.rows[0].coins });
   } catch (err) {
