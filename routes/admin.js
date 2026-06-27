@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
 const { isAdmin } = require('../middleware/auth');
+const { settleSelectionsForMarket } = require('../services/accumulator');
 const { syncMatches } = require('../services/matchUpdater');
 
 router.use(isAdmin);
@@ -256,6 +257,7 @@ router.post('/markets/:marketId/settle', async (req, res) => {
       }
     }
     await client.query(`UPDATE markets SET status = 'settled', updated_at = NOW() WHERE id = $1`, [marketId]);
+    await settleSelectionsForMarket(client, marketId, winning_runner);
     await client.query('COMMIT');
     req.flash('success', `সেটেল সম্পন্ন! ${bets.rows.length} টি বেট, ${winnersCount} জন জিতেছে।`);
     res.redirect('back');
