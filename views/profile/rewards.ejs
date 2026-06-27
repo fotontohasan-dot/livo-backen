@@ -1,52 +1,108 @@
 <%- include('../partials/head') %>
-<div class="container" style="padding:16px;padding-bottom:100px">
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-    <a href="/profile" style="color:#fff;text-decoration:none;font-size:20px">←</a>
-    <h1 style="color:#fff;font-size:18px;font-weight:bold">🏆 পুরস্কার সেন্টার</h1>
-  </div>
-
-  <!-- User Card -->
-  <div style="background:linear-gradient(135deg,#f59e0b,#ef4444);border-radius:16px;padding:20px;margin-bottom:16px">
-    <div style="display:flex;align-items:center;gap:12px">
-      <div style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:bold;color:#fff">
-        <%= user.username.charAt(0).toUpperCase() %>
-      </div>
-      <div>
-        <div style="color:#fff;font-weight:bold"><%= user.username %></div>
-        <div style="color:rgba(255,255,255,0.8);font-size:13px">🪙 <%= user.coins %> কয়েন</div>
-      </div>
-    </div>
-    <div style="margin-top:12px;background:rgba(255,255,255,0.2);border-radius:8px;height:8px">
-      <div style="background:#fff;border-radius:8px;height:8px;width:0%"></div>
-    </div>
-    <div style="color:rgba(255,255,255,0.8);font-size:12px;margin-top:4px;text-align:right">VIP0 → VIP1</div>
-  </div>
-
-  <!-- Reward Cards -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-    <a href="/profile/referral" style="text-decoration:none;background:linear-gradient(135deg,#10b981,#06b6d4);border-radius:16px;padding:20px;display:flex;flex-direction:column;align-items:center;gap:8px">
-      <div style="font-size:32px">🎁</div>
-      <div style="color:#fff;font-weight:bold">দাবি করা</div>
-      <div style="background:rgba(255,255,255,0.2);color:#fff;font-size:12px;padding:2px 8px;border-radius:20px">রেফারেল বোনাস</div>
-    </a>
-
-    <a href="/coins" style="text-decoration:none;background:linear-gradient(135deg,#f59e0b,#fbbf24);border-radius:16px;padding:20px;display:flex;flex-direction:column;align-items:center;gap:8px">
-      <div style="font-size:32px">💰</div>
-      <div style="color:#fff;font-weight:bold">কয়েন তহবিল</div>
-      <div style="background:rgba(255,255,255,0.2);color:#fff;font-size:12px;padding:2px 8px;border-radius:20px">🪙 <%= user.coins %></div>
-    </a>
-
-    <a href="/profile/missions" style="text-decoration:none;background:linear-gradient(135deg,#8b5cf6,#6366f1);border-radius:16px;padding:20px;display:flex;flex-direction:column;align-items:center;gap:8px">
-      <div style="font-size:32px">🎯</div>
-      <div style="color:#fff;font-weight:bold">মিশন</div>
-      <div style="background:rgba(255,255,255,0.2);color:#fff;font-size:12px;padding:2px 8px;border-radius:20px">পয়েন্ট অর্জন করুন</div>
-    </a>
-
-    <a href="/profile/referral" style="text-decoration:none;background:linear-gradient(135deg,#ec4899,#f43f5e);border-radius:16px;padding:20px;display:flex;flex-direction:column;align-items:center;gap:8px">
-      <div style="font-size:32px">👥</div>
-      <div style="color:#fff;font-weight:bold">বন্ধু আমন্ত্রণ</div>
-      <div style="background:rgba(255,255,255,0.2);color:#fff;font-size:12px;padding:2px 8px;border-radius:20px">১০০ কয়েন/রেফারেল</div>
-    </a>
-  </div>
-</div>
 <%- include('../partials/navbar') %>
+<div class="container page" style="max-width:600px;margin:0 auto;padding:15px;">
+  <%- include('../partials/flash') %>
+
+  <h1 style="font-size:1.4rem;font-weight:800;margin-bottom:1rem;text-align:center;color:var(--gold);">
+    🎁 দৈনিক রিওয়ার্ড
+  </h1>
+
+  <% if (reward) { %>
+    <!-- আজকের টার্নওভার -->
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="card-body" style="text-align:center;padding:1.2rem;">
+        <div style="font-size:.8rem;color:var(--muted);">আজকের স্পোর্টস টার্নওভার</div>
+        <div style="font-size:2rem;font-weight:900;color:var(--gold);margin:.3rem 0;">
+          <%= Number(reward.turnover).toLocaleString('bn-BD') %>
+        </div>
+
+        <% 
+          // পরের টিয়ারের দিকে প্রোগ্রেস হিসাব
+          let pct = 100;
+          let nextText = 'সর্বোচ্চ টিয়ার অর্জিত!';
+          if (reward.nextTier) {
+            const target = Number(reward.nextTier.min_turnover);
+            pct = Math.min(100, Math.floor((reward.turnover / target) * 100));
+            nextText = `পরের টিয়ার: ${Number(target).toLocaleString('bn-BD')} (বোনাস ${reward.nextTier.bonus_amount})`;
+          }
+        %>
+
+        <!-- প্রোগ্রেস বার -->
+        <div style="background:rgba(255,255,255,0.1);border-radius:20px;height:14px;overflow:hidden;margin:.6rem 0;">
+          <div style="width:<%= pct %>%;height:100%;background:var(--grad-gold,linear-gradient(90deg,#f59e0b,#fbbf24));transition:width .5s;"></div>
+        </div>
+        <div style="font-size:.78rem;color:var(--muted);"><%= nextText %></div>
+      </div>
+    </div>
+
+    <!-- বর্তমান প্রাপ্য বোনাস + ক্লেইম -->
+    <div class="card" style="margin-bottom:1rem;border:1px solid var(--gold);">
+      <div class="card-body" style="text-align:center;padding:1.2rem;">
+        <% if (reward.currentTier) { %>
+          <div style="font-size:.85rem;color:#fff;">আপনার বর্তমান প্রাপ্য বোনাস</div>
+          <div style="font-size:1.8rem;font-weight:900;color:#10b981;margin:.3rem 0;">
+            <%= reward.currentTier.bonus_amount %> কয়েন
+          </div>
+          <% if (reward.claimed) { %>
+            <button class="btn" style="width:100%;background:rgba(255,255,255,0.1);color:var(--muted);cursor:not-allowed;" disabled>
+              ✅ আজকের রিওয়ার্ড নেওয়া হয়েছে (<%= reward.claimedAmount %> কয়েন)
+            </button>
+          <% } else { %>
+            <form action="/profile/rewards/claim" method="POST">
+              <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;font-weight:700;">
+                🎁 ক্লেইম করুন
+              </button>
+            </form>
+          <% } %>
+        <% } else { %>
+          <div style="font-size:.9rem;color:var(--muted);">
+            রিওয়ার্ড পেতে আজ আরও স্পোর্টস বেট করুন।<br>
+            সর্বনিম্ন টিয়ার: <%= reward.tiers.length ? Number(reward.tiers[0].min_turnover).toLocaleString('bn-BD') : '5,000' %> টার্নওভার
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- টিয়ার টেবিল -->
+    <div class="card">
+      <div class="card-header">📊 টিয়ার তালিকা</div>
+      <div class="card-body" style="padding:0;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border-glass);">
+              <th style="padding:.7rem;text-align:left;font-size:.8rem;color:var(--muted);">দৈনিক টার্নওভার</th>
+              <th style="padding:.7rem;text-align:right;font-size:.8rem;color:var(--muted);">বোনাস</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% reward.tiers.forEach(t => { 
+              const reached = reward.turnover >= Number(t.min_turnover);
+            %>
+              <tr style="border-bottom:1px solid var(--border-glass);">
+                <td style="padding:.7rem;font-size:.9rem;color:<%= reached ? '#10b981' : '#fff' %>;">
+                  <%= reached ? '✅ ' : '' %><%= Number(t.min_turnover).toLocaleString('bn-BD') %>+
+                </td>
+                <td style="padding:.7rem;text-align:right;font-weight:700;color:var(--gold);">
+                  <%= t.bonus_amount %> টাকা
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <p style="font-size:.75rem;color:var(--muted);text-align:center;margin-top:1rem;line-height:1.6;">
+      ⏰ প্রতিদিন রাত ১২টায় টার্নওভার রিসেট হয়।<br>
+      শুধু স্পোর্টস বেটিং গণনা হয়। দিনে একবার ক্লেইম করা যায়।
+    </p>
+
+  <% } else { %>
+    <div class="card"><div class="card-body" style="text-align:center;padding:2rem;color:var(--muted);">
+      রিওয়ার্ড তথ্য লোড করা যায়নি। পরে আবার চেষ্টা করুন।
+    </div></div>
+  <% } %>
+
+</div>
+<%- include('../partials/bottom-nav') %>
+</body></html>
