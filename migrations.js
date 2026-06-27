@@ -99,7 +99,6 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_login_user ON login_logs(user_id);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_login_ip ON login_logs(ip);`);
 
-    // বোনাস / টার্নওভার
     await pool.query(`
       CREATE TABLE IF NOT EXISTS bonuses (
         id SERIAL PRIMARY KEY,
@@ -118,7 +117,6 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_bonus_user ON bonuses(user_id);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_bonus_status ON bonuses(status);`);
 
-    // দৈনিক রিওয়ার্ড টিয়ার
     await pool.query(`
       CREATE TABLE IF NOT EXISTS daily_reward_tiers (
         id SERIAL PRIMARY KEY,
@@ -152,7 +150,6 @@ async function runMigrations() {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_udr_user_date ON user_daily_rewards(user_id, reward_date);`);
 
-    // রেফারেল
     await pool.query(`
       CREATE TABLE IF NOT EXISTS referrals (
         id SERIAL PRIMARY KEY,
@@ -180,9 +177,6 @@ async function runMigrations() {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_refcom_earner ON referral_commissions(earner_id);`);
 
-    // ==================== ক্যাশব্যাক ====================
-    // প্রতিদিন ইউজারের নট লোকসানের একটা শতাংশ পরদন ফেরত।
-    // daily_losses: প্রতিদিন প্রতি ইউজার কত বাজি ধরল ও কত জিতল — নট লোকসান বের করতে।
     await pool.query(`
       CREATE TABLE IF NOT EXISTS daily_losses (
         id SERIAL PRIMARY KEY,
@@ -196,7 +190,34 @@ async function runMigrations() {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_loss_user_date ON daily_losses(user_id, loss_date);`);
 
-    // users টেবিল নতুন কলাম
+    // ==================== VIP লেভেল ====================
+    // মোট টার্নওভার (লাইফটাইম বাজি) অনুযায়ী VIP লেভেল।
+    // প্রতি লেভেলে আপগ্রেড বোনাস + সাপ্তাহিক বোনাস হার।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS vip_levels (
+        id SERIAL PRIMARY KEY,
+        level INTEGER NOT NULL,
+        name VARCHAR(40) NOT NULL,
+        min_turnover NUMERIC(16,2) NOT NULL,
+        upgrade_bonus INTEGER DEFAULT 0,
+        weekly_bonus INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    const vipCount = await pool.query(`SELECT COUNT(*) FROM vip_levels`);
+    if (parseInt(vipCount.rows[0].count) === 0) {
+      await pool.query(`
+        INSERT INTO vip_levels (level, name, min_turnover, upgrade_bonus, weekly_bonus) VALUES
+        (0, 'Bronze', 0, 0, 0),
+        (1, 'Silver', 50000, 200, 50),
+        (2, 'Gold', 200000, 800, 200),
+        (3, 'Platinum', 500000, 2000, 500),
+        (4, 'Diamond', 1500000, 6000, 1500),
+        (5, 'Elite', 5000000, 20000, 5000);
+      `);
+    }
+
+    // users টেবিলে নতুন কলাম
     await pool.query(`
       ALTER TABLE users
       ADD COLUMN IF NOT EXISTS kyc_status VARCHAR(20) DEFAULT 'none',
@@ -207,7 +228,9 @@ async function runMigrations() {
       ADD COLUMN IF NOT EXISTS admin_note TEXT,
       ADD COLUMN IF NOT EXISTS last_reward_date DATE,
       ADD COLUMN IF NOT EXISTS first_deposit_done BOOLEAN DEFAULT false,
-      ADD COLUMN IF NOT EXISTS total_deposited NUMERIC(14,2) DEFAULT 0;
+      ADD COLUMN IF NOT EXISTS total_deposited NUMERIC(14,2) DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS total_turnover NUMERIC(16,2) DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS vip_level INTEGER DEFAULT 0;
     `);
 
     await pool.query(`
