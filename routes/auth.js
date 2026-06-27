@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { pool } = require('../db');
+const { createReferral } = require('../services/referral');
 
 function sanitizeUser(u) {
   if (!u) return null;
@@ -95,7 +96,14 @@ router.post('/register', async (req, res) => {
       VALUES ($1, $2, $3, $4, 'user', 0, $5, $6, NOW()) RETURNING *
     `, [username, email || null, phone || null, hashed, myCode, referredById]);
 
-    await recordLogin(req, result.rows[0].id);
+    const newUserId = result.rows[0].id;
+
+    // রেফারেল রেকর্ড তৈরি (সেল্ফ-রেফারেল service-এ আটকানো আছে)
+    if (referredById) {
+      await createReferral(null, referredById, newUserId);
+    }
+
+    await recordLogin(req, newUserId);
     req.session.user = sanitizeUser(result.rows[0]);
     req.flash('success', '✅ রেজিস্ট্রেশন সফল হয়েছে! স্বাগতম!');
     res.redirect('/');
