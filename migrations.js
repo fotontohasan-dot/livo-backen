@@ -98,7 +98,6 @@ async function runMigrations() {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_login_user ON login_logs(user_id);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_login_ip ON login_logs(ip);`);
-
     // ==================== বোনাস / টার্নওভার টেবিল ====================
     await pool.query(`
       CREATE TABLE IF NOT EXISTS bonuses (
@@ -118,16 +117,7 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_bonus_user ON bonuses(user_id);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_bonus_status ON bonuses(status);`);
 
-    console.log("✅ All tables migration completed successfully");
-  } catch (err) {
-    console.error("❌ Migration error:", err.message);
-  }
-}
-
-module.exports = runMigrations;
     // ==================== দৈনিক রিওয়ার্ড টিয়ার সিস্টেম ====================
-    // daily_reward_tiers: টিয়ার নিয়ম (অ্যাডমিন বদলাতে পারবে)
-    // min_turnover = এই টার্নওভার ছুঁলে, bonus_amount বোনাস মিলবে
     await pool.query(`
       CREATE TABLE IF NOT EXISTS daily_reward_tiers (
         id SERIAL PRIMARY KEY,
@@ -136,8 +126,6 @@ module.exports = runMigrations;
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
-
-    // ডিফল্ট টিয়ার বসানো (একবারই — খালি থাকলে)
     const tierCount = await pool.query(`SELECT COUNT(*) FROM daily_reward_tiers`);
     if (parseInt(tierCount.rows[0].count) === 0) {
       await pool.query(`
@@ -149,8 +137,6 @@ module.exports = runMigrations;
       `);
     }
 
-    // user_daily_rewards: প্রতি ইউজারের আজকের স্পোর্টস টার্নওভার ও ক্লেইম অবস্থা
-    // প্রতিদিন নতুন রো (wager_date দিয়ে), রাত ১২টার পর নতুন দিন = অটো রিসেট
     await pool.query(`
       CREATE TABLE IF NOT EXISTS user_daily_rewards (
         id SERIAL PRIMARY KEY,
@@ -165,6 +151,35 @@ module.exports = runMigrations;
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_udr_user_date ON user_daily_rewards(user_id, reward_date);`);
 
+    // ==================== রেফারেল সিস্টেম ====================
+    // referrals: কে কাকে রেফার করল, প্রথম ডিপোজিট ও বোনাস অবস্থা
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS referrals (
+        id SERIAL PRIMARY KEY,
+        referrer_id INTEGER REFERENCES users(id),   -- যে রেফার করেছে
+        referred_id INTEGER REFERENCES users(id),    -- যাকে রেফার করা হয়েছে
+        first_deposit_done BOOLEAN DEFAULT false,    -- রেফার করা ইউজার প্রথম ডিপোজিট করেছে কিনা
+        signup_bonus_paid BOOLEAN DEFAULT false,     -- রেফারারকে প্রথম-ডিপোজিট বোনাস দেওয়া হয়েছে কিনা
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE (referred_id)
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_ref_referrer ON referrals(referrer_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_ref_referred ON referrals(referred_id);`);
+
+    // referral_commissions: সব কমিশন/বোনাসের হিস্ট্রি (অডিট লগ)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS referral_commissions (
+        id SERIAL PRIMARY KEY,
+        earner_id INTEGER REFERENCES users(id),      -- যে কমিশন পেল
+        from_user_id INTEGER REFERENCES users(id),   -- যার বাজি/ডিপোজিট থেকে
+        level INTEGER DEFAULT 1,                       -- 1/2/3 (মাল্টি-লেভেল), 0 = signup bonus
+        amount NUMERIC(12,2) NOT NULL,               -- কত কয়েন
+        reason VARCHAR(40),                           -- 'signup' / 'commission'
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_refcom_earner ON referral_commissions(earner_id);`);
     // users টেবিলে নতুন কলাম
     await pool.query(`
       ALTER TABLE users
@@ -174,7 +189,9 @@ module.exports = runMigrations;
       ADD COLUMN IF NOT EXISTS last_device TEXT,
       ADD COLUMN IF NOT EXISTS login_count INTEGER DEFAULT 0,
       ADD COLUMN IF NOT EXISTS admin_note TEXT,
-      ADD COLUMN IF NOT EXISTS last_reward_date DATE;
+      ADD COLUMN IF NOT EXISTS last_reward_date DATE,
+      ADD COLUMN IF NOT EXISTS first_deposit_done BOOLEAN DEFAULT false,
+      ADD COLUMN IF NOT EXISTS total_deposited NUMERIC(14,2) DEFAULT 0;
     `);
 
     // payment_requests টেবিলে বোনাস নেওয়ার তথ্য
