@@ -3,6 +3,7 @@ const router = express.Router();
 const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
 const { addTurnover } = require('../services/turnover');
+const { updateDailyTurnover } = require('../services/dailyReward');
 
 // ====================================================
 //  DB row -> client (matches.ejs) এর জন্য ফরম্যাট
@@ -28,7 +29,6 @@ function formatMatch(row) {
 //  পেজ রাউটগুলো
 // ====================================================
 
-// মূল ম্যাচ পেজ  ->  GET /matches
 router.get('/', (req, res) => {
   res.render('matches', {
     currentPage: 'matches',
@@ -38,7 +38,6 @@ router.get('/', (req, res) => {
   });
 });
 
-// World Cup ক্যাটাগরি  ->  GET /matches/worldcup
 router.get('/worldcup', (req, res) => {
   res.render('matches', {
     currentPage: 'worldcup',
@@ -48,7 +47,6 @@ router.get('/worldcup', (req, res) => {
   });
 });
 
-// Cricket ক্যাটাগরি  ->  GET /matches/cricket
 router.get('/cricket', (req, res) => {
   res.render('matches', {
     currentPage: 'cricket',
@@ -58,7 +56,6 @@ router.get('/cricket', (req, res) => {
   });
 });
 
-// Football ক্যাটাগরি  ->  GET /matches/football
 router.get('/football', (req, res) => {
   res.render('matches', {
     currentPage: 'football',
@@ -164,14 +161,12 @@ router.post('/:id/bet', isAuth, async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    // মার্কেট খোলা আছে কিনা যাচাই
     const m = await client.query(`SELECT * FROM markets WHERE id = $1`, [market_id]);
     if (!m.rows[0] || m.rows[0].status !== 'open') {
       await client.query('ROLLBACK');
       return res.status(400).json({ success: false, message: 'এই মার্কেটে এখন বেট করা যাবে না' });
     }
 
-    // অ্যাটমিক কয়েন কাটা (পর্যাপ্ত থাকলে তবেই)
     const upd = await client.query(
       `UPDATE users SET coins = coins - $1 WHERE id = $2 AND coins >= $1 RETURNING coins`,
       [stake, userId]
@@ -181,14 +176,12 @@ router.post('/:id/bet', isAuth, async (req, res) => {
       return res.status(400).json({ success: false, message: 'পর্যাপ্ত কয়েন নেই' });
     }
 
-    // বেট রেকর্ড
     await client.query(
       `INSERT INTO bets (user_id, match_id, market_id, market_type, runner, odd, stake, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')`,
       [userId, matchId, market_id, m.rows[0].type, runner || null, oddNum, stake]
     );
 
-    // কয়েন লেনদেন রেকর্ড
     await client.query(
       `INSERT INTO coin_transactions (user_id, amount, type, description)
        VALUES ($1, $2, 'bet', $3)`,
@@ -199,8 +192,11 @@ router.post('/:id/bet', isAuth, async (req, res) => {
 
     if (req.session.user) req.session.user.coins = upd.rows[0].coins;
 
-    // টার্নওভার আপডেট (স্পোর্টস) — বেটের পরিমাণ গণনা
+    // টার্নওভার আপডেট (স্পোর্টস) — বোনাস টার্নওভার
     addTurnover(userId, 'sports', stake).catch(e => console.error('turnover:', e.message));
+
+    // দৈনিক টিয়ার রিওয়ার্ডের জন্য স্পোর্টস টার্নওভার যোগ
+    updateDailyTurnover(userId, stake).catch(e => console.error('dailyReward:', e.message));
 
     res.json({ success: true, message: 'বেট সফল হয়েছে!', newBalance: upd.rows[0].coins });
   } catch (err) {
