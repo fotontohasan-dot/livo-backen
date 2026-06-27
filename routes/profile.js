@@ -13,6 +13,7 @@ const { getLoyalty, redeemPoints } = require('../services/loyalty');
 const { getStreak } = require('../services/streak');
 const { getBadges } = require('../services/badges');
 const { getAllFreeBets, claimFreeBet } = require('../services/freebet');
+const { getWeeklyStatus, claimWeekly, getMonthlyStatus, claimMonthly } = require('../services/periodicReward');
 
 router.get('/', isAuth, async (req, res) => {
   try {
@@ -460,6 +461,40 @@ router.post('/freebet/claim/:id', isAuth, async (req, res) => {
     req.flash('error', 'সার্ভার ত্রুটি।');
   }
   res.redirect('/profile/freebet');
+});
+
+// ==================== সাপ্তাহিক ও মাসিক রিওয়ার্ড ====================
+router.get('/periodic', isAuth, async (req, res) => {
+  try {
+    const weekly = await getWeeklyStatus(req.session.user.id);
+    const monthly = await getMonthlyStatus(req.session.user.id);
+    res.render('profile/periodic', { user: req.session.user, weekly, monthly });
+  } catch (err) {
+    console.error('periodic page error:', err.message);
+    res.render('profile/periodic', { user: req.session.user, weekly: null, monthly: null });
+  }
+});
+
+router.post('/periodic/weekly', isAuth, async (req, res) => {
+  try {
+    const result = await claimWeekly(req.session.user.id);
+    req.flash(result.success ? 'success' : 'error', result.message);
+  } catch (err) {
+    console.error('weekly claim error:', err.message);
+    req.flash('error', 'সার্ভার ত্রুটি।');
+  }
+  res.redirect('/profile/periodic');
+});
+
+router.post('/periodic/monthly', isAuth, async (req, res) => {
+  try {
+    const result = await claimMonthly(req.session.user.id);
+    req.flash(result.success ? 'success' : 'error', result.message);
+  } catch (err) {
+    console.error('monthly claim error:', err.message);
+    req.flash('error', 'সার্ভার ত্রুটি।');
+  }
+  res.redirect('/profile/periodic');
 });
 
 module.exports = router;
