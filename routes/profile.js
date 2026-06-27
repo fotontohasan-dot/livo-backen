@@ -7,6 +7,7 @@ const { getTodayReward, claimDailyReward } = require('../services/dailyReward');
 const { getReferralStats } = require('../services/referral');
 const { getCashbackStatus, claimCashback } = require('../services/cashback');
 const { getVipStatus } = require('../services/vip');
+const { getMissions, claimMission } = require('../services/missions');
 
 router.get('/', isAuth, async (req, res) => {
   try {
@@ -143,8 +144,26 @@ router.get('/security', isAuth, async (req, res) => {
   }
 });
 
-router.get('/missions', isAuth, (req, res) => {
-  res.render('profile/missions', { user: req.session.user });
+// ==================== ডেইলি মিশন ====================
+router.get('/missions', isAuth, async (req, res) => {
+  try {
+    const missions = await getMissions(req.session.user.id);
+    res.render('profile/missions', { user: req.session.user, missions });
+  } catch (err) {
+    console.error('missions page error:', err.message);
+    res.render('profile/missions', { user: req.session.user, missions: [] });
+  }
+});
+
+router.post('/missions/claim/:id', isAuth, async (req, res) => {
+  try {
+    const result = await claimMission(req.session.user.id, parseInt(req.params.id));
+    req.flash(result.success ? 'success' : 'error', result.message);
+  } catch (err) {
+    console.error('mission claim error:', err.message);
+    req.flash('error', 'সার্ভার ত্রুটি।');
+  }
+  res.redirect('/profile/missions');
 });
 
 // ==================== দৈনিক রিওয়ার্ড ====================
