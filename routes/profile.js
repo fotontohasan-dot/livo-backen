@@ -5,6 +5,7 @@ const { isAuth } = require('../middleware/auth');
 const bcrypt = require('bcryptjs');
 const { getTodayReward, claimDailyReward } = require('../services/dailyReward');
 const { getReferralStats } = require('../services/referral');
+const { getCashbackStatus, claimCashback } = require('../services/cashback');
 
 router.get('/', isAuth, async (req, res) => {
   try {
@@ -19,7 +20,7 @@ router.get('/', isAuth, async (req, res) => {
 
     const tournaments = await pool.query(`
       SELECT
-        COALESCE(t.name, 'টুর্নামন্ট') as name,
+        COALESCE(t.name, 'টুর্নামেন্ট') as name,
         COALESCE(t.sport, 'General') as sport,
         COALESCE(tp.points, 0) as points,
         tp.joined_at as joined_at
@@ -47,7 +48,7 @@ router.get('/', isAuth, async (req, res) => {
     });
   } catch (err) {
     console.error('Profile error:', err);
-    req.flash('error', 'প্রোফাইল লোড করতে সমস্যা হয়ছে।');
+    req.flash('error', 'প্রোফাইল লোড করতে সমস্যা হয়েছে।');
     res.redirect('/');
   }
 });
@@ -82,7 +83,7 @@ router.post('/change-password', isAuth, async (req, res) => {
     const np = new_password || newPassword;
 
     if (confirmPassword && np !== confirmPassword) {
-      req.flash('error', '❌ নতুন পাসওয়ার্ড মিলছ না।');
+      req.flash('error', '❌ নতুন পাসওয়ার্ড মিলছে না।');
       return res.redirect('/profile/security');
     }
 
@@ -93,10 +94,10 @@ router.post('/change-password', isAuth, async (req, res) => {
     }
     const hashed = await bcrypt.hash(np, 10);
     await pool.query(`UPDATE users SET password=$1 WHERE id=$2`, [hashed, req.session.user.id]);
-    req.flash('success', '✅ পাসওয়ার্ড পরবর্তন হয়েছে!');
+    req.flash('success', '✅ পাসওয়ার্ড পরিবর্তন হয়েছে!');
     res.redirect('/profile/security');
   } catch (err) {
-    req.flash('error', '❌ পাসওয়ার্ড পরবর্তন করতে সমস্যা হয়েছে।');
+    req.flash('error', '❌ পাসওয়ার্ড পরিবর্তন করতে সমস্যা হয়েছে।');
     res.redirect('/profile/security');
   }
 });
@@ -145,7 +146,7 @@ router.get('/missions', isAuth, (req, res) => {
   res.render('profile/missions', { user: req.session.user });
 });
 
-// ==================== দৈনিক রিওয়ার্ড পেজ ====================
+// ==================== দৈনিক রিওয়ার্ড ====================
 router.get('/rewards', isAuth, async (req, res) => {
   try {
     const reward = await getTodayReward(req.session.user.id);
@@ -159,11 +160,7 @@ router.get('/rewards', isAuth, async (req, res) => {
 router.post('/rewards/claim', isAuth, async (req, res) => {
   try {
     const result = await claimDailyReward(req.session.user.id);
-    if (result.success) {
-      req.flash('success', result.message);
-    } else {
-      req.flash('error', result.message);
-    }
+    req.flash(result.success ? 'success' : 'error', result.message);
   } catch (err) {
     console.error('claim error:', err.message);
     req.flash('error', 'সার্ভার ত্রুটি।');
@@ -171,7 +168,29 @@ router.post('/rewards/claim', isAuth, async (req, res) => {
   res.redirect('/profile/rewards');
 });
 
-// ==================== রেফারেল পেজ ====================
+// ==================== ক্যাশব্যাক ====================
+router.get('/cashback', isAuth, async (req, res) => {
+  try {
+    const cashback = await getCashbackStatus(req.session.user.id);
+    res.render('profile/cashback', { user: req.session.user, cashback });
+  } catch (err) {
+    console.error('cashback page error:', err.message);
+    res.render('profile/cashback', { user: req.session.user, cashback: null });
+  }
+});
+
+router.post('/cashback/claim', isAuth, async (req, res) => {
+  try {
+    const result = await claimCashback(req.session.user.id);
+    req.flash(result.success ? 'success' : 'error', result.message);
+  } catch (err) {
+    console.error('cashback claim error:', err.message);
+    req.flash('error', 'সার্ভার ত্রুটি।');
+  }
+  res.redirect('/profile/cashback');
+});
+
+// ==================== রেফারেল ====================
 router.get('/referral', isAuth, async (req, res) => {
   try {
     const stats = await getReferralStats(req.session.user.id);
