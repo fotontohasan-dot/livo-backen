@@ -249,8 +249,7 @@ async function runMigrations() {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_umission_user_date ON user_missions(user_id, mission_date);`);
 
-    // ==================== লাকি হুইল ====================
-    // wheel_spins: প্রতি ইউজার কোন তারিখে স্পিন করেছে (দিনে একবার)
+    // লাকি হুইল
     await pool.query(`
       CREATE TABLE IF NOT EXISTS wheel_spins (
         id SERIAL PRIMARY KEY,
@@ -262,6 +261,18 @@ async function runMigrations() {
       );
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_wheel_user_date ON wheel_spins(user_id, spin_date);`);
+
+    // লয়্যালটি পয়েন্ট
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS loyalty_ledger (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        points INTEGER NOT NULL,
+        reason VARCHAR(40),
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_loyalty_user ON loyalty_ledger(user_id);`);
 
     await pool.query(`
       ALTER TABLE users
@@ -277,7 +288,8 @@ async function runMigrations() {
       ADD COLUMN IF NOT EXISTS total_turnover NUMERIC(16,2) DEFAULT 0,
       ADD COLUMN IF NOT EXISTS vip_level INTEGER DEFAULT 0,
       ADD COLUMN IF NOT EXISTS daily_deposit_limit NUMERIC(14,2),
-      ADD COLUMN IF NOT EXISTS self_exclude_until TIMESTAMP;
+      ADD COLUMN IF NOT EXISTS self_exclude_until TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS loyalty_points INTEGER DEFAULT 0;
     `);
 
     await pool.query(`
