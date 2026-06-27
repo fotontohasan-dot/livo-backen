@@ -6,6 +6,7 @@ const { addTurnover } = require('../services/turnover');
 const { updateDailyTurnover } = require('../services/dailyReward');
 const { distributeCommission } = require('../services/referral');
 const { addBet } = require('../services/cashback');
+const { addVipTurnover } = require('../services/vip');
 
 function formatMatch(row) {
   return {
@@ -182,6 +183,7 @@ router.post('/:id/bet', isAuth, async (req, res) => {
     updateDailyTurnover(userId, stake).catch(e => console.error('dailyReward:', e.message));
     distributeCommission(userId, stake).catch(e => console.error('commission:', e.message));
     addBet(userId, stake).catch(e => console.error('cashback:', e.message));
+    addVipTurnover(userId, stake).catch(e => console.error('vip:', e.message));
 
     res.json({ success: true, message: 'বেট সফল হয়েছে!', newBalance: upd.rows[0].coins });
   } catch (err) {
