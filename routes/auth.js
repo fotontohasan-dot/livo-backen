@@ -13,7 +13,6 @@ function sanitizeUser(u) {
   return safe;
 }
 
-// লগইনের সময় IP/ডিভাইস রেকর্ড
 async function recordLogin(req, userId) {
   try {
     const ip = (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
@@ -98,7 +97,6 @@ router.post('/register', async (req, res) => {
 
     const newUserId = result.rows[0].id;
 
-    // রেফারেল রেকর্ড তৈরি (সেল্ফ-রেফারেল service-এ আটকানো আছে)
     if (referredById) {
       await createReferral(null, referredById, newUserId);
     }
@@ -131,6 +129,13 @@ router.post('/login', async (req, res) => {
     }
     if (user.is_banned) {
       req.flash('error', '❌ আপনার অ্যাকাউন্ট ব্যান করা হয়েছে।');
+      return res.redirect('/login');
+    }
+
+    // সেল্ফ-এক্সকশন চেক — নির্দিষ্ট সময় পর্যন্ত লগইন বন্ধ
+    if (user.self_exclude_until && new Date(user.self_exclude_until) > new Date()) {
+      const until = new Date(user.self_exclude_until).toLocaleDateString('bn-BD');
+      req.flash('error', `আপনি নিজে অ্যাকাউন্ট বন্ধ রেখেছেন। ${until} পর্যন্ত লগইন করা যাবে না।`);
       return res.redirect('/login');
     }
 
