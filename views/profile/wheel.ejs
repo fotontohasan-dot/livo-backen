@@ -1,0 +1,120 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto;text-align:center;">
+  <%- include('../partials/flash') %>
+
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+    <a href="/profile" style="color:#fff;text-decoration:none;font-size:20px;">←</a>
+    <h1 style="color:#fff;font-size:18px;font-weight:bold;">🎡 লাকি হুইল</h1>
+  </div>
+
+  <div style="color:#94a3b8;font-size:13px;margin-bottom:20px;">দিনে একবার ঘুরিয়ে কয়েন জিতুন!</div>
+
+  <!-- হুইল -->
+  <div style="position:relative;width:280px;height:280px;margin:0 auto 20px;">
+    <!-- পয়েন্টার -->
+    <div style="position:absolute;top:-6px;left:50%;transform:translateX(-50%);z-index:10;font-size:30px;">🔻</div>
+    <canvas id="wheelCanvas" width="280" height="280" style="border-radius:50%;box-shadow:0 0 30px rgba(245,158,11,0.4);"></canvas>
+  </div>
+
+  <% if (status && status.canSpin) { %>
+    <button id="spinBtn" class="btn btn-primary" style="padding:14px 50px;font-size:16px;font-weight:bold;border-radius:30px;">
+      🎯 স্পিন করুন
+    </button>
+  <% } else { %>
+    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:16px;color:#94a3b8;font-size:14px;">
+      ✅ আজ স্পিন করা হয়ে গেছে<% if (status && status.prize) { %> — পেয়েছেন <strong style="color:#f59e0b;"><%= status.prize %> কয়েন</strong><% } %>।<br>
+      আগামীকাল আবার আসুন।
+    </div>
+  <% } %>
+
+  <div id="result" style="margin-top:20px;font-size:18px;font-weight:bold;color:#10b981;"></div>
+
+</div>
+
+<script>
+const segments = <%- JSON.stringify(segments || []) %>;
+const colors = ['#ef4444','#f59e0b','#10b981','#0ea5e9','#8b5cf6','#ec4899','#14b8a6','#f97316'];
+const canvas = document.getElementById('wheelCanvas');
+const ctx = canvas.getContext('2d');
+const cx = 140, cy = 140, radius = 140;
+const n = segments.length;
+const arc = (2 * Math.PI) / n;
+let currentRotation = 0;
+
+function drawWheel() {
+  ctx.clearRect(0, 0, 280, 280);
+  for (let i = 0; i < n; i++) {
+    const start = currentRotation + i * arc;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, radius, start, start + arc);
+    ctx.closePath();
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.fill();
+    // লেখা
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(start + arc / 2);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 15px sans-serif';
+    ctx.fillText(segments[i], radius - 15, 5);
+    ctx.restore();
+  }
+}
+drawWheel();
+
+const spinBtn = document.getElementById('spinBtn');
+if (spinBtn) {
+  spinBtn.addEventListener('click', async () => {
+    spinBtn.disabled = true;
+    document.getElementById('result').innerText = '';
+
+    try {
+      const res = await fetch('/profile/wheel/spin', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+      const data = await res.json();
+
+      if (!data.success) {
+        document.getElementById('result').style.color = '#ef4444';
+        document.getElementById('result').innerText = data.message;
+        spinBtn.disabled = false;
+        return;
+      }
+
+      // যে ঘরে থামবে সেই index-এ পয়েন্টার (উপরে) আনতে ঘোরানো
+      const targetIndex = data.index;
+      const spins = 5; // কয়বার পুরো ঘুরবে
+      // পয়েন্টার উপরে (−90°), তাই ওই ঘর উপরে আনতে হিসাব
+      const targetAngle = (2 * Math.PI * spins) + (1.5 * Math.PI - (targetIndex * arc) - arc / 2);
+
+      const duration = 4000;
+      const startTime = performance.now();
+      const startRotation = currentRotation;
+
+      function animate(now) {
+        const elapsed = now - startTime;
+        const t = Math.min(elapsed / duration, 1);
+        const ease = 1 - Math.pow(1 - t, 3); // ease-out
+        currentRotation = startRotation + targetAngle * ease;
+        drawWheel();
+        if (t < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          document.getElementById('result').style.color = '#10b981';
+          document.getElementById('result').innerText = '🎉 ' + data.message;
+          setTimeout(() => location.reload(), 2500);
+        }
+      }
+      requestAnimationFrame(animate);
+
+    } catch (err) {
+      document.getElementById('result').style.color = '#ef4444';
+      document.getElementById('result').innerText = 'সমস্যা হয়েছে, আবার চেষ্টা করুন।';
+      spinBtn.disabled = false;
+    }
+  });
+}
+</script>
+<%- include('../partials/bottom-nav') %>
+</body></html>
