@@ -4,6 +4,7 @@ const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
 const { addTurnover } = require('../services/turnover');
 const { distributeCommission } = require('../services/referral');
+const { addBet, addWin } = require('../services/cashback');
 
 const supportedGames = {
   "aviator": "Aviator",
@@ -174,7 +175,7 @@ const gameHandlers = {
 router.get('/play', isAuth, (req, res) => {
   const gameSlug = req.query.game || 'slots';
   if (!supportedGames[gameSlug]) {
-    req.flash('error', 'গেমটি পওয়া যায়নি');
+    req.flash('error', 'গেমটি পাওয়া যায়নি');
     return res.redirect('/');
   }
   res.render('games/play', {
@@ -202,7 +203,7 @@ router.post('/play', isAuth, async (req, res) => {
   const userId = req.session.user.id;
   const betAmount = parseInt(amount);
 
-  if (isNaN(betAmount) || betAmount <= 0) return res.status(400).json({ success: false, message: 'সঠিক পরিমাণ দন' });
+  if (isNaN(betAmount) || betAmount <= 0) return res.status(400).json({ success: false, message: 'সঠিক পরিমাণ দিন' });
 
   const client = await pool.connect();
   try {
@@ -224,6 +225,7 @@ router.post('/play', isAuth, async (req, res) => {
 
       addTurnover(userId, 'casino', betAmount).catch(e => console.error('turnover:', e.message));
       distributeCommission(userId, betAmount).catch(e => console.error('commission:', e.message));
+      addBet(userId, betAmount).catch(e => console.error('cashback:', e.message));
 
       return res.json({ success: true, message: 'গেম শুরু হয়েছে' });
     }
@@ -245,6 +247,8 @@ router.post('/play', isAuth, async (req, res) => {
 
     addTurnover(userId, 'casino', betAmount).catch(e => console.error('turnover:', e.message));
     distributeCommission(userId, betAmount).catch(e => console.error('commission:', e.message));
+    addBet(userId, betAmount).catch(e => console.error('cashback:', e.message));
+    if (winAmount > 0) addWin(userId, winAmount).catch(e => console.error('cashback:', e.message));
 
     res.json({ success: true, newBalance: req.session.user.coins, winAmount, gameResult });
 
@@ -256,7 +260,6 @@ router.post('/play', isAuth, async (req, res) => {
   }
 });
 
-// ==================== AVIATOR / CRASH ক্যাশআউট ====================
 router.post('/cashout', isAuth, async (req, res) => {
   const userId = req.session.user.id;
   const { gameSlug, multiplier } = req.body;
@@ -280,7 +283,7 @@ router.post('/cashout', isAuth, async (req, res) => {
       crashed: true,
       winAmount: 0,
       newBalance: req.session.user.coins,
-      message: `উডজাহাজ ${state.crashPoint}x-এ ক্র্যাশ করেছে!`
+      message: `উড়োজাহাজ ${state.crashPoint}x-এ ক্র্যাশ করেছে!`
     });
   }
 
@@ -300,6 +303,9 @@ router.post('/cashout', isAuth, async (req, res) => {
     await client.query('COMMIT');
 
     req.session.user.coins = upd.rows[0].coins;
+
+    if (winAmount > 0) addWin(userId, winAmount).catch(e => console.error('cashback:', e.message));
+
     res.json({
       success: true,
       crashed: false,
