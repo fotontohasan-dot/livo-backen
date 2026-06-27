@@ -1,0 +1,58 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto;">
+  <%- include('../partials/flash') %>
+
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+    <a href="/profile" style="color:#fff;text-decoration:none;font-size:20px;">←</a>
+    <h1 style="color:#fff;font-size:18px;font-weight:bold;">🔥 উইন স্ট্রিক বোনাস</h1>
+  </div>
+
+  <% if (streak) { %>
+    <!-- বর্তমান স্ট্রিক -->
+    <div style="background:linear-gradient(135deg,#f97316,#ef4444);border-radius:16px;padding:24px;margin-bottom:16px;text-align:center;">
+      <div style="font-size:44px;margin-bottom:4px;">🔥</div>
+      <div style="color:rgba(255,255,255,0.9);font-size:13px;">বর্তমান স্ট্রিক</div>
+      <div style="color:#fff;font-size:38px;font-weight:900;"><%= streak.current %></div>
+      <div style="color:rgba(255,255,255,0.9);font-size:12px;margin-top:4px;">সর্বোচ্ স্ট্রিক: <%= streak.best %></div>
+    </div>
+
+    <!-- পরের মাইলস্টোন -->
+    <% if (streak.nextMilestone) { %>
+      <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;margin-bottom:16px;text-align:center;">
+        <div style="color:#94a3b8;font-size:13px;">পরের বনাসের জন্য দরকার</div>
+        <div style="color:#f59e0b;font-size:16px;font-weight:bold;margin-top:4px;">
+          আরও <%= streak.nextMilestone - streak.current %> টান জয় → <%= streak.nextBonus %> কয়েন
+        </div>
+      </div>
+    <% } %>
+
+    <!-- সব মাইলস্টোন -->
+    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;">
+      <div style="color:#fff;font-weight:bold;margin-bottom:12px;">🎯 স্ট্রিক মাইলস্টোন</div>
+      <% streak.milestones.forEach(m => {
+        const reached = streak.current >= m.streak;
+      %>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;margin-bottom:8px;border-radius:10px;background:<%= reached ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.03)' %>;border:1px solid <%= reached ? '#10b981' : 'transparent' %>;">
+          <div style="color:<%= reached ? '#fff' : '#94a3b8' %>;font-size:14px;font-weight:bold;">
+            <%= reached ? '✅' : '🔒' %> <%= m.streak %> টানা জয়
+          </div>
+          <div style="color:#f59e0b;font-size:13px;font-weight:bold;">+<%= m.bonus %> 🪙</div>
+        </div>
+      <% }) %>
+    </div>
+
+    <p style="font-size:.75rem;color:#94a3b8;text-align:center;margin-top:1rem;line-height:1.6;">
+      ক্যাসিনো গেম পরপর জিতলে স্ট্রিক বাড়ে।<br>
+      একবর হারলে স্ট্রিক ০ থেকে আবার শুরু। বোনাস স্বযক্রিয়ভাবে যোগ হয়।
+    </p>
+
+  <% } else { %>
+    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:30px;text-align:center;color:#94a3b8;">
+      স্ট্রিক তথ্য লোড করা যায়নি। পরে আবার চেষ্টা করুন।
+    </div>
+  <% } %>
+
+</div>
+<%- include('../partials/bottom-nav') %>
+</body></html>
