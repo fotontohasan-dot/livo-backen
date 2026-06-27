@@ -289,7 +289,9 @@ async function runMigrations() {
       ADD COLUMN IF NOT EXISTS vip_level INTEGER DEFAULT 0,
       ADD COLUMN IF NOT EXISTS daily_deposit_limit NUMERIC(14,2),
       ADD COLUMN IF NOT EXISTS self_exclude_until TIMESTAMP,
-      ADD COLUMN IF NOT EXISTS loyalty_points INTEGER DEFAULT 0;
+      ADD COLUMN IF NOT EXISTS loyalty_points INTEGER DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS win_streak INTEGER DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS best_streak INTEGER DEFAULT 0;
     `);
 
     await pool.query(`
