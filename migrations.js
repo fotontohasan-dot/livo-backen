@@ -249,7 +249,20 @@ async function runMigrations() {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_umission_user_date ON user_missions(user_id, mission_date);`);
 
-    // users টেবিলে নতুন কলাম (responsible gaming সহ)
+    // ==================== লাকি হুইল ====================
+    // wheel_spins: প্রতি ইউজার কোন তারিখে স্পিন করেছে (দিনে একবার)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS wheel_spins (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        spin_date DATE NOT NULL,
+        prize INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE (user_id, spin_date)
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_wheel_user_date ON wheel_spins(user_id, spin_date);`);
+
     await pool.query(`
       ALTER TABLE users
       ADD COLUMN IF NOT EXISTS kyc_status VARCHAR(20) DEFAULT 'none',
