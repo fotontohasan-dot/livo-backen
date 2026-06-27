@@ -5,6 +5,7 @@ const { isAuth } = require('../middleware/auth');
 const { addTurnover } = require('../services/turnover');
 const { distributeCommission } = require('../services/referral');
 const { addBet, addWin } = require('../services/cashback');
+const { addVipTurnover } = require('../services/vip');
 
 const supportedGames = {
   "aviator": "Aviator",
@@ -211,7 +212,7 @@ router.post('/play', isAuth, async (req, res) => {
     const userResult = await client.query('SELECT coins FROM users WHERE id = $1 FOR UPDATE', [userId]);
     if (userResult.rows[0].coins < betAmount) {
       await client.query('ROLLBACK');
-      return res.status(400).json({ success: false, message: 'পর্যাপ্ত ব্যালেন্স নেই' });
+      return res.status(400).json({ success: false, message: 'পরপ্ত ব্যালেন্স নেই' });
     }
 
     let winAmount = 0;
@@ -226,6 +227,7 @@ router.post('/play', isAuth, async (req, res) => {
       addTurnover(userId, 'casino', betAmount).catch(e => console.error('turnover:', e.message));
       distributeCommission(userId, betAmount).catch(e => console.error('commission:', e.message));
       addBet(userId, betAmount).catch(e => console.error('cashback:', e.message));
+      addVipTurnover(userId, betAmount).catch(e => console.error('vip:', e.message));
 
       return res.json({ success: true, message: 'গেম শুরু হয়েছে' });
     }
@@ -248,6 +250,7 @@ router.post('/play', isAuth, async (req, res) => {
     addTurnover(userId, 'casino', betAmount).catch(e => console.error('turnover:', e.message));
     distributeCommission(userId, betAmount).catch(e => console.error('commission:', e.message));
     addBet(userId, betAmount).catch(e => console.error('cashback:', e.message));
+    addVipTurnover(userId, betAmount).catch(e => console.error('vip:', e.message));
     if (winAmount > 0) addWin(userId, winAmount).catch(e => console.error('cashback:', e.message));
 
     res.json({ success: true, newBalance: req.session.user.coins, winAmount, gameResult });
@@ -272,7 +275,7 @@ router.post('/cashout', isAuth, async (req, res) => {
 
   const cashMultiplier = parseFloat(multiplier);
   if (isNaN(cashMultiplier) || cashMultiplier < 1) {
-    return res.status(400).json({ success: false, message: 'অকার্যকর মাল্টিপ্লায়ার' });
+    return res.status(400).json({ success: false, message: 'অকার্যকর মালপ্লায়ার' });
   }
 
   req.session.gameState = null;
@@ -283,7 +286,7 @@ router.post('/cashout', isAuth, async (req, res) => {
       crashed: true,
       winAmount: 0,
       newBalance: req.session.user.coins,
-      message: `উড়োজাহাজ ${state.crashPoint}x-এ ক্র্যাশ করেছে!`
+      message: `উড়োজাহাজ ${state.crashPoint}x-এ ক্রশ করেছে!`
     });
   }
 
