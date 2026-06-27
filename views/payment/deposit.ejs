@@ -11,7 +11,8 @@
         <p style="font-size:.85rem;color:#fff;margin-top:.3rem;">📲 bKash Personal</p>
         <p style="font-size:.85rem;color:#fff;">📲 Nagad Personal</p>
         <p style="font-size:.85rem;color:#fff;">📲 Rocket Personal</p>
-        <p style="font-size:.8rem;color:var(--muted);margin-top:.6rem;">⚠️ Send Money করুন, তারপর নিচের ফর্ম পূরণ করুন। প্রতিবার নতুন নম্বর আসতে পারে — যে নম্বর দেখছেন সেখানেই পাঠান।</p>
+        <p style="font-size:.85rem;color:#fff;">📲 Upay Personal</p>
+        <p style="font-size:.8rem;color:var(--muted);margin-top:.6rem;">⚠️ Send Money করুন, তারপর নিচের ফর্ম পূরণ করুন। ব্যাংক ট্রান্সফারের জন্য সাপোর্টে যোগাযোগ করুন।</p>
       </div>
       <form action="/payment/deposit" method="POST">
         <div class="form-group" style="margin-bottom:1rem;">
@@ -20,6 +21,8 @@
             <option value="bkash">bKash</option>
             <option value="nagad">Nagad</option>
             <option value="rocket">Rocket</option>
+            <option value="upay">Upay</option>
+            <option value="bank">Bank Transfer</option>
           </select>
         </div>
         <div class="form-group" style="margin-bottom:1rem;">
@@ -35,7 +38,6 @@
           <input type="text" name="account_number" class="form-input" placeholder="01XXXXXXXXX" required>
         </div>
 
-        <!-- বোনাস অপশন -->
         <div style="background:rgba(245,158,11,0.08);border:1px solid var(--gold);border-radius:10px;padding:12px;margin-bottom:1.5rem;">
           <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
             <input type="checkbox" name="want_bonus" value="yes" style="margin-top:3px;width:18px;height:18px;">
