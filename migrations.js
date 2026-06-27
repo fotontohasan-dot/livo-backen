@@ -225,14 +225,17 @@ async function runMigrations() {
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
-    const missionCount = await pool.query(`SELECT COUNT(*) FROM mission_defs`);
-    if (parseInt(missionCount.rows[0].count) === 0) {
+    // মিশন তালিকা (ব্যালেন্সড ৪টি) — সঠিক সেট না থকলে রিসিড
+    const missionVer = await pool.query(`SELECT COALESCE(SUM(reward),0) AS s, COUNT(*) AS c FROM mission_defs`);
+    const missionOk = parseInt(missionVer.rows[0].c) === 4 && parseInt(missionVer.rows[0].s) === 600;
+    if (!missionOk) {
+      await pool.query(`DELETE FROM mission_defs`);
       await pool.query(`
         INSERT INTO mission_defs (title, target_type, target_value, reward) VALUES
         ('আজ ৩টি বাজি ধরুন', 'bet_count', 3, 50),
+        ('আজ ৫,০০০ টাকা টার্নওভার করুন', 'turnover', 5000, 100),
         ('আজ ১০টি বাজি ধরুন', 'bet_count', 10, 150),
-        ('আজ মোট ১০০০ টার্নওভার করুন', 'turnover', 1000, 100),
-        ('আজ মোট ৫০০০ টার্নওভার করুন', 'turnover', 5000, 400);
+        ('আজ ১৫,০০০ টাকা টার্নওভার করুন', 'turnover', 15000, 300);
       `);
     }
 
@@ -274,7 +277,7 @@ async function runMigrations() {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_loyalty_user ON loyalty_ledger(user_id);`);
 
-    // ব্জ ও অর্জন
+    // ব্যাজ ও অর্জন
     await pool.query(`
       CREATE TABLE IF NOT EXISTS user_badges (
         id SERIAL PRIMARY KEY,
@@ -301,7 +304,7 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_freebet_user ON free_bets(user_id);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_freebet_status ON free_bets(status);`);
 
-    // সাপ্তাহিক/মাসিক ক্লেইম রেকর্ড
+    // সাপ্তাহিক/মাসিক কইম রেকর্ড
     await pool.query(`
       CREATE TABLE IF NOT EXISTS periodic_claims (
         id SERIAL PRIMARY KEY,
