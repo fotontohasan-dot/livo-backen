@@ -231,7 +231,7 @@ async function runMigrations() {
         INSERT INTO mission_defs (title, target_type, target_value, reward) VALUES
         ('আজ ৩টি বাজি ধরুন', 'bet_count', 3, 50),
         ('আজ ১০টি বাজি ধরুন', 'bet_count', 10, 150),
-        ('আজ মোট ১০০০ টার্নওভার করন', 'turnover', 1000, 100),
+        ('আজ মট ১০০০ টার্নওভার করুন', 'turnover', 1000, 100),
         ('আজ মোট ৫০০০ টার্নওভার করুন', 'turnover', 5000, 400);
       `);
     }
@@ -274,7 +274,7 @@ async function runMigrations() {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_loyalty_user ON loyalty_ledger(user_id);`);
 
-    // ব্যাজ ও অর্জন
+    // ব্জ ও অর্জন
     await pool.query(`
       CREATE TABLE IF NOT EXISTS user_badges (
         id SERIAL PRIMARY KEY,
@@ -286,7 +286,7 @@ async function runMigrations() {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_badge_user ON user_badges(user_id);`);
 
-    // ফ বেট
+    // ফ্রি বেট
     await pool.query(`
       CREATE TABLE IF NOT EXISTS free_bets (
         id SERIAL PRIMARY KEY,
@@ -300,6 +300,20 @@ async function runMigrations() {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_freebet_user ON free_bets(user_id);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_freebet_status ON free_bets(status);`);
+
+    // সাপ্তাহিক/মাসিক ক্লেইম রেকর্ড
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS periodic_claims (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        claim_type VARCHAR(20) NOT NULL,
+        period_key VARCHAR(20) NOT NULL,
+        amount INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE (user_id, claim_type, period_key)
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_periodic_user ON periodic_claims(user_id);`);
 
     await pool.query(`
       ALTER TABLE users
