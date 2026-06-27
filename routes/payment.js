@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
 const { createBonus, canWithdraw } = require('../services/turnover');
+const { processReferralDeposit } = require('../services/referral');
 
 function requireLogin(req, res, next) {
   if (!req.session.user) return res.redirect('/login');
@@ -33,7 +34,7 @@ async function notifyAdmins(title, message) {
   }
 }
 
-// ডিপোজিট নাম্বার তালিকা — প্রতিবার পালা করে (rotate) দেখাবে
+// ডিপোজিট নাম্বার তলিকা — প্রতিবার পালা করে (rotate) দেখাবে
 const DEPOSIT_NUMBERS = [
   '01781732144',
   '01714275156',
@@ -56,7 +57,7 @@ router.post('/deposit', requireLogin, async (req, res) => {
 
   const validMethods = ['bkash', 'nagad', 'rocket', 'crypto'];
   if (!validMethods.includes(method)) {
-    req.flash('error', 'অকার্যকর পেমেন্ট মেথড');
+    req.flash('error', 'অকার্যকর পেমেন্ট মথড');
     return res.redirect('/payment/deposit');
   }
   if (!method || amount === null || !transaction_id || !account_number) {
@@ -111,12 +112,11 @@ router.post('/withdraw', requireLogin, async (req, res) => {
     return res.redirect('/payment/withdraw');
   }
 
-  // ==================== টার্নওভার চেক ====================
-  // কোনো active বোনাস (অসম্পূর্ণ টার্নওভার) থাকলে উইথড্র আটকাবে
+  // টর্নওভার চেক — active বোনস থাকলে উইথড্র আটকাবে
   try {
     const check = await canWithdraw(userId);
     if (!check.allowed) {
-      let msg = 'উত্তোলনের আগে বোনাসের টার্নওভার পূরণ করুন। বাকি: ';
+      let msg = 'উত্তোলনের আগে বোনাসর টার্নওভার পূরণ করুন। বাকি: ';
       const parts = [];
       check.pending.forEach(p => {
         if (p.sportsLeft > 0) parts.push(`স্পোর্টস ${p.sportsLeft.toFixed(0)}`);
@@ -156,7 +156,7 @@ router.post('/withdraw', requireLogin, async (req, res) => {
 
     await notifyAdmins('নতুন উইথড্র রিকোয়েস্ট', `${req.session.user.username} ${amount} টাকা উইথড্র চেয়েছে (${method})।`);
 
-    req.flash('success', 'উইথড্র রিকোয়েস্ট পাঠানো হয়েছে!');
+    req.flash('success', 'উইথড্র রিকোয়েস্ট পাঠানো হযছে!');
     res.redirect('/payment/history');
   } catch (err) {
     await client.query('ROLLBACK');
@@ -200,19 +200,25 @@ router.post('/admin/approve/:id', requireAdmin, async (req, res) => {
     const request = result.rows[0];
     if (!request || request.status !== 'pending') {
       await client.query('ROLLBACK');
-      req.flash('error', 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে');
+      req.flash('error', 'রকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসস হয়েছে');
       return res.redirect('/payment/admin/payments');
     }
 
     if (request.type === 'deposit') {
-      // আসল কয়েন যোগ
+      // আসল কয়েন যগ
       await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
 
-      // বোনাস নিয়ে থাকলে — সমপরিমাণ বোনাস কয়েন + টার্নওভার রেকর্ড
+      // মোট ডিপোজট আপডেট
+      await client.query('UPDATE users SET total_deposited = COALESCE(total_deposited,0) + $1 WHERE id=$2', [request.amount, request.user_id]);
+
+      // বোনাস নিয়ে থাকলে — সমপরমাণ বোনাস কয়েন + টার্নওভার রেকর্ড
       if (request.want_bonus) {
         await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
         await createBonus(client, request.user_id, 'deposit', request.amount);
       }
+
+      // রেফারেল প্রথম-ডিপোজিট বোনাস (৫০০+ হলে রেফারার বোনাস পাবে)
+      await processReferralDeposit(client, request.user_id, request.amount);
     }
 
     await client.query(`UPDATE payment_requests SET status='approved', updated_at=NOW() WHERE id=$1`, [id]);
