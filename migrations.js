@@ -231,7 +231,7 @@ async function runMigrations() {
         INSERT INTO mission_defs (title, target_type, target_value, reward) VALUES
         ('আজ ৩টি বাজি ধরুন', 'bet_count', 3, 50),
         ('আজ ১০টি বাজি ধরুন', 'bet_count', 10, 150),
-        ('আজ মোট ১০০০ টার্নওভার করুন', 'turnover', 1000, 100),
+        ('আজ মট ১০০০ টার্নওভার করুন', 'turnover', 1000, 100),
         ('আজ মোট ৫০০০ টার্নওভার করুন', 'turnover', 5000, 400);
       `);
     }
@@ -249,7 +249,7 @@ async function runMigrations() {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_umission_user_date ON user_missions(user_id, mission_date);`);
 
-    // লাকি হুইল
+    // লাক হুইল
     await pool.query(`
       CREATE TABLE IF NOT EXISTS wheel_spins (
         id SERIAL PRIMARY KEY,
@@ -273,6 +273,18 @@ async function runMigrations() {
       );
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_loyalty_user ON loyalty_ledger(user_id);`);
+
+    // ব্যাজ ও অর্জন
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS user_badges (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        badge_code VARCHAR(40) NOT NULL,
+        earned_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE (user_id, badge_code)
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_badge_user ON user_badges(user_id);`);
 
     await pool.query(`
       ALTER TABLE users
