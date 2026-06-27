@@ -231,7 +231,7 @@ async function runMigrations() {
         INSERT INTO mission_defs (title, target_type, target_value, reward) VALUES
         ('আজ ৩টি বাজি ধরুন', 'bet_count', 3, 50),
         ('আজ ১০টি বাজি ধরুন', 'bet_count', 10, 150),
-        ('আজ মট ১০০০ টার্নওভার করুন', 'turnover', 1000, 100),
+        ('আজ মোট ১০০০ টার্নওভার করন', 'turnover', 1000, 100),
         ('আজ মোট ৫০০০ টার্নওভার করুন', 'turnover', 5000, 400);
       `);
     }
@@ -249,7 +249,7 @@ async function runMigrations() {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_umission_user_date ON user_missions(user_id, mission_date);`);
 
-    // লাক হুইল
+    // লাকি হুইল
     await pool.query(`
       CREATE TABLE IF NOT EXISTS wheel_spins (
         id SERIAL PRIMARY KEY,
@@ -285,6 +285,21 @@ async function runMigrations() {
       );
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_badge_user ON user_badges(user_id);`);
+
+    // ফ বেট
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS free_bets (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        amount INTEGER NOT NULL,
+        reason VARCHAR(40),
+        status VARCHAR(20) DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT NOW(),
+        used_at TIMESTAMP
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_freebet_user ON free_bets(user_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_freebet_status ON free_bets(status);`);
 
     await pool.query(`
       ALTER TABLE users
