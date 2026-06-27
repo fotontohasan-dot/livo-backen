@@ -4,6 +4,7 @@ const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
 const bcrypt = require('bcryptjs');
 const { getTodayReward, claimDailyReward } = require('../services/dailyReward');
+const { getReferralStats } = require('../services/referral');
 
 router.get('/', isAuth, async (req, res) => {
   try {
@@ -18,7 +19,7 @@ router.get('/', isAuth, async (req, res) => {
 
     const tournaments = await pool.query(`
       SELECT
-        COALESCE(t.name, 'টুর্নামেন্ট') as name,
+        COALESCE(t.name, 'টুর্নামন্ট') as name,
         COALESCE(t.sport, 'General') as sport,
         COALESCE(tp.points, 0) as points,
         tp.joined_at as joined_at
@@ -46,7 +47,7 @@ router.get('/', isAuth, async (req, res) => {
     });
   } catch (err) {
     console.error('Profile error:', err);
-    req.flash('error', 'প্রোফাইল লোড করতে সমস্যা হয়েছে।');
+    req.flash('error', 'প্রোফাইল লোড করতে সমস্যা হয়ছে।');
     res.redirect('/');
   }
 });
@@ -81,7 +82,7 @@ router.post('/change-password', isAuth, async (req, res) => {
     const np = new_password || newPassword;
 
     if (confirmPassword && np !== confirmPassword) {
-      req.flash('error', '❌ নতুন পাসওয়ার্ড মিলছে না।');
+      req.flash('error', '❌ নতুন পাসওয়ার্ড মিলছ না।');
       return res.redirect('/profile/security');
     }
 
@@ -92,13 +93,14 @@ router.post('/change-password', isAuth, async (req, res) => {
     }
     const hashed = await bcrypt.hash(np, 10);
     await pool.query(`UPDATE users SET password=$1 WHERE id=$2`, [hashed, req.session.user.id]);
-    req.flash('success', '✅ পাসওয়ার্ড পরিবর্তন হয়েছে!');
+    req.flash('success', '✅ পাসওয়ার্ড পরবর্তন হয়েছে!');
     res.redirect('/profile/security');
   } catch (err) {
-    req.flash('error', '❌ পাসওয়ার্ড পরিবর্তন করতে সমস্যা হয়েছে।');
+    req.flash('error', '❌ পাসওয়ার্ড পরবর্তন করতে সমস্যা হয়েছে।');
     res.redirect('/profile/security');
   }
 });
+
 router.get('/history', isAuth, async (req, res) => {
   try {
     const predictions = await pool.query(`
@@ -154,7 +156,6 @@ router.get('/rewards', isAuth, async (req, res) => {
   }
 });
 
-// ==================== দৈনিক রিওয়ার্ড ক্লেইম ====================
 router.post('/rewards/claim', isAuth, async (req, res) => {
   try {
     const result = await claimDailyReward(req.session.user.id);
@@ -170,16 +171,26 @@ router.post('/rewards/claim', isAuth, async (req, res) => {
   res.redirect('/profile/rewards');
 });
 
+// ==================== রেফারেল পেজ ====================
 router.get('/referral', isAuth, async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT COUNT(*) FROM users WHERE referred_by_id = $1',
-      [req.session.user.id]
-    );
-    const referralCount = parseInt(result.rows[0].count);
-    res.render('profile/referral', { user: req.session.user, referralCount });
+    const stats = await getReferralStats(req.session.user.id);
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    res.render('profile/referral', {
+      user: req.session.user,
+      referralCount: stats.totalReferrals,
+      stats,
+      baseUrl
+    });
   } catch (err) {
-    res.render('profile/referral', { user: req.session.user, referralCount: 0 });
+    console.error('referral page error:', err.message);
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    res.render('profile/referral', {
+      user: req.session.user,
+      referralCount: 0,
+      stats: { totalReferrals: 0, successfulReferrals: 0, totalEarnings: 0, nextBonus: 100, history: [], team: [] },
+      baseUrl
+    });
   }
 });
 
@@ -206,6 +217,7 @@ router.get('/account-record', isAuth, async (req, res) => {
     res.render('profile/transactions', { user: req.session.user, transactions: [] });
   }
 });
+
 router.get('/cards', isAuth, async (req, res) => {
   try {
     const result = await pool.query(
