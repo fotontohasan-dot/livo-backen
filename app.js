@@ -153,10 +153,7 @@ app.use((req, res, next) => {
       }
     } catch (e) {}
   }
-  return next();
-});
-
-// ==================== ROUTES ====================
+  return // ==================== ROUTES ====================
 app.use('/', require('./routes/auth'));
 app.use('/matches', require('./routes/matches'));
 app.use('/sports', require('./routes/sports'));
@@ -174,6 +171,7 @@ app.use('/accumulator', require('./routes/accumulator'));
 app.use('/chat', require('./routes/chat'));
 app.use('/extra', require('./routes/extra'));
 // ===============================================
+
 
 app.get('/app/update', (req, res) => res.render('app/update'));
 
