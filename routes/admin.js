@@ -3,6 +3,7 @@ const router = express.Router();
 const { pool } = require('../db');
 const { isAdmin } = require('../middleware/auth');
 const { settleSelectionsForMarket } = require('../services/accumulator');
+const { grantFreeBet } = require('../services/freebet');
 const { syncMatches } = require('../services/matchUpdater');
 
 router.use(isAdmin);
@@ -121,7 +122,7 @@ router.post('/users/:id/delete', async (req, res) => {
       return res.redirect('/admin/users');
     }
     await pool.query('DELETE FROM users WHERE id = $1', [req.params.id]);
-    req.flash('success', 'ইউজার ডিলিট করা হয়েছে!');
+    req.flash('success', 'ইউজার ডিলট করা হয়েছে!');
   } catch (err) {
     console.error('delete error:', err.message);
     req.flash('error', 'ডিলিট করতে সমস্যা! (যুক্ত ডেটা থাকতে পারে)');
@@ -133,7 +134,7 @@ router.post('/users/:id/note', async (req, res) => {
   try {
     await pool.query('UPDATE users SET admin_note = $1 WHERE id = $2', [req.body.note || '', req.params.id]);
     req.flash('success', 'নোট সেভ হয়েছে!');
-  } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
+  } catch (err) { req.flash('error', 'সমস্য হয়েছে!'); }
   res.redirect('back');
 });
 
@@ -155,8 +156,8 @@ router.post('/users/:id/coins/add', async (req, res) => {
     const amount = parseInt(req.body.amount);
     if (!amount || amount <= 0) { req.flash('error', 'সঠিক পরিমাণ দিন!'); return res.redirect('back'); }
     await pool.query('UPDATE users SET coins = coins + $1 WHERE id = $2', [amount, req.params.id]);
-    await pool.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'admin_add','অ্যাডমিন কয়েন যোগ')`, [req.params.id, amount]);
-    req.flash('success', '✅ কয়েন যোগ হয়েছে!');
+    await pool.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'admin_add','অ্যাডমন কয়েন যোগ')`, [req.params.id, amount]);
+    req.flash('success', '✅ কয়েন যগ হয়েছে!');
   } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
   res.redirect('back');
 });
@@ -167,7 +168,17 @@ router.post('/users/:id/coins/remove', async (req, res) => {
     if (!amount || amount <= 0) { req.flash('error', 'সঠিক পরিমাণ দিন!'); return res.redirect('back'); }
     await pool.query('UPDATE users SET coins = GREATEST(coins - $1, 0) WHERE id = $2', [amount, req.params.id]);
     await pool.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'admin_remove','অ্যাডমিন কয়েন কমানো')`, [req.params.id, -amount]);
-    req.flash('success', '✅ কয়েন কমানো হয়েছে!');
+    req.flash('success', '✅ কয়ন কমানো হয়েছে!');
+  } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
+  res.redirect('back');
+});
+
+router.post('/users/:id/freebet', async (req, res) => {
+  try {
+    const amount = parseInt(req.body.amount);
+    if (!amount || amount <= 0) { req.flash('error', 'সঠিক পরিমাণ দিন!'); return res.redirect('back'); }
+    await grantFreeBet(req.params.id, amount, 'admin');
+    req.flash('success', `✅ ${amount} টাকার ফ্রি বেট দেওয়া হয়েছে!`);
   } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
   res.redirect('back');
 });
@@ -199,7 +210,7 @@ router.post('/matches/add', async (req, res) => {
 });
 
 router.post('/matches/:id/delete', async (req, res) => {
-  try { await pool.query('DELETE FROM matches WHERE id = $1', [req.params.id]); req.flash('success', 'ম্যাচ মুছে ফেলা হয়েছে!'); }
+  try { await pool.query('DELETE FROM matches WHERE id = $1', [req.params.id]); req.flash('success', 'ম্যাচ মছে ফেলা হয়েছে!'); }
   catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
   res.redirect('/admin/matches');
 });
@@ -238,7 +249,7 @@ router.post('/markets/:marketId/toggle', async (req, res) => {
 router.post('/markets/:marketId/settle', async (req, res) => {
   const marketId = req.params.marketId;
   const { winning_runner } = req.body;
-  if (!winning_runner) { req.flash('error', 'জয়ী নির্বাচন করুন!'); return res.redirect('back'); }
+  if (!winning_runner) { req.flash('error', 'জয নির্বাচন করুন!'); return res.redirect('back'); }
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -263,7 +274,7 @@ router.post('/markets/:marketId/settle', async (req, res) => {
     res.redirect('back');
   } catch (err) {
     await client.query('ROLLBACK');
-    req.flash('error', 'সেটেল সমস্যা!');
+    req.flash('error', 'সটেল সমস্যা!');
     res.redirect('back');
   } finally { client.release(); }
 });
