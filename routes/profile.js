@@ -10,6 +10,7 @@ const { getVipStatus } = require('../services/vip');
 const { getMissions, claimMission } = require('../services/missions');
 const { getSegments, canSpin, spin } = require('../services/wheel');
 const { getLoyalty, redeemPoints } = require('../services/loyalty');
+const { getStreak } = require('../services/streak');
 
 router.get('/', isAuth, async (req, res) => {
   try {
@@ -413,6 +414,17 @@ router.post('/loyalty/redeem', isAuth, async (req, res) => {
     req.flash('error', 'সার্ভার ত্রুটি।');
   }
   res.redirect('/profile/loyalty');
+});
+
+// ==================== উইন স্ট্রিক ====================
+router.get('/streak', isAuth, async (req, res) => {
+  try {
+    const streak = await getStreak(req.session.user.id);
+    res.render('profile/streak', { user: req.session.user, streak });
+  } catch (err) {
+    console.error('streak page error:', err.message);
+    res.render('profile/streak', { user: req.session.user, streak: null });
+  }
 });
 
 module.exports = router;
