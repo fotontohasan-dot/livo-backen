@@ -14,6 +14,7 @@ const { getStreak } = require('../services/streak');
 const { getBadges } = require('../services/badges');
 const { getAllFreeBets, claimFreeBet } = require('../services/freebet');
 const { getWeeklyStatus, claimWeekly, getMonthlyStatus, claimMonthly } = require('../services/periodicReward');
+const { getShareStatus, claimShare } = require('../services/social');
 
 router.get('/', isAuth, async (req, res) => {
   try {
@@ -495,6 +496,30 @@ router.post('/periodic/monthly', isAuth, async (req, res) => {
     req.flash('error', 'সার্ভার ত্রুটি।');
   }
   res.redirect('/profile/periodic');
+});
+
+// ==================== সোশ্যাল শেয়ার ====================
+router.get('/share', isAuth, async (req, res) => {
+  try {
+    const share = await getShareStatus(req.session.user.id);
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    res.render('profile/share', { user: req.session.user, share, baseUrl });
+  } catch (err) {
+    console.error('share page error:', err.message);
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    res.render('profile/share', { user: req.session.user, share: null, baseUrl });
+  }
+});
+
+router.post('/share/claim', isAuth, async (req, res) => {
+  try {
+    const result = await claimShare(req.session.user.id);
+    req.flash(result.success ? 'success' : 'error', result.message);
+  } catch (err) {
+    console.error('share claim error:', err.message);
+    req.flash('error', 'সার্ভার ত্রুটি।');
+  }
+  res.redirect('/profile/share');
 });
 
 module.exports = router;
