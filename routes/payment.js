@@ -34,6 +34,21 @@ async function notifyAdmins(title, message) {
   }
 }
 
+// ==================== রিলোড বোনাসের হার ====================
+// কততম ডিপোজিট ও কোন বার অনুযায়ী বোনাস শতাংশ ঠিক হয়।
+//  ১ম ডিপোজিট: ১০০%
+//  ২য় ডিপোজিট: ৫০%
+//  শুক্রবার (যেকোনো ডিপোজিট): ৮০% (রিলোড)
+//  ৩য়+ সাধারণ দিন: ১৫%
+//  সর্বোচ্চ বোনাস ১৫০০০ কয়েন
+function bonusPercentFor(depositCountBefore, isFriday) {
+  if (depositCountBefore === 0) return 100;   // প্রথম ডিপোজিট
+  if (isFriday) return 80;                      // শুক্রবার রিলোড
+  if (depositCountBefore === 1) return 50;      // দ্বিতীয় ডিপোজিট
+  return 15;                                    // সাধারণ রিলোড
+}
+const MAX_BONUS = 15000;
+
 const VALID_METHODS = ['bkash', 'nagad', 'rocket', 'upay', 'bank', 'crypto'];
 
 const DEPOSIT_NUMBERS = [
@@ -94,7 +109,7 @@ router.post('/deposit', requireLogin, async (req, res) => {
       `INSERT INTO payment_requests (user_id, type, method, amount, transaction_id, account_number, status, want_bonus) VALUES ($1, 'deposit', $2, $3, $4, $5, 'pending', $6)`,
       [userId, method, amount, transaction_id, account_number, wantBonus]
     );
-    await notifyAdmins('নতুন ডিপোজিট রিকয়েস্ট', `${req.session.user.username} ${amount} টাকা ডিপোজিট চেয়েছে (${method})।`);
+    await notifyAdmins('নতুন ডিপোজিট রিকোয়েস্ট', `${req.session.user.username} ${amount} টাকা ডিপোজিট চেয়েছে (${method})।`);
     req.flash('success', 'ডিপোজিট রিকোয়েস্ট পাঠানো হয়েছে!');
     res.redirect('/payment/history');
   } catch (err) {
@@ -135,11 +150,11 @@ router.post('/withdraw', requireLogin, async (req, res) => {
   try {
     const check = await canWithdraw(userId);
     if (!check.allowed) {
-      let msg = 'উত্তোলনের আগে বোনাসের টারওভার পূরণ করুন। বাকি: ';
+      let msg = 'উত্তোলনের আগে বোনাসের টার্নওভার পূরণ করুন। বাকি: ';
       const parts = [];
       check.pending.forEach(p => {
         if (p.sportsLeft > 0) parts.push(`স্পোর্টস ${p.sportsLeft.toFixed(0)}`);
-        if (p.casinoLeft > 0) parts.push(`ক্যাসনো ${p.casinoLeft.toFixed(0)}`);
+        if (p.casinoLeft > 0) parts.push(`ক্যাসিনো ${p.casinoLeft.toFixed(0)}`);
       });
       msg += parts.join(', ');
       req.flash('error', msg);
@@ -180,7 +195,7 @@ router.post('/withdraw', requireLogin, async (req, res) => {
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('withdraw error:', err.message);
-    req.flash('error', 'সমস্যা হযছে');
+    req.flash('error', 'সমস্যা হয়েছে');
     res.redirect('/payment/withdraw');
   } finally {
     client.release();
@@ -223,13 +238,30 @@ router.post('/admin/approve/:id', requireAdmin, async (req, res) => {
       return res.redirect('/payment/admin/payments');
     }
 
+    let bonusGiven = 0;
+
     if (request.type === 'deposit') {
+      // আসল কয়েন যোগ
       await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
       await client.query('UPDATE users SET total_deposited = COALESCE(total_deposited,0) + $1 WHERE id=$2', [request.amount, request.user_id]);
 
+      // বোনাস নিলে — রিলোড নিয়ম অনুযায়ী শতাংশ
       if (request.want_bonus) {
-        await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
-        await createBonus(client, request.user_id, 'deposit', request.amount);
+        // এই ডিপোজিটের আগে কতগুলো approved ডিপোজিট হয়েছে
+        const cnt = await client.query(
+          `SELECT COUNT(*) FROM payment_requests WHERE user_id=$1 AND type='deposit' AND status='approved' AND id <> $2`,
+          [request.user_id, request.id]
+        );
+        const before = parseInt(cnt.rows[0].count);
+        const isFriday = new Date().getDay() === 5; // 5 = শুক্রবার
+        const pct = bonusPercentFor(before, isFriday);
+
+        bonusGiven = Math.min(MAX_BONUS, Math.floor(request.amount * pct / 100));
+
+        if (bonusGiven > 0) {
+          await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [bonusGiven, request.user_id]);
+          await createBonus(client, request.user_id, 'deposit', bonusGiven);
+        }
       }
 
       await processReferralDeposit(client, request.user_id, request.amount);
@@ -239,11 +271,11 @@ router.post('/admin/approve/:id', requireAdmin, async (req, res) => {
 
     let message;
     if (request.type === 'deposit') {
-      message = request.want_bonus
-        ? `আপনার ${request.amount} টাকার ডিপোজিট + ${request.amount} বোনাস যোগ হয়েছে! (টার্নওভার প্রযোজ্য)`
+      message = bonusGiven > 0
+        ? `আপনার ${request.amount} টাকার ডিপোজিট + ${bonusGiven} বোনাস যোগ হয়েছে! (টার্নওভার প্রযোজ্য)`
         : `আপনার ${request.amount} টাকার ডিপোজিট অনুমোদন হয়েছে!`;
     } else {
-      message = `আপনার ${request.amount} টকার উইথড্র অনুমোদন হয়েছে!`;
+      message = `আপনার ${request.amount} টাকার উইথড্র অনুমোদন হয়েছে!`;
     }
     await client.query(
       `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'success')`,
@@ -271,7 +303,7 @@ router.post('/admin/reject/:id', requireAdmin, async (req, res) => {
     const request = result.rows[0];
     if (!request || request.status !== 'pending') {
       await client.query('ROLLBACK');
-      req.flash('error', 'রিকোয়েস্ট পওয়া যায়নি অথবা আগেই প্রসেস হয়েছে');
+      req.flash('error', 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে');
       return res.redirect('/payment/admin/payments');
     }
     if (request.type === 'withdraw') {
