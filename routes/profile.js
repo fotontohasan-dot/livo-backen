@@ -9,6 +9,7 @@ const { getCashbackStatus, claimCashback } = require('../services/cashback');
 const { getVipStatus } = require('../services/vip');
 const { getMissions, claimMission } = require('../services/missions');
 const { getSegments, canSpin, spin } = require('../services/wheel');
+const { getLoyalty, redeemPoints } = require('../services/loyalty');
 
 router.get('/', isAuth, async (req, res) => {
   try {
@@ -51,7 +52,7 @@ router.get('/', isAuth, async (req, res) => {
     });
   } catch (err) {
     console.error('Profile error:', err);
-    req.flash('error', 'প্রোফাইল লোড করতে সমস্যা হয়ছে।');
+    req.flash('error', 'প্রোফাইল লোড করতে সমস্যা হয়েছে।');
     res.redirect('/');
   }
 });
@@ -63,7 +64,7 @@ router.post('/update', isAuth, async (req, res) => {
     req.session.user.username = username;
     req.flash('success', 'প্রোফাইল আপডেট হয়েছে!');
   } catch (err) {
-    req.flash('error', 'আপডেট করতে সমস্যা হয়ছে।');
+    req.flash('error', 'আপডেট করতে সমস্যা হয়েছে।');
   }
   res.redirect('/profile');
 });
@@ -86,21 +87,21 @@ router.post('/change-password', isAuth, async (req, res) => {
     const np = new_password || newPassword;
 
     if (confirmPassword && np !== confirmPassword) {
-      req.flash('error', '❌ নতুন পাসওয়ার্ড মলছে না।');
+      req.flash('error', '❌ নতুন পাসওয়ার্ড মিলছে না।');
       return res.redirect('/profile/security');
     }
 
     const user = await pool.query(`SELECT * FROM users WHERE id=$1`, [req.session.user.id]);
     if (!(await bcrypt.compare(cp, user.rows[0].password))) {
-      req.flash('error', '❌ বরমান পাসওয়ার্ড ভুল।');
+      req.flash('error', '❌ বর্তমান পাসওয়ার্ড ভুল।');
       return res.redirect('/profile/security');
     }
     const hashed = await bcrypt.hash(np, 10);
     await pool.query(`UPDATE users SET password=$1 WHERE id=$2`, [hashed, req.session.user.id]);
-    req.flash('success', '✅ পাসওয়ার পরিবর্তন হয়েছে!');
+    req.flash('success', '✅ পাসওয়ার্ড পরিবর্তন হয়েছে!');
     res.redirect('/profile/security');
   } catch (err) {
-    req.flash('error', '❌ পাসওযর্ড পরিবর্তন করতে সমস্যা হয়েছে।');
+    req.flash('error', '❌ পাসওয়ার্ড পরিবর্তন করতে সমস্যা হয়েছে।');
     res.redirect('/profile/security');
   }
 });
@@ -179,13 +180,13 @@ router.post('/responsible/self-exclude', isAuth, async (req, res) => {
   try {
     const days = parseInt(req.body.days);
     if (isNaN(days) || days < 1) {
-      req.flash('error', 'সঠিক দন সংখ্যা দিন।');
+      req.flash('error', 'সঠিক দিন সংখ্যা দিন।');
       return res.redirect('/profile/responsible');
     }
     const until = new Date();
     until.setDate(until.getDate() + days);
     await pool.query(`UPDATE users SET self_exclude_until = $1 WHERE id = $2`, [until, req.session.user.id]);
-    req.flash('success', `আপনার অযাকাউন্ট ${days} দিনের জন্য বন্ধ করা হয়েছে।`);
+    req.flash('success', `আপনার অ্যাকাউন্ট ${days} দিনের জন্য বন্ধ করা হয়েছে।`);
     return req.session.destroy(() => res.redirect('/login'));
   } catch (err) {
     console.error('self-exclude error:', err.message);
@@ -390,6 +391,28 @@ router.post('/feedback', isAuth, async (req, res) => {
 
 router.get('/chat', isAuth, (req, res) => {
   res.render('profile/chat', { user: req.session.user });
+});
+
+// ==================== লয়্যালটি পয়েন্ট ====================
+router.get('/loyalty', isAuth, async (req, res) => {
+  try {
+    const loyalty = await getLoyalty(req.session.user.id);
+    res.render('profile/loyalty', { user: req.session.user, loyalty });
+  } catch (err) {
+    console.error('loyalty page error:', err.message);
+    res.render('profile/loyalty', { user: req.session.user, loyalty: null });
+  }
+});
+
+router.post('/loyalty/redeem', isAuth, async (req, res) => {
+  try {
+    const result = await redeemPoints(req.session.user.id, req.body.points);
+    req.flash(result.success ? 'success' : 'error', result.message);
+  } catch (err) {
+    console.error('loyalty redeem error:', err.message);
+    req.flash('error', 'সার্ভার ত্রুটি।');
+  }
+  res.redirect('/profile/loyalty');
 });
 
 module.exports = router;
