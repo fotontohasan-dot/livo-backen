@@ -11,6 +11,7 @@ const { getMissions, claimMission } = require('../services/missions');
 const { getSegments, canSpin, spin } = require('../services/wheel');
 const { getLoyalty, redeemPoints } = require('../services/loyalty');
 const { getStreak } = require('../services/streak');
+const { getBadges } = require('../services/badges');
 
 router.get('/', isAuth, async (req, res) => {
   try {
@@ -424,6 +425,17 @@ router.get('/streak', isAuth, async (req, res) => {
   } catch (err) {
     console.error('streak page error:', err.message);
     res.render('profile/streak', { user: req.session.user, streak: null });
+  }
+});
+
+// ==================== ব্যাজ ও অর্জন ====================
+router.get('/badges', isAuth, async (req, res) => {
+  try {
+    const badges = await getBadges(req.session.user.id);
+    res.render('profile/badges', { user: req.session.user, badges });
+  } catch (err) {
+    console.error('badges page error:', err.message);
+    res.render('profile/badges', { user: req.session.user, badges: [] });
   }
 });
 
