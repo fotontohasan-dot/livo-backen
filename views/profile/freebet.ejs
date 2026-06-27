@@ -1,0 +1,61 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto;">
+  <%- include('../partials/flash') %>
+
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+    <a href="/profile" style="color:#fff;text-decoration:none;font-size:20px;">←</a>
+    <h1 style="color:#fff;font-size:18px;font-weight:bold;">🎁 ফ্রি বেট</h1>
+  </div>
+
+  <div style="background:linear-gradient(135deg,#10b981,#059669);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center;">
+    <div style="font-size:40px;margin-bottom:8px;">🎁</div>
+    <div style="color:#fff;font-size:16px;font-weight:bold;margin-bottom:4px;">ফ্রি বেট কয়েন</div>
+    <div style="color:rgba(255,255,255,0.9);font-size:13px;">ক্লেইম করে বোনাস কয়েন পান, খেলে উপভোগ করুন</div>
+  </div>
+
+  <% 
+    const active = (freebets || []).filter(f => f.status === 'active');
+    const used = (freebets || []).filter(f => f.status !== 'active');
+  %>
+
+  <% if (active.length > 0) { %>
+    <% active.forEach(f => { %>
+      <div style="background:rgba(16,185,129,0.1);border:1px solid #10b981;border-radius:14px;padding:16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="color:#fff;font-size:18px;font-weight:bold;">🎁 <%= f.amount %> কয়েন</div>
+          <div style="color:#94a3b8;font-size:11px;margin-top:2px;"><%= new Date(f.created_at).toLocaleDateString('bn-BD') %></div>
+        </div>
+        <form action="/profile/freebet/claim/<%= f.id %>" method="POST" style="margin:0;">
+          <button type="submit" style="background:#10b981;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:bold;cursor:pointer;">
+            ক্লেইম
+          </button>
+        </form>
+      </div>
+    <% }) %>
+  <% } else { %>
+    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:30px;text-align:center;color:#94a3b8;margin-bottom:16px;">
+      এখন কোনো ফ বেট নেই।<br>মিশন সম্পন্ন করুন ব অফারের জন্য অপেক্ষা করুন!
+    </div>
+  <% } %>
+
+  <% if (used.length > 0) { %>
+    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;">
+      <div style="color:#fff;font-weight:bold;margin-bottom:12px;">📜 ব্যবহৃত ফ্রি বেট</div>
+      <% used.forEach(f => { %>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+          <div style="color:#94a3b8;font-size:13px;"><%= f.amount %> কয়েন</div>
+          <span style="color:#64748b;font-size:11px;">✅ ব্যবহৃত</span>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <p style="font-size:.75rem;color:#94a3b8;text-align:center;margin-top:1rem;line-height:1.6;">
+    ফ্রি বেট ক্লেইম করলে বোনাস কয়েন ব্যালেন যোগ হয়।<br>
+    উত্তোলনর আগে টার্নওভার পূরণ করতে হবে (স্পর্টস ৫x / ক্যাসিন ৩৫x)।
+  </p>
+
+</div>
+<%- include('../partials/bottom-nav') %>
+</body></html>
