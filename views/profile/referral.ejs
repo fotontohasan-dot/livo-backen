@@ -1,72 +1,128 @@
 <%- include('../partials/head') %>
-<div class="container" style="padding:16px;padding-bottom:100px">
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-    <a href="/profile" style="color:#fff;text-decoration:none;font-size:20px">←</a>
-    <h1 style="color:#fff;font-size:18px;font-weight:bold">👥 বন্ধুদের আমন্ত্রণ</h1>
+<%- include('../partials/navbar') %>
+<div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto;">
+  <%- include('../partials/flash') %>
+
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+    <a href="/profile" style="color:#fff;text-decoration:none;font-size:20px;">←</a>
+    <h1 style="color:#fff;font-size:18px;font-weight:bold;">👥 বন্ধুদের আমন্ত্রণ</h1>
   </div>
 
-  <!-- Referral Card -->
-  <div style="background:linear-gradient(135deg,#10b981,#06b6d4);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center">
-    <div style="font-size:40px;margin-bottom:8px">🎁</div>
-    <div style="color:#fff;font-size:16px;font-weight:bold;margin-bottom:4px">প্রতি রেফারেলে ১০০ কয়েন!</div>
-    <div style="color:rgba(255,255,255,0.8);font-size:13px">বন্ধুকে আমন্ত্রণ জানান এবং কয়েন অর্জন করুন</div>
+  <!-- ব্যানার -->
+  <div style="background:linear-gradient(135deg,#10b981,#06b6d4);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center;">
+    <div style="font-size:40px;margin-bottom:8px;">🎁</div>
+    <div style="color:#fff;font-size:16px;font-weight:bold;margin-bottom:4px;">বন্ধু রেফার করে আয় করুন!</div>
+    <div style="color:rgba(255,255,255,0.9);font-size:13px;">
+      বন্ধুর প্রথম ডিপোজিটে বোনাস + আজীবন কমিশন (২.৫% / ১.৫% / ০.৮%)
+    </div>
   </div>
 
-  <!-- Referral Code -->
-  <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;margin-bottom:16px">
-    <div style="color:#94a3b8;font-size:13px;margin-bottom:8px">আপনার রেফারেল কোড</div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <div id="ref-code" style="flex:1;background:rgba(255,255,255,0.1);border-radius:8px;padding:12px;color:#f59e0b;font-size:18px;font-weight:bold;letter-spacing:2px;text-align:center">
+  <!-- পরিসংখ্যান -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
+    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:14px;text-align:center;">
+      <div style="color:#f59e0b;font-size:22px;font-weight:bold;"><%= stats.totalReferrals %></div>
+      <div style="color:#94a3b8;font-size:11px;margin-top:4px;">মোট রেফার</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:14px;text-align:center;">
+      <div style="color:#10b981;font-size:22px;font-weight:bold;"><%= stats.successfulReferrals %></div>
+      <div style="color:#94a3b8;font-size:11px;margin-top:4px;">সফল রেফার</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:14px;text-align:center;">
+      <div style="color:#fbbf24;font-size:22px;font-weight:bold;"><%= Number(stats.totalEarnings).toLocaleString('bn-BD') %></div>
+      <div style="color:#94a3b8;font-size:11px;margin-top:4px;">মোট আয়</div>
+    </div>
+  </div>
+
+  <!-- পরের বোনাস তথ্য -->
+  <div style="background:rgba(245,158,11,0.1);border:1px solid #f59e0b;border-radius:12px;padding:14px;margin-bottom:16px;text-align:center;">
+    <div style="color:#fff;font-size:13px;">আপনার পরের সফল রেফারে পাবেন</div>
+    <div style="color:#f59e0b;font-size:24px;font-weight:bold;margin-top:4px;"><%= stats.nextBonus %> কয়েন</div>
+    <div style="color:#94a3b8;font-size:11px;margin-top:4px;">শর্ত: বন্ধুকে ৫০০+ টাকা ডিপোজিট করতে হবে</div>
+  </div>
+
+  <!-- রেফারেল কোড -->
+  <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;margin-bottom:14px;">
+    <div style="color:#94a3b8;font-size:13px;margin-bottom:8px;">আপনার রেফারেল কোড</div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <div id="ref-code" style="flex:1;background:rgba(255,255,255,0.1);border-radius:8px;padding:12px;color:#f59e0b;font-size:18px;font-weight:bold;letter-spacing:2px;text-align:center;">
         <%= user.referral_code || 'N/A' %>
       </div>
-      <button onclick="copyCode()" style="background:#8b5cf6;color:#fff;border:none;border-radius:8px;padding:12px 16px;cursor:pointer;font-size:14px">কপি</button>
+      <button onclick="copyCode()" style="background:#8b5cf6;color:#fff;border:none;border-radius:8px;padding:12px 16px;cursor:pointer;">কপি</button>
     </div>
   </div>
 
-  <!-- Referral Link -->
-  <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;margin-bottom:16px">
-    <div style="color:#94a3b8;font-size:13px;margin-bottom:8px">আপনার রেফারেল লিংক</div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <div style="flex:1;background:rgba(255,255,255,0.1);border-radius:8px;padding:10px;color:#fff;font-size:12px;word-break:break-all" id="ref-link">
+  <!-- রেফারেল লিংক -->
+  <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;margin-bottom:16px;">
+    <div style="color:#94a3b8;font-size:13px;margin-bottom:8px;">আপনার রেফারেল লিংক</div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <div style="flex:1;background:rgba(255,255,255,0.1);border-radius:8px;padding:10px;color:#fff;font-size:12px;word-break:break-all;" id="ref-link">
         <%= baseUrl %>/register?ref=<%= user.referral_code %>
       </div>
-      <button onclick="shareLink()" style="background:#10b981;color:#fff;border:none;border-radius:8px;padding:12px 16px;cursor:pointer;font-size:14px">শেয়ার</button>
+      <button onclick="shareLink()" style="background:#10b981;color:#fff;border:none;border-radius:8px;padding:12px 16px;cursor:pointer;">শেয়ার</button>
     </div>
   </div>
 
-  <!-- Stats -->
-  <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px">
-    <div style="color:#fff;font-weight:bold;margin-bottom:12px">📊 রেফারেল পরিসংখ্যান</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:16px;text-align:center">
-        <div style="color:#f59e0b;font-size:24px;font-weight:bold"><%= referralCount || 0 %></div>
-        <div style="color:#94a3b8;font-size:12px;margin-top:4px">মোট রেফারেল</div>
-      </div>
-      <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:16px;text-align:center">
-        <div style="color:#10b981;font-size:24px;font-weight:bold"><%= (referralCount || 0) * 100 %></div>
-        <div style="color:#94a3b8;font-size:12px;margin-top:4px">অর্জিত কয়েন</div>
-      </div>
-    </div>
+  <!-- আমার টিম -->
+  <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;margin-bottom:16px;">
+    <div style="color:#fff;font-weight:bold;margin-bottom:12px;">👨‍👩‍👧 আমার টিম</div>
+    <% if (stats.team && stats.team.length > 0) { %>
+      <% stats.team.forEach(t => { %>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+          <div>
+            <div style="color:#fff;font-size:13px;"><%= t.username %></div>
+            <div style="color:#94a3b8;font-size:10px;"><%= new Date(t.created_at).toLocaleDateString('bn-BD') %></div>
+          </div>
+          <div>
+            <% if (t.signup_bonus_paid) { %>
+              <span style="color:#10b981;font-size:11px;">✅ সফল</span>
+            <% } else if (t.first_deposit_done) { %>
+              <span style="color:#f59e0b;font-size:11px;">ডিপোজিট হয়েছে</span>
+            <% } else { %>
+              <span style="color:#94a3b8;font-size:11px;">⏳ অপেকমাণ</span>
+            <% } %>
+          </div>
+        </div>
+      <% }) %>
+    <% } else { %>
+      <div style="color:#94a3b8;font-size:13px;text-align:center;padding:10px;">এখনো কেউ রেফার হয়নি</div>
+    <% } %>
+  </div>
+
+  <!-- আয়ের হিস্ট্রি -->
+  <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;">
+    <div style="color:#fff;font-weight:bold;margin-bottom:12px;">💰 আয়ের হিস্ট্রি</div>
+    <% if (stats.history && stats.history.length > 0) { %>
+      <% stats.history.forEach(h => { %>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+          <div>
+            <div style="color:#fff;font-size:12px;">
+              <%= h.reason === 'signup' ? '🎁 রেফার বোনাস' : `💸 কমিশন (লেভেল ${h.level})` %>
+            </div>
+            <div style="color:#94a3b8;font-size:10px;">
+              <%= h.from_username || 'ইউজার' %> · <%= new Date(h.created_at).toLocaleDateString('bn-BD') %>
+            </div>
+          </div>
+          <div style="color:#10b981;font-size:14px;font-weight:bold;">+<%= Number(h.amount).toLocaleString('bn-BD') %></div>
+        </div>
+      <% }) %>
+    <% } else { %>
+      <div style="color:#94a3b8;font-size:13px;text-align:center;padding:10px;">এখনো কোনো আয় নেই</div>
+    <% } %>
   </div>
 </div>
 
 <script>
 function copyCode() {
   const code = '<%= user.referral_code %>';
-  navigator.clipboard.writeText(code).then(() => {
-    alert('কোড কপি হয়েছে!');
-  });
+  navigator.clipboard.writeText(code).then(() => alert('কোড কপি হয়েছে!'));
 }
-
 function shareLink() {
   const link = '<%= baseUrl %>/register?ref=<%= user.referral_code %>';
   if (navigator.share) {
-    navigator.share({ title: '<%= siteName %> তে যোগ দিন!', url: link });
+    navigator.share({ title: 'LIVO ত যোগ দিন', text: 'আমার রেফারেল লিংক দিয়ে রেজিস্টার করুন!', url: link });
   } else {
-    navigator.clipboard.writeText(link).then(() => {
-      alert('লিংক কপি হয়েছে!');
-    });
+    navigator.clipboard.writeText(link).then(() => alert('লিংক কপি হয়েছে!'));
   }
 }
 </script>
-<%- include('../partials/navbar') %>
+</body></html>
