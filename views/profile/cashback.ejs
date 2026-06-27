@@ -1,0 +1,68 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto;">
+  <%- include('../partials/flash') %>
+
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+    <a href="/profile" style="color:#fff;text-decoration:none;font-size:20px;">←</a>
+    <h1 style="color:#fff;font-size:18px;font-weight:bold;">💸 ক্যাশব্যাক</h1>
+  </div>
+
+  <!-- ব্যানার -->
+  <div style="background:linear-gradient(135deg,#8b5cf6,#6366f1);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center;">
+    <div style="font-size:40px;margin-bottom:8px;">💸</div>
+    <div style="color:#fff;font-size:16px;font-weight:bold;margin-bottom:4px;">দৈনিক ক্যাশব্যাক</div>
+    <div style="color:rgba(255,255,255,0.9);font-size:13px;">
+      প্রতিদিন আপনার নিট লোকসানের ৫% পরদিন ফেরত পান
+    </div>
+  </div>
+
+  <% if (cashback) { %>
+    <!-- গতকালের তথ্য -->
+    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;margin-bottom:16px;">
+      <div style="color:#94a3b8;font-size:13px;margin-bottom:12px;">গতকালের হিসাব (<%= cashback.yesterday %>)</div>
+
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+        <span style="color:#94a3b8;font-size:13px;">নিট লোকসান</span>
+        <span style="color:#ef4444;font-size:14px;font-weight:bold;"><%= Number(cashback.netLoss).toLocaleString('bn-BD') %> কয়েন</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;">
+        <span style="color:#94a3b8;font-size:13px;">ক্যাশব্যাক (৫%)</span>
+        <span style="color:#10b981;font-size:14px;font-weight:bold;"><%= Number(cashback.amount).toLocaleString('bn-BD') %> কয়েন</span>
+      </div>
+    </div>
+
+    <!-- ক্লেইম -->
+    <div style="background:rgba(245,158,11,0.1);border:1px solid #f59e0b;border-radius:16px;padding:20px;text-align:center;">
+      <% if (cashback.claimed) { %>
+        <div style="color:#10b981;font-size:15px;font-weight:bold;">✅ গতকালের ক্যাশব্যাক নেওয়া হয়েছে</div>
+      <% } else if (cashback.available) { %>
+        <div style="color:#fff;font-size:14px;margin-bottom:4px;">আপনি পাবেন</div>
+        <div style="color:#f59e0b;font-size:28px;font-weight:bold;margin-bottom:12px;"><%= Number(cashback.amount).toLocaleString('bn-BD') %> কয়েন</div>
+        <form action="/profile/cashback/claim" method="POST">
+          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;font-weight:700;">
+            💸 ক্যাশব্যাক ক্লেইম করুন
+          </button>
+        </form>
+      <% } else { %>
+        <div style="color:#94a3b8;font-size:14px;">
+          গতকাল ক্যাশব্যাক পাওয়ার মতো লোকসান হয়নি।<br>
+          (সর্বনিম্ন ১০ কয়েন ক্যাশব্যাক লাগবে)
+        </div>
+      <% } %>
+    </div>
+
+    <p style="font-size:.75rem;color:#94a3b8;text-align:center;margin-top:1rem;line-height:1.6;">
+      ⏰ প্রতিদিন গতকালের লোকসানের উপর ক্যাশব্যাক পাওয়া যায়।<br>
+      নিট লোকসান = মোট বাজি − মোট জয়।
+    </p>
+
+  <% } else { %>
+    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:30px;text-align:center;color:#94a3b8;">
+      ক্যাশব্যাক তথ্য লোড করা যায়নি। পরে আবার চেষ্টা করুন।
+    </div>
+  <% } %>
+
+</div>
+<%- include('../partials/bottom-nav') %>
+</body></html>
