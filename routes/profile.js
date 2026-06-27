@@ -8,6 +8,7 @@ const { getReferralStats } = require('../services/referral');
 const { getCashbackStatus, claimCashback } = require('../services/cashback');
 const { getVipStatus } = require('../services/vip');
 const { getMissions, claimMission } = require('../services/missions');
+const { getSegments, canSpin, spin } = require('../services/wheel');
 
 router.get('/', isAuth, async (req, res) => {
   try {
@@ -22,7 +23,7 @@ router.get('/', isAuth, async (req, res) => {
 
     const tournaments = await pool.query(`
       SELECT
-        COALESCE(t.name, 'টর্নামেন্ট') as name,
+        COALESCE(t.name, 'টুর্নামেন্ট') as name,
         COALESCE(t.sport, 'General') as sport,
         COALESCE(tp.points, 0) as points,
         tp.joined_at as joined_at
@@ -50,7 +51,7 @@ router.get('/', isAuth, async (req, res) => {
     });
   } catch (err) {
     console.error('Profile error:', err);
-    req.flash('error', 'প্রোফাইল লোড করতে সমস্যা হয়েছে।');
+    req.flash('error', 'প্রোফাইল লোড করতে সমস্যা হয়ছে।');
     res.redirect('/');
   }
 });
@@ -62,7 +63,7 @@ router.post('/update', isAuth, async (req, res) => {
     req.session.user.username = username;
     req.flash('success', 'প্রোফাইল আপডেট হয়েছে!');
   } catch (err) {
-    req.flash('error', 'আপডেট করত সমস্যা হয়েছে।');
+    req.flash('error', 'আপডেট করতে সমস্যা হয়ছে।');
   }
   res.redirect('/profile');
 });
@@ -85,7 +86,7 @@ router.post('/change-password', isAuth, async (req, res) => {
     const np = new_password || newPassword;
 
     if (confirmPassword && np !== confirmPassword) {
-      req.flash('error', '❌ নতুন পাসওয়ার্ড মিলছে না।');
+      req.flash('error', '❌ নতুন পাসওয়ার্ড মলছে না।');
       return res.redirect('/profile/security');
     }
 
@@ -178,20 +179,40 @@ router.post('/responsible/self-exclude', isAuth, async (req, res) => {
   try {
     const days = parseInt(req.body.days);
     if (isNaN(days) || days < 1) {
-      req.flash('error', 'সঠিক দিন সংখ্যা দিন।');
+      req.flash('error', 'সঠিক দন সংখ্যা দিন।');
       return res.redirect('/profile/responsible');
     }
     const until = new Date();
     until.setDate(until.getDate() + days);
     await pool.query(`UPDATE users SET self_exclude_until = $1 WHERE id = $2`, [until, req.session.user.id]);
-
-    // সাথে সাথে লগআউট
-    req.flash('success', `আপনার অ্যাকউন্ট ${days} দিনের জন্য বন্ধ করা হয়েছে।`);
+    req.flash('success', `আপনার অযাকাউন্ট ${days} দিনের জন্য বন্ধ করা হয়েছে।`);
     return req.session.destroy(() => res.redirect('/login'));
   } catch (err) {
     console.error('self-exclude error:', err.message);
     req.flash('error', 'সমস্যা হয়েছে।');
     res.redirect('/profile/responsible');
+  }
+});
+
+// ==================== লাকি হুইল ====================
+router.get('/wheel', isAuth, async (req, res) => {
+  try {
+    const segments = getSegments();
+    const status = await canSpin(req.session.user.id);
+    res.render('profile/wheel', { user: req.session.user, segments, status });
+  } catch (err) {
+    console.error('wheel page error:', err.message);
+    res.render('profile/wheel', { user: req.session.user, segments: [], status: { canSpin: false } });
+  }
+});
+
+router.post('/wheel/spin', isAuth, async (req, res) => {
+  try {
+    const result = await spin(req.session.user.id);
+    res.json(result);
+  } catch (err) {
+    console.error('wheel spin error:', err.message);
+    res.json({ success: false, message: 'সার্ভার ত্রুটি।' });
   }
 });
 
@@ -212,7 +233,7 @@ router.post('/missions/claim/:id', isAuth, async (req, res) => {
     req.flash(result.success ? 'success' : 'error', result.message);
   } catch (err) {
     console.error('mission claim error:', err.message);
-    req.flash('error', 'সারর ত্রুটি।');
+    req.flash('error', 'সার্ভার ত্রুটি।');
   }
   res.redirect('/profile/missions');
 });
@@ -239,7 +260,7 @@ router.post('/rewards/claim', isAuth, async (req, res) => {
   res.redirect('/profile/rewards');
 });
 
-// ==================== ক্যশব্যাক ====================
+// ==================== ক্যাশব্যাক ====================
 router.get('/cashback', isAuth, async (req, res) => {
   try {
     const cashback = await getCashbackStatus(req.session.user.id);
