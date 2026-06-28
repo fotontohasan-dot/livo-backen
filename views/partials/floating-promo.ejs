@@ -1,5 +1,5 @@
-<!-- ভাসমান প্রোমো প্যাকেট + স্লাইডিং প্যানেল + অটো পপআপ (শধু হোমপেজ) -->
-<!-- ====== পপআপ ছবির লিংক (https://...) — খালি রাখলে রঙিন ব্যানার দেখাবে ====== -->
+<!-- ভাসমান প্রোমো প্যাকট + স্লাইডিং প্যানেল + অটো পপআপ (শধু হোমপেজ) -->
+<!-- ====== পপআপ ছবির লিংক (https://...) — খলি রাখলে রঙিন ব্যানার দেখাবে ====== -->
 <%
   var popupImg1 = "https://i.postimg.cc/RWxKYRSh/IMG-3413.jpg";
   var popupImg2 = "https://i.postimg.cc/w7mDFPpR/IMG-3414.jpg";
@@ -70,14 +70,14 @@
   </div>
 </div>
 
-<!-- স্লাইডিং প্যানেল -->
+<!-- স্লাইডি প্যানেল -->
 <div id="lpPanel">
   <div class="lp-top">
     <button class="lp-close" onclick="lpClosePanel()">×</button>
     <button class="lp-up" onclick="lpClosePanel()">⌃</button>
   </div>
-  <a class="lp-item" href="/tournaments"><div class="lp-icon lp-ic-trophy">🏆</div><div class="lp-label">টুর্নামেন্ট</div></a>
-  <a class="lp-item" href="/profile/wheel"><div class="lp-icon lp-ic-wheel">🎡</div><div class="lp-label">লাকি স্পন</div></a>
+  <a class="lp-item" href="/tournaments"><div class="lp-icon lp-ic-trophy">🏆</div><div class="lp-label">টুর্নামন্ট</div></a>
+  <a class="lp-item" href="/profile/wheel"><div class="lp-icon lp-ic-wheel">🎡</div><div class="lp-label">লাকি স্পিন</div></a>
   <a class="lp-item" href="/profile/rewards"><div class="lp-icon lp-ic-egg">🥚</div><div class="lp-label">রিওয়ার্ড</div></a>
   <a class="lp-item" href="/profile/freebet"><div class="lp-icon lp-ic-packet">🧧</div><div class="lp-label">ফ্রি বেট</div></a>
   <a class="lp-item" href="/profile/vip"><div class="lp-icon lp-ic-vip">👑</div><div class="lp-label">VIP</div></a>
@@ -93,10 +93,10 @@
 <script>
 (function () {
   var IMG = ["<%= popupImg1 %>", "<%= popupImg2 %>", "<%= popupImg3 %>"];
-  var TITLES = ["সদস্য উদযাপন দিবস", "VIP সদস্যদের জন্য আরও সুবিধা", "এখনই অ্যাপ ডাউনলোড করুন"];
+  var TITLES = ["সদস্য উদযাপন দিবস", "VIP সদস্যদর জন্য আরও সুবিধা", "এখনই অ্যাপ ডাউনলোড করুন"];
   var TEXTS = [
-    "প্রতি মাসের ১০ তারিখ বশাল নগদ পুরস্কার! যত বেশি বাজি, তত বেশি ভাগ্যবান।",
-    "প্রতি মাসে সর্বোচ্চ বোনাস + সপ্তাহিক রিওয়ার্ড। VIP হয়ে উপভোগ করুন এক্সক্লুসিভ সুবিধা।",
+    "প্রতি মাসের ১০ তারিখ বিশাল নগদ পুরস্কার! যত বেশি বাজি, তত বেশি ভাগ্যবান।",
+    "প্রতি মাসে সর্বোচ্চ বোনাস + সাপ্তহিক রিওয়ার্ড। VIP হয়ে উপভোগ করুন এক্সক্লুসিভ সুবিধা।",
     "অ্যাপ ডাউনলোড করে জিতে নিন আকর্ষণীয বোনাস ও দ্রুত অ্যাক্সেস!"
   ];
   var EMOJIS = ["🎉", "👑", "📲"];
@@ -146,7 +146,23 @@
     }, 90000);
   }
 
-  function showPopup() { cur = 0; render(); document.getElementById('lpPopup').style.display = 'flex'; }
+  function showPopup() {
+    cur = 0; render();
+    document.getElementById('lpPopup').style.display = 'flex';
+    // অটো-স্লাইড: প্রতি ১ সেকেন্ডে পরের ছবি, ৩টা শেষে বন্ধ
+    var step = 1;
+    var slideTimer = setInterval(function () {
+      if (step < IMG.length) {
+        cur = step; render(); step++;
+      } else {
+        clearInterval(slideTimer);
+        lpClosePopup();
+      }
+    }, 1000);
+    // ম্যানুয়ালি বন্ধ করলে টাইমারও থামবে
+    var origClose = window.lpClosePopup;
+    window.lpClosePopup = function () { clearInterval(slideTimer); origClose(); window.lpClosePopup = origClose; };
+  }
 
   function init() {
     setTimeout(showPopup, 1200);
