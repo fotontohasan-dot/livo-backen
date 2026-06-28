@@ -1,5 +1,4 @@
-<!-- ভাসমান প্রোমো প্যাকট + স্লাইডিং প্যানেল + অটো পপআপ (শধু হোমপেজ) -->
-<!-- ====== পপআপ ছবির লিংক (https://...) — খলি রাখলে রঙিন ব্যানার দেখাবে ====== -->
+<!-- ভাসমান প্রোমো প্যাকেট + স্লাইডিং প্যানেল + অটো পপআপ (শুধু হোমপেজ) -->
 <%
   var popupImg1 = "https://i.postimg.cc/RWxKYRSh/IMG-3413.jpg";
   var popupImg2 = "https://i.postimg.cc/w7mDFPpR/IMG-3414.jpg";
@@ -7,32 +6,25 @@
 %>
 
 <style>
-  /* ভাসমান প্যাকেট */
   #lpPromo { position: fixed; right: 12px; bottom: 100px; z-index: 9998; width: 60px; height: 60px; cursor: pointer; animation: lpFloat 3s ease-in-out infinite; }
   @keyframes lpFloat { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-9px);} }
   #lpPromo .lp-pack { width: 60px; height: 60px; border-radius: 14px; background: radial-gradient(circle at 32% 26%, #ff6b6b, #c81d1d); box-shadow: 0 6px 16px rgba(200,29,29,0.55); display: flex; align-items: center; justify-content: center; font-size: 30px; border: 2px solid rgba(255,255,255,0.3); }
   #lpPromo .lp-dot { position: absolute; top: -3px; right: -3px; width: 14px; height: 14px; background: #f59e0b; border-radius: 50%; border: 2px solid #111; }
 
-  /* স্লাইডিং প্যানেল (ডান থেকে) */
-  #lpPanel { position: fixed; top: 0; right: 0; height: 100%; width: 100px; z-index: 10001; background: rgba(20,20,20,0.92); backdrop-filter: blur(4px); box-shadow: -6px 0 24px rgba(0,0,0,0.5); transform: translateX(100%); transition: transform .35s ease; display: flex; flex-direction: column; padding-top: 60px; overflow-y: auto; }
+  #lpPanel { position: fixed; top: 0; right: 0; height: 100%; width: 84px; z-index: 10001; background: rgba(20,20,20,0.92); backdrop-filter: blur(4px); box-shadow: -6px 0 24px rgba(0,0,0,0.5); transform: translateX(100%); transition: transform .35s ease; display: flex; flex-direction: column; padding-top: 56px; overflow-y: auto; }
   #lpPanel.open { transform: translateX(0); }
-
-  #lpPanel .lp-top { position: absolute; top: 12px; left: 0; right: 0; display: flex; justify-content: space-around; align-items: center; }
-  #lpPanel .lp-top button { width: 42px; height: 42px; border-radius: 50%; border: none; font-size: 20px; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  #lpPanel .lp-top { position: absolute; top: 10px; left: 0; right: 0; display: flex; justify-content: space-around; align-items: center; }
+  #lpPanel .lp-top button { width: 34px; height: 34px; border-radius: 50%; border: none; font-size: 17px; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; }
   #lpPanel .lp-close { background: #6b7280; }
   #lpPanel .lp-up { background: linear-gradient(135deg,#f97316,#ea580c); }
-
-  #lpPanel .lp-item { display: flex; flex-direction: column; align-items: center; gap: 3px; text-decoration: none; padding: 9px 4px; }
-  #lpPanel .lp-icon { width: 50px; height: 50px; border-radius: 13px; display: flex; align-items: center; justify-content: center; font-size: 26px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
-  #lpPanel .lp-label { color: #fff; font-size: 10px; font-weight: 600; text-align: center; }
+  #lpPanel .lp-item { display: flex; flex-direction: column; align-items: center; gap: 3px; text-decoration: none; padding: 8px 4px; }
+  #lpPanel .lp-icon { width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+  #lpPanel .lp-label { color: #fff; font-size: 9px; font-weight: 600; text-align: center; }
   .lp-ic-trophy { background: linear-gradient(135deg,#fbbf24,#d97706); }
   .lp-ic-wheel  { background: linear-gradient(135deg,#dc2626,#7f1d1d); }
   .lp-ic-egg    { background: linear-gradient(135deg,#a855f7,#6b21a8); }
   .lp-ic-packet { background: linear-gradient(135deg,#ef4444,#991b1b); }
-  .lp-ic-games  { background: linear-gradient(135deg,#3b82f6,#1d4ed8); }
-  .lp-ic-vip    { background: linear-gradient(135deg,#10b981,#065f46); }
 
-  /* পপআপ */
   #lpPopup { position: fixed; inset: 0; background: rgba(0,0,0,0.72); z-index: 10010; display: none; align-items: center; justify-content: center; padding: 22px; }
   #lpPopup .pp-box { background: #fff; border-radius: 18px; max-width: 340px; width: 100%; max-height: 85vh; position: relative; overflow: hidden; animation: lpPop .3s ease; display: flex; flex-direction: column; }
   @keyframes lpPop { from{transform:scale(.85);opacity:0;} to{transform:scale(1);opacity:1;} }
@@ -55,7 +47,6 @@
   #lpPopup .pp-dots span.on { background: #e11d48; }
 </style>
 
-<!-- পপআপ -->
 <div id="lpPopup">
   <div class="pp-box">
     <button class="pp-close" onclick="lpClosePopup()">×</button>
@@ -70,21 +61,17 @@
   </div>
 </div>
 
-<!-- স্লাইডি প্যানেল -->
 <div id="lpPanel">
   <div class="lp-top">
     <button class="lp-close" onclick="lpClosePanel()">×</button>
     <button class="lp-up" onclick="lpClosePanel()">⌃</button>
   </div>
-  <a class="lp-item" href="/tournaments"><div class="lp-icon lp-ic-trophy">🏆</div><div class="lp-label">টুর্নামন্ট</div></a>
+  <a class="lp-item" href="/tournaments"><div class="lp-icon lp-ic-trophy">🏆</div><div class="lp-label">টুর্নামেন্ট</div></a>
   <a class="lp-item" href="/profile/wheel"><div class="lp-icon lp-ic-wheel">🎡</div><div class="lp-label">লাকি স্পিন</div></a>
   <a class="lp-item" href="/profile/rewards"><div class="lp-icon lp-ic-egg">🥚</div><div class="lp-label">রিওয়ার্ড</div></a>
   <a class="lp-item" href="/profile/freebet"><div class="lp-icon lp-ic-packet">🧧</div><div class="lp-label">ফ্রি বেট</div></a>
-  <a class="lp-item" href="/profile/vip"><div class="lp-icon lp-ic-vip">👑</div><div class="lp-label">VIP</div></a>
-  <a class="lp-item" href="/games"><div class="lp-icon lp-ic-games">⚽</div><div class="lp-label">গেমস</div></a>
 </div>
 
-<!-- ভাসমান প্যাকেট -->
 <div id="lpPromo">
   <div class="lp-dot"></div>
   <div class="lp-pack">🧧</div>
@@ -93,85 +80,70 @@
 <script>
 (function () {
   var IMG = ["<%= popupImg1 %>", "<%= popupImg2 %>", "<%= popupImg3 %>"];
-  var TITLES = ["সদস্য উদযাপন দিবস", "VIP সদস্যদর জন্য আরও সুবিধা", "এখনই অ্যাপ ডাউনলোড করুন"];
+  var TITLES = ["সদস্য উদযাপন দিবস", "VIP সদস্যদের জন্য আরও সুবিধা", "এখনই অ্যাপ ডাউনলোড করুন"];
   var TEXTS = [
     "প্রতি মাসের ১০ তারিখ বিশাল নগদ পুরস্কার! যত বেশি বাজি, তত বেশি ভাগ্যবান।",
-    "প্রতি মাসে সর্বোচ্চ বোনাস + সাপ্তহিক রিওয়ার্ড। VIP হয়ে উপভোগ করুন এক্সক্লুসিভ সুবিধা।",
-    "অ্যাপ ডাউনলোড করে জিতে নিন আকর্ষণীয বোনাস ও দ্রুত অ্যাক্সেস!"
+    "প্রতি মাসে সর্বোচ্চ বোনাস + সাপ্তাহিক রিওয়ার্ড। VIP হয়ে উপভোগ করুন এক্সক্লুসিভ সুবিধা।",
+    "অ্যাপ ডাউনলোড করে জিতে নিন আকর্ষণীয় বোনাস ও দ্রুত অ্যাক্সেস!"
   ];
   var EMOJIS = ["🎉", "👑", "📲"];
   var GRADS = ["linear-gradient(135deg,#0f7a3d,#064d26)", "linear-gradient(135deg,#7c3aed,#4c1d95)", "linear-gradient(135deg,#e11d48,#9f1239)"];
   var cur = 0;
+  var slideTimer = null;
 
+  function bannerHTML(i) {
+    return '<div class="pp-banner" style="background:' + GRADS[i] + '"><span class="pp-emoji">' + EMOJIS[i] + '</span><h2>' + TITLES[i] + '</h2><p>' + TEXTS[i] + '</p></div>';
+  }
   function render() {
     var body = document.getElementById('lpPopupBody');
     var img = IMG[cur];
     if (img && img.trim() !== "") {
-      body.innerHTML = '<img class="pp-img" src="' + img + '" onerror="this.parentElement.innerHTML=lpBanner(' + cur + ')">' +
+      body.innerHTML = '<img class="pp-img" src="' + img + '" alt="promo">' +
         '<div class="pp-caption"><h2>' + TITLES[cur] + '</h2><p>' + TEXTS[cur] + '</p></div>';
     } else {
-      body.innerHTML = lpBanner(cur);
+      body.innerHTML = bannerHTML(cur);
     }
     var dots = "";
     for (var i = 0; i < IMG.length; i++) dots += '<span class="' + (i === cur ? 'on' : '') + '"></span>';
     document.getElementById('lpPopupDots').innerHTML = dots;
   }
-  window.lpBanner = function (i) {
-    return '<div class="pp-banner" style="background:' + GRADS[i] + '"><span class="pp-emoji">' + EMOJIS[i] + '</span><h2>' + TITLES[i] + '</h2><p>' + TEXTS[i] + '</p></div>';
-  };
-  window.lpNext = function () { if (cur < IMG.length - 1) { cur++; render(); } else { lpClosePopup(); } };
-  window.lpPrev = function () { if (cur > 0) { cur--; render(); } };
-  window.lpClosePopup = function () { document.getElementById('lpPopup').style.display = 'none'; };
+  function stopSlide() { if (slideTimer) { clearInterval(slideTimer); slideTimer = null; } }
+  window.lpNext = function () { stopSlide(); if (cur < IMG.length - 1) { cur++; render(); } else { lpClosePopup(); } };
+  window.lpPrev = function () { stopSlide(); if (cur > 0) { cur--; render(); } };
+  window.lpClosePopup = function () { stopSlide(); document.getElementById('lpPopup').style.display = 'none'; };
+  function showPopup() {
+    cur = 0; render();
+    document.getElementById('lpPopup').style.display = 'flex';
+    var step = 1;
+    slideTimer = setInterval(function () {
+      if (step < IMG.length) { cur = step; render(); step++; }
+      else { lpClosePopup(); }
+    }, 1000);
+  }
 
-  // প্যানেল
   var panel = document.getElementById('lpPanel');
   var promo = document.getElementById('lpPromo');
   var hideTimer = null, showTimer = null;
-
   window.lpClosePanel = function () { panel.classList.remove('open'); };
-  function openPanel() { panel.classList.add('open'); }
-
   promo.addEventListener('click', function () {
-    if (panel.classList.contains('open')) lpClosePanel(); else openPanel();
+    if (panel.classList.contains('open')) panel.classList.remove('open');
+    else panel.classList.add('open');
     scheduleHide();
   });
-
   function scheduleHide() {
     if (hideTimer) clearTimeout(hideTimer);
     hideTimer = setTimeout(function () {
       promo.style.display = 'none';
-      lpClosePanel();
+      panel.classList.remove('open');
       if (showTimer) clearTimeout(showTimer);
       showTimer = setTimeout(function () { promo.style.display = 'block'; scheduleHide(); }, 90000);
     }, 90000);
   }
-
-  function showPopup() {
-    cur = 0; render();
-    document.getElementById('lpPopup').style.display = 'flex';
-    // অটো-স্লাইড: প্রতি ১ সেকেন্ডে পরের ছবি, ৩টা শেষে বন্ধ
-    var step = 1;
-    var slideTimer = setInterval(function () {
-      if (step < IMG.length) {
-        cur = step; render(); step++;
-      } else {
-        clearInterval(slideTimer);
-        lpClosePopup();
-      }
-    }, 1000);
-    // ম্যানুয়ালি বন্ধ করলে টাইমারও থামবে
-    var origClose = window.lpClosePopup;
-    window.lpClosePopup = function () { clearInterval(slideTimer); origClose(); window.lpClosePopup = origClose; };
-  }
-
   function init() {
     setTimeout(showPopup, 1200);
     scheduleHide();
   }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
+  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', init); }
+  else { init(); }
 })();
 </script>
