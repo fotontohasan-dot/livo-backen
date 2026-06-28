@@ -1,9 +1,9 @@
-<!-- ভাসমান প্রোমো + প্যনেল + দৈনিক রিওয়ার্ড -->
+<!-- ভাসমান প্রোমো + প্যানেল + দৈনিক রিওয়ার্ড -->
 <script>
 window.addEventListener('error', function(ev){
   var bar = document.getElementById('lpErrBar');
   if(!bar){ bar = document.createElement('div'); bar.id='lpErrBar'; bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:#fff;font-size:12px;padding:8px;text-align:center;'; document.body.appendChild(bar); }
-  bar.textContent = 'JS ERROR: ' + ev.message + ' @ ' + (ev.filename||'').split('/').pop() + ':' + ev.lineno;
+  bar.textContent = 'JS ERROR: ' + ev.message + ' @ line ' + ev.lineno;
 });
 </script>
 
@@ -14,13 +14,12 @@ window.addEventListener('error', function(ev){
 %>
 
 <style>
-    #lpPromo { position: fixed; right: 12px; bottom: 100px; z-index: 9990; width: 60px; height: 60px; cursor: pointer; animation: lpFloat 3s ease-in-out infinite; }
-  #lpPanel.open ~ #lpPromo { display: none !important; }
-
+  #lpPromo { position: fixed; right: 12px; bottom: 100px; z-index: 9990; width: 60px; height: 60px; cursor: pointer; animation: lpFloat 3s ease-in-out infinite; }
+  #lpPromo.hide { display: none !important; }
   @keyframes lpFloat { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-9px);} }
   #lpPromo .lp-pack { width: 60px; height: 60px; border-radius: 14px; background: radial-gradient(circle at 32% 26%, #ff6b6b, #c81d1d); box-shadow: 0 6px 16px rgba(200,29,29,0.55); display: flex; align-items: center; justify-content: center; font-size: 30px; border: 2px solid rgba(255,255,255,0.3); }
   #lpPromo .lp-dot { position: absolute; top: -3px; right: -3px; width: 14px; height: 14px; background: #f59e0b; border-radius: 50%; border: 2px solid #111; }
-  #lpPanel { position: fixed; right: 10px; bottom: 90px; z-index: 10001; width: 76px; max-height: 70vh; background: rgba(20,20,20,0.92); box-shadow: 0 8px 28px rgba(0,0,0,0.55); border-radius: 18px; transform: translateX(140%); transition: transform .35s ease; display: flex; flex-direction: column; padding: 48px 0 10px; overflow-y: auto; }
+  #lpPanel { position: fixed; right: 10px; bottom: 90px; z-index: 10005; width: 76px; max-height: 70vh; background: rgba(20,20,20,0.92); box-shadow: 0 8px 28px rgba(0,0,0,0.55); border-radius: 18px; transform: translateX(140%); transition: transform .35s ease; display: flex; flex-direction: column; padding: 48px 0 10px; overflow-y: auto; }
   #lpPanel.open { transform: translateX(0); }
   #lpPanel .lp-top { position: absolute; top: 8px; left: 0; right: 0; display: flex; justify-content: space-around; align-items: center; }
   #lpPanel .lp-top button { width: 30px; height: 30px; border-radius: 50%; border: none; font-size: 15px; color: #fff; cursor: pointer; }
@@ -75,38 +74,39 @@ window.addEventListener('error', function(ev){
 
 <div id="lpPopup"><div class="pp-box"><button class="pp-close" onclick="lpClosePopup()">×</button><div class="pp-scroll"><div id="lpPopupBody"></div><div class="pp-dots" id="lpPopupDots"></div></div><div class="pp-actions"><button class="pp-prev" onclick="lpPrev()">পূর্ববর্তী</button><button class="pp-next" onclick="lpNext()">পরবর্তী</button></div></div></div>
 
-<div class="dr-overlay" id="drRedOverlay"><div class="dr-box dr-red"><button class="dr-close" onclick="drCloseRed()">×</button><div class="dr-banner">পুরস্কার</div><div class="dr-subtitle">দৈনিক লগইন লাল খাম — সর্বোচ্চ পুরস্কার ৯৯,৯৯৯</div><div class="dr-timer"><span class="t-label">অবশিষ্ট সময়</span><span class="t-cell" id="drRedH">00</span><span class="t-colon">:</span><span class="t-cell" id="drRedM">00</span><span class="t-colon">:</span><span class="t-cell" id="drRedS">00</span></div><div class="dr-bigpack">🧧</div><div id="drRedResult"></div><button class="dr-claim" id="drRedBtn" onclick="drClaimRed()">দাব করুন</button><div class="dr-hint">দিনে একবার দাবি করা যাবে</div></div></div>
+<div class="dr-overlay" id="drRedOverlay"><div class="dr-box dr-red"><button class="dr-close" onclick="drCloseRed()">×</button><div class="dr-banner">পুরস্কার</div><div class="dr-subtitle">দৈনিক লগইন লাল খাম — সর্বোচ্চ পুরস্কার ৯৯,৯৯৯</div><div class="dr-timer"><span class="t-label">অবশিষ্ট সময়</span><span class="t-cell" id="drRedH">00</span><span class="t-colon">:</span><span class="t-cell" id="drRedM">00</span><span class="t-colon">:</span><span class="t-cell" id="drRedS">00</span></div><div class="dr-bigpack">🧧</div><div id="drRedResult"></div><button class="dr-claim" id="drRedBtn" onclick="drClaimRed()">দাবি করুন</button><div class="dr-hint">দিনে একবার দাবি করা যাবে</div></div></div>
 
 <div class="dr-overlay" id="drEggOverlay"><div class="dr-box dr-egg"><button class="dr-close" onclick="drCloseEgg()">×</button><div class="dr-banner">পুরস্কার</div><div class="dr-subtitle">প্রতিদিন লগইন করলেই গোল্ডেন এগ ভাঙতে পারবেন</div><div class="dr-timer"><span class="t-label">অবশিষ্ট সময়</span><span class="t-cell" id="drEggH">00</span><span class="t-colon">:</span><span class="t-cell" id="drEggM">00</span><span class="t-colon">:</span><span class="t-cell" id="drEggS">00</span></div><div class="dr-eggs" id="drEggGrid"></div><div id="drEggResult"></div><div class="dr-hint" id="drEggHint">একটি ডিমে চাপ দিন</div></div></div>
 
 <div id="lpPanel"><div class="lp-top"><button class="lp-close" onclick="lpClosePanel()">×</button><button class="lp-up" onclick="lpClosePanel()">⌃</button></div>
-<a class="lp-item" href="/tournaments"><div class="lp-icon lp-ic-trophy">🏆</div><div class="lp-label">টর্নামেন্ট</div></a>
-<a class="lp-item" href="/profile/wheel"><div class="lp-icon lp-ic-wheel">🎡</div><div class="lp-label">লাকি স্পিন</div></a>
-<button class="lp-item" onclick="drOpenEgg()"><div class="lp-icon lp-ic-egg">🥚</div><div class="lp-label">সোনার ডিম</div></button>
-<button class="lp-item" onclick="drOpenRed()"><div class="lp-icon lp-ic-packet">🧧</div><div class="lp-label">লাল পকেট</div></button></div>
+<a class="lp-item" href="/tournaments"><div class="lp-icon lp-ic-trophy">🏆</div><div class="lp-label">টুর্নামেন্ট</div></a>
+<a class="lp-item" href="/profile/wheel"><div class="lp-icon lp-ic-wheel">🎡</div><div class="lp-label">লকি স্পিন</div></a>
+<button class="lp-item" id="lpBtnEgg"><div class="lp-icon lp-ic-egg">🥚</div><div class="lp-label">সোনার ডিম</div></button>
+<button class="lp-item" id="lpBtnRed"><div class="lp-icon lp-ic-packet">🧧</div><div class="lp-label">লাল পকেট</div></button></div>
 
 <div id="lpPromo"><div class="lp-dot"></div><div class="lp-pack">🧧</div></div>
 
 <script>
-// ===== ফাংশনগুলো সবার আগে গ্লোবাল করে দিই =====
 function _g(id){ return document.getElementById(id); }
 var lpStatus = { redPacket:{claimed:false}, goldenEgg:{claimed:false} };
 
-window.lpClosePanel = function(){ var p=_g('lpPanel'); if(p) p.classList.remove('open'); };
+function lpShowPromo(){ var pr=_g('lpPromo'); if(pr) pr.classList.remove('hide'); }
+function lpHidePromo(){ var pr=_g('lpPromo'); if(pr) pr.classList.add('hide'); }
 
-window.drOpenRed = function(){ var p=_g('lpPanel'); if(p) p.classList.remove('open'); var rr=_g('drRedResult'); if(rr) rr.innerHTML=''; var btn=_g('drRedBtn'); if(btn){ if(lpStatus.redPacket.claimed){btn.disabled=true;btn.textContent='আজ নেওয়া হয়েছে';}else{btn.disabled=false;btn.textContent='দাবি করুন';} } var ov=_g('drRedOverlay'); if(ov) ov.style.display='flex'; };
+window.lpClosePanel = function(){ var p=_g('lpPanel'); if(p) p.classList.remove('open'); lpShowPromo(); };
+
+window.drOpenRed = function(){ var p=_g('lpPanel'); if(p) p.classList.remove('open'); lpShowPromo(); var rr=_g('drRedResult'); if(rr) rr.innerHTML=''; var btn=_g('drRedBtn'); if(btn){ if(lpStatus.redPacket.claimed){btn.disabled=true;btn.textContent='আজ নেওয়া হয়েছে';}else{btn.disabled=false;btn.textContent='দাবি করুন';} } var ov=_g('drRedOverlay'); if(ov) ov.style.display='flex'; };
 window.drCloseRed = function(){ var e=_g('drRedOverlay'); if(e) e.style.display='none'; };
 window.drClaimRed = function(){ var btn=_g('drRedBtn'); if(!btn) return; btn.disabled=true; btn.textContent='অপেক্ষা করুন...'; fetch('/profile/daily-rewards/red-packet/claim',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).then(function(r){return r.json();}).then(function(d){ if(d.ok){ lpStatus.redPacket.claimed=true; _g('drRedResult').innerHTML='<div class="dr-success">🎉 আপনি পেলেন '+d.amount+' কয়েন!</div>'; btn.textContent='সফল হয়েছে'; setTimeout(drCloseRed,2500); }else{ _g('drRedResult').innerHTML='<div class="dr-hint">'+(d.message||'সমস্যা')+'</div>'; btn.disabled=false; btn.textContent='দাবি করুন'; } }).catch(function(){ btn.disabled=false; btn.textContent='দাবি করুন'; }); };
 
 var _eggClaimed=false;
-window.drOpenEgg = function(){ var p=_g('lpPanel'); if(p) p.classList.remove('open'); var grid=_g('drEggGrid'); if(grid){ grid.innerHTML=''; for(var i=0;i<8;i++){ var d=document.createElement('div'); d.className='dr-egg-item'; d.innerHTML='<span class="egg-emoji">🥚</span><span class="egg-amt"></span>'; d.onclick=(function(idx){return function(){drPickEgg(idx);};})(i); grid.appendChild(d); } } var hint=_g('drEggHint'); if(hint) hint.textContent='একটি ডিমে চাপ দিন'; var rr=_g('drEggResult'); if(rr) rr.innerHTML=''; _eggClaimed=false; if(lpStatus.goldenEgg.claimed){ if(hint) hint.textContent='আজকের ডিম ইতিমধ্যে নেওয়া হয়েছে'; var items=document.querySelectorAll('#drEggGrid .dr-egg-item'); for(var j=0;j<items.length;j++){ items[j].style.opacity='.4'; items[j].onclick=null; } } var ov=_g('drEggOverlay'); if(ov) ov.style.display='flex'; };
+window.drOpenEgg = function(){ var p=_g('lpPanel'); if(p) p.classList.remove('open'); lpShowPromo(); var grid=_g('drEggGrid'); if(grid){ grid.innerHTML=''; for(var i=0;i<8;i++){ var d=document.createElement('div'); d.className='dr-egg-item'; d.innerHTML='<span class="egg-emoji">🥚</span><span class="egg-amt"></span>'; d.onclick=(function(idx){return function(){drPickEgg(idx);};})(i); grid.appendChild(d); } } var hint=_g('drEggHint'); if(hint) hint.textContent='একটি ডিমে চাপ দিন'; var rr=_g('drEggResult'); if(rr) rr.innerHTML=''; _eggClaimed=false; if(lpStatus.goldenEgg.claimed){ if(hint) hint.textContent='আজকের ডিম ইতিমধ্যে নেওয়া হযছে'; var items=document.querySelectorAll('#drEggGrid .dr-egg-item'); for(var j=0;j<items.length;j++){ items[j].style.opacity='.4'; items[j].onclick=null; } } var ov=_g('drEggOverlay'); if(ov) ov.style.display='flex'; };
 window.drCloseEgg = function(){ var e=_g('drEggOverlay'); if(e) e.style.display='none'; };
-function drPickEgg(idx){ if(_eggClaimed||lpStatus.goldenEgg.claimed) return; _eggClaimed=true; var hint=_g('drEggHint'); if(hint) hint.textContent='অপেক্ষা করুন...'; fetch('/profile/daily-rewards/golden-egg/claim',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pickedIndex:idx})}).then(function(r){return r.json();}).then(function(d){ if(d.ok){ lpStatus.goldenEgg.claimed=true; var items=document.querySelectorAll('#drEggGrid .dr-egg-item'); for(var i=0;i<items.length;i++){ items[i].classList.add('opened'); if(i===d.pickedIndex) items[i].classList.add('win'); items[i].querySelector('.egg-amt').textContent=d.reveal[i]; items[i].onclick=null; } _g('drEggResult').innerHTML='<div class="dr-success">🎉 আপনি পেলেন '+d.amount+' কয়েন!</div>'; if(hint) hint.textContent='অনন্য ডিমে আরও বড় পুরস্কার ছিল!'; setTimeout(drCloseEgg,4000); }else{ if(hint) hint.textContent=d.message||'সমস্যা'; _eggClaimed=false; } }).catch(function(){ _eggClaimed=false; if(hint) hint.textContent='সমস হয়েছে'; }); }
+function drPickEgg(idx){ if(_eggClaimed||lpStatus.goldenEgg.claimed) return; _eggClaimed=true; var hint=_g('drEggHint'); if(hint) hint.textContent='অপেক্ষা করুন...'; fetch('/profile/daily-rewards/golden-egg/claim',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pickedIndex:idx})}).then(function(r){return r.json();}).then(function(d){ if(d.ok){ lpStatus.goldenEgg.claimed=true; var items=document.querySelectorAll('#drEggGrid .dr-egg-item'); for(var i=0;i<items.length;i++){ items[i].classList.add('opened'); if(i===d.pickedIndex) items[i].classList.add('win'); items[i].querySelector('.egg-amt').textContent=d.reveal[i]; items[i].onclick=null; } _g('drEggResult').innerHTML='<div class="dr-success">🎉 আপনি পেলেন '+d.amount+' কয়েন!</div>'; if(hint) hint.textContent='অন্যান্য ডিমে আরও বড় পুরস্কার ছিল!'; setTimeout(drCloseEgg,4000); }else{ if(hint) hint.textContent=d.message||'সমস্যা'; _eggClaimed=false; } }).catch(function(){ _eggClaimed=false; if(hint) hint.textContent='সমস্যা হয়েছে'; }); }
 
-// ===== প্রোমো পপআপ =====
 var LP_IMG = ["<%= popupImg1 %>","<%= popupImg2 %>","<%= popupImg3 %>"];
-var LP_TIT = ["সদস্য উদযাপন দিবস","VIP সদস্যদর জন্য আরও সুবিধা","এখনই অ্যাপ ডাউনলোড করুন"];
-var LP_TXT = ["প্রতি মাসের ১০ তারিখ বিশাল নগদ পুরস্কার!","পতি মাসে সর্বোচ্চ বোনাস + সাপ্তাহিক রিওয়ার্ড।","অযাপ ডাউনলোড করে জিতে নিন আকর্ষণীয় বোনাস!"];
+var LP_TIT = ["সদস্য উদযাপন দিবস","VIP সদস্যদের জন্য আরও সুবিধা","এখনই অ্যাপ ডউনলোড করুন"];
+var LP_TXT = ["প্রতি মাসের ১০ তারিখ বিশাল নগদ পুরস্কার!","প্রতি মাসে সর্বোচ্চ বনাস + সাপ্তাহিক রিওয়ার্ড।","অ্যাপ ডাউনলোড করে জিতে নিন আকর্ষণীয় বোনাস!"];
 var lpCur=0, lpSlide=null;
 function lpRender(){ var b=_g('lpPopupBody'); if(!b) return; b.innerHTML='<img class="pp-img" src="'+LP_IMG[lpCur]+'"><div class="pp-caption"><h2>'+LP_TIT[lpCur]+'</h2><p>'+LP_TXT[lpCur]+'</p></div>'; var dt=''; for(var i=0;i<LP_IMG.length;i++) dt+='<span class="'+(i===lpCur?'on':'')+'"></span>'; _g('lpPopupDots').innerHTML=dt; }
 function lpStop(){ if(lpSlide){clearInterval(lpSlide);lpSlide=null;} }
@@ -115,15 +115,15 @@ window.lpPrev=function(){ lpStop(); if(lpCur>0){lpCur--;lpRender();} };
 window.lpClosePopup=function(){ lpStop(); var e=_g('lpPopup'); if(e) e.style.display='none'; };
 function lpShowPopup(){ var e=_g('lpPopup'); if(!e) return; lpCur=0; lpRender(); e.style.display='flex'; var st=1; lpSlide=setInterval(function(){ if(st<LP_IMG.length){lpCur=st;lpRender();st++;}else{lpClosePopup();} },1000); }
 
-// ===== টাইমার =====
 function lpTimer(h,m,s){ function tk(){ var n=new Date(); var e=new Date(n); e.setHours(24,0,0,0); var df=Math.max(0,Math.floor((e-n)/1000)); function p(x){return x<10?'0'+x:''+x;} var a=_g(h),b=_g(m),c=_g(s); if(a)a.textContent=p(Math.floor(df/3600)); if(b)b.textContent=p(Math.floor((df%3600)/60)); if(c)c.textContent=p(df%60); } tk(); setInterval(tk,1000); }
 
-// ===== প্যানেল টগল =====
 (function(){
   try {
     var promo=_g('lpPromo'), panel=_g('lpPanel'), hideT=null, showT=null;
-    if(promo){ promo.addEventListener('click', function(){ if(panel){ if(panel.classList.contains('open')) panel.classList.remove('open'); else panel.classList.add('open'); } schedule(); }); }
-    function schedule(){ if(!promo) return; if(hideT) clearTimeout(hideT); hideT=setTimeout(function(){ promo.style.display='none'; if(panel) panel.classList.remove('open'); if(showT) clearTimeout(showT); showT=setTimeout(function(){ promo.style.display='block'; schedule(); },90000); },90000); }
+    if(promo){ promo.addEventListener('click', function(){ if(panel){ if(panel.classList.contains('open')){ panel.classList.remove('open'); } else { panel.classList.add('open'); } } schedule(); }); }
+    var be=_g('lpBtnEgg'); if(be) be.addEventListener('click', function(){ window.drOpenEgg(); });
+    var br=_g('lpBtnRed'); if(br) br.addEventListener('click', function(){ window.drOpenRed(); });
+    function schedule(){ if(!promo) return; if(hideT) clearTimeout(hideT); hideT=setTimeout(function(){ promo.classList.add('hide'); if(panel) panel.classList.remove('open'); if(showT) clearTimeout(showT); showT=setTimeout(function(){ promo.classList.remove('hide'); schedule(); },90000); },90000); }
     lpTimer('drRedH','drRedM','drRedS'); lpTimer('drEggH','drEggM','drEggS');
     fetch('/profile/daily-rewards/status').then(function(r){return r.json();}).then(function(d){ if(d&&d.ok&&d.status) lpStatus=d.status; }).catch(function(){});
     setTimeout(lpShowPopup,1200);
