@@ -14,7 +14,9 @@ window.addEventListener('error', function(ev){
 %>
 
 <style>
-  #lpPromo { position: fixed; right: 12px; bottom: 100px; z-index: 9998; width: 60px; height: 60px; cursor: pointer; animation: lpFloat 3s ease-in-out infinite; }
+    #lpPromo { position: fixed; right: 12px; bottom: 100px; z-index: 9990; width: 60px; height: 60px; cursor: pointer; animation: lpFloat 3s ease-in-out infinite; }
+  #lpPanel.open ~ #lpPromo { display: none !important; }
+
   @keyframes lpFloat { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-9px);} }
   #lpPromo .lp-pack { width: 60px; height: 60px; border-radius: 14px; background: radial-gradient(circle at 32% 26%, #ff6b6b, #c81d1d); box-shadow: 0 6px 16px rgba(200,29,29,0.55); display: flex; align-items: center; justify-content: center; font-size: 30px; border: 2px solid rgba(255,255,255,0.3); }
   #lpPromo .lp-dot { position: absolute; top: -3px; right: -3px; width: 14px; height: 14px; background: #f59e0b; border-radius: 50%; border: 2px solid #111; }
