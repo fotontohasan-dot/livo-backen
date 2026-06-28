@@ -45,28 +45,51 @@
 
 <div class="menu-overlay" id="menuOverlay" onclick="toggleMenu()"></div>
 
-<nav class="navbar" style="background: var(--grad-primary); position:relative; z-index:10000;">
-  <div style="display:flex;align-items:center;gap:12px;">
-    <button onclick="toggleMenu()" style="background:none;border:none;color:#fff;font-size:24px;cursor:pointer;padding:0 12px;"><i class="fas fa-bars"></i></button>
-    <div class="nav-brand" style="color: #fff; font-family: 'Teko', sans-serif; font-size: 1.8rem; letter-spacing: 1px;">LIVO</div>
+<nav class="navbar">
+  <div class="nav-left">
+    <button onclick="toggleMenu()" style="background:none;border:none;color:var(--text-main);font-size:22px;cursor:pointer;padding:5px;">
+      <i class="fas fa-bars"></i>
+    </button>
+    <a href="/" class="nav-brand" style="color: var(--gold); font-family: 'Teko', sans-serif; font-size: 2rem; letter-spacing: 1px; text-decoration: none;">LIVO</a>
   </div>
-  <div style="display:flex;align-items:center;gap:12px;">
-    <div class="lang-switch" style="background: var(--bg-glass); border-radius: 20px; padding: 2px; border: 1px solid var(--border-glass);">
-      <a href="/lang/bn" class="lang-btn <%= lang === 'bn' ? 'active' : '' %>" style="border:none; padding: 4px 10px; border-radius: 18px;">BN</a>
-      <a href="/lang/en" class="lang-btn <%= lang === 'en' ? 'active' : '' %>" style="border:none; padding: 4px 10px; border-radius: 18px;">EN</a>
+
+  <div class="nav-right">
+    <!-- Language Toggle -->
+    <div class="lang-switch-nav">
+      <a href="/lang/bn" class="<%= lang === 'bn' ? 'active' : '' %>">BN</a>
+      <a href="/lang/en" class="<%= lang === 'en' ? 'active' : '' %>">EN</a>
     </div>
-    <button id="theme-toggle-nav" class="glass" style="width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--gold); border: 1px solid var(--border-glass); cursor: pointer; background: none;">
+
+    <!-- Theme Toggle -->
+    <button id="theme-toggle-nav" class="nav-theme-btn">
       <i class="fas fa-moon nav-theme-icon"></i>
     </button>
+
     <% if(locals.user) { %>
-      <div class="glass" style="padding:4px 12px;border-radius:20px;font-size:13px;color:var(--gold);display:flex;align-items:center;gap:4px;font-family:'Teko',sans-serif;font-weight:700;">💰 <span class="js-balance"><%= user.coins %></span></div>
-      <div style="display:flex;gap:12px;">
-        <a href="/notifications" style="color:#fff;font-size:18px;padding:8px;"><i class="fas fa-bell"></i></a>
-        <a href="/news" style="color:#fff;font-size:18px;padding:8px;"><i class="fas fa-envelope"></i></a>
+      <!-- User Elements -->
+      <div class="nav-balance-box">
+        <span style="font-size: 0.9rem;">💰</span>
+        <span class="js-balance"><%= user.coins %></span>
+        <button onclick="refreshBalance()" class="nav-refresh-btn" id="refreshBtn">
+          <i class="fas fa-sync-alt"></i>
+        </button>
+      </div>
+
+      <div style="display:flex; gap: 4px;">
+        <a href="/notifications" class="nav-icon-link">
+          <i class="fas fa-bell"></i>
+          <span class="badge-dot"></span>
+        </a>
+        <a href="/profile/chat" class="nav-icon-link">
+          <i class="fas fa-envelope"></i>
+        </a>
       </div>
     <% } else { %>
-      <a href="/login" class="btn btn-primary" style="padding:6px 14px;border-radius:20px;font-size:12px;">Login</a>
-      <a href="/register" class="btn btn-secondary" style="padding:6px 14px;border-radius:20px;font-size:12px;">Register</a>
+      <!-- Auth Buttons -->
+      <div style="display:flex; gap: 8px;">
+        <a href="/login" class="nav-btn-auth nav-btn-login"><%= t.login %></a>
+        <a href="/register" class="nav-btn-auth nav-btn-register"><%= t.register %></a>
+      </div>
     <% } %>
   </div>
 </nav>
@@ -109,19 +132,29 @@ document.addEventListener('keydown', function (e) {
 })();
 
 // ===== রিয়েল-টাইম ব্যালেন্স আপডেট =====
+function refreshBalance() {
+  var btn = document.getElementById('refreshBtn');
+  if (btn) btn.classList.add('spinning');
+
+  fetch('/coins/balance', { headers: { 'Accept': 'application/json' } })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d && d.success && d.coins != null) {
+        document.querySelectorAll('.js-balance').forEach(function (el) {
+          el.textContent = d.coins;
+        });
+      }
+    })
+    .catch(function () {})
+    .finally(function() {
+      setTimeout(function() {
+        if (btn) btn.classList.remove('spinning');
+      }, 500);
+    });
+}
+window.refreshBalance = refreshBalance;
+
 (function () {
-  function refreshBalance() {
-    fetch('/coins/balance', { headers: { 'Accept': 'application/json' } })
-      .then(function (r) { return r.json(); })
-      .then(function (d) {
-        if (d && d.success && d.coins != null) {
-          document.querySelectorAll('.js-balance').forEach(function (el) {
-            el.textContent = d.coins;
-          });
-        }
-      })
-      .catch(function () {});
-  }
   // অ্যাপে ফিরলে বা ট্যাব আবার দেখলে ব্যালেন্স রিফ্রেশ
   window.addEventListener('focus', refreshBalance);
   document.addEventListener('visibilitychange', function () {
