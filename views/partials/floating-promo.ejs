@@ -1,12 +1,12 @@
 <!-- ভাসমান প্রোমো প্যাকেট + অটো পপআপ -->
-<!-- ব্যবহার: হমপেজে include করুন -->
+<!-- ব্যবহার: হোমপেজে include করুন -->
 
 <!-- ====== এখানে আপনার ছবির লিংক বসান (https://...) ====== -->
 <%
   var promoIcon   = "";  // ভাসমান আইকন (খালি = সুন্দর লাল প্যাকেট ইমোজি)
-  var popupImg1   = "https://i.postimg.cc/V05Qx9N4/IMG-3375.jpg";  // পপআপ ১ ছবি
-  var popupImg2   = "https://i.postimg.cc/p5ybwQdQ/IMG-3399.jpg";  // পপআপ ২ ছবি
-  var popupImg3   = "https://i.postimg.cc/V05Qx9NR/IMG-3401.jpg";  // পপআপ ৩ ছবি
+  var popupImg1   = "https://i.postimg.cc/RWxKYRSh/IMG-3413.jpg";  // পপআপ ১ ছবি
+  var popupImg2   = "https://i.postimg.cc/w7mDFPpR/IMG-3414.jpg";  // পপআপ ২ ছবি
+  var popupImg3   = "https://i.postimg.cc/hXRTYrDj/photo-output.jpg";  // পপআপ ৩ ছবি
 %>
 <!-- ===================================================== -->
 
@@ -35,7 +35,7 @@
   #livoPopupOverlay .popup-title-img { padding: 16px 20px 4px; text-align: center; color: #111; }
   #livoPopupOverlay .popup-title-img h2 { font-size: 17px; font-weight: 800; margin: 0 0 6px; }
   #livoPopupOverlay .popup-title-img p { font-size: 13px; margin: 0; color: #555; line-height: 1.5; }
-  #livoPopupOverlay .popup-close { position: absolute; top: 10px; right: 12px; width: 30px; height: 30px; background: rgba(0,0,0,0.35); color: #fff; border: none; border-radius: 50%; font-size: 18px; cursor: pointer; z-index: 3; }
+  #livoPopupOverlay .popup-close { position: absolute; top: 10px; right: 10px; width: 38px; height: 38px; background: rgba(0,0,0,0.55); color: #fff; border: 2px solid #fff; border-radius: 50%; font-size: 22px; font-weight: bold; line-height: 1; cursor: pointer; z-index: 5; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
   #livoPopupOverlay .popup-actions { display: flex; gap: 8px; padding: 14px 16px 12px; background: #fff; }
   #livoPopupOverlay .popup-actions button { flex: 1; padding: 12px; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; }
   #livoPopupOverlay .btn-prev { background: #eee; color: #444; }
@@ -51,7 +51,7 @@
     <div id="livoPopupBody"></div>
     <div class="popup-dots" id="livoPopupDots"></div>
     <div class="popup-actions">
-      <button class="btn-prev" onclick="livoPrevPopup()">পূর্ববর্তী</button>
+      <button class="btn-prev" onclick="livoPrevPopup()">পূর্ববর</button>
       <button class="btn-next" onclick="livoNextPopup()">পরবর্তী</button>
     </div>
   </div>
@@ -62,7 +62,7 @@
   <a href="/profile/vip"><span class="mi-emoji">👑</span> VIP সদস্যদের সুবিধা</a>
   <a href="/profile/app-download"><span class="mi-emoji">📲</span> অ্যাপ ডাউনলোড করুন</a>
   <a href="/tournaments"><span class="mi-emoji">🏆</span> টুর্নামেন্ট</a>
-  <a href="/profile/wheel"><span class="mi-emoji">🎡</span> লাকি স্পিন</a>
+  <a href="/profile/wheel"><span class="mi-emoji">🎡</span> লাকি সন</a>
 </div>
 
 <div id="livoPromo">
@@ -75,92 +75,12 @@
 (function () {
   var IMG1 = "<%= popupImg1 %>", IMG2 = "<%= popupImg2 %>", IMG3 = "<%= popupImg3 %>";
   var popups = [
-    { img: IMG1, emoji: "🎉", title: "সদস্য উদযাপন দিবস", text: "প্রতি মাসের ১০ তারিখ বিশাল নগদ পুরস্কার! যত বেশি বাজি, তত বেশি ভাগ্যবান।", grad: "linear-gradient(135deg,#0f7a3d,#064d26)" },
+    { img: IMG1, emoji: "🎉", title: "সদস্য উদযাপন দিবস", text: "প্রতি মাসের ১০ তারিখ বিশাল নগদ পুরস্কার! যত বেশি বাজি, তত বেশি ভাগবান।", grad: "linear-gradient(135deg,#0f7a3d,#064d26)" },
     { img: IMG2, emoji: "👑", title: "VIP সদস্যদের জন্য আরও সুবিধা", text: "প্রতি মাসে সর্বোচ্চ বোনাস + সাপ্তাহিক রিওয়ার্ড। VIP হয়ে উপভোগ করুন এক্সক্লুসিভ সুবিধা।", grad: "linear-gradient(135deg,#7c3aed,#4c1d95)" },
-    { img: IMG3, emoji: "📲", title: "এখনই অ্যাপ ডাউনলোড করুন", text: "অ্যাপ ডাউনলোড করে জিতে নিন আকর্ষণীয় বোনাস ও দ্রুত অ্যাক্সেস!", grad: "linear-gradient(135deg,#e11d48,#9f1239)" }
+    { img: IMG3, emoji: "📲", title: "এখনই অযাপ ডাউনলোড করুন", text: "অ্যাপ ডাউনলোড করে জিতে নিন আকর্ষণীয় বোনাস ও দ্রুত অ্যাক্সেস!", grad: "linear-gradient(135deg,#e11d48,#9f1239)" }
   ];
   var cur = 0;
 
   function renderPopup() {
     var p = popups[cur];
     var body = document.getElementById('livoPopupBody');
-    if (p.img && p.img.trim() !== "") {
-      body.innerHTML = '<img class="popup-img" src="' + p.img + '" alt="promo">' +
-        '<div class="popup-title-img"><h2>' + p.title + '</h2><p>' + p.text + '</p></div>';
-    } else {
-      body.innerHTML = '<div class="popup-banner" style="background:' + p.grad + '">' +
-        '<span class="big-emoji">' + p.emoji + '</span><h2>' + p.title + '</h2><p>' + p.text + '</p></div>';
-    }
-    document.getElementById('livoPopupDots').innerHTML = popups.map(function (_, i) {
-      return '<span class="' + (i === cur ? 'active' : '') + '"></span>';
-    }).join('');
-  }
-
-  window.livoNextPopup = function () { if (cur < popups.length - 1) { cur++; renderPopup(); } else { livoClosePopup(); } };
-  window.livoPrevPopup = function () { if (cur > 0) { cur--; renderPopup(); } };
-  window.livoClosePopup = function () { document.getElementById('livoPopupOverlay').style.display = 'none'; };
-  function showPopup() { cur = 0; renderPopup(); document.getElementById('livoPopupOverlay').style.display = 'flex'; }
-
-  var promo = document.getElementById('livoPromo');
-  var menu = document.getElementById('livoPromoMenu');
-  var reAppearTimer = null;
-  var dragging = false, moved = false, startX = 0, startY = 0, curX = 0, curY = 0;
-
-  function openMenu() {
-    var rect = promo.getBoundingClientRect();
-    menu.style.bottom = 'auto'; menu.style.right = 'auto';
-    var top = rect.top - menu.offsetHeight - 8;
-    if (top < 10) top = rect.bottom + 8;
-    menu.style.top = top + 'px';
-    var left = rect.right - 215;
-    if (left < 10) left = 10;
-    menu.style.left = left + 'px';
-    menu.style.display = 'block';
-  }
-  function closeMenu() { menu.style.display = 'none'; }
-
-  function onDown(e) {
-    dragging = true; moved = false;
-    promo.classList.add('dragging');
-    var pt = e.touches ? e.touches[0] : e;
-    var rect = promo.getBoundingClientRect();
-    startX = pt.clientX; startY = pt.clientY; curX = rect.left; curY = rect.top;
-    promo.style.right = 'auto'; promo.style.bottom = 'auto';
-    promo.style.left = curX + 'px'; promo.style.top = curY + 'px';
-  }
-  function onMove(e) {
-    if (!dragging) return;
-    var pt = e.touches ? e.touches[0] : e;
-    var dx = pt.clientX - startX, dy = pt.clientY - startY;
-    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true;
-    var nx = curX + dx, ny = curY + dy;
-    nx = Math.max(4, Math.min(window.innerWidth - 70, nx));
-    ny = Math.max(4, Math.min(window.innerHeight - 70, ny));
-    promo.style.left = nx + 'px'; promo.style.top = ny + 'px';
-    if (e.cancelable) e.preventDefault();
-  }
-  function onUp() {
-    if (!dragging) return;
-    dragging = false; promo.classList.remove('dragging');
-    if (!moved) { if (menu.style.display === 'block') closeMenu(); else openMenu(); }
-  }
-
-  promo.addEventListener('touchstart', onDown, { passive: true });
-  promo.addEventListener('touchmove', onMove, { passive: false });
-  promo.addEventListener('touchend', onUp);
-  promo.addEventListener('mousedown', onDown);
-  document.addEventListener('mousemove', onMove);
-  document.addEventListener('mouseup', onUp);
-  document.addEventListener('click', function (e) { if (!promo.contains(e.target) && !menu.contains(e.target)) closeMenu(); });
-
-  window.livoHidePromo = function (e) {
-    e.stopPropagation();
-    promo.style.display = 'none'; closeMenu();
-    if (reAppearTimer) clearTimeout(reAppearTimer);
-    reAppearTimer = setTimeout(function () { promo.style.display = 'block'; }, 150000);
-  };
-
-  document.addEventListener('DOMContentLoaded', function () { setTimeout(showPopup, 1200); });
-  if (document.readyState !== 'loading') { setTimeout(showPopup, 1200); }
-})();
-</script>
