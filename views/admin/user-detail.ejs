@@ -66,9 +66,15 @@
       <input type="number" name="amount" class="form-input" placeholder="কয়েন" min="1" style="flex:1;">
       <button class="btn btn-sm btn-gold">+ যোগ</button>
     </form>
-    <form action="/admin/users/<%= u.id %>/coins/remove" method="POST" style="display:flex;gap:.5rem;margin-bottom:14px;">
+    <form action="/admin/users/<%= u.id %>/coins/remove" method="POST" style="display:flex;gap:.5rem;margin-bottom:8px;">
       <input type="number" name="amount" class="form-input" placeholder="কয়েন" min="1" style="flex:1;">
       <button class="btn btn-sm btn-danger">- কমান</button>
+    </form>
+
+    <!-- ফ্রি বেট -->
+    <form action="/admin/users/<%= u.id %>/freebet" method="POST" style="display:flex;gap:.5rem;margin-bottom:14px;">
+      <input type="number" name="amount" class="form-input" placeholder="ফ্রি বেট পরিমাণ" min="1" style="flex:1;">
+      <button class="btn btn-sm" style="background:#10b981;color:#fff;">🎁 ফ্রি বেট দিন</button>
     </form>
 
     <!-- নোটিফিকেশন পাঠানো -->
