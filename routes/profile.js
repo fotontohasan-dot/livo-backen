@@ -16,6 +16,8 @@ const { getAllFreeBets, claimFreeBet } = require('../services/freebet');
 const { getWeeklyStatus, claimWeekly, getMonthlyStatus, claimMonthly } = require('../services/periodicReward');
 const { getShareStatus, claimShare } = require('../services/social');
 const { getLeaderboard } = require('../services/contest');
+const { getRewardStatus, claimRedPacket, claimGoldenEgg } = require('../services/redpacket');
+
 
 router.get('/', isAuth, async (req, res) => {
   try {
