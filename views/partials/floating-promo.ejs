@@ -1,4 +1,4 @@
-<!-- ভাসমান প্রোমো প্যাকেট + স্লাইডিং প্যানেল + পমো পপআপ + দৈনিক রিওয়ার্ড (শুধু হোমপেজ) -->
+<!-- ভাসমান প্রোমো প্যাকেট + স্লাইডিং প্যানেল + পমো পপআপ + দৈনিক রিওয়ার্ড (শুধ হোমপেজ) -->
 <%
   var popupImg1 = "https://i.postimg.cc/RWxKYRSh/IMG-3413.jpg";
   var popupImg2 = "https://i.postimg.cc/w7mDFPpR/IMG-3414.jpg";
@@ -84,12 +84,12 @@
   <div class="dr-box dr-red">
     <button class="dr-close" onclick="drCloseRed()">×</button>
     <div class="dr-banner">পুরস্কার</div>
-    <div class="dr-subtitle">দনিক লগইন লাল খাম — সর্বোচ পুরস্কার ৯৯,৯৯৯</div>
+    <div class="dr-subtitle">দৈনিক লগইন লাল খাম — সর্বোচ্চ পুরস্কার ৯৯,৯৯৯</div>
     <div class="dr-timer"><span class="t-label">অবশিষ্ট সময়</span><span class="t-cell" id="drRedH">00</span><span class="t-colon">:</span><span class="t-cell" id="drRedM">00</span><span class="t-colon">:</span><span class="t-cell" id="drRedS">00</span></div>
     <div class="dr-bigpack">🧧</div>
     <div id="drRedResult"></div>
     <button class="dr-claim" id="drRedBtn" onclick="drClaimRed()">দাবি করুন</button>
-    <div class="dr-hint">দিনে একবার দবি করা যাবে</div>
+    <div class="dr-hint">দিনে একবার দাবি করা যাবে</div>
   </div>
 </div>
 
@@ -97,8 +97,8 @@
   <div class="dr-box dr-egg">
     <button class="dr-close" onclick="drCloseEgg()">×</button>
     <div class="dr-banner">পুরস্কার</div>
-    <div class="dr-subtitle">প্রতিদিন লগইন করলেই গোল্ডেন এগ ভাঙতে পারবেন</div>
-    <div class="dr-timer"><span class="t-label">অবশিষ্ সময়</span><span class="t-cell" id="drEggH">00</span><span class="t-colon">:</span><span class="t-cell" id="drEggM">00</span><span class="t-colon">:</span><span class="t-cell" id="drEggS">00</span></div>
+    <div class="dr-subtitle">প্রতিদিন লগইন করলেই গোলন এগ ভাঙতে পারবেন</div>
+    <div class="dr-timer"><span class="t-label">অবশিষ্ট সময়</span><span class="t-cell" id="drEggH">00</span><span class="t-colon">:</span><span class="t-cell" id="drEggM">00</span><span class="t-colon">:</span><span class="t-cell" id="drEggS">00</span></div>
     <div class="dr-eggs" id="drEggGrid"></div>
     <div id="drEggResult"></div>
     <div class="dr-hint" id="drEggHint">একটি ডিমে চাপ দিন</div>
@@ -111,7 +111,7 @@
     <button class="lp-up" onclick="lpClosePanel()">⌃</button>
   </div>
   <a class="lp-item" href="/tournaments"><div class="lp-icon lp-ic-trophy">🏆</div><div class="lp-label">টুর্নামেন্ট</div></a>
-  <a class="lp-item" href="/profile/wheel"><div class="lp-icon lp-ic-wheel">🎡</div><div class="lp-label">লাকি স্পিন</div></a>
+  <a class="lp-item" href="/profile/wheel"><div class="lp-icon lp-ic-wheel">🎡</div><div class="lp-label">লকি স্পিন</div></a>
   <button class="lp-item" onclick="drOpenEgg()"><div class="lp-icon lp-ic-egg">🥚</div><div class="lp-label">সোনার ডিম</div></button>
   <button class="lp-item" onclick="drOpenRed()"><div class="lp-icon lp-ic-packet">🧧</div><div class="lp-label">লাল প্যাকেট</div></button>
 </div>
@@ -123,12 +123,13 @@
 
 <script>
 (function () {
+  try {
   var IMG = ["<%= popupImg1 %>", "<%= popupImg2 %>", "<%= popupImg3 %>"];
-  var TITLES = ["সদস্য উদযাপন দবস", "VIP সদস্যদের জন্য আরও সুবিধা", "এখনই অ্যাপ ডাউনলোড করুন"];
-  var TEXTS = ["প্রতি মাসের ১০ তারিখ বিশাল নগদ পুরস্কার! যত বেশি বাজি, তত বেশি ভাগবান।","প্রতি মাসে সর্বোচ্চ বোনাস + সাপ্তাহিক রিওয়ার্।","অ্যাপ ডাউনলোড করে জিতে নিন আকর্ষণীয় বোনাস!"];
+  var TITLES = ["সদস্য উদযাপন দিবস", "VIP সদস্যদের জন্য আরও সুবিধা", "এখনই অ্যাপ ডাউনলোড করুন"];
+  var TEXTS = ["প্রতি মাসের ১০ তারিখ বিশাল নগদ পুরস্কার! যত বেশি বাজ, তত বেশি ভাগ্যবান।","প্রতি মাসে সর্বোচ্চ বোনাস + সাপ্তাহিক রিওয়ার্ড।","অ্যাপ ডাউনলোড করে জিতে নিন আকর্ষণীয় বোনাস!"];
   var cur = 0, slideTimer = null;
   function render(){
-    var body=document.getElementById('lpPopupBody');
+    var body=document.getElementById('lpPopupBody'); if(!body) return;
     body.innerHTML='<img class="pp-img" src="'+IMG[cur]+'" alt="promo"><div class="pp-caption"><h2>'+TITLES[cur]+'</h2><p>'+TEXTS[cur]+'</p></div>';
     var dots=""; for(var i=0;i<IMG.length;i++) dots+='<span class="'+(i===cur?'on':'')+'"></span>';
     document.getElementById('lpPopupDots').innerHTML=dots;
@@ -136,5 +137,36 @@
   function stopSlide(){ if(slideTimer){clearInterval(slideTimer);slideTimer=null;} }
   window.lpNext=function(){ stopSlide(); if(cur<IMG.length-1){cur++;render();}else{lpClosePopup();} };
   window.lpPrev=function(){ stopSlide(); if(cur>0){cur--;render();} };
-  window.lpClosePopup=function(){ stopSlide(); document.getElementById('lpPopup').style.display='none'; };
-  function showPopup(){ cur=0; render(); document.getElementById('lpPopup').style.display='flex'; var step=1; slideTimer=setInterval(function(){ if(step<IMG.length){cur=step;render();step
+  window.lpClosePopup=function(){ stopSlide(); var e=document.getElementById('lpPopup'); if(e) e.style.display='none'; };
+  function showPopup(){ var e=document.getElementById('lpPopup'); if(!e) return; cur=0; render(); e.style.display='flex'; var step=1; slideTimer=setInterval(function(){ if(step<IMG.length){cur=step;render();step++;}else{lpClosePopup();} },1000); }
+
+  var panel=document.getElementById('lpPanel'); var promo=document.getElementById('lpPromo');
+  var hideTimer=null, showTimer=null;
+  window.lpClosePanel=function(){ if(panel) panel.classList.remove('open'); };
+  if(promo){ promo.addEventListener('click', function(){ if(panel){ if(panel.classList.contains('open')) panel.classList.remove('open'); else panel.classList.add('open'); } scheduleHide(); }); }
+  function scheduleHide(){ if(!promo) return; if(hideTimer) clearTimeout(hideTimer); hideTimer=setTimeout(function(){ promo.style.display='none'; if(panel) panel.classList.remove('open'); if(showTimer) clearTimeout(showTimer); showTimer=setTimeout(function(){ promo.style.display='block'; scheduleHide(); },90000); },90000); }
+
+  function startTimer(hEl,mEl,sEl){
+    function tick(){ var now=new Date(); var end=new Date(now); end.setHours(24,0,0,0); var diff=Math.max(0,Math.floor((end-now)/1000)); var h=Math.floor(diff/3600),m=Math.floor((diff%3600)/60),s=diff%60; function p(n){return n<10?'0'+n:''+n;} var a=document.getElementById(hEl),b=document.getElementById(mEl),c=document.getElementById(sEl); if(a)a.textContent=p(h); if(b)b.textContent=p(m); if(c)c.textContent=p(s); }
+    tick(); setInterval(tick,1000);
+  }
+  startTimer('drRedH','drRedM','drRedS'); startTimer('drEggH','drEggM','drEggS');
+
+  var statusData={ redPacket:{claimed:false}, goldenEgg:{claimed:false} };
+  function loadStatus(){ fetch('/profile/daily-rewards/status').then(function(r){return r.json();}).then(function(d){ if(d&&d.ok&&d.status) statusData=d.status; }).catch(function(){}); }
+
+  window.drOpenRed=function(){ if(panel) panel.classList.remove('open'); var rr=document.getElementById('drRedResult'); if(rr) rr.innerHTML=''; var btn=document.getElementById('drRedBtn'); if(btn){ if(statusData.redPacket.claimed){btn.disabled=true;btn.textContent='আজ নেওয়া হয়েছে';}else{btn.disabled=false;btn.textContent='দাবি করুন';} } var ov=document.getElementById('drRedOverlay'); if(ov) ov.style.display='flex'; };
+  window.drCloseRed=function(){ var e=document.getElementById('drRedOverlay'); if(e) e.style.display='none'; };
+  window.drClaimRed=function(){ var btn=document.getElementById('drRedBtn'); if(!btn) return; btn.disabled=true; btn.textContent='অপেক্ষা করুন...'; fetch('/profile/daily-rewards/red-packet/claim',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).then(function(r){return r.json();}).then(function(d){ if(d.ok){ statusData.redPacket.claimed=true; document.getElementById('drRedResult').innerHTML='<div class="dr-success">🎉 আপনি পেলেন '+d.amount+' কয়েন!</div>'; btn.textContent='সফল হয়েছে'; setTimeout(drCloseRed,2500); }else{ document.getElementById('drRedResult').innerHTML='<div class="dr-hint">'+(d.message||'সমস্যা হয়েছে')+'</div>'; btn.disabled=false; btn.textContent='দাবি করুন'; } }).catch(function(){ btn.disabled=false; btn.textContent='দাবি করুন'; }); };
+
+  var eggClaimed=false;
+  function buildEggs(){ var grid=document.getElementById('drEggGrid'); if(!grid) return; grid.innerHTML=''; for(var i=0;i<8;i++){ var d=document.createElement('div'); d.className='dr-egg-item'; d.innerHTML='<span class="egg-emoji">🥚</span><span class="egg-amt"></span>'; d.onclick=(function(idx){return function(){drPickEgg(idx);};})(i); grid.appendChild(d); } var hint=document.getElementById('drEggHint'); if(hint) hint.textContent='একটি ডিমে চাপ দিন'; var rr=document.getElementById('drEggResult'); if(rr) rr.innerHTML=''; eggClaimed=false; }
+  window.drOpenEgg=function(){ if(panel) panel.classList.remove('open'); buildEggs(); if(statusData.goldenEgg.claimed){ var hint=document.getElementById('drEggHint'); if(hint) hint.textContent='আজকের ডিম ইতিমধ্যে নেওয়া হয়েছে'; document.querySelectorAll('#drEggGrid .dr-egg-item').forEach(function(it){it.style.opacity='.4';it.onclick=null;}); } var ov=document.getElementById('drEggOverlay'); if(ov) ov.style.display='flex'; };
+  window.drCloseEgg=function(){ var e=document.getElementById('drEggOverlay'); if(e) e.style.display='none'; };
+  function drPickEgg(idx){ if(eggClaimed||statusData.goldenEgg.claimed) return; eggClaimed=true; var hint=document.getElementById('drEggHint'); if(hint) hint.textContent='অপেক্ষা করুন...'; fetch('/profile/daily-rewards/golden-egg/claim',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pickedIndex:idx})}).then(function(r){return r.json();}).then(function(d){ if(d.ok){ statusData.goldenEgg.claimed=true; document.querySelectorAll('#drEggGrid .dr-egg-item').forEach(function(it,i){ it.classList.add('opened'); if(i===d.pickedIndex) it.classList.add('win'); it.querySelector('.egg-amt').textContent=d.reveal[i]; it.onclick=null; }); document.getElementById('drEggResult').innerHTML='<div class="dr-success">🎉 আপনি পেলেন '+d.amount+' কয়েন!</div>'; if(hint) hint.textContent='অন্যান্য ডিমে আরও বড় পুরস্কার ছিল!'; setTimeout(drCloseEgg,4000); }else{ if(hint) hint.textContent=d.message||'সমস্যা হয়েছে'; eggClaimed=false; } }).catch(function(){ eggClaimed=false; if(hint) hint.textContent='সমস্যা হয়েছে'; }); }
+
+  function init(){ try { loadStatus(); setTimeout(showPopup,1200); scheduleHide(); } catch(e){ console.log('promo init err',e); } }
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded',init); } else { init(); }
+  } catch(e){ console.log('floating-promo err',e); }
+})();
+</script>
