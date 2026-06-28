@@ -10,34 +10,19 @@
   .red-theme-text { color: #e61e26; }
   .red-theme-border { border-color: #e61e26; }
 
-  .method-card.active {
-    border-color: #e61e26;
-    background-color: #fff5f5;
-  }
-  .amount-btn.active {
-    background-color: #e61e26;
-    color: white;
-    border-color: #e61e26;
-  }
-  .channel-btn.active {
-    background-color: #e61e26;
-    color: white;
-    border-color: #e61e26;
-  }
   input:focus {
     border-color: #e61e26 !important;
     box-shadow: 0 0 0 2px rgba(230, 30, 38, 0.1);
   }
   .step-2 { display: none; }
 
-  /* Fix for navbar and bottom nav if they have dark styles */
   .navbar, .bottom-nav {
     max-width: 480px;
     margin: 0 auto;
   }
 </style>
 
-<div class="min-h-screen pb-24">
+<div class="min-h-screen pb-32">
   <!-- Top Bar -->
   <div class="red-theme-bg text-white px-4 py-3 flex items-center gap-4 sticky top-0 z-50">
     <a href="/profile" class="text-xl"><i class="fas fa-chevron-left"></i></a>
@@ -55,15 +40,17 @@
         <div class="mb-6">
           <label class="block text-gray-700 font-bold mb-3">পেমেন্ট মেথড সিলেক্টর</label>
           <div class="grid grid-cols-2 gap-4">
-            <div class="method-card active border-2 rounded-xl p-3 flex flex-col items-center justify-center bg-white cursor-pointer transition-all" onclick="selectMethod('bkash', this)">
-              <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Bkash_logo.png/1200px-Bkash_logo.png" class="h-10 object-contain mb-1" alt="bKash">
+            <!-- bKash -->
+            <div id="method-bkash" class="method-card border-2 border-red-600 bg-red-50 rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer transition-all" onclick="selectMethod('bkash')">
+              <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR_Y05v4D0V5v5yX_K0Q9f-xKz9Kq5Y8Y1w5A&s" class="h-10 object-contain mb-1" alt="bKash" onerror="this.src='https://via.placeholder.com/40?text=bKash'">
               <span class="text-sm font-bold">bKash</span>
-              <input type="radio" name="method" value="bkash" class="hidden" checked>
+              <input type="radio" name="method" value="bkash" id="radio-bkash" class="hidden" checked>
             </div>
-            <div class="method-card border-2 border-gray-200 rounded-xl p-3 flex flex-col items-center justify-center bg-white cursor-pointer transition-all" onclick="selectMethod('nagad', this)">
-              <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Nagad_Logo.svg/1200px-Nagad_Logo.svg.png" class="h-10 object-contain mb-1" alt="Nagad">
+            <!-- Nagad -->
+            <div id="method-nagad" class="method-card border-2 border-gray-200 bg-white rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer transition-all" onclick="selectMethod('nagad')">
+              <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Nagad_Logo.svg/1200px-Nagad_Logo.svg.png" class="h-10 object-contain mb-1" alt="Nagad" onerror="this.src='https://via.placeholder.com/40?text=Nagad'">
               <span class="text-sm font-bold">Nagad</span>
-              <input type="radio" name="method" value="nagad" class="hidden">
+              <input type="radio" name="method" value="nagad" id="radio-nagad" class="hidden">
             </div>
           </div>
         </div>
@@ -73,7 +60,9 @@
           <label class="block text-gray-700 font-bold mb-3">পেমেন্ট চ্যানেল</label>
           <div class="grid grid-cols-2 gap-3">
             <% ['চ্যানেল ১', 'চ্যানেল ৪', 'চ্যানেল ৫', 'চ্যানেল ১০'].forEach((ch, i) => { %>
-              <button type="button" class="channel-btn <%= i===0?'active':'' %> border-2 border-gray-200 rounded-lg py-2 text-sm font-bold bg-white transition-all" onclick="selectChannel(this)">
+              <button type="button"
+                      class="channel-btn <%= i===0?'red-theme-bg text-white':'bg-white text-gray-700 border-gray-200' %> border-2 rounded-lg py-2 text-sm font-bold transition-all"
+                      onclick="selectChannel(this)">
                 <%= ch %>
               </button>
             <% }) %>
@@ -85,7 +74,9 @@
           <label class="block text-gray-700 font-bold mb-3">অ্যামাউন্ট সিলেকশন (Fast Amount)</label>
           <div class="grid grid-cols-3 gap-2 mb-4">
             <% [100, 200, 500, 1000, 3000, 5000, 20000, 30000, 50000].forEach(amt => { %>
-              <button type="button" class="amount-btn border border-gray-300 rounded-md py-2 text-sm font-semibold bg-white hover:border-red-400 transition-all" onclick="setAmount(<%= amt %>, this)">
+              <button type="button"
+                      class="amount-btn border border-gray-300 rounded-md py-2 text-sm font-semibold bg-white hover:border-red-400 transition-all"
+                      onclick="setAmount(<%= amt %>, this)">
                 <%= amt %>
               </button>
             <% }) %>
@@ -113,7 +104,7 @@
             <button type="button" onclick="copyNumber()" class="mt-2 text-blue-600 text-xs font-bold uppercase"><i class="far fa-copy mr-1"></i> কপি করুন</button>
           </div>
           <div class="mt-4 space-y-2 text-sm text-gray-600 text-center">
-            <p>📲 bKash / Nagad Personal</p>
+            <p>📲 <span id="selectedMethodName">bKash</span> Personal</p>
             <p class="text-xs text-gray-400">⚠️ Send Money করুন, তারপর নিচের ফর্ম পূরণ করুন।</p>
           </div>
         </div>
@@ -156,26 +147,42 @@
 </div>
 
 <script>
-  function selectMethod(method, el) {
+  function selectMethod(method) {
+    // Reset all method cards
     document.querySelectorAll('.method-card').forEach(c => {
-      c.classList.remove('active');
-      c.classList.remove('border-red-500');
-      c.classList.add('border-gray-200');
+      c.classList.remove('border-red-600', 'bg-red-50');
+      c.classList.add('border-gray-200', 'bg-white');
     });
-    el.classList.add('active');
-    el.classList.remove('border-gray-200');
-    el.querySelector('input').checked = true;
+
+    // Set active method card
+    const el = document.getElementById('method-' + method);
+    el.classList.remove('border-gray-200', 'bg-white');
+    el.classList.add('border-red-600', 'bg-red-50');
+
+    // Check hidden radio
+    document.getElementById('radio-' + method).checked = true;
+
+    // Update display name in step 2
+    document.getElementById('selectedMethodName').innerText = method.charAt(0).toUpperCase() + method.slice(1);
   }
 
   function selectChannel(el) {
-    document.querySelectorAll('.channel-btn').forEach(b => b.classList.remove('active'));
-    el.classList.add('active');
+    document.querySelectorAll('.channel-btn').forEach(b => {
+      b.classList.remove('red-theme-bg', 'text-white');
+      b.classList.add('bg-white', 'text-gray-700', 'border-gray-200');
+    });
+    el.classList.remove('bg-white', 'text-gray-700', 'border-gray-200');
+    el.classList.add('red-theme-bg', 'text-white');
   }
 
   function setAmount(amt, el) {
     document.getElementById('amountInput').value = amt;
-    document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('active'));
-    el.classList.add('active');
+    document.querySelectorAll('.amount-btn').forEach(b => {
+      b.classList.remove('border-red-600', 'text-red-600', 'bg-red-50');
+      b.classList.add('border-gray-300', 'bg-white', 'text-gray-700');
+    });
+    el.classList.remove('border-gray-300', 'bg-white', 'text-gray-700');
+    el.classList.add('border-red-600', 'text-red-600', 'bg-red-50');
   }
 
   function goToStep2() {

@@ -27,14 +27,42 @@
     visibility: visible;
   }
 
-  /* Fix for navbar and bottom nav */
   .navbar, .bottom-nav {
     max-width: 480px;
     margin: 0 auto;
   }
+
+  /* Floating plus button position to be above bottom nav */
+  .fab-container {
+    position: fixed;
+    bottom: 100px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    z-index: 50;
+    pointer-events: none;
+  }
+  .fab-btn {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background-color: #e61e26;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    box-shadow: 0 4px 15px rgba(230, 30, 38, 0.4);
+    pointer-events: auto;
+    transition: transform 0.2s;
+  }
+  .fab-btn:active {
+    transform: scale(0.9);
+  }
 </style>
 
-<div class="min-h-screen pb-24">
+<div class="min-h-screen pb-32">
   <!-- Top Bar -->
   <div class="red-theme-bg text-white px-4 py-3 flex items-center gap-4 sticky top-0 z-50">
     <a href="/profile" class="text-xl"><i class="fas fa-chevron-left"></i></a>
@@ -45,19 +73,20 @@
     <%- include('../partials/flash') %>
 
     <div class="mb-6">
-        <p class="text-gray-500 font-bold mb-4">ই-ওয়ালেট যোগ করা হয়েছে: <span class="red-theme-text"><%= cards ? cards.length : 0 %></span></p>
+        <p class="text-gray-500 font-bold mb-4">ই-ওয়ালেট যোগ করা হয়েছে: <span class="red-theme-text font-black"><%= cards ? cards.length : 0 %></span></p>
 
         <% if (cards && cards.length > 0) { %>
             <div class="space-y-4">
                 <% cards.forEach(c => { %>
-                    <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex items-center gap-4">
-                        <div class="w-12 h-12 red-theme-bg rounded-full flex items-center justify-center text-white text-xl">
+                    <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex items-center gap-4 relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-1 h-full red-theme-bg"></div>
+                        <div class="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center red-theme-text text-xl">
                             <i class="fas fa-wallet"></i>
                         </div>
                         <div class="flex-1">
-                            <h3 class="font-bold text-gray-800"><%= c.bank_name %></h3>
-                            <p class="text-gray-500 text-sm"><%= c.account_number %></p>
-                            <p class="text-gray-400 text-xs mt-1"><%= c.holder_name %></p>
+                            <h3 class="font-bold text-gray-800 text-lg"><%= c.bank_name %></h3>
+                            <p class="text-gray-500 font-mono tracking-wider"><%= c.account_number %></p>
+                            <p class="text-gray-400 text-xs mt-1 font-bold"><%= c.holder_name %></p>
                         </div>
                         <div class="text-gray-300">
                             <i class="fas fa-chevron-right"></i>
@@ -66,60 +95,74 @@
                 <% }) %>
             </div>
         <% } else { %>
-            <div class="flex flex-col items-center justify-center py-20 text-center opacity-40">
-                <div class="text-7xl mb-4 text-gray-300">
-                    <i class="fas fa-credit-card"></i>
+            <!-- Empty State -->
+            <div class="flex flex-col items-center justify-center py-20 text-center">
+                <div class="relative mb-6">
+                    <div class="w-32 h-32 bg-gray-50 rounded-full flex items-center justify-center">
+                        <i class="fas fa-credit-card text-6xl text-gray-200"></i>
+                    </div>
+                    <div class="absolute -bottom-2 -right-2 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-md">
+                        <i class="fas fa-search text-gray-300"></i>
+                    </div>
                 </div>
-                <p class="text-gray-500 font-bold">খালি ই-ওয়ালেট</p>
-                <p class="text-xs text-gray-400 mt-2">আপনি এখনো কোনো ই-ওয়ালেট যোগ করেননি।</p>
+                <p class="text-gray-700 font-black text-xl">খালি ই-ওয়ালেট</p>
+                <p class="text-sm text-gray-400 mt-2 max-w-[200px] mx-auto">আপনি এখনো কোনো ই-ওয়ালেট যোগ করেননি। টাকা উত্তোলনের জন্য একটি ওয়ালেট যোগ করুন।</p>
             </div>
         <% } %>
-    </div>
-
-    <!-- Floating Plus Button -->
-    <div class="fixed bottom-28 left-0 right-0 flex justify-center z-40 pointer-events-none">
-        <button onclick="toggleModal(true)" class="w-16 h-16 red-theme-bg text-white rounded-full shadow-2xl flex items-center justify-center text-3xl hover:scale-110 active:scale-95 transition-all pointer-events-auto">
-            <i class="fas fa-plus"></i>
-        </button>
     </div>
   </div>
 </div>
 
+<!-- Floating Plus Button -->
+<div class="fab-container">
+    <button onclick="toggleModal(true)" class="fab-btn">
+        <i class="fas fa-plus"></i>
+    </button>
+</div>
+
 <!-- Bottom Sheet Modal -->
-<div id="modalOverlay" class="overlay fixed inset-0 bg-black/50 z-[100]" onclick="toggleModal(false)"></div>
-<div id="bottomSheet" class="bottom-sheet fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white rounded-t-[32px] z-[101] shadow-2xl overflow-hidden">
-    <div class="p-6">
+<div id="modalOverlay" class="overlay fixed inset-0 bg-black/60 z-[100]" onclick="toggleModal(false)"></div>
+<div id="bottomSheet" class="bottom-sheet fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white rounded-t-[32px] z-[101] shadow-2xl">
+    <div class="p-6 pb-10">
+        <!-- Handle -->
+        <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6"></div>
+
         <div class="flex items-center justify-between mb-8">
-            <h2 class="text-xl font-black text-gray-800">নতুন যোগ করুন</h2>
-            <button onclick="toggleModal(false)" class="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full text-gray-500">
-                <i class="fas fa-times"></i>
+            <h2 class="text-2xl font-black text-gray-800 tracking-tight">নতুন যোগ করুন</h2>
+            <button onclick="toggleModal(false)" class="w-10 h-10 flex items-center justify-center bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200 transition-colors">
+                <i class="fas fa-times text-xl"></i>
             </button>
         </div>
 
         <form action="/profile/cards/add" method="POST" class="space-y-6">
             <div>
-                <label class="block text-gray-500 text-sm font-bold mb-2">ওয়ালেট টাইপ</label>
-                <select name="bank_name" class="w-full p-4 border-2 border-gray-100 rounded-2xl focus:outline-none bg-gray-50 font-bold" required>
-                    <option value="" disabled selected>E-wallet সিলেক্ট করুন</option>
-                    <option value="bKash">bKash</option>
-                    <option value="Nagad">Nagad</option>
-                    <option value="Rocket">Rocket</option>
-                    <option value="Upay">Upay</option>
-                    <option value="Bank">Bank Account</option>
-                </select>
+                <label class="block text-gray-500 text-sm font-bold mb-2">ওয়ালেট টাইপ (E-wallet)</label>
+                <div class="relative">
+                    <select name="bank_name" class="w-full p-4 border-2 border-gray-100 rounded-2xl focus:outline-none focus:border-red-500 bg-gray-50 font-bold appearance-none" required>
+                        <option value="" disabled selected>E-wallet সিলেক্ট করুন</option>
+                        <option value="bKash">bKash</option>
+                        <option value="Nagad">Nagad</option>
+                        <option value="Rocket">Rocket</option>
+                        <option value="Upay">Upay</option>
+                        <option value="Bank Account">Bank Account</option>
+                    </select>
+                    <div class="absolute inset-y-0 right-4 flex items-center pointer-events-none text-gray-400">
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                </div>
             </div>
 
             <div>
                 <label class="block text-gray-500 text-sm font-bold mb-2">অ্যাকাউন্ট/নাম্বার</label>
-                <input type="text" name="account_number" placeholder="আপনার নম্বর বা অ্যাকাউন্ট লিখুন" class="w-full p-4 border-2 border-gray-100 rounded-2xl focus:outline-none bg-gray-50" required>
+                <input type="text" name="account_number" placeholder="আপনার নম্বর বা অ্যাকাউন্ট লিখুন" class="w-full p-4 border-2 border-gray-100 rounded-2xl focus:outline-none focus:border-red-500 bg-gray-50 font-bold" required>
             </div>
 
             <div>
                 <label class="block text-gray-500 text-sm font-bold mb-2">অ্যাকাউন্ট হোল্ডার নাম</label>
-                <input type="text" name="holder_name" placeholder="আপনার পুরো নাম লিখুন" class="w-full p-4 border-2 border-gray-100 rounded-2xl focus:outline-none bg-gray-50" required>
+                <input type="text" name="holder_name" placeholder="আপনার পুরো নাম লিখুন" class="w-full p-4 border-2 border-gray-100 rounded-2xl focus:outline-none focus:border-red-500 bg-gray-50 font-bold" required>
             </div>
 
-            <button type="submit" class="w-full red-theme-bg text-white py-4 rounded-2xl font-bold text-lg shadow-lg mt-4">
+            <button type="submit" class="w-full red-theme-bg text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:opacity-95 transition-all mt-4">
                 ওয়ালেট নিশ্চিত করুন
             </button>
         </form>
