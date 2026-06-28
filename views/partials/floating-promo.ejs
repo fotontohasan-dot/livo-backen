@@ -78,7 +78,8 @@ window.addEventListener('error', function(ev){
 
 <div class="dr-overlay" id="drEggOverlay"><div class="dr-box dr-egg"><button class="dr-close" onclick="drCloseEgg()">×</button><div class="dr-banner">পুরস্কার</div><div class="dr-subtitle">প্রতিদিন লগইন করলেই গোল্ডেন এগ ভাঙতে পারবেন</div><div class="dr-timer"><span class="t-label">অবশিষ্ট সময়</span><span class="t-cell" id="drEggH">00</span><span class="t-colon">:</span><span class="t-cell" id="drEggM">00</span><span class="t-colon">:</span><span class="t-cell" id="drEggS">00</span></div><div class="dr-eggs" id="drEggGrid"></div><div id="drEggResult"></div><div class="dr-hint" id="drEggHint">একটি ডিমে চাপ দিন</div></div></div>
 
-<div id="lpPanel"><div class="lp-top"><button class="lp-close" onclick="lpClosePanel()">×</button><button class="lp-up" onclick="lpClosePanel()">⌃</button></div>
+<div id="lpPanel"><div class="lp-top"><button class="lp-close" id="lpBtnClose">×</button><button class="lp-up" id="lpBtnUp">⌃</button></div>
+
 <a class="lp-item" href="/tournaments"><div class="lp-icon lp-ic-trophy">🏆</div><div class="lp-label">টুর্নামেন্ট</div></a>
 <a class="lp-item" href="/profile/wheel"><div class="lp-icon lp-ic-wheel">🎡</div><div class="lp-label">লকি স্পিন</div></a>
 <button class="lp-item" id="lpBtnEgg"><div class="lp-icon lp-ic-egg">🥚</div><div class="lp-label">সোনার ডিম</div></button>
@@ -121,7 +122,10 @@ function lpTimer(h,m,s){ function tk(){ var n=new Date(); var e=new Date(n); e.s
   try {
     var promo=_g('lpPromo'), panel=_g('lpPanel'), hideT=null, showT=null;
     if(promo){ promo.addEventListener('click', function(){ if(panel){ if(panel.classList.contains('open')){ panel.classList.remove('open'); } else { panel.classList.add('open'); } } schedule(); }); }
-    var be=_g('lpBtnEgg'); if(be) be.addEventListener('click', function(){ window.drOpenEgg(); });
+        var br=_g('lpBtnRed'); if(br) br.addEventListener('click', function(){ window.drOpenRed(); });
+    var bc=_g('lpBtnClose'); if(bc) bc.addEventListener('click', function(){ window.lpClosePanel(); });
+    var bu=_g('lpBtnUp'); if(bu) bu.addEventListener('click', function(){ window.lpClosePanel(); });
+
     var br=_g('lpBtnRed'); if(br) br.addEventListener('click', function(){ window.drOpenRed(); });
     function schedule(){ if(!promo) return; if(hideT) clearTimeout(hideT); hideT=setTimeout(function(){ promo.classList.add('hide'); if(panel) panel.classList.remove('open'); if(showT) clearTimeout(showT); showT=setTimeout(function(){ promo.classList.remove('hide'); schedule(); },90000); },90000); }
     lpTimer('drRedH','drRedM','drRedS'); lpTimer('drEggH','drEggM','drEggS');
