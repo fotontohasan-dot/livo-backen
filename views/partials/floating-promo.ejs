@@ -1,4 +1,12 @@
 <!-- ভাসমান প্রোমো + প্যনেল + দৈনিক রিওয়ার্ড -->
+<script>
+window.addEventListener('error', function(ev){
+  var bar = document.getElementById('lpErrBar');
+  if(!bar){ bar = document.createElement('div'); bar.id='lpErrBar'; bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:#fff;font-size:12px;padding:8px;text-align:center;'; document.body.appendChild(bar); }
+  bar.textContent = 'JS ERROR: ' + ev.message + ' @ ' + (ev.filename||'').split('/').pop() + ':' + ev.lineno;
+});
+</script>
+
 <%
   var popupImg1 = "https://i.postimg.cc/RWxKYRSh/IMG-3413.jpg";
   var popupImg2 = "https://i.postimg.cc/w7mDFPpR/IMG-3414.jpg";
