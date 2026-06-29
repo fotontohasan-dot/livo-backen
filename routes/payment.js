@@ -123,11 +123,17 @@ router.get('/withdraw', requireLogin, async (req, res) => {
   try {
     const result = await pool.query('SELECT coins FROM users WHERE id=$1', [req.session.user.id]);
     const coins = result.rows[0]?.coins || 0;
-    res.render('payment/withdraw', { user: req.session.user, coins });
+    let cards = [];
+    try {
+      const cardRes = await pool.query('SELECT * FROM bank_cards WHERE user_id=$1', [req.session.user.id]);
+      cards = cardRes.rows;
+    } catch (e) { cards = []; }
+    res.render('payment/withdraw', { user: req.session.user, coins, cards });
   } catch (err) {
     res.redirect('/');
   }
 });
+
 
 router.post('/withdraw', requireLogin, async (req, res) => {
   const { method, account_number } = req.body;
