@@ -1,41 +1,29 @@
 <%- include('partials/head') %>
 <%- include('partials/navbar') %>
-
-<div class="container" style="padding:1rem;padding-bottom:100px;max-width:800px;margin:0 auto;">
-  <%- include('partials/flash') %>
-
-  <h1 style="font-size:1.8rem;font-weight:800;margin-bottom:1.5rem;">🔔 <%= t.notifications_title %></h1>
-
-  <div class="layout-grid" style="display:flex;flex-direction:column;gap:12px;">
-    <% if (notifications && notifications.length > 0) { %>
+<div class="container page">
+  <h1 style="font-size:1.8rem;font-weight:800;margin-bottom:1.5rem;">🔔 Notifications</h1>
+  <div class="card">
+    <% if(notifications.length === 0) { %>
+      <div style="text-align:center;padding:3rem;color:var(--muted);">
+        <div style="font-size:3rem;margin-bottom:1rem;">🔔</div>
+        <p>No notifications yet</p>
+      </div>
+    <% } else { %>
       <% notifications.forEach(n => { %>
-        <div class="glass-card" style="padding:1rem;display:flex;gap:15px;align-items:start;opacity:<%= n.is_read ? '0.7' : '1' %>;border-left:4px solid <%= n.type==='success'?'#10b981':n.type==='warning'?'#f59e0b':'#3b82f6' %>">
-          <div style="font-size:1.5rem;margin-top:4px;">
+        <div style="display:flex;gap:1rem;align-items:flex-start;padding:1rem;border-bottom:1px solid var(--border);<%= !n.is_read ? 'background:var(--card2);' : '' %>">
+          <div style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.1rem;background:<%= n.type==='success'?'#10b98120':'#3b82f620' %>">
             <%= n.type==='success'?'✅':n.type==='warning'?'⚠️':'ℹ️' %>
           </div>
           <div style="flex:1;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-              <div style="font-size:0.75rem;color:var(--text-muted);">
-                <%= new Date(n.created_at).toLocaleString('bn-BD') %>
-              </div>
-              <% if (!n.is_read) { %>
-                <span style="width:8px;height:8px;background:var(--gold);border-radius:50%;"></span>
-              <% } %>
+            <div style="font-weight:600;font-size:.9rem"><%= n.title %></div>
+            <div style="font-size:.85rem;color:var(--muted);margin-top:2px"><%= n.message %></div>
+            <div style="font-size:.75rem;color:var(--muted);margin-top:4px">
+              <%= new Date(n.created_at).toLocaleString() %>
             </div>
-            <div style="color:#fff;font-weight:600;margin-bottom:2px;"><%= n.title %></div>
-            <div style="color:var(--text-muted);font-size:0.9rem;"><%= n.message %></div>
           </div>
         </div>
       <% }) %>
-    <% } else { %>
-      <div class="glass-card" style="padding:3rem;text-align:center;color:var(--text-muted);">
-        <div style="font-size:3rem;margin-bottom:1rem;">🔔</div>
-        <p><%= t.no_notifications %></p>
-      </div>
     <% } %>
   </div>
 </div>
-
-<%- include('partials/bottom-nav') %>
-</body>
-</html>
+</body></html>

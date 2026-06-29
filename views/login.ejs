@@ -2,27 +2,27 @@
 <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg-dark);">
   <div style="width:100%;max-width:400px;padding:1rem;">
     <div class="card glass">
-      <div class="card-header" style="justify-content:center;font-size:1.2rem;">🔐 <%= t.login_title %></div>
+      <div class="card-header" style="justify-content:center;font-size:1.2rem;">🔐 লগইন করুন</div>
       <div class="card-body">
         <%- include('partials/flash') %>
         <form action="/login" method="POST">
           <div class="form-group">
-            <label class="form-label"><%= t.email_or_phone %></label>
-            <input type="text" name="identifier" class="form-input" placeholder="<%= t.email_or_phone %>" required>
+            <label class="form-label">ইমেইল অথবা ফোন নাম্বার</label>
+            <input type="text" name="identifier" class="form-input" placeholder="ইমেইল অথবা ফোন নাম্বার" required>
           </div>
           <div class="form-group">
-            <label class="form-label"><%= t.password %></label>
+            <label class="form-label">পাসওয়ার্ড</label>
             <input type="password" name="password" class="form-input" placeholder="••••••••" required>
           </div>
-          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;"><%= t.login %> 🚀</button>
+          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;">লগইন 🚀</button>
         </form>
         <p style="text-align:center;margin-top:1rem;color:var(--text-muted);font-size:.9rem;">
-          <%= t.no_account %> <a href="/register" style="color:var(--secondary)"><%= t.register_now %></a>
+          অ্যাকাউন্ট নেই? <a href="/register" style="color:var(--secondary)">রেজিস্ট্রেশন করুন</a>
         </p>
       </div>
     </div>
     <p style="text-align:center;margin-top:2rem;">
-      <a href="/" style="color:var(--text-muted);text-decoration:none;font-size:.85rem;"><%= t.back_to_home %></a>
+      <a href="/" style="color:var(--text-muted);text-decoration:none;font-size:.85rem;">← হোমে ফিরে যান</a>
     </p>
   </div>
 </div>
