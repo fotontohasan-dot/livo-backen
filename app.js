@@ -214,7 +214,17 @@ async function startServer() {
 }
 
 startServer();
-
 module.exports = app;
-// Telegram Bot চালু করো
-require('./telegram-bot');
+
+// Telegram Bot Webhook
+const { handleMessage } = require('./telegram-bot');
+app.post('/telegram-webhook', express.json(), async (req, res) => {
+  try {
+    const { message } = req.body;
+    if (message) await handleMessage(message);
+    res.sendStatus(200);
+  } catch (err) {
+    console.error('Webhook error:', err);
+    res.sendStatus(200);
+  }
+});
