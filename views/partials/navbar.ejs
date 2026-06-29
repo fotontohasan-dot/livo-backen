@@ -1,7 +1,13 @@
 <div class="side-menu" id="sideMenu">
   <div style="padding:20px;border-bottom:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:space-between;">
-    <span class="nav-brand" style="color: var(--gold); font-family: 'Teko', sans-serif; font-size: 1.8rem;">LIVO</span>
-    <button onclick="toggleMenu()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;">✕</button>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span class="nav-brand" style="color: var(--gold); font-family: 'Teko', sans-serif; font-size: 1.8rem;"><%= siteName %></span>
+      <button id="theme-toggle-side" class="glass" style="width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--gold); border: 1px solid var(--border-glass); cursor: pointer; background: none;">
+        <i class="fas fa-moon nav-theme-icon"></i>
+      </button>
+    </div>
+        <button id="lvClose" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;">✕</button>
+
   </div>
   <% if(locals.user) { %>
   <div style="padding:15px 20px;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;gap:12px;">
@@ -43,7 +49,8 @@
   <% } %>
 </div>
 
-<div class="menu-overlay" id="menuOverlay" onclick="toggleMenu()"></div>
+<div class="menu-overlay" id="menuOverlay"></div>
+
 
 <nav class="navbar" style="background: var(--grad-primary); position:relative; z-index:10000;">
   <div style="display:flex;align-items:center;gap:12px;">
@@ -72,6 +79,12 @@
 </nav>
 
 <script>
+window.addEventListener('error', function(ev){
+  var bar = document.getElementById('navErrBar');
+  if(!bar){ bar = document.createElement('div'); bar.id='navErrBar'; bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:999999;background:#dc2626;color:#fff;font-size:13px;padding:10px;text-align:center;'; document.body.appendChild(bar); }
+  bar.textContent = 'ERROR: ' + ev.message + ' @ line ' + ev.lineno + ' (' + (ev.filename||'').split('/').pop() + ')';
+});
+
 function toggleMenu() {
   var menu = document.getElementById('sideMenu');
   var overlay = document.getElementById('menuOverlay');
@@ -82,6 +95,11 @@ function toggleMenu() {
   document.body.classList.toggle('menu-open', willOpen);
 }
 window.toggleMenu = toggleMenu;
+var lvHam = document.getElementById('lvHamburger'); if (lvHam) lvHam.addEventListener('click', toggleMenu);
+
+var lvClose = document.getElementById('lvClose'); if (lvClose) lvClose.addEventListener('click', toggleMenu);
+var lvOv = document.getElementById('menuOverlay'); if (lvOv) lvOv.addEventListener('click', toggleMenu);
+
 
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') {

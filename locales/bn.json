@@ -85,5 +85,11 @@
   "login_to_predict": "লগইন করে Predict করুন",
   "connection_status": "কানেকশন চলছে...",
   "live_status_ok": "লাইভ — অটো আপডেট চালু",
-  "live_status_error": "কানেকশন বন্ধ — পুনরায় চেষ্টা চলছে..."
+    "live_status_error": "Connection closed — retrying...",
+  "error_title": "Something went wrong",
+  "server_error": "A server error occurred. Please try again later.",
+  "page_not_found": "Page not found",
+  "go_to_homepage": "Go to Homepage",
+  "go_back": "Go Back"
 }
+

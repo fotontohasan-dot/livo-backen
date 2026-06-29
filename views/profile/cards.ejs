@@ -198,9 +198,10 @@
 </div>
 
 <script>
-    function toggleModal(show) {
+        function toggleModal(show) {
         const modal = document.getElementById('bottomSheet');
         const overlay = document.getElementById('modalOverlay');
+        if (!modal || !overlay) return;
         if (show) {
             modal.classList.add('active');
             overlay.classList.add('active');
@@ -211,7 +212,15 @@
             document.body.style.overflow = '';
         }
     }
+    window.toggleModal = toggleModal;
+    document.addEventListener('DOMContentLoaded', function(){
+        var fab = document.querySelector('.fab-btn');
+        if (fab) fab.addEventListener('click', function(){ toggleModal(true); });
+        var ov = document.getElementById('modalOverlay');
+        if (ov) ov.addEventListener('click', function(){ toggleModal(false); });
+    });
 </script>
+
 
 <%- include('../partials/bottom-nav') %>
 </body></html>

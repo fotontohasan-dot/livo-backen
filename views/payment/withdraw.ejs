@@ -141,14 +141,30 @@
         </button>
     </div>
 
-    <!-- Withdrawal Form -->
-    <form action="/payment/withdraw" method="POST" class="space-y-4">
-        <p class="font-bold text-sm text-gray-700">উত্তোলন পরিমাণ:</p>
-
-        <div class="relative">
-            <span class="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-700">পরিমাণ</span>
-            <input type="number" name="amount" placeholder="100 ~ 50,000" min="100" max="50000" class="input-field pl-20 text-right font-bold" required>
+    <form action="/payment/withdraw" method="POST">
+      <!-- Withdrawal Form -->
+      <div class="space-y-5">
+        <div>
+          <label class="block text-gray-700 font-bold mb-2">পেমেন্ট মেথড</label>
+          <select name="method" class="w-full p-4 border-2 border-gray-200 rounded-xl focus:outline-none bg-white font-bold" required>
+            <option value="bkash">bKash</option>
+            <option value="nagad">Nagad</option>
+            <option value="rocket">Rocket</option>
+            <option value="upay">Upay</option>
+            <option value="bank"><%= t.bank_transfer %></option>
+            <option value="crypto">USDT (TRC20)</option>
+          </select>
         </div>
+
+        <div>
+          <label class="block text-gray-700 font-bold mb-2">পরিমাণ (১০০ ~ ৫০,০০০)</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <span class="text-gray-500 font-bold">৳</span>
+            </div>
+            <input type="number" name="amount" placeholder="টাকার পরিমাণ লিখুন" min="100" max="50000" class="w-full pl-10 p-4 border-2 border-gray-200 rounded-xl focus:outline-none bg-white text-lg font-bold text-red-600" required>
+          </div>
+        
 
         <div class="relative">
             <span class="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-700">পাসওয়ার্ড</span>
