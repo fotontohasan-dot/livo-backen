@@ -85,11 +85,11 @@
   "login_to_predict": "লগইন করে Predict করুন",
   "connection_status": "কানেকশন চলছে...",
   "live_status_ok": "লাইভ — অটো আপডেট চালু",
-  "live_status_error": "কানেকশন বন্ধ — পুনরায় চেষ্টা চলছে...",
-  "error_title": "কিছু একটা ভুল হয়েছে",
-  "server_error": "সার্ভারে সমস্য হয়েছে। একটু পরে আবার চেষ্টা করুন।",
-  "page_not_found": "পেজটি খুঁজে পাওয়া যায়নি",
-  "go_to_homepage": "হোমপেজে যান",
-  "go_back": "পিছনে যান"
+    "live_status_error": "Connection closed — retrying...",
+  "error_title": "Something went wrong",
+  "server_error": "A server error occurred. Please try again later.",
+  "page_not_found": "Page not found",
+  "go_to_homepage": "Go to Homepage",
+  "go_back": "Go Back"
 }
 
