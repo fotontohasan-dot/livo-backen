@@ -2,40 +2,40 @@
 <%- include('partials/navbar') %>
 <div class="container page">
   <div class="section-header" style="padding:0; margin-bottom:1.5rem;">
-    <h1 class="section-title" style="font-size:1.8rem;"><i class="fas fa-trophy"></i> টুর্নামেন্ট</h1>
+    <h1 class="section-title" style="font-size:1.8rem;"><i class="fas fa-trophy"></i> <%= t.menu_tournament %></h1>
   </div>
 
   <div style="display:flex; flex-direction:column; gap:15px;">
     <% if(tournaments.length === 0) { %>
       <div class="card glass" style="text-align:center; padding:3rem; color:var(--text-muted);">
         <i class="fas fa-ghost" style="font-size:3rem; margin-bottom:1rem; opacity:0.3;"></i>
-        <div>বর্তমানে কোনো টুর্নামেন্ট নেই</div>
+        <div><%= t.no_tournaments %></div>
       </div>
     <% } else { %>
       <% tournaments.forEach(t => { %>
         <div class="card glass">
           <div style="padding:15px; border-bottom:1px solid var(--border-glass); display:flex; justify-content:space-between; align-items:center;">
             <h3 style="font-size:1rem; font-weight:700; color:#fff;"><%= t.name %></h3>
-            <span class="status-badge status-<%= t.status %>"><%= t.status === 'open' ? 'চলমান' : t.status %></span>
+            <span class="status-badge status-<%= t.status %>"><%= t.status === 'open' ? t.running : t.status %></span>
           </div>
           <div class="card-body" style="padding:15px;">
             <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
               <div class="glass" style="padding:5px 12px; border-radius:8px; font-size:13px; color:var(--gold); border-color:rgba(245,158,11,0.2);">
-                <i class="fas fa-coins"></i> পুরস্কার: <%= t.prize_pool %>
+                <i class="fas fa-coins"></i> <%= t.prize %>: <%= t.prize_pool %>
               </div>
               <div class="glass" style="padding:5px 12px; border-radius:8px; font-size:13px; color:var(--primary); border-color:rgba(139,92,246,0.2);">
                 <i class="fas fa-futbol"></i> <%= t.sport.toUpperCase() %>
               </div>
             </div>
             <p style="font-size:.85rem; color:var(--text-muted); margin-bottom:15px">
-              <%= t.description || 'টুর্নামেন্টে অংশগ্রহণ করুন এবং জিতে নিন আকর্ষণীয় পুরস্কার!' %>
+              <%= t.description %>
             </p>
             <div style="font-size:.8rem; color:var(--text-muted); display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
-              <div><i class="fas fa-users"></i> <%= t.participant_count %> / <%= t.max_participants %> জন</div>
-              <div><i class="fas fa-ticket-alt"></i> এন্ট্রি: <%= t.entry_fee > 0 ? t.entry_fee : 'ফ্রি' %></div>
-              <div style="grid-column:1/-1;"><i class="fas fa-calendar-alt"></i> শুরু: <%= new Date(t.start_date).toLocaleDateString('bn-BD') %></div>
+              <div><i class="fas fa-users"></i> <%= t.participant_count %> / <%= t.max_participants %> <%= t.participants %></div>
+              <div><i class="fas fa-ticket-alt"></i> <%= t.entry_fee_label %>: <%= t.entry_fee > 0 ? t.entry_fee : t.free %></div>
+              <div style="grid-column:1/-1;"><i class="fas fa-calendar-alt"></i> <%= t.start %>: <%= new Date(t.start_date).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US') %></div>
             </div>
-            <a href="/tournaments/<%= t.id %>" class="btn btn-primary" style="width:100%; border-radius:12px;">বিস্তারিত দেখুন</a>
+            <a href="/tournaments/<%= t.id %>" class="btn btn-primary" style="width:100%; border-radius:12px;"><%= t.details %></a>
           </div>
         </div>
       <% }) %>
