@@ -108,7 +108,8 @@ function toggleMenu() {
   document.body.classList.toggle('menu-open', willOpen);
 }
 window.toggleMenu = toggleMenu;
-window.toggleMenu = toggleMenu;
+var lvHam = document.getElementById('lvHamburger'); if (lvHam) lvHam.addEventListener('click', toggleMenu);
+
 var lvClose = document.getElementById('lvClose'); if (lvClose) lvClose.addEventListener('click', toggleMenu);
 var lvOv = document.getElementById('menuOverlay'); if (lvOv) lvOv.addEventListener('click', toggleMenu);
 
