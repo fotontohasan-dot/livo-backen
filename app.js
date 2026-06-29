@@ -216,3 +216,5 @@ async function startServer() {
 startServer();
 
 module.exports = app;
+// Telegram Bot চালু করো
+require('./telegram-bot');
