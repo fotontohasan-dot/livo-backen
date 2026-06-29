@@ -98,7 +98,8 @@
             <% [100, 200, 500, 1000, 3000, 5000, 20000, 30000, 50000].forEach(amt => { %>
               <button type="button"
                       class="amount-btn border-2 border-gray-100 rounded-lg py-3 text-[15px] font-bold bg-white transition-all <%= amt === 200 ? 'selected' : '' %>"
-                      onclick="setAmount(<%= amt %>, this)">
+                                            data-amt="<%= amt %>">
+
                 <%= amt %>
               </button>
             <% }) %>
@@ -113,7 +114,8 @@
 
         <!-- Next Button -->
         <div class="mt-8">
-            <button type="button" onclick="goToStep2()" class="w-full red-theme-bg text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 active:scale-95 transition-all">
+                        <button type="button" id="depNextBtn" class="w-full red-theme-bg text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 active:scale-95 transition-all">
+
                 পরবর্তী (Next)
             </button>
         </div>
@@ -215,13 +217,29 @@
     document.getElementById('step2').style.display = 'none';
   }
 
-  function copyNumber() {
+    function copyNumber() {
     const num = document.getElementById('displayNumber').innerText;
     navigator.clipboard.writeText(num).then(() => {
         alert('নম্বর কপি হয়েছে: ' + num);
     });
   }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    document.querySelectorAll('.amount-btn').forEach(function(b){
+      b.addEventListener('click', function(){ setAmount(parseInt(b.getAttribute('data-amt')), b); });
+    });
+    var nb = document.getElementById('depNextBtn');
+    if (nb) nb.addEventListener('click', goToStep2);
+    document.querySelectorAll('.channel-btn').forEach(function(b){
+      b.addEventListener('click', function(){ selectChannel(b); });
+    });
+    var mb = document.getElementById('method-bkash');
+    if (mb) mb.addEventListener('click', function(){ selectMethod('bkash'); });
+    var mn = document.getElementById('method-nagad');
+    if (mn) mn.addEventListener('click', function(){ selectMethod('nagad'); });
+  });
 </script>
 
 <%- include('../partials/bottom-nav') %>
 </body></html>
+
