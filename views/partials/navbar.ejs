@@ -92,6 +92,12 @@
 </nav>
 
 <script>
+window.addEventListener('error', function(ev){
+  var bar = document.getElementById('navErrBar');
+  if(!bar){ bar = document.createElement('div'); bar.id='navErrBar'; bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:999999;background:#dc2626;color:#fff;font-size:13px;padding:10px;text-align:center;'; document.body.appendChild(bar); }
+  bar.textContent = 'ERROR: ' + ev.message + ' @ line ' + ev.lineno + ' (' + (ev.filename||'').split('/').pop() + ')';
+});
+
 function toggleMenu() {
   var menu = document.getElementById('sideMenu');
   var overlay = document.getElementById('menuOverlay');
