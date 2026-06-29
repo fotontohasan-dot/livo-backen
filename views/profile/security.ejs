@@ -51,15 +51,20 @@
       <h3 style="color: var(--gold); font-size: 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
         <i class="fas fa-credit-card"></i> <%= t.bank_cards_wallets %>
       </h3>
-                <form action="/profile/delete-bank-card/<%= card.id %>" method="POST" onsubmit="return confirm('<%= t.delete_card_confirm %>')">
-                  <button type="submit" style="background: rgba(239, 68, 68, 0.1); border: none; width: 32px; height: 32px; border-radius: 8px; color: #ef4444; cursor: pointer;">
-                    <i class="fas fa-trash-alt"></i>
-                  </button>
-                </form>
-              </div>
+      <% if (bankCards && bankCards.length > 0) { %>
+        <% bankCards.forEach(card => { %>
+          <div style="background: rgba(255,255,255,0.03); border-radius: 12px; padding: 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="color: #fff; font-size: 14px; font-weight: 600;"><%= card.bank_name %></div>
+              <div style="color: var(--text-muted); font-size: 12px;"><%= card.account_number %></div>
             </div>
-          <% }) %>
-        </div>
+            <form action="/profile/delete-bank-card/<%= card.id %>" method="POST" onsubmit="return confirm('<%= t.delete_card_confirm %>')">
+              <button type="submit" style="background: rgba(239, 68, 68, 0.1); border: none; width: 32px; height: 32px; border-radius: 8px; color: #ef4444; cursor: pointer;">
+                <i class="fas fa-trash-alt"></i>
+              </button>
+            </form>
+          </div>
+        <% }) %>
       <% } else { %>
         <div style="text-align: center; padding: 40px 20px; background: rgba(255,255,255,0.02); border-radius: 16px; margin-bottom: 25px; border: 1px dashed var(--border-glass);">
           <i class="fas fa-university" style="font-size: 40px; color: var(--text-muted); margin-bottom: 15px;"></i>
@@ -126,14 +131,9 @@
 
 <script>
 function switchTab(tab) {
-  // Hide all content
   document.querySelectorAll('.sec-content').forEach(c => c.style.display = 'none');
-  // Deactivate all buttons
   document.querySelectorAll('.sec-tab').forEach(b => b.classList.remove('active'));
-
-  // Show selected tab content
   document.getElementById('tab-' + tab).style.display = 'block';
-  // Activate selected button
   document.getElementById('btn-' + tab).classList.add('active');
 }
 </script>
