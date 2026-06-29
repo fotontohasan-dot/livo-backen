@@ -6,7 +6,8 @@
         <i class="fas fa-moon nav-theme-icon"></i>
       </button>
     </div>
-    <button onclick="toggleMenu()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;">✕</button>
+        <button id="lvClose" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;">✕</button>
+
   </div>
   <div style="padding:10px 20px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:center;">
     <div class="lang-switch" style="background: var(--bg-glass); border-radius: 20px; padding: 2px; border: 1px solid var(--border-glass); width: 100%; display: flex;">
@@ -47,7 +48,8 @@
   <% } %>
 </div>
 
-<div class="menu-overlay" id="menuOverlay" onclick="toggleMenu()"></div>
+<div class="menu-overlay" id="menuOverlay"></div>
+
 
 <nav class="navbar">
   <div class="nav-left">
@@ -101,7 +103,9 @@ function toggleMenu() {
 }
 window.toggleMenu = toggleMenu;
 window.toggleMenu = toggleMenu;
-var lvHam = document.getElementById('lvHamburger'); if (lvHam) lvHam.addEventListener('click', toggleMenu);
+var lvClose = document.getElementById('lvClose'); if (lvClose) lvClose.addEventListener('click', toggleMenu);
+var lvOv = document.getElementById('menuOverlay'); if (lvOv) lvOv.addEventListener('click', toggleMenu);
+
 
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') {
