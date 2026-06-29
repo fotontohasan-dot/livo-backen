@@ -15,6 +15,7 @@ const { syncMatches } = require('./services/matchUpdater');
 const runMigrations = require('./migrations');
 
 const app = express();
+app.use(compression());
 const server = http.createServer(app);
 initSocket(server);
 
@@ -105,7 +106,11 @@ app.use((req, res, next) => {
   res.locals.error = req.flash('error');
 
   const lang = req.session.lang === 'en' ? 'en' : 'bn';
-  res.locals.t = translations[lang];
+  const t_func = (key) => translations[lang][key] || key;
+  // Proxy allow both t('key') and t.key
+  res.locals.t = new Proxy(t_func, {
+    get: (target, prop) => translations[lang][prop] || prop
+  });
   res.locals.lang = lang;
   res.locals.siteName = 'Livo';
 
@@ -178,14 +183,14 @@ app.use((err, req, res, next) => {
   ).catch(() => {});
 
   res.status(500).render('error', {
-    message: 'সার্ভার সমস্যা হয়েছে। একটু পরে আবার চেষ্টা করুন।',
+    message: res.locals.t.server_error,
     siteName: 'Livo'
   });
 });
 
 app.use((req, res) => {
   res.status(404).render('error', {
-    message: 'পেজটি পাওয়া যায়নি।',
+    message: res.locals.t.page_not_found,
     siteName: 'Livo'
   });
 });
