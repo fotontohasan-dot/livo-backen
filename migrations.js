@@ -389,6 +389,17 @@ async function runMigrations() {
       );
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_dr_user_date ON daily_rewards(user_id, claim_date);`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS bank_cards (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        bank_name TEXT,
+        account_number TEXT,
+        holder_name TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
 
     console.log("✅ All tables migration completed successfully");
   } catch (err) {
