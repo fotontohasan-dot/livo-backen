@@ -57,17 +57,7 @@
     <a href="/" class="nav-brand" style="color: var(--gold); font-family: 'Teko', sans-serif; font-size: 2rem; letter-spacing: 1px; text-decoration: none;">LIVO</a>
   </div>
 
-  <div class="nav-right">
-    <!-- Language Toggle -->
-    <div class="lang-switch-nav">
-      <a href="/lang/bn" class="<%= lang === 'bn' ? 'active' : '' %>">BN</a>
-      <a href="/lang/en" class="<%= lang === 'en' ? 'active' : '' %>">EN</a>
-    </div>
-
-    <!-- Theme Toggle -->
-    <button id="theme-toggle-nav" class="nav-theme-btn">
-      <i class="fas fa-moon nav-theme-icon"></i>
-    </button>
+  
 
     <% if(locals.user) { %>
       <!-- User Elements -->
