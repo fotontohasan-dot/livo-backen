@@ -5,16 +5,16 @@
   <div class="layout-main">
     <div>
       <div class="card">
-        <div class="card-header">💰 ট্রানজ্যাকশন হিস্ট্রি</div>
+        <div class="card-header">💰 <%= t.transaction_history %></div>
         <table class="table">
-          <thead><tr><th>তারিখ</th><th>ধরণ</th><th>বিবরণ</th><th>পরিমাণ</th></tr></thead>
+          <thead><tr><th><%= t.date %></th><th><%= t.type %></th><th><%= t.description %></th><th><%= t.amount %></th></tr></thead>
           <tbody>
             <% if(transactions.length === 0) { %>
-              <tr><td colspan="4" style="text-align:center;color:var(--muted)">এখনো কোনো ট্রানজ্যাকশন নেই</td></tr>
+              <tr><td colspan="4" style="text-align:center;color:var(--muted)"><%= t.no_transactions_yet %></td></tr>
             <% } %>
             <% transactions.forEach(t => { %>
               <tr>
-                <td style="font-size:.8rem;color:var(--muted)"><%= new Date(t.created_at).toLocaleDateString('bn-BD') %></td>
+                <td style="font-size:.8rem;color:var(--muted)"><%= new Date(t.created_at).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US') %></td>
                 <td><span style="font-size:.75rem;background:var(--card2);padding:3px 8px;border-radius:20px"><%= t.type %></span></td>
                 <td style="font-size:.85rem"><%= t.description %></td>
                 <td class="<%= t.amount > 0 ? 'tx-positive' : 'tx-negative' %>" style="font-weight:700">
@@ -28,16 +28,16 @@
     </div>
     <div>
       <div class="stat-card" style="margin-bottom:1.5rem;">
-        <div style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem;">💰 আপনার ব্যালেন্স</div>
+        <div style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem;">💰 <%= t.your_balance %></div>
         <div class="stat-number"><%= coins %></div>
-        <div class="stat-label">কয়েন</div>
+        <div class="stat-label"><%= t.coins_label %></div>
       </div>
       <div class="card">
         <div class="card-body" style="text-align:center;">
           <div style="font-size:3rem;margin-bottom:.5rem;">🎁</div>
-          <h3 style="margin-bottom:.5rem;">ডেইলি বোনাস</h3>
-          <p style="color:var(--muted);font-size:.85rem;margin-bottom:1rem;">প্রতিদিন ১০০ ফ্রি কয়েন পান!</p>
-          <button onclick="claimBonus()" class="btn btn-gold" style="width:100%;justify-content:center;">বোনাস নিন +১০০ 🪙</button>
+          <h3 style="margin-bottom:.5rem;"><%= t.daily_bonus %></h3>
+          <p style="color:var(--muted);font-size:.85rem;margin-bottom:1rem;"><%= t.daily_bonus_desc %></p>
+          <button onclick="claimBonus()" class="btn btn-gold" style="width:100%;justify-content:center;"><%= t.claim_bonus_btn %></button>
         </div>
       </div>
     </div>

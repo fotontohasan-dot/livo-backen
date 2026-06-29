@@ -3,30 +3,30 @@
 <div class="container page">
   <%- include('../partials/flash') %>
   <div class="card" style="max-width:500px;margin:0 auto;">
-    <div class="card-header">💸 উইথড্র করুন</div>
+    <div class="card-header">💸 <%= t.withdraw %></div>
     <div class="card-body">
-      <p style="color:var(--muted);font-size:.85rem;margin-bottom:1rem;">আপনার ব্যালেন্স: <span style="color:var(--gold);font-weight:700;">🪙 <%= coins %></span></p>
+      <p style="color:var(--muted);font-size:.85rem;margin-bottom:1rem;"><%= t.your_balance %>: <span style="color:var(--gold);font-weight:700;">🪙 <%= coins %></span></p>
       <form action="/payment/withdraw" method="POST">
         <div class="form-group" style="margin-bottom:1rem;">
-          <label class="form-label" style="display:block;margin-bottom:.5rem;color:var(--muted);">পেমেন্ট মেথড</label>
+          <label class="form-label" style="display:block;margin-bottom:.5rem;color:var(--muted);"><%= t.payment_method %></label>
           <select name="method" class="form-input">
             <option value="bkash">bKash</option>
             <option value="nagad">Nagad</option>
             <option value="rocket">Rocket</option>
             <option value="upay">Upay</option>
-            <option value="bank">Bank Transfer</option>
+            <option value="bank"><%= t.bank_transfer %></option>
             <option value="crypto">USDT (TRC20)</option>
           </select>
         </div>
         <div class="form-group" style="margin-bottom:1rem;">
-          <label class="form-label" style="display:block;margin-bottom:.5rem;color:var(--muted);">পরিমাণ (সর্বনিম্ন ২০০)</label>
-          <input type="number" name="amount" class="form-input" placeholder="টাকার পরিমাণ লিখুন" min="200" required>
+          <label class="form-label" style="display:block;margin-bottom:.5rem;color:var(--muted);"><%= t.amount_min_200 %></label>
+          <input type="number" name="amount" class="form-input" placeholder="<%= t.withdraw_amount_placeholder %>" min="200" required>
         </div>
         <div class="form-group" style="margin-bottom:1.5rem;">
-          <label class="form-label" style="display:block;margin-bottom:.5rem;color:var(--muted);">আপনার নম্বর / অ্যাকাউন্ট / ওয়ালেট অ্যাড্রেস</label>
-          <input type="text" name="account_number" class="form-input" placeholder="01XXXXXXXXX / ব্যাংক অ্যাকাউন্ট / Wallet Address" required>
+          <label class="form-label" style="display:block;margin-bottom:.5rem;color:var(--muted);"><%= t.account_number_label %></label>
+          <input type="text" name="account_number" class="form-input" placeholder="<%= t.account_number_placeholder %>" required>
         </div>
-        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">💸 উইথড্র রিকোয়েস্ট পাঠান</button>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">💸 <%= t.send_withdraw_request %></button>
       </form>
     </div>
   </div>

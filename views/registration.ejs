@@ -2,47 +2,47 @@
 <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg-dark);">
   <div style="width:100%;max-width:400px;padding:1rem;">
     <div class="card glass">
-      <div class="card-header" style="justify-content:center;font-size:1.2rem;">📝 রেজিস্ট্রেশন করুন</div>
+      <div class="card-header" style="justify-content:center;font-size:1.2rem;">📝 <%= t.registration_title %></div>
       <div class="card-body">
         <%- include('partials/flash') %>
         <form id="registerForm" action="/register" method="POST">
           <div class="form-group">
-            <label class="form-label">ইউজারনেম</label>
-            <input type="text" name="username" class="form-input" placeholder="আপনার ইউজারনেম" required>
+            <label class="form-label"><%= t.username %></label>
+            <input type="text" name="username" class="form-input" placeholder="<%= t.username_placeholder %>" required>
           </div>
 
           <div class="form-group">
-            <label class="form-label">ইমেইল (ঐচ্ছিক)</label>
+            <label class="form-label"><%= t.email_optional %></label>
             <input type="email" name="email" class="form-input" placeholder="example@email.com">
           </div>
 
           <div class="form-group">
-            <label class="form-label">ফোন নাম্বার (ঐচ্ছিক)</label>
+            <label class="form-label"><%= t.phone_optional %></label>
             <input type="text" name="phone" class="form-input" placeholder="01XXXXXXXXX">
           </div>
           <p style="color:var(--text-muted);font-size:.8rem;margin-top:-8px;margin-bottom:12px;">
-            ইমেইল অথবা ফোন নাম্বার — অন্তত একটি দিতে হবে
+            <%= t.at_least_one_msg %>
           </p>
 
           <div class="form-group">
-            <label class="form-label">পাসওয়ার্ড</label>
+            <label class="form-label"><%= t.password %></label>
             <input type="password" name="password" id="password" class="form-input" placeholder="••••••••" required>
           </div>
 
           <div class="form-group">
-            <label class="form-label">কনফার্ম পাসওয়ার্ড</label>
+            <label class="form-label"><%= t.confirm_password %></label>
             <input type="password" name="confirmPassword" id="confirmPassword" class="form-input" placeholder="••••••••" required>
           </div>
 
           <div class="form-group">
-            <label class="form-label">রেফারেল কোড (ঐচ্ছিক)</label>
-            <input type="text" name="referralCode" class="form-input" placeholder="রেফারেল কোড থাকলে দিন" value="<%= ref || '' %>">
+            <label class="form-label"><%= t.referral_code %></label>
+            <input type="text" name="referralCode" class="form-input" placeholder="<%= t.referral_code_placeholder %>" value="<%= ref || '' %>">
           </div>
 
-          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;">✅ রেজিস্ট্রেশন করুন</button>
+          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;">✅ <%= t.register %></button>
         </form>
         <p style="text-align:center;margin-top:1rem;color:var(--text-muted);font-size:.9rem;">
-          অ্যাকাউন্ট আছে? <a href="/login" style="color:var(--secondary)">লগইন করুন</a>
+          <%= t.already_have_account %> <a href="/login" style="color:var(--secondary)"><%= t.login_now %></a>
         </p>
       </div>
     </div>
@@ -57,17 +57,17 @@ document.getElementById('registerForm').addEventListener('submit', function (e) 
   const confirmPassword = this.confirmPassword.value;
 
   if (!email && !phone) {
-    alert('ইমেইল অথবা ফোন নাম্বার অন্তত একটি দিন।');
+    alert('<%= t.error_at_least_one %>');
     e.preventDefault();
     return;
   }
   if (password.length < 8) {
-    alert('পাসওয়ার্ড কমপক্ষে ৮ অক্ষর হতে হবে।');
+    alert('<%= t.error_password_length %>');
     e.preventDefault();
     return;
   }
   if (password !== confirmPassword) {
-    alert('পাসওয়ার্ড মিলছে না।');
+    alert('<%= t.error_password_mismatch %>');
     e.preventDefault();
     return;
   }
