@@ -5,42 +5,42 @@
     <a href="/profile" style="color: #fff; text-decoration: none; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
       <i class="fas fa-chevron-left"></i>
     </a>
-    <h1 style="color: #fff; font-size: 20px; font-weight: 800; letter-spacing: 0.5px;"><%= t.security_settings_title %></h1>
+    <h1 style="color: #fff; font-size: 20px; font-weight: 800; letter-spacing: 0.5px;">নিরাপত্তা ও সেটিং</h1>
   </div>
 
   <%- include('../partials/flash') %>
 
   <!-- Tab Buttons -->
   <div style="display: flex; gap: 10px; margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 5px; border-radius: 12px; border: 1px solid var(--border-glass);">
-    <button onclick="switchTab('personal')" id="btn-personal" class="sec-tab active" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;"><%= t.personal_info %></button>
-    <button onclick="switchTab('bank')" id="btn-bank" class="sec-tab" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;"><%= t.menu_withdraw %></button>
-    <button onclick="switchTab('security')" id="btn-security" class="sec-tab" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;"><%= t.security %></button>
+    <button onclick="switchTab('personal')" id="btn-personal" class="sec-tab active" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;">ব্যক্তিগত তথ্য</button>
+    <button onclick="switchTab('bank')" id="btn-bank" class="sec-tab" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;">ব্যাঙ্ক কার্ড</button>
+    <button onclick="switchTab('security')" id="btn-security" class="sec-tab" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;">নিরাপত্তা</button>
   </div>
 
   <!-- Personal Information Tab -->
   <div id="tab-personal" class="sec-content">
     <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
       <h3 style="color: var(--gold); font-size: 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-        <i class="fas fa-id-card"></i> <%= t.personal_info %>
+        <i class="fas fa-id-card"></i> ব্যক্তিগত তথ্য
       </h3>
       <form action="/profile/update-personal" method="POST" style="display: flex; flex-direction: column; gap: 15px;">
         <div>
-          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.username_fixed %></label>
+          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;">ইউজারনেম (অপরিবর্তনযোগ্য)</label>
           <input type="text" value="<%= user.username %>" disabled style="width: 100%; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 15px; color: rgba(255,255,255,0.5); font-size: 14px;">
         </div>
         <div>
-          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.email %></label>
+          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;">ইমেইল</label>
           <input type="email" value="<%= user.email %>" disabled style="width: 100%; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 15px; color: rgba(255,255,255,0.5); font-size: 14px;">
         </div>
         <div>
-          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.full_name %></label>
-          <input type="text" name="full_name" value="<%= user.full_name || '' %>" placeholder="<%= t.full_name_placeholder %>" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none; border-color: <%= user.full_name ? 'var(--border-glass)' : 'rgba(245, 158, 11, 0.3)' %>;">
+          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;">পূর্ণ নাম</label>
+          <input type="text" name="full_name" value="<%= user.full_name || '' %>" placeholder="আপনার নাম লিখুন" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none; border-color: <%= user.full_name ? 'var(--border-glass)' : 'rgba(245, 158, 11, 0.3)' %>;">
         </div>
         <div>
-          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.phone %></label>
+          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;">ফোন নম্বর</label>
           <input type="text" name="phone" value="<%= user.phone || '' %>" placeholder="01XXXXXXXXX" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
         </div>
-        <button type="submit" class="btn btn-primary" style="margin-top: 10px; border-radius: 12px; padding: 14px; font-weight: 800;"><%= t.update_info %></button>
+        <button type="submit" class="btn btn-primary" style="margin-top: 10px; border-radius: 12px; padding: 14px; font-weight: 800;">তথ্য আপডেট করুন</button>
       </form>
     </div>
   </div>
@@ -49,7 +49,7 @@
   <div id="tab-bank" class="sec-content" style="display: none;">
     <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
       <h3 style="color: var(--gold); font-size: 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-        <i class="fas fa-credit-card"></i> <%= t.bank_cards_wallets %>
+        <i class="fas fa-credit-card"></i> ব্যাঙ্ক কার্ড / ওয়ালেট
       </h3>
       <% if (bankCards && bankCards.length > 0) { %>
         <% bankCards.forEach(card => { %>
@@ -68,24 +68,24 @@
       <% } else { %>
         <div style="text-align: center; padding: 40px 20px; background: rgba(255,255,255,0.02); border-radius: 16px; margin-bottom: 25px; border: 1px dashed var(--border-glass);">
           <i class="fas fa-university" style="font-size: 40px; color: var(--text-muted); margin-bottom: 15px;"></i>
-          <p style="color: var(--text-muted); font-size: 13px;"><%= t.no_cards_msg %></p>
+          <p style="color: var(--text-muted); font-size: 13px;">কোন কার্ড বা ওয়ালেট যোগ করা নেই</p>
         </div>
       <% } %>
 
       <!-- Add Card Form -->
       <div style="border-top: 1px solid var(--border-glass); padding-top: 25px;">
-        <h4 style="color: #fff; font-size: 14px; margin-bottom: 15px;"><%= t.add_new_card %></h4>
+        <h4 style="color: #fff; font-size: 14px; margin-bottom: 15px;">নতুন কার্ড যোগ করুন</h4>
         <form action="/profile/add-bank-card" method="POST" style="display: flex; flex-direction: column; gap: 12px;">
           <select name="bank_name" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
-            <option value="" style="background: #121212;"><%= t.select_payment_method %></option>
+            <option value="" style="background: #121212;">পেমেন্ট মেথড বেছে নিন</option>
             <option value="bKash" style="background: #121212;">bKash</option>
             <option value="Nagad" style="background: #121212;">Nagad</option>
             <option value="Rocket" style="background: #121212;">Rocket</option>
             <option value="Bank Account" style="background: #121212;">Local Bank</option>
           </select>
-          <input type="text" name="account_number" placeholder="<%= t.account_number_placeholder_alt %>" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
-          <input type="text" name="holder_name" placeholder="<%= t.holder_name_placeholder %>" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
-          <button type="submit" class="btn btn-secondary" style="margin-top: 5px; border-radius: 12px; padding: 14px; font-weight: 800; background: var(--grad-gold); color: #000;"><%= t.add_card_btn %></button>
+          <input type="text" name="account_number" placeholder="নম্বর বা অ্যাকাউন্ট আইডি" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
+          <input type="text" name="holder_name" placeholder="অ্যাকাউন্ট হোল্ডারের নাম" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
+          <button type="submit" class="btn btn-secondary" style="margin-top: 5px; border-radius: 12px; padding: 14px; font-weight: 800; background: var(--grad-gold); color: #000;">কার্ড যোগ করুন</button>
         </form>
       </div>
     </div>
@@ -95,22 +95,22 @@
   <div id="tab-security" class="sec-content" style="display: none;">
     <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
       <h3 style="color: var(--gold); font-size: 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-        <i class="fas fa-lock"></i> <%= t.change_password_title %>
+        <i class="fas fa-lock"></i> পাসওয়ার্ড পরিবর্তন
       </h3>
       <form action="/profile/change-password" method="POST" style="display: flex; flex-direction: column; gap: 15px;">
         <div>
-          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.current_password %></label>
+          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;">বর্তমান পাসওয়ার্ড</label>
           <input type="password" name="currentPassword" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
         </div>
         <div>
-          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.new_password %></label>
+          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;">নতুন পাসওয়ার্ড</label>
           <input type="password" name="newPassword" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
         </div>
         <div>
-          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.confirm_new_password %></label>
+          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;">নতুন পাসওয়ার্ড নিশ্চিত করুন</label>
           <input type="password" name="confirmPassword" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
         </div>
-        <button type="submit" class="btn btn-primary" style="margin-top: 10px; border-radius: 12px; padding: 14px; font-weight: 800;"><%= t.change_password_btn %></button>
+        <button type="submit" class="btn btn-primary" style="margin-top: 10px; border-radius: 12px; padding: 14px; font-weight: 800;">পাসওয়ার্ড পরিবর্তন করুন</button>
       </form>
     </div>
   </div>

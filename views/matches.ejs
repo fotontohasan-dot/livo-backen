@@ -91,7 +91,7 @@
       <div>🏆</div><%= t.all %>
     </a>
     <a href="/matches/worldcup" class="cat-item <%= currentPage === 'worldcup' ? 'active' : '' %>" style="min-width:90px;text-decoration:none;padding:10px 6px;flex-shrink:0;">
-      <div>⚽</div><%= t.world_cup %>
+      <div>⚽</div>World Cup
     </a>
     <a href="/matches/football" class="cat-item <%= (currentPage === 'football' && sport === 'football') ? 'active' : '' %>" style="min-width:85px;text-decoration:none;padding:10px 6px;flex-shrink:0;">
       <div>⚽</div>Football
@@ -147,16 +147,16 @@ const IS_LOGGED_IN = <%= locals.user ? 'true' : 'false' %>;
 // ========== Card builder ==========
 function buildMatchCard(m, isLive) {
   const sportIcon = m.sport === 'football' ? '⚽' : '🏏';
-  const tournament = m.league || m.name || '<%= t.match %>';
-  const teamA = (m.teams && m.teams[0]) || m.homeTeam || '<%= t.team_a %>';
-  const teamB = (m.teams && m.teams[1]) || m.awayTeam || '<%= t.team_b %>';
+  const tournament = m.league || m.name || 'Match';
+  const teamA = (m.teams && m.teams[0]) || m.homeTeam || 'Team A';
+  const teamB = (m.teams && m.teams[1]) || m.awayTeam || 'Team B';
   const scoreA = m.homeScore != null ? m.homeScore : (m.score && m.score[0] ? `${m.score[0].r}/${m.score[0].w}` : null);
   const scoreB = m.awayScore != null ? m.awayScore : (m.score && m.score[1] ? `${m.score[1].r}/${m.score[1].w}` : null);
   const dateStr = m.date ? new Date(m.date).toLocaleString('<%= lang === 'bn' ? 'bn-BD' : 'en-US' %>', {dateStyle:'medium', timeStyle:'short'}) : '';
   
   const badge = isLive 
-    ? `<span class="live-badge"><span style="width:7px;height:7px;border-radius:50%;background:#ef4444;animation:livedot 1.5s infinite;"></span><%= t.live_label %></span>`
-    : `<span class="upcoming-badge">📅 ${dateStr || '<%= t.upcoming_matches %>'}</span>`;
+    ? `<span class="live-badge"><span style="width:7px;height:7px;border-radius:50%;background:#ef4444;animation:livedot 1.5s infinite;"></span>LIVE</span>`
+    : `<span class="upcoming-badge">📅 ${dateStr || 'Upcoming'}</span>`;
   
   const scoreHTML = isLive && scoreA != null
     ? `<div style="font-family:'Teko',sans-serif;font-size:1.4rem;color:var(--gold);">${scoreA}</div>`
@@ -258,7 +258,7 @@ async function fetchMatches() {
     if (CURRENT_SPORT === 'all' || CURRENT_SPORT === 'football') all = all.concat(data.football || []);
     
     renderMatches(all);
-    updateStatus('<%= t.last_update_label || "Last Update" %>: ' + new Date().toLocaleTimeString('<%= lang === "bn" ? "bn-BD" : "en-US" %>'));
+    updateStatus('সর্বশেষ আপডেট: ' + new Date().toLocaleTimeString('bn-BD'));
   } catch (err) {
     console.error('Fetch error:', err);
     updateStatus('ডেটা লোড করতে সমস্যা', '#ef4444');

@@ -44,12 +44,12 @@
 
 <div class="container" style="padding-top: 14px; padding-bottom: 90px;">
 
-  <a href="/matches"><%= t.back_to_all_matches %></a>
+  <a href="/matches">← সব ম্যাচে ফিরে যান</a>
 
   <!-- Match Header -->
   <div class="card" style="padding:16px; margin:20px 0;">
-    <h4><%= match.teams ? match.teams[0] + " " + t.vs + " " + match.teams[1] : match.title %></h4>
-    <p style="color: var(--gold);"><%= match.status || t.upcoming_matches %></p>
+    <h4><%= match.teams ? match.teams[0] + " vs " + match.teams[1] : match.title %></h4>
+    <p style="color: var(--gold);"><%= match.status || 'Upcoming' %></p>
   </div>
 
   <!-- Dynamic Markets -->
@@ -62,7 +62,7 @@
 
         <% if (market.type === 'bookmaker') { %>
           <div class="market-row">
-            <div class="market-team"><%= match.teams ? match.teams[0] : t.team_a %></div>
+            <div class="market-team"><%= match.teams ? match.teams[0] : 'Team A' %></div>
             <div class="odds back" 
                  data-market-id="<%= market.id %>" 
                  data-runner="0" 
@@ -71,7 +71,7 @@
             </div>
           </div>
           <div class="market-row">
-            <div class="market-team"><%= match.teams ? match.teams[1] : t.team_b %></div>
+            <div class="market-team"><%= match.teams ? match.teams[1] : 'Team B' %></div>
             <div class="odds back" 
                  data-market-id="<%= market.id %>" 
                  data-runner="1" 
@@ -81,12 +81,12 @@
           </div>
         <% } else { %>
           <div class="market-row">
-            <div class="market-team"><%= t.yes %></div>
+            <div class="market-team">Yes</div>
             <div class="odds back" 
                  data-market-id="<%= market.id %>" 
                  data-runner="yes" 
                  data-odd="<%= market.odds && market.odds['yes'] ? market.odds['yes'] : 1.75 %>">
-              <%= t.yes %> <%= market.odds && market.odds['yes'] ? market.odds['yes'] : 1.75 %>
+              Yes <%= market.odds && market.odds['yes'] ? market.odds['yes'] : 1.75 %>
             </div>
           </div>
         <% } %>
@@ -95,13 +95,13 @@
   <% } else { %>
     <div class="card text-center" style="padding:50px 20px;">
       <div style="font-size:40px; margin-bottom:12px;">⏳</div>
-      <p style="font-size:16px; font-weight:600;"><%= t.betting_options_soon %></p>
-      <small style="color: var(--text-muted);"><%= t.check_back_later_short %></small>
+      <p style="font-size:16px; font-weight:600;">এই ম্যাচের বেটিং অপশন শীঘ্রই আসছে</p>
+      <small style="color: var(--text-muted);">একটু পরে আবার দেখুন</small>
 
       <% if (locals.user && user.role === 'admin') { %>
         <div style="margin-top:20px; padding-top:16px; border-top:1px dashed #334155;">
           <a href="/admin/markets/<%= match.id %>" class="btn btn-primary" style="border-radius:8px; padding:10px 20px;">
-            <%= t.add_market_admin %>
+            ⚙️ মার্কেট যোগ করুন (অ্যাডমিন)
           </a>
         </div>
       <% } %>
@@ -114,21 +114,20 @@
   document.querySelectorAll('.odds').forEach(btn => {
     btn.addEventListener('click', function() {
       if (!<%= locals.user ? 'true' : 'false' %>) {
-        alert("<%= t.login_to_bet %>");
+        alert("বেটিং করতে লগইন করুন");
         return;
       }
 
       const oddText = this.textContent.trim();
-      const stake = prompt("<%= t.min_bet_msg %>", "50");
+      const stake = prompt("কত কয়েন বেট করবেন? (মিনিমাম ১০)", "50");
       const stakeAmount = parseInt(stake);
 
       if (!stakeAmount || stakeAmount < 10) {
-        alert("<%= t.min_bet_msg %>");
+        alert("মিনিমাম ১০ কয়েন বেট করতে হবে");
         return;
       }
 
-      const confirmMsg = "<%= t.bet_confirm_msg %>".replace('{odd}', oddText).replace('{stake}', stakeAmount);
-      if (!confirm(confirmMsg)) return;
+      if (!confirm(`আপনি ${oddText} ওডসে ${stakeAmount} কয়েন বেট করবেন?`)) return;
 
       fetch(`/matches/<%= match.id %>/bet`, {
         method: 'POST',
@@ -145,7 +144,7 @@
         alert(data.message || data.error);
         if (data.success) location.reload();
       })
-      .catch(() => alert("<%= t.network_error %>"));
+      .catch(() => alert("নেটওয়ার্ক সমস্যা"));
     });
   });
 </script>

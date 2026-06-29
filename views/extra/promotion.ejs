@@ -5,17 +5,17 @@
     <!-- Promotion Header -->
     <div style="background: linear-gradient(135deg, #009625, #006519); border-radius: 24px; padding: 30px 20px; margin-bottom: 25px; text-align: center; border: 1px solid rgba(255,255,255,0.1); position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
         <div style="position: absolute; right: -20px; bottom: -20px; font-size: 100px; opacity: 0.1;">🎁</div>
-        <h1 style="color: #fff; font-size: 24px; font-weight: 800; margin-bottom: 8px;"><%= t.promotion_center %></h1>
-        <p style="color: rgba(255,255,255,0.8); font-size: 13px;"><%= t.best_offers_msg %></p>
+        <h1 style="color: #fff; font-size: 24px; font-weight: 800; margin-bottom: 8px;">প্রমোশন সেন্টার</h1>
+        <p style="color: rgba(255,255,255,0.8); font-size: 13px;">সেরা অফার এবং বোনাস গুলো বেছে নিন</p>
     </div>
 
     <!-- Category Filter -->
     <div style="display: flex; gap: 10px; margin-bottom: 25px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none;">
         <style>div::-webkit-scrollbar { display: none; }</style>
-        <div class="promo-cat active" style="flex: 0 0 auto; padding: 10px 20px; background: var(--grad-gold); color: #000; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer;"><%= t.all %></div>
-        <div class="promo-cat" style="flex: 0 0 auto; padding: 10px 20px; background: rgba(255,255,255,0.05); color: #fff; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; border: 1px solid var(--border-glass);"><%= t.deposit %></div>
-        <div class="promo-cat" style="flex: 0 0 auto; padding: 10px 20px; background: rgba(255,255,255,0.05); color: #fff; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; border: 1px solid var(--border-glass);"><%= t.football %></div>
-        <div class="promo-cat" style="flex: 0 0 auto; padding: 10px 20px; background: rgba(255,255,255,0.05); color: #fff; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; border: 1px solid var(--border-glass);"><%= t.menu_slots %></div>
+        <div class="promo-cat active" style="flex: 0 0 auto; padding: 10px 20px; background: var(--grad-gold); color: #000; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer;">সবগুলো</div>
+        <div class="promo-cat" style="flex: 0 0 auto; padding: 10px 20px; background: rgba(255,255,255,0.05); color: #fff; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; border: 1px solid var(--border-glass);">ডিপোজিট</div>
+        <div class="promo-cat" style="flex: 0 0 auto; padding: 10px 20px; background: rgba(255,255,255,0.05); color: #fff; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; border: 1px solid var(--border-glass);">স্পোর্টস</div>
+        <div class="promo-cat" style="flex: 0 0 auto; padding: 10px 20px; background: rgba(255,255,255,0.05); color: #fff; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; border: 1px solid var(--border-glass);">ক্যাসিনো</div>
     </div>
 
     <!-- Promo Cards -->
@@ -31,14 +31,14 @@
                 <div style="position: absolute; top: 15px; left: 15px; background: rgba(0,0,0,0.4); padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; color: #fff;">NEW USER</div>
             </div>
             <div style="padding: 20px;">
-                <h3 style="color: #fff; font-size: 16px; font-weight: 700; margin-bottom: 8px;"><%= t.promo_welcome_title %></h3>
-                <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 20px; line-height: 1.6;"><%= t.promo_welcome_desc %></p>
+                <h3 style="color: #fff; font-size: 16px; font-weight: 700; margin-bottom: 8px;">প্রথম ডিপোজিট বোনাস ১০০%</h3>
+                <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 20px; line-height: 1.6;">আপনার প্রথম ডিপোজিটে ১০০% বোনাস পান। সর্বোচ্চ ৫,০০০ টাকা পর্যন্ত বোনাস প্রযোজ্য।</p>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div style="display: flex; align-items: center; gap: 5px;">
                         <i class="fas fa-clock" style="color: var(--gold); font-size: 11px;"></i>
-                        <span style="color: var(--text-muted); font-size: 11px;"><%= t.valid_until %>: <%= t.lifetime %></span>
+                        <span style="color: var(--text-muted); font-size: 11px;">মেয়াদ: আজীবন</span>
                     </div>
-                    <a href="/payment/deposit" class="btn btn-primary" style="padding: 8px 20px; font-size: 12px; border-radius: 10px; background: var(--grad-gold); color: #000;"><%= t.get_now %></a>
+                    <a href="/payment/deposit" class="btn btn-primary" style="padding: 8px 20px; font-size: 12px; border-radius: 10px; background: var(--grad-gold); color: #000;">এখনই নিন</a>
                 </div>
             </div>
         </div>
@@ -53,14 +53,14 @@
                 <div style="position: absolute; top: 15px; left: 15px; background: rgba(0,0,0,0.4); padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; color: #fff;">HOT</div>
             </div>
             <div style="padding: 20px;">
-                <h3 style="color: #fff; font-size: 16px; font-weight: 700; margin-bottom: 8px;"><%= t.promo_referral_title %></h3>
-                <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 20px; line-height: 1.6;"><%= t.promo_referral_desc %></p>
+                <h3 style="color: #fff; font-size: 16px; font-weight: 700; margin-bottom: 8px;">বন্ধুকে আমন্ত্রণ জানিয়ে ৩,০০০ বোনাস</h3>
+                <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 20px; line-height: 1.6;">প্রতিটি সফল রেফারেলের জন্য ৩,০০০ টাকা পর্যন্ত বোনাস জেতার সুযোগ।</p>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div style="display: flex; align-items: center; gap: 5px;">
                         <i class="fas fa-clock" style="color: var(--gold); font-size: 11px;"></i>
-                        <span style="color: var(--text-muted); font-size: 11px;"><%= t.valid_until %>: <%= t.lifetime %></span>
+                        <span style="color: var(--text-muted); font-size: 11px;">মেয়াদ: আজীবন</span>
                     </div>
-                    <a href="/profile/referral" class="btn btn-primary" style="padding: 8px 20px; font-size: 12px; border-radius: 10px;"><%= t.invite_friends_title %></a>
+                    <a href="/profile/referral" class="btn btn-primary" style="padding: 8px 20px; font-size: 12px; border-radius: 10px;">বন্ধুকে আমন্ত্রণ জানান</a>
                 </div>
             </div>
         </div>
@@ -74,14 +74,14 @@
                 </div>
             </div>
             <div style="padding: 20px;">
-                <h3 style="color: #fff; font-size: 16px; font-weight: 700; margin-bottom: 8px;"><%= t.promo_cashback_title %></h3>
-                <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 20px; line-height: 1.6;"><%= t.promo_cashback_desc %></p>
+                <h3 style="color: #fff; font-size: 16px; font-weight: 700; margin-bottom: 8px;">প্রতিদিন ১০% ক্যাশব্যাক</h3>
+                <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 20px; line-height: 1.6;">প্রতিদিনের লস এর ওপর ১০% পর্যন্ত ক্যাশব্যাক বোনাস পান। স্বয়ংক্রিয়ভাবে আপনার অ্যাকাউন্টে জমা হবে।</p>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div style="display: flex; align-items: center; gap: 5px;">
                         <i class="fas fa-clock" style="color: var(--gold); font-size: 11px;"></i>
-                        <span style="color: var(--text-muted); font-size: 11px;"><%= t.valid_until %>: <%= t.daily %></span>
+                        <span style="color: var(--text-muted); font-size: 11px;">মেয়াদ: দৈনিক</span>
                     </div>
-                    <button class="btn btn-secondary" style="padding: 8px 20px; font-size: 12px; border-radius: 10px;"><%= t.details %></button>
+                    <button class="btn btn-secondary" style="padding: 8px 20px; font-size: 12px; border-radius: 10px;">বিস্তারিত দেখুন</button>
                 </div>
             </div>
         </div>

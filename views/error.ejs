@@ -3,7 +3,7 @@
 <head>
  <meta charset="UTF-8">
  <meta name="viewport" content="width=device-width, initial-scale=1.0">
- <title><%= t.error_title %> - <%= siteName %></title>
+ <title>সমস্যা হয়েছে - <%= siteName %></title>
  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&display=swap" rel="stylesheet">
  <style>
    * { margin:0; padding:0; box-sizing:border-box; }
@@ -47,11 +47,11 @@
 <body>
  <div class="error-box">
    <div class="error-icon">⚠️</div>
-   <h1><%= t.error_title %></h1>
-   <p><%= message || t.server_error %></p>
-   <a href="/" class="btn-home">🏠 <%= t.go_to_homepage %></a>
+   <h1>সমস্যা হয়েছে</h1>
+   <p><%= message || 'সার্ভারে সমস্যা হয়েছে। একটু পরে আবার চেষ্টা করুন।' %></p>
+   <a href="/" class="btn-home">🏠 হোমপেজে যান</a>
    <br>
-   <a href="javascript:history.back()" class="btn-back">← <%= t.go_back %></a>
+   <a href="javascript:history.back()" class="btn-back">← আগের পেজে ফিরুন</a>
  </div>
 </body>
 </html>
