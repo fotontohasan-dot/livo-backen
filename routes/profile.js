@@ -417,6 +417,20 @@ router.post('/cards/add', isAuth, async (req, res) => {
   res.redirect('/profile/cards');
 });
 
+router.post('/cards/delete/:id', isAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query(
+      'DELETE FROM bank_cards WHERE id = $1 AND user_id = $2',
+      [id, req.session.user.id]
+    );
+    req.flash('success', '✅ কার্ড মুছে ফেলা হয়েছে!');
+  } catch (err) {
+    req.flash('error', '❌ কার্ড মুছতে সমস্যা হয়েছে।');
+  }
+  res.redirect('back');
+});
+
 router.get('/app-download', isAuth, (req, res) => {
   res.render('profile/app-download', { user: req.session.user });
 });
