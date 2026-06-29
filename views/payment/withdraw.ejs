@@ -1,6 +1,8 @@
 <%- include('../partials/head') %>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap');
+
   body {
     background-color: #f8f9fa !important;
     color: #333 !important;
@@ -10,114 +12,156 @@
   .red-theme-text { color: #e61e26; }
   .red-theme-border { border-color: #e61e26; }
 
-  input:focus {
-    border-color: #e61e26 !important;
-    box-shadow: 0 0 0 2px rgba(230, 30, 38, 0.1);
-  }
-
   .navbar, .bottom-nav {
     max-width: 480px;
     margin: 0 auto;
   }
+
+  .instr-card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  .fab-add {
+    position: absolute;
+    right: 20px;
+    top: 180px;
+    width: 50px;
+    height: 50px;
+    background: #e61e26;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    box-shadow: 0 4px 10px rgba(230, 30, 38, 0.3);
+    z-index: 10;
+  }
+
+  .input-field {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 16px;
+    background: white;
+  }
+  .input-field:focus {
+    outline: none;
+    border-color: #e61e26;
+  }
+
+  .delete-btn {
+    color: #e61e26;
+    font-size: 18px;
+    cursor: pointer;
+  }
 </style>
 
-<div class="min-h-screen pb-32">
+<div class="min-h-screen pb-32 max-w-[480px] mx-auto relative bg-[#f8f9fa]">
   <!-- Top Bar -->
-  <div class="red-theme-bg text-white px-4 py-3 flex items-center gap-4 sticky top-0 z-50">
-    <a href="/profile" class="text-xl"><i class="fas fa-chevron-left"></i></a>
-    <h1 class="text-lg font-bold">উত্তোলন (Withdrawal)</h1>
+  <div class="red-theme-bg text-white px-4 py-4 flex items-center justify-between sticky top-0 z-50">
+    <div class="flex items-center gap-4">
+        <a href="/profile" class="text-xl"><i class="fas fa-chevron-left"></i></a>
+        <h1 class="text-lg font-bold">উত্তোলন</h1>
+    </div>
+    <div class="flex gap-4">
+        <i class="fas fa-file-alt text-xl"></i>
+        <i class="fas fa-headset text-xl"></i>
+    </div>
   </div>
 
-  <div class="p-4 max-w-md mx-auto">
+  <!-- Sub Header / Tab -->
+  <div class="bg-white py-3 flex justify-center items-center gap-2 border-b-2 border-red-600 mb-4">
+    <div class="w-8 h-8 bg-pink-600 rounded-lg flex items-center justify-center text-white text-xs">
+        <i class="fas fa-wallet"></i>
+    </div>
+    <span class="text-red-600 font-bold">E wallet</span>
+  </div>
+
+  <!-- FAB Add -->
+  <a href="/profile/cards" class="fab-add">
+    <i class="fas fa-plus"></i>
+  </a>
+
+  <div class="px-4">
     <%- include('../partials/flash') %>
 
-    <!-- Wallet Status -->
-    <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm mb-6 relative overflow-hidden">
-        <div class="absolute top-0 right-0 p-4">
-            <button onclick="location.reload()" class="text-gray-300 hover:text-red-500 transition-colors">
-                <i class="fas fa-sync-alt"></i>
-            </button>
+    <!-- Bound Wallet Section -->
+    <div class="mb-6">
+        <h2 class="text-gray-500 font-bold mb-4">আবদ্ধ E wallet (<%= cards ? cards.length : 0 %>/5)</h2>
+
+        <% if (cards && cards.length > 0) { %>
+            <div class="space-y-3">
+                <% cards.forEach(c => { %>
+                    <div class="bg-white rounded-xl p-4 border border-gray-100 flex items-center justify-between shadow-sm">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center text-red-600">
+                                <i class="fas fa-university"></i>
+                            </div>
+                            <div>
+                                <p class="font-bold text-sm"><%= c.bank_name %></p>
+                                <p class="text-xs text-gray-400"><%= c.account_number %></p>
+                            </div>
+                        </div>
+                        <form action="/profile/cards/delete/<%= c.id %>" method="POST" onsubmit="return confirm('আপনি কি নিশ্চিত?')">
+                            <button type="submit" class="delete-btn">
+                                <i class="far fa-times-circle"></i>
+                            </button>
+                        </form>
+                    </div>
+                <% }) %>
+            </div>
+        <% } else { %>
+            <div class="flex flex-col items-center py-8">
+                <img src="https://img.icons8.com/illustrations/64/credit-card.png" class="opacity-20 mb-2" alt="empty">
+                <p class="text-gray-400 font-bold">খালি ই-ওয়ালেট</p>
+            </div>
+        <% } %>
+    </div>
+
+    <!-- Instructions Section -->
+    <div class="text-[13px] text-gray-800 leading-snug mb-6">
+        <p class="text-gray-400 mb-2">উত্তোলন সময়: 24 ঘণ্টা</p>
+        <p class="font-bold mb-1">💬 প্রিয় সদস্য, শুভেচ্ছা! 🎯</p>
+        <p class="font-bold mb-2">আপনার <span class="red-theme-text uppercase"><%= siteName %></span> অ্যাকাউন্টে উত্তোলনের আগে অনুগ্রহ করে আপনার ওয়ালেট (বিকাশ/নগদ/রকেট ইত্যাদি) সঠিকভাবে সংযুক্ত হয়েছে কিনা তা যাচাই করুন। ভুল ওয়ালেট সংযোগের কারণে টাকা স্থানান্তরে বিলম্ব বা ব্যর্থতা ঘটতে পারে।</p>
+        <p class="font-bold mb-4">🔒 দয়া করে আবার পরীক্ষা করুন এবং নিরাপদে উত্তোলন সম্পন্ন করুন! 💰</p>
+
+        <div class="text-gray-400 space-y-1">
+            <p>দৈনিক উত্তোলন ৯৯,৯৯৯ (বার), অবশিষ্ট উত্তোলন ৯৯,৯৯৯ (বার)</p>
+            <p>প্রধান ওয়ালেট :৳ <%= (coins || 0).toFixed(2) %></p>
+            <p>উপলব্ধ পরিমাণ : ৳ <%= (coins || 0).toFixed(2) %></p>
         </div>
 
-        <div class="space-y-4">
-            <div>
-                <span class="text-gray-500 text-xs font-bold uppercase tracking-wider block mb-1">দৈনিক উত্তোলনের সীমা</span>
-                <span class="text-xl font-black text-gray-800">৯৯,৯৯৯ বার</span>
-            </div>
-
-            <div class="flex items-end justify-between border-t border-gray-50 pt-4">
-                <div>
-                    <span class="text-gray-500 text-xs font-bold uppercase tracking-wider block mb-1">প্রধান ওয়ালেট ব্যালেন্স</span>
-                    <span class="text-3xl font-black red-theme-text teko leading-none">৳<%= coins.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span>
-                </div>
-                <div class="text-right">
-                    <span class="text-gray-500 text-xs font-bold uppercase tracking-wider block mb-1">উপলব্ধ পরিমাণ</span>
-                    <span class="text-xl font-black text-green-600 teko leading-none">৳<%= coins.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span>
-                </div>
-            </div>
-        </div>
-
-        <button onclick="location.reload()" class="w-full mt-6 py-3 border border-gray-100 rounded-xl text-gray-500 text-sm font-bold flex items-center justify-center gap-2 hover:bg-gray-50 transition-all">
-            <i class="fas fa-redo-alt text-xs"></i>
-            আপনার ব্যালেন্স রিফ্রেশ করুন
+        <button onclick="location.reload()" class="w-full mt-4 py-2.5 bg-blue-100 text-blue-600 rounded-full font-bold flex items-center justify-center gap-2 text-sm">
+            <i class="fas fa-sync-alt"></i> আপনার ব্যালেন্স রিফ্রেশ করুন
         </button>
     </div>
 
-    <form action="/payment/withdraw" method="POST">
-      <!-- Withdrawal Form -->
-      <div class="space-y-5">
-        <div>
-          <label class="block text-gray-700 font-bold mb-2">পেমেন্ট মেথড</label>
-          <div class="relative">
-            <select name="method" class="w-full p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-red-500 bg-white font-bold appearance-none" required>
-                <option value="bkash">bKash</option>
-                <option value="nagad">Nagad</option>
-                <option value="rocket">Rocket</option>
-                <option value="upay">Upay</option>
-                <option value="bank">Bank Transfer</option>
-                <option value="crypto">USDT (TRC20)</option>
-            </select>
-            <div class="absolute inset-y-0 right-4 flex items-center pointer-events-none text-gray-400">
-                <i class="fas fa-chevron-down"></i>
-            </div>
-          </div>
+    <!-- Withdrawal Form -->
+    <form action="/payment/withdraw" method="POST" class="space-y-4">
+        <p class="font-bold text-sm text-gray-700">উত্তোলন পরিমাণ:</p>
+
+        <div class="relative">
+            <span class="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-700">পরিমাণ</span>
+            <input type="number" name="amount" placeholder="100 ~ 50,000" min="100" max="50000" class="input-field pl-20 text-right font-bold" required>
         </div>
 
-        <div>
-          <label class="block text-gray-700 font-bold mb-2">পরিমাণ (১০০ ~ ৫০,০০০)</label>
-          <div class="relative">
-            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <span class="text-gray-500 font-bold">৳</span>
-            </div>
-            <input type="number" name="amount" placeholder="টাকার পরিমাণ লিখুন" min="100" max="50000" class="w-full pl-10 p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-red-500 bg-white text-lg font-bold text-red-600" required>
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-gray-700 font-bold mb-2">আপনার নম্বর / অ্যাকাউন্ট অ্যাড্রেস</label>
-          <input type="text" name="account_number" placeholder="01XXXXXXXXX" class="w-full p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-red-500 bg-white font-bold" required>
-        </div>
-
-        <div>
-          <label class="block text-gray-700 font-bold mb-2">সিকিউরিটি পাসওয়ার্ড</label>
-          <div class="relative">
-            <input type="password" id="secPassword" name="password" placeholder="সিকিউরিটি পিন দিন" class="w-full p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-red-500 bg-white font-mono font-bold" required>
-            <button type="button" onclick="togglePassword()" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-red-500">
-                <i class="fas fa-eye text-lg" id="eyeIcon"></i>
+        <div class="relative">
+            <span class="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-700">পাসওয়ার্ড</span>
+            <input type="password" id="secPassword" name="password" placeholder="পাসওয়ার্ড" class="input-field pl-24 text-right" required>
+            <button type="button" onclick="togglePassword()" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
+                <i class="fas fa-eye-slash" id="eyeIcon"></i>
             </button>
-          </div>
         </div>
-      </div>
 
-      <!-- Submit Button -->
-      <button type="submit" class="w-full red-theme-bg text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:opacity-95 active:scale-95 transition-all mt-10">
-        জমা দিন (Submit)
-      </button>
+        <button type="submit" class="w-full red-theme-bg text-white py-4 rounded-lg font-bold text-lg mt-6 shadow-lg active:scale-95 transition-all">
+            জমা দিন
+        </button>
     </form>
-
-    <div class="mt-8 text-center text-xs text-gray-400 px-6 italic">
-        <p>উত্তোলনের অনুরোধ সাধারণত ৩০-৬০ মিনিটের মধ্যে প্রসেস করা হয়। কিছু ক্ষেত্রে ২৪ ঘণ্টা পর্যন্ত সময় লাগতে পারে।</p>
-    </div>
   </div>
 </div>
 
@@ -127,12 +171,12 @@
     const eye = document.getElementById('eyeIcon');
     if (pwd.type === 'password') {
       pwd.type = 'text';
-      eye.classList.remove('fa-eye');
-      eye.classList.add('fa-eye-slash');
-    } else {
-      pwd.type = 'password';
       eye.classList.remove('fa-eye-slash');
       eye.classList.add('fa-eye');
+    } else {
+      pwd.type = 'password';
+      eye.classList.remove('fa-eye');
+      eye.classList.add('fa-eye-slash');
     }
   }
 </script>
