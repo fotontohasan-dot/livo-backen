@@ -305,7 +305,7 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_freebet_status ON free_bets(status);`);
 
     // সাপ্তাহিক/মাসিক কইম রেকর্ড
-    await pool.query(`
+       await pool.query(`
       CREATE TABLE IF NOT EXISTS periodic_claims (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id),
@@ -316,6 +316,21 @@ async function runMigrations() {
         UNIQUE (user_id, claim_type, period_key)
       );
     `);
+
+    // লাল প্যাকেট + সোনার ডিম দৈনিক রিওয়ার্ড
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS daily_rewards (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        reward_type VARCHAR(20) NOT NULL,
+        amount DECIMAL(12,2) NOT NULL,
+        claim_date DATE NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE (user_id, reward_type, claim_date)
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_dr_user_date ON daily_rewards(user_id, claim_date);`);
+
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_periodic_user ON periodic_claims(user_id);`);
 
     // সোশ্যাল শেয়ার
@@ -361,6 +376,19 @@ async function runMigrations() {
       ADD COLUMN IF NOT EXISTS start_time TIMESTAMP,
       ADD COLUMN IF NOT EXISTS league TEXT;
     `);
+    // লাল প্যাকেট + সোনার ডিম দৈনিক রিওয়ার্ড
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS daily_rewards (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        reward_type VARCHAR(20) NOT NULL,
+        amount DECIMAL(12,2) NOT NULL,
+        claim_date DATE NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE (user_id, reward_type, claim_date)
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_dr_user_date ON daily_rewards(user_id, claim_date);`);
 
     console.log("✅ All tables migration completed successfully");
   } catch (err) {

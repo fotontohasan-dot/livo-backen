@@ -224,8 +224,9 @@
     <i class="fas fa-headset"></i>
   </a>
 </div>
-
 <%- include('partials/bottom-nav') %>
+<%- include('partials/floating-promo') %>
+
 <script>
 const games = [
   {name:"Aviator", emoji:"🚀", type:"pvp", slug:"aviator", badge:"hot", provider:"SPRIBE"},
@@ -260,7 +261,8 @@ function renderGames() {
   const c = document.getElementById('gameContainer');
   if(!c) return;
   c.innerHTML = '';
-  const searchQ = document.getElementById('gameSearch').value.toLowerCase();
+  var gsEl = document.getElementById('gameSearch');
+  const searchQ = gsEl ? gsEl.value.toLowerCase() : '';
   const filtered = games.filter(g => g.name.toLowerCase().includes(searchQ));
 
   if (filtered.length === 0) {
@@ -291,7 +293,8 @@ document.querySelectorAll('.cat-item').forEach(el => {
   });
 });
 
-document.getElementById('gameSearch').addEventListener('input', renderGames);
+var gs2 = document.getElementById('gameSearch');
+if (gs2) gs2.addEventListener('input', renderGames);
 
 let jp = 88617517;
 setInterval(() => {

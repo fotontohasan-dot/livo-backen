@@ -26,18 +26,8 @@ if (!process.env.SESSION_SECRET) {
   console.warn('⚠️ SESSION_SECRET সেট করা নেই — সাময়িক র‍্যানম সিক্রেট ব্যবহার হচ্ছে। প্রোডকশনে অবশ্যই SESSION_SECRET সেট করুন।');
 }
 
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://cdnjs.cloudflare.com"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
-      imgSrc: ["'self'", "data:", "https://res.cloudinary.com"],
-      connectSrc: ["'self'", "wss:", "ws:"],
-    },
-  },
-}));
+app.use(compression());
+
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -48,6 +38,18 @@ app.use(express.static(path.join(__dirname, 'public'), {
   etag: false
 }));
 
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://cdnjs.cloudflare.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "wss:", "ws:"],
+    },
+  },
+}));
 app.use(session({
   store: new pgSession({
     pool: pool,
