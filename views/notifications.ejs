@@ -16,7 +16,7 @@
           <div style="flex:1;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
               <div style="font-size:0.75rem;color:var(--text-muted);">
-                <%= new Date(n.created_at).toLocaleString('bn-BD') %>
+                <%= new Date(n.created_at).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %>
               </div>
               <% if (!n.is_read) { %>
                 <span style="width:8px;height:8px;background:var(--gold);border-radius:50%;"></span>
@@ -36,6 +36,7 @@
   </div>
 </div>
 
+<%- include('partials/footer') %>
 <%- include('partials/bottom-nav') %>
 </body>
 </html>

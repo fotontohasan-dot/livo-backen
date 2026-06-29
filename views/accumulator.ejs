@@ -104,7 +104,7 @@ const i18n = {
   totalOdds: "<%= t.total_odds_label %>",
   boost: "<%= t.boost_label %>",
   potentialWin: "<%= t.potential_win_label %>",
-  error: "সমস্যা হয়েছে, আবার চেষ্টা করুন।"
+  error: "<%= t.server_error %>"
 };
 
 function boostFor(n){ if(n>=5) return 30; if(n===4) return 20; if(n===3) return 10; return 0; }
@@ -172,5 +172,6 @@ async function placeAcca() {
   }
 }
 </script>
+<%- include('partials/footer') %>
 <%- include('partials/bottom-nav') %>
 </body></html>

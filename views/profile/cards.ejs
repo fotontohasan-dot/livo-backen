@@ -1,146 +1,51 @@
 <%- include('../partials/head') %>
-<script src="https://cdn.tailwindcss.com"></script>
-<style>
-  body {
-    background-color: #f8f9fa !important;
-    color: #333 !important;
-    font-family: 'Hind Siliguri', sans-serif;
-  }
-  .red-theme-bg { background-color: #e61e26; }
-  .red-theme-text { color: #e61e26; }
-  .red-theme-border { border-color: #e61e26; }
-
-  .bottom-sheet {
-    transform: translateY(100%);
-    transition: transform 0.3s ease-out;
-  }
-  .bottom-sheet.active {
-    transform: translateY(0);
-  }
-  .overlay {
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s;
-  }
-  .overlay.active {
-    opacity: 1;
-    visibility: visible;
-  }
-
-  /* Fix for navbar and bottom nav */
-  .navbar, .bottom-nav {
-    max-width: 480px;
-    margin: 0 auto;
-  }
-</style>
-
-<div class="min-h-screen pb-24">
-  <!-- Top Bar -->
-  <div class="red-theme-bg text-white px-4 py-3 flex items-center gap-4 sticky top-0 z-50">
-    <a href="/profile" class="text-xl"><i class="fas fa-chevron-left"></i></a>
-    <h1 class="text-lg font-bold">আমার কার্ড / ই-ওয়ালেট</h1>
+<div class="container" style="padding:16px;padding-bottom:100px">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+    <a href="/profile" style="color:#fff;text-decoration:none;font-size:20px">←</a>
+    <h1 style="color:#fff;font-size:18px;font-weight:bold">💳 আমার কার্ড</h1>
   </div>
 
-  <div class="p-4 max-w-md mx-auto">
-    <%- include('../partials/flash') %>
+  <%- include('../partials/flash') %>
 
-    <div class="mb-6">
-        <p class="text-gray-500 font-bold mb-4">ই-ওয়ালেট যোগ করা হয়েছে: <span class="red-theme-text"><%= cards ? cards.length : 0 %></span></p>
-
-        <% if (cards && cards.length > 0) { %>
-            <div class="space-y-4">
-                <% cards.forEach(c => { %>
-                    <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex items-center gap-4">
-                        <div class="w-12 h-12 red-theme-bg rounded-full flex items-center justify-center text-white text-xl">
-                            <i class="fas fa-wallet"></i>
-                        </div>
-                        <div class="flex-1">
-                            <h3 class="font-bold text-gray-800"><%= c.bank_name %></h3>
-                            <p class="text-gray-500 text-sm"><%= c.account_number %></p>
-                            <p class="text-gray-400 text-xs mt-1"><%= c.holder_name %></p>
-                        </div>
-                        <div class="text-gray-300">
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                    </div>
-                <% }) %>
-            </div>
-        <% } else { %>
-            <div class="flex flex-col items-center justify-center py-20 text-center opacity-40">
-                <div class="text-7xl mb-4 text-gray-300">
-                    <i class="fas fa-credit-card"></i>
-                </div>
-                <p class="text-gray-500 font-bold">খালি ই-ওয়ালেট</p>
-                <p class="text-xs text-gray-400 mt-2">আপনি এখনো কোনো ই-ওয়ালেট যোগ করেননি।</p>
-            </div>
-        <% } %>
-    </div>
-
-    <!-- Floating Plus Button -->
-    <div class="fixed bottom-28 left-0 right-0 flex justify-center z-40 pointer-events-none">
-        <button onclick="toggleModal(true)" class="w-16 h-16 red-theme-bg text-white rounded-full shadow-2xl flex items-center justify-center text-3xl hover:scale-110 active:scale-95 transition-all pointer-events-auto">
-            <i class="fas fa-plus"></i>
-        </button>
-    </div>
-  </div>
-</div>
-
-<!-- Bottom Sheet Modal -->
-<div id="modalOverlay" class="overlay fixed inset-0 bg-black/50 z-[100]" onclick="toggleModal(false)"></div>
-<div id="bottomSheet" class="bottom-sheet fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white rounded-t-[32px] z-[101] shadow-2xl overflow-hidden">
-    <div class="p-6">
-        <div class="flex items-center justify-between mb-8">
-            <h2 class="text-xl font-black text-gray-800">নতুন যোগ করুন</h2>
-            <button onclick="toggleModal(false)" class="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full text-gray-500">
-                <i class="fas fa-times"></i>
-            </button>
+  <% if (cards && cards.length > 0) { %>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px">
+      <% cards.forEach(c => { %>
+        <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:16px;padding:20px;border:1px solid rgba(245,158,11,0.3)">
+          <div style="color:#f59e0b;font-size:13px;margin-bottom:6px"><%= c.bank_name %></div>
+          <div style="color:#fff;font-size:18px;font-weight:bold;letter-spacing:2px;margin-bottom:6px"><%= c.account_number %></div>
+          <div style="color:#94a3b8;font-size:13px"><%= c.holder_name %></div>
         </div>
-
-        <form action="/profile/cards/add" method="POST" class="space-y-6">
-            <div>
-                <label class="block text-gray-500 text-sm font-bold mb-2">ওয়ালেট টাইপ</label>
-                <select name="bank_name" class="w-full p-4 border-2 border-gray-100 rounded-2xl focus:outline-none bg-gray-50 font-bold" required>
-                    <option value="" disabled selected>E-wallet সিলেক্ট করুন</option>
-                    <option value="bKash">bKash</option>
-                    <option value="Nagad">Nagad</option>
-                    <option value="Rocket">Rocket</option>
-                    <option value="Upay">Upay</option>
-                    <option value="Bank">Bank Account</option>
-                </select>
-            </div>
-
-            <div>
-                <label class="block text-gray-500 text-sm font-bold mb-2">অ্যাকাউন্ট/নাম্বার</label>
-                <input type="text" name="account_number" placeholder="আপনার নম্বর বা অ্যাকাউন্ট লিখুন" class="w-full p-4 border-2 border-gray-100 rounded-2xl focus:outline-none bg-gray-50" required>
-            </div>
-
-            <div>
-                <label class="block text-gray-500 text-sm font-bold mb-2">অ্যাকাউন্ট হোল্ডার নাম</label>
-                <input type="text" name="holder_name" placeholder="আপনার পুরো নাম লিখুন" class="w-full p-4 border-2 border-gray-100 rounded-2xl focus:outline-none bg-gray-50" required>
-            </div>
-
-            <button type="submit" class="w-full red-theme-bg text-white py-4 rounded-2xl font-bold text-lg shadow-lg mt-4">
-                ওয়ালেট নিশ্চিত করুন
-            </button>
-        </form>
+      <% }) %>
     </div>
+  <% } else { %>
+    <div style="text-align:center;padding:40px;color:#94a3b8">
+      <div style="font-size:48px;margin-bottom:12px">💳</div>
+      <div>কোনো কার্ড যোগ করা হয়নি</div>
+    </div>
+  <% } %>
+
+  <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;border:1px solid rgba(255,255,255,0.1)">
+    <div style="color:#fff;font-weight:bold;margin-bottom:16px">নতুন কার্ড যোগ করুন</div>
+    <form action="/profile/cards/add" method="POST" style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:6px">ব্যাংক/মাধ্যমের নাম</label>
+        <input type="text" name="bank_name" required placeholder="যেমন: বিকাশ, নগদ, ব্যাংক"
+          style="width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 14px;color:#fff;font-size:16px;outline:none">
+      </div>
+      <div>
+        <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:6px">অ্যাকাউন্ট/নাম্বার</label>
+        <input type="text" name="account_number" required
+          style="width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 14px;color:#fff;font-size:16px;outline:none">
+      </div>
+      <div>
+        <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:6px">হোল্ডার নাম</label>
+        <input type="text" name="holder_name" required
+          style="width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 14px;color:#fff;font-size:16px;outline:none">
+      </div>
+      <button type="submit" style="background:linear-gradient(90deg,#f59e0b,#fbbf24);color:#000;border:none;border-radius:8px;padding:12px;font-size:16px;font-weight:bold;cursor:pointer">
+        কার্ড যোগ করুন
+      </button>
+    </form>
+  </div>
 </div>
-
-<script>
-    function toggleModal(show) {
-        const modal = document.getElementById('bottomSheet');
-        const overlay = document.getElementById('modalOverlay');
-        if (show) {
-            modal.classList.add('active');
-            overlay.classList.add('active');
-            document.body.style.overflow = 'hidden';
-        } else {
-            modal.classList.remove('active');
-            overlay.classList.remove('active');
-            document.body.style.overflow = '';
-        }
-    }
-</script>
-
-<%- include('../partials/bottom-nav') %>
-</body></html>
+<%- include('../partials/navbar') %>
