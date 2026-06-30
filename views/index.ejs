@@ -11,7 +11,7 @@
 
 <!-- ===== News Ticker ===== -->
 <div class="glass" style="margin:8px 12px;border-radius:12px;padding:12px;display:flex;align-items:center;gap:12px;position:relative;">
-  <div style="background:var(--gold);color:#000;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:bold;">News</div>
+  <div style="background:var(--gold);color:var(--text-inverse);padding:2px 8px;border-radius:4px;font-size:10px;font-weight:bold;">News</div>
   <div style="flex:1;overflow:hidden;">
     <div style="font-size:12px;color:var(--text-muted);white-space:nowrap;animation:marquee-text 15s linear infinite;">
       প্রিয় গ্রাহক, 🎉 LIVO-তে আপনাকে স্বাগতম! 🌟 নতুন আমানত বোনাস 💰 এবং আকর্ষণীয় পুরস্কার 🏆 পেতে এখনই খেলা শুরু করুন 🚀। আমাদের সাথে থাকার জন্য ধন্যবাদ। 🙏
@@ -29,8 +29,8 @@
     <div style="z-index:1;">
       <h2 style="font-family:'Teko',sans-serif;font-size:32px;color:var(--gold);line-height:1;">🎰 <%= t.welcome_bonus %></h2>
       <p style="font-size:13px;color:rgba(255,255,255,0.9);margin-top:5px;"><%= t.welcome_bonus_desc %></p>
-      <div style="margin-top:5px; font-size: 11px; color: #fff;"><%= t.referral_bonus %> 🎁</div>
-      <a href="/payment/deposit" class="btn btn-primary" style="margin-top:12px;border-radius:25px;padding:8px 24px;background: var(--grad-gold); color: #000;"><%= t.get_now %></a>
+      <div style="margin-top:5px; font-size: 11px; color: var(--text-white);"><%= t.referral_bonus %> 🎁</div>
+      <a href="/payment/deposit" class="btn btn-primary" style="margin-top:12px;border-radius:25px;padding:8px 24px;background: var(--grad-gold); color: var(--text-inverse);"><%= t.get_now %></a>
     </div>
     <div style="position:absolute;right:10px;font-size:80px;opacity:0.2;">🏆</div>
   </div>
@@ -53,7 +53,7 @@
       <a href="/matches" style="text-decoration:none;text-align:center;">
         <div style="background:linear-gradient(135deg,#ef4444,#dc2626);border-radius:12px;padding:14px 6px;position:relative;">
           <div style="font-size:22px;">⏱️</div>
-          <div style="position:absolute;top:4px;right:4px;width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 8px #fff;animation:livedot 1.5s infinite;"></div>
+          <div style="position:absolute;top:4px;right:4px;width:6px;height:6px;border-radius:50%;background:var(--text-white);box-shadow:0 0 8px var(--text-white);animation:livedot 1.5s infinite;"></div>
         </div>
         <div style="font-size:11px;color:var(--text-main);margin-top:6px;font-weight:600;"><%= t.in_play %></div>
       </a>
@@ -75,7 +75,7 @@
       <a href="/matches/worldcup" style="text-decoration:none;text-align:center;">
         <div style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:12px;padding:14px 6px;position:relative;">
           <div style="font-size:22px;">🏆</div>
-          <div style="position:absolute;top:3px;right:3px;background:#ef4444;color:#fff;font-size:8px;padding:1px 4px;border-radius:6px;font-weight:700;">HOT</div>
+          <div style="position:absolute;top:3px;right:3px;background:#ef4444;color:var(--text-white);font-size:8px;padding:1px 4px;border-radius:6px;font-weight:700;">HOT</div>
         </div>
         <div style="font-size:11px;color:var(--text-main);margin-top:6px;font-weight:600;">WC 2026</div>
       </a>
@@ -160,8 +160,8 @@
       <span style="font-size: 32px; margin-top: 10px;">৳</span>
       <span id="jp-num">88,617,517</span>
     </div>
-    <div style="font-size:12px; color:rgba(255,255,255,0.7); font-weight: 500;"><%= t.lucky_draw_msg %> 🎁</div>
-    <button class="btn btn-glow" style="margin-top:20px; border-radius:30px; padding:12px 40px; background: var(--grad-gold); color: #000; font-weight: 800; border: none;" onclick="location.href='/games/slots'"><%= t.play_jackpot %> 🎰</button>
+    <div style="font-size:12px; color:var(--text-muted); font-weight: 500;"><%= t.lucky_draw_msg %> 🎁</div>
+    <button class="btn btn-glow" style="margin-top:20px; border-radius:30px; padding:12px 40px; background: var(--grad-gold); color: var(--text-inverse); font-weight: 800; border: none;" onclick="location.href='/games/slots'"><%= t.play_jackpot %> 🎰</button>
   </div>
 </div>
 
@@ -204,19 +204,19 @@
 </div>
 
 <!-- ===== Footer ===== -->
-<div class="site-footer" style="margin-top:30px;background:rgba(255,255,255,0.02);padding:30px 20px;text-align:center;border-top:1px solid var(--border-glass);">
-  <div class="nav-brand" style="font-size:2.5rem;margin-bottom:15px;"><%= siteName %></div>
+<div class="site-footer" style="margin-top:30px;background:var(--bg-surface);padding:30px 20px;text-align:center;border-top:1px solid var(--border-glass);">
+  <div class="nav-brand text-main" style="font-size:2.5rem;margin-bottom:15px;"><%= siteName %></div>
   <div style="display:flex;flex-wrap:wrap;gap:15px;justify-content:center;margin-bottom:20px;">
-    <a href="/privacy" style="color:var(--text-muted);font-size:12px;text-decoration:none;">Privacy Policy</a>
-    <a href="/terms" style="color:var(--text-muted);font-size:12px;text-decoration:none;">Terms & Conditions</a>
-    <a href="/rules" style="color:var(--text-muted);font-size:12px;text-decoration:none;">Rules and Regulation</a>
-    <a href="/kyc" style="color:var(--text-muted);font-size:12px;text-decoration:none;">KYC</a>
+    <a href="/privacy" class="text-muted" style="font-size:12px;text-decoration:none;">Privacy Policy</a>
+    <a href="/terms" class="text-muted" style="font-size:12px;text-decoration:none;">Terms & Conditions</a>
+    <a href="/rules" class="text-muted" style="font-size:12px;text-decoration:none;">Rules and Regulation</a>
+    <a href="/kyc" class="text-muted" style="font-size:12px;text-decoration:none;">KYC</a>
   </div>
   <div style="display:flex;gap:15px;justify-content:center;margin-bottom:20px;">
     <div class="glass" style="padding:5px 15px;border-radius:8px;font-size:12px;color:#ef4444;font-weight:700;">🔞 18+</div>
-    <div class="glass" style="padding:5px 15px;border-radius:8px;font-size:12px;color:var(--text-muted);">Curacao Licensed</div>
+    <div class="glass text-muted" style="padding:5px 15px;border-radius:8px;font-size:12px;">Curacao Licensed</div>
   </div>
-  <p style="font-size:11px;color:var(--text-muted);line-height:1.6;">
+  <p class="text-muted" style="font-size:11px;line-height:1.6;">
     © 2024 <%= siteName %> Gaming. All Rights Reserved.<br>
     <%= t.responsible_gaming_msg %>
   </p>
@@ -275,14 +275,14 @@ function renderGames() {
   }
 
   filtered.forEach(g => {
-    const badgeHTML = g.badge ? `<div style="position:absolute;top:8px;left:8px;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;background:var(--grad-gold);color:#000;z-index:2;">${g.badge.toUpperCase()}</div>` : '';
+    const badgeHTML = g.badge ? `<div style="position:absolute;top:8px;left:8px;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;background:var(--grad-gold);color:var(--text-inverse);z-index:2;">${g.badge.toUpperCase()}</div>` : '';
     c.innerHTML += `
       <a href="/games/${g.slug}" class="game-card" style="display:block;text-decoration:none;border-color: rgba(245, 158, 11, 0.2); transition: transform 0.2s; position:relative;">
         <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:40px;background:var(--grad-surface);">
           <span class="game-emoji">${g.emoji}</span>
           ${badgeHTML}
-          <div style="padding:8px;background:rgba(255,255,255,0.05);border-top:1px solid rgba(255,255,255,0.05);">
-            <div style="font-size:11px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${g.name}</div>
+          <div style="padding:8px;background:var(--bg-glass);border-top:1px solid var(--border-glass);">
+            <div style="font-size:11px;font-weight:700;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${g.name}</div>
             <div style="font-size:9px;color:var(--gold);">${g.provider}</div>
           </div>
         </div>
