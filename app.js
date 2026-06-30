@@ -164,6 +164,19 @@ app.use('/extra', require('./routes/extra'));
 
 app.get('/app/update', (req, res) => res.render('app/update'));
 
+// Telegram Bot Webhook
+const { handleMessage } = require('./telegram-bot');
+app.post('/telegram-webhook', express.json(), async (req, res) => {
+  try {
+    const { message } = req.body;
+    if (message) await handleMessage(message);
+    res.sendStatus(200);
+  } catch (err) {
+    console.error('Webhook error:', err);
+    res.sendStatus(200);
+  }
+});
+
 // Error Handling
 app.use((err, req, res, next) => {
   console.error('❌ Unhandled Error:', err.stack);
@@ -212,19 +225,6 @@ async function startServer() {
     process.exit(1);
   }
 }
-
-// Telegram Bot Webhook
-const { handleMessage } = require('./telegram-bot');
-app.post('/telegram-webhook', express.json(), async (req, res) => {
-  try {
-    const { message } = req.body;
-    if (message) await handleMessage(message);
-    res.sendStatus(200);
-  } catch (err) {
-    console.error('Webhook error:', err);
-    res.sendStatus(200);
-  }
-});
 
 startServer();
 module.exports = app;
