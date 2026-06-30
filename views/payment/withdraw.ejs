@@ -4,8 +4,8 @@
   @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap');
 
   body {
-    background-color: #f8f9fa !important;
-    color: #333 !important;
+    background-color: var(--bg-dark) !important;
+    color: var(--text-main) !important;
     font-family: 'Hind Siliguri', sans-serif;
   }
   .red-theme-bg { background-color: #e61e26; }
@@ -18,7 +18,7 @@
   }
 
   .instr-card {
-    background: white;
+    background: var(--bg-surface);
     border-radius: 12px;
     padding: 16px;
     margin-bottom: 16px;
@@ -44,10 +44,11 @@
   .input-field {
     width: 100%;
     padding: 12px 16px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--border-glass);
     border-radius: 8px;
     font-size: 16px;
-    background: white;
+    background: var(--bg-surface);
+    color: var(--text-main);
   }
   .input-field:focus {
     outline: none;
@@ -61,7 +62,7 @@
   }
 </style>
 
-<div class="min-h-screen pb-32 max-w-[480px] mx-auto relative bg-[#f8f9fa]">
+<div class="min-h-screen pb-32 max-w-[480px] mx-auto relative bg-dark">
   <!-- Top Bar -->
   <div class="red-theme-bg text-white px-4 py-4 flex items-center justify-between sticky top-0 z-50">
     <div class="flex items-center gap-4">
@@ -75,7 +76,7 @@
   </div>
 
   <!-- Sub Header / Tab -->
-  <div class="bg-white py-3 flex justify-center items-center gap-2 border-b-2 border-red-600 mb-4">
+  <div class="bg-surface py-3 flex justify-center items-center gap-2 border-b-2 border-red-600 mb-4">
     <div class="w-8 h-8 bg-pink-600 rounded-lg flex items-center justify-center text-white text-xs">
         <i class="fas fa-wallet"></i>
     </div>
@@ -92,19 +93,19 @@
 
     <!-- Bound Wallet Section -->
     <div class="mb-6">
-        <h2 class="text-gray-500 font-bold mb-4">আবদ্ধ E wallet (<%= cards ? cards.length : 0 %>/5)</h2>
+        <h2 class="text-muted font-bold mb-4">আবদ্ধ E wallet (<%= cards ? cards.length : 0 %>/5)</h2>
 
         <% if (cards && cards.length > 0) { %>
             <div class="space-y-3">
                 <% cards.forEach(c => { %>
-                    <div class="bg-white rounded-xl p-4 border border-gray-100 flex items-center justify-between shadow-sm">
+                    <div class="bg-surface rounded-xl p-4 border border-glass flex items-center justify-between shadow-sm">
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center text-red-600">
                                 <i class="fas fa-university"></i>
                             </div>
                             <div>
-                                <p class="font-bold text-sm"><%= c.bank_name %></p>
-                                <p class="text-xs text-gray-400"><%= c.account_number %></p>
+                                <p class="font-bold text-sm text-main"><%= c.bank_name %></p>
+                                <p class="text-xs text-muted"><%= c.account_number %></p>
                             </div>
                         </div>
                         <form action="/profile/cards/delete/<%= c.id %>" method="POST" onsubmit="return confirm('আপনি কি নিশ্চিত?')">
@@ -124,13 +125,13 @@
     </div>
 
     <!-- Instructions Section -->
-    <div class="text-[13px] text-gray-800 leading-snug mb-6">
-        <p class="text-gray-400 mb-2">উত্তোলন সময়: 24 ঘণ্টা</p>
+    <div class="text-[13px] text-main leading-snug mb-6">
+        <p class="text-muted mb-2">উত্তোলন সময়: 24 ঘণ্টা</p>
         <p class="font-bold mb-1">💬 প্রিয় সদস্য, শুভেচ্ছা! 🎯</p>
         <p class="font-bold mb-2">আপনার <span class="red-theme-text uppercase"><%= siteName %></span> অ্যাকাউন্টে উত্তোলনের আগে অনুগ্রহ করে আপনার ওয়ালেট (বিকাশ/নগদ/রকেট ইত্যাদি) সঠিকভাবে সংযুক্ত হয়েছে কিনা তা যাচাই করুন। ভুল ওয়ালেট সংযোগের কারণে টাকা স্থানান্তরে বিলম্ব বা ব্যর্থতা ঘটতে পারে।</p>
         <p class="font-bold mb-4">🔒 দয়া করে আবার পরীক্ষা করুন এবং নিরাপদে উত্তোলন সম্পন্ন করুন! 💰</p>
 
-        <div class="text-gray-400 space-y-1">
+        <div class="text-muted space-y-1">
             <p>দৈনিক উত্তোলন ৯৯,৯৯৯ (বার), অবশিষ্ট উত্তোলন ৯৯,৯৯৯ (বার)</p>
             <p>প্রধান ওয়ালেট :৳ <%= (coins || 0).toFixed(2) %></p>
             <p>উপলব্ধ পরিমাণ : ৳ <%= (coins || 0).toFixed(2) %></p>
@@ -145,8 +146,8 @@
       <!-- Withdrawal Form -->
       <div class="space-y-5">
         <div>
-          <label class="block text-gray-700 font-bold mb-2">পেমেন্ট মেথড</label>
-          <select name="method" class="w-full p-4 border-2 border-gray-200 rounded-xl focus:outline-none bg-white font-bold" required>
+          <label class="block text-main font-bold mb-2">পেমেন্ট মেথড</label>
+          <select name="method" class="w-full p-4 border-2 border-glass rounded-xl focus:outline-none bg-surface text-main font-bold" required>
             <option value="bkash">bKash</option>
             <option value="nagad">Nagad</option>
             <option value="rocket">Rocket</option>
@@ -157,19 +158,19 @@
         </div>
 
         <div>
-          <label class="block text-gray-700 font-bold mb-2">পরিমাণ (১০০ ~ ৫০,০০০)</label>
+          <label class="block text-main font-bold mb-2">পরিমাণ (১০০ ~ ৫০,০০০)</label>
           <div class="relative">
             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <span class="text-gray-500 font-bold">৳</span>
+                <span class="text-muted font-bold">৳</span>
             </div>
-            <input type="number" name="amount" placeholder="টাকার পরিমাণ লিখুন" min="100" max="50000" class="w-full pl-10 p-4 border-2 border-gray-200 rounded-xl focus:outline-none bg-white text-lg font-bold text-red-600" required>
+            <input type="number" name="amount" placeholder="টাকার পরিমাণ লিখুন" min="100" max="50000" class="w-full pl-10 p-4 border-2 border-glass rounded-xl focus:outline-none bg-surface text-lg font-bold text-red-600" required>
           </div>
-        
+        </div>
 
         <div class="relative">
-            <span class="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-700">পাসওয়ার্ড</span>
+            <span class="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-main">পাসওয়ার্ড</span>
             <input type="password" id="secPassword" name="password" placeholder="পাসওয়ার্ড" class="input-field pl-24 text-right" required>
-            <button type="button" onclick="togglePassword()" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
+            <button type="button" onclick="togglePassword()" class="absolute right-4 top-1/2 -translate-y-1/2 text-muted">
                 <i class="fas fa-eye-slash" id="eyeIcon"></i>
             </button>
         </div>

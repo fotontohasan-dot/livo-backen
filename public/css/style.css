@@ -1,26 +1,35 @@
 :root {
+  /* Colors */
+  --primary: #C8102E;
+  --primary-glow: rgba(200, 16, 46, 0.4);
+  --secondary: #9B1C2E;
+  --accent: #EAB308;
+  --gold: #EAB308;
+  --green: #10b981;
+  --red: #ef4444;
+
+  /* Surfaces & Backgrounds */
   --bg-dark: #050505;
   --bg-surface: #121212;
   --bg-card: rgba(255, 255, 255, 0.03);
   --bg-glass: rgba(255, 255, 255, 0.05);
   --border-glass: rgba(255, 255, 255, 0.1);
+  --bg-nav: rgba(5, 5, 5, 0.95);
 
-    --primary: #C8102E;
-  --primary-glow: rgba(200, 16, 46, 0.4);
-  --secondary: #9B1C2E;
-  --accent: #EAB308;
-  --gold: #EAB308;
+  /* Text */
+  --text-main: #ffffff;
+  --text-inverse: #000000;
+  --text-muted: #94a3b8;
+  --text-white: #ffffff; /* Consistent white for colored backgrounds */
 
+  /* Gradients */
   --grad-primary: linear-gradient(135deg, #C8102E, #9B1C2E);
   --grad-secondary: linear-gradient(135deg, #9B1C2E, #7A1624);
   --grad-gold: linear-gradient(135deg, #EAB308, #FCD34D);
   --grad-dark: linear-gradient(180deg, #121212, #050505);
   --grad-surface: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));
 
-
-  --text-main: #ffffff;
-  --text-muted: #94a3b8;
-
+  /* Effects */
   --shadow-neon: 0 0 15px var(--primary-glow);
   --glass-blur: blur(12px);
 }
@@ -31,8 +40,12 @@ body.light-mode {
   --bg-card: rgba(0, 0, 0, 0.03);
   --bg-glass: rgba(255, 255, 255, 0.7);
   --border-glass: rgba(0, 0, 0, 0.1);
+  --bg-nav: #ffffff;
+
   --text-main: #1a1a1a;
+  --text-inverse: #ffffff;
   --text-muted: #64748b;
+
   --grad-surface: linear-gradient(135deg, rgba(255,255,255,0.8), rgba(255,255,255,0.4));
 }
 
@@ -246,7 +259,7 @@ body.light-mode .nav-balance-box {
     margin: 0 auto;
     width: 100%;
     max-width: 480px;
-    background: rgb(10, 10, 10);
+    background: var(--bg-nav);
     display: flex;
     justify-content: space-around;
     padding: 10px 0 20px 0;
@@ -309,7 +322,7 @@ body.light-mode .nav-balance-box {
 
 .btn-primary {
     background: var(--grad-primary);
-    color: #fff;
+    color: var(--text-white);
     box-shadow: 0 4px 15px rgba(0, 150, 37, 0.3);
 }
 
@@ -320,7 +333,7 @@ body.light-mode .nav-balance-box {
 
 .btn-secondary {
     background: var(--grad-secondary);
-    color: #fff;
+    color: var(--text-white);
 }
 
 .btn-glow {
@@ -420,11 +433,11 @@ body.light-mode .nav-balance-box {
 
 .form-input {
     width: 100%;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--bg-glass);
     border: 1px solid var(--border-glass);
     border-radius: 12px;
     padding: 12px 15px;
-    color: #fff;
+    color: var(--text-main);
     outline: none;
     transition: 0.3s;
 }
@@ -480,8 +493,8 @@ p {
 }
 
 .top-balance-bar {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
+    background: var(--bg-glass);
+    backdrop-filter: var(--glass-blur);
     padding: 10px 16px;
     display: flex;
     align-items: center;
@@ -497,8 +510,8 @@ p {
 }
 
 .btn-gold {
-    background: linear-gradient(135deg, #f59e0b, #d97706);
-    color: #fff;
+    background: var(--grad-gold);
+    color: var(--text-inverse);
 }
 
 .btn-sm {
@@ -513,6 +526,12 @@ p {
 .teko {
     font-family: 'Teko', sans-serif;
 }
+
+.text-white { color: var(--text-white) !important; }
+.text-main { color: var(--text-main) !important; }
+.text-muted { color: var(--text-muted) !important; }
+.text-inverse { color: var(--text-inverse) !important; }
+.text-gold { color: var(--gold) !important; }
 
 .lang-switch {
     display: flex;

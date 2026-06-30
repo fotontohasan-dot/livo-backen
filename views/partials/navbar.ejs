@@ -1,12 +1,12 @@
 <div class="side-menu" id="sideMenu">
-  <div style="padding:20px;border-bottom:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:space-between;">
+  <div style="padding:20px;border-bottom:1px solid var(--border-glass);display:flex;align-items:center;justify-content:space-between;">
     <div style="display:flex;align-items:center;gap:12px;">
       <span class="nav-brand" style="color: var(--gold); font-family: 'Teko', sans-serif; font-size: 1.8rem;"><%= siteName %></span>
       <button id="theme-toggle-side" class="glass" style="width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--gold); border: 1px solid var(--border-glass); cursor: pointer; background: none;">
         <i class="fas fa-moon nav-theme-icon"></i>
       </button>
     </div>
-        <button id="lvClose" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;">✕</button>
+        <button id="lvClose" style="background:none;border:none;color:var(--text-main);font-size:22px;cursor:pointer;">✕</button>
 
   </div>
   <div style="padding:10px 20px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:center;">
@@ -16,12 +16,12 @@
     </div>
   </div>
   <% if(locals.user) { %>
-  <div style="padding:15px 20px;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;gap:12px;">
-    <div style="width:45px;height:45px;border-radius:50%;background:var(--grad-primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;color:#fff;box-shadow: 0 0 10px var(--primary-glow);">
+  <div style="padding:15px 20px;border-bottom:1px solid var(--border-glass);display:flex;align-items:center;gap:12px;">
+    <div style="width:45px;height:45px;border-radius:50%;background:var(--grad-primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;color:var(--text-white);box-shadow: 0 0 10px var(--primary-glow);">
       <%= user.username[0].toUpperCase() %>
     </div>
     <div>
-      <div style="font-weight:700;color:#fff;"><%= user.username %></div>
+      <div style="font-weight:700;color:var(--text-main);"><%= user.username %></div>
       <div style="color:var(--gold);font-size:.85rem;font-family:'Teko',sans-serif;">💰 <%= t.balance %>: <span class="js-balance"><%= user.coins %></span></div>
     </div>
   </div>
