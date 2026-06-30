@@ -3,56 +3,54 @@
 <div class="container page">
   <%- include('../partials/flash') %>
   <div class="card" style="max-width:500px;margin:0 auto;">
-    <div class="card-header">💰 ডিপোজিট করুন</div>
+    <div class="card-header">💰 <%= t.deposit %></div>
     <div class="card-body">
       <div style="background:var(--card2);border-radius:10px;padding:1rem;margin-bottom:1.5rem;border:1px solid rgba(230,0,0,0.2);">
-        <p style="color:var(--muted);font-size:.8rem;margin-bottom:.5rem;">নিচের নম্বরে টাকা পাঠান:</p>
+        <p style="color:var(--muted);font-size:.8rem;margin-bottom:.5rem;"><%= t.send_money_to %></p>
         <p style="font-size:1.3rem;font-weight:800;color:var(--gold);letter-spacing:1px;"><%= payNumber %></p>
-        <p style="font-size:.85rem;color:#fff;margin-top:.3rem;">📲 bKash Personal</p>
-        <p style="font-size:.85rem;color:#fff;">📲 Nagad Personal</p>
-        <p style="font-size:.85rem;color:#fff;">📲 Rocket Personal</p>
-        <p style="font-size:.85rem;color:#fff;">📲 Upay Personal</p>
-        <p style="font-size:.8rem;color:var(--muted);margin-top:.6rem;">⚠️ Send Money করুন, তারপর নিচের ফর্ম পূরণ করুন। ব্যাংক ট্রান্সফারের জন্য সাপোর্টে যোগাযোগ করুন।</p>
+        <p style="font-size:.85rem;color:#fff;margin-top:.3rem;">📲 bKash <%= t.personal %></p>
+        <p style="font-size:.85rem;color:#fff;">📲 Nagad <%= t.personal %></p>
+        <p style="font-size:.85rem;color:#fff;">📲 Rocket <%= t.personal %></p>
+        <p style="font-size:.85rem;color:#fff;">📲 Upay <%= t.personal %></p>
+        <p style="font-size:.8rem;color:var(--muted);margin-top:.6rem;"><%= t.send_money_warn %></p>
       </div>
       <form action="/payment/deposit" method="POST">
         <div class="form-group" style="margin-bottom:1rem;">
-          <label class="form-label" style="display:block;margin-bottom:.5rem;color:var(--muted);">পেমেন্ট মেথড</label>
+          <label class="form-label" style="display:block;margin-bottom:.5rem;color:var(--muted);"><%= t.payment_method %></label>
           <select name="method" class="form-input">
             <option value="bkash">bKash</option>
             <option value="nagad">Nagad</option>
             <option value="rocket">Rocket</option>
             <option value="upay">Upay</option>
-            <option value="bank">Bank Transfer</option>
+            <option value="bank"><%= t.bank_transfer %></option>
           </select>
         </div>
         <div class="form-group" style="margin-bottom:1rem;">
-          <label class="form-label" style="display:block;margin-bottom:.5rem;color:var(--muted);">পরিমাণ (সর্বনিম্ন ১০০)</label>
-          <input type="number" name="amount" class="form-input" placeholder="টাকার পরিমাণ" min="100" required>
+          <label class="form-label" style="display:block;margin-bottom:.5rem;color:var(--muted);"><%= t.amount_min_100 %></label>
+          <input type="number" name="amount" class="form-input" placeholder="<%= t.amount_placeholder %>" min="100" required>
         </div>
         <div class="form-group" style="margin-bottom:1rem;">
-          <label class="form-label" style="display:block;margin-bottom:.5rem;color:var(--muted);">ট্রানজেকশন আইডি</label>
-          <input type="text" name="transaction_id" class="form-input" placeholder="TrxID লিখুন" required>
+          <label class="form-label" style="display:block;margin-bottom:.5rem;color:var(--muted);"><%= t.trx_id %></label>
+          <input type="text" name="transaction_id" class="form-input" placeholder="<%= t.trx_id_placeholder %>" required>
         </div>
         <div class="form-group" style="margin-bottom:1rem;">
-          <label class="form-label" style="display:block;margin-bottom:.5rem;color:var(--muted);">আপনার নম্বর (যেটা থেকে পাঠিয়েছেন)</label>
-          <input type="text" name="account_number" class="form-input" placeholder="01XXXXXXXXX" required>
+          <label class="form-label" style="display:block;margin-bottom:.5rem;color:var(--muted);"><%= t.sender_number %></label>
+          <input type="text" name="account_number" class="form-input" placeholder="<%= t.phone_placeholder %>" required>
         </div>
 
         <div style="background:rgba(245,158,11,0.08);border:1px solid var(--gold);border-radius:10px;padding:12px;margin-bottom:1.5rem;">
           <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
             <input type="checkbox" name="want_bonus" value="yes" style="margin-top:3px;width:18px;height:18px;">
             <span>
-              <span style="font-weight:700;color:var(--gold);">🎁 ডিপোজিট বোনাস নিন</span>
+              <span style="font-weight:700;color:var(--gold);"><%= t.get_deposit_bonus %></span>
               <span style="display:block;font-size:.78rem;color:var(--muted);margin-top:3px;">
-                ১ম ডিপোজিট ১০০%, ২য় ডিপোজিট ৫০%, প্রতি শুক্রবার ৮০% রিলোড, এরপর সব ডিপোজিটে ১৫% বোনাস
-                (সর্বোচ্চ ১৫,০০০)। বোনাস নিলে উত্তোলনের আগে টার্নওভার পূরণ করতে হবে (স্পোর্টস ৫x অথবা ক্যাসিনো ৩৫x)।
-                বোনাস না নিলে কোনো শর্ত ছাড়াই উত্তোলন করতে পারবেন।
+                <%= t.bonus_terms_msg %>
               </span>
             </span>
           </label>
         </div>
 
-        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">✅ সাবমিট করুন</button>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">✅ <%= t.submit %></button>
       </form>
     </div>
   </div>

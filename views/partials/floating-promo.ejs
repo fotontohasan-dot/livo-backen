@@ -1,0 +1,153 @@
+<!-- ভাসমান প্রোমো + প্যানেল + দৈনিক রিওয়ার্ (গ্লাস মডাল) -->
+<%
+  var popupImg1 = "https://i.postimg.cc/rdv7yRFH/195BF8C8-EBFA-4B2D-B8BC-CC0D54D1A2DF.png";
+  var popupImg2 = "https://i.postimg.cc/QVXZF5JR/60299204-2FDA-4A85-AE3D-BC025737173E.png";
+  var popupImg3 = "https://i.postimg.cc/Z91XYvKX/AB50B448-06EF-4A03-9154-DB527E8EE698.png";
+%>
+
+<style>
+  #lpPromo { position: fixed; right: 12px; bottom: 100px; z-index: 9990; width: 60px; height: 60px; cursor: pointer; animation: lpFloat 3s ease-in-out infinite; }
+  #lpPromo.hide { display: none !important; }
+  @keyframes lpFloat { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-9px);} }
+  #lpPromo .lp-pack { width: 60px; height: 60px; border-radius: 14px; background: radial-gradient(circle at 32% 26%, #ff6b6b, #c81d1d); box-shadow: 0 6px 16px rgba(200,29,29,0.55); display: flex; align-items: center; justify-content: center; font-size: 30px; border: 2px solid rgba(255,255,255,0.3); }
+  #lpPromo .lp-dot { position: absolute; top: -3px; right: -3px; width: 14px; height: 14px; background: #f59e0b; border-radius: 50%; border: 2px solid #111; }
+  #lpPanel { position: fixed; right: 10px; bottom: 90px; z-index: 10005; width: 76px; max-height: 70vh; background: rgba(20,20,20,0.92); box-shadow: 0 8px 28px rgba(0,0,0,0.55); border-radius: 18px; transform: translateX(140%); transition: transform .35s ease; display: flex; flex-direction: column; padding: 48px 0 10px; overflow-y: auto; }
+  #lpPanel.open { transform: translateX(0); }
+  #lpPanel .lp-top { position: absolute; top: 8px; left: 0; right: 0; display: flex; justify-content: space-around; align-items: center; }
+  #lpPanel .lp-top button { width: 30px; height: 30px; border-radius: 50%; border: none; font-size: 15px; color: #fff; cursor: pointer; }
+  #lpPanel .lp-close { background: #6b7280; }
+  #lpPanel .lp-up { background: linear-gradient(135deg,#f97316,#ea580c); }
+  #lpPanel .lp-item { display: flex; flex-direction: column; align-items: center; gap: 3px; text-decoration: none; padding: 7px 4px; background: none; border: none; cursor: pointer; }
+  #lpPanel .lp-icon { width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+  #lpPanel .lp-label { color: #fff; font-size: 9px; font-weight: 600; text-align: center; }
+  .lp-ic-trophy { background: linear-gradient(135deg,#fbbf24,#d97706); }
+  .lp-ic-wheel  { background: linear-gradient(135deg,#dc2626,#7f1d1d); }
+  .lp-ic-egg    { background: linear-gradient(135deg,#a855f7,#6b21a8); }
+  .lp-ic-packet { background: linear-gradient(135deg,#ef4444,#991b1b); }
+
+  #lpPopup { position: fixed; inset: 0; background: rgba(0,0,0,0.55); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 10010; display: none; align-items: center; justify-content: center; padding: 22px; }
+  #lpPopup .pp-box { background: #fff; border-radius: 18px; max-width: 340px; width: 100%; max-height: 85vh; position: relative; overflow: hidden; display: flex; flex-direction: column; }
+  #lpPopup .pp-scroll { overflow-y: auto; flex: 1; }
+  #lpPopup .pp-img { width: 100%; display: block; }
+  #lpPopup .pp-caption { padding: 14px 18px 4px; text-align: center; }
+  #lpPopup .pp-caption h2 { font-size: 16px; font-weight: 800; margin: 0 0 5px; color: #111; }
+  #lpPopup .pp-caption p { font-size: 12px; margin: 0; color: #555; line-height: 1.5; }
+  #lpPopup .pp-close { position: absolute; top: 10px; right: 10px; width: 38px; height: 38px; background: rgba(0,0,0,0.55); color: #fff; border: 2px solid #fff; border-radius: 50%; font-size: 22px; font-weight: bold; cursor: pointer; z-index: 5; }
+  #lpPopup .pp-actions { display: flex; gap: 8px; padding: 12px 16px; background: #fff; border-top: 1px solid #eee; }
+  #lpPopup .pp-actions button { flex: 1; padding: 12px; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  #lpPopup .pp-prev { background: #eee; color: #444; }
+  #lpPopup .pp-next { background: #e11d48; color: #fff; }
+  #lpPopup .pp-dots { display: flex; justify-content: center; gap: 6px; padding-bottom: 14px; }
+  #lpPopup .pp-dots span { width: 8px; height: 8px; border-radius: 50%; background: #ddd; }
+  #lpPopup .pp-dots span.on { background: #e11d48; }
+
+  .dr-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 10020; display: none; align-items: center; justify-content: center; padding: 18px; }
+  .dr-box { position: relative; max-width: 360px; width: 100%; border-radius: 20px; overflow: hidden; }
+  .dr-red { background: radial-gradient(circle at 50% 0%, #b91c1c, #7f1d1d 70%); padding: 18px 16px 20px; }
+  .dr-egg { background: radial-gradient(circle at 50% 0%, #3b2f0b, #1a1505 75%); padding: 18px 16px 20px; }
+  .dr-banner { background: linear-gradient(180deg,#ff4d4d,#d61f1f); color: #fff; font-weight: 800; font-size: 17px; text-align: center; padding: 9px 0; border-radius: 30px; margin: 0 auto 6px; max-width: 70%; border: 2px solid #ffd06b; }
+  .dr-subtitle { color: #ffe08a; font-size: 13px; text-align: center; font-weight: 700; margin: 8px 6px 12px; line-height: 1.5; }
+  .dr-close { position: absolute; top: 10px; right: 10px; width: 38px; height: 38px; background: rgba(0,0,0,0.45); color: #fff; border: 2px solid #fff; border-radius: 50%; font-size: 22px; font-weight: bold; cursor: pointer; z-index: 6; }
+  .dr-timer { display: flex; justify-content: center; align-items: center; gap: 6px; margin-bottom: 14px; }
+  .dr-timer .t-label { color: #ffe08a; font-size: 11px; margin-right: 4px; }
+  .dr-timer .t-cell { background: #fff; color: #c81d1d; font-weight: 800; font-size: 18px; border-radius: 7px; padding: 4px 9px; min-width: 36px; text-align: center; }
+  .dr-timer .t-colon { color: #fff; font-weight: 800; }
+  .dr-bigpack { text-align: center; font-size: 110px; line-height: 1; margin: 6px 0 4px; }
+  .dr-eggs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 4px 0 10px; }
+  .dr-egg-item { position: relative; aspect-ratio: 3/4; border-radius: 12px; background: radial-gradient(circle at 50% 35%, rgba(255,215,120,0.25), rgba(0,0,0,0)); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
+  .dr-egg-item .egg-emoji { font-size: 34px; }
+  .dr-egg-item.opened .egg-emoji { font-size: 22px; opacity: .5; }
+  .dr-egg-item .egg-amt { display: none; font-size: 13px; font-weight: 800; color: #ffd700; margin-top: 2px; }
+  .dr-egg-item.opened .egg-amt { display: block; }
+  .dr-egg-item.win .egg-amt { color: #4ade80; font-size: 15px; }
+  .dr-claim { display: block; width: 86%; margin: 6px auto 4px; padding: 13px; border: none; border-radius: 30px; background: linear-gradient(180deg,#ffd86b,#f0a91e); color: #7a3e00; font-size: 16px; font-weight: 800; cursor: pointer; }
+  .dr-claim:disabled { opacity: .6; }
+  .dr-hint { text-align: center; color: #ffe08a; font-size: 11px; margin-top: 6px; }
+  .dr-success { text-align: center; color: #4ade80; font-size: 16px; font-weight: 800; margin: 8px 0; }
+
+  .lpFrame-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 10030; display: none; align-items: center; justify-content: center; padding: 14px; }
+  .lpFrame-box { position: relative; width: 100%; max-width: 420px; height: 80vh; background: #14151a; border-radius: 18px; overflow: hidden; box-shadow: 0 12px 40px rgba(0,0,0,0.6); }
+  .lpFrame-box iframe { width: 100%; height: 100%; border: none; }
+  .lpFrame-close { position: absolute; top: 10px; right: 10px; width: 40px; height: 40px; background: rgba(0,0,0,0.6); color: #fff; border: 2px solid #fff; border-radius: 50%; font-size: 24px; font-weight: bold; cursor: pointer; z-index: 6; }
+</style>
+
+<div id="lpPopup"><div class="pp-box"><button class="pp-close" id="lpPopClose">×</button><div class="pp-scroll"><div id="lpPopupBody"></div><div class="pp-dots" id="lpPopupDots"></div></div><div class="pp-actions"><button class="pp-prev" id="lpPopPrev">পূর্ববর্তী</button><button class="pp-next" id="lpPopNext">পরবর্তী</button></div></div></div>
+
+<div class="dr-overlay" id="drRedOverlay"><div class="dr-box dr-red"><button class="dr-close" id="drRedClose">×</button><div class="dr-banner">পুরস্কার</div><div class="dr-subtitle">দৈনিক লগইন লল খাম — সর্বোচ্চ পুরস্কার ৯৯,৯৯৯</div><div class="dr-timer"><span class="t-label">অবশিষ্ট সময়</span><span class="t-cell" id="drRedH">00</span><span class="t-colon">:</span><span class="t-cell" id="drRedM">00</span><span class="t-colon">:</span><span class="t-cell" id="drRedS">00</span></div><div class="dr-bigpack">🧧</div><div id="drRedResult"></div><button class="dr-claim" id="drRedBtn">দাবি করুন</button><div class="dr-hint">দিনে একবার দাবি করা যাবে</div></div></div>
+
+<div class="dr-overlay" id="drEggOverlay"><div class="dr-box dr-egg"><button class="dr-close" id="drEggClose">×</button><div class="dr-banner">পুরস্কার</div><div class="dr-subtitle">প্রতিদন লগইন করলেই গোল্ডেন এগ ভাঙতে পারবেন</div><div class="dr-timer"><span class="t-label">অবশিষ্ট সময়</span><span class="t-cell" id="drEggH">00</span><span class="t-colon">:</span><span class="t-cell" id="drEggM">00</span><span class="t-colon">:</span><span class="t-cell" id="drEggS">00</span></div><div class="dr-eggs" id="drEggGrid"></div><div id="drEggResult"></div><div class="dr-hint" id="drEggHint">একটি ডিমে চাপ দিন</div></div></div>
+
+<div class="lpFrame-overlay" id="lpFrameOverlay"><div class="lpFrame-box"><button class="lpFrame-close" id="lpFrameClose">×</button><iframe id="lpFrame" src="about:blank"></iframe></div></div>
+
+<div id="lpPanel"><div class="lp-top"><button class="lp-close" id="lpBtnClose">×</button><button class="lp-up" id="lpBtnUp">⌃</button></div>
+<button class="lp-item" id="lpBtnTour"><div class="lp-icon lp-ic-trophy">🏆</div><div class="lp-label">টুর্নামেন্ট</div></button>
+<button class="lp-item" id="lpBtnWheel"><div class="lp-icon lp-ic-wheel">🎡</div><div class="lp-label">লাকি স্পিন</div></button>
+<button class="lp-item" id="lpBtnEgg"><div class="lp-icon lp-ic-egg">🥚</div><div class="lp-label">সোনার ডিম</div></button>
+<button class="lp-item" id="lpBtnRed"><div class="lp-icon lp-ic-packet">🧧</div><div class="lp-label">লাল পকেট</div></button></div>
+
+<div id="lpPromo"><div class="lp-dot"></div><div class="lp-pack">🧧</div></div>
+
+<script>
+function _g(id){ return document.getElementById(id); }
+var lpStatus = { redPacket:{claimed:false}, goldenEgg:{claimed:false} };
+
+function lpShowPromo(){ var pr=_g('lpPromo'); if(pr) pr.classList.remove('hide'); }
+function lpClosePanelFn(){ var p=_g('lpPanel'); if(p) p.classList.remove('open'); lpShowPromo(); }
+window.lpClosePanel = lpClosePanelFn;
+
+function lpOpenFrame(url){ lpClosePanelFn(); var f=_g('lpFrame'); if(f) f.src=url; var ov=_g('lpFrameOverlay'); if(ov) ov.style.display='flex'; }
+function lpCloseFrame(){ var ov=_g('lpFrameOverlay'); if(ov) ov.style.display='none'; var f=_g('lpFrame'); if(f) f.src='about:blank'; }
+
+function drOpenRedFn(){ lpClosePanelFn(); var rr=_g('drRedResult'); if(rr) rr.innerHTML=''; var btn=_g('drRedBtn'); if(btn){ if(lpStatus.redPacket.claimed){btn.disabled=true;btn.textContent='আজ নওয়া হয়েছে';}else{btn.disabled=false;btn.textContent='দাবি করুন';} } var ov=_g('drRedOverlay'); if(ov) ov.style.display='flex'; }
+function drCloseRedFn(){ var e=_g('drRedOverlay'); if(e) e.style.display='none'; }
+function drClaimRedFn(){ var btn=_g('drRedBtn'); if(!btn) return; btn.disabled=true; btn.textContent='অপেক্ষা করুন...'; fetch('/profile/daily-rewards/red-packet/claim',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).then(function(r){return r.json();}).then(function(d){ if(d.ok){ lpStatus.redPacket.claimed=true; _g('drRedResult').innerHTML='<div class="dr-success">🎉 আপনি পেলেন '+d.amount+' কযন!</div>'; btn.textContent='সফল হয়েছে'; setTimeout(drCloseRedFn,2500); }else{ _g('drRedResult').innerHTML='<div class="dr-hint">'+(d.message||'সমস্যা')+'</div>'; btn.disabled=false; btn.textContent='দাব করুন'; } }).catch(function(){ btn.disabled=false; btn.textContent='দাবি করুন'; }); }
+
+var _eggClaimed=false;
+function drOpenEggFn(){ lpClosePanelFn(); var grid=_g('drEggGrid'); if(grid){ grid.innerHTML=''; for(var i=0;i<8;i++){ var d=document.createElement('div'); d.className='dr-egg-item'; d.innerHTML='<span class="egg-emoji">🥚</span><span class="egg-amt"></span>'; d.onclick=(function(idx){return function(){drPickEgg(idx);};})(i); grid.appendChild(d); } } var hint=_g('drEggHint'); if(hint) hint.textContent='একটি ডিমে চাপ দিন'; var rr=_g('drEggResult'); if(rr) rr.innerHTML=''; _eggClaimed=false; if(lpStatus.goldenEgg.claimed){ if(hint) hint.textContent='আজকের ডিম ইতিমধ্যে নেওয়া হয়েছে'; var items=document.querySelectorAll('#drEggGrid .dr-egg-item'); for(var j=0;j<items.length;j++){ items[j].style.opacity='.4'; items[j].onclick=null; } } var ov=_g('drEggOverlay'); if(ov) ov.style.display='flex'; }
+function drCloseEggFn(){ var e=_g('drEggOverlay'); if(e) e.style.display='none'; }
+function drPickEgg(idx){ if(_eggClaimed||lpStatus.goldenEgg.claimed) return; _eggClaimed=true; var hint=_g('drEggHint'); if(hint) hint.textContent='অপেক্ষা করুন...'; fetch('/profile/daily-rewards/golden-egg/claim',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pickedIndex:idx})}).then(function(r){return r.json();}).then(function(d){ if(d.ok){ lpStatus.goldenEgg.claimed=true; var items=document.querySelectorAll('#drEggGrid .dr-egg-item'); for(var i=0;i<items.length;i++){ items[i].classList.add('opened'); if(i===d.pickedIndex) items[i].classList.add('win'); items[i].querySelector('.egg-amt').textContent=d.reveal[i]; items[i].onclick=null; } _g('drEggResult').innerHTML='<div class="dr-success">🎉 আপনি পেলেন '+d.amount+' কয়েন!</div>'; if(hint) hint.textContent='অন্যান্য ডিমে আরও বড় পুরস্কার ছিল!'; setTimeout(drCloseEggFn,4000); }else{ if(hint) hint.textContent=d.message||'সমস্যা'; _eggClaimed=false; } }).catch(function(){ _eggClaimed=false; if(hint) hint.textContent='সমস্যা হয়েছে'; }); }
+
+var LP_IMG = ["<%= popupImg1 %>","<%= popupImg2 %>","<%= popupImg3 %>"];
+var LP_TIT = ["সদস্য উদযাপন দিবস","VIP সদস্যদের জন্য আরও সুবিধা","এখনই অযাপ ডাউনলোড করুন"];
+var LP_TXT = ["প্রতি মাসের ১০ তারিখ বিশাল নগদ পুরস্কার!","প্রতি মাসে সর্বোচ্চ বোনাস + সপ্তাহিক রিওয়ার্ড।","অ্যাপ ডাউনলোড করে জিতে নিন আকর্ষণীয় বোনাস!"];
+var lpCur=0, lpSlide=null;
+function lpRender(){ var b=_g('lpPopupBody'); if(!b) return; b.innerHTML='<img class="pp-img" src="'+LP_IMG[lpCur]+'"><div class="pp-caption"><h2>'+LP_TIT[lpCur]+'</h2><p>'+LP_TXT[lpCur]+'</p></div>'; var dt=''; for(var i=0;i<LP_IMG.length;i++) dt+='<span class="'+(i===lpCur?'on':'')+'"></span>'; _g('lpPopupDots').innerHTML=dt; }
+function lpStop(){ if(lpSlide){clearInterval(lpSlide);lpSlide=null;} }
+function lpNextFn(){ lpStop(); if(lpCur<LP_IMG.length-1){lpCur++;lpRender();}else{lpClosePopupFn();} }
+function lpPrevFn(){ lpStop(); if(lpCur>0){lpCur--;lpRender();} }
+function lpClosePopupFn(){ lpStop(); var e=_g('lpPopup'); if(e) e.style.display='none'; }
+function lpShowPopup(){ var e=_g('lpPopup'); if(!e) return; lpCur=0; lpRender(); e.style.display='flex'; var st=1; lpSlide=setInterval(function(){ if(st<LP_IMG.length){lpCur=st;lpRender();st++;}else{lpClosePopupFn();} },1000); }
+
+function lpTimer(h,m,s){ function tk(){ var n=new Date(); var e=new Date(n); e.setHours(24,0,0,0); var df=Math.max(0,Math.floor((e-n)/1000)); function p(x){return x<10?'0'+x:''+x;} var a=_g(h),b=_g(m),c=_g(s); if(a)a.textContent=p(Math.floor(df/3600)); if(b)b.textContent=p(Math.floor((df%3600)/60)); if(c)c.textContent=p(df%60); } tk(); setInterval(tk,1000); }
+
+(function(){
+  try {
+    var promo=_g('lpPromo'), panel=_g('lpPanel'), hideT=null, showT=null;
+    function bind(id,fn){ var el=_g(id); if(el) el.addEventListener('click', fn); }
+    if(promo){ promo.addEventListener('click', function(){ if(panel){ if(panel.classList.contains('open')){ panel.classList.remove('open'); } else { panel.classList.add('open'); } } schedule(); }); }
+    bind('lpBtnClose', lpClosePanelFn);
+    bind('lpBtnUp', lpClosePanelFn);
+    bind('lpBtnTour', function(){ lpOpenFrame('/tournaments'); });
+    bind('lpBtnWheel', function(){ lpOpenFrame('/profile/wheel'); });
+    bind('lpBtnEgg', drOpenEggFn);
+    bind('lpBtnRed', drOpenRedFn);
+    bind('drRedClose', drCloseRedFn);
+    bind('drRedBtn', drClaimRedFn);
+    bind('drEggClose', drCloseEggFn);
+    bind('lpFrameClose', lpCloseFrame);
+    bind('lpPopClose', lpClosePopupFn);
+    bind('lpPopPrev', lpPrevFn);
+    bind('lpPopNext', lpNextFn);
+    var ro=_g('drRedOverlay'); if(ro) ro.addEventListener('click', function(e){ if(e.target===ro) drCloseRedFn(); });
+    var eo=_g('drEggOverlay'); if(eo) eo.addEventListener('click', function(e){ if(e.target===eo) drCloseEggFn(); });
+    var fo=_g('lpFrameOverlay'); if(fo) fo.addEventListener('click', function(e){ if(e.target===fo) lpCloseFrame(); });
+    var po=_g('lpPopup'); if(po) po.addEventListener('click', function(e){ if(e.target===po) lpClosePopupFn(); });
+
+    function schedule(){ if(!promo) return; if(hideT) clearTimeout(hideT); hideT=setTimeout(function(){ promo.classList.add('hide'); if(panel) panel.classList.remove('open'); if(showT) clearTimeout(showT); showT=setTimeout(function(){ promo.classList.remove('hide'); schedule(); },90000); },90000); }
+    lpTimer('drRedH','drRedM','drRedS'); lpTimer('drEggH','drEggM','drEggS');
+    fetch('/profile/daily-rewards/status').then(function(r){return r.json();}).then(function(d){ if(d&&d.ok&&d.status) lpStatus=d.status; }).catch(function(){});
+    setTimeout(lpShowPopup,1200);
+    schedule();
+  } catch(e){ console.log('promo err',e); }
+})();
+</script>

@@ -7,10 +7,10 @@
 
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
       <div style="font-size:13px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.5px;">
-        ⚡ Quick Links
+        ⚡ <%= t.quick_links %>
       </div>
       <a href="/matches" style="font-size:11px;color:var(--text-muted);text-decoration:none;">
-        সব দেখুন →
+        <%= t.see_all %> →
       </a>
     </div>
 
@@ -20,21 +20,21 @@
           <div style="font-size:22px;">⏱️</div>
           <div style="position:absolute;top:4px;right:4px;width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 8px #fff;animation:livedot 1.5s infinite;"></div>
         </div>
-        <div style="font-size:11px;color:var(--text-main);margin-top:6px;font-weight:600;">In-Play</div>
+        <div style="font-size:11px;color:var(--text-main);margin-top:6px;font-weight:600;"><%= t.in_play %></div>
       </a>
 
       <a href="/matches/cricket" style="text-decoration:none;text-align:center;">
         <div style="background:linear-gradient(135deg,#10b981,#059669);border-radius:12px;padding:14px 6px;">
           <div style="font-size:22px;">🏏</div>
         </div>
-        <div style="font-size:11px;color:var(--text-main);margin-top:6px;font-weight:600;">Cricket</div>
+        <div style="font-size:11px;color:var(--text-main);margin-top:6px;font-weight:600;"><%= t.cricket %></div>
       </a>
 
       <a href="/matches/football" style="text-decoration:none;text-align:center;">
         <div style="background:linear-gradient(135deg,#0ea5e9,#0284c7);border-radius:12px;padding:14px 6px;">
           <div style="font-size:22px;">⚽</div>
         </div>
-        <div style="font-size:11px;color:var(--text-main);margin-top:6px;font-weight:600;">Football</div>
+        <div style="font-size:11px;color:var(--text-main);margin-top:6px;font-weight:600;"><%= t.football %></div>
       </a>
 
       <a href="/matches/worldcup" style="text-decoration:none;text-align:center;">
@@ -49,7 +49,7 @@
         <div style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);border-radius:12px;padding:14px 6px;">
           <div style="font-size:22px;">🎯</div>
         </div>
-        <div style="font-size:11px;color:var(--text-main);margin-top:6px;font-weight:600;">প্রেডিকশন</div>
+        <div style="font-size:11px;color:var(--text-main);margin-top:6px;font-weight:600;"><%= t.prediction %></div>
       </a>
     </div>
   </div>
@@ -67,10 +67,10 @@
 <div class="banner-container">
   <div class="card btn-glow" style="height:160px;background:linear-gradient(135deg, #006519, #004d13);position:relative;display:flex;align-items:center;padding:20px;border: 1px solid var(--gold);">
     <div style="z-index:1;">
-      <h2 style="font-family:'Teko',sans-serif;font-size:32px;color:var(--gold);line-height:1;">🎰 ওয়েলকাম বনাস ৫০%</h2>
-      <p style="font-size:13px;color:rgba(255,255,255,0.9);margin-top:5px;">পথম ডিপোজিটে ৫০% পর্যন্ত বোনাস পান</p>
-      <div style="margin-top:5px; font-size: 11px; color: #fff;">প্রতি রেফারেলের জন্য ৩০০০ বোনাস! 🎁</div>
-      <a href="/payment/deposit" class="btn btn-primary" style="margin-top:12px;border-radius:25px;padding:8px 24px;background: var(--grad-gold); color: #000;">এখনই নন</a>
+      <h2 style="font-family:'Teko',sans-serif;font-size:32px;color:var(--gold);line-height:1;">🎰 <%= t.welcome_bonus %></h2>
+      <p style="font-size:13px;color:rgba(255,255,255,0.9);margin-top:5px;"><%= t.welcome_bonus_desc %></p>
+      <div style="margin-top:5px; font-size: 11px; color: #fff;"><%= t.referral_bonus %> 🎁</div>
+      <a href="/payment/deposit" class="btn btn-primary" style="margin-top:12px;border-radius:25px;padding:8px 24px;background: var(--grad-gold); color: #000;"><%= t.get_now %></a>
     </div>
     <div style="position:absolute;right:10px;font-size:80px;opacity:0.2;">🏆</div>
   </div>
@@ -81,7 +81,7 @@
   <div style="background:var(--gold);color:#000;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:bold;">News</div>
   <div style="flex:1;overflow:hidden;">
     <div style="font-size:12px;color:var(--text-muted);white-space:nowrap;animation:marquee-text 15s linear infinite;">
-      প্রিয় গ্রাহক, LIVO-ত আপনাকে স্বাগতম! নতুন আমানত বোনাস এবং আকর্ষণীয় পুরস্কার পেতে এখনই খেলা শরু করুন। আমাদের সাথে থাকার জন্য ধন্যবাদ।
+      <%= t.marquee_text %>
     </div>
   </div>
 </div>
@@ -89,16 +89,16 @@
 <!-- ===== Stats Grid ===== -->
 <div class="stats-grid">
   <div class="stat-card">
-    <div class="stat-value">৫০০+</div>
-    <div class="stat-label">গেমের সংখ্যা</div>
+    <div class="stat-value">500+</div>
+    <div class="stat-label"><%= t.games_count %></div>
   </div>
   <div class="stat-card">
-    <div class="stat-value">২৪/৭</div>
-    <div class="stat-label">সাপোর্ট</div>
+    <div class="stat-value">24/7</div>
+    <div class="stat-label"><%= t.support %></div>
   </div>
   <div class="stat-card">
-    <div class="stat-value">৳৫ম+</div>
-    <div class="stat-label">পেমেন্ট</div>
+    <div class="stat-value">৳5M+</div>
+    <div class="stat-label"><%= t.payment %></div>
   </div>
 </div>
 <!-- ===== Category Scrollbar ===== -->
@@ -106,34 +106,34 @@
   <style>#catNav::-webkit-scrollbar { display:none; }</style>
   <div class="glass cat-item active" data-link="/matches" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--gold);">
     <div style="font-size:22px;">⚽</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">ম্যাচসমূহ</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);"><%= t.menu_sports %></div>
   </div>
   <div class="glass cat-item" data-link="/tournaments" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--border-glass);">
     <div style="font-size:22px;">🏆</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">টুর্নামন্ট</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);"><%= t.menu_tournament %></div>
   </div>
   <div class="glass cat-item" data-link="/leaderboard" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--border-glass);">
     <div style="font-size:22px;">📊</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">লডারবোর্ড</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);"><%= t.menu_leaderboard %></div>
   </div>
   <div class="glass cat-item" data-link="/news" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--border-glass);">
     <div style="font-size:22px;">📰</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">নিউজ</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);"><%= t.menu_news %></div>
   </div>
   <div class="glass cat-item" data-link="/payment/deposit" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--border-glass);">
     <div style="font-size:22px;">💰</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">ডিপজিট</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);"><%= t.menu_deposit %></div>
   </div>
   <div class="glass cat-item" data-link="/chat" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--border-glass);">
     <div style="font-size:22px;">🎧</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">সাপোর্ট</div>
+    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);"><%= t.support %></div>
   </div>
 </div>
 
 <!-- ===== Search ===== -->
 <div style="padding:0 12px 10px;">
   <div style="position:relative;">
-    <input type="text" id="gameSearch" class="form-input" placeholder="গেম খুঁজুন..." style="padding-right:45px;">
+    <input type="text" id="gameSearch" class="form-input" placeholder="<%= t.search_placeholder %>" style="padding-right:45px;">
     <i class="fas fa-search" style="position:absolute;right:15px;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
   </div>
 </div>
@@ -142,7 +142,7 @@
 
 <!-- ===== Hot Games ===== -->
 <div class="section-header">
-  <h3 class="section-title"><i class="fas fa-fire"></i> <span id="sectionTitle">হট গেমস</span></h3>
+  <h3 class="section-title"><i class="fas fa-fire"></i> <span id="sectionTitle"><%= t.hot_games %></span></h3>
 </div>
 <div class="game-grid" id="gameContainer"></div>
 
@@ -151,26 +151,26 @@
   <div class="card" style="padding:25px 20px; text-align:center; border: 2px solid var(--gold); background: radial-gradient(circle at center, #1a4a1a 0%, #002d0b 100%); position: relative; overflow: hidden; border-radius: 25px;">
     <div style="position:absolute; top:-20px; left:-20px; width:100px; height:100px; background:var(--gold); filter:blur(60px); opacity:0.3;"></div>
     <div style="position:absolute; bottom:-20px; right:-20px; width:100px; height:100px; background:var(--gold); filter:blur(60px); opacity:0.3;"></div>
-    <div style="font-size:13px; color:var(--gold); letter-spacing:4px; text-transform:uppercase; font-weight:800; text-shadow: 0 0 10px rgba(245,158,11,0.5);">✨ মেগ জকপট ✨</div>
+    <div style="font-size:13px; color:var(--gold); letter-spacing:4px; text-transform:uppercase; font-weight:800; text-shadow: 0 0 10px rgba(245,158,11,0.5);">✨ <%= t.mega_jackpot %> ✨</div>
     <div style="font-family:'Teko',sans-serif; font-size:56px; color:var(--gold); line-height:1; margin:15px 0; text-shadow: 0 0 30px rgba(245,158,11,0.6); display: flex; align-items: center; justify-content: center; gap: 10px;">
       <span style="font-size: 32px; margin-top: 10px;">৳</span>
-      <span id="jp-num">৮৮,৬১৭,৫১৭</span>
+      <span id="jp-num">88,617,517</span>
     </div>
-    <div style="font-size:12px; color:rgba(255,255,255,0.7); font-weight: 500;">পতিদিন লকি ড্র জেতার সযোগ! 🎁</div>
-    <button class="btn btn-glow" style="margin-top:20px; border-radius:30px; padding:12px 40px; background: var(--grad-gold); color: #000; font-weight: 800; border: none;" onclick="location.href='/games/slots'">জকপট খেলুন 🎰</button>
+    <div style="font-size:12px; color:rgba(255,255,255,0.7); font-weight: 500;"><%= t.lucky_draw_msg %> 🎁</div>
+    <button class="btn btn-glow" style="margin-top:20px; border-radius:30px; padding:12px 40px; background: var(--grad-gold); color: #000; font-weight: 800; border: none;" onclick="location.href='/games/slots'"><%= t.play_jackpot %> 🎰</button>
   </div>
 </div>
 
 <!-- ===== Winners ===== -->
 <div class="section-header">
-  <h3 class="section-title"><i class="fas fa-medal"></i> বিজয়ী তালিকা</h3>
-  <a href="/leaderboard" class="btn glass" style="font-size:12px;padding:4px 12px;border-radius:20px;color:var(--text-muted);">সব দেখুন</a>
+  <h3 class="section-title"><i class="fas fa-medal"></i> <%= t.winners_list %></h3>
+  <a href="/leaderboard" class="btn glass" style="font-size:12px;padding:4px 12px;border-radius:20px;color:var(--text-muted);"><%= t.see_all %></a>
 </div>
 
 <div style="padding:0 12px;">
   <div class="card glass">
     <div style="display:grid;grid-template-columns:40px 1fr 1fr;padding:12px;border-bottom:1px solid var(--border-glass);font-size:11px;color:var(--text-muted);font-weight:600;">
-      <div>#</div><div>খেলোয়াড়</div><div style="text-align:right">জতার পরিমাণ</div>
+      <div>#</div><div><%= t.player %></div><div style="text-align:right"><%= t.win_amount %></div>
     </div>
     <div style="display:grid;grid-template-columns:40px 1fr 1fr;padding:12px;align-items:center;border-bottom:1px solid var(--border-glass);">
       <div style="color:var(--gold);font-family:'Teko',sans-serif;font-size:18px;">🥇</div><div style="font-size:13px;">***৮৮২</div><div style="text-align:right;color:#10b981;font-family:'Teko',sans-serif;font-size:16px;">৳১৫,৬৮,৫২৩</div>
@@ -186,16 +186,16 @@
 
 <!-- ===== Promotions ===== -->
 <div class="section-header" style="margin-top:15px;">
-  <h3 class="section-title"><i class="fas fa-gift"></i> প্রমোশন</h3>
+  <h3 class="section-title"><i class="fas fa-gift"></i> <%= t.promotion %></h3>
 </div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 12px;">
   <div class="card glass" style="padding:15px;cursor:pointer;border-left:4px solid var(--primary);" onclick="location.href='/payment/deposit'">
-    <div style="font-size:13px;font-weight:700;">ওয়েলকম বোনাস</div>
-    <div style="font-family:'Teko',sans-serif;font-size:28px;color:var(--primary);">১০০%</div>
+    <div style="font-size:13px;font-weight:700;"><%= t.welcome_bonus %></div>
+    <div style="font-family:'Teko',sans-serif;font-size:28px;color:var(--primary);">100%</div>
   </div>
   <div class="card glass" style="padding:15px;cursor:pointer;border-left:4px solid var(--accent);">
-    <div style="font-size:13px;font-weight:700;">ডেইলি ক্যাশব্যাক</div>
-    <div style="font-family:'Teko',sans-serif;font-size:28px;color:var(--accent);">১০%</div>
+    <div style="font-size:13px;font-weight:700;"><%= t.daily_cashback %></div>
+    <div style="font-family:'Teko',sans-serif;font-size:28px;color:var(--accent);">10%</div>
   </div>
 </div>
 
@@ -203,10 +203,10 @@
 <div class="site-footer" style="margin-top:30px;background:rgba(255,255,255,0.02);padding:30px 20px;text-align:center;border-top:1px solid var(--border-glass);">
   <div class="nav-brand" style="font-size:2.5rem;margin-bottom:15px;"><%= siteName %></div>
   <div style="display:flex;flex-wrap:wrap;gap:15px;justify-content:center;margin-bottom:20px;">
-    <a href="/privacy" style="color:var(--text-muted);font-size:12px;text-decoration:none;">Privacy Policy</a>
-    <a href="/terms" style="color:var(--text-muted);font-size:12px;text-decoration:none;">Terms & Conditions</a>
-    <a href="/rules" style="color:var(--text-muted);font-size:12px;text-decoration:none;">Rules and Regulation</a>
-    <a href="/kyc" style="color:var(--text-muted);font-size:12px;text-decoration:none;">KYC</a>
+    <a href="/privacy" style="color:var(--text-muted);font-size:12px;text-decoration:none;"><%= t.privacy_policy %></a>
+    <a href="/terms" style="color:var(--text-muted);font-size:12px;text-decoration:none;"><%= t.terms_conditions %></a>
+    <a href="/rules" style="color:var(--text-muted);font-size:12px;text-decoration:none;"><%= t.rules_regulation %></a>
+    <a href="/kyc" style="color:var(--text-muted);font-size:12px;text-decoration:none;"><%= t.kyc %></a>
   </div>
   <div style="display:flex;gap:15px;justify-content:center;margin-bottom:20px;">
     <div class="glass" style="padding:5px 15px;border-radius:8px;font-size:12px;color:#ef4444;font-weight:700;">🔞 18+</div>
@@ -214,7 +214,7 @@
   </div>
   <p style="font-size:11px;color:var(--text-muted);line-height:1.6;">
     © 2024 <%= siteName %> Gaming. All Rights Reserved.<br>
-    অনলাইন গেম আসক তৈরি করতে পারে। দয়িত্বশীলভাবে খেলুন।
+    <%= t.responsible_gaming_msg %>
   </p>
 </div>
 
@@ -224,8 +224,9 @@
     <i class="fas fa-headset"></i>
   </a>
 </div>
-
 <%- include('partials/bottom-nav') %>
+<%- include('partials/floating-promo') %>
+
 <script>
 const games = [
   {name:"Aviator", emoji:"🚀", type:"pvp", slug:"aviator", badge:"hot", provider:"SPRIBE"},
@@ -260,11 +261,12 @@ function renderGames() {
   const c = document.getElementById('gameContainer');
   if(!c) return;
   c.innerHTML = '';
-  const searchQ = document.getElementById('gameSearch').value.toLowerCase();
+  var gsEl = document.getElementById('gameSearch');
+  const searchQ = gsEl ? gsEl.value.toLowerCase() : '';
   const filtered = games.filter(g => g.name.toLowerCase().includes(searchQ));
 
   if (filtered.length === 0) {
-    c.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">কোনো গেম পাওয়া যয়নি</div>';
+    c.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);"><%= t.no_games_found %></div>`;
     return;
   }
 
@@ -291,13 +293,14 @@ document.querySelectorAll('.cat-item').forEach(el => {
   });
 });
 
-document.getElementById('gameSearch').addEventListener('input', renderGames);
+var gs2 = document.getElementById('gameSearch');
+if (gs2) gs2.addEventListener('input', renderGames);
 
 let jp = 88617517;
 setInterval(() => {
   jp += Math.floor(Math.random() * 600 + 100);
   const jpN = document.getElementById('jp-num');
-  if(jpN) jpN.textContent = jp.toLocaleString('bn-BD');
+  if(jpN) jpN.textContent = jp.toLocaleString('<%= lang === 'bn' ? 'bn-BD' : 'en-US' %>');
 }, 2000);
 
 document.addEventListener('DOMContentLoaded', renderGames);

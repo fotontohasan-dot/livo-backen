@@ -2,50 +2,51 @@
 <%- include('partials/navbar') %>
 
 <div style="padding:20px;padding-bottom:100px;max-width:700px;margin:0 auto">
-  <h1 style="color:var(--gold);font-size:24px;font-weight:800;margin-bottom:6px">KYC (পরিচয় যাচাইকরণ)</h1>
+  <h1 style="color:var(--gold);font-size:24px;font-weight:800;margin-bottom:6px"><%= t.kyc_title %></h1>
 
   <% if (kyc && kyc.status === 'approved') { %>
     <div class="card" style="padding:16px;background:rgba(16,185,129,0.15);border:1px solid #10b981;margin-bottom:16px;">
-      <strong style="color:#10b981;">✅ আপনার KYC অনুমোদিত হয়েছে।</strong>
+      <strong style="color:#10b981;"><%= t.kyc_approved %></strong>
     </div>
   <% } else if (kyc && kyc.status === 'pending') { %>
     <div class="card" style="padding:16px;background:rgba(234,179,8,0.15);border:1px solid #eab308;margin-bottom:16px;">
-      <strong style="color:#eab308;">⏳ আপনার KYC যাচাইয়ের অপেক্ষায় আছে।</strong>
+      <strong style="color:#eab308;"><%= t.kyc_pending %></strong>
     </div>
   <% } else if (kyc && kyc.status === 'rejected') { %>
     <div class="card" style="padding:16px;background:rgba(239,68,68,0.15);border:1px solid #ef4444;margin-bottom:16px;">
-      <strong style="color:#ef4444;">❌ আপনার KYC বাতিল হয়েছে। আবার চেষ্টা করুন।</strong>
+      <strong style="color:#ef4444;"><%= t.kyc_rejected %></strong>
     </div>
   <% } %>
 
   <% if (!kyc || kyc.status === 'rejected') { %>
   <div class="card" style="padding:20px;margin-bottom:20px;">
-    <h3 style="color:var(--gold);font-size:16px;margin-bottom:12px;">আপনার তথ্য জমা দিন</h3>
+    <h3 style="color:var(--gold);font-size:16px;margin-bottom:12px;"><%= t.submit_info %></h3>
     <form action="/extra/kyc" method="POST">
-      <input type="text" name="full_name" placeholder="পূর্ণ নাম (NID অনুযায়ী)" required class="form-control" style="margin-bottom:10px;">
+      <input type="text" name="full_name" placeholder="<%= t.full_name_nid %>" required class="form-control" style="margin-bottom:10px;">
 
       <select name="document_type" class="form-control" style="margin-bottom:10px;">
-        <option value="nid">জাতীয় পরিচয়পত্র (NID)</option>
-        <option value="passport">পাসপোর্ট</option>
-        <option value="driving">ড্রাইভিং লাইসেন্স</option>
+        <option value="nid"><%= t.nid %></option>
+        <option value="passport"><%= t.passport %></option>
+        <option value="driving"><%= t.driving %></option>
       </select>
 
-      <input type="text" name="document_number" placeholder="ডকুমেন্ট নাম্বার" required class="form-control" style="margin-bottom:10px;">
+      <input type="text" name="document_number" placeholder="<%= t.doc_number %>" required class="form-control" style="margin-bottom:10px;">
 
-      <input type="text" name="document_url" placeholder="ডকুমেন্ট ছবির লিংক (ঐচ্ছিক)" class="form-control" style="margin-bottom:10px;">
+      <input type="text" name="document_url" placeholder="<%= t.doc_url_optional %>" class="form-control" style="margin-bottom:10px;">
 
-      <button type="submit" class="btn btn-success" style="width:100%;">জমা দিন</button>
+      <button type="submit" class="btn btn-success" style="width:100%;"><%= t.submit %></button>
     </form>
   </div>
   <% } %>
 
   <div style="color:var(--text-main);font-size:14px;line-height:1.8">
-    <h3 style="color:var(--gold);font-size:16px;margin:20px 0 8px">KYC কেন প্রয়োজন</h3>
-    <p>আপনার অ্যাকাউন্টের নিরাপত্তা ও জালিয়াতি প্রতিরোধে পরিচয় যাচাই করা হয়।</p>
+    <h3 style="color:var(--gold);font-size:16px;margin:20px 0 8px"><%= t.kyc_why_title %></h3>
+    <p><%= t.kyc_why_desc %></p>
 
-    <h3 style="color:var(--gold);font-size:16px;margin:20px 0 8px">তথ্যের সুরক্ষা</h3>
-    <p>আপনার দেওয়া তথ্য গোপনীয় রাখা হয় এবং শুধু যাচাইয়ের উদ্দেশ্যে ব্যবহৃত হয়।</p>
+    <h3 style="color:var(--gold);font-size:16px;margin:20px 0 8px"><%= t.kyc_safety_title %></h3>
+    <p><%= t.kyc_safety_desc %></p>
   </div>
 </div>
 
+<%- include('partials/footer') %>
 <%- include('partials/bottom-nav') %>

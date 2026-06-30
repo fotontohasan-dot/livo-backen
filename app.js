@@ -15,6 +15,7 @@ const { syncMatches } = require('./services/matchUpdater');
 const runMigrations = require('./migrations');
 
 const app = express();
+app.use(compression());
 const server = http.createServer(app);
 initSocket(server);
 
@@ -25,20 +26,6 @@ if (!process.env.SESSION_SECRET) {
   console.warn('⚠️ SESSION_SECRET সেট করা নেই — সাময়িক র‍্যানম সিক্রেট ব্যবহার হচ্ছে। প্রোডকশনে অবশ্যই SESSION_SECRET সেট করুন।');
 }
 
-app.use(compression());
-
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://cdnjs.cloudflare.com"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
-      imgSrc: ["'self'", "data:", "https://res.cloudinary.com"],
-      connectSrc: ["'self'", "wss:", "ws:"],
-    },
-  },
-}));
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -49,6 +36,19 @@ app.use(express.static(path.join(__dirname, 'public'), {
   etag: false
 }));
 
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://cdnjs.cloudflare.com"],
+      scriptSrcAttr: ["'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "wss:", "ws:"],
+    },
+  },
+}));
 app.use(session({
   store: new pgSession({
     pool: pool,
@@ -89,22 +89,8 @@ app.use('/register', loginLimiter);
 
 // ভাষা সেটিং
 const translations = {
-  bn: {
-    balance: 'ব্যালেন', deposit: 'ডিপোজিট', withdraw: 'উইথড্র',
-    login: 'লগইন', register: 'রেজস্টার', logout: 'লগআউট',
-    home: 'হোম', invite: 'আমন্ত্রণ', promotion: 'প্রমোশন', support: 'সেবা', member: 'সদস্য',
-    menu_home: 'হোম', menu_aviator: 'Aviator', menu_slots: 'Slots', menu_color: 'Color Prediction',
-    menu_sports: 'স্পোর্টস', menu_tournament: 'টুর্নামেন্ট', menu_deposit: 'ডিপোজিট', menu_withdraw: 'উইথড্র',
-    menu_leaderboard: 'লিডারবোর্ড', menu_news: 'নিউজ', menu_profile: 'প্রোফাইল', menu_admin: 'এডমিন প্যানেল'
-  },
-  en: {
-    balance: 'Balance', deposit: 'Deposit', withdraw: 'Withdraw',
-    login: 'Login', register: 'Register', logout: 'Logout',
-    home: 'Home', invite: 'Invite', promotion: 'Promotion', support: 'Support', member: 'Profile',
-    menu_home: 'Home', menu_aviator: 'Aviator', menu_slots: 'Slots', menu_color: 'Color Prediction',
-    menu_sports: 'Sports', menu_tournament: 'Tournament', menu_deposit: 'Deposit', menu_withdraw: 'Withdraw',
-    menu_leaderboard: 'Leaderboard', menu_news: 'News', menu_profile: 'Profile', menu_admin: 'Admin Panel'
-  }
+  bn: require('./locales/bn.json'),
+  en: require('./locales/en.json')
 };
 
 app.get('/lang/:code', (req, res) => {
@@ -119,7 +105,11 @@ app.use((req, res, next) => {
   res.locals.error = req.flash('error');
 
   const lang = req.session.lang === 'en' ? 'en' : 'bn';
-  res.locals.t = translations[lang];
+  const t_func = (key) => translations[lang][key] || key;
+  // Proxy allow both t('key') and t.key
+  res.locals.t = new Proxy(t_func, {
+    get: (target, prop) => translations[lang][prop] || prop
+  });
   res.locals.lang = lang;
   res.locals.siteName = 'Livo';
 
@@ -192,14 +182,14 @@ app.use((err, req, res, next) => {
   ).catch(() => {});
 
   res.status(500).render('error', {
-    message: 'সার্ভার সমস্যা হয়েছে। একটু পরে আবার চেষ্টা করুন।',
+    message: res.locals.t.server_error,
     siteName: 'Livo'
   });
 });
 
 app.use((req, res) => {
   res.status(404).render('error', {
-    message: 'পেজটি পাওয়া যায়নি।',
+    message: res.locals.t.page_not_found,
     siteName: 'Livo'
   });
 });
