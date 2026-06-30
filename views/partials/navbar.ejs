@@ -110,22 +110,25 @@ document.addEventListener('keydown', function (e) {
 });
 
 (function () {
-  var btn = document.getElementById('theme-toggle-nav');
+  var btnNav = document.getElementById('theme-toggle-nav');
+  var btnSide = document.getElementById('theme-toggle-side');
   function applyTheme(theme) {
     var light = theme === 'light';
     document.body.classList.toggle('light-mode', light);
-    var icon = document.querySelector('.nav-theme-icon');
-    if (icon) icon.className = 'fas ' + (light ? 'fa-sun' : 'fa-moon') + ' nav-theme-icon';
-  }
-  applyTheme(localStorage.getItem('livo-theme') || 'dark');
-  if (btn) {
-    btn.addEventListener('click', function () {
-      var next = document.body.classList.contains('light-mode') ? 'dark' : 'light';
-      localStorage.setItem('livo-theme', next);
-      applyTheme(next);
+    document.querySelectorAll('.nav-theme-icon').forEach(function (icon) {
+      icon.className = 'fas ' + (light ? 'fa-sun' : 'fa-moon') + ' nav-theme-icon';
     });
   }
+  applyTheme(localStorage.getItem('livo-theme') || 'dark');
+  function handleToggle() {
+    var next = document.body.classList.contains('light-mode') ? 'dark' : 'light';
+    localStorage.setItem('livo-theme', next);
+    applyTheme(next);
+  }
+  if (btnNav) btnNav.addEventListener('click', handleToggle);
+  if (btnSide) btnSide.addEventListener('click', handleToggle);
 })();
+
 
 // ===== রিয়েল-টাইম ব্যালেন্স আপডেট =====
 (function () {
