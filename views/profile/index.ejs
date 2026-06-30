@@ -34,8 +34,8 @@
     <div style="margin-top: 25px; background: rgba(0,0,0,0.3); border-radius: 16px; padding: 15px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(5px);">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <div>
-          <div style="color: rgba(255,255,255,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">মোট ব্যালেন্স</div>
-          <div style="color: var(--gold); font-size: 30px; font-weight: 800; font-family: 'Teko', sans-serif; line-height: 1.2;">৳ <%= user.coins.toLocaleString('bn-BD') %></div>
+          <div style="color: rgba(255,255,255,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 1px;"><%= t.total_balance %></div>
+          <div style="color: var(--gold); font-size: 30px; font-weight: 800; font-family: 'Teko', sans-serif; line-height: 1.2;">৳ <%= user.coins.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></div>
         </div>
         <a href="/profile/transactions" style="background: rgba(245, 158, 11, 0.1); color: var(--gold); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none;">
           <i class="fas fa-history"></i>
@@ -45,15 +45,15 @@
       <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 15px;">
         <a href="/payment/deposit" style="background: var(--grad-gold); color: #000; padding: 10px; border-radius: 12px; text-align: center; text-decoration: none; font-size: 13px; font-weight: 800; display: flex; flex-direction: column; gap: 4px; align-items: center;">
           <i class="fas fa-plus-circle"></i>
-          জমা দিন
+          <%= t.deposit %>
         </a>
         <a href="/payment/withdraw" style="background: rgba(255,255,255,0.08); color: var(--gold); padding: 10px; border-radius: 12px; text-align: center; text-decoration: none; font-size: 13px; font-weight: 800; border: 1px solid rgba(245, 158, 11, 0.3); display: flex; flex-direction: column; gap: 4px; align-items: center;">
           <i class="fas fa-hand-holding-usd"></i>
-          উত্তোলন
+          <%= t.withdraw %>
         </a>
         <a href="/profile/cards" style="background: rgba(255,255,255,0.08); color: #fff; padding: 10px; border-radius: 12px; text-align: center; text-decoration: none; font-size: 13px; font-weight: 800; border: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; gap: 4px; align-items: center;">
           <i class="fas fa-credit-card"></i>
-          আমার কার্ড
+          <%= t.my_cards %>
         </a>
       </div>
     </div>
@@ -61,33 +61,33 @@
 
   <!-- 🎁 বোনাস ও রিওয়ার্ড সেকশন -->
   <div style="background: var(--bg-card); border-radius: 20px; padding: 20px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
-    <div style="color: var(--gold); font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;">🎁 বোনাস ও রিওয়ার্ড</div>
+    <div style="color: var(--gold); font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;">🎁 <%= t.bonus_rewards %></div>
 
     <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px 10px;">
 
       <a href="/profile/rewards" style="text-decoration:none; text-align:center">
         <div style="width:58px;height:58px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:24px">🎁</div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600">দৈনিক রিওয়ার্ড</div>
+        <div style="color:var(--text-main);font-size:11px;font-weight:600"><%= t.daily_reward %></div>
       </a>
 
       <a href="/profile/cashback" style="text-decoration:none; text-align:center">
         <div style="width:58px;height:58px;border-radius:50%;background:rgba(139,92,246,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:24px">💸</div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600">ক্যাশব্যাক</div>
+        <div style="color:var(--text-main);font-size:11px;font-weight:600"><%= t.cashback %></div>
       </a>
 
       <a href="/profile/periodic" style="text-decoration:none; text-align:center">
         <div style="width:58px;height:58px;border-radius:50%;background:rgba(14,165,233,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:24px">📅</div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600">সাপ্তাহিক/মাসিক</div>
+        <div style="color:var(--text-main);font-size:11px;font-weight:600"><%= t.weekly_monthly %></div>
       </a>
 
       <a href="/profile/wheel" style="text-decoration:none; text-align:center">
         <div style="width:58px;height:58px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:24px">🎡</div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600">লাকি হুইল</div>
+        <div style="color:var(--text-main);font-size:11px;font-weight:600"><%= t.lucky_wheel %></div>
       </a>
 
       <a href="/profile/missions" style="text-decoration:none; text-align:center">
         <div style="width:58px;height:58px;border-radius:50%;background:rgba(99,102,241,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:24px">🎯</div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600">মিশন</div>
+        <div style="color:var(--text-main);font-size:11px;font-weight:600"><%= t.missions %></div>
       </a>
 
       <a href="/profile/vip" style="text-decoration:none; text-align:center">
@@ -97,32 +97,32 @@
 
       <a href="/profile/loyalty" style="text-decoration:none; text-align:center">
         <div style="width:58px;height:58px;border-radius:50%;background:rgba(124,58,237,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:24px">⭐</div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600">পয়েন্ট</div>
+        <div style="color:var(--text-main);font-size:11px;font-weight:600"><%= t.points %></div>
       </a>
 
       <a href="/profile/streak" style="text-decoration:none; text-align:center">
         <div style="width:58px;height:58px;border-radius:50%;background:rgba(249,115,22,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:24px">🔥</div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600">উইন স্ট্ক</div>
+        <div style="color:var(--text-main);font-size:11px;font-weight:600"><%= t.win_streak %></div>
       </a>
 
       <a href="/profile/badges" style="text-decoration:none; text-align:center">
         <div style="width:58px;height:58px;border-radius:50%;background:rgba(14,165,233,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:24px">🏆</div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600">ব্যাজ</div>
+        <div style="color:var(--text-main);font-size:11px;font-weight:600"><%= t.badges %></div>
       </a>
 
       <a href="/profile/freebet" style="text-decoration:none; text-align:center">
         <div style="width:58px;height:58px;border-radius:50%;background:rgba(16,185,129,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:24px">🎟️</div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600">ফ্রি বেট</div>
+        <div style="color:var(--text-main);font-size:11px;font-weight:600"><%= t.free_bet %></div>
       </a>
 
       <a href="/profile/share" style="text-decoration:none; text-align:center">
         <div style="width:58px;height:58px;border-radius:50%;background:rgba(236,72,153,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:24px">📤</div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600">শেয়ার বোনাস</div>
+        <div style="color:var(--text-main);font-size:11px;font-weight:600"><%= t.share_bonus %></div>
       </a>
 
       <a href="/profile/contest" style="text-decoration:none; text-align:center">
         <div style="width:58px;height:58px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:24px">🥇</div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600">কনটস্ট</div>
+        <div style="color:var(--text-main);font-size:11px;font-weight:600"><%= t.contest %></div>
       </a>
 
     </div>
@@ -130,7 +130,7 @@
 
   <!-- Icon Grid Menu -->
   <div style="background: var(--bg-card); border-radius: 20px; padding: 20px; border: 1px solid var(--border-glass);">
-    <div style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;">সদস্য সেন্টার</div>
+    <div style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;"><%= t.member_center %></div>
 
     <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px 10px;">
 
@@ -138,85 +138,85 @@
         <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
           <i class="fas fa-user-plus"></i>
         </div>
-        <div style="color:var(--text-main);font-size:12px;font-weight:600">বন্ধু আমন্ত্রণ</div>
+        <div style="color:var(--text-main);font-size:12px;font-weight:600"><%= t.invite_friends %></div>
       </a>
 
       <a href="/profile/history" style="text-decoration:none; text-align:center">
         <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
           <i class="fas fa-clipboard-list"></i>
         </div>
-        <div style="color:var(--text-main);font-size:12px;font-weight:600">বেট রেকর্ড</div>
+        <div style="color:var(--text-main);font-size:12px;font-weight:600"><%= t.bet_record %></div>
       </a>
 
       <a href="/profile/stats" style="text-decoration:none; text-align:center">
         <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
           <i class="fas fa-chart-line"></i>
         </div>
-        <div style="color:var(--text-main);font-size:12px;font-weight:600">লাভ এবং লস</div>
+        <div style="color:var(--text-main);font-size:12px;font-weight:600"><%= t.profit_loss %></div>
       </a>
 
       <a href="/profile/transactions" style="text-decoration:none; text-align:center">
         <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
           <i class="fas fa-file-invoice-dollar"></i>
         </div>
-        <div style="color:var(--text-main);font-size:12px;font-weight:600">লেনদেন রেকর্ড</div>
+        <div style="color:var(--text-main);font-size:12px;font-weight:600"><%= t.transaction_record %></div>
       </a>
 
       <a href="/profile/security" style="text-decoration:none; text-align:center">
         <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
           <i class="fas fa-shield-alt"></i>
         </div>
-        <div style="color:var(--text-main);font-size:12px;font-weight:600">সুরক্ষা কেন্দ্র</div>
+        <div style="color:var(--text-main);font-size:12px;font-weight:600"><%= t.security_center %></div>
       </a>
 
       <a href="/profile/responsible" style="text-decoration:none; text-align:center">
         <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
           <i class="fas fa-hand-paper"></i>
         </div>
-        <div style="color:var(--text-main);font-size:12px;font-weight:600">দায়িত্বশীল গেমিং</div>
+        <div style="color:var(--text-main);font-size:12px;font-weight:600"><%= t.responsible_gaming %></div>
       </a>
 
       <a href="/notifications" style="text-decoration:none; text-align:center">
         <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
           <i class="fas fa-envelope"></i>
         </div>
-        <div style="color:var(--text-main);font-size:12px;font-weight:600">মেইল</div>
+        <div style="color:var(--text-main);font-size:12px;font-weight:600"><%= t.mail %></div>
       </a>
 
       <a href="/profile/feedback" style="text-decoration:none; text-align:center">
         <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
           <i class="fas fa-comment-alt"></i>
         </div>
-        <div style="color:var(--text-main);font-size:12px;font-weight:600">পরামর্শ</div>
+        <div style="color:var(--text-main);font-size:12px;font-weight:600"><%= t.feedback %></div>
       </a>
 
       <a href="/profile/app-download" style="text-decoration:none; text-align:center">
         <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
           <i class="fas fa-mobile-alt"></i>
         </div>
-        <div style="color:var(--text-main);font-size:12px;font-weight:600">অ্যাপ ডাউনলোড</div>
+        <div style="color:var(--text-main);font-size:12px;font-weight:600"><%= t.app_download %></div>
       </a>
 
       <a href="/chat" style="text-decoration:none; text-align:center">
         <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
           <i class="fas fa-headset"></i>
         </div>
-        <div style="color:var(--text-main);font-size:12px;font-weight:600">সাপোর্ট</div>
+        <div style="color:var(--text-main);font-size:12px;font-weight:600"><%= t.support %></div>
       </a>
 
       <a href="/logout" style="text-decoration:none; text-align:center">
         <div style="width:60px;height:60px;border-radius:50%;background:rgba(239,68,68,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:#ef4444;font-size:24px">
           <i class="fas fa-sign-out-alt"></i>
         </div>
-        <div style="color:#ef4444;font-size:12px;font-weight:600">লগআউট</div>
+        <div style="color:#ef4444;font-size:12px;font-weight:600"><%= t.logout %></div>
       </a>
 
     </div>
   </div>
 
   <div style="text-align: center; margin-top: 30px; padding-bottom: 20px;">
-    <div style="color: var(--text-muted); font-size: 12px;">ভার্সন ২.১.০</div>
-    <div style="color: var(--text-muted); font-size: 11px; margin-top: 5px;">© 2024 LIVO Gaming</div>
+    <div style="color: var(--text-muted); font-size: 12px;"><%= t.version %> 2.1.0</div>
+    <div style="color: var(--text-muted); font-size: 11px; margin-top: 5px;">© 2024 <%= siteName %> Gaming</div>
   </div>
 
 </div>

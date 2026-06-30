@@ -21,23 +21,23 @@
     <p style="color:var(--text-muted); font-size:.85rem; margin-top:4px;"><%= profileUser.email %></p>
 
     <div class="balance-section glass" style="margin-top: 25px; padding: 20px; border-radius: 20px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass);">
-        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">মোট ব্যালেন্স</p>
-        <div style="color:var(--gold); font-weight:700; font-family:'Teko',sans-serif; font-size:2.8rem; line-height: 1; margin-bottom: 5px;">৳ <%= profileUser.coins %></div>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;"><%= t.total_balance %></p>
+        <div style="color:var(--gold); font-weight:700; font-family:'Teko',sans-serif; font-size:2.8rem; line-height: 1; margin-bottom: 5px;">৳ <%= profileUser.coins.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></div>
     </div>
 
     <!-- Action Buttons -->
     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 20px;">
         <a href="/payment/deposit" class="btn btn-primary" style="padding: 12px 5px; font-size: 0.85rem; flex-direction: column; gap: 6px; border-radius: 15px;">
             <i class="fas fa-wallet" style="font-size: 1.3rem;"></i>
-            <span>জমা দিন</span>
+            <span><%= t.deposit %></span>
         </a>
         <a href="/payment/withdraw" class="btn glass" style="padding: 12px 5px; font-size: 0.85rem; color: var(--gold); flex-direction: column; gap: 6px; border: 1px solid rgba(245,158,11,0.3); border-radius: 15px; font-weight:700;">
             <i class="fas fa-money-bill-transfer" style="font-size: 1.3rem;"></i>
-            <span>উত্তোলন</span>
+            <span><%= t.withdraw %></span>
         </a>
         <a href="/profile/security" class="btn glass" style="padding: 12px 5px; font-size: 0.85rem; color: var(--text-main); flex-direction: column; gap: 6px; border: 1px solid var(--border-glass); border-radius: 15px;">
             <i class="fas fa-credit-card" style="font-size: 1.3rem;"></i>
-            <span>আমার কার্ড</span>
+            <span><%= t.my_cards %></span>
         </a>
     </div>
   </div>
@@ -51,15 +51,15 @@
             <i class="fas fa-users"></i>
         </div>
         <div>
-            <p style="color:var(--text-muted); font-size:.75rem; margin-bottom: 2px;">রেফারেল কোড</p>
+            <p style="color:var(--text-muted); font-size:.75rem; margin-bottom: 2px;"><%= t.referral_code %></p>
             <div style="font-size:1.3rem; font-weight:700; color:var(--gold); font-family:'Teko',sans-serif; letter-spacing: 2px;">
               <%= profileUser.referral_code %>
             </div>
         </div>
       </div>
       <div style="display:flex; gap:10px;">
-        <button onclick="copyRef()" class="btn glass" style="font-size:.8rem; padding:8px 16px; color: var(--text-main); border: 1px solid var(--border-glass); border-radius: 10px;">কপি</button>
-        <button onclick="shareRef()" class="btn btn-primary" style="font-size:.8rem; padding:8px 16px; border-radius: 10px;">শেয়ার</button>
+        <button onclick="copyRef()" class="btn glass" style="font-size:.8rem; padding:8px 16px; color: var(--text-main); border: 1px solid var(--border-glass); border-radius: 10px;"><%= t.copy %></button>
+        <button onclick="shareRef()" class="btn btn-primary" style="font-size:.8rem; padding:8px 16px; border-radius: 10px;"><%= t.send %></button>
       </div>
     </div>
   </div>
@@ -71,37 +71,37 @@
         <div style="width: 50px; height: 50px; border-radius: 15px; background: rgba(139, 92, 246, 0.1); display: flex; align-items: center; justify-content: center; color: var(--primary); font-size: 1.4rem;">
             <i class="fas fa-history"></i>
         </div>
-        <span style="color: var(--text-main); font-size: 0.95rem; font-weight: 600;">বেটিং রেকর্ড</span>
+        <span style="color: var(--text-main); font-size: 0.95rem; font-weight: 600;"><%= t.bet_record %></span>
     </a>
-    <a href="/payment/history" class="glass" style="padding: 20px 15px; border-radius: 20px; text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 10px; border: 1px solid var(--border-glass);">
+    <a href="/profile/transactions" class="glass" style="padding: 20px 15px; border-radius: 20px; text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 10px; border: 1px solid var(--border-glass);">
         <div style="width: 50px; height: 50px; border-radius: 15px; background: rgba(6, 182, 212, 0.1); display: flex; align-items: center; justify-content: center; color: var(--accent); font-size: 1.4rem;">
             <i class="fas fa-file-invoice-dollar"></i>
         </div>
-        <span style="color: var(--text-main); font-size: 0.95rem; font-weight: 600;">লেনদেন</span>
+        <span style="color: var(--text-main); font-size: 0.95rem; font-weight: 600;"><%= t.transaction_record %></span>
     </a>
     <a href="/leaderboard" class="glass" style="padding: 20px 15px; border-radius: 20px; text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 10px; border: 1px solid var(--border-glass);">
         <div style="width: 50px; height: 50px; border-radius: 15px; background: rgba(245, 158, 11, 0.1); display: flex; align-items: center; justify-content: center; color: var(--gold); font-size: 1.4rem;">
             <i class="fas fa-gift"></i>
         </div>
-        <span style="color: var(--text-main); font-size: 0.95rem; font-weight: 600;">পুরস্কার</span>
+        <span style="color: var(--text-main); font-size: 0.95rem; font-weight: 600;"><%= t.bonus_rewards %></span>
     </a>
     <a href="/profile/security" class="glass" style="padding: 20px 15px; border-radius: 20px; text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 10px; border: 1px solid var(--border-glass);">
         <div style="width: 50px; height: 50px; border-radius: 15px; background: rgba(16, 185, 129, 0.1); display: flex; align-items: center; justify-content: center; color: #10b981; font-size: 1.4rem;">
             <i class="fas fa-shield-alt"></i>
         </div>
-        <span style="color: var(--text-main); font-size: 0.95rem; font-weight: 600;">নিরাপত্তা</span>
+        <span style="color: var(--text-main); font-size: 0.95rem; font-weight: 600;"><%= t.security_center %></span>
     </a>
     <a href="/chat" class="glass" style="padding: 20px 15px; border-radius: 20px; text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 10px; border: 1px solid var(--border-glass);">
         <div style="width: 50px; height: 50px; border-radius: 15px; background: rgba(236, 72, 153, 0.1); display: flex; align-items: center; justify-content: center; color: var(--secondary); font-size: 1.4rem;">
             <i class="fas fa-headset"></i>
         </div>
-        <span style="color: var(--text-main); font-size: 0.95rem; font-weight: 600;">সাপোর্ট</span>
+        <span style="color: var(--text-main); font-size: 0.95rem; font-weight: 600;"><%= t.support %></span>
     </a>
     <a href="/logout" class="glass" style="padding: 20px 15px; border-radius: 20px; text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 10px; border: 1px solid var(--border-glass);">
         <div style="width: 50px; height: 50px; border-radius: 15px; background: rgba(239, 68, 68, 0.1); display: flex; align-items: center; justify-content: center; color: #ef4444; font-size: 1.4rem;">
             <i class="fas fa-sign-out-alt"></i>
         </div>
-        <span style="color: var(--text-main); font-size: 0.95rem; font-weight: 600;">লগআউট</span>
+        <span style="color: var(--text-main); font-size: 0.95rem; font-weight: 600;"><%= t.logout %></span>
     </a>
   </div>
 </div>
@@ -109,13 +109,13 @@
 <script>
 function copyRef() {
   navigator.clipboard.writeText('<%= profileUser.referral_code %>');
-  alert('কোড কপি হয়েছে! ✅');
+  alert('<%= t.referral_code_copied %>');
 }
 function shareRef() {
   if (navigator.share) {
     navigator.share({
-      title: '<%= siteName %> তে যোগ দিন!',
-      text: 'আমার রেফারেল কোড দিয়ে রেজিস্ট্রেশন করুন: <%= profileUser.referral_code %> — ১০০ এক্সট্রা কয়েন পাবেন!',
+      title: '<%= siteName %>',
+      text: '<%= t.referral_bonus %>',
       url: window.location.origin + '/register?ref=<%= profileUser.referral_code %>'
     });
   }
@@ -123,5 +123,6 @@ function shareRef() {
 
 </script>
 
+<%- include('partials/footer') %>
 <%- include('partials/bottom-nav') %>
 </body></html>

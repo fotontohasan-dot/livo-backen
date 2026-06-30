@@ -1,1 +1,54 @@
-<%# footer partial - LIVO %>
+<footer class="bg-[#0f172a] text-zinc-400 pt-12 pb-24 px-4 mt-auto border-t border-zinc-800">
+  <div class="max-w-6xl mx-auto space-y-12">
+
+    <!-- ১. লাইসেন্স ও সার্টিফিকেশন -->
+    <div>
+      <h3 class="text-white text-xl font-bold mb-6 text-center"><%= t.footer_license_title || 'লাইসেন্স ও সার্টিফিকেশন' %></h3>
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6 items-center justify-items-center">
+        <div class="text-center font-bold text-sm tracking-widest opacity-80 hover:opacity-100 transition-opacity">BMM</div>
+        <div class="text-center font-bold text-sm tracking-widest opacity-80 hover:opacity-100 transition-opacity">iTech Labs</div>
+        <div class="text-center font-bold text-sm tracking-widest opacity-80 hover:opacity-100 transition-opacity text-xs">Gaming Laboratories International</div>
+        <div class="text-center font-bold text-sm tracking-widest opacity-80 hover:opacity-100 transition-opacity">MGA</div>
+        <div class="text-center font-bold text-sm tracking-widest opacity-80 hover:opacity-100 transition-opacity">GLI Certified</div>
+        <div class="text-center font-bold text-sm tracking-widest opacity-80 hover:opacity-100 transition-opacity">PAGCOR</div>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-12">
+      <!-- ২. সুরক্ষা ও নিরাপত্তা -->
+      <div>
+        <h3 class="text-white text-xl font-bold mb-6 text-center md:text-left"><%= t.footer_security_title || 'সুরক্ষা ও নিরাপত্তা' %></h3>
+        <div class="flex flex-wrap justify-center md:justify-start gap-8 items-center">
+          <div class="font-bold text-lg tracking-tight opacity-80 hover:opacity-100 transition-opacity">iovation</div>
+          <div class="font-bold text-lg tracking-tight opacity-80 hover:opacity-100 transition-opacity">ThreatMetrix</div>
+        </div>
+      </div>
+
+      <!-- ৩. দায়িত্বশীলভাবে খেলুন -->
+      <div>
+        <h3 class="text-white text-xl font-bold mb-6 text-center md:text-left"><%= t.footer_responsible_gaming_title || 'দায়িত্বশীলভাবে খেলুন' %></h3>
+        <div class="flex flex-wrap justify-center md:justify-start gap-8 items-center">
+          <div class="font-bold text-lg tracking-tight opacity-80 hover:opacity-100 transition-opacity">GamCare</div>
+          <div class="font-bold text-lg tracking-tight opacity-80 hover:opacity-100 transition-opacity text-red-500">BeGambleAware</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Copyright & Info -->
+    <div class="pt-8 border-t border-zinc-800 text-center space-y-4">
+      <div class="flex justify-center gap-6 text-xs mb-4">
+        <a href="/privacy" class="hover:text-white transition-colors"><%= t.privacy_policy %></a>
+        <a href="/terms" class="hover:text-white transition-colors"><%= t.terms_conditions %></a>
+        <a href="/rules" class="hover:text-white transition-colors"><%= t.rules_regulation %></a>
+        <a href="/kyc" class="hover:text-white transition-colors"><%= t.kyc %></a>
+      </div>
+      <p class="text-[10px] uppercase tracking-[0.2em] opacity-50">
+        <%= t.responsible_gaming_msg %>
+      </p>
+      <p class="text-[10px] font-medium opacity-40">
+        <%= t.footer_copyright %>
+      </p>
+    </div>
+
+  </div>
+</footer>

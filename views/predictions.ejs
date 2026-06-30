@@ -22,7 +22,7 @@
 
 <div class="container">
     <div class="header">
-        <h1>⚽ ফুটবল প্রেডিকশন</h1>
+        <h1><%= t.football_prediction_title %></h1>
     </div>
 
     <%- include('partials/flash') %>
@@ -36,26 +36,26 @@
                     <div class="team">
                         <div class="team-name"><%= item.home_team %></div>
                     </div>
-                    <div class="vs">VS</div>
+                    <div class="vs"><%= t.vs %></div>
                     <div class="team">
                         <div class="team-name"><%= item.away_team %></div>
                     </div>
                 </div>
                 <div class="prediction-details">
                     <div class="detail-item">
-                        <div class="detail-label">প্রেডিকশন:</div>
+                        <div class="detail-label"><%= t.prediction %>:</div>
                         <div class="detail-value"><%= item.prediction %></div>
                     </div>
                     <div class="detail-item">
-                        <div class="detail-label">সম্ভাব্যতা:</div>
+                        <div class="detail-label"><%= t.probability %>:</div>
                         <div class="detail-value"><%= item.probability %>%</div>
                     </div>
                     <div class="detail-item">
-                        <div class="detail-label">অডস (Home):</div>
+                        <div class="detail-label"><%= t.odds_home %>:</div>
                         <div class="detail-value"><%= item.odds_home %></div>
                     </div>
                     <div class="detail-item">
-                        <div class="detail-label">অডস (Away):</div>
+                        <div class="detail-label"><%= t.odds_away %>:</div>
                         <div class="detail-value"><%= item.odds_away %></div>
                     </div>
                 </div>
@@ -64,7 +64,7 @@
     <% } else { %>
         <div class="empty-state">
             <div style="font-size:40px;margin-bottom:10px;">🏟️</div>
-            <p>বর্তমানে কোনো প্রেডিকশন ডেটা উপলব্ধ নেই।</p>
+            <p><%= t.no_predictions_msg %></p>
         </div>
     <% } %>
 </div>

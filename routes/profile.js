@@ -16,6 +16,8 @@ const { getAllFreeBets, claimFreeBet } = require('../services/freebet');
 const { getWeeklyStatus, claimWeekly, getMonthlyStatus, claimMonthly } = require('../services/periodicReward');
 const { getShareStatus, claimShare } = require('../services/social');
 const { getLeaderboard } = require('../services/contest');
+const { getRewardStatus, claimRedPacket, claimGoldenEgg } = require('../services/redpacket');
+
 
 router.get('/', isAuth, async (req, res) => {
   try {
@@ -58,7 +60,7 @@ router.get('/', isAuth, async (req, res) => {
     });
   } catch (err) {
     console.error('Profile error:', err);
-    req.flash('error', 'প্রোফাইল লোড করতে সমস্যা হয়েছে।');
+    req.flash('error', res.locals.t.profile_load_error);
     res.redirect('/');
   }
 });
@@ -68,9 +70,9 @@ router.post('/update', isAuth, async (req, res) => {
     const { username } = req.body;
     await pool.query(`UPDATE users SET username=$1 WHERE id=$2`, [username, req.session.user.id]);
     req.session.user.username = username;
-    req.flash('success', 'প্রোফাইল আপডেট হয়েছে!');
+    req.flash('success', res.locals.t.profile_update_success);
   } catch (err) {
-    req.flash('error', 'আপডেট করতে সমস্যা হয়েছে।');
+    req.flash('error', res.locals.t.profile_update_error);
   }
   res.redirect('/profile');
 });
@@ -79,9 +81,36 @@ router.post('/update-personal', isAuth, async (req, res) => {
   try {
     const { full_name, phone } = req.body;
     await pool.query(`UPDATE users SET full_name=$1, phone=$2 WHERE id=$3`, [full_name, phone, req.session.user.id]);
-    req.flash('success', '✅ তথ্য আপডেট হয়েছে!');
+    req.session.user.full_name = full_name;
+    req.session.user.phone = phone;
+
+    req.flash('success', res.locals.t.info_update_success);
   } catch (err) {
-    req.flash('error', '❌ আপডেট করতে সমস্যা হয়েছে।');
+    req.flash('error', res.locals.t.info_update_error);
+  }
+  res.redirect('/profile/security');
+});
+
+router.post('/add-bank-card', isAuth, async (req, res) => {
+  try {
+    const { bank_name, account_number, holder_name } = req.body;
+    await pool.query(
+      `INSERT INTO bank_cards (user_id, bank_name, account_number, holder_name) VALUES ($1, $2, $3, $4)`,
+      [req.session.user.id, bank_name, account_number, holder_name]
+    );
+    req.flash('success', res.locals.t.card_add_success);
+  } catch (err) {
+    req.flash('error', res.locals.t.card_add_error);
+  }
+  res.redirect('/profile/security');
+});
+
+router.post('/delete-bank-card/:id', isAuth, async (req, res) => {
+  try {
+    await pool.query(`DELETE FROM bank_cards WHERE id=$1 AND user_id=$2`, [req.params.id, req.session.user.id]);
+    req.flash('success', res.locals.t.card_delete_success);
+  } catch (err) {
+    req.flash('error', res.locals.t.card_delete_error);
   }
   res.redirect('/profile/security');
 });
@@ -93,21 +122,21 @@ router.post('/change-password', isAuth, async (req, res) => {
     const np = new_password || newPassword;
 
     if (confirmPassword && np !== confirmPassword) {
-      req.flash('error', '❌ নতুন পাসওয়ার মিলছে না।');
+      req.flash('error', res.locals.t.password_mismatch_error);
       return res.redirect('/profile/security');
     }
 
     const user = await pool.query(`SELECT * FROM users WHERE id=$1`, [req.session.user.id]);
     if (!(await bcrypt.compare(cp, user.rows[0].password))) {
-      req.flash('error', '❌ বর্তমান পাসওয়ার্ড ভুল।');
+      req.flash('error', res.locals.t.current_password_error);
       return res.redirect('/profile/security');
     }
     const hashed = await bcrypt.hash(np, 10);
     await pool.query(`UPDATE users SET password=$1 WHERE id=$2`, [hashed, req.session.user.id]);
-    req.flash('success', '✅ পাসওয়ার্ড পরিবর্তন হয়েছে!');
+    req.flash('success', res.locals.t.password_change_success);
     res.redirect('/profile/security');
   } catch (err) {
-    req.flash('error', '❌ পাসওয়ার্ড পরিবর্তন করতে সমস্যা হয়েছে।');
+    req.flash('error', res.locals.t.password_change_error);
     res.redirect('/profile/security');
   }
 });
@@ -122,7 +151,7 @@ router.get('/history', isAuth, async (req, res) => {
     `, [req.session.user.id]);
     res.render('profile/history', { predictions: predictions.rows, user: req.session.user });
   } catch (err) {
-    req.flash('error', 'ইতিহাস লোড করতে সমস্যা হয়েছে।');
+    req.flash('error', res.locals.t.history_load_error);
     res.redirect('/profile');
   }
 });
@@ -138,7 +167,7 @@ router.get('/stats', isAuth, async (req, res) => {
     `, [req.session.user.id]);
     res.render('profile/stats', { stats: stats.rows[0], user: req.session.user });
   } catch (err) {
-    req.flash('error', 'স্ট্যাটস লোড করতে সমস্যা হয়েছে।');
+    req.flash('error', res.locals.t.stats_load_error);
     res.redirect('/profile');
   }
 });
@@ -170,11 +199,12 @@ router.post('/responsible/deposit-limit', isAuth, async (req, res) => {
   try {
     const limit = req.body.limit ? parseInt(req.body.limit) : null;
     if (limit !== null && (isNaN(limit) || limit < 0)) {
-      req.flash('error', 'সঠিক সীমা দিন।');
+      req.flash('error', res.locals.t.limit_invalid_error);
       return res.redirect('/profile/responsible');
     }
     await pool.query(`UPDATE users SET daily_deposit_limit = $1 WHERE id = $2`, [limit, req.session.user.id]);
-    req.flash('success', limit ? `দৈনিক ডিপোজট সীমা ${limit} টাকা সেট হয়েছে।` : 'ডিপোজিট সীমা সরানো হয়েছে।');
+    const msg = limit ? (res.locals.t.limit_set_success.replace('{limit}', limit)) : res.locals.t.limit_removed_success;
+    req.flash('success', msg);
   } catch (err) {
     console.error('deposit-limit error:', err.message);
     req.flash('error', 'সমস্যা হয়েছে।');
@@ -186,13 +216,13 @@ router.post('/responsible/self-exclude', isAuth, async (req, res) => {
   try {
     const days = parseInt(req.body.days);
     if (isNaN(days) || days < 1) {
-      req.flash('error', 'সঠিক দিন সংখ্যা দিন।');
+      req.flash('error', res.locals.t.invalid_days_error);
       return res.redirect('/profile/responsible');
     }
     const until = new Date();
     until.setDate(until.getDate() + days);
     await pool.query(`UPDATE users SET self_exclude_until = $1 WHERE id = $2`, [until, req.session.user.id]);
-    req.flash('success', `আপনার অ্যাকাউন্ট ${days} দিনের জন্য বন্ধ করা হযছে।`);
+    req.flash('success', res.locals.t.self_exclude_success.replace('{days}', days));
     return req.session.destroy(() => res.redirect('/login'));
   } catch (err) {
     console.error('self-exclude error:', err.message);
@@ -266,6 +296,48 @@ router.post('/rewards/claim', isAuth, async (req, res) => {
   }
   res.redirect('/profile/rewards');
 });
+
+// ==================== লাল প্যাকট + সোনার ডিম (JSON API) ====================
+router.get('/daily-rewards/status', isAuth, async (req, res) => {
+  try {
+    const status = await getRewardStatus(req.session.user.id);
+    res.json({ ok: true, status });
+  } catch (err) {
+    console.error('daily-rewards status error:', err.message);
+    res.json({ ok: false });
+  }
+});
+
+router.post('/daily-rewards/red-packet/claim', isAuth, async (req, res) => {
+  try {
+    const result = await claimRedPacket(req.session.user.id);
+    if (result.ok) {
+      const r = await pool.query('SELECT coins FROM users WHERE id=$1', [req.session.user.id]);
+      if (r.rows[0]) req.session.user.coins = r.rows[0].coins;
+    }
+    res.json(result);
+  } catch (err) {
+    console.error('red-packet claim error:', err.message);
+    res.json({ ok: false, message: 'সার্ভার ত্রুটি।' });
+  }
+});
+
+router.post('/daily-rewards/golden-egg/claim', isAuth, async (req, res) => {
+  try {
+    let idx = parseInt(req.body.pickedIndex, 10);
+    if (isNaN(idx) || idx < 0 || idx > 7) idx = 0;
+    const result = await claimGoldenEgg(req.session.user.id, idx);
+    if (result.ok) {
+      const r = await pool.query('SELECT coins FROM users WHERE id=$1', [req.session.user.id]);
+      if (r.rows[0]) req.session.user.coins = r.rows[0].coins;
+    }
+    res.json(result);
+  } catch (err) {
+    console.error('golden-egg claim error:', err.message);
+    res.json({ ok: false, message: 'সার্ভার ত্রুটি।' });
+  }
+});
+
 
 // ==================== ক্যাশবক ====================
 router.get('/cashback', isAuth, async (req, res) => {
@@ -373,6 +445,20 @@ router.post('/cards/add', isAuth, async (req, res) => {
   res.redirect('/profile/cards');
 });
 
+router.post('/cards/delete/:id', isAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query(
+      'DELETE FROM bank_cards WHERE id = $1 AND user_id = $2',
+      [id, req.session.user.id]
+    );
+    req.flash('success', '✅ কার্ড মুছে ফেলা হয়েছে!');
+  } catch (err) {
+    req.flash('error', '❌ কার্ড মুছতে সমস্যা হয়েছে।');
+  }
+  res.redirect('back');
+});
+
 router.get('/app-download', isAuth, (req, res) => {
   res.render('profile/app-download', { user: req.session.user });
 });
@@ -388,9 +474,9 @@ router.post('/feedback', isAuth, async (req, res) => {
       'INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, 0, $2, $3)',
       [req.session.user.id, 'feedback', message]
     );
-    req.flash('success', '✅ আপনার মতামত পাঠানো হয়েছে। ধন্যবাদ!');
+    req.flash('success', res.locals.t.feedback_success);
   } catch (err) {
-    req.flash('error', '❌ মতামত পাঠাতে সমস্যা হয়েছে।');
+    req.flash('error', res.locals.t.feedback_error);
   }
   res.redirect('/profile/feedback');
 });
