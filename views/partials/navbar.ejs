@@ -58,13 +58,14 @@
     <div class="nav-brand" style="color: #fff; font-family: 'Teko', sans-serif; font-size: 1.8rem; letter-spacing: 1px;">LIVO</div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
-    <div class="lang-switch" style="background: var(--bg-glass); border-radius: 20px; padding: 2px; border: 1px solid var(--border-glass);">
+        <div class="lang-switch" style="background: var(--bg-glass); border-radius: 20px; padding: 2px; border: 1px solid var(--border-glass);">
       <a href="/lang/bn" class="lang-btn <%= lang === 'bn' ? 'active' : '' %>" style="border:none; padding: 4px 10px; border-radius: 18px;">BN</a>
       <a href="/lang/en" class="lang-btn <%= lang === 'en' ? 'active' : '' %>" style="border:none; padding: 4px 10px; border-radius: 18px;">EN</a>
     </div>
     <button id="theme-toggle-nav" class="glass" style="width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--gold); border: 1px solid var(--border-glass); cursor: pointer; background: none;">
       <i class="fas fa-moon nav-theme-icon"></i>
     </button>
+
     <% if(locals.user) { %>
       <div class="glass" style="padding:4px 12px;border-radius:20px;font-size:13px;color:var(--gold);display:flex;align-items:center;gap:4px;font-family:'Teko',sans-serif;font-weight:700;">💰 <span class="js-balance"><%= user.coins %></span></div>
       <div style="display:flex;gap:12px;">
