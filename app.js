@@ -213,9 +213,6 @@ async function startServer() {
   }
 }
 
-startServer();
-module.exports = app;
-
 // Telegram Bot Webhook
 const { handleMessage } = require('./telegram-bot');
 app.post('/telegram-webhook', express.json(), async (req, res) => {
@@ -228,3 +225,6 @@ app.post('/telegram-webhook', express.json(), async (req, res) => {
     res.sendStatus(200);
   }
 });
+
+startServer();
+module.exports = app;
