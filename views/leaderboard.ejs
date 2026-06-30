@@ -2,64 +2,64 @@
 <%- include('partials/navbar') %>
 
 <style>
-  .pulse-live { animation: pulselive 1.5s ease-in-out infinite; }
-  @keyframes pulselive { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-
-  .market-box {
-    background: #1f2937;
+  .leader-row {
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
     border-radius: 12px;
-    margin-bottom: 18px;
-    overflow: hidden;
-    border: 1px solid #334155;
-  }
-  .market-header {
     padding: 12px 16px;
-    background: #111827;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .rank {
+    font-family: 'Teko', sans-serif;
+    font-size: 1.4rem;
     font-weight: 700;
-    font-size: 15px;
-    color: #fbbf24;
+    width: 30px;
+    color: var(--text-muted);
+  }
+  .rank-1 { color: #facc15; font-size: 1.8rem; }
+  .rank-2 { color: #94a3b8; font-size: 1.6rem; }
+  .rank-3 { color: #92400e; font-size: 1.5rem; }
+
+  .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--grad-primary);
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.1rem;
+    box-shadow: 0 0 10px rgba(245,158,11,0.2);
   }
-  .market-row {
-    display: flex;
-    align-items: center;
-    padding: 14px 16px;
-    border-top: 1px solid #334155;
+  .pts {
+    font-family: 'Teko', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--gold);
+    margin-left: auto;
   }
-  .market-team { flex: 1; font-size: 15px; font-weight: 600; }
-  .odds {
-    padding: 11px 16px;
-    border-radius: 6px;
-    font-weight: 800;
-    font-size: 16px;
-    min-width: 82px;
-    text-align: center;
-    cursor: pointer;
-  }
-  .back { background: #22c55e; color: #000; }
-  .lay { background: #ef4444; color: #fff; }
 </style>
 
 <div class="container" style="padding-top: 14px; padding-bottom: 90px;">
+  <h1 style="font-size: 1.8rem; font-weight: 800; margin-bottom: 1.5rem;">🏆 <%= t.menu_leaderboard %></h1>
 
-  <a href="/matches">← সব ম্যাচে ফিরে যান</a>
-
-  <!-- Match Header -->
-  <div class="card" style="padding:16px; margin: 20px 0;">
-    <!-- তোমার আগের হেডার কোড এখানে থাকবে -->
-    <h4><%= match.teams ? match.teams[0] + " vs " + match.teams[1] : match.title %></h4>
-    <p><%= match.status || 'Upcoming' %></p>
-  </div>
-
-  <!-- ডাইনামিক মার্কেটস -->
-  <% if (markets && markets.length > 0) { %>
-    <% markets.forEach(market => { %>
-      <div class="market-box">
-        <div class="market-header">
-          <%= market.type === 'bookmaker' ? '🏆' : '⚡' %> <%= market.name %>
-          <% if (market.status !== 'open') { %><span class="badge bg-danger">SUSPENDED</span><% } %>
+  <% users.forEach((u, i) => { %>
+    <div class="leader-row">
+      <div class="rank rank-<%= i+1 %>"><%= i+1 %></div>
+      <% if (u.avatar) { %>
+        <img src="<%= u.avatar %>" class="avatar" alt="">
+      <% } else { %>
+        <div class="avatar"><%= u.username[0].toUpperCase() %></div>
+      <% } %>
+      <div style="flex:1;">
+        <div style="font-weight:700; color:var(--text-main);"><%= u.username %></div>
+        <div style="font-size:11px; color:var(--text-muted);">
+          <%= t.wins %>: <%= u.wins %> / <%= t.bets_label %>: <%= u.total_bets %>
         </div>
 
         <% if (market.type === 'bookmaker') { %>
@@ -86,47 +86,18 @@
           </div>
         <% } %>
       </div>
-    <% }) %>
-  <% } else { %>
-    <p>এই ম্যাচে এখনো কোনো মার্কেট খোলা হয়নি।</p>
+      <div class="pts">
+        <%= u.total_points %> <span style="font-size:0.7rem; color:var(--text-muted);">PTS</span>
+      </div>
+    </div>
+  <% }) %>
+
+  <% if (users.length === 0) { %>
+    <div class="card text-center" style="padding: 40px;">
+      <p style="color:var(--text-muted);"><%= t.no_data || 'No data found' %></p>
+    </div>
   <% } %>
-
 </div>
-
-<script>
-  document.querySelectorAll('.odds').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (!<%= locals.user ? 'true' : 'false' %>) {
-        alert("লগইন করুন");
-        return;
-      }
-
-      const stake = prompt("কত কয়েন বেট করবেন? (মিনিমাম ১০)", "50");
-      const stakeAmount = parseInt(stake);
-
-      if (!stakeAmount || stakeAmount < 10) {
-        alert("মিনিমাম ১০ কয়েন লাগবে");
-        return;
-      }
-
-      if (!confirm(`আপনি ${btn.textContent} ওডসে ${stakeAmount} কয়েন বেট করবেন?`)) return;
-
-      fetch(`/matches/<%= match.id %>/bet`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          market_id: btn.dataset.marketId,
-          runner: btn.dataset.runner,
-          odd: parseFloat(btn.dataset.odd),
-          stake: stakeAmount
-        })
-      })
-      .then(r => r.json())
-      .then(data => alert(data.message || data.error))
-      .catch(() => alert("নেটওয়ার্ক এরর"));
-    });
-  });
-</script>
 
 <%- include('partials/bottom-nav') %>
 </body>
