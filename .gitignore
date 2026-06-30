@@ -1,9 +1,11 @@
-node_modules/
+node_modules
+.next
+out
+build
 .env
 .env.local
-.env.production
-*.log
-npm-debug.log*
+.env.development.local
+.env.test.local
+.env.production.local
 .DS_Store
-dist/
-build/
+*.log

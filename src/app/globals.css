@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0a0f1c;
+  --foreground: #f1f5f9;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: 'Inter', sans-serif;
+}
+
+@theme {
+  --color-background: #0A0F1C;
+  --color-card-default: #1A2338;
+  --color-primary-default: #FBBF24;
+  --color-primary-dark: #D97706;
+  --color-secondary: #10B981;
+  --color-text-main: #F1F5F9;
+  --color-text-muted: #94A3B8;
+  --color-accent: #EF4444;
+
+  --background-image-gold-gradient: linear-gradient(135deg, #FBBF24, #D97706);
+  --background-image-card-gradient: linear-gradient(145deg, #1A2338, #111827);
+}
+
+@utility glass {
+  backdrop-filter: blur(12px);
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@utility card-premium {
+  background-image: linear-gradient(to bottom right, #1A2338, #111827);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+@utility btn-gold {
+  background-image: linear-gradient(135deg, #FBBF24, #D97706);
+  color: black;
+  font-weight: bold;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  border-radius: 0.75rem;
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.btn-gold:hover {
+  filter: brightness(1.1);
+}
+
+.btn-gold:active {
+  scale: 0.95;
+}
+
+.gold-glow {
+  box-shadow: 0 0 20px rgba(251, 191, 36, 0.2);
+}
+
+.gold-glow:hover {
+  box-shadow: 0 0 30px rgba(251, 191, 36, 0.4);
+}
