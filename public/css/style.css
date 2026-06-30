@@ -1,21 +1,21 @@
 :root {
-  --bg-dark: #050505;
-  --bg-surface: #121212;
-  --bg-card: rgba(255, 255, 255, 0.03);
-  --bg-glass: rgba(255, 255, 255, 0.05);
-  --border-glass: rgba(255, 255, 255, 0.1);
+  --bg-dark: #0a0a0a;
+  --bg-surface: #161616;
+  --bg-card: rgba(255, 255, 255, 0.04);
+  --bg-glass: rgba(255, 255, 255, 0.06);
+  --border-glass: rgba(255, 255, 255, 0.08);
 
-  --primary: #009625;
-  --primary-glow: rgba(0, 150, 37, 0.5);
-  --secondary: #006519;
-  --accent: #f59e0b;
-  --gold: #f59e0b;
+  --primary: #C8102E;
+  --primary-glow: rgba(200, 16, 46, 0.4);
+  --secondary: #a30d25;
+  --accent: #EAB308;
+  --gold: #EAB308;
 
-  --grad-primary: linear-gradient(135deg, #009625, #006519);
-  --grad-secondary: linear-gradient(135deg, #006519, #004d13);
-  --grad-gold: linear-gradient(135deg, #f59e0b, #fbbf24);
-  --grad-dark: linear-gradient(180deg, #121212, #050505);
-  --grad-surface: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));
+  --grad-primary: linear-gradient(135deg, #C8102E, #a30d25);
+  --grad-secondary: linear-gradient(135deg, #a30d25, #7a0a1c);
+  --grad-gold: linear-gradient(135deg, #EAB308, #d4a017);
+  --grad-dark: linear-gradient(180deg, #161616, #0a0a0a);
+  --grad-surface: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
 
   --text-main: #ffffff;
   --text-muted: #94a3b8;
@@ -56,8 +56,8 @@ body.light-mode .bottom-nav {
 body {
     background-color: var(--bg-dark);
     background-image:
-        radial-gradient(circle at 0% 0%, rgba(0, 150, 37, 0.1) 0%, transparent 40%),
-        radial-gradient(circle at 100% 100%, rgba(245, 158, 11, 0.05) 0%, transparent 40%);
+        radial-gradient(circle at 0% 0%, rgba(200, 16, 46, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 100% 100%, rgba(234, 179, 8, 0.04) 0%, transparent 40%);
     color: var(--text-main);
     font-family: 'Hind Siliguri', 'Segoe UI', Roboto, sans-serif;
     line-height: 1.7;

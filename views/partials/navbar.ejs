@@ -1,6 +1,6 @@
 <div class="side-menu" id="sideMenu">
-  <div style="padding:20px;border-bottom:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:space-between;">
-    <span class="nav-brand" style="color: var(--gold); font-family: 'Teko', sans-serif; font-size: 1.8rem;">LIVO</span>
+  <div style="padding:20px;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:space-between;">
+    <span class="nav-brand" style="color: var(--primary); font-family: 'Teko', sans-serif; font-size: 1.8rem; font-weight:700;">LIVO</span>
     <button onclick="toggleMenu()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;">✕</button>
   </div>
   <% if(locals.user) { %>
@@ -45,28 +45,37 @@
 
 <div class="menu-overlay" id="menuOverlay" onclick="toggleMenu()"></div>
 
-<nav class="navbar" style="background: var(--grad-primary); position:relative; z-index:10000;">
-  <div style="display:flex;align-items:center;gap:12px;">
-    <button onclick="toggleMenu()" style="background:none;border:none;color:#fff;font-size:24px;cursor:pointer;padding:0 12px;"><i class="fas fa-bars"></i></button>
-    <div class="nav-brand" style="color: #fff; font-family: 'Teko', sans-serif; font-size: 1.8rem; letter-spacing: 1px;">LIVO</div>
+<nav class="navbar" style="background: #111; position:sticky; top:0; z-index:10000; border-bottom: 1px solid rgba(255,255,255,0.05);">
+  <div style="display:flex;align-items:center;gap:8px;">
+    <button onclick="toggleMenu()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:8px;"><i class="fas fa-bars"></i></button>
+    <div class="nav-brand" style="color: var(--primary); font-family: 'Teko', sans-serif; font-size: 1.8rem; letter-spacing: 0.5px; font-weight: 700;">LIVO</div>
   </div>
-  <div style="display:flex;align-items:center;gap:12px;">
-    <div class="lang-switch" style="background: var(--bg-glass); border-radius: 20px; padding: 2px; border: 1px solid var(--border-glass);">
-      <a href="/lang/bn" class="lang-btn <%= lang === 'bn' ? 'active' : '' %>" style="border:none; padding: 4px 10px; border-radius: 18px;">BN</a>
-      <a href="/lang/en" class="lang-btn <%= lang === 'en' ? 'active' : '' %>" style="border:none; padding: 4px 10px; border-radius: 18px;">EN</a>
-    </div>
-    <button id="theme-toggle-nav" class="glass" style="width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--gold); border: 1px solid var(--border-glass); cursor: pointer; background: none;">
-      <i class="fas fa-moon nav-theme-icon"></i>
-    </button>
+
+  <div style="display:flex;align-items:center;gap:10px;">
     <% if(locals.user) { %>
-      <div class="glass" style="padding:4px 12px;border-radius:20px;font-size:13px;color:var(--gold);display:flex;align-items:center;gap:4px;font-family:'Teko',sans-serif;font-weight:700;">💰 <span class="js-balance"><%= user.coins %></span></div>
-      <div style="display:flex;gap:12px;">
-        <a href="/notifications" style="color:#fff;font-size:18px;padding:8px;"><i class="fas fa-bell"></i></a>
-        <a href="/news" style="color:#fff;font-size:18px;padding:8px;"><i class="fas fa-envelope"></i></a>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;">
+        <div style="font-size:14px;color:var(--gold);font-family:'Teko',sans-serif;font-weight:700;display:flex;align-items:center;gap:4px;">
+           <span class="js-balance"><%= user.coins %></span>
+           <span style="font-size:10px; color:#fff;">৳</span>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:6px;">
+        <a href="/payment/deposit" style="background:var(--grad-primary); color:#fff; font-size:10px; padding:4px 10px; border-radius:4px; text-decoration:none; font-weight:bold;"><%= t.deposit %></a>
+        <a href="/payment/withdraw" style="background:#333; color:#fff; font-size:10px; padding:4px 10px; border-radius:4px; text-decoration:none; font-weight:bold;"><%= t.withdraw %></a>
+      </div>
+
+      <div style="display:flex; gap:8px; margin-left:4px;">
+        <a href="/profile/rewards" title="Rewards" style="color:var(--gold); font-size:16px;"><i class="fas fa-gift"></i></a>
+        <a href="/profile/cashback" title="Rebate" style="color:var(--gold); font-size:16px;"><i class="fas fa-percent"></i></a>
       </div>
     <% } else { %>
-      <a href="/login" class="btn btn-primary" style="padding:6px 14px;border-radius:20px;font-size:12px;">Login</a>
-      <a href="/register" class="btn btn-secondary" style="padding:6px 14px;border-radius:20px;font-size:12px;">Register</a>
+      <div class="lang-switch" style="background: rgba(255,255,255,0.05); border-radius: 4px; padding: 2px;">
+        <a href="/lang/bn" class="lang-btn <%= lang === 'bn' ? 'active' : '' %>" style="border:none; padding: 2px 6px; font-size:10px;">BN</a>
+        <a href="/lang/en" class="lang-btn <%= lang === 'en' ? 'active' : '' %>" style="border:none; padding: 2px 6px; font-size:10px;">EN</a>
+      </div>
+      <a href="/login" style="color:#fff; font-size:12px; text-decoration:none; font-weight:bold; padding:4px 10px; border:1px solid rgba(255,255,255,0.2); border-radius:4px;">Login</a>
+      <a href="/register" style="background:var(--grad-primary); color:#fff; font-size:12px; text-decoration:none; font-weight:bold; padding:4px 10px; border:1px solid rgba(255,255,255,0.05); border-radius:4px;">Join Now</a>
     <% } %>
   </div>
 </nav>
@@ -83,32 +92,6 @@ function toggleMenu() {
 }
 window.toggleMenu = toggleMenu;
 
-document.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape') {
-    var menu = document.getElementById('sideMenu');
-    if (menu && menu.classList.contains('open')) toggleMenu();
-  }
-});
-
-(function () {
-  var btn = document.getElementById('theme-toggle-nav');
-  function applyTheme(theme) {
-    var light = theme === 'light';
-    document.body.classList.toggle('light-mode', light);
-    var icon = document.querySelector('.nav-theme-icon');
-    if (icon) icon.className = 'fas ' + (light ? 'fa-sun' : 'fa-moon') + ' nav-theme-icon';
-  }
-  applyTheme(localStorage.getItem('livo-theme') || 'dark');
-  if (btn) {
-    btn.addEventListener('click', function () {
-      var next = document.body.classList.contains('light-mode') ? 'dark' : 'light';
-      localStorage.setItem('livo-theme', next);
-      applyTheme(next);
-    });
-  }
-})();
-
-// ===== রিয়েল-টাইম ব্যালেন্স আপডেট =====
 (function () {
   function refreshBalance() {
     fetch('/coins/balance', { headers: { 'Accept': 'application/json' } })
@@ -122,12 +105,10 @@ document.addEventListener('keydown', function (e) {
       })
       .catch(function () {});
   }
-  // অ্যাপে ফিরলে বা ট্যাব আবার দেখলে ব্যালেন্স রিফ্রেশ
   window.addEventListener('focus', refreshBalance);
   document.addEventListener('visibilitychange', function () {
     if (!document.hidden) refreshBalance();
   });
-  // প্রতি ৩০ সেকেন্ডে একবার
   setInterval(refreshBalance, 30000);
 })();
 </script>

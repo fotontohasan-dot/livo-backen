@@ -123,21 +123,47 @@ router.get('/withdraw', requireLogin, async (req, res) => {
   try {
     const result = await pool.query('SELECT coins FROM users WHERE id=$1', [req.session.user.id]);
     const coins = result.rows[0]?.coins || 0;
-    res.render('payment/withdraw', { user: req.session.user, coins });
+
+    const cardsResult = await pool.query('SELECT * FROM bank_cards WHERE user_id=$1', [req.session.user.id]);
+    const cards = cardsResult.rows;
+
+    res.render('payment/withdraw', { user: req.session.user, coins, cards });
   } catch (err) {
+    console.error('withdraw GET error:', err.message);
     res.redirect('/');
   }
 });
 
 router.post('/withdraw', requireLogin, async (req, res) => {
-  const { method, account_number } = req.body;
-  const amount = parseAmount(req.body.amount);
+  const { amount: rawAmount, password } = req.body;
+  const amount = parseAmount(rawAmount);
   const userId = req.session.user.id;
 
-  if (!VALID_METHODS.includes(method)) {
-    req.flash('error', 'অকার্যকর পেমেন্ট মেথড');
+  if (amount === null || !password) {
+    req.flash('error', 'সব তথ্য সঠিকভাবে দিন');
     return res.redirect('/payment/withdraw');
   }
+
+  try {
+    const userRes = await pool.query('SELECT password FROM users WHERE id = $1', [userId]);
+    const isMatch = await require('bcryptjs').compare(password, userRes.rows[0].password);
+    if (!isMatch) {
+      req.flash('error', 'ভুল সিকিউরিটি পাসওয়ার্ড');
+      return res.redirect('/payment/withdraw');
+    }
+  } catch (e) {
+    req.flash('error', 'সার্ভার সমস্যা');
+    return res.redirect('/payment/withdraw');
+  }
+
+  const cardsRes = await pool.query('SELECT * FROM bank_cards WHERE user_id = $1 LIMIT 1', [userId]);
+  if (cardsRes.rows.length === 0) {
+    req.flash('error', 'অনুগ্রহ করে আগে একটি ই-ওয়ালেট যোগ করুন');
+    return res.redirect('/profile/cards');
+  }
+  const method = cardsRes.rows[0].bank_name.toLowerCase();
+  const account_number = cardsRes.rows[0].account_number;
+
   if (!method || amount === null || !account_number) {
     req.flash('error', 'সব তথ্য সঠিকভাবে দিন');
     return res.redirect('/payment/withdraw');

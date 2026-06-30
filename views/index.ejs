@@ -1,87 +1,58 @@
 <%- include('partials/head') %>
 <%- include('partials/navbar') %>
 
-<!-- ===== Sports Quick Links ===== -->
-<div style="padding: 12px;">
-  <div style="background: linear-gradient(135deg, rgba(245,158,11,0.08), rgba(0,150,37,0.05)); border: 1px solid var(--border-glass); border-radius: 16px; padding: 14px;">
-
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-      <div style="font-size:13px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.5px;">
-        ⚡ <%= t.quick_links %>
-      </div>
-      <a href="/matches" style="font-size:11px;color:var(--text-muted);text-decoration:none;">
-        <%= t.see_all %> →
-      </a>
-    </div>
-
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
-      <a href="/matches" style="text-decoration:none;text-align:center;">
-        <div style="background:linear-gradient(135deg,#ef4444,#dc2626);border-radius:12px;padding:14px 6px;position:relative;">
-          <div style="font-size:22px;">⏱️</div>
-          <div style="position:absolute;top:4px;right:4px;width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 8px #fff;animation:livedot 1.5s infinite;"></div>
-        </div>
-        <div style="font-size:11px;color:var(--text-main);margin-top:6px;font-weight:600;"><%= t.in_play %></div>
-      </a>
-
-      <a href="/matches/cricket" style="text-decoration:none;text-align:center;">
-        <div style="background:linear-gradient(135deg,#10b981,#059669);border-radius:12px;padding:14px 6px;">
-          <div style="font-size:22px;">🏏</div>
-        </div>
-        <div style="font-size:11px;color:var(--text-main);margin-top:6px;font-weight:600;"><%= t.cricket %></div>
-      </a>
-
-      <a href="/matches/football" style="text-decoration:none;text-align:center;">
-        <div style="background:linear-gradient(135deg,#0ea5e9,#0284c7);border-radius:12px;padding:14px 6px;">
-          <div style="font-size:22px;">⚽</div>
-        </div>
-        <div style="font-size:11px;color:var(--text-main);margin-top:6px;font-weight:600;"><%= t.football %></div>
-      </a>
-
-      <a href="/matches/worldcup" style="text-decoration:none;text-align:center;">
-        <div style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:12px;padding:14px 6px;position:relative;">
-          <div style="font-size:22px;">🏆</div>
-          <div style="position:absolute;top:3px;right:3px;background:#ef4444;color:#fff;font-size:8px;padding:1px 4px;border-radius:6px;font-weight:700;">HOT</div>
-        </div>
-        <div style="font-size:11px;color:var(--text-main);margin-top:6px;font-weight:600;">WC 2026</div>
-      </a>
-
-      <a href="/tournaments" style="text-decoration:none;text-align:center;">
-        <div style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);border-radius:12px;padding:14px 6px;">
-          <div style="font-size:22px;">🎯</div>
-        </div>
-        <div style="font-size:11px;color:var(--text-main);margin-top:6px;font-weight:600;"><%= t.prediction %></div>
-      </a>
-    </div>
+<!-- ===== Hero Slider ===== -->
+<div class="hero-slider" style="margin: 10px; border-radius: 12px; overflow: hidden; height: 180px; background: #222; position: relative;">
+  <div style="width: 100%; height: 100%; background: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.5)), url('https://img.freepik.com/free-vector/realistic-casino-banner_23-2148902506.jpg'); background-size: cover; background-position: center;"></div>
+  <div style="position: absolute; bottom: 20px; left: 20px;">
+    <h2 style="font-size: 24px; color: #fff; font-family: 'Teko', sans-serif; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.5);"><%= t.welcome_bonus %></h2>
+    <p style="font-size: 12px; color: var(--gold);"><%= t.welcome_bonus_desc %></p>
   </div>
 </div>
 
 <style>
-@keyframes livedot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.3; transform: scale(1.4); }
-}
 @keyframes marquee-text { 0%{transform:translateX(100%)} 100%{transform:translateX(-100%)} }
 </style>
 
-<!-- ===== Welcome Banner ===== -->
-<div class="banner-container">
-  <div class="card btn-glow" style="height:160px;background:linear-gradient(135deg, #006519, #004d13);position:relative;display:flex;align-items:center;padding:20px;border: 1px solid var(--gold);">
-    <div style="z-index:1;">
-      <h2 style="font-family:'Teko',sans-serif;font-size:32px;color:var(--gold);line-height:1;">🎰 <%= t.welcome_bonus %></h2>
-      <p style="font-size:13px;color:rgba(255,255,255,0.9);margin-top:5px;"><%= t.welcome_bonus_desc %></p>
-      <div style="margin-top:5px; font-size: 11px; color: #fff;"><%= t.referral_bonus %> 🎁</div>
-      <a href="/payment/deposit" class="btn btn-primary" style="margin-top:12px;border-radius:25px;padding:8px 24px;background: var(--grad-gold); color: #000;"><%= t.get_now %></a>
+<% if(locals.user) { %>
+<!-- ===== User Info Bar ===== -->
+<div style="margin: 0 10px 10px; padding: 12px; background: var(--bg-surface); border-radius: 12px; border: 1px solid var(--border-glass); display: flex; align-items: center; justify-content: space-between;">
+  <div style="display: flex; align-items: center; gap: 10px;">
+    <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--grad-primary); display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff;">
+      <%= user.username[0].toUpperCase() %>
     </div>
-    <div style="position:absolute;right:10px;font-size:80px;opacity:0.2;">🏆</div>
+    <div>
+      <div style="font-size: 13px; font-weight: 700; color: #fff;"><%= user.username %></div>
+      <div style="font-size: 10px; color: var(--text-muted);">VIP 1</div>
+    </div>
+  </div>
+  <div style="display: flex; gap: 15px;">
+    <a href="/payment/deposit" style="text-align: center; text-decoration: none;">
+      <i class="fas fa-wallet" style="color: var(--primary); font-size: 18px;"></i>
+      <div style="font-size: 9px; color: var(--text-muted); margin-top: 2px;"><%= t.deposit %></div>
+    </a>
+    <a href="/payment/withdraw" style="text-align: center; text-decoration: none;">
+      <i class="fas fa-money-bill-wave" style="color: var(--primary); font-size: 18px;"></i>
+      <div style="font-size: 9px; color: var(--text-muted); margin-top: 2px;"><%= t.withdraw %></div>
+    </a>
+    <a href="/profile/rewards" style="text-align: center; text-decoration: none;">
+      <i class="fas fa-gift" style="color: var(--gold); font-size: 18px;"></i>
+      <div style="font-size: 9px; color: var(--text-muted); margin-top: 2px;">Reward</div>
+    </a>
+    <a href="/profile/cashback" style="text-align: center; text-decoration: none;">
+      <i class="fas fa-percent" style="color: var(--gold); font-size: 18px;"></i>
+      <div style="font-size: 9px; color: var(--text-muted); margin-top: 2px;">Rebate</div>
+    </a>
   </div>
 </div>
+<% } %>
 
 <!-- ===== News Ticker ===== -->
-<div class="glass" style="margin:8px 12px;border-radius:12px;padding:12px;display:flex;align-items:center;gap:12px;position:relative;">
-  <div style="background:var(--gold);color:#000;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:bold;">News</div>
-  <div style="flex:1;overflow:hidden;">
-    <div style="font-size:12px;color:var(--text-muted);white-space:nowrap;animation:marquee-text 15s linear infinite;">
-      প্রিয় গ্রাহক, LIVO-ত আপনাকে স্বাগতম! নতুন আমানত বোনাস এবং আকর্ষণীয় পুরস্কার পেতে এখনই খেলা শরু করুন। আমাদের সাথে থাকার জন্য ধন্যবাদ।
+<div style="margin:8px 10px; border-radius:30px; padding:8px 15px; display:flex; align-items:center; gap:10px; background: #1a1a1a; border: 1px solid rgba(255,255,255,0.05);">
+  <div style="color:var(--primary); font-size: 16px;"><i class="fas fa-bullhorn"></i></div>
+  <div style="flex:1; overflow:hidden;">
+    <div style="font-size:12px; color:var(--text-muted); white-space:nowrap; animation:marquee-text 20s linear infinite;">
+      প্রিয় গ্রাহক, Livo-তে আপনাকে স্বাগতম! নতুন আমানত বোনাস এবং আকর্ষণীয় পুরস্কার পেতে এখনই খেলা শুরু করুন। আমাদের সাথে থাকার জন্য ধন্যবাদ।
     </div>
   </div>
 </div>
@@ -101,44 +72,79 @@
     <div class="stat-label"><%= t.payment %></div>
   </div>
 </div>
-<!-- ===== Category Scrollbar ===== -->
-<div style="display:flex;overflow-x:auto;padding:8px 12px;gap:10px;scrollbar-width:none;" id="catNav">
+
+<!-- ===== Category Tab Bar ===== -->
+<div style="display:flex; overflow-x:auto; padding: 10px; gap: 15px; border-bottom: 1px solid var(--border-glass); background: #111; position: sticky; top: 60px; z-index: 999; scrollbar-width: none;" id="catNav">
   <style>#catNav::-webkit-scrollbar { display:none; }</style>
-  <div class="glass cat-item active" data-link="/matches" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--gold);">
-    <div style="font-size:22px;">⚽</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);"><%= t.menu_sports %></div>
+  <div class="cat-tab active" data-filter="hot" style="flex: 0 0 auto; padding: 5px 0; font-size: 14px; font-weight: 700; color: #fff; cursor: pointer; position: relative; border-bottom: 2px solid var(--primary);">
+    <i class="fas fa-fire" style="margin-right: 5px; color: var(--primary);"></i> Hot
   </div>
-  <div class="glass cat-item" data-link="/tournaments" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--border-glass);">
-    <div style="font-size:22px;">🏆</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);"><%= t.menu_tournament %></div>
+  <div class="cat-tab" data-filter="slots" style="flex: 0 0 auto; padding: 5px 0; font-size: 14px; font-weight: 700; color: var(--text-muted); cursor: pointer;">
+    <i class="fas fa-gamepad" style="margin-right: 5px;"></i> Slots
   </div>
-  <div class="glass cat-item" data-link="/leaderboard" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--border-glass);">
-    <div style="font-size:22px;">📊</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);"><%= t.menu_leaderboard %></div>
+  <div class="cat-tab" data-filter="live" style="flex: 0 0 auto; padding: 5px 0; font-size: 14px; font-weight: 700; color: var(--text-muted); cursor: pointer;">
+    <i class="fas fa-video" style="margin-right: 5px;"></i> Live
   </div>
-  <div class="glass cat-item" data-link="/news" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--border-glass);">
-    <div style="font-size:22px;">📰</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);"><%= t.menu_news %></div>
+  <div class="cat-tab" data-filter="sports" style="flex: 0 0 auto; padding: 5px 0; font-size: 14px; font-weight: 700; color: var(--text-muted); cursor: pointer;">
+    <i class="fas fa-futbol" style="margin-right: 5px;"></i> Sports
   </div>
-  <div class="glass cat-item" data-link="/payment/deposit" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--border-glass);">
-    <div style="font-size:22px;">💰</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);"><%= t.menu_deposit %></div>
-  </div>
-  <div class="glass cat-item" data-link="/chat" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--border-glass);">
-    <div style="font-size:22px;">🎧</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);"><%= t.support %></div>
+  <div class="cat-tab" data-filter="poker" style="flex: 0 0 auto; padding: 5px 0; font-size: 14px; font-weight: 700; color: var(--text-muted); cursor: pointer;">
+    <i class="fas fa-spade" style="margin-right: 5px;"></i> Poker
   </div>
 </div>
 
 <!-- ===== Search ===== -->
-<div style="padding:0 12px 10px;">
+<div style="padding:15px 12px 10px;">
   <div style="position:relative;">
-    <input type="text" id="gameSearch" class="form-input" placeholder="<%= t.search_placeholder %>" style="padding-right:45px;">
+    <input type="text" id="gameSearch" class="form-input" placeholder="<%= t.search_placeholder %>" style="padding-right:45px; border-radius:30px; background:#1a1a1a;">
     <i class="fas fa-search" style="position:absolute;right:15px;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
   </div>
 </div>
 
 <%- include('partials/flash') %>
+
+<!-- Member Celebration Popup -->
+<div id="memberModal" style="position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:20000; display:flex; align-items:center; justify-content:center; padding:20px; display:none;">
+    <div style="background:#fff; border-radius:24px; width:100%; max-width:340px; position:relative; overflow:hidden; animation: zoomIn 0.3s ease-out;">
+        <button onclick="closeMemberModal()" style="position:absolute; top:15px; right:15px; width:30px; height:30px; border-radius:50%; background:rgba(0,0,0,0.5); color:#fff; border:none; font-size:18px; z-index:10; cursor:pointer;">×</button>
+
+        <div style="padding:0;">
+            <img src="https://img.freepik.com/free-vector/gradient-casino-lucky-bonus-banner-template_23-2149533722.jpg" style="width:100%; display:block;" alt="Promotion">
+        </div>
+
+        <div style="padding:20px; text-align:center;">
+            <h2 style="font-size:18px; font-weight:800; color:#111; margin-bottom:10px;">সদস্য উদযাপন দিবস</h2>
+            <p style="font-size:12px; color:#666; margin-bottom:20px; line-height:1.6;">প্রতি মাসের ১০ তারিখ বিশাল নগদ পুরস্কার! ভিআইপি সদস্যদের জন্য আরও অসংখ্য সুবিধা।</p>
+
+            <div style="display:flex; gap:10px;">
+                <button onclick="closeMemberModal()" style="flex:1; padding:12px; border-radius:12px; background:#f5f5f5; color:#333; border:none; font-weight:700; font-size:14px; cursor:pointer;">পূর্ববর্তী</button>
+                <button onclick="location.href='/profile/vip'" style="flex:1; padding:12px; border-radius:12px; background:var(--primary); color:#fff; border:none; font-weight:700; font-size:14px; cursor:pointer;">পরবর্তী</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes zoomIn {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
+}
+</style>
+
+<script>
+function showMemberModal() {
+    const modal = document.getElementById('memberModal');
+    if(modal) modal.style.display = 'flex';
+}
+function closeMemberModal() {
+    const modal = document.getElementById('memberModal');
+    if(modal) modal.style.display = 'none';
+}
+if(!sessionStorage.getItem('modalShown')) {
+    setTimeout(showMemberModal, 1500);
+    sessionStorage.setItem('modalShown', 'true');
+}
+</script>
 
 <!-- ===== Hot Games ===== -->
 <div class="section-header">
@@ -148,10 +154,10 @@
 
 <!-- ===== Jackpot ===== -->
 <div class="banner-container" style="margin-top:10px;">
-  <div class="card" style="padding:25px 20px; text-align:center; border: 2px solid var(--gold); background: radial-gradient(circle at center, #1a4a1a 0%, #002d0b 100%); position: relative; overflow: hidden; border-radius: 25px;">
-    <div style="position:absolute; top:-20px; left:-20px; width:100px; height:100px; background:var(--gold); filter:blur(60px); opacity:0.3;"></div>
-    <div style="position:absolute; bottom:-20px; right:-20px; width:100px; height:100px; background:var(--gold); filter:blur(60px); opacity:0.3;"></div>
-    <div style="font-size:13px; color:var(--gold); letter-spacing:4px; text-transform:uppercase; font-weight:800; text-shadow: 0 0 10px rgba(245,158,11,0.5);">✨ <%= t.mega_jackpot %> ✨</div>
+  <div class="card" style="padding:25px 20px; text-align:center; border: 2px solid var(--gold); background: radial-gradient(circle at center, #3a0a1a 0%, #1a0505 100%); position: relative; overflow: hidden; border-radius: 25px;">
+    <div style="position:absolute; top:-20px; left:-20px; width:100px; height:100px; background:var(--primary); filter:blur(60px); opacity:0.2;"></div>
+    <div style="position:absolute; bottom:-20px; right:-20px; width:100px; height:100px; background:var(--gold); filter:blur(60px); opacity:0.2;"></div>
+    <div style="font-size:13px; color:var(--gold); letter-spacing:4px; text-transform:uppercase; font-weight:800; text-shadow: 0 0 10px rgba(234, 179, 8, 0.4);">✨ <%= t.mega_jackpot %> ✨</div>
     <div style="font-family:'Teko',sans-serif; font-size:56px; color:var(--gold); line-height:1; margin:15px 0; text-shadow: 0 0 30px rgba(245,158,11,0.6); display: flex; align-items: center; justify-content: center; gap: 10px;">
       <span style="font-size: 32px; margin-top: 10px;">৳</span>
       <span id="jp-num">88,617,517</span>
@@ -162,9 +168,9 @@
 </div>
 
 <!-- ===== Winners ===== -->
-<div class="section-header">
-  <h3 class="section-title"><i class="fas fa-medal"></i> <%= t.winners_list %></h3>
-  <a href="/leaderboard" class="btn glass" style="font-size:12px;padding:4px 12px;border-radius:20px;color:var(--text-muted);"><%= t.see_all %></a>
+<div class="section-header" style="background: #1a1a1a; margin: 10px; border-radius: 12px; padding: 12px; border: 1px solid rgba(255,255,255,0.05);">
+  <h3 class="section-title" style="font-size: 14px; margin:0;"><i class="fas fa-medal" style="color:var(--gold);"></i> <%= t.winners_list %></h3>
+  <a href="/leaderboard" style="font-size:11px; color:var(--text-muted); text-decoration:none;"><%= t.see_all %> →</a>
 </div>
 
 <div style="padding:0 12px;">
@@ -201,7 +207,7 @@
 
 <!-- ===== Footer ===== -->
 <div class="site-footer" style="margin-top:30px;background:rgba(255,255,255,0.02);padding:30px 20px;text-align:center;border-top:1px solid var(--border-glass);">
-  <div class="nav-brand" style="font-size:2.5rem;margin-bottom:15px;"><%= siteName %></div>
+    <div class="nav-brand" style="font-size:2.5rem;margin-bottom:15px;color:var(--primary);font-family:'Teko',sans-serif;font-weight:700;"><%= siteName %></div>
   <div style="display:flex;flex-wrap:wrap;gap:15px;justify-content:center;margin-bottom:20px;">
     <a href="/privacy" style="color:var(--text-muted);font-size:12px;text-decoration:none;">Privacy Policy</a>
     <a href="/terms" style="color:var(--text-muted);font-size:12px;text-decoration:none;">Terms & Conditions</a>
@@ -257,13 +263,19 @@ const games = [
   {name:"Keno", emoji:"🔢", type:"lottery", slug:"keno", badge:"pop", provider:"JL"},
 ];
 
-function renderGames() {
+function renderGames(filter = 'hot') {
   const c = document.getElementById('gameContainer');
   if(!c) return;
   c.innerHTML = '';
-  var gsEl = document.getElementById('gameSearch');
+
+  const gsEl = document.getElementById('gameSearch');
   const searchQ = gsEl ? gsEl.value.toLowerCase() : '';
-  const filtered = games.filter(g => g.name.toLowerCase().includes(searchQ));
+
+  const filtered = games.filter(g => {
+    const matchesSearch = g.name.toLowerCase().includes(searchQ);
+    const matchesFilter = filter === 'hot' ? (g.badge === 'hot' || g.badge === 'pop') : (g.type === filter);
+    return matchesSearch && matchesFilter;
+  });
 
   if (filtered.length === 0) {
     c.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);"><%= t.no_games_found %></div>`;
@@ -271,30 +283,45 @@ function renderGames() {
   }
 
   filtered.forEach(g => {
-    const badgeHTML = g.badge ? `<div style="position:absolute;top:8px;left:8px;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;background:var(--grad-gold);color:#000;z-index:2;">${g.badge.toUpperCase()}</div>` : '';
+    const badgeHTML = g.badge ? `<div style="position:absolute;top:5px;right:5px;padding:2px 6px;border-radius:4px;font-size:8px;font-weight:700;background:rgba(200, 16, 46, 0.9);color:#fff;z-index:2;">${g.badge.toUpperCase()}</div>` : '';
     c.innerHTML += `
-      <a href="/games/${g.slug}" class="game-card" style="display:block;text-decoration:none;border-color: rgba(245, 158, 11, 0.2); transition: transform 0.2s; position:relative;">
-        <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:40px;background:var(--grad-surface);">
-          <span class="game-emoji">${g.emoji}</span>
+      <a href="${g.type === 'sports' ? '/matches' : '/games/'+g.slug}" class="game-card" style="display:block;text-decoration:none; background: #1a1a1a; border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+        <div style="height: 100px; background: #222; display:flex; align-items:center; justify-content:center; font-size:40px; position: relative; overflow: hidden;">
+          <div style="position: absolute; inset:0; background: radial-gradient(circle at center, rgba(200,16,46,0.1), transparent 70%);"></div>
+          <span class="game-emoji" style="z-index:1;">${g.emoji}</span>
           ${badgeHTML}
-          <div style="padding:8px;background:rgba(255,255,255,0.05);border-top:1px solid rgba(255,255,255,0.05);">
-            <div style="font-size:11px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${g.name}</div>
-            <div style="font-size:9px;color:var(--gold);">${g.provider}</div>
-          </div>
+        </div>
+        <div style="padding: 8px; background: linear-gradient(180deg, #1a1a1a, #111);">
+          <div style="font-size: 11px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2;">${g.name}</div>
+          <div style="font-size: 9px; color: var(--gold); margin-top: 2px; font-family:'Teko',sans-serif;">${g.provider}</div>
         </div>
       </a>`;
   });
 }
 
-document.querySelectorAll('.cat-item').forEach(el => {
+document.querySelectorAll('.cat-tab').forEach(el => {
   el.addEventListener('click', () => {
-    const link = el.dataset.link;
-    if (link) location.href = link;
+    const filter = el.dataset.filter;
+    if (filter === 'sports') {
+        location.href = '/matches';
+        return;
+    }
+
+    document.querySelectorAll('.cat-tab').forEach(tab => {
+        tab.classList.remove('active');
+        tab.style.color = 'var(--text-muted)';
+        tab.style.borderBottom = 'none';
+    });
+    el.classList.add('active');
+    el.style.color = '#fff';
+    el.style.borderBottom = '2px solid var(--primary)';
+
+    renderGames(filter);
   });
 });
 
 var gs2 = document.getElementById('gameSearch');
-if (gs2) gs2.addEventListener('input', renderGames);
+if (gs2) gs2.addEventListener('input', () => renderGames('hot'));
 
 let jp = 88617517;
 setInterval(() => {
@@ -303,8 +330,8 @@ setInterval(() => {
   if(jpN) jpN.textContent = jp.toLocaleString('<%= lang === 'bn' ? 'bn-BD' : 'en-US' %>');
 }, 2000);
 
-document.addEventListener('DOMContentLoaded', renderGames);
-renderGames();
+document.addEventListener('DOMContentLoaded', () => renderGames('hot'));
+renderGames('hot');
 </script>
 
 </body></html>
