@@ -1,1 +1,63 @@
-<%# footer partial - LIVO %>
+<footer class="bg-[#050505] border-t border-zinc-800 text-zinc-400 pt-12 pb-24 px-4 mt-auto">
+  <div class="max-w-6xl mx-auto space-y-12">
+
+    <!-- Brand and Links -->
+    <div class="text-center">
+      <div class="text-3xl font-bold text-white mb-6 tracking-tighter"><%= siteName %></div>
+      <div class="flex flex-wrap justify-center gap-x-6 gap-y-3 mb-8">
+        <a href="/privacy" class="text-xs hover:text-white transition-colors"><%= t.privacy_policy %></a>
+        <a href="/terms" class="text-xs hover:text-white transition-colors"><%= t.terms_conditions %></a>
+        <a href="/rules" class="text-xs hover:text-white transition-colors"><%= t.rules_regulation %></a>
+        <a href="/kyc" class="text-xs hover:text-white transition-colors"><%= t.kyc %></a>
+      </div>
+      <div class="flex justify-center gap-4 mb-10">
+        <div class="bg-zinc-900 border border-zinc-800 px-4 py-1 rounded text-red-500 font-bold text-sm">🔞 18+</div>
+        <div class="bg-zinc-900 border border-zinc-800 px-4 py-1 rounded text-xs flex items-center">Curacao Licensed</div>
+      </div>
+    </div>
+
+    <!-- লাইসেন্স সেকশন -->
+    <div>
+      <h3 class="text-white text-xl font-bold mb-6 text-center"><%= t.footer_license_title %></h3>
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 items-center">
+        <div class="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 text-center text-[10px] font-bold uppercase tracking-widest opacity-60">BMM</div>
+        <div class="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 text-center text-[10px] font-bold uppercase tracking-widest opacity-60">iTech Labs</div>
+        <div class="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 text-center text-[10px] font-bold uppercase tracking-widest opacity-60">GLI Certified</div>
+        <div class="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 text-center text-[10px] font-bold uppercase tracking-widest opacity-60">MGA</div>
+        <div class="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 text-center text-[10px] font-bold uppercase tracking-widest opacity-60">Gaming Labs</div>
+        <div class="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 text-center text-[10px] font-bold uppercase tracking-widest opacity-60">PAGCOR</div>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-8">
+      <!-- সুরক্ষা করা সেকশন -->
+      <div>
+        <h3 class="text-white text-xl font-bold mb-6 text-center md:text-left"><%= t.footer_security_title %></h3>
+        <div class="grid grid-cols-2 gap-4">
+          <div class="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 text-center font-bold text-xs opacity-60">iovation</div>
+          <div class="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 text-center font-bold text-xs opacity-60">ThreatMetrix</div>
+        </div>
+      </div>
+
+      <!-- দায়িত্বশীলভাবে খেলুন সেকশন -->
+      <div>
+        <h3 class="text-white text-xl font-bold mb-6 text-center md:text-left"><%= t.footer_responsible_gaming_title %></h3>
+        <div class="grid grid-cols-2 gap-4">
+          <div class="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 text-center font-bold text-xs opacity-60">GamCare</div>
+          <div class="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 text-center font-bold text-xs opacity-60 text-red-500/80">BeGambleAware</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Copyright -->
+    <div class="pt-8 border-t border-zinc-900 text-center space-y-2">
+      <p class="text-[10px] text-zinc-600 uppercase tracking-widest">
+        <%= t.responsible_gaming_msg %>
+      </p>
+      <p class="text-[10px] text-zinc-500 font-medium">
+        <%= t.footer_copyright %>
+      </p>
+    </div>
+
+  </div>
+</footer>

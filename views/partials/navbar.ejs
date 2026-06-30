@@ -9,6 +9,12 @@
         <button id="lvClose" style="background:none;border:none;color:var(--text-main);font-size:22px;cursor:pointer;">✕</button>
 
   </div>
+  <div style="padding:10px 20px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:center;">
+    <div class="lang-switch" style="background: var(--bg-glass); border-radius: 20px; padding: 2px; border: 1px solid var(--border-glass); width: 100%; display: flex;">
+      <a href="/lang/bn" class="lang-btn <%= lang === 'bn' ? 'active' : '' %>" style="border:none; padding: 8px 0; border-radius: 18px; flex:1; text-align:center;">BN</a>
+      <a href="/lang/en" class="lang-btn <%= lang === 'en' ? 'active' : '' %>" style="border:none; padding: 8px 0; border-radius: 18px; flex:1; text-align:center;">EN</a>
+    </div>
+  </div>
   <% if(locals.user) { %>
   <div style="padding:15px 20px;border-bottom:1px solid var(--border-glass);display:flex;align-items:center;gap:12px;">
     <div style="width:45px;height:45px;border-radius:50%;background:var(--grad-primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;color:var(--text-white);box-shadow: 0 0 10px var(--primary-glow);">
@@ -34,13 +40,6 @@
   <% if(locals.user && user.role === 'admin') { %>
   <a href="/admin" class="menu-item" style="color:var(--primary) !important;"><i class="fas fa-cog"></i> <%= t.menu_admin %></a>
   <% } %>
-  <div style="padding:13px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border-glass);">
-    <span style="color:var(--text-muted);font-size:13px;">🌐</span>
-    <div class="lang-switch">
-      <a href="/lang/bn" class="lang-btn <%= lang === 'bn' ? 'active' : '' %>">বাং</a>
-      <a href="/lang/en" class="lang-btn <%= lang === 'en' ? 'active' : '' %>">EN</a>
-    </div>
-  </div>
   <% if(locals.user) { %>
   <a href="/logout" class="menu-item" style="color:#ef4444 !important;"><i class="fas fa-sign-out-alt"></i> <%= t.logout %></a>
   <% } else { %>
@@ -52,23 +51,39 @@
 <div class="menu-overlay" id="menuOverlay"></div>
 
 
-<nav class="navbar" style="position:relative; z-index:10000;">
+<nav class="navbar" style="background: var(--grad-primary); position:relative; z-index:1000;">
   <div style="display:flex;align-items:center;gap:12px;">
-    <button onclick="toggleMenu()" style="background:none;border:none;color:var(--text-main);font-size:24px;cursor:pointer;padding:0 12px;"><i class="fas fa-bars"></i></button>
-    <div class="nav-brand" style="color: var(--text-main); font-family: 'Teko', sans-serif; font-size: 1.8rem; letter-spacing: 1px;"><%= siteName %></div>
+    <button onclick="toggleMenu()" style="background:none;border:none;color:#fff;font-size:24px;cursor:pointer;padding:0 12px;"><i class="fas fa-bars"></i></button>
+    <div class="nav-brand" style="color: #fff; font-family: 'Teko', sans-serif; font-size: 1.8rem; letter-spacing: 1px;"><%= siteName %></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
         
 
     <% if(locals.user) { %>
-      <div class="glass" style="padding:4px 12px;border-radius:20px;font-size:13px;color:var(--gold);display:flex;align-items:center;gap:4px;font-family:'Teko',sans-serif;font-weight:700;">💰 <span class="js-balance"><%= user.coins %></span></div>
-      <div style="display:flex;gap:12px;">
-        <a href="/notifications" style="color:var(--text-main);font-size:18px;padding:8px;"><i class="fas fa-bell"></i></a>
-        <a href="/news" style="color:var(--text-main);font-size:18px;padding:8px;"><i class="fas fa-envelope"></i></a>
+      <!-- User Elements -->
+      <div class="nav-balance-box">
+        <span style="font-size: 0.9rem;">💰</span>
+        <span class="js-balance"><%= user.coins %></span>
+        <button onclick="refreshBalance()" class="nav-refresh-btn" id="refreshBtn">
+          <i class="fas fa-sync-alt"></i>
+        </button>
+      </div>
+
+      <div style="display:flex; gap: 4px;">
+        <a href="/notifications" class="nav-icon-link">
+          <i class="fas fa-bell"></i>
+          <span class="badge-dot"></span>
+        </a>
+        <a href="/profile/chat" class="nav-icon-link">
+          <i class="fas fa-envelope"></i>
+        </a>
       </div>
     <% } else { %>
-      <a href="/login" class="btn btn-primary" style="padding:6px 14px;border-radius:20px;font-size:12px;">Login</a>
-      <a href="/register" class="btn btn-secondary" style="padding:6px 14px;border-radius:20px;font-size:12px;">Register</a>
+      <!-- Auth Buttons -->
+      <div style="display:flex; gap: 8px;">
+        <a href="/login" class="nav-btn-auth nav-btn-login"><%= t.login %></a>
+        <a href="/register" class="nav-btn-auth nav-btn-register"><%= t.register %></a>
+      </div>
     <% } %>
   </div>
 </nav>
@@ -93,6 +108,9 @@ window.toggleMenu = toggleMenu;
 var lvHam = document.getElementById('lvHamburger'); if (lvHam) lvHam.addEventListener('click', toggleMenu);
 
 var lvClose = document.getElementById('lvClose'); if (lvClose) lvClose.addEventListener('click', toggleMenu);
+var lvOv = document.getElementById('menuOverlay'); if (lvOv) lvOv.addEventListener('click', toggleMenu);
+
+
 var lvOv = document.getElementById('menuOverlay'); if (lvOv) lvOv.addEventListener('click', toggleMenu);
 
 
@@ -125,19 +143,29 @@ document.addEventListener('keydown', function (e) {
 
 
 // ===== রিয়েল-টাইম ব্যালেন্স আপডেট =====
+function refreshBalance() {
+  var btn = document.getElementById('refreshBtn');
+  if (btn) btn.classList.add('spinning');
+
+  fetch('/coins/balance', { headers: { 'Accept': 'application/json' } })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d && d.success && d.coins != null) {
+        document.querySelectorAll('.js-balance').forEach(function (el) {
+          el.textContent = d.coins;
+        });
+      }
+    })
+    .catch(function () {})
+    .finally(function() {
+      setTimeout(function() {
+        if (btn) btn.classList.remove('spinning');
+      }, 500);
+    });
+}
+window.refreshBalance = refreshBalance;
+
 (function () {
-  function refreshBalance() {
-    fetch('/coins/balance', { headers: { 'Accept': 'application/json' } })
-      .then(function (r) { return r.json(); })
-      .then(function (d) {
-        if (d && d.success && d.coins != null) {
-          document.querySelectorAll('.js-balance').forEach(function (el) {
-            el.textContent = d.coins;
-          });
-        }
-      })
-      .catch(function () {});
-  }
   // অ্যাপে ফিরলে বা ট্যাব আবার দেখলে ব্যালেন্স রিফ্রেশ
   window.addEventListener('focus', refreshBalance);
   document.addEventListener('visibilitychange', function () {

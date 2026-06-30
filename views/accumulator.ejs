@@ -5,19 +5,19 @@
 
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
     <a href="/matches" style="color:#fff;text-decoration:none;font-size:20px;">←</a>
-    <h1 style="color:#fff;font-size:18px;font-weight:bold;">🎯 অ্যাকুমুলেটর বেট</h1>
+    <h1 style="color:#fff;font-size:18px;font-weight:bold;">🎯 <%= t.accumulator_bet %></h1>
   </div>
 
   <!-- ব্যানার -->
   <div style="background:linear-gradient(135deg,#7c3aed,#5b21b6);border-radius:16px;padding:16px;margin-bottom:16px;text-align:center;">
-    <div style="color:#fff;font-size:15px;font-weight:bold;">একসাথে একাধিক বাজি, বড় জয়!</div>
+    <div style="color:#fff;font-size:15px;font-weight:bold;"><%= t.accumulator_desc %></div>
     <div style="color:rgba(255,255,255,0.9);font-size:12px;margin-top:4px;">
-      ৩টি সিলেকশনে +১০%, ৪টিতে +২০%, ৫+ এ +৩০% বুস্ট
+      <%= t.accumulator_boost_msg %>
     </div>
   </div>
 
   <% if (matches && matches.length > 0) { %>
-    <div style="color:#94a3b8;font-size:13px;margin-bottom:10px;">সলেকশন বাছুন (প্রতি ম্যাচ থেকে একটি):</div>
+    <div style="color:#94a3b8;font-size:13px;margin-bottom:10px;"><%= t.select_selection_msg %></div>
 
     <% matches.forEach(m => { %>
       <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:14px;margin-bottom:12px;">
@@ -48,25 +48,25 @@
     <% }) %>
   <% } else { %>
     <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:30px;text-align:center;color:#94a3b8;">
-      এখন কোনো ওপেন মার্কেট নেই। পরে আবার দেখুন।
+      <%= t.no_open_markets_msg %>
     </div>
   <% } %>
 
   <!-- আমার অ্যাকুমুলেটর হিস -->
   <% if (myAccas && myAccas.length > 0) { %>
     <div style="margin-top:24px;">
-      <div style="color:#fff;font-weight:bold;margin-bottom:10px;">📜 আমার অ্যাকুমুলেটর</div>
+      <div style="color:#fff;font-weight:bold;margin-bottom:10px;">📜 <%= t.my_accumulators %></div>
       <% myAccas.forEach(a => {
         const color = a.status === 'won' ? '#10b981' : a.status === 'lost' ? '#ef4444' : '#f59e0b';
-        const label = a.status === 'won' ? 'জিতেছেন' : a.status === 'lost' ? 'হেরেছেন' : 'চলমান';
+        const label = a.status === 'won' ? t.won : a.status === 'lost' ? t.lost : t.running;
       %>
         <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:14px;margin-bottom:10px;">
           <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-            <span style="color:#fff;font-size:13px;font-weight:600;"><%= a.selection_count %> সিলেকশন <%= a.boost_percent > 0 ? '(+' + a.boost_percent + '% বুস্ট)' : '' %></span>
+            <span style="color:#fff;font-size:13px;font-weight:600;"><%= a.selection_count %> <%= t.selections_label %> <%= a.boost_percent > 0 ? '(+' + a.boost_percent + '% ' + t.boost_label + ')' : '' %></span>
             <span style="color:<%= color %>;font-size:12px;font-weight:bold;"><%= label %></span>
           </div>
           <div style="color:#94a3b8;font-size:11px;">
-            স্টেক: <%= a.stake %> · মোট অডস: <%= a.total_odd %> · সম্ভাব্য জয়: <span style="color:#f59e0b;"><%= a.potential_win %></span>
+            <%= t.stake_label %>: <%= a.stake %> · <%= t.total_odds_label %>: <%= a.total_odd %> · <%= t.potential_win_label %>: <span style="color:#f59e0b;"><%= a.potential_win %></span>
           </div>
           <div style="margin-top:8px;">
             <% a.selections.forEach(s => {
@@ -85,19 +85,27 @@
 <!-- বট স্লিপ (নিচে ভাসমান) -->
 <div id="betSlip" style="position:fixed;bottom:60px;left:0;right:0;background:#111;border-top:2px solid #f59e0b;padding:14px 16px;display:none;z-index:100;max-width:600px;margin:0 auto;">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-    <span style="color:#fff;font-weight:bold;font-size:14px;">বেট স্লিপ (<span id="slipCount">0</span>)</span>
-    <button onclick="clearSlip()" style="background:none;border:none;color:#ef4444;font-size:12px;cursor:pointer;">সব মুছুন</button>
+    <span style="color:#fff;font-weight:bold;font-size:14px;"><%= t.bet_slip %> (<span id="slipCount">0</span>)</span>
+    <button onclick="clearSlip()" style="background:none;border:none;color:#ef4444;font-size:12px;cursor:pointer;"><%= t.clear_all %></button>
   </div>
   <div id="slipItems" style="max-height:120px;overflow-y:auto;margin-bottom:8px;"></div>
   <div style="display:flex;gap:8px;align-items:center;">
-    <input type="number" id="slipStake" placeholder="স্টেক" min="10" style="flex:1;background:#1e1e1e;border:1px solid #333;color:#fff;padding:10px;border-radius:8px;">
-    <button onclick="placeAcca()" style="background:#f59e0b;color:#000;border:none;border-radius:8px;padding:10px 16px;font-weight:bold;font-size:13px;cursor:pointer;">বাজি ধরুন</button>
+    <input type="number" id="slipStake" placeholder="<%= t.stake_placeholder_short %>" min="10" style="flex:1;background:#1e1e1e;border:1px solid #333;color:#fff;padding:10px;border-radius:8px;">
+    <button onclick="placeAcca()" style="background:#f59e0b;color:#000;border:none;border-radius:8px;padding:10px 16px;font-weight:bold;font-size:13px;cursor:pointer;"><%= t.place_bet %></button>
   </div>
   <div id="slipInfo" style="color:#94a3b8;font-size:11px;margin-top:6px;text-align:center;"></div>
 </div>
 
 <script>
 let slip = [];
+const i18n = {
+  minStake: "<%= t.min_stake_msg %>",
+  minSelections: "<%= t.min_selections_msg %>",
+  totalOdds: "<%= t.total_odds_label %>",
+  boost: "<%= t.boost_label %>",
+  potentialWin: "<%= t.potential_win_label %>",
+  error: "<%= t.server_error %>"
+};
 
 function boostFor(n){ if(n>=5) return 30; if(n===4) return 20; if(n===3) return 10; return 0; }
 
@@ -118,7 +126,7 @@ function renderSlip() {
   const stake = parseFloat(document.getElementById('slipStake').value) || 0;
   const win = Math.floor(stake * totalOdd * (1 + boost/100));
   document.getElementById('slipInfo').innerText =
-    'মোট অডস: ' + totalOdd.toFixed(2) + (boost>0?(' · বুস্ট +'+boost+'%'):'') + (stake>0?(' · সম্ভাব্য জয়: '+win):'');
+    i18n.totalOdds + ': ' + totalOdd.toFixed(2) + (boost>0?(' · ' + i18n.boost + ' +' + boost + '%'):'') + (stake>0?(' · ' + i18n.potentialWin + ': ' + win):'');
 }
 
 function removePick(i){ slip.splice(i,1); document.querySelectorAll('.acca-pick').forEach(b=>b.style.borderColor=isPicked(b)?'#f59e0b':'#333'); renderSlip(); }
@@ -145,8 +153,8 @@ document.getElementById('slipStake').addEventListener('input', renderSlip);
 
 async function placeAcca() {
   const stake = parseInt(document.getElementById('slipStake').value);
-  if (!stake || stake < 10) { alert('সর্বনম্ন স্টেক ১০ কয়েন।'); return; }
-  if (slip.length < 2) { alert('কমপক্ষে ২টি সিলেকশন লাগবে।'); return; }
+  if (!stake || stake < 10) { alert(i18n.minStake); return; }
+  if (slip.length < 2) { alert(i18n.minSelections); return; }
 
   const selections = slip.map(s => ({ match_id:s.match, market_id:s.market, market_name:s.mname, runner:s.runner, odd:s.odd }));
 
@@ -160,9 +168,10 @@ async function placeAcca() {
     alert(data.message);
     if (data.success) location.reload();
   } catch(e) {
-    alert('সমস্যা হয়েছে, আবার চষ্টা করুন।');
+    alert(i18n.error);
   }
 }
 </script>
+<%- include('partials/footer') %>
 <%- include('partials/bottom-nav') %>
 </body></html>
