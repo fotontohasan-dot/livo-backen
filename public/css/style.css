@@ -5,17 +5,18 @@
   --bg-glass: rgba(255, 255, 255, 0.05);
   --border-glass: rgba(255, 255, 255, 0.1);
 
-  --primary: #009625;
-  --primary-glow: rgba(0, 150, 37, 0.5);
-  --secondary: #006519;
-  --accent: #f59e0b;
-  --gold: #f59e0b;
+    --primary: #C8102E;
+  --primary-glow: rgba(200, 16, 46, 0.4);
+  --secondary: #9B1C2E;
+  --accent: #EAB308;
+  --gold: #EAB308;
 
-  --grad-primary: linear-gradient(135deg, #009625, #006519);
-  --grad-secondary: linear-gradient(135deg, #006519, #004d13);
-  --grad-gold: linear-gradient(135deg, #f59e0b, #fbbf24);
+  --grad-primary: linear-gradient(135deg, #C8102E, #9B1C2E);
+  --grad-secondary: linear-gradient(135deg, #9B1C2E, #7A1624);
+  --grad-gold: linear-gradient(135deg, #EAB308, #FCD34D);
   --grad-dark: linear-gradient(180deg, #121212, #050505);
   --grad-surface: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));
+
 
   --text-main: #ffffff;
   --text-muted: #94a3b8;

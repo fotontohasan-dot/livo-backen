@@ -130,6 +130,7 @@ router.get('/withdraw', requireLogin, async (req, res) => {
     } catch (e) { cards = []; }
     res.render('payment/withdraw', { user: req.session.user, coins, cards });
   } catch (err) {
+    console.error('withdraw GET error:', err.message);
     res.redirect('/');
   }
 });

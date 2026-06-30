@@ -6,7 +6,8 @@
         <i class="fas fa-moon nav-theme-icon"></i>
       </button>
     </div>
-    <button onclick="toggleMenu()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;">✕</button>
+        <button id="lvClose" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;">✕</button>
+
   </div>
   <div style="padding:10px 20px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:center;">
     <div class="lang-switch" style="background: var(--bg-glass); border-radius: 20px; padding: 2px; border: 1px solid var(--border-glass); width: 100%; display: flex;">
@@ -49,12 +50,15 @@
 
 <div class="menu-overlay" id="menuOverlay"></div>
 
+
 <nav class="navbar" style="background: var(--grad-primary); position:relative; z-index:1000;">
   <div style="display:flex;align-items:center;gap:12px;">
     <button onclick="toggleMenu()" style="background:none;border:none;color:#fff;font-size:24px;cursor:pointer;padding:0 12px;"><i class="fas fa-bars"></i></button>
     <div class="nav-brand" style="color: #fff; font-family: 'Teko', sans-serif; font-size: 1.8rem; letter-spacing: 1px;"><%= siteName %></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
+        
+
     <% if(locals.user) { %>
       <!-- User Elements -->
       <div class="nav-balance-box">
@@ -101,6 +105,11 @@ function toggleMenu() {
   document.body.classList.toggle('menu-open', willOpen);
 }
 window.toggleMenu = toggleMenu;
+var lvHam = document.getElementById('lvHamburger'); if (lvHam) lvHam.addEventListener('click', toggleMenu);
+
+var lvClose = document.getElementById('lvClose'); if (lvClose) lvClose.addEventListener('click', toggleMenu);
+var lvOv = document.getElementById('menuOverlay'); if (lvOv) lvOv.addEventListener('click', toggleMenu);
+
 
 var lvOv = document.getElementById('menuOverlay'); if (lvOv) lvOv.addEventListener('click', toggleMenu);
 
@@ -113,22 +122,25 @@ document.addEventListener('keydown', function (e) {
 });
 
 (function () {
-  var btn = document.getElementById('theme-toggle-side');
+  var btnNav = document.getElementById('theme-toggle-nav');
+  var btnSide = document.getElementById('theme-toggle-side');
   function applyTheme(theme) {
     var light = theme === 'light';
     document.body.classList.toggle('light-mode', light);
-    var icon = document.querySelector('.nav-theme-icon');
-    if (icon) icon.className = 'fas ' + (light ? 'fa-sun' : 'fa-moon') + ' nav-theme-icon';
-  }
-  applyTheme(localStorage.getItem('livo-theme') || 'dark');
-  if (btn) {
-    btn.addEventListener('click', function () {
-      var next = document.body.classList.contains('light-mode') ? 'dark' : 'light';
-      localStorage.setItem('livo-theme', next);
-      applyTheme(next);
+    document.querySelectorAll('.nav-theme-icon').forEach(function (icon) {
+      icon.className = 'fas ' + (light ? 'fa-sun' : 'fa-moon') + ' nav-theme-icon';
     });
   }
+  applyTheme(localStorage.getItem('livo-theme') || 'dark');
+  function handleToggle() {
+    var next = document.body.classList.contains('light-mode') ? 'dark' : 'light';
+    localStorage.setItem('livo-theme', next);
+    applyTheme(next);
+  }
+  if (btnNav) btnNav.addEventListener('click', handleToggle);
+  if (btnSide) btnSide.addEventListener('click', handleToggle);
 })();
+
 
 // ===== রিয়েল-টাইম ব্যালেন্স আপডেট =====
 function refreshBalance() {

@@ -36,6 +36,16 @@ app.use(express.static(path.join(__dirname, 'public'), {
   etag: false
 }));
 
+
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: '0',
+  etag: false
+}));
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -167,6 +177,19 @@ app.use('/extra', require('./routes/extra'));
 
 app.get('/app/update', (req, res) => res.render('app/update'));
 
+// Telegram Bot Webhook
+const { handleMessage } = require('./telegram-bot');
+app.post('/telegram-webhook', express.json(), async (req, res) => {
+  try {
+    const { message } = req.body;
+    if (message) await handleMessage(message);
+    res.sendStatus(200);
+  } catch (err) {
+    console.error('Webhook error:', err);
+    res.sendStatus(200);
+  }
+});
+
 // Error Handling
 app.use((err, req, res, next) => {
   console.error('❌ Unhandled Error:', err.stack);
@@ -217,5 +240,4 @@ async function startServer() {
 }
 
 startServer();
-
 module.exports = app;
