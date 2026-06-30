@@ -4,8 +4,8 @@
   @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap');
 
   body {
-    background-color: #f3f4f6 !important;
-    color: #1f2937 !important;
+    background-color: var(--bg-dark) !important;
+    color: var(--text-main) !important;
     font-family: 'Hind Siliguri', sans-serif;
   }
   .red-theme-bg { background-color: #e61e26; }
@@ -28,7 +28,7 @@
   }
   .method-card.selected {
     border-color: #e61e26;
-    background-color: #fff;
+    background-color: var(--bg-surface);
   }
 
   .channel-btn.selected {
@@ -43,7 +43,7 @@
   }
 </style>
 
-<div class="min-h-screen pb-32">
+<div class="min-h-screen pb-32 text-main">
   <!-- Top Bar -->
   <div class="red-theme-bg text-white px-4 py-4 flex items-center gap-4 sticky top-0 z-50 shadow-md">
     <a href="/profile" class="text-xl"><i class="fas fa-chevron-left"></i></a>
@@ -59,22 +59,22 @@
       <div id="step1">
         <!-- Payment Method -->
         <div class="mb-6">
-          <label class="block text-gray-600 font-bold mb-3 text-[15px]">পেমেন্ট মেথড সিলেক্টর</label>
+          <label class="block text-muted font-bold mb-3 text-[15px]">পেমেন্ট মেথড সিলেক্টর</label>
           <div class="grid grid-cols-2 gap-4">
             <!-- bKash -->
-            <div id="method-bkash" class="method-card selected border-2 border-gray-200 bg-white rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer" onclick="selectMethod('bkash')">
+            <div id="method-bkash" class="method-card selected border-2 border-glass bg-surface rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer" onclick="selectMethod('bkash')">
               <div class="h-12 w-12 rounded-full bg-[#D12053] flex items-center justify-center mb-2 shadow-sm">
                 <span class="text-white font-bold text-xl">b</span>
               </div>
-              <span class="text-sm font-bold text-gray-700 font-bold">bKash</span>
+              <span class="text-sm font-bold text-main">bKash</span>
               <input type="radio" name="method" value="bkash" id="radio-bkash" class="hidden" checked>
             </div>
             <!-- Nagad -->
-            <div id="method-nagad" class="method-card border-2 border-gray-200 bg-white rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer" onclick="selectMethod('nagad')">
+            <div id="method-nagad" class="method-card border-2 border-glass bg-surface rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer" onclick="selectMethod('nagad')">
               <div class="h-12 w-12 rounded-full bg-[#F47321] flex items-center justify-center mb-2 shadow-sm">
                 <span class="text-white font-bold text-xl">n</span>
               </div>
-              <span class="text-sm font-bold text-gray-700 font-bold">Nagad</span>
+              <span class="text-sm font-bold text-main">Nagad</span>
               <input type="radio" name="method" value="nagad" id="radio-nagad" class="hidden">
             </div>
           </div>
@@ -82,22 +82,22 @@
 
         <!-- Payment Channel -->
         <div class="mb-6">
-          <label class="block text-gray-600 font-bold mb-3 text-[15px]">পেমেন্ট চ্যানেল</label>
+          <label class="block text-muted font-bold mb-3 text-[15px]">পেমেন্ট চ্যানেল</label>
           <div class="grid grid-cols-2 gap-3">
-            <button type="button" class="channel-btn selected border-2 border-gray-100 bg-white rounded-xl py-3 text-sm font-bold transition-all" onclick="selectChannel(this)">চ্যানেল ১</button>
-            <button type="button" class="channel-btn border-2 border-gray-100 bg-white rounded-xl py-3 text-sm font-bold transition-all" onclick="selectChannel(this)">চ্যানেল ৪</button>
-            <button type="button" class="channel-btn border-2 border-gray-100 bg-white rounded-xl py-3 text-sm font-bold transition-all" onclick="selectChannel(this)">চ্যানেল ৫</button>
-            <button type="button" class="channel-btn border-2 border-gray-100 bg-white rounded-xl py-3 text-sm font-bold transition-all" onclick="selectChannel(this)">চ্যানেল ১০</button>
+            <button type="button" class="channel-btn selected border-2 border-glass bg-surface rounded-xl py-3 text-sm font-bold transition-all" onclick="selectChannel(this)">চ্যানেল ১</button>
+            <button type="button" class="channel-btn border-2 border-glass bg-surface rounded-xl py-3 text-sm font-bold transition-all" onclick="selectChannel(this)">চ্যানেল ৪</button>
+            <button type="button" class="channel-btn border-2 border-glass bg-surface rounded-xl py-3 text-sm font-bold transition-all" onclick="selectChannel(this)">চ্যানেল ৫</button>
+            <button type="button" class="channel-btn border-2 border-glass bg-surface rounded-xl py-3 text-sm font-bold transition-all" onclick="selectChannel(this)">চ্যানেল ১০</button>
           </div>
         </div>
 
         <!-- Amount Selection -->
         <div class="mb-6">
-          <label class="block text-gray-600 font-bold mb-3 text-[15px]">অ্যামাউন্ট সিলেকশন (Fast Amount)</label>
+          <label class="block text-muted font-bold mb-3 text-[15px]">অ্যামাউন্ট সিলেকশন (Fast Amount)</label>
           <div class="grid grid-cols-3 gap-2 mb-4">
             <% [100, 200, 500, 1000, 3000, 5000, 20000, 30000, 50000].forEach(amt => { %>
               <button type="button"
-                      class="amount-btn border-2 border-gray-100 rounded-lg py-3 text-[15px] font-bold bg-white transition-all <%= amt === 200 ? 'selected' : '' %>"
+                      class="amount-btn border-2 border-glass rounded-lg py-3 text-[15px] font-bold bg-surface text-main transition-all <%= amt === 200 ? 'selected' : '' %>"
                                             data-amt="<%= amt %>">
 
                 <%= amt %>
@@ -106,9 +106,9 @@
           </div>
           <div class="relative mt-4">
             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <span class="text-gray-400 font-bold text-lg">৳</span>
+              <span class="text-muted font-bold text-lg">৳</span>
             </div>
-            <input type="number" name="amount" id="amountInput" value="200" placeholder="১০০ ~ ৫০,০০০" min="100" max="50000" class="block w-full pl-10 pr-4 py-4 border-2 border-gray-100 rounded-2xl text-lg font-bold text-gray-700 bg-white focus:outline-none" required>
+            <input type="number" name="amount" id="amountInput" value="200" placeholder="১০০ ~ ৫০,০০০" min="100" max="50000" class="block w-full pl-10 pr-4 py-4 border-2 border-glass rounded-2xl text-lg font-bold text-main bg-surface focus:outline-none" required>
           </div>
         </div>
 
@@ -123,14 +123,14 @@
 
       <!-- Step 2: Confirmation & Instructions -->
       <div id="step2" class="step-2">
-        <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm mb-6">
-          <p class="text-gray-500 text-sm mb-3 text-center">নিচের নম্বরে টাকা পাঠান:</p>
-          <div class="bg-gray-50 rounded-2xl p-5 flex flex-col items-center border border-gray-100">
-            <span class="text-3xl font-black tracking-widest text-gray-800" id="displayNumber"><%= payNumber %></span>
-                        <button type="button" id="depCopyBtn" class="mt-3 px-4 py-1 bg-white border border-gray-200 rounded-full text-blue-600 text-xs font-bold uppercase shadow-sm"><i class="far fa-copy mr-1"></i> কপি করুন</button>
+        <div class="bg-surface rounded-2xl p-6 border border-glass shadow-sm mb-6">
+          <p class="text-muted text-sm mb-3 text-center">নিচের নম্বরে টাকা পাঠান:</p>
+          <div class="bg-dark rounded-2xl p-5 flex flex-col items-center border border-glass">
+            <span class="text-3xl font-black tracking-widest text-main" id="displayNumber"><%= payNumber %></span>
+                        <button type="button" id="depCopyBtn" class="mt-3 px-4 py-1 bg-surface border border-glass rounded-full text-blue-400 text-xs font-bold uppercase shadow-sm"><i class="far fa-copy mr-1"></i> কপি করুন</button>
 
           </div>
-          <div class="mt-4 space-y-2 text-sm text-gray-600 text-center">
+          <div class="mt-4 space-y-2 text-sm text-muted text-center">
             <p>📲 <span id="selectedMethodName" class="font-bold">bKash</span> Personal</p>
             <p class="text-xs text-red-400 font-medium">⚠️ Send Money করুন, তারপর নিচের ফর্ম পূরণ করুন।</p>
           </div>
@@ -138,12 +138,12 @@
 
         <div class="space-y-4">
           <div>
-            <label class="block text-gray-700 font-bold mb-2">ট্রানজেকশন আইডি</label>
-            <input type="text" name="transaction_id" placeholder="TrxID লিখুন" class="w-full p-4 border-2 border-gray-100 rounded-2xl focus:outline-none bg-white font-mono font-bold" required>
+            <label class="block text-main font-bold mb-2">ট্রানজেকশন আইডি</label>
+            <input type="text" name="transaction_id" placeholder="TrxID লিখুন" class="w-full p-4 border-2 border-glass rounded-2xl focus:outline-none bg-surface text-main font-mono font-bold" required>
           </div>
           <div>
-            <label class="block text-gray-700 font-bold mb-2">আপনার নম্বর (যেটা থেকে পাঠিয়েছেন)</label>
-            <input type="text" name="account_number" placeholder="01XXXXXXXXX" class="w-full p-4 border-2 border-gray-100 rounded-2xl focus:outline-none bg-white font-bold" required>
+            <label class="block text-main font-bold mb-2">আপনার নম্বর (যেটা থেকে পাঠিয়েছেন)</label>
+            <input type="text" name="account_number" placeholder="01XXXXXXXXX" class="w-full p-4 border-2 border-glass rounded-2xl focus:outline-none bg-surface text-main font-bold" required>
           </div>
         </div>
 

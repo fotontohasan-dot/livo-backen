@@ -79,10 +79,10 @@
   <!-- Accumulator Banner -->
   <a href="/accumulator" style="display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#7c3aed,#5b21b6);border-radius:14px;padding:14px 16px;margin-bottom:14px;text-decoration:none;">
     <div>
-      <div style="color:#fff;font-size:15px;font-weight:bold;">🎯 <%= t.accumulator_bet %></div>
+      <div style="color:var(--text-white);font-size:15px;font-weight:bold;">🎯 <%= t.accumulator_bet %></div>
       <div style="color:rgba(255,255,255,0.85);font-size:12px;margin-top:2px;"><%= t.accumulator_desc %></div>
     </div>
-    <span style="color:#fff;font-size:22px;">›</span>
+    <span style="color:var(--text-white);font-size:22px;">›</span>
   </a>
 
   <!-- Sport Tabs -->
@@ -110,9 +110,9 @@
   <!-- Live section -->
   <div id="liveSection" style="display:none;">
     <div class="section-title">
-      <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;animation:livedot 1.5s infinite;"></span>
+      <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red);animation:livedot 1.5s infinite;"></span>
       <%= t.live_now %>
-      <span id="liveCount" class="badge" style="margin-left:auto;background:#ef4444;color:#fff;padding:2px 8px;border-radius:6px;font-size:11px;">0</span>
+      <span id="liveCount" class="badge" style="margin-left:auto;background:var(--red);color:var(--text-white);padding:2px 8px;border-radius:6px;font-size:11px;">0</span>
     </div>
     <div id="liveList"></div>
   </div>
@@ -172,7 +172,7 @@ function buildMatchCard(m, isLive) {
   
   const btnHTML = IS_LOGGED_IN
     ? `<a href="/matches/${m.id}" class="predict-btn-card">🎯 <%= t.predict_now %></a>`
-    : `<a href="/login" class="predict-btn-card" style="background:var(--bg-glass);color:var(--text-main);border:1px solid var(--border-glass);"><%= t.login_to_predict %></a>`;
+    : `<a href="/login" class="predict-btn-card" style="background:var(--bg-glass);color:var(--text-main);border:1px solid var(--border-glass); text-decoration: none;"><%= t.login_to_predict %></a>`;
   
   return `
     <div class="match-card ${isLive ? 'live' : ''}" onclick="event.target.tagName !== 'A' && (window.location.href='/matches/${m.id}')">
@@ -189,7 +189,7 @@ function buildMatchCard(m, isLive) {
         ${scoreHTML}
       </div>
       
-      <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid rgba(255,255,255,0.05);">
+      <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid var(--border-glass);">
         <div class="jersey jersey-b">👕</div>
         <div style="flex:1;font-weight:600;font-size:14px;color:var(--text-main);">${teamB}</div>
         ${scoreBHTML}
