@@ -1,26 +1,26 @@
-<div class="bottom-nav">
-  <a href="/" onclick="location.href='/'; return false;" class="nav-link <%= locals.currentPage === 'home' ? 'active' : '' %>">
-    <i class="fas fa-home"></i>
-    <span><%= t.home %></span>
+<div class="bottom-nav" style="background: #111; border-top: 1px solid rgba(255,255,255,0.05); padding: 8px 0;">
+  <a href="/" onclick="location.href='/'; return false;" class="nav-link <%= locals.currentPage === 'home' ? 'active' : '' %>" style="color: <%= locals.currentPage === 'home' ? 'var(--primary)' : 'var(--text-muted)' %>">
+    <i class="fas fa-home" style="font-size: 20px;"></i>
+    <span style="font-size: 11px; margin-top: 4px;"><%= t.home %></span>
   </a>
 
-  <a href="/extra/invitation" onclick="location.href='/extra/invitation'; return false;" class="nav-link <%= locals.currentPage === 'invitation' ? 'active' : '' %>">
-    <i class="fas fa-user-plus"></i>
-    <span><%= t.invite %></span>
+  <a href="/extra/invitation" onclick="location.href='/extra/invitation'; return false;" class="nav-link <%= locals.currentPage === 'invitation' ? 'active' : '' %>" style="color: <%= locals.currentPage === 'invitation' ? 'var(--primary)' : 'var(--text-muted)' %>">
+    <i class="fas fa-user-friends" style="font-size: 20px;"></i>
+    <span style="font-size: 11px; margin-top: 4px;"><%= t.invite %></span>
   </a>
 
-  <a href="/extra/promotion" onclick="location.href='/extra/promotion'; return false;" class="nav-link <%= locals.currentPage === 'promotion' ? 'active' : '' %>">
-    <i class="fas fa-gift"></i>
-    <span><%= t.promotion %></span>
+  <a href="/promotions" onclick="location.href='/promotions'; return false;" class="nav-link <%= locals.currentPage === 'promotion' ? 'active' : '' %>" style="color: <%= locals.currentPage === 'promotion' ? 'var(--primary)' : 'var(--text-muted)' %>">
+    <i class="fas fa-gift" style="font-size: 20px;"></i>
+    <span style="font-size: 11px; margin-top: 4px;"><%= t.promotion %></span>
   </a>
 
-  <a href="/chat" onclick="location.href='/chat'; return false;" class="nav-link <%= locals.currentPage === 'chat' ? 'active' : '' %>">
-    <i class="fas fa-headset"></i>
-    <span><%= t.support %></span>
+  <a href="/chat" onclick="location.href='/chat'; return false;" class="nav-link <%= locals.currentPage === 'chat' ? 'active' : '' %>" style="color: <%= locals.currentPage === 'chat' ? 'var(--primary)' : 'var(--text-muted)' %>">
+    <i class="fas fa-headset" style="font-size: 20px;"></i>
+    <span style="font-size: 11px; margin-top: 4px;"><%= t.support %></span>
   </a>
 
-  <a href="/profile" onclick="location.href='/profile'; return false;" class="nav-link <%= locals.currentPage === 'profile' ? 'active' : '' %>">
-    <i class="fas fa-user-circle"></i>
-    <span><%= t.member %></span>
+  <a href="/profile" onclick="location.href='/profile'; return false;" class="nav-link <%= locals.currentPage === 'profile' ? 'active' : '' %>" style="color: <%= locals.currentPage === 'profile' ? 'var(--primary)' : 'var(--text-muted)' %>">
+    <i class="fas fa-user" style="font-size: 20px;"></i>
+    <span style="font-size: 11px; margin-top: 4px;"><%= t.member %></span>
   </a>
 </div>
