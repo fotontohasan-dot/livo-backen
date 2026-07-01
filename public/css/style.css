@@ -423,15 +423,15 @@ body.light-mode .nav-balance-box {
 .stats-grid {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
-    gap: 10px;
-    padding: 15px 12px;
+    gap: 0;
+    padding: 15px 0;
 }
 
 .stat-card {
     background: var(--bg-card);
     border: 1px solid var(--border-glass);
-    padding: 15px 10px;
-    border-radius: 15px;
+    padding: 22px 10px;
+    border-radius: 0;
     text-align: center;
 }
 
