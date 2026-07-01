@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale= 1.0">
+    <title>ব্যাটিং হেল্প সেন্টার</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Nikosh', 'SolaimanLipi', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c 0%, #2a5298 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            background: linear-gradient(90deg, #1a2a6c 0%, #2a5298 50%, #1a2a6c 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+        
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, #ff8a00, #e52e71);
+        }
+        
+        .main-content {
+            display: flex;
+            flex: 1;
+            height: 500px;
+        }
+        
+        .sidebar {
+            width: 280px;
+            background-color: #2a5298;
+            color: white;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .logo h2 {
+            font-size: 22px;
+            margin-top: 10px;
+        }
+        
+        .category-list {
+            list-style: none;
+            margin-top: 20px;
+        }
+        
+        .category-list li {
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            display: flex;
+            align-items: center;
+        }
+        
+        .category-list li:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .category-list li i {
+            margin-right: 10px;
+            font-size: 16px;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chat-header {
+            background-color: #f8f9fa;
+            padding: 15px 20px;
+            font-weight: bold;
+            font-size: 18px;
+            color: #333;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .online-indicator {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            color: #28a745;
+            font-weight: normal;
+        }
+        
+        .online-dot {
+            width: 10px;
+            height: 10px;
+            background-color: #28a745;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background-color: #f9f9f9;
+        }
+        
+        .message {
+            max-width: 80%;
+            padding: 12px 15px;
+            border-radius: 18px;
+            line-height: 1.4;
+            position: relative;
+        }
+        
+        .bot-message {
+            background-color: #f0f2f5;
+            align-self: flex-start;
+            border-bottom-left-radius: 5px;
+        }
+        
+        .user-message {
+            background-color: #2a5298;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 5px;
+        }
+        
+        .message-time {
+            font-size: 11px;
+            margin-top: 5px;
+            opacity: 0.7;
+        }
+        
+        .chat-input-container {
+            display: flex;
+            padding: 15px;
+            border-top: 1px solid #e0e0e0;
+            background-color: white;
+        }
+        
+        .chat-input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            outline: none;
+            font-size: 14px;
+        }
+        
+        .send-button {
+            background-color: #2a5298;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 12px 20px;
+            margin-left: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        
+        .send-button:hover {
+            background-color: #1a2a6c;
+        }
+        
+        .quick-replies {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 15px;
+            background-color: white;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .quick-reply {
+            background-color: #f0f2f5;
+            border: none;
+            border-radius: 16px;
+            padding: 8px 15px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .quick-reply:hover {
+            background-color: #e4e6eb;
+        }
+        
+        .bot-typing {
+            display: none;
+            padding: 10px 15px;
+            color: #666;
+            font-style: italic;
+        }
+        
+        .footer {
+            background-color: #1a2a6c;
+            color: white;
+            text-align: center;
+            padding: 10px;
+            font-size: 12px;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+                height: auto;
+            }
+            
+            .sidebar {
+                width: 100%;
+                padding: 15px;
+                max-height: 200px;
+            }
+            
+            .category-list {
+                display: flex;
+                overflow-x: auto;
+                gap: 10px;
+            }
+            
+            .category-list li {
+                white-space: nowrap;
+                margin-bottom: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>ব্যাটিং হেল্প সেন্টার</h1>
+            <p>টিকেট, ফুটবল, ডিপোজিট, অ্যাকাউন্ট এবং অন্যান্য সকল ইস্যুতে সাহায্যের জন্য আমরা এখানে আছি</p>
+        </div>
+        
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="logo">
+                    <h2>দ্রুত সাহায্য</h2>
+                </div>
+                <h3>ক্যাটাগরি</h3>
+                <ul class="category-list">
+                    <li><i class="fas fa-ticket-alt"></i> টিকেট ইস্যু</li>
+                    <li><i class="fas fa-futbol"></i> ফুটব
