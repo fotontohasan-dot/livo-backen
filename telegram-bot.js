@@ -148,10 +148,14 @@ async function processGithubAction(responseText, chatId) {
 
 // Webhook set
 async function setWebhook() {
-  await telegramAPI('deleteWebhook', { drop_pending_updates: true });
-  const webhookUrl = `${RENDER_URL}/telegram-webhook`;
-  const result = await telegramAPI('setWebhook', { url: webhookUrl });
-  console.log('🔗 Telegram Webhook set:', result.description);
+  try {
+    await telegramAPI('deleteWebhook', { drop_pending_updates: true });
+    const webhookUrl = `${RENDER_URL}/telegram-webhook`;
+    const result = await telegramAPI('setWebhook', { url: webhookUrl });
+    console.log('🔗 Telegram Webhook set:', result.description);
+  } catch (err) {
+    console.error('⚠️ Telegram webhook setup skipped (network issue):', err.message);
+  }
 }
 
 // Message handle করা
