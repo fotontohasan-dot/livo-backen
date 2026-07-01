@@ -20,16 +20,14 @@
   --text-main: #ffffff;
   --text-inverse: #000000;
   --text-muted: #94a3b8;
-  --text-white: #ffffff; /* Consistent white for colored backgrounds */
+  --text-white: #ffffff;
 
   /* Gradients */
   --grad-primary: linear-gradient(135deg, #C8102E, #9B1C2E);
-  --grad-secondary: linear-gradient(135deg, #9B1C2E, #@utility glass {
-  backdrop-filter:none;
-  -webkit-backdrop-filter:none;
-  background-color:rgba(255,255,255,.05);
-  border:1px solid rgba(255,255,255,.1);
-}
+  --grad-secondary: linear-gradient(135deg, #9B1C2E, #7A1624);
+  --grad-gold: linear-gradient(135deg, #EAB308, #FCD34D);
+  --grad-dark: linear-gradient(180deg, #121212, #050505);
+  --grad-surface: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));
 
   /* Effects */
   --shadow-neon: 0 0 15px var(--primary-glow);
@@ -116,23 +114,6 @@ body {
     image-rendering: crisp-edges;
     -webkit-backface-visibility: hidden;
 }
-.banner-container {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    filter: none !important;
-    -webkit-filter: none !important;
-}
-
-.popup img,
-.popup-hero img,
-.feature-image img,
-.hero-section img {
-    filter: none !important;
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
-    -webkit-backface-visibility: hidden;
-}
-
 .container {
     max-width: 480px;
     margin: 0 auto;
@@ -140,9 +121,9 @@ body {
 }
 
 .navbar {
-    background: rgba(5, 5, 5, 0.95);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
+    background: rgba(5, 5, 5, 0.85);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
     border-bottom: 1px solid var(--border-glass);
     padding: 0 16px;
     display: flex;
@@ -644,48 +625,23 @@ p {
     opacity: 1;
     visibility: visible;
 }
-/* ===== HD POPUP IMAGE FIX ===== */
-
-.popup,
-.modal,
-.promo-popup,
-.promo-modal,
-.popup *,
-.modal *,
-.promo-popup *,
-.promo-modal *{
-    filter:none!important;
-    -webkit-filter:none!important;
-
-    backdrop-filter:none!important;
-    -webkit-backdrop-filter:none!important;
+/* ===== FINAL ZERO BLUR FIX FOR POPUP IMAGES ===== */
+.popup-hero,
+.popup-background,
+.feature-background,
+.hero-section {
+    filter: none !important;
+    backdrop-filter: none !important;
+    background-size: cover !important;
+    background-position: center !important;
 }
 
-.popup img,
-.modal img,
-.promo-popup img,
-.popup-hero img,
-.feature-image img,
-.hero-section img{
-    display:block;
-
-    width:100%;
-
-    height:auto;
-
-    object-fit:cover;
-
-    filter:none!important;
-
-    transform:none!important;
-
-    image-rendering:auto!important;
-
-    opacity:1!important;
-
-    backface-visibility:hidden;
-
-    -webkit-backface-visibility:hidden;
+.popup img {
+    filter: none !important;
+    max-width: 100%;
+    height: auto;
+    display: block;
+    image-rendering: -webkit-optimize-contrast;
 }
 .menu-item {
     display: flex;
