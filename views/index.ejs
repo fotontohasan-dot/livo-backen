@@ -25,14 +25,14 @@
 
 <!-- ===== Welcome Banner ===== -->
 <div class="banner-container">
-  <div class="card btn-glow" style="height:160px;background:linear-gradient(135deg, #006519, #004d13);position:relative;display:flex;align-items:center;padding:20px;border: 1px solid var(--gold);">
+  <div class="card btn-glow" style="height:160px;background:linear-gradient(135deg, #FFF6D8, #FFE28A);position:relative;display:flex;align-items:center;padding:20px;border: 1px solid #E0B84B;">
     <div style="z-index:1;">
-      <h2 style="font-family:'Teko',sans-serif;font-size:32px;color:var(--gold);line-height:1;">🎰 <%= t.welcome_bonus %></h2>
-      <p style="font-size:13px;color:rgba(255,255,255,0.9);margin-top:5px;"><%= t.welcome_bonus_desc %></p>
-      <div style="margin-top:5px; font-size: 11px; color: var(--text-white);"><%= t.referral_bonus %> 🎁</div>
-      <a href="/payment/deposit" class="btn btn-primary" style="margin-top:12px;border-radius:25px;padding:8px 24px;background: var(--grad-gold); color: var(--text-inverse);"><%= t.get_now %></a>
+      <h2 style="font-family:'Teko',sans-serif;font-size:32px;color:#6B4A00;line-height:1;">🎰 <%= t.welcome_bonus %></h2>
+      <p style="font-size:13px;color:#5A4520;margin-top:5px;"><%= t.welcome_bonus_desc %></p>
+      <div style="margin-top:5px; font-size: 11px; color: #5A4520;"><%= t.referral_bonus %> 🎁</div>
+      <a href="/payment/deposit" class="btn btn-primary" style="margin-top:12px;border-radius:25px;padding:8px 24px;background: var(--grad-primary); color: #fff;"><%= t.get_now %></a>
     </div>
-    <div style="position:absolute;right:10px;font-size:80px;opacity:0.2;">🏆</div>
+    <div style="position:absolute;right:10px;font-size:80px;opacity:0.15;">🏆</div>
   </div>
 </div>
 
@@ -152,16 +152,16 @@
 
 <!-- ===== Jackpot ===== -->
 <div class="banner-container" style="margin-top:10px;">
-  <div class="card" style="padding:25px 20px; text-align:center; border: 2px solid var(--gold); background: radial-gradient(circle at center, #1a4a1a 0%, #002d0b 100%); position: relative; overflow: hidden; border-radius: 25px;">
-    <div style="position:absolute; top:-20px; left:-20px; width:100px; height:100px; background:var(--gold); filter:blur(60px); opacity:0.3;"></div>
-    <div style="position:absolute; bottom:-20px; right:-20px; width:100px; height:100px; background:var(--gold); filter:blur(60px); opacity:0.3;"></div>
-    <div style="font-size:13px; color:var(--gold); letter-spacing:4px; text-transform:uppercase; font-weight:800; text-shadow: 0 0 10px rgba(245,158,11,0.5);">✨ <%= t.mega_jackpot %> ✨</div>
-    <div style="font-family:'Teko',sans-serif; font-size:56px; color:var(--gold); line-height:1; margin:15px 0; text-shadow: 0 0 30px rgba(245,158,11,0.6); display: flex; align-items: center; justify-content: center; gap: 10px;">
+  <div class="card" style="padding:25px 20px; text-align:center; border: 2px solid #E0B84B; background: radial-gradient(circle at center, #FFF3C4 0%, #FFDD6B 100%); position: relative; overflow: hidden; border-radius: 25px;">
+    <div style="position:absolute; top:-20px; left:-20px; width:100px; height:100px; background:#fff; filter:blur(60px); opacity:0.4;"></div>
+    <div style="position:absolute; bottom:-20px; right:-20px; width:100px; height:100px; background:#fff; filter:blur(60px); opacity:0.4;"></div>
+    <div style="font-size:13px; color:#6B4A00; letter-spacing:4px; text-transform:uppercase; font-weight:800;">✨ <%= t.mega_jackpot %> ✨</div>
+    <div style="font-family:'Teko',sans-serif; font-size:56px; color:#5A3E00; line-height:1; margin:15px 0; text-shadow: 0 2px 6px rgba(0,0,0,0.12); display: flex; align-items: center; justify-content: center; gap: 10px;">
       <span style="font-size: 32px; margin-top: 10px;">৳</span>
       <span id="jp-num">88,617,517</span>
     </div>
-    <div style="font-size:12px; color:var(--text-muted); font-weight: 500;"><%= t.lucky_draw_msg %> 🎁</div>
-    <button class="btn btn-glow" style="margin-top:20px; border-radius:30px; padding:12px 40px; background: var(--grad-gold); color: var(--text-inverse); font-weight: 800; border: none;" onclick="location.href='/games/slots'"><%= t.play_jackpot %> 🎰</button>
+    <div style="font-size:12px; color:#6B5227; font-weight: 500;"><%= t.lucky_draw_msg %> 🎁</div>
+    <button class="btn btn-glow" style="margin-top:20px; border-radius:30px; padding:12px 40px; background: var(--grad-primary); color: #fff; font-weight: 800; border: none;" onclick="location.href='/games/slots'"><%= t.play_jackpot %> 🎰</button>
   </div>
 </div>
 
