@@ -2,7 +2,8 @@
 <%- include('partials/navbar') %>
 
 <style>
-@keyframes livedot {
+<div style="background: linear-gradient(135deg, #f2f0eb, #dedcd3); border-radius: 24px; padding: 25px 20px; margin-bottom: 20px; position: relative; overflow: hidden; border: 1px solid rgba(245, 158, 11, 0.3); box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
+
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.3; transform: scale(1.4); }
 }
@@ -24,17 +25,19 @@
 </div>
 
 <!-- ===== Welcome Banner ===== -->
-<div class="banner-container">
+<div class="card btn-glow" style="height:160px;background:linear-gradient(135deg, #8a6a00, #5c4600);position:relative;display:flex;align-items:center;padding:20px;border: 1px solid var(--gold);">
+
   <div class="card btn-glow" style="height:160px;background:linear-gradient(135deg, #006519, #004d13);position:relative;display:flex;align-items:center;padding:20px;border: 1px solid var(--gold);">
     <div style="z-index:1;">
       <h2 style="font-family:'Teko',sans-serif;font-size:32px;color:var(--gold);line-height:1;">🎰 <%= t.welcome_bonus %></h2>
       <p style="font-size:13px;color:rgba(255,255,255,0.9);margin-top:5px;"><%= t.welcome_bonus_desc %></p>
       <div style="margin-top:5px; font-size: 11px; color: var(--text-white);"><%= t.referral_bonus %> 🎁</div>
       <a href="/payment/deposit" class="btn btn-primary" style="margin-top:12px;border-radius:25px;padding:8px 24px;background: var(--grad-gold); color: var(--text-inverse);"><%= t.get_now %></a>
-    </div>
-    <div style="position:absolute;right:10px;font-size:80px;opacity:0.2;">🏆</div>
-  </div>
-</div>
+        <div style="margin-top: 25px; background: rgba(0,0,0,0.04); border-radius: 16px; padding: 15px; border: 1px solid rgba(0,0,0,0.08); backdrop-filter: blur(5px);">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <div style="color: rgba(0,0,0,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 1px;"><%= t.total_balance %></div>
+
 
 <!-- ===== Sports Quick Links ===== -->
 <div style="padding: 12px;">
@@ -51,7 +54,8 @@
 
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
       <a href="/matches" style="text-decoration:none;text-align:center;">
-        <div style="background:linear-gradient(135deg,#ef4444,#dc2626);border-radius:12px;padding:14px 6px;position:relative;">
+                <a href="/profile/cards" style="background: rgba(0,0,0,0.05); color: #1a1a1a; padding: 10px; border-radius: 12px; text-align: center; text-decoration: none; font-size: 13px; font-weight: 800; border: 1px solid rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 4px; align-items: center;">
+
           <div style="font-size:22px;">⏱️</div>
           <div style="position:absolute;top:4px;right:4px;width:6px;height:6px;border-radius:50%;background:var(--text-white);box-shadow:0 0 8px var(--text-white);animation:livedot 1.5s infinite;"></div>
         </div>
@@ -152,7 +156,8 @@
 
 <!-- ===== Jackpot ===== -->
 <div class="banner-container" style="margin-top:10px;">
-  <div class="card" style="padding:25px 20px; text-align:center; border: 2px solid var(--gold); background: radial-gradient(circle at center, #1a4a1a 0%, #002d0b 100%); position: relative; overflow: hidden; border-radius: 25px;">
+  <div class="card" style="padding:25px 20px; text-align:center; border: 2px solid var(--gold); background: radial-gradient(circle at center, #5c4600 0%, #2b1f00 100%); position: relative; overflow: hidden; border-radius: 25px;">
+
     <div style="position:absolute; top:-20px; left:-20px; width:100px; height:100px; background:var(--gold); filter:blur(60px); opacity:0.3;"></div>
     <div style="position:absolute; bottom:-20px; right:-20px; width:100px; height:100px; background:var(--gold); filter:blur(60px); opacity:0.3;"></div>
     <div style="font-size:13px; color:var(--gold); letter-spacing:4px; text-transform:uppercase; font-weight:800; text-shadow: 0 0 10px rgba(245,158,11,0.5);">✨ <%= t.mega_jackpot %> ✨</div>
