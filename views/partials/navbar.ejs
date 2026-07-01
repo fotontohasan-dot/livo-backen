@@ -95,6 +95,7 @@ window.addEventListener('error', function(ev){
   bar.textContent = 'ERROR: ' + ev.message + ' @ line ' + ev.lineno + ' (' + (ev.filename||'').split('/').pop() + ')';
 });
 
+var lvScrollY = 0;
 function toggleMenu() {
   var menu = document.getElementById('sideMenu');
   var overlay = document.getElementById('menuOverlay');
@@ -102,7 +103,16 @@ function toggleMenu() {
   var willOpen = !menu.classList.contains('open');
   menu.classList.toggle('open', willOpen);
   if (overlay) overlay.classList.toggle('show', willOpen);
-  document.body.classList.toggle('menu-open', willOpen);
+
+  if (willOpen) {
+    lvScrollY = window.scrollY || window.pageYOffset || 0;
+    document.body.style.top = (-lvScrollY) + 'px';
+    document.body.classList.add('menu-open');
+  } else {
+    document.body.classList.remove('menu-open');
+    document.body.style.top = '';
+    window.scrollTo(0, lvScrollY);
+  }
 }
 window.toggleMenu = toggleMenu;
 var lvHam = document.getElementById('lvHamburger'); if (lvHam) lvHam.addEventListener('click', toggleMenu);
