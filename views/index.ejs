@@ -51,9 +51,10 @@
 
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
       <a href="/matches" style="text-decoration:none;text-align:center;">
-        <div style="background:linear-gradient(135deg,#ef4444,#dc2626);border-radius:12px;padding:14px 6px;position:relative;">
-          <div style="font-size:22px;">⏱️</div>
-          <div style="position:absolute;top:4px;right:4px;width:6px;height:6px;border-radius:50%;background:var(--text-white);box-shadow:0 0 8px var(--text-white);animation:livedot 1.5s infinite;"></div>
+        <nav class="navbar" style="background: linear-gradient(135deg, #0a0a0a, #000000); border-bottom: 1px solid rgba(245,158,11,0.25); box-shadow: 0 4px 15px rgba(0,0,0,0.5); position:relative; z-index:1000;">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <button onclick="toggleMenu()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(245,158,11,0.2);border-radius:10px;color:var(--gold);font-size:20px;cursor:pointer;padding:6px 12px;"><i class="fas fa-bars"></i></button>
+
         </div>
         <div style="font-size:11px;color:var(--text-main);margin-top:6px;font-weight:600;"><%= t.in_play %></div>
       </a>
