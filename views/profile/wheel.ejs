@@ -8,7 +8,10 @@
     <h1 style="color:#fff;font-size:18px;font-weight:bold;">🎡 লাকি হুইল</h1>
   </div>
 
-  <div style="color:#94a3b8;font-size:13px;margin-bottom:20px;">দিনে একবার ঘুরিয়ে কয়েন জিতুন!</div>
+  <div style="color:#94a3b8;font-size:13px;margin-bottom:6px;">দিনে একবার ঘুরিয়ে কয়েন জিতুন!</div>
+  <div style="color:#f59e0b;font-size:13px;font-weight:bold;margin-bottom:20px;">
+    আজকের রিমেইনিং স্পিন: <%= remainingToday || 0 %> / ১
+  </div>
 
   <!-- হুইল -->
   <div style="position:relative;width:280px;height:280px;margin:0 auto 20px;">
@@ -29,6 +32,21 @@
   <% } %>
 
   <div id="result" style="margin-top:20px;font-size:18px;font-weight:bold;color:#10b981;"></div>
+
+  <!-- স্পিন হিস্ট্রি / প্রাইজ লগ -->
+  <div style="margin-top:30px;text-align:left;">
+    <div style="color:#fff;font-size:15px;font-weight:bold;margin-bottom:10px;">🧾 স্পিন হিস্ট্রি</div>
+    <% if (history && history.length) { %>
+      <% history.forEach(function(h) { %>
+        <div style="display:flex;justify-content:space-between;background:rgba(255,255,255,0.05);border-radius:10px;padding:10px 14px;margin-bottom:8px;">
+          <span style="color:#94a3b8;font-size:13px;"><%= h.spin_date %></span>
+          <span style="color:#f59e0b;font-size:13px;font-weight:bold;">+<%= h.prize %> কয়েন</span>
+        </div>
+      <% }); %>
+    <% } else { %>
+      <div style="color:#64748b;font-size:13px;text-align:center;padding:16px;">এখনো কোনো স্পিন করা হয়নি।</div>
+    <% } %>
+  </div>
 
 </div>
 
