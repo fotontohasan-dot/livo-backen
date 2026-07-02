@@ -47,6 +47,10 @@ async function runMigrations() {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_sender ON chat_messages(sender_id);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_receiver ON chat_messages(receiver_id);`);
+    await pool.query(`
+      ALTER TABLE chat_messages
+      ADD COLUMN IF NOT EXISTS is_bot BOOLEAN DEFAULT false;
+    `);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS news (
