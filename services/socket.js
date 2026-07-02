@@ -84,7 +84,7 @@ const initSocket = (server) => {
             await pool.query(
               `INSERT INTO chat_messages (sender_id, receiver_id, message, is_admin, is_bot, created_at)
                VALUES ($1, $2, $3, $4, $5, $6)`,
-              [null, senderId, botText, true, true, botCreatedAt]
+              [senderId, senderId, botText, true, true, botCreatedAt]
             );
 
             io.to(`user:${senderId}`).emit("new_message", {
