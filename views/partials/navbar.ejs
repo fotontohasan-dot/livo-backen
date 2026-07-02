@@ -51,6 +51,7 @@
 <div class="menu-overlay" id="menuOverlay"></div>
 
 
+<% if (locals.currentPage === 'home') { %>
 <nav class="navbar" style="background: var(--grad-primary); position:relative; z-index:1000;">
   <div style="display:flex;align-items:center;gap:12px;">
     <button onclick="toggleMenu()" style="background:none;border:none;color:#fff;font-size:24px;cursor:pointer;padding:0 12px;"><i class="fas fa-bars"></i></button>
@@ -87,6 +88,7 @@
     <% } %>
   </div>
 </nav>
+<% } %>
 
 <script>
 window.addEventListener('error', function(ev){
