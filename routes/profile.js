@@ -351,7 +351,7 @@ router.get('/cashback', isAuth, async (req, res) => {
 
 router.post('/cashback/claim', isAuth, async (req, res) => {
   try {
-    const result = await claimCashback(req.session.user.id);
+    const result = await claimCashback(req.session.user.id, req.body.category);
     req.flash(result.success ? 'success' : 'error', result.message);
   } catch (err) {
     console.error('cashback claim error:', err.message);
