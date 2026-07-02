@@ -146,7 +146,13 @@ function lpTimer(h,m,s){ function tk(){ var n=new Date(); var e=new Date(n); e.s
     function schedule(){ if(!promo) return; if(hideT) clearTimeout(hideT); hideT=setTimeout(function(){ promo.classList.add('hide'); if(panel) panel.classList.remove('open'); if(showT) clearTimeout(showT); showT=setTimeout(function(){ promo.classList.remove('hide'); schedule(); },90000); },90000); }
     lpTimer('drRedH','drRedM','drRedS'); lpTimer('drEggH','drEggM','drEggS');
     fetch('/profile/daily-rewards/status').then(function(r){return r.json();}).then(function(d){ if(d&&d.ok&&d.status) lpStatus=d.status; }).catch(function(){});
-    setTimeout(lpShowPopup,1200);
+    var LP_SESSION_KEY = 'lpPopupShownThisSession';
+var alreadyShown = false;
+try { alreadyShown = sessionStorage.getItem(LP_SESSION_KEY) === '1'; } catch(e) { alreadyShown = false; }
+if (!alreadyShown) {
+  setTimeout(function(){ lpShowPopup(); try { sessionStorage.setItem(LP_SESSION_KEY, '1'); } catch(e){} }, 1200);
+}
+
     schedule();
   } catch(e){ console.log('promo err',e); }
 })();
