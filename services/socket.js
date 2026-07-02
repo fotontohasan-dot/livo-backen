@@ -1,5 +1,6 @@
 const { Server } = require("socket.io");
 const { pool } = require('../db');
+const { getBotReply } = require('./chatbot');
 
 let io;
 
@@ -74,6 +75,29 @@ const initSocket = (server) => {
         } else {
           // ইউজার → সব অ্যাডমিনের কাছে
           io.to("admins").emit("new_message", payload);
+
+          // ===== বট মোড হলে অটো-রিপ্লাই =====
+          if (data && data.botMode && message) {
+            const botText = await getBotReply(message);
+            const botCreatedAt = new Date();
+
+            await pool.query(
+              `INSERT INTO chat_messages (sender_id, receiver_id, message, is_admin, is_bot, created_at)
+               VALUES ($1, $2, $3, $4, $5, $6)`,
+              [null, senderId, botText, true, true, botCreatedAt]
+            );
+
+            io.to(`user:${senderId}`).emit("new_message", {
+              senderId: null,
+              receiverId: senderId,
+              message: botText,
+              isAdmin: true,
+              isBot: true,
+              fileUrl: null,
+              fileType: null,
+              createdAt: botCreatedAt
+            });
+          }
         }
       } catch (err) {
         console.error("send_message error:", err.message);
