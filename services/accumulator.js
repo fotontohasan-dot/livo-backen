@@ -117,7 +117,7 @@ async function placeAccumulator(userId, stake, selections) {
     // রিওয়ার্ড সার্ভিসগুলো (স্পোর্টস টার্নওভার)
     addTurnover(userId, 'sports', stake).catch(e => console.error('turnover:', e.message));
     distributeCommission(userId, stake).catch(e => console.error('commission:', e.message));
-    addBet(userId, stake).catch(e => console.error('cashback:', e.message));
+    addBet(userId, stake, 'sports').catch(e => console.error('cashback:', e.message));
     addVipTurnover(userId, stake).catch(e => console.error('vip:', e.message));
     updateMissionProgress(userId, stake).catch(e => console.error('mission:', e.message));
     addPoints(userId, stake).catch(e => console.error('loyalty:', e.message));
