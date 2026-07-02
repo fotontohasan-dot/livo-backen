@@ -1,3 +1,4 @@
+<% if (locals.currentPage === 'home') { %>
 <div class="bottom-nav">
   <a href="/" onclick="location.href='/'; return false;" class="nav-link <%= locals.currentPage === 'home' ? 'active' : '' %>">
     <i class="fas fa-home"></i>
@@ -24,3 +25,5 @@
     <span><%= t.member %></span>
   </a>
 </div>
+<% } %>
+
