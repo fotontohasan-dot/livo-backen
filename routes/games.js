@@ -5,6 +5,10 @@ const { isAuth } = require('../middleware/auth');
 const { addTurnover } = require('../services/turnover');
 const { distributeCommission } = require('../services/referral');
 const { addBet, addWin } = require('../services/cashback');
+const LIVE_DEALER_GAMES = ['live-blackjack', 'live-roulette', 'lightning-roulette', 'dream-catcher', 'super-sic-bo', 'bac-bo', 'andar-bahar'];
+function cashbackCategory(gameSlug) {
+  return LIVE_DEALER_GAMES.includes(gameSlug) ? 'live' : 'casino';
+}
 const { addVipTurnover } = require('../services/vip');
 const { updateMissionProgress } = require('../services/missions');
 const { addPoints } = require('../services/loyalty');
@@ -230,7 +234,7 @@ router.post('/play', isAuth, async (req, res) => {
 
       addTurnover(userId, 'casino', betAmount).catch(e => console.error('turnover:', e.message));
       distributeCommission(userId, betAmount).catch(e => console.error('commission:', e.message));
-      addBet(userId, betAmount).catch(e => console.error('cashback:', e.message));
+      addBet(userId, betAmount, cashbackCategory(gameSlug)).catch(e => console.error('cashback:', e.message));
       addVipTurnover(userId, betAmount).catch(e => console.error('vip:', e.message));
       updateMissionProgress(userId, betAmount).catch(e => console.error('mission:', e.message));
       addPoints(userId, betAmount).catch(e => console.error('loyalty:', e.message));
@@ -256,13 +260,13 @@ router.post('/play', isAuth, async (req, res) => {
 
     addTurnover(userId, 'casino', betAmount).catch(e => console.error('turnover:', e.message));
     distributeCommission(userId, betAmount).catch(e => console.error('commission:', e.message));
-    addBet(userId, betAmount).catch(e => console.error('cashback:', e.message));
+    addBet(userId, betAmount, cashbackCategory(gameSlug)).catch(e => console.error('cashback:', e.message));
     addVipTurnover(userId, betAmount).catch(e => console.error('vip:', e.message));
     updateMissionProgress(userId, betAmount).catch(e => console.error('mission:', e.message));
     addPoints(userId, betAmount).catch(e => console.error('loyalty:', e.message));
     recordGameResult(userId, winAmount > 0).catch(e => console.error('streak:', e.message));
     checkBadges(userId).catch(e => console.error('badges:', e.message));
-    if (winAmount > 0) addWin(userId, winAmount).catch(e => console.error('cashback:', e.message));
+    if (winAmount > 0) addWin(userId, winAmount, cashbackCategory(gameSlug)).catch(e => console.error('cashback:', e.message));
 
     res.json({ success: true, newBalance: req.session.user.coins, winAmount, gameResult });
 
@@ -321,7 +325,7 @@ router.post('/cashout', isAuth, async (req, res) => {
 
     recordGameResult(userId, true).catch(e => console.error('streak:', e.message));
     checkBadges(userId).catch(e => console.error('badges:', e.message));
-    if (winAmount > 0) addWin(userId, winAmount).catch(e => console.error('cashback:', e.message));
+    if (winAmount > 0) addWin(userId, winAmount, cashbackCategory(gameSlug)).catch(e => console.error('cashback:', e.message));
 
     res.json({
       success: true,
