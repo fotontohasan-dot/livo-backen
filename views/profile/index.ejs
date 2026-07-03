@@ -1,220 +1,440 @@
 <%- include('../partials/head') %>
+<style>
+  :root {
+    --gold-bright: #fbbf24;
+    --gold-dark: #d97706;
+    --bg-profile: #ffffff; /* White background as requested */
+    --card-profile: #f8fafc;
+    --text-dark: #1e293b;
+    --text-muted: #64748b;
+    --border-light: #e2e8f0;
+  }
 
-<div class="container" style="padding: 15px; padding-bottom: 100px;">
-  <!-- Premium Profile Header -->
-  <div style="background: linear-gradient(135deg, #002d0b, #004d13); border-radius: 24px; padding: 25px 20px; margin-bottom: 20px; position: relative; overflow: hidden; border: 1px solid rgba(245, 158, 11, 0.3); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-    <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: radial-gradient(circle, rgba(245,158,11,0.1) 0%, transparent 70%); border-radius: 50%;"></div>
+  body {
+    background: var(--bg-profile) !important;
+    color: var(--text-dark) !important;
+  }
 
-    <div style="display: flex; align-items: center; gap: 20px; position: relative; z-index: 1;">
-      <div style="position: relative;">
-        <div style="width: 80px; height: 80px; border-radius: 50%; background: var(--grad-gold); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800; color: #000; box-shadow: 0 0 20px rgba(245, 158, 11, 0.5); border: 3px solid rgba(255,255,255,0.1);">
-          <%= user.username.charAt(0).toUpperCase() %>
-        </div>
-        <div style="position: absolute; bottom: -5px; right: -5px; background: #000; border: 2px solid var(--gold); border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 14px;">
-          👑
-        </div>
+  .container {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  .profile-header {
+    background: linear-gradient(135deg, #fffbeb, #fef3c7); /* Light yellow/gold gradient */
+    padding: 30px 20px;
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid var(--gold-bright);
+  }
+
+  .avatar-container {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 3px solid #fff;
+    overflow: hidden;
+    background: #fff;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  }
+
+  .avatar-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .vip-badge {
+    background: #000;
+    color: var(--gold-bright);
+    font-size: 10px;
+    font-weight: 900;
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .copy-btn {
+    background: rgba(0, 0, 0, 0.05);
+    border: none;
+    color: var(--text-muted);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  .refresh-icon {
+    transition: transform 0.5s ease;
+  }
+  .refresh-icon.spinning {
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .progress-container {
+    margin-top: 15px;
+    background: #fff;
+    height: 10px;
+    border-radius: 5px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(0,0,0,0.05);
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #fbbf24, #d97706);
+  }
+
+  .folder-section {
+    background: var(--card-profile);
+    margin: 15px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border-light);
+  }
+
+  .folder-header {
+    background: #f1f5f9;
+    padding: 10px 15px;
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--text-dark);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .menu-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    padding: 15px;
+  }
+
+  .menu-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    color: var(--text-dark);
+    font-size: 11px;
+    text-align: center;
+    border: none !important;
+  }
+
+  .menu-icon {
+    width: 45px;
+    height: 45px;
+    background: #fff;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gold-dark);
+    font-size: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    border: 1px solid var(--border-light);
+  }
+
+  /* Modal Styles */
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-content {
+    background: #fff;
+    padding: 20px;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  }
+  .avatar-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin-top: 15px;
+  }
+  .avatar-option {
+    aspect-ratio: 1/1;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid transparent;
+    cursor: pointer;
+  }
+  .avatar-option.selected {
+    border-color: var(--gold-bright);
+  }
+  .avatar-option img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+</style>
+
+<div class="container pb-24">
+  <!-- Header -->
+  <div class="profile-header">
+    <div style="display: flex; align-items: center; gap: 20px;">
+      <div class="avatar-container" onclick="openAvatarModal()">
+        <img src="<%= user.avatar_url || 'https://i.ibb.co/mR70f6V/default-avatar.png' %>" alt="Avatar" id="currentAvatar">
       </div>
-
       <div style="flex: 1;">
-        <a href="/profile/vip" style="display: flex; align-items: center; gap: 10px; text-decoration: none;">
-          <span style="color: #fff; font-size: 20px; font-weight: 800; letter-spacing: 0.5px;"><%= user.username %></span>
-          <span style="background: var(--gold); color: #000; font-size: 10px; padding: 2px 10px; border-radius: 20px; font-weight: 900; text-transform: uppercase;">VIP<%= user.vip_level || 0 %></span>
-        </a>
-        <div style="color: rgba(255,255,255,0.6); font-size: 12px; margin-top: 4px;">ID: <%= 100000 + user.id %></div>
-        <div style="display: flex; align-items: center; gap: 6px; margin-top: 8px;">
-           <div style="flex: 1; height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden;">
-              <div style="width: <%= (user.total_points % 1000) / 10 %>%; height: 100%; background: var(--grad-gold); border-radius: 10px;"></div>
-           </div>
-           <span style="font-family: 'Teko', sans-serif; font-size: 12px; color: var(--gold);"><%= user.total_points % 1000 %>/1000</span>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <h2 style="color: var(--text-dark); font-size: 18px; font-weight: 800;"><%= user.username %></h2>
+          <button class="copy-btn" onclick="copyUsername('<%= user.username %>')">
+            <i class="far fa-copy"></i>
+          </button>
+        </div>
+        <div style="margin-top: 5px; display: flex; align-items: center; gap: 10px;">
+          <div class="vip-badge">
+             <i class="fas fa-crown"></i> VIP <%= user.vip_level %>
+          </div>
+          <span style="color: var(--text-muted); font-size: 12px;">ID: <%= 100000 + user.id %></span>
         </div>
       </div>
     </div>
 
-    <!-- Wallet Card -->
-    <div style="margin-top: 25px; background: rgba(0,0,0,0.3); border-radius: 16px; padding: 15px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(5px);">
+    <!-- Balance Section -->
+    <div style="margin-top: 25px; background: #fff; border-radius: 16px; padding: 20px; border: 1px solid var(--gold-bright); box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <div>
-          <div style="color: rgba(255,255,255,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 1px;"><%= t.total_balance %></div>
-          <div style="color: var(--gold); font-size: 30px; font-weight: 800; font-family: 'Teko', sans-serif; line-height: 1.2;">৳ <%= user.coins.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></div>
+          <p style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">ব্যালেন্স</p>
+          <div style="display: flex; align-items: center; gap: 10px; margin-top: 5px;">
+             <h3 style="color: var(--text-dark); font-size: 32px; font-weight: 800; margin: 0;" id="userBalance">৳ <%= user.coins.toLocaleString() %></h3>
+             <i class="fas fa-sync-alt refresh-icon" style="color: var(--gold-dark); cursor: pointer;" onclick="refreshBalance()"></i>
+          </div>
         </div>
-        <a href="/profile/transactions" style="background: rgba(245, 158, 11, 0.1); color: var(--gold); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none;">
-          <i class="fas fa-history"></i>
-        </a>
+        <div style="display: flex; gap: 10px;">
+          <a href="/payment/deposit" style="background: var(--gold-bright); color: #000; padding: 10px 20px; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">ডিপোজিট</a>
+        </div>
       </div>
 
-      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 15px;">
-        <a href="/payment/deposit" style="background: var(--grad-gold); color: #000; padding: 10px; border-radius: 12px; text-align: center; text-decoration: none; font-size: 13px; font-weight: 800; display: flex; flex-direction: column; gap: 4px; align-items: center;">
-          <i class="fas fa-plus-circle"></i>
-          <%= t.deposit %>
-        </a>
-        <a href="/payment/withdraw" style="background: rgba(255,255,255,0.08); color: var(--gold); padding: 10px; border-radius: 12px; text-align: center; text-decoration: none; font-size: 13px; font-weight: 800; border: 1px solid rgba(245, 158, 11, 0.3); display: flex; flex-direction: column; gap: 4px; align-items: center;">
-          <i class="fas fa-hand-holding-usd"></i>
-          <%= t.withdraw %>
-        </a>
-        <a href="/profile/cards" style="background: rgba(255,255,255,0.08); color: #fff; padding: 10px; border-radius: 12px; text-align: center; text-decoration: none; font-size: 13px; font-weight: 800; border: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; gap: 4px; align-items: center;">
-          <i class="fas fa-credit-card"></i>
-          <%= t.my_cards %>
-        </a>
+      <!-- VIP Progress -->
+      <div style="margin-top: 20px;">
+        <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: bold; text-transform: uppercase;">
+          <span style="color: var(--text-dark);">VIP <%= user.vip_level %> প্রগ্রেস</span>
+          <span style="color: var(--gold-dark);" id="progressText"><%= vip.progress %>/1000</span>
+        </div>
+        <div class="progress-container">
+          <div class="progress-bar" style="width: <%= vip.progress / 10 %>%;"></div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- 🎁 বোনাস ও রিওয়ার্ড সেকশন -->
-  <div style="background: var(--bg-card); border-radius: 20px; padding: 20px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
-    <div style="color: var(--gold); font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;">🎁 <%= t.bonus_rewards %></div>
-
-    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px 10px;">
-
-      <a href="/profile/rewards" style="text-decoration:none; text-align:center">
-        <div style="width:58px;height:58px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:24px">🎁</div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600"><%= t.daily_reward %></div>
+  <!-- Folder A: Account Management -->
+  <div class="folder-section">
+    <div class="folder-header">Folder A: একাউন্ট সেটিংস</div>
+    <div class="menu-grid">
+      <a href="/profile/security" class="menu-item">
+        <div class="menu-icon"><i class="fas fa-user-circle"></i></div>
+        <span>মাই একাউন্ট</span>
       </a>
-
-      <a href="/profile/cashback" style="text-decoration:none; text-align:center">
-        <div style="width:58px;height:58px;border-radius:50%;background:rgba(139,92,246,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:24px">💸</div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600"><%= t.cashback %></div>
+      <a href="/profile/security" class="menu-item">
+        <div class="menu-icon"><i class="fas fa-shield-alt"></i></div>
+        <span>সিকিউরিটি</span>
       </a>
-
-      <a href="/profile/periodic" style="text-decoration:none; text-align:center">
-        <div style="width:58px;height:58px;border-radius:50%;background:rgba(14,165,233,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:24px">📅</div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600"><%= t.weekly_monthly %></div>
+      <a href="/profile/referral" class="menu-item">
+        <div class="menu-icon"><i class="fas fa-user-plus"></i></div>
+        <span>ইনভাইট ফ্রেন্ড</span>
       </a>
-
-      <a href="/profile/wheel" style="text-decoration:none; text-align:center">
-        <div style="width:58px;height:58px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:24px">🎡</div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600"><%= t.lucky_wheel %></div>
+      <a href="/profile/cards" class="menu-item">
+        <div class="menu-icon"><i class="fas fa-credit-card"></i></div>
+        <span>ব্যাংক কার্ড</span>
       </a>
-
-      <a href="/profile/missions" style="text-decoration:none; text-align:center">
-        <div style="width:58px;height:58px;border-radius:50%;background:rgba(99,102,241,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:24px">🎯</div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600"><%= t.missions %></div>
-      </a>
-
-      <a href="/profile/loyalty" style="text-decoration:none; text-align:center">
-        <div style="width:58px;height:58px;border-radius:50%;background:rgba(124,58,237,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:24px">⭐</div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600"><%= t.points %></div>
-      </a>
-
-      <a href="/profile/streak" style="text-decoration:none; text-align:center">
-        <div style="width:58px;height:58px;border-radius:50%;background:rgba(249,115,22,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:24px">🔥</div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600"><%= t.win_streak %></div>
-      </a>
-
-      <a href="/profile/badges" style="text-decoration:none; text-align:center">
-        <div style="width:58px;height:58px;border-radius:50%;background:rgba(14,165,233,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:24px">🏆</div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600"><%= t.badges %></div>
-      </a>
-
-      <a href="/profile/freebet" style="text-decoration:none; text-align:center">
-        <div style="width:58px;height:58px;border-radius:50%;background:rgba(16,185,129,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:24px">🎟️</div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600"><%= t.free_bet %></div>
-      </a>
-
-      <a href="/profile/share" style="text-decoration:none; text-align:center">
-        <div style="width:58px;height:58px;border-radius:50%;background:rgba(236,72,153,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:24px">📤</div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600"><%= t.share_bonus %></div>
-      </a>
-
-      <a href="/profile/contest" style="text-decoration:none; text-align:center">
-        <div style="width:58px;height:58px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:24px">🥇</div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600"><%= t.contest %></div>
-      </a>
-
     </div>
   </div>
 
-  <!-- Icon Grid Menu -->
-  <div style="background: var(--bg-card); border-radius: 20px; padding: 20px; border: 1px solid var(--border-glass);">
-    <div style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;"><%= t.member_center %></div>
-
-    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px 10px;">
-
-      <a href="/profile/referral" style="text-decoration:none; text-align:center">
-        <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
-          <i class="fas fa-user-plus"></i>
-        </div>
-        <div style="color:var(--text-main);font-size:12px;font-weight:600"><%= t.invite_friends %></div>
+  <!-- Folder B: Transaction History -->
+  <div class="folder-section">
+    <div class="folder-header">Folder B: ট্রানজেকশন রেকর্ড</div>
+    <div class="menu-grid">
+      <a href="/payment/history?type=deposit" class="menu-item">
+        <div class="menu-icon"><i class="fas fa-file-import"></i></div>
+        <span>ডিপোজিট রেকর্ড</span>
       </a>
-
-      <a href="/profile/history" style="text-decoration:none; text-align:center">
-        <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
-          <i class="fas fa-clipboard-list"></i>
-        </div>
-        <div style="color:var(--text-main);font-size:12px;font-weight:600"><%= t.bet_record %></div>
+      <a href="/payment/history?type=withdraw" class="menu-item">
+        <div class="menu-icon"><i class="fas fa-file-export"></i></div>
+        <span>উইথড্র রেকর্ড</span>
       </a>
-
-      <a href="/profile/stats" style="text-decoration:none; text-align:center">
-        <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
-          <i class="fas fa-chart-line"></i>
-        </div>
-        <div style="color:var(--text-main);font-size:12px;font-weight:600"><%= t.profit_loss %></div>
+      <a href="/profile/transactions" class="menu-item">
+        <div class="menu-icon"><i class="fas fa-history"></i></div>
+        <span>একাউন্ট রেকর্ড</span>
       </a>
-
-      <a href="/profile/transactions" style="text-decoration:none; text-align:center">
-        <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
-          <i class="fas fa-file-invoice-dollar"></i>
-        </div>
-        <div style="color:var(--text-main);font-size:12px;font-weight:600"><%= t.transaction_record %></div>
-      </a>
-
-      <a href="/profile/security" style="text-decoration:none; text-align:center">
-        <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
-          <i class="fas fa-shield-alt"></i>
-        </div>
-        <div style="color:var(--text-main);font-size:12px;font-weight:600"><%= t.security_center %></div>
-      </a>
-
-      <a href="/profile/responsible" style="text-decoration:none; text-align:center">
-        <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
-          <i class="fas fa-hand-paper"></i>
-        </div>
-        <div style="color:var(--text-main);font-size:12px;font-weight:600"><%= t.responsible_gaming %></div>
-      </a>
-
-      <a href="/notifications" style="text-decoration:none; text-align:center">
-        <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
-          <i class="fas fa-envelope"></i>
-        </div>
-        <div style="color:var(--text-main);font-size:12px;font-weight:600"><%= t.mail %></div>
-      </a>
-
-      <a href="/profile/feedback" style="text-decoration:none; text-align:center">
-        <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
-          <i class="fas fa-comment-alt"></i>
-        </div>
-        <div style="color:var(--text-main);font-size:12px;font-weight:600"><%= t.feedback %></div>
-      </a>
-
-      <a href="/profile/app-download" style="text-decoration:none; text-align:center">
-        <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
-          <i class="fas fa-mobile-alt"></i>
-        </div>
-        <div style="color:var(--text-main);font-size:12px;font-weight:600"><%= t.app_download %></div>
-      </a>
-
-      <a href="/chat" style="text-decoration:none; text-align:center">
-        <div style="width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:24px">
-          <i class="fas fa-headset"></i>
-        </div>
-        <div style="color:var(--text-main);font-size:12px;font-weight:600"><%= t.support %></div>
-      </a>
-
-      <a href="/logout" style="text-decoration:none; text-align:center">
-        <div style="width:60px;height:60px;border-radius:50%;background:rgba(239,68,68,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:#ef4444;font-size:24px">
-          <i class="fas fa-sign-out-alt"></i>
-        </div>
-        <div style="color:#ef4444;font-size:12px;font-weight:600"><%= t.logout %></div>
-      </a>
-
     </div>
   </div>
 
-  <div style="text-align: center; margin-top: 30px; padding-bottom: 20px;">
-    <div style="color: var(--text-muted); font-size: 12px;"><%= t.version %> 2.1.0</div>
-    <div style="color: var(--text-muted); font-size: 11px; margin-top: 5px;">© 2024 <%= siteName %> Gaming</div>
+  <!-- Folder C: Gaming Activity -->
+  <div class="folder-section">
+    <div class="folder-header">Folder C: বেটিং ও গেম হিস্ট্রি</div>
+    <div class="menu-grid">
+      <a href="/profile/history" class="menu-item">
+        <div class="menu-icon"><i class="fas fa-clipboard-list"></i></div>
+        <span>বেটিং রেকর্ড</span>
+      </a>
+      <a href="/profile/stats" class="menu-item">
+        <div class="menu-icon"><i class="fas fa-chart-line"></i></div>
+        <span>প্রফিট এন্ড লস</span>
+      </a>
+    </div>
   </div>
 
+  <!-- Folder D: Rewards & Missions -->
+  <div class="folder-section">
+    <div class="folder-header">Folder D: রিওয়ার্ড ও মিশন</div>
+    <div class="menu-grid">
+      <a href="/profile/rewards" class="menu-item">
+        <div class="menu-icon"><i class="fas fa-gift"></i></div>
+        <span>বোনাস রিওয়ার্ড</span>
+      </a>
+      <a href="/profile/missions" class="menu-item">
+        <div class="menu-icon"><i class="fas fa-bullseye"></i></div>
+        <span>মিশন পয়েন্ট</span>
+      </a>
+      <a href="/profile/wheel" class="menu-item">
+        <div class="menu-icon"><i class="fas fa-spinner"></i></div>
+        <span>লাকি হুইল</span>
+      </a>
+      <a href="/profile/streak" class="menu-item">
+        <div class="menu-icon"><i class="fas fa-fire"></i></div>
+        <span>উইন স্ট্রিক</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Folder E: General -->
+  <div class="folder-section">
+    <div class="folder-header">Folder E: কাস্টমার সাপোর্ট ও অন্যান্য</div>
+    <div class="menu-grid">
+      <a href="mailto:support@livo.com" class="menu-item">
+        <div class="menu-icon"><i class="fas fa-envelope-open-text"></i></div>
+        <span>ইন্টারন্যাশনাল মেইল</span>
+      </a>
+      <a href="/feedback" class="menu-item">
+        <div class="menu-icon"><i class="fas fa-lightbulb"></i></div>
+        <span>সাজেশন</span>
+      </a>
+      <a href="/profile/app-download" class="menu-item">
+        <div class="menu-icon"><i class="fas fa-download"></i></div>
+        <span>অ্যাপ ডাউনলোড</span>
+      </a>
+      <a href="/chat" class="menu-item">
+        <div class="menu-icon"><i class="fas fa-headset"></i></div>
+        <span>কাস্টমার সেন্টার</span>
+      </a>
+      <a href="/help-center" class="menu-item">
+        <div class="menu-icon"><i class="fas fa-question-circle"></i></div>
+        <span>হেল্প সেন্টার</span>
+      </a>
+      <a href="/logout" class="menu-item">
+        <div class="menu-icon" style="color: #ef4444; background: #fee2e2;"><i class="fas fa-sign-out-alt"></i></div>
+        <span>লগ আউট</span>
+      </a>
+    </div>
+  </div>
+
+  <div style="text-align: center; margin-top: 30px; color: var(--text-muted); font-size: 12px; padding-bottom: 20px;">
+    ভার্সন ৩.১.০ | © ২০২৪ <%= siteName %> Gaming
+  </div>
 </div>
 
-<%- include('../partials/navbar') %>
+<!-- Avatar Modal -->
+<div id="avatarModal" class="modal">
+  <div class="modal-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h3 style="color: var(--text-dark); margin: 0;">অবতার সিলেক্ট করুন</h3>
+      <span style="color: var(--text-muted); cursor: pointer; font-size: 24px;" onclick="closeAvatarModal()">&times;</span>
+    </div>
+    <div class="avatar-grid">
+      <%
+        const avatars = [
+          'https://i.ibb.co/mR70f6V/default-avatar.png',
+          'https://i.ibb.co/L5hYvj9/elon-musk.png',
+          'https://i.ibb.co/3WqPZqS/zuckerberg.png',
+          'https://i.ibb.co/0Xz8z3R/jeff-bezos.png',
+          'https://i.ibb.co/vV1J7fT/bill-gates.png',
+          'https://i.ibb.co/D8mQ0Z8/warren-buffett.png'
+        ];
+        avatars.forEach(url => {
+      %>
+        <div class="avatar-option <%= user.avatar_url === url ? 'selected' : '' %>" onclick="selectAvatar('<%= url %>')">
+          <img src="<%= url %>">
+        </div>
+      <% }) %>
+    </div>
+  </div>
+</div>
+
+<script>
+  function copyUsername(text) {
+    navigator.clipboard.writeText(text).then(() => {
+      alert('কপি হয়েছে!');
+    });
+  }
+
+  async function refreshBalance() {
+    const icon = document.querySelector('.refresh-icon');
+    icon.classList.add('spinning');
+    try {
+      const res = await fetch('/profile/api/balance');
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('userBalance').innerText = '৳ ' + data.coins.toLocaleString();
+      }
+    } catch (e) {}
+    setTimeout(() => icon.classList.remove('spinning'), 1000);
+  }
+
+  function openAvatarModal() {
+    document.getElementById('avatarModal').style.display = 'flex';
+  }
+  function closeAvatarModal() {
+    document.getElementById('avatarModal').style.display = 'none';
+  }
+
+  async function selectAvatar(url) {
+    try {
+      const res = await fetch('/profile/avatar/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Origin': window.location.origin
+        },
+        body: JSON.stringify({ avatar_url: url })
+      });
+      if (res.ok) {
+        document.getElementById('currentAvatar').src = url;
+        closeAvatarModal();
+      }
+    } catch (e) {
+      alert('অবতার আপডেট করতে সমস্যা হয়েছে।');
+    }
+  }
+
+  window.onclick = function(event) {
+    const modal = document.getElementById('avatarModal');
+    if (event.target == modal) {
+      closeAvatarModal();
+    }
+  }
+</script>
+
 <%- include('../partials/bottom-nav') %>
