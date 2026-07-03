@@ -15,42 +15,63 @@
     <div style="color:rgba(255,255,255,0.9);font-size:13px;">প্রতিদিন খলে মিশন শেষ করুন আর কয়েন জতুন</div>
   </div>
 
-  <% if (missions && missions.length > 0) { %>
-    <% missions.forEach(m => { %>
-      <div style="background:rgba(255,255,255,0.05);border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid <%= m.done && !m.claimed ? '#10b981' : 'transparent' %>;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-          <div style="color:#fff;font-size:14px;font-weight:600;"><%= m.title %></div>
-          <div style="color:#f59e0b;font-size:13px;font-weight:bold;">+<%= m.reward %> 🪙</div>
-        </div>
+  <!-- ট্যাব -->
+  <div style="display:flex;gap:8px;margin-bottom:16px;">
+    <button class="mtab" data-tab="daily" style="flex:1;padding:10px;border-radius:10px;border:none;background:#10b981;color:#fff;font-weight:bold;font-size:13px;cursor:pointer;">ডেইলি</button>
+    <button class="mtab" data-tab="weekly" style="flex:1;padding:10px;border-radius:10px;border:none;background:rgba(255,255,255,0.08);color:#fff;font-weight:bold;font-size:13px;cursor:pointer;">উইকলি</button>
+    <button class="mtab" data-tab="special" style="flex:1;padding:10px;border-radius:10px;border:none;background:rgba(255,255,255,0.08);color:#fff;font-weight:bold;font-size:13px;cursor:pointer;">স্পেশাল</button>
+  </div>
 
-        <!-- প্রোগ্রেস বার -->
-        <div style="background:rgba(255,255,255,0.1);border-radius:20px;height:10px;overflow:hidden;margin-bottom:6px;">
-          <div style="width:<%= m.pct %>%;height:100%;background:linear-gradient(90deg,#10b981,#34d399);transition:width .5s;"></div>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <div style="color:#94a3b8;font-size:11px;">
-            <%= Number(m.progress).toLocaleString('bn-BD') %> / <%= Number(m.target).toLocaleString('bn-BD') %>
+  <% ['daily','weekly','special'].forEach(function(tab) { var list = missions && missions[tab] ? missions[tab] : []; %>
+  <div class="mtab-panel" data-panel="<%= tab %>" style="<%= tab === 'daily' ? '' : 'display:none;' %>">
+    <% if (list.length > 0) { %>
+      <% list.forEach(m => { %>
+        <div style="background:rgba(255,255,255,0.05);border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid <%= m.done && !m.claimed ? '#10b981' : 'transparent' %>;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div style="color:#fff;font-size:14px;font-weight:600;"><%= m.title %></div>
+            <div style="color:#f59e0b;font-size:13px;font-weight:bold;">+<%= m.reward %> 🪙</div>
           </div>
 
-          <% if (m.claimed) { %>
-            <span style="color:#10b981;font-size:12px;font-weight:bold;">✅ নেওয়া হয়েছে</span>
-          <% } else if (m.done) { %>
-            <form action="/profile/missions/claim/<%= m.id %>" method="POST" style="margin:0;">
-              <button type="submit" style="background:#10b981;color:#fff;border:none;border-radius:8px;padding:6px 16px;font-size:12px;font-weight:bold;cursor:pointer;">
-                ক্লেইম করন
-              </button>
-            </form>
-          <% } else { %>
-            <span style="color:#94a3b8;font-size:12px;">চলমান...</span>
-          <% } %>
+          <div style="background:rgba(255,255,255,0.1);border-radius:20px;height:10px;overflow:hidden;margin-bottom:6px;">
+            <div style="width:<%= m.pct %>%;height:100%;background:linear-gradient(90deg,#10b981,#34d399);transition:width .5s;"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="color:#94a3b8;font-size:11px;">
+              <%= Number(m.progress).toLocaleString('bn-BD') %> / <%= Number(m.target).toLocaleString('bn-BD') %>
+            </div>
+
+            <% if (m.claimed) { %>
+              <span style="color:#10b981;font-size:12px;font-weight:bold;">✅ নেওয়া হয়েছে</span>
+            <% } else if (m.done) { %>
+              <form action="/profile/missions/claim/<%= m.id %>" method="POST" style="margin:0;">
+                <button type="submit" style="background:#10b981;color:#fff;border:none;border-radius:8px;padding:6px 16px;font-size:12px;font-weight:bold;cursor:pointer;">
+                  ক্লেইম করুন
+                </button>
+              </form>
+            <% } else { %>
+              <span style="color:#94a3b8;font-size:12px;">চলমান...</span>
+            <% } %>
+          </div>
         </div>
+      <% }) %>
+    <% } else { %>
+      <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:30px;text-align:center;color:#94a3b8;">
+        এই মুহূর্তে কোনো মিশন নেই।
       </div>
-    <% }) %>
-  <% } else { %>
-    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:30px;text-align:center;color:#94a3b8;">
-      এখন কোনো মিশন নেই। পরে আবার দখুন।
-    </div>
-  <% } %>
+    <% } %>
+  </div>
+  <% }); %>
+
+  <script>
+    document.querySelectorAll('.mtab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.mtab').forEach(b => { b.style.background = 'rgba(255,255,255,0.08)'; });
+        btn.style.background = '#10b981';
+        document.querySelectorAll('.mtab-panel').forEach(p => { p.style.display = 'none'; });
+        document.querySelector('.mtab-panel[data-panel="' + btn.dataset.tab + '"]').style.display = 'block';
+      });
+    });
+  </script>
 
   <p style="font-size:.75rem;color:#94a3b8;text-align:center;margin-top:1rem;line-height:1.6;">
     ⏰ প্রতিদিন রাত ১২টায় মিশন রিসেট হয়।<br>
