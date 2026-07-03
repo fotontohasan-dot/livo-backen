@@ -69,12 +69,19 @@ async function getStreak(userId) {
   const milestones = Object.keys(MILESTONES).map(Number).sort((a, b) => a - b);
   const next = milestones.find(m => m > current) || null;
 
+  const history = (await pool.query(
+    `SELECT amount, description, created_at FROM coin_transactions
+     WHERE user_id = $1 AND type = 'win_streak' ORDER BY created_at DESC LIMIT 20`,
+    [userId]
+  )).rows;
+
   return {
     current,
     best,
     nextMilestone: next,
     nextBonus: next ? MILESTONES[next] : 0,
-    milestones: milestones.map(m => ({ streak: m, bonus: MILESTONES[m] }))
+    milestones: milestones.map(m => ({ streak: m, bonus: MILESTONES[m] })),
+    history
   };
 }
 
