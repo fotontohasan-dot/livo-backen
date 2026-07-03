@@ -233,17 +233,35 @@ async function runMigrations() {
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
+    await pool.query(`ALTER TABLE mission_defs ADD COLUMN IF NOT EXISTS period VARCHAR(10) NOT NULL DEFAULT 'daily';`);
+    await pool.query(`ALTER TABLE mission_defs ADD COLUMN IF NOT EXISTS start_date DATE;`);
+    await pool.query(`ALTER TABLE mission_defs ADD COLUMN IF NOT EXISTS end_date DATE;`);
     // মিশন তালিকা (ব্যালেন্সড ৪টি) — সঠিক সেট না থকলে রিসিড
-    const missionVer = await pool.query(`SELECT COALESCE(SUM(reward),0) AS s, COUNT(*) AS c FROM mission_defs`);
+    const missionVer = await pool.query(`SELECT COALESCE(SUM(reward),0) AS s, COUNT(*) AS c FROM mission_defs WHERE period = 'daily'`);
     const missionOk = parseInt(missionVer.rows[0].c) === 4 && parseInt(missionVer.rows[0].s) === 600;
     if (!missionOk) {
-      await pool.query(`DELETE FROM mission_defs`);
+      await pool.query(`DELETE FROM mission_defs WHERE period = 'daily'`);
       await pool.query(`
-        INSERT INTO mission_defs (title, target_type, target_value, reward) VALUES
-        ('আজ ৩টি বাজি ধরুন', 'bet_count', 3, 50),
-        ('আজ ৫,০০০ টাকা টার্নওভার করুন', 'turnover', 5000, 100),
-        ('আজ ১০টি বাজি ধরুন', 'bet_count', 10, 150),
-        ('আজ ১৫,০০০ টাকা টার্নওভার করুন', 'turnover', 15000, 300);
+        INSERT INTO mission_defs (title, target_type, target_value, reward, period) VALUES
+        ('আজ ৩টি বাজি ধরুন', 'bet_count', 3, 50, 'daily'),
+        ('আজ ৫,০০০ টাকা টার্নওভার করুন', 'turnover', 5000, 100, 'daily'),
+        ('আজ ১০টি বাজি ধরুন', 'bet_count', 10, 150, 'daily'),
+        ('আজ ১৫,০০০ টাকা টার্নওভার করুন', 'turnover', 15000, 300, 'daily');
+      `);
+    }
+    const weeklyCount = await pool.query(`SELECT COUNT(*) AS c FROM mission_defs WHERE period = 'weekly'`);
+    if (parseInt(weeklyCount.rows[0].c) === 0) {
+      await pool.query(`
+        INSERT INTO mission_defs (title, target_type, target_value, reward, period) VALUES
+        ('এই সপ্তাহে ২০টি বাজি ধরুন', 'bet_count', 20, 400, 'weekly'),
+        ('এই সপ্তাহে ৫০,০০০ টাকা টার্নওভার করুন', 'turnover', 50000, 800, 'weekly');
+      `);
+    }
+    const specialCount = await pool.query(`SELECT COUNT(*) AS c FROM mission_defs WHERE period = 'special'`);
+    if (parseInt(specialCount.rows[0].c) === 0) {
+      await pool.query(`
+        INSERT INTO mission_defs (title, target_type, target_value, reward, period, start_date, end_date) VALUES
+        ('স্পেশাল: এই মাসে ১০০টি বাজি ধরুন', 'bet_count', 100, 2000, 'special', date_trunc('month', CURRENT_DATE), (date_trunc('month', CURRENT_DATE) + INTERVAL '1 month - 1 day'));
       `);
     }
 
@@ -259,6 +277,18 @@ async function runMigrations() {
       );
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_umission_user_date ON user_missions(user_id, mission_date);`);
+
+    // সাপ্তাহিক/স্পেশাল মিশনের ক্লেইম ট্র্যাক করার টেবিল
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS mission_claims (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        mission_id INTEGER REFERENCES mission_defs(id),
+        period_key VARCHAR(20) NOT NULL,
+        claimed_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE (user_id, mission_id, period_key)
+      );
+    `);
 
     // লাকি হুইল
     await pool.query(`
