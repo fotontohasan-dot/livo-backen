@@ -55,4 +55,34 @@ async function getLeaderboard(currentUserId) {
   return { leaders, myRank, prizes: PRIZES, monthName };
 }
 
-module.exports = { getLeaderboard, PRIZES };
+// আগের মাসগুলোর ফলাফল (টপ ৫, শেষ ৩ মাস)
+async function getPastContests(currentUserId, monthsBack = 3) {
+  const results = [];
+  for (let i = 1; i <= monthsBack; i++) {
+    const r = await pool.query(
+      `SELECT u.id, u.username, COUNT(rf.id) AS referrals
+       FROM referrals rf
+       JOIN users u ON rf.referrer_id = u.id
+       WHERE to_char(rf.created_at, 'YYYY-MM') = to_char(CURRENT_DATE - ($1 || ' months')::interval, 'YYYY-MM')
+       GROUP BY u.id, u.username
+       ORDER BY referrals DESC, u.id ASC
+       LIMIT 5`,
+      [i]
+    );
+    if (r.rows.length === 0) continue;
+    const monthName = new Date(new Date().setMonth(new Date().getMonth() - i)).toLocaleDateString('bn-BD', { month: 'long', year: 'numeric' });
+    results.push({
+      monthName,
+      leaders: r.rows.map((row, idx) => ({
+        rank: idx + 1,
+        username: row.username,
+        referrals: parseInt(row.referrals),
+        isMe: row.id === currentUserId,
+        prize: (PRIZES.find(p => p.rank === idx + 1) || {}).prize || null
+      }))
+    });
+  }
+  return results;
+}
+
+module.exports = { getLeaderboard, getPastContests, PRIZES };
