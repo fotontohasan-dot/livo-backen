@@ -8,7 +8,7 @@ const { getReferralStats } = require('../services/referral');
 const { getCashbackStatus, claimCashback } = require('../services/cashback');
 const { getVipStatus } = require('../services/vip');
 const { getMissions, claimMission } = require('../services/missions');
-const { getSegments, canSpin, spin } = require('../services/wheel');
+const { getSegments, canSpin, spin, getHistory: getWheelHistory } = require('../services/wheel');
 const { getLoyalty, redeemPoints } = require('../services/loyalty');
 const { getStreak } = require('../services/streak');
 const { getBadges } = require('../services/badges');
@@ -235,10 +235,11 @@ router.get('/wheel', isAuth, async (req, res) => {
   try {
     const segments = getSegments();
     const status = await canSpin(req.session.user.id);
-    res.render('profile/wheel', { user: req.session.user, segments, status });
+    const history = await getWheelHistory(req.session.user.id);
+    res.render('profile/wheel', { user: req.session.user, segments, status, history, remainingToday: status.canSpin ? 1 : 0 });
   } catch (err) {
     console.error('wheel page error:', err.message);
-    res.render('profile/wheel', { user: req.session.user, segments: [], status: { canSpin: false } });
+    res.render('profile/wheel', { user: req.session.user, segments: [], status: { canSpin: false }, history: [], remainingToday: 0 });
   }
 });
 
@@ -259,7 +260,7 @@ router.get('/missions', isAuth, async (req, res) => {
     res.render('profile/missions', { user: req.session.user, missions });
   } catch (err) {
     console.error('missions page error:', err.message);
-    res.render('profile/missions', { user: req.session.user, missions: [] });
+    res.render('profile/missions', { user: req.session.user, missions: { daily: [], weekly: [], special: [] } });
   }
 });
 
