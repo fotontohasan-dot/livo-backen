@@ -67,6 +67,26 @@
       🔗 আমার রেফারেল লিংক দেখুন
     </a>
 
+    <!-- পাস্ট কনটেস্ট রেজাল্ট -->
+    <% if (pastContests && pastContests.length > 0) { %>
+      <div style="margin-top:24px;">
+        <div style="color:#fff;font-weight:bold;font-size:15px;margin-bottom:12px;">📜 আগের মাসের ফলাফল</div>
+        <% pastContests.forEach(pc => { %>
+          <div style="background:rgba(255,255,255,0.05);border-radius:14px;padding:16px;margin-bottom:12px;">
+            <div style="color:#94a3b8;font-size:12px;margin-bottom:8px;"><%= pc.monthName %></div>
+            <% pc.leaders.forEach(l => {
+              const medal = l.rank === 1 ? '🥇' : l.rank === 2 ? '🥈' : l.rank === 3 ? '🥉' : l.rank + '.';
+            %>
+              <div style="display:flex;justify-content:space-between;padding:6px 0;<%= l.isMe ? 'color:#f59e0b;' : 'color:#e2e8f0;' %>font-size:13px;">
+                <span><%= medal %> <%= l.username %><%= l.isMe ? ' (আপনি)' : '' %></span>
+                <span><%= l.referrals %> রেফার<% if (l.prize) { %> — <%= l.prize %><% } %></span>
+              </div>
+            <% }); %>
+          </div>
+        <% }); %>
+      </div>
+    <% } %>
+
   <% } else { %>
     <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:30px;text-align:center;color:#94a3b8;">
       কনটেস্ট তথ্য লোড করা যায়নি। পরে আবার চেষ্টা করুন।
