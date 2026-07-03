@@ -15,7 +15,7 @@ const { getBadges } = require('../services/badges');
 const { getAllFreeBets, claimFreeBet } = require('../services/freebet');
 const { getWeeklyStatus, claimWeekly, getMonthlyStatus, claimMonthly } = require('../services/periodicReward');
 const { getShareStatus, claimShare } = require('../services/social');
-const { getLeaderboard } = require('../services/contest');
+const { getLeaderboard, getPastContests } = require('../services/contest');
 const { getRewardStatus, claimRedPacket, claimGoldenEgg } = require('../services/redpacket');
 
 
@@ -614,10 +614,11 @@ router.post('/share/claim', isAuth, async (req, res) => {
 router.get('/contest', isAuth, async (req, res) => {
   try {
     const contest = await getLeaderboard(req.session.user.id);
-    res.render('profile/contest', { user: req.session.user, contest });
+    const pastContests = await getPastContests(req.session.user.id);
+    res.render('profile/contest', { user: req.session.user, contest, pastContests });
   } catch (err) {
     console.error('contest page error:', err.message);
-    res.render('profile/contest', { user: req.session.user, contest: null });
+    res.render('profile/contest', { user: req.session.user, contest: null, pastContests: [] });
   }
 });
 
