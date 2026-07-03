@@ -489,10 +489,11 @@ router.get('/chat', isAuth, (req, res) => {
 router.get('/loyalty', isAuth, async (req, res) => {
   try {
     const loyalty = await getLoyalty(req.session.user.id);
-    res.render('profile/loyalty', { user: req.session.user, loyalty });
+    const vip = await getVipStatus(req.session.user.id);
+    res.render('profile/loyalty', { user: req.session.user, loyalty, vip });
   } catch (err) {
     console.error('loyalty page error:', err.message);
-    res.render('profile/loyalty', { user: req.session.user, loyalty: null });
+    res.render('profile/loyalty', { user: req.session.user, loyalty: null, vip: null });
   }
 });
 
