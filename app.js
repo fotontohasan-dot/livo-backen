@@ -14,6 +14,7 @@ const { connectDB, pool } = require('./db');
 const { syncMatches } = require('./services/matchUpdater');
 const runMigrations = require('./migrations');
 const { apiGateway, responseHelpers } = require('./middleware/gateway');
+const { scheduleDailyBackup } = require('./services/backup');
 
 const app = express();
 app.use(compression());
@@ -239,6 +240,7 @@ async function startServer() {
       setTimeout(() => {
         syncMatches().catch(err => console.error('Initial match sync failed:', err));
       }, 3000);
+      scheduleDailyBackup();
     });
   } catch (err) {
     console.error('❌ Server startup failed:', err);
