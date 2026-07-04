@@ -98,4 +98,20 @@ async function spin(userId) {
   }
 }
 
-module.exports = { getSegments, canSpin, spin };
+async function getHistory(userId) {
+  try {
+    const res = await pool.query(
+      `SELECT prize, TO_CHAR(spin_date, 'YYYY-MM-DD') as spin_date
+       FROM wheel_spins
+       WHERE user_id = $1
+       ORDER BY spin_date DESC LIMIT 10`,
+      [userId]
+    );
+    return res.rows;
+  } catch (e) {
+    console.error('getHistory error:', e.message);
+    return [];
+  }
+}
+
+module.exports = { getSegments, canSpin, spin, getHistory };

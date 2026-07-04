@@ -1,20 +1,65 @@
 <%- include('../partials/head') %>
 <%- include('../partials/navbar') %>
-<div class="container page">
-  <h1 style="margin-bottom: 1.5rem;">Betting Record</h1>
-  <div class="card">
-    <table class="table">
-      <thead><tr><th>Match</th><th>Bet</th><th>Status</th></tr></thead>
-      <tbody>
-        <% predictions.forEach(p => { %>
-          <tr>
-            <td><%= p.title %></td>
-            <td>🪙 <%= p.coins_bet %></td>
-            <td><%= p.status %></td>
-          </tr>
-        <% }) %>
-      </tbody>
-    </table>
+<div class="container page" style="padding: 16px; padding-bottom: 100px;">
+  <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px">
+    <a href="/profile" style="color:var(--text-main); text-decoration:none; font-size:20px">←</a>
+    <h1 style="color:var(--text-main); font-size:18px; font-weight:bold; margin:0;">বেটিং রেকর্ড</h1>
+  </div>
+
+  <!-- Date Filter -->
+  <div class="card glass mb-4" style="padding: 15px; border-radius: 15px;">
+    <form action="/profile/history" method="GET" style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 120px;">
+        <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 5px;">শুরুর তারিখ</label>
+        <input type="date" name="start" class="form-control" style="background: rgba(255,255,255,0.05); color: #fff; border: 1px solid var(--border-glass); border-radius: 8px; font-size: 12px; width: 100%;">
+      </div>
+      <div style="flex: 1; min-width: 120px;">
+        <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 5px;">শেষ তারিখ</label>
+        <input type="date" name="end" class="form-control" style="background: rgba(255,255,255,0.05); color: #fff; border: 1px solid var(--border-glass); border-radius: 8px; font-size: 12px; width: 100%;">
+      </div>
+      <button type="submit" class="btn btn-primary" style="padding: 8px 20px; border-radius: 8px; font-size: 13px; height: 38px;">ফিল্টার</button>
+    </form>
+    <div style="display: flex; gap: 8px; margin-top: 12px;">
+        <a href="?range=today" class="badge glass" style="padding: 6px 12px; text-decoration: none; color: #fff; border: 1px solid var(--border-glass);">আজ</a>
+        <a href="?range=yesterday" class="badge glass" style="padding: 6px 12px; text-decoration: none; color: #fff; border: 1px solid var(--border-glass);">গতকাল</a>
+        <a href="?range=7days" class="badge glass" style="padding: 6px 12px; text-decoration: none; color: #fff; border: 1px solid var(--border-glass);">গত ৭ দিন</a>
+    </div>
+  </div>
+
+  <div class="card glass" style="border-radius: 20px; overflow: hidden; border: 1px solid var(--border-glass);">
+    <div class="table-responsive">
+        <table class="table" style="margin: 0; color: #fff;">
+          <thead style="background: rgba(255,255,255,0.05);">
+            <tr>
+              <th style="font-size: 12px; border: none; padding: 15px;">ম্যাচ</th>
+              <th style="font-size: 12px; border: none; padding: 15px;">পরিমাণ</th>
+              <th style="font-size: 12px; border: none; padding: 15px;">অবস্থা</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if(predictions && predictions.length > 0) { %>
+                <% predictions.forEach(p => { %>
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 15px; border: none;">
+                        <div style="font-size: 14px; font-weight: 600;"><%= p.title %></div>
+                        <div style="font-size: 11px; color: var(--text-muted);"><%= new Date(p.created_at).toLocaleString('bn-BD') %></div>
+                    </td>
+                    <td style="padding: 15px; border: none; font-weight: 700; color: var(--gold);">৳ <%= p.coins_bet %></td>
+                    <td style="padding: 15px; border: none;">
+                        <span class="badge" style="background: <%= p.status === 'won' ? '#10b981' : p.status === 'lost' ? '#ef4444' : '#f59e0b' %>; padding: 4px 8px; border-radius: 4px; font-size: 11px;">
+                            <%= p.status === 'won' ? 'জয়ী' : p.status === 'lost' ? 'পরাজিত' : 'অপেক্ষমান' %>
+                        </span>
+                    </td>
+                </tr>
+                <% }) %>
+            <% } else { %>
+                <tr>
+                    <td colspan="3" style="text-align: center; padding: 40px; color: var(--text-muted);">কোনো রেকর্ড পাওয়া যায়নি</td>
+                </tr>
+            <% } %>
+          </tbody>
+        </table>
+    </div>
   </div>
 </div>
 <%- include('../partials/bottom-nav') %>

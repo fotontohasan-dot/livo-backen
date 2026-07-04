@@ -1,32 +1,56 @@
 <%- include('../partials/head') %>
-<div class="container" style="padding:16px;padding-bottom:100px">
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-    <a href="/profile" style="color:#fff;text-decoration:none;font-size:20px">←</a>
-    <h1 style="color:#fff;font-size:18px;font-weight:bold">💳 লেনদেন ইতিহাস</h1>
+<%- include('../partials/navbar') %>
+<div class="container page" style="padding: 16px; padding-bottom: 100px;">
+  <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px">
+    <a href="/profile" style="color:var(--text-main); text-decoration:none; font-size:20px">←</a>
+    <h1 style="color:var(--text-main); font-size:18px; font-weight:bold; margin:0;">একাউন্ট রেকর্ড</h1>
+  </div>
+
+  <!-- Date Filter -->
+  <div class="card glass mb-4" style="padding: 15px; border-radius: 15px;">
+    <form action="/profile/transactions" method="GET" style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 120px;">
+        <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 5px;">শুরুর তারিখ</label>
+        <input type="date" name="start" class="form-control" style="background: rgba(255,255,255,0.05); color: #fff; border: 1px solid var(--border-glass); border-radius: 8px; font-size: 12px; width: 100%;">
+      </div>
+      <div style="flex: 1; min-width: 120px;">
+        <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 5px;">শেষ তারিখ</label>
+        <input type="date" name="end" class="form-control" style="background: rgba(255,255,255,0.05); color: #fff; border: 1px solid var(--border-glass); border-radius: 8px; font-size: 12px; width: 100%;">
+      </div>
+      <button type="submit" class="btn btn-primary" style="padding: 8px 20px; border-radius: 8px; font-size: 13px; height: 38px;">ফিল্টার</button>
+    </form>
+    <div style="display: flex; gap: 8px; margin-top: 12px;">
+        <a href="?range=today" class="badge glass" style="padding: 6px 12px; text-decoration: none; color: #fff; border: 1px solid var(--border-glass);">আজ</a>
+        <a href="?range=yesterday" class="badge glass" style="padding: 6px 12px; text-decoration: none; color: #fff; border: 1px solid var(--border-glass);">গতকাল</a>
+        <a href="?range=7days" class="badge glass" style="padding: 6px 12px; text-decoration: none; color: #fff; border: 1px solid var(--border-glass);">গত ৭ দিন</a>
+    </div>
   </div>
 
   <% if (transactions && transactions.length > 0) { %>
-    <div style="display:flex;flex-direction:column;gap:8px">
+    <div style="display:flex; flex-direction:column; gap:10px">
       <% transactions.forEach(t => { %>
-        <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between">
-          <div style="display:flex;align-items:center;gap:12px">
-            <div style="font-size:24px"><%= t.type === 'deposit' ? '⬇️' : t.type === 'withdraw' ? '⬆️' : '🎯' %></div>
+        <div class="card glass" style="border-radius:15px; padding:16px; display:flex; align-items:center; justify-content:space-between; border: 1px solid var(--border-glass);">
+          <div style="display:flex; align-items:center; gap:15px">
+            <div style="width: 45px; height: 45px; border-radius: 12px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                <%= t.type === 'deposit' ? '💰' : t.type === 'withdraw' ? '💸' : t.type === 'lucky_wheel' ? '🎡' : t.type === 'bet' ? '🎲' : '✨' %>
+            </div>
             <div>
-              <div style="color:#fff;font-size:14px"><%= t.description || t.type %></div>
-              <div style="color:#94a3b8;font-size:12px"><%= new Date(t.created_at).toLocaleDateString('bn-BD') %></div>
+              <div style="color:#fff; font-size:14px; font-weight: 600;"><%= t.description || t.type %></div>
+              <div style="color:var(--text-muted); font-size:11px;"><%= new Date(t.created_at).toLocaleString('bn-BD') %></div>
             </div>
           </div>
-          <div style="color:<%= t.amount > 0 ? '#10b981' : '#ef4444' %>;font-weight:bold;font-size:16px">
-            <%= t.amount > 0 ? '+' : '' %><%= t.amount %> 🪙
+          <div style="color:<%= t.amount > 0 ? '#10b981' : '#ef4444' %>; font-weight:bold; font-size:16px; font-family: 'Teko', sans-serif;">
+            <%= t.amount > 0 ? '+' : '' %><%= t.amount.toLocaleString() %>
           </div>
         </div>
       <% }) %>
     </div>
   <% } else { %>
-    <div style="text-align:center;padding:40px;color:#94a3b8">
-      <div style="font-size:48px;margin-bottom:12px">📭</div>
-      <div>কোনো লেনদেন নেই</div>
+    <div style="text-align:center; padding:60px; color:var(--text-muted)">
+      <div style="font-size:48px; margin-bottom:12px">📭</div>
+      <div style="font-weight: 600;">কোনো লেনদেন রেকর্ড নেই</div>
     </div>
   <% } %>
 </div>
-<%- include('../partials/navbar') %>
+<%- include('../partials/bottom-nav') %>
+</body></html>
