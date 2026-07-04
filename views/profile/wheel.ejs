@@ -90,13 +90,7 @@ if (spinBtn) {
     document.getElementById('result').innerText = '';
 
     try {
-      const res = await fetch('/profile/wheel/spin', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Origin': window.location.origin
-        }
-      });
+      const res = await fetch('/profile/wheel/spin', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
       const data = await res.json();
 
       if (!data.success) {

@@ -22,7 +22,6 @@ const { getRewardStatus, claimRedPacket, claimGoldenEgg } = require('../services
 router.get('/', isAuth, async (req, res) => {
   try {
     const user = await pool.query(`SELECT * FROM users WHERE id=$1`, [req.session.user.id]);
-    const vip = await getVipStatus(req.session.user.id);
     const predictions = await pool.query(`
       SELECT p.*, m.title, m.team_a, m.team_b, m.result
       FROM predictions p
@@ -55,7 +54,6 @@ router.get('/', isAuth, async (req, res) => {
     res.render('profile/index', {
       user: user.rows[0],
       profileUser: user.rows[0],
-      vip,
       predictions: predictions.rows,
       tournaments: tournaments.rows,
       stats: stats.rows[0]
@@ -586,31 +584,6 @@ router.post('/periodic/monthly', isAuth, async (req, res) => {
     req.flash('error', 'সার্ভার ত্রুটি।');
   }
   res.redirect('/profile/periodic');
-});
-
-router.post('/avatar/update', isAuth, async (req, res) => {
-  try {
-    const { avatar_url } = req.body;
-    await pool.query(`UPDATE users SET avatar_url=$1 WHERE id=$2`, [avatar_url, req.session.user.id]);
-    req.session.user.avatar_url = avatar_url;
-    req.flash('success', '✅ অবতার আপডেট হয়েছে!');
-  } catch (err) {
-    req.flash('error', '❌ আপডেট করতে সমস্যা হয়েছে।');
-  }
-  res.redirect('/profile');
-});
-
-router.get('/api/balance', isAuth, async (req, res) => {
-  try {
-    const r = await pool.query('SELECT coins FROM users WHERE id=$1', [req.session.user.id]);
-    if (r.rows[0]) {
-      req.session.user.coins = r.rows[0].coins;
-      return res.json({ success: true, coins: r.rows[0].coins });
-    }
-    res.json({ success: false });
-  } catch (err) {
-    res.json({ success: false });
-  }
 });
 
 // ==================== সোশ্যাল শেয়ার ====================

@@ -68,13 +68,12 @@ async function getVipStatus(userId) {
   const current = levels.find(l => l.level === level) || levels[0];
   const next = levels.find(l => l.level === level + 1) || null;
 
-  let progress = 1000;
+  let progress = 100;
   let toNext = 0;
   if (next) {
     const span = Number(next.min_turnover) - Number(current.min_turnover);
     const done = totalTurnover - Number(current.min_turnover);
-    // Scale progress to 1000 instead of 100 as requested
-    progress = span > 0 ? Math.min(1000, Math.floor((done / span) * 1000)) : 0;
+    progress = span > 0 ? Math.min(100, Math.floor((done / span) * 100)) : 0;
     toNext = Math.max(0, Number(next.min_turnover) - totalTurnover);
   }
 
