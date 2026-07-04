@@ -3,25 +3,29 @@
   :root {
     --gold-bright: #fbbf24;
     --gold-dark: #d97706;
-    --bg-profile: #ffffff; /* White background as requested */
-    --card-profile: #f8fafc;
+    --bg-profile: #fffbeb; /* Light yellow background */
+    --card-profile: #ffffff;
     --text-dark: #1e293b;
     --text-muted: #64748b;
-    --border-light: #e2e8f0;
+    --border-light: #fde68a;
   }
 
   body {
     background: var(--bg-profile) !important;
     color: var(--text-dark) !important;
+    margin: 0;
+    padding: 0;
   }
 
   .container {
     max-width: none !important;
     padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
   }
 
   .profile-header {
-    background: linear-gradient(135deg, #fffbeb, #fef3c7); /* Light yellow/gold gradient */
+    background: linear-gradient(180deg, #fef3c7 0%, #fffbeb 100%);
     padding: 30px 20px;
     position: relative;
     overflow: hidden;
@@ -46,25 +50,32 @@
   }
 
   .vip-badge {
-    background: #000;
+    background: linear-gradient(45deg, #000, #333);
     color: var(--gold-bright);
-    font-size: 10px;
-    font-weight: 900;
-    padding: 2px 8px;
-    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 4px 12px;
+    border-radius: 20px;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    border: 1px solid var(--gold-bright);
   }
 
   .copy-btn {
-    background: rgba(0, 0, 0, 0.05);
-    border: none;
-    color: var(--text-muted);
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    color: var(--gold-dark);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 14px;
     cursor: pointer;
+    transition: all 0.2s;
+  }
+  .copy-btn:active {
+    transform: scale(0.9);
+    background: #e2e8f0;
   }
 
   .refresh-icon {
@@ -80,17 +91,32 @@
 
   .progress-container {
     margin-top: 15px;
-    background: #fff;
-    height: 10px;
-    border-radius: 5px;
+    background: #f1f5f9;
+    height: 14px;
+    border-radius: 10px;
     overflow: hidden;
     position: relative;
     border: 1px solid rgba(0,0,0,0.05);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
   }
 
   .progress-bar {
     height: 100%;
-    background: linear-gradient(90deg, #fbbf24, #d97706);
+    background: linear-gradient(90deg, #fbbf24, #f59e0b, #d97706);
+    position: relative;
+    transition: width 0.5s ease;
+  }
+
+  .progress-bar-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 9px;
+    font-weight: 800;
+    color: #000;
+    white-space: nowrap;
+    z-index: 10;
   }
 
   .folder-section {
@@ -198,16 +224,17 @@
       </div>
       <div style="flex: 1;">
         <div style="display: flex; align-items: center; gap: 8px;">
-          <h2 style="color: var(--text-dark); font-size: 18px; font-weight: 800;"><%= user.username %></h2>
-          <button class="copy-btn" onclick="copyUsername('<%= user.username %>')">
+          <h2 style="color: var(--text-dark); font-size: 20px; font-weight: 800; margin: 0;"><%= user.username %></h2>
+          <button class="copy-btn" onclick="copyUsername('<%= user.username %>')" title="কপি করুন">
             <i class="far fa-copy"></i>
           </button>
         </div>
-        <div style="margin-top: 5px; display: flex; align-items: center; gap: 10px;">
+        <div style="margin-top: 8px; display: flex; align-items: center; gap: 12px;">
           <div class="vip-badge">
-             <i class="fas fa-crown"></i> VIP <%= user.vip_level %>
+             <img src="https://i.ibb.co/0Xz8z3R/vip-logo.png" alt="VIP" style="width: 16px; height: 16px; object-fit: contain;">
+             VIP
           </div>
-          <span style="color: var(--text-muted); font-size: 12px;">ID: <%= 100000 + user.id %></span>
+          <span style="color: var(--text-muted); font-size: 13px; font-weight: 600;">ID: <%= 100000 + user.id %></span>
         </div>
       </div>
     </div>
@@ -229,20 +256,25 @@
 
       <!-- VIP Progress -->
       <div style="margin-top: 20px;">
-        <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: bold; text-transform: uppercase;">
+        <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 800; text-transform: uppercase; margin-bottom: 5px;">
           <span style="color: var(--text-dark);">VIP <%= user.vip_level %> প্রগ্রেস</span>
-          <span style="color: var(--gold-dark);" id="progressText"><%= vip.progress %>/1000</span>
+          <span style="color: var(--gold-dark);" id="progressText"><%= (vip.progress || 0).toLocaleString() %> / 1,000</span>
         </div>
         <div class="progress-container">
-          <div class="progress-bar" style="width: <%= vip.progress / 10 %>%;"></div>
+          <div class="progress-bar" style="width: <%= (vip.progress || 0) / 10 %>%;">
+            <div class="progress-bar-text"><%= (vip.progress || 0).toLocaleString() %> / 1,000</div>
+          </div>
         </div>
+        <p style="font-size: 10px; color: var(--text-muted); margin-top: 8px; font-weight: 600;">
+          <i class="fas fa-info-circle"></i> পরের লেভেল <%= vip.next ? vip.next.name : 'সর্বোচ্চ' %> এ যেতে আরও ৳<%= (vip.toNext || 0).toLocaleString() %> টার্নওভার প্রয়োজন।
+        </p>
       </div>
     </div>
   </div>
 
   <!-- Folder A: Account Management -->
   <div class="folder-section">
-    <div class="folder-header">Folder A: একাউন্ট সেটিংস</div>
+    <div class="folder-header">Folder A: একাউন্ট সেটিংস (Account Management)</div>
     <div class="menu-grid">
       <a href="/profile/security" class="menu-item">
         <div class="menu-icon"><i class="fas fa-user-circle"></i></div>
@@ -256,16 +288,12 @@
         <div class="menu-icon"><i class="fas fa-user-plus"></i></div>
         <span>ইনভাইট ফ্রেন্ড</span>
       </a>
-      <a href="/profile/cards" class="menu-item">
-        <div class="menu-icon"><i class="fas fa-credit-card"></i></div>
-        <span>ব্যাংক কার্ড</span>
-      </a>
     </div>
   </div>
 
   <!-- Folder B: Transaction History -->
   <div class="folder-section">
-    <div class="folder-header">Folder B: ট্রানজেকশন রেকর্ড</div>
+    <div class="folder-header">Folder B: ট্রানজেকশন রেকর্ড (Transaction History)</div>
     <div class="menu-grid">
       <a href="/payment/history?type=deposit" class="menu-item">
         <div class="menu-icon"><i class="fas fa-file-import"></i></div>
@@ -284,7 +312,7 @@
 
   <!-- Folder C: Gaming Activity -->
   <div class="folder-section">
-    <div class="folder-header">Folder C: বেটিং ও গেম হিস্ট্রি</div>
+    <div class="folder-header">Folder C: বেটিং ও গেম হিস্ট্রি (Gaming Activity)</div>
     <div class="menu-grid">
       <a href="/profile/history" class="menu-item">
         <div class="menu-icon"><i class="fas fa-clipboard-list"></i></div>
@@ -299,7 +327,7 @@
 
   <!-- Folder D: Rewards & Missions -->
   <div class="folder-section">
-    <div class="folder-header">Folder D: রিওয়ার্ড ও মিশন</div>
+    <div class="folder-header">Folder D: রিওয়ার্ড ও মিশন (Rewards & Missions)</div>
     <div class="menu-grid">
       <a href="/profile/rewards" class="menu-item">
         <div class="menu-icon"><i class="fas fa-gift"></i></div>
@@ -308,6 +336,10 @@
       <a href="/profile/missions" class="menu-item">
         <div class="menu-icon"><i class="fas fa-bullseye"></i></div>
         <span>মিশন পয়েন্ট</span>
+      </a>
+      <a href="/profile/transactions" class="menu-item">
+        <div class="menu-icon"><i class="fas fa-list-alt"></i></div>
+        <span>গেম ওয়াইজ রেকর্ড</span>
       </a>
       <a href="/profile/wheel" class="menu-item">
         <div class="menu-icon"><i class="fas fa-spinner"></i></div>
@@ -322,7 +354,7 @@
 
   <!-- Folder E: General -->
   <div class="folder-section">
-    <div class="folder-header">Folder E: কাস্টমার সাপোর্ট ও অন্যান্য</div>
+    <div class="folder-header">Folder E: কাস্টমার সাপোর্ট ও অন্যান্য (General)</div>
     <div class="menu-grid">
       <a href="mailto:support@livo.com" class="menu-item">
         <div class="menu-icon"><i class="fas fa-envelope-open-text"></i></div>
@@ -366,14 +398,18 @@
     <div class="avatar-grid">
       <%
         const avatars = [
-          'https://i.ibb.co/mR70f6V/default-avatar.png',
-          'https://i.ibb.co/L5hYvj9/elon-musk.png',
-          'https://i.ibb.co/3WqPZqS/zuckerberg.png',
-          'https://i.ibb.co/0Xz8z3R/jeff-bezos.png',
-          'https://i.ibb.co/vV1J7fT/bill-gates.png',
-          'https://i.ibb.co/D8mQ0Z8/warren-buffett.png'
+          { url: 'https://i.ibb.co/mR70f6V/default-avatar.png', name: 'Default' },
+          { url: 'https://i.ibb.co/L5hYvj9/elon-musk.png', name: 'Elon Musk' },
+          { url: 'https://i.ibb.co/3WqPZqS/zuckerberg.png', name: 'Mark Zuckerberg' },
+          { url: 'https://i.ibb.co/0Xz8z3R/jeff-bezos.png', name: 'Jeff Bezos' },
+          { url: 'https://i.ibb.co/vV1J7fT/bill-gates.png', name: 'Bill Gates' },
+          { url: 'https://i.ibb.co/D8mQ0Z8/warren-buffett.png', name: 'Warren Buffett' },
+          { url: 'https://i.ibb.co/mXzR4X9/jack-ma.png', name: 'Jack Ma' },
+          { url: 'https://i.ibb.co/S6z7X8X/mukesh-ambani.png', name: 'Mukesh Ambani' },
+          { url: 'https://i.ibb.co/Xz9zX0X/ratan-tata.png', name: 'Ratan Tata' }
         ];
-        avatars.forEach(url => {
+        avatars.forEach(avatar => {
+          const url = avatar.url;
       %>
         <div class="avatar-option <%= user.avatar_url === url ? 'selected' : '' %>" onclick="selectAvatar('<%= url %>')">
           <img src="<%= url %>">
@@ -386,8 +422,25 @@
 <script>
   function copyUsername(text) {
     navigator.clipboard.writeText(text).then(() => {
-      alert('কপি হয়েছে!');
+      showToast('কপি হয়েছে!');
     });
+  }
+
+  function showToast(message) {
+    const toast = document.createElement('div');
+    toast.style.position = 'fixed';
+    toast.style.bottom = '100px';
+    toast.style.left = '50%';
+    toast.style.transform = 'translateX(-50%)';
+    toast.style.background = 'rgba(0,0,0,0.8)';
+    toast.style.color = '#fff';
+    toast.style.padding = '10px 20px';
+    toast.style.borderRadius = '20px';
+    toast.style.zIndex = '3000';
+    toast.style.fontSize = '14px';
+    toast.innerText = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2000);
   }
 
   async function refreshBalance() {

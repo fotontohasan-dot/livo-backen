@@ -98,4 +98,18 @@ async function spin(userId) {
   }
 }
 
-module.exports = { getSegments, canSpin, spin };
+// স্পিন ইতিহাস
+async function getHistory(userId) {
+  try {
+    const res = await pool.query(
+      `SELECT * FROM wheel_spins WHERE user_id = $1 ORDER BY created_at DESC LIMIT 10`,
+      [userId]
+    );
+    return res.rows;
+  } catch (e) {
+    console.error('getWheelHistory error:', e.message);
+    return [];
+  }
+}
+
+module.exports = { getSegments, canSpin, spin, getHistory };
