@@ -210,60 +210,15 @@ async function runMigrations() {
       );
     `);
     const vipCount = await pool.query(`SELECT COUNT(*) FROM vip_levels`);
-    if (parseInt(vipCount.rows[0].count) < 50) {
-      await pool.query(`DELETE FROM vip_levels`);
+    if (parseInt(vipCount.rows[0].count) === 0) {
       await pool.query(`
         INSERT INTO vip_levels (level, name, min_turnover, upgrade_bonus, weekly_bonus) VALUES
-        (0, 'VIP 0', 2000, 0, 0),
-        (1, 'VIP 1', 20000, 0, 0),
-        (2, 'VIP 2', 60000, 0, 0),
-        (3, 'VIP 3', 200000, 0, 0),
-        (4, 'VIP 4', 600000, 0, 0),
-        (5, 'VIP 5', 1200000, 0, 0),
-        (6, 'VIP 6', 2000000, 0, 0),
-        (7, 'VIP 7', 6000000, 0, 0),
-        (8, 'VIP 8', 12000000, 0, 0),
-        (9, 'VIP 9', 20000000, 0, 0),
-        (10, 'VIP 10', 40000000, 0, 0),
-        (11, 'VIP 11', 60000000, 0, 0),
-        (12, 'VIP 12', 80000000, 0, 0),
-        (13, 'VIP 13', 100000000, 0, 0),
-        (14, 'VIP 14', 120000000, 0, 0),
-        (15, 'VIP 15', 160000000, 0, 0),
-        (16, 'VIP 16', 200000000, 0, 0),
-        (17, 'VIP 17', 240000000, 0, 0),
-        (18, 'VIP 18', 280000000, 0, 0),
-        (19, 'VIP 19', 320000000, 0, 0),
-        (20, 'VIP 20', 360000000, 0, 0),
-        (21, 'VIP 21', 400000000, 0, 0),
-        (22, 'VIP 22', 460000000, 0, 0),
-        (23, 'VIP 23', 520000000, 0, 0),
-        (24, 'VIP 24', 600000000, 0, 0),
-        (25, 'VIP 25', 700000000, 0, 0),
-        (26, 'VIP 26', 800000000, 0, 0),
-        (27, 'VIP 27', 900000000, 0, 0),
-        (28, 'VIP 28', 1000000000, 0, 0),
-        (29, 'VIP 29', 1200000000, 0, 0),
-        (30, 'VIP 30', 1400000000, 0, 0),
-        (31, 'VIP 31', 1600000000, 0, 0),
-        (32, 'VIP 32', 1800000000, 0, 0),
-        (33, 'VIP 33', 2000000000, 0, 0),
-        (34, 'VIP 34', 2400000000, 0, 0),
-        (35, 'VIP 35', 2800000000, 0, 0),
-        (36, 'VIP 36', 3200000000, 0, 0),
-        (37, 'VIP 37', 3600000000, 0, 0),
-        (38, 'VIP 38', 4000000000, 0, 0),
-        (39, 'VIP 39', 4600000000, 0, 0),
-        (40, 'VIP 40', 5200000000, 0, 0),
-        (41, 'VIP 41', 6000000000, 0, 0),
-        (42, 'VIP 42', 7000000000, 0, 0),
-        (43, 'VIP 43', 8000000000, 0, 0),
-        (44, 'VIP 44', 10000000000, 0, 0),
-        (45, 'VIP 45', 12000000000, 0, 0),
-        (46, 'VIP 46', 14000000000, 0, 0),
-        (47, 'VIP 47', 16000000000, 0, 0),
-        (48, 'VIP 48', 18000000000, 0, 0),
-        (49, 'VIP 49', 20000000000, 0, 0);
+        (0, 'Bronze', 0, 0, 0),
+        (1, 'Silver', 50000, 200, 50),
+        (2, 'Gold', 200000, 800, 200),
+        (3, 'Platinum', 500000, 2000, 500),
+        (4, 'Diamond', 1500000, 6000, 1500),
+        (5, 'Elite', 5000000, 20000, 5000);
       `);
     }
 
@@ -446,8 +401,7 @@ async function runMigrations() {
       ADD COLUMN IF NOT EXISTS self_exclude_until TIMESTAMP,
       ADD COLUMN IF NOT EXISTS loyalty_points INTEGER DEFAULT 0,
       ADD COLUMN IF NOT EXISTS win_streak INTEGER DEFAULT 0,
-      ADD COLUMN IF NOT EXISTS best_streak INTEGER DEFAULT 0,
-      ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+      ADD COLUMN IF NOT EXISTS best_streak INTEGER DEFAULT 0;
     `);
 
     await pool.query(`
@@ -484,6 +438,15 @@ async function runMigrations() {
       );
     `);
 
+
+    await pool.query(`
+      ALTER TABLE payment_requests
+      ADD COLUMN IF NOT EXISTS gateway TEXT,
+      ADD COLUMN IF NOT EXISTS gateway_tran_id TEXT,
+      ADD COLUMN IF NOT EXISTS gateway_val_id TEXT,
+      ADD COLUMN IF NOT EXISTS gateway_response JSONB;
+    `);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_pr_gateway_tran ON payment_requests(gateway_tran_id) WHERE gateway_tran_id IS NOT NULL;`);
 
     console.log("✅ All tables migration completed successfully");
   } catch (err) {
