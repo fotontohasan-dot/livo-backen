@@ -3,6 +3,8 @@ const router = express.Router();
 const { pool } = require('../db');
 const { createBonus, canWithdraw } = require('../services/turnover');
 const { processReferralDeposit } = require('../services/referral');
+const crypto = require('crypto');
+const sslcommerz = require('../services/sslcommerz');
 
 function requireLogin(req, res, next) {
   if (!req.session.user) return res.redirect('/login');
@@ -48,6 +50,46 @@ function bonusPercentFor(depositCountBefore, isFriday) {
   return 15;                                    // সাধারণ রিলোড
 }
 const MAX_BONUS = 15000;
+
+// ডিপোজিট অনুমোদন হলে কয়েন+বোনাস+রেফারেল প্রসেস করে — অ্যাডমিন approve
+// এবং SSLCommerz অটো-ক্রেডিট দুই জায়গা থেকেই এই একই ফাংশন কল হয়
+async function creditApprovedDeposit(client, request) {
+  let bonusGiven = 0;
+
+  await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
+  await client.query('UPDATE users SET total_deposited = COALESCE(total_deposited,0) + $1 WHERE id=$2', [request.amount, request.user_id]);
+
+  if (request.want_bonus) {
+    const cnt = await client.query(
+      `SELECT COUNT(*) FROM payment_requests WHERE user_id=$1 AND type='deposit' AND status='approved' AND id <> $2`,
+      [request.user_id, request.id]
+    );
+    const before = parseInt(cnt.rows[0].count);
+    const isFriday = new Date().getDay() === 5;
+    const pct = bonusPercentFor(before, isFriday);
+
+    bonusGiven = Math.min(MAX_BONUS, Math.floor(request.amount * pct / 100));
+
+    if (bonusGiven > 0) {
+      await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [bonusGiven, request.user_id]);
+      await createBonus(client, request.user_id, 'deposit', bonusGiven);
+    }
+  }
+
+  await processReferralDeposit(client, request.user_id, request.amount);
+
+  await client.query(`UPDATE payment_requests SET status='approved', updated_at=NOW() WHERE id=$1`, [request.id]);
+
+  const message = bonusGiven > 0
+    ? `আপনার ${request.amount} টাকার ডিপোজিট + ${bonusGiven} বোনাস যোগ হয়েছে! (টার্নওভার প্রযোজ্য)`
+    : `আপনার ${request.amount} টাকার ডিপোজিট অনুমোদন হয়েছে!`;
+  await client.query(
+    `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'success')`,
+    [request.user_id, 'পেমেন্ট অনুমোদন', message]
+  );
+
+  return bonusGiven;
+}
 
 const VALID_METHODS = ['bkash', 'nagad', 'rocket', 'upay', 'bank', 'crypto'];
 
@@ -245,49 +287,15 @@ router.post('/admin/approve/:id', requireAdmin, async (req, res) => {
       return res.redirect('/payment/admin/payments');
     }
 
-    let bonusGiven = 0;
-
     if (request.type === 'deposit') {
-      // আসল কয়েন যোগ
-      await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
-      await client.query('UPDATE users SET total_deposited = COALESCE(total_deposited,0) + $1 WHERE id=$2', [request.amount, request.user_id]);
-
-      // বোনাস নিলে — রিলোড নিয়ম অনুযায়ী শতাংশ
-      if (request.want_bonus) {
-        // এই ডিপোজিটের আগে কতগুলো approved ডিপোজিট হয়েছে
-        const cnt = await client.query(
-          `SELECT COUNT(*) FROM payment_requests WHERE user_id=$1 AND type='deposit' AND status='approved' AND id <> $2`,
-          [request.user_id, request.id]
-        );
-        const before = parseInt(cnt.rows[0].count);
-        const isFriday = new Date().getDay() === 5; // 5 = শুক্রবার
-        const pct = bonusPercentFor(before, isFriday);
-
-        bonusGiven = Math.min(MAX_BONUS, Math.floor(request.amount * pct / 100));
-
-        if (bonusGiven > 0) {
-          await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [bonusGiven, request.user_id]);
-          await createBonus(client, request.user_id, 'deposit', bonusGiven);
-        }
-      }
-
-      await processReferralDeposit(client, request.user_id, request.amount);
-    }
-
-    await client.query(`UPDATE payment_requests SET status='approved', updated_at=NOW() WHERE id=$1`, [id]);
-
-    let message;
-    if (request.type === 'deposit') {
-      message = bonusGiven > 0
-        ? `আপনার ${request.amount} টাকার ডিপোজিট + ${bonusGiven} বোনাস যোগ হয়েছে! (টার্নওভার প্রযোজ্য)`
-        : `আপনার ${request.amount} টাকার ডিপোজিট অনুমোদন হয়েছে!`;
+      await creditApprovedDeposit(client, request);
     } else {
-      message = `আপনার ${request.amount} টাকার উইথড্র অনুমোদন হয়েছে!`;
+      await client.query(`UPDATE payment_requests SET status='approved', updated_at=NOW() WHERE id=$1`, [id]);
+      await client.query(
+        `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'success')`,
+        [request.user_id, 'পেমেন্ট অনুমোদন', `আপনার ${request.amount} টাকার উইথড্র অনুমোদন হয়েছে!`]
+      );
     }
-    await client.query(
-      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'success')`,
-      [request.user_id, 'পেমেন্ট অনুমোদন', message]
-    );
     await client.query('COMMIT');
     req.flash('success', 'অনুমোদন হয়েছে');
     res.redirect('/payment/admin/payments');
@@ -328,6 +336,167 @@ router.post('/admin/reject/:id', requireAdmin, async (req, res) => {
     await client.query('ROLLBACK');
     console.error('reject error:', err.message);
     res.redirect('/payment/admin/payments');
+  } finally {
+    client.release();
+  }
+});
+
+// ==================== SSLCommerz (বিকাশ/নগদ/রকেট/কার্ড) — সম্পূর্ণ অটোমেটিক ====================
+// অ্যাডমিনকে কোনো কিছু ম্যানুয়ালি অনুমোদন করতে হয় না — গেটওয়ে ভ্যালিডেশন পাশ করলেই কয়েন যোগ হয়ে যায়।
+
+router.post('/sslcommerz/init', requireLogin, async (req, res) => {
+  const wantBonus = req.body.want_bonus === 'yes';
+  const amount = parseAmount(req.body.amount);
+  const userId = req.session.user.id;
+
+  if (amount === null || amount < 100) {
+    req.flash('error', 'সর্বনিম্ন ডিপোজিট ১০০ টাকা');
+    return res.redirect('/payment/deposit');
+  }
+
+  const tranId = `LIVO${userId}${Date.now()}${crypto.randomBytes(3).toString('hex')}`;
+
+  try {
+    await pool.query(
+      `INSERT INTO payment_requests (user_id, type, method, amount, status, want_bonus, gateway, gateway_tran_id)
+       VALUES ($1, 'deposit', 'sslcommerz', $2, 'pending', $3, 'sslcommerz', $4)`,
+      [userId, amount, wantBonus, tranId]
+    );
+
+    const baseUrl = req.protocol + '://' + req.get('host');
+    const gatewayUrl = await sslcommerz.initPayment({
+      amount,
+      tranId,
+      customer: {
+        name: req.session.user.username,
+        email: req.session.user.email,
+        phone: req.session.user.phone
+      },
+      baseUrl
+    });
+
+    res.redirect(gatewayUrl);
+  } catch (err) {
+    console.error('sslcommerz init error:', err.message);
+    req.flash('error', 'পেমেন্ট গেটওয়ে চালু করা যায়নি। আবার চেষ্টা করুন।');
+    res.redirect('/payment/deposit');
+  }
+});
+
+// SSLCommerz পেমেন্ট সফল হলে ইউজারের ব্রাউজার এখানে রিডাইরেক্ট হয়ে আসে
+router.post('/sslcommerz/success', async (req, res) => {
+  const { tran_id, val_id } = req.body;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await client.query(
+      `SELECT * FROM payment_requests WHERE gateway_tran_id=$1 FOR UPDATE`, [tran_id]
+    );
+    const request = result.rows[0];
+
+    if (!request) {
+      await client.query('ROLLBACK');
+      req.flash('error', 'ট্রানজেকশন খুঁজে পাওয়া যায়নি');
+      return res.redirect('/payment/deposit');
+    }
+    if (request.status !== 'pending') {
+      await client.query('ROLLBACK');
+      return res.redirect('/payment/history'); // আগেই IPN দিয়ে ক্রেডিট হয়ে গেছে
+    }
+
+    const verification = await sslcommerz.validatePayment(val_id);
+    const validStatus = verification.status === 'VALID' || verification.status === 'VALIDATED';
+    const amountMatches = Math.round(Number(verification.amount)) === Math.round(Number(request.amount));
+
+    if (!validStatus || !amountMatches) {
+      await client.query(
+        `UPDATE payment_requests SET status='rejected', gateway_val_id=$1, gateway_response=$2, updated_at=NOW() WHERE id=$3`,
+        [val_id, JSON.stringify(verification), request.id]
+      );
+      await client.query('COMMIT');
+      req.flash('error', 'পেমেন্ট ভেরিফাই করা যায়নি।');
+      return res.redirect('/payment/deposit');
+    }
+
+    await client.query(
+      `UPDATE payment_requests SET gateway_val_id=$1, gateway_response=$2 WHERE id=$3`,
+      [val_id, JSON.stringify(verification), request.id]
+    );
+    await creditApprovedDeposit(client, request);
+    await client.query('COMMIT');
+
+    if (req.session.user) {
+      const u = await pool.query('SELECT coins FROM users WHERE id=$1', [request.user_id]);
+      req.session.user.coins = u.rows[0].coins;
+    }
+    req.flash('success', `আপনার ${request.amount} টাকার ডিপোজিট সফল হয়েছে!`);
+    res.redirect('/payment/history');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('sslcommerz success error:', err.message);
+    req.flash('error', 'সমস্যা হয়েছে, সাপোর্টে যোগাযোগ করুন।');
+    res.redirect('/payment/deposit');
+  } finally {
+    client.release();
+  }
+});
+
+router.post('/sslcommerz/fail', async (req, res) => {
+  const { tran_id } = req.body;
+  try {
+    await pool.query(
+      `UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE gateway_tran_id=$1 AND status='pending'`,
+      [tran_id]
+    );
+  } catch (e) { console.error('sslcommerz fail error:', e.message); }
+  req.flash('error', 'পেমেন্ট ব্যর্থ হয়েছে।');
+  res.redirect('/payment/deposit');
+});
+
+router.post('/sslcommerz/cancel', async (req, res) => {
+  const { tran_id } = req.body;
+  try {
+    await pool.query(
+      `UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE gateway_tran_id=$1 AND status='pending'`,
+      [tran_id]
+    );
+  } catch (e) { console.error('sslcommerz cancel error:', e.message); }
+  req.flash('error', 'পেমেন্ট বাতিল করা হয়েছে।');
+  res.redirect('/payment/deposit');
+});
+
+// সার্ভার-টু-সার্ভার IPN — ব্যাকআপ হিসেবে, যদি ইউজারের ব্রাউজার success_url এ ফিরে না আসে
+router.post('/sslcommerz/ipn', async (req, res) => {
+  const { tran_id, val_id } = req.body;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await client.query(
+      `SELECT * FROM payment_requests WHERE gateway_tran_id=$1 FOR UPDATE`, [tran_id]
+    );
+    const request = result.rows[0];
+    if (!request || request.status !== 'pending') {
+      await client.query('ROLLBACK');
+      return res.sendStatus(200);
+    }
+
+    const verification = await sslcommerz.validatePayment(val_id);
+    const validStatus = verification.status === 'VALID' || verification.status === 'VALIDATED';
+    const amountMatches = Math.round(Number(verification.amount)) === Math.round(Number(request.amount));
+
+    if (validStatus && amountMatches) {
+      await client.query(
+        `UPDATE payment_requests SET gateway_val_id=$1, gateway_response=$2 WHERE id=$3`,
+        [val_id, JSON.stringify(verification), request.id]
+      );
+      await creditApprovedDeposit(client, request);
+    }
+    await client.query('COMMIT');
+    res.sendStatus(200);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('sslcommerz ipn error:', err.message);
+    res.sendStatus(200);
   } finally {
     client.release();
   }
