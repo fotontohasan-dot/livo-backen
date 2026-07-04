@@ -5,6 +5,7 @@ const { isAdmin } = require('../middleware/auth');
 const { settleSelectionsForMarket } = require('../services/accumulator');
 const { grantFreeBet } = require('../services/freebet');
 const { syncMatches } = require('../services/matchUpdater');
+const { runBackupNow, restoreFromBackup, getBackupStatus } = require('../services/backup');
 
 router.use(isAdmin);
 
@@ -338,6 +339,34 @@ router.post('/kyc/:id/reject', async (req, res) => {
     req.flash('error', 'KYC বাতিল করা হয়েছে।');
   } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
   res.redirect('/admin/kyc');
+});
+
+// ==================== ব্যাকআপ ====================
+router.get('/backup/status', async (req, res) => {
+  res.json(getBackupStatus());
+});
+
+router.post('/backup/run', async (req, res) => {
+  const result = await runBackupNow();
+  if (result.ok) req.flash('success', `✅ ব্যাকআপ সম্পন্ন (${result.tables}টা টেবিল)`);
+  else req.flash('error', `❌ ব্যাকআপ ব্যর্থ: ${result.error}`);
+  res.redirect('/admin');
+});
+
+// সতর্কতা: ?confirm=RESTORE ছাড়া কাজ করবে না — ভুলে চালানো ঠেকাতে
+router.post('/backup/restore', async (req, res) => {
+  if (req.query.confirm !== 'RESTORE') {
+    req.flash('error', '?confirm=RESTORE যোগ করে আবার চেষ্টা করুন। এটা ভুলে চালানো ঠেকানোর জন্য।');
+    return res.redirect('/admin');
+  }
+  try {
+    const results = await restoreFromBackup();
+    const total = Object.values(results).reduce((a, b) => a + b, 0);
+    req.flash('success', `✅ রিস্টোর সম্পন্ন — মোট ${total} সারি ফিরে এসেছে`);
+  } catch (err) {
+    req.flash('error', `❌ রিস্টোর ব্যর্থ: ${err.message}`);
+  }
+  res.redirect('/admin');
 });
 
 module.exports = router;
