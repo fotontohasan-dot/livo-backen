@@ -112,11 +112,22 @@
           </div>
         </div>
 
-        <!-- Next Button -->
-        <div class="mt-8">
-                        <button type="button" id="depNextBtn" class="w-full red-theme-bg text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 active:scale-95 transition-all">
+        <!-- Auto Pay (SSLCommerz — bKash/Nagad/Rocket/Card, অটোমেটিক) -->
+        <div class="mt-4">
+          <label class="flex items-center gap-2 mb-3 text-xs text-muted">
+            <input type="checkbox" id="autoBonusCheck" value="yes" class="w-4 h-4 accent-red-600"> বোনাস সহ (টার্নওভার প্রযোজ্য)
+          </label>
+          <button type="button" id="autoPayBtn" class="w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 active:scale-95 transition-all">
+            ⚡ অটো পে (bKash/Nagad/Rocket/Card)
+          </button>
+          <p class="text-[11px] text-muted text-center mt-2">সরাসরি গেটওয়েতে পে করুন — সাথে সাথে কয়েন যোগ হবে, ম্যানুয়াল অপেক্ষা লাগবে না।</p>
+        </div>
 
-                পরবর্তী (Next)
+        <!-- Next Button (ম্যানুয়াল পদ্ধতি) -->
+        <div class="mt-4">
+                        <button type="button" id="depNextBtn" class="w-full bg-surface border-2 border-glass text-main py-4 rounded-2xl font-bold text-lg transition-all">
+
+                ম্যানুয়ালি জমা দিন (Next)
             </button>
         </div>
       </div>
@@ -196,18 +207,11 @@
   }
 
   function setAmount(amt, el) {
-    const input = document.getElementById('amountInput');
-    input.value = amt;
-    // Trigger input event to ensure any listeners are updated
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-
+    document.getElementById('amountInput').value = amt;
     document.querySelectorAll('.amount-btn').forEach(b => {
-      b.classList.remove('selected', 'border-red-600', 'text-red-600');
-      b.classList.add('border-glass', 'text-main');
+      b.classList.remove('selected');
     });
-    el.classList.add('selected', 'border-red-600', 'text-red-600');
-    el.classList.remove('border-glass', 'text-main');
+    el.classList.add('selected');
   }
 
   function goToStep2() {
@@ -250,6 +254,20 @@
     if (cb) cb.addEventListener('click', copyNumber);
     var bb = document.getElementById('depBackBtn');
     if (bb) bb.addEventListener('click', goToStep1);
+
+    var apBtn = document.getElementById('autoPayBtn');
+    if (apBtn) apBtn.addEventListener('click', function () {
+      var amt = document.getElementById('amountInput').value;
+      if (!amt || amt < 100) { alert('সর্বনিম্ন ১০০ টাকা জমা দিন'); return; }
+      var wantBonus = document.getElementById('autoBonusCheck').checked ? 'yes' : 'no';
+      var f = document.createElement('form');
+      f.method = 'POST';
+      f.action = '/payment/sslcommerz/init';
+      f.innerHTML = '<input type="hidden" name="amount" value="' + amt + '">' +
+                    '<input type="hidden" name="want_bonus" value="' + wantBonus + '">';
+      document.body.appendChild(f);
+      f.submit();
+    });
   });
 </script>
 
