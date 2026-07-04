@@ -22,7 +22,7 @@
       <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;margin-bottom:16px;text-align:center;">
         <div style="color:#94a3b8;font-size:13px;">পরের বনাসের জন্য দরকার</div>
         <div style="color:#f59e0b;font-size:16px;font-weight:bold;margin-top:4px;">
-          আরও <%= streak.nextMilestone - streak.current %> টান জয় → <%= streak.nextBonus %> কয়েন
+          আরও <%= streak.nextMilestone - streak.current %> টান জয় → বেট এর <%= streak.nextMultiplier %> গুণ বোনাস
         </div>
       </div>
     <% } %>
@@ -37,7 +37,7 @@
           <div style="color:<%= reached ? '#fff' : '#94a3b8' %>;font-size:14px;font-weight:bold;">
             <%= reached ? '✅' : '🔒' %> <%= m.streak %> টানা জয়
           </div>
-          <div style="color:#f59e0b;font-size:13px;font-weight:bold;">+<%= m.bonus %> 🪙</div>
+          <div style="color:#f59e0b;font-size:13px;font-weight:bold;"><%= m.multiplier %>x 🪙</div>
         </div>
       <% }) %>
     </div>

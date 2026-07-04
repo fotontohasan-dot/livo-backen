@@ -264,7 +264,7 @@ router.post('/play', isAuth, async (req, res) => {
     addVipTurnover(userId, betAmount).catch(e => console.error('vip:', e.message));
     updateMissionProgress(userId, betAmount).catch(e => console.error('mission:', e.message));
     addPoints(userId, betAmount).catch(e => console.error('loyalty:', e.message));
-    recordGameResult(userId, winAmount > 0).catch(e => console.error('streak:', e.message));
+    recordGameResult(userId, winAmount > 0, betAmount).catch(e => console.error('streak:', e.message));
     checkBadges(userId).catch(e => console.error('badges:', e.message));
     if (winAmount > 0) addWin(userId, winAmount, cashbackCategory(gameSlug)).catch(e => console.error('cashback:', e.message));
 
@@ -296,7 +296,7 @@ router.post('/cashout', isAuth, async (req, res) => {
   req.session.gameState = null;
 
   if (cashMultiplier > state.crashPoint) {
-    recordGameResult(userId, false).catch(e => console.error('streak:', e.message));
+    recordGameResult(userId, false, state.betAmount).catch(e => console.error('streak:', e.message));
     return res.json({
       success: true,
       crashed: true,
@@ -323,7 +323,7 @@ router.post('/cashout', isAuth, async (req, res) => {
 
     req.session.user.coins = upd.rows[0].coins;
 
-    recordGameResult(userId, true).catch(e => console.error('streak:', e.message));
+    recordGameResult(userId, true, state.betAmount).catch(e => console.error('streak:', e.message));
     checkBadges(userId).catch(e => console.error('badges:', e.message));
     if (winAmount > 0) addWin(userId, winAmount, cashbackCategory(gameSlug)).catch(e => console.error('cashback:', e.message));
 

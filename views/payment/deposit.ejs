@@ -196,11 +196,18 @@
   }
 
   function setAmount(amt, el) {
-    document.getElementById('amountInput').value = amt;
+    const input = document.getElementById('amountInput');
+    input.value = amt;
+    // Trigger input event to ensure any listeners are updated
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+
     document.querySelectorAll('.amount-btn').forEach(b => {
-      b.classList.remove('selected');
+      b.classList.remove('selected', 'border-red-600', 'text-red-600');
+      b.classList.add('border-glass', 'text-main');
     });
-    el.classList.add('selected');
+    el.classList.add('selected', 'border-red-600', 'text-red-600');
+    el.classList.remove('border-glass', 'text-main');
   }
 
   function goToStep2() {
