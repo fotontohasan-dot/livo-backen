@@ -13,6 +13,7 @@ const compression = require('compression');
 const { connectDB, pool } = require('./db');
 const { syncMatches } = require('./services/matchUpdater');
 const runMigrations = require('./migrations');
+const { apiGateway, responseHelpers } = require('./middleware/gateway');
 
 const app = express();
 app.use(compression());
@@ -142,6 +143,7 @@ app.get('/rules', (req, res) => res.render('rules'));
 
 // ==================== CSRF সুরক্ষা (Origin যাচাই) ====================
 app.use((req, res, next) => {
+  if (req.path.startsWith('/payment/sslcommerz/')) return next(); // গেটওয়ে ভিন্ন ডোমেইন থেকে POST করে
   if (!['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) return next();
   const host = req.get('host');
   const origin = req.get('origin');
@@ -155,6 +157,11 @@ app.use((req, res, next) => {
   }
   return next();
 });
+
+// ==================== API GATEWAY ====================
+app.use(responseHelpers);
+app.use(apiGateway);
+// =======================================================
 
 // ==================== ROUTES ====================
 app.use('/', require('./routes/auth'));
