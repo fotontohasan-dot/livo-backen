@@ -4,6 +4,68 @@ async function runMigrations() {
   try {
     console.log("🚀 Running database migrations...");
 
+    // বেস টেবিল — এগুলো না থাকলে নিচের সব টেবিল (REFERENCES users/matches) ফেইল করবে
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(50) UNIQUE NOT NULL,
+        email VARCHAR(255) UNIQUE,
+        phone VARCHAR(20) UNIQUE,
+        password TEXT NOT NULL,
+        role VARCHAR(20) DEFAULT 'user',
+        coins INTEGER DEFAULT 0,
+        total_points INTEGER DEFAULT 0,
+        referral_code VARCHAR(20) UNIQUE,
+        referred_by_id INTEGER,
+        is_banned BOOLEAN DEFAULT false,
+        reset_token TEXT,
+        reset_token_expiry TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS matches (
+        id SERIAL PRIMARY KEY,
+        title TEXT NOT NULL,
+        sport VARCHAR(30) NOT NULL,
+        team_a TEXT,
+        team_b TEXT,
+        status VARCHAR(20) DEFAULT 'upcoming',
+        score_a TEXT,
+        score_b TEXT,
+        overs TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS payment_requests (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        type VARCHAR(20) NOT NULL,
+        method VARCHAR(30),
+        amount NUMERIC(14,2) NOT NULL,
+        transaction_id TEXT,
+        account_number TEXT,
+        status VARCHAR(20) DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        title TEXT,
+        message TEXT,
+        type VARCHAR(20) DEFAULT 'info',
+        is_read BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS markets (
         id SERIAL PRIMARY KEY,
