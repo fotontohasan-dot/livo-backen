@@ -22,7 +22,6 @@ const { getRewardStatus, claimRedPacket, claimGoldenEgg } = require('../services
 router.get('/', isAuth, async (req, res) => {
   try {
     const user = await pool.query(`SELECT * FROM users WHERE id=$1`, [req.session.user.id]);
-    const vip = await getVipStatus(req.session.user.id);
     const predictions = await pool.query(`
       SELECT p.*, m.title, m.team_a, m.team_b, m.result
       FROM predictions p
@@ -55,7 +54,6 @@ router.get('/', isAuth, async (req, res) => {
     res.render('profile/index', {
       user: user.rows[0],
       profileUser: user.rows[0],
-      vip,
       predictions: predictions.rows,
       tournaments: tournaments.rows,
       stats: stats.rows[0]
@@ -64,6 +62,18 @@ router.get('/', isAuth, async (req, res) => {
     console.error('Profile error:', err);
     req.flash('error', 'প্রোফাইল লোড করতে সমস্যা হয়েছে।');
     res.redirect('/');
+  }
+});
+
+router.get('/api/balance', isAuth, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT coins FROM users WHERE id=$1', [req.session.user.id]);
+    if (!result.rows[0]) return res.status(404).json({ success: false, error: 'ইউজার পাওয়া যায়নি' });
+    req.session.user.coins = result.rows[0].coins;
+    res.json({ success: true, coins: result.rows[0].coins });
+  } catch (err) {
+    console.error('balance api error:', err.message);
+    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি' });
   }
 });
 
@@ -145,14 +155,37 @@ router.post('/change-password', isAuth, async (req, res) => {
 
 router.get('/history', isAuth, async (req, res) => {
   try {
-    const predictions = await pool.query(`
-      SELECT p.*, m.title FROM predictions p
-      JOIN matches m ON p.match_id = m.id
-      WHERE p.user_id = $1
-      ORDER BY p.created_at DESC
-    `, [req.session.user.id]);
-    res.render('profile/history', { predictions: predictions.rows, user: req.session.user });
+    const { status, quick, from, to } = req.query;
+    const conditions = ['b.user_id=$1'];
+    const params = [req.session.user.id];
+
+    if (['pending', 'won', 'lost'].includes(status)) {
+      params.push(status);
+      conditions.push(`b.status=$${params.length}`);
+    }
+
+    let dateFrom = from, dateTo = to;
+    if (quick === 'today') { dateFrom = new Date().toISOString().slice(0, 10); dateTo = dateFrom; }
+    else if (quick === 'yesterday') { const y = new Date(Date.now() - 86400000).toISOString().slice(0, 10); dateFrom = y; dateTo = y; }
+    else if (quick === '7days') { dateFrom = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10); dateTo = new Date().toISOString().slice(0, 10); }
+
+    if (dateFrom) { params.push(dateFrom); conditions.push(`b.created_at::date >= $${params.length}`); }
+    if (dateTo) { params.push(dateTo); conditions.push(`b.created_at::date <= $${params.length}`); }
+
+    const bets = await pool.query(`
+      SELECT b.*, m.title, m.team_a, m.team_b
+      FROM bets b LEFT JOIN matches m ON b.match_id = m.id
+      WHERE ${conditions.join(' AND ')}
+      ORDER BY b.created_at DESC LIMIT 200
+    `, params);
+
+    res.render('profile/history', {
+      user: req.session.user,
+      bets: bets.rows,
+      filter: { status: status || '', quick: quick || '', from: dateFrom || '', to: dateTo || '' }
+    });
   } catch (err) {
+    console.error('betting history error:', err.message);
     req.flash('error', 'ইতিহাস লোড করতে সমস্যা হয়েছে।');
     res.redirect('/profile');
   }
@@ -160,15 +193,51 @@ router.get('/history', isAuth, async (req, res) => {
 
 router.get('/stats', isAuth, async (req, res) => {
   try {
-    const stats = await pool.query(`
+    const { quick, from, to } = req.query;
+    const conditions = ['user_id=$1'];
+    const params = [req.session.user.id];
+
+    let dateFrom = from, dateTo = to;
+    if (quick === 'today') { dateFrom = new Date().toISOString().slice(0, 10); dateTo = dateFrom; }
+    else if (quick === 'yesterday') { const y = new Date(Date.now() - 86400000).toISOString().slice(0, 10); dateFrom = y; dateTo = y; }
+    else if (quick === '7days') { dateFrom = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10); dateTo = new Date().toISOString().slice(0, 10); }
+
+    if (dateFrom) { params.push(dateFrom); conditions.push(`created_at::date >= $${params.length}`); }
+    if (dateTo) { params.push(dateTo); conditions.push(`created_at::date <= $${params.length}`); }
+
+    const result = await pool.query(`
       SELECT
-        COUNT(*) as total,
-        COUNT(CASE WHEN status='won' THEN 1 END) as won,
-        COALESCE(SUM(CASE WHEN status='won' THEN points_earned ELSE 0 END), 0) as total_earned
-      FROM predictions WHERE user_id=$1
-    `, [req.session.user.id]);
-    res.render('profile/stats', { stats: stats.rows[0], user: req.session.user });
+        COUNT(*) AS total,
+        COUNT(CASE WHEN status='won' THEN 1 END) AS won,
+        COUNT(CASE WHEN status='lost' THEN 1 END) AS lost,
+        COUNT(CASE WHEN status='pending' THEN 1 END) AS pending,
+        COALESCE(SUM(stake),0) AS total_staked,
+        COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS total_won_amount
+      FROM bets WHERE ${conditions.join(' AND ')}
+    `, params);
+
+    const row = result.rows[0];
+    const settledStake = await pool.query(`
+      SELECT COALESCE(SUM(stake),0) AS s FROM bets WHERE ${conditions.join(' AND ')} AND status IN ('won','lost')
+    `, params);
+
+    const stats = {
+      total: parseInt(row.total),
+      won: parseInt(row.won),
+      lost: parseInt(row.lost),
+      pending: parseInt(row.pending),
+      total_staked: Number(row.total_staked),
+      total_won_amount: Number(row.total_won_amount),
+      net_profit: Number(row.total_won_amount) - Number(settledStake.rows[0].s)
+    };
+
+    res.render('profile/stats', {
+      user: req.session.user,
+      stats,
+      filter: { quick: quick || '', from: dateFrom || '', to: dateTo || '' }
+    });
   } catch (err) {
+    console.error('stats error:', err.message);
     req.flash('error', 'স্ট্যাটস লোড করতে সমস্যা হয়েছে।');
     res.redirect('/profile');
   }
@@ -586,31 +655,6 @@ router.post('/periodic/monthly', isAuth, async (req, res) => {
     req.flash('error', 'সার্ভার ত্রুটি।');
   }
   res.redirect('/profile/periodic');
-});
-
-router.post('/avatar/update', isAuth, async (req, res) => {
-  try {
-    const { avatar_url } = req.body;
-    await pool.query(`UPDATE users SET avatar_url=$1 WHERE id=$2`, [avatar_url, req.session.user.id]);
-    req.session.user.avatar_url = avatar_url;
-    req.flash('success', '✅ অবতার আপডেট হয়েছে!');
-  } catch (err) {
-    req.flash('error', '❌ আপডেট করতে সমস্যা হয়েছে।');
-  }
-  res.redirect('/profile');
-});
-
-router.get('/api/balance', isAuth, async (req, res) => {
-  try {
-    const r = await pool.query('SELECT coins FROM users WHERE id=$1', [req.session.user.id]);
-    if (r.rows[0]) {
-      req.session.user.coins = r.rows[0].coins;
-      return res.json({ success: true, coins: r.rows[0].coins });
-    }
-    res.json({ success: false });
-  } catch (err) {
-    res.json({ success: false });
-  }
 });
 
 // ==================== সোশ্যাল শেয়ার ====================
