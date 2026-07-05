@@ -253,13 +253,48 @@ router.post('/withdraw', requireLogin, async (req, res) => {
 
 router.get('/history', requireLogin, async (req, res) => {
   try {
+    const { type, quick, from, to } = req.query;
+    const conditions = ['user_id=$1'];
+    const params = [req.session.user.id];
+
+    if (type === 'deposit' || type === 'withdraw') {
+      params.push(type);
+      conditions.push(`type=$${params.length}`);
+    }
+
+    let dateFrom = from, dateTo = to;
+    if (quick === 'today') {
+      dateFrom = new Date().toISOString().slice(0, 10);
+      dateTo = dateFrom;
+    } else if (quick === 'yesterday') {
+      const y = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      dateFrom = y; dateTo = y;
+    } else if (quick === '7days') {
+      dateFrom = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+      dateTo = new Date().toISOString().slice(0, 10);
+    }
+
+    if (dateFrom) {
+      params.push(dateFrom);
+      conditions.push(`created_at::date >= $${params.length}`);
+    }
+    if (dateTo) {
+      params.push(dateTo);
+      conditions.push(`created_at::date <= $${params.length}`);
+    }
+
     const result = await pool.query(
-      `SELECT * FROM payment_requests WHERE user_id=$1 ORDER BY created_at DESC LIMIT 50`,
-      [req.session.user.id]
+      `SELECT * FROM payment_requests WHERE ${conditions.join(' AND ')} ORDER BY created_at DESC LIMIT 200`,
+      params
     );
-    res.render('payment/history', { user: req.session.user, requests: result.rows });
+    res.render('payment/history', {
+      user: req.session.user,
+      requests: result.rows,
+      filter: { type: type || '', quick: quick || '', from: dateFrom || '', to: dateTo || '' }
+    });
   } catch (err) {
-    res.render('payment/history', { user: req.session.user, requests: [] });
+    console.error('history error:', err.message);
+    res.render('payment/history', { user: req.session.user, requests: [], filter: { type: '', quick: '', from: '', to: '' } });
   }
 });
 
