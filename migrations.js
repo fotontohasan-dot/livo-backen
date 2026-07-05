@@ -463,7 +463,10 @@ async function runMigrations() {
       ADD COLUMN IF NOT EXISTS self_exclude_until TIMESTAMP,
       ADD COLUMN IF NOT EXISTS loyalty_points INTEGER DEFAULT 0,
       ADD COLUMN IF NOT EXISTS win_streak INTEGER DEFAULT 0,
-      ADD COLUMN IF NOT EXISTS best_streak INTEGER DEFAULT 0;
+      ADD COLUMN IF NOT EXISTS best_streak INTEGER DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS avatar TEXT,
+      ADD COLUMN IF NOT EXISTS total_points INTEGER DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS full_name TEXT;
     `);
 
     await pool.query(`
@@ -474,8 +477,58 @@ async function runMigrations() {
     await pool.query(`
       ALTER TABLE matches
       ADD COLUMN IF NOT EXISTS start_time TIMESTAMP,
-      ADD COLUMN IF NOT EXISTS league TEXT;
+      ADD COLUMN IF NOT EXISTS league TEXT,
+      ADD COLUMN IF NOT EXISTS result TEXT;
     `);
+
+    // প্রোফাইল পেজ চালাতে দরকার — এগুলো না থাকায় "প্রোফাইল লোড করতে সমস্যা হয়েছে" এরর হচ্ছিল
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS predictions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        match_id INTEGER REFERENCES matches(id),
+        pick TEXT,
+        status VARCHAR(20) DEFAULT 'pending',
+        points_earned INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_pred_user ON predictions(user_id);`);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS tournaments (
+        id SERIAL PRIMARY KEY,
+        name TEXT,
+        title TEXT,
+        sport VARCHAR(30),
+        entry_fee INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS tournament_participants (
+        id SERIAL PRIMARY KEY,
+        tournament_id INTEGER REFERENCES tournaments(id),
+        user_id INTEGER REFERENCES users(id),
+        points INTEGER DEFAULT 0,
+        joined_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_tp_tournament ON tournament_participants(tournament_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_tp_user ON tournament_participants(user_id);`);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS coin_transactions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        amount NUMERIC(14,2) NOT NULL,
+        type VARCHAR(30),
+        description TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_ct_user ON coin_transactions(user_id);`);
     // লাল প্যাকেট + সোনার ডিম দৈনিক রিওয়ার্ড
     await pool.query(`
       CREATE TABLE IF NOT EXISTS daily_rewards (
