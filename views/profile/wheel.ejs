@@ -24,6 +24,11 @@
     <button id="spinBtn" class="btn btn-primary" style="padding:14px 50px;font-size:16px;font-weight:bold;border-radius:30px;">
       🎯 স্পিন করুন
     </button>
+  <% } else if (status && status.locked) { %>
+    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:16px;color:#94a3b8;font-size:14px;">
+      🔒 হুইল লক করা আছে।<br>
+      আজ ডিপোজিট করুন অথবা যেকোনো গেম/বেট খেলুন — তাহলেই স্পিন আনলক হবে।
+    </div>
   <% } else { %>
     <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:16px;color:#94a3b8;font-size:14px;">
       ✅ আজ স্পিন করা হয়ে গেছে<% if (status && status.prize) { %> — পেয়েছেন <strong style="color:#f59e0b;"><%= status.prize %> কয়েন</strong><% } %>।<br>
