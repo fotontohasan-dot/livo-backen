@@ -90,6 +90,22 @@ router.post('/update', isAuth, async (req, res) => {
   res.redirect('/profile');
 });
 
+router.post('/update-avatar', isAuth, async (req, res) => {
+  try {
+    const { avatar } = req.body;
+    const allowedPrefix = 'https://api.dicebear.com/';
+    if (!avatar || typeof avatar !== 'string' || !avatar.startsWith(allowedPrefix)) {
+      return res.status(400).json({ success: false, error: 'অবৈধ অ্যাভাটার' });
+    }
+    await pool.query(`UPDATE users SET avatar=$1 WHERE id=$2`, [avatar, req.session.user.id]);
+    req.session.user.avatar = avatar;
+    res.json({ success: true, avatar });
+  } catch (err) {
+    console.error('avatar update error:', err.message);
+    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি' });
+  }
+});
+
 router.post('/update-personal', isAuth, async (req, res) => {
   try {
     const { full_name, phone } = req.body;
