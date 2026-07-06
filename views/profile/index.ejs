@@ -9,11 +9,11 @@
 
     <div style="display: flex; align-items: center; gap: 20px; position: relative; z-index: 1;">
       <div style="position: relative;">
-        <div style="width: 80px; height: 80px; border-radius: 50%; background: var(--grad-gold); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800; color: #000; box-shadow: 0 0 20px rgba(245, 158, 11, 0.45); border: 3px solid rgba(255,255,255,0.12);">
-          <%= user.username.charAt(0).toUpperCase() %>
+        <div id="avatarCircle" onclick="openAvatarPicker()" style="width: 80px; height: 80px; border-radius: 50%; background: var(--grad-gold); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800; color: #000; box-shadow: 0 0 20px rgba(245, 158, 11, 0.45); border: 3px solid rgba(255,255,255,0.12); cursor: pointer; overflow: hidden; background-image: <%= user.avatar ? `url('${user.avatar}')` : 'none' %>; background-size: cover; background-position: center;">
+          <% if (!user.avatar) { %><%= user.username.charAt(0).toUpperCase() %><% } %>
         </div>
-        <div style="position: absolute; bottom: -5px; right: -5px; background: #000; border: 2px solid var(--gold); border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 14px;">
-          👑
+        <div onclick="openAvatarPicker()" style="position: absolute; bottom: -5px; right: -5px; background: #000; border: 2px solid var(--gold); border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 13px; cursor: pointer;">
+          ✏️
         </div>
       </div>
 
@@ -68,6 +68,17 @@
           <%= t.my_cards %>
         </a>
       </div>
+    </div>
+  </div>
+
+  <!-- অ্যাভাটার পিকার মোডাল -->
+  <div id="avatarModal" style="display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 999; align-items: flex-end; justify-content: center;">
+    <div style="background: #1c2128; width: 100%; max-width: 480px; border-radius: 22px 22px 0 0; padding: 20px; border: 1px solid rgba(245,158,11,0.25); max-height: 75vh; display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <span style="color:#fff; font-size:16px; font-weight:800;">প্রোফাইল ছবি বাছাই করুন</span>
+        <span onclick="closeAvatarPicker()" style="color: rgba(255,255,255,0.6); font-size: 20px; cursor: pointer; padding: 0 6px;">&times;</span>
+      </div>
+      <div id="avatarGrid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; overflow-y: auto; padding-bottom: 10px;"></div>
     </div>
   </div>
 
@@ -209,6 +220,63 @@ function copyUsername() {
     document.body.removeChild(ta);
     showToast('✅ কপি হয়েছে!');
   }
+}
+
+var AVATAR_OPTIONS = [
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Milo',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Zara',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Kofi',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Luna',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Rio',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Nova',
+  'https://api.dicebear.com/7.x/bottts/svg?seed=Apollo',
+  'https://api.dicebear.com/7.x/bottts/svg?seed=Byte',
+  'https://api.dicebear.com/7.x/bottts/svg?seed=Circuit',
+  'https://api.dicebear.com/7.x/bottts/svg?seed=Dexter',
+  'https://api.dicebear.com/7.x/lorelei/svg?seed=Sasha',
+  'https://api.dicebear.com/7.x/lorelei/svg?seed=Tara',
+  'https://api.dicebear.com/7.x/lorelei/svg?seed=Vera',
+  'https://api.dicebear.com/7.x/lorelei/svg?seed=Wren'
+];
+
+function openAvatarPicker() {
+  var grid = document.getElementById('avatarGrid');
+  grid.innerHTML = '';
+  AVATAR_OPTIONS.forEach(function (url) {
+    var img = document.createElement('img');
+    img.src = url;
+    img.style.cssText = 'width:100%; aspect-ratio:1/1; border-radius:14px; background:rgba(255,255,255,0.06); border:2px solid rgba(255,255,255,0.08); cursor:pointer; padding:6px;';
+    img.onclick = function () { selectAvatar(url); };
+    grid.appendChild(img);
+  });
+  document.getElementById('avatarModal').style.display = 'flex';
+}
+
+function closeAvatarPicker() {
+  document.getElementById('avatarModal').style.display = 'none';
+}
+
+function selectAvatar(url) {
+  fetch('/profile/update-avatar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ avatar: url })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.success) {
+        var circle = document.getElementById('avatarCircle');
+        circle.style.backgroundImage = "url('" + url + "')";
+        circle.textContent = '';
+        closeAvatarPicker();
+        showToast('✅ প্রোফাইল ছবি পরিবর্তন হয়েছে!');
+      } else {
+        showToast('❌ আপডেট ব্যর্থ হয়েছে');
+      }
+    })
+    .catch(function () { showToast('❌ সমস্যা হয়েছে'); });
 }
 
 function refreshBalance() {
