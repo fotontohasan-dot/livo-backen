@@ -17,12 +17,27 @@ async function hasClaimedToday(userId, type) {
   return r.rows.length > 0;
 }
 
+// আজ ডিপোজিট করেছে কিনা — শুধু ডিপোজিট করলেই সোনার ডিম আনলক হবে
+async function hasQualifyingActivityToday(userId) {
+  const d = todayStr();
+
+  const dep = await pool.query(
+    `SELECT 1 FROM payment_requests
+     WHERE user_id=$1 AND type='deposit' AND status='approved'
+       AND (updated_at + interval '6 hours')::date = $2
+     LIMIT 1`,
+    [userId, d]
+  );
+  return !!dep.rows[0];
+}
+
 async function getRewardStatus(userId) {
   const redDone = await hasClaimedToday(userId, 'red_packet');
   const eggDone = await hasClaimedToday(userId, 'golden_egg');
+  const qualifies = await hasQualifyingActivityToday(userId);
   return {
-    redPacket: { claimed: redDone },
-    goldenEgg: { claimed: eggDone }
+    redPacket: { claimed: redDone, locked: !redDone && !qualifies },
+    goldenEgg: { claimed: eggDone, locked: !eggDone && !qualifies }
   };
 }
 
@@ -33,6 +48,9 @@ function randInt(min, max) {
 async function claimRedPacket(userId) {
   if (await hasClaimedToday(userId, 'red_packet')) {
     return { ok: false, message: 'আজকের লাল প্যাকেট ইতিমধ্যে নেওয়া হয়েছে' };
+  }
+  if (!(await hasQualifyingActivityToday(userId))) {
+    return { ok: false, message: '🔒 প্যাকেট লক করা আছে। আজ ডিপোজিট করুন, তারপর দাবি করতে পারবেন।' };
   }
   const amount = randInt(10, 50);
   const client = await pool.connect();
@@ -58,6 +76,9 @@ async function claimRedPacket(userId) {
 async function claimGoldenEgg(userId, pickedIndex) {
   if (await hasClaimedToday(userId, 'golden_egg')) {
     return { ok: false, message: 'আজকের সোনার ডিম ইতিমধ্যে নেওয়া হয়েছে' };
+  }
+  if (!(await hasQualifyingActivityToday(userId))) {
+    return { ok: false, message: '🔒 ডিম লক করা আছে। আজ ডিপোজিট করুন, তারপর ভাঙতে পারবেন।' };
   }
   const wonAmount = randInt(10, 30);
   const reveal = [];
