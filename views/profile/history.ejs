@@ -1,21 +1,57 @@
 <%- include('../partials/head') %>
-<%- include('../partials/navbar') %>
-<div class="container page">
-  <h1 style="margin-bottom: 1.5rem;">Betting Record</h1>
-  <div class="card">
-    <table class="table">
-      <thead><tr><th>Match</th><th>Bet</th><th>Status</th></tr></thead>
-      <tbody>
-        <% predictions.forEach(p => { %>
-          <tr>
-            <td><%= p.title %></td>
-            <td>🪙 <%= p.coins_bet %></td>
-            <td><%= p.status %></td>
-          </tr>
-        <% }) %>
-      </tbody>
-    </table>
+
+<div class="container" style="padding: 15px; padding-bottom: 100px;">
+  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+    <a href="/profile" style="color: #fff; text-decoration: none; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+      <i class="fas fa-chevron-left"></i>
+    </a>
+    <h1 style="color: #fff; font-size: 20px; font-weight: 800;">বেটিং রেকর্ড</h1>
+  </div>
+
+  <%- include('../partials/flash') %>
+
+  <form method="GET" action="/profile/history" style="margin-bottom: 16px;">
+    <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 10px;">
+      <button type="submit" name="quick" value="today" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.quick === 'today' ? 'var(--grad-gold)' : 'var(--bg-card)' %>; color: <%= filter.quick === 'today' ? '#000' : 'var(--text-main)' %>;">আজ</button>
+      <button type="submit" name="quick" value="yesterday" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.quick === 'yesterday' ? 'var(--grad-gold)' : 'var(--bg-card)' %>; color: <%= filter.quick === 'yesterday' ? '#000' : 'var(--text-main)' %>;">গতকাল</button>
+      <button type="submit" name="quick" value="7days" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.quick === '7days' ? 'var(--grad-gold)' : 'var(--bg-card)' %>; color: <%= filter.quick === '7days' ? '#000' : 'var(--text-main)' %>;">গত ৭ দিন</button>
+      <a href="/profile/history" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: var(--bg-card); color: var(--text-main); text-decoration:none;">সব</a>
+    </div>
+    <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 10px;">
+      <input type="date" name="from" value="<%= filter.from %>" style="flex:1; background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 10px; padding: 8px 10px; color: var(--text-main); font-size: 12px;">
+      <span style="color: var(--text-muted); font-size: 12px;">থেকে</span>
+      <input type="date" name="to" value="<%= filter.to %>" style="flex:1; background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 10px; padding: 8px 10px; color: var(--text-main); font-size: 12px;">
+      <button type="submit" style="background: var(--grad-gold); border: none; color: #000; padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 800;">ফিল্টার</button>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button type="submit" name="status" value="won" style="flex:1; padding: 8px; border-radius: 10px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.status === 'won' ? '#10b981' : 'var(--bg-card)' %>; color: <%= filter.status === 'won' ? '#fff' : 'var(--text-main)' %>;">জয়</button>
+      <button type="submit" name="status" value="lost" style="flex:1; padding: 8px; border-radius: 10px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.status === 'lost' ? '#ef4444' : 'var(--bg-card)' %>; color: <%= filter.status === 'lost' ? '#fff' : 'var(--text-main)' %>;">হার</button>
+      <button type="submit" name="status" value="pending" style="flex:1; padding: 8px; border-radius: 10px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.status === 'pending' ? '#f59e0b' : 'var(--bg-card)' %>; color: <%= filter.status === 'pending' ? '#000' : 'var(--text-main)' %>;">পেন্ডিং</button>
+    </div>
+  </form>
+
+  <div style="display: flex; flex-direction: column; gap: 10px;">
+    <% if (bets && bets.length) { %>
+      <% bets.forEach(function (b) { %>
+        <% var sc = b.status === 'won' ? '#10b981' : b.status === 'lost' ? '#ef4444' : '#f59e0b'; %>
+        <% var st = b.status === 'won' ? 'জয়' : b.status === 'lost' ? 'হার' : 'পেন্ডিং'; %>
+        <div style="background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 14px; padding: 14px 16px;">
+          <div style="display: flex; justify-content: space-between;">
+            <div style="color: #fff; font-size: 13px; font-weight: 700;"><%= b.team_a && b.team_b ? (b.team_a + ' vs ' + b.team_b) : (b.title || 'ম্যাচ') %></div>
+            <div style="color: <%= sc %>; font-size: 12px; font-weight: 800;"><%= st %></div>
+          </div>
+          <div style="color: var(--text-muted); font-size: 11px; margin-top: 6px;"><%= b.runner %> · অড <%= b.odd %></div>
+          <div style="display: flex; justify-content: space-between; margin-top: 8px; align-items: center;">
+            <div style="color: var(--text-muted); font-size: 11px;"><%= new Date(b.created_at).toLocaleString('bn-BD') %></div>
+            <div style="color: var(--gold); font-size: 14px; font-weight: 800;">৳<%= b.stake %> <% if (b.status === 'won') { %><span style="color:#10b981">→ ৳<%= Math.floor(b.stake * b.odd) %></span><% } %></div>
+          </div>
+        </div>
+      <% }) %>
+    <% } else { %>
+      <div style="text-align:center; padding: 40px 0; color: var(--text-muted); font-size: 13px;">এই সময়ে কোনো বেট নেই</div>
+    <% } %>
   </div>
 </div>
+
+<%- include('../partials/navbar') %>
 <%- include('../partials/bottom-nav') %>
-</body></html>
