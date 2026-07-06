@@ -309,6 +309,104 @@ router.get('/admin/payments', requireAdmin, async (req, res) => {
   }
 });
 
+function dhakaTodayStr() {
+  const now = new Date();
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+}
+
+function addDaysStr(dateStr, days) {
+  const d = new Date(dateStr + 'T00:00:00+06:00');
+  d.setUTCDate(d.getUTCDate() + days);
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+}
+
+function dhakaStartOf(dateStr) { return new Date(dateStr + 'T00:00:00+06:00'); }
+function dhakaEndOf(dateStr) { return new Date(dateStr + 'T23:59:59.999+06:00'); }
+
+router.get('/admin/summary', requireAdmin, async (req, res) => {
+  try {
+    const quick = req.query.quick || 'today';
+    const today = dhakaTodayStr();
+    let fromStr, toStr;
+
+    if (quick === '7d') {
+      fromStr = addDaysStr(today, -6);
+      toStr = today;
+    } else if (quick === '30d') {
+      fromStr = addDaysStr(today, -29);
+      toStr = today;
+    } else if (quick === 'all') {
+      fromStr = '1970-01-01';
+      toStr = today;
+    } else if (quick === 'custom') {
+      fromStr = req.query.from || today;
+      toStr = req.query.to || today;
+    } else {
+      fromStr = today;
+      toStr = today;
+    }
+
+    const fromTs = dhakaStartOf(fromStr);
+    const toTs = dhakaEndOf(toStr);
+
+    const grandResult = await pool.query(
+      `SELECT
+         COALESCE(SUM(CASE WHEN type='deposit' THEN amount ELSE 0 END),0) AS total_deposit,
+         COALESCE(SUM(CASE WHEN type='withdraw' THEN amount ELSE 0 END),0) AS total_withdraw,
+         COUNT(*) FILTER (WHERE type='deposit') AS deposit_count,
+         COUNT(*) FILTER (WHERE type='withdraw') AS withdraw_count
+       FROM payment_requests
+       WHERE status='approved' AND created_at BETWEEN $1 AND $2`,
+      [fromTs, toTs]
+    );
+
+    const dailyResult = await pool.query(
+      `SELECT
+         DATE(created_at AT TIME ZONE 'Asia/Dhaka') AS day,
+         COALESCE(SUM(CASE WHEN type='deposit' THEN amount ELSE 0 END),0) AS deposit_total,
+         COALESCE(SUM(CASE WHEN type='withdraw' THEN amount ELSE 0 END),0) AS withdraw_total
+       FROM payment_requests
+       WHERE status='approved' AND created_at BETWEEN $1 AND $2
+       GROUP BY DATE(created_at AT TIME ZONE 'Asia/Dhaka')
+       ORDER BY day DESC`,
+      [fromTs, toTs]
+    );
+
+    const userResult = await pool.query(
+      `SELECT u.id, u.username,
+         COALESCE(SUM(CASE WHEN pr.type='deposit' THEN pr.amount ELSE 0 END),0) AS total_deposit,
+         COALESCE(SUM(CASE WHEN pr.type='withdraw' THEN pr.amount ELSE 0 END),0) AS total_withdraw
+       FROM payment_requests pr
+       JOIN users u ON u.id = pr.user_id
+       WHERE pr.status='approved' AND pr.created_at BETWEEN $1 AND $2
+       GROUP BY u.id, u.username
+       ORDER BY total_deposit DESC`,
+      [fromTs, toTs]
+    );
+
+    res.render('payment/summary', {
+      user: req.session.user,
+      quick,
+      from: fromStr,
+      to: toStr,
+      grand: grandResult.rows[0],
+      daily: dailyResult.rows,
+      users: userResult.rows
+    });
+  } catch (err) {
+    console.error('summary error:', err.message);
+    res.render('payment/summary', {
+      user: req.session.user,
+      quick: 'today',
+      from: dhakaTodayStr(),
+      to: dhakaTodayStr(),
+      grand: { total_deposit: 0, total_withdraw: 0, deposit_count: 0, withdraw_count: 0 },
+      daily: [],
+      users: []
+    });
+  }
+});
+
 router.post('/admin/approve/:id', requireAdmin, async (req, res) => {
   const { id } = req.params;
   const client = await pool.connect();
