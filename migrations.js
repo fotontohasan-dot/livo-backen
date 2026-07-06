@@ -4,30 +4,48 @@ async function runMigrations() {
   try {
     console.log("🚀 Running database migrations...");
 
-    // বেস টেবিল — এগুলো না থাকলে নিচের সব টেবিল (REFERENCES users/matches) ফেইল করবে
+    // ==================== মূল টেবিল (আগে হাতে বানানো ছিল, এখানে কখনো ছিল না) ====================
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         username VARCHAR(50) UNIQUE NOT NULL,
-        email VARCHAR(255) UNIQUE,
-        phone VARCHAR(20) UNIQUE,
+        email TEXT UNIQUE,
+        phone TEXT UNIQUE,
         password TEXT NOT NULL,
+        full_name TEXT,
+        avatar TEXT,
         role VARCHAR(20) DEFAULT 'user',
-        coins INTEGER DEFAULT 0,
-        total_points INTEGER DEFAULT 0,
+        coins NUMERIC(14,2) DEFAULT 0,
+        total_deposited NUMERIC(14,2) DEFAULT 0,
+        total_turnover NUMERIC(14,2) DEFAULT 0,
+        total_points NUMERIC(14,2) DEFAULT 0,
+        loyalty_points NUMERIC(14,2) DEFAULT 0,
+        vip_level INTEGER DEFAULT 0,
+        win_streak INTEGER DEFAULT 0,
+        best_streak INTEGER DEFAULT 0,
         referral_code VARCHAR(20) UNIQUE,
-        referred_by_id INTEGER,
+        referred_by_id INTEGER REFERENCES users(id),
         is_banned BOOLEAN DEFAULT false,
+        admin_note TEXT,
+        kyc_status VARCHAR(20) DEFAULT 'none',
+        daily_deposit_limit NUMERIC(14,2),
+        self_exclude_until TIMESTAMP,
+        last_login TIMESTAMP,
+        last_ip TEXT,
+        last_device TEXT,
+        login_count INTEGER DEFAULT 0,
         reset_token TEXT,
         reset_token_expiry TIMESTAMP,
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_referral ON users(referral_code);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_referred_by ON users(referred_by_id);`);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS matches (
         id SERIAL PRIMARY KEY,
-        title TEXT NOT NULL,
+        title TEXT,
         sport VARCHAR(30) NOT NULL,
         team_a TEXT,
         team_b TEXT,
@@ -35,24 +53,31 @@ async function runMigrations() {
         score_a TEXT,
         score_b TEXT,
         overs TEXT,
+        start_time TIMESTAMP,
+        league TEXT,
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_matches_status ON matches(status);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_matches_sport ON matches(sport);`);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS payment_requests (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id),
         type VARCHAR(20) NOT NULL,
-        method VARCHAR(30),
+        method VARCHAR(20),
         amount NUMERIC(14,2) NOT NULL,
         transaction_id TEXT,
         account_number TEXT,
         status VARCHAR(20) DEFAULT 'pending',
+        want_bonus BOOLEAN DEFAULT false,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       );
     `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_pr_user ON payment_requests(user_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_pr_status ON payment_requests(status);`);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS notifications (
@@ -65,6 +90,8 @@ async function runMigrations() {
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id);`);
+    // ============================================================================================
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS markets (
@@ -300,15 +327,15 @@ async function runMigrations() {
     await pool.query(`ALTER TABLE mission_defs ADD COLUMN IF NOT EXISTS end_date DATE;`);
     // মিশন তালিকা (ব্যালেন্সড ৪টি) — সঠিক সেট না থকলে রিসিড
     const missionVer = await pool.query(`SELECT COALESCE(SUM(reward),0) AS s, COUNT(*) AS c FROM mission_defs WHERE period = 'daily'`);
-    const missionOk = parseInt(missionVer.rows[0].c) === 4 && parseInt(missionVer.rows[0].s) === 600;
+    const missionOk = parseInt(missionVer.rows[0].c) === 4 && parseInt(missionVer.rows[0].s) === 125;
     if (!missionOk) {
       await pool.query(`DELETE FROM mission_defs WHERE period = 'daily'`);
       await pool.query(`
         INSERT INTO mission_defs (title, target_type, target_value, reward, period) VALUES
-        ('আজ ৩টি বাজি ধরুন', 'bet_count', 3, 50, 'daily'),
-        ('আজ ৫,০০০ টাকা টার্নওভার করুন', 'turnover', 5000, 100, 'daily'),
-        ('আজ ১০টি বাজি ধরুন', 'bet_count', 10, 150, 'daily'),
-        ('আজ ১৫,০০০ টাকা টার্নওভার করুন', 'turnover', 15000, 300, 'daily');
+        ('আজ ৩টি বাজি ধরুন', 'bet_count', 3, 10, 'daily'),
+        ('আজ ৫,০০০ টাকা টার্নওভার করুন', 'turnover', 5000, 20, 'daily'),
+        ('আজ ১০টি বাজি ধরুন', 'bet_count', 10, 35, 'daily'),
+        ('আজ ১৫,০০০ টাকা টার্নওভার করুন', 'turnover', 15000, 60, 'daily');
       `);
     }
     const weeklyCount = await pool.query(`SELECT COUNT(*) AS c FROM mission_defs WHERE period = 'weekly'`);
@@ -463,10 +490,7 @@ async function runMigrations() {
       ADD COLUMN IF NOT EXISTS self_exclude_until TIMESTAMP,
       ADD COLUMN IF NOT EXISTS loyalty_points INTEGER DEFAULT 0,
       ADD COLUMN IF NOT EXISTS win_streak INTEGER DEFAULT 0,
-      ADD COLUMN IF NOT EXISTS best_streak INTEGER DEFAULT 0,
-      ADD COLUMN IF NOT EXISTS avatar TEXT,
-      ADD COLUMN IF NOT EXISTS total_points INTEGER DEFAULT 0,
-      ADD COLUMN IF NOT EXISTS full_name TEXT;
+      ADD COLUMN IF NOT EXISTS best_streak INTEGER DEFAULT 0;
     `);
 
     await pool.query(`
@@ -477,58 +501,8 @@ async function runMigrations() {
     await pool.query(`
       ALTER TABLE matches
       ADD COLUMN IF NOT EXISTS start_time TIMESTAMP,
-      ADD COLUMN IF NOT EXISTS league TEXT,
-      ADD COLUMN IF NOT EXISTS result TEXT;
+      ADD COLUMN IF NOT EXISTS league TEXT;
     `);
-
-    // প্রোফাইল পেজ চালাতে দরকার — এগুলো না থাকায় "প্রোফাইল লোড করতে সমস্যা হয়েছে" এরর হচ্ছিল
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS predictions (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id),
-        match_id INTEGER REFERENCES matches(id),
-        pick TEXT,
-        status VARCHAR(20) DEFAULT 'pending',
-        points_earned INTEGER DEFAULT 0,
-        created_at TIMESTAMP DEFAULT NOW()
-      );
-    `);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_pred_user ON predictions(user_id);`);
-
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS tournaments (
-        id SERIAL PRIMARY KEY,
-        name TEXT,
-        title TEXT,
-        sport VARCHAR(30),
-        entry_fee INTEGER DEFAULT 0,
-        created_at TIMESTAMP DEFAULT NOW()
-      );
-    `);
-
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS tournament_participants (
-        id SERIAL PRIMARY KEY,
-        tournament_id INTEGER REFERENCES tournaments(id),
-        user_id INTEGER REFERENCES users(id),
-        points INTEGER DEFAULT 0,
-        joined_at TIMESTAMP DEFAULT NOW()
-      );
-    `);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_tp_tournament ON tournament_participants(tournament_id);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_tp_user ON tournament_participants(user_id);`);
-
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS coin_transactions (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id),
-        amount NUMERIC(14,2) NOT NULL,
-        type VARCHAR(30),
-        description TEXT,
-        created_at TIMESTAMP DEFAULT NOW()
-      );
-    `);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_ct_user ON coin_transactions(user_id);`);
     // লাল প্যাকেট + সোনার ডিম দৈনিক রিওয়ার্ড
     await pool.query(`
       CREATE TABLE IF NOT EXISTS daily_rewards (
