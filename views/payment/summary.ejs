@@ -1,0 +1,119 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<div class="admin-layout">
+  <div class="admin-sidebar">
+    <div style="padding:0 1.5rem 1rem;font-size:.75rem;color:var(--muted);text-transform:uppercase;">অ্যাডমিন প্যানেল</div>
+    <a href="/admin" class="admin-nav-link">📊 ড্যাশবোর্ড</a>
+    <a href="/admin/users" class="admin-nav-link">👥 ব্যবহারকারী</a>
+    <a href="/admin/matches" class="admin-nav-link">⚽ ম্যাচসমূহ</a>
+    <a href="/admin/tournaments" class="admin-nav-link">🏆 টুর্নামন্ট</a>
+    <a href="/admin/news" class="admin-nav-link">📰 নিউজ</a>
+    <a href="/payment/admin/payments" class="admin-nav-link">💳 পেমেন্ট</a>
+    <a href="/payment/admin/summary" class="admin-nav-link active">📈 ডিপোজিট/উইথড্র সামারি</a>
+    <a href="/" class="admin-nav-link">🏠 সাইটে ফিরে যান</a>
+  </div>
+  <div class="admin-content">
+    <%- include('../partials/flash') %>
+    <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:1.5rem;">📈 ডিপোজিট/উইথড্র সামারি</h1>
+
+    <div class="card" style="margin-bottom:1.5rem;">
+      <div class="card-body">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem;">
+          <a href="/payment/admin/summary?quick=today" class="btn" style="padding:6px 14px;font-size:.8rem;<%= quick==='today' ? 'background:var(--gold);color:#000;' : '' %>">আজ</a>
+          <a href="/payment/admin/summary?quick=7d" class="btn" style="padding:6px 14px;font-size:.8rem;<%= quick==='7d' ? 'background:var(--gold);color:#000;' : '' %>">গত ৭ দিন</a>
+          <a href="/payment/admin/summary?quick=30d" class="btn" style="padding:6px 14px;font-size:.8rem;<%= quick==='30d' ? 'background:var(--gold);color:#000;' : '' %>">গত ৩০ দিন</a>
+          <a href="/payment/admin/summary?quick=all" class="btn" style="padding:6px 14px;font-size:.8rem;<%= quick==='all' ? 'background:var(--gold);color:#000;' : '' %>">সব সময়</a>
+        </div>
+        <form method="GET" action="/payment/admin/summary" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <input type="hidden" name="quick" value="custom">
+          <label style="font-size:.8rem;color:var(--muted);">থেকে
+            <input type="date" name="from" value="<%= from %>" style="margin-left:5px;padding:5px;border-radius:6px;background:#111;color:#fff;border:1px solid var(--border);">
+          </label>
+          <label style="font-size:.8rem;color:var(--muted);">পর্যন্ত
+            <input type="date" name="to" value="<%= to %>" style="margin-left:5px;padding:5px;border-radius:6px;background:#111;color:#fff;border:1px solid var(--border);">
+          </label>
+          <button class="btn" style="padding:6px 14px;font-size:.8rem;background:var(--gold);color:#000;">দেখুন</button>
+        </form>
+        <div style="margin-top:.75rem;font-size:.8rem;color:var(--muted);">সময়সীমা: <%= from %> থেকে <%= to %> পর্যন্ত</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem;">
+      <div class="card"><div class="card-body">
+        <div style="font-size:.75rem;color:var(--muted);">মোট ডিপোজিট</div>
+        <div style="font-size:1.4rem;font-weight:800;color:#10b981;">৳ <%= Number(grand.total_deposit).toLocaleString('en-BD') %></div>
+        <div style="font-size:.7rem;color:var(--muted);"><%= grand.deposit_count %> টি লেনদেন</div>
+      </div></div>
+      <div class="card"><div class="card-body">
+        <div style="font-size:.75rem;color:var(--muted);">মোট উইথড্র</div>
+        <div style="font-size:1.4rem;font-weight:800;color:#ff4444;">৳ <%= Number(grand.total_withdraw).toLocaleString('en-BD') %></div>
+        <div style="font-size:.7rem;color:var(--muted);"><%= grand.withdraw_count %> টি লেনদেন</div>
+      </div></div>
+      <div class="card"><div class="card-body">
+        <div style="font-size:.75rem;color:var(--muted);">নেট (ডিপোজিট - উইথড্র)</div>
+        <div style="font-size:1.4rem;font-weight:800;color:var(--gold);">৳ <%= Number(grand.total_deposit - grand.total_withdraw).toLocaleString('en-BD') %></div>
+      </div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:1.5rem;">
+      <div class="card-body" style="overflow-x:auto;">
+        <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:1rem;">📅 দৈনিক হিসাব</h2>
+        <table class="table" style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border);">
+              <th style="padding:.6rem;text-align:left;color:var(--muted);font-size:.8rem;">তারিখ</th>
+              <th style="padding:.6rem;text-align:left;color:var(--muted);font-size:.8rem;">ডিপোজিট</th>
+              <th style="padding:.6rem;text-align:left;color:var(--muted);font-size:.8rem;">উইথড্র</th>
+              <th style="padding:.6rem;text-align:left;color:var(--muted);font-size:.8rem;">নেট</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if(daily && daily.length > 0) { %>
+              <% daily.forEach(d => { %>
+                <tr style="border-bottom:1px solid var(--border);">
+                  <td style="padding:.6rem;font-weight:600;"><%= new Date(d.day).toLocaleDateString('bn-BD', {day:'2-digit', month:'short', year:'numeric'}) %></td>
+                  <td style="padding:.6rem;color:#10b981;font-weight:700;">৳ <%= Number(d.deposit_total).toLocaleString('en-BD') %></td>
+                  <td style="padding:.6rem;color:#ff4444;font-weight:700;">৳ <%= Number(d.withdraw_total).toLocaleString('en-BD') %></td>
+                  <td style="padding:.6rem;color:var(--gold);font-weight:700;">৳ <%= Number(d.deposit_total - d.withdraw_total).toLocaleString('en-BD') %></td>
+                </tr>
+              <% }) %>
+            <% } else { %>
+              <tr><td colspan="4" style="padding:1.5rem;text-align:center;color:var(--muted);">এই সময়ে কোনো লেনদেন নেই</td></tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body" style="overflow-x:auto;">
+        <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:1rem;">👥 ইউজার অনুযায়ী হিসাব</h2>
+        <table class="table" style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border);">
+              <th style="padding:.6rem;text-align:left;color:var(--muted);font-size:.8rem;">ইউজার</th>
+              <th style="padding:.6rem;text-align:left;color:var(--muted);font-size:.8rem;">মোট ডিপোজিট</th>
+              <th style="padding:.6rem;text-align:left;color:var(--muted);font-size:.8rem;">মোট উইথড্র</th>
+              <th style="padding:.6rem;text-align:left;color:var(--muted);font-size:.8rem;">নেট</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if(users && users.length > 0) { %>
+              <% users.forEach(u => { %>
+                <tr style="border-bottom:1px solid var(--border);">
+                  <td style="padding:.6rem;font-weight:600;"><%= u.username %></td>
+                  <td style="padding:.6rem;color:#10b981;font-weight:700;">৳ <%= Number(u.total_deposit).toLocaleString('en-BD') %></td>
+                  <td style="padding:.6rem;color:#ff4444;font-weight:700;">৳ <%= Number(u.total_withdraw).toLocaleString('en-BD') %></td>
+                  <td style="padding:.6rem;color:var(--gold);font-weight:700;">৳ <%= Number(u.total_deposit - u.total_withdraw).toLocaleString('en-BD') %></td>
+                </tr>
+              <% }) %>
+            <% } else { %>
+              <tr><td colspan="4" style="padding:1.5rem;text-align:center;color:var(--muted);">এই সময়ে কোনো ইউজার নেই</td></tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>
