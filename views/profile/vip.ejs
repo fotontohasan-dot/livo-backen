@@ -17,23 +17,38 @@
     </div>
 
     <!-- প্রোগ্রেস -->
-    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;margin-bottom:16px;">
+    <div id="vipProgressBox" style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;margin-bottom:16px;"
+         data-progress="<%= vip.progress %>" data-total-turnover="<%= vip.totalTurnover %>" data-to-next="<%= vip.toNext %>"
+         data-next-name="<%= vip.next ? vip.next.name : '' %>" data-is-max="<%= vip.next ? '0' : '1' %>">
       <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
         <span style="color:#94a3b8;font-size:13px;">মোট টার্নওভার</span>
-        <span style="color:#f59e0b;font-size:14px;font-weight:bold;"><%= Number(vip.totalTurnover).toLocaleString('bn-BD') %></span>
+        <span id="vipTurnoverText" style="color:#f59e0b;font-size:14px;font-weight:bold;"><%= Number(vip.totalTurnover).toLocaleString('bn-BD') %></span>
       </div>
 
-      <div style="background:rgba(255,255,255,0.1);border-radius:20px;height:14px;overflow:hidden;margin:10px 0;">
-        <div style="width:<%= vip.progress %>%;height:100%;background:linear-gradient(90deg,#f59e0b,#fbbf24);transition:width .5s;"></div>
+      <!-- বার + ভাসমান সংখ্যা -->
+      <div style="position:relative;margin:14px 0 6px;">
+        <div style="background:rgba(255,255,255,0.1);border-radius:20px;height:14px;overflow:visible;">
+          <div id="vipProgressFill" style="width:0%;height:100%;border-radius:20px;background:linear-gradient(90deg,#f59e0b,#fbbf24);transition:width 1s ease;"></div>
+        </div>
+        <!-- ভাসমান প্রোগ্রেস নাম্বার -->
+        <div id="vipProgressFloat" style="position:absolute;top:-26px;left:0%;transform:translateX(-50%);background:#1e293b;color:#fbbf24;font-size:11px;font-weight:800;padding:2px 8px;border-radius:8px;white-space:nowrap;border:1px solid #f59e0b;transition:left 1s ease;">
+          0 / 1000
+        </div>
+        <!-- +পরিমাণ পপ-আপ (লাইভ বৃদ্ধি দেখানোর জন্য) -->
+        <div id="vipDeltaPop" style="position:absolute;top:-26px;right:0;color:#4ade80;font-size:12px;font-weight:800;opacity:0;transition:opacity .3s, transform .6s;pointer-events:none;">+0</div>
+      </div>
+
+      <div style="color:#64748b;font-size:11px;text-align:center;margin-top:2px;">
+        প্রোগ্রেস: <span id="vipProgressNum" style="color:#f59e0b;font-weight:bold;">0</span> / ১০০০
       </div>
 
       <% if (vip.next) { %>
-        <div style="color:#94a3b8;font-size:12px;text-align:center;">
+        <div style="color:#94a3b8;font-size:12px;text-align:center;margin-top:8px;">
           পরের লেভেল <strong style="color:#fff;"><%= vip.next.name %></strong> পেতে আরও
-          <strong style="color:#f59e0b;"><%= Number(vip.toNext).toLocaleString('bn-BD') %></strong> টার্নওভার দরকার
+          <strong id="vipToNextText" style="color:#f59e0b;"><%= Number(vip.toNext).toLocaleString('bn-BD') %></strong> টার্নওভার দরকার
         </div>
       <% } else { %>
-        <div style="color:#10b981;font-size:13px;text-align:center;font-weight:bold;">🎉 আপনি সর্বোচ্চ VIP লেভেলে আছেন!</div>
+        <div id="vipMaxMsg" style="color:#10b981;font-size:13px;text-align:center;font-weight:bold;margin-top:8px;">🎉 আপনি সর্বোচ্চ VIP লেভেলে আছেন!</div>
       <% } %>
     </div>
 
@@ -77,5 +92,89 @@
   <% } %>
 
 </div>
+
+<% if (vip) { %>
+<script>
+(function () {
+  var box = document.getElementById('vipProgressBox');
+  if (!box) return;
+
+  var fill      = document.getElementById('vipProgressFill');
+  var floatTag  = document.getElementById('vipProgressFloat');
+  var numText   = document.getElementById('vipProgressNum');
+  var turnText  = document.getElementById('vipTurnoverText');
+  var toNextEl  = document.getElementById('vipToNextText');
+  var deltaPop  = document.getElementById('vipDeltaPop');
+
+  var current = 0; // বর্তমানে স্ক্রিনে দেখানো প্রোগ্রেস (0-1000)
+
+  function setBar(progress) {
+    progress = Math.max(0, Math.min(1000, Number(progress) || 0));
+    var pct = progress / 10; // 0-1000 -> 0-100%
+    fill.style.width = pct + '%';
+    floatTag.style.left = pct + '%';
+    floatTag.textContent = Math.round(progress) + ' / 1000';
+    numText.textContent = Math.round(progress);
+  }
+
+  // পেজ লোড হওয়ার সাথে সাথে ০ থেকে অ্যানিমেট করে বর্তমান মান পর্যন্ত ভরাট করা
+  var target = Number(box.dataset.progress) || 0;
+  requestAnimationFrame(function () {
+    setBar(0);
+    requestAnimationFrame(function () {
+      setBar(target);
+      current = target;
+    });
+  });
+
+  function showDelta(amount) {
+    if (amount <= 0) return;
+    deltaPop.textContent = '+' + amount;
+    deltaPop.style.opacity = '1';
+    deltaPop.style.transform = 'translateY(-6px)';
+    setTimeout(function () {
+      deltaPop.style.opacity = '0';
+      deltaPop.style.transform = 'translateY(0)';
+    }, 1400);
+  }
+
+  function refreshVipProgress() {
+    fetch('/profile/api/vip-progress')
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.success) return;
+
+        if (data.progress > current) {
+          showDelta(Math.round(data.progress - current));
+        }
+        setBar(data.progress);
+        current = data.progress;
+
+        if (turnText) {
+          turnText.textContent = Number(data.totalTurnover).toLocaleString('bn-BD');
+        }
+        if (data.isMax) {
+          if (toNextEl && toNextEl.parentElement) toNextEl.parentElement.style.display = 'none';
+        } else if (toNextEl) {
+          toNextEl.textContent = Number(data.toNext).toLocaleString('bn-BD');
+        }
+      })
+      .catch(function () { /* নীরবে ব্যর্থ — পরের পোলে আবার চেষ্টা হবে */ });
+  }
+
+  // পেজ খোলা থাকা অবস্থায় প্রতি ১০ সেকেন্ডে লাইভ আপডেট চেক করা হবে
+  var pollTimer = setInterval(function () {
+    if (document.visibilityState === 'visible') refreshVipProgress();
+  }, 10000);
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') refreshVipProgress();
+  });
+
+  window.addEventListener('beforeunload', function () { clearInterval(pollTimer); });
+})();
+</script>
+<% } %>
+
 <%- include('../partials/bottom-nav') %>
 </body></html>
