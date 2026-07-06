@@ -90,22 +90,6 @@ router.post('/update', isAuth, async (req, res) => {
   res.redirect('/profile');
 });
 
-router.post('/update-avatar', isAuth, async (req, res) => {
-  try {
-    const { avatar } = req.body;
-    const allowedPrefix = 'https://api.dicebear.com/';
-    if (!avatar || typeof avatar !== 'string' || !avatar.startsWith(allowedPrefix)) {
-      return res.status(400).json({ success: false, error: 'অবৈধ অ্যাভাটার' });
-    }
-    await pool.query(`UPDATE users SET avatar=$1 WHERE id=$2`, [avatar, req.session.user.id]);
-    req.session.user.avatar = avatar;
-    res.json({ success: true, avatar });
-  } catch (err) {
-    console.error('avatar update error:', err.message);
-    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি' });
-  }
-});
-
 router.post('/update-personal', isAuth, async (req, res) => {
   try {
     const { full_name, phone } = req.body;
@@ -467,6 +451,26 @@ router.get('/vip', isAuth, async (req, res) => {
   } catch (err) {
     console.error('vip page error:', err.message);
     res.render('profile/vip', { user: req.session.user, vip: null });
+  }
+});
+
+// VIP প্রোগ্রেস — লাইভ AJAX আপডেটের জন্য (০ থেকে ১০০০ স্কেল)
+router.get('/api/vip-progress', isAuth, async (req, res) => {
+  try {
+    const vip = await getVipStatus(req.session.user.id);
+    res.json({
+      success: true,
+      progress: vip.progress,           // 0 - 1000
+      totalTurnover: vip.totalTurnover,
+      toNext: vip.toNext,
+      level: vip.level,
+      currentName: vip.current ? vip.current.name : null,
+      nextName: vip.next ? vip.next.name : null,
+      isMax: !vip.next
+    });
+  } catch (err) {
+    console.error('vip progress api error:', err.message);
+    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি' });
   }
 });
 
