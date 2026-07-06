@@ -1,4 +1,5 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
@@ -314,7 +315,17 @@ router.get('/wheel', isAuth, async (req, res) => {
   }
 });
 
-router.post('/wheel/spin', isAuth, async (req, res) => {
+// প্রতি ইউজার/IP-তে মিনিটে সর্বোচ্চ ১০ বার claim/spin রিকোয়েস্ট — বট/স্প্যাম ঠেকাতে
+const claimLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => (req.session && req.session.user ? String(req.session.user.id) : req.ip),
+  message: { ok: false, success: false, message: 'অনেকবার চেষ্টা করেছেন, একটু পরে আবার চেষ্টা করুন।' }
+});
+
+router.post('/wheel/spin', isAuth, claimLimiter, async (req, res) => {
   try {
     const result = await spin(req.session.user.id);
     res.json(result);
@@ -379,7 +390,7 @@ router.get('/daily-rewards/status', isAuth, async (req, res) => {
   }
 });
 
-router.post('/daily-rewards/red-packet/claim', isAuth, async (req, res) => {
+router.post('/daily-rewards/red-packet/claim', isAuth, claimLimiter, async (req, res) => {
   try {
     const result = await claimRedPacket(req.session.user.id);
     if (result.ok) {
@@ -393,7 +404,7 @@ router.post('/daily-rewards/red-packet/claim', isAuth, async (req, res) => {
   }
 });
 
-router.post('/daily-rewards/golden-egg/claim', isAuth, async (req, res) => {
+router.post('/daily-rewards/golden-egg/claim', isAuth, claimLimiter, async (req, res) => {
   try {
     let idx = parseInt(req.body.pickedIndex, 10);
     if (isNaN(idx) || idx < 0 || idx > 7) idx = 0;
