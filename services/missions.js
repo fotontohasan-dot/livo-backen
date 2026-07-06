@@ -133,6 +133,8 @@ async function claimMission(userId, missionId) {
       return { success: false, message: 'মিশন পাওয়া যায়নি।' };
     }
 
+    let finalReward = d.reward;
+
     if (d.period === 'daily') {
       const um = await client.query(
         `SELECT * FROM user_missions WHERE user_id = $1 AND mission_date = $2 FOR UPDATE`,
@@ -147,7 +149,22 @@ async function claimMission(userId, missionId) {
       const progress = d.target_type === 'bet_count' ? Number(row.bet_count) : Number(row.turnover);
       if (progress < Number(d.target_value)) { await client.query('ROLLBACK'); return { success: false, message: 'মিশন এখনো সম্পূর্ণ হয়নি।' }; }
 
-      await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [d.reward, userId]);
+      // দৈনিক মিশন রিওয়ার্ড ক্যাপ — একই দিনে সর্বোচ্চ ১০০ কয়েন
+      const DAILY_MISSION_CAP = 100;
+      const claimedToday = await client.query(
+        `SELECT COALESCE(SUM(md.reward),0) AS total
+         FROM mission_defs md WHERE md.period = 'daily' AND md.id = ANY($1::int[])`,
+        [claimedIds]
+      );
+      const alreadyEarned = Number(claimedToday.rows[0].total);
+      const remainingCap = DAILY_MISSION_CAP - alreadyEarned;
+      if (remainingCap <= 0) {
+        await client.query('ROLLBACK');
+        return { success: false, message: 'আজকের সর্বোচ্চ মিশন রিওয়ার্ড সীমা (১০০ কয়েন) শেষ হয়ে গেছে।' };
+      }
+      finalReward = Math.min(d.reward, remainingCap);
+
+      await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [finalReward, userId]);
       await client.query(`UPDATE user_missions SET claimed_ids = array_append(claimed_ids, $1) WHERE id = $2`, [missionId, row.id]);
     } else {
       // উইকলি / স্পেশাল — mission_claims দিয়ে ট্র্যাক
@@ -179,15 +196,15 @@ async function claimMission(userId, missionId) {
 
     await client.query(
       `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, 'mission', $3)`,
-      [userId, d.reward, `মিশন: ${d.title}`]
+      [userId, finalReward, `মিশন: ${d.title}`]
     );
     await client.query(
       `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, 'মিশন সম্পন্ন!', $2, 'success')`,
-      [userId, `আপনি "${d.title}" মিশন শেষ করে ${d.reward} কয়েন পেয়েছেন!`]
+      [userId, `আপনি "${d.title}" মিশন শেষ করে ${finalReward} কয়েন পেয়েছেন!`]
     );
 
     await client.query('COMMIT');
-    return { success: true, reward: d.reward, message: `${d.reward} কয়েন পেয়েছেন!` };
+    return { success: true, reward: finalReward, message: `${finalReward} কয়েন পেয়েছেন!` };
   } catch (e) {
     await client.query('ROLLBACK');
     console.error('claimMission error:', e.message);
