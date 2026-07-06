@@ -6,12 +6,12 @@ const { pool } = require('../db');
 
 // হুইলের ঘর (পুরস্কার) — weight যত বেশি, আসার সম্ভাবনা তত বেশি
 const SEGMENTS = [
-  { prize: 0,    weight: 35 }, // আবার চেষ্টা করুন
-  { prize: 0,    weight: 35 }, // আবার চেষ্টা করুন
-  { prize: 0,    weight: 20 }, // আবার চেষ্টা করুন
-  { prize: 0,    weight: 20 }, // আবার চেষ্টা করুন
-  { prize: 5,    weight: 40 },
-  { prize: 5,    weight: 30 },
+  { prize: 0,    weight: 25 }, // আবার চেষ্টা করুন
+  { prize: 0,    weight: 25 }, // আবার চেষ্টা করুন
+  { prize: 0,    weight: 15 }, // আবার চেষ্টা করুন
+  { prize: 0,    weight: 15 }, // আবার চেষ্টা করুন
+  { prize: 5,    weight: 45 },
+  { prize: 5,    weight: 35 },
   { prize: 10,   weight: 25 },
   { prize: 10,   weight: 20 },
   { prize: 20,   weight: 8 },
@@ -29,7 +29,7 @@ function getSegments() {
   return SEGMENTS.map(s => s.prize);
 }
 
-// আজ ডিপোজিট করেছে বা গেম/বেট খেলেছে কিনা — এই দুটোর যেকোনো একটা হলে হুইল আনলক হবে
+// আজ ডিপোজিট করেছে কিনা — শুধু ডিপোজিট করলেই হুইল আনলক হবে
 async function hasQualifyingActivityToday(userId) {
   const d = today();
 
@@ -39,15 +39,7 @@ async function hasQualifyingActivityToday(userId) {
      LIMIT 1`,
     [userId, d]
   );
-  if (dep.rows[0]) return true;
-
-  const played = await pool.query(
-    `SELECT 1 FROM coin_transactions
-     WHERE user_id=$1 AND type IN ('game_play','game_win','bet','bet_win') AND created_at::date = $2
-     LIMIT 1`,
-    [userId, d]
-  );
-  return !!played.rows[0];
+  return !!dep.rows[0];
 }
 
 // আজ স্পিন করা হয়েছে কিনা
@@ -99,7 +91,7 @@ async function spin(userId) {
     const qualifies = await hasQualifyingActivityToday(userId);
     if (!qualifies) {
       await client.query('ROLLBACK');
-      return { success: false, message: 'হুইল লক করা আছে। আজ ডিপোজিট করুন বা গেম খেলুন, তারপর স্পিন করতে পারবেন।' };
+      return { success: false, message: 'হুইল লক করা আছে। আজ ডিপোজিট করুন, তারপর স্পিন করতে পারবেন।' };
     }
 
     // পুরস্কার নির্বাচন
