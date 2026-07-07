@@ -6,7 +6,50 @@ const { settleSelectionsForMarket } = require('../services/accumulator');
 const { grantFreeBet } = require('../services/freebet');
 const { syncMatches } = require('../services/matchUpdater');
 const { runBackupNow, restoreFromBackup, getBackupStatus } = require('../services/backup');
+const bcrypt = require('bcryptjs');
 
+// ==================== ADMIN LOGIN (এটা সবার উপরে রাখতে হবে) ====================
+router.get('/login', (req, res) => {
+  if (req.session.user && req.session.user.role === 'admin') {
+    return res.redirect('/admin');
+  }
+  res.render('admin/login', { error: null });
+});
+
+router.post('/login', async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+    const [rows] = await pool.query(
+      'SELECT * FROM users WHERE username = ? AND role = "admin" LIMIT 1',
+      [username]
+    );
+
+    if (rows.length === 0) {
+      return res.render('admin/login', { error: 'ইউজারনেম বা পাসওয়ার্ড ভুল' });
+    }
+
+    const admin = rows[0];
+    const isMatch = await bcrypt.compare(password, admin.password);
+
+    if (!isMatch) {
+      return res.render('admin/login', { error: 'ইউজারনেম বা পাসওয়ার্ড ভুল' });
+    }
+
+    req.session.user = {
+      id: admin.id,
+      username: admin.username,
+      role: admin.role
+    };
+
+    res.redirect('/admin');
+  } catch (err) {
+    console.error(err);
+    res.render('admin/login', { error: 'সার্ভার এরর হয়েছে' });
+  }
+});
+
+// ==================== এর পর থেকে সব রাউট প্রোটেক্টেড ====================
 router.use(isAdmin);
 
 // ==================== DASHBOARD ====================
@@ -40,7 +83,6 @@ router.get('/', async (req, res) => {
        FROM bets WHERE created_at::date = CURRENT_DATE AND status IN ('won','lost')`
     );
 
-    // গত ১৪ দিনের রেভিনিউ (ডিপোজিট - উইথড্র), লাইন চার্টের জন্য
     const revenueTrend = await pool.query(`
       SELECT d::date AS day,
         COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='deposit' AND status='approved' AND created_at::date = d::date),0) AS deposit,
@@ -49,7 +91,6 @@ router.get('/', async (req, res) => {
       ORDER BY day
     `);
 
-    // গত ১৪ দিনের নতুন ইউজার, বার চার্টের জন্য
     const userGrowth = await pool.query(`
       SELECT d::date AS day,
         COALESCE((SELECT COUNT(*) FROM users WHERE created_at::date = d::date),0) AS new_users
@@ -68,7 +109,6 @@ router.get('/', async (req, res) => {
       WHERE pr.type='withdraw' ORDER BY pr.created_at DESC LIMIT 8
     `);
 
-    // সন্দেহজনক অ্যাক্টিভিটি: একই IP থেকে একাধিক অ্যাকাউন্ট
     const suspicious = await pool.query(`
       SELECT last_ip, COUNT(*) AS cnt, ARRAY_AGG(username) AS usernames
       FROM users WHERE last_ip IS NOT NULL
@@ -178,7 +218,6 @@ router.get('/users/:id', async (req, res) => {
       payments = p.rows;
     } catch (e) {}
 
-    // একই IP থেকে অন্য অ্যাকাউন্ট (multi-account ধরা)
     try {
       if (user.last_ip) {
         const s = await pool.query(
@@ -193,7 +232,6 @@ router.get('/users/:id', async (req, res) => {
       referralCount = parseInt(r.rows[0].count);
     } catch (e) {}
 
-    // আর্থিক হিসাব
     try {
       const dep = await pool.query(`SELECT COALESCE(SUM(amount),0) s FROM payment_requests WHERE user_id=$1 AND type='deposit' AND status='approved'`, [uId]);
       const wd = await pool.query(`SELECT COALESCE(SUM(amount),0) s FROM payment_requests WHERE user_id=$1 AND type='withdraw' AND status='approved'`, [uId]);
@@ -459,10 +497,9 @@ router.post('/backup/run', async (req, res) => {
   res.redirect('/admin');
 });
 
-// সতর্কতা: ?confirm=RESTORE ছাড়া কাজ করবে না — ভুলে চালানো ঠেকাতে
 router.post('/backup/restore', async (req, res) => {
   if (req.query.confirm !== 'RESTORE') {
-    req.flash('error', '?confirm=RESTORE যোগ করে আবার চেষ্টা করুন। এটা ভুলে চালানো ঠেকানোর জন্য।');
+    req.flash('error', '?confirm=RESTORE যোগ করে আবার চেষ্টা করুন। এটা ভুলে চালানো ঠেকাতে।');
     return res.redirect('/admin');
   }
   try {
@@ -533,6 +570,7 @@ router.post('/tournaments/:id/delete', async (req, res) => {
   }
   res.redirect('/admin/tournaments');
 });
+
 router.get('/bets', async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -557,7 +595,6 @@ router.get('/bets', async (req, res) => {
       ${where} ORDER BY b.created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}
     `, params);
 
-    // সন্দেহজনক বেট: গড়ের তুলনায় অনেক বড় স্টেক (৫০০০+ বা টানা জয়ের প্যাটার্ন)
     const suspiciousBets = await pool.query(`
       SELECT b.*, u.username, m.team_a, m.team_b, m.title
       FROM bets b JOIN users u ON b.user_id = u.id LEFT JOIN matches m ON b.match_id = m.id
@@ -574,10 +611,9 @@ router.get('/bets', async (req, res) => {
   }
 });
 
-// ম্যানুয়াল বেট সেটেলমেন্ট (একটা নির্দিষ্ট বেট জয়/হার হিসেবে সেট করা + পেআউট)
 router.post('/bets/:id/settle', async (req, res) => {
   const { id } = req.params;
-  const { result } = req.body; // 'won' | 'lost'
+  const { result } = req.body;
   if (!['won', 'lost'].includes(result)) {
     req.flash('error', 'ভুল রেজাল্ট');
     return res.redirect('/admin/bets');
@@ -757,7 +793,7 @@ router.get('/reports/export/:type', async (req, res) => {
     const csv = toCsv(rows);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send('\uFEFF' + csv); // BOM যোগ — এক্সেলে বাংলা ঠিকভাবে দেখানোর জন্য
+    res.send('\uFEFF' + csv);
   } catch (err) {
     console.error('report export error:', err.message);
     res.status(500).send('রিপোর্ট তৈরি করতে সমস্যা হয়েছে: ' + err.message);
@@ -799,7 +835,6 @@ router.post('/settings/update', async (req, res) => {
   res.redirect('/admin/settings');
 });
 
-// অ্যাডমিন রোল ম্যানেজমেন্ট
 router.post('/settings/admins/promote', async (req, res) => {
   const { username } = req.body;
   try {
