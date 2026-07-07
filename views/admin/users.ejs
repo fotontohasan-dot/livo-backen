@@ -1,89 +1,93 @@
 <%- include('../partials/head') %>
-<%- include('../partials/navbar') %>
-<div class="admin-layout">
-  <div class="admin-sidebar">
-    <div style="padding:0 1.5rem 1rem;font-size:.75rem;color:var(--muted);text-transform:uppercase;">অ্যাডমিন প্যনেল</div>
-    <a href="/admin" class="admin-nav-link">📊 ড্যাশবোর্ড</a>
-    <a href="/admin/users" class="admin-nav-link active">👥 ব্যবহারকারী</a>
-    <a href="/admin/matches" class="admin-nav-link">⚽ ম্যাচসমূহ</a>
-    <a href="/admin/tournaments" class="admin-nav-link">🏆 টুর্নামেন্ট</a>
-    <a href="/admin/news" class="admin-nav-link">📰 নিউজ</a>
-    <a href="/chat/admin" class="admin-nav-link">💬 সপোর্ট চ্যাট</a>
-    <a href="/" class="admin-nav-link">🏠 সাইটে ফির যান</a>
-  </div>
+<div class="admin-wrap">
+  <%- include('./partials/sidebar', { active: 'users' }) %>
   <div class="admin-content">
+    <div class="admin-topbar">
+      <button class="admin-hamburger" onclick="toggleAdminSidebar()"><i class="fas fa-bars"></i></button>
+      <h1 style="font-size:18px;font-weight:800;color:#fff;">👥 ইউজার ম্যানেজমেন্ট</h1>
+    </div>
+
     <%- include('../partials/flash') %>
-    <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:1.5rem;">👥 ইউজার ম্যানেজমেন্ট</h1>
-    <div class="card">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>ইউজার</th>
-            <th>ইমেইল</th>
-            <th>কয়েন</th>
-            <th>পয়েন্ট</th>
-            <th>স্ট্যাটাস</th>
-            <th>অ্যাকশন</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% users.forEach(u => { %>
-            <tr>
-              <td style="font-weight:600"><%= u.username %></td>
-              <td style="font-size:.8rem;color:var(--muted)"><%= u.email %></td>
-              <td style="color:var(--gold)"><%= u.coins %></td>
-              <td style="color:var(--primary)"><%= u.total_points %></td>
-              <td>
-                <span style="color:<%= u.is_banned ? 'var(--red)' : 'var(--green)' %>;font-size:.85rem">
-                  <%= u.is_banned ? '🚫 নিষিদ্ধ' : '✅ সচল' %>
-                </span>
-              </td>
-              <td style="display:flex;gap:.4rem;flex-wrap:wrap;">
-                <a href="/admin/users/<%= u.id %>" class="btn btn-sm btn-primary">👁️ বিস্তারিত</a>
-                <button onclick="banUser(<%= u.id %>)" class="btn btn-sm <%= u.is_banned ? 'btn-outline' : 'btn-danger' %>">
-                  <%= u.is_banned ? 'আনব্যান' : 'ব্যান' %>
-                </button>
-                <button onclick="showAddCoins(<%= u.id %>)" class="btn btn-sm btn-gold">+ কয়েন</button>
-                <button onclick="showRemoveCoins(<%= u.id %>)" class="btn btn-sm btn-danger">- কয়েন</button>
-              </td>
-            </tr>
-          <% }) %>
-        </tbody>
-      </table>
-    </div>
 
-    <div id="addCoinModal" style="display:none;position:fixed;inset:0;background:#000000aa;z-index:9999;align-items:center;justify-content:center;">
-      <div class="card" style="width:90%;max-width:350px;padding:20px;">
-        <h3 style="color:var(--gold);margin-bottom:12px;">💰 কয়েন যোগ করুন</h3>
-        <input type="number" class="form-input" id="addCoinAmount" min="1" placeholder="যত কয়েন দিতে চান" style="margin-bottom:12px;width:100%;">
-        <div style="display:flex;gap:.5rem;">
-          <button onclick="submitAddCoins()" class="btn btn-primary">✅ যোগ করুন</button>
-          <button onclick="closeModals()" class="btn btn-outline">বাতিল</button>
-        </div>
+    <form method="GET" action="/admin/users" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+      <input type="text" name="search" value="<%= search %>" placeholder="ইউজারনেম/ইমেইল/ফোন সার্চ..." style="flex:1;min-width:180px;background:#171b23;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:9px 12px;color:#fff;font-size:13px;">
+      <select name="status" style="background:#171b23;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:9px 12px;color:#fff;font-size:13px;">
+        <option value="" <%= status === '' ? 'selected' : '' %>>সব স্ট্যাটাস</option>
+        <option value="active" <%= status === 'active' ? 'selected' : '' %>>সচল</option>
+        <option value="banned" <%= status === 'banned' ? 'selected' : '' %>>নিষিদ্ধ</option>
+      </select>
+      <button type="submit" style="background:#f59e0b;border:none;color:#000;padding:9px 18px;border-radius:10px;font-size:13px;font-weight:800;">সার্চ</button>
+    </form>
+
+    <div class="admin-card">
+      <div style="overflow-x:auto;">
+        <table class="admin-table">
+          <thead>
+            <tr><th>ইউজার</th><th>ইমেইল</th><th>কয়েন</th><th>পয়েন্ট</th><th>স্ট্যাটাস</th><th>অ্যাকশন</th></tr>
+          </thead>
+          <tbody>
+            <% users.forEach(u => { %>
+              <tr>
+                <td style="font-weight:700;color:#fff"><%= u.username %></td>
+                <td style="color:#94a3b8"><%= u.email %></td>
+                <td style="color:#f59e0b"><%= u.coins %></td>
+                <td style="color:#60a5fa"><%= u.total_points %></td>
+                <td><span class="badge <%= u.is_banned ? 'badge-red' : 'badge-green' %>"><%= u.is_banned ? 'নিষিদ্ধ' : 'সচল' %></span></td>
+                <td style="display:flex;gap:6px;flex-wrap:wrap;">
+                  <a href="/admin/users/<%= u.id %>" style="background:rgba(59,130,246,0.15);color:#60a5fa;padding:5px 10px;border-radius:8px;font-size:11px;text-decoration:none;font-weight:700;">বিস্তারিত</a>
+                  <button onclick="banUser(<%= u.id %>)" style="background:<%= u.is_banned ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)' %>;color:<%= u.is_banned ? '#10b981' : '#ef4444' %>;border:none;padding:5px 10px;border-radius:8px;font-size:11px;font-weight:700;"><%= u.is_banned ? 'আনব্যান' : 'ব্যান' %></button>
+                  <button onclick="showAddCoins(<%= u.id %>)" style="background:rgba(245,158,11,0.15);color:#f59e0b;border:none;padding:5px 10px;border-radius:8px;font-size:11px;font-weight:700;">+ কয়েন</button>
+                  <button onclick="showRemoveCoins(<%= u.id %>)" style="background:rgba(239,68,68,0.15);color:#ef4444;border:none;padding:5px 10px;border-radius:8px;font-size:11px;font-weight:700;">- কয়েন</button>
+                </td>
+              </tr>
+            <% }) %>
+            <% if (!users.length) { %><tr><td colspan="6" style="text-align:center;color:#64748b;padding:20px;">কোনো ইউজার পাওয়া যায়নি</td></tr><% } %>
+          </tbody>
+        </table>
       </div>
     </div>
 
-    <div id="removeCoinModal" style="display:none;position:fixed;inset:0;background:#000000aa;z-index:9999;align-items:center;justify-content:center;">
-      <div class="card" style="width:90%;max-width:350px;padding:20px;">
-        <h3 style="color:var(--red);margin-bottom:12px;">🔻 কয়েন কমান</h3>
-        <input type="number" class="form-input" id="removeCoinAmount" min="1" placeholder="যত কয়েন কমাতে চান" style="margin-bottom:12px;width:100%;">
-        <div style="display:flex;gap:.5rem;">
-          <button onclick="submitRemoveCoins()" class="btn btn-danger">🔻 কমান</button>
-          <button onclick="closeModals()" class="btn btn-outline">বাতিল</button>
+    <!-- পেজিনেশন -->
+    <div style="display:flex;justify-content:center;gap:8px;margin-top:16px;">
+      <% if (page > 1) { %>
+        <a href="/admin/users?page=<%= page - 1 %>&search=<%= search %>&status=<%= status %>" style="background:#171b23;color:#fff;padding:8px 14px;border-radius:8px;text-decoration:none;font-size:12px;border:1px solid rgba(255,255,255,0.08);">← আগে</a>
+      <% } %>
+      <span style="color:#94a3b8;font-size:12px;padding:8px;">পেজ <%= page %> / <%= totalPages %> (মোট <%= total %>)</span>
+      <% if (page < totalPages) { %>
+        <a href="/admin/users?page=<%= page + 1 %>&search=<%= search %>&status=<%= status %>" style="background:#171b23;color:#fff;padding:8px 14px;border-radius:8px;text-decoration:none;font-size:12px;border:1px solid rgba(255,255,255,0.08);">পরে →</a>
+      <% } %>
+    </div>
+
+    <!-- Modals -->
+    <div id="addCoinModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;align-items:center;justify-content:center;">
+      <div style="background:#171b23;border-radius:16px;padding:20px;width:90%;max-width:340px;">
+        <div style="color:#fff;font-weight:800;margin-bottom:12px;">🔺 কয়েন যোগ করুন</div>
+        <input type="number" id="addCoinAmount" min="1" placeholder="কত কয়েন যোগ করবেন" style="width:100%;background:#0f1115;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px;color:#fff;margin-bottom:12px;">
+        <div style="display:flex;gap:8px;">
+          <button onclick="submitAddCoins()" style="flex:1;background:#f59e0b;color:#000;border:none;padding:10px;border-radius:10px;font-weight:800;">যোগ করুন</button>
+          <button onclick="closeModals()" style="flex:1;background:rgba(255,255,255,0.08);color:#fff;border:none;padding:10px;border-radius:10px;">বাতিল</button>
         </div>
       </div>
     </div>
-
+    <div id="removeCoinModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;align-items:center;justify-content:center;">
+      <div style="background:#171b23;border-radius:16px;padding:20px;width:90%;max-width:340px;">
+        <div style="color:#fff;font-weight:800;margin-bottom:12px;">🔻 কয়েন কমান</div>
+        <input type="number" id="removeCoinAmount" min="1" placeholder="যত কয়েন কমাতে চান" style="width:100%;background:#0f1115;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px;color:#fff;margin-bottom:12px;">
+        <div style="display:flex;gap:8px;">
+          <button onclick="submitRemoveCoins()" style="flex:1;background:#ef4444;color:#fff;border:none;padding:10px;border-radius:10px;font-weight:800;">কমান</button>
+          <button onclick="closeModals()" style="flex:1;background:rgba(255,255,255,0.08);color:#fff;border:none;padding:10px;border-radius:10px;">বাতিল</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
+
 <script>
 let currentUserId;
-
 function closeModals() {
   document.getElementById('addCoinModal').style.display = 'none';
   document.getElementById('removeCoinModal').style.display = 'none';
 }
-
 function postForm(action, fields) {
   const f = document.createElement('form');
   f.method = 'POST'; f.action = action;
@@ -95,34 +99,28 @@ function postForm(action, fields) {
   document.body.appendChild(f);
   f.submit();
 }
-
 function banUser(id) {
   if (!confirm('স্ট্যাটাস পরিবর্তন করবেন?')) return;
   postForm(`/admin/users/${id}/ban`, {});
 }
-
 function showAddCoins(id) {
   currentUserId = id;
   document.getElementById('addCoinAmount').value = '';
   document.getElementById('addCoinModal').style.display = 'flex';
 }
-
 function showRemoveCoins(id) {
   currentUserId = id;
   document.getElementById('removeCoinAmount').value = '';
   document.getElementById('removeCoinModal').style.display = 'flex';
 }
-
 function submitAddCoins() {
   const amount = document.getElementById('addCoinAmount').value;
   if (!amount || amount <= 0) { alert('সঠিক পরিমাণ দিন!'); return; }
   postForm(`/admin/users/${currentUserId}/coins/add`, { amount });
 }
-
 function submitRemoveCoins() {
   const amount = document.getElementById('removeCoinAmount').value;
   if (!amount || amount <= 0) { alert('সঠিক পরিমাণ দিন!'); return; }
   postForm(`/admin/users/${currentUserId}/coins/remove`, { amount });
 }
 </script>
-</body></html>
