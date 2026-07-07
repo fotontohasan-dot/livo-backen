@@ -15,6 +15,13 @@ router.get('/', async (req, res) => {
     const users = await pool.query('SELECT COUNT(*) as count FROM users');
     const totalCoins = await pool.query('SELECT SUM(coins) as total FROM users');
     const matches = await pool.query('SELECT COUNT(*) as count FROM matches');
+    const totalBets = await pool.query('SELECT COUNT(*) as count FROM bets');
+    const recentMatchesRes = await pool.query(
+      `SELECT * FROM matches ORDER BY start_time DESC LIMIT 8`
+    );
+    const recentUsersRes = await pool.query(
+      `SELECT * FROM users ORDER BY created_at DESC LIMIT 8`
+    );
 
     const todayDeposit = await pool.query(
       `SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS cnt FROM payment_requests
@@ -74,6 +81,7 @@ router.get('/', async (req, res) => {
         total_users: users.rows[0].count,
         total_coins_in_system: totalCoins.rows[0].total || 0,
         total_matches: matches.rows[0].count,
+        total_predictions: totalBets.rows[0].count,
         today_deposit: Number(todayDeposit.rows[0].total),
         today_deposit_count: parseInt(todayDeposit.rows[0].cnt),
         today_withdraw: Number(todayWithdraw.rows[0].total),
@@ -88,12 +96,14 @@ router.get('/', async (req, res) => {
       userGrowth: userGrowth.rows.map(r => ({ day: r.day, count: parseInt(r.new_users) })),
       recentBets: recentBets.rows,
       recentWithdrawals: recentWithdrawals.rows,
+      recentMatches: recentMatchesRes.rows,
+      recentUsers: recentUsersRes.rows,
       suspicious: suspicious.rows
     });
   } catch (err) {
     console.error(err);
     res.render('admin/dashboard', {
-      stats: {}, revenueTrend: [], userGrowth: [], recentBets: [], recentWithdrawals: [], suspicious: []
+      stats: {}, revenueTrend: [], userGrowth: [], recentBets: [], recentWithdrawals: [], recentMatches: [], recentUsers: [], suspicious: []
     });
   }
 });
