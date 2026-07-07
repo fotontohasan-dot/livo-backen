@@ -47,7 +47,7 @@
               <tr>
                 <td style="font-size:.85rem"><%= m.team_a %> vs <%= m.team_b %></td>
                 <td><span class="status-badge status-<%= m.status %>"><%= m.status %></span></td>
-                <td style="font-size:.8rem;color:var(--muted)"><%= new Date(m.match_date).toLocaleDateString() %></td>
+                <td style="font-size:.8rem;color:var(--muted)"><%= m.start_time ? new Date(m.start_time).toLocaleDateString() : '-' %></td>
               </tr>
             <% }) %>
           </tbody>
