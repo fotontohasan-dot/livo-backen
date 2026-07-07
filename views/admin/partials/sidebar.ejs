@@ -1,0 +1,114 @@
+<!-- views/admin/partials/sidebar.ejs -->
+<!-- ব্যবহার: <%- include('./partials/sidebar', { active: 'dashboard' }) %> -->
+<style>
+  .admin-wrap { display: flex; min-height: 100vh; background: #0f1115; }
+  .admin-sidebar {
+    width: 240px; background: #14171f; border-right: 1px solid rgba(255,255,255,0.06);
+    position: fixed; top: 0; left: 0; bottom: 0; overflow-y: auto; z-index: 50;
+    transform: translateX(-100%); transition: transform 0.25s ease;
+  }
+  .admin-sidebar.open { transform: translateX(0); }
+  .admin-sidebar-brand {
+    padding: 20px 18px; font-size: 16px; font-weight: 900; color: #f59e0b;
+    border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; gap: 8px;
+  }
+  .admin-nav-group-title {
+    padding: 16px 18px 6px; font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+    color: #64748b; font-weight: 700;
+  }
+  .admin-nav-link {
+    display: flex; align-items: center; gap: 10px; padding: 11px 18px; color: #cbd5e1;
+    text-decoration: none; font-size: 13px; font-weight: 600; border-left: 3px solid transparent;
+  }
+  .admin-nav-link i { width: 18px; text-align: center; color: #94a3b8; font-size: 13px; }
+  .admin-nav-link:active { background: rgba(255,255,255,0.04); }
+  .admin-nav-link.active { background: rgba(245,158,11,0.1); border-left-color: #f59e0b; color: #fff; }
+  .admin-nav-link.active i { color: #f59e0b; }
+
+  .admin-content { flex: 1; min-width: 0; padding: 16px; padding-bottom: 60px; }
+  .admin-topbar {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 18px; position: sticky; top: 0;
+    background: #0f1115; z-index: 40; padding: 4px 0;
+  }
+  .admin-hamburger {
+    width: 38px; height: 38px; border-radius: 10px; background: #1c2028; border: 1px solid rgba(255,255,255,0.08);
+    color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .admin-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 45; display: none;
+  }
+  .admin-overlay.show { display: block; }
+
+  .stat-card { background: #171b23; border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 16px; }
+  .stat-card .stat-label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .stat-card .stat-number { font-size: 22px; font-weight: 800; color: #fff; font-family: 'Teko', sans-serif; }
+  .stat-card .stat-sub { font-size: 11px; color: #64748b; margin-top: 4px; }
+
+  .grid { display: grid; gap: 12px; }
+  .grid-2 { grid-template-columns: 1fr; }
+  .grid-4 { grid-template-columns: 1fr 1fr; }
+  @media (min-width: 700px) {
+    .grid-2 { grid-template-columns: 1fr 1fr; }
+    .grid-4 { grid-template-columns: repeat(4, 1fr); }
+    .admin-sidebar { transform: translateX(0); position: sticky; }
+    .admin-hamburger { display: none; }
+    .admin-content { padding: 22px; }
+  }
+
+  .admin-card { background: #171b23; border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; overflow: hidden; }
+  .admin-card-header { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 13px; font-weight: 700; color: #fff; }
+  .admin-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .admin-table th { text-align: left; padding: 8px 12px; color: #64748b; font-weight: 600; font-size: 10px; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.06); white-space: nowrap; }
+  .admin-table td { padding: 9px 12px; color: #e2e8f0; border-bottom: 1px solid rgba(255,255,255,0.04); white-space: nowrap; }
+  .badge { padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+  .badge-green { background: rgba(16,185,129,0.15); color: #10b981; }
+  .badge-red { background: rgba(239,68,68,0.15); color: #ef4444; }
+  .badge-amber { background: rgba(245,158,11,0.15); color: #f59e0b; }
+</style>
+
+<div class="admin-overlay" id="adminOverlay" onclick="toggleAdminSidebar(false)"></div>
+<div class="admin-sidebar" id="adminSidebar">
+  <div class="admin-sidebar-brand"><i class="fas fa-shield-alt"></i> Livo Admin</div>
+
+  <div class="admin-nav-group-title">Dashboard</div>
+  <a href="/admin" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'dashboard' ? 'active' : '' %>"><i class="fas fa-chart-line"></i> ড্যাশবোর্ড</a>
+
+  <div class="admin-nav-group-title">ইউজার</div>
+  <a href="/admin/users" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'users' ? 'active' : '' %>"><i class="fas fa-users"></i> ইউজার ম্যানেজমেন্ট</a>
+  <a href="/admin/kyc" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'kyc' ? 'active' : '' %>"><i class="fas fa-id-card"></i> KYC</a>
+
+  <div class="admin-nav-group-title">পেমেন্ট</div>
+  <a href="/payment/admin/payments" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'payments' ? 'active' : '' %>"><i class="fas fa-money-bill-wave"></i> ডিপোজিট/উইথড্র</a>
+  <a href="/admin/backup/status" class="admin-nav-link"><i class="fas fa-database"></i> ব্যাকআপ স্ট্যাটাস</a>
+
+  <div class="admin-nav-group-title">গেম ও বেটিং</div>
+  <a href="/admin/matches" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'matches' ? 'active' : '' %>"><i class="fas fa-futbol"></i> ম্যাচসমূহ</a>
+  <a href="/admin/tournaments" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'tournaments' ? 'active' : '' %>"><i class="fas fa-trophy"></i> টুর্নামেন্ট</a>
+  <a href="/admin/bets" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'bets' ? 'active' : '' %>"><i class="fas fa-dice"></i> বেট ম্যানেজমেন্ট</a>
+
+  <div class="admin-nav-group-title">বোনাস ও প্রমোশন</div>
+  <a href="/admin/bonuses" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'bonuses' ? 'active' : '' %>"><i class="fas fa-gift"></i> বোনাস ম্যানেজমেন্ট</a>
+  <a href="/admin/promotions" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'promotions' ? 'active' : '' %>"><i class="fas fa-bullhorn"></i> প্রমোশন ব্যানার</a>
+
+  <div class="admin-nav-group-title">রিপোর্ট ও সেটিংস</div>
+  <a href="/admin/reports" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'reports' ? 'active' : '' %>"><i class="fas fa-file-export"></i> রিপোর্টিং</a>
+  <a href="/admin/settings" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'settings' ? 'active' : '' %>"><i class="fas fa-cogs"></i> সেটিংস</a>
+
+  <div class="admin-nav-group-title">কন্টেন্ট ও সাপোর্ট</div>
+  <a href="/admin/news" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'news' ? 'active' : '' %>"><i class="fas fa-newspaper"></i> নিউজ</a>
+  <a href="/chat/admin" class="admin-nav-link"><i class="fas fa-headset"></i> সাপোর্ট চ্যাট</a>
+
+  <div class="admin-nav-group-title">সাধারণ</div>
+  <a href="/" class="admin-nav-link"><i class="fas fa-home"></i> সাইটে ফিরে যান</a>
+  <a href="/logout" class="admin-nav-link" style="color:#f87171"><i class="fas fa-sign-out-alt"></i> লগ আউট</a>
+</div>
+
+<script>
+function toggleAdminSidebar(force) {
+  var sb = document.getElementById('adminSidebar');
+  var ov = document.getElementById('adminOverlay');
+  var show = force !== undefined ? force : !sb.classList.contains('open');
+  sb.classList.toggle('open', show);
+  ov.classList.toggle('show', show);
+}
+</script>
