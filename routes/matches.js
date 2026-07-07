@@ -10,6 +10,7 @@ const { addVipTurnover } = require('../services/vip');
 const { updateMissionProgress } = require('../services/missions');
 const { addPoints } = require('../services/loyalty');
 const { checkBadges } = require('../services/badges');
+const { getSetting } = require('../services/settings');
 
 function formatMatch(row) {
   return {
@@ -137,8 +138,13 @@ router.post('/:id/bet', isAuth, async (req, res) => {
   const stake = parseInt(req.body.stake);
   const oddNum = parseFloat(odd);
 
-  if (isNaN(stake) || stake < 10) {
-    return res.status(400).json({ success: false, message: 'মিনিমাম ১০ কয়েন বেট করতে হবে' });
+  const minBet = Number(await getSetting('min_bet'));
+  const maxBet = Number(await getSetting('max_bet'));
+  if (isNaN(stake) || stake < minBet) {
+    return res.status(400).json({ success: false, message: `সর্বনিম্ন বাজি ৳${minBet}` });
+  }
+  if (stake > maxBet) {
+    return res.status(400).json({ success: false, message: `সর্বোচ্চ বাজি ৳${maxBet}` });
   }
   if (isNaN(oddNum) || oddNum <= 1) {
     return res.status(400).json({ success: false, message: 'অকার্যকর ওডস' });
