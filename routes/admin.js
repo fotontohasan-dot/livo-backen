@@ -15,30 +15,126 @@ router.get('/', async (req, res) => {
     const users = await pool.query('SELECT COUNT(*) as count FROM users');
     const totalCoins = await pool.query('SELECT SUM(coins) as total FROM users');
     const matches = await pool.query('SELECT COUNT(*) as count FROM matches');
+
+    const todayDeposit = await pool.query(
+      `SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS cnt FROM payment_requests
+       WHERE type='deposit' AND status='approved' AND created_at::date = CURRENT_DATE`
+    );
+    const todayWithdraw = await pool.query(
+      `SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS cnt FROM payment_requests
+       WHERE type='withdraw' AND status='approved' AND created_at::date = CURRENT_DATE`
+    );
+    const todayBets = await pool.query(
+      `SELECT COALESCE(SUM(stake),0) AS total, COUNT(*) AS cnt FROM bets WHERE created_at::date = CURRENT_DATE`
+    );
+    const todayProfitLoss = await pool.query(
+      `SELECT COALESCE(SUM(stake),0) AS staked,
+              COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS paidout
+       FROM bets WHERE created_at::date = CURRENT_DATE AND status IN ('won','lost')`
+    );
+
+    // গত ১৪ দিনের রেভিনিউ (ডিপোজিট - উইথড্র), লাইন চার্টের জন্য
+    const revenueTrend = await pool.query(`
+      SELECT d::date AS day,
+        COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='deposit' AND status='approved' AND created_at::date = d::date),0) AS deposit,
+        COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='withdraw' AND status='approved' AND created_at::date = d::date),0) AS withdraw
+      FROM generate_series(CURRENT_DATE - INTERVAL '13 days', CURRENT_DATE, INTERVAL '1 day') d
+      ORDER BY day
+    `);
+
+    // গত ১৪ দিনের নতুন ইউজার, বার চার্টের জন্য
+    const userGrowth = await pool.query(`
+      SELECT d::date AS day,
+        COALESCE((SELECT COUNT(*) FROM users WHERE created_at::date = d::date),0) AS new_users
+      FROM generate_series(CURRENT_DATE - INTERVAL '13 days', CURRENT_DATE, INTERVAL '1 day') d
+      ORDER BY day
+    `);
+
+    const recentBets = await pool.query(`
+      SELECT b.*, u.username, m.team_a, m.team_b, m.title
+      FROM bets b JOIN users u ON b.user_id = u.id LEFT JOIN matches m ON b.match_id = m.id
+      ORDER BY b.created_at DESC LIMIT 8
+    `);
+
+    const recentWithdrawals = await pool.query(`
+      SELECT pr.*, u.username FROM payment_requests pr JOIN users u ON pr.user_id = u.id
+      WHERE pr.type='withdraw' ORDER BY pr.created_at DESC LIMIT 8
+    `);
+
+    // সন্দেহজনক অ্যাক্টিভিটি: একই IP থেকে একাধিক অ্যাকাউন্ট
+    const suspicious = await pool.query(`
+      SELECT last_ip, COUNT(*) AS cnt, ARRAY_AGG(username) AS usernames
+      FROM users WHERE last_ip IS NOT NULL
+      GROUP BY last_ip HAVING COUNT(*) > 1
+      ORDER BY cnt DESC LIMIT 5
+    `);
+
     res.render('admin/dashboard', {
       stats: {
         total_users: users.rows[0].count,
         total_coins_in_system: totalCoins.rows[0].total || 0,
         total_matches: matches.rows[0].count,
-        total_predictions: 'N/A',
-        total_tournaments: 'N/A'
+        today_deposit: Number(todayDeposit.rows[0].total),
+        today_deposit_count: parseInt(todayDeposit.rows[0].cnt),
+        today_withdraw: Number(todayWithdraw.rows[0].total),
+        today_withdraw_count: parseInt(todayWithdraw.rows[0].cnt),
+        today_bet_amount: Number(todayBets.rows[0].total),
+        today_bet_count: parseInt(todayBets.rows[0].cnt),
+        today_profit: Number(todayProfitLoss.rows[0].staked) - Number(todayProfitLoss.rows[0].paidout)
       },
-      recentUsers: [], recentMatches: []
+      revenueTrend: revenueTrend.rows.map(r => ({
+        day: r.day, deposit: Number(r.deposit), withdraw: Number(r.withdraw)
+      })),
+      userGrowth: userGrowth.rows.map(r => ({ day: r.day, count: parseInt(r.new_users) })),
+      recentBets: recentBets.rows,
+      recentWithdrawals: recentWithdrawals.rows,
+      suspicious: suspicious.rows
     });
   } catch (err) {
     console.error(err);
-    res.render('admin/dashboard', { stats: {}, recentUsers: [], recentMatches: [] });
+    res.render('admin/dashboard', {
+      stats: {}, revenueTrend: [], userGrowth: [], recentBets: [], recentWithdrawals: [], suspicious: []
+    });
   }
 });
 
 // ==================== USERS ====================
 router.get('/users', async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, username, email, coins, total_points, is_banned, created_at FROM users ORDER BY id DESC');
-    res.render('admin/users', { users: result.rows });
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = 25;
+    const offset = (page - 1) * limit;
+    const search = (req.query.search || '').trim();
+    const status = req.query.status || '';
+
+    const conditions = [];
+    const params = [];
+    if (search) {
+      params.push(`%${search}%`);
+      conditions.push(`(username ILIKE $${params.length} OR email ILIKE $${params.length} OR phone ILIKE $${params.length})`);
+    }
+    if (status === 'banned') conditions.push('is_banned = true');
+    if (status === 'active') conditions.push('is_banned = false');
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const countRes = await pool.query(`SELECT COUNT(*) FROM users ${where}`, params);
+    const total = parseInt(countRes.rows[0].count);
+
+    params.push(limit, offset);
+    const result = await pool.query(
+      `SELECT id, username, email, phone, coins, total_points, is_banned, created_at FROM users ${where}
+       ORDER BY id DESC LIMIT $${params.length - 1} OFFSET $${params.length}`,
+      params
+    );
+
+    res.render('admin/users', {
+      users: result.rows,
+      page, totalPages: Math.max(1, Math.ceil(total / limit)), total,
+      search, status
+    });
   } catch (err) {
     console.error(err);
-    res.render('admin/users', { users: [] });
+    res.render('admin/users', { users: [], page: 1, totalPages: 1, total: 0, search: '', status: '' });
   }
 });
 
@@ -367,6 +463,296 @@ router.post('/backup/restore', async (req, res) => {
     req.flash('error', `❌ রিস্টোর ব্যর্থ: ${err.message}`);
   }
   res.redirect('/admin');
+});
+
+// ==================== ব্যাট ম্যানেজমেন্ট ====================
+router.get('/bets', async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = 30;
+    const offset = (page - 1) * limit;
+    const status = req.query.status || '';
+    const conditions = [];
+    const params = [];
+    if (['pending', 'won', 'lost'].includes(status)) {
+      params.push(status);
+      conditions.push(`b.status = $${params.length}`);
+    }
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const countRes = await pool.query(`SELECT COUNT(*) FROM bets b ${where}`, params);
+    const total = parseInt(countRes.rows[0].count);
+
+    params.push(limit, offset);
+    const bets = await pool.query(`
+      SELECT b.*, u.username, m.team_a, m.team_b, m.title
+      FROM bets b JOIN users u ON b.user_id = u.id LEFT JOIN matches m ON b.match_id = m.id
+      ${where} ORDER BY b.created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}
+    `, params);
+
+    // সন্দেহজনক বেট: গড়ের তুলনায় অনেক বড় স্টেক (৫০০০+ বা টানা জয়ের প্যাটার্ন)
+    const suspiciousBets = await pool.query(`
+      SELECT b.*, u.username, m.team_a, m.team_b, m.title
+      FROM bets b JOIN users u ON b.user_id = u.id LEFT JOIN matches m ON b.match_id = m.id
+      WHERE b.stake >= 5000 ORDER BY b.created_at DESC LIMIT 15
+    `);
+
+    res.render('admin/bets', {
+      bets: bets.rows, suspiciousBets: suspiciousBets.rows,
+      page, totalPages: Math.max(1, Math.ceil(total / limit)), total, status
+    });
+  } catch (err) {
+    console.error(err);
+    res.render('admin/bets', { bets: [], suspiciousBets: [], page: 1, totalPages: 1, total: 0, status: '' });
+  }
+});
+
+// ম্যানুয়াল বেট সেটেলমেন্ট (একটা নির্দিষ্ট বেট জয়/হার হিসেবে সেট করা + পেআউট)
+router.post('/bets/:id/settle', async (req, res) => {
+  const { id } = req.params;
+  const { result } = req.body; // 'won' | 'lost'
+  if (!['won', 'lost'].includes(result)) {
+    req.flash('error', 'ভুল রেজাল্ট');
+    return res.redirect('/admin/bets');
+  }
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const b = await client.query('SELECT * FROM bets WHERE id=$1 FOR UPDATE', [id]);
+    const bet = b.rows[0];
+    if (!bet || bet.status !== 'pending') {
+      await client.query('ROLLBACK');
+      req.flash('error', 'বেট পাওয়া যায়নি অথবা আগেই সেটেল হয়েছে');
+      return res.redirect('/admin/bets');
+    }
+    await client.query('UPDATE bets SET status=$1 WHERE id=$2', [result, id]);
+    if (result === 'won') {
+      const payout = Math.floor(Number(bet.stake) * Number(bet.odd));
+      await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [payout, bet.user_id]);
+      await client.query(
+        `INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট জিতেছেন!',$2,'success')`,
+        [bet.user_id, `আপনি ৳${payout} জিতেছেন!`]
+      );
+    } else {
+      await client.query(
+        `INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট ফলাফল',$2,'error')`,
+        [bet.user_id, `আপনার ৳${bet.stake} বেটটি হেরে গেছে।`]
+      );
+    }
+    await client.query('COMMIT');
+    req.flash('success', 'বেট সেটেল হয়েছে');
+    res.redirect('/admin/bets');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('bet settle error:', err.message);
+    req.flash('error', 'সমস্যা হয়েছে');
+    res.redirect('/admin/bets');
+  } finally {
+    client.release();
+  }
+});
+
+// ==================== বোনাস ম্যানেজমেন্ট ====================
+router.get('/bonuses', async (req, res) => {
+  try {
+    const type = req.query.type || '';
+    const params = [];
+    let where = '';
+    if (type) { params.push(type); where = `WHERE b.bonus_type = $1`; }
+    const bonuses = await pool.query(`
+      SELECT b.*, u.username FROM bonuses b JOIN users u ON b.user_id = u.id
+      ${where} ORDER BY b.created_at DESC LIMIT 200
+    `, params);
+    res.render('admin/bonuses', { bonuses: bonuses.rows, type });
+  } catch (err) {
+    console.error(err);
+    res.render('admin/bonuses', { bonuses: [], type: '' });
+  }
+});
+
+router.post('/bonuses/:id/cancel', async (req, res) => {
+  try {
+    await pool.query(`UPDATE bonuses SET status='cancelled', updated_at=NOW() WHERE id=$1`, [req.params.id]);
+    req.flash('success', 'বোনাস বাতিল হয়েছে');
+  } catch (err) {
+    req.flash('error', 'সমস্যা হয়েছে');
+  }
+  res.redirect('/admin/bonuses');
+});
+
+// ==================== প্রমোশন ব্যানার ====================
+router.get('/promotions', async (req, res) => {
+  try {
+    const promos = await pool.query('SELECT * FROM promotions ORDER BY position ASC, id DESC');
+    res.render('admin/promotions', { promotions: promos.rows });
+  } catch (err) {
+    console.error(err);
+    res.render('admin/promotions', { promotions: [] });
+  }
+});
+
+router.post('/promotions/add', async (req, res) => {
+  const { title, image_url, link_url, position } = req.body;
+  if (!image_url) {
+    req.flash('error', 'ছবির URL দাও');
+    return res.redirect('/admin/promotions');
+  }
+  try {
+    await pool.query(
+      `INSERT INTO promotions (title, image_url, link_url, position) VALUES ($1,$2,$3,$4)`,
+      [title || '', image_url, link_url || '', parseInt(position) || 0]
+    );
+    req.flash('success', 'প্রমোশন ব্যানার যোগ হয়েছে');
+  } catch (err) {
+    console.error(err);
+    req.flash('error', 'সমস্যা হয়েছে');
+  }
+  res.redirect('/admin/promotions');
+});
+
+router.post('/promotions/:id/toggle', async (req, res) => {
+  try {
+    await pool.query(`UPDATE promotions SET active = NOT active WHERE id=$1`, [req.params.id]);
+  } catch (e) {}
+  res.redirect('/admin/promotions');
+});
+
+router.post('/promotions/:id/delete', async (req, res) => {
+  try {
+    await pool.query(`DELETE FROM promotions WHERE id=$1`, [req.params.id]);
+    req.flash('success', 'মুছে ফেলা হয়েছে');
+  } catch (e) {}
+  res.redirect('/admin/promotions');
+});
+
+// ==================== রিপোর্টিং ====================
+function toCsv(rows) {
+  if (!rows.length) return '';
+  const headers = Object.keys(rows[0]);
+  const escape = v => `"${String(v === null || v === undefined ? '' : v).replace(/"/g, '""')}"`;
+  const lines = [headers.join(',')];
+  for (const row of rows) lines.push(headers.map(h => escape(row[h])).join(','));
+  return lines.join('\n');
+}
+
+router.get('/reports', (req, res) => {
+  res.render('admin/reports', {});
+});
+
+router.get('/reports/export/:type', async (req, res) => {
+  const { type } = req.params;
+  const { from, to } = req.query;
+  const dateFilter = (col) => {
+    const conds = [];
+    const params = [];
+    if (from) { params.push(from); conds.push(`${col}::date >= $${params.length}`); }
+    if (to) { params.push(to); conds.push(`${col}::date <= $${params.length}`); }
+    return { where: conds.length ? 'WHERE ' + conds.join(' AND ') : '', params };
+  };
+
+  try {
+    let rows = [], filename = 'report.csv';
+    if (type === 'users') {
+      const f = dateFilter('created_at');
+      const r = await pool.query(`SELECT id, username, email, phone, coins, total_points, is_banned, created_at FROM users ${f.where} ORDER BY id`, f.params);
+      rows = r.rows; filename = 'users_report.csv';
+    } else if (type === 'bets') {
+      const f = dateFilter('b.created_at');
+      const r = await pool.query(`
+        SELECT b.id, u.username, b.stake, b.odd, b.status, b.created_at
+        FROM bets b JOIN users u ON b.user_id = u.id ${f.where} ORDER BY b.created_at DESC
+      `, f.params);
+      rows = r.rows; filename = 'bets_report.csv';
+    } else if (type === 'payments') {
+      const f = dateFilter('pr.created_at');
+      const r = await pool.query(`
+        SELECT pr.id, u.username, pr.type, pr.method, pr.amount, pr.status, pr.created_at
+        FROM payment_requests pr JOIN users u ON pr.user_id = u.id ${f.where} ORDER BY pr.created_at DESC
+      `, f.params);
+      rows = r.rows; filename = 'payments_report.csv';
+    } else if (type === 'profit') {
+      const conds = ['status IN (\'won\',\'lost\')'];
+      const params = [];
+      if (from) { params.push(from); conds.push(`created_at::date >= $${params.length}`); }
+      if (to) { params.push(to); conds.push(`created_at::date <= $${params.length}`); }
+      const r = await pool.query(`
+        SELECT created_at::date AS date,
+          COALESCE(SUM(stake),0) AS total_staked,
+          COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS total_paidout,
+          COALESCE(SUM(stake),0) - COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS profit
+        FROM bets WHERE ${conds.join(' AND ')} GROUP BY created_at::date ORDER BY date DESC
+      `, params);
+      rows = r.rows; filename = 'profit_report.csv';
+    } else {
+      return res.status(400).send('অজানা রিপোর্ট টাইপ');
+    }
+
+    const csv = toCsv(rows);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send('\uFEFF' + csv); // BOM যোগ — এক্সেলে বাংলা ঠিকভাবে দেখানোর জন্য
+  } catch (err) {
+    console.error('report export error:', err.message);
+    res.status(500).send('রিপোর্ট তৈরি করতে সমস্যা হয়েছে: ' + err.message);
+  }
+});
+
+// ==================== সেটিংস ====================
+router.get('/settings', async (req, res) => {
+  try {
+    const settings = await pool.query('SELECT * FROM site_settings ORDER BY key');
+    const admins = await pool.query(`SELECT id, username, email, role FROM users WHERE role='admin' ORDER BY id`);
+    res.render('admin/settings', {
+      settings: settings.rows.reduce((acc, r) => { acc[r.key] = r.value; return acc; }, {}),
+      admins: admins.rows
+    });
+  } catch (err) {
+    console.error(err);
+    res.render('admin/settings', { settings: {}, admins: [] });
+  }
+});
+
+router.post('/settings/update', async (req, res) => {
+  try {
+    const keys = ['min_bet', 'max_bet', 'turnover_multiplier', 'deposit_commission_percent', 'withdraw_commission_percent'];
+    for (const k of keys) {
+      if (req.body[k] !== undefined) {
+        await pool.query(
+          `INSERT INTO site_settings (key, value, updated_at) VALUES ($1,$2,NOW())
+           ON CONFLICT (key) DO UPDATE SET value=$2, updated_at=NOW()`,
+          [k, String(req.body[k])]
+        );
+      }
+    }
+    req.flash('success', 'সেটিংস সেভ হয়েছে');
+  } catch (err) {
+    console.error(err);
+    req.flash('error', 'সমস্যা হয়েছে');
+  }
+  res.redirect('/admin/settings');
+});
+
+// অ্যাডমিন রোল ম্যানেজমেন্ট
+router.post('/settings/admins/promote', async (req, res) => {
+  const { username } = req.body;
+  try {
+    const r = await pool.query(`UPDATE users SET role='admin' WHERE username=$1 RETURNING id`, [username]);
+    if (r.rowCount === 0) req.flash('error', `"${username}" নামে ইউজার পাওয়া যায়নি`);
+    else req.flash('success', `"${username}" এখন অ্যাডমিন`);
+  } catch (err) {
+    req.flash('error', 'সমস্যা হয়েছে');
+  }
+  res.redirect('/admin/settings');
+});
+
+router.post('/settings/admins/:id/demote', async (req, res) => {
+  try {
+    await pool.query(`UPDATE users SET role='user' WHERE id=$1`, [req.params.id]);
+    req.flash('success', 'অ্যাডমিন অ্যাক্সেস বাতিল হয়েছে');
+  } catch (err) {
+    req.flash('error', 'সমস্যা হয়েছে');
+  }
+  res.redirect('/admin/settings');
 });
 
 module.exports = router;
