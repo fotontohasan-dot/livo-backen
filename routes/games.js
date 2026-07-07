@@ -207,12 +207,19 @@ router.get('/:slug', isAuth, (req, res) => {
   });
 });
 
+const { getSetting } = require('../services/settings');
+
 router.post('/play', isAuth, async (req, res) => {
   const { gameSlug, amount, selection } = req.body;
   const userId = req.session.user.id;
   const betAmount = parseInt(amount);
 
   if (isNaN(betAmount) || betAmount <= 0) return res.status(400).json({ success: false, message: 'সঠিক পরিমাণ দিন' });
+
+  const minBet = Number(await getSetting('min_bet'));
+  const maxBet = Number(await getSetting('max_bet'));
+  if (betAmount < minBet) return res.status(400).json({ success: false, message: `সর্বনিম্ন বাজি ৳${minBet}` });
+  if (betAmount > maxBet) return res.status(400).json({ success: false, message: `সর্বোচ্চ বাজি ৳${maxBet}` });
 
   const client = await pool.connect();
   try {
@@ -296,7 +303,7 @@ router.post('/cashout', isAuth, async (req, res) => {
   req.session.gameState = null;
 
   if (cashMultiplier > state.crashPoint) {
-    recordGameResult(userId, false, state.betAmount).catch(e => console.error('streak:', e.message));
+    recordGameResult(userId, false).catch(e => console.error('streak:', e.message));
     return res.json({
       success: true,
       crashed: true,
