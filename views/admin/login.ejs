@@ -1,0 +1,51 @@
+<%- include('../partials/head') %>
+
+<div class="min-h-screen flex items-center justify-center bg-[#0f172a]">
+  <div class="w-full max-w-md px-4">
+    
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <h1 class="text-5xl font-bold text-[#f59e0b] tracking-wider">LIVO</h1>
+      <p class="text-gray-400 mt-3 text-lg">অ্যাডমিন প্যানেল</p>
+    </div>
+
+    <!-- Login Card -->
+    <div class="bg-[#1e2937] rounded-3xl shadow-2xl p-8 border border-[#334155]">
+      <h2 class="text-2xl font-semibold text-white mb-8 text-center">এডমিন লগইন</h2>
+
+      <!-- Error Message -->
+      <% if (typeof error !== 'undefined' && error) { %>
+        <div class="bg-red-500/10 border border-red-500 text-red-400 px-4 py-3 rounded-xl mb-6 text-sm">
+          <%= error %>
+        </div>
+      <% } %>
+
+      <form action="/admin/login" method="POST">
+        
+        <div class="mb-5">
+          <label class="block text-sm font-medium text-gray-300 mb-2">ইউজারনেম</label>
+          <input type="text" name="username" required autofocus
+                 class="w-full px-4 py-3.5 bg-[#0f172a] border border-[#475569] rounded-2xl text-white placeholder-gray-500 focus:outline-none focus:border-[#f59e0b] transition-all">
+        </div>
+
+        <div class="mb-8">
+          <label class="block text-sm font-medium text-gray-300 mb-2">পাসওয়ার্ড</label>
+          <input type="password" name="password" required
+                 class="w-full px-4 py-3.5 bg-[#0f172a] border border-[#475569] rounded-2xl text-white placeholder-gray-500 focus:outline-none focus:border-[#f59e0b] transition-all">
+        </div>
+
+        <button type="submit"
+                class="w-full bg-[#f59e0b] hover:bg-[#d97706] active:bg-[#b45309] text-black font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 text-lg shadow-lg">
+          <i class="fas fa-sign-in-alt"></i>
+          <span>লগইন করুন</span>
+        </button>
+
+      </form>
+    </div>
+
+    <p class="text-center text-gray-500 text-xs mt-6 tracking-wider">
+      শুধুমাত্র অনুমোদিত অ্যাডমিনদের জন্য
+    </p>
+
+  </div>
+</div>
