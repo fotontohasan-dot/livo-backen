@@ -59,4 +59,25 @@ router.get('/backup-status', async (req, res) => {
   res.json(getBackupStatus());
 });
 
+// ব্রাউজারে ভিজিট করো: /setup/last-errors?key=SETUP_KEY
+router.get('/last-errors', async (req, res) => {
+  if (!checkKey(req, res)) return;
+  try {
+    const result = await pool.query(
+      `SELECT id, message, url, method, created_at FROM error_logs ORDER BY created_at DESC LIMIT 10`
+    );
+    let html = '<h3>সাম্প্রতিক ১০টা এরর</h3>';
+    result.rows.forEach(r => {
+      html += `<div style="border:1px solid #ccc;margin:8px 0;padding:8px;">
+        <b>${r.created_at}</b><br>
+        URL: ${r.method} ${r.url}<br>
+        Message: ${r.message}
+      </div>`;
+    });
+    res.send(html || 'কোনো এরর লগ নেই');
+  } catch (err) {
+    res.send('এরর লগ পড়া যায়নি: ' + err.message);
+  }
+});
+
 module.exports = router;
