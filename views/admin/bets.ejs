@@ -1,0 +1,84 @@
+<%- include('../partials/head') %>
+<div class="admin-wrap">
+  <%- include('./partials/sidebar', { active: 'bets' }) %>
+  <div class="admin-content">
+    <div class="admin-topbar">
+      <button class="admin-hamburger" onclick="toggleAdminSidebar()"><i class="fas fa-bars"></i></button>
+      <h1 style="font-size:18px;font-weight:800;color:#fff;">🎲 বেট ম্যানেজমেন্ট</h1>
+    </div>
+    <%- include('../partials/flash') %>
+
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <a href="/admin/bets" style="padding:8px 16px;border-radius:20px;font-size:12px;font-weight:700;text-decoration:none;background:<%= status === '' ? '#f59e0b' : '#171b23' %>;color:<%= status === '' ? '#000' : '#fff' %>;">সব</a>
+      <a href="/admin/bets?status=pending" style="padding:8px 16px;border-radius:20px;font-size:12px;font-weight:700;text-decoration:none;background:<%= status === 'pending' ? '#f59e0b' : '#171b23' %>;color:<%= status === 'pending' ? '#000' : '#fff' %>;">লাইভ/পেন্ডিং</a>
+      <a href="/admin/bets?status=won" style="padding:8px 16px;border-radius:20px;font-size:12px;font-weight:700;text-decoration:none;background:<%= status === 'won' ? '#f59e0b' : '#171b23' %>;color:<%= status === 'won' ? '#000' : '#fff' %>;">জয়</a>
+      <a href="/admin/bets?status=lost" style="padding:8px 16px;border-radius:20px;font-size:12px;font-weight:700;text-decoration:none;background:<%= status === 'lost' ? '#f59e0b' : '#171b23' %>;color:<%= status === 'lost' ? '#000' : '#fff' %>;">হার (সেটেলড)</a>
+    </div>
+
+    <!-- সন্দেহজনক বেট -->
+    <div class="admin-card" style="margin-bottom:20px;border-color:rgba(239,68,68,0.3);">
+      <div class="admin-card-header" style="color:#ef4444;">⚠️ সন্দেহজনক বেট (৳৫,০০০+ স্টেক)</div>
+      <div style="overflow-x:auto;">
+        <table class="admin-table">
+          <thead><tr><th>ইউজার</th><th>ম্যাচ</th><th>স্টেক</th><th>অড</th><th>স্ট্যাটাস</th></tr></thead>
+          <tbody>
+            <% suspiciousBets.forEach(function(b) { %>
+              <tr>
+                <td><%= b.username %></td>
+                <td><%= b.team_a ? (b.team_a + ' vs ' + b.team_b) : (b.title || '-') %></td>
+                <td style="color:#ef4444;font-weight:700;">৳<%= b.stake %></td>
+                <td><%= b.odd %></td>
+                <td><%= b.status %></td>
+              </tr>
+            <% }) %>
+            <% if (!suspiciousBets.length) { %><tr><td colspan="5" style="text-align:center;color:#64748b;">কিছু পাওয়া যায়নি</td></tr><% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="admin-card">
+      <div class="admin-card-header">সব বেট</div>
+      <div style="overflow-x:auto;">
+        <table class="admin-table">
+          <thead><tr><th>ইউজার</th><th>ম্যাচ</th><th>স্টেক</th><th>অড</th><th>স্ট্যাটাস</th><th>সময়</th><th>অ্যাকশন</th></tr></thead>
+          <tbody>
+            <% bets.forEach(function(b) { %>
+              <tr>
+                <td><%= b.username %></td>
+                <td><%= b.team_a ? (b.team_a + ' vs ' + b.team_b) : (b.title || '-') %></td>
+                <td>৳<%= b.stake %></td>
+                <td><%= b.odd %></td>
+                <td>
+                  <% if (b.status === 'won') { %><span class="badge badge-green">জয়</span>
+                  <% } else if (b.status === 'lost') { %><span class="badge badge-red">হার</span>
+                  <% } else { %><span class="badge badge-amber">পেন্ডিং</span><% } %>
+                </td>
+                <td><%= new Date(b.created_at).toLocaleString('bn-BD') %></td>
+                <td>
+                  <% if (b.status === 'pending') { %>
+                    <form method="POST" action="/admin/bets/<%= b.id %>/settle" style="display:inline;">
+                      <input type="hidden" name="result" value="won">
+                      <button type="submit" style="background:rgba(16,185,129,0.15);color:#10b981;border:none;padding:5px 8px;border-radius:6px;font-size:10px;font-weight:700;">জয় সেট</button>
+                    </form>
+                    <form method="POST" action="/admin/bets/<%= b.id %>/settle" style="display:inline;">
+                      <input type="hidden" name="result" value="lost">
+                      <button type="submit" style="background:rgba(239,68,68,0.15);color:#ef4444;border:none;padding:5px 8px;border-radius:6px;font-size:10px;font-weight:700;">হার সেট</button>
+                    </form>
+                  <% } else { %>—<% } %>
+                </td>
+              </tr>
+            <% }) %>
+            <% if (!bets.length) { %><tr><td colspan="7" style="text-align:center;color:#64748b;">কোনো বেট নেই</td></tr><% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:center;gap:8px;margin-top:16px;">
+      <% if (page > 1) { %><a href="/admin/bets?page=<%= page-1 %>&status=<%= status %>" style="background:#171b23;color:#fff;padding:8px 14px;border-radius:8px;text-decoration:none;font-size:12px;">← আগে</a><% } %>
+      <span style="color:#94a3b8;font-size:12px;padding:8px;">পেজ <%= page %> / <%= totalPages %></span>
+      <% if (page < totalPages) { %><a href="/admin/bets?page=<%= page+1 %>&status=<%= status %>" style="background:#171b23;color:#fff;padding:8px 14px;border-radius:8px;text-decoration:none;font-size:12px;">পরে →</a><% } %>
+    </div>
+  </div>
+</div>
