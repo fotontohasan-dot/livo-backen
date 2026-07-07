@@ -465,7 +465,64 @@ router.post('/backup/restore', async (req, res) => {
   res.redirect('/admin');
 });
 
-// ==================== ব্যাট ম্যানেজমেন্ট ====================
+// ==================== টুর্নামেন্ট ====================
+router.get('/tournaments', async (req, res) => {
+  try {
+    const tournaments = await pool.query(`
+      SELECT t.*, COUNT(tp.user_id) AS participant_count
+      FROM tournaments t
+      LEFT JOIN tournament_participants tp ON t.id = tp.tournament_id
+      GROUP BY t.id ORDER BY t.created_at DESC
+    `);
+    res.render('admin/tournaments', { tournaments: tournaments.rows });
+  } catch (err) {
+    console.error('admin tournaments error:', err.message);
+    res.render('admin/tournaments', { tournaments: [] });
+  }
+});
+
+router.post('/tournaments', async (req, res) => {
+  const { name, sport, description, entry_fee, prize_pool, max_participants, start_date, end_date } = req.body;
+  if (!name || !start_date || !end_date) {
+    req.flash('error', 'নাম ও তারিখ আবশ্যক');
+    return res.redirect('/admin/tournaments');
+  }
+  try {
+    await pool.query(
+      `INSERT INTO tournaments (name, sport, description, entry_fee, prize_pool, max_participants, start_date, end_date)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [name, sport || 'football', description || '', parseInt(entry_fee) || 0, parseInt(prize_pool) || 0,
+       parseInt(max_participants) || 100, start_date, end_date]
+    );
+    req.flash('success', 'টুর্নামেন্ট তৈরি হয়েছে');
+  } catch (err) {
+    console.error('create tournament error:', err.message);
+    req.flash('error', 'সমস্যা হয়েছে: ' + err.message);
+  }
+  res.redirect('/admin/tournaments');
+});
+
+router.post('/tournaments/:id/status', async (req, res) => {
+  const { status } = req.body;
+  if (!['upcoming', 'ongoing', 'completed'].includes(status)) return res.redirect('/admin/tournaments');
+  try {
+    await pool.query(`UPDATE tournaments SET status=$1 WHERE id=$2`, [status, req.params.id]);
+    req.flash('success', 'স্ট্যাটাস আপডেট হয়েছে');
+  } catch (err) {
+    req.flash('error', 'সমস্যা হয়েছে');
+  }
+  res.redirect('/admin/tournaments');
+});
+
+router.post('/tournaments/:id/delete', async (req, res) => {
+  try {
+    await pool.query(`DELETE FROM tournaments WHERE id=$1`, [req.params.id]);
+    req.flash('success', 'মুছে ফেলা হয়েছে');
+  } catch (err) {
+    req.flash('error', 'সমস্যা হয়েছে');
+  }
+  res.redirect('/admin/tournaments');
+});
 router.get('/bets', async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
