@@ -566,6 +566,32 @@ async function runMigrations() {
       );
     `);
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS tournaments (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        sport VARCHAR(30),
+        description TEXT,
+        entry_fee INTEGER DEFAULT 0,
+        prize_pool INTEGER DEFAULT 0,
+        max_participants INTEGER DEFAULT 100,
+        start_date TIMESTAMP,
+        end_date TIMESTAMP,
+        status VARCHAR(20) DEFAULT 'upcoming',
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS tournament_participants (
+        id SERIAL PRIMARY KEY,
+        tournament_id INTEGER REFERENCES tournaments(id) ON DELETE CASCADE,
+        user_id INTEGER REFERENCES users(id),
+        points NUMERIC(12,2) DEFAULT 0,
+        joined_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(tournament_id, user_id)
+      );
+    `);
+
     console.log("✅ All tables migration completed successfully");
   } catch (err) {
     console.error("❌ Migration error:", err.message);
