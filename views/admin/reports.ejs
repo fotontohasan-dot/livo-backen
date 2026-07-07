@@ -1,0 +1,51 @@
+<%- include('../partials/head') %>
+<div class="admin-wrap">
+  <%- include('./partials/sidebar', { active: 'reports' }) %>
+  <div class="admin-content">
+    <div class="admin-topbar">
+      <button class="admin-hamburger" onclick="toggleAdminSidebar()"><i class="fas fa-bars"></i></button>
+      <h1 style="font-size:18px;font-weight:800;color:#fff;">📑 রিপোর্টিং</h1>
+    </div>
+    <%- include('../partials/flash') %>
+
+    <form id="reportForm" style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
+      <input type="date" id="repFrom" style="background:#171b23;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:9px 12px;color:#fff;font-size:13px;">
+      <span style="color:#94a3b8;font-size:12px;">থেকে</span>
+      <input type="date" id="repTo" style="background:#171b23;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:9px 12px;color:#fff;font-size:13px;">
+    </form>
+
+    <div class="grid grid-4">
+      <div class="admin-card" style="padding:18px;text-align:center;">
+        <i class="fas fa-users" style="color:#60a5fa;font-size:22px;"></i>
+        <div style="color:#fff;font-weight:700;margin:10px 0 4px;font-size:13px;">ইউজার রিপোর্ট</div>
+        <button onclick="exportReport('users')" style="background:#f59e0b;color:#000;border:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:800;width:100%;">CSV ডাউনলোড</button>
+      </div>
+      <div class="admin-card" style="padding:18px;text-align:center;">
+        <i class="fas fa-dice" style="color:#f59e0b;font-size:22px;"></i>
+        <div style="color:#fff;font-weight:700;margin:10px 0 4px;font-size:13px;">বেট রিপোর্ট</div>
+        <button onclick="exportReport('bets')" style="background:#f59e0b;color:#000;border:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:800;width:100%;">CSV ডাউনলোড</button>
+      </div>
+      <div class="admin-card" style="padding:18px;text-align:center;">
+        <i class="fas fa-money-bill-wave" style="color:#10b981;font-size:22px;"></i>
+        <div style="color:#fff;font-weight:700;margin:10px 0 4px;font-size:13px;">পেমেন্ট রিপোর্ট</div>
+        <button onclick="exportReport('payments')" style="background:#f59e0b;color:#000;border:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:800;width:100%;">CSV ডাউনলোড</button>
+      </div>
+      <div class="admin-card" style="padding:18px;text-align:center;">
+        <i class="fas fa-chart-pie" style="color:#a78bfa;font-size:22px;"></i>
+        <div style="color:#fff;font-weight:700;margin:10px 0 4px;font-size:13px;">প্রফিট রিপোর্ট</div>
+        <button onclick="exportReport('profit')" style="background:#f59e0b;color:#000;border:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:800;width:100%;">CSV ডাউনলোড</button>
+      </div>
+    </div>
+    <p style="color:#64748b;font-size:12px;margin-top:16px;">উপরে তারিখ সিলেক্ট করে তারপর যেকোনো রিপোর্ট ডাউনলোড করলে সেই সময়সীমার ডেটা আসবে। তারিখ ফাঁকা রাখলে সব ডেটা আসবে। ফাইলটা Excel/Google Sheets দিয়ে খোলা যাবে।</p>
+  </div>
+</div>
+<script>
+function exportReport(type) {
+  const from = document.getElementById('repFrom').value;
+  const to = document.getElementById('repTo').value;
+  let url = `/admin/reports/export/${type}?`;
+  if (from) url += `from=${from}&`;
+  if (to) url += `to=${to}&`;
+  window.location.href = url;
+}
+</script>
