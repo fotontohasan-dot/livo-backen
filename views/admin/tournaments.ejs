@@ -1,87 +1,151 @@
-<%- include('../partials/head') %>
-<div class="admin-wrap">
-  <%- include('./partials/sidebar', { active: 'tournaments' }) %>
-  <div class="admin-content">
-    <div class="admin-topbar">
-      <button class="admin-hamburger" onclick="toggleAdminSidebar()"><i class="fas fa-bars"></i></button>
-      <h1 style="font-size:18px;font-weight:800;color:#fff;flex:1;">🏆 টুর্নামেন্ট ম্যানেজমেন্ট</h1>
-      <button onclick="document.getElementById('addModal').style.display='flex'" style="background:#f59e0b;color:#000;border:none;padding:8px 14px;border-radius:10px;font-weight:800;font-size:12px;">+ তৈরি করুন</button>
-    </div>
-    <%- include('../partials/flash') %>
+const { Server } = require("socket.io");
+const { pool } = require('../db');
+const { getBotReply } = require('./chatbot');
 
-    <div class="admin-card">
-      <div style="overflow-x:auto;">
-        <table class="admin-table">
-          <thead><tr><th>নাম</th><th>স্পোর্টস</th><th>এন্ট্রি</th><th>পুরস্কার</th><th>অংশগ্রহণকারী</th><th>স্ট্যাটাস</th><th>তারিখ</th><th>অ্যাকশন</th></tr></thead>
-          <tbody>
-            <% tournaments.forEach(function(t) { %>
-              <tr>
-                <td style="color:#fff;font-weight:700;"><%= t.name %></td>
-                <td><%= t.sport %></td>
-                <td style="color:#f59e0b;"><%= t.entry_fee > 0 ? '৳' + t.entry_fee : 'ফ্রি' %></td>
-                <td style="color:#10b981;">৳<%= t.prize_pool %></td>
-                <td><%= t.participant_count %> / <%= t.max_participants %></td>
-                <td>
-                  <form method="POST" action="/admin/tournaments/<%= t.id %>/status" style="display:inline;">
-                    <select name="status" onchange="this.form.submit()" style="background:#0f1115;color:#fff;border:1px solid rgba(255,255,255,0.1);border-radius:6px;font-size:11px;padding:3px 6px;">
-                      <option value="upcoming" <%= t.status === 'upcoming' ? 'selected' : '' %>>আসন্ন</option>
-                      <option value="ongoing" <%= t.status === 'ongoing' ? 'selected' : '' %>>চলমান</option>
-                      <option value="completed" <%= t.status === 'completed' ? 'selected' : '' %>>সম্পন্ন</option>
-                    </select>
-                  </form>
-                </td>
-                <td style="font-size:11px;color:#64748b;">
-                  <%= t.start_date ? new Date(t.start_date).toLocaleDateString('bn-BD') : '-' %> - <%= t.end_date ? new Date(t.end_date).toLocaleDateString('bn-BD') : '-' %>
-                </td>
-                <td>
-                  <form method="POST" action="/admin/tournaments/<%= t.id %>/delete" onsubmit="return confirm('মুছে ফেলবেন?')">
-                    <button type="submit" style="background:rgba(239,68,68,0.15);color:#ef4444;border:none;padding:5px 10px;border-radius:6px;font-size:10px;font-weight:700;">মুছুন</button>
-                  </form>
-                </td>
-              </tr>
-            <% }) %>
-            <% if (!tournaments.length) { %><tr><td colspan="8" style="text-align:center;color:#64748b;padding:20px;">কোনো টুর্নামেন্ট নেই</td></tr><% } %>
-          </tbody>
-        </table>
-      </div>
-    </div>
+let io;
 
-    <div id="addModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;align-items:center;justify-content:center;">
-      <div style="background:#171b23;border-radius:16px;padding:20px;width:92%;max-width:420px;max-height:85vh;overflow-y:auto;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-          <span style="color:#fff;font-weight:800;">+ টুর্নামেন্ট তৈরি করুন</span>
-          <span onclick="document.getElementById('addModal').style.display='none'" style="color:#94a3b8;cursor:pointer;font-size:18px;">✕</span>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:10px;">
-          <input type="text" id="tName" placeholder="নাম" style="background:#0f1115;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px;color:#fff;font-size:13px;">
-          <select id="tSport" style="background:#0f1115;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px;color:#fff;font-size:13px;">
-            <option value="football">ফুটবল</option><option value="cricket">ক্রিকেট</option>
-          </select>
-          <textarea id="tDesc" placeholder="বিবরণ" style="background:#0f1115;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px;color:#fff;font-size:13px;"></textarea>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-            <input type="number" id="tEntry" value="0" placeholder="এন্ট্রি ফি" style="background:#0f1115;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px;color:#fff;font-size:13px;">
-            <input type="number" id="tPrize" value="0" placeholder="পুরস্কার" style="background:#0f1115;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px;color:#fff;font-size:13px;">
-          </div>
-          <input type="number" id="tMax" value="100" placeholder="সর্বোচ্চ অংশগ্রহণকারী" style="background:#0f1115;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px;color:#fff;font-size:13px;">
-          <label style="color:#94a3b8;font-size:11px;">শুরুর তারিখ</label>
-          <input type="datetime-local" id="tStart" style="background:#0f1115;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px;color:#fff;font-size:13px;">
-          <label style="color:#94a3b8;font-size:11px;">শেষের তারিখ</label>
-          <input type="datetime-local" id="tEnd" style="background:#0f1115;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px;color:#fff;font-size:13px;">
-          <button onclick="submitTournament()" style="background:#f59e0b;color:#000;border:none;padding:12px;border-radius:10px;font-weight:800;">তৈরি করুন</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-<script>
-function submitTournament() {
-  const form = document.createElement('form');
-  form.method = 'POST'; form.action = '/admin/tournaments';
-  [['name','tName'],['sport','tSport'],['description','tDesc'],['entry_fee','tEntry'],['prize_pool','tPrize'],['max_participants','tMax'],['start_date','tStart'],['end_date','tEnd']].forEach(([n,id]) => {
-    const i = document.createElement('input');
-    i.name = n; i.value = document.getElementById(id).value;
-    form.appendChild(i);
+const initSocket = (server) => {
+  io = new Server(server, {
+    cors: {
+      origin: "*",
+      methods: ["GET", "POST"]
+    }
   });
-  document.body.appendChild(form); form.submit();
-}
-</script>
+
+  io.on("connection", (socket) => {
+    console.log("🟢 User connected:", socket.id);
+
+    // ===== ম্যাচ রুম (লাইভ স্কোর) =====
+    socket.on("joinMatch", (matchId) => {
+      socket.join(`match:${matchId}`);
+    });
+    socket.on("join_matches", () => socket.join("matches"));
+    socket.on("leave_matches", () => socket.leave("matches"));
+
+    // ===== ইউজার নিজের চ্যাট রুমে জয়েন =====
+    socket.on("join", (userId) => {
+      if (userId) socket.join(`user:${userId}`);
+    });
+
+    // ===== অ্যাডমিন চ্যাট রুম =====
+    socket.on("join_admin", () => {
+      socket.join("admins");
+    });
+
+    // ===== চ্যাট মেসেজ পাঠানো/গ্রহণ =====
+    socket.on("send_message", async (data) => {
+      try {
+        const senderId = data && data.senderId;
+        const receiverId = (data && data.receiverId) || null;
+        const message = (data && data.message) || null;
+        const fileUrl = (data && data.fileUrl) || null;
+        const fileType = (data && data.fileType) || null;
+        let isAdmin = !!(data && data.isAdmin);
+
+        if (!senderId || (!message && !fileUrl)) return;
+
+        // নিরাপত্তা: কেউ isAdmin:true দাবি করলেও ডেটাবেস থেকে আসল রোল যাচাই
+        if (isAdmin) {
+          const r = await pool.query('SELECT role FROM users WHERE id = $1', [senderId]);
+          isAdmin = !!(r.rows[0] && r.rows[0].role === 'admin');
+        }
+
+        const createdAt = new Date();
+
+        // ডেটাবেসে সেভ
+        await pool.query(
+          `INSERT INTO chat_messages (sender_id, receiver_id, message, is_admin, file_url, file_type, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [senderId, receiverId, message, isAdmin, fileUrl, fileType, createdAt]
+        );
+
+        const payload = {
+          senderId,
+          receiverId,
+          message,
+          isAdmin,
+          fileUrl,
+          fileType,
+          createdAt
+        };
+
+        if (isAdmin) {
+          // অ্যাডমিন → নির্দিষ্ট ইউজারের কাছে
+          if (receiverId) io.to(`user:${receiverId}`).emit("new_message", payload);
+        } else {
+          // ইউজার → সব অ্যাডমিনের কাছে (লাইভ, যদি অ্যাডমিন চ্যাট পেজ খোলা থাকে)
+          io.to("admins").emit("new_message", payload);
+
+          // অ্যাডমিন চ্যাট পেজ খোলা না থাকলেও যেন মিস না হয়, তাই নোটিফিকেশনেও যোগ করা
+          try {
+            const sender = await pool.query('SELECT username FROM users WHERE id=$1', [senderId]);
+            const uname = sender.rows[0] ? sender.rows[0].username : 'ইউজার';
+            const admins = await pool.query(`SELECT id FROM users WHERE role='admin'`);
+            for (const a of admins.rows) {
+              await pool.query(
+                `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, 'নতুন চ্যাট মেসেজ', $2, 'info')`,
+                [a.id, `${uname}: ${message ? message.slice(0, 80) : '[ফাইল পাঠিয়েছে]'}`]
+              );
+            }
+          } catch (e) {
+            console.error('chat admin notify error:', e.message);
+          }
+
+          // ===== বট মোড হলে অটো-রিপ্লাই =====
+          if (data && data.botMode && message) {
+            const botText = await getBotReply(message);
+            const botCreatedAt = new Date();
+
+            await pool.query(
+              `INSERT INTO chat_messages (sender_id, receiver_id, message, is_admin, is_bot, created_at)
+               VALUES ($1, $2, $3, $4, $5, $6)`,
+              [senderId, senderId, botText, true, true, botCreatedAt]
+            );
+
+            io.to(`user:${senderId}`).emit("new_message", {
+              senderId: null,
+              receiverId: senderId,
+              message: botText,
+              isAdmin: true,
+              isBot: true,
+              fileUrl: null,
+              fileType: null,
+              createdAt: botCreatedAt
+            });
+          }
+        }
+      } catch (err) {
+        console.error("send_message error:", err.message);
+      }
+    });
+
+    socket.on("disconnect", () => {
+      console.log("🔴 User disconnected:", socket.id);
+    });
+  });
+
+  console.log("✅ Socket.io initialized");
+};
+
+// ===== লাইভ স্কোর আপডেট (আগের মতোই) =====
+const updateLiveScore = async (matchId, scoreData) => {
+  if (!io) return;
+  try {
+    await pool.query(
+      `UPDATE matches
+       SET score_a = $1, score_b = $2, overs = $3, status = 'live'
+       WHERE id = $4`,
+      [scoreData.score_a, scoreData.score_b, scoreData.overs, matchId]
+    );
+
+    io.to(`match:${matchId}`).emit("scoreUpdate", {
+      matchId,
+      ...scoreData,
+      timestamp: new Date()
+    });
+  } catch (err) {
+    console.error("Live score update error:", err.message);
+  }
+};
+
+module.exports = { initSocket, updateLiveScore };
