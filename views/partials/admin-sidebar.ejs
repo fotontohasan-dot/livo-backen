@@ -1,0 +1,58 @@
+<!-- Professional Admin Sidebar -->
+<aside id="admin-sidebar" 
+       class="fixed lg:static inset-y-0 left-0 z-40 w-64 bg-[#1e2937] border-r border-[#334155] transform -translate-x-full lg:translate-x-0 transition-transform duration-200 ease-in-out overflow-y-auto">
+
+  <div class="p-5">
+    <nav class="space-y-1">
+      <a href="/admin" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-2xl <%= (typeof currentPage === 'undefined' || currentPage === 'dashboard') ? 'bg-[#f59e0b] text-black' : 'text-gray-300 hover:bg-[#334155] hover:text-white' %>">
+        <i class="fas fa-tachometer-alt w-5"></i>
+        <span>Dashboard</span>
+      </a>
+
+      <a href="/admin/users" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-2xl text-gray-300 hover:bg-[#334155] hover:text-white">
+        <i class="fas fa-users w-5"></i>
+        <span>Users</span>
+      </a>
+
+      <a href="/admin/bets" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-2xl text-gray-300 hover:bg-[#334155] hover:text-white">
+        <i class="fas fa-ticket-alt w-5"></i>
+        <span>Bets</span>
+      </a>
+
+      <a href="/admin/matches" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-2xl text-gray-300 hover:bg-[#334155] hover:text-white">
+        <i class="fas fa-gamepad w-5"></i>
+        <span>Matches & Markets</span>
+      </a>
+
+      <a href="/admin/tournaments" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-2xl text-gray-300 hover:bg-[#334155] hover:text-white">
+        <i class="fas fa-trophy w-5"></i>
+        <span>Tournaments</span>
+      </a>
+
+      <a href="/admin/kyc" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-2xl text-gray-300 hover:bg-[#334155] hover:text-white">
+        <i class="fas fa-id-card w-5"></i>
+        <span>KYC Requests</span>
+      </a>
+
+      <a href="/admin/bonuses" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-2xl text-gray-300 hover:bg-[#334155] hover:text-white">
+        <i class="fas fa-gift w-5"></i>
+        <span>Bonuses</span>
+      </a>
+
+      <a href="/admin/promotions" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-2xl text-gray-300 hover:bg-[#334155] hover:text-white">
+        <i class="fas fa-bullhorn w-5"></i>
+        <span>Promotions</span>
+      </a>
+
+      <a href="/admin/reports" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-2xl text-gray-300 hover:bg-[#334155] hover:text-white">
+        <i class="fas fa-chart-bar w-5"></i>
+        <span>Reports</span>
+      </a>
+
+      <a href="/admin/settings" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-2xl text-gray-300 hover:bg-[#334155] hover:text-white">
+        <i class="fas fa-cog w-5"></i>
+        <span>Settings</span>
+      </a>
+    </nav>
+  </div>
+</aside>
