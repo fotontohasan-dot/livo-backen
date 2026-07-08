@@ -4,7 +4,6 @@
 <div class="flex min-h-screen bg-[#0f172a]">
   <%- include('../partials/admin-sidebar') %>
 
-  <!-- Main Content -->
   <main class="flex-1 p-6 lg:p-8 overflow-auto">
     
     <!-- Welcome -->
@@ -44,27 +43,44 @@
       </div>
     </div>
 
-    <!-- Quick Actions -->
-    <div class="mb-8">
-      <h3 class="text-white font-semibold mb-3 text-lg">Quick Actions</h3>
-      <div class="flex flex-wrap gap-3">
-        <a href="/admin/users" class="px-5 py-2.5 bg-[#334155] hover:bg-[#475569] text-white rounded-2xl text-sm flex items-center gap-2 transition">
-          <i class="fas fa-user-plus"></i> <span>Manage Users</span>
-        </a>
-        <a href="/admin/matches" class="px-5 py-2.5 bg-[#334155] hover:bg-[#475569] text-white rounded-2xl text-sm flex items-center gap-2 transition">
-          <i class="fas fa-plus"></i> <span>Add Match</span>
-        </a>
-        <a href="/admin/settings" class="px-5 py-2.5 bg-[#334155] hover:bg-[#475569] text-white rounded-2xl text-sm flex items-center gap-2 transition">
-          <i class="fas fa-cog"></i> <span>Site Settings</span>
-        </a>
+    <!-- Charts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      
+      <!-- Revenue Trend Chart -->
+      <div class="bg-[#1e2937] rounded-3xl border border-[#334155] p-6">
+        <h3 class="font-semibold text-white mb-4">Revenue Trend (Last 14 Days)</h3>
+        <canvas id="revenueChart" height="120"></canvas>
       </div>
+
+      <!-- User Growth Chart -->
+      <div class="bg-[#1e2937] rounded-3xl border border-[#334155] p-6">
+        <h3 class="font-semibold text-white mb-4">New Users (Last 14 Days)</h3>
+        <canvas id="userGrowthChart" height="120"></canvas>
+      </div>
+
     </div>
 
-    <!-- Recent Activity Tables -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Quick Actions + Recent Tables -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       
-      <!-- Recent Bets -->
+      <!-- Quick Actions -->
       <div class="bg-[#1e2937] rounded-3xl border border-[#334155] p-6">
+        <h3 class="font-semibold text-white mb-4">Quick Actions</h3>
+        <div class="flex flex-wrap gap-3">
+          <a href="/admin/users" class="px-5 py-2.5 bg-[#334155] hover:bg-[#475569] text-white rounded-2xl text-sm flex items-center gap-2 transition">
+            <i class="fas fa-user-plus"></i> <span>Manage Users</span>
+          </a>
+          <a href="/admin/matches" class="px-5 py-2.5 bg-[#334155] hover:bg-[#475569] text-white rounded-2xl text-sm flex items-center gap-2 transition">
+            <i class="fas fa-plus"></i> <span>Add Match</span>
+          </a>
+          <a href="/admin/settings" class="px-5 py-2.5 bg-[#334155] hover:bg-[#475569] text-white rounded-2xl text-sm flex items-center gap-2 transition">
+            <i class="fas fa-cog"></i> <span>Site Settings</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Recent Bets -->
+      <div class="lg:col-span-2 bg-[#1e2937] rounded-3xl border border-[#334155] p-6">
         <div class="flex justify-between items-center mb-5">
           <h3 class="font-semibold text-white">Recent Bets</h3>
           <a href="/admin/bets" class="text-[#f59e0b] text-sm hover:underline">View all →</a>
@@ -73,10 +89,10 @@
           <table class="w-full text-sm">
             <thead>
               <tr class="text-gray-400 border-b border-[#334155]">
-                <th class="text-left pb-3 font-normal">User</th>
-                <th class="text-left pb-3 font-normal">Match</th>
-                <th class="text-right pb-3 font-normal">Stake</th>
-                <th class="text-center pb-3 font-normal">Status</th>
+                <th class="text-left pb-3">User</th>
+                <th class="text-left pb-3">Match</th>
+                <th class="text-right pb-3">Stake</th>
+                <th class="text-center pb-3">Status</th>
               </tr>
             </thead>
             <tbody class="text-gray-300">
@@ -101,36 +117,64 @@
         </div>
       </div>
 
-      <!-- Recent Users -->
-      <div class="bg-[#1e2937] rounded-3xl border border-[#334155] p-6">
-        <div class="flex justify-between items-center mb-5">
-          <h3 class="font-semibold text-white">New Users</h3>
-          <a href="/admin/users" class="text-[#f59e0b] text-sm hover:underline">View all →</a>
-        </div>
-        <div class="space-y-4">
-          <% recentUsers.forEach(u => { %>
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="font-medium text-white"><%= u.username %></div>
-              <div class="text-xs text-gray-500"><%= new Date(u.created_at).toLocaleDateString() %></div>
-            </div>
-            <div class="text-right">
-              <div class="text-emerald-400 font-semibold">৳<%= u.coins || 0 %></div>
-            </div>
-          </div>
-          <% }) %>
-        </div>
-      </div>
-
     </div>
 
   </main>
 </div>
 
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script>
-  // Mobile sidebar toggle
-  document.getElementById('sidebar-toggle')?.addEventListener('click', () => {
-    const sidebar = document.getElementById('admin-sidebar');
-    sidebar.classList.toggle('-translate-x-full');
+  // Revenue Trend Chart
+  const revenueCtx = document.getElementById('revenueChart');
+  new Chart(revenueCtx, {
+    type: 'line',
+    data: {
+      labels: <%- JSON.stringify(revenueTrend.map(r => new Date(r.day).toLocaleDateString('en-US', {month:'short', day:'numeric'}))) %>,
+      datasets: [
+        {
+          label: 'Deposit',
+          data: <%- JSON.stringify(revenueTrend.map(r => r.deposit)) %>,
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          tension: 0.4,
+          fill: true
+        },
+        {
+          label: 'Withdraw',
+          data: <%- JSON.stringify(revenueTrend.map(r => r.withdraw)) %>,
+          borderColor: '#ef4444',
+          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+          tension: 0.4,
+          fill: true
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'top' } },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+
+  // User Growth Chart
+  const userCtx = document.getElementById('userGrowthChart');
+  new Chart(userCtx, {
+    type: 'bar',
+    data: {
+      labels: <%- JSON.stringify(userGrowth.map(r => new Date(r.day).toLocaleDateString('en-US', {month:'short', day:'numeric'}))) %>,
+      datasets: [{
+        label: 'New Users',
+        data: <%- JSON.stringify(userGrowth.map(r => r.count)) %>,
+        backgroundColor: '#f59e0b',
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true } }
+    }
   });
 </script>
