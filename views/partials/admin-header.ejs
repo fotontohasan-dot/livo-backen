@@ -1,0 +1,75 @@
+<!-- Professional Admin Header -->
+<header class="bg-[#1e2937] border-b border-[#334155] sticky top-0 z-50">
+  <div class="flex items-center justify-between px-6 h-16">
+    
+    <!-- Logo + Mobile Menu -->
+    <div class="flex items-center gap-3">
+      <button id="sidebar-toggle" class="lg:hidden text-gray-400 hover:text-white p-2">
+        <i class="fas fa-bars text-xl"></i>
+      </button>
+      <div class="flex items-center gap-2">
+        <div class="w-9 h-9 bg-[#f59e0b] rounded-xl flex items-center justify-center">
+          <span class="text-black font-black text-2xl tracking-tighter">L</span>
+        </div>
+        <div>
+          <span class="font-bold text-2xl text-white tracking-wider">LIVO</span>
+          <span class="text-[#f59e0b] text-xs font-bold tracking-[3px] ml-0.5">ADMIN</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="hidden md:flex flex-1 max-w-md mx-8">
+      <div class="relative w-full">
+        <input type="text" 
+               placeholder="Search users, bets, matches..." 
+               class="w-full bg-[#0f172a] border border-[#475569] text-white placeholder-gray-500 rounded-2xl pl-11 py-2.5 text-sm focus:outline-none focus:border-[#f59e0b]">
+        <i class="fas fa-search absolute left-4 top-3.5 text-gray-500"></i>
+      </div>
+    </div>
+
+    <!-- Right Side -->
+    <div class="flex items-center gap-4">
+      
+      <!-- Notifications -->
+      <div class="relative">
+        <button class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#334155] rounded-2xl transition">
+          <i class="fas fa-bell text-lg"></i>
+        </button>
+        <span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
+      </div>
+
+      <!-- Profile Dropdown -->
+      <div class="relative group">
+        <button class="flex items-center gap-3 pl-2 pr-4 py-1.5 rounded-2xl hover:bg-[#334155] transition">
+          <div class="w-8 h-8 bg-[#f59e0b] rounded-xl flex items-center justify-center overflow-hidden">
+            <i class="fas fa-user text-black text-sm"></i>
+          </div>
+          <div class="hidden md:block text-left">
+            <div class="text-white text-sm font-semibold"><%= (typeof user !== 'undefined' && user.username) ? user.username : 'Admin' %></div>
+            <div class="text-[10px] text-gray-500 -mt-0.5">Administrator</div>
+          </div>
+          <i class="fas fa-chevron-down text-gray-500 text-xs ml-1"></i>
+        </button>
+
+        <!-- Dropdown Menu -->
+        <div class="absolute right-0 mt-2 w-52 bg-[#1e2937] border border-[#334155] rounded-2xl shadow-2xl py-2 hidden group-hover:block z-50">
+          <a href="/admin/settings" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#334155] hover:text-white">
+            <i class="fas fa-cog w-4"></i> 
+            <span>Settings</span>
+          </a>
+          <a href="/admin/profile" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#334155] hover:text-white">
+            <i class="fas fa-user w-4"></i> 
+            <span>My Profile</span>
+          </a>
+          <div class="border-t border-[#334155] my-1"></div>
+          <a href="/logout" class="flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-[#334155] hover:text-red-400">
+            <i class="fas fa-sign-out-alt w-4"></i> 
+            <span>Logout</span>
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</header>
