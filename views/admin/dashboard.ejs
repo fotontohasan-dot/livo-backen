@@ -1,85 +1,136 @@
 <%- include('../partials/head') %>
-<%- include('../partials/navbar') %>
-<div class="admin-layout">
-  <div class="admin-sidebar">
-    <div style="padding:0 1.5rem 1rem;font-size:.75rem;color:var(--muted);text-transform:uppercase;">অ্যাডমিন প্যানেল</div>
-    <a href="/admin" class="admin-nav-link active">📊 ড্যাশবোর্ড</a>
-    <a href="/admin/users" class="admin-nav-link">👥 ব্যবহারকারী</a>
-    <a href="/admin/matches" class="admin-nav-link">⚽ ম্যাচসমূহ</a>
-    <a href="/admin/tournaments" class="admin-nav-link">🏆 টুর্নামেন্ট</a>
-    <a href="/admin/news" class="admin-nav-link">📰 নিউজ</a>
-    <a href="/chat/admin" class="admin-nav-link">💬 সাপোর্ট চ্যাট</a>
-    <a href="/payment/admin/payments" class="admin-nav-link">💳 পেমেন্ট</a>
-    <a href="/" class="admin-nav-link">🏠 সাইটে ফিরে যান</a>
-  </div>
-  <div class="admin-content">
-    <%- include('../partials/flash') %>
-    <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:1.5rem;">📊 ড্যাশবোর্ড</h1>
-    <div class="grid grid-4" style="margin-bottom:2rem;">
-      <div class="stat-card"><div class="stat-number"><%= stats.total_users %></div><div class="stat-label">মোট ইউজার</div></div>
-      <div class="stat-card"><div class="stat-number" style="color:var(--secondary)"><%= stats.total_matches %></div><div class="stat-label">মোট ম্যাচ</div></div>
-      <div class="stat-card"><div class="stat-number" style="color:var(--green)"><%= stats.total_predictions %></div><div class="stat-label">প্রেডিকশন</div></div>
-      <div class="stat-card"><div class="stat-number" style="color:var(--gold)"><%= stats.total_coins_in_system %></div><div class="stat-label">সিস্টেম কয়েন</div></div>
+<%- include('../partials/admin-header') %>
+
+<div class="flex min-h-screen bg-[#0f172a]">
+  <%- include('../partials/admin-sidebar') %>
+
+  <!-- Main Content -->
+  <main class="flex-1 p-6 lg:p-8 overflow-auto">
+    
+    <!-- Welcome -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-white">Welcome back, Admin 👋</h1>
+      <p class="text-gray-400 mt-1">Here's what's happening with your platform today.</p>
     </div>
-    <div class="grid grid-2">
-      <div class="card">
-        <div class="card-header">👥 সাম্প্রতিক ইউজার</div>
-        <table class="table">
-          <thead><tr><th>ইউজারনেম</th><th>ইমেইল</th><th>কয়েন</th><th>যোগদান</th></tr></thead>
-          <tbody>
-            <% recentUsers.forEach(u => { %>
-              <tr>
-                <td><%= u.username %></td>
-                <td style="font-size:.8rem;color:var(--muted)"><%= u.email %></td>
-                <td style="color:var(--gold)"><%= u.coins %></td>
-                <td style="font-size:.8rem;color:var(--muted)"><%= new Date(u.created_at).toLocaleDateString() %></td>
-              </tr>
-            <% }) %>
-          </tbody>
-        </table>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+      <div class="bg-[#1e2937] rounded-3xl p-5 border border-[#334155]">
+        <div class="text-gray-400 text-sm">Total Users</div>
+        <div class="text-4xl font-bold text-white mt-2"><%= stats.total_users || 0 %></div>
       </div>
-      <div class="card">
-        <div class="card-header">⚽ সাম্প্রতিক ম্যাচ</div>
-        <table class="table">
-          <thead><tr><th>ম্যাচ</th><th>স্ট্যাটাস</th><th>তারিখ</th></tr></thead>
-          <tbody>
-            <% recentMatches.forEach(m => { %>
-              <tr>
-                <td style="font-size:.85rem"><%= m.team_a %> vs <%= m.team_b %></td>
-                <td><span class="status-badge status-<%= m.status %>"><%= m.status %></span></td>
-                <td style="font-size:.8rem;color:var(--muted)"><%= m.start_time ? new Date(m.start_time).toLocaleDateString() : '-' %></td>
-              </tr>
-            <% }) %>
-          </tbody>
-        </table>
+      <div class="bg-[#1e2937] rounded-3xl p-5 border border-[#334155]">
+        <div class="text-gray-400 text-sm">Total Coins</div>
+        <div class="text-4xl font-bold text-white mt-2"><%= (stats.total_coins_in_system || 0).toLocaleString() %></div>
+      </div>
+      <div class="bg-[#1e2937] rounded-3xl p-5 border border-[#334155]">
+        <div class="text-gray-400 text-sm">Today's Deposit</div>
+        <div class="text-4xl font-bold text-emerald-400 mt-2">৳<%= stats.today_deposit || 0 %></div>
+        <div class="text-xs text-emerald-400/70 mt-1"><%= stats.today_deposit_count || 0 %> transactions</div>
+      </div>
+      <div class="bg-[#1e2937] rounded-3xl p-5 border border-[#334155]">
+        <div class="text-gray-400 text-sm">Today's Withdraw</div>
+        <div class="text-4xl font-bold text-red-400 mt-2">৳<%= stats.today_withdraw || 0 %></div>
+        <div class="text-xs text-red-400/70 mt-1"><%= stats.today_withdraw_count || 0 %> requests</div>
+      </div>
+      <div class="bg-[#1e2937] rounded-3xl p-5 border border-[#334155]">
+        <div class="text-gray-400 text-sm">Today's Bets</div>
+        <div class="text-4xl font-bold text-white mt-2">৳<%= stats.today_bet_amount || 0 %></div>
+        <div class="text-xs text-gray-500 mt-1"><%= stats.today_bet_count || 0 %> bets</div>
+      </div>
+      <div class="bg-[#1e2937] rounded-3xl p-5 border border-[#334155]">
+        <div class="text-gray-400 text-sm">Today's Profit</div>
+        <div class="text-4xl font-bold text-[#f59e0b] mt-2">৳<%= stats.today_profit || 0 %></div>
       </div>
     </div>
-    <div class="card" style="margin-top:1.5rem;">
-      <div class="card-header">📢 ব্রডকাস্ট নোটিফিকেশন</div>
-      <div class="card-body">
-        <div class="form-group">
-          <label class="form-label">টাইটেল</label>
-          <input type="text" class="form-input" id="notifTitle" placeholder="নোটিফিকেশন টাইটেল">
+
+    <!-- Quick Actions -->
+    <div class="mb-8">
+      <h3 class="text-white font-semibold mb-3 text-lg">Quick Actions</h3>
+      <div class="flex flex-wrap gap-3">
+        <a href="/admin/users" class="px-5 py-2.5 bg-[#334155] hover:bg-[#475569] text-white rounded-2xl text-sm flex items-center gap-2 transition">
+          <i class="fas fa-user-plus"></i> <span>Manage Users</span>
+        </a>
+        <a href="/admin/matches" class="px-5 py-2.5 bg-[#334155] hover:bg-[#475569] text-white rounded-2xl text-sm flex items-center gap-2 transition">
+          <i class="fas fa-plus"></i> <span>Add Match</span>
+        </a>
+        <a href="/admin/settings" class="px-5 py-2.5 bg-[#334155] hover:bg-[#475569] text-white rounded-2xl text-sm flex items-center gap-2 transition">
+          <i class="fas fa-cog"></i> <span>Site Settings</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Recent Activity Tables -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      
+      <!-- Recent Bets -->
+      <div class="bg-[#1e2937] rounded-3xl border border-[#334155] p-6">
+        <div class="flex justify-between items-center mb-5">
+          <h3 class="font-semibold text-white">Recent Bets</h3>
+          <a href="/admin/bets" class="text-[#f59e0b] text-sm hover:underline">View all →</a>
         </div>
-        <div class="form-group">
-          <label class="form-label">মেসেজ</label>
-          <input type="text" class="form-input" id="notifMsg" placeholder="সব ইউজারদের জন্য মেসেজ">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-gray-400 border-b border-[#334155]">
+                <th class="text-left pb-3 font-normal">User</th>
+                <th class="text-left pb-3 font-normal">Match</th>
+                <th class="text-right pb-3 font-normal">Stake</th>
+                <th class="text-center pb-3 font-normal">Status</th>
+              </tr>
+            </thead>
+            <tbody class="text-gray-300">
+              <% recentBets.forEach(bet => { %>
+              <tr class="border-b border-[#334155] last:border-none">
+                <td class="py-3"><%= bet.username %></td>
+                <td class="py-3 text-xs"><%= bet.team_a %> vs <%= bet.team_b %></td>
+                <td class="py-3 text-right font-medium">৳<%= bet.stake %></td>
+                <td class="py-3 text-center">
+                  <% if(bet.status === 'won') { %>
+                    <span class="px-3 py-0.5 text-xs rounded-full bg-emerald-500/20 text-emerald-400">Won</span>
+                  <% } else if(bet.status === 'lost') { %>
+                    <span class="px-3 py-0.5 text-xs rounded-full bg-red-500/20 text-red-400">Lost</span>
+                  <% } else { %>
+                    <span class="px-3 py-0.5 text-xs rounded-full bg-yellow-500/20 text-yellow-400">Pending</span>
+                  <% } %>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
         </div>
-        <button onclick="broadcastNotif()" class="btn btn-primary">📢 সব ইউজারকে পাঠান</button>
       </div>
+
+      <!-- Recent Users -->
+      <div class="bg-[#1e2937] rounded-3xl border border-[#334155] p-6">
+        <div class="flex justify-between items-center mb-5">
+          <h3 class="font-semibold text-white">New Users</h3>
+          <a href="/admin/users" class="text-[#f59e0b] text-sm hover:underline">View all →</a>
+        </div>
+        <div class="space-y-4">
+          <% recentUsers.forEach(u => { %>
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="font-medium text-white"><%= u.username %></div>
+              <div class="text-xs text-gray-500"><%= new Date(u.created_at).toLocaleDateString() %></div>
+            </div>
+            <div class="text-right">
+              <div class="text-emerald-400 font-semibold">৳<%= u.coins || 0 %></div>
+            </div>
+          </div>
+          <% }) %>
+        </div>
+      </div>
+
     </div>
-  </div>
+
+  </main>
 </div>
+
 <script>
-function broadcastNotif() {
-  const form = document.createElement('form');
-  form.method = 'POST'; form.action = '/admin/notify-all';
-  [['title','notifTitle'],['message','notifMsg']].forEach(([n,id]) => {
-    const i = document.createElement('input');
-    i.name = n; i.value = document.getElementById(id).value;
-    form.appendChild(i);
+  // Mobile sidebar toggle
+  document.getElementById('sidebar-toggle')?.addEventListener('click', () => {
+    const sidebar = document.getElementById('admin-sidebar');
+    sidebar.classList.toggle('-translate-x-full');
   });
-  document.body.appendChild(form); form.submit();
-}
 </script>
-</body></html>
