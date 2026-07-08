@@ -1,140 +1,180 @@
 <%- include('../partials/head') %>
-<%- include('../partials/navbar') %>
-<div class="admin-content" style="padding:16px; padding-bottom:90px;">
-  <%- include('../partials/flash') %>
+<%- include('../partials/admin-header') %>
 
-  <a href="/admin/users" class="btn btn-outline btn-sm">← ইউজার লিস্ট</a>
+<div class="flex min-h-screen bg-[#0f172a]">
+  <%- include('../partials/admin-sidebar') %>
 
-  <h1 style="font-size:1.4rem;font-weight:800;margin:16px 0;">👤 <%= u.username %></h1>
-
-  <!-- মূল তথ্য -->
-  <div class="card" style="padding:16px;margin-bottom:16px;">
-    <h3 style="color:var(--gold);margin-bottom:10px;">📋 মূল তথ্য</h3>
-    <p>ইউজারনেম: <strong><%= u.username %></strong></p>
-    <p>ইমেইল: <strong><%= u.email || '—' %></strong></p>
-    <p>ফোন: <strong><%= u.phone || '—' %></strong></p>
-    <p>রেজিস্ট্রেশন: <strong><%= u.created_at ? new Date(u.created_at).toLocaleString('bn-BD') : '—' %></strong></p>
-    <p>স্ট্যাটাস: <strong style="color:<%= u.is_banned ? 'var(--red)' : 'var(--green)' %>"><%= u.is_banned ? '🚫 নিষিদ্ধ' : '✅ সচল' %></strong></p>
-    <p>KYC: <strong><%= u.kyc_status || 'none' %></strong></p>
-    <p>রেফারেল কোড: <strong><%= u.referral_code || '—' %></strong></p>
-    <p>যত জনকে রেফার করেছে: <strong><%= referralCount %></strong></p>
-  </div>
-
-  <!-- আর্থিক -->
-  <div class="card" style="padding:16px;margin-bottom:16px;">
-    <h3 style="color:var(--gold);margin-bottom:10px;">💰 আর্থিক হিসাব</h3>
-    <p>বর্তমান ব্যালেন্স: <strong style="color:var(--gold)"><%= u.coins %></strong> কয়েন</p>
-    <p>মোট ডিপোজিট: <strong style="color:var(--green)">৳<%= stats.totalDeposit || 0 %></strong></p>
-    <p>মোট উইথড্র: <strong style="color:#f97316">৳<%= stats.totalWithdraw || 0 %></strong></p>
-    <p>মোট বেট: <strong><%= stats.totalBet || 0 %></strong> কয়েন (<%= stats.betCount || 0 %> টি)</p>
-  </div>
-
-  <!-- কার্যকলাপ -->
-  <div class="card" style="padding:16px;margin-bottom:16px;">
-    <h3 style="color:var(--gold);margin-bottom:10px;">📡 কার্যকলাপ</h3>
-    <p>শেষ লগইন: <strong><%= u.last_login ? new Date(u.last_login).toLocaleString('bn-BD') : '—' %></strong></p>
-    <p>মোট লগইন: <strong><%= u.login_count || 0 %></strong> বার</p>
-    <p>শেষ IP: <strong><%= u.last_ip || '—' %></strong></p>
-    <p style="font-size:.8rem;color:var(--muted);word-break:break-all;">ডিভাইস: <%= u.last_device || '—' %></p>
-  </div>
-
-  <!-- জালিয়াতি সতর্কতা -->
-  <% if (sameIp && sameIp.length > 0) { %>
-  <div class="card" style="padding:16px;margin-bottom:16px;border:1px solid var(--red);">
-    <h3 style="color:var(--red);margin-bottom:10px;">⚠️ একই IP থেকে অন্য অ্যাকাউন্ট (<%= sameIp.length %>)</h3>
-    <% sameIp.forEach(s => { %>
-      <p><a href="/admin/users/<%= s.id %>" style="color:var(--gold)"><%= s.username %></a> — <%= s.email || '—' %></p>
-    <% }) %>
-    <small style="color:var(--muted)">⚠️ মাল্টি-অ্যাকাউন্ট সন্দেহ থাকলে যাচাই করুন।</small>
-  </div>
-  <% } %>
-
-  <!-- অ্যাডমিন অ্যাকশন -->
-  <div class="card" style="padding:16px;margin-bottom:16px;">
-    <h3 style="color:var(--gold);margin-bottom:10px;">⚙️ অ্যাকশন</h3>
-    <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:14px;">
-      <form action="/admin/users/<%= u.id %>/ban" method="POST" onsubmit="return confirm('স্ট্যাটাস বদলাবেন?')">
-        <button class="btn btn-sm <%= u.is_banned ? 'btn-outline' : 'btn-danger' %>"><%= u.is_banned ? 'আনব্যান' : 'ব্যান/সাসপেন্ড' %></button>
-      </form>
-      <form action="/admin/users/<%= u.id %>/delete" method="POST" onsubmit="return confirm('সত্যিই ডিলিট করবেন? এটা ফেরানো যাবে না।')">
-        <button class="btn btn-sm btn-danger">🗑️ ডিলিট</button>
-      </form>
+  <main class="flex-1 p-6 lg:p-8 overflow-auto">
+    
+    <!-- Back Button + Header -->
+    <div class="flex items-center gap-4 mb-6">
+      <a href="/admin/users" class="flex items-center justify-center w-10 h-10 bg-[#1e2937] hover:bg-[#334155] rounded-2xl text-gray-300">
+        <i class="fas fa-arrow-left"></i>
+      </a>
+      <div>
+        <h1 class="text-3xl font-bold text-white"><%= u.username %></h1>
+        <p class="text-gray-400 text-sm">User ID: <%= u.id %> • Joined <%= new Date(u.created_at).toLocaleDateString() %></p>
+      </div>
+      <div class="ml-auto">
+        <% if(u.is_banned) { %>
+          <span class="px-4 py-1.5 bg-red-500/20 text-red-400 text-sm rounded-2xl">Banned</span>
+        <% } else { %>
+          <span class="px-4 py-1.5 bg-emerald-500/20 text-emerald-400 text-sm rounded-2xl">Active</span>
+        <% } %>
+      </div>
     </div>
 
-    <!-- কয়েন -->
-    <form action="/admin/users/<%= u.id %>/coins/add" method="POST" style="display:flex;gap:.5rem;margin-bottom:8px;">
-      <input type="number" name="amount" class="form-input" placeholder="কয়েন" min="1" style="flex:1;">
-      <button class="btn btn-sm btn-gold">+ যোগ</button>
-    </form>
-    <form action="/admin/users/<%= u.id %>/coins/remove" method="POST" style="display:flex;gap:.5rem;margin-bottom:8px;">
-      <input type="number" name="amount" class="form-input" placeholder="কয়েন" min="1" style="flex:1;">
-      <button class="btn btn-sm btn-danger">- কমান</button>
-    </form>
-
-    <!-- ফ্রি বেট -->
-    <form action="/admin/users/<%= u.id %>/freebet" method="POST" style="display:flex;gap:.5rem;margin-bottom:14px;">
-      <input type="number" name="amount" class="form-input" placeholder="ফ্রি বেট পরিমাণ" min="1" style="flex:1;">
-      <button class="btn btn-sm" style="background:#10b981;color:#fff;">🎁 ফ্রি বেট দিন</button>
-    </form>
-
-    <!-- নোটিফিকেশন পাঠানো -->
-    <form action="/admin/users/<%= u.id %>/notify" method="POST" style="margin-bottom:14px;">
-      <input type="text" name="title" class="form-input" placeholder="মেসেজের শিরোনাম" style="margin-bottom:6px;width:100%;">
-      <textarea name="message" class="form-input" placeholder="মেসেজ লিখুন..." rows="2" style="width:100%;margin-bottom:6px;"></textarea>
-      <button class="btn btn-sm btn-primary">📨 মেসেজ পাঠান</button>
-    </form>
-
-    <!-- ম্যানুয়াল নোট -->
-    <form action="/admin/users/<%= u.id %>/note" method="POST">
-      <textarea name="note" class="form-input" placeholder="অ্যাডমিন নোট (যেমন: সন্দেহজনক)" rows="2" style="width:100%;margin-bottom:6px;"><%= u.admin_note || '' %></textarea>
-      <button class="btn btn-sm btn-outline">💾 নোট সেভ</button>
-    </form>
-  </div>
-
-  <!-- বেট হিস্টরি -->
-  <div class="card" style="padding:16px;margin-bottom:16px;">
-    <h3 style="color:var(--gold);margin-bottom:10px;">🎯 বেট হিস্টরি</h3>
-    <% if (bets.length === 0) { %>
-      <p style="color:var(--muted)">কোনো বেট নেই।</p>
-    <% } else { %>
-      <% bets.forEach(b => { %>
-        <div style="border-bottom:1px solid #333;padding:8px 0;font-size:.85rem;">
-          <%= b.match_title || 'ম্যাচ' %> — <%= b.stake %> কয়েন @ <%= b.odd %>
-          <span style="color:<%= b.status === 'won' ? 'var(--green)' : (b.status === 'lost' ? 'var(--red)' : 'var(--muted)') %>"> [<%= b.status %>]</span>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Left Column: User Info + Actions -->
+      <div class="lg:col-span-1 space-y-6">
+        
+        <!-- Basic Info Card -->
+        <div class="bg-[#1e2937] rounded-3xl border border-[#334155] p-6">
+          <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+            <i class="fas fa-user text-[#f59e0b]"></i> 
+            <span>Basic Information</span>
+          </h3>
+          <div class="space-y-3 text-sm">
+            <div class="flex justify-between"><span class="text-gray-400">Username</span> <span class="font-medium text-white"><%= u.username %></span></div>
+            <div class="flex justify-between"><span class="text-gray-400">Email</span> <span class="font-medium text-white"><%= u.email || '-' %></span></div>
+            <div class="flex justify-between"><span class="text-gray-400">Phone</span> <span class="font-medium text-white"><%= u.phone || '-' %></span></div>
+            <div class="flex justify-between"><span class="text-gray-400">Coins</span> <span class="font-bold text-emerald-400">৳<%= u.coins || 0 %></span></div>
+            <div class="flex justify-between"><span class="text-gray-400">Total Points</span> <span class="font-medium text-white"><%= u.total_points || 0 %></span></div>
+            <div class="flex justify-between"><span class="text-gray-400">KYC Status</span> <span class="font-medium"><%= u.kyc_status || 'Not Submitted' %></span></div>
+          </div>
         </div>
-      <% }) %>
-    <% } %>
-  </div>
 
-  <!-- কয়েন লেনদেন -->
-  <div class="card" style="padding:16px;margin-bottom:16px;">
-    <h3 style="color:var(--gold);margin-bottom:10px;">💳 কয়েন লেনদেন</h3>
-    <% if (transactions.length === 0) { %>
-      <p style="color:var(--muted)">কোনো লেনদেন নেই।</p>
-    <% } else { %>
-      <% transactions.forEach(t => { %>
-        <div style="border-bottom:1px solid #333;padding:8px 0;font-size:.85rem;">
-          <%= t.description || t.type %> :
-          <span style="color:<%= t.amount >= 0 ? 'var(--green)' : 'var(--red)' %>"><%= t.amount %></span>
+        <!-- Financial Summary -->
+        <div class="bg-[#1e2937] rounded-3xl border border-[#334155] p-6">
+          <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+            <i class="fas fa-wallet text-[#f59e0b]"></i> 
+            <span>Financial Summary</span>
+          </h3>
+          <div class="grid grid-cols-2 gap-4 text-sm">
+            <div class="bg-[#0f172a] rounded-2xl p-4">
+              <div class="text-gray-400 text-xs">Total Deposit</div>
+              <div class="text-xl font-bold text-emerald-400 mt-1">৳<%= stats.totalDeposit || 0 %></div>
+            </div>
+            <div class="bg-[#0f172a] rounded-2xl p-4">
+              <div class="text-gray-400 text-xs">Total Withdraw</div>
+              <div class="text-xl font-bold text-red-400 mt-1">৳<%= stats.totalWithdraw || 0 %></div>
+            </div>
+            <div class="bg-[#0f172a] rounded-2xl p-4">
+              <div class="text-gray-400 text-xs">Total Bet Amount</div>
+              <div class="text-xl font-bold text-white mt-1">৳<%= stats.totalBet || 0 %></div>
+            </div>
+            <div class="bg-[#0f172a] rounded-2xl p-4">
+              <div class="text-gray-400 text-xs">Total Bets</div>
+              <div class="text-xl font-bold text-white mt-1"><%= stats.betCount || 0 %></div>
+            </div>
+          </div>
         </div>
-      <% }) %>
-    <% } %>
-  </div>
 
-  <!-- পেমেন্ট রিকোয়েস্ট -->
-  <div class="card" style="padding:16px;margin-bottom:16px;">
-    <h3 style="color:var(--gold);margin-bottom:10px;">🏦 ডিপোজিট/উইথড্র</h3>
-    <% if (payments.length === 0) { %>
-      <p style="color:var(--muted)">কোনো রিকোয়েস্ট নেই।</p>
-    <% } else { %>
-      <% payments.forEach(p => { %>
-        <div style="border-bottom:1px solid #333;padding:8px 0;font-size:.85rem;">
-          <%= p.type %> — ৳<%= p.amount %> (<%= p.method %>)
-          <span style="color:var(--muted)"> [<%= p.status %>]</span>
+        <!-- Quick Actions -->
+        <div class="bg-[#1e2937] rounded-3xl border border-[#334155] p-6">
+          <h3 class="font-semibold text-white mb-4">Quick Actions</h3>
+          
+          <div class="space-y-3">
+            <!-- Ban/Unban -->
+            <form action="/admin/users/<%= u.id %>/ban" method="POST">
+              <button type="submit" class="w-full py-3 rounded-2xl text-sm font-medium <%= u.is_banned ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700' %> text-white">
+                <%= u.is_banned ? 'Unban User' : 'Ban User' %>
+              </button>
+            </form>
+
+            <!-- Add Coins -->
+            <form action="/admin/users/<%= u.id %>/coins/add" method="POST" class="flex gap-2">
+              <input type="number" name="amount" placeholder="Amount" class="flex-1 bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-sm" required>
+              <button type="submit" class="px-5 bg-emerald-600 hover:bg-emerald-700 rounded-2xl text-sm font-medium">Add</button>
+            </form>
+
+            <!-- Remove Coins -->
+            <form action="/admin/users/<%= u.id %>/coins/remove" method="POST" class="flex gap-2">
+              <input type="number" name="amount" placeholder="Amount" class="flex-1 bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-sm" required>
+              <button type="submit" class="px-5 bg-red-600 hover:bg-red-700 rounded-2xl text-sm font-medium">Remove</button>
+            </form>
+
+            <!-- Freebet -->
+            <form action="/admin/users/<%= u.id %>/freebet" method="POST" class="flex gap-2">
+              <input type="number" name="amount" placeholder="Freebet Amount" class="flex-1 bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-sm" required>
+              <button type="submit" class="px-5 bg-[#f59e0b] hover:bg-[#d97706] text-black rounded-2xl text-sm font-medium">Give Freebet</button>
+            </form>
+          </div>
         </div>
-      <% }) %>
-    <% } %>
-  </div>
 
+      </div>
+
+      <!-- Right Column: History Tables -->
+      <div class="lg:col-span-2 space-y-6">
+        
+        <!-- Recent Bets -->
+        <div class="bg-[#1e2937] rounded-3xl border border-[#334155] p-6">
+          <h3 class="font-semibold text-white mb-4">Recent Bets</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="text-gray-400 border-b border-[#334155]">
+                  <th class="text-left pb-3">Match</th>
+                  <th class="text-right pb-3">Stake</th>
+                  <th class="text-right pb-3">Odd</th>
+                  <th class="text-center pb-3">Status</th>
+                </tr>
+              </thead>
+              <tbody class="text-gray-300">
+                <% bets.forEach(b => { %>
+                <tr class="border-b border-[#334155] last:border-none">
+                  <td class="py-3 text-xs"><%= b.match_title || 'N/A' %></td>
+                  <td class="py-3 text-right font-medium">৳<%= b.stake %></td>
+                  <td class="py-3 text-right"><%= b.odd %></td>
+                  <td class="py-3 text-center">
+                    <% if(b.status === 'won') { %>
+                      <span class="px-3 py-0.5 text-xs rounded-full bg-emerald-500/20 text-emerald-400">Won</span>
+                    <% } else if(b.status === 'lost') { %>
+                      <span class="px-3 py-0.5 text-xs rounded-full bg-red-500/20 text-red-400">Lost</span>
+                    <% } else { %>
+                      <span class="px-3 py-0.5 text-xs rounded-full bg-yellow-500/20 text-yellow-400">Pending</span>
+                    <% } %>
+                  </td>
+                </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Coin Transactions -->
+        <div class="bg-[#1e2937] rounded-3xl border border-[#334155] p-6">
+          <h3 class="font-semibold text-white mb-4">Coin Transactions</h3>
+          <div class="overflow-x-auto max-h-[280px]">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="text-gray-400 border-b border-[#334155]">
+                  <th class="text-left pb-3">Type</th>
+                  <th class="text-right pb-3">Amount</th>
+                  <th class="text-left pb-3">Description</th>
+                  <th class="text-right pb-3">Date</th>
+                </tr>
+              </thead>
+              <tbody class="text-gray-300">
+                <% transactions.forEach(t => { %>
+                <tr class="border-b border-[#334155] last:border-none">
+                  <td class="py-2.5"><%= t.type %></td>
+                  <td class="py-2.5 text-right font-medium <%= t.amount > 0 ? 'text-emerald-400' : 'text-red-400' %>">
+                    <%= t.amount > 0 ? '+' : '' %><%= t.amount %>
+                  </td>
+                  <td class="py-2.5 text-xs"><%= t.description || '-' %></td>
+                  <td class="py-2.5 text-right text-xs text-gray-500"><%= new Date(t.created_at).toLocaleDateString() %></td>
+                </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
 </div>
-</body></html>
