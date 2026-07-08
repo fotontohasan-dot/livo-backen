@@ -1,0 +1,86 @@
+<%- include('../partials/head') %>
+<%- include('../partials/admin-header') %>
+
+<div class="flex min-h-screen bg-[#0f172a]">
+  <%- include('../partials/admin-sidebar') %>
+
+  <main class="flex-1 p-6 lg:p-8 overflow-auto">
+    
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-3xl font-bold text-white">Activity Log</h1>
+        <p class="text-gray-400 text-sm mt-1">Track all admin actions</p>
+      </div>
+      <a href="/admin" class="px-4 py-2 bg-[#334155] hover:bg-[#475569] text-white rounded-2xl text-sm flex items-center gap-2">
+        <i class="fas fa-arrow-left"></i>
+        <span>Back to Dashboard</span>
+      </a>
+    </div>
+
+    <!-- Filter -->
+    <div class="bg-[#1e2937] rounded-3xl border border-[#334155] p-5 mb-6">
+      <form method="GET" class="flex flex-wrap gap-4 items-end">
+        <div class="flex-1 min-w-[200px]">
+          <label class="text-xs text-gray-400 block mb-1">Action Type</label>
+          <select name="type" class="w-full bg-[#0f172a] border border-[#475569] text-white rounded-2xl px-4 py-3 text-sm">
+            <option value="">All Actions</option>
+            <option value="coin_add">Coin Added</option>
+            <option value="coin_remove">Coin Removed</option>
+            <option value="user_ban">User Banned/Unbanned</option>
+            <option value="bet_settle">Bet Settled</option>
+            <option value="kyc">KYC Action</option>
+            <option value="match">Match/Market Updated</option>
+          </select>
+        </div>
+        <div>
+          <button type="submit" class="px-6 py-3 bg-[#f59e0b] hover:bg-[#d97706] text-black font-bold rounded-2xl text-sm">
+            Filter
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Activity Table -->
+    <div class="bg-[#1e2937] rounded-3xl border border-[#334155] overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-[#0f172a]">
+          <tr class="text-gray-400">
+            <th class="text-left px-6 py-4 font-normal">Time</th>
+            <th class="text-left px-4 py-4 font-normal">Admin</th>
+            <th class="text-left px-4 py-4 font-normal">Action</th>
+            <th class="text-left px-4 py-4 font-normal">Details</th>
+            <th class="text-center px-6 py-4 font-normal">IP</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[#334155] text-gray-300">
+          <% if (typeof activities !== 'undefined' && activities.length > 0) { %>
+            <% activities.forEach(log => { %>
+            <tr class="hover:bg-[#0f172a]">
+              <td class="px-6 py-4 text-xs text-gray-400"><%= new Date(log.created_at).toLocaleString() %></td>
+              <td class="px-4 py-4 font-medium text-white"><%= log.admin_username || 'System' %></td>
+              <td class="px-4 py-4">
+                <span class="px-3 py-1 text-xs rounded-full 
+                  <%= log.action_type.includes('coin') ? 'bg-emerald-500/20 text-emerald-400' : '' %>
+                  <%= log.action_type.includes('ban') ? 'bg-red-500/20 text-red-400' : '' %>
+                  <%= log.action_type.includes('bet') ? 'bg-yellow-500/20 text-yellow-400' : '' %>
+                ">
+                  <%= log.action_type %>
+                </span>
+              </td>
+              <td class="px-4 py-4 text-sm"><%= log.details %></td>
+              <td class="px-6 py-4 text-center text-xs text-gray-500"><%= log.ip || '-' %></td>
+            </tr>
+            <% }) %>
+          <% } else { %>
+            <tr>
+              <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                No activity logs found yet.
+              </td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+</div>
