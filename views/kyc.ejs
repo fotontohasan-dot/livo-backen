@@ -1,52 +1,73 @@
-<%- include('partials/head') %>
-<%- include('partials/navbar') %>
+<%- include('../partials/head') %>
+<%- include('../partials/admin-header') %>
 
-<div style="padding:20px;padding-bottom:100px;max-width:700px;margin:0 auto">
-  <h1 style="color:var(--gold);font-size:24px;font-weight:800;margin-bottom:6px"><%= t.kyc_title %></h1>
+<div class="flex min-h-screen bg-[#0f172a]">
+  <%- include('../partials/admin-sidebar') %>
 
-  <% if (kyc && kyc.status === 'approved') { %>
-    <div class="card" style="padding:16px;background:rgba(16,185,129,0.15);border:1px solid #10b981;margin-bottom:16px;">
-      <strong style="color:#10b981;"><%= t.kyc_approved %></strong>
+  <main class="flex-1 p-6 lg:p-8 overflow-auto">
+    
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-3xl font-bold text-white">KYC Requests</h1>
+        <p class="text-gray-400 text-sm mt-1">Verify user identities</p>
+      </div>
     </div>
-  <% } else if (kyc && kyc.status === 'pending') { %>
-    <div class="card" style="padding:16px;background:rgba(234,179,8,0.15);border:1px solid #eab308;margin-bottom:16px;">
-      <strong style="color:#eab308;"><%= t.kyc_pending %></strong>
+
+    <!-- KYC Table -->
+    <div class="bg-[#1e2937] rounded-3xl border border-[#334155] overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-[#0f172a]">
+          <tr class="text-gray-400">
+            <th class="text-left px-6 py-4 font-normal">User</th>
+            <th class="text-left px-4 py-4 font-normal">Submitted</th>
+            <th class="text-center px-4 py-4 font-normal">Status</th>
+            <th class="text-center px-6 py-4 font-normal">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[#334155] text-gray-300">
+          <% requests.forEach(k => { %>
+          <tr class="hover:bg-[#0f172a]">
+            <td class="px-6 py-4">
+              <div class="font-semibold text-white"><%= k.username %></div>
+              <div class="text-xs text-gray-500">ID: <%= k.user_id %></div>
+            </td>
+            <td class="px-4 py-4 text-xs text-gray-400">
+              <%= new Date(k.created_at).toLocaleDateString() %>
+            </td>
+            <td class="px-4 py-4 text-center">
+              <% if(k.status === 'pending') { %>
+                <span class="px-3 py-1 text-xs rounded-full bg-yellow-500/20 text-yellow-400">Pending</span>
+              <% } else if(k.status === 'approved') { %>
+                <span class="px-3 py-1 text-xs rounded-full bg-emerald-500/20 text-emerald-400">Approved</span>
+              <% } else { %>
+                <span class="px-3 py-1 text-xs rounded-full bg-red-500/20 text-red-400">Rejected</span>
+              <% } %>
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex justify-center gap-2">
+                <% if(k.status === 'pending') { %>
+                  <form action="/admin/kyc/<%= k.id %>/approve" method="POST">
+                    <button type="submit" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 rounded-xl text-xs text-white">Approve</button>
+                  </form>
+                  <form action="/admin/kyc/<%= k.id %>/reject" method="POST">
+                    <button type="submit" class="px-4 py-1.5 bg-red-600 hover:bg-red-700 rounded-xl text-xs text-white">Reject</button>
+                  </form>
+                <% } else { %>
+                  <span class="text-gray-500 text-xs">Processed</span>
+                <% } %>
+              </div>
+            </td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
     </div>
-  <% } else if (kyc && kyc.status === 'rejected') { %>
-    <div class="card" style="padding:16px;background:rgba(239,68,68,0.15);border:1px solid #ef4444;margin-bottom:16px;">
-      <strong style="color:#ef4444;"><%= t.kyc_rejected %></strong>
-    </div>
-  <% } %>
 
-  <% if (!kyc || kyc.status === 'rejected') { %>
-  <div class="card" style="padding:20px;margin-bottom:20px;">
-    <h3 style="color:var(--gold);font-size:16px;margin-bottom:12px;"><%= t.submit_info %></h3>
-    <form action="/extra/kyc" method="POST">
-      <input type="text" name="full_name" placeholder="<%= t.full_name_nid %>" required class="form-control" style="margin-bottom:10px;">
+    <% if (requests.length === 0) { %>
+      <div class="text-center py-12 text-gray-500">
+        No KYC requests found.
+      </div>
+    <% } %>
 
-      <select name="document_type" class="form-control" style="margin-bottom:10px;">
-        <option value="nid"><%= t.nid %></option>
-        <option value="passport"><%= t.passport %></option>
-        <option value="driving"><%= t.driving %></option>
-      </select>
-
-      <input type="text" name="document_number" placeholder="<%= t.doc_number %>" required class="form-control" style="margin-bottom:10px;">
-
-      <input type="text" name="document_url" placeholder="<%= t.doc_url_optional %>" class="form-control" style="margin-bottom:10px;">
-
-      <button type="submit" class="btn btn-success" style="width:100%;"><%= t.submit %></button>
-    </form>
-  </div>
-  <% } %>
-
-  <div style="color:var(--text-main);font-size:14px;line-height:1.8">
-    <h3 style="color:var(--gold);font-size:16px;margin:20px 0 8px"><%= t.kyc_why_title %></h3>
-    <p><%= t.kyc_why_desc %></p>
-
-    <h3 style="color:var(--gold);font-size:16px;margin:20px 0 8px"><%= t.kyc_safety_title %></h3>
-    <p><%= t.kyc_safety_desc %></p>
-  </div>
+  </main>
 </div>
-
-<%- include('partials/footer') %>
-<%- include('partials/bottom-nav') %>
