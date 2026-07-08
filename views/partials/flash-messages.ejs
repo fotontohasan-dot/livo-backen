@@ -1,0 +1,22 @@
+<!-- Professional Flash Messages -->
+<% if (typeof messages !== 'undefined' && messages) { %>
+  <% if (messages.success && messages.success.length > 0) { %>
+    <% messages.success.forEach(msg => { %>
+      <div class="mx-6 mt-4 bg-emerald-500/10 border border-emerald-500 text-emerald-400 px-5 py-3.5 rounded-2xl flex items-center gap-3 text-sm">
+        <i class="fas fa-check-circle text-emerald-400"></i>
+        <span><%= msg %></span>
+        <button onclick="this.parentElement.remove()" class="ml-auto text-emerald-400 hover:text-white">×</button>
+      </div>
+    <% }) %>
+  <% } %>
+
+  <% if (messages.error && messages.error.length > 0) { %>
+    <% messages.error.forEach(msg => { %>
+      <div class="mx-6 mt-4 bg-red-500/10 border border-red-500 text-red-400 px-5 py-3.5 rounded-2xl flex items-center gap-3 text-sm">
+        <i class="fas fa-exclamation-circle text-red-400"></i>
+        <span><%= msg %></span>
+        <button onclick="this.parentElement.remove()" class="ml-auto text-red-400 hover:text-white">×</button>
+      </div>
+    <% }) %>
+  <% } %>
+<% } %>
