@@ -48,7 +48,26 @@ router.post('/login', async (req, res) => {
     res.render('admin/login', { error: 'সার্ভার এরর হয়েছে' });
   }
 });
-
+// ==================== TEMPORARY: CREATE ADMIN LOGS TABLE ====================
+router.get('/create-activity-table', async (req, res) => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS admin_logs (
+        id SERIAL PRIMARY KEY,
+        admin_id INTEGER REFERENCES users(id),
+        admin_username VARCHAR(100),
+        action_type VARCHAR(100) NOT NULL,
+        details TEXT,
+        ip_address VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    res.send('✅ Admin Logs টেবিল সফলভাবে তৈরি হয়েছে!');
+  } catch (err) {
+    console.error(err);
+    res.send('❌ সমস্যা হয়েছে: ' + err.message);
+  }
+});
 // ==================== এর পর থেকে সব রাউট প্রোটেক্টেড ====================
 router.use(isAdmin);
 
