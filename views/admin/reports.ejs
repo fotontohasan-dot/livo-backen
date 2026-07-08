@@ -1,51 +1,59 @@
 <%- include('../partials/head') %>
-<div class="admin-wrap">
-  <%- include('./partials/sidebar', { active: 'reports' }) %>
-  <div class="admin-content">
-    <div class="admin-topbar">
-      <button class="admin-hamburger" onclick="toggleAdminSidebar()"><i class="fas fa-bars"></i></button>
-      <h1 style="font-size:18px;font-weight:800;color:#fff;">📑 রিপোর্টিং</h1>
-    </div>
-    <%- include('../partials/flash') %>
+<%- include('../partials/admin-header') %>
 
-    <form id="reportForm" style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
-      <input type="date" id="repFrom" style="background:#171b23;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:9px 12px;color:#fff;font-size:13px;">
-      <span style="color:#94a3b8;font-size:12px;">থেকে</span>
-      <input type="date" id="repTo" style="background:#171b23;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:9px 12px;color:#fff;font-size:13px;">
-    </form>
+<div class="flex min-h-screen bg-[#0f172a]">
+  <%- include('../partials/admin-sidebar') %>
 
-    <div class="grid grid-4">
-      <div class="admin-card" style="padding:18px;text-align:center;">
-        <i class="fas fa-users" style="color:#60a5fa;font-size:22px;"></i>
-        <div style="color:#fff;font-weight:700;margin:10px 0 4px;font-size:13px;">ইউজার রিপোর্ট</div>
-        <button onclick="exportReport('users')" style="background:#f59e0b;color:#000;border:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:800;width:100%;">CSV ডাউনলোড</button>
-      </div>
-      <div class="admin-card" style="padding:18px;text-align:center;">
-        <i class="fas fa-dice" style="color:#f59e0b;font-size:22px;"></i>
-        <div style="color:#fff;font-weight:700;margin:10px 0 4px;font-size:13px;">বেট রিপোর্ট</div>
-        <button onclick="exportReport('bets')" style="background:#f59e0b;color:#000;border:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:800;width:100%;">CSV ডাউনলোড</button>
-      </div>
-      <div class="admin-card" style="padding:18px;text-align:center;">
-        <i class="fas fa-money-bill-wave" style="color:#10b981;font-size:22px;"></i>
-        <div style="color:#fff;font-weight:700;margin:10px 0 4px;font-size:13px;">পেমেন্ট রিপোর্ট</div>
-        <button onclick="exportReport('payments')" style="background:#f59e0b;color:#000;border:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:800;width:100%;">CSV ডাউনলোড</button>
-      </div>
-      <div class="admin-card" style="padding:18px;text-align:center;">
-        <i class="fas fa-chart-pie" style="color:#a78bfa;font-size:22px;"></i>
-        <div style="color:#fff;font-weight:700;margin:10px 0 4px;font-size:13px;">প্রফিট রিপোর্ট</div>
-        <button onclick="exportReport('profit')" style="background:#f59e0b;color:#000;border:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:800;width:100%;">CSV ডাউনলোড</button>
-      </div>
+  <main class="flex-1 p-6 lg:p-8 overflow-auto">
+    
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-white">Reports</h1>
+      <p class="text-gray-400 text-sm mt-1">Export data for analysis</p>
     </div>
-    <p style="color:#64748b;font-size:12px;margin-top:16px;">উপরে তারিখ সিলেক্ট করে তারপর যেকোনো রিপোর্ট ডাউনলোড করলে সেই সময়সীমার ডেটা আসবে। তারিখ ফাঁকা রাখলে সব ডেটা আসবে। ফাইলটা Excel/Google Sheets দিয়ে খোলা যাবে।</p>
-  </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      
+      <!-- Users Report -->
+      <div class="bg-[#1e2937] rounded-3xl border border-[#334155] p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <i class="fas fa-users text-2xl text-[#f59e0b]"></i>
+          <h3 class="font-semibold text-white">Users Report</h3>
+        </div>
+        <p class="text-sm text-gray-400 mb-6">Download all users data with filters</p>
+        <a href="/admin/reports/export/users" class="block w-full text-center py-3 bg-[#334155] hover:bg-[#475569] rounded-2xl text-sm font-medium">Download CSV</a>
+      </div>
+
+      <!-- Bets Report -->
+      <div class="bg-[#1e2937] rounded-3xl border border-[#334155] p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <i class="fas fa-ticket-alt text-2xl text-[#f59e0b]"></i>
+          <h3 class="font-semibold text-white">Bets Report</h3>
+        </div>
+        <p class="text-sm text-gray-400 mb-6">All bets with user and status</p>
+        <a href="/admin/reports/export/bets" class="block w-full text-center py-3 bg-[#334155] hover:bg-[#475569] rounded-2xl text-sm font-medium">Download CSV</a>
+      </div>
+
+      <!-- Payments Report -->
+      <div class="bg-[#1e2937] rounded-3xl border border-[#334155] p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <i class="fas fa-wallet text-2xl text-[#f59e0b]"></i>
+          <h3 class="font-semibold text-white">Payments Report</h3>
+        </div>
+        <p class="text-sm text-gray-400 mb-6">Deposits & Withdrawals data</p>
+        <a href="/admin/reports/export/payments" class="block w-full text-center py-3 bg-[#334155] hover:bg-[#475569] rounded-2xl text-sm font-medium">Download CSV</a>
+      </div>
+
+      <!-- Profit Report -->
+      <div class="bg-[#1e2937] rounded-3xl border border-[#334155] p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <i class="fas fa-chart-line text-2xl text-[#f59e0b]"></i>
+          <h3 class="font-semibold text-white">Profit Report</h3>
+        </div>
+        <p class="text-sm text-gray-400 mb-6">Daily profit & loss summary</p>
+        <a href="/admin/reports/export/profit" class="block w-full text-center py-3 bg-[#334155] hover:bg-[#475569] rounded-2xl text-sm font-medium">Download CSV</a>
+      </div>
+
+    </div>
+
+  </main>
 </div>
-<script>
-function exportReport(type) {
-  const from = document.getElementById('repFrom').value;
-  const to = document.getElementById('repTo').value;
-  let url = `/admin/reports/export/${type}?`;
-  if (from) url += `from=${from}&`;
-  if (to) url += `to=${to}&`;
-  window.location.href = url;
-}
-</script>
