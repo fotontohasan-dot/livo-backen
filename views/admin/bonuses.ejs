@@ -1,50 +1,67 @@
 <%- include('../partials/head') %>
-<div class="admin-wrap">
-  <%- include('./partials/sidebar', { active: 'bonuses' }) %>
-  <div class="admin-content">
-    <div class="admin-topbar">
-      <button class="admin-hamburger" onclick="toggleAdminSidebar()"><i class="fas fa-bars"></i></button>
-      <h1 style="font-size:18px;font-weight:800;color:#fff;">🎁 বোনাস ম্যানেজমেন্ট</h1>
-    </div>
-    <%- include('../partials/flash') %>
+<%- include('../partials/admin-header') %>
 
-    <div style="display:flex;gap:8px;margin-bottom:16px;">
-      <a href="/admin/bonuses" style="padding:8px 16px;border-radius:20px;font-size:12px;font-weight:700;text-decoration:none;background:<%= type === '' ? '#f59e0b' : '#171b23' %>;color:<%= type === '' ? '#000' : '#fff' %>;">সব</a>
-      <a href="/admin/bonuses?type=deposit" style="padding:8px 16px;border-radius:20px;font-size:12px;font-weight:700;text-decoration:none;background:<%= type === 'deposit' ? '#f59e0b' : '#171b23' %>;color:<%= type === 'deposit' ? '#000' : '#fff' %>;">ডিপোজিট বোনাস</a>
-      <a href="/admin/bonuses?type=daily" style="padding:8px 16px;border-radius:20px;font-size:12px;font-weight:700;text-decoration:none;background:<%= type === 'daily' ? '#f59e0b' : '#171b23' %>;color:<%= type === 'daily' ? '#000' : '#fff' %>;">দৈনিক রিওয়ার্ড</a>
-    </div>
+<div class="flex min-h-screen bg-[#0f172a]">
+  <%- include('../partials/admin-sidebar') %>
 
-    <div class="admin-card">
-      <div style="overflow-x:auto;">
-        <table class="admin-table">
-          <thead><tr><th>ইউজার</th><th>টাইপ</th><th>পরিমাণ</th><th>স্পোর্টস টার্নওভার</th><th>ক্যাসিনো টার্নওভার</th><th>স্ট্যাটাস</th><th>তারিখ</th><th>অ্যাকশন</th></tr></thead>
-          <tbody>
-            <% bonuses.forEach(function(b) { %>
-              <tr>
-                <td><%= b.username %></td>
-                <td><%= b.bonus_type === 'deposit' ? 'ডিপোজিট' : 'দৈনিক' %></td>
-                <td style="color:#f59e0b;">৳<%= b.bonus_amount %></td>
-                <td><%= Number(b.sports_done).toFixed(0) %> / <%= Number(b.sports_required).toFixed(0) %></td>
-                <td><%= Number(b.casino_done).toFixed(0) %> / <%= Number(b.casino_required).toFixed(0) %></td>
-                <td>
-                  <% if (b.status === 'active') { %><span class="badge badge-amber">চলমান</span>
-                  <% } else if (b.status === 'completed') { %><span class="badge badge-green">সম্পন্ন</span>
-                  <% } else { %><span class="badge badge-red">বাতিল</span><% } %>
-                </td>
-                <td style="font-size:11px;color:#64748b;"><%= new Date(b.created_at).toLocaleDateString('bn-BD') %></td>
-                <td>
-                  <% if (b.status === 'active') { %>
-                    <form method="POST" action="/admin/bonuses/<%= b.id %>/cancel" onsubmit="return confirm('বাতিল করবেন?')">
-                      <button type="submit" style="background:rgba(239,68,68,0.15);color:#ef4444;border:none;padding:5px 10px;border-radius:6px;font-size:10px;font-weight:700;">বাতিল করুন</button>
-                    </form>
-                  <% } else { %>—<% } %>
-                </td>
-              </tr>
-            <% }) %>
-            <% if (!bonuses.length) { %><tr><td colspan="8" style="text-align:center;color:#64748b;">কোনো বোনাস নেই</td></tr><% } %>
-          </tbody>
-        </table>
+  <main class="flex-1 p-6 lg:p-8 overflow-auto">
+    
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-3xl font-bold text-white">Bonuses</h1>
+        <p class="text-gray-400 text-sm mt-1">Manage user bonuses</p>
       </div>
     </div>
-  </div>
+
+    <!-- Bonuses Table -->
+    <div class="bg-[#1e2937] rounded-3xl border border-[#334155] overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-[#0f172a]">
+          <tr class="text-gray-400">
+            <th class="text-left px-6 py-4 font-normal">User</th>
+            <th class="text-left px-4 py-4 font-normal">Type</th>
+            <th class="text-right px-4 py-4 font-normal">Amount</th>
+            <th class="text-center px-4 py-4 font-normal">Status</th>
+            <th class="text-center px-6 py-4 font-normal">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[#334155] text-gray-300">
+          <% bonuses.forEach(b => { %>
+          <tr class="hover:bg-[#0f172a]">
+            <td class="px-6 py-4 font-medium text-white"><%= b.username %></td>
+            <td class="px-4 py-4">
+              <span class="px-3 py-1 text-xs rounded-full bg-[#334155]"><%= b.bonus_type %></span>
+            </td>
+            <td class="px-4 py-4 text-right font-bold text-emerald-400">৳<%= b.amount %></td>
+            <td class="px-4 py-4 text-center">
+              <% if(b.status === 'active') { %>
+                <span class="px-3 py-1 text-xs rounded-full bg-emerald-500/20 text-emerald-400">Active</span>
+              <% } else if(b.status === 'cancelled') { %>
+                <span class="px-3 py-1 text-xs rounded-full bg-red-500/20 text-red-400">Cancelled</span>
+              <% } else { %>
+                <span class="px-3 py-1 text-xs rounded-full bg-gray-500/20 text-gray-400"><%= b.status %></span>
+              <% } %>
+            </td>
+            <td class="px-6 py-4 text-center">
+              <% if(b.status === 'active') { %>
+                <form action="/admin/bonuses/<%= b.id %>/cancel" method="POST">
+                  <button type="submit" class="px-4 py-1.5 bg-red-600 hover:bg-red-700 rounded-xl text-xs text-white">Cancel</button>
+                </form>
+              <% } else { %>
+                <span class="text-gray-500 text-xs">—</span>
+              <% } %>
+            </td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <% if (bonuses.length === 0) { %>
+      <div class="text-center py-12 text-gray-500">
+        No bonuses found.
+      </div>
+    <% } %>
+
+  </main>
 </div>
