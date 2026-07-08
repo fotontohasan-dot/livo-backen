@@ -1,123 +1,104 @@
 <%- include('../partials/head') %>
-<%- include('../partials/navbar') %>
-<div class="admin-layout">
-  <div class="admin-sidebar">
-    <div style="padding:0 1.5rem 1rem;font-size:.75rem;color:var(--muted);text-transform:uppercase;">অ্যাডমিন প্যানেল</div>
-    <a href="/admin" class="admin-nav-link">📊 ড্যাশবোর্ড</a>
-    <a href="/admin/users" class="admin-nav-link">👥 ব্যবহারকারী</a>
-    <a href="/admin/matches" class="admin-nav-link active">⚽ ম্যাচসমূহ</a>
-    <a href="/admin/tournaments" class="admin-nav-link">🏆 টুর্নামেন্ট</a>
-    <a href="/admin/news" class="admin-nav-link">📰 নিউজ</a>
-    <a href="/chat/admin" class="admin-nav-link">💬 সাপোর্ট চ্যাট</a>
-    <a href="/" class="admin-nav-link">🏠 সাইটে ফিরে যান</a>
-  </div>
-  <div class="admin-content">
-    <%- include('../partials/flash') %>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
-      <h1 style="font-size:1.5rem;font-weight:800;">⚽ ম্যাচ ম্যানেজমেন্ট</h1>
-      <div style="display:flex;gap:0.5rem;">
-        <form action="/admin/matches/sync" method="POST">
-          <button type="submit" class="btn btn-outline">🔄 ম্যাচ সিঙ্ক করুন</button>
-        </form>
-        <button onclick="document.getElementById('addModal').style.display='flex'" class="btn btn-primary">+ নতুন ম্যাচ</button>
+<%- include('../partials/admin-header') %>
+
+<div class="flex min-h-screen bg-[#0f172a]">
+  <%- include('../partials/admin-sidebar') %>
+
+  <main class="flex-1 p-6 lg:p-8 overflow-auto">
+    
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-3xl font-bold text-white">Matches</h1>
+        <p class="text-gray-400 text-sm mt-1">Manage all matches & markets</p>
       </div>
+      <button onclick="document.getElementById('add-match-modal').classList.remove('hidden')" 
+              class="px-5 py-2.5 bg-[#f59e0b] hover:bg-[#d97706] text-black font-bold rounded-2xl flex items-center gap-2 text-sm">
+        <i class="fas fa-plus"></i>
+        <span>Add Match</span>
+      </button>
     </div>
-    <div class="card">
-      <table class="table">
-        <thead>
-          <tr><th>ম্যাচ</th><th>স্পোর্টস</th><th>তারিখ</th><th>স্ট্যাটাস</th><th>ফলাফল</th><th>অ্যাকশন</th></tr>
+
+    <!-- Matches Table -->
+    <div class="bg-[#1e2937] rounded-3xl border border-[#334155] overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-[#0f172a]">
+          <tr class="text-gray-400">
+            <th class="text-left px-6 py-4 font-normal">Match</th>
+            <th class="text-center px-4 py-4 font-normal">Sport</th>
+            <th class="text-center px-4 py-4 font-normal">Start Time</th>
+            <th class="text-center px-4 py-4 font-normal">Status</th>
+            <th class="text-center px-6 py-4 font-normal">Actions</th>
+          </tr>
         </thead>
-        <tbody>
+        <tbody class="divide-y divide-[#334155] text-gray-300">
           <% matches.forEach(m => { %>
-            <tr>
-              <td style="font-weight:600"><%= m.team_a %> vs <%= m.team_b %></td>
-              <td><%= m.sport %></td>
-              <td style="font-size:.8rem;color:var(--muted)"><%= new Date(m.match_date).toLocaleString() %></td>
-              <td><span class="status-badge status-<%= m.status %>"><%= m.status === 'upcoming' ? 'আসন্ন' : (m.status === 'live' ? 'লাইভ' : 'সম্পন্ন') %></span></td>
-              <td><%= m.result || '-' %></td>
-              <td>
-                <% if(m.status !== 'completed') { %>
-                  <button onclick="setResult(<%= m.id %>, '<%= m.team_a %>', '<%= m.team_b %>')" class="btn btn-sm btn-primary">ফলাফল দিন</button>
-                <% } %>
-              </td>
-            </tr>
+          <tr class="hover:bg-[#0f172a]">
+            <td class="px-6 py-4">
+              <div class="font-semibold text-white"><%= m.team_a %> vs <%= m.team_b %></div>
+              <div class="text-xs text-gray-500"><%= m.title || '' %></div>
+            </td>
+            <td class="px-4 py-4 text-center">
+              <span class="px-3 py-1 text-xs rounded-full bg-[#334155]"><%= m.sport || 'N/A' %></span>
+            </td>
+            <td class="px-4 py-4 text-center text-xs">
+              <%= m.start_time ? new Date(m.start_time).toLocaleString() : 'Not set' %>
+            </td>
+            <td class="px-4 py-4 text-center">
+              <% if(m.status === 'live') { %>
+                <span class="px-3 py-1 text-xs rounded-full bg-red-500/20 text-red-400">Live</span>
+              <% } else if(m.status === 'upcoming') { %>
+                <span class="px-3 py-1 text-xs rounded-full bg-yellow-500/20 text-yellow-400">Upcoming</span>
+              <% } else { %>
+                <span class="px-3 py-1 text-xs rounded-full bg-gray-500/20 text-gray-400">Completed</span>
+              <% } %>
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex justify-center gap-2">
+                <a href="/admin/markets/<%= m.id %>" class="px-3 py-1.5 bg-[#334155] hover:bg-[#475569] rounded-xl text-xs">Markets</a>
+                <form action="/admin/matches/<%= m.id %>/delete" method="POST" onsubmit="return confirm('Delete this match?')">
+                  <button type="submit" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 rounded-xl text-xs text-white">Delete</button>
+                </form>
+              </div>
+            </td>
+          </tr>
           <% }) %>
         </tbody>
       </table>
     </div>
 
-    <div id="addModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#00000080;z-index:999;align-items:center;justify-content:center;">
-      <div class="card" style="width:480px;max-width:95vw;max-height:90vh;overflow-y:auto;">
-        <div class="card-header">
-          + নতুন ম্যাচ যোগ করুন
-          <button onclick="document.getElementById('addModal').style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.2rem;">✕</button>
-        </div>
-        <div class="card-body">
-          <div class="form-group"><label class="form-label">টাইটেল</label><input type="text" class="form-input" id="mTitle" placeholder="ম্যাচ টাইটেল"></div>
-          <div class="form-group"><label class="form-label">স্পোর্টস</label><select class="form-input" id="mSport"><option value="football">ফুটবল</option><option value="cricket">ক্রিকেট</option><option value="basketball">বাস্কেটবল</option><option value="tennis">টেনিস</option></select></div>
-          <div class="form-group"><label class="form-label">টিম এ</label><input type="text" class="form-input" id="mTeamA"></div>
-          <div class="form-group"><label class="form-label">টিম বি</label><input type="text" class="form-input" id="mTeamB"></div>
-          <div class="form-group"><label class="form-label">ম্যাচের তারিখ ও সময়</label><input type="datetime-local" class="form-input" id="mDate"></div>
-          <div class="form-group"><label class="form-label">স্ট্রিম ইউআরএল (ঐচ্ছিক)</label><input type="text" class="form-input" id="mStream" placeholder="https://..."></div>
-          <button onclick="submitMatch()" class="btn btn-primary">ম্যাচ তৈরি করুন</button>
-        </div>
+    <!-- Add Match Modal -->
+    <div id="add-match-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+      <div class="bg-[#1e2937] rounded-3xl p-8 w-full max-w-md border border-[#334155]">
+        <h3 class="text-xl font-bold text-white mb-6">Add New Match</h3>
+        
+        <form action="/admin/matches/add" method="POST">
+          <div class="space-y-4">
+            <div>
+              <label class="text-sm text-gray-400 block mb-1">Team A</label>
+              <input type="text" name="team_a" required class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white">
+            </div>
+            <div>
+              <label class="text-sm text-gray-400 block mb-1">Team B</label>
+              <input type="text" name="team_b" required class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white">
+            </div>
+            <div>
+              <label class="text-sm text-gray-400 block mb-1">Sport</label>
+              <input type="text" name="sport" value="cricket" class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white">
+            </div>
+            <div>
+              <label class="text-sm text-gray-400 block mb-1">Start Time</label>
+              <input type="datetime-local" name="start_time" class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white">
+            </div>
+          </div>
+
+          <div class="flex gap-3 mt-8">
+            <button type="button" onclick="document.getElementById('add-match-modal').classList.add('hidden')"
+                    class="flex-1 py-3 bg-[#334155] hover:bg-[#475569] rounded-2xl text-sm">Cancel</button>
+            <button type="submit" class="flex-1 py-3 bg-[#f59e0b] hover:bg-[#d97706] text-black font-bold rounded-2xl">Add Match</button>
+          </div>
+        </form>
       </div>
     </div>
 
-    <div id="resultModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#00000080;z-index:999;align-items:center;justify-content:center;">
-      <div class="card" style="width:380px;">
-        <div class="card-header">🏆 ফলাফল নির্ধারণ করুন</div>
-        <div class="card-body">
-          <div class="form-group">
-            <label class="form-label">বিজয়ী</label>
-            <select class="form-input" id="resultWinner">
-              <option id="optA"></option>
-              <option id="optB"></option>
-              <option value="draw">ড্র (Draw)</option>
-            </select>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-            <div class="form-group"><label class="form-label">স্কোর এ</label><input type="number" class="form-input" id="scoreA" value="0"></div>
-            <div class="form-group"><label class="form-label">স্কোর বি</label><input type="number" class="form-input" id="scoreB" value="0"></div>
-          </div>
-          <div style="display:flex;gap:.75rem;">
-            <button onclick="submitResult()" class="btn btn-primary">ফলাফল সংরক্ষণ করুন</button>
-            <button onclick="document.getElementById('resultModal').style.display='none'" class="btn btn-outline">বাতিল</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  </main>
 </div>
-<script>
-let currentMatchId;
-function submitMatch() {
-  const form = document.createElement('form');
-  form.method = 'POST'; form.action = '/admin/matches';
-  [['title','mTitle'],['sport','mSport'],['team_a','mTeamA'],['team_b','mTeamB'],['match_date','mDate'],['stream_url','mStream']].forEach(([n,id]) => {
-    const i = document.createElement('input');
-    i.name = n; i.value = document.getElementById(id).value;
-    form.appendChild(i);
-  });
-  document.body.appendChild(form); form.submit();
-}
-function setResult(id, teamA, teamB) {
-  currentMatchId = id;
-  document.getElementById('optA').value = teamA;
-  document.getElementById('optA').textContent = teamA;
-  document.getElementById('optB').value = teamB;
-  document.getElementById('optB').textContent = teamB;
-  document.getElementById('resultModal').style.display = 'flex';
-}
-function submitResult() {
-  const form = document.createElement('form');
-  form.method = 'POST'; form.action = `/admin/matches/${currentMatchId}/result`;
-  [['result','resultWinner'],['score_a','scoreA'],['score_b','scoreB']].forEach(([n,id]) => {
-    const i = document.createElement('input');
-    i.name = n; i.value = document.getElementById(id).value;
-    form.appendChild(i);
-  });
-  document.body.appendChild(form); form.submit();
-}
-</script>
-</body></html>
