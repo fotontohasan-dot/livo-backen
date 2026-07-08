@@ -1,151 +1,128 @@
-const { Server } = require("socket.io");
-const { pool } = require('../db');
-const { getBotReply } = require('./chatbot');
+<%- include('../partials/head') %>
+<%- include('../partials/admin-header') %>
 
-let io;
+<div class="flex min-h-screen bg-[#0f172a]">
+  <%- include('../partials/admin-sidebar') %>
 
-const initSocket = (server) => {
-  io = new Server(server, {
-    cors: {
-      origin: "*",
-      methods: ["GET", "POST"]
-    }
-  });
+  <main class="flex-1 p-6 lg:p-8 overflow-auto">
+    
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-3xl font-bold text-white">Tournaments</h1>
+        <p class="text-gray-400 text-sm mt-1">Manage all tournaments</p>
+      </div>
+      <button onclick="document.getElementById('create-tournament-modal').classList.remove('hidden')" 
+              class="px-5 py-2.5 bg-[#f59e0b] hover:bg-[#d97706] text-black font-bold rounded-2xl flex items-center gap-2 text-sm">
+        <i class="fas fa-plus"></i>
+        <span>Create Tournament</span>
+      </button>
+    </div>
 
-  io.on("connection", (socket) => {
-    console.log("🟢 User connected:", socket.id);
+    <!-- Tournaments Table -->
+    <div class="bg-[#1e2937] rounded-3xl border border-[#334155] overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-[#0f172a]">
+          <tr class="text-gray-400">
+            <th class="text-left px-6 py-4 font-normal">Tournament</th>
+            <th class="text-center px-4 py-4 font-normal">Sport</th>
+            <th class="text-center px-4 py-4 font-normal">Participants</th>
+            <th class="text-center px-4 py-4 font-normal">Prize Pool</th>
+            <th class="text-center px-4 py-4 font-normal">Status</th>
+            <th class="text-center px-6 py-4 font-normal">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[#334155] text-gray-300">
+          <% tournaments.forEach(t => { %>
+          <tr class="hover:bg-[#0f172a]">
+            <td class="px-6 py-4">
+              <div class="font-semibold text-white"><%= t.name %></div>
+              <div class="text-xs text-gray-500"><%= new Date(t.start_date).toLocaleDateString() %> - <%= new Date(t.end_date).toLocaleDateString() %></div>
+            </td>
+            <td class="px-4 py-4 text-center">
+              <span class="px-3 py-1 text-xs rounded-full bg-[#334155]"><%= t.sport %></span>
+            </td>
+            <td class="px-4 py-4 text-center">
+              <%= t.participant_count || 0 %> / <%= t.max_participants || 100 %>
+            </td>
+            <td class="px-4 py-4 text-center font-bold text-emerald-400">৳<%= t.prize_pool || 0 %></td>
+            <td class="px-4 py-4 text-center">
+              <% if(t.status === 'ongoing') { %>
+                <span class="px-3 py-1 text-xs rounded-full bg-emerald-500/20 text-emerald-400">Ongoing</span>
+              <% } else if(t.status === 'upcoming') { %>
+                <span class="px-3 py-1 text-xs rounded-full bg-yellow-500/20 text-yellow-400">Upcoming</span>
+              <% } else { %>
+                <span class="px-3 py-1 text-xs rounded-full bg-gray-500/20 text-gray-400">Completed</span>
+              <% } %>
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex justify-center gap-2">
+                <form action="/admin/tournaments/<%= t.id %>/status" method="POST" class="flex gap-1">
+                  <select name="status" onchange="this.form.submit()" class="bg-[#0f172a] border border-[#475569] text-white text-xs rounded-xl px-2 py-1">
+                    <option value="upcoming" <%= t.status === 'upcoming' ? 'selected' : '' %>>Upcoming</option>
+                    <option value="ongoing" <%= t.status === 'ongoing' ? 'selected' : '' %>>Ongoing</option>
+                    <option value="completed" <%= t.status === 'completed' ? 'selected' : '' %>>Completed</option>
+                  </select>
+                </form>
+                <form action="/admin/tournaments/<%= t.id %>/delete" method="POST" onsubmit="return confirm('Delete this tournament?')">
+                  <button type="submit" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 rounded-xl text-xs text-white">Delete</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
 
-    // ===== ম্যাচ রুম (লাইভ স্কোর) =====
-    socket.on("joinMatch", (matchId) => {
-      socket.join(`match:${matchId}`);
-    });
-    socket.on("join_matches", () => socket.join("matches"));
-    socket.on("leave_matches", () => socket.leave("matches"));
+    <!-- Create Tournament Modal -->
+    <div id="create-tournament-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+      <div class="bg-[#1e2937] rounded-3xl p-8 w-full max-w-lg border border-[#334155]">
+        <h3 class="text-xl font-bold text-white mb-6">Create New Tournament</h3>
+        
+        <form action="/admin/tournaments" method="POST">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="md:col-span-2">
+              <label class="text-sm text-gray-400 block mb-1">Tournament Name</label>
+              <input type="text" name="name" required class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white">
+            </div>
+            <div>
+              <label class="text-sm text-gray-400 block mb-1">Sport</label>
+              <input type="text" name="sport" value="football" class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white">
+            </div>
+            <div>
+              <label class="text-sm text-gray-400 block mb-1">Entry Fee</label>
+              <input type="number" name="entry_fee" value="0" class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white">
+            </div>
+            <div>
+              <label class="text-sm text-gray-400 block mb-1">Prize Pool</label>
+              <input type="number" name="prize_pool" value="0" class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white">
+            </div>
+            <div>
+              <label class="text-sm text-gray-400 block mb-1">Max Participants</label>
+              <input type="number" name="max_participants" value="100" class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white">
+            </div>
+            <div>
+              <label class="text-sm text-gray-400 block mb-1">Start Date</label>
+              <input type="date" name="start_date" required class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white">
+            </div>
+            <div>
+              <label class="text-sm text-gray-400 block mb-1">End Date</label>
+              <input type="date" name="end_date" required class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white">
+            </div>
+            <div class="md:col-span-2">
+              <label class="text-sm text-gray-400 block mb-1">Description</label>
+              <textarea name="description" rows="2" class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white"></textarea>
+            </div>
+          </div>
 
-    // ===== ইউজার নিজের চ্যাট রুমে জয়েন =====
-    socket.on("join", (userId) => {
-      if (userId) socket.join(`user:${userId}`);
-    });
+          <div class="flex gap-3 mt-8">
+            <button type="button" onclick="document.getElementById('create-tournament-modal').classList.add('hidden')"
+                    class="flex-1 py-3 bg-[#334155] hover:bg-[#475569] rounded-2xl text-sm">Cancel</button>
+            <button type="submit" class="flex-1 py-3 bg-[#f59e0b] hover:bg-[#d97706] text-black font-bold rounded-2xl">Create Tournament</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
-    // ===== অ্যাডমিন চ্যাট রুম =====
-    socket.on("join_admin", () => {
-      socket.join("admins");
-    });
-
-    // ===== চ্যাট মেসেজ পাঠানো/গ্রহণ =====
-    socket.on("send_message", async (data) => {
-      try {
-        const senderId = data && data.senderId;
-        const receiverId = (data && data.receiverId) || null;
-        const message = (data && data.message) || null;
-        const fileUrl = (data && data.fileUrl) || null;
-        const fileType = (data && data.fileType) || null;
-        let isAdmin = !!(data && data.isAdmin);
-
-        if (!senderId || (!message && !fileUrl)) return;
-
-        // নিরাপত্তা: কেউ isAdmin:true দাবি করলেও ডেটাবেস থেকে আসল রোল যাচাই
-        if (isAdmin) {
-          const r = await pool.query('SELECT role FROM users WHERE id = $1', [senderId]);
-          isAdmin = !!(r.rows[0] && r.rows[0].role === 'admin');
-        }
-
-        const createdAt = new Date();
-
-        // ডেটাবেসে সেভ
-        await pool.query(
-          `INSERT INTO chat_messages (sender_id, receiver_id, message, is_admin, file_url, file_type, created_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-          [senderId, receiverId, message, isAdmin, fileUrl, fileType, createdAt]
-        );
-
-        const payload = {
-          senderId,
-          receiverId,
-          message,
-          isAdmin,
-          fileUrl,
-          fileType,
-          createdAt
-        };
-
-        if (isAdmin) {
-          // অ্যাডমিন → নির্দিষ্ট ইউজারের কাছে
-          if (receiverId) io.to(`user:${receiverId}`).emit("new_message", payload);
-        } else {
-          // ইউজার → সব অ্যাডমিনের কাছে (লাইভ, যদি অ্যাডমিন চ্যাট পেজ খোলা থাকে)
-          io.to("admins").emit("new_message", payload);
-
-          // অ্যাডমিন চ্যাট পেজ খোলা না থাকলেও যেন মিস না হয়, তাই নোটিফিকেশনেও যোগ করা
-          try {
-            const sender = await pool.query('SELECT username FROM users WHERE id=$1', [senderId]);
-            const uname = sender.rows[0] ? sender.rows[0].username : 'ইউজার';
-            const admins = await pool.query(`SELECT id FROM users WHERE role='admin'`);
-            for (const a of admins.rows) {
-              await pool.query(
-                `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, 'নতুন চ্যাট মেসেজ', $2, 'info')`,
-                [a.id, `${uname}: ${message ? message.slice(0, 80) : '[ফাইল পাঠিয়েছে]'}`]
-              );
-            }
-          } catch (e) {
-            console.error('chat admin notify error:', e.message);
-          }
-
-          // ===== বট মোড হলে অটো-রিপ্লাই =====
-          if (data && data.botMode && message) {
-            const botText = await getBotReply(message);
-            const botCreatedAt = new Date();
-
-            await pool.query(
-              `INSERT INTO chat_messages (sender_id, receiver_id, message, is_admin, is_bot, created_at)
-               VALUES ($1, $2, $3, $4, $5, $6)`,
-              [senderId, senderId, botText, true, true, botCreatedAt]
-            );
-
-            io.to(`user:${senderId}`).emit("new_message", {
-              senderId: null,
-              receiverId: senderId,
-              message: botText,
-              isAdmin: true,
-              isBot: true,
-              fileUrl: null,
-              fileType: null,
-              createdAt: botCreatedAt
-            });
-          }
-        }
-      } catch (err) {
-        console.error("send_message error:", err.message);
-      }
-    });
-
-    socket.on("disconnect", () => {
-      console.log("🔴 User disconnected:", socket.id);
-    });
-  });
-
-  console.log("✅ Socket.io initialized");
-};
-
-// ===== লাইভ স্কোর আপডেট (আগের মতোই) =====
-const updateLiveScore = async (matchId, scoreData) => {
-  if (!io) return;
-  try {
-    await pool.query(
-      `UPDATE matches
-       SET score_a = $1, score_b = $2, overs = $3, status = 'live'
-       WHERE id = $4`,
-      [scoreData.score_a, scoreData.score_b, scoreData.overs, matchId]
-    );
-
-    io.to(`match:${matchId}`).emit("scoreUpdate", {
-      matchId,
-      ...scoreData,
-      timestamp: new Date()
-    });
-  } catch (err) {
-    console.error("Live score update error:", err.message);
-  }
-};
-
-module.exports = { initSocket, updateLiveScore };
+  </main>
+</div>
