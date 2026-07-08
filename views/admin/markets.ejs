@@ -1,76 +1,160 @@
 <%- include('../partials/head') %>
-<%- include('../partials/navbar') %>
+<%- include('../partials/admin-header') %>
 
-<div class="container" style="padding-top: 20px;">
-  <h2>⚙️ মার্কেট ম্যানেজমেন্ট</h2>
-  <p><strong><%= match.teams ? match.teams[0] + ' vs ' + match.teams[1] : match.title %></strong></p>
+<div class="flex min-h-screen bg-[#0f172a]">
+  <%- include('../partials/admin-sidebar') %>
 
-  <a href="/admin/matches" class="btn btn-secondary">← ম্যাচ লস্ট</a>
+  <main class="flex-1 p-6 lg:p-8 overflow-auto">
+    
+    <!-- Header -->
+    <div class="flex items-center gap-4 mb-6">
+      <a href="/admin/matches" class="flex items-center justify-center w-10 h-10 bg-[#1e2937] hover:bg-[#334155] rounded-2xl text-gray-300">
+        <i class="fas fa-arrow-left"></i>
+      </a>
+      <div>
+        <h1 class="text-3xl font-bold text-white"><%= match.team_a %> vs <%= match.team_b %></h1>
+        <p class="text-gray-400 text-sm">Manage Markets & Odds • <%= match.sport || 'Cricket' %></p>
+      </div>
+    </div>
 
-  <!-- নতুন মার্কেট যোগ -->
-  <div class="card" style="margin: 20px 0; padding: 20px;">
-    <h5>নতুন মার্কেট যোগ করুন</h5>
-    <form action="/admin/markets/update" method="POST">
-      <input type="hidden" name="match_id" value="<%= match.id %>">
+    <!-- Add / Update Market Form -->
+    <div class="bg-[#1e2937] rounded-3xl border border-[#334155] p-6 mb-8">
+      <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+        <i class="fas fa-plus-circle text-[#f59e0b]"></i>
+        <span>Add or Update Market</span>
+      </h3>
 
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <select name="type" required class="form-control">
-          <option value="bookmaker">বুকমেকার</option>
-          <option value="fancy">ফ্যান্সি</option>
-        </select>
+      <form action="/admin/markets/update" method="POST" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <input type="hidden" name="match_id" value="<%= match.id %>">
 
-        <input type="text" name="name" placeholder="মার্কটের নাম (যেমন: ম্যাচ উইনার)" required class="form-control">
+        <div class="md:col-span-1">
+          <label class="text-xs text-gray-400 block mb-1">Type</label>
+          <input type="text" name="type" placeholder="e.g. match_winner" required 
+                 class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-sm text-white">
+        </div>
+
+        <div class="md:col-span-2">
+          <label class="text-xs text-gray-400 block mb-1">Market Name / Runner</label>
+          <input type="text" name="name" placeholder="e.g. Team A Win" required 
+                 class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-sm text-white">
+        </div>
+
+        <div>
+          <label class="text-xs text-gray-400 block mb-1">Odds</label>
+          <input type="number" step="0.01" name="odds" placeholder="1.85" required 
+                 class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-sm text-white">
+        </div>
+
+        <div class="flex items-end">
+          <button type="submit" 
+                  class="w-full py-3 bg-[#f59e0b] hover:bg-[#d97706] text-black font-bold rounded-2xl text-sm">
+            Save Market
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Markets List -->
+    <div class="bg-[#1e2937] rounded-3xl border border-[#334155] overflow-hidden">
+      <div class="px-6 py-4 border-b border-[#334155] flex items-center justify-between">
+        <h3 class="font-semibold text-white">Active Markets</h3>
+        <span class="text-xs text-gray-400"><%= markets.length %> markets</span>
       </div>
 
-      <input type="text" name="odds" placeholder='{"0": 1.85, "1": 2.10}' style="margin-top:10px;" required class="form-control">
+      <table class="w-full text-sm">
+        <thead class="bg-[#0f172a]">
+          <tr class="text-gray-400">
+            <th class="text-left px-6 py-4 font-normal">Market</th>
+            <th class="text-center px-4 py-4 font-normal">Type</th>
+            <th class="text-center px-4 py-4 font-normal">Odds</th>
+            <th class="text-center px-4 py-4 font-normal">Status</th>
+            <th class="text-center px-6 py-4 font-normal">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[#334155] text-gray-300">
+          <% markets.forEach(m => { %>
+          <tr class="hover:bg-[#0f172a]">
+            <td class="px-6 py-4 font-medium text-white"><%= m.name %></td>
+            <td class="px-4 py-4 text-center">
+              <span class="px-3 py-1 text-xs rounded-full bg-[#334155]"><%= m.type %></span>
+            </td>
+            <td class="px-4 py-4 text-center font-bold text-[#f59e0b]"><%= m.odds %></td>
+            <td class="px-4 py-4 text-center">
+              <% if(m.status === 'open') { %>
+                <span class="px-3 py-1 text-xs rounded-full bg-emerald-500/20 text-emerald-400">Open</span>
+              <% } else if(m.status === 'settled') { %>
+                <span class="px-3 py-1 text-xs rounded-full bg-gray-500/20 text-gray-400">Settled</span>
+              <% } else { %>
+                <span class="px-3 py-1 text-xs rounded-full bg-yellow-500/20 text-yellow-400"><%= m.status %></span>
+              <% } %>
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex justify-center gap-2">
+                <!-- Toggle Status -->
+                <form action="/admin/markets/<%= m.id %>/toggle" method="POST">
+                  <input type="hidden" name="status" value="<%= m.status === 'open' ? 'suspended' : 'open' %>">
+                  <button type="submit" class="px-3 py-1.5 text-xs rounded-xl <%= m.status === 'open' ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-emerald-600 hover:bg-emerald-700' %> text-white">
+                    <%= m.status === 'open' ? 'Suspend' : 'Open' %>
+                  </button>
+                </form>
 
-      <button type="submit" class="btn btn-success" style="margin-top:15px; width:100%;">মার্কেট যোগ করুন</button>
-    </form>
-  </div>
-
-  <!-- বরমান মার্কেট -->
-  <h5>বর্তমান মার্কেটসমূহ</h5>
-  <% markets.forEach(market => { %>
-    <div class="card" style="margin-bottom:15px; padding:15px;">
-      <strong><%= market.name %></strong>
-      <span class="badge <%= market.status === 'open' ? 'bg-success' : (market.status === 'settled' ? 'bg-secondary' : 'bg-danger') %>"><%= market.status %></span>
-
-      <pre style="background:#111; padding:10px; border-radius:8px; font-size:12px;"><%= JSON.stringify(market.odds, null, 2) %></pre>
-
-      <!-- সাসপেন্ড / ওপেন (শুধু settled না হলে) -->
-      <% if (market.status !== 'settled') { %>
-        <form action="/admin/markets/<%= market.id %>/toggle" method="POST" style="display:inline;">
-          <input type="hidden" name="status" value="<%= market.status === 'open' ? 'suspended' : 'open' %>">
-          <button type="submit" class="btn btn-sm <%= market.status === 'open' ? 'btn-warning' : 'btn-success' %>">
-            <%= market.status === 'open' ? 'সাসপেন্ড করুন' : 'ওপেন করুন' %>
-          </button>
-        </form>
-
-        <!-- ===== বেট সেটেল (জয়ী নির্ধারণ) ===== -->
-        <form action="/admin/markets/<%= market.id %>/settle" method="POST"
-              style="margin-top:12px; border-top:1px solid #333; padding-top:12px;"
-              onsubmit="return confirm('নিশ্চিত? জয়ী নির্ধারণ করলে সব বট নিষ্পত্তি হবে এবং কয়েন বিতরণ হবে। এটা ফেরানো যাবে না।');">
-          <label style="font-size:13px; display:block; margin-bottom:6px;">জয়ী নির্বাচন করুন:</label>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <select name="winning_runner" required class="form-control" style="flex:1; min-width:150px;">
-              <% Object.keys(market.odds || {}).forEach(key => { %>
-                <option value="<%= key %>">
-                  <% if (key === '0') { %><%= match.teams ? match.teams[0] : 'Team A' %>
-                  <% } else if (key === '1') { %><%= match.teams ? match.teams[1] : 'Team B' %>
-                  <% } else { %><%= key %><% } %>
-                  (<%= market.odds[key] %>x)
-                </option>
-              <% }) %>
-            </select>
-            <button type="submit" class="btn btn-sm btn-danger">✅ সেটেল করুন</button>
-          </div>
-        </form>
-      <% } else { %>
-        <p style="color:#888; font-size:13px; margin-top:8px;">✔️ এই মার্কেট নিষ্পত্তি হয়ে গেছে।</p>
-      <% } %>
+                <!-- Settle -->
+                <% if(m.status === 'open') { %>
+                  <button onclick="showSettleModal(<%= m.id %>, '<%= m.name %>')" 
+                          class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs rounded-xl">
+                    Settle
+                  </button>
+                <% } %>
+              </div>
+            </td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
     </div>
-  <% }) %>
 
+    <% if (markets.length === 0) { %>
+      <div class="text-center py-12 text-gray-500">
+        No markets created yet for this match.
+      </div>
+    <% } %>
+
+  </main>
 </div>
 
-<%- include('../partials/bottom-nav') %>
+<!-- Settle Market Modal -->
+<div id="settle-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+  <div class="bg-[#1e2937] rounded-3xl p-8 w-full max-w-md border border-[#334155]">
+    <h3 class="text-xl font-bold text-white mb-2">Settle Market</h3>
+    <p id="settle-market-name" class="text-gray-400 text-sm mb-6"></p>
+
+    <form id="settle-form" method="POST">
+      <input type="hidden" name="winning_runner" id="winning-runner-input">
+
+      <div class="mb-6">
+        <label class="text-sm text-gray-400 block mb-2">Winning Runner / Result</label>
+        <input type="text" id="winning-runner-text" required
+               class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white">
+      </div>
+
+      <div class="flex gap-3">
+        <button type="button" onclick="hideSettleModal()" 
+                class="flex-1 py-3 bg-[#334155] hover:bg-[#475569] rounded-2xl text-sm">Cancel</button>
+        <button type="submit" 
+                class="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-2xl">Settle Market</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function showSettleModal(marketId, marketName) {
+    document.getElementById('settle-modal').classList.remove('hidden');
+    document.getElementById('settle-market-name').innerText = marketName;
+    document.getElementById('settle-form').action = `/admin/markets/${marketId}/settle`;
+  }
+
+  function hideSettleModal() {
+    document.getElementById('settle-modal').classList.add('hidden');
+  }
+</script>
