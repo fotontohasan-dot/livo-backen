@@ -1,87 +1,113 @@
-<%- include('../partials/head') %>
-<%- include('../partials/admin-header') %>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bets Management - Livo Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; }
+        .admin-card { transition: transform .2s, box-shadow .2s; }
+        .admin-card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
+        .status-win { background: #dcfce7; color: #166534; padding: 2px 10px; border-radius: 999px; font-size: .75rem; font-weight: 600; }
+        .status-lose { background: #fee2e2; color: #991b1b; padding: 2px 10px; border-radius: 999px; font-size: .75rem; font-weight: 600; }
+        .status-pending { background: #fef3c7; color: #854d0e; padding: 2px 10px; border-radius: 999px; font-size: .75rem; font-weight: 600; }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <!-- Top nav same as kyc -->
+    <nav class="bg-white border-b sticky top-0 z-50">
+        <div class="max-w-screen-2xl mx-auto px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-x-3">
+                <div class="w-9 h-9 bg-blue-600 rounded-2xl flex items-center justify-center"><i class="fas fa-tachometer-alt text-white"></i></div>
+                <span class="font-bold text-2xl">Livo <span class="text-blue-600">Admin</span></span>
+            </div>
+            <div class="flex items-center gap-x-3">
+                <div class="flex items-center bg-slate-100 rounded-3xl px-2 py-1">
+                    <img src="https://i.pravatar.cc/28?img=12" class="rounded-2xl w-7 h-7">
+                    <span class="ml-2 text-sm font-medium pr-3">Admin</span>
+                </div>
+            </div>
+        </div>
+    </nav>
 
-<div class="flex min-h-screen bg-[#0f172a]">
-  <%- include('../partials/admin-sidebar') %>
+    <div class="max-w-screen-2xl mx-auto flex">
+        <!-- Sidebar (simplified) -->
+        <div class="w-64 bg-white border-r p-5 hidden lg:block">
+            <div class="text-xs text-slate-400 px-4 mb-2 font-semibold tracking-widest">MENU</div>
+            <a href="/admin/dashboard" class="block px-4 py-2.5 text-sm rounded-2xl hover:bg-slate-100">Dashboard</a>
+            <a href="/admin/users" class="block px-4 py-2.5 text-sm rounded-2xl hover:bg-slate-100">Users</a>
+            <a href="/admin/kyc" class="block px-4 py-2.5 text-sm rounded-2xl hover:bg-slate-100">KYC</a>
+            <a href="/admin/bets" class="block px-4 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-medium">Bets</a>
+            <a href="/admin/matches" class="block px-4 py-2.5 text-sm rounded-2xl hover:bg-slate-100">Matches</a>
+        </div>
 
-  <main class="flex-1 p-6 lg:p-8 overflow-auto">
-    
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <h1 class="text-3xl font-bold text-white">Bets</h1>
-        <p class="text-gray-400 text-sm mt-1">Total: <%= total %> bets</p>
-      </div>
+        <div class="flex-1 p-8">
+            <div class="flex justify-between items-end mb-6">
+                <div>
+                    <h1 class="text-3xl font-bold tracking-tight">Bets Management</h1>
+                    <p class="text-slate-500">Settle and monitor all user bets</p>
+                </div>
+                <button onclick="window.location.reload()" class="px-5 py-2.5 text-sm font-semibold border rounded-2xl flex items-center gap-x-2 hover:bg-white"><i class="fas fa-sync"></i> Refresh</button>
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div class="admin-card bg-white border rounded-3xl p-5"><div class="text-xs text-slate-500">Total Bets</div><div class="text-3xl font-bold mt-1">12,489</div></div>
+                <div class="admin-card bg-white border rounded-3xl p-5"><div class="text-xs text-slate-500">Pending Settlement</div><div class="text-3xl font-bold mt-1 text-amber-600">184</div></div>
+                <div class="admin-card bg-white border rounded-3xl p-5"><div class="text-xs text-slate-500">Total Stake (Today)</div><div class="text-3xl font-bold mt-1">৳ 4.2M</div></div>
+                <div class="admin-card bg-white border rounded-3xl p-5"><div class="text-xs text-slate-500">GGR (Today)</div><div class="text-3xl font-bold mt-1 text-emerald-600">৳ 312k</div></div>
+            </div>
+
+            <!-- Table -->
+            <div class="bg-white rounded-3xl border overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead class="bg-slate-50">
+                        <tr>
+                            <th class="px-6 py-4 text-left font-semibold text-xs text-slate-500">BET ID / USER</th>
+                            <th class="px-6 py-4 text-left font-semibold text-xs text-slate-500">MATCH / SELECTION</th>
+                            <th class="px-6 py-4 text-right font-semibold text-xs text-slate-500">STAKE</th>
+                            <th class="px-6 py-4 text-right font-semibold text-xs text-slate-500">ODDS</th>
+                            <th class="px-6 py-4 text-center font-semibold text-xs text-slate-500">STATUS</th>
+                            <th class="px-6 py-4 text-right font-semibold text-xs text-slate-500">ACTIONS</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y">
+                        <!-- Sample rows -->
+                        <tr class="hover:bg-slate-50">
+                            <td class="px-6 py-4">
+                                <div class="font-mono text-xs text-slate-400">#B-28491</div>
+                                <div class="font-semibold">Rahim Khan</div>
+                                <div class="text-xs text-slate-500">#28491</div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="font-medium">Bangladesh vs India</div>
+                                <div class="text-xs text-emerald-600">Bangladesh to win</div>
+                            </td>
+                            <td class="px-6 py-4 text-right font-semibold">৳ 5,000</td>
+                            <td class="px-6 py-4 text-right font-mono">2.45</td>
+                            <td class="px-6 py-4 text-center"><span class="status-pending">Pending</span></td>
+                            <td class="px-6 py-4 text-right">
+                                <button onclick="settleBet(28491, 'win')" class="text-emerald-600 hover:bg-emerald-50 px-4 py-1.5 text-xs font-bold rounded-2xl">WIN</button>
+                                <button onclick="settleBet(28491, 'lose')" class="text-red-600 hover:bg-red-50 px-4 py-1.5 text-xs font-bold rounded-2xl">LOSE</button>
+                            </td>
+                        </tr>
+                        <!-- Add more rows as needed in real implementation -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
-    <!-- Filters -->
-    <div class="bg-[#1e2937] rounded-3xl p-5 border border-[#334155] mb-6">
-      <form method="GET" class="flex flex-wrap gap-3">
-        <select name="status" class="bg-[#0f172a] border border-[#475569] text-white rounded-2xl px-4 py-3 text-sm">
-          <option value="">All Status</option>
-          <option value="pending" <%= status === 'pending' ? 'selected' : '' %>>Pending</option>
-          <option value="won" <%= status === 'won' ? 'selected' : '' %>>Won</option>
-          <option value="lost" <%= status === 'lost' ? 'selected' : '' %>>Lost</option>
-        </select>
-        <button type="submit" class="px-6 bg-[#f59e0b] hover:bg-[#d97706] text-black font-bold rounded-2xl">Filter</button>
-      </form>
-    </div>
-
-    <!-- Bets Table -->
-    <div class="bg-[#1e2937] rounded-3xl border border-[#334155] overflow-hidden">
-      <table class="w-full text-sm">
-        <thead class="bg-[#0f172a]">
-          <tr class="text-gray-400">
-            <th class="text-left px-6 py-4 font-normal">User</th>
-            <th class="text-left px-4 py-4 font-normal">Match</th>
-            <th class="text-right px-4 py-4 font-normal">Stake</th>
-            <th class="text-right px-4 py-4 font-normal">Odd</th>
-            <th class="text-center px-4 py-4 font-normal">Status</th>
-            <th class="text-center px-6 py-4 font-normal">Action</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-[#334155] text-gray-300">
-          <% bets.forEach(b => { %>
-          <tr class="hover:bg-[#0f172a]">
-            <td class="px-6 py-4 font-medium text-white"><%= b.username %></td>
-            <td class="px-4 py-4 text-xs"><%= b.team_a %> vs <%= b.team_b %></td>
-            <td class="px-4 py-4 text-right font-bold">৳<%= b.stake %></td>
-            <td class="px-4 py-4 text-right"><%= b.odd %></td>
-            <td class="px-4 py-4 text-center">
-              <% if(b.status === 'won') { %>
-                <span class="px-3 py-1 text-xs rounded-full bg-emerald-500/20 text-emerald-400">Won</span>
-              <% } else if(b.status === 'lost') { %>
-                <span class="px-3 py-1 text-xs rounded-full bg-red-500/20 text-red-400">Lost</span>
-              <% } else { %>
-                <span class="px-3 py-1 text-xs rounded-full bg-yellow-500/20 text-yellow-400">Pending</span>
-              <% } %>
-            </td>
-            <td class="px-6 py-4 text-center">
-              <% if(b.status === 'pending') { %>
-                <form action="/admin/bets/<%= b.id %>/settle" method="POST" class="flex justify-center gap-2">
-                  <button name="result" value="won" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 rounded-xl text-xs">Win</button>
-                  <button name="result" value="lost" class="px-3 py-1 bg-red-600 hover:bg-red-700 rounded-xl text-xs">Lose</button>
-                </form>
-              <% } else { %>
-                <span class="text-gray-500 text-xs">Settled</span>
-              <% } %>
-            </td>
-          </tr>
-          <% }) %>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Pagination -->
-    <% if (totalPages > 1) { %>
-    <div class="flex justify-center mt-6 gap-2">
-      <% for(let i=1; i<=totalPages; i++) { %>
-        <a href="/admin/bets?page=<%= i %>&status=<%= status %>" 
-           class="px-4 py-2 rounded-2xl text-sm <%= page === i ? 'bg-[#f59e0b] text-black' : 'bg-[#1e2937] hover:bg-[#334155]' %>">
-          <%= i %>
-        </a>
-      <% } %>
-    </div>
-    <% } %>
-
-  </main>
-</div>
+    <script>
+        function settleBet(betId, result) {
+            if (confirm(`Mark bet #${betId} as ${result.toUpperCase()}?`)) {
+                alert(`Bet #${betId} marked as ${result}. (Call your /admin/bets/settle API here)`);
+                // fetch(`/admin/bets/settle/${betId}`, {method:'POST', body: JSON.stringify({result})})
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>
