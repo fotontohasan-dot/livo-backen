@@ -1,414 +1,145 @@
-<%- include('../partials/head') %>
-<%- include('../partials/admin-header') %>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Details • Livo Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body class="bg-slate-950 text-white">
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        <%- include('../partials/sidebar', { activePage: 'users' }) %>
 
-<div class="flex min-h-screen bg-[#0f172a]">
-  <%- include('../partials/admin-sidebar') %>
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col">
+            <!-- Header -->
+            <%- include('../partials/header', { 
+                pageTitle: 'User Details', 
+                pageSubtitle: 'View and manage user information' 
+            }) %>
 
-  <main class="flex-1 p-6 lg:p-8 overflow-auto">
-    
-    <!-- Header -->
-    <div class="flex flex-col lg:flex-row lg:items-center gap-4 mb-8">
-      <div class="flex items-center gap-4">
-        <a href="/admin/users" class="flex items-center justify-center w-11 h-11 bg-[#1e2937] hover:bg-[#334155] rounded-2xl text-gray-300 transition-colors">
-          <i class="fas fa-arrow-left text-lg"></i>
-        </a>
-        
-        <div class="flex items-center gap-4">
-          <!-- Avatar -->
-          <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#f59e0b] to-[#d97706] flex items-center justify-center text-white text-3xl font-bold shadow-inner">
-            <%= u.username ? u.username.charAt(0).toUpperCase() : 'U' %>
-          </div>
-          
-          <div>
-            <div class="flex items-center gap-3">
-              <h1 class="text-3xl font-bold text-white"><%= u.username %></h1>
-              <button onclick="copyUserId()" class="px-3 py-1 text-xs bg-[#1e2937] hover:bg-[#334155] text-gray-400 rounded-xl flex items-center gap-1.5 transition-colors">
-                <i class="fas fa-copy"></i>
-                <span class="font-mono">#<%= u.id %></span>
-              </button>
+            <div class="p-6">
+                <!-- Back Button -->
+                <a href="/admin/users" class="inline-flex items-center gap-2 text-slate-400 hover:text-white mb-6 transition-colors">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back to Users</span>
+                </a>
+
+                <!-- User Header Card -->
+                <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 mb-6">
+                    <div class="flex flex-col md:flex-row md:items-center gap-6">
+                        <div class="flex-shrink-0">
+                            <div class="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center text-3xl font-bold">
+                                <%= user.username ? user.username.charAt(0).toUpperCase() : 'U' %>
+                            </div>
+                        </div>
+
+                        <div class="flex-1">
+                            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                                <div>
+                                    <div class="flex items-center gap-3">
+                                        <h1 class="text-3xl font-bold"><%= user.username || 'Unknown User' %></h1>
+                                        <button onclick="copyUserId()" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs flex items-center gap-2 transition-colors">
+                                            <i class="fas fa-copy"></i>
+                                            <span><%= user.id %></span>
+                                        </button>
+                                    </div>
+                                    <p class="text-slate-400 mt-1"><%= user.email || 'No email' %></p>
+                                </div>
+
+                                <div class="flex items-center gap-3">
+                                    <% if (user.is_banned) { %>
+                                        <span class="px-4 py-2 bg-red-500/10 text-red-400 rounded-2xl text-sm font-medium flex items-center gap-2">
+                                            <i class="fas fa-ban"></i> Banned
+                                        </span>
+                                    <% } else { %>
+                                        <span class="px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-2xl text-sm font-medium flex items-center gap-2">
+                                            <i class="fas fa-check-circle"></i> Active
+                                        </span>
+                                    <% } %>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-slate-900 border border-slate-700 rounded-2xl p-5">
+                        <div class="text-slate-400 text-sm">Current Balance</div>
+                        <div class="text-3xl font-bold mt-1 text-emerald-400">৳ <%= (user.balance || 0).toLocaleString() %></div>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-700 rounded-2xl p-5">
+                        <div class="text-slate-400 text-sm">Total Deposit</div>
+                        <div class="text-3xl font-bold mt-1">৳ <%= (user.total_deposit || 0).toLocaleString() %></div>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-700 rounded-2xl p-5">
+                        <div class="text-slate-400 text-sm">Total Bet Volume</div>
+                        <div class="text-3xl font-bold mt-1">৳ <%= (user.total_bet_volume || 0).toLocaleString() %></div>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-700 rounded-2xl p-5">
+                        <div class="text-slate-400 text-sm">Joined</div>
+                        <div class="text-xl font-semibold mt-1"><%= new Date(user.created_at).toLocaleDateString() %></div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Profile Information -->
+                    <div class="lg:col-span-2 bg-slate-900 border border-slate-700 rounded-3xl p-6">
+                        <h3 class="font-semibold text-lg mb-5 flex items-center gap-2">
+                            <i class="fas fa-user text-blue-400"></i> Profile Information
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5 text-sm">
+                            <div><div class="text-slate-400">Full Name</div><div class="font-medium mt-1"><%= user.full_name || 'Not provided' %></div></div>
+                            <div><div class="text-slate-400">Phone Number</div><div class="font-medium mt-1"><%= user.phone || 'Not provided' %></div></div>
+                            <div><div class="text-slate-400">Username</div><div class="font-medium mt-1"><%= user.username %></div></div>
+                            <div><div class="text-slate-400">Email</div><div class="font-medium mt-1"><%= user.email || 'Not provided' %></div></div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6">
+                        <h3 class="font-semibold text-lg mb-5 flex items-center gap-2">
+                            <i class="fas fa-bolt text-amber-400"></i> Quick Actions
+                        </h3>
+                        <div class="space-y-3">
+                            <button onclick="showAddCoinsModal()" class="w-full flex items-center justify-center gap-3 bg-emerald-600 hover:bg-emerald-700 transition-colors py-3 rounded-2xl font-medium">
+                                <i class="fas fa-plus-circle"></i> <span>Add Coins</span>
+                            </button>
+                            <button onclick="showBanModal()" class="w-full flex items-center justify-center gap-3 bg-red-600 hover:bg-red-700 transition-colors py-3 rounded-2xl font-medium">
+                                <i class="fas fa-ban"></i> <span>Ban User</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <p class="text-gray-400 text-sm mt-0.5">Joined <%= new Date(u.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %></p>
-          </div>
         </div>
-      </div>
-
-      <div class="ml-auto flex items-center gap-3">
-        <% if(u.is_banned) { %>
-          <span class="px-5 py-2 bg-red-500/10 text-red-400 text-sm font-medium rounded-2xl flex items-center gap-2">
-            <i class="fas fa-ban"></i> BANNED
-          </span>
-        <% } else { %>
-          <span class="px-5 py-2 bg-emerald-500/10 text-emerald-400 text-sm font-medium rounded-2xl flex items-center gap-2">
-            <i class="fas fa-check-circle"></i> ACTIVE
-          </span>
-        <% } %>
-        
-        <button onclick="showBanModal()" class="px-5 py-2.5 <%= u.is_banned ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700' %> text-white text-sm font-semibold rounded-2xl transition-all flex items-center gap-2">
-          <i class="fas <%= u.is_banned ? 'fa-user-check' : 'fa-user-slash' %>"></i>
-          <span><%= u.is_banned ? 'Unban User' : 'Ban User' %></span>
-        </button>
-      </div>
     </div>
 
-    <!-- Quick Stats -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-      <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-5">
-        <div class="flex justify-between items-start">
-          <div>
-            <p class="text-gray-400 text-xs tracking-wider">CURRENT BALANCE</p>
-            <p class="text-3xl font-bold text-emerald-400 mt-1">৳<%= (u.coins || 0).toLocaleString() %></p>
-          </div>
-          <i class="fas fa-wallet text-emerald-500/30 text-4xl"></i>
+    <!-- Simple Add Coins Modal -->
+    <div id="addCoinsModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-md p-6">
+            <h3 class="text-xl font-semibold mb-4">Add Coins</h3>
+            <form action="/admin/users/<%= user.id %>/add-coins" method="POST">
+                <div class="mb-4">
+                    <label class="block text-sm text-slate-400 mb-2">Amount</label>
+                    <input type="number" name="amount" class="w-full bg-slate-800 border border-slate-700 rounded-2xl px-4 py-3" placeholder="Enter amount" required>
+                </div>
+                <div class="flex gap-3">
+                    <button type="button" onclick="hideModal('addCoinsModal')" class="flex-1 py-3 rounded-2xl border border-slate-700">Cancel</button>
+                    <button type="submit" class="flex-1 py-3 rounded-2xl bg-emerald-600">Add Coins</button>
+                </div>
+            </form>
         </div>
-      </div>
-      
-      <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-5">
-        <div class="flex justify-between items-start">
-          <div>
-            <p class="text-gray-400 text-xs tracking-wider">TOTAL DEPOSITED</p>
-            <p class="text-3xl font-bold text-white mt-1">৳<%= (stats.totalDeposit || 0).toLocaleString() %></p>
-          </div>
-          <i class="fas fa-arrow-down text-emerald-500/30 text-4xl"></i>
-        </div>
-      </div>
-      
-      <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-5">
-        <div class="flex justify-between items-start">
-          <div>
-            <p class="text-gray-400 text-xs tracking-wider">TOTAL BET VOLUME</p>
-            <p class="text-3xl font-bold text-white mt-1">৳<%= (stats.totalBet || 0).toLocaleString() %></p>
-          </div>
-          <i class="fas fa-chart-line text-amber-500/30 text-4xl"></i>
-        </div>
-      </div>
-      
-      <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-5">
-        <div class="flex justify-between items-start">
-          <div>
-            <p class="text-gray-400 text-xs tracking-wider">KYC STATUS</p>
-            <p class="text-2xl font-bold mt-1 <%= u.kyc_status === 'approved' ? 'text-emerald-400' : u.kyc_status === 'rejected' ? 'text-red-400' : 'text-yellow-400' %>">
-              <%= u.kyc_status || 'Pending' %>
-            </p>
-          </div>
-          <i class="fas fa-id-card text-yellow-500/30 text-4xl"></i>
-        </div>
-      </div>
     </div>
 
-    <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
-      
-      <!-- Left: Profile + Actions -->
-      <div class="xl:col-span-5 space-y-6">
-        
-        <!-- Profile Information -->
-        <div class="bg-[#1e2937] rounded-3xl border border-[#334155] p-6">
-          <div class="flex items-center justify-between mb-5">
-            <h3 class="font-semibold text-white flex items-center gap-2">
-              <i class="fas fa-user text-[#f59e0b]"></i> 
-              <span>Profile Information</span>
-            </h3>
-            <span class="text-xs px-3 py-1 bg-[#0f172a] rounded-xl text-gray-400">ID: <%= u.id %></span>
-          </div>
-          
-          <div class="space-y-4 text-sm">
-            <div class="flex justify-between py-1 border-b border-[#334155]/60">
-              <span class="text-gray-400">Full Name</span> 
-              <span class="font-medium text-white"><%= u.full_name || u.username %></span>
-            </div>
-            <div class="flex justify-between py-1 border-b border-[#334155]/60">
-              <span class="text-gray-400">Email</span> 
-              <span class="font-medium text-white"><%= u.email || '—' %></span>
-            </div>
-            <div class="flex justify-between py-1 border-b border-[#334155]/60">
-              <span class="text-gray-400">Phone</span> 
-              <span class="font-medium text-white"><%= u.phone || '—' %></span>
-            </div>
-            <div class="flex justify-between py-1 border-b border-[#334155]/60">
-              <span class="text-gray-400">Total Points</span> 
-              <span class="font-bold text-white"><%= u.total_points || 0 %></span>
-            </div>
-            <div class="flex justify-between py-1">
-              <span class="text-gray-400">Last Login</span> 
-              <span class="font-medium text-white"><%= u.last_login ? new Date(u.last_login).toLocaleString() : 'Never' %></span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="bg-[#1e2937] rounded-3xl border border-[#334155] p-6">
-          <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
-            <i class="fas fa-bolt text-[#f59e0b]"></i> 
-            <span>Quick Actions</span>
-          </h3>
-          
-          <div class="grid grid-cols-1 gap-3">
-            <button onclick="showCoinModal('add')" class="flex items-center justify-center gap-3 w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 transition-all text-white rounded-2xl font-semibold text-sm">
-              <i class="fas fa-plus-circle"></i>
-              <span>Add Coins</span>
-            </button>
-            
-            <button onclick="showCoinModal('remove')" class="flex items-center justify-center gap-3 w-full py-3.5 bg-red-600/90 hover:bg-red-700 active:bg-red-800 transition-all text-white rounded-2xl font-semibold text-sm">
-              <i class="fas fa-minus-circle"></i>
-              <span>Remove Coins</span>
-            </button>
-            
-            <button onclick="showFreebetModal()" class="flex items-center justify-center gap-3 w-full py-3.5 bg-[#f59e0b] hover:bg-[#d97706] active:bg-[#b45309] transition-all text-black rounded-2xl font-semibold text-sm">
-              <i class="fas fa-gift"></i>
-              <span>Give Freebet</span>
-            </button>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Right Side: History -->
-      <div class="xl:col-span-7 space-y-6">
-        
-        <!-- Recent Bets -->
-        <div class="bg-[#1e2937] rounded-3xl border border-[#334155] p-6">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="font-semibold text-white flex items-center gap-2">
-              <i class="fas fa-dice text-[#f59e0b]"></i> 
-              <span>Recent Bets</span>
-            </h3>
-            <a href="/admin/bets?user_id=<%= u.id %>" class="text-xs px-4 py-1.5 bg-[#0f172a] hover:bg-[#1e2937] rounded-2xl text-gray-300 flex items-center gap-2 transition-colors">
-              View All <i class="fas fa-arrow-right text-xs"></i>
-            </a>
-          </div>
-          
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead>
-                <tr class="text-gray-400 border-b border-[#334155]">
-                  <th class="text-left pb-3 font-normal">Match</th>
-                  <th class="text-right pb-3 font-normal">Stake</th>
-                  <th class="text-right pb-3 font-normal">Odd</th>
-                  <th class="text-center pb-3 font-normal">Status</th>
-                </tr>
-              </thead>
-              <tbody class="text-gray-300 divide-y divide-[#334155]">
-                <% if (bets && bets.length > 0) { %>
-                  <% bets.slice(0, 6).forEach(b => { %>
-                  <tr class="hover:bg-[#0f172a]/50 transition-colors">
-                    <td class="py-3.5 text-xs pr-4"><%= b.match_title || 'N/A' %></td>
-                    <td class="py-3.5 text-right font-medium">৳<%= b.stake %></td>
-                    <td class="py-3.5 text-right"><%= b.odd %></td>
-                    <td class="py-3.5 text-center">
-                      <% if(b.status === 'won') { %>
-                        <span class="inline-block px-4 py-px text-xs rounded-full bg-emerald-500/10 text-emerald-400 font-medium">Won</span>
-                      <% } else if(b.status === 'lost') { %>
-                        <span class="inline-block px-4 py-px text-xs rounded-full bg-red-500/10 text-red-400 font-medium">Lost</span>
-                      <% } else { %>
-                        <span class="inline-block px-4 py-px text-xs rounded-full bg-yellow-500/10 text-yellow-400 font-medium">Pending</span>
-                      <% } %>
-                    </td>
-                  </tr>
-                  <% }) %>
-                <% } else { %>
-                  <tr><td colspan="4" class="py-8 text-center text-gray-500 text-sm">No bets found for this user.</td></tr>
-                <% } %>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Coin Transactions -->
-        <div class="bg-[#1e2937] rounded-3xl border border-[#334155] p-6">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="font-semibold text-white flex items-center gap-2">
-              <i class="fas fa-exchange-alt text-[#f59e0b]"></i> 
-              <span>Recent Transactions</span>
-            </h3>
-            <a href="/admin/reports?user_id=<%= u.id %>" class="text-xs px-4 py-1.5 bg-[#0f172a] hover:bg-[#1e2937] rounded-2xl text-gray-300 flex items-center gap-2 transition-colors">
-              Full History <i class="fas fa-arrow-right text-xs"></i>
-            </a>
-          </div>
-          
-          <div class="overflow-x-auto max-h-[240px]">
-            <table class="w-full text-sm">
-              <thead>
-                <tr class="text-gray-400 border-b border-[#334155]">
-                  <th class="text-left pb-3 font-normal">Type</th>
-                  <th class="text-right pb-3 font-normal">Amount</th>
-                  <th class="text-left pb-3 font-normal">Note</th>
-                  <th class="text-right pb-3 font-normal">Date</th>
-                </tr>
-              </thead>
-              <tbody class="text-gray-300 divide-y divide-[#334155]">
-                <% if (transactions && transactions.length > 0) { %>
-                  <% transactions.slice(0, 8).forEach(t => { %>
-                  <tr class="hover:bg-[#0f172a]/50 transition-colors">
-                    <td class="py-3 text-xs"><%= t.type %></td>
-                    <td class="py-3 text-right font-semibold <%= t.amount > 0 ? 'text-emerald-400' : 'text-red-400' %>">
-                      <%= t.amount > 0 ? '+' : '' %><%= t.amount %>
-                    </td>
-                    <td class="py-3 text-xs text-gray-400"><%= t.description || '-' %></td>
-                    <td class="py-3 text-right text-xs text-gray-500"><%= new Date(t.created_at).toLocaleDateString() %></td>
-                  </tr>
-                  <% }) %>
-                <% } else { %>
-                  <tr><td colspan="4" class="py-8 text-center text-gray-500 text-sm">No transactions yet.</td></tr>
-                <% } %>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-      </div>
-    </div>
-
-  </main>
-</div>
-
-<!-- Modals -->
-<!-- Coin Modal -->
-<div id="coinModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-  <div class="bg-[#1e2937] w-full max-w-md mx-4 rounded-3xl border border-[#334155] p-6">
-    <div class="flex justify-between items-center mb-5">
-      <h3 id="coinModalTitle" class="text-xl font-semibold text-white"></h3>
-      <button onclick="hideCoinModal()" class="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
-    </div>
-    
-    <form id="coinForm" method="POST">
-      <input type="hidden" name="user_id" value="<%= u.id %>">
-      
-      <div class="mb-5">
-        <label class="block text-sm text-gray-400 mb-2">Amount (BDT)</label>
-        <input type="number" name="amount" id="coinAmount" class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-5 py-3.5 text-white text-lg focus:outline-none focus:border-[#f59e0b]" placeholder="Enter amount" required>
-      </div>
-      
-      <div class="mb-6">
-        <label class="block text-sm text-gray-400 mb-2">Note / Reason (optional)</label>
-        <input type="text" name="note" class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-5 py-3 text-sm" placeholder="Admin note...">
-      </div>
-      
-      <div class="flex gap-3">
-        <button type="button" onclick="hideCoinModal()" class="flex-1 py-3.5 rounded-2xl bg-[#334155] hover:bg-[#475569] text-white font-medium">Cancel</button>
-        <button type="submit" id="coinSubmitBtn" class="flex-1 py-3.5 rounded-2xl font-semibold text-white"></button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- Ban Modal -->
-<div id="banModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-  <div class="bg-[#1e2937] w-full max-w-md mx-4 rounded-3xl border border-[#334155] p-6">
-    <h3 class="text-xl font-semibold text-white mb-2"><%= u.is_banned ? 'Unban User' : 'Ban User' %></h3>
-    <p class="text-gray-400 text-sm mb-5">This action will <%= u.is_banned ? 'restore' : 'restrict' %> the user's access immediately.</p>
-    
-    <form action="/admin/users/<%= u.id %>/ban" method="POST">
-      <% if (!u.is_banned) { %>
-      <div class="mb-5">
-        <label class="block text-sm text-gray-400 mb-2">Reason for ban</label>
-        <textarea name="reason" rows="3" class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-sm resize-y" placeholder="Enter reason..." required></textarea>
-      </div>
-      <% } %>
-      
-      <div class="flex gap-3">
-        <button type="button" onclick="hideBanModal()" class="flex-1 py-3.5 rounded-2xl bg-[#334155] hover:bg-[#475569] text-white font-medium">Cancel</button>
-        <button type="submit" class="flex-1 py-3.5 rounded-2xl font-semibold <%= u.is_banned ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700' %> text-white">
-          <%= u.is_banned ? 'Confirm Unban' : 'Confirm Ban' %>
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- Freebet Modal -->
-<div id="freebetModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-  <div class="bg-[#1e2937] w-full max-w-md mx-4 rounded-3xl border border-[#334155] p-6">
-    <h3 class="text-xl font-semibold text-white mb-5 flex items-center gap-2">
-      <i class="fas fa-gift text-[#f59e0b]"></i> Give Freebet
-    </h3>
-    
-    <form action="/admin/users/<%= u.id %>/freebet" method="POST">
-      <div class="mb-5">
-        <label class="block text-sm text-gray-400 mb-2">Freebet Amount</label>
-        <input type="number" name="amount" class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-5 py-3.5 text-white text-lg" placeholder="1000" required>
-      </div>
-      
-      <div class="flex gap-3">
-        <button type="button" onclick="hideFreebetModal()" class="flex-1 py-3.5 rounded-2xl bg-[#334155] hover:bg-[#475569] text-white font-medium">Cancel</button>
-        <button type="submit" class="flex-1 py-3.5 rounded-2xl bg-[#f59e0b] hover:bg-[#d97706] text-black font-semibold">Give Freebet</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<script>
-function copyUserId() {
-  navigator.clipboard.writeText('<%= u.id %>').then(() => {
-    const btns = document.querySelectorAll('button');
-    // simple feedback
-    const originalText = event.currentTarget ? event.currentTarget.innerHTML : '';
-    alert('User ID copied to clipboard!');
-  }).catch(() => {
-    prompt('Copy this User ID:', '<%= u.id %>');
-  });
-}
-
-function showCoinModal(type) {
-  const modal = document.getElementById('coinModal');
-  const title = document.getElementById('coinModalTitle');
-  const form = document.getElementById('coinForm');
-  const submitBtn = document.getElementById('coinSubmitBtn');
-  const amountInput = document.getElementById('coinAmount');
-
-  if (type === 'add') {
-    title.innerHTML = '<i class="fas fa-plus-circle text-emerald-400 mr-2"></i> Add Coins';
-    form.action = '/admin/users/<%= u.id %>/coins/add';
-    submitBtn.className = 'flex-1 py-3.5 rounded-2xl font-semibold bg-emerald-600 hover:bg-emerald-700 text-white';
-    submitBtn.innerHTML = 'Add Coins';
-  } else {
-    title.innerHTML = '<i class="fas fa-minus-circle text-red-400 mr-2"></i> Remove Coins';
-    form.action = '/admin/users/<%= u.id %>/coins/remove';
-    submitBtn.className = 'flex-1 py-3.5 rounded-2xl font-semibold bg-red-600 hover:bg-red-700 text-white';
-    submitBtn.innerHTML = 'Remove Coins';
-  }
-  
-  amountInput.value = '';
-  modal.classList.remove('hidden');
-  modal.classList.add('flex');
-  amountInput.focus();
-}
-
-function hideCoinModal() {
-  const modal = document.getElementById('coinModal');
-  modal.classList.remove('flex');
-  modal.classList.add('hidden');
-}
-
-function showBanModal() {
-  const modal = document.getElementById('banModal');
-  modal.classList.remove('hidden');
-  modal.classList.add('flex');
-}
-
-function hideBanModal() {
-  const modal = document.getElementById('banModal');
-  modal.classList.remove('flex');
-  modal.classList.add('hidden');
-}
-
-function showFreebetModal() {
-  const modal = document.getElementById('freebetModal');
-  modal.classList.remove('hidden');
-  modal.classList.add('flex');
-}
-
-function hideFreebetModal() {
-  const modal = document.getElementById('freebetModal');
-  modal.classList.remove('flex');
-  modal.classList.add('hidden');
-}
-
-// Close modals on outside click
-document.querySelectorAll('#coinModal, #banModal, #freebetModal').forEach(modal => {
-  modal.addEventListener('click', function(e) {
-    if (e.target === modal) {
-      modal.classList.remove('flex');
-      modal.classList.add('hidden');
-    }
-  });
-});
-</script>
+    <script>
+        function copyUserId() { navigator.clipboard.writeText('<%= user.id %>'); alert('User ID copied!'); }
+        function showAddCoinsModal() { document.getElementById('addCoinsModal').classList.remove('hidden'); document.getElementById('addCoinsModal').classList.add('flex'); }
+        function hideModal(id) { document.getElementById(id).classList.remove('flex'); document.getElementById(id).classList.add('hidden'); }
+        function showBanModal() { if(confirm('Ban this user?')) window.location.href = '/admin/users/<%= user.id %>/ban'; }
+    </script>
+</body>
+</html>
