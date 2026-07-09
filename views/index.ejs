@@ -7,293 +7,447 @@
   50% { opacity: 0.3; transform: scale(1.4); }
 }
 @keyframes marquee-text { 0%{transform:translateX(100%)} 100%{transform:translateX(-100%)} }
+
+/* FA999 Gold Theme Styles */
+:root {
+  --fa-gold-light: #FFEFA6;
+  --fa-gold: #D4AF37;
+  --fa-gold-dark: #AA7C11;
+  --fa-gold-gradient: linear-gradient(135deg, #FFF3C4 0%, #FFD700 50%, #B8860B 100%);
+  --fa-dark-gradient: linear-gradient(180deg, #1A1C20 0%, #0F1012 100%);
+  --fa-card-bg: rgba(255, 255, 255, 0.05);
+}
+
+.promo-banner {
+  background: linear-gradient(135deg, #1C1E22 0%, #0F1012 100%);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  margin: 12px;
+}
+
+.promo-banner-content {
+  background: linear-gradient(90deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 100%);
+  padding: 24px;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  z-index: 2;
+  position: relative;
+}
+
+.promo-banner-badge {
+  background: var(--fa-gold-gradient);
+  color: #000;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 4px 10px;
+  border-radius: 20px;
+  align-self: flex-start;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+}
+
+/* Shortcuts Menu Bar */
+.shortcut-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin: 0 12px 15px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(212, 175, 55, 0.15);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.shortcut-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-decoration: none;
+  transition: transform 0.2s, box-shadow 0.2s;
+  padding: 10px 4px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.05) 100%);
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.shortcut-item:hover {
+  transform: translateY(-2px);
+  border-color: var(--fa-gold);
+  background: linear-gradient(135deg, rgba(212,175,55,0.1) 0%, rgba(0,0,0,0.2) 100%);
+}
+
+.shortcut-icon-wrapper {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background: var(--fa-gold-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #000;
+  margin-bottom: 6px;
+  box-shadow: 0 4px 10px rgba(212, 175, 55, 0.3);
+}
+
+.shortcut-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-main);
+  text-align: center;
+}
+
+/* Horizontal Navigation Tabs */
+.horizontal-nav-container {
+  display: flex;
+  overflow-x: auto;
+  gap: 10px;
+  padding: 5px 12px 15px 12px;
+  scrollbar-width: none;
+}
+.horizontal-nav-container::-webkit-scrollbar {
+  display: none;
+}
+
+.nav-tab-item {
+  flex: 0 0 auto;
+  padding: 10px 20px;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.nav-tab-item.active {
+  background: var(--fa-gold-gradient);
+  color: #000 !important;
+  border-color: transparent;
+  font-weight: 700;
+  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4);
+}
+
+.nav-tab-item.active i {
+  color: #000;
+}
+
+.game-grid-premium {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 0 12px;
+}
+
+.game-card-premium {
+  background: linear-gradient(135deg, rgba(30, 32, 38, 0.8) 0%, rgba(15, 16, 18, 0.9) 100%);
+  border: 1px solid rgba(212, 175, 55, 0.1);
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.game-card-premium:hover {
+  transform: scale(1.02);
+  border-color: var(--fa-gold);
+}
+
+.game-thumb-wrapper {
+  aspect-ratio: 16/10;
+  background: rgba(255, 255, 255, 0.02);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 44px;
+  position: relative;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.game-info-premium {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.game-title-premium {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.game-provider-premium {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--fa-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.game-badge-premium {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 8px;
+  font-weight: 800;
+  background: #ff4d4f;
+  color: #fff;
+  text-transform: uppercase;
+}
+
+.marquee-container-premium {
+  background: rgba(212, 175, 55, 0.08);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 8px;
+  margin: 10px 12px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.marquee-label-premium {
+  color: var(--fa-gold);
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
 </style>
 
-<!-- ===== News Ticker ===== -->
-<div class="glass" style="margin:8px 12px;border-radius:12px;padding:12px;display:flex;align-items:center;gap:12px;position:relative;">
-  <div style="background:var(--gold);color:var(--text-inverse);padding:2px 8px;border-radius:4px;font-size:10px;font-weight:bold;">News</div>
-  <div style="flex:1;overflow:hidden;">
-    <div style="font-size:12px;color:var(--text-muted);white-space:nowrap;animation:marquee-text 15s linear infinite;">
-      প্রিয় গ্রাহক, 🎉 LIVO-তে আপনাকে স্বাগতম! 🌟 নতুন আমানত বোনাস 💰 এবং আকর্ষণীয় পুরস্কার 🏆 পেতে এখনই খেলা শুরু করুন 🚀। আমাদের সাথে থাকার জন্য ধন্যবাদ। 🙏
-🎁 ভি আই পি সদস্য সুবিধা 🎁
-🤝 একজনকে আমন্ত্রণ জানিয়ে ৩০০ টাকা আয় করুন 🤝 💸
-🏆 সদস্য কার্নিভাল ৯০০ টাকা পুরস্কার 🥇 💶 🔥
-🎁 🏆 রহস্য বোনাস ইতিমধ্যে বিতরণ করা হয়েছে 👑 🥇 ✨
+<!-- ===== Marquee Ticker ===== -->
+<div class="marquee-container-premium">
+  <div class="marquee-label-premium">
+    <i class="fas fa-bullhorn"></i> Announcement:
+  </div>
+  <div style="flex:1; overflow:hidden;">
+    <div style="font-size:12px; color:var(--text-muted); white-space:nowrap; animation:marquee-text 18s linear infinite;">
+      📢 প্রিয় গ্রাহক, LIVO-তে আপনাকে স্বাগতম! 🌟 Deposit, Withdrawal, Reward, এবং Rebate-এর চমৎকার সুবিধা উপভোগ করুন। প্রতিদিন ১ লক্ষ টাকা পর্যন্ত Rebate বোনাস জেতার সুযোগ! 💰
     </div>
   </div>
 </div>
 
-<!-- ===== Welcome Banner ===== -->
-<div class="banner-container">
-  <div class="card btn-glow" style="height:160px;background:linear-gradient(135deg, #FFF6D8, #FFE28A);position:relative;display:flex;align-items:center;padding:20px;border: 1px solid #E0B84B;">
-    <div style="z-index:1;">
-      <h2 style="font-family:'Teko',sans-serif;font-size:32px;color:#6B4A00;line-height:1;">🎰 <%= t.welcome_bonus %></h2>
-      <p style="font-size:13px;color:#5A4520;margin-top:5px;"><%= t.welcome_bonus_desc %></p>
-      <div style="margin-top:5px; font-size: 11px; color: #5A4520;"><%= t.referral_bonus %> 🎁</div>
-      <a href="/payment/deposit" class="btn btn-primary" style="margin-top:12px;border-radius:25px;padding:8px 24px;background: var(--grad-primary); color: #fff;"><%= t.get_now %></a>
-    </div>
-    <div style="position:absolute;right:10px;font-size:80px;opacity:0.15;">🏆</div>
-  </div>
-</div>
-
-<!-- ===== Sports Quick Links ===== -->
-<div style="padding: 12px;">
-  <div style="background: linear-gradient(135deg, rgba(245,158,11,0.08), rgba(0,150,37,0.05)); border: 1px solid var(--border-glass); border-radius: 16px; padding: 14px;">
-
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-      <div style="font-size:13px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.5px;">
-        ⚡ <%= t.quick_links %>
-      </div>
-      <a href="/matches" style="font-size:11px;color:var(--text-muted);text-decoration:none;">
-        <%= t.see_all %> →
-      </a>
-    </div>
-
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
-      <a href="/matches" style="text-decoration:none;text-align:center;">
-        <div style="background:linear-gradient(135deg,#ef4444,#dc2626);border-radius:12px;padding:14px 6px;position:relative;">
-          <div style="font-size:22px;">⏱️</div>
-          <div style="position:absolute;top:4px;right:4px;width:6px;height:6px;border-radius:50%;background:var(--text-white);box-shadow:0 0 8px var(--text-white);animation:livedot 1.5s infinite;"></div>
-        </div>
-        <div style="font-size:11px;color:var(--text-main);margin-top:6px;font-weight:600;"><%= t.in_play %></div>
-      </a>
-
-      <a href="/matches/cricket" style="text-decoration:none;text-align:center;">
-        <div style="background:linear-gradient(135deg,#10b981,#059669);border-radius:12px;padding:14px 6px;">
-          <div style="font-size:22px;">🏏</div>
-        </div>
-        <div style="font-size:11px;color:var(--text-main);margin-top:6px;font-weight:600;"><%= t.cricket %></div>
-      </a>
-
-      <a href="/matches/football" style="text-decoration:none;text-align:center;">
-        <div style="background:linear-gradient(135deg,#0ea5e9,#0284c7);border-radius:12px;padding:14px 6px;">
-          <div style="font-size:22px;">⚽</div>
-        </div>
-        <div style="font-size:11px;color:var(--text-main);margin-top:6px;font-weight:600;"><%= t.football %></div>
-      </a>
-
-      <a href="/matches/worldcup" style="text-decoration:none;text-align:center;">
-        <div style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:12px;padding:14px 6px;position:relative;">
-          <div style="font-size:22px;">🏆</div>
-          <div style="position:absolute;top:3px;right:3px;background:#ef4444;color:var(--text-white);font-size:8px;padding:1px 4px;border-radius:6px;font-weight:700;">HOT</div>
-        </div>
-        <div style="font-size:11px;color:var(--text-main);margin-top:6px;font-weight:600;">WC 2026</div>
-      </a>
-
-      <a href="/tournaments" style="text-decoration:none;text-align:center;">
-        <div style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);border-radius:12px;padding:14px 6px;">
-          <div style="font-size:22px;">🎯</div>
-        </div>
-        <div style="font-size:11px;color:var(--text-main);margin-top:6px;font-weight:600;"><%= t.prediction %></div>
+<!-- ===== Large FA999-style Promotional Welcome Banner ===== -->
+<div class="promo-banner">
+  <div class="promo-banner-content">
+    <div class="promo-banner-badge"><%= t.welcome_bonus %></div>
+    <h1 style="font-family:'Teko', sans-serif; font-size: 38px; color: var(--fa-gold-light); line-height: 1.1; margin: 10px 0 4px 0; text-transform: uppercase; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">
+      100% Welcome Bonus
+    </h1>
+    <p style="font-size: 12px; color: #E0E2E5; margin-bottom: 15px; font-weight: 500;">
+      <%= t.welcome_bonus_desc %> - Up to 50,000 BDT match bonus on first deposit.
+    </p>
+    <div>
+      <a href="/payment/deposit" class="btn" style="background: var(--fa-gold-gradient); color: #000; font-weight: 800; font-size: 12px; border-radius: 20px; padding: 8px 20px;">
+        <%= t.get_now %> <i class="fas fa-chevron-right" style="font-size: 9px; margin-left: 4px;"></i>
       </a>
     </div>
   </div>
-</div>
-
-<!-- ===== Category Scrollbar ===== -->
-<div style="display:flex;overflow-x:auto;padding:8px 12px;gap:10px;scrollbar-width:none;" id="catNav">
-  <style>#catNav::-webkit-scrollbar { display:none; }</style>
-  <div class="glass cat-item active" data-link="/matches" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--gold);">
-    <div style="font-size:22px;">⚽</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);"><%= t.menu_sports %></div>
-  </div>
-  <div class="glass cat-item" data-link="/tournaments" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--border-glass);">
-    <div style="font-size:22px;">🏆</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);"><%= t.menu_tournament %></div>
-  </div>
-  <div class="glass cat-item" data-link="/leaderboard" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--border-glass);">
-    <div style="font-size:22px;">📊</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);"><%= t.menu_leaderboard %></div>
-  </div>
-  <div class="glass cat-item" data-link="/news" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--border-glass);">
-    <div style="font-size:22px;">📰</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);"><%= t.menu_news %></div>
-  </div>
-  <div class="glass cat-item" data-link="/payment/deposit" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--border-glass);">
-    <div style="font-size:22px;">💰</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);"><%= t.menu_deposit %></div>
-  </div>
-  <div class="glass cat-item" data-link="/chat" style="flex:0 0 auto;width:70px;height:70px;border-radius:15px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:0.3s;border: 1px solid var(--border-glass);">
-    <div style="font-size:22px;">🎧</div>
-    <div style="font-size:10px;margin-top:4px;color:var(--text-muted);"><%= t.support %></div>
+  <div style="position: absolute; right: 15px; bottom: 10px; font-size: 110px; opacity: 0.12; pointer-events: none; color: #FFF;">
+    🎰
   </div>
 </div>
 
-<!-- ===== Search ===== -->
-<div style="padding:0 12px 10px;">
+<!-- ===== Deposit, Withdrawal, Reward, Rebate Highlighted Shortcuts ===== -->
+<div class="shortcut-bar">
+  <a href="/payment/deposit" class="shortcut-item">
+    <div class="shortcut-icon-wrapper">
+      <i class="fas fa-wallet"></i>
+    </div>
+    <div class="shortcut-label"><%= t.deposit %></div>
+  </a>
+  <a href="/payment/withdraw" class="shortcut-item">
+    <div class="shortcut-icon-wrapper" style="background: linear-gradient(135deg, #FFF, #E0E0E0);">
+      <i class="fas fa-money-bill-wave" style="color: #111;"></i>
+    </div>
+    <div class="shortcut-label"><%= t.withdrawal %></div>
+  </a>
+  <a href="/extra/missions" class="shortcut-item">
+    <div class="shortcut-icon-wrapper" style="background: linear-gradient(135deg, #FF9900, #FF5E00);">
+      <i class="fas fa-gift" style="color: #FFF;"></i>
+    </div>
+    <div class="shortcut-label"><%= t.reward %></div>
+  </a>
+  <a href="/profile" class="shortcut-item">
+    <div class="shortcut-icon-wrapper" style="background: linear-gradient(135deg, #00FFCC, #0099FF);">
+      <i class="fas fa-percentage" style="color: #FFF;"></i>
+    </div>
+    <div class="shortcut-label"><%= t.rebate %></div>
+  </a>
+</div>
+
+<!-- ===== Horizontal Navigation Tabs (Hot, Slots, Live, Sports, Poker) ===== -->
+<div class="horizontal-nav-container" id="categoryTabs">
+  <div class="nav-tab-item active" data-category="all">
+    <i class="fas fa-border-all"></i> <%= t.all %>
+  </div>
+  <div class="nav-tab-item" data-category="hot">
+    <i class="fas fa-fire"></i> <%= t.cat_hot %>
+  </div>
+  <div class="nav-tab-item" data-category="slots">
+    <i class="fas fa-gamepad"></i> <%= t.cat_slots %>
+  </div>
+  <div class="nav-tab-item" data-category="live">
+    <i class="fas fa-video"></i> <%= t.cat_live %>
+  </div>
+  <div class="nav-tab-item" data-category="sports">
+    <i class="fas fa-running"></i> <%= t.cat_sports %>
+  </div>
+  <div class="nav-tab-item" data-category="poker">
+    <i class="fas fa-heart"></i> <%= t.cat_poker %>
+  </div>
+</div>
+
+<!-- ===== Search Bar ===== -->
+<div style="padding: 0 12px 15px 12px;">
   <div style="position:relative;">
-    <input type="text" id="gameSearch" class="form-input" placeholder="<%= t.search_placeholder %>" style="padding-right:45px;">
-    <i class="fas fa-search" style="position:absolute;right:15px;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
+    <input type="text" id="gameSearch" class="form-input" placeholder="<%= t.search_placeholder %>" style="padding-right:45px; border-radius: 30px; background: rgba(255,255,255,0.04); border-color: rgba(212,175,55,0.2);">
+    <i class="fas fa-search" style="position:absolute;right:18px;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
   </div>
 </div>
 
 <%- include('partials/flash') %>
 
-<!-- ===== Hot Games ===== -->
-<div class="section-header">
-  <h3 class="section-title"><i class="fas fa-fire"></i> <span id="sectionTitle"><%= t.hot_games %></span></h3>
-</div>
-<div class="game-grid" id="gameContainer"></div>
+<!-- ===== High-Fidelity Premium Game Grid ===== -->
+<div class="game-grid-premium" id="gameContainer"></div>
 
-<!-- ===== Stats Grid ===== -->
-<div class="stats-grid">
-  <div class="stat-card">
-    <div class="stat-value">500+</div>
-    <div class="stat-label"><%= t.games_count %></div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-value">24/7</div>
-    <div class="stat-label"><%= t.support %></div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-value">৳5M+</div>
-    <div class="stat-label"><%= t.payment %></div>
-  </div>
-</div>
-
-<!-- ===== Jackpot ===== -->
-<div class="banner-container" style="margin-top:10px;">
-  <div class="card" style="padding:25px 20px; text-align:center; border: 2px solid #E0B84B; background: radial-gradient(circle at center, #FFF3C4 0%, #FFDD6B 100%); position: relative; overflow: hidden; border-radius: 25px;">
-    <div style="position:absolute; top:-20px; left:-20px; width:100px; height:100px; background:#fff; filter:blur(60px); opacity:0.4;"></div>
-    <div style="position:absolute; bottom:-20px; right:-20px; width:100px; height:100px; background:#fff; filter:blur(60px); opacity:0.4;"></div>
-    <div style="font-size:13px; color:#6B4A00; letter-spacing:4px; text-transform:uppercase; font-weight:800;">✨ <%= t.mega_jackpot %> ✨</div>
-    <div style="font-family:'Teko',sans-serif; font-size:56px; color:#5A3E00; line-height:1; margin:15px 0; text-shadow: 0 2px 6px rgba(0,0,0,0.12); display: flex; align-items: center; justify-content: center; gap: 10px;">
-      <span style="font-size: 32px; margin-top: 10px;">৳</span>
-      <span id="jp-num">88,617,517</span>
+<!-- ===== Progressive Jackpot Board ===== -->
+<div class="banner-container" style="margin-top:20px;">
+  <div class="card" style="padding:25px 20px; text-align:center; border: 1.5px solid var(--fa-gold); background: radial-gradient(circle at center, #1F2226 0%, #0D0E10 100%); position: relative; overflow: hidden; border-radius: 20px;">
+    <div style="font-size:12px; color:var(--fa-gold); letter-spacing:4px; text-transform:uppercase; font-weight:800; text-shadow: 0 0 10px rgba(212,175,55,0.4);">✨ MEGA JACKPOT ✨</div>
+    <div style="font-family:'Teko',sans-serif; font-size:52px; color:#FFF; line-height:1; margin:12px 0; text-shadow: 0 0 15px rgba(255, 215, 0, 0.4); display: flex; align-items: center; justify-content: center; gap: 8px;">
+      <span style="font-size: 28px; color: var(--fa-gold);">৳</span>
+      <span id="jp-num" style="background: linear-gradient(180deg, #FFF 0%, #E2E2E2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">88,617,517</span>
     </div>
-    <div style="font-size:12px; color:#6B5227; font-weight: 500;"><%= t.lucky_draw_msg %> 🎁</div>
-    <button class="btn btn-glow" style="margin-top:20px; border-radius:30px; padding:12px 40px; background: var(--grad-primary); color: #fff; font-weight: 800; border: none;" onclick="location.href='/games/slots'"><%= t.play_jackpot %> 🎰</button>
+    <div style="font-size:11px; color:var(--text-muted);"><%= t.lucky_draw_msg %></div>
   </div>
 </div>
 
-<!-- ===== Winners ===== -->
-<div class="section-header">
-  <h3 class="section-title"><i class="fas fa-medal"></i> <%= t.winners_list %></h3>
-  <a href="/leaderboard" class="btn glass" style="font-size:12px;padding:4px 12px;border-radius:20px;color:var(--text-muted);"><%= t.see_all %></a>
+<!-- ===== Winners List ===== -->
+<div class="section-header" style="padding-top: 15px;">
+  <h3 class="section-title"><i class="fas fa-trophy" style="color:var(--fa-gold);"></i> <%= t.winners_list %></h3>
 </div>
-
 <div style="padding:0 12px;">
-  <div class="card glass">
-    <div style="display:grid;grid-template-columns:40px 1fr 1fr;padding:12px;border-bottom:1px solid var(--border-glass);font-size:11px;color:var(--text-muted);font-weight:600;">
+  <div class="card" style="background: rgba(255,255,255,0.02); border-color: rgba(212,175,55,0.15);">
+    <div style="display:grid;grid-template-columns:40px 1fr 1fr;padding:12px;border-bottom:1px solid rgba(255,255,255,0.05);font-size:11px;color:var(--text-muted);font-weight:600;">
       <div>#</div><div><%= t.player %></div><div style="text-align:right"><%= t.win_amount %></div>
     </div>
-    <div style="display:grid;grid-template-columns:40px 1fr 1fr;padding:12px;align-items:center;border-bottom:1px solid var(--border-glass);">
-      <div style="color:var(--gold);font-family:'Teko',sans-serif;font-size:18px;">🥇</div><div style="font-size:13px;">***৮৮২</div><div style="text-align:right;color:#10b981;font-family:'Teko',sans-serif;font-size:16px;">৳১৫,৬৮,৫২৩</div>
+    <div style="display:grid;grid-template-columns:40px 1fr 1fr;padding:12px;align-items:center;border-bottom:1px solid rgba(255,255,255,0.05);">
+      <div style="color:var(--fa-gold);font-family:'Teko',sans-serif;font-size:18px;">🥇</div><div style="font-size:13px; font-weight:600;">***৮৮২</div><div style="text-align:right;color:#10b981;font-family:'Teko',sans-serif;font-size:16px;">৳১৫,৬৮,৫২৩</div>
     </div>
-    <div style="display:grid;grid-template-columns:40px 1fr 1fr;padding:12px;align-items:center;border-bottom:1px solid var(--border-glass);">
-      <div style="color:#94a3b8;font-family:'Teko',sans-serif;font-size:18px;">🥈</div><div style="font-size:13px;">***৭৪২</div><div style="text-align:right;color:#10b981;font-family:'Teko',sans-serif;font-size:16px;">৳১১,৪৪,৫৫৬</div>
+    <div style="display:grid;grid-template-columns:40px 1fr 1fr;padding:12px;align-items:center;border-bottom:1px solid rgba(255,255,255,0.05);">
+      <div style="color:#94a3b8;font-family:'Teko',sans-serif;font-size:18px;">🥈</div><div style="font-size:13px; font-weight:600;">***৭৪২</div><div style="text-align:right;color:#10b981;font-family:'Teko',sans-serif;font-size:16px;">৳১১,৪৪,৫৫৬</div>
     </div>
-    <div style="display:grid;grid-template-columns:40px 1fr 1fr;padding:12px;align-items:center;">
-      <div style="color:#cd7f32;font-family:'Teko',sans-serif;font-size:18px;">🥉</div><div style="font-size:13px;">***১১৮</div><div style="text-align:right;color:#10b981;font-family:'Teko',sans-serif;font-size:16px;">৳৯,৯৮,৫৪১</div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== Promotions ===== -->
-<div class="section-header" style="margin-top:15px;">
-  <h3 class="section-title"><i class="fas fa-gift"></i> <%= t.promotion %></h3>
-</div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 12px;">
-  <div class="card glass" style="padding:15px;cursor:pointer;border-left:4px solid var(--primary);" onclick="location.href='/payment/deposit'">
-    <div style="font-size:13px;font-weight:700;"><%= t.welcome_bonus %></div>
-    <div style="font-family:'Teko',sans-serif;font-size:28px;color:var(--primary);">100%</div>
-  </div>
-  <div class="card glass" style="padding:15px;cursor:pointer;border-left:4px solid var(--accent);">
-    <div style="font-size:13px;font-weight:700;"><%= t.daily_cashback %></div>
-    <div style="font-family:'Teko',sans-serif;font-size:28px;color:var(--accent);">10%</div>
   </div>
 </div>
 
 <!-- ===== Footer ===== -->
 <%- include('partials/footer') %>
 
-<!-- ===== Floating Support ===== -->
-<div style="position:fixed;right:20px;bottom:100px;z-index:999;display:flex;flex-direction:column;gap:10px;">
-  <a href="/chat" style="width:50px;height:50px;border-radius:50%;background:var(--grad-gold);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px rgba(0,0,0,0.4);text-decoration:none;color:#000;font-size:24px;">
-    <i class="fas fa-headset"></i>
-  </a>
-</div>
 <%- include('partials/bottom-nav') %>
 <%- include('partials/floating-promo') %>
 
 <script>
-const games = [
-  {name:"Aviator", emoji:"🚀", type:"pvp", slug:"aviator", badge:"hot", provider:"SPRIBE"},
-  {name:"Teen Patti", emoji:"🃏", type:"pvp", slug:"teen-patti", badge:"pop", provider:"JL"},
-  {name:"Andar Bahar", emoji:"🎴", type:"pvp", slug:"andar-bahar", badge:"hot", provider:"JL"},
-  {name:"Blackjack", emoji:"♠️", type:"table", slug:"blackjack", badge:"", provider:"EVO"},
-  {name:"Baccarat", emoji:"🎰", type:"table", slug:"baccarat", badge:"pop", provider:"EVO"},
-  {name:"Roulette", emoji:"🎡", type:"table", slug:"roulette", badge:"", provider:"EVO"},
-  {name:"Slots", emoji:"🎰", type:"slots", slug:"slots", badge:"hot", provider:"PG"},
-  {name:"Online Ludo", emoji:"🎲", type:"slots", slug:"ludo", badge:"new", provider:"JL"},
-  {name:"Dragon Tiger", emoji:"🐉", type:"live", slug:"dragon-tiger", badge:"pop", provider:"JL"},
-  {name:"Color Prediction", emoji:"🌈", type:"slots", slug:"color-prediction", badge:"new", provider:"JL"},
-  {name:"Mine Game", emoji:"💣", type:"slots", slug:"mine", badge:"hot", provider:"JL"},
+// Mock list of rich games under specific categories matching FA999
+const gamesList = [
+  {name:"Aviator", emoji:"🚀", type:"hot", slug:"aviator", badge:"hot", provider:"SPRIBE"},
   {name:"Fortune Gems", emoji:"💎", type:"slots", slug:"fortune-gems", badge:"hot", provider:"JDB"},
-  {name:"Sweet Bonanza", emoji:"🍭", type:"slots", slug:"sweet-bonanza", badge:"pop", provider:"PP"},
-  {name:"Gates of Olympus", emoji:"⚡", type:"slots", slug:"gates-of-olympus", badge:"hot", provider:"PP"},
   {name:"Crazy Time", emoji:"🎡", type:"live", slug:"crazy-time", badge:"hot", provider:"EVO"},
-  {name:"Mega Ball", emoji:"🟡", type:"live", slug:"mega-ball", badge:"pop", provider:"EVO"},
-  {name:"Rummy", emoji:"🃏", type:"slots", slug:"rummy", badge:"hot", provider:"JL"},
-  {name:"Call Break", emoji:"♠️", type:"slots", slug:"call-break", badge:"pop", provider:"JL"},
-  {name:"Lightning Roulette", emoji:"⚡", type:"live", slug:"lightning-roulette", badge:"hot", provider:"EVO"},
-  {name:"Mines", emoji:"💣", type:"slots", slug:"mines", badge:"new", provider:"SPRIBE"},
-  {name:"Sugar Pop", emoji:"🍬", type:"slots", slug:"sugar-pop", badge:"new", provider:"BS"},
-  {name:"Big Bad Wolf", emoji:"🐺", type:"slots", slug:"big-bad-wolf", badge:"new", provider:"QS"},
-  {name:"Mega Fishing", emoji:"🎣", type:"fishing", slug:"mega-fishing", badge:"hot", provider:"JL"},
-  {name:"Happy Fishing", emoji:"🐠", type:"fishing", slug:"happy-fishing", badge:"new", provider:"JL"},
-  {name:"Win Go", emoji:"🎟️", type:"lottery", slug:"win-go", badge:"hot", provider:"JL"},
-  {name:"Keno", emoji:"🔢", type:"lottery", slug:"keno", badge:"pop", provider:"JL"},
+  {name:"Teen Patti", emoji:"🃏", type:"poker", slug:"teen-patti", badge:"pop", provider:"JL"},
+  {name:"Gates of Olympus", emoji:"⚡", type:"slots", slug:"gates-of-olympus", badge:"hot", provider:"PP"},
+  {name:"Sweet Bonanza", emoji:"🍭", type:"slots", slug:"sweet-bonanza", badge:"pop", provider:"PP"},
+  {name:"Baccarat", emoji:"🃏", type:"live", slug:"baccarat", badge:"pop", provider:"EVO"},
+  {name:"Lightning Roulette", emoji:"🎡", type:"live", slug:"lightning-roulette", badge:"hot", provider:"EVO"},
+  {name:"Dragon Tiger", emoji:"🐉", type:"live", slug:"dragon-tiger", badge:"pop", provider:"JL"},
+  {name:"Andar Bahar", emoji:"🎴", type:"poker", slug:"andar-bahar", badge:"hot", provider:"JL"},
+  {name:"Virtual Cricket", emoji:"🏏", type:"sports", slug:"cricket", badge:"live", provider:"LIVO"},
+  {name:"Pro Football", emoji:"⚽", type:"sports", slug:"football", badge:"hot", provider:"LIVO"},
+  {name:"Texas Holdem", emoji:"♠️", type:"poker", slug:"poker", badge:"pro", provider:"JL"},
+  {name:"Omaha Poker", emoji:"♦️", type:"poker", slug:"poker", badge:"new", provider:"EVO"}
 ];
+
+let selectedCategory = 'all';
 
 function renderGames() {
   const c = document.getElementById('gameContainer');
   if(!c) return;
   c.innerHTML = '';
-  var gsEl = document.getElementById('gameSearch');
-  const searchQ = gsEl ? gsEl.value.toLowerCase() : '';
-  const filtered = games.filter(g => g.name.toLowerCase().includes(searchQ));
+
+  const searchQ = document.getElementById('gameSearch') ? document.getElementById('gameSearch').value.toLowerCase() : '';
+
+  const filtered = gamesList.filter(g => {
+    const matchesSearch = g.name.toLowerCase().includes(searchQ);
+    const matchesCategory = selectedCategory === 'all' || g.type === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   if (filtered.length === 0) {
-    c.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);"><%= t.no_games_found %></div>`;
+    c.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted); font-size: 13px;"><%= t.no_games_found %></div>`;
     return;
   }
 
   filtered.forEach(g => {
-    const badgeHTML = g.badge ? `<div style="position:absolute;top:8px;left:8px;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;background:var(--grad-gold);color:var(--text-inverse);z-index:2;">${g.badge.toUpperCase()}</div>` : '';
+    const badgeHTML = g.badge ? `<div class="game-badge-premium">${g.badge}</div>` : '';
     c.innerHTML += `
-      <a href="/games/${g.slug}" class="game-card" style="display:block;text-decoration:none;border-color: rgba(245, 158, 11, 0.2); transition: transform 0.2s; position:relative;">
-        <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:40px;background:var(--grad-surface);">
+      <a href="/games/${g.slug}" class="game-card-premium">
+        <div class="game-thumb-wrapper">
           <span class="game-emoji">${g.emoji}</span>
           ${badgeHTML}
-          <div style="padding:8px;background:var(--bg-glass);border-top:1px solid var(--border-glass);">
-            <div style="font-size:11px;font-weight:700;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${g.name}</div>
-            <div style="font-size:9px;color:var(--gold);">${g.provider}</div>
-          </div>
+        </div>
+        <div class="game-info-premium">
+          <div class="game-title-premium">${g.name}</div>
+          <div class="game-provider-premium">${g.provider}</div>
         </div>
       </a>`;
   });
 }
 
-document.querySelectorAll('.cat-item').forEach(el => {
+// Category Tab Filtering Handler
+document.querySelectorAll('.nav-tab-item').forEach(el => {
   el.addEventListener('click', () => {
-    const link = el.dataset.link;
-    if (link) location.href = link;
+    document.querySelectorAll('.nav-tab-item').forEach(item => item.classList.remove('active'));
+    el.classList.add('active');
+    selectedCategory = el.dataset.category;
+    renderGames();
   });
 });
 
-var gs2 = document.getElementById('gameSearch');
-if (gs2) gs2.addEventListener('input', renderGames);
+var gs = document.getElementById('gameSearch');
+if (gs) {
+  gs.addEventListener('input', renderGames);
+}
 
-let jp = 88617517;
+// Multi-currency Jackpot Ticker
+let jpValue = 88617517;
 setInterval(() => {
-  jp += Math.floor(Math.random() * 600 + 100);
-  const jpN = document.getElementById('jp-num');
-  if(jpN) jpN.textContent = jp.toLocaleString('<%= lang === 'bn' ? 'bn-BD' : 'en-US' %>');
-}, 2000);
+  jpValue += Math.floor(Math.random() * 500 + 50);
+  const jpNumEl = document.getElementById('jp-num');
+  if(jpNumEl) jpNumEl.textContent = jpValue.toLocaleString('<%= lang === 'bn' ? 'bn-BD' : 'en-US' %>');
+}, 1500);
 
 document.addEventListener('DOMContentLoaded', renderGames);
-renderGames();
 </script>
 
 </body></html>
