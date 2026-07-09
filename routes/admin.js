@@ -93,6 +93,90 @@ router.get('/logout', (req, res) => {
 // ==================== à¦¸à¦¬ à¦°à¦¾à¦à¦ à¦ªà§à¦°à§à¦à§à¦à§à¦à§à¦¡ ====================
 router.use(isAdmin);
 
+// ==================== KYC ভেরিফিকেশন ====================
+router.get('/kyc', async (req, res) => {
+  try {
+    const status = req.query.status || '';
+    const q = req.query.q || '';
+    const params = [];
+    let query = `
+      SELECT k.*, u.username, u.phone
+      FROM kyc_requests k
+      LEFT JOIN users u ON u.id = k.user_id
+      WHERE 1=1
+    `;
+    if (status) {
+      params.push(status);
+      query += ` AND k.status = $${params.length}`;
+    }
+    if (q) {
+      params.push(`%${q}%`);
+      query += ` AND (u.username ILIKE $${params.length} OR u.phone ILIKE $${params.length} OR k.full_name ILIKE $${params.length})`;
+    }
+    query += ' ORDER BY k.created_at DESC LIMIT 200';
+
+    const result = await pool.query(query, params);
+    const statsRes = await pool.query(`
+      SELECT
+        COUNT(*) AS total,
+        COUNT(*) FILTER (WHERE status = 'pending') AS pending,
+        COUNT(*) FILTER (WHERE status = 'approved') AS approved,
+        COUNT(*) FILTER (WHERE status = 'rejected') AS rejected
+      FROM kyc_requests
+    `);
+
+    res.render('admin/kyc', {
+      kycList: result.rows,
+      stats: statsRes.rows[0],
+      filters: { status, q }
+    });
+  } catch (err) {
+    console.error('KYC list error:', err.message);
+    res.render('admin/kyc', {
+      kycList: [],
+      stats: { total: 0, pending: 0, approved: 0, rejected: 0 },
+      filters: { status: '', q: '' }
+    });
+  }
+});
+
+router.post('/kyc/:id/approve', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const r = await pool.query(
+      "UPDATE kyc_requests SET status = 'approved', updated_at = NOW() WHERE id = $1 RETURNING user_id",
+      [id]
+    );
+    if (r.rows[0]) {
+      await pool.query("UPDATE users SET kyc_status = 'approved' WHERE id = $1", [r.rows[0].user_id]);
+    }
+    await logAdminAction(req.session.user.id, req.session.user.username, 'KYC_APPROVE', `KYC #${id} অনুমোদন করা হয়েছে`, req.ip);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('KYC approve error:', err.message);
+    res.status(500).json({ success: false, message: 'সার্ভার এরর' });
+  }
+});
+
+router.post('/kyc/:id/reject', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const reason = (req.body && req.body.reason) || '';
+    const r = await pool.query(
+      "UPDATE kyc_requests SET status = 'rejected', updated_at = NOW() WHERE id = $1 RETURNING user_id",
+      [id]
+    );
+    if (r.rows[0]) {
+      await pool.query("UPDATE users SET kyc_status = 'rejected' WHERE id = $1", [r.rows[0].user_id]);
+    }
+    await logAdminAction(req.session.user.id, req.session.user.username, 'KYC_REJECT', `KYC #${id} বাতিল করা হয়েছে। কারণ: ${reason}`, req.ip);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('KYC reject error:', err.message);
+    res.status(500).json({ success: false, message: 'সার্ভার এরর' });
+  }
+});
+
 // ==================== DASHBOARD ====================
 router.get('/', async (req, res) => {
   try {
@@ -505,5 +589,3 @@ router.post('/bets/:id/settle', async (req, res) => {
     client.release();
   }
 });
-
-module.exports = router;
