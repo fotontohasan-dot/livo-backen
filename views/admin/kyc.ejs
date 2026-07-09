@@ -1,206 +1,200 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="bn">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KYC Verification • Livo Admin</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KYC ভেরিফিকেশন • Livo Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
+    .kyc-filters { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+    .kyc-filters .input-icon-wrap { flex: 1; min-width: 180px; }
+    .kyc-filters .select { width: auto; min-width: 130px; }
+    .doc-preview { width: 100%; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); margin-top: 8px; }
+    .kv-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 12px; }
+    .kv-row span:first-child { color: #64748b; }
+    .kv-row span:last-child { color: #e2e8f0; font-weight: 600; }
+  </style>
 </head>
-<body class="bg-slate-950 text-white">
-    <div class="flex h-screen">
-        <!-- Sidebar -->
-        <%- include('../partials/sidebar', { activePage: 'kyc' }) %>
+<body>
+  <div class="admin-wrap">
+    <%- include('./partials/sidebar', { active: 'kyc' }) %>
 
-        <!-- Main Content -->
-        <div class="flex-1 flex flex-col overflow-hidden">
-            <!-- Header -->
-            <%- include('../partials/header', { 
-                pageTitle: 'KYC Verification', 
-                pageSubtitle: 'Review and manage user identity documents' 
-            }) %>
+    <div class="admin-content">
+      <%- include('./partials/header', {
+        pageTitle: 'KYC ভেরিফিকেশন',
+        pageSubtitle: 'ইউজারদের পরিচয়পত্র যাচাই ও অনুমোদন'
+      }) %>
 
-            <main class="flex-1 overflow-y-auto p-6">
-                <!-- Stats Cards -->
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                    <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-slate-400 text-sm">Total Applications</p>
-                                <p class="text-3xl font-bold mt-1"><%= stats.total || 0 %></p>
-                            </div>
-                            <div class="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center">
-                                <i class="fas fa-id-card text-blue-400 text-2xl"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-slate-400 text-sm">Pending Review</p>
-                                <p class="text-3xl font-bold mt-1 text-yellow-400"><%= stats.pending || 0 %></p>
-                            </div>
-                            <div class="w-12 h-12 bg-yellow-500/10 rounded-2xl flex items-center justify-center">
-                                <i class="fas fa-clock text-yellow-400 text-2xl"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-slate-400 text-sm">Approved</p>
-                                <p class="text-3xl font-bold mt-1 text-emerald-400"><%= stats.approved || 0 %></p>
-                            </div>
-                            <div class="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center">
-                                <i class="fas fa-check-circle text-emerald-400 text-2xl"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-slate-400 text-sm">Rejected</p>
-                                <p class="text-3xl font-bold mt-1 text-red-400"><%= stats.rejected || 0 %></p>
-                            </div>
-                            <div class="w-12 h-12 bg-red-500/10 rounded-2xl flex items-center justify-center">
-                                <i class="fas fa-times-circle text-red-400 text-2xl"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Search and Filter -->
-                <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 mb-6">
-                    <div class="flex flex-col md:flex-row gap-4">
-                        <div class="flex-1">
-                            <div class="relative">
-                                <i class="fas fa-search absolute left-4 top-3.5 text-slate-400"></i>
-                                <input type="text" id="searchInput" placeholder="Search by name or user ID..." 
-                                       class="w-full bg-slate-800 border border-slate-700 pl-11 pr-4 py-3 rounded-2xl text-sm focus:outline-none focus:border-blue-500">
-                            </div>
-                        </div>
-                        <select id="statusFilter" class="bg-slate-800 border border-slate-700 px-4 py-3 rounded-2xl text-sm focus:outline-none focus:border-blue-500">
-                            <option value="">All Status</option>
-                            <option value="pending">Pending</option>
-                            <option value="approved">Approved</option>
-                            <option value="rejected">Rejected</option>
-                        </select>
-                        <button onclick="exportCSV()" 
-                                class="px-6 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-2xl text-sm flex items-center gap-2 transition-colors">
-                            <i class="fas fa-download"></i>
-                            <span>Export CSV</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- KYC Table -->
-                <div class="bg-slate-900 border border-slate-700 rounded-3xl overflow-hidden">
-                    <table class="w-full">
-                        <thead class="bg-slate-800">
-                            <tr>
-                                <th class="text-left px-6 py-4 text-sm font-medium text-slate-300">User</th>
-                                <th class="text-left px-6 py-4 text-sm font-medium text-slate-300">Document Type</th>
-                                <th class="text-left px-6 py-4 text-sm font-medium text-slate-300">Submitted</th>
-                                <th class="text-left px-6 py-4 text-sm font-medium text-slate-300">Status</th>
-                                <th class="text-right px-6 py-4 text-sm font-medium text-slate-300">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-700" id="kycTableBody">
-                            <% if (kycList && kycList.length > 0) { %>
-                                <% kycList.forEach(kyc => { %>
-                                    <tr class="hover:bg-slate-800/50 transition-colors">
-                                        <td class="px-6 py-4">
-                                            <div class="flex items-center gap-3">
-                                                <div class="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center">
-                                                    <i class="fas fa-user text-slate-400"></i>
-                                                </div>
-                                                <div>
-                                                    <p class="font-medium"><%= kyc.userName || 'N/A' %></p>
-                                                    <p class="text-xs text-slate-400"><%= kyc.userId || '' %></p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4 text-sm"><%= kyc.documentType || 'NID / Passport' %></td>
-                                        <td class="px-6 py-4 text-sm text-slate-300"><%= kyc.submittedAt ? new Date(kyc.submittedAt).toLocaleDateString() : 'N/A' %></td>
-                                        <td class="px-6 py-4">
-                                            <% if (kyc.status === 'approved') { %>
-                                                <span class="px-3 py-1 text-xs rounded-full bg-emerald-500/10 text-emerald-400">Approved</span>
-                                            <% } else if (kyc.status === 'rejected') { %>
-                                                <span class="px-3 py-1 text-xs rounded-full bg-red-500/10 text-red-400">Rejected</span>
-                                            <% } else { %>
-                                                <span class="px-3 py-1 text-xs rounded-full bg-yellow-500/10 text-yellow-400">Pending</span>
-                                            <% } %>
-                                        </td>
-                                        <td class="px-6 py-4 text-right">
-                                            <div class="flex items-center justify-end gap-2">
-                                                <button onclick="viewDocument('<%= kyc.id %>')" 
-                                                        class="px-4 py-2 text-sm bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors">
-                                                    View
-                                                </button>
-                                                <% if (kyc.status === 'pending') { %>
-                                                    <button onclick="approveKYC('<%= kyc.id %>')" 
-                                                            class="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors">
-                                                        Approve
-                                                    </button>
-                                                    <button onclick="rejectKYC('<%= kyc.id %>')" 
-                                                            class="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 rounded-xl transition-colors">
-                                                        Reject
-                                                    </button>
-                                                <% } %>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                <% }) %>
-                            <% } else { %>
-                                <tr>
-                                    <td colspan="5" class="px-6 py-12 text-center text-slate-400">
-                                        No KYC applications found
-                                    </td>
-                                </tr>
-                            <% } %>
-                        </tbody>
-                    </table>
-                </div>
-            </main>
+      <div class="grid grid-4" style="margin-bottom:14px;">
+        <div class="stat-card">
+          <div class="stat-label">মোট আবেদন</div>
+          <div class="stat-number"><%= stats.total || 0 %></div>
         </div>
+        <div class="stat-card">
+          <div class="stat-label">পেন্ডিং</div>
+          <div class="stat-number" style="color:#f59e0b;"><%= stats.pending || 0 %></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">অনুমোদিত</div>
+          <div class="stat-number" style="color:#10b981;"><%= stats.approved || 0 %></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">বাতিল</div>
+          <div class="stat-number" style="color:#ef4444;"><%= stats.rejected || 0 %></div>
+        </div>
+      </div>
+
+      <form class="kyc-filters" method="GET" action="/admin/kyc">
+        <div class="input-icon-wrap">
+          <i class="fas fa-search"></i>
+          <input class="input" type="text" name="q" placeholder="নাম, ইউজারনেম বা ফোন দিয়ে খুঁজুন..." value="<%= filters.q || '' %>">
+        </div>
+        <select class="select" name="status" onchange="this.form.submit()">
+          <option value="">সব স্ট্যাটাস</option>
+          <option value="pending" <%= filters.status === 'pending' ? 'selected' : '' %>>পেন্ডিং</option>
+          <option value="approved" <%= filters.status === 'approved' ? 'selected' : '' %>>অনুমোদিত</option>
+          <option value="rejected" <%= filters.status === 'rejected' ? 'selected' : '' %>>বাতিল</option>
+        </select>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> ফিল্টার</button>
+      </form>
+
+      <div class="admin-card">
+        <div class="admin-card-header">KYC আবেদনসমূহ</div>
+        <div style="overflow-x:auto;">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>ইউজার</th>
+                <th>ডকুমেন্ট</th>
+                <th>জমার তারিখ</th>
+                <th>স্ট্যাটাস</th>
+                <th style="text-align:right;">অ্যাকশন</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (kycList && kycList.length > 0) { %>
+                <% kycList.forEach(k => { %>
+                  <tr>
+                    <td>
+                      <div style="font-weight:700;"><%= k.full_name || k.username || 'N/A' %></div>
+                      <div style="color:#64748b;font-size:11px;">@<%= k.username || '—' %> · <%= k.phone || '—' %></div>
+                    </td>
+                    <td><%= k.document_type || '—' %></td>
+                    <td><%= k.created_at ? new Date(k.created_at).toLocaleDateString('bn-BD') : '—' %></td>
+                    <td>
+                      <% if (k.status === 'approved') { %>
+                        <span class="badge badge-green">অনুমোদিত</span>
+                      <% } else if (k.status === 'rejected') { %>
+                        <span class="badge badge-red">বাতিল</span>
+                      <% } else { %>
+                        <span class="badge badge-amber">পেন্ডিং</span>
+                      <% } %>
+                    </td>
+                    <td style="text-align:right;">
+                      <button class="btn btn-sm" onclick='viewKyc(<%- JSON.stringify(k) %>)'>বিস্তারিত</button>
+                      <% if (k.status === 'pending') { %>
+                        <button class="btn btn-sm btn-green" onclick="approveKyc(<%= k.id %>)">অনুমোদন</button>
+                        <button class="btn btn-sm btn-red" onclick="rejectKyc(<%= k.id %>)">বাতিল</button>
+                      <% } %>
+                    </td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="5"><div class="empty-state"><i class="fas fa-id-card" style="font-size:22px;margin-bottom:8px;display:block;"></i>কোনো KYC আবেদন পাওয়া যায়নি</div></td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
+  </div>
 
-    <!-- Modals for View, Approve, Reject -->
-    <!-- Add your modal HTML/JS here (same as previous modern version) -->
+  <!-- View Modal -->
+  <div class="modal-overlay" id="viewModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>KYC বিস্তারিত</h3>
+        <button class="modal-close" onclick="closeModal('viewModal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body" id="viewModalBody"></div>
+    </div>
+  </div>
 
-    <script>
-        // Search and Filter JS
-        function filterTable() {
-            // Add your filter logic here
-            console.log('Filtering...');
-        }
+  <!-- Reject Modal -->
+  <div class="modal-overlay" id="rejectModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>বাতিলের কারণ</h3>
+        <button class="modal-close" onclick="closeModal('rejectModal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <textarea class="input" id="rejectReason" rows="3" placeholder="কারণ লিখুন (ইউজারকে দেখানো হবে)"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal('rejectModal')">বাতিল করুন</button>
+        <button class="btn btn-red" id="confirmRejectBtn">বাতিল নিশ্চিত করুন</button>
+      </div>
+    </div>
+  </div>
 
-        function exportCSV() {
-            alert('CSV export triggered (implement backend if needed)');
-        }
+  <script>
+    var pendingRejectId = null;
 
-        function viewDocument(id) {
-            alert('View document for ID: ' + id + ' (implement modal)');
-        }
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('show');
+    }
 
-        function approveKYC(id) {
-            if (confirm('Approve this KYC?')) {
-                // Call your backend route
-                window.location.href = '/admin/kyc/approve/' + id;
-            }
-        }
+    function viewKyc(k) {
+      var html = '';
+      html += '<div class="kv-row"><span>নাম</span><span>' + (k.full_name || '—') + '</span></div>';
+      html += '<div class="kv-row"><span>ইউজারনেম</span><span>@' + (k.username || '—') + '</span></div>';
+      html += '<div class="kv-row"><span>ফোন</span><span>' + (k.phone || '—') + '</span></div>';
+      html += '<div class="kv-row"><span>ডকুমেন্ট টাইপ</span><span>' + (k.document_type || '—') + '</span></div>';
+      html += '<div class="kv-row"><span>ডকুমেন্ট নম্বর</span><span>' + (k.document_number || '—') + '</span></div>';
+      html += '<div class="kv-row"><span>জমার তারিখ</span><span>' + (k.created_at ? new Date(k.created_at).toLocaleString('bn-BD') : '—') + '</span></div>';
+      if (k.document_url) {
+        html += '<a href="' + k.document_url + '" target="_blank"><img class="doc-preview" src="' + k.document_url + '" onerror="this.style.display=\'none\'"></a>';
+        html += '<a class="btn btn-sm" style="margin-top:8px;" href="' + k.document_url + '" target="_blank"><i class="fas fa-external-link-alt"></i> মূল ডকুমেন্ট দেখুন</a>';
+      }
+      document.getElementById('viewModalBody').innerHTML = html;
+      document.getElementById('viewModal').classList.add('show');
+    }
 
-        function rejectKYC(id) {
-            const reason = prompt('Enter rejection reason:');
-            if (reason) {
-                // Call your backend route with reason
-                window.location.href = '/admin/kyc/reject/' + id + '?reason=' + encodeURIComponent(reason);
-            }
-        }
+    function approveKyc(id) {
+      if (!confirm('এই KYC আবেদনটি অনুমোদন করবেন?')) return;
+      fetch('/admin/kyc/' + id + '/approve', { method: 'POST' })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.success) { showAdminToast('অনুমোদন সম্পন্ন হয়েছে'); setTimeout(function(){ location.reload(); }, 700); }
+          else { alert(data.message || 'সমস্যা হয়েছে'); }
+        })
+        .catch(function () { alert('সার্ভার এরর'); });
+    }
 
-        // Attach filter listeners
-        document.getElementById('searchInput').addEventListener('input', filterTable);
-        document.getElementById('statusFilter').addEventListener('change', filterTable);
-    </script>
+    function rejectKyc(id) {
+      pendingRejectId = id;
+      document.getElementById('rejectReason').value = '';
+      document.getElementById('rejectModal').classList.add('show');
+    }
+
+    document.getElementById('confirmRejectBtn').addEventListener('click', function () {
+      var reason = document.getElementById('rejectReason').value.trim();
+      if (!pendingRejectId) return;
+      fetch('/admin/kyc/' + pendingRejectId + '/reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: reason })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          closeModal('rejectModal');
+          if (data.success) { showAdminToast('আবেদন বাতিল করা হয়েছে'); setTimeout(function(){ location.reload(); }, 700); }
+          else { alert(data.message || 'সমস্যা হয়েছে'); }
+        })
+        .catch(function () { alert('সার্ভার এরর'); });
+    });
+  </script>
 </body>
 </html>
