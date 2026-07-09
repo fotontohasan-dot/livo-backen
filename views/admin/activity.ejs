@@ -1,277 +1,62 @@
-<%- include('../partials/head') %>
-<%- include('../partials/admin-header') %>
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>অ্যাক্টিভিটি লগ • Livo Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
+    .activity-filters { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+    .activity-filters .input-icon-wrap { flex: 1; min-width: 180px; }
+    .log-row { display: flex; gap: 10px; padding: 11px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .log-icon { width: 32px; height: 32px; border-radius: 8px; background: rgba(245,158,11,0.1); color: #f59e0b; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="admin-wrap">
+    <%- include('./partials/sidebar', { active: 'activity' }) %>
+    <div class="admin-content">
+      <%- include('./partials/header', { pageTitle: 'অ্যাক্টিভিটি লগ', pageSubtitle: 'অ্যাডমিনদের কার্যকলাপের ইতিহাস' }) %>
 
-<div class="flex min-h-screen bg-[#0f172a]">
-  <%- include('../partials/admin-sidebar') %>
-
-  <main class="flex-1 p-6 lg:p-8 overflow-auto">
-    
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <h1 class="text-3xl font-bold text-white">Activity Log</h1>
-        <p class="text-gray-400 text-sm mt-1">Track all important admin actions and system events</p>
-      </div>
-      <div class="flex items-center gap-3">
-        <button onclick="exportToCSV()" 
-                class="flex items-center gap-2 px-5 py-2.5 bg-[#1e2937] hover:bg-[#334155] border border-[#475569] text-white rounded-2xl text-sm font-medium transition-all">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2 5.002 5.002 0 019 0 2 2 0 012 2v14a2 2 0 01-2 2z" />
-          </svg>
-          Export CSV
-        </button>
-        <button onclick="window.location.reload()" 
-                class="flex items-center gap-2 px-5 py-2.5 bg-[#f59e0b] hover:bg-[#d97706] text-black font-bold rounded-2xl text-sm transition-all">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.058 11H1M12 3v2m0 16v2m9-9H15m-6 0a8.002 8.002 0 01-3.356-1.5" />
-          </svg>
-          Refresh
-        </button>
-      </div>
-    </div>
-
-    <!-- Stats Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-5">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-gray-400 text-sm">Total Activities</p>
-            <p class="text-3xl font-bold text-white mt-1" id="stat-total"><%= typeof activities !== 'undefined' ? activities.length : 0 %></p>
-          </div>
-          <div class="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2 5.002 5.002 0 019 0 2 2 0 002-2V7a2 2 0 00-2-2 5.002 5.002 0 019 0 2 2 0 002 2v5" />
-            </svg>
-          </div>
+      <form class="activity-filters" method="GET" action="/admin/activity">
+        <div class="input-icon-wrap">
+          <i class="fas fa-search"></i>
+          <input class="input" type="text" name="q" placeholder="অ্যাডমিন বা বিবরণ দিয়ে খুঁজুন..." value="<%= filters.q || '' %>">
         </div>
-      </div>
+        <select class="select" name="action_type" onchange="this.form.submit()" style="width:auto;min-width:160px;">
+          <option value="">সব ধরনের অ্যাকশন</option>
+          <% actionTypes.forEach(t => { %>
+            <option value="<%= t %>" <%= filters.action_type === t ? 'selected' : '' %>><%= t %></option>
+          <% }) %>
+        </select>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> ফিল্টার</button>
+      </form>
 
-      <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-5">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-gray-400 text-sm">Today</p>
-            <p class="text-3xl font-bold text-white mt-1" id="stat-today">0</p>
-          </div>
-          <div class="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z" />
-            </svg>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-5">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-gray-400 text-sm">This Week</p>
-            <p class="text-3xl font-bold text-white mt-1" id="stat-week">0</p>
-          </div>
-          <div class="w-12 h-12 bg-purple-500/10 rounded-2xl flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-            </svg>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-5">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-gray-400 text-sm">Critical Actions</p>
-            <p class="text-3xl font-bold text-white mt-1" id="stat-critical">0</p>
-          </div>
-          <div class="w-12 h-12 bg-red-500/10 rounded-2xl flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Search & Filter -->
-    <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-5 mb-6">
-      <div class="flex flex-col lg:flex-row gap-4">
-        <div class="flex-1">
-          <div class="relative">
-            <input type="text" id="searchInput" placeholder="Search by admin name or details..." 
-                   class="w-full bg-[#0f172a] border border-[#475569] text-white rounded-2xl pl-11 pr-4 py-3 text-sm focus:outline-none focus:border-[#f59e0b]">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 absolute left-4 top-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
-        </div>
-        
-        <div class="w-full lg:w-64">
-          <select id="actionFilter" class="w-full bg-[#0f172a] border border-[#475569] text-white rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-[#f59e0b]">
-            <option value="">All Action Types</option>
-            <option value="coin_add">Coin Added</option>
-            <option value="coin_remove">Coin Removed</option>
-            <option value="user_ban">User Banned/Unbanned</option>
-            <option value="bet_settle">Bet Settled</option>
-            <option value="kyc">KYC Action</option>
-            <option value="login">Admin Login</option>
-            <option value="other">Other</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <!-- Activity Table -->
-    <div class="bg-[#1e2937] border border-[#334155] rounded-3xl overflow-hidden">
-      <table class="w-full text-sm" id="activityTable">
-        <thead class="bg-[#0f172a]">
-          <tr class="text-gray-400">
-            <th class="text-left px-6 py-4 font-medium">Time</th>
-            <th class="text-left px-4 py-4 font-medium">Admin</th>
-            <th class="text-left px-4 py-4 font-medium">Action</th>
-            <th class="text-left px-6 py-4 font-medium">Details</th>
-            <th class="text-center px-6 py-4 font-medium">IP Address</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-[#334155] text-gray-300" id="activityBody">
-          <% if (typeof activities !== 'undefined' && activities.length > 0) { %>
-            <% activities.forEach((log, index) => { %>
-            <tr class="hover:bg-[#0f172a] transition-colors activity-row" data-action="<%= log.action_type %>" data-admin="<%= log.admin_username || '' %>" data-details="<%= log.details || '' %>">
-              <td class="px-6 py-4 text-xs text-gray-400 whitespace-nowrap">
-                <%= new Date(log.created_at).toLocaleString() %>
-              </td>
-              <td class="px-4 py-4 font-medium text-white">
-                <%= log.admin_username || 'System' %>
-              </td>
-              <td class="px-4 py-4">
-                <% 
-                  let badgeClass = 'bg-gray-500/20 text-gray-400';
-                  let icon = '📋';
-                  if (log.action_type && log.action_type.includes('coin')) { badgeClass = 'bg-emerald-500/20 text-emerald-400'; icon = '💰'; }
-                  else if (log.action_type && log.action_type.includes('ban')) { badgeClass = 'bg-red-500/20 text-red-400'; icon = '🚫'; }
-                  else if (log.action_type && log.action_type.includes('bet')) { badgeClass = 'bg-yellow-500/20 text-yellow-400'; icon = '🎯'; }
-                  else if (log.action_type && log.action_type.includes('kyc')) { badgeClass = 'bg-blue-500/20 text-blue-400'; icon = '🪪'; }
-                  else if (log.action_type && log.action_type.includes('login')) { badgeClass = 'bg-purple-500/20 text-purple-400'; icon = '🔑'; }
-                %>
-                <span class="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full <%= badgeClass %>">
-                  <span><%= icon %></span>
-                  <%= log.action_type || 'Unknown' %>
-                </span>
-              </td>
-              <td class="px-6 py-4 text-sm text-gray-300 max-w-[420px] truncate">
-                <%= log.details || '-' %>
-              </td>
-              <td class="px-6 py-4 text-center text-xs text-gray-500 font-mono">
-                <%= log.ip_address || '-' %>
-              </td>
-            </tr>
-            <% }) %>
-          <% } else { %>
-            <tr>
-              <td colspan="5" class="px-6 py-16 text-center">
-                <div class="flex flex-col items-center justify-center text-gray-500">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 mb-3 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2 5.002 5.002 0 019 0 2 2 0 002-2V7a2 2 0 00-2-2 5.002 5.002 0 019 0 2 2 0 002 2v5" />
-                  </svg>
-                  <p class="font-medium">No activity logs found</p>
-                  <p class="text-sm mt-1">Admin actions will appear here</p>
+      <div class="admin-card">
+        <div class="admin-card-header">সাম্প্রতিক কার্যকলাপ</div>
+        <% if (logs && logs.length > 0) { %>
+          <% logs.forEach(l => { %>
+            <div class="log-row">
+              <div class="log-icon"><i class="fas fa-bolt"></i></div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:12px;color:#e2e8f0;">
+                  <span style="font-weight:700;color:#fff;">@<%= l.admin_username || 'system' %></span>
+                  &nbsp;<span class="badge badge-amber" style="font-size:9px;"><%= l.action_type %></span>
                 </div>
-              </td>
-            </tr>
-          <% } %>
-        </tbody>
-      </table>
+                <div style="font-size:12px;color:#94a3b8;margin-top:3px;"><%= l.details || '' %></div>
+                <div style="font-size:10px;color:#475569;margin-top:3px;">
+                  <%= l.created_at ? new Date(l.created_at).toLocaleString('bn-BD') : '' %> <%= l.ip_address ? '· ' + l.ip_address : '' %>
+                </div>
+              </div>
+            </div>
+          <% }) %>
+        <% } else { %>
+          <div class="empty-state">কোনো অ্যাক্টিভিটি পাওয়া যায়নি</div>
+        <% } %>
+      </div>
     </div>
-
-    <p class="text-center text-gray-500 text-xs mt-4">Showing latest activities. Data is updated in real-time.</p>
-
-  </main>
-</div>
-
-<script>
-  // Live Search + Filter
-  const searchInput = document.getElementById('searchInput');
-  const actionFilter = document.getElementById('actionFilter');
-  const rows = document.querySelectorAll('.activity-row');
-
-  function filterTable() {
-    const searchTerm = searchInput.value.toLowerCase();
-    const actionType = actionFilter.value.toLowerCase();
-
-    rows.forEach(row => {
-      const admin = (row.dataset.admin || '').toLowerCase();
-      const details = (row.dataset.details || '').toLowerCase();
-      const action = (row.dataset.action || '').toLowerCase();
-
-      const matchesSearch = admin.includes(searchTerm) || details.includes(searchTerm);
-      const matchesAction = !actionType || action.includes(actionType);
-
-      row.style.display = (matchesSearch && matchesAction) ? '' : 'none';
-    });
-  }
-
-  searchInput.addEventListener('input', filterTable);
-  actionFilter.addEventListener('change', filterTable);
-
-  // Export to CSV
-  function exportToCSV() {
-    const table = document.getElementById('activityTable');
-    let csv = [];
-    const rows = table.querySelectorAll('tr');
-
-    rows.forEach(row => {
-      if (row.style.display === 'none') return;
-      const cols = row.querySelectorAll('td, th');
-      let rowData = [];
-      cols.forEach(col => {
-        let text = col.innerText.replace(/"/g, '""');
-        rowData.push('"' + text + '"');
-      });
-      csv.push(rowData.join(','));
-    });
-
-    const csvContent = csv.join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.href = url;
-    link.download = `activity-log-${new Date().toISOString().slice(0,10)}.csv`;
-    link.click();
-  }
-
-  // Calculate stats on load
-  function calculateStats() {
-    const allRows = document.querySelectorAll('.activity-row');
-    const total = allRows.length;
-    document.getElementById('stat-total').innerText = total;
-
-    let todayCount = 0;
-    let weekCount = 0;
-    let criticalCount = 0;
-
-    const now = new Date();
-    const todayStr = now.toDateString();
-    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-    allRows.forEach(row => {
-      const timeText = row.cells[0].innerText;
-      const action = (row.dataset.action || '').toLowerCase();
-
-      try {
-        const logDate = new Date(timeText);
-        
-        if (logDate.toDateString() === todayStr) todayCount++;
-        if (logDate >= weekAgo) weekCount++;
-        
-        if (action.includes('ban') || action.includes('remove') || action.includes('delete')) {
-          criticalCount++;
-        }
-      } catch(e) {}
-    });
-
-    document.getElementById('stat-today').innerText = todayCount;
-    document.getElementById('stat-week').innerText = weekCount;
-    document.getElementById('stat-critical').innerText = criticalCount;
-  }
-
-  // Initialize
-  window.onload = function() {
-    calculateStats();
-  }
-</script>
+  </div>
+</body>
+</html>
