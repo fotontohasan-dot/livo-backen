@@ -592,6 +592,18 @@ async function runMigrations() {
       );
     `);
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS admin_logs (
+        id SERIAL PRIMARY KEY,
+        admin_id INTEGER REFERENCES users(id),
+        admin_username VARCHAR(100),
+        action_type VARCHAR(100) NOT NULL,
+        details TEXT,
+        ip_address VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     console.log("✅ All tables migration completed successfully");
   } catch (err) {
     console.error("❌ Migration error:", err.message);
