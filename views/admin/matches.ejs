@@ -6,62 +6,173 @@
 
   <main class="flex-1 p-6 lg:p-8 overflow-auto">
     
+    <!-- Header -->
     <div class="flex items-center justify-between mb-6">
       <div>
         <h1 class="text-3xl font-bold text-white">Matches</h1>
-        <p class="text-gray-400 text-sm mt-1">Manage all matches & markets</p>
+        <p class="text-gray-400 text-sm mt-1">Manage all matches &amp; markets • Professional Control Panel</p>
       </div>
-      <button onclick="document.getElementById('add-match-modal').classList.remove('hidden')" 
-              class="px-5 py-2.5 bg-[#f59e0b] hover:bg-[#d97706] text-black font-bold rounded-2xl flex items-center gap-2 text-sm">
-        <i class="fas fa-plus"></i>
-        <span>Add Match</span>
-      </button>
+      <div class="flex items-center gap-3">
+        <button onclick="exportMatchesCSV()" 
+                class="px-4 py-2.5 bg-[#334155] hover:bg-[#475569] text-white text-sm font-medium rounded-2xl flex items-center gap-2 transition-all">
+          <i class="fas fa-download"></i>
+          <span>Export CSV</span>
+        </button>
+        <button onclick="document.getElementById('add-match-modal').classList.remove('hidden')" 
+                class="px-5 py-2.5 bg-[#f59e0b] hover:bg-[#d97706] text-black font-bold rounded-2xl flex items-center gap-2 text-sm shadow-lg transition-all active:scale-[0.985]">
+          <i class="fas fa-plus"></i>
+          <span>Add New Match</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-400 text-sm">Total Matches</p>
+            <p class="text-3xl font-bold text-white mt-1"><%= matches ? matches.length : 0 %></p>
+          </div>
+          <div class="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center">
+            <i class="fas fa-tachometer-alt text-blue-400 text-2xl"></i>
+          </div>
+        </div>
+      </div>
+      <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-400 text-sm">Live Now</p>
+            <p class="text-3xl font-bold text-red-400 mt-1"><%= matches ? matches.filter(m => m.status === 'live').length : 0 %></p>
+          </div>
+          <div class="w-12 h-12 bg-red-500/10 rounded-2xl flex items-center justify-center">
+            <i class="fas fa-broadcast-tower text-red-400 text-2xl"></i>
+          </div>
+        </div>
+      </div>
+      <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-400 text-sm">Upcoming</p>
+            <p class="text-3xl font-bold text-yellow-400 mt-1"><%= matches ? matches.filter(m => m.status === 'upcoming').length : 0 %></p>
+          </div>
+          <div class="w-12 h-12 bg-yellow-500/10 rounded-2xl flex items-center justify-center">
+            <i class="fas fa-clock text-yellow-400 text-2xl"></i>
+          </div>
+        </div>
+      </div>
+      <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-400 text-sm">Completed</p>
+            <p class="text-3xl font-bold text-emerald-400 mt-1"><%= matches ? matches.filter(m => m.status === 'completed').length : 0 %></p>
+          </div>
+          <div class="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center">
+            <i class="fas fa-check-circle text-emerald-400 text-2xl"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search & Filters -->
+    <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-5 mb-6">
+      <div class="flex flex-col md:flex-row gap-4">
+        <div class="flex-1">
+          <div class="relative">
+            <i class="fas fa-search absolute left-4 top-3.5 text-gray-500"></i>
+            <input type="text" id="searchInput" placeholder="Search by team name..." 
+                   class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl pl-11 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f59e0b]"
+                   onkeyup="filterMatches()">
+          </div>
+        </div>
+        <div class="w-full md:w-48">
+          <select id="statusFilter" onchange="filterMatches()" 
+                  class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b]">
+            <option value="">All Status</option>
+            <option value="live">Live</option>
+            <option value="upcoming">Upcoming</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+        <div class="w-full md:w-48">
+          <select id="sportFilter" onchange="filterMatches()" 
+                  class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b]">
+            <option value="">All Sports</option>
+            <option value="cricket">Cricket</option>
+            <option value="football">Football</option>
+            <option value="basketball">Basketball</option>
+            <option value="tennis">Tennis</option>
+          </select>
+        </div>
+      </div>
     </div>
 
     <!-- Matches Table -->
     <div class="bg-[#1e2937] rounded-3xl border border-[#334155] overflow-hidden">
-      <table class="w-full text-sm">
+      <table class="w-full text-sm" id="matchesTable">
         <thead class="bg-[#0f172a]">
           <tr class="text-gray-400">
             <th class="text-left px-6 py-4 font-normal">Match</th>
             <th class="text-center px-4 py-4 font-normal">Sport</th>
             <th class="text-center px-4 py-4 font-normal">Start Time</th>
             <th class="text-center px-4 py-4 font-normal">Status</th>
+            <th class="text-center px-4 py-4 font-normal">Markets</th>
             <th class="text-center px-6 py-4 font-normal">Actions</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-[#334155] text-gray-300">
-          <% matches.forEach(m => { %>
-          <tr class="hover:bg-[#0f172a]">
-            <td class="px-6 py-4">
-              <div class="font-semibold text-white"><%= m.team_a %> vs <%= m.team_b %></div>
-              <div class="text-xs text-gray-500"><%= m.title || '' %></div>
-            </td>
-            <td class="px-4 py-4 text-center">
-              <span class="px-3 py-1 text-xs rounded-full bg-[#334155]"><%= m.sport || 'N/A' %></span>
-            </td>
-            <td class="px-4 py-4 text-center text-xs">
-              <%= m.start_time ? new Date(m.start_time).toLocaleString() : 'Not set' %>
-            </td>
-            <td class="px-4 py-4 text-center">
-              <% if(m.status === 'live') { %>
-                <span class="px-3 py-1 text-xs rounded-full bg-red-500/20 text-red-400">Live</span>
-              <% } else if(m.status === 'upcoming') { %>
-                <span class="px-3 py-1 text-xs rounded-full bg-yellow-500/20 text-yellow-400">Upcoming</span>
-              <% } else { %>
-                <span class="px-3 py-1 text-xs rounded-full bg-gray-500/20 text-gray-400">Completed</span>
-              <% } %>
-            </td>
-            <td class="px-6 py-4">
-              <div class="flex justify-center gap-2">
-                <a href="/admin/markets/<%= m.id %>" class="px-3 py-1.5 bg-[#334155] hover:bg-[#475569] rounded-xl text-xs">Markets</a>
-                <form action="/admin/matches/<%= m.id %>/delete" method="POST" onsubmit="return confirm('Delete this match?')">
-                  <button type="submit" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 rounded-xl text-xs text-white">Delete</button>
-                </form>
-              </div>
-            </td>
-          </tr>
-          <% }) %>
+          <% if (matches && matches.length > 0) { %>
+            <% matches.forEach(m => { %>
+            <tr class="hover:bg-[#0f172a] transition-colors match-row" 
+                data-team="<%= (m.team_a + ' ' + m.team_b).toLowerCase() %>" 
+                data-sport="<%= (m.sport || '').toLowerCase() %>" 
+                data-status="<%= m.status %>">
+              <td class="px-6 py-4">
+                <div class="font-semibold text-white"><%= m.team_a %> vs <%= m.team_b %></div>
+                <div class="text-xs text-gray-500"><%= m.title || '' %></div>
+              </td>
+              <td class="px-4 py-4 text-center">
+                <span class="px-3 py-1 text-xs rounded-full bg-[#334155]"><%= m.sport || 'N/A' %></span>
+              </td>
+              <td class="px-4 py-4 text-center text-xs">
+                <%= m.start_time ? new Date(m.start_time).toLocaleString() : 'Not set' %>
+              </td>
+              <td class="px-4 py-4 text-center">
+                <% if(m.status === 'live') { %>
+                  <span class="px-3 py-1 text-xs rounded-full bg-red-500/20 text-red-400 font-medium">● Live</span>
+                <% } else if(m.status === 'upcoming') { %>
+                  <span class="px-3 py-1 text-xs rounded-full bg-yellow-500/20 text-yellow-400 font-medium">Upcoming</span>
+                <% } else { %>
+                  <span class="px-3 py-1 text-xs rounded-full bg-emerald-500/20 text-emerald-400 font-medium">Completed</span>
+                <% } %>
+              </td>
+              <td class="px-4 py-4 text-center">
+                <a href="/admin/markets/<%= m.id %>" 
+                   class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#334155] hover:bg-[#475569] rounded-xl text-xs transition-all">
+                  <i class="fas fa-chart-line"></i>
+                  <span>View Markets</span>
+                </a>
+              </td>
+              <td class="px-6 py-4">
+                <div class="flex justify-center gap-2">
+                  <form action="/admin/matches/<%= m.id %>/delete" method="POST" onsubmit="return confirm('Delete this match permanently?')">
+                    <button type="submit" 
+                            class="px-3 py-1.5 bg-red-600/90 hover:bg-red-700 rounded-xl text-xs text-white flex items-center gap-1 transition-all">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            <% }) %>
+          <% } else { %>
+            <tr>
+              <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                <i class="fas fa-inbox text-4xl mb-3 block"></i>
+                No matches found. Add your first match to get started.
+              </td>
+            </tr>
+          <% } %>
         </tbody>
       </table>
     </div>
@@ -69,32 +180,46 @@
     <!-- Add Match Modal -->
     <div id="add-match-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
       <div class="bg-[#1e2937] rounded-3xl p-8 w-full max-w-md border border-[#334155]">
-        <h3 class="text-xl font-bold text-white mb-6">Add New Match</h3>
+        <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
+          <i class="fas fa-plus-circle text-[#f59e0b]"></i> 
+          Add New Match
+        </h3>
         
         <form action="/admin/matches/add" method="POST">
           <div class="space-y-4">
             <div>
-              <label class="text-sm text-gray-400 block mb-1">Team A</label>
-              <input type="text" name="team_a" required class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white">
+              <label class="text-sm text-gray-400 block mb-1.5">Team A</label>
+              <input type="text" name="team_a" required placeholder="e.g. Bangladesh" 
+                     class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white placeholder-gray-500 focus:border-[#f59e0b]">
             </div>
             <div>
-              <label class="text-sm text-gray-400 block mb-1">Team B</label>
-              <input type="text" name="team_b" required class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white">
+              <label class="text-sm text-gray-400 block mb-1.5">Team B</label>
+              <input type="text" name="team_b" required placeholder="e.g. India" 
+                     class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white placeholder-gray-500 focus:border-[#f59e0b]">
             </div>
-            <div>
-              <label class="text-sm text-gray-400 block mb-1">Sport</label>
-              <input type="text" name="sport" value="cricket" class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white">
-            </div>
-            <div>
-              <label class="text-sm text-gray-400 block mb-1">Start Time</label>
-              <input type="datetime-local" name="start_time" class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="text-sm text-gray-400 block mb-1.5">Sport</label>
+                <select name="sport" class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white">
+                  <option value="cricket">Cricket</option>
+                  <option value="football">Football</option>
+                  <option value="basketball">Basketball</option>
+                  <option value="tennis">Tennis</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-sm text-gray-400 block mb-1.5">Start Time</label>
+                <input type="datetime-local" name="start_time" 
+                       class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white">
+              </div>
             </div>
           </div>
 
           <div class="flex gap-3 mt-8">
             <button type="button" onclick="document.getElementById('add-match-modal').classList.add('hidden')"
-                    class="flex-1 py-3 bg-[#334155] hover:bg-[#475569] rounded-2xl text-sm">Cancel</button>
-            <button type="submit" class="flex-1 py-3 bg-[#f59e0b] hover:bg-[#d97706] text-black font-bold rounded-2xl">Add Match</button>
+                    class="flex-1 py-3 bg-[#334155] hover:bg-[#475569] rounded-2xl text-sm font-medium transition-all">Cancel</button>
+            <button type="submit" 
+                    class="flex-1 py-3 bg-[#f59e0b] hover:bg-[#d97706] text-black font-bold rounded-2xl transition-all active:scale-[0.985]">Add Match</button>
           </div>
         </form>
       </div>
@@ -102,3 +227,47 @@
 
   </main>
 </div>
+
+<script>
+function filterMatches() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const status = document.getElementById('statusFilter').value;
+  const sport = document.getElementById('sportFilter').value.toLowerCase();
+  const rows = document.querySelectorAll('#matchesTable tbody tr.match-row');
+
+  rows.forEach(row => {
+    const team = row.dataset.team || '';
+    const rowStatus = row.dataset.status || '';
+    const rowSport = row.dataset.sport || '';
+
+    const matchSearch = team.includes(search);
+    const matchStatus = !status || rowStatus === status;
+    const matchSport = !sport || rowSport === sport;
+
+    row.style.display = (matchSearch && matchStatus && matchSport) ? '' : 'none';
+  });
+}
+
+function exportMatchesCSV() {
+  const table = document.getElementById('matchesTable');
+  let csv = [];
+  const rows = table.querySelectorAll('tr');
+  
+  rows.forEach(row => {
+    if (row.style.display === 'none') return;
+    const cols = row.querySelectorAll('td, th');
+    let rowData = [];
+    cols.forEach(col => {
+      rowData.push('"' + col.innerText.replace(/"/g, '""') + '"');
+    });
+    csv.push(rowData.join(','));
+  });
+
+  const csvContent = csv.join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'matches_export.csv';
+  link.click();
+}
+</script>
