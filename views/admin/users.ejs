@@ -1,241 +1,264 @@
-<%- include('../partials/head') %>
-<%- include('../partials/admin-header') %>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Users • Livo Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { background-color: #0f172a; }
+        .admin-card { transition: all 0.2s ease; }
+        .admin-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
+        .table-row:hover { background-color: #1e293b; }
+        .modern-badge { font-size: 0.75rem; padding: 0.25rem 0.75rem; border-radius: 9999px; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-200">
+    <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <%- include('../../partials/sidebar', { activePage: 'users' }) %>
 
-<div class="admin-wrap">
-  <%- include('../partials/sidebar', { active: 'users' }) %>
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- Header -->
+            <%- include('../../partials/header', { 
+                pageTitle: 'Users', 
+                pageSubtitle: 'Manage all registered users' 
+            }) %>
 
-  <div class="admin-content">
-    <!-- Topbar -->
-    <div class="admin-topbar">
-      <button class="admin-hamburger" onclick="toggleAdminSidebar(true)">
-        <i class="fas fa-bars"></i>
-      </button>
-      <div>
-        <h1 class="text-2xl font-extrabold text-white tracking-tight">ইউজার ম্যানেজমেন্ট</h1>
-        <p class="text-sm text-slate-400">সকল ইউজার দেখুন, ব্যান/আনব্যান করুন এবং কয়েন অ্যাডজাস্ট করুন</p>
-      </div>
-      <div class="flex-1"></div>
-      <a href="/admin/users" class="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-sm flex items-center gap-2 border border-white/10">
-        <i class="fas fa-sync-alt"></i> <span>রিফ্রেশ</span>
-      </a>
-      <button onclick="exportUsersCSV()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm flex items-center gap-2">
-        <i class="fas fa-download"></i> <span>Export CSV</span>
-      </button>
-    </div>
-
-    <!-- Stats Cards -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-      <div class="stat-card">
-        <div class="stat-label">মোট ইউজার</div>
-        <div class="stat-number"><%= total || 0 %></div>
-        <div class="stat-sub">সকল রেজিস্টার্ড</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">অ্যাকটিভ ইউজার</div>
-        <div class="stat-number text-emerald-400"><%= (users || []).filter(u => !u.is_banned).length %></div>
-        <div class="stat-sub">বর্তমানে অ্যাকটিভ</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">ব্যান্ড ইউজার</div>
-        <div class="stat-number text-red-400"><%= (users || []).filter(u => u.is_banned).length %></div>
-        <div class="stat-sub">সাসপেন্ডেড</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">নতুন (আজ)</div>
-        <div class="stat-number text-amber-400"><%= newUsersToday || 0 %></div>
-        <div class="stat-sub">আজকের রেজিস্ট্রেশন</div>
-      </div>
-    </div>
-
-    <!-- Search & Filter -->
-    <div class="admin-card mb-6">
-      <div class="admin-card-header flex items-center justify-between">
-        <span>ফিল্টার ও সার্চ</span>
-      </div>
-      <div class="p-4">
-        <form method="GET" action="/admin/users" class="flex flex-col md:flex-row gap-3">
-          <div class="flex-1 relative">
-            <i class="fas fa-search absolute left-4 top-3.5 text-slate-400"></i>
-            <input type="text" name="search" value="<%= search || '' %>" 
-                   class="w-full bg-[#0f1115] border border-white/10 rounded-2xl pl-11 py-3 text-sm focus:outline-none focus:border-amber-500"
-                   placeholder="ইউজারনেম, ইমেইল বা ফোন নাম্বার দিয়ে সার্চ করুন...">
-          </div>
-          
-          <select name="status" class="bg-[#0f1115] border border-white/10 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500">
-            <option value="">সব স্ট্যাটাস</option>
-            <option value="active" <%= status === 'active' ? 'selected' : '' %>>অ্যাকটিভ</option>
-            <option value="banned" <%= status === 'banned' ? 'selected' : '' %>>ব্যান্ড</option>
-          </select>
-
-          <button type="submit" 
-                  class="px-8 py-3 bg-amber-500 hover:bg-amber-600 transition rounded-2xl text-sm font-semibold text-black flex items-center justify-center gap-2">
-            <i class="fas fa-search"></i> সার্চ
-          </button>
-        </form>
-      </div>
-    </div>
-
-    <!-- Users Table -->
-    <div class="admin-card">
-      <div class="admin-card-header flex items-center justify-between">
-        <span>ইউজার লিস্ট (<%= users ? users.length : 0 %> জন)</span>
-        <span class="text-xs text-slate-400">পেজ <%= page || 1 %> / <%= totalPages || 1 %></span>
-      </div>
-
-      <div class="overflow-x-auto">
-        <table class="admin-table">
-          <thead>
-            <tr>
-              <th>ইউজার</th>
-              <th>কন্ট্যাক্ট</th>
-              <th class="text-right">কয়েন</th>
-              <th>স্ট্যাটাস</th>
-              <th>জয়েনড</th>
-              <th class="text-center">অ্যাকশন</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% if (users && users.length > 0) { %>
-              <% users.forEach(user => { %>
-                <tr class="hover:bg-white/5 transition-colors">
-                  <td>
-                    <div class="flex items-center gap-3">
-                      <div class="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-black font-bold text-sm flex-shrink-0">
-                        <%= (user.username || 'U').charAt(0).toUpperCase() %>
-                      </div>
-                      <div>
-                        <div class="font-semibold text-white"><%= user.username || 'N/A' %></div>
-                        <div class="text-[10px] text-slate-500 font-mono">ID: <%= user.id %></div>
-                      </div>
+            <!-- Main Content Area -->
+            <div class="flex-1 overflow-y-auto p-6">
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 admin-card">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-slate-400 text-sm">Total Users</p>
+                                <p class="text-3xl font-bold text-white mt-1"><%= totalUsers || 1248 %></p>
+                            </div>
+                            <div class="w-12 h-12 bg-blue-600/10 rounded-2xl flex items-center justify-center">
+                                <i class="fas fa-users text-blue-500 text-2xl"></i>
+                            </div>
+                        </div>
                     </div>
-                  </td>
-                  <td>
-                    <div class="text-sm"><%= user.email || '-' %></div>
-                    <div class="text-xs text-slate-400"><%= user.phone || '-' %></div>
-                  </td>
-                  <td class="text-right">
-                    <span class="font-mono text-emerald-400 font-semibold">৳ <%= Number(user.coins || 0).toLocaleString('bn-BD') %></span>
-                  </td>
-                  <td>
-                    <% if (user.is_banned) { %>
-                      <span class="badge badge-red">BANNED</span>
-                    <% } else { %>
-                      <span class="badge badge-green">ACTIVE</span>
-                    <% } %>
-                  </td>
-                  <td>
-                    <span class="text-xs text-slate-400">
-                      <%= user.created_at ? new Date(user.created_at).toLocaleDateString('bn-BD') : '-' %>
-                    </span>
-                  </td>
-                  <td class="text-center">
-                    <div class="flex items-center justify-center gap-2">
-                      <!-- View Details -->
-                      <a href="/admin/users/<%= user.id %>" 
-                         class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white transition"
-                         title="বিস্তারিত দেখুন">
-                        <i class="fas fa-eye text-sm"></i>
-                      </a>
 
-                      <!-- Quick Coin Adjust (link to detail page) -->
-                      <a href="/admin/users/<%= user.id %>#coins" 
-                         class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 transition"
-                         title="কয়েন অ্যাডজাস্ট">
-                        <i class="fas fa-coins text-sm"></i>
-                      </a>
+                    <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 admin-card">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-slate-400 text-sm">Active Users</p>
+                                <p class="text-3xl font-bold text-emerald-400 mt-1"><%= activeUsers || 987 %></p>
+                            </div>
+                            <div class="w-12 h-12 bg-emerald-600/10 rounded-2xl flex items-center justify-center">
+                                <i class="fas fa-user-check text-emerald-500 text-2xl"></i>
+                            </div>
+                        </div>
+                    </div>
 
-                      <!-- Ban / Unban -->
-                      <form action="/admin/users/<%= user.id %>/ban" method="POST" class="inline" onsubmit="return confirm('<%= user.is_banned ? 'এই ইউজারকে আনব্যান করবেন?' : 'এই ইউজারকে ব্যান করবেন?' %>')">
-                        <button type="submit" 
-                                class="inline-flex items-center justify-center w-9 h-9 rounded-xl transition <%= user.is_banned ? 'bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400' : 'bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400' %>"
-                                title="<%= user.is_banned ? 'আনব্যান করুন' : 'ব্যান করুন' %>">
-                          <i class="fas <%= user.is_banned ? 'fa-user-check' : 'fa-user-slash' %> text-sm"></i>
+                    <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 admin-card">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-slate-400 text-sm">Banned Users</p>
+                                <p class="text-3xl font-bold text-red-400 mt-1"><%= bannedUsers || 45 %></p>
+                            </div>
+                            <div class="w-12 h-12 bg-red-600/10 rounded-2xl flex items-center justify-center">
+                                <i class="fas fa-user-slash text-red-500 text-2xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 admin-card">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-slate-400 text-sm">New Today</p>
+                                <p class="text-3xl font-bold text-amber-400 mt-1"><%= newToday || 23 %></p>
+                            </div>
+                            <div class="w-12 h-12 bg-amber-600/10 rounded-2xl flex items-center justify-center">
+                                <i class="fas fa-user-plus text-amber-500 text-2xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search + Filter + Export -->
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                    <div class="flex-1 w-full md:w-auto">
+                        <div class="relative">
+                            <input type="text" id="searchInput" placeholder="Search by name, email or phone..." 
+                                   class="w-full bg-slate-900 border border-slate-700 text-white pl-11 pr-4 py-3 rounded-2xl focus:outline-none focus:border-blue-500 text-sm">
+                            <i class="fas fa-search absolute left-4 top-4 text-slate-400"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-3 w-full md:w-auto">
+                        <select id="statusFilter" class="bg-slate-900 border border-slate-700 text-white px-4 py-3 rounded-2xl text-sm focus:outline-none">
+                            <option value="">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="banned">Banned</option>
+                            <option value="pending">Pending</option>
+                        </select>
+                        
+                        <button onclick="exportToCSV()" 
+                                class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 px-5 py-3 rounded-2xl text-sm font-medium transition-colors">
+                            <i class="fas fa-download"></i>
+                            <span>Export CSV</span>
                         </button>
-                      </form>
+                        
+                        <a href="/admin/users/new" 
+                           class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 px-5 py-3 rounded-2xl text-sm font-medium transition-colors">
+                            <i class="fas fa-plus"></i>
+                            <span>Add User</span>
+                        </a>
                     </div>
-                  </td>
-                </tr>
-              <% }) %>
-            <% } else { %>
-              <tr>
-                <td colspan="6" class="text-center py-12 text-slate-400">
-                  <i class="fas fa-users text-3xl mb-3 opacity-50"></i><br>
-                  কোনো ইউজার পাওয়া যায়নি
-                </td>
-              </tr>
-            <% } %>
-          </tbody>
-        </table>
-      </div>
+                </div>
 
-      <!-- Pagination -->
-      <% if (totalPages > 1) { %>
-        <div class="flex items-center justify-between px-4 py-4 border-t border-white/10 text-sm">
-          <div class="text-slate-400">
-            দেখানো হচ্ছে <span class="text-white"><%= users.length %></span> টি এন্ট্রি
-          </div>
-          <div class="flex gap-1">
-            <% for(let i=1; i<=totalPages; i++) { %>
-              <a href="/admin/users?page=<%= i %>&search=<%= search || '' %>&status=<%= status || '' %>" 
-                 class="px-3.5 py-1.5 rounded-xl <%= i == (page || 1) ? 'bg-amber-500 text-black font-semibold' : 'bg-white/5 hover:bg-white/10' %>">
-                <%= i %>
-              </a>
-            <% } %>
-          </div>
+                <!-- Users Table -->
+                <div class="bg-slate-900 border border-slate-700 rounded-3xl overflow-hidden">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-slate-700 bg-slate-950">
+                                <th class="text-left px-6 py-4 text-sm font-semibold text-slate-300">User</th>
+                                <th class="text-left px-6 py-4 text-sm font-semibold text-slate-300">Email / Phone</th>
+                                <th class="text-center px-6 py-4 text-sm font-semibold text-slate-300">Joined</th>
+                                <th class="text-center px-6 py-4 text-sm font-semibold text-slate-300">Status</th>
+                                <th class="text-center px-6 py-4 text-sm font-semibold text-slate-300">Balance</th>
+                                <th class="text-center px-6 py-4 text-sm font-semibold text-slate-300">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <% if (users && users.length > 0) { %>
+                                <% users.forEach(user => { %>
+                                    <tr class="table-row border-b border-slate-700 last:border-0">
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center overflow-hidden">
+                                                    <% if (user.avatar) { %>
+                                                        <img src="<%= user.avatar %>" class="w-full h-full object-cover">
+                                                    <% } else { %>
+                                                        <i class="fas fa-user text-slate-400"></i>
+                                                    <% } %>
+                                                </div>
+                                                <div>
+                                                    <div class="font-medium text-white"><%= user.name || 'N/A' %></div>
+                                                    <div class="text-xs text-slate-400">ID: <%= user.id %></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="text-sm"><%= user.email || 'N/A' %></div>
+                                            <div class="text-xs text-slate-400"><%= user.phone || '' %></div>
+                                        </td>
+                                        <td class="px-6 py-4 text-center text-sm text-slate-300">
+                                            <%= user.joinedDate || 'N/A' %>
+                                        </td>
+                                        <td class="px-6 py-4 text-center">
+                                            <% if (user.status === 'active') { %>
+                                                <span class="modern-badge bg-emerald-500/10 text-emerald-400">Active</span>
+                                            <% } else if (user.status === 'banned') { %>
+                                                <span class="modern-badge bg-red-500/10 text-red-400">Banned</span>
+                                            <% } else { %>
+                                                <span class="modern-badge bg-amber-500/10 text-amber-400">Pending</span>
+                                            <% } %>
+                                        </td>
+                                        <td class="px-6 py-4 text-center font-medium text-white">
+                                            ৳ <%= user.balance || '0.00' %>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center justify-center gap-2">
+                                                <a href="/admin/user/<%= user.id %>" class="text-blue-400 hover:text-blue-300 p-2" title="View Details">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <button onclick="adjustCoins(<%= user.id %>, '<%= user.name %>')" class="text-emerald-400 hover:text-emerald-300 p-2" title="Adjust Coins">
+                                                    <i class="fas fa-coins"></i>
+                                                </button>
+                                                <button onclick="toggleBan(<%= user.id %>, '<%= user.name %>', '<%= user.status %>')" 
+                                                        class="text-red-400 hover:text-red-300 p-2" title="Ban / Unban">
+                                                    <i class="fas fa-ban"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="6" class="px-6 py-12 text-center text-slate-400">
+                                        <i class="fas fa-users text-4xl mb-3 opacity-30"></i>
+                                        <p>No users found</p>
+                                    </td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
-      <% } %>
     </div>
-  </div>
-</div>
 
-<script>
-function toggleAdminSidebar(show) {
-  const sidebar = document.getElementById('adminSidebar');
-  const overlay = document.getElementById('adminOverlay');
-  if (!sidebar || !overlay) return;
-  
-  if (show) {
-    sidebar.classList.add('open');
-    overlay.classList.add('show');
-  } else {
-    sidebar.classList.remove('open');
-    overlay.classList.remove('show');
-  }
-}
+    <script>
+        function filterTable() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const status = document.getElementById('statusFilter').value.toLowerCase();
+            const rows = document.querySelectorAll('#usersTableBody tr');
 
-function exportUsersCSV() {
-  // Simple client-side export (can be improved with server route later)
-  const table = document.querySelector('.admin-table');
-  if (!table) return alert('টেবিল পাওয়া যায়নি');
-  
-  let csv = [];
-  const rows = table.querySelectorAll('tr');
-  
-  rows.forEach(row => {
-    let cols = row.querySelectorAll('td, th');
-    let rowData = [];
-    cols.forEach(col => rowData.push('"' + col.innerText.replace(/"/g, '""') + '"'));
-    csv.push(rowData.join(','));
-  });
-  
-  const csvContent = csv.join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = 'users_export.csv';
-  link.click();
-}
-</script>
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                const statusBadge = row.querySelector('.modern-badge');
+                const statusText = statusBadge ? statusBadge.textContent.toLowerCase() : '';
 
-<style>
-/* Extra polish for this page */
-.admin-table tbody tr:hover {
-  background: rgba(255,255,255,0.03);
-}
-.badge {
-  padding: 3px 10px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-}
-</style>
+                const matchesSearch = text.includes(search);
+                const matchesStatus = !status || statusText.includes(status);
+
+                row.style.display = (matchesSearch && matchesStatus) ? '' : 'none';
+            });
+        }
+
+        document.getElementById('searchInput').addEventListener('input', filterTable);
+        document.getElementById('statusFilter').addEventListener('change', filterTable);
+
+        function exportToCSV() {
+            const rows = document.querySelectorAll('#usersTableBody tr');
+            let csv = 'Name,Email,Phone,Joined,Status,Balance\n';
+            
+            rows.forEach(row => {
+                if (row.style.display === 'none') return;
+                const cells = row.querySelectorAll('td');
+                if (cells.length < 6) return;
+                
+                const name = cells[0].innerText.trim().replace(/,/g, '');
+                const email = cells[1].innerText.trim().replace(/,/g, '');
+                const joined = cells[2].innerText.trim();
+                const status = cells[3].innerText.trim();
+                const balance = cells[4].innerText.trim().replace('৳', '').trim();
+                
+                csv += `"${name}","${email}","${joined}","${status}","${balance}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'users_export.csv';
+            a.click();
+        }
+
+        function adjustCoins(userId, userName) {
+            const amount = prompt(`Enter amount to add/remove for ${userName} (use negative for remove):`, '100');
+            if (amount === null) return;
+            alert(`Coins adjusted for ${userName} by ${amount} (Demo)`);
+        }
+
+        function toggleBan(userId, userName, currentStatus) {
+            const action = currentStatus === 'banned' ? 'unban' : 'ban';
+            if (!confirm(`Are you sure you want to ${action} ${userName}?`)) return;
+            alert(`${userName} has been ${action}ned (Demo)`);
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === '/' && document.activeElement.tagName === 'BODY') {
+                e.preventDefault();
+                document.getElementById('searchInput').focus();
+            }
+        });
+    </script>
+</body>
+</html>
