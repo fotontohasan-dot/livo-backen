@@ -667,3 +667,278 @@ router.post('/bets/:id/settle', async (req, res) => {
     client.release();
   }
 });
+
+// ==================== বোনাস ম্যানেজমেন্ট ====================
+router.get('/bonuses', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT b.*, u.username FROM bonuses b LEFT JOIN users u ON u.id = b.user_id
+      ORDER BY b.created_at DESC LIMIT 200
+    `);
+    const statsRes = await pool.query(`
+      SELECT
+        COUNT(*) FILTER (WHERE status = 'active') AS active,
+        COUNT(*) FILTER (WHERE status = 'completed') AS completed,
+        COUNT(*) FILTER (WHERE status = 'cancelled') AS cancelled,
+        COALESCE(SUM(bonus_amount) FILTER (WHERE status = 'active'), 0) AS total_active_amount
+      FROM bonuses
+    `);
+    res.render('admin/bonuses', { bonuses: result.rows, stats: statsRes.rows[0] });
+  } catch (err) {
+    console.error('Bonuses list error:', err.message);
+    res.render('admin/bonuses', { bonuses: [], stats: { active: 0, completed: 0, cancelled: 0, total_active_amount: 0 } });
+  }
+});
+
+router.post('/bonuses/add', async (req, res) => {
+  try {
+    const { username, bonus_type, bonus_amount, sports_required, casino_required } = req.body;
+    const userRes = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
+    if (!userRes.rows[0]) return res.redirect('/admin/bonuses');
+    await pool.query(
+      `INSERT INTO bonuses (user_id, bonus_type, bonus_amount, sports_required, casino_required, status)
+       VALUES ($1, $2, $3, $4, $5, 'active')`,
+      [userRes.rows[0].id, bonus_type, bonus_amount, sports_required || 0, casino_required || 0]
+    );
+    await logAdminAction(req.session.user.id, req.session.user.username, 'BONUS_ADD', `${username} কে ${bonus_amount} কয়েন বোনাস দেওয়া হয়েছে`, req.ip);
+    res.redirect('/admin/bonuses');
+  } catch (err) {
+    console.error('Bonus add error:', err.message);
+    res.redirect('/admin/bonuses');
+  }
+});
+
+router.post('/bonuses/:id/cancel', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query("UPDATE bonuses SET status = 'cancelled', updated_at = NOW() WHERE id = $1", [id]);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'BONUS_CANCEL', `বোনাস #${id} বাতিল করা হয়েছে`, req.ip);
+    res.redirect('/admin/bonuses');
+  } catch (err) {
+    console.error('Bonus cancel error:', err.message);
+    res.redirect('/admin/bonuses');
+  }
+});
+
+// ==================== প্রমোশন ব্যানার ====================
+router.get('/promotions', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM promotions ORDER BY position ASC, created_at DESC');
+    res.render('admin/promotions', { promotions: result.rows });
+  } catch (err) {
+    console.error('Promotions list error:', err.message);
+    res.render('admin/promotions', { promotions: [] });
+  }
+});
+
+router.post('/promotions/add', async (req, res) => {
+  try {
+    const { title, image_url, link_url, position } = req.body;
+    await pool.query(
+      'INSERT INTO promotions (title, image_url, link_url, position, active) VALUES ($1, $2, $3, $4, true)',
+      [title || null, image_url, link_url || null, position || 0]
+    );
+    await logAdminAction(req.session.user.id, req.session.user.username, 'PROMOTION_ADD', `নতুন প্রমোশন ব্যানার যোগ করা হয়েছে: ${title || ''}`, req.ip);
+    res.redirect('/admin/promotions');
+  } catch (err) {
+    console.error('Promotion add error:', err.message);
+    res.redirect('/admin/promotions');
+  }
+});
+
+router.post('/promotions/:id/toggle', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query('UPDATE promotions SET active = NOT active WHERE id = $1', [id]);
+    res.redirect('/admin/promotions');
+  } catch (err) {
+    console.error('Promotion toggle error:', err.message);
+    res.redirect('/admin/promotions');
+  }
+});
+
+router.post('/promotions/:id/delete', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query('DELETE FROM promotions WHERE id = $1', [id]);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'PROMOTION_DELETE', `প্রমোশন #${id} মুছে ফেলা হয়েছে`, req.ip);
+    res.redirect('/admin/promotions');
+  } catch (err) {
+    console.error('Promotion delete error:', err.message);
+    res.redirect('/admin/promotions');
+  }
+});
+
+// ==================== টুর্নামেন্ট ====================
+router.get('/tournaments', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT t.*, COUNT(p.id) AS participant_count
+      FROM tournaments t
+      LEFT JOIN tournament_participants p ON p.tournament_id = t.id
+      GROUP BY t.id ORDER BY t.created_at DESC
+    `);
+    const statsRes = await pool.query(`
+      SELECT
+        COUNT(*) AS total,
+        COUNT(*) FILTER (WHERE status = 'live') AS live,
+        COUNT(*) FILTER (WHERE status = 'upcoming') AS upcoming,
+        COUNT(*) FILTER (WHERE status = 'completed') AS completed
+      FROM tournaments
+    `);
+    res.render('admin/tournaments', { tournaments: result.rows, stats: statsRes.rows[0] });
+  } catch (err) {
+    console.error('Tournaments list error:', err.message);
+    res.render('admin/tournaments', { tournaments: [], stats: { total: 0, live: 0, upcoming: 0, completed: 0 } });
+  }
+});
+
+router.post('/tournaments/add', async (req, res) => {
+  try {
+    const { name, sport, description, entry_fee, prize_pool, max_participants, start_date, end_date } = req.body;
+    await pool.query(
+      `INSERT INTO tournaments (name, sport, description, entry_fee, prize_pool, max_participants, start_date, end_date, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'upcoming')`,
+      [name, sport || null, description || null, entry_fee || 0, prize_pool || 0, max_participants || 100, start_date || null, end_date || null]
+    );
+    await logAdminAction(req.session.user.id, req.session.user.username, 'TOURNAMENT_ADD', `নতুন টুর্নামেন্ট যোগ করা হয়েছে: ${name}`, req.ip);
+    res.redirect('/admin/tournaments');
+  } catch (err) {
+    console.error('Tournament add error:', err.message);
+    res.redirect('/admin/tournaments');
+  }
+});
+
+router.post('/tournaments/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    await pool.query('UPDATE tournaments SET status = $1 WHERE id = $2', [status, id]);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'TOURNAMENT_STATUS', `টুর্নামেন্ট #${id} স্ট্যাটাস ${status} করা হয়েছে`, req.ip);
+    res.redirect('/admin/tournaments');
+  } catch (err) {
+    console.error('Tournament status error:', err.message);
+    res.redirect('/admin/tournaments');
+  }
+});
+
+router.post('/tournaments/:id/delete', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query('DELETE FROM tournaments WHERE id = $1', [id]);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'TOURNAMENT_DELETE', `টুর্নামেন্ট #${id} মুছে ফেলা হয়েছে`, req.ip);
+    res.redirect('/admin/tournaments');
+  } catch (err) {
+    console.error('Tournament delete error:', err.message);
+    res.redirect('/admin/tournaments');
+  }
+});
+
+// ==================== নিউজ ====================
+router.get('/news', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM news ORDER BY created_at DESC LIMIT 200');
+    res.render('admin/news', { newsList: result.rows });
+  } catch (err) {
+    console.error('News list error:', err.message);
+    res.render('admin/news', { newsList: [] });
+  }
+});
+
+router.post('/news/add', async (req, res) => {
+  try {
+    const { title, content, image_url, sport } = req.body;
+    await pool.query(
+      'INSERT INTO news (title, content, image_url, sport, author_id) VALUES ($1, $2, $3, $4, $5)',
+      [title, content || null, image_url || null, sport || null, req.session.user.id]
+    );
+    await logAdminAction(req.session.user.id, req.session.user.username, 'NEWS_ADD', `নতুন নিউজ যোগ করা হয়েছে: ${title}`, req.ip);
+    res.redirect('/admin/news');
+  } catch (err) {
+    console.error('News add error:', err.message);
+    res.redirect('/admin/news');
+  }
+});
+
+router.post('/news/:id/delete', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query('DELETE FROM news WHERE id = $1', [id]);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'NEWS_DELETE', `নিউজ #${id} মুছে ফেলা হয়েছে`, req.ip);
+    res.redirect('/admin/news');
+  } catch (err) {
+    console.error('News delete error:', err.message);
+    res.redirect('/admin/news');
+  }
+});
+
+// ==================== অ্যাক্টিভিটি লগ ====================
+router.get('/activity', async (req, res) => {
+  try {
+    const { action_type = '', q = '' } = req.query;
+    const params = [];
+    let query = 'SELECT * FROM admin_logs WHERE 1=1';
+    if (action_type) {
+      params.push(action_type);
+      query += ` AND action_type = $${params.length}`;
+    }
+    if (q) {
+      params.push(`%${q}%`);
+      query += ` AND (admin_username ILIKE $${params.length} OR details ILIKE $${params.length})`;
+    }
+    query += ' ORDER BY created_at DESC LIMIT 300';
+    const result = await pool.query(query, params);
+    const typesRes = await pool.query('SELECT DISTINCT action_type FROM admin_logs ORDER BY action_type');
+    res.render('admin/activity', { logs: result.rows, actionTypes: typesRes.rows.map(r => r.action_type), filters: { action_type, q } });
+  } catch (err) {
+    console.error('Activity list error:', err.message);
+    res.render('admin/activity', { logs: [], actionTypes: [], filters: { action_type: '', q: '' } });
+  }
+});
+
+// ==================== রিপোর্টিং ====================
+router.get('/reports', async (req, res) => {
+  try {
+    const from = req.query.from || new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+    const to = req.query.to || new Date().toISOString().slice(0, 10);
+
+    const depositRes = await pool.query(
+      `SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS cnt FROM payment_requests
+       WHERE type = 'deposit' AND status = 'approved' AND created_at BETWEEN $1 AND $2::date + INTERVAL '1 day'`,
+      [from, to]
+    );
+    const withdrawRes = await pool.query(
+      `SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS cnt FROM payment_requests
+       WHERE type = 'withdraw' AND status = 'approved' AND created_at BETWEEN $1 AND $2::date + INTERVAL '1 day'`,
+      [from, to]
+    );
+    const betsRes = await pool.query(
+      `SELECT COALESCE(SUM(stake),0) AS total_stake, COUNT(*) AS cnt,
+              COALESCE(SUM(stake * odd) FILTER (WHERE status = 'won'),0) AS total_payout
+       FROM bets WHERE created_at BETWEEN $1 AND $2::date + INTERVAL '1 day'`,
+      [from, to]
+    );
+    const usersRes = await pool.query(
+      `SELECT COUNT(*) AS cnt FROM users WHERE created_at BETWEEN $1 AND $2::date + INTERVAL '1 day'`,
+      [from, to]
+    );
+
+    const deposits = depositRes.rows[0];
+    const withdrawals = withdrawRes.rows[0];
+    const bets = betsRes.rows[0];
+    const netRevenue = parseFloat(bets.total_stake) - parseFloat(bets.total_payout);
+
+    res.render('admin/reports', {
+      from, to, deposits, withdrawals, bets, newUsers: usersRes.rows[0].cnt, netRevenue
+    });
+  } catch (err) {
+    console.error('Reports error:', err.message);
+    res.render('admin/reports', {
+      from: '', to: '',
+      deposits: { total: 0, cnt: 0 }, withdrawals: { total: 0, cnt: 0 },
+      bets: { total_stake: 0, cnt: 0, total_payout: 0 }, newUsers: 0, netRevenue: 0
+    });
+  }
+});
+
+module.exports = router;
