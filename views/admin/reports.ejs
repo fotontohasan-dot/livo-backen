@@ -1,19 +1,55 @@
-<%- include('partials/admin-layout', { title: 'Reports & Analytics', currentPage: 'reports', body: `
+<%- include('partials/admin-layout', { 
+    title: 'Reports & Analytics', 
+    active: 'reports',
+    body: `
 <div class="max-w-7xl mx-auto">
-    <h2 class="section-header mb-6">Reports & Analytics</h2>
+    <h2 class="text-2xl font-semibold mb-6">Reports & Analytics</h2>
     
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div class="bg-white p-6 rounded-3xl border"><h4 class="font-semibold mb-4">Monthly Revenue</h4><canvas id="revenueChart" height="120"></canvas></div>
-        <div class="bg-white p-6 rounded-3xl border"><h4 class="font-semibold mb-4">Bet Volume by Sport</h4><canvas id="sportChart" height="120"></canvas></div>
+        <div class="bg-white p-6 rounded-3xl border">
+            <h4 class="font-semibold mb-4">GGR Trend (Last 7 Days)</h4>
+            <canvas id="ggrChart" height="120"></canvas>
+        </div>
+        
+        <div class="bg-white p-6 rounded-3xl border">
+            <h4 class="font-semibold mb-4">User Growth</h4>
+            <canvas id="userChart" height="120"></canvas>
+        </div>
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-new Chart(document.getElementById('revenueChart'), {
-    type: 'line', data: { labels: ['Jan','Feb','Mar','Apr','May','Jun'], datasets: [{ label: 'Revenue', data: [12,19,14,22,28,35], borderColor: '#3b82f6', tension: 0.3, fill: true }] }
+const ctx1 = document.getElementById('ggrChart');
+new Chart(ctx1, {
+    type: 'line',
+    data: {
+        labels: ['Jan 3', 'Jan 4', 'Jan 5', 'Jan 6', 'Jan 7', 'Jan 8', 'Jan 9'],
+        datasets: [{
+            label: 'GGR (৳)',
+            data: [3200000, 4100000, 3850000, 5200000, 4700000, 6100000, 4820000],
+            borderColor: '#3b82f6',
+            tension: 0.4,
+            fill: true,
+            backgroundColor: 'rgba(59, 130, 246, 0.1)'
+        }]
+    },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
 });
-new Chart(document.getElementById('sportChart'), {
-    type: 'doughnut', data: { labels: ['Cricket', 'Football', 'Casino'], datasets: [{ data: [65,25,10], backgroundColor: ['#3b82f6','#6366f1','#a855f7'] }] }
+
+const ctx2 = document.getElementById('userChart');
+new Chart(ctx2, {
+    type: 'bar',
+    data: {
+        labels: ['Jan 3', 'Jan 4', 'Jan 5', 'Jan 6', 'Jan 7', 'Jan 8', 'Jan 9'],
+        datasets: [{
+            label: 'New Users',
+            data: [1240, 980, 1450, 1320, 1680, 2100, 1284],
+            backgroundColor: '#10b981'
+        }]
+    },
+    options: { plugins: { legend: { display: false } } }
 });
 </script>
-` }) %>
+` 
+}) %>

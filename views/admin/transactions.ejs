@@ -1,15 +1,29 @@
-<%- include('partials/admin-layout', { title: 'Transactions Log', currentPage: 'transactions', body: `
+<%- include('partials/admin-layout', { 
+    title: 'Transactions Log', 
+    active: 'transactions',
+    body: `
 <div class="max-w-7xl mx-auto">
-    <h2 class="section-header mb-6">All Transactions</h2>
+    <h2 class="text-2xl font-semibold mb-6">All Transactions</h2>
     
-    <div class="bg-white rounded-3xl p-6 border">
+    <div class="bg-white rounded-3xl border p-1">
         <table class="w-full text-sm">
-            <thead><tr class="text-left text-xs text-slate-500"><th class="py-3">TX ID</th><th>USER</th><th>TYPE</th><th class="text-right">AMOUNT</th><th>STATUS</th><th>TIME</th></tr></thead>
-            <tbody>
-                <tr class="border-t"><td class="py-3 font-mono">#TX-88291</td><td>Rahim Khan</td><td><span class="text-emerald-600">Deposit</span></td><td class="text-right font-semibold">৳25,000</td><td><span class="badge bg-emerald-100 text-emerald-700">Completed</span></td><td class="text-xs">Today 11:42</td></tr>
-                <tr class="border-t"><td class="py-3 font-mono">#TX-88290</td><td>Sadia Islam</td><td><span class="text-red-600">Withdrawal</span></td><td class="text-right font-semibold">৳40,000</td><td><span class="badge bg-emerald-100 text-emerald-700">Completed</span></td><td class="text-xs">Today 10:15</td></tr>
+            <thead class="bg-slate-50">
+                <tr>
+                    <th class="px-6 py-4 text-left">TXN ID</th>
+                    <th class="px-6 py-4 text-left">User</th>
+                    <th class="px-6 py-4 text-left">Type</th>
+                    <th class="px-6 py-4 text-right">Amount</th>
+                    <th class="px-6 py-4 text-center">Status</th>
+                    <th class="px-6 py-4 text-left">Date</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y">
+                <tr><td class="px-6 py-4 font-mono">#TXN98421</td><td class="px-6 py-4">Rahim Khan</td><td class="px-6 py-4"><span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-xs">Deposit</span></td><td class="px-6 py-4 text-right font-semibold">+৳25,000</td><td class="px-6 py-4 text-center"><span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold">Success</span></td><td class="px-6 py-4 text-sm">Jan 9, 2026</td></tr>
+                <tr><td class="px-6 py-4 font-mono">#TXN98422</td><td class="px-6 py-4">Karim Hossain</td><td class="px-6 py-4"><span class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs">Withdrawal</span></td><td class="px-6 py-4 text-right font-semibold">-৳120,000</td><td class="px-6 py-4 text-center"><span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold">Success</span></td><td class="px-6 py-4 text-sm">Jan 9, 2026</td></tr>
+                <tr><td class="px-6 py-4 font-mono">#TXN98425</td><td class="px-6 py-4">Jasim Uddin</td><td class="px-6 py-4"><span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs">Bet Win</span></td><td class="px-6 py-4 text-right font-semibold">+৳1,24,500</td><td class="px-6 py-4 text-center"><span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold">Settled</span></td><td class="px-6 py-4 text-sm">Jan 8, 2026</td></tr>
             </tbody>
         </table>
     </div>
 </div>
-` }) %>
+` 
+}) %>
