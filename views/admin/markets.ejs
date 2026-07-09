@@ -1,30 +1,33 @@
-<%- include('../partials/head') %>
-<%- include('../partials/admin-header') %>
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= match ? match.team_a + ' vs ' + match.team_b : 'Markets' %> • Livo Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body class="bg-[#0f172a]">
+<div class="admin-wrap">
+  <%- include('./partials/sidebar', { active: 'matches' }) %>
+  <div class="admin-content">
+  <%- include('./partials/header', {
+    pageTitle: match ? (match.team_a + ' vs ' + match.team_b) : 'মার্কেট',
+    pageSubtitle: match ? (match.sport || 'Cricket') : 'বেটিং মার্কেট পরিচালনা করুন'
+  }) %>
 
-<div class="flex min-h-screen bg-[#0f172a]">
-  <%- include('../partials/admin-sidebar') %>
-
-  <main class="flex-1 p-6 lg:p-8 overflow-auto">
-    
-    <!-- Header -->
+  <main class="flex-1">
+    <!-- Back + Actions -->
     <div class="flex items-center justify-between mb-6">
-      <div class="flex items-center gap-4">
-        <a href="/admin/matches" 
-           class="flex items-center justify-center w-10 h-10 bg-[#1e2937] hover:bg-[#334155] border border-[#475569] rounded-2xl text-gray-400 hover:text-white transition-all">
-          <i class="fas fa-arrow-left"></i>
-        </a>
-        <div>
-          <h1 class="text-3xl font-bold text-white"><%= match ? match.team_a + ' vs ' + match.team_b : 'Markets' %></h1>
-          <p class="text-gray-400 text-sm mt-0.5"><%= match ? (match.sport || 'Cricket') : 'Manage betting markets' %></p>
-        </div>
-      </div>
-      <div class="flex items-center gap-3">
-        <button onclick="exportMarketsCSV()" 
-                class="px-4 py-2.5 bg-[#334155] hover:bg-[#475569] text-white text-sm font-medium rounded-2xl flex items-center gap-2 transition-all">
-          <i class="fas fa-download"></i>
-          <span>Export</span>
-        </button>
-      </div>
+      <a href="/admin/matches" 
+         class="flex items-center justify-center w-10 h-10 bg-[#1e2937] hover:bg-[#334155] border border-[#475569] rounded-2xl text-gray-400 hover:text-white transition-all">
+        <i class="fas fa-arrow-left"></i>
+      </a>
+      <button onclick="exportMarketsCSV()" 
+              class="px-4 py-2.5 bg-[#334155] hover:bg-[#475569] text-white text-sm font-medium rounded-2xl flex items-center gap-2 transition-all">
+        <i class="fas fa-download"></i>
+        <span>Export</span>
+      </button>
     </div>
 
     <!-- Quick Stats -->
@@ -193,9 +196,6 @@
       </div>
     </div>
 
-  </main>
-</div>
-
 <script>
 function showSettleModal(marketId, marketName) {
   document.getElementById('settle-modal').classList.remove('hidden');
@@ -229,3 +229,8 @@ function exportMarketsCSV() {
   link.click();
 }
 </script>
+  </main>
+  </div>
+</div>
+</body>
+</html>
