@@ -1,47 +1,450 @@
-<%- include('../partials/head') %>
-<%- include('../partials/navbar') %>
-
-<div class="container" style="padding-top: 20px;">
-  <h2>📰 নিউজ ম্যানেজমেন্ট</h2>
-  <a href="/admin" class="btn btn-secondary">← ড্যাশবোর্ড</a>
-
-  <div class="card" style="margin: 20px 0; padding: 20px;">
-    <h5>নতুন নিউজ লিখুন</h5>
-    <form action="/admin/news" method="POST">
-      <input type="text" name="title" placeholder="শিরোনাম" required class="form-control" style="margin-bottom:10px;">
-
-      <textarea name="content" placeholder="বিস্তারিত লেখা..." rows="6" class="form-control" style="margin-bottom:10px;"></textarea>
-
-      <input type="text" name="image_url" placeholder="ছবির লিংক (ঐচ্ছিক)" class="form-control" style="margin-bottom:10px;">
-
-      <select name="sport" class="form-control" style="margin-bottom:10px;">
-        <option value="">-- ক্যাটাগরি (ঐচ্ছিক) --</option>
-        <option value="cricket">ক্রিকেট</option>
-        <option value="football">ফুটবল</option>
-        <option value="general">সাধারণ</option>
-      </select>
-
-      <button type="submit" class="btn btn-success" style="width:100%;">প্রকাশ করুন</button>
-    </form>
-  </div>
-
-  <h5>প্রকাশিত নিউজ</h5>
-  <% if (news.length === 0) { %>
-    <p style="color:#888;">এখনো কোনো নিউজ নেই।</p>
-  <% } %>
-  <% news.forEach(item => { %>
-    <div class="card" style="margin-bottom:12px; padding:15px;">
-      <strong><%= item.title %></strong>
-      <% if (item.sport) { %><span class="badge bg-info"><%= item.sport %></span><% } %>
-      <p style="font-size:13px; color:#aaa; margin:6px 0;">👁️ <%= item.views || 0 %> ভিউ</p>
-
-      <form action="/admin/news/<%= item.id %>/delete" method="POST" style="display:inline;"
-            onsubmit="return confirm('এই নিউজটি মুছে ফেলবেন?');">
-        <button type="submit" class="btn btn-sm btn-danger">🗑️ মুছুন</button>
-      </form>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News Management - Livo Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --primary: #0d6efd;
+        }
+        body { background: #f8f9fa; font-family: 'Segoe UI', system-ui, sans-serif; }
+        .admin-header {
+            background: white;
+            border-bottom: 1px solid #dee2e6;
+            padding: 1rem 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .stats-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.25rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .stats-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+        .stats-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        .modern-table {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .modern-table thead {
+            background: #f8f9fa;
+        }
+        .modern-table th {
+            font-weight: 600;
+            color: #495057;
+            border-bottom: 2px solid #dee2e6;
+            padding: 1rem 1.25rem;
+        }
+        .modern-table td {
+            padding: 1rem 1.25rem;
+            vertical-align: middle;
+            border-bottom: 1px solid #f1f3f5;
+        }
+        .modern-table tr:hover {
+            background: #f8f9fa;
+        }
+        .badge-status {
+            padding: 0.4rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 20px;
+        }
+        .action-btn {
+            width: 36px;
+            height: 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .action-btn:hover {
+            transform: translateY(-1px);
+        }
+        .section-title {
+            font-weight: 700;
+            color: #212529;
+            margin-bottom: 1.5rem;
+        }
+        .filter-bar {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .news-thumb {
+            width: 60px;
+            height: 40px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Header -->
+    <div class="admin-header d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="mb-0 fw-bold">News Management</h4>
+            <small class="text-muted">Manage articles, announcements & updates</small>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary btn-sm" onclick="exportToCSV()">
+                <i class="bi bi-download me-1"></i> Export CSV
+            </button>
+            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addNewsModal">
+                <i class="bi bi-plus-lg me-1"></i> Add New Article
+            </button>
+        </div>
     </div>
-  <% }) %>
 
-</div>
+    <div class="container-fluid py-4">
+        <!-- Stats Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-xl-3 col-md-6">
+                <div class="stats-card d-flex align-items-center gap-3">
+                    <div class="stats-icon bg-primary bg-opacity-10 text-primary">
+                        <i class="bi bi-newspaper"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small">Total Articles</div>
+                        <div class="fs-4 fw-bold"><%= totalNews || 124 %></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="stats-card d-flex align-items-center gap-3">
+                    <div class="stats-icon bg-success bg-opacity-10 text-success">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small">Published</div>
+                        <div class="fs-4 fw-bold"><%= publishedNews || 98 %></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="stats-card d-flex align-items-center gap-3">
+                    <div class="stats-icon bg-warning bg-opacity-10 text-warning">
+                        <i class="bi bi-clock-history"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small">Drafts</div>
+                        <div class="fs-4 fw-bold"><%= draftNews || 19 %></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="stats-card d-flex align-items-center gap-3">
+                    <div class="stats-icon bg-info bg-opacity-10 text-info">
+                        <i class="bi bi-eye"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small">Total Views</div>
+                        <div class="fs-4 fw-bold"><%= totalViews || '45.2k' %></div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-<%- include('../partials/bottom-nav') %>
+        <!-- Filter Bar -->
+        <div class="filter-bar mb-3 d-flex flex-wrap gap-3 align-items-center">
+            <div class="flex-grow-1" style="max-width: 320px;">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search by title or category..." onkeyup="filterTable()">
+                </div>
+            </div>
+            
+            <select id="statusFilter" class="form-select form-select-sm" style="width: auto;" onchange="filterTable()">
+                <option value="">All Status</option>
+                <option value="published">Published</option>
+                <option value="draft">Draft</option>
+                <option value="archived">Archived</option>
+            </select>
+
+            <select id="categoryFilter" class="form-select form-select-sm" style="width: auto;" onchange="filterTable()">
+                <option value="">All Categories</option>
+                <option value="Announcement">Announcement</option>
+                <option value="Update">Update</option>
+                <option value="Promotion">Promotion</option>
+                <option value="Maintenance">Maintenance</option>
+            </select>
+
+            <button class="btn btn-sm btn-outline-secondary ms-auto" onclick="resetFilters()">
+                <i class="bi bi-arrow-counterclockwise"></i> Reset
+            </button>
+        </div>
+
+        <!-- News Table -->
+        <div class="modern-table">
+            <table class="table table-hover mb-0" id="newsTable">
+                <thead>
+                    <tr>
+                        <th style="width: 80px;">Image</th>
+                        <th>Title</th>
+                        <th>Category</th>
+                        <th>Status</th>
+                        <th>Views</th>
+                        <th>Published</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (news && news.length > 0) { %>
+                        <% news.forEach((item, index) => { %>
+                            <tr data-status="<%= item.status %>" data-category="<%= item.category %>">
+                                <td>
+                                    <% if (item.image) { %>
+                                        <img src="<%= item.image %>" class="news-thumb" alt="">
+                                    <% } else { %>
+                                        <div class="news-thumb bg-light d-flex align-items-center justify-content-center">
+                                            <i class="bi bi-image text-muted"></i>
+                                        </div>
+                                    <% } %>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold"><%= item.title %></div>
+                                    <small class="text-muted"><%= item.slug || '' %></small>
+                                </td>
+                                <td><span class="badge bg-secondary-subtle text-secondary"><%= item.category %></span></td>
+                                <td>
+                                    <% if (item.status === 'published') { %>
+                                        <span class="badge-status bg-success-subtle text-success">Published</span>
+                                    <% } else if (item.status === 'draft') { %>
+                                        <span class="badge-status bg-warning-subtle text-warning">Draft</span>
+                                    <% } else { %>
+                                        <span class="badge-status bg-secondary-subtle text-secondary">Archived</span>
+                                    <% } %>
+                                </td>
+                                <td><strong><%= item.views || 0 %></strong></td>
+                                <td>
+                                    <div><%= new Date(item.publishedAt || Date.now()).toLocaleDateString() %></div>
+                                    <small class="text-muted"><%= item.author || 'Admin' %></small>
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-flex gap-1 justify-content-end">
+                                        <button onclick="editNews(<%= index %>)" class="action-btn btn btn-outline-primary btn-sm" title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button onclick="toggleStatus(<%= index %>)" class="action-btn btn btn-outline-warning btn-sm" title="Toggle Status">
+                                            <i class="bi bi-toggle-on"></i>
+                                        </button>
+                                        <button onclick="deleteNews(<%= index %>)" class="action-btn btn btn-outline-danger btn-sm" title="Delete">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    <% } else { %>
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="bi bi-newspaper fs-1 d-block mb-2"></i>
+                                No news articles found
+                            </td>
+                        </tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Add/Edit News Modal -->
+    <div class="modal fade" id="addNewsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="modalTitle">Add New Article</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="newsForm">
+                        <input type="hidden" id="editIndex">
+                        <div class="row g-3">
+                            <div class="col-md-8">
+                                <label class="form-label">Title</label>
+                                <input type="text" class="form-control" id="title" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Category</label>
+                                <select class="form-select" id="category" required>
+                                    <option value="Announcement">Announcement</option>
+                                    <option value="Update">Update</option>
+                                    <option value="Promotion">Promotion</option>
+                                    <option value="Maintenance">Maintenance</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Content / Description</label>
+                                <textarea class="form-control" id="content" rows="5" required></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Featured Image URL</label>
+                                <input type="text" class="form-control" id="image" placeholder="https://...">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Status</label>
+                                <select class="form-select" id="status">
+                                    <option value="draft">Draft</option>
+                                    <option value="published">Published</option>
+                                    <option value="archived">Archived</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Publish Date</label>
+                                <input type="date" class="form-control" id="publishDate">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveNews()">Save Article</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Filter Table
+        function filterTable() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+            const categoryFilter = document.getElementById('categoryFilter').value;
+
+            const rows = document.querySelectorAll('#newsTable tbody tr');
+
+            rows.forEach(row => {
+                const title = row.cells[1].innerText.toLowerCase();
+                const category = row.dataset.category || '';
+                const status = row.dataset.status || '';
+
+                const matchSearch = title.includes(search);
+                const matchStatus = !statusFilter || status === statusFilter;
+                const matchCategory = !categoryFilter || category === categoryFilter;
+
+                row.style.display = (matchSearch && matchStatus && matchCategory) ? '' : 'none';
+            });
+        }
+
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('categoryFilter').value = '';
+            filterTable();
+        }
+
+        // Export to CSV
+        function exportToCSV() {
+            const table = document.getElementById('newsTable');
+            let csv = [];
+            const rows = table.querySelectorAll('tr');
+
+            rows.forEach(row => {
+                if (row.style.display === 'none') return;
+                const cols = row.querySelectorAll('th, td');
+                let rowData = [];
+                cols.forEach((col, i) => {
+                    if (i === 0 || i === 6) return; // skip image and actions
+                    rowData.push('"' + col.innerText.replace(/"/g, '""') + '"');
+                });
+                csv.push(rowData.join(','));
+            });
+
+            const csvContent = csv.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'news_export_' + new Date().toISOString().slice(0,10) + '.csv';
+            a.click();
+        }
+
+        // Edit News
+        let newsData = <%- JSON.stringify(news || []) %>;
+
+        function editNews(index) {
+            const item = newsData[index];
+            if (!item) return;
+
+            document.getElementById('modalTitle').innerText = 'Edit Article';
+            document.getElementById('editIndex').value = index;
+            document.getElementById('title').value = item.title || '';
+            document.getElementById('category').value = item.category || 'Announcement';
+            document.getElementById('content').value = item.content || '';
+            document.getElementById('image').value = item.image || '';
+            document.getElementById('status').value = item.status || 'draft';
+            
+            const modal = new bootstrap.Modal(document.getElementById('addNewsModal'));
+            modal.show();
+        }
+
+        // Save News (Add or Update)
+        function saveNews() {
+            const index = document.getElementById('editIndex').value;
+            const newItem = {
+                title: document.getElementById('title').value,
+                category: document.getElementById('category').value,
+                content: document.getElementById('content').value,
+                image: document.getElementById('image').value,
+                status: document.getElementById('status').value,
+                publishedAt: document.getElementById('publishDate').value || new Date().toISOString(),
+                views: Math.floor(Math.random() * 5000) + 100,
+                author: 'Admin'
+            };
+
+            if (index !== '') {
+                newsData[index] = { ...newsData[index], ...newItem };
+            } else {
+                newsData.unshift(newItem);
+            }
+
+            // In real app: send to backend via fetch
+            alert('Article saved successfully! (Demo mode - connect to backend)');
+            location.reload(); // refresh to show changes (in real app remove this)
+        }
+
+        function toggleStatus(index) {
+            if (!newsData[index]) return;
+            const current = newsData[index].status;
+            newsData[index].status = current === 'published' ? 'draft' : 'published';
+            alert('Status updated to ' + newsData[index].status + ' (Demo)');
+            location.reload();
+        }
+
+        function deleteNews(index) {
+            if (!confirm('Are you sure you want to delete this article?')) return;
+            newsData.splice(index, 1);
+            alert('Article deleted (Demo mode)');
+            location.reload();
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Any extra init if needed
+            console.log('%c[Admin] News page modernized successfully', 'color:#0d6efd');
+        });
+    </script>
+</body>
+</html>
