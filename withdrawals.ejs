@@ -1,0 +1,29 @@
+<%- include('partials/admin-layout', { title: 'Withdrawals Management', currentPage: 'withdrawals', body: `
+<div class="max-w-7xl mx-auto">
+    <h2 class="section-header mb-6">Withdrawals Management</h2>
+    
+    <div class="bg-white rounded-3xl p-6 border">
+        <h4 class="font-semibold mb-4">Pending Withdrawals (19)</h4>
+        <div class="space-y-3">
+            <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+                <div>
+                    <span class="font-semibold">Sadia Islam</span> <span class="text-xs text-slate-500">#29102</span><br>
+                    <span class="text-red-600 font-bold">৳40,000</span> to Bank • Nagad
+                </div>
+                <div class="flex gap-x-2">
+                    <button onclick="approveWithdrawal(this)" class="px-5 py-2 bg-emerald-600 text-white text-sm rounded-2xl">Approve + TX ID</button>
+                    <button onclick="rejectWithdrawal(this)" class="px-5 py-2 bg-red-100 text-red-600 text-sm rounded-2xl">Reject</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function approveWithdrawal(el) { 
+    const tx = prompt('Enter Transaction ID:'); 
+    if(tx) el.closest('.flex').innerHTML = '<span class="text-emerald-600">Approved • TX: '+tx+'</span>'; 
+}
+function rejectWithdrawal(el) { el.closest('.flex').innerHTML = '<span class="text-red-600">Rejected</span>'; }
+</script>
+` }) %>

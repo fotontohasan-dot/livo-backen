@@ -1,0 +1,352 @@
+<%- include('partials/admin-layout', { 
+    title: 'User Management', 
+    currentPage: 'users',
+    body: `
+<div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+        <div>
+            <h2 class="section-header">User Management</h2>
+            <p class="text-slate-500">Manage all registered users • 48,291 total</p>
+        </div>
+        
+        <div class="flex items-center gap-x-3">
+            <div class="relative">
+                <input type="text" id="searchInput" placeholder="Search by name, phone or ID..." 
+                       class="pl-10 pr-4 py-2.5 w-80 bg-white border border-slate-200 rounded-2xl text-sm focus:outline-none focus:border-blue-400"
+                       onkeyup="filterUsers()">
+                <i class="fa-solid fa-search absolute left-4 top-3.5 text-slate-400"></i>
+            </div>
+            
+            <button onclick="showAddUserModal()" 
+                    class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 transition-colors text-white rounded-2xl text-sm font-semibold flex items-center gap-x-2">
+                <i class="fa-solid fa-plus"></i>
+                <span>Add User</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="flex flex-wrap gap-2 mb-6">
+        <button onclick="filterByStatus('all')" class="status-filter active px-4 py-1.5 text-sm rounded-2xl bg-blue-600 text-white font-medium">All Users</button>
+        <button onclick="filterByStatus('active')" class="status-filter px-4 py-1.5 text-sm rounded-2xl bg-white border border-slate-200 hover:bg-slate-50">Active</button>
+        <button onclick="filterByStatus('banned')" class="status-filter px-4 py-1.5 text-sm rounded-2xl bg-white border border-slate-200 hover:bg-slate-50">Banned</button>
+        <button onclick="filterByStatus('blocked')" class="status-filter px-4 py-1.5 text-sm rounded-2xl bg-white border border-slate-200 hover:bg-slate-50">Blocked</button>
+    </div>
+
+    <!-- Users Table -->
+    <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden modern-table">
+        <table class="w-full data-table">
+            <thead>
+                <tr class="border-b border-slate-100">
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-slate-500">USER</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-slate-500">PHONE / ID</th>
+                    <th class="px-6 py-4 text-right text-xs font-semibold text-slate-500">BALANCE</th>
+                    <th class="px-6 py-4 text-center text-xs font-semibold text-slate-500">TOTAL BET</th>
+                    <th class="px-6 py-4 text-center text-xs font-semibold text-slate-500">STATUS</th>
+                    <th class="px-6 py-4 text-center text-xs font-semibold text-slate-500">JOINED</th>
+                    <th class="px-6 py-4 text-center text-xs font-semibold text-slate-500 w-40">ACTIONS</th>
+                </tr>
+            </thead>
+            <tbody id="usersTableBody">
+                <!-- Populated by JS -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- User Detail Modal -->
+<div id="userModal" onclick="if (event.target.id === 'userModal') closeUserModal()" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+    <div onclick="event.stopImmediatePropagation()" class="bg-white w-full max-w-2xl mx-4 rounded-3xl shadow-2xl overflow-hidden modal">
+        <!-- Modal Header -->
+        <div class="px-6 py-4 bg-slate-50 border-b flex items-center justify-between">
+            <div class="flex items-center gap-x-3">
+                <img id="modalAvatar" class="w-11 h-11 rounded-2xl ring-2 ring-white" src="https://i.pravatar.cc/44">
+                <div>
+                    <h3 id="modalName" class="font-bold text-xl"></h3>
+                    <p id="modalId" class="text-xs text-slate-500 font-mono"></p>
+                </div>
+            </div>
+            <button onclick="closeUserModal()" class="text-2xl leading-none text-slate-400 hover:text-slate-600">&times;</button>
+        </div>
+        
+        <div class="p-6">
+            <!-- Stats -->
+            <div class="grid grid-cols-3 gap-4 mb-6">
+                <div class="bg-slate-50 rounded-2xl p-4">
+                    <div class="text-xs text-slate-500">Current Balance</div>
+                    <div id="modalBalance" class="text-3xl font-bold text-emerald-600 mt-1"></div>
+                </div>
+                <div class="bg-slate-50 rounded-2xl p-4">
+                    <div class="text-xs text-slate-500">Total Bet Amount</div>
+                    <div id="modalTotalBet" class="text-3xl font-bold text-slate-800 mt-1"></div>
+                </div>
+                <div class="bg-slate-50 rounded-2xl p-4">
+                    <div class="text-xs text-slate-500">Total Transactions</div>
+                    <div id="modalTxCount" class="text-3xl font-bold text-slate-800 mt-1"></div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-wrap gap-3">
+                <button onclick="adjustCoins()" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-semibold flex items-center justify-center gap-x-2">
+                    <i class="fa-solid fa-coins"></i> <span>Adjust Coins</span>
+                </button>
+                
+                <button onclick="banUser()" id="banBtn"
+                        class="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-semibold flex items-center justify-center gap-x-2">
+                    <i class="fa-solid fa-ban"></i> <span>Ban User</span>
+                </button>
+                
+                <button onclick="blockUser()" class="flex-1 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-semibold flex items-center justify-center gap-x-2">
+                    <i class="fa-solid fa-lock"></i> <span>Block</span>
+                </button>
+            </div>
+            
+            <div class="mt-6 text-xs text-slate-400 flex items-center gap-x-2">
+                <i class="fa-solid fa-info-circle"></i>
+                <span>Last activity: <span id="modalLastActive"></span></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Coin Adjust Modal -->
+<div id="coinModal" onclick="if (event.target.id === 'coinModal') closeCoinModal()" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[60]">
+    <div onclick="event.stopImmediatePropagation()" class="bg-white w-full max-w-md mx-4 rounded-3xl p-6 modal">
+        <h3 class="font-bold text-xl mb-1">Adjust User Balance</h3>
+        <p class="text-sm text-slate-500 mb-5">Manually add or deduct coins from user account</p>
+        
+        <div class="mb-4">
+            <label class="text-xs font-medium text-slate-500">AMOUNT (৳)</label>
+            <input type="number" id="coinAmount" value="1000" class="w-full mt-1 px-4 py-3 border border-slate-200 rounded-2xl text-xl font-semibold">
+        </div>
+        
+        <div class="mb-5">
+            <label class="text-xs font-medium text-slate-500">REASON / NOTE</label>
+            <textarea id="coinNote" class="w-full mt-1 px-4 py-3 border border-slate-200 rounded-2xl text-sm" rows="2" placeholder="Admin adjustment..."></textarea>
+        </div>
+        
+        <div class="flex gap-x-3">
+            <button onclick="applyCoinAdjust('add')" class="flex-1 py-3 bg-emerald-600 text-white rounded-2xl font-semibold">+ ADD</button>
+            <button onclick="applyCoinAdjust('deduct')" class="flex-1 py-3 bg-red-600 text-white rounded-2xl font-semibold">- DEDUCT</button>
+        </div>
+        
+        <button onclick="closeCoinModal()" class="mt-3 w-full py-2 text-sm text-slate-500 hover:text-slate-700">Cancel</button>
+    </div>
+</div>
+
+<script>
+let usersData = [
+    { id: 28491, name: "Rahim Khan", phone: "01711-223344", balance: 124500, totalBet: 892000, status: "active", joined: "2025-09-12", lastActive: "2 hours ago", avatar: "https://i.pravatar.cc/44?img=12" },
+    { id: 29102, name: "Sadia Islam", phone: "01822-556677", balance: 8700, totalBet: 124000, status: "active", joined: "2025-11-03", lastActive: "Just now", avatar: "https://i.pravatar.cc/44?img=28" },
+    { id: 30567, name: "Karim Hossain", phone: "01933-112233", balance: 0, totalBet: 450000, status: "banned", joined: "2025-07-21", lastActive: "3 days ago", avatar: "https://i.pravatar.cc/44?img=15" },
+    { id: 31288, name: "Nadia Rahman", phone: "01655-998877", balance: 45200, totalBet: 210000, status: "blocked", joined: "2025-12-15", lastActive: "1 day ago", avatar: "https://i.pravatar.cc/44?img=47" },
+    { id: 32901, name: "Tanvir Ahmed", phone: "01788-445566", balance: 189000, totalBet: 1340000, status: "active", joined: "2025-08-30", lastActive: "45 min ago", avatar: "https://i.pravatar.cc/44?img=32" }
+];
+
+function renderUsers(filteredUsers) {
+    const tbody = document.getElementById('usersTableBody');
+    tbody.innerHTML = '';
+    
+    filteredUsers.forEach(user => {
+        const row = document.createElement('tr');
+        row.className = 'border-b border-slate-100 hover:bg-slate-50';
+        
+        let statusHTML = '';
+        if (user.status === 'active') {
+            statusHTML = '<span class="badge bg-emerald-100 text-emerald-700">Active</span>';
+        } else if (user.status === 'banned') {
+            statusHTML = '<span class="badge bg-red-100 text-red-700">Banned</span>';
+        } else {
+            statusHTML = '<span class="badge bg-amber-100 text-amber-700">Blocked</span>';
+        }
+        
+        row.innerHTML = `
+            <td class="px-6 py-4">
+                <div class="flex items-center gap-x-3">
+                    <img src="${user.avatar}" class="w-9 h-9 rounded-2xl">
+                    <div>
+                        <div class="font-semibold">${user.name}</div>
+                    </div>
+                </div>
+            </td>
+            <td class="px-6 py-4">
+                <div class="font-mono text-sm">${user.phone}</div>
+                <div class="text-[10px] text-slate-400">#${user.id}</div>
+            </td>
+            <td class="px-6 py-4 text-right">
+                <span class="font-bold text-emerald-600">৳${user.balance.toLocaleString()}</span>
+            </td>
+            <td class="px-6 py-4 text-center font-medium">৳${user.totalBet.toLocaleString()}</td>
+            <td class="px-6 py-4 text-center">${statusHTML}</td>
+            <td class="px-6 py-4 text-center text-xs text-slate-500">${user.joined}</td>
+            <td class="px-6 py-4">
+                <div class="flex justify-center gap-x-1">
+                    <button onclick="viewUser(${user.id})" class="px-3 py-1.5 text-xs bg-slate-100 hover:bg-slate-200 rounded-xl font-medium">View</button>
+                    <button onclick="quickBan(${user.id}, event)" class="px-3 py-1.5 text-xs bg-red-100 hover:bg-red-200 text-red-700 rounded-xl font-medium">Ban</button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function filterUsers() {
+    const term = document.getElementById('searchInput').value.toLowerCase();
+    const filtered = usersData.filter(u => 
+        u.name.toLowerCase().includes(term) || 
+        u.phone.includes(term) || 
+        u.id.toString().includes(term)
+    );
+    renderUsers(filtered);
+}
+
+function filterByStatus(status) {
+    // Remove active class from all filters
+    document.querySelectorAll('.status-filter').forEach(el => el.classList.remove('active', 'bg-blue-600', 'text-white'));
+    document.querySelectorAll('.status-filter').forEach(el => el.classList.add('bg-white', 'border', 'border-slate-200'));
+    
+    // Add active to clicked
+    event.currentTarget.classList.add('active', 'bg-blue-600', 'text-white');
+    event.currentTarget.classList.remove('bg-white', 'border', 'border-slate-200');
+    
+    let filtered = usersData;
+    if (status !== 'all') {
+        filtered = usersData.filter(u => u.status === status);
+    }
+    renderUsers(filtered);
+}
+
+let currentUserId = null;
+
+function viewUser(id) {
+    const user = usersData.find(u => u.id === id);
+    if (!user) return;
+    
+    currentUserId = id;
+    
+    document.getElementById('modalAvatar').src = user.avatar;
+    document.getElementById('modalName').innerText = user.name;
+    document.getElementById('modalId').innerText = '#' + user.id;
+    document.getElementById('modalBalance').innerText = '৳' + user.balance.toLocaleString();
+    document.getElementById('modalTotalBet').innerText = '৳' + user.totalBet.toLocaleString();
+    document.getElementById('modalTxCount').innerText = Math.floor(user.totalBet / 12000);
+    document.getElementById('modalLastActive').innerText = user.lastActive;
+    
+    const banBtn = document.getElementById('banBtn');
+    if (user.status === 'banned') {
+        banBtn.innerHTML = '<i class="fa-solid fa-check"></i> <span>Unban User</span>';
+        banBtn.onclick = () => unbanUser();
+        banBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+        banBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+    } else {
+        banBtn.innerHTML = '<i class="fa-solid fa-ban"></i> <span>Ban User</span>';
+        banBtn.onclick = () => banUser();
+        banBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+        banBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
+    }
+    
+    document.getElementById('userModal').classList.remove('hidden');
+    document.getElementById('userModal').classList.add('flex');
+}
+
+function closeUserModal() {
+    document.getElementById('userModal').classList.add('hidden');
+    document.getElementById('userModal').classList.remove('flex');
+}
+
+function adjustCoins() {
+    closeUserModal();
+    document.getElementById('coinModal').classList.remove('hidden');
+    document.getElementById('coinModal').classList.add('flex');
+}
+
+function closeCoinModal() {
+    document.getElementById('coinModal').classList.add('hidden');
+    document.getElementById('coinModal').classList.remove('flex');
+}
+
+function applyCoinAdjust(type) {
+    const amount = parseInt(document.getElementById('coinAmount').value) || 0;
+    const note = document.getElementById('coinNote').value || 'Admin adjustment';
+    
+    if (!currentUserId || amount <= 0) return alert('Invalid amount');
+    
+    const user = usersData.find(u => u.id === currentUserId);
+    
+    if (type === 'add') {
+        user.balance += amount;
+        alert(`Successfully added ৳${amount} to ${user.name}`);
+    } else {
+        user.balance = Math.max(0, user.balance - amount);
+        alert(`Successfully deducted ৳${amount} from ${user.name}`);
+    }
+    
+    closeCoinModal();
+    renderUsers(usersData);
+    
+    // In real app: send POST to /admin/users/:id/adjust-balance
+}
+
+function banUser() {
+    if (!currentUserId) return;
+    const user = usersData.find(u => u.id === currentUserId);
+    user.status = 'banned';
+    closeUserModal();
+    renderUsers(usersData);
+    alert(`${user.name} has been banned.`);
+}
+
+function unbanUser() {
+    if (!currentUserId) return;
+    const user = usersData.find(u => u.id === currentUserId);
+    user.status = 'active';
+    closeUserModal();
+    renderUsers(usersData);
+    alert(`${user.name} has been unbanned.`);
+}
+
+function blockUser() {
+    if (!currentUserId) return;
+    const user = usersData.find(u => u.id === currentUserId);
+    user.status = user.status === 'blocked' ? 'active' : 'blocked';
+    closeUserModal();
+    renderUsers(usersData);
+}
+
+function quickBan(id, e) {
+    e.stopImmediatePropagation();
+    const user = usersData.find(u => u.id === id);
+    if (confirm(`Ban ${user.name}?`)) {
+        user.status = 'banned';
+        renderUsers(usersData);
+    }
+}
+
+function showAddUserModal() {
+    const name = prompt('Enter user full name:');
+    if (!name) return;
+    const phone = prompt('Enter phone number:');
+    
+    const newUser = {
+        id: Date.now(),
+        name: name,
+        phone: phone || '01700-000000',
+        balance: 0,
+        totalBet: 0,
+        status: 'active',
+        joined: new Date().toISOString().split('T')[0],
+        lastActive: 'Just now',
+        avatar: 'https://i.pravatar.cc/44?img=40'
+    };
+    
+    usersData.unshift(newUser);
+    renderUsers(usersData);
+}
+
+// Initial render
+renderUsers(usersData);
+</script>
+` 
+}) %>

@@ -1,0 +1,52 @@
+<%- include('partials/admin-layout', { title: 'Support Tickets', currentPage: 'support', body: `
+<div class="max-w-7xl mx-auto">
+    <h2 class="section-header mb-6">Support / User Chat</h2>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Tickets List -->
+        <div class="lg:col-span-1 bg-white rounded-3xl p-5 border">
+            <h4 class="font-semibold mb-3">Open Tickets (31)</h4>
+            <div onclick="openTicket(1)" class="p-3 hover:bg-slate-50 rounded-2xl cursor-pointer border-l-4 border-blue-600 mb-2">
+                <div class="font-medium">#T-991 • Rahim Khan</div>
+                <div class="text-xs text-slate-500">Deposit not credited • 2h ago</div>
+            </div>
+            <div onclick="openTicket(2)" class="p-3 hover:bg-slate-50 rounded-2xl cursor-pointer">
+                <div class="font-medium">#T-992 • Tanvir Ahmed</div>
+                <div class="text-xs text-slate-500">Account blocked by mistake • 5h ago</div>
+            </div>
+        </div>
+        
+        <!-- Chat Area -->
+        <div class="lg:col-span-2 bg-white rounded-3xl border flex flex-col h-[520px]">
+            <div class="p-4 border-b font-semibold flex items-center gap-x-2" id="chatHeader">
+                Select a ticket to start chatting
+            </div>
+            
+            <div class="flex-1 p-4 overflow-auto text-sm space-y-4" id="chatMessages"></div>
+            
+            <div class="p-4 border-t flex gap-x-2">
+                <input id="chatInput" type="text" placeholder="Type your reply..." class="flex-1 border rounded-2xl px-4 py-3 text-sm">
+                <button onclick="sendReply()" class="px-6 bg-blue-600 text-white rounded-2xl">Send</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function openTicket(id) {
+    document.getElementById('chatHeader').innerHTML = 'Chat with User #' + id + ' <span class="text-xs ml-2 text-emerald-500">● Online</span>';
+    const msgBox = document.getElementById('chatMessages');
+    msgBox.innerHTML = '<div class="text-xs text-slate-400">Ticket opened. Previous messages would load here from your database.</div>';
+}
+
+function sendReply() {
+    const input = document.getElementById('chatInput');
+    if (!input.value.trim()) return;
+    
+    const msgBox = document.getElementById('chatMessages');
+    msgBox.innerHTML += '<div class="flex justify-end"><div class="bg-blue-600 text-white px-4 py-2 rounded-3xl max-w-[70%] text-sm">' + input.value + '</div></div>';
+    input.value = '';
+    msgBox.scrollTop = msgBox.scrollHeight;
+}
+</script>
+` }) %>

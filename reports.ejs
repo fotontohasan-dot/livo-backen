@@ -1,0 +1,19 @@
+<%- include('partials/admin-layout', { title: 'Reports & Analytics', currentPage: 'reports', body: `
+<div class="max-w-7xl mx-auto">
+    <h2 class="section-header mb-6">Reports & Analytics</h2>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white p-6 rounded-3xl border"><h4 class="font-semibold mb-4">Monthly Revenue</h4><canvas id="revenueChart" height="120"></canvas></div>
+        <div class="bg-white p-6 rounded-3xl border"><h4 class="font-semibold mb-4">Bet Volume by Sport</h4><canvas id="sportChart" height="120"></canvas></div>
+    </div>
+</div>
+
+<script>
+new Chart(document.getElementById('revenueChart'), {
+    type: 'line', data: { labels: ['Jan','Feb','Mar','Apr','May','Jun'], datasets: [{ label: 'Revenue', data: [12,19,14,22,28,35], borderColor: '#3b82f6', tension: 0.3, fill: true }] }
+});
+new Chart(document.getElementById('sportChart'), {
+    type: 'doughnut', data: { labels: ['Cricket', 'Football', 'Casino'], datasets: [{ data: [65,25,10], backgroundColor: ['#3b82f6','#6366f1','#a855f7'] }] }
+});
+</script>
+` }) %>
