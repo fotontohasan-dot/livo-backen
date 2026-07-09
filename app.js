@@ -61,12 +61,14 @@ app.use(helmet({
     },
   },
 }));
+const sessionStore = process.env.DATABASE_URL ? new pgSession({
+  pool: pool,
+  tableName: 'user_sessions',
+  createTableIfMissing: true
+}) : undefined;
+
 app.use(session({
-  store: new pgSession({
-    pool: pool,
-    tableName: 'user_sessions',
-    createTableIfMissing: true
-  }),
+  store: sessionStore,
   secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
@@ -213,15 +215,17 @@ app.use((err, req, res, next) => {
     ]
   ).catch(() => {});
 
+  const serverErrorMsg = (res.locals && res.locals.t && res.locals.t.server_error) ? res.locals.t.server_error : 'Server Error / সার্ভার ত্রুটি';
   res.status(500).render('error', {
-    message: res.locals.t.server_error,
+    message: serverErrorMsg,
     siteName: 'Livo'
   });
 });
 
 app.use((req, res) => {
+  const notFoundMsg = (res.locals && res.locals.t && res.locals.t.page_not_found) ? res.locals.t.page_not_found : 'Page Not Found / পৃষ্ঠাটি পাওয়া যায়নি';
   res.status(404).render('error', {
-    message: res.locals.t.page_not_found,
+    message: notFoundMsg,
     siteName: 'Livo'
   });
 });
