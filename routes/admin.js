@@ -6,6 +6,7 @@ const { settleSelectionsForMarket } = require('../services/accumulator');
 const { grantFreeBet } = require('../services/freebet');
 const { syncMatches } = require('../services/matchUpdater');
 const { runBackupNow, restoreFromBackup, getBackupStatus } = require('../services/backup');
+const { loadSettings } = require('../services/settings');
 const bcrypt = require('bcryptjs');
 
 // ==================== ADMIN ACTIVITY LOG HELPER ====================
@@ -174,6 +175,83 @@ router.post('/kyc/:id/reject', async (req, res) => {
   } catch (err) {
     console.error('KYC reject error:', err.message);
     res.status(500).json({ success: false, message: 'সার্ভার এরর' });
+  }
+});
+
+// ==================== সেটিংস ====================
+const SETTING_KEYS = [
+  'site_name', 'support_email', 'maintenance_mode', 'max_login_attempts',
+  'min_bet', 'max_bet', 'turnover_multiplier', 'max_daily_bets',
+  'deposit_commission_percent', 'withdraw_commission_percent', 'min_deposit', 'min_withdraw'
+];
+
+router.get('/settings', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT key, value FROM site_settings');
+    const settings = {};
+    result.rows.forEach(r => { settings[r.key] = r.value; });
+    settings.maintenance_mode = settings.maintenance_mode === 'true';
+
+    const adminsRes = await pool.query(
+      "SELECT id, username, email, created_at FROM users WHERE role = 'admin' ORDER BY created_at ASC"
+    );
+
+    res.render('admin/settings', { settings, admins: adminsRes.rows, saved: req.query.saved === '1' });
+  } catch (err) {
+    console.error('Settings load error:', err.message);
+    res.render('admin/settings', { settings: {}, admins: [], saved: false });
+  }
+});
+
+router.post('/settings/update', async (req, res) => {
+  try {
+    for (const key of SETTING_KEYS) {
+      if (!(key in req.body)) continue;
+      let value = req.body[key];
+      if (key === 'maintenance_mode') {
+        value = Array.isArray(value) ? value[value.length - 1] : value;
+      }
+      await pool.query(
+        `INSERT INTO site_settings (key, value, updated_at) VALUES ($1, $2, NOW())
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+        [key, String(value)]
+      );
+    }
+    await loadSettings();
+    await logAdminAction(req.session.user.id, req.session.user.username, 'SETTINGS_UPDATE', 'সাইট সেটিংস পরিবর্তন করা হয়েছে', req.ip);
+    res.redirect('/admin/settings?saved=1');
+  } catch (err) {
+    console.error('Settings update error:', err.message);
+    res.redirect('/admin/settings');
+  }
+});
+
+router.post('/settings/admins/promote', async (req, res) => {
+  try {
+    const { username } = req.body;
+    const r = await pool.query("UPDATE users SET role = 'admin' WHERE username = $1 RETURNING id", [username]);
+    if (r.rows[0]) {
+      await logAdminAction(req.session.user.id, req.session.user.username, 'ADMIN_PROMOTE', `${username} কে অ্যাডমিন করা হয়েছে`, req.ip);
+    }
+    res.redirect('/admin/settings');
+  } catch (err) {
+    console.error('Admin promote error:', err.message);
+    res.redirect('/admin/settings');
+  }
+});
+
+router.post('/settings/admins/:id/demote', async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (parseInt(id) === req.session.user.id) {
+      return res.redirect('/admin/settings');
+    }
+    await pool.query("UPDATE users SET role = 'user' WHERE id = $1", [id]);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ADMIN_DEMOTE', `অ্যাডমিন আইডি #${id} থেকে অ্যাডমিন অ্যাক্সেস সরানো হয়েছে`, req.ip);
+    res.redirect('/admin/settings');
+  } catch (err) {
+    console.error('Admin demote error:', err.message);
+    res.redirect('/admin/settings');
   }
 });
 
