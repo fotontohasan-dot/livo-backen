@@ -1,17 +1,22 @@
-<%- include('../partials/head') %>
-<%- include('../partials/admin-header') %>
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ম্যাচসমূহ • Livo Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body class="bg-[#0f172a]">
+<div class="admin-wrap">
+  <%- include('./partials/sidebar', { active: 'matches' }) %>
+  <div class="admin-content">
+  <%- include('./partials/header', { pageTitle: 'ম্যাচসমূহ', pageSubtitle: 'সকল ম্যাচ ও মার্কেট পরিচালনা করুন' }) %>
 
-<div class="flex min-h-screen bg-[#0f172a]">
-  <%- include('../partials/admin-sidebar') %>
-
-  <main class="flex-1 p-6 lg:p-8 overflow-auto">
+  <main class="flex-1">
     
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <h1 class="text-3xl font-bold text-white">Matches</h1>
-        <p class="text-gray-400 text-sm mt-1">Manage all matches &amp; markets • Professional Control Panel</p>
-      </div>
+    <!-- Actions -->
+    <div class="flex items-center justify-end gap-3 mb-6">
       <div class="flex items-center gap-3">
         <button onclick="exportMatchesCSV()" 
                 class="px-4 py-2.5 bg-[#334155] hover:bg-[#475569] text-white text-sm font-medium rounded-2xl flex items-center gap-2 transition-all">
@@ -21,7 +26,7 @@
         <button onclick="document.getElementById('add-match-modal').classList.remove('hidden')" 
                 class="px-5 py-2.5 bg-[#f59e0b] hover:bg-[#d97706] text-black font-bold rounded-2xl flex items-center gap-2 text-sm shadow-lg transition-all active:scale-[0.985]">
           <i class="fas fa-plus"></i>
-          <span>Add New Match</span>
+          <span>নতুন ম্যাচ</span>
         </button>
       </div>
     </div>
@@ -225,9 +230,6 @@
       </div>
     </div>
 
-  </main>
-</div>
-
 <script>
 function filterMatches() {
   const search = document.getElementById('searchInput').value.toLowerCase();
@@ -271,3 +273,8 @@ function exportMatchesCSV() {
   link.click();
 }
 </script>
+  </main>
+  </div>
+</div>
+</body>
+</html>

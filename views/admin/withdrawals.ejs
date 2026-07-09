@@ -1,0 +1,73 @@
+<%- include('partials/admin-layout', { 
+    title: 'Withdrawals Management', 
+    currentPage: 'withdrawals',
+    body: `
+<div class="max-w-7xl mx-auto">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="modern-card bg-white p-6 rounded-3xl border">
+            <p class="text-sm text-slate-500">Pending Withdrawals</p>
+            <p class="text-4xl font-semibold text-orange-600 mt-1">47</p>
+        </div>
+        <div class="modern-card bg-white p-6 rounded-3xl border">
+            <p class="text-sm text-slate-500">Today's Withdrawals</p>
+            <p class="text-4xl font-semibold text-red-600 mt-1">৳ 1.8M</p>
+        </div>
+        <div class="modern-card bg-white p-6 rounded-3xl border">
+            <p class="text-sm text-slate-500">Approved Today</p>
+            <p class="text-4xl font-semibold text-emerald-600 mt-1">29</p>
+        </div>
+    </div>
+
+    <div class="modern-card bg-white rounded-3xl border overflow-hidden">
+        <div class="px-6 py-5 border-b">
+            <h3 class="font-semibold text-lg">Pending Withdrawal Requests</h3>
+        </div>
+        
+        <table class="w-full">
+            <thead class="bg-slate-50">
+                <tr>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-slate-500">USER</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-slate-500">AMOUNT</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-slate-500">METHOD / DETAILS</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-slate-500">REQUESTED</th>
+                    <th class="px-6 py-4 text-right text-xs font-semibold text-slate-500">ACTIONS</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y">
+                <tr>
+                    <td class="px-6 py-4">
+                        <div class="font-medium">Karim Hossain</div>
+                        <div class="text-xs text-slate-500">#U-28491</div>
+                    </td>
+                    <td class="px-6 py-4 font-semibold text-red-600">৳ 15,000</td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm">bKash: 017XX-XXXXXX</div>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-500">2 hours ago</td>
+                    <td class="px-6 py-4 text-right space-x-2">
+                        <button onclick="approveWithdrawal(this)" class="px-4 py-1.5 text-xs bg-emerald-600 text-white rounded-xl">Approve</button>
+                        <button onclick="rejectWithdrawal(this)" class="px-4 py-1.5 text-xs bg-red-100 text-red-600 rounded-xl">Reject</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+`
+}) %>
+
+<script>
+function approveWithdrawal(btn) {
+    const txn = prompt('Enter Transaction ID / Reference:');
+    if (txn) {
+        btn.outerHTML = `<span class="text-emerald-600 text-xs font-medium">Approved • ${txn}</span>`;
+        showToast('Withdrawal approved');
+    }
+}
+function rejectWithdrawal(btn) {
+    if (confirm('Reject this withdrawal request?')) {
+        btn.outerHTML = `<span class="text-red-600 text-xs font-medium">Rejected</span>`;
+        showToast('Withdrawal rejected');
+    }
+}
+</script>

@@ -1,60 +1,60 @@
-<footer class="bg-[#050505] border-t border-zinc-800 text-zinc-400 pt-12 pb-24 px-4 mt-auto">
-  <div class="max-w-6xl mx-auto space-y-12">
+<footer style="background:var(--bg-surface);border-top:1px solid var(--border-glass);color:var(--text-muted);padding:20px 14px 70px;margin-top:20px;">
+  <div style="max-width:900px;margin:0 auto;">
 
     <!-- Brand and Links -->
-    <div class="text-center">
-      <div class="text-3xl font-bold text-white mb-6 tracking-tighter"><%= siteName %></div>
-      <div class="flex flex-wrap justify-center gap-x-6 gap-y-3 mb-8">
-        <a href="/privacy" class="text-xs hover:text-white transition-colors"><%= t.privacy_policy %></a>
-        <a href="/terms" class="text-xs hover:text-white transition-colors"><%= t.terms_conditions %></a>
-        <a href="/rules" class="text-xs hover:text-white transition-colors"><%= t.rules_regulation %></a>
-        <a href="/kyc" class="text-xs hover:text-white transition-colors"><%= t.kyc %></a>
+    <div style="text-align:center;">
+      <div class="text-main" style="font-size:1.3rem;font-weight:700;margin-bottom:10px;"><%= siteName %></div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:12px;">
+        <a href="/privacy" style="color:var(--text-muted);font-size:11px;text-decoration:none;"><%= t.privacy_policy %></a>
+        <a href="/terms" style="color:var(--text-muted);font-size:11px;text-decoration:none;"><%= t.terms_conditions %></a>
+        <a href="/rules" style="color:var(--text-muted);font-size:11px;text-decoration:none;"><%= t.rules_regulation %></a>
+        <a href="/kyc" style="color:var(--text-muted);font-size:11px;text-decoration:none;"><%= t.kyc %></a>
       </div>
-      <div class="flex justify-center gap-4 mb-10">
-        <div class="bg-zinc-900 border border-zinc-800 px-4 py-1 rounded text-red-500 font-bold text-sm">🔞 18+</div>
-        <div class="bg-zinc-900 border border-zinc-800 px-4 py-1 rounded text-xs flex items-center">Curacao Licensed</div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-bottom:16px;">
+        <div class="glass" style="padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;color:var(--primary);">🔞 18+</div>
+        <div class="glass text-muted" style="padding:4px 10px;border-radius:6px;font-size:11px;">Curacao Licensed</div>
       </div>
     </div>
 
     <!-- লাইসেন্স সেকশন -->
-    <div>
-      <h3 class="text-white text-xl font-bold mb-6 text-center"><%= t.footer_license_title %></h3>
-      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 items-center">
-        <div class="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 text-center text-[10px] font-bold uppercase tracking-widest opacity-60">BMM</div>
-        <div class="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 text-center text-[10px] font-bold uppercase tracking-widest opacity-60">iTech Labs</div>
-        <div class="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 text-center text-[10px] font-bold uppercase tracking-widest opacity-60">GLI Certified</div>
-        <div class="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 text-center text-[10px] font-bold uppercase tracking-widest opacity-60">MGA</div>
-        <div class="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 text-center text-[10px] font-bold uppercase tracking-widest opacity-60">Gaming Labs</div>
-        <div class="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 text-center text-[10px] font-bold uppercase tracking-widest opacity-60">PAGCOR</div>
+    <div style="margin-bottom:16px;">
+      <h3 class="text-main" style="font-size:13px;font-weight:700;margin-bottom:8px;text-align:center;"><%= t.footer_license_title %></h3>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+        <div class="glass" style="padding:7px 4px;border-radius:8px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;opacity:0.7;">BMM</div>
+        <div class="glass" style="padding:7px 4px;border-radius:8px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;opacity:0.7;">iTech Labs</div>
+        <div class="glass" style="padding:7px 4px;border-radius:8px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;opacity:0.7;">GLI Certified</div>
+        <div class="glass" style="padding:7px 4px;border-radius:8px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;opacity:0.7;">MGA</div>
+        <div class="glass" style="padding:7px 4px;border-radius:8px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;opacity:0.7;">Gaming Labs</div>
+        <div class="glass" style="padding:7px 4px;border-radius:8px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;opacity:0.7;">PAGCOR</div>
       </div>
     </div>
 
-    <div class="grid md:grid-cols-2 gap-8">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px;">
       <!-- সুরক্ষা করা সেকশন -->
       <div>
-        <h3 class="text-white text-xl font-bold mb-6 text-center md:text-left"><%= t.footer_security_title %></h3>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 text-center font-bold text-xs opacity-60">iovation</div>
-          <div class="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 text-center font-bold text-xs opacity-60">ThreatMetrix</div>
+        <h3 class="text-main" style="font-size:12px;font-weight:700;margin-bottom:6px;"><%= t.footer_security_title %></h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <div class="glass" style="padding:7px 4px;border-radius:8px;text-align:center;font-size:10px;font-weight:700;opacity:0.7;">iovation</div>
+          <div class="glass" style="padding:7px 4px;border-radius:8px;text-align:center;font-size:10px;font-weight:700;opacity:0.7;">ThreatMetrix</div>
         </div>
       </div>
 
-      <!-- দায়িত্বশীলভাবে খেলুন সেকশন -->
+      <!-- দায়িত্বশীলভাবে খেলুন সেকশন -->
       <div>
-        <h3 class="text-white text-xl font-bold mb-6 text-center md:text-left"><%= t.footer_responsible_gaming_title %></h3>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 text-center font-bold text-xs opacity-60">GamCare</div>
-          <div class="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 text-center font-bold text-xs opacity-60 text-red-500/80">BeGambleAware</div>
+        <h3 class="text-main" style="font-size:12px;font-weight:700;margin-bottom:6px;"><%= t.footer_responsible_gaming_title %></h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <div class="glass" style="padding:7px 4px;border-radius:8px;text-align:center;font-size:10px;font-weight:700;opacity:0.7;">GamCare</div>
+          <div class="glass" style="padding:7px 4px;border-radius:8px;text-align:center;font-size:10px;font-weight:700;opacity:0.85;color:var(--primary);">BeGambleAware</div>
         </div>
       </div>
     </div>
 
     <!-- Copyright -->
-    <div class="pt-8 border-t border-zinc-900 text-center space-y-2">
-      <p class="text-[10px] text-zinc-600 uppercase tracking-widest">
+    <div style="padding-top:12px;margin-top:10px;border-top:1px solid var(--border-glass);text-align:center;">
+      <p style="font-size:9px;color:var(--text-muted);letter-spacing:0.3px;margin-bottom:4px;">
         <%= t.responsible_gaming_msg %>
       </p>
-      <p class="text-[10px] text-zinc-500 font-medium">
+      <p style="font-size:9px;color:var(--text-muted);">
         <%= t.footer_copyright %>
       </p>
     </div>

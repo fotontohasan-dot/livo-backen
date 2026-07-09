@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title || 'Livo Admin' %></title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', system_ui, sans-serif; }
+        .sidebar-link { transition: all 0.2s; }
+        .sidebar-link:hover, .sidebar-link.active { background-color: #eff6ff; color: #2563eb; }
+        .modern-card { box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: transform 0.2s; }
+        .modern-card:hover { transform: translateY(-2px); }
+        .stat-card { background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <div class="w-64 bg-white border-r border-slate-200 flex flex-col">
+            <div class="p-6 border-b">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
+                        <i class="fa-solid fa-chart-line text-white text-2xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-900">Livo</h1>
+                        <p class="text-xs text-slate-500 -mt-1">Admin Panel</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-3">
+                <div class="px-3 py-2 text-xs font-semibold text-slate-400 tracking-wider">MAIN</div>
+                
+                <a href="/admin/dashboard" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-700 font-medium mb-1 <%= currentPage === 'dashboard' ? 'active bg-blue-50 text-blue-600' : '' %>">
+                    <i class="fa-solid fa-home w-5"></i>
+                    <span>Dashboard</span>
+                </a>
+                
+                <a href="/admin/users" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-700 font-medium mb-1 <%= currentPage === 'users' ? 'active bg-blue-50 text-blue-600' : '' %>">
+                    <i class="fa-solid fa-users w-5"></i>
+                    <span>User Management</span>
+                </a>
+                
+                <a href="/admin/bets" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-700 font-medium mb-1 <%= currentPage === 'bets' ? 'active bg-blue-50 text-blue-600' : '' %>">
+                    <i class="fa-solid fa-ticket w-5"></i>
+                    <span>Bets Management</span>
+                </a>
+                
+                <a href="/admin/deposits" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-700 font-medium mb-1 <%= currentPage === 'deposits' ? 'active bg-blue-50 text-blue-600' : '' %>">
+                    <i class="fa-solid fa-arrow-down w-5"></i>
+                    <span>Deposits</span>
+                </a>
+                
+                <a href="/admin/withdrawals" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-700 font-medium mb-1 <%= currentPage === 'withdrawals' ? 'active bg-blue-50 text-blue-600' : '' %>">
+                    <i class="fa-solid fa-arrow-up w-5"></i>
+                    <span>Withdrawals</span>
+                </a>
+                
+                <a href="/admin/support" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-700 font-medium mb-1 <%= currentPage === 'support' ? 'active bg-blue-50 text-blue-600' : '' %>">
+                    <i class="fa-solid fa-headset w-5"></i>
+                    <span>Support Tickets</span>
+                </a>
+                
+                <a href="/admin/transactions" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-700 font-medium mb-1 <%= currentPage === 'transactions' ? 'active bg-blue-50 text-blue-600' : '' %>">
+                    <i class="fa-solid fa-exchange-alt w-5"></i>
+                    <span>Transactions</span>
+                </a>
+                
+                <a href="/admin/reports" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-700 font-medium mb-1 <%= currentPage === 'reports' ? 'active bg-blue-50 text-blue-600' : '' %>">
+                    <i class="fa-solid fa-chart-bar w-5"></i>
+                    <span>Reports & Analytics</span>
+                </a>
+
+                <div class="px-3 py-2 mt-4 text-xs font-semibold text-slate-400 tracking-wider">SYSTEM</div>
+                
+                <a href="/admin/settings" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-700 font-medium mb-1 <%= currentPage === 'settings' ? 'active bg-blue-50 text-blue-600' : '' %>">
+                    <i class="fa-solid fa-cog w-5"></i>
+                    <span>Settings</span>
+                </a>
+            </div>
+
+            <div class="p-4 border-t">
+                <div class="flex items-center gap-3">
+                    <img src="https://i.pravatar.cc/32?img=47" class="w-8 h-8 rounded-full" alt="Admin">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-slate-900 truncate">Admin User</p>
+                        <p class="text-xs text-slate-500">Super Admin</p>
+                    </div>
+                    <a href="/admin/logout" class="text-slate-400 hover:text-red-500"><i class="fa-solid fa-sign-out-alt"></i></a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- Top Navbar -->
+            <div class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6">
+                <div class="flex items-center gap-4">
+                    <h2 class="text-xl font-semibold text-slate-900"><%= title || 'Dashboard' %></h2>
+                </div>
+                
+                <div class="flex items-center gap-4">
+                    <!-- Search -->
+                    <div class="relative w-72">
+                        <input type="text" placeholder="Search users, bets..." 
+                               class="w-full bg-slate-100 border border-slate-200 rounded-2xl pl-10 py-2 text-sm focus:outline-none focus:border-blue-300">
+                        <i class="fa-solid fa-search absolute left-4 top-3 text-slate-400"></i>
+                    </div>
+                    
+                    <button class="px-4 py-2 bg-white border border-slate-200 rounded-2xl text-sm flex items-center gap-2 hover:bg-slate-50">
+                        <i class="fa-solid fa-sync"></i>
+                        <span>Refresh</span>
+                    </button>
+                    
+                    <div class="w-9 h-9 bg-slate-200 rounded-full overflow-hidden">
+                        <img src="https://i.pravatar.cc/36?img=47" alt="Admin">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page Content -->
+            <div class="flex-1 overflow-auto p-6">
+                <%- body %>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tailwind script if needed
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-6 right-6 bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-xl flex items-center gap-3 z-50`;
+            toast.innerHTML = `<span>${message}</span>`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+    </script>
+</body>
+</html>

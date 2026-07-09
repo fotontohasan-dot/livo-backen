@@ -1,168 +1,71 @@
-<!-- views/partials/header.ejs - Modern Professional Admin Header -->
-<header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-50">
-    <div class="flex items-center justify-between px-6 py-3.5">
-        
-        <!-- Left: Page Title + Mobile Menu -->
-        <div class="flex items-center gap-4">
-            <!-- Mobile Menu Button -->
-            <button onclick="toggleMobileSidebar()" 
-                    class="lg:hidden w-10 h-10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 rounded-2xl transition-all">
-                <i class="fas fa-bars text-xl"></i>
-            </button>
-            
-            <!-- Page Title (dynamic) -->
-            <div>
-                <h1 class="text-xl font-semibold text-white"><%= typeof pageTitle !== 'undefined' ? pageTitle : 'Admin Panel' %></h1>
-                <p class="text-xs text-slate-400 -mt-0.5"><%= typeof pageSubtitle !== 'undefined' ? pageSubtitle : '' %></p>
-            </div>
-        </div>
+<!-- views/admin/partials/header.ejs -->
+<!-- ব্যবহার: <%- include('./partials/header', { pageTitle: 'শিরোনাম', pageSubtitle: 'উপ-শিরোনাম' }) %> -->
+<style>
+  .admin-page-title { font-size: 19px; font-weight: 800; color: #fff; line-height: 1.2; }
+  .admin-page-subtitle { font-size: 12px; color: #64748b; margin-top: 2px; }
 
-        <!-- Right: Search + Notifications + User -->
-        <div class="flex items-center gap-3">
-            
-            <!-- Search Bar -->
-            <div class="hidden md:flex items-center bg-slate-900 border border-slate-700 rounded-2xl px-4 py-2 w-72 focus-within:border-blue-500 transition-all">
-                <i class="fas fa-search text-slate-500 mr-3"></i>
-                <input type="text" 
-                       id="globalSearch"
-                       placeholder="Search users, bets, matches..." 
-                       class="flex-1 bg-transparent text-sm text-white placeholder:text-slate-500 focus:outline-none">
-            </div>
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 10px;
+    font-size: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.08); cursor: pointer;
+    background: #1c2028; color: #e2e8f0; white-space: nowrap;
+  }
+  .btn-primary { background: #f59e0b; border-color: #f59e0b; color: #14171f; }
+  .btn-green { background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.3); color: #10b981; }
+  .btn-red { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.3); color: #ef4444; }
+  .btn-sm { padding: 6px 12px; font-size: 11px; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-            <!-- Notifications -->
-            <div class="relative">
-                <button onclick="showNotifications()" 
-                        class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 rounded-2xl transition-all relative">
-                    <i class="fas fa-bell text-lg"></i>
-                    <!-- Notification Badge -->
-                    <span class="absolute top-2 right-2 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">7</span>
-                </button>
-            </div>
+  .input, .select, textarea.input {
+    width: 100%; background: #14171f; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
+    padding: 10px 12px; font-size: 13px; color: #e2e8f0; outline: none;
+  }
+  .input:focus, .select:focus { border-color: #f59e0b; }
+  .input-icon-wrap { position: relative; }
+  .input-icon-wrap i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #64748b; font-size: 12px; }
+  .input-icon-wrap .input { padding-left: 32px; }
 
-            <!-- Quick Actions -->
-            <div class="hidden sm:flex items-center gap-1 bg-slate-900 border border-slate-700 rounded-2xl p-1">
-                <button onclick="quickAction('add-coins')"
-                        class="px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-700 rounded-xl transition-all flex items-center gap-1.5">
-                    <i class="fas fa-coins text-amber-400"></i>
-                    <span class="hidden lg:inline">Coins</span>
-                </button>
-                <button onclick="quickAction('broadcast')"
-                        class="px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-700 rounded-xl transition-all flex items-center gap-1.5">
-                    <i class="fas fa-broadcast-tower text-emerald-400"></i>
-                    <span class="hidden lg:inline">Broadcast</span>
-                </button>
-            </div>
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 100; display: none;
+    align-items: center; justify-content: center; padding: 16px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-box {
+    background: #171b23; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;
+    width: 100%; max-width: 420px; max-height: 85vh; overflow-y: auto;
+  }
+  .modal-header { padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: space-between; }
+  .modal-header h3 { font-size: 14px; font-weight: 800; color: #fff; }
+  .modal-close { background: none; border: none; color: #94a3b8; font-size: 16px; cursor: pointer; }
+  .modal-body { padding: 16px; }
+  .modal-footer { padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; gap: 8px; justify-content: flex-end; }
 
-            <!-- User Profile Dropdown -->
-            <div class="relative group">
-                <button class="flex items-center gap-3 pl-2 pr-4 py-1.5 rounded-2xl hover:bg-slate-700 transition-all">
-                    <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center overflow-hidden">
-                        <img src="https://ui-avatars.com/api/?name=Admin&background=1e40af&color=fff&bold=true" 
-                             alt="Admin" class="w-full h-full object-cover">
-                    </div>
-                    <div class="hidden md:block text-left">
-                        <p class="text-sm font-semibold text-white leading-tight">Admin User</p>
-                        <p class="text-[10px] text-slate-400 -mt-0.5">Super Admin</p>
-                    </div>
-                    <i class="fas fa-chevron-down text-slate-400 text-xs ml-1 hidden md:block"></i>
-                </button>
+  .empty-state { padding: 40px 16px; text-align: center; color: #64748b; font-size: 13px; }
+  .toast {
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: #171b23;
+    border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 10px 18px; border-radius: 10px;
+    font-size: 12px; z-index: 200; display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .toast.show { display: block; }
+</style>
 
-                <!-- Dropdown Menu -->
-                <div class="absolute right-0 mt-2 w-56 bg-slate-800 border border-slate-700 rounded-2xl shadow-xl py-2 hidden group-hover:block z-50">
-                    <div class="px-4 py-2 border-b border-slate-700">
-                        <p class="text-sm font-semibold text-white">Admin User</p>
-                        <p class="text-xs text-slate-400">admin@livo.com</p>
-                    </div>
-                    
-                    <a href="/admin/settings" class="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-all">
-                        <i class="fas fa-cog w-4"></i>
-                        <span>Account Settings</span>
-                    </a>
-                    <a href="/admin/activity" class="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-all">
-                        <i class="fas fa-history w-4"></i>
-                        <span>My Activity</span>
-                    </a>
-                    
-                    <div class="border-t border-slate-700 my-1"></div>
-                    
-                    <a href="/admin/logout" class="flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-all">
-                        <i class="fas fa-sign-out-alt w-4"></i>
-                        <span>Logout</span>
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</header>
+<div class="admin-topbar">
+  <button class="admin-hamburger" onclick="toggleAdminSidebar()"><i class="fas fa-bars"></i></button>
+  <div>
+    <div class="admin-page-title"><%= typeof pageTitle !== 'undefined' ? pageTitle : 'অ্যাডমিন' %></div>
+    <% if (typeof pageSubtitle !== 'undefined' && pageSubtitle) { %>
+      <div class="admin-page-subtitle"><%= pageSubtitle %></div>
+    <% } %>
+  </div>
+</div>
+
+<div class="toast" id="adminToast"></div>
 
 <script>
-    // Mobile Sidebar Toggle (works with new sidebar)
-    function toggleMobileSidebar() {
-        const sidebar = document.querySelector('aside');
-        if (sidebar) {
-            sidebar.classList.toggle('hidden');
-            sidebar.classList.toggle('lg:flex');
-        }
-    }
-
-    // Global Search (basic - can be enhanced later)
-    document.getElementById('globalSearch')?.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            const query = this.value.trim();
-            if (query.length > 2) {
-                window.location.href = `/admin/users?search=${encodeURIComponent(query)}`;
-            }
-        }
-    });
-
-    // Quick Actions
-    function quickAction(action) {
-        if (action === 'add-coins') {
-            window.location.href = '/admin/users?quick=coins';
-        } else if (action === 'broadcast') {
-            alert('Broadcast feature coming soon! (You can implement this later)');
-        }
-    }
-
-    // Notifications (placeholder)
-    function showNotifications() {
-        const modal = document.createElement('div');
-        modal.innerHTML = `
-            <div class="fixed inset-0 bg-black/60 flex items-start justify-end z-[100]" onclick="this.remove()">
-                <div class="w-full max-w-sm bg-slate-800 border-l border-slate-700 h-full p-6" onclick="event.stopImmediatePropagation()">
-                    <div class="flex items-center justify-between mb-6">
-                        <h3 class="text-lg font-semibold text-white">Notifications</h3>
-                        <button onclick="event.target.closest('.fixed').remove()" class="text-slate-400 hover:text-white">
-                            <i class="fas fa-times text-xl"></i>
-                        </button>
-                    </div>
-                    <div class="space-y-3 text-sm">
-                        <div class="bg-slate-700/50 rounded-2xl p-4">
-                            <div class="flex gap-3">
-                                <i class="fas fa-user-check text-emerald-400 mt-1"></i>
-                                <div>
-                                    <p class="text-white">New KYC submission</p>
-                                    <p class="text-xs text-slate-400">Rahim Uddin • 2 min ago</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="bg-slate-700/50 rounded-2xl p-4">
-                            <div class="flex gap-3">
-                                <i class="fas fa-exclamation-triangle text-amber-400 mt-1"></i>
-                                <div>
-                                    <p class="text-white">High bet volume detected</p>
-                                    <p class="text-xs text-slate-400">Match #1243 • 15 min ago</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <button onclick="event.target.closest('.fixed').remove()" 
-                            class="mt-6 w-full py-2.5 text-sm font-medium text-slate-300 hover:text-white border border-slate-600 rounded-2xl">
-                        View All Notifications
-                    </button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-    }
+  function showAdminToast(msg) {
+    var t = document.getElementById('adminToast');
+    if (!t) return;
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(function () { t.classList.remove('show'); }, 2600);
+  }
 </script>

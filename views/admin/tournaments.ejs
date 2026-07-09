@@ -1,270 +1,88 @@
-<%- include('../partials/head') %>
-<%- include('../partials/admin-header') %>
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>টুর্নামেন্ট • Livo Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
+  </style>
+</head>
+<body>
+  <div class="admin-wrap">
+    <%- include('./partials/sidebar', { active: 'tournaments' }) %>
+    <div class="admin-content">
+      <%- include('./partials/header', { pageTitle: 'টুর্নামেন্ট', pageSubtitle: 'টুর্নামেন্ট তৈরি ও পরিচালনা করুন' }) %>
 
-<div class="flex min-h-screen bg-[#0f172a]">
-  <%- include('../partials/admin-sidebar') %>
+      <div class="grid grid-4" style="margin-bottom:14px;">
+        <div class="stat-card"><div class="stat-label">মোট</div><div class="stat-number"><%= stats.total || 0 %></div></div>
+        <div class="stat-card"><div class="stat-label">লাইভ</div><div class="stat-number" style="color:#10b981;"><%= stats.live || 0 %></div></div>
+        <div class="stat-card"><div class="stat-label">আসন্ন</div><div class="stat-number" style="color:#f59e0b;"><%= stats.upcoming || 0 %></div></div>
+        <div class="stat-card"><div class="stat-label">সম্পন্ন</div><div class="stat-number" style="color:#64748b;"><%= stats.completed || 0 %></div></div>
+      </div>
 
-  <main class="flex-1 p-6 lg:p-8 overflow-auto">
-    
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <h1 class="text-3xl font-bold text-white">Tournaments</h1>
-        <p class="text-gray-400 text-sm mt-1">Manage all tournaments professionally</p>
-      </div>
-      <div class="flex gap-3">
-        <button onclick="exportToCSV()" 
-                class="px-4 py-2.5 bg-[#334155] hover:bg-[#475569] text-white font-medium rounded-2xl flex items-center gap-2 text-sm">
-          <i class="fas fa-download"></i>
-          <span>Export CSV</span>
-        </button>
-        <button onclick="document.getElementById('create-tournament-modal').classList.remove('hidden')" 
-                class="px-5 py-2.5 bg-[#f59e0b] hover:bg-[#d97706] text-black font-bold rounded-2xl flex items-center gap-2 text-sm">
-          <i class="fas fa-plus"></i>
-          <span>Create Tournament</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Stats Cards -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-      <div class="bg-[#1e2937] rounded-3xl p-5 border border-[#334155]">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-gray-400 text-sm">Total Tournaments</p>
-            <p class="text-3xl font-bold text-white mt-1"><%= tournaments.length %></p>
-          </div>
-          <div class="w-12 h-12 bg-blue-500/20 rounded-2xl flex items-center justify-center">
-            <i class="fas fa-trophy text-blue-400 text-2xl"></i>
-          </div>
-        </div>
-      </div>
-      <div class="bg-[#1e2937] rounded-3xl p-5 border border-[#334155]">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-gray-400 text-sm">Active / Ongoing</p>
-            <p class="text-3xl font-bold text-emerald-400 mt-1"><%= tournaments.filter(t => t.status === 'ongoing').length %></p>
-          </div>
-          <div class="w-12 h-12 bg-emerald-500/20 rounded-2xl flex items-center justify-center">
-            <i class="fas fa-play text-emerald-400 text-2xl"></i>
-          </div>
-        </div>
-      </div>
-      <div class="bg-[#1e2937] rounded-3xl p-5 border border-[#334155]">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-gray-400 text-sm">Upcoming</p>
-            <p class="text-3xl font-bold text-yellow-400 mt-1"><%= tournaments.filter(t => t.status === 'upcoming').length %></p>
-          </div>
-          <div class="w-12 h-12 bg-yellow-500/20 rounded-2xl flex items-center justify-center">
-            <i class="fas fa-clock text-yellow-400 text-2xl"></i>
-          </div>
-        </div>
-      </div>
-      <div class="bg-[#1e2937] rounded-3xl p-5 border border-[#334155]">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-gray-400 text-sm">Completed</p>
-            <p class="text-3xl font-bold text-gray-400 mt-1"><%= tournaments.filter(t => t.status === 'completed').length %></p>
-          </div>
-          <div class="w-12 h-12 bg-gray-500/20 rounded-2xl flex items-center justify-center">
-            <i class="fas fa-check text-gray-400 text-2xl"></i>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Search and Filters -->
-    <div class="flex flex-col md:flex-row gap-4 mb-6">
-      <div class="flex-1">
-        <div class="relative">
-          <input type="text" id="searchInput" placeholder="Search by tournament name..." 
-                 onkeyup="filterTable()" 
-                 class="w-full bg-[#1e2937] border border-[#334155] rounded-2xl px-5 py-3 text-white pl-12 focus:outline-none focus:border-[#f59e0b]">
-          <i class="fas fa-search absolute left-5 top-4 text-gray-400"></i>
-        </div>
-      </div>
-      <div class="flex gap-3">
-        <select id="statusFilter" onchange="filterTable()" class="bg-[#1e2937] border border-[#334155] rounded-2xl px-4 py-3 text-white text-sm">
-          <option value="">All Status</option>
-          <option value="ongoing">Ongoing</option>
-          <option value="upcoming">Upcoming</option>
-          <option value="completed">Completed</option>
-        </select>
-        <select id="sportFilter" onchange="filterTable()" class="bg-[#1e2937] border border-[#334155] rounded-2xl px-4 py-3 text-white text-sm">
-          <option value="">All Sports</option>
-          <option value="football">Football</option>
-          <option value="cricket">Cricket</option>
-          <option value="basketball">Basketball</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- Tournaments Table -->
-    <div class="bg-[#1e2937] rounded-3xl border border-[#334155] overflow-hidden">
-      <table class="w-full text-sm" id="tournamentsTable">
-        <thead class="bg-[#0f172a]">
-          <tr class="text-gray-400">
-            <th class="text-left px-6 py-4 font-normal">Tournament</th>
-            <th class="text-center px-4 py-4 font-normal">Sport</th>
-            <th class="text-center px-4 py-4 font-normal">Participants</th>
-            <th class="text-center px-4 py-4 font-normal">Prize Pool</th>
-            <th class="text-center px-4 py-4 font-normal">Status</th>
-            <th class="text-center px-6 py-4 font-normal">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-[#334155] text-gray-300">
-          <% tournaments.forEach((t, index) => { %>
-          <tr class="hover:bg-[#0f172a] tournament-row" data-name="<%= t.name.toLowerCase() %>" data-status="<%= t.status %>" data-sport="<%= t.sport %>">
-            <td class="px-6 py-4">
-              <div class="font-semibold text-white"><%= t.name %></div>
-              <div class="text-xs text-gray-500"><%= new Date(t.start_date).toLocaleDateString() %> - <%= new Date(t.end_date).toLocaleDateString() %></div>
-            </td>
-            <td class="px-4 py-4 text-center">
-              <span class="px-3 py-1 text-xs rounded-full bg-[#334155]"><%= t.sport %></span>
-            </td>
-            <td class="px-4 py-4 text-center">
-              <%= t.participant_count || 0 %> / <%= t.max_participants || 100 %>
-            </td>
-            <td class="px-4 py-4 text-center font-bold text-emerald-400">৳<%= t.prize_pool || 0 %></td>
-            <td class="px-4 py-4 text-center">
-              <% if(t.status === 'ongoing') { %>
-                <span class="px-3 py-1 text-xs rounded-full bg-emerald-500/20 text-emerald-400">Ongoing</span>
-              <% } else if(t.status === 'upcoming') { %>
-                <span class="px-3 py-1 text-xs rounded-full bg-yellow-500/20 text-yellow-400">Upcoming</span>
-              <% } else { %>
-                <span class="px-3 py-1 text-xs rounded-full bg-gray-500/20 text-gray-400">Completed</span>
-              <% } %>
-            </td>
-            <td class="px-6 py-4">
-              <div class="flex justify-center gap-2">
-                <form action="/admin/tournaments/<%= t.id %>/status" method="POST" class="flex gap-1">
-                  <select name="status" onchange="this.form.submit()" class="bg-[#0f172a] border border-[#475569] text-white text-xs rounded-xl px-2 py-1">
-                    <option value="upcoming" <%= t.status === 'upcoming' ? 'selected' : '' %>>Upcoming</option>
-                    <option value="ongoing" <%= t.status === 'ongoing' ? 'selected' : '' %>>Ongoing</option>
-                    <option value="completed" <%= t.status === 'completed' ? 'selected' : '' %>>Completed</option>
-                  </select>
-                </form>
-                <form action="/admin/tournaments/<%= t.id %>/delete" method="POST" onsubmit="return confirm('Delete this tournament?')">
-                  <button type="submit" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 rounded-xl text-xs text-white">Delete</button>
-                </form>
-              </div>
-            </td>
-          </tr>
-          <% }) %>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Create Tournament Modal -->
-    <div id="create-tournament-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-      <div class="bg-[#1e2937] rounded-3xl p-8 w-full max-w-lg border border-[#334155]">
-        <div class="flex justify-between items-center mb-6">
-          <h3 class="text-xl font-bold text-white">Create New Tournament</h3>
-          <button onclick="document.getElementById('create-tournament-modal').classList.add('hidden')" class="text-gray-400 hover:text-white">
-            <i class="fas fa-times text-xl"></i>
-          </button>
-        </div>
-        
-        <form action="/admin/tournaments" method="POST">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="md:col-span-2">
-              <label class="text-sm text-gray-400 block mb-1">Tournament Name</label>
-              <input type="text" name="name" required class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white">
-            </div>
-            <div>
-              <label class="text-sm text-gray-400 block mb-1">Sport</label>
-              <select name="sport" class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white">
-                <option value="football">Football</option>
-                <option value="cricket">Cricket</option>
-                <option value="basketball">Basketball</option>
-              </select>
-            </div>
-            <div>
-              <label class="text-sm text-gray-400 block mb-1">Entry Fee (৳)</label>
-              <input type="number" name="entry_fee" value="0" class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white">
-            </div>
-            <div>
-              <label class="text-sm text-gray-400 block mb-1">Prize Pool (৳)</label>
-              <input type="number" name="prize_pool" value="0" class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white">
-            </div>
-            <div>
-              <label class="text-sm text-gray-400 block mb-1">Max Participants</label>
-              <input type="number" name="max_participants" value="100" class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white">
-            </div>
-            <div>
-              <label class="text-sm text-gray-400 block mb-1">Start Date</label>
-              <input type="date" name="start_date" required class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white">
-            </div>
-            <div>
-              <label class="text-sm text-gray-400 block mb-1">End Date</label>
-              <input type="date" name="end_date" required class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white">
-            </div>
-            <div class="md:col-span-2">
-              <label class="text-sm text-gray-400 block mb-1">Description</label>
-              <textarea name="description" rows="2" class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white"></textarea>
-            </div>
-          </div>
-
-          <div class="flex gap-3 mt-6">
-            <button type="button" onclick="document.getElementById('create-tournament-modal').classList.add('hidden')" 
-                    class="flex-1 py-3 bg-[#334155] hover:bg-[#475569] text-white rounded-2xl font-medium">Cancel</button>
-            <button type="submit" 
-                    class="flex-1 py-3 bg-[#f59e0b] hover:bg-[#d97706] text-black font-bold rounded-2xl">Create Tournament</button>
-          </div>
+      <div class="admin-card" style="padding:16px;margin-bottom:16px;">
+        <div style="font-weight:800;color:#fff;font-size:13px;margin-bottom:12px;"><i class="fas fa-trophy" style="color:#f59e0b;"></i> নতুন টুর্নামেন্ট তৈরি করুন</div>
+        <form method="POST" action="/admin/tournaments/add" style="display:grid;grid-template-columns:1fr;gap:10px;">
+          <input class="input" type="text" name="name" placeholder="টুর্নামেন্টের নাম" required>
+          <input class="input" type="text" name="sport" placeholder="স্পোর্ট (যেমন: cricket, football)">
+          <textarea class="input" name="description" rows="2" placeholder="বিবরণ (ঐচ্ছিক)"></textarea>
+          <input class="input" type="number" name="entry_fee" placeholder="এন্ট্রি ফি">
+          <input class="input" type="number" name="prize_pool" placeholder="প্রাইজ পুল">
+          <input class="input" type="number" name="max_participants" placeholder="সর্বোচ্চ অংশগ্রহণকারী" value="100">
+          <label style="font-size:11px;color:#94a3b8;">শুরুর সময়</label>
+          <input class="input" type="datetime-local" name="start_date">
+          <label style="font-size:11px;color:#94a3b8;">শেষের সময়</label>
+          <input class="input" type="datetime-local" name="end_date">
+          <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> তৈরি করুন</button>
         </form>
       </div>
+
+      <div class="admin-card">
+        <div class="admin-card-header">সকল টুর্নামেন্ট</div>
+        <div style="overflow-x:auto;">
+          <table class="admin-table">
+            <thead><tr><th>নাম</th><th>স্পোর্ট</th><th>এন্ট্রি ফি</th><th>প্রাইজ পুল</th><th>অংশগ্রহণকারী</th><th>স্ট্যাটাস</th><th style="text-align:right;">অ্যাকশন</th></tr></thead>
+            <tbody>
+              <% if (tournaments && tournaments.length > 0) { %>
+                <% tournaments.forEach(t => { %>
+                  <tr>
+                    <td style="font-weight:700;"><%= t.name %></td>
+                    <td><%= t.sport || '—' %></td>
+                    <td><%= t.entry_fee %></td>
+                    <td><%= t.prize_pool %></td>
+                    <td><%= t.participant_count %>/<%= t.max_participants %></td>
+                    <td>
+                      <% if (t.status === 'live') { %><span class="badge badge-green">লাইভ</span>
+                      <% } else if (t.status === 'upcoming') { %><span class="badge badge-amber">আসন্ন</span>
+                      <% } else if (t.status === 'completed') { %><span class="badge">সম্পন্ন</span>
+                      <% } else { %><span class="badge badge-red">বাতিল</span><% } %>
+                    </td>
+                    <td style="text-align:right;">
+                      <form method="POST" action="/admin/tournaments/<%= t.id %>/status" style="display:inline-block;">
+                        <select name="status" class="select" style="width:auto;padding:5px 8px;font-size:11px;" onchange="this.form.submit()">
+                          <option value="upcoming" <%= t.status === 'upcoming' ? 'selected' : '' %>>আসন্ন</option>
+                          <option value="live" <%= t.status === 'live' ? 'selected' : '' %>>লাইভ</option>
+                          <option value="completed" <%= t.status === 'completed' ? 'selected' : '' %>>সম্পন্ন</option>
+                          <option value="cancelled" <%= t.status === 'cancelled' ? 'selected' : '' %>>বাতিল</option>
+                        </select>
+                      </form>
+                      <form method="POST" action="/admin/tournaments/<%= t.id %>/delete" style="display:inline-block;" onsubmit="return confirm('মুছে ফেলবেন?')">
+                        <button class="btn btn-sm btn-red" type="submit"><i class="fas fa-trash"></i></button>
+                      </form>
+                    </td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="7"><div class="empty-state">কোনো টুর্নামেন্ট পাওয়া যায়নি</div></td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
-
-  </main>
-</div>
-
-<script>
-function filterTable() {
-  const searchValue = document.getElementById('searchInput').value.toLowerCase();
-  const statusValue = document.getElementById('statusFilter').value;
-  const sportValue = document.getElementById('sportFilter').value;
-  const rows = document.querySelectorAll('#tournamentsTable tbody .tournament-row');
-
-  rows.forEach(row => {
-    const name = row.getAttribute('data-name');
-    const status = row.getAttribute('data-status');
-    const sport = row.getAttribute('data-sport');
-
-    const matchesSearch = name.includes(searchValue);
-    const matchesStatus = !statusValue || status === statusValue;
-    const matchesSport = !sportValue || sport === sportValue;
-
-    if (matchesSearch && matchesStatus && matchesSport) {
-      row.style.display = '';
-    } else {
-      row.style.display = 'none';
-    }
-  });
-}
-
-function exportToCSV() {
-  const table = document.getElementById('tournamentsTable');
-  let csv = [];
-  const rows = table.querySelectorAll('tr');
-  
-  rows.forEach(row => {
-    if (row.style.display === 'none') return;
-    const cols = row.querySelectorAll('th, td');
-    let rowData = [];
-    cols.forEach(col => {
-      rowData.push('"' + col.innerText.replace(/"/g, '""') + '"');
-    });
-    csv.push(rowData.join(','));
-  });
-
-  const csvContent = csv.join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv' });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'tournaments_export.csv';
-  a.click();
-  window.URL.revokeObjectURL(url);
-}
-</script>
+  </div>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<%- include('partials/admin-layout', { 
+    title: 'Support Tickets', 
+    currentPage: 'support',
+    body: `
+<div class="max-w-7xl mx-auto">
+    <div class="modern-card bg-white rounded-3xl border p-6">
+        <div class="flex justify-between mb-6">
+            <div>
+                <h3 class="font-semibold text-xl">Open Support Tickets</h3>
+                <p class="text-sm text-slate-500">12 tickets waiting for reply</p>
+            </div>
+            <button class="px-5 py-2 bg-blue-600 text-white rounded-2xl text-sm">Mark All as Read</button>
+        </div>
+
+        <div class="space-y-4">
+            <div class="border border-slate-100 rounded-2xl p-5 hover:border-blue-200 cursor-pointer" onclick="openTicketModal()">
+                <div class="flex justify-between">
+                    <div>
+                        <span class="font-semibold">#TKT-3921</span> 
+                        <span class="ml-3 text-sm bg-red-100 text-red-600 px-3 py-0.5 rounded-full text-xs">High Priority</span>
+                    </div>
+                    <span class="text-xs text-slate-500">10 min ago</span>
+                </div>
+                <p class="mt-2 text-sm"><strong>Rahim Khan:</strong> আমার ব্যালেন্স থেকে ৫০০০ টাকা কেটে গেছে, কিন্তু বেট সেটেল হয়নি।</p>
+                <div class="mt-3 text-xs text-blue-600">Click to reply →</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ticket Reply Modal -->
+<div id="ticketModal" onclick="if (event.target.id === 'ticketModal') hideTicketModal()" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[100]">
+    <div onclick="event.stopImmediatePropagation()" class="bg-white w-full max-w-2xl rounded-3xl p-6">
+        <div class="flex justify-between mb-4">
+            <div>
+                <span class="font-bold">#TKT-3921</span> — Rahim Khan
+            </div>
+            <button onclick="hideTicketModal()" class="text-2xl leading-none">&times;</button>
+        </div>
+        
+        <div class="bg-slate-50 rounded-2xl p-4 mb-4 max-h-64 overflow-auto text-sm">
+            <p><strong>User:</strong> আমার ব্যালেন্স থেকে ৫০০০ টাকা কেটে গেছে...</p>
+        </div>
+        
+        <textarea id="replyText" class="w-full border border-slate-200 rounded-2xl p-4 h-28" placeholder="Type your reply here..."></textarea>
+        
+        <div class="flex justify-end gap-3 mt-4">
+            <button onclick="hideTicketModal()" class="px-6 py-3 rounded-2xl border">Close Ticket</button>
+            <button onclick="sendReply()" class="px-8 py-3 bg-blue-600 text-white rounded-2xl">Send Reply</button>
+        </div>
+    </div>
+</div>
+`
+}) %>
+
+<script>
+function openTicketModal() {
+    document.getElementById('ticketModal').classList.remove('hidden');
+    document.getElementById('ticketModal').classList.add('flex');
+}
+function hideTicketModal() {
+    const m = document.getElementById('ticketModal');
+    m.classList.remove('flex');
+    m.classList.add('hidden');
+}
+function sendReply() {
+    const text = document.getElementById('replyText').value.trim();
+    if (!text) return;
+    hideTicketModal();
+    showToast('Reply sent successfully. Ticket marked as resolved.');
+    // TODO: POST to /admin/support/reply
+}
+</script>

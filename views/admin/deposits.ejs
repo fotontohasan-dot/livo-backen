@@ -1,0 +1,172 @@
+<%- include('partials/admin-layout', { 
+    title: 'Deposits Management', 
+    currentPage: 'deposits',
+    body: `
+<div class="max-w-7xl mx-auto">
+    <!-- Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="modern-card bg-white p-6 rounded-3xl border border-slate-100">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm text-slate-500">Pending Deposits</p>
+                    <p class="text-4xl font-semibold text-amber-600 mt-1">184</p>
+                </div>
+                <div class="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center">
+                    <i class="fa-solid fa-clock text-amber-600 text-2xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="modern-card bg-white p-6 rounded-3xl border border-slate-100">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm text-slate-500">Today's Deposits</p>
+                    <p class="text-4xl font-semibold text-emerald-600 mt-1">৳ 4.2M</p>
+                </div>
+                <div class="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center">
+                    <i class="fa-solid fa-arrow-down text-emerald-600 text-2xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="modern-card bg-white p-6 rounded-3xl border border-slate-100">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm text-slate-500">Approved Today</p>
+                    <p class="text-4xl font-semibold text-blue-600 mt-1">312</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center">
+                    <i class="fa-solid fa-check-double text-blue-600 text-2xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="modern-card bg-white p-6 rounded-3xl border border-slate-100">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm text-slate-500">Total Deposits</p>
+                    <p class="text-4xl font-semibold text-slate-900 mt-1">12,489</p>
+                </div>
+                <div class="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center">
+                    <i class="fa-solid fa-wallet text-slate-600 text-2xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Deposits Table -->
+    <div class="modern-card bg-white rounded-3xl border border-slate-100 overflow-hidden">
+        <div class="px-6 py-5 border-b flex items-center justify-between">
+            <div>
+                <h3 class="font-semibold text-lg">Pending Deposits</h3>
+                <p class="text-sm text-slate-500">Approve or reject incoming deposits</p>
+            </div>
+            <button onclick="showManualDepositModal()" 
+                    class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-2xl flex items-center gap-2">
+                <i class="fa-solid fa-plus"></i>
+                <span>Manual Deposit</span>
+            </button>
+        </div>
+        
+        <table class="w-full">
+            <thead class="bg-slate-50">
+                <tr>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-slate-500">USER / TXN ID</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-slate-500">AMOUNT</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-slate-500">METHOD</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-slate-500">DATE</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-slate-500">STATUS</th>
+                    <th class="px-6 py-4 text-right text-xs font-semibold text-slate-500">ACTIONS</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y">
+                <tr class="hover:bg-slate-50">
+                    <td class="px-6 py-4">
+                        <div>
+                            <p class="font-medium">#TXN-93821</p>
+                            <p class="text-sm text-slate-500">Rahim Khan • 018XX-XXXXXX</p>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 font-semibold text-emerald-600">৳ 25,000</td>
+                    <td class="px-6 py-4">
+                        <span class="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full">bKash</span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-500">Just now</td>
+                    <td class="px-6 py-4"><span class="px-3 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">Pending</span></td>
+                    <td class="px-6 py-4 text-right">
+                        <button onclick="approveDeposit(this, 'TXN-93821')" class="px-4 py-1.5 text-xs font-medium bg-emerald-600 text-white rounded-xl mr-2">Approve</button>
+                        <button onclick="rejectDeposit(this, 'TXN-93821')" class="px-4 py-1.5 text-xs font-medium bg-red-100 text-red-600 rounded-xl">Reject</button>
+                    </td>
+                </tr>
+                <!-- More rows can be added dynamically -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Manual Deposit Modal -->
+<div id="manualDepositModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-3xl w-full max-w-md p-6">
+        <h3 class="text-xl font-semibold mb-4">Add Manual Deposit</h3>
+        <div class="space-y-4">
+            <div>
+                <label class="text-sm font-medium text-slate-600">User ID / Phone</label>
+                <input type="text" id="manualUser" class="w-full mt-1 border border-slate-200 rounded-2xl px-4 py-3" placeholder="018XX-XXXXXX or User ID">
+            </div>
+            <div>
+                <label class="text-sm font-medium text-slate-600">Amount (৳)</label>
+                <input type="number" id="manualAmount" class="w-full mt-1 border border-slate-200 rounded-2xl px-4 py-3" placeholder="5000">
+            </div>
+            <div>
+                <label class="text-sm font-medium text-slate-600">Note / Reference</label>
+                <textarea id="manualNote" class="w-full mt-1 border border-slate-200 rounded-2xl px-4 py-3" rows="2"></textarea>
+            </div>
+        </div>
+        <div class="flex gap-3 mt-6">
+            <button onclick="hideManualDepositModal()" class="flex-1 py-3 border border-slate-200 rounded-2xl font-medium">Cancel</button>
+            <button onclick="submitManualDeposit()" class="flex-1 py-3 bg-blue-600 text-white rounded-2xl font-medium">Add Deposit</button>
+        </div>
+    </div>
+</div>
+`
+}) %>
+
+<script>
+function approveDeposit(btn, txnId) {
+    if (confirm('Approve this deposit of ৳25,000?')) {
+        btn.outerHTML = `<span class="px-4 py-1.5 text-xs font-medium bg-emerald-100 text-emerald-700 rounded-xl">Approved</span>`;
+        showToast('Deposit approved successfully');
+        // TODO: Call your backend API here
+    }
+}
+
+function rejectDeposit(btn, txnId) {
+    const note = prompt('Reason for rejection:');
+    if (note) {
+        btn.outerHTML = `<span class="px-4 py-1.5 text-xs font-medium bg-red-100 text-red-600 rounded-xl">Rejected</span>`;
+        showToast('Deposit rejected');
+        // TODO: Call backend
+    }
+}
+
+function showManualDepositModal() {
+    document.getElementById('manualDepositModal').classList.remove('hidden');
+    document.getElementById('manualDepositModal').classList.add('flex');
+}
+
+function hideManualDepositModal() {
+    const modal = document.getElementById('manualDepositModal');
+    modal.classList.remove('flex');
+    modal.classList.add('hidden');
+}
+
+function submitManualDeposit() {
+    const user = document.getElementById('manualUser').value;
+    const amount = document.getElementById('manualAmount').value;
+    if (!user || !amount) return alert('Please fill all fields');
+    
+    hideManualDepositModal();
+    showToast('Manual deposit of ৳' + amount + ' added for ' + user);
+    // TODO: Send to your backend route POST /admin/deposits/manual
+}
+</script>
