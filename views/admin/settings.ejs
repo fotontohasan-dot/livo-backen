@@ -1,211 +1,173 @@
-<%- include('../partials/head') %>
-<%- include('../partials/admin-header') %>
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>সেটিংস • Livo Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
+    .settings-tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 16px; }
+    .settings-tab-btn {
+      background: none; border: none; color: #64748b; font-size: 12px; font-weight: 700;
+      padding: 10px 14px; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap;
+    }
+    .settings-tab-btn.active { color: #f59e0b; border-bottom-color: #f59e0b; }
+    .settings-panel { display: none; }
+    .settings-panel.active { display: block; }
+    .form-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+    @media (min-width: 700px) { .form-grid { grid-template-columns: 1fr 1fr; } }
+    .form-field label { display: block; font-size: 11px; color: #94a3b8; margin-bottom: 6px; font-weight: 600; }
+    .switch { position: relative; display: inline-block; width: 42px; height: 24px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .switch-slider { position: absolute; inset: 0; background: #334155; border-radius: 24px; cursor: pointer; transition: 0.2s; }
+    .switch-slider:before { content: ""; position: absolute; height: 18px; width: 18px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: 0.2s; }
+    .switch input:checked + .switch-slider { background: #f59e0b; }
+    .switch input:checked + .switch-slider:before { transform: translateX(18px); }
+  </style>
+</head>
+<body>
+  <div class="admin-wrap">
+    <%- include('./partials/sidebar', { active: 'settings' }) %>
 
-<div class="flex min-h-screen bg-[#0f172a]">
-  <%- include('../partials/admin-sidebar') %>
+    <div class="admin-content">
+      <%- include('./partials/header', {
+        pageTitle: 'সেটিংস',
+        pageSubtitle: 'সাইট কনফিগারেশন, বেটিং রুলস ও অ্যাডমিন অ্যাক্সেস পরিচালনা করুন'
+      }) %>
 
-  <main class="flex-1 p-6 lg:p-8 overflow-auto">
-    
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-8">
-      <div>
-        <h1 class="text-3xl font-bold text-white">Settings</h1>
-        <p class="text-gray-400 text-sm mt-1">Manage site configuration, betting rules & admin access</p>
+      <div class="settings-tabs">
+        <button class="settings-tab-btn active" onclick="showSettingsTab(0)">সাধারণ</button>
+        <button class="settings-tab-btn" onclick="showSettingsTab(1)">বেটিং রুলস</button>
+        <button class="settings-tab-btn" onclick="showSettingsTab(2)">পেমেন্ট</button>
+        <button class="settings-tab-btn" onclick="showSettingsTab(3)">অ্যাডমিন ম্যানেজমেন্ট</button>
       </div>
-      <button onclick="window.location.reload()" 
-              class="flex items-center gap-2 px-4 py-2.5 bg-[#1e2937] hover:bg-[#334155] border border-[#475569] text-white rounded-2xl text-sm font-medium transition-all">
-        <i class="fas fa-sync-alt"></i>
-        <span>Refresh</span>
-      </button>
-    </div>
 
-    <!-- Tabs -->
-    <div class="flex border-b border-[#334155] mb-8">
-      <button onclick="showTab(0)" class="tab-btn active px-6 py-3 text-sm font-semibold border-b-2 border-[#f59e0b] text-[#f59e0b]">General</button>
-      <button onclick="showTab(1)" class="tab-btn px-6 py-3 text-sm font-semibold text-gray-400 hover:text-white">Betting Rules</button>
-      <button onclick="showTab(2)" class="tab-btn px-6 py-3 text-sm font-semibold text-gray-400 hover:text-white">Payment</button>
-      <button onclick="showTab(3)" class="tab-btn px-6 py-3 text-sm font-semibold text-gray-400 hover:text-white">Admin Management</button>
-    </div>
-
-    <!-- Tab 0: General Settings -->
-    <div id="tab-0" class="tab-content">
-      <div class="bg-[#1e2937] rounded-3xl border border-[#334155] p-8 mb-8">
-        <h3 class="text-xl font-semibold text-white mb-6 flex items-center gap-2">
-          <i class="fas fa-globe text-[#f59e0b]"></i>
-          <span>General Site Settings</span>
-        </h3>
-
-        <form action="/admin/settings/update" method="POST">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label class="block text-sm text-gray-400 mb-2">Site Name</label>
-              <input type="text" name="site_name" value="<%= settings.site_name || 'Livo' %>" 
-                     class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b]">
-            </div>
-            <div>
-              <label class="block text-sm text-gray-400 mb-2">Support Email</label>
-              <input type="email" name="support_email" value="<%= settings.support_email || '' %>" 
-                     class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b]">
-            </div>
-            <div>
-              <label class="block text-sm text-gray-400 mb-2">Maintenance Mode</label>
-              <div class="flex items-center gap-3 mt-1">
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" name="maintenance_mode" <%= settings.maintenance_mode ? 'checked' : '' %> class="sr-only peer">
-                  <div class="w-11 h-6 bg-[#475569] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#f59e0b]"></div>
-                </label>
-                <span class="text-sm text-gray-400">Enable maintenance mode</span>
+      <!-- General -->
+      <div class="settings-panel active" id="settings-tab-0">
+        <div class="admin-card" style="padding:18px;">
+          <div style="font-weight:800;color:#fff;font-size:14px;margin-bottom:14px;"><i class="fas fa-globe" style="color:#f59e0b;"></i> সাধারণ সেটিংস</div>
+          <form method="POST" action="/admin/settings/update">
+            <div class="form-grid">
+              <div class="form-field">
+                <label>সাইটের নাম</label>
+                <input class="input" type="text" name="site_name" value="<%= settings.site_name || 'Livo' %>">
+              </div>
+              <div class="form-field">
+                <label>সাপোর্ট ইমেইল</label>
+                <input class="input" type="email" name="support_email" value="<%= settings.support_email || '' %>">
+              </div>
+              <div class="form-field">
+                <label>ম্যাক্স লগইন চেষ্টা</label>
+                <input class="input" type="number" name="max_login_attempts" value="<%= settings.max_login_attempts || 5 %>">
+              </div>
+              <div class="form-field">
+                <label>মেইনটেন্যান্স মোড</label>
+                <div style="display:flex;align-items:center;gap:10px;margin-top:4px;">
+                  <input type="hidden" name="maintenance_mode" value="false">
+                  <label class="switch">
+                    <input type="checkbox" name="maintenance_mode" value="true" <%= settings.maintenance_mode ? 'checked' : '' %>>
+                    <span class="switch-slider"></span>
+                  </label>
+                  <span style="font-size:12px;color:#94a3b8;">চালু থাকলে সাইট মেইনটেন্যান্স পেজ দেখাবে</span>
+                </div>
               </div>
             </div>
-            <div>
-              <label class="block text-sm text-gray-400 mb-2">Max Login Attempts</label>
-              <input type="number" name="max_login_attempts" value="<%= settings.max_login_attempts || 5 %>" 
-                     class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b]">
-            </div>
-          </div>
-
-          <div class="mt-8">
-            <button type="submit" class="px-8 py-3 bg-[#f59e0b] hover:bg-[#d97706] text-black font-bold rounded-2xl transition-all active:scale-[0.985]">
-              Save General Settings
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Tab 1: Betting Rules -->
-    <div id="tab-1" class="tab-content hidden">
-      <div class="bg-[#1e2937] rounded-3xl border border-[#334155] p-8 mb-8">
-        <h3 class="text-xl font-semibold text-white mb-6 flex items-center gap-2">
-          <i class="fas fa-dice text-[#f59e0b]"></i>
-          <span>Betting Rules & Limits</span>
-        </h3>
-
-        <form action="/admin/settings/update" method="POST">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label class="block text-sm text-gray-400 mb-2">Minimum Bet Amount (৳)</label>
-              <input type="number" name="min_bet" value="<%= settings.min_bet || 10 %>" 
-                     class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b]">
-            </div>
-            <div>
-              <label class="block text-sm text-gray-400 mb-2">Maximum Bet Amount (৳)</label>
-              <input type="number" name="max_bet" value="<%= settings.max_bet || 50000 %>" 
-                     class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b]">
-            </div>
-            <div>
-              <label class="block text-sm text-gray-400 mb-2">Turnover Multiplier</label>
-              <input type="number" step="0.1" name="turnover_multiplier" value="<%= settings.turnover_multiplier || 1 %>" 
-                     class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b]">
-            </div>
-            <div>
-              <label class="block text-sm text-gray-400 mb-2">Max Daily Bets Per User</label>
-              <input type="number" name="max_daily_bets" value="<%= settings.max_daily_bets || 50 %>" 
-                     class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b]">
-            </div>
-          </div>
-
-          <div class="mt-8">
-            <button type="submit" class="px-8 py-3 bg-[#f59e0b] hover:bg-[#d97706] text-black font-bold rounded-2xl transition-all active:scale-[0.985]">
-              Save Betting Rules
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Tab 2: Payment Settings -->
-    <div id="tab-2" class="tab-content hidden">
-      <div class="bg-[#1e2937] rounded-3xl border border-[#334155] p-8 mb-8">
-        <h3 class="text-xl font-semibold text-white mb-6 flex items-center gap-2">
-          <i class="fas fa-credit-card text-[#f59e0b]"></i>
-          <span>Payment & Commission Settings</span>
-        </h3>
-
-        <form action="/admin/settings/update" method="POST">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label class="block text-sm text-gray-400 mb-2">Deposit Commission (%)</label>
-              <input type="number" step="0.1" name="deposit_commission_percent" value="<%= settings.deposit_commission_percent || 0 %>" 
-                     class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b]">
-            </div>
-            <div>
-              <label class="block text-sm text-gray-400 mb-2">Withdraw Commission (%)</label>
-              <input type="number" step="0.1" name="withdraw_commission_percent" value="<%= settings.withdraw_commission_percent || 0 %>" 
-                     class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b]">
-            </div>
-            <div>
-              <label class="block text-sm text-gray-400 mb-2">Minimum Deposit (৳)</label>
-              <input type="number" name="min_deposit" value="<%= settings.min_deposit || 100 %>" 
-                     class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b]">
-            </div>
-            <div>
-              <label class="block text-sm text-gray-400 mb-2">Minimum Withdraw (৳)</label>
-              <input type="number" name="min_withdraw" value="<%= settings.min_withdraw || 500 %>" 
-                     class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b]">
-            </div>
-          </div>
-
-          <div class="mt-8">
-            <button type="submit" class="px-8 py-3 bg-[#f59e0b] hover:bg-[#d97706] text-black font-bold rounded-2xl transition-all active:scale-[0.985]">
-              Save Payment Settings
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Tab 3: Admin Management -->
-    <div id="tab-3" class="tab-content hidden">
-      <div class="bg-[#1e2937] rounded-3xl border border-[#334155] p-8">
-        <div class="flex items-center justify-between mb-6">
-          <h3 class="text-xl font-semibold text-white flex items-center gap-2">
-            <i class="fas fa-user-shield text-[#f59e0b]"></i>
-            <span>Admin Management</span>
-          </h3>
-          <span class="text-xs px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full"><%= admins.length %> Admins</span>
+            <button type="submit" class="btn btn-primary" style="margin-top:18px;"><i class="fas fa-save"></i> সেভ করুন</button>
+          </form>
         </div>
+      </div>
 
-        <!-- Add New Admin -->
-        <form action="/admin/settings/admins/promote" method="POST" class="flex flex-col md:flex-row gap-3 mb-8">
-          <input type="text" name="username" placeholder="Enter username to promote as admin" 
-                 class="flex-1 bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b]" required>
-          <button type="submit" 
-                  class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl transition-all active:scale-[0.985] whitespace-nowrap">
-            <i class="fas fa-user-plus mr-2"></i> Promote to Admin
-          </button>
-        </form>
+      <!-- Betting -->
+      <div class="settings-panel" id="settings-tab-1">
+        <div class="admin-card" style="padding:18px;">
+          <div style="font-weight:800;color:#fff;font-size:14px;margin-bottom:14px;"><i class="fas fa-dice" style="color:#f59e0b;"></i> বেটিং রুলস ও লিমিট</div>
+          <form method="POST" action="/admin/settings/update">
+            <div class="form-grid">
+              <div class="form-field">
+                <label>মিনিমাম বেট (৳)</label>
+                <input class="input" type="number" name="min_bet" value="<%= settings.min_bet || 10 %>">
+              </div>
+              <div class="form-field">
+                <label>ম্যাক্সিমাম বেট (৳)</label>
+                <input class="input" type="number" name="max_bet" value="<%= settings.max_bet || 50000 %>">
+              </div>
+              <div class="form-field">
+                <label>টার্নওভার মাল্টিপ্লায়ার</label>
+                <input class="input" type="number" step="0.1" name="turnover_multiplier" value="<%= settings.turnover_multiplier || 1 %>">
+              </div>
+              <div class="form-field">
+                <label>ইউজার প্রতি দৈনিক ম্যাক্স বেট</label>
+                <input class="input" type="number" name="max_daily_bets" value="<%= settings.max_daily_bets || 50 %>">
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="margin-top:18px;"><i class="fas fa-save"></i> সেভ করুন</button>
+          </form>
+        </div>
+      </div>
 
-        <!-- Current Admins Table -->
-        <div>
-          <h4 class="text-sm text-gray-400 mb-3">Current Admins</h4>
-          <div class="overflow-x-auto">
-            <table class="w-full">
+      <!-- Payment -->
+      <div class="settings-panel" id="settings-tab-2">
+        <div class="admin-card" style="padding:18px;">
+          <div style="font-weight:800;color:#fff;font-size:14px;margin-bottom:14px;"><i class="fas fa-credit-card" style="color:#f59e0b;"></i> পেমেন্ট ও কমিশন সেটিংস</div>
+          <form method="POST" action="/admin/settings/update">
+            <div class="form-grid">
+              <div class="form-field">
+                <label>ডিপোজিট কমিশন (%)</label>
+                <input class="input" type="number" step="0.1" name="deposit_commission_percent" value="<%= settings.deposit_commission_percent || 0 %>">
+              </div>
+              <div class="form-field">
+                <label>উইথড্র কমিশন (%)</label>
+                <input class="input" type="number" step="0.1" name="withdraw_commission_percent" value="<%= settings.withdraw_commission_percent || 0 %>">
+              </div>
+              <div class="form-field">
+                <label>মিনিমাম ডিপোজিট (৳)</label>
+                <input class="input" type="number" name="min_deposit" value="<%= settings.min_deposit || 100 %>">
+              </div>
+              <div class="form-field">
+                <label>মিনিমাম উইথড্র (৳)</label>
+                <input class="input" type="number" name="min_withdraw" value="<%= settings.min_withdraw || 500 %>">
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="margin-top:18px;"><i class="fas fa-save"></i> সেভ করুন</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Admin management -->
+      <div class="settings-panel" id="settings-tab-3">
+        <div class="admin-card" style="padding:18px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div style="font-weight:800;color:#fff;font-size:14px;"><i class="fas fa-user-shield" style="color:#f59e0b;"></i> অ্যাডমিন ম্যানেজমেন্ট</div>
+            <span class="badge badge-green"><%= admins.length %> জন অ্যাডমিন</span>
+          </div>
+
+          <form method="POST" action="/admin/settings/admins/promote" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+            <input class="input" style="flex:1;min-width:180px;" type="text" name="username" placeholder="যে ইউজারনেমকে অ্যাডমিন বানাবেন" required>
+            <button type="submit" class="btn btn-green"><i class="fas fa-user-plus"></i> অ্যাডমিন বানান</button>
+          </form>
+
+          <div style="overflow-x:auto;">
+            <table class="admin-table">
               <thead>
-                <tr class="border-b border-[#334155] text-left">
-                  <th class="py-3 px-4 text-xs font-semibold text-gray-400">Username</th>
-                  <th class="py-3 px-4 text-xs font-semibold text-gray-400">Email</th>
-                  <th class="py-3 px-4 text-xs font-semibold text-gray-400">Joined</th>
-                  <th class="py-3 px-4 text-xs font-semibold text-gray-400 text-right">Action</th>
+                <tr>
+                  <th>ইউজারনেম</th>
+                  <th>ইমেইল</th>
+                  <th>যোগদান</th>
+                  <th style="text-align:right;">অ্যাকশন</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-[#334155]">
+              <tbody>
                 <% admins.forEach(a => { %>
-                  <tr class="hover:bg-[#0f172a] transition-colors">
-                    <td class="py-4 px-4">
-                      <div class="font-semibold text-white"><%= a.username %></div>
-                    </td>
-                    <td class="py-4 px-4 text-gray-400 text-sm"><%= a.email || 'N/A' %></td>
-                    <td class="py-4 px-4 text-gray-400 text-sm">
-                      <%= a.created_at ? new Date(a.created_at).toLocaleDateString() : 'N/A' %>
-                    </td>
-                    <td class="py-4 px-4 text-right">
-                      <form action="/admin/settings/admins/<%= a.id %>/demote" method="POST" 
-                            onsubmit="return confirm('Remove admin access from <%= a.username %>?')">
-                        <button type="submit" 
-                                class="px-4 py-1.5 text-xs bg-red-600 hover:bg-red-700 rounded-xl text-white font-medium transition-all">
-                          Remove Admin
-                        </button>
+                  <tr>
+                    <td style="font-weight:700;"><%= a.username %></td>
+                    <td><%= a.email || '—' %></td>
+                    <td><%= a.created_at ? new Date(a.created_at).toLocaleDateString('bn-BD') : '—' %></td>
+                    <td style="text-align:right;">
+                      <form method="POST" action="/admin/settings/admins/<%= a.id %>/demote"
+                            onsubmit="return confirm('<%= a.username %> থেকে অ্যাডমিন অ্যাক্সেস সরাবেন?')">
+                        <button type="submit" class="btn btn-sm btn-red">অ্যাডমিন সরান</button>
                       </form>
                     </td>
                   </tr>
@@ -216,29 +178,18 @@
         </div>
       </div>
     </div>
+  </div>
 
-  </main>
-</div>
-
-<script>
-function showTab(tabIndex) {
-  // Hide all tabs
-  document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-  // Remove active from all buttons
-  document.querySelectorAll('.tab-btn').forEach(el => {
-    el.classList.remove('active', 'border-b-2', 'border-[#f59e0b]', 'text-[#f59e0b]');
-    el.classList.add('text-gray-400');
-  });
-  // Show selected tab
-  document.getElementById('tab-' + tabIndex).classList.remove('hidden');
-  // Activate button
-  const btns = document.querySelectorAll('.tab-btn');
-  btns[tabIndex].classList.add('active', 'border-b-2', 'border-[#f59e0b]', 'text-[#f59e0b]');
-  btns[tabIndex].classList.remove('text-gray-400');
-}
-
-// Show first tab by default
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('tab-0').classList.remove('hidden');
-});
-</script>
+  <script>
+    function showSettingsTab(i) {
+      document.querySelectorAll('.settings-panel').forEach(function (el) { el.classList.remove('active'); });
+      document.querySelectorAll('.settings-tab-btn').forEach(function (el) { el.classList.remove('active'); });
+      document.getElementById('settings-tab-' + i).classList.add('active');
+      document.querySelectorAll('.settings-tab-btn')[i].classList.add('active');
+    }
+    <% if (typeof saved !== 'undefined' && saved) { %>
+      window.addEventListener('DOMContentLoaded', function () { showAdminToast('সেটিংস সেভ হয়েছে'); });
+    <% } %>
+  </script>
+</body>
+</html>
