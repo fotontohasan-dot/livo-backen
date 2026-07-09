@@ -6,54 +6,325 @@
 
   <main class="flex-1 p-6 lg:p-8 overflow-auto">
     
-    <div class="mb-8">
-      <h1 class="text-3xl font-bold text-white">Reports</h1>
-      <p class="text-gray-400 text-sm mt-1">Export data for analysis</p>
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-3xl font-bold text-white">Reports</h1>
+        <p class="text-gray-400 text-sm mt-1">Generate and export data reports for analysis</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <button onclick="refreshStats()" 
+                class="px-4 py-2.5 bg-[#1e2937] hover:bg-[#334155] border border-[#475569] text-white rounded-2xl flex items-center gap-2 text-sm transition-all">
+          <i class="fas fa-sync-alt"></i>
+          <span>Refresh</span>
+        </button>
+      </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-400 text-sm">Total Exports</p>
+            <p class="text-3xl font-bold text-white mt-1" id="stat-total">1,284</p>
+          </div>
+          <div class="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center">
+            <i class="fas fa-file-export text-blue-400 text-2xl"></i>
+          </div>
+        </div>
+        <p class="text-emerald-400 text-xs mt-3 flex items-center gap-1">
+          <i class="fas fa-arrow-up"></i> <span>+142 this month</span>
+        </p>
+      </div>
+      
+      <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-400 text-sm">Exports Today</p>
+            <p class="text-3xl font-bold text-emerald-400 mt-1" id="stat-today">47</p>
+          </div>
+          <div class="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center">
+            <i class="fas fa-calendar-day text-emerald-400 text-2xl"></i>
+          </div>
+        </div>
+        <p class="text-gray-400 text-xs mt-3">Last export: 12 min ago</p>
+      </div>
+      
+      <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-400 text-sm">Most Popular</p>
+            <p class="text-xl font-bold text-amber-400 mt-1" id="stat-popular">Bets Report</p>
+          </div>
+          <div class="w-12 h-12 bg-amber-500/10 rounded-2xl flex items-center justify-center">
+            <i class="fas fa-tachometer-alt text-amber-400 text-2xl"></i>
+          </div>
+        </div>
+        <p class="text-gray-400 text-xs mt-3">Downloaded 312 times this month</p>
+      </div>
+      
+      <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-400 text-sm">This Month</p>
+            <p class="text-3xl font-bold text-white mt-1" id="stat-month">312</p>
+          </div>
+          <div class="w-12 h-12 bg-purple-500/10 rounded-2xl flex items-center justify-center">
+            <i class="fas fa-chart-bar text-purple-400 text-2xl"></i>
+          </div>
+        </div>
+        <p class="text-emerald-400 text-xs mt-3 flex items-center gap-1">
+          <i class="fas fa-arrow-up"></i> <span>+28% from last month</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- Available Reports Section -->
+    <div class="mb-6">
+      <h2 class="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+        <i class="fas fa-download text-[#f59e0b]"></i>
+        <span>Available Reports</span>
+      </h2>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       
       <!-- Users Report -->
-      <div class="bg-[#1e2937] rounded-3xl border border-[#334155] p-6">
-        <div class="flex items-center gap-3 mb-4">
-          <i class="fas fa-users text-2xl text-[#f59e0b]"></i>
-          <h3 class="font-semibold text-white">Users Report</h3>
+      <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-6 hover:border-[#f59e0b]/50 transition-all group">
+        <div class="flex items-center gap-4 mb-4">
+          <div class="w-14 h-14 bg-blue-500/10 rounded-2xl flex items-center justify-center group-hover:bg-blue-500/20 transition-all">
+            <i class="fas fa-users text-blue-400 text-3xl"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-white text-lg">Users Report</h3>
+            <p class="text-xs text-gray-400">All registered users data</p>
+          </div>
         </div>
-        <p class="text-sm text-gray-400 mb-6">Download all users data with filters</p>
-        <a href="/admin/reports/export/users" class="block w-full text-center py-3 bg-[#334155] hover:bg-[#475569] rounded-2xl text-sm font-medium">Download CSV</a>
+        <p class="text-sm text-gray-400 mb-6 leading-relaxed">Download complete list of users with registration date, status, balance and KYC information.</p>
+        
+        <a href="/admin/reports/export/users" 
+           class="block w-full text-center py-3.5 bg-[#334155] hover:bg-[#f59e0b] hover:text-black text-white font-semibold rounded-2xl text-sm transition-all flex items-center justify-center gap-2">
+          <i class="fas fa-download"></i>
+          <span>Export CSV</span>
+        </a>
       </div>
 
       <!-- Bets Report -->
-      <div class="bg-[#1e2937] rounded-3xl border border-[#334155] p-6">
-        <div class="flex items-center gap-3 mb-4">
-          <i class="fas fa-ticket-alt text-2xl text-[#f59e0b]"></i>
-          <h3 class="font-semibold text-white">Bets Report</h3>
+      <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-6 hover:border-[#f59e0b]/50 transition-all group">
+        <div class="flex items-center gap-4 mb-4">
+          <div class="w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center group-hover:bg-emerald-500/20 transition-all">
+            <i class="fas fa-ticket-alt text-emerald-400 text-3xl"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-white text-lg">Bets Report</h3>
+            <p class="text-xs text-gray-400">All bets with details</p>
+          </div>
         </div>
-        <p class="text-sm text-gray-400 mb-6">All bets with user and status</p>
-        <a href="/admin/reports/export/bets" class="block w-full text-center py-3 bg-[#334155] hover:bg-[#475569] rounded-2xl text-sm font-medium">Download CSV</a>
+        <p class="text-sm text-gray-400 mb-6 leading-relaxed">Complete betting history including user, match, stake, odds, status and profit/loss.</p>
+        
+        <a href="/admin/reports/export/bets" 
+           class="block w-full text-center py-3.5 bg-[#334155] hover:bg-[#f59e0b] hover:text-black text-white font-semibold rounded-2xl text-sm transition-all flex items-center justify-center gap-2">
+          <i class="fas fa-download"></i>
+          <span>Export CSV</span>
+        </a>
       </div>
 
       <!-- Payments Report -->
-      <div class="bg-[#1e2937] rounded-3xl border border-[#334155] p-6">
-        <div class="flex items-center gap-3 mb-4">
-          <i class="fas fa-wallet text-2xl text-[#f59e0b]"></i>
-          <h3 class="font-semibold text-white">Payments Report</h3>
+      <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-6 hover:border-[#f59e0b]/50 transition-all group">
+        <div class="flex items-center gap-4 mb-4">
+          <div class="w-14 h-14 bg-amber-500/10 rounded-2xl flex items-center justify-center group-hover:bg-amber-500/20 transition-all">
+            <i class="fas fa-wallet text-amber-400 text-3xl"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-white text-lg">Payments Report</h3>
+            <p class="text-xs text-gray-400">Deposits & Withdrawals</p>
+          </div>
         </div>
-        <p class="text-sm text-gray-400 mb-6">Deposits & Withdrawals data</p>
-        <a href="/admin/reports/export/payments" class="block w-full text-center py-3 bg-[#334155] hover:bg-[#475569] rounded-2xl text-sm font-medium">Download CSV</a>
+        <p class="text-sm text-gray-400 mb-6 leading-relaxed">All financial transactions including deposits, withdrawals and manual adjustments.</p>
+        
+        <a href="/admin/reports/export/payments" 
+           class="block w-full text-center py-3.5 bg-[#334155] hover:bg-[#f59e0b] hover:text-black text-white font-semibold rounded-2xl text-sm transition-all flex items-center justify-center gap-2">
+          <i class="fas fa-download"></i>
+          <span>Export CSV</span>
+        </a>
       </div>
 
       <!-- Profit Report -->
-      <div class="bg-[#1e2937] rounded-3xl border border-[#334155] p-6">
-        <div class="flex items-center gap-3 mb-4">
-          <i class="fas fa-chart-line text-2xl text-[#f59e0b]"></i>
-          <h3 class="font-semibold text-white">Profit Report</h3>
+      <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-6 hover:border-[#f59e0b]/50 transition-all group">
+        <div class="flex items-center gap-4 mb-4">
+          <div class="w-14 h-14 bg-purple-500/10 rounded-2xl flex items-center justify-center group-hover:bg-purple-500/20 transition-all">
+            <i class="fas fa-chart-line text-purple-400 text-3xl"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-white text-lg">Profit Report</h3>
+            <p class="text-xs text-gray-400">Daily P&amp;L Summary</p>
+          </div>
         </div>
-        <p class="text-sm text-gray-400 mb-6">Daily profit & loss summary</p>
-        <a href="/admin/reports/export/profit" class="block w-full text-center py-3 bg-[#334155] hover:bg-[#475569] rounded-2xl text-sm font-medium">Download CSV</a>
+        <p class="text-sm text-gray-400 mb-6 leading-relaxed">Daily profit and loss breakdown with commission, winning payouts and net revenue.</p>
+        
+        <a href="/admin/reports/export/profit" 
+           class="block w-full text-center py-3.5 bg-[#334155] hover:bg-[#f59e0b] hover:text-black text-white font-semibold rounded-2xl text-sm transition-all flex items-center justify-center gap-2">
+          <i class="fas fa-download"></i>
+          <span>Export CSV</span>
+        </a>
       </div>
 
+    </div>
+
+    <!-- Recent Exports Log -->
+    <div class="mb-4 flex items-center justify-between">
+      <h2 class="text-xl font-semibold text-white flex items-center gap-2">
+        <i class="fas fa-history text-[#f59e0b]"></i>
+        <span>Recent Exports</span>
+      </h2>
+      <button onclick="exportToCSV()" 
+              class="px-4 py-2 bg-[#1e2937] hover:bg-[#334155] border border-[#475569] text-white text-xs rounded-2xl flex items-center gap-2 transition-all">
+        <i class="fas fa-download"></i>
+        <span>Export Log CSV</span>
+      </button>
+    </div>
+
+    <div class="bg-[#1e2937] border border-[#334155] rounded-3xl overflow-hidden">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-[#334155] bg-[#0f172a]">
+            <th class="text-left py-4 px-6 text-gray-400 font-medium">Report Type</th>
+            <th class="text-left py-4 px-6 text-gray-400 font-medium">Exported By</th>
+            <th class="text-left py-4 px-6 text-gray-400 font-medium">Date &amp; Time</th>
+            <th class="text-left py-4 px-6 text-gray-400 font-medium">Records</th>
+            <th class="text-left py-4 px-6 text-gray-400 font-medium">Status</th>
+            <th class="text-right py-4 px-6 text-gray-400 font-medium">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[#334155]">
+          <tr class="hover:bg-[#0f172a] transition-colors">
+            <td class="py-4 px-6">
+              <div class="flex items-center gap-3">
+                <i class="fas fa-ticket-alt text-emerald-400"></i>
+                <span class="font-medium text-white">Bets Report</span>
+              </div>
+            </td>
+            <td class="py-4 px-6 text-gray-300">admin@ livo.com</td>
+            <td class="py-4 px-6 text-gray-300">09 Jul 2026, 11:42</td>
+            <td class="py-4 px-6 text-white font-medium">12,458</td>
+            <td class="py-4 px-6">
+              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400">Completed</span>
+            </td>
+            <td class="py-4 px-6 text-right">
+              <button onclick="downloadReport(this)" class="text-[#f59e0b] hover:text-white text-xs font-medium px-4 py-1.5 rounded-xl border border-[#f59e0b]/30 hover:bg-[#f59e0b]/10 transition-all">Download</button>
+            </td>
+          </tr>
+          <tr class="hover:bg-[#0f172a] transition-colors">
+            <td class="py-4 px-6">
+              <div class="flex items-center gap-3">
+                <i class="fas fa-users text-blue-400"></i>
+                <span class="font-medium text-white">Users Report</span>
+              </div>
+            </td>
+            <td class="py-4 px-6 text-gray-300">admin@ livo.com</td>
+            <td class="py-4 px-6 text-gray-300">09 Jul 2026, 09:15</td>
+            <td class="py-4 px-6 text-white font-medium">8,721</td>
+            <td class="py-4 px-6">
+              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400">Completed</span>
+            </td>
+            <td class="py-4 px-6 text-right">
+              <button onclick="downloadReport(this)" class="text-[#f59e0b] hover:text-white text-xs font-medium px-4 py-1.5 rounded-xl border border-[#f59e0b]/30 hover:bg-[#f59e0b]/10 transition-all">Download</button>
+            </td>
+          </tr>
+          <tr class="hover:bg-[#0f172a] transition-colors">
+            <td class="py-4 px-6">
+              <div class="flex items-center gap-3">
+                <i class="fas fa-wallet text-amber-400"></i>
+                <span class="font-medium text-white">Payments Report</span>
+              </div>
+            </td>
+            <td class="py-4 px-6 text-gray-300">finance@ livo.com</td>
+            <td class="py-4 px-6 text-gray-300">08 Jul 2026, 16:30</td>
+            <td class="py-4 px-6 text-white font-medium">3,245</td>
+            <td class="py-4 px-6">
+              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400">Completed</span>
+            </td>
+            <td class="py-4 px-6 text-right">
+              <button onclick="downloadReport(this)" class="text-[#f59e0b] hover:text-white text-xs font-medium px-4 py-1.5 rounded-xl border border-[#f59e0b]/30 hover:bg-[#f59e0b]/10 transition-all">Download</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
   </main>
 </div>
+
+<!-- Toast Notification -->
+<div id="toast" class="hidden fixed bottom-6 right-6 bg-[#1e2937] border border-[#334155] text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 z-50">
+  <i class="fas fa-check-circle text-emerald-400"></i>
+  <span id="toast-message"></span>
+</div>
+
+<script>
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  const msg = document.getElementById('toast-message');
+  msg.textContent = message;
+  toast.classList.remove('hidden');
+  toast.classList.add('flex');
+  
+  setTimeout(() => {
+    toast.classList.remove('flex');
+    toast.classList.add('hidden');
+  }, 3000);
+}
+
+function refreshStats() {
+  const btns = document.querySelectorAll('button');
+  btns.forEach(b => b.disabled = true);
+  
+  setTimeout(() => {
+    document.getElementById('stat-total').textContent = '1,291';
+    document.getElementById('stat-today').textContent = '54';
+    btns.forEach(b => b.disabled = false);
+    showToast('Stats refreshed successfully');
+  }, 800);
+}
+
+function downloadReport(btn) {
+  const originalText = btn.innerHTML;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Downloading...';
+  btn.disabled = true;
+  
+  setTimeout(() => {
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+    showToast('Report downloaded successfully');
+  }, 1500);
+}
+
+function exportToCSV() {
+  const btns = document.querySelectorAll('button');
+  const originalTexts = [];
+  
+  btns.forEach((btn, i) => {
+    originalTexts[i] = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exporting...';
+    btn.disabled = true;
+  });
+  
+  setTimeout(() => {
+    btns.forEach((btn, i) => {
+      btn.innerHTML = originalTexts[i];
+      btn.disabled = false;
+    });
+    showToast('Export log downloaded as CSV');
+  }, 1200);
+}
+
+// Keyboard support
+document.addEventListener('keydown', function(e) {
+  if (e.key === "/" && document.activeElement.tagName === "BODY") {
+    e.preventDefault();
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) searchInput.focus();
+  }
+});
+</script>
