@@ -5,7 +5,10 @@ const isAuth = (req, res, next) => {
 
 const isAdmin = (req, res, next) => {
   if (req.session && req.session.user && req.session.user.role === 'admin') return next();
-  res.status(403).send('Access denied');
+  if (req.path.includes('/api/')) {
+    return res.status(403).json({ success: false, error: 'অ্যাক্সেস অনুমোদিত নয়, দয়া করে অ্যাডমিন হিসেবে লগইন করুন।' });
+  }
+  return res.redirect('/admin/login');
 };
 
 const requireAuth = isAuth;
