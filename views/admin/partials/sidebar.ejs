@@ -75,10 +75,10 @@
 
   <div class="admin-nav-group-title">ইউজার</div>
   <a href="/admin/users" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'users' ? 'active' : '' %>"><i class="fas fa-users"></i> ইউজার ম্যানেজমেন্ট</a>
-  <a href="/admin/kyc" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'kyc' ? 'active' : '' %>"><i class="fas fa-id-card"></i> KYC</a>
+  <a href="/admin/kyc" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'kyc' ? 'active' : '' %>"><i class="fas fa-id-card"></i> KYC <span class="badge badge-red" id="navBadgeKyc" style="display:none;margin-left:auto;"></span></a>
 
   <div class="admin-nav-group-title">পেমেন্ট</div>
-  <a href="/payment/admin/payments" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'payments' ? 'active' : '' %>"><i class="fas fa-money-bill-wave"></i> ডিপোজিট/উইথড্র</a>
+  <a href="/payment/admin/payments" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'payments' ? 'active' : '' %>"><i class="fas fa-money-bill-wave"></i> ডিপোজিট/উইথড্র <span class="badge badge-red" id="navBadgePayments" style="display:none;margin-left:auto;"></span></a>
   <a href="/admin/backup/status" class="admin-nav-link"><i class="fas fa-database"></i> ব্যাকআপ স্ট্যাটাস</a>
 
   <div class="admin-nav-group-title">গেম ও বেটিং</div>
@@ -111,4 +111,22 @@ function toggleAdminSidebar(force) {
   sb.classList.toggle('open', show);
   ov.classList.toggle('show', show);
 }
+
+function updateAdminNavBadges() {
+  fetch('/admin/pending-counts').then(function(r){ return r.json(); }).then(function(data){
+    var payBadge = document.getElementById('navBadgePayments');
+    var kycBadge = document.getElementById('navBadgeKyc');
+    var payTotal = (data.deposits || 0) + (data.withdrawals || 0);
+    if (payBadge) {
+      if (payTotal > 0) { payBadge.textContent = payTotal; payBadge.style.display = 'inline-block'; }
+      else { payBadge.style.display = 'none'; }
+    }
+    if (kycBadge) {
+      if (data.kyc > 0) { kycBadge.textContent = data.kyc; kycBadge.style.display = 'inline-block'; }
+      else { kycBadge.style.display = 'none'; }
+    }
+  }).catch(function(){});
+}
+updateAdminNavBadges();
+setInterval(updateAdminNavBadges, 20000);
 </script>
