@@ -256,6 +256,21 @@ router.post('/settings/admins/:id/demote', async (req, res) => {
 });
 
 // ==================== DASHBOARD ====================
+router.get('/pending-counts', async (req, res) => {
+  try {
+    const deposits = await pool.query(`SELECT COUNT(*) AS count FROM payment_requests WHERE type='deposit' AND status='pending'`);
+    const withdrawals = await pool.query(`SELECT COUNT(*) AS count FROM payment_requests WHERE type='withdraw' AND status='pending'`);
+    const kyc = await pool.query(`SELECT COUNT(*) AS count FROM kyc_requests WHERE status='pending'`);
+    res.json({
+      deposits: parseInt(deposits.rows[0].count),
+      withdrawals: parseInt(withdrawals.rows[0].count),
+      kyc: parseInt(kyc.rows[0].count)
+    });
+  } catch (err) {
+    res.json({ deposits: 0, withdrawals: 0, kyc: 0 });
+  }
+});
+
 router.get('/dashboard', (req, res) => res.redirect('/admin'));
 router.get('/deposits', (req, res) => res.redirect('/payment/admin/payments'));
 router.get('/withdrawals', (req, res) => res.redirect('/payment/admin/payments'));
