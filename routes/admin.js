@@ -257,6 +257,10 @@ router.post('/settings/admins/:id/demote', async (req, res) => {
 
 // ==================== DASHBOARD ====================
 router.get('/dashboard', (req, res) => res.redirect('/admin'));
+router.get('/deposits', (req, res) => res.redirect('/payment/admin/payments'));
+router.get('/withdrawals', (req, res) => res.redirect('/payment/admin/payments'));
+router.get('/support', (req, res) => res.redirect('/chat/admin'));
+router.get('/transactions', (req, res) => res.redirect('/admin/reports'));
 
 router.get('/', async (req, res) => {
   try {
@@ -318,6 +322,19 @@ router.get('/', async (req, res) => {
       ORDER BY cnt DESC LIMIT 5
     `);
 
+    const allTimeDeposit = await pool.query(
+      `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests WHERE type='deposit' AND status='approved'`
+    );
+    const allTimeWithdraw = await pool.query(
+      `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests WHERE type='withdraw' AND status='approved'`
+    );
+    const newUsersToday = await pool.query(
+      `SELECT COUNT(*) AS count FROM users WHERE created_at::date = CURRENT_DATE`
+    );
+    const pendingKyc = await pool.query(`SELECT COUNT(*) AS count FROM kyc_requests WHERE status = 'pending'`);
+    const pendingDeposits = await pool.query(`SELECT COUNT(*) AS count FROM payment_requests WHERE type='deposit' AND status='pending'`);
+    const pendingWithdrawals = await pool.query(`SELECT COUNT(*) AS count FROM payment_requests WHERE type='withdraw' AND status='pending'`);
+
     res.render('admin/dashboard', {
       stats: {
         total_users: users.rows[0].count,
@@ -330,7 +347,14 @@ router.get('/', async (req, res) => {
         today_withdraw_count: parseInt(todayWithdraw.rows[0].cnt),
         today_bet_amount: Number(todayBets.rows[0].total),
         today_bet_count: parseInt(todayBets.rows[0].cnt),
-        today_profit: Number(todayProfitLoss.rows[0].staked) - Number(todayProfitLoss.rows[0].paidout)
+        today_profit: Number(todayProfitLoss.rows[0].staked) - Number(todayProfitLoss.rows[0].paidout),
+        total_deposits_all_time: Number(allTimeDeposit.rows[0].total),
+        total_withdrawals_all_time: Number(allTimeWithdraw.rows[0].total),
+        new_users_today: parseInt(newUsersToday.rows[0].count),
+        pending_kyc: parseInt(pendingKyc.rows[0].count),
+        pending_deposits: parseInt(pendingDeposits.rows[0].count),
+        pending_withdrawals: parseInt(pendingWithdrawals.rows[0].count),
+        pending_total: parseInt(pendingKyc.rows[0].count) + parseInt(pendingDeposits.rows[0].count) + parseInt(pendingWithdrawals.rows[0].count)
       },
       revenueTrend: revenueTrend.rows.map(r => ({
         day: r.day, deposit: Number(r.deposit), withdraw: Number(r.withdraw)
@@ -345,7 +369,14 @@ router.get('/', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.render('admin/dashboard', {
-      stats: {}, revenueTrend: [], userGrowth: [], recentBets: [], recentWithdrawals: [], recentMatches: [], recentUsers: [], suspicious: []
+      stats: {
+        total_users: 0, total_coins_in_system: 0, total_matches: 0, total_predictions: 0,
+        today_deposit: 0, today_deposit_count: 0, today_withdraw: 0, today_withdraw_count: 0,
+        today_bet_amount: 0, today_bet_count: 0, today_profit: 0,
+        total_deposits_all_time: 0, total_withdrawals_all_time: 0, new_users_today: 0,
+        pending_kyc: 0, pending_deposits: 0, pending_withdrawals: 0, pending_total: 0
+      },
+      revenueTrend: [], userGrowth: [], recentBets: [], recentWithdrawals: [], recentMatches: [], recentUsers: [], suspicious: []
     });
   }
 });
@@ -596,26 +627,6 @@ router.post('/markets/:marketId/settle', async (req, res) => {
     req.flash('error', 'à¦¸à§à¦à§à¦² à¦¸à¦®à¦¸à§à¦¯à¦¾!');
     res.redirect('back');
   } finally { client.release(); }
-});
-
-// ==================== DEPOSITS ====================
-router.get('/deposits', async (req, res) => {
-  res.render('admin/deposits');
-});
-
-// ==================== WITHDRAWALS ====================
-router.get('/withdrawals', async (req, res) => {
-  res.render('admin/withdrawals');
-});
-
-// ==================== SUPPORT TICKETS ====================
-router.get('/support', async (req, res) => {
-  res.render('admin/support');
-});
-
-// ==================== TRANSACTIONS ====================
-router.get('/transactions', async (req, res) => {
-  res.render('admin/transactions');
 });
 
 // ==================== BETS ====================
