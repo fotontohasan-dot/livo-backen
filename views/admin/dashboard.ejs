@@ -22,9 +22,9 @@
             <div class="flex justify-between items-start">
                 <div>
                     <p class="text-sm font-medium text-slate-500">Total Users</p>
-                    <p class="metric-value text-slate-900 mt-2">48,291</p>
+                    <p class="metric-value text-slate-900 mt-2">${Number(stats.total_users || 0).toLocaleString('en-US')}</p>
                     <p class="text-emerald-600 text-xs font-semibold mt-1 flex items-center gap-1">
-                        <i class="fas fa-arrow-up"></i> +1,284 today
+                        <i class="fas fa-arrow-up"></i> +${Number(stats.new_users_today || 0).toLocaleString('en-US')} today
                     </p>
                 </div>
                 <div class="w-11 h-11 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center">
@@ -38,9 +38,9 @@
             <div class="flex justify-between items-start">
                 <div>
                     <p class="text-sm font-medium text-slate-500">Total Deposits</p>
-                    <p class="metric-value text-slate-900 mt-2">৳ 124.8M</p>
+                    <p class="metric-value text-slate-900 mt-2">৳ ${Number(stats.total_deposits_all_time || 0).toLocaleString('en-US')}</p>
                     <p class="text-emerald-600 text-xs font-semibold mt-1 flex items-center gap-1">
-                        <i class="fas fa-arrow-up"></i> +৳ 8.4M today
+                        <i class="fas fa-arrow-up"></i> +৳ ${Number(stats.today_deposit || 0).toLocaleString('en-US')} today
                     </p>
                 </div>
                 <div class="w-11 h-11 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center">
@@ -54,9 +54,9 @@
             <div class="flex justify-between items-start">
                 <div>
                     <p class="text-sm font-medium text-slate-500">Total Withdrawals</p>
-                    <p class="metric-value text-slate-900 mt-2">৳ 89.2M</p>
+                    <p class="metric-value text-slate-900 mt-2">৳ ${Number(stats.total_withdrawals_all_time || 0).toLocaleString('en-US')}</p>
                     <p class="text-amber-600 text-xs font-semibold mt-1 flex items-center gap-1">
-                        <i class="fas fa-arrow-down"></i> ৳ 3.1M today
+                        <i class="fas fa-arrow-up"></i> ৳ ${Number(stats.today_withdraw || 0).toLocaleString('en-US')} today
                     </p>
                 </div>
                 <div class="w-11 h-11 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center">
@@ -70,8 +70,8 @@
             <div class="flex justify-between items-start">
                 <div>
                     <p class="text-sm font-medium text-slate-500">GGR (Today)</p>
-                    <p class="metric-value text-emerald-600 mt-2">৳ 4.82M</p>
-                    <p class="text-emerald-600 text-xs font-semibold mt-1">+18% from yesterday</p>
+                    <p class="metric-value text-emerald-600 mt-2">৳ ${Number(stats.today_profit || 0).toLocaleString('en-US')}</p>
+                    <p class="text-slate-500 text-xs font-semibold mt-1">${stats.today_bet_count || 0} bets today</p>
                 </div>
                 <div class="w-11 h-11 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center">
                     <i class="fas fa-chart-line text-xl"></i>
@@ -84,8 +84,8 @@
             <div class="flex justify-between items-start">
                 <div>
                     <p class="text-sm font-medium text-slate-500">Pending Actions</p>
-                    <p class="metric-value text-orange-600 mt-2">187</p>
-                    <p class="text-orange-600 text-xs font-semibold mt-1">42 deposits • 31 withdrawals</p>
+                    <p class="metric-value text-orange-600 mt-2">${stats.pending_total || 0}</p>
+                    <p class="text-orange-600 text-xs font-semibold mt-1">${stats.pending_deposits || 0} deposits • ${stats.pending_withdrawals || 0} withdrawals • ${stats.pending_kyc || 0} KYC</p>
                 </div>
                 <div class="w-11 h-11 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center">
                     <i class="fas fa-clock text-xl"></i>
@@ -110,17 +110,24 @@
                     </div>
                     <i class="fas fa-chevron-right text-slate-300 group-hover:text-blue-500 transition-colors"></i>
                 </a>
-                <a href="/admin/deposits" class="flex items-center justify-between p-3 hover:bg-slate-50 rounded-2xl transition-colors group">
+                <a href="/payment/admin/payments" class="flex items-center justify-between p-3 hover:bg-slate-50 rounded-2xl transition-colors group">
                     <div class="flex items-center gap-3">
                         <i class="fas fa-check-circle text-emerald-500 w-5"></i>
-                        <span class="font-medium text-sm">Approve Pending Deposits (42)</span>
+                        <span class="font-medium text-sm">Approve Pending Deposits (${stats.pending_deposits || 0})</span>
                     </div>
                     <i class="fas fa-chevron-right text-slate-300 group-hover:text-emerald-500 transition-colors"></i>
                 </a>
-                <a href="/admin/support" class="flex items-center justify-between p-3 hover:bg-slate-50 rounded-2xl transition-colors group">
+                <a href="/admin/kyc" class="flex items-center justify-between p-3 hover:bg-slate-50 rounded-2xl transition-colors group">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-id-card text-indigo-500 w-5"></i>
+                        <span class="font-medium text-sm">Review Pending KYC (${stats.pending_kyc || 0})</span>
+                    </div>
+                    <i class="fas fa-chevron-right text-slate-300 group-hover:text-indigo-500 transition-colors"></i>
+                </a>
+                <a href="/chat/admin" class="flex items-center justify-between p-3 hover:bg-slate-50 rounded-2xl transition-colors group">
                     <div class="flex items-center gap-3">
                         <i class="fas fa-headset text-purple-500 w-5"></i>
-                        <span class="font-medium text-sm">Reply to Support Tickets (31)</span>
+                        <span class="font-medium text-sm">Live Support Chat</span>
                     </div>
                     <i class="fas fa-chevron-right text-slate-300 group-hover:text-purple-500 transition-colors"></i>
                 </a>
@@ -131,31 +138,33 @@
         <div class="lg:col-span-2 bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="font-semibold text-lg">Recent Activity</h3>
-                <a href="/admin/transactions" class="text-sm text-blue-600 hover:underline flex items-center gap-1">View all <i class="fas fa-arrow-right text-xs"></i></a>
+                <a href="/admin/reports" class="text-sm text-blue-600 hover:underline flex items-center gap-1">View all <i class="fas fa-arrow-right text-xs"></i></a>
             </div>
             
             <div class="space-y-4 text-sm">
+                ${recentWithdrawals.slice(0, 4).map(w => `
                 <div class="flex items-start gap-4">
-                    <div class="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-2xl flex-shrink-0 flex items-center justify-center"><i class="fas fa-arrow-down text-sm"></i></div>
+                    <div class="w-8 h-8 bg-amber-100 text-amber-600 rounded-2xl flex-shrink-0 flex items-center justify-center"><i class="fas fa-arrow-up text-sm"></i></div>
                     <div class="flex-1">
                         <div class="flex justify-between">
-                            <span class="font-medium">Deposit approved</span>
-                            <span class="text-xs text-slate-500">2 min ago</span>
+                            <span class="font-medium">Withdrawal ${w.status}</span>
+                            <span class="text-xs text-slate-500">${new Date(w.created_at).toLocaleString('en-BD', { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
                         </div>
-                        <p class="text-slate-600">Rahim Khan • ৳ 25,000 • #TXN98421</p>
+                        <p class="text-slate-600">${w.username} • ৳ ${Number(w.amount).toLocaleString('en-US')}</p>
                     </div>
-                </div>
-                
+                </div>`).join('')}
+                ${recentBets.slice(0, 4).map(b => `
                 <div class="flex items-start gap-4">
                     <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-2xl flex-shrink-0 flex items-center justify-center"><i class="fas fa-dice text-sm"></i></div>
                     <div class="flex-1">
                         <div class="flex justify-between">
-                            <span class="font-medium">Big win settled</span>
-                            <span class="text-xs text-slate-500">14 min ago</span>
+                            <span class="font-medium">Bet ${b.status}</span>
+                            <span class="text-xs text-slate-500">${new Date(b.created_at).toLocaleString('en-BD', { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
                         </div>
-                        <p class="text-slate-600">User #28491 won ৳ 1,24,500 on Bangladesh vs India</p>
+                        <p class="text-slate-600">${b.username} • ৳ ${Number(b.stake).toLocaleString('en-US')} on ${b.title || (b.team_a + ' vs ' + b.team_b)}</p>
                     </div>
-                </div>
+                </div>`).join('')}
+                ${(recentWithdrawals.length === 0 && recentBets.length === 0) ? '<p class="text-slate-400 text-sm">এখনো কোনো সাম্প্রতিক কার্যকলাপ নেই।</p>' : ''}
             </div>
         </div>
     </div>
