@@ -598,6 +598,26 @@ router.post('/markets/:marketId/settle', async (req, res) => {
   } finally { client.release(); }
 });
 
+// ==================== DEPOSITS ====================
+router.get('/deposits', async (req, res) => {
+  res.render('admin/deposits');
+});
+
+// ==================== WITHDRAWALS ====================
+router.get('/withdrawals', async (req, res) => {
+  res.render('admin/withdrawals');
+});
+
+// ==================== SUPPORT TICKETS ====================
+router.get('/support', async (req, res) => {
+  res.render('admin/support');
+});
+
+// ==================== TRANSACTIONS ====================
+router.get('/transactions', async (req, res) => {
+  res.render('admin/transactions');
+});
+
 // ==================== BETS ====================
 router.get('/bets', async (req, res) => {
   try {
