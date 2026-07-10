@@ -1,20 +1,23 @@
-<%- include('../partials/head') %>
-<%- include('../partials/navbar') %>
-<div class="admin-layout">
-  <div class="admin-sidebar">
-    <div style="padding:0 1.5rem 1rem;font-size:.75rem;color:var(--muted);text-transform:uppercase;">অ্যাডমিন প্যানেল</div>
-    <a href="/admin" class="admin-nav-link">📊 ড্যাশবোর্ড</a>
-    <a href="/admin/users" class="admin-nav-link">👥 ব্যবহারকারী</a>
-    <a href="/admin/matches" class="admin-nav-link">⚽ ম্যাচসমূহ</a>
-    <a href="/admin/tournaments" class="admin-nav-link">🏆 টুর্নামন্ট</a>
-    <a href="/admin/news" class="admin-nav-link">📰 নিউজ</a>
-    <a href="/payment/admin/payments" class="admin-nav-link">💳 পেমেন্ট</a>
-    <a href="/payment/admin/summary" class="admin-nav-link active">📈 ডিপোজিট/উইথড্র সামারি</a>
-    <a href="/" class="admin-nav-link">🏠 সাইটে ফিরে যান</a>
-  </div>
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ডিপোজিট/উইথড্র সামারি • Livo Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; color: #e2e8f0; }
+    .card { background: #171b23; border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; }
+    .card-body { padding: 16px; }
+    .table { color: #e2e8f0; }
+    :root { --gold: #f59e0b; --muted: #64748b; --border: rgba(255,255,255,0.08); }
+  </style>
+</head>
+<body>
+<div class="admin-wrap">
+  <%- include('../admin/partials/sidebar', { active: 'payments' }) %>
   <div class="admin-content">
-    <%- include('../partials/flash') %>
-    <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:1.5rem;">📈 ডিপোজিট/উইথড্র সামারি</h1>
 
     <div class="card" style="margin-bottom:1.5rem;">
       <div class="card-body">
