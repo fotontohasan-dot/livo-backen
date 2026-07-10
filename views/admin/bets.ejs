@@ -1,71 +1,181 @@
-<%- include('partials/admin-layout', { 
-    title: 'Bets Management', 
-    currentPage: 'bets',
-    body: `
-<div class="max-w-7xl mx-auto">
-    <div class="flex justify-between items-end mb-6">
+<%- include('partials/admin-layout', { title: 'Bets Management' }) %>
+
+<div class="p-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
         <div>
-            <h2 class="section-header">Bets Management</h2>
-            <p class="text-slate-500">Settle and monitor all user bets • 12,489 total</p>
+            <h1 class="text-3xl font-bold text-slate-900">Bets Management</h1>
+            <p class="text-slate-500 mt-1">Settle and monitor all user bets</p>
         </div>
-        <button onclick="window.location.reload()" class="px-4 py-2 text-sm flex items-center gap-x-2 border border-slate-200 rounded-2xl hover:bg-white">
-            <i class="fa-solid fa-sync"></i> <span>Refresh</span>
+        <button onclick="location.reload()" 
+                class="flex items-center gap-x-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors">
+            <i class="fas fa-sync-alt"></i>
+            <span class="font-medium">Refresh</span>
         </button>
     </div>
 
-    <!-- Summary Cards -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div class="bg-white p-5 rounded-3xl border"><div class="text-xs text-slate-500">Total Bets</div><div class="text-3xl font-bold">12,489</div></div>
-        <div class="bg-white p-5 rounded-3xl border"><div class="text-xs text-slate-500">Pending Settlement</div><div class="text-3xl font-bold text-amber-600">184</div></div>
-        <div class="bg-white p-5 rounded-3xl border"><div class="text-xs text-slate-500">Total Stake (Today)</div><div class="text-3xl font-bold">৳4.2M</div></div>
-        <div class="bg-white p-5 rounded-3xl border"><div class="text-xs text-slate-500">GGR (Today)</div><div class="text-3xl font-bold text-emerald-600">৳312k</div></div>
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+        <!-- Total Bets -->
+        <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm stat-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">Total Bets</p>
+                    <p class="text-4xl font-bold text-slate-900 mt-2">12,489</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center">
+                    <i class="fas fa-ticket-alt text-blue-600 text-2xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Settlement -->
+        <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm stat-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">Pending Settlement</p>
+                    <p class="text-4xl font-bold text-amber-500 mt-2">184</p>
+                </div>
+                <div class="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center">
+                    <i class="fas fa-clock text-amber-500 text-2xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Stake Today -->
+        <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm stat-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">Total Stake (Today)</p>
+                    <p class="text-4xl font-bold text-emerald-600 mt-2">৳ 4.2M</p>
+                </div>
+                <div class="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center">
+                    <i class="fas fa-wallet text-emerald-600 text-2xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- GGR Today -->
+        <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm stat-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">GGR (Today)</p>
+                    <p class="text-4xl font-bold text-emerald-600 mt-2">৳ 312k</p>
+                </div>
+                <div class="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center">
+                    <i class="fas fa-chart-line text-emerald-600 text-2xl"></i>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="bg-white rounded-3xl shadow-sm border overflow-hidden modern-table">
-        <table class="w-full">
-            <thead class="bg-slate-50">
-                <tr>
-                    <th class="px-6 py-4 text-left text-xs">BET ID / USER</th>
-                    <th class="px-6 py-4 text-left text-xs">MATCH / SELECTION</th>
-                    <th class="px-6 py-4 text-right text-xs">STAKE</th>
-                    <th class="px-6 py-4 text-center text-xs">ODDS</th>
-                    <th class="px-6 py-4 text-center text-xs">STATUS</th>
-                    <th class="px-6 py-4 text-center text-xs w-48">ACTIONS</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr class="border-b hover:bg-slate-50">
-                    <td class="px-6 py-4 font-mono text-sm">#B-28491<br><span class="text-xs text-slate-500">Rahim Khan</span></td>
-                    <td class="px-6 py-4">Bangladesh vs India<br><span class="text-emerald-600 text-xs">Bangladesh to win</span></td>
-                    <td class="px-6 py-4 text-right font-semibold">৳5,000</td>
-                    <td class="px-6 py-4 text-center">2.45</td>
-                    <td class="px-6 py-4 text-center"><span class="badge bg-amber-100 text-amber-700">Pending</span></td>
-                    <td class="px-6 py-4 text-center">
-                        <button onclick="settleBet(this, 'win')" class="px-4 py-1 text-xs bg-emerald-600 text-white rounded-xl mr-1">WIN</button>
-                        <button onclick="settleBet(this, 'lose')" class="px-4 py-1 text-xs bg-red-600 text-white rounded-xl">LOSE</button>
-                    </td>
-                </tr>
-                <!-- More rows can be added similarly -->
-            </tbody>
-        </table>
+    <!-- Bets Table -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h3 class="font-semibold text-lg text-slate-800">Recent Bets</h3>
+            <div class="flex items-center gap-x-3">
+                <div class="relative">
+                    <input type="text" id="betSearch" placeholder="Search bet or user..." 
+                           class="pl-10 pr-4 py-2 border border-slate-200 rounded-xl text-sm w-72 focus:outline-none focus:border-blue-400">
+                    <i class="fas fa-search absolute left-4 top-3 text-slate-400"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-slate-50">
+                    <tr>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">BET ID / USER</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">MATCH / SELECTION</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">STAKE</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">ODDS</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">STATUS</th>
+                        <th class="px-6 py-4 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">ACTIONS</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-sm" id="betsTableBody">
+                    <!-- Row 1 -->
+                    <tr class="hover:bg-slate-50">
+                        <td class="px-6 py-4">
+                            <div>
+                                <div class="font-mono text-xs text-slate-400">#B-28491</div>
+                                <div class="font-semibold text-slate-800">Rahim Khan</div>
+                                <div class="text-xs text-slate-500">#28491</div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div>
+                                <div class="font-medium text-slate-800">Bangladesh vs India</div>
+                                <div class="text-emerald-600 text-xs">Bangladesh to win</div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="font-semibold">৳ 5,000</span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="font-mono bg-slate-100 px-2.5 py-1 rounded-lg text-xs">2.45</span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Pending</span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center justify-center gap-x-2">
+                                <button onclick="settleBet(this, 'win')" 
+                                        class="px-4 py-1.5 text-xs font-semibold rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white transition-colors">WIN</button>
+                                <button onclick="settleBet(this, 'lose')" 
+                                        class="px-4 py-1.5 text-xs font-semibold rounded-xl bg-rose-500 hover:bg-rose-600 text-white transition-colors">LOSE</button>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- More rows can be added similarly -->
+                    <tr class="hover:bg-slate-50">
+                        <td class="px-6 py-4">
+                            <div>
+                                <div class="font-mono text-xs text-slate-400">#B-28492</div>
+                                <div class="font-semibold text-slate-800">Karim Hossain</div>
+                                <div class="text-xs text-slate-500">#28492</div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div>
+                                <div class="font-medium text-slate-800">England vs Australia</div>
+                                <div class="text-emerald-600 text-xs">Over 2.5 Goals</div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="font-semibold">৳ 12,000</span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="font-mono bg-slate-100 px-2.5 py-1 rounded-lg text-xs">1.85</span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">Won</span>
+                        </td>
+                        <td class="px-6 py-4 text-center text-emerald-600 font-semibold text-sm">Settled</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
 <script>
 function settleBet(btn, result) {
     const row = btn.closest('tr');
-    row.style.transition = 'all .3s';
-    row.style.opacity = '0.4';
+    const statusCell = row.querySelector('td:nth-child(5)');
+    const actionCell = row.querySelector('td:nth-child(6)');
     
-    setTimeout(() => {
-        row.querySelector('.badge').outerHTML = result === 'win' 
-            ? '<span class="badge bg-emerald-100 text-emerald-700">Won</span>' 
-            : '<span class="badge bg-red-100 text-red-700">Lost</span>';
-        
-        btn.parentElement.innerHTML = '<span class="text-xs text-slate-400">Settled</span>';
-        row.style.opacity = '1';
-    }, 600);
+    if (result === 'win') {
+        statusCell.innerHTML = `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">Won</span>`;
+        actionCell.innerHTML = `<span class="text-emerald-600 font-semibold text-sm">Settled as WIN</span>`;
+    } else {
+        statusCell.innerHTML = `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-rose-100 text-rose-700">Lost</span>`;
+        actionCell.innerHTML = `<span class="text-rose-600 font-semibold text-sm">Settled as LOSE</span>`;
+    }
+    
+    // TODO: Send to backend - fetch('/admin/bets/settle', { method: 'POST', body: JSON.stringify(...) })
+    alert('Bet settled successfully! (Connect to your backend)');
 }
 </script>
-` 
-}) %>
