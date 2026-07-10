@@ -1,77 +1,127 @@
-<%- include('../partials/head') %>
-<%- include('../partials/navbar') %>
-<div class="admin-layout">
-  <div class="admin-sidebar">
-    <div style="padding:0 1.5rem 1rem;font-size:.75rem;color:var(--muted);text-transform:uppercase;">অযাডমিন প্যানেল</div>
-    <a href="/admin" class="admin-nav-link">📊 ড্যাশবোর্ড</a>
-    <a href="/admin/users" class="admin-nav-link">👥 ব্যবহারকারী</a>
-    <a href="/admin/matches" class="admin-nav-link">⚽ ম্যাচসমূহ</a>
-    <a href="/admin/tournaments" class="admin-nav-link">🏆 টুর্নামন্ট</a>
-    <a href="/admin/news" class="admin-nav-link">📰 নিউজ</a>
-    <a href="/payment/admin/payments" class="admin-nav-link active">💳 পেমেন্ট</a>
-    <a href="/payment/admin/summary" class="admin-nav-link">📈 ডিপোজিট/উইথড্র সামারি</a>
-    <a href="/" class="admin-nav-link">🏠 সাইটে ফিরে যান</a>
-  </div>
-  <div class="admin-content">
-    <%- include('../partials/flash') %>
-    <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:1.5rem;">💳 পেমেন্ট ম্যানেজমেন্ট</h1>
-    <div class="card">
-      <div class="card-body" style="overflow-x:auto;">
-        <table class="table" style="width:100%;border-collapse:collapse;">
-          <thead>
-            <tr style="border-bottom:1px solid var(--border);">
-              <th style="padding:.75rem;text-align:left;color:var(--muted);font-size:.8rem;">ইউজার</th>
-              <th style="padding:.75rem;text-align:left;color:var(--muted);font-size:.8rem;">ধরন</th>
-              <th style="padding:.75rem;text-align:left;color:var(--muted);font-size:.8rem;">মেথড</th>
-              <th style="padding:.75rem;text-align:left;color:var(--muted);font-size:.8rem;">পরিমাণ</th>
-              <th style="padding:.75rem;text-align:left;color:var(--muted);font-size:.8rem;">TrxID</th>
-              <th style="padding:.75rem;text-align:left;color:var(--muted);font-size:.8rem;">যে নম্বর থেকে</th>
-              <th style="padding:.75rem;text-align:left;color:var(--muted);font-size:.8rem;">স্ট্যাটাস</th>
-              <th style="padding:.75rem;text-align:left;color:var(--muted);font-size:.8rem;">অ্যাকশন</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% if(locals.requests && requests.length > 0) { %>
-              <% requests.forEach(r => { %>
-                <tr style="border-bottom:1px solid var(--border);">
-                  <td style="padding:.75rem;font-weight:600;"><%= r.username %></td>
-                  <td style="padding:.75rem;">
-                    <span style="padding:3px 8px;border-radius:5px;font-size:.75rem;font-weight:600;background:<%= r.type==='deposit' ? 'rgba(16,185,129,0.2)' : 'rgba(230,0,0,0.2)' %>;color:<%= r.type==='deposit' ? '#10b981' : '#ff4444' %>">
-                      <%= r.type === 'deposit' ? '💰 ডিপোজিট' : '💸 উইথড্র' %>
-                    </span>
-                  </td>
-                  <td style="padding:.75rem;text-transform:capitalize;"><%= r.method %></td>
-                  <td style="padding:.75rem;color:var(--gold);font-weight:700;">৳ <%= r.amount %></td>
-                  <td style="padding:.75rem;font-size:.8rem;color:var(--muted);"><%= r.transaction_id || '—' %></td>
-                  <td style="padding:.75rem;font-size:.85rem;color:#fff;font-weight:600;"><%= r.account_number || '—' %></td>
-                  <td style="padding:.75rem;">
-                    <% if(r.status === 'pending') { %>
-                      <span style="color:#ffd700;font-size:.8rem;">⏳ পেন্ড</span>
-                    <% } else if(r.status === 'approved') { %>
-                      <span style="color:#10b981;font-size:.8rem;">✅ অনুমোদিত</span>
-                    <% } else { %>
-                      <span style="color:#ff4444;font-size:.8rem;">❌ বাতিল</span>
-                    <% } %>
-                  </td>
-                  <td style="padding:.75rem;">
-                    <% if(r.status === 'pending') { %>
-                      <form action="/payment/admin/approve/<%= r.id %>" method="POST" style="display:inline;">
-                        <button class="btn" style="padding:5px 12px;font-size:.75rem;background:rgba(16,185,129,0.2);color:#10b981;border:1px solid #10b981;">✅ Approve</button>
-                      </form>
-                      <form action="/payment/admin/reject/<%= r.id %>" method="POST" style="display:inline;margin-left:5px;">
-                        <button class="btn" style="padding:5px 12px;font-size:.75rem;background:rgba(230,0,0,0.2);color:#ff4444;border:1px solid #ff4444;">❌ Reject</button>
-                      </form>
-                    <% } %>
-                  </td>
-                </tr>
-              <% }) %>
-            <% } else { %>
-              <tr><td colspan="8" style="padding:2rem;text-align:center;color:var(--muted);">কোনো পেমেন্ট রিকোয়েস্ট নেই</td></tr>
-            <% } %>
-          </tbody>
-        </table>
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>পেমেন্ট ম্যানেজমেন্ট • Livo Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
+    .pay-tabs { display: flex; gap: 4px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 16px; }
+    .pay-tab-btn {
+      background: none; border: none; color: #64748b; font-size: 13px; font-weight: 700;
+      padding: 10px 16px; cursor: pointer; border-bottom: 2px solid transparent; display: flex; align-items: center; gap: 6px;
+    }
+    .pay-tab-btn.active { color: #f59e0b; border-bottom-color: #f59e0b; }
+    .pay-panel { display: none; }
+    .pay-panel.active { display: block; }
+    .pending-strip { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; font-size: 12px; color: #f59e0b; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div class="admin-wrap">
+    <%- include('../admin/partials/sidebar', { active: 'payments' }) %>
+    <div class="admin-content">
+      <%- include('../admin/partials/header', { pageTitle: 'পেমেন্ট ম্যানেজমেন্ট', pageSubtitle: 'ডিপোজিট ও উইথড্র রিকোয়েস্ট পরিচালনা করুন' }) %>
+
+      <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
+        <a href="/payment/admin/summary" class="btn"><i class="fas fa-chart-bar"></i> হিস্টোরি ও দৈনিক সামারি</a>
+      </div>
+
+      <div class="pay-tabs">
+        <button class="pay-tab-btn active" onclick="showPayTab(0)"><i class="fas fa-arrow-down"></i> ডিপোজিট <span id="depositCount" class="badge badge-amber"></span></button>
+        <button class="pay-tab-btn" onclick="showPayTab(1)"><i class="fas fa-arrow-up"></i> উইথড্র <span id="withdrawCount" class="badge badge-amber"></span></button>
+      </div>
+
+      <!-- Deposits -->
+      <div class="pay-panel active" id="pay-tab-0">
+        <div id="depositPendingStrip"></div>
+        <div class="admin-card">
+          <div class="admin-card-header">ডিপোজিট রিকোয়েস্ট</div>
+          <div style="overflow-x:auto;">
+            <table class="admin-table" id="depositTable">
+              <thead><tr><th>ইউজার</th><th>মেথড</th><th>পরিমাণ</th><th>TrxID</th><th>নম্বর</th><th>তারিখ</th><th>স্ট্যাটাস</th><th style="text-align:right;">অ্যাকশন</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Withdrawals -->
+      <div class="pay-panel" id="pay-tab-1">
+        <div id="withdrawPendingStrip"></div>
+        <div class="admin-card">
+          <div class="admin-card-header">উইথড্র রিকোয়েস্ট</div>
+          <div style="overflow-x:auto;">
+            <table class="admin-table" id="withdrawTable">
+              <thead><tr><th>ইউজার</th><th>মেথড</th><th>পরিমাণ</th><th>TrxID</th><th>নম্বর</th><th>তারিখ</th><th>স্ট্যাটাস</th><th style="text-align:right;">অ্যাকশন</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   </div>
-</div>
-</body></html>
+
+  <script>
+    const allRequests = <%- JSON.stringify(requests || []) %>;
+
+    function statusBadge(status) {
+      if (status === 'pending') return '<span class="badge badge-amber">পেন্ডিং</span>';
+      if (status === 'approved') return '<span class="badge badge-green">অনুমোদিত</span>';
+      return '<span class="badge badge-red">বাতিল</span>';
+    }
+
+    function renderRows(type, tableId, stripId, countId) {
+      const rows = allRequests.filter(r => r.type === type);
+      const pending = rows.filter(r => r.status === 'pending');
+      document.getElementById(countId).textContent = pending.length;
+
+      document.getElementById(stripId).innerHTML = pending.length > 0
+        ? '<div class="pending-strip"><i class="fas fa-bell"></i> ' + pending.length + 'টি নতুন পেন্ডিং রিকোয়েস্ট অপেক্ষমাণ</div>'
+        : '';
+
+      const tbody = document.querySelector('#' + tableId + ' tbody');
+      if (rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state">কোনো রিকোয়েস্ট নেই</div></td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows.map(r => `
+        <tr>
+          <td style="font-weight:700;">${r.username}</td>
+          <td style="text-transform:capitalize;">${r.method || '—'}</td>
+          <td style="color:#f59e0b;font-weight:700;">৳ ${Number(r.amount).toLocaleString('en-US')}</td>
+          <td style="color:#64748b;">${r.transaction_id || '—'}</td>
+          <td>${r.account_number || '—'}</td>
+          <td>${r.created_at ? new Date(r.created_at).toLocaleString('bn-BD') : '—'}</td>
+          <td>${statusBadge(r.status)}</td>
+          <td style="text-align:right;">
+            ${r.status === 'pending' ? `
+              <form action="/payment/admin/approve/${r.id}" method="POST" style="display:inline;">
+                <button class="btn btn-sm btn-green" type="submit">অনুমোদন</button>
+              </form>
+              <form action="/payment/admin/reject/${r.id}" method="POST" style="display:inline;" onsubmit="return confirm('বাতিল করবেন?')">
+                <button class="btn btn-sm btn-red" type="submit">বাতিল</button>
+              </form>
+            ` : ''}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderAll() {
+      renderRows('deposit', 'depositTable', 'depositPendingStrip', 'depositCount');
+      renderRows('withdraw', 'withdrawTable', 'withdrawPendingStrip', 'withdrawCount');
+    }
+    renderAll();
+
+    function showPayTab(i) {
+      document.querySelectorAll('.pay-panel').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.pay-tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById('pay-tab-' + i).classList.add('active');
+      document.querySelectorAll('.pay-tab-btn')[i].classList.add('active');
+    }
+  </script>
+</body>
+</html>
