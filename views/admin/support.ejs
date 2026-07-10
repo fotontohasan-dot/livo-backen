@@ -1,3 +1,15 @@
+<%
+function esc(s) { return String(s || '').replace(/'/g, "\\'").replace(/\n/g, ' '); }
+function ticketListItem(t) {
+  return '<div class="px-4 py-3.5 mx-1 mb-1 rounded-2xl cursor-pointer border border-transparent hover:bg-slate-50" onclick="openTicket(' + t.userId + ')" id="ticket-item-' + t.userId + '">' +
+    '<div class="flex justify-between"><div class="font-semibold text-sm">' + t.username + '</div>' +
+    '<div class="text-[10px] px-2 py-0.5 rounded ' + (t.status === 'Open' ? 'bg-yellow-100 text-yellow-700' : 'bg-emerald-100 text-emerald-700') + '">' + t.status + '</div></div>' +
+    '<div class="text-xs text-slate-400 mt-1 line-clamp-1">' + String(t.lastMessage || '').slice(0, 60) + '</div>' +
+  '</div>';
+}
+const ticketsHtml = (tickets || []).map(ticketListItem).join('') || '<div class="text-center text-slate-400 py-10 text-sm">কোনো সাপোর্ট মেসেজ নেই</div>';
+const ticketsData = JSON.stringify((tickets || []).map(t => ({ userId: t.userId, username: t.username, messages: t.messages, status: t.status })));
+%>
 <%- include('partials/admin-layout', { 
     title: 'Support Tickets', 
     active: 'support',
@@ -6,34 +18,30 @@
     <div class="flex justify-between mb-6">
         <div>
             <h2 class="text-2xl font-semibold">Support Tickets</h2>
-            <p class="text-sm text-slate-600">31 open tickets • 8 urgent</p>
+            <p class="text-sm text-slate-600">${openCount || 0} open tickets</p>
         </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        <!-- Tickets List -->
         <div class="lg:col-span-5 bg-white rounded-3xl border border-slate-100 p-1">
             <div class="p-4">
                 <input type="text" placeholder="Search tickets..." class="w-full border px-4 py-2.5 rounded-2xl text-sm mb-4" onkeyup="filterTickets(this.value)">
             </div>
-            <div id="ticketsList" class="max-h-[520px] overflow-auto px-2"></div>
+            <div id="ticketsList" class="max-h-[520px] overflow-auto px-2">${ticketsHtml}</div>
         </div>
 
-        <!-- Chat Window -->
         <div class="lg:col-span-7 bg-white rounded-3xl border border-slate-100 flex flex-col h-[580px]">
             <div id="chatHeader" class="px-6 py-4 border-b flex items-center justify-between">
                 <div class="flex items-center gap-3">
                     <div class="w-9 h-9 bg-slate-200 rounded-2xl flex-shrink-0"></div>
                     <div>
-                        <div id="chatUserName" class="font-semibold">Select a ticket</div>
+                        <div id="chatUserName" class="font-semibold">একটা টিকেট বাছাই করুন</div>
                         <div id="chatUserId" class="text-xs text-slate-500"></div>
                     </div>
                 </div>
                 <button onclick="resolveTicket()" class="text-xs px-4 py-1.5 bg-emerald-100 text-emerald-700 rounded-2xl font-bold">Mark as Resolved</button>
             </div>
-            
             <div id="chatMessages" class="flex-1 p-6 overflow-auto space-y-4 text-sm bg-slate-50"></div>
-            
             <div class="p-4 border-t flex gap-2">
                 <input id="replyInput" type="text" placeholder="Type your reply..." class="flex-1 border rounded-2xl px-5 py-3 text-sm">
                 <button onclick="sendReply()" class="px-6 bg-blue-600 text-white rounded-2xl font-semibold">Send</button>
@@ -43,82 +51,74 @@
 </div>
 
 <script>
-let tickets = [
-    { id: "TKT-1021", userId: 28491, userName: "Rahim Khan", subject: "Withdrawal not received", status: "Open", lastMessage: "I sent withdrawal 2 days ago but money not in my bKash yet", messages: [{from: "user", text: "I sent withdrawal 2 days ago but money not in my bKash yet", time: "10:22"}, {from: "admin", text: "Please share your transaction ID", time: "10:25"}] },
-    { id: "TKT-1022", userId: 19283, userName: "Karim Hossain", subject: "Account banned by mistake?", status: "Open", lastMessage: "Why my account is banned? I didn't do anything wrong", messages: [{from: "user", text: "Why my account is banned? I didn't do anything wrong", time: "Yesterday"}] },
-    { id: "TKT-1023", userId: 47291, userName: "Jasim Uddin", subject: "Deposit not credited", status: "Resolved", lastMessage: "Thanks, deposit received now", messages: [] }
-];
+let tickets = ${ticketsData};
+let currentUserId = null;
 
-let currentTicketId = null;
-
-function renderTickets(filtered = tickets) {
-    const container = document.getElementById('ticketsList');
-    container.innerHTML = '';
-    
-    filtered.forEach(t => {
-        const div = document.createElement('div');
-        div.className = \`px-4 py-3.5 mx-1 mb-1 rounded-2xl cursor-pointer border \${currentTicketId === t.id ? 'border-blue-300 bg-blue-50' : 'border-transparent hover:bg-slate-50'}\`;
-        div.innerHTML = \`
-            <div class="flex justify-between">
-                <div class="font-semibold text-sm">\${t.userName}</div>
-                <div class="text-[10px] px-2 py-0.5 rounded \${t.status === 'Open' ? 'bg-yellow-100 text-yellow-700' : 'bg-emerald-100 text-emerald-700'}">\${t.status}</div>
-            </div>
-            <div class="text-xs text-slate-500 mt-0.5">\${t.subject}</div>
-            <div class="text-[10px] text-slate-400 mt-1 line-clamp-1">\${t.lastMessage}</div>
-        \`;
-        div.onclick = () => openTicket(t.id);
-        container.appendChild(div);
+function filterTickets(term) {
+    term = term.toLowerCase();
+    document.querySelectorAll('#ticketsList > div').forEach(el => {
+        el.style.display = el.textContent.toLowerCase().includes(term) ? '' : 'none';
     });
 }
 
-function filterTickets(term) {
-    const filtered = tickets.filter(t => t.userName.toLowerCase().includes(term.toLowerCase()) || t.subject.toLowerCase().includes(term.toLowerCase()));
-    renderTickets(filtered);
-}
-
-function openTicket(id) {
-    currentTicketId = id;
-    const ticket = tickets.find(t => t.id === id);
+function openTicket(userId) {
+    currentUserId = userId;
+    const ticket = tickets.find(t => t.userId === userId);
     if (!ticket) return;
 
-    document.getElementById('chatUserName').textContent = ticket.userName;
-    document.getElementById('chatUserId').textContent = \`#\${ticket.userId} • \${ticket.id}\`;
-    
+    document.getElementById('chatUserName').textContent = ticket.username;
+    document.getElementById('chatUserId').textContent = '#' + ticket.userId;
+
     const chatBox = document.getElementById('chatMessages');
     chatBox.innerHTML = '';
-    
     ticket.messages.forEach(m => {
         const msgDiv = document.createElement('div');
         msgDiv.className = m.from === 'admin' ? 'flex justify-end' : '';
-        msgDiv.innerHTML = \`<div class="\${m.from === 'admin' ? 'bg-blue-600 text-white' : 'bg-white border'} max-w-[75%] px-4 py-2 rounded-2xl text-sm">\${m.text}</div>\`;
+        const bubble = document.createElement('div');
+        bubble.className = (m.from === 'admin' ? 'bg-blue-600 text-white' : 'bg-white border') + ' max-w-[75%] px-4 py-2 rounded-2xl text-sm';
+        bubble.textContent = m.text;
+        msgDiv.appendChild(bubble);
         chatBox.appendChild(msgDiv);
     });
-    
-    renderTickets();
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    document.querySelectorAll('#ticketsList > div').forEach(el => el.classList.remove('border-blue-300', 'bg-blue-50'));
+    const activeEl = document.getElementById('ticket-item-' + userId);
+    if (activeEl) activeEl.classList.add('border-blue-300', 'bg-blue-50');
 }
 
-function sendReply() {
+async function sendReply() {
     const input = document.getElementById('replyInput');
-    if (!input.value.trim() || !currentTicketId) return;
-    
-    const ticket = tickets.find(t => t.id === currentTicketId);
-    ticket.messages.push({ from: 'admin', text: input.value.trim(), time: 'Now' });
-    ticket.lastMessage = input.value.trim();
-    
-    input.value = '';
-    openTicket(currentTicketId);
+    const message = input.value.trim();
+    if (!message || !currentUserId) return;
+    try {
+        const res = await fetch('/admin/api/support/' + currentUserId + '/reply', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message })
+        });
+        const data = await res.json();
+        if (data.success) {
+            const ticket = tickets.find(t => t.userId === currentUserId);
+            ticket.messages.push({ from: 'admin', text: message, time: new Date().toISOString() });
+            ticket.status = 'Resolved';
+            input.value = '';
+            openTicket(currentUserId);
+        } else {
+            alert('❌ ' + (data.error || 'সমস্যা হয়েছে'));
+        }
+    } catch (e) { alert('❌ সার্ভার এরর'); }
 }
 
-function resolveTicket() {
-    if (!currentTicketId) return;
-    const ticket = tickets.find(t => t.id === currentTicketId);
-    ticket.status = 'Resolved';
-    alert('Ticket marked as resolved');
-    renderTickets();
-    document.getElementById('chatMessages').innerHTML = '<div class="text-center text-emerald-600 py-8">Ticket resolved. Thank you!</div>';
+async function resolveTicket() {
+    if (!currentUserId) return;
+    try {
+        const res = await fetch('/admin/api/support/' + currentUserId + '/resolve', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            alert('✅ টিকেট Resolved হিসেবে মার্ক করা হয়েছে');
+            location.reload();
+        }
+    } catch (e) { alert('❌ সার্ভার এরর'); }
 }
-
-renderTickets();
 </script>
 ` 
 }) %>

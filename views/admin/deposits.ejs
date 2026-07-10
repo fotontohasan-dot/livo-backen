@@ -1,3 +1,29 @@
+<%
+function fmtDate(d) {
+  const dt = new Date(d);
+  return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' ' + dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+function depRow(d, isPending) {
+  const statusColor = d.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : d.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700';
+  const statusLabel = d.status === 'approved' ? 'Approved' : d.status === 'rejected' ? 'Rejected' : 'Pending';
+  const actions = isPending
+    ? '<div class="flex justify-center gap-2">' +
+        '<button onclick="approveDeposit(' + d.id + ')" class="px-4 py-1.5 text-xs font-bold bg-emerald-600 text-white rounded-xl">Approve</button>' +
+        '<button onclick="rejectDeposit(' + d.id + ')" class="px-4 py-1.5 text-xs font-bold bg-red-600 text-white rounded-xl">Reject</button>' +
+      '</div>'
+    : '<span class="text-xs text-slate-500 font-medium">' + statusLabel + '</span>';
+  return '<tr id="dep-row-' + d.id + '">' +
+    '<td class="px-6 py-4"><div class="font-semibold">' + d.username + '</div><div class="text-xs text-slate-500">#' + d.user_id + ' • DEP' + d.id + '</div></td>' +
+    '<td class="px-6 py-4 font-mono font-semibold text-emerald-600">৳ ' + Number(d.amount).toLocaleString('en-US') + '</td>' +
+    '<td class="px-6 py-4">' + (d.method || '-') + (d.transaction_id ? '<div class="text-xs text-slate-400">' + d.transaction_id + '</div>' : '') + '</td>' +
+    '<td class="px-6 py-4 text-sm">' + fmtDate(d.created_at) + '</td>' +
+    '<td class="px-6 py-4 text-center"><span class="px-3 py-1 text-xs font-bold rounded-full ' + statusColor + '">' + statusLabel + '</span></td>' +
+    '<td class="px-6 py-4">' + actions + '</td>' +
+  '</tr>';
+}
+const pendingRows = (pendingDeposits || []).map(d => depRow(d, true)).join('') || '<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400">কোনো পেন্ডিং ডিপোজিট নেই</td></tr>';
+const recentRows = (recentDeposits || []).map(d => depRow(d, false)).join('');
+%>
 <%- include('partials/admin-layout', { 
     title: 'Deposits Management', 
     active: 'deposits',
@@ -6,14 +32,12 @@
     <div class="flex justify-between items-center mb-6">
         <div>
             <h2 class="text-2xl font-semibold">Deposits Management</h2>
-            <p class="text-sm text-slate-600">42 pending deposits • Total pending: ৳ 18.4M</p>
+            <p class="text-sm text-slate-600">${pendingCount || 0} pending deposits • Total pending: ৳ ${Number(pendingTotal || 0).toLocaleString('en-US')}</p>
         </div>
-        <button onclick="showManualDepositModal()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-2xl flex items-center gap-2">
-            <i class="fas fa-plus"></i> <span>Manual Deposit</span>
-        </button>
     </div>
 
-    <div class="bg-white rounded-3xl border border-slate-100 overflow-hidden modern-table">
+    <div class="bg-white rounded-3xl border border-slate-100 overflow-hidden modern-table mb-8">
+        <div class="px-6 py-4 border-b border-slate-100 font-semibold text-slate-700">পেন্ডিং (${pendingCount || 0})</div>
         <table class="w-full text-sm">
             <thead class="bg-slate-50">
                 <tr>
@@ -25,137 +49,50 @@
                     <th class="px-6 py-4 text-center font-medium w-48">Actions</th>
                 </tr>
             </thead>
-            <tbody class="divide-y text-slate-700" id="depositsBody">
-                <!-- JS populated -->
-            </tbody>
+            <tbody class="divide-y text-slate-700">${pendingRows}</tbody>
+        </table>
+    </div>
+
+    <div class="bg-white rounded-3xl border border-slate-100 overflow-hidden modern-table">
+        <div class="px-6 py-4 border-b border-slate-100 font-semibold text-slate-700">সাম্প্রতিক (শেষ ৩০টি)</div>
+        <table class="w-full text-sm">
+            <thead class="bg-slate-50">
+                <tr>
+                    <th class="px-6 py-4 text-left font-medium">User / TXN ID</th>
+                    <th class="px-6 py-4 text-left font-medium">Amount</th>
+                    <th class="px-6 py-4 text-left font-medium">Method</th>
+                    <th class="px-6 py-4 text-left font-medium">Date</th>
+                    <th class="px-6 py-4 text-center font-medium">Status</th>
+                    <th class="px-6 py-4 text-center font-medium w-48">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y text-slate-700">${recentRows}</tbody>
         </table>
     </div>
 </div>
 
-<!-- Manual Deposit Modal -->
-<div id="manualModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-    <div class="bg-white w-full max-w-md mx-4 rounded-3xl p-6">
-        <h3 class="font-semibold text-xl mb-4">Add Manual Deposit</h3>
-        
-        <div class="space-y-4">
-            <div>
-                <label class="text-xs font-medium text-slate-500">User ID or Phone</label>
-                <input id="manualUser" type="text" class="w-full border rounded-2xl px-4 py-3 text-sm mt-1" placeholder="28491 or 01711-223344">
-            </div>
-            <div>
-                <label class="text-xs font-medium text-slate-500">Amount (৳)</label>
-                <input id="manualAmount" type="number" class="w-full border rounded-2xl px-4 py-3 text-sm mt-1" value="10000">
-            </div>
-            <div>
-                <label class="text-xs font-medium text-slate-500">Note / Reference</label>
-                <input id="manualNote" type="text" class="w-full border rounded-2xl px-4 py-3 text-sm mt-1" placeholder="Bank transfer from Rahim">
-            </div>
-        </div>
-        
-        <div class="flex gap-3 mt-6">
-            <button onclick="addManualDeposit()" class="flex-1 py-3 bg-emerald-600 text-white font-semibold rounded-2xl">Add Deposit</button>
-            <button onclick="closeManualModal()" class="flex-1 py-3 border font-semibold rounded-2xl">Cancel</button>
-        </div>
-    </div>
-</div>
-
 <script>
-let deposits = [
-    { id: "DEP98421", userId: 28491, userName: "Rahim Khan", amount: 25000, method: "bKash", date: "2026-01-09", status: "Pending" },
-    { id: "DEP98422", userId: 19283, userName: "Karim Hossain", amount: 50000, method: "Nagad", date: "2026-01-09", status: "Pending" },
-    { id: "DEP98423", userId: 39102, userName: "Fatema Begum", amount: 12000, method: "Bank Transfer", date: "2026-01-08", status: "Pending" },
-    { id: "DEP98424", userId: 47291, userName: "Jasim Uddin", amount: 75000, method: "Rocket", date: "2026-01-08", status: "Approved" }
-];
-
-function renderDeposits() {
-    const tbody = document.getElementById('depositsBody');
-    tbody.innerHTML = '';
-    
-    deposits.forEach(dep => {
-        const row = document.createElement('tr');
-        row.innerHTML = \`
-            <td class="px-6 py-4">
-                <div class="font-semibold">\${dep.userName}</div>
-                <div class="text-xs text-slate-500">#\${dep.userId} • \${dep.id}</div>
-            </td>
-            <td class="px-6 py-4 font-mono font-semibold text-emerald-600">৳ \${dep.amount.toLocaleString()}</td>
-            <td class="px-6 py-4">\${dep.method}</td>
-            <td class="px-6 py-4 text-sm">\${dep.date}</td>
-            <td class="px-6 py-4 text-center">
-                <span class="px-3 py-1 text-xs font-bold rounded-full \${dep.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-emerald-100 text-emerald-700'}">\${dep.status}</span>
-            </td>
-            <td class="px-6 py-4">
-                \${dep.status === 'Pending' ? \`
-                    <div class="flex justify-center gap-2">
-                        <button onclick="approveDeposit('\${dep.id}')" class="px-4 py-1.5 text-xs font-bold bg-emerald-600 text-white rounded-xl">Approve</button>
-                        <button onclick="rejectDeposit('\${dep.id}')" class="px-4 py-1.5 text-xs font-bold bg-red-600 text-white rounded-xl">Reject</button>
-                    </div>
-                \` : \`<span class="text-xs text-emerald-600 font-medium">Completed</span>\`}
-            </td>
-        \`;
-        tbody.appendChild(row);
-    });
+async function approveDeposit(id) {
+    if (!confirm('এই ডিপোজিট Approve করবেন?')) return;
+    try {
+        const res = await fetch('/admin/api/deposits/' + id + '/approve', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) { alert('✅ ডিপোজিট Approve হয়েছে, ইউজারের কয়েন যোগ হয়ে গেছে।'); location.reload(); }
+        else alert('❌ ' + (data.error || 'সমস্যা হয়েছে'));
+    } catch (e) { alert('❌ সার্ভার এরর'); }
 }
-
-function approveDeposit(id) {
-    if (!confirm('Approve this deposit?')) return;
-    const dep = deposits.find(d => d.id === id);
-    if (dep) {
-        dep.status = 'Approved';
-        // In real app: call backend + update user balance
-        alert('Deposit approved! User balance updated.');
-        renderDeposits();
-    }
+async function rejectDeposit(id) {
+    const reason = prompt('বাতিলের কারণ লিখুন (ঐচ্ছিক):', '');
+    if (reason === null) return;
+    try {
+        const res = await fetch('/admin/api/deposits/' + id + '/reject', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason })
+        });
+        const data = await res.json();
+        if (data.success) { alert('✅ ডিপোজিট বাতিল হয়েছে।'); location.reload(); }
+        else alert('❌ ' + (data.error || 'সমস্যা হয়েছে'));
+    } catch (e) { alert('❌ সার্ভার এরর'); }
 }
-
-function rejectDeposit(id) {
-    const reason = prompt('Enter rejection reason:', 'Invalid transaction proof');
-    if (!reason) return;
-    const dep = deposits.find(d => d.id === id);
-    if (dep) {
-        dep.status = 'Rejected';
-        alert('Deposit rejected. User notified.');
-        renderDeposits();
-    }
-}
-
-function showManualDepositModal() {
-    document.getElementById('manualModal').classList.remove('hidden');
-    document.getElementById('manualModal').classList.add('flex');
-}
-
-function closeManualModal() {
-    document.getElementById('manualModal').classList.add('hidden');
-    document.getElementById('manualModal').classList.remove('flex');
-}
-
-function addManualDeposit() {
-    const userInput = document.getElementById('manualUser').value.trim();
-    const amount = parseInt(document.getElementById('manualAmount').value);
-    const note = document.getElementById('manualNote').value.trim();
-    
-    if (!userInput || !amount) {
-        alert('Please fill all fields');
-        return;
-    }
-    
-    const newDep = {
-        id: 'DEP' + Date.now().toString().slice(-5),
-        userId: parseInt(userInput) || 99999,
-        userName: 'Manual Entry',
-        amount: amount,
-        method: 'Manual / ' + (note || 'Admin'),
-        date: new Date().toISOString().split('T')[0],
-        status: 'Approved'
-    };
-    
-    deposits.unshift(newDep);
-    closeManualModal();
-    renderDeposits();
-    alert('Manual deposit added successfully!');
-}
-
-renderDeposits();
 </script>
 ` 
 }) %>

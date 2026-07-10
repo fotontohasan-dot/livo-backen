@@ -1,89 +1,93 @@
+<%
+function fmtCompact(n) {
+  n = Number(n) || 0;
+  const sign = n < 0 ? '-' : '';
+  const abs = Math.abs(n);
+  if (abs >= 1e6) return sign + (abs / 1e6).toFixed(2).replace(/\.?0+$/, '') + 'M';
+  if (abs >= 1e3) return sign + (abs / 1e3).toFixed(1).replace(/\.?0+$/, '') + 'K';
+  return sign + abs.toLocaleString('en-US');
+}
+function betRow(b) {
+  const statusColor = b.status === 'won' ? 'bg-emerald-100 text-emerald-700' : b.status === 'lost' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700';
+  const statusLabel = b.status === 'won' ? 'Won' : b.status === 'lost' ? 'Lost' : 'Pending';
+  const matchName = b.title || (b.team_a ? (b.team_a + ' vs ' + b.team_b) : 'N/A');
+  const actions = b.status === 'pending'
+    ? '<div class="flex items-center justify-center gap-x-2">' +
+        '<form method="POST" action="/admin/bets/' + b.id + '/settle" onsubmit="return confirm(\'এই বেট WIN হিসেবে সেটেল করবেন?\')" style="display:inline">' +
+          '<input type="hidden" name="result" value="won">' +
+          '<button type="submit" class="px-4 py-1.5 text-xs font-semibold rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white transition-colors">WIN</button>' +
+        '</form>' +
+        '<form method="POST" action="/admin/bets/' + b.id + '/settle" onsubmit="return confirm(\'এই বেট LOSE হিসেবে সেটেল করবেন?\')" style="display:inline">' +
+          '<input type="hidden" name="result" value="lost">' +
+          '<button type="submit" class="px-4 py-1.5 text-xs font-semibold rounded-xl bg-rose-500 hover:bg-rose-600 text-white transition-colors">LOSE</button>' +
+        '</form>' +
+      '</div>'
+    : '<span class="text-slate-500 font-semibold text-sm">Settled</span>';
+  return '<tr class="hover:bg-slate-50">' +
+    '<td class="px-6 py-4"><div class="font-mono text-xs text-slate-400">#B-' + b.id + '</div><div class="font-semibold text-slate-800">' + b.username + '</div></td>' +
+    '<td class="px-6 py-4"><div class="font-medium text-slate-800">' + matchName + '</div><div class="text-emerald-600 text-xs">' + (b.runner || b.market_type || '') + '</div></td>' +
+    '<td class="px-6 py-4"><span class="font-semibold">৳ ' + Number(b.stake).toLocaleString('en-US') + '</span></td>' +
+    '<td class="px-6 py-4"><span class="font-mono bg-slate-100 px-2.5 py-1 rounded-lg text-xs">' + Number(b.odd).toFixed(2) + '</span></td>' +
+    '<td class="px-6 py-4"><span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ' + statusColor + '">' + statusLabel + '</span></td>' +
+    '<td class="px-6 py-4">' + actions + '</td>' +
+  '</tr>';
+}
+const rows = (bets || []).map(betRow).join('') || '<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400">কোনো বেট পাওয়া যায়নি</td></tr>';
+%>
 <%- include('partials/admin-layout', {
     title: 'Bets Management',
     active: 'bets',
     body: `
-<div class="p-6">
-    <!-- Header -->
+<div class="max-w-7xl mx-auto">
     <div class="flex items-center justify-between mb-6">
         <div>
             <h1 class="text-3xl font-bold text-slate-900">Bets Management</h1>
             <p class="text-slate-500 mt-1">Settle and monitor all user bets</p>
         </div>
-        <button onclick="location.reload()" 
+        <button onclick="location.reload()"
                 class="flex items-center gap-x-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors">
             <i class="fas fa-sync-alt"></i>
             <span class="font-medium">Refresh</span>
         </button>
     </div>
 
-    <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-        <!-- Total Bets -->
         <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm stat-card">
             <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-slate-500">Total Bets</p>
-                    <p class="text-4xl font-bold text-slate-900 mt-2">12,489</p>
-                </div>
-                <div class="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center">
-                    <i class="fas fa-ticket-alt text-blue-600 text-2xl"></i>
-                </div>
+                <div><p class="text-sm font-medium text-slate-500">Total Bets</p><p class="text-4xl font-bold text-slate-900 mt-2">${Number(total || 0).toLocaleString('en-US')}</p></div>
+                <div class="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center"><i class="fas fa-ticket-alt text-blue-600 text-2xl"></i></div>
             </div>
         </div>
-
-        <!-- Pending Settlement -->
         <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm stat-card">
             <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-slate-500">Pending Settlement</p>
-                    <p class="text-4xl font-bold text-amber-500 mt-2">184</p>
-                </div>
-                <div class="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center">
-                    <i class="fas fa-clock text-amber-500 text-2xl"></i>
-                </div>
+                <div><p class="text-sm font-medium text-slate-500">Pending Settlement</p><p class="text-4xl font-bold text-amber-500 mt-2">${pendingSettlement || 0}</p></div>
+                <div class="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center"><i class="fas fa-clock text-amber-500 text-2xl"></i></div>
             </div>
         </div>
-
-        <!-- Total Stake Today -->
         <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm stat-card">
             <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-slate-500">Total Stake (Today)</p>
-                    <p class="text-4xl font-bold text-emerald-600 mt-2">৳ 4.2M</p>
-                </div>
-                <div class="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center">
-                    <i class="fas fa-wallet text-emerald-600 text-2xl"></i>
-                </div>
+                <div><p class="text-sm font-medium text-slate-500">Total Stake (Today)</p><p class="text-4xl font-bold text-emerald-600 mt-2">৳ ${fmtCompact(todayStake)}</p></div>
+                <div class="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center"><i class="fas fa-wallet text-emerald-600 text-2xl"></i></div>
             </div>
         </div>
-
-        <!-- GGR Today -->
         <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm stat-card">
             <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-slate-500">GGR (Today)</p>
-                    <p class="text-4xl font-bold text-emerald-600 mt-2">৳ 312k</p>
-                </div>
-                <div class="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center">
-                    <i class="fas fa-chart-line text-emerald-600 text-2xl"></i>
-                </div>
+                <div><p class="text-sm font-medium text-slate-500">GGR (Today)</p><p class="text-4xl font-bold ${todayGgr >= 0 ? 'text-emerald-600' : 'text-red-600'} mt-2">৳ ${fmtCompact(todayGgr)}</p></div>
+                <div class="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center"><i class="fas fa-chart-line text-emerald-600 text-2xl"></i></div>
             </div>
         </div>
     </div>
 
-    <!-- Bets Table -->
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
             <h3 class="font-semibold text-lg text-slate-800">Recent Bets</h3>
-            <div class="flex items-center gap-x-3">
-                <div class="relative">
-                    <input type="text" id="betSearch" placeholder="Search bet or user..." 
-                           class="pl-10 pr-4 py-2 border border-slate-200 rounded-xl text-sm w-72 focus:outline-none focus:border-blue-400">
-                    <i class="fas fa-search absolute left-4 top-3 text-slate-400"></i>
-                </div>
+            <div class="flex items-center gap-x-2 text-sm">
+                <a href="/admin/bets" class="px-3 py-1.5 rounded-xl ${!status ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-slate-500'}">All</a>
+                <a href="/admin/bets?status=pending" class="px-3 py-1.5 rounded-xl ${status === 'pending' ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-slate-500'}">Pending</a>
+                <a href="/admin/bets?status=won" class="px-3 py-1.5 rounded-xl ${status === 'won' ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-slate-500'}">Won</a>
+                <a href="/admin/bets?status=lost" class="px-3 py-1.5 rounded-xl ${status === 'lost' ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-slate-500'}">Lost</a>
             </div>
         </div>
-
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead class="bg-slate-50">
@@ -96,90 +100,14 @@
                         <th class="px-6 py-4 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">ACTIONS</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100 text-sm" id="betsTableBody">
-                    <!-- Row 1 -->
-                    <tr class="hover:bg-slate-50">
-                        <td class="px-6 py-4">
-                            <div>
-                                <div class="font-mono text-xs text-slate-400">#B-28491</div>
-                                <div class="font-semibold text-slate-800">Rahim Khan</div>
-                                <div class="text-xs text-slate-500">#28491</div>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4">
-                            <div>
-                                <div class="font-medium text-slate-800">Bangladesh vs India</div>
-                                <div class="text-emerald-600 text-xs">Bangladesh to win</div>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4">
-                            <span class="font-semibold">৳ 5,000</span>
-                        </td>
-                        <td class="px-6 py-4">
-                            <span class="font-mono bg-slate-100 px-2.5 py-1 rounded-lg text-xs">2.45</span>
-                        </td>
-                        <td class="px-6 py-4">
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Pending</span>
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="flex items-center justify-center gap-x-2">
-                                <button onclick="settleBet(this, 'win')" 
-                                        class="px-4 py-1.5 text-xs font-semibold rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white transition-colors">WIN</button>
-                                <button onclick="settleBet(this, 'lose')" 
-                                        class="px-4 py-1.5 text-xs font-semibold rounded-xl bg-rose-500 hover:bg-rose-600 text-white transition-colors">LOSE</button>
-                            </div>
-                        </td>
-                    </tr>
-
-                    <!-- More rows can be added similarly -->
-                    <tr class="hover:bg-slate-50">
-                        <td class="px-6 py-4">
-                            <div>
-                                <div class="font-mono text-xs text-slate-400">#B-28492</div>
-                                <div class="font-semibold text-slate-800">Karim Hossain</div>
-                                <div class="text-xs text-slate-500">#28492</div>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4">
-                            <div>
-                                <div class="font-medium text-slate-800">England vs Australia</div>
-                                <div class="text-emerald-600 text-xs">Over 2.5 Goals</div>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4">
-                            <span class="font-semibold">৳ 12,000</span>
-                        </td>
-                        <td class="px-6 py-4">
-                            <span class="font-mono bg-slate-100 px-2.5 py-1 rounded-lg text-xs">1.85</span>
-                        </td>
-                        <td class="px-6 py-4">
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">Won</span>
-                        </td>
-                        <td class="px-6 py-4 text-center text-emerald-600 font-semibold text-sm">Settled</td>
-                    </tr>
-                </tbody>
+                <tbody class="divide-y divide-slate-100 text-sm">${rows}</tbody>
             </table>
+        </div>
+        <div class="flex justify-center gap-3 py-5">
+            ${page > 1 ? '<a href="/admin/bets?page=' + (page - 1) + (status ? '&status=' + status : '') + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">← আগের পেজ</a>' : ''}
+            ${page < totalPages ? '<a href="/admin/bets?page=' + (page + 1) + (status ? '&status=' + status : '') + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">পরের পেজ →</a>' : ''}
         </div>
     </div>
 </div>
-
-<script>
-function settleBet(btn, result) {
-    const row = btn.closest('tr');
-    const statusCell = row.querySelector('td:nth-child(5)');
-    const actionCell = row.querySelector('td:nth-child(6)');
-    
-    if (result === 'win') {
-        statusCell.innerHTML = \\`<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">Won</span>\\`;
-        actionCell.innerHTML = \\`<span class="text-emerald-600 font-semibold text-sm">Settled as WIN</span>\\`;
-    } else {
-        statusCell.innerHTML = \\`<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-rose-100 text-rose-700">Lost</span>\\`;
-        actionCell.innerHTML = \\`<span class="text-rose-600 font-semibold text-sm">Settled as LOSE</span>\\`;
-    }
-    
-    // TODO: Send to backend - fetch('/admin/bets/settle', { method: 'POST', body: JSON.stringify(...) })
-    alert('Bet settled successfully! (Connect to your backend)');
-}
-</script>
-` 
+`
 }) %>
