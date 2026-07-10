@@ -7,6 +7,7 @@ const { grantFreeBet } = require('../services/freebet');
 const { syncMatches } = require('../services/matchUpdater');
 const { runBackupNow, restoreFromBackup, getBackupStatus } = require('../services/backup');
 const { loadSettings } = require('../services/settings');
+const { creditApprovedDeposit } = require('./payment');
 const bcrypt = require('bcryptjs');
 
 // ==================== ADMIN ACTIVITY LOG HELPER ====================
@@ -40,14 +41,14 @@ router.post('/login', async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.render('admin/login', { error: 'ইউজারনেম বা পাসওয়ার্ড ভুল' });
+      return res.render('admin/login', { error: 'ইউজারনেম বা পাসওয়ার্ড ভুল' });
     }
 
     const admin = result.rows[0];
     const isMatch = await bcrypt.compare(password, admin.password);
 
     if (!isMatch) {
-      return res.render('admin/login', { error: 'ইউজারনেম বা পাসওয়ার্ড ভুল' });
+      return res.render('admin/login', { error: 'ইউজারনেম বা পাসওয়ার্ড ভুল' });
     }
 
     req.session.user = {
@@ -59,7 +60,7 @@ router.post('/login', async (req, res) => {
     res.redirect('/admin');
   } catch (err) {
     console.error(err);
-    res.render('admin/login', { error: 'সার্ভার এরর হয়েছে' });
+    res.render('admin/login', { error: 'সার্ভার এরর হয়েছে' });
   }
 });
 
@@ -77,10 +78,10 @@ router.get('/create-activity-table', async (req, res) => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    res.send('✅ Admin Logs টেবিল সফলভাবে তৈরি হয়েছে!');
+    res.send('✅ Admin Logs টেবিল সফলভাবে তৈরি হয়েছে!');
   } catch (err) {
     console.error(err);
-    res.send('❌ সমস্যা হয়েছে: ' + err.message);
+    res.send('❌ সমস্যা হয়েছে: ' + err.message);
   }
 });
 
@@ -493,6 +494,275 @@ router.get('/api/dashboard-stats', async (req, res) => {
   }
 });
 
+// ==================== ডিপোজিট ম্যানেজমেন্ট ====================
+router.get('/deposits', async (req, res) => {
+  try {
+    const pending = await pool.query(`
+      SELECT pr.*, u.username, u.phone FROM payment_requests pr
+      JOIN users u ON pr.user_id = u.id
+      WHERE pr.type='deposit' AND pr.status='pending'
+      ORDER BY pr.created_at ASC
+    `);
+    const recent = await pool.query(`
+      SELECT pr.*, u.username, u.phone FROM payment_requests pr
+      JOIN users u ON pr.user_id = u.id
+      WHERE pr.type='deposit' AND pr.status != 'pending'
+      ORDER BY pr.created_at DESC LIMIT 30
+    `);
+    const summary = await pool.query(`
+      SELECT COUNT(*) AS cnt, COALESCE(SUM(amount),0) AS total
+      FROM payment_requests WHERE type='deposit' AND status='pending'
+    `);
+    res.render('admin/deposits', {
+      pendingDeposits: pending.rows,
+      recentDeposits: recent.rows,
+      pendingCount: parseInt(summary.rows[0].cnt),
+      pendingTotal: Number(summary.rows[0].total)
+    });
+  } catch (err) {
+    console.error('deposits list error:', err.message);
+    res.render('admin/deposits', { pendingDeposits: [], recentDeposits: [], pendingCount: 0, pendingTotal: 0 });
+  }
+});
+
+router.post('/api/deposits/:id/approve', async (req, res) => {
+  const { id } = req.params;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await client.query('SELECT * FROM payment_requests WHERE id=$1 FOR UPDATE', [id]);
+    const request = result.rows[0];
+    if (!request || request.type !== 'deposit' || request.status !== 'pending') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ success: false, error: 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে' });
+    }
+    await creditApprovedDeposit(client, request);
+    await client.query('COMMIT');
+    await logAdminAction(req.session.user.id, req.session.user.username, 'deposit_approve', `Deposit #${id} approved`, req.ip);
+    res.json({ success: true });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('deposit approve error:', err.message);
+    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি' });
+  } finally {
+    client.release();
+  }
+});
+
+router.post('/api/deposits/:id/reject', async (req, res) => {
+  const { id } = req.params;
+  const { reason } = req.body;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await client.query('SELECT * FROM payment_requests WHERE id=$1 FOR UPDATE', [id]);
+    const request = result.rows[0];
+    if (!request || request.type !== 'deposit' || request.status !== 'pending') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ success: false, error: 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে' });
+    }
+    await client.query(`UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE id=$1`, [id]);
+    await client.query(
+      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'error')`,
+      [request.user_id, 'ডিপোজিট বাতিল', `আপনার ${request.amount} টাকার ডিপোজিট বাতিল হয়েছে।${reason ? ' কারণ: ' + reason : ''}`]
+    );
+    await client.query('COMMIT');
+    await logAdminAction(req.session.user.id, req.session.user.username, 'deposit_reject', `Deposit #${id} rejected: ${reason || ''}`, req.ip);
+    res.json({ success: true });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('deposit reject error:', err.message);
+    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি' });
+  } finally {
+    client.release();
+  }
+});
+
+// ==================== উইথড্র ম্যানেজমেন্ট ====================
+router.get('/withdrawals', async (req, res) => {
+  try {
+    const pending = await pool.query(`
+      SELECT pr.*, u.username, u.phone FROM payment_requests pr
+      JOIN users u ON pr.user_id = u.id
+      WHERE pr.type='withdraw' AND pr.status='pending'
+      ORDER BY pr.created_at ASC
+    `);
+    const recent = await pool.query(`
+      SELECT pr.*, u.username, u.phone FROM payment_requests pr
+      JOIN users u ON pr.user_id = u.id
+      WHERE pr.type='withdraw' AND pr.status != 'pending'
+      ORDER BY pr.created_at DESC LIMIT 30
+    `);
+    const summary = await pool.query(`
+      SELECT COUNT(*) AS cnt, COALESCE(SUM(amount),0) AS total
+      FROM payment_requests WHERE type='withdraw' AND status='pending'
+    `);
+    res.render('admin/withdrawals', {
+      pendingWithdrawals: pending.rows,
+      recentWithdrawals: recent.rows,
+      pendingCount: parseInt(summary.rows[0].cnt),
+      pendingTotal: Number(summary.rows[0].total)
+    });
+  } catch (err) {
+    console.error('withdrawals list error:', err.message);
+    res.render('admin/withdrawals', { pendingWithdrawals: [], recentWithdrawals: [], pendingCount: 0, pendingTotal: 0 });
+  }
+});
+
+router.post('/api/withdrawals/:id/approve', async (req, res) => {
+  const { id } = req.params;
+  const { txn } = req.body;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await client.query('SELECT * FROM payment_requests WHERE id=$1 FOR UPDATE', [id]);
+    const request = result.rows[0];
+    if (!request || request.type !== 'withdraw' || request.status !== 'pending') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ success: false, error: 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে' });
+    }
+    await client.query(
+      `UPDATE payment_requests SET status='approved', transaction_id=COALESCE($1, transaction_id), updated_at=NOW() WHERE id=$2`,
+      [txn || null, id]
+    );
+    await client.query(
+      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'success')`,
+      [request.user_id, 'উইথড্র অনুমোদন', `আপনার ${request.amount} টাকার উইথড্র সম্পন্ন হয়েছে!${txn ? ' Ref: ' + txn : ''}`]
+    );
+    await client.query('COMMIT');
+    await logAdminAction(req.session.user.id, req.session.user.username, 'withdraw_approve', `Withdrawal #${id} approved`, req.ip);
+    res.json({ success: true });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('withdraw approve error:', err.message);
+    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি' });
+  } finally {
+    client.release();
+  }
+});
+
+router.post('/api/withdrawals/:id/reject', async (req, res) => {
+  const { id } = req.params;
+  const { reason } = req.body;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await client.query('SELECT * FROM payment_requests WHERE id=$1 FOR UPDATE', [id]);
+    const request = result.rows[0];
+    if (!request || request.type !== 'withdraw' || request.status !== 'pending') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ success: false, error: 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে' });
+    }
+    // উইথড্র রিকোয়েস্ট করার সময় কয়েন কেটে নেওয়া হয়, তাই বাতিল হলে ফেরত দিতে হবে
+    await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
+    await client.query(`UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE id=$1`, [id]);
+    await client.query(
+      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'error')`,
+      [request.user_id, 'উইথড্র বাতিল', `আপনার ${request.amount} টাকার উইথড্র বাতিল হয়েছে, কয়েন ফেরত দেওয়া হয়েছে।${reason ? ' কারণ: ' + reason : ''}`]
+    );
+    await client.query('COMMIT');
+    await logAdminAction(req.session.user.id, req.session.user.username, 'withdraw_reject', `Withdrawal #${id} rejected: ${reason || ''}`, req.ip);
+    res.json({ success: true });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('withdraw reject error:', err.message);
+    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি' });
+  } finally {
+    client.release();
+  }
+});
+
+// ==================== সাপোর্ট টিকেট ====================
+router.get('/support', async (req, res) => {
+  try {
+    const msgs = await pool.query(`
+      SELECT cm.*, u.username FROM chat_messages cm
+      JOIN users u ON cm.sender_id = u.id AND cm.is_admin = false
+      ORDER BY cm.created_at ASC
+    `);
+    // প্রতি ইউজারের মেসেজগুলো একটা "টিকেট" হিসেবে গ্রুপ করা
+    const ticketMap = new Map();
+    for (const m of msgs.rows) {
+      if (!ticketMap.has(m.sender_id)) {
+        ticketMap.set(m.sender_id, { userId: m.sender_id, username: m.username, messages: [], hasUnread: false });
+      }
+      const t = ticketMap.get(m.sender_id);
+      t.messages.push({ from: 'user', text: m.message, time: m.created_at });
+      if (!m.is_read) t.hasUnread = true;
+    }
+    const adminMsgs = await pool.query(`
+      SELECT cm.* FROM chat_messages cm WHERE cm.is_admin = true AND cm.receiver_id IS NOT NULL
+      ORDER BY cm.created_at ASC
+    `);
+    for (const m of adminMsgs.rows) {
+      if (ticketMap.has(m.receiver_id)) {
+        ticketMap.get(m.receiver_id).messages.push({ from: 'admin', text: m.message, time: m.created_at });
+      }
+    }
+    const tickets = Array.from(ticketMap.values()).map(t => {
+      t.messages.sort((a, b) => new Date(a.time) - new Date(b.time));
+      const last = t.messages[t.messages.length - 1];
+      return { ...t, lastMessage: last ? last.text : '', status: t.hasUnread ? 'Open' : 'Resolved' };
+    }).sort((a, b) => (a.status === 'Open' ? -1 : 1) - (b.status === 'Open' ? -1 : 1));
+
+    res.render('admin/support', { tickets, openCount: tickets.filter(t => t.status === 'Open').length });
+  } catch (err) {
+    console.error('support list error:', err.message);
+    res.render('admin/support', { tickets: [], openCount: 0 });
+  }
+});
+
+router.post('/api/support/:userId/reply', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    const { message } = req.body;
+    if (!message || !message.trim()) return res.status(400).json({ success: false, error: 'মেসেজ লিখুন' });
+    await pool.query(
+      `INSERT INTO chat_messages (sender_id, receiver_id, message, is_admin, is_read, created_at) VALUES ($1,$2,$3,true,true,NOW())`,
+      [req.session.user.id, userId, message.trim()]
+    );
+    // ইউজারের পাঠানো মেসেজগুলো রিড হিসেবে মার্ক করা
+    await pool.query(`UPDATE chat_messages SET is_read=true WHERE sender_id=$1 AND is_admin=false`, [userId]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('support reply error:', err.message);
+    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি' });
+  }
+});
+
+router.post('/api/support/:userId/resolve', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    await pool.query(`UPDATE chat_messages SET is_read=true WHERE sender_id=$1 AND is_admin=false`, [userId]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('support resolve error:', err.message);
+    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি' });
+  }
+});
+
+// ==================== ট্রানজেকশন লগ ====================
+router.get('/transactions', async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = 40;
+    const offset = (page - 1) * limit;
+    const countRes = await pool.query(`SELECT COUNT(*) FROM payment_requests`);
+    const total = parseInt(countRes.rows[0].count);
+    const txns = await pool.query(`
+      SELECT pr.*, u.username FROM payment_requests pr
+      JOIN users u ON pr.user_id = u.id
+      ORDER BY pr.created_at DESC LIMIT $1 OFFSET $2
+    `, [limit, offset]);
+    res.render('admin/transactions', {
+      transactions: txns.rows, page, totalPages: Math.max(1, Math.ceil(total / limit)), total
+    });
+  } catch (err) {
+    console.error('transactions list error:', err.message);
+    res.render('admin/transactions', { transactions: [], page: 1, totalPages: 1, total: 0 });
+  }
+});
+
 // ==================== USERS ====================
 router.get('/users', async (req, res) => {
   try {
@@ -540,7 +810,7 @@ router.get('/users/:id', async (req, res) => {
     const userRes = await pool.query('SELECT * FROM users WHERE id = $1', [uId]);
     const user = userRes.rows[0];
     if (!user) {
-      req.flash('error', 'ইউজার পাওয়া যায়নি!');
+      req.flash('error', 'ইউজার পাওয়া যায়নি!');
       return res.redirect('/admin/users');
     }
 
@@ -590,7 +860,7 @@ router.get('/users/:id', async (req, res) => {
     res.render('admin/user-detail', { u: user, bets, transactions, payments, sameIp, referralCount, stats });
   } catch (err) {
     console.error('user detail error:', err.message);
-    req.flash('error', 'সমস্যা হয়েছে!');
+    req.flash('error', 'সমস্যা হয়েছে!');
     res.redirect('/admin/users');
   }
 });
@@ -599,8 +869,8 @@ router.get('/users/:id', async (req, res) => {
 router.post('/users/:id/ban', async (req, res) => {
   try {
     await pool.query('UPDATE users SET is_banned = NOT is_banned WHERE id = $1', [req.params.id]);
-    req.flash('success', 'স্ট্যাটাস আপডেট হয়েছে!');
-  } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
+    req.flash('success', 'স্ট্যাটাস আপডেট হয়েছে!');
+  } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
   res.redirect('back');
 });
 
@@ -611,7 +881,7 @@ router.post('/users/:id/delete', async (req, res) => {
       return res.redirect('/admin/users');
     }
     await pool.query('DELETE FROM users WHERE id = $1', [req.params.id]);
-    req.flash('success', 'ইউজার ডিলিট করা হয়েছে!');
+    req.flash('success', 'ইউজার ডিলিট করা হয়েছে!');
   } catch (err) {
     console.error('delete error:', err.message);
     req.flash('error', 'ডিলিট করতে সমস্যা!');
@@ -624,9 +894,9 @@ router.post('/users/:id/coins/add', async (req, res) => {
     const amount = parseInt(req.body.amount);
     if (!amount || amount <= 0) { req.flash('error', 'সঠিক পরিমাণ দিন!'); return res.redirect('back'); }
     await pool.query('UPDATE users SET coins = coins + $1 WHERE id = $2', [amount, req.params.id]);
-    await pool.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'admin_add','অ্যাডমিন কয়েন যোগ')`, [req.params.id, amount]);
-    req.flash('success', '✅ কয়েন যোগ হয়েছে!');
-  } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
+    await pool.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'admin_add','অ্যাডমিন কয়েন যোগ')`, [req.params.id, amount]);
+    req.flash('success', '✅ কয়েন যোগ হয়েছে!');
+  } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
   res.redirect('back');
 });
 
@@ -635,9 +905,9 @@ router.post('/users/:id/coins/remove', async (req, res) => {
     const amount = parseInt(req.body.amount);
     if (!amount || amount <= 0) { req.flash('error', 'সঠিক পরিমাণ দিন!'); return res.redirect('back'); }
     await pool.query('UPDATE users SET coins = GREATEST(coins - $1, 0) WHERE id = $2', [amount, req.params.id]);
-    await pool.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'admin_remove','অ্যাডমিন কয়েন কমানো')`, [req.params.id, -amount]);
-    req.flash('success', '✅ কয়েন কমানো হয়েছে!');
-  } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
+    await pool.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'admin_remove','অ্যাডমিন কয়েন কমানো')`, [req.params.id, -amount]);
+    req.flash('success', '✅ কয়েন কমানো হয়েছে!');
+  } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
   res.redirect('back');
 });
 
@@ -646,8 +916,8 @@ router.post('/users/:id/freebet', async (req, res) => {
     const amount = parseInt(req.body.amount);
     if (!amount || amount <= 0) { req.flash('error', 'সঠিক পরিমাণ দিন!'); return res.redirect('back'); }
     await grantFreeBet(req.params.id, amount, 'admin');
-    req.flash('success', `✅ ${amount} টাকার ফ্রি বেট দেওয়া হয়েছে!`);
-  } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
+    req.flash('success', `✅ ${amount} টাকার ফ্রি বেট দেওয়া হয়েছে!`);
+  } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
   res.redirect('back');
 });
 
@@ -666,14 +936,14 @@ router.post('/matches/add', async (req, res) => {
     await pool.query(
       `INSERT INTO matches (title, sport, team_a, team_b, status, start_time) VALUES ($1,$2,$3,$4,'upcoming',$5)`,
       [title || `${team_a} vs ${team_b}`, sport || 'cricket', team_a, team_b, start_time || null]);
-    req.flash('success', 'নতুন ম্যাচ যোগ হয়েছে!');
-  } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
+    req.flash('success', 'নতুন ম্যাচ যোগ হয়েছে!');
+  } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
   res.redirect('/admin/matches');
 });
 
 router.post('/matches/:id/delete', async (req, res) => {
-  try { await pool.query('DELETE FROM matches WHERE id = $1', [req.params.id]); req.flash('success', 'ম্যাচ মুছে ফেলা হয়েছে!'); }
-  catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
+  try { await pool.query('DELETE FROM matches WHERE id = $1', [req.params.id]); req.flash('success', 'ম্যাচ মুছে ফেলা হয়েছে!'); }
+  catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
   res.redirect('/admin/matches');
 });
 
@@ -695,23 +965,23 @@ router.post('/markets/update', async (req, res) => {
       INSERT INTO markets (match_id, type, name, odds, status) VALUES ($1,$2,$3,$4,$5)
       ON CONFLICT (match_id, type, name) DO UPDATE SET odds = EXCLUDED.odds, status = EXCLUDED.status, updated_at = NOW()
     `, [match_id, type, name, odds, status || 'open']);
-    req.flash('success', 'মার্কেট আপডেট হয়েছে!');
+    req.flash('success', 'মার্কেট আপডেট হয়েছে!');
     res.redirect(`/admin/markets/${match_id}`);
-  } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); res.redirect('/admin/matches'); }
+  } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); res.redirect('/admin/matches'); }
 });
 
 router.post('/markets/:marketId/toggle', async (req, res) => {
   try {
     await pool.query('UPDATE markets SET status = $1 WHERE id = $2', [req.body.status, req.params.marketId]);
-    req.flash('success', 'মার্কেট আপডেট হয়েছে!');
-  } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
+    req.flash('success', 'মার্কেট আপডেট হয়েছে!');
+  } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
   res.redirect('back');
 });
 
 router.post('/markets/:marketId/settle', async (req, res) => {
   const marketId = req.params.marketId;
   const { winning_runner } = req.body;
-  if (!winning_runner) { req.flash('error', 'জয় নির্বাচন করুন!'); return res.redirect('back'); }
+  if (!winning_runner) { req.flash('error', 'জয় নির্বাচন করুন!'); return res.redirect('back'); }
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -721,9 +991,9 @@ router.post('/markets/:marketId/settle', async (req, res) => {
       if (String(bet.runner) === String(winning_runner)) {
         const payout = Math.floor(Number(bet.stake) * Number(bet.odd));
         await client.query('UPDATE users SET coins = coins + $1 WHERE id = $2', [payout, bet.user_id]);
-        await client.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'bet_win','বেট জয়')`, [bet.user_id, payout]);
+        await client.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'bet_win','বেট জয়')`, [bet.user_id, payout]);
         await client.query(`UPDATE bets SET status = 'won' WHERE id = $1`, [bet.id]);
-        await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট জয়!',$2,'success')`, [bet.user_id, `আপনি ${payout} কয়েন জিতেছেন!`]);
+        await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট জয়!',$2,'success')`, [bet.user_id, `আপনি ${payout} কয়েন জিতেছেন!`]);
         winnersCount++;
       } else {
         await client.query(`UPDATE bets SET status = 'lost' WHERE id = $1`, [bet.id]);
@@ -766,13 +1036,24 @@ router.get('/bets', async (req, res) => {
       ${where} ORDER BY b.created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}
     `, params);
 
+    const pendingCountRes = await pool.query(`SELECT COUNT(*) FROM bets WHERE status='pending'`);
+    const todayStakeRes = await pool.query(`SELECT COALESCE(SUM(stake),0) AS total FROM bets WHERE created_at::date = CURRENT_DATE`);
+    const todayGgrRes = await pool.query(`
+      SELECT COALESCE(SUM(stake),0) AS staked,
+             COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS paidout
+      FROM bets WHERE created_at::date = CURRENT_DATE AND status IN ('won','lost')
+    `);
+
     res.render('admin/bets', {
       bets: bets.rows,
-      page, totalPages: Math.max(1, Math.ceil(total / limit)), total, status
+      page, totalPages: Math.max(1, Math.ceil(total / limit)), total, status,
+      pendingSettlement: parseInt(pendingCountRes.rows[0].count),
+      todayStake: Number(todayStakeRes.rows[0].total),
+      todayGgr: Number(todayGgrRes.rows[0].staked) - Number(todayGgrRes.rows[0].paidout)
     });
   } catch (err) {
     console.error(err);
-    res.render('admin/bets', { bets: [], page: 1, totalPages: 1, total: 0, status: '' });
+    res.render('admin/bets', { bets: [], page: 1, totalPages: 1, total: 0, status: '', pendingSettlement: 0, todayStake: 0, todayGgr: 0 });
   }
 });
 
@@ -790,7 +1071,7 @@ router.post('/bets/:id/settle', async (req, res) => {
     const bet = b.rows[0];
     if (!bet || bet.status !== 'pending') {
       await client.query('ROLLBACK');
-      req.flash('error', 'বেট পাওয়া যায়নি অথবা আগেই সেটেল হয়েছে');
+      req.flash('error', 'বেট পাওয়া যায়নি অথবা আগেই সেটেল হয়েছে');
       return res.redirect('/admin/bets');
     }
     await client.query('UPDATE bets SET status=$1 WHERE id=$2', [result, id]);
@@ -802,11 +1083,11 @@ router.post('/bets/:id/settle', async (req, res) => {
       await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট ফলাফল',$2,'error')`, [bet.user_id, `আপনার ৳${bet.stake} বেটটি হেরে গেছে।`]);
     }
     await client.query('COMMIT');
-    req.flash('success', 'বেট সেটেল হয়েছে');
+    req.flash('success', 'বেট সেটেল হয়েছে');
     res.redirect('/admin/bets');
   } catch (err) {
     await client.query('ROLLBACK');
-    req.flash('error', 'সমস্যা হয়েছে');
+    req.flash('error', 'সমস্যা হয়েছে');
     res.redirect('/admin/bets');
   } finally {
     client.release();

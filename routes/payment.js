@@ -636,3 +636,4 @@ router.post('/sslcommerz/ipn', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.creditApprovedDeposit = creditApprovedDeposit;
