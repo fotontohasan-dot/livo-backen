@@ -1,5 +1,7 @@
-<%- include('partials/admin-layout', { title: 'Bets Management' }) %>
-
+<%- include('partials/admin-layout', {
+    title: 'Bets Management',
+    active: 'bets',
+    body: `
 <div class="p-6">
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
@@ -168,14 +170,16 @@ function settleBet(btn, result) {
     const actionCell = row.querySelector('td:nth-child(6)');
     
     if (result === 'win') {
-        statusCell.innerHTML = `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">Won</span>`;
-        actionCell.innerHTML = `<span class="text-emerald-600 font-semibold text-sm">Settled as WIN</span>`;
+        statusCell.innerHTML = \\`<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">Won</span>\\`;
+        actionCell.innerHTML = \\`<span class="text-emerald-600 font-semibold text-sm">Settled as WIN</span>\\`;
     } else {
-        statusCell.innerHTML = `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-rose-100 text-rose-700">Lost</span>`;
-        actionCell.innerHTML = `<span class="text-rose-600 font-semibold text-sm">Settled as LOSE</span>`;
+        statusCell.innerHTML = \\`<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-rose-100 text-rose-700">Lost</span>\\`;
+        actionCell.innerHTML = \\`<span class="text-rose-600 font-semibold text-sm">Settled as LOSE</span>\\`;
     }
     
     // TODO: Send to backend - fetch('/admin/bets/settle', { method: 'POST', body: JSON.stringify(...) })
     alert('Bet settled successfully! (Connect to your backend)');
 }
 </script>
+` 
+}) %>
