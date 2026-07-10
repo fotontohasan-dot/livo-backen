@@ -256,6 +256,8 @@ router.post('/settings/admins/:id/demote', async (req, res) => {
 });
 
 // ==================== DASHBOARD ====================
+router.get('/dashboard', (req, res) => res.redirect('/admin'));
+
 router.get('/', async (req, res) => {
   try {
     const users = await pool.query('SELECT COUNT(*) as count FROM users');
