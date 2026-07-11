@@ -19,7 +19,6 @@ const { scheduleDailyBackup } = require('./services/backup');
 const app = express();
 app.use(compression());
 const server = http.createServer(app);
-initSocket(server);
 
 app.set('trust proxy', 1);
 
@@ -67,7 +66,7 @@ const sessionStore = process.env.DATABASE_URL ? new pgSession({
   createTableIfMissing: true
 }) : undefined;
 
-app.use(session({
+const sessionMiddleware = session({
   store: sessionStore,
   secret: SESSION_SECRET,
   resave: false,
@@ -78,7 +77,12 @@ app.use(session({
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax'
   }
-}));
+});
+app.use(sessionMiddleware);
+
+// session middleware রেডি হওয়ার পর socket.io ইনিশিয়ালাইজ করা হচ্ছে,
+// যাতে socket connection-এও একই লগইন session ব্যবহার করে ইউজার/অ্যাডমিন যাচাই করা যায়
+initSocket(server, sessionMiddleware);
 
 app.use(flash());
 
