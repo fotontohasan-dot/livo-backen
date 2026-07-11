@@ -96,18 +96,23 @@ router.get('/logout', (req, res) => {
 // ==================== সব রাউট প্রোটেক্টেড ====================
 router.use(isAdmin);
 
-router.get('/pending-counts', async (req, res) => {
+// ==================== নোটিফিকেশন ব্যাজ কাউন্ট (বটম-নেভ) ====================
+router.get('/api/notification-counts', async (req, res) => {
   try {
-    const deposits = await pool.query(`SELECT COUNT(*) AS cnt FROM payment_requests WHERE type='deposit' AND status='pending'`);
-    const withdrawals = await pool.query(`SELECT COUNT(*) AS cnt FROM payment_requests WHERE type='withdraw' AND status='pending'`);
-    const kyc = await pool.query(`SELECT COUNT(*) AS cnt FROM kyc_requests WHERE status='pending'`);
+    const [deposits, withdrawals, chats] = await Promise.all([
+      pool.query(`SELECT COUNT(*)::int AS c FROM payment_requests WHERE type='deposit' AND status='pending'`),
+      pool.query(`SELECT COUNT(*)::int AS c FROM payment_requests WHERE type='withdraw' AND status='pending'`),
+      pool.query(`SELECT COUNT(*)::int AS c FROM chat_messages WHERE is_admin=false AND is_read=false`)
+    ]);
     res.json({
-      deposits: parseInt(deposits.rows[0].cnt),
-      withdrawals: parseInt(withdrawals.rows[0].cnt),
-      kyc: parseInt(kyc.rows[0].cnt)
+      success: true,
+      deposits: deposits.rows[0].c,
+      withdrawals: withdrawals.rows[0].c,
+      chats: chats.rows[0].c
     });
   } catch (err) {
-    res.json({ deposits: 0, withdrawals: 0, kyc: 0 });
+    console.error('notification-counts error:', err.message);
+    res.json({ success: false, deposits: 0, withdrawals: 0, chats: 0 });
   }
 });
 
@@ -1075,52 +1080,6 @@ router.post('/markets/:marketId/settle', async (req, res) => {
 });
 
 // ==================== BETS ====================
-router.get('/api/bets-live', async (req, res) => {
-  try {
-    const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = 30;
-    const offset = (page - 1) * limit;
-    const status = req.query.status || '';
-    const conditions = [];
-    const params = [];
-    if (['pending', 'won', 'lost'].includes(status)) {
-      params.push(status);
-      conditions.push(`b.status = $${params.length}`);
-    }
-    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
-
-    const countRes = await pool.query(`SELECT COUNT(*) FROM bets b ${where}`, params);
-    const total = parseInt(countRes.rows[0].count);
-
-    params.push(limit, offset);
-    const bets = await pool.query(`
-      SELECT b.*, u.username, m.team_a, m.team_b, m.title
-      FROM bets b JOIN users u ON b.user_id = u.id LEFT JOIN matches m ON b.match_id = m.id
-      ${where} ORDER BY b.created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}
-    `, params);
-
-    const pendingCountRes = await pool.query(`SELECT COUNT(*) FROM bets WHERE status='pending'`);
-    const todayStakeRes = await pool.query(`SELECT COALESCE(SUM(stake),0) AS total FROM bets WHERE created_at::date = CURRENT_DATE`);
-    const todayGgrRes = await pool.query(`
-      SELECT COALESCE(SUM(stake),0) AS staked,
-             COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS paidout
-      FROM bets WHERE created_at::date = CURRENT_DATE AND status IN ('won','lost')
-    `);
-
-    res.json({
-      success: true,
-      bets: bets.rows,
-      page, totalPages: Math.max(1, Math.ceil(total / limit)), total,
-      pendingSettlement: parseInt(pendingCountRes.rows[0].count),
-      todayStake: Number(todayStakeRes.rows[0].total),
-      todayGgr: Number(todayGgrRes.rows[0].staked) - Number(todayGgrRes.rows[0].paidout)
-    });
-  } catch (err) {
-    console.error('bets-live api error:', err.message);
-    res.status(500).json({ success: false });
-  }
-});
-
 router.get('/bets', async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);

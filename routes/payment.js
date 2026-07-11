@@ -5,7 +5,7 @@ const { createBonus, canWithdraw } = require('../services/turnover');
 const { processReferralDeposit } = require('../services/referral');
 const crypto = require('crypto');
 const sslcommerz = require('../services/sslcommerz');
-const { broadcastDemoStats } = require('../services/socket');
+const { broadcastDemoStats, emitAdminAlert } = require('../services/socket');
 
 function requireLogin(req, res, next) {
   if (!req.session.user) return res.redirect('/login');
@@ -23,7 +23,7 @@ function parseAmount(raw) {
   return n;
 }
 
-async function notifyAdmins(title, message) {
+async function notifyAdmins(title, message, alertType) {
   try {
     const admins = await pool.query("SELECT id FROM users WHERE role = 'admin'");
     for (const a of admins.rows) {
@@ -35,6 +35,7 @@ async function notifyAdmins(title, message) {
   } catch (e) {
     console.error('notifyAdmins error:', e.message);
   }
+  if (alertType) emitAdminAlert(alertType, { title, message });
 }
 
 // ==================== রিলোড বোনাসের হার ====================
@@ -172,7 +173,7 @@ router.post('/deposit', requireLogin, async (req, res) => {
       `INSERT INTO payment_requests (user_id, type, method, amount, transaction_id, account_number, status, want_bonus) VALUES ($1, 'deposit', $2, $3, $4, $5, 'pending', $6)`,
       [userId, method, amount, transaction_id, account_number, wantBonus]
     );
-    await notifyAdmins('নতুন ডিপোজিট রিকোয়েস্ট', `${req.session.user.username} ${amount} টাকা ডিপোজিট চেয়েছে (${method})।`);
+    await notifyAdmins('নতুন ডিপোজিট রিকোয়েস্ট', `${req.session.user.username} ${amount} টাকা ডিপোজিট চেয়েছে (${method})।`, 'deposit');
     req.flash('success', 'ডিপোজিট রিকোয়েস্ট পাঠানো হয়েছে!');
     res.redirect('/payment/history');
   } catch (err) {
@@ -259,7 +260,7 @@ router.post('/withdraw', requireLogin, async (req, res) => {
 
     if (req.session.user) req.session.user.coins = upd.rows[0].coins;
 
-    await notifyAdmins('নতুন উইথড্র রিকোয়েস্ট', `${req.session.user.username} ${amount} টাকা উইথড্র চেয়েছে (${method})।`);
+    await notifyAdmins('নতুন উইথড্র রিকোয়েস্ট', `${req.session.user.username} ${amount} টাকা উইথড্র চেয়েছে (${method})।`, 'withdraw');
 
     req.flash('success', 'উইথড্র রিকোয়েস্ট পাঠানো হয়েছে!');
     res.redirect('/payment/history');

@@ -89,6 +89,10 @@ router.get('/admin/history/:userId', isAdmin, async (req, res) => {
       'SELECT * FROM chat_messages WHERE sender_id = $1 OR receiver_id = $1 ORDER BY created_at ASC',
       [req.params.userId]
     );
+    await pool.query(
+      `UPDATE chat_messages SET is_read = true WHERE sender_id = $1 AND is_admin = false AND is_read = false`,
+      [req.params.userId]
+    );
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: 'সার্ভার ত্রুটি' });
