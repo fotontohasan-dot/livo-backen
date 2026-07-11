@@ -1,13 +1,34 @@
+<%
+const ggrLabels = JSON.stringify((ggrTrend || []).map(r => new Date(r.day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })));
+const ggrData = JSON.stringify((ggrTrend || []).map(r => Number(r.ggr)));
+const userLabels = JSON.stringify((userTrend || []).map(r => new Date(r.day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })));
+const userData = JSON.stringify((userTrend || []).map(r => r.count));
+%>
 <%- include('partials/admin-layout', { 
     title: 'Reports & Analytics', 
     active: 'reports',
     body: `
 <div class="max-w-7xl mx-auto">
-    <h2 class="text-2xl font-semibold mb-6">Reports & Analytics</h2>
-    
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-semibold">Reports & Analytics</h2>
+        <form method="GET" action="/admin/reports" class="flex items-center gap-2 text-sm">
+            <input type="date" name="from" value="${from}" class="border px-3 py-2 rounded-xl">
+            <span class="text-slate-400">থেকে</span>
+            <input type="date" name="to" value="${to}" class="border px-3 py-2 rounded-xl">
+            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold">ফিল্টার</button>
+        </form>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-5 mb-6">
+        <div class="bg-white p-5 rounded-2xl border"><p class="text-xs text-slate-500">মোট ডিপোজিট</p><p class="text-2xl font-bold text-emerald-600 mt-1">৳ ${Number(deposits.total).toLocaleString('en-US')}</p><p class="text-xs text-slate-400 mt-1">${deposits.cnt} টি</p></div>
+        <div class="bg-white p-5 rounded-2xl border"><p class="text-xs text-slate-500">মোট উইথড্র</p><p class="text-2xl font-bold text-red-500 mt-1">৳ ${Number(withdrawals.total).toLocaleString('en-US')}</p><p class="text-xs text-slate-400 mt-1">${withdrawals.cnt} টি</p></div>
+        <div class="bg-white p-5 rounded-2xl border"><p class="text-xs text-slate-500">নেট রেভিনিউ (GGR)</p><p class="text-2xl font-bold ${netRevenue >= 0 ? 'text-emerald-600' : 'text-red-600'} mt-1">৳ ${Number(netRevenue).toLocaleString('en-US')}</p><p class="text-xs text-slate-400 mt-1">${bets.cnt} টি বেট</p></div>
+        <div class="bg-white p-5 rounded-2xl border"><p class="text-xs text-slate-500">নতুন ইউজার</p><p class="text-2xl font-bold mt-1">${Number(newUsers).toLocaleString('en-US')}</p><p class="text-xs text-slate-400 mt-1">${from} থেকে ${to}</p></div>
+    </div>
+
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div class="bg-white p-6 rounded-3xl border">
-            <h4 class="font-semibold mb-4">GGR Trend (Last 7 Days)</h4>
+            <h4 class="font-semibold mb-4">GGR Trend</h4>
             <canvas id="ggrChart" height="120"></canvas>
         </div>
         
@@ -24,10 +45,10 @@ const ctx1 = document.getElementById('ggrChart');
 new Chart(ctx1, {
     type: 'line',
     data: {
-        labels: ['Jan 3', 'Jan 4', 'Jan 5', 'Jan 6', 'Jan 7', 'Jan 8', 'Jan 9'],
+        labels: ${ggrLabels},
         datasets: [{
             label: 'GGR (৳)',
-            data: [3200000, 4100000, 3850000, 5200000, 4700000, 6100000, 4820000],
+            data: ${ggrData},
             borderColor: '#3b82f6',
             tension: 0.4,
             fill: true,
@@ -41,10 +62,10 @@ const ctx2 = document.getElementById('userChart');
 new Chart(ctx2, {
     type: 'bar',
     data: {
-        labels: ['Jan 3', 'Jan 4', 'Jan 5', 'Jan 6', 'Jan 7', 'Jan 8', 'Jan 9'],
+        labels: ${userLabels},
         datasets: [{
             label: 'New Users',
-            data: [1240, 980, 1450, 1320, 1680, 2100, 1284],
+            data: ${userData},
             backgroundColor: '#10b981'
         }]
     },
