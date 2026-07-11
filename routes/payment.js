@@ -55,8 +55,9 @@ const MAX_BONUS = 15000;
 // এবং SSLCommerz অটো-ক্রেডিট দুই জায়গা থেকেই এই একই ফাংশন কল হয়
 async function creditApprovedDeposit(client, request) {
   let bonusGiven = 0;
+  const amount = Math.round(Number(request.amount));
 
-  await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
+  await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [amount, request.user_id]);
   await client.query('UPDATE users SET total_deposited = COALESCE(total_deposited,0) + $1 WHERE id=$2', [request.amount, request.user_id]);
 
   if (request.want_bonus) {
@@ -470,7 +471,7 @@ router.post('/admin/reject/:id', requireAdmin, async (req, res) => {
       return res.redirect('/payment/admin/payments');
     }
     if (request.type === 'withdraw') {
-      await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
+      await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [Math.round(Number(request.amount)), request.user_id]);
     }
     await client.query(`UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE id=$1`, [id]);
     await client.query(
