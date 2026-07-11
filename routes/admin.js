@@ -1354,15 +1354,39 @@ router.get('/reports', async (req, res) => {
     const bets = betsRes.rows[0];
     const netRevenue = parseFloat(bets.total_stake) - parseFloat(bets.total_payout);
 
+    // ==== দৈনিক GGR ট্রেন্ড (চার্টের জন্য) ====
+    const ggrTrendRes = await pool.query(`
+      SELECT d::date AS day,
+             COALESCE(SUM(b.stake) FILTER (WHERE b.created_at::date = d::date),0) AS staked,
+             COALESCE(SUM(b.stake * b.odd) FILTER (WHERE b.created_at::date = d::date AND b.status='won'),0) AS payout
+      FROM generate_series($1::date, $2::date, '1 day') d
+      LEFT JOIN bets b ON b.created_at::date = d::date
+      GROUP BY d ORDER BY d
+    `, [from, to]);
+    const ggrTrend = ggrTrendRes.rows.map(r => ({
+      day: r.day, ggr: Number(r.staked) - Number(r.payout)
+    }));
+
+    // ==== দৈনিক নতুন ইউজার ট্রেন্ড ====
+    const userTrendRes = await pool.query(`
+      SELECT d::date AS day, COUNT(u.id) AS cnt
+      FROM generate_series($1::date, $2::date, '1 day') d
+      LEFT JOIN users u ON u.created_at::date = d::date
+      GROUP BY d ORDER BY d
+    `, [from, to]);
+    const userTrend = userTrendRes.rows.map(r => ({ day: r.day, count: parseInt(r.cnt) }));
+
     res.render('admin/reports', {
-      from, to, deposits, withdrawals, bets, newUsers: usersRes.rows[0].cnt, netRevenue
+      from, to, deposits, withdrawals, bets, newUsers: usersRes.rows[0].cnt, netRevenue,
+      ggrTrend, userTrend
     });
   } catch (err) {
     console.error('Reports error:', err.message);
     res.render('admin/reports', {
       from: '', to: '',
       deposits: { total: 0, cnt: 0 }, withdrawals: { total: 0, cnt: 0 },
-      bets: { total_stake: 0, cnt: 0, total_payout: 0 }, newUsers: 0, netRevenue: 0
+      bets: { total_stake: 0, cnt: 0, total_payout: 0 }, newUsers: 0, netRevenue: 0,
+      ggrTrend: [], userTrend: []
     });
   }
 });
