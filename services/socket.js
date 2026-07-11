@@ -151,18 +151,20 @@ const updateLiveScore = async (matchId, scoreData) => {
   }
 };
 
-// ===== ডেমো (প্র্যাকটিস) কারেন্সি স্ট্যাটস =====
+// ===== ডেমো (প্র্যাকটিস) কারেন্সি স্ট্যাটস — অ্যাডমিন ড্যাশবোর্ড =====
 // মোট ডেমো সংখ্যাটি স্থায়ীভাবে নির্ধারিত (ফিক্সড) — এটি কোনো হিসাব থেকে আসে না,
-// কেউ এটি পরিবর্তন/কমাতে-বাড়াতে পারবে না। বাকি তিনটি স্ট্যাট রিয়েল-টাইম DB থেকে আসে।
+// কেউ এটি পরিবর্তন/কমাতে-বাড়াতে পারবে না।
+// বাকি তিনটি স্ট্যাট এখন সরাসরি ইউজারের আসল ব্যালেন্স (coins) ও বাজি থেকে
+// রিয়েল-টাইম হিসাব হয় — তাই এটা ইউজারের প্রোফাইলে দেখা ব্যালেন্সের সাথে মিলবে।
 const TOTAL_DEMO_FIXED = 9999999;
 
 const getDemoStats = async () => {
-  const heldByUsers = await pool.query(`SELECT COALESCE(SUM(demo_balance),0) AS total FROM users`);
+  const heldByUsers = await pool.query(`SELECT COALESCE(SUM(coins),0) AS total FROM users`);
   const casinoWagered = await pool.query(
-    `SELECT COALESCE(SUM(amount),0) AS total FROM demo_transactions WHERE category='casino' AND type='bet'`
+    `SELECT COALESCE(SUM(amount),0) AS total FROM coin_transactions WHERE type='casino_bet'`
   );
   const sportsWagered = await pool.query(
-    `SELECT COALESCE(SUM(amount),0) AS total FROM demo_transactions WHERE category='sports' AND type='bet'`
+    `SELECT COALESCE(SUM(stake),0) AS total FROM bets WHERE is_demo = false`
   );
 
   return {
