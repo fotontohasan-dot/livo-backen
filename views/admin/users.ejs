@@ -1,233 +1,79 @@
-<%- include('partials/admin-layout', { 
-    title: 'User Management', 
+<%
+function fmtDate(d) {
+  return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+function userRow(u) {
+  const statusBadge = u.is_banned
+    ? '<span class="px-3 py-1 text-xs font-bold rounded-full bg-red-100 text-red-700">Banned</span>'
+    : '<span class="px-3 py-1 text-xs font-bold rounded-full bg-emerald-100 text-emerald-700">Active</span>';
+  const banLabel = u.is_banned ? 'Unban' : 'Ban';
+  const banColor = u.is_banned ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-red-500 hover:bg-red-600';
+  return '<tr class="hover:bg-slate-50">' +
+    '<td class="px-6 py-4">' +
+      '<div class="font-semibold text-slate-800">' + u.username + '</div>' +
+      '<div class="text-xs text-slate-500">#' + u.id + ' • ' + (u.email || u.phone || '-') + '</div>' +
+    '</td>' +
+    '<td class="px-6 py-4 font-mono font-semibold">৳ ' + Number(u.coins || 0).toLocaleString('en-US') + '</td>' +
+    '<td class="px-6 py-4 text-sm">' + Number(u.total_points || 0).toLocaleString('en-US') + '</td>' +
+    '<td class="px-6 py-4">' + statusBadge + '</td>' +
+    '<td class="px-6 py-4 text-sm text-slate-500">' + fmtDate(u.created_at) + '</td>' +
+    '<td class="px-6 py-4">' +
+      '<div class="flex items-center justify-center gap-x-1.5 flex-wrap">' +
+        '<a href="/admin/users/' + u.id + '" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-blue-500 hover:bg-blue-600 text-white transition-colors">View</a>' +
+        '<form method="POST" action="/admin/users/' + u.id + '/ban" style="display:inline" onsubmit="return confirm(\'স্ট্যাটাস পরিবর্তন করবেন?\')">' +
+          '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl ' + banColor + ' text-white transition-colors">' + banLabel + '</button>' +
+        '</form>' +
+      '</div>' +
+    '</td>' +
+  '</tr>';
+}
+const rows = (users || []).map(userRow).join('') || '<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400">কোনো ইউজার পাওয়া যায়নি</td></tr>';
+%>
+<%- include('partials/admin-layout', {
+    title: 'User Management',
     active: 'users',
     body: `
 <div class="max-w-7xl mx-auto">
     <div class="flex items-center justify-between mb-6">
         <div>
-            <h2 class="text-2xl font-semibold">User Management</h2>
-            <p class="text-slate-600 text-sm">Manage all registered users • 48,291 total</p>
+            <h1 class="text-2xl font-semibold text-slate-900">User Management</h1>
+            <p class="text-slate-500 mt-1 text-sm">মোট ${total || 0} জন ইউজার</p>
         </div>
-        <button onclick="showAddUserModal()" 
-                class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 transition-colors text-white text-sm font-semibold rounded-2xl flex items-center gap-2">
-            <i class="fas fa-user-plus"></i>
-            <span>Add New User</span>
-        </button>
     </div>
 
-    <!-- Search & Filters -->
-    <div class="bg-white p-4 rounded-3xl border border-slate-100 mb-5 flex flex-col md:flex-row gap-3">
-        <div class="flex-1 relative">
-            <input id="searchInput" type="text" placeholder="Search by name, phone, user ID..." 
-                   class="w-full border border-slate-200 pl-11 py-3 rounded-2xl text-sm focus:outline-none focus:border-blue-300"
-                   onkeyup="filterUsers()">
-            <i class="fas fa-search absolute left-4 top-4 text-slate-400"></i>
-        </div>
-        <select class="border border-slate-200 px-4 py-3 rounded-2xl text-sm" onchange="filterUsers()">
-            <option>All Status</option>
-            <option>Active</option>
-            <option>Banned</option>
-            <option>Blocked</option>
+    <form method="GET" action="/admin/users" class="flex flex-wrap gap-3 mb-6">
+        <input type="text" name="search" value="${search || ''}" placeholder="নাম, ইমেইল বা ফোন দিয়ে খুঁজুন..."
+               class="flex-1 min-w-[220px] border border-slate-200 px-4 py-2.5 rounded-2xl text-sm outline-none focus:border-blue-300">
+        <select name="status" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+            <option value="">সব স্ট্যাটাস</option>
+            <option value="active" ${status === 'active' ? 'selected' : ''}>Active</option>
+            <option value="banned" ${status === 'banned' ? 'selected' : ''}>Banned</option>
         </select>
-    </div>
+        <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">খুঁজুন</button>
+        ${(search || status) ? '<a href="/admin/users" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">রিসেট</a>' : ''}
+    </form>
 
-    <!-- Users Table -->
     <div class="bg-white rounded-3xl border border-slate-100 overflow-hidden modern-table">
         <table class="w-full text-sm">
-            <thead class="bg-slate-50 text-slate-600">
+            <thead class="bg-slate-50">
                 <tr>
-                    <th class="text-left px-6 py-4 font-medium">User</th>
-                    <th class="text-left px-6 py-4 font-medium">Phone / ID</th>
-                    <th class="text-right px-6 py-4 font-medium">Balance</th>
-                    <th class="text-center px-6 py-4 font-medium">Total Bet</th>
-                    <th class="text-center px-6 py-4 font-medium">Status</th>
-                    <th class="text-center px-6 py-4 font-medium">Actions</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">User</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Coins</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Points</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Status</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Joined</th>
+                    <th class="px-6 py-4 text-center font-medium text-slate-500 uppercase text-xs">Actions</th>
                 </tr>
             </thead>
-            <tbody id="usersTableBody" class="divide-y divide-slate-100 text-slate-700">
-                <!-- Populated by JS -->
-            </tbody>
+            <tbody class="divide-y divide-slate-100">${rows}</tbody>
         </table>
     </div>
-</div>
 
-<!-- User Detail Modal -->
-<div id="userModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-    <div class="bg-white w-full max-w-lg mx-4 rounded-3xl overflow-hidden">
-        <div class="px-6 py-5 border-b flex justify-between items-center">
-            <h3 class="font-semibold text-lg">User Details</h3>
-            <button onclick="closeUserModal()" class="text-2xl leading-none text-slate-400 hover:text-slate-600">&times;</button>
-        </div>
-        
-        <div class="p-6 space-y-5" id="userModalContent">
-            <!-- Dynamic content -->
-        </div>
-        
-        <div class="px-6 py-4 bg-slate-50 flex gap-3 justify-end">
-            <button onclick="adjustCoins()" class="px-5 py-2 text-sm font-semibold bg-emerald-600 text-white rounded-2xl">Adjust Coins</button>
-            <button onclick="toggleBan()" id="banBtn" class="px-5 py-2 text-sm font-semibold bg-red-600 text-white rounded-2xl">Ban User</button>
-            <button onclick="closeUserModal()" class="px-5 py-2 text-sm font-semibold border border-slate-300 rounded-2xl">Close</button>
-        </div>
+    <div class="flex justify-center gap-3 mt-6">
+        ${page > 1 ? '<a href="/admin/users?page=' + (page - 1) + '&search=' + encodeURIComponent(search || '') + '&status=' + (status || '') + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">← আগের পেজ</a>' : ''}
+        <span class="px-4 py-2 text-sm text-slate-500">পেজ ${page} / ${totalPages}</span>
+        ${page < totalPages ? '<a href="/admin/users?page=' + (page + 1) + '&search=' + encodeURIComponent(search || '') + '&status=' + (status || '') + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">পরের পেজ →</a>' : ''}
     </div>
 </div>
-
-<script>
-let users = [
-    { id: 28491, name: "Rahim Khan", phone: "01711-223344", balance: 124500, totalBet: 2450000, status: "Active", joined: "2025-11-12" },
-    { id: 19283, name: "Karim Hossain", phone: "01822-556677", balance: 87500, totalBet: 1890000, status: "Active", joined: "2025-10-05" },
-    { id: 39102, name: "Fatema Begum", phone: "01933-112233", balance: 32000, totalBet: 450000, status: "Banned", joined: "2025-09-18" },
-    { id: 47291, name: "Jasim Uddin", phone: "01655-998877", balance: 215000, totalBet: 3120000, status: "Active", joined: "2025-12-01" },
-    { id: 58321, name: "Nasrin Akter", phone: "01544-667788", balance: 45000, totalBet: 980000, status: "Blocked", joined: "2025-08-22" }
-];
-
-function renderUsers(filteredUsers = users) {
-    const tbody = document.getElementById('usersTableBody');
-    tbody.innerHTML = '';
-    
-    filteredUsers.forEach(user => {
-        const row = document.createElement('tr');
-        row.className = 'hover:bg-slate-50 transition-colors';
-        row.innerHTML = \`
-            <td class="px-6 py-4">
-                <div class="font-semibold">\${user.name}</div>
-                <div class="text-xs text-slate-500">#\${user.id}</div>
-            </td>
-            <td class="px-6 py-4 text-sm">\${user.phone}</td>
-            <td class="px-6 py-4 text-right font-mono font-semibold">৳ \${user.balance.toLocaleString()}</td>
-            <td class="px-6 py-4 text-center font-mono">৳ \${user.totalBet.toLocaleString()}</td>
-            <td class="px-6 py-4 text-center">
-                <span class="inline-block px-3 py-1 text-xs font-semibold rounded-full \${user.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : user.status === 'Banned' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}">
-                    \${user.status}
-                </span>
-            </td>
-            <td class="px-6 py-4">
-                <div class="flex justify-center gap-2">
-                    <button onclick="viewUser(\${user.id})" class="px-3 py-1.5 text-xs font-semibold bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-xl">View</button>
-                    <button onclick="quickBan(\${user.id})" class="px-3 py-1.5 text-xs font-semibold \${user.status === 'Banned' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'} rounded-xl">\${user.status === 'Banned' ? 'Unban' : 'Ban'}</button>
-                </div>
-            </td>
-        \`;
-        tbody.appendChild(row);
-    });
-}
-
-function filterUsers() {
-    const term = document.getElementById('searchInput').value.toLowerCase();
-    const filtered = users.filter(u => 
-        u.name.toLowerCase().includes(term) || 
-        u.phone.includes(term) || 
-        u.id.toString().includes(term)
-    );
-    renderUsers(filtered);
-}
-
-let currentUserId = null;
-
-function viewUser(id) {
-    currentUserId = id;
-    const user = users.find(u => u.id === id);
-    if (!user) return;
-
-    const content = document.getElementById('userModalContent');
-    content.innerHTML = \`
-        <div class="flex items-center gap-4">
-            <img src="https://i.pravatar.cc/64?img=\${(id % 70)}" class="w-16 h-16 rounded-2xl" />
-            <div>
-                <div class="font-bold text-xl">\${user.name}</div>
-                <div class="text-sm text-slate-500">#\${user.id} • Joined \${user.joined}</div>
-            </div>
-        </div>
-        
-        <div class="grid grid-cols-2 gap-4 pt-4">
-            <div class="bg-slate-50 p-4 rounded-2xl">
-                <div class="text-xs text-slate-500">Current Balance</div>
-                <div class="text-3xl font-bold text-emerald-600 mt-1">৳ \${user.balance.toLocaleString()}</div>
-            </div>
-            <div class="bg-slate-50 p-4 rounded-2xl">
-                <div class="text-xs text-slate-500">Total Bet Amount</div>
-                <div class="text-3xl font-bold mt-1">৳ \${user.totalBet.toLocaleString()}</div>
-            </div>
-        </div>
-
-        <div>
-            <div class="text-xs font-semibold text-slate-500 mb-1.5">PHONE NUMBER</div>
-            <div class="font-mono text-lg">\${user.phone}</div>
-        </div>
-    \`;
-
-    const banBtn = document.getElementById('banBtn');
-    banBtn.textContent = user.status === 'Banned' ? 'Unban User' : 'Ban User';
-    banBtn.className = user.status === 'Banned' 
-        ? 'px-5 py-2 text-sm font-semibold bg-emerald-600 text-white rounded-2xl' 
-        : 'px-5 py-2 text-sm font-semibold bg-red-600 text-white rounded-2xl';
-
-    document.getElementById('userModal').classList.remove('hidden');
-    document.getElementById('userModal').classList.add('flex');
-}
-
-function closeUserModal() {
-    document.getElementById('userModal').classList.add('hidden');
-    document.getElementById('userModal').classList.remove('flex');
-}
-
-function adjustCoins() {
-    const user = users.find(u => u.id === currentUserId);
-    if (!user) return;
-    
-    const amount = prompt('Enter amount to add or remove (use negative to deduct):', '5000');
-    if (amount === null) return;
-    
-    const num = parseInt(amount);
-    if (isNaN(num)) return alert('Invalid amount');
-    
-    user.balance += num;
-    alert(\`Balance updated! New balance: ৳\${user.balance.toLocaleString()}\`);
-    closeUserModal();
-    renderUsers();
-}
-
-function toggleBan() {
-    const user = users.find(u => u.id === currentUserId);
-    if (!user) return;
-    
-    user.status = user.status === 'Banned' ? 'Active' : 'Banned';
-    alert(\`User \${user.status === 'Banned' ? 'banned' : 'unbanned'} successfully!\`);
-    closeUserModal();
-    renderUsers();
-}
-
-function quickBan(id) {
-    const user = users.find(u => u.id === id);
-    if (!user) return;
-    
-    if (confirm(\`Are you sure you want to \${user.status === 'Banned' ? 'unban' : 'ban'} \${user.name}?\`)) {
-        user.status = user.status === 'Banned' ? 'Active' : 'Banned';
-        renderUsers();
-    }
-}
-
-function showAddUserModal() {
-    const name = prompt('Enter new user name:');
-    if (!name) return;
-    const phone = prompt('Enter phone number:');
-    if (!phone) return;
-    
-    const newUser = {
-        id: Math.floor(10000 + Math.random() * 90000),
-        name: name,
-        phone: phone,
-        balance: 0,
-        totalBet: 0,
-        status: 'Active',
-        joined: new Date().toISOString().split('T')[0]
-    };
-    users.unshift(newUser);
-    renderUsers();
-    alert('New user added successfully!');
-}
-
-// Initial render
-renderUsers();
-</script>
-` 
+`
 }) %>
