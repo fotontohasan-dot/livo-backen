@@ -116,6 +116,10 @@
     }
     renderAll();
 
+    // বটম-নেভ থেকে সরাসরি ?tab=withdraw বা ?tab=deposit দিয়ে আসলে সেই ট্যাব খুলে দেখানো
+    const urlTab = new URLSearchParams(window.location.search).get('tab');
+    if (urlTab === 'withdraw') showPayTab(1);
+
     function showPayTab(i) {
       document.querySelectorAll('.pay-panel').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.pay-tab-btn').forEach(el => el.classList.remove('active'));
