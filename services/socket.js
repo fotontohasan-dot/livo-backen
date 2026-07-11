@@ -4,7 +4,7 @@ const { getBotReply } = require('./chatbot');
 
 let io;
 
-const initSocket = (server) => {
+const initSocket = (server, sessionMiddleware) => {
   io = new Server(server, {
     cors: {
       origin: "*",
@@ -12,43 +12,61 @@ const initSocket = (server) => {
     }
   });
 
+  // ===== নিরাপত্তা: socket handshake-এর সাথে Express session যুক্ত করা =====
+  // এর ফলে socket.request.session.user থেকে আসল লগইন করা ইউজার/রোল পাওয়া যাবে,
+  // ক্লায়েন্ট যা দাবি করে (senderId, isAdmin) তা আর বিশ্বাস করা হবে না।
+  if (sessionMiddleware) {
+    io.engine.use(sessionMiddleware);
+  }
+
   io.on("connection", (socket) => {
     console.log("🟢 User connected:", socket.id);
 
-    // ===== ম্যাচ রুম (লাইভ স্কোর) =====
+    const getSessionUser = () => {
+      const s = socket.request && socket.request.session;
+      return (s && s.user) ? s.user : null;
+    };
+
+    // লগইন করা থাকলে সাথে সাথে নিজের চ্যাট রুমে ও (অ্যাডমিন হলে) admins রুমে জয়েন করানো
+    const authUser = getSessionUser();
+    if (authUser) {
+      socket.join(`user:${authUser.id}`);
+      if (authUser.role === 'admin') socket.join('admins');
+    }
+
+    // ===== ম্যাচ রুম (লাইভ স্কোর) — পাবলিক তথ্য, লগইন লাগবে না =====
     socket.on("joinMatch", (matchId) => {
       socket.join(`match:${matchId}`);
     });
     socket.on("join_matches", () => socket.join("matches"));
     socket.on("leave_matches", () => socket.leave("matches"));
 
-    // ===== ইউজার নিজের চ্যাট রুমে জয়েন =====
-    socket.on("join", (userId) => {
-      if (userId) socket.join(`user:${userId}`);
+    // ===== ইউজার নিজের চ্যাট রুমে জয়েন — শুধু নিজের রুমে, session দিয়ে যাচাই করে =====
+    socket.on("join", () => {
+      const u = getSessionUser();
+      if (u) socket.join(`user:${u.id}`);
     });
 
-    // ===== অ্যাডমিন চ্যাট রুম =====
+    // ===== অ্যাডমিন চ্যাট রুম — শুধু আসল admin session হলেই =====
     socket.on("join_admin", () => {
-      socket.join("admins");
+      const u = getSessionUser();
+      if (u && u.role === 'admin') socket.join("admins");
     });
 
     // ===== চ্যাট মেসেজ পাঠানো/গ্রহণ =====
     socket.on("send_message", async (data) => {
       try {
-        const senderId = data && data.senderId;
+        const u = getSessionUser();
+        if (!u) return; // লগইন ছাড়া মেসেজ পাঠানো যাবে না
+
+        const senderId = u.id; // ক্লায়েন্টের senderId উপেক্ষা করা হচ্ছে, session-ই একমাত্র সত্য উৎস
+        const isAdmin = u.role === 'admin';
         const receiverId = (data && data.receiverId) || null;
         const message = (data && data.message) || null;
         const fileUrl = (data && data.fileUrl) || null;
         const fileType = (data && data.fileType) || null;
-        let isAdmin = !!(data && data.isAdmin);
 
-        if (!senderId || (!message && !fileUrl)) return;
-
-        // নিরাপত্তা: কেউ isAdmin:true দাবি করলেও ডেটাবেস থেকে আসল রোল যাচাই
-        if (isAdmin) {
-          const r = await pool.query('SELECT role FROM users WHERE id = $1', [senderId]);
-          isAdmin = !!(r.rows[0] && r.rows[0].role === 'admin');
-        }
+        if (!message && !fileUrl) return;
 
         const createdAt = new Date();
 
