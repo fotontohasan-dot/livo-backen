@@ -11,6 +11,7 @@ const { updateMissionProgress } = require('../services/missions');
 const { addPoints } = require('../services/loyalty');
 const { checkBadges } = require('../services/badges');
 const { getSetting } = require('../services/settings');
+const { broadcastDemoStats } = require('../services/socket');
 
 function formatMatch(row) {
   return {
@@ -134,9 +135,10 @@ router.get('/:id', async (req, res) => {
 router.post('/:id/bet', isAuth, async (req, res) => {
   const userId = req.session.user.id;
   const matchId = req.params.id;
-  const { market_id, runner, odd } = req.body;
+  const { market_id, runner, odd, demo } = req.body;
   const stake = parseInt(req.body.stake);
   const oddNum = parseFloat(odd);
+  const isDemo = !!demo;
 
   const minBet = Number(await getSetting('min_bet'));
   const maxBet = Number(await getSetting('max_bet'));
@@ -163,20 +165,35 @@ router.post('/:id/bet', isAuth, async (req, res) => {
       return res.status(400).json({ success: false, message: 'এই মার্কেটে এখন বেট করা যাবে না' });
     }
 
+    const balanceCol = isDemo ? 'demo_balance' : 'coins';
     const upd = await client.query(
-      `UPDATE users SET coins = coins - $1 WHERE id = $2 AND coins >= $1 RETURNING coins`,
+      `UPDATE users SET ${balanceCol} = ${balanceCol} - $1 WHERE id = $2 AND ${balanceCol} >= $1 RETURNING ${balanceCol}`,
       [stake, userId]
     );
     if (upd.rowCount === 0) {
       await client.query('ROLLBACK');
-      return res.status(400).json({ success: false, message: 'পর্যাপ্ত কয়েন নেই' });
+      return res.status(400).json({ success: false, message: isDemo ? 'পর্যাপ্ত ডেমো ব্যালেন্স নেই' : 'পর্যাপ্ত কয়েন নেই' });
     }
 
     await client.query(
-      `INSERT INTO bets (user_id, match_id, market_id, market_type, runner, odd, stake, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')`,
-      [userId, matchId, market_id, m.rows[0].type, runner || null, oddNum, stake]
+      `INSERT INTO bets (user_id, match_id, market_id, market_type, runner, odd, stake, status, is_demo)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8)`,
+      [userId, matchId, market_id, m.rows[0].type, runner || null, oddNum, stake, isDemo]
     );
+
+    if (isDemo) {
+      await client.query(
+        `INSERT INTO demo_transactions (user_id, category, type, amount, description)
+         VALUES ($1, 'sports', 'bet', $2, $3)`,
+        [userId, stake, `বেট: ${m.rows[0].name} (ডেমো)`]
+      );
+      await client.query('COMMIT');
+
+      req.session.user.demo_balance = upd.rows[0].demo_balance;
+      broadcastDemoStats().catch(e => console.error('demo stats:', e.message));
+
+      return res.json({ success: true, message: 'ডেমো বেট সফল হয়েছে!', demo: true, newBalance: upd.rows[0].demo_balance });
+    }
 
     await client.query(
       `INSERT INTO coin_transactions (user_id, amount, type, description)

@@ -9,6 +9,7 @@ const { runBackupNow, restoreFromBackup, getBackupStatus } = require('../service
 const { loadSettings } = require('../services/settings');
 const { creditApprovedDeposit } = require('./payment');
 const bcrypt = require('bcryptjs');
+const { getDemoStats } = require('../services/socket');
 
 // ==================== ADMIN ACTIVITY LOG HELPER ====================
 async function logAdminAction(adminId, adminUsername, actionType, details, ip = null) {
@@ -259,6 +260,16 @@ router.post('/settings/admins/:id/demote', async (req, res) => {
 // ==================== DASHBOARD ====================
 router.get('/dashboard', (req, res) => res.redirect('/admin'));
 
+router.get('/api/demo-stats', async (req, res) => {
+  try {
+    const stats = await getDemoStats();
+    res.json({ success: true, ...stats });
+  } catch (err) {
+    console.error('demo stats api error:', err.message);
+    res.status(500).json({ success: false });
+  }
+});
+
 router.get('/', async (req, res) => {
   try {
     const users = await pool.query('SELECT COUNT(*) as count FROM users');
@@ -368,7 +379,13 @@ router.get('/', async (req, res) => {
       ORDER BY cnt DESC LIMIT 5
     `);
 
+    const demoStats = await getDemoStats().catch(e => {
+      console.error('demo stats error:', e.message);
+      return { totalDemo: 0, userHeldDemo: 0, casinoDemoWagered: 0, sportsDemoWagered: 0 };
+    });
+
     res.render('admin/dashboard', {
+      demoStats,
       stats: {
         total_users: users.rows[0].count,
         total_coins_in_system: totalCoins.rows[0].total || 0,
@@ -497,18 +514,31 @@ router.get('/api/dashboard-stats', async (req, res) => {
 // ==================== ডিপোজিট ম্যানেজমেন্ট ====================
 router.get('/deposits', async (req, res) => {
   try {
+    const { from, to } = req.query;
     const pending = await pool.query(`
       SELECT pr.*, u.username, u.phone FROM payment_requests pr
       JOIN users u ON pr.user_id = u.id
       WHERE pr.type='deposit' AND pr.status='pending'
       ORDER BY pr.created_at ASC
     `);
-    const recent = await pool.query(`
+
+    let recentQuery = `
       SELECT pr.*, u.username, u.phone FROM payment_requests pr
       JOIN users u ON pr.user_id = u.id
       WHERE pr.type='deposit' AND pr.status != 'pending'
-      ORDER BY pr.created_at DESC LIMIT 30
-    `);
+    `;
+    const params = [];
+    if (from) {
+      params.push(from);
+      recentQuery += ` AND pr.created_at >= $${params.length}::date`;
+    }
+    if (to) {
+      params.push(to);
+      recentQuery += ` AND pr.created_at < ($${params.length}::date + INTERVAL '1 day')`;
+    }
+    recentQuery += ` ORDER BY pr.created_at DESC` + (from || to ? '' : ' LIMIT 30');
+    const recent = await pool.query(recentQuery, params);
+
     const summary = await pool.query(`
       SELECT COUNT(*) AS cnt, COALESCE(SUM(amount),0) AS total
       FROM payment_requests WHERE type='deposit' AND status='pending'
@@ -517,11 +547,13 @@ router.get('/deposits', async (req, res) => {
       pendingDeposits: pending.rows,
       recentDeposits: recent.rows,
       pendingCount: parseInt(summary.rows[0].cnt),
-      pendingTotal: Number(summary.rows[0].total)
+      pendingTotal: Number(summary.rows[0].total),
+      filterFrom: from || '',
+      filterTo: to || ''
     });
   } catch (err) {
     console.error('deposits list error:', err.message);
-    res.render('admin/deposits', { pendingDeposits: [], recentDeposits: [], pendingCount: 0, pendingTotal: 0 });
+    res.render('admin/deposits', { pendingDeposits: [], recentDeposits: [], pendingCount: 0, pendingTotal: 0, filterFrom: '', filterTo: '' });
   }
 });
 
@@ -581,18 +613,31 @@ router.post('/api/deposits/:id/reject', async (req, res) => {
 // ==================== উইথড্র ম্যানেজমেন্ট ====================
 router.get('/withdrawals', async (req, res) => {
   try {
+    const { from, to } = req.query;
     const pending = await pool.query(`
       SELECT pr.*, u.username, u.phone FROM payment_requests pr
       JOIN users u ON pr.user_id = u.id
       WHERE pr.type='withdraw' AND pr.status='pending'
       ORDER BY pr.created_at ASC
     `);
-    const recent = await pool.query(`
+
+    let recentQuery = `
       SELECT pr.*, u.username, u.phone FROM payment_requests pr
       JOIN users u ON pr.user_id = u.id
       WHERE pr.type='withdraw' AND pr.status != 'pending'
-      ORDER BY pr.created_at DESC LIMIT 30
-    `);
+    `;
+    const params = [];
+    if (from) {
+      params.push(from);
+      recentQuery += ` AND pr.created_at >= $${params.length}::date`;
+    }
+    if (to) {
+      params.push(to);
+      recentQuery += ` AND pr.created_at < ($${params.length}::date + INTERVAL '1 day')`;
+    }
+    recentQuery += ` ORDER BY pr.created_at DESC` + (from || to ? '' : ' LIMIT 30');
+    const recent = await pool.query(recentQuery, params);
+
     const summary = await pool.query(`
       SELECT COUNT(*) AS cnt, COALESCE(SUM(amount),0) AS total
       FROM payment_requests WHERE type='withdraw' AND status='pending'
@@ -601,11 +646,13 @@ router.get('/withdrawals', async (req, res) => {
       pendingWithdrawals: pending.rows,
       recentWithdrawals: recent.rows,
       pendingCount: parseInt(summary.rows[0].cnt),
-      pendingTotal: Number(summary.rows[0].total)
+      pendingTotal: Number(summary.rows[0].total),
+      filterFrom: from || '',
+      filterTo: to || ''
     });
   } catch (err) {
     console.error('withdrawals list error:', err.message);
-    res.render('admin/withdrawals', { pendingWithdrawals: [], recentWithdrawals: [], pendingCount: 0, pendingTotal: 0 });
+    res.render('admin/withdrawals', { pendingWithdrawals: [], recentWithdrawals: [], pendingCount: 0, pendingTotal: 0, filterFrom: '', filterTo: '' });
   }
 });
 
@@ -654,7 +701,7 @@ router.post('/api/withdrawals/:id/reject', async (req, res) => {
       return res.status(400).json({ success: false, error: 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে' });
     }
     // উইথড্র রিকোয়েস্ট করার সময় কয়েন কেটে নেওয়া হয়, তাই বাতিল হলে ফেরত দিতে হবে
-    await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [Math.round(Number(request.amount)), request.user_id]);
+    await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
     await client.query(`UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE id=$1`, [id]);
     await client.query(
       `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'error')`,

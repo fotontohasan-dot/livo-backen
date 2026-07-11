@@ -14,6 +14,7 @@ const { updateMissionProgress } = require('../services/missions');
 const { addPoints } = require('../services/loyalty');
 const { recordGameResult } = require('../services/streak');
 const { checkBadges } = require('../services/badges');
+const { broadcastDemoStats } = require('../services/socket');
 
 const supportedGames = {
   "aviator": "Aviator",
@@ -190,7 +191,8 @@ router.get('/play', isAuth, (req, res) => {
   res.render('games/play', {
     gameSlug: gameSlug,
     gameDisplayName: supportedGames[gameSlug],
-    coins: req.session.user.coins
+    coins: req.session.user.coins,
+    demoBalance: req.session.user.demo_balance
   });
 });
 
@@ -203,16 +205,18 @@ router.get('/:slug', isAuth, (req, res) => {
   res.render('games/play', {
     gameSlug: gameSlug,
     gameDisplayName: supportedGames[gameSlug],
-    coins: req.session.user.coins
+    coins: req.session.user.coins,
+    demoBalance: req.session.user.demo_balance
   });
 });
 
 const { getSetting } = require('../services/settings');
 
 router.post('/play', isAuth, async (req, res) => {
-  const { gameSlug, amount, selection } = req.body;
+  const { gameSlug, amount, selection, demo } = req.body;
   const userId = req.session.user.id;
   const betAmount = parseInt(amount);
+  const isDemo = !!demo;
 
   if (isNaN(betAmount) || betAmount <= 0) return res.status(400).json({ success: false, message: 'সঠিক পরিমাণ দিন' });
 
@@ -224,10 +228,11 @@ router.post('/play', isAuth, async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const userResult = await client.query('SELECT coins FROM users WHERE id = $1 FOR UPDATE', [userId]);
-    if (userResult.rows[0].coins < betAmount) {
+    const balanceCol = isDemo ? 'demo_balance' : 'coins';
+    const userResult = await client.query(`SELECT ${balanceCol} FROM users WHERE id = $1 FOR UPDATE`, [userId]);
+    if (userResult.rows[0][balanceCol] < betAmount) {
       await client.query('ROLLBACK');
-      return res.status(400).json({ success: false, message: 'পর্যাপ্ত ব্যালেন্স নেই' });
+      return res.status(400).json({ success: false, message: isDemo ? 'পর্যাপ্ত ডেমো ব্যালেন্স নেই' : 'পর্যাপ্ত ব্যালেন্স নেই' });
     }
 
     let winAmount = 0;
@@ -235,9 +240,17 @@ router.post('/play', isAuth, async (req, res) => {
 
     if (['aviator', 'crash-game'].includes(gameSlug)) {
       const crashPoint = (1 + Math.random() * 9).toFixed(2);
-      req.session.gameState = { game: gameSlug, betAmount, crashPoint: parseFloat(crashPoint), startTime: Date.now() };
-      await client.query('UPDATE users SET coins = coins - $1 WHERE id = $2', [betAmount, userId]);
+      req.session.gameState = { game: gameSlug, betAmount, crashPoint: parseFloat(crashPoint), startTime: Date.now(), isDemo };
+      await client.query(`UPDATE users SET ${balanceCol} = ${balanceCol} - $1 WHERE id = $2`, [betAmount, userId]);
       await client.query('COMMIT');
+
+      if (isDemo) {
+        req.session.user.demo_balance = Number(req.session.user.demo_balance || 0) - betAmount;
+        await client.query('INSERT INTO demo_transactions (user_id, category, type, amount, description) VALUES ($1, $2, $3, $4, $5)',
+          [userId, 'casino', 'bet', betAmount, `${supportedGames[gameSlug] || gameSlug} (ডেমো)`]).catch(e => console.error('demo tx:', e.message));
+        broadcastDemoStats().catch(e => console.error('demo stats:', e.message));
+        return res.json({ success: true, message: 'গেম শুরু হয়েছে (ডেমো)', demo: true, newBalance: req.session.user.demo_balance });
+      }
 
       addTurnover(userId, 'casino', betAmount).catch(e => console.error('turnover:', e.message));
       distributeCommission(userId, betAmount).catch(e => console.error('commission:', e.message));
@@ -259,7 +272,21 @@ router.post('/play', isAuth, async (req, res) => {
     }
 
     const netChange = winAmount - betAmount;
-    await client.query('UPDATE users SET coins = coins + $1 WHERE id = $2', [netChange, userId]);
+    await client.query(`UPDATE users SET ${balanceCol} = ${balanceCol} + $1 WHERE id = $2`, [netChange, userId]);
+
+    if (isDemo) {
+      await client.query('INSERT INTO demo_transactions (user_id, category, type, amount, description) VALUES ($1, $2, $3, $4, $5)',
+        [userId, 'casino', 'bet', betAmount, `${supportedGames[gameSlug] || gameSlug} (ডেমো)`]);
+      if (winAmount > 0) {
+        await client.query('INSERT INTO demo_transactions (user_id, category, type, amount, description) VALUES ($1, $2, $3, $4, $5)',
+          [userId, 'casino', 'win', winAmount, `${supportedGames[gameSlug] || gameSlug} জয় (ডেমো)`]);
+      }
+      await client.query('COMMIT');
+      req.session.user.demo_balance = Number(req.session.user.demo_balance || 0) + netChange;
+      broadcastDemoStats().catch(e => console.error('demo stats:', e.message));
+      return res.json({ success: true, demo: true, newBalance: req.session.user.demo_balance, winAmount, gameResult });
+    }
+
     await client.query('INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, $3, $4)', 
                        [userId, netChange, 'game_play', `${supportedGames[gameSlug] || gameSlug} গেম`]);
     await client.query('COMMIT');
@@ -295,6 +322,9 @@ router.post('/cashout', isAuth, async (req, res) => {
     return res.status(400).json({ success: false, message: 'কোনো চলমান গেম নেই' });
   }
 
+  const isDemo = !!state.isDemo;
+  const balanceCol = isDemo ? 'demo_balance' : 'coins';
+
   const cashMultiplier = parseFloat(multiplier);
   if (isNaN(cashMultiplier) || cashMultiplier < 1) {
     return res.status(400).json({ success: false, message: 'অকার্যকর মাল্টিপ্লায়ার' });
@@ -308,7 +338,8 @@ router.post('/cashout', isAuth, async (req, res) => {
       success: true,
       crashed: true,
       winAmount: 0,
-      newBalance: req.session.user.coins,
+      demo: isDemo,
+      newBalance: isDemo ? req.session.user.demo_balance : req.session.user.coins,
       message: `উড়োজাহাজ ${state.crashPoint}x-এ ক্র্যাশ করেছে!`
     });
   }
@@ -319,9 +350,25 @@ router.post('/cashout', isAuth, async (req, res) => {
   try {
     await client.query('BEGIN');
     const upd = await client.query(
-      'UPDATE users SET coins = coins + $1 WHERE id = $2 RETURNING coins',
+      `UPDATE users SET ${balanceCol} = ${balanceCol} + $1 WHERE id = $2 RETURNING ${balanceCol}`,
       [winAmount, userId]
     );
+
+    if (isDemo) {
+      await client.query(
+        'INSERT INTO demo_transactions (user_id, category, type, amount, description) VALUES ($1, $2, $3, $4, $5)',
+        [userId, 'casino', 'win', winAmount, `${supportedGames[gameSlug] || gameSlug} ক্যাশআউট ${cashMultiplier}x (ডেমো)`]
+      );
+      await client.query('COMMIT');
+      req.session.user.demo_balance = upd.rows[0].demo_balance;
+      broadcastDemoStats().catch(e => console.error('demo stats:', e.message));
+
+      return res.json({
+        success: true, crashed: false, winAmount, multiplier: cashMultiplier,
+        demo: true, newBalance: req.session.user.demo_balance
+      });
+    }
+
     await client.query(
       'INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, $3, $4)',
       [userId, winAmount, 'game_win', `${supportedGames[gameSlug] || gameSlug} ক্যাশআউট ${cashMultiplier}x`]
