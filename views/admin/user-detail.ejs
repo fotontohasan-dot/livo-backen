@@ -1,145 +1,124 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Details • Livo Admin</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-</head>
-<body class="bg-slate-950 text-white">
-    <div class="flex min-h-screen">
-        <!-- Sidebar -->
-        <%- include('../partials/sidebar', { activePage: 'users' }) %>
+<%
+function fmtDate(d) { return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); }
+function betRow(b) {
+  const color = b.status === 'won' ? 'text-emerald-600' : b.status === 'lost' ? 'text-red-600' : 'text-amber-600';
+  return '<tr class="border-b border-slate-100"><td class="px-4 py-2.5 text-sm">' + (b.match_title || '-') + '</td>' +
+    '<td class="px-4 py-2.5 text-sm">৳ ' + Number(b.stake).toLocaleString('en-US') + '</td>' +
+    '<td class="px-4 py-2.5 text-sm font-mono">' + Number(b.odd).toFixed(2) + '</td>' +
+    '<td class="px-4 py-2.5 text-sm font-semibold ' + color + '">' + b.status + '</td>' +
+    '<td class="px-4 py-2.5 text-xs text-slate-400">' + fmtDate(b.created_at) + '</td></tr>';
+}
+function paymentRow(p) {
+  const color = p.status === 'approved' ? 'text-emerald-600' : p.status === 'rejected' ? 'text-red-600' : 'text-amber-600';
+  return '<tr class="border-b border-slate-100"><td class="px-4 py-2.5 text-sm capitalize">' + p.type + '</td>' +
+    '<td class="px-4 py-2.5 text-sm">৳ ' + Number(p.amount).toLocaleString('en-US') + '</td>' +
+    '<td class="px-4 py-2.5 text-sm">' + (p.method || '-') + '</td>' +
+    '<td class="px-4 py-2.5 text-sm font-semibold ' + color + '">' + p.status + '</td>' +
+    '<td class="px-4 py-2.5 text-xs text-slate-400">' + fmtDate(p.created_at) + '</td></tr>';
+}
+function ipRow(s) {
+  return '<a href="/admin/users/' + s.id + '" class="block px-4 py-2.5 text-sm border-b border-slate-100 hover:bg-slate-50">' + s.username + ' <span class="text-slate-400 text-xs">(' + (s.email || '-') + ')</span></a>';
+}
+const betsHtml = (bets || []).map(betRow).join('') || '<tr><td colspan="5" class="px-4 py-6 text-center text-slate-400 text-sm">কোনো বেট নেই</td></tr>';
+const paymentsHtml = (payments || []).map(paymentRow).join('') || '<tr><td colspan="5" class="px-4 py-6 text-center text-slate-400 text-sm">কোনো পেমেন্ট নেই</td></tr>';
+const sameIpHtml = (sameIp || []).map(ipRow).join('') || '<div class="px-4 py-4 text-center text-slate-400 text-xs">একই আইপিতে অন্য কোনো ইউজার নেই</div>';
+const banLabel = u.is_banned ? 'Unban ইউজার' : 'Ban ইউজার';
+const banColor = u.is_banned ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700';
+%>
+<%- include('partials/admin-layout', {
+    title: 'User Details',
+    active: 'users',
+    body: `
+<div class="max-w-6xl mx-auto">
+    <a href="/admin/users" class="inline-flex items-center gap-2 text-slate-500 hover:text-slate-800 mb-5 text-sm">
+        <i class="fas fa-arrow-left"></i><span>Back to Users</span>
+    </a>
 
-        <!-- Main Content -->
-        <div class="flex-1 flex flex-col">
-            <!-- Header -->
-            <%- include('../partials/header', { 
-                pageTitle: 'User Details', 
-                pageSubtitle: 'View and manage user information' 
-            }) %>
-
-            <div class="p-6">
-                <!-- Back Button -->
-                <a href="/admin/users" class="inline-flex items-center gap-2 text-slate-400 hover:text-white mb-6 transition-colors">
-                    <i class="fas fa-arrow-left"></i>
-                    <span>Back to Users</span>
-                </a>
-
-                <!-- User Header Card -->
-                <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 mb-6">
-                    <div class="flex flex-col md:flex-row md:items-center gap-6">
-                        <div class="flex-shrink-0">
-                            <div class="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center text-3xl font-bold">
-                                <%= user.username ? user.username.charAt(0).toUpperCase() : 'U' %>
-                            </div>
-                        </div>
-
-                        <div class="flex-1">
-                            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                                <div>
-                                    <div class="flex items-center gap-3">
-                                        <h1 class="text-3xl font-bold"><%= user.username || 'Unknown User' %></h1>
-                                        <button onclick="copyUserId()" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs flex items-center gap-2 transition-colors">
-                                            <i class="fas fa-copy"></i>
-                                            <span><%= user.id %></span>
-                                        </button>
-                                    </div>
-                                    <p class="text-slate-400 mt-1"><%= user.email || 'No email' %></p>
-                                </div>
-
-                                <div class="flex items-center gap-3">
-                                    <% if (user.is_banned) { %>
-                                        <span class="px-4 py-2 bg-red-500/10 text-red-400 rounded-2xl text-sm font-medium flex items-center gap-2">
-                                            <i class="fas fa-ban"></i> Banned
-                                        </span>
-                                    <% } else { %>
-                                        <span class="px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-2xl text-sm font-medium flex items-center gap-2">
-                                            <i class="fas fa-check-circle"></i> Active
-                                        </span>
-                                    <% } %>
-                                </div>
-                            </div>
-                        </div>
+    <div class="bg-white border border-slate-100 rounded-3xl p-6 mb-6 shadow-sm">
+        <div class="flex flex-col md:flex-row md:items-center gap-6">
+            <div class="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center text-3xl font-bold text-white flex-shrink-0">
+                ${(u.username || 'U').charAt(0).toUpperCase()}
+            </div>
+            <div class="flex-1">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-900">${u.username}</h1>
+                        <p class="text-slate-500 mt-1 text-sm">#${u.id} • ${u.email || u.phone || 'যোগাযোগের তথ্য নেই'}</p>
                     </div>
-                </div>
-
-                <!-- Stats Cards -->
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                    <div class="bg-slate-900 border border-slate-700 rounded-2xl p-5">
-                        <div class="text-slate-400 text-sm">Current Balance</div>
-                        <div class="text-3xl font-bold mt-1 text-emerald-400">৳ <%= (user.balance || 0).toLocaleString() %></div>
-                    </div>
-                    <div class="bg-slate-900 border border-slate-700 rounded-2xl p-5">
-                        <div class="text-slate-400 text-sm">Total Deposit</div>
-                        <div class="text-3xl font-bold mt-1">৳ <%= (user.total_deposit || 0).toLocaleString() %></div>
-                    </div>
-                    <div class="bg-slate-900 border border-slate-700 rounded-2xl p-5">
-                        <div class="text-slate-400 text-sm">Total Bet Volume</div>
-                        <div class="text-3xl font-bold mt-1">৳ <%= (user.total_bet_volume || 0).toLocaleString() %></div>
-                    </div>
-                    <div class="bg-slate-900 border border-slate-700 rounded-2xl p-5">
-                        <div class="text-slate-400 text-sm">Joined</div>
-                        <div class="text-xl font-semibold mt-1"><%= new Date(user.created_at).toLocaleDateString() %></div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- Profile Information -->
-                    <div class="lg:col-span-2 bg-slate-900 border border-slate-700 rounded-3xl p-6">
-                        <h3 class="font-semibold text-lg mb-5 flex items-center gap-2">
-                            <i class="fas fa-user text-blue-400"></i> Profile Information
-                        </h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5 text-sm">
-                            <div><div class="text-slate-400">Full Name</div><div class="font-medium mt-1"><%= user.full_name || 'Not provided' %></div></div>
-                            <div><div class="text-slate-400">Phone Number</div><div class="font-medium mt-1"><%= user.phone || 'Not provided' %></div></div>
-                            <div><div class="text-slate-400">Username</div><div class="font-medium mt-1"><%= user.username %></div></div>
-                            <div><div class="text-slate-400">Email</div><div class="font-medium mt-1"><%= user.email || 'Not provided' %></div></div>
-                        </div>
-                    </div>
-
-                    <!-- Quick Actions -->
-                    <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6">
-                        <h3 class="font-semibold text-lg mb-5 flex items-center gap-2">
-                            <i class="fas fa-bolt text-amber-400"></i> Quick Actions
-                        </h3>
-                        <div class="space-y-3">
-                            <button onclick="showAddCoinsModal()" class="w-full flex items-center justify-center gap-3 bg-emerald-600 hover:bg-emerald-700 transition-colors py-3 rounded-2xl font-medium">
-                                <i class="fas fa-plus-circle"></i> <span>Add Coins</span>
-                            </button>
-                            <button onclick="showBanModal()" class="w-full flex items-center justify-center gap-3 bg-red-600 hover:bg-red-700 transition-colors py-3 rounded-2xl font-medium">
-                                <i class="fas fa-ban"></i> <span>Ban User</span>
-                            </button>
-                        </div>
-                    </div>
+                    <span class="px-4 py-2 rounded-2xl text-sm font-semibold ${u.is_banned ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}">
+                        ${u.is_banned ? '🚫 Banned' : '✅ Active'}
+                    </span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Simple Add Coins Modal -->
-    <div id="addCoinsModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-        <div class="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-md p-6">
-            <h3 class="text-xl font-semibold mb-4">Add Coins</h3>
-            <form action="/admin/users/<%= user.id %>/add-coins" method="POST">
-                <div class="mb-4">
-                    <label class="block text-sm text-slate-400 mb-2">Amount</label>
-                    <input type="number" name="amount" class="w-full bg-slate-800 border border-slate-700 rounded-2xl px-4 py-3" placeholder="Enter amount" required>
-                </div>
-                <div class="flex gap-3">
-                    <button type="button" onclick="hideModal('addCoinsModal')" class="flex-1 py-3 rounded-2xl border border-slate-700">Cancel</button>
-                    <button type="submit" class="flex-1 py-3 rounded-2xl bg-emerald-600">Add Coins</button>
-                </div>
-            </form>
-        </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white border border-slate-100 rounded-2xl p-5"><div class="text-slate-500 text-xs">বর্তমান কয়েন</div><div class="text-2xl font-bold mt-1 text-emerald-600">৳ ${Number(u.coins || 0).toLocaleString('en-US')}</div></div>
+        <div class="bg-white border border-slate-100 rounded-2xl p-5"><div class="text-slate-500 text-xs">মোট ডিপোজিট</div><div class="text-2xl font-bold mt-1">৳ ${Number(stats.totalDeposit || 0).toLocaleString('en-US')}</div></div>
+        <div class="bg-white border border-slate-100 rounded-2xl p-5"><div class="text-slate-500 text-xs">মোট বেট (${stats.betCount || 0})</div><div class="text-2xl font-bold mt-1">৳ ${Number(stats.totalBet || 0).toLocaleString('en-US')}</div></div>
+        <div class="bg-white border border-slate-100 rounded-2xl p-5"><div class="text-slate-500 text-xs">যোগ দিয়েছেন</div><div class="text-lg font-semibold mt-1">${fmtDate(u.created_at)}</div></div>
     </div>
 
-    <script>
-        function copyUserId() { navigator.clipboard.writeText('<%= user.id %>'); alert('User ID copied!'); }
-        function showAddCoinsModal() { document.getElementById('addCoinsModal').classList.remove('hidden'); document.getElementById('addCoinsModal').classList.add('flex'); }
-        function hideModal(id) { document.getElementById(id).classList.remove('flex'); document.getElementById(id).classList.add('hidden'); }
-        function showBanModal() { if(confirm('Ban this user?')) window.location.href = '/admin/users/<%= user.id %>/ban'; }
-    </script>
-</body>
-</html>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 space-y-6">
+            <div class="bg-white border border-slate-100 rounded-3xl p-6">
+                <h3 class="font-semibold text-slate-800 mb-4"><i class="fas fa-user text-blue-500 mr-2"></i>প্রোফাইল তথ্য</h3>
+                <div class="grid grid-cols-2 gap-y-4 text-sm">
+                    <div><div class="text-slate-400 text-xs">পূর্ণ নাম</div><div class="font-medium mt-0.5">${u.full_name || 'দেওয়া হয়নি'}</div></div>
+                    <div><div class="text-slate-400 text-xs">ফোন</div><div class="font-medium mt-0.5">${u.phone || 'দেওয়া হয়নি'}</div></div>
+                    <div><div class="text-slate-400 text-xs">ইমেইল</div><div class="font-medium mt-0.5">${u.email || 'দেওয়া হয়নি'}</div></div>
+                    <div><div class="text-slate-400 text-xs">রেফারেল</div><div class="font-medium mt-0.5">${referralCount} জনকে রেফার করেছেন</div></div>
+                    <div><div class="text-slate-400 text-xs">শেষ লগইন IP</div><div class="font-medium mt-0.5">${u.last_ip || '-'}</div></div>
+                    <div><div class="text-slate-400 text-xs">KYC স্ট্যাটাস</div><div class="font-medium mt-0.5 capitalize">${u.kyc_status || 'none'}</div></div>
+                </div>
+            </div>
+
+            <div class="bg-white border border-slate-100 rounded-3xl overflow-hidden">
+                <h3 class="font-semibold text-slate-800 px-6 pt-6 pb-3"><i class="fas fa-dice text-purple-500 mr-2"></i>সাম্প্রতিক বেট</h3>
+                <table class="w-full"><tbody>${betsHtml}</tbody></table>
+            </div>
+
+            <div class="bg-white border border-slate-100 rounded-3xl overflow-hidden">
+                <h3 class="font-semibold text-slate-800 px-6 pt-6 pb-3"><i class="fas fa-wallet text-emerald-500 mr-2"></i>পেমেন্ট হিস্ট্রি</h3>
+                <table class="w-full"><tbody>${paymentsHtml}</tbody></table>
+            </div>
+
+            ${(sameIp && sameIp.length) ? `
+            <div class="bg-white border border-amber-200 rounded-3xl overflow-hidden">
+                <h3 class="font-semibold text-amber-700 px-6 pt-6 pb-3"><i class="fas fa-exclamation-triangle mr-2"></i>একই IP-তে অন্য অ্যাকাউন্ট (${sameIp.length})</h3>
+                <div>${sameIpHtml}</div>
+            </div>` : ''}
+        </div>
+
+        <div class="bg-white border border-slate-100 rounded-3xl p-6 h-fit">
+            <h3 class="font-semibold text-slate-800 mb-4"><i class="fas fa-bolt text-amber-500 mr-2"></i>দ্রুত অ্যাকশন</h3>
+            <div class="space-y-3">
+                <form method="POST" action="/admin/users/${u.id}/coins/add" class="flex gap-2">
+                    <input type="number" name="amount" placeholder="পরিমাণ" required class="flex-1 border px-3 py-2.5 rounded-xl text-sm">
+                    <button type="submit" class="px-4 bg-emerald-600 text-white rounded-xl text-sm font-semibold">+ যোগ</button>
+                </form>
+                <form method="POST" action="/admin/users/${u.id}/coins/remove" class="flex gap-2">
+                    <input type="number" name="amount" placeholder="পরিমাণ" required class="flex-1 border px-3 py-2.5 rounded-xl text-sm">
+                    <button type="submit" class="px-4 bg-orange-500 text-white rounded-xl text-sm font-semibold">− কমান</button>
+                </form>
+                <form method="POST" action="/admin/users/${u.id}/freebet" class="flex gap-2">
+                    <input type="number" name="amount" placeholder="ফ্রি বেট (৳)" required class="flex-1 border px-3 py-2.5 rounded-xl text-sm">
+                    <button type="submit" class="px-4 bg-blue-600 text-white rounded-xl text-sm font-semibold">🎁</button>
+                </form>
+                <form method="POST" action="/admin/users/${u.id}/ban" onsubmit="return confirm('${banLabel} করবেন?')">
+                    <button type="submit" class="w-full py-3 rounded-2xl font-medium text-white ${banColor}">
+                        <i class="fas fa-ban mr-1.5"></i>${banLabel}
+                    </button>
+                </form>
+                <form method="POST" action="/admin/users/${u.id}/delete" onsubmit="return confirm('এই ইউজার স্থায়ীভাবে ডিলিট করবেন? এটা আর ফেরত আনা যাবে না!')">
+                    <button type="submit" class="w-full py-3 rounded-2xl font-medium text-red-600 bg-red-50 hover:bg-red-100">
+                        <i class="fas fa-trash mr-1.5"></i>ইউজার ডিলিট করুন
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+`
+}) %>
