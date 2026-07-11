@@ -1,37 +1,78 @@
-<%- include('partials/admin-layout', { 
-    title: 'Settings', 
+<%
+const s = settings || {};
+function field(name, label, type, value, step) {
+  return '<div><label class="block text-sm font-medium mb-1.5 text-slate-700">' + label + '</label>' +
+    '<input type="' + type + '" name="' + name + '" value="' + (value !== undefined && value !== null ? value : '') + '"' +
+    (step ? ' step="' + step + '"' : '') +
+    ' class="w-full border border-slate-200 px-4 py-3 rounded-2xl text-sm outline-none focus:border-blue-300"></div>';
+}
+function adminRow(a, currentAdminId) {
+  const isSelf = String(a.id) === String(currentAdminId);
+  return '<tr class="border-b border-slate-100"><td class="px-4 py-3 text-sm font-medium">' + a.username + '</td>' +
+    '<td class="px-4 py-3 text-sm text-slate-500">' + (a.email || '-') + '</td>' +
+    '<td class="px-4 py-3 text-xs text-slate-400">' + new Date(a.created_at).toLocaleDateString('en-US') + '</td>' +
+    '<td class="px-4 py-3 text-center">' + (isSelf
+      ? '<span class="text-xs text-slate-400">আপনি</span>'
+      : '<form method="POST" action="/admin/settings/admins/' + a.id + '/demote" onsubmit="return confirm(\'অ্যাডমিন অ্যাক্সেস সরাবেন?\')">' +
+          '<button type="submit" class="px-3 py-1.5 text-xs bg-red-100 text-red-600 rounded-xl font-semibold">Remove Admin</button></form>') +
+    '</td></tr>';
+}
+%>
+<%- include('partials/admin-layout', {
+    title: 'Platform Settings',
     active: 'settings',
     body: `
-<div class="max-w-3xl mx-auto">
-    <h2 class="text-2xl font-semibold mb-6">Platform Settings</h2>
-    
-    <div class="bg-white rounded-3xl border p-8 space-y-8">
-        <div>
-            <label class="block text-sm font-medium mb-1.5">Platform Name</label>
-            <input type="text" value="Livo Betting" class="w-full border px-4 py-3 rounded-2xl">
+<div class="max-w-4xl mx-auto space-y-6">
+    <h2 class="text-2xl font-semibold text-slate-900">Platform Settings</h2>
+
+    <form method="POST" action="/admin/settings/update" class="bg-white rounded-3xl border border-slate-100 p-6 space-y-5">
+        <h3 class="font-semibold text-slate-800 border-b pb-3">সাধারণ সেটিংস</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            ${field('site_name', 'সাইটের নাম', 'text', s.site_name || 'Livo Betting')}
+            ${field('support_email', 'সাপোর্ট ইমেইল', 'email', s.support_email || '')}
         </div>
-        
-        <div class="grid grid-cols-2 gap-6">
-            <div>
-                <label class="block text-sm font-medium mb-1.5">Minimum Withdrawal</label>
-                <div class="flex items-center border rounded-2xl px-4">
-                    <span class="text-slate-400">৳</span>
-                    <input type="number" value="500" class="flex-1 py-3 outline-none px-2">
-                </div>
-            </div>
-            <div>
-                <label class="block text-sm font-medium mb-1.5">Max Bet Amount</label>
-                <div class="flex items-center border rounded-2xl px-4">
-                    <span class="text-slate-400">৳</span>
-                    <input type="number" value="100000" class="flex-1 py-3 outline-none px-2">
-                </div>
-            </div>
+
+        <h3 class="font-semibold text-slate-800 border-b pb-3 pt-2">বেটিং লিমিট</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            ${field('min_bet', 'সর্বনিম্ন বেট (৳)', 'number', s.min_bet || 10)}
+            ${field('max_bet', 'সর্বোচ্চ বেট (৳)', 'number', s.max_bet || 50000)}
+            ${field('turnover_multiplier', 'টার্নওভার মাল্টিপ্লায়ার', 'number', s.turnover_multiplier || 3, '0.1')}
+            ${field('max_daily_bets', 'দৈনিক সর্বোচ্চ বেট সংখ্যা', 'number', s.max_daily_bets || 0)}
         </div>
-        
-        <div class="pt-4">
-            <button class="px-8 py-3 bg-blue-600 text-white font-semibold rounded-2xl">Save Changes</button>
+
+        <h3 class="font-semibold text-slate-800 border-b pb-3 pt-2">পেমেন্ট সেটিংস</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            ${field('min_deposit', 'সর্বনিম্ন ডিপোজিট (৳)', 'number', s.min_deposit || 100)}
+            ${field('min_withdraw', 'সর্বনিম্ন উইথড্র (৳)', 'number', s.min_withdraw || 300)}
+            ${field('deposit_commission_percent', 'ডিপোজিট কমিশন (%)', 'number', s.deposit_commission_percent || 0, '0.1')}
+            ${field('withdraw_commission_percent', 'উইথড্র কমিশন (%)', 'number', s.withdraw_commission_percent || 0, '0.1')}
         </div>
+
+        <h3 class="font-semibold text-slate-800 border-b pb-3 pt-2">নিরাপত্তা</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-center">
+            ${field('max_login_attempts', 'সর্বোচ্চ লগইন চেষ্টা', 'number', s.max_login_attempts || 5)}
+            <label class="flex items-center gap-3 mt-6">
+                <input type="hidden" name="maintenance_mode" value="false">
+                <input type="checkbox" name="maintenance_mode" value="true" ${s.maintenance_mode ? 'checked' : ''} class="w-5 h-5 rounded">
+                <span class="text-sm font-medium text-slate-700">🔧 মেইনটেন্যান্স মোড চালু করুন</span>
+            </label>
+        </div>
+
+        <button type="submit" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-2xl transition-colors">Save Changes</button>
+        ${saved ? '<span class="ml-4 text-emerald-600 text-sm font-medium"><i class="fas fa-check-circle"></i> সেভ হয়েছে!</span>' : ''}
+    </form>
+
+    <div class="bg-white rounded-3xl border border-slate-100 p-6">
+        <h3 class="font-semibold text-slate-800 mb-4">অ্যাডমিন তালিকা</h3>
+        <form method="POST" action="/admin/settings/admins/promote" class="flex gap-2 mb-4">
+            <input type="text" name="username" placeholder="ইউজারনেম দিয়ে নতুন অ্যাডমিন যোগ করুন" required class="flex-1 border px-4 py-2.5 rounded-2xl text-sm">
+            <button type="submit" class="px-5 bg-slate-800 text-white rounded-2xl text-sm font-semibold">Promote</button>
+        </form>
+        <table class="w-full">
+            <thead><tr class="text-left text-xs text-slate-400 uppercase"><th class="px-4 py-2">Username</th><th class="px-4 py-2">Email</th><th class="px-4 py-2">Since</th><th class="px-4 py-2 text-center">Action</th></tr></thead>
+            <tbody>${(admins || []).map(a => adminRow(a, user.id)).join('') || '<tr><td colspan="4" class="px-4 py-6 text-center text-slate-400 text-sm">কোনো অ্যাডমিন নেই</td></tr>'}</tbody>
+        </table>
     </div>
 </div>
-` 
+`
 }) %>
