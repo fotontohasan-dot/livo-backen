@@ -71,12 +71,27 @@ async function creditApprovedDeposit(client, request) {
     bonusGiven = Math.min(MAX_BONUS, Math.floor(request.amount * pct / 100));
 
     if (bonusGiven > 0) {
-      await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [bonusGiven, request.user_id]);
-      await createBonus(client, request.user_id, 'deposit', bonusGiven);
+      await client.query('SAVEPOINT bonus_sp');
+      try {
+        await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [bonusGiven, request.user_id]);
+        await createBonus(client, request.user_id, 'deposit', bonusGiven);
+        await client.query('RELEASE SAVEPOINT bonus_sp');
+      } catch (bonusErr) {
+        await client.query('ROLLBACK TO SAVEPOINT bonus_sp');
+        console.error('createBonus failed, bonus skipped but deposit continues:', bonusErr.message);
+        bonusGiven = 0;
+      }
     }
   }
 
-  await processReferralDeposit(client, request.user_id, request.amount);
+  await client.query('SAVEPOINT referral_sp');
+  try {
+    await processReferralDeposit(client, request.user_id, request.amount);
+    await client.query('RELEASE SAVEPOINT referral_sp');
+  } catch (refErr) {
+    await client.query('ROLLBACK TO SAVEPOINT referral_sp');
+    console.error('processReferralDeposit failed, referral bonus skipped:', refErr.message);
+  }
 
   await client.query(`UPDATE payment_requests SET status='approved', updated_at=NOW() WHERE id=$1`, [request.id]);
 
