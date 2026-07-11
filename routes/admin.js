@@ -654,7 +654,7 @@ router.post('/api/withdrawals/:id/reject', async (req, res) => {
       return res.status(400).json({ success: false, error: 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে' });
     }
     // উইথড্র রিকোয়েস্ট করার সময় কয়েন কেটে নেওয়া হয়, তাই বাতিল হলে ফেরত দিতে হবে
-    await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
+    await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [Math.round(Number(request.amount)), request.user_id]);
     await client.query(`UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE id=$1`, [id]);
     await client.query(
       `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'error')`,
