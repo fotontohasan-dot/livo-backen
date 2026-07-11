@@ -133,4 +133,35 @@ const updateLiveScore = async (matchId, scoreData) => {
   }
 };
 
-module.exports = { initSocket, updateLiveScore };
+// ===== ডেমো (প্র্যাকটিস) কারেন্সি স্ট্যাটস =====
+const getDemoStats = async () => {
+  const totalUsers = await pool.query(`SELECT COUNT(*) AS cnt FROM users`);
+  const heldByUsers = await pool.query(`SELECT COALESCE(SUM(demo_balance),0) AS total FROM users`);
+  const casinoWagered = await pool.query(
+    `SELECT COALESCE(SUM(amount),0) AS total FROM demo_transactions WHERE category='casino' AND type='bet'`
+  );
+  const sportsWagered = await pool.query(
+    `SELECT COALESCE(SUM(amount),0) AS total FROM demo_transactions WHERE category='sports' AND type='bet'`
+  );
+
+  const totalIssued = parseInt(totalUsers.rows[0].cnt) * 1000; // প্রতি ইউজারকে শুরুতে ১০০০ ডেমো দেওয়া হয়
+
+  return {
+    totalDemo: totalIssued,
+    userHeldDemo: Number(heldByUsers.rows[0].total),
+    casinoDemoWagered: Number(casinoWagered.rows[0].total),
+    sportsDemoWagered: Number(sportsWagered.rows[0].total)
+  };
+};
+
+const broadcastDemoStats = async () => {
+  if (!io) return;
+  try {
+    const stats = await getDemoStats();
+    io.to("admins").emit("demo_stats_update", stats);
+  } catch (err) {
+    console.error("Demo stats broadcast error:", err.message);
+  }
+};
+
+module.exports = { initSocket, updateLiveScore, getDemoStats, broadcastDemoStats };
