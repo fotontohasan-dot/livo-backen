@@ -1,29 +1,180 @@
-<% if (locals.currentPage === 'home') { %>
-<div class="bottom-nav">
-  <a href="/" onclick="location.href='/'; return false;" class="nav-link <%= locals.currentPage === 'home' ? 'active' : '' %>">
-    <i class="fas fa-home"></i>
-    <span><%= t.home %></span>
-  </a>
+<!-- views/admin/partials/bottom-nav.ejs -->
+<!-- অ্যাডমিন প্যানেলের ফিক্সড বটম নেভিগেশন বার — জরুরি ফিচারে দ্রুত অ্যাক্সেস + রিয়েল-টাইম নোটিফিকেশন ব্যাজ -->
+<style>
+  .admin-bottom-nav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 500;
+    display: flex; justify-content: space-around; align-items: stretch;
+    background: #14171f; border-top: 1px solid rgba(255,255,255,0.08);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.35);
+  }
+  .admin-bottom-nav a {
+    position: relative; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 3px; color: #94a3b8; text-decoration: none;
+    font-size: 10px; font-weight: 700; padding: 6px 4px; border-radius: 10px; flex: 1;
+    transition: color .15s;
+  }
+  .admin-bottom-nav a i { font-size: 18px; }
+  .admin-bottom-nav a.active { color: #f59e0b; }
+  .admin-bottom-nav a:active { color: #f59e0b; }
 
-  <a href="/extra/invitation" onclick="location.href='/extra/invitation'; return false;" class="nav-link <%= locals.currentPage === 'invitation' ? 'active' : '' %>">
-    <i class="fas fa-user-plus"></i>
-    <span><%= t.invite %></span>
-  </a>
+  .admin-bn-badge {
+    position: absolute; top: -2px; right: 12px; min-width: 16px; height: 16px; padding: 0 4px;
+    background: #ef4444; color: #fff; border-radius: 999px; font-size: 10px; font-weight: 800;
+    display: none; align-items: center; justify-content: center; line-height: 1;
+    box-shadow: 0 0 0 2px #14171f;
+  }
+  .admin-bn-badge.show { display: flex; }
+  .admin-bn-badge.pulse { animation: adminBnPulse .6s ease; }
+  @keyframes adminBnPulse { 0% { transform: scale(1); } 30% { transform: scale(1.55); } 100% { transform: scale(1); } }
 
-  <a href="/extra/promotion" onclick="location.href='/extra/promotion'; return false;" class="nav-link <%= locals.currentPage === 'promotion' ? 'active' : '' %>">
-    <i class="fas fa-gift"></i>
-    <span><%= t.promotion %></span>
-  </a>
+  .admin-bn-toast {
+    position: fixed; left: 50%; bottom: 72px; transform: translateX(-50%) translateY(16px);
+    background: #1c2028; border: 1px solid rgba(245,158,11,0.45); color: #fff;
+    padding: 10px 16px; border-radius: 12px; font-size: 12px; font-weight: 700;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.45); z-index: 600; opacity: 0; pointer-events: none;
+    transition: all .3s ease; max-width: 88vw; display: flex; align-items: center; gap: 8px;
+  }
+  .admin-bn-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
 
-  <a href="/chat" onclick="location.href='/chat'; return false;" class="nav-link <%= locals.currentPage === 'chat' ? 'active' : '' %>">
-    <i class="fas fa-headset"></i>
-    <span><%= t.support %></span>
+<nav class="admin-bottom-nav" id="adminBottomNav">
+  <a href="/admin/dashboard"><i class="fas fa-house"></i><span>হোম</span></a>
+  <a href="/payment/admin/payments?tab=deposit">
+    <i class="fas fa-arrow-down"></i><span>ডিপোজিট</span>
+    <span class="admin-bn-badge" id="bnBadgeDeposit">0</span>
   </a>
-
-  <a href="/profile" onclick="location.href='/profile'; return false;" class="nav-link <%= locals.currentPage === 'profile' ? 'active' : '' %>">
-    <i class="fas fa-user-circle"></i>
-    <span><%= t.member %></span>
+  <a href="/payment/admin/payments?tab=withdraw">
+    <i class="fas fa-arrow-up"></i><span>উইথড্র</span>
+    <span class="admin-bn-badge" id="bnBadgeWithdraw">0</span>
   </a>
-</div>
-<% } %>
+  <a href="/chat/admin">
+    <i class="fas fa-headset"></i><span>চ্যাট</span>
+    <span class="admin-bn-badge" id="bnBadgeChat">0</span>
+  </a>
+  <a href="/admin/kyc"><i class="fas fa-id-card"></i><span>KYC</span></a>
+</nav>
 
+<div class="admin-bn-toast" id="adminBnToast"></div>
+
+<script>
+(function () {
+  function setBadge(id, val) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var n = Number(val) || 0;
+    if (n > 0) { el.textContent = n > 99 ? '99+' : n; el.classList.add('show'); }
+    else { el.classList.remove('show'); }
+  }
+
+  function bump(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('pulse');
+    void el.offsetWidth; // রিফ্লো — অ্যানিমেশন আবার ট্রিগার করার জন্য
+    el.classList.add('pulse');
+  }
+
+  function loadCounts() {
+    fetch('/admin/api/notification-counts')
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        setBadge('bnBadgeDeposit', d.deposits);
+        setBadge('bnBadgeWithdraw', d.withdrawals);
+        setBadge('bnBadgeChat', d.chats);
+      })
+      .catch(function () {});
+  }
+
+  function showToast(text) {
+    var t = document.getElementById('adminBnToast');
+    if (!t) return;
+    t.innerHTML = '🔔 ' + text;
+    t.classList.add('show');
+    clearTimeout(t._hideTimer);
+    t._hideTimer = setTimeout(function () { t.classList.remove('show'); }, 3200);
+  }
+
+  // এক্সটার্নাল ফাইলের উপর নির্ভর না করে ছোট বিপ শব্দ জেনারেট করা হচ্ছে
+  function playSound() {
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      var ctx = new Ctx();
+      [0, 0.14].forEach(function (delay) {
+        var o = ctx.createOscillator();
+        var g = ctx.createGain();
+        o.type = 'sine';
+        o.frequency.value = 920;
+        g.gain.setValueAtTime(0.0001, ctx.currentTime + delay);
+        g.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + delay + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + delay + 0.28);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(ctx.currentTime + delay);
+        o.stop(ctx.currentTime + delay + 0.3);
+      });
+      if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
+    } catch (e) {}
+  }
+
+  var LABELS = { deposit: 'নতুন ডিপোজিট রিকোয়েস্ট', withdraw: 'নতুন উইথড্র রিকোয়েস্ট', chat: 'নতুন সাপোর্ট মেসেজ' };
+  var BADGE_IDS = { deposit: 'bnBadgeDeposit', withdraw: 'bnBadgeWithdraw', chat: 'bnBadgeChat' };
+
+  function handleAlert(data) {
+    var type = data && data.type;
+    if (BADGE_IDS[type]) bump(BADGE_IDS[type]);
+    showToast((data && data.message) ? data.message : (LABELS[type] || 'নতুন নোটিফিকেশন'));
+    playSound();
+    loadCounts();
+  }
+
+  loadCounts();
+  setInterval(loadCounts, 30000); // সকেট কোনো কারণে না পৌঁছালেও ৩০ সেকেন্ড পরপর ফলব্যাক আপডেট
+
+  function connectSocket() {
+    if (typeof io === 'undefined') return;
+    var socket = io();
+    socket.on('connect', function () { socket.emit('join_admin'); });
+    socket.on('admin_alert', handleAlert);
+    socket.on('new_message', function (data) {
+      if (data && !data.isAdmin) handleAlert({ type: 'chat', message: 'নতুন সাপোর্ট মেসেজ এসেছে' });
+    });
+  }
+
+  if (typeof io === 'undefined') {
+    var s = document.createElement('script');
+    s.src = '/socket.io/socket.io.js';
+    s.onload = connectSocket;
+    document.head.appendChild(s);
+  } else {
+    connectSocket();
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    // ancestor-এ transform থাকলে position:fixed ভেঙে যেতে পারে, তাই body-তে সরাসরি সরিয়ে নিশ্চিত করা হচ্ছে
+    var nav = document.getElementById('adminBottomNav');
+    var toast = document.getElementById('adminBnToast');
+    if (nav && nav.parentElement !== document.body) document.body.appendChild(nav);
+    if (toast && toast.parentElement !== document.body) document.body.appendChild(toast);
+
+    // Layout A (Tailwind ড্যাশবোর্ড)-এর স্ক্রলযোগ্য কন্টেইনারে বটম-নেভের জন্য জায়গা রাখা
+    var layoutAContent = document.querySelector('.flex-1.overflow-auto');
+    if (layoutAContent) layoutAContent.style.paddingBottom = '76px';
+
+    var path = window.location.pathname;
+    var curTab = new URLSearchParams(window.location.search).get('tab') || 'deposit';
+    document.querySelectorAll('#adminBottomNav a').forEach(function (a) {
+      var href = a.getAttribute('href');
+      var hp = href.split('?')[0];
+      var hq = href.split('?')[1] || '';
+      var samePath = (path === hp) || (hp !== '/admin/dashboard' && path.indexOf(hp) === 0);
+      var sameTab = true;
+      if (hq) sameTab = (new URLSearchParams(hq).get('tab') === curTab);
+      if (samePath && sameTab) a.classList.add('active');
+    });
+    if (path === '/admin' || path === '/admin/dashboard') {
+      document.querySelector('#adminBottomNav a').classList.add('active');
+    }
+  });
+})();
+</script>
