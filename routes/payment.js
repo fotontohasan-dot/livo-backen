@@ -5,6 +5,7 @@ const { createBonus, canWithdraw } = require('../services/turnover');
 const { processReferralDeposit } = require('../services/referral');
 const crypto = require('crypto');
 const sslcommerz = require('../services/sslcommerz');
+const { broadcastDemoStats } = require('../services/socket');
 
 function requireLogin(req, res, next) {
   if (!req.session.user) return res.redirect('/login');
@@ -59,6 +60,10 @@ async function creditApprovedDeposit(client, request) {
 
   await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [amount, request.user_id]);
   await client.query('UPDATE users SET total_deposited = COALESCE(total_deposited,0) + $1 WHERE id=$2', [request.amount, request.user_id]);
+
+  // ডিপোজিট করলে ইউজারের ডেমো ব্যালেন্সও একই পরিমাণ বেড়ে যাবে (স্বয়ংক্রিয়)
+  await client.query('UPDATE users SET demo_balance = COALESCE(demo_balance,0) + $1 WHERE id=$2', [amount, request.user_id]);
+  broadcastDemoStats().catch(e => console.error('demo stats broadcast:', e.message));
 
   if (request.want_bonus) {
     const cnt = await client.query(

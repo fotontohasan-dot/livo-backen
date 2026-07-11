@@ -421,6 +421,7 @@ router.get('/', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.render('admin/dashboard', {
+      demoStats: { totalDemo: 9999999, userHeldDemo: 0, casinoDemoWagered: 0, sportsDemoWagered: 0 },
       stats: {}, revenueTrend: [], userGrowth: [], recentBets: [], recentDeposits: [], recentWithdrawals: [], recentActivity: [], recentMatches: [], recentUsers: [], suspicious: []
     });
   }
