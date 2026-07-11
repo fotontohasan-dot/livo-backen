@@ -38,7 +38,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-gray-400 text-sm">Total Conversations</p>
-                    <h3 class="text-3xl font-bold text-white mt-1" id="stat-total">124</h3>
+                    <h3 class="text-3xl font-bold text-white mt-1" id="stat-total">—</h3>
                 </div>
                 <div class="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center">
                     <i class="fas fa-comments text-blue-500 text-2xl"></i>
@@ -50,7 +50,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-gray-400 text-sm">Active Chats</p>
-                    <h3 class="text-3xl font-bold text-white mt-1" id="stat-active">18</h3>
+                    <h3 class="text-3xl font-bold text-white mt-1" id="stat-active">—</h3>
                 </div>
                 <div class="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center">
                     <i class="fas fa-headset text-green-500 text-2xl"></i>
@@ -62,7 +62,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-gray-400 text-sm">Pending Replies</p>
-                    <h3 class="text-3xl font-bold text-white mt-1" id="stat-pending">7</h3>
+                    <h3 class="text-3xl font-bold text-white mt-1" id="stat-pending">—</h3>
                 </div>
                 <div class="w-12 h-12 bg-orange-500/10 rounded-xl flex items-center justify-center">
                     <i class="fas fa-clock text-orange-500 text-2xl"></i>
@@ -74,7 +74,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-gray-400 text-sm">Resolved Today</p>
-                    <h3 class="text-3xl font-bold text-white mt-1" id="stat-resolved">42</h3>
+                    <h3 class="text-3xl font-bold text-white mt-1" id="stat-resolved">—</h3>
                 </div>
                 <div class="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center">
                     <i class="fas fa-check-circle text-emerald-500 text-2xl"></i>
@@ -217,7 +217,23 @@
     let selectedFile = null;
     let selectedFileType = null;
 
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str || '';
+        return div.innerHTML;
+    }
+
     socket.emit('join_admin');
+
+    function loadStats() {
+        fetch('/chat/admin/stats').then(r => r.json()).then(d => {
+            document.getElementById('stat-total').textContent = d.totalConversations ?? '0';
+            document.getElementById('stat-active').textContent = d.activeChats ?? '0';
+            document.getElementById('stat-pending').textContent = d.pendingReplies ?? '0';
+            document.getElementById('stat-resolved').textContent = d.resolvedToday ?? '0';
+        }).catch(() => {});
+    }
+    loadStats();
 
     // Load conversations
     async function loadConversations() {
@@ -235,21 +251,28 @@
             
             users.forEach(user => {
                 const div = document.createElement('div');
+                const hasUnread = Number(user.unread_count) > 0;
                 div.className = `p-3.5 mx-1 rounded-2xl cursor-pointer flex items-center gap-3 hover:bg-gray-800 transition-colors ${currentUserId === user.id ? 'bg-gray-800' : ''}`;
-                
+
+                const lastPrefix = user.last_message_is_admin ? '<span class="text-gray-500">আপনি: </span>' : '';
+                const lastText = user.last_message ? (lastPrefix + escapeHtml(user.last_message)) : 'No messages yet';
+
                 div.innerHTML = `
-                    <div class="w-9 h-9 bg-gray-700 rounded-full flex-shrink-0 flex items-center justify-center">
+                    <div class="w-9 h-9 bg-gray-700 rounded-full flex-shrink-0 flex items-center justify-center relative">
                         <i class="fas fa-user text-gray-400"></i>
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center justify-between">
-                            <div class="font-medium text-white truncate">${user.username}</div>
+                            <div class="font-medium ${hasUnread ? 'text-white' : 'text-gray-300'} truncate">${user.username}</div>
                             <div class="text-[10px] text-gray-500">${user.last_message_time ? new Date(user.last_message_time).toLocaleTimeString('bn-BD', {hour:'2-digit', minute:'2-digit'}) : ''}</div>
                         </div>
-                        <div class="text-xs text-gray-500 truncate">${user.last_message || 'No messages yet'}</div>
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="text-xs ${hasUnread ? 'text-white font-semibold' : 'text-gray-500'} truncate">${lastText}</div>
+                            ${hasUnread ? `<span class="flex-shrink-0 min-w-[18px] h-[18px] px-1 bg-yellow-500 text-black text-[10px] font-bold rounded-full flex items-center justify-center">${user.unread_count}</span>` : ''}
+                        </div>
                     </div>
                 `;
-                
+
                 div.onclick = () => selectUser(user.id, user.username);
                 container.appendChild(div);
             });
@@ -303,16 +326,19 @@
             
             if (Array.isArray(messages)) {
                 messages.forEach(msg => {
-                    appendMessage(msg.message, msg.is_admin, msg.created_at, msg.file_url, msg.file_type);
+                    appendMessage(msg.message, msg.is_admin, msg.created_at, msg.file_url, msg.file_type, msg.is_read);
                 });
                 scrollToBottom();
             }
+            // এই ইউজারের মেসেজ পড়া হয়েছে ধরে নিয়ে সাইডবারের আনরিড ব্যাজ/কাউন্ট রিফ্রেশ
+            loadConversations();
+            loadStats();
         } catch (e) {
             console.error(e);
         }
     }
 
-    function appendMessage(text, isAdmin, timestamp, fileUrl, fileType) {
+    function appendMessage(text, isAdmin, timestamp, fileUrl, fileType, isRead) {
         const messagesDiv = document.getElementById('messages');
         const div = document.createElement('div');
         div.className = `flex ${isAdmin ? 'justify-end' : 'justify-start'}`;
@@ -328,15 +354,23 @@
         }
         
         if (text) {
-            content += `<div class="px-4 py-2.5 rounded-3xl text-sm ${isAdmin ? 'bg-yellow-500 text-black' : 'bg-gray-800 text-white'}">${text}</div>`;
+            content += `<div class="px-4 py-2.5 rounded-3xl text-sm ${isAdmin ? 'bg-yellow-500 text-black' : 'bg-gray-800 text-white'}">${escapeHtml(text)}</div>`;
         }
         
         const time = new Date(timestamp).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
+
+        // মেসেঞ্জারের মতো সিন/ডেলিভারি টিক — শুধু অ্যাডমিনের পাঠানো মেসেজে দেখাবে
+        let ticks = '';
+        if (isAdmin) {
+            ticks = isRead
+                ? '<i class="fas fa-check-double text-[11px] ml-1" style="color:#60a5fa;"></i>'
+                : '<i class="fas fa-check text-[11px] ml-1 text-gray-500"></i>';
+        }
         
         div.innerHTML = `
             <div class="max-w-[75%]">
                 ${content}
-                <div class="text-[10px] text-gray-500 mt-1 px-1 ${isAdmin ? 'text-right' : ''}">${time}</div>
+                <div class="text-[10px] text-gray-500 mt-1 px-1 flex items-center ${isAdmin ? 'justify-end' : ''}">${time}${ticks}</div>
             </div>
         `;
         
@@ -401,7 +435,7 @@
             fileType
         });
 
-        appendMessage(text, true, new Date(), fileUrl, fileType);
+        appendMessage(text, true, new Date(), fileUrl, fileType, false);
         document.getElementById('message-input').value = '';
         clearFile();
         scrollToBottom();
@@ -438,11 +472,12 @@
     // Socket listeners
     socket.on('new_message', (data) => {
         if (data.senderId === currentUserId || data.receiverId === currentUserId) {
-            appendMessage(data.message, data.isAdmin, data.created_at, data.fileUrl, data.fileType);
+            appendMessage(data.message, data.isAdmin, data.created_at, data.fileUrl, data.fileType, false);
             scrollToBottom();
         }
         // Refresh list to show latest message
         loadConversations();
+        loadStats();
     });
 
     // Initial load
