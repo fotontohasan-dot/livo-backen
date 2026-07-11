@@ -604,6 +604,23 @@ async function runMigrations() {
       );
     `);
 
+    // ==================== কয়েন লেনদেন লগ (coin_transactions) ====================
+    // এই টেবিলটা পুরো অ্যাপে (গেম, বেট, রেফারেল, মিশন, VIP, ক্যাশব্যাক, অ্যাডমিন
+    // কয়েন অ্যাডজাস্টমেন্ট ইত্যাদি) ব্যবহার হয়, কিন্তু আগে migrations.js-এ ছিল না —
+    // ফলে এই টেবিল না থাকলে রিয়েল-মানি গেম/বেট খেলাই ব্যর্থ হয়ে যেত।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS coin_transactions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        amount NUMERIC(14,2) NOT NULL,
+        type VARCHAR(50),
+        description TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_coin_tx_user ON coin_transactions(user_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_coin_tx_type ON coin_transactions(type);`);
+
     // ==================== ডেমো (প্র্যাকটিস) কারেন্সি সিস্টেম ====================
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS demo_balance NUMERIC(14,2) DEFAULT 1000`);
     await pool.query(`ALTER TABLE bets ADD COLUMN IF NOT EXISTS is_demo BOOLEAN DEFAULT false`);
