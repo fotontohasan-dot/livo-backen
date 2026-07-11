@@ -151,12 +151,6 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
-    // ancestor-এ transform থাকলে position:fixed ভেঙে যেতে পারে, তাই body-তে সরাসরি সরিয়ে নিশ্চিত করা হচ্ছে
-    var nav = document.getElementById('adminBottomNav');
-    var toast = document.getElementById('adminBnToast');
-    if (nav && nav.parentElement !== document.body) document.body.appendChild(nav);
-    if (toast && toast.parentElement !== document.body) document.body.appendChild(toast);
-
     // Layout A (Tailwind ড্যাশবোর্ড)-এর স্ক্রলযোগ্য কন্টেইনারে বটম-নেভের জন্য জায়গা রাখা
     var layoutAContent = document.querySelector('.flex-1.overflow-auto');
     if (layoutAContent) layoutAContent.style.paddingBottom = '76px';
