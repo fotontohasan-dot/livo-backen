@@ -259,6 +259,9 @@ router.post('/play', isAuth, async (req, res) => {
       updateMissionProgress(userId, betAmount).catch(e => console.error('mission:', e.message));
       addPoints(userId, betAmount).catch(e => console.error('loyalty:', e.message));
       checkBadges(userId).catch(e => console.error('badges:', e.message));
+      pool.query('INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, $3, $4)',
+        [userId, betAmount, 'casino_bet', `${supportedGames[gameSlug] || gameSlug} বাজি`]).catch(e => console.error('coin tx:', e.message));
+      broadcastDemoStats().catch(e => console.error('demo stats:', e.message));
 
       return res.json({ success: true, message: 'গেম শুরু হয়েছে' });
     }
@@ -289,8 +292,11 @@ router.post('/play', isAuth, async (req, res) => {
 
     await client.query('INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, $3, $4)', 
                        [userId, netChange, 'game_play', `${supportedGames[gameSlug] || gameSlug} গেম`]);
+    await client.query('INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, $3, $4)',
+                       [userId, betAmount, 'casino_bet', `${supportedGames[gameSlug] || gameSlug} বাজি`]);
     await client.query('COMMIT');
     req.session.user.coins += netChange;
+    broadcastDemoStats().catch(e => console.error('demo stats:', e.message));
 
     addTurnover(userId, 'casino', betAmount).catch(e => console.error('turnover:', e.message));
     distributeCommission(userId, betAmount).catch(e => console.error('commission:', e.message));
@@ -376,6 +382,7 @@ router.post('/cashout', isAuth, async (req, res) => {
     await client.query('COMMIT');
 
     req.session.user.coins = upd.rows[0].coins;
+    broadcastDemoStats().catch(e => console.error('demo stats:', e.message));
 
     recordGameResult(userId, true, state.betAmount).catch(e => console.error('streak:', e.message));
     checkBadges(userId).catch(e => console.error('badges:', e.message));

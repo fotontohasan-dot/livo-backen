@@ -204,6 +204,7 @@ router.post('/:id/bet', isAuth, async (req, res) => {
     await client.query('COMMIT');
 
     if (req.session.user) req.session.user.coins = upd.rows[0].coins;
+    broadcastDemoStats().catch(e => console.error('demo stats:', e.message));
 
     addTurnover(userId, 'sports', stake).catch(e => console.error('turnover:', e.message));
     updateDailyTurnover(userId, stake).catch(e => console.error('dailyReward:', e.message));

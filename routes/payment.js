@@ -253,6 +253,7 @@ router.post('/withdraw', requireLogin, async (req, res) => {
       `INSERT INTO payment_requests (user_id, type, method, amount, account_number, status) VALUES ($1, 'withdraw', $2, $3, $4, 'pending')`,
       [userId, method, amount, account_number]
     );
+    broadcastDemoStats().catch(e => console.error('demo stats:', e.message));
 
     await client.query('COMMIT');
 
