@@ -17,9 +17,21 @@
     .quick-bet { display:flex; gap:8px; }
     .quick-btn { padding:6px 12px; background:#1e1e1e; border:1px solid #333; color:#888; border-radius:6px; cursor:pointer; font-size:12px; }
     .quick-btn:hover { border-color:#e60000; color:#e60000; }
+    .demo-toggle-wrap { display:flex; align-items:center; gap:8px; background:#141414; padding:10px 15px; border-radius:12px; margin-bottom:12px; border:1px solid rgba(255,255,255,0.07); }
+    .demo-switch { position:relative; width:44px; height:24px; background:#333; border-radius:20px; cursor:pointer; transition:.2s; flex-shrink:0; }
+    .demo-switch.active { background:#10b981; }
+    .demo-switch::after { content:''; position:absolute; top:2px; left:2px; width:20px; height:20px; background:#fff; border-radius:50%; transition:.2s; }
+    .demo-switch.active::after { left:22px; }
+    .demo-label { font-size:13px; color:#aaa; font-weight:600; }
+    .demo-label.active { color:#10b981; }
 </style>
 
 <div class="game-container">
+    <div class="demo-toggle-wrap">
+        <div id="demoSwitch" class="demo-switch" onclick="toggleDemoMode()"></div>
+        <span id="demoLabel" class="demo-label">🎮 ডেমো মোড (প্র্যাকটিস, রিয়েল টাকা লাগবে না)</span>
+    </div>
+
     <div class="game-header">
         <div class="game-title">🎮 <%= gameDisplayName %></div>
         <div class="balance-box">🪙 <span id="userBalance"><%= coins %></span></div>
@@ -55,6 +67,18 @@
 <script>
     const gameSlug = '<%= gameSlug %>';
     let currentBalance = <%= coins %>;
+    let currentDemoBalance = <%= demoBalance || 0 %>;
+    let isDemoMode = false;
+
+    function toggleDemoMode() {
+        isDemoMode = !isDemoMode;
+        const sw = document.getElementById('demoSwitch');
+        const label = document.getElementById('demoLabel');
+        sw.classList.toggle('active', isDemoMode);
+        label.classList.toggle('active', isDemoMode);
+        label.innerText = isDemoMode ? '🎮 ডেমো মোড চালু (কোনো রিয়েল টাকা ব্যবহার হচ্ছে না)' : '🎮 ডেমো মোড (প্র্যাকটিস, রিয়েল টাকা লাগবে না)';
+        document.getElementById('userBalance').innerText = isDemoMode ? currentDemoBalance : currentBalance;
+    }
 
     function setBet(amount) {
         var inp = document.getElementById('betAmount');
@@ -66,7 +90,7 @@
             const response = await fetch('/games/play', {
                 method:'POST',
                 headers:{'Content-Type':'application/json'},
-                body:JSON.stringify({ gameSlug, amount, selection })
+                body:JSON.stringify({ gameSlug, amount, selection, demo: isDemoMode })
             });
             const data = await response.json();
             if (data.success) { updateBalance(data.newBalance); return data; }
@@ -88,7 +112,8 @@
     }
 
     function updateBalance(newBalance) {
-        currentBalance = newBalance;
+        if (isDemoMode) { currentDemoBalance = newBalance; }
+        else { currentBalance = newBalance; }
         document.getElementById('userBalance').innerText = newBalance;
     }
 </script>
