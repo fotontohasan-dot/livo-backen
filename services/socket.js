@@ -4,6 +4,22 @@ const { getBotReply } = require('./chatbot');
 
 let io;
 
+// ===== অ্যাডমিন প্যানেলে রিয়েল-টাইম নোটিফিকেশন (ডিপোজিট/উইথড্র/চ্যাট) =====
+// type: 'deposit' | 'withdraw' | 'chat'
+const emitAdminAlert = (type, data = {}) => {
+  if (!io) return;
+  try {
+    io.to('admins').emit('admin_alert', {
+      type,
+      title: data.title || '',
+      message: data.message || '',
+      createdAt: new Date()
+    });
+  } catch (err) {
+    console.error('emitAdminAlert error:', err.message);
+  }
+};
+
 const initSocket = (server, sessionMiddleware) => {
   io = new Server(server, {
     cors: {
@@ -93,6 +109,10 @@ const initSocket = (server, sessionMiddleware) => {
         } else {
           // ইউজার → সব অ্যাডমিনের কাছে
           io.to("admins").emit("new_message", payload);
+          emitAdminAlert('chat', {
+            title: 'নতুন সাপোর্ট মেসেজ',
+            message: message || 'একটি ফাইল পাঠানো হয়েছে'
+          });
 
           // ===== বট মোড হলে অটো-রিপ্লাই =====
           if (data && data.botMode && message) {
@@ -185,4 +205,4 @@ const broadcastDemoStats = async () => {
   }
 };
 
-module.exports = { initSocket, updateLiveScore, getDemoStats, broadcastDemoStats };
+module.exports = { initSocket, updateLiveScore, getDemoStats, broadcastDemoStats, emitAdminAlert };
