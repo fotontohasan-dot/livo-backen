@@ -134,8 +134,11 @@ const updateLiveScore = async (matchId, scoreData) => {
 };
 
 // ===== ডেমো (প্র্যাকটিস) কারেন্সি স্ট্যাটস =====
+// মোট ডেমো সংখ্যাটি স্থায়ীভাবে নির্ধারিত (ফিক্সড) — এটি কোনো হিসাব থেকে আসে না,
+// কেউ এটি পরিবর্তন/কমাতে-বাড়াতে পারবে না। বাকি তিনটি স্ট্যাট রিয়েল-টাইম DB থেকে আসে।
+const TOTAL_DEMO_FIXED = 9999999;
+
 const getDemoStats = async () => {
-  const totalUsers = await pool.query(`SELECT COUNT(*) AS cnt FROM users`);
   const heldByUsers = await pool.query(`SELECT COALESCE(SUM(demo_balance),0) AS total FROM users`);
   const casinoWagered = await pool.query(
     `SELECT COALESCE(SUM(amount),0) AS total FROM demo_transactions WHERE category='casino' AND type='bet'`
@@ -144,10 +147,8 @@ const getDemoStats = async () => {
     `SELECT COALESCE(SUM(amount),0) AS total FROM demo_transactions WHERE category='sports' AND type='bet'`
   );
 
-  const totalIssued = parseInt(totalUsers.rows[0].cnt) * 1000; // প্রতি ইউজারকে শুরুতে ১০০০ ডেমো দেওয়া হয়
-
   return {
-    totalDemo: totalIssued,
+    totalDemo: TOTAL_DEMO_FIXED,
     userHeldDemo: Number(heldByUsers.rows[0].total),
     casinoDemoWagered: Number(casinoWagered.rows[0].total),
     sportsDemoWagered: Number(sportsWagered.rows[0].total)
