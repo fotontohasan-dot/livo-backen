@@ -604,6 +604,21 @@ async function runMigrations() {
       );
     `);
 
+    // ==================== ডেমো (প্র্যাকটিস) কারেন্সি সিস্টেম ====================
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS demo_balance NUMERIC(14,2) DEFAULT 1000`);
+    await pool.query(`ALTER TABLE bets ADD COLUMN IF NOT EXISTS is_demo BOOLEAN DEFAULT false`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS demo_transactions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        category VARCHAR(20) NOT NULL,
+        type VARCHAR(20) NOT NULL,
+        amount NUMERIC(14,2) NOT NULL,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
     console.log("✅ All tables migration completed successfully");
   } catch (err) {
     console.error("❌ Migration error:", err.message);
