@@ -2,7 +2,7 @@
 <html lang="bn">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale= 1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ব্যাটিং হেল্প সেন্টার</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -12,7 +12,7 @@
             box-sizing: border-box;
             font-family: 'Segoe UI', 'Nikosh', 'SolaimanLipi', sans-serif;
         }
-        
+
         body {
             background: linear-gradient(135deg, #1a2a6c 0%, #2a5298 100%);
             display: flex;
@@ -21,7 +21,7 @@
             min-height: 100vh;
             padding: 20px;
         }
-        
+
         .container {
             width: 100%;
             max-width: 1200px;
@@ -32,7 +32,7 @@
             display: flex;
             flex-direction: column;
         }
-        
+
         .header {
             background: linear-gradient(90deg, #1a2a6c 0%, #2a5298 50%, #1a2a6c 100%);
             color: white;
@@ -40,17 +40,17 @@
             text-align: center;
             position: relative;
         }
-        
+
         .header h1 {
             font-size: 28px;
             margin-bottom: 5px;
         }
-        
+
         .header p {
             font-size: 16px;
             opacity: 0.9;
         }
-        
+
         .header::after {
             content: '';
             position: absolute;
@@ -60,13 +60,13 @@
             height: 3px;
             background: linear-gradient(90deg, #ff8a00, #e52e71);
         }
-        
+
         .main-content {
             display: flex;
             flex: 1;
             height: 500px;
         }
-        
+
         .sidebar {
             width: 280px;
             background-color: #2a5298;
@@ -76,24 +76,24 @@
             flex-direction: column;
             overflow-y: auto;
         }
-        
+
         .logo {
             text-align: center;
             margin-bottom: 30px;
             padding-bottom: 20px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.2);
         }
-        
+
         .logo h2 {
             font-size: 22px;
             margin-top: 10px;
         }
-        
+
         .category-list {
             list-style: none;
             margin-top: 20px;
         }
-        
+
         .category-list li {
             padding: 12px 15px;
             margin-bottom: 10px;
@@ -104,24 +104,24 @@
             display: flex;
             align-items: center;
         }
-        
+
         .category-list li:hover {
             background-color: rgba(255, 255, 255, 0.2);
         }
-        
+
         .category-list li i {
             margin-right: 10px;
             font-size: 16px;
             width: 20px;
             text-align: center;
         }
-        
+
         .chat-container {
             flex: 1;
             display: flex;
             flex-direction: column;
         }
-        
+
         .chat-header {
             background-color: #f8f9fa;
             padding: 15px 20px;
@@ -133,7 +133,7 @@
             align-items: center;
             justify-content: space-between;
         }
-        
+
         .online-indicator {
             display: flex;
             align-items: center;
@@ -141,7 +141,7 @@
             color: #28a745;
             font-weight: normal;
         }
-        
+
         .online-dot {
             width: 10px;
             height: 10px;
@@ -149,7 +149,7 @@
             border-radius: 50%;
             margin-right: 8px;
         }
-        
+
         .chat-messages {
             flex: 1;
             padding: 20px;
@@ -159,7 +159,7 @@
             gap: 15px;
             background-color: #f9f9f9;
         }
-        
+
         .message {
             max-width: 80%;
             padding: 12px 15px;
@@ -167,33 +167,46 @@
             line-height: 1.4;
             position: relative;
         }
-        
+
         .bot-message {
             background-color: #f0f2f5;
             align-self: flex-start;
             border-bottom-left-radius: 5px;
         }
-        
+
         .user-message {
             background-color: #2a5298;
             color: white;
             align-self: flex-end;
             border-bottom-right-radius: 5px;
         }
-        
+
         .message-time {
             font-size: 11px;
             margin-top: 5px;
             opacity: 0.7;
         }
-        
+
         .chat-input-container {
             display: flex;
+            flex-direction: column;
             padding: 15px;
             border-top: 1px solid #e0e0e0;
             background-color: white;
         }
-        
+
+        .cf-warning {
+            display: none;
+            color: #e5484d;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 6px;
+        }
+
+        .chat-input-row {
+            display: flex;
+        }
+
         .chat-input {
             flex: 1;
             padding: 12px 15px;
@@ -202,7 +215,7 @@
             outline: none;
             font-size: 14px;
         }
-        
+
         .send-button {
             background-color: #2a5298;
             color: white;
@@ -214,11 +227,16 @@
             font-weight: bold;
             transition: background-color 0.3s;
         }
-        
+
         .send-button:hover {
             background-color: #1a2a6c;
         }
-        
+
+        .send-button:disabled {
+            background-color: #aaa;
+            cursor: not-allowed;
+        }
+
         .quick-replies {
             display: flex;
             flex-wrap: wrap;
@@ -227,7 +245,7 @@
             background-color: white;
             border-top: 1px solid #e0e0e0;
         }
-        
+
         .quick-reply {
             background-color: #f0f2f5;
             border: none;
@@ -237,18 +255,18 @@
             cursor: pointer;
             transition: background-color 0.2s;
         }
-        
+
         .quick-reply:hover {
             background-color: #e4e6eb;
         }
-        
+
         .bot-typing {
             display: none;
             padding: 10px 15px;
             color: #666;
             font-style: italic;
         }
-        
+
         .footer {
             background-color: #1a2a6c;
             color: white;
@@ -256,25 +274,25 @@
             padding: 10px;
             font-size: 12px;
         }
-        
+
         @media (max-width: 768px) {
             .main-content {
                 flex-direction: column;
                 height: auto;
             }
-            
+
             .sidebar {
                 width: 100%;
                 padding: 15px;
                 max-height: 200px;
             }
-            
+
             .category-list {
                 display: flex;
                 overflow-x: auto;
                 gap: 10px;
             }
-            
+
             .category-list li {
                 white-space: nowrap;
                 margin-bottom: 0;
@@ -288,7 +306,7 @@
             <h1>ব্যাটিং হেল্প সেন্টার</h1>
             <p>টিকেট, ফুটবল, ডিপোজিট, অ্যাকাউন্ট এবং অন্যান্য সকল ইস্যুতে সাহায্যের জন্য আমরা এখানে আছি</p>
         </div>
-        
+
         <div class="main-content">
             <div class="sidebar">
                 <div class="logo">
@@ -296,5 +314,130 @@
                 </div>
                 <h3>ক্যাটাগরি</h3>
                 <ul class="category-list">
-                    <li><i class="fas fa-ticket-alt"></i> টিকেট ইস্যু</li>
-                    <li><i class="fas fa-futbol"></i> ফুটব
+                    <li data-msg="ডিপোজিট সমস্যা"><i class="fas fa-wallet"></i> ডিপোজিট সমস্যা</li>
+                    <li data-msg="উইথড্র সমস্যা"><i class="fas fa-money-bill-wave"></i> উইথড্র সমস্যা</li>
+                    <li data-msg="লগইন সমস্যা"><i class="fas fa-right-to-bracket"></i> লগইন সমস্যা</li>
+                    <li data-msg="অ্যাকাউন্ট ভেরিফিকেশন"><i class="fas fa-id-card"></i> KYC ভেরিফিকেশন</li>
+                    <li data-msg="বোনাস সমস্যা"><i class="fas fa-gift"></i> বোনাস সমস্যা</li>
+                    <li data-msg="টিকেট ইস্যু"><i class="fas fa-ticket-alt"></i> টিকেট ইস্যু</li>
+                    <li data-msg="ফুটবল ইস্যু"><i class="fas fa-futbol"></i> ফুটবল ইস্যু</li>
+                </ul>
+            </div>
+
+            <div class="chat-container">
+                <div class="chat-header">
+                    <span>সাপোর্ট বট</span>
+                    <span class="online-indicator"><span class="online-dot"></span> অনলাইন</span>
+                </div>
+
+                <div class="chat-messages" id="chat-messages">
+                    <div class="message bot-message">
+                        হ্যালো! আমি Livo সাপোর্ট বট। আপনার সমস্যাটি লিখুন অথবা বাম পাশের ক্যাটাগরি থেকে বেছে নিন।
+                        <div class="message-time" id="init-time"></div>
+                    </div>
+                </div>
+
+                <div class="bot-typing" id="bot-typing">বট লিখছে...</div>
+
+                <div class="quick-replies">
+                    <button class="quick-reply" data-msg="ডিপোজিট সমস্যা">ডিপোজিট সমস্যা</button>
+                    <button class="quick-reply" data-msg="উইথড্র সমস্যা">উইথড্র সমস্যা</button>
+                    <button class="quick-reply" data-msg="বোনাস সমস্যা">বোনাস সমস্যা</button>
+                    <button class="quick-reply" data-msg="লগইন সমস্যা">লগইন সমস্যা</button>
+                </div>
+
+                <div class="chat-input-container">
+                    <div class="chat-input-row">
+                        <input type="text" class="chat-input" id="chat-input" placeholder="আপনার সমস্যা লিখুন...">
+                        <button class="send-button" id="send-button">পাঠান</button>
+                    </div>
+                    <div class="cf-warning" id="cf-warning">⚠️ অনুপযুক্ত/অশ্লীল কনটেন্ট শনাক্ত হয়েছে — অনুগ্রহ করে লেখাটি ঠিক করুন।</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            সমস্যা সমাধান না হলে লাইভ এজেন্টের সাথে কথা বলুন — প্রোফাইল → সাপোর্ট চ্যাট।
+        </div>
+    </div>
+
+    <script src="/js/content-filter.js"></script>
+    <script>
+        const messagesBox = document.getElementById('chat-messages');
+        const input = document.getElementById('chat-input');
+        const sendBtn = document.getElementById('send-button');
+        const typingEl = document.getElementById('bot-typing');
+        const warningEl = document.getElementById('cf-warning');
+
+        document.getElementById('init-time').textContent =
+            new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
+
+        function appendMessage(text, isUser) {
+            const div = document.createElement('div');
+            div.className = 'message ' + (isUser ? 'user-message' : 'bot-message');
+            const textNode = document.createElement('div');
+            textNode.textContent = text;
+            div.appendChild(textNode);
+            const time = document.createElement('div');
+            time.className = 'message-time';
+            time.textContent = new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
+            div.appendChild(time);
+            messagesBox.appendChild(div);
+            messagesBox.scrollTop = messagesBox.scrollHeight;
+        }
+
+        async function sendToBot(text) {
+            typingEl.style.display = 'block';
+            messagesBox.scrollTop = messagesBox.scrollHeight;
+            try {
+                const res = await fetch('/help-center/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
+                const data = await res.json();
+                typingEl.style.display = 'none';
+                if (data.success) {
+                    appendMessage(data.reply, false);
+                } else {
+                    appendMessage(data.error || 'দুঃখিত, একটা সমস্যা হয়েছে।', false);
+                }
+            } catch (e) {
+                typingEl.style.display = 'none';
+                appendMessage('দুঃখিত, সার্ভারে সংযোগ করা যায়নি। একটু পর আবার চেষ্টা করুন।', false);
+            }
+        }
+
+        function handleSend() {
+            const text = input.value.trim();
+            if (!text) return;
+
+            // ==== রিয়েল-টাইম ফ্রন্টএন্ড ফিল্টার — পাঠানোর আগে শেষবার চেক ====
+            if (window.contentFilterIsBad(text)) {
+                warningEl.style.display = 'block';
+                return;
+            }
+
+            appendMessage(text, true);
+            input.value = '';
+            sendToBot(text);
+        }
+
+        sendBtn.addEventListener('click', handleSend);
+        input.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSend(); });
+
+        // টাইপ করার সময় লাল বর্ডার + ওয়ার্নিং + সেন্ড বাটন ডিসেবল
+        attachContentFilter('#chat-input', { submitButton: sendBtn, warningEl });
+
+        // ক্যাটাগরি লিস্ট / কুইক-রিপ্লাই বাটনে ক্লিক করলে সরাসরি সেই মেসেজ পাঠানো
+        document.querySelectorAll('.category-list li, .quick-reply').forEach((el) => {
+            el.addEventListener('click', () => {
+                const msg = el.getAttribute('data-msg');
+                if (!msg) return;
+                appendMessage(msg, true);
+                sendToBot(msg);
+            });
+        });
+    </script>
+</body>
+</html>
