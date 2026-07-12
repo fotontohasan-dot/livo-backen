@@ -10,6 +10,7 @@ const { loadSettings } = require('../services/settings');
 const { creditApprovedDeposit } = require('./payment');
 const bcrypt = require('bcryptjs');
 const { getDemoStats } = require('../services/socket');
+const { saveSubscription, removeSubscription, VAPID_PUBLIC_KEY } = require('../services/push');
 
 // ==================== ADMIN ACTIVITY LOG HELPER ====================
 async function logAdminAction(adminId, adminUsername, actionType, details, ip = null) {
@@ -113,6 +114,31 @@ router.get('/api/notification-counts', async (req, res) => {
   } catch (err) {
     console.error('notification-counts error:', err.message);
     res.json({ success: false, deposits: 0, withdrawals: 0, chats: 0 });
+  }
+});
+
+// ==================== ওয়েব পুশ নোটিফিকেশন (ফোন লক/ব্যাকগ্রাউন্ডেও অ্যালার্ট) ====================
+router.get('/push/public-key', isAdmin, (req, res) => {
+  res.json({ success: true, publicKey: VAPID_PUBLIC_KEY });
+});
+
+router.post('/push/subscribe', isAdmin, async (req, res) => {
+  try {
+    await saveSubscription(req.session.user.id, req.body && req.body.subscription);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('push/subscribe error:', err.message);
+    res.status(400).json({ success: false, error: 'সাবস্ক্রিপশন সেভ করা যায়নি' });
+  }
+});
+
+router.post('/push/unsubscribe', isAdmin, async (req, res) => {
+  try {
+    await removeSubscription(req.body && req.body.endpoint);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('push/unsubscribe error:', err.message);
+    res.status(400).json({ success: false });
   }
 });
 
