@@ -5,45 +5,71 @@
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 900;
     max-width: 480px; margin: 0 auto;
     display: flex; align-items: stretch;
-    background: linear-gradient(180deg, #8c1b12, #6e150e);
+    background: linear-gradient(180deg, #9a1f16, #6e150e);
     padding-bottom: env(safe-area-inset-bottom, 0px);
     box-shadow: 0 -4px 18px rgba(0,0,0,0.4);
   }
   .pub-nav-item {
     flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 2px; padding: 6px 4px 5px; color: rgba(255,255,255,0.85); text-decoration: none;
-    font-size: 10px; font-weight: 700; position: relative; transition: background .15s, color .15s;
+    gap: 3px; padding: 8px 4px 6px; margin: 6px 2px; color: rgba(255,255,255,0.8); text-decoration: none;
+    font-size: 10px; font-weight: 700; position: relative; transition: background .2s, color .2s;
   }
-  .pub-nav-item i { font-size: 16px; }
+  /* আইটেমগুলোর মাঝে পাতলা ডিভাইডার লাইন (অ্যাক্টিভ/প্রোমোর পাশে বাদে) */
+  .pub-nav-item:not(:first-child)::after {
+    content: ''; position: absolute; left: -2px; top: 18%; bottom: 18%; width: 1px;
+    background: rgba(255,255,255,0.14);
+  }
+  .pub-nav-item.active::after,
+  .pub-nav-item.active + .pub-nav-item::after,
+  .pub-nav-promo::after,
+  .pub-nav-promo + .pub-nav-item::after { display: none; }
+
+  .pub-nav-item i {
+    font-size: 17px; transition: filter .2s, transform .2s;
+  }
   .pub-nav-item.active {
     color: #fff;
   }
-  .pub-nav-item.active::before {
-    content: ''; position: absolute; left: 14%; right: 14%; top: 3px; bottom: 3px;
-    background: #e35c4c; border-radius: 10px; z-index: -1;
+  .pub-nav-item.active i {
+    filter: drop-shadow(0 0 6px rgba(255,255,255,0.75));
   }
-  .pub-nav-item:not(.pub-nav-promo):active { background: rgba(255,255,255,0.08); }
+  /* অ্যাক্টিভ ট্যাব — গ্লোয়িং হাইলাইটেড কার্ড (প্রোমো বাদে, ওর নিজস্ব গ্লো সার্কেল আছে) */
+  .pub-nav-item.active:not(.pub-nav-promo)::before {
+    content: ''; position: absolute; inset: 0; margin: -6px 2px;
+    background: linear-gradient(180deg, #ff5b4a, #d6291a);
+    border-radius: 14px; z-index: -1;
+    box-shadow: 0 0 18px rgba(255,70,55,0.55), inset 0 1px 0 rgba(255,255,255,0.25);
+  }
+  /* অ্যাক্টিভ ট্যাবের নিচে ছোট হোম-ইন্ডিকেটর বার */
+  .pub-nav-item.active:not(.pub-nav-promo) .pub-active-bar {
+    position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
+    width: 26px; height: 3px; border-radius: 3px;
+    background: rgba(255,255,255,0.85); box-shadow: 0 0 6px rgba(255,255,255,0.7);
+  }
+  .pub-nav-item:not(.pub-nav-promo):active { background: rgba(255,255,255,0.06); border-radius: 12px; }
 
-  /* মাঝের "প্রমোশন" আইকন — সামান্য উঁচু করে সাদা গোলাকার বাটনের মতো (আগের চেয়ে চিপা) */
+  /* মাঝের "প্রমোশন" আইকন — গ্লোয়িং সাদা বৃত্ত */
   .pub-nav-promo { padding-top: 0; }
   .pub-promo-circle {
-    width: 44px; height: 44px; border-radius: 13px; background: #fff;
+    width: 50px; height: 50px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #ffffff, #f3f3f3);
     display: flex; align-items: center; justify-content: center;
-    margin-top: -14px; box-shadow: 0 5px 12px rgba(0,0,0,0.4);
-    position: relative;
+    margin-top: -16px; position: relative;
+    box-shadow: 0 0 0 4px rgba(227,92,76,0.18), 0 0 20px rgba(255,70,55,0.55), 0 6px 14px rgba(0,0,0,0.4);
   }
-  .pub-promo-circle i { color: #c0392b; font-size: 19px; }
-  .pub-nav-promo span { margin-top: 1px; }
+  .pub-promo-circle i { color: #c0392b; font-size: 21px; }
+  .pub-nav-promo span { margin-top: 2px; }
 
   /* ছোট রেড নোটিফিকেশন ডট */
   .pub-nav-dot {
-    position: absolute; top: -2px; right: -2px; width: 12px; height: 12px;
+    position: absolute; top: -2px; right: -2px; width: 13px; height: 13px;
     background: #ef4444; border-radius: 50%; border: 2px solid #fff;
+    box-shadow: 0 0 6px rgba(239,68,68,0.8);
   }
 
   /* প্রোফাইল ট্যাবের আনরিড কাউন্ট ব্যাজ */
   .pub-nav-badge {
-    position: absolute; top: 4px; right: 18%; min-width: 17px; height: 17px; padding: 0 4px;
+    position: absolute; top: 2px; right: 18%; min-width: 17px; height: 17px; padding: 0 4px;
     background: #ef4444; color: #fff; border-radius: 999px; font-size: 10px; font-weight: 800;
     display: none; align-items: center; justify-content: center; line-height: 1;
     border: 2px solid #6e150e;
@@ -55,10 +81,12 @@
   <a href="/" class="pub-nav-item <%= locals.currentPage === 'home' ? 'active' : '' %>">
     <i class="fas fa-house"></i>
     <span>হোম</span>
+    <span class="pub-active-bar"></span>
   </a>
   <a href="/extra/invitation" class="pub-nav-item <%= locals.currentPage === 'invitation' ? 'active' : '' %>">
     <i class="fas fa-handshake"></i>
     <span>আমন্ত্রণ</span>
+    <span class="pub-active-bar"></span>
   </a>
   <a href="/promotions" class="pub-nav-item pub-nav-promo <%= locals.currentPage === 'promotion' ? 'active' : '' %>">
     <span class="pub-promo-circle">
@@ -70,11 +98,13 @@
   <a href="/chat" class="pub-nav-item <%= locals.currentPage === 'chat' ? 'active' : '' %>">
     <i class="fas fa-headset"></i>
     <span>সেবা</span>
+    <span class="pub-active-bar"></span>
   </a>
   <a href="/profile" class="pub-nav-item <%= locals.currentPage === 'profile' ? 'active' : '' %>" style="position:relative;">
     <i class="fas fa-circle-user"></i>
     <span>প্রোফাইল</span>
     <span class="pub-nav-badge" id="pubNavProfileBadge">0</span>
+    <span class="pub-active-bar"></span>
   </a>
 </nav>
 
