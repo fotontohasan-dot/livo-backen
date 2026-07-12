@@ -235,6 +235,77 @@
   gap: 4px;
   white-space: nowrap;
 }
+
+/* ===== Golden Shimmer / Glow — Welcome Banner + Jackpot (dark & light mode) ===== */
+@keyframes goldShimmerSweep {
+  0%   { transform: translateX(-150%) skewX(-20deg); }
+  100% { transform: translateX(250%) skewX(-20deg); }
+}
+@keyframes goldGlowPulse {
+  0%, 100% { text-shadow: 0 0 8px rgba(255,215,0,0.35), 0 0 18px rgba(212,175,55,0.25), 0 2px 4px rgba(0,0,0,0.6); }
+  50%      { text-shadow: 0 0 16px rgba(255,215,0,0.65), 0 0 32px rgba(212,175,55,0.5), 0 2px 4px rgba(0,0,0,0.6); }
+}
+
+.promo-banner {
+  background:
+    radial-gradient(circle at 15% 15%, rgba(255,215,0,0.16) 0%, transparent 45%),
+    radial-gradient(circle at 90% 85%, rgba(212,175,55,0.14) 0%, transparent 50%),
+    linear-gradient(135deg, #1C1E22 0%, #0F1012 100%) !important;
+  border: 1px solid rgba(212, 175, 55, 0.4) !important;
+  box-shadow: 0 4px 25px rgba(0,0,0,0.5), inset 0 0 25px rgba(212,175,55,0.08) !important;
+}
+
+.promo-banner::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0;
+  width: 55%; height: 100%;
+  background: linear-gradient(100deg, transparent 0%, rgba(255,235,160,0.16) 45%, rgba(255,215,0,0.3) 50%, rgba(255,235,160,0.16) 55%, transparent 100%);
+  animation: goldShimmerSweep 5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.promo-banner-title {
+  animation: goldGlowPulse 3s ease-in-out infinite;
+}
+
+.jackpot-board {
+  background:
+    radial-gradient(circle at center, rgba(255,215,0,0.10) 0%, transparent 60%),
+    radial-gradient(circle at center, #1F2226 0%, #0D0E10 100%) !important;
+}
+
+.jackpot-board::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 0%, rgba(255,235,160,0.09) 45%, rgba(255,215,0,0.18) 50%, rgba(255,235,160,0.09) 55%, transparent 100%);
+  animation: goldShimmerSweep 6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.jackpot-title, #jp-num {
+  animation: goldGlowPulse 3s ease-in-out infinite;
+  position: relative;
+  z-index: 2;
+}
+
+.promo-banner-content, .promo-banner > div:last-child {
+  position: relative;
+  z-index: 2;
+}
+
+/* Light mode: keep the same rich dark gold card, but frame it so it visibly floats off a white page */
+body.light-mode .promo-banner {
+  border: 1.5px solid var(--fa-gold) !important;
+  box-shadow: 0 10px 30px rgba(212,175,55,0.3), 0 2px 10px rgba(0,0,0,0.12) !important;
+}
+body.light-mode .jackpot-board {
+  border: 1.5px solid var(--fa-gold) !important;
+  box-shadow: 0 10px 30px rgba(212,175,55,0.3), 0 2px 10px rgba(0,0,0,0.12) !important;
+}
 </style>
 
 <!-- ===== Marquee Ticker ===== -->
@@ -253,7 +324,7 @@
 <div class="promo-banner">
   <div class="promo-banner-content">
     <div class="promo-banner-badge"><%= t.welcome_bonus %></div>
-    <h1 style="font-family:'Teko', sans-serif; font-size: 38px; color: var(--fa-gold-light); line-height: 1.1; margin: 10px 0 4px 0; text-transform: uppercase; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">
+    <h1 class="promo-banner-title" style="font-family:'Teko', sans-serif; font-size: 38px; color: var(--fa-gold-light); line-height: 1.1; margin: 10px 0 4px 0; text-transform: uppercase;">
       100% Welcome Bonus
     </h1>
     <p style="font-size: 12px; color: #E0E2E5; margin-bottom: 15px; font-weight: 500;">
@@ -335,8 +406,8 @@
 
 <!-- ===== Progressive Jackpot Board ===== -->
 <div class="banner-container" style="margin-top:20px;">
-  <div class="card" style="padding:25px 20px; text-align:center; border: 1.5px solid var(--fa-gold); background: radial-gradient(circle at center, #1F2226 0%, #0D0E10 100%); position: relative; overflow: hidden; border-radius: 20px;">
-    <div style="font-size:12px; color:var(--fa-gold); letter-spacing:4px; text-transform:uppercase; font-weight:800; text-shadow: 0 0 10px rgba(212,175,55,0.4);">✨ MEGA JACKPOT ✨</div>
+  <div class="card jackpot-board" style="padding:25px 20px; text-align:center; border: 1.5px solid var(--fa-gold); position: relative; overflow: hidden; border-radius: 20px;">
+    <div class="jackpot-title" style="font-size:12px; color:var(--fa-gold); letter-spacing:4px; text-transform:uppercase; font-weight:800;">✨ MEGA JACKPOT ✨</div>
     <div style="font-family:'Teko',sans-serif; font-size:52px; color:#FFF; line-height:1; margin:12px 0; text-shadow: 0 0 15px rgba(255, 215, 0, 0.4); display: flex; align-items: center; justify-content: center; gap: 8px;">
       <span style="font-size: 28px; color: var(--fa-gold);">৳</span>
       <span id="jp-num" style="background: linear-gradient(180deg, #FFF 0%, #E2E2E2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">88,617,517</span>
