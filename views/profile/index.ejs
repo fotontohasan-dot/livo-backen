@@ -82,56 +82,95 @@
     </div>
   </div>
 
-  <!-- ফোল্ডার ভিত্তিক মেনু -->
-  <div style="display: flex; flex-direction: column; gap: 12px;">
+  <!-- Member Center — আইকন গ্রিড (স্ক্রিনশট রেফারেন্স অনুযায়ী) -->
+  <div class="member-center-card">
+    <div class="mc-heading">
+      <span class="mc-pill">Member Center</span>
+      <span class="mc-hairline"></span>
+    </div>
 
-    <details class="menu-folder" open>
-      <summary>👤 একাউন্ট সেটিংস</summary>
-      <div class="menu-folder-body">
-        <a href="/profile/security"><i class="fas fa-id-card"></i> মাই একাউন্ট</a>
-        <a href="/profile/security"><i class="fas fa-shield-alt"></i> সিকিউরিটি</a>
-        <a href="/profile/referral"><i class="fas fa-user-plus"></i> ইনভাইট ফ্রেন্ড</a>
-      </div>
-    </details>
+    <div class="mc-grid">
+      <a href="/profile/rewards" class="mc-item">
+        <span class="mc-icon-wrap">
+          <span class="mc-icon"><i class="fas fa-trophy"></i></span>
+          <% if (typeof rewardBadge !== 'undefined' && rewardBadge > 0) { %><span class="mc-badge"><%= rewardBadge %></span><% } %>
+        </span>
+        <span class="mc-label">Reward Center</span>
+      </a>
+      <a href="/profile/history" class="mc-item">
+        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-list-alt"></i></span></span>
+        <span class="mc-label">Betting Record</span>
+      </a>
+      <a href="/profile/stats" class="mc-item">
+        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-file-invoice-dollar"></i></span></span>
+        <span class="mc-label">Profit And Loss</span>
+      </a>
+      <a href="/payment/history?type=deposit" class="mc-item">
+        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-file-arrow-up"></i></span></span>
+        <span class="mc-label">Deposit Record</span>
+      </a>
 
-    <details class="menu-folder">
-      <summary>💳 ট্রানজেকশন রেকর্ড</summary>
-      <div class="menu-folder-body">
-        <a href="/payment/history?type=deposit"><i class="fas fa-arrow-down"></i> ডিপোজিট রেকর্ড</a>
-        <a href="/payment/history?type=withdraw"><i class="fas fa-arrow-up"></i> উইথড্র রেকর্ড</a>
-        <a href="/profile/transactions"><i class="fas fa-file-invoice-dollar"></i> একাউন্ট রেকর্ড</a>
-      </div>
-    </details>
+      <a href="/payment/history?type=withdraw" class="mc-item">
+        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-file-arrow-down"></i></span></span>
+        <span class="mc-label">Withdrawal Record</span>
+      </a>
+      <a href="/profile/transactions" class="mc-item">
+        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-clock-rotate-left"></i></span></span>
+        <span class="mc-label">Account Record</span>
+      </a>
+      <a href="/profile/security" class="mc-item">
+        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-user"></i></span></span>
+        <span class="mc-label">My Account</span>
+      </a>
+      <a href="/profile/security" class="mc-item">
+        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-shield-halved"></i></span></span>
+        <span class="mc-label">Security Center</span>
+      </a>
 
-    <details class="menu-folder">
-      <summary>🎮 বেটিং ও গেম হিস্ট্রি</summary>
-      <div class="menu-folder-body">
-        <a href="/profile/history"><i class="fas fa-clipboard-list"></i> বেটিং রেকর্ড</a>
-        <a href="/profile/stats"><i class="fas fa-chart-line"></i> প্রফিট এন্ড লস</a>
-      </div>
-    </details>
+      <a href="/profile/referral" class="mc-item">
+        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-user-plus"></i></span></span>
+        <span class="mc-label">Invite Friends</span>
+      </a>
+      <a href="/profile/missions" class="mc-item">
+        <span class="mc-icon-wrap">
+          <span class="mc-icon"><i class="fas fa-gift"></i></span>
+          <% if (typeof missionBadge !== 'undefined' && missionBadge > 0) { %><span class="mc-badge"><%= missionBadge %></span><% } %>
+        </span>
+        <span class="mc-label">Mission</span>
+      </a>
+      <a href="/profile/cashback" class="mc-item">
+        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-coins"></i></span></span>
+        <span class="mc-label">Rebate</span>
+      </a>
+      <a href="/notifications" class="mc-item">
+        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-at"></i></span></span>
+        <span class="mc-label">Internal Message</span>
+      </a>
 
-    <details class="menu-folder">
-      <summary>🎁 রিওয়ার্ড ও মিশন</summary>
-      <div class="menu-folder-body">
-        <a href="/profile/rewards"><i class="fas fa-gift"></i> বোনাস রিওয়ার্ড ফান্ড</a>
-        <a href="/profile/missions"><i class="fas fa-bullseye"></i> মিশন পয়েন্ট</a>
-        <a href="/profile/stats"><i class="fas fa-list-ol"></i> গেম ওয়াইজ রেকর্ড</a>
-      </div>
-    </details>
+      <a href="/profile/feedback" class="mc-item">
+        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-comment-dots"></i></span></span>
+        <span class="mc-label">Suggestion</span>
+      </a>
+      <a href="/profile/app-download" class="mc-item">
+        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-mobile-screen-button"></i></span></span>
+        <span class="mc-label">Download APP</span>
+      </a>
+      <a href="/chat" class="mc-item">
+        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-headset"></i></span></span>
+        <span class="mc-label">Customer Service</span>
+      </a>
+      <a href="/chat" class="mc-item">
+        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-circle-question"></i></span></span>
+        <span class="mc-label">Help Center</span>
+      </a>
+    </div>
 
-    <details class="menu-folder">
-      <summary>💬 কাস্টমার সাপোর্ট ও অন্যান্য</summary>
-      <div class="menu-folder-body">
-        <a href="/notifications"><i class="fas fa-envelope"></i> ইন্টারন্যাশনাল মেইল</a>
-        <a href="/profile/feedback"><i class="fas fa-comment-alt"></i> সাজেশন</a>
-        <a href="/profile/app-download"><i class="fas fa-mobile-alt"></i> অ্যাপ ডাউনলোড</a>
-        <a href="/chat"><i class="fas fa-headset"></i> কাস্টমার সেন্টার</a>
-        <a href="/chat"><i class="fas fa-question-circle"></i> হেল্প সেন্টার</a>
-        <a href="/logout" style="color:#ef4444"><i class="fas fa-sign-out-alt"></i> লগ আউট</a>
-      </div>
-    </details>
-
+    <div class="mc-logout-row">
+      <a href="/logout" class="mc-item">
+        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-right-from-bracket"></i></span></span>
+        <span class="mc-label">Logout</span>
+      </a>
+    </div>
   </div>
 
   <div style="text-align: center; margin-top: 30px; padding-bottom: 20px;">
@@ -193,6 +232,50 @@
 .menu-folder-body a:active { background: rgba(255,255,255,0.05); }
 #refreshIcon.spinning { animation: spin 0.7s linear infinite; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* ---------- Member Center grid (screenshot reference) ---------- */
+.member-center-card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 18px 14px 22px;
+  margin: 0 -15px 20px -15px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.08);
+}
+.mc-heading { display: flex; align-items: center; gap: 10px; padding: 0 6px; margin-bottom: 18px; }
+.mc-pill {
+  background: #eceef1; color: #4b5563; font-size: 12.5px; font-weight: 700;
+  padding: 6px 16px; border-radius: 999px; white-space: nowrap;
+}
+.mc-hairline { flex: 1; height: 1px; background: #e5e7eb; }
+
+.mc-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  row-gap: 22px;
+  column-gap: 4px;
+}
+.mc-item {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  text-decoration: none; text-align: center; padding: 0 2px;
+}
+.mc-icon-wrap { position: relative; }
+.mc-icon {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: #fbebd0;
+  display: flex; align-items: center; justify-content: center;
+  color: #b8863a; font-size: 22px;
+}
+.mc-badge {
+  position: absolute; top: -4px; right: -4px;
+  background: #e53935; color: #fff; font-size: 11px; font-weight: 800;
+  min-width: 20px; height: 20px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid #fff; padding: 0 3px;
+}
+.mc-label { color: #374151; font-size: 12.5px; font-weight: 600; line-height: 1.3; }
+
+.mc-logout-row { margin-top: 22px; padding: 0 2px; }
+.mc-logout-row .mc-item { align-items: flex-start; width: fit-content; }
 </style>
 
 <script>
