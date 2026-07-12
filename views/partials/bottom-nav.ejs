@@ -11,12 +11,12 @@
   }
   .pub-nav-item {
     flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 3px; padding: 8px 4px 6px; margin: 6px 2px; color: rgba(255,255,255,0.8); text-decoration: none;
-    font-size: 10px; font-weight: 700; position: relative; transition: background .2s, color .2s;
+    gap: 2px; padding: 6px 4px 5px; margin: 5px 2px; color: rgba(255,255,255,0.8); text-decoration: none;
+    font-size: 9.5px; font-weight: 700; position: relative; transition: background .2s, color .2s;
   }
   /* আইটেমগুলোর মাঝে পাতলা ডিভাইডার লাইন (অ্যাক্টিভ/প্রোমোর পাশে বাদে) */
   .pub-nav-item:not(:first-child)::after {
-    content: ''; position: absolute; left: -2px; top: 18%; bottom: 18%; width: 1px;
+    content: ''; position: absolute; left: -2px; top: 20%; bottom: 20%; width: 1px;
     background: rgba(255,255,255,0.14);
   }
   .pub-nav-item.active::after,
@@ -25,7 +25,7 @@
   .pub-nav-promo + .pub-nav-item::after { display: none; }
 
   .pub-nav-item i {
-    font-size: 17px; transition: filter .2s, transform .2s;
+    font-size: 15px; transition: filter .2s, transform .2s;
   }
   .pub-nav-item.active {
     color: #fff;
@@ -35,15 +35,15 @@
   }
   /* অ্যাক্টিভ ট্যাব — গ্লোয়িং হাইলাইটেড কার্ড (প্রোমো বাদে, ওর নিজস্ব গ্লো সার্কেল আছে) */
   .pub-nav-item.active:not(.pub-nav-promo)::before {
-    content: ''; position: absolute; inset: 0; margin: -6px 2px;
+    content: ''; position: absolute; inset: 0; margin: -5px 2px;
     background: linear-gradient(180deg, #ff5b4a, #d6291a);
-    border-radius: 14px; z-index: -1;
-    box-shadow: 0 0 18px rgba(255,70,55,0.55), inset 0 1px 0 rgba(255,255,255,0.25);
+    border-radius: 12px; z-index: -1;
+    box-shadow: 0 0 16px rgba(255,70,55,0.55), inset 0 1px 0 rgba(255,255,255,0.25);
   }
   /* অ্যাক্টিভ ট্যাবের নিচে ছোট হোম-ইন্ডিকেটর বার */
   .pub-nav-item.active:not(.pub-nav-promo) .pub-active-bar {
-    position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
-    width: 26px; height: 3px; border-radius: 3px;
+    position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
+    width: 22px; height: 3px; border-radius: 3px;
     background: rgba(255,255,255,0.85); box-shadow: 0 0 6px rgba(255,255,255,0.7);
   }
   .pub-nav-item:not(.pub-nav-promo):active { background: rgba(255,255,255,0.06); border-radius: 12px; }
@@ -51,30 +51,21 @@
   /* মাঝের "প্রমোশন" আইকন — গ্লোয়িং সাদা বৃত্ত */
   .pub-nav-promo { padding-top: 0; }
   .pub-promo-circle {
-    width: 50px; height: 50px; border-radius: 50%;
+    width: 42px; height: 42px; border-radius: 50%;
     background: radial-gradient(circle at 35% 30%, #ffffff, #f3f3f3);
     display: flex; align-items: center; justify-content: center;
-    margin-top: -16px; position: relative;
-    box-shadow: 0 0 0 4px rgba(227,92,76,0.18), 0 0 20px rgba(255,70,55,0.55), 0 6px 14px rgba(0,0,0,0.4);
+    margin-top: -11px; position: relative;
+    box-shadow: 0 0 0 3px rgba(227,92,76,0.18), 0 0 16px rgba(255,70,55,0.55), 0 4px 10px rgba(0,0,0,0.4);
   }
-  .pub-promo-circle i { color: #c0392b; font-size: 21px; }
-  .pub-nav-promo span { margin-top: 2px; }
+  .pub-promo-circle i { color: #c0392b; font-size: 18px; }
+  .pub-nav-promo span { margin-top: 1px; }
 
-  /* ছোট রেড নোটিফিকেশন ডট */
+  /* ছোট রেড নোটিফিকেশন ডট (শুধু প্রমোশনে — কোনো সংখ্যা নেই) */
   .pub-nav-dot {
-    position: absolute; top: -2px; right: -2px; width: 13px; height: 13px;
+    position: absolute; top: -2px; right: -2px; width: 12px; height: 12px;
     background: #ef4444; border-radius: 50%; border: 2px solid #fff;
     box-shadow: 0 0 6px rgba(239,68,68,0.8);
   }
-
-  /* প্রোফাইল ট্যাবের আনরিড কাউন্ট ব্যাজ */
-  .pub-nav-badge {
-    position: absolute; top: 2px; right: 18%; min-width: 17px; height: 17px; padding: 0 4px;
-    background: #ef4444; color: #fff; border-radius: 999px; font-size: 10px; font-weight: 800;
-    display: none; align-items: center; justify-content: center; line-height: 1;
-    border: 2px solid #6e150e;
-  }
-  .pub-nav-badge.show { display: flex; }
 </style>
 
 <nav class="pub-bottom-nav" id="pubBottomNav">
@@ -100,31 +91,10 @@
     <span>সেবা</span>
     <span class="pub-active-bar"></span>
   </a>
-  <a href="/profile" class="pub-nav-item <%= locals.currentPage === 'profile' ? 'active' : '' %>" style="position:relative;">
+  <a href="/profile" class="pub-nav-item <%= locals.currentPage === 'profile' ? 'active' : '' %>">
     <i class="fas fa-circle-user"></i>
     <span>প্রোফাইল</span>
-    <span class="pub-nav-badge" id="pubNavProfileBadge">0</span>
     <span class="pub-active-bar"></span>
   </a>
 </nav>
 
-<% if (locals.user) { %>
-<script>
-(function () {
-  function loadUnread() {
-    fetch('/notifications/count')
-      .then(function (r) { return r.json(); })
-      .then(function (d) {
-        var el = document.getElementById('pubNavProfileBadge');
-        if (!el) return;
-        var n = Number(d && d.count) || 0;
-        if (n > 0) { el.textContent = n > 99 ? '99+' : n; el.classList.add('show'); }
-        else { el.classList.remove('show'); }
-      })
-      .catch(function () {});
-  }
-  loadUnread();
-  setInterval(loadUnread, 30000);
-})();
-</script>
-<% } %>
