@@ -52,12 +52,32 @@ router.get('/', isAuth, async (req, res) => {
       WHERE user_id = $1
     `, [req.session.user.id]);
 
+    // Member Center গ্রিডের ব্যাজ কাউন্ট — কোনো একটাতে সমস্যা হলেও পুরো প্রোফাইল পেজ যেন লোড হতে ব্যর্থ না হয়, তাই আলাদা try/catch
+    let missionBadge = 0;
+    try {
+      const missions = await getMissions(req.session.user.id);
+      missionBadge = [...missions.daily, ...missions.weekly, ...missions.special]
+        .filter(m => m.done && !m.claimed).length;
+    } catch (e) {
+      console.error('mission badge count error:', e.message);
+    }
+
+    let rewardBadge = 0;
+    try {
+      const reward = await getTodayReward(req.session.user.id);
+      rewardBadge = (reward && !reward.claimed && reward.currentTier) ? 1 : 0;
+    } catch (e) {
+      console.error('reward badge count error:', e.message);
+    }
+
     res.render('profile/index', {
       user: user.rows[0],
       profileUser: user.rows[0],
       predictions: predictions.rows,
       tournaments: tournaments.rows,
-      stats: stats.rows[0]
+      stats: stats.rows[0],
+      missionBadge,
+      rewardBadge
     });
   } catch (err) {
     console.error('Profile error:', err);
