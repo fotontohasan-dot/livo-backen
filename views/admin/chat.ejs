@@ -32,9 +32,9 @@
         </div>
     </div>
 
-    <!-- Stats Cards -->
+    <!-- Stats Cards (ক্লিক করলে বাম পাশের লিস্ট ফিল্টার হবে) -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div class="stat-filter-card bg-gray-900 border-2 border-gray-800 rounded-xl p-5 cursor-pointer transition-colors hover:border-blue-500/50" data-filter="all" onclick="applyStatFilter('all')">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-gray-400 text-sm">Total Conversations</p>
@@ -46,7 +46,7 @@
             </div>
         </div>
         
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div class="stat-filter-card bg-gray-900 border-2 border-gray-800 rounded-xl p-5 cursor-pointer transition-colors hover:border-green-500/50" data-filter="active" onclick="applyStatFilter('active')">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-gray-400 text-sm">Active Chats</p>
@@ -58,7 +58,7 @@
             </div>
         </div>
         
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div class="stat-filter-card bg-gray-900 border-2 border-gray-800 rounded-xl p-5 cursor-pointer transition-colors hover:border-orange-500/50" data-filter="pending" onclick="applyStatFilter('pending')">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-gray-400 text-sm">Pending Replies</p>
@@ -70,7 +70,7 @@
             </div>
         </div>
         
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div class="stat-filter-card bg-gray-900 border-2 border-gray-800 rounded-xl p-5 cursor-pointer transition-colors hover:border-emerald-500/50" data-filter="resolved" onclick="applyStatFilter('resolved')">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-gray-400 text-sm">Resolved Today</p>
@@ -81,6 +81,11 @@
                 </div>
             </div>
         </div>
+    </div>
+    <div id="filter-indicator" class="hidden mb-4 flex items-center gap-2 text-sm">
+        <span class="text-gray-400">ফিল্টার:</span>
+        <span id="filter-indicator-label" class="text-yellow-500 font-semibold"></span>
+        <button onclick="applyStatFilter('all')" class="text-gray-500 hover:text-white text-xs underline">সব দেখান</button>
     </div>
 
     <!-- Main Chat Layout -->
@@ -216,6 +221,8 @@
     let currentUserId = null;
     let selectedFile = null;
     let selectedFileType = null;
+    let allConversations = [];
+    let activeFilter = 'all';
 
     function escapeHtml(str) {
         const div = document.createElement('div');
@@ -240,16 +247,66 @@
         try {
             const res = await fetch('/chat/admin/conversations');
             const users = await res.json();
-            
-            const container = document.getElementById('conversations-list');
-            container.innerHTML = '';
-            
-            if (!Array.isArray(users) || users.length === 0) {
-                container.innerHTML = `<div class="p-4 text-center text-gray-500 text-sm">No conversations yet</div>`;
-                return;
-            }
-            
-            users.forEach(user => {
+            allConversations = Array.isArray(users) ? users : [];
+            renderConversations();
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    // একটা কনভারসেশন বর্তমান ফিল্টারের সাথে মিলে কিনা যাচাই (ব্যাকএন্ডের /chat/admin/stats কোয়েরির লজিকের সাথে সামঞ্জস্যপূর্ণ)
+    function conversationMatchesFilter(user, filter) {
+        if (filter === 'all') return true;
+        if (filter === 'pending') return Number(user.unread_count) > 0;
+        if (filter === 'active') {
+            if (!user.last_message_time) return false;
+            return (Date.now() - new Date(user.last_message_time).getTime()) <= 24 * 60 * 60 * 1000;
+        }
+        if (filter === 'resolved') {
+            if (!user.last_message_time || !user.last_message_is_admin) return false;
+            const d = new Date(user.last_message_time);
+            const today = new Date();
+            return d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate();
+        }
+        return true;
+    }
+
+    function applyStatFilter(filter) {
+        activeFilter = filter;
+
+        document.querySelectorAll('.stat-filter-card').forEach(card => {
+            const isActive = card.getAttribute('data-filter') === filter && filter !== 'all';
+            card.classList.toggle('ring-2', isActive);
+            card.classList.toggle('ring-yellow-500', isActive);
+            card.classList.toggle('border-yellow-500', isActive);
+        });
+
+        const indicator = document.getElementById('filter-indicator');
+        const label = document.getElementById('filter-indicator-label');
+        const labels = { active: 'Active Chats', pending: 'Pending Replies', resolved: 'Resolved Today' };
+        if (filter === 'all') {
+            indicator.classList.add('hidden');
+        } else {
+            indicator.classList.remove('hidden');
+            label.textContent = labels[filter] || filter;
+        }
+
+        renderConversations();
+    }
+    window.applyStatFilter = applyStatFilter;
+
+    function renderConversations() {
+        const container = document.getElementById('conversations-list');
+        container.innerHTML = '';
+
+        const users = allConversations.filter(u => conversationMatchesFilter(u, activeFilter));
+
+        if (users.length === 0) {
+            container.innerHTML = `<div class="p-4 text-center text-gray-500 text-sm">এই ফিল্টারে কোনো কনভারসেশন নেই</div>`;
+            return;
+        }
+
+        users.forEach(user => {
                 const div = document.createElement('div');
                 const hasUnread = Number(user.unread_count) > 0;
                 div.className = `p-3.5 mx-1 rounded-2xl cursor-pointer flex items-center gap-3 hover:bg-gray-800 transition-colors ${currentUserId === user.id ? 'bg-gray-800' : ''}`;
@@ -275,10 +332,7 @@
 
                 div.onclick = () => selectUser(user.id, user.username);
                 container.appendChild(div);
-            });
-        } catch (e) {
-            console.error(e);
-        }
+        });
     }
 
     loadConversations();
@@ -453,20 +507,48 @@
         }
     }
 
-    function quickBanUser() {
+    async function quickBanUser() {
         if (!currentUserId) return;
-        if (confirm('Ban this user?')) {
-            // Call your ban API here
-            alert('User banned (implement your ban endpoint)');
+        if (!confirm('আপনি কি এই ইউজারকে ব্যান/আনব্যান করতে চান?')) return;
+        try {
+            const res = await fetch(`/admin/users/${currentUserId}/ban`, { method: 'POST' });
+            if (!res.ok) throw new Error('request failed');
+            alert('ইউজারের ব্যান স্ট্যাটাস পরিবর্তন করা হয়েছে।');
+        } catch (e) {
+            alert('ব্যান করতে ব্যর্থ হয়েছে, আবার চেষ্টা করুন।');
         }
     }
 
     function refreshConversations() {
         loadConversations();
+        loadStats();
     }
 
     function exportChatLogs() {
-        alert('Chat logs exported (implement CSV export)');
+        if (!allConversations.length) {
+            alert('এক্সপোর্ট করার মতো কোনো কনভারসেশন নেই।');
+            return;
+        }
+        const rows = [['Username', 'Last Message', 'Last Message Time', 'Sent By Admin', 'Unread Count']];
+        allConversations.forEach(u => {
+            rows.push([
+                u.username,
+                (u.last_message || '').replace(/"/g, '""'),
+                u.last_message_time || '',
+                u.last_message_is_admin ? 'Yes' : 'No',
+                u.unread_count || 0
+            ]);
+        });
+        const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `chat-logs-${new Date().toISOString().slice(0,10)}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
     }
 
     // Socket listeners
