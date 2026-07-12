@@ -1,3 +1,46 @@
+<style>
+.footer-badge {
+  padding: 9px 4px;
+  border-radius: 10px;
+  text-align: center;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #FFEFA6;
+  background: linear-gradient(145deg, rgba(212,175,55,0.14) 0%, rgba(0,0,0,0.25) 100%);
+  border: 1px solid rgba(212,175,55,0.35);
+  box-shadow: 0 2px 10px rgba(212,175,55,0.12);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.footer-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(212,175,55,0.25);
+}
+.footer-badge i { font-size: 13px; color: #D4AF37; }
+.footer-badge-security { color: #cfe8ff; }
+.footer-badge-security i { color: #7fc4ff; }
+.footer-badge-responsible { color: #d8f5e3; }
+.footer-badge-responsible i { color: #3ddc84; }
+
+body.light-mode .footer-badge {
+  background: linear-gradient(145deg, rgba(212,175,55,0.16) 0%, rgba(255,255,255,0.65) 100%);
+  border: 1px solid rgba(184,134,11,0.4);
+  color: #7A5A00;
+  box-shadow: 0 2px 10px rgba(212,175,55,0.2);
+}
+body.light-mode .footer-badge i { color: #AA7C11; }
+body.light-mode .footer-badge-security { color: #0c4a86; }
+body.light-mode .footer-badge-security i { color: #1e78c9; }
+body.light-mode .footer-badge-responsible { color: #0f6b3a; }
+body.light-mode .footer-badge-responsible i { color: #17a05a; }
+</style>
+
 <footer style="background:var(--bg-surface);border-top:1px solid var(--border-glass);color:var(--text-muted);padding:20px 14px 70px;margin-top:20px;">
   <div style="max-width:900px;margin:0 auto;">
 
@@ -20,12 +63,12 @@
     <div style="margin-bottom:16px;">
       <h3 class="text-main" style="font-size:13px;font-weight:700;margin-bottom:8px;text-align:center;"><%= t.footer_license_title %></h3>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
-        <div class="glass" style="padding:7px 4px;border-radius:8px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;opacity:0.7;">BMM</div>
-        <div class="glass" style="padding:7px 4px;border-radius:8px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;opacity:0.7;">iTech Labs</div>
-        <div class="glass" style="padding:7px 4px;border-radius:8px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;opacity:0.7;">GLI Certified</div>
-        <div class="glass" style="padding:7px 4px;border-radius:8px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;opacity:0.7;">MGA</div>
-        <div class="glass" style="padding:7px 4px;border-radius:8px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;opacity:0.7;">Gaming Labs</div>
-        <div class="glass" style="padding:7px 4px;border-radius:8px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;opacity:0.7;">PAGCOR</div>
+        <div class="footer-badge"><i class="fas fa-shield-alt"></i>BMM</div>
+        <div class="footer-badge"><i class="fas fa-shield-alt"></i>iTech Labs</div>
+        <div class="footer-badge"><i class="fas fa-certificate"></i>GLI Certified</div>
+        <div class="footer-badge"><i class="fas fa-shield-alt"></i>MGA</div>
+        <div class="footer-badge"><i class="fas fa-flask"></i>Gaming Labs</div>
+        <div class="footer-badge"><i class="fas fa-certificate"></i>PAGCOR</div>
       </div>
     </div>
 
@@ -34,8 +77,8 @@
       <div>
         <h3 class="text-main" style="font-size:12px;font-weight:700;margin-bottom:6px;"><%= t.footer_security_title %></h3>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-          <div class="glass" style="padding:7px 4px;border-radius:8px;text-align:center;font-size:10px;font-weight:700;opacity:0.7;">iovation</div>
-          <div class="glass" style="padding:7px 4px;border-radius:8px;text-align:center;font-size:10px;font-weight:700;opacity:0.7;">ThreatMetrix</div>
+          <div class="footer-badge footer-badge-security"><i class="fas fa-lock"></i>iovation</div>
+          <div class="footer-badge footer-badge-security"><i class="fas fa-user-shield"></i>ThreatMetrix</div>
         </div>
       </div>
 
@@ -43,8 +86,8 @@
       <div>
         <h3 class="text-main" style="font-size:12px;font-weight:700;margin-bottom:6px;"><%= t.footer_responsible_gaming_title %></h3>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-          <div class="glass" style="padding:7px 4px;border-radius:8px;text-align:center;font-size:10px;font-weight:700;opacity:0.7;">GamCare</div>
-          <div class="glass" style="padding:7px 4px;border-radius:8px;text-align:center;font-size:10px;font-weight:700;opacity:0.85;color:var(--primary);">BeGambleAware</div>
+          <div class="footer-badge footer-badge-responsible"><i class="fas fa-heart"></i>GamCare</div>
+          <div class="footer-badge footer-badge-responsible"><i class="fas fa-hand-paper"></i>BeGambleAware</div>
         </div>
       </div>
     </div>
