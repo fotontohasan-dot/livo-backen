@@ -181,44 +181,9 @@ app.get('/promotions', (req, res) => res.render('promotions', { currentPage: 'pr
 // ==================== Bonus (দৈনিক রিওয়ার্ড ভাউচার) ====================
 // প্রতিদিন রাত ১২টায় (Asia/Dhaka) অটোমেটিক রিসেট হয় — সার্ভার থেকে পরবর্তী মধ্যরাতের
 // সময় পাঠানো হয়, ক্লায়েন্ট সাইডে প্রতি সেকেন্ডে কাউন্টডাউন আপডেট হয় (views/bonus.ejs দেখুন)।
-app.get('/bonus', (req, res) => {
-  const DHAKA_OFFSET_MIN = 6 * 60; // Asia/Dhaka = UTC+6, কোনো DST নেই
-
-  // এই মুহূর্তে ঢাকার লোকাল তারিখ/সময়
-  const nowUtcMs = Date.now();
-  const dhakaNowMs = nowUtcMs + DHAKA_OFFSET_MIN * 60000;
-  const dhakaNow = new Date(dhakaNowMs);
-
-  // ঢাকার পরবর্তী মধ্যরাত (00:00) বের করে সেটাকে UTC ISO স্ট্রিং-এ রূপান্তর
-  const nextDhakaMidnight = Date.UTC(
-    dhakaNow.getUTCFullYear(), dhakaNow.getUTCMonth(), dhakaNow.getUTCDate() + 1, 0, 0, 0
-  );
-  const dueUtcMs = nextDhakaMidnight - DHAKA_OFFSET_MIN * 60000;
-  const dueIso = new Date(dueUtcMs).toISOString();
-
-  const dueDhaka = new Date(dueUtcMs + DHAKA_OFFSET_MIN * 60000);
-  const dateLabel = `${dueDhaka.getUTCFullYear()}.${String(dueDhaka.getUTCMonth() + 1).padStart(2, '0')}.${String(dueDhaka.getUTCDate()).padStart(2, '0')}`;
-
-  const vouchers = [
-    {
-      tone: 'red', gradIndex: 1, title: 'Lucky Wheel', dateLabel, dueIso,
-      rewardText: 'iPhone 17 Pro Max জিততে দৈনিক ডিপোজিট ড্র',
-      claimUrl: '/profile/wheel'
-    },
-    {
-      tone: 'pink', gradIndex: 2, title: 'Lucky Draw', dateLabel, dueIso,
-      rewardText: 'দৈনিক লগইন লাল খাম, সর্বোচ্চ পুরস্কার হল 99,999',
-      claimUrl: '/promotions'
-    },
-    {
-      tone: 'orange', gradIndex: 3, title: 'Smash & Win', dateLabel, dueIso,
-      rewardText: 'প্রতিদিন লগইন করলেই গোল্ডেন এগ ভাঙতে পারবেন',
-      claimUrl: '/promotions'
-    }
-  ];
-
-  res.render('bonus', { currentPage: 'bonus', vouchers });
-});
+// বোনাস (লাকি হুইল, সোনার ডিম, রেড কার্ড) এখন প্রোফাইল → Reward Center পেজের ভেতরেই
+// ইন্টিগ্রেটেড (দেখুন views/profile/rewards.ejs) — পুরনো /bonus লিংক ওখানেই রিডিরেক্ট করে।
+app.get('/bonus', (req, res) => res.redirect('/profile/rewards'));
 
 app.use('/coins', require('./routes/coins'));
 app.use('/news', require('./routes/news'));
