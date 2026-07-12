@@ -1,23 +1,23 @@
 <!-- views/partials/bottom-nav.ejs -->
-<!-- সাধারণ ইউজারদের জন্য ফিক্সড বটম নেভিগেশন বার (রেড থিম) -->
+<!-- সাধারণ ইউজারদের জন্য ফিক্সড বটম নেভিগেশন বার (গোল্ডেন থিম) -->
 <style>
   .pub-bottom-nav {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 900;
     max-width: 480px; margin: 0 auto;
     display: flex; align-items: stretch;
-    background: linear-gradient(180deg, #9a1f16, #6e150e);
+    background: linear-gradient(180deg, #E6B93D, #A97F1B);
     padding-bottom: env(safe-area-inset-bottom, 0px);
-    box-shadow: 0 -4px 18px rgba(0,0,0,0.4);
+    box-shadow: 0 -4px 18px rgba(0,0,0,0.35);
   }
   .pub-nav-item {
     flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 2px; padding: 6px 4px 5px; margin: 5px 2px; color: rgba(255,255,255,0.8); text-decoration: none;
+    gap: 2px; padding: 6px 4px 5px; margin: 5px 2px; color: rgba(36,26,0,0.75); text-decoration: none;
     font-size: 9.5px; font-weight: 700; position: relative; transition: background .2s, color .2s;
   }
   /* আইটেমগুলোর মাঝে পাতলা ডিভাইডার লাইন (অ্যাক্টিভ/প্রোমোর পাশে বাদে) */
   .pub-nav-item:not(:first-child)::after {
     content: ''; position: absolute; left: -2px; top: 20%; bottom: 20%; width: 1px;
-    background: rgba(255,255,255,0.14);
+    background: rgba(0,0,0,0.15);
   }
   .pub-nav-item.active::after,
   .pub-nav-item.active + .pub-nav-item::after,
@@ -28,25 +28,25 @@
     font-size: 15px; transition: filter .2s, transform .2s;
   }
   .pub-nav-item.active {
-    color: #fff;
+    color: #FFD700;
   }
   .pub-nav-item.active i {
-    filter: drop-shadow(0 0 6px rgba(255,255,255,0.75));
+    filter: drop-shadow(0 0 6px rgba(255,215,0,0.75));
   }
-  /* অ্যাক্টিভ ট্যাব — গ্লোয়িং হাইলাইটেড কার্ড (প্রোমো বাদে, ওর নিজস্ব গ্লো সার্কেল আছে) */
+  /* অ্যাক্টিভ ট্যাব — গ্লোয়িং ডার্ক-গোল্ড হাইলাইটেড কার্ড (প্রোমো বাদে, ওর নিজস্ব গ্লো সার্কেল আছে) */
   .pub-nav-item.active:not(.pub-nav-promo)::before {
     content: ''; position: absolute; inset: 0; margin: -5px 2px;
-    background: linear-gradient(180deg, #ff5b4a, #d6291a);
+    background: linear-gradient(180deg, #2b1d00, #140d00);
     border-radius: 12px; z-index: -1;
-    box-shadow: 0 0 16px rgba(255,70,55,0.55), inset 0 1px 0 rgba(255,255,255,0.25);
+    box-shadow: 0 0 16px rgba(255,215,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15);
   }
   /* অ্যাক্টিভ ট্যাবের নিচে ছোট হোম-ইন্ডিকেটর বার */
   .pub-nav-item.active:not(.pub-nav-promo) .pub-active-bar {
     position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
     width: 22px; height: 3px; border-radius: 3px;
-    background: rgba(255,255,255,0.85); box-shadow: 0 0 6px rgba(255,255,255,0.7);
+    background: linear-gradient(90deg, #FFE9A8, #FFD700); box-shadow: 0 0 6px rgba(255,215,0,0.7);
   }
-  .pub-nav-item:not(.pub-nav-promo):active { background: rgba(255,255,255,0.06); border-radius: 12px; }
+  .pub-nav-item:not(.pub-nav-promo):active { background: rgba(0,0,0,0.08); border-radius: 12px; }
 
   /* মাঝের "প্রমোশন" আইকন — গ্লোয়িং সাদা বৃত্ত */
   .pub-nav-promo { padding-top: 0; }
@@ -55,9 +55,9 @@
     background: radial-gradient(circle at 35% 30%, #ffffff, #f3f3f3);
     display: flex; align-items: center; justify-content: center;
     margin-top: -11px; position: relative;
-    box-shadow: 0 0 0 3px rgba(227,92,76,0.18), 0 0 16px rgba(255,70,55,0.55), 0 4px 10px rgba(0,0,0,0.4);
+    box-shadow: 0 0 0 3px rgba(212,175,55,0.22), 0 0 16px rgba(212,175,55,0.55), 0 4px 10px rgba(0,0,0,0.35);
   }
-  .pub-promo-circle i { color: #c0392b; font-size: 18px; }
+  .pub-promo-circle i { color: #B8860B; font-size: 18px; }
   .pub-nav-promo span { margin-top: 1px; }
 
   /* ছোট রেড নোটিফিকেশন ডট (শুধু প্রমোশনে — কোনো সংখ্যা নেই) */

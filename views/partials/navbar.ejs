@@ -51,11 +51,38 @@
 <div class="menu-overlay" id="menuOverlay"></div>
 
 
+<style>
+.golden-navbar {
+  background: linear-gradient(135deg, #FFE9A8 0%, #EAB308 40%, #B8860B 100%) !important;
+  box-shadow: 0 4px 18px rgba(212,175,55,0.35);
+}
+.golden-navbar .nav-brand,
+.golden-navbar > div > button,
+.golden-navbar .nav-icon-link,
+.golden-navbar .nav-balance-box,
+.golden-navbar .nav-refresh-btn {
+  color: #241a00 !important;
+}
+.golden-navbar .nav-balance-box {
+  background: rgba(0,0,0,0.14);
+  border-color: rgba(0,0,0,0.22);
+}
+.golden-navbar .nav-icon-link:hover { background: rgba(0,0,0,0.12); }
+.golden-navbar .badge-dot { border-color: #B8860B; }
+.golden-navbar .nav-btn-login {
+  color: #241a00 !important;
+  border-color: rgba(0,0,0,0.3) !important;
+}
+.golden-navbar .nav-btn-register {
+  background: #241a00 !important;
+  color: #FFD700 !important;
+}
+</style>
 <% if (locals.currentPage === 'home') { %>
-<nav class="navbar" style="background: var(--grad-primary); position:relative; z-index:1000;">
+<nav class="navbar golden-navbar" style="position:relative; z-index:1000;">
   <div style="display:flex;align-items:center;gap:12px;">
-    <button onclick="toggleMenu()" style="background:none;border:none;color:#fff;font-size:24px;cursor:pointer;padding:0 12px;"><i class="fas fa-bars"></i></button>
-    <div class="nav-brand" style="color: #fff; font-family: 'Teko', sans-serif; font-size: 1.8rem; letter-spacing: 1px;"><%= siteName %></div>
+    <button onclick="toggleMenu()" style="background:none;border:none;color:#241a00;font-size:24px;cursor:pointer;padding:0 12px;"><i class="fas fa-bars"></i></button>
+    <div class="nav-brand" style="color: #241a00; font-family: 'Teko', sans-serif; font-size: 1.8rem; letter-spacing: 1px;"><%= siteName %></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
         
