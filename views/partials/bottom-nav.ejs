@@ -1,4 +1,12 @@
 <% if (locals.currentPage === 'home') { %>
+<style>
+  .bottom-nav .nav-link i {
+    font-size: 18px;
+  }
+  .bottom-nav .nav-link span {
+    font-size: 11px;
+  }
+</style>
 <div class="bottom-nav">
   <a href="/" onclick="location.href='/'; return false;" class="nav-link <%= (typeof activePage !== 'undefined' ? activePage : locals.currentPage) === 'home' ? 'active' : '' %>">
     <i class="fas fa-home"></i>
