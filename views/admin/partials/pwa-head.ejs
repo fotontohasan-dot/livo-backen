@@ -1,0 +1,13 @@
+<!-- views/admin/partials/pwa-head.ejs -->
+<!-- এই ট্যাগগুলো ছাড়া iOS Safari-তে "Add to Home Screen" করলেও সেটা আসল
+     standalone অ্যাপ হয় না — শুধু বুকমার্ক থাকে, আর তখন iOS Notification
+     permission (লক থাকলে পুশ নোটিফিকেশন) কখনোই কাজ করে না।
+     Home Screen আইকন থেকে খোলা হলে তবেই permission popup আসবে। -->
+<link rel="manifest" href="/admin-manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Livo অ্যাডমিন">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#14171f">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" href="/icon-192.png">

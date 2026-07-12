@@ -36,6 +36,17 @@
     transition: all .3s ease; max-width: 88vw; display: flex; align-items: center; gap: 8px;
   }
   .admin-bn-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ===== সাউন্ড নোটিফিকেশন অন/অফ টগল বাটন ===== */
+  .admin-sound-toggle {
+    position: fixed; top: calc(10px + env(safe-area-inset-top, 0px)); right: 12px; z-index: 580;
+    width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.1);
+    background: #1c2028; color: #94a3b8; display: flex; align-items: center; justify-content: center;
+    font-size: 16px; box-shadow: 0 4px 14px rgba(0,0,0,0.35); cursor: pointer;
+  }
+  .admin-sound-toggle.on { color: #f59e0b; border-color: rgba(245,158,11,0.4); }
+  .admin-sound-toggle.flash { animation: adminSoundFlash .4s ease; }
+  @keyframes adminSoundFlash { 0% { transform: scale(1); } 40% { transform: scale(1.2); } 100% { transform: scale(1); } }
 </style>
 
 <nav class="admin-bottom-nav" id="adminBottomNav">
@@ -56,6 +67,10 @@
 </nav>
 
 <div class="admin-bn-toast" id="adminBnToast"></div>
+
+<button type="button" class="admin-sound-toggle" id="adminSoundToggle" title="সাউন্ড নোটিফিকেশন অন/অফ">
+  <i class="fas fa-bell"></i>
+</button>
 
 <script>
 (function () {
@@ -93,6 +108,25 @@
     t.classList.add('show');
     clearTimeout(t._hideTimer);
     t._hideTimer = setTimeout(function () { t.classList.remove('show'); }, 3200);
+  }
+
+  // ===== সাউন্ড নোটিফিকেশন অন/অফ (এক ট্যাপে টগল, localStorage-এ সেভ থাকে) =====
+  var SOUND_KEY = 'livo_admin_sound_enabled';
+  function isSoundOn() {
+    var v = localStorage.getItem(SOUND_KEY);
+    return v === null ? true : v === '1'; // ডিফল্ট: অন
+  }
+  function setSoundOn(on) {
+    localStorage.setItem(SOUND_KEY, on ? '1' : '0');
+    updateSoundToggleUI();
+  }
+  function updateSoundToggleUI() {
+    var btn = document.getElementById('adminSoundToggle');
+    if (!btn) return;
+    var on = isSoundOn();
+    btn.classList.toggle('on', on);
+    btn.innerHTML = '<i class="fas fa-bell' + (on ? '' : '-slash') + '"></i>';
+    btn.title = on ? 'সাউন্ড নোটিফিকেশন: চালু (বন্ধ করতে ট্যাপ করুন)' : 'সাউন্ড নোটিফিকেশন: বন্ধ (চালু করতে ট্যাপ করুন)';
   }
 
   // ===== অডিও আনলক (ব্রাউজার অটোপ্লে পলিসি হ্যান্ডলিং) =====
@@ -160,6 +194,7 @@
   fileAudio.addEventListener('error', function () { fileAudioAvailable = false; });
 
   function playSound() {
+    if (!isSoundOn()) return; // অ্যাডমিন নিজে অফ করে রাখলে বাজবে না
     try {
       var ctx = getCtx();
       if (ctx && ctx.state === 'suspended') {
@@ -189,6 +224,25 @@
     var outputArray = new Uint8Array(rawData.length);
     for (var i = 0; i < rawData.length; i++) outputArray[i] = rawData.charCodeAt(i);
     return outputArray;
+  }
+
+  function isIOS() {
+    return /iphone|ipad|ipod/i.test(navigator.userAgent);
+  }
+  function isStandalone() {
+    return window.navigator.standalone === true ||
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  }
+
+  function showAddToHomeHint() {
+    if (document.getElementById('adminA2hsHint')) return;
+    var btn = document.createElement('div');
+    btn.id = 'adminA2hsHint';
+    btn.innerHTML = '📲 ফোন লক থাকলেও নোটিফিকেশন পেতে: Safari-র Share বাটন → Add to Home Screen → হোম স্ক্রিনের আইকন থেকে অ্যাপ খুলুন';
+    btn.style.cssText = 'position:fixed;left:12px;right:12px;bottom:84px;z-index:590;' +
+      'background:#1c2028;color:#e2e8f0;border:1px solid rgba(245,158,11,0.4);padding:10px 14px;border-radius:12px;' +
+      'font-weight:600;font-size:11.5px;line-height:1.5;box-shadow:0 8px 24px rgba(0,0,0,0.35);';
+    document.body.appendChild(btn);
   }
 
   function showPushEnableButton() {
@@ -234,17 +288,46 @@
   }
 
   function initPush() {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return;
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+      // iOS Safari-তে সাধারণ ট্যাবে (হোম স্ক্রিন থেকে না খুললে) এই APIগুলো থাকেই না
+      if (isIOS() && !isStandalone()) showAddToHomeHint();
+      return;
+    }
     if (Notification.permission === 'granted') {
       // আগে থেকেই পারমিশন থাকলে চুপচাপ (কোনো UI ছাড়াই) সাবস্ক্রিপশন নিশ্চিত করা
       subscribePush();
     } else if (Notification.permission === 'default') {
-      showPushEnableButton();
+      // ===== পেজ ঢোকার সাথে সাথেই অটোমেটিক পারমিশন চাওয়ার চেষ্টা =====
+      // Android Chrome-এ এটা গেসচার ছাড়াই popup দেখাতে পারে।
+      // iOS/অন্য কিছু ব্রাউজারে গেসচার ছাড়া popup আসে না — তখন এই কল
+      // চুপচাপ কিছু না করেই থেমে যায় (permission 'default'-ই থেকে যায়),
+      // তাই সামান্য পরে চেক করে দরকার হলে ম্যানুয়াল বাটন দেখানো হচ্ছে।
+      subscribePush();
+      setTimeout(function () {
+        if (Notification.permission === 'default') showPushEnableButton();
+      }, 800);
     }
     // permission === 'denied' হলে কিছু করার নেই, ব্রাউজার সেটিংস থেকে অ্যাডমিনকে বদলাতে হবে
   }
 
   document.addEventListener('DOMContentLoaded', initPush);
+
+  document.addEventListener('DOMContentLoaded', function () {
+    updateSoundToggleUI();
+    var toggleBtn = document.getElementById('adminSoundToggle');
+    if (!toggleBtn) return;
+    toggleBtn.addEventListener('click', function () {
+      var turningOn = !isSoundOn();
+      setSoundOn(turningOn);
+      toggleBtn.classList.add('flash');
+      setTimeout(function () { toggleBtn.classList.remove('flash'); }, 400);
+      if (turningOn) {
+        // অন করার সাথে সাথে একটা টেস্ট বীপ — বোঝার জন্য যে সাউন্ড কাজ করছে
+        // এই ক্লিকটাই ব্রাউজারের ইউজার-জেসচার হিসেবে অডিও আনলকও করে দেয়
+        setTimeout(playSound, 50);
+      }
+    });
+  });
 
   var LABELS = { deposit: 'নতুন ডিপোজিট রিকোয়েস্ট', withdraw: 'নতুন উইথড্র রিকোয়েস্ট', chat: 'নতুন সাপোর্ট মেসেজ' };
   var BADGE_IDS = { deposit: 'bnBadgeDeposit', withdraw: 'bnBadgeWithdraw', chat: 'bnBadgeChat' };
