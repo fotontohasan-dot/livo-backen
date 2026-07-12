@@ -142,20 +142,42 @@
         </button>
     </div>
 
-    <form action="/payment/withdraw" method="POST">
+    <form action="/payment/withdraw" method="POST" id="withdrawForm">
       <!-- Withdrawal Form -->
       <div class="space-y-5">
-        <div>
-          <label class="block text-main font-bold mb-2">পেমেন্ট মেথড</label>
-          <select name="method" class="w-full p-4 border-2 border-glass rounded-xl focus:outline-none bg-surface text-main font-bold" required>
-            <option value="bkash">bKash</option>
-            <option value="nagad">Nagad</option>
-            <option value="rocket">Rocket</option>
-            <option value="upay">Upay</option>
-            <option value="bank"><%= t.bank_transfer %></option>
-            <option value="crypto">USDT (TRC20)</option>
-          </select>
-        </div>
+
+        <% if (!cards || cards.length === 0) { %>
+          <div class="bg-surface border border-glass rounded-xl p-4 text-center">
+            <p class="text-muted font-bold mb-3">উত্তোলনের জন্য আগে একটি ই-ওয়ালেট যুক্ত করুন।</p>
+            <a href="/profile/cards" class="inline-block red-theme-bg text-white font-bold px-5 py-2.5 rounded-full text-sm">
+              <i class="fas fa-plus"></i> ই-ওয়ালেট যুক্ত করুন
+            </a>
+          </div>
+        <% } else { %>
+          <div>
+            <label class="block text-main font-bold mb-2">ই-ওয়ালেট নির্বাচন করুন</label>
+            <select id="walletSelect" class="w-full p-4 border-2 border-glass rounded-xl focus:outline-none bg-surface text-main font-bold" required onchange="syncWallet()">
+              <option value="" disabled selected>আপনার সংযুক্ত ওয়ালেট বাছাই করুন</option>
+              <% cards.forEach(c => {
+                   const bn = (c.bank_name || '').toLowerCase();
+                   let methodCode = 'bank';
+                   if (bn.includes('bkash')) methodCode = 'bkash';
+                   else if (bn.includes('nagad')) methodCode = 'nagad';
+                   else if (bn.includes('rocket')) methodCode = 'rocket';
+                   else if (bn.includes('upay')) methodCode = 'upay';
+              %>
+                <option value="<%= c.id %>" data-method="<%= methodCode %>" data-number="<%= c.account_number %>">
+                  <%= c.bank_name %> — <%= c.account_number %>
+                </option>
+              <% }) %>
+            </select>
+            <p class="text-muted text-xs mt-2"><i class="fas fa-lock"></i> শুধুমাত্র আপনার ই-ওয়ালেটের সাথে সংযুক্ত নাম্বারেই উত্তোলন করা যাবে। নতুন নাম্বার লিখতে হলে আগে <a href="/profile/cards" class="red-theme-text font-bold">ই-ওয়ালেট</a> থেকে যুক্ত করুন।</p>
+          </div>
+
+          <!-- এই দুটো hidden ফিল্ড ই সার্ভারে পাঠানো হবে, ইউজার নিজে থেকে টাইপ করতে পারবে না -->
+          <input type="hidden" name="method" id="methodField">
+          <input type="hidden" name="account_number" id="accountNumberField">
+        <% } %>
 
         <div>
           <label class="block text-main font-bold mb-2">পরিমাণ (১০০ ~ ৫০,০০০)</label>
@@ -175,7 +197,7 @@
             </button>
         </div>
 
-        <button type="submit" class="w-full red-theme-bg text-white py-4 rounded-lg font-bold text-lg mt-6 shadow-lg active:scale-95 transition-all">
+        <button type="submit" <%= (!cards || cards.length === 0) ? 'disabled' : '' %> class="w-full red-theme-bg text-white py-4 rounded-lg font-bold text-lg mt-6 shadow-lg active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
             জমা দিন
         </button>
     </form>
@@ -183,6 +205,13 @@
 </div>
 
 <script>
+  function syncWallet() {
+    const sel = document.getElementById('walletSelect');
+    const opt = sel.options[sel.selectedIndex];
+    document.getElementById('methodField').value = opt.dataset.method || '';
+    document.getElementById('accountNumberField').value = opt.dataset.number || '';
+  }
+
   function togglePassword() {
     const pwd = document.getElementById('secPassword');
     const eye = document.getElementById('eyeIcon');
