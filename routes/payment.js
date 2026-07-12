@@ -192,7 +192,15 @@ router.get('/withdraw', requireLogin, async (req, res) => {
       const cardRes = await pool.query('SELECT * FROM bank_cards WHERE user_id=$1', [req.session.user.id]);
       cards = cardRes.rows;
     } catch (e) { cards = []; }
-    res.render('payment/withdraw', { user: req.session.user, coins, cards });
+
+    let withdrawLock = { allowed: true, pending: [] };
+    try {
+      withdrawLock = await canWithdraw(req.session.user.id);
+    } catch (e) {
+      console.error('withdraw lock check error:', e.message);
+    }
+
+    res.render('payment/withdraw', { user: req.session.user, coins, cards, withdrawLock });
   } catch (err) {
     console.error('withdraw GET error:', err.message);
     res.redirect('/');
