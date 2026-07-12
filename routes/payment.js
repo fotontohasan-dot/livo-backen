@@ -213,6 +213,23 @@ router.post('/withdraw', requireLogin, async (req, res) => {
     req.flash('error', 'সব তথ্য সঠিকভাবে দিন');
     return res.redirect('/payment/withdraw');
   }
+
+  // নিরাপত্তা: ইউজার শুধু তার নিজের যুক্ত করা ই-ওয়ালেট নাম্বারেই উইথড্র করতে পারবে —
+  // hidden ফিল্ড ক্লায়েন্ট সাইডে ম্যানিপুলেট করলেও সার্ভার এখানে ম্যাচ যাচাই করবে
+  try {
+    const ownedWallet = await pool.query(
+      `SELECT id FROM bank_cards WHERE user_id = $1 AND account_number = $2 AND LOWER(bank_name) LIKE '%' || LOWER($3) || '%'`,
+      [userId, account_number, method]
+    );
+    if (ownedWallet.rowCount === 0) {
+      req.flash('error', 'শুধুমাত্র আপনার সংযুক্ত ই-ওয়ালেট নাম্বারেই উত্তোলন করা যাবে');
+      return res.redirect('/payment/withdraw');
+    }
+  } catch (e) {
+    console.error('wallet ownership check error:', e.message);
+    req.flash('error', 'সমস্যা হয়েছে, আবার চেষ্টা করুন');
+    return res.redirect('/payment/withdraw');
+  }
   if (amount < 200) {
     req.flash('error', 'সর্বনিম্ন উইথড্র ২০০ টাকা');
     return res.redirect('/payment/withdraw');
