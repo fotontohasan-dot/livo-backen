@@ -11,25 +11,29 @@
   }
   .pub-nav-item {
     flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 4px; padding: 12px 4px 10px; color: rgba(255,255,255,0.85); text-decoration: none;
-    font-size: 11px; font-weight: 700; position: relative; transition: background .15s, color .15s;
+    gap: 2px; padding: 6px 4px 5px; color: rgba(255,255,255,0.85); text-decoration: none;
+    font-size: 10px; font-weight: 700; position: relative; transition: background .15s, color .15s;
   }
-  .pub-nav-item i { font-size: 20px; }
+  .pub-nav-item i { font-size: 16px; }
   .pub-nav-item.active {
-    background: #e35c4c; color: #fff;
+    color: #fff;
+  }
+  .pub-nav-item.active::before {
+    content: ''; position: absolute; left: 14%; right: 14%; top: 3px; bottom: 3px;
+    background: #e35c4c; border-radius: 10px; z-index: -1;
   }
   .pub-nav-item:not(.pub-nav-promo):active { background: rgba(255,255,255,0.08); }
 
-  /* মাঝের "প্রমোশন" আইকন — উঁচু করে সাদা গোলাকার বাটনের মতো */
+  /* মাঝের "প্রমোশন" আইকন — সামান্য উঁচু করে সাদা গোলাকার বাটনের মতো (আগের চেয়ে চিপা) */
   .pub-nav-promo { padding-top: 0; }
   .pub-promo-circle {
-    width: 54px; height: 54px; border-radius: 16px; background: #fff;
+    width: 44px; height: 44px; border-radius: 13px; background: #fff;
     display: flex; align-items: center; justify-content: center;
-    margin-top: -22px; box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+    margin-top: -14px; box-shadow: 0 5px 12px rgba(0,0,0,0.4);
     position: relative;
   }
-  .pub-promo-circle i { color: #c0392b; font-size: 24px; }
-  .pub-nav-promo span { margin-top: 2px; }
+  .pub-promo-circle i { color: #c0392b; font-size: 19px; }
+  .pub-nav-promo span { margin-top: 1px; }
 
   /* ছোট রেড নোটিফিকেশন ডট */
   .pub-nav-dot {
