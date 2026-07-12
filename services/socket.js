@@ -1,23 +1,29 @@
 const { Server } = require("socket.io");
 const { pool } = require('../db');
 const { getBotReply } = require('./chatbot');
+const { sendPushToAdmins } = require('./push');
 
 let io;
 
 // ===== অ্যাডমিন প্যানেলে রিয়েল-টাইম নোটিফিকেশন (ডিপোজিট/উইথড্র/চ্যাট) =====
 // type: 'deposit' | 'withdraw' | 'chat'
+// Socket.io দিয়ে পেজ খোলা থাকলে সাথে সাথে আপডেট হয়, আর Web Push দিয়ে
+// ফোন লক থাকলে বা অ্যাডমিন অন্য অ্যাপে থাকলেও সিস্টেম নোটিফিকেশন যায়।
 const emitAdminAlert = (type, data = {}) => {
-  if (!io) return;
-  try {
-    io.to('admins').emit('admin_alert', {
-      type,
-      title: data.title || '',
-      message: data.message || '',
-      createdAt: new Date()
-    });
-  } catch (err) {
-    console.error('emitAdminAlert error:', err.message);
+  if (io) {
+    try {
+      io.to('admins').emit('admin_alert', {
+        type,
+        title: data.title || '',
+        message: data.message || '',
+        createdAt: new Date()
+      });
+    } catch (err) {
+      console.error('emitAdminAlert error:', err.message);
+    }
   }
+  // পেজ বন্ধ/ব্যাকগ্রাউন্ডে থাকলেও পৌঁছানোর জন্য — এটা fire-and-forget, ব্লক করে না
+  sendPushToAdmins(type, data.title, data.message).catch(() => {});
 };
 
 const initSocket = (server, sessionMiddleware) => {
