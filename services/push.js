@@ -7,14 +7,33 @@
 const webpush = require('web-push');
 const { pool } = require('../db');
 
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@example.com';
+const VAPID_PUBLIC_KEY = (process.env.VAPID_PUBLIC_KEY || '').trim();
+const VAPID_PRIVATE_KEY = (process.env.VAPID_PRIVATE_KEY || '').trim();
+const VAPID_SUBJECT = (process.env.VAPID_SUBJECT || 'mailto:admin@example.com').trim();
+
+// URL-safe base64 (no '=' padding) — ভুল ফরম্যাটের key ঢুকে গেলে যাতে পুরো অ্যাপ ক্র্যাশ না করে,
+// তাই web-push-কে দেওয়ার আগেই নিজে যাচাই করে নেওয়া হচ্ছে
+function isValidUrlSafeBase64(str, expectedBytes) {
+  if (!str || /[+/=]/.test(str) || !/^[A-Za-z0-9\-_]+$/.test(str)) return false;
+  try {
+    const b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+    const buf = Buffer.from(b64, 'base64');
+    return buf.length === expectedBytes;
+  } catch (e) {
+    return false;
+  }
+}
 
 let pushConfigured = false;
-if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
-  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
-  pushConfigured = true;
+if (isValidUrlSafeBase64(VAPID_PUBLIC_KEY, 65) && isValidUrlSafeBase64(VAPID_PRIVATE_KEY, 32)) {
+  try {
+    webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+    pushConfigured = true;
+  } catch (err) {
+    console.error('⚠️ VAPID key সেট করতে গিয়ে সমস্যা হয়েছে — Web Push বন্ধ থাকবে:', err.message);
+  }
+} else if (VAPID_PUBLIC_KEY || VAPID_PRIVATE_KEY) {
+  console.warn('⚠️ VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY ফরম্যাট সঠিক নয় (Render Environment Variables চেক করুন) — Web Push বন্ধ থাকবে।');
 } else {
   console.warn('⚠️ VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY সেট নেই — Web Push বন্ধ থাকবে।');
 }
