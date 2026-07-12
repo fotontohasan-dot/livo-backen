@@ -1,24 +1,96 @@
 <!-- views/partials/bottom-nav.ejs -->
-<!-- সাধারণ ইউজারদের জন্য ফিক্সড বটম নেভিগেশন বার -->
-<nav class="bottom-nav">
-  <a href="/" class="nav-link <%= locals.currentPage === 'home' ? 'active' : '' %>">
-    <i class="fas fa-home"></i>
-    <span><%= t.menu_home %></span>
+<!-- সাধারণ ইউজারদের জন্য ফিক্সড বটম নেভিগেশন বার (রেড থিম) -->
+<style>
+  .pub-bottom-nav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 900;
+    max-width: 480px; margin: 0 auto;
+    display: flex; align-items: stretch;
+    background: linear-gradient(180deg, #8c1b12, #6e150e);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-shadow: 0 -4px 18px rgba(0,0,0,0.4);
+  }
+  .pub-nav-item {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 4px; padding: 12px 4px 10px; color: rgba(255,255,255,0.85); text-decoration: none;
+    font-size: 11px; font-weight: 700; position: relative; transition: background .15s, color .15s;
+  }
+  .pub-nav-item i { font-size: 20px; }
+  .pub-nav-item.active {
+    background: #e35c4c; color: #fff;
+  }
+  .pub-nav-item:not(.pub-nav-promo):active { background: rgba(255,255,255,0.08); }
+
+  /* মাঝের "প্রমোশন" আইকন — উঁচু করে সাদা গোলাকার বাটনের মতো */
+  .pub-nav-promo { padding-top: 0; }
+  .pub-promo-circle {
+    width: 54px; height: 54px; border-radius: 16px; background: #fff;
+    display: flex; align-items: center; justify-content: center;
+    margin-top: -22px; box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+    position: relative;
+  }
+  .pub-promo-circle i { color: #c0392b; font-size: 24px; }
+  .pub-nav-promo span { margin-top: 2px; }
+
+  /* ছোট রেড নোটিফিকেশন ডট */
+  .pub-nav-dot {
+    position: absolute; top: -2px; right: -2px; width: 12px; height: 12px;
+    background: #ef4444; border-radius: 50%; border: 2px solid #fff;
+  }
+
+  /* প্রোফাইল ট্যাবের আনরিড কাউন্ট ব্যাজ */
+  .pub-nav-badge {
+    position: absolute; top: 4px; right: 18%; min-width: 17px; height: 17px; padding: 0 4px;
+    background: #ef4444; color: #fff; border-radius: 999px; font-size: 10px; font-weight: 800;
+    display: none; align-items: center; justify-content: center; line-height: 1;
+    border: 2px solid #6e150e;
+  }
+  .pub-nav-badge.show { display: flex; }
+</style>
+
+<nav class="pub-bottom-nav" id="pubBottomNav">
+  <a href="/" class="pub-nav-item <%= locals.currentPage === 'home' ? 'active' : '' %>">
+    <i class="fas fa-house"></i>
+    <span>হোম</span>
   </a>
-  <a href="/matches" class="nav-link <%= locals.currentPage === 'matches' ? 'active' : '' %>">
-    <i class="fas fa-futbol"></i>
-    <span><%= t.menu_sports %></span>
+  <a href="/extra/invitation" class="pub-nav-item <%= locals.currentPage === 'invitation' ? 'active' : '' %>">
+    <i class="fas fa-handshake"></i>
+    <span>আমন্ত্রণ</span>
   </a>
-  <a href="/payment/deposit" class="nav-link <%= locals.currentPage === 'payment' ? 'active' : '' %>">
-    <i class="fas fa-wallet"></i>
-    <span><%= t.menu_deposit %></span>
+  <a href="/promotions" class="pub-nav-item pub-nav-promo <%= locals.currentPage === 'promotion' ? 'active' : '' %>">
+    <span class="pub-promo-circle">
+      <i class="fas fa-gift"></i>
+      <span class="pub-nav-dot"></span>
+    </span>
+    <span>প্রমোশন</span>
   </a>
-  <a href="/leaderboard" class="nav-link <%= locals.currentPage === 'leaderboard' ? 'active' : '' %>">
-    <i class="fas fa-medal"></i>
-    <span><%= t.menu_leaderboard %></span>
+  <a href="/chat" class="pub-nav-item <%= locals.currentPage === 'chat' ? 'active' : '' %>">
+    <i class="fas fa-headset"></i>
+    <span>সেবা</span>
   </a>
-  <a href="/profile" class="nav-link <%= locals.currentPage === 'profile' ? 'active' : '' %>">
-    <i class="fas fa-user"></i>
-    <span><%= t.menu_profile %></span>
+  <a href="/profile" class="pub-nav-item <%= locals.currentPage === 'profile' ? 'active' : '' %>" style="position:relative;">
+    <i class="fas fa-circle-user"></i>
+    <span>প্রোফাইল</span>
+    <span class="pub-nav-badge" id="pubNavProfileBadge">0</span>
   </a>
 </nav>
+
+<% if (locals.user) { %>
+<script>
+(function () {
+  function loadUnread() {
+    fetch('/notifications/count')
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var el = document.getElementById('pubNavProfileBadge');
+        if (!el) return;
+        var n = Number(d && d.count) || 0;
+        if (n > 0) { el.textContent = n > 99 ? '99+' : n; el.classList.add('show'); }
+        else { el.classList.remove('show'); }
+      })
+      .catch(function () {});
+  }
+  loadUnread();
+  setInterval(loadUnread, 30000);
+})();
+</script>
+<% } %>
