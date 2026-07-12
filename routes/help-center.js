@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { filterMiddleware } = require('../middleware/filterMiddleware');
 
 // হেল্প সেন্টার পেজ রেন্ডার করবে
 router.get('/', (req, res) => {
@@ -10,7 +11,9 @@ router.get('/', (req, res) => {
 });
 
 // চ্যাটবট এপিআই এন্ডপয়েন্ট
-router.post('/api/chat', (req, res) => {
+// filterMiddleware() → req.body.message-এ গালাগালি/অশ্লীল/১৮+ কনটেন্ট থাকলে
+// এখানেই 400 রিটার্ন করে দেয়, নিচের কোড আর চলে না।
+router.post('/api/chat', filterMiddleware(), (req, res) => {
     const userMessage = req.body.message;
     
     // ব্যাটিং সম্পর্কিত রেসপন্স সিস্টেম

@@ -2,6 +2,7 @@ const { Server } = require("socket.io");
 const { pool } = require('../db');
 const { getBotReply } = require('./chatbot');
 const { sendPushToAdmins } = require('./push');
+const { checkContent } = require('../utils/contentFilter');
 
 let io;
 
@@ -89,6 +90,19 @@ const initSocket = (server, sessionMiddleware) => {
         const fileType = (data && data.fileType) || null;
 
         if (!message && !fileUrl) return;
+
+        // ==== কনটেন্ট ফিল্টার — শুধু ইউজারের মেসেজ চেক হবে, অ্যাডমিনের নিজের রিপ্লাই না ====
+        // (অ্যাডমিন প্যানেলে যাতে গালাগালি/অশ্লীল/১৮+ কনটেন্ট কখনো না ঢোকে)
+        if (!isAdmin && message) {
+          const check = checkContent(message);
+          if (check.flagged) {
+            socket.emit("message_blocked", {
+              reason: 'inappropriate_content',
+              text: 'আপনার মেসেজে অনুপযুক্ত/অশ্লীল কনটেন্ট শনাক্ত হয়েছে। এই মেসেজটি পাঠানো হয়নি — অনুগ্রহ করে সংশোধন করে আবার পাঠান।'
+            });
+            return; // না সেভ হবে, না অ্যাডমিনের কাছে যাবে
+          }
+        }
 
         const createdAt = new Date();
 

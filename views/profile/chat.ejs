@@ -35,6 +35,7 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="/js/content-filter.js"></script>
 <script>
   const socket = io();
   const userId = <%= user.id %>;
@@ -174,6 +175,12 @@
     const text = messageInput.value.trim();
     if (!text && !selectedFile) return;
 
+    // ==== রিয়েল-টাইম ফ্রন্টএন্ড ফিল্টার — পাঠানোর আগে শেষবার চেক ====
+    if (text && window.contentFilterIsBad(text)) {
+      alert('⚠️ আপনার লেখায় অনুপযুক্ত/অশ্লীল কনটেন্ট আছে। অনুগ্রহ করে ঠিক করে আবার পাঠান।');
+      return;
+    }
+
     let fileUrl = null;
     let fileType = null;
 
@@ -210,6 +217,14 @@
   sendButton.addEventListener('click', sendMessage);
   messageInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') sendMessage();
+  });
+
+  // ==== টাইপ করার সময় রিয়েল-টাইম ভিজুয়াল ওয়ার্নিং (লাল বর্ডার + মেসেজ) ====
+  attachContentFilter('#message-input', { submitButton: sendButton });
+
+  // ==== ব্যাকএন্ড (socket.js) থেকে ব্লক হলে ইউজারকে জানানো ====
+  socket.on('message_blocked', (data) => {
+    alert('⚠️ ' + (data && data.text ? data.text : 'মেসেজটি পাঠানো যায়নি।'));
   });
 
   socket.on('new_message', (data) => {

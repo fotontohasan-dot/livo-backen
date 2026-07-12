@@ -18,6 +18,7 @@ const { getWeeklyStatus, claimWeekly, getMonthlyStatus, claimMonthly } = require
 const { getShareStatus, claimShare } = require('../services/social');
 const { getLeaderboard, getPastContests } = require('../services/contest');
 const { getRewardStatus, claimRedPacket, claimGoldenEgg } = require('../services/redpacket');
+const { checkContent } = require('../utils/contentFilter');
 
 
 router.get('/', isAuth, async (req, res) => {
@@ -592,6 +593,14 @@ router.get('/feedback', isAuth, (req, res) => {
 router.post('/feedback', isAuth, async (req, res) => {
   try {
     const { message } = req.body;
+
+    // ==== কনটেন্ট ফিল্টার — গালাগালি/অশ্লীল/১৮+ কনটেন্ট ব্লক ====
+    const check = checkContent(message);
+    if (check.flagged) {
+      req.flash('error', '❌ আপনার লেখায় অনুপযুক্ত/অশ্লীল কনটেন্ট শনাক্ত হয়েছে। অনুগ্রহ করে সংশোধন করে আবার চেষ্টা করুন।');
+      return res.redirect('/profile/feedback');
+    }
+
     await pool.query(
       'INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, 0, $2, $3)',
       [req.session.user.id, 'feedback', message]

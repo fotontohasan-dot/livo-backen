@@ -260,6 +260,7 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="/js/content-filter.js"></script>
 <script>
     const socket = io();
     const adminId = <%= user.id %>;
@@ -568,6 +569,9 @@
     document.getElementById('message-input').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') sendMessage();
     });
+
+    // ==== রিয়েল-টাইম কনটেন্ট ওয়ার্নিং (টাইপ করার সময় লাল বর্ডার + বাটন ডিসেবল) ====
+    attachContentFilter('#message-input', { submitButton: document.getElementById('send-button') });
 
     // Quick actions
     function viewUserProfile() {
