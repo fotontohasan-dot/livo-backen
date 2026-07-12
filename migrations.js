@@ -636,6 +636,21 @@ async function runMigrations() {
       );
     `);
 
+    // ==================== ওয়েব পুশ সাবস্ক্রিপশন (ফোন লক/ব্যাকগ্রাউন্ডেও নোটিফিকেশন) ====================
+    // অ্যাডমিন ব্রাউজার থেকে যে push subscription তৈরি হয় সেটা এখানে সেভ থাকে।
+    // ডিপোজিট/উইথড্র/চ্যাট আসলে এই সাবস্ক্রিপশনগুলোতে push পাঠানো হয়।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS push_subscriptions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        endpoint TEXT NOT NULL UNIQUE,
+        p256dh TEXT NOT NULL,
+        auth TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_push_subs_user ON push_subscriptions(user_id);`);
+
     console.log("✅ All tables migration completed successfully");
   } catch (err) {
     console.error("❌ Migration error:", err.message);
