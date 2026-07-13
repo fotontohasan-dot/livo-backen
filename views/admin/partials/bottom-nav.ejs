@@ -234,30 +234,46 @@
       (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
   }
 
-  function showAddToHomeHint() {
-    if (document.getElementById('adminA2hsHint')) return;
-    var btn = document.createElement('div');
-    btn.id = 'adminA2hsHint';
-    btn.innerHTML = '📲 ফোন লক থাকলেও নোটিফিকেশন পেতে: Safari-র Share বাটন → Add to Home Screen → হোম স্ক্রিনের আইকন থেকে অ্যাপ খুলুন';
-    btn.style.cssText = 'position:fixed;left:12px;right:12px;bottom:84px;z-index:590;' +
-      'background:#1c2028;color:#e2e8f0;border:1px solid rgba(245,158,11,0.4);padding:10px 14px;border-radius:12px;' +
-      'font-weight:600;font-size:11.5px;line-height:1.5;box-shadow:0 8px 24px rgba(0,0,0,0.35);';
-    document.body.appendChild(btn);
+  // ===== একটা মাত্র ব্যানার — iPhone ও Android দুটোতেই একইভাবে কাজ করে =====
+  // যতক্ষণ নোটিফিকেশন সেটআপ শেষ না হয় ততক্ষণ স্ক্রিনে থাকবে,
+  // সেটআপ সম্পূর্ণ হলে (permission granted + সার্ভারে সাবস্ক্রিপশন সেভ) নিজে থেকেই সরে যাবে।
+  function getBanner() {
+    var el = document.getElementById('adminPushSetupBanner');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'adminPushSetupBanner';
+      el.style.cssText = 'position:fixed;left:12px;right:12px;bottom:84px;z-index:590;' +
+        'background:#1c2028;color:#e2e8f0;border:1px solid rgba(245,158,11,0.4);padding:10px 14px;border-radius:12px;' +
+        'font-weight:600;font-size:11.5px;line-height:1.5;box-shadow:0 8px 24px rgba(0,0,0,0.35);';
+      document.body.appendChild(el);
+    }
+    return el;
   }
 
-  function showPushEnableButton() {
-    if (document.getElementById('adminPushEnableBtn')) return;
-    var btn = document.createElement('button');
-    btn.id = 'adminPushEnableBtn';
-    btn.innerHTML = '🔔 লক থাকলেও নোটিফিকেশন চালু করুন';
-    btn.style.cssText = 'position:fixed;left:12px;right:12px;bottom:84px;z-index:590;' +
-      'background:#f59e0b;color:#111;border:none;padding:10px 14px;border-radius:12px;' +
-      'font-weight:700;font-size:12px;box-shadow:0 8px 24px rgba(0,0,0,0.35);cursor:pointer;';
-    btn.onclick = function () {
-      btn.remove();
-      subscribePush();
-    };
-    document.body.appendChild(btn);
+  function hideBanner() {
+    var el = document.getElementById('adminPushSetupBanner');
+    if (el) el.remove();
+  }
+
+  function showIOSAddToHomeBanner() {
+    var el = getBanner();
+    el.style.cursor = 'default';
+    el.onclick = null;
+    el.innerHTML = '📲 ফোন লক থাকলেও নোটিফিকেশন পেতে: Safari-র Share বাটন → Add to Home Screen → হোম স্ক্রিনের আইকন থেকে অ্যাপ খুলুন';
+  }
+
+  function showEnableBanner() {
+    var el = getBanner();
+    el.style.cursor = 'pointer';
+    el.innerHTML = '🔔 লক থাকলেও নোটিফিকেশন পেতে এখানে ট্যাপ করুন এবং "Allow" দিন';
+    el.onclick = function () { subscribePush(); };
+  }
+
+  function showDeniedBanner() {
+    var el = getBanner();
+    el.style.cursor = 'default';
+    el.onclick = null;
+    el.innerHTML = '🔕 নোটিফিকেশন বন্ধ আছে — ব্রাউজারের সেটিংস থেকে এই সাইটের Notification পারমিশন চালু করুন';
   }
 
   function subscribePush() {
@@ -265,7 +281,10 @@
 
     navigator.serviceWorker.register('/service-worker.js').then(function (reg) {
       return Notification.requestPermission().then(function (perm) {
-        if (perm !== 'granted') return;
+        if (perm !== 'granted') {
+          showDeniedBanner();
+          return;
+        }
         return fetch('/admin/push/public-key')
           .then(function (r) { return r.json(); })
           .then(function (d) {
@@ -282,6 +301,10 @@
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ subscription: sub.toJSON ? sub.toJSON() : sub })
             });
+          })
+          .then(function () {
+            // ===== সেটআপ সম্পন্ন — ব্যানার অটোমেটিক স্ক্রিন থেকে সরে যাবে =====
+            hideBanner();
           });
       });
     }).catch(function (err) { console.warn('Push subscribe failed:', err); });
@@ -290,24 +313,20 @@
   function initPush() {
     if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
       // iOS Safari-তে সাধারণ ট্যাবে (হোম স্ক্রিন থেকে না খুললে) এই APIগুলো থাকেই না
-      if (isIOS() && !isStandalone()) showAddToHomeHint();
+      if (isIOS() && !isStandalone()) showIOSAddToHomeBanner();
       return;
     }
     if (Notification.permission === 'granted') {
-      // আগে থেকেই পারমিশন থাকলে চুপচাপ (কোনো UI ছাড়াই) সাবস্ক্রিপশন নিশ্চিত করা
+      // আগে থেকেই পারমিশন থাকলে চুপচাপ (ব্যানার না দেখিয়েই) সাবস্ক্রিপশন নিশ্চিত করা
       subscribePush();
-    } else if (Notification.permission === 'default') {
-      // ===== পেজ ঢোকার সাথে সাথেই অটোমেটিক পারমিশন চাওয়ার চেষ্টা =====
-      // Android Chrome-এ এটা গেসচার ছাড়াই popup দেখাতে পারে।
-      // iOS/অন্য কিছু ব্রাউজারে গেসচার ছাড়া popup আসে না — তখন এই কল
-      // চুপচাপ কিছু না করেই থেমে যায় (permission 'default'-ই থেকে যায়),
-      // তাই সামান্য পরে চেক করে দরকার হলে ম্যানুয়াল বাটন দেখানো হচ্ছে।
+    } else if (Notification.permission === 'denied') {
+      showDeniedBanner();
+    } else {
+      // permission === 'default' — ব্যানার দেখানো + একইসাথে অটো পারমিশন চাওয়ার চেষ্টা
+      // (Android Chrome-এ গেসচার ছাড়াই popup আসতে পারে; না এলেও ব্যানারে ট্যাপ করে করা যাবে)
+      showEnableBanner();
       subscribePush();
-      setTimeout(function () {
-        if (Notification.permission === 'default') showPushEnableButton();
-      }, 800);
     }
-    // permission === 'denied' হলে কিছু করার নেই, ব্রাউজার সেটিংস থেকে অ্যাডমিনকে বদলাতে হবে
   }
 
   document.addEventListener('DOMContentLoaded', initPush);
