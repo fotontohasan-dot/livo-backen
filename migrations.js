@@ -547,6 +547,12 @@ async function runMigrations() {
       ON payment_requests (transaction_id)
       WHERE type = 'deposit' AND transaction_id IS NOT NULL AND status <> 'cancelled';
     `);
+    // কেস-ইনসেনসিটিভ ভার্সন: "ABC123" আর "abc123" কে একই ট্রানজেকশন আইডি হিসেবে ধরা (স্পেস ট্রিম করেও)
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_pr_deposit_trx_unique_ci
+      ON payment_requests (LOWER(TRIM(transaction_id)))
+      WHERE type = 'deposit' AND transaction_id IS NOT NULL AND status <> 'cancelled';
+    `);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS site_settings (

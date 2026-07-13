@@ -130,7 +130,8 @@ router.get('/deposit', requireLogin, (req, res) => {
 });
 
 router.post('/deposit', requireLogin, async (req, res) => {
-  const { method, transaction_id, account_number } = req.body;
+  const { method, account_number } = req.body;
+  const transaction_id = (req.body.transaction_id || '').trim();
   const wantBonus = req.body.want_bonus === 'yes';
   const amount = parseAmount(req.body.amount);
   const userId = req.session.user.id;
@@ -146,6 +147,24 @@ router.post('/deposit', requireLogin, async (req, res) => {
   if (amount < 100) {
     req.flash('error', 'সর্বনিম্ন ডিপোজিট ১০০ টাকা');
     return res.redirect('/payment/deposit');
+  }
+
+  // একই ট্রানজেকশন আইডি আগে অন্য কোনো (বাতিল ছাড়া) ডিপোজিটে ব্যবহৃত হয়েছে কিনা তা আগেই চেক করা
+  // (কেস-ইনসেনসিটিভ, যাতে "ABC123" আর "abc123" আলাদা করে বাইপাস করা না যায়)
+  try {
+    const dup = await pool.query(
+      `SELECT id FROM payment_requests
+       WHERE type = 'deposit' AND status <> 'cancelled'
+         AND LOWER(TRIM(transaction_id)) = LOWER($1)
+       LIMIT 1`,
+      [transaction_id]
+    );
+    if (dup.rowCount) {
+      req.flash('error', 'এই ট্রানজেকশন আইডি আগে থেকেই ব্যবহার হয়েছে। নতুন ট্রানজেকশন আইডি দিন।');
+      return res.redirect('/payment/deposit');
+    }
+  } catch (e) {
+    console.error('deposit duplicate trx check error:', e.message);
   }
 
   try {
@@ -230,16 +249,35 @@ router.get('/deposit/:id/edit', requireLogin, async (req, res) => {
 // পেন্ডিং ডিপোজিট রিকোয়েস্ট এডিট সাবমিট
 router.post('/deposit/:id/edit', requireLogin, async (req, res) => {
   const { id } = req.params;
-  const { transaction_id, account_number } = req.body;
+  const account_number = (req.body.account_number || '').trim();
+  const transaction_id = (req.body.transaction_id || '').trim();
   if (!transaction_id || !account_number) {
     req.flash('error', 'সব তথ্য সঠিকভাবে দিন');
     return res.redirect(`/payment/deposit/${id}/edit`);
   }
+
+  try {
+    const dup = await pool.query(
+      `SELECT id FROM payment_requests
+       WHERE type = 'deposit' AND status <> 'cancelled'
+         AND LOWER(TRIM(transaction_id)) = LOWER($1)
+         AND id <> $2
+       LIMIT 1`,
+      [transaction_id, id]
+    );
+    if (dup.rowCount) {
+      req.flash('error', 'এই ট্রানজেকশন আইডি আগে থেকেই ব্যবহার হয়েছে। নতুন ট্রানজেকশন আইডি দিন।');
+      return res.redirect(`/payment/deposit/${id}/edit`);
+    }
+  } catch (e) {
+    console.error('deposit edit duplicate trx check error:', e.message);
+  }
+
   try {
     const result = await pool.query(
       `UPDATE payment_requests SET transaction_id=$1, account_number=$2, updated_at=NOW()
        WHERE id=$3 AND user_id=$4 AND type='deposit' AND status='pending' RETURNING id`,
-      [transaction_id.trim(), account_number.trim(), id, req.session.user.id]
+      [transaction_id, account_number, id, req.session.user.id]
     );
     if (!result.rowCount) {
       req.flash('error', 'এই রিকোয়েস্ট এডিট করা যাচ্ছে না');
