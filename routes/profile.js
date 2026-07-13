@@ -111,6 +111,28 @@ router.post('/update', isAuth, async (req, res) => {
   res.redirect('/profile');
 });
 
+const ALLOWED_AVATAR_IDS = [12, 33, 5, 47, 8, 25, 15, 44, 68, 32, 60, 51, 20, 49, 65, 57];
+
+router.post('/update-avatar', isAuth, async (req, res) => {
+  try {
+    const { avatar } = req.body || {};
+    const match = typeof avatar === 'string' && avatar.match(/^https:\/\/i\.pravatar\.cc\/300\?img=(\d+)$/);
+    const imgId = match ? parseInt(match[1], 10) : null;
+
+    if (!imgId || !ALLOWED_AVATAR_IDS.includes(imgId)) {
+      return res.status(400).json({ success: false, error: 'অবৈধ ছবি নির্বাচন' });
+    }
+
+    await pool.query(`UPDATE users SET avatar=$1 WHERE id=$2`, [avatar, req.session.user.id]);
+    req.session.user.avatar = avatar;
+
+    res.json({ success: true, avatar });
+  } catch (err) {
+    console.error('update-avatar error:', err.message);
+    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি' });
+  }
+});
+
 router.post('/update-personal', isAuth, async (req, res) => {
   try {
     const { full_name, phone } = req.body;
