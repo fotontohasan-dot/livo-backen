@@ -1120,6 +1120,55 @@ router.post('/markets/:marketId/settle', async (req, res) => {
   } finally { client.release(); }
 });
 
+// ==================== BETS — লাইভ আপডেট (পেজে প্রতি ৪ সেকেন্ডে পোল করে, নিচের রুটটাই সেই ডেটা দেয়) ====================
+router.get('/api/bets-live', async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = 30;
+    const offset = (page - 1) * limit;
+    const status = req.query.status || '';
+    const conditions = [];
+    const params = [];
+    if (['pending', 'won', 'lost'].includes(status)) {
+      params.push(status);
+      conditions.push(`b.status = $${params.length}`);
+    }
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const countRes = await pool.query(`SELECT COUNT(*) FROM bets b ${where}`, params);
+    const total = parseInt(countRes.rows[0].count);
+
+    params.push(limit, offset);
+    const bets = await pool.query(`
+      SELECT b.*, u.username, m.team_a, m.team_b, m.title
+      FROM bets b JOIN users u ON b.user_id = u.id LEFT JOIN matches m ON b.match_id = m.id
+      ${where} ORDER BY b.created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}
+    `, params);
+
+    const pendingCountRes = await pool.query(`SELECT COUNT(*) FROM bets WHERE status='pending'`);
+    const todayStakeRes = await pool.query(`SELECT COALESCE(SUM(stake),0) AS total FROM bets WHERE created_at::date = CURRENT_DATE`);
+    const todayGgrRes = await pool.query(`
+      SELECT COALESCE(SUM(stake),0) AS staked,
+             COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS paidout
+      FROM bets WHERE created_at::date = CURRENT_DATE AND status IN ('won','lost')
+    `);
+
+    res.json({
+      success: true,
+      bets: bets.rows,
+      total,
+      page,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      pendingSettlement: parseInt(pendingCountRes.rows[0].count),
+      todayStake: Number(todayStakeRes.rows[0].total),
+      todayGgr: Number(todayGgrRes.rows[0].staked) - Number(todayGgrRes.rows[0].paidout)
+    });
+  } catch (err) {
+    console.error('bets-live error:', err.message);
+    res.status(500).json({ success: false, error: 'সমস্যা হয়েছে' });
+  }
+});
+
 // ==================== BETS ====================
 router.get('/bets', async (req, res) => {
   try {
