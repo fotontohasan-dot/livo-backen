@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title><%= locals.title || 'Livo - সরা স্পোর্টস প্রেডিকশন প্ল্যাটফর্ম' %></title>
+  <title><%= locals.title || 'Livo - সেরা স্পোর্টস প্রেডিকশন প্ল্যাটফর্ম' %></title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,8 +11,14 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/css/style.css?v=<%= Date.now() %>">
 
-  <meta name="description" content="LIVO - বাংলাদেশের সরা স্পোর্টস প্রেডিকশন প্ল্যাটফর্ম। মচ প্রেডিকশন করুন, কয়েন জিতুন।">
+  <meta name="description" content="LIVO - বাংলাদেশের সেরা স্পোর্টস প্রেডিকশন প্ল্যাটফর্ম। ম্যাচ প্রেডিকশন করুন, কয়েন জিতুন।">
   <meta name="theme-color" content="#006519">
+
+  <!-- ফেভিকন -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png">
+  <link rel="shortcut icon" href="/favicon.ico">
 
   <!-- PWA -->
   <link rel="manifest" href="/manifest.json">
@@ -21,5 +27,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Livo">
   <script src="/pwa.js" defer></script>
+  <script src="/js/age-gate.js" defer></script>
 </head>
 <body>
+

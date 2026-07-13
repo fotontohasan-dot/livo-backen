@@ -63,6 +63,26 @@ function adminRow(a, currentAdminId) {
     </form>
 
     <div class="bg-white rounded-3xl border border-slate-100 p-6">
+        <h3 class="font-semibold text-slate-800 mb-1 flex items-center gap-2"><i class="fas fa-shield-halved text-blue-600"></i> টু-ফ্যাক্টর অথেন্টিকেশন (2FA)</h3>
+        <p class="text-sm text-slate-500 mb-4">আপনার নিজের অ্যাডমিন অ্যাকাউন্টে লগইনের সময় Authenticator অ্যাপের এক্সট্রা কোড যাচাই চালু/বন্ধ করুন।</p>
+        ${tfaError ? '<div class="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-2.5 rounded-2xl text-sm">❌ পাসওয়ার্ড ভুল, 2FA বন্ধ করা যায়নি।</div>' : ''}
+        ${twoFactorEnabled ? `
+        <div class="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-2xl px-5 py-4">
+            <span class="text-sm font-medium text-emerald-700"><i class="fas fa-check-circle"></i> 2FA চালু আছে</span>
+        </div>
+        <form method="POST" action="/admin/settings/2fa/disable" class="flex gap-2 mt-3" onsubmit="return confirm('2FA বন্ধ করতে চান?')">
+            <input type="password" name="password" placeholder="বর্তমান পাসওয়ার্ড দিন" required class="flex-1 border px-4 py-2.5 rounded-2xl text-sm">
+            <button type="submit" class="px-5 bg-red-100 text-red-600 rounded-2xl text-sm font-semibold">বন্ধ করুন</button>
+        </form>
+        ` : `
+        <div class="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4">
+            <span class="text-sm font-medium text-amber-700"><i class="fas fa-triangle-exclamation"></i> 2FA বন্ধ আছে — চালু করার পরামর্শ দেওয়া হচ্ছে</span>
+            <a href="/admin/settings/2fa/setup" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold whitespace-nowrap">চালু করুন</a>
+        </div>
+        `}
+    </div>
+
+    <div class="bg-white rounded-3xl border border-slate-100 p-6">
         <h3 class="font-semibold text-slate-800 mb-4">অ্যাডমিন তালিকা</h3>
         <form method="POST" action="/admin/settings/admins/promote" class="flex gap-2 mb-4">
             <input type="text" name="username" placeholder="ইউজারনেম দিয়ে নতুন অ্যাডমিন যোগ করুন" required class="flex-1 border px-4 py-2.5 rounded-2xl text-sm">

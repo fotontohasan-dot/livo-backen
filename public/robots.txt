@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+Allow: /promotions
+Allow: /login
+Allow: /register
+Allow: /terms
+Allow: /privacy
+Allow: /help-center
+
+# ব্যক্তিগত/অ্যাডমিন/API রুট ইনডেক্স করা থেকে বিরত রাখা হলো
+Disallow: /admin
+Disallow: /profile
+Disallow: /api/
+Disallow: /coins
+Disallow: /notifications
+Disallow: /payment
+Disallow: /leaderboard
+
+Sitemap: https://livo-backen.onrender.com/sitemap.xml

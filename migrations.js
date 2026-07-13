@@ -42,6 +42,10 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_referral ON users(referral_code);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_referred_by ON users(referred_by_id);`);
 
+    // ==================== অ্যাডমিন টু-ফ্যাক্টর অথেন্টিকেশন (2FA) ====================
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret TEXT;`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN DEFAULT false;`);
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS matches (
         id SERIAL PRIMARY KEY,

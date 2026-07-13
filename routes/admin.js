@@ -11,6 +11,7 @@ const { creditApprovedDeposit } = require('./payment');
 const bcrypt = require('bcryptjs');
 const { getDemoStats } = require('../services/socket');
 const { saveSubscription, removeSubscription, VAPID_PUBLIC_KEY } = require('../services/push');
+const { generateSecret, generateQrCodeDataUrl, verifyToken } = require('../services/totp');
 
 // ==================== ADMIN ACTIVITY LOG HELPER ====================
 async function logAdminAction(adminId, adminUsername, actionType, details, ip = null) {
@@ -53,6 +54,12 @@ router.post('/login', async (req, res) => {
       return res.render('admin/login', { error: 'ইউজারনেম বা পাসওয়ার্ড ভুল' });
     }
 
+    // ==== 2FA চালু থাকলে সরাসরি লগইন না করিয়ে ভেরিফিকেশন ধাপে পাঠানো হয় ====
+    if (admin.totp_enabled) {
+      req.session.pendingAdmin2FA = admin.id;
+      return res.redirect('/admin/2fa-verify');
+    }
+
     req.session.user = {
       id: admin.id,
       username: admin.username,
@@ -63,6 +70,34 @@ router.post('/login', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.render('admin/login', { error: 'সার্ভার এরর হয়েছে' });
+  }
+});
+
+// ==================== 2FA ভেরিফিকেশন (লগইনের সময়) ====================
+router.get('/2fa-verify', (req, res) => {
+  if (!req.session.pendingAdmin2FA) return res.redirect('/admin/login');
+  res.render('admin/2fa-verify', { error: null });
+});
+
+router.post('/2fa-verify', async (req, res) => {
+  const adminId = req.session.pendingAdmin2FA;
+  if (!adminId) return res.redirect('/admin/login');
+
+  try {
+    const { token } = req.body;
+    const result = await pool.query('SELECT * FROM users WHERE id = $1 AND role = $2', [adminId, 'admin']);
+    const admin = result.rows[0];
+
+    if (!admin || !verifyToken(token, admin.totp_secret)) {
+      return res.render('admin/2fa-verify', { error: 'কোডটি ভুল অথবা মেয়াদ শেষ হয়ে গেছে। আবার চেষ্টা করুন।' });
+    }
+
+    delete req.session.pendingAdmin2FA;
+    req.session.user = { id: admin.id, username: admin.username, role: admin.role };
+    res.redirect('/admin');
+  } catch (err) {
+    console.error('2fa-verify error:', err.message);
+    res.render('admin/2fa-verify', { error: 'সার্ভার এরর হয়েছে, আবার চেষ্টা করুন।' });
   }
 });
 
@@ -244,10 +279,13 @@ router.get('/settings', async (req, res) => {
       "SELECT id, username, email, created_at FROM users WHERE role = 'admin' ORDER BY created_at ASC"
     );
 
-    res.render('admin/settings', { settings, admins: adminsRes.rows, saved: req.query.saved === '1' });
+    const meRes = await pool.query('SELECT totp_enabled FROM users WHERE id = $1', [req.session.user.id]);
+    const twoFactorEnabled = !!(meRes.rows[0] && meRes.rows[0].totp_enabled);
+
+    res.render('admin/settings', { settings, admins: adminsRes.rows, saved: req.query.saved === '1', twoFactorEnabled, tfaError: req.query.tfaError === '1' });
   } catch (err) {
     console.error('Settings load error:', err.message);
-    res.render('admin/settings', { settings: {}, admins: [], saved: false });
+    res.render('admin/settings', { settings: {}, admins: [], saved: false, twoFactorEnabled: false, tfaError: false });
   }
 });
 
@@ -299,6 +337,61 @@ router.post('/settings/admins/:id/demote', async (req, res) => {
     res.redirect('/admin/settings');
   } catch (err) {
     console.error('Admin demote error:', err.message);
+    res.redirect('/admin/settings');
+  }
+});
+
+// ==================== অ্যাডমিন 2FA সেটআপ ====================
+
+// ধাপ ১: নতুন সিক্রেট বানিয়ে QR কোড দেখানো (এখনো সেভ হয় না, সেশনে সাময়িকভাবে রাখা হয়)
+router.get('/settings/2fa/setup', async (req, res) => {
+  try {
+    const secret = generateSecret();
+    req.session.pending2FASecret = secret;
+    const qrDataUrl = await generateQrCodeDataUrl(secret, req.session.user.username);
+    res.render('admin/2fa-setup', { qrDataUrl, secret, error: null });
+  } catch (err) {
+    console.error('2fa setup error:', err.message);
+    res.redirect('/admin/settings');
+  }
+});
+
+// ধাপ ২: অ্যাপ থেকে পাওয়া ৬ সংখ্যার কোড দিয়ে নিশ্চিত করলে তবেই DB-তে সেভ ও চালু হয়
+router.post('/settings/2fa/enable', async (req, res) => {
+  const secret = req.session.pending2FASecret;
+  try {
+    const { token } = req.body;
+    if (!secret || !verifyToken(token, secret)) {
+      const qrDataUrl = secret ? await generateQrCodeDataUrl(secret, req.session.user.username) : null;
+      return res.render('admin/2fa-setup', { qrDataUrl, secret, error: 'কোডটি ভুল। আবার চেষ্টা করুন।' });
+    }
+
+    await pool.query('UPDATE users SET totp_secret = $1, totp_enabled = true WHERE id = $2', [secret, req.session.user.id]);
+    delete req.session.pending2FASecret;
+    await logAdminAction(req.session.user.id, req.session.user.username, '2FA_ENABLED', 'অ্যাডমিন অ্যাকাউন্টে 2FA চালু করা হয়েছে', req.ip);
+    res.redirect('/admin/settings?saved=1');
+  } catch (err) {
+    console.error('2fa enable error:', err.message);
+    res.redirect('/admin/settings');
+  }
+});
+
+// 2FA বন্ধ করা — নিরাপত্তার জন্য বর্তমান পাসওয়ার্ড লাগবে
+router.post('/settings/2fa/disable', async (req, res) => {
+  try {
+    const { password } = req.body;
+    const result = await pool.query('SELECT password FROM users WHERE id = $1', [req.session.user.id]);
+    const me = result.rows[0];
+
+    if (!me || !(await bcrypt.compare(password || '', me.password))) {
+      return res.redirect('/admin/settings?tfaError=1');
+    }
+
+    await pool.query('UPDATE users SET totp_secret = NULL, totp_enabled = false WHERE id = $1', [req.session.user.id]);
+    await logAdminAction(req.session.user.id, req.session.user.username, '2FA_DISABLED', 'অ্যাডমিন অ্যাকাউন্টে 2FA বন্ধ করা হয়েছে', req.ip);
+    res.redirect('/admin/settings?saved=1');
+  } catch (err) {
+    console.error('2fa disable error:', err.message);
     res.redirect('/admin/settings');
   }
 });

@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const { pool } = require('../db');
 const { createReferral } = require('../services/referral');
+const { sendPasswordReset } = require('../services/email');
 
 function sanitizeUser(u) {
   if (!u) return null;
@@ -150,6 +152,102 @@ router.post('/login', async (req, res) => {
     console.error(err);
     req.flash('error', '❌ লগইন ব্যর্থ হয়েছে।');
     res.redirect('/login');
+  }
+});
+
+// ==================== পাসওয়ার্ড রিসেট (Forgot Password) ====================
+
+router.get('/forgot-password', (req, res) => {
+  res.render('forgot-password', { sent: false });
+});
+
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  try {
+    if (!email) {
+      req.flash('error', '❌ ইমেইল দিন।');
+      return res.redirect('/forgot-password');
+    }
+
+    const result = await pool.query('SELECT id, email FROM users WHERE email = $1', [email]);
+    const user = result.rows[0];
+
+    // ইউজার থাকুক বা না থাকুক একই সাফল্যের মেসেজ দেখানো হয় (ইমেইল enumeration ঠেকাতে)
+    if (user) {
+      const token = crypto.randomBytes(32).toString('hex');
+      const expiry = new Date(Date.now() + 60 * 60 * 1000); // ১ ঘণ্টা
+      await pool.query(
+        'UPDATE users SET reset_token = $1, reset_token_expiry = $2 WHERE id = $3',
+        [token, expiry, user.id]
+      );
+
+      const resetUrl = `${req.protocol}://${req.get('host')}/reset-password/${token}`;
+      try {
+        await sendPasswordReset(user.email, resetUrl);
+      } catch (mailErr) {
+        console.error('sendPasswordReset error:', mailErr.message);
+      }
+    }
+
+    res.render('forgot-password', { sent: true });
+  } catch (err) {
+    console.error('forgot-password error:', err.message);
+    req.flash('error', '❌ কিছু একটা সমস্যা হয়েছে, আবার চেষ্টা করুন।');
+    res.redirect('/forgot-password');
+  }
+});
+
+router.get('/reset-password/:token', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id FROM users WHERE reset_token = $1 AND reset_token_expiry > NOW()',
+      [req.params.token]
+    );
+    if (result.rows.length === 0) {
+      req.flash('error', '❌ লিঙ্কটি অকার্যকর অথবা মেয়াদ শেষ হয়ে গেছে। আবার চেষ্টা করুন।');
+      return res.redirect('/forgot-password');
+    }
+    res.render('reset-password', { token: req.params.token });
+  } catch (err) {
+    console.error('reset-password GET error:', err.message);
+    res.redirect('/forgot-password');
+  }
+});
+
+router.post('/reset-password/:token', async (req, res) => {
+  const { password, confirmPassword } = req.body;
+  const { token } = req.params;
+  try {
+    if (!password || password.length < 8) {
+      req.flash('error', '❌ পাসওয়ার্ড কমপক্ষে ৮ অক্ষর হতে হবে।');
+      return res.redirect(`/reset-password/${token}`);
+    }
+    if (password !== confirmPassword) {
+      req.flash('error', '❌ পাসওয়ার্ড মিলছে না।');
+      return res.redirect(`/reset-password/${token}`);
+    }
+
+    const result = await pool.query(
+      'SELECT id FROM users WHERE reset_token = $1 AND reset_token_expiry > NOW()',
+      [token]
+    );
+    if (result.rows.length === 0) {
+      req.flash('error', '❌ লিঙ্কটি অকার্যকর অথবা মেয়াদ শেষ হয়ে গেছে। আবার চেষ্টা করুন।');
+      return res.redirect('/forgot-password');
+    }
+
+    const hashed = await bcrypt.hash(password, 10);
+    await pool.query(
+      'UPDATE users SET password = $1, reset_token = NULL, reset_token_expiry = NULL WHERE id = $2',
+      [hashed, result.rows[0].id]
+    );
+
+    req.flash('success', '✅ পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে। এখন লগইন করুন।');
+    res.redirect('/login');
+  } catch (err) {
+    console.error('reset-password POST error:', err.message);
+    req.flash('error', '❌ কিছু একটা সমস্যা হয়েছে, আবার চেষ্টা করুন।');
+    res.redirect(`/reset-password/${token}`);
   }
 });
 
