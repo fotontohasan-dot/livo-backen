@@ -1,15 +1,45 @@
 const Anthropic = require('@anthropic-ai/sdk');
+const crypto = require('crypto');
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const RENDER_URL = process.env.RENDER_EXTERNAL_URL || 'https://livo-backen.onrender.com';
 
+// ==================== নিরাপত্তা: Webhook যাচাইকরণ ====================
+// Telegram প্রতিটি webhook request-এ এই secret token header হিসেবে পাঠাবে
+// (setWebhook কল করার সময় এই একই token Telegram-কে জানিয়ে দেওয়া হয়)।
+// header না থাকলে/না মিললে বুঝতে হবে request Telegram থেকে আসেনি।
+const WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET || crypto.randomBytes(24).toString('hex');
+if (!process.env.TELEGRAM_WEBHOOK_SECRET) {
+  console.warn('⚠️ TELEGRAM_WEBHOOK_SECRET সেট করা নেই — সাময়িক র‍্যান্ডম secret ব্যবহার হচ্ছে। প্রোডাকশনে অবশ্যই .env-এ TELEGRAM_WEBHOOK_SECRET সেট করুন।');
+}
+
+// শুধুমাত্র এই chat ID থেকে আসা মেসেজ প্রসেস হবে (admin/Mahmud-এর Telegram chat id)।
+// সেট না থাকলে বট fail-closed থাকবে — GitHub-writable AI bot কখনো সবার জন্য খোলা রাখা উচিত না।
+const ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID;
+if (!ADMIN_CHAT_ID) {
+  console.warn('⚠️ TELEGRAM_ADMIN_CHAT_ID সেট করা নেই — নিরাপত্তার জন্য বট আপাতত কোনো মেসেজ প্রসেস করবে না। .env-এ আপনার Telegram chat id সেট করুন।');
+}
+
+function verifyWebhookSecret(headerValue) {
+  if (!headerValue) return false;
+  const a = Buffer.from(String(headerValue));
+  const b = Buffer.from(WEBHOOK_SECRET);
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
 const GITHUB_OWNER = 'fotontohasan-dot';
 const GITHUB_REPO = 'livo-backen';
 
 const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
 const conversations = {};
+
+// GitHub-এ commit করার আগে admin-এর explicit "হ্যাঁ" লাগবে — ভুল/দুর্ঘটনাক্রমে
+// deploy হয়ে যাওয়া ঠেকাতে। chatId ধরে pending action রাখা হয়, ৫ মিনিট পর মেয়াদ শেষ।
+const pendingActions = {};
+const CONFIRM_TIMEOUT_MS = 5 * 60 * 1000;
 
 const SYSTEM_PROMPT = `তুমি Livo-র AI Assistant। Livo একটি অনলাইন গেমিং প্ল্যাটফর্ম Node.js/Express দিয়ে তৈরি।
 তুমি বাংলায় কথা বলবে এবং Livo-র admin Mahmud-কে সাহায্য করবে।
@@ -117,24 +147,20 @@ async function processGithubAction(responseText, chatId) {
     if (fileMatch && contentMatch) {
       const filePath = fileMatch[1].trim();
       const newContent = contentMatch[1].trim();
+
+      // সরাসরি commit না করে, আগে admin-কে দেখিয়ে "হ্যাঁ" চাওয়া হচ্ছে।
+      pendingActions[chatId] = {
+        filePath,
+        newContent,
+        expiresAt: Date.now() + CONFIRM_TIMEOUT_MS
+      };
+
+      const preview = newContent.length > 800 ? newContent.slice(0, 800) + '\n...(আরও আছে)' : newContent;
       await telegramAPI('sendMessage', {
         chat_id: chatId,
-        text: `✏️ *${filePath}* edit করছি...`,
+        text: `⚠️ *${filePath}* ফাইলটা এভাবে বদলাতে চাইছি:\n\`\`\`\n${preview}\n\`\`\`\n\nএটা সরাসরি GitHub-এ commit হয়ে যাবে এবং সাথে সাথে deploy শুরু হবে।\n\n✅ নিশ্চিত হলে লেখো: *হ্যাঁ*\n❌ বাতিল করতে লেখো: *না*\n\n(৫ মিনিটের মধ্যে সাড়া না দিলে এই অনুরোধ আপনা থেকেই বাতিল হয়ে যাবে)`,
         parse_mode: 'Markdown'
       });
-      const result = await githubEditFile(filePath, newContent, `🤖 Bot: ${filePath} updated via Telegram`);
-      if (result.success) {
-        await telegramAPI('sendMessage', {
-          chat_id: chatId,
-          text: `✅ *${filePath}* সফলভাবে update হয়েছে! Render এ deploy হচ্ছে...`,
-          parse_mode: 'Markdown'
-        });
-      } else {
-        await telegramAPI('sendMessage', {
-          chat_id: chatId,
-          text: `❌ Error: ${result.error}`
-        });
-      }
     }
   } else {
     // Normal message
@@ -151,7 +177,9 @@ async function setWebhook() {
   try {
     await telegramAPI('deleteWebhook', { drop_pending_updates: true });
     const webhookUrl = `${RENDER_URL}/telegram-webhook`;
-    const result = await telegramAPI('setWebhook', { url: webhookUrl });
+    // secret_token পাঠানো হচ্ছে — Telegram এখন থেকে প্রতিটি request-এ
+    // X-Telegram-Bot-Api-Secret-Token header-এ এই মানটা পাঠাবে, যা app.js যাচাই করবে।
+    const result = await telegramAPI('setWebhook', { url: webhookUrl, secret_token: WEBHOOK_SECRET });
     console.log('🔗 Telegram Webhook set:', result.description);
   } catch (err) {
     console.error('⚠️ Telegram webhook setup skipped (network issue):', err.message);
@@ -164,6 +192,14 @@ async function handleMessage(msg) {
   const userMessage = msg.text;
 
   if (!userMessage) return;
+
+  // নিরাপত্তা: শুধু admin-এর chat থেকে আসা মেসেজ প্রসেস হবে।
+  // এই বট GitHub repo-তে সরাসরি write করতে পারে, তাই অন্য কারো মেসেজে সাড়া
+  // দেওয়া মানেই যে কেউ (বট খুঁজে পেলে) কোড এডিট করার সুযোগ পাওয়া।
+  if (!ADMIN_CHAT_ID || String(chatId) !== String(ADMIN_CHAT_ID)) {
+    console.warn(`⚠️ অননুমোদিত Telegram chat (${chatId}) থেকে মেসেজ এলো — উপেক্ষা করা হলো।`);
+    return;
+  }
 
   if (userMessage === '/start') {
     conversations[chatId] = [];
@@ -179,6 +215,50 @@ async function handleMessage(msg) {
     conversations[chatId] = [];
     await telegramAPI('sendMessage', { chat_id: chatId, text: '✅ কথোপকথন মুছে ফেলা হয়েছে!' });
     return;
+  }
+
+  // pending GitHub edit-এর জবাব (হ্যাঁ/না) এখানেই সামলানো হয়, AI-কে ডাকার প্রয়োজন নেই
+  const pending = pendingActions[chatId];
+  if (pending) {
+    if (Date.now() > pending.expiresAt) {
+      delete pendingActions[chatId];
+    } else {
+      const normalized = userMessage.trim().toLowerCase();
+      const isYes = ['হ্যাঁ', 'হা', 'yes', 'y', 'confirm'].includes(normalized);
+      const isNo = ['না', 'no', 'n', 'cancel'].includes(normalized);
+
+      if (isYes) {
+        delete pendingActions[chatId];
+        await telegramAPI('sendMessage', {
+          chat_id: chatId,
+          text: `✏️ *${pending.filePath}* commit করছি...`,
+          parse_mode: 'Markdown'
+        });
+        const result = await githubEditFile(pending.filePath, pending.newContent, `🤖 Bot: ${pending.filePath} updated via Telegram (admin confirmed)`);
+        if (result.success) {
+          await telegramAPI('sendMessage', {
+            chat_id: chatId,
+            text: `✅ *${pending.filePath}* সফলভাবে update হয়েছে! Render এ deploy হচ্ছে...`,
+            parse_mode: 'Markdown'
+          });
+        } else {
+          await telegramAPI('sendMessage', { chat_id: chatId, text: `❌ Error: ${result.error}` });
+        }
+        return;
+      }
+      if (isNo) {
+        delete pendingActions[chatId];
+        await telegramAPI('sendMessage', { chat_id: chatId, text: '🚫 বাতিল করা হলো, কোনো পরিবর্তন হয়নি।' });
+        return;
+      }
+      // অস্পষ্ট জবাব — pending অনুরোধটা মনে করিয়ে দেওয়া হচ্ছে, AI-কে ডাকা হচ্ছে না
+      await telegramAPI('sendMessage', {
+        chat_id: chatId,
+        text: `⏳ *${pending.filePath}*-এর পরিবর্তন এখনো নিশ্চিত হয়নি। "হ্যাঁ" বা "না" লেখো।`,
+        parse_mode: 'Markdown'
+      });
+      return;
+    }
   }
 
   if (!conversations[chatId]) conversations[chatId] = [];
@@ -214,4 +294,4 @@ async function handleMessage(msg) {
 }
 
 setWebhook();
-module.exports = { handleMessage };
+module.exports = { handleMessage, verifyWebhookSecret };

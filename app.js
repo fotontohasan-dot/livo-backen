@@ -202,9 +202,19 @@ app.use('/extra', require('./routes/extra'));
 app.get('/app/update', (req, res) => res.render('app/update'));
 
 // Telegram Bot Webhook
-const { handleMessage } = require('./telegram-bot');
+const { handleMessage, verifyWebhookSecret } = require('./telegram-bot');
 app.post('/telegram-webhook', express.json(), async (req, res) => {
   try {
+    // নিরাপত্তা: Telegram থেকে সত্যিই এসেছে কিনা যাচাই করা হচ্ছে।
+    // এই header Telegram নিজে পাঠায় যদি setWebhook-এ secret_token দেওয়া থাকে।
+    // এটা না মিললে request বাতিল — এই বট GitHub-এ সরাসরি write করতে পারে,
+    // তাই এই চেক ছাড়া যে কেউ URL-এ POST করে কোড এডিট করাতে পারত।
+    const incomingSecret = req.get('X-Telegram-Bot-Api-Secret-Token');
+    if (!verifyWebhookSecret(incomingSecret)) {
+      console.warn('⚠️ /telegram-webhook: অবৈধ বা অনুপস্থিত secret token — request বাতিল।');
+      return res.sendStatus(401);
+    }
+
     const { message } = req.body;
     if (message) await handleMessage(message);
     res.sendStatus(200);
