@@ -177,10 +177,84 @@ router.post('/deposit', requireLogin, async (req, res) => {
     req.flash('success', 'ডিপোজিট রিকোয়েস্ট পাঠানো হয়েছে!');
     res.redirect('/payment/history');
   } catch (err) {
+    if (err.code === '23505') {
+      req.flash('error', 'এই ট্রানজেকশন আইডি আগে থেকেই ব্যবহার হয়েছে। নতুন ট্রানজেকশন আইডি দিন।');
+      return res.redirect('/payment/deposit');
+    }
     console.error('deposit error:', err.message);
     req.flash('error', 'সমস্যা হয়েছে');
     res.redirect('/payment/deposit');
   }
+});
+
+// ইউজার নিজে পেন্ডিং ডিপোজিট রিকোয়েস্ট বাতিল করতে পারবে
+router.post('/deposit/:id/cancel', requireLogin, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query(
+      `UPDATE payment_requests SET status='cancelled', updated_at=NOW()
+       WHERE id=$1 AND user_id=$2 AND type='deposit' AND status='pending' RETURNING id`,
+      [id, req.session.user.id]
+    );
+    if (!result.rowCount) {
+      req.flash('error', 'এই রিকোয়েস্ট বাতিল করা যাচ্ছে না (হয়তো আগেই প্রসেস হয়ে গেছে)');
+    } else {
+      req.flash('success', 'ডিপোজিট রিকোয়েস্ট বাতিল হয়েছে');
+    }
+  } catch (err) {
+    console.error('deposit cancel error:', err.message);
+    req.flash('error', 'সমস্যা হয়েছে');
+  }
+  res.redirect('/payment/history');
+});
+
+// পেন্ডিং ডিপোজিট রিকোয়েস্টের এডিট ফর্ম
+router.get('/deposit/:id/edit', requireLogin, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query(
+      `SELECT * FROM payment_requests WHERE id=$1 AND user_id=$2 AND type='deposit' AND status='pending'`,
+      [id, req.session.user.id]
+    );
+    if (!result.rows.length) {
+      req.flash('error', 'এই রিকোয়েস্ট এডিট করা যাচ্ছে না');
+      return res.redirect('/payment/history');
+    }
+    res.render('payment/deposit-edit', { user: req.session.user, request: result.rows[0] });
+  } catch (err) {
+    console.error('deposit edit form error:', err.message);
+    res.redirect('/payment/history');
+  }
+});
+
+// পেন্ডিং ডিপোজিট রিকোয়েস্ট এডিট সাবমিট
+router.post('/deposit/:id/edit', requireLogin, async (req, res) => {
+  const { id } = req.params;
+  const { transaction_id, account_number } = req.body;
+  if (!transaction_id || !account_number) {
+    req.flash('error', 'সব তথ্য সঠিকভাবে দিন');
+    return res.redirect(`/payment/deposit/${id}/edit`);
+  }
+  try {
+    const result = await pool.query(
+      `UPDATE payment_requests SET transaction_id=$1, account_number=$2, updated_at=NOW()
+       WHERE id=$3 AND user_id=$4 AND type='deposit' AND status='pending' RETURNING id`,
+      [transaction_id.trim(), account_number.trim(), id, req.session.user.id]
+    );
+    if (!result.rowCount) {
+      req.flash('error', 'এই রিকোয়েস্ট এডিট করা যাচ্ছে না');
+    } else {
+      req.flash('success', 'ডিপোজিট রিকোয়েস্ট আপডেট হয়েছে');
+    }
+  } catch (err) {
+    if (err.code === '23505') {
+      req.flash('error', 'এই ট্রানজেকশন আইডি আগে থেকেই ব্যবহার হয়েছে');
+      return res.redirect(`/payment/deposit/${id}/edit`);
+    }
+    console.error('deposit edit error:', err.message);
+    req.flash('error', 'সমস্যা হয়েছে');
+  }
+  res.redirect('/payment/history');
 });
 
 router.get('/withdraw', requireLogin, async (req, res) => {
