@@ -77,6 +77,22 @@
               <span class="text-sm font-bold text-main">Nagad</span>
               <input type="radio" name="method" value="nagad" id="radio-nagad" class="hidden">
             </div>
+            <!-- Rocket -->
+            <div id="method-rocket" class="method-card border-2 border-glass bg-surface rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer" onclick="selectMethod('rocket')">
+              <div class="h-12 w-12 rounded-full bg-[#8C3494] flex items-center justify-center mb-2 shadow-sm">
+                <span class="text-white font-bold text-xl">R</span>
+              </div>
+              <span class="text-sm font-bold text-main">Rocket</span>
+              <input type="radio" name="method" value="rocket" id="radio-rocket" class="hidden">
+            </div>
+            <!-- Upay -->
+            <div id="method-upay" class="method-card border-2 border-glass bg-surface rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer" onclick="selectMethod('upay')">
+              <div class="h-12 w-12 rounded-full bg-[#E4032E] flex items-center justify-center mb-2 shadow-sm">
+                <span class="text-white font-bold text-xl">U</span>
+              </div>
+              <span class="text-sm font-bold text-main">Upay</span>
+              <input type="radio" name="method" value="upay" id="radio-upay" class="hidden">
+            </div>
           </div>
         </div>
 
@@ -187,16 +203,18 @@
 <script>
   function selectMethod(method) {
     document.querySelectorAll('.method-card').forEach(c => {
-      c.classList.remove('selected', 'border-red-600');
-      c.classList.add('border-gray-200');
+      c.classList.remove('selected');
     });
 
     const el = document.getElementById('method-' + method);
-    el.classList.add('selected', 'border-red-600');
-    el.classList.remove('border-gray-200');
+    if (!el) return;
+    el.classList.add('selected');
 
-    document.getElementById('radio-' + method).checked = true;
-    document.getElementById('selectedMethodName').innerText = method.charAt(0).toUpperCase() + method.slice(1);
+    const radio = document.getElementById('radio-' + method);
+    if (radio) radio.checked = true;
+
+    const nameEl = document.getElementById('selectedMethodName');
+    if (nameEl) nameEl.innerText = method.charAt(0).toUpperCase() + method.slice(1);
   }
 
   function selectChannel(el) {
@@ -246,10 +264,6 @@
     document.querySelectorAll('.channel-btn').forEach(function(b){
       b.addEventListener('click', function(){ selectChannel(b); });
     });
-    var mb = document.getElementById('method-bkash');
-    if (mb) mb.addEventListener('click', function(){ selectMethod('bkash'); });
-    var mn = document.getElementById('method-nagad');
-    if (mn) mn.addEventListener('click', function(){ selectMethod('nagad'); });
     var cb = document.getElementById('depCopyBtn');
     if (cb) cb.addEventListener('click', copyNumber);
     var bb = document.getElementById('depBackBtn');
