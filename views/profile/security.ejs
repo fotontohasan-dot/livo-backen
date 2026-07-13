@@ -2,10 +2,10 @@
 
 <div class="container" style="padding: 16px; padding-bottom: 100px;">
   <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
-    <a href="/profile" style="color: #fff; text-decoration: none; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+    <a href="/profile" style="color:var(--text-main); text-decoration: none; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
       <i class="fas fa-chevron-left"></i>
     </a>
-    <h1 style="color: #fff; font-size: 20px; font-weight: 800; letter-spacing: 0.5px;"><%= t.security_settings_title %></h1>
+    <h1 style="color:var(--text-main); font-size: 20px; font-weight: 800; letter-spacing: 0.5px;"><%= t.security_settings_title %></h1>
   </div>
 
   <%- include('../partials/flash') %>
@@ -34,11 +34,11 @@
         </div>
         <div>
           <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.full_name %></label>
-          <input type="text" name="full_name" value="<%= user.full_name || '' %>" placeholder="<%= t.full_name_placeholder %>" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none; border-color: <%= user.full_name ? 'var(--border-glass)' : 'rgba(245, 158, 11, 0.3)' %>;">
+          <input type="text" name="full_name" value="<%= user.full_name || '' %>" placeholder="<%= t.full_name_placeholder %>" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 14px; outline: none; border-color: <%= user.full_name ? 'var(--border-glass)' : 'rgba(245, 158, 11, 0.3)' %>;">
         </div>
         <div>
           <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.phone %></label>
-          <input type="text" name="phone" value="<%= user.phone || '' %>" placeholder="01XXXXXXXXX" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
+          <input type="text" name="phone" value="<%= user.phone || '' %>" placeholder="01XXXXXXXXX" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 14px; outline: none;">
         </div>
         <button type="submit" class="btn btn-primary" style="margin-top: 10px; border-radius: 12px; padding: 14px; font-weight: 800;"><%= t.update_info %></button>
       </form>
@@ -55,7 +55,7 @@
         <% bankCards.forEach(card => { %>
           <div style="background: rgba(255,255,255,0.03); border-radius: 12px; padding: 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
             <div>
-              <div style="color: #fff; font-size: 14px; font-weight: 600;"><%= card.bank_name %></div>
+              <div style="color:var(--text-main); font-size: 14px; font-weight: 600;"><%= card.bank_name %></div>
               <div style="color: var(--text-muted); font-size: 12px;"><%= card.account_number %></div>
             </div>
             <form action="/profile/delete-bank-card/<%= card.id %>" method="POST" onsubmit="return confirm('<%= t.delete_card_confirm %>')">
@@ -74,17 +74,17 @@
 
       <!-- Add Card Form -->
       <div style="border-top: 1px solid var(--border-glass); padding-top: 25px;">
-        <h4 style="color: #fff; font-size: 14px; margin-bottom: 15px;"><%= t.add_new_card %></h4>
+        <h4 style="color:var(--text-main); font-size: 14px; margin-bottom: 15px;"><%= t.add_new_card %></h4>
         <form action="/profile/add-bank-card" method="POST" style="display: flex; flex-direction: column; gap: 12px;">
-          <select name="bank_name" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
+          <select name="bank_name" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 14px; outline: none;">
             <option value="" style="background: #121212;"><%= t.select_payment_method %></option>
             <option value="bKash" style="background: #121212;">bKash</option>
             <option value="Nagad" style="background: #121212;">Nagad</option>
             <option value="Rocket" style="background: #121212;">Rocket</option>
             <option value="Bank Account" style="background: #121212;">Local Bank</option>
           </select>
-          <input type="text" name="account_number" placeholder="<%= t.account_number_placeholder_alt %>" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
-          <input type="text" name="holder_name" placeholder="<%= t.holder_name_placeholder %>" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
+          <input type="text" name="account_number" placeholder="<%= t.account_number_placeholder_alt %>" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 14px; outline: none;">
+          <input type="text" name="holder_name" placeholder="<%= t.holder_name_placeholder %>" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 14px; outline: none;">
           <button type="submit" class="btn btn-secondary" style="margin-top: 5px; border-radius: 12px; padding: 14px; font-weight: 800; background: var(--grad-gold); color: #000;"><%= t.add_card_btn %></button>
         </form>
       </div>
@@ -100,15 +100,15 @@
       <form action="/profile/change-password" method="POST" style="display: flex; flex-direction: column; gap: 15px;">
         <div>
           <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.current_password %></label>
-          <input type="password" name="currentPassword" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
+          <input type="password" name="currentPassword" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 14px; outline: none;">
         </div>
         <div>
           <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.new_password %></label>
-          <input type="password" name="newPassword" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
+          <input type="password" name="newPassword" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 14px; outline: none;">
         </div>
         <div>
           <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.confirm_new_password %></label>
-          <input type="password" name="confirmPassword" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
+          <input type="password" name="confirmPassword" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 14px; outline: none;">
         </div>
         <button type="submit" class="btn btn-primary" style="margin-top: 10px; border-radius: 12px; padding: 14px; font-weight: 800;"><%= t.change_password_btn %></button>
       </form>

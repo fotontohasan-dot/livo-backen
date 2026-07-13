@@ -4,13 +4,13 @@
   <%- include('../partials/flash') %>
 
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-    <a href="/profile" style="color:#fff;text-decoration:none;font-size:20px;">←</a>
-    <h1 style="color:#fff;font-size:18px;font-weight:bold;">📤 শেয়ার করে বোনাস</h1>
+    <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
+    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">📤 শেয়ার করে বোনাস</h1>
   </div>
 
   <div style="background:linear-gradient(135deg,#ec4899,#db2777);border-radius:16px;padding:24px;margin-bottom:16px;text-align:center;">
     <div style="font-size:44px;margin-bottom:6px;">📤</div>
-    <div style="color:#fff;font-size:16px;font-weight:bold;">শেয়ার করুন, বোনাস নিন</div>
+    <div style="color:var(--text-main);font-size:16px;font-weight:bold;">শেয়ার করুন, বোনাস নিন</div>
     <div style="color:rgba(255,255,255,0.9);font-size:13px;margin-top:4px;">
       প্রতিদিন শেয়ার করে <strong><%= share ? share.bonus : 20 %> কয়েন</strong> পান
     </div>
@@ -20,7 +20,7 @@
 
   <!-- শেয়ার বাটন -->
   <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;margin-bottom:16px;">
-    <div style="color:#fff;font-weight:bold;margin-bottom:12px;">যেখানে শেয়ার করবেন</div>
+    <div style="color:var(--text-main);font-weight:bold;margin-bottom:12px;">যেখানে শেয়ার করবেন</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       <a href="https://wa.me/?text=<%= encodeURIComponent('Livo-তে খেলুন আর জিতুন! ' + shareUrl) %>" target="_blank"
          style="background:#25D366;color:#fff;text-decoration:none;text-align:center;padding:12px;border-radius:10px;font-weight:bold;font-size:13px;">
@@ -49,7 +49,7 @@
       <div style="color:#10b981;font-size:14px;font-weight:bold;">✅ আজকের শেয়ার বোনাস নেওয়া হয়েছে</div>
       <div style="color:#94a3b8;font-size:12px;margin-top:4px;">আগামীকাল আবার আসুন</div>
     <% } else { %>
-      <div style="color:#fff;font-size:13px;margin-bottom:12px;">উপরে শেয়ার করার পর নিচের বাটনে বোনাস নিন</div>
+      <div style="color:var(--text-main);font-size:13px;margin-bottom:12px;">উপরে শেয়ার করার পর নিচের বাটনে বোনাস নিন</div>
       <form action="/profile/share/claim" method="POST" style="margin:0;">
         <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;font-weight:700;">
           🎁 শেয়ার বোনাস নিন (<%= share ? share.bonus : 20 %> কয়েন)

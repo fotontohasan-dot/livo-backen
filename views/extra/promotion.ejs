@@ -5,7 +5,7 @@
     <!-- Promotion Header -->
     <div style="background: linear-gradient(135deg, #009625, #006519); border-radius: 24px; padding: 30px 20px; margin-bottom: 25px; text-align: center; border: 1px solid rgba(255,255,255,0.1); position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
         <div style="position: absolute; right: -20px; bottom: -20px; font-size: 100px; opacity: 0.1;">🎁</div>
-        <h1 style="color: #fff; font-size: 24px; font-weight: 800; margin-bottom: 8px;"><%= t.promotion_center %></h1>
+        <h1 style="color:var(--text-main); font-size: 24px; font-weight: 800; margin-bottom: 8px;"><%= t.promotion_center %></h1>
         <p style="color: rgba(255,255,255,0.8); font-size: 13px;"><%= t.best_offers_msg %></p>
     </div>
 
@@ -13,9 +13,9 @@
     <div style="display: flex; gap: 10px; margin-bottom: 25px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none;">
         <style>div::-webkit-scrollbar { display: none; }</style>
         <div class="promo-cat active" style="flex: 0 0 auto; padding: 10px 20px; background: var(--grad-gold); color: #000; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer;"><%= t.all %></div>
-        <div class="promo-cat" style="flex: 0 0 auto; padding: 10px 20px; background: rgba(255,255,255,0.05); color: #fff; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; border: 1px solid var(--border-glass);"><%= t.deposit %></div>
-        <div class="promo-cat" style="flex: 0 0 auto; padding: 10px 20px; background: rgba(255,255,255,0.05); color: #fff; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; border: 1px solid var(--border-glass);"><%= t.football %></div>
-        <div class="promo-cat" style="flex: 0 0 auto; padding: 10px 20px; background: rgba(255,255,255,0.05); color: #fff; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; border: 1px solid var(--border-glass);"><%= t.menu_slots %></div>
+        <div class="promo-cat" style="flex: 0 0 auto; padding: 10px 20px; background: rgba(255,255,255,0.05); color:var(--text-main); border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; border: 1px solid var(--border-glass);"><%= t.deposit %></div>
+        <div class="promo-cat" style="flex: 0 0 auto; padding: 10px 20px; background: rgba(255,255,255,0.05); color:var(--text-main); border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; border: 1px solid var(--border-glass);"><%= t.football %></div>
+        <div class="promo-cat" style="flex: 0 0 auto; padding: 10px 20px; background: rgba(255,255,255,0.05); color:var(--text-main); border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; border: 1px solid var(--border-glass);"><%= t.menu_slots %></div>
     </div>
 
     <!-- Promo Cards -->
@@ -24,14 +24,14 @@
         <!-- Welcome Bonus -->
         <div class="promo-card" style="background: var(--bg-card); border-radius: 20px; overflow: hidden; border: 1px solid var(--border-glass); box-shadow: 0 5px 20px rgba(0,0,0,0.2);">
             <div style="height: 140px; background: linear-gradient(135deg, #f59e0b, #ef4444); display: flex; align-items: center; justify-content: center; position: relative;">
-                <div style="text-align: center; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.3);">
+                <div style="text-align: center; color:var(--text-main); text-shadow: 0 2px 10px rgba(0,0,0,0.3);">
                     <div style="font-size: 40px; font-weight: 900; line-height: 1;">১০০%</div>
                     <div style="font-size: 14px; font-weight: 700; margin-top: 5px; text-transform: uppercase; letter-spacing: 1px;">ওয়েলকাম বোনাস</div>
                 </div>
                 <div style="position: absolute; top: 15px; left: 15px; background: rgba(0,0,0,0.4); padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; color: #fff;">NEW USER</div>
             </div>
             <div style="padding: 20px;">
-                <h3 style="color: #fff; font-size: 16px; font-weight: 700; margin-bottom: 8px;"><%= t.promo_welcome_title %></h3>
+                <h3 style="color:var(--text-main); font-size: 16px; font-weight: 700; margin-bottom: 8px;"><%= t.promo_welcome_title %></h3>
                 <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 20px; line-height: 1.6;"><%= t.promo_welcome_desc %></p>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div style="display: flex; align-items: center; gap: 5px;">
@@ -46,14 +46,14 @@
         <!-- Referral Bonus -->
         <div class="promo-card" style="background: var(--bg-card); border-radius: 20px; overflow: hidden; border: 1px solid var(--border-glass); box-shadow: 0 5px 20px rgba(0,0,0,0.2);">
             <div style="height: 140px; background: linear-gradient(135deg, #8b5cf6, #3b82f6); display: flex; align-items: center; justify-content: center; position: relative;">
-                <div style="text-align: center; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.3);">
+                <div style="text-align: center; color:var(--text-main); text-shadow: 0 2px 10px rgba(0,0,0,0.3);">
                     <div style="font-size: 40px; font-weight: 900; line-height: 1;">৳৩,০০০</div>
                     <div style="font-size: 14px; font-weight: 700; margin-top: 5px; text-transform: uppercase; letter-spacing: 1px;">রেফারেল বোনাস</div>
                 </div>
                 <div style="position: absolute; top: 15px; left: 15px; background: rgba(0,0,0,0.4); padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; color: #fff;">HOT</div>
             </div>
             <div style="padding: 20px;">
-                <h3 style="color: #fff; font-size: 16px; font-weight: 700; margin-bottom: 8px;"><%= t.promo_referral_title %></h3>
+                <h3 style="color:var(--text-main); font-size: 16px; font-weight: 700; margin-bottom: 8px;"><%= t.promo_referral_title %></h3>
                 <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 20px; line-height: 1.6;"><%= t.promo_referral_desc %></p>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div style="display: flex; align-items: center; gap: 5px;">
@@ -68,13 +68,13 @@
         <!-- Cashback Bonus -->
         <div class="promo-card" style="background: var(--bg-card); border-radius: 20px; overflow: hidden; border: 1px solid var(--border-glass); box-shadow: 0 5px 20px rgba(0,0,0,0.2);">
             <div style="height: 140px; background: linear-gradient(135deg, #10b981, #06b6d4); display: flex; align-items: center; justify-content: center; position: relative;">
-                <div style="text-align: center; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.3);">
+                <div style="text-align: center; color:var(--text-main); text-shadow: 0 2px 10px rgba(0,0,0,0.3);">
                     <div style="font-size: 40px; font-weight: 900; line-height: 1;">১০%</div>
                     <div style="font-size: 14px; font-weight: 700; margin-top: 5px; text-transform: uppercase; letter-spacing: 1px;">ডেইলি ক্যাশব্যাক</div>
                 </div>
             </div>
             <div style="padding: 20px;">
-                <h3 style="color: #fff; font-size: 16px; font-weight: 700; margin-bottom: 8px;"><%= t.promo_cashback_title %></h3>
+                <h3 style="color:var(--text-main); font-size: 16px; font-weight: 700; margin-bottom: 8px;"><%= t.promo_cashback_title %></h3>
                 <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 20px; line-height: 1.6;"><%= t.promo_cashback_desc %></p>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div style="display: flex; align-items: center; gap: 5px;">

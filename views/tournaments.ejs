@@ -15,7 +15,7 @@
       <% tournaments.forEach(t => { %>
         <div class="card glass">
           <div style="padding:15px; border-bottom:1px solid var(--border-glass); display:flex; justify-content:space-between; align-items:center;">
-            <h3 style="font-size:1rem; font-weight:700; color:#fff;"><%= t.name %></h3>
+            <h3 style="font-size:1rem; font-weight:700; color:var(--text-main);"><%= t.name %></h3>
             <span class="status-badge status-<%= t.status %>"><%= t.status === 'open' ? t.running : t.status %></span>
           </div>
           <div class="card-body" style="padding:15px;">

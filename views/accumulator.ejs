@@ -4,13 +4,13 @@
   <%- include('partials/flash') %>
 
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-    <a href="/matches" style="color:#fff;text-decoration:none;font-size:20px;">←</a>
-    <h1 style="color:#fff;font-size:18px;font-weight:bold;">🎯 <%= t.accumulator_bet %></h1>
+    <a href="/matches" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
+    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">🎯 <%= t.accumulator_bet %></h1>
   </div>
 
   <!-- ব্যানার -->
   <div style="background:linear-gradient(135deg,#7c3aed,#5b21b6);border-radius:16px;padding:16px;margin-bottom:16px;text-align:center;">
-    <div style="color:#fff;font-size:15px;font-weight:bold;"><%= t.accumulator_desc %></div>
+    <div style="color:var(--text-main);font-size:15px;font-weight:bold;"><%= t.accumulator_desc %></div>
     <div style="color:rgba(255,255,255,0.9);font-size:12px;margin-top:4px;">
       <%= t.accumulator_boost_msg %>
     </div>
@@ -21,7 +21,7 @@
 
     <% matches.forEach(m => { %>
       <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:14px;margin-bottom:12px;">
-        <div style="color:#fff;font-size:14px;font-weight:600;margin-bottom:10px;"><%= m.title %> <span style="color:#64748b;font-size:11px;">(<%= m.sport %>)</span></div>
+        <div style="color:var(--text-main);font-size:14px;font-weight:600;margin-bottom:10px;"><%= m.title %> <span style="color:#64748b;font-size:11px;">(<%= m.sport %>)</span></div>
         <% m.markets.forEach(mk => {
           const runners = mk.odds && typeof mk.odds === 'object' ? Object.keys(mk.odds) : [];
         %>
@@ -55,14 +55,14 @@
   <!-- আমার অ্যাকুমুলেটর হিস -->
   <% if (myAccas && myAccas.length > 0) { %>
     <div style="margin-top:24px;">
-      <div style="color:#fff;font-weight:bold;margin-bottom:10px;">📜 <%= t.my_accumulators %></div>
+      <div style="color:var(--text-main);font-weight:bold;margin-bottom:10px;">📜 <%= t.my_accumulators %></div>
       <% myAccas.forEach(a => {
         const color = a.status === 'won' ? '#10b981' : a.status === 'lost' ? '#ef4444' : '#f59e0b';
         const label = a.status === 'won' ? t.won : a.status === 'lost' ? t.lost : t.running;
       %>
         <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:14px;margin-bottom:10px;">
           <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-            <span style="color:#fff;font-size:13px;font-weight:600;"><%= a.selection_count %> <%= t.selections_label %> <%= a.boost_percent > 0 ? '(+' + a.boost_percent + '% ' + t.boost_label + ')' : '' %></span>
+            <span style="color:var(--text-main);font-size:13px;font-weight:600;"><%= a.selection_count %> <%= t.selections_label %> <%= a.boost_percent > 0 ? '(+' + a.boost_percent + '% ' + t.boost_label + ')' : '' %></span>
             <span style="color:<%= color %>;font-size:12px;font-weight:bold;"><%= label %></span>
           </div>
           <div style="color:#94a3b8;font-size:11px;">
@@ -85,7 +85,7 @@
 <!-- বট স্লিপ (নিচে ভাসমান) -->
 <div id="betSlip" style="position:fixed;bottom:60px;left:0;right:0;background:#111;border-top:2px solid #f59e0b;padding:14px 16px;display:none;z-index:100;max-width:600px;margin:0 auto;">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-    <span style="color:#fff;font-weight:bold;font-size:14px;"><%= t.bet_slip %> (<span id="slipCount">0</span>)</span>
+    <span style="color:var(--text-main);font-weight:bold;font-size:14px;"><%= t.bet_slip %> (<span id="slipCount">0</span>)</span>
     <button onclick="clearSlip()" style="background:none;border:none;color:#ef4444;font-size:12px;cursor:pointer;"><%= t.clear_all %></button>
   </div>
   <div id="slipItems" style="max-height:120px;overflow-y:auto;margin-bottom:8px;"></div>

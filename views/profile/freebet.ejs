@@ -4,13 +4,13 @@
   <%- include('../partials/flash') %>
 
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-    <a href="/profile" style="color:#fff;text-decoration:none;font-size:20px;">←</a>
-    <h1 style="color:#fff;font-size:18px;font-weight:bold;">🎁 ফ্রি বেট</h1>
+    <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
+    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">🎁 ফ্রি বেট</h1>
   </div>
 
   <div style="background:linear-gradient(135deg,#10b981,#059669);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center;">
     <div style="font-size:40px;margin-bottom:8px;">🎁</div>
-    <div style="color:#fff;font-size:16px;font-weight:bold;margin-bottom:4px;">ফ্রি বেট কয়েন</div>
+    <div style="color:var(--text-main);font-size:16px;font-weight:bold;margin-bottom:4px;">ফ্রি বেট কয়েন</div>
     <div style="color:rgba(255,255,255,0.9);font-size:13px;">ক্লেইম করে বোনাস কয়েন পান, খেলে উপভোগ করুন</div>
   </div>
 
@@ -34,7 +34,7 @@
     <% active.forEach(f => { %>
       <div style="background:rgba(16,185,129,0.1);border:1px solid #10b981;border-radius:14px;padding:16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
         <div>
-          <div style="color:#fff;font-size:18px;font-weight:bold;">🎁 <%= f.amount %> কয়েন</div>
+          <div style="color:var(--text-main);font-size:18px;font-weight:bold;">🎁 <%= f.amount %> কয়েন</div>
           <div style="color:#94a3b8;font-size:11px;margin-top:2px;"><%= new Date(f.created_at).toLocaleDateString('bn-BD') %></div>
         </div>
         <form action="/profile/freebet/claim/<%= f.id %>" method="POST" style="margin:0;">
@@ -52,7 +52,7 @@
 
   <% if (used.length > 0) { %>
     <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;">
-      <div style="color:#fff;font-weight:bold;margin-bottom:12px;">📜 ব্যবহৃত ফ্রি বেট</div>
+      <div style="color:var(--text-main);font-weight:bold;margin-bottom:12px;">📜 ব্যবহৃত ফ্রি বেট</div>
       <% used.forEach(f => { %>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
           <div style="color:#94a3b8;font-size:13px;"><%= f.amount %> কয়েন</div>

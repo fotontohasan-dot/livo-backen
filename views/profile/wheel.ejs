@@ -17,7 +17,7 @@
   <%- include('../partials/flash') %>
 
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
-    <a href="/profile" style="color:#fff;text-decoration:none;font-size:20px;">←</a>
+    <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
   </div>
 
   <div class="fa-crown-banner">
@@ -56,7 +56,7 @@
 
   <!-- স্পিন হিস্ট্রি / প্রাইজ লগ -->
   <div style="margin-top:30px;text-align:left;">
-    <div style="color:#fff;font-size:15px;font-weight:bold;margin-bottom:10px;">🧾 স্পিন হিস্ট্রি</div>
+    <div style="color:var(--text-main);font-size:15px;font-weight:bold;margin-bottom:10px;">🧾 স্পিন হিস্ট্রি</div>
     <% if (history && history.length) { %>
       <% history.forEach(function(h) { %>
         <div style="display:flex;justify-content:space-between;background:rgba(255,255,255,0.05);border-radius:10px;padding:10px 14px;margin-bottom:8px;">

@@ -4,8 +4,8 @@
   <%- include('../partials/flash') %>
 
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-    <a href="/profile" style="color:#fff;text-decoration:none;font-size:20px;">←</a>
-    <h1 style="color:#fff;font-size:18px;font-weight:bold;">🔥 উইন স্ট্রিক বোনাস</h1>
+    <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
+    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">🔥 উইন স্ট্রিক বোনাস</h1>
   </div>
 
   <% if (streak) { %>
@@ -13,7 +13,7 @@
     <div style="background:linear-gradient(135deg,#f97316,#ef4444);border-radius:16px;padding:24px;margin-bottom:16px;text-align:center;">
       <div style="font-size:44px;margin-bottom:4px;">🔥</div>
       <div style="color:rgba(255,255,255,0.9);font-size:13px;">বর্তমান স্ট্রিক</div>
-      <div style="color:#fff;font-size:38px;font-weight:900;"><%= streak.current %></div>
+      <div style="color:var(--text-main);font-size:38px;font-weight:900;"><%= streak.current %></div>
       <div style="color:rgba(255,255,255,0.9);font-size:12px;margin-top:4px;">সর্বোচ্ স্ট্রিক: <%= streak.best %></div>
     </div>
 
@@ -29,7 +29,7 @@
 
     <!-- সব মাইলস্টোন -->
     <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;">
-      <div style="color:#fff;font-weight:bold;margin-bottom:12px;">🎯 স্ট্রিক মাইলস্টোন</div>
+      <div style="color:var(--text-main);font-weight:bold;margin-bottom:12px;">🎯 স্ট্রিক মাইলস্টোন</div>
       <% streak.milestones.forEach(m => {
         const reached = streak.current >= m.streak;
       %>
@@ -44,12 +44,12 @@
 
     <!-- স্ট্রিক হিস্ট্রি -->
     <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;margin-top:16px;">
-      <div style="color:#fff;font-weight:bold;margin-bottom:12px;">🧾 স্ট্রিক হিস্ট্রি</div>
+      <div style="color:var(--text-main);font-weight:bold;margin-bottom:12px;">🧾 স্ট্রিক হিস্ট্রি</div>
       <% if (streak.history && streak.history.length) { %>
         <% streak.history.forEach(h => { %>
           <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
             <div>
-              <div style="color:#fff;font-size:13px;"><%= h.description %></div>
+              <div style="color:var(--text-main);font-size:13px;"><%= h.description %></div>
               <div style="color:#64748b;font-size:11px;"><%= new Date(h.created_at).toLocaleDateString('bn-BD') %></div>
             </div>
             <div style="color:#10b981;font-size:13px;font-weight:bold;">+<%= h.amount %></div>

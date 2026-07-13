@@ -29,7 +29,7 @@
 
   <div style="display:flex;gap:8px;margin-bottom:12px">
     <button id="mode-bot" onclick="setMode(true)" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border-glass);background:var(--grad-gold);color:#000;font-weight:bold;cursor:pointer;font-size:13px">🤖 বট সহায়তা</button>
-    <button id="mode-agent" onclick="setMode(false)" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border-glass);background:rgba(255,255,255,0.08);color:#fff;font-weight:bold;cursor:pointer;font-size:13px">👤 লাইভ এজেন্ট</button>
+    <button id="mode-agent" onclick="setMode(false)" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border-glass);background:rgba(255,255,255,0.08);color:var(--text-main);font-weight:bold;cursor:pointer;font-size:13px">👤 লাইভ এজেন্ট</button>
   </div>
 
   <div id="chat-container" style="background:rgba(255,255,255,0.03);border:1px solid var(--border-glass);border-radius:16px;display:flex;flex-direction:column;height:70vh">
@@ -42,12 +42,12 @@
         <button onclick="clearFile()" style="color:#ef4444;font-size:12px;margin-left:8px;background:none;border:none;cursor:pointer">✕ <%= t.cancel %></button>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
-        <label style="background:rgba(255,255,255,0.08);color:#fff;padding:10px 12px;border-radius:8px;cursor:pointer;font-size:18px">
+        <label style="background:rgba(255,255,255,0.08);color:var(--text-main);padding:10px 12px;border-radius:8px;cursor:pointer;font-size:18px">
           📎
           <input type="file" id="file-input" style="display:none" accept="image/*,video/*">
         </label>
         <input type="text" id="message-input"
-          style="flex:1;background:rgba(255,255,255,0.08);border:1px solid var(--border-glass);border-radius:8px;padding:10px 14px;color:#fff;font-size:14px;outline:none"
+          style="flex:1;background:rgba(255,255,255,0.08);border:1px solid var(--border-glass);border-radius:8px;padding:10px 14px;color:var(--text-main);font-size:14px;outline:none"
           placeholder="<%= t.message_placeholder %>">
         <button id="send-button"
           style="background:var(--grad-gold);color:#000;padding:10px 16px;border-radius:8px;border:none;font-weight:bold;cursor:pointer;font-size:14px">
@@ -157,7 +157,7 @@
     div.style.cssText = `display:flex;justify-content:${isAdmin ? 'flex-start' : 'flex-end'}`;
 
     const inner = document.createElement('div');
-    inner.style.cssText = `max-width:80%;border-radius:12px;padding:10px 14px;${isAdmin ? 'background:rgba(255,255,255,0.1);color:#fff' : 'background:var(--grad-gold);color:#000'}`;
+    inner.style.cssText = `max-width:80%;border-radius:12px;padding:10px 14px;${isAdmin ? 'background:rgba(255,255,255,0.1);color:var(--text-main)' : 'background:var(--grad-gold);color:#000'}`;
 
     if (fileUrl) {
       if (fileType === 'image') {

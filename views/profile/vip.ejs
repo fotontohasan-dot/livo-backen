@@ -4,15 +4,15 @@
   <%- include('../partials/flash') %>
 
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-    <a href="/profile" style="color:#fff;text-decoration:none;font-size:20px;">←</a>
-    <h1 style="color:#fff;font-size:18px;font-weight:bold;">👑 VIP প্রোগ্রাম</h1>
+    <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
+    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">👑 VIP প্রোগ্রাম</h1>
   </div>
 
   <% if (vip) { %>
     <!-- বর্তমান লেভেল কার্ড -->
     <div style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:16px;padding:24px;margin-bottom:16px;text-align:center;">
       <div style="font-size:44px;margin-bottom:4px;">👑</div>
-      <div style="color:#fff;font-size:22px;font-weight:900;"><%= vip.current.name %></div>
+      <div style="color:var(--text-main);font-size:22px;font-weight:900;"><%= vip.current.name %></div>
       <div style="color:rgba(255,255,255,0.9);font-size:13px;margin-top:2px;">VIP লেভেল <%= vip.level %></div>
     </div>
 
@@ -44,7 +44,7 @@
 
       <% if (vip.next) { %>
         <div style="color:#94a3b8;font-size:12px;text-align:center;margin-top:8px;">
-          পরের লেভেল <strong style="color:#fff;"><%= vip.next.name %></strong> পেতে আরও
+          পরের লেভেল <strong style="color:var(--text-main);"><%= vip.next.name %></strong> পেতে আরও
           <strong id="vipToNextText" style="color:#f59e0b;"><%= Number(vip.toNext).toLocaleString('bn-BD') %></strong> টার্নওভার দরকার
         </div>
       <% } else { %>
@@ -54,7 +54,7 @@
 
     <!-- সব লেভেল তালিকা -->
     <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;">
-      <div style="color:#fff;font-weight:bold;margin-bottom:12px;">📊 VIP লেভেলসমূহ</div>
+      <div style="color:var(--text-main);font-weight:bold;margin-bottom:12px;">📊 VIP লেভেলসমূহ</div>
       <% vip.levels.forEach(l => {
         const isCurrent = l.level === vip.level;
         const reached = vip.totalTurnover >= Number(l.min_turnover);

@@ -1,8 +1,8 @@
 <%- include('../partials/head') %>
 <div class="container" style="padding:16px;padding-bottom:100px">
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-    <a href="/profile" style="color:#fff;text-decoration:none;font-size:20px">←</a>
-    <h1 style="color:#fff;font-size:18px;font-weight:bold">💬 পরামর্শ ও প্রতিক্রিয়া</h1>
+    <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px">←</a>
+    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold">💬 পরামর্শ ও প্রতিক্রিয়া</h1>
   </div>
 
   <%- include('../partials/flash') %>
@@ -12,7 +12,7 @@
       <div>
         <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:6px">আপনার মতামত লিখুন</label>
         <textarea name="message" id="feedback-message" required rows="6" placeholder="২০ থেকে ২০০ শব্দের মধ্যে লিখুন..."
-          style="width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:12px;color:#fff;font-size:14px;outline:none;resize:none"></textarea>
+          style="width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:12px;color:var(--text-main);font-size:14px;outline:none;resize:none"></textarea>
       </div>
       <button type="submit" id="feedback-submit" style="background:linear-gradient(90deg,#f59e0b,#fbbf24);color:#000;border:none;border-radius:8px;padding:12px;font-size:16px;font-weight:bold;cursor:pointer">
         জমা দিন

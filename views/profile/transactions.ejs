@@ -1,8 +1,8 @@
 <%- include('../partials/head') %>
 <div class="container" style="padding:16px;padding-bottom:100px">
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-    <a href="/profile" style="color:#fff;text-decoration:none;font-size:20px">←</a>
-    <h1 style="color:#fff;font-size:18px;font-weight:bold">💳 লেনদেন ইতিহাস</h1>
+    <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px">←</a>
+    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold">💳 লেনদেন ইতিহাস</h1>
   </div>
 
   <% if (transactions && transactions.length > 0) { %>
@@ -12,7 +12,7 @@
           <div style="display:flex;align-items:center;gap:12px">
             <div style="font-size:24px"><%= t.type === 'deposit' ? '⬇️' : t.type === 'withdraw' ? '⬆️' : '🎯' %></div>
             <div>
-              <div style="color:#fff;font-size:14px"><%= t.description || t.type %></div>
+              <div style="color:var(--text-main);font-size:14px"><%= t.description || t.type %></div>
               <div style="color:#94a3b8;font-size:12px"><%= new Date(t.created_at).toLocaleDateString('bn-BD') %></div>
             </div>
           </div>

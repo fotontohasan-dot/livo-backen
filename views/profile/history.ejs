@@ -2,10 +2,10 @@
 
 <div class="container" style="padding: 15px; padding-bottom: 100px;">
   <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
-    <a href="/profile" style="color: #fff; text-decoration: none; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+    <a href="/profile" style="color:var(--text-main); text-decoration: none; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
       <i class="fas fa-chevron-left"></i>
     </a>
-    <h1 style="color: #fff; font-size: 20px; font-weight: 800;">বেটিং রেকর্ড</h1>
+    <h1 style="color:var(--text-main); font-size: 20px; font-weight: 800;">বেটিং রেকর্ড</h1>
   </div>
 
   <%- include('../partials/flash') %>
@@ -37,7 +37,7 @@
         <% var st = b.status === 'won' ? 'জয়' : b.status === 'lost' ? 'হার' : 'পেন্ডিং'; %>
         <div style="background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 14px; padding: 14px 16px;">
           <div style="display: flex; justify-content: space-between;">
-            <div style="color: #fff; font-size: 13px; font-weight: 700;"><%= b.team_a && b.team_b ? (b.team_a + ' vs ' + b.team_b) : (b.title || 'ম্যাচ') %></div>
+            <div style="color:var(--text-main); font-size: 13px; font-weight: 700;"><%= b.team_a && b.team_b ? (b.team_a + ' vs ' + b.team_b) : (b.title || 'ম্যাচ') %></div>
             <div style="color: <%= sc %>; font-size: 12px; font-weight: 800;"><%= st %></div>
           </div>
           <div style="color: var(--text-muted); font-size: 11px; margin-top: 6px;"><%= b.runner %> · অড <%= b.odd %></div>

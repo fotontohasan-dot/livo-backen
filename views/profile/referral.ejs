@@ -4,14 +4,14 @@
   <%- include('../partials/flash') %>
 
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-    <a href="/profile" style="color:#fff;text-decoration:none;font-size:20px;">←</a>
-    <h1 style="color:#fff;font-size:18px;font-weight:bold;">👥 বন্ধুদের আমন্ত্রণ</h1>
+    <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
+    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">👥 বন্ধুদের আমন্ত্রণ</h1>
   </div>
 
   <!-- ব্যানার -->
   <div style="background:linear-gradient(135deg,#10b981,#06b6d4);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center;">
     <div style="font-size:40px;margin-bottom:8px;">🎁</div>
-    <div style="color:#fff;font-size:16px;font-weight:bold;margin-bottom:4px;">বন্ধু রেফার করে আয় করুন!</div>
+    <div style="color:var(--text-main);font-size:16px;font-weight:bold;margin-bottom:4px;">বন্ধু রেফার করে আয় করুন!</div>
     <div style="color:rgba(255,255,255,0.9);font-size:13px;">
       বন্ধুর প্রথম ডিপোজিটে বোনাস + আজীবন কমিশন (২.৫% / ১.৫% / ০.৮%)
     </div>
@@ -35,7 +35,7 @@
 
   <!-- পরের বোনাস তথ্য -->
   <div style="background:rgba(245,158,11,0.1);border:1px solid #f59e0b;border-radius:12px;padding:14px;margin-bottom:16px;text-align:center;">
-    <div style="color:#fff;font-size:13px;">আপনার পরের সফল রেফারে পাবেন</div>
+    <div style="color:var(--text-main);font-size:13px;">আপনার পরের সফল রেফারে পাবেন</div>
     <div style="color:#f59e0b;font-size:24px;font-weight:bold;margin-top:4px;"><%= stats.nextBonus %> কয়েন</div>
     <div style="color:#94a3b8;font-size:11px;margin-top:4px;">শর্ত: বন্ধুকে ৫০০+ টাকা ডিপোজিট করতে হবে</div>
   </div>
@@ -55,7 +55,7 @@
   <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;margin-bottom:16px;">
     <div style="color:#94a3b8;font-size:13px;margin-bottom:8px;">আপনার রেফারেল লিংক</div>
     <div style="display:flex;gap:8px;align-items:center;">
-      <div style="flex:1;background:rgba(255,255,255,0.1);border-radius:8px;padding:10px;color:#fff;font-size:12px;word-break:break-all;" id="ref-link">
+      <div style="flex:1;background:rgba(255,255,255,0.1);border-radius:8px;padding:10px;color:var(--text-main);font-size:12px;word-break:break-all;" id="ref-link">
         <%= baseUrl %>/register?ref=<%= user.referral_code %>
       </div>
       <button onclick="shareLink()" style="background:#10b981;color:#fff;border:none;border-radius:8px;padding:12px 16px;cursor:pointer;">শেয়ার</button>
@@ -64,12 +64,12 @@
 
   <!-- আমার টিম -->
   <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;margin-bottom:16px;">
-    <div style="color:#fff;font-weight:bold;margin-bottom:12px;">👨‍👩‍👧 আমার টিম</div>
+    <div style="color:var(--text-main);font-weight:bold;margin-bottom:12px;">👨‍👩‍👧 আমার টিম</div>
     <% if (stats.team && stats.team.length > 0) { %>
       <% stats.team.forEach(t => { %>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
           <div>
-            <div style="color:#fff;font-size:13px;"><%= t.username %></div>
+            <div style="color:var(--text-main);font-size:13px;"><%= t.username %></div>
             <div style="color:#94a3b8;font-size:10px;"><%= new Date(t.created_at).toLocaleDateString('bn-BD') %></div>
           </div>
           <div>
@@ -90,12 +90,12 @@
 
   <!-- আয়ের হিস্ট্রি -->
   <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;">
-    <div style="color:#fff;font-weight:bold;margin-bottom:12px;">💰 আয়ের হিস্ট্রি</div>
+    <div style="color:var(--text-main);font-weight:bold;margin-bottom:12px;">💰 আয়ের হিস্ট্রি</div>
     <% if (stats.history && stats.history.length > 0) { %>
       <% stats.history.forEach(h => { %>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
           <div>
-            <div style="color:#fff;font-size:12px;">
+            <div style="color:var(--text-main);font-size:12px;">
               <%= h.reason === 'signup' ? '🎁 রেফার বোনাস' : `💸 কমিশন (লেভেল ${h.level})` %>
             </div>
             <div style="color:#94a3b8;font-size:10px;">

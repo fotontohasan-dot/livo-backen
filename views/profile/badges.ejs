@@ -4,8 +4,8 @@
   <%- include('../partials/flash') %>
 
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-    <a href="/profile" style="color:#fff;text-decoration:none;font-size:20px;">←</a>
-    <h1 style="color:#fff;font-size:18px;font-weight:bold;">🏆 ব্যাজ ও অর্জন</h1>
+    <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
+    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">🏆 ব্যাজ ও অর্জন</h1>
   </div>
 
   <% 
@@ -16,7 +16,7 @@
   <!-- সারাংশ -->
   <div style="background:linear-gradient(135deg,#0ea5e9,#6366f1);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center;">
     <div style="font-size:40px;margin-bottom:6px;">🏆</div>
-    <div style="color:#fff;font-size:22px;font-weight:900;"><%= earnedCount %> / <%= total %></div>
+    <div style="color:var(--text-main);font-size:22px;font-weight:900;"><%= earnedCount %> / <%= total %></div>
     <div style="color:rgba(255,255,255,0.9);font-size:13px;">ব্যাজ অর্জন করেছেন</div>
   </div>
 
@@ -25,7 +25,7 @@
     <% (badges || []).forEach(b => { %>
       <div style="background:<%= b.earned ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.04)' %>;border:1px solid <%= b.earned ? '#10b981' : 'rgba(255,255,255,0.08)' %>;border-radius:14px;padding:16px;text-align:center;<%= b.earned ? '' : 'opacity:0.55;' %>">
         <div style="font-size:38px;margin-bottom:6px;<%= b.earned ? '' : 'filter:grayscale(1);' %>"><%= b.icon %></div>
-        <div style="color:#fff;font-size:13px;font-weight:bold;"><%= b.name %></div>
+        <div style="color:var(--text-main);font-size:13px;font-weight:bold;"><%= b.name %></div>
         <div style="color:#94a3b8;font-size:11px;margin-top:3px;line-height:1.4;"><%= b.desc %></div>
         <div style="margin-top:8px;">
           <% if (b.earned) { %>

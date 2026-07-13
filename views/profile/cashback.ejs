@@ -4,14 +4,14 @@
   <%- include('../partials/flash') %>
 
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-    <a href="/profile" style="color:#fff;text-decoration:none;font-size:20px;">←</a>
-    <h1 style="color:#fff;font-size:18px;font-weight:bold;">💸 ক্যাশব্যাক</h1>
+    <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
+    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">💸 ক্যাশব্যাক</h1>
   </div>
 
   <!-- ব্যানার -->
   <div style="background:linear-gradient(135deg,#8b5cf6,#6366f1);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center;">
     <div style="font-size:40px;margin-bottom:8px;">💸</div>
-    <div style="color:#fff;font-size:16px;font-weight:bold;margin-bottom:4px;">দৈনিক ক্যাশব্যাক</div>
+    <div style="color:var(--text-main);font-size:16px;font-weight:bold;margin-bottom:4px;">দৈনিক ক্যাশব্যাক</div>
     <div style="color:rgba(255,255,255,0.9);font-size:13px;">
       প্রতিদিন আপনার নিট লোকসানের ৫% পরদিন ফেরত পান
     </div>
@@ -23,7 +23,7 @@
     <% ['sports','casino','live'].forEach(function(cat) { var c = cashback.byCategory[cat]; %>
     <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:16px;margin-bottom:12px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <span style="color:#fff;font-size:14px;font-weight:bold;"><%= c.label %></span>
+        <span style="color:var(--text-main);font-size:14px;font-weight:bold;"><%= c.label %></span>
         <% if (c.claimed) { %>
           <span style="color:#10b981;font-size:12px;">✅ নেওয়া হয়েছে</span>
         <% } %>
@@ -51,7 +51,7 @@
 
     <!-- সাপ্তাহিক/মাসিক সামারি -->
     <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:16px;margin-top:20px;">
-      <div style="color:#fff;font-size:14px;font-weight:bold;margin-bottom:10px;">📊 সামারি</div>
+      <div style="color:var(--text-main);font-size:14px;font-weight:bold;margin-bottom:10px;">📊 সামারি</div>
       <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
         <span style="color:#94a3b8;font-size:13px;">গত ৭ দিনে মোট ক্যাশব্যাক</span>
         <span style="color:#f59e0b;font-size:13px;font-weight:bold;"><%= Number(cashback.weekly.cashbackEarned).toLocaleString('bn-BD') %> কয়েন</span>
