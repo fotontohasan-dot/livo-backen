@@ -541,6 +541,13 @@ async function runMigrations() {
     `);
     await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_pr_gateway_tran ON payment_requests(gateway_tran_id) WHERE gateway_tran_id IS NOT NULL;`);
 
+    // একই ট্রানজেকশন আইডি দিয়ে বারবার ডিপোজিট আটকানো (ইউজার নিজে বাতিল করলে TrxID আবার ব্যবহার করা যাবে)
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_pr_deposit_trx_unique
+      ON payment_requests (transaction_id)
+      WHERE type = 'deposit' AND transaction_id IS NOT NULL AND status <> 'cancelled';
+    `);
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS site_settings (
         key TEXT PRIMARY KEY,
