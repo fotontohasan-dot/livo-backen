@@ -1,0 +1,40 @@
+<%- include('../partials/head') %>
+<script src="https://cdn.tailwindcss.com"></script>
+
+<div class="min-h-screen pb-32 text-main">
+  <div class="red-theme-bg text-white px-4 py-4 flex items-center gap-4 sticky top-0 z-50 shadow-md" style="background-color:#e61e26;">
+    <a href="/payment/history" style="color:#fff;" class="text-xl"><i class="fas fa-chevron-left"></i></a>
+    <h1 class="text-lg font-bold">ডিপোজিট এডিট করুন</h1>
+  </div>
+
+  <div class="p-4 max-w-[480px] mx-auto">
+    <%- include('../partials/flash') %>
+
+    <div style="background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 14px; padding: 16px; margin-bottom: 16px;">
+      <div style="color: var(--text-muted); font-size: 12px;">অ্যামাউন্ট</div>
+      <div style="color: var(--gold); font-size: 18px; font-weight: 800;">৳<%= Number(request.amount).toLocaleString('bn-BD') %></div>
+      <div style="color: var(--text-muted); font-size: 12px; margin-top: 4px;">মেথড: <%= request.method %></div>
+    </div>
+
+    <form action="/payment/deposit/<%= request.id %>/edit" method="POST">
+      <div class="mb-4">
+        <label class="block text-main font-bold mb-2">ট্রানজেকশন আইডি</label>
+        <input type="text" name="transaction_id" value="<%= request.transaction_id %>" placeholder="TrxID লিখুন" class="w-full p-4 border-2 border-glass rounded-2xl focus:outline-none bg-surface text-main font-mono font-bold" required>
+      </div>
+      <div class="mb-4">
+        <label class="block text-main font-bold mb-2">আপনার নম্বর (যেটা থেকে পাঠিয়েছেন)</label>
+        <input type="text" name="account_number" value="<%= request.account_number %>" placeholder="01XXXXXXXXX" class="w-full p-4 border-2 border-glass rounded-2xl focus:outline-none bg-surface text-main font-bold" required>
+      </div>
+
+      <div class="flex gap-3 mt-6">
+        <a href="/payment/history" class="flex-1 bg-gray-200 text-gray-700 py-4 rounded-2xl font-bold text-center">বাতিল</a>
+        <button type="submit" class="flex-[2] red-theme-bg text-white py-4 rounded-2xl font-bold text-lg shadow-lg" style="background-color:#e61e26;">
+          আপডেট করুন
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%- include('../partials/bottom-nav') %>
+</body></html>

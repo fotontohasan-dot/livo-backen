@@ -35,18 +35,30 @@
       <% requests.forEach(function (tx) { %>
         <% var statusColor = tx.status === 'approved' ? '#10b981' : tx.status === 'rejected' ? '#ef4444' : '#f59e0b'; %>
         <% var statusText = tx.status === 'approved' ? 'সফল' : tx.status === 'rejected' ? 'বাতিল' : 'পেন্ডিং'; %>
-        <div style="background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 14px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <div style="color:var(--text-main); font-size: 14px; font-weight: 700;">
-              <%= tx.type === 'deposit' ? '⬇️ ডিপোজিট' : '⬆️ উইথড্র' %>
-              <% if (tx.gateway === 'sslcommerz') { %><span style="font-size: 10px; color: var(--gold); font-weight: 600;"> (অটো)</span><% } %>
+        <% if (tx.status === 'cancelled') { statusColor = '#ef4444'; statusText = 'বাতিলকৃত'; } %>
+        <div style="background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 14px; padding: 14px 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="color:var(--text-main); font-size: 14px; font-weight: 700;">
+                <%= tx.type === 'deposit' ? '⬇️ ডিপোজিট' : '⬆️ উইথড্র' %>
+                <% if (tx.gateway === 'sslcommerz') { %><span style="font-size: 10px; color: var(--gold); font-weight: 600;"> (অটো)</span><% } %>
+              </div>
+              <div style="color: var(--text-muted); font-size: 11px; margin-top: 3px;"><%= tx.method || '-' %> · <%= new Date(tx.created_at).toLocaleString('bn-BD') %></div>
+              <% if (tx.transaction_id) { %><div style="color: var(--text-muted); font-size: 11px; margin-top: 2px;">TrxID: <%= tx.transaction_id %></div><% } %>
             </div>
-            <div style="color: var(--text-muted); font-size: 11px; margin-top: 3px;"><%= tx.method || '-' %> · <%= new Date(tx.created_at).toLocaleString('bn-BD') %></div>
+            <div style="text-align: right;">
+              <div style="color: var(--gold); font-size: 15px; font-weight: 800;">৳<%= Number(tx.amount).toLocaleString('bn-BD') %></div>
+              <div style="color: <%= statusColor %>; font-size: 11px; font-weight: 700; margin-top: 3px;"><%= statusText %></div>
+            </div>
           </div>
-          <div style="text-align: right;">
-            <div style="color: var(--gold); font-size: 15px; font-weight: 800;">৳<%= Number(tx.amount).toLocaleString('bn-BD') %></div>
-            <div style="color: <%= statusColor %>; font-size: 11px; font-weight: 700; margin-top: 3px;"><%= statusText %></div>
-          </div>
+          <% if (tx.type === 'deposit' && tx.status === 'pending') { %>
+            <div style="display: flex; gap: 8px; margin-top: 10px; border-top: 1px solid var(--border-glass); padding-top: 10px;">
+              <a href="/payment/deposit/<%= tx.id %>/edit" style="flex:1; text-align:center; padding: 7px 0; border-radius: 8px; font-size: 12px; font-weight: 700; background: var(--bg-glass); color: var(--text-main); text-decoration:none; border: 1px solid var(--border-glass);">✏️ এডিট</a>
+              <form method="POST" action="/payment/deposit/<%= tx.id %>/cancel" style="flex:1;" onsubmit="return confirm('আপনি কি নিশ্চিত এই ডিপোজিট রিকোয়েস্ট বাতিল করতে চান?');">
+                <button type="submit" style="width:100%; padding: 7px 0; border-radius: 8px; font-size: 12px; font-weight: 700; background: rgba(239,68,68,0.12); color: #ef4444; border: 1px solid rgba(239,68,68,0.3);">✖ ক্যান্সেল</button>
+              </form>
+            </div>
+          <% } %>
         </div>
       <% }) %>
     <% } else { %>
