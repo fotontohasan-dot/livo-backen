@@ -25,21 +25,51 @@
 
   .method-card {
     transition: all 0.2s ease;
+    position: relative;
   }
   .method-card.selected {
-    border-color: #e61e26;
-    background-color: var(--bg-surface);
+    border-color: #e61e26 !important;
+    background-color: rgba(230, 30, 38, 0.08) !important;
+    box-shadow: 0 0 0 2px rgba(230, 30, 38, 0.25);
+  }
+  .method-card .check-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #e61e26;
+    color: #fff;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  }
+  .method-card.selected .check-badge {
+    display: flex;
   }
 
+  .channel-btn {
+    transition: all 0.2s ease;
+    position: relative;
+  }
   .channel-btn.selected {
-    background-color: #e61e26;
-    color: white;
-    border-color: #e61e26;
+    background-color: #e61e26 !important;
+    color: #fff !important;
+    border-color: #e61e26 !important;
+    box-shadow: 0 0 0 2px rgba(230, 30, 38, 0.25);
   }
 
+  .amount-btn {
+    position: relative;
+  }
   .amount-btn.selected {
-    border-color: #e61e26;
-    color: #e61e26;
+    border-color: #e61e26 !important;
+    color: #e61e26 !important;
+    background-color: rgba(230, 30, 38, 0.08) !important;
+    box-shadow: 0 0 0 2px rgba(230, 30, 38, 0.25);
   }
 </style>
 
@@ -63,32 +93,36 @@
           <div class="grid grid-cols-2 gap-4">
             <!-- bKash -->
             <div id="method-bkash" class="method-card selected border-2 border-glass bg-surface rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer" onclick="selectMethod('bkash')">
-              <div class="h-12 w-12 rounded-full bg-[#D12053] flex items-center justify-center mb-2 shadow-sm">
-                <span class="text-white font-bold text-xl">b</span>
+              <div class="check-badge"><i class="fas fa-check"></i></div>
+              <div class="h-12 w-12 rounded-2xl bg-[#E2136E] flex items-center justify-center mb-2 shadow-sm">
+                <span class="text-white font-black text-lg" style="letter-spacing:-1px;">bK</span>
               </div>
               <span class="text-sm font-bold text-main">bKash</span>
               <input type="radio" name="method" value="bkash" id="radio-bkash" class="hidden" checked>
             </div>
             <!-- Nagad -->
             <div id="method-nagad" class="method-card border-2 border-glass bg-surface rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer" onclick="selectMethod('nagad')">
-              <div class="h-12 w-12 rounded-full bg-[#F47321] flex items-center justify-center mb-2 shadow-sm">
-                <span class="text-white font-bold text-xl">n</span>
+              <div class="check-badge"><i class="fas fa-check"></i></div>
+              <div class="h-12 w-12 rounded-2xl bg-[#EE3123] flex items-center justify-center mb-2 shadow-sm">
+                <span class="text-white font-black text-lg" style="letter-spacing:-1px;">Ng</span>
               </div>
               <span class="text-sm font-bold text-main">Nagad</span>
               <input type="radio" name="method" value="nagad" id="radio-nagad" class="hidden">
             </div>
             <!-- Rocket -->
             <div id="method-rocket" class="method-card border-2 border-glass bg-surface rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer" onclick="selectMethod('rocket')">
-              <div class="h-12 w-12 rounded-full bg-[#8C3494] flex items-center justify-center mb-2 shadow-sm">
-                <span class="text-white font-bold text-xl">R</span>
+              <div class="check-badge"><i class="fas fa-check"></i></div>
+              <div class="h-12 w-12 rounded-2xl bg-[#8C3494] flex items-center justify-center mb-2 shadow-sm">
+                <span class="text-white font-black text-lg" style="letter-spacing:-1px;">Rk</span>
               </div>
               <span class="text-sm font-bold text-main">Rocket</span>
               <input type="radio" name="method" value="rocket" id="radio-rocket" class="hidden">
             </div>
             <!-- Upay -->
             <div id="method-upay" class="method-card border-2 border-glass bg-surface rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer" onclick="selectMethod('upay')">
-              <div class="h-12 w-12 rounded-full bg-[#E4032E] flex items-center justify-center mb-2 shadow-sm">
-                <span class="text-white font-bold text-xl">U</span>
+              <div class="check-badge"><i class="fas fa-check"></i></div>
+              <div class="h-12 w-12 rounded-2xl bg-[#D4145A] flex items-center justify-center mb-2 shadow-sm">
+                <span class="text-white font-black text-lg" style="letter-spacing:-1px;">Up</span>
               </div>
               <span class="text-sm font-bold text-main">Upay</span>
               <input type="radio" name="method" value="upay" id="radio-upay" class="hidden">
