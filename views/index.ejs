@@ -398,9 +398,7 @@ body.light-mode .jackpot-board {
 </div>
 
 <!-- ===== Provider Filter ===== -->
-<div class="horizontal-nav-container" id="providerTabs" style="padding-top:0;">
-  <div class="provider-chip active" data-provider="all">সব প্রোভাইডার</div>
-</div>
+<div class="horizontal-nav-container" id="providerTabs" style="padding-top:0;"></div>
 
 <!-- ===== Layout Switcher ===== -->
 <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:0 12px 10px;">
@@ -412,13 +410,22 @@ body.light-mode .jackpot-board {
 
 <style>
   .provider-chip {
-    flex: 0 0 auto; white-space: nowrap; padding: 7px 14px; border-radius: 20px;
+    flex: 0 0 auto; white-space: nowrap; display: flex; align-items: center; gap: 7px;
+    padding: 6px 14px 6px 6px; border-radius: 20px;
     background: var(--bg-surface); border: 1px solid var(--border-glass);
     color: var(--text-muted); font-size: 12px; font-weight: 700; cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .provider-chip .provider-logo {
+    width: 22px; height: 22px; border-radius: 7px; flex: 0 0 22px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 9px; font-weight: 900; letter-spacing: -0.3px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
   }
   .provider-chip.active {
     background: var(--fa-gold); color: #1a1a1a; border-color: var(--fa-gold);
   }
+  .provider-chip.active .provider-logo { box-shadow: 0 0 0 2px rgba(0,0,0,0.15); }
   .layout-btn {
     width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border-glass);
     background: var(--bg-surface); color: var(--text-muted); cursor: pointer; font-size: 13px;
@@ -613,28 +620,29 @@ const allGames = [
   { name: 'Sakura Fortune', emoji: '⛩️', type: 'slots', slug: 'sakura-fortune', badge: 'new', provider: 'Quickspin' }
 ];
 
-const PROVIDERS = [
-  'Jili',
-  'PG Soft',
-  'Spribe',
-  'Pragmatic Play',
-  'Evolution',
-  'NetEnt',
-  'Play\'n GO',
-  'Red Tiger',
-  'Hacksaw Gaming',
-  'Relax Gaming',
-  'Nolimit City',
-  'Playtech',
-  'Microgaming',
-  'Big Time Gaming',
-  'Yggdrasil',
-  'Quickspin',
-  'Betsoft',
-  'Wazdan',
-  'Playson',
-  'Spinomenal'
-];
+const PROVIDER_META = {
+  'Jili':             { mono: 'JILI', color: '#F5A623' },
+  'PG Soft':          { mono: 'PG',   color: '#00B4D8' },
+  'Spribe':           { mono: 'SB',   color: '#6C2EB9' },
+  'Pragmatic Play':   { mono: 'PP',   color: '#E8302A' },
+  'Evolution':        { mono: 'EVO',  color: '#C8102E' },
+  'NetEnt':           { mono: 'NE',   color: '#003D7A' },
+  "Play'n GO":        { mono: 'PnGO', color: '#00A651' },
+  'Red Tiger':        { mono: 'RT',   color: '#D71920' },
+  'Hacksaw Gaming':   { mono: 'HG',   color: '#FF6B00' },
+  'Relax Gaming':     { mono: 'RX',   color: '#14B8A6' },
+  'Nolimit City':     { mono: 'NLC',  color: '#1A1A1A' },
+  'Playtech':         { mono: 'PT',   color: '#0B2545' },
+  'Microgaming':      { mono: 'MG',   color: '#5A2D82' },
+  'Big Time Gaming':  { mono: 'BTG',  color: '#8A6D00' },
+  'Yggdrasil':        { mono: 'YGG',  color: '#0F9B8E' },
+  'Quickspin':        { mono: 'QS',   color: '#9B2FAE' },
+  'Betsoft':          { mono: 'BS',   color: '#1B3A6B' },
+  'Wazdan':           { mono: 'WZ',   color: '#D62828' },
+  'Playson':          { mono: 'PS',   color: '#F77F00' },
+  'Spinomenal':       { mono: 'SM',   color: '#4C3B8C' }
+};
+const PROVIDERS = Object.keys(PROVIDER_META);
 
 let selectedCategory = 'all';
 let selectedProvider = 'all';
@@ -661,32 +669,33 @@ function pushRecent(slug) {
   localStorage.setItem('livo_recent', JSON.stringify(recent));
 }
 
-// ==================== প্রোভাইডার ফিল্টার চিপ রেন্ডার ====================
+// ==================== প্রোভাইডার ফিল্টার চিপ রেন্ডার (লোগো ব্যাজসহ) ====================
+// এই সারিটা শুধু 'সব' ট্যাবে থাকা অবস্থায় দেখানো হয়
 function renderProviderTabs() {
   const wrap = document.getElementById('providerTabs');
   if (!wrap) return;
+  wrap.innerHTML = '';
   PROVIDERS.forEach(p => {
+    const meta = PROVIDER_META[p];
     const chip = document.createElement('div');
-    chip.className = 'provider-chip';
+    chip.className = 'provider-chip' + (selectedProvider === p ? ' active' : '');
     chip.dataset.provider = p;
-    chip.textContent = p;
+    chip.innerHTML = `<span class="provider-logo" style="background:${meta.color}">${meta.mono}</span>${p}`;
     chip.addEventListener('click', () => {
-      document.querySelectorAll('.provider-chip').forEach(c => c.classList.remove('active'));
-      chip.classList.add('active');
-      selectedProvider = p;
+      // একই প্রোভাইডারে আবার চাপ দিলে ফিল্টার উঠে যাবে (সব দেখাবে)
+      selectedProvider = (selectedProvider === p) ? 'all' : p;
+      renderProviderTabs();
       renderGames();
     });
     wrap.appendChild(chip);
   });
-  const allChip = wrap.querySelector('[data-provider="all"]');
-  if (allChip) {
-    allChip.addEventListener('click', () => {
-      document.querySelectorAll('.provider-chip').forEach(c => c.classList.remove('active'));
-      allChip.classList.add('active');
-      selectedProvider = 'all';
-      renderGames();
-    });
-  }
+}
+
+function updateProviderRowVisibility() {
+  const wrap = document.getElementById('providerTabs');
+  if (!wrap) return;
+  // প্রোভাইডার ফিল্টার এখন 'সব' ট্যাবের অংশ — অন্য ট্যাবে গেলে লুকানো থাকবে
+  wrap.style.display = (selectedCategory === 'all') ? 'flex' : 'none';
 }
 
 // ==================== গেইম গ্রিড রেন্ডার ====================
@@ -754,6 +763,8 @@ document.querySelectorAll('.nav-tab-item').forEach(el => {
     document.querySelectorAll('.nav-tab-item').forEach(item => item.classList.remove('active'));
     el.classList.add('active');
     selectedCategory = el.dataset.category;
+    if (selectedCategory !== 'all') selectedProvider = 'all';
+    updateProviderRowVisibility();
     renderGames();
   });
 });
@@ -792,6 +803,7 @@ setInterval(() => {
 
 document.addEventListener('DOMContentLoaded', () => {
   renderProviderTabs();
+  updateProviderRowVisibility();
   applyLayout();
   renderGames();
 });
