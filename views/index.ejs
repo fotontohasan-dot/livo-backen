@@ -524,36 +524,135 @@ body.light-mode .jackpot-board {
   <div class="game-grid-premium" id="gameContainer"></div>
 </div>
 
-<!-- ===== Mega Jackpot Banner ===== -->
-<div class="banner-container" style="margin:20px 12px 12px 12px;">
-  <div class="card jackpot-board" style="padding:22px 16px; text-align:center; border: 2px solid #FFD700; position: relative; overflow: hidden; border-radius: 18px; background: linear-gradient(135deg, #3a0d0d 0%, #1a0505 100%);">
-    <div class="jackpot-title" style="font-family:'Teko',sans-serif; font-size:44px; letter-spacing:2px; text-transform:uppercase; font-weight:800; color:#FFD700; -webkit-text-stroke: 1.5px #7a1010; text-shadow: 0 2px 0 #7a1010, 0 4px 8px rgba(0,0,0,0.6), 0 0 20px rgba(255,215,0,0.5); display:flex; align-items:center; justify-content:center; gap:10px;">
-      <span style="font-size:26px;">👑</span> JACKPOT
+<!-- ===== Mega Jackpot + Recent Big Wins ===== -->
+<style>
+/* Mega Jackpot */
+.mega-jackpot {
+  margin: 20px 12px 15px;
+}
+.jackpot-container {
+  background: linear-gradient(90deg, #c8102e, #f5c400, #c8102e);
+  border-radius: 15px;
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  border: 4px solid #ffd700;
+  box-shadow: 0 0 25px rgba(255, 215, 0, 0.8);
+  min-height: 145px;
+}
+.jackpot-container::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 60%;
+  height: 200%;
+  background: linear-gradient(transparent, rgba(255,255,255,0.5), transparent);
+  transform: rotate(25deg);
+  animation: shine 4s linear infinite;
+}
+@keyframes shine {
+  0% { transform: translateX(-100%) rotate(25deg); }
+  100% { transform: translateX(300%) rotate(25deg); }
+}
+.jackpot-text h2 {
+  color: white;
+  font-size: 27px;
+  font-weight: 900;
+  margin: 0 0 8px 0;
+  text-shadow: 0 0 12px gold;
+}
+.jackpot-amount {
+  color: white;
+  font-size: 31px;
+  font-weight: bold;
+  text-shadow: 2px 2px 8px rgba(0,0,0,0.6);
+}
+/* Recent Big Wins */
+.recent-wins {
+  margin: 0 12px 20px;
+  background: rgba(0, 0, 0, 0.85);
+  border-radius: 12px;
+  padding: 12px;
+  border: 2px solid #ffd700;
+}
+.recent-wins h3 {
+  color: #ffd700;
+  margin: 0 0 12px 0;
+  font-size: 18px;
+  text-align: center;
+}
+.wins-container {
+  height: 220px;
+  overflow: hidden;
+  position: relative;
+}
+.win-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: white;
+  padding: 9px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  font-size: 14px;
+}
+.win-item:last-child { border-bottom: none; }
+.game-name { color: #ffdd88; font-weight: 500; }
+.win-amount { color: #00ff9d; font-weight: bold; }
+</style>
+<!-- Mega Jackpot -->
+<div class="mega-jackpot">
+  <div class="jackpot-container">
+    <div class="jackpot-text">
+      <h2>MEGA JACKPOT</h2>
+      <div class="jackpot-amount">৳ 88,885,063.59</div>
     </div>
-    <div style="margin-top:10px; background: linear-gradient(180deg, #b91c1c 0%, #7f1010 100%); border: 1.5px solid #FFD700; border-radius: 8px; padding: 8px 10px; display:inline-block; box-shadow: inset 0 0 10px rgba(0,0,0,0.4);">
-      <span style="font-family:'Teko',sans-serif; font-size:32px; color:#FFE9A8; letter-spacing:1px; text-shadow: 0 0 10px rgba(255,215,0,0.6);">৳<span id="jp-num">88,617,517</span></span>
+    <div class="jackpot-girl">
+      <img src="https://i.ibb.co.com/your-image.png" alt="Jackpot Girl" style="width:130px;">
     </div>
-    <div style="margin-top:8px; font-size:10.5px; color:var(--text-muted);"><%= t.lucky_draw_msg %></div>
   </div>
 </div>
-
-<!-- ===== Winners List ===== -->
-<div class="section-header" style="padding-top: 15px;">
-  <h3 class="section-title"><i class="fas fa-trophy" style="color:var(--fa-gold);"></i> <%= t.winners_list %></h3>
-</div>
-<div style="padding:0 12px;">
-  <div class="card" style="background: rgba(255,255,255,0.02); border-color: rgba(212,175,55,0.15);">
-    <div style="display:grid;grid-template-columns:40px 1fr 1fr;padding:12px;border-bottom:1px solid rgba(255,255,255,0.05);font-size:11px;color:var(--text-muted);font-weight:600;">
-      <div>#</div><div><%= t.player %></div><div style="text-align:right"><%= t.win_amount %></div>
-    </div>
-    <div style="display:grid;grid-template-columns:40px 1fr 1fr;padding:12px;align-items:center;border-bottom:1px solid rgba(255,255,255,0.05);">
-      <div style="color:var(--fa-gold);font-family:'Teko',sans-serif;font-size:18px;">🥇</div><div style="font-size:13px; font-weight:600;">***৮৮২</div><div style="text-align:right;color:#10b981;font-family:'Teko',sans-serif;font-size:16px;">৳১৫,৬৮,৫২৩</div>
-    </div>
-    <div style="display:grid;grid-template-columns:40px 1fr 1fr;padding:12px;align-items:center;border-bottom:1px solid rgba(255,255,255,0.05);">
-      <div style="color:#94a3b8;font-family:'Teko',sans-serif;font-size:18px;">🥈</div><div style="font-size:13px; font-weight:600;">***৭৪২</div><div style="text-align:right;color:#10b981;font-family:'Teko',sans-serif;font-size:16px;">৳১১,৪৪,৫৫৬</div>
-    </div>
+<!-- Recent Big Wins -->
+<div class="recent-wins">
+  <h3>Recent Big Wins</h3>
+  <div class="wins-container" id="winsContainer">
+    <!-- JS দিয়ে এখানে আইটেম যোগ হবে -->
   </div>
 </div>
+<script>
+const wins = [
+  { user: "******119", game: "Super Ace II", amount: "৳ 11,892,652" },
+  { user: "******642", game: "Mega Fishing", amount: "৳ 10,663,489" },
+  { user: "******458", game: "Fortune King", amount: "৳ 10,592,349" },
+  { user: "******622", game: "Bombing Fishing", amount: "৳ 9,739,137" },
+  { user: "******778", game: "Boxing King", amount: "৳ 11,258,690" }
+];
+let winsIndex = 0;
+const winsContainerEl = document.getElementById('winsContainer');
+function addWin() {
+  const w = wins[winsIndex];
+  const item = document.createElement('div');
+  item.className = 'win-item';
+  item.innerHTML = `
+    <div>
+      <span>${w.user}</span><br>
+      <span class="game-name">${w.game}</span>
+    </div>
+    <div class="win-amount">${w.amount}</div>
+  `;
+  winsContainerEl.appendChild(item);
+  if (winsContainerEl.children.length > 5) {
+    winsContainerEl.removeChild(winsContainerEl.children[0]);
+  }
+  winsIndex = (winsIndex + 1) % wins.length;
+}
+// প্রথমে ৪টা আইটেম যোগ করি
+for (let i = 0; i < 4; i++) addWin();
+// প্রতি ২.৫ সেকেন্ডে নতুন আইটেম যোগ হবে
+setInterval(addWin, 2500);
+</script>
 
 <!-- ===== Footer ===== -->
 <%- include('partials/footer') %>
@@ -944,14 +1043,6 @@ var gs = document.getElementById('gameSearch');
 if (gs) {
   gs.addEventListener('input', renderGames);
 }
-
-// Multi-currency Jackpot Ticker
-let jpValue = 88617517;
-setInterval(() => {
-  jpValue += Math.floor(Math.random() * 500 + 50);
-  const jpNumEl = document.getElementById('jp-num');
-  if(jpNumEl) jpNumEl.textContent = jpValue.toLocaleString('<%= lang === 'bn' ? 'bn-BD' : 'en-US' %>');
-}, 1500);
 
 document.addEventListener('DOMContentLoaded', () => {
   renderProviderGrid();
