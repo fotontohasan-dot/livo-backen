@@ -1,3 +1,13 @@
+<%
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+%>
 <%- include('partials/admin-layout', { 
     title: 'Dashboard', 
     active: 'dashboard',
@@ -175,7 +185,7 @@
                             <span class="font-medium">Withdrawal ${w.status}</span>
                             <span class="text-xs text-slate-500">${new Date(w.created_at).toLocaleString('en-BD', { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
                         </div>
-                        <p class="text-slate-600">${w.username} • ৳ ${Number(w.amount).toLocaleString('en-US')}</p>
+                        <p class="text-slate-600">${escapeHtml(w.username)} • ৳ ${Number(w.amount).toLocaleString('en-US')}</p>
                     </div>
                 </div>`).join('')}
                 ${recentBets.slice(0, 4).map(b => `
@@ -186,7 +196,7 @@
                             <span class="font-medium">Bet ${b.status}</span>
                             <span class="text-xs text-slate-500">${new Date(b.created_at).toLocaleString('en-BD', { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
                         </div>
-                        <p class="text-slate-600">${b.username} • ৳ ${Number(b.stake).toLocaleString('en-US')} on ${b.title || (b.team_a + ' vs ' + b.team_b)}</p>
+                        <p class="text-slate-600">${escapeHtml(b.username)} • ৳ ${Number(b.stake).toLocaleString('en-US')} on ${escapeHtml(b.title || (b.team_a + ' vs ' + b.team_b))}</p>
                     </div>
                 </div>`).join('')}
                 ${(recentWithdrawals.length === 0 && recentBets.length === 0) ? '<p class="text-slate-400 text-sm">এখনো কোনো সাম্প্রতিক কার্যকলাপ নেই।</p>' : ''}

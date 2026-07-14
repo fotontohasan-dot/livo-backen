@@ -20,6 +20,21 @@ const { getLeaderboard, getPastContests } = require('../services/contest');
 const { getRewardStatus, claimRedPacket, claimGoldenEgg } = require('../services/redpacket');
 const { checkContent } = require('../utils/contentFilter');
 
+// ==== ইনপুট ভ্যালিডেশন হেল্পার (username, name, phone, bank card ফিল্ড) ====
+// লক্ষ্য: কোনো ফিল্ডেই <, >, স্ক্রিপ্ট, বা লিংক বসিয়ে ঢুকতে না পারা — কারণ এই মানগুলো
+// পরে অ্যাডমিন প্যানেলে দেখানো হয়, তাই ইনপুট নেওয়ার সময়ই আটকানো সবচেয়ে নিরাপদ।
+const USERNAME_RE = /^[A-Za-z0-9_.]{3,20}$/;
+// নাম: বাংলা/ইংরেজি অক্ষর, স্পেস, ডট, অ্যাপোস্ট্রফি, হাইফেন — HTML স্পেশাল ক্যারেক্টার (< > " ' এর মধ্যে শুধু নেম-সাধারণ apostrophe বাদে) বাদে
+const NAME_RE = /^[\p{L}\p{M}\s.'-]{2,60}$/u;
+const PHONE_RE = /^[0-9+\-\s]{6,20}$/;
+const BANK_FIELD_RE = /^[A-Za-z0-9\s._\-]{2,40}$/;
+
+function isValidUsername(v) { return typeof v === 'string' && USERNAME_RE.test(v.trim()); }
+function isValidName(v) { return typeof v === 'string' && NAME_RE.test(v.trim()) && !checkContent(v).flagged; }
+function isValidPhone(v) { return typeof v === 'string' && PHONE_RE.test(v.trim()); }
+function isValidBankField(v) { return typeof v === 'string' && BANK_FIELD_RE.test(v.trim()); }
+
+
 
 router.get('/', isAuth, async (req, res) => {
   try {
@@ -102,8 +117,12 @@ router.get('/api/balance', isAuth, async (req, res) => {
 router.post('/update', isAuth, async (req, res) => {
   try {
     const { username } = req.body;
-    await pool.query(`UPDATE users SET username=$1 WHERE id=$2`, [username, req.session.user.id]);
-    req.session.user.username = username;
+    if (!isValidUsername(username)) {
+      req.flash('error', 'ইউজারনেমে শুধু লেটার, সংখ্যা, আন্ডারস্কোর, ডট ব্যবহার করা যাবে (৩-২০ ক্যারেক্টার)।');
+      return res.redirect('/profile');
+    }
+    await pool.query(`UPDATE users SET username=$1 WHERE id=$2`, [username.trim(), req.session.user.id]);
+    req.session.user.username = username.trim();
     req.flash('success', 'প্রোফাইল আপডেট হয়েছে!');
   } catch (err) {
     req.flash('error', 'আপডেট করতে সমস্যা হয়েছে।');
@@ -136,6 +155,14 @@ router.post('/update-avatar', isAuth, async (req, res) => {
 router.post('/update-personal', isAuth, async (req, res) => {
   try {
     const { full_name, phone } = req.body;
+    if (full_name && !isValidName(full_name)) {
+      req.flash('error', 'নামে অস্বাভাবিক ক্যারেক্টার বা লিংক থাকা যাবে না।');
+      return res.redirect('/profile/security');
+    }
+    if (phone && !isValidPhone(phone)) {
+      req.flash('error', 'ফোন নম্বর সঠিক ফরম্যাটে দিন।');
+      return res.redirect('/profile/security');
+    }
     await pool.query(`UPDATE users SET full_name=$1, phone=$2 WHERE id=$3`, [full_name, phone, req.session.user.id]);
     req.session.user.full_name = full_name;
     req.session.user.phone = phone;
@@ -150,9 +177,13 @@ router.post('/update-personal', isAuth, async (req, res) => {
 router.post('/add-bank-card', isAuth, async (req, res) => {
   try {
     const { bank_name, account_number, holder_name } = req.body;
+    if (!isValidBankField(bank_name) || !isValidBankField(account_number) || !isValidName(holder_name)) {
+      req.flash('error', '❌ কার্ডের তথ্যে অস্বাভাবিক ক্যারেক্টার বা লিংক থাকা যাবে না।');
+      return res.redirect('/profile/security');
+    }
     await pool.query(
       `INSERT INTO bank_cards (user_id, bank_name, account_number, holder_name) VALUES ($1, $2, $3, $4)`,
-      [req.session.user.id, bank_name, account_number, holder_name]
+      [req.session.user.id, bank_name.trim(), account_number.trim(), holder_name.trim()]
     );
     req.flash('success', '✅ কার্ড যোগ হয়েছে!');
   } catch (err) {

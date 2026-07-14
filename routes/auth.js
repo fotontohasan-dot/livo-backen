@@ -55,6 +55,10 @@ router.post('/register', async (req, res) => {
       req.flash('error', '❌ ইউজারনেম এবং পাসওয়ার্ড আবশ্যক।');
       return res.redirect('/register');
     }
+    if (!/^[A-Za-z0-9_.]{3,20}$/.test(username.trim())) {
+      req.flash('error', '❌ ইউজারনেমে শুধু লেটার, সংখ্যা, আন্ডারস্কোর, ডট ব্যবহার করা যাবে (৩-২০ ক্যারেক্টার)।');
+      return res.redirect('/register');
+    }
     if (!email && !phone) {
       req.flash('error', '❌ ইমেইল অথবা ফোন নাম্বার অন্তত একটি দিতে হবে।');
       return res.redirect('/register');
