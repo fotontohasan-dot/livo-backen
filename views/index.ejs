@@ -510,8 +510,7 @@ body.light-mode .jackpot-board {
 
 <!-- ===== Secondary Filter Pills (শুধু Slots/Live/Sports/Poker ক্যাটাগরিতে দেখাবে) ===== -->
 <div class="secondary-tabs-container" id="secondaryTabs" style="display:none;">
-  <div class="secondary-tab-item active" data-secondary="all"><%= t.all %></div>
-  <div class="secondary-tab-item" data-secondary="hot"><i class="fas fa-fire"></i> <%= t.cat_hot %></div>
+  <div class="secondary-tab-item active" data-secondary="hot"><i class="fas fa-fire"></i> <%= t.cat_hot %></div>
   <div class="secondary-tab-item" data-secondary="favorites"><i class="fas fa-star"></i> ফেভারিটস</div>
   <div class="secondary-tab-item" data-secondary="recent"><i class="fas fa-clock-rotate-left"></i> রিসেন্ট</div>
 </div>
@@ -710,6 +709,9 @@ let selectedCategory = 'all';
 let selectedProvider = 'all';
 let selectedSecondaryTab = 'all';
 const CATALOG_CATEGORIES = ['slots', 'live', 'sports', 'poker'];
+// শুধুমাত্র এই ক্যাটাগরিগুলোতে উপরে Hot | Favorite | Recent সেকেন্ডারি ট্যাব দেখাবে।
+// Live Casino এবং Sports-এ কোনো সেকেন্ডারি ট্যাব থাকবে না — শুধু প্রোভাইডার লিস্ট ও গেম গ্রিড দেখাবে।
+const SECONDARY_TAB_CATEGORIES = ['slots'];
 let selectedLayout = localStorage.getItem('livo_game_layout') || 'standard';
 
 // ==================== ফেভারিটস / রিসেন্ট (localStorage-ভিত্তিক) ====================
@@ -886,15 +888,17 @@ document.querySelectorAll('.nav-tab-item').forEach(el => {
     el.classList.add('active');
     selectedCategory = el.dataset.category;
     selectedProvider = 'all';
-    selectedSecondaryTab = 'all';
 
-    const isCatalog = CATALOG_CATEGORIES.includes(selectedCategory);
+    // সেকেন্ডারি ট্যাব (Hot | Favorite | Recent) শুধুমাত্র Slots ক্যাটাগরিতে দেখাবে।
+    // Live Casino ও Sports-এ ক্লিক করলে সরাসরি সেই ক্যাটাগরির গেম + প্রোভাইডার লিস্ট দেখাবে, কোনো সেকেন্ডারি ট্যাব ছাড়াই।
+    const showSecondaryTabs = SECONDARY_TAB_CATEGORIES.includes(selectedCategory);
+    selectedSecondaryTab = showSecondaryTabs ? 'hot' : 'all';
     const secTabs = document.getElementById('secondaryTabs');
     if (secTabs) {
-      secTabs.style.display = isCatalog ? 'flex' : 'none';
+      secTabs.style.display = showSecondaryTabs ? 'flex' : 'none';
       secTabs.querySelectorAll('.secondary-tab-item').forEach(t => t.classList.remove('active'));
-      const allTab = secTabs.querySelector('[data-secondary="all"]');
-      if (allTab) allTab.classList.add('active');
+      const defaultTab = secTabs.querySelector('[data-secondary="hot"]');
+      if (defaultTab) defaultTab.classList.add('active');
     }
 
     updateProviderRowVisibility();
