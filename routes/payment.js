@@ -23,6 +23,15 @@ function parseAmount(raw) {
   return n;
 }
 
+// Transaction IDs and account numbers should only ever be short alphanumeric
+// codes. This allow-list (letters, digits, space, - _ .) rejects anything
+// containing <, >, /, quotes, or other characters a link/script injection
+// attempt would need, and caps the length so nothing large can be stuffed in.
+const SAFE_FIELD_RE = /^[A-Za-z0-9 _.\-]{1,40}$/;
+function isSafeField(value) {
+  return typeof value === 'string' && SAFE_FIELD_RE.test(value.trim());
+}
+
 async function notifyAdmins(title, message, alertType) {
   try {
     const admins = await pool.query("SELECT id FROM users WHERE role = 'admin'");
@@ -144,6 +153,10 @@ router.post('/deposit', requireLogin, async (req, res) => {
     req.flash('error', 'সব তথ্য সঠিকভাবে দিন');
     return res.redirect('/payment/deposit');
   }
+  if (!isSafeField(transaction_id) || !isSafeField(account_number)) {
+    req.flash('error', 'ট্রানজেকশন আইডি বা নম্বরে শুধু লেটার, সংখ্যা, স্পেস, - _ . ব্যবহার করা যাবে। লিংক বা অন্য কোনো চিহ্ন গ্রহণযোগ্য নয়।');
+    return res.redirect('/payment/deposit');
+  }
   if (amount < 100) {
     req.flash('error', 'সর্বনিম্ন ডিপোজিট ১০০ টাকা');
     return res.redirect('/payment/deposit');
@@ -253,6 +266,10 @@ router.post('/deposit/:id/edit', requireLogin, async (req, res) => {
   const transaction_id = (req.body.transaction_id || '').trim();
   if (!transaction_id || !account_number) {
     req.flash('error', 'সব তথ্য সঠিকভাবে দিন');
+    return res.redirect(`/payment/deposit/${id}/edit`);
+  }
+  if (!isSafeField(transaction_id) || !isSafeField(account_number)) {
+    req.flash('error', 'ট্রানজেকশন আইডি বা নম্বরে শুধু লেটার, সংখ্যা, স্পেস, - _ . ব্যবহার করা যাবে। লিংক বা অন্য কোনো চিহ্ন গ্রহণযোগ্য নয়।');
     return res.redirect(`/payment/deposit/${id}/edit`);
   }
 

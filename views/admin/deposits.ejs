@@ -1,4 +1,12 @@
 <%
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 function fmtDate(d) {
   const dt = new Date(d);
   return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' ' + dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
@@ -6,6 +14,9 @@ function fmtDate(d) {
 function depRow(d, isPending) {
   const statusColor = d.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : d.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700';
   const statusLabel = d.status === 'approved' ? 'Approved' : d.status === 'rejected' ? 'Rejected' : 'Pending';
+  const safeUsername = escapeHtml(d.username);
+  const safeMethod = escapeHtml(d.method || '-');
+  const safeTrxId = escapeHtml(d.transaction_id);
   const actions = isPending
     ? '<div class="flex justify-center gap-2">' +
         '<button onclick="approveDeposit(' + d.id + ')" class="px-4 py-1.5 text-xs font-bold bg-emerald-600 text-white rounded-xl">Approve</button>' +
@@ -13,9 +24,9 @@ function depRow(d, isPending) {
       '</div>'
     : '<span class="text-xs text-slate-500 font-medium">' + statusLabel + '</span>';
   return '<tr id="dep-row-' + d.id + '">' +
-    '<td class="px-6 py-4"><div class="font-semibold">' + d.username + '</div><div class="text-xs text-slate-500">#' + d.user_id + ' • DEP' + d.id + '</div></td>' +
+    '<td class="px-6 py-4"><div class="font-semibold">' + safeUsername + '</div><div class="text-xs text-slate-500">#' + d.user_id + ' • DEP' + d.id + '</div></td>' +
     '<td class="px-6 py-4 font-mono font-semibold text-emerald-600">৳ ' + Number(d.amount).toLocaleString('en-US') + '</td>' +
-    '<td class="px-6 py-4">' + (d.method || '-') + (d.transaction_id ? '<div class="text-xs text-slate-400">' + d.transaction_id + '</div>' : '') + '</td>' +
+    '<td class="px-6 py-4">' + safeMethod + (d.transaction_id ? '<div class="text-xs text-slate-400">' + safeTrxId + '</div>' : '') + '</td>' +
     '<td class="px-6 py-4 text-sm">' + fmtDate(d.created_at) + '</td>' +
     '<td class="px-6 py-4 text-center"><span class="px-3 py-1 text-xs font-bold rounded-full ' + statusColor + '">' + statusLabel + '</span></td>' +
     '<td class="px-6 py-4">' + actions + '</td>' +
