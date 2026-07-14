@@ -395,10 +395,8 @@ body.light-mode .jackpot-board {
   <div class="nav-tab-item" data-category="recent">
     <i class="fas fa-clock-rotate-left"></i> রিসেন্ট
   </div>
+  <div id="providerTabs" style="display:contents;"></div>
 </div>
-
-<!-- ===== Provider Filter ===== -->
-<div class="horizontal-nav-container" id="providerTabs" style="padding-top:0;"></div>
 
 <!-- ===== Layout Switcher ===== -->
 <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:0 12px 10px;">
@@ -675,6 +673,9 @@ function renderProviderTabs() {
   const wrap = document.getElementById('providerTabs');
   if (!wrap) return;
   wrap.innerHTML = '';
+  const divider = document.createElement('div');
+  divider.style.cssText = 'flex:0 0 auto;width:1px;align-self:stretch;background:var(--border-glass);margin:4px 4px;';
+  wrap.appendChild(divider);
   PROVIDERS.forEach(p => {
     const meta = PROVIDER_META[p];
     const chip = document.createElement('div');
@@ -694,8 +695,8 @@ function renderProviderTabs() {
 function updateProviderRowVisibility() {
   const wrap = document.getElementById('providerTabs');
   if (!wrap) return;
-  // প্রোভাইডার ফিল্টার এখন 'সব' ট্যাবের অংশ — অন্য ট্যাবে গেলে লুকানো থাকবে
-  wrap.style.display = (selectedCategory === 'all') ? 'flex' : 'none';
+  // প্রোভাইডার ফিল্টার এখন 'সব' ট্যাবের একই সারিতে — অন্য ট্যাবে গেলে লুকানো থাকবে
+  wrap.style.display = (selectedCategory === 'all') ? 'contents' : 'none';
 }
 
 // ==================== গেইম গ্রিড রেন্ডার ====================
