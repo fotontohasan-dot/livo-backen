@@ -369,7 +369,7 @@ body.light-mode .jackpot-board {
   </a>
 </div>
 
-<!-- ===== Horizontal Navigation Tabs (Hot, Slots, Live, Sports, Poker) ===== -->
+<!-- ===== Horizontal Navigation Tabs (Hot, Slots, Live, Sports, Poker, Favorites, Recent) ===== -->
 <div class="horizontal-nav-container" id="categoryTabs">
   <div class="nav-tab-item active" data-category="all">
     <i class="fas fa-border-all"></i> <%= t.all %>
@@ -389,7 +389,76 @@ body.light-mode .jackpot-board {
   <div class="nav-tab-item" data-category="poker">
     <i class="fas fa-heart"></i> <%= t.cat_poker %>
   </div>
+  <div class="nav-tab-item" data-category="favorites">
+    <i class="fas fa-star"></i> ফেভারিটস
+  </div>
+  <div class="nav-tab-item" data-category="recent">
+    <i class="fas fa-clock-rotate-left"></i> রিসেন্ট
+  </div>
 </div>
+
+<!-- ===== Provider Grid (শুধু 'সব' ট্যাবে দেখাবে, কোলাপসিবল) ===== -->
+<div id="providerSection" style="padding:0 12px 10px;">
+  <div id="providerGrid" class="provider-grid"></div>
+  <button type="button" id="providerToggleBtn" class="provider-toggle-btn">
+    <i class="fas fa-chevron-down"></i>
+  </button>
+</div>
+
+<!-- ===== Layout Switcher ===== -->
+<div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:0 12px 10px;">
+  <span style="font-size:11px;color:var(--text-muted);margin-right:2px;">লেআউট:</span>
+  <button type="button" class="layout-btn" data-layout="compact" title="কমপ্যাক্ট"><i class="fas fa-table-cells"></i></button>
+  <button type="button" class="layout-btn active" data-layout="standard" title="স্ট্যান্ডার্ড"><i class="fas fa-table-cells-large"></i></button>
+  <button type="button" class="layout-btn" data-layout="list" title="লিস্ট"><i class="fas fa-list"></i></button>
+</div>
+
+<style>
+  .provider-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+    max-height: 340px; overflow: hidden; transition: max-height 0.3s ease;
+  }
+  .provider-grid.expanded { max-height: 3000px; }
+  .provider-card {
+    background: var(--bg-surface); border: 1px solid var(--border-glass);
+    border-radius: 14px; padding: 14px 10px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 10px; cursor: pointer;
+    transition: all 0.15s ease; min-height: 110px;
+  }
+  .provider-card.active { border-color: var(--fa-gold); box-shadow: 0 0 0 2px rgba(212,175,55,0.25); }
+  .provider-card .provider-logo-img {
+    max-width: 100%; max-height: 42px; object-fit: contain; border-radius: 6px;
+  }
+  .provider-card .provider-logo-fallback {
+    width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center;
+    justify-content: center; color: #fff; font-size: 11px; font-weight: 900;
+  }
+  .provider-card .provider-name { font-size: 12.5px; font-weight: 700; color: var(--text-main); text-align: center; }
+  .provider-toggle-btn {
+    width: 100%; margin-top: 10px; padding: 8px; border-radius: 10px; border: none;
+    background: var(--bg-surface); color: var(--text-muted); cursor: pointer; font-size: 13px;
+  }
+  .layout-btn {
+    width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border-glass);
+    background: var(--bg-surface); color: var(--text-muted); cursor: pointer; font-size: 13px;
+  }
+  .layout-btn.active { background: var(--fa-gold); color: #1a1a1a; border-color: var(--fa-gold); }
+
+  .game-grid-premium.layout-compact { grid-template-columns: repeat(4, 1fr) !important; gap: 8px !important; }
+  .game-grid-premium.layout-compact .game-thumb-wrapper { font-size: 28px !important; }
+  .game-grid-premium.layout-compact .game-title-premium { font-size: 11px !important; }
+
+  .game-grid-premium.layout-list { display: flex !important; flex-direction: column; gap: 8px; }
+  .game-grid-premium.layout-list .game-card-premium { flex-direction: row !important; align-items: center; }
+  .game-grid-premium.layout-list .game-thumb-wrapper { width: 70px; aspect-ratio: 1/1 !important; flex: 0 0 70px; }
+  .game-grid-premium.layout-list .game-info-premium { flex: 1; }
+
+  .fav-star {
+    position: absolute; top: 6px; left: 6px; z-index: 3; font-size: 15px;
+    color: rgba(255,255,255,0.55); text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  }
+  .fav-star.active { color: #FFD700; }
+</style>
 
 <!-- ===== Search Bar ===== -->
 <div style="padding: 0 12px 15px 12px;">
@@ -441,67 +510,297 @@ body.light-mode .jackpot-board {
 <%- include('partials/floating-promo') %>
 
 <script>
-// Mock list of rich games under specific categories matching FA999
-const gamesList = [
-  {name:"Aviator", emoji:"🚀", type:"hot", slug:"aviator", badge:"hot", provider:"SPRIBE"},
-  {name:"Fortune Gems", emoji:"💎", type:"slots", slug:"fortune-gems", badge:"hot", provider:"JDB"},
-  {name:"Crazy Time", emoji:"🎡", type:"live", slug:"crazy-time", badge:"hot", provider:"EVO"},
-  {name:"Teen Patti", emoji:"🃏", type:"poker", slug:"teen-patti", badge:"pop", provider:"JL"},
-  {name:"Gates of Olympus", emoji:"⚡", type:"slots", slug:"gates-of-olympus", badge:"hot", provider:"PP"},
-  {name:"Sweet Bonanza", emoji:"🍭", type:"slots", slug:"sweet-bonanza", badge:"pop", provider:"PP"},
-  {name:"Baccarat", emoji:"🃏", type:"live", slug:"baccarat", badge:"pop", provider:"EVO"},
-  {name:"Lightning Roulette", emoji:"🎡", type:"live", slug:"lightning-roulette", badge:"hot", provider:"EVO"},
-  {name:"Dragon Tiger", emoji:"🐉", type:"live", slug:"dragon-tiger", badge:"pop", provider:"JL"},
-  {name:"Andar Bahar", emoji:"🎴", type:"poker", slug:"andar-bahar", badge:"hot", provider:"JL"},
-  {name:"Virtual Cricket", emoji:"🏏", type:"sports", slug:"cricket", badge:"live", provider:"LIVO"},
-  {name:"Pro Football", emoji:"⚽", type:"sports", slug:"football", badge:"hot", provider:"LIVO"},
-  {name:"Texas Holdem", emoji:"♠️", type:"poker", slug:"poker", badge:"pro", provider:"JL"},
-  {name:"Omaha Poker", emoji:"♦️", type:"poker", slug:"poker", badge:"new", provider:"EVO"}
+// পূর্ণ গেইম ক্যাটালগ — ১১৮টি গেইম, প্রকৃত স্লাগ (routes/games.js অনুযায়ী) ও প্রোভাইডারসহ
+const allGames = [
+  { name: 'Aviator', emoji: '🎰', type: 'hot', slug: 'aviator', badge: 'hot', provider: 'Spribe' },
+  { name: 'Slots', emoji: '💎', type: 'slots', slug: 'slots', badge: 'pop', provider: 'Playtech' },
+  { name: 'Roulette', emoji: '🍭', type: 'live', slug: 'roulette', badge: 'new', provider: 'Playtech' },
+  { name: 'Andar Bahar', emoji: '⚡', type: 'live', slug: 'andar-bahar', badge: null, provider: 'Jili' },
+  { name: 'Teen Patti', emoji: '🔥', type: 'hot', slug: 'teen-patti', badge: 'hot', provider: 'Jili' },
+  { name: 'Blackjack', emoji: '🐉', type: 'live', slug: 'blackjack', badge: 'hot', provider: 'Playtech' },
+  { name: 'Poker', emoji: '🎴', type: 'poker', slug: 'poker', badge: 'pop', provider: 'Playtech' },
+  { name: 'Baccarat', emoji: '🃏', type: 'live', slug: 'baccarat', badge: 'new', provider: 'Playtech' },
+  { name: 'Crash Game', emoji: '🎲', type: 'slots', slug: 'crash-game', badge: null, provider: 'Playtech' },
+  { name: 'Starburst', emoji: '🎯', type: 'hot', slug: 'starburst', badge: 'hot', provider: 'NetEnt' },
+  { name: 'Book of Dead', emoji: '🎡', type: 'hot', slug: 'book-of-dead', badge: 'hot', provider: 'Play\'n GO' },
+  { name: 'Gonzo\'s Quest', emoji: '🚀', type: 'slots', slug: 'gonzos-quest', badge: 'pop', provider: 'NetEnt' },
+  { name: 'Mega Moolah', emoji: '👑', type: 'hot', slug: 'mega-moolah', badge: 'hot', provider: 'Microgaming' },
+  { name: 'Gates of Olympus', emoji: '🦁', type: 'hot', slug: 'gates-of-olympus', badge: 'hot', provider: 'Pragmatic Play' },
+  { name: 'Sweet Bonanza', emoji: '🐯', type: 'hot', slug: 'sweet-bonanza', badge: 'hot', provider: 'Pragmatic Play' },
+  { name: 'Legacy of Dead', emoji: '🌊', type: 'slots', slug: 'legacy-of-dead', badge: 'hot', provider: 'Play\'n GO' },
+  { name: 'Crazy Time', emoji: '⚓', type: 'hot', slug: 'crazy-time', badge: 'hot', provider: 'Evolution' },
+  { name: 'Lightning Roulette', emoji: '🥷', type: 'live', slug: 'lightning-roulette', badge: 'new', provider: 'Evolution' },
+  { name: 'Monopoly Live', emoji: '🀄', type: 'live', slug: 'monopoly-live', badge: null, provider: 'Evolution' },
+  { name: 'Mega Ball', emoji: '🐺', type: 'live', slug: 'mega-ball', badge: null, provider: 'Evolution' },
+  { name: 'Dream Catcher', emoji: '🍀', type: 'live', slug: 'dream-catcher', badge: 'hot', provider: 'Evolution' },
+  { name: 'Super Sic Bo', emoji: '💰', type: 'live', slug: 'super-sic-bo', badge: 'pop', provider: 'Evolution' },
+  { name: 'Fan Tan', emoji: '🏆', type: 'live', slug: 'fan-tan', badge: 'new', provider: 'Evolution' },
+  { name: 'Bac Bo', emoji: '🎪', type: 'live', slug: 'bac-bo', badge: null, provider: 'Evolution' },
+  { name: 'Rummy', emoji: '🌟', type: 'poker', slug: 'rummy', badge: null, provider: 'Jili' },
+  { name: 'Call Break', emoji: '🎆', type: 'poker', slug: 'call-break', badge: 'hot', provider: 'Jili' },
+  { name: 'Dragon Tiger', emoji: '❄️', type: 'hot', slug: 'dragon-tiger', badge: 'hot', provider: 'Jili' },
+  { name: 'JetX', emoji: '⛩️', type: 'hot', slug: 'jetx', badge: 'hot', provider: 'Spribe' },
+  { name: 'Plinko', emoji: '🍬', type: 'slots', slug: 'plinko', badge: null, provider: 'Spribe' },
+  { name: 'Keno', emoji: '🦍', type: 'slots', slug: 'keno', badge: null, provider: 'Spribe' },
+  { name: 'Bingo', emoji: '🎰', type: 'slots', slug: 'bingo', badge: 'hot', provider: 'JDB' },
+  { name: '5D Lottery', emoji: '💎', type: 'slots', slug: '5d-lottery', badge: 'pop', provider: 'JDB' },
+  { name: 'Win Go', emoji: '🍭', type: 'slots', slug: 'win-go', badge: 'new', provider: 'JDB' },
+  { name: 'Coin Flip', emoji: '⚡', type: 'slots', slug: 'coin-flip', badge: null, provider: 'JDB' },
+  { name: 'Dice', emoji: '🔥', type: 'slots', slug: 'dice', badge: null, provider: 'Spribe' },
+  { name: 'Fortune Gems', emoji: '🐉', type: 'hot', slug: 'fortune-gems', badge: 'hot', provider: 'Jili' },
+  { name: 'Golden Empire', emoji: '🎴', type: 'slots', slug: 'golden-empire', badge: 'pop', provider: 'Jili' },
+  { name: 'Sugar Rush', emoji: '🃏', type: 'slots', slug: 'sugar-rush', badge: 'new', provider: 'Pragmatic Play' },
+  { name: 'K3 Lottery', emoji: '🎲', type: 'slots', slug: 'k3-lottery', badge: null, provider: 'JDB' },
+  { name: 'Spaceman', emoji: '🎯', type: 'hot', slug: 'spaceman', badge: 'hot', provider: 'Spribe' },
+  { name: 'Sic Bo', emoji: '🎡', type: 'live', slug: 'sic-bo', badge: 'hot', provider: 'Microgaming' },
+  { name: 'Fish Prawn Crab', emoji: '🚀', type: 'slots', slug: 'fish-prawn-crab', badge: 'pop', provider: 'Jili' },
+  { name: 'Fruit Slot', emoji: '👑', type: 'slots', slug: 'fruit-slot', badge: 'new', provider: 'Playson' },
+  { name: 'Diamond Slot', emoji: '🦁', type: 'slots', slug: 'diamond-slot', badge: null, provider: 'Wazdan' },
+  { name: '7up 7down', emoji: '🐯', type: 'slots', slug: '7up-7down', badge: null, provider: 'Jili' },
+  { name: 'Triple Card', emoji: '🌊', type: 'poker', slug: 'triple-card', badge: 'hot', provider: 'Jili' },
+  { name: 'Jhandi Munda', emoji: '⚓', type: 'poker', slug: 'jhandi-munda', badge: 'pop', provider: 'Jili' },
+  { name: 'Cricket War', emoji: '🥷', type: 'sports', slug: 'cricket-war', badge: 'new', provider: 'Jili' },
+  { name: 'Football War', emoji: '🀄', type: 'sports', slug: 'football-war', badge: null, provider: 'Jili' },
+  { name: 'Minesweeper Pro', emoji: '🐺', type: 'slots', slug: 'minesweeper-pro', badge: null, provider: 'Jili' },
+  { name: 'Tower Game', emoji: '🍀', type: 'slots', slug: 'tower-game', badge: 'hot', provider: 'Jili' },
+  { name: 'Limbo', emoji: '💰', type: 'slots', slug: 'limbo', badge: 'pop', provider: 'Spribe' },
+  { name: 'Wheel Pro', emoji: '🏆', type: 'slots', slug: 'wheel-pro', badge: 'new', provider: 'Jili' },
+  { name: 'Panda Slot', emoji: '🎪', type: 'slots', slug: 'panda-slot', badge: null, provider: 'Jili' },
+  { name: 'Tiger Slot', emoji: '🌟', type: 'slots', slug: 'tiger-slot', badge: null, provider: 'Jili' },
+  { name: 'Dragon Slot', emoji: '🎆', type: 'slots', slug: 'dragon-slot', badge: 'hot', provider: 'Jili' },
+  { name: 'Phoenix Slot', emoji: '❄️', type: 'slots', slug: 'phoenix-slot', badge: 'pop', provider: 'Red Tiger' },
+  { name: 'Lion Slot', emoji: '⛩️', type: 'slots', slug: 'lion-slot', badge: 'new', provider: 'Red Tiger' },
+  { name: 'Coin Master', emoji: '🍬', type: 'slots', slug: 'coin-master', badge: null, provider: 'Jili' },
+  { name: 'Gold Rush', emoji: '🦍', type: 'slots', slug: 'gold-rush', badge: null, provider: 'Red Tiger' },
+  { name: 'Treasure Hunt', emoji: '🎰', type: 'slots', slug: 'treasure-hunt', badge: 'hot', provider: 'Betsoft' },
+  { name: 'Pirate Gold', emoji: '💎', type: 'slots', slug: 'pirate-gold', badge: 'pop', provider: 'Red Tiger' },
+  { name: 'Ninja Game', emoji: '🍭', type: 'slots', slug: 'ninja-game', badge: 'new', provider: 'Betsoft' },
+  { name: 'Samurai Slot', emoji: '⚡', type: 'slots', slug: 'samurai-slot', badge: null, provider: 'Hacksaw Gaming' },
+  { name: 'Mahjong Ways', emoji: '🔥', type: 'slots', slug: 'mahjong-ways', badge: null, provider: 'Big Time Gaming' },
+  { name: 'Thai Paradise', emoji: '🐉', type: 'slots', slug: 'thai-paradise', badge: 'hot', provider: 'Big Time Gaming' },
+  { name: 'Monkey King', emoji: '🎴', type: 'slots', slug: 'monkey-king', badge: 'pop', provider: 'Hacksaw Gaming' },
+  { name: 'Wild West', emoji: '🃏', type: 'slots', slug: 'wild-west', badge: 'new', provider: 'Pragmatic Play' },
+  { name: 'Space Wars', emoji: '🎲', type: 'slots', slug: 'space-wars', badge: null, provider: 'Spinomenal' },
+  { name: 'Ocean King', emoji: '🎯', type: 'slots', slug: 'ocean-king', badge: null, provider: 'Jili' },
+  { name: 'Fire Dice', emoji: '🎡', type: 'slots', slug: 'fire-dice', badge: 'hot', provider: 'Wazdan' },
+  { name: 'Ice Slot', emoji: '🚀', type: 'slots', slug: 'ice-slot', badge: 'pop', provider: 'Wazdan' },
+  { name: 'Storm Slot', emoji: '👑', type: 'slots', slug: 'storm-slot', badge: 'new', provider: 'PG Soft' },
+  { name: 'Royal Flush', emoji: '🦁', type: 'poker', slug: 'royal-flush', badge: null, provider: 'Spinomenal' },
+  { name: 'Lucky 7', emoji: '🐯', type: 'slots', slug: 'lucky-7', badge: null, provider: 'NetEnt' },
+  { name: 'Magic Ball', emoji: '🌊', type: 'slots', slug: 'magic-ball', badge: 'hot', provider: 'Playson' },
+  { name: 'Neon Slots', emoji: '⚓', type: 'slots', slug: 'neon-slots', badge: 'pop', provider: 'Playson' },
+  { name: 'Cash Burst', emoji: '🥷', type: 'slots', slug: 'cash-burst', badge: 'new', provider: 'PG Soft' },
+  { name: 'Live Blackjack', emoji: '🀄', type: 'live', slug: 'live-blackjack', badge: null, provider: 'Evolution' },
+  { name: 'Live Roulette', emoji: '🐺', type: 'live', slug: 'live-roulette', badge: null, provider: 'Evolution' },
+  { name: 'Live Baccarat', emoji: '🍀', type: 'live', slug: 'live-baccarat', badge: 'hot', provider: 'Evolution' },
+  { name: 'Live Poker', emoji: '💰', type: 'live', slug: 'live-poker', badge: 'pop', provider: 'Evolution' },
+  { name: 'Mines', emoji: '🏆', type: 'slots', slug: 'mines', badge: 'new', provider: 'Spribe' },
+  { name: 'Football Studio', emoji: '🎪', type: 'live', slug: 'football-studio', badge: null, provider: 'Evolution' },
+  { name: 'Cash or Crash', emoji: '🌟', type: 'slots', slug: 'cash-or-crash', badge: null, provider: 'Spribe' },
+  { name: 'Extra Chilli', emoji: '🎆', type: 'slots', slug: 'extra-chill', badge: 'hot', provider: 'Big Time Gaming' },
+  { name: 'Fire in the Hole', emoji: '❄️', type: 'slots', slug: 'fire-in-the-hole', badge: 'pop', provider: 'Nolimit City' },
+  { name: 'Wanted Dead or Wild', emoji: '⛩️', type: 'hot', slug: 'wanted-dead-or-a-wild', badge: 'hot', provider: 'Hacksaw Gaming' },
+  { name: 'Mental', emoji: '🍬', type: 'slots', slug: 'mental', badge: null, provider: 'Nolimit City' },
+  { name: 'Razor Shark', emoji: '🦍', type: 'slots', slug: 'razor-shark', badge: null, provider: 'Relax Gaming' },
+  { name: 'Jammin Jars', emoji: '🎰', type: 'slots', slug: 'jammin-jars', badge: 'hot', provider: 'Relax Gaming' },
+  { name: 'San Quentin', emoji: '💎', type: 'hot', slug: 'san-quentin', badge: 'hot', provider: 'Nolimit City' },
+  { name: 'Aviator Pro', emoji: '🍭', type: 'slots', slug: 'aviator-pro', badge: 'new', provider: 'Spribe' },
+  { name: 'JetX Pro', emoji: '⚡', type: 'slots', slug: 'jetx-pro', badge: null, provider: 'Spribe' },
+  { name: 'Spaceman Pro', emoji: '🔥', type: 'slots', slug: 'spaceman-pro', badge: null, provider: 'Spribe' },
+  { name: 'Aviatrix', emoji: '🐉', type: 'slots', slug: 'aviatrix', badge: 'hot', provider: 'Spribe' },
+  { name: 'Balloon', emoji: '🎴', type: 'slots', slug: 'balloon', badge: 'pop', provider: 'Spribe' },
+  { name: 'Minesweeper', emoji: '🃏', type: 'slots', slug: 'minesweeper', badge: 'new', provider: 'Jili' },
+  { name: 'Football X', emoji: '🎲', type: 'sports', slug: 'football-x', badge: null, provider: 'Spribe' },
+  { name: 'Online Ludo', emoji: '🎯', type: 'sports', slug: 'ludo', badge: null, provider: 'Jili' },
+  { name: 'Color Prediction', emoji: '🎡', type: 'slots', slug: 'color-prediction', badge: 'hot', provider: 'Jili' },
+  { name: 'Mine Game', emoji: '🚀', type: 'slots', slug: 'mine', badge: 'pop', provider: 'Jili' },
+  { name: 'Hi-Lo', emoji: '👑', type: 'slots', slug: 'hilo', badge: 'new', provider: 'Jili' },
+  { name: 'Card War', emoji: '🦁', type: 'poker', slug: 'card-war', badge: null, provider: 'Jili' },
+  { name: 'Lucky Spin', emoji: '🐯', type: 'slots', slug: 'lucky-spin', badge: null, provider: 'Jili' },
+  { name: 'Number Guess', emoji: '🌊', type: 'slots', slug: 'number-guess', badge: 'hot', provider: 'Jili' },
+  { name: 'Age of the Gods', emoji: '⚓', type: 'slots', slug: 'age-of-the-gods', badge: 'pop', provider: 'Playtech' },
+  { name: 'Buffalo Blitz', emoji: '🥷', type: 'slots', slug: 'buffalo-blitz', badge: 'new', provider: 'Playtech' },
+  { name: 'Immortal Romance', emoji: '🀄', type: 'slots', slug: 'immortal-romance', badge: null, provider: 'Microgaming' },
+  { name: 'Thunderstruck II', emoji: '🐺', type: 'slots', slug: 'thunderstruck-2', badge: null, provider: 'Microgaming' },
+  { name: 'Sugar Pop', emoji: '🍀', type: 'slots', slug: 'sugar-pop', badge: 'hot', provider: 'Spinomenal' },
+  { name: 'The Slotfather', emoji: '💰', type: 'slots', slug: 'slotfather', badge: 'pop', provider: 'Betsoft' },
+  { name: 'Valley of the Gods', emoji: '🏆', type: 'slots', slug: 'valley-of-the-gods', badge: 'new', provider: 'Yggdrasil' },
+  { name: 'Vikings Go Berzerk', emoji: '🎪', type: 'slots', slug: 'vikings-go-berzerk', badge: null, provider: 'Yggdrasil' },
+  { name: 'Gonzo\'s Quest Megaways', emoji: '🌟', type: 'slots', slug: 'gonzos-quest-megaways', badge: null, provider: 'NetEnt' },
+  { name: 'Piggy Riches Megaways', emoji: '🎆', type: 'slots', slug: 'piggy-riches-megaways', badge: 'hot', provider: 'NetEnt' },
+  { name: 'Big Bad Wolf', emoji: '❄️', type: 'slots', slug: 'big-bad-wolf', badge: 'pop', provider: 'Quickspin' },
+  { name: 'Sakura Fortune', emoji: '⛩️', type: 'slots', slug: 'sakura-fortune', badge: 'new', provider: 'Quickspin' }
 ];
 
-let selectedCategory = 'all';
+const PROVIDER_META = {
+  'Jili':             { mono: 'JILI', color: '#F5A623', logo: '/images/providers/jili.jpg' },
+  'PG Soft':          { mono: 'PG',   color: '#00B4D8', logo: '/images/providers/pg-soft.jpg' },
+  'Spribe':           { mono: 'SB',   color: '#6C2EB9', logo: '/images/providers/spribe.jpg' },
+  'Pragmatic Play':   { mono: 'PP',   color: '#E8302A', logo: '/images/providers/pragmatic-play.jpg' },
+  'Evolution':        { mono: 'EVO',  color: '#C8102E', logo: '/images/providers/evolution.jpg' },
+  'NetEnt':           { mono: 'NE',   color: '#003D7A', logo: '/images/providers/netent.jpg' },
+  "Play'n GO":        { mono: 'PnGO', color: '#00A651', logo: '/images/providers/playn-go.jpg' },
+  'Red Tiger':        { mono: 'RT',   color: '#D71920', logo: '/images/providers/red-tiger.jpg' },
+  'Hacksaw Gaming':   { mono: 'HG',   color: '#FF6B00', logo: '/images/providers/hacksaw-gaming.jpg' },
+  'Relax Gaming':     { mono: 'RX',   color: '#14B8A6', logo: '/images/providers/relax-gaming.jpg' },
+  'Nolimit City':     { mono: 'NLC',  color: '#1A1A1A', logo: '/images/providers/nolimit-city.jpg' },
+  'Playtech':         { mono: 'PT',   color: '#0B2545', logo: null },
+  'Microgaming':      { mono: 'MG',   color: '#5A2D82', logo: '/images/providers/microgaming.jpg' },
+  'Big Time Gaming':  { mono: 'BTG',  color: '#8A6D00', logo: '/images/providers/big-time-gaming.jpg' },
+  'Yggdrasil':        { mono: 'YGG',  color: '#0F9B8E', logo: '/images/providers/yggdrasil.jpg' },
+  'Quickspin':        { mono: 'QS',   color: '#9B2FAE', logo: '/images/providers/quickspin.jpg' },
+  'Betsoft':          { mono: 'BS',   color: '#1B3A6B', logo: '/images/providers/betsoft.jpg' },
+  'Wazdan':           { mono: 'WZ',   color: '#D62828', logo: '/images/providers/wazdan.jpg' },
+  'Playson':          { mono: 'PS',   color: '#F77F00', logo: '/images/providers/playson.jpg' },
+  'Spinomenal':       { mono: 'SM',   color: '#4C3B8C', logo: '/images/providers/spinomenal.jpg' }
+};
+const PROVIDERS = Object.keys(PROVIDER_META);
+let providerGridExpanded = false;
 
+let selectedCategory = 'all';
+let selectedProvider = 'all';
+let selectedLayout = localStorage.getItem('livo_game_layout') || 'standard';
+
+// ==================== ফেভারিটস / রিসেন্ট (localStorage-ভিত্তিক) ====================
+function getFavorites() {
+  try { return JSON.parse(localStorage.getItem('livo_favorites') || '[]'); } catch (e) { return []; }
+}
+function toggleFavorite(slug) {
+  let favs = getFavorites();
+  if (favs.includes(slug)) favs = favs.filter(s => s !== slug);
+  else favs.push(slug);
+  localStorage.setItem('livo_favorites', JSON.stringify(favs));
+  renderGames();
+}
+function getRecent() {
+  try { return JSON.parse(localStorage.getItem('livo_recent') || '[]'); } catch (e) { return []; }
+}
+function pushRecent(slug) {
+  let recent = getRecent().filter(s => s !== slug);
+  recent.unshift(slug);
+  recent = recent.slice(0, 20);
+  localStorage.setItem('livo_recent', JSON.stringify(recent));
+}
+
+// ==================== প্রোভাইডার কার্ড গ্রিড রেন্ডার (আসল লোগোসহ) ====================
+// এই সেকশনটা শুধু 'সব' ট্যাবে থাকা অবস্থায় দেখানো হয়
+function renderProviderGrid() {
+  const wrap = document.getElementById('providerGrid');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  PROVIDERS.forEach(p => {
+    const meta = PROVIDER_META[p];
+    const card = document.createElement('div');
+    card.className = 'provider-card' + (selectedProvider === p ? ' active' : '');
+    card.dataset.provider = p;
+    const logoHTML = meta.logo
+      ? `<img class="provider-logo-img" src="${meta.logo}" alt="${p}">`
+      : `<div class="provider-logo-fallback" style="background:${meta.color}">${meta.mono}</div>`;
+    card.innerHTML = `${logoHTML}<div class="provider-name">${p}</div>`;
+    card.addEventListener('click', () => {
+      // একই প্রোভাইডারে আবার চাপ দিলে ফিল্টার উঠে যাবে (সব দেখাবে)
+      selectedProvider = (selectedProvider === p) ? 'all' : p;
+      renderProviderGrid();
+      renderGames();
+    });
+    wrap.appendChild(card);
+  });
+}
+
+function updateProviderRowVisibility() {
+  const section = document.getElementById('providerSection');
+  if (!section) return;
+  // প্রোভাইডার গ্রিড এখন 'সব' ট্যাবের অংশ — অন্য ট্যাবে গেলে লুকানো থাকবে
+  section.style.display = (selectedCategory === 'all') ? 'block' : 'none';
+}
+
+// ==================== গেইম গ্রিড রেন্ডার ====================
 function renderGames() {
   const c = document.getElementById('gameContainer');
-  if(!c) return;
+  if (!c) return;
   c.innerHTML = '';
 
   const searchQ = document.getElementById('gameSearch') ? document.getElementById('gameSearch').value.toLowerCase() : '';
+  const favs = getFavorites();
+  const recent = getRecent();
 
-  const filtered = gamesList.filter(g => {
+  let source = allGames;
+  if (selectedCategory === 'favorites') {
+    source = allGames.filter(g => favs.includes(g.slug));
+  } else if (selectedCategory === 'recent') {
+    source = recent.map(slug => allGames.find(g => g.slug === slug)).filter(Boolean);
+  }
+
+  const filtered = source.filter(g => {
     const matchesSearch = g.name.toLowerCase().includes(searchQ);
-    const matchesCategory = selectedCategory === 'all' || g.type === selectedCategory;
-    return matchesSearch && matchesCategory;
+    const matchesCategory = (selectedCategory === 'all' || selectedCategory === 'favorites' || selectedCategory === 'recent') || g.type === selectedCategory;
+    const matchesProvider = selectedProvider === 'all' || g.provider === selectedProvider;
+    return matchesSearch && matchesCategory && matchesProvider;
   });
 
   if (filtered.length === 0) {
-    c.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted); font-size: 13px;"><%= t.no_games_found %></div>`;
+    const msg = selectedCategory === 'favorites' ? 'এখনো কোনো গেইম ফেভারিটে যোগ করা হয়নি ⭐'
+      : selectedCategory === 'recent' ? 'সম্প্রতি কোনো গেইম খেলা হয়নি 🕒'
+      : '<%= t.no_games_found %>';
+    c.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted); font-size: 13px;">${msg}</div>`;
     return;
   }
 
   filtered.forEach(g => {
     const badgeHTML = g.badge ? `<div class="game-badge-premium">${g.badge}</div>` : '';
-    c.innerHTML += `
-      <a href="/games/${g.slug}" class="game-card-premium">
-        <div class="game-thumb-wrapper">
-          <span class="game-emoji">${g.emoji}</span>
-          ${badgeHTML}
-        </div>
-        <div class="game-info-premium">
-          <div class="game-title-premium">${g.name}</div>
-          <div class="game-provider-premium">${g.provider}</div>
-        </div>
-      </a>`;
+    const isFav = favs.includes(g.slug);
+    const card = document.createElement('a');
+    card.href = '/games/' + g.slug;
+    card.className = 'game-card-premium';
+    card.innerHTML = `
+      <div class="game-thumb-wrapper">
+        <i class="fa-star fav-star ${isFav ? 'fas active' : 'far'}" data-slug="${g.slug}"></i>
+        <span class="game-emoji">${g.emoji}</span>
+        ${badgeHTML}
+      </div>
+      <div class="game-info-premium">
+        <div class="game-title-premium">${g.name}</div>
+        <div class="game-provider-premium">${g.provider}</div>
+      </div>`;
+    card.addEventListener('click', () => pushRecent(g.slug));
+    const star = card.querySelector('.fav-star');
+    star.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleFavorite(g.slug);
+    });
+    c.appendChild(card);
   });
 }
 
-// Category Tab Filtering Handler
+// ==================== ক্যাটাগরি ট্যাব ====================
 document.querySelectorAll('.nav-tab-item').forEach(el => {
   el.addEventListener('click', () => {
     document.querySelectorAll('.nav-tab-item').forEach(item => item.classList.remove('active'));
     el.classList.add('active');
     selectedCategory = el.dataset.category;
+    if (selectedCategory !== 'all') selectedProvider = 'all';
+    updateProviderRowVisibility();
     renderGames();
+  });
+});
+
+// ==================== লেআউট সুইচার ====================
+function applyLayout() {
+  const c = document.getElementById('gameContainer');
+  if (!c) return;
+  c.classList.remove('layout-compact', 'layout-list');
+  if (selectedLayout === 'compact') c.classList.add('layout-compact');
+  if (selectedLayout === 'list') c.classList.add('layout-list');
+  document.querySelectorAll('.layout-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.layout === selectedLayout);
+  });
+}
+document.querySelectorAll('.layout-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    selectedLayout = btn.dataset.layout;
+    localStorage.setItem('livo_game_layout', selectedLayout);
+    applyLayout();
   });
 });
 
@@ -518,7 +817,24 @@ setInterval(() => {
   if(jpNumEl) jpNumEl.textContent = jpValue.toLocaleString('<%= lang === 'bn' ? 'bn-BD' : 'en-US' %>');
 }, 1500);
 
-document.addEventListener('DOMContentLoaded', renderGames);
+document.addEventListener('DOMContentLoaded', () => {
+  renderProviderGrid();
+  updateProviderRowVisibility();
+  applyLayout();
+  renderGames();
+
+  const toggleBtn = document.getElementById('providerToggleBtn');
+  const grid = document.getElementById('providerGrid');
+  if (toggleBtn && grid) {
+    toggleBtn.addEventListener('click', () => {
+      providerGridExpanded = !providerGridExpanded;
+      grid.classList.toggle('expanded', providerGridExpanded);
+      toggleBtn.innerHTML = providerGridExpanded
+        ? '<i class="fas fa-chevron-up"></i>'
+        : '<i class="fas fa-chevron-down"></i>';
+    });
+  }
+});
 </script>
 
 </body></html>
