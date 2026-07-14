@@ -395,7 +395,14 @@ body.light-mode .jackpot-board {
   <div class="nav-tab-item" data-category="recent">
     <i class="fas fa-clock-rotate-left"></i> রিসেন্ট
   </div>
-  <div id="providerTabs" style="display:contents;"></div>
+</div>
+
+<!-- ===== Provider Grid (শুধু 'সব' ট্যাবে দেখাবে, কোলাপসিবল) ===== -->
+<div id="providerSection" style="padding:0 12px 10px;">
+  <div id="providerGrid" class="provider-grid"></div>
+  <button type="button" id="providerToggleBtn" class="provider-toggle-btn">
+    <i class="fas fa-chevron-down"></i>
+  </button>
 </div>
 
 <!-- ===== Layout Switcher ===== -->
@@ -407,23 +414,30 @@ body.light-mode .jackpot-board {
 </div>
 
 <style>
-  .provider-chip {
-    flex: 0 0 auto; white-space: nowrap; display: flex; align-items: center; gap: 7px;
-    padding: 6px 14px 6px 6px; border-radius: 20px;
+  .provider-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+    max-height: 340px; overflow: hidden; transition: max-height 0.3s ease;
+  }
+  .provider-grid.expanded { max-height: 3000px; }
+  .provider-card {
     background: var(--bg-surface); border: 1px solid var(--border-glass);
-    color: var(--text-muted); font-size: 12px; font-weight: 700; cursor: pointer;
-    transition: all 0.15s ease;
+    border-radius: 14px; padding: 14px 10px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 10px; cursor: pointer;
+    transition: all 0.15s ease; min-height: 110px;
   }
-  .provider-chip .provider-logo {
-    width: 22px; height: 22px; border-radius: 7px; flex: 0 0 22px;
-    display: flex; align-items: center; justify-content: center;
-    color: #fff; font-size: 9px; font-weight: 900; letter-spacing: -0.3px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  .provider-card.active { border-color: var(--fa-gold); box-shadow: 0 0 0 2px rgba(212,175,55,0.25); }
+  .provider-card .provider-logo-img {
+    max-width: 100%; max-height: 42px; object-fit: contain; border-radius: 6px;
   }
-  .provider-chip.active {
-    background: var(--fa-gold); color: #1a1a1a; border-color: var(--fa-gold);
+  .provider-card .provider-logo-fallback {
+    width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center;
+    justify-content: center; color: #fff; font-size: 11px; font-weight: 900;
   }
-  .provider-chip.active .provider-logo { box-shadow: 0 0 0 2px rgba(0,0,0,0.15); }
+  .provider-card .provider-name { font-size: 12.5px; font-weight: 700; color: var(--text-main); text-align: center; }
+  .provider-toggle-btn {
+    width: 100%; margin-top: 10px; padding: 8px; border-radius: 10px; border: none;
+    background: var(--bg-surface); color: var(--text-muted); cursor: pointer; font-size: 13px;
+  }
   .layout-btn {
     width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border-glass);
     background: var(--bg-surface); color: var(--text-muted); cursor: pointer; font-size: 13px;
@@ -619,28 +633,29 @@ const allGames = [
 ];
 
 const PROVIDER_META = {
-  'Jili':             { mono: 'JILI', color: '#F5A623' },
-  'PG Soft':          { mono: 'PG',   color: '#00B4D8' },
-  'Spribe':           { mono: 'SB',   color: '#6C2EB9' },
-  'Pragmatic Play':   { mono: 'PP',   color: '#E8302A' },
-  'Evolution':        { mono: 'EVO',  color: '#C8102E' },
-  'NetEnt':           { mono: 'NE',   color: '#003D7A' },
-  "Play'n GO":        { mono: 'PnGO', color: '#00A651' },
-  'Red Tiger':        { mono: 'RT',   color: '#D71920' },
-  'Hacksaw Gaming':   { mono: 'HG',   color: '#FF6B00' },
-  'Relax Gaming':     { mono: 'RX',   color: '#14B8A6' },
-  'Nolimit City':     { mono: 'NLC',  color: '#1A1A1A' },
-  'Playtech':         { mono: 'PT',   color: '#0B2545' },
-  'Microgaming':      { mono: 'MG',   color: '#5A2D82' },
-  'Big Time Gaming':  { mono: 'BTG',  color: '#8A6D00' },
-  'Yggdrasil':        { mono: 'YGG',  color: '#0F9B8E' },
-  'Quickspin':        { mono: 'QS',   color: '#9B2FAE' },
-  'Betsoft':          { mono: 'BS',   color: '#1B3A6B' },
-  'Wazdan':           { mono: 'WZ',   color: '#D62828' },
-  'Playson':          { mono: 'PS',   color: '#F77F00' },
-  'Spinomenal':       { mono: 'SM',   color: '#4C3B8C' }
+  'Jili':             { mono: 'JILI', color: '#F5A623', logo: '/images/providers/jili.jpg' },
+  'PG Soft':          { mono: 'PG',   color: '#00B4D8', logo: '/images/providers/pg-soft.jpg' },
+  'Spribe':           { mono: 'SB',   color: '#6C2EB9', logo: '/images/providers/spribe.jpg' },
+  'Pragmatic Play':   { mono: 'PP',   color: '#E8302A', logo: '/images/providers/pragmatic-play.jpg' },
+  'Evolution':        { mono: 'EVO',  color: '#C8102E', logo: '/images/providers/evolution.jpg' },
+  'NetEnt':           { mono: 'NE',   color: '#003D7A', logo: '/images/providers/netent.jpg' },
+  "Play'n GO":        { mono: 'PnGO', color: '#00A651', logo: '/images/providers/playn-go.jpg' },
+  'Red Tiger':        { mono: 'RT',   color: '#D71920', logo: '/images/providers/red-tiger.jpg' },
+  'Hacksaw Gaming':   { mono: 'HG',   color: '#FF6B00', logo: '/images/providers/hacksaw-gaming.jpg' },
+  'Relax Gaming':     { mono: 'RX',   color: '#14B8A6', logo: '/images/providers/relax-gaming.jpg' },
+  'Nolimit City':     { mono: 'NLC',  color: '#1A1A1A', logo: '/images/providers/nolimit-city.jpg' },
+  'Playtech':         { mono: 'PT',   color: '#0B2545', logo: null },
+  'Microgaming':      { mono: 'MG',   color: '#5A2D82', logo: '/images/providers/microgaming.jpg' },
+  'Big Time Gaming':  { mono: 'BTG',  color: '#8A6D00', logo: '/images/providers/big-time-gaming.jpg' },
+  'Yggdrasil':        { mono: 'YGG',  color: '#0F9B8E', logo: '/images/providers/yggdrasil.jpg' },
+  'Quickspin':        { mono: 'QS',   color: '#9B2FAE', logo: '/images/providers/quickspin.jpg' },
+  'Betsoft':          { mono: 'BS',   color: '#1B3A6B', logo: '/images/providers/betsoft.jpg' },
+  'Wazdan':           { mono: 'WZ',   color: '#D62828', logo: '/images/providers/wazdan.jpg' },
+  'Playson':          { mono: 'PS',   color: '#F77F00', logo: '/images/providers/playson.jpg' },
+  'Spinomenal':       { mono: 'SM',   color: '#4C3B8C', logo: '/images/providers/spinomenal.jpg' }
 };
 const PROVIDERS = Object.keys(PROVIDER_META);
+let providerGridExpanded = false;
 
 let selectedCategory = 'all';
 let selectedProvider = 'all';
@@ -667,36 +682,36 @@ function pushRecent(slug) {
   localStorage.setItem('livo_recent', JSON.stringify(recent));
 }
 
-// ==================== প্রোভাইডার ফিল্টার চিপ রেন্ডার (লোগো ব্যাজসহ) ====================
-// এই সারিটা শুধু 'সব' ট্যাবে থাকা অবস্থায় দেখানো হয়
-function renderProviderTabs() {
-  const wrap = document.getElementById('providerTabs');
+// ==================== প্রোভাইডার কার্ড গ্রিড রেন্ডার (আসল লোগোসহ) ====================
+// এই সেকশনটা শুধু 'সব' ট্যাবে থাকা অবস্থায় দেখানো হয়
+function renderProviderGrid() {
+  const wrap = document.getElementById('providerGrid');
   if (!wrap) return;
   wrap.innerHTML = '';
-  const divider = document.createElement('div');
-  divider.style.cssText = 'flex:0 0 auto;width:1px;align-self:stretch;background:var(--border-glass);margin:4px 4px;';
-  wrap.appendChild(divider);
   PROVIDERS.forEach(p => {
     const meta = PROVIDER_META[p];
-    const chip = document.createElement('div');
-    chip.className = 'provider-chip' + (selectedProvider === p ? ' active' : '');
-    chip.dataset.provider = p;
-    chip.innerHTML = `<span class="provider-logo" style="background:${meta.color}">${meta.mono}</span>${p}`;
-    chip.addEventListener('click', () => {
+    const card = document.createElement('div');
+    card.className = 'provider-card' + (selectedProvider === p ? ' active' : '');
+    card.dataset.provider = p;
+    const logoHTML = meta.logo
+      ? `<img class="provider-logo-img" src="${meta.logo}" alt="${p}">`
+      : `<div class="provider-logo-fallback" style="background:${meta.color}">${meta.mono}</div>`;
+    card.innerHTML = `${logoHTML}<div class="provider-name">${p}</div>`;
+    card.addEventListener('click', () => {
       // একই প্রোভাইডারে আবার চাপ দিলে ফিল্টার উঠে যাবে (সব দেখাবে)
       selectedProvider = (selectedProvider === p) ? 'all' : p;
-      renderProviderTabs();
+      renderProviderGrid();
       renderGames();
     });
-    wrap.appendChild(chip);
+    wrap.appendChild(card);
   });
 }
 
 function updateProviderRowVisibility() {
-  const wrap = document.getElementById('providerTabs');
-  if (!wrap) return;
-  // প্রোভাইডার ফিল্টার এখন 'সব' ট্যাবের একই সারিতে — অন্য ট্যাবে গেলে লুকানো থাকবে
-  wrap.style.display = (selectedCategory === 'all') ? 'contents' : 'none';
+  const section = document.getElementById('providerSection');
+  if (!section) return;
+  // প্রোভাইডার গ্রিড এখন 'সব' ট্যাবের অংশ — অন্য ট্যাবে গেলে লুকানো থাকবে
+  section.style.display = (selectedCategory === 'all') ? 'block' : 'none';
 }
 
 // ==================== গেইম গ্রিড রেন্ডার ====================
@@ -803,10 +818,22 @@ setInterval(() => {
 }, 1500);
 
 document.addEventListener('DOMContentLoaded', () => {
-  renderProviderTabs();
+  renderProviderGrid();
   updateProviderRowVisibility();
   applyLayout();
   renderGames();
+
+  const toggleBtn = document.getElementById('providerToggleBtn');
+  const grid = document.getElementById('providerGrid');
+  if (toggleBtn && grid) {
+    toggleBtn.addEventListener('click', () => {
+      providerGridExpanded = !providerGridExpanded;
+      grid.classList.toggle('expanded', providerGridExpanded);
+      toggleBtn.innerHTML = providerGridExpanded
+        ? '<i class="fas fa-chevron-up"></i>'
+        : '<i class="fas fa-chevron-down"></i>';
+    });
+  }
 });
 </script>
 
