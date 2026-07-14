@@ -344,20 +344,6 @@ body.light-mode .jackpot-board {
   </div>
 </div>
 
-<!-- ===== Mega Jackpot Banner ===== -->
-<div class="banner-container" style="margin: 0 0 12px 0;">
-  <div class="card jackpot-board" style="padding:18px 16px; text-align:center; border: 1.5px solid var(--fa-gold); position: relative; overflow: hidden; border-radius: 14px;">
-    <div class="jackpot-title" style="font-family:'Teko',sans-serif; font-size:26px; letter-spacing:2px; text-transform:uppercase; font-weight:800; background: linear-gradient(180deg, #FFE9A8 0%, #D4AF37 60%, #8A5F0C 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display:flex; align-items:center; justify-content:center; gap:8px;">
-      <span>👑</span> MEGA JACKPOT <span>👑</span>
-    </div>
-    <div style="font-family:'Teko',sans-serif; font-size:40px; color:#FFF; line-height:1; margin:8px 0 2px 0; text-shadow: 0 0 15px rgba(255, 215, 0, 0.5); display: flex; align-items: center; justify-content: center; gap: 6px;">
-      <span style="font-size: 22px; color: var(--fa-gold);">৳</span>
-      <span id="jp-num" style="background: linear-gradient(180deg, #FFF 0%, #E2E2E2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">88,617,517</span>
-    </div>
-    <div style="font-size:10.5px; color:var(--text-muted);"><%= t.lucky_draw_msg %></div>
-  </div>
-</div>
-
 <!-- ===== Deposit, Withdrawal, Reward, Rebate Highlighted Shortcuts ===== -->
 <div class="shortcut-bar">
   <a href="/payment/deposit" class="shortcut-item">
@@ -536,6 +522,19 @@ body.light-mode .jackpot-board {
 <div id="mainGridWrap">
   <div id="catalogProviderList"></div>
   <div class="game-grid-premium" id="gameContainer"></div>
+</div>
+
+<!-- ===== Mega Jackpot Banner ===== -->
+<div class="banner-container" style="margin:20px 12px 12px 12px;">
+  <div class="card jackpot-board" style="padding:22px 16px; text-align:center; border: 2px solid #FFD700; position: relative; overflow: hidden; border-radius: 18px; background: linear-gradient(135deg, #3a0d0d 0%, #1a0505 100%);">
+    <div class="jackpot-title" style="font-family:'Teko',sans-serif; font-size:44px; letter-spacing:2px; text-transform:uppercase; font-weight:800; color:#FFD700; -webkit-text-stroke: 1.5px #7a1010; text-shadow: 0 2px 0 #7a1010, 0 4px 8px rgba(0,0,0,0.6), 0 0 20px rgba(255,215,0,0.5); display:flex; align-items:center; justify-content:center; gap:10px;">
+      <span style="font-size:26px;">👑</span> JACKPOT
+    </div>
+    <div style="margin-top:10px; background: linear-gradient(180deg, #b91c1c 0%, #7f1010 100%); border: 1.5px solid #FFD700; border-radius: 8px; padding: 8px 10px; display:inline-block; box-shadow: inset 0 0 10px rgba(0,0,0,0.4);">
+      <span style="font-family:'Teko',sans-serif; font-size:32px; color:#FFE9A8; letter-spacing:1px; text-shadow: 0 0 10px rgba(255,215,0,0.6);">৳<span id="jp-num">88,617,517</span></span>
+    </div>
+    <div style="margin-top:8px; font-size:10.5px; color:var(--text-muted);"><%= t.lucky_draw_msg %></div>
+  </div>
 </div>
 
 <!-- ===== Winners List ===== -->
