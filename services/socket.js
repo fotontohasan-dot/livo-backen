@@ -6,6 +6,20 @@ const { checkContent } = require('../utils/contentFilter');
 
 let io;
 
+// চ্যাটে ফাইল/ইমেজ URL সবসময় আমাদের Cloudinary আপলোড এন্ডপয়েন্ট (routes/chat.js -> /chat/upload)
+// থেকেই আসা উচিত। ক্লায়েন্ট থেকে সরাসরি পাঠানো send_message ইভেন্টের fileUrl কখনো বিশ্বাস করা
+// উচিত না — এটা যাচাই না করলে কেউ চাইলে সরাসরি socket ইভেন্ট পাঠিয়ে যেকোনো স্ট্রিং fileUrl
+// হিসেবে পাঠাতে পারত, যেটা অ্যাডমিন প্যানেলে <img src="..."> এ বসে যেত।
+function isSafeChatFileUrl(url) {
+  if (typeof url !== 'string' || !url) return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' && parsed.hostname === 'res.cloudinary.com';
+  } catch (e) {
+    return false;
+  }
+}
+
 // ===== অ্যাডমিন প্যানেলে রিয়েল-টাইম নোটিফিকেশন (ডিপোজিট/উইথড্র/চ্যাট) =====
 // type: 'deposit' | 'withdraw' | 'chat'
 // Socket.io দিয়ে পেজ খোলা থাকলে সাথে সাথে আপডেট হয়, আর Web Push দিয়ে
@@ -86,8 +100,17 @@ const initSocket = (server, sessionMiddleware) => {
         const isAdmin = u.role === 'admin';
         const receiverId = (data && data.receiverId) || null;
         const message = (data && data.message) || null;
-        const fileUrl = (data && data.fileUrl) || null;
+        let fileUrl = (data && data.fileUrl) || null;
         const fileType = (data && data.fileType) || null;
+
+        if (fileUrl && !isSafeChatFileUrl(fileUrl)) {
+          socket.emit("message_blocked", {
+            reason: 'invalid_file_url',
+            text: 'ফাইল লিংক গ্রহণযোগ্য নয়। শুধু এই চ্যাটের নিজস্ব আপলোড বাটন দিয়ে পাঠানো ফাইল গ্রহণ করা হয়।'
+          });
+          fileUrl = null;
+          if (!message) return;
+        }
 
         if (!message && !fileUrl) return;
 
@@ -96,9 +119,12 @@ const initSocket = (server, sessionMiddleware) => {
         if (!isAdmin && message) {
           const check = checkContent(message);
           if (check.flagged) {
+            const isLinkIssue = check.reason === 'link_not_allowed' || check.reason === 'adult_link';
             socket.emit("message_blocked", {
-              reason: 'inappropriate_content',
-              text: 'আপনার মেসেজে অনুপযুক্ত/অশ্লীল কনটেন্ট শনাক্ত হয়েছে। এই মেসেজটি পাঠানো হয়নি — অনুগ্রহ করে সংশোধন করে আবার পাঠান।'
+              reason: check.reason,
+              text: isLinkIssue
+                ? 'চ্যাটে কোনো লিংক পাঠানো যাবে না। এই মেসেজটি পাঠানো হয়নি — অনুগ্রহ করে লিংক ছাড়া লিখুন।'
+                : 'আপনার মেসেজে অনুপযুক্ত/অশ্লীল কনটেন্ট শনাক্ত হয়েছে। এই মেসেজটি পাঠানো হয়নি — অনুগ্রহ করে সংশোধন করে আবার পাঠান।'
             });
             return; // না সেভ হবে, না অ্যাডমিনের কাছে যাবে
           }

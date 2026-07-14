@@ -462,18 +462,34 @@
         }
     }
 
+    // ফাইল URL শুধুমাত্র আমাদের নিজস্ব Cloudinary আপলোড থেকেই আসা উচিত।
+    // javascript:, data:, বা attribute/quote breakout করার মতো কোনো মান হলে reject করা হয়।
+    // URL() ক্যানোনিকালাইজ করার সময় বিপজ্জনক ক্যারেক্টার (", <, ' ইত্যাদি) নিজে থেকেই percent-encode করে দেয়।
+    function safeFileUrl(url) {
+        if (typeof url !== 'string') return null;
+        try {
+            const parsed = new URL(url, window.location.origin);
+            if (parsed.protocol !== 'https:' || parsed.hostname !== 'res.cloudinary.com') return null;
+            return parsed.href;
+        } catch (e) {
+            return null;
+        }
+    }
+
     function appendMessage(text, isAdmin, timestamp, fileUrl, fileType, isRead) {
         const messagesDiv = document.getElementById('messages');
         const div = document.createElement('div');
         div.className = `flex ${isAdmin ? 'justify-end' : 'justify-start'}`;
 
         let content = '';
+        const safeUrl = fileUrl ? safeFileUrl(fileUrl) : null;
+        if (fileUrl && !safeUrl) console.warn('Blocked untrusted file URL in chat message:', fileUrl);
 
-        if (fileUrl) {
+        if (safeUrl) {
             if (fileType === 'image') {
-                content += `<img src="${fileUrl}" class="max-w-[220px] rounded-2xl mb-1 cursor-pointer" onclick="window.open('${fileUrl}', '_blank')">`;
+                content += `<img src="${escapeHtml(safeUrl)}" class="max-w-[220px] rounded-2xl mb-1 cursor-pointer" onclick="window.open(${JSON.stringify(safeUrl)}, '_blank', 'noopener,noreferrer')">`;
             } else if (fileType === 'video') {
-                content += `<video src="${fileUrl}" controls class="max-w-[220px] rounded-2xl mb-1"></video>`;
+                content += `<video src="${escapeHtml(safeUrl)}" controls class="max-w-[220px] rounded-2xl mb-1"></video>`;
             }
         }
 

@@ -140,7 +140,8 @@ function containsBadContent(text) {
 }
 
 /**
- * টেক্সটের ভেতরে থাকা যেকোনো URL ১৮+ সাইটের কিনা চেক করে
+ * টেক্সটের ভেতরে যেকোনো লিঙ্ক/URL আছে কিনা চেক করে — চ্যাট সাপোর্টে কোনো ধরনের
+ * লিঙ্ক (ফিশিং, ম্যালওয়্যার, ১৮+, বা অন্য যেকোনো) পাঠানোই অনুমোদিত নয়
  * @param {string} text
  * @returns {{ flagged: boolean, reason: string|null, matched: string|null }}
  */
@@ -152,13 +153,15 @@ function containsBadLink(text) {
   const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+|[a-z0-9-]+\.[a-z]{2,}(?:\/[^\s]*)?)/gi;
   const urls = text.match(urlRegex) || [];
 
-  for (const raw of urls) {
-    const lower = raw.toLowerCase();
+  if (urls.length > 0) {
+    const lower = urls[0].toLowerCase();
     for (const domain of ADULT_DOMAINS) {
       if (lower.includes(domain)) {
         return { flagged: true, reason: 'adult_link', matched: domain };
       }
     }
+    // ১৮+ তালিকায় না থাকলেও, চ্যাটে কোনো লিঙ্কই পাঠানো যাবে না
+    return { flagged: true, reason: 'link_not_allowed', matched: urls[0] };
   }
 
   return { flagged: false, reason: null, matched: null };
