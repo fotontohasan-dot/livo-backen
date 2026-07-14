@@ -56,12 +56,13 @@
 .shortcut-bar {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  margin: 0 12px 15px 12px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(212, 175, 55, 0.15);
-  border-radius: 14px;
-  padding: 12px;
+  gap: 6px;
+  margin: 0 0 15px 0;
+  background: rgba(255, 255, 255, 0.02);
+  border-top: 1px solid rgba(212, 175, 55, 0.12);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.12);
+  border-radius: 0;
+  padding: 12px 0;
 }
 
 .shortcut-item {
@@ -69,38 +70,38 @@
   flex-direction: column;
   align-items: center;
   text-decoration: none;
-  transition: transform 0.2s, box-shadow 0.2s;
-  padding: 10px 4px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.05) 100%);
-  border: 1px solid rgba(255,255,255,0.05);
+  transition: transform 0.15s ease, opacity 0.15s ease;
+  padding: 2px 2px;
+  border-radius: 0;
+  background: transparent;
+  border: none;
 }
 
 .shortcut-item:hover {
-  transform: translateY(-2px);
-  border-color: var(--fa-gold);
-  background: linear-gradient(135deg, rgba(212,175,55,0.1) 0%, rgba(0,0,0,0.2) 100%);
+  transform: translateY(-1px);
+  opacity: 0.85;
 }
 
 .shortcut-icon-wrapper {
-  width: 45px;
-  height: 45px;
-  border-radius: 50%;
-  background: var(--fa-gold-gradient);
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
-  color: #000;
+  font-size: 26px;
+  color: var(--fa-gold);
   margin-bottom: 6px;
-  box-shadow: 0 4px 10px rgba(212, 175, 55, 0.3);
+  box-shadow: none;
 }
 
 .shortcut-label {
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--text-main);
   text-align: center;
+  letter-spacing: 0.2px;
 }
 
 /* Horizontal Navigation Tabs */
@@ -350,20 +351,20 @@ body.light-mode .jackpot-board {
     <div class="shortcut-label"><%= t.deposit %></div>
   </a>
   <a href="/payment/withdraw" class="shortcut-item">
-    <div class="shortcut-icon-wrapper" style="background: linear-gradient(135deg, #FFF, #E0E0E0);">
-      <i class="fas fa-money-bill-wave" style="color: #111;"></i>
+    <div class="shortcut-icon-wrapper">
+      <i class="fas fa-hand-holding-dollar"></i>
     </div>
     <div class="shortcut-label"><%= t.withdrawal %></div>
   </a>
   <a href="/extra/missions" class="shortcut-item">
-    <div class="shortcut-icon-wrapper" style="background: linear-gradient(135deg, #FF9900, #FF5E00);">
-      <i class="fas fa-gift" style="color: #FFF;"></i>
+    <div class="shortcut-icon-wrapper">
+      <i class="fas fa-trophy"></i>
     </div>
     <div class="shortcut-label"><%= t.reward %></div>
   </a>
   <a href="/profile" class="shortcut-item">
-    <div class="shortcut-icon-wrapper" style="background: linear-gradient(135deg, #00FFCC, #0099FF);">
-      <i class="fas fa-percentage" style="color: #FFF;"></i>
+    <div class="shortcut-icon-wrapper">
+      <i class="fas fa-coins"></i>
     </div>
     <div class="shortcut-label"><%= t.rebate %></div>
   </a>
