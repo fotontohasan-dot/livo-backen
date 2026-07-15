@@ -445,7 +445,8 @@ body.light-mode .jackpot-board {
   .provider-scroll-btn:active { background: var(--fa-gold-gradient); color: #000; }
   #catalogProviderList {
     display: flex; flex-direction: column; gap: 8px;
-    max-height: 480px; overflow-y: auto; scrollbar-width: none; scroll-behavior: smooth;
+    height: 420px; overflow-y: scroll; scrollbar-width: none; scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y;
   }
   #catalogProviderList::-webkit-scrollbar { display: none; }
   .catalog-provider-item {
@@ -745,8 +746,12 @@ function renderCatalogProviderList() {
   }
   sidebar.style.display = 'flex';
 
-  // এই ক্যাটাগরিতে যেসব প্রোভাইডারের গেম আছে শুধু তাদেরই দেখাবে
-  const providersInCategory = PROVIDERS.filter(p => allGames.some(g => g.type === selectedCategory && g.provider === p));
+  // এই ক্যাটাগরিতে যেসব প্রোভাইডারের গেম আছে সবগুলোই দেখাবে —
+  // ফিক্সড PROVIDER_META লিস্ট থেকে না, বরং আসল গেম ডেটা থেকেই বের করা হয়,
+  // যাতে Admin Panel থেকে নতুন কোনো প্রোভাইডার (PROVIDER_META-তে নেই এমন) যোগ করলেও তা বাদ না পড়ে।
+  const providersInCategory = [...new Set(
+    allGames.filter(g => g.type === selectedCategory && g.provider).map(g => g.provider)
+  )].sort((a, b) => a.localeCompare(b));
 
   const allItem = document.createElement('div');
   allItem.className = 'catalog-provider-item' + (selectedProvider === 'all' ? ' active' : '');
@@ -759,7 +764,8 @@ function renderCatalogProviderList() {
   wrap.appendChild(allItem);
 
   providersInCategory.forEach(p => {
-    const meta = PROVIDER_META[p];
+    // PROVIDER_META-তে লোগো/রঙ থাকলে সেটা ব্যবহার হবে, নাহলে নাম থেকে একটা ফলব্যাক আইকন বানানো হবে
+    const meta = PROVIDER_META[p] || { mono: p.slice(0, 3).toUpperCase(), color: '#555c6b', logo: null };
     const item = document.createElement('div');
     item.className = 'catalog-provider-item' + (selectedProvider === p ? ' active' : '');
     const logoHTML = meta.logo
