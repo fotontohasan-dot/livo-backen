@@ -826,6 +826,18 @@ async function runMigrations() {
       console.log(`✅ ${seedGames.length}টি ডিফল্ট গেম সিড করা হয়েছে`);
     }
 
+    // একই গেম একাধিকবার (ভিন্ন ভিন্ন slug দিয়ে) যোগ হয়ে থাকলে ডুপ্লিকেট পরিষ্কার করা —
+    // প্রতিটা নামের সবচেয়ে পুরনো (সবচেয়ে ছোট id) এন্ট্রিটা রেখে বাকিগুলো মুছে ফেলা হয়
+    const dedupResult = await pool.query(`
+      DELETE FROM games
+      WHERE id NOT IN (
+        SELECT MIN(id) FROM games GROUP BY LOWER(TRIM(name))
+      )
+    `);
+    if (dedupResult.rowCount > 0) {
+      console.log(`✅ ${dedupResult.rowCount}টি ডুপ্লিকেট গেম মুছে ফেলা হয়েছে`);
+    }
+
     console.log("✅ All tables migration completed successfully");
   } catch (err) {
     console.error("❌ Migration error:", err.message);
