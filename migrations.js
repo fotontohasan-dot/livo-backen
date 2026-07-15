@@ -838,6 +838,29 @@ async function runMigrations() {
       console.log(`✅ ${dedupResult.rowCount}টি ডুপ্লিকেট গেম মুছে ফেলা হয়েছে`);
     }
 
+    // পুরনো ডেটায় কিছু গেম category='hot' হিসেবে সেভ ছিল (আসল ক্যাটাগরি slots/live/poker
+    // থেকে সরিয়ে) — এর ফলে সেই প্রোভাইডারের গেম Slots/Live/Poker ট্যাবে দেখা যাচ্ছিল না।
+    // badge='hot' রেখেই (হট ট্যাবেও দেখাবে) আসল ক্যাটাগরিতে ফিরিয়ে দেওয়া হলো।
+    const hotCategoryFix = {
+      slots: ['aviator', 'gates-of-olympus', 'sweet-bonanza', 'fortune-gems', 'starburst',
+        'mega-moolah', 'book-of-dead', 'jetx', 'spaceman', 'wanted-dead-or-a-wild', 'san-quentin'],
+      live: ['crazy-time', 'dragon-tiger'],
+      poker: ['teen-patti'],
+    };
+    for (const [cat, slugs] of Object.entries(hotCategoryFix)) {
+      const r = await pool.query(
+        `UPDATE games SET category = $1, badge = 'hot', updated_at = NOW()
+         WHERE category = 'hot' AND slug = ANY($2::text[])`,
+        [cat, slugs]
+      );
+      if (r.rowCount > 0) console.log(`✅ ${r.rowCount}টি গেম '${cat}' ক্যাটাগরিতে ফিরিয়ে আনা হলো (badge=hot বজায় থাকলো)`);
+    }
+    // এই তালিকার বাইরে category='hot' হয়ে থাকলে (অজানা গেম) ডিফল্টভাবে slots-এ ফেলা হলো
+    const leftoverHot = await pool.query(
+      `UPDATE games SET category = 'slots', badge = 'hot', updated_at = NOW() WHERE category = 'hot'`
+    );
+    if (leftoverHot.rowCount > 0) console.log(`✅ বাকি ${leftoverHot.rowCount}টি 'hot' ক্যাটাগরির গেম slots-এ সরানো হলো`);
+
     console.log("✅ All tables migration completed successfully");
   } catch (err) {
     console.error("❌ Migration error:", err.message);

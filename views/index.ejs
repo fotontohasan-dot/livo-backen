@@ -649,23 +649,23 @@ setInterval(addWin, 2500);
 const SERVER_GAMES = <%- JSON.stringify((typeof dbGames !== 'undefined' && dbGames) ? dbGames : []).replace(/</g, '\\u003C') %>;
 
 const allGames = SERVER_GAMES.length > 0 ? SERVER_GAMES : [
-  { name: 'Aviator', emoji: '🎰', type: 'hot', slug: 'aviator', badge: 'hot', provider: 'Spribe' },
+  { name: 'Aviator', emoji: '🎰', type: 'slots', slug: 'aviator', badge: 'hot', provider: 'Spribe' },
   { name: 'Slots', emoji: '💎', type: 'slots', slug: 'slots', badge: 'pop', provider: 'Playtech' },
   { name: 'Roulette', emoji: '🍭', type: 'live', slug: 'roulette', badge: 'new', provider: 'Playtech' },
   { name: 'Andar Bahar', emoji: '⚡', type: 'live', slug: 'andar-bahar', badge: null, provider: 'Jili' },
-  { name: 'Teen Patti', emoji: '🔥', type: 'hot', slug: 'teen-patti', badge: 'hot', provider: 'Jili' },
+  { name: 'Teen Patti', emoji: '🔥', type: 'poker', slug: 'teen-patti', badge: 'hot', provider: 'Jili' },
   { name: 'Blackjack', emoji: '🐉', type: 'live', slug: 'blackjack', badge: 'hot', provider: 'Playtech' },
   { name: 'Poker', emoji: '🎴', type: 'poker', slug: 'poker', badge: 'pop', provider: 'Playtech' },
   { name: 'Baccarat', emoji: '🃏', type: 'live', slug: 'baccarat', badge: 'new', provider: 'Playtech' },
   { name: 'Crash Game', emoji: '🎲', type: 'slots', slug: 'crash-game', badge: null, provider: 'Playtech' },
-  { name: 'Starburst', emoji: '🎯', type: 'hot', slug: 'starburst', badge: 'hot', provider: 'NetEnt' },
-  { name: 'Book of Dead', emoji: '🎡', type: 'hot', slug: 'book-of-dead', badge: 'hot', provider: 'Play\'n GO' },
+  { name: 'Starburst', emoji: '🎯', type: 'slots', slug: 'starburst', badge: 'hot', provider: 'NetEnt' },
+  { name: 'Book of Dead', emoji: '🎡', type: 'slots', slug: 'book-of-dead', badge: 'hot', provider: 'Play\'n GO' },
   { name: 'Gonzo\'s Quest', emoji: '🚀', type: 'slots', slug: 'gonzos-quest', badge: 'pop', provider: 'NetEnt' },
-  { name: 'Mega Moolah', emoji: '👑', type: 'hot', slug: 'mega-moolah', badge: 'hot', provider: 'Microgaming' },
-  { name: 'Gates of Olympus', emoji: '🦁', type: 'hot', slug: 'gates-of-olympus', badge: 'hot', provider: 'Pragmatic Play' },
-  { name: 'Sweet Bonanza', emoji: '🐯', type: 'hot', slug: 'sweet-bonanza', badge: 'hot', provider: 'Pragmatic Play' },
+  { name: 'Mega Moolah', emoji: '👑', type: 'slots', slug: 'mega-moolah', badge: 'hot', provider: 'Microgaming' },
+  { name: 'Gates of Olympus', emoji: '🦁', type: 'slots', slug: 'gates-of-olympus', badge: 'hot', provider: 'Pragmatic Play' },
+  { name: 'Sweet Bonanza', emoji: '🐯', type: 'slots', slug: 'sweet-bonanza', badge: 'hot', provider: 'Pragmatic Play' },
   { name: 'Legacy of Dead', emoji: '🌊', type: 'slots', slug: 'legacy-of-dead', badge: 'hot', provider: 'Play\'n GO' },
-  { name: 'Crazy Time', emoji: '⚓', type: 'hot', slug: 'crazy-time', badge: 'hot', provider: 'Evolution' },
+  { name: 'Crazy Time', emoji: '⚓', type: 'live', slug: 'crazy-time', badge: 'hot', provider: 'Evolution' },
   { name: 'Lightning Roulette', emoji: '🥷', type: 'live', slug: 'lightning-roulette', badge: 'new', provider: 'Evolution' },
   { name: 'Monopoly Live', emoji: '🀄', type: 'live', slug: 'monopoly-live', badge: null, provider: 'Evolution' },
   { name: 'Mega Ball', emoji: '🐺', type: 'live', slug: 'mega-ball', badge: null, provider: 'Evolution' },
@@ -675,8 +675,8 @@ const allGames = SERVER_GAMES.length > 0 ? SERVER_GAMES : [
   { name: 'Bac Bo', emoji: '🎪', type: 'live', slug: 'bac-bo', badge: null, provider: 'Evolution' },
   { name: 'Rummy', emoji: '🌟', type: 'poker', slug: 'rummy', badge: null, provider: 'Jili' },
   { name: 'Call Break', emoji: '🎆', type: 'poker', slug: 'call-break', badge: 'hot', provider: 'Jili' },
-  { name: 'Dragon Tiger', emoji: '❄️', type: 'hot', slug: 'dragon-tiger', badge: 'hot', provider: 'Jili' },
-  { name: 'JetX', emoji: '⛩️', type: 'hot', slug: 'jetx', badge: 'hot', provider: 'Spribe' },
+  { name: 'Dragon Tiger', emoji: '❄️', type: 'live', slug: 'dragon-tiger', badge: 'hot', provider: 'Jili' },
+  { name: 'JetX', emoji: '⛩️', type: 'slots', slug: 'jetx', badge: 'hot', provider: 'Spribe' },
   { name: 'Plinko', emoji: '🍬', type: 'slots', slug: 'plinko', badge: null, provider: 'Spribe' },
 ];
 
@@ -821,7 +821,8 @@ function renderGames() {
 
   const filtered = source.filter(g => {
     const matchesSearch = g.name.toLowerCase().includes(searchQ);
-    const matchesCategory = isCatalogCategory || selectedCategory === 'all' || selectedCategory === 'favorites' || selectedCategory === 'recent' || g.type === selectedCategory;
+    const matchesCategory = isCatalogCategory || selectedCategory === 'all' || selectedCategory === 'favorites' || selectedCategory === 'recent'
+      || (selectedCategory === 'hot' ? g.badge === 'hot' : g.type === selectedCategory);
     const matchesProvider = selectedProvider === 'all' || g.provider === selectedProvider;
     return matchesSearch && matchesCategory && matchesProvider;
   });

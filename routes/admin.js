@@ -1050,7 +1050,11 @@ router.get('/games', async (req, res) => {
     const params = [];
     let i = 1;
 
-    if (category !== 'all') { where.push(`category = $${i++}`); params.push(category); }
+    if (category === 'hot') {
+      where.push(`badge = 'hot'`);
+    } else if (category !== 'all') {
+      where.push(`category = $${i++}`); params.push(category);
+    }
     if (provider !== 'all') { where.push(`provider = $${i++}`); params.push(provider); }
     if (badgeFilter === 'hot') { where.push(`badge = 'hot'`); }
     if (status === 'active') { where.push(`is_active = true`); }
