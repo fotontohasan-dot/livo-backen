@@ -34,7 +34,18 @@ async function recordLogin(req, userId) {
 
 router.get('/', async (req, res) => {
   try {
-    res.render('index', { user: req.session.user || null });
+    let dbGames = [];
+    try {
+      const gamesResult = await pool.query(
+        `SELECT name, slug, emoji, category AS type, provider, badge
+         FROM games WHERE is_active = true ORDER BY sort_order ASC, id ASC`
+      );
+      dbGames = gamesResult.rows;
+    } catch (gErr) {
+      console.error('Homepage games fetch error:', gErr.message);
+      dbGames = [];
+    }
+    res.render('index', { user: req.session.user || null, dbGames });
   } catch (err) {
     console.error('Error rendering index:', err);
     res.status(500).send('Render Error');
