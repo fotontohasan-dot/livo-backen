@@ -466,15 +466,24 @@ body.light-mode .jackpot-board {
 
   /* ===== Catalog Mode: বাম পাশে প্রোভাইডার কলাম, ডান পাশে গেম গ্রিড ===== */
   #mainGridWrap { display: flex; gap: 10px; padding: 0 12px; }
+  #providerSidebar {
+    display: none; flex-direction: column; width: 78px; flex-shrink: 0; gap: 6px;
+  }
+  .provider-scroll-btn {
+    width: 100%; padding: 6px 0; border: none; border-radius: 8px; cursor: pointer;
+    background: rgba(255,255,255,0.08); color: var(--text-muted); font-size: 13px;
+    display: flex; align-items: center; justify-content: center; transition: all 0.15s ease;
+  }
+  .provider-scroll-btn:active { background: var(--fa-gold-gradient); color: #000; }
   #catalogProviderList {
-    display: none; flex-direction: column; gap: 8px; width: 78px; flex-shrink: 0;
-    max-height: 640px; overflow-y: auto; scrollbar-width: none;
+    display: flex; flex-direction: column; gap: 8px;
+    max-height: 480px; overflow-y: auto; scrollbar-width: none; scroll-behavior: smooth;
   }
   #catalogProviderList::-webkit-scrollbar { display: none; }
   .catalog-provider-item {
     background: var(--bg-surface); border: 1px solid var(--border-glass);
     border-radius: 12px; padding: 8px 4px; display: flex; flex-direction: column;
-    align-items: center; gap: 6px; cursor: pointer; transition: all 0.15s ease;
+    align-items: center; gap: 6px; cursor: pointer; transition: all 0.15s ease; flex-shrink: 0;
   }
   .catalog-provider-item.active { border-color: var(--fa-gold); box-shadow: 0 0 0 2px rgba(212,175,55,0.25); }
   .catalog-provider-item img { width: 100%; max-height: 28px; object-fit: contain; border-radius: 4px; }
@@ -520,7 +529,11 @@ body.light-mode .jackpot-board {
 
 <!-- ===== High-Fidelity Premium Game Grid (বাম পাশে প্রোভাইডার কলাম সহ, Slots/Live/Sports/Poker-এ) ===== -->
 <div id="mainGridWrap">
-  <div id="catalogProviderList"></div>
+  <div id="providerSidebar">
+    <button type="button" id="providerScrollUp" class="provider-scroll-btn"><i class="fas fa-chevron-up"></i></button>
+    <div id="catalogProviderList"></div>
+    <button type="button" id="providerScrollDown" class="provider-scroll-btn"><i class="fas fa-chevron-down"></i></button>
+  </div>
   <div class="game-grid-premium" id="gameContainer"></div>
 </div>
 
@@ -788,13 +801,14 @@ function updateProviderRowVisibility() {
 // ==================== বাম পাশের প্রোভাইডার কলাম (Slots/Live/Sports/Poker ক্যাটাগরির জন্য) ====================
 function renderCatalogProviderList() {
   const wrap = document.getElementById('catalogProviderList');
-  if (!wrap) return;
+  const sidebar = document.getElementById('providerSidebar');
+  if (!wrap || !sidebar) return;
   wrap.innerHTML = '';
   if (!CATALOG_CATEGORIES.includes(selectedCategory)) {
-    wrap.style.display = 'none';
+    sidebar.style.display = 'none';
     return;
   }
-  wrap.style.display = 'flex';
+  sidebar.style.display = 'flex';
 
   // এই ক্যাটাগরিতে যেসব প্রোভাইডারের গেম আছে শুধু তাদেরই দেখাবে
   const providersInCategory = PROVIDERS.filter(p => allGames.some(g => g.type === selectedCategory && g.provider === p));
@@ -825,6 +839,16 @@ function renderCatalogProviderList() {
     wrap.appendChild(item);
   });
 }
+
+// প্রোভাইডার লিস্ট উপরে/নিচে স্ক্রল করার বাটন (▲▼)
+(function setupProviderScrollButtons() {
+  const list = document.getElementById('catalogProviderList');
+  const upBtn = document.getElementById('providerScrollUp');
+  const downBtn = document.getElementById('providerScrollDown');
+  if (!list || !upBtn || !downBtn) return;
+  upBtn.addEventListener('click', () => list.scrollBy({ top: -150, behavior: 'smooth' }));
+  downBtn.addEventListener('click', () => list.scrollBy({ top: 150, behavior: 'smooth' }));
+})();
 
 // ==================== গেইম গ্রিড রেন্ডার ====================
 function renderGames() {
