@@ -464,25 +464,30 @@ body.light-mode .jackpot-board {
   }
   .secondary-tab-item.active i { color: #000; }
 
-  /* ===== Catalog Mode: বাম পাশে প্রোভাইডার কলাম, ডান পাশে গেম গ্রিড ===== */
-  #mainGridWrap { display: flex; gap: 10px; padding: 0 12px; }
+  /* ===== Catalog Mode: উপরে অনুভূমিক প্রোভাইডার সারি, নিচে পূর্ণ-প্রস্থ গেম গ্রিড ===== */
+  #mainGridWrap { display: flex; flex-direction: column; padding: 0 12px; }
   #catalogProviderList {
-    display: none; flex-direction: column; gap: 8px; width: 78px; flex-shrink: 0;
-    max-height: 640px; overflow-y: auto; scrollbar-width: none;
+    display: none; flex-direction: row; gap: 14px; overflow-x: auto; scrollbar-width: none;
+    padding: 2px 2px 14px 2px;
   }
   #catalogProviderList::-webkit-scrollbar { display: none; }
   .catalog-provider-item {
-    background: var(--bg-surface); border: 1px solid var(--border-glass);
-    border-radius: 12px; padding: 8px 4px; display: flex; flex-direction: column;
-    align-items: center; gap: 6px; cursor: pointer; transition: all 0.15s ease;
+    background: transparent; border: none;
+    border-radius: 0; padding: 0; display: flex; flex-direction: column;
+    flex: 0 0 auto; align-items: center; gap: 6px; cursor: pointer; transition: all 0.15s ease;
   }
-  .catalog-provider-item.active { border-color: var(--fa-gold); box-shadow: 0 0 0 2px rgba(212,175,55,0.25); }
-  .catalog-provider-item img { width: 100%; max-height: 28px; object-fit: contain; border-radius: 4px; }
+  .catalog-provider-item .icon-circle {
+    width: 54px; height: 54px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; background: var(--bg-surface); border: 2px solid var(--border-glass);
+    overflow: hidden; transition: all 0.15s ease;
+  }
+  .catalog-provider-item.active .icon-circle { border-color: var(--fa-gold); box-shadow: 0 0 0 2px rgba(212,175,55,0.25); }
+  .catalog-provider-item img { width: 100%; height: 100%; object-fit: cover; }
   .catalog-provider-item .fallback {
-    width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center;
-    justify-content: center; color: #fff; font-size: 9px; font-weight: 900;
+    width: 100%; height: 100%; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; color: #fff; font-size: 11px; font-weight: 900;
   }
-  .catalog-provider-item .name { font-size: 9.5px; font-weight: 700; color: var(--text-main); text-align: center; line-height: 1.15; }
+  .catalog-provider-item .name { font-size: 10.5px; font-weight: 700; color: var(--text-main); text-align: center; line-height: 1.15; white-space: nowrap; }
   #gameContainer { padding: 0 !important; flex: 1; min-width: 0; }
 
   .game-grid-premium.layout-compact { grid-template-columns: repeat(4, 1fr) !important; gap: 8px !important; }
@@ -511,16 +516,16 @@ body.light-mode .jackpot-board {
 
 <%- include('partials/flash') %>
 
-<!-- ===== Secondary Filter Pills (শুধু Slots/Live/Sports/Poker ক্যাটাগরিতে দেখাবে) ===== -->
-<div class="secondary-tabs-container" id="secondaryTabs" style="display:none;">
-  <div class="secondary-tab-item active" data-secondary="hot"><i class="fas fa-fire"></i> <%= t.cat_hot %></div>
-  <div class="secondary-tab-item" data-secondary="favorites"><i class="fas fa-star"></i> ফেভারিটস</div>
-  <div class="secondary-tab-item" data-secondary="recent"><i class="fas fa-clock-rotate-left"></i> রিসেন্ট</div>
-</div>
-
-<!-- ===== High-Fidelity Premium Game Grid (বাম পাশে প্রোভাইডার কলাম সহ, Slots/Live/Sports/Poker-এ) ===== -->
+<!-- ===== High-Fidelity Premium Game Grid: উপরে প্রোভাইডার সারি, তারপর সেকেন্ডারি ট্যাব (শুধু Slots-এ), তারপর গ্রিড ===== -->
 <div id="mainGridWrap">
   <div id="catalogProviderList"></div>
+
+  <div class="secondary-tabs-container" id="secondaryTabs" style="display:none;">
+    <div class="secondary-tab-item active" data-secondary="hot"><i class="fas fa-fire"></i> <%= t.cat_hot %></div>
+    <div class="secondary-tab-item" data-secondary="favorites"><i class="fas fa-star"></i> ফেভারিটস</div>
+    <div class="secondary-tab-item" data-secondary="recent"><i class="fas fa-clock-rotate-left"></i> রিসেন্ট</div>
+  </div>
+
   <div class="game-grid-premium" id="gameContainer"></div>
 </div>
 
@@ -801,7 +806,7 @@ function renderCatalogProviderList() {
 
   const allItem = document.createElement('div');
   allItem.className = 'catalog-provider-item' + (selectedProvider === 'all' ? ' active' : '');
-  allItem.innerHTML = `<div class="fallback" style="background:var(--fa-gold);color:#000;">সব</div><div class="name"><%= t.all %></div>`;
+  allItem.innerHTML = `<div class="icon-circle"><div class="fallback" style="background:var(--fa-gold);color:#000;">সব</div></div><div class="name"><%= t.all %></div>`;
   allItem.addEventListener('click', () => {
     selectedProvider = 'all';
     renderCatalogProviderList();
@@ -816,7 +821,7 @@ function renderCatalogProviderList() {
     const logoHTML = meta.logo
       ? `<img src="${meta.logo}" alt="${p}">`
       : `<div class="fallback" style="background:${meta.color}">${meta.mono}</div>`;
-    item.innerHTML = `${logoHTML}<div class="name">${p}</div>`;
+    item.innerHTML = `<div class="icon-circle">${logoHTML}</div><div class="name">${p}</div>`;
     item.addEventListener('click', () => {
       selectedProvider = (selectedProvider === p) ? 'all' : p;
       renderCatalogProviderList();
