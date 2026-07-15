@@ -400,14 +400,6 @@ body.light-mode .jackpot-board {
   </div>
 </div>
 
-<!-- ===== Provider Grid (শুধু 'সব' ট্যাবে দেখাবে, কোলাপসিবল) ===== -->
-<div id="providerSection" style="padding:0 12px 10px;">
-  <div id="providerGrid" class="provider-grid"></div>
-  <button type="button" id="providerToggleBtn" class="provider-toggle-btn">
-    <i class="fas fa-chevron-down"></i>
-  </button>
-</div>
-
 <!-- ===== Layout Switcher ===== -->
 <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:0 12px 10px;">
   <span style="font-size:11px;color:var(--text-muted);margin-right:2px;">লেআউট:</span>
@@ -417,30 +409,6 @@ body.light-mode .jackpot-board {
 </div>
 
 <style>
-  .provider-grid {
-    display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
-    max-height: 340px; overflow: hidden; transition: max-height 0.3s ease;
-  }
-  .provider-grid.expanded { max-height: 3000px; }
-  .provider-card {
-    background: var(--bg-surface); border: 1px solid var(--border-glass);
-    border-radius: 14px; padding: 14px 10px; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 10px; cursor: pointer;
-    transition: all 0.15s ease; min-height: 110px;
-  }
-  .provider-card.active { border-color: var(--fa-gold); box-shadow: 0 0 0 2px rgba(212,175,55,0.25); }
-  .provider-card .provider-logo-img {
-    max-width: 100%; max-height: 42px; object-fit: contain; border-radius: 6px;
-  }
-  .provider-card .provider-logo-fallback {
-    width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center;
-    justify-content: center; color: #fff; font-size: 11px; font-weight: 900;
-  }
-  .provider-card .provider-name { font-size: 12.5px; font-weight: 700; color: var(--text-main); text-align: center; }
-  .provider-toggle-btn {
-    width: 100%; margin-top: 10px; padding: 8px; border-radius: 10px; border: none;
-    background: var(--bg-surface); color: var(--text-muted); cursor: pointer; font-size: 13px;
-  }
   .layout-btn {
     width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border-glass);
     background: var(--bg-surface); color: var(--text-muted); cursor: pointer; font-size: 13px;
@@ -734,7 +702,6 @@ const PROVIDER_META = {
   'Spinomenal':       { mono: 'SM',   color: '#4C3B8C', logo: '/images/providers/spinomenal.jpg' }
 };
 const PROVIDERS = Object.keys(PROVIDER_META);
-let providerGridExpanded = false;
 
 let selectedCategory = 'all';
 let selectedProvider = 'all';
@@ -764,38 +731,6 @@ function pushRecent(slug) {
   recent.unshift(slug);
   recent = recent.slice(0, 20);
   localStorage.setItem('livo_recent', JSON.stringify(recent));
-}
-
-// ==================== প্রোভাইডার কার্ড গ্রিড রেন্ডার (আসল লোগোসহ) ====================
-// এই সেকশনটা শুধু 'সব' ট্যাবে থাকা অবস্থায় দেখানো হয়
-function renderProviderGrid() {
-  const wrap = document.getElementById('providerGrid');
-  if (!wrap) return;
-  wrap.innerHTML = '';
-  PROVIDERS.forEach(p => {
-    const meta = PROVIDER_META[p];
-    const card = document.createElement('div');
-    card.className = 'provider-card' + (selectedProvider === p ? ' active' : '');
-    card.dataset.provider = p;
-    const logoHTML = meta.logo
-      ? `<img class="provider-logo-img" src="${meta.logo}" alt="${p}">`
-      : `<div class="provider-logo-fallback" style="background:${meta.color}">${meta.mono}</div>`;
-    card.innerHTML = `${logoHTML}<div class="provider-name">${p}</div>`;
-    card.addEventListener('click', () => {
-      // একই প্রোভাইডারে আবার চাপ দিলে ফিল্টার উঠে যাবে (সব দেখাবে)
-      selectedProvider = (selectedProvider === p) ? 'all' : p;
-      renderProviderGrid();
-      renderGames();
-    });
-    wrap.appendChild(card);
-  });
-}
-
-function updateProviderRowVisibility() {
-  const section = document.getElementById('providerSection');
-  if (!section) return;
-  // প্রোভাইডার গ্রিড এখন 'সব' ট্যাবের অংশ — অন্য ট্যাবে গেলে লুকানো থাকবে
-  section.style.display = (selectedCategory === 'all') ? 'block' : 'none';
 }
 
 // ==================== বাম পাশের প্রোভাইডার কলাম (Slots/Live/Sports/Poker ক্যাটাগরির জন্য) ====================
@@ -943,7 +878,6 @@ document.querySelectorAll('.nav-tab-item').forEach(el => {
       if (defaultTab) defaultTab.classList.add('active');
     }
 
-    updateProviderRowVisibility();
     renderCatalogProviderList();
     renderGames();
   });
@@ -984,23 +918,9 @@ if (gs) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  renderProviderGrid();
-  updateProviderRowVisibility();
   renderCatalogProviderList();
   applyLayout();
   renderGames();
-
-  const toggleBtn = document.getElementById('providerToggleBtn');
-  const grid = document.getElementById('providerGrid');
-  if (toggleBtn && grid) {
-    toggleBtn.addEventListener('click', () => {
-      providerGridExpanded = !providerGridExpanded;
-      grid.classList.toggle('expanded', providerGridExpanded);
-      toggleBtn.innerHTML = providerGridExpanded
-        ? '<i class="fas fa-chevron-up"></i>'
-        : '<i class="fas fa-chevron-down"></i>';
-    });
-  }
 });
 </script>
 
