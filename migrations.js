@@ -861,6 +861,14 @@ async function runMigrations() {
     );
     if (leftoverHot.rowCount > 0) console.log(`✅ বাকি ${leftoverHot.rowCount}টি 'hot' ক্যাটাগরির গেম slots-এ সরানো হলো`);
 
+    // প্রতিটা প্রোভাইডারের অন্তত ১টা করে 'slots' গেম থাকা নিশ্চিত করা — Evolution-এর সবগুলো
+    // গেম আসলে 'live' ক্যাটাগরির ছিল, তাই Slots ট্যাবে গেলে Evolution-এ কিছুই দেখাচ্ছিল না
+    await pool.query(`
+      INSERT INTO games (name, slug, emoji, category, provider, badge, sort_order)
+      VALUES ('Divine Fortune', 'divine-fortune', '💎', 'slots', 'Evolution', 'hot', 119)
+      ON CONFLICT (slug) DO NOTHING
+    `);
+
     console.log("✅ All tables migration completed successfully");
   } catch (err) {
     console.error("❌ Migration error:", err.message);
