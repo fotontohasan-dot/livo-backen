@@ -247,24 +247,6 @@ router.post('/2fa/setup/verify', async (req, res) => {
   }
 });
 
-// ==================== ডায়াগনস্টিক: 2FA স্ট্যাটাস যাচাই ====================
-// এটা টেম্পোরারি — সমস্যাটা বোঝার পর সরিয়ে ফেলা উচিত।
-// লগইন করা অ্যাডমিন এখানে এসে দেখতে পারবে তার নিজের অ্যাকাউন্টে totp_enabled আসলেই true কিনা,
-// এবং সিস্টেমে মোট কতজন admin আছে (একাধিক admin অ্যাকাউন্ট থাকলে ভুল অ্যাকাউন্টে লগইন হচ্ছে কিনা বোঝা যাবে)।
-router.get('/2fa/status', async (req, res) => {
-  try {
-    const me = await pool.query('SELECT id, username, email, role, totp_enabled FROM users WHERE id = $1', [req.session.user.id]);
-    const allAdmins = await pool.query(`SELECT id, username, email, totp_enabled FROM users WHERE role = 'admin' ORDER BY id`);
-    let html = `<h3>তুমি এখন লগইন করা আছ এই অ্যাকাউন্টে:</h3>
-      <pre>${JSON.stringify(me.rows[0], null, 2)}</pre>
-      <h3>সিস্টেমের সব admin অ্যাকাউন্ট:</h3>
-      <pre>${JSON.stringify(allAdmins.rows, null, 2)}</pre>`;
-    res.send(html);
-  } catch (err) {
-    res.send('এরর: ' + err.message);
-  }
-});
-
 router.post('/2fa/disable', async (req, res) => {
   try {
     const { password, token } = req.body;
