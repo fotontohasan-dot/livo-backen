@@ -101,9 +101,25 @@ const generalLimiter = rateLimit({
   legacyHeaders: false
 });
 
+// ডিপোজিট/উইথড্র/কার্ড/পাসওয়ার্ড — টাকা-সংক্রান্ত ও অ্যাকাউন্ট-সংবেদনশীল রুটে কড়া রেট-লিমিট
+const financialLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: 'অনেকবার চেষ্টা করেছেন। কিছুক্ষণ পর আবার চেষ্টা করুন।',
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
 app.use(generalLimiter);
 app.use('/login', loginLimiter);
 app.use('/register', loginLimiter);
+app.use('/admin/login', loginLimiter);
+app.use('/payment/deposit', financialLimiter);
+app.use('/payment/withdraw', financialLimiter);
+app.use('/profile/add-bank-card', financialLimiter);
+app.use('/profile/change-password', financialLimiter);
+app.use('/profile/update', financialLimiter);
+app.use('/profile/update-personal', financialLimiter);
 
 // ভাষা সেটিং
 const translations = {
@@ -172,7 +188,11 @@ app.use(apiGateway);
 
 // ==================== ROUTES ====================
 app.use('/', require('./routes/auth'));
-app.use('/setup', require('./routes/setup'));
+// setup.js শুধুমাত্র প্রোডাকশনের বাইরে (লোকাল ডেভেলপমেন্টে) মাউন্ট হবে —
+// প্রোডাকশনে এই রুট সম্পূর্ণভাবে অনুপস্থিত থাকবে, তাই কোনো key দিয়েও অ্যাক্সেস করা যাবে না।
+if (process.env.NODE_ENV !== 'production') {
+  app.use('/setup', require('./routes/setup'));
+}
 app.use('/matches', require('./routes/matches'));
 app.use('/sports', require('./routes/sports'));
 app.use('/tournaments', require('./routes/tournaments'));

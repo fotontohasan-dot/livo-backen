@@ -143,21 +143,43 @@
   <script>
     var pendingRejectId = null;
 
+    function escapeHtml(str) {
+      return String(str == null ? '' : str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    // ডকুমেন্ট URL শুধুমাত্র আমাদের Cloudinary আপলোড থেকেই আসা উচিত
+    function safeDocUrl(url) {
+      if (typeof url !== 'string' || !url) return null;
+      try {
+        const parsed = new URL(url, window.location.origin);
+        if (parsed.protocol !== 'https:' || parsed.hostname !== 'res.cloudinary.com') return null;
+        return parsed.href;
+      } catch (e) { return null; }
+    }
+
     function closeModal(id) {
       document.getElementById(id).classList.remove('show');
     }
 
     function viewKyc(k) {
       var html = '';
-      html += '<div class="kv-row"><span>নাম</span><span>' + (k.full_name || '—') + '</span></div>';
-      html += '<div class="kv-row"><span>ইউজারনেম</span><span>@' + (k.username || '—') + '</span></div>';
-      html += '<div class="kv-row"><span>ফোন</span><span>' + (k.phone || '—') + '</span></div>';
-      html += '<div class="kv-row"><span>ডকুমেন্ট টাইপ</span><span>' + (k.document_type || '—') + '</span></div>';
-      html += '<div class="kv-row"><span>ডকুমেন্ট নম্বর</span><span>' + (k.document_number || '—') + '</span></div>';
+      html += '<div class="kv-row"><span>নাম</span><span>' + escapeHtml(k.full_name || '—') + '</span></div>';
+      html += '<div class="kv-row"><span>ইউজারনেম</span><span>@' + escapeHtml(k.username || '—') + '</span></div>';
+      html += '<div class="kv-row"><span>ফোন</span><span>' + escapeHtml(k.phone || '—') + '</span></div>';
+      html += '<div class="kv-row"><span>ডকুমেন্ট টাইপ</span><span>' + escapeHtml(k.document_type || '—') + '</span></div>';
+      html += '<div class="kv-row"><span>ডকুমেন্ট নম্বর</span><span>' + escapeHtml(k.document_number || '—') + '</span></div>';
       html += '<div class="kv-row"><span>জমার তারিখ</span><span>' + (k.created_at ? new Date(k.created_at).toLocaleString('bn-BD') : '—') + '</span></div>';
-      if (k.document_url) {
-        html += '<a href="' + k.document_url + '" target="_blank"><img class="doc-preview" src="' + k.document_url + '" onerror="this.style.display=\'none\'"></a>';
-        html += '<a class="btn btn-sm" style="margin-top:8px;" href="' + k.document_url + '" target="_blank"><i class="fas fa-external-link-alt"></i> মূল ডকুমেন্ট দেখুন</a>';
+      var docUrl = safeDocUrl(k.document_url);
+      if (docUrl) {
+        html += '<a href="' + escapeHtml(docUrl) + '" target="_blank" rel="noopener noreferrer"><img class="doc-preview" src="' + escapeHtml(docUrl) + '" onerror="this.style.display=\'none\'"></a>';
+        html += '<a class="btn btn-sm" style="margin-top:8px;" href="' + escapeHtml(docUrl) + '" target="_blank" rel="noopener noreferrer"><i class="fas fa-external-link-alt"></i> মূল ডকুমেন্ট দেখুন</a>';
+      } else if (k.document_url) {
+        html += '<p style="color:#dc2626;font-size:12px;">⚠️ অবৈধ ডকুমেন্ট URL — দেখানো যাচ্ছে না</p>';
       }
       document.getElementById('viewModalBody').innerHTML = html;
       document.getElementById('viewModal').classList.add('show');

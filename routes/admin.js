@@ -67,7 +67,9 @@ router.post('/login', async (req, res) => {
 });
 
 // ==================== TEMPORARY: CREATE ADMIN LOGS TABLE ====================
-router.get('/create-activity-table', async (req, res) => {
+// isAdmin এখানে সরাসরি বসানো হলো কারণ এই রুটটা router.use(isAdmin) (নিচে লাইন ৯৮) এর
+// আগে ডিফাইন করা — এটা ছাড়া যে কেউ (লগইন ছাড়াই) এই এন্ডপয়েন্ট কল করতে পারত।
+router.get('/create-activity-table', isAdmin, async (req, res) => {
   try {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS admin_logs (
