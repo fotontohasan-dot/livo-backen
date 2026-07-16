@@ -20,6 +20,8 @@ const {
   qrFromSecret
 } = require('../services/twofactor');
 
+const { requireIntParam, requireAmount, parseAmount, sanitizeText, isSafeUrl } = require('../middleware/validate');
+
 // ==================== 2FA ভেরিফিকেশন রুটের জন্য কড়া rate limit ====================
 // এই দুটো রুটে কোড অনুমান করে ব্রুট-ফোর্স করার ঝুঁকি থাকে, তাই আলাদা কড়া সীমা।
 const strict2FALimiter = rateLimit({
@@ -31,6 +33,26 @@ const strict2FALimiter = rateLimit({
   handler: (req, res) => {
     res.status(429).send('Too many attempts, please try again later.');
   }
+});
+
+// সব অ্যাডমিন রুটে (login-এর বাইরে) সাধারণ কড়া সীমা — app.js-এর generalLimiter (300/15min,
+// পুরো সাইটের জন্য) এর উপরে অতিরিক্ত স্তর, যেহেতু admin রুটগুলো সরাসরি DB write করে।
+const adminActionLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 150,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'অনেকবার অ্যাকশন নেওয়া হয়েছে, কিছুক্ষণ পর আবার চেষ্টা করুন।',
+});
+
+// টাকা/কয়েন সরাসরি নড়াচড়া করে এমন রুটে (approve/reject/coins add-remove) আরও কড়া সীমা —
+// কম্প্রোমাইজড সেশন বা স্ক্রিপ্টেড অপব্যবহার হলেও ক্ষতির পরিমাণ সীমিত রাখতে।
+const adminFinancialLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 40,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'অনেকবার আর্থিক অ্যাকশন নেওয়া হয়েছে, কিছুক্ষণ পর আবার চেষ্টা করুন।',
 });
 
 // ==================== ADMIN ACTIVITY LOG HELPER ====================
@@ -156,27 +178,6 @@ router.post('/login/2fa', strict2FALimiter, async (req, res) => {
   }
 });
 
-// ==================== TEMPORARY: CREATE ADMIN LOGS TABLE ====================
-router.get('/create-activity-table', async (req, res) => {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS admin_logs (
-        id SERIAL PRIMARY KEY,
-        admin_id INTEGER REFERENCES users(id),
-        admin_username VARCHAR(100),
-        action_type VARCHAR(100) NOT NULL,
-        details TEXT,
-        ip_address VARCHAR(50),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    res.send('✅ Admin Logs টেবিল সফলভাবে তৈরি হয়েছে!');
-  } catch (err) {
-    console.error(err);
-    res.send('❌ সমস্যা হয়েছে: ' + err.message);
-  }
-});
-
 // ==================== ADMIN LOGOUT ====================
 router.get('/logout', (req, res) => {
   req.session.destroy(() => {
@@ -186,6 +187,7 @@ router.get('/logout', (req, res) => {
 
 // ==================== সব রাউট প্রোটেক্টেড ====================
 router.use(isAdmin);
+router.use(adminActionLimiter);
 
 // ==================== নোটিফিকেশন ব্যাজ কাউন্ট (বটম-নেভ) ====================
 router.get('/api/notification-counts', async (req, res) => {
@@ -752,7 +754,7 @@ router.get('/deposits', async (req, res) => {
   }
 });
 
-router.post('/api/deposits/:id/approve', async (req, res) => {
+router.post('/api/deposits/:id/approve', adminFinancialLimiter, requireIntParam('id'), async (req, res) => {
   const { id } = req.params;
   const client = await pool.connect();
   try {
@@ -770,15 +772,15 @@ router.post('/api/deposits/:id/approve', async (req, res) => {
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('deposit approve error:', err);
-    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি: ' + err.message });
+    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি, পরে আবার চেষ্টা করুন।' });
   } finally {
     client.release();
   }
 });
 
-router.post('/api/deposits/:id/reject', async (req, res) => {
+router.post('/api/deposits/:id/reject', adminFinancialLimiter, requireIntParam('id'), async (req, res) => {
   const { id } = req.params;
-  const { reason } = req.body;
+  const reason = sanitizeText(req.body.reason || '', { maxLen: 300 });
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -799,7 +801,7 @@ router.post('/api/deposits/:id/reject', async (req, res) => {
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('deposit reject error:', err);
-    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি: ' + err.message });
+    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি, পরে আবার চেষ্টা করুন।' });
   } finally {
     client.release();
   }
@@ -851,9 +853,9 @@ router.get('/withdrawals', async (req, res) => {
   }
 });
 
-router.post('/api/withdrawals/:id/approve', async (req, res) => {
+router.post('/api/withdrawals/:id/approve', adminFinancialLimiter, requireIntParam('id'), async (req, res) => {
   const { id } = req.params;
-  const { txn } = req.body;
+  const txn = req.body.txn ? sanitizeText(req.body.txn, { maxLen: 120 }) : null;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -877,15 +879,15 @@ router.post('/api/withdrawals/:id/approve', async (req, res) => {
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('withdraw approve error:', err);
-    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি: ' + err.message });
+    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি, পরে আবার চেষ্টা করুন।' });
   } finally {
     client.release();
   }
 });
 
-router.post('/api/withdrawals/:id/reject', async (req, res) => {
+router.post('/api/withdrawals/:id/reject', adminFinancialLimiter, requireIntParam('id'), async (req, res) => {
   const { id } = req.params;
-  const { reason } = req.body;
+  const reason = sanitizeText(req.body.reason || '', { maxLen: 300 });
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -908,7 +910,7 @@ router.post('/api/withdrawals/:id/reject', async (req, res) => {
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('withdraw reject error:', err);
-    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি: ' + err.message });
+    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি, পরে আবার চেষ্টা করুন।' });
   } finally {
     client.release();
   }
@@ -954,32 +956,32 @@ router.get('/support', async (req, res) => {
   }
 });
 
-router.post('/api/support/:userId/reply', async (req, res) => {
+router.post('/api/support/:userId/reply', requireIntParam('userId'), async (req, res) => {
   try {
-    const userId = parseInt(req.params.userId);
-    const { message } = req.body;
-    if (!message || !message.trim()) return res.status(400).json({ success: false, error: 'মেসেজ লিখুন' });
+    const userId = req.params.userId;
+    const message = sanitizeText(req.body.message || '', { maxLen: 2000 });
+    if (!message) return res.status(400).json({ success: false, error: 'মেসেজ লিখুন' });
     await pool.query(
       `INSERT INTO chat_messages (sender_id, receiver_id, message, is_admin, is_read, created_at) VALUES ($1,$2,$3,true,true,NOW())`,
-      [req.session.user.id, userId, message.trim()]
+      [req.session.user.id, userId, message]
     );
     // ইউজারের পাঠানো মেসেজগুলো রিড হিসেবে মার্ক করা
     await pool.query(`UPDATE chat_messages SET is_read=true WHERE sender_id=$1 AND is_admin=false`, [userId]);
     res.json({ success: true });
   } catch (err) {
     console.error('support reply error:', err);
-    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি: ' + err.message });
+    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি, পরে আবার চেষ্টা করুন।' });
   }
 });
 
-router.post('/api/support/:userId/resolve', async (req, res) => {
+router.post('/api/support/:userId/resolve', requireIntParam('userId'), async (req, res) => {
   try {
-    const userId = parseInt(req.params.userId);
+    const userId = req.params.userId;
     await pool.query(`UPDATE chat_messages SET is_read=true WHERE sender_id=$1 AND is_admin=false`, [userId]);
     res.json({ success: true });
   } catch (err) {
     console.error('support resolve error:', err);
-    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি: ' + err.message });
+    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি, পরে আবার চেষ্টা করুন।' });
   }
 });
 
@@ -1108,7 +1110,7 @@ router.get('/users/:id', async (req, res) => {
 });
 
 // ==================== USER ACTIONS ====================
-router.post('/users/:id/ban', async (req, res) => {
+router.post('/users/:id/ban', requireIntParam('id'), async (req, res) => {
   try {
     await pool.query('UPDATE users SET is_banned = NOT is_banned WHERE id = $1', [req.params.id]);
     req.flash('success', 'স্ট্যাটাস আপডেট হয়েছে!');
@@ -1116,7 +1118,7 @@ router.post('/users/:id/ban', async (req, res) => {
   res.redirect('back');
 });
 
-router.post('/users/:id/delete', async (req, res) => {
+router.post('/users/:id/delete', requireIntParam('id'), async (req, res) => {
   try {
     if (String(req.session.user.id) === String(req.params.id)) {
       req.flash('error', 'নিজের অ্যাকাউন্ট ডিলিট করা যাবে না!');
@@ -1131,33 +1133,33 @@ router.post('/users/:id/delete', async (req, res) => {
   res.redirect('/admin/users');
 });
 
-router.post('/users/:id/coins/add', async (req, res) => {
+router.post('/users/:id/coins/add', adminFinancialLimiter, requireIntParam('id'), requireAmount('amount', { max: 10_000_000 }), async (req, res) => {
   try {
-    const amount = parseInt(req.body.amount);
-    if (!amount || amount <= 0) { req.flash('error', 'সঠিক পরিমাণ দিন!'); return res.redirect('back'); }
+    const amount = req.body.amount; // requireAmount দিয়ে ইতিমধ্যে যাচাই ও normalize করা
     await pool.query('UPDATE users SET coins = coins + $1 WHERE id = $2', [amount, req.params.id]);
     await pool.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'admin_add','অ্যাডমিন কয়েন যোগ')`, [req.params.id, amount]);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'coins_add', `+${amount} coins to user #${req.params.id}`, req.ip);
     req.flash('success', '✅ কয়েন যোগ হয়েছে!');
   } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
   res.redirect('back');
 });
 
-router.post('/users/:id/coins/remove', async (req, res) => {
+router.post('/users/:id/coins/remove', adminFinancialLimiter, requireIntParam('id'), requireAmount('amount', { max: 10_000_000 }), async (req, res) => {
   try {
-    const amount = parseInt(req.body.amount);
-    if (!amount || amount <= 0) { req.flash('error', 'সঠিক পরিমাণ দিন!'); return res.redirect('back'); }
+    const amount = req.body.amount;
     await pool.query('UPDATE users SET coins = GREATEST(coins - $1, 0) WHERE id = $2', [amount, req.params.id]);
     await pool.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'admin_remove','অ্যাডমিন কয়েন কমানো')`, [req.params.id, -amount]);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'coins_remove', `-${amount} coins from user #${req.params.id}`, req.ip);
     req.flash('success', '✅ কয়েন কমানো হয়েছে!');
   } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
   res.redirect('back');
 });
 
-router.post('/users/:id/freebet', async (req, res) => {
+router.post('/users/:id/freebet', adminFinancialLimiter, requireIntParam('id'), requireAmount('amount', { max: 1_000_000 }), async (req, res) => {
   try {
-    const amount = parseInt(req.body.amount);
-    if (!amount || amount <= 0) { req.flash('error', 'সঠিক পরিমাণ দিন!'); return res.redirect('back'); }
+    const amount = req.body.amount;
     await grantFreeBet(req.params.id, amount, 'admin');
+    await logAdminAction(req.session.user.id, req.session.user.username, 'freebet_grant', `${amount} taka free bet to user #${req.params.id}`, req.ip);
     req.flash('success', `✅ ${amount} টাকার ফ্রি বেট দেওয়া হয়েছে!`);
   } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
   res.redirect('back');
@@ -1360,13 +1362,18 @@ router.get('/bonuses', async (req, res) => {
 
 router.post('/bonuses/add', async (req, res) => {
   try {
-    const { username, bonus_type, bonus_amount, sports_required, casino_required } = req.body;
+    const { username } = req.body;
+    const bonus_type = sanitizeText(req.body.bonus_type || '', { maxLen: 50 });
+    const bonus_amount = parseAmount(req.body.bonus_amount, { max: 1_000_000 });
+    const sports_required = Number.isFinite(Number(req.body.sports_required)) ? Math.max(0, parseInt(req.body.sports_required) || 0) : 0;
+    const casino_required = Number.isFinite(Number(req.body.casino_required)) ? Math.max(0, parseInt(req.body.casino_required) || 0) : 0;
+    if (!bonus_amount) { req.flash('error', 'সঠিক বোনাস পরিমাণ দিন'); return res.redirect('/admin/bonuses'); }
     const userRes = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
     if (!userRes.rows[0]) return res.redirect('/admin/bonuses');
     await pool.query(
       `INSERT INTO bonuses (user_id, bonus_type, bonus_amount, sports_required, casino_required, status)
        VALUES ($1, $2, $3, $4, $5, 'active')`,
-      [userRes.rows[0].id, bonus_type, bonus_amount, sports_required || 0, casino_required || 0]
+      [userRes.rows[0].id, bonus_type, bonus_amount, sports_required, casino_required]
     );
     await logAdminAction(req.session.user.id, req.session.user.username, 'BONUS_ADD', `${username} কে ${bonus_amount} কয়েন বোনাস দেওয়া হয়েছে`, req.ip);
     res.redirect('/admin/bonuses');
@@ -1401,10 +1408,14 @@ router.get('/promotions', async (req, res) => {
 
 router.post('/promotions/add', async (req, res) => {
   try {
-    const { title, image_url, link_url, position } = req.body;
+    const title = sanitizeText(req.body.title || '', { maxLen: 200 }) || null;
+    const image_url = req.body.image_url && isSafeUrl(req.body.image_url) ? req.body.image_url.trim() : null;
+    const link_url = req.body.link_url && isSafeUrl(req.body.link_url) ? req.body.link_url.trim() : null;
+    const position = Number.isFinite(Number(req.body.position)) ? parseInt(req.body.position) || 0 : 0;
+    if (!image_url) { req.flash('error', 'বৈধ ইমেজ URL দিন'); return res.redirect('/admin/promotions'); }
     await pool.query(
       'INSERT INTO promotions (title, image_url, link_url, position, active) VALUES ($1, $2, $3, $4, true)',
-      [title || null, image_url, link_url || null, position || 0]
+      [title, image_url, link_url, position]
     );
     await logAdminAction(req.session.user.id, req.session.user.username, 'PROMOTION_ADD', `নতুন প্রমোশন ব্যানার যোগ করা হয়েছে: ${title || ''}`, req.ip);
     res.redirect('/admin/promotions');
@@ -1515,10 +1526,14 @@ router.get('/news', async (req, res) => {
 
 router.post('/news/add', async (req, res) => {
   try {
-    const { title, content, image_url, sport } = req.body;
+    const title = sanitizeText(req.body.title || '', { maxLen: 200 });
+    const content = sanitizeText(req.body.content || '', { maxLen: 20000 });
+    const image_url = req.body.image_url && isSafeUrl(req.body.image_url) ? req.body.image_url.trim() : null;
+    const sport = sanitizeText(req.body.sport || '', { maxLen: 50 }) || null;
+    if (!title) { req.flash('error', 'শিরোনাম আবশ্যক'); return res.redirect('/admin/news'); }
     await pool.query(
       'INSERT INTO news (title, content, image_url, sport, author_id) VALUES ($1, $2, $3, $4, $5)',
-      [title, content || null, image_url || null, sport || null, req.session.user.id]
+      [title, content || null, image_url, sport, req.session.user.id]
     );
     await logAdminAction(req.session.user.id, req.session.user.username, 'NEWS_ADD', `নতুন নিউজ যোগ করা হয়েছে: ${title}`, req.ip);
     res.redirect('/admin/news');
@@ -1528,7 +1543,7 @@ router.post('/news/add', async (req, res) => {
   }
 });
 
-router.post('/news/:id/delete', async (req, res) => {
+router.post('/news/:id/delete', requireIntParam('id'), async (req, res) => {
   try {
     const { id } = req.params;
     await pool.query('DELETE FROM news WHERE id = $1', [id]);
