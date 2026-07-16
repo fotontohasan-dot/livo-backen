@@ -1032,6 +1032,143 @@ router.post('/users/:id/freebet', async (req, res) => {
   res.redirect('back');
 });
 
+// ==================== গেম ম্যানেজমেন্ট (games) ====================
+function slugifyGameName(str) {
+  return String(str).toLowerCase().trim()
+    .replace(/['"]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
+
+router.get('/games', async (req, res) => {
+  try {
+    const category = req.query.category || 'all';
+    const provider = req.query.provider || 'all';
+    const badgeFilter = req.query.badge || 'all'; // শুধু Slots ক্যাটাগরির সেকেন্ডারি "হট" ট্যাবের জন্য
+    const status = req.query.status || 'all';
+    const q = (req.query.q || '').trim();
+
+    const where = [];
+    const params = [];
+    let i = 1;
+
+    if (category === 'hot') {
+      where.push(`badge = 'hot'`);
+    } else if (category !== 'all') {
+      where.push(`category = $${i++}`); params.push(category);
+    }
+    if (provider !== 'all') { where.push(`provider = $${i++}`); params.push(provider); }
+    if (badgeFilter === 'hot') { where.push(`badge = 'hot'`); }
+    if (status === 'active') { where.push(`is_active = true`); }
+    if (status === 'inactive') { where.push(`is_active = false`); }
+    if (q) { where.push(`name ILIKE $${i++}`); params.push(`%${q}%`); }
+
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    const gamesResult = await pool.query(
+      `SELECT * FROM games ${whereSql} ORDER BY sort_order ASC, created_at DESC`,
+      params
+    );
+
+    // এই ক্যাটাগরিতে যেসব প্রোভাইডারের গেম আছে, শুধু তাদেরই ছোট সাইড লিস্টে দেখানো হয়
+    // ('সব' বা 'হট' ট্যাবে কোনো প্রোভাইডার লিস্ট দেখানো হয় না, ঠিক হোমপেজের মতোই)
+    let providersInCategory = [];
+    if (['slots', 'live', 'sports', 'poker'].includes(category)) {
+      const provResult = await pool.query(
+        `SELECT provider, COUNT(*)::int AS count FROM games WHERE category = $1 GROUP BY provider ORDER BY provider ASC`,
+        [category]
+      );
+      providersInCategory = provResult.rows;
+    }
+
+    const totalResult = await pool.query(
+      `SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE is_active)::int AS active FROM games`
+    );
+
+    res.render('admin/games', {
+      games: gamesResult.rows,
+      providersInCategory,
+      selectedCategory: category,
+      selectedProvider: provider,
+      selectedBadge: badgeFilter,
+      selectedStatus: status,
+      searchQ: q,
+      totalGames: totalResult.rows[0].total,
+      activeGames: totalResult.rows[0].active
+    });
+  } catch (err) {
+    console.error('Games list error:', err.message);
+    res.render('admin/games', {
+      games: [], providersInCategory: [], selectedCategory: 'all', selectedProvider: 'all',
+      selectedBadge: 'all', selectedStatus: 'all', searchQ: '', totalGames: 0, activeGames: 0
+    });
+  }
+});
+
+router.post('/games/add', async (req, res) => {
+  try {
+    const { name, slug, emoji, category, provider, badge } = req.body;
+    if (!name || !category || !provider) {
+      req.flash('error', 'নাম, ক্যাটাগরি ও প্রোভাইডার আবশ্যক!');
+      return res.redirect('/admin/games');
+    }
+    const finalSlug = slugifyGameName(slug || name);
+    const maxOrderRes = await pool.query('SELECT COALESCE(MAX(sort_order),0)::int AS m FROM games');
+    await pool.query(
+      `INSERT INTO games (name, slug, emoji, category, provider, badge, sort_order)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+      [name.trim(), finalSlug, emoji || '🎮', category, provider.trim(), badge || null, maxOrderRes.rows[0].m + 1]
+    );
+    await logAdminAction(req.session.user.id, req.session.user.username, 'GAME_ADD', `নতুন গেম যোগ করা হয়েছে: ${name}`, req.ip);
+    req.flash('success', `✅ "${name}" গেম যোগ করা হয়েছে`);
+  } catch (err) {
+    console.error('Game add error:', err.message);
+    req.flash('error', err.code === '23505' ? 'এই স্লাগ ইতিমধ্যে ব্যবহৃত হয়েছে, অন্য নাম/স্লাগ দিন।' : 'গেম যোগ করতে সমস্যা হয়েছে!');
+  }
+  res.redirect('/admin/games');
+});
+
+router.post('/games/:id/edit', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, slug, emoji, category, provider, badge } = req.body;
+    const finalSlug = slugifyGameName(slug || name);
+    await pool.query(
+      `UPDATE games SET name=$1, slug=$2, emoji=$3, category=$4, provider=$5, badge=$6, updated_at=NOW() WHERE id=$7`,
+      [name.trim(), finalSlug, emoji || '🎮', category, provider.trim(), badge || null, id]
+    );
+    await logAdminAction(req.session.user.id, req.session.user.username, 'GAME_EDIT', `গেম #${id} আপডেট করা হয়েছে: ${name}`, req.ip);
+    req.flash('success', '✅ গেম আপডেট করা হয়েছে');
+  } catch (err) {
+    console.error('Game edit error:', err.message);
+    req.flash('error', err.code === '23505' ? 'এই স্লাগ ইতিমধ্যে ব্যবহৃত হয়েছে।' : 'গেম আপডেট করতে সমস্যা হয়েছে!');
+  }
+  res.redirect('/admin/games');
+});
+
+router.post('/games/:id/toggle', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query('UPDATE games SET is_active = NOT is_active, updated_at = NOW() WHERE id = $1', [id]);
+  } catch (err) {
+    console.error('Game toggle error:', err.message);
+    req.flash('error', 'স্ট্যাটাস পরিবর্তন করতে সমস্যা হয়েছে!');
+  }
+  res.redirect('back');
+});
+
+router.post('/games/:id/delete', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query('DELETE FROM games WHERE id = $1', [id]);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'GAME_DELETE', `গেম #${id} মুছে ফেলা হয়েছে`, req.ip);
+    req.flash('success', '✅ গেম মুছে ফেলা হয়েছে');
+  } catch (err) {
+    console.error('Game delete error:', err.message);
+    req.flash('error', 'গেম মুছতে সমস্যা হয়েছে!');
+  }
+  res.redirect('back');
+});
+
 // ==================== MATCHES ====================
 router.get('/matches', async (req, res) => {
   try {
