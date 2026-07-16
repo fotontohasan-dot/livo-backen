@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const path = require('path');
 const { pool } = require('../db');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
@@ -21,13 +22,76 @@ const isAdmin = (req, res, next) => {
   res.status(403).send('Access denied');
 };
 
+// ==================== ফাইল আপলোড: শুধু নির্দিষ্ট image/video ফরম্যাট ====================
+// তিন স্তরে যাচাই করা হয় — extension, browser-reported MIME type, এবং magic byte
+// (ফাইলের প্রকৃত বাইনারি কনটেন্ট)। তিনটাই মিলতে হবে, নাহলে reject।
+const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.mp4', '.mov', '.webm'];
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/quicktime', 'video/webm'];
+
+// ফাইলের প্রথম কয়েক বাইট (magic number/signature) দেখে প্রকৃত ফাইল টাইপ শনাক্ত করে —
+// শুধু extension বা Content-Type header বদলে দিলে এটা ফাঁকি দেওয়া যায় না।
+function detectMagicBytes(buffer) {
+  if (!buffer || buffer.length < 12) return null;
+
+  // JPEG: FF D8 FF
+  if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) return 'image/jpeg';
+
+  // PNG: 89 50 4E 47 0D 0A 1A 0A
+  if (
+    buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47 &&
+    buffer[4] === 0x0D && buffer[5] === 0x0A && buffer[6] === 0x1A && buffer[7] === 0x0A
+  ) return 'image/png';
+
+  // WEBP: 'RIFF' <4 byte size> 'WEBP'
+  if (
+    buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
+    buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50
+  ) return 'image/webp';
+
+  // WebM/Matroska EBML হেডার: 1A 45 DF A3
+  if (buffer[0] === 0x1A && buffer[1] === 0x45 && buffer[2] === 0xDF && buffer[3] === 0xA3) return 'video/webm';
+
+  // MP4/MOV (ISO base media container): অফসেট 4-7 এ 'ftyp' বক্স
+  if (
+    buffer[4] === 0x66 && buffer[5] === 0x74 && buffer[6] === 0x79 && buffer[7] === 0x70
+  ) {
+    const brand = buffer.subarray(8, 12).toString('ascii');
+    return brand.toLowerCase().startsWith('qt') ? 'video/quicktime' : 'video/mp4';
+  }
+
+  return null;
+}
+
+// extension আর magic-byte দিয়ে শনাক্ত হওয়া প্রকৃত টাইপ একই পরিবারের কিনা যাচাই —
+// mp4/mov একই container ফরম্যাট শেয়ার করে বলে ftyp brand সবসময় নির্ভরযোগ্যভাবে আলাদা করা যায় না,
+// তাই এই দুটোকে একে অপরের জন্য গ্রহণযোগ্য ধরা হয়েছে (তবে ছবি/ভিডিও আলাদা পরিবারের মধ্যে কখনো মেলে না)।
+function extensionMatchesDetectedType(ext, detectedMime) {
+  const imageExts = ['.jpg', '.jpeg', '.png', '.webp'];
+  const videoExts = ['.mp4', '.mov', '.webm'];
+  if (imageExts.includes(ext)) {
+    if (ext === '.jpg' || ext === '.jpeg') return detectedMime === 'image/jpeg';
+    if (ext === '.png') return detectedMime === 'image/png';
+    if (ext === '.webp') return detectedMime === 'image/webp';
+  }
+  if (videoExts.includes(ext)) {
+    if (ext === '.webm') return detectedMime === 'video/webm';
+    if (ext === '.mp4' || ext === '.mov') return detectedMime === 'video/mp4' || detectedMime === 'video/quicktime';
+  }
+  return false;
+}
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 20 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowed = /jpeg|jpg|png|gif|mp4|webm|mov/;
-    if (allowed.test(file.originalname.toLowerCase())) return cb(null, true);
-    cb(new Error('শুধু image/video আপলোড করা যাবে'));
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      return cb(new Error('শুধু jpg, jpeg, png, webp, mp4, mov, webm ফাইল আপলোড করা যাবে'));
+    }
+    if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+      return cb(new Error('অসমর্থিত ফাইল টাইপ'));
+    }
+    cb(null, true);
   }
 });
 
@@ -42,7 +106,17 @@ router.get('/admin', isAdmin, (req, res) => {
 router.post('/upload', isAuth, upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'ফাইল পাওয়া যায়নি' });
   try {
-    const isVideo = req.file.mimetype.startsWith('video');
+    const ext = path.extname(req.file.originalname || '').toLowerCase();
+    const detectedMime = detectMagicBytes(req.file.buffer);
+
+    // ফাইলের প্রকৃত বাইনারি কনটেন্ট (magic byte) allowlist-এর কোনো ফরম্যাটের সাথেই না মিললে,
+    // অথবা extension যা দাবি করছে তার সাথে প্রকৃত কনটেন্ট না মিললে — reject।
+    // এভাবে কেউ malicious ফাইলের নাম/এক্সটেনশন/Content-Type বদলে ফাঁকি দিতে পারবে না।
+    if (!detectedMime || !extensionMatchesDetectedType(ext, detectedMime)) {
+      return res.status(400).json({ error: 'ফাইলের প্রকৃত কনটেন্ট অনুমোদিত ফরম্যাটের (jpg, jpeg, png, webp, mp4, mov, webm) সাথে মেলেনি' });
+    }
+
+    const isVideo = detectedMime.startsWith('video');
     const result = await new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         { folder: 'livo/chat', resource_type: isVideo ? 'video' : 'image' },
@@ -122,6 +196,15 @@ router.get('/admin/history/:userId', isAdmin, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: 'সার্ভার ত্রুটি' });
   }
+});
+
+// multer fileFilter/সাইজ-লিমিট থেকে আসা error যেন JSON 400 হিসেবে ফেরত যায়
+// (global HTML error page-এর বদলে, যেহেতু ফ্রন্টএন্ড JSON আশা করে)
+router.use((err, req, res, next) => {
+  if (req.path === '/upload') {
+    return res.status(400).json({ error: err.message || 'আপলোড ব্যর্থ হয়েছে' });
+  }
+  next(err);
 });
 
 module.exports = router;
