@@ -42,10 +42,6 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_referral ON users(referral_code);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_referred_by ON users(referred_by_id);`);
 
-    // ==================== অ্যাডমিন টু-ফ্যাক্টর অথেন্টিকেশন (2FA) ====================
-    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret TEXT;`);
-    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN DEFAULT false;`);
-
     await pool.query(`
       CREATE TABLE IF NOT EXISTS matches (
         id SERIAL PRIMARY KEY,
@@ -541,19 +537,6 @@ async function runMigrations() {
     `);
     await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_pr_gateway_tran ON payment_requests(gateway_tran_id) WHERE gateway_tran_id IS NOT NULL;`);
 
-    // একই ট্রানজেকশন আইডি দিয়ে বারবার ডিপোজিট আটকানো (ইউজার নিজে বাতিল করলে TrxID আবার ব্যবহার করা যাবে)
-    await pool.query(`
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_pr_deposit_trx_unique
-      ON payment_requests (transaction_id)
-      WHERE type = 'deposit' AND transaction_id IS NOT NULL AND status <> 'cancelled';
-    `);
-    // কেস-ইনসেনসিটিভ ভার্সন: "ABC123" আর "abc123" কে একই ট্রানজেকশন আইডি হিসেবে ধরা (স্পেস ট্রিম করেও)
-    await pool.query(`
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_pr_deposit_trx_unique_ci
-      ON payment_requests (LOWER(TRIM(transaction_id)))
-      WHERE type = 'deposit' AND transaction_id IS NOT NULL AND status <> 'cancelled';
-    `);
-
     await pool.query(`
       CREATE TABLE IF NOT EXISTS site_settings (
         key TEXT PRIMARY KEY,
@@ -653,220 +636,12 @@ async function runMigrations() {
       );
     `);
 
-    // ==================== ওয়েব পুশ সাবস্ক্রিপশন (ফোন লক/ব্যাকগ্রাউন্ডেও নোটিফিকেশন) ====================
-    // অ্যাডমিন ব্রাউজার থেকে যে push subscription তৈরি হয় সেটা এখানে সেভ থাকে।
-    // ডিপোজিট/উইথড্র/চ্যাট আসলে এই সাবস্ক্রিপশনগুলোতে push পাঠানো হয়।
+    // ==================== অ্যাডমিন 2FA (TOTP) ====================
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS push_subscriptions (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-        endpoint TEXT NOT NULL UNIQUE,
-        p256dh TEXT NOT NULL,
-        auth TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT NOW()
-      );
-    `);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_push_subs_user ON push_subscriptions(user_id);`);
-
-    // ==================== গেম ক্যাটালগ (games) — Admin Panel থেকে Full CRUD ====================
-    // আগে গেমগুলো শুধু হোমপেজের JS কোডে হার্ডকোড করা ছিল। এখন games টেবিলে সেভ হয়,
-    // অ্যাডমিন প্যানেল থেকে Add/Edit/Delete/Enable-Disable করা যাবে।
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS games (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(150) NOT NULL,
-        slug VARCHAR(150) UNIQUE NOT NULL,
-        emoji VARCHAR(10) DEFAULT '🎮',
-        category VARCHAR(20) NOT NULL,
-        provider VARCHAR(100) NOT NULL,
-        badge VARCHAR(10),
-        is_active BOOLEAN DEFAULT true,
-        sort_order INTEGER DEFAULT 0,
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      );
-    `);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_games_category ON games(category);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_games_provider ON games(provider);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_games_active ON games(is_active);`);
-
-    // প্রথমবার টেবিল খালি থাকলে হোমপেজের পুরনো ১১৮টি গেম দিয়ে সিড করা হয়
-    const gameCountRes = await pool.query('SELECT COUNT(*)::int AS count FROM games');
-    if (gameCountRes.rows[0].count === 0) {
-      const seedGames = [
-        { name: 'Aviator', slug: 'aviator', emoji: '🎰', category: 'hot', provider: 'Spribe', badge: 'hot' },
-        { name: 'Slots', slug: 'slots', emoji: '💎', category: 'slots', provider: 'Playtech', badge: 'pop' },
-        { name: 'Roulette', slug: 'roulette', emoji: '🍭', category: 'live', provider: 'Playtech', badge: 'new' },
-        { name: 'Andar Bahar', slug: 'andar-bahar', emoji: '⚡', category: 'live', provider: 'Jili', badge: null },
-        { name: 'Teen Patti', slug: 'teen-patti', emoji: '🔥', category: 'hot', provider: 'Jili', badge: 'hot' },
-        { name: 'Blackjack', slug: 'blackjack', emoji: '🐉', category: 'live', provider: 'Playtech', badge: 'hot' },
-        { name: 'Poker', slug: 'poker', emoji: '🎴', category: 'poker', provider: 'Playtech', badge: 'pop' },
-        { name: 'Baccarat', slug: 'baccarat', emoji: '🃏', category: 'live', provider: 'Playtech', badge: 'new' },
-        { name: 'Crash Game', slug: 'crash-game', emoji: '🎲', category: 'slots', provider: 'Playtech', badge: null },
-        { name: 'Starburst', slug: 'starburst', emoji: '🎯', category: 'hot', provider: 'NetEnt', badge: 'hot' },
-        { name: 'Book of Dead', slug: 'book-of-dead', emoji: '🎡', category: 'hot', provider: 'Play\'n GO', badge: 'hot' },
-        { name: 'Gonzo\'s Quest', slug: 'gonzos-quest', emoji: '🚀', category: 'slots', provider: 'NetEnt', badge: 'pop' },
-        { name: 'Mega Moolah', slug: 'mega-moolah', emoji: '👑', category: 'hot', provider: 'Microgaming', badge: 'hot' },
-        { name: 'Gates of Olympus', slug: 'gates-of-olympus', emoji: '🦁', category: 'hot', provider: 'Pragmatic Play', badge: 'hot' },
-        { name: 'Sweet Bonanza', slug: 'sweet-bonanza', emoji: '🐯', category: 'hot', provider: 'Pragmatic Play', badge: 'hot' },
-        { name: 'Legacy of Dead', slug: 'legacy-of-dead', emoji: '🌊', category: 'slots', provider: 'Play\'n GO', badge: 'hot' },
-        { name: 'Crazy Time', slug: 'crazy-time', emoji: '⚓', category: 'hot', provider: 'Evolution', badge: 'hot' },
-        { name: 'Lightning Roulette', slug: 'lightning-roulette', emoji: '🥷', category: 'live', provider: 'Evolution', badge: 'new' },
-        { name: 'Monopoly Live', slug: 'monopoly-live', emoji: '🀄', category: 'live', provider: 'Evolution', badge: null },
-        { name: 'Mega Ball', slug: 'mega-ball', emoji: '🐺', category: 'live', provider: 'Evolution', badge: null },
-        { name: 'Dream Catcher', slug: 'dream-catcher', emoji: '🍀', category: 'live', provider: 'Evolution', badge: 'hot' },
-        { name: 'Super Sic Bo', slug: 'super-sic-bo', emoji: '💰', category: 'live', provider: 'Evolution', badge: 'pop' },
-        { name: 'Fan Tan', slug: 'fan-tan', emoji: '🏆', category: 'live', provider: 'Evolution', badge: 'new' },
-        { name: 'Bac Bo', slug: 'bac-bo', emoji: '🎪', category: 'live', provider: 'Evolution', badge: null },
-        { name: 'Rummy', slug: 'rummy', emoji: '🌟', category: 'poker', provider: 'Jili', badge: null },
-        { name: 'Call Break', slug: 'call-break', emoji: '🎆', category: 'poker', provider: 'Jili', badge: 'hot' },
-        { name: 'Dragon Tiger', slug: 'dragon-tiger', emoji: '❄️', category: 'hot', provider: 'Jili', badge: 'hot' },
-        { name: 'JetX', slug: 'jetx', emoji: '⛩️', category: 'hot', provider: 'Spribe', badge: 'hot' },
-        { name: 'Plinko', slug: 'plinko', emoji: '🍬', category: 'slots', provider: 'Spribe', badge: null },
-        { name: 'Keno', slug: 'keno', emoji: '🦍', category: 'slots', provider: 'Spribe', badge: null },
-        { name: 'Bingo', slug: 'bingo', emoji: '🎰', category: 'slots', provider: 'JDB', badge: 'hot' },
-        { name: '5D Lottery', slug: '5d-lottery', emoji: '💎', category: 'slots', provider: 'JDB', badge: 'pop' },
-        { name: 'Win Go', slug: 'win-go', emoji: '🍭', category: 'slots', provider: 'JDB', badge: 'new' },
-        { name: 'Coin Flip', slug: 'coin-flip', emoji: '⚡', category: 'slots', provider: 'JDB', badge: null },
-        { name: 'Dice', slug: 'dice', emoji: '🔥', category: 'slots', provider: 'Spribe', badge: null },
-        { name: 'Fortune Gems', slug: 'fortune-gems', emoji: '🐉', category: 'hot', provider: 'Jili', badge: 'hot' },
-        { name: 'Golden Empire', slug: 'golden-empire', emoji: '🎴', category: 'slots', provider: 'Jili', badge: 'pop' },
-        { name: 'Sugar Rush', slug: 'sugar-rush', emoji: '🃏', category: 'slots', provider: 'Pragmatic Play', badge: 'new' },
-        { name: 'K3 Lottery', slug: 'k3-lottery', emoji: '🎲', category: 'slots', provider: 'JDB', badge: null },
-        { name: 'Spaceman', slug: 'spaceman', emoji: '🎯', category: 'hot', provider: 'Spribe', badge: 'hot' },
-        { name: 'Sic Bo', slug: 'sic-bo', emoji: '🎡', category: 'live', provider: 'Microgaming', badge: 'hot' },
-        { name: 'Fish Prawn Crab', slug: 'fish-prawn-crab', emoji: '🚀', category: 'slots', provider: 'Jili', badge: 'pop' },
-        { name: 'Fruit Slot', slug: 'fruit-slot', emoji: '👑', category: 'slots', provider: 'Playson', badge: 'new' },
-        { name: 'Diamond Slot', slug: 'diamond-slot', emoji: '🦁', category: 'slots', provider: 'Wazdan', badge: null },
-        { name: '7up 7down', slug: '7up-7down', emoji: '🐯', category: 'slots', provider: 'Jili', badge: null },
-        { name: 'Triple Card', slug: 'triple-card', emoji: '🌊', category: 'poker', provider: 'Jili', badge: 'hot' },
-        { name: 'Jhandi Munda', slug: 'jhandi-munda', emoji: '⚓', category: 'poker', provider: 'Jili', badge: 'pop' },
-        { name: 'Cricket War', slug: 'cricket-war', emoji: '🥷', category: 'sports', provider: 'Jili', badge: 'new' },
-        { name: 'Football War', slug: 'football-war', emoji: '🀄', category: 'sports', provider: 'Jili', badge: null },
-        { name: 'Minesweeper Pro', slug: 'minesweeper-pro', emoji: '🐺', category: 'slots', provider: 'Jili', badge: null },
-        { name: 'Tower Game', slug: 'tower-game', emoji: '🍀', category: 'slots', provider: 'Jili', badge: 'hot' },
-        { name: 'Limbo', slug: 'limbo', emoji: '💰', category: 'slots', provider: 'Spribe', badge: 'pop' },
-        { name: 'Wheel Pro', slug: 'wheel-pro', emoji: '🏆', category: 'slots', provider: 'Jili', badge: 'new' },
-        { name: 'Panda Slot', slug: 'panda-slot', emoji: '🎪', category: 'slots', provider: 'Jili', badge: null },
-        { name: 'Tiger Slot', slug: 'tiger-slot', emoji: '🌟', category: 'slots', provider: 'Jili', badge: null },
-        { name: 'Dragon Slot', slug: 'dragon-slot', emoji: '🎆', category: 'slots', provider: 'Jili', badge: 'hot' },
-        { name: 'Phoenix Slot', slug: 'phoenix-slot', emoji: '❄️', category: 'slots', provider: 'Red Tiger', badge: 'pop' },
-        { name: 'Lion Slot', slug: 'lion-slot', emoji: '⛩️', category: 'slots', provider: 'Red Tiger', badge: 'new' },
-        { name: 'Coin Master', slug: 'coin-master', emoji: '🍬', category: 'slots', provider: 'Jili', badge: null },
-        { name: 'Gold Rush', slug: 'gold-rush', emoji: '🦍', category: 'slots', provider: 'Red Tiger', badge: null },
-        { name: 'Treasure Hunt', slug: 'treasure-hunt', emoji: '🎰', category: 'slots', provider: 'Betsoft', badge: 'hot' },
-        { name: 'Pirate Gold', slug: 'pirate-gold', emoji: '💎', category: 'slots', provider: 'Red Tiger', badge: 'pop' },
-        { name: 'Ninja Game', slug: 'ninja-game', emoji: '🍭', category: 'slots', provider: 'Betsoft', badge: 'new' },
-        { name: 'Samurai Slot', slug: 'samurai-slot', emoji: '⚡', category: 'slots', provider: 'Hacksaw Gaming', badge: null },
-        { name: 'Mahjong Ways', slug: 'mahjong-ways', emoji: '🔥', category: 'slots', provider: 'Big Time Gaming', badge: null },
-        { name: 'Thai Paradise', slug: 'thai-paradise', emoji: '🐉', category: 'slots', provider: 'Big Time Gaming', badge: 'hot' },
-        { name: 'Monkey King', slug: 'monkey-king', emoji: '🎴', category: 'slots', provider: 'Hacksaw Gaming', badge: 'pop' },
-        { name: 'Wild West', slug: 'wild-west', emoji: '🃏', category: 'slots', provider: 'Pragmatic Play', badge: 'new' },
-        { name: 'Space Wars', slug: 'space-wars', emoji: '🎲', category: 'slots', provider: 'Spinomenal', badge: null },
-        { name: 'Ocean King', slug: 'ocean-king', emoji: '🎯', category: 'slots', provider: 'Jili', badge: null },
-        { name: 'Fire Dice', slug: 'fire-dice', emoji: '🎡', category: 'slots', provider: 'Wazdan', badge: 'hot' },
-        { name: 'Ice Slot', slug: 'ice-slot', emoji: '🚀', category: 'slots', provider: 'Wazdan', badge: 'pop' },
-        { name: 'Storm Slot', slug: 'storm-slot', emoji: '👑', category: 'slots', provider: 'PG Soft', badge: 'new' },
-        { name: 'Royal Flush', slug: 'royal-flush', emoji: '🦁', category: 'poker', provider: 'Spinomenal', badge: null },
-        { name: 'Lucky 7', slug: 'lucky-7', emoji: '🐯', category: 'slots', provider: 'NetEnt', badge: null },
-        { name: 'Magic Ball', slug: 'magic-ball', emoji: '🌊', category: 'slots', provider: 'Playson', badge: 'hot' },
-        { name: 'Neon Slots', slug: 'neon-slots', emoji: '⚓', category: 'slots', provider: 'Playson', badge: 'pop' },
-        { name: 'Cash Burst', slug: 'cash-burst', emoji: '🥷', category: 'slots', provider: 'PG Soft', badge: 'new' },
-        { name: 'Live Blackjack', slug: 'live-blackjack', emoji: '🀄', category: 'live', provider: 'Evolution', badge: null },
-        { name: 'Live Roulette', slug: 'live-roulette', emoji: '🐺', category: 'live', provider: 'Evolution', badge: null },
-        { name: 'Live Baccarat', slug: 'live-baccarat', emoji: '🍀', category: 'live', provider: 'Evolution', badge: 'hot' },
-        { name: 'Live Poker', slug: 'live-poker', emoji: '💰', category: 'live', provider: 'Evolution', badge: 'pop' },
-        { name: 'Mines', slug: 'mines', emoji: '🏆', category: 'slots', provider: 'Spribe', badge: 'new' },
-        { name: 'Football Studio', slug: 'football-studio', emoji: '🎪', category: 'live', provider: 'Evolution', badge: null },
-        { name: 'Cash or Crash', slug: 'cash-or-crash', emoji: '🌟', category: 'slots', provider: 'Spribe', badge: null },
-        { name: 'Extra Chilli', slug: 'extra-chill', emoji: '🎆', category: 'slots', provider: 'Big Time Gaming', badge: 'hot' },
-        { name: 'Fire in the Hole', slug: 'fire-in-the-hole', emoji: '❄️', category: 'slots', provider: 'Nolimit City', badge: 'pop' },
-        { name: 'Wanted Dead or Wild', slug: 'wanted-dead-or-a-wild', emoji: '⛩️', category: 'hot', provider: 'Hacksaw Gaming', badge: 'hot' },
-        { name: 'Mental', slug: 'mental', emoji: '🍬', category: 'slots', provider: 'Nolimit City', badge: null },
-        { name: 'Razor Shark', slug: 'razor-shark', emoji: '🦍', category: 'slots', provider: 'Relax Gaming', badge: null },
-        { name: 'Jammin Jars', slug: 'jammin-jars', emoji: '🎰', category: 'slots', provider: 'Relax Gaming', badge: 'hot' },
-        { name: 'San Quentin', slug: 'san-quentin', emoji: '💎', category: 'hot', provider: 'Nolimit City', badge: 'hot' },
-        { name: 'Aviator Pro', slug: 'aviator-pro', emoji: '🍭', category: 'slots', provider: 'Spribe', badge: 'new' },
-        { name: 'JetX Pro', slug: 'jetx-pro', emoji: '⚡', category: 'slots', provider: 'Spribe', badge: null },
-        { name: 'Spaceman Pro', slug: 'spaceman-pro', emoji: '🔥', category: 'slots', provider: 'Spribe', badge: null },
-        { name: 'Aviatrix', slug: 'aviatrix', emoji: '🐉', category: 'slots', provider: 'Spribe', badge: 'hot' },
-        { name: 'Balloon', slug: 'balloon', emoji: '🎴', category: 'slots', provider: 'Spribe', badge: 'pop' },
-        { name: 'Minesweeper', slug: 'minesweeper', emoji: '🃏', category: 'slots', provider: 'Jili', badge: 'new' },
-        { name: 'Football X', slug: 'football-x', emoji: '🎲', category: 'sports', provider: 'Spribe', badge: null },
-        { name: 'Online Ludo', slug: 'ludo', emoji: '🎯', category: 'sports', provider: 'Jili', badge: null },
-        { name: 'Color Prediction', slug: 'color-prediction', emoji: '🎡', category: 'slots', provider: 'Jili', badge: 'hot' },
-        { name: 'Mine Game', slug: 'mine', emoji: '🚀', category: 'slots', provider: 'Jili', badge: 'pop' },
-        { name: 'Hi-Lo', slug: 'hilo', emoji: '👑', category: 'slots', provider: 'Jili', badge: 'new' },
-        { name: 'Card War', slug: 'card-war', emoji: '🦁', category: 'poker', provider: 'Jili', badge: null },
-        { name: 'Lucky Spin', slug: 'lucky-spin', emoji: '🐯', category: 'slots', provider: 'Jili', badge: null },
-        { name: 'Number Guess', slug: 'number-guess', emoji: '🌊', category: 'slots', provider: 'Jili', badge: 'hot' },
-        { name: 'Age of the Gods', slug: 'age-of-the-gods', emoji: '⚓', category: 'slots', provider: 'Playtech', badge: 'pop' },
-        { name: 'Buffalo Blitz', slug: 'buffalo-blitz', emoji: '🥷', category: 'slots', provider: 'Playtech', badge: 'new' },
-        { name: 'Immortal Romance', slug: 'immortal-romance', emoji: '🀄', category: 'slots', provider: 'Microgaming', badge: null },
-        { name: 'Thunderstruck II', slug: 'thunderstruck-2', emoji: '🐺', category: 'slots', provider: 'Microgaming', badge: null },
-        { name: 'Sugar Pop', slug: 'sugar-pop', emoji: '🍀', category: 'slots', provider: 'Spinomenal', badge: 'hot' },
-        { name: 'The Slotfather', slug: 'slotfather', emoji: '💰', category: 'slots', provider: 'Betsoft', badge: 'pop' },
-        { name: 'Valley of the Gods', slug: 'valley-of-the-gods', emoji: '🏆', category: 'slots', provider: 'Yggdrasil', badge: 'new' },
-        { name: 'Vikings Go Berzerk', slug: 'vikings-go-berzerk', emoji: '🎪', category: 'slots', provider: 'Yggdrasil', badge: null },
-        { name: 'Gonzo\'s Quest Megaways', slug: 'gonzos-quest-megaways', emoji: '🌟', category: 'slots', provider: 'NetEnt', badge: null },
-        { name: 'Piggy Riches Megaways', slug: 'piggy-riches-megaways', emoji: '🎆', category: 'slots', provider: 'NetEnt', badge: 'hot' },
-        { name: 'Big Bad Wolf', slug: 'big-bad-wolf', emoji: '❄️', category: 'slots', provider: 'Quickspin', badge: 'pop' },
-        { name: 'Sakura Fortune', slug: 'sakura-fortune', emoji: '⛩️', category: 'slots', provider: 'Quickspin', badge: 'new' }
-      ];
-      let seedOrder = 0;
-      for (const g of seedGames) {
-        seedOrder += 1;
-        await pool.query(
-          `INSERT INTO games (name, slug, emoji, category, provider, badge, sort_order)
-           VALUES ($1,$2,$3,$4,$5,$6,$7)
-           ON CONFLICT (slug) DO NOTHING`,
-          [g.name, g.slug, g.emoji, g.category, g.provider, g.badge, seedOrder]
-        );
-      }
-      console.log(`✅ ${seedGames.length}টি ডিফল্ট গেম সিড করা হয়েছে`);
-    }
-
-    // একই গেম একাধিকবার (ভিন্ন ভিন্ন slug দিয়ে) যোগ হয়ে থাকলে ডুপ্লিকেট পরিষ্কার করা —
-    // প্রতিটা নামের সবচেয়ে পুরনো (সবচেয়ে ছোট id) এন্ট্রিটা রেখে বাকিগুলো মুছে ফেলা হয়
-    const dedupResult = await pool.query(`
-      DELETE FROM games
-      WHERE id NOT IN (
-        SELECT MIN(id) FROM games GROUP BY LOWER(TRIM(name))
-      )
-    `);
-    if (dedupResult.rowCount > 0) {
-      console.log(`✅ ${dedupResult.rowCount}টি ডুপ্লিকেট গেম মুছে ফেলা হয়েছে`);
-    }
-
-    // পুরনো ডেটায় কিছু গেম category='hot' হিসেবে সেভ ছিল (আসল ক্যাটাগরি slots/live/poker
-    // থেকে সরিয়ে) — এর ফলে সেই প্রোভাইডারের গেম Slots/Live/Poker ট্যাবে দেখা যাচ্ছিল না।
-    // badge='hot' রেখেই (হট ট্যাবেও দেখাবে) আসল ক্যাটাগরিতে ফিরিয়ে দেওয়া হলো।
-    const hotCategoryFix = {
-      slots: ['aviator', 'gates-of-olympus', 'sweet-bonanza', 'fortune-gems', 'starburst',
-        'mega-moolah', 'book-of-dead', 'jetx', 'spaceman', 'wanted-dead-or-a-wild', 'san-quentin'],
-      live: ['crazy-time', 'dragon-tiger'],
-      poker: ['teen-patti'],
-    };
-    for (const [cat, slugs] of Object.entries(hotCategoryFix)) {
-      const r = await pool.query(
-        `UPDATE games SET category = $1, badge = 'hot', updated_at = NOW()
-         WHERE category = 'hot' AND slug = ANY($2::text[])`,
-        [cat, slugs]
-      );
-      if (r.rowCount > 0) console.log(`✅ ${r.rowCount}টি গেম '${cat}' ক্যাটাগরিতে ফিরিয়ে আনা হলো (badge=hot বজায় থাকলো)`);
-    }
-    // এই তালিকার বাইরে category='hot' হয়ে থাকলে (অজানা গেম) ডিফল্টভাবে slots-এ ফেলা হলো
-    const leftoverHot = await pool.query(
-      `UPDATE games SET category = 'slots', badge = 'hot', updated_at = NOW() WHERE category = 'hot'`
-    );
-    if (leftoverHot.rowCount > 0) console.log(`✅ বাকি ${leftoverHot.rowCount}টি 'hot' ক্যাটাগরির গেম slots-এ সরানো হলো`);
-
-    // প্রতিটা প্রোভাইডারের অন্তত ১টা করে 'slots' গেম থাকা নিশ্চিত করা — Evolution-এর সবগুলো
-    // গেম আসলে 'live' ক্যাটাগরির ছিল, তাই Slots ট্যাবে গেলে Evolution-এ কিছুই দেখাচ্ছিল না
-    await pool.query(`
-      INSERT INTO games (name, slug, emoji, category, provider, badge, sort_order)
-      VALUES ('Divine Fortune', 'divine-fortune', '💎', 'slots', 'Evolution', 'hot', 119)
-      ON CONFLICT (slug) DO NOTHING
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS totp_secret TEXT,
+      ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN DEFAULT false,
+      ADD COLUMN IF NOT EXISTS totp_backup_codes TEXT;
     `);
 
     console.log("✅ All tables migration completed successfully");

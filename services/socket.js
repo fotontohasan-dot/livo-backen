@@ -1,44 +1,36 @@
 const { Server } = require("socket.io");
 const { pool } = require('../db');
 const { getBotReply } = require('./chatbot');
-const { sendPushToAdmins } = require('./push');
-const { checkContent } = require('../utils/contentFilter');
+
+// ===== "দেখা হয়েছে" (Seen) রিসিট — Messenger-এর মতো রিয়েল-টাইম নোটিফিকেশন =====
+const notifyUserSeen = (userId) => {
+  if (!io || !userId) return;
+  try { io.to(`user:${userId}`).emit('messages_seen', { by: 'admin' }); }
+  catch (err) { console.error('notifyUserSeen error:', err.message); }
+};
+
+const notifyAdminsSeen = (userId) => {
+  if (!io || !userId) return;
+  try { io.to('admins').emit('messages_seen', { by: Number(userId) }); }
+  catch (err) { console.error('notifyAdminsSeen error:', err.message); }
+};
 
 let io;
 
-// চ্যাটে ফাইল/ইমেজ URL সবসময় আমাদের Cloudinary আপলোড এন্ডপয়েন্ট (routes/chat.js -> /chat/upload)
-// থেকেই আসা উচিত। ক্লায়েন্ট থেকে সরাসরি পাঠানো send_message ইভেন্টের fileUrl কখনো বিশ্বাস করা
-// উচিত না — এটা যাচাই না করলে কেউ চাইলে সরাসরি socket ইভেন্ট পাঠিয়ে যেকোনো স্ট্রিং fileUrl
-// হিসেবে পাঠাতে পারত, যেটা অ্যাডমিন প্যানেলে <img src="..."> এ বসে যেত।
-function isSafeChatFileUrl(url) {
-  if (typeof url !== 'string' || !url) return false;
-  try {
-    const parsed = new URL(url);
-    return parsed.protocol === 'https:' && parsed.hostname === 'res.cloudinary.com';
-  } catch (e) {
-    return false;
-  }
-}
-
 // ===== অ্যাডমিন প্যানেলে রিয়েল-টাইম নোটিফিকেশন (ডিপোজিট/উইথড্র/চ্যাট) =====
 // type: 'deposit' | 'withdraw' | 'chat'
-// Socket.io দিয়ে পেজ খোলা থাকলে সাথে সাথে আপডেট হয়, আর Web Push দিয়ে
-// ফোন লক থাকলে বা অ্যাডমিন অন্য অ্যাপে থাকলেও সিস্টেম নোটিফিকেশন যায়।
 const emitAdminAlert = (type, data = {}) => {
-  if (io) {
-    try {
-      io.to('admins').emit('admin_alert', {
-        type,
-        title: data.title || '',
-        message: data.message || '',
-        createdAt: new Date()
-      });
-    } catch (err) {
-      console.error('emitAdminAlert error:', err.message);
-    }
+  if (!io) return;
+  try {
+    io.to('admins').emit('admin_alert', {
+      type,
+      title: data.title || '',
+      message: data.message || '',
+      createdAt: new Date()
+    });
+  } catch (err) {
+    console.error('emitAdminAlert error:', err.message);
   }
-  // পেজ বন্ধ/ব্যাকগ্রাউন্ডে থাকলেও পৌঁছানোর জন্য — এটা fire-and-forget, ব্লক করে না
-  sendPushToAdmins(type, data.title, data.message).catch(() => {});
 };
 
 const initSocket = (server, sessionMiddleware) => {
@@ -100,35 +92,10 @@ const initSocket = (server, sessionMiddleware) => {
         const isAdmin = u.role === 'admin';
         const receiverId = (data && data.receiverId) || null;
         const message = (data && data.message) || null;
-        let fileUrl = (data && data.fileUrl) || null;
+        const fileUrl = (data && data.fileUrl) || null;
         const fileType = (data && data.fileType) || null;
 
-        if (fileUrl && !isSafeChatFileUrl(fileUrl)) {
-          socket.emit("message_blocked", {
-            reason: 'invalid_file_url',
-            text: 'ফাইল লিংক গ্রহণযোগ্য নয়। শুধু এই চ্যাটের নিজস্ব আপলোড বাটন দিয়ে পাঠানো ফাইল গ্রহণ করা হয়।'
-          });
-          fileUrl = null;
-          if (!message) return;
-        }
-
         if (!message && !fileUrl) return;
-
-        // ==== কনটেন্ট ফিল্টার — শুধু ইউজারের মেসেজ চেক হবে, অ্যাডমিনের নিজের রিপ্লাই না ====
-        // (অ্যাডমিন প্যানেলে যাতে গালাগালি/অশ্লীল/১৮+ কনটেন্ট কখনো না ঢোকে)
-        if (!isAdmin && message) {
-          const check = checkContent(message);
-          if (check.flagged) {
-            const isLinkIssue = check.reason === 'link_not_allowed' || check.reason === 'adult_link';
-            socket.emit("message_blocked", {
-              reason: check.reason,
-              text: isLinkIssue
-                ? 'চ্যাটে কোনো লিংক পাঠানো যাবে না। এই মেসেজটি পাঠানো হয়নি — অনুগ্রহ করে লিংক ছাড়া লিখুন।'
-                : 'আপনার মেসেজে অনুপযুক্ত/অশ্লীল কনটেন্ট শনাক্ত হয়েছে। এই মেসেজটি পাঠানো হয়নি — অনুগ্রহ করে সংশোধন করে আবার পাঠান।'
-            });
-            return; // না সেভ হবে, না অ্যাডমিনের কাছে যাবে
-          }
-        }
 
         const createdAt = new Date();
 
@@ -251,4 +218,4 @@ const broadcastDemoStats = async () => {
   }
 };
 
-module.exports = { initSocket, updateLiveScore, getDemoStats, broadcastDemoStats, emitAdminAlert };
+module.exports = { initSocket, updateLiveScore, getDemoStats, broadcastDemoStats, emitAdminAlert, notifyUserSeen, notifyAdminsSeen };

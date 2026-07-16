@@ -10,7 +10,14 @@ const { loadSettings } = require('../services/settings');
 const { creditApprovedDeposit } = require('./payment');
 const bcrypt = require('bcryptjs');
 const { getDemoStats } = require('../services/socket');
-const { saveSubscription, removeSubscription, sendPushToAdmins, VAPID_PUBLIC_KEY } = require('../services/push');
+const {
+  generateTotpSetup,
+  verifyTotpToken,
+  generateBackupCodes,
+  hashBackupCodes,
+  verifyAndConsumeBackupCode,
+  qrFromSecret
+} = require('../services/twofactor');
 
 // ==================== ADMIN ACTIVITY LOG HELPER ====================
 async function logAdminAction(adminId, adminUsername, actionType, details, ip = null) {
@@ -53,6 +60,17 @@ router.post('/login', async (req, res) => {
       return res.render('admin/login', { error: 'ইউজারনেম বা পাসওয়ার্ড ভুল' });
     }
 
+    // ==================== 2FA চালু থাকলে সরাসরি লগইন না করিয়ে ভেরিফিকেশন স্টেপে পাঠানো ====================
+    if (admin.totp_enabled) {
+      req.session.pending2FA = {
+        id: admin.id,
+        username: admin.username,
+        role: admin.role
+      };
+      req.session.twoFAAttempts = 0;
+      return res.redirect('/admin/login/2fa');
+    }
+
     req.session.user = {
       id: admin.id,
       username: admin.username,
@@ -66,10 +84,60 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// ==================== লগইন-টাইম 2FA ভেরিফিকেশন ====================
+router.get('/login/2fa', (req, res) => {
+  if (!req.session.pending2FA) return res.redirect('/admin/login');
+  res.render('admin/2fa-verify', { error: null, username: req.session.pending2FA.username });
+});
+
+router.post('/login/2fa', async (req, res) => {
+  const pending = req.session.pending2FA;
+  if (!pending) return res.redirect('/admin/login');
+
+  try {
+    const { token, backupCode } = req.body;
+    const result = await pool.query('SELECT * FROM users WHERE id = $1 LIMIT 1', [pending.id]);
+    const admin = result.rows[0];
+
+    if (!admin || !admin.totp_enabled) {
+      req.session.pending2FA = null;
+      return res.redirect('/admin/login');
+    }
+
+    let ok = false;
+
+    if (backupCode && backupCode.trim()) {
+      const check = await verifyAndConsumeBackupCode(admin.totp_backup_codes, backupCode);
+      if (check.valid) {
+        ok = true;
+        await pool.query('UPDATE users SET totp_backup_codes = $1 WHERE id = $2', [check.remainingJson, admin.id]);
+      }
+    } else if (token && token.trim()) {
+      ok = verifyTotpToken(admin.totp_secret, token);
+    }
+
+    if (!ok) {
+      req.session.twoFAAttempts = (req.session.twoFAAttempts || 0) + 1;
+      if (req.session.twoFAAttempts >= 5) {
+        req.session.pending2FA = null;
+        return res.render('admin/login', { error: 'বারবার ভুল কোড — আবার লগইন করুন' });
+      }
+      return res.render('admin/2fa-verify', { error: 'কোডটি সঠিক নয়, আবার চেষ্টা করুন', username: pending.username });
+    }
+
+    req.session.user = { id: admin.id, username: admin.username, role: admin.role };
+    req.session.pending2FA = null;
+    req.session.twoFAAttempts = 0;
+    logAdminAction(admin.id, admin.username, 'LOGIN_2FA', '2FA দিয়ে লগইন সম্পন্ন', req.ip);
+    res.redirect('/admin');
+  } catch (err) {
+    console.error('2FA verify error:', err.message);
+    res.render('admin/2fa-verify', { error: 'সার্ভার এরর হয়েছে', username: pending.username });
+  }
+});
+
 // ==================== TEMPORARY: CREATE ADMIN LOGS TABLE ====================
-// isAdmin এখানে সরাসরি বসানো হলো কারণ এই রুটটা router.use(isAdmin) (নিচে লাইন ৯৮) এর
-// আগে ডিফাইন করা — এটা ছাড়া যে কেউ (লগইন ছাড়াই) এই এন্ডপয়েন্ট কল করতে পারত।
-router.get('/create-activity-table', isAdmin, async (req, res) => {
+router.get('/create-activity-table', async (req, res) => {
   try {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS admin_logs (
@@ -119,45 +187,88 @@ router.get('/api/notification-counts', async (req, res) => {
   }
 });
 
-// ==================== ওয়েব পুশ নোটিফিকেশন (ফোন লক/ব্যাকগ্রাউন্ডেও অ্যালার্ট) ====================
-router.get('/push/public-key', isAdmin, (req, res) => {
-  res.json({ success: true, publicKey: VAPID_PUBLIC_KEY });
-});
-
-router.post('/push/subscribe', isAdmin, async (req, res) => {
+// ==================== 2FA সেটআপ (QR কোড) ====================
+router.get('/2fa/setup', async (req, res) => {
   try {
-    await saveSubscription(req.session.user.id, req.body && req.body.subscription);
-    res.json({ success: true });
+    const result = await pool.query('SELECT totp_enabled FROM users WHERE id = $1', [req.session.user.id]);
+    if (result.rows[0]?.totp_enabled) {
+      return res.render('admin/2fa-setup', { alreadyEnabled: true, qrDataUrl: null, base32: null, error: null });
+    }
+    const setup = await generateTotpSetup(req.session.user.username);
+    req.session.pending2FASetup = { base32: setup.base32 };
+    res.render('admin/2fa-setup', {
+      alreadyEnabled: false,
+      qrDataUrl: setup.qrDataUrl,
+      base32: setup.base32,
+      error: null
+    });
   } catch (err) {
-    console.error('push/subscribe error:', err.message);
-    res.status(400).json({ success: false, error: 'সাবস্ক্রিপশন সেভ করা যায়নি' });
+    console.error('2fa/setup error:', err.message);
+    res.render('admin/2fa-setup', { alreadyEnabled: false, qrDataUrl: null, base32: null, error: 'QR কোড তৈরি করতে সমস্যা হয়েছে' });
   }
 });
 
-router.post('/push/unsubscribe', isAdmin, async (req, res) => {
+router.post('/2fa/setup/verify', async (req, res) => {
   try {
-    await removeSubscription(req.body && req.body.endpoint);
-    res.json({ success: true });
-  } catch (err) {
-    console.error('push/unsubscribe error:', err.message);
-    res.status(400).json({ success: false });
-  }
-});
+    const pendingSecret = req.session.pending2FASetup?.base32;
+    const { token } = req.body;
 
-// ===== ডিবাগ/টেস্ট রুট: সাবস্ক্রাইবার সংখ্যা দেখা + টেস্ট পুশ পাঠানো =====
-// ব্রাউজারে এই লিংকে যান (admin হিসেবে লগইন করা অবস্থায়): /admin/push/test-send
-router.get('/push/test-send', isAdmin, async (req, res) => {
-  try {
-    const check = await pool.query(
-      `SELECT COUNT(*) FROM push_subscriptions ps JOIN users u ON u.id = ps.user_id WHERE u.role = 'admin'`
+    if (!pendingSecret) {
+      return res.redirect('/admin/2fa/setup');
+    }
+    if (!verifyTotpToken(pendingSecret, token)) {
+      const dataUrlAgain = await qrFromSecret(pendingSecret, req.session.user.username);
+      return res.render('admin/2fa-setup', {
+        alreadyEnabled: false, qrDataUrl: dataUrlAgain, base32: pendingSecret,
+        error: 'কোডটি সঠিক নয়, আবার চেষ্টা করুন'
+      });
+    }
+
+    const backupCodes = generateBackupCodes(8);
+    const backupCodesJson = await hashBackupCodes(backupCodes);
+
+    await pool.query(
+      'UPDATE users SET totp_secret = $1, totp_enabled = true, totp_backup_codes = $2 WHERE id = $3',
+      [pendingSecret, backupCodesJson, req.session.user.id]
     );
-    const subscriberCount = parseInt(check.rows[0].count);
-    await sendPushToAdmins('test', 'টেস্ট নোটিফিকেশন', 'পুশ ঠিকমতো কাজ করছে ✅');
-    res.json({ success: true, subscriberCount, message: 'পাঠানো হয়েছে, সাবস্ক্রাইবার সংখ্যা: ' + subscriberCount });
+    req.session.pending2FASetup = null;
+    await logAdminAction(req.session.user.id, req.session.user.username, '2FA_ENABLED', '2FA চালু করা হয়েছে', req.ip);
+
+    res.render('admin/2fa-backup-codes', { codes: backupCodes });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    console.error('2fa/setup/verify error:', err.message);
+    res.render('admin/2fa-setup', { alreadyEnabled: false, qrDataUrl: null, base32: null, error: 'সার্ভার এরর হয়েছে' });
   }
 });
+
+router.post('/2fa/disable', async (req, res) => {
+  try {
+    const { password, token } = req.body;
+    const result = await pool.query('SELECT * FROM users WHERE id = $1', [req.session.user.id]);
+    const admin = result.rows[0];
+
+    const passOk = admin && await bcrypt.compare(password || '', admin.password);
+    const codeOk = admin && verifyTotpToken(admin.totp_secret, token);
+
+    if (!passOk || !codeOk) {
+      return res.render('admin/2fa-setup', {
+        alreadyEnabled: true, qrDataUrl: null, base32: null,
+        error: 'পাসওয়ার্ড অথবা 2FA কোড সঠিক নয়'
+      });
+    }
+
+    await pool.query(
+      'UPDATE users SET totp_secret = NULL, totp_enabled = false, totp_backup_codes = NULL WHERE id = $1',
+      [req.session.user.id]
+    );
+    await logAdminAction(req.session.user.id, req.session.user.username, '2FA_DISABLED', '2FA বন্ধ করা হয়েছে', req.ip);
+    res.redirect('/admin/settings');
+  } catch (err) {
+    console.error('2fa/disable error:', err.message);
+    res.redirect('/admin/2fa/setup');
+  }
+});
+
 
 // ==================== KYC ভেরিফিকেশন ====================
 router.get('/kyc', async (req, res) => {
@@ -1032,143 +1143,6 @@ router.post('/users/:id/freebet', async (req, res) => {
   res.redirect('back');
 });
 
-// ==================== গেম ম্যানেজমেন্ট (games) ====================
-function slugifyGameName(str) {
-  return String(str).toLowerCase().trim()
-    .replace(/['"]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
-}
-
-router.get('/games', async (req, res) => {
-  try {
-    const category = req.query.category || 'all';
-    const provider = req.query.provider || 'all';
-    const badgeFilter = req.query.badge || 'all'; // শুধু Slots ক্যাটাগরির সেকেন্ডারি "হট" ট্যাবের জন্য
-    const status = req.query.status || 'all';
-    const q = (req.query.q || '').trim();
-
-    const where = [];
-    const params = [];
-    let i = 1;
-
-    if (category === 'hot') {
-      where.push(`badge = 'hot'`);
-    } else if (category !== 'all') {
-      where.push(`category = $${i++}`); params.push(category);
-    }
-    if (provider !== 'all') { where.push(`provider = $${i++}`); params.push(provider); }
-    if (badgeFilter === 'hot') { where.push(`badge = 'hot'`); }
-    if (status === 'active') { where.push(`is_active = true`); }
-    if (status === 'inactive') { where.push(`is_active = false`); }
-    if (q) { where.push(`name ILIKE $${i++}`); params.push(`%${q}%`); }
-
-    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
-    const gamesResult = await pool.query(
-      `SELECT * FROM games ${whereSql} ORDER BY sort_order ASC, created_at DESC`,
-      params
-    );
-
-    // এই ক্যাটাগরিতে যেসব প্রোভাইডারের গেম আছে, শুধু তাদেরই ছোট সাইড লিস্টে দেখানো হয়
-    // ('সব' বা 'হট' ট্যাবে কোনো প্রোভাইডার লিস্ট দেখানো হয় না, ঠিক হোমপেজের মতোই)
-    let providersInCategory = [];
-    if (['slots', 'live', 'sports', 'poker'].includes(category)) {
-      const provResult = await pool.query(
-        `SELECT provider, COUNT(*)::int AS count FROM games WHERE category = $1 GROUP BY provider ORDER BY provider ASC`,
-        [category]
-      );
-      providersInCategory = provResult.rows;
-    }
-
-    const totalResult = await pool.query(
-      `SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE is_active)::int AS active FROM games`
-    );
-
-    res.render('admin/games', {
-      games: gamesResult.rows,
-      providersInCategory,
-      selectedCategory: category,
-      selectedProvider: provider,
-      selectedBadge: badgeFilter,
-      selectedStatus: status,
-      searchQ: q,
-      totalGames: totalResult.rows[0].total,
-      activeGames: totalResult.rows[0].active
-    });
-  } catch (err) {
-    console.error('Games list error:', err.message);
-    res.render('admin/games', {
-      games: [], providersInCategory: [], selectedCategory: 'all', selectedProvider: 'all',
-      selectedBadge: 'all', selectedStatus: 'all', searchQ: '', totalGames: 0, activeGames: 0
-    });
-  }
-});
-
-router.post('/games/add', async (req, res) => {
-  try {
-    const { name, slug, emoji, category, provider, badge } = req.body;
-    if (!name || !category || !provider) {
-      req.flash('error', 'নাম, ক্যাটাগরি ও প্রোভাইডার আবশ্যক!');
-      return res.redirect('/admin/games');
-    }
-    const finalSlug = slugifyGameName(slug || name);
-    const maxOrderRes = await pool.query('SELECT COALESCE(MAX(sort_order),0)::int AS m FROM games');
-    await pool.query(
-      `INSERT INTO games (name, slug, emoji, category, provider, badge, sort_order)
-       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-      [name.trim(), finalSlug, emoji || '🎮', category, provider.trim(), badge || null, maxOrderRes.rows[0].m + 1]
-    );
-    await logAdminAction(req.session.user.id, req.session.user.username, 'GAME_ADD', `নতুন গেম যোগ করা হয়েছে: ${name}`, req.ip);
-    req.flash('success', `✅ "${name}" গেম যোগ করা হয়েছে`);
-  } catch (err) {
-    console.error('Game add error:', err.message);
-    req.flash('error', err.code === '23505' ? 'এই স্লাগ ইতিমধ্যে ব্যবহৃত হয়েছে, অন্য নাম/স্লাগ দিন।' : 'গেম যোগ করতে সমস্যা হয়েছে!');
-  }
-  res.redirect('/admin/games');
-});
-
-router.post('/games/:id/edit', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { name, slug, emoji, category, provider, badge } = req.body;
-    const finalSlug = slugifyGameName(slug || name);
-    await pool.query(
-      `UPDATE games SET name=$1, slug=$2, emoji=$3, category=$4, provider=$5, badge=$6, updated_at=NOW() WHERE id=$7`,
-      [name.trim(), finalSlug, emoji || '🎮', category, provider.trim(), badge || null, id]
-    );
-    await logAdminAction(req.session.user.id, req.session.user.username, 'GAME_EDIT', `গেম #${id} আপডেট করা হয়েছে: ${name}`, req.ip);
-    req.flash('success', '✅ গেম আপডেট করা হয়েছে');
-  } catch (err) {
-    console.error('Game edit error:', err.message);
-    req.flash('error', err.code === '23505' ? 'এই স্লাগ ইতিমধ্যে ব্যবহৃত হয়েছে।' : 'গেম আপডেট করতে সমস্যা হয়েছে!');
-  }
-  res.redirect('/admin/games');
-});
-
-router.post('/games/:id/toggle', async (req, res) => {
-  try {
-    const { id } = req.params;
-    await pool.query('UPDATE games SET is_active = NOT is_active, updated_at = NOW() WHERE id = $1', [id]);
-  } catch (err) {
-    console.error('Game toggle error:', err.message);
-    req.flash('error', 'স্ট্যাটাস পরিবর্তন করতে সমস্যা হয়েছে!');
-  }
-  res.redirect('back');
-});
-
-router.post('/games/:id/delete', async (req, res) => {
-  try {
-    const { id } = req.params;
-    await pool.query('DELETE FROM games WHERE id = $1', [id]);
-    await logAdminAction(req.session.user.id, req.session.user.username, 'GAME_DELETE', `গেম #${id} মুছে ফেলা হয়েছে`, req.ip);
-    req.flash('success', '✅ গেম মুছে ফেলা হয়েছে');
-  } catch (err) {
-    console.error('Game delete error:', err.message);
-    req.flash('error', 'গেম মুছতে সমস্যা হয়েছে!');
-  }
-  res.redirect('back');
-});
-
 // ==================== MATCHES ====================
 router.get('/matches', async (req, res) => {
   try {
@@ -1257,55 +1231,6 @@ router.post('/markets/:marketId/settle', async (req, res) => {
     req.flash('error', 'সেটেল সমস্যা!');
     res.redirect('back');
   } finally { client.release(); }
-});
-
-// ==================== BETS — লাইভ আপডেট (পেজে প্রতি ৪ সেকেন্ডে পোল করে, নিচের রুটটাই সেই ডেটা দেয়) ====================
-router.get('/api/bets-live', async (req, res) => {
-  try {
-    const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = 30;
-    const offset = (page - 1) * limit;
-    const status = req.query.status || '';
-    const conditions = [];
-    const params = [];
-    if (['pending', 'won', 'lost'].includes(status)) {
-      params.push(status);
-      conditions.push(`b.status = $${params.length}`);
-    }
-    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
-
-    const countRes = await pool.query(`SELECT COUNT(*) FROM bets b ${where}`, params);
-    const total = parseInt(countRes.rows[0].count);
-
-    params.push(limit, offset);
-    const bets = await pool.query(`
-      SELECT b.*, u.username, m.team_a, m.team_b, m.title
-      FROM bets b JOIN users u ON b.user_id = u.id LEFT JOIN matches m ON b.match_id = m.id
-      ${where} ORDER BY b.created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}
-    `, params);
-
-    const pendingCountRes = await pool.query(`SELECT COUNT(*) FROM bets WHERE status='pending'`);
-    const todayStakeRes = await pool.query(`SELECT COALESCE(SUM(stake),0) AS total FROM bets WHERE created_at::date = CURRENT_DATE`);
-    const todayGgrRes = await pool.query(`
-      SELECT COALESCE(SUM(stake),0) AS staked,
-             COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS paidout
-      FROM bets WHERE created_at::date = CURRENT_DATE AND status IN ('won','lost')
-    `);
-
-    res.json({
-      success: true,
-      bets: bets.rows,
-      total,
-      page,
-      totalPages: Math.max(1, Math.ceil(total / limit)),
-      pendingSettlement: parseInt(pendingCountRes.rows[0].count),
-      todayStake: Number(todayStakeRes.rows[0].total),
-      todayGgr: Number(todayGgrRes.rows[0].staked) - Number(todayGgrRes.rows[0].paidout)
-    });
-  } catch (err) {
-    console.error('bets-live error:', err.message);
-    res.status(500).json({ success: false, error: 'সমস্যা হয়েছে' });
-  }
 });
 
 // ==================== BETS ====================
