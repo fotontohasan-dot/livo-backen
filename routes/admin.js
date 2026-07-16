@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
 const { pool } = require('../db');
 const { isAdmin } = require('../middleware/auth');
 const { settleSelectionsForMarket } = require('../services/accumulator');
@@ -18,6 +19,19 @@ const {
   verifyAndConsumeBackupCode,
   qrFromSecret
 } = require('../services/twofactor');
+
+// ==================== 2FA ভেরিফিকেশন রুটের জন্য কড়া rate limit ====================
+// এই দুটো রুটে কোড অনুমান করে ব্রুট-ফোর্স করার ঝুঁকি থাকে, তাই আলাদা কড়া সীমা।
+const strict2FALimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many attempts, please try again later.',
+  handler: (req, res) => {
+    res.status(429).send('Too many attempts, please try again later.');
+  }
+});
 
 // ==================== ADMIN ACTIVITY LOG HELPER ====================
 async function logAdminAction(adminId, adminUsername, actionType, details, ip = null) {
@@ -96,7 +110,7 @@ router.get('/login/2fa', (req, res) => {
   res.render('admin/2fa-verify', { error: null, username: req.session.pending2FA.username });
 });
 
-router.post('/login/2fa', async (req, res) => {
+router.post('/login/2fa', strict2FALimiter, async (req, res) => {
   const pending = req.session.pending2FA;
   if (!pending) return res.redirect('/admin/login');
 
@@ -214,7 +228,7 @@ router.get('/2fa/setup', async (req, res) => {
   }
 });
 
-router.post('/2fa/setup/verify', async (req, res) => {
+router.post('/2fa/setup/verify', strict2FALimiter, async (req, res) => {
   try {
     const pendingSecret = req.session.pending2FASetup?.base32;
     const { token } = req.body;
