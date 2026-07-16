@@ -44,8 +44,14 @@ router.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
   try {
+    // ফর্মে "Username or Email" লেখা থাকলেও আগে শুধু username কলাম চেক হতো —
+    // যেসব অ্যাডমিন ইমেইল দিয়ে লগইন করার চেষ্টা করতেন তাদের জন্য এটা সবসময় ব্যর্থ হতো।
+    // এখন username অথবা email দুটোই মেলানো হচ্ছে (case-insensitive)।
     const result = await pool.query(
-      'SELECT * FROM users WHERE username = $1 AND role = $2 LIMIT 1',
+      `SELECT * FROM users
+       WHERE (LOWER(username) = LOWER($1) OR LOWER(email) = LOWER($1))
+         AND role = $2
+       LIMIT 1`,
       [username, 'admin']
     );
 
