@@ -304,12 +304,17 @@ router.post('/2fa/disable', async (req, res) => {
     const admin = result.rows[0];
 
     const passOk = admin && await bcrypt.compare(password || '', admin.password);
-    const codeOk = admin && verifyTotpToken(admin.totp_secret, token);
+    // TOTP কোড অথবা ব্যাকআপ কোড — যেকোনো একটা দিয়ে যাচাই করা যাবে
+    let codeOk = admin && verifyTotpToken(admin.totp_secret, token);
+    if (!codeOk && admin && admin.totp_backup_codes) {
+      const backupCheck = await verifyAndConsumeBackupCode(admin.totp_backup_codes, token);
+      if (backupCheck.valid) codeOk = true;
+    }
 
     if (!passOk || !codeOk) {
       return res.render('admin/2fa-setup', {
         alreadyEnabled: true, qrDataUrl: null, base32: null,
-        error: 'পাসওয়ার্ড অথবা 2FA কোড সঠিক নয়'
+        error: 'পাসওয়ার্ড অথবা 2FA কোড/ব্যাকআপ কোড সঠিক নয়'
       });
     }
 

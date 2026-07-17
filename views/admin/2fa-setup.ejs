@@ -39,16 +39,16 @@
                 </div>
 
                 <form action="/admin/2fa/disable" method="POST" class="space-y-4">
-                    <p class="text-slate-400 text-sm">2FA বন্ধ করতে আপনার পাসওয়ার্ড এবং একটা বর্তমান 2FA কোড দিন:</p>
+                    <p class="text-slate-400 text-sm">2FA বন্ধ করতে আপনার পাসওয়ার্ড এবং একটা বর্তমান 2FA কোড অথবা একটা ব্যাকআপ কোড দিন:</p>
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2">পাসওয়ার্ড</label>
                         <input type="password" name="password" required
                             class="w-full bg-slate-900 border border-slate-700 text-white px-4 py-3 rounded-2xl focus:outline-none focus:border-red-500">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">2FA কোড</label>
-                        <input type="text" name="token" maxlength="6" inputmode="numeric" required
-                            class="otp-input w-full bg-slate-900 border border-slate-700 text-white py-3 rounded-2xl focus:outline-none focus:border-red-500" placeholder="------">
+                        <label class="block text-sm font-medium text-slate-300 mb-2">2FA কোড অথবা ব্যাকআপ কোড</label>
+                        <input type="text" name="token" maxlength="20" required
+                            class="otp-input w-full bg-slate-900 border border-slate-700 text-white py-3 rounded-2xl focus:outline-none focus:border-red-500" placeholder="------ বা XXXXX-XXXXX">
                     </div>
                     <button type="submit" onclick="return confirm('আপনি কি নিশ্চিত 2FA বন্ধ করতে চান? এতে অ্যাকাউন্টের নিরাপত্তা কমে যাবে।')"
                         class="w-full bg-red-600 hover:bg-red-700 transition-all text-white font-semibold py-3 rounded-2xl text-sm">

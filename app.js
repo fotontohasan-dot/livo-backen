@@ -3,6 +3,7 @@ const process = require('node:process');
 const express = require('express');
 const http = require('http');
 const { initSocket } = require('./services/socket');
+const { getSetting } = require('./services/settings');
 const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
 const flash = require('connect-flash');
@@ -229,6 +230,19 @@ app.use((req, res, next) => {
 app.use(responseHelpers);
 app.use(apiGateway);
 // =======================================================
+
+// ==================== MAINTENANCE MODE ====================
+// অ্যাডমিন প্যানেল, পেমেন্ট গেটওয়ে callback, আর স্ট্যাটিক ফাইল সবসময় চালু থাকবে —
+// শুধু সাধারণ ইউজার-facing রুট মেইনটেন্যান্স পেজ দেখাবে।
+app.use(async (req, res, next) => {
+  if (req.path.startsWith('/admin')) return next();
+  if (req.path.startsWith('/payment/sslcommerz/')) return next();
+  if (req.path === '/health') return next();
+  if (req.path.startsWith('/public') || req.path.startsWith('/uploads')) return next();
+  const on = await getSetting('maintenance_mode');
+  if (on !== 'true' && on !== true) return next();
+  return res.status(503).render('maintenance', { siteName: 'Livo' });
+});
 
 // ==================== ROUTES ====================
 app.use('/', require('./routes/auth'));
