@@ -9,6 +9,7 @@ const flash = require('connect-flash');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
+const cors = require('cors');
 const compression = require('compression');
 const { connectDB, pool } = require('./db');
 const { syncMatches } = require('./services/matchUpdater');
@@ -78,6 +79,29 @@ app.use((req, res, next) => {
   res.setHeader('X-XSS-Protection', '1; mode=block');
   next();
 });
+
+// ==================== CORS ====================
+// কাস্টম ডোমেইন এখনো কেনা হয়নি, তাই আপাতত Render subdomain + লোকাল ডেভেলপমেন্ট origin-ই অনুমোদিত।
+// কাস্টম ডোমেইন কেনা হলে ALLOWED_ORIGINS-এ যোগ করে দিতে হবে।
+const ALLOWED_ORIGINS = [
+  'https://livo-backen.onrender.com',
+  'http://localhost:3000',
+];
+const LOCALHOST_ANY_PORT = /^http:\/\/localhost:\d+$/;
+
+app.use(cors({
+  origin(origin, callback) {
+    // origin হেডার ছাড়া রিকোয়েস্ট (server-to-server, curl, mobile app ইত্যাদি) অনুমোদিত
+    if (!origin) return callback(null, true);
+    if (ALLOWED_ORIGINS.includes(origin) || LOCALHOST_ANY_PORT.test(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('CORS: এই origin থেকে অ্যাক্সেসের অনুমতি নেই — ' + origin));
+  },
+  credentials: true, // session cookie পাঠাতে/পেতে দরকার
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+}));
 const sessionStore = process.env.DATABASE_URL ? new pgSession({
   pool: pool,
   tableName: 'user_sessions',
