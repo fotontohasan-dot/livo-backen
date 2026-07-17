@@ -38,10 +38,12 @@
                 <i class="fas fa-copy"></i> সব কোড কপি করুন
             </button>
 
-            <a href="/admin/settings"
-                class="block text-center w-full bg-blue-600 hover:bg-blue-700 transition-all text-white font-semibold py-3.5 rounded-2xl text-base shadow-lg shadow-blue-600/30">
-                বুঝেছি, সংরক্ষণ করেছি
-            </a>
+            <form method="POST" action="/admin/2fa/backup-codes/acknowledge">
+                <button type="submit"
+                    class="block text-center w-full bg-blue-600 hover:bg-blue-700 transition-all text-white font-semibold py-3.5 rounded-2xl text-base shadow-lg shadow-blue-600/30">
+                    বুঝেছি, সংরক্ষণ করেছি
+                </button>
+            </form>
         </div>
     </div>
 

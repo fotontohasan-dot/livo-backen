@@ -68,6 +68,16 @@ async function logAdminAction(adminId, adminUsername, actionType, details, ip = 
     }
 }
 
+// ==================== অ্যাডমিন সেশনের জন্য কড়া কুকি পলিসি ====================
+// সাধারণ ইউজার সেশন থেকে আলাদা — অ্যাডমিন সেশন প্রোডাকশনে ৮ ঘণ্টা পর এক্সপায়ার হয়ে যাবে
+// এবং sameSite=strict থাকবে (cross-site request-এ কুকি পাঠানো হবে না)।
+function applyAdminSessionPolicy(req) {
+  if (process.env.NODE_ENV === 'production' && req.session && req.session.cookie) {
+    req.session.cookie.maxAge = 8 * 60 * 60 * 1000; // ৮ ঘণ্টা
+    req.session.cookie.sameSite = 'strict';
+  }
+}
+
 // ==================== ADMIN LOGIN ====================
 router.get('/login', (req, res) => {
   if (req.session.user && req.session.user.role === 'admin') {
@@ -118,6 +128,8 @@ router.post('/login', async (req, res) => {
       username: admin.username,
       role: admin.role
     };
+    applyAdminSessionPolicy(req);
+    logAdminAction(admin.id, admin.username, 'LOGIN', 'লগইন সম্পন্ন', req.ip);
 
     res.redirect('/admin');
   } catch (err) {
@@ -170,6 +182,7 @@ router.post('/login/2fa', strict2FALimiter, async (req, res) => {
     req.session.user = { id: admin.id, username: admin.username, role: admin.role };
     req.session.pending2FA = null;
     req.session.twoFAAttempts = 0;
+    applyAdminSessionPolicy(req);
     logAdminAction(admin.id, admin.username, 'LOGIN_2FA', '2FA দিয়ে লগইন সম্পন্ন', req.ip);
     res.redirect('/admin');
   } catch (err) {
@@ -250,7 +263,7 @@ router.post('/2fa/setup/verify', strict2FALimiter, async (req, res) => {
     const backupCodesJson = await hashBackupCodes(backupCodes);
 
     await pool.query(
-      'UPDATE users SET totp_secret = $1, totp_enabled = true, totp_backup_codes = $2 WHERE id = $3',
+      'UPDATE users SET totp_secret = $1, totp_enabled = true, totp_backup_codes = $2, backup_codes_viewed = false WHERE id = $3',
       [pendingSecret, backupCodesJson, req.session.user.id]
     );
     req.session.pending2FASetup = null;
@@ -260,6 +273,19 @@ router.post('/2fa/setup/verify', strict2FALimiter, async (req, res) => {
   } catch (err) {
     console.error('2fa/setup/verify error:', err.message);
     res.render('admin/2fa-setup', { alreadyEnabled: false, qrDataUrl: null, base32: null, error: 'সার্ভার এরর হয়েছে' });
+  }
+});
+
+// ব্যাকআপ কোড দেখার পর অ্যাডমিন কনফার্ম করলে এই রুট হিট হয় — এরপর থেকে কোনো ভাবেই
+// প্লেইনটেক্সট কোডগুলো আর দেখানো হয় না (DB-তে শুধু হ্যাশই থাকে, তাই এমনিতেও পুনরুদ্ধারযোগ্য না,
+// এই ফ্ল্যাগটা শুধু স্পষ্টভাবে "দেখা হয়ে গেছে" ট্র্যাক ও অডিট করার জন্য)।
+router.post('/2fa/backup-codes/acknowledge', async (req, res) => {
+  try {
+    await pool.query('UPDATE users SET backup_codes_viewed = true WHERE id = $1', [req.session.user.id]);
+    res.redirect('/admin');
+  } catch (err) {
+    console.error('backup-codes acknowledge error:', err.message);
+    res.redirect('/admin');
   }
 });
 
@@ -1112,7 +1138,10 @@ router.get('/users/:id', async (req, res) => {
 // ==================== USER ACTIONS ====================
 router.post('/users/:id/ban', requireIntParam('id'), async (req, res) => {
   try {
-    await pool.query('UPDATE users SET is_banned = NOT is_banned WHERE id = $1', [req.params.id]);
+    const r = await pool.query('UPDATE users SET is_banned = NOT is_banned WHERE id = $1 RETURNING is_banned, username', [req.params.id]);
+    if (r.rows[0]) {
+      await logAdminAction(req.session.user.id, req.session.user.username, r.rows[0].is_banned ? 'USER_BAN' : 'USER_UNBAN', `${r.rows[0].username} (#${req.params.id}) কে ${r.rows[0].is_banned ? 'ব্যান' : 'আনব্যান'} করা হয়েছে`, req.ip);
+    }
     req.flash('success', 'স্ট্যাটাস আপডেট হয়েছে!');
   } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
   res.redirect('back');

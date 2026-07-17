@@ -641,7 +641,9 @@ async function runMigrations() {
       ALTER TABLE users
       ADD COLUMN IF NOT EXISTS totp_secret TEXT,
       ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN DEFAULT false,
-      ADD COLUMN IF NOT EXISTS totp_backup_codes TEXT;
+      ADD COLUMN IF NOT EXISTS totp_backup_codes TEXT,
+      ADD COLUMN IF NOT EXISTS backup_codes_viewed BOOLEAN DEFAULT false,
+      ADD COLUMN IF NOT EXISTS permissions JSONB DEFAULT '{}'::jsonb;
     `);
 
     console.log("✅ All tables migration completed successfully");
