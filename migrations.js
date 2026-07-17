@@ -554,6 +554,14 @@ async function runMigrations() {
       ON CONFLICT (key) DO NOTHING;
     `);
 
+    // জরুরি ফিক্স: maintenance_mode জোর করে বন্ধ — settings পেজে এরর থাকায়
+    // টগল দিয়ে অফ করা যাচ্ছিল না, তাই এখানে unconditionally 'false' সেট করা হলো
+    // (ON CONFLICT ... DO UPDATE, DO NOTHING না)।
+    await pool.query(`
+      INSERT INTO site_settings (key, value, updated_at) VALUES ('maintenance_mode', 'false', NOW())
+      ON CONFLICT (key) DO UPDATE SET value = 'false', updated_at = NOW();
+    `);
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS promotions (
         id SERIAL PRIMARY KEY,
