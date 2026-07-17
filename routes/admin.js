@@ -445,32 +445,45 @@ router.post('/settings/update', async (req, res) => {
     for (const key of SETTING_KEYS) {
       if (key === 'maintenance_mode') continue; // নিচে আলাদাভাবে সামলানো হচ্ছে
       if (!(key in req.body)) continue;
-      let value = req.body[key];
+      let raw = req.body[key];
+      if (Array.isArray(raw)) raw = raw[raw.length - 1];
+      const value = raw === null || raw === undefined ? '' : String(raw);
       await pool.query(
         `INSERT INTO site_settings (key, value, updated_at) VALUES ($1, $2, NOW())
          ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
-        [key, String(value)]
+        [key, value]
       );
     }
 
     // চেকবক্স আনচেক থাকলে ব্রাউজার req.body-তে maintenance_mode ফিল্ডটাই পাঠায় না,
-    // তাই আগে এটা লুপে স্কিপ হয়ে যেত আর মান কখনো 'false' হতো না — অফ করা যেত না।
-    // এখানে সবসময় explicit true/false লেখা হচ্ছে।
-    const maintenanceOn = 'maintenance_mode' in req.body
-      ? (Array.isArray(req.body.maintenance_mode) ? req.body.maintenance_mode[req.body.maintenance_mode.length - 1] : req.body.maintenance_mode)
-      : 'false';
+    // তাই এখানে সবসময় boolean-এ coerce করে explicit true/false লেখা হচ্ছে।
+    let rawMaintenance = 'maintenance_mode' in req.body ? req.body.maintenance_mode : 'false';
+    if (Array.isArray(rawMaintenance)) rawMaintenance = rawMaintenance[rawMaintenance.length - 1];
+    const maintenanceBool = rawMaintenance === true || rawMaintenance === 'true' || rawMaintenance === 'on' || rawMaintenance === '1';
+
     await pool.query(
       `INSERT INTO site_settings (key, value, updated_at) VALUES ('maintenance_mode', $1, NOW())
        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
-      [String(maintenanceOn === 'true' || maintenanceOn === true || maintenanceOn === 'on')]
+      [String(maintenanceBool)]
     );
 
-    await loadSettings();
-    await logAdminAction(req.session.user.id, req.session.user.username, 'SETTINGS_UPDATE', 'সাইট সেটিংস পরিবর্তন করা হয়েছে', req.ip);
-    res.redirect('/admin/settings?saved=1');
+    // এই দুটো ব্যর্থ হলেও সেটিংস তো সেভ হয়েই গেছে — তাই আলাদা try/catch দিয়ে
+    // এদের এরর মূল সেভ অপারেশনকে ব্যর্থ দেখানো থেকে আটকানো হচ্ছে
+    try {
+      await loadSettings();
+    } catch (e) {
+      console.error('loadSettings() cache refresh failed (settings already saved):', e && e.stack ? e.stack : e);
+    }
+    try {
+      await logAdminAction(req.session.user.id, req.session.user.username, 'SETTINGS_UPDATE', 'সাইট সেটিংস পরিবর্তন করা হয়েছে', req.ip);
+    } catch (e) {
+      console.error('logAdminAction failed (settings already saved):', e && e.stack ? e.stack : e);
+    }
+
+    return res.redirect('/admin/settings?saved=1');
   } catch (err) {
-    console.error('Settings update error:', err.message);
-    res.redirect('/admin/settings');
+    console.error('Settings update error:', err && err.stack ? err.stack : err);
+    if (!res.headersSent) return res.redirect('/admin/settings?error=1');
   }
 });
 
