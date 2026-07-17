@@ -1,5 +1,18 @@
 require('dotenv').config();
 const process = require('node:process');
+
+// ==================== প্রসেস-লেভেল ক্র্যাশ গার্ড ====================
+// কোনো একটা জায়গায় unhandled promise rejection হলে Node.js (v15+) ডিফল্টভাবে
+// পুরো প্রসেস বন্ধ করে দেয় — তখন Render/হোস্টিং প্ল্যাটফর্মের জেনেরিক
+// "Internal Server Error" পেজ দেখা যায় যতক্ষণ না প্রসেস আবার রিস্টার্ট হয়।
+// এখানে সেটা আটকে শুধু লগ করে সার্ভার চালু রাখা হচ্ছে।
+process.on('unhandledRejection', (reason) => {
+  console.error('⚠️ Unhandled Rejection:', reason && reason.stack ? reason.stack : reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('⚠️ Uncaught Exception:', err && err.stack ? err.stack : err);
+});
+
 const express = require('express');
 const http = require('http');
 const { initSocket } = require('./services/socket');
