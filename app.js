@@ -312,6 +312,17 @@ app.use((err, req, res, next) => {
   ).catch(() => {});
 
   const serverErrorMsg = (res.locals && res.locals.t && res.locals.t.server_error) ? res.locals.t.server_error : 'Server Error / সার্ভার ত্রুটি';
+
+  // fetch/AJAX/API কলে HTML পেজ ফেরত পাঠালে client-side JSON.parse ভেঙে যায়,
+  // তাই সেসব ক্ষেত্রে JSON error দেওয়া হচ্ছে — raw error message/stack কখনোই client-এ যাচ্ছে না
+  const wantsJson = req.xhr
+    || (req.headers.accept && req.headers.accept.includes('application/json'))
+    || req.path.startsWith('/api')
+    || (req.headers['content-type'] || '').includes('json');
+  if (wantsJson) {
+    return res.status(500).json({ success: false, message: serverErrorMsg });
+  }
+
   res.status(500).render('error', {
     message: serverErrorMsg,
     siteName: 'Livo'
