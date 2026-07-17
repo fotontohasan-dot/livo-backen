@@ -239,9 +239,14 @@ app.use(async (req, res, next) => {
   if (req.path.startsWith('/payment/sslcommerz/')) return next();
   if (req.path === '/health') return next();
   if (req.path.startsWith('/public') || req.path.startsWith('/uploads')) return next();
-  const on = await getSetting('maintenance_mode');
-  if (on !== 'true' && on !== true) return next();
-  return res.status(503).render('maintenance', { siteName: 'Livo' });
+  try {
+    const on = await getSetting('maintenance_mode');
+    if (on !== 'true' && on !== true) return next();
+    return res.status(503).render('maintenance', { siteName: 'Livo' });
+  } catch (e) {
+    console.error('maintenance check error:', e.message);
+    return next();
+  }
 });
 
 // ==================== ROUTES ====================
