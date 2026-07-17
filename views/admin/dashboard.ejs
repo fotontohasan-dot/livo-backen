@@ -68,6 +68,20 @@ function escapeHtml(str) {
             </div>
         </div>
 
+        <!-- Active Users (last 15 min) -->
+        <div class="stat-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">Active Users</p>
+                    <p class="metric-value text-slate-900 mt-2">${Number(stats.active_users_now || 0).toLocaleString('en-US')}</p>
+                    <p class="text-slate-400 text-xs font-semibold mt-1">গত ১৫ মিনিটে</p>
+                </div>
+                <div class="w-11 h-11 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center">
+                    <i class="fas fa-signal text-xl"></i>
+                </div>
+            </div>
+        </div>
+
         <!-- Total Deposits -->
         <div class="stat-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
             <div class="flex justify-between items-start">

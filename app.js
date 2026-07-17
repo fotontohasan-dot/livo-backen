@@ -102,12 +102,14 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
 }));
+app.disable('x-powered-by');
 const sessionStore = process.env.DATABASE_URL ? new pgSession({
   pool: pool,
   tableName: 'user_sessions',
   createTableIfMissing: true
 }) : undefined;
 
+const isProd = process.env.NODE_ENV === 'production';
 const sessionMiddleware = session({
   store: sessionStore,
   secret: SESSION_SECRET,
@@ -116,7 +118,7 @@ const sessionMiddleware = session({
   cookie: {
     maxAge: 7 * 24 * 60 * 60 * 1000,
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isProd,
     sameSite: 'lax'
   }
 });
@@ -230,11 +232,6 @@ app.use(apiGateway);
 
 // ==================== ROUTES ====================
 app.use('/', require('./routes/auth'));
-// setup.js শুধুমাত্র প্রোডাকশনের বাইরে (লোকাল ডেভেলপমেন্টে) মাউন্ট হবে —
-// প্রোডাকশনে এই রুট সম্পূর্ণভাবে অনুপস্থিত থাকবে, তাই কোনো key দিয়েও অ্যাক্সেস করা যাবে না।
-if (process.env.NODE_ENV !== 'production') {
-  app.use('/setup', require('./routes/setup'));
-}
 app.use('/matches', require('./routes/matches'));
 app.use('/sports', require('./routes/sports'));
 app.use('/tournaments', require('./routes/tournaments'));

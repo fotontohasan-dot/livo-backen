@@ -1,11 +1,20 @@
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
 const { pool } = require('../db');
 const { createBonus, canWithdraw } = require('../services/turnover');
 const { processReferralDeposit } = require('../services/referral');
 const crypto = require('crypto');
 const sslcommerz = require('../services/sslcommerz');
 const { broadcastDemoStats, emitAdminAlert } = require('../services/socket');
+
+const paymentLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  message: 'অনেকবার চেষ্টা করেছেন। কিছুক্ষণ পর আবার চেষ্টা করুন।',
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
 function requireLogin(req, res, next) {
   if (!req.session.user) return res.redirect('/login');
@@ -129,8 +138,9 @@ router.get('/deposit', requireLogin, (req, res) => {
   res.render('payment/deposit', { user: req.session.user, payNumber: current });
 });
 
-router.post('/deposit', requireLogin, async (req, res) => {
-  const { method, transaction_id, account_number } = req.body;
+router.post('/deposit', requireLogin, paymentLimiter, async (req, res) => {
+  const { method, account_number } = req.body;
+  const transaction_id = (req.body.transaction_id || '').trim();
   const wantBonus = req.body.want_bonus === 'yes';
   const amount = parseAmount(req.body.amount);
   const userId = req.session.user.id;
@@ -200,7 +210,7 @@ router.get('/withdraw', requireLogin, async (req, res) => {
 });
 
 
-router.post('/withdraw', requireLogin, async (req, res) => {
+router.post('/withdraw', requireLogin, paymentLimiter, async (req, res) => {
   const { method, account_number } = req.body;
   const amount = parseAmount(req.body.amount);
   const userId = req.session.user.id;

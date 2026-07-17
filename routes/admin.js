@@ -86,7 +86,15 @@ router.get('/login', (req, res) => {
   res.render('admin/login', { error: null });
 });
 
-router.post('/login', async (req, res) => {
+const adminLoginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 8,
+  message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+router.post('/login', adminLoginLimiter, async (req, res) => {
   const { username, password } = req.body;
 
   try {
@@ -534,6 +542,9 @@ router.get('/', async (req, res) => {
     const newUsersToday = await pool.query(
       `SELECT COUNT(*) AS cnt FROM users WHERE created_at::date = CURRENT_DATE`
     );
+    const activeUsersNow = await pool.query(
+      `SELECT COUNT(*) AS cnt FROM users WHERE last_login > NOW() - INTERVAL '15 minutes'`
+    );
 
     // ==== পেন্ডিং অ্যাকশন — ডিপোজিট, উইথড্র, সাপোর্ট মেসেজ ====
     const pendingDeposits = await pool.query(
@@ -624,6 +635,7 @@ router.get('/', async (req, res) => {
         total_deposit_all: Number(totalDepositAll.rows[0].total),
         total_withdraw_all: Number(totalWithdrawAll.rows[0].total),
         new_users_today: parseInt(newUsersToday.rows[0].cnt),
+        active_users_now: parseInt(activeUsersNow.rows[0].cnt),
         pending_deposits: parseInt(pendingDeposits.rows[0].cnt),
         pending_withdrawals: parseInt(pendingWithdrawals.rows[0].cnt),
         pending_support: parseInt(pendingSupport.rows[0].cnt)
@@ -1165,9 +1177,10 @@ router.post('/users/:id/delete', requireIntParam('id'), async (req, res) => {
 router.post('/users/:id/coins/add', adminFinancialLimiter, requireIntParam('id'), requireAmount('amount', { max: 10_000_000 }), async (req, res) => {
   try {
     const amount = req.body.amount; // requireAmount দিয়ে ইতিমধ্যে যাচাই ও normalize করা
+    const reason = (req.body.reason || '').trim().slice(0, 200);
     await pool.query('UPDATE users SET coins = coins + $1 WHERE id = $2', [amount, req.params.id]);
-    await pool.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'admin_add','অ্যাডমিন কয়েন যোগ')`, [req.params.id, amount]);
-    await logAdminAction(req.session.user.id, req.session.user.username, 'coins_add', `+${amount} coins to user #${req.params.id}`, req.ip);
+    await pool.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'admin_add',$3)`, [req.params.id, amount, reason || 'অ্যাডমিন কয়েন যোগ']);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'COIN_ADD', `ইউজার #${req.params.id}-কে ${amount} কয়েন যোগ${reason ? ' — কারণ: ' + reason : ''}`, req.ip);
     req.flash('success', '✅ কয়েন যোগ হয়েছে!');
   } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
   res.redirect('back');
@@ -1176,9 +1189,10 @@ router.post('/users/:id/coins/add', adminFinancialLimiter, requireIntParam('id')
 router.post('/users/:id/coins/remove', adminFinancialLimiter, requireIntParam('id'), requireAmount('amount', { max: 10_000_000 }), async (req, res) => {
   try {
     const amount = req.body.amount;
+    const reason = (req.body.reason || '').trim().slice(0, 200);
     await pool.query('UPDATE users SET coins = GREATEST(coins - $1, 0) WHERE id = $2', [amount, req.params.id]);
-    await pool.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'admin_remove','অ্যাডমিন কয়েন কমানো')`, [req.params.id, -amount]);
-    await logAdminAction(req.session.user.id, req.session.user.username, 'coins_remove', `-${amount} coins from user #${req.params.id}`, req.ip);
+    await pool.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'admin_remove',$3)`, [req.params.id, -amount, reason || 'অ্যাডমিন কয়েন কমানো']);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'COIN_REMOVE', `ইউজার #${req.params.id}-এর ${amount} কয়েন কমানো${reason ? ' — কারণ: ' + reason : ''}`, req.ip);
     req.flash('success', '✅ কয়েন কমানো হয়েছে!');
   } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
   res.redirect('back');
@@ -1581,6 +1595,36 @@ router.post('/news/:id/delete', requireIntParam('id'), async (req, res) => {
   } catch (err) {
     console.error('News delete error:', err.message);
     res.redirect('/admin/news');
+  }
+});
+
+router.get('/activity/export.csv', async (req, res) => {
+  try {
+    const { action_type = '', q = '' } = req.query;
+    const params = [];
+    let query = 'SELECT * FROM admin_logs WHERE 1=1';
+    if (action_type) {
+      params.push(action_type);
+      query += ` AND action_type = $${params.length}`;
+    }
+    if (q) {
+      params.push(`%${q}%`);
+      query += ` AND (admin_username ILIKE $${params.length} OR details ILIKE $${params.length})`;
+    }
+    query += ' ORDER BY created_at DESC LIMIT 5000';
+    const result = await pool.query(query, params);
+
+    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const header = ['id', 'admin_username', 'action_type', 'details', 'ip_address', 'created_at'];
+    const rows = result.rows.map(r => header.map(h => esc(r[h])).join(','));
+    const csv = [header.join(','), ...rows].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="admin-activity-${Date.now()}.csv"`);
+    res.send('\uFEFF' + csv); // BOM যাতে বাংলা টেক্সট Excel-এ ঠিকভাবে দেখায়
+  } catch (err) {
+    console.error('Activity CSV export error:', err.message);
+    res.status(500).send('Export failed');
   }
 });
 

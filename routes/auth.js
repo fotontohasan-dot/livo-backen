@@ -2,9 +2,18 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
 const { pool } = require('../db');
 const { createReferral } = require('../services/referral');
 const { sendPasswordReset } = require('../services/email');
+
+const resetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
 function sanitizeUser(u) {
   if (!u) return null;
@@ -176,7 +185,7 @@ router.get('/forgot-password', (req, res) => {
   res.render('forgot-password', { sent: false });
 });
 
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', resetLimiter, async (req, res) => {
   const { email } = req.body;
   try {
     if (!email) {
@@ -229,7 +238,7 @@ router.get('/reset-password/:token', async (req, res) => {
   }
 });
 
-router.post('/reset-password/:token', async (req, res) => {
+router.post('/reset-password/:token', resetLimiter, async (req, res) => {
   const { password, confirmPassword } = req.body;
   const { token } = req.params;
   try {
