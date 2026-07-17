@@ -141,6 +141,20 @@ function escapeHtml(str) {
                 </div>
             </div>
         </div>
+
+        <!-- Pending Withdraw Requests (dedicated card) -->
+        <a href="/admin/withdrawals" class="stat-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition block">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">Pending Withdraw Requests</p>
+                    <p class="metric-value text-red-600 mt-2">${stats.pending_withdrawals || 0}</p>
+                    <p class="text-slate-400 text-xs font-semibold mt-1">রিভিউ করতে ক্লিক করুন</p>
+                </div>
+                <div class="w-11 h-11 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center">
+                    <i class="fas fa-hand-holding-usd text-xl"></i>
+                </div>
+            </div>
+        </a>
     </div>
 
     <!-- Quick Actions + Recent Activity -->
