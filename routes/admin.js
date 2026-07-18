@@ -433,10 +433,15 @@ router.get('/settings', async (req, res) => {
       "SELECT id, username, email, created_at FROM users WHERE role = 'admin' ORDER BY created_at ASC"
     );
 
-    res.render('admin/settings', { settings, admins: adminsRes.rows, saved: req.query.saved === '1' });
+    res.render('admin/settings', {
+      settings,
+      admins: adminsRes.rows,
+      saved: req.query.saved === '1',
+      saveError: req.query.error === '1'
+    });
   } catch (err) {
-    console.error('Settings load error:', err.message);
-    res.render('admin/settings', { settings: {}, admins: [], saved: false });
+    console.error('Settings load error:', err && err.stack ? err.stack : err);
+    res.render('admin/settings', { settings: {}, admins: [], saved: false, saveError: false });
   }
 });
 

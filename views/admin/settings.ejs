@@ -60,6 +60,7 @@ function adminRow(a, currentAdminId) {
 
         <button type="submit" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-2xl transition-colors">Save Changes</button>
         ${saved ? '<span class="ml-4 text-emerald-600 text-sm font-medium"><i class="fas fa-check-circle"></i> সেভ হয়েছে!</span>' : ''}
+        ${saveError ? '<span class="ml-4 text-red-600 text-sm font-medium"><i class="fas fa-triangle-exclamation"></i> সেভ করতে সমস্যা হয়েছে — সার্ভার লগ চেক করুন।</span>' : ''}
     </form>
 
     <div class="bg-white rounded-3xl border border-slate-100 p-6">
