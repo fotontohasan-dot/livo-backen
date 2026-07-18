@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title><%= locals.title || 'Livo - সেরা স্পোর্টস প্রেডিকশন প্ল্যাটফর্ম' %></title>
+  <title><%= locals.title || 'Livo - সেরা স্পোর্টস প্রেডিকশন ও ক্যাসিনো প্ল্যাটফর্ম' %></title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,8 +11,24 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/css/style.css?v=<%= Date.now() %>">
 
-  <meta name="description" content="LIVO - বাংলাদেশের সেরা স্পোর্টস প্রেডিকশন প্ল্যাটফর্ম। ম্যাচ প্রেডিকশন করুন, কয়েন জিতুন।">
+  <meta name="description" content="<%= locals.description || 'Livo-তে খেলুন বাংলাদেশের সেরা স্পোর্টস প্রেডিকশন ও ক্যাসিনো গেম, জিতুন রিয়েল রিওয়ার্ড, নিরাপদ ও দ্রুত ডিপোজিট-উইথড্র সুবিধাসহ।' %>">
+  <meta name="keywords" content="<%= locals.keywords || 'Livo, স্পোর্টস প্রেডিকশন, অনলাইন ক্যাসিনো, বাংলাদেশ বেটিং, ক্রিকেট প্রেডিকশন, লাইভ ক্যাসিনো, অনলাইন গেমিং বাংলাদেশ' %>">
   <meta name="theme-color" content="#006519">
+
+  <!-- Open Graph / ফেসবুক-হোয়াটসঅ্যাপে শেয়ার করলে যেভাবে দেখাবে -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Livo">
+  <meta property="og:title" content="<%= locals.title || 'Livo - সেরা স্পোর্টস প্রেডিকশন ও ক্যাসিনো প্ল্যাটফর্ম' %>">
+  <meta property="og:description" content="<%= locals.description || 'Livo-তে খেলুন বাংলাদেশের সেরা স্পোর্টস প্রেডিকশন ও ক্যাসিনো গেম, জিতুন রিয়েল রিওয়ার্ড, নিরাপদ ও দ্রুত ডিপোজিট-উইথড্র সুবিধাসহ।' %>">
+  <meta property="og:image" content="<%= locals.baseUrl || '' %>/icon-512.png">
+  <meta property="og:url" content="<%= locals.baseUrl || '' %>">
+  <meta property="og:locale" content="bn_BD">
+
+  <!-- Twitter/X Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="<%= locals.title || 'Livo - সেরা স্পোর্টস প্রেডিকশন ও ক্যাসিনো প্ল্যাটফর্ম' %>">
+  <meta name="twitter:description" content="<%= locals.description || 'Livo-তে খেলুন বাংলাদেশের সেরা স্পোর্টস প্রেডিকশন ও ক্যাসিনো গেম, জিতুন রিয়েল রিওয়ার্ড।' %>">
+  <meta name="twitter:image" content="<%= locals.baseUrl || '' %>/icon-512.png">
 
   <!-- ফেভিকন -->
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
