@@ -80,6 +80,14 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_pr_status ON payment_requests(status);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_pr_type_method_created ON payment_requests(type, method, created_at);`);
 
+    // একই মেথডে একই TrxID দিয়ে একাধিকবার (rejected বাদে) ডিপোজিট আটকাতে partial unique index —
+    // rejected বাদ রাখা হয়েছে যাতে ভুল/টাইপো করে reject হওয়া ট্রানজেকশন আইডি আবার বৈধভাবে সাবমিট করা যায়
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_pr_deposit_trxid_unique
+      ON payment_requests (method, transaction_id)
+      WHERE type = 'deposit' AND status != 'rejected';
+    `);
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS notifications (
         id SERIAL PRIMARY KEY,

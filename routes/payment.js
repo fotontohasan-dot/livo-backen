@@ -180,6 +180,24 @@ router.post('/deposit', requireLogin, paymentLimiter, async (req, res) => {
     console.error('deposit limit check error:', e.message);
   }
 
+  // ==== Duplicate Transaction ID ব্লক ====
+  // একই TrxID দিয়ে আগে pending/approved ডিপোজিট থাকলে আটকানো হচ্ছে —
+  // rejected বাদ রাখা হয়েছে যাতে ভুল/টাইপো করে reject হওয়া ট্রানজেকশন আইডি বৈধভাবে আবার সাবমিট করা যায়
+  try {
+    const dupCheck = await pool.query(
+      `SELECT id FROM payment_requests
+       WHERE type='deposit' AND method=$1 AND transaction_id=$2 AND status != 'rejected'
+       LIMIT 1`,
+      [method, transaction_id]
+    );
+    if (dupCheck.rows.length > 0) {
+      req.flash('error', 'এই ট্রানজেকশন আইডি আগে ব্যবহার করা হয়েছে।');
+      return res.redirect('/payment/deposit');
+    }
+  } catch (e) {
+    console.error('duplicate trx_id check error:', e.message);
+  }
+
   try {
     await pool.query(
       `INSERT INTO payment_requests (user_id, type, method, amount, transaction_id, account_number, status, want_bonus) VALUES ($1, 'deposit', $2, $3, $4, $5, 'pending', $6)`,
@@ -189,6 +207,11 @@ router.post('/deposit', requireLogin, paymentLimiter, async (req, res) => {
     req.flash('success', 'ডিপোজিট রিকোয়েস্ট পাঠানো হয়েছে!');
     res.redirect('/payment/history');
   } catch (err) {
+    // DB-এর unique constraint (race condition-এ দুইটা রিকোয়েস্ট একসাথে এলে) ধরার জন্য দ্বিতীয় স্তরের সুরক্ষা
+    if (err.code === '23505') {
+      req.flash('error', 'এই ট্রানজেকশন আইডি আগে ব্যবহার করা হয়েছে।');
+      return res.redirect('/payment/deposit');
+    }
     console.error('deposit error:', err.message);
     req.flash('error', 'সমস্যা হয়েছে');
     res.redirect('/payment/deposit');
