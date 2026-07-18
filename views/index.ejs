@@ -309,70 +309,123 @@ body.light-mode .promo-banner {
 
 <!-- ===== HERO SECTION ===== -->
 <style>
+@keyframes heroSweep {
+  0%   { transform: translateX(-120%) skewX(-15deg); }
+  100% { transform: translateX(220%) skewX(-15deg); }
+}
+@keyframes heroFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+
 .hero-section {
   position: relative;
   overflow: hidden;
-  padding: 40px 16px 28px;
+  padding: 52px 18px 40px;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   background:
-    radial-gradient(circle at 18% 15%, rgba(200,16,46,0.28) 0%, transparent 50%),
-    radial-gradient(circle at 85% 85%, rgba(234,179,8,0.16) 0%, transparent 55%),
-    linear-gradient(180deg, #0b0b10 0%, #050505 100%);
-  border-bottom: 1px solid rgba(212,175,55,0.15);
+    radial-gradient(circle at 15% 10%, rgba(200,16,46,0.32) 0%, transparent 45%),
+    radial-gradient(circle at 88% 20%, rgba(234,179,8,0.22) 0%, transparent 42%),
+    radial-gradient(circle at 50% 100%, rgba(234,179,8,0.10) 0%, transparent 55%),
+    linear-gradient(180deg, #0c0c12 0%, #050505 100%);
+  border-bottom: 1px solid rgba(212,175,55,0.18);
   text-align: center;
 }
-.hero-live-badge {
-  display: inline-flex; align-items: center; gap: 7px;
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(212,175,55,0.3);
-  padding: 5px 14px; border-radius: 20px; font-size: 11px; font-weight: 700;
-  color: var(--fa-gold-light); margin-bottom: 16px;
+/* মৃদু ডট-গ্রিড টেক্সচার — কার্ড-টেবিলের মতো গভীরতা দেয় */
+.hero-section::before {
+  content: "";
+  position: absolute; inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse at center, rgba(0,0,0,0.9) 0%, transparent 75%);
+  pointer-events: none;
 }
-.hero-live-dot { width:7px; height:7px; border-radius:50%; background:#22c55e; animation: livedot 1.5s infinite; }
+/* সিগনেচার — ধীরে চলমান সোনালি আলোর ঝলক */
+.hero-section::after {
+  content: "";
+  position: absolute; top: 0; left: 0; width: 45%; height: 100%;
+  background: linear-gradient(100deg, transparent 0%, rgba(255,235,160,0.10) 45%, rgba(255,215,0,0.16) 50%, rgba(255,235,160,0.10) 55%, transparent 100%);
+  animation: heroSweep 7s ease-in-out infinite;
+  pointer-events: none;
+}
+.hero-inner { position: relative; z-index: 2; }
+
+.hero-live-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(212,175,55,0.35);
+  padding: 7px 16px; border-radius: 22px; font-size: 12px; font-weight: 700;
+  color: var(--fa-gold-light); margin-bottom: 18px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+  animation: heroFloat 4s ease-in-out infinite;
+}
+.hero-live-dot { width:8px; height:8px; border-radius:50%; background:#22c55e; box-shadow: 0 0 8px #22c55e; animation: livedot 1.5s infinite; }
+
 .hero-heading {
   font-family: 'Teko', sans-serif; font-weight: 700; text-transform: uppercase;
-  font-size: 38px; line-height: 1.05; letter-spacing: 0.5px; margin: 0 0 12px;
-  background: linear-gradient(135deg, #fff 30%, var(--fa-gold-light) 75%);
+  font-size: 44px; line-height: 1.02; letter-spacing: 0.5px; margin: 0 0 14px;
+  background: linear-gradient(135deg, #ffffff 25%, var(--fa-gold-light) 60%, var(--fa-gold) 85%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 2px 18px rgba(212,175,55,0.25));
 }
 .hero-heading .accent { color: var(--primary); -webkit-text-fill-color: var(--primary); }
+
 .hero-sub {
-  font-size: 13px; color: #c7c9d1; max-width: 420px; margin: 0 auto 22px; line-height: 1.65;
+  font-size: 14px; color: #d3d5dc; max-width: 440px; margin: 0 auto 26px; line-height: 1.7;
+  font-weight: 500;
 }
-.hero-cta-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 24px; }
+
+.hero-cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 28px; }
 .hero-btn {
-  padding: 12px 24px; border-radius: 30px; font-weight: 800; font-size: 13px;
-  text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
-  transition: transform .15s ease;
+  padding: 15px 30px; border-radius: 32px; font-weight: 800; font-size: 14.5px;
+  text-decoration: none; display: inline-flex; align-items: center; gap: 9px;
+  transition: transform .15s ease, box-shadow .15s ease;
 }
+.hero-btn:hover { transform: translateY(-2px); }
 .hero-btn:active { transform: scale(0.96); }
-.hero-btn-primary { background: var(--fa-gold-gradient); color: #000; box-shadow: 0 6px 20px rgba(212,175,55,0.35); }
-.hero-btn-secondary { background: rgba(255,255,255,0.06); color: #fff; border: 1px solid rgba(255,255,255,0.15); }
-.hero-stats-row { display: flex; justify-content: center; gap: 26px; flex-wrap: wrap; }
+.hero-btn-primary {
+  background: var(--fa-gold-gradient); color: #000;
+  box-shadow: 0 8px 24px rgba(212,175,55,0.4);
+}
+.hero-btn-primary:hover { box-shadow: 0 10px 30px rgba(212,175,55,0.55); }
+.hero-btn-secondary {
+  background: rgba(255,255,255,0.07); color: #fff; border: 1.5px solid rgba(255,255,255,0.2);
+}
+.hero-btn-secondary:hover { background: rgba(255,255,255,0.12); border-color: rgba(212,175,55,0.4); }
+
+.hero-stats-row { display: flex; justify-content: center; gap: 30px; flex-wrap: wrap; }
 .hero-stat { text-align: center; }
-.hero-stat-num { font-family: 'Teko', sans-serif; font-size: 22px; font-weight: 700; color: var(--fa-gold); line-height: 1; }
-.hero-stat-label { font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+.hero-stat-num { font-family: 'Teko', sans-serif; font-size: 25px; font-weight: 700; color: var(--fa-gold); line-height: 1; }
+.hero-stat-label { font-size: 10.5px; color: var(--text-muted); margin-top: 4px; letter-spacing: 0.2px; }
 
 @media (min-width: 640px) {
-  .hero-heading { font-size: 52px; }
-  .hero-sub { font-size: 15px; max-width: 540px; }
+  .hero-section { padding: 72px 24px 52px; min-height: 480px; }
+  .hero-heading { font-size: 64px; }
+  .hero-sub { font-size: 16.5px; max-width: 580px; }
+  .hero-btn { padding: 17px 36px; font-size: 15.5px; }
 }
 </style>
 
 <div class="hero-section">
-  <div class="hero-live-badge"><span class="hero-live-dot"></span> ২,৮৪০+ জন এখন অনলাইনে</div>
-  <h1 class="hero-heading">বাংলাদেশের <span class="accent">#১</span> প্রেডিকশন ও ক্যাসিনো প্ল্যাটফর্ম</h1>
-  <p class="hero-sub">লাইভ ম্যাচ প্রেডিক্ট করুন, প্রিমিয়াম ক্যাসিনো গেম খেলুন এবং সেকেন্ডেই জিতুন রিয়েল রিওয়ার্ড — নিরাপদ, দ্রুত ও সম্পূর্ণ লাইসেন্সপ্রাপ্ত।</p>
-  <div class="hero-cta-row">
-    <a href="#categoryTabs" class="hero-btn hero-btn-primary"><i class="fas fa-play"></i> এখনই খেলুন</a>
-    <% if (!locals.user) { %>
-      <a href="/register" class="hero-btn hero-btn-secondary"><i class="fas fa-user-plus"></i> ফ্রি অ্যাকাউন্ট খুলুন</a>
-    <% } else { %>
-      <a href="/payment/deposit" class="hero-btn hero-btn-secondary"><i class="fas fa-wallet"></i> ডিপোজিট করুন</a>
-    <% } %>
-  </div>
-  <div class="hero-stats-row">
-    <div class="hero-stat"><div class="hero-stat-num">১১৮+</div><div class="hero-stat-label">গেমস</div></div>
-    <div class="hero-stat"><div class="hero-stat-num">২৪/৭</div><div class="hero-stat-label">সাপোর্ট</div></div>
-    <div class="hero-stat"><div class="hero-stat-num">৫ মিনিট</div><div class="hero-stat-label">উইথড্র</div></div>
+  <div class="hero-inner">
+    <div class="hero-live-badge"><span class="hero-live-dot"></span> ২,৮৪০+ জন এখন অনলাইনে খেলছেন</div>
+    <h1 class="hero-heading">বাংলাদেশের <span class="accent">#১</span><br>প্রেডিকশন ও ক্যাসিনো প্ল্যাটফর্ম</h1>
+    <p class="hero-sub">লাইভ ম্যাচ প্রেডিক্ট করুন, প্রিমিয়াম ক্যাসিনো গেম খেলুন এবং সেকেন্ডেই জিতুন রিয়েল রিওয়ার্ড — নিরাপদ, দ্রুত ও সম্পূর্ণ লাইসেন্সপ্রাপ্ত।</p>
+    <div class="hero-cta-row">
+      <a href="#categoryTabs" class="hero-btn hero-btn-primary"><i class="fas fa-play"></i> এখনই খেলুন</a>
+      <% if (!locals.user) { %>
+        <a href="/register" class="hero-btn hero-btn-secondary"><i class="fas fa-user-plus"></i> ফ্রি অ্যাকাউন্ট খুলুন</a>
+      <% } else { %>
+        <a href="/payment/deposit" class="hero-btn hero-btn-secondary"><i class="fas fa-wallet"></i> ডিপোজিট করুন</a>
+      <% } %>
+    </div>
+    <div class="hero-stats-row">
+      <div class="hero-stat"><div class="hero-stat-num">১১৮+</div><div class="hero-stat-label">গেমস</div></div>
+      <div class="hero-stat"><div class="hero-stat-num">২৪/৭</div><div class="hero-stat-label">সাপোর্ট</div></div>
+      <div class="hero-stat"><div class="hero-stat-num">৫ মিনিট</div><div class="hero-stat-label">উইথড্র</div></div>
+    </div>
   </div>
 </div>
 
