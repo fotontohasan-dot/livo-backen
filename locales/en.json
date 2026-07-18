@@ -128,5 +128,15 @@
   "terms_sec5_h": "5. Responsible Gaming",
   "terms_sec5_p": "We encourage responsible gaming. Users can set deposit limits, bet limits, or self-exclusion from their profile settings. If you feel your gaming is becoming uncontrollable, please contact our support team or use self-exclusion.",
   "terms_sec6_h": "6. Changes to These Terms",
-  "terms_sec6_p": "We reserve the right to amend these Terms at any time to reflect platform needs or changes in applicable law. Material changes will be announced on the website. Continued use of the platform after changes constitutes acceptance of the revised Terms."
+  "terms_sec6_p": "We reserve the right to amend these Terms at any time to reflect platform needs or changes in applicable law. Material changes will be announced on the website. Continued use of the platform after changes constitutes acceptance of the revised Terms.",
+  "rules_page_title": "Rules & Regulations",
+  "rules_updated_date": "Last updated: July 18, 2026",
+  "rules_sec1_h": "1. General Betting Rules",
+  "rules_sec1_p": "Once confirmed, a bet cannot be cancelled or changed. Bets are settled at the odds shown at the time of confirmation, though we reserve the right to void or correct bets placed due to clear technical errors or incorrect odds. Accounts showing suspicious patterns, such as opposing bets placed on the same event, may be reviewed.",
+  "rules_sec2_h": "2. Odds & Settlement",
+  "rules_sec2_p": "Bets are settled based on official results or scores. If a match is abandoned, postponed, or cancelled, related bets are generally voided (stake returned) unless a market has a specific rule stated otherwise. In case of a results dispute, the platform's decision is final.",
+  "rules_sec3_h": "3. Casino & Game Rules",
+  "rules_sec3_p": "Each casino game (slots, live casino, card games) has its own RTP and paytable, viewable within the game before play begins. The game provider's server-side result is considered final. If a connection drops mid-round, the round outcome is settled according to the provider's recorded result.",
+  "rules_sec4_h": "4. Bonus & Promotion Rules",
+  "rules_sec4_p": "Every bonus carries a specific turnover requirement that must be met before withdrawal. Claiming the same bonus across multiple accounts, or placing minimal-risk bets to abuse a bonus (e.g., covering both red and black in roulette), is strictly prohibited and may result in bonus forfeiture or account suspension."
 }
