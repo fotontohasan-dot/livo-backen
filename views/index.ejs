@@ -305,11 +305,76 @@ body.light-mode .promo-banner {
   border: 1.5px solid var(--fa-gold) !important;
   box-shadow: 0 10px 30px rgba(212,175,55,0.3), 0 2px 10px rgba(0,0,0,0.12) !important;
 }
-body.light-mode .jackpot-board {
-  border: 1.5px solid var(--fa-gold) !important;
-  box-shadow: 0 10px 30px rgba(212,175,55,0.3), 0 2px 10px rgba(0,0,0,0.12) !important;
+</style>
+
+<!-- ===== HERO SECTION ===== -->
+<style>
+.hero-section {
+  position: relative;
+  overflow: hidden;
+  padding: 40px 16px 28px;
+  background:
+    radial-gradient(circle at 18% 15%, rgba(200,16,46,0.28) 0%, transparent 50%),
+    radial-gradient(circle at 85% 85%, rgba(234,179,8,0.16) 0%, transparent 55%),
+    linear-gradient(180deg, #0b0b10 0%, #050505 100%);
+  border-bottom: 1px solid rgba(212,175,55,0.15);
+  text-align: center;
+}
+.hero-live-badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(212,175,55,0.3);
+  padding: 5px 14px; border-radius: 20px; font-size: 11px; font-weight: 700;
+  color: var(--fa-gold-light); margin-bottom: 16px;
+}
+.hero-live-dot { width:7px; height:7px; border-radius:50%; background:#22c55e; animation: livedot 1.5s infinite; }
+.hero-heading {
+  font-family: 'Teko', sans-serif; font-weight: 700; text-transform: uppercase;
+  font-size: 38px; line-height: 1.05; letter-spacing: 0.5px; margin: 0 0 12px;
+  background: linear-gradient(135deg, #fff 30%, var(--fa-gold-light) 75%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.hero-heading .accent { color: var(--primary); -webkit-text-fill-color: var(--primary); }
+.hero-sub {
+  font-size: 13px; color: #c7c9d1; max-width: 420px; margin: 0 auto 22px; line-height: 1.65;
+}
+.hero-cta-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 24px; }
+.hero-btn {
+  padding: 12px 24px; border-radius: 30px; font-weight: 800; font-size: 13px;
+  text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+  transition: transform .15s ease;
+}
+.hero-btn:active { transform: scale(0.96); }
+.hero-btn-primary { background: var(--fa-gold-gradient); color: #000; box-shadow: 0 6px 20px rgba(212,175,55,0.35); }
+.hero-btn-secondary { background: rgba(255,255,255,0.06); color: #fff; border: 1px solid rgba(255,255,255,0.15); }
+.hero-stats-row { display: flex; justify-content: center; gap: 26px; flex-wrap: wrap; }
+.hero-stat { text-align: center; }
+.hero-stat-num { font-family: 'Teko', sans-serif; font-size: 22px; font-weight: 700; color: var(--fa-gold); line-height: 1; }
+.hero-stat-label { font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+
+@media (min-width: 640px) {
+  .hero-heading { font-size: 52px; }
+  .hero-sub { font-size: 15px; max-width: 540px; }
 }
 </style>
+
+<div class="hero-section">
+  <div class="hero-live-badge"><span class="hero-live-dot"></span> ২,৮৪০+ জন এখন অনলাইনে</div>
+  <h1 class="hero-heading">বাংলাদেশের <span class="accent">#১</span> প্রেডিকশন ও ক্যাসিনো প্ল্যাটফর্ম</h1>
+  <p class="hero-sub">লাইভ ম্যাচ প্রেডিক্ট করুন, প্রিমিয়াম ক্যাসিনো গেম খেলুন এবং সেকেন্ডেই জিতুন রিয়েল রিওয়ার্ড — নিরাপদ, দ্রুত ও সম্পূর্ণ লাইসেন্সপ্রাপ্ত।</p>
+  <div class="hero-cta-row">
+    <a href="#categoryTabs" class="hero-btn hero-btn-primary"><i class="fas fa-play"></i> এখনই খেলুন</a>
+    <% if (!locals.user) { %>
+      <a href="/register" class="hero-btn hero-btn-secondary"><i class="fas fa-user-plus"></i> ফ্রি অ্যাকাউন্ট খুলুন</a>
+    <% } else { %>
+      <a href="/payment/deposit" class="hero-btn hero-btn-secondary"><i class="fas fa-wallet"></i> ডিপোজিট করুন</a>
+    <% } %>
+  </div>
+  <div class="hero-stats-row">
+    <div class="hero-stat"><div class="hero-stat-num">১১৮+</div><div class="hero-stat-label">গেমস</div></div>
+    <div class="hero-stat"><div class="hero-stat-num">২৪/৭</div><div class="hero-stat-label">সাপোর্ট</div></div>
+    <div class="hero-stat"><div class="hero-stat-num">৫ মিনিট</div><div class="hero-stat-label">উইথড্র</div></div>
+  </div>
+</div>
 
 <!-- ===== Marquee Ticker ===== -->
 <div class="marquee-container-premium">
@@ -370,6 +435,33 @@ body.light-mode .jackpot-board {
     </div>
     <div class="shortcut-label"><%= t.rebate %></div>
   </a>
+</div>
+
+<!-- ===== Popular Games (কিউরেটেড হাইলাইট স্ট্রিপ) ===== -->
+<style>
+.popular-games-section { padding: 4px 0 16px; }
+.popular-games-heading {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 12px 10px;
+}
+.popular-games-heading h2 {
+  font-family: 'Teko', sans-serif; font-size: 22px; font-weight: 700; letter-spacing: 0.4px;
+  color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 8px;
+}
+.popular-games-heading h2 i { color: #ff5b3d; font-size: 17px; }
+.popular-games-heading a { font-size: 11px; font-weight: 700; color: var(--fa-gold); text-decoration: none; }
+.popular-games-scroll {
+  display: flex; gap: 12px; overflow-x: auto; padding: 2px 12px 6px; scrollbar-width: none;
+}
+.popular-games-scroll::-webkit-scrollbar { display: none; }
+.popular-games-scroll .game-card-premium { flex: 0 0 128px; }
+</style>
+<div class="popular-games-section">
+  <div class="popular-games-heading">
+    <h2><i class="fas fa-fire"></i> Popular Games</h2>
+    <a href="#categoryTabs">সব দেখুন <i class="fas fa-chevron-right" style="font-size:9px;"></i></a>
+  </div>
+  <div class="popular-games-scroll" id="popularGamesRow"></div>
 </div>
 
 <!-- ===== Horizontal Navigation Tabs (Hot, Slots, Live, Sports, Poker, Favorites, Recent) ===== -->
@@ -638,6 +730,97 @@ for (let i = 0; i < 4; i++) addWin();
 setInterval(addWin, 2500);
 </script>
 
+<!-- ===== Why Choose Us / Benefits ===== -->
+<style>
+.why-us-section { padding: 26px 12px 8px; }
+.why-us-heading { text-align: center; margin-bottom: 18px; }
+.why-us-heading h2 {
+  font-family: 'Teko', sans-serif; font-size: 26px; font-weight: 700; letter-spacing: 0.4px;
+  color: var(--text-main); margin: 0 0 4px;
+}
+.why-us-heading p { font-size: 12px; color: var(--text-muted); margin: 0; }
+.why-us-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.why-us-card {
+  background: linear-gradient(135deg, rgba(30,32,38,0.8) 0%, rgba(15,16,18,0.9) 100%);
+  border: 1px solid rgba(212,175,55,0.12); border-radius: 16px; padding: 16px 14px; text-align: center;
+  transition: transform 0.2s, border-color 0.2s;
+}
+.why-us-card:hover { transform: translateY(-2px); border-color: var(--fa-gold); }
+.why-us-icon {
+  width: 46px; height: 46px; border-radius: 14px; margin: 0 auto 10px;
+  display: flex; align-items: center; justify-content: center; font-size: 19px;
+  background: rgba(212,175,55,0.1); color: var(--fa-gold);
+}
+.why-us-card h3 { font-size: 13px; font-weight: 700; color: var(--text-main); margin: 0 0 5px; }
+.why-us-card p { font-size: 11px; color: var(--text-muted); line-height: 1.5; margin: 0; }
+
+@media (min-width: 640px) { .why-us-grid { grid-template-columns: repeat(4, 1fr); } }
+</style>
+<div class="why-us-section">
+  <div class="why-us-heading">
+    <h2>কেন Livo বেছে নেবেন?</h2>
+    <p>আমরা যা দিচ্ছি, তা আপনার খেলা আরও নিরাপদ ও আনন্দময় করে তোলে</p>
+  </div>
+  <div class="why-us-grid">
+    <div class="why-us-card">
+      <div class="why-us-icon"><i class="fas fa-bolt"></i></div>
+      <h3>দ্রুত উইথড্র</h3>
+      <p>মাত্র ৫ মিনিটে আপনার জেতা টাকা তুলে নিন, কোনো ঝামেলা ছাড়াই।</p>
+    </div>
+    <div class="why-us-card">
+      <div class="why-us-icon"><i class="fas fa-chart-line"></i></div>
+      <h3>লাইভ প্রেডিকশন</h3>
+      <p>রিয়েল-টাইম ম্যাচ ডেটা দেখে সঠিক প্রেডিকশন করার সুযোগ।</p>
+    </div>
+    <div class="why-us-card">
+      <div class="why-us-icon"><i class="fas fa-headset"></i></div>
+      <h3>২৪/৭ সাপোর্ট</h3>
+      <p>যেকোনো সমস্যায় আমাদের সাপোর্ট টিম সবসময় আপনার পাশে।</p>
+    </div>
+    <div class="why-us-card">
+      <div class="why-us-icon"><i class="fas fa-gift"></i></div>
+      <h3>দুর্দান্ত বোনাস</h3>
+      <p>প্রতিদিন রিওয়ার্ড, রিবেট ও ওয়েলকাম বোনাস জেতার সুযোগ।</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Trust Badges ===== -->
+<style>
+.trust-badges-section { padding: 22px 12px 6px; }
+.trust-badges-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.trust-badge-item {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass);
+  border-radius: 12px; padding: 12px;
+}
+.trust-badge-item i { font-size: 17px; color: #3ddc84; flex-shrink: 0; }
+.trust-badge-item .label { font-size: 11.5px; font-weight: 700; color: var(--text-main); line-height: 1.3; }
+.trust-badge-item .sub { font-size: 9.5px; color: var(--text-muted); }
+
+@media (min-width: 640px) { .trust-badges-grid { grid-template-columns: repeat(4, 1fr); } }
+</style>
+<div class="trust-badges-section">
+  <div class="trust-badges-grid">
+    <div class="trust-badge-item">
+      <i class="fas fa-shield-halved"></i>
+      <div><div class="label">নিরাপদ পেমেন্ট</div><div class="sub">SSL এনক্রিপ্টেড</div></div>
+    </div>
+    <div class="trust-badge-item">
+      <i class="fas fa-headset"></i>
+      <div><div class="label">২৪/৭ সাপোর্ট</div><div class="sub">সবসময় পাশে আছি</div></div>
+    </div>
+    <div class="trust-badge-item">
+      <i class="fas fa-certificate"></i>
+      <div><div class="label">লাইসেন্সপ্রাপ্ত</div><div class="sub">Curacao Licensed</div></div>
+    </div>
+    <div class="trust-badge-item">
+      <i class="fas fa-bolt"></i>
+      <div><div class="label">দ্রুত উইথড্র</div><div class="sub">৫ মিনিটের মধ্যে</div></div>
+    </div>
+  </div>
+</div>
+
 <!-- ===== Footer ===== -->
 <%- include('partials/footer') %>
 
@@ -810,6 +993,26 @@ function renderCatalogProviderList() {
   downBtn.addEventListener('click', () => list.scrollBy({ top: 150, behavior: 'smooth' }));
 })();
 
+// ==================== Popular Games (হাইলাইট স্ট্রিপ) — 'hot' ব্যাজযুক্ত গেম থেকে প্রথম কয়েকটা ====================
+function renderPopularGames() {
+  const row = document.getElementById('popularGamesRow');
+  if (!row) return;
+  const popular = allGames.filter(g => g.badge === 'hot').slice(0, 12);
+  const list = popular.length > 0 ? popular : allGames.slice(0, 12);
+  row.innerHTML = list.map(g => `
+    <a href="/games/${g.slug}" class="game-card-premium">
+      <div class="game-thumb-wrapper">
+        <span class="game-emoji">${g.emoji}</span>
+        ${g.badge ? `<div class="game-badge-premium">${g.badge}</div>` : ''}
+      </div>
+      <div class="game-info-premium">
+        <div class="game-title-premium">${g.name}</div>
+        <div class="game-provider-premium">${g.provider}</div>
+      </div>
+    </a>
+  `).join('');
+}
+
 // ==================== গেইম গ্রিড রেন্ডার ====================
 function renderGames() {
   const c = document.getElementById('gameContainer');
@@ -947,6 +1150,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderCatalogProviderList();
   applyLayout();
   renderGames();
+  renderPopularGames();
 });
 </script>
 
