@@ -356,6 +356,66 @@ function addDaysStr(dateStr, days) {
 function dhakaStartOf(dateStr) { return new Date(dateStr + 'T00:00:00+06:00'); }
 function dhakaEndOf(dateStr) { return new Date(dateStr + 'T23:59:59.999+06:00'); }
 
+router.get('/admin/deposits', requireAdmin, async (req, res) => {
+  try {
+    const method = ['bkash', 'nagad', 'rocket'].includes(req.query.method) ? req.query.method : 'bkash';
+    const quick = req.query.quick || 'today';
+    const today = dhakaTodayStr();
+    let fromStr, toStr;
+
+    if (quick === '7d') { fromStr = addDaysStr(today, -6); toStr = today; }
+    else if (quick === '30d') { fromStr = addDaysStr(today, -29); toStr = today; }
+    else if (quick === '90d') { fromStr = addDaysStr(today, -89); toStr = today; }
+    else if (quick === 'year') { fromStr = today.slice(0, 4) + '-01-01'; toStr = today; }
+    else if (quick === 'custom') { fromStr = req.query.from || today; toStr = req.query.to || today; }
+    else { fromStr = today; toStr = today; }
+
+    const fromTs = dhakaStartOf(fromStr);
+    const toTs = dhakaEndOf(toStr);
+
+    // তিনটা মেথডেরই টোটাল (বর্তমান ডেট রেঞ্জে) — ট্যাব হেডারে দেখানোর জন্য, শুধু approved হিসাব করা হচ্ছে
+    const totalsResult = await pool.query(
+      `SELECT method, COALESCE(SUM(amount),0) AS total, COUNT(*) AS cnt
+       FROM payment_requests
+       WHERE type='deposit' AND status='approved' AND method = ANY($1) AND created_at BETWEEN $2 AND $3
+       GROUP BY method`,
+      [['bkash', 'nagad', 'rocket'], fromTs, toTs]
+    );
+    const totals = { bkash: { total: 0, cnt: 0 }, nagad: { total: 0, cnt: 0 }, rocket: { total: 0, cnt: 0 } };
+    totalsResult.rows.forEach(r => { totals[r.method] = { total: Number(r.total), cnt: parseInt(r.cnt) }; });
+
+    // সিলেক্টেড ট্যাবের সব ট্রানজেকশন (pending/approved/rejected সবই — অ্যাডমিন অ্যাকশন নেওয়ার জন্য)
+    const listResult = await pool.query(
+      `SELECT pr.*, u.username FROM payment_requests pr
+       JOIN users u ON pr.user_id = u.id
+       WHERE pr.type='deposit' AND pr.method=$1 AND pr.created_at BETWEEN $2 AND $3
+       ORDER BY pr.created_at DESC`,
+      [method, fromTs, toTs]
+    );
+
+    res.render('payment/deposits', {
+      user: req.session.user,
+      method,
+      quick,
+      from: fromStr,
+      to: toStr,
+      totals,
+      requests: listResult.rows
+    });
+  } catch (err) {
+    console.error('deposits admin error:', err.message);
+    res.render('payment/deposits', {
+      user: req.session.user,
+      method: 'bkash',
+      quick: 'today',
+      from: dhakaTodayStr(),
+      to: dhakaTodayStr(),
+      totals: { bkash: { total: 0, cnt: 0 }, nagad: { total: 0, cnt: 0 }, rocket: { total: 0, cnt: 0 } },
+      requests: []
+    });
+  }
+});
+
 router.get('/admin/summary', requireAdmin, async (req, res) => {
   try {
     const quick = req.query.quick || 'today';
