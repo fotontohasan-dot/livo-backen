@@ -104,12 +104,12 @@ const LOCALHOST_ANY_PORT = /^http:\/\/localhost:\d+$/;
 
 app.use(cors({
   origin(origin, callback) {
-    // origin হেডার ছাড়া রিকোয়েস্ট (server-to-server, curl, mobile app ইত্যাদি) অনুমোদিত
-    if (!origin) return callback(null, true);
+    // origin হেডার ছাড়া বা "null" (sandboxed webview/in-app browser) রিকোয়েস্ট অনুমোদিত
+    if (!origin || origin === 'null') return callback(null, true);
     if (ALLOWED_ORIGINS.includes(origin) || LOCALHOST_ANY_PORT.test(origin)) {
       return callback(null, true);
     }
-    return callback(new Error('CORS: এই origin থেকে অ্যাক্সেসের অনুমতি নেই — ' + origin));
+    return callback(null, false);
   },
   credentials: true, // session cookie পাঠাতে/পেতে দরকার
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

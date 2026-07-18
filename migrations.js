@@ -654,6 +654,37 @@ async function runMigrations() {
       ADD COLUMN IF NOT EXISTS permissions JSONB DEFAULT '{}'::jsonb;
     `);
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS games (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        slug TEXT UNIQUE NOT NULL,
+        emoji TEXT,
+        category TEXT NOT NULL,
+        provider TEXT,
+        badge TEXT,
+        is_active BOOLEAN DEFAULT true,
+        sort_order INT DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    const gamesCount = await pool.query('SELECT COUNT(*) AS cnt FROM games');
+    if (parseInt(gamesCount.rows[0].cnt) === 0) {
+      const seedGames = [
+        { name: 'Online Ludo', slug: 'ludo', emoji: '🎯', category: 'sports', provider: 'Jili', badge: null },
+        { name: 'Fortune Tiger', slug: 'fortune-tiger', emoji: '🐯', category: 'slots', provider: 'PG Soft', badge: 'hot' },
+        { name: 'Aviator', slug: 'aviator', emoji: '✈️', category: 'slots', provider: 'Spribe', badge: 'hot' },
+        { name: 'Crazy Time', slug: 'crazy-time', emoji: '🎡', category: 'live', provider: 'Pragmatic Play', badge: 'hot' }
+      ];
+      for (let i = 0; i < seedGames.length; i++) {
+        const g = seedGames[i];
+        await pool.query(
+          `INSERT INTO games (name, slug, emoji, category, provider, badge, sort_order) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (slug) DO NOTHING`,
+          [g.name, g.slug, g.emoji, g.category, g.provider, g.badge, i]
+        );
+      }
+    }
+
     console.log("✅ All tables migration completed successfully");
   } catch (err) {
     console.error("❌ Migration error:", err.message);
