@@ -1,9 +1,17 @@
+<%
+const _t = (typeof t !== 'undefined' && t) ? t : {
+  error_title: 'কিছু একটা সমস্যা হয়েছে',
+  server_error: 'সার্ভারে একটি সমস্যা হয়েছে। অনুগ্রহ করে পরে আবার চেষ্টা করুন।',
+  go_to_homepage: 'হোমপেজে যান',
+  go_back: 'ফিরে যান'
+};
+%>
 <!DOCTYPE html>
 <html lang="bn">
 <head>
  <meta charset="UTF-8">
  <meta name="viewport" content="width=device-width, initial-scale=1.0">
- <title><%= t.error_title %> - <%= siteName %></title>
+ <title><%= _t.error_title %> - <%= siteName %></title>
  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&display=swap" rel="stylesheet">
  <style>
    * { margin:0; padding:0; box-sizing:border-box; }
@@ -47,11 +55,11 @@
 <body>
  <div class="error-box">
    <div class="error-icon">⚠️</div>
-   <h1><%= t.error_title %></h1>
-   <p><%= message || t.server_error %></p>
-   <a href="/" class="btn-home">🏠 <%= t.go_to_homepage %></a>
+   <h1><%= _t.error_title %></h1>
+   <p><%= message || _t.server_error %></p>
+   <a href="/" class="btn-home">🏠 <%= _t.go_to_homepage %></a>
    <br>
-   <a href="javascript:history.back()" class="btn-back">← <%= t.go_back %></a>
+   <a href="javascript:history.back()" class="btn-back">← <%= _t.go_back %></a>
  </div>
 </body>
 </html>
