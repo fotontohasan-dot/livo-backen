@@ -694,6 +694,10 @@ async function runMigrations() {
       }
     }
 
+    // KYC রিজেক্ট করার সময় কারণ ইউজারকে দেখানোর জন্য (অ্যাডমিন প্যানেলে আগে থেকেই
+    // "কারণ লিখুন (ইউজারকে দেখানো হবে)" বলা ছিল, কিন্তু কলামই ছিল না)
+    await pool.query(`ALTER TABLE kyc_requests ADD COLUMN IF NOT EXISTS reject_reason TEXT`);
+
     console.log("✅ All tables migration completed successfully");
   } catch (err) {
     console.error("❌ Migration error:", err.message);

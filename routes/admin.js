@@ -401,8 +401,8 @@ router.post('/kyc/:id/reject', async (req, res) => {
     const { id } = req.params;
     const reason = (req.body && req.body.reason) || '';
     const r = await pool.query(
-      "UPDATE kyc_requests SET status = 'rejected', updated_at = NOW() WHERE id = $1 RETURNING user_id",
-      [id]
+      "UPDATE kyc_requests SET status = 'rejected', reject_reason = $2, updated_at = NOW() WHERE id = $1 RETURNING user_id",
+      [id, reason || null]
     );
     if (r.rows[0]) {
       await pool.query("UPDATE users SET kyc_status = 'rejected' WHERE id = $1", [r.rows[0].user_id]);

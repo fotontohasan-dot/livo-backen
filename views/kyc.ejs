@@ -1,73 +1,214 @@
-<%- include('../partials/head') %>
-<%- include('../partials/admin-header') %>
+<%- include('partials/head') %>
+<%- include('partials/navbar') %>
 
-<div class="flex min-h-screen bg-[#0f172a]">
-  <%- include('../partials/admin-sidebar') %>
+<div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto">
+  <h1 style="color:var(--gold);font-size:24px;font-weight:800;margin-bottom:6px">KYC ভেরিফিকেশন</h1>
+  <p style="color:var(--text-muted);font-size:13px;margin-bottom:20px">আপনার পরিচয় যাচাই করে অ্যাকাউন্ট সম্পূর্ণ আনলক করুন — নিরাপদ ও দ্রুত উইথড্রর জন্য এটি প্রয়োজন।</p>
 
-  <main class="flex-1 p-6 lg:p-8 overflow-auto">
-    
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <h1 class="text-3xl font-bold text-white">KYC Requests</h1>
-        <p class="text-gray-400 text-sm mt-1">Verify user identities</p>
+  <% if (typeof success !== 'undefined' && success && success.length) { %>
+    <% success.forEach(function(m) { %>
+      <div style="background:rgba(16,185,129,0.1);border:1px solid #10b981;color:#10b981;padding:14px 16px;border-radius:14px;margin-bottom:16px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px">
+        <i class="fas fa-check-circle"></i><span><%= m %></span>
+      </div>
+    <% }) %>
+  <% } %>
+  <% if (typeof error !== 'undefined' && error && error.length) { %>
+    <% error.forEach(function(m) { %>
+      <div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;color:#f87171;padding:14px 16px;border-radius:14px;margin-bottom:16px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px">
+        <i class="fas fa-exclamation-circle"></i><span><%= m %></span>
+      </div>
+    <% }) %>
+  <% } %>
+
+  <% if (kyc && kyc.status === 'approved') { %>
+    <!-- ===== অনুমোদিত ===== -->
+    <div class="glass-card" style="padding:28px 20px;text-align:center;border:1px solid rgba(16,185,129,0.35);border-radius:20px;background:rgba(16,185,129,0.06)">
+      <div style="width:64px;height:64px;border-radius:50%;background:rgba(16,185,129,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
+        <i class="fas fa-check" style="color:#10b981;font-size:26px"></i>
+      </div>
+      <h2 style="color:#10b981;font-size:18px;font-weight:800;margin-bottom:6px">আপনার KYC অনুমোদিত হয়েছে</h2>
+      <p style="color:var(--text-muted);font-size:13px">আপনার অ্যাকাউন্ট সম্পূর্ণ যাচাইকৃত। কোনো সীমা ছাড়াই ডিপোজিট ও উইথড্র করতে পারবেন।</p>
+    </div>
+
+  <% } else if (kyc && kyc.status === 'pending') { %>
+    <!-- ===== পর্যালোচনাধীন ===== -->
+    <div class="glass-card" style="padding:28px 20px;text-align:center;border:1px solid rgba(234,179,8,0.35);border-radius:20px;background:rgba(234,179,8,0.06)">
+      <div style="width:64px;height:64px;border-radius:50%;background:rgba(234,179,8,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
+        <i class="fas fa-hourglass-half" style="color:var(--gold);font-size:24px"></i>
+      </div>
+      <h2 style="color:var(--gold);font-size:18px;font-weight:800;margin-bottom:6px">আপনার তথ্য পর্যালোচনাধীন</h2>
+      <p style="color:var(--text-muted);font-size:13px;margin-bottom:14px">সাধারণত ২৪ ঘণ্টার মধ্যে যাচাই সম্পন্ন হয়। ফলাফল পেলে জানিয়ে দেওয়া হবে।</p>
+      <div style="text-align:left;background:rgba(255,255,255,0.03);border-radius:12px;padding:14px;font-size:12px;color:#cbd5e1">
+        <div style="margin-bottom:4px"><b style="color:#94a3b8">নাম:</b> <%= kyc.full_name %></div>
+        <div style="margin-bottom:4px"><b style="color:#94a3b8">ডকুমেন্ট নম্বর:</b> <%= kyc.document_number %></div>
+        <div><b style="color:#94a3b8">জমা দেওয়া হয়েছে:</b> <%= new Date(kyc.created_at).toLocaleDateString('bn-BD') %></div>
       </div>
     </div>
 
-    <!-- KYC Table -->
-    <div class="bg-[#1e2937] rounded-3xl border border-[#334155] overflow-hidden">
-      <table class="w-full text-sm">
-        <thead class="bg-[#0f172a]">
-          <tr class="text-gray-400">
-            <th class="text-left px-6 py-4 font-normal">User</th>
-            <th class="text-left px-4 py-4 font-normal">Submitted</th>
-            <th class="text-center px-4 py-4 font-normal">Status</th>
-            <th class="text-center px-6 py-4 font-normal">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-[#334155] text-gray-300">
-          <% requests.forEach(k => { %>
-          <tr class="hover:bg-[#0f172a]">
-            <td class="px-6 py-4">
-              <div class="font-semibold text-white"><%= k.username %></div>
-              <div class="text-xs text-gray-500">ID: <%= k.user_id %></div>
-            </td>
-            <td class="px-4 py-4 text-xs text-gray-400">
-              <%= new Date(k.created_at).toLocaleDateString() %>
-            </td>
-            <td class="px-4 py-4 text-center">
-              <% if(k.status === 'pending') { %>
-                <span class="px-3 py-1 text-xs rounded-full bg-yellow-500/20 text-yellow-400">Pending</span>
-              <% } else if(k.status === 'approved') { %>
-                <span class="px-3 py-1 text-xs rounded-full bg-emerald-500/20 text-emerald-400">Approved</span>
-              <% } else { %>
-                <span class="px-3 py-1 text-xs rounded-full bg-red-500/20 text-red-400">Rejected</span>
-              <% } %>
-            </td>
-            <td class="px-6 py-4">
-              <div class="flex justify-center gap-2">
-                <% if(k.status === 'pending') { %>
-                  <form action="/admin/kyc/<%= k.id %>/approve" method="POST">
-                    <button type="submit" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 rounded-xl text-xs text-white">Approve</button>
-                  </form>
-                  <form action="/admin/kyc/<%= k.id %>/reject" method="POST">
-                    <button type="submit" class="px-4 py-1.5 bg-red-600 hover:bg-red-700 rounded-xl text-xs text-white">Reject</button>
-                  </form>
-                <% } else { %>
-                  <span class="text-gray-500 text-xs">Processed</span>
-                <% } %>
-              </div>
-            </td>
-          </tr>
-          <% }) %>
-        </tbody>
-      </table>
-    </div>
+  <% } else { %>
+    <!-- ===== ফর্ম (নতুন অথবা রিজেক্টেড হলে পুনরায় জমা) ===== -->
 
-    <% if (requests.length === 0) { %>
-      <div class="text-center py-12 text-gray-500">
-        No KYC requests found.
+    <% if (kyc && kyc.status === 'rejected') { %>
+      <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.35);border-radius:16px;padding:16px;margin-bottom:20px">
+        <div style="display:flex;align-items:center;gap:8px;color:#f87171;font-weight:700;font-size:14px;margin-bottom:6px">
+          <i class="fas fa-circle-xmark"></i> আপনার আগের আবেদনটি বাতিল হয়েছে
+        </div>
+        <p style="color:#fca5a5;font-size:12.5px;margin:0">
+          <b>কারণ:</b> <%= kyc.reject_reason && kyc.reject_reason.trim() ? kyc.reject_reason : 'নির্দিষ্ট করা হয়নি — অনুগ্রহ করে সাপোর্টে যোগাযোগ করুন।' %>
+        </p>
       </div>
     <% } %>
 
-  </main>
+    <!-- আপলোড গাইডলাইন -->
+    <div class="glass-card" style="padding:16px 18px;border-radius:16px;margin-bottom:20px;background:rgba(234,179,8,0.06);border:1px solid rgba(234,179,8,0.25)">
+      <div style="color:var(--gold);font-weight:700;font-size:13px;margin-bottom:8px"><i class="fas fa-circle-info"></i> আপলোড করার আগে খেয়াল রাখুন</div>
+      <ul style="margin:0;padding-left:18px;color:#cbd5e1;font-size:12.5px;line-height:1.9">
+        <li>NID / পাসপোর্ট / ড্রাইভিং লাইসেন্স — যেকোনো একটি বৈধ সরকারি ডকুমেন্ট</li>
+        <li>ছবি স্পষ্ট হতে হবে, ডকুমেন্টের চারটি কোণ দৃশ্যমান থাকতে হবে</li>
+        <li>ফরম্যাট: JPG, JPEG, PNG বা WEBP — সর্বোচ্চ ২০MB</li>
+        <li>নাম ও নম্বর ডকুমেন্টে যা লেখা আছে হুবহু মিলিয়ে দিন</li>
+      </ul>
+    </div>
+
+    <form id="kycForm" class="glass-card" style="padding:22px 18px;border-radius:20px;border:1px solid rgba(255,255,255,0.08)" onsubmit="return handleKycSubmit(event)">
+
+      <!-- ধাপ ১ -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <div style="width:26px;height:26px;border-radius:50%;background:var(--gold);color:#1a1a1a;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
+        <span style="color:var(--text-main);font-weight:700;font-size:14px">ব্যক্তিগত তথ্য</span>
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="color:var(--text-muted);font-size:12px;display:block;margin-bottom:5px">ডকুমেন্টে থাকা পূর্ণ নাম</label>
+        <input type="text" name="full_name" required maxlength="60" class="form-input" placeholder="যেমন: Md. Rahim Uddin" value="<%= kyc ? kyc.full_name : '' %>">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+        <div>
+          <label style="color:var(--text-muted);font-size:12px;display:block;margin-bottom:5px">ডকুমেন্টের ধরন</label>
+          <select name="document_type" required class="form-input">
+            <option value="NID">জাতীয় পরিচয়পত্র (NID)</option>
+            <option value="Passport">পাসপোর্ট</option>
+            <option value="Driving License">ড্রাইভিং লাইসেন্স</option>
+          </select>
+        </div>
+        <div>
+          <label style="color:var(--text-muted);font-size:12px;display:block;margin-bottom:5px">ডকুমেন্ট নম্বর</label>
+          <input type="text" name="document_number" required maxlength="30" class="form-input" placeholder="নম্বর লিখুন">
+        </div>
+      </div>
+
+      <!-- ধাপ ২ -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <div style="width:26px;height:26px;border-radius:50%;background:var(--gold);color:#1a1a1a;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
+        <span style="color:var(--text-main);font-weight:700;font-size:14px">ডকুমেন্টের ছবি আপলোড</span>
+      </div>
+
+      <input type="hidden" name="document_url" id="documentUrl" value="">
+
+      <label id="uploadBox" for="documentFile" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border:2px dashed rgba(234,179,8,0.4);border-radius:16px;padding:28px 16px;cursor:pointer;margin-bottom:8px;background:rgba(255,255,255,0.02);text-align:center">
+        <i id="uploadIcon" class="fas fa-cloud-arrow-up" style="color:var(--gold);font-size:26px"></i>
+        <span id="uploadText" style="color:var(--text-muted);font-size:13px">ছবি আপলোড করতে এখানে ট্যাপ করুন</span>
+        <img id="previewImg" style="display:none;max-width:140px;max-height:140px;border-radius:10px;margin-top:6px" />
+      </label>
+      <input type="file" id="documentFile" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" style="display:none" onchange="handleFileSelect(event)">
+      <div id="uploadError" style="color:#f87171;font-size:12px;margin-bottom:16px;display:none"></div>
+      <div style="margin-bottom:20px"></div>
+
+      <!-- ধাপ ৩ -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <div style="width:26px;height:26px;border-radius:50%;background:var(--gold);color:#1a1a1a;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
+        <span style="color:var(--text-main);font-weight:700;font-size:14px">জমা দিন</span>
+      </div>
+
+      <button type="submit" id="submitBtn" class="btn btn-gold" style="width:100%;padding:14px;font-size:14px;border-radius:14px" disabled>
+        <span id="submitBtnText">প্রথমে ছবি আপলোড করুন</span>
+      </button>
+    </form>
+  <% } %>
 </div>
+
+<script>
+let uploadedOk = false;
+
+function setSubmitState(enabled, text) {
+  const btn = document.getElementById('submitBtn');
+  if (!btn) return;
+  btn.disabled = !enabled;
+  document.getElementById('submitBtnText').textContent = text;
+}
+
+async function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const errBox = document.getElementById('uploadError');
+  errBox.style.display = 'none';
+  uploadedOk = false;
+  setSubmitState(false, 'আপলোড হচ্ছে...');
+
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  if (!allowedTypes.includes(file.type)) {
+    errBox.textContent = 'শুধু JPG, PNG বা WEBP ছবি আপলোড করা যাবে।';
+    errBox.style.display = 'block';
+    setSubmitState(false, 'প্রথমে ছবি আপলোড করুন');
+    return;
+  }
+  if (file.size > 20 * 1024 * 1024) {
+    errBox.textContent = 'ফাইলের সাইজ ২০MB-এর বেশি হতে পারবে না।';
+    errBox.style.display = 'block';
+    setSubmitState(false, 'প্রথমে ছবি আপলোড করুন');
+    return;
+  }
+
+  document.getElementById('uploadIcon').className = 'fas fa-spinner fa-spin';
+  document.getElementById('uploadText').textContent = 'আপলোড হচ্ছে...';
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = document.getElementById('previewImg');
+    img.src = reader.result;
+    img.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch('/chat/upload', { method: 'POST', body: formData });
+    const data = await res.json();
+
+    if (!res.ok || !data.url) {
+      throw new Error(data.error || 'আপলোড ব্যর্থ হয়েছে');
+    }
+
+    document.getElementById('documentUrl').value = data.url;
+    document.getElementById('uploadIcon').className = 'fas fa-circle-check';
+    document.getElementById('uploadIcon').style.color = '#10b981';
+    document.getElementById('uploadText').textContent = 'ছবি আপলোড সম্পন্ন ✓';
+    uploadedOk = true;
+    setSubmitState(true, 'KYC জমা দিন');
+  } catch (err) {
+    errBox.textContent = err.message || 'আপলোড ব্যর্থ হয়েছে, আবার চেষ্টা করুন।';
+    errBox.style.display = 'block';
+    document.getElementById('uploadIcon').className = 'fas fa-cloud-arrow-up';
+    document.getElementById('uploadIcon').style.color = 'var(--gold)';
+    document.getElementById('uploadText').textContent = 'ছবি আপলোড করতে এখানে ট্যাপ করুন';
+    setSubmitState(false, 'প্রথমে ছবি আপলোড করুন');
+  }
+}
+
+function handleKycSubmit(e) {
+  if (!uploadedOk || !document.getElementById('documentUrl').value) {
+    e.preventDefault();
+    const errBox = document.getElementById('uploadError');
+    errBox.textContent = 'জমা দেওয়ার আগে ডকুমেন্টের ছবি আপলোড করুন।';
+    errBox.style.display = 'block';
+    return false;
+  }
+  setSubmitState(false, 'জমা হচ্ছে...');
+  return true;
+}
+</script>
+
+<%- include('partials/bottom-nav') %>
+</body>
+</html>

@@ -63,6 +63,14 @@ router.post('/kyc', isAuth, async (req, res) => {
         req.flash('error', 'নাম ও ডকুমেন্ট নাম্বার দিন!');
         return res.redirect('/extra/kyc');
     }
+    if (!document_url) {
+        req.flash('error', 'ডকুমেন্টের ছবি আপলোড করুন!');
+        return res.redirect('/extra/kyc');
+    }
+    if (!isSafeCloudinaryUrl(document_url)) {
+        req.flash('error', 'ডকুমেন্ট ছবি আমাদের নিজস্ব আপলোড সিস্টেম থেকে আসতে হবে।');
+        return res.redirect('/extra/kyc');
+    }
     if (!KYC_NAME_RE.test(full_name.trim())) {
         req.flash('error', 'নামে অস্বাভাবিক ক্যারেক্টার বা লিংক থাকা যাবে না।');
         return res.redirect('/extra/kyc');
@@ -73,10 +81,6 @@ router.post('/kyc', isAuth, async (req, res) => {
     }
     if (document_type && !KYC_DOCTYPE_RE.test(document_type.trim())) {
         req.flash('error', 'ডকুমেন্ট টাইপ সঠিক নয়।');
-        return res.redirect('/extra/kyc');
-    }
-    if (document_url && !isSafeCloudinaryUrl(document_url)) {
-        req.flash('error', 'ডকুমেন্ট ছবি আমাদের নিজস্ব আপলোড সিস্টেম থেকে আসতে হবে।');
         return res.redirect('/extra/kyc');
     }
 
