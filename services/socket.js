@@ -1,6 +1,7 @@
 const { Server } = require("socket.io");
 const { pool } = require('../db');
 const { getBotReply } = require('./chatbot');
+const { notifyTelegram } = require('./telegramNotify');
 
 // ===== "দেখা হয়েছে" (Seen) রিসিট — Messenger-এর মতো রিয়েল-টাইম নোটিফিকেশন =====
 const notifyUserSeen = (userId) => {
@@ -126,6 +127,7 @@ const initSocket = (server, sessionMiddleware) => {
             title: 'নতুন সাপোর্ট মেসেজ',
             message: message || 'একটি ফাইল পাঠানো হয়েছে'
           });
+          notifyTelegram(`💬 <b>নতুন সাপোর্ট মেসেজ</b>\n${u.username || 'ইউজার'}: ${message || '(ফাইল পাঠানো হয়েছে)'}`);
 
           // ===== বট মোড হলে অটো-রিপ্লাই =====
           if (data && data.botMode && message) {

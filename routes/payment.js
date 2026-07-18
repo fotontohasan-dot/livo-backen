@@ -7,6 +7,7 @@ const { processReferralDeposit } = require('../services/referral');
 const crypto = require('crypto');
 const sslcommerz = require('../services/sslcommerz');
 const { broadcastDemoStats, emitAdminAlert } = require('../services/socket');
+const { notifyTelegram } = require('../services/telegramNotify');
 
 const paymentLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -45,6 +46,7 @@ async function notifyAdmins(title, message, alertType) {
     console.error('notifyAdmins error:', e.message);
   }
   if (alertType) emitAdminAlert(alertType, { title, message });
+  notifyTelegram(`🔔 <b>${title}</b>\n${message}`);
 }
 
 // ==================== রিলোড বোনাসের হার ====================
