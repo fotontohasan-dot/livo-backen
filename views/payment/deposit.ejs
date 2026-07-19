@@ -81,9 +81,8 @@
   </div>
 
   <div class="p-4 max-w-[480px] mx-auto">
-    <%- include('../partials/flash') %>
 
-    <form action="/payment/deposit" method="POST" id="depositForm">
+    <form action="/payment/deposit" method="POST" id="depositForm" onsubmit="LivoToast.setLoading(document.getElementById('depSubmitBtn'), true, 'জমা হচ্ছে...')">
 
       <!-- Step 1: Method & Amount -->
       <div id="step1">
@@ -226,7 +225,7 @@
         <div class="flex gap-3 mt-8">
                     <button type="button" id="depBackBtn" class="flex-1 bg-gray-200 text-gray-700 py-4 rounded-2xl font-bold">পিছনে</button>
 
-          <button type="submit" class="flex-[2] red-theme-bg text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 active:scale-95 transition-all">
+          <button type="submit" id="depSubmitBtn" class="flex-[2] red-theme-bg text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 active:scale-95 transition-all">
             সাবমিট করুন
           </button>
         </div>

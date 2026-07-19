@@ -89,7 +89,6 @@
   </a>
 
   <div class="px-4">
-    <%- include('../partials/flash') %>
 
     <!-- Bound Wallet Section -->
     <div class="mb-6">
@@ -160,7 +159,7 @@
       </div>
     <% } %>
 
-    <form action="/payment/withdraw" method="POST" id="withdrawForm">
+    <form action="/payment/withdraw" method="POST" id="withdrawForm" onsubmit="LivoToast.setLoading(document.getElementById('withdrawSubmitBtn'), true, 'উইথড্র অনুরোধ পাঠানো হচ্ছে...')">
       <!-- Withdrawal Form -->
       <fieldset <%= locked ? 'disabled' : '' %> class="space-y-5 <%= locked ? 'opacity-50' : '' %>">
 
@@ -215,7 +214,7 @@
             </button>
         </div>
 
-        <button type="submit" <%= (!cards || cards.length === 0 || locked) ? 'disabled' : '' %> class="w-full red-theme-bg text-white py-4 rounded-lg font-bold text-lg mt-6 shadow-lg active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+        <button type="submit" id="withdrawSubmitBtn" <%= (!cards || cards.length === 0 || locked) ? 'disabled' : '' %> class="w-full red-theme-bg text-white py-4 rounded-lg font-bold text-lg mt-6 shadow-lg active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
             <%= locked ? 'টার্নওভার সম্পন্ন করুন' : 'জমা দিন' %>
         </button>
       </fieldset>

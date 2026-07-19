@@ -25,7 +25,7 @@ function adminRow(a, currentAdminId) {
 <div class="max-w-4xl mx-auto space-y-6">
     <h2 class="text-2xl font-semibold text-slate-900">Platform Settings</h2>
 
-    <form method="POST" action="/admin/settings/update" class="bg-white rounded-3xl border border-slate-100 p-6 space-y-5">
+    <form method="POST" action="/admin/settings/update" class="bg-white rounded-3xl border border-slate-100 p-6 space-y-5" onsubmit="LivoToast.setLoading(document.getElementById('settingsSaveBtn'), true, 'Saving...')">
         <h3 class="font-semibold text-slate-800 border-b pb-3">সাধারণ সেটিংস</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             ${field('site_name', 'সাইটের নাম', 'text', s.site_name || 'Livo Betting')}
@@ -58,7 +58,7 @@ function adminRow(a, currentAdminId) {
             </label>
         </div>
 
-        <button type="submit" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-2xl transition-colors">Save Changes</button>
+        <button type="submit" id="settingsSaveBtn" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-2xl transition-colors">Save Changes</button>
         ${saved ? '<span class="ml-4 text-emerald-600 text-sm font-medium"><i class="fas fa-check-circle"></i> সেভ হয়েছে!</span>' : ''}
         ${saveError ? '<span class="ml-4 text-red-600 text-sm font-medium"><i class="fas fa-triangle-exclamation"></i> সেভ করতে সমস্যা হয়েছে — সার্ভার লগ চেক করুন।</span>' : ''}
     </form>
