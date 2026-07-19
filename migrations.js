@@ -754,6 +754,61 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_fraud_flags_created ON fraud_flags(created_at);`);
 
     console.log("✅ All tables migration completed successfully");
+
+    // ==================== VPN / Proxy / Tor ডিটেকশন (Feature 04) ====================
+    // শুধু ফ্ল্যাগ করা হয়, কখনো অটোমেটিক ব্লক করা হয় না — সিদ্ধান্ত সবসময় অ্যাডমিন নেয়
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS trusted_ips (
+        id SERIAL PRIMARY KEY,
+        ip VARCHAR(45) UNIQUE NOT NULL,
+        note TEXT,
+        added_by INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS vpn_detections (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        ip VARCHAR(45) NOT NULL,
+        context VARCHAR(20) NOT NULL,
+        is_vpn BOOLEAN DEFAULT FALSE,
+        is_proxy BOOLEAN DEFAULT FALSE,
+        is_tor BOOLEAN DEFAULT FALSE,
+        is_hosting BOOLEAN DEFAULT FALSE,
+        risk_level VARCHAR(10) NOT NULL CHECK (risk_level IN ('low','medium','high')),
+        provider VARCHAR(30),
+        details JSONB,
+        status VARCHAR(20) NOT NULL DEFAULT 'open' CHECK (status IN ('open','reviewed','dismissed')),
+        reviewed_by INTEGER REFERENCES users(id),
+        reviewed_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_vpn_det_user ON vpn_detections(user_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_vpn_det_ip ON vpn_detections(ip);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_vpn_det_risk ON vpn_detections(risk_level);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_vpn_det_status ON vpn_detections(status);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_vpn_det_context ON vpn_detections(context);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_vpn_det_created ON vpn_detections(created_at);`);
+
+    // প্রতিটা IP বারবার তৃতীয়-পক্ষ API-তে না পাঠিয়ে কিছুক্ষণ ক্যাশ রাখার জন্য (rate limit বাঁচাতে)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS ip_intel_cache (
+        ip VARCHAR(45) PRIMARY KEY,
+        is_vpn BOOLEAN DEFAULT FALSE,
+        is_proxy BOOLEAN DEFAULT FALSE,
+        is_tor BOOLEAN DEFAULT FALSE,
+        is_hosting BOOLEAN DEFAULT FALSE,
+        risk_level VARCHAR(10),
+        provider VARCHAR(30),
+        details JSONB,
+        checked_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    console.log("✅ VPN/Proxy detection tables ready");
   } catch (err) {
     console.error("❌ Migration error:", err.message);
   }

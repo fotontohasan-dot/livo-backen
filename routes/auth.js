@@ -7,6 +7,7 @@ const { pool } = require('../db');
 const { createReferral } = require('../services/referral');
 const { sendPasswordReset } = require('../services/email');
 const { evaluateRegistration } = require('../services/fraudDetection');
+const { evaluateIp } = require('../services/vpnDetection');
 
 const resetLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -145,6 +146,9 @@ router.post('/register', async (req, res) => {
       phone: phone || null
     }).catch(e => console.error('fraud evaluateRegistration error:', e.message));
 
+    evaluateIp(newUserId, (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim(), 'signup')
+      .catch(e => console.error('vpn evaluateIp (signup) error:', e.message));
+
     req.flash('success', '✅ রেজিস্ট্রেশন সফল হয়েছে! স্বাগতম!');
     res.redirect('/');
   } catch (err) {
@@ -183,6 +187,9 @@ router.post('/login', async (req, res) => {
 
     await recordLogin(req, user.id);
     req.session.user = sanitizeUser(user);
+
+    evaluateIp(user.id, (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim(), 'login')
+      .catch(e => console.error('vpn evaluateIp (login) error:', e.message));
 
     if (user.role && user.role.toLowerCase() === 'admin') {
       return res.redirect('/admin');

@@ -21,6 +21,7 @@ const {
 } = require('../services/twofactor');
 const { getPinStatus, adminResetPin } = require('../services/withdrawPin');
 const { getUserFraudStatus } = require('../services/fraudDetection');
+const { getUserVpnStatus } = require('../services/vpnDetection');
 
 const { requireIntParam, requireAmount, parseAmount, sanitizeText, isSafeUrl } = require('../middleware/validate');
 
@@ -421,7 +422,8 @@ router.post('/kyc/:id/reject', async (req, res) => {
 const SETTING_KEYS = [
   'site_name', 'support_email', 'maintenance_mode', 'max_login_attempts',
   'min_bet', 'max_bet', 'turnover_multiplier', 'max_daily_bets',
-  'deposit_commission_percent', 'withdraw_commission_percent', 'min_deposit', 'min_withdraw'
+  'deposit_commission_percent', 'withdraw_commission_percent', 'min_deposit', 'min_withdraw',
+  'vpn_detection_enabled', 'vpn_detection_api_key'
 ];
 
 router.get('/settings', async (req, res) => {
@@ -430,6 +432,7 @@ router.get('/settings', async (req, res) => {
     const settings = {};
     result.rows.forEach(r => { settings[r.key] = r.value; });
     settings.maintenance_mode = settings.maintenance_mode === 'true';
+    settings.vpn_detection_enabled = settings.vpn_detection_enabled === 'true';
 
     const adminsRes = await pool.query(
       "SELECT id, username, email, created_at FROM users WHERE role = 'admin' ORDER BY created_at ASC"
@@ -450,7 +453,7 @@ router.get('/settings', async (req, res) => {
 router.post('/settings/update', async (req, res) => {
   try {
     for (const key of SETTING_KEYS) {
-      if (key === 'maintenance_mode') continue; // নিচে আলাদাভাবে সামলানো হচ্ছে
+      if (key === 'maintenance_mode' || key === 'vpn_detection_enabled') continue; // নিচে আলাদাভাবে সামলানো হচ্ছে
       if (!(key in req.body)) continue;
       let raw = req.body[key];
       if (Array.isArray(raw)) raw = raw[raw.length - 1];
@@ -472,6 +475,17 @@ router.post('/settings/update', async (req, res) => {
       `INSERT INTO site_settings (key, value, updated_at) VALUES ('maintenance_mode', $1, NOW())
        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
       [String(maintenanceBool)]
+    );
+
+    // vpn_detection_enabled-ও একই কারণে (আনচেক করলে ফিল্ড পাঠানো হয় না) আলাদাভাবে সামলানো হচ্ছে
+    let rawVpnEnabled = 'vpn_detection_enabled' in req.body ? req.body.vpn_detection_enabled : 'false';
+    if (Array.isArray(rawVpnEnabled)) rawVpnEnabled = rawVpnEnabled[rawVpnEnabled.length - 1];
+    const vpnEnabledBool = rawVpnEnabled === true || rawVpnEnabled === 'true' || rawVpnEnabled === 'on' || rawVpnEnabled === '1';
+
+    await pool.query(
+      `INSERT INTO site_settings (key, value, updated_at) VALUES ('vpn_detection_enabled', $1, NOW())
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+      [String(vpnEnabledBool)]
     );
 
     // এই দুটো ব্যর্থ হলেও সেটিংস তো সেভ হয়েই গেছে — তাই আলাদা try/catch দিয়ে
@@ -1183,7 +1197,11 @@ router.get('/users/:id', async (req, res) => {
     let fraudStatus = { currentRiskLevel: 'none', openCount: 0, flags: [] };
     try { fraudStatus = await getUserFraudStatus(uId); } catch (e) {}
 
-    res.render('admin/user-detail', { u: user, bets, transactions, payments, sameIp, referralCount, stats, pinStatus, fraudStatus });
+    // VPN/Proxy/Tor স্ট্যাটাস — শুধু তথ্য দেখানো হয়, কোনো অটোমেটিক অ্যাকশন না
+    let vpnStatus = { currentRiskLevel: 'none', openCount: 0, detections: [] };
+    try { vpnStatus = await getUserVpnStatus(uId); } catch (e) {}
+
+    res.render('admin/user-detail', { u: user, bets, transactions, payments, sameIp, referralCount, stats, pinStatus, fraudStatus, vpnStatus });
   } catch (err) {
     console.error('user detail error:', err.message);
     req.flash('error', 'সমস্যা হয়েছে!');
@@ -1780,6 +1798,123 @@ router.post('/fraud-logs/:id/review', requireIntParam('id'), async (req, res) =>
     req.flash('error', 'সমস্যা হয়েছে!');
   }
   res.redirect('back');
+});
+
+// ==================== VPN / Proxy / Tor ডিটেকশন লগ (Feature 04) ====================
+router.get('/vpn-logs', async (req, res) => {
+  try {
+    const { risk_level = '', status = '', user_id = '', ip = '', context = '', type = '', from = '', to = '' } = req.query;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = 25;
+    const offset = (page - 1) * limit;
+
+    const conditions = [];
+    const params = [];
+    if (risk_level) { params.push(risk_level); conditions.push(`d.risk_level = $${params.length}`); }
+    if (status) { params.push(status); conditions.push(`d.status = $${params.length}`); }
+    if (user_id) { params.push(user_id); conditions.push(`d.user_id = $${params.length}`); }
+    if (ip) { params.push(`%${ip}%`); conditions.push(`d.ip ILIKE $${params.length}`); }
+    if (context) { params.push(context); conditions.push(`d.context = $${params.length}`); }
+    if (type === 'vpn') conditions.push(`d.is_vpn = true`);
+    if (type === 'proxy') conditions.push(`d.is_proxy = true`);
+    if (type === 'tor') conditions.push(`d.is_tor = true`);
+    if (type === 'hosting') conditions.push(`d.is_hosting = true`);
+    if (from) { params.push(from); conditions.push(`d.created_at >= $${params.length}`); }
+    if (to) { params.push(to); conditions.push(`d.created_at <= $${params.length}::date + INTERVAL '1 day'`); }
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const countRes = await pool.query(`SELECT COUNT(*) FROM vpn_detections d ${where}`, params);
+    const total = parseInt(countRes.rows[0].count);
+
+    const listParams = [...params, limit, offset];
+    const result = await pool.query(
+      `SELECT d.*, u.username, u.email
+       FROM vpn_detections d LEFT JOIN users u ON u.id = d.user_id
+       ${where}
+       ORDER BY d.created_at DESC LIMIT $${listParams.length - 1} OFFSET $${listParams.length}`,
+      listParams
+    );
+
+    const trustedRes = await pool.query(
+      `SELECT t.*, u.username AS added_by_username FROM trusted_ips t LEFT JOIN users u ON u.id = t.added_by ORDER BY t.created_at DESC`
+    );
+
+    const settingsRes = await pool.query(`SELECT key, value FROM site_settings WHERE key IN ('vpn_detection_enabled','vpn_detection_api_key')`);
+    const vpnSettings = {};
+    settingsRes.rows.forEach(r => { vpnSettings[r.key] = r.value; });
+
+    res.render('admin/vpn-logs', {
+      logs: result.rows,
+      page, totalPages: Math.max(1, Math.ceil(total / limit)), total,
+      filters: { risk_level, status, user_id, ip, context, type, from, to },
+      trustedIps: trustedRes.rows,
+      vpnEnabled: vpnSettings.vpn_detection_enabled === 'true'
+    });
+  } catch (err) {
+    console.error('VPN logs list error:', err.message);
+    res.render('admin/vpn-logs', {
+      logs: [], page: 1, totalPages: 1, total: 0,
+      filters: { risk_level: '', status: '', user_id: '', ip: '', context: '', type: '', from: '', to: '' },
+      trustedIps: [], vpnEnabled: false
+    });
+  }
+});
+
+router.post('/vpn-logs/:id/review', requireIntParam('id'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const action = req.body.action === 'dismiss' ? 'dismissed' : 'reviewed';
+    const r = await pool.query(
+      `UPDATE vpn_detections SET status = $1, reviewed_by = $2, reviewed_at = NOW() WHERE id = $3 RETURNING user_id`,
+      [action, req.session.user.id, id]
+    );
+    if (r.rows[0]) {
+      await logAdminAction(
+        req.session.user.id, req.session.user.username, 'VPN_DETECTION_REVIEWED',
+        `VPN ডিটেকশন #${id} (ইউজার #${r.rows[0].user_id}) কে "${action}" হিসেবে চিহ্নিত করা হয়েছে`, req.ip
+      );
+    }
+    req.flash('success', 'VPN ডিটেকশন লগ আপডেট হয়েছে!');
+  } catch (err) {
+    console.error('VPN detection review error:', err.message);
+    req.flash('error', 'সমস্যা হয়েছে!');
+  }
+  res.redirect('back');
+});
+
+router.post('/trusted-ips/add', async (req, res) => {
+  try {
+    const ip = (req.body.ip || '').trim();
+    const note = (req.body.note || '').trim();
+    if (!ip) {
+      req.flash('error', 'IP অ্যাড্রেস দিতে হবে!');
+      return res.redirect('/admin/vpn-logs');
+    }
+    await pool.query(
+      `INSERT INTO trusted_ips (ip, note, added_by) VALUES ($1, $2, $3) ON CONFLICT (ip) DO UPDATE SET note = EXCLUDED.note`,
+      [ip, note || null, req.session.user.id]
+    );
+    await logAdminAction(req.session.user.id, req.session.user.username, 'TRUSTED_IP_ADDED', `IP হোয়াইটলিস্ট করা হয়েছে: ${ip}`, req.ip);
+    req.flash('success', `IP ${ip} হোয়াইটলিস্ট করা হয়েছে!`);
+  } catch (err) {
+    console.error('Trusted IP add error:', err.message);
+    req.flash('error', 'সমস্যা হয়েছে!');
+  }
+  res.redirect('/admin/vpn-logs');
+});
+
+router.post('/trusted-ips/:id/remove', requireIntParam('id'), async (req, res) => {
+  try {
+    const r = await pool.query(`DELETE FROM trusted_ips WHERE id = $1 RETURNING ip`, [req.params.id]);
+    if (r.rows[0]) {
+      await logAdminAction(req.session.user.id, req.session.user.username, 'TRUSTED_IP_REMOVED', `IP হোয়াইটলিস্ট থেকে সরানো হয়েছে: ${r.rows[0].ip}`, req.ip);
+    }
+    req.flash('success', 'হোয়াইটলিস্ট থেকে IP সরানো হয়েছে!');
+  } catch (err) {
+    console.error('Trusted IP remove error:', err.message);
+    req.flash('error', 'সমস্যা হয়েছে!');
+  }
+  res.redirect('/admin/vpn-logs');
 });
 
 

@@ -58,6 +58,17 @@ function adminRow(a, currentAdminId) {
             </label>
         </div>
 
+        <h3 class="font-semibold text-slate-800 border-b pb-3 pt-2">VPN / Proxy / Tor ডিটেকশন</h3>
+        <p class="text-xs text-slate-400 -mt-3">লগইন, সাইনআপ, ডিপোজিট ও উইথড্রর সময় VPN/Proxy/Tor/Hosting IP চেক করে অ্যাডমিন রিভিউয়ের জন্য ফ্ল্যাগ করবে। কখনো অটোমেটিক ব্লক করবে না।</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-center">
+            <label class="flex items-center gap-3">
+                <input type="hidden" name="vpn_detection_enabled" value="false">
+                <input type="checkbox" name="vpn_detection_enabled" value="true" ${s.vpn_detection_enabled ? 'checked' : ''} class="w-5 h-5 rounded">
+                <span class="text-sm font-medium text-slate-700">🛡️ VPN ডিটেকশন চালু করুন</span>
+            </label>
+            ${field('vpn_detection_api_key', 'proxycheck.io API Key', 'text', s.vpn_detection_api_key || '')}
+        </div>
+
         <button type="submit" id="settingsSaveBtn" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-2xl transition-colors">Save Changes</button>
         ${saved ? '<span class="ml-4 text-emerald-600 text-sm font-medium"><i class="fas fa-check-circle"></i> সেভ হয়েছে!</span>' : ''}
         ${saveError ? '<span class="ml-4 text-red-600 text-sm font-medium"><i class="fas fa-triangle-exclamation"></i> সেভ করতে সমস্যা হয়েছে — সার্ভার লগ চেক করুন।</span>' : ''}

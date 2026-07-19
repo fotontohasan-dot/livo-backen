@@ -46,6 +46,31 @@ function fraudRow(fl) {
     actions +
   '</div>';
 }
+function vpnRow(d) {
+  const riskColor = d.risk_level === 'high' ? 'bg-red-100 text-red-700' : d.risk_level === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600';
+  const statusColor = d.status === 'open' ? 'bg-blue-100 text-blue-700' : d.status === 'reviewed' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500';
+  const tags = [];
+  if (d.is_tor) tags.push('<span class="px-2 py-0.5 text-[11px] font-bold rounded bg-red-50 text-red-600 border border-red-200">TOR</span>');
+  if (d.is_vpn) tags.push('<span class="px-2 py-0.5 text-[11px] font-bold rounded bg-indigo-50 text-indigo-600 border border-indigo-200">VPN</span>');
+  if (d.is_proxy) tags.push('<span class="px-2 py-0.5 text-[11px] font-bold rounded bg-purple-50 text-purple-600 border border-purple-200">PROXY</span>');
+  if (d.is_hosting) tags.push('<span class="px-2 py-0.5 text-[11px] font-bold rounded bg-orange-50 text-orange-600 border border-orange-200">HOSTING</span>');
+  const actions = d.status === 'open'
+    ? '<div class="flex gap-1.5 mt-2">' +
+        '<form method="POST" action="/admin/vpn-logs/' + d.id + '/review" style="display:inline"><input type="hidden" name="action" value="reviewed"><button type="submit" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white">Reviewed</button></form>' +
+        '<form method="POST" action="/admin/vpn-logs/' + d.id + '/review" style="display:inline"><input type="hidden" name="action" value="dismiss"><button type="submit" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-400 hover:bg-slate-500 text-white">Dismiss</button></form>' +
+      '</div>'
+    : '';
+  return '<div class="px-6 py-4 border-b border-slate-100">' +
+    '<div class="flex items-center gap-2 flex-wrap">' +
+      '<span class="px-2.5 py-1 text-xs font-bold rounded-full ' + riskColor + '">' + escapeHtml((d.risk_level || '').toUpperCase()) + '</span>' +
+      '<span class="px-2.5 py-1 text-xs font-semibold rounded-full ' + statusColor + '">' + escapeHtml(d.status) + '</span>' +
+      '<span class="text-xs text-slate-400">' + fmtDate(d.created_at) + '</span>' +
+    '</div>' +
+    '<div class="flex gap-1 flex-wrap mt-1.5">' + tags.join('') + '</div>' +
+    '<div class="text-xs text-slate-500 mt-1.5 font-mono">' + escapeHtml(d.ip) + ' &middot; ' + escapeHtml(d.context) + '</div>' +
+    actions +
+  '</div>';
+}
 const betsHtml = (bets || []).map(betRow).join('') || '<tr><td colspan="5" class="px-4 py-6 text-center text-slate-400 text-sm">কোনো বেট নেই</td></tr>';
 const paymentsHtml = (payments || []).map(paymentRow).join('') || '<tr><td colspan="5" class="px-4 py-6 text-center text-slate-400 text-sm">কোনো পেমেন্ট নেই</td></tr>';
 const sameIpHtml = (sameIp || []).map(ipRow).join('') || '<div class="px-4 py-4 text-center text-slate-400 text-xs">একই আইপিতে অন্য কোনো ইউজার নেই</div>';
@@ -53,6 +78,12 @@ const fraudFlagsHtml = ((fraudStatus && fraudStatus.flags) || []).map(fraudRow).
 const riskLevel = (fraudStatus && fraudStatus.currentRiskLevel) || 'none';
 const riskHeaderColor = riskLevel === 'high' ? 'bg-red-100 text-red-700' : riskLevel === 'medium' ? 'bg-amber-100 text-amber-700' : riskLevel === 'low' ? 'bg-slate-100 text-slate-600' : 'bg-emerald-100 text-emerald-700';
 const riskHeaderLabel = riskLevel === 'none' ? 'ঝুঁকিমুক্ত' : riskLevel.toUpperCase() + ' ঝুঁকি';
+
+const vpnFlagsHtml = ((vpnStatus && vpnStatus.detections) || []).map(vpnRow).join('') || '<div class="px-6 py-4 text-center text-slate-400 text-xs">কোনো VPN/Proxy ডিটেকশন নেই</div>';
+const vpnRiskLevel = (vpnStatus && vpnStatus.currentRiskLevel) || 'none';
+const vpnHeaderColor = vpnRiskLevel === 'high' ? 'bg-red-100 text-red-700' : vpnRiskLevel === 'medium' ? 'bg-amber-100 text-amber-700' : vpnRiskLevel === 'low' ? 'bg-slate-100 text-slate-600' : 'bg-emerald-100 text-emerald-700';
+const vpnHeaderLabel = vpnRiskLevel === 'none' ? 'VPN পাওয়া যায়নি' : 'VPN/Proxy ঝুঁকি: ' + vpnRiskLevel.toUpperCase();
+
 const banLabel = u.is_banned ? 'Unban ইউজার' : 'Ban ইউজার';
 const banColor = u.is_banned ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700';
 %>
@@ -81,6 +112,9 @@ const banColor = u.is_banned ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-6
                     </span>
                     <span class="px-4 py-2 rounded-2xl text-sm font-semibold ${riskHeaderColor}">
                         <i class="fas fa-shield-halved mr-1"></i>${riskHeaderLabel}
+                    </span>
+                    <span class="px-4 py-2 rounded-2xl text-sm font-semibold ${vpnHeaderColor}">
+                        <i class="fas fa-user-secret mr-1"></i>${vpnHeaderLabel}
                     </span>
                 </div>
             </div>
@@ -140,6 +174,14 @@ const banColor = u.is_banned ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-6
                     <a href="/admin/fraud-logs?user_id=${u.id}" class="text-xs text-blue-600 hover:underline">সব লগ দেখুন →</a>
                 </div>
                 <div>${fraudFlagsHtml}</div>
+            </div>
+
+            <div class="bg-white border border-slate-100 rounded-3xl overflow-hidden">
+                <div class="flex items-center justify-between px-6 pt-6 pb-3">
+                    <h3 class="font-semibold text-slate-800"><i class="fas fa-user-secret text-indigo-500 mr-2"></i>VPN / Proxy / Tor ডিটেকশন (${(vpnStatus && vpnStatus.detections && vpnStatus.detections.length) || 0})</h3>
+                    <a href="/admin/vpn-logs?user_id=${u.id}" class="text-xs text-blue-600 hover:underline">সব লগ দেখুন →</a>
+                </div>
+                <div>${vpnFlagsHtml}</div>
             </div>
         </div>
 

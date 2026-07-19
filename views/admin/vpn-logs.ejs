@@ -1,0 +1,160 @@
+<%
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function fmtDate(d) { return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); }
+function riskBadge(level) {
+  const map = { high: 'bg-red-100 text-red-700', medium: 'bg-amber-100 text-amber-700', low: 'bg-slate-100 text-slate-600' };
+  return '<span class="px-3 py-1 text-xs font-bold rounded-full ' + (map[level] || map.low) + '">' + escapeHtml((level || '').toUpperCase()) + '</span>';
+}
+function statusBadge(status) {
+  const map = { open: 'bg-blue-100 text-blue-700', reviewed: 'bg-emerald-100 text-emerald-700', dismissed: 'bg-slate-100 text-slate-500' };
+  return '<span class="px-2.5 py-1 text-xs font-semibold rounded-full ' + (map[status] || map.open) + '">' + escapeHtml(status) + '</span>';
+}
+function typeTags(l) {
+  const tags = [];
+  if (l.is_tor) tags.push('<span class="px-2 py-0.5 text-[11px] font-bold rounded bg-red-50 text-red-600 border border-red-200">TOR</span>');
+  if (l.is_vpn) tags.push('<span class="px-2 py-0.5 text-[11px] font-bold rounded bg-indigo-50 text-indigo-600 border border-indigo-200">VPN</span>');
+  if (l.is_proxy) tags.push('<span class="px-2 py-0.5 text-[11px] font-bold rounded bg-purple-50 text-purple-600 border border-purple-200">PROXY</span>');
+  if (l.is_hosting) tags.push('<span class="px-2 py-0.5 text-[11px] font-bold rounded bg-orange-50 text-orange-600 border border-orange-200">HOSTING</span>');
+  return '<div class="flex gap-1 flex-wrap">' + tags.join('') + '</div>';
+}
+const contextLabels = { login: 'লগইন', signup: 'সাইনআপ', deposit: 'ডিপোজিট', withdraw: 'উইথড্র' };
+function logRow(l) {
+  const userLabel = l.username ? escapeHtml(l.username) + ' <span class="text-slate-400">(#' + l.user_id + ')</span>' : '#' + l.user_id;
+  const actions = l.status === 'open'
+    ? '<div class="flex gap-1.5 justify-center">' +
+        '<form method="POST" action="/admin/vpn-logs/' + l.id + '/review" style="display:inline"><input type="hidden" name="action" value="reviewed"><button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white">Reviewed</button></form>' +
+        '<form method="POST" action="/admin/vpn-logs/' + l.id + '/review" style="display:inline"><input type="hidden" name="action" value="dismiss"><button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-400 hover:bg-slate-500 text-white">Dismiss</button></form>' +
+      '</div>'
+    : '<span class="text-xs text-slate-400">' + (l.reviewed_at ? fmtDate(l.reviewed_at) : '-') + '</span>';
+
+  return '<tr class="hover:bg-slate-50 align-top">' +
+    '<td class="px-6 py-4"><a href="/admin/users/' + l.user_id + '" class="font-semibold text-blue-600 hover:underline">' + userLabel + '</a></td>' +
+    '<td class="px-6 py-4 font-mono text-xs">' + escapeHtml(l.ip) + '</td>' +
+    '<td class="px-6 py-4 text-xs text-slate-500">' + (contextLabels[l.context] || escapeHtml(l.context)) + '</td>' +
+    '<td class="px-6 py-4">' + typeTags(l) + '</td>' +
+    '<td class="px-6 py-4">' + riskBadge(l.risk_level) + '</td>' +
+    '<td class="px-6 py-4">' + statusBadge(l.status) + '</td>' +
+    '<td class="px-6 py-4 text-xs text-slate-400">' + fmtDate(l.created_at) + '</td>' +
+    '<td class="px-6 py-4 text-center">' + actions + '</td>' +
+  '</tr>';
+}
+function trustedRow(t) {
+  return '<tr class="hover:bg-slate-50">' +
+    '<td class="px-4 py-2.5 font-mono text-xs">' + escapeHtml(t.ip) + '</td>' +
+    '<td class="px-4 py-2.5 text-xs text-slate-500">' + escapeHtml(t.note || '-') + '</td>' +
+    '<td class="px-4 py-2.5 text-xs text-slate-400">' + escapeHtml(t.added_by_username || 'SYSTEM') + '</td>' +
+    '<td class="px-4 py-2.5 text-xs text-slate-400">' + fmtDate(t.created_at) + '</td>' +
+    '<td class="px-4 py-2.5 text-center">' +
+      '<form method="POST" action="/admin/trusted-ips/' + t.id + '/remove" onsubmit="return confirm(\'হোয়াইটলিস্ট থেকে সরাবেন?\')">' +
+        '<button type="submit" class="px-2.5 py-1 text-xs bg-red-100 text-red-600 rounded-lg font-semibold">Remove</button>' +
+      '</form>' +
+    '</td></tr>';
+}
+
+const rows = (logs || []).map(logRow).join('') || '<tr><td colspan="8" class="px-6 py-10 text-center text-slate-400">কোনো VPN/Proxy ডিটেকশন পাওয়া যায়নি</td></tr>';
+const trustedRows = (trustedIps || []).map(trustedRow).join('') || '<tr><td colspan="5" class="px-4 py-6 text-center text-slate-400 text-xs">কোনো হোয়াইটলিস্টেড IP নেই</td></tr>';
+const f = filters || {};
+%>
+<%- include('partials/admin-layout', {
+    title: 'VPN Detection Log',
+    active: 'vpn-logs',
+    body: `
+<div class="max-w-7xl mx-auto space-y-6">
+    <div class="flex items-center justify-between flex-wrap gap-3">
+        <div>
+            <h1 class="text-2xl font-semibold text-slate-900">VPN / Proxy / Tor Detection Log</h1>
+            <p class="text-slate-500 mt-1 text-sm">মোট ${total || 0}টি ডিটেকশন — শুধু রিভিউয়ের জন্য, অটোমেটিক ব্লক হয় না</p>
+        </div>
+        <span class="px-4 py-2 rounded-2xl text-sm font-semibold ${vpnEnabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}">
+            <i class="fas fa-power-off mr-1"></i>ডিটেকশন সিস্টেম: ${vpnEnabled ? 'চালু' : 'বন্ধ'}
+        </span>
+    </div>
+    ${!vpnEnabled ? '<div class="bg-amber-50 border border-amber-200 text-amber-700 text-sm px-5 py-3 rounded-2xl"><i class="fas fa-triangle-exclamation mr-2"></i>VPN ডিটেকশন সিস্টেম বর্তমানে বন্ধ আছে। চালু করতে <a href="/admin/settings" class="underline font-semibold">Settings</a> পেজে যান।</div>' : ''}
+
+    <form method="GET" action="/admin/vpn-logs" class="flex flex-wrap gap-3">
+        <select name="risk_level" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+            <option value="">সব ঝুঁকির মাত্রা</option>
+            <option value="high" ${f.risk_level === 'high' ? 'selected' : ''}>High</option>
+            <option value="medium" ${f.risk_level === 'medium' ? 'selected' : ''}>Medium</option>
+            <option value="low" ${f.risk_level === 'low' ? 'selected' : ''}>Low</option>
+        </select>
+        <select name="status" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+            <option value="">সব স্ট্যাটাস</option>
+            <option value="open" ${f.status === 'open' ? 'selected' : ''}>Open</option>
+            <option value="reviewed" ${f.status === 'reviewed' ? 'selected' : ''}>Reviewed</option>
+            <option value="dismissed" ${f.status === 'dismissed' ? 'selected' : ''}>Dismissed</option>
+        </select>
+        <select name="context" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+            <option value="">সব কনটেক্সট</option>
+            <option value="login" ${f.context === 'login' ? 'selected' : ''}>লগইন</option>
+            <option value="signup" ${f.context === 'signup' ? 'selected' : ''}>সাইনআপ</option>
+            <option value="deposit" ${f.context === 'deposit' ? 'selected' : ''}>ডিপোজিট</option>
+            <option value="withdraw" ${f.context === 'withdraw' ? 'selected' : ''}>উইথড্র</option>
+        </select>
+        <select name="type" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+            <option value="">সব টাইপ</option>
+            <option value="vpn" ${f.type === 'vpn' ? 'selected' : ''}>VPN</option>
+            <option value="proxy" ${f.type === 'proxy' ? 'selected' : ''}>Proxy</option>
+            <option value="tor" ${f.type === 'tor' ? 'selected' : ''}>Tor</option>
+            <option value="hosting" ${f.type === 'hosting' ? 'selected' : ''}>Hosting/Datacenter</option>
+        </select>
+        <input type="text" name="user_id" value="${f.user_id || ''}" placeholder="ইউজার ID" class="w-28 border border-slate-200 px-4 py-2.5 rounded-2xl text-sm outline-none focus:border-blue-300">
+        <input type="text" name="ip" value="${f.ip || ''}" placeholder="IP সার্চ" class="w-36 border border-slate-200 px-4 py-2.5 rounded-2xl text-sm outline-none focus:border-blue-300">
+        <input type="date" name="from" value="${f.from || ''}" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+        <input type="date" name="to" value="${f.to || ''}" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+        <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">ফিল্টার</button>
+        ${(f.risk_level || f.status || f.user_id || f.ip || f.context || f.type || f.from || f.to) ? '<a href="/admin/vpn-logs" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">রিসেট</a>' : ''}
+    </form>
+
+    <div class="bg-white rounded-3xl border border-slate-100 overflow-x-auto modern-table">
+        <table class="w-full text-sm">
+            <thead class="bg-slate-50">
+                <tr>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">User</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">IP</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Context</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Type</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Risk</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Status</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Date</th>
+                    <th class="px-6 py-4 text-center font-medium text-slate-500 uppercase text-xs">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">${rows}</tbody>
+        </table>
+    </div>
+
+    <div class="flex justify-center gap-3">
+        ${page > 1 ? '<a href="/admin/vpn-logs?page=' + (page - 1) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">← আগের পেজ</a>' : ''}
+        <span class="px-4 py-2 text-sm text-slate-500">পেজ ${page} / ${totalPages}</span>
+        ${page < totalPages ? '<a href="/admin/vpn-logs?page=' + (page + 1) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">পরের পেজ →</a>' : ''}
+    </div>
+
+    <div class="bg-white rounded-3xl border border-slate-100 p-6">
+        <h3 class="font-semibold text-slate-800 mb-1"><i class="fas fa-shield-check text-emerald-500 mr-2"></i>বিশ্বস্ত IP হোয়াইটলিস্ট</h3>
+        <p class="text-xs text-slate-400 mb-4">হোয়াইটলিস্টেড IP থেকে কোনো ডিটেকশন চেক হবে না (যেমন অফিস IP, নিজস্ব VPN)</p>
+        <form method="POST" action="/admin/trusted-ips/add" class="flex flex-wrap gap-2 mb-4">
+            <input type="text" name="ip" required placeholder="IP অ্যাড্রেস (যেমন 103.10.20.30)" class="flex-1 min-w-[200px] border px-4 py-2.5 rounded-2xl text-sm">
+            <input type="text" name="note" placeholder="নোট (ঐচ্ছিক)" class="flex-1 min-w-[200px] border px-4 py-2.5 rounded-2xl text-sm">
+            <button type="submit" class="px-5 bg-slate-800 text-white rounded-2xl text-sm font-semibold">Whitelist যোগ করুন</button>
+        </form>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead><tr class="border-b border-slate-100">
+                    <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">IP</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Note</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Added By</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Date</th>
+                    <th class="px-4 py-2 text-center text-xs font-medium text-slate-500 uppercase">Actions</th>
+                </tr></thead>
+                <tbody class="divide-y divide-slate-100">${trustedRows}</tbody>
+            </table>
+        </div>
+    </div>
+</div>
+`
+}) %>
