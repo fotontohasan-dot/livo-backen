@@ -20,6 +20,7 @@ const {
   qrFromSecret
 } = require('../services/twofactor');
 const { getPinStatus, adminResetPin } = require('../services/withdrawPin');
+const { getUserFraudStatus } = require('../services/fraudDetection');
 
 const { requireIntParam, requireAmount, parseAmount, sanitizeText, isSafeUrl } = require('../middleware/validate');
 
@@ -1178,7 +1179,11 @@ router.get('/users/:id', async (req, res) => {
     let pinStatus = { configured: false, updatedAt: null, locked: false };
     try { pinStatus = await getPinStatus(uId); } catch (e) {}
 
-    res.render('admin/user-detail', { u: user, bets, transactions, payments, sameIp, referralCount, stats, pinStatus });
+    // ফ্রড স্ট্যাটাস — শুধু তথ্য দেখানো হয়, কোনো অটোমেটিক অ্যাকশন না
+    let fraudStatus = { currentRiskLevel: 'none', openCount: 0, flags: [] };
+    try { fraudStatus = await getUserFraudStatus(uId); } catch (e) {}
+
+    res.render('admin/user-detail', { u: user, bets, transactions, payments, sameIp, referralCount, stats, pinStatus, fraudStatus });
   } catch (err) {
     console.error('user detail error:', err.message);
     req.flash('error', 'সমস্যা হয়েছে!');
@@ -1712,7 +1717,72 @@ router.get('/activity', async (req, res) => {
   }
 });
 
-// ==================== রিপোর্টিং ====================
+// ==================== ফ্রড লগ (Fraud Detection) ====================
+router.get('/fraud-logs', async (req, res) => {
+  try {
+    const { risk_level = '', status = '', user_id = '', from = '', to = '' } = req.query;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = 25;
+    const offset = (page - 1) * limit;
+
+    const conditions = [];
+    const params = [];
+    if (risk_level) { params.push(risk_level); conditions.push(`risk_level = $${params.length}`); }
+    if (status) { params.push(status); conditions.push(`status = $${params.length}`); }
+    if (user_id) { params.push(user_id); conditions.push(`user_id = $${params.length}`); }
+    if (from) { params.push(from); conditions.push(`created_at >= $${params.length}`); }
+    if (to) { params.push(to); conditions.push(`created_at <= $${params.length}::date + INTERVAL '1 day'`); }
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const countRes = await pool.query(`SELECT COUNT(*) FROM fraud_flags ${where}`, params);
+    const total = parseInt(countRes.rows[0].count);
+
+    const listParams = [...params, limit, offset];
+    const result = await pool.query(
+      `SELECT f.*, u.username, u.email, u.phone
+       FROM fraud_flags f LEFT JOIN users u ON u.id = f.user_id
+       ${where}
+       ORDER BY f.created_at DESC LIMIT $${listParams.length - 1} OFFSET $${listParams.length}`,
+      listParams
+    );
+
+    res.render('admin/fraud-logs', {
+      logs: result.rows,
+      page, totalPages: Math.max(1, Math.ceil(total / limit)), total,
+      filters: { risk_level, status, user_id, from, to }
+    });
+  } catch (err) {
+    console.error('Fraud logs list error:', err.message);
+    res.render('admin/fraud-logs', {
+      logs: [], page: 1, totalPages: 1, total: 0,
+      filters: { risk_level: '', status: '', user_id: '', from: '', to: '' }
+    });
+  }
+});
+
+router.post('/fraud-logs/:id/review', requireIntParam('id'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const action = req.body.action === 'dismiss' ? 'dismissed' : 'reviewed';
+    const r = await pool.query(
+      `UPDATE fraud_flags SET status = $1, reviewed_by = $2, reviewed_at = NOW() WHERE id = $3 RETURNING user_id`,
+      [action, req.session.user.id, id]
+    );
+    if (r.rows[0]) {
+      await logAdminAction(
+        req.session.user.id, req.session.user.username, 'FRAUD_FLAG_REVIEWED',
+        `ফ্রড ফ্ল্যাগ #${id} (ইউজার #${r.rows[0].user_id}) কে "${action}" হিসেবে চিহ্নিত করা হয়েছে`, req.ip
+      );
+    }
+    req.flash('success', 'ফ্রড ফ্ল্যাগ আপডেট হয়েছে!');
+  } catch (err) {
+    console.error('Fraud flag review error:', err.message);
+    req.flash('error', 'সমস্যা হয়েছে!');
+  }
+  res.redirect('back');
+});
+
+
 router.get('/reports', async (req, res) => {
   try {
     const from = req.query.from || new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);

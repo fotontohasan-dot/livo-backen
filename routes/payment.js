@@ -9,6 +9,7 @@ const sslcommerz = require('../services/sslcommerz');
 const { broadcastDemoStats, emitAdminAlert } = require('../services/socket');
 const { notifyTelegram } = require('../services/telegramNotify');
 const { verifyPin, getPinStatus } = require('../services/withdrawPin');
+const { evaluateTransaction } = require('../services/fraudDetection');
 
 const paymentLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -204,6 +205,8 @@ router.post('/deposit', requireLogin, paymentLimiter, async (req, res) => {
       `INSERT INTO payment_requests (user_id, type, method, amount, transaction_id, account_number, status, want_bonus) VALUES ($1, 'deposit', $2, $3, $4, $5, 'pending', $6)`,
       [userId, method, amount, transaction_id, account_number, wantBonus]
     );
+    evaluateTransaction(userId, 'deposit', { accountNumber: account_number })
+      .catch(e => console.error('fraud evaluateTransaction (deposit) error:', e.message));
     await notifyAdmins('নতুন ডিপোজিট রিকোয়েস্ট', `${req.session.user.username} ${amount} টাকা ডিপোজিট চেয়েছে (${method})।`, 'deposit');
     req.flash('success', 'ডিপোজিট রিকোয়েস্ট পাঠানো হয়েছে!');
     res.redirect('/payment/history');
@@ -323,6 +326,9 @@ router.post('/withdraw', requireLogin, paymentLimiter, async (req, res) => {
     await client.query('COMMIT');
 
     if (req.session.user) req.session.user.coins = upd.rows[0].coins;
+
+    evaluateTransaction(userId, 'withdraw', { accountNumber: account_number })
+      .catch(e => console.error('fraud evaluateTransaction (withdraw) error:', e.message));
 
     await notifyAdmins('নতুন উইথড্র রিকোয়েস্ট', `${req.session.user.username} ${amount} টাকা উইথড্র চেয়েছে (${method})।`, 'withdraw');
 

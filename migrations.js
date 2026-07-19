@@ -728,6 +728,31 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_wpl_action ON withdraw_pin_logs(action_type);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_wpl_created ON withdraw_pin_logs(created_at);`);
 
+    // ==================== ফ্রড ডিটেকশন (Fraud Detection Foundation) ====================
+    // শুধু ফ্ল্যাগ করা হয়, কখনো অটোমেটিক ব্লক করা হয় না — সিদ্ধান্ত সবসময় অ্যাডমিন নেয়
+    await pool.query(`ALTER TABLE login_logs ADD COLUMN IF NOT EXISTS device_fingerprint TEXT`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_login_device ON login_logs(device_fingerprint);`);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS fraud_flags (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        risk_level VARCHAR(10) NOT NULL CHECK (risk_level IN ('low','medium','high')),
+        signal_types TEXT[] NOT NULL DEFAULT '{}',
+        reason TEXT NOT NULL,
+        related_user_ids INTEGER[] NOT NULL DEFAULT '{}',
+        details JSONB,
+        status VARCHAR(20) NOT NULL DEFAULT 'open' CHECK (status IN ('open','reviewed','dismissed')),
+        reviewed_by INTEGER REFERENCES users(id),
+        reviewed_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_fraud_flags_user ON fraud_flags(user_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_fraud_flags_risk ON fraud_flags(risk_level);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_fraud_flags_status ON fraud_flags(status);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_fraud_flags_created ON fraud_flags(created_at);`);
+
     console.log("✅ All tables migration completed successfully");
   } catch (err) {
     console.error("❌ Migration error:", err.message);

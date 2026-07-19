@@ -6,6 +6,7 @@ const rateLimit = require('express-rate-limit');
 const { pool } = require('../db');
 const { createReferral } = require('../services/referral');
 const { sendPasswordReset } = require('../services/email');
+const { evaluateRegistration } = require('../services/fraudDetection');
 
 const resetLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -28,17 +29,23 @@ async function recordLogin(req, userId) {
   try {
     const ip = (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
     const ua = req.get('user-agent') || '';
+    // ডিভাইস ফিঙ্গারপ্রিন্ট ঐচ্ছিক — ফ্রন্টএন্ড পাঠালে ব্যবহার হয়, না পাঠালে fraud check শুধু IP/UA দিয়ে চলে
+    const deviceFingerprint = req.headers['x-device-fingerprint'] || req.body?.device_fingerprint || null;
     await pool.query(
       `UPDATE users SET last_login = NOW(), last_ip = $1, last_device = $2, login_count = COALESCE(login_count,0) + 1 WHERE id = $3`,
       [ip, ua, userId]
     );
     await pool.query(
-      `INSERT INTO login_logs (user_id, ip, user_agent) VALUES ($1, $2, $3)`,
-      [userId, ip, ua]
+      `INSERT INTO login_logs (user_id, ip, user_agent, device_fingerprint) VALUES ($1, $2, $3, $4)`,
+      [userId, ip, ua, deviceFingerprint]
     );
   } catch (e) {
     console.error('recordLogin error:', e.message);
   }
+  return {
+    ip: (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim(),
+    deviceFingerprint: req.headers['x-device-fingerprint'] || req.body?.device_fingerprint || null
+  };
 }
 
 router.get('/', async (req, res) => {
@@ -129,6 +136,15 @@ router.post('/register', async (req, res) => {
 
     await recordLogin(req, newUserId);
     req.session.user = sanitizeUser(result.rows[0]);
+
+    // ফ্রড চেক — কখনো রেজিস্ট্রেশন ব্লক করে না, ব্যর্থ হলেও silently এগিয়ে যায়
+    evaluateRegistration(newUserId, {
+      ip: (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim(),
+      deviceFingerprint: req.headers['x-device-fingerprint'] || req.body?.device_fingerprint || null,
+      email: email || null,
+      phone: phone || null
+    }).catch(e => console.error('fraud evaluateRegistration error:', e.message));
+
     req.flash('success', '✅ রেজিস্ট্রেশন সফল হয়েছে! স্বাগতম!');
     res.redirect('/');
   } catch (err) {
