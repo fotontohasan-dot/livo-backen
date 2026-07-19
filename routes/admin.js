@@ -19,6 +19,7 @@ const {
   verifyAndConsumeBackupCode,
   qrFromSecret
 } = require('../services/twofactor');
+const { getPinStatus, adminResetPin } = require('../services/withdrawPin');
 
 const { requireIntParam, requireAmount, parseAmount, sanitizeText, isSafeUrl } = require('../middleware/validate');
 
@@ -1173,7 +1174,11 @@ router.get('/users/:id', async (req, res) => {
       };
     } catch (e) { stats = {}; }
 
-    res.render('admin/user-detail', { u: user, bets, transactions, payments, sameIp, referralCount, stats });
+    // Withdraw PIN স্ট্যাটাস — অ্যাডমিন শুধু কনফিগার্ড কিনা ও শেষ পরিবর্তনের সময় দেখতে পারবে, কখনো আসল PIN না
+    let pinStatus = { configured: false, updatedAt: null, locked: false };
+    try { pinStatus = await getPinStatus(uId); } catch (e) {}
+
+    res.render('admin/user-detail', { u: user, bets, transactions, payments, sameIp, referralCount, stats, pinStatus });
   } catch (err) {
     console.error('user detail error:', err.message);
     req.flash('error', 'সমস্যা হয়েছে!');
@@ -1206,6 +1211,27 @@ router.post('/users/:id/delete', requireIntParam('id'), async (req, res) => {
     req.flash('error', 'ডিলিট করতে সমস্যা!');
   }
   res.redirect('/admin/users');
+});
+
+// ==================== Withdraw PIN রিসেট (অ্যাডমিন) ====================
+// অ্যাডমিন আসল PIN কখনো দেখতে/সেট করতে পারবে না — শুধু হ্যাশ ক্লিয়ার করে দেয়, ইউজারকে
+// আবার নতুন PIN তৈরি করতে হবে। প্রতিটি রিসেট withdraw_pin_logs + admin_logs উভয় জায়গায় লগ হয়।
+router.post('/users/:id/withdraw-pin/reset', adminActionLimiter, requireIntParam('id'), async (req, res) => {
+  try {
+    await adminResetPin(req.params.id, req.session.user.id, req.session.user.username, req.ip);
+    await logAdminAction(
+      req.session.user.id,
+      req.session.user.username,
+      'WITHDRAW_PIN_RESET',
+      `ইউজার #${req.params.id}-এর Withdraw PIN রিসেট করা হয়েছে`,
+      req.ip
+    );
+    req.flash('success', '✅ ইউজারের Withdraw PIN রিসেট করা হয়েছে। ইউজারকে এখন নতুন PIN সেট করতে হবে।');
+  } catch (err) {
+    console.error('admin withdraw pin reset error:', err.message);
+    req.flash('error', 'সমস্যা হয়েছে!');
+  }
+  res.redirect('back');
 });
 
 router.post('/users/:id/coins/add', adminFinancialLimiter, requireIntParam('id'), requireAmount('amount', { max: 10_000_000 }), async (req, res) => {

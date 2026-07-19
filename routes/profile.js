@@ -19,6 +19,7 @@ const { getShareStatus, claimShare } = require('../services/social');
 const { getLeaderboard, getPastContests } = require('../services/contest');
 const { getRewardStatus, claimRedPacket, claimGoldenEgg } = require('../services/redpacket');
 const { checkContent } = require('../utils/contentFilter');
+const { isWeakPin, createPin, updatePin, verifyPin, getPinStatus } = require('../services/withdrawPin');
 
 // ==== ইনপুট ভ্যালিডেশন হেল্পার (username, name, phone, bank card ফিল্ড) ====
 // লক্ষ্য: কোনো ফিল্ডেই <, >, স্ক্রিপ্ট, বা লিংক বসিয়ে ঢুকতে না পারা — কারণ এই মানগুলো
@@ -321,9 +322,116 @@ router.get('/stats', isAuth, async (req, res) => {
 router.get('/security', isAuth, async (req, res) => {
   try {
     const cards = await pool.query('SELECT * FROM bank_cards WHERE user_id = $1 ORDER BY created_at DESC', [req.session.user.id]);
-    res.render('profile/security', { user: req.session.user, bankCards: cards.rows });
+    let pinStatus = { configured: false, locked: false };
+    try { pinStatus = await getPinStatus(req.session.user.id); } catch (e) {}
+    res.render('profile/security', { user: req.session.user, bankCards: cards.rows, pinStatus });
   } catch (err) {
-    res.render('profile/security', { user: req.session.user, bankCards: [] });
+    res.render('profile/security', { user: req.session.user, bankCards: [], pinStatus: { configured: false, locked: false } });
+  }
+});
+
+// ==================== Withdraw PIN তৈরি ====================
+router.post('/withdraw-pin/create', isAuth, async (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const status = await getPinStatus(userId);
+    if (status.configured) {
+      req.flash('error', '❌ আপনার আগে থেকেই Withdraw PIN সেট করা আছে। পরিবর্তন করতে "Change PIN" ব্যবহার করুন।');
+      return res.redirect('/profile/security');
+    }
+
+    const { pin, confirmPin } = req.body;
+    if (!pin || !confirmPin || pin !== confirmPin) {
+      req.flash('error', '❌ PIN দুটি মিলছে না।');
+      return res.redirect('/profile/security');
+    }
+    if (isWeakPin(pin)) {
+      req.flash('error', '❌ দুর্বল বা অনুমানযোগ্য PIN গ্রহণযোগ্য নয়। একই সংখ্যা বা ক্রমিক প্যাটার্ন এড়িয়ে চলুন।');
+      return res.redirect('/profile/security');
+    }
+
+    await createPin(userId, pin, req.ip);
+    req.flash('success', '✅ Withdraw PIN সফলভাবে তৈরি হয়েছে!');
+    res.redirect('/profile/security');
+  } catch (err) {
+    console.error('withdraw-pin create error:', err.message);
+    req.flash('error', '❌ Withdraw PIN তৈরি করতে সমস্যা হয়েছে।');
+    res.redirect('/profile/security');
+  }
+});
+
+// ==================== Withdraw PIN পরিবর্তন (বর্তমান PIN জানা থাকলে) ====================
+router.post('/withdraw-pin/change', isAuth, async (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const { currentPin, newPin, confirmNewPin } = req.body;
+
+    const status = await getPinStatus(userId);
+    if (!status.configured) {
+      req.flash('error', '❌ প্রথমে একটি Withdraw PIN তৈরি করুন।');
+      return res.redirect('/profile/security');
+    }
+    if (status.locked) {
+      req.flash('error', `🔒 অনেকবার ভুল চেষ্টার কারণে সাময়িকভাবে লক করা হয়েছে। ${Math.ceil(status.remainingMs / 60000)} মিনিট পর আবার চেষ্টা করুন।`);
+      return res.redirect('/profile/security');
+    }
+    if (!newPin || !confirmNewPin || newPin !== confirmNewPin) {
+      req.flash('error', '❌ নতুন PIN দুটি মিলছে না।');
+      return res.redirect('/profile/security');
+    }
+    if (isWeakPin(newPin)) {
+      req.flash('error', '❌ দুর্বল বা অনুমানযোগ্য PIN গ্রহণযোগ্য নয়।');
+      return res.redirect('/profile/security');
+    }
+
+    const check = await verifyPin(userId, currentPin, req.ip);
+    if (!check.success) {
+      if (check.locked) {
+        req.flash('error', '🔒 অনেকবার ভুল চেষ্টার কারণে Withdraw PIN সাময়িকভাবে লক করা হয়েছে। ১৫ মিনিট পর আবার চেষ্টা করুন।');
+      } else {
+        req.flash('error', '❌ বর্তমান PIN ভুল।');
+      }
+      return res.redirect('/profile/security');
+    }
+
+    await updatePin(userId, newPin, req.ip, 'changed');
+    req.flash('success', '✅ Withdraw PIN পরিবর্তন হয়েছে!');
+    res.redirect('/profile/security');
+  } catch (err) {
+    console.error('withdraw-pin change error:', err.message);
+    req.flash('error', '❌ PIN পরিবর্তন করতে সমস্যা হয়েছে।');
+    res.redirect('/profile/security');
+  }
+});
+
+// ==================== Withdraw PIN রিসেট (PIN ভুলে গেলে — অ্যাকাউন্ট পাসওয়ার্ড দিয়ে যাচাই) ====================
+router.post('/withdraw-pin/reset', isAuth, async (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const { accountPassword, newPin, confirmNewPin } = req.body;
+
+    if (!newPin || !confirmNewPin || newPin !== confirmNewPin) {
+      req.flash('error', '❌ নতুন PIN দুটি মিলছে না।');
+      return res.redirect('/profile/security');
+    }
+    if (isWeakPin(newPin)) {
+      req.flash('error', '❌ দুর্বল বা অনুমানযোগ্য PIN গ্রহণযোগ্য নয়।');
+      return res.redirect('/profile/security');
+    }
+
+    const u = await pool.query('SELECT password FROM users WHERE id=$1', [userId]);
+    if (!u.rows[0] || !(await bcrypt.compare(accountPassword || '', u.rows[0].password))) {
+      req.flash('error', '❌ অ্যাকাউন্ট পাসওয়ার্ড ভুল।');
+      return res.redirect('/profile/security');
+    }
+
+    await updatePin(userId, newPin, req.ip, 'reset');
+    req.flash('success', '✅ Withdraw PIN রিসেট হয়েছে!');
+    res.redirect('/profile/security');
+  } catch (err) {
+    console.error('withdraw-pin reset error:', err.message);
+    req.flash('error', '❌ PIN রিসেট করতে সমস্যা হয়েছে।');
+    res.redirect('/profile/security');
   }
 });
 

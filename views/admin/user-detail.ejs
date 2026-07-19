@@ -79,6 +79,16 @@ const banColor = u.is_banned ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-6
                     <div><div class="text-slate-400 text-xs">রেফারেল</div><div class="font-medium mt-0.5">${referralCount} জনকে রেফার করেছেন</div></div>
                     <div><div class="text-slate-400 text-xs">শেষ লগইন IP</div><div class="font-medium mt-0.5">${escapeHtml(u.last_ip || '-')}</div></div>
                     <div><div class="text-slate-400 text-xs">KYC স্ট্যাটাস</div><div class="font-medium mt-0.5 capitalize">${escapeHtml(u.kyc_status || 'none')}</div></div>
+                    <div>
+                        <div class="text-slate-400 text-xs">Withdraw PIN</div>
+                        <div class="font-medium mt-0.5">
+                            ${pinStatus && pinStatus.configured
+                                ? '<span class="text-emerald-600">✅ Configured</span>'
+                                : '<span class="text-red-500">❌ Not Configured</span>'}
+                            ${pinStatus && pinStatus.locked ? ' <span class="text-amber-600 text-xs">(🔒 Locked)</span>' : ''}
+                        </div>
+                        ${pinStatus && pinStatus.updatedAt ? `<div class="text-slate-400 text-xs mt-0.5">Last changed: ${fmtDate(pinStatus.updatedAt)}</div>` : ''}
+                    </div>
                 </div>
             </div>
 
@@ -117,6 +127,11 @@ const banColor = u.is_banned ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-6
                 <form method="POST" action="/admin/users/${u.id}/ban" onsubmit="return confirm('${banLabel} করবেন?')">
                     <button type="submit" class="w-full py-3 rounded-2xl font-medium text-white ${banColor}">
                         <i class="fas fa-ban mr-1.5"></i>${banLabel}
+                    </button>
+                </form>
+                <form method="POST" action="/admin/users/${u.id}/withdraw-pin/reset" onsubmit="return confirm('এই ইউজারের Withdraw PIN রিসেট করবেন? ইউজারকে আবার নতুন PIN সেট করতে হবে।')">
+                    <button type="submit" class="w-full py-3 rounded-2xl font-medium text-white bg-purple-600 hover:bg-purple-700">
+                        <i class="fas fa-key mr-1.5"></i>Withdraw PIN রিসেট করুন
                     </button>
                 </form>
                 <form method="POST" action="/admin/users/${u.id}/delete" onsubmit="return confirm('এই ইউজার স্থায়ীভাবে ডিলিট করবেন? এটা আর ফেরত আনা যাবে না!')">

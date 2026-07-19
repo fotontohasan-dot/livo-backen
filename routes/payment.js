@@ -8,6 +8,7 @@ const crypto = require('crypto');
 const sslcommerz = require('../services/sslcommerz');
 const { broadcastDemoStats, emitAdminAlert } = require('../services/socket');
 const { notifyTelegram } = require('../services/telegramNotify');
+const { verifyPin, getPinStatus } = require('../services/withdrawPin');
 
 const paymentLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -227,7 +228,9 @@ router.get('/withdraw', requireLogin, async (req, res) => {
       const cardRes = await pool.query('SELECT * FROM bank_cards WHERE user_id=$1', [req.session.user.id]);
       cards = cardRes.rows;
     } catch (e) { cards = []; }
-    res.render('payment/withdraw', { user: req.session.user, coins, cards });
+    let pinStatus = { configured: false, locked: false };
+    try { pinStatus = await getPinStatus(req.session.user.id); } catch (e) {}
+    res.render('payment/withdraw', { user: req.session.user, coins, cards, pinStatus });
   } catch (err) {
     console.error('withdraw GET error:', err.message);
     res.redirect('/');
@@ -236,7 +239,7 @@ router.get('/withdraw', requireLogin, async (req, res) => {
 
 
 router.post('/withdraw', requireLogin, paymentLimiter, async (req, res) => {
-  const { method, account_number } = req.body;
+  const { method, account_number, withdraw_pin } = req.body;
   const amount = parseAmount(req.body.amount);
   const userId = req.session.user.id;
 
@@ -250,6 +253,32 @@ router.post('/withdraw', requireLogin, paymentLimiter, async (req, res) => {
   }
   if (amount < 200) {
     req.flash('error', 'সর্বনিম্ন উইথড্র ২০০ টাকা');
+    return res.redirect('/payment/withdraw');
+  }
+
+  // ==================== Withdraw PIN ভেরিফিকেশন (নতুন নিরাপত্তা স্তর) ====================
+  // প্রতিটি উইথড্র রিকোয়েস্টের আগে PIN যাচাই করা বাধ্যতামূলক। এটা একটা আলাদা গেট —
+  // নিচের বিদ্যমান উইথড্র বিজনেস লজিক (turnover check, coins deduction ইত্যাদি) অপরিবর্তিত রাখা হয়েছে।
+  try {
+    const pinCheck = await verifyPin(userId, withdraw_pin, req.ip);
+
+    if (pinCheck.notConfigured) {
+      req.flash('error', 'উত্তোলনের আগে আপনার Withdraw PIN সেট করতে হবে। Security পেজ থেকে PIN তৈরি করুন।');
+      return res.redirect('/profile/security');
+    }
+    if (pinCheck.locked) {
+      const mins = Math.max(1, Math.ceil((pinCheck.remainingMs || 0) / 60000));
+      req.flash('error', `অনেকবার ভুল Withdraw PIN দেওয়ার কারণে উত্তোলন সাময়িকভাবে লক করা হয়েছে। ${mins} মিনিট পর আবার চেষ্টা করুন।`);
+      return res.redirect('/payment/withdraw');
+    }
+    if (!pinCheck.success) {
+      const left = pinCheck.attemptsLeft != null ? ` (আর ${pinCheck.attemptsLeft} বার সুযোগ আছে)` : '';
+      req.flash('error', `Withdraw PIN ভুল হয়েছে${left}।`);
+      return res.redirect('/payment/withdraw');
+    }
+  } catch (e) {
+    console.error('withdraw pin verification error:', e.message);
+    req.flash('error', 'PIN যাচাই করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।');
     return res.redirect('/payment/withdraw');
   }
 

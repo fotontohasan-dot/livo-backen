@@ -698,6 +698,36 @@ async function runMigrations() {
     // "কারণ লিখুন (ইউজারকে দেখানো হবে)" বলা ছিল, কিন্তু কলামই ছিল না)
     await pool.query(`ALTER TABLE kyc_requests ADD COLUMN IF NOT EXISTS reject_reason TEXT`);
 
+    // ==================== Withdraw PIN নিরাপত্তা সিস্টেম ====================
+    // ৬-সংখ্যার Withdraw PIN কখনো plain text এ রাখা হয় না — শুধু bcrypt হ্যাশ স্টোর হয়
+    // (users.totp_secret এর মতোই প্যাটার্ন — বিদ্যমান 2FA সিস্টেমের সাথে সামঞ্জস্যপূর্ণ)
+    await pool.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS withdraw_pin_hash TEXT,
+      ADD COLUMN IF NOT EXISTS withdraw_pin_created_at TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS withdraw_pin_updated_at TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS withdraw_pin_failed_attempts INTEGER DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS withdraw_pin_locked_until TIMESTAMP;
+    `);
+
+    // Withdraw PIN সম্পর্কিত সব ইভেন্টের (create/change/reset/verify/admin-reset) অডিট ট্রেইল —
+    // admin_logs থেকে আলাদা রাখা হয়েছে কারণ বেশিরভাগ ইভেন্ট user-initiated, admin-initiated না
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS withdraw_pin_logs (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        action_type VARCHAR(30) NOT NULL,
+        actor_type VARCHAR(10) NOT NULL DEFAULT 'user',
+        actor_id INTEGER,
+        actor_username VARCHAR(100),
+        ip_address VARCHAR(50),
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_wpl_user ON withdraw_pin_logs(user_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_wpl_action ON withdraw_pin_logs(action_type);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_wpl_created ON withdraw_pin_logs(created_at);`);
+
     console.log("✅ All tables migration completed successfully");
   } catch (err) {
     console.error("❌ Migration error:", err.message);

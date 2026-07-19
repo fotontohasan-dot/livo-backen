@@ -113,6 +113,104 @@
         <button type="submit" class="btn btn-primary" style="margin-top: 10px; border-radius: 12px; padding: 14px; font-weight: 800;"><%= t.change_password_btn %></button>
       </form>
     </div>
+
+    <!-- ==================== Withdraw PIN কার্ড ==================== -->
+    <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
+      <h3 style="color: var(--gold); font-size: 16px; margin-bottom: 6px; display: flex; align-items: center; gap: 10px;">
+        <i class="fas fa-shield-alt"></i> <%= t.withdraw_pin_title %>
+      </h3>
+      <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 18px;"><%= t.withdraw_pin_subtitle %></p>
+
+      <!-- Status -->
+      <div style="display:flex; justify-content:space-between; align-items:center; background: rgba(255,255,255,0.03); border-radius: 12px; padding: 15px; margin-bottom: 20px; gap: 12px;">
+        <div>
+          <div style="color:var(--text-muted); font-size:12px; margin-bottom:4px;"><%= t.withdraw_pin_status %></div>
+          <div style="font-weight:700; font-size: 14px; color: <%= (pinStatus && pinStatus.configured) ? '#10b981' : '#ef4444' %>;">
+            <i class="fas <%= (pinStatus && pinStatus.configured) ? 'fa-circle-check' : 'fa-circle-xmark' %>"></i>
+            <%= (pinStatus && pinStatus.configured) ? t.pin_configured : t.pin_not_configured %>
+          </div>
+          <div style="color:var(--text-muted); font-size:11px; margin-top:6px;">
+            <%= t.pin_last_changed %>:
+            <%= (pinStatus && pinStatus.updatedAt) ? new Date(pinStatus.updatedAt).toLocaleString('en-US', { year:'numeric', month:'short', day:'numeric', hour:'numeric', minute:'2-digit' }) : t.pin_never_changed %>
+          </div>
+          <% if (pinStatus && pinStatus.locked) { %>
+            <div style="color:#ef4444; font-size:11px; margin-top:6px; font-weight:700;">
+              <i class="fas fa-lock"></i> <%= t.pin_locked_msg %>
+              (<%= Math.max(1, Math.ceil((pinStatus.remainingMs || 0) / 60000)) %> <%= lang === 'bn' ? 'মিনিট বাকি' : 'min left' %>)
+            </div>
+          <% } %>
+        </div>
+        <i class="fas fa-shield-halved" style="font-size:30px; flex-shrink:0; color: <%= (pinStatus && pinStatus.configured) ? '#10b981' : 'var(--text-muted)' %>;"></i>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display:flex; gap:10px; margin-bottom: 20px; flex-wrap:wrap;">
+        <% if (!(pinStatus && pinStatus.configured)) { %>
+          <button type="button" onclick="showPinForm('create')" id="pinToggleBtn-create" class="btn btn-primary" style="flex:1; min-width:130px; border-radius:12px; padding:12px; font-weight:800;"><%= t.create_pin_btn %></button>
+        <% } else { %>
+          <button type="button" onclick="showPinForm('change')" id="pinToggleBtn-change" class="btn btn-primary" style="flex:1; min-width:130px; border-radius:12px; padding:12px; font-weight:800;"><%= t.change_pin_btn %></button>
+          <button type="button" onclick="showPinForm('reset')" id="pinToggleBtn-reset" class="btn btn-secondary" style="flex:1; min-width:130px; border-radius:12px; padding:12px; font-weight:800; background: var(--grad-gold); color:#000;"><%= t.reset_pin_btn %></button>
+        <% } %>
+      </div>
+
+      <p style="color: var(--text-muted); font-size: 11px; margin-bottom: 15px;"><i class="fas fa-circle-info"></i> <%= t.pin_rules_hint %></p>
+
+      <!-- Create PIN Form -->
+      <form id="pinFormcreate" action="/profile/withdraw-pin/create" method="POST" style="display:none; flex-direction: column; gap: 15px;" onsubmit="return handlePinSubmit(this)">
+        <div>
+          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.new_pin %></label>
+          <input type="password" name="pin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 16px; outline: none; letter-spacing:6px; text-align:center;">
+        </div>
+        <div>
+          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.confirm_new_pin %></label>
+          <input type="password" name="confirmPin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 16px; outline: none; letter-spacing:6px; text-align:center;">
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button type="submit" class="btn btn-primary pin-submit-btn" style="flex:1; border-radius: 12px; padding: 14px; font-weight: 800;"><%= t.create_pin_btn %></button>
+          <button type="button" onclick="hidePinForms()" style="flex:0 0 auto; padding: 14px 18px; border-radius: 12px; font-weight: 700; background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid var(--border-glass); cursor:pointer;"><%= t.cancel_btn %></button>
+        </div>
+      </form>
+
+      <!-- Change PIN Form -->
+      <form id="pinFormchange" action="/profile/withdraw-pin/change" method="POST" style="display:none; flex-direction: column; gap: 15px;" onsubmit="return handlePinSubmit(this)">
+        <div>
+          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.current_pin %></label>
+          <input type="password" name="currentPin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 16px; outline: none; letter-spacing:6px; text-align:center;">
+        </div>
+        <div>
+          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.new_pin %></label>
+          <input type="password" name="newPin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 16px; outline: none; letter-spacing:6px; text-align:center;">
+        </div>
+        <div>
+          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.confirm_new_pin %></label>
+          <input type="password" name="confirmNewPin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 16px; outline: none; letter-spacing:6px; text-align:center;">
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button type="submit" class="btn btn-primary pin-submit-btn" style="flex:1; border-radius: 12px; padding: 14px; font-weight: 800;"><%= t.change_pin_btn %></button>
+          <button type="button" onclick="hidePinForms()" style="flex:0 0 auto; padding: 14px 18px; border-radius: 12px; font-weight: 700; background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid var(--border-glass); cursor:pointer;"><%= t.cancel_btn %></button>
+        </div>
+      </form>
+
+      <!-- Reset PIN Form (PIN ভুলে গেলে — অ্যাকাউন্ট পাসওয়ার্ড দিয়ে যাচাই) -->
+      <form id="pinFormreset" action="/profile/withdraw-pin/reset" method="POST" style="display:none; flex-direction: column; gap: 15px;" onsubmit="return handlePinSubmit(this)">
+        <div>
+          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.account_password %></label>
+          <input type="password" name="accountPassword" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 14px; outline: none;">
+        </div>
+        <div>
+          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.new_pin %></label>
+          <input type="password" name="newPin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 16px; outline: none; letter-spacing:6px; text-align:center;">
+        </div>
+        <div>
+          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.confirm_new_pin %></label>
+          <input type="password" name="confirmNewPin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 16px; outline: none; letter-spacing:6px; text-align:center;">
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button type="submit" class="btn btn-primary pin-submit-btn" style="flex:1; border-radius: 12px; padding: 14px; font-weight: 800; background: var(--grad-gold); color:#000;"><%= t.reset_pin_btn %></button>
+          <button type="button" onclick="hidePinForms()" style="flex:0 0 auto; padding: 14px 18px; border-radius: 12px; font-weight: 700; background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid var(--border-glass); cursor:pointer;"><%= t.cancel_btn %></button>
+        </div>
+      </form>
+    </div>
   </div>
 
 </div>
@@ -135,6 +233,24 @@ function switchTab(tab) {
   document.querySelectorAll('.sec-tab').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + tab).style.display = 'block';
   document.getElementById('btn-' + tab).classList.add('active');
+}
+
+// ==================== Withdraw PIN ফর্ম টগল ====================
+function hidePinForms() {
+  ['create', 'change', 'reset'].forEach(function (t) {
+    var f = document.getElementById('pinForm' + t);
+    if (f) f.style.display = 'none';
+  });
+}
+function showPinForm(type) {
+  hidePinForms();
+  var f = document.getElementById('pinForm' + type);
+  if (f) f.style.display = 'flex';
+}
+function handlePinSubmit(form) {
+  var btn = form.querySelector('.pin-submit-btn');
+  if (window.LivoToast) LivoToast.setLoading(btn, true);
+  return true;
 }
 </script>
 
