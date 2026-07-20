@@ -21,6 +21,7 @@ const { getRewardStatus, claimRedPacket, claimGoldenEgg } = require('../services
 const { checkContent } = require('../utils/contentFilter');
 const { isWeakPin, createPin, updatePin, verifyPin, getPinStatus } = require('../services/withdrawPin');
 const { listActiveSessions, listLoginHistory, revokeDeviceSession, revokeAllOtherSessions } = require('../services/deviceTracking');
+const cache = require('../services/cache');
 
 // ==== ইনপুট ভ্যালিডেশন হেল্পার (username, name, phone, bank card ফিল্ড) ====
 // লক্ষ্য: কোনো ফিল্ডেই <, >, স্ক্রিপ্ট, বা লিংক বসিয়ে ঢুকতে না পারা — কারণ এই মানগুলো
@@ -41,34 +42,41 @@ function isValidBankField(v) { return typeof v === 'string' && BANK_FIELD_RE.tes
 router.get('/', isAuth, async (req, res) => {
   try {
     const user = await pool.query(`SELECT * FROM users WHERE id=$1`, [req.session.user.id]);
-    const predictions = await pool.query(`
-      SELECT p.*, m.title, m.team_a, m.team_b, m.result
-      FROM predictions p
-      JOIN matches m ON p.match_id = m.id
-      WHERE p.user_id = $1
-      ORDER BY p.created_at DESC LIMIT 10
-    `, [req.session.user.id]);
 
-    const tournaments = await pool.query(`
-      SELECT
-        COALESCE(t.name, 'টুর্নমেন্ট') as name,
-        COALESCE(t.sport, 'General') as sport,
-        COALESCE(tp.points, 0) as points,
-        tp.joined_at as joined_at
-      FROM tournament_participants tp
-      JOIN tournaments t ON tp.tournament_id = t.id
-      WHERE tp.user_id = $1
-      ORDER BY tp.joined_at DESC
-    `, [req.session.user.id]);
+    // প্রোফাইলের কয়েন ব্যালেন্স সবসময় সরাসরি DB থেকে (উপরে) নেওয়া হচ্ছে — এটা কখনো ক্যাশ করা হয় না।
+    // নিচের প্রেডিকশন/টুর্নামেন্ট/স্ট্যাটস তুলনামূলক কম-সংবেদনশীল ও ভারী জয়েন কোয়েরি, তাই ১৫ সেকেন্ড ক্যাশ করা হয়েছে।
+    const { predictions, tournaments, stats } = await cache.getOrSet(`profile:activity:${req.session.user.id}`, 15, async () => {
+      const predictionsRes = await pool.query(`
+        SELECT p.*, m.title, m.team_a, m.team_b, m.result
+        FROM predictions p
+        JOIN matches m ON p.match_id = m.id
+        WHERE p.user_id = $1
+        ORDER BY p.created_at DESC LIMIT 10
+      `, [req.session.user.id]);
 
-    const stats = await pool.query(`
-      SELECT
-        COUNT(*) as total,
-        COUNT(CASE WHEN status='won' THEN 1 END) as won,
-        COALESCE(SUM(CASE WHEN status='won' THEN points_earned ELSE 0 END), 0) as total_earned
-      FROM predictions
-      WHERE user_id = $1
-    `, [req.session.user.id]);
+      const tournamentsRes = await pool.query(`
+        SELECT
+          COALESCE(t.name, 'টুর্নমেন্ট') as name,
+          COALESCE(t.sport, 'General') as sport,
+          COALESCE(tp.points, 0) as points,
+          tp.joined_at as joined_at
+        FROM tournament_participants tp
+        JOIN tournaments t ON tp.tournament_id = t.id
+        WHERE tp.user_id = $1
+        ORDER BY tp.joined_at DESC
+      `, [req.session.user.id]);
+
+      const statsRes = await pool.query(`
+        SELECT
+          COUNT(*) as total,
+          COUNT(CASE WHEN status='won' THEN 1 END) as won,
+          COALESCE(SUM(CASE WHEN status='won' THEN points_earned ELSE 0 END), 0) as total_earned
+        FROM predictions
+        WHERE user_id = $1
+      `, [req.session.user.id]);
+
+      return { predictions: predictionsRes.rows, tournaments: tournamentsRes.rows, stats: statsRes.rows[0] };
+    });
 
     // Member Center গ্রিডের ব্যাজ কাউন্ট — কোনো একটাতে সমস্যা হলেও পুরো প্রোফাইল পেজ যেন লোড হতে ব্যর্থ না হয়, তাই আলাদা try/catch
     let missionBadge = 0;
@@ -91,9 +99,9 @@ router.get('/', isAuth, async (req, res) => {
     res.render('profile/index', {
       user: user.rows[0],
       profileUser: user.rows[0],
-      predictions: predictions.rows,
-      tournaments: tournaments.rows,
-      stats: stats.rows[0],
+      predictions: predictions,
+      tournaments: tournaments,
+      stats: stats,
       missionBadge,
       rewardBadge
     });
