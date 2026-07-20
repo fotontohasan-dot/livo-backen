@@ -7,6 +7,7 @@ const { pool } = require('../db');
 const { createReferral } = require('../services/referral');
 const { sendPasswordReset } = require('../services/email');
 const { evaluateRegistration } = require('../services/fraudDetection');
+const { recordDeviceLogin } = require('../services/deviceTracking');
 
 const resetLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -26,6 +27,7 @@ function sanitizeUser(u) {
 }
 
 async function recordLogin(req, userId) {
+  let loginLogId = null;
   try {
     const ip = (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
     const ua = req.get('user-agent') || '';
@@ -35,16 +37,18 @@ async function recordLogin(req, userId) {
       `UPDATE users SET last_login = NOW(), last_ip = $1, last_device = $2, login_count = COALESCE(login_count,0) + 1 WHERE id = $3`,
       [ip, ua, userId]
     );
-    await pool.query(
-      `INSERT INTO login_logs (user_id, ip, user_agent, device_fingerprint) VALUES ($1, $2, $3, $4)`,
+    const inserted = await pool.query(
+      `INSERT INTO login_logs (user_id, ip, user_agent, device_fingerprint) VALUES ($1, $2, $3, $4) RETURNING id`,
       [userId, ip, ua, deviceFingerprint]
     );
+    loginLogId = inserted.rows[0]?.id || null;
   } catch (e) {
     console.error('recordLogin error:', e.message);
   }
   return {
     ip: (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim(),
-    deviceFingerprint: req.headers['x-device-fingerprint'] || req.body?.device_fingerprint || null
+    deviceFingerprint: req.headers['x-device-fingerprint'] || req.body?.device_fingerprint || null,
+    loginLogId
   };
 }
 
@@ -134,8 +138,9 @@ router.post('/register', async (req, res) => {
       await createReferral(null, referredById, newUserId);
     }
 
-    await recordLogin(req, newUserId);
+    const regLogin = await recordLogin(req, newUserId);
     req.session.user = sanitizeUser(result.rows[0]);
+    await recordDeviceLogin(req, newUserId, regLogin.loginLogId);
 
     // ফ্রড চেক — কখনো রেজিস্ট্রেশন ব্লক করে না, ব্যর্থ হলেও silently এগিয়ে যায়
     evaluateRegistration(newUserId, {
@@ -181,8 +186,9 @@ router.post('/login', async (req, res) => {
       return res.redirect('/login');
     }
 
-    await recordLogin(req, user.id);
+    const loginResult = await recordLogin(req, user.id);
     req.session.user = sanitizeUser(user);
+    await recordDeviceLogin(req, user.id, loginResult.loginLogId);
 
     if (user.role && user.role.toLowerCase() === 'admin') {
       return res.redirect('/admin');
@@ -291,7 +297,14 @@ router.post('/reset-password/:token', resetLimiter, async (req, res) => {
   }
 });
 
-router.get('/logout', (req, res) => {
+router.get('/logout', async (req, res) => {
+  try {
+    if (req.sessionID) {
+      await pool.query(`UPDATE device_sessions SET revoked_at = NOW() WHERE sid = $1`, [req.sessionID]);
+    }
+  } catch (e) {
+    console.error('logout device_sessions cleanup error:', e.message);
+  }
   req.session.destroy(() => res.redirect('/login'));
 });
 

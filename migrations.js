@@ -754,6 +754,34 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_fraud_flags_created ON fraud_flags(created_at);`);
 
     console.log("✅ All tables migration completed successfully");
+
+    // ==================== ডিভাইস ট্র্যাকিং ও লগইন হিস্ট্রি (Feature 05) ====================
+    await pool.query(`ALTER TABLE login_logs ADD COLUMN IF NOT EXISTS device_signature VARCHAR(64)`);
+    await pool.query(`ALTER TABLE login_logs ADD COLUMN IF NOT EXISTS is_new_device BOOLEAN DEFAULT FALSE`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_login_signature ON login_logs(user_id, device_signature);`);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS device_sessions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        sid VARCHAR(255) UNIQUE NOT NULL,
+        device_signature VARCHAR(64),
+        device_name VARCHAR(100),
+        browser VARCHAR(50),
+        os VARCHAR(50),
+        device_type VARCHAR(20),
+        ip VARCHAR(45),
+        user_agent TEXT,
+        is_new_device BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        last_activity TIMESTAMP DEFAULT NOW(),
+        revoked_at TIMESTAMP
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_device_sessions_user ON device_sessions(user_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_device_sessions_active ON device_sessions(user_id, revoked_at);`);
+
+    console.log("✅ Device tracking tables ready");
   } catch (err) {
     console.error("❌ Migration error:", err.message);
   }

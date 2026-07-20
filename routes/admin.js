@@ -21,6 +21,7 @@ const {
 } = require('../services/twofactor');
 const { getPinStatus, adminResetPin } = require('../services/withdrawPin');
 const { getUserFraudStatus } = require('../services/fraudDetection');
+const { getUserDeviceOverview } = require('../services/deviceTracking');
 
 const { requireIntParam, requireAmount, parseAmount, sanitizeText, isSafeUrl } = require('../middleware/validate');
 
@@ -1183,7 +1184,10 @@ router.get('/users/:id', async (req, res) => {
     let fraudStatus = { currentRiskLevel: 'none', openCount: 0, flags: [] };
     try { fraudStatus = await getUserFraudStatus(uId); } catch (e) {}
 
-    res.render('admin/user-detail', { u: user, bets, transactions, payments, sameIp, referralCount, stats, pinStatus, fraudStatus });
+    let deviceOverview = { recentLogins: [], activeSessions: [] };
+    try { deviceOverview = await getUserDeviceOverview(uId, 10); } catch (e) {}
+
+    res.render('admin/user-detail', { u: user, bets, transactions, payments, sameIp, referralCount, stats, pinStatus, fraudStatus, deviceOverview });
   } catch (err) {
     console.error('user detail error:', err.message);
     req.flash('error', 'সমস্যা হয়েছে!');
