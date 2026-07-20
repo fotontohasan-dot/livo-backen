@@ -7,7 +7,7 @@ const { settleSelectionsForMarket } = require('../services/accumulator');
 const { grantFreeBet } = require('../services/freebet');
 const { syncMatches } = require('../services/matchUpdater');
 const { runBackupNow, restoreFromBackup, getBackupStatus } = require('../services/backup');
-const { loadSettings } = require('../services/settings');
+const { loadSettings, invalidateSettingsCache } = require('../services/settings');
 const { creditApprovedDeposit } = require('./payment');
 const bcrypt = require('bcryptjs');
 const { getDemoStats } = require('../services/socket');
@@ -22,6 +22,7 @@ const {
 const { getPinStatus, adminResetPin } = require('../services/withdrawPin');
 const { getUserFraudStatus } = require('../services/fraudDetection');
 const { getUserDeviceOverview } = require('../services/deviceTracking');
+const cache = require('../services/cache');
 
 const { requireIntParam, requireAmount, parseAmount, sanitizeText, isSafeUrl } = require('../middleware/validate');
 
@@ -478,6 +479,7 @@ router.post('/settings/update', async (req, res) => {
     // এই দুটো ব্যর্থ হলেও সেটিংস তো সেভ হয়েই গেছে — তাই আলাদা try/catch দিয়ে
     // এদের এরর মূল সেভ অপারেশনকে ব্যর্থ দেখানো থেকে আটকানো হচ্ছে
     try {
+      await invalidateSettingsCache();
       await loadSettings();
     } catch (e) {
       console.error('loadSettings() cache refresh failed (settings already saved):', e && e.stack ? e.stack : e);
@@ -656,6 +658,7 @@ router.get('/', async (req, res) => {
 
     res.render('admin/dashboard', {
       demoStats,
+      redisStatus: cache.getStatus(),
       stats: {
         total_users: users.rows[0].count,
         total_coins_in_system: totalCoins.rows[0].total || 0,

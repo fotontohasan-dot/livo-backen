@@ -8,6 +8,7 @@ const { createReferral } = require('../services/referral');
 const { sendPasswordReset } = require('../services/email');
 const { evaluateRegistration } = require('../services/fraudDetection');
 const { recordDeviceLogin } = require('../services/deviceTracking');
+const cache = require('../services/cache');
 
 const resetLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -56,11 +57,13 @@ router.get('/', async (req, res) => {
   try {
     let dbGames = [];
     try {
-      const gamesResult = await pool.query(
-        `SELECT name, slug, emoji, category AS type, provider, badge
-         FROM games WHERE is_active = true ORDER BY sort_order ASC, id ASC`
-      );
-      dbGames = gamesResult.rows;
+      dbGames = await cache.getOrSet('homepage:games', 60, async () => {
+        const gamesResult = await pool.query(
+          `SELECT name, slug, emoji, category AS type, provider, badge
+           FROM games WHERE is_active = true ORDER BY sort_order ASC, id ASC`
+        );
+        return gamesResult.rows;
+      });
     } catch (gErr) {
       console.error('Homepage games fetch error:', gErr.message);
       dbGames = [];

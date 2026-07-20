@@ -30,6 +30,7 @@ const runMigrations = require('./migrations');
 const { apiGateway, responseHelpers } = require('./middleware/gateway');
 const { scheduleDailyBackup } = require('./services/backup');
 const { touchDeviceActivity } = require('./services/deviceTracking');
+require('./services/cache'); // অ্যাপ বুট হওয়ার সাথে সাথেই Redis কানেকশন অ্যাটেম্পট শুরু হয় (কানেক্ট না হলেও অ্যাপ চলতে থাকে)
 
 const app = express();
 app.use(compression());
