@@ -804,6 +804,23 @@ async function runMigrations() {
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMP;`);
 
     console.log("✅ Security Center columns ready");
+
+    // ==================== Fraud Detection Engine — ব্যর্থ লগইন ট্র্যাকিং (ব্রুট-ফোর্স শনাক্তকরণ) ====================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS failed_login_attempts (
+        id SERIAL PRIMARY KEY,
+        identifier TEXT,
+        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        ip VARCHAR(45),
+        user_agent TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_failed_login_user ON failed_login_attempts(user_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_failed_login_ip ON failed_login_attempts(ip);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_failed_login_created ON failed_login_attempts(created_at);`);
+
+    console.log("✅ Fraud detection tables ready");
   } catch (err) {
     console.error("❌ Migration error:", err.message);
   }

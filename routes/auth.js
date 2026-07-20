@@ -6,7 +6,7 @@ const rateLimit = require('express-rate-limit');
 const { pool } = require('../db');
 const { createReferral } = require('../services/referral');
 const { sendPasswordReset, sendVerificationEmail } = require('../services/email');
-const { evaluateRegistration } = require('../services/fraudDetection');
+const { evaluateRegistration, evaluateFailedLogin, evaluateLogin } = require('../services/fraudDetection');
 const { recordDeviceLogin } = require('../services/deviceTracking');
 const cache = require('../services/cache');
 
@@ -220,6 +220,9 @@ router.post('/login', async (req, res) => {
     const user = result.rows[0];
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
+      const failIp = (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
+      evaluateFailedLogin(identifier, user ? user.id : null, failIp, req.get('user-agent') || '')
+        .catch(e => console.error('evaluateFailedLogin error:', e.message));
       req.flash('error', '❌ তথ্য অথবা পাসওয়ার্ড ভুল।');
       return res.redirect('/login');
     }
@@ -237,7 +240,14 @@ router.post('/login', async (req, res) => {
 
     const loginResult = await recordLogin(req, user.id);
     req.session.user = sanitizeUser(user);
-    await recordDeviceLogin(req, user.id, loginResult.loginLogId);
+    const deviceResult = await recordDeviceLogin(req, user.id, loginResult.loginLogId);
+
+    // ফ্রড চেক (অস্বাভাবিক লগইন, ঘনঘন IP/ডিভাইস পরিবর্তন) — কখনো লগইন ব্লক করে না
+    evaluateLogin(user.id, {
+      ip: loginResult.ip,
+      isNewDevice: deviceResult && deviceResult.isNewDevice,
+      location: deviceResult && deviceResult.location
+    }).catch(e => console.error('evaluateLogin error:', e.message));
 
     if (user.role && user.role.toLowerCase() === 'admin') {
       return res.redirect('/admin');

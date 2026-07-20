@@ -651,6 +651,19 @@ router.get('/', async (req, res) => {
       ORDER BY cnt DESC LIMIT 5
     `);
 
+    // ==================== Fraud Detection Engine — ড্যাশবোর্ড Fraud Alerts উইজেট ====================
+    const fraudCounts = await pool.query(`
+      SELECT risk_level, COUNT(*) AS c FROM fraud_flags WHERE status = 'open' GROUP BY risk_level
+    `);
+    const fraudAlerts = { high: 0, medium: 0, low: 0 };
+    fraudCounts.rows.forEach(r => { fraudAlerts[r.risk_level] = parseInt(r.c); });
+    const recentFraudFlags = await pool.query(`
+      SELECT f.*, u.username FROM fraud_flags f LEFT JOIN users u ON u.id = f.user_id
+      WHERE f.status = 'open' ORDER BY
+        CASE f.risk_level WHEN 'high' THEN 3 WHEN 'medium' THEN 2 ELSE 1 END DESC, f.created_at DESC
+      LIMIT 5
+    `);
+
     const demoStats = await getDemoStats().catch(e => {
       console.error('demo stats error:', e.message);
       return { totalDemo: 0, userHeldDemo: 0, casinoDemoWagered: 0, sportsDemoWagered: 0 };
@@ -690,13 +703,16 @@ router.get('/', async (req, res) => {
       recentActivity,
       recentMatches: recentMatchesRes.rows,
       recentUsers: recentUsersRes.rows,
-      suspicious: suspicious.rows
+      suspicious: suspicious.rows,
+      fraudAlerts,
+      recentFraudFlags: recentFraudFlags.rows
     });
   } catch (err) {
     console.error(err);
     res.render('admin/dashboard', {
       demoStats: { totalDemo: 9999999, userHeldDemo: 0, casinoDemoWagered: 0, sportsDemoWagered: 0 },
-      stats: {}, revenueTrend: [], userGrowth: [], recentBets: [], recentDeposits: [], recentWithdrawals: [], recentActivity: [], recentMatches: [], recentUsers: [], suspicious: []
+      stats: {}, revenueTrend: [], userGrowth: [], recentBets: [], recentDeposits: [], recentWithdrawals: [], recentActivity: [], recentMatches: [], recentUsers: [], suspicious: [],
+      fraudAlerts: { high: 0, medium: 0, low: 0 }, recentFraudFlags: []
     });
   }
 });
