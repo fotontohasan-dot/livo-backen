@@ -20,6 +20,7 @@ const { getLeaderboard, getPastContests } = require('../services/contest');
 const { getRewardStatus, claimRedPacket, claimGoldenEgg } = require('../services/redpacket');
 const { checkContent } = require('../utils/contentFilter');
 const { isWeakPin, createPin, updatePin, verifyPin, getPinStatus } = require('../services/withdrawPin');
+const { listActiveSessions, listLoginHistory, revokeDeviceSession, revokeAllOtherSessions } = require('../services/deviceTracking');
 
 // ==== ইনপুট ভ্যালিডেশন হেল্পার (username, name, phone, bank card ফিল্ড) ====
 // লক্ষ্য: কোনো ফিল্ডেই <, >, স্ক্রিপ্ট, বা লিংক বসিয়ে ঢুকতে না পারা — কারণ এই মানগুলো
@@ -324,9 +325,53 @@ router.get('/security', isAuth, async (req, res) => {
     const cards = await pool.query('SELECT * FROM bank_cards WHERE user_id = $1 ORDER BY created_at DESC', [req.session.user.id]);
     let pinStatus = { configured: false, locked: false };
     try { pinStatus = await getPinStatus(req.session.user.id); } catch (e) {}
-    res.render('profile/security', { user: req.session.user, bankCards: cards.rows, pinStatus });
+
+    let activeSessions = [];
+    let recentLogins = [];
+    try {
+      activeSessions = await listActiveSessions(req.session.user.id, req.sessionID);
+      recentLogins = await listLoginHistory(req.session.user.id, 5, 0);
+    } catch (e) { console.error('security devices load error:', e.message); }
+
+    res.render('profile/security', { user: req.session.user, bankCards: cards.rows, pinStatus, activeSessions, recentLogins });
   } catch (err) {
-    res.render('profile/security', { user: req.session.user, bankCards: [], pinStatus: { configured: false, locked: false } });
+    res.render('profile/security', { user: req.session.user, bankCards: [], pinStatus: { configured: false, locked: false }, activeSessions: [], recentLogins: [] });
+  }
+});
+
+// ==================== ডিভাইস লগআউট (নির্দিষ্ট / সব অন্য ডিভাইস) ====================
+router.post('/devices/:id/logout', isAuth, async (req, res) => {
+  try {
+    const ok = await revokeDeviceSession(req.session.user.id, req.params.id, req.session.user.username);
+    req.flash(ok ? 'success' : 'error', ok ? '✅ ডিভাইস থেকে লগআউট করা হয়েছে।' : '❌ ডিভাইসটি খুঁজে পাওয়া যায়নি।');
+  } catch (err) {
+    console.error('device logout error:', err.message);
+    req.flash('error', '❌ সমস্যা হয়েছে, আবার চেষ্টা করুন।');
+  }
+  res.redirect('/profile/security');
+});
+
+router.post('/devices/logout-all-others', isAuth, async (req, res) => {
+  try {
+    const count = await revokeAllOtherSessions(req.session.user.id, req.sessionID, req.session.user.username);
+    req.flash('success', count > 0 ? `✅ ${count}টি অন্য ডিভাইস থেকে লগআউট করা হয়েছে।` : 'অন্য কোনো সক্রিয় ডিভাইস নেই।');
+  } catch (err) {
+    console.error('logout-all-others error:', err.message);
+    req.flash('error', '❌ সমস্যা হয়েছে, আবার চেষ্টা করুন।');
+  }
+  res.redirect('/profile/security');
+});
+
+// ==================== সম্পূর্ণ লগইন হিস্ট্রি ====================
+router.get('/login-history', isAuth, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = 20;
+    const logins = await listLoginHistory(req.session.user.id, limit, (page - 1) * limit);
+    res.render('profile/login-history', { user: req.session.user, logins, page, hasMore: logins.length === limit });
+  } catch (err) {
+    console.error('login-history load error:', err.message);
+    res.render('profile/login-history', { user: req.session.user, logins: [], page: 1, hasMore: false });
   }
 });
 

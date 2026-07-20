@@ -27,6 +27,18 @@ function paymentRow(p) {
 function ipRow(s) {
   return '<a href="/admin/users/' + s.id + '" class="block px-4 py-2.5 text-sm border-b border-slate-100 hover:bg-slate-50">' + escapeHtml(s.username) + ' <span class="text-slate-400 text-xs">(' + escapeHtml(s.email || '-') + ')</span></a>';
 }
+function loginHistRow(l) {
+  const newBadge = l.is_new_device ? '<span class="px-2 py-0.5 text-[10px] font-bold rounded bg-amber-50 text-amber-600 border border-amber-200 ml-2">NEW</span>' : '';
+  return '<tr class="border-b border-slate-100"><td class="px-4 py-2.5 text-sm">' + escapeHtml(l.browser) + ' · ' + escapeHtml(l.os) + newBadge + '</td>' +
+    '<td class="px-4 py-2.5 text-sm font-mono">' + escapeHtml(l.ip) + '</td>' +
+    '<td class="px-4 py-2.5 text-xs text-slate-400">' + fmtDate(l.created_at) + '</td></tr>';
+}
+function deviceSessRow(d) {
+  const badge = d.is_new_device ? '<span class="px-2 py-0.5 text-[10px] font-bold rounded bg-amber-50 text-amber-600 border border-amber-200 ml-2">NEW</span>' : '';
+  return '<tr class="border-b border-slate-100"><td class="px-4 py-2.5 text-sm">' + escapeHtml(d.device_name || '-') + badge + '</td>' +
+    '<td class="px-4 py-2.5 text-sm font-mono">' + escapeHtml(d.ip) + '</td>' +
+    '<td class="px-4 py-2.5 text-xs text-slate-400">' + fmtDate(d.last_activity) + '</td></tr>';
+}
 function fraudRow(fl) {
   const riskColor = fl.risk_level === 'high' ? 'bg-red-100 text-red-700' : fl.risk_level === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600';
   const statusColor = fl.status === 'open' ? 'bg-blue-100 text-blue-700' : fl.status === 'reviewed' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500';
@@ -53,6 +65,9 @@ const fraudFlagsHtml = ((fraudStatus && fraudStatus.flags) || []).map(fraudRow).
 const riskLevel = (fraudStatus && fraudStatus.currentRiskLevel) || 'none';
 const riskHeaderColor = riskLevel === 'high' ? 'bg-red-100 text-red-700' : riskLevel === 'medium' ? 'bg-amber-100 text-amber-700' : riskLevel === 'low' ? 'bg-slate-100 text-slate-600' : 'bg-emerald-100 text-emerald-700';
 const riskHeaderLabel = riskLevel === 'none' ? 'ঝুঁকিমুক্ত' : riskLevel.toUpperCase() + ' ঝুঁকি';
+
+const loginHistRows = ((deviceOverview && deviceOverview.recentLogins) || []).map(loginHistRow).join('') || '<tr><td colspan="3" class="px-4 py-6 text-center text-slate-400 text-xs">কোনো লগইন রেকর্ড নেই</td></tr>';
+const deviceSessRows = ((deviceOverview && deviceOverview.activeSessions) || []).map(deviceSessRow).join('') || '<tr><td colspan="3" class="px-4 py-6 text-center text-slate-400 text-xs">কোনো সক্রিয় ডিভাইস নেই</td></tr>';
 const banLabel = u.is_banned ? 'Unban ইউজার' : 'Ban ইউজার';
 const banColor = u.is_banned ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700';
 %>
@@ -140,6 +155,34 @@ const banColor = u.is_banned ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-6
                     <a href="/admin/fraud-logs?user_id=${u.id}" class="text-xs text-blue-600 hover:underline">সব লগ দেখুন →</a>
                 </div>
                 <div>${fraudFlagsHtml}</div>
+            </div>
+
+            <div class="bg-white border border-slate-100 rounded-3xl overflow-hidden">
+                <h3 class="font-semibold text-slate-800 px-6 pt-6 pb-3"><i class="fas fa-mobile-screen-button text-indigo-500 mr-2"></i>সক্রিয় ডিভাইস (${(deviceOverview && deviceOverview.activeSessions && deviceOverview.activeSessions.length) || 0})</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead><tr class="bg-slate-50 border-b border-slate-100">
+                            <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Device</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">IP</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Last Active</th>
+                        </tr></thead>
+                        <tbody>${deviceSessRows}</tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white border border-slate-100 rounded-3xl overflow-hidden">
+                <h3 class="font-semibold text-slate-800 px-6 pt-6 pb-3"><i class="fas fa-clock-rotate-left text-indigo-500 mr-2"></i>সাম্প্রতিক লগইন হিস্ট্রি</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead><tr class="bg-slate-50 border-b border-slate-100">
+                            <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Device</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">IP</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Date</th>
+                        </tr></thead>
+                        <tbody>${loginHistRows}</tbody>
+                    </table>
+                </div>
             </div>
         </div>
 

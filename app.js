@@ -29,6 +29,7 @@ const { syncMatches } = require('./services/matchUpdater');
 const runMigrations = require('./migrations');
 const { apiGateway, responseHelpers } = require('./middleware/gateway');
 const { scheduleDailyBackup } = require('./services/backup');
+const { touchDeviceActivity } = require('./services/deviceTracking');
 
 const app = express();
 app.use(compression());
@@ -195,6 +196,11 @@ app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.success = req.flash('success');
   res.locals.error = req.flash('error');
+
+  // ডিভাইস "last activity" আপডেট — থ্রটলড, নন-ব্লকিং, লগইন করা ইউজারের জন্যই শুধু
+  if (req.session && req.session.user) {
+    touchDeviceActivity(req).catch(() => {});
+  }
 
   const lang = req.session.lang === 'en' ? 'en' : 'bn';
   const t_func = (key) => translations[lang][key] || key;
