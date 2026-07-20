@@ -66,4 +66,27 @@ async function sendVerificationEmail(email, verifyUrl) {
   });
 }
 
-module.exports = { sendOTP, sendPasswordReset, sendVerificationEmail };
+async function sendNewDeviceAlert(email, { username, deviceName, ip, location, time }) {
+  const timeStr = new Date(time).toLocaleString('bn-BD', { dateStyle: 'medium', timeStyle: 'short' });
+  await transporter.sendMail({
+    from: `"LIVO" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: 'LIVO - নতুন ডিভাইস থেকে লগইন শনাক্ত হয়েছে',
+    html: `
+      <div style="font-family:sans-serif;max-width:440px;margin:auto;padding:20px;border:1px solid #eee;border-radius:10px">
+        <h2 style="color:#e53e3e">LIVO</h2>
+        <p>প্রিয় ${username || ''},</p>
+        <p>আপনার অ্যাকাউন্টে একটা নতুন ডিভাইস থেকে লগইন হয়েছে:</p>
+        <table style="width:100%;font-size:14px;color:#333;margin:16px 0;border-collapse:collapse">
+          <tr><td style="padding:4px 0;color:#888">ডিভাইস</td><td style="padding:4px 0;font-weight:bold">${deviceName || 'অজানা'}</td></tr>
+          <tr><td style="padding:4px 0;color:#888">IP ঠিকানা</td><td style="padding:4px 0;font-weight:bold">${ip || 'অজানা'}</td></tr>
+          <tr><td style="padding:4px 0;color:#888">আনুমানিক স্থান</td><td style="padding:4px 0;font-weight:bold">${location || 'অজানা'}</td></tr>
+          <tr><td style="padding:4px 0;color:#888">সময়</td><td style="padding:4px 0;font-weight:bold">${timeStr}</td></tr>
+        </table>
+        <p style="font-size:13px;color:#666">এটা যদি আপনি না করে থাকেন, অবিলম্বে আপনার পাসওয়ার্ড পরিবর্তন করুন এবং 2FA চালু করুন।</p>
+      </div>
+    `
+  });
+}
+
+module.exports = { sendOTP, sendPasswordReset, sendVerificationEmail, sendNewDeviceAlert };

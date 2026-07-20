@@ -3,10 +3,26 @@
 // "Active Devices" ট্র্যাক করে যাতে ইউজার নির্দিষ্ট ডিভাইস বা সব ডিভাইস থেকে লগআউট করতে পারে।
 
 const crypto = require('crypto');
+const geoip = require('geoip-lite');
 const { pool } = require('../db');
 const { logAdminAction } = require('./fraudDetection');
+const { sendNewDeviceAlert } = require('./email');
 
 const ACTIVITY_TOUCH_INTERVAL_MS = 5 * 60 * 1000; // বারবার DB আপডেট না করে ৫ মিনিট পরপর last_activity রিফ্রেশ
+
+// ==================== আনুমানিক লোকেশন (geoip-lite — অফলাইন DB, কোনো API key/নেটওয়ার্ক কল লাগে না) ====================
+function lookupLocation(ip) {
+  try {
+    if (!ip || ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168.') || ip.startsWith('10.')) {
+      return 'Local/Unknown';
+    }
+    const geo = geoip.lookup(ip);
+    if (!geo) return 'Unknown';
+    return [geo.city, geo.region, geo.country].filter(Boolean).join(', ') || 'Unknown';
+  } catch (e) {
+    return 'Unknown';
+  }
+}
 
 // ==================== User-Agent পার্সিং (কোনো বাড়তি npm প্যাকেজ ছাড়াই, হালকা regex-ভিত্তিক) ====================
 function parseUserAgent(ua) {
@@ -64,6 +80,7 @@ async function recordDeviceLogin(req, userId, loginLogId) {
     const signature = computeSignature(fingerprint, ua);
     const parsed = parseUserAgent(ua);
     const deviceName = buildDeviceName(parsed);
+    const location = lookupLocation(ip);
     const sid = req.sessionID;
 
     const seenBefore = await pool.query(
@@ -74,32 +91,45 @@ async function recordDeviceLogin(req, userId, loginLogId) {
 
     if (loginLogId) {
       await pool.query(
-        `UPDATE login_logs SET device_signature = $1, is_new_device = $2 WHERE id = $3`,
-        [signature, isNewDevice, loginLogId]
+        `UPDATE login_logs SET device_signature = $1, is_new_device = $2, location = $3 WHERE id = $4`,
+        [signature, isNewDevice, location, loginLogId]
       );
     }
 
     if (sid) {
       await pool.query(
-        `INSERT INTO device_sessions (user_id, sid, device_signature, device_name, browser, os, device_type, ip, user_agent, is_new_device, created_at, last_activity)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW(),NOW())
+        `INSERT INTO device_sessions (user_id, sid, device_signature, device_name, browser, os, device_type, ip, user_agent, is_new_device, location, created_at, last_activity)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NOW(),NOW())
          ON CONFLICT (sid) DO UPDATE SET
            user_id = EXCLUDED.user_id, device_signature = EXCLUDED.device_signature,
            device_name = EXCLUDED.device_name, browser = EXCLUDED.browser, os = EXCLUDED.os,
            device_type = EXCLUDED.device_type, ip = EXCLUDED.ip, user_agent = EXCLUDED.user_agent,
-           last_activity = NOW(), revoked_at = NULL`,
-        [userId, sid, signature, deviceName, parsed.browser, parsed.os, parsed.deviceType, ip, ua, isNewDevice]
+           location = EXCLUDED.location, last_activity = NOW(), revoked_at = NULL`,
+        [userId, sid, signature, deviceName, parsed.browser, parsed.os, parsed.deviceType, ip, ua, isNewDevice, location]
       );
     }
 
     if (isNewDevice) {
       await logAdminAction(
         null, 'SYSTEM', 'NEW_DEVICE_LOGIN',
-        `ইউজার #${userId} — নতুন ডিভাইস থেকে লগইন: ${deviceName} — IP ${ip}`, null
+        `ইউজার #${userId} — নতুন ডিভাইস থেকে লগইন: ${deviceName} — IP ${ip} — ${location}`, null
       );
+
+      // নতুন ডিভাইস থেকে লগইন হলে ইউজারকে ইমেইল সতর্কতা — ব্যর্থ হলেও লগইন ফ্লো কখনো আটকাবে না
+      try {
+        const userRes = await pool.query('SELECT email, username FROM users WHERE id = $1', [userId]);
+        const u = userRes.rows[0];
+        if (u && u.email) {
+          await sendNewDeviceAlert(u.email, {
+            username: u.username, deviceName, ip, location, time: new Date()
+          });
+        }
+      } catch (mailErr) {
+        console.error('sendNewDeviceAlert error (non-blocking):', mailErr.message);
+      }
     }
 
-    return { isNewDevice, deviceName, signature };
+    return { isNewDevice, deviceName, signature, location };
   } catch (err) {
     console.error('recordDeviceLogin error (non-blocking):', err.message);
     return null;

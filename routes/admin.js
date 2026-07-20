@@ -1860,4 +1860,52 @@ router.get('/reports', async (req, res) => {
   }
 });
 
+// ==================== LOGIN HISTORY (সব ইউজারের, সার্চ/ফিল্টার সহ) ====================
+router.get('/login-history', async (req, res) => {
+  try {
+    const { q = '', new_device = '', from = '', to = '' } = req.query;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = 30;
+    const offset = (page - 1) * limit;
+
+    const conditions = [];
+    const params = [];
+    if (q) {
+      params.push(`%${q}%`);
+      conditions.push(`(u.username ILIKE $${params.length} OR l.ip ILIKE $${params.length} OR l.location ILIKE $${params.length})`);
+    }
+    if (new_device === '1') conditions.push(`l.is_new_device = true`);
+    if (from) { params.push(from); conditions.push(`l.created_at >= $${params.length}`); }
+    if (to) { params.push(to); conditions.push(`l.created_at <= $${params.length}::date + INTERVAL '1 day'`); }
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const countRes = await pool.query(
+      `SELECT COUNT(*) FROM login_logs l LEFT JOIN users u ON u.id = l.user_id ${where}`, params
+    );
+    const total = parseInt(countRes.rows[0].count);
+
+    const listParams = [...params, limit, offset];
+    const result = await pool.query(
+      `SELECT l.*, u.username
+       FROM login_logs l LEFT JOIN users u ON u.id = l.user_id
+       ${where}
+       ORDER BY l.created_at DESC LIMIT $${listParams.length - 1} OFFSET $${listParams.length}`,
+      listParams
+    );
+
+    const { parseUserAgent } = require('../services/deviceTracking');
+    const logs = result.rows.map(row => ({ ...row, ...parseUserAgent(row.user_agent) }));
+
+    res.render('admin/login-history', {
+      logs, total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)),
+      filters: { q, new_device, from, to }
+    });
+  } catch (err) {
+    console.error('Login history error:', err && err.stack ? err.stack : err);
+    res.render('admin/login-history', {
+      logs: [], total: 0, page: 1, limit: 30, totalPages: 1, filters: { q: '', new_device: '', from: '', to: '' }
+    });
+  }
+});
+
 module.exports = router;

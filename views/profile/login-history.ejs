@@ -20,7 +20,7 @@
                 <i class="fas <%= l.deviceType === 'Mobile' ? 'fa-mobile-screen' : (l.deviceType === 'Tablet' ? 'fa-tablet-screen-button' : 'fa-desktop') %>"></i>
                 <%= l.browser %> · <%= l.os %>
               </div>
-              <div style="color: var(--text-muted); font-size: 11px; margin-top: 6px;"><%= l.ip %></div>
+              <div style="color: var(--text-muted); font-size: 11px; margin-top: 6px;"><%= l.ip %><%= l.location ? ' · ' + l.location : '' %></div>
             </div>
             <% if (l.is_new_device) { %>
               <span style="background:rgba(245,158,11,0.15); color:var(--gold); font-size:10px; font-weight:800; padding:3px 8px; border-radius:20px; white-space:nowrap;"><%= t.new_device_badge %></span>

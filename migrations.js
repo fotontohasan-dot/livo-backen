@@ -794,6 +794,10 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_device_sessions_user ON device_sessions(user_id);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_device_sessions_active ON device_sessions(user_id, revoked_at);`);
 
+    // ==================== আনুমানিক লোকেশন (Feature 06 — geoip-lite দিয়ে, অফলাইন, কোনো API key লাগে না) ====================
+    await pool.query(`ALTER TABLE login_logs ADD COLUMN IF NOT EXISTS location VARCHAR(120)`);
+    await pool.query(`ALTER TABLE device_sessions ADD COLUMN IF NOT EXISTS location VARCHAR(120)`);
+
     console.log("✅ Device tracking tables ready");
   } catch (err) {
     console.error("❌ Migration error:", err.message);
