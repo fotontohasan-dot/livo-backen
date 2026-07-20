@@ -5,10 +5,79 @@
     <a href="/profile" style="color:var(--text-main); text-decoration: none; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
       <i class="fas fa-chevron-left"></i>
     </a>
-    <h1 style="color:var(--text-main); font-size: 20px; font-weight: 800; letter-spacing: 0.5px;"><%= t.security_settings_title %></h1>
+    <h1 style="color:var(--text-main); font-size: 20px; font-weight: 800; letter-spacing: 0.5px;"><%= t.security_center %></h1>
   </div>
 
   <%- include('../partials/flash') %>
+
+  <!-- ==================== Security Center Overview — ৬টি নিরাপত্তা আইটেমের স্ট্যাটাস একনজরে ==================== -->
+  <%
+    var scActiveOtherCount = (activeSessions || []).filter(function(d){ return !d.is_current; }).length;
+    var scItems = [
+      {
+        icon: 'fa-envelope-circle-check',
+        label: lang === 'bn' ? 'ইমেইল ভেরিফিকেশন' : 'Email Verification',
+        ok: !emailStatus || !emailStatus.hasEmail || emailStatus.verified,
+        sub: (!emailStatus || !emailStatus.hasEmail) ? (lang === 'bn' ? 'প্রযোজ্য নয়' : 'Not applicable')
+             : (emailStatus.verified ? (lang === 'bn' ? 'ভেরিফাইড' : 'Verified') : (lang === 'bn' ? 'ভেরিফাই করা হয়নি' : 'Not verified')),
+        tab: 'security'
+      },
+      {
+        icon: 'fa-key',
+        label: lang === 'bn' ? 'পাসওয়ার্ড' : 'Password',
+        ok: true,
+        sub: passwordChangedAt ? ((lang === 'bn' ? 'শেষ পরিবর্তন: ' : 'Last changed: ') + new Date(passwordChangedAt).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US')) : (lang === 'bn' ? 'কখনো পরিবর্তন হয়নি' : 'Never changed'),
+        tab: 'security'
+      },
+      {
+        icon: 'fa-shield-halved',
+        label: t.withdraw_pin_title,
+        ok: !!(pinStatus && pinStatus.configured) && !(pinStatus && pinStatus.locked),
+        sub: (pinStatus && pinStatus.locked) ? (lang === 'bn' ? 'সাময়িক লক' : 'Temporarily locked') : ((pinStatus && pinStatus.configured) ? t.pin_configured : t.pin_not_configured),
+        tab: 'security'
+      },
+      {
+        icon: 'fa-mobile-screen-button',
+        label: t.active_devices_title,
+        ok: true,
+        sub: (activeSessions ? activeSessions.length : 0) + (lang === 'bn' ? 'টি ডিভাইস সক্রিয়' : ' active'),
+        tab: 'devices'
+      },
+      {
+        icon: 'fa-right-from-bracket',
+        label: lang === 'bn' ? 'অন্যান্য সেশন' : 'Other Sessions',
+        ok: scActiveOtherCount === 0,
+        sub: scActiveOtherCount > 0 ? (scActiveOtherCount + (lang === 'bn' ? 'টি অন্য সেশন সক্রিয়' : ' other sessions active')) : (lang === 'bn' ? 'শুধু এই ডিভাইস' : 'This device only'),
+        tab: 'devices'
+      },
+      {
+        icon: 'fa-clock-rotate-left',
+        label: t.recent_login_activity,
+        ok: true,
+        sub: (recentLogins ? recentLogins.length : 0) + (lang === 'bn' ? 'টি সাম্প্রতিক লগইন' : ' recent logins'),
+        tab: 'devices'
+      }
+    ];
+  %>
+  <div style="background: var(--bg-card); border-radius: 20px; padding: 18px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
+    <h3 style="color: var(--gold); font-size: 14px; margin: 0 0 14px; display:flex; align-items:center; gap:8px;">
+      <i class="fas fa-shield-halved"></i> <%= lang === 'bn' ? 'নিরাপত্তা ওভারভিউ' : 'Security Overview' %>
+    </h3>
+    <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px;">
+      <% scItems.forEach(function(it) { %>
+        <div onclick="switchTab('<%= it.tab %>')" style="cursor:pointer; background: rgba(255,255,255,0.03); border-radius: 14px; padding: 12px; border: 1px solid <%= it.ok ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.3)' %>; display:flex; gap:10px; align-items:flex-start;">
+          <i class="fas <%= it.icon %>" style="font-size:16px; margin-top:2px; color: <%= it.ok ? '#10b981' : '#ef4444' %>;"></i>
+          <div style="min-width:0;">
+            <div style="color:var(--text-main); font-size:12px; font-weight:700; display:flex; align-items:center; gap:6px;">
+              <%= it.label %>
+              <i class="fas <%= it.ok ? 'fa-circle-check' : 'fa-triangle-exclamation' %>" style="font-size:10px; color: <%= it.ok ? '#10b981' : '#ef4444' %>;"></i>
+            </div>
+            <div style="color:var(--text-muted); font-size:11px; margin-top:3px;"><%= it.sub %></div>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  </div>
 
   <!-- Tab Buttons -->
   <div style="display: flex; gap: 10px; margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 5px; border-radius: 12px; border: 1px solid var(--border-glass);">
@@ -94,6 +163,33 @@
 
   <!-- Security Tab -->
   <div id="tab-security" class="sec-content" style="display: none;">
+
+    <!-- ==================== Email Verification কার্ড ==================== -->
+    <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
+      <h3 style="color: var(--gold); font-size: 16px; margin-bottom: 6px; display: flex; align-items: center; gap: 10px;">
+        <i class="fas fa-envelope-circle-check"></i> <%= lang === 'bn' ? 'ইমেইল ভেরিফিকেশন' : 'Email Verification' %>
+      </h3>
+      <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 18px;"><%= lang === 'bn' ? 'অ্যাকাউন্ট রিকভারি ও গুরুত্বপূর্ণ নোটিফিকেশনের জন্য ইমেইল ভেরিফাই করুন' : 'Verify your email for account recovery and important notifications' %></p>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; background: rgba(255,255,255,0.03); border-radius: 12px; padding: 15px; gap: 12px;">
+        <div style="min-width:0;">
+          <div style="color:var(--text-muted); font-size:12px; margin-bottom:4px;"><%= user.email || (lang === 'bn' ? 'কোনো ইমেইল যুক্ত নেই' : 'No email on account') %></div>
+          <% if (!emailStatus || !emailStatus.hasEmail) { %>
+            <div style="font-weight:700; font-size: 14px; color: var(--text-muted);"><i class="fas fa-circle-minus"></i> <%= lang === 'bn' ? 'প্রযোজ্য নয়' : 'Not applicable' %></div>
+          <% } else if (emailStatus.verified) { %>
+            <div style="font-weight:700; font-size: 14px; color: #10b981;"><i class="fas fa-circle-check"></i> <%= lang === 'bn' ? 'ভেরিফাইড' : 'Verified' %></div>
+          <% } else { %>
+            <div style="font-weight:700; font-size: 14px; color: #ef4444;"><i class="fas fa-circle-xmark"></i> <%= lang === 'bn' ? 'ভেরিফাই করা হয়নি' : 'Not verified' %></div>
+          <% } %>
+        </div>
+        <% if (emailStatus && emailStatus.hasEmail && !emailStatus.verified) { %>
+          <form method="POST" action="/resend-verification">
+            <button type="submit" class="btn btn-primary" style="border-radius:10px; padding:10px 16px; font-weight:800; font-size:12px; white-space:nowrap;"><%= lang === 'bn' ? 'পুনরায় পাঠান' : 'Resend' %></button>
+          </form>
+        <% } %>
+      </div>
+    </div>
+
     <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
       <h3 style="color: var(--gold); font-size: 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
         <i class="fas fa-lock"></i> <%= t.change_password_title %>

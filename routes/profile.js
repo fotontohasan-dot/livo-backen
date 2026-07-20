@@ -21,6 +21,7 @@ const { getRewardStatus, claimRedPacket, claimGoldenEgg } = require('../services
 const { checkContent } = require('../utils/contentFilter');
 const { isWeakPin, createPin, updatePin, verifyPin, getPinStatus } = require('../services/withdrawPin');
 const { listActiveSessions, listLoginHistory, revokeDeviceSession, revokeAllOtherSessions } = require('../services/deviceTracking');
+const { logAdminAction } = require('../services/fraudDetection');
 const cache = require('../services/cache');
 
 // ==== ইনপুট ভ্যালিডেশন হেল্পার (username, name, phone, bank card ফিল্ড) ====
@@ -229,7 +230,8 @@ router.post('/change-password', isAuth, async (req, res) => {
       return res.redirect('/profile/security');
     }
     const hashed = await bcrypt.hash(np, 10);
-    await pool.query(`UPDATE users SET password=$1 WHERE id=$2`, [hashed, req.session.user.id]);
+    await pool.query(`UPDATE users SET password=$1, password_changed_at=NOW() WHERE id=$2`, [hashed, req.session.user.id]);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'PASSWORD_CHANGED', `ইউজার #${req.session.user.id} নিজের পাসওয়ার্ড পরিবর্তন করেছে`, req.ip);
     req.flash('success', '✅ পাসওয়ার্ড পরিবর্তন হয়েছে!');
     res.redirect('/profile/security');
   } catch (err) {
@@ -341,9 +343,33 @@ router.get('/security', isAuth, async (req, res) => {
       recentLogins = await listLoginHistory(req.session.user.id, 5, 0);
     } catch (e) { console.error('security devices load error:', e.message); }
 
-    res.render('profile/security', { user: req.session.user, bankCards: cards.rows, pinStatus, activeSessions, recentLogins });
+    // ==================== Security Center — ইমেইল ভেরিফিকেশন ও পাসওয়ার্ড স্ট্যাটাস (সবসময় DB থেকে ফ্রেশ, সেশন স্টেল হতে পারে) ====================
+    let emailStatus = { verified: true, hasEmail: false, lastSentAt: null };
+    let passwordChangedAt = null;
+    try {
+      const u = await pool.query(
+        'SELECT email, email_verified, last_verification_sent_at, password_changed_at FROM users WHERE id = $1',
+        [req.session.user.id]
+      );
+      if (u.rows[0]) {
+        emailStatus = {
+          verified: !!u.rows[0].email_verified,
+          hasEmail: !!u.rows[0].email,
+          lastSentAt: u.rows[0].last_verification_sent_at
+        };
+        passwordChangedAt = u.rows[0].password_changed_at;
+      }
+    } catch (e) { console.error('security email/password status load error:', e.message); }
+
+    res.render('profile/security', {
+      user: req.session.user, bankCards: cards.rows, pinStatus, activeSessions, recentLogins,
+      emailStatus, passwordChangedAt
+    });
   } catch (err) {
-    res.render('profile/security', { user: req.session.user, bankCards: [], pinStatus: { configured: false, locked: false }, activeSessions: [], recentLogins: [] });
+    res.render('profile/security', {
+      user: req.session.user, bankCards: [], pinStatus: { configured: false, locked: false }, activeSessions: [], recentLogins: [],
+      emailStatus: { verified: true, hasEmail: false, lastSentAt: null }, passwordChangedAt: null
+    });
   }
 });
 
@@ -404,6 +430,7 @@ router.post('/withdraw-pin/create', isAuth, async (req, res) => {
     }
 
     await createPin(userId, pin, req.ip);
+    await logAdminAction(userId, req.session.user.username, 'WITHDRAW_PIN_CREATED', `ইউজার #${userId} নিজের Withdraw PIN তৈরি করেছে`, req.ip);
     req.flash('success', '✅ Withdraw PIN সফলভাবে তৈরি হয়েছে!');
     res.redirect('/profile/security');
   } catch (err) {
@@ -448,6 +475,7 @@ router.post('/withdraw-pin/change', isAuth, async (req, res) => {
     }
 
     await updatePin(userId, newPin, req.ip, 'changed');
+    await logAdminAction(userId, req.session.user.username, 'WITHDRAW_PIN_CHANGED', `ইউজার #${userId} নিজের Withdraw PIN পরিবর্তন করেছে`, req.ip);
     req.flash('success', '✅ Withdraw PIN পরিবর্তন হয়েছে!');
     res.redirect('/profile/security');
   } catch (err) {
@@ -479,6 +507,7 @@ router.post('/withdraw-pin/reset', isAuth, async (req, res) => {
     }
 
     await updatePin(userId, newPin, req.ip, 'reset');
+    await logAdminAction(userId, req.session.user.username, 'WITHDRAW_PIN_RESET', `ইউজার #${userId} নিজের Withdraw PIN রিসেট করেছে`, req.ip);
     req.flash('success', '✅ Withdraw PIN রিসেট হয়েছে!');
     res.redirect('/profile/security');
   } catch (err) {

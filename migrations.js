@@ -799,6 +799,11 @@ async function runMigrations() {
     await pool.query(`ALTER TABLE device_sessions ADD COLUMN IF NOT EXISTS location VARCHAR(120)`);
 
     console.log("✅ Device tracking tables ready");
+
+    // ==================== Security Center — পাসওয়ার্ড শেষ কবে বদলেছে তা ট্র্যাক করার জন্য ====================
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMP;`);
+
+    console.log("✅ Security Center columns ready");
   } catch (err) {
     console.error("❌ Migration error:", err.message);
   }

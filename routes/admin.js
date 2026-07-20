@@ -1227,7 +1227,53 @@ router.post('/users/:id/delete', requireIntParam('id'), async (req, res) => {
   res.redirect('/admin/users');
 });
 
-// ==================== Withdraw PIN রিসেট (অ্যাডমিন) ====================
+// ==================== Security Overview — Security Center-এর অ্যাডমিন-সাইড ড্যাশবোর্ড ====================
+router.get('/security-overview', async (req, res) => {
+  try {
+    const SECURITY_ACTION_TYPES = [
+      'PASSWORD_CHANGED', 'WITHDRAW_PIN_CREATED', 'WITHDRAW_PIN_CHANGED', 'WITHDRAW_PIN_RESET',
+      'NEW_DEVICE_LOGIN', 'DEVICE_SESSION_REVOKED', 'ALL_OTHER_SESSIONS_REVOKED',
+      'EMAIL_VERIFIED', 'EMAIL_VERIFICATION_RESEND', 'EMAIL_VERIFICATION_SENT', '2FA_ENABLED', '2FA_DISABLED'
+    ];
+
+    const [
+      totalUsersRes, emailUsersRes, emailVerifiedRes, pinConfiguredRes,
+      activeSessionsRes, newDeviceLoginsRes, pinLockedRes, recentLogsRes
+    ] = await Promise.all([
+      pool.query(`SELECT COUNT(*) AS c FROM users`),
+      pool.query(`SELECT COUNT(*) AS c FROM users WHERE email IS NOT NULL`),
+      pool.query(`SELECT COUNT(*) AS c FROM users WHERE email IS NOT NULL AND email_verified = true`),
+      pool.query(`SELECT COUNT(*) AS c FROM users WHERE withdraw_pin_hash IS NOT NULL`),
+      pool.query(`SELECT COUNT(*) AS c FROM device_sessions WHERE revoked_at IS NULL`),
+      pool.query(`SELECT COUNT(*) AS c FROM login_logs WHERE is_new_device = true AND created_at >= NOW() - INTERVAL '7 days'`),
+      pool.query(`SELECT COUNT(*) AS c FROM users WHERE withdraw_pin_locked_until IS NOT NULL AND withdraw_pin_locked_until > NOW()`),
+      pool.query(
+        `SELECT * FROM admin_logs WHERE action_type = ANY($1) ORDER BY created_at DESC LIMIT 25`,
+        [SECURITY_ACTION_TYPES]
+      )
+    ]);
+
+    const stats = {
+      totalUsers: parseInt(totalUsersRes.rows[0].c),
+      emailUsers: parseInt(emailUsersRes.rows[0].c),
+      emailVerified: parseInt(emailVerifiedRes.rows[0].c),
+      pinConfigured: parseInt(pinConfiguredRes.rows[0].c),
+      activeSessions: parseInt(activeSessionsRes.rows[0].c),
+      newDeviceLogins7d: parseInt(newDeviceLoginsRes.rows[0].c),
+      pinLocked: parseInt(pinLockedRes.rows[0].c)
+    };
+
+    res.render('admin/security-overview', { stats, recentLogs: recentLogsRes.rows });
+  } catch (err) {
+    console.error('security-overview error:', err.message);
+    res.render('admin/security-overview', {
+      stats: { totalUsers: 0, emailUsers: 0, emailVerified: 0, pinConfigured: 0, activeSessions: 0, newDeviceLogins7d: 0, pinLocked: 0 },
+      recentLogs: []
+    });
+  }
+});
+
+
 // অ্যাডমিন আসল PIN কখনো দেখতে/সেট করতে পারবে না — শুধু হ্যাশ ক্লিয়ার করে দেয়, ইউজারকে
 // আবার নতুন PIN তৈরি করতে হবে। প্রতিটি রিসেট withdraw_pin_logs + admin_logs উভয় জায়গায় লগ হয়।
 router.post('/users/:id/withdraw-pin/reset', adminActionLimiter, requireIntParam('id'), async (req, res) => {
