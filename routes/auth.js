@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const { pool } = require('../db');
 const { createReferral } = require('../services/referral');
-const { sendPasswordReset } = require('../services/email');
+const { sendPasswordReset, sendVerificationEmail } = require('../services/email');
 const { evaluateRegistration } = require('../services/fraudDetection');
 const { recordDeviceLogin } = require('../services/deviceTracking');
 const cache = require('../services/cache');
@@ -17,6 +17,37 @@ const resetLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false
 });
+
+const verifyResendLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+// ইউজার-সাইড ইভেন্ট (রেজিস্ট্রেশন, ভেরিফিকেশন) admin_logs টেবিলেই লগ হয়, যাতে
+// অ্যাডমিন প্যানেলের বিদ্যমান Activity Log-এই (ফিল্টার/সার্চ/CSV export সহ) দেখা যায়
+async function logSystemEvent(userId, username, actionType, details, ip = null) {
+  try {
+    await pool.query(
+      `INSERT INTO admin_logs (admin_id, admin_username, action_type, details, ip_address) VALUES ($1, $2, $3, $4, $5)`,
+      [userId, username, actionType, details, ip]
+    );
+  } catch (e) {
+    console.error('logSystemEvent error:', e.message);
+  }
+}
+
+async function issueVerificationToken(userId) {
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // ২৪ ঘণ্টা
+  await pool.query(
+    'UPDATE users SET verification_token = $1, verification_token_expiry = $2, last_verification_sent_at = NOW() WHERE id = $3',
+    [token, expiry, userId]
+  );
+  return token;
+}
 
 function sanitizeUser(u) {
   if (!u) return null;
@@ -145,6 +176,19 @@ router.post('/register', async (req, res) => {
     req.session.user = sanitizeUser(result.rows[0]);
     await recordDeviceLogin(req, newUserId, regLogin.loginLogId);
 
+    // ==== ইমেইল ভেরিফিকেশন লিঙ্ক পাঠানো (থাকলে) — কখনো রেজিস্ট্রেশন ব্লক করে না ====
+    if (email) {
+      try {
+        const token = await issueVerificationToken(newUserId);
+        const verifyUrl = `${req.protocol}://${req.get('host')}/verify-email/${token}`;
+        await sendVerificationEmail(email, verifyUrl);
+        req.session.user.verification_token = token; // sanitizeUser ইতিমধ্যে কপি করে ফেলেছে বলে সেশনেও আপডেট
+        await logSystemEvent(newUserId, username, 'EMAIL_VERIFICATION_SENT', `রেজিস্ট্রেশনের সময় ভেরিফিকেশন ইমেইল পাঠানো হয়েছে: ${email}`, req.ip);
+      } catch (mailErr) {
+        console.error('registration verification email error:', mailErr.message);
+      }
+    }
+
     // ফ্রড চেক — কখনো রেজিস্ট্রেশন ব্লক করে না, ব্যর্থ হলেও silently এগিয়ে যায়
     evaluateRegistration(newUserId, {
       ip: (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim(),
@@ -153,7 +197,9 @@ router.post('/register', async (req, res) => {
       phone: phone || null
     }).catch(e => console.error('fraud evaluateRegistration error:', e.message));
 
-    req.flash('success', '✅ রেজিস্ট্রেশন সফল হয়েছে! স্বাগতম!');
+    req.flash('success', email
+      ? '✅ রেজিস্ট্রেশন সফল হয়েছে! স্বাগতম! আপনার ইমেইলে একটা ভেরিফিকেশন লিঙ্ক পাঠানো হয়েছে।'
+      : '✅ রেজিস্ট্রেশন সফল হয়েছে! স্বাগতম!');
     res.redirect('/');
   } catch (err) {
     console.error(err);
@@ -201,6 +247,80 @@ router.post('/login', async (req, res) => {
     console.error(err);
     req.flash('error', '❌ লগইন ব্যর্থ হয়েছে।');
     res.redirect('/login');
+  }
+});
+
+// ==================== ইমেইল ভেরিফিকেশন ====================
+
+router.get('/verify-email/:token', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, username, email FROM users WHERE verification_token = $1 AND verification_token_expiry > NOW()',
+      [req.params.token]
+    );
+    const user = result.rows[0];
+
+    if (!user) {
+      req.flash('error', '❌ লিঙ্কটি অকার্যকর অথবা মেয়াদ শেষ হয়ে গেছে। নতুন লিঙ্কের জন্য অনুরোধ করুন।');
+      return res.redirect('/profile');
+    }
+
+    await pool.query(
+      'UPDATE users SET email_verified = true, verification_token = NULL, verification_token_expiry = NULL WHERE id = $1',
+      [user.id]
+    );
+    if (req.session.user && req.session.user.id === user.id) {
+      req.session.user.email_verified = true;
+    }
+    await logSystemEvent(user.id, user.username, 'EMAIL_VERIFIED', `ইমেইল ভেরিফাই সম্পন্ন হয়েছে: ${user.email}`, req.ip);
+
+    req.flash('success', '✅ আপনার ইমেইল সফলভাবে ভেরিফাই হয়েছে!');
+    res.redirect(req.session.user ? '/profile' : '/login');
+  } catch (err) {
+    console.error('verify-email error:', err.message);
+    req.flash('error', '❌ কিছু একটা সমস্যা হয়েছে, আবার চেষ্টা করুন।');
+    res.redirect('/');
+  }
+});
+
+router.post('/resend-verification', verifyResendLimiter, async (req, res) => {
+  try {
+    if (!req.session.user) {
+      req.flash('error', '❌ আগে লগইন করুন।');
+      return res.redirect('/login');
+    }
+
+    const result = await pool.query(
+      'SELECT id, username, email, email_verified, last_verification_sent_at FROM users WHERE id = $1',
+      [req.session.user.id]
+    );
+    const user = result.rows[0];
+
+    if (!user || !user.email) {
+      req.flash('error', '❌ আপনার অ্যাকাউন্টে কোনো ইমেইল যুক্ত নেই।');
+      return res.redirect('/profile');
+    }
+    if (user.email_verified) {
+      req.flash('success', '✅ আপনার ইমেইল ইতিমধ্যে ভেরিফাই করা আছে।');
+      return res.redirect('/profile');
+    }
+    // অ্যাকাউন্ট-ভিত্তিক কুলডাউন — বারবার স্প্যাম-ক্লিকেও ৬০ সেকেন্ডে একবারের বেশি পাঠানো যাবে না
+    if (user.last_verification_sent_at && (Date.now() - new Date(user.last_verification_sent_at).getTime()) < 60 * 1000) {
+      req.flash('error', '❌ একটু আগেই পাঠানো হয়েছে, ৬০ সেকেন্ড পর আবার চেষ্টা করুন।');
+      return res.redirect('/profile');
+    }
+
+    const token = await issueVerificationToken(user.id);
+    const verifyUrl = `${req.protocol}://${req.get('host')}/verify-email/${token}`;
+    await sendVerificationEmail(user.email, verifyUrl);
+    await logSystemEvent(user.id, user.username, 'EMAIL_VERIFICATION_RESEND', `ভেরিফিকেশন ইমেইল আবার পাঠানো হয়েছে: ${user.email}`, req.ip);
+
+    req.flash('success', '✅ ভেরিফিকেশন লিঙ্ক আবার পাঠানো হয়েছে, ইমেইল চেক করুন।');
+    res.redirect('/profile');
+  } catch (err) {
+    console.error('resend-verification error:', err.message);
+    req.flash('error', '❌ কিছু একটা সমস্যা হয়েছে, আবার চেষ্টা করুন।');
+    res.redirect('/profile');
   }
 });
 

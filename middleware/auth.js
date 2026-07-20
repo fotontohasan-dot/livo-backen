@@ -39,4 +39,30 @@ const isAdmin = async (req, res, next) => {
 const requireAuth = isAuth;
 const requireAdmin = isAdmin;
 
-module.exports = { isAuth, isAdmin, requireAuth, requireAdmin };
+// সংবেদনশীল ফিচার (যেমন withdraw) ব্যবহারের আগে ইমেইল ভেরিফাইড কিনা DB থেকে যাচাই করে —
+// সেশনে ক্যাশ করা মান নয়, কারণ ভেরিফাই/রিসেন্ড অন্য ট্যাবে হলে সেশন স্টেল থাকতে পারে
+const requireVerifiedEmail = async (req, res, next) => {
+  if (!req.session || !req.session.user) return res.redirect('/login');
+
+  try {
+    const result = await pool.query('SELECT email, email_verified FROM users WHERE id = $1', [req.session.user.id]);
+    const row = result.rows[0];
+
+    // ইমেইলই নেই এমন অ্যাকাউন্টের জন্য এই গেট প্রযোজ্য না (ফোন দিয়ে রেজিস্টার করা ইউজার)
+    if (!row || !row.email || row.email_verified) {
+      if (row) req.session.user.email_verified = row.email_verified;
+      return next();
+    }
+
+    if (req.path.includes('/api/')) {
+      return res.status(403).json({ success: false, error: 'এই ফিচার ব্যবহার করতে আগে ইমেইল ভেরিফাই করুন।' });
+    }
+    req.flash && req.flash('error', '❌ এই ফিচার ব্যবহার করতে আগে আপনার ইমেইল ভেরিফাই করুন। প্রোফাইল পেজ থেকে ভেরিফিকেশন লিঙ্ক পুনরায় পাঠাতে পারেন।');
+    return res.redirect('/profile');
+  } catch (err) {
+    console.error('requireVerifiedEmail error:', err.message);
+    return res.redirect('/profile');
+  }
+};
+
+module.exports = { isAuth, isAdmin, requireAuth, requireAdmin, requireVerifiedEmail };

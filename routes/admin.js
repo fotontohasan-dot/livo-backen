@@ -1102,6 +1102,8 @@ router.get('/users', async (req, res) => {
     }
     if (status === 'banned') conditions.push('is_banned = true');
     if (status === 'active') conditions.push('is_banned = false');
+    if (status === 'email_verified') conditions.push('email_verified = true');
+    if (status === 'email_unverified') conditions.push('email_verified = false AND email IS NOT NULL');
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const countRes = await pool.query(`SELECT COUNT(*) FROM users ${where}`, params);
@@ -1109,7 +1111,7 @@ router.get('/users', async (req, res) => {
 
     params.push(limit, offset);
     const result = await pool.query(
-      `SELECT id, username, email, phone, coins, total_points, is_banned, created_at FROM users ${where}
+      `SELECT id, username, email, phone, coins, total_points, is_banned, email_verified, created_at FROM users ${where}
        ORDER BY id DESC LIMIT $${params.length - 1} OFFSET $${params.length}`,
       params
     );

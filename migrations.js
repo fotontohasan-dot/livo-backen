@@ -42,6 +42,19 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_referral ON users(referral_code);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_referred_by ON users(referred_by_id);`);
 
+    // ==================== ইমেইল ভেরিফিকেশন ====================
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT false;`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token TEXT;`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_expiry TIMESTAMP;`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_verification_sent_at TIMESTAMP;`);
+    // যাদের ইমেইল নেই (শুধু ফোন দিয়ে রেজিস্টার করেছে) তাদের জন্য ভেরিফিকেশন গেট প্রযোজ্য না
+    await pool.query(`UPDATE users SET email_verified = true WHERE email IS NULL AND email_verified = false;`);
+    // এই ফিচার চালুর আগে থেকে থাকা ইউজারদের (কখনো ভেরিফিকেশন টোকেন ইস্যু হয়নি) "verified" হিসেবে
+    // গ্র্যান্ডফাদার করা হলো — নাহলে সবার withdraw/সংবেদনশীল ফিচার হঠাৎ বন্ধ হয়ে যেত।
+    // নতুন রেজিস্ট্রেশন থেকেই শুধু ভেরিফিকেশন বাধ্যতামূলক থাকবে (তাদের টোকেন ইস্যু হবে)।
+    await pool.query(`UPDATE users SET email_verified = true WHERE email_verified = false AND verification_token IS NULL;`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_verification_token ON users(verification_token);`);
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS matches (
         id SERIAL PRIMARY KEY,

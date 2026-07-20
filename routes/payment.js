@@ -10,6 +10,7 @@ const { broadcastDemoStats, emitAdminAlert } = require('../services/socket');
 const { notifyTelegram } = require('../services/telegramNotify');
 const { verifyPin, getPinStatus } = require('../services/withdrawPin');
 const { evaluateTransaction } = require('../services/fraudDetection');
+const { requireVerifiedEmail } = require('../middleware/auth');
 
 const paymentLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -241,7 +242,7 @@ router.get('/withdraw', requireLogin, async (req, res) => {
 });
 
 
-router.post('/withdraw', requireLogin, paymentLimiter, async (req, res) => {
+router.post('/withdraw', requireLogin, requireVerifiedEmail, paymentLimiter, async (req, res) => {
   const { method, account_number, withdraw_pin } = req.body;
   const amount = parseAmount(req.body.amount);
   const userId = req.session.user.id;

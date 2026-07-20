@@ -3,6 +3,18 @@
 <div class="container" style="padding: 15px; padding-bottom: 100px;">
   <%- include('../partials/flash') %>
 
+  <% if (user.email && !user.email_verified) { %>
+  <div style="background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 14px; padding: 14px 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+    <i class="fas fa-triangle-exclamation" style="color: #f59e0b; font-size: 18px;"></i>
+    <div style="flex: 1; min-width: 200px; font-size: 13px; color: var(--text-main, #eee);">
+      আপনার ইমেইল এখনো ভেরিফাই করা হয়নি — কিছু ফিচার (যেমন উইথড্র) ব্যবহার করতে ভেরিফিকেশন লাগবে।
+    </div>
+    <form action="/resend-verification" method="POST" style="margin:0;">
+      <button type="submit" style="background:#f59e0b;color:#1a1a1a;border:none;border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:800;cursor:pointer;white-space:nowrap;">লিঙ্ক পাঠান</button>
+    </form>
+  </div>
+  <% } %>
+
   <!-- প্রোফাইল ব্যানার — হালকা ডার্ক শেড -->
   <div style="background: linear-gradient(135deg, #2d3446, #454e64); border-radius: 24px; padding: 25px 20px; margin: 0 -15px 20px -15px; position: relative; overflow: hidden; border: 1px solid rgba(245, 158, 11, 0.25); box-shadow: 0 10px 30px rgba(0,0,0,0.25);">
     <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: radial-gradient(circle, rgba(245,158,11,0.12) 0%, transparent 70%); border-radius: 50%;"></div>

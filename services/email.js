@@ -48,4 +48,22 @@ async function sendPasswordReset(email, resetUrl) {
   });
 }
 
-module.exports = { sendOTP, sendPasswordReset };
+async function sendVerificationEmail(email, verifyUrl) {
+  await transporter.sendMail({
+    from: `"LIVO" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: 'LIVO - আপনার ইমেইল ভেরিফাই করুন',
+    html: `
+      <div style="font-family:sans-serif;max-width:420px;margin:auto;padding:20px;border:1px solid #eee;border-radius:10px">
+        <h2 style="color:#e53e3e">LIVO</h2>
+        <p>আপনার অ্যাকাউন্টের ইমেইল ভেরিফাই করতে নিচের বাটনে ক্লিক করুন:</p>
+        <p style="text-align:center;margin:24px 0">
+          <a href="${verifyUrl}" style="background:#e53e3e;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:bold;display:inline-block">ইমেইল ভেরিফাই করুন</a>
+        </p>
+        <p style="font-size:13px;color:#666">এই লিঙ্কটি ২৪ ঘণ্টার জন্য কার্যকর থাকবে। আপনি যদি এই অ্যাকাউন্ট না খুলে থাকেন, তাহলে এই ইমেইলটি উপেক্ষা করুন।</p>
+      </div>
+    `
+  });
+}
+
+module.exports = { sendOTP, sendPasswordReset, sendVerificationEmail };

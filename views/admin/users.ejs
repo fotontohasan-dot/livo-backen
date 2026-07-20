@@ -6,6 +6,11 @@ function userRow(u) {
   const statusBadge = u.is_banned
     ? '<span class="px-3 py-1 text-xs font-bold rounded-full bg-red-100 text-red-700">Banned</span>'
     : '<span class="px-3 py-1 text-xs font-bold rounded-full bg-emerald-100 text-emerald-700">Active</span>';
+  const verifyBadge = !u.email
+    ? '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 text-slate-400">No Email</span>'
+    : (u.email_verified
+      ? '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-100 text-blue-700"><i class="fas fa-circle-check"></i> Verified</span>'
+      : '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-700"><i class="fas fa-triangle-exclamation"></i> Unverified</span>');
   const banLabel = u.is_banned ? 'Unban' : 'Ban';
   const banColor = u.is_banned ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-red-500 hover:bg-red-600';
   return '<tr class="hover:bg-slate-50">' +
@@ -15,7 +20,7 @@ function userRow(u) {
     '</td>' +
     '<td class="px-6 py-4 font-mono font-semibold">৳ ' + Number(u.coins || 0).toLocaleString('en-US') + '</td>' +
     '<td class="px-6 py-4 text-sm">' + Number(u.total_points || 0).toLocaleString('en-US') + '</td>' +
-    '<td class="px-6 py-4">' + statusBadge + '</td>' +
+    '<td class="px-6 py-4"><div class="flex flex-col gap-1 items-start">' + statusBadge + verifyBadge + '</div></td>' +
     '<td class="px-6 py-4 text-sm text-slate-500">' + fmtDate(u.created_at) + '</td>' +
     '<td class="px-6 py-4">' +
       '<div class="flex items-center justify-center gap-x-1.5 flex-wrap">' +
@@ -48,6 +53,8 @@ const rows = (users || []).map(userRow).join('') || '<tr><td colspan="6" class="
             <option value="">সব স্ট্যাটাস</option>
             <option value="active" ${status === 'active' ? 'selected' : ''}>Active</option>
             <option value="banned" ${status === 'banned' ? 'selected' : ''}>Banned</option>
+            <option value="email_verified" ${status === 'email_verified' ? 'selected' : ''}>Email Verified</option>
+            <option value="email_unverified" ${status === 'email_unverified' ? 'selected' : ''}>Email Unverified</option>
         </select>
         <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">খুঁজুন</button>
         ${(search || status) ? '<a href="/admin/users" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">রিসেট</a>' : ''}
