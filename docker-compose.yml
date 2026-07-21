@@ -14,6 +14,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      prometheus:
+        condition: service_started
     networks:
       - livo-net
     healthcheck:
@@ -54,6 +56,30 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: livo-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - livo-net
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: livo-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - livo-net
 
 networks:
   livo-net:
