@@ -1,0 +1,106 @@
+<%- include('./partials/admin-layout', { title: 'API Usage Logs', active: 'api-logs' }) %>
+
+<div class="admin-content">
+  <div class="admin-topbar">
+    <button class="admin-hamburger" onclick="toggleAdminSidebar()"><i class="fas fa-bars"></i></button>
+    <h1 style="font-size:18px;font-weight:800;color:#fff;margin:0;">API Usage Logs</h1>
+  </div>
+
+  <div class="admin-card" style="margin-bottom:16px;">
+    <div class="admin-card-header">Search & Filter</div>
+    <form method="GET" action="/admin/api-logs" style="padding:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:end;">
+      <div>
+        <label style="font-size:11px;color:#94a3b8;">Endpoint</label><br>
+        <input type="text" name="endpoint" value="<%= filters.endpoint || '' %>" placeholder="/api/..." style="padding:8px;border-radius:8px;border:1px solid #334155;background:#0f1115;color:#fff;width:160px;">
+      </div>
+      <div>
+        <label style="font-size:11px;color:#94a3b8;">Method</label><br>
+        <select name="method" style="padding:8px;border-radius:8px;border:1px solid #334155;background:#0f1115;color:#fff;">
+          <option value="">All</option>
+          <option value="GET" <%= filters.method==='GET'?'selected':'' %>>GET</option>
+          <option value="POST" <%= filters.method==='POST'?'selected':'' %>>POST</option>
+          <option value="PUT" <%= filters.method==='PUT'?'selected':'' %>>PUT</option>
+          <option value="DELETE" <%= filters.method==='DELETE'?'selected':'' %>>DELETE</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;color:#94a3b8;">Status</label><br>
+        <input type="number" name="status" value="<%= filters.status || '' %>" placeholder="200" style="padding:8px;border-radius:8px;border:1px solid #334155;background:#0f1115;color:#fff;width:80px;">
+      </div>
+      <div>
+        <label style="font-size:11px;color:#94a3b8;">IP</label><br>
+        <input type="text" name="ip" value="<%= filters.ip || '' %>" style="padding:8px;border-radius:8px;border:1px solid #334155;background:#0f1115;color:#fff;width:120px;">
+      </div>
+      <div>
+        <label style="font-size:11px;color:#94a3b8;">From</label><br>
+        <input type="date" name="from" value="<%= filters.from || '' %>" style="padding:8px;border-radius:8px;border:1px solid #334155;background:#0f1115;color:#fff;">
+      </div>
+      <div>
+        <label style="font-size:11px;color:#94a3b8;">To</label><br>
+        <input type="date" name="to" value="<%= filters.to || '' %>" style="padding:8px;border-radius:8px;border:1px solid #334155;background:#0f1115;color:#fff;">
+      </div>
+      <button type="submit" style="padding:8px 16px;border-radius:8px;background:#f59e0b;color:#000;font-weight:700;border:none;cursor:pointer;">Filter</button>
+      <a href="/admin/api-logs/export.csv?<%= new URLSearchParams(filters).toString() %>" style="padding:8px 16px;border-radius:8px;background:#10b981;color:#fff;font-weight:700;text-decoration:none;">CSV Export</a>
+    </form>
+  </div>
+
+  <div class="admin-card">
+    <div class="admin-card-header">Logs (<%= total %> total)</div>
+    <div style="overflow-x:auto;">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Time</th>
+            <th>Method</th>
+            <th>Endpoint</th>
+            <th>Status</th>
+            <th>Time (ms)</th>
+            <th>IP</th>
+            <th>User</th>
+            <th>API Key</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (logs && logs.length) { %>
+            <% logs.forEach(function(log) { %>
+              <tr>
+                <td><%= log.id %></td>
+                <td><%= log.created_at ? new Date(log.created_at).toLocaleString('en-GB') : '-' %></td>
+                <td><span class="badge badge-amber"><%= log.method %></span></td>
+                <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;"><%= log.endpoint %></td>
+                <td>
+                  <% if (log.status_code >= 200 && log.status_code < 300) { %>
+                    <span class="badge badge-green"><%= log.status_code %></span>
+                  <% } else if (log.status_code >= 400) { %>
+                    <span class="badge badge-red"><%= log.status_code %></span>
+                  <% } else { %>
+                    <span class="badge"><%= log.status_code %></span>
+                  <% } %>
+                </td>
+                <td><%= log.response_time_ms != null ? log.response_time_ms : '-' %></td>
+                <td><%= log.ip || '-' %></td>
+                <td><%= log.username || (log.user_id ? '#'+log.user_id : '-') %></td>
+                <td><%= log.api_key_name || (log.api_key_id ? '#'+log.api_key_id : '-') %></td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr><td colspan="9" style="text-align:center;color:#64748b;padding:24px;">No logs found</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+
+    <% if (totalPages > 1) { %>
+      <div style="padding:12px;display:flex;gap:8px;justify-content:center;">
+        <% if (page > 1) { %>
+          <a href="?page=<%= page-1 %>&<%= new URLSearchParams(filters).toString() %>" style="color:#f59e0b;">Prev</a>
+        <% } %>
+        <span style="color:#94a3b8;">Page <%= page %> / <%= totalPages %></span>
+        <% if (page < totalPages) { %>
+          <a href="?page=<%= page+1 %>&<%= new URLSearchParams(filters).toString() %>" style="color:#f59e0b;">Next</a>
+        <% } %>
+      </div>
+    <% } %>
+  </div>
+</div>
