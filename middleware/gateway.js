@@ -3,6 +3,7 @@
 // rate-limit, logging, standardized response এবং error handling
 
 const rateLimit = require('express-rate-limit');
+const RedisRateLimitStore = require('../services/redisRateLimitStore');
 
 // শুধু /api/ পাথের জন্য আলাদা rate limiter (login/register এর থেকে আলাদা)
 const apiLimiter = rateLimit({
@@ -11,6 +12,7 @@ const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => (req.session && req.session.user) ? `u_${req.session.user.id}` : req.ip,
+  store: new RedisRateLimitStore('rl:api:'),
   handler: (req, res) => {
     res.status(429).json({ success: false, error: 'অনেকবার রিকোয়েস্ট করেছেন। একটু পর আবার চেষ্টা করুন।' });
   }

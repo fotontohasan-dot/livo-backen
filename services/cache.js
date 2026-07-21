@@ -180,4 +180,28 @@ function getStatus() {
   };
 }
 
-module.exports = { get, set, del, delByPattern, getOrSet, isAvailable, getStatus };
+/**
+ * Rate limiting-এর জন্য atomic counter — key না থাকলে ১ থেকে শুরু করে windowSeconds পর expire হয়ে যায়,
+ * থাকলে শুধু বাড়ায় (TTL অপরিবর্তিত থাকে)। একাধিক সার্ভার ইনস্ট্যান্স জুড়ে শেয়ার্ড রেট-লিমিট কাউন্টের জন্য দরকার।
+ * Redis অনুপলব্ধ থাকলে null রিটার্ন করে — caller-কে তখন in-memory fallback ব্যবহার করতে হবে।
+ */
+async function incrWithExpiry(key, windowSeconds) {
+  if (!isAvailable()) return null;
+  try {
+    const fullKey = prefixed(key);
+    const count = await state.client.incr(fullKey);
+    if (count === 1) await state.client.expire(fullKey, windowSeconds);
+    const ttl = await state.client.ttl(fullKey);
+    return { count, ttlMs: ttl > 0 ? ttl * 1000 : windowSeconds * 1000 };
+  } catch (err) {
+    logError('incrWithExpiry(' + key + ')', err);
+    return null;
+  }
+}
+
+/** নির্দিষ্ট rate-limit key রিসেট করার জন্য (যেমন সফল লগইনের পর failed-attempt কাউন্টার মুছে ফেলা)। */
+async function resetKey(key) {
+  return del(key);
+}
+
+module.exports = { get, set, del, delByPattern, getOrSet, isAvailable, getStatus, incrWithExpiry, resetKey };

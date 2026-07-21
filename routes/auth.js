@@ -13,13 +13,15 @@ const { sendOTP } = require('../services/email');
 const { evaluateRequest, generateCaptcha, verifyCaptcha, logBotEvent } = require('../services/botDetection');
 const { recordDeviceLogin, parseUserAgent } = require('../services/deviceTracking');
 const cache = require('../services/cache');
+const RedisRateLimitStore = require('../services/redisRateLimitStore');
 
 const resetLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
   message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  store: new RedisRateLimitStore('rl:reset:')
 });
 
 const verifyResendLimiter = rateLimit({
@@ -27,7 +29,8 @@ const verifyResendLimiter = rateLimit({
   max: 5,
   message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  store: new RedisRateLimitStore('rl:verifyresend:')
 });
 
 // ইউজার-সাইড ইভেন্ট (রেজিস্ট্রেশন, ভেরিফিকেশন) admin_logs টেবিলেই লগ হয়, যাতে
@@ -527,6 +530,9 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
         'UPDATE users SET reset_token = $1, reset_token_expiry = $2 WHERE id = $3',
         [token, expiry, user.id]
       );
+      // Redis-এ token → userId ক্যাশ করা হচ্ছে (TTL = DB expiry-এর সমান), যাতে verify-এর সময়
+      // বেশিরভাগ ক্ষেত্রে DB না ছুঁয়েই কাজ চলে। ব্যর্থ হলেও সমস্যা নেই — DB fallback তো থাকছেই।
+      cache.set(`reset_token:${token}`, user.id, 60 * 60).catch(() => {});
 
       const resetUrl = `${req.protocol}://${req.get('host')}/reset-password/${token}`;
       try {
@@ -546,15 +552,21 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
 
 router.get('/reset-password/:token', async (req, res) => {
   try {
+    const token = req.params.token;
+    // আগে Redis-এ চেক করা হচ্ছে (দ্রুত, DB-তে না গিয়েই) — ক্যাশ মিস/Redis ডাউন হলে স্বাভাবিকভাবে DB fallback হবে
+    const cachedUserId = await cache.get(`reset_token:${token}`);
+    if (cachedUserId) {
+      return res.render('reset-password', { token });
+    }
     const result = await pool.query(
       'SELECT id FROM users WHERE reset_token = $1 AND reset_token_expiry > NOW()',
-      [req.params.token]
+      [token]
     );
     if (result.rows.length === 0) {
       req.flash('error', '❌ লিঙ্কটি অকার্যকর অথবা মেয়াদ শেষ হয়ে গেছে। আবার চেষ্টা করুন।');
       return res.redirect('/forgot-password');
     }
-    res.render('reset-password', { token: req.params.token });
+    res.render('reset-password', { token });
   } catch (err) {
     console.error('reset-password GET error:', err.message);
     res.redirect('/forgot-password');
@@ -588,6 +600,7 @@ router.post('/reset-password/:token', resetLimiter, async (req, res) => {
       'UPDATE users SET password = $1, reset_token = NULL, reset_token_expiry = NULL WHERE id = $2',
       [hashed, result.rows[0].id]
     );
+    cache.del(`reset_token:${token}`).catch(() => {});
 
     req.flash('success', '✅ পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে। এখন লগইন করুন।');
     res.redirect('/login');

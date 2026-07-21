@@ -12,13 +12,15 @@ const { verifyPin, getPinStatus } = require('../services/withdrawPin');
 const { evaluateTransaction } = require('../services/fraudDetection');
 const { checkIp } = require('../services/vpnDetection');
 const { requireVerifiedEmail } = require('../middleware/auth');
+const RedisRateLimitStore = require('../services/redisRateLimitStore');
 
 const paymentLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 15,
   message: 'অনেকবার চেষ্টা করেছেন। কিছুক্ষণ পর আবার চেষ্টা করুন।',
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  store: new RedisRateLimitStore('rl:payment:')
 });
 
 function requireLogin(req, res, next) {

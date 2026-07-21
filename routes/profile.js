@@ -580,13 +580,15 @@ router.get('/wheel', isAuth, async (req, res) => {
 });
 
 // প্রতি ইউজার/IP-তে মিনিটে সর্বোচ্চ ১০ বার claim/spin রিকোয়েস্ট — বট/স্প্যাম ঠেকাতে
+const RedisRateLimitStore = require('../services/redisRateLimitStore');
 const claimLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => (req.session && req.session.user ? String(req.session.user.id) : req.ip),
-  message: { ok: false, success: false, message: 'অনেকবার চেষ্টা করেছেন, একটু পরে আবার চেষ্টা করুন।' }
+  message: { ok: false, success: false, message: 'অনেকবার চেষ্টা করেছেন, একটু পরে আবার চেষ্টা করুন।' },
+  store: new RedisRateLimitStore('rl:claim:')
 });
 
 router.post('/wheel/spin', isAuth, claimLimiter, async (req, res) => {

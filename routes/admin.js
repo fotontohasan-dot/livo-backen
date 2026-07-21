@@ -24,6 +24,7 @@ const { getUserFraudStatus } = require('../services/fraudDetection');
 const { listDuplicateFlags, reviewDuplicateFlag, scanAllUsers } = require('../services/duplicateDetection');
 const { getUserDeviceOverview } = require('../services/deviceTracking');
 const cache = require('../services/cache');
+const RedisRateLimitStore = require('../services/redisRateLimitStore');
 
 const { requireIntParam, requireAmount, parseAmount, sanitizeText, isSafeUrl } = require('../middleware/validate');
 
@@ -35,6 +36,7 @@ const strict2FALimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: 'Too many attempts, please try again later.',
+  store: new RedisRateLimitStore('rl:2fa:'),
   handler: (req, res) => {
     res.status(429).send('Too many attempts, please try again later.');
   }
@@ -48,6 +50,7 @@ const adminActionLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: 'অনেকবার অ্যাকশন নেওয়া হয়েছে, কিছুক্ষণ পর আবার চেষ্টা করুন।',
+  store: new RedisRateLimitStore('rl:adminaction:')
 });
 
 // টাকা/কয়েন সরাসরি নড়াচড়া করে এমন রুটে (approve/reject/coins add-remove) আরও কড়া সীমা —
@@ -58,6 +61,7 @@ const adminFinancialLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: 'অনেকবার আর্থিক অ্যাকশন নেওয়া হয়েছে, কিছুক্ষণ পর আবার চেষ্টা করুন।',
+  store: new RedisRateLimitStore('rl:adminfinancial:')
 });
 
 // ==================== ADMIN ACTIVITY LOG HELPER ====================
@@ -96,7 +100,8 @@ const adminLoginLimiter = rateLimit({
   max: 8,
   message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  store: new RedisRateLimitStore('rl:adminlogin:')
 });
 
 router.post('/login', adminLoginLimiter, async (req, res) => {

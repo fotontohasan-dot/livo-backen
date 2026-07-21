@@ -146,19 +146,23 @@ initSocket(server, sessionMiddleware);
 
 app.use(flash());
 
+const RedisRateLimitStore = require('./services/redisRateLimitStore');
+
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
   message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  store: new RedisRateLimitStore('rl:login:')
 });
 
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 300,
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  store: new RedisRateLimitStore('rl:general:')
 });
 
 // ডিপোজিট/উইথড্র/কার্ড/পাসওয়ার্ড — টাকা-সংক্রান্ত ও অ্যাকাউন্ট-সংবেদনশীল রুটে কড়া রেট-লিমিট
@@ -167,7 +171,8 @@ const financialLimiter = rateLimit({
   max: 20,
   message: 'অনেকবার চেষ্টা করেছেন। কিছুক্ষণ পর আবার চেষ্টা করুন।',
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  store: new RedisRateLimitStore('rl:financial:')
 });
 
 app.use(generalLimiter);
