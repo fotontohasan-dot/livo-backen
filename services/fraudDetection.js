@@ -80,10 +80,11 @@ async function checkRapidTransactions(userId, type) {
 
 function computeRiskLevel(signals) {
   const maxRelated = signals.reduce((m, s) => Math.max(m, s.relatedCount || 0), 0);
-  const HIGH_SEVERITY_TYPES = ['repeated_failed_login_severe'];
+  const HIGH_SEVERITY_TYPES = ['repeated_failed_login_severe', 'tor_detected'];
   const MEDIUM_SEVERITY_TYPES = [
     'rapid_registration', 'rapid_transaction', 'repeated_failed_login',
-    'multiple_ip_change', 'multiple_device_change', 'unusual_login'
+    'multiple_ip_change', 'multiple_device_change', 'unusual_login',
+    'vpn_detected', 'proxy_detected', 'hosting_ip_detected'
   ];
   const hasHigh = signals.some(s => HIGH_SEVERITY_TYPES.includes(s.type));
   const hasMedium = signals.some(s => MEDIUM_SEVERITY_TYPES.includes(s.type));
@@ -163,7 +164,7 @@ async function evaluateRegistration(userId, { ip, deviceFingerprint, email, phon
  * ডিপোজিট/উইথড্র রিকোয়েস্ট তৈরির পর কল হয়। কখনো ব্লক করে না।
  * type: 'deposit' | 'withdraw'
  */
-async function evaluateTransaction(userId, type, { accountNumber } = {}) {
+async function evaluateTransaction(userId, type, { accountNumber, vpnInfo } = {}) {
   try {
     const signals = [];
 
@@ -183,6 +184,9 @@ async function evaluateTransaction(userId, type, { accountNumber } = {}) {
         description: `${rapid.windowMinutes} মিনিটে ${rapid.count}টি ${label} রিকোয়েস্ট`
       });
     }
+
+    const txLabel = type === 'deposit' ? 'ডিপোজিট' : 'উইথড্র';
+    signals.push(...buildVpnSignals(vpnInfo, txLabel));
 
     if (signals.length) return await createFraudFlag(userId, signals);
     return null;
@@ -266,7 +270,7 @@ async function evaluateFailedLogin(identifier, userId, ip, userAgent) {
  * সফল লগইনের পর কল হয়। অস্বাভাবিক লগইন প্যাটার্ন (নতুন ডিভাইস + নতুন লোকেশন, ঘনঘন IP/ডিভাইস
  * পরিবর্তন) শনাক্ত করে। কখনো লগইন ফ্লো ব্লক করে না।
  */
-async function evaluateLogin(userId, { ip, isNewDevice, location } = {}) {
+async function evaluateLogin(userId, { ip, isNewDevice, location, vpnInfo } = {}) {
   try {
     const signals = [];
 
@@ -293,12 +297,46 @@ async function evaluateLogin(userId, { ip, isNewDevice, location } = {}) {
       });
     }
 
+    signals.push(...buildVpnSignals(vpnInfo, 'লগইন'));
+
     if (signals.length) return await createFraudFlag(userId, signals);
     return null;
   } catch (err) {
     console.error('evaluateLogin error (non-blocking):', err.message);
     return null;
   }
+}
+
+// ==================== VPN & Proxy Detection — সিগন্যাল বিল্ডার ====================
+// প্রতিটি শনাক্তকরণ (fraud_flags থ্রেশহোল্ড পার হোক বা না হোক) সবসময় Activity Log-এ সংরক্ষিত হয়।
+function buildVpnSignals(vpnInfo, context) {
+  if (!vpnInfo) return [];
+  const signals = [];
+  if (vpnInfo.isTor) {
+    signals.push({
+      type: 'tor_detected', relatedUsers: [], relatedCount: 0,
+      description: `Tor নেটওয়ার্ক থেকে ${context} — IP: ${vpnInfo.ip}`
+    });
+  } else if (vpnInfo.isVpn || vpnInfo.isProxy) {
+    signals.push({
+      type: 'vpn_detected', relatedUsers: [], relatedCount: 0,
+      description: `VPN/Proxy থেকে ${context} — IP: ${vpnInfo.ip}${vpnInfo.isp ? ' (' + vpnInfo.isp + ')' : ''}`
+    });
+  } else if (vpnInfo.isHosting) {
+    signals.push({
+      type: 'hosting_ip_detected', relatedUsers: [], relatedCount: 0,
+      description: `ডেটাসেন্টার/হোস্টিং IP থেকে ${context} — IP: ${vpnInfo.ip}`
+    });
+  }
+
+  if (signals.length) {
+    logAdminAction(
+      null, 'SYSTEM', 'VPN_PROXY_DETECTED',
+      `${signals[0].description} — Risk Score: ${vpnInfo.riskScore}`,
+      vpnInfo.ip
+    ).catch(() => {});
+  }
+  return signals;
 }
 
 async function getUserFraudStatus(userId) {

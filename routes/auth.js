@@ -7,6 +7,8 @@ const { pool } = require('../db');
 const { createReferral } = require('../services/referral');
 const { sendPasswordReset, sendVerificationEmail } = require('../services/email');
 const { evaluateRegistration, evaluateFailedLogin, evaluateLogin } = require('../services/fraudDetection');
+const { checkIp } = require('../services/vpnDetection');
+const { sendOTP } = require('../services/email');
 const { recordDeviceLogin } = require('../services/deviceTracking');
 const cache = require('../services/cache');
 
@@ -58,7 +60,7 @@ function sanitizeUser(u) {
   return safe;
 }
 
-async function recordLogin(req, userId) {
+async function recordLogin(req, userId, vpnInfo = null) {
   let loginLogId = null;
   try {
     const ip = (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
@@ -70,8 +72,11 @@ async function recordLogin(req, userId) {
       [ip, ua, userId]
     );
     const inserted = await pool.query(
-      `INSERT INTO login_logs (user_id, ip, user_agent, device_fingerprint) VALUES ($1, $2, $3, $4) RETURNING id`,
-      [userId, ip, ua, deviceFingerprint]
+      `INSERT INTO login_logs (user_id, ip, user_agent, device_fingerprint, is_vpn, is_proxy, is_tor, is_hosting, ip_risk_score)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+      [userId, ip, ua, deviceFingerprint,
+        !!(vpnInfo && vpnInfo.isVpn), !!(vpnInfo && vpnInfo.isProxy), !!(vpnInfo && vpnInfo.isTor), !!(vpnInfo && vpnInfo.isHosting),
+        (vpnInfo && vpnInfo.riskScore) || 0]
     );
     loginLogId = inserted.rows[0]?.id || null;
   } catch (e) {
@@ -208,6 +213,26 @@ router.post('/register', async (req, res) => {
   }
 });
 
+const STEP_UP_RISK_THRESHOLD = 70; // এর উপরে রিস্ক স্কোর হলে অতিরিক্ত ইমেইল ভেরিফিকেশন চাওয়া হয়
+const STEP_UP_CODE_TTL_MINUTES = 10;
+
+// ভেরিফিকেশন সফল/অপ্রয়োজনীয় হলে লগইন সম্পন্ন করে — session সেট, device/fraud লগ, রিডাইরেক্ট পাথ রিটার্ন করে
+async function completeLogin(req, user, vpnInfo) {
+  const loginResult = await recordLogin(req, user.id, vpnInfo);
+  req.session.user = sanitizeUser(user);
+  const deviceResult = await recordDeviceLogin(req, user.id, loginResult.loginLogId);
+
+  // ফ্রড চেক (অস্বাভাবিক লগইন, ঘনঘন IP/ডিভাইস পরিবর্তন, VPN/Proxy/Tor) — কখনো লগইন ব্লক করে না
+  evaluateLogin(user.id, {
+    ip: loginResult.ip,
+    isNewDevice: deviceResult && deviceResult.isNewDevice,
+    location: deviceResult && deviceResult.location,
+    vpnInfo
+  }).catch(e => console.error('evaluateLogin error:', e.message));
+
+  return (user.role && user.role.toLowerCase() === 'admin') ? '/admin' : '/';
+}
+
 router.get('/login', (req, res) => res.render('login'));
 
 router.post('/login', async (req, res) => {
@@ -218,10 +243,10 @@ router.post('/login', async (req, res) => {
       [identifier]
     );
     const user = result.rows[0];
+    const loginIp = (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      const failIp = (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
-      evaluateFailedLogin(identifier, user ? user.id : null, failIp, req.get('user-agent') || '')
+      evaluateFailedLogin(identifier, user ? user.id : null, loginIp, req.get('user-agent') || '')
         .catch(e => console.error('evaluateFailedLogin error:', e.message));
       req.flash('error', '❌ তথ্য অথবা পাসওয়ার্ড ভুল।');
       return res.redirect('/login');
@@ -238,24 +263,88 @@ router.post('/login', async (req, res) => {
       return res.redirect('/login');
     }
 
-    const loginResult = await recordLogin(req, user.id);
-    req.session.user = sanitizeUser(user);
-    const deviceResult = await recordDeviceLogin(req, user.id, loginResult.loginLogId);
+    // ==================== VPN & Proxy Detection — কখনো লগইন ব্লক করে না, শুধু রিস্ক স্কোর অনুযায়ী step-up ভেরিফিকেশন চায় ====================
+    const vpnInfo = await checkIp(loginIp).catch(() => null);
+    const needsStepUp = vpnInfo && (vpnInfo.isTor || vpnInfo.riskScore >= STEP_UP_RISK_THRESHOLD);
 
-    // ফ্রড চেক (অস্বাভাবিক লগইন, ঘনঘন IP/ডিভাইস পরিবর্তন) — কখনো লগইন ব্লক করে না
-    evaluateLogin(user.id, {
-      ip: loginResult.ip,
-      isNewDevice: deviceResult && deviceResult.isNewDevice,
-      location: deviceResult && deviceResult.location
-    }).catch(e => console.error('evaluateLogin error:', e.message));
+    if (needsStepUp && user.email && user.email_verified) {
+      const code = String(Math.floor(100000 + Math.random() * 900000));
+      await pool.query(
+        `INSERT INTO step_up_verifications (user_id, code, purpose, ip, expires_at)
+         VALUES ($1, $2, 'vpn_login', $3, NOW() + INTERVAL '${STEP_UP_CODE_TTL_MINUTES} minutes')`,
+        [user.id, code, loginIp]
+      );
+      sendOTP(user.email, code).catch(e => console.error('sendOTP error:', e.message));
 
-    if (user.role && user.role.toLowerCase() === 'admin') {
-      return res.redirect('/admin');
+      req.session.pendingLoginUserId = user.id;
+      req.session.pendingLoginVpnInfo = vpnInfo;
+      req.flash('success', `🔐 নিরাপত্তার কারণে আপনার ইমেইলে (${user.email}) একটি ভেরিফিকেশন কোড পাঠানো হয়েছে।`);
+      return res.redirect('/verify-access');
     }
-    res.redirect('/');
+
+    const redirectPath = await completeLogin(req, user, vpnInfo);
+    res.redirect(redirectPath);
   } catch (err) {
     console.error(err);
     req.flash('error', '❌ লগইন ব্যর্থ হয়েছে।');
+    res.redirect('/login');
+  }
+});
+
+// ==================== VPN & Proxy Detection — Step-up Verification (ইমেইল OTP) ====================
+router.get('/verify-access', (req, res) => {
+  if (!req.session.pendingLoginUserId) return res.redirect('/login');
+  res.render('verify-access');
+});
+
+router.post('/verify-access', async (req, res) => {
+  try {
+    const pendingUserId = req.session.pendingLoginUserId;
+    if (!pendingUserId) return res.redirect('/login');
+
+    const { code } = req.body;
+    const rowRes = await pool.query(
+      `SELECT * FROM step_up_verifications
+       WHERE user_id = $1 AND purpose = 'vpn_login' AND verified_at IS NULL
+       ORDER BY created_at DESC LIMIT 1`,
+      [pendingUserId]
+    );
+    const row = rowRes.rows[0];
+
+    if (!row || new Date(row.expires_at) < new Date()) {
+      req.flash('error', '❌ কোডের মেয়াদ শেষ হয়ে গেছে। আবার লগইন করুন।');
+      req.session.pendingLoginUserId = null;
+      req.session.pendingLoginVpnInfo = null;
+      return res.redirect('/login');
+    }
+    if (row.attempts >= 5) {
+      req.flash('error', '❌ অনেকবার ভুল চেষ্টা হয়েছে। আবার লগইন করুন।');
+      req.session.pendingLoginUserId = null;
+      req.session.pendingLoginVpnInfo = null;
+      return res.redirect('/login');
+    }
+    if (!code || code !== row.code) {
+      await pool.query(`UPDATE step_up_verifications SET attempts = attempts + 1 WHERE id = $1`, [row.id]);
+      req.flash('error', '❌ কোড সঠিক নয়।');
+      return res.redirect('/verify-access');
+    }
+
+    await pool.query(`UPDATE step_up_verifications SET verified_at = NOW() WHERE id = $1`, [row.id]);
+
+    const userRes = await pool.query('SELECT * FROM users WHERE id = $1', [pendingUserId]);
+    const user = userRes.rows[0];
+    if (!user) return res.redirect('/login');
+
+    const vpnInfo = req.session.pendingLoginVpnInfo || null;
+    req.session.pendingLoginUserId = null;
+    req.session.pendingLoginVpnInfo = null;
+
+    const redirectPath = await completeLogin(req, user, vpnInfo);
+    req.flash('success', '✅ ভেরিফিকেশন সম্পন্ন! স্বাগতম।');
+    res.redirect(redirectPath);
+  } catch (err) {
+    console.error('verify-access error:', err.message);
+    req.flash('error', '❌ ভেরিফিকেশন ব্যর্থ হয়েছে।');
     res.redirect('/login');
   }
 });

@@ -821,6 +821,30 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_failed_login_created ON failed_login_attempts(created_at);`);
 
     console.log("✅ Fraud detection tables ready");
+
+    // ==================== VPN & Proxy Detection System ====================
+    await pool.query(`ALTER TABLE login_logs ADD COLUMN IF NOT EXISTS is_vpn BOOLEAN DEFAULT FALSE`);
+    await pool.query(`ALTER TABLE login_logs ADD COLUMN IF NOT EXISTS is_proxy BOOLEAN DEFAULT FALSE`);
+    await pool.query(`ALTER TABLE login_logs ADD COLUMN IF NOT EXISTS is_tor BOOLEAN DEFAULT FALSE`);
+    await pool.query(`ALTER TABLE login_logs ADD COLUMN IF NOT EXISTS is_hosting BOOLEAN DEFAULT FALSE`);
+    await pool.query(`ALTER TABLE login_logs ADD COLUMN IF NOT EXISTS ip_risk_score INTEGER DEFAULT 0`);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS step_up_verifications (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        code VARCHAR(10) NOT NULL,
+        purpose VARCHAR(30) NOT NULL DEFAULT 'vpn_login',
+        ip VARCHAR(45),
+        attempts INTEGER NOT NULL DEFAULT 0,
+        verified_at TIMESTAMP,
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_step_up_user ON step_up_verifications(user_id);`);
+
+    console.log("✅ VPN & Proxy Detection tables ready");
   } catch (err) {
     console.error("❌ Migration error:", err.message);
   }
