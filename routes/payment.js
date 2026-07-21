@@ -13,6 +13,7 @@ const { evaluateTransaction } = require('../services/fraudDetection');
 const { checkIp } = require('../services/vpnDetection');
 const { requireVerifiedEmail } = require('../middleware/auth');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
+const queue = require('../services/queue');
 
 const paymentLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -42,17 +43,27 @@ function parseAmount(raw) {
 async function notifyAdmins(title, message, alertType) {
   try {
     const admins = await pool.query("SELECT id FROM users WHERE role = 'admin'");
-    for (const a of admins.rows) {
-      await pool.query(
-        `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'info')`,
-        [a.id, title, message]
-      );
+    const userIds = admins.rows.map(a => a.id);
+    const jobId = await queue.enqueue('notification', {
+      userIds,
+      title,
+      message,
+      telegramText: `🔔 <b>${title}</b>\n${message}`
+    });
+    if (!jobId) {
+      // কিউ এনকিউ ব্যর্থ হলে সরাসরি পাঠিয়ে দেওয়া হচ্ছে যাতে অ্যাডমিন নোটিফিকেশন মিস না হয়
+      for (const uid of userIds) {
+        await pool.query(
+          `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'info')`,
+          [uid, title, message]
+        );
+      }
+      notifyTelegram(`🔔 <b>${title}</b>\n${message}`);
     }
   } catch (e) {
     console.error('notifyAdmins error:', e.message);
   }
   if (alertType) emitAdminAlert(alertType, { title, message });
-  notifyTelegram(`🔔 <b>${title}</b>\n${message}`);
 }
 
 // ==================== রিলোড বোনাসের হার ====================

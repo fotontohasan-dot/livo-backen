@@ -89,4 +89,26 @@ async function sendNewDeviceAlert(email, { username, deviceName, ip, location, t
   });
 }
 
-module.exports = { sendOTP, sendPasswordReset, sendVerificationEmail, sendNewDeviceAlert };
+module.exports = { sendOTP, sendPasswordReset, sendVerificationEmail, sendNewDeviceAlert, sendQueuedEmail };
+
+/**
+ * ইমেইল কিউতে জমা দেয় (ব্যাকগ্রাউন্ড ওয়ার্কার পাঠাবে, ব্যর্থ হলে অটো-রিট্রাই সহ)।
+ * কিউ ডাউন থাকলে বা enqueue ব্যর্থ হলে সরাসরি পাঠিয়ে দেয় — কখনো ইমেইল হারায় না, কখনো caller-কে ব্লক করে না বেশি।
+ * kind: 'otp' | 'password_reset' | 'verification'
+ */
+async function sendQueuedEmail(kind, to, data = {}) {
+  const queue = require('./queue'); // lazy require — চক্রাকার dependency এড়াতে
+  const jobId = await queue.enqueue('email', { kind, to, ...data });
+  if (jobId) return { queued: true, jobId };
+
+  try {
+    if (kind === 'otp') await sendOTP(to, data.otp);
+    else if (kind === 'password_reset') await sendPasswordReset(to, data.resetUrl);
+    else if (kind === 'verification') await sendVerificationEmail(to, data.verifyUrl);
+    else throw new Error(`অজানা email kind: ${kind}`);
+    return { queued: false, sentDirectly: true };
+  } catch (err) {
+    console.error('sendQueuedEmail direct-send fallback error:', err.message);
+    return { queued: false, sentDirectly: false, error: err.message };
+  }
+}

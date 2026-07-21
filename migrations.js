@@ -800,6 +800,30 @@ async function runMigrations() {
 
     console.log("✅ Device tracking tables ready");
 
+    // ==================== ব্যাকগ্রাউন্ড জব কিউ (Feature 07) ====================
+    // Email, OTP, Notification, Audit Log ইত্যাদি এখান দিয়ে প্রসেস হয় — কিউ ডাউন থাকলেও
+    // মূল ওয়েবসাইট স্বাভাবিক থাকে, শুধু ব্যাকগ্রাউন্ড প্রসেসিং আটকে যায়।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS job_queue (
+        id SERIAL PRIMARY KEY,
+        type VARCHAR(50) NOT NULL,
+        payload JSONB NOT NULL DEFAULT '{}',
+        status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','processing','completed','failed')),
+        attempts INTEGER NOT NULL DEFAULT 0,
+        max_attempts INTEGER NOT NULL DEFAULT 3,
+        last_error TEXT,
+        available_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        started_at TIMESTAMP,
+        completed_at TIMESTAMP
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_job_queue_poll ON job_queue(status, available_at);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_job_queue_type ON job_queue(type);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_job_queue_created ON job_queue(created_at);`);
+
+    console.log("✅ Job queue table ready");
+
     // ==================== Security Center — পাসওয়ার্ড শেষ কবে বদলেছে তা ট্র্যাক করার জন্য ====================
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMP;`);
 

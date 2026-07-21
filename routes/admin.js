@@ -24,6 +24,7 @@ const { getUserFraudStatus } = require('../services/fraudDetection');
 const { listDuplicateFlags, reviewDuplicateFlag, scanAllUsers } = require('../services/duplicateDetection');
 const { getUserDeviceOverview } = require('../services/deviceTracking');
 const cache = require('../services/cache');
+const queue = require('../services/queue');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
 
 const { requireIntParam, requireAmount, parseAmount, sanitizeText, isSafeUrl } = require('../middleware/validate');
@@ -66,6 +67,9 @@ const adminFinancialLimiter = rateLimit({
 
 // ==================== ADMIN ACTIVITY LOG HELPER ====================
 async function logAdminAction(adminId, adminUsername, actionType, details, ip = null) {
+    const jobId = await queue.enqueue('audit_log', { adminId, adminUsername, actionType, details, ip });
+    if (jobId) return; // কিউতে জমা হয়ে গেছে
+
     try {
         await pool.query(
             `INSERT INTO admin_logs (admin_id, admin_username, action_type, details, ip_address) 
@@ -73,7 +77,7 @@ async function logAdminAction(adminId, adminUsername, actionType, details, ip = 
             [adminId, adminUsername, actionType, details, ip]
         );
     } catch (err) {
-        console.error('Admin Log Error:', err.message);
+        console.error('Admin Log Error (queue + direct write both failed):', err.message);
     }
 }
 
@@ -696,6 +700,7 @@ router.get('/', async (req, res) => {
     res.render('admin/dashboard', {
       demoStats,
       redisStatus: cache.getStatus(),
+      queueStatus: Object.assign({}, queue.getStatus(), await queue.getStats().catch(() => ({ pending: 0, processing: 0, completed: 0, failed: 0 }))),
       stats: {
         total_users: users.rows[0].count,
         total_coins_in_system: totalCoins.rows[0].total || 0,
@@ -737,6 +742,8 @@ router.get('/', async (req, res) => {
     console.error(err);
     res.render('admin/dashboard', {
       demoStats: { totalDemo: 9999999, userHeldDemo: 0, casinoDemoWagered: 0, sportsDemoWagered: 0 },
+      redisStatus: cache.getStatus(),
+      queueStatus: { enabled: false, running: false, pending: 0, processing: 0, completed: 0, failed: 0 },
       stats: {}, revenueTrend: [], userGrowth: [], recentBets: [], recentDeposits: [], recentWithdrawals: [], recentActivity: [], recentMatches: [], recentUsers: [], suspicious: [],
       fraudAlerts: { high: 0, medium: 0, low: 0 }, recentFraudFlags: [],
       dupAlerts: { high: 0, medium: 0, low: 0 }, recentDupFlags: []
@@ -2094,6 +2101,80 @@ router.get('/login-history', async (req, res) => {
       logs: [], total: 0, page: 1, limit: 30, totalPages: 1, filters: { q: '', new_device: '', from: '', to: '' }
     });
   }
+});
+
+// ==================== ব্যাকগ্রাউন্ড জব কিউ মনিটরিং ====================
+router.get('/queue-jobs', async (req, res) => {
+  try {
+    const { status = '', type = '' } = req.query;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = 25;
+    const offset = (page - 1) * limit;
+
+    const conditions = [];
+    const params = [];
+    if (status) { params.push(status); conditions.push(`status = $${params.length}`); }
+    if (type) { params.push(type); conditions.push(`type = $${params.length}`); }
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const countRes = await pool.query(`SELECT COUNT(*) FROM job_queue ${where}`, params);
+    const total = parseInt(countRes.rows[0].count);
+
+    const listParams = [...params, limit, offset];
+    const jobsRes = await pool.query(
+      `SELECT * FROM job_queue ${where} ORDER BY id DESC LIMIT $${listParams.length - 1} OFFSET $${listParams.length}`,
+      listParams
+    );
+
+    const typesRes = await pool.query(`SELECT DISTINCT type FROM job_queue ORDER BY type`);
+    const stats = await queue.getStats();
+
+    res.render('admin/queue-jobs', {
+      jobs: jobsRes.rows,
+      page, totalPages: Math.max(1, Math.ceil(total / limit)), total,
+      filters: { status, type },
+      types: typesRes.rows.map(r => r.type),
+      stats,
+      queueStatus: queue.getStatus()
+    });
+  } catch (err) {
+    console.error('Queue jobs list error:', err.message);
+    res.render('admin/queue-jobs', {
+      jobs: [], page: 1, totalPages: 1, total: 0,
+      filters: { status: '', type: '' }, types: [],
+      stats: { pending: 0, processing: 0, completed: 0, failed: 0 },
+      queueStatus: { enabled: false, running: false, registeredTypes: [] }
+    });
+  }
+});
+
+router.post('/queue-jobs/:id/retry', requireIntParam('id'), async (req, res) => {
+  try {
+    const ok = await queue.retryJob(req.params.id);
+    if (ok) {
+      await logAdminAction(req.session.user.id, req.session.user.username, 'QUEUE_JOB_RETRIED', `জব #${req.params.id} আবার pending-এ পাঠানো হয়েছে`, req.ip);
+      req.flash('success', '✅ জব আবার কিউতে পাঠানো হয়েছে।');
+    } else {
+      req.flash('error', '❌ জবটি খুঁজে পাওয়া যায়নি বা এটি failed অবস্থায় নেই।');
+    }
+  } catch (err) {
+    console.error('Job retry error:', err.message);
+    req.flash('error', '❌ সমস্যা হয়েছে।');
+  }
+  res.redirect('/admin/queue-jobs');
+});
+
+router.post('/queue-jobs/retry-all', async (req, res) => {
+  try {
+    const type = req.body.type || null;
+    const count = await queue.retryAllFailed(type);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'QUEUE_JOBS_BULK_RETRIED', `${count}টি ব্যর্থ জব আবার pending-এ পাঠানো হয়েছে${type ? ' (টাইপ: ' + type + ')' : ''}`, req.ip);
+    req.flash('success', `✅ ${count}টি জব আবার কিউতে পাঠানো হয়েছে।`);
+  } catch (err) {
+    console.error('Bulk retry error:', err.message);
+    req.flash('error', '❌ সমস্যা হয়েছে।');
+  }
+  res.redirect('/admin/queue-jobs');
 });
 
 module.exports = router;

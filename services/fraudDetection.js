@@ -13,7 +13,13 @@ const IP_CHANGE_THRESHOLD = 3;            // ২৪ ঘণ্টায় ৩+ �
 const DEVICE_CHANGE_WINDOW_HOURS = 24;
 const DEVICE_CHANGE_THRESHOLD = 3;        // ২৪ ঘণ্টায় ৩+ আলাদা ডিভাইস থেকে লগইন
 
+const queue = require('./queue');
+
 async function logAdminAction(adminId, adminUsername, actionType, details, ip = null) {
+  const jobId = await queue.enqueue('audit_log', { adminId, adminUsername, actionType, details, ip });
+  if (jobId) return; // কিউতে জমা হয়ে গেছে, ওয়ার্কার এটা প্রসেস করবে
+
+  // কিউ এনকিউ ব্যর্থ হলে (যেমন DB সাময়িক আনরিচেবল) — সরাসরি লিখে ফেলা হচ্ছে যাতে অডিট লগ কখনো হারিয়ে না যায়
   try {
     await pool.query(
       `INSERT INTO admin_logs (admin_id, admin_username, action_type, details, ip_address)
@@ -21,7 +27,7 @@ async function logAdminAction(adminId, adminUsername, actionType, details, ip = 
       [adminId, adminUsername, actionType, details, ip]
     );
   } catch (err) {
-    console.error('Fraud audit log error:', err.message);
+    console.error('Fraud audit log error (queue + direct write both failed):', err.message);
   }
 }
 
