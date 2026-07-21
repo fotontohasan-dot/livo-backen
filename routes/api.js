@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
+const { apiUsageLogger } = require('../middleware/apiLogger');
 
 // Rate limiting
 const apiLimiter = rateLimit({
@@ -9,6 +10,7 @@ const apiLimiter = rateLimit({
 });
 
 router.use(apiLimiter);
+router.use(apiUsageLogger);
 
 // TODO: Add key auth middleware, versioning, etc.
 
