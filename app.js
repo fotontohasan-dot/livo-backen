@@ -81,13 +81,29 @@ if (process.env.NODE_ENV === 'production') {
   cspDirectives.upgradeInsecureRequests = [];
 }
 
+const isProdEnv = process.env.NODE_ENV === 'production';
+
 app.use(helmet({
   contentSecurityPolicy: { directives: cspDirectives },
   // Cloudinary/Google Fonts/CDN-এর মতো ক্রস-অরিজিন রিসোর্স লোড করতে হয় বলে
   // COEP বন্ধ রাখা হয়েছে — এটা চালু থাকলে ওই রিসোর্সগুলো ব্লক হয়ে যেত।
   crossOriginEmbedderPolicy: false,
   crossOriginResourcePolicy: { policy: 'cross-origin' },
+  // শুধু production-এ HTTPS-এ চালু (লোকাল HTTP ডেভেলপমেন্ট যেন ভেঙে না যায়)
+  hsts: isProdEnv ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
+  frameguard: { action: 'sameorigin' }, // X-Frame-Options — নিজের সাইট ছাড়া কোথাও iframe-এ embed হবে না (clickjacking প্রতিরোধ)
+  noSniff: true, // X-Content-Type-Options: nosniff
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' }, // পেমেন্ট/অ্যাডমিন পেজের সংবেদনশীল URL বাইরে leak হবে না, কিন্তু নিজের সাইটে ও same-origin নেভিগেশনে referrer ঠিকঠাক যাবে
 }));
+// Permissions-Policy — helmet v6+ এ বিল্ট-ইন নেই, তাই ম্যানুয়ালি সেট করা হচ্ছে।
+// এই সাইট ক্যামেরা/মাইক্রোফোন/জিওলোকেশন কিছুই ব্যবহার করে না, তাই সব বন্ধ; পেমেন্ট ফ্লো নিজের অরিজিনে চলে বলে payment=(self) রাখা হলো।
+app.use((req, res, next) => {
+  res.setHeader(
+    'Permissions-Policy',
+    'geolocation=(), camera=(), microphone=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), payment=(self), fullscreen=(self)'
+  );
+  next();
+});
 // লিগ্যাসি ব্রাউজারের জন্য X-XSS-Protection (আধুনিক ব্রাউজার CSP-ই যথেষ্ট মানে, হেডারটা ignore করে,
 // কিন্তু পুরনো ব্রাউজার সাপোর্টের জন্য স্ট্যান্ডার্ড হিসেবে রাখা হলো)
 app.use((req, res, next) => {
