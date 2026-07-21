@@ -303,6 +303,7 @@ app.use('/payment', require('./routes/payment'));
 app.use('/games', require('./routes/games'));
 app.use('/accumulator', require('./routes/accumulator'));
 app.use('/chat', require('./routes/chat'));
+app.use('/api', require('./routes/api'));
 app.use('/extra', require('./routes/extra'));
 // ===============================================
 
