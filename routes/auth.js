@@ -9,6 +9,7 @@ const { sendPasswordReset, sendVerificationEmail } = require('../services/email'
 const { evaluateRegistration, evaluateFailedLogin, evaluateLogin } = require('../services/fraudDetection');
 const { checkIp } = require('../services/vpnDetection');
 const { sendOTP } = require('../services/email');
+const { evaluateRequest, generateCaptcha, verifyCaptcha, logBotEvent } = require('../services/botDetection');
 const { recordDeviceLogin } = require('../services/deviceTracking');
 const cache = require('../services/cache');
 
@@ -49,6 +50,10 @@ async function issueVerificationToken(userId) {
     [token, expiry, userId]
   );
   return token;
+}
+
+function getReqIp(req) {
+  return (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
 }
 
 function sanitizeUser(u) {
@@ -113,12 +118,42 @@ router.get('/', async (req, res) => {
 
 router.get('/register', (req, res) => {
   const ref = req.query.ref || '';
-  res.render('registration', { ref });
+  const botCheck = evaluateRequest({ ip: getReqIp(req), userAgent: req.get('user-agent') || '', endpoint: '/register' });
+  let captcha = null;
+  if (botCheck.requiresCaptcha) {
+    captcha = generateCaptcha();
+    req.session.botCaptcha = captcha;
+    logBotEvent({ ip: getReqIp(req), endpoint: '/register', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent: req.get('user-agent') || '', blocked: false })
+      .catch(e => console.error('logBotEvent error:', e.message));
+  } else {
+    req.session.botCaptcha = null;
+  }
+  res.render('registration', { ref, captcha, formRenderedAt: Date.now() });
 });
 
 router.post('/register', async (req, res) => {
-  const { username, email, phone, password, confirmPassword, referralCode } = req.body;
+  const { username, email, phone, password, confirmPassword, referralCode, website, form_rendered_at, captcha_answer } = req.body;
   const ref = referralCode || req.query.ref || '';
+  const reqIp = getReqIp(req);
+  const userAgent = req.get('user-agent') || '';
+
+  // ==================== Bot Detection System — সন্দেহজনক হলে CAPTCHA পাস করা বাধ্যতামূলক ====================
+  const botCheck = evaluateRequest({
+    ip: reqIp, userAgent, endpoint: '/register',
+    honeypotTriggered: !!(website && website.trim()),
+    formRenderedAt: form_rendered_at
+  });
+  if (botCheck.requiresCaptcha) {
+    const captchaOk = verifyCaptcha(req.session, captcha_answer);
+    if (!captchaOk) {
+      logBotEvent({ ip: reqIp, endpoint: '/register', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: true })
+        .catch(e => console.error('logBotEvent error:', e.message));
+      req.flash('error', '❌ সন্দেহজনক কার্যকলাপ শনাক্ত হয়েছে — নিচের ভেরিফিকেশন প্রশ্নের সঠিক উত্তর দিন।');
+      return res.redirect('/register');
+    }
+    logBotEvent({ ip: reqIp, endpoint: '/register', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: false })
+      .catch(e => console.error('logBotEvent error:', e.message));
+  }
 
   try {
     if (!username || !password) {
@@ -233,17 +268,50 @@ async function completeLogin(req, user, vpnInfo) {
   return (user.role && user.role.toLowerCase() === 'admin') ? '/admin' : '/';
 }
 
-router.get('/login', (req, res) => res.render('login'));
+router.get('/login', (req, res) => {
+  const botCheck = evaluateRequest({ ip: getReqIp(req), userAgent: req.get('user-agent') || '', endpoint: '/login' });
+  let captcha = null;
+  if (botCheck.requiresCaptcha) {
+    captcha = generateCaptcha();
+    req.session.botCaptcha = captcha;
+    logBotEvent({ ip: getReqIp(req), endpoint: '/login', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent: req.get('user-agent') || '', blocked: false })
+      .catch(e => console.error('logBotEvent error:', e.message));
+  } else {
+    req.session.botCaptcha = null;
+  }
+  res.render('login', { captcha, formRenderedAt: Date.now() });
+});
 
 router.post('/login', async (req, res) => {
-  const { identifier, password } = req.body;
+  const { identifier, password, website, form_rendered_at, captcha_answer } = req.body;
+  const reqIp = getReqIp(req);
+  const userAgent = req.get('user-agent') || '';
+
+  // ==================== Bot Detection System — সন্দেহজনক হলে CAPTCHA পাস করা বাধ্যতামূলক ====================
+  const botCheck = evaluateRequest({
+    ip: reqIp, userAgent, endpoint: '/login',
+    honeypotTriggered: !!(website && website.trim()),
+    formRenderedAt: form_rendered_at
+  });
+  if (botCheck.requiresCaptcha) {
+    const captchaOk = verifyCaptcha(req.session, captcha_answer);
+    if (!captchaOk) {
+      logBotEvent({ ip: reqIp, endpoint: '/login', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: true })
+        .catch(e => console.error('logBotEvent error:', e.message));
+      req.flash('error', '❌ সন্দেহজনক কার্যকলাপ শনাক্ত হয়েছে — নিচের ভেরিফিকেশন প্রশ্নের সঠিক উত্তর দিন।');
+      return res.redirect('/login');
+    }
+    logBotEvent({ ip: reqIp, endpoint: '/login', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: false })
+      .catch(e => console.error('logBotEvent error:', e.message));
+  }
+
   try {
     const result = await pool.query(
       'SELECT * FROM users WHERE email = $1 OR phone = $1',
       [identifier]
     );
     const user = result.rows[0];
-    const loginIp = (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
+    const loginIp = reqIp;
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
       evaluateFailedLogin(identifier, user ? user.id : null, loginIp, req.get('user-agent') || '')

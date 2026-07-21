@@ -1,0 +1,106 @@
+<%
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function fmtDate(d) { return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); }
+function riskBadge(level) {
+  const map = { high: 'bg-red-100 text-red-700', medium: 'bg-amber-100 text-amber-700', low: 'bg-slate-100 text-slate-600' };
+  return '<span class="px-3 py-1 text-xs font-bold rounded-full ' + (map[level] || map.low) + '">' + escapeHtml((level || '').toUpperCase()) + '</span>';
+}
+function signalBadges(types) {
+  return (types || []).map(t => '<span class="px-2 py-0.5 text-[10px] font-semibold rounded-md bg-slate-100 text-slate-500 mr-1">' + escapeHtml(t) + '</span>').join('');
+}
+function logRow(l) {
+  const userLabel = l.username ? '<a href="/admin/users/' + l.user_id + '" class="font-semibold text-blue-600 hover:underline">' + escapeHtml(l.username) + '</a>' : '<span class="text-slate-400">Guest</span>';
+  return '<tr class="hover:bg-slate-50 align-top">' +
+    '<td class="px-6 py-4 text-sm font-mono text-slate-600">' + escapeHtml(l.ip || '-') + '</td>' +
+    '<td class="px-6 py-4">' + userLabel + '</td>' +
+    '<td class="px-6 py-4 text-sm text-slate-600 font-medium">' + escapeHtml(l.endpoint || '-') + '</td>' +
+    '<td class="px-6 py-4">' + riskBadge(l.risk_level) + '</td>' +
+    '<td class="px-6 py-4 max-w-xs">' + signalBadges(l.signal_types) + '<p class="text-xs text-slate-500 mt-1">' + escapeHtml(l.reason) + '</p></td>' +
+    '<td class="px-6 py-4 text-center">' + (l.blocked ? '<span class="px-2.5 py-1 text-xs font-bold rounded-full bg-red-100 text-red-700">CAPTCHA আটকানো</span>' : '<span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-500">পাস হয়েছে</span>') + '</td>' +
+    '<td class="px-6 py-4 text-xs text-slate-400">' + fmtDate(l.created_at) + '</td>' +
+  '</tr>';
+}
+const rows = (logs || []).map(logRow).join('') || '<tr><td colspan="7" class="px-6 py-10 text-center text-slate-400">কোনো বট কার্যকলাপ পাওয়া যায়নি</td></tr>';
+const f = filters || {};
+const s = summary || { last24h: 0, high24h: 0, blocked24h: 0 };
+function qs(overrides) {
+  const merged = Object.assign({ risk_level: f.risk_level, endpoint: f.endpoint, ip: f.ip, from: f.from, to: f.to }, overrides);
+  return Object.keys(merged).map(k => k + '=' + encodeURIComponent(merged[k] || '')).join('&');
+}
+%>
+<%- include('partials/admin-layout', {
+    title: 'Bot Activity',
+    active: 'bot-logs',
+    body: `
+<div class="max-w-7xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-semibold text-slate-900">🤖 Bot Activity ও Alerts</h1>
+            <p class="text-slate-500 mt-1 text-sm">সন্দেহজনক Request Pattern, অস্বাভাবিক লগইন/রেজিস্ট্রেশন ও Automation শনাক্তকরণ</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-4 mb-6">
+        <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5">
+            <p class="text-xs text-slate-500">গত ২৪ ঘণ্টায় মোট শনাক্তকরণ</p>
+            <p class="text-2xl font-bold text-slate-900 mt-1">${s.last24h || 0}</p>
+        </div>
+        <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5">
+            <p class="text-xs text-slate-500">High Risk (২৪ ঘণ্টা)</p>
+            <p class="text-2xl font-bold ${s.high24h > 0 ? 'text-red-600' : 'text-slate-900'} mt-1">${s.high24h || 0}</p>
+        </div>
+        <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5">
+            <p class="text-xs text-slate-500">CAPTCHA দিয়ে আটকানো হয়েছে (২৪ ঘণ্টা)</p>
+            <p class="text-2xl font-bold text-slate-900 mt-1">${s.blocked24h || 0}</p>
+        </div>
+    </div>
+
+    <form method="GET" action="/admin/bot-logs" class="flex flex-wrap gap-3 mb-6">
+        <select name="risk_level" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+            <option value="">সব ঝুঁকির মাত্রা</option>
+            <option value="high" ${f.risk_level === 'high' ? 'selected' : ''}>High</option>
+            <option value="medium" ${f.risk_level === 'medium' ? 'selected' : ''}>Medium</option>
+            <option value="low" ${f.risk_level === 'low' ? 'selected' : ''}>Low</option>
+        </select>
+        <select name="endpoint" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+            <option value="">সব এন্ডপয়েন্ট</option>
+            <option value="/login" ${f.endpoint === '/login' ? 'selected' : ''}>/login</option>
+            <option value="/register" ${f.endpoint === '/register' ? 'selected' : ''}>/register</option>
+        </select>
+        <input type="text" name="ip" value="${f.ip || ''}" placeholder="IP অ্যাড্রেস"
+               class="w-40 border border-slate-200 px-4 py-2.5 rounded-2xl text-sm outline-none focus:border-blue-300">
+        <input type="date" name="from" value="${f.from || ''}" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+        <input type="date" name="to" value="${f.to || ''}" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+        <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">ফিল্টার</button>
+        ${(f.risk_level || f.endpoint || f.ip || f.from || f.to) ? '<a href="/admin/bot-logs" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">রিসেট</a>' : ''}
+    </form>
+
+    <div class="bg-white rounded-3xl border border-slate-100 overflow-hidden modern-table">
+        <table class="w-full text-sm">
+            <thead class="bg-slate-50">
+                <tr>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">IP</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">User</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Endpoint</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Risk</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Signals</th>
+                    <th class="px-6 py-4 text-center font-medium text-slate-500 uppercase text-xs">Result</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Date</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">${rows}</tbody>
+        </table>
+    </div>
+
+    <div class="flex justify-center gap-3 mt-6">
+        ${page > 1 ? '<a href="/admin/bot-logs?page=' + (page - 1) + '&' + qs({}) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">← আগের পেজ</a>' : ''}
+        <span class="px-4 py-2 text-sm text-slate-500">পেজ ${page} / ${totalPages}</span>
+        ${page < totalPages ? '<a href="/admin/bot-logs?page=' + (page + 1) + '&' + qs({}) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">পরের পেজ →</a>' : ''}
+    </div>
+</div>
+`
+}) %>

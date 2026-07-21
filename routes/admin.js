@@ -1289,6 +1289,58 @@ router.get('/security-overview', async (req, res) => {
   }
 });
 
+// ==================== Bot Detection System — Admin Bot Activity ও Alerts ====================
+router.get('/bot-logs', async (req, res) => {
+  try {
+    const { risk_level = '', endpoint = '', ip = '', from = '', to = '' } = req.query;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = 25;
+    const offset = (page - 1) * limit;
+
+    const conditions = [];
+    const params = [];
+    if (risk_level) { params.push(risk_level); conditions.push(`risk_level = $${params.length}`); }
+    if (endpoint) { params.push(endpoint); conditions.push(`endpoint = $${params.length}`); }
+    if (ip) { params.push(ip); conditions.push(`ip = $${params.length}`); }
+    if (from) { params.push(from); conditions.push(`created_at >= $${params.length}`); }
+    if (to) { params.push(to); conditions.push(`created_at <= $${params.length}::date + INTERVAL '1 day'`); }
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const countRes = await pool.query(`SELECT COUNT(*) FROM bot_activity_logs ${where}`, params);
+    const total = parseInt(countRes.rows[0].count);
+
+    const listParams = [...params, limit, offset];
+    const result = await pool.query(
+      `SELECT b.*, u.username FROM bot_activity_logs b LEFT JOIN users u ON u.id = b.user_id
+       ${where}
+       ORDER BY b.created_at DESC LIMIT $${listParams.length - 1} OFFSET $${listParams.length}`,
+      listParams
+    );
+
+    const summaryRes = await pool.query(`
+      SELECT
+        COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '24 hours') AS last24h,
+        COUNT(*) FILTER (WHERE risk_level = 'high' AND created_at > NOW() - INTERVAL '24 hours') AS high24h,
+        COUNT(*) FILTER (WHERE blocked = true AND created_at > NOW() - INTERVAL '24 hours') AS blocked24h
+      FROM bot_activity_logs
+    `);
+
+    res.render('admin/bot-logs', {
+      logs: result.rows,
+      page, totalPages: Math.max(1, Math.ceil(total / limit)), total,
+      filters: { risk_level, endpoint, ip, from, to },
+      summary: summaryRes.rows[0]
+    });
+  } catch (err) {
+    console.error('Bot logs list error:', err.message);
+    res.render('admin/bot-logs', {
+      logs: [], page: 1, totalPages: 1, total: 0,
+      filters: { risk_level: '', endpoint: '', ip: '', from: '', to: '' },
+      summary: { last24h: 0, high24h: 0, blocked24h: 0 }
+    });
+  }
+});
+
 
 // অ্যাডমিন আসল PIN কখনো দেখতে/সেট করতে পারবে না — শুধু হ্যাশ ক্লিয়ার করে দেয়, ইউজারকে
 // আবার নতুন PIN তৈরি করতে হবে। প্রতিটি রিসেট withdraw_pin_logs + admin_logs উভয় জায়গায় লগ হয়।

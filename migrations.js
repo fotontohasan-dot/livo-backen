@@ -845,6 +845,27 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_step_up_user ON step_up_verifications(user_id);`);
 
     console.log("✅ VPN & Proxy Detection tables ready");
+
+    // ==================== Bot Detection System ====================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS bot_activity_logs (
+        id SERIAL PRIMARY KEY,
+        ip VARCHAR(45),
+        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        endpoint VARCHAR(60),
+        signal_types TEXT[] NOT NULL DEFAULT '{}',
+        risk_level VARCHAR(10) NOT NULL CHECK (risk_level IN ('low','medium','high')),
+        reason TEXT NOT NULL,
+        user_agent TEXT,
+        blocked BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bot_logs_ip ON bot_activity_logs(ip);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bot_logs_risk ON bot_activity_logs(risk_level);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bot_logs_created ON bot_activity_logs(created_at);`);
+
+    console.log("✅ Bot Detection tables ready");
   } catch (err) {
     console.error("❌ Migration error:", err.message);
   }
