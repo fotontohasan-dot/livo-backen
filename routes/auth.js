@@ -5,11 +5,10 @@ const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const { pool } = require('../db');
 const { createReferral } = require('../services/referral');
-const { sendPasswordReset, sendVerificationEmail } = require('../services/email');
+const { sendQueuedEmail } = require('../services/email');
 const { evaluateRegistration, evaluateFailedLogin, evaluateLogin } = require('../services/fraudDetection');
 const { evaluateDuplicateAccount } = require('../services/duplicateDetection');
 const { checkIp } = require('../services/vpnDetection');
-const { sendOTP } = require('../services/email');
 const { evaluateRequest, generateCaptcha, verifyCaptcha, logBotEvent } = require('../services/botDetection');
 const { recordDeviceLogin, parseUserAgent } = require('../services/deviceTracking');
 const cache = require('../services/cache');
@@ -225,7 +224,7 @@ router.post('/register', async (req, res) => {
       try {
         const token = await issueVerificationToken(newUserId);
         const verifyUrl = `${req.protocol}://${req.get('host')}/verify-email/${token}`;
-        await sendVerificationEmail(email, verifyUrl);
+        await sendQueuedEmail('verification', email, { verifyUrl });
         req.session.user.verification_token = token; // sanitizeUser ইতিমধ্যে কপি করে ফেলেছে বলে সেশনেও আপডেট
         await logSystemEvent(newUserId, username, 'EMAIL_VERIFICATION_SENT', `রেজিস্ট্রেশনের সময় ভেরিফিকেশন ইমেইল পাঠানো হয়েছে: ${email}`, req.ip);
       } catch (mailErr) {
@@ -356,7 +355,7 @@ router.post('/login', async (req, res) => {
          VALUES ($1, $2, 'vpn_login', $3, NOW() + INTERVAL '${STEP_UP_CODE_TTL_MINUTES} minutes')`,
         [user.id, code, loginIp]
       );
-      sendOTP(user.email, code).catch(e => console.error('sendOTP error:', e.message));
+      sendQueuedEmail('otp', user.email, { otp: code }).catch(e => console.error('sendOTP queue error:', e.message));
 
       req.session.pendingLoginUserId = user.id;
       req.session.pendingLoginVpnInfo = vpnInfo;
@@ -493,7 +492,7 @@ router.post('/resend-verification', verifyResendLimiter, async (req, res) => {
 
     const token = await issueVerificationToken(user.id);
     const verifyUrl = `${req.protocol}://${req.get('host')}/verify-email/${token}`;
-    await sendVerificationEmail(user.email, verifyUrl);
+    await sendQueuedEmail('verification', user.email, { verifyUrl });
     await logSystemEvent(user.id, user.username, 'EMAIL_VERIFICATION_RESEND', `ভেরিফিকেশন ইমেইল আবার পাঠানো হয়েছে: ${user.email}`, req.ip);
 
     req.flash('success', '✅ ভেরিফিকেশন লিঙ্ক আবার পাঠানো হয়েছে, ইমেইল চেক করুন।');
@@ -535,11 +534,7 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
       cache.set(`reset_token:${token}`, user.id, 60 * 60).catch(() => {});
 
       const resetUrl = `${req.protocol}://${req.get('host')}/reset-password/${token}`;
-      try {
-        await sendPasswordReset(user.email, resetUrl);
-      } catch (mailErr) {
-        console.error('sendPasswordReset error:', mailErr.message);
-      }
+      await sendQueuedEmail('password_reset', user.email, { resetUrl });
     }
 
     res.render('forgot-password', { sent: true });

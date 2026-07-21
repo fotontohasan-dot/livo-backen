@@ -1,0 +1,108 @@
+<%
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function fmtDate(d) { return d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' }) : '-'; }
+function statusBadge(status) {
+  const map = {
+    pending: 'bg-slate-100 text-slate-600',
+    processing: 'bg-blue-100 text-blue-700',
+    completed: 'bg-emerald-100 text-emerald-700',
+    failed: 'bg-red-100 text-red-700'
+  };
+  return '<span class="px-2.5 py-1 text-xs font-bold rounded-full ' + (map[status] || map.pending) + '">' + escapeHtml((status || '').toUpperCase()) + '</span>';
+}
+function jobRow(j) {
+  const retryBtn = j.status === 'failed'
+    ? '<form method="POST" action="/admin/queue-jobs/' + j.id + '/retry" style="display:inline"><button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-blue-500 hover:bg-blue-600 text-white">Retry</button></form>'
+    : '<span class="text-xs text-slate-300">-</span>';
+  let payloadPreview = '';
+  try { payloadPreview = escapeHtml(JSON.stringify(typeof j.payload === 'string' ? JSON.parse(j.payload) : j.payload).slice(0, 80)); } catch (e) { payloadPreview = ''; }
+  return '<tr class="hover:bg-slate-50 align-top">' +
+    '<td class="px-6 py-4 text-xs text-slate-400">#' + j.id + '</td>' +
+    '<td class="px-6 py-4"><span class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-200">' + escapeHtml(j.type) + '</span></td>' +
+    '<td class="px-6 py-4 text-xs font-mono text-slate-500 max-w-xs truncate" title="' + payloadPreview + '">' + payloadPreview + '</td>' +
+    '<td class="px-6 py-4">' + statusBadge(j.status) + '</td>' +
+    '<td class="px-6 py-4 text-xs text-slate-500">' + j.attempts + ' / ' + j.max_attempts + '</td>' +
+    '<td class="px-6 py-4 text-xs text-red-500 max-w-xs truncate" title="' + escapeHtml(j.last_error || '') + '">' + escapeHtml(j.last_error || '-') + '</td>' +
+    '<td class="px-6 py-4 text-xs text-slate-400">' + fmtDate(j.created_at) + '</td>' +
+    '<td class="px-6 py-4 text-center">' + retryBtn + '</td>' +
+  '</tr>';
+}
+const rows = (jobs || []).map(jobRow).join('') || '<tr><td colspan="8" class="px-6 py-10 text-center text-slate-400">কোনো জব পাওয়া যায়নি</td></tr>';
+const f = filters || {};
+const s = stats || { pending: 0, processing: 0, completed: 0, failed: 0 };
+const qStatus = queueStatus || { enabled: false, running: false, registeredTypes: [] };
+%>
+<%- include('partials/admin-layout', {
+    title: 'Job Queue',
+    active: 'queue-jobs',
+    body: `
+<div class="max-w-7xl mx-auto space-y-6">
+    <div class="flex items-center justify-between flex-wrap gap-3">
+        <div>
+            <h1 class="text-2xl font-semibold text-slate-900">Background Job Queue</h1>
+            <p class="text-slate-500 mt-1 text-sm">Email, OTP, Notification, Audit Log — সব ব্যাকগ্রাউন্ড টাস্ক এখান থেকে মনিটর করা যায়</p>
+        </div>
+        <span class="px-4 py-2 rounded-2xl text-sm font-semibold ${qStatus.running ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}">
+            <i class="fas fa-power-off mr-1"></i>ওয়ার্কার: ${qStatus.running ? 'চালু' : (qStatus.enabled ? 'বন্ধ (স্টার্ট হয়নি)' : 'ডিসেবল করা আছে')}
+        </span>
+    </div>
+    ${!qStatus.running ? '<div class="bg-amber-50 border border-amber-200 text-amber-700 text-sm px-5 py-3 rounded-2xl"><i class="fas fa-triangle-exclamation mr-2"></i>ওয়ার্কার এই মুহূর্তে চলছে না — জব জমা হচ্ছে কিন্তু প্রসেস হচ্ছে না। ওয়েবসাইটের বাকি অংশ স্বাভাবিকভাবে কাজ করছে।</div>' : ''}
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-white rounded-2xl border border-slate-100 p-5"><div class="text-xs text-slate-400 uppercase font-medium">Pending</div><div class="text-2xl font-bold text-slate-700 mt-1">${s.pending || 0}</div></div>
+        <div class="bg-white rounded-2xl border border-slate-100 p-5"><div class="text-xs text-slate-400 uppercase font-medium">Processing</div><div class="text-2xl font-bold text-blue-600 mt-1">${s.processing || 0}</div></div>
+        <div class="bg-white rounded-2xl border border-slate-100 p-5"><div class="text-xs text-slate-400 uppercase font-medium">Completed</div><div class="text-2xl font-bold text-emerald-600 mt-1">${s.completed || 0}</div></div>
+        <div class="bg-white rounded-2xl border border-slate-100 p-5"><div class="text-xs text-slate-400 uppercase font-medium">Failed</div><div class="text-2xl font-bold text-red-600 mt-1">${s.failed || 0}</div></div>
+    </div>
+
+    <form method="GET" action="/admin/queue-jobs" class="flex flex-wrap gap-3">
+        <select name="status" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+            <option value="">সব স্ট্যাটাস</option>
+            <option value="pending" ${f.status === 'pending' ? 'selected' : ''}>Pending</option>
+            <option value="processing" ${f.status === 'processing' ? 'selected' : ''}>Processing</option>
+            <option value="completed" ${f.status === 'completed' ? 'selected' : ''}>Completed</option>
+            <option value="failed" ${f.status === 'failed' ? 'selected' : ''}>Failed</option>
+        </select>
+        <select name="type" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+            <option value="">সব টাইপ</option>
+            ${(types || []).map(t => '<option value="' + t + '" ' + (f.type === t ? 'selected' : '') + '>' + t + '</option>').join('')}
+        </select>
+        <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">ফিল্টার</button>
+        ${(f.status || f.type) ? '<a href="/admin/queue-jobs" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">রিসেট</a>' : ''}
+        ${(s.failed > 0) ? `
+        <form method="POST" action="/admin/queue-jobs/retry-all" onsubmit="return confirm('সব ব্যর্থ জব আবার কিউতে পাঠাতে চান?')" style="margin-left:auto">
+            ${f.type ? '<input type="hidden" name="type" value="' + f.type + '">' : ''}
+            <button type="submit" class="px-5 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-2xl text-sm font-semibold"><i class="fas fa-rotate-right mr-1"></i>সব Failed Retry করুন</button>
+        </form>` : ''}
+    </form>
+
+    <div class="bg-white rounded-3xl border border-slate-100 overflow-x-auto modern-table">
+        <table class="w-full text-sm">
+            <thead class="bg-slate-50">
+                <tr>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">ID</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Type</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Payload</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Status</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Attempts</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Last Error</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Created</th>
+                    <th class="px-6 py-4 text-center font-medium text-slate-500 uppercase text-xs">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">${rows}</tbody>
+        </table>
+    </div>
+
+    <div class="flex justify-center gap-3">
+        ${page > 1 ? '<a href="/admin/queue-jobs?page=' + (page - 1) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">← আগের পেজ</a>' : ''}
+        <span class="px-4 py-2 text-sm text-slate-500">পেজ ${page} / ${totalPages}</span>
+        ${page < totalPages ? '<a href="/admin/queue-jobs?page=' + (page + 1) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">পরের পেজ →</a>' : ''}
+    </div>
+</div>
+`
+}) %>

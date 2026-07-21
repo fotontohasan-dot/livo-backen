@@ -381,6 +381,14 @@ async function startServer() {
     await runMigrations();
     console.log("✅ DB migration done");
 
+    // ব্যাকগ্রাউন্ড জব কিউ ওয়ার্কার — try/catch দিয়ে মোড়ানো যাতে ব্যর্থ হলেও সার্ভার বুট আটকে না যায়
+    try {
+      require('./services/queueHandlers'); // হ্যান্ডলার রেজিস্টার করে
+      require('./services/queue').startWorker();
+    } catch (qErr) {
+      console.error('⚠️ Queue worker start failed (site continues normally, jobs will just queue up):', qErr.message);
+    }
+
     server.listen(PORT, () => {
       console.log(`✅ Server running on port ${PORT}`);
       setTimeout(() => {
