@@ -7,10 +7,11 @@ const { pool } = require('../db');
 const { createReferral } = require('../services/referral');
 const { sendPasswordReset, sendVerificationEmail } = require('../services/email');
 const { evaluateRegistration, evaluateFailedLogin, evaluateLogin } = require('../services/fraudDetection');
+const { evaluateDuplicateAccount } = require('../services/duplicateDetection');
 const { checkIp } = require('../services/vpnDetection');
 const { sendOTP } = require('../services/email');
 const { evaluateRequest, generateCaptcha, verifyCaptcha, logBotEvent } = require('../services/botDetection');
-const { recordDeviceLogin } = require('../services/deviceTracking');
+const { recordDeviceLogin, parseUserAgent } = require('../services/deviceTracking');
 const cache = require('../services/cache');
 
 const resetLimiter = rateLimit({
@@ -214,7 +215,7 @@ router.post('/register', async (req, res) => {
 
     const regLogin = await recordLogin(req, newUserId);
     req.session.user = sanitizeUser(result.rows[0]);
-    await recordDeviceLogin(req, newUserId, regLogin.loginLogId);
+    const regDevice = await recordDeviceLogin(req, newUserId, regLogin.loginLogId);
 
     // ==== ইমেইল ভেরিফিকেশন লিঙ্ক পাঠানো (থাকলে) — কখনো রেজিস্ট্রেশন ব্লক করে না ====
     if (email) {
@@ -236,6 +237,16 @@ router.post('/register', async (req, res) => {
       email: email || null,
       phone: phone || null
     }).catch(e => console.error('fraud evaluateRegistration error:', e.message));
+
+    // ডুপ্লিকেট অ্যাকাউন্ট চেক — কখনো রেজিস্ট্রেশন ব্লক করে না, ব্যর্থ হলেও silently এগিয়ে যায়
+    const regParsedUA = parseUserAgent(req.get('user-agent') || '');
+    evaluateDuplicateAccount(newUserId, {
+      ip: (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim(),
+      deviceFingerprint: req.headers['x-device-fingerprint'] || req.body?.device_fingerprint || null,
+      deviceSignature: regDevice?.signature || null,
+      browser: regParsedUA.browser,
+      os: regParsedUA.os
+    }).catch(e => console.error('duplicate account evaluate error:', e.message));
 
     req.flash('success', email
       ? '✅ রেজিস্ট্রেশন সফল হয়েছে! স্বাগতম! আপনার ইমেইলে একটা ভেরিফিকেশন লিঙ্ক পাঠানো হয়েছে।'

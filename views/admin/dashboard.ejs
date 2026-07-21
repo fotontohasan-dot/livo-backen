@@ -89,6 +89,40 @@ function escapeHtml(str) {
         }).join('') : '<p class="text-sm text-slate-400 text-center py-3">কোনো ওপেন ফ্রড ফ্ল্যাগ নেই</p>'}
     </div>
 
+    <!-- ==================== Duplicate Account Detection — উইজেট ==================== -->
+    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 mb-8">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-slate-800">🧬 Duplicate Accounts <span class="text-xs font-normal text-slate-400">ওপেন ফ্ল্যাগ</span></h3>
+            <a href="/admin/duplicate-accounts" class="text-xs font-semibold text-blue-600 hover:underline">সব দেখুন <i class="fas fa-arrow-right ml-1"></i></a>
+        </div>
+        <div class="grid grid-cols-3 gap-4 mb-4">
+            <div class="p-4 rounded-2xl ${dupAlerts.high > 0 ? 'bg-red-50' : 'bg-slate-50'}">
+                <p class="text-xs text-slate-500">High (70+)</p>
+                <p class="text-xl font-bold ${dupAlerts.high > 0 ? 'text-red-600' : 'text-slate-900'} mt-1">${dupAlerts.high || 0}</p>
+            </div>
+            <div class="p-4 rounded-2xl ${dupAlerts.medium > 0 ? 'bg-amber-50' : 'bg-slate-50'}">
+                <p class="text-xs text-slate-500">Medium (40-69)</p>
+                <p class="text-xl font-bold ${dupAlerts.medium > 0 ? 'text-amber-600' : 'text-slate-900'} mt-1">${dupAlerts.medium || 0}</p>
+            </div>
+            <div class="p-4 rounded-2xl bg-slate-50">
+                <p class="text-xs text-slate-500">Low (&lt;40)</p>
+                <p class="text-xl font-bold text-slate-900 mt-1">${dupAlerts.low || 0}</p>
+            </div>
+        </div>
+        ${(recentDupFlags && recentDupFlags.length) ? recentDupFlags.map(f => {
+          const score = Number(f.risk_score) || 0;
+          const riskClass = score >= 70 ? 'bg-red-100 text-red-700' : (score >= 40 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600');
+          const uLabel = f.username ? escapeHtml(f.username) : ('#' + f.user_id);
+          return '<div class="flex items-center justify-between py-2 border-t border-slate-50">' +
+            '<div class="min-w-0 flex-1">' +
+              '<a href="/admin/users/' + f.user_id + '" class="text-sm font-semibold text-blue-600 hover:underline">' + uLabel + '</a>' +
+              '<p class="text-xs text-slate-500 truncate">' + escapeHtml(f.reason) + '</p>' +
+            '</div>' +
+            '<span class="px-2.5 py-1 text-xs font-bold rounded-full ' + riskClass + ' ml-3 flex-shrink-0">' + score + ' / 100</span>' +
+          '</div>';
+        }).join('') : '<p class="text-sm text-slate-400 text-center py-3">কোনো ওপেন ডুপ্লিকেট ফ্ল্যাগ নেই</p>'}
+    </div>
+
     <!-- Stats Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5 mb-8">
         <!-- Total Users -->

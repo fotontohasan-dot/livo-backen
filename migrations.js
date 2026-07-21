@@ -866,6 +866,29 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_bot_logs_created ON bot_activity_logs(created_at);`);
 
     console.log("✅ Bot Detection tables ready");
+
+    // ==================== Duplicate Account Detection System ====================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS duplicate_account_flags (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        matched_user_ids INTEGER[] NOT NULL DEFAULT '{}',
+        match_types TEXT[] NOT NULL DEFAULT '{}',
+        risk_score INTEGER NOT NULL DEFAULT 0,
+        reason TEXT NOT NULL,
+        details JSONB,
+        status VARCHAR(20) NOT NULL DEFAULT 'open' CHECK (status IN ('open','reviewed','dismissed')),
+        reviewed_by INTEGER REFERENCES users(id),
+        reviewed_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_dup_flags_user ON duplicate_account_flags(user_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_dup_flags_score ON duplicate_account_flags(risk_score);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_dup_flags_status ON duplicate_account_flags(status);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_dup_flags_created ON duplicate_account_flags(created_at);`);
+
+    console.log("✅ Duplicate Account Detection tables ready");
   } catch (err) {
     console.error("❌ Migration error:", err.message);
   }

@@ -21,6 +21,7 @@ const {
 } = require('../services/twofactor');
 const { getPinStatus, adminResetPin } = require('../services/withdrawPin');
 const { getUserFraudStatus } = require('../services/fraudDetection');
+const { listDuplicateFlags, reviewDuplicateFlag, scanAllUsers } = require('../services/duplicateDetection');
 const { getUserDeviceOverview } = require('../services/deviceTracking');
 const cache = require('../services/cache');
 
@@ -664,6 +665,24 @@ router.get('/', async (req, res) => {
       LIMIT 5
     `);
 
+    // ==================== Duplicate Account Detection — ড্যাশবোর্ড উইজেট ====================
+    const dupCounts = await pool.query(`
+      SELECT
+        COUNT(*) FILTER (WHERE risk_score >= 70) AS high,
+        COUNT(*) FILTER (WHERE risk_score >= 40 AND risk_score < 70) AS medium,
+        COUNT(*) FILTER (WHERE risk_score < 40) AS low
+      FROM duplicate_account_flags WHERE status = 'open'
+    `);
+    const dupAlerts = {
+      high: parseInt(dupCounts.rows[0].high) || 0,
+      medium: parseInt(dupCounts.rows[0].medium) || 0,
+      low: parseInt(dupCounts.rows[0].low) || 0
+    };
+    const recentDupFlags = await pool.query(`
+      SELECT f.*, u.username FROM duplicate_account_flags f LEFT JOIN users u ON u.id = f.user_id
+      WHERE f.status = 'open' ORDER BY f.risk_score DESC, f.created_at DESC LIMIT 5
+    `);
+
     const demoStats = await getDemoStats().catch(e => {
       console.error('demo stats error:', e.message);
       return { totalDemo: 0, userHeldDemo: 0, casinoDemoWagered: 0, sportsDemoWagered: 0 };
@@ -705,14 +724,17 @@ router.get('/', async (req, res) => {
       recentUsers: recentUsersRes.rows,
       suspicious: suspicious.rows,
       fraudAlerts,
-      recentFraudFlags: recentFraudFlags.rows
+      recentFraudFlags: recentFraudFlags.rows,
+      dupAlerts,
+      recentDupFlags: recentDupFlags.rows
     });
   } catch (err) {
     console.error(err);
     res.render('admin/dashboard', {
       demoStats: { totalDemo: 9999999, userHeldDemo: 0, casinoDemoWagered: 0, sportsDemoWagered: 0 },
       stats: {}, revenueTrend: [], userGrowth: [], recentBets: [], recentDeposits: [], recentWithdrawals: [], recentActivity: [], recentMatches: [], recentUsers: [], suspicious: [],
-      fraudAlerts: { high: 0, medium: 0, low: 0 }, recentFraudFlags: []
+      fraudAlerts: { high: 0, medium: 0, low: 0 }, recentFraudFlags: [],
+      dupAlerts: { high: 0, medium: 0, low: 0 }, recentDupFlags: []
     });
   }
 });
@@ -1903,6 +1925,53 @@ router.post('/fraud-logs/:id/review', requireIntParam('id'), async (req, res) =>
     req.flash('error', 'সমস্যা হয়েছে!');
   }
   res.redirect('back');
+});
+
+// ==================== Duplicate Account Detection ====================
+router.get('/duplicate-accounts', async (req, res) => {
+  try {
+    const { status = '', min_score = '', user_id = '' } = req.query;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const result = await listDuplicateFlags({ status, minScore: min_score, userId: user_id, page, limit: 25 });
+    res.render('admin/duplicate-accounts', {
+      logs: result.logs, page: result.page, totalPages: result.totalPages, total: result.total,
+      filters: { status, min_score, user_id }
+    });
+  } catch (err) {
+    console.error('Duplicate accounts list error:', err.message);
+    res.render('admin/duplicate-accounts', {
+      logs: [], page: 1, totalPages: 1, total: 0,
+      filters: { status: '', min_score: '', user_id: '' }
+    });
+  }
+});
+
+router.post('/duplicate-accounts/:id/review', requireIntParam('id'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const action = req.body.action === 'dismiss' ? 'dismissed' : 'reviewed';
+    await reviewDuplicateFlag(id, action, req.session.user.id, req.session.user.username, req.ip);
+    req.flash('success', 'ডুপ্লিকেট ফ্ল্যাগ আপডেট হয়েছে!');
+  } catch (err) {
+    console.error('Duplicate flag review error:', err.message);
+    req.flash('error', 'সমস্যা হয়েছে!');
+  }
+  res.redirect('back');
+});
+
+router.post('/duplicate-accounts/scan', async (req, res) => {
+  try {
+    const count = await scanAllUsers();
+    await logAdminAction(
+      req.session.user.id, req.session.user.username, 'DUPLICATE_ACCOUNT_SCAN_RUN',
+      `ম্যানুয়াল স্ক্যান চালানো হয়েছে — ${count}টি নতুন ফ্ল্যাগ তৈরি হয়েছে`, req.ip
+    );
+    req.flash('success', `স্ক্যান সম্পন্ন! ${count}টি নতুন ফ্ল্যাগ তৈরি হয়েছে।`);
+  } catch (err) {
+    console.error('Duplicate account scan error:', err.message);
+    req.flash('error', 'স্ক্যান ব্যর্থ হয়েছে!');
+  }
+  res.redirect('/admin/duplicate-accounts');
 });
 
 
