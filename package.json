@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.24.0",
+    "@sentry/node": "^8.0.0",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^2.5.1",
     "clsx": "^2.1.1",
@@ -30,6 +31,7 @@
     "next": "^15.5.19",
     "nodemailer": "^9.0.3",
     "pg": "^8.22.0",
+    "prom-client": "^15.1.0",
     "qrcode": "^1.5.3",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
