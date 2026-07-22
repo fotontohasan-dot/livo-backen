@@ -23,7 +23,7 @@
     "express-rate-limit": "^7.4.1",
     "express-session": "^1.17.3",
     "framer-motion": "^12.42.1",
-    "geoip-lite": "^1.2.2",
+    "geoip-lite": "^1.4.10",
     "helmet": "^8.3.0",
     "ioredis": "^5.4.1",
     "lucide-react": "^1.22.0",
