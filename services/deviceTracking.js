@@ -164,6 +164,18 @@ async function listActiveSessions(userId, currentSid) {
   return r.rows.map(row => ({ ...row, is_current: row.sid === currentSid }));
 }
 
+/** বর্তমান সেশনের ডিভাইসটি সাম্প্রতিক লগইনে নতুন হিসেবে চিহ্নিত হয়েছিল কিনা — Fraud Detection-এর জন্য (যেমন: নতুন ডিভাইস থেকে বড় উইথড্র)। ব্যর্থ হলে false (fail-safe, ফ্ল্যাগ মিস হবে কিন্তু কখনো ফ্লো আটকাবে না)। */
+async function isSessionNewDevice(sid) {
+  if (!sid) return false;
+  try {
+    const r = await pool.query(`SELECT is_new_device FROM device_sessions WHERE sid = $1`, [sid]);
+    return !!(r.rows[0] && r.rows[0].is_new_device);
+  } catch (err) {
+    console.error('isSessionNewDevice error (non-blocking):', err.message);
+    return false;
+  }
+}
+
 async function listLoginHistory(userId, limit = 50, offset = 0) {
   const r = await pool.query(
     `SELECT * FROM login_logs WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
@@ -226,6 +238,7 @@ module.exports = {
   recordDeviceLogin,
   touchDeviceActivity,
   listActiveSessions,
+  isSessionNewDevice,
   listLoginHistory,
   revokeDeviceSession,
   revokeAllOtherSessions,

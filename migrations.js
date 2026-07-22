@@ -898,6 +898,14 @@ async function runMigrations() {
 
     console.log("✅ API Keys and API Usage Logs tables ready");
 
+    // ==================== Fraud Detection Engine — numeric Risk Score (Feature: Fraud Monitoring Dashboard) ====================
+    // বিদ্যমান risk_level (low/medium/high) এর পাশাপাশি একটা numeric 0-100 স্কোর যোগ করা হচ্ছে,
+    // পুরনো রো-গুলোর জন্য 0 ডিফল্ট (backward compatible, কিছু ভাঙে না)।
+    await pool.query(`ALTER TABLE fraud_flags ADD COLUMN IF NOT EXISTS risk_score INTEGER NOT NULL DEFAULT 0`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_fraud_flags_score ON fraud_flags(risk_score);`);
+
+    console.log("✅ Fraud Detection risk_score column ready");
+
   } catch (err) {
     console.error("❌ Migration error:", err.message);
   }

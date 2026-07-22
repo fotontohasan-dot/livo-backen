@@ -12,6 +12,7 @@ const IP_CHANGE_WINDOW_HOURS = 24;
 const IP_CHANGE_THRESHOLD = 3;            // ২৪ ঘণ্টায় ৩+ আলাদা IP থেকে লগইন
 const DEVICE_CHANGE_WINDOW_HOURS = 24;
 const DEVICE_CHANGE_THRESHOLD = 3;        // ২৪ ঘণ্টায় ৩+ আলাদা ডিভাইস থেকে লগইন
+const LARGE_WITHDRAW_NEW_DEVICE_THRESHOLD = parseInt(process.env.FRAUD_LARGE_WITHDRAW_THRESHOLD || '10000', 10); // নতুন ডিভাইস থেকে এর বেশি উইথড্র হলে ফ্ল্যাগ
 
 const queue = require('./queue');
 
@@ -86,7 +87,7 @@ async function checkRapidTransactions(userId, type) {
 
 function computeRiskLevel(signals) {
   const maxRelated = signals.reduce((m, s) => Math.max(m, s.relatedCount || 0), 0);
-  const HIGH_SEVERITY_TYPES = ['repeated_failed_login_severe', 'tor_detected'];
+  const HIGH_SEVERITY_TYPES = ['repeated_failed_login_severe', 'tor_detected', 'large_withdraw_new_device'];
   const MEDIUM_SEVERITY_TYPES = [
     'rapid_registration', 'rapid_transaction', 'repeated_failed_login',
     'multiple_ip_change', 'multiple_device_change', 'unusual_login',
@@ -101,18 +102,48 @@ function computeRiskLevel(signals) {
   return signals.length ? 'low' : null;
 }
 
+// ==================== numeric Risk Score (0-100) — risk_level-এর পাশাপাশি, অ্যাডমিন প্যানেলে ফাইন-গ্রেইনড sort/trend-এর জন্য ====================
+const SIGNAL_WEIGHTS = {
+  shared_ip: 15,
+  shared_device: 20,
+  shared_payment_account: 25,
+  rapid_registration: 15,
+  rapid_transaction: 15,
+  repeated_failed_login: 20,
+  repeated_failed_login_severe: 35,
+  multiple_ip_change: 15,
+  multiple_device_change: 15,
+  unusual_login: 10,
+  vpn_detected: 10,
+  proxy_detected: 15,
+  tor_detected: 40,
+  hosting_ip_detected: 10,
+  large_withdraw_new_device: 30
+};
+
+function computeRiskScore(signals) {
+  let score = 0;
+  for (const s of signals) {
+    let w = SIGNAL_WEIGHTS[s.type] || 5;
+    if (s.relatedCount) w += Math.min(20, s.relatedCount * 5); // সম্পর্কিত অ্যাকাউন্ট যত বেশি, স্কোর তত বাড়ে
+    score += w;
+  }
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
 async function createFraudFlag(userId, signals) {
   const riskLevel = computeRiskLevel(signals);
   if (!riskLevel) return null;
+  const riskScore = computeRiskScore(signals);
 
   const signalTypes = signals.map(s => s.type);
   const relatedUserIds = [...new Set(signals.flatMap(s => s.relatedUsers || []))];
   const reason = signals.map(s => s.description).join('; ');
 
   const inserted = await pool.query(
-    `INSERT INTO fraud_flags (user_id, risk_level, signal_types, reason, related_user_ids, details, status)
-     VALUES ($1, $2, $3, $4, $5, $6, 'open') RETURNING *`,
-    [userId, riskLevel, signalTypes, reason, relatedUserIds, JSON.stringify(signals)]
+    `INSERT INTO fraud_flags (user_id, risk_level, risk_score, signal_types, reason, related_user_ids, details, status)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, 'open') RETURNING *`,
+    [userId, riskLevel, riskScore, signalTypes, reason, relatedUserIds, JSON.stringify(signals)]
   );
   const flag = inserted.rows[0];
 
@@ -120,7 +151,7 @@ async function createFraudFlag(userId, signals) {
     null,
     'SYSTEM',
     'FRAUD_FLAG_CREATED',
-    `ইউজার #${userId} — ঝুঁকি: ${riskLevel.toUpperCase()} — ${reason}`,
+    `ইউজার #${userId} — ঝুঁকি: ${riskLevel.toUpperCase()} (স্কোর: ${riskScore}) — ${reason}`,
     null
   );
 
@@ -170,7 +201,7 @@ async function evaluateRegistration(userId, { ip, deviceFingerprint, email, phon
  * ডিপোজিট/উইথড্র রিকোয়েস্ট তৈরির পর কল হয়। কখনো ব্লক করে না।
  * type: 'deposit' | 'withdraw'
  */
-async function evaluateTransaction(userId, type, { accountNumber, vpnInfo } = {}) {
+async function evaluateTransaction(userId, type, { accountNumber, vpnInfo, amount, isNewDevice } = {}) {
   try {
     const signals = [];
 
@@ -188,6 +219,14 @@ async function evaluateTransaction(userId, type, { accountNumber, vpnInfo } = {}
       signals.push({
         type: 'rapid_transaction', relatedUsers: [], relatedCount: 0,
         description: `${rapid.windowMinutes} মিনিটে ${rapid.count}টি ${label} রিকোয়েস্ট`
+      });
+    }
+
+    // নতুন ডিভাইস থেকে বড় অংকের উইথড্র — অ্যাকাউন্ট টেকওভারের সাধারণ প্যাটার্ন
+    if (type === 'withdraw' && isNewDevice && amount && amount >= LARGE_WITHDRAW_NEW_DEVICE_THRESHOLD) {
+      signals.push({
+        type: 'large_withdraw_new_device', relatedUsers: [], relatedCount: 0,
+        description: `নতুন ডিভাইস থেকে ${amount} টাকার উইথড্র রিকোয়েস্ট (থ্রেশহোল্ড: ${LARGE_WITHDRAW_NEW_DEVICE_THRESHOLD})`
       });
     }
 
@@ -366,11 +405,52 @@ async function getUserFraudStatus(userId) {
   };
 }
 
+// ==================== Fraud Monitoring Dashboard — অ্যাগ্রিগেট স্ট্যাটস ====================
+async function getFraudDashboardStats() {
+  const [byLevel, byStatus, signalBreakdown, topUsers, trend, avgScore] = await Promise.all([
+    pool.query(`SELECT risk_level, COUNT(*) AS c FROM fraud_flags WHERE status = 'open' GROUP BY risk_level`),
+    pool.query(`SELECT status, COUNT(*) AS c FROM fraud_flags GROUP BY status`),
+    pool.query(`SELECT unnest(signal_types) AS signal_type, COUNT(*) AS c FROM fraud_flags GROUP BY signal_type ORDER BY c DESC LIMIT 10`),
+    pool.query(`
+      SELECT f.user_id, u.username, COUNT(*) AS flag_count, MAX(f.risk_score) AS max_score, MAX(f.created_at) AS last_flag_at
+      FROM fraud_flags f LEFT JOIN users u ON u.id = f.user_id
+      WHERE f.status = 'open'
+      GROUP BY f.user_id, u.username
+      ORDER BY max_score DESC, flag_count DESC
+      LIMIT 10
+    `),
+    pool.query(`
+      SELECT DATE(created_at) AS day, COUNT(*) AS c
+      FROM fraud_flags
+      WHERE created_at >= NOW() - INTERVAL '14 days'
+      GROUP BY DATE(created_at)
+      ORDER BY day ASC
+    `),
+    pool.query(`SELECT COALESCE(AVG(risk_score), 0) AS avg_score FROM fraud_flags WHERE status = 'open'`)
+  ]);
+
+  const riskByLevel = { high: 0, medium: 0, low: 0 };
+  byLevel.rows.forEach(r => { riskByLevel[r.risk_level] = parseInt(r.c, 10); });
+
+  const statusCounts = { open: 0, reviewed: 0, dismissed: 0 };
+  byStatus.rows.forEach(r => { statusCounts[r.status] = parseInt(r.c, 10); });
+
+  return {
+    riskByLevel,
+    statusCounts,
+    topSignals: signalBreakdown.rows.map(r => ({ type: r.signal_type, count: parseInt(r.c, 10) })),
+    topUsers: topUsers.rows,
+    trend: trend.rows.map(r => ({ day: r.day, count: parseInt(r.c, 10) })),
+    avgOpenRiskScore: Math.round(parseFloat(avgScore.rows[0].avg_score) || 0)
+  };
+}
+
 module.exports = {
   evaluateRegistration,
   evaluateTransaction,
   evaluateFailedLogin,
   evaluateLogin,
   getUserFraudStatus,
+  getFraudDashboardStats,
   logAdminAction
 };

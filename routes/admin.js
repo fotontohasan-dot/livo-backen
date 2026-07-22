@@ -20,7 +20,7 @@ const {
   qrFromSecret
 } = require('../services/twofactor');
 const { getPinStatus, adminResetPin } = require('../services/withdrawPin');
-const { getUserFraudStatus } = require('../services/fraudDetection');
+const { getUserFraudStatus, getFraudDashboardStats } = require('../services/fraudDetection');
 const { listDuplicateFlags, reviewDuplicateFlag, scanAllUsers } = require('../services/duplicateDetection');
 const { getUserDeviceOverview } = require('../services/deviceTracking');
 const cache = require('../services/cache');
@@ -1880,6 +1880,23 @@ router.get('/activity', async (req, res) => {
 });
 
 // ==================== ফ্রড লগ (Fraud Detection) ====================
+// ==================== Fraud Monitoring Dashboard — Risk Score, Trend, Top Signals/Users ====================
+router.get('/fraud-monitoring', async (req, res) => {
+  try {
+    const dashStats = await getFraudDashboardStats();
+    res.render('admin/fraud-monitoring', { dashStats });
+  } catch (err) {
+    console.error('Fraud monitoring dashboard error:', err.message);
+    res.render('admin/fraud-monitoring', {
+      dashStats: {
+        riskByLevel: { high: 0, medium: 0, low: 0 },
+        statusCounts: { open: 0, reviewed: 0, dismissed: 0 },
+        topSignals: [], topUsers: [], trend: [], avgOpenRiskScore: 0
+      }
+    });
+  }
+});
+
 router.get('/fraud-logs', async (req, res) => {
   try {
     const { risk_level = '', status = '', user_id = '', from = '', to = '' } = req.query;

@@ -10,6 +10,7 @@ const { broadcastDemoStats, emitAdminAlert } = require('../services/socket');
 const { notifyTelegram } = require('../services/telegramNotify');
 const { verifyPin, getPinStatus } = require('../services/withdrawPin');
 const { evaluateTransaction } = require('../services/fraudDetection');
+const { isSessionNewDevice } = require('../services/deviceTracking');
 const { checkIp } = require('../services/vpnDetection');
 const { requireVerifiedEmail } = require('../middleware/auth');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
@@ -344,8 +345,9 @@ router.post('/withdraw', requireLogin, requireVerifiedEmail, paymentLimiter, asy
 
     if (req.session.user) req.session.user.coins = upd.rows[0].coins;
 
-    checkIp((req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim()).then(vpnInfo => {
-      evaluateTransaction(userId, 'withdraw', { accountNumber: account_number, vpnInfo })
+    checkIp((req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim()).then(async (vpnInfo) => {
+      const isNewDevice = await isSessionNewDevice(req.sessionID).catch(() => false);
+      evaluateTransaction(userId, 'withdraw', { accountNumber: account_number, vpnInfo, amount, isNewDevice })
         .catch(e => console.error('fraud evaluateTransaction (withdraw) error:', e.message));
     }).catch(e => console.error('vpn checkIp (withdraw) error:', e.message));
 
