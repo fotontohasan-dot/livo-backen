@@ -906,6 +906,21 @@ async function runMigrations() {
 
     console.log("✅ Fraud Detection risk_score column ready");
 
+    // ==================== Bot Detection — IP Block/Whitelist ====================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS ip_rules (
+        id SERIAL PRIMARY KEY,
+        ip TEXT NOT NULL UNIQUE,
+        type TEXT NOT NULL CHECK (type IN ('block', 'whitelist')),
+        reason TEXT,
+        created_by TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_ip_rules_ip ON ip_rules(ip);`);
+
+    console.log("✅ IP Block/Whitelist table ready");
+
   } catch (err) {
     console.error("❌ Migration error:", err.message);
   }

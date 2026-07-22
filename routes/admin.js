@@ -28,6 +28,7 @@ const queue = require('../services/queue');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
 
 const { requireIntParam, requireAmount, parseAmount, sanitizeText, isSafeUrl } = require('../middleware/validate');
+const { listIpRules, setIpRule, removeIpRule } = require('../services/ipRules');
 
 // ==================== 2FA ভেরিফিকেশন রুটের জন্য কড়া rate limit ====================
 // এই দুটো রুটে কোড অনুমান করে ব্রুট-ফোর্স করার ঝুঁকি থাকে, তাই আলাদা কড়া সীমা।
@@ -1856,6 +1857,81 @@ router.get('/activity/export.csv', async (req, res) => {
 });
 
 // ==================== অ্যাক্টিভিটি লগ ====================
+
+// ==================== Bot Detection — Admin Monitoring ====================
+router.get('/bot-monitoring', async (req, res) => {
+  try {
+    const [statsToday, byRisk, byEndpoint, ipRules, recentLogs] = await Promise.all([
+      pool.query(`SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE blocked) AS blocked
+                  FROM bot_activity_logs WHERE created_at::date = CURRENT_DATE`),
+      pool.query(`SELECT risk_level, COUNT(*) AS cnt FROM bot_activity_logs
+                  WHERE created_at > NOW() - INTERVAL '7 days' GROUP BY risk_level`),
+      pool.query(`SELECT endpoint, COUNT(*) AS cnt FROM bot_activity_logs
+                  WHERE created_at > NOW() - INTERVAL '7 days' GROUP BY endpoint ORDER BY cnt DESC LIMIT 8`),
+      pool.query(`SELECT COUNT(*) FILTER (WHERE type='block') AS blocked_ips,
+                         COUNT(*) FILTER (WHERE type='whitelist') AS whitelisted_ips FROM ip_rules`),
+      pool.query(`SELECT * FROM bot_activity_logs ORDER BY created_at DESC LIMIT 20`)
+    ]);
+
+    res.render('admin/bot-monitoring', {
+      user: req.session.user,
+      statsToday: statsToday.rows[0],
+      byRisk: byRisk.rows,
+      byEndpoint: byEndpoint.rows,
+      ipRuleCounts: ipRules.rows[0],
+      recentLogs: recentLogs.rows
+    });
+  } catch (err) {
+    console.error('bot-monitoring dashboard error:', err.message);
+    res.render('admin/bot-monitoring', {
+      user: req.session.user,
+      statsToday: { total: 0, blocked: 0 },
+      byRisk: [], byEndpoint: [], ipRuleCounts: { blocked_ips: 0, whitelisted_ips: 0 }, recentLogs: []
+    });
+  }
+});
+
+router.get('/bot-monitoring/ip-rules', async (req, res) => {
+  try {
+    const rules = await listIpRules();
+    res.render('admin/bot-ip-rules', { user: req.session.user, rules });
+  } catch (err) {
+    console.error('ip-rules list error:', err.message);
+    res.render('admin/bot-ip-rules', { user: req.session.user, rules: [] });
+  }
+});
+
+router.post('/bot-monitoring/ip-rules', async (req, res) => {
+  const { ip, type, reason } = req.body;
+  try {
+    if (!ip || !['block', 'whitelist'].includes(type)) {
+      req.flash('error', 'সঠিক IP ও টাইপ দিন।');
+      return res.redirect('/admin/bot-monitoring/ip-rules');
+    }
+    await setIpRule(ip.trim(), type, sanitizeText(reason || ''), req.session.user.username);
+    await logAdminAction(req.session.user.id, req.session.user.username, type === 'block' ? 'IP_BLOCKED' : 'IP_WHITELISTED', `IP: ${ip} — কারণ: ${reason || '-'}`, req.ip);
+    req.flash('success', `IP ${ip} সফলভাবে ${type === 'block' ? 'ব্লক' : 'হোয়াইটলিস্ট'} করা হয়েছে।`);
+    res.redirect('/admin/bot-monitoring/ip-rules');
+  } catch (err) {
+    console.error('ip-rules add error:', err.message);
+    req.flash('error', 'সমস্যা হয়েছে।');
+    res.redirect('/admin/bot-monitoring/ip-rules');
+  }
+});
+
+router.post('/bot-monitoring/ip-rules/:ip/remove', async (req, res) => {
+  try {
+    const ip = decodeURIComponent(req.params.ip);
+    await removeIpRule(ip);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'IP_RULE_REMOVED', `IP: ${ip}`, req.ip);
+    req.flash('success', `IP ${ip}-এর রুল সরানো হয়েছে।`);
+    res.redirect('/admin/bot-monitoring/ip-rules');
+  } catch (err) {
+    console.error('ip-rules remove error:', err.message);
+    req.flash('error', 'সমস্যা হয়েছে।');
+    res.redirect('/admin/bot-monitoring/ip-rules');
+  }
+});
 
 router.get('/activity', async (req, res) => {
   try {

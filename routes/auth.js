@@ -10,6 +10,7 @@ const { evaluateRegistration, evaluateFailedLogin, evaluateLogin } = require('..
 const { evaluateDuplicateAccount } = require('../services/duplicateDetection');
 const { checkIp } = require('../services/vpnDetection');
 const { evaluateRequest, generateCaptcha, verifyCaptcha, logBotEvent } = require('../services/botDetection');
+const { getIpRule } = require('../services/ipRules');
 const { recordDeviceLogin, parseUserAgent } = require('../services/deviceTracking');
 const cache = require('../services/cache');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
@@ -140,8 +141,17 @@ router.post('/register', async (req, res) => {
   const reqIp = getReqIp(req);
   const userAgent = req.get('user-agent') || '';
 
+  // ব্লকলিস্টেড IP হলে সরাসরি প্রত্যাখ্যান, whitelist হলে নিচের বট-চেক সম্পূর্ণ স্কিপ
+  const ipRule = await getIpRule(reqIp);
+  if (ipRule === 'block') {
+    logBotEvent({ ip: reqIp, endpoint: '/register', signals: [{ type: 'ip_blocklisted', description: 'অ্যাডমিন কর্তৃক ব্লকলিস্টেড IP' }], riskLevel: 'high', userAgent, blocked: true })
+      .catch(e => console.error('logBotEvent error:', e.message));
+    req.flash('error', '❌ এই অ্যাকশনটি সম্পন্ন করা যায়নি।');
+    return res.redirect('/register');
+  }
+
   // ==================== Bot Detection System — সন্দেহজনক হলে CAPTCHA পাস করা বাধ্যতামূলক ====================
-  const botCheck = evaluateRequest({
+  const botCheck = ipRule === 'whitelist' ? { requiresCaptcha: false, signals: [], riskLevel: null } : evaluateRequest({
     ip: reqIp, userAgent, endpoint: '/register',
     honeypotTriggered: !!(website && website.trim()),
     formRenderedAt: form_rendered_at
@@ -300,8 +310,16 @@ router.post('/login', async (req, res) => {
   const reqIp = getReqIp(req);
   const userAgent = req.get('user-agent') || '';
 
+  const ipRule = await getIpRule(reqIp);
+  if (ipRule === 'block') {
+    logBotEvent({ ip: reqIp, endpoint: '/login', signals: [{ type: 'ip_blocklisted', description: 'অ্যাডমিন কর্তৃক ব্লকলিস্টেড IP' }], riskLevel: 'high', userAgent, blocked: true })
+      .catch(e => console.error('logBotEvent error:', e.message));
+    req.flash('error', '❌ এই অ্যাকশনটি সম্পন্ন করা যায়নি।');
+    return res.redirect('/login');
+  }
+
   // ==================== Bot Detection System — সন্দেহজনক হলে CAPTCHA পাস করা বাধ্যতামূলক ====================
-  const botCheck = evaluateRequest({
+  const botCheck = ipRule === 'whitelist' ? { requiresCaptcha: false, signals: [], riskLevel: null } : evaluateRequest({
     ip: reqIp, userAgent, endpoint: '/login',
     honeypotTriggered: !!(website && website.trim()),
     formRenderedAt: form_rendered_at
@@ -507,11 +525,50 @@ router.post('/resend-verification', verifyResendLimiter, async (req, res) => {
 // ==================== পাসওয়ার্ড রিসেট (Forgot Password) ====================
 
 router.get('/forgot-password', (req, res) => {
-  res.render('forgot-password', { sent: false });
+  const botCheck = evaluateRequest({ ip: getReqIp(req), userAgent: req.get('user-agent') || '', endpoint: '/forgot-password' });
+  let captcha = null;
+  if (botCheck.requiresCaptcha) {
+    captcha = generateCaptcha();
+    req.session.botCaptcha = captcha;
+    logBotEvent({ ip: getReqIp(req), endpoint: '/forgot-password', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent: req.get('user-agent') || '', blocked: false })
+      .catch(e => console.error('logBotEvent error:', e.message));
+  } else {
+    req.session.botCaptcha = null;
+  }
+  res.render('forgot-password', { sent: false, captcha, formRenderedAt: Date.now() });
 });
 
 router.post('/forgot-password', resetLimiter, async (req, res) => {
-  const { email } = req.body;
+  const { email, website, form_rendered_at, captcha_answer } = req.body;
+  const reqIp = getReqIp(req);
+  const userAgent = req.get('user-agent') || '';
+
+  const ipRule = await getIpRule(reqIp);
+  if (ipRule === 'block') {
+    logBotEvent({ ip: reqIp, endpoint: '/forgot-password', signals: [{ type: 'ip_blocklisted', description: 'অ্যাডমিন কর্তৃক ব্লকলিস্টেড IP' }], riskLevel: 'high', userAgent, blocked: true })
+      .catch(e => console.error('logBotEvent error:', e.message));
+    req.flash('error', '❌ এই অ্যাকশনটি সম্পন্ন করা যায়নি।');
+    return res.redirect('/forgot-password');
+  }
+
+  // ==================== Bot Detection System — সন্দেহজনক হলে CAPTCHA পাস করা বাধ্যতামূলক ====================
+  const botCheck = ipRule === 'whitelist' ? { requiresCaptcha: false, signals: [], riskLevel: null } : evaluateRequest({
+    ip: reqIp, userAgent, endpoint: '/forgot-password',
+    honeypotTriggered: !!(website && website.trim()),
+    formRenderedAt: form_rendered_at
+  });
+  if (botCheck.requiresCaptcha) {
+    const captchaOk = verifyCaptcha(req.session, captcha_answer);
+    if (!captchaOk) {
+      logBotEvent({ ip: reqIp, endpoint: '/forgot-password', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: true })
+        .catch(e => console.error('logBotEvent error:', e.message));
+      req.flash('error', '❌ সন্দেহজনক কার্যকলাপ শনাক্ত হয়েছে — নিচের ভেরিফিকেশন প্রশ্নের সঠিক উত্তর দিন।');
+      return res.redirect('/forgot-password');
+    }
+    logBotEvent({ ip: reqIp, endpoint: '/forgot-password', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: false })
+      .catch(e => console.error('logBotEvent error:', e.message));
+  }
+
   try {
     if (!email) {
       req.flash('error', '❌ ইমেইল দিন।');
