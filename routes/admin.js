@@ -556,6 +556,7 @@ router.get('/', async (req, res) => {
   try {
     const users = await pool.query('SELECT COUNT(*) as count FROM users');
     const totalCoins = await pool.query('SELECT SUM(coins) as total FROM users');
+    const activeUsersNow = await pool.query(`SELECT COUNT(*) AS cnt FROM users WHERE last_login >= NOW() - INTERVAL '15 minutes'`);
     const matches = await pool.query('SELECT COUNT(*) as count FROM matches');
     const totalBets = await pool.query('SELECT COUNT(*) as count FROM bets');
 
@@ -716,6 +717,7 @@ router.get('/', async (req, res) => {
       stats: {
         total_users: users.rows[0].count,
         total_coins_in_system: totalCoins.rows[0].total || 0,
+        active_users: parseInt(activeUsersNow.rows[0].cnt),
         total_matches: matches.rows[0].count,
         total_predictions: totalBets.rows[0].count,
         today_deposit: Number(todayDeposit.rows[0].total),
@@ -767,6 +769,8 @@ router.get('/', async (req, res) => {
 router.get('/api/dashboard-stats', async (req, res) => {
   try {
     const users = await pool.query('SELECT COUNT(*) as count FROM users');
+    const totalCoinsPoll = await pool.query('SELECT COALESCE(SUM(coins),0) AS total FROM users');
+    const activeUsersPoll = await pool.query(`SELECT COUNT(*) AS cnt FROM users WHERE last_login >= NOW() - INTERVAL '15 minutes'`);
 
     const todayDeposit = await pool.query(
       `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests 
@@ -829,6 +833,8 @@ router.get('/api/dashboard-stats', async (req, res) => {
       success: true,
       stats: {
         total_users: parseInt(users.rows[0].count),
+        total_coins: Number(totalCoinsPoll.rows[0].total),
+        active_users: parseInt(activeUsersPoll.rows[0].cnt),
         today_deposit: Number(todayDeposit.rows[0].total),
         today_withdraw: Number(todayWithdraw.rows[0].total),
         today_profit: Number(todayProfitLoss.rows[0].staked) - Number(todayProfitLoss.rows[0].paidout),
