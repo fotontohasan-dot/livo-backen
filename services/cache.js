@@ -95,12 +95,15 @@ function prefixed(key) {
   return REDIS_PREFIX + key;
 }
 
+const stats = { hits: 0, misses: 0, sets: 0 };
+
 /** ক্যাশ থেকে মান পড়ে (JSON parse সহ)। Redis না থাকলে/এরর হলে null রিটার্ন করে — কখনো throw করে না। */
 async function get(key) {
   if (!isAvailable()) return null;
   try {
     const raw = await state.client.get(prefixed(key));
-    if (raw === null || raw === undefined) return null;
+    if (raw === null || raw === undefined) { stats.misses++; return null; }
+    stats.hits++;
     try { return JSON.parse(raw); } catch { return raw; }
   } catch (err) {
     logError('get(' + key + ')', err);
@@ -115,6 +118,7 @@ async function set(key, value, ttlSeconds) {
     const raw = typeof value === 'string' ? value : JSON.stringify(value);
     if (ttlSeconds) await state.client.set(prefixed(key), raw, 'EX', ttlSeconds);
     else await state.client.set(prefixed(key), raw);
+    stats.sets++;
     return true;
   } catch (err) {
     logError('set(' + key + ')', err);
@@ -132,6 +136,66 @@ async function del(...keys) {
     logError('del(' + keys.join(',') + ')', err);
     return false;
   }
+}
+
+/** এই অ্যাপের নিজস্ব prefix-এর আওতায় থাকা সব ক্যাশ কী মুছে দেয় (অন্য অ্যাপের ডেটা স্পর্শ করে না)। অ্যাডমিন প্যানেলের "Clear All Cache" বাটনের জন্য। */
+async function flushAll() {
+  return delByPattern('*');
+}
+
+/**
+ * অ্যাডমিন ক্যাশ ম্যানেজমেন্ট পেজের জন্য বিস্তারিত পরিসংখ্যান — মোট কী সংখ্যা,
+ * ক্যাটাগরি অনুযায়ী ব্রেকডাউন, মেমরি ব্যবহার, hit/miss রেট।
+ */
+async function getDetailedStats() {
+  const base = {
+    ...getStatus(),
+    hits: stats.hits,
+    misses: stats.misses,
+    sets: stats.sets,
+    hitRatePercent: (stats.hits + stats.misses) > 0 ? Math.round((stats.hits / (stats.hits + stats.misses)) * 100) : null,
+    totalKeys: 0,
+    memoryUsed: null,
+    categories: []
+  };
+  if (!isAvailable()) return base;
+
+  try {
+    const categoryPatterns = {
+      'ম্যাচ/অডস (matches, markets)': 'match:*',
+      'API ক্যাশ (matches/leaderboard/tournaments)': 'api:*',
+      'লিডারবোর্ড': 'leaderboard:*',
+      'প্রোফাইল অ্যাক্টিভিটি': 'profile:*',
+      'হোমপেজ গেমস': 'homepage:*',
+      'সাইট সেটিংস': 'settings:*',
+      'IP নিয়ম': 'ip_rule:*',
+      'পাসওয়ার্ড রিসেট টোকেন': 'reset_token:*',
+      'রেট-লিমিট কাউন্টার': 'rl:*'
+    };
+    let totalKeys = 0;
+    const categories = [];
+    for (const [label, pattern] of Object.entries(categoryPatterns)) {
+      let cursor = '0', count = 0;
+      do {
+        const [next, keys] = await state.client.scan(cursor, 'MATCH', prefixed(pattern), 'COUNT', 200);
+        cursor = next;
+        count += keys.length;
+      } while (cursor !== '0');
+      if (count > 0) categories.push({ label, pattern, count });
+      totalKeys += count;
+    }
+    base.totalKeys = totalKeys;
+    base.categories = categories;
+
+    try {
+      const info = await state.client.info('memory');
+      const match = info.match(/used_memory_human:(\S+)/);
+      if (match) base.memoryUsed = match[1].trim();
+    } catch (e) {}
+  } catch (err) {
+    logError('getDetailedStats', err);
+  }
+  return base;
 }
 
 /** prefix-ভিত্তিক bulk invalidate (যেমন 'profile:*') — SCAN ব্যবহার করে, KEYS ব্যবহার করে না (production-safe, ব্লক করে না)। */
@@ -204,4 +268,4 @@ async function resetKey(key) {
   return del(key);
 }
 
-module.exports = { get, set, del, delByPattern, getOrSet, isAvailable, getStatus, incrWithExpiry, resetKey };
+module.exports = { get, set, del, delByPattern, getOrSet, isAvailable, getStatus, incrWithExpiry, resetKey, flushAll, getDetailedStats };

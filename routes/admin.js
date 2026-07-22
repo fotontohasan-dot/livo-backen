@@ -24,6 +24,7 @@ const { getUserFraudStatus, getFraudDashboardStats } = require('../services/frau
 const { listDuplicateFlags, reviewDuplicateFlag, scanAllUsers } = require('../services/duplicateDetection');
 const { getUserDeviceOverview } = require('../services/deviceTracking');
 const cache = require('../services/cache');
+const cacheKeys = require('../services/cacheKeys');
 const queue = require('../services/queue');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
 
@@ -1480,6 +1481,7 @@ router.post('/markets/update', async (req, res) => {
       INSERT INTO markets (match_id, type, name, odds, status) VALUES ($1,$2,$3,$4,$5)
       ON CONFLICT (match_id, type, name) DO UPDATE SET odds = EXCLUDED.odds, status = EXCLUDED.status, updated_at = NOW()
     `, [match_id, type, name, odds, status || 'open']);
+    await cache.del(cacheKeys.matchDetail(match_id)).catch(() => {});
     req.flash('success', 'মার্কেট আপডেট হয়েছে!');
     res.redirect(`/admin/markets/${match_id}`);
   } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); res.redirect('/admin/matches'); }
@@ -1487,7 +1489,8 @@ router.post('/markets/update', async (req, res) => {
 
 router.post('/markets/:marketId/toggle', async (req, res) => {
   try {
-    await pool.query('UPDATE markets SET status = $1 WHERE id = $2', [req.body.status, req.params.marketId]);
+    const mRes = await pool.query('UPDATE markets SET status = $1 WHERE id = $2 RETURNING match_id', [req.body.status, req.params.marketId]);
+    if (mRes.rows[0]) await cache.del(cacheKeys.matchDetail(mRes.rows[0].match_id)).catch(() => {});
     req.flash('success', 'মার্কেট আপডেট হয়েছে!');
   } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
   res.redirect('back');
@@ -1517,6 +1520,10 @@ router.post('/markets/:marketId/settle', async (req, res) => {
     await client.query(`UPDATE markets SET status = 'settled', updated_at = NOW() WHERE id = $1`, [marketId]);
     await settleSelectionsForMarket(client, marketId, winning_runner);
     await client.query('COMMIT');
+    try {
+      const mRow = await pool.query('SELECT match_id FROM markets WHERE id = $1', [marketId]);
+      if (mRow.rows[0]) await cache.del(cacheKeys.matchDetail(mRow.rows[0].match_id));
+    } catch (e) {}
     req.flash('success', `সেটেল সম্পন্ন! ${bets.rows.length} টি বেট, ${winnersCount} জন জিতেছে।`);
     res.redirect('back');
   } catch (err) {
@@ -2482,6 +2489,37 @@ router.get('/api-logs/export.csv', async (req, res) => {
   } catch (err) {
     console.error('API logs CSV export error:', err.message);
     res.status(500).send('Export failed');
+  }
+});
+
+// ==================== REDIS CACHE MANAGEMENT ====================
+router.get('/cache', async (req, res) => {
+  try {
+    const cacheStats = await cache.getDetailedStats();
+    res.render('admin/cache', { cacheStats, cleared: req.query.cleared || '' });
+  } catch (err) {
+    console.error('Cache page error:', err && err.stack ? err.stack : err);
+    res.render('admin/cache', {
+      cacheStats: { enabled: false, connected: false, totalKeys: 0, categories: [], hits: 0, misses: 0, hitRatePercent: null, memoryUsed: null },
+      cleared: ''
+    });
+  }
+});
+
+router.post('/cache/clear', async (req, res) => {
+  try {
+    const { pattern } = req.body;
+    let deleted;
+    if (pattern && pattern !== '*') {
+      deleted = await cache.delByPattern(pattern);
+    } else {
+      deleted = await cache.flushAll();
+    }
+    await logAdminAction(req.session.user.id, req.session.user.username, 'CACHE_CLEARED', `ক্যাশ পরিষ্কার করা হয়েছে (pattern: ${pattern || 'সব'}) — ${deleted} টি কী মুছে গেছে`, req.ip);
+    res.redirect(`/admin/cache?cleared=${deleted}`);
+  } catch (err) {
+    console.error('Cache clear error:', err && err.stack ? err.stack : err);
+    res.redirect('/admin/cache');
   }
 });
 
