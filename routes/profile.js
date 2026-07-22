@@ -343,12 +343,13 @@ router.get('/security', isAuth, async (req, res) => {
       recentLogins = await listLoginHistory(req.session.user.id, 5, 0);
     } catch (e) { console.error('security devices load error:', e.message); }
 
-    // ==================== Security Center — ইমেইল ভেরিফিকেশন ও পাসওয়ার্ড স্ট্যাটাস (সবসময় DB থেকে ফ্রেশ, সেশন স্টেল হতে পারে) ====================
+    // ==================== Security Center — ইমেইল ভেরিফিকেশন, পাসওয়ার্ড ও 2FA স্ট্যাটাস (সবসময় DB থেকে ফ্রেশ, সেশন স্টেল হতে পারে) ====================
     let emailStatus = { verified: true, hasEmail: false, lastSentAt: null };
     let passwordChangedAt = null;
+    let totpEnabled = false;
     try {
       const u = await pool.query(
-        'SELECT email, email_verified, last_verification_sent_at, password_changed_at FROM users WHERE id = $1',
+        'SELECT email, email_verified, last_verification_sent_at, password_changed_at, totp_enabled FROM users WHERE id = $1',
         [req.session.user.id]
       );
       if (u.rows[0]) {
@@ -358,17 +359,56 @@ router.get('/security', isAuth, async (req, res) => {
           lastSentAt: u.rows[0].last_verification_sent_at
         };
         passwordChangedAt = u.rows[0].password_changed_at;
+        totpEnabled = !!u.rows[0].totp_enabled;
       }
     } catch (e) { console.error('security email/password status load error:', e.message); }
 
+    // ==================== Security Alerts — নতুন ডিভাইস লগইন, ব্যর্থ লগইন চেষ্টা, ফ্রড ফ্ল্যাগ (তথ্যমূলক ভাষায়, ভীতিকর নয়) ====================
+    let securityAlerts = [];
+    try {
+      const newDeviceLogins = await pool.query(
+        `SELECT created_at, ip, user_agent FROM login_logs
+         WHERE user_id = $1 AND is_new_device = true
+         ORDER BY created_at DESC LIMIT 3`,
+        [req.session.user.id]
+      );
+      for (const row of newDeviceLogins.rows) {
+        securityAlerts.push({
+          level: 'medium', icon: 'fa-mobile-screen-button',
+          title: res.locals.lang === 'bn' ? 'নতুন ডিভাইস থেকে লগইন' : 'Login from a new device',
+          detail: (res.locals.lang === 'bn' ? 'IP: ' : 'IP: ') + (row.ip || '-'),
+          time: row.created_at
+        });
+      }
+
+      const failedAttempts = await pool.query(
+        `SELECT COUNT(*) AS cnt, MAX(created_at) AS last_at FROM failed_login_attempts
+         WHERE user_id = $1 AND created_at > NOW() - INTERVAL '24 hours'`,
+        [req.session.user.id]
+      );
+      const fa = failedAttempts.rows[0];
+      if (fa && parseInt(fa.cnt, 10) > 0) {
+        securityAlerts.push({
+          level: parseInt(fa.cnt, 10) >= 5 ? 'high' : 'low', icon: 'fa-triangle-exclamation',
+          title: res.locals.lang === 'bn' ? 'ব্যর্থ লগইন চেষ্টা' : 'Failed login attempts',
+          detail: (res.locals.lang === 'bn' ? `গত ২৪ ঘণ্টায় ${fa.cnt}টি ব্যর্থ চেষ্টা` : `${fa.cnt} failed attempt(s) in the last 24 hours`),
+          time: fa.last_at
+        });
+      }
+
+      securityAlerts.sort((a, b) => new Date(b.time) - new Date(a.time));
+      securityAlerts = securityAlerts.slice(0, 5);
+    } catch (e) { console.error('security alerts load error:', e.message); }
+
     res.render('profile/security', {
-      user: req.session.user, bankCards: cards.rows, pinStatus, activeSessions, recentLogins,
-      emailStatus, passwordChangedAt
+      user: Object.assign({}, req.session.user, { totp_enabled: totpEnabled }),
+      bankCards: cards.rows, pinStatus, activeSessions, recentLogins,
+      emailStatus, passwordChangedAt, securityAlerts
     });
   } catch (err) {
     res.render('profile/security', {
       user: req.session.user, bankCards: [], pinStatus: { configured: false, locked: false }, activeSessions: [], recentLogins: [],
-      emailStatus: { verified: true, hasEmail: false, lastSentAt: null }, passwordChangedAt: null
+      emailStatus: { verified: true, hasEmail: false, lastSentAt: null }, passwordChangedAt: null, securityAlerts: []
     });
   }
 });

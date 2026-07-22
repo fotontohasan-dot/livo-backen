@@ -308,6 +308,55 @@
         </div>
       </form>
     </div>
+
+    <!-- ==================== Two-Factor Authentication (প্রস্তুতি) ==================== -->
+    <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
+      <h3 style="color: var(--gold); font-size: 16px; margin-bottom: 6px; display: flex; align-items: center; gap: 10px;">
+        <i class="fas fa-mobile-retro"></i> <%= lang === 'bn' ? 'দুই-ধাপ যাচাইকরণ (Two-Factor Authentication)' : 'Two-Factor Authentication' %>
+      </h3>
+      <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 18px;">
+        <%= lang === 'bn' ? 'অ্যাকাউন্টে অতিরিক্ত নিরাপত্তার একটি স্তর — শীঘ্রই আসছে।' : 'An extra layer of account security — coming soon.' %>
+      </p>
+      <div style="display:flex; justify-content:space-between; align-items:center; background: rgba(255,255,255,0.03); border-radius: 12px; padding: 15px; gap: 12px;">
+        <div>
+          <div style="font-weight:700; font-size: 14px; color: var(--text-muted);">
+            <i class="fas fa-circle-info"></i>
+            <%= (user && user.totp_enabled) ? (lang === 'bn' ? 'চালু আছে' : 'Enabled') : (lang === 'bn' ? 'এখনো চালু করা হয়নি' : 'Not enabled yet') %>
+          </div>
+          <div style="color:var(--text-muted); font-size:11px; margin-top:6px;">
+            <%= lang === 'bn' ? 'ইউজার অ্যাকাউন্টের জন্য 2FA শীঘ্রই যুক্ত হবে। এই মুহূর্তে এটি শুধুমাত্র প্রস্তুতিমূলক স্ট্যাটাস।' : 'User-facing 2FA is coming soon. This is currently a readiness status only.' %>
+          </div>
+        </div>
+        <i class="fas fa-shield-halved" style="font-size:30px; flex-shrink:0; color: var(--text-muted);"></i>
+      </div>
+    </div>
+
+    <!-- ==================== নিরাপত্তা সতর্কতা (Security Alerts) ==================== -->
+    <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
+      <h3 style="color: var(--gold); font-size: 16px; margin-bottom: 6px; display: flex; align-items: center; gap: 10px;">
+        <i class="fas fa-bell"></i> <%= lang === 'bn' ? 'নিরাপত্তা সতর্কতা' : 'Security Alerts' %>
+      </h3>
+      <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 18px;">
+        <%= lang === 'bn' ? 'আপনার অ্যাকাউন্টে সাম্প্রতিক নিরাপত্তা-সম্পর্কিত কার্যকলাপ' : 'Recent security-related activity on your account' %>
+      </p>
+      <% if (securityAlerts && securityAlerts.length) { %>
+        <% securityAlerts.forEach(function(a) { %>
+          <div style="display:flex; gap:12px; align-items:flex-start; background: rgba(255,255,255,0.03); border-radius: 12px; padding: 13px 15px; margin-bottom: 10px; border-left: 3px solid <%= a.level === 'high' ? '#ef4444' : (a.level === 'medium' ? 'var(--gold)' : '#10b981') %>;">
+            <i class="fas <%= a.icon %>" style="font-size:15px; margin-top:2px; color: <%= a.level === 'high' ? '#ef4444' : (a.level === 'medium' ? 'var(--gold)' : '#10b981') %>;"></i>
+            <div style="min-width:0; flex:1;">
+              <div style="color:var(--text-main); font-size:13px; font-weight:700;"><%= a.title %></div>
+              <div style="color:var(--text-muted); font-size:11px; margin-top:3px;"><%= a.detail %></div>
+              <div style="color:var(--text-muted); font-size:10px; margin-top:4px;"><%= new Date(a.time).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></div>
+            </div>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <div style="text-align:center; padding: 25px 0; color: var(--text-muted); font-size: 13px;">
+          <i class="fas fa-circle-check" style="color:#10b981; font-size:20px; display:block; margin-bottom:8px;"></i>
+          <%= lang === 'bn' ? 'কোনো নিরাপত্তা সতর্কতা নেই — সবকিছু স্বাভাবিক আছে।' : 'No security alerts — everything looks normal.' %>
+        </div>
+      <% } %>
+    </div>
   </div>
 
   <!-- Devices Tab -->

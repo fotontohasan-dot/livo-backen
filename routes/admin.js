@@ -1288,7 +1288,8 @@ router.get('/security-overview', async (req, res) => {
 
     const [
       totalUsersRes, emailUsersRes, emailVerifiedRes, pinConfiguredRes,
-      activeSessionsRes, newDeviceLoginsRes, pinLockedRes, recentLogsRes
+      activeSessionsRes, newDeviceLoginsRes, pinLockedRes, recentLogsRes,
+      totpEnabledRes, failedLogins24hRes
     ] = await Promise.all([
       pool.query(`SELECT COUNT(*) AS c FROM users`),
       pool.query(`SELECT COUNT(*) AS c FROM users WHERE email IS NOT NULL`),
@@ -1300,7 +1301,9 @@ router.get('/security-overview', async (req, res) => {
       pool.query(
         `SELECT * FROM admin_logs WHERE action_type = ANY($1) ORDER BY created_at DESC LIMIT 25`,
         [SECURITY_ACTION_TYPES]
-      )
+      ),
+      pool.query(`SELECT COUNT(*) AS c FROM users WHERE totp_enabled = true`),
+      pool.query(`SELECT COUNT(*) AS c FROM failed_login_attempts WHERE created_at >= NOW() - INTERVAL '24 hours'`)
     ]);
 
     const stats = {
@@ -1310,14 +1313,16 @@ router.get('/security-overview', async (req, res) => {
       pinConfigured: parseInt(pinConfiguredRes.rows[0].c),
       activeSessions: parseInt(activeSessionsRes.rows[0].c),
       newDeviceLogins7d: parseInt(newDeviceLoginsRes.rows[0].c),
-      pinLocked: parseInt(pinLockedRes.rows[0].c)
+      pinLocked: parseInt(pinLockedRes.rows[0].c),
+      totpEnabled: parseInt(totpEnabledRes.rows[0].c),
+      failedLogins24h: parseInt(failedLogins24hRes.rows[0].c)
     };
 
     res.render('admin/security-overview', { stats, recentLogs: recentLogsRes.rows });
   } catch (err) {
     console.error('security-overview error:', err.message);
     res.render('admin/security-overview', {
-      stats: { totalUsers: 0, emailUsers: 0, emailVerified: 0, pinConfigured: 0, activeSessions: 0, newDeviceLogins7d: 0, pinLocked: 0 },
+      stats: { totalUsers: 0, emailUsers: 0, emailVerified: 0, pinConfigured: 0, activeSessions: 0, newDeviceLogins7d: 0, pinLocked: 0, totpEnabled: 0, failedLogins24h: 0 },
       recentLogs: []
     });
   }

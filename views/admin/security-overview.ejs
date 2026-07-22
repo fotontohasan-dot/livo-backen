@@ -73,11 +73,13 @@ function statCard(icon, label, value, sub, tone) {
     </div>
 
     <!-- Overview Stat Cards -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         ${statCard('fa-users', 'Total Users', (s.totalUsers || 0).toLocaleString('en-US'), '', 'blue')}
         ${statCard('fa-envelope-circle-check', 'Email Verified', (s.emailVerified || 0).toLocaleString('en-US'), emailNotVerified + ' not verified', emailNotVerified > 0 ? 'amber' : 'emerald')}
         ${statCard('fa-shield-halved', 'Withdraw PIN Configured', (s.pinConfigured || 0).toLocaleString('en-US'), pinNotConfigured + ' not configured' + (s.pinLocked ? ' · ' + s.pinLocked + ' locked' : ''), s.pinLocked > 0 ? 'red' : 'blue')}
         ${statCard('fa-mobile-screen-button', 'Active Sessions', (s.activeSessions || 0).toLocaleString('en-US'), (s.newDeviceLogins7d || 0) + ' new devices (7d)', 'blue')}
+        ${statCard('fa-mobile-retro', '2FA Enabled', (s.totpEnabled || 0).toLocaleString('en-US'), 'out of ' + (s.totalUsers || 0) + ' users', s.totpEnabled > 0 ? 'emerald' : 'amber')}
+        ${statCard('fa-triangle-exclamation', 'Failed Logins (24h)', (s.failedLogins24h || 0).toLocaleString('en-US'), '', s.failedLogins24h > 0 ? 'red' : 'emerald')}
     </div>
 
     <!-- Recent Security Activity -->
