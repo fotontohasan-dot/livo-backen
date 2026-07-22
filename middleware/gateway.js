@@ -5,7 +5,7 @@
 const rateLimit = require('express-rate-limit');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
 const { getIpRule, getClientIp } = require('../services/ipRules');
-const { logBotEvent } = require('../services/botDetection');
+const { logBotEvent, evaluateRequest } = require('../services/botDetection');
 
 // শুধু /api/ পাথের জন্য আলাদা rate limiter (login/register এর থেকে আলাদা)
 const apiLimiter = rateLimit({
@@ -62,6 +62,15 @@ async function apiGateway(req, res, next) {
       logBotEvent({ ip, endpoint: req.path, signals: [{ type: 'ip_blocklisted', description: 'অ্যাডমিন কর্তৃক ব্লকলিস্টেড IP' }], riskLevel: 'high', userAgent: req.get('user-agent') || '', blocked: true })
         .catch(e => console.error('logBotEvent error:', e.message));
       return res.status(403).json({ success: false, error: 'অ্যাক্সেস সীমাবদ্ধ করা হয়েছে।' });
+    }
+    if (rule !== 'whitelist') {
+      // শুধু ফিঙ্গারপ্রিন্ট/হেডলেস সিগন্যাল মনিটরিং — রেট-লিমিট আলাদাভাবে apiLimiter হ্যান্ডেল করে,
+      // তাই এখানে ব্লক করা হয় না, শুধু bot-logs-এ রেকর্ড রাখা হয়।
+      const botCheck = evaluateRequest({ ip, userAgent: req.get('user-agent') || '', endpoint: req.path, req });
+      if (botCheck.signals.length > 0) {
+        logBotEvent({ ip, endpoint: req.path, signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent: req.get('user-agent') || '', blocked: false, fingerprint: botCheck.fingerprint })
+          .catch(e => console.error('logBotEvent error:', e.message));
+      }
     }
   } catch (e) {
     console.error('apiGateway ip-rule check error:', e.message); // fail-open

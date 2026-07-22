@@ -832,6 +832,9 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_bot_logs_ip ON bot_activity_logs(ip);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_bot_logs_risk ON bot_activity_logs(risk_level);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_bot_logs_created ON bot_activity_logs(created_at);`);
+    // Request Fingerprinting — একই ব্রাউজার/হেডার-প্রোফাইল একাধিক IP থেকে এলে ধরার জন্য
+    await pool.query(`ALTER TABLE bot_activity_logs ADD COLUMN IF NOT EXISTS fingerprint VARCHAR(32);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bot_logs_fingerprint ON bot_activity_logs(fingerprint);`);
 
     console.log("✅ Bot Detection tables ready");
 

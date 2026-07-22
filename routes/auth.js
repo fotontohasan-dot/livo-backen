@@ -122,7 +122,7 @@ router.get('/', async (req, res) => {
 
 router.get('/register', (req, res) => {
   const ref = req.query.ref || '';
-  const botCheck = evaluateRequest({ ip: getReqIp(req), userAgent: req.get('user-agent') || '', endpoint: '/register' });
+  const botCheck = evaluateRequest({ ip: getReqIp(req), userAgent: req.get('user-agent') || '', endpoint: '/register', req });
   let captcha = null;
   if (botCheck.requiresCaptcha) {
     captcha = generateCaptcha();
@@ -154,17 +154,18 @@ router.post('/register', async (req, res) => {
   const botCheck = ipRule === 'whitelist' ? { requiresCaptcha: false, signals: [], riskLevel: null } : evaluateRequest({
     ip: reqIp, userAgent, endpoint: '/register',
     honeypotTriggered: !!(website && website.trim()),
-    formRenderedAt: form_rendered_at
+    formRenderedAt: form_rendered_at,
+    req
   });
   if (botCheck.requiresCaptcha) {
     const captchaOk = verifyCaptcha(req.session, captcha_answer);
     if (!captchaOk) {
-      logBotEvent({ ip: reqIp, endpoint: '/register', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: true })
+      logBotEvent({ ip: reqIp, endpoint: '/register', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: true , fingerprint: botCheck.fingerprint })
         .catch(e => console.error('logBotEvent error:', e.message));
       req.flash('error', '❌ সন্দেহজনক কার্যকলাপ শনাক্ত হয়েছে — নিচের ভেরিফিকেশন প্রশ্নের সঠিক উত্তর দিন।');
       return res.redirect('/register');
     }
-    logBotEvent({ ip: reqIp, endpoint: '/register', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: false })
+    logBotEvent({ ip: reqIp, endpoint: '/register', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: false , fingerprint: botCheck.fingerprint })
       .catch(e => console.error('logBotEvent error:', e.message));
   }
 
@@ -292,7 +293,7 @@ async function completeLogin(req, user, vpnInfo) {
 }
 
 router.get('/login', (req, res) => {
-  const botCheck = evaluateRequest({ ip: getReqIp(req), userAgent: req.get('user-agent') || '', endpoint: '/login' });
+  const botCheck = evaluateRequest({ ip: getReqIp(req), userAgent: req.get('user-agent') || '', endpoint: '/login', req });
   let captcha = null;
   if (botCheck.requiresCaptcha) {
     captcha = generateCaptcha();
@@ -322,17 +323,18 @@ router.post('/login', async (req, res) => {
   const botCheck = ipRule === 'whitelist' ? { requiresCaptcha: false, signals: [], riskLevel: null } : evaluateRequest({
     ip: reqIp, userAgent, endpoint: '/login',
     honeypotTriggered: !!(website && website.trim()),
-    formRenderedAt: form_rendered_at
+    formRenderedAt: form_rendered_at,
+    req
   });
   if (botCheck.requiresCaptcha) {
     const captchaOk = verifyCaptcha(req.session, captcha_answer);
     if (!captchaOk) {
-      logBotEvent({ ip: reqIp, endpoint: '/login', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: true })
+      logBotEvent({ ip: reqIp, endpoint: '/login', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: true , fingerprint: botCheck.fingerprint })
         .catch(e => console.error('logBotEvent error:', e.message));
       req.flash('error', '❌ সন্দেহজনক কার্যকলাপ শনাক্ত হয়েছে — নিচের ভেরিফিকেশন প্রশ্নের সঠিক উত্তর দিন।');
       return res.redirect('/login');
     }
-    logBotEvent({ ip: reqIp, endpoint: '/login', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: false })
+    logBotEvent({ ip: reqIp, endpoint: '/login', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: false , fingerprint: botCheck.fingerprint })
       .catch(e => console.error('logBotEvent error:', e.message));
   }
 
@@ -525,7 +527,7 @@ router.post('/resend-verification', verifyResendLimiter, async (req, res) => {
 // ==================== পাসওয়ার্ড রিসেট (Forgot Password) ====================
 
 router.get('/forgot-password', (req, res) => {
-  const botCheck = evaluateRequest({ ip: getReqIp(req), userAgent: req.get('user-agent') || '', endpoint: '/forgot-password' });
+  const botCheck = evaluateRequest({ ip: getReqIp(req), userAgent: req.get('user-agent') || '', endpoint: '/forgot-password', req });
   let captcha = null;
   if (botCheck.requiresCaptcha) {
     captcha = generateCaptcha();
@@ -555,17 +557,18 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
   const botCheck = ipRule === 'whitelist' ? { requiresCaptcha: false, signals: [], riskLevel: null } : evaluateRequest({
     ip: reqIp, userAgent, endpoint: '/forgot-password',
     honeypotTriggered: !!(website && website.trim()),
-    formRenderedAt: form_rendered_at
+    formRenderedAt: form_rendered_at,
+    req
   });
   if (botCheck.requiresCaptcha) {
     const captchaOk = verifyCaptcha(req.session, captcha_answer);
     if (!captchaOk) {
-      logBotEvent({ ip: reqIp, endpoint: '/forgot-password', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: true })
+      logBotEvent({ ip: reqIp, endpoint: '/forgot-password', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: true , fingerprint: botCheck.fingerprint })
         .catch(e => console.error('logBotEvent error:', e.message));
       req.flash('error', '❌ সন্দেহজনক কার্যকলাপ শনাক্ত হয়েছে — নিচের ভেরিফিকেশন প্রশ্নের সঠিক উত্তর দিন।');
       return res.redirect('/forgot-password');
     }
-    logBotEvent({ ip: reqIp, endpoint: '/forgot-password', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: false })
+    logBotEvent({ ip: reqIp, endpoint: '/forgot-password', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: false , fingerprint: botCheck.fingerprint })
       .catch(e => console.error('logBotEvent error:', e.message));
   }
 

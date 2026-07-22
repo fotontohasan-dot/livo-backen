@@ -36,14 +36,14 @@ router.post('/api/chat', filterMiddleware(), async (req, res) => {
   }
 
   if (rule !== 'whitelist') {
-    const botCheck = evaluateRequest({ ip, userAgent, endpoint: '/help-center/api/chat' });
+    const botCheck = evaluateRequest({ ip, userAgent, endpoint: '/help-center/api/chat', req });
     if (botCheck.riskLevel === 'high') {
-      logBotEvent({ ip, endpoint: '/help-center/api/chat', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: true })
+      logBotEvent({ ip, endpoint: '/help-center/api/chat', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: true, fingerprint: botCheck.fingerprint })
         .catch(e => console.error('logBotEvent error:', e.message));
       return res.status(429).json({ success: false, error: 'অনেকবার রিকোয়েস্ট করা হয়েছে। কিছুক্ষণ পর আবার চেষ্টা করুন।' });
     }
     if (botCheck.signals.length > 0) {
-      logBotEvent({ ip, endpoint: '/help-center/api/chat', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: false })
+      logBotEvent({ ip, endpoint: '/help-center/api/chat', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: false, fingerprint: botCheck.fingerprint })
         .catch(e => console.error('logBotEvent error:', e.message));
     }
   }

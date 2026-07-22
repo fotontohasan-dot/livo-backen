@@ -15,7 +15,7 @@ function signalBadges(types) {
 function logRow(l) {
   const userLabel = l.username ? '<a href="/admin/users/' + l.user_id + '" class="font-semibold text-blue-600 hover:underline">' + escapeHtml(l.username) + '</a>' : '<span class="text-slate-400">Guest</span>';
   return '<tr class="hover:bg-slate-50 align-top">' +
-    '<td class="px-6 py-4 text-sm font-mono text-slate-600">' + escapeHtml(l.ip || '-') + '</td>' +
+    '<td class="px-6 py-4 text-sm font-mono text-slate-600">' + escapeHtml(l.ip || '-') + (l.fingerprint ? '<div class="text-[10px] text-slate-400 mt-1" title="Request Fingerprint">fp: ' + escapeHtml(l.fingerprint) + '</div>' : '') + '</td>' +
     '<td class="px-6 py-4">' + userLabel + '</td>' +
     '<td class="px-6 py-4 text-sm text-slate-600 font-medium">' + escapeHtml(l.endpoint || '-') + '</td>' +
     '<td class="px-6 py-4">' + riskBadge(l.risk_level) + '</td>' +
