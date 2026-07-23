@@ -9,3 +9,6 @@ build
 .env.production.local
 .DS_Store
 *.log
+
+# Backup & Restore System — লোকাল ব্যাকআপ ফাইল কখনো কমিট হবে না
+/backups/

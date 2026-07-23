@@ -29,6 +29,7 @@ const { syncMatches } = require('./services/matchUpdater');
 const runMigrations = require('./migrations');
 const { apiGateway, responseHelpers } = require('./middleware/gateway');
 const { scheduleDailyBackup } = require('./services/backup');
+const { scheduleAutoBackup } = require('./services/backupManager');
 const { touchDeviceActivity } = require('./services/deviceTracking');
 require('./services/cache'); // অ্যাপ বুট হওয়ার সাথে সাথেই Redis কানেকশন অ্যাটেম্পট শুরু হয় (কানেক্ট না হলেও অ্যাপ চলতে থাকে)
 const appMetrics = require('./services/metrics');
@@ -416,6 +417,7 @@ async function startServer() {
         syncMatches().catch(err => console.error('Initial match sync failed:', err));
       }, 3000);
       scheduleDailyBackup();
+      scheduleAutoBackup();
     });
   } catch (err) {
     console.error('❌ Server startup failed:', err);

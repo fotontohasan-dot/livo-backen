@@ -29,6 +29,7 @@ services:
       - livo-net
     volumes:
       - uploads_data:/app/public/uploads
+      - backups_data:/app/backups
     healthcheck:
       test: ["CMD", "curl", "-fs", "http://localhost:3000/health"]
       interval: 30s
@@ -132,5 +133,6 @@ volumes:
   postgres_data:
   redis_data:
   uploads_data:
+  backups_data:
   prometheus_data:
   grafana_data:

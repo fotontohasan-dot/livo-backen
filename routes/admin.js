@@ -2523,4 +2523,90 @@ router.post('/cache/clear', async (req, res) => {
   }
 });
 
+// ==================== BACKUP & RESTORE SYSTEM ====================
+const backupManager = require('../services/backupManager');
+
+router.get('/backups', async (req, res) => {
+  try {
+    const { type = '' } = req.query;
+    const backups = await backupManager.listBackups({ type, limit: 100 });
+    res.render('admin/backups', {
+      backups, filterType: type,
+      encryptionEnabled: backupManager.isEncryptionEnabled(),
+      created: req.query.created || '', restored: req.query.restored || '', error: req.query.error || ''
+    });
+  } catch (err) {
+    console.error('Backups page error:', err && err.stack ? err.stack : err);
+    res.render('admin/backups', { backups: [], filterType: '', encryptionEnabled: false, created: '', restored: '', error: 'load_failed' });
+  }
+});
+
+router.post('/backups/create', async (req, res) => {
+  try {
+    const { type } = req.body; // 'database' | 'uploads' | 'config' | 'all'
+    const ctx = { source: 'manual', createdById: req.session.user.id, createdByUsername: req.session.user.username };
+    const created = [];
+    if (type === 'database' || type === 'all') created.push(await backupManager.createDatabaseBackup(ctx));
+    if (type === 'uploads' || type === 'all') created.push(await backupManager.createUploadsBackup(ctx));
+    if (type === 'config' || type === 'all') created.push(await backupManager.createConfigBackup(ctx));
+
+    const failed = created.filter(c => c.status === 'failed');
+    for (const c of created) {
+      await logAdminAction(
+        req.session.user.id, req.session.user.username,
+        c.status === 'completed' ? 'BACKUP_CREATED' : 'BACKUP_FAILED',
+        `${c.type} ব্যাকআপ ${c.status === 'completed' ? 'সম্পন্ন হয়েছে' : 'ব্যর্থ হয়েছে: ' + c.error_message} (${c.filename})`,
+        req.ip
+      );
+    }
+    res.redirect(`/admin/backups?created=${created.length}${failed.length ? '&error=' + failed.length + '_failed' : ''}`);
+  } catch (err) {
+    console.error('Backup create error:', err && err.stack ? err.stack : err);
+    res.redirect('/admin/backups?error=1');
+  }
+});
+
+router.get('/backups/:id/download', async (req, res) => {
+  try {
+    const record = await backupManager.getBackupById(req.params.id);
+    if (!record || record.status !== 'completed') return res.status(404).send('ব্যাকআপ পাওয়া যায়নি।');
+    const filePath = backupManager.getBackupFilePath(record);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'BACKUP_DOWNLOADED', `${record.type} ব্যাকআপ ডাউনলোড হয়েছে (${record.filename})`, req.ip);
+    res.download(filePath, record.filename);
+  } catch (err) {
+    console.error('Backup download error:', err && err.stack ? err.stack : err);
+    res.status(500).send('ডাউনলোড ব্যর্থ।');
+  }
+});
+
+router.post('/backups/:id/restore', async (req, res) => {
+  try {
+    const record = await backupManager.getBackupById(req.params.id);
+    if (!record) return res.redirect('/admin/backups?error=not_found');
+    const result = await backupManager.restoreBackup(record);
+    await logAdminAction(
+      req.session.user.id, req.session.user.username, 'BACKUP_RESTORED',
+      `${record.type} ব্যাকআপ রিস্টোর করা হয়েছে (${record.filename}) — ${JSON.stringify(result).slice(0, 300)}`,
+      req.ip
+    );
+    res.redirect(`/admin/backups?restored=${record.type}`);
+  } catch (err) {
+    console.error('Backup restore error:', err && err.stack ? err.stack : err);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'BACKUP_RESTORE_FAILED', `রিস্টোর ব্যর্থ (#${req.params.id}): ${err.message}`, req.ip).catch(() => {});
+    res.redirect(`/admin/backups?error=${encodeURIComponent(err.message)}`);
+  }
+});
+
+router.post('/backups/:id/delete', async (req, res) => {
+  try {
+    const record = await backupManager.getBackupById(req.params.id);
+    await backupManager.deleteBackup(req.params.id);
+    if (record) await logAdminAction(req.session.user.id, req.session.user.username, 'BACKUP_DELETED', `${record.type} ব্যাকআপ ডিলিট করা হয়েছে (${record.filename})`, req.ip);
+    res.redirect('/admin/backups');
+  } catch (err) {
+    console.error('Backup delete error:', err && err.stack ? err.stack : err);
+    res.redirect('/admin/backups?error=delete_failed');
+  }
+});
+
 module.exports = router;
