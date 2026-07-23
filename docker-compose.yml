@@ -69,6 +69,61 @@ services:
       timeout: 5s
       retries: 3
 
+  # ==================== Monitoring — Prometheus + Grafana (ঐচ্ছিক, মূল app-এর উপর নির্ভর করে না) ====================
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: livo-prometheus
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      METRICS_TOKEN: ${METRICS_TOKEN:-}
+    volumes:
+      - ./docker/prometheus/prometheus.yml.template:/etc/prometheus/prometheus.yml.template:ro
+      - prometheus_data:/prometheus
+    # কন্টেইনার স্টার্ট হওয়ার সময় .env-এর METRICS_TOKEN template ফাইলে বসিয়ে আসল কনফিগ তৈরি হয় —
+    # ম্যানুয়াল কোনো স্টেপ ছাড়াই /metrics স্ক্র্যাপ করার জন্য টোকেন সেট হয়ে যায়
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        sed 's#METRICS_TOKEN_PLACEHOLDER#'"$${METRICS_TOKEN}"'#' /etc/prometheus/prometheus.yml.template > /etc/prometheus/prometheus.yml &&
+        exec /bin/prometheus --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/prometheus --storage.tsdb.retention.time=15d
+    networks:
+      - livo-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:9090/-/healthy || exit 1"]
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: livo-grafana
+    restart: unless-stopped
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    ports:
+      - "${GRAFANA_PORT:-3001}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-changeme}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - livo-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
+
 networks:
   livo-net:
     driver: bridge
@@ -77,3 +132,5 @@ volumes:
   postgres_data:
   redis_data:
   uploads_data:
+  prometheus_data:
+  grafana_data:
