@@ -249,7 +249,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get('/health', (req, res) => res.status(200).send('OK'));
+app.use('/', require('./routes/health')); // /health ও /ready — সিস্টেম ডায়াগনস্টিকসসহ
 
 // ==================== Prometheus Metrics — শুধু Admin/Internal অ্যাক্সেস ====================
 app.get('/metrics', requireMetricsAccess, async (req, res) => {

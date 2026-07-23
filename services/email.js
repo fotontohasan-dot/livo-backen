@@ -89,7 +89,12 @@ async function sendNewDeviceAlert(email, { username, deviceName, ip, location, t
   });
 }
 
-module.exports = { sendOTP, sendPasswordReset, sendVerificationEmail, sendNewDeviceAlert, sendQueuedEmail };
+async function verifyConnection() {
+  await transporter.verify();
+  return true;
+}
+
+module.exports = { sendOTP, sendPasswordReset, sendVerificationEmail, sendNewDeviceAlert, sendQueuedEmail, verifyConnection };
 
 /**
  * ইমেইল কিউতে জমা দেয় (BullMQ Email Queue — ব্যাকগ্রাউন্ড ওয়ার্কার পাঠাবে, ব্যর্থ হলে অটো-রিট্রাই সহ)।
