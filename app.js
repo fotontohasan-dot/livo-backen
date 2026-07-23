@@ -31,6 +31,8 @@ const { apiGateway, responseHelpers } = require('./middleware/gateway');
 const { scheduleDailyBackup } = require('./services/backup');
 const { touchDeviceActivity } = require('./services/deviceTracking');
 require('./services/cache'); // অ্যাপ বুট হওয়ার সাথে সাথেই Redis কানেকশন অ্যাটেম্পট শুরু হয় (কানেক্ট না হলেও অ্যাপ চলতে থাকে)
+const appMetrics = require('./services/metrics');
+const { requireMetricsAccess } = require('./middleware/metricsAuth');
 
 const app = express();
 app.use(compression());
@@ -104,6 +106,8 @@ app.use((req, res, next) => {
   );
   next();
 });
+// Prometheus HTTP মেট্রিক্স — প্রতিটা রিকোয়েস্টের duration/count/error রেকর্ড করে (non-blocking, prom-client না থাকলেও নিরাপদ)
+app.use(appMetrics.httpMiddleware);
 // লিগ্যাসি ব্রাউজারের জন্য X-XSS-Protection (আধুনিক ব্রাউজার CSP-ই যথেষ্ট মানে, হেডারটা ignore করে,
 // কিন্তু পুরনো ব্রাউজার সাপোর্টের জন্য স্ট্যান্ডার্ড হিসেবে রাখা হলো)
 app.use((req, res, next) => {
@@ -245,6 +249,22 @@ app.use((req, res, next) => {
 });
 
 app.get('/health', (req, res) => res.status(200).send('OK'));
+
+// ==================== Prometheus Metrics — শুধু Admin/Internal অ্যাক্সেস ====================
+app.get('/metrics', requireMetricsAccess, async (req, res) => {
+  try {
+    if (!appMetrics.enabled) {
+      return res.status(503).type('text/plain').send('# metrics disabled: prom-client not installed\n');
+    }
+    await appMetrics.refreshAsyncMetrics();
+    res.set('Content-Type', appMetrics.register.contentType);
+    res.end(await appMetrics.register.metrics());
+  } catch (err) {
+    console.error('[metrics] /metrics endpoint error:', err.message);
+    res.status(500).type('text/plain').send('# error collecting metrics\n');
+  }
+});
+
 app.get('/privacy', (req, res) => res.render('privacy'));
 app.get('/terms', (req, res) => res.render('terms'));
 app.get('/kyc', (req, res) => res.redirect('/extra/kyc'));
