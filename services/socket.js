@@ -37,8 +37,13 @@ const emitAdminAlert = (type, data = {}) => {
       console.error('emitAdminAlert error:', err.message);
     }
   }
-  // পেজ বন্ধ/ব্যাকগ্রাউন্ডে থাকলেও পৌঁছানোর জন্য — এটা fire-and-forget, ব্লক করে না
-  sendPushToAdmins(type, data.title, data.message).catch(() => {});
+  // পেজ বন্ধ/ব্যাকগ্রাউন্ডে থাকলেও পৌঁছানোর জন্য — এখন Notification Queue-এর মাধ্যমে
+  // (Redis না থাকলে queues/producers.js নিজেই সরাসরি sendPushToAdmins কল করে, তাই ফিচার অপরিবর্তিত থাকে)
+  try {
+    require('../queues').enqueueNotification(type, { title: data.title, message: data.message }).catch(() => {});
+  } catch (err) {
+    sendPushToAdmins(type, data.title, data.message).catch(() => {});
+  }
 };
 
 const initSocket = (server, sessionMiddleware) => {

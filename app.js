@@ -263,6 +263,15 @@ async function startServer() {
     await runMigrations();
     console.log("✅ DB migration done");
 
+    // Background Queue System (BullMQ + Redis) — Redis অনুপলব্ধ হলেও সার্ভার বন্ধ হবে না,
+    // শুধু Queue-ভিত্তিক জব inline ফলব্যাকে চলবে (দেখুন queues/index.js)।
+    try {
+      const { initQueueSystem } = require('./queues');
+      await initQueueSystem();
+    } catch (err) {
+      console.error('⚠️ Queue System চালু করতে সমস্যা হয়েছে (সার্ভার চলতে থাকবে):', err.message);
+    }
+
     server.listen(PORT, () => {
       console.log(`✅ Server running on port ${PORT}`);
       setTimeout(() => {
@@ -277,4 +286,18 @@ async function startServer() {
 }
 
 startServer();
+
+// Graceful shutdown — Queue Worker গুলো চলমান জব শেষ করে তারপর বন্ধ হবে
+async function gracefulShutdown() {
+  try {
+    const { shutdownQueueSystem } = require('./queues');
+    await shutdownQueueSystem();
+  } catch (err) {
+    console.error('Queue shutdown error:', err.message);
+  }
+  process.exit(0);
+}
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
+
 module.exports = app;

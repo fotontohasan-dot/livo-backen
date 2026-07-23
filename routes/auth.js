@@ -27,6 +27,11 @@ async function recordLogin(req, userId) {
       `INSERT INTO login_logs (user_id, ip, user_agent) VALUES ($1, $2, $3)`,
       [userId, ip, ua]
     );
+
+    // Activity Log + Fraud Scan — Background Queue-এর মাধ্যমে (fire-and-forget, লগইন ফ্লো ব্লক করে না)
+    const queues = require('../queues');
+    queues.enqueueActivityLog({ userId, actionType: 'login', details: 'ইউজার লগইন করেছে', ip, userAgent: ua }).catch(() => {});
+    queues.enqueueFraudScan({ userId, triggeredBy: 'login' }).catch(() => {});
   } catch (e) {
     console.error('recordLogin error:', e.message);
   }
@@ -187,7 +192,8 @@ router.post('/forgot-password', async (req, res) => {
 
       const resetUrl = `${req.protocol}://${req.get('host')}/reset-password/${token}`;
       try {
-        await sendPasswordReset(user.email, resetUrl);
+        // Email Queue-এর মাধ্যমে — Redis না থাকলে queues/producers.js নিজেই সরাসরি sendPasswordReset কল করে
+        await require('../queues').enqueueEmail('password_reset', { email: user.email, resetUrl });
       } catch (mailErr) {
         console.error('sendPasswordReset error:', mailErr.message);
       }

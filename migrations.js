@@ -668,6 +668,77 @@ async function runMigrations() {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_push_subs_user ON push_subscriptions(user_id);`);
 
+    // ==================== Background Queue System (BullMQ + Redis) সাপোর্ট টেবিল ====================
+    // এই টেবিলগুলো Queue-এর সাথে সম্পর্কিত ডেটা persist করার জন্য — Redis অনুপলব্ধ/রিস্টার্ট হলেও
+    // ইতিহাস হারিয়ে যায় না, এবং অ্যাডমিন প্যানেল Postgres থেকে সরাসরি রিপোর্ট বানাতে পারে।
+
+    // Activity Log — সাধারণ ইউজার/সিস্টেম অ্যাক্টিভিটি (লগইন, বেট, প্রোফাইল আপডেট ইত্যাদি)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS activity_logs (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        username TEXT,
+        action_type VARCHAR(50) NOT NULL,
+        details TEXT,
+        ip_address TEXT,
+        user_agent TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_activity_logs_user ON activity_logs(user_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_activity_logs_created ON activity_logs(created_at DESC);`);
+
+    // API Log — প্রতিটা API রিকোয়েস্টের মেথড/পাথ/স্ট্যাটাস/রেসপন্স টাইম
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS api_logs (
+        id SERIAL PRIMARY KEY,
+        method VARCHAR(10),
+        path TEXT,
+        status_code INTEGER,
+        response_time_ms INTEGER,
+        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        ip_address TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_api_logs_created ON api_logs(created_at DESC);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_api_logs_status ON api_logs(status_code);`);
+
+    // Fraud Scan Log — heuristic fraud detection স্ক্যানের ফলাফল
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS fraud_scan_logs (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        risk_score INTEGER DEFAULT 0,
+        risk_level VARCHAR(10) DEFAULT 'low',
+        flags JSONB DEFAULT '[]',
+        triggered_by VARCHAR(30) DEFAULT 'system',
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_fraud_logs_user ON fraud_scan_logs(user_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_fraud_logs_risk ON fraud_scan_logs(risk_level);`);
+
+    // Dead Letter Queue — সব রিট্রাই শেষ হয়ে যাওয়া ব্যর্থ জব স্থায়ীভাবে সেভ থাকে এখানে
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS queue_dead_letter (
+        id SERIAL PRIMARY KEY,
+        queue_name VARCHAR(50) NOT NULL,
+        job_id TEXT NOT NULL,
+        job_name TEXT,
+        job_data JSONB,
+        failed_reason TEXT,
+        attempts_made INTEGER DEFAULT 0,
+        stacktrace TEXT,
+        status VARCHAR(20) DEFAULT 'dead',
+        retried_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(queue_name, job_id)
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_dead_letter_queue ON queue_dead_letter(queue_name);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_dead_letter_status ON queue_dead_letter(status);`);
+
     console.log("✅ All tables migration completed successfully");
   } catch (err) {
     console.error("❌ Migration error:", err.message);

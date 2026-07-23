@@ -17,12 +17,29 @@ const apiLimiter = rateLimit({
 });
 
 // Request logging (হালকা, শুধু /api/ কলের জন্য)
+// console.log আগের মতোই থাকছে (backward compatible) — এর পাশাপাশি
+// এখন প্রতিটা API কল Background Queue-এর মাধ্যমে DB-তেও লগ হয় (API Log Queue)।
 function apiLogger(req, res, next) {
   const start = Date.now();
-  const userId = (req.session && req.session.user) ? req.session.user.id : 'guest';
+  const userId = (req.session && req.session.user) ? req.session.user.id : null;
   res.on('finish', () => {
     const ms = Date.now() - start;
-    console.log(`[API] ${req.method} ${req.originalUrl} → ${res.statusCode} (${ms}ms) user=${userId}`);
+    console.log(`[API] ${req.method} ${req.originalUrl} → ${res.statusCode} (${ms}ms) user=${userId || 'guest'}`);
+
+    // fire-and-forget — API রেসপন্স স্লো করবে না, ব্যর্থ হলেও রিকোয়েস্ট ফ্লো-তে প্রভাব পড়বে না
+    try {
+      const { enqueueApiLog } = require('../queues');
+      enqueueApiLog({
+        method: req.method,
+        path: req.originalUrl,
+        statusCode: res.statusCode,
+        responseTimeMs: ms,
+        userId,
+        ip: req.ip
+      }).catch(() => {});
+    } catch (err) {
+      // Queue মডিউল লোড না হলেও অ্যাপ ভাঙবে না
+    }
   });
   next();
 }

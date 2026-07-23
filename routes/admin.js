@@ -1549,4 +1549,77 @@ router.get('/reports', async (req, res) => {
   }
 });
 
+// ==================== Background Queue System ড্যাশবোর্ড ====================
+router.get('/queues', async (req, res) => {
+  try {
+    const { getQueueHealthStats } = require('../queues');
+    const health = await getQueueHealthStats();
+
+    const dlqRes = await pool.query(
+      `SELECT * FROM queue_dead_letter WHERE status = 'dead' ORDER BY created_at DESC LIMIT 100`
+    );
+
+    res.render('admin/queues', { health, deadLetterJobs: dlqRes.rows });
+  } catch (err) {
+    console.error('Queue dashboard error:', err.message);
+    res.render('admin/queues', { health: { redisConnected: false, queues: [] }, deadLetterJobs: [] });
+  }
+});
+
+// লাইভ স্ট্যাটাস পোলিং-এর জন্য JSON এন্ডপয়েন্ট (ড্যাশবোর্ড প্রতি কয়েক সেকেন্ডে রিফ্রেশ করে)
+router.get('/queues/api/stats', async (req, res) => {
+  try {
+    const { getQueueHealthStats } = require('../queues');
+    const health = await getQueueHealthStats();
+    res.json({ success: true, health });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
+// নির্দিষ্ট Queue-এর একটা state (waiting/active/failed ইত্যাদি)-এর জব লিস্ট
+router.get('/queues/api/jobs/:queueName', async (req, res) => {
+  try {
+    const { getRecentJobs } = require('../queues');
+    const state = req.query.state || 'failed';
+    const jobs = await getRecentJobs(req.params.queueName, state, 30);
+    res.json({ success: true, jobs });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
+// Dead-letter জব রিট্রাই (আবার মূল Queue-তে পাঠানো)
+router.post('/queues/dead-letter/:id/retry', async (req, res) => {
+  try {
+    const { retryDeadLetterJob } = require('../queues');
+    await retryDeadLetterJob(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
+// Dead-letter জব ডিলিট
+router.post('/queues/dead-letter/:id/delete', async (req, res) => {
+  try {
+    const { deleteDeadLetterJob } = require('../queues');
+    await deleteDeadLetterJob(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
+// ম্যানুয়ালি একটা Fraud Scan ট্রিগার করা (টেস্টিং/অ্যাডহক ব্যবহারের জন্য)
+router.post('/queues/fraud-scan/:userId', async (req, res) => {
+  try {
+    const { enqueueFraudScan } = require('../queues');
+    const result = await enqueueFraudScan({ userId: parseInt(req.params.userId, 10), triggeredBy: 'admin' });
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
 module.exports = router;
