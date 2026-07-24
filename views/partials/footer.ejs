@@ -28,6 +28,34 @@
 .footer-badge-responsible { color: #d8f5e3; }
 .footer-badge-responsible i { color: #3ddc84; }
 
+.footer-link {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  padding: 4px 2px;
+  position: relative;
+  transition: color 0.2s;
+}
+.footer-link:hover, .footer-link:focus {
+  color: var(--gold, #D4AF37);
+}
+.footer-link:not(:last-child)::after {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--border-glass, rgba(255,255,255,0.2));
+  margin-left: 10px;
+  vertical-align: middle;
+}
+.footer-copyright {
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.2px;
+}
+
 body.light-mode .footer-badge {
   background: linear-gradient(145deg, rgba(212,175,55,0.16) 0%, rgba(255,255,255,0.65) 100%);
   border: 1px solid rgba(184,134,11,0.4);
@@ -39,6 +67,7 @@ body.light-mode .footer-badge-security { color: #0c4a86; }
 body.light-mode .footer-badge-security i { color: #1e78c9; }
 body.light-mode .footer-badge-responsible { color: #0f6b3a; }
 body.light-mode .footer-badge-responsible i { color: #17a05a; }
+body.light-mode .footer-link:hover, body.light-mode .footer-link:focus { color: #AA7C11; }
 </style>
 
 <footer style="background:var(--bg-surface);border-top:1px solid var(--border-glass);color:var(--text-muted);padding:20px 14px 70px;margin-top:20px;">
@@ -47,11 +76,11 @@ body.light-mode .footer-badge-responsible i { color: #17a05a; }
     <!-- Brand and Links -->
     <div style="text-align:center;">
       <div class="text-main" style="font-size:1.3rem;font-weight:700;margin-bottom:10px;"><%= siteName %></div>
-      <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:12px;">
-        <a href="/privacy" style="color:var(--text-muted);font-size:11px;text-decoration:none;"><%= t.privacy_policy %></a>
-        <a href="/terms" style="color:var(--text-muted);font-size:11px;text-decoration:none;"><%= t.terms_conditions %></a>
-        <a href="/rules" style="color:var(--text-muted);font-size:11px;text-decoration:none;"><%= t.rules_regulation %></a>
-        <a href="/kyc" style="color:var(--text-muted);font-size:11px;text-decoration:none;"><%= t.kyc %></a>
+      <div style="display:flex;flex-wrap:wrap;gap:2px 4px;justify-content:center;align-items:center;margin-bottom:12px;">
+        <a href="/privacy" class="footer-link"><%= t.privacy_policy %></a>
+        <a href="/terms" class="footer-link"><%= t.terms_conditions %></a>
+        <a href="/rules" class="footer-link"><%= t.rules_regulation %></a>
+        <a href="/kyc" class="footer-link"><%= t.kyc %></a>
       </div>
       <div style="display:flex;gap:8px;justify-content:center;margin-bottom:16px;">
         <div class="glass" style="padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;color:var(--primary);">🔞 18+</div>
@@ -93,11 +122,11 @@ body.light-mode .footer-badge-responsible i { color: #17a05a; }
     </div>
 
     <!-- Copyright -->
-    <div style="padding-top:12px;margin-top:10px;border-top:1px solid var(--border-glass);text-align:center;">
-      <p style="font-size:9px;color:var(--text-muted);letter-spacing:0.3px;margin-bottom:4px;">
+    <div style="padding-top:14px;margin-top:10px;border-top:1px solid var(--border-glass);text-align:center;">
+      <p style="font-size:10px;color:var(--text-muted);letter-spacing:0.3px;margin-bottom:8px;line-height:1.6;">
         <%= t.responsible_gaming_msg %>
       </p>
-      <p style="font-size:9px;color:var(--text-muted);">
+      <p class="footer-copyright">
         <%= t.footer_copyright %>
       </p>
     </div>

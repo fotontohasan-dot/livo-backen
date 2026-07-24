@@ -5,16 +5,86 @@
     <a href="/profile" style="color:var(--text-main); text-decoration: none; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
       <i class="fas fa-chevron-left"></i>
     </a>
-    <h1 style="color:var(--text-main); font-size: 20px; font-weight: 800; letter-spacing: 0.5px;"><%= t.security_settings_title %></h1>
+    <h1 style="color:var(--text-main); font-size: 20px; font-weight: 800; letter-spacing: 0.5px;"><%= t.security_center %></h1>
   </div>
 
   <%- include('../partials/flash') %>
+
+  <!-- ==================== Security Center Overview — ৬টি নিরাপত্তা আইটেমের স্ট্যাটাস একনজরে ==================== -->
+  <%
+    var scActiveOtherCount = (activeSessions || []).filter(function(d){ return !d.is_current; }).length;
+    var scItems = [
+      {
+        icon: 'fa-envelope-circle-check',
+        label: lang === 'bn' ? 'ইমেইল ভেরিফিকেশন' : 'Email Verification',
+        ok: !emailStatus || !emailStatus.hasEmail || emailStatus.verified,
+        sub: (!emailStatus || !emailStatus.hasEmail) ? (lang === 'bn' ? 'প্রযোজ্য নয়' : 'Not applicable')
+             : (emailStatus.verified ? (lang === 'bn' ? 'ভেরিফাইড' : 'Verified') : (lang === 'bn' ? 'ভেরিফাই করা হয়নি' : 'Not verified')),
+        tab: 'security'
+      },
+      {
+        icon: 'fa-key',
+        label: lang === 'bn' ? 'পাসওয়ার্ড' : 'Password',
+        ok: true,
+        sub: passwordChangedAt ? ((lang === 'bn' ? 'শেষ পরিবর্তন: ' : 'Last changed: ') + new Date(passwordChangedAt).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US')) : (lang === 'bn' ? 'কখনো পরিবর্তন হয়নি' : 'Never changed'),
+        tab: 'security'
+      },
+      {
+        icon: 'fa-shield-halved',
+        label: t.withdraw_pin_title,
+        ok: !!(pinStatus && pinStatus.configured) && !(pinStatus && pinStatus.locked),
+        sub: (pinStatus && pinStatus.locked) ? (lang === 'bn' ? 'সাময়িক লক' : 'Temporarily locked') : ((pinStatus && pinStatus.configured) ? t.pin_configured : t.pin_not_configured),
+        tab: 'security'
+      },
+      {
+        icon: 'fa-mobile-screen-button',
+        label: t.active_devices_title,
+        ok: true,
+        sub: (activeSessions ? activeSessions.length : 0) + (lang === 'bn' ? 'টি ডিভাইস সক্রিয়' : ' active'),
+        tab: 'devices'
+      },
+      {
+        icon: 'fa-right-from-bracket',
+        label: lang === 'bn' ? 'অন্যান্য সেশন' : 'Other Sessions',
+        ok: scActiveOtherCount === 0,
+        sub: scActiveOtherCount > 0 ? (scActiveOtherCount + (lang === 'bn' ? 'টি অন্য সেশন সক্রিয়' : ' other sessions active')) : (lang === 'bn' ? 'শুধু এই ডিভাইস' : 'This device only'),
+        tab: 'devices'
+      },
+      {
+        icon: 'fa-clock-rotate-left',
+        label: t.recent_login_activity,
+        ok: true,
+        sub: (recentLogins ? recentLogins.length : 0) + (lang === 'bn' ? 'টি সাম্প্রতিক লগইন' : ' recent logins'),
+        tab: 'devices'
+      }
+    ];
+  %>
+  <div style="background: var(--bg-card); border-radius: 20px; padding: 18px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
+    <h3 style="color: var(--gold); font-size: 14px; margin: 0 0 14px; display:flex; align-items:center; gap:8px;">
+      <i class="fas fa-shield-halved"></i> <%= lang === 'bn' ? 'নিরাপত্তা ওভারভিউ' : 'Security Overview' %>
+    </h3>
+    <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px;">
+      <% scItems.forEach(function(it) { %>
+        <div onclick="switchTab('<%= it.tab %>')" style="cursor:pointer; background: rgba(255,255,255,0.03); border-radius: 14px; padding: 12px; border: 1px solid <%= it.ok ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.3)' %>; display:flex; gap:10px; align-items:flex-start;">
+          <i class="fas <%= it.icon %>" style="font-size:16px; margin-top:2px; color: <%= it.ok ? '#10b981' : '#ef4444' %>;"></i>
+          <div style="min-width:0;">
+            <div style="color:var(--text-main); font-size:12px; font-weight:700; display:flex; align-items:center; gap:6px;">
+              <%= it.label %>
+              <i class="fas <%= it.ok ? 'fa-circle-check' : 'fa-triangle-exclamation' %>" style="font-size:10px; color: <%= it.ok ? '#10b981' : '#ef4444' %>;"></i>
+            </div>
+            <div style="color:var(--text-muted); font-size:11px; margin-top:3px;"><%= it.sub %></div>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  </div>
 
   <!-- Tab Buttons -->
   <div style="display: flex; gap: 10px; margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 5px; border-radius: 12px; border: 1px solid var(--border-glass);">
     <button onclick="switchTab('personal')" id="btn-personal" class="sec-tab active" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;"><%= t.personal_info %></button>
     <button onclick="switchTab('bank')" id="btn-bank" class="sec-tab" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;"><%= t.menu_withdraw %></button>
     <button onclick="switchTab('security')" id="btn-security" class="sec-tab" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;"><%= t.security %></button>
+    <button onclick="switchTab('devices')" id="btn-devices" class="sec-tab" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;"><%= t.devices_tab %></button>
   </div>
 
   <!-- Personal Information Tab -->
@@ -93,6 +163,33 @@
 
   <!-- Security Tab -->
   <div id="tab-security" class="sec-content" style="display: none;">
+
+    <!-- ==================== Email Verification কার্ড ==================== -->
+    <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
+      <h3 style="color: var(--gold); font-size: 16px; margin-bottom: 6px; display: flex; align-items: center; gap: 10px;">
+        <i class="fas fa-envelope-circle-check"></i> <%= lang === 'bn' ? 'ইমেইল ভেরিফিকেশন' : 'Email Verification' %>
+      </h3>
+      <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 18px;"><%= lang === 'bn' ? 'অ্যাকাউন্ট রিকভারি ও গুরুত্বপূর্ণ নোটিফিকেশনের জন্য ইমেইল ভেরিফাই করুন' : 'Verify your email for account recovery and important notifications' %></p>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; background: rgba(255,255,255,0.03); border-radius: 12px; padding: 15px; gap: 12px;">
+        <div style="min-width:0;">
+          <div style="color:var(--text-muted); font-size:12px; margin-bottom:4px;"><%= user.email || (lang === 'bn' ? 'কোনো ইমেইল যুক্ত নেই' : 'No email on account') %></div>
+          <% if (!emailStatus || !emailStatus.hasEmail) { %>
+            <div style="font-weight:700; font-size: 14px; color: var(--text-muted);"><i class="fas fa-circle-minus"></i> <%= lang === 'bn' ? 'প্রযোজ্য নয়' : 'Not applicable' %></div>
+          <% } else if (emailStatus.verified) { %>
+            <div style="font-weight:700; font-size: 14px; color: #10b981;"><i class="fas fa-circle-check"></i> <%= lang === 'bn' ? 'ভেরিফাইড' : 'Verified' %></div>
+          <% } else { %>
+            <div style="font-weight:700; font-size: 14px; color: #ef4444;"><i class="fas fa-circle-xmark"></i> <%= lang === 'bn' ? 'ভেরিফাই করা হয়নি' : 'Not verified' %></div>
+          <% } %>
+        </div>
+        <% if (emailStatus && emailStatus.hasEmail && !emailStatus.verified) { %>
+          <form method="POST" action="/resend-verification">
+            <button type="submit" class="btn btn-primary" style="border-radius:10px; padding:10px 16px; font-weight:800; font-size:12px; white-space:nowrap;"><%= lang === 'bn' ? 'পুনরায় পাঠান' : 'Resend' %></button>
+          </form>
+        <% } %>
+      </div>
+    </div>
+
     <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
       <h3 style="color: var(--gold); font-size: 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
         <i class="fas fa-lock"></i> <%= t.change_password_title %>
@@ -113,9 +210,220 @@
         <button type="submit" class="btn btn-primary" style="margin-top: 10px; border-radius: 12px; padding: 14px; font-weight: 800;"><%= t.change_password_btn %></button>
       </form>
     </div>
+
+    <!-- ==================== Withdraw PIN কার্ড ==================== -->
+    <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
+      <h3 style="color: var(--gold); font-size: 16px; margin-bottom: 6px; display: flex; align-items: center; gap: 10px;">
+        <i class="fas fa-shield-alt"></i> <%= t.withdraw_pin_title %>
+      </h3>
+      <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 18px;"><%= t.withdraw_pin_subtitle %></p>
+
+      <!-- Status -->
+      <div style="display:flex; justify-content:space-between; align-items:center; background: rgba(255,255,255,0.03); border-radius: 12px; padding: 15px; margin-bottom: 20px; gap: 12px;">
+        <div>
+          <div style="color:var(--text-muted); font-size:12px; margin-bottom:4px;"><%= t.withdraw_pin_status %></div>
+          <div style="font-weight:700; font-size: 14px; color: <%= (pinStatus && pinStatus.configured) ? '#10b981' : '#ef4444' %>;">
+            <i class="fas <%= (pinStatus && pinStatus.configured) ? 'fa-circle-check' : 'fa-circle-xmark' %>"></i>
+            <%= (pinStatus && pinStatus.configured) ? t.pin_configured : t.pin_not_configured %>
+          </div>
+          <div style="color:var(--text-muted); font-size:11px; margin-top:6px;">
+            <%= t.pin_last_changed %>:
+            <%= (pinStatus && pinStatus.updatedAt) ? new Date(pinStatus.updatedAt).toLocaleString('en-US', { year:'numeric', month:'short', day:'numeric', hour:'numeric', minute:'2-digit' }) : t.pin_never_changed %>
+          </div>
+          <% if (pinStatus && pinStatus.locked) { %>
+            <div style="color:#ef4444; font-size:11px; margin-top:6px; font-weight:700;">
+              <i class="fas fa-lock"></i> <%= t.pin_locked_msg %>
+              (<%= Math.max(1, Math.ceil((pinStatus.remainingMs || 0) / 60000)) %> <%= lang === 'bn' ? 'মিনিট বাকি' : 'min left' %>)
+            </div>
+          <% } %>
+        </div>
+        <i class="fas fa-shield-halved" style="font-size:30px; flex-shrink:0; color: <%= (pinStatus && pinStatus.configured) ? '#10b981' : 'var(--text-muted)' %>;"></i>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display:flex; gap:10px; margin-bottom: 20px; flex-wrap:wrap;">
+        <% if (!(pinStatus && pinStatus.configured)) { %>
+          <button type="button" onclick="showPinForm('create')" id="pinToggleBtn-create" class="btn btn-primary" style="flex:1; min-width:130px; border-radius:12px; padding:12px; font-weight:800;"><%= t.create_pin_btn %></button>
+        <% } else { %>
+          <button type="button" onclick="showPinForm('change')" id="pinToggleBtn-change" class="btn btn-primary" style="flex:1; min-width:130px; border-radius:12px; padding:12px; font-weight:800;"><%= t.change_pin_btn %></button>
+          <button type="button" onclick="showPinForm('reset')" id="pinToggleBtn-reset" class="btn btn-secondary" style="flex:1; min-width:130px; border-radius:12px; padding:12px; font-weight:800; background: var(--grad-gold); color:#000;"><%= t.reset_pin_btn %></button>
+        <% } %>
+      </div>
+
+      <p style="color: var(--text-muted); font-size: 11px; margin-bottom: 15px;"><i class="fas fa-circle-info"></i> <%= t.pin_rules_hint %></p>
+
+      <!-- Create PIN Form -->
+      <form id="pinFormcreate" action="/profile/withdraw-pin/create" method="POST" style="display:none; flex-direction: column; gap: 15px;" onsubmit="return handlePinSubmit(this)">
+        <div>
+          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.new_pin %></label>
+          <input type="password" name="pin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 16px; outline: none; letter-spacing:6px; text-align:center;">
+        </div>
+        <div>
+          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.confirm_new_pin %></label>
+          <input type="password" name="confirmPin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 16px; outline: none; letter-spacing:6px; text-align:center;">
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button type="submit" class="btn btn-primary pin-submit-btn" style="flex:1; border-radius: 12px; padding: 14px; font-weight: 800;"><%= t.create_pin_btn %></button>
+          <button type="button" onclick="hidePinForms()" style="flex:0 0 auto; padding: 14px 18px; border-radius: 12px; font-weight: 700; background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid var(--border-glass); cursor:pointer;"><%= t.cancel_btn %></button>
+        </div>
+      </form>
+
+      <!-- Change PIN Form -->
+      <form id="pinFormchange" action="/profile/withdraw-pin/change" method="POST" style="display:none; flex-direction: column; gap: 15px;" onsubmit="return handlePinSubmit(this)">
+        <div>
+          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.current_pin %></label>
+          <input type="password" name="currentPin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 16px; outline: none; letter-spacing:6px; text-align:center;">
+        </div>
+        <div>
+          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.new_pin %></label>
+          <input type="password" name="newPin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 16px; outline: none; letter-spacing:6px; text-align:center;">
+        </div>
+        <div>
+          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.confirm_new_pin %></label>
+          <input type="password" name="confirmNewPin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 16px; outline: none; letter-spacing:6px; text-align:center;">
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button type="submit" class="btn btn-primary pin-submit-btn" style="flex:1; border-radius: 12px; padding: 14px; font-weight: 800;"><%= t.change_pin_btn %></button>
+          <button type="button" onclick="hidePinForms()" style="flex:0 0 auto; padding: 14px 18px; border-radius: 12px; font-weight: 700; background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid var(--border-glass); cursor:pointer;"><%= t.cancel_btn %></button>
+        </div>
+      </form>
+
+      <!-- Reset PIN Form (PIN ভুলে গেলে — অ্যাকাউন্ট পাসওয়ার্ড দিয়ে যাচাই) -->
+      <form id="pinFormreset" action="/profile/withdraw-pin/reset" method="POST" style="display:none; flex-direction: column; gap: 15px;" onsubmit="return handlePinSubmit(this)">
+        <div>
+          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.account_password %></label>
+          <input type="password" name="accountPassword" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 14px; outline: none;">
+        </div>
+        <div>
+          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.new_pin %></label>
+          <input type="password" name="newPin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 16px; outline: none; letter-spacing:6px; text-align:center;">
+        </div>
+        <div>
+          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.confirm_new_pin %></label>
+          <input type="password" name="confirmNewPin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 16px; outline: none; letter-spacing:6px; text-align:center;">
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button type="submit" class="btn btn-primary pin-submit-btn" style="flex:1; border-radius: 12px; padding: 14px; font-weight: 800; background: var(--grad-gold); color:#000;"><%= t.reset_pin_btn %></button>
+          <button type="button" onclick="hidePinForms()" style="flex:0 0 auto; padding: 14px 18px; border-radius: 12px; font-weight: 700; background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid var(--border-glass); cursor:pointer;"><%= t.cancel_btn %></button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ==================== Two-Factor Authentication (প্রস্তুতি) ==================== -->
+    <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
+      <h3 style="color: var(--gold); font-size: 16px; margin-bottom: 6px; display: flex; align-items: center; gap: 10px;">
+        <i class="fas fa-mobile-retro"></i> <%= lang === 'bn' ? 'দুই-ধাপ যাচাইকরণ (Two-Factor Authentication)' : 'Two-Factor Authentication' %>
+      </h3>
+      <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 18px;">
+        <%= lang === 'bn' ? 'অ্যাকাউন্টে অতিরিক্ত নিরাপত্তার একটি স্তর — শীঘ্রই আসছে।' : 'An extra layer of account security — coming soon.' %>
+      </p>
+      <div style="display:flex; justify-content:space-between; align-items:center; background: rgba(255,255,255,0.03); border-radius: 12px; padding: 15px; gap: 12px;">
+        <div>
+          <div style="font-weight:700; font-size: 14px; color: var(--text-muted);">
+            <i class="fas fa-circle-info"></i>
+            <%= (user && user.totp_enabled) ? (lang === 'bn' ? 'চালু আছে' : 'Enabled') : (lang === 'bn' ? 'এখনো চালু করা হয়নি' : 'Not enabled yet') %>
+          </div>
+          <div style="color:var(--text-muted); font-size:11px; margin-top:6px;">
+            <%= lang === 'bn' ? 'ইউজার অ্যাকাউন্টের জন্য 2FA শীঘ্রই যুক্ত হবে। এই মুহূর্তে এটি শুধুমাত্র প্রস্তুতিমূলক স্ট্যাটাস।' : 'User-facing 2FA is coming soon. This is currently a readiness status only.' %>
+          </div>
+        </div>
+        <i class="fas fa-shield-halved" style="font-size:30px; flex-shrink:0; color: var(--text-muted);"></i>
+      </div>
+    </div>
+
+    <!-- ==================== নিরাপত্তা সতর্কতা (Security Alerts) ==================== -->
+    <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
+      <h3 style="color: var(--gold); font-size: 16px; margin-bottom: 6px; display: flex; align-items: center; gap: 10px;">
+        <i class="fas fa-bell"></i> <%= lang === 'bn' ? 'নিরাপত্তা সতর্কতা' : 'Security Alerts' %>
+      </h3>
+      <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 18px;">
+        <%= lang === 'bn' ? 'আপনার অ্যাকাউন্টে সাম্প্রতিক নিরাপত্তা-সম্পর্কিত কার্যকলাপ' : 'Recent security-related activity on your account' %>
+      </p>
+      <% if (securityAlerts && securityAlerts.length) { %>
+        <% securityAlerts.forEach(function(a) { %>
+          <div style="display:flex; gap:12px; align-items:flex-start; background: rgba(255,255,255,0.03); border-radius: 12px; padding: 13px 15px; margin-bottom: 10px; border-left: 3px solid <%= a.level === 'high' ? '#ef4444' : (a.level === 'medium' ? 'var(--gold)' : '#10b981') %>;">
+            <i class="fas <%= a.icon %>" style="font-size:15px; margin-top:2px; color: <%= a.level === 'high' ? '#ef4444' : (a.level === 'medium' ? 'var(--gold)' : '#10b981') %>;"></i>
+            <div style="min-width:0; flex:1;">
+              <div style="color:var(--text-main); font-size:13px; font-weight:700;"><%= a.title %></div>
+              <div style="color:var(--text-muted); font-size:11px; margin-top:3px;"><%= a.detail %></div>
+              <div style="color:var(--text-muted); font-size:10px; margin-top:4px;"><%= new Date(a.time).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></div>
+            </div>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <div style="text-align:center; padding: 25px 0; color: var(--text-muted); font-size: 13px;">
+          <i class="fas fa-circle-check" style="color:#10b981; font-size:20px; display:block; margin-bottom:8px;"></i>
+          <%= lang === 'bn' ? 'কোনো নিরাপত্তা সতর্কতা নেই — সবকিছু স্বাভাবিক আছে।' : 'No security alerts — everything looks normal.' %>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Devices Tab -->
+  <div id="tab-devices" class="sec-content" style="display: none;">
+    <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
+      <h3 style="color: var(--gold); font-size: 16px; margin-bottom: 6px; display: flex; align-items: center; gap: 10px;">
+        <i class="fas fa-mobile-screen-button"></i> <%= t.active_devices_title %>
+      </h3>
+      <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 18px;"><%= t.active_devices_subtitle %></p>
+
+      <% if (activeSessions && activeSessions.length) { %>
+        <% activeSessions.forEach(function(d) { %>
+          <div style="background: rgba(255,255,255,0.03); border-radius: 14px; padding: 15px; margin-bottom: 12px; border: 1px solid <%= d.is_current ? 'rgba(16,185,129,0.3)' : 'var(--border-glass)' %>;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+              <div style="flex:1; min-width:0;">
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                  <span style="color:var(--text-main); font-size:14px; font-weight:700;"><i class="fas <%= d.device_type === 'Mobile' ? 'fa-mobile-screen' : (d.device_type === 'Tablet' ? 'fa-tablet-screen-button' : 'fa-desktop') %>"></i> <%= d.device_name %></span>
+                  <% if (d.is_current) { %><span style="background:rgba(16,185,129,0.15); color:#10b981; font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px;"><%= t.current_device_badge %></span><% } %>
+                  <% if (d.is_new_device) { %><span style="background:rgba(245,158,11,0.15); color:var(--gold); font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px;"><%= t.new_device_badge %></span><% } %>
+                </div>
+                <div style="color:var(--text-muted); font-size:11px; margin-top:6px;"><%= d.ip %></div>
+                <div style="color:var(--text-muted); font-size:11px; margin-top:2px;"><%= t.device_last_active %>: <%= new Date(d.last_activity).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></div>
+              </div>
+              <% if (!d.is_current) { %>
+                <form method="POST" action="/profile/devices/<%= d.id %>/logout" onsubmit="return confirm('<%= t.logout_device_confirm %>')">
+                  <button type="submit" style="background: rgba(239,68,68,0.1); border:none; color:#ef4444; padding:8px 12px; border-radius:10px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap;"><%= t.logout_this_device %></button>
+                </form>
+              <% } %>
+            </div>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <div style="text-align:center; padding: 30px 0; color: var(--text-muted); font-size: 13px;"><%= t.no_active_devices %></div>
+      <% } %>
+
+      <% if (activeSessions && activeSessions.filter(function(d){return !d.is_current}).length > 0) { %>
+        <form method="POST" action="/profile/devices/logout-all-others" onsubmit="return confirm('<%= t.logout_all_confirm %>')" style="margin-top:10px;">
+          <button type="submit" style="width:100%; background: rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; padding:12px; border-radius:12px; font-size:13px; font-weight:800; cursor:pointer;"><i class="fas fa-right-from-bracket"></i> <%= t.logout_all_other_devices %></button>
+        </form>
+      <% } %>
+    </div>
+
+    <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+        <h3 style="color: var(--gold); font-size: 16px; display: flex; align-items: center; gap: 10px; margin:0;">
+          <i class="fas fa-clock-rotate-left"></i> <%= t.recent_login_activity %>
+        </h3>
+        <a href="/profile/login-history" style="color:var(--text-muted); font-size:12px; text-decoration:none;"><%= t.view_full_login_history %> <i class="fas fa-chevron-right"></i></a>
+      </div>
+      <% if (recentLogins && recentLogins.length) { %>
+        <% recentLogins.forEach(function(l) { %>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+            <div>
+              <div style="color:var(--text-main); font-size:13px; font-weight:600;"><%= l.browser %> · <%= l.os %> <% if (l.is_new_device) { %><span style="color:var(--gold); font-size:10px; font-weight:800;">• <%= t.new_device_badge %></span><% } %></div>
+              <div style="color:var(--text-muted); font-size:11px; margin-top:3px;"><%= l.ip %></div>
+            </div>
+            <div style="color:var(--text-muted); font-size:11px; text-align:right;"><%= new Date(l.created_at).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></div>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <div style="text-align:center; padding: 20px 0; color: var(--text-muted); font-size: 13px;"><%= t.no_login_history %></div>
+      <% } %>
+    </div>
   </div>
 
 </div>
+
 
 <style>
 .sec-tab {
@@ -135,6 +443,24 @@ function switchTab(tab) {
   document.querySelectorAll('.sec-tab').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + tab).style.display = 'block';
   document.getElementById('btn-' + tab).classList.add('active');
+}
+
+// ==================== Withdraw PIN ফর্ম টগল ====================
+function hidePinForms() {
+  ['create', 'change', 'reset'].forEach(function (t) {
+    var f = document.getElementById('pinForm' + t);
+    if (f) f.style.display = 'none';
+  });
+}
+function showPinForm(type) {
+  hidePinForms();
+  var f = document.getElementById('pinForm' + type);
+  if (f) f.style.display = 'flex';
+}
+function handlePinSubmit(form) {
+  var btn = form.querySelector('.pin-submit-btn');
+  if (window.LivoToast) LivoToast.setLoading(btn, true);
+  return true;
 }
 </script>
 

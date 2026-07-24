@@ -19,6 +19,10 @@ const { getShareStatus, claimShare } = require('../services/social');
 const { getLeaderboard, getPastContests } = require('../services/contest');
 const { getRewardStatus, claimRedPacket, claimGoldenEgg } = require('../services/redpacket');
 const { checkContent } = require('../utils/contentFilter');
+const { isWeakPin, createPin, updatePin, verifyPin, getPinStatus } = require('../services/withdrawPin');
+const { listActiveSessions, listLoginHistory, revokeDeviceSession, revokeAllOtherSessions } = require('../services/deviceTracking');
+const { logAdminAction } = require('../services/fraudDetection');
+const cache = require('../services/cache');
 
 // ==== ইনপুট ভ্যালিডেশন হেল্পার (username, name, phone, bank card ফিল্ড) ====
 // লক্ষ্য: কোনো ফিল্ডেই <, >, স্ক্রিপ্ট, বা লিংক বসিয়ে ঢুকতে না পারা — কারণ এই মানগুলো
@@ -39,34 +43,41 @@ function isValidBankField(v) { return typeof v === 'string' && BANK_FIELD_RE.tes
 router.get('/', isAuth, async (req, res) => {
   try {
     const user = await pool.query(`SELECT * FROM users WHERE id=$1`, [req.session.user.id]);
-    const predictions = await pool.query(`
-      SELECT p.*, m.title, m.team_a, m.team_b, m.result
-      FROM predictions p
-      JOIN matches m ON p.match_id = m.id
-      WHERE p.user_id = $1
-      ORDER BY p.created_at DESC LIMIT 10
-    `, [req.session.user.id]);
 
-    const tournaments = await pool.query(`
-      SELECT
-        COALESCE(t.name, 'টুর্নমেন্ট') as name,
-        COALESCE(t.sport, 'General') as sport,
-        COALESCE(tp.points, 0) as points,
-        tp.joined_at as joined_at
-      FROM tournament_participants tp
-      JOIN tournaments t ON tp.tournament_id = t.id
-      WHERE tp.user_id = $1
-      ORDER BY tp.joined_at DESC
-    `, [req.session.user.id]);
+    // প্রোফাইলের কয়েন ব্যালেন্স সবসময় সরাসরি DB থেকে (উপরে) নেওয়া হচ্ছে — এটা কখনো ক্যাশ করা হয় না।
+    // নিচের প্রেডিকশন/টুর্নামেন্ট/স্ট্যাটস তুলনামূলক কম-সংবেদনশীল ও ভারী জয়েন কোয়েরি, তাই ১৫ সেকেন্ড ক্যাশ করা হয়েছে।
+    const { predictions, tournaments, stats } = await cache.getOrSet(`profile:activity:${req.session.user.id}`, 15, async () => {
+      const predictionsRes = await pool.query(`
+        SELECT p.*, m.title, m.team_a, m.team_b, m.result
+        FROM predictions p
+        JOIN matches m ON p.match_id = m.id
+        WHERE p.user_id = $1
+        ORDER BY p.created_at DESC LIMIT 10
+      `, [req.session.user.id]);
 
-    const stats = await pool.query(`
-      SELECT
-        COUNT(*) as total,
-        COUNT(CASE WHEN status='won' THEN 1 END) as won,
-        COALESCE(SUM(CASE WHEN status='won' THEN points_earned ELSE 0 END), 0) as total_earned
-      FROM predictions
-      WHERE user_id = $1
-    `, [req.session.user.id]);
+      const tournamentsRes = await pool.query(`
+        SELECT
+          COALESCE(t.name, 'টুর্নমেন্ট') as name,
+          COALESCE(t.sport, 'General') as sport,
+          COALESCE(tp.points, 0) as points,
+          tp.joined_at as joined_at
+        FROM tournament_participants tp
+        JOIN tournaments t ON tp.tournament_id = t.id
+        WHERE tp.user_id = $1
+        ORDER BY tp.joined_at DESC
+      `, [req.session.user.id]);
+
+      const statsRes = await pool.query(`
+        SELECT
+          COUNT(*) as total,
+          COUNT(CASE WHEN status='won' THEN 1 END) as won,
+          COALESCE(SUM(CASE WHEN status='won' THEN points_earned ELSE 0 END), 0) as total_earned
+        FROM predictions
+        WHERE user_id = $1
+      `, [req.session.user.id]);
+
+      return { predictions: predictionsRes.rows, tournaments: tournamentsRes.rows, stats: statsRes.rows[0] };
+    });
 
     // Member Center গ্রিডের ব্যাজ কাউন্ট — কোনো একটাতে সমস্যা হলেও পুরো প্রোফাইল পেজ যেন লোড হতে ব্যর্থ না হয়, তাই আলাদা try/catch
     let missionBadge = 0;
@@ -89,9 +100,9 @@ router.get('/', isAuth, async (req, res) => {
     res.render('profile/index', {
       user: user.rows[0],
       profileUser: user.rows[0],
-      predictions: predictions.rows,
-      tournaments: tournaments.rows,
-      stats: stats.rows[0],
+      predictions: predictions,
+      tournaments: tournaments,
+      stats: stats,
       missionBadge,
       rewardBadge
     });
@@ -219,7 +230,8 @@ router.post('/change-password', isAuth, async (req, res) => {
       return res.redirect('/profile/security');
     }
     const hashed = await bcrypt.hash(np, 10);
-    await pool.query(`UPDATE users SET password=$1 WHERE id=$2`, [hashed, req.session.user.id]);
+    await pool.query(`UPDATE users SET password=$1, password_changed_at=NOW() WHERE id=$2`, [hashed, req.session.user.id]);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'PASSWORD_CHANGED', `ইউজার #${req.session.user.id} নিজের পাসওয়ার্ড পরিবর্তন করেছে`, req.ip);
     req.flash('success', '✅ পাসওয়ার্ড পরিবর্তন হয়েছে!');
     res.redirect('/profile/security');
   } catch (err) {
@@ -321,9 +333,227 @@ router.get('/stats', isAuth, async (req, res) => {
 router.get('/security', isAuth, async (req, res) => {
   try {
     const cards = await pool.query('SELECT * FROM bank_cards WHERE user_id = $1 ORDER BY created_at DESC', [req.session.user.id]);
-    res.render('profile/security', { user: req.session.user, bankCards: cards.rows });
+    let pinStatus = { configured: false, locked: false };
+    try { pinStatus = await getPinStatus(req.session.user.id); } catch (e) {}
+
+    let activeSessions = [];
+    let recentLogins = [];
+    try {
+      activeSessions = await listActiveSessions(req.session.user.id, req.sessionID);
+      recentLogins = await listLoginHistory(req.session.user.id, 5, 0);
+    } catch (e) { console.error('security devices load error:', e.message); }
+
+    // ==================== Security Center — ইমেইল ভেরিফিকেশন, পাসওয়ার্ড ও 2FA স্ট্যাটাস (সবসময় DB থেকে ফ্রেশ, সেশন স্টেল হতে পারে) ====================
+    let emailStatus = { verified: true, hasEmail: false, lastSentAt: null };
+    let passwordChangedAt = null;
+    let totpEnabled = false;
+    try {
+      const u = await pool.query(
+        'SELECT email, email_verified, last_verification_sent_at, password_changed_at, totp_enabled FROM users WHERE id = $1',
+        [req.session.user.id]
+      );
+      if (u.rows[0]) {
+        emailStatus = {
+          verified: !!u.rows[0].email_verified,
+          hasEmail: !!u.rows[0].email,
+          lastSentAt: u.rows[0].last_verification_sent_at
+        };
+        passwordChangedAt = u.rows[0].password_changed_at;
+        totpEnabled = !!u.rows[0].totp_enabled;
+      }
+    } catch (e) { console.error('security email/password status load error:', e.message); }
+
+    // ==================== Security Alerts — নতুন ডিভাইস লগইন, ব্যর্থ লগইন চেষ্টা, ফ্রড ফ্ল্যাগ (তথ্যমূলক ভাষায়, ভীতিকর নয়) ====================
+    let securityAlerts = [];
+    try {
+      const newDeviceLogins = await pool.query(
+        `SELECT created_at, ip, user_agent FROM login_logs
+         WHERE user_id = $1 AND is_new_device = true
+         ORDER BY created_at DESC LIMIT 3`,
+        [req.session.user.id]
+      );
+      for (const row of newDeviceLogins.rows) {
+        securityAlerts.push({
+          level: 'medium', icon: 'fa-mobile-screen-button',
+          title: res.locals.lang === 'bn' ? 'নতুন ডিভাইস থেকে লগইন' : 'Login from a new device',
+          detail: (res.locals.lang === 'bn' ? 'IP: ' : 'IP: ') + (row.ip || '-'),
+          time: row.created_at
+        });
+      }
+
+      const failedAttempts = await pool.query(
+        `SELECT COUNT(*) AS cnt, MAX(created_at) AS last_at FROM failed_login_attempts
+         WHERE user_id = $1 AND created_at > NOW() - INTERVAL '24 hours'`,
+        [req.session.user.id]
+      );
+      const fa = failedAttempts.rows[0];
+      if (fa && parseInt(fa.cnt, 10) > 0) {
+        securityAlerts.push({
+          level: parseInt(fa.cnt, 10) >= 5 ? 'high' : 'low', icon: 'fa-triangle-exclamation',
+          title: res.locals.lang === 'bn' ? 'ব্যর্থ লগইন চেষ্টা' : 'Failed login attempts',
+          detail: (res.locals.lang === 'bn' ? `গত ২৪ ঘণ্টায় ${fa.cnt}টি ব্যর্থ চেষ্টা` : `${fa.cnt} failed attempt(s) in the last 24 hours`),
+          time: fa.last_at
+        });
+      }
+
+      securityAlerts.sort((a, b) => new Date(b.time) - new Date(a.time));
+      securityAlerts = securityAlerts.slice(0, 5);
+    } catch (e) { console.error('security alerts load error:', e.message); }
+
+    res.render('profile/security', {
+      user: Object.assign({}, req.session.user, { totp_enabled: totpEnabled }),
+      bankCards: cards.rows, pinStatus, activeSessions, recentLogins,
+      emailStatus, passwordChangedAt, securityAlerts
+    });
   } catch (err) {
-    res.render('profile/security', { user: req.session.user, bankCards: [] });
+    res.render('profile/security', {
+      user: req.session.user, bankCards: [], pinStatus: { configured: false, locked: false }, activeSessions: [], recentLogins: [],
+      emailStatus: { verified: true, hasEmail: false, lastSentAt: null }, passwordChangedAt: null, securityAlerts: []
+    });
+  }
+});
+
+// ==================== ডিভাইস লগআউট (নির্দিষ্ট / সব অন্য ডিভাইস) ====================
+router.post('/devices/:id/logout', isAuth, async (req, res) => {
+  try {
+    const ok = await revokeDeviceSession(req.session.user.id, req.params.id, req.session.user.username);
+    req.flash(ok ? 'success' : 'error', ok ? '✅ ডিভাইস থেকে লগআউট করা হয়েছে।' : '❌ ডিভাইসটি খুঁজে পাওয়া যায়নি।');
+  } catch (err) {
+    console.error('device logout error:', err.message);
+    req.flash('error', '❌ সমস্যা হয়েছে, আবার চেষ্টা করুন।');
+  }
+  res.redirect('/profile/security');
+});
+
+router.post('/devices/logout-all-others', isAuth, async (req, res) => {
+  try {
+    const count = await revokeAllOtherSessions(req.session.user.id, req.sessionID, req.session.user.username);
+    req.flash('success', count > 0 ? `✅ ${count}টি অন্য ডিভাইস থেকে লগআউট করা হয়েছে।` : 'অন্য কোনো সক্রিয় ডিভাইস নেই।');
+  } catch (err) {
+    console.error('logout-all-others error:', err.message);
+    req.flash('error', '❌ সমস্যা হয়েছে, আবার চেষ্টা করুন।');
+  }
+  res.redirect('/profile/security');
+});
+
+// ==================== সম্পূর্ণ লগইন হিস্ট্রি ====================
+router.get('/login-history', isAuth, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = 20;
+    const logins = await listLoginHistory(req.session.user.id, limit, (page - 1) * limit);
+    res.render('profile/login-history', { user: req.session.user, logins, page, hasMore: logins.length === limit });
+  } catch (err) {
+    console.error('login-history load error:', err.message);
+    res.render('profile/login-history', { user: req.session.user, logins: [], page: 1, hasMore: false });
+  }
+});
+
+// ==================== Withdraw PIN তৈরি ====================
+router.post('/withdraw-pin/create', isAuth, async (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const status = await getPinStatus(userId);
+    if (status.configured) {
+      req.flash('error', '❌ আপনার আগে থেকেই Withdraw PIN সেট করা আছে। পরিবর্তন করতে "Change PIN" ব্যবহার করুন।');
+      return res.redirect('/profile/security');
+    }
+
+    const { pin, confirmPin } = req.body;
+    if (!pin || !confirmPin || pin !== confirmPin) {
+      req.flash('error', '❌ PIN দুটি মিলছে না।');
+      return res.redirect('/profile/security');
+    }
+    if (isWeakPin(pin)) {
+      req.flash('error', '❌ দুর্বল বা অনুমানযোগ্য PIN গ্রহণযোগ্য নয়। একই সংখ্যা বা ক্রমিক প্যাটার্ন এড়িয়ে চলুন।');
+      return res.redirect('/profile/security');
+    }
+
+    await createPin(userId, pin, req.ip);
+    await logAdminAction(userId, req.session.user.username, 'WITHDRAW_PIN_CREATED', `ইউজার #${userId} নিজের Withdraw PIN তৈরি করেছে`, req.ip);
+    req.flash('success', '✅ Withdraw PIN সফলভাবে তৈরি হয়েছে!');
+    res.redirect('/profile/security');
+  } catch (err) {
+    console.error('withdraw-pin create error:', err.message);
+    req.flash('error', '❌ Withdraw PIN তৈরি করতে সমস্যা হয়েছে।');
+    res.redirect('/profile/security');
+  }
+});
+
+// ==================== Withdraw PIN পরিবর্তন (বর্তমান PIN জানা থাকলে) ====================
+router.post('/withdraw-pin/change', isAuth, async (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const { currentPin, newPin, confirmNewPin } = req.body;
+
+    const status = await getPinStatus(userId);
+    if (!status.configured) {
+      req.flash('error', '❌ প্রথমে একটি Withdraw PIN তৈরি করুন।');
+      return res.redirect('/profile/security');
+    }
+    if (status.locked) {
+      req.flash('error', `🔒 অনেকবার ভুল চেষ্টার কারণে সাময়িকভাবে লক করা হয়েছে। ${Math.ceil(status.remainingMs / 60000)} মিনিট পর আবার চেষ্টা করুন।`);
+      return res.redirect('/profile/security');
+    }
+    if (!newPin || !confirmNewPin || newPin !== confirmNewPin) {
+      req.flash('error', '❌ নতুন PIN দুটি মিলছে না।');
+      return res.redirect('/profile/security');
+    }
+    if (isWeakPin(newPin)) {
+      req.flash('error', '❌ দুর্বল বা অনুমানযোগ্য PIN গ্রহণযোগ্য নয়।');
+      return res.redirect('/profile/security');
+    }
+
+    const check = await verifyPin(userId, currentPin, req.ip);
+    if (!check.success) {
+      if (check.locked) {
+        req.flash('error', '🔒 অনেকবার ভুল চেষ্টার কারণে Withdraw PIN সাময়িকভাবে লক করা হয়েছে। ১৫ মিনিট পর আবার চেষ্টা করুন।');
+      } else {
+        req.flash('error', '❌ বর্তমান PIN ভুল।');
+      }
+      return res.redirect('/profile/security');
+    }
+
+    await updatePin(userId, newPin, req.ip, 'changed');
+    await logAdminAction(userId, req.session.user.username, 'WITHDRAW_PIN_CHANGED', `ইউজার #${userId} নিজের Withdraw PIN পরিবর্তন করেছে`, req.ip);
+    req.flash('success', '✅ Withdraw PIN পরিবর্তন হয়েছে!');
+    res.redirect('/profile/security');
+  } catch (err) {
+    console.error('withdraw-pin change error:', err.message);
+    req.flash('error', '❌ PIN পরিবর্তন করতে সমস্যা হয়েছে।');
+    res.redirect('/profile/security');
+  }
+});
+
+// ==================== Withdraw PIN রিসেট (PIN ভুলে গেলে — অ্যাকাউন্ট পাসওয়ার্ড দিয়ে যাচাই) ====================
+router.post('/withdraw-pin/reset', isAuth, async (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const { accountPassword, newPin, confirmNewPin } = req.body;
+
+    if (!newPin || !confirmNewPin || newPin !== confirmNewPin) {
+      req.flash('error', '❌ নতুন PIN দুটি মিলছে না।');
+      return res.redirect('/profile/security');
+    }
+    if (isWeakPin(newPin)) {
+      req.flash('error', '❌ দুর্বল বা অনুমানযোগ্য PIN গ্রহণযোগ্য নয়।');
+      return res.redirect('/profile/security');
+    }
+
+    const u = await pool.query('SELECT password FROM users WHERE id=$1', [userId]);
+    if (!u.rows[0] || !(await bcrypt.compare(accountPassword || '', u.rows[0].password))) {
+      req.flash('error', '❌ অ্যাকাউন্ট পাসওয়ার্ড ভুল।');
+      return res.redirect('/profile/security');
+    }
+
+    await updatePin(userId, newPin, req.ip, 'reset');
+    await logAdminAction(userId, req.session.user.username, 'WITHDRAW_PIN_RESET', `ইউজার #${userId} নিজের Withdraw PIN রিসেট করেছে`, req.ip);
+    req.flash('success', '✅ Withdraw PIN রিসেট হয়েছে!');
+    res.redirect('/profile/security');
+  } catch (err) {
+    console.error('withdraw-pin reset error:', err.message);
+    req.flash('error', '❌ PIN রিসেট করতে সমস্যা হয়েছে।');
+    res.redirect('/profile/security');
   }
 });
 
@@ -390,13 +620,15 @@ router.get('/wheel', isAuth, async (req, res) => {
 });
 
 // প্রতি ইউজার/IP-তে মিনিটে সর্বোচ্চ ১০ বার claim/spin রিকোয়েস্ট — বট/স্প্যাম ঠেকাতে
+const RedisRateLimitStore = require('../services/redisRateLimitStore');
 const claimLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => (req.session && req.session.user ? String(req.session.user.id) : req.ip),
-  message: { ok: false, success: false, message: 'অনেকবার চেষ্টা করেছেন, একটু পরে আবার চেষ্টা করুন।' }
+  message: { ok: false, success: false, message: 'অনেকবার চেষ্টা করেছেন, একটু পরে আবার চেষ্টা করুন।' },
+  store: new RedisRateLimitStore('rl:claim:')
 });
 
 router.post('/wheel/spin', isAuth, claimLimiter, async (req, res) => {

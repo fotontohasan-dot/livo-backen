@@ -148,7 +148,7 @@
 
 .game-grid-premium {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
   padding: 0 12px;
 }
@@ -209,14 +209,22 @@
   position: absolute;
   top: 8px;
   right: 8px;
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 3px 8px 3px 6px;
+  border-radius: 6px;
   font-size: 8px;
   font-weight: 800;
-  background: #ff4d4f;
-  color: #fff;
+  color: #1a1200;
   text-transform: uppercase;
+  letter-spacing: 0.3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--fa-gold-gradient);
+  box-shadow: 0 2px 8px rgba(212,175,55,0.45);
 }
+.game-badge-premium.badge-new { background: linear-gradient(135deg, #6ee7ff 0%, #3b82f6 100%); color: #04121f; box-shadow: 0 2px 8px rgba(59,130,246,0.4); }
+.game-badge-premium.badge-hot::before { content: "\f06d"; font-family: "Font Awesome 6 Free"; font-weight: 900; font-size: 7px; }
+.game-badge-premium.badge-new::before { content: "\f005"; font-family: "Font Awesome 6 Free"; font-weight: 900; font-size: 7px; }
 
 .marquee-container-premium {
   background: rgba(212, 175, 55, 0.08);
@@ -305,11 +313,129 @@ body.light-mode .promo-banner {
   border: 1.5px solid var(--fa-gold) !important;
   box-shadow: 0 10px 30px rgba(212,175,55,0.3), 0 2px 10px rgba(0,0,0,0.12) !important;
 }
-body.light-mode .jackpot-board {
-  border: 1.5px solid var(--fa-gold) !important;
-  box-shadow: 0 10px 30px rgba(212,175,55,0.3), 0 2px 10px rgba(0,0,0,0.12) !important;
+</style>
+
+<!-- ===== HERO SECTION ===== -->
+<style>
+@keyframes heroSweep {
+  0%   { transform: translateX(-120%) skewX(-15deg); }
+  100% { transform: translateX(220%) skewX(-15deg); }
+}
+@keyframes heroFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+
+.hero-section {
+  position: relative;
+  overflow: hidden;
+  padding: 52px 18px 40px;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 15% 10%, rgba(200,16,46,0.32) 0%, transparent 45%),
+    radial-gradient(circle at 88% 20%, rgba(234,179,8,0.22) 0%, transparent 42%),
+    radial-gradient(circle at 50% 100%, rgba(234,179,8,0.10) 0%, transparent 55%),
+    linear-gradient(180deg, #0c0c12 0%, #050505 100%);
+  border-bottom: 1px solid rgba(212,175,55,0.18);
+  text-align: center;
+}
+/* মৃদু ডট-গ্রিড টেক্সচার — কার্ড-টেবিলের মতো গভীরতা দেয় */
+.hero-section::before {
+  content: "";
+  position: absolute; inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse at center, rgba(0,0,0,0.9) 0%, transparent 75%);
+  pointer-events: none;
+}
+/* সিগনেচার — ধীরে চলমান সোনালি আলোর ঝলক */
+.hero-section::after {
+  content: "";
+  position: absolute; top: 0; left: 0; width: 45%; height: 100%;
+  background: linear-gradient(100deg, transparent 0%, rgba(255,235,160,0.10) 45%, rgba(255,215,0,0.16) 50%, rgba(255,235,160,0.10) 55%, transparent 100%);
+  animation: heroSweep 7s ease-in-out infinite;
+  pointer-events: none;
+}
+.hero-inner { position: relative; z-index: 2; }
+
+.hero-live-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(212,175,55,0.35);
+  padding: 7px 16px; border-radius: 22px; font-size: 12px; font-weight: 700;
+  color: var(--fa-gold-light); margin-bottom: 18px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+  animation: heroFloat 4s ease-in-out infinite;
+}
+.hero-live-dot { width:8px; height:8px; border-radius:50%; background:#22c55e; box-shadow: 0 0 8px #22c55e; animation: livedot 1.5s infinite; }
+
+.hero-heading {
+  font-family: 'Teko', sans-serif; font-weight: 700; text-transform: uppercase;
+  font-size: 44px; line-height: 1.02; letter-spacing: 0.5px; margin: 0 0 14px;
+  background: linear-gradient(135deg, #ffffff 25%, var(--fa-gold-light) 60%, var(--fa-gold) 85%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 2px 18px rgba(212,175,55,0.25));
+}
+.hero-heading .accent { color: var(--primary); -webkit-text-fill-color: var(--primary); }
+
+.hero-sub {
+  font-size: 14px; color: #d3d5dc; max-width: 440px; margin: 0 auto 26px; line-height: 1.7;
+  font-weight: 500;
+}
+
+.hero-cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 28px; }
+.hero-btn {
+  padding: 15px 30px; border-radius: 32px; font-weight: 800; font-size: 14.5px;
+  text-decoration: none; display: inline-flex; align-items: center; gap: 9px;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.hero-btn:hover { transform: translateY(-2px); }
+.hero-btn:active { transform: scale(0.96); }
+.hero-btn-primary {
+  background: var(--fa-gold-gradient); color: #000;
+  box-shadow: 0 8px 24px rgba(212,175,55,0.4);
+}
+.hero-btn-primary:hover { box-shadow: 0 10px 30px rgba(212,175,55,0.55); }
+.hero-btn-secondary {
+  background: rgba(255,255,255,0.07); color: #fff; border: 1.5px solid rgba(255,255,255,0.2);
+}
+.hero-btn-secondary:hover { background: rgba(255,255,255,0.12); border-color: rgba(212,175,55,0.4); }
+
+.hero-stats-row { display: flex; justify-content: center; gap: 30px; flex-wrap: wrap; }
+.hero-stat { text-align: center; }
+.hero-stat-num { font-family: 'Teko', sans-serif; font-size: 25px; font-weight: 700; color: var(--fa-gold); line-height: 1; }
+.hero-stat-label { font-size: 10.5px; color: var(--text-muted); margin-top: 4px; letter-spacing: 0.2px; }
+
+@media (min-width: 640px) {
+  .hero-section { padding: 72px 24px 52px; min-height: 480px; }
+  .hero-heading { font-size: 64px; }
+  .hero-sub { font-size: 16.5px; max-width: 580px; }
+  .hero-btn { padding: 17px 36px; font-size: 15.5px; }
 }
 </style>
+
+<div class="hero-section">
+  <div class="hero-inner">
+    <div class="hero-live-badge"><span class="hero-live-dot"></span> ২,৮৪০+ জন এখন অনলাইনে খেলছেন</div>
+    <h1 class="hero-heading">বাংলাদেশের <span class="accent">#১</span><br>প্রেডিকশন ও ক্যাসিনো প্ল্যাটফর্ম</h1>
+    <p class="hero-sub">লাইভ ম্যাচ প্রেডিক্ট করুন, প্রিমিয়াম ক্যাসিনো গেম খেলুন এবং সেকেন্ডেই জিতুন রিয়েল রিওয়ার্ড — নিরাপদ, দ্রুত ও সম্পূর্ণ লাইসেন্সপ্রাপ্ত।</p>
+    <div class="hero-cta-row">
+      <a href="#categoryTabs" class="hero-btn hero-btn-primary"><i class="fas fa-play"></i> এখনই খেলুন</a>
+      <% if (!locals.user) { %>
+        <a href="/register" class="hero-btn hero-btn-secondary"><i class="fas fa-user-plus"></i> ফ্রি অ্যাকাউন্ট খুলুন</a>
+      <% } else { %>
+        <a href="/payment/deposit" class="hero-btn hero-btn-secondary"><i class="fas fa-wallet"></i> ডিপোজিট করুন</a>
+      <% } %>
+    </div>
+    <div class="hero-stats-row">
+      <div class="hero-stat"><div class="hero-stat-num">১১৮+</div><div class="hero-stat-label">গেমস</div></div>
+      <div class="hero-stat"><div class="hero-stat-num">২৪/৭</div><div class="hero-stat-label">সাপোর্ট</div></div>
+      <div class="hero-stat"><div class="hero-stat-num">৫ মিনিট</div><div class="hero-stat-label">উইথড্র</div></div>
+    </div>
+  </div>
+</div>
 
 <!-- ===== Marquee Ticker ===== -->
 <div class="marquee-container-premium">
@@ -372,6 +498,50 @@ body.light-mode .jackpot-board {
   </a>
 </div>
 
+<!-- ===== Popular Games (কিউরেটেড হাইলাইট স্ট্রিপ) ===== -->
+<style>
+.popular-games-section { padding: 8px 0 22px; }
+.popular-games-heading {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 14px 14px;
+}
+.popular-games-heading h2 {
+  font-family: 'Teko', sans-serif; font-size: 24px; font-weight: 700; letter-spacing: 0.4px;
+  color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 9px;
+}
+.popular-games-heading h2 .fire-icon {
+  width: 30px; height: 30px; border-radius: 9px; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, rgba(212,175,55,0.18) 0%, rgba(255,77,79,0.14) 100%);
+  border: 1px solid rgba(212,175,55,0.25);
+  color: #ff6b47; font-size: 14px;
+}
+.popular-games-heading .see-all-btn {
+  font-size: 11.5px; font-weight: 800; color: #0a0a0a; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--fa-gold-gradient);
+  padding: 7px 14px; border-radius: 20px;
+  box-shadow: 0 3px 10px rgba(212,175,55,0.3);
+  transition: transform 0.15s ease;
+}
+.popular-games-heading .see-all-btn:hover { transform: translateY(-1px); }
+.popular-games-scroll {
+  display: flex; gap: 14px; overflow-x: auto; padding: 2px 14px 10px;
+  scroll-snap-type: x proximity;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.popular-games-scroll::-webkit-scrollbar { display: none; }
+.popular-games-scroll .game-card-premium { flex: 0 0 138px; scroll-snap-align: start; }
+</style>
+<div class="popular-games-section">
+  <div class="popular-games-heading">
+    <h2><span class="fire-icon"><i class="fas fa-fire"></i></span> Popular Games</h2>
+    <a href="#categoryTabs" class="see-all-btn">সব দেখুন <i class="fas fa-chevron-right" style="font-size:9px;"></i></a>
+  </div>
+  <div class="popular-games-scroll" id="popularGamesRow"></div>
+</div>
+
 <!-- ===== Horizontal Navigation Tabs (Hot, Slots, Live, Sports, Poker, Favorites, Recent) ===== -->
 <div class="horizontal-nav-container" id="categoryTabs">
   <div class="nav-tab-item active" data-category="all">
@@ -400,14 +570,6 @@ body.light-mode .jackpot-board {
   </div>
 </div>
 
-<!-- ===== Provider Grid (শুধু 'সব' ট্যাবে দেখাবে, কোলাপসিবল) ===== -->
-<div id="providerSection" style="padding:0 12px 10px;">
-  <div id="providerGrid" class="provider-grid"></div>
-  <button type="button" id="providerToggleBtn" class="provider-toggle-btn">
-    <i class="fas fa-chevron-down"></i>
-  </button>
-</div>
-
 <!-- ===== Layout Switcher ===== -->
 <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:0 12px 10px;">
   <span style="font-size:11px;color:var(--text-muted);margin-right:2px;">লেআউট:</span>
@@ -417,30 +579,6 @@ body.light-mode .jackpot-board {
 </div>
 
 <style>
-  .provider-grid {
-    display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
-    max-height: 340px; overflow: hidden; transition: max-height 0.3s ease;
-  }
-  .provider-grid.expanded { max-height: 3000px; }
-  .provider-card {
-    background: var(--bg-surface); border: 1px solid var(--border-glass);
-    border-radius: 14px; padding: 14px 10px; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 10px; cursor: pointer;
-    transition: all 0.15s ease; min-height: 110px;
-  }
-  .provider-card.active { border-color: var(--fa-gold); box-shadow: 0 0 0 2px rgba(212,175,55,0.25); }
-  .provider-card .provider-logo-img {
-    max-width: 100%; max-height: 42px; object-fit: contain; border-radius: 6px;
-  }
-  .provider-card .provider-logo-fallback {
-    width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center;
-    justify-content: center; color: #fff; font-size: 11px; font-weight: 900;
-  }
-  .provider-card .provider-name { font-size: 12.5px; font-weight: 700; color: var(--text-main); text-align: center; }
-  .provider-toggle-btn {
-    width: 100%; margin-top: 10px; padding: 8px; border-radius: 10px; border: none;
-    background: var(--bg-surface); color: var(--text-muted); cursor: pointer; font-size: 13px;
-  }
   .layout-btn {
     width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border-glass);
     background: var(--bg-surface); color: var(--text-muted); cursor: pointer; font-size: 13px;
@@ -466,15 +604,25 @@ body.light-mode .jackpot-board {
 
   /* ===== Catalog Mode: বাম পাশে প্রোভাইডার কলাম, ডান পাশে গেম গ্রিড ===== */
   #mainGridWrap { display: flex; gap: 10px; padding: 0 12px; }
+  #providerSidebar {
+    display: none; flex-direction: column; width: 78px; flex-shrink: 0; gap: 6px;
+  }
+  .provider-scroll-btn {
+    width: 100%; padding: 6px 0; border: none; border-radius: 8px; cursor: pointer;
+    background: rgba(255,255,255,0.08); color: var(--text-muted); font-size: 13px;
+    display: flex; align-items: center; justify-content: center; transition: all 0.15s ease;
+  }
+  .provider-scroll-btn:active { background: var(--fa-gold-gradient); color: #000; }
   #catalogProviderList {
-    display: none; flex-direction: column; gap: 8px; width: 78px; flex-shrink: 0;
-    max-height: 640px; overflow-y: auto; scrollbar-width: none;
+    display: flex; flex-direction: column; gap: 8px;
+    height: 420px; overflow-y: scroll; scrollbar-width: none; scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y;
   }
   #catalogProviderList::-webkit-scrollbar { display: none; }
   .catalog-provider-item {
     background: var(--bg-surface); border: 1px solid var(--border-glass);
     border-radius: 12px; padding: 8px 4px; display: flex; flex-direction: column;
-    align-items: center; gap: 6px; cursor: pointer; transition: all 0.15s ease;
+    align-items: center; gap: 6px; cursor: pointer; transition: all 0.15s ease; flex-shrink: 0;
   }
   .catalog-provider-item.active { border-color: var(--fa-gold); box-shadow: 0 0 0 2px rgba(212,175,55,0.25); }
   .catalog-provider-item img { width: 100%; max-height: 28px; object-fit: contain; border-radius: 4px; }
@@ -520,7 +668,11 @@ body.light-mode .jackpot-board {
 
 <!-- ===== High-Fidelity Premium Game Grid (বাম পাশে প্রোভাইডার কলাম সহ, Slots/Live/Sports/Poker-এ) ===== -->
 <div id="mainGridWrap">
-  <div id="catalogProviderList"></div>
+  <div id="providerSidebar">
+    <button type="button" id="providerScrollUp" class="provider-scroll-btn"><i class="fas fa-chevron-up"></i></button>
+    <div id="catalogProviderList"></div>
+    <button type="button" id="providerScrollDown" class="provider-scroll-btn"><i class="fas fa-chevron-down"></i></button>
+  </div>
   <div class="game-grid-premium" id="gameContainer"></div>
 </div>
 
@@ -528,17 +680,18 @@ body.light-mode .jackpot-board {
 <style>
 /* Mega Jackpot */
 .mega-jackpot {
-  margin: 20px 12px 15px;
+  margin: 20px 0 15px;
 }
 .jackpot-container {
   background: linear-gradient(90deg, #c8102e, #f5c400, #c8102e);
-  border-radius: 15px;
+  border-radius: 0;
   padding: 18px 20px;
   display: flex;
   align-items: center;
   position: relative;
   overflow: hidden;
-  border: 4px solid #ffd700;
+  border-top: 4px solid #ffd700;
+  border-bottom: 4px solid #ffd700;
   box-shadow: 0 0 25px rgba(255, 215, 0, 0.8);
   min-height: 145px;
 }
@@ -572,11 +725,12 @@ body.light-mode .jackpot-board {
 }
 /* Recent Big Wins */
 .recent-wins {
-  margin: 0 12px 20px;
+  margin: 0 0 20px;
   background: rgba(0, 0, 0, 0.85);
-  border-radius: 12px;
+  border-radius: 0;
   padding: 12px;
-  border: 2px solid #ffd700;
+  border-top: 2px solid #ffd700;
+  border-bottom: 2px solid #ffd700;
 }
 .recent-wins h3 {
   color: #ffd700;
@@ -654,6 +808,118 @@ for (let i = 0; i < 4; i++) addWin();
 setInterval(addWin, 2500);
 </script>
 
+<!-- ===== Why Choose Us / Benefits ===== -->
+<style>
+.why-us-section { padding: 34px 14px 12px; }
+.why-us-heading { text-align: center; margin-bottom: 24px; }
+.why-us-heading h2 {
+  font-family: 'Teko', sans-serif; font-size: 30px; font-weight: 700; letter-spacing: 0.4px;
+  background: linear-gradient(135deg, #fff 40%, var(--fa-gold-light) 90%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  margin: 0 0 6px;
+}
+.why-us-heading p { font-size: 12.5px; color: var(--text-muted); margin: 0; }
+.why-us-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.why-us-card {
+  position: relative;
+  background: linear-gradient(135deg, rgba(32,34,40,0.85) 0%, rgba(14,15,17,0.95) 100%);
+  border: 1px solid rgba(212,175,55,0.15); border-radius: 18px; padding: 22px 16px; text-align: center;
+  overflow: hidden;
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.why-us-card::before {
+  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--fa-gold-gradient);
+  opacity: 0; transition: opacity 0.25s ease;
+}
+.why-us-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(212,175,55,0.5);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.35), 0 0 0 1px rgba(212,175,55,0.08);
+}
+.why-us-card:hover::before { opacity: 1; }
+.why-us-icon {
+  width: 54px; height: 54px; border-radius: 16px; margin: 0 auto 14px;
+  display: flex; align-items: center; justify-content: center; font-size: 22px;
+  background: linear-gradient(135deg, rgba(212,175,55,0.22) 0%, rgba(212,175,55,0.06) 100%);
+  border: 1px solid rgba(212,175,55,0.25);
+  color: var(--fa-gold-light);
+}
+.why-us-card h3 { font-size: 14.5px; font-weight: 800; color: var(--text-main); margin: 0 0 7px; letter-spacing: 0.2px; }
+.why-us-card p { font-size: 11.5px; color: var(--text-muted); line-height: 1.6; margin: 0; }
+
+@media (min-width: 640px) {
+  .why-us-grid { grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  .why-us-card { padding: 28px 18px; }
+}
+</style>
+<div class="why-us-section">
+  <div class="why-us-heading">
+    <h2>কেন Livo বেছে নেবেন?</h2>
+    <p>আমরা যা দিচ্ছি, তা আপনার খেলা আরও নিরাপদ ও আনন্দময় করে তোলে</p>
+  </div>
+  <div class="why-us-grid">
+    <div class="why-us-card">
+      <div class="why-us-icon"><i class="fas fa-bolt"></i></div>
+      <h3>দ্রুত উইথড্র</h3>
+      <p>মাত্র ৫ মিনিটে আপনার জেতা টাকা তুলে নিন, কোনো ঝামেলা ছাড়াই।</p>
+    </div>
+    <div class="why-us-card">
+      <div class="why-us-icon"><i class="fas fa-chart-line"></i></div>
+      <h3>লাইভ প্রেডিকশন</h3>
+      <p>রিয়েল-টাইম ম্যাচ ডেটা দেখে সঠিক প্রেডিকশন করার সুযোগ।</p>
+    </div>
+    <div class="why-us-card">
+      <div class="why-us-icon"><i class="fas fa-headset"></i></div>
+      <h3>২৪/৭ সাপোর্ট</h3>
+      <p>যেকোনো সমস্যায় আমাদের সাপোর্ট টিম সবসময় আপনার পাশে।</p>
+    </div>
+    <div class="why-us-card">
+      <div class="why-us-icon"><i class="fas fa-gift"></i></div>
+      <h3>দুর্দান্ত বোনাস</h3>
+      <p>প্রতিদিন রিওয়ার্ড, রিবেট ও ওয়েলকাম বোনাস জেতার সুযোগ।</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Trust Badges ===== -->
+<style>
+.trust-badges-section { padding: 30px 14px 14px; }
+.trust-badges-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.trust-badge-item {
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass);
+  border-radius: 14px; padding: 14px;
+  transition: border-color 0.2s ease;
+}
+.trust-badge-item:hover { border-color: rgba(212,175,55,0.3); }
+.trust-badge-item i { font-size: 18px; color: #3ddc84; flex-shrink: 0; width: 22px; text-align: center; }
+.trust-badge-item .label { font-size: 12px; font-weight: 700; color: var(--text-main); line-height: 1.3; }
+.trust-badge-item .sub { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+@media (min-width: 640px) { .trust-badges-grid { grid-template-columns: repeat(4, 1fr); } }
+</style>
+<div class="trust-badges-section">
+  <div class="trust-badges-grid">
+    <div class="trust-badge-item">
+      <i class="fas fa-shield-halved"></i>
+      <div><div class="label">নিরাপদ পেমেন্ট</div><div class="sub">SSL এনক্রিপ্টেড</div></div>
+    </div>
+    <div class="trust-badge-item">
+      <i class="fas fa-headset"></i>
+      <div><div class="label">২৪/৭ সাপোর্ট</div><div class="sub">সবসময় পাশে আছি</div></div>
+    </div>
+    <div class="trust-badge-item">
+      <i class="fas fa-certificate"></i>
+      <div><div class="label">লাইসেন্সপ্রাপ্ত</div><div class="sub">Curacao Licensed</div></div>
+    </div>
+    <div class="trust-badge-item">
+      <i class="fas fa-bolt"></i>
+      <div><div class="label">দ্রুত উইথড্র</div><div class="sub">৫ মিনিটের মধ্যে</div></div>
+    </div>
+  </div>
+</div>
+
 <!-- ===== Footer ===== -->
 <%- include('partials/footer') %>
 
@@ -662,24 +928,28 @@ setInterval(addWin, 2500);
 
 <script>
 // পূর্ণ গেইম ক্যাটালগ — ১১৮টি গেইম, প্রকৃত স্লাগ (routes/games.js অনুযায়ী) ও প্রোভাইডারসহ
-const allGames = [
-  { name: 'Aviator', emoji: '🎰', type: 'hot', slug: 'aviator', badge: 'hot', provider: 'Spribe' },
+// অ্যাডমিন প্যানেল থেকে ম্যানেজ করা গেম (games টেবিল) — থাকলে এটাই ব্যবহার হবে,
+// টেবিল খালি থাকলে (মাইগ্রেশন এখনো না চললে) নিচের হার্ডকোড করা তালিকা ফলব্যাক হিসেবে কাজ করবে
+const SERVER_GAMES = <%- JSON.stringify((typeof dbGames !== 'undefined' && dbGames) ? dbGames : []).replace(/</g, '\\u003C') %>;
+
+const allGames = SERVER_GAMES.length > 0 ? SERVER_GAMES : [
+  { name: 'Aviator', emoji: '🎰', type: 'slots', slug: 'aviator', badge: 'hot', provider: 'Spribe' },
   { name: 'Slots', emoji: '💎', type: 'slots', slug: 'slots', badge: 'pop', provider: 'Playtech' },
   { name: 'Roulette', emoji: '🍭', type: 'live', slug: 'roulette', badge: 'new', provider: 'Playtech' },
   { name: 'Andar Bahar', emoji: '⚡', type: 'live', slug: 'andar-bahar', badge: null, provider: 'Jili' },
-  { name: 'Teen Patti', emoji: '🔥', type: 'hot', slug: 'teen-patti', badge: 'hot', provider: 'Jili' },
+  { name: 'Teen Patti', emoji: '🔥', type: 'poker', slug: 'teen-patti', badge: 'hot', provider: 'Jili' },
   { name: 'Blackjack', emoji: '🐉', type: 'live', slug: 'blackjack', badge: 'hot', provider: 'Playtech' },
   { name: 'Poker', emoji: '🎴', type: 'poker', slug: 'poker', badge: 'pop', provider: 'Playtech' },
   { name: 'Baccarat', emoji: '🃏', type: 'live', slug: 'baccarat', badge: 'new', provider: 'Playtech' },
   { name: 'Crash Game', emoji: '🎲', type: 'slots', slug: 'crash-game', badge: null, provider: 'Playtech' },
-  { name: 'Starburst', emoji: '🎯', type: 'hot', slug: 'starburst', badge: 'hot', provider: 'NetEnt' },
-  { name: 'Book of Dead', emoji: '🎡', type: 'hot', slug: 'book-of-dead', badge: 'hot', provider: 'Play\'n GO' },
+  { name: 'Starburst', emoji: '🎯', type: 'slots', slug: 'starburst', badge: 'hot', provider: 'NetEnt' },
+  { name: 'Book of Dead', emoji: '🎡', type: 'slots', slug: 'book-of-dead', badge: 'hot', provider: 'Play\'n GO' },
   { name: 'Gonzo\'s Quest', emoji: '🚀', type: 'slots', slug: 'gonzos-quest', badge: 'pop', provider: 'NetEnt' },
-  { name: 'Mega Moolah', emoji: '👑', type: 'hot', slug: 'mega-moolah', badge: 'hot', provider: 'Microgaming' },
-  { name: 'Gates of Olympus', emoji: '🦁', type: 'hot', slug: 'gates-of-olympus', badge: 'hot', provider: 'Pragmatic Play' },
-  { name: 'Sweet Bonanza', emoji: '🐯', type: 'hot', slug: 'sweet-bonanza', badge: 'hot', provider: 'Pragmatic Play' },
+  { name: 'Mega Moolah', emoji: '👑', type: 'slots', slug: 'mega-moolah', badge: 'hot', provider: 'Microgaming' },
+  { name: 'Gates of Olympus', emoji: '🦁', type: 'slots', slug: 'gates-of-olympus', badge: 'hot', provider: 'Pragmatic Play' },
+  { name: 'Sweet Bonanza', emoji: '🐯', type: 'slots', slug: 'sweet-bonanza', badge: 'hot', provider: 'Pragmatic Play' },
   { name: 'Legacy of Dead', emoji: '🌊', type: 'slots', slug: 'legacy-of-dead', badge: 'hot', provider: 'Play\'n GO' },
-  { name: 'Crazy Time', emoji: '⚓', type: 'hot', slug: 'crazy-time', badge: 'hot', provider: 'Evolution' },
+  { name: 'Crazy Time', emoji: '⚓', type: 'live', slug: 'crazy-time', badge: 'hot', provider: 'Evolution' },
   { name: 'Lightning Roulette', emoji: '🥷', type: 'live', slug: 'lightning-roulette', badge: 'new', provider: 'Evolution' },
   { name: 'Monopoly Live', emoji: '🀄', type: 'live', slug: 'monopoly-live', badge: null, provider: 'Evolution' },
   { name: 'Mega Ball', emoji: '🐺', type: 'live', slug: 'mega-ball', badge: null, provider: 'Evolution' },
@@ -689,98 +959,27 @@ const allGames = [
   { name: 'Bac Bo', emoji: '🎪', type: 'live', slug: 'bac-bo', badge: null, provider: 'Evolution' },
   { name: 'Rummy', emoji: '🌟', type: 'poker', slug: 'rummy', badge: null, provider: 'Jili' },
   { name: 'Call Break', emoji: '🎆', type: 'poker', slug: 'call-break', badge: 'hot', provider: 'Jili' },
-  { name: 'Dragon Tiger', emoji: '❄️', type: 'hot', slug: 'dragon-tiger', badge: 'hot', provider: 'Jili' },
-  { name: 'JetX', emoji: '⛩️', type: 'hot', slug: 'jetx', badge: 'hot', provider: 'Spribe' },
+  { name: 'Dragon Tiger', emoji: '❄️', type: 'live', slug: 'dragon-tiger', badge: 'hot', provider: 'Jili' },
+  { name: 'JetX', emoji: '⛩️', type: 'slots', slug: 'jetx', badge: 'hot', provider: 'Spribe' },
   { name: 'Plinko', emoji: '🍬', type: 'slots', slug: 'plinko', badge: null, provider: 'Spribe' },
-  { name: 'Keno', emoji: '🦍', type: 'slots', slug: 'keno', badge: null, provider: 'Spribe' },
-  { name: 'Bingo', emoji: '🎰', type: 'slots', slug: 'bingo', badge: 'hot', provider: 'JDB' },
-  { name: '5D Lottery', emoji: '💎', type: 'slots', slug: '5d-lottery', badge: 'pop', provider: 'JDB' },
-  { name: 'Win Go', emoji: '🍭', type: 'slots', slug: 'win-go', badge: 'new', provider: 'JDB' },
-  { name: 'Coin Flip', emoji: '⚡', type: 'slots', slug: 'coin-flip', badge: null, provider: 'JDB' },
-  { name: 'Dice', emoji: '🔥', type: 'slots', slug: 'dice', badge: null, provider: 'Spribe' },
-  { name: 'Fortune Gems', emoji: '🐉', type: 'hot', slug: 'fortune-gems', badge: 'hot', provider: 'Jili' },
-  { name: 'Golden Empire', emoji: '🎴', type: 'slots', slug: 'golden-empire', badge: 'pop', provider: 'Jili' },
-  { name: 'Sugar Rush', emoji: '🃏', type: 'slots', slug: 'sugar-rush', badge: 'new', provider: 'Pragmatic Play' },
-  { name: 'K3 Lottery', emoji: '🎲', type: 'slots', slug: 'k3-lottery', badge: null, provider: 'JDB' },
-  { name: 'Spaceman', emoji: '🎯', type: 'hot', slug: 'spaceman', badge: 'hot', provider: 'Spribe' },
-  { name: 'Sic Bo', emoji: '🎡', type: 'live', slug: 'sic-bo', badge: 'hot', provider: 'Microgaming' },
-  { name: 'Fish Prawn Crab', emoji: '🚀', type: 'slots', slug: 'fish-prawn-crab', badge: 'pop', provider: 'Jili' },
-  { name: 'Fruit Slot', emoji: '👑', type: 'slots', slug: 'fruit-slot', badge: 'new', provider: 'Playson' },
-  { name: 'Diamond Slot', emoji: '🦁', type: 'slots', slug: 'diamond-slot', badge: null, provider: 'Wazdan' },
-  { name: '7up 7down', emoji: '🐯', type: 'slots', slug: '7up-7down', badge: null, provider: 'Jili' },
-  { name: 'Triple Card', emoji: '🌊', type: 'poker', slug: 'triple-card', badge: 'hot', provider: 'Jili' },
-  { name: 'Jhandi Munda', emoji: '⚓', type: 'poker', slug: 'jhandi-munda', badge: 'pop', provider: 'Jili' },
-  { name: 'Cricket War', emoji: '🥷', type: 'sports', slug: 'cricket-war', badge: 'new', provider: 'Jili' },
-  { name: 'Football War', emoji: '🀄', type: 'sports', slug: 'football-war', badge: null, provider: 'Jili' },
-  { name: 'Minesweeper Pro', emoji: '🐺', type: 'slots', slug: 'minesweeper-pro', badge: null, provider: 'Jili' },
-  { name: 'Tower Game', emoji: '🍀', type: 'slots', slug: 'tower-game', badge: 'hot', provider: 'Jili' },
-  { name: 'Limbo', emoji: '💰', type: 'slots', slug: 'limbo', badge: 'pop', provider: 'Spribe' },
-  { name: 'Wheel Pro', emoji: '🏆', type: 'slots', slug: 'wheel-pro', badge: 'new', provider: 'Jili' },
-  { name: 'Panda Slot', emoji: '🎪', type: 'slots', slug: 'panda-slot', badge: null, provider: 'Jili' },
-  { name: 'Tiger Slot', emoji: '🌟', type: 'slots', slug: 'tiger-slot', badge: null, provider: 'Jili' },
-  { name: 'Dragon Slot', emoji: '🎆', type: 'slots', slug: 'dragon-slot', badge: 'hot', provider: 'Jili' },
-  { name: 'Phoenix Slot', emoji: '❄️', type: 'slots', slug: 'phoenix-slot', badge: 'pop', provider: 'Red Tiger' },
-  { name: 'Lion Slot', emoji: '⛩️', type: 'slots', slug: 'lion-slot', badge: 'new', provider: 'Red Tiger' },
-  { name: 'Coin Master', emoji: '🍬', type: 'slots', slug: 'coin-master', badge: null, provider: 'Jili' },
-  { name: 'Gold Rush', emoji: '🦍', type: 'slots', slug: 'gold-rush', badge: null, provider: 'Red Tiger' },
-  { name: 'Treasure Hunt', emoji: '🎰', type: 'slots', slug: 'treasure-hunt', badge: 'hot', provider: 'Betsoft' },
-  { name: 'Pirate Gold', emoji: '💎', type: 'slots', slug: 'pirate-gold', badge: 'pop', provider: 'Red Tiger' },
-  { name: 'Ninja Game', emoji: '🍭', type: 'slots', slug: 'ninja-game', badge: 'new', provider: 'Betsoft' },
-  { name: 'Samurai Slot', emoji: '⚡', type: 'slots', slug: 'samurai-slot', badge: null, provider: 'Hacksaw Gaming' },
-  { name: 'Mahjong Ways', emoji: '🔥', type: 'slots', slug: 'mahjong-ways', badge: null, provider: 'Big Time Gaming' },
-  { name: 'Thai Paradise', emoji: '🐉', type: 'slots', slug: 'thai-paradise', badge: 'hot', provider: 'Big Time Gaming' },
-  { name: 'Monkey King', emoji: '🎴', type: 'slots', slug: 'monkey-king', badge: 'pop', provider: 'Hacksaw Gaming' },
-  { name: 'Wild West', emoji: '🃏', type: 'slots', slug: 'wild-west', badge: 'new', provider: 'Pragmatic Play' },
-  { name: 'Space Wars', emoji: '🎲', type: 'slots', slug: 'space-wars', badge: null, provider: 'Spinomenal' },
-  { name: 'Ocean King', emoji: '🎯', type: 'slots', slug: 'ocean-king', badge: null, provider: 'Jili' },
-  { name: 'Fire Dice', emoji: '🎡', type: 'slots', slug: 'fire-dice', badge: 'hot', provider: 'Wazdan' },
-  { name: 'Ice Slot', emoji: '🚀', type: 'slots', slug: 'ice-slot', badge: 'pop', provider: 'Wazdan' },
-  { name: 'Storm Slot', emoji: '👑', type: 'slots', slug: 'storm-slot', badge: 'new', provider: 'PG Soft' },
-  { name: 'Royal Flush', emoji: '🦁', type: 'poker', slug: 'royal-flush', badge: null, provider: 'Spinomenal' },
-  { name: 'Lucky 7', emoji: '🐯', type: 'slots', slug: 'lucky-7', badge: null, provider: 'NetEnt' },
-  { name: 'Magic Ball', emoji: '🌊', type: 'slots', slug: 'magic-ball', badge: 'hot', provider: 'Playson' },
-  { name: 'Neon Slots', emoji: '⚓', type: 'slots', slug: 'neon-slots', badge: 'pop', provider: 'Playson' },
-  { name: 'Cash Burst', emoji: '🥷', type: 'slots', slug: 'cash-burst', badge: 'new', provider: 'PG Soft' },
-  { name: 'Live Blackjack', emoji: '🀄', type: 'live', slug: 'live-blackjack', badge: null, provider: 'Evolution' },
-  { name: 'Live Roulette', emoji: '🐺', type: 'live', slug: 'live-roulette', badge: null, provider: 'Evolution' },
-  { name: 'Live Baccarat', emoji: '🍀', type: 'live', slug: 'live-baccarat', badge: 'hot', provider: 'Evolution' },
-  { name: 'Live Poker', emoji: '💰', type: 'live', slug: 'live-poker', badge: 'pop', provider: 'Evolution' },
-  { name: 'Mines', emoji: '🏆', type: 'slots', slug: 'mines', badge: 'new', provider: 'Spribe' },
-  { name: 'Football Studio', emoji: '🎪', type: 'live', slug: 'football-studio', badge: null, provider: 'Evolution' },
-  { name: 'Cash or Crash', emoji: '🌟', type: 'slots', slug: 'cash-or-crash', badge: null, provider: 'Spribe' },
-  { name: 'Extra Chilli', emoji: '🎆', type: 'slots', slug: 'extra-chill', badge: 'hot', provider: 'Big Time Gaming' },
-  { name: 'Fire in the Hole', emoji: '❄️', type: 'slots', slug: 'fire-in-the-hole', badge: 'pop', provider: 'Nolimit City' },
-  { name: 'Wanted Dead or Wild', emoji: '⛩️', type: 'hot', slug: 'wanted-dead-or-a-wild', badge: 'hot', provider: 'Hacksaw Gaming' },
-  { name: 'Mental', emoji: '🍬', type: 'slots', slug: 'mental', badge: null, provider: 'Nolimit City' },
-  { name: 'Razor Shark', emoji: '🦍', type: 'slots', slug: 'razor-shark', badge: null, provider: 'Relax Gaming' },
-  { name: 'Jammin Jars', emoji: '🎰', type: 'slots', slug: 'jammin-jars', badge: 'hot', provider: 'Relax Gaming' },
-  { name: 'San Quentin', emoji: '💎', type: 'hot', slug: 'san-quentin', badge: 'hot', provider: 'Nolimit City' },
-  { name: 'Aviator Pro', emoji: '🍭', type: 'slots', slug: 'aviator-pro', badge: 'new', provider: 'Spribe' },
-  { name: 'JetX Pro', emoji: '⚡', type: 'slots', slug: 'jetx-pro', badge: null, provider: 'Spribe' },
-  { name: 'Spaceman Pro', emoji: '🔥', type: 'slots', slug: 'spaceman-pro', badge: null, provider: 'Spribe' },
-  { name: 'Aviatrix', emoji: '🐉', type: 'slots', slug: 'aviatrix', badge: 'hot', provider: 'Spribe' },
-  { name: 'Balloon', emoji: '🎴', type: 'slots', slug: 'balloon', badge: 'pop', provider: 'Spribe' },
-  { name: 'Minesweeper', emoji: '🃏', type: 'slots', slug: 'minesweeper', badge: 'new', provider: 'Jili' },
-  { name: 'Football X', emoji: '🎲', type: 'sports', slug: 'football-x', badge: null, provider: 'Spribe' },
-  { name: 'Online Ludo', emoji: '🎯', type: 'sports', slug: 'ludo', badge: null, provider: 'Jili' },
-  { name: 'Color Prediction', emoji: '🎡', type: 'slots', slug: 'color-prediction', badge: 'hot', provider: 'Jili' },
-  { name: 'Mine Game', emoji: '🚀', type: 'slots', slug: 'mine', badge: 'pop', provider: 'Jili' },
-  { name: 'Hi-Lo', emoji: '👑', type: 'slots', slug: 'hilo', badge: 'new', provider: 'Jili' },
-  { name: 'Card War', emoji: '🦁', type: 'poker', slug: 'card-war', badge: null, provider: 'Jili' },
-  { name: 'Lucky Spin', emoji: '🐯', type: 'slots', slug: 'lucky-spin', badge: null, provider: 'Jili' },
-  { name: 'Number Guess', emoji: '🌊', type: 'slots', slug: 'number-guess', badge: 'hot', provider: 'Jili' },
-  { name: 'Age of the Gods', emoji: '⚓', type: 'slots', slug: 'age-of-the-gods', badge: 'pop', provider: 'Playtech' },
-  { name: 'Buffalo Blitz', emoji: '🥷', type: 'slots', slug: 'buffalo-blitz', badge: 'new', provider: 'Playtech' },
-  { name: 'Immortal Romance', emoji: '🀄', type: 'slots', slug: 'immortal-romance', badge: null, provider: 'Microgaming' },
-  { name: 'Thunderstruck II', emoji: '🐺', type: 'slots', slug: 'thunderstruck-2', badge: null, provider: 'Microgaming' },
-  { name: 'Sugar Pop', emoji: '🍀', type: 'slots', slug: 'sugar-pop', badge: 'hot', provider: 'Spinomenal' },
-  { name: 'The Slotfather', emoji: '💰', type: 'slots', slug: 'slotfather', badge: 'pop', provider: 'Betsoft' },
-  { name: 'Valley of the Gods', emoji: '🏆', type: 'slots', slug: 'valley-of-the-gods', badge: 'new', provider: 'Yggdrasil' },
-  { name: 'Vikings Go Berzerk', emoji: '🎪', type: 'slots', slug: 'vikings-go-berzerk', badge: null, provider: 'Yggdrasil' },
-  { name: 'Gonzo\'s Quest Megaways', emoji: '🌟', type: 'slots', slug: 'gonzos-quest-megaways', badge: null, provider: 'NetEnt' },
-  { name: 'Piggy Riches Megaways', emoji: '🎆', type: 'slots', slug: 'piggy-riches-megaways', badge: 'hot', provider: 'NetEnt' },
-  { name: 'Big Bad Wolf', emoji: '❄️', type: 'slots', slug: 'big-bad-wolf', badge: 'pop', provider: 'Quickspin' },
-  { name: 'Sakura Fortune', emoji: '⛩️', type: 'slots', slug: 'sakura-fortune', badge: 'new', provider: 'Quickspin' }
+  { name: 'Super Ace', emoji: '👑', type: 'slots', slug: 'super-ace', badge: 'hot', provider: 'Jili' },
+  { name: 'Golden Empire', emoji: '🏛️', type: 'slots', slug: 'golden-empire', badge: null, provider: 'PG Soft' },
+  { name: 'Wild Bandito', emoji: '🤠', type: 'slots', slug: 'wild-bandito', badge: 'pop', provider: 'PG Soft' },
+  { name: 'Sweet Bonanza Xmas', emoji: '🎄', type: 'slots', slug: 'sweet-bonanza-xmas', badge: null, provider: 'Pragmatic Play' },
+  { name: 'Wild West Gold', emoji: '🐎', type: 'slots', slug: 'wild-west-gold', badge: 'hot', provider: 'Pragmatic Play' },
+  { name: 'Gonzo\'s Quest Megaways', emoji: '🗿', type: 'slots', slug: 'gonzos-quest-megaways', badge: null, provider: 'Evolution' },
+  { name: 'Mega Moolah Absolootly', emoji: '🐮', type: 'slots', slug: 'mega-moolah-absolootly', badge: null, provider: 'Microgaming' },
+  { name: 'Piggy Riches Megaways', emoji: '🐷', type: 'slots', slug: 'piggy-riches-megaways', badge: null, provider: 'Red Tiger' },
+  { name: 'Wanted Dead or a Wild', emoji: '🔫', type: 'slots', slug: 'wanted-dead-or-a-wild', badge: 'hot', provider: 'Hacksaw Gaming' },
+  { name: 'Money Train 4', emoji: '🚂', type: 'slots', slug: 'money-train-4', badge: 'pop', provider: 'Relax Gaming' },
+  { name: 'Mental', emoji: '🧠', type: 'slots', slug: 'mental', badge: null, provider: 'Nolimit City' },
+  { name: 'Bonanza Megaways', emoji: '⛏️', type: 'slots', slug: 'bonanza-megaways', badge: null, provider: 'Big Time Gaming' },
+  { name: 'Vikings Go Berzerk', emoji: '⚔️', type: 'slots', slug: 'vikings-go-berzerk', badge: null, provider: 'Yggdrasil' },
+  { name: 'Sakura Fortune', emoji: '🌸', type: 'slots', slug: 'sakura-fortune', badge: null, provider: 'Quickspin' },
+  { name: 'The Dog House', emoji: '🐶', type: 'slots', slug: 'the-dog-house', badge: null, provider: 'Betsoft' },
+  { name: 'Larry Gonna Make It', emoji: '🎲', type: 'slots', slug: 'larry-gonna-make-it', badge: null, provider: 'Wazdan' },
+  { name: 'Solar Queen', emoji: '☀️', type: 'slots', slug: 'solar-queen', badge: null, provider: 'Playson' },
+  { name: 'Rise of Egypt', emoji: '🏺', type: 'slots', slug: 'rise-of-egypt', badge: null, provider: 'Spinomenal' },
 ];
 
 const PROVIDER_META = {
@@ -806,7 +1005,6 @@ const PROVIDER_META = {
   'Spinomenal':       { mono: 'SM',   color: '#4C3B8C', logo: '/images/providers/spinomenal.jpg' }
 };
 const PROVIDERS = Object.keys(PROVIDER_META);
-let providerGridExpanded = false;
 
 let selectedCategory = 'all';
 let selectedProvider = 'all';
@@ -838,51 +1036,23 @@ function pushRecent(slug) {
   localStorage.setItem('livo_recent', JSON.stringify(recent));
 }
 
-// ==================== প্রোভাইডার কার্ড গ্রিড রেন্ডার (আসল লোগোসহ) ====================
-// এই সেকশনটা শুধু 'সব' ট্যাবে থাকা অবস্থায় দেখানো হয়
-function renderProviderGrid() {
-  const wrap = document.getElementById('providerGrid');
-  if (!wrap) return;
-  wrap.innerHTML = '';
-  PROVIDERS.forEach(p => {
-    const meta = PROVIDER_META[p];
-    const card = document.createElement('div');
-    card.className = 'provider-card' + (selectedProvider === p ? ' active' : '');
-    card.dataset.provider = p;
-    const logoHTML = meta.logo
-      ? `<img class="provider-logo-img" src="${meta.logo}" alt="${p}">`
-      : `<div class="provider-logo-fallback" style="background:${meta.color}">${meta.mono}</div>`;
-    card.innerHTML = `${logoHTML}<div class="provider-name">${p}</div>`;
-    card.addEventListener('click', () => {
-      // একই প্রোভাইডারে আবার চাপ দিলে ফিল্টার উঠে যাবে (সব দেখাবে)
-      selectedProvider = (selectedProvider === p) ? 'all' : p;
-      renderProviderGrid();
-      renderGames();
-    });
-    wrap.appendChild(card);
-  });
-}
-
-function updateProviderRowVisibility() {
-  const section = document.getElementById('providerSection');
-  if (!section) return;
-  // প্রোভাইডার গ্রিড এখন 'সব' ট্যাবের অংশ — অন্য ট্যাবে গেলে লুকানো থাকবে
-  section.style.display = (selectedCategory === 'all') ? 'block' : 'none';
-}
-
 // ==================== বাম পাশের প্রোভাইডার কলাম (Slots/Live/Sports/Poker ক্যাটাগরির জন্য) ====================
 function renderCatalogProviderList() {
   const wrap = document.getElementById('catalogProviderList');
-  if (!wrap) return;
+  const sidebar = document.getElementById('providerSidebar');
+  if (!wrap || !sidebar) return;
   wrap.innerHTML = '';
   if (!CATALOG_CATEGORIES.includes(selectedCategory)) {
-    wrap.style.display = 'none';
+    sidebar.style.display = 'none';
     return;
   }
-  wrap.style.display = 'flex';
+  sidebar.style.display = 'flex';
 
-  // এই ক্যাটাগরিতে যেসব প্রোভাইডারের গেম আছে শুধু তাদেরই দেখাবে
-  const providersInCategory = PROVIDERS.filter(p => allGames.some(g => g.type === selectedCategory && g.provider === p));
+  // সবগুলো প্রোভাইডার দেখাবে (পুরো গেম ক্যাটালগ থেকে), শুধু বর্তমান ক্যাটাগরির না —
+  // যাতে কোনো প্রোভাইডার তালিকা থেকে বাদ না পড়ে
+  const providersInCategory = [...new Set(
+    allGames.filter(g => g.provider).map(g => g.provider)
+  )].sort((a, b) => a.localeCompare(b));
 
   const allItem = document.createElement('div');
   allItem.className = 'catalog-provider-item' + (selectedProvider === 'all' ? ' active' : '');
@@ -895,7 +1065,8 @@ function renderCatalogProviderList() {
   wrap.appendChild(allItem);
 
   providersInCategory.forEach(p => {
-    const meta = PROVIDER_META[p];
+    // PROVIDER_META-তে লোগো/রঙ থাকলে সেটা ব্যবহার হবে, নাহলে নাম থেকে একটা ফলব্যাক আইকন বানানো হবে
+    const meta = PROVIDER_META[p] || { mono: p.slice(0, 3).toUpperCase(), color: '#555c6b', logo: null };
     const item = document.createElement('div');
     item.className = 'catalog-provider-item' + (selectedProvider === p ? ' active' : '');
     const logoHTML = meta.logo
@@ -909,6 +1080,36 @@ function renderCatalogProviderList() {
     });
     wrap.appendChild(item);
   });
+}
+
+// প্রোভাইডার লিস্ট উপরে/নিচে স্ক্রল করার বাটন (▲▼)
+(function setupProviderScrollButtons() {
+  const list = document.getElementById('catalogProviderList');
+  const upBtn = document.getElementById('providerScrollUp');
+  const downBtn = document.getElementById('providerScrollDown');
+  if (!list || !upBtn || !downBtn) return;
+  upBtn.addEventListener('click', () => list.scrollBy({ top: -150, behavior: 'smooth' }));
+  downBtn.addEventListener('click', () => list.scrollBy({ top: 150, behavior: 'smooth' }));
+})();
+
+// ==================== Popular Games (হাইলাইট স্ট্রিপ) — 'hot' ব্যাজযুক্ত গেম থেকে প্রথম কয়েকটা ====================
+function renderPopularGames() {
+  const row = document.getElementById('popularGamesRow');
+  if (!row) return;
+  const popular = allGames.filter(g => g.badge === 'hot').slice(0, 12);
+  const list = popular.length > 0 ? popular : allGames.slice(0, 12);
+  row.innerHTML = list.map(g => `
+    <a href="/games/${g.slug}" class="game-card-premium">
+      <div class="game-thumb-wrapper">
+        <span class="game-emoji">${g.emoji}</span>
+        ${g.badge ? `<div class="game-badge-premium badge-${g.badge}">${g.badge}</div>` : ''}
+      </div>
+      <div class="game-info-premium">
+        <div class="game-title-premium">${g.name}</div>
+        <div class="game-provider-premium">${g.provider}</div>
+      </div>
+    </a>
+  `).join('');
 }
 
 // ==================== গেইম গ্রিড রেন্ডার ====================
@@ -942,7 +1143,8 @@ function renderGames() {
 
   const filtered = source.filter(g => {
     const matchesSearch = g.name.toLowerCase().includes(searchQ);
-    const matchesCategory = isCatalogCategory || selectedCategory === 'all' || selectedCategory === 'favorites' || selectedCategory === 'recent' || g.type === selectedCategory;
+    const matchesCategory = isCatalogCategory || selectedCategory === 'all' || selectedCategory === 'favorites' || selectedCategory === 'recent'
+      || (selectedCategory === 'hot' ? g.badge === 'hot' : g.type === selectedCategory);
     const matchesProvider = selectedProvider === 'all' || g.provider === selectedProvider;
     return matchesSearch && matchesCategory && matchesProvider;
   });
@@ -958,7 +1160,7 @@ function renderGames() {
   }
 
   filtered.forEach(g => {
-    const badgeHTML = g.badge ? `<div class="game-badge-premium">${g.badge}</div>` : '';
+    const badgeHTML = g.badge ? `<div class="game-badge-premium badge-${g.badge}">${g.badge}</div>` : '';
     const isFav = favs.includes(g.slug);
     const card = document.createElement('a');
     card.href = '/games/' + g.slug;
@@ -1004,7 +1206,6 @@ document.querySelectorAll('.nav-tab-item').forEach(el => {
       if (defaultTab) defaultTab.classList.add('active');
     }
 
-    updateProviderRowVisibility();
     renderCatalogProviderList();
     renderGames();
   });
@@ -1045,23 +1246,10 @@ if (gs) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  renderProviderGrid();
-  updateProviderRowVisibility();
   renderCatalogProviderList();
   applyLayout();
   renderGames();
-
-  const toggleBtn = document.getElementById('providerToggleBtn');
-  const grid = document.getElementById('providerGrid');
-  if (toggleBtn && grid) {
-    toggleBtn.addEventListener('click', () => {
-      providerGridExpanded = !providerGridExpanded;
-      grid.classList.toggle('expanded', providerGridExpanded);
-      toggleBtn.innerHTML = providerGridExpanded
-        ? '<i class="fas fa-chevron-up"></i>'
-        : '<i class="fas fa-chevron-down"></i>';
-    });
-  }
+  renderPopularGames();
 });
 </script>
 

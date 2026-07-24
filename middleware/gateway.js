@@ -3,6 +3,9 @@
 // rate-limit, logging, standardized response এবং error handling
 
 const rateLimit = require('express-rate-limit');
+const RedisRateLimitStore = require('../services/redisRateLimitStore');
+const { getIpRule, getClientIp } = require('../services/ipRules');
+const { logBotEvent, evaluateRequest } = require('../services/botDetection');
 
 // শুধু /api/ পাথের জন্য আলাদা rate limiter (login/register এর থেকে আলাদা)
 const apiLimiter = rateLimit({
@@ -11,6 +14,7 @@ const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => (req.session && req.session.user) ? `u_${req.session.user.id}` : req.ip,
+  store: new RedisRateLimitStore('rl:api:'),
   handler: (req, res) => {
     res.status(429).json({ success: false, error: 'অনেকবার রিকোয়েস্ট করেছেন। একটু পর আবার চেষ্টা করুন।' });
   }
@@ -64,8 +68,31 @@ function apiNotFound(req, res, next) {
 }
 
 // একসাথে সব middleware চালানোর জন্য গেটওয়ে এন্ট্রিপয়েন্ট
-function apiGateway(req, res, next) {
+async function apiGateway(req, res, next) {
   if (!req.path.includes('/api/')) return next();
+
+  // Bot Detection — ব্লকলিস্টেড IP হলে Public API-তেও সরাসরি প্রত্যাখ্যান
+  try {
+    const ip = getClientIp(req);
+    const rule = await getIpRule(ip);
+    if (rule === 'block') {
+      logBotEvent({ ip, endpoint: req.path, signals: [{ type: 'ip_blocklisted', description: 'অ্যাডমিন কর্তৃক ব্লকলিস্টেড IP' }], riskLevel: 'high', userAgent: req.get('user-agent') || '', blocked: true })
+        .catch(e => console.error('logBotEvent error:', e.message));
+      return res.status(403).json({ success: false, error: 'অ্যাক্সেস সীমাবদ্ধ করা হয়েছে।' });
+    }
+    if (rule !== 'whitelist') {
+      // শুধু ফিঙ্গারপ্রিন্ট/হেডলেস সিগন্যাল মনিটরিং — রেট-লিমিট আলাদাভাবে apiLimiter হ্যান্ডেল করে,
+      // তাই এখানে ব্লক করা হয় না, শুধু bot-logs-এ রেকর্ড রাখা হয়।
+      const botCheck = evaluateRequest({ ip, userAgent: req.get('user-agent') || '', endpoint: req.path, req });
+      if (botCheck.signals.length > 0) {
+        logBotEvent({ ip, endpoint: req.path, signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent: req.get('user-agent') || '', blocked: false, fingerprint: botCheck.fingerprint })
+          .catch(e => console.error('logBotEvent error:', e.message));
+      }
+    }
+  } catch (e) {
+    console.error('apiGateway ip-rule check error:', e.message); // fail-open
+  }
+
   return apiLimiter(req, res, () => apiLogger(req, res, next));
 }
 

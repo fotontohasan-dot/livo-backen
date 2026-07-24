@@ -3,6 +3,22 @@ const router = express.Router();
 const { isAuth } = require('../middleware/auth');
 const { pool } = require('../db');
 
+// ==== KYC ইনপুট ভ্যালিডেশন ====
+const KYC_NAME_RE = /^[\p{L}\p{M}\s.'-]{2,60}$/u;
+const KYC_DOCNUM_RE = /^[A-Za-z0-9\-\s]{3,30}$/;
+const KYC_DOCTYPE_RE = /^[A-Za-z_\-\s]{2,40}$/;
+
+function isSafeCloudinaryUrl(url) {
+  if (typeof url !== 'string' || !url) return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' && parsed.hostname === 'res.cloudinary.com';
+  } catch (e) {
+    return false;
+  }
+}
+
+
 router.get('/invitation', isAuth, async (req, res) => {
     try {
         const userResult = await pool.query('SELECT id, referral_code FROM users WHERE id = $1', [req.session.user.id]);
@@ -45,6 +61,26 @@ router.post('/kyc', isAuth, async (req, res) => {
 
     if (!full_name || !document_number) {
         req.flash('error', 'নাম ও ডকুমেন্ট নাম্বার দিন!');
+        return res.redirect('/extra/kyc');
+    }
+    if (!document_url) {
+        req.flash('error', 'ডকুমেন্টের ছবি আপলোড করুন!');
+        return res.redirect('/extra/kyc');
+    }
+    if (!isSafeCloudinaryUrl(document_url)) {
+        req.flash('error', 'ডকুমেন্ট ছবি আমাদের নিজস্ব আপলোড সিস্টেম থেকে আসতে হবে।');
+        return res.redirect('/extra/kyc');
+    }
+    if (!KYC_NAME_RE.test(full_name.trim())) {
+        req.flash('error', 'নামে অস্বাভাবিক ক্যারেক্টার বা লিংক থাকা যাবে না।');
+        return res.redirect('/extra/kyc');
+    }
+    if (!KYC_DOCNUM_RE.test(document_number.trim())) {
+        req.flash('error', 'ডকুমেন্ট নম্বরে শুধু লেটার, সংখ্যা, স্পেস, হাইফেন ব্যবহার করা যাবে।');
+        return res.redirect('/extra/kyc');
+    }
+    if (document_type && !KYC_DOCTYPE_RE.test(document_type.trim())) {
+        req.flash('error', 'ডকুমেন্ট টাইপ সঠিক নয়।');
         return res.redirect('/extra/kyc');
     }
 

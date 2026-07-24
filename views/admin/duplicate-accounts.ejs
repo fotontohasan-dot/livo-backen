@@ -1,0 +1,121 @@
+<%
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function fmtDate(d) { return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); }
+function scoreBadge(score) {
+  const s = Number(score) || 0;
+  const cls = s >= 70 ? 'bg-red-100 text-red-700' : (s >= 40 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600');
+  return '<span class="px-3 py-1 text-xs font-bold rounded-full ' + cls + '">' + s + ' / 100</span>';
+}
+function statusBadge(status) {
+  const map = {
+    open: 'bg-blue-100 text-blue-700',
+    reviewed: 'bg-emerald-100 text-emerald-700',
+    dismissed: 'bg-slate-100 text-slate-500'
+  };
+  return '<span class="px-2.5 py-1 text-xs font-semibold rounded-full ' + (map[status] || map.open) + '">' + escapeHtml(status) + '</span>';
+}
+function matchTypesLabel(types) {
+  const labels = { shared_device: 'ডিভাইস', shared_ip: 'IP', shared_browser: 'ব্রাউজার', shared_payment_account: 'পেমেন্ট' };
+  return (types || []).map(t => labels[t] || t).join(', ');
+}
+function matchedLinks(ids) {
+  return (ids || []).map(id => '<a href="/admin/users/' + id + '" class="text-blue-600 hover:underline">#' + id + '</a>').join(', ');
+}
+function logRow(l) {
+  const userLabel = l.username ? escapeHtml(l.username) + ' <span class="text-slate-400">(#' + l.user_id + ')</span>' : '#' + l.user_id;
+  const actions = l.status === 'open'
+    ? '<div class="flex gap-1.5 justify-center">' +
+        '<form method="POST" action="/admin/duplicate-accounts/' + l.id + '/review" style="display:inline">' +
+          '<input type="hidden" name="action" value="reviewed">' +
+          '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white">Reviewed</button>' +
+        '</form>' +
+        '<form method="POST" action="/admin/duplicate-accounts/' + l.id + '/review" style="display:inline">' +
+          '<input type="hidden" name="action" value="dismiss">' +
+          '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-400 hover:bg-slate-500 text-white">Dismiss</button>' +
+        '</form>' +
+      '</div>'
+    : '<span class="text-xs text-slate-400">' + (l.reviewed_at ? fmtDate(l.reviewed_at) : '-') + '</span>';
+
+  return '<tr class="hover:bg-slate-50 align-top">' +
+    '<td class="px-6 py-4"><a href="/admin/users/' + l.user_id + '" class="font-semibold text-blue-600 hover:underline">' + userLabel + '</a></td>' +
+    '<td class="px-6 py-4">' + scoreBadge(l.risk_score) + '</td>' +
+    '<td class="px-6 py-4 text-xs text-slate-500">' + escapeHtml(matchTypesLabel(l.match_types)) + '</td>' +
+    '<td class="px-6 py-4 text-xs">' + matchedLinks(l.matched_user_ids) + '</td>' +
+    '<td class="px-6 py-4 text-sm text-slate-600 max-w-sm">' + escapeHtml(l.reason) + '</td>' +
+    '<td class="px-6 py-4">' + statusBadge(l.status) + '</td>' +
+    '<td class="px-6 py-4 text-xs text-slate-400">' + fmtDate(l.created_at) + '</td>' +
+    '<td class="px-6 py-4 text-center">' + actions + '</td>' +
+  '</tr>';
+}
+const rows = (logs || []).map(logRow).join('') || '<tr><td colspan="8" class="px-6 py-10 text-center text-slate-400">কোনো ডুপ্লিকেট অ্যাকাউন্ট ফ্ল্যাগ পাওয়া যায়নি</td></tr>';
+const f = filters || {};
+function qs(overrides) {
+  const merged = Object.assign({ status: f.status, min_score: f.min_score, user_id: f.user_id }, overrides);
+  return Object.keys(merged).map(k => k + '=' + encodeURIComponent(merged[k] || '')).join('&');
+}
+%>
+<%- include('partials/admin-layout', {
+    title: 'Duplicate Account Detection',
+    active: 'duplicate-accounts',
+    body: `
+<div class="max-w-7xl mx-auto">
+    <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <div>
+            <h1 class="text-2xl font-semibold text-slate-900">Duplicate Account Detection</h1>
+            <p class="text-slate-500 mt-1 text-sm">মোট ${total || 0}টি সন্দেহজনক ডুপ্লিকেট অ্যাকাউন্ট — শুধু রিভিউয়ের জন্য, অটোমেটিক ব্লক হয় না</p>
+        </div>
+        <form method="POST" action="/admin/duplicate-accounts/scan">
+            <button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-semibold">
+                <i class="fas fa-magnifying-glass mr-1.5"></i> এখনই স্ক্যান করুন
+            </button>
+        </form>
+    </div>
+
+    <form method="GET" action="/admin/duplicate-accounts" class="flex flex-wrap gap-3 mb-6">
+        <select name="status" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+            <option value="">সব স্ট্যাটাস</option>
+            <option value="open" ${f.status === 'open' ? 'selected' : ''}>Open</option>
+            <option value="reviewed" ${f.status === 'reviewed' ? 'selected' : ''}>Reviewed</option>
+            <option value="dismissed" ${f.status === 'dismissed' ? 'selected' : ''}>Dismissed</option>
+        </select>
+        <select name="min_score" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+            <option value="">সব Risk Score</option>
+            <option value="70" ${f.min_score === '70' ? 'selected' : ''}>High (70+)</option>
+            <option value="40" ${f.min_score === '40' ? 'selected' : ''}>Medium (40+)</option>
+        </select>
+        <input type="text" name="user_id" value="${f.user_id || ''}" placeholder="ইউজার ID"
+               class="w-32 border border-slate-200 px-4 py-2.5 rounded-2xl text-sm outline-none focus:border-blue-300">
+        <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">ফিল্টার</button>
+        ${(f.status || f.min_score || f.user_id) ? '<a href="/admin/duplicate-accounts" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">রিসেট</a>' : ''}
+    </form>
+
+    <div class="bg-white rounded-3xl border border-slate-100 overflow-hidden modern-table overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="bg-slate-50">
+                <tr>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">User</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Risk Score</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Match Types</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Matched Accounts</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Reason</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Status</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Date</th>
+                    <th class="px-6 py-4 text-center font-medium text-slate-500 uppercase text-xs">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">${rows}</tbody>
+        </table>
+    </div>
+
+    <div class="flex justify-center gap-3 mt-6">
+        ${page > 1 ? '<a href="/admin/duplicate-accounts?page=' + (page - 1) + '&' + qs({}) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">← আগের পেজ</a>' : ''}
+        <span class="px-4 py-2 text-sm text-slate-500">পেজ ${page} / ${totalPages}</span>
+        ${page < totalPages ? '<a href="/admin/duplicate-accounts?page=' + (page + 1) + '&' + qs({}) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">পরের পেজ →</a>' : ''}
+    </div>
+</div>
+`
+}) %>

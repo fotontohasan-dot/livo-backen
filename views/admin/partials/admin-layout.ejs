@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Livo Admin - <%= title || 'Panel' %></title>
-    <%- include('./pwa-head') %>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -87,9 +86,63 @@
             border-radius: 8px;
             margin: 2px 8px;
         }
+
+        /* ==================== Livo Admin Toast / Loading ==================== */
+        #livo-toast-root { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 99999; display: flex; flex-direction: column; gap: 10px; align-items: center; width: 100%; max-width: 440px; padding: 0 16px; pointer-events: none; }
+        .livo-toast { pointer-events: auto; display: flex; align-items: center; gap: 10px; background: #1e293b; border: 1px solid rgba(234,179,8,0.4); color: #fff; padding: 13px 16px; border-radius: 14px; font-size: 13.5px; font-weight: 600; box-shadow: 0 10px 28px rgba(0,0,0,0.25); width: 100%; cursor: pointer; animation: livoToastIn .3s ease forwards; }
+        .livo-toast.success { border-color: #10b981; } .livo-toast.success i { color: #34d399; }
+        .livo-toast.error { border-color: #ef4444; } .livo-toast.error i { color: #f87171; }
+        .livo-toast.info { border-color: #EAB308; } .livo-toast.info i { color: #facc15; }
+        .livo-toast.leaving { animation: livoToastOut .25s ease forwards; }
+        .livo-toast i { font-size: 16px; flex-shrink: 0; }
+        @keyframes livoToastIn { from { opacity: 0; transform: translateY(-16px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes livoToastOut { to { opacity: 0; transform: translateY(-10px) scale(.96); } }
+        .livo-spinner { width: 15px; height: 15px; border: 2.5px solid rgba(255,255,255,0.3); border-top-color: currentColor; border-radius: 50%; display: inline-block; vertical-align: -3px; margin-right: 6px; animation: livoSpin .7s linear infinite; }
+        @keyframes livoSpin { to { transform: rotate(360deg); } }
+        button:disabled { opacity: 0.75; cursor: not-allowed; }
     </style>
 </head>
 <body class="bg-slate-50">
+    <div id="livo-toast-root"></div>
+    <script>
+      window.LivoToast = (function () {
+        function ensureRoot() { return document.getElementById('livo-toast-root'); }
+        function show(message, type, duration) {
+          type = type || 'info'; duration = duration || 4000;
+          const root = ensureRoot();
+          if (!root || !message) return;
+          const el = document.createElement('div');
+          el.className = 'livo-toast ' + type;
+          const icon = type === 'success' ? 'fa-circle-check' : (type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-info');
+          el.innerHTML = '<i class="fas ' + icon + '"></i><span></span>';
+          el.querySelector('span').textContent = message;
+          const dismiss = () => { el.classList.add('leaving'); setTimeout(() => el.remove(), 250); };
+          el.addEventListener('click', dismiss);
+          root.appendChild(el);
+          setTimeout(dismiss, duration);
+        }
+        function setLoading(btn, loading, loadingText) {
+          if (!btn) return;
+          if (loading) {
+            if (!btn.dataset.livoOriginalHtml) btn.dataset.livoOriginalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="livo-spinner"></span>' + (loadingText || 'অপেক্ষা করুন...');
+          } else {
+            btn.disabled = false;
+            if (btn.dataset.livoOriginalHtml) btn.innerHTML = btn.dataset.livoOriginalHtml;
+          }
+        }
+        return { show: show, setLoading: setLoading };
+      })();
+      document.addEventListener('DOMContentLoaded', function () {
+        <% if (typeof success !== 'undefined' && success && success.length) { %>
+          <% success.forEach(function (m) { %> LivoToast.show(<%- JSON.stringify(m) %>, 'success'); <% }) %>
+        <% } %>
+        <% if (typeof error !== 'undefined' && error && error.length) { %>
+          <% error.forEach(function (m) { %> LivoToast.show(<%- JSON.stringify(m) %>, 'error'); <% }) %>
+        <% } %>
+      });
+    </script>
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
         <div class="w-72 admin-sidebar text-white flex-shrink-0 hidden lg:flex flex-col">
@@ -143,6 +196,56 @@
                 <a href="/admin/transactions" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'transactions' ? 'active' : 'text-slate-300 hover:text-white' %>">
                     <i class="fas fa-exchange-alt w-5"></i>
                     <span>Transactions</span>
+                </a>
+                
+                <a href="/admin/fraud-monitoring" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'fraud-monitoring' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-radar w-5"></i>
+                    <span>Fraud Monitoring</span>
+                </a>
+
+                <a href="/admin/fraud-logs" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'fraud-logs' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-shield-halved w-5"></i>
+                    <span>Fraud Log</span>
+                </a>
+
+                <a href="/admin/duplicate-accounts" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'duplicate-accounts' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-clone w-5"></i>
+                    <span>Duplicate Accounts</span>
+                </a>
+
+                <a href="/admin/login-history" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'login-history' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-clock-rotate-left w-5"></i>
+                    <span>Login History</span>
+                </a>
+
+                <a href="/admin/cache" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'cache' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-bolt w-5"></i>
+                    <span>Cache Management</span>
+                </a>
+
+                <a href="/admin/queues" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'queues' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-layer-group w-5"></i>
+                    <span>Job Queue</span>
+                </a>
+
+                <a href="/admin/api-keys" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'api-keys' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-key w-5"></i>
+                    <span>API Keys</span>
+                </a>
+
+                <a href="/admin/api-logs" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'api-logs' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-list-alt w-5"></i>
+                    <span>API Logs</span>
+                </a>
+
+                <a href="/admin/security-overview" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'security-overview' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-shield-halved w-5"></i>
+                    <span>Security Overview</span>
+                </a>
+
+                <a href="/admin/bot-logs" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'bot-logs' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-robot w-5"></i>
+                    <span>Bot Activity</span>
                 </a>
                 
                 <a href="/admin/reports" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'reports' ? 'active' : 'text-slate-300 hover:text-white' %>">
@@ -206,18 +309,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- ফ্ল্যাশ মেসেজ -->
-            <% if (typeof success !== 'undefined' && success && success.length) { %>
-              <div class="mx-6 mt-4 px-4 py-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-2xl text-sm font-medium">
-                <% success.forEach(function(m) { %><div><i class="fas fa-check-circle mr-1.5"></i><%= m %></div><% }); %>
-              </div>
-            <% } %>
-            <% if (typeof error !== 'undefined' && error && error.length) { %>
-              <div class="mx-6 mt-4 px-4 py-3 bg-red-50 border border-red-200 text-red-700 rounded-2xl text-sm font-medium">
-                <% error.forEach(function(m) { %><div><i class="fas fa-exclamation-circle mr-1.5"></i><%= m %></div><% }); %>
-              </div>
-            <% } %>
 
             <!-- Page Content -->
             <div class="flex-1 overflow-auto p-6 bg-slate-50">

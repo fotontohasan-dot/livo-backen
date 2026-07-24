@@ -4,8 +4,13 @@
     <div class="card glass">
       <div class="card-header" style="justify-content:center;font-size:1.2rem;">🔐 <%= t.login_title %></div>
       <div class="card-body">
-        <%- include('partials/flash') %>
-        <form action="/login" method="POST">
+        <form action="/login" method="POST" onsubmit="LivoToast.setLoading(document.getElementById('loginSubmitBtn'), true, 'লগইন হচ্ছে...')">
+          <input type="hidden" name="form_rendered_at" value="<%= formRenderedAt %>">
+          <!-- হানিপট — সাধারণ ইউজারদের কাছে অদৃশ্য, স্বয়ংক্রিয় বট স্ক্রিপ্ট প্রায়ই এই ফিল্ড পূরণ করে ফেলে -->
+          <div style="position:absolute;left:-9999px;opacity:0;height:0;overflow:hidden;" aria-hidden="true">
+            <label for="website">Website</label>
+            <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+          </div>
           <div class="form-group">
             <label class="form-label"><%= t.email_or_phone %></label>
             <input type="text" name="identifier" class="form-input" placeholder="<%= t.email_or_phone %>" required>
@@ -17,7 +22,13 @@
           <p style="text-align:right;margin:-8px 0 12px;">
             <a href="/forgot-password" style="color:var(--text-muted);font-size:.82rem;text-decoration:none;">পাসওয়ার্ড ভুলে গেছেন?</a>
           </p>
-          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;"><%= t.login %> 🚀</button>
+          <% if (captcha) { %>
+          <div class="form-group">
+            <label class="form-label">🤖 যাচাই করুন: <%= captcha.question %></label>
+            <input type="text" name="captcha_answer" class="form-input" placeholder="উত্তর লিখুন" inputmode="numeric" required>
+          </div>
+          <% } %>
+          <button type="submit" id="loginSubmitBtn" class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;"><%= t.login %> 🚀</button>
         </form>
         <p style="text-align:center;margin-top:1rem;color:var(--text-muted);font-size:.9rem;">
           <%= t.no_account %> <a href="/register" style="color:var(--secondary)"><%= t.register_now %></a>

@@ -10,9 +10,9 @@ const RENDER_URL = process.env.RENDER_EXTERNAL_URL || 'https://livo-backen.onren
 // Telegram প্রতিটি webhook request-এ এই secret token header হিসেবে পাঠাবে
 // (setWebhook কল করার সময় এই একই token Telegram-কে জানিয়ে দেওয়া হয়)।
 // header না থাকলে/না মিললে বুঝতে হবে request Telegram থেকে আসেনি।
-const WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET || crypto.randomBytes(24).toString('hex');
-if (!process.env.TELEGRAM_WEBHOOK_SECRET) {
-  console.warn('⚠️ TELEGRAM_WEBHOOK_SECRET সেট করা নেই — সাময়িক র‍্যান্ডম secret ব্যবহার হচ্ছে। প্রোডাকশনে অবশ্যই .env-এ TELEGRAM_WEBHOOK_SECRET সেট করুন।');
+const WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET || null;
+if (!WEBHOOK_SECRET) {
+  console.warn('⚠️ TELEGRAM_WEBHOOK_SECRET সেট করা নেই — নিরাপত্তার জন্য বট কোনো webhook request গ্রহণ করবে না (fail-closed)। .env-এ TELEGRAM_WEBHOOK_SECRET সেট করুন (যেমন: openssl rand -hex 24)।');
 }
 
 // শুধুমাত্র এই chat ID থেকে আসা মেসেজ প্রসেস হবে (admin/Mahmud-এর Telegram chat id)।
@@ -23,6 +23,7 @@ if (!ADMIN_CHAT_ID) {
 }
 
 function verifyWebhookSecret(headerValue) {
+  if (!WEBHOOK_SECRET) return false; // secret সেট না থাকলে কোনো request-ই গ্রহণযোগ্য না
   if (!headerValue) return false;
   const a = Buffer.from(String(headerValue));
   const b = Buffer.from(WEBHOOK_SECRET);
@@ -174,6 +175,10 @@ async function processGithubAction(responseText, chatId) {
 
 // Webhook set
 async function setWebhook() {
+  if (!WEBHOOK_SECRET) {
+    console.warn('⚠️ TELEGRAM_WEBHOOK_SECRET নেই — webhook রেজিস্টার করা হচ্ছে না, বট নিষ্ক্রিয় থাকবে।');
+    return;
+  }
   try {
     await telegramAPI('deleteWebhook', { drop_pending_updates: true });
     const webhookUrl = `${RENDER_URL}/telegram-webhook`;

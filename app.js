@@ -1,5 +1,18 @@
 require('dotenv').config();
 const process = require('node:process');
+
+// ==================== প্রসেস-লেভেল ক্র্যাশ গার্ড ====================
+// কোনো একটা জায়গায় unhandled promise rejection হলে Node.js (v15+) ডিফল্টভাবে
+// পুরো প্রসেস বন্ধ করে দেয় — তখন Render/হোস্টিং প্ল্যাটফর্মের জেনেরিক
+// "Internal Server Error" পেজ দেখা যায় যতক্ষণ না প্রসেস আবার রিস্টার্ট হয়।
+// এখানে সেটা আটকে শুধু লগ করে সার্ভার চালু রাখা হচ্ছে।
+process.on('unhandledRejection', (reason) => {
+  console.error('⚠️ Unhandled Rejection:', reason && reason.stack ? reason.stack : reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('⚠️ Uncaught Exception:', err && err.stack ? err.stack : err);
+});
+
 const express = require('express');
 const http = require('http');
 const { initSocket } = require('./services/socket');
@@ -9,12 +22,15 @@ const flash = require('connect-flash');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
+const cors = require('cors');
 const compression = require('compression');
 const { connectDB, pool } = require('./db');
 const { syncMatches } = require('./services/matchUpdater');
 const runMigrations = require('./migrations');
 const { apiGateway, responseHelpers } = require('./middleware/gateway');
 const { scheduleDailyBackup } = require('./services/backup');
+const { touchDeviceActivity } = require('./services/deviceTracking');
+require('./services/cache'); // অ্যাপ বুট হওয়ার সাথে সাথেই Redis কানেকশন অ্যাটেম্পট শুরু হয় (কানেক্ট না হলেও অ্যাপ চলতে থাকে)
 
 const app = express();
 app.use(compression());
@@ -47,34 +63,94 @@ app.use(express.static(path.join(__dirname, 'public'), {
   etag: false
 }));
 
+const cspDirectives = {
+  defaultSrc: ["'self'"],
+  scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
+  scriptSrcAttr: ["'unsafe-inline'"],
+  styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
+  fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "data:"],
+  imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://i.pravatar.cc", "https://img.icons8.com", "https://i.postimg.cc"],
+  mediaSrc: ["'self'", "https://res.cloudinary.com"],
+  connectSrc: ["'self'", "wss:", "ws:"],
+  objectSrc: ["'none'"],
+  frameAncestors: ["'self'"],
+  baseUri: ["'self'"],
+  formAction: ["'self'"],
+};
+if (process.env.NODE_ENV === 'production') {
+  cspDirectives.upgradeInsecureRequests = [];
+}
+
+const isProdEnv = process.env.NODE_ENV === 'production';
+
 app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://cdnjs.cloudflare.com"],
-      scriptSrcAttr: ["'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "wss:", "ws:"],
-    },
-  },
+  contentSecurityPolicy: { directives: cspDirectives },
+  // Cloudinary/Google Fonts/CDN-এর মতো ক্রস-অরিজিন রিসোর্স লোড করতে হয় বলে
+  // COEP বন্ধ রাখা হয়েছে — এটা চালু থাকলে ওই রিসোর্সগুলো ব্লক হয়ে যেত।
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  // শুধু production-এ HTTPS-এ চালু (লোকাল HTTP ডেভেলপমেন্ট যেন ভেঙে না যায়)
+  hsts: isProdEnv ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
+  frameguard: { action: 'sameorigin' }, // X-Frame-Options — নিজের সাইট ছাড়া কোথাও iframe-এ embed হবে না (clickjacking প্রতিরোধ)
+  noSniff: true, // X-Content-Type-Options: nosniff
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' }, // পেমেন্ট/অ্যাডমিন পেজের সংবেদনশীল URL বাইরে leak হবে না, কিন্তু নিজের সাইটে ও same-origin নেভিগেশনে referrer ঠিকঠাক যাবে
 }));
+// Permissions-Policy — helmet v6+ এ বিল্ট-ইন নেই, তাই ম্যানুয়ালি সেট করা হচ্ছে।
+// এই সাইট ক্যামেরা/মাইক্রোফোন/জিওলোকেশন কিছুই ব্যবহার করে না, তাই সব বন্ধ; পেমেন্ট ফ্লো নিজের অরিজিনে চলে বলে payment=(self) রাখা হলো।
+app.use((req, res, next) => {
+  res.setHeader(
+    'Permissions-Policy',
+    'geolocation=(), camera=(), microphone=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), payment=(self), fullscreen=(self)'
+  );
+  next();
+});
+// লিগ্যাসি ব্রাউজারের জন্য X-XSS-Protection (আধুনিক ব্রাউজার CSP-ই যথেষ্ট মানে, হেডারটা ignore করে,
+// কিন্তু পুরনো ব্রাউজার সাপোর্টের জন্য স্ট্যান্ডার্ড হিসেবে রাখা হলো)
+app.use((req, res, next) => {
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  next();
+});
+
+// ==================== CORS ====================
+// কাস্টম ডোমেইন এখনো কেনা হয়নি, তাই আপাতত Render subdomain + লোকাল ডেভেলপমেন্ট origin-ই অনুমোদিত।
+// কাস্টম ডোমেইন কেনা হলে ALLOWED_ORIGINS-এ যোগ করে দিতে হবে।
+const ALLOWED_ORIGINS = [
+  'https://livo-backen.onrender.com',
+  'http://localhost:3000',
+];
+const LOCALHOST_ANY_PORT = /^http:\/\/localhost:\d+$/;
+
+app.use(cors({
+  origin(origin, callback) {
+    // origin হেডার ছাড়া বা "null" (sandboxed webview/in-app browser) রিকোয়েস্ট অনুমোদিত
+    if (!origin || origin === 'null') return callback(null, true);
+    if (ALLOWED_ORIGINS.includes(origin) || LOCALHOST_ANY_PORT.test(origin)) {
+      return callback(null, true);
+    }
+    return callback(null, false);
+  },
+  credentials: true, // session cookie পাঠাতে/পেতে দরকার
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+}));
+app.disable('x-powered-by');
 const sessionStore = process.env.DATABASE_URL ? new pgSession({
   pool: pool,
   tableName: 'user_sessions',
   createTableIfMissing: true
 }) : undefined;
 
+const isProd = process.env.NODE_ENV === 'production';
 const sessionMiddleware = session({
   store: sessionStore,
   secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
+  rolling: true,
   cookie: {
     maxAge: 7 * 24 * 60 * 60 * 1000,
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isProd,
     sameSite: 'lax'
   }
 });
@@ -86,24 +162,45 @@ initSocket(server, sessionMiddleware);
 
 app.use(flash());
 
+const RedisRateLimitStore = require('./services/redisRateLimitStore');
+
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
   message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  store: new RedisRateLimitStore('rl:login:')
 });
 
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 300,
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  store: new RedisRateLimitStore('rl:general:')
+});
+
+// ডিপোজিট/উইথড্র/কার্ড/পাসওয়ার্ড — টাকা-সংক্রান্ত ও অ্যাকাউন্ট-সংবেদনশীল রুটে কড়া রেট-লিমিট
+const financialLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: 'অনেকবার চেষ্টা করেছেন। কিছুক্ষণ পর আবার চেষ্টা করুন।',
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new RedisRateLimitStore('rl:financial:')
 });
 
 app.use(generalLimiter);
 app.use('/login', loginLimiter);
 app.use('/register', loginLimiter);
+app.use('/admin/login', loginLimiter);
+app.use('/payment/deposit', financialLimiter);
+app.use('/payment/withdraw', financialLimiter);
+app.use('/profile/add-bank-card', financialLimiter);
+app.use('/profile/change-password', financialLimiter);
+app.use('/profile/update', financialLimiter);
+app.use('/profile/update-personal', financialLimiter);
 
 // ভাষা সেটিং
 const translations = {
@@ -121,6 +218,11 @@ app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.success = req.flash('success');
   res.locals.error = req.flash('error');
+
+  // ডিভাইস "last activity" আপডেট — থ্রটলড, নন-ব্লকিং, লগইন করা ইউজারের জন্যই শুধু
+  if (req.session && req.session.user) {
+    touchDeviceActivity(req).catch(() => {});
+  }
 
   const lang = req.session.lang === 'en' ? 'en' : 'bn';
   const t_func = (key) => translations[lang][key] || key;
@@ -170,9 +272,14 @@ app.use(responseHelpers);
 app.use(apiGateway);
 // =======================================================
 
+// ==================== MAINTENANCE MODE ====================
+// অ্যাডমিন প্যানেল, পেমেন্ট গেটওয়ে callback, টেলিগ্রাম webhook, আর স্ট্যাটিক ফাইল
+// সবসময় চালু থাকবে — বিস্তারিত middleware/maintenance.js এ।
+const { maintenanceMiddleware } = require('./middleware/maintenance');
+app.use(maintenanceMiddleware);
+
 // ==================== ROUTES ====================
 app.use('/', require('./routes/auth'));
-app.use('/setup', require('./routes/setup'));
 app.use('/matches', require('./routes/matches'));
 app.use('/sports', require('./routes/sports'));
 app.use('/tournaments', require('./routes/tournaments'));
@@ -196,6 +303,7 @@ app.use('/payment', require('./routes/payment'));
 app.use('/games', require('./routes/games'));
 app.use('/accumulator', require('./routes/accumulator'));
 app.use('/chat', require('./routes/chat'));
+app.use('/api', require('./routes/api'));
 app.use('/extra', require('./routes/extra'));
 // ===============================================
 
@@ -239,6 +347,17 @@ app.use((err, req, res, next) => {
   ).catch(() => {});
 
   const serverErrorMsg = (res.locals && res.locals.t && res.locals.t.server_error) ? res.locals.t.server_error : 'Server Error / সার্ভার ত্রুটি';
+
+  // fetch/AJAX/API কলে HTML পেজ ফেরত পাঠালে client-side JSON.parse ভেঙে যায়,
+  // তাই সেসব ক্ষেত্রে JSON error দেওয়া হচ্ছে — raw error message/stack কখনোই client-এ যাচ্ছে না
+  const wantsJson = req.xhr
+    || (req.headers.accept && req.headers.accept.includes('application/json'))
+    || req.path.startsWith('/api')
+    || (req.headers['content-type'] || '').includes('json');
+  if (wantsJson) {
+    return res.status(500).json({ success: false, message: serverErrorMsg });
+  }
+
   res.status(500).render('error', {
     message: serverErrorMsg,
     siteName: 'Livo'

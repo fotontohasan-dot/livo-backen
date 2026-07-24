@@ -1,11 +1,28 @@
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
 const { pool } = require('../db');
 const { createBonus, canWithdraw } = require('../services/turnover');
 const { processReferralDeposit } = require('../services/referral');
 const crypto = require('crypto');
 const sslcommerz = require('../services/sslcommerz');
 const { broadcastDemoStats, emitAdminAlert } = require('../services/socket');
+const { notifyTelegram } = require('../services/telegramNotify');
+const { verifyPin, getPinStatus } = require('../services/withdrawPin');
+const { evaluateTransaction } = require('../services/fraudDetection');
+const { isSessionNewDevice } = require('../services/deviceTracking');
+const { checkIp } = require('../services/vpnDetection');
+const { requireVerifiedEmail } = require('../middleware/auth');
+const RedisRateLimitStore = require('../services/redisRateLimitStore');
+
+const paymentLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  message: 'অনেকবার চেষ্টা করেছেন। কিছুক্ষণ পর আবার চেষ্টা করুন।',
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new RedisRateLimitStore('rl:payment:')
+});
 
 function requireLogin(req, res, next) {
   if (!req.session.user) return res.redirect('/login');
@@ -23,23 +40,26 @@ function parseAmount(raw) {
   return n;
 }
 
-// Transaction IDs and account numbers should only ever be short alphanumeric
-// codes. This allow-list (letters, digits, space, - _ .) rejects anything
-// containing <, >, /, quotes, or other characters a link/script injection
-// attempt would need, and caps the length so nothing large can be stuffed in.
-const SAFE_FIELD_RE = /^[A-Za-z0-9 _.\-]{1,40}$/;
-function isSafeField(value) {
-  return typeof value === 'string' && SAFE_FIELD_RE.test(value.trim());
-}
-
 async function notifyAdmins(title, message, alertType) {
   try {
     const admins = await pool.query("SELECT id FROM users WHERE role = 'admin'");
-    for (const a of admins.rows) {
-      await pool.query(
-        `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'info')`,
-        [a.id, title, message]
-      );
+    const userIds = admins.rows.map(a => a.id);
+    const result = await require('../queues').enqueueNotification('admin_alert', {
+      userIds,
+      title,
+      message,
+      telegramText: `🔔 <b>${title}</b>\n${message}`
+    });
+    if (!result || !result.queued) {
+      // fallback ইতিমধ্যে queues/producers.js নিজেই চালিয়ে দিয়েছে (inline mode);
+      // এখানে শুধু নিশ্চিত করি যে notifications টেবিল/Telegram কখনো মিস না হয়
+      for (const uid of userIds) {
+        await pool.query(
+          `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'info')`,
+          [uid, title, message]
+        ).catch(() => {});
+      }
+      notifyTelegram(`🔔 <b>${title}</b>\n${message}`);
     }
   } catch (e) {
     console.error('notifyAdmins error:', e.message);
@@ -138,7 +158,7 @@ router.get('/deposit', requireLogin, (req, res) => {
   res.render('payment/deposit', { user: req.session.user, payNumber: current });
 });
 
-router.post('/deposit', requireLogin, async (req, res) => {
+router.post('/deposit', requireLogin, paymentLimiter, async (req, res) => {
   const { method, account_number } = req.body;
   const transaction_id = (req.body.transaction_id || '').trim();
   const wantBonus = req.body.want_bonus === 'yes';
@@ -153,31 +173,9 @@ router.post('/deposit', requireLogin, async (req, res) => {
     req.flash('error', 'সব তথ্য সঠিকভাবে দিন');
     return res.redirect('/payment/deposit');
   }
-  if (!isSafeField(transaction_id) || !isSafeField(account_number)) {
-    req.flash('error', 'ট্রানজেকশন আইডি বা নম্বরে শুধু লেটার, সংখ্যা, স্পেস, - _ . ব্যবহার করা যাবে। লিংক বা অন্য কোনো চিহ্ন গ্রহণযোগ্য নয়।');
-    return res.redirect('/payment/deposit');
-  }
   if (amount < 100) {
     req.flash('error', 'সর্বনিম্ন ডিপোজিট ১০০ টাকা');
     return res.redirect('/payment/deposit');
-  }
-
-  // একই ট্রানজেকশন আইডি আগে অন্য কোনো (বাতিল ছাড়া) ডিপোজিটে ব্যবহৃত হয়েছে কিনা তা আগেই চেক করা
-  // (কেস-ইনসেনসিটিভ, যাতে "ABC123" আর "abc123" আলাদা করে বাইপাস করা না যায়)
-  try {
-    const dup = await pool.query(
-      `SELECT id FROM payment_requests
-       WHERE type = 'deposit' AND status <> 'cancelled'
-         AND LOWER(TRIM(transaction_id)) = LOWER($1)
-       LIMIT 1`,
-      [transaction_id]
-    );
-    if (dup.rowCount) {
-      req.flash('error', 'এই ট্রানজেকশন আইডি আগে থেকেই ব্যবহার হয়েছে। নতুন ট্রানজেকশন আইডি দিন।');
-      return res.redirect('/payment/deposit');
-    }
-  } catch (e) {
-    console.error('deposit duplicate trx check error:', e.message);
   }
 
   try {
@@ -200,116 +198,46 @@ router.post('/deposit', requireLogin, async (req, res) => {
     console.error('deposit limit check error:', e.message);
   }
 
+  // ==== Duplicate Transaction ID ব্লক ====
+  // একই TrxID দিয়ে আগে pending/approved ডিপোজিট থাকলে আটকানো হচ্ছে —
+  // rejected বাদ রাখা হয়েছে যাতে ভুল/টাইপো করে reject হওয়া ট্রানজেকশন আইডি বৈধভাবে আবার সাবমিট করা যায়
+  try {
+    const dupCheck = await pool.query(
+      `SELECT id FROM payment_requests
+       WHERE type='deposit' AND method=$1 AND transaction_id=$2 AND status != 'rejected'
+       LIMIT 1`,
+      [method, transaction_id]
+    );
+    if (dupCheck.rows.length > 0) {
+      req.flash('error', 'এই ট্রানজেকশন আইডি আগে ব্যবহার করা হয়েছে।');
+      return res.redirect('/payment/deposit');
+    }
+  } catch (e) {
+    console.error('duplicate trx_id check error:', e.message);
+  }
+
   try {
     await pool.query(
       `INSERT INTO payment_requests (user_id, type, method, amount, transaction_id, account_number, status, want_bonus) VALUES ($1, 'deposit', $2, $3, $4, $5, 'pending', $6)`,
       [userId, method, amount, transaction_id, account_number, wantBonus]
     );
+    checkIp((req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim()).then(vpnInfo => {
+      evaluateTransaction(userId, 'deposit', { accountNumber: account_number, vpnInfo })
+        .catch(e => console.error('fraud evaluateTransaction (deposit) error:', e.message));
+    }).catch(e => console.error('vpn checkIp (deposit) error:', e.message));
     await notifyAdmins('নতুন ডিপোজিট রিকোয়েস্ট', `${req.session.user.username} ${amount} টাকা ডিপোজিট চেয়েছে (${method})।`, 'deposit');
     req.flash('success', 'ডিপোজিট রিকোয়েস্ট পাঠানো হয়েছে!');
     res.redirect('/payment/history');
   } catch (err) {
+    // DB-এর unique constraint (race condition-এ দুইটা রিকোয়েস্ট একসাথে এলে) ধরার জন্য দ্বিতীয় স্তরের সুরক্ষা
     if (err.code === '23505') {
-      req.flash('error', 'এই ট্রানজেকশন আইডি আগে থেকেই ব্যবহার হয়েছে। নতুন ট্রানজেকশন আইডি দিন।');
+      req.flash('error', 'এই ট্রানজেকশন আইডি আগে ব্যবহার করা হয়েছে।');
       return res.redirect('/payment/deposit');
     }
     console.error('deposit error:', err.message);
     req.flash('error', 'সমস্যা হয়েছে');
     res.redirect('/payment/deposit');
   }
-});
-
-// ইউজার নিজে পেন্ডিং ডিপোজিট রিকোয়েস্ট বাতিল করতে পারবে
-router.post('/deposit/:id/cancel', requireLogin, async (req, res) => {
-  const { id } = req.params;
-  try {
-    const result = await pool.query(
-      `UPDATE payment_requests SET status='cancelled', updated_at=NOW()
-       WHERE id=$1 AND user_id=$2 AND type='deposit' AND status='pending' RETURNING id`,
-      [id, req.session.user.id]
-    );
-    if (!result.rowCount) {
-      req.flash('error', 'এই রিকোয়েস্ট বাতিল করা যাচ্ছে না (হয়তো আগেই প্রসেস হয়ে গেছে)');
-    } else {
-      req.flash('success', 'ডিপোজিট রিকোয়েস্ট বাতিল হয়েছে');
-    }
-  } catch (err) {
-    console.error('deposit cancel error:', err.message);
-    req.flash('error', 'সমস্যা হয়েছে');
-  }
-  res.redirect('/payment/history');
-});
-
-// পেন্ডিং ডিপোজিট রিকোয়েস্টের এডিট ফর্ম
-router.get('/deposit/:id/edit', requireLogin, async (req, res) => {
-  const { id } = req.params;
-  try {
-    const result = await pool.query(
-      `SELECT * FROM payment_requests WHERE id=$1 AND user_id=$2 AND type='deposit' AND status='pending'`,
-      [id, req.session.user.id]
-    );
-    if (!result.rows.length) {
-      req.flash('error', 'এই রিকোয়েস্ট এডিট করা যাচ্ছে না');
-      return res.redirect('/payment/history');
-    }
-    res.render('payment/deposit-edit', { user: req.session.user, request: result.rows[0] });
-  } catch (err) {
-    console.error('deposit edit form error:', err.message);
-    res.redirect('/payment/history');
-  }
-});
-
-// পেন্ডিং ডিপোজিট রিকোয়েস্ট এডিট সাবমিট
-router.post('/deposit/:id/edit', requireLogin, async (req, res) => {
-  const { id } = req.params;
-  const account_number = (req.body.account_number || '').trim();
-  const transaction_id = (req.body.transaction_id || '').trim();
-  if (!transaction_id || !account_number) {
-    req.flash('error', 'সব তথ্য সঠিকভাবে দিন');
-    return res.redirect(`/payment/deposit/${id}/edit`);
-  }
-  if (!isSafeField(transaction_id) || !isSafeField(account_number)) {
-    req.flash('error', 'ট্রানজেকশন আইডি বা নম্বরে শুধু লেটার, সংখ্যা, স্পেস, - _ . ব্যবহার করা যাবে। লিংক বা অন্য কোনো চিহ্ন গ্রহণযোগ্য নয়।');
-    return res.redirect(`/payment/deposit/${id}/edit`);
-  }
-
-  try {
-    const dup = await pool.query(
-      `SELECT id FROM payment_requests
-       WHERE type = 'deposit' AND status <> 'cancelled'
-         AND LOWER(TRIM(transaction_id)) = LOWER($1)
-         AND id <> $2
-       LIMIT 1`,
-      [transaction_id, id]
-    );
-    if (dup.rowCount) {
-      req.flash('error', 'এই ট্রানজেকশন আইডি আগে থেকেই ব্যবহার হয়েছে। নতুন ট্রানজেকশন আইডি দিন।');
-      return res.redirect(`/payment/deposit/${id}/edit`);
-    }
-  } catch (e) {
-    console.error('deposit edit duplicate trx check error:', e.message);
-  }
-
-  try {
-    const result = await pool.query(
-      `UPDATE payment_requests SET transaction_id=$1, account_number=$2, updated_at=NOW()
-       WHERE id=$3 AND user_id=$4 AND type='deposit' AND status='pending' RETURNING id`,
-      [transaction_id, account_number, id, req.session.user.id]
-    );
-    if (!result.rowCount) {
-      req.flash('error', 'এই রিকোয়েস্ট এডিট করা যাচ্ছে না');
-    } else {
-      req.flash('success', 'ডিপোজিট রিকোয়েস্ট আপডেট হয়েছে');
-    }
-  } catch (err) {
-    if (err.code === '23505') {
-      req.flash('error', 'এই ট্রানজেকশন আইডি আগে থেকেই ব্যবহার হয়েছে');
-      return res.redirect(`/payment/deposit/${id}/edit`);
-    }
-    console.error('deposit edit error:', err.message);
-    req.flash('error', 'সমস্যা হয়েছে');
-  }
-  res.redirect('/payment/history');
 });
 
 router.get('/withdraw', requireLogin, async (req, res) => {
@@ -321,15 +249,9 @@ router.get('/withdraw', requireLogin, async (req, res) => {
       const cardRes = await pool.query('SELECT * FROM bank_cards WHERE user_id=$1', [req.session.user.id]);
       cards = cardRes.rows;
     } catch (e) { cards = []; }
-
-    let withdrawLock = { allowed: true, pending: [] };
-    try {
-      withdrawLock = await canWithdraw(req.session.user.id);
-    } catch (e) {
-      console.error('withdraw lock check error:', e.message);
-    }
-
-    res.render('payment/withdraw', { user: req.session.user, coins, cards, withdrawLock });
+    let pinStatus = { configured: false, locked: false };
+    try { pinStatus = await getPinStatus(req.session.user.id); } catch (e) {}
+    res.render('payment/withdraw', { user: req.session.user, coins, cards, pinStatus });
   } catch (err) {
     console.error('withdraw GET error:', err.message);
     res.redirect('/');
@@ -337,8 +259,8 @@ router.get('/withdraw', requireLogin, async (req, res) => {
 });
 
 
-router.post('/withdraw', requireLogin, async (req, res) => {
-  const { method, account_number } = req.body;
+router.post('/withdraw', requireLogin, requireVerifiedEmail, paymentLimiter, async (req, res) => {
+  const { method, account_number, withdraw_pin } = req.body;
   const amount = parseAmount(req.body.amount);
   const userId = req.session.user.id;
 
@@ -350,25 +272,34 @@ router.post('/withdraw', requireLogin, async (req, res) => {
     req.flash('error', 'সব তথ্য সঠিকভাবে দিন');
     return res.redirect('/payment/withdraw');
   }
+  if (amount < 200) {
+    req.flash('error', 'সর্বনিম্ন উইথড্র ২০০ টাকা');
+    return res.redirect('/payment/withdraw');
+  }
 
-  // নিরাপত্তা: ইউজার শুধু তার নিজের যুক্ত করা ই-ওয়ালেট নাম্বারেই উইথড্র করতে পারবে —
-  // hidden ফিল্ড ক্লায়েন্ট সাইডে ম্যানিপুলেট করলেও সার্ভার এখানে ম্যাচ যাচাই করবে
+  // ==================== Withdraw PIN ভেরিফিকেশন (নতুন নিরাপত্তা স্তর) ====================
+  // প্রতিটি উইথড্র রিকোয়েস্টের আগে PIN যাচাই করা বাধ্যতামূলক। এটা একটা আলাদা গেট —
+  // নিচের বিদ্যমান উইথড্র বিজনেস লজিক (turnover check, coins deduction ইত্যাদি) অপরিবর্তিত রাখা হয়েছে।
   try {
-    const ownedWallet = await pool.query(
-      `SELECT id FROM bank_cards WHERE user_id = $1 AND account_number = $2 AND LOWER(bank_name) LIKE '%' || LOWER($3) || '%'`,
-      [userId, account_number, method]
-    );
-    if (ownedWallet.rowCount === 0) {
-      req.flash('error', 'শুধুমাত্র আপনার সংযুক্ত ই-ওয়ালেট নাম্বারেই উত্তোলন করা যাবে');
+    const pinCheck = await verifyPin(userId, withdraw_pin, req.ip);
+
+    if (pinCheck.notConfigured) {
+      req.flash('error', 'উত্তোলনের আগে আপনার Withdraw PIN সেট করতে হবে। Security পেজ থেকে PIN তৈরি করুন।');
+      return res.redirect('/profile/security');
+    }
+    if (pinCheck.locked) {
+      const mins = Math.max(1, Math.ceil((pinCheck.remainingMs || 0) / 60000));
+      req.flash('error', `অনেকবার ভুল Withdraw PIN দেওয়ার কারণে উত্তোলন সাময়িকভাবে লক করা হয়েছে। ${mins} মিনিট পর আবার চেষ্টা করুন।`);
+      return res.redirect('/payment/withdraw');
+    }
+    if (!pinCheck.success) {
+      const left = pinCheck.attemptsLeft != null ? ` (আর ${pinCheck.attemptsLeft} বার সুযোগ আছে)` : '';
+      req.flash('error', `Withdraw PIN ভুল হয়েছে${left}।`);
       return res.redirect('/payment/withdraw');
     }
   } catch (e) {
-    console.error('wallet ownership check error:', e.message);
-    req.flash('error', 'সমস্যা হয়েছে, আবার চেষ্টা করুন');
-    return res.redirect('/payment/withdraw');
-  }
-  if (amount < 200) {
-    req.flash('error', 'সর্বনিম্ন উইথড্র ২০০ টাকা');
+    console.error('withdraw pin verification error:', e.message);
+    req.flash('error', 'PIN যাচাই করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।');
     return res.redirect('/payment/withdraw');
   }
 
@@ -413,6 +344,12 @@ router.post('/withdraw', requireLogin, async (req, res) => {
     await client.query('COMMIT');
 
     if (req.session.user) req.session.user.coins = upd.rows[0].coins;
+
+    checkIp((req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim()).then(async (vpnInfo) => {
+      const isNewDevice = await isSessionNewDevice(req.sessionID).catch(() => false);
+      evaluateTransaction(userId, 'withdraw', { accountNumber: account_number, vpnInfo, amount, isNewDevice })
+        .catch(e => console.error('fraud evaluateTransaction (withdraw) error:', e.message));
+    }).catch(e => console.error('vpn checkIp (withdraw) error:', e.message));
 
     await notifyAdmins('নতুন উইথড্র রিকোয়েস্ট', `${req.session.user.username} ${amount} টাকা উইথড্র চেয়েছে (${method})।`, 'withdraw');
 
@@ -499,6 +436,66 @@ function addDaysStr(dateStr, days) {
 
 function dhakaStartOf(dateStr) { return new Date(dateStr + 'T00:00:00+06:00'); }
 function dhakaEndOf(dateStr) { return new Date(dateStr + 'T23:59:59.999+06:00'); }
+
+router.get('/admin/deposits', requireAdmin, async (req, res) => {
+  try {
+    const method = ['bkash', 'nagad', 'rocket'].includes(req.query.method) ? req.query.method : 'bkash';
+    const quick = req.query.quick || 'today';
+    const today = dhakaTodayStr();
+    let fromStr, toStr;
+
+    if (quick === '7d') { fromStr = addDaysStr(today, -6); toStr = today; }
+    else if (quick === '30d') { fromStr = addDaysStr(today, -29); toStr = today; }
+    else if (quick === '90d') { fromStr = addDaysStr(today, -89); toStr = today; }
+    else if (quick === 'year') { fromStr = today.slice(0, 4) + '-01-01'; toStr = today; }
+    else if (quick === 'custom') { fromStr = req.query.from || today; toStr = req.query.to || today; }
+    else { fromStr = today; toStr = today; }
+
+    const fromTs = dhakaStartOf(fromStr);
+    const toTs = dhakaEndOf(toStr);
+
+    // তিনটা মেথডেরই টোটাল (বর্তমান ডেট রেঞ্জে) — ট্যাব হেডারে দেখানোর জন্য, শুধু approved হিসাব করা হচ্ছে
+    const totalsResult = await pool.query(
+      `SELECT method, COALESCE(SUM(amount),0) AS total, COUNT(*) AS cnt
+       FROM payment_requests
+       WHERE type='deposit' AND status='approved' AND method = ANY($1) AND created_at BETWEEN $2 AND $3
+       GROUP BY method`,
+      [['bkash', 'nagad', 'rocket'], fromTs, toTs]
+    );
+    const totals = { bkash: { total: 0, cnt: 0 }, nagad: { total: 0, cnt: 0 }, rocket: { total: 0, cnt: 0 } };
+    totalsResult.rows.forEach(r => { totals[r.method] = { total: Number(r.total), cnt: parseInt(r.cnt) }; });
+
+    // সিলেক্টেড ট্যাবের সব ট্রানজেকশন (pending/approved/rejected সবই — অ্যাডমিন অ্যাকশন নেওয়ার জন্য)
+    const listResult = await pool.query(
+      `SELECT pr.*, u.username FROM payment_requests pr
+       JOIN users u ON pr.user_id = u.id
+       WHERE pr.type='deposit' AND pr.method=$1 AND pr.created_at BETWEEN $2 AND $3
+       ORDER BY pr.created_at DESC`,
+      [method, fromTs, toTs]
+    );
+
+    res.render('payment/deposits', {
+      user: req.session.user,
+      method,
+      quick,
+      from: fromStr,
+      to: toStr,
+      totals,
+      requests: listResult.rows
+    });
+  } catch (err) {
+    console.error('deposits admin error:', err.message);
+    res.render('payment/deposits', {
+      user: req.session.user,
+      method: 'bkash',
+      quick: 'today',
+      from: dhakaTodayStr(),
+      to: dhakaTodayStr(),
+      totals: { bkash: { total: 0, cnt: 0 }, nagad: { total: 0, cnt: 0 }, rocket: { total: 0, cnt: 0 } },
+      requests: []
+    });
+  }
+});
 
 router.get('/admin/summary', requireAdmin, async (req, res) => {
   try {

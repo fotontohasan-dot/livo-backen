@@ -1,0 +1,24 @@
+<%- include('partials/head') %>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg-dark);">
+  <div style="width:100%;max-width:400px;padding:1rem;">
+    <div class="card glass">
+      <div class="card-header" style="justify-content:center;font-size:1.2rem;">🔐 অতিরিক্ত ভেরিফিকেশন প্রয়োজন</div>
+      <div class="card-body">
+        <p style="color:var(--text-muted);font-size:.88rem;margin-bottom:16px;text-align:center;">
+          নিরাপত্তার কারণে (VPN/Proxy/Tor শনাক্ত হয়েছে) আপনার ইমেইলে পাঠানো ৬ ডিজিটের কোডটি দিন।
+        </p>
+        <%- include('partials/flash') %>
+        <form action="/verify-access" method="POST">
+          <div class="form-group">
+            <label class="form-label">ভেরিফিকেশন কোড</label>
+            <input type="text" name="code" class="form-input" placeholder="যেমন: 123456" inputmode="numeric" maxlength="6" autofocus required style="text-align:center;letter-spacing:6px;font-size:1.2rem;">
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;">নিশ্চিত করুন ✅</button>
+        </form>
+        <p style="text-align:center;margin-top:1rem;color:var(--text-muted);font-size:.9rem;">
+          কোডের মেয়াদ ১০ মিনিট। ভুল হলে <a href="/login" style="color:var(--secondary)">আবার লগইন করুন</a>।
+        </p>
+      </div>
+    </div>
+  </div>
+</div>

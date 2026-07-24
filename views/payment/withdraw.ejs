@@ -89,7 +89,6 @@
   </a>
 
   <div class="px-4">
-    <%- include('../partials/flash') %>
 
     <!-- Bound Wallet Section -->
     <div class="mb-6">
@@ -143,6 +142,29 @@
     </div>
 
     <% var locked = (typeof withdrawLock !== 'undefined') && withdrawLock && withdrawLock.allowed === false; %>
+    <% var pinNotConfigured = (typeof pinStatus !== 'undefined') && pinStatus && !pinStatus.configured; %>
+    <% var pinLocked = (typeof pinStatus !== 'undefined') && pinStatus && pinStatus.locked; %>
+
+    <% if (pinNotConfigured) { %>
+      <div class="rounded-xl p-4 mb-6" style="background: rgba(230,30,38,0.1); border: 1.5px solid #e61e26;">
+        <div class="flex items-center gap-2 mb-2">
+          <i class="fas fa-shield-alt red-theme-text"></i>
+          <span class="font-bold red-theme-text">Withdraw PIN প্রয়োজন</span>
+        </div>
+        <p class="text-sm text-main mb-3">নিরাপত্তার জন্য উত্তোলনের আগে একটি ৬-সংখ্যার Withdraw PIN সেট করতে হবে।</p>
+        <a href="/profile/security" class="inline-block red-theme-bg text-white font-bold px-5 py-2.5 rounded-full text-sm">
+          <i class="fas fa-lock"></i> এখনই PIN তৈরি করুন
+        </a>
+      </div>
+    <% } else if (pinLocked) { %>
+      <div class="rounded-xl p-4 mb-6" style="background: rgba(230,30,38,0.1); border: 1.5px solid #e61e26;">
+        <div class="flex items-center gap-2 mb-2">
+          <i class="fas fa-lock red-theme-text"></i>
+          <span class="font-bold red-theme-text">Withdraw PIN সাময়িকভাবে লক করা আছে</span>
+        </div>
+        <p class="text-sm text-main">অনেকবার ভুল PIN দেওয়ার কারণে প্রায় <%= Math.max(1, Math.ceil((pinStatus.remainingMs || 0) / 60000)) %> মিনিট পর আবার চেষ্টা করুন।</p>
+      </div>
+    <% } %>
 
     <% if (locked) { %>
       <div class="rounded-xl p-4 mb-6" style="background: rgba(230,30,38,0.1); border: 1.5px solid #e61e26;">
@@ -160,9 +182,10 @@
       </div>
     <% } %>
 
-    <form action="/payment/withdraw" method="POST" id="withdrawForm">
+    <form action="/payment/withdraw" method="POST" id="withdrawForm" onsubmit="LivoToast.setLoading(document.getElementById('withdrawSubmitBtn'), true, 'উইথড্র অনুরোধ পাঠানো হচ্ছে...')">
       <!-- Withdrawal Form -->
-      <fieldset <%= locked ? 'disabled' : '' %> class="space-y-5 <%= locked ? 'opacity-50' : '' %>">
+      <% var formGated = locked || pinNotConfigured || pinLocked; %>
+      <fieldset <%= formGated ? 'disabled' : '' %> class="space-y-5 <%= formGated ? 'opacity-50' : '' %>">
 
         <% if (!cards || cards.length === 0) { %>
           <div class="bg-surface border border-glass rounded-xl p-4 text-center">
@@ -215,7 +238,18 @@
             </button>
         </div>
 
-        <button type="submit" <%= (!cards || cards.length === 0 || locked) ? 'disabled' : '' %> class="w-full red-theme-bg text-white py-4 rounded-lg font-bold text-lg mt-6 shadow-lg active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+        <div>
+          <label class="block text-main font-bold mb-2"><i class="fas fa-shield-alt red-theme-text"></i> Withdraw PIN</label>
+          <div class="relative">
+              <input type="password" id="withdrawPinField" name="withdraw_pin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" autocomplete="off" placeholder="৬-সংখ্যার Withdraw PIN দিন" class="input-field pr-12 text-right" style="letter-spacing:4px;" required>
+              <button type="button" onclick="toggleWithdrawPin()" class="absolute right-4 top-1/2 -translate-y-1/2 text-muted">
+                  <i class="fas fa-eye-slash" id="withdrawPinEye"></i>
+              </button>
+          </div>
+          <p class="text-muted text-xs mt-2"><i class="fas fa-info-circle"></i> প্রতিটি উত্তোলনের আগে আপনার Withdraw PIN যাচাই করা হবে।</p>
+        </div>
+
+        <button type="submit" id="withdrawSubmitBtn" <%= (!cards || cards.length === 0 || formGated) ? 'disabled' : '' %> class="w-full red-theme-bg text-white py-4 rounded-lg font-bold text-lg mt-6 shadow-lg active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
             <%= locked ? 'টার্নওভার সম্পন্ন করুন' : 'জমা দিন' %>
         </button>
       </fieldset>

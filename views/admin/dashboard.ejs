@@ -22,6 +22,15 @@ function escapeHtml(str) {
         <div class="text-right">
             <div class="text-sm text-slate-500">Last updated</div>
             <div class="font-medium text-slate-700" id="current-time"></div>
+            <div class="mt-2 flex flex-col items-end gap-1.5">
+                <span class="px-3 py-1.5 rounded-xl text-xs font-semibold ${redisStatus.connected ? 'bg-emerald-100 text-emerald-700' : (redisStatus.enabled ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500')}">
+                    <i class="fas fa-database mr-1"></i>Redis: ${redisStatus.connected ? 'Connected' : (redisStatus.enabled ? 'Disconnected' : 'Disabled')}
+                </span>
+                ${(!redisStatus.connected && redisStatus.lastError) ? `<div class="text-[11px] text-red-500 max-w-[220px] text-right">${escapeHtml(redisStatus.lastError)}</div>` : ''}
+                <a href="/admin/queues" class="px-3 py-1.5 rounded-xl text-xs font-semibold ${queueStatus.running ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'} hover:opacity-80">
+                    <i class="fas fa-layer-group mr-1"></i>Queue: ${queueStatus.running ? 'Running' : 'Stopped'}${(queueStatus.failed || 0) > 0 ? ` · ${queueStatus.failed} failed` : ''}
+                </a>
+            </div>
         </div>
     </div>
 
@@ -50,6 +59,76 @@ function escapeHtml(str) {
         </div>
     </div>
 
+    <!-- ==================== Fraud Detection Engine — Fraud Alerts উইজেট ==================== -->
+    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 mb-8">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-slate-800">🛡️ Fraud Alerts <span class="text-xs font-normal text-slate-400">ওপেন ফ্ল্যাগ</span></h3>
+            <div class="flex items-center gap-3">
+                <a href="/admin/fraud-monitoring" class="text-xs font-semibold text-blue-600 hover:underline">মনিটরিং ড্যাশবোর্ড</a>
+                <a href="/admin/fraud-logs" class="text-xs font-semibold text-blue-600 hover:underline">সব দেখুন <i class="fas fa-arrow-right ml-1"></i></a>
+            </div>
+        </div>
+        <div class="grid grid-cols-3 gap-4 mb-4">
+            <div class="p-4 rounded-2xl ${fraudAlerts.high > 0 ? 'bg-red-50' : 'bg-slate-50'}">
+                <p class="text-xs text-slate-500">High Risk</p>
+                <p class="text-xl font-bold ${fraudAlerts.high > 0 ? 'text-red-600' : 'text-slate-900'} mt-1">${fraudAlerts.high || 0}</p>
+            </div>
+            <div class="p-4 rounded-2xl ${fraudAlerts.medium > 0 ? 'bg-amber-50' : 'bg-slate-50'}">
+                <p class="text-xs text-slate-500">Medium Risk</p>
+                <p class="text-xl font-bold ${fraudAlerts.medium > 0 ? 'text-amber-600' : 'text-slate-900'} mt-1">${fraudAlerts.medium || 0}</p>
+            </div>
+            <div class="p-4 rounded-2xl bg-slate-50">
+                <p class="text-xs text-slate-500">Low Risk</p>
+                <p class="text-xl font-bold text-slate-900 mt-1">${fraudAlerts.low || 0}</p>
+            </div>
+        </div>
+        ${(recentFraudFlags && recentFraudFlags.length) ? recentFraudFlags.map(f => {
+          const riskClass = f.risk_level === 'high' ? 'bg-red-100 text-red-700' : (f.risk_level === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600');
+          const uLabel = f.username ? escapeHtml(f.username) : ('#' + f.user_id);
+          return '<div class="flex items-center justify-between py-2 border-t border-slate-50">' +
+            '<div class="min-w-0 flex-1">' +
+              '<a href="/admin/users/' + f.user_id + '" class="text-sm font-semibold text-blue-600 hover:underline">' + uLabel + '</a>' +
+              '<p class="text-xs text-slate-500 truncate">' + escapeHtml(f.reason) + '</p>' +
+            '</div>' +
+            '<span class="px-2.5 py-1 text-xs font-bold rounded-full ' + riskClass + ' ml-3 flex-shrink-0">' + f.risk_level.toUpperCase() + '</span>' +
+          '</div>';
+        }).join('') : '<p class="text-sm text-slate-400 text-center py-3">কোনো ওপেন ফ্রড ফ্ল্যাগ নেই</p>'}
+    </div>
+
+    <!-- ==================== Duplicate Account Detection — উইজেট ==================== -->
+    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 mb-8">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-slate-800">🧬 Duplicate Accounts <span class="text-xs font-normal text-slate-400">ওপেন ফ্ল্যাগ</span></h3>
+            <a href="/admin/duplicate-accounts" class="text-xs font-semibold text-blue-600 hover:underline">সব দেখুন <i class="fas fa-arrow-right ml-1"></i></a>
+        </div>
+        <div class="grid grid-cols-3 gap-4 mb-4">
+            <div class="p-4 rounded-2xl ${dupAlerts.high > 0 ? 'bg-red-50' : 'bg-slate-50'}">
+                <p class="text-xs text-slate-500">High (70+)</p>
+                <p class="text-xl font-bold ${dupAlerts.high > 0 ? 'text-red-600' : 'text-slate-900'} mt-1">${dupAlerts.high || 0}</p>
+            </div>
+            <div class="p-4 rounded-2xl ${dupAlerts.medium > 0 ? 'bg-amber-50' : 'bg-slate-50'}">
+                <p class="text-xs text-slate-500">Medium (40-69)</p>
+                <p class="text-xl font-bold ${dupAlerts.medium > 0 ? 'text-amber-600' : 'text-slate-900'} mt-1">${dupAlerts.medium || 0}</p>
+            </div>
+            <div class="p-4 rounded-2xl bg-slate-50">
+                <p class="text-xs text-slate-500">Low (&lt;40)</p>
+                <p class="text-xl font-bold text-slate-900 mt-1">${dupAlerts.low || 0}</p>
+            </div>
+        </div>
+        ${(recentDupFlags && recentDupFlags.length) ? recentDupFlags.map(f => {
+          const score = Number(f.risk_score) || 0;
+          const riskClass = score >= 70 ? 'bg-red-100 text-red-700' : (score >= 40 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600');
+          const uLabel = f.username ? escapeHtml(f.username) : ('#' + f.user_id);
+          return '<div class="flex items-center justify-between py-2 border-t border-slate-50">' +
+            '<div class="min-w-0 flex-1">' +
+              '<a href="/admin/users/' + f.user_id + '" class="text-sm font-semibold text-blue-600 hover:underline">' + uLabel + '</a>' +
+              '<p class="text-xs text-slate-500 truncate">' + escapeHtml(f.reason) + '</p>' +
+            '</div>' +
+            '<span class="px-2.5 py-1 text-xs font-bold rounded-full ' + riskClass + ' ml-3 flex-shrink-0">' + score + ' / 100</span>' +
+          '</div>';
+        }).join('') : '<p class="text-sm text-slate-400 text-center py-3">কোনো ওপেন ডুপ্লিকেট ফ্ল্যাগ নেই</p>'}
+    </div>
+
     <!-- Stats Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5 mb-8">
         <!-- Total Users -->
@@ -64,6 +143,20 @@ function escapeHtml(str) {
                 </div>
                 <div class="w-11 h-11 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center">
                     <i class="fas fa-users text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Users (last 15 min) -->
+        <div class="stat-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">Active Users</p>
+                    <p class="metric-value text-slate-900 mt-2">${Number(stats.active_users_now || 0).toLocaleString('en-US')}</p>
+                    <p class="text-slate-400 text-xs font-semibold mt-1">গত ১৫ মিনিটে</p>
+                </div>
+                <div class="w-11 h-11 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center">
+                    <i class="fas fa-signal text-xl"></i>
                 </div>
             </div>
         </div>
@@ -127,6 +220,20 @@ function escapeHtml(str) {
                 </div>
             </div>
         </div>
+
+        <!-- Pending Withdraw Requests (dedicated card) -->
+        <a href="/admin/withdrawals" class="stat-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition block">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">Pending Withdraw Requests</p>
+                    <p class="metric-value text-red-600 mt-2">${stats.pending_withdrawals || 0}</p>
+                    <p class="text-slate-400 text-xs font-semibold mt-1">রিভিউ করতে ক্লিক করুন</p>
+                </div>
+                <div class="w-11 h-11 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center">
+                    <i class="fas fa-hand-holding-usd text-xl"></i>
+                </div>
+            </div>
+        </a>
     </div>
 
     <!-- Quick Actions + Recent Activity -->

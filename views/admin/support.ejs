@@ -1,14 +1,24 @@
 <%
-function esc(s) { return String(s || '').replace(/'/g, "\\'").replace(/\n/g, ' '); }
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 function ticketListItem(t) {
-  return '<div class="px-4 py-3.5 mx-1 mb-1 rounded-2xl cursor-pointer border border-transparent hover:bg-slate-50" onclick="openTicket(' + t.userId + ')" id="ticket-item-' + t.userId + '">' +
-    '<div class="flex justify-between"><div class="font-semibold text-sm">' + t.username + '</div>' +
-    '<div class="text-[10px] px-2 py-0.5 rounded ' + (t.status === 'Open' ? 'bg-yellow-100 text-yellow-700' : 'bg-emerald-100 text-emerald-700') + '">' + t.status + '</div></div>' +
-    '<div class="text-xs text-slate-400 mt-1 line-clamp-1">' + String(t.lastMessage || '').slice(0, 60) + '</div>' +
+  return '<div class="px-4 py-3.5 mx-1 mb-1 rounded-2xl cursor-pointer border border-transparent hover:bg-slate-50" onclick="openTicket(' + Number(t.userId) + ')" id="ticket-item-' + Number(t.userId) + '">' +
+    '<div class="flex justify-between"><div class="font-semibold text-sm">' + esc(t.username) + '</div>' +
+    '<div class="text-[10px] px-2 py-0.5 rounded ' + (t.status === 'Open' ? 'bg-yellow-100 text-yellow-700' : 'bg-emerald-100 text-emerald-700') + '">' + esc(t.status) + '</div></div>' +
+    '<div class="text-xs text-slate-400 mt-1 line-clamp-1">' + esc(String(t.lastMessage || '').slice(0, 60)) + '</div>' +
   '</div>';
 }
 const ticketsHtml = (tickets || []).map(ticketListItem).join('') || '<div class="text-center text-slate-400 py-10 text-sm">কোনো সাপোর্ট মেসেজ নেই</div>';
-const ticketsData = JSON.stringify((tickets || []).map(t => ({ userId: t.userId, username: t.username, messages: t.messages, status: t.status })));
+// JSON.stringify escapes quotes/backslashes কিন্তু "</script>" সিকোয়েন্স আটকায় না।
+// কোনো user message/username-এ "</script>" থাকলে <script> ব্লক ভেঙে আর্বিট্রারি HTML/JS ইনজেক্ট হতে পারত,
+// তাই '<' কে '\u003c' দিয়ে replace করে script-breakout বন্ধ করা হচ্ছে।
+const ticketsData = JSON.stringify((tickets || []).map(t => ({ userId: t.userId, username: t.username, messages: t.messages, status: t.status }))).replace(/</g, '\\u003c');
 %>
 <%- include('partials/admin-layout', { 
     title: 'Support Tickets', 

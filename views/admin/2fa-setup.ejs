@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="bn">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2FA Setup • Livo Admin</title>
+    <title>2FA সেটআপ • Livo Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         body { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
         .admin-card { box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.4); }
-        .otp-input { letter-spacing: 0.5em; font-size: 1.4rem; text-align: center; }
+        .otp-input { letter-spacing: 8px; font-size: 22px; text-align: center; }
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
@@ -18,47 +18,78 @@
             <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4">
                 <i class="fas fa-qrcode text-white text-3xl"></i>
             </div>
-            <h1 class="text-2xl font-bold text-white">2FA সেটআপ করুন</h1>
-            <p class="text-slate-400 mt-2 text-sm">Google Authenticator / Authy অ্যাপ দিয়ে নিচের QR কোডটি স্ক্যান করুন</p>
+            <h1 class="text-2xl font-bold text-white">অ্যাডমিন 2FA</h1>
+            <p class="text-slate-400 mt-2 text-sm">Google Authenticator / Authy দিয়ে অ্যাকাউন্ট সুরক্ষিত করুন</p>
         </div>
 
-        <div class="bg-slate-800 border border-slate-700 rounded-3xl p-8 admin-card">
+        <div class="bg-slate-800 border border-slate-700 rounded-3xl p-8 admin-card space-y-6">
+
             <% if (typeof error !== 'undefined' && error) { %>
-                <div class="mb-6 bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-2xl text-sm flex items-center gap-3">
+                <div class="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-2xl text-sm flex items-center gap-3">
                     <i class="fas fa-exclamation-circle"></i>
                     <span><%= error %></span>
                 </div>
             <% } %>
 
-            <% if (qrDataUrl) { %>
-                <div class="flex justify-center mb-5">
-                    <img src="<%= qrDataUrl %>" alt="2FA QR code" class="rounded-xl border border-slate-700" width="220" height="220">
+            <% if (alreadyEnabled) { %>
+                <!-- ==================== ইতিমধ্যে চালু আছে — বন্ধ করার অপশন ==================== -->
+                <div class="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-4 py-3 rounded-2xl text-sm flex items-center gap-3">
+                    <i class="fas fa-user-shield"></i>
+                    <span>2FA বর্তমানে চালু আছে</span>
                 </div>
-                <p class="text-slate-500 text-xs text-center mb-1">অ্যাপ দিয়ে স্ক্যান করা না গেলে এই কী-টি ম্যানুয়ালি লিখুন:</p>
-                <p class="text-center text-slate-300 text-sm font-mono break-all bg-slate-900 rounded-xl px-3 py-2 mb-6"><%= secret %></p>
+
+                <form action="/admin/2fa/disable" method="POST" class="space-y-4">
+                    <p class="text-slate-400 text-sm">2FA বন্ধ করতে আপনার পাসওয়ার্ড এবং একটা বর্তমান 2FA কোড অথবা একটা ব্যাকআপ কোড দিন:</p>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">পাসওয়ার্ড</label>
+                        <input type="password" name="password" required
+                            class="w-full bg-slate-900 border border-slate-700 text-white px-4 py-3 rounded-2xl focus:outline-none focus:border-red-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">2FA কোড অথবা ব্যাকআপ কোড</label>
+                        <input type="text" name="token" maxlength="20" required
+                            class="otp-input w-full bg-slate-900 border border-slate-700 text-white py-3 rounded-2xl focus:outline-none focus:border-red-500" placeholder="------ বা XXXXX-XXXXX">
+                    </div>
+                    <button type="submit" onclick="return confirm('আপনি কি নিশ্চিত 2FA বন্ধ করতে চান? এতে অ্যাকাউন্টের নিরাপত্তা কমে যাবে।')"
+                        class="w-full bg-red-600 hover:bg-red-700 transition-all text-white font-semibold py-3 rounded-2xl text-sm">
+                        <i class="fas fa-lock-open"></i> 2FA বন্ধ করুন
+                    </button>
+                </form>
+            <% } else { %>
+                <!-- ==================== নতুন সেটআপ — QR স্ক্যান করান ==================== -->
+                <div class="text-center">
+                    <p class="text-slate-300 text-sm mb-4">
+                        ১) Google Authenticator বা Authy অ্যাপ দিয়ে নিচের QR কোডটা স্ক্যান করুন
+                    </p>
+                    <% if (qrDataUrl) { %>
+                        <div class="bg-white p-4 rounded-2xl inline-block">
+                            <img src="<%= qrDataUrl %>" alt="2FA QR Code" class="w-48 h-48">
+                        </div>
+                    <% } %>
+                </div>
+
+                <% if (base32) { %>
+                <div class="bg-slate-900 border border-slate-700 rounded-2xl p-4 text-center">
+                    <p class="text-xs text-slate-500 mb-1">QR স্ক্যান করতে না পারলে ম্যানুয়ালি এই কি (key) দিন:</p>
+                    <p class="font-mono text-blue-400 text-sm break-all select-all"><%= base32 %></p>
+                </div>
+                <% } %>
+
+                <form action="/admin/2fa/setup/verify" method="POST" class="space-y-4">
+                    <p class="text-slate-300 text-sm">২) অ্যাপে দেখানো ৬-ডিজিট কোডটা দিয়ে নিশ্চিত করুন:</p>
+                    <input type="text" name="token" maxlength="6" inputmode="numeric" pattern="[0-9]*" required autofocus
+                        class="otp-input w-full bg-slate-900 border border-slate-700 text-white py-4 rounded-2xl focus:outline-none focus:border-blue-500 placeholder:text-slate-600"
+                        placeholder="------">
+                    <button type="submit"
+                        class="w-full bg-blue-600 hover:bg-blue-700 transition-all text-white font-semibold py-3.5 rounded-2xl text-base shadow-lg shadow-blue-600/30">
+                        <i class="fas fa-check"></i> 2FA চালু করুন
+                    </button>
+                </form>
             <% } %>
 
-            <form action="/admin/settings/2fa/enable" method="POST" class="space-y-5">
-                <label class="block text-sm font-medium text-slate-300 text-center">অ্যাপে দেখানো ৬ সংখ্যার কোড দিন</label>
-                <input
-                    type="text"
-                    name="token"
-                    inputmode="numeric"
-                    pattern="[0-9]*"
-                    maxlength="6"
-                    required
-                    autofocus
-                    class="otp-input w-full bg-slate-900 border border-slate-700 text-white px-4 py-4 rounded-2xl focus:outline-none focus:border-blue-500 placeholder:text-slate-600"
-                    placeholder="000000"
-                >
-                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3.5 rounded-2xl transition-colors">
-                    নিশ্চিত করে 2FA চালু করুন
-                </button>
-            </form>
-
-            <p class="text-center text-slate-500 text-xs mt-6">
-                <a href="/admin/settings" class="hover:text-slate-300">বাতিল করে সেটিংসে ফিরে যান</a>
-            </p>
+            <a href="/admin/settings" class="block text-center text-slate-500 hover:text-slate-400 text-xs">
+                ← সেটিংসে ফিরে যান
+            </a>
         </div>
     </div>
 </body>

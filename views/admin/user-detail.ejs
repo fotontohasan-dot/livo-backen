@@ -27,9 +27,47 @@ function paymentRow(p) {
 function ipRow(s) {
   return '<a href="/admin/users/' + s.id + '" class="block px-4 py-2.5 text-sm border-b border-slate-100 hover:bg-slate-50">' + escapeHtml(s.username) + ' <span class="text-slate-400 text-xs">(' + escapeHtml(s.email || '-') + ')</span></a>';
 }
+function loginHistRow(l) {
+  const newBadge = l.is_new_device ? '<span class="px-2 py-0.5 text-[10px] font-bold rounded bg-amber-50 text-amber-600 border border-amber-200 ml-2">NEW</span>' : '';
+  return '<tr class="border-b border-slate-100"><td class="px-4 py-2.5 text-sm">' + escapeHtml(l.browser) + ' · ' + escapeHtml(l.os) + newBadge + '</td>' +
+    '<td class="px-4 py-2.5 text-sm font-mono">' + escapeHtml(l.ip) + '</td>' +
+    '<td class="px-4 py-2.5 text-xs text-slate-400">' + fmtDate(l.created_at) + '</td></tr>';
+}
+function deviceSessRow(d) {
+  const badge = d.is_new_device ? '<span class="px-2 py-0.5 text-[10px] font-bold rounded bg-amber-50 text-amber-600 border border-amber-200 ml-2">NEW</span>' : '';
+  return '<tr class="border-b border-slate-100"><td class="px-4 py-2.5 text-sm">' + escapeHtml(d.device_name || '-') + badge + '</td>' +
+    '<td class="px-4 py-2.5 text-sm font-mono">' + escapeHtml(d.ip) + '</td>' +
+    '<td class="px-4 py-2.5 text-xs text-slate-400">' + fmtDate(d.last_activity) + '</td></tr>';
+}
+function fraudRow(fl) {
+  const riskColor = fl.risk_level === 'high' ? 'bg-red-100 text-red-700' : fl.risk_level === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600';
+  const statusColor = fl.status === 'open' ? 'bg-blue-100 text-blue-700' : fl.status === 'reviewed' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500';
+  const actions = fl.status === 'open'
+    ? '<div class="flex gap-1.5 mt-2">' +
+        '<form method="POST" action="/admin/fraud-logs/' + fl.id + '/review" style="display:inline"><input type="hidden" name="action" value="reviewed"><button type="submit" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white">Reviewed</button></form>' +
+        '<form method="POST" action="/admin/fraud-logs/' + fl.id + '/review" style="display:inline"><input type="hidden" name="action" value="dismiss"><button type="submit" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-400 hover:bg-slate-500 text-white">Dismiss</button></form>' +
+      '</div>'
+    : '';
+  return '<div class="px-6 py-4 border-b border-slate-100">' +
+    '<div class="flex items-center gap-2 flex-wrap">' +
+      '<span class="px-2.5 py-1 text-xs font-bold rounded-full ' + riskColor + '">' + escapeHtml((fl.risk_level || '').toUpperCase()) + '</span>' +
+      '<span class="px-2.5 py-1 text-xs font-semibold rounded-full ' + statusColor + '">' + escapeHtml(fl.status) + '</span>' +
+      '<span class="text-xs text-slate-400">' + fmtDate(fl.created_at) + '</span>' +
+    '</div>' +
+    '<div class="text-sm text-slate-600 mt-1.5">' + escapeHtml(fl.reason) + '</div>' +
+    actions +
+  '</div>';
+}
 const betsHtml = (bets || []).map(betRow).join('') || '<tr><td colspan="5" class="px-4 py-6 text-center text-slate-400 text-sm">কোনো বেট নেই</td></tr>';
 const paymentsHtml = (payments || []).map(paymentRow).join('') || '<tr><td colspan="5" class="px-4 py-6 text-center text-slate-400 text-sm">কোনো পেমেন্ট নেই</td></tr>';
 const sameIpHtml = (sameIp || []).map(ipRow).join('') || '<div class="px-4 py-4 text-center text-slate-400 text-xs">একই আইপিতে অন্য কোনো ইউজার নেই</div>';
+const fraudFlagsHtml = ((fraudStatus && fraudStatus.flags) || []).map(fraudRow).join('') || '<div class="px-6 py-4 text-center text-slate-400 text-xs">কোনো ফ্রড ফ্ল্যাগ নেই</div>';
+const riskLevel = (fraudStatus && fraudStatus.currentRiskLevel) || 'none';
+const riskHeaderColor = riskLevel === 'high' ? 'bg-red-100 text-red-700' : riskLevel === 'medium' ? 'bg-amber-100 text-amber-700' : riskLevel === 'low' ? 'bg-slate-100 text-slate-600' : 'bg-emerald-100 text-emerald-700';
+const riskHeaderLabel = riskLevel === 'none' ? 'ঝুঁকিমুক্ত' : riskLevel.toUpperCase() + ' ঝুঁকি';
+
+const loginHistRows = ((deviceOverview && deviceOverview.recentLogins) || []).map(loginHistRow).join('') || '<tr><td colspan="3" class="px-4 py-6 text-center text-slate-400 text-xs">কোনো লগইন রেকর্ড নেই</td></tr>';
+const deviceSessRows = ((deviceOverview && deviceOverview.activeSessions) || []).map(deviceSessRow).join('') || '<tr><td colspan="3" class="px-4 py-6 text-center text-slate-400 text-xs">কোনো সক্রিয় ডিভাইস নেই</td></tr>';
 const banLabel = u.is_banned ? 'Unban ইউজার' : 'Ban ইউজার';
 const banColor = u.is_banned ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700';
 %>
@@ -56,6 +94,9 @@ const banColor = u.is_banned ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-6
                     <span class="px-4 py-2 rounded-2xl text-sm font-semibold ${u.is_banned ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}">
                         ${u.is_banned ? '🚫 Banned' : '✅ Active'}
                     </span>
+                    <span class="px-4 py-2 rounded-2xl text-sm font-semibold ${riskHeaderColor}">
+                        <i class="fas fa-shield-halved mr-1"></i>${riskHeaderLabel}
+                    </span>
                 </div>
             </div>
         </div>
@@ -79,6 +120,16 @@ const banColor = u.is_banned ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-6
                     <div><div class="text-slate-400 text-xs">রেফারেল</div><div class="font-medium mt-0.5">${referralCount} জনকে রেফার করেছেন</div></div>
                     <div><div class="text-slate-400 text-xs">শেষ লগইন IP</div><div class="font-medium mt-0.5">${escapeHtml(u.last_ip || '-')}</div></div>
                     <div><div class="text-slate-400 text-xs">KYC স্ট্যাটাস</div><div class="font-medium mt-0.5 capitalize">${escapeHtml(u.kyc_status || 'none')}</div></div>
+                    <div>
+                        <div class="text-slate-400 text-xs">Withdraw PIN</div>
+                        <div class="font-medium mt-0.5">
+                            ${pinStatus && pinStatus.configured
+                                ? '<span class="text-emerald-600">✅ Configured</span>'
+                                : '<span class="text-red-500">❌ Not Configured</span>'}
+                            ${pinStatus && pinStatus.locked ? ' <span class="text-amber-600 text-xs">(🔒 Locked)</span>' : ''}
+                        </div>
+                        ${pinStatus && pinStatus.updatedAt ? `<div class="text-slate-400 text-xs mt-0.5">Last changed: ${fmtDate(pinStatus.updatedAt)}</div>` : ''}
+                    </div>
                 </div>
             </div>
 
@@ -97,6 +148,42 @@ const banColor = u.is_banned ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-6
                 <h3 class="font-semibold text-amber-700 px-6 pt-6 pb-3"><i class="fas fa-exclamation-triangle mr-2"></i>একই IP-তে অন্য অ্যাকাউন্ট (${sameIp.length})</h3>
                 <div>${sameIpHtml}</div>
             </div>` : ''}
+
+            <div class="bg-white border border-slate-100 rounded-3xl overflow-hidden">
+                <div class="flex items-center justify-between px-6 pt-6 pb-3">
+                    <h3 class="font-semibold text-slate-800"><i class="fas fa-shield-halved text-red-500 mr-2"></i>ফ্রড ফ্ল্যাগ (${(fraudStatus && fraudStatus.flags && fraudStatus.flags.length) || 0})</h3>
+                    <a href="/admin/fraud-logs?user_id=${u.id}" class="text-xs text-blue-600 hover:underline">সব লগ দেখুন →</a>
+                </div>
+                <div>${fraudFlagsHtml}</div>
+            </div>
+
+            <div class="bg-white border border-slate-100 rounded-3xl overflow-hidden">
+                <h3 class="font-semibold text-slate-800 px-6 pt-6 pb-3"><i class="fas fa-mobile-screen-button text-indigo-500 mr-2"></i>সক্রিয় ডিভাইস (${(deviceOverview && deviceOverview.activeSessions && deviceOverview.activeSessions.length) || 0})</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead><tr class="bg-slate-50 border-b border-slate-100">
+                            <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Device</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">IP</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Last Active</th>
+                        </tr></thead>
+                        <tbody>${deviceSessRows}</tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white border border-slate-100 rounded-3xl overflow-hidden">
+                <h3 class="font-semibold text-slate-800 px-6 pt-6 pb-3"><i class="fas fa-clock-rotate-left text-indigo-500 mr-2"></i>সাম্প্রতিক লগইন হিস্ট্রি</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead><tr class="bg-slate-50 border-b border-slate-100">
+                            <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Device</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">IP</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Date</th>
+                        </tr></thead>
+                        <tbody>${loginHistRows}</tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
         <div class="bg-white border border-slate-100 rounded-3xl p-6 h-fit">
@@ -117,6 +204,11 @@ const banColor = u.is_banned ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-6
                 <form method="POST" action="/admin/users/${u.id}/ban" onsubmit="return confirm('${banLabel} করবেন?')">
                     <button type="submit" class="w-full py-3 rounded-2xl font-medium text-white ${banColor}">
                         <i class="fas fa-ban mr-1.5"></i>${banLabel}
+                    </button>
+                </form>
+                <form method="POST" action="/admin/users/${u.id}/withdraw-pin/reset" onsubmit="return confirm('এই ইউজারের Withdraw PIN রিসেট করবেন? ইউজারকে আবার নতুন PIN সেট করতে হবে।')">
+                    <button type="submit" class="w-full py-3 rounded-2xl font-medium text-white bg-purple-600 hover:bg-purple-700">
+                        <i class="fas fa-key mr-1.5"></i>Withdraw PIN রিসেট করুন
                     </button>
                 </form>
                 <form method="POST" action="/admin/users/${u.id}/delete" onsubmit="return confirm('এই ইউজার স্থায়ীভাবে ডিলিট করবেন? এটা আর ফেরত আনা যাবে না!')">
