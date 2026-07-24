@@ -2115,6 +2115,156 @@ router.get('/api/system-diagnostics', async (req, res) => {
   }
 });
 
+// ==================== Notification Template Management ====================
+const templates = require('../services/templates');
+const { sendSms } = require('../services/sms');
+
+router.get('/notification-templates', async (req, res) => {
+  try {
+    const { channel = '', lang = '', q = '' } = req.query;
+    const list = await templates.listTemplates({ channel, lang, q });
+    res.render('admin/notification-templates', { list, filters: { channel, lang, q }, error: null, success: null });
+  } catch (err) {
+    console.error('notification-templates list error:', err.message);
+    res.render('admin/notification-templates', { list: [], filters: { channel: '', lang: '', q: '' }, error: err.message, success: null });
+  }
+});
+
+router.get('/notification-templates/new', (req, res) => {
+  res.render('admin/notification-template-form', { tmpl: null, error: null });
+});
+
+router.post('/notification-templates', async (req, res) => {
+  try {
+    const { template_key, channel, lang, name, subject, body, is_active } = req.body;
+    const tmpl = await templates.createTemplate(
+      { template_key, channel, lang, name, subject, body, is_active: is_active === 'on' || is_active === 'true' },
+      req.session.user.id, req.session.user.username
+    );
+    await logAdminAction(req.session.user.id, req.session.user.username, 'TEMPLATE_CREATE',
+      `নতুন নোটিফিকেশন টেমপ্লেট তৈরি: ${tmpl.template_key} (${tmpl.channel}/${tmpl.lang})`, req.ip);
+    req.flash && req.flash('success', 'টেমপ্লেট তৈরি হয়েছে');
+    res.redirect('/admin/notification-templates');
+  } catch (err) {
+    console.error('template create error:', err.message);
+    res.render('admin/notification-template-form', { tmpl: req.body, error: err.message });
+  }
+});
+
+router.get('/notification-templates/:id/edit', async (req, res) => {
+  try {
+    const tmpl = await templates.getTemplateById(req.params.id);
+    if (!tmpl) return res.redirect('/admin/notification-templates');
+    res.render('admin/notification-template-form', { tmpl, error: null });
+  } catch (err) {
+    res.redirect('/admin/notification-templates');
+  }
+});
+
+router.post('/notification-templates/:id', async (req, res) => {
+  try {
+    const { name, subject, body, is_active } = req.body;
+    const tmpl = await templates.updateTemplate(
+      req.params.id,
+      { name, subject, body, is_active: is_active === 'on' || is_active === 'true' },
+      req.session.user.id, req.session.user.username
+    );
+    await logAdminAction(req.session.user.id, req.session.user.username, 'TEMPLATE_UPDATE',
+      `নোটিফিকেশন টেমপ্লেট আপডেট: ${tmpl.template_key} (${tmpl.channel}/${tmpl.lang})`, req.ip);
+    res.redirect('/admin/notification-templates');
+  } catch (err) {
+    console.error('template update error:', err.message);
+    const existing = await templates.getTemplateById(req.params.id).catch(() => null);
+    res.render('admin/notification-template-form', { tmpl: existing || { id: req.params.id, ...req.body }, error: err.message });
+  }
+});
+
+router.post('/notification-templates/:id/delete', async (req, res) => {
+  try {
+    const deleted = await templates.deleteTemplate(req.params.id);
+    if (deleted) {
+      await logAdminAction(req.session.user.id, req.session.user.username, 'TEMPLATE_DELETE',
+        `নোটিফিকেশন টেমপ্লেট ডিলিট: ${deleted.template_key} (${deleted.channel}/${deleted.lang})`, req.ip);
+    }
+    res.redirect('/admin/notification-templates');
+  } catch (err) {
+    console.error('template delete error:', err.message);
+    res.redirect('/admin/notification-templates');
+  }
+});
+
+// প্রিভিউ — নমুনা ভ্যারিয়েবল দিয়ে রেন্ডার করে দেখায় (AJAX)
+router.post('/notification-templates/:id/preview', async (req, res) => {
+  try {
+    const tmpl = await templates.getTemplateById(req.params.id);
+    if (!tmpl) return res.status(404).json({ success: false, error: 'টেমপ্লেট পাওয়া যায়নি' });
+
+    const sampleVars = {};
+    (tmpl.variables || []).forEach(v => {
+      const samples = { name: 'রহিম উদ্দিন', otp: '123456', amount: '৫,০০০', username: 'demo_user', date: new Date().toLocaleDateString('bn-BD') };
+      sampleVars[v] = samples[v] || `[${v}]`;
+    });
+    const rendered = templates.renderTemplateRow(tmpl, { ...sampleVars, ...(req.body.variables || {}) });
+    res.json({ success: true, subject: rendered.subject, body: rendered.body, sampleVars });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// টেস্ট সেন্ড — অ্যাডমিন নিজের ইমেইল/নম্বরে পাঠিয়ে দেখতে পারবে
+router.post('/notification-templates/:id/test-send', async (req, res) => {
+  try {
+    const tmpl = await templates.getTemplateById(req.params.id);
+    if (!tmpl) return res.status(404).json({ success: false, error: 'টেমপ্লেট পাওয়া যায়নি' });
+
+    const target = (req.body.target || '').trim();
+    if (!target) return res.status(400).json({ success: false, error: 'টেস্ট টার্গেট (ইমেইল/ফোন/ইউজার আইডি) দিন' });
+
+    const sampleVars = {};
+    (tmpl.variables || []).forEach(v => {
+      const samples = { name: req.session.user.username, otp: '123456', amount: '৫,০০০', username: req.session.user.username, date: new Date().toLocaleDateString('bn-BD') };
+      sampleVars[v] = samples[v] || `[${v}]`;
+    });
+    const rendered = templates.renderTemplateRow(tmpl, sampleVars);
+
+    let result;
+    if (tmpl.channel === 'email') {
+      const nodemailer = require('nodemailer');
+      const transporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com', port: 587, secure: false,
+        auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+        tls: { rejectUnauthorized: false }
+      });
+      await transporter.sendMail({
+        from: `"LIVO (Test)" <${process.env.EMAIL_USER}>`,
+        to: target,
+        subject: `[TEST] ${rendered.subject || tmpl.name}`,
+        html: rendered.body
+      });
+      result = { ok: true, message: `টেস্ট ইমেইল ${target}-এ পাঠানো হয়েছে` };
+    } else if (tmpl.channel === 'sms') {
+      result = await sendSms(target, rendered.body);
+    } else {
+      // in_app — সরাসরি notifications টেবিলে ইনসার্ট করা যায়, target হবে user id
+      const userId = parseInt(target, 10);
+      if (!userId) return res.status(400).json({ success: false, error: 'in-app টেস্টের জন্য বৈধ user ID দিন' });
+      await pool.query(
+        `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'info')`,
+        [userId, `[TEST] ${tmpl.name}`, rendered.body]
+      );
+      result = { ok: true, message: `টেস্ট নোটিফিকেশন user #${userId}-কে পাঠানো হয়েছে` };
+    }
+
+    await logAdminAction(req.session.user.id, req.session.user.username, 'TEMPLATE_TEST_SEND',
+      `টেমপ্লেট টেস্ট-সেন্ড: ${tmpl.template_key} (${tmpl.channel}/${tmpl.lang}) → ${target}`, req.ip);
+
+    res.json({ success: true, ...result });
+  } catch (err) {
+    console.error('template test-send error:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ==================== ফ্রড লগ (Fraud Detection) ====================
 // ==================== Fraud Monitoring Dashboard — Risk Score, Trend, Top Signals/Users ====================
 router.get('/fraud-monitoring', async (req, res) => {

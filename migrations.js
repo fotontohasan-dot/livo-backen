@@ -1085,6 +1085,41 @@ async function runMigrations() {
     `);
     console.log("✅ Feature Flags table ready");
 
+    // ==================== Notification Template Management ====================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS notification_templates (
+        id SERIAL PRIMARY KEY,
+        template_key TEXT NOT NULL,
+        channel TEXT NOT NULL CHECK (channel IN ('email', 'sms', 'in_app')),
+        lang TEXT NOT NULL DEFAULT 'bn' CHECK (lang IN ('bn', 'en')),
+        name TEXT NOT NULL,
+        subject TEXT,
+        body TEXT NOT NULL,
+        variables JSONB DEFAULT '[]',
+        is_active BOOLEAN NOT NULL DEFAULT true,
+        created_by_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        created_by_username TEXT,
+        updated_by_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        updated_by_username TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(template_key, channel, lang)
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_notif_tmpl_key ON notification_templates(template_key);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_notif_tmpl_channel ON notification_templates(channel);`);
+    await pool.query(`
+      INSERT INTO notification_templates (template_key, channel, lang, name, subject, body, variables) VALUES
+      ('otp_verification', 'email', 'bn', 'OTP ভেরিফিকেশন (ইমেইল)', 'LIVO - আপনার OTP কোড', '<div style="font-family:sans-serif;max-width:400px;margin:auto;padding:20px;border:1px solid #eee;border-radius:10px"><h2 style="color:#e53e3e">LIVO</h2><p>হ্যালো {{name}},</p><p>আপনার OTP কোড:</p><h1 style="color:#e53e3e;letter-spacing:10px">{{otp}}</h1><p>এই কোড ৫ মিনিটের মধ্যে ব্যবহার করুন।</p></div>', '["name","otp"]'),
+      ('otp_verification', 'email', 'en', 'OTP Verification (Email)', 'LIVO - Your OTP Code', '<div style="font-family:sans-serif;max-width:400px;margin:auto;padding:20px;border:1px solid #eee;border-radius:10px"><h2 style="color:#e53e3e">LIVO</h2><p>Hello {{name}},</p><p>Your OTP code:</p><h1 style="color:#e53e3e;letter-spacing:10px">{{otp}}</h1><p>This code expires in 5 minutes.</p></div>', '["name","otp"]'),
+      ('deposit_success', 'in_app', 'bn', 'ডিপোজিট সফল (ইন-অ্যাপ)', NULL, 'আপনার {{amount}} টাকা ডিপোজিট সফলভাবে সম্পন্ন হয়েছে।', '["amount"]'),
+      ('deposit_success', 'in_app', 'en', 'Deposit Successful (In-app)', NULL, 'Your deposit of {{amount}} BDT has been completed successfully.', '["amount"]'),
+      ('withdraw_success', 'sms', 'bn', 'উইথড্র সফল (SMS)', NULL, 'প্রিয় {{name}}, আপনার {{amount}} টাকা উইথড্র সফল হয়েছে। - Livo', '["name","amount"]'),
+      ('withdraw_success', 'sms', 'en', 'Withdraw Successful (SMS)', NULL, 'Dear {{name}}, your withdrawal of {{amount}} BDT was successful. - Livo', '["name","amount"]')
+      ON CONFLICT (template_key, channel, lang) DO NOTHING;
+    `);
+    console.log("✅ Notification Templates table ready");
+
   } catch (err) {
     console.error("❌ Migration error:", err.message);
   }
