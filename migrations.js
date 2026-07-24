@@ -995,6 +995,30 @@ async function runMigrations() {
 
     console.log("✅ IP Block/Whitelist table ready");
 
+    // ==================== Backup & Restore System ====================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS backup_history (
+        id SERIAL PRIMARY KEY,
+        type TEXT NOT NULL CHECK (type IN ('database', 'uploads', 'config')),
+        filename TEXT NOT NULL,
+        size_bytes BIGINT DEFAULT 0,
+        encrypted BOOLEAN NOT NULL DEFAULT FALSE,
+        compressed BOOLEAN NOT NULL DEFAULT TRUE,
+        checksum TEXT,
+        status TEXT NOT NULL DEFAULT 'completed' CHECK (status IN ('completed', 'failed')),
+        error_message TEXT,
+        source TEXT NOT NULL DEFAULT 'manual' CHECK (source IN ('manual', 'scheduled')),
+        created_by_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        created_by_username TEXT,
+        restored_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_backup_history_type ON backup_history(type);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_backup_history_created ON backup_history(created_at DESC);`);
+
+    console.log("✅ Backup & Restore System table ready");
+
   } catch (err) {
     console.error("❌ Migration error:", err.message);
   }

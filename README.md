@@ -91,6 +91,23 @@ npm start        # production
 npm run dev       # nodemon দিয়ে, ডেভেলপমেন্টে
 ```
 
+## Docker (এক কমান্ডে পুরো সিস্টেম)
+
+```bash
+docker compose up -d --build
+```
+
+App, PostgreSQL, Redis চালু হবে। মনিটরিং স্ট্যাক (Prometheus + Grafana) একই কমান্ডে চালু হয়:
+
+- Prometheus: `http://localhost:9090` — `/metrics` স্ক্র্যাপ করে (`METRICS_TOKEN` .env-এ সেট থাকলে সেটা ব্যবহার করে)
+- Grafana: `http://localhost:${GRAFANA_PORT:-3001}` — লগইন `GRAFANA_ADMIN_USER`/`GRAFANA_ADMIN_PASSWORD` (ডিফল্ট `admin`/`changeme`, প্রোডাকশনে অবশ্যই পাল্টাও); "Livo" ফোল্ডারে "Livo — Application Overview" ড্যাশবোর্ড অটো-ইম্পোর্ট হয়ে থাকবে (CPU, Memory, Request Rate, Response Time, Error Rate, Redis, PostgreSQL, Queue, Active Users, API Metrics)
+
+মনিটরিং স্ট্যাক ছাড়া শুধু app+db+redis চালাতে চাইলে:
+
+```bash
+docker compose up -d --build app db redis
+```
+
 ## নিরাপত্তা সংক্রান্ত নোট
 
 - কোনো real API key/token/password কখনো git-এ commit করবে না বা চ্যাটে শেয়ার করবে না — leak হলে সেটাকে সাথে সাথে revoke/rotate করে ফেলা উচিত, শুধু মুছে দিলেই যথেষ্ট না।
