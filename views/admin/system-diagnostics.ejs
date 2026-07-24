@@ -1,0 +1,104 @@
+<%
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+const d = diagnostics || null;
+const c = d ? d.checks : {};
+
+function badge(status) {
+  const map = {
+    healthy: 'bg-emerald-100 text-emerald-700',
+    warning: 'bg-amber-100 text-amber-700',
+    error: 'bg-red-100 text-red-700'
+  };
+  const label = { healthy: 'Healthy', warning: 'Warning', error: 'Error' };
+  return '<span class="px-3 py-1 rounded-full text-xs font-semibold ' + (map[status] || 'bg-slate-100 text-slate-600') + '">' + (label[status] || status) + '</span>';
+}
+function card(icon, title, statusObj, rows) {
+  const s = statusObj || { status: 'warning', message: 'তথ্য পাওয়া যায়নি' };
+  const borderMap = { healthy: 'border-emerald-200', warning: 'border-amber-200', error: 'border-red-200' };
+  return '<div class="bg-white rounded-3xl border ' + (borderMap[s.status] || 'border-slate-100') + ' p-6">' +
+    '<div class="flex items-center justify-between mb-3">' +
+      '<div class="flex items-center gap-2"><i class="fas ' + icon + ' text-slate-400"></i><h3 class="font-semibold text-slate-800 text-sm">' + title + '</h3></div>' +
+      badge(s.status) +
+    '</div>' +
+    '<p class="text-xs text-slate-500 mb-3">' + escapeHtml(s.message || '') + '</p>' +
+    (rows || '') +
+  '</div>';
+}
+function kv(label, value) {
+  return '<div class="flex justify-between text-xs py-1 border-t border-slate-50 first:border-0">' +
+    '<span class="text-slate-400">' + escapeHtml(label) + '</span><span class="text-slate-700 font-medium">' + escapeHtml(value) + '</span></div>';
+}
+
+let bodyInner = '';
+if (!d) {
+  bodyInner = '<div class="bg-white rounded-3xl border border-red-200 p-8 text-center text-red-600 text-sm">ডায়াগনস্টিকস লোড করা যায়নি: ' + escapeHtml(error || 'অজানা এরর') + '</div>';
+} else {
+  const db = c.database || {};
+  const redis = c.redis || {};
+  const q = c.queue || {};
+  const em = c.email || {};
+  const disk = c.disk || {};
+  const mem = c.memory || {};
+  const up = c.uptime || {};
+  const stats = q.stats || {};
+
+  bodyInner = `
+  <div class="flex items-center justify-between flex-wrap gap-3 mb-6">
+    <div>
+      <h1 class="text-2xl font-semibold text-slate-900">System Diagnostics</h1>
+      <p class="text-slate-500 mt-1 text-sm">সব সার্ভিসের রিয়েল-টাইম স্বাস্থ্য অবস্থা — সর্বশেষ আপডেট: ${new Date(d.timestamp).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', day: 'numeric', month: 'short' })}</p>
+    </div>
+    <div class="flex items-center gap-3">
+      ${badge(d.status)}
+      <button onclick="location.reload()" class="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-2xl text-sm font-semibold hover:bg-slate-200"><i class="fas fa-rotate mr-1"></i> রিফ্রেশ</button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+    ${card('fa-database', 'PostgreSQL', db, kv('Response Time', (db.responseTimeMs != null ? db.responseTimeMs + 'ms' : '—')))}
+    ${card('fa-layer-group', 'Redis', redis, kv('Connected', redis.connected ? 'হ্যাঁ' : 'না') + kv('Host', redis.host || '—'))}
+    ${card('fa-list-check', 'Background Queue', q,
+      kv('Worker চালু', q.running ? 'হ্যাঁ' : 'না') +
+      kv('Pending', stats.pending != null ? stats.pending : '—') +
+      kv('Processing', stats.processing != null ? stats.processing : '—') +
+      kv('Completed', stats.completed != null ? stats.completed : '—') +
+      kv('Failed', stats.failed != null ? stats.failed : '—')
+    )}
+    ${card('fa-envelope', 'Email (SMTP)', em, kv('Response Time', (em.responseTimeMs != null ? em.responseTimeMs + 'ms' : '—')))}
+    ${card('fa-hard-drive', 'Disk Space', disk,
+      kv('মোট', (disk.totalGB != null ? disk.totalGB + ' GB' : '—')) +
+      kv('ফ্রি', (disk.freeGB != null ? disk.freeGB + ' GB' : '—')) +
+      kv('ব্যবহৃত', (disk.usedPercent != null ? disk.usedPercent + '%' : '—'))
+    )}
+    ${card('fa-microchip', 'Memory', mem,
+      kv('সিস্টেম RAM ব্যবহৃত', (mem.usedPercent != null ? mem.usedPercent + '%' : '—')) +
+      kv('Heap Used', (mem.heapUsedMB != null ? mem.heapUsedMB + ' MB' : '—')) +
+      kv('Heap Total', (mem.heapTotalMB != null ? mem.heapTotalMB + ' MB' : '—')) +
+      kv('RSS', (mem.rssMB != null ? mem.rssMB + ' MB' : '—'))
+    )}
+    ${card('fa-clock', 'Uptime', up,
+      kv('অ্যাপ আপটাইম', up.appUptimeSeconds != null ? Math.floor(up.appUptimeSeconds / 3600) + ' ঘণ্টা' : '—') +
+      kv('হোস্ট আপটাইম', up.hostUptimeSeconds != null ? Math.floor(up.hostUptimeSeconds / 3600) + ' ঘণ্টা' : '—')
+    )}
+  </div>
+
+  <div class="mt-6 bg-white rounded-3xl border border-slate-100 p-6">
+    <h3 class="font-semibold text-slate-800 mb-3 text-sm"><i class="fas fa-code text-slate-400 mr-2"></i>Raw JSON (API: <code class="text-xs bg-slate-100 px-2 py-0.5 rounded">/admin/api/system-diagnostics</code>)</h3>
+    <pre class="text-xs bg-slate-50 rounded-2xl p-4 overflow-x-auto text-slate-600">${escapeHtml(JSON.stringify(d, null, 2))}</pre>
+  </div>
+  `;
+}
+%>
+<%- include('partials/admin-layout', {
+    title: 'System Diagnostics',
+    active: 'system-diagnostics',
+    body: `<div class="max-w-7xl mx-auto space-y-6">` + bodyInner + `</div>
+    <script>
+      // প্রতি ৩০ সেকেন্ডে অটো-রিফ্রেশ
+      setTimeout(() => location.reload(), 30000);
+    </script>`
+}) %>

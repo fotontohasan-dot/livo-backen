@@ -1,8 +1,13 @@
 const { Pool } = require('pg');
 
+// প্রোডাকশনে (Render ইত্যাদি ম্যানেজড Postgres) SSL আবশ্যক, তাই ডিফল্ট true —
+// এই আচরণ অপরিবর্তিত থাকছে যাতে বিদ্যমান ডিপ্লয়মেন্ট ভেঙে না যায়।
+// শুধু লোকাল/Docker Compose-এর মতো non-SSL Postgres-এর ক্ষেত্রে DB_SSL=false সেট করতে হবে।
+const DB_SSL = String(process.env.DB_SSL || 'true').toLowerCase() !== 'false';
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
+  ssl: DB_SSL ? { rejectUnauthorized: false } : false
 });
 
 const connectDB = async () => {

@@ -245,6 +245,20 @@ app.use((req, res, next) => {
 });
 
 app.get('/health', (req, res) => res.status(200).send('OK'));
+
+// ==================== /ready — গভীর readiness চেক (DB/Redis/Queue/Email/Disk/Memory/Uptime) ====================
+// /health থেকে আলাদা রাখা হয়েছে ইচ্ছাকৃতভাবে: /health শুধু "প্রসেস চালু আছে কিনা" দেখে (দ্রুত, নির্ভরতাহীন),
+// আর /ready দেখে "সত্যিকারের ট্রাফিক সার্ভ করার মতো প্রস্তুত কিনা"। Docker/K8s-এ দুটোর ভূমিকা আলাদা —
+// dependency (DB) সাময়িক ধীর হলে /health ঠিক থাকলে কন্টেইনার restart-loop এ পড়ে না, শুধু ট্রাফিক থেকে বাদ পড়ে।
+app.get('/ready', async (req, res) => {
+  try {
+    const result = await require('./services/healthCheck').runDiagnostics();
+    const httpStatus = result.status === 'error' ? 503 : 200;
+    res.status(httpStatus).json(result);
+  } catch (err) {
+    res.status(503).json({ status: 'error', message: err.message, timestamp: new Date().toISOString() });
+  }
+});
 app.get('/privacy', (req, res) => res.render('privacy'));
 app.get('/terms', (req, res) => res.render('terms'));
 app.get('/kyc', (req, res) => res.redirect('/extra/kyc'));

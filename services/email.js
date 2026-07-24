@@ -89,7 +89,37 @@ async function sendNewDeviceAlert(email, { username, deviceName, ip, location, t
   });
 }
 
-module.exports = { sendOTP, sendPasswordReset, sendVerificationEmail, sendNewDeviceAlert, sendQueuedEmail };
+/**
+ * ইমেইল (SMTP) সার্ভিস স্বাস্থ্য পরীক্ষা — Health Check / System Diagnostics-এর জন্য।
+ * প্রতিটা /ready কল-এ SMTP সার্ভারে হিট করলে অপ্রয়োজনীয় লোড হবে, তাই ফলাফল ২০ সেকেন্ড ক্যাশ করা থাকে।
+ */
+const EMAIL_HEALTH_CACHE_MS = 20000;
+let emailHealthCache = { checkedAt: 0, result: null };
+
+async function verifyConnection() {
+  const now = Date.now();
+  if (emailHealthCache.result && (now - emailHealthCache.checkedAt) < EMAIL_HEALTH_CACHE_MS) {
+    return emailHealthCache.result;
+  }
+  const start = Date.now();
+  try {
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      const result = { ok: false, configured: false, message: 'EMAIL_USER/EMAIL_PASS সেট করা নেই' };
+      emailHealthCache = { checkedAt: now, result };
+      return result;
+    }
+    await transporter.verify();
+    const result = { ok: true, configured: true, message: 'SMTP কানেকশন সফল', responseTimeMs: Date.now() - start };
+    emailHealthCache = { checkedAt: now, result };
+    return result;
+  } catch (err) {
+    const result = { ok: false, configured: true, message: err.message, responseTimeMs: Date.now() - start };
+    emailHealthCache = { checkedAt: now, result };
+    return result;
+  }
+}
+
+module.exports = { sendOTP, sendPasswordReset, sendVerificationEmail, sendNewDeviceAlert, sendQueuedEmail, verifyConnection };
 
 /**
  * ইমেইল কিউতে জমা দেয় (ব্যাকগ্রাউন্ড ওয়ার্কার পাঠাবে, ব্যর্থ হলে অটো-রিট্রাই সহ)।

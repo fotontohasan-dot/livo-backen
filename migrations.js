@@ -924,6 +924,31 @@ async function runMigrations() {
 
     console.log("✅ IP Block/Whitelist table ready");
 
+    // ==================== BullMQ + Redis Background Queue — Dead Letter persistence ====================
+    // BullMQ নিজে Redis-এ ফেইলড জব রাখে, কিন্তু Redis মেমরি/ইভিকশনের কারণে হারিয়ে যেতে পারে।
+    // চূড়ান্তভাবে ব্যর্থ (সব রিট্রাই শেষ) জব এখানেও persist করা হয়, যাতে অ্যাডমিন প্যানেলে
+    // চিরস্থায়ী audit trail থাকে এবং Redis হারিয়ে গেলেও ইতিহাস হারায় না।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS dead_letter_jobs (
+        id SERIAL PRIMARY KEY,
+        queue_name TEXT NOT NULL,
+        job_id TEXT,
+        job_name TEXT,
+        payload JSONB,
+        attempts_made INTEGER DEFAULT 0,
+        error_message TEXT,
+        error_stack TEXT,
+        status TEXT NOT NULL DEFAULT 'dead' CHECK (status IN ('dead', 'requeued', 'discarded')),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        resolved_at TIMESTAMPTZ
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_dlq_queue_name ON dead_letter_jobs(queue_name);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_dlq_status ON dead_letter_jobs(status);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_dlq_created ON dead_letter_jobs(created_at);`);
+
+    console.log("✅ BullMQ Dead Letter Queue table ready");
+
   } catch (err) {
     console.error("❌ Migration error:", err.message);
   }

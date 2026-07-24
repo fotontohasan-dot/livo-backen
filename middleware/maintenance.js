@@ -21,7 +21,7 @@ const ALWAYS_ALLOWED_PREFIXES = [
   '/public',
   '/uploads',
 ];
-const ALWAYS_ALLOWED_EXACT = ['/health'];
+const ALWAYS_ALLOWED_EXACT = ['/health', '/ready'];
 
 function isAlwaysAllowed(path) {
   if (ALWAYS_ALLOWED_EXACT.includes(path)) return true;

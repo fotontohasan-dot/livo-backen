@@ -1963,6 +1963,28 @@ router.get('/activity', async (req, res) => {
   }
 });
 
+// ==================== System Diagnostics / Health Check ====================
+router.get('/system-diagnostics', async (req, res) => {
+  try {
+    const { runDiagnostics } = require('../services/healthCheck');
+    const diagnostics = await runDiagnostics();
+    res.render('admin/system-diagnostics', { diagnostics, error: null });
+  } catch (err) {
+    console.error('System diagnostics error:', err.message);
+    res.render('admin/system-diagnostics', { diagnostics: null, error: err.message });
+  }
+});
+
+router.get('/api/system-diagnostics', async (req, res) => {
+  try {
+    const { runDiagnostics } = require('../services/healthCheck');
+    const diagnostics = await runDiagnostics();
+    res.json({ success: true, diagnostics });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ==================== ফ্রড লগ (Fraud Detection) ====================
 // ==================== Fraud Monitoring Dashboard — Risk Score, Trend, Top Signals/Users ====================
 router.get('/fraud-monitoring', async (req, res) => {
