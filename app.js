@@ -419,6 +419,7 @@ async function startServer() {
       }, 3000);
       scheduleDailyBackup();
       scheduleAutoBackup();
+      require('./services/scheduler').start().catch(err => console.error('⚠️ Scheduler চালু করতে সমস্যা হয়েছে (সার্ভার চলতে থাকবে):', err.message));
     });
   } catch (err) {
     console.error('❌ Server startup failed:', err);

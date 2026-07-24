@@ -995,6 +995,38 @@ async function runMigrations() {
 
     console.log("✅ IP Block/Whitelist table ready");
 
+    // ==================== Cron / Scheduler System ====================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS cron_jobs (
+        key TEXT PRIMARY KEY,
+        label TEXT NOT NULL,
+        description TEXT,
+        interval_ms BIGINT NOT NULL,
+        enabled BOOLEAN NOT NULL DEFAULT true,
+        last_run_at TIMESTAMPTZ,
+        last_finished_at TIMESTAMPTZ,
+        last_status TEXT,
+        last_message TEXT,
+        next_run_at TIMESTAMPTZ,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS cron_job_logs (
+        id SERIAL PRIMARY KEY,
+        job_key TEXT NOT NULL,
+        started_at TIMESTAMPTZ NOT NULL,
+        finished_at TIMESTAMPTZ,
+        duration_ms INTEGER,
+        status TEXT NOT NULL,
+        message TEXT,
+        triggered_by TEXT DEFAULT 'schedule'
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_cron_job_logs_key ON cron_job_logs(job_key, started_at DESC);`);
+
+    console.log("✅ Cron Jobs tables ready");
+
     // ==================== Backup & Restore System ====================
     await pool.query(`
       CREATE TABLE IF NOT EXISTS backup_history (

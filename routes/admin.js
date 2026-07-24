@@ -1908,6 +1908,62 @@ router.get('/bot-monitoring', async (req, res) => {
   }
 });
 
+// ==================== Cron / Scheduler Management ====================
+router.get('/cron-jobs', async (req, res) => {
+  try {
+    const scheduler = require('../services/scheduler');
+    const jobs = await scheduler.listJobs();
+    res.render('admin/cron-jobs', { jobs, ran: req.query.ran || '', error: null });
+  } catch (err) {
+    console.error('cron-jobs page error:', err.message);
+    res.render('admin/cron-jobs', { jobs: [], ran: '', error: err.message });
+  }
+});
+
+router.get('/cron-jobs/:key/logs', async (req, res) => {
+  try {
+    const scheduler = require('../services/scheduler');
+    const jobs = await scheduler.listJobs();
+    const job = jobs.find(j => j.key === req.params.key);
+    if (!job) { req.flash('error', 'Job পাওয়া যায়নি।'); return res.redirect('/admin/cron-jobs'); }
+    const logs = await scheduler.getJobLogs(req.params.key, 50);
+    res.render('admin/cron-job-logs', { job, logs });
+  } catch (err) {
+    console.error('cron-job logs error:', err.message);
+    req.flash('error', 'লগ লোড করতে সমস্যা হয়েছে।');
+    res.redirect('/admin/cron-jobs');
+  }
+});
+
+router.post('/cron-jobs/:key/toggle', async (req, res) => {
+  try {
+    const scheduler = require('../services/scheduler');
+    const enabled = req.body.enabled === 'true';
+    await scheduler.setEnabled(req.params.key, enabled);
+    await logAdminAction(req.session.user.id, req.session.user.username, enabled ? 'CRON_JOB_ENABLED' : 'CRON_JOB_DISABLED', `Job: ${req.params.key}`, req.ip);
+    req.flash('success', `Job ${enabled ? 'চালু' : 'বন্ধ'} করা হয়েছে।`);
+    res.redirect('/admin/cron-jobs');
+  } catch (err) {
+    console.error('cron-job toggle error:', err.message);
+    req.flash('error', 'সমস্যা হয়েছে।');
+    res.redirect('/admin/cron-jobs');
+  }
+});
+
+router.post('/cron-jobs/:key/run', async (req, res) => {
+  try {
+    const scheduler = require('../services/scheduler');
+    const result = await scheduler.runJob(req.params.key, { triggeredBy: req.session.user.username });
+    await logAdminAction(req.session.user.id, req.session.user.username, 'CRON_JOB_MANUAL_RUN', `Job: ${req.params.key} — ফলাফল: ${result.status} — ${result.message}`, req.ip);
+    req.flash(result.status === 'success' ? 'success' : 'error', `${req.params.key}: ${result.message}`);
+    res.redirect('/admin/cron-jobs');
+  } catch (err) {
+    console.error('cron-job manual run error:', err.message);
+    req.flash('error', 'Job রান করতে সমস্যা হয়েছে: ' + err.message);
+    res.redirect('/admin/cron-jobs');
+  }
+});
+
 router.get('/bot-monitoring/ip-rules', async (req, res) => {
   try {
     const rules = await listIpRules();
