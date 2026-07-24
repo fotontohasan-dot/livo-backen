@@ -12,9 +12,9 @@ const { verifyPin, getPinStatus } = require('../services/withdrawPin');
 const { evaluateTransaction } = require('../services/fraudDetection');
 const { isSessionNewDevice } = require('../services/deviceTracking');
 const { checkIp } = require('../services/vpnDetection');
+const { getSetting } = require('../services/settings');
 const { requireVerifiedEmail } = require('../middleware/auth');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
-const queue = require('../services/queue');
 
 const paymentLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -45,19 +45,20 @@ async function notifyAdmins(title, message, alertType) {
   try {
     const admins = await pool.query("SELECT id FROM users WHERE role = 'admin'");
     const userIds = admins.rows.map(a => a.id);
-    const jobId = await queue.enqueue('notification', {
+    const result = await require('../queues').enqueueNotification('admin_alert', {
       userIds,
       title,
       message,
       telegramText: `🔔 <b>${title}</b>\n${message}`
     });
-    if (!jobId) {
-      // কিউ এনকিউ ব্যর্থ হলে সরাসরি পাঠিয়ে দেওয়া হচ্ছে যাতে অ্যাডমিন নোটিফিকেশন মিস না হয়
+    if (!result || !result.queued) {
+      // fallback ইতিমধ্যে queues/producers.js নিজেই চালিয়ে দিয়েছে (inline mode);
+      // এখানে শুধু নিশ্চিত করি যে notifications টেবিল/Telegram কখনো মিস না হয়
       for (const uid of userIds) {
         await pool.query(
           `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'info')`,
           [uid, title, message]
-        );
+        ).catch(() => {});
       }
       notifyTelegram(`🔔 <b>${title}</b>\n${message}`);
     }
@@ -159,6 +160,12 @@ router.get('/deposit', requireLogin, (req, res) => {
 });
 
 router.post('/deposit', requireLogin, paymentLimiter, async (req, res) => {
+  const depositEnabled = await getSetting('payment_deposit_enabled');
+  if (depositEnabled === 'false') {
+    req.flash('error', 'বর্তমানে ডিপোজিট সাময়িকভাবে বন্ধ আছে। কিছুক্ষণ পর আবার চেষ্টা করুন।');
+    return res.redirect('/payment/deposit');
+  }
+
   const { method, account_number } = req.body;
   const transaction_id = (req.body.transaction_id || '').trim();
   const wantBonus = req.body.want_bonus === 'yes';
@@ -260,6 +267,12 @@ router.get('/withdraw', requireLogin, async (req, res) => {
 
 
 router.post('/withdraw', requireLogin, requireVerifiedEmail, paymentLimiter, async (req, res) => {
+  const withdrawEnabled = await getSetting('payment_withdraw_enabled');
+  if (withdrawEnabled === 'false') {
+    req.flash('error', 'বর্তমানে উইথড্র সাময়িকভাবে বন্ধ আছে। কিছুক্ষণ পর আবার চেষ্টা করুন।');
+    return res.redirect('/payment/withdraw');
+  }
+
   const { method, account_number, withdraw_pin } = req.body;
   const amount = parseAmount(req.body.amount);
   const userId = req.session.user.id;

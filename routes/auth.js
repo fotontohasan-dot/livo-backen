@@ -88,6 +88,13 @@ async function recordLogin(req, userId, vpnInfo = null) {
         (vpnInfo && vpnInfo.riskScore) || 0]
     );
     loginLogId = inserted.rows[0]?.id || null;
+
+    // Activity Log + Fraud Scan — Background Queue-এর মাধ্যমে (fire-and-forget, লগইন ফ্লো ব্লক করে না)
+    // এটা বিদ্যমান services/fraudDetection.js সিঙ্ক্রোনাস চেকের পাশাপাশি একটা এক্সট্রা,
+    // অ্যাসিঙ্ক্রোনাস হিউরিস্টিক লেয়ার (IP/device শেয়ারিং, rapid deposit-withdraw প্যাটার্ন)
+    const queues = require('../queues');
+    queues.enqueueActivityLog({ userId, actionType: 'login', details: 'ইউজার লগইন করেছে', ip, userAgent: ua }).catch(() => {});
+    queues.enqueueFraudScan({ userId, triggeredBy: 'login' }).catch(() => {});
   } catch (e) {
     console.error('recordLogin error:', e.message);
   }

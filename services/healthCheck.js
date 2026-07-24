@@ -1,203 +1,201 @@
-// services/healthCheck.js
-// ==================== System Health Check & Diagnostics ====================
-// বিদ্যমান আর্কিটেকচারের প্যাটার্ন অনুসরণ করে লেখা: প্রতিটা চেক নিজে কখনো throw করে না,
-// ব্যর্থ হলে { status:'error', message } রিটার্ন করে — একটা সার্ভিস ডাউন থাকলেও
-// পুরো ডায়াগনস্টিক রেসপন্স ভেঙে পড়ে না।
-//
-// status মান তিনটা: 'healthy' | 'warning' | 'error'
-// - healthy → স্বাভাবিক
-// - warning → কাজ করছে কিন্তু সতর্কতা দরকার (যেমন Redis অফ, ডিস্ক ৮০%+ ভরা)
-// - error   → সমস্যা আছে / সার্ভিস আনরিচেবল
+/**
+ * services/healthCheck.js
+ * ---------------------------------------------------------------------------
+ * সিস্টেমের বিভিন্ন সার্ভিস (DB, Redis, Queue, Email, Disk, Memory, Uptime)
+ * চেক করে Healthy/Warning/Error স্ট্যাটাস রিটার্ন করে।
+ * - /health ও /ready রুট (routes/health.js) এবং
+ * - অ্যাডমিন প্যানেলের System Diagnostics পেজ (routes/admin.js) — দুই জায়গাতেই এই সার্ভিস ব্যবহার হয়।
+ * এই ফাইলের কোনো ফাংশনই থ্রো করে না — প্রতিটা চেক নিজের try/catch-এ র‍্যাপ করা,
+ * ব্যর্থ হলে status: 'error' রিটার্ন করে, পুরো health check কখনো ক্র্যাশ করে না।
+ * ---------------------------------------------------------------------------
+ */
 
 const os = require('os');
-const fs = require('fs');
 const { pool } = require('../db');
 const cache = require('./cache');
-const queue = require('./queue');
-const email = require('./email');
+const emailService = require('./email');
 
-const DISK_WARN_PERCENT = 80;
-const DISK_ERROR_PERCENT = 95;
-const MEM_WARN_PERCENT = 80;
-const MEM_ERROR_PERCENT = 95;
-const DB_SLOW_MS = 500; // এর বেশি সময় লাগলে warning
+const STATUS = { OK: 'healthy', WARN: 'warning', ERROR: 'error' };
+
+async function timed(fn) {
+  const start = Date.now();
+  const result = await fn();
+  return { ...result, responseTimeMs: Date.now() - start };
+}
 
 // ==================== PostgreSQL ====================
 async function checkDatabase() {
-  const start = Date.now();
-  try {
-    await pool.query('SELECT 1');
-    const responseTimeMs = Date.now() - start;
-    return {
-      status: responseTimeMs > DB_SLOW_MS ? 'warning' : 'healthy',
-      message: responseTimeMs > DB_SLOW_MS ? `সংযোগ ধীর (${responseTimeMs}ms)` : 'সংযোগ স্বাভাবিক',
-      responseTimeMs
-    };
-  } catch (err) {
-    return { status: 'error', message: err.message, responseTimeMs: Date.now() - start };
-  }
+  return timed(async () => {
+    try {
+      await pool.query('SELECT 1');
+      return { status: STATUS.OK, message: 'সংযুক্ত' };
+    } catch (err) {
+      return { status: STATUS.ERROR, message: err.message };
+    }
+  });
 }
 
 // ==================== Redis ====================
 async function checkRedis() {
-  const status = cache.getStatus();
-  if (!status.enabled) {
-    return { status: 'warning', message: status.disabledReason || 'Redis নিষ্ক্রিয় করা আছে (.env)', ...status };
-  }
-  if (!status.connected) {
-    return { status: 'warning', message: status.lastError || 'Redis-এর সাথে সংযোগ নেই — DB fallback ব্যবহার হচ্ছে', ...status };
-  }
-  return { status: 'healthy', message: 'সংযোগ স্বাভাবিক', ...status };
+  return timed(async () => {
+    try {
+      const status = cache.getStatus();
+      if (!status.enabled) {
+        return { status: STATUS.WARN, message: 'Redis কনফিগার করা নেই (ঐচ্ছিক — DB fallback দিয়ে চলছে)' };
+      }
+      if (!status.connected) {
+        return { status: STATUS.WARN, message: status.lastError || 'সংযোগ বিচ্ছিন্ন — DB fallback দিয়ে চলছে', disabledReason: status.disabledReason };
+      }
+      return { status: STATUS.OK, message: 'সংযুক্ত' };
+    } catch (err) {
+      return { status: STATUS.WARN, message: err.message };
+    }
+  });
 }
 
-// ==================== Background Job Queue ====================
+// ==================== Background Job Queue (BullMQ) ====================
 async function checkQueue() {
-  try {
-    const st = queue.getStatus();
-    const stats = await queue.getStats();
-    if (!st.enabled) {
-      return { status: 'warning', message: 'কিউ নিষ্ক্রিয় করা আছে (QUEUE_ENABLED=false)', ...st, stats };
+  return timed(async () => {
+    try {
+      const { getQueueHealthStats } = require('../queues');
+      const stats = await getQueueHealthStats();
+      if (!stats.redisConnected) {
+        return { status: STATUS.WARN, message: 'কিউ সিস্টেম নিষ্ক্রিয় (Redis ছাড়া কাজ করে না, ঐচ্ছিক ফিচার)' };
+      }
+      const failedTotal = stats.queues.reduce((sum, q) => sum + (q.counts?.failed || 0), 0);
+      const anyPaused = stats.queues.some(q => q.paused);
+      const status = failedTotal > 50 ? STATUS.WARN : anyPaused ? STATUS.WARN : STATUS.OK;
+      return {
+        status,
+        message: `${stats.queues.length}টা কিউ সক্রিয়${failedTotal ? `, ${failedTotal}টা ফেইলড জব` : ''}${anyPaused ? ' (কিছু paused)' : ''}`,
+        queues: stats.queues.map(q => ({ name: q.name, ...q.counts }))
+      };
+    } catch (err) {
+      return { status: STATUS.WARN, message: err.message };
     }
-    if (!st.running) {
-      return { status: 'error', message: 'কিউ enabled কিন্তু ওয়ার্কার চলছে না', ...st, stats };
-    }
-    const recentError = st.lastErrorAt && (Date.now() - new Date(st.lastErrorAt).getTime()) < 5 * 60 * 1000;
-    if (recentError) {
-      return { status: 'warning', message: `সাম্প্রতিক এরর: ${st.lastError}`, ...st, stats };
-    }
-    if (stats.failed > 0) {
-      return { status: 'warning', message: `${stats.failed}টি জব ব্যর্থ হয়েছে (রিট্রাই দরকার হতে পারে)`, ...st, stats };
-    }
-    return { status: 'healthy', message: 'ওয়ার্কার চালু এবং স্বাভাবিক', ...st, stats };
-  } catch (err) {
-    return { status: 'error', message: err.message };
-  }
+  });
 }
 
-// ==================== Email (SMTP) ====================
+// ==================== ইমেইল সার্ভিস (SMTP) ====================
 async function checkEmail() {
-  try {
-    const result = await email.verifyConnection();
-    if (!result.configured) return { status: 'warning', message: result.message };
-    if (!result.ok) return { status: 'error', message: result.message, responseTimeMs: result.responseTimeMs };
-    return { status: 'healthy', message: result.message, responseTimeMs: result.responseTimeMs };
-  } catch (err) {
-    return { status: 'error', message: err.message };
-  }
+  return timed(async () => {
+    try {
+      if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+        return { status: STATUS.WARN, message: 'EMAIL_USER/EMAIL_PASS সেট করা নেই' };
+      }
+      await emailService.verifyConnection();
+      return { status: STATUS.OK, message: 'SMTP সংযোগ যাচাই সফল' };
+    } catch (err) {
+      return { status: STATUS.ERROR, message: err.message };
+    }
+  });
 }
 
 // ==================== ডিস্ক স্পেস ====================
-function checkDisk() {
-  try {
-    if (typeof fs.statfsSync !== 'function') {
-      return { status: 'warning', message: 'এই Node.js ভার্সনে ডিস্ক-চেক সমর্থিত না' };
+async function checkDiskSpace() {
+  return timed(async () => {
+    try {
+      if (typeof require('fs').statfs !== 'function') {
+        return { status: STATUS.WARN, message: 'এই Node.js ভার্সনে ডিস্ক চেক সাপোর্ট নেই' };
+      }
+      const stats = await new Promise((resolve, reject) => {
+        require('fs').statfs('.', (err, s) => (err ? reject(err) : resolve(s)));
+      });
+      const totalBytes = stats.blocks * stats.bsize;
+      const freeBytes = stats.bfree * stats.bsize;
+      const usedPercent = totalBytes > 0 ? Math.round(((totalBytes - freeBytes) / totalBytes) * 100) : 0;
+      const status = usedPercent >= 90 ? STATUS.ERROR : (usedPercent >= 75 ? STATUS.WARN : STATUS.OK);
+      return {
+        status,
+        message: `${usedPercent}% ব্যবহৃত`,
+        totalGB: +(totalBytes / 1e9).toFixed(2),
+        freeGB: +(freeBytes / 1e9).toFixed(2),
+        usedPercent
+      };
+    } catch (err) {
+      return { status: STATUS.WARN, message: 'ডিস্ক চেক করা যায়নি: ' + err.message };
     }
-    const stats = fs.statfsSync(process.cwd());
-    const totalBytes = stats.blocks * stats.bsize;
-    const freeBytes = stats.bfree * stats.bsize;
-    const usedBytes = totalBytes - freeBytes;
-    const usedPercent = totalBytes > 0 ? Math.round((usedBytes / totalBytes) * 100) : 0;
-
-    let status = 'healthy';
-    if (usedPercent >= DISK_ERROR_PERCENT) status = 'error';
-    else if (usedPercent >= DISK_WARN_PERCENT) status = 'warning';
-
-    return {
-      status,
-      message: `${usedPercent}% ব্যবহৃত`,
-      totalGB: +(totalBytes / (1024 ** 3)).toFixed(2),
-      freeGB: +(freeBytes / (1024 ** 3)).toFixed(2),
-      usedPercent
-    };
-  } catch (err) {
-    return { status: 'warning', message: 'ডিস্ক পরিমাপ করা যায়নি: ' + err.message };
-  }
+  });
 }
 
 // ==================== মেমরি ব্যবহার ====================
-function checkMemory() {
-  try {
-    const mem = process.memoryUsage();
-    const totalMem = os.totalmem();
-    const freeMem = os.freemem();
-    const usedSystemPercent = Math.round(((totalMem - freeMem) / totalMem) * 100);
-
-    let status = 'healthy';
-    if (usedSystemPercent >= MEM_ERROR_PERCENT) status = 'error';
-    else if (usedSystemPercent >= MEM_WARN_PERCENT) status = 'warning';
-
-    return {
-      status,
-      message: `সিস্টেম মেমরির ${usedSystemPercent}% ব্যবহৃত`,
-      usedPercent: usedSystemPercent,
-      totalMB: Math.round(totalMem / (1024 ** 2)),
-      freeMB: Math.round(freeMem / (1024 ** 2)),
-      heapUsedMB: Math.round(mem.heapUsed / (1024 ** 2)),
-      heapTotalMB: Math.round(mem.heapTotal / (1024 ** 2)),
-      rssMB: Math.round(mem.rss / (1024 ** 2))
-    };
-  } catch (err) {
-    return { status: 'warning', message: 'মেমরি পরিমাপ করা যায়নি: ' + err.message };
-  }
+async function checkMemory() {
+  return timed(async () => {
+    try {
+      const totalMem = os.totalmem();
+      const freeMem = os.freemem();
+      const usedPercent = Math.round(((totalMem - freeMem) / totalMem) * 100);
+      const proc = process.memoryUsage();
+      const status = usedPercent >= 90 ? STATUS.ERROR : (usedPercent >= 75 ? STATUS.WARN : STATUS.OK);
+      return {
+        status,
+        message: `${usedPercent}% ব্যবহৃত`,
+        totalMB: Math.round(totalMem / 1e6),
+        freeMB: Math.round(freeMem / 1e6),
+        usedPercent,
+        processRssMB: Math.round(proc.rss / 1e6),
+        processHeapUsedMB: Math.round(proc.heapUsed / 1e6)
+      };
+    } catch (err) {
+      return { status: STATUS.WARN, message: err.message };
+    }
+  });
 }
 
 // ==================== আপটাইম ====================
 function checkUptime() {
-  const appSeconds = Math.floor(process.uptime());
-  const hostSeconds = Math.floor(os.uptime());
+  const seconds = Math.floor(process.uptime());
+  const d = Math.floor(seconds / 86400);
+  const h = Math.floor((seconds % 86400) / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
   return {
-    status: 'healthy',
-    message: formatDuration(appSeconds),
-    appUptimeSeconds: appSeconds,
-    hostUptimeSeconds: hostSeconds
+    status: STATUS.OK,
+    message: `${d}দ ${h}ঘ ${m}মি ${s}সে`,
+    seconds,
+    startedAt: new Date(Date.now() - seconds * 1000).toISOString()
   };
 }
 
-function formatDuration(totalSeconds) {
-  const d = Math.floor(totalSeconds / 86400);
-  const h = Math.floor((totalSeconds % 86400) / 3600);
-  const m = Math.floor((totalSeconds % 3600) / 60);
-  const parts = [];
-  if (d) parts.push(`${d} দিন`);
-  if (h) parts.push(`${h} ঘণ্টা`);
-  parts.push(`${m} মিনিট`);
-  return parts.join(' ');
-}
-
-// ==================== সার্বিক সিস্টেম ডায়াগনস্টিকস — সব চেক সমান্তরালে চালানো হয় ====================
-async function runDiagnostics() {
-  const [database, redis, queueCheck, emailCheck] = await Promise.all([
+/**
+ * সবগুলো চেক একসাথে চালায় এবং একটা সামগ্রিক স্ট্যাটাস বের করে।
+ * overall: error (কোনো critical সার্ভিস ডাউন) > warning > healthy
+ */
+async function runAllChecks() {
+  const [database, redis, queueStatus, email, disk, memory] = await Promise.all([
     checkDatabase(),
     checkRedis(),
     checkQueue(),
-    checkEmail()
+    checkEmail(),
+    checkDiskSpace(),
+    checkMemory()
   ]);
-  const disk = checkDisk();
-  const memory = checkMemory();
   const uptime = checkUptime();
 
-  const checks = { database, redis, queue: queueCheck, email: emailCheck, disk, memory, uptime };
+  const checks = { database, redis, queue: queueStatus, email, disk, memory, uptime };
 
-  // সার্বিক স্ট্যাটাস: যেকোনো একটা 'error' হলে সার্বিক error, নাহলে যেকোনো 'warning' থাকলে warning, নাহলে healthy
-  const values = Object.values(checks).map(c => c.status);
-  let overall = 'healthy';
-  if (values.includes('error')) overall = 'error';
-  else if (values.includes('warning')) overall = 'warning';
+  // ডাটাবেজ ছাড়া বাকি সব ঐচ্ছিক/গ্রেসফুল-ফলব্যাক থাকা সার্ভিস — তাই overall status-এ
+  // শুধু database-এর error সরাসরি 'error' করে দেয়, বাকিদের error/warning মিলিয়ে 'warning' এ নামায়
+  let overall = STATUS.OK;
+  if (database.status === STATUS.ERROR) {
+    overall = STATUS.ERROR;
+  } else {
+    const others = [redis, queueStatus, email, disk, memory];
+    if (others.some(c => c.status === STATUS.ERROR)) overall = STATUS.WARN;
+    else if (others.some(c => c.status === STATUS.WARN)) overall = STATUS.WARN;
+  }
 
-  return {
-    status: overall,
-    timestamp: new Date().toISOString(),
-    checks
-  };
+  return { overall, checks, timestamp: new Date().toISOString() };
 }
 
 module.exports = {
-  runDiagnostics,
+  STATUS,
   checkDatabase,
   checkRedis,
   checkQueue,
   checkEmail,
-  checkDisk,
+  checkDiskSpace,
   checkMemory,
-  checkUptime
+  checkUptime,
+  runAllChecks
 };

@@ -25,7 +25,6 @@ const { listDuplicateFlags, reviewDuplicateFlag, scanAllUsers } = require('../se
 const { getUserDeviceOverview } = require('../services/deviceTracking');
 const cache = require('../services/cache');
 const cacheKeys = require('../services/cacheKeys');
-const queue = require('../services/queue');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
 
 const { requireIntParam, requireAmount, parseAmount, sanitizeText, isSafeUrl } = require('../middleware/validate');
@@ -69,9 +68,8 @@ const adminFinancialLimiter = rateLimit({
 
 // ==================== ADMIN ACTIVITY LOG HELPER ====================
 async function logAdminAction(adminId, adminUsername, actionType, details, ip = null) {
-    const jobId = await queue.enqueue('audit_log', { adminId, adminUsername, actionType, details, ip });
-    if (jobId) return; // কিউতে জমা হয়ে গেছে
-
+    // admin_logs কম-ভলিউম, তাই সরাসরি লেখা হয় (আগে এখানে পুরনো Postgres-queue দিয়ে যেত,
+    // এখন BullMQ Activity Log Queue দিয়ে যায় — সাথে সরাসরি admin_logs-এও লেখা থাকে যাতে কখনো না হারায়)
     try {
         await pool.query(
             `INSERT INTO admin_logs (admin_id, admin_username, action_type, details, ip_address) 
@@ -79,8 +77,11 @@ async function logAdminAction(adminId, adminUsername, actionType, details, ip = 
             [adminId, adminUsername, actionType, details, ip]
         );
     } catch (err) {
-        console.error('Admin Log Error (queue + direct write both failed):', err.message);
+        console.error('Admin Log Error:', err.message);
     }
+    try {
+        require('../queues').enqueueActivityLog({ userId: adminId, username: adminUsername, actionType, details, ip }).catch(() => {});
+    } catch (e) { /* queue মডিউল লোড না হলেও সমস্যা নেই */ }
 }
 
 // ==================== অ্যাডমিন সেশনের জন্য কড়া কুকি পলিসি ====================
@@ -435,8 +436,41 @@ router.post('/kyc/:id/reject', async (req, res) => {
 const SETTING_KEYS = [
   'site_name', 'support_email', 'maintenance_mode', 'max_login_attempts',
   'min_bet', 'max_bet', 'turnover_multiplier', 'max_daily_bets',
-  'deposit_commission_percent', 'withdraw_commission_percent', 'min_deposit', 'min_withdraw'
+  'deposit_commission_percent', 'withdraw_commission_percent', 'min_deposit', 'min_withdraw',
+  'maintenance_message', 'maintenance_eta', 'maintenance_allowed_ips', 'maintenance_bypass_token',
+  // ---- System Settings hub-এ যোগ হওয়া নতুন ক্যাটাগরি ---- (সব অ্যাক্টুয়াল secret .env-এই থাকে, এখানে শুধু non-secret কনফিগ)
+  'site_tagline', 'support_phone',
+  'smtp_host', 'smtp_port', 'smtp_secure', 'smtp_from_name', 'smtp_from_email',
+  'sms_provider', 'sms_sender_id',
+  'payment_deposit_enabled', 'payment_withdraw_enabled', 'payment_gateway_live_mode',
+  'api_public_enabled', 'api_rate_limit_per_15min',
+  'upload_max_size_mb', 'upload_allowed_types',
+  'session_idle_timeout_minutes',
+  'default_language', 'default_timezone', 'default_currency'
 ];
+
+router.get('/system-settings', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT key, value FROM site_settings');
+    const settings = {};
+    result.rows.forEach(r => { settings[r.key] = r.value; });
+    settings.maintenance_mode = settings.maintenance_mode === 'true';
+    settings.payment_deposit_enabled = settings.payment_deposit_enabled !== 'false';
+    settings.payment_withdraw_enabled = settings.payment_withdraw_enabled !== 'false';
+    settings.payment_gateway_live_mode = settings.payment_gateway_live_mode === 'true';
+    settings.api_public_enabled = settings.api_public_enabled !== 'false';
+    settings.smtp_secure = settings.smtp_secure !== 'false';
+
+    res.render('admin/system-settings', {
+      settings,
+      redisConnected: cache.getStatus().connected,
+      saved: req.query.saved === '1'
+    });
+  } catch (err) {
+    console.error('System settings load error:', err && err.stack ? err.stack : err);
+    res.render('admin/system-settings', { settings: {}, redisConnected: false, saved: false });
+  }
+});
 
 router.get('/settings', async (req, res) => {
   try {
@@ -463,12 +497,31 @@ router.get('/settings', async (req, res) => {
 
 router.post('/settings/update', async (req, res) => {
   try {
+    // টগল করার আগের অবস্থা জেনে রাখা — যাতে ON/OFF কোন দিকে গেল সেটা স্পষ্টভাবে লগ করা যায়
+    const prevRes = await pool.query("SELECT value FROM site_settings WHERE key = 'maintenance_mode'");
+    const wasOn = prevRes.rows[0] && prevRes.rows[0].value === 'true';
+
     for (const key of SETTING_KEYS) {
       if (key === 'maintenance_mode') continue; // নিচে আলাদাভাবে সামলানো হচ্ছে
       if (!(key in req.body)) continue;
       let raw = req.body[key];
       if (Array.isArray(raw)) raw = raw[raw.length - 1];
-      const value = raw === null || raw === undefined ? '' : String(raw);
+      let value = raw === null || raw === undefined ? '' : String(raw);
+
+      // মেইনটেন্যান্স মেসেজ ইউজার-facing পেজে (মেইনটেন্যান্স স্ক্রিন) সরাসরি দেখানো হয়,
+      // তাই stored-XSS ঠেকাতে HTML স্ট্রিপ করে sanitize করা হচ্ছে
+      if (key === 'maintenance_message') value = sanitizeText(value, { maxLen: 500 });
+      // Allowed IP লিস্ট — শুধু বৈধ ফরম্যাটের এন্ট্রিগুলোই রাখা হচ্ছে (IPv4/IPv6, কমা/নিউলাইন দিয়ে আলাদা)
+      if (key === 'maintenance_allowed_ips') {
+        value = value
+          .split(/[\s,]+/)
+          .map(ip => ip.trim())
+          .filter(ip => /^[0-9a-fA-F:.]+$/.test(ip))
+          .join(',');
+      }
+      // Emergency bypass token — শুধু url-safe ক্যারেক্টার, বাড়তি স্পেস/HTML বাদ
+      if (key === 'maintenance_bypass_token') value = value.trim().replace(/[^A-Za-z0-9_\-]/g, '').slice(0, 128);
+
       await pool.query(
         `INSERT INTO site_settings (key, value, updated_at) VALUES ($1, $2, NOW())
          ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
@@ -497,15 +550,24 @@ router.post('/settings/update', async (req, res) => {
       console.error('loadSettings() cache refresh failed (settings already saved):', e && e.stack ? e.stack : e);
     }
     try {
-      await logAdminAction(req.session.user.id, req.session.user.username, 'SETTINGS_UPDATE', 'সাইট সেটিংস পরিবর্তন করা হয়েছে', req.ip);
+      if (maintenanceBool && !wasOn) {
+        const msg = sanitizeText(req.body.maintenance_message || '', { maxLen: 200 });
+        const eta = req.body.maintenance_eta ? String(req.body.maintenance_eta).slice(0, 100) : '';
+        await logAdminAction(req.session.user.id, req.session.user.username, 'MAINTENANCE_ON',
+          `মেইনটেন্যান্স মোড চালু করা হয়েছে${eta ? ' | আনুমানিক সময়: ' + eta : ''}${msg ? ' | বার্তা: ' + msg : ''}`, req.ip);
+      } else if (!maintenanceBool && wasOn) {
+        await logAdminAction(req.session.user.id, req.session.user.username, 'MAINTENANCE_OFF', 'মেইনটেন্যান্স মোড বন্ধ করা হয়েছে', req.ip);
+      } else {
+        await logAdminAction(req.session.user.id, req.session.user.username, 'SETTINGS_UPDATE', 'সাইট সেটিংস পরিবর্তন করা হয়েছে', req.ip);
+      }
     } catch (e) {
       console.error('logAdminAction failed (settings already saved):', e && e.stack ? e.stack : e);
     }
 
-    return res.redirect('/admin/settings?saved=1');
+    return res.redirect(`${req.body.redirect_to === 'system-settings' ? '/admin/system-settings' : '/admin/settings'}?saved=1`);
   } catch (err) {
     console.error('Settings update error:', err && err.stack ? err.stack : err);
-    if (!res.headersSent) return res.redirect('/admin/settings?error=1');
+    if (!res.headersSent) return res.redirect(`${req.body.redirect_to === 'system-settings' ? '/admin/system-settings' : '/admin/settings'}?error=1`);
   }
 });
 
@@ -555,6 +617,7 @@ router.get('/', async (req, res) => {
   try {
     const users = await pool.query('SELECT COUNT(*) as count FROM users');
     const totalCoins = await pool.query('SELECT SUM(coins) as total FROM users');
+    const activeUsersNow = await pool.query(`SELECT COUNT(*) AS cnt FROM users WHERE last_login >= NOW() - INTERVAL '15 minutes'`);
     const matches = await pool.query('SELECT COUNT(*) as count FROM matches');
     const totalBets = await pool.query('SELECT COUNT(*) as count FROM bets');
 
@@ -592,9 +655,6 @@ router.get('/', async (req, res) => {
     );
     const newUsersToday = await pool.query(
       `SELECT COUNT(*) AS cnt FROM users WHERE created_at::date = CURRENT_DATE`
-    );
-    const activeUsersNow = await pool.query(
-      `SELECT COUNT(*) AS cnt FROM users WHERE last_login > NOW() - INTERVAL '15 minutes'`
     );
 
     // ==== পেন্ডিং অ্যাকশন — ডিপোজিট, উইথড্র, সাপোর্ট মেসেজ ====
@@ -699,13 +759,23 @@ router.get('/', async (req, res) => {
       return { totalDemo: 0, userHeldDemo: 0, casinoDemoWagered: 0, sportsDemoWagered: 0 };
     });
 
+    const bullHealth = await require('../queues').getQueueHealthStats().catch(() => ({ redisConnected: false, queues: [] }));
+    const queueStatus = bullHealth.queues.reduce((acc, q) => ({
+      pending: acc.pending + (q.counts.waiting || 0) + (q.counts.delayed || 0),
+      processing: acc.processing + (q.counts.active || 0),
+      completed: acc.completed + (q.counts.completed || 0),
+      failed: acc.failed + (q.counts.failed || 0),
+      running: bullHealth.redisConnected
+    }), { pending: 0, processing: 0, completed: 0, failed: 0, running: bullHealth.redisConnected });
+
     res.render('admin/dashboard', {
       demoStats,
       redisStatus: cache.getStatus(),
-      queueStatus: Object.assign({}, queue.getStatus(), await queue.getStats().catch(() => ({ pending: 0, processing: 0, completed: 0, failed: 0 }))),
+      queueStatus,
       stats: {
         total_users: users.rows[0].count,
         total_coins_in_system: totalCoins.rows[0].total || 0,
+        active_users: parseInt(activeUsersNow.rows[0].cnt),
         total_matches: matches.rows[0].count,
         total_predictions: totalBets.rows[0].count,
         today_deposit: Number(todayDeposit.rows[0].total),
@@ -757,6 +827,8 @@ router.get('/', async (req, res) => {
 router.get('/api/dashboard-stats', async (req, res) => {
   try {
     const users = await pool.query('SELECT COUNT(*) as count FROM users');
+    const totalCoinsPoll = await pool.query('SELECT COALESCE(SUM(coins),0) AS total FROM users');
+    const activeUsersPoll = await pool.query(`SELECT COUNT(*) AS cnt FROM users WHERE last_login >= NOW() - INTERVAL '15 minutes'`);
 
     const todayDeposit = await pool.query(
       `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests 
@@ -819,6 +891,8 @@ router.get('/api/dashboard-stats', async (req, res) => {
       success: true,
       stats: {
         total_users: parseInt(users.rows[0].count),
+        total_coins: Number(totalCoinsPoll.rows[0].total),
+        active_users: parseInt(activeUsersPoll.rows[0].cnt),
         today_deposit: Number(todayDeposit.rows[0].total),
         today_withdraw: Number(todayWithdraw.rows[0].total),
         today_profit: Number(todayProfitLoss.rows[0].staked) - Number(todayProfitLoss.rows[0].paidout),
@@ -1898,6 +1972,62 @@ router.get('/bot-monitoring', async (req, res) => {
   }
 });
 
+// ==================== Cron / Scheduler Management ====================
+router.get('/cron-jobs', async (req, res) => {
+  try {
+    const scheduler = require('../services/scheduler');
+    const jobs = await scheduler.listJobs();
+    res.render('admin/cron-jobs', { jobs, ran: req.query.ran || '', error: null });
+  } catch (err) {
+    console.error('cron-jobs page error:', err.message);
+    res.render('admin/cron-jobs', { jobs: [], ran: '', error: err.message });
+  }
+});
+
+router.get('/cron-jobs/:key/logs', async (req, res) => {
+  try {
+    const scheduler = require('../services/scheduler');
+    const jobs = await scheduler.listJobs();
+    const job = jobs.find(j => j.key === req.params.key);
+    if (!job) { req.flash('error', 'Job পাওয়া যায়নি।'); return res.redirect('/admin/cron-jobs'); }
+    const logs = await scheduler.getJobLogs(req.params.key, 50);
+    res.render('admin/cron-job-logs', { job, logs });
+  } catch (err) {
+    console.error('cron-job logs error:', err.message);
+    req.flash('error', 'লগ লোড করতে সমস্যা হয়েছে।');
+    res.redirect('/admin/cron-jobs');
+  }
+});
+
+router.post('/cron-jobs/:key/toggle', async (req, res) => {
+  try {
+    const scheduler = require('../services/scheduler');
+    const enabled = req.body.enabled === 'true';
+    await scheduler.setEnabled(req.params.key, enabled);
+    await logAdminAction(req.session.user.id, req.session.user.username, enabled ? 'CRON_JOB_ENABLED' : 'CRON_JOB_DISABLED', `Job: ${req.params.key}`, req.ip);
+    req.flash('success', `Job ${enabled ? 'চালু' : 'বন্ধ'} করা হয়েছে।`);
+    res.redirect('/admin/cron-jobs');
+  } catch (err) {
+    console.error('cron-job toggle error:', err.message);
+    req.flash('error', 'সমস্যা হয়েছে।');
+    res.redirect('/admin/cron-jobs');
+  }
+});
+
+router.post('/cron-jobs/:key/run', async (req, res) => {
+  try {
+    const scheduler = require('../services/scheduler');
+    const result = await scheduler.runJob(req.params.key, { triggeredBy: req.session.user.username });
+    await logAdminAction(req.session.user.id, req.session.user.username, 'CRON_JOB_MANUAL_RUN', `Job: ${req.params.key} — ফলাফল: ${result.status} — ${result.message}`, req.ip);
+    req.flash(result.status === 'success' ? 'success' : 'error', `${req.params.key}: ${result.message}`);
+    res.redirect('/admin/cron-jobs');
+  } catch (err) {
+    console.error('cron-job manual run error:', err.message);
+    req.flash('error', 'Job রান করতে সমস্যা হয়েছে: ' + err.message);
+    res.redirect('/admin/cron-jobs');
+  }
+});
+
 router.get('/bot-monitoring/ip-rules', async (req, res) => {
   try {
     const rules = await listIpRules();
@@ -2183,6 +2313,79 @@ router.get('/reports', async (req, res) => {
   }
 });
 
+// ==================== Background Queue System ড্যাশবোর্ড (BullMQ + Redis) ====================
+router.get('/queues', async (req, res) => {
+  try {
+    const { getQueueHealthStats } = require('../queues');
+    const health = await getQueueHealthStats();
+
+    const dlqRes = await pool.query(
+      `SELECT * FROM queue_dead_letter WHERE status = 'dead' ORDER BY created_at DESC LIMIT 100`
+    );
+
+    res.render('admin/queues', { health, deadLetterJobs: dlqRes.rows });
+  } catch (err) {
+    console.error('Queue dashboard error:', err.message);
+    res.render('admin/queues', { health: { redisConnected: false, queues: [] }, deadLetterJobs: [] });
+  }
+});
+
+// লাইভ স্ট্যাটাস পোলিং-এর জন্য JSON এন্ডপয়েন্ট (ড্যাশবোর্ড প্রতি কয়েক সেকেন্ডে রিফ্রেশ করে)
+router.get('/queues/api/stats', async (req, res) => {
+  try {
+    const { getQueueHealthStats } = require('../queues');
+    const health = await getQueueHealthStats();
+    res.json({ success: true, health });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
+// নির্দিষ্ট Queue-এর একটা state (waiting/active/failed ইত্যাদি)-এর জব লিস্ট
+router.get('/queues/api/jobs/:queueName', async (req, res) => {
+  try {
+    const { getRecentJobs } = require('../queues');
+    const state = req.query.state || 'failed';
+    const jobs = await getRecentJobs(req.params.queueName, state, 30);
+    res.json({ success: true, jobs });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
+// Dead-letter জব রিট্রাই (আবার মূল Queue-তে পাঠানো)
+router.post('/queues/dead-letter/:id/retry', async (req, res) => {
+  try {
+    const { retryDeadLetterJob } = require('../queues');
+    await retryDeadLetterJob(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
+// Dead-letter জব ডিলিট
+router.post('/queues/dead-letter/:id/delete', async (req, res) => {
+  try {
+    const { deleteDeadLetterJob } = require('../queues');
+    await deleteDeadLetterJob(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
+// ম্যানুয়ালি একটা Fraud Scan ট্রিগার করা (টেস্টিং/অ্যাডহক ব্যবহারের জন্য)
+router.post('/queues/fraud-scan/:userId', async (req, res) => {
+  try {
+    const { enqueueFraudScan } = require('../queues');
+    const result = await enqueueFraudScan({ userId: parseInt(req.params.userId, 10), triggeredBy: 'admin' });
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
 // ==================== LOGIN HISTORY (সব ইউজারের, সার্চ/ফিল্টার সহ) ====================
 router.get('/login-history', async (req, res) => {
   try {
@@ -2231,78 +2434,16 @@ router.get('/login-history', async (req, res) => {
   }
 });
 
-// ==================== ব্যাকগ্রাউন্ড জব কিউ মনিটরিং ====================
-router.get('/queue-jobs', async (req, res) => {
+// ==================== সিস্টেম ডায়াগনস্টিকস (Health Check) ====================
+router.get('/system-diagnostics', async (req, res) => {
   try {
-    const { status = '', type = '' } = req.query;
-    const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = 25;
-    const offset = (page - 1) * limit;
-
-    const conditions = [];
-    const params = [];
-    if (status) { params.push(status); conditions.push(`status = $${params.length}`); }
-    if (type) { params.push(type); conditions.push(`type = $${params.length}`); }
-    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
-
-    const countRes = await pool.query(`SELECT COUNT(*) FROM job_queue ${where}`, params);
-    const total = parseInt(countRes.rows[0].count);
-
-    const listParams = [...params, limit, offset];
-    const jobsRes = await pool.query(
-      `SELECT * FROM job_queue ${where} ORDER BY id DESC LIMIT $${listParams.length - 1} OFFSET $${listParams.length}`,
-      listParams
-    );
-
-    const typesRes = await pool.query(`SELECT DISTINCT type FROM job_queue ORDER BY type`);
-    const stats = await queue.getStats();
-
-    res.render('admin/queue-jobs', {
-      jobs: jobsRes.rows,
-      page, totalPages: Math.max(1, Math.ceil(total / limit)), total,
-      filters: { status, type },
-      types: typesRes.rows.map(r => r.type),
-      stats,
-      queueStatus: queue.getStatus()
-    });
+    const healthCheck = require('../services/healthCheck');
+    const result = await healthCheck.runAllChecks();
+    res.render('admin/system-diagnostics', { result, error: null });
   } catch (err) {
-    console.error('Queue jobs list error:', err.message);
-    res.render('admin/queue-jobs', {
-      jobs: [], page: 1, totalPages: 1, total: 0,
-      filters: { status: '', type: '' }, types: [],
-      stats: { pending: 0, processing: 0, completed: 0, failed: 0 },
-      queueStatus: { enabled: false, running: false, registeredTypes: [] }
-    });
+    console.error('System diagnostics error:', err.message);
+    res.render('admin/system-diagnostics', { result: null, error: err.message });
   }
-});
-
-router.post('/queue-jobs/:id/retry', requireIntParam('id'), async (req, res) => {
-  try {
-    const ok = await queue.retryJob(req.params.id);
-    if (ok) {
-      await logAdminAction(req.session.user.id, req.session.user.username, 'QUEUE_JOB_RETRIED', `জব #${req.params.id} আবার pending-এ পাঠানো হয়েছে`, req.ip);
-      req.flash('success', '✅ জব আবার কিউতে পাঠানো হয়েছে।');
-    } else {
-      req.flash('error', '❌ জবটি খুঁজে পাওয়া যায়নি বা এটি failed অবস্থায় নেই।');
-    }
-  } catch (err) {
-    console.error('Job retry error:', err.message);
-    req.flash('error', '❌ সমস্যা হয়েছে।');
-  }
-  res.redirect('/admin/queue-jobs');
-});
-
-router.post('/queue-jobs/retry-all', async (req, res) => {
-  try {
-    const type = req.body.type || null;
-    const count = await queue.retryAllFailed(type);
-    await logAdminAction(req.session.user.id, req.session.user.username, 'QUEUE_JOBS_BULK_RETRIED', `${count}টি ব্যর্থ জব আবার pending-এ পাঠানো হয়েছে${type ? ' (টাইপ: ' + type + ')' : ''}`, req.ip);
-    req.flash('success', `✅ ${count}টি জব আবার কিউতে পাঠানো হয়েছে।`);
-  } catch (err) {
-    console.error('Bulk retry error:', err.message);
-    req.flash('error', '❌ সমস্যা হয়েছে।');
-  }
-  res.redirect('/admin/queue-jobs');
 });
 
 // ==================== API KEY ম্যানেজমেন্ট ====================
@@ -2542,6 +2683,151 @@ router.post('/cache/clear', async (req, res) => {
   } catch (err) {
     console.error('Cache clear error:', err && err.stack ? err.stack : err);
     res.redirect('/admin/cache');
+  }
+});
+
+// ==================== BACKUP & RESTORE SYSTEM ====================
+const backupManager = require('../services/backupManager');
+
+router.get('/backups', async (req, res) => {
+  try {
+    const { type = '' } = req.query;
+    const backups = await backupManager.listBackups({ type, limit: 100 });
+    res.render('admin/backups', {
+      backups, filterType: type,
+      encryptionEnabled: backupManager.isEncryptionEnabled(),
+      created: req.query.created || '', restored: req.query.restored || '', error: req.query.error || ''
+    });
+  } catch (err) {
+    console.error('Backups page error:', err && err.stack ? err.stack : err);
+    res.render('admin/backups', { backups: [], filterType: '', encryptionEnabled: false, created: '', restored: '', error: 'load_failed' });
+  }
+});
+
+router.post('/backups/create', async (req, res) => {
+  try {
+    const { type } = req.body; // 'database' | 'uploads' | 'config' | 'all'
+    const ctx = { source: 'manual', createdById: req.session.user.id, createdByUsername: req.session.user.username };
+    const created = [];
+    if (type === 'database' || type === 'all') created.push(await backupManager.createDatabaseBackup(ctx));
+    if (type === 'uploads' || type === 'all') created.push(await backupManager.createUploadsBackup(ctx));
+    if (type === 'config' || type === 'all') created.push(await backupManager.createConfigBackup(ctx));
+
+    const failed = created.filter(c => c.status === 'failed');
+    for (const c of created) {
+      await logAdminAction(
+        req.session.user.id, req.session.user.username,
+        c.status === 'completed' ? 'BACKUP_CREATED' : 'BACKUP_FAILED',
+        `${c.type} ব্যাকআপ ${c.status === 'completed' ? 'সম্পন্ন হয়েছে' : 'ব্যর্থ হয়েছে: ' + c.error_message} (${c.filename})`,
+        req.ip
+      );
+    }
+    res.redirect(`/admin/backups?created=${created.length}${failed.length ? '&error=' + failed.length + '_failed' : ''}`);
+  } catch (err) {
+    console.error('Backup create error:', err && err.stack ? err.stack : err);
+    res.redirect('/admin/backups?error=1');
+  }
+});
+
+router.get('/backups/:id/download', async (req, res) => {
+  try {
+    const record = await backupManager.getBackupById(req.params.id);
+    if (!record || record.status !== 'completed') return res.status(404).send('ব্যাকআপ পাওয়া যায়নি।');
+    const filePath = backupManager.getBackupFilePath(record);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'BACKUP_DOWNLOADED', `${record.type} ব্যাকআপ ডাউনলোড হয়েছে (${record.filename})`, req.ip);
+    res.download(filePath, record.filename);
+  } catch (err) {
+    console.error('Backup download error:', err && err.stack ? err.stack : err);
+    res.status(500).send('ডাউনলোড ব্যর্থ।');
+  }
+});
+
+router.post('/backups/:id/restore', async (req, res) => {
+  try {
+    const record = await backupManager.getBackupById(req.params.id);
+    if (!record) return res.redirect('/admin/backups?error=not_found');
+    const result = await backupManager.restoreBackup(record);
+    await logAdminAction(
+      req.session.user.id, req.session.user.username, 'BACKUP_RESTORED',
+      `${record.type} ব্যাকআপ রিস্টোর করা হয়েছে (${record.filename}) — ${JSON.stringify(result).slice(0, 300)}`,
+      req.ip
+    );
+    res.redirect(`/admin/backups?restored=${record.type}`);
+  } catch (err) {
+    console.error('Backup restore error:', err && err.stack ? err.stack : err);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'BACKUP_RESTORE_FAILED', `রিস্টোর ব্যর্থ (#${req.params.id}): ${err.message}`, req.ip).catch(() => {});
+    res.redirect(`/admin/backups?error=${encodeURIComponent(err.message)}`);
+  }
+});
+
+router.post('/backups/:id/delete', async (req, res) => {
+  try {
+    const record = await backupManager.getBackupById(req.params.id);
+    await backupManager.deleteBackup(req.params.id);
+    if (record) await logAdminAction(req.session.user.id, req.session.user.username, 'BACKUP_DELETED', `${record.type} ব্যাকআপ ডিলিট করা হয়েছে (${record.filename})`, req.ip);
+    res.redirect('/admin/backups');
+  } catch (err) {
+    console.error('Backup delete error:', err && err.stack ? err.stack : err);
+    res.redirect('/admin/backups?error=delete_failed');
+  }
+});
+
+// ==================== FEATURE FLAGS & CONFIGURATION MANAGEMENT ====================
+const featureFlags = require('../services/featureFlags');
+
+router.get('/feature-flags', async (req, res) => {
+  try {
+    const flags = await featureFlags.loadAllFlags();
+    res.render('admin/feature-flags', { flags: flags || [], created: req.query.created || '', error: req.query.error || '' });
+  } catch (err) {
+    console.error('Feature flags page error:', err && err.stack ? err.stack : err);
+    res.render('admin/feature-flags', { flags: [], created: '', error: 'load_failed' });
+  }
+});
+
+router.post('/feature-flags/:id/toggle', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT * FROM feature_flags WHERE id = $1', [req.params.id]);
+    const flag = r.rows[0];
+    if (!flag) return res.redirect('/admin/feature-flags?error=not_found');
+    const newState = !flag.enabled;
+    await featureFlags.setFlag(flag.key, newState, req.session.user.id, req.session.user.username);
+    await logAdminAction(
+      req.session.user.id, req.session.user.username, 'FEATURE_FLAG_TOGGLED',
+      `"${flag.label}" (${flag.key}) ${newState ? 'চালু' : 'বন্ধ'} করা হয়েছে`, req.ip
+    );
+    res.redirect('/admin/feature-flags');
+  } catch (err) {
+    console.error('Feature flag toggle error:', err && err.stack ? err.stack : err);
+    res.redirect('/admin/feature-flags?error=toggle_failed');
+  }
+});
+
+router.post('/feature-flags/create', async (req, res) => {
+  try {
+    const { key, label, category, description } = req.body;
+    const created = await featureFlags.createFlag({
+      key: (key || '').trim(), label: (label || '').trim(), category, description,
+      enabled: false, adminId: req.session.user.id, adminUsername: req.session.user.username
+    });
+    await logAdminAction(req.session.user.id, req.session.user.username, 'FEATURE_FLAG_CREATED', `নতুন ফ্ল্যাগ তৈরি হয়েছে: "${created.label}" (${created.key}, ${created.category})`, req.ip);
+    res.redirect('/admin/feature-flags?created=1');
+  } catch (err) {
+    console.error('Feature flag create error:', err && err.stack ? err.stack : err);
+    res.redirect(`/admin/feature-flags?error=${encodeURIComponent(err.message)}`);
+  }
+});
+
+router.post('/feature-flags/:id/delete', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT * FROM feature_flags WHERE id = $1', [req.params.id]);
+    const flag = r.rows[0];
+    await featureFlags.deleteFlag(req.params.id);
+    if (flag) await logAdminAction(req.session.user.id, req.session.user.username, 'FEATURE_FLAG_DELETED', `"${flag.label}" (${flag.key}) ডিলিট করা হয়েছে`, req.ip);
+    res.redirect('/admin/feature-flags');
+  } catch (err) {
+    console.error('Feature flag delete error:', err && err.stack ? err.stack : err);
+    res.redirect('/admin/feature-flags?error=delete_failed');
   }
 });
 

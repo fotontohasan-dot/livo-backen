@@ -89,56 +89,33 @@ async function sendNewDeviceAlert(email, { username, deviceName, ip, location, t
   });
 }
 
-/**
- * ইমেইল (SMTP) সার্ভিস স্বাস্থ্য পরীক্ষা — Health Check / System Diagnostics-এর জন্য।
- * প্রতিটা /ready কল-এ SMTP সার্ভারে হিট করলে অপ্রয়োজনীয় লোড হবে, তাই ফলাফল ২০ সেকেন্ড ক্যাশ করা থাকে।
- */
-const EMAIL_HEALTH_CACHE_MS = 20000;
-let emailHealthCache = { checkedAt: 0, result: null };
-
 async function verifyConnection() {
-  const now = Date.now();
-  if (emailHealthCache.result && (now - emailHealthCache.checkedAt) < EMAIL_HEALTH_CACHE_MS) {
-    return emailHealthCache.result;
-  }
-  const start = Date.now();
-  try {
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      const result = { ok: false, configured: false, message: 'EMAIL_USER/EMAIL_PASS সেট করা নেই' };
-      emailHealthCache = { checkedAt: now, result };
-      return result;
-    }
-    await transporter.verify();
-    const result = { ok: true, configured: true, message: 'SMTP কানেকশন সফল', responseTimeMs: Date.now() - start };
-    emailHealthCache = { checkedAt: now, result };
-    return result;
-  } catch (err) {
-    const result = { ok: false, configured: true, message: err.message, responseTimeMs: Date.now() - start };
-    emailHealthCache = { checkedAt: now, result };
-    return result;
-  }
+  await transporter.verify();
+  return true;
 }
 
 module.exports = { sendOTP, sendPasswordReset, sendVerificationEmail, sendNewDeviceAlert, sendQueuedEmail, verifyConnection };
 
 /**
- * ইমেইল কিউতে জমা দেয় (ব্যাকগ্রাউন্ড ওয়ার্কার পাঠাবে, ব্যর্থ হলে অটো-রিট্রাই সহ)।
- * কিউ ডাউন থাকলে বা enqueue ব্যর্থ হলে সরাসরি পাঠিয়ে দেয় — কখনো ইমেইল হারায় না, কখনো caller-কে ব্লক করে না বেশি।
+ * ইমেইল কিউতে জমা দেয় (BullMQ Email Queue — ব্যাকগ্রাউন্ড ওয়ার্কার পাঠাবে, ব্যর্থ হলে অটো-রিট্রাই সহ)।
+ * Redis/Queue বন্ধ থাকলে queues/producers.js নিজে থেকেই সরাসরি পাঠিয়ে দেয় — কখনো ইমেইল হারায় না।
  * kind: 'otp' | 'password_reset' | 'verification'
  */
 async function sendQueuedEmail(kind, to, data = {}) {
-  const queue = require('./queue'); // lazy require — চক্রাকার dependency এড়াতে
-  const jobId = await queue.enqueue('email', { kind, to, ...data });
-  if (jobId) return { queued: true, jobId };
-
   try {
-    if (kind === 'otp') await sendOTP(to, data.otp);
-    else if (kind === 'password_reset') await sendPasswordReset(to, data.resetUrl);
-    else if (kind === 'verification') await sendVerificationEmail(to, data.verifyUrl);
-    else throw new Error(`অজানা email kind: ${kind}`);
-    return { queued: false, sentDirectly: true };
+    const result = await require('../queues').enqueueEmail(kind, { to, ...data });
+    return result;
   } catch (err) {
-    console.error('sendQueuedEmail direct-send fallback error:', err.message);
-    return { queued: false, sentDirectly: false, error: err.message };
+    console.error('sendQueuedEmail error:', err.message);
+    try {
+      if (kind === 'otp') await sendOTP(to, data.otp);
+      else if (kind === 'password_reset') await sendPasswordReset(to, data.resetUrl);
+      else if (kind === 'verification') await sendVerificationEmail(to, data.verifyUrl);
+      else throw new Error(`অজানা email kind: ${kind}`);
+      return { queued: false, sentDirectly: true };
+    } catch (err2) {
+      console.error('sendQueuedEmail direct-send fallback error:', err2.message);
+      return { queued: false, sentDirectly: false, error: err2.message };
+    }
   }
 }

@@ -6,6 +6,7 @@ const rateLimit = require('express-rate-limit');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
 const { getIpRule, getClientIp } = require('../services/ipRules');
 const { logBotEvent, evaluateRequest } = require('../services/botDetection');
+const { getSetting } = require('../services/settings');
 
 // শুধু /api/ পাথের জন্য আলাদা rate limiter (login/register এর থেকে আলাদা)
 const apiLimiter = rateLimit({
@@ -21,12 +22,29 @@ const apiLimiter = rateLimit({
 });
 
 // Request logging (হালকা, শুধু /api/ কলের জন্য)
+// console.log আগের মতোই থাকছে (backward compatible) — এর পাশাপাশি
+// এখন প্রতিটা API কল Background Queue-এর মাধ্যমে DB-তেও লগ হয় (API Log Queue)।
 function apiLogger(req, res, next) {
   const start = Date.now();
-  const userId = (req.session && req.session.user) ? req.session.user.id : 'guest';
+  const userId = (req.session && req.session.user) ? req.session.user.id : null;
   res.on('finish', () => {
     const ms = Date.now() - start;
-    console.log(`[API] ${req.method} ${req.originalUrl} → ${res.statusCode} (${ms}ms) user=${userId}`);
+    console.log(`[API] ${req.method} ${req.originalUrl} → ${res.statusCode} (${ms}ms) user=${userId || 'guest'}`);
+
+    // fire-and-forget — API রেসপন্স স্লো করবে না, ব্যর্থ হলেও রিকোয়েস্ট ফ্লো-তে প্রভাব পড়বে না
+    try {
+      const { enqueueApiLog } = require('../queues');
+      enqueueApiLog({
+        method: req.method,
+        path: req.originalUrl,
+        statusCode: res.statusCode,
+        responseTimeMs: ms,
+        userId,
+        ip: req.ip
+      }).catch(() => {});
+    } catch (err) {
+      // Queue মডিউল লোড না হলেও অ্যাপ ভাঙবে না
+    }
   });
   next();
 }
@@ -53,6 +71,12 @@ function apiNotFound(req, res, next) {
 // একসাথে সব middleware চালানোর জন্য গেটওয়ে এন্ট্রিপয়েন্ট
 async function apiGateway(req, res, next) {
   if (!req.path.includes('/api/')) return next();
+  if (!req.path.startsWith('/admin')) {
+    const publicApiOn = await getSetting('api_public_enabled').catch(() => undefined);
+    if (publicApiOn === 'false') {
+      return res.status(503).json({ success: false, error: 'পাবলিক API সাময়িকভাবে বন্ধ আছে।' });
+    }
+  }
 
   // Bot Detection — ব্লকলিস্টেড IP হলে Public API-তেও সরাসরি প্রত্যাখ্যান
   try {

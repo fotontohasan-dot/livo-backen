@@ -1,0 +1,143 @@
+<%
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function fmtDate(d) { return new Date(d).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); }
+function fmtSize(bytes) {
+  if (!bytes) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let i = 0, n = bytes;
+  while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+  return n.toFixed(1) + ' ' + units[i];
+}
+function typeLabel(t) {
+  return t === 'database' ? '<span class="px-2.5 py-1 text-xs font-bold rounded-full bg-blue-100 text-blue-700">Database</span>'
+    : t === 'uploads' ? '<span class="px-2.5 py-1 text-xs font-bold rounded-full bg-purple-100 text-purple-700">Uploads</span>'
+    : '<span class="px-2.5 py-1 text-xs font-bold rounded-full bg-amber-100 text-amber-700">Config</span>';
+}
+function row(b) {
+  const statusBadge = b.status === 'completed'
+    ? '<span class="text-emerald-600 text-xs font-semibold"><i class="fas fa-check-circle"></i> Completed</span>'
+    : '<span class="text-red-600 text-xs font-semibold" title="' + escapeHtml(b.error_message || '') + '"><i class="fas fa-triangle-exclamation"></i> Failed</span>';
+  const actions = b.status === 'completed' ? (
+    '<div class="flex gap-2 justify-end flex-wrap">' +
+      '<a href="/admin/backups/' + b.id + '/download" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200">Download</a>' +
+      '<form method="POST" action="/admin/backups/' + b.id + '/restore" onsubmit="return confirm(\'এই ব্যাকআপ থেকে রিস্টোর করবেন? বিদ্যমান ডেটা মোছা হবে না, শুধু নতুন/মিসিং ডেটা যোগ হবে (' + b.type + ')।\')" style="display:inline">' +
+        '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100">Restore</button>' +
+      '</form>' +
+      '<form method="POST" action="/admin/backups/' + b.id + '/delete" onsubmit="return confirm(\'এই ব্যাকআপ ফাইলটি স্থায়ীভাবে ডিলিট করবেন?\')" style="display:inline">' +
+        '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-red-50 text-red-600 hover:bg-red-100">Delete</button>' +
+      '</form>' +
+    '</div>'
+  ) : (
+    '<form method="POST" action="/admin/backups/' + b.id + '/delete" onsubmit="return confirm(\'মুছে ফেলবেন?\')" style="display:inline">' +
+      '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-red-50 text-red-600 hover:bg-red-100">Delete</button>' +
+    '</form>'
+  );
+  return '<tr class="border-b border-slate-100 align-top">' +
+    '<td class="px-6 py-4">' + typeLabel(b.type) + '</td>' +
+    '<td class="px-6 py-4 text-sm font-mono text-slate-600">' + escapeHtml(b.filename) + '</td>' +
+    '<td class="px-6 py-4 text-sm text-slate-600">' + fmtSize(b.size_bytes) + '</td>' +
+    '<td class="px-6 py-4 text-xs">' +
+      (b.encrypted ? '<span class="text-emerald-600"><i class="fas fa-lock"></i> Encrypted</span>' : '<span class="text-slate-400"><i class="fas fa-lock-open"></i> Unencrypted</span>') +
+      '<br>' + (b.compressed ? '<span class="text-slate-400">Compressed</span>' : '') +
+    '</td>' +
+    '<td class="px-6 py-4 text-xs text-slate-400 capitalize">' + escapeHtml(b.source) + '</td>' +
+    '<td class="px-6 py-4">' + statusBadge + '</td>' +
+    '<td class="px-6 py-4 text-xs text-slate-400">' + fmtDate(b.created_at) + (b.restored_at ? '<div class="text-emerald-600 mt-1">✓ Restored: ' + fmtDate(b.restored_at) + '</div>' : '') + '</td>' +
+    '<td class="px-6 py-4 text-right">' + actions + '</td>' +
+  '</tr>';
+}
+const rows = (backups || []).map(row).join('') || '<tr><td colspan="8" class="px-6 py-10 text-center text-slate-400">কোনো ব্যাকআপ নেই — উপরের বাটন দিয়ে প্রথম ব্যাকআপ নিন</td></tr>';
+%>
+<%- include('partials/admin-layout', {
+    title: 'Backup & Restore',
+    active: 'backups',
+    body: `
+<div class="max-w-7xl mx-auto">
+    <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <div>
+            <h1 class="text-2xl font-semibold text-slate-900">Backup &amp; Restore System</h1>
+            <p class="text-slate-500 mt-1 text-sm">Database, Uploaded Files ও Configuration — Manual/Scheduled Backup, One-Click Restore</p>
+        </div>
+        ${!encryptionEnabled ? '<span class="px-4 py-2 bg-amber-50 text-amber-700 rounded-2xl text-sm font-semibold"><i class="fas fa-triangle-exclamation"></i> BACKUP_ENCRYPTION_KEY সেট নেই — ব্যাকআপ এনক্রিপ্ট হচ্ছে না</span>' : '<span class="px-4 py-2 bg-emerald-50 text-emerald-700 rounded-2xl text-sm font-semibold"><i class="fas fa-lock"></i> Encryption চালু</span>'}
+    </div>
+
+    ${created ? '<div class="mb-4 px-4 py-3 bg-emerald-50 text-emerald-700 rounded-2xl text-sm font-medium">✅ ' + created + ' টি ব্যাকআপ তৈরি হয়েছে</div>' : ''}
+    ${restored ? '<div class="mb-4 px-4 py-3 bg-blue-50 text-blue-700 rounded-2xl text-sm font-medium">✅ ' + restored + ' রিস্টোর সম্পন্ন হয়েছে</div>' : ''}
+    ${error ? '<div class="mb-4 px-4 py-3 bg-red-50 text-red-700 rounded-2xl text-sm font-medium">❌ ' + escapeHtml(error) + '</div>' : ''}
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <form method="POST" action="/admin/backups/create">
+            <input type="hidden" name="type" value="database">
+            <button type="submit" class="w-full text-left bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition">
+                <i class="fas fa-database text-blue-600 text-xl"></i>
+                <p class="font-semibold text-slate-900 mt-2">Database Backup</p>
+                <p class="text-xs text-slate-400 mt-1">এখনই একটা ম্যানুয়াল DB ব্যাকআপ নিন</p>
+            </button>
+        </form>
+        <form method="POST" action="/admin/backups/create">
+            <input type="hidden" name="type" value="uploads">
+            <button type="submit" class="w-full text-left bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition">
+                <i class="fas fa-folder text-purple-600 text-xl"></i>
+                <p class="font-semibold text-slate-900 mt-2">Uploads Backup</p>
+                <p class="text-xs text-slate-400 mt-1">public/uploads ফোল্ডারের tar.gz ব্যাকআপ</p>
+            </button>
+        </form>
+        <form method="POST" action="/admin/backups/create">
+            <input type="hidden" name="type" value="config">
+            <button type="submit" class="w-full text-left bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition">
+                <i class="fas fa-gear text-amber-600 text-xl"></i>
+                <p class="font-semibold text-slate-900 mt-2">Config Backup</p>
+                <p class="text-xs text-slate-400 mt-1">সাইট সেটিংস (secret ছাড়া)</p>
+            </button>
+        </form>
+        <form method="POST" action="/admin/backups/create">
+            <input type="hidden" name="type" value="all">
+            <button type="submit" class="w-full text-left bg-blue-600 text-white p-5 rounded-3xl shadow-sm hover:bg-blue-700 transition">
+                <i class="fas fa-shield-halved text-xl"></i>
+                <p class="font-semibold mt-2">Full Backup</p>
+                <p class="text-xs text-blue-100 mt-1">তিনটাই একসাথে নিন</p>
+            </button>
+        </form>
+    </div>
+
+    <div class="flex gap-2 mb-4">
+        <a href="/admin/backups" class="px-4 py-2 rounded-xl text-sm font-medium ${!filterType ? 'bg-slate-900 text-white' : 'bg-white border text-slate-600'}">সব</a>
+        <a href="/admin/backups?type=database" class="px-4 py-2 rounded-xl text-sm font-medium ${filterType === 'database' ? 'bg-slate-900 text-white' : 'bg-white border text-slate-600'}">Database</a>
+        <a href="/admin/backups?type=uploads" class="px-4 py-2 rounded-xl text-sm font-medium ${filterType === 'uploads' ? 'bg-slate-900 text-white' : 'bg-white border text-slate-600'}">Uploads</a>
+        <a href="/admin/backups?type=config" class="px-4 py-2 rounded-xl text-sm font-medium ${filterType === 'config' ? 'bg-slate-900 text-white' : 'bg-white border text-slate-600'}">Config</a>
+    </div>
+
+    <div class="bg-white rounded-3xl border border-slate-100 overflow-x-auto">
+        <table class="w-full text-sm min-w-[900px]">
+            <thead class="bg-slate-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Type</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Filename</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Size</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Security</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Source</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Date</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase">Actions</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>
+    </div>
+
+    <div class="bg-slate-50 border border-slate-100 rounded-3xl p-5 text-sm text-slate-500 mt-6">
+        <p class="font-semibold text-slate-700 mb-2">নোট:</p>
+        <ul class="list-disc list-inside space-y-1">
+            <li>Restore নন-ডেস্ট্রাক্টিভ — বিদ্যমান রেকর্ড কখনো মোছে/ওভাররাইট হয় না, শুধু মিসিং ডেটা যোগ হয়</li>
+            <li>প্রতিটা ব্যাকআপ SHA-256 checksum দিয়ে ভেরিফাই হয় রিস্টোরের আগে — ফাইল কারাপ্টেড হলে রিস্টোর বাতিল হয়ে যাবে</li>
+            <li>Scheduled ব্যাকআপ চালু করতে .env-এ BACKUP_SCHEDULE_HOURS সেট করুন (ডিফল্ট: প্রতি ২৪ ঘণ্টা)</li>
+            <li>Encryption চালু করতে .env-এ BACKUP_ENCRYPTION_KEY সেট করুন</li>
+        </ul>
+    </div>
+</div>
+`
+}) %>

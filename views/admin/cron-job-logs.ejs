@@ -1,0 +1,39 @@
+<%
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function fmtDate(d) { return d ? new Date(d).toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }) : '—'; }
+%>
+<%- include('partials/admin-layout', {
+    title: 'Cron Job Logs',
+    active: 'cron-jobs',
+    body: `
+<div class="max-w-5xl mx-auto">
+  <div class="flex items-center justify-between mb-5">
+    <h1 class="text-xl font-bold text-slate-800">📜 ${escapeHtml(job.label)} — Execution Log</h1>
+    <a href="/admin/cron-jobs" class="text-sm text-slate-500"><i class="fas fa-arrow-left"></i> ফিরে যান</a>
+  </div>
+
+  <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+    <table class="w-full text-sm">
+      <thead><tr class="text-left text-slate-400 text-xs uppercase">
+        <th class="p-3">শুরু</th><th class="p-3">সময় লেগেছে</th><th class="p-3">স্ট্যাটাস</th><th class="p-3">যেভাবে ট্রিগার হয়েছে</th><th class="p-3">মেসেজ</th>
+      </tr></thead>
+      <tbody>
+        ${logs.map(l => `
+          <tr class="border-t border-slate-50">
+            <td class="p-3 text-slate-500 whitespace-nowrap">${fmtDate(l.started_at)}</td>
+            <td class="p-3">${l.duration_ms != null ? l.duration_ms + 'ms' : '—'}</td>
+            <td class="p-3">${l.status === 'success' ? '<span class="text-emerald-600 font-bold">✅ সফল</span>' : '<span class="text-red-500 font-bold">❌ ব্যর্থ</span>'}</td>
+            <td class="p-3 text-slate-500">${escapeHtml(l.triggered_by || 'schedule')}</td>
+            <td class="p-3 text-slate-600 max-w-md">${escapeHtml(l.message)}</td>
+          </tr>
+        `).join('') || '<tr><td colspan="5" class="p-6 text-center text-slate-400">কোনো এক্সিকিউশন লগ নেই এখনো</td></tr>'}
+      </tbody>
+    </table>
+  </div>
+</div>
+`
+}) %>

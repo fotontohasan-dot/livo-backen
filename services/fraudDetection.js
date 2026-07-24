@@ -14,13 +14,9 @@ const DEVICE_CHANGE_WINDOW_HOURS = 24;
 const DEVICE_CHANGE_THRESHOLD = 3;        // ২৪ ঘণ্টায় ৩+ আলাদা ডিভাইস থেকে লগইন
 const LARGE_WITHDRAW_NEW_DEVICE_THRESHOLD = parseInt(process.env.FRAUD_LARGE_WITHDRAW_THRESHOLD || '10000', 10); // নতুন ডিভাইস থেকে এর বেশি উইথড্র হলে ফ্ল্যাগ
 
-const queue = require('./queue');
-
 async function logAdminAction(adminId, adminUsername, actionType, details, ip = null) {
-  const jobId = await queue.enqueue('audit_log', { adminId, adminUsername, actionType, details, ip });
-  if (jobId) return; // কিউতে জমা হয়ে গেছে, ওয়ার্কার এটা প্রসেস করবে
-
-  // কিউ এনকিউ ব্যর্থ হলে (যেমন DB সাময়িক আনরিচেবল) — সরাসরি লিখে ফেলা হচ্ছে যাতে অডিট লগ কখনো হারিয়ে না যায়
+  // admin_logs কম-ভলিউম, তাই সরাসরি লেখা হয় (আগে এখানে পুরনো Postgres-queue দিয়ে যেত,
+  // এখন BullMQ Activity Log Queue দিয়ে যায় — সাথে সরাসরি admin_logs-এও লেখা থাকে যাতে কখনো না হারায়)
   try {
     await pool.query(
       `INSERT INTO admin_logs (admin_id, admin_username, action_type, details, ip_address)
@@ -28,8 +24,11 @@ async function logAdminAction(adminId, adminUsername, actionType, details, ip = 
       [adminId, adminUsername, actionType, details, ip]
     );
   } catch (err) {
-    console.error('Fraud audit log error (queue + direct write both failed):', err.message);
+    console.error('Fraud audit log error:', err.message);
   }
+  try {
+    require('../queues').enqueueActivityLog({ userId: adminId, username: adminUsername, actionType, details, ip }).catch(() => {});
+  } catch (e) { /* queue মডিউল লোড না হলেও সমস্যা নেই — admin_logs-এ তো লেখা হয়েই গেছে */ }
 }
 
 async function findRelatedUsersByIp(userId, ip) {

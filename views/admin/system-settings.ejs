@@ -1,0 +1,160 @@
+<%
+const s = settings || {};
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function field(name, label, type, value, opts) {
+  opts = opts || {};
+  return '<div><label class="block text-sm font-medium mb-1.5 text-slate-700">' + label + '</label>' +
+    '<input type="' + type + '" name="' + name + '" value="' + escapeHtml(value !== undefined && value !== null ? value : '') + '"' +
+    (opts.step ? ' step="' + opts.step + '"' : '') + (opts.placeholder ? ' placeholder="' + escapeHtml(opts.placeholder) + '"' : '') +
+    ' class="w-full border border-slate-200 px-4 py-3 rounded-2xl text-sm outline-none focus:border-blue-300"></div>';
+}
+function toggle(name, label, checked, hint) {
+  return '<label class="flex items-center gap-3 py-2">' +
+    '<input type="hidden" name="' + name + '" value="false">' +
+    '<input type="checkbox" name="' + name + '" value="true" ' + (checked ? 'checked' : '') + ' class="w-5 h-5 rounded">' +
+    '<span class="text-sm font-medium text-slate-700">' + label + (hint ? '<span class="block text-xs text-slate-400 font-normal">' + hint + '</span>' : '') + '</span>' +
+  '</label>';
+}
+function tabPanel(id, title, icon, contentHtml) {
+  return '<div id="tab-' + id + '" class="settings-tab hidden bg-white rounded-3xl border border-slate-100 p-6">' +
+    '<h2 class="font-semibold text-slate-900 mb-4"><i class="fas ' + icon + ' text-blue-600"></i> ' + title + '</h2>' +
+    '<div class="grid grid-cols-1 sm:grid-cols-2 gap-5">' + contentHtml + '</div>' +
+  '</div>';
+}
+
+const tabs = [
+  { id: 'general', label: 'General', icon: 'fa-gear' },
+  { id: 'site', label: 'Site Info', icon: 'fa-globe' },
+  { id: 'smtp', label: 'SMTP', icon: 'fa-envelope' },
+  { id: 'sms', label: 'SMS', icon: 'fa-comment-sms' },
+  { id: 'payment', label: 'Payment Gateway', icon: 'fa-credit-card' },
+  { id: 'security', label: 'Security', icon: 'fa-shield-halved' },
+  { id: 'api', label: 'API', icon: 'fa-plug' },
+  { id: 'upload', label: 'Upload Limits', icon: 'fa-upload' },
+  { id: 'session', label: 'Session', icon: 'fa-clock' },
+  { id: 'maintenance', label: 'Maintenance', icon: 'fa-screwdriver-wrench' },
+  { id: 'localization', label: 'Localization', icon: 'fa-language' }
+];
+const tabButtons = tabs.map((t, i) =>
+  '<button type="button" onclick="showTab(\'' + t.id + '\')" data-tab="' + t.id + '" class="tab-btn px-4 py-2.5 rounded-2xl text-sm font-medium whitespace-nowrap ' + (i === 0 ? 'bg-slate-900 text-white' : 'bg-white border text-slate-600') + '"><i class="fas ' + t.icon + '"></i> ' + t.label + '</button>'
+).join('');
+%>
+<%- include('partials/admin-layout', {
+    title: 'System Settings',
+    active: 'system-settings',
+    body: `
+<div class="max-w-6xl mx-auto">
+    <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <div>
+            <h1 class="text-2xl font-semibold text-slate-900">System Settings</h1>
+            <p class="text-slate-500 mt-1 text-sm">সব সেটিংস এক জায়গা থেকে — Redis-cached, প্রতিটা সেভ Activity Log-এ রেকর্ড হয়</p>
+        </div>
+        <span class="px-4 py-2 rounded-2xl text-sm font-semibold ${redisConnected ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}">
+            <i class="fas fa-bolt"></i> Redis: ${redisConnected ? 'Connected' : 'Fallback (DB direct)'}
+        </span>
+    </div>
+
+    ${saved ? '<div class="mb-4 px-4 py-3 bg-emerald-50 text-emerald-700 rounded-2xl text-sm font-medium">✅ সেভ হয়েছে!</div>' : ''}
+
+    <div class="flex gap-2 mb-6 overflow-x-auto pb-2">${tabButtons}</div>
+
+    <form method="POST" action="/admin/settings/update" class="space-y-4">
+        <input type="hidden" name="redirect_to" value="system-settings">
+
+        ${tabPanel('general', 'General Settings', 'fa-gear',
+            field('site_name', 'Site Name', 'text', s.site_name) +
+            field('support_email', 'Support Email', 'email', s.support_email) +
+            field('support_phone', 'Support Phone', 'text', s.support_phone) +
+            field('max_login_attempts', 'Max Login Attempts', 'number', s.max_login_attempts)
+        )}
+
+        ${tabPanel('site', 'Site Information', 'fa-globe',
+            field('site_tagline', 'Tagline', 'text', s.site_tagline) +
+            field('min_deposit', 'Min Deposit (৳)', 'number', s.min_deposit) +
+            field('min_withdraw', 'Min Withdraw (৳)', 'number', s.min_withdraw) +
+            field('min_bet', 'Min Bet', 'number', s.min_bet) +
+            field('max_bet', 'Max Bet', 'number', s.max_bet) +
+            field('max_daily_bets', 'Max Daily Bets', 'number', s.max_daily_bets)
+        )}
+
+        ${tabPanel('smtp', 'SMTP Settings', 'fa-envelope',
+            field('smtp_host', 'SMTP Host', 'text', s.smtp_host, {placeholder:'smtp.gmail.com'}) +
+            field('smtp_port', 'SMTP Port', 'number', s.smtp_port, {placeholder:'587'}) +
+            field('smtp_from_name', 'From Name', 'text', s.smtp_from_name, {placeholder:'LIVO'}) +
+            field('smtp_from_email', 'From Email', 'email', s.smtp_from_email) +
+            '<div class="sm:col-span-2">' + toggle('smtp_secure', 'Use TLS/SSL', s.smtp_secure, null) + '</div>' +
+            '<p class="sm:col-span-2 text-xs text-slate-400">নিরাপত্তার জন্য SMTP পাসওয়ার্ড এখানে সংরক্ষণ হয় না — .env-এ EMAIL_USER/EMAIL_PASS সেট করুন।</p>'
+        )}
+
+        ${tabPanel('sms', 'SMS Settings', 'fa-comment-sms',
+            field('sms_provider', 'SMS Provider', 'text', s.sms_provider, {placeholder:'e.g. Twilio, BulkSMSBD'}) +
+            field('sms_sender_id', 'Sender ID', 'text', s.sms_sender_id) +
+            '<p class="sm:col-span-2 text-xs text-slate-400">SMS API key এখানে সংরক্ষণ হয় না — .env-এ সেট করুন।</p>'
+        )}
+
+        ${tabPanel('payment', 'Payment Gateway', 'fa-credit-card',
+            toggle('payment_deposit_enabled', 'Deposits Enabled', s.payment_deposit_enabled, 'বন্ধ করলে ইউজার ডিপোজিট করতে পারবে না') +
+            toggle('payment_withdraw_enabled', 'Withdrawals Enabled', s.payment_withdraw_enabled, 'বন্ধ করলে ইউজার উইথড্র করতে পারবে না') +
+            toggle('payment_gateway_live_mode', 'Live Mode (তথ্যগত)', s.payment_gateway_live_mode, 'আসল সুইচ .env-এর SSLCZ_IS_LIVE — এটা শুধু ড্যাশবোর্ডে দেখানোর জন্য') +
+            field('deposit_commission_percent', 'Deposit Commission %', 'number', s.deposit_commission_percent, {step:'0.01'}) +
+            field('withdraw_commission_percent', 'Withdraw Commission %', 'number', s.withdraw_commission_percent, {step:'0.01'}) +
+            '<p class="sm:col-span-2 text-xs text-slate-400">SSLCommerz Store ID/Password .env-এ (SSLCZ_STORE_ID, SSLCZ_STORE_PASSWD)।</p>'
+        )}
+
+        ${tabPanel('security', 'Security Settings', 'fa-shield-halved',
+            field('max_login_attempts', 'Max Login Attempts', 'number', s.max_login_attempts) +
+            '<div><a href="/admin/feature-flags" class="inline-block px-4 py-3 bg-red-50 text-red-700 rounded-2xl text-sm font-medium">2FA/Force-2FA ফ্ল্যাগ → Feature Flags পেজ</a></div>'
+        )}
+
+        ${tabPanel('api', 'API Settings', 'fa-plug',
+            toggle('api_public_enabled', 'Public API Enabled', s.api_public_enabled, null) +
+            field('api_rate_limit_per_15min', 'Rate Limit (per 15 min)', 'number', s.api_rate_limit_per_15min, {placeholder:'300'})
+        )}
+
+        ${tabPanel('upload', 'Upload Limits', 'fa-upload',
+            field('upload_max_size_mb', 'Max Upload Size (MB)', 'number', s.upload_max_size_mb, {placeholder:'5'}) +
+            field('upload_allowed_types', 'Allowed File Types', 'text', s.upload_allowed_types, {placeholder:'jpg,png,pdf'})
+        )}
+
+        ${tabPanel('session', 'Session Settings', 'fa-clock',
+            field('session_idle_timeout_minutes', 'Admin Idle Timeout (min, 0 = অসীম)', 'number', s.session_idle_timeout_minutes, {placeholder:'0'}) +
+            '<p class="sm:col-span-2 text-xs text-slate-400">ইউজার সেশন: ৭ দিন (lax) · অ্যাডমিন সেশন: ৮ ঘণ্টা (strict) — কোডে ফিক্সড, এখান থেকে শুধু অ্যাডমিন idle-timeout কনফিগারযোগ্য।</p>'
+        )}
+
+        ${tabPanel('maintenance', 'Maintenance Settings', 'fa-screwdriver-wrench',
+            toggle('maintenance_mode', 'Maintenance Mode', s.maintenance_mode, 'চালু থাকলে অ্যাডমিন ছাড়া সবাই Maintenance Page দেখবে') +
+            field('maintenance_eta', 'ETA (ঐচ্ছিক)', 'text', s.maintenance_eta) +
+            '<div class="sm:col-span-2">' + field('maintenance_message', 'Maintenance Message', 'text', s.maintenance_message) + '</div>' +
+            '<div class="sm:col-span-2">' + field('maintenance_allowed_ips', 'Allowed IPs (comma-separated)', 'text', s.maintenance_allowed_ips) + '</div>'
+        )}
+
+        ${tabPanel('localization', 'Localization Settings', 'fa-language',
+            field('default_language', 'Default Language', 'text', s.default_language, {placeholder:'bn'}) +
+            field('default_timezone', 'Default Timezone', 'text', s.default_timezone, {placeholder:'Asia/Dhaka'}) +
+            field('default_currency', 'Default Currency', 'text', s.default_currency, {placeholder:'BDT'})
+        )}
+
+        <button type="submit" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-2xl transition-colors">Save All Changes</button>
+    </form>
+</div>
+
+<script>
+function showTab(id) {
+  document.querySelectorAll('.settings-tab').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.tab-btn').forEach(el => {
+    el.classList.remove('bg-slate-900', 'text-white');
+    el.classList.add('bg-white', 'border', 'text-slate-600');
+  });
+  const panel = document.getElementById('tab-' + id);
+  if (panel) panel.classList.remove('hidden');
+  const btn = document.querySelector('[data-tab="' + id + '"]');
+  if (btn) { btn.classList.add('bg-slate-900', 'text-white'); btn.classList.remove('bg-white', 'border', 'text-slate-600'); }
+}
+showTab('general');
+</script>
+`
+}) %>

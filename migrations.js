@@ -553,6 +553,15 @@ async function runMigrations() {
     `);
 
     await pool.query(`
+      INSERT INTO site_settings (key, value) VALUES
+      ('maintenance_message', 'আমরা সেবার মান উন্নত করার কাজ করছি। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন।'),
+      ('maintenance_eta', ''),
+      ('maintenance_allowed_ips', ''),
+      ('maintenance_bypass_token', '')
+      ON CONFLICT (key) DO NOTHING;
+    `);
+
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS promotions (
         id SERIAL PRIMARY KEY,
         title TEXT,
@@ -718,6 +727,77 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_fraud_flags_risk ON fraud_flags(risk_level);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_fraud_flags_status ON fraud_flags(status);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_fraud_flags_created ON fraud_flags(created_at);`);
+
+    // ==================== Background Queue System (BullMQ + Redis) সাপোর্ট টেবিল ====================
+    // এই টেবিলগুলো Queue-এর সাথে সম্পর্কিত ডেটা persist করার জন্য — Redis অনুপলব্ধ/রিস্টার্ট হলেও
+    // ইতিহাস হারিয়ে যায় না, এবং অ্যাডমিন প্যানেল Postgres থেকে সরাসরি রিপোর্ট বানাতে পারে।
+
+    // Activity Log — সাধারণ ইউজার/সিস্টেম অ্যাক্টিভিটি (লগইন, বেট, প্রোফাইল আপডেট ইত্যাদি)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS activity_logs (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        username TEXT,
+        action_type VARCHAR(50) NOT NULL,
+        details TEXT,
+        ip_address TEXT,
+        user_agent TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_activity_logs_user ON activity_logs(user_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_activity_logs_created ON activity_logs(created_at DESC);`);
+
+    // API Log — প্রতিটা API রিকোয়েস্টের মেথড/পাথ/স্ট্যাটাস/রেসপন্স টাইম
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS api_logs (
+        id SERIAL PRIMARY KEY,
+        method VARCHAR(10),
+        path TEXT,
+        status_code INTEGER,
+        response_time_ms INTEGER,
+        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        ip_address TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_api_logs_created ON api_logs(created_at DESC);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_api_logs_status ON api_logs(status_code);`);
+
+    // Fraud Scan Log — heuristic fraud detection স্ক্যানের ফলাফল
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS fraud_scan_logs (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        risk_score INTEGER DEFAULT 0,
+        risk_level VARCHAR(10) DEFAULT 'low',
+        flags JSONB DEFAULT '[]',
+        triggered_by VARCHAR(30) DEFAULT 'system',
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_fraud_logs_user ON fraud_scan_logs(user_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_fraud_logs_risk ON fraud_scan_logs(risk_level);`);
+
+    // Dead Letter Queue — সব রিট্রাই শেষ হয়ে যাওয়া ব্যর্থ জব স্থায়ীভাবে সেভ থাকে এখানে
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS queue_dead_letter (
+        id SERIAL PRIMARY KEY,
+        queue_name VARCHAR(50) NOT NULL,
+        job_id TEXT NOT NULL,
+        job_name TEXT,
+        job_data JSONB,
+        failed_reason TEXT,
+        attempts_made INTEGER DEFAULT 0,
+        stacktrace TEXT,
+        status VARCHAR(20) DEFAULT 'dead',
+        retried_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(queue_name, job_id)
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_dead_letter_queue ON queue_dead_letter(queue_name);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_dead_letter_status ON queue_dead_letter(status);`);
 
     console.log("✅ All tables migration completed successfully");
 
@@ -924,30 +1004,86 @@ async function runMigrations() {
 
     console.log("✅ IP Block/Whitelist table ready");
 
-    // ==================== BullMQ + Redis Background Queue — Dead Letter persistence ====================
-    // BullMQ নিজে Redis-এ ফেইলড জব রাখে, কিন্তু Redis মেমরি/ইভিকশনের কারণে হারিয়ে যেতে পারে।
-    // চূড়ান্তভাবে ব্যর্থ (সব রিট্রাই শেষ) জব এখানেও persist করা হয়, যাতে অ্যাডমিন প্যানেলে
-    // চিরস্থায়ী audit trail থাকে এবং Redis হারিয়ে গেলেও ইতিহাস হারায় না।
+    // ==================== Cron / Scheduler System ====================
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS dead_letter_jobs (
-        id SERIAL PRIMARY KEY,
-        queue_name TEXT NOT NULL,
-        job_id TEXT,
-        job_name TEXT,
-        payload JSONB,
-        attempts_made INTEGER DEFAULT 0,
-        error_message TEXT,
-        error_stack TEXT,
-        status TEXT NOT NULL DEFAULT 'dead' CHECK (status IN ('dead', 'requeued', 'discarded')),
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        resolved_at TIMESTAMPTZ
+      CREATE TABLE IF NOT EXISTS cron_jobs (
+        key TEXT PRIMARY KEY,
+        label TEXT NOT NULL,
+        description TEXT,
+        interval_ms BIGINT NOT NULL,
+        enabled BOOLEAN NOT NULL DEFAULT true,
+        last_run_at TIMESTAMPTZ,
+        last_finished_at TIMESTAMPTZ,
+        last_status TEXT,
+        last_message TEXT,
+        next_run_at TIMESTAMPTZ,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_dlq_queue_name ON dead_letter_jobs(queue_name);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_dlq_status ON dead_letter_jobs(status);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_dlq_created ON dead_letter_jobs(created_at);`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS cron_job_logs (
+        id SERIAL PRIMARY KEY,
+        job_key TEXT NOT NULL,
+        started_at TIMESTAMPTZ NOT NULL,
+        finished_at TIMESTAMPTZ,
+        duration_ms INTEGER,
+        status TEXT NOT NULL,
+        message TEXT,
+        triggered_by TEXT DEFAULT 'schedule'
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_cron_job_logs_key ON cron_job_logs(job_key, started_at DESC);`);
 
-    console.log("✅ BullMQ Dead Letter Queue table ready");
+    console.log("✅ Cron Jobs tables ready");
+
+    // ==================== Backup & Restore System ====================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS backup_history (
+        id SERIAL PRIMARY KEY,
+        type TEXT NOT NULL CHECK (type IN ('database', 'uploads', 'config')),
+        filename TEXT NOT NULL,
+        size_bytes BIGINT DEFAULT 0,
+        encrypted BOOLEAN NOT NULL DEFAULT FALSE,
+        compressed BOOLEAN NOT NULL DEFAULT TRUE,
+        checksum TEXT,
+        status TEXT NOT NULL DEFAULT 'completed' CHECK (status IN ('completed', 'failed')),
+        error_message TEXT,
+        source TEXT NOT NULL DEFAULT 'manual' CHECK (source IN ('manual', 'scheduled')),
+        created_by_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        created_by_username TEXT,
+        restored_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_backup_history_type ON backup_history(type);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_backup_history_created ON backup_history(created_at DESC);`);
+
+    console.log("✅ Backup & Restore System table ready");
+
+    // ==================== Feature Flags & Configuration Management ====================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS feature_flags (
+        id SERIAL PRIMARY KEY,
+        key TEXT NOT NULL UNIQUE,
+        label TEXT NOT NULL,
+        category TEXT NOT NULL CHECK (category IN ('feature', 'maintenance', 'beta', 'security', 'api')),
+        enabled BOOLEAN NOT NULL DEFAULT FALSE,
+        description TEXT,
+        updated_by_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        updated_by_username TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_feature_flags_category ON feature_flags(category);`);
+    await pool.query(`
+      INSERT INTO feature_flags (key, label, category, enabled, description) VALUES
+      ('beta_new_dashboard', 'New Dashboard UI', 'beta', false, 'নতুন ড্যাশবোর্ড ডিজাইন (টেস্টিং)'),
+      ('security_force_2fa_admin', 'Force 2FA for Admins', 'security', false, 'সব অ্যাডমিনের জন্য 2FA বাধ্যতামূলক করবে'),
+      ('api_public_stats', 'Public Stats API', 'api', true, 'পাবলিক /api/stats এন্ডপয়েন্ট চালু/বন্ধ')
+      ON CONFLICT (key) DO NOTHING;
+    `);
+    console.log("✅ Feature Flags table ready");
 
   } catch (err) {
     console.error("❌ Migration error:", err.message);

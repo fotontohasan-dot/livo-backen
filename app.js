@@ -23,14 +23,18 @@ const path = require('path');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const compression = require('compression');
 const { connectDB, pool } = require('./db');
 const { syncMatches } = require('./services/matchUpdater');
 const runMigrations = require('./migrations');
 const { apiGateway, responseHelpers } = require('./middleware/gateway');
 const { scheduleDailyBackup } = require('./services/backup');
+const { scheduleAutoBackup } = require('./services/backupManager');
 const { touchDeviceActivity } = require('./services/deviceTracking');
 require('./services/cache'); // অ্যাপ বুট হওয়ার সাথে সাথেই Redis কানেকশন অ্যাটেম্পট শুরু হয় (কানেক্ট না হলেও অ্যাপ চলতে থাকে)
+const appMetrics = require('./services/metrics');
+const { requireMetricsAccess } = require('./middleware/metricsAuth');
 
 const app = express();
 app.use(compression());
@@ -104,6 +108,8 @@ app.use((req, res, next) => {
   );
   next();
 });
+// Prometheus HTTP মেট্রিক্স — প্রতিটা রিকোয়েস্টের duration/count/error রেকর্ড করে (non-blocking, prom-client না থাকলেও নিরাপদ)
+app.use(appMetrics.httpMiddleware);
 // লিগ্যাসি ব্রাউজারের জন্য X-XSS-Protection (আধুনিক ব্রাউজার CSP-ই যথেষ্ট মানে, হেডারটা ignore করে,
 // কিন্তু পুরনো ব্রাউজার সাপোর্টের জন্য স্ট্যান্ডার্ড হিসেবে রাখা হলো)
 app.use((req, res, next) => {
@@ -154,6 +160,7 @@ const sessionMiddleware = session({
     sameSite: 'lax'
   }
 });
+app.use(cookieParser());
 app.use(sessionMiddleware);
 
 // session middleware রেডি হওয়ার পর socket.io ইনিশিয়ালাইজ করা হচ্ছে,
@@ -244,21 +251,23 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get('/health', (req, res) => res.status(200).send('OK'));
+app.use('/', require('./routes/health')); // /health ও /ready — সিস্টেম ডায়াগনস্টিকসসহ
 
-// ==================== /ready — গভীর readiness চেক (DB/Redis/Queue/Email/Disk/Memory/Uptime) ====================
-// /health থেকে আলাদা রাখা হয়েছে ইচ্ছাকৃতভাবে: /health শুধু "প্রসেস চালু আছে কিনা" দেখে (দ্রুত, নির্ভরতাহীন),
-// আর /ready দেখে "সত্যিকারের ট্রাফিক সার্ভ করার মতো প্রস্তুত কিনা"। Docker/K8s-এ দুটোর ভূমিকা আলাদা —
-// dependency (DB) সাময়িক ধীর হলে /health ঠিক থাকলে কন্টেইনার restart-loop এ পড়ে না, শুধু ট্রাফিক থেকে বাদ পড়ে।
-app.get('/ready', async (req, res) => {
+// ==================== Prometheus Metrics — শুধু Admin/Internal অ্যাক্সেস ====================
+app.get('/metrics', requireMetricsAccess, async (req, res) => {
   try {
-    const result = await require('./services/healthCheck').runDiagnostics();
-    const httpStatus = result.status === 'error' ? 503 : 200;
-    res.status(httpStatus).json(result);
+    if (!appMetrics.enabled) {
+      return res.status(503).type('text/plain').send('# metrics disabled: prom-client not installed\n');
+    }
+    await appMetrics.refreshAsyncMetrics();
+    res.set('Content-Type', appMetrics.register.contentType);
+    res.end(await appMetrics.register.metrics());
   } catch (err) {
-    res.status(503).json({ status: 'error', message: err.message, timestamp: new Date().toISOString() });
+    console.error('[metrics] /metrics endpoint error:', err.message);
+    res.status(500).type('text/plain').send('# error collecting metrics\n');
   }
 });
+
 app.get('/privacy', (req, res) => res.render('privacy'));
 app.get('/terms', (req, res) => res.render('terms'));
 app.get('/kyc', (req, res) => res.redirect('/extra/kyc'));
@@ -396,12 +405,13 @@ async function startServer() {
     await runMigrations();
     console.log("✅ DB migration done");
 
-    // ব্যাকগ্রাউন্ড জব কিউ ওয়ার্কার — try/catch দিয়ে মোড়ানো যাতে ব্যর্থ হলেও সার্ভার বুট আটকে না যায়
+    // Background Queue System (BullMQ + Redis) — Redis অনুপলব্ধ হলেও সার্ভার বন্ধ হবে না,
+    // শুধু Queue-ভিত্তিক জব inline ফলব্যাকে চলবে (দেখুন queues/index.js)।
     try {
-      require('./services/queueHandlers'); // হ্যান্ডলার রেজিস্টার করে
-      require('./services/queue').startWorker();
-    } catch (qErr) {
-      console.error('⚠️ Queue worker start failed (site continues normally, jobs will just queue up):', qErr.message);
+      const { initQueueSystem } = require('./queues');
+      await initQueueSystem();
+    } catch (err) {
+      console.error('⚠️ Queue System চালু করতে সমস্যা হয়েছে (সার্ভার চলতে থাকবে):', err.message);
     }
 
     server.listen(PORT, () => {
@@ -410,6 +420,8 @@ async function startServer() {
         syncMatches().catch(err => console.error('Initial match sync failed:', err));
       }, 3000);
       scheduleDailyBackup();
+      scheduleAutoBackup();
+      require('./services/scheduler').start().catch(err => console.error('⚠️ Scheduler চালু করতে সমস্যা হয়েছে (সার্ভার চলতে থাকবে):', err.message));
     });
   } catch (err) {
     console.error('❌ Server startup failed:', err);
@@ -418,4 +430,18 @@ async function startServer() {
 }
 
 startServer();
+
+// Graceful shutdown — Queue Worker গুলো চলমান জব শেষ করে তারপর বন্ধ হবে
+async function gracefulShutdown() {
+  try {
+    const { shutdownQueueSystem } = require('./queues');
+    await shutdownQueueSystem();
+  } catch (err) {
+    console.error('Queue shutdown error:', err.message);
+  }
+  process.exit(0);
+}
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
+
 module.exports = app;

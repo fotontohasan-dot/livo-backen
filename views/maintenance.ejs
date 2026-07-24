@@ -25,13 +25,18 @@
    .icon { font-size:60px; margin-bottom:16px; }
    h1 { color:#f5c518; font-size:22px; margin-bottom:12px; }
    p { color:#aaa; font-size:14px; line-height:1.6; }
+   .eta { margin-top:14px; color:#f5c518; font-size:13px; }
+   .eta strong { color:#fff; }
  </style>
 </head>
 <body>
   <div class="box">
     <div class="icon">🛠️</div>
     <h1>সাইটটি সাময়িক রক্ষণাবেক্ষণে আছে</h1>
-    <p>আমরা সেবার মান উন্নত করার কাজ করছি। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন।</p>
+    <p><%= message %></p>
+    <% if (eta) { %>
+      <p class="eta">⏱️ আনুমানিক সম্পন্ন হওয়ার সময়: <strong><%= eta %></strong></p>
+    <% } %>
   </div>
 </body>
 </html>
