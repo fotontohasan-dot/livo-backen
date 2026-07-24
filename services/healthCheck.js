@@ -13,7 +13,6 @@
 const os = require('os');
 const { pool } = require('../db');
 const cache = require('./cache');
-const queue = require('./queue');
 const emailService = require('./email');
 
 const STATUS = { OK: 'healthy', WARN: 'warning', ERROR: 'error' };
@@ -54,21 +53,23 @@ async function checkRedis() {
   });
 }
 
-// ==================== Background Job Queue ====================
+// ==================== Background Job Queue (BullMQ) ====================
 async function checkQueue() {
   return timed(async () => {
     try {
-      const status = queue.getStatus();
-      if (!status.enabled) {
-        return { status: STATUS.WARN, message: 'কিউ চালু নেই (ঐচ্ছিক ফিচার)' };
+      const { getQueueHealthStats } = require('../queues');
+      const stats = await getQueueHealthStats();
+      if (!stats.redisConnected) {
+        return { status: STATUS.WARN, message: 'কিউ সিস্টেম নিষ্ক্রিয় (Redis ছাড়া কাজ করে না, ঐচ্ছিক ফিচার)' };
       }
-      if (status.lastError && status.lastErrorAt && (Date.now() - new Date(status.lastErrorAt).getTime()) < 5 * 60 * 1000) {
-        return { status: STATUS.WARN, message: `সাম্প্রতিক এরর: ${status.lastError}`, processed: status.processedCount, failed: status.failedCount };
-      }
-      if (!status.running) {
-        return { status: STATUS.WARN, message: 'ওয়ার্কার চলছে না' };
-      }
-      return { status: STATUS.OK, message: 'চলছে', processed: status.processedCount, failed: status.failedCount };
+      const failedTotal = stats.queues.reduce((sum, q) => sum + (q.counts?.failed || 0), 0);
+      const anyPaused = stats.queues.some(q => q.paused);
+      const status = failedTotal > 50 ? STATUS.WARN : anyPaused ? STATUS.WARN : STATUS.OK;
+      return {
+        status,
+        message: `${stats.queues.length}টা কিউ সক্রিয়${failedTotal ? `, ${failedTotal}টা ফেইলড জব` : ''}${anyPaused ? ' (কিছু paused)' : ''}`,
+        queues: stats.queues.map(q => ({ name: q.name, ...q.counts }))
+      };
     } catch (err) {
       return { status: STATUS.WARN, message: err.message };
     }
