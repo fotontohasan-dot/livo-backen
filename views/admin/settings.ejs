@@ -58,6 +58,27 @@ function adminRow(a, currentAdminId) {
             </label>
         </div>
 
+        <h3 class="font-semibold text-slate-800 border-b pb-3 pt-2">মেইনটেন্যান্স মোড — বিস্তারিত সেটিংস</h3>
+        <p class="text-xs text-slate-400 -mt-3">মেইনটেন্যান্স চালু থাকলে সাধারণ ইউজাররা নিচের মেসেজ/সময় দেখবে। লগইন করা অ্যাডমিনরা সবসময় স্বাভাবিকভাবেই সাইট ব্যবহার করতে পারবেন — এই সেটিংস শুধু non-admin ভিজিটরদের জন্য প্রযোজ্য।</p>
+        <div class="grid grid-cols-1 gap-5">
+            <div>
+                <label class="block text-sm font-medium mb-1.5 text-slate-700">মেইনটেন্যান্স মেসেজ</label>
+                <textarea name="maintenance_message" rows="2" maxlength="500"
+                    class="w-full border border-slate-200 px-4 py-3 rounded-2xl text-sm outline-none focus:border-blue-300"
+                    placeholder="আমরা সেবার মান উন্নত করার কাজ করছি...">${s.maintenance_message || ''}</textarea>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                ${field('maintenance_eta', 'আনুমানিক সম্পন্ন হওয়ার সময় (যেমন: রাত ১১টা, বা ৩০ মিনিট)', 'text', s.maintenance_eta || '')}
+                ${field('maintenance_bypass_token', 'Emergency Bypass Token (URL-এ ?maintenance_bypass=TOKEN দিয়ে অ্যাক্সেস)', 'text', s.maintenance_bypass_token || '')}
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1.5 text-slate-700">Allowed IP List (কমা দিয়ে আলাদা — এই IP গুলো মেইনটেন্যান্সের সময়ও সাইট দেখতে পাবে)</label>
+                <textarea name="maintenance_allowed_ips" rows="2"
+                    class="w-full border border-slate-200 px-4 py-3 rounded-2xl text-sm outline-none focus:border-blue-300 font-mono"
+                    placeholder="203.0.113.5, 198.51.100.20">${s.maintenance_allowed_ips || ''}</textarea>
+            </div>
+        </div>
+
         <button type="submit" id="settingsSaveBtn" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-2xl transition-colors">Save Changes</button>
         ${saved ? '<span class="ml-4 text-emerald-600 text-sm font-medium"><i class="fas fa-check-circle"></i> সেভ হয়েছে!</span>' : ''}
         ${saveError ? '<span class="ml-4 text-red-600 text-sm font-medium"><i class="fas fa-triangle-exclamation"></i> সেভ করতে সমস্যা হয়েছে — সার্ভার লগ চেক করুন।</span>' : ''}

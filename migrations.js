@@ -553,6 +553,15 @@ async function runMigrations() {
     `);
 
     await pool.query(`
+      INSERT INTO site_settings (key, value) VALUES
+      ('maintenance_message', 'আমরা সেবার মান উন্নত করার কাজ করছি। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন।'),
+      ('maintenance_eta', ''),
+      ('maintenance_allowed_ips', ''),
+      ('maintenance_bypass_token', '')
+      ON CONFLICT (key) DO NOTHING;
+    `);
+
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS promotions (
         id SERIAL PRIMARY KEY,
         title TEXT,

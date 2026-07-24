@@ -23,6 +23,7 @@ const path = require('path');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const compression = require('compression');
 const { connectDB, pool } = require('./db');
 const { syncMatches } = require('./services/matchUpdater');
@@ -159,6 +160,7 @@ const sessionMiddleware = session({
     sameSite: 'lax'
   }
 });
+app.use(cookieParser());
 app.use(sessionMiddleware);
 
 // session middleware রেডি হওয়ার পর socket.io ইনিশিয়ালাইজ করা হচ্ছে,

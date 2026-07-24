@@ -436,7 +436,8 @@ router.post('/kyc/:id/reject', async (req, res) => {
 const SETTING_KEYS = [
   'site_name', 'support_email', 'maintenance_mode', 'max_login_attempts',
   'min_bet', 'max_bet', 'turnover_multiplier', 'max_daily_bets',
-  'deposit_commission_percent', 'withdraw_commission_percent', 'min_deposit', 'min_withdraw'
+  'deposit_commission_percent', 'withdraw_commission_percent', 'min_deposit', 'min_withdraw',
+  'maintenance_message', 'maintenance_eta', 'maintenance_allowed_ips', 'maintenance_bypass_token'
 ];
 
 router.get('/settings', async (req, res) => {
@@ -464,12 +465,31 @@ router.get('/settings', async (req, res) => {
 
 router.post('/settings/update', async (req, res) => {
   try {
+    // টগল করার আগের অবস্থা জেনে রাখা — যাতে ON/OFF কোন দিকে গেল সেটা স্পষ্টভাবে লগ করা যায়
+    const prevRes = await pool.query("SELECT value FROM site_settings WHERE key = 'maintenance_mode'");
+    const wasOn = prevRes.rows[0] && prevRes.rows[0].value === 'true';
+
     for (const key of SETTING_KEYS) {
       if (key === 'maintenance_mode') continue; // নিচে আলাদাভাবে সামলানো হচ্ছে
       if (!(key in req.body)) continue;
       let raw = req.body[key];
       if (Array.isArray(raw)) raw = raw[raw.length - 1];
-      const value = raw === null || raw === undefined ? '' : String(raw);
+      let value = raw === null || raw === undefined ? '' : String(raw);
+
+      // মেইনটেন্যান্স মেসেজ ইউজার-facing পেজে (মেইনটেন্যান্স স্ক্রিন) সরাসরি দেখানো হয়,
+      // তাই stored-XSS ঠেকাতে HTML স্ট্রিপ করে sanitize করা হচ্ছে
+      if (key === 'maintenance_message') value = sanitizeText(value, { maxLen: 500 });
+      // Allowed IP লিস্ট — শুধু বৈধ ফরম্যাটের এন্ট্রিগুলোই রাখা হচ্ছে (IPv4/IPv6, কমা/নিউলাইন দিয়ে আলাদা)
+      if (key === 'maintenance_allowed_ips') {
+        value = value
+          .split(/[\s,]+/)
+          .map(ip => ip.trim())
+          .filter(ip => /^[0-9a-fA-F:.]+$/.test(ip))
+          .join(',');
+      }
+      // Emergency bypass token — শুধু url-safe ক্যারেক্টার, বাড়তি স্পেস/HTML বাদ
+      if (key === 'maintenance_bypass_token') value = value.trim().replace(/[^A-Za-z0-9_\-]/g, '').slice(0, 128);
+
       await pool.query(
         `INSERT INTO site_settings (key, value, updated_at) VALUES ($1, $2, NOW())
          ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
@@ -498,7 +518,16 @@ router.post('/settings/update', async (req, res) => {
       console.error('loadSettings() cache refresh failed (settings already saved):', e && e.stack ? e.stack : e);
     }
     try {
-      await logAdminAction(req.session.user.id, req.session.user.username, 'SETTINGS_UPDATE', 'সাইট সেটিংস পরিবর্তন করা হয়েছে', req.ip);
+      if (maintenanceBool && !wasOn) {
+        const msg = sanitizeText(req.body.maintenance_message || '', { maxLen: 200 });
+        const eta = req.body.maintenance_eta ? String(req.body.maintenance_eta).slice(0, 100) : '';
+        await logAdminAction(req.session.user.id, req.session.user.username, 'MAINTENANCE_ON',
+          `মেইনটেন্যান্স মোড চালু করা হয়েছে${eta ? ' | আনুমানিক সময়: ' + eta : ''}${msg ? ' | বার্তা: ' + msg : ''}`, req.ip);
+      } else if (!maintenanceBool && wasOn) {
+        await logAdminAction(req.session.user.id, req.session.user.username, 'MAINTENANCE_OFF', 'মেইনটেন্যান্স মোড বন্ধ করা হয়েছে', req.ip);
+      } else {
+        await logAdminAction(req.session.user.id, req.session.user.username, 'SETTINGS_UPDATE', 'সাইট সেটিংস পরিবর্তন করা হয়েছে', req.ip);
+      }
     } catch (e) {
       console.error('logAdminAction failed (settings already saved):', e && e.stack ? e.stack : e);
     }
@@ -594,9 +623,6 @@ router.get('/', async (req, res) => {
     );
     const newUsersToday = await pool.query(
       `SELECT COUNT(*) AS cnt FROM users WHERE created_at::date = CURRENT_DATE`
-    );
-    const activeUsersNow = await pool.query(
-      `SELECT COUNT(*) AS cnt FROM users WHERE last_login > NOW() - INTERVAL '15 minutes'`
     );
 
     // ==== পেন্ডিং অ্যাকশন — ডিপোজিট, উইথড্র, সাপোর্ট মেসেজ ====
