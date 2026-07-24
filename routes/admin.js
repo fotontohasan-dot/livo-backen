@@ -21,6 +21,7 @@ const {
 } = require('../services/twofactor');
 const { getPinStatus, adminResetPin } = require('../services/withdrawPin');
 const { getUserFraudStatus, getFraudDashboardStats } = require('../services/fraudDetection');
+const { logEvent: logAuditEvent, listAuditLogs, getAuditLogById, exportAuditLogs, getCategoryCounts, getRiskCounts, VALID_CATEGORIES, VALID_RISK_LEVELS } = require('../services/auditLog');
 const { listDuplicateFlags, reviewDuplicateFlag, scanAllUsers } = require('../services/duplicateDetection');
 const { getUserDeviceOverview } = require('../services/deviceTracking');
 const cache = require('../services/cache');
@@ -523,10 +524,24 @@ router.post('/settings/update', async (req, res) => {
         const eta = req.body.maintenance_eta ? String(req.body.maintenance_eta).slice(0, 100) : '';
         await logAdminAction(req.session.user.id, req.session.user.username, 'MAINTENANCE_ON',
           `মেইনটেন্যান্স মোড চালু করা হয়েছে${eta ? ' | আনুমানিক সময়: ' + eta : ''}${msg ? ' | বার্তা: ' + msg : ''}`, req.ip);
+        logAuditEvent({
+          req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+          action: 'MAINTENANCE_ENABLED', category: 'maintenance', status: 'success', riskLevel: 'high',
+          details: { eta, message: msg }
+        }).catch(e => console.error('logAuditEvent (MAINTENANCE_ENABLED) error:', e.message));
       } else if (!maintenanceBool && wasOn) {
         await logAdminAction(req.session.user.id, req.session.user.username, 'MAINTENANCE_OFF', 'মেইনটেন্যান্স মোড বন্ধ করা হয়েছে', req.ip);
+        logAuditEvent({
+          req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+          action: 'MAINTENANCE_DISABLED', category: 'maintenance', status: 'success', riskLevel: 'medium'
+        }).catch(e => console.error('logAuditEvent (MAINTENANCE_DISABLED) error:', e.message));
       } else {
         await logAdminAction(req.session.user.id, req.session.user.username, 'SETTINGS_UPDATE', 'সাইট সেটিংস পরিবর্তন করা হয়েছে', req.ip);
+        logAuditEvent({
+          req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+          action: 'SETTINGS_CHANGED', category: 'settings', status: 'success', riskLevel: 'medium',
+          details: { changedKeys: SETTING_KEYS.filter(k => k in req.body) }
+        }).catch(e => console.error('logAuditEvent (SETTINGS_CHANGED) error:', e.message));
       }
     } catch (e) {
       console.error('logAdminAction failed (settings already saved):', e && e.stack ? e.stack : e);
@@ -545,6 +560,11 @@ router.post('/settings/admins/promote', async (req, res) => {
     const r = await pool.query("UPDATE users SET role = 'admin' WHERE username = $1 RETURNING id", [username]);
     if (r.rows[0]) {
       await logAdminAction(req.session.user.id, req.session.user.username, 'ADMIN_PROMOTE', `${username} কে অ্যাডমিন করা হয়েছে`, req.ip);
+      logAuditEvent({
+        req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+        action: 'ROLE_CHANGED', category: 'role', status: 'success', riskLevel: 'high',
+        details: { targetUserId: r.rows[0].id, targetUsername: username, newRole: 'admin' }
+      }).catch(e => console.error('logAuditEvent (ROLE_CHANGED promote) error:', e.message));
     }
     res.redirect('/admin/settings');
   } catch (err) {
@@ -561,6 +581,11 @@ router.post('/settings/admins/:id/demote', async (req, res) => {
     }
     await pool.query("UPDATE users SET role = 'user' WHERE id = $1", [id]);
     await logAdminAction(req.session.user.id, req.session.user.username, 'ADMIN_DEMOTE', `অ্যাডমিন আইডি #${id} থেকে অ্যাডমিন অ্যাক্সেস সরানো হয়েছে`, req.ip);
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'ROLE_CHANGED', category: 'role', status: 'success', riskLevel: 'high',
+      details: { targetUserId: id, newRole: 'user' }
+    }).catch(e => console.error('logAuditEvent (ROLE_CHANGED demote) error:', e.message));
     res.redirect('/admin/settings');
   } catch (err) {
     console.error('Admin demote error:', err.message);
@@ -940,6 +965,11 @@ router.post('/api/deposits/:id/approve', adminFinancialLimiter, requireIntParam(
     await creditApprovedDeposit(client, request);
     await client.query('COMMIT');
     await logAdminAction(req.session.user.id, req.session.user.username, 'deposit_approve', `Deposit #${id} approved`, req.ip);
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'DEPOSIT_APPROVED', category: 'financial', status: 'success', riskLevel: 'low',
+      details: { depositId: id, userId: request.user_id, amount: request.amount }
+    }).catch(e => console.error('logAuditEvent (DEPOSIT_APPROVED) error:', e.message));
     res.json({ success: true });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -969,6 +999,11 @@ router.post('/api/deposits/:id/reject', adminFinancialLimiter, requireIntParam('
     );
     await client.query('COMMIT');
     await logAdminAction(req.session.user.id, req.session.user.username, 'deposit_reject', `Deposit #${id} rejected: ${reason || ''}`, req.ip);
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'DEPOSIT_REJECTED', category: 'financial', status: 'success', riskLevel: 'low',
+      details: { depositId: id, userId: request.user_id, amount: request.amount, reason }
+    }).catch(e => console.error('logAuditEvent (DEPOSIT_REJECTED) error:', e.message));
     res.json({ success: true });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -1047,6 +1082,12 @@ router.post('/api/withdrawals/:id/approve', adminFinancialLimiter, requireIntPar
     );
     await client.query('COMMIT');
     await logAdminAction(req.session.user.id, req.session.user.username, 'withdraw_approve', `Withdrawal #${id} approved`, req.ip);
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'WITHDRAW_APPROVED', category: 'financial', status: 'success',
+      riskLevel: request.amount >= 10000 ? 'medium' : 'low',
+      details: { withdrawId: id, userId: request.user_id, amount: request.amount, txn }
+    }).catch(e => console.error('logAuditEvent (WITHDRAW_APPROVED) error:', e.message));
     res.json({ success: true });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -1078,6 +1119,11 @@ router.post('/api/withdrawals/:id/reject', adminFinancialLimiter, requireIntPara
     );
     await client.query('COMMIT');
     await logAdminAction(req.session.user.id, req.session.user.username, 'withdraw_reject', `Withdrawal #${id} rejected: ${reason || ''}`, req.ip);
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'WITHDRAW_REJECTED', category: 'financial', status: 'success', riskLevel: 'low',
+      details: { withdrawId: id, userId: request.user_id, amount: request.amount, reason }
+    }).catch(e => console.error('logAuditEvent (WITHDRAW_REJECTED) error:', e.message));
     res.json({ success: true });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -1300,6 +1346,12 @@ router.post('/users/:id/ban', requireIntParam('id'), async (req, res) => {
     const r = await pool.query('UPDATE users SET is_banned = NOT is_banned WHERE id = $1 RETURNING is_banned, username', [req.params.id]);
     if (r.rows[0]) {
       await logAdminAction(req.session.user.id, req.session.user.username, r.rows[0].is_banned ? 'USER_BAN' : 'USER_UNBAN', `${r.rows[0].username} (#${req.params.id}) কে ${r.rows[0].is_banned ? 'ব্যান' : 'আনব্যান'} করা হয়েছে`, req.ip);
+      logAuditEvent({
+        req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+        action: r.rows[0].is_banned ? 'USER_BANNED' : 'USER_UNBANNED', category: 'security', status: 'success',
+        riskLevel: r.rows[0].is_banned ? 'high' : 'medium',
+        details: { targetUserId: req.params.id, targetUsername: r.rows[0].username }
+      }).catch(e => console.error('logAuditEvent (USER_BAN/UNBAN) error:', e.message));
     }
     req.flash('success', 'স্ট্যাটাস আপডেট হয়েছে!');
   } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
@@ -1973,6 +2025,11 @@ router.post('/cron-jobs/:key/toggle', async (req, res) => {
     const enabled = req.body.enabled === 'true';
     await scheduler.setEnabled(req.params.key, enabled);
     await logAdminAction(req.session.user.id, req.session.user.username, enabled ? 'CRON_JOB_ENABLED' : 'CRON_JOB_DISABLED', `Job: ${req.params.key}`, req.ip);
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: enabled ? 'CRON_JOB_ENABLED' : 'CRON_JOB_DISABLED', category: 'cron', status: 'success', riskLevel: 'low',
+      details: { jobKey: req.params.key }
+    }).catch(e => console.error('logAuditEvent (CRON toggle) error:', e.message));
     req.flash('success', `Job ${enabled ? 'চালু' : 'বন্ধ'} করা হয়েছে।`);
     res.redirect('/admin/cron-jobs');
   } catch (err) {
@@ -1987,6 +2044,12 @@ router.post('/cron-jobs/:key/run', async (req, res) => {
     const scheduler = require('../services/scheduler');
     const result = await scheduler.runJob(req.params.key, { triggeredBy: req.session.user.username });
     await logAdminAction(req.session.user.id, req.session.user.username, 'CRON_JOB_MANUAL_RUN', `Job: ${req.params.key} — ফলাফল: ${result.status} — ${result.message}`, req.ip);
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'CRON_JOB_MANUAL_RUN', category: 'cron',
+      status: result.status === 'success' ? 'success' : 'failure', riskLevel: 'low',
+      details: { jobKey: req.params.key, resultStatus: result.status, message: result.message }
+    }).catch(e => console.error('logAuditEvent (CRON manual run) error:', e.message));
     req.flash(result.status === 'success' ? 'success' : 'error', `${req.params.key}: ${result.message}`);
     res.redirect('/admin/cron-jobs');
   } catch (err) {
@@ -2443,6 +2506,11 @@ router.post('/api-keys/create', async (req, res) => {
 
     await logAdminAction(req.session.user.id, req.session.user.username, 'API_KEY_CREATED',
       `নতুন API key তৈরি: "${name}" (scopes: ${scopes.join(', ')})`, req.ip);
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'API_KEY_CREATED', category: 'api', status: 'success', riskLevel: 'medium',
+      details: { keyId: inserted.rows[0] && inserted.rows[0].id, name, scopes }
+    }).catch(e => console.error('logAuditEvent (API_KEY_CREATED) error:', e.message));
 
     const result = await pool.query(
       `SELECT k.*, u.username AS created_by_username
@@ -2478,6 +2546,11 @@ router.post('/api-keys/:id/revoke', requireIntParam('id'), async (req, res) => {
     if (r.rows[0]) {
       await logAdminAction(req.session.user.id, req.session.user.username, 'API_KEY_REVOKED',
         `API key "${r.rows[0].name}" revoke করা হয়েছে`, req.ip);
+      logAuditEvent({
+        req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+        action: 'API_KEY_REVOKED', category: 'api', status: 'success', riskLevel: 'medium',
+        details: { keyId: req.params.id, name: r.rows[0].name }
+      }).catch(e => console.error('logAuditEvent (API_KEY_REVOKED) error:', e.message));
       req.flash('success', 'API key revoke করা হয়েছে।');
     }
   } catch (err) {
@@ -2625,6 +2698,11 @@ router.post('/cache/clear', async (req, res) => {
       deleted = await cache.flushAll();
     }
     await logAdminAction(req.session.user.id, req.session.user.username, 'CACHE_CLEARED', `ক্যাশ পরিষ্কার করা হয়েছে (pattern: ${pattern || 'সব'}) — ${deleted} টি কী মুছে গেছে`, req.ip);
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'CACHE_CLEARED', category: 'cache', status: 'success', riskLevel: 'medium',
+      details: { pattern: pattern || '*', deletedCount: deleted }
+    }).catch(e => console.error('logAuditEvent (CACHE_CLEARED) error:', e.message));
     res.redirect(`/admin/cache?cleared=${deleted}`);
   } catch (err) {
     console.error('Cache clear error:', err && err.stack ? err.stack : err);
@@ -2667,6 +2745,13 @@ router.post('/backups/create', async (req, res) => {
         `${c.type} ব্যাকআপ ${c.status === 'completed' ? 'সম্পন্ন হয়েছে' : 'ব্যর্থ হয়েছে: ' + c.error_message} (${c.filename})`,
         req.ip
       );
+      logAuditEvent({
+        req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+        action: 'BACKUP_CREATED', category: 'backup',
+        status: c.status === 'completed' ? 'success' : 'failure',
+        riskLevel: c.status === 'completed' ? 'low' : 'medium',
+        details: { type: c.type, filename: c.filename, error: c.error_message || null }
+      }).catch(e => console.error('logAuditEvent (BACKUP_CREATED) error:', e.message));
     }
     res.redirect(`/admin/backups?created=${created.length}${failed.length ? '&error=' + failed.length + '_failed' : ''}`);
   } catch (err) {
@@ -2698,10 +2783,20 @@ router.post('/backups/:id/restore', async (req, res) => {
       `${record.type} ব্যাকআপ রিস্টোর করা হয়েছে (${record.filename}) — ${JSON.stringify(result).slice(0, 300)}`,
       req.ip
     );
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'BACKUP_RESTORED', category: 'restore', status: 'success', riskLevel: 'critical',
+      details: { backupId: req.params.id, type: record.type, filename: record.filename }
+    }).catch(e => console.error('logAuditEvent (BACKUP_RESTORED) error:', e.message));
     res.redirect(`/admin/backups?restored=${record.type}`);
   } catch (err) {
     console.error('Backup restore error:', err && err.stack ? err.stack : err);
     await logAdminAction(req.session.user.id, req.session.user.username, 'BACKUP_RESTORE_FAILED', `রিস্টোর ব্যর্থ (#${req.params.id}): ${err.message}`, req.ip).catch(() => {});
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'BACKUP_RESTORE_FAILED', category: 'restore', status: 'failure', riskLevel: 'critical',
+      details: { backupId: req.params.id, error: err.message }
+    }).catch(e => console.error('logAuditEvent (BACKUP_RESTORE_FAILED) error:', e.message));
     res.redirect(`/admin/backups?error=${encodeURIComponent(err.message)}`);
   }
 });
@@ -2715,6 +2810,106 @@ router.post('/backups/:id/delete', async (req, res) => {
   } catch (err) {
     console.error('Backup delete error:', err && err.stack ? err.stack : err);
     res.redirect('/admin/backups?error=delete_failed');
+  }
+});
+
+// ==================== Advanced Audit Log Dashboard ====================
+router.get('/audit-logs', async (req, res) => {
+  try {
+    const { q = '', actorType = '', category = '', status = '', riskLevel = '', action = '', from = '', to = '' } = req.query;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const filters = { q, actorType, category, status, riskLevel, action, from, to };
+
+    const [{ rows, total, totalPages }, categoryCounts, riskCounts] = await Promise.all([
+      listAuditLogs(filters, { page, limit: 30 }),
+      getCategoryCounts(),
+      getRiskCounts()
+    ]);
+
+    res.render('admin/audit-logs', {
+      logs: rows, total, page, totalPages, filters,
+      categoryCounts, riskCounts,
+      categories: VALID_CATEGORIES, riskLevels: VALID_RISK_LEVELS
+    });
+  } catch (err) {
+    console.error('Audit log dashboard error:', err.message);
+    res.render('admin/audit-logs', {
+      logs: [], total: 0, page: 1, totalPages: 1,
+      filters: { q: '', actorType: '', category: '', status: '', riskLevel: '', action: '', from: '', to: '' },
+      categoryCounts: [], riskCounts: { low: 0, medium: 0, high: 0, critical: 0 },
+      categories: VALID_CATEGORIES, riskLevels: VALID_RISK_LEVELS
+    });
+  }
+});
+
+// Log Details Modal-এর জন্য — AJAX দিয়ে fetch হয়
+router.get('/audit-logs/:id.json', requireIntParam('id'), async (req, res) => {
+  try {
+    const log = await getAuditLogById(req.params.id);
+    if (!log) return res.status(404).json({ error: 'পাওয়া যায়নি' });
+    res.json(log);
+  } catch (err) {
+    console.error('Audit log detail error:', err.message);
+    res.status(500).json({ error: 'সার্ভার ত্রুটি' });
+  }
+});
+
+router.get('/audit-logs/export.csv', async (req, res) => {
+  try {
+    const { q = '', actorType = '', category = '', status = '', riskLevel = '', action = '', from = '', to = '' } = req.query;
+    const rows = await exportAuditLogs({ q, actorType, category, status, riskLevel, action, from, to });
+
+    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const header = ['id', 'created_at', 'actor_type', 'actor_username', 'action', 'category', 'status', 'risk_level', 'ip_address', 'device_name', 'browser', 'os', 'location', 'request_id', 'details'];
+    const csvRows = rows.map(r => header.map(h => esc(h === 'details' ? JSON.stringify(r[h]) : r[h])).join(','));
+    const csv = [header.join(','), ...csvRows].join('\n');
+
+    await logAdminAction(req.session.user.id, req.session.user.username, 'AUDIT_LOG_EXPORTED', `Audit log CSV এক্সপোর্ট (${rows.length} রো)`, req.ip);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="audit-logs-${Date.now()}.csv"`);
+    res.send('\uFEFF' + csv);
+  } catch (err) {
+    console.error('Audit log CSV export error:', err.message);
+    res.status(500).send('Export failed');
+  }
+});
+
+router.get('/audit-logs/export.xlsx', async (req, res) => {
+  try {
+    const ExcelJS = require('exceljs');
+    const { q = '', actorType = '', category = '', status = '', riskLevel = '', action = '', from = '', to = '' } = req.query;
+    const rows = await exportAuditLogs({ q, actorType, category, status, riskLevel, action, from, to });
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Audit Logs');
+    sheet.columns = [
+      { header: 'ID', key: 'id', width: 8 },
+      { header: 'Time', key: 'created_at', width: 22 },
+      { header: 'Actor Type', key: 'actor_type', width: 12 },
+      { header: 'Actor', key: 'actor_username', width: 18 },
+      { header: 'Action', key: 'action', width: 22 },
+      { header: 'Category', key: 'category', width: 14 },
+      { header: 'Status', key: 'status', width: 10 },
+      { header: 'Risk Level', key: 'risk_level', width: 12 },
+      { header: 'IP', key: 'ip_address', width: 16 },
+      { header: 'Device', key: 'device_name', width: 24 },
+      { header: 'Browser', key: 'browser', width: 14 },
+      { header: 'OS', key: 'os', width: 14 },
+      { header: 'Location', key: 'location', width: 20 },
+      { header: 'Request ID', key: 'request_id', width: 24 },
+      { header: 'Details', key: 'details', width: 40 }
+    ];
+    sheet.getRow(1).font = { bold: true };
+    rows.forEach(r => sheet.addRow({ ...r, details: JSON.stringify(r.details || {}) }));
+
+    await logAdminAction(req.session.user.id, req.session.user.username, 'AUDIT_LOG_EXPORTED', `Audit log Excel এক্সপোর্ট (${rows.length} রো)`, req.ip);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="audit-logs-${Date.now()}.xlsx"`);
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error('Audit log Excel export error:', err.message);
+    res.status(500).send('Export failed');
   }
 });
 

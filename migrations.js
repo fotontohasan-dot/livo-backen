@@ -1060,6 +1060,43 @@ async function runMigrations() {
 
     console.log("✅ Backup & Restore System table ready");
 
+    // ==================== Advanced Audit Log System ====================
+    // বিদ্যমান admin_logs টেবিলের পাশাপাশি (সেটা অপরিবর্তিত থাকছে, backward compatible) —
+    // এই টেবিলে ইউজার/অ্যাডমিন/সিস্টেম তিন ধরনের actor-এর সব গুরুত্বপূর্ণ action সমৃদ্ধ মেটাডেটাসহ (IP,
+    // ডিভাইস, ব্রাউজার, লোকেশন, রিকোয়েস্ট ID, ঝুঁকির মাত্রা) সংরক্ষিত হয়।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id BIGSERIAL PRIMARY KEY,
+        actor_type VARCHAR(10) NOT NULL DEFAULT 'system' CHECK (actor_type IN ('user', 'admin', 'system')),
+        actor_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        actor_username VARCHAR(100),
+        action VARCHAR(100) NOT NULL,
+        category VARCHAR(30) NOT NULL DEFAULT 'other' CHECK (category IN (
+          'auth', 'financial', 'settings', 'role', 'security', 'maintenance',
+          'backup', 'restore', 'cron', 'queue', 'cache', 'api', 'other'
+        )),
+        status VARCHAR(10) NOT NULL DEFAULT 'success' CHECK (status IN ('success', 'failure')),
+        risk_level VARCHAR(10) NOT NULL DEFAULT 'low' CHECK (risk_level IN ('low', 'medium', 'high', 'critical')),
+        details JSONB DEFAULT '{}',
+        ip_address VARCHAR(45),
+        device_name VARCHAR(150),
+        browser VARCHAR(50),
+        os VARCHAR(50),
+        location VARCHAR(150),
+        request_id VARCHAR(64),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_actor ON audit_logs(actor_type, actor_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_category ON audit_logs(category);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_risk ON audit_logs(risk_level);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_status ON audit_logs(status);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at DESC);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_request_id ON audit_logs(request_id);`);
+
+    console.log("✅ Advanced Audit Log System table ready");
+
   } catch (err) {
     console.error("❌ Migration error:", err.message);
   }

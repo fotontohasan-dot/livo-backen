@@ -109,6 +109,8 @@ app.use((req, res, next) => {
   next();
 });
 // Prometheus HTTP মেট্রিক্স — প্রতিটা রিকোয়েস্টের duration/count/error রেকর্ড করে (non-blocking, prom-client না থাকলেও নিরাপদ)
+// প্রতিটা রিকোয়েস্টে একটা ইউনিক ID — Audit Log entries-কে নির্দিষ্ট রিকোয়েস্টের সাথে ট্রেস করার জন্য
+app.use(require('./middleware/requestId'));
 app.use(appMetrics.httpMiddleware);
 // লিগ্যাসি ব্রাউজারের জন্য X-XSS-Protection (আধুনিক ব্রাউজার CSP-ই যথেষ্ট মানে, হেডারটা ignore করে,
 // কিন্তু পুরনো ব্রাউজার সাপোর্টের জন্য স্ট্যান্ডার্ড হিসেবে রাখা হলো)

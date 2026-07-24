@@ -235,6 +235,7 @@ module.exports = {
   buildDeviceName,
   computeSignature,
   extractIp,
+  lookupLocation,
   recordDeviceLogin,
   touchDeviceActivity,
   listActiveSessions,

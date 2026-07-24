@@ -14,6 +14,7 @@ const { isSessionNewDevice } = require('../services/deviceTracking');
 const { checkIp } = require('../services/vpnDetection');
 const { requireVerifiedEmail } = require('../middleware/auth');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
+const { logEvent: logAuditEvent } = require('../services/auditLog');
 
 const paymentLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -226,6 +227,12 @@ router.post('/deposit', requireLogin, paymentLimiter, async (req, res) => {
         .catch(e => console.error('fraud evaluateTransaction (deposit) error:', e.message));
     }).catch(e => console.error('vpn checkIp (deposit) error:', e.message));
     await notifyAdmins('নতুন ডিপোজিট রিকোয়েস্ট', `${req.session.user.username} ${amount} টাকা ডিপোজিট চেয়েছে (${method})।`, 'deposit');
+    logAuditEvent({
+      req, actorType: 'user', actorId: userId, actorUsername: req.session.user.username,
+      action: 'DEPOSIT_REQUESTED', category: 'financial', status: 'success',
+      riskLevel: amount >= 10000 ? 'medium' : 'low',
+      details: { amount, method, transaction_id }
+    }).catch(e => console.error('logAuditEvent (DEPOSIT_REQUESTED) error:', e.message));
     req.flash('success', 'ডিপোজিট রিকোয়েস্ট পাঠানো হয়েছে!');
     res.redirect('/payment/history');
   } catch (err) {
@@ -352,6 +359,12 @@ router.post('/withdraw', requireLogin, requireVerifiedEmail, paymentLimiter, asy
     }).catch(e => console.error('vpn checkIp (withdraw) error:', e.message));
 
     await notifyAdmins('নতুন উইথড্র রিকোয়েস্ট', `${req.session.user.username} ${amount} টাকা উইথড্র চেয়েছে (${method})।`, 'withdraw');
+    logAuditEvent({
+      req, actorType: 'user', actorId: userId, actorUsername: req.session.user.username,
+      action: 'WITHDRAW_REQUESTED', category: 'financial', status: 'success',
+      riskLevel: amount >= 10000 ? 'high' : (amount >= 3000 ? 'medium' : 'low'),
+      details: { amount, method, accountNumber: account_number }
+    }).catch(e => console.error('logAuditEvent (WITHDRAW_REQUESTED) error:', e.message));
 
     req.flash('success', 'উইথড্র রিকোয়েস্ট পাঠানো হয়েছে!');
     res.redirect('/payment/history');

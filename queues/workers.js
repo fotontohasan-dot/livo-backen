@@ -32,6 +32,17 @@ function startWorkers() {
       const attemptsMade = job ? job.attemptsMade : '?';
       const maxAttempts = job ? job.opts.attempts : '?';
       console.error(`❌ [Queue:${name}] job #${job ? job.id : '?'} ব্যর্থ (attempt ${attemptsMade}/${maxAttempts}):`, err.message);
+      try {
+        const { logEvent } = require('../services/auditLog');
+        logEvent({
+          actorType: 'system', actorUsername: 'SYSTEM',
+          action: 'QUEUE_JOB_FAILED', category: 'queue', status: 'failure',
+          riskLevel: (job && job.opts && attemptsMade >= job.opts.attempts) ? 'high' : 'medium',
+          details: { queue: name, jobId: job ? job.id : null, jobName: job ? job.name : null, attemptsMade, maxAttempts, error: err.message }
+        }).catch(() => {});
+      } catch (e) {
+        console.error('[auditLog] queue failed-job logging error (non-blocking):', e.message);
+      }
     });
 
     worker.on('error', (err) => {

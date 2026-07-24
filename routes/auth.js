@@ -14,6 +14,7 @@ const { getIpRule } = require('../services/ipRules');
 const { recordDeviceLogin, parseUserAgent } = require('../services/deviceTracking');
 const cache = require('../services/cache');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
+const { logEvent: logAuditEvent } = require('../services/auditLog');
 
 const resetLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -271,6 +272,13 @@ router.post('/register', async (req, res) => {
     req.flash('success', email
       ? '✅ রেজিস্ট্রেশন সফল হয়েছে! স্বাগতম! আপনার ইমেইলে একটা ভেরিফিকেশন লিঙ্ক পাঠানো হয়েছে।'
       : '✅ রেজিস্ট্রেশন সফল হয়েছে! স্বাগতম!');
+
+    logAuditEvent({
+      req, actorType: 'user', actorId: newUserId, actorUsername: username,
+      action: 'REGISTER', category: 'auth', status: 'success', riskLevel: 'low',
+      details: { hasEmail: !!email, hasPhone: !!phone, referred: !!referredById }
+    }).catch(e => console.error('logAuditEvent (REGISTER) error:', e.message));
+
     res.redirect('/');
   } catch (err) {
     console.error(err);
@@ -295,6 +303,13 @@ async function completeLogin(req, user, vpnInfo) {
     location: deviceResult && deviceResult.location,
     vpnInfo
   }).catch(e => console.error('evaluateLogin error:', e.message));
+
+  logAuditEvent({
+    req, actorType: user.role === 'admin' ? 'admin' : 'user', actorId: user.id, actorUsername: user.username,
+    action: 'LOGIN', category: 'auth', status: 'success',
+    riskLevel: (deviceResult && deviceResult.isNewDevice) ? 'medium' : 'low',
+    details: { newDevice: !!(deviceResult && deviceResult.isNewDevice), vpnDetected: !!(vpnInfo && (vpnInfo.isVpn || vpnInfo.isProxy || vpnInfo.isTor)) }
+  }).catch(e => console.error('logAuditEvent (LOGIN) error:', e.message));
 
   return (user.role && user.role.toLowerCase() === 'admin') ? '/admin' : '/';
 }
@@ -356,6 +371,11 @@ router.post('/login', async (req, res) => {
     if (!user || !(await bcrypt.compare(password, user.password))) {
       evaluateFailedLogin(identifier, user ? user.id : null, loginIp, req.get('user-agent') || '')
         .catch(e => console.error('evaluateFailedLogin error:', e.message));
+      logAuditEvent({
+        req, actorType: 'user', actorId: user ? user.id : null, actorUsername: user ? user.username : identifier,
+        action: 'LOGIN_FAILED', category: 'auth', status: 'failure', riskLevel: 'medium',
+        details: { identifier }
+      }).catch(e => console.error('logAuditEvent (LOGIN_FAILED) error:', e.message));
       req.flash('error', '❌ তথ্য অথবা পাসওয়ার্ড ভুল।');
       return res.redirect('/login');
     }
@@ -675,6 +695,13 @@ router.post('/reset-password/:token', resetLimiter, async (req, res) => {
 
 router.get('/logout', async (req, res) => {
   try {
+    if (req.session && req.session.user) {
+      logAuditEvent({
+        req, actorType: req.session.user.role === 'admin' ? 'admin' : 'user',
+        actorId: req.session.user.id, actorUsername: req.session.user.username,
+        action: 'LOGOUT', category: 'auth', status: 'success', riskLevel: 'low'
+      }).catch(e => console.error('logAuditEvent (LOGOUT) error:', e.message));
+    }
     if (req.sessionID) {
       await pool.query(`UPDATE device_sessions SET revoked_at = NOW() WHERE sid = $1`, [req.sessionID]);
     }
