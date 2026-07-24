@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Localization Management • Livo Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
+    .loc-toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; align-items: center; }
+    .loc-toolbar .input-icon-wrap { flex: 1; min-width: 200px; }
+    .loc-table-wrap { overflow-x: auto; background: rgba(255,255,255,0.03); border-radius: 14px; border: 1px solid rgba(255,255,255,0.06); }
+    table.loc-table { width: 100%; border-collapse: collapse; font-size: 13px; color: #cbd5e1; }
+    table.loc-table th { text-align: left; padding: 10px 12px; background: rgba(255,255,255,0.04); color: #94a3b8; font-weight: 600; white-space: nowrap; }
+    table.loc-table td { padding: 8px 12px; border-top: 1px solid rgba(255,255,255,0.05); vertical-align: top; }
+    table.loc-table input.cell-input { width: 100%; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: #fff; padding: 6px 8px; font-size: 12.5px; }
+    table.loc-table input.cell-input.missing { border-color: #ef4444; background: rgba(239,68,68,0.08); }
+    .key-code { font-family: monospace; color: var(--gold, #EAB308); font-size: 12px; }
+    .badge-missing { background: rgba(239,68,68,0.15); color: #f87171; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+    .stat-pill { display: inline-flex; align-items: center; gap: 6px; background: rgba(234,179,8,0.08); border: 1px solid rgba(234,179,8,0.25); color: var(--gold, #EAB308); padding: 6px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600; }
+    .btn-xs { padding: 5px 10px; font-size: 12px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; }
+    .import-box { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 16px; margin-bottom: 16px; }
+    .import-box textarea { width: 100%; min-height: 90px; background: #0f1115; color: #e2e8f0; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 10px; font-family: monospace; font-size: 12px; }
+  </style>
+  <%- include('./partials/pwa-head') %>
+</head>
+<body>
+  <div class="admin-wrap">
+    <%- include('./partials/sidebar', { active: 'localization' }) %>
+    <div class="admin-content">
+      <%- include('./partials/header', { pageTitle: 'Localization Management', pageSubtitle: 'bn.json ও en.json — সব Text Key এক জায়গায়' }) %>
+
+      <div class="loc-toolbar">
+        <span class="stat-pill"><i class="fas fa-database"></i> মোট Key: <%= total %></span>
+        <span class="stat-pill" style="<%= missingCount > 0 ? 'background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.3);color:#f87171;' : '' %>">
+          <i class="fas fa-triangle-exclamation"></i> Missing Translation: <%= missingCount %>
+        </span>
+        <form method="GET" action="/admin/localization" class="input-icon-wrap" style="display:flex;">
+          <input class="input cell-input" style="max-width:260px;" type="text" name="q" placeholder="Key বা টেক্সট দিয়ে খুঁজুন..." value="<%= q %>">
+          <button class="btn-xs" style="background:var(--gold,#EAB308);color:#1a1a1a;margin-left:6px;">খুঁজুন</button>
+        </form>
+        <a href="/admin/localization/export/bn" class="btn-xs" style="background:#1e293b;color:#fff;text-decoration:none;"><i class="fas fa-download"></i> bn.json Export</a>
+        <a href="/admin/localization/export/en" class="btn-xs" style="background:#1e293b;color:#fff;text-decoration:none;"><i class="fas fa-download"></i> en.json Export</a>
+        <form method="POST" action="/admin/localization/refresh-cache" style="display:inline;">
+          <button class="btn-xs" style="background:#10b981;color:#fff;" onclick="LivoToast && LivoToast.setLoading(this, true, 'Refreshing...')"><i class="fas fa-rotate"></i> Cache Refresh</button>
+        </form>
+      </div>
+
+      <div class="import-box">
+        <b style="color:#fff;font-size:13px;">Import JSON</b>
+        <form method="POST" action="/admin/localization/import/bn" onsubmit="return prepImport('bn')">
+          <input type="hidden" name="json" id="importJsonBn">
+        </form>
+        <form method="POST" action="/admin/localization/import/en" onsubmit="return prepImport('en')">
+          <input type="hidden" name="json" id="importJsonEn">
+        </form>
+        <textarea id="importTextarea" placeholder='{"key_name": "মান"}'></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button type="button" class="btn-xs" style="background:var(--gold,#EAB308);color:#1a1a1a;" onclick="submitImport('bn')">bn.json-এ Import</button>
+          <button type="button" class="btn-xs" style="background:#334155;color:#fff;" onclick="submitImport('en')">en.json-এ Import</button>
+          <label class="btn-xs" style="background:#1e293b;color:#fff;cursor:pointer;">
+            ফাইল থেকে লোড <input type="file" accept=".json" style="display:none" onchange="loadFile(event)">
+          </label>
+        </div>
+      </div>
+
+      <div class="import-box">
+        <b style="color:#fff;font-size:13px;">নতুন Key তৈরি করুন</b>
+        <form method="POST" action="/admin/localization/create" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+          <input class="cell-input" style="max-width:220px;" type="text" name="key" placeholder="key_name (a-z, 0-9, _)" required>
+          <input class="cell-input" style="max-width:260px;" type="text" name="bn" placeholder="বাংলা টেক্সট">
+          <input class="cell-input" style="max-width:260px;" type="text" name="en" placeholder="English text">
+          <button class="btn-xs" style="background:var(--gold,#EAB308);color:#1a1a1a;">তৈরি করুন</button>
+        </form>
+      </div>
+
+      <div class="loc-table-wrap">
+        <table class="loc-table">
+          <thead>
+            <tr><th>Key</th><th>Bangla (bn)</th><th>English (en)</th><th>Status</th><th>Action</th></tr>
+          </thead>
+          <tbody>
+            <% rows.forEach(function(r) { %>
+            <tr>
+              <td><span class="key-code"><%= r.key %></span></td>
+              <td>
+                <form method="POST" action="/admin/localization/update" class="row-form" style="display:flex;gap:6px;">
+                  <input type="hidden" name="key" value="<%= r.key %>">
+                  <input type="hidden" name="en" value="<%= r.en %>" class="en-mirror">
+                  <input class="cell-input <%= r.missingBn ? 'missing' : '' %>" type="text" name="bn" value="<%= r.bn %>">
+              </td>
+              <td>
+                  <input class="cell-input <%= r.missingEn ? 'missing' : '' %>" type="text" name="en_display" onInput="this.closest('tr').querySelector('.en-mirror').value=this.value" value="<%= r.en %>">
+              </td>
+              <td>
+                <% if (r.missingBn || r.missingEn) { %><span class="badge-missing">Missing</span><% } else { %><span style="color:#10b981;font-size:11px;font-weight:700;">OK</span><% } %>
+              </td>
+              <td>
+                  <button type="submit" class="btn-xs" style="background:#10b981;color:#fff;">Save</button>
+                </form>
+                <form method="POST" action="/admin/localization/delete" style="display:inline;" onsubmit="return confirm('এই Key ডিলিট করবেন?')">
+                  <input type="hidden" name="key" value="<%= r.key %>">
+                  <button class="btn-xs" style="background:#ef4444;color:#fff;">Delete</button>
+                </form>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    function prepImport(lang) {
+      const val = document.getElementById('importTextarea').value;
+      document.getElementById(lang === 'bn' ? 'importJsonBn' : 'importJsonEn').value = val;
+      return true;
+    }
+    function submitImport(lang) {
+      prepImport(lang);
+      document.querySelector('form[action="/admin/localization/import/' + lang + '"]').submit();
+    }
+    function loadFile(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => { document.getElementById('importTextarea').value = reader.result; };
+      reader.readAsText(file);
+    }
+  </script>
+</body>
+</html>

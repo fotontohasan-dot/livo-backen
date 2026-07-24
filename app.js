@@ -210,10 +210,18 @@ app.use('/profile/update', financialLimiter);
 app.use('/profile/update-personal', financialLimiter);
 
 // ভাষা সেটিং
-const translations = {
-  bn: require('./locales/bn.json'),
-  en: require('./locales/en.json')
-};
+const fs = require('fs');
+const LOCALES_DIR = path.join(__dirname, 'locales');
+function loadTranslations() {
+  return {
+    bn: JSON.parse(fs.readFileSync(path.join(LOCALES_DIR, 'bn.json'), 'utf8')),
+    en: JSON.parse(fs.readFileSync(path.join(LOCALES_DIR, 'en.json'), 'utf8'))
+  };
+}
+let translations = loadTranslations();
+function refreshTranslationsCache() { translations = loadTranslations(); }
+app.set('refreshTranslationsCache', refreshTranslationsCache);
+app.set('getTranslations', () => translations);
 
 app.get('/lang/:code', (req, res) => {
   req.session.lang = req.params.code === 'en' ? 'en' : 'bn';

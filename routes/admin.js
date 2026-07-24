@@ -2981,4 +2981,144 @@ router.post('/feature-flags/:id/delete', async (req, res) => {
   }
 });
 
+const fs = require('fs');
+const path = require('path');
+const LOCALES_DIR = path.join(__dirname, '..', 'locales');
+
+function readLocale(code) {
+  return JSON.parse(fs.readFileSync(path.join(LOCALES_DIR, code + '.json'), 'utf8'));
+}
+function writeLocale(code, obj) {
+  const sorted = {};
+  Object.keys(obj).sort().forEach(k => sorted[k] = obj[k]);
+  fs.writeFileSync(path.join(LOCALES_DIR, code + '.json'), JSON.stringify(sorted, null, 2) + '\n', 'utf8');
+}
+function refreshCache(req) {
+  const fn = req.app.get('refreshTranslationsCache');
+  if (fn) fn();
+}
+
+router.get('/localization', (req, res) => {
+  try {
+    const bn = readLocale('bn');
+    const en = readLocale('en');
+    const q = (req.query.q || '').trim().toLowerCase();
+    const allKeys = Array.from(new Set([...Object.keys(bn), ...Object.keys(en)])).sort();
+    const rows = allKeys
+      .filter(k => !q || k.toLowerCase().includes(q) || (bn[k] || '').toLowerCase().includes(q) || (en[k] || '').toLowerCase().includes(q))
+      .map(k => ({ key: k, bn: bn[k] || '', en: en[k] || '', missingBn: !bn[k], missingEn: !en[k] }));
+    const missingCount = rows.filter(r => r.missingBn || r.missingEn).length;
+    res.render('admin/localization', { rows, q: req.query.q || '', total: allKeys.length, missingCount, saved: req.query.saved === '1' });
+  } catch (err) {
+    console.error('Localization load error:', err.message);
+    res.render('admin/localization', { rows: [], q: '', total: 0, missingCount: 0, saved: false });
+  }
+});
+
+router.post('/localization/create', async (req, res) => {
+  try {
+    const key = (req.body.key || '').trim();
+    const bnVal = req.body.bn || '';
+    const enVal = req.body.en || '';
+    if (!key || !/^[a-zA-Z0-9_]+$/.test(key)) {
+      req.flash('error', 'Key শুধু ইংরেজি অক্ষর, সংখ্যা ও আন্ডারস্কোর দিয়ে হতে হবে।');
+      return res.redirect('/admin/localization');
+    }
+    const bn = readLocale('bn'); const en = readLocale('en');
+    bn[key] = bnVal; en[key] = enVal;
+    writeLocale('bn', bn); writeLocale('en', en);
+    refreshCache(req);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'LOCALIZATION_KEY_CREATED', `Key তৈরি: ${key}`, req.ip);
+    req.flash('success', '✅ নতুন Key তৈরি হয়েছে।');
+    res.redirect('/admin/localization');
+  } catch (err) {
+    req.flash('error', 'Key তৈরি করতে সমস্যা হয়েছে।');
+    res.redirect('/admin/localization');
+  }
+});
+
+router.post('/localization/update', async (req, res) => {
+  try {
+    const key = (req.body.key || '').trim();
+    const bnVal = req.body.bn || '';
+    const enVal = req.body.en || '';
+    if (!key) { req.flash('error', 'Key পাওয়া যায়নি।'); return res.redirect('/admin/localization'); }
+    const bn = readLocale('bn'); const en = readLocale('en');
+    bn[key] = bnVal; en[key] = enVal;
+    writeLocale('bn', bn); writeLocale('en', en);
+    refreshCache(req);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'LOCALIZATION_KEY_UPDATED', `Key আপডেট: ${key}`, req.ip);
+    req.flash('success', '✅ Key আপডেট হয়েছে।');
+    res.redirect('/admin/localization');
+  } catch (err) {
+    req.flash('error', 'Key আপডেট করতে সমস্যা হয়েছে।');
+    res.redirect('/admin/localization');
+  }
+});
+
+router.post('/localization/delete', async (req, res) => {
+  try {
+    const key = (req.body.key || '').trim();
+    const bn = readLocale('bn'); const en = readLocale('en');
+    delete bn[key]; delete en[key];
+    writeLocale('bn', bn); writeLocale('en', en);
+    refreshCache(req);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'LOCALIZATION_KEY_DELETED', `Key ডিলিট: ${key}`, req.ip);
+    req.flash('success', '✅ Key ডিলিট হয়েছে।');
+    res.redirect('/admin/localization');
+  } catch (err) {
+    req.flash('error', 'Key ডিলিট করতে সমস্যা হয়েছে।');
+    res.redirect('/admin/localization');
+  }
+});
+
+router.get('/localization/export/:lang', (req, res) => {
+  try {
+    const lang = req.params.lang === 'en' ? 'en' : 'bn';
+    const data = readLocale(lang);
+    res.setHeader('Content-Disposition', `attachment; filename="${lang}.json"`);
+    res.setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify(data, null, 2));
+  } catch (err) {
+    res.status(500).send('Export failed');
+  }
+});
+
+router.post('/localization/import/:lang', async (req, res) => {
+  try {
+    const lang = req.params.lang === 'en' ? 'en' : 'bn';
+    let incoming;
+    try { incoming = JSON.parse(req.body.json || '{}'); } catch (e) {
+      req.flash('error', 'বৈধ JSON না — পার্স করা যায়নি।');
+      return res.redirect('/admin/localization');
+    }
+    if (typeof incoming !== 'object' || Array.isArray(incoming) || incoming === null) {
+      req.flash('error', 'JSON অবশ্যই key-value অবজেক্ট হতে হবে।');
+      return res.redirect('/admin/localization');
+    }
+    const current = readLocale(lang);
+    const merged = Object.assign({}, current, incoming);
+    writeLocale(lang, merged);
+    refreshCache(req);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'LOCALIZATION_IMPORTED', `${lang}.json import (${Object.keys(incoming).length}টি key)`, req.ip);
+    req.flash('success', `✅ ${Object.keys(incoming).length}টি Key ইম্পোর্ট হয়েছে (${lang})।`);
+    res.redirect('/admin/localization');
+  } catch (err) {
+    req.flash('error', 'ইম্পোর্ট ব্যর্থ হয়েছে।');
+    res.redirect('/admin/localization');
+  }
+});
+
+router.post('/localization/refresh-cache', async (req, res) => {
+  try {
+    refreshCache(req);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'LOCALIZATION_CACHE_REFRESHED', 'Translation cache রিফ্রেশ করা হয়েছে', req.ip);
+    req.flash('success', '✅ Cache রিফ্রেশ হয়েছে।');
+    res.redirect('/admin/localization');
+  } catch (err) {
+    req.flash('error', 'Cache রিফ্রেশ ব্যর্থ হয়েছে।');
+    res.redirect('/admin/localization');
+  }
+});
+
 module.exports = router;
