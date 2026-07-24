@@ -7,6 +7,7 @@ const geoip = require('geoip-lite');
 const { pool } = require('../db');
 const { logAdminAction } = require('./fraudDetection');
 const { sendNewDeviceAlert } = require('./email');
+const { notifyUser, notifyAdmins } = require('./notify');
 
 const ACTIVITY_TOUCH_INTERVAL_MS = 5 * 60 * 1000; // বারবার DB আপডেট না করে ৫ মিনিট পরপর last_activity রিফ্রেশ
 
@@ -114,6 +115,19 @@ async function recordDeviceLogin(req, userId, loginLogId) {
         null, 'SYSTEM', 'NEW_DEVICE_LOGIN',
         `ইউজার #${userId} — নতুন ডিভাইস থেকে লগইন: ${deviceName} — IP ${ip} — ${location}`, null
       );
+
+      // ইউজারকে রিয়েল-টাইম সিকিউরিটি অ্যালার্ট (নোটিফিকেশন সেন্টার + অনলাইন থাকলে পুশ)
+      notifyUser(userId, {
+        title: '🔐 নতুন ডিভাইস থেকে লগইন',
+        message: `${deviceName} থেকে আপনার অ্যাকাউন্টে লগইন হয়েছে — IP: ${ip}, লোকেশন: ${location}। এটা আপনি না হলে এখনই পাসওয়ার্ড বদলান।`,
+        type: 'security',
+      }).catch(() => {});
+
+      // অ্যাডমিন প্যানেলেও রিয়েল-টাইম দেখানো
+      notifyAdmins('security', {
+        title: 'নতুন ডিভাইস লগইন',
+        message: `ইউজার #${userId} — ${deviceName} — IP ${ip} — ${location}`,
+      });
 
       // নতুন ডিভাইস থেকে লগইন হলে ইউজারকে ইমেইল সতর্কতা — ব্যর্থ হলেও লগইন ফ্লো কখনো আটকাবে না
       try {

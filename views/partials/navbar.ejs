@@ -70,6 +70,11 @@
 }
 .golden-navbar .nav-icon-link:hover { background: rgba(0,0,0,0.12); }
 .golden-navbar .badge-dot { border-color: #B8860B; }
+.notif-badge {
+  width: auto !important; height: 16px; min-width: 16px; border-radius: 8px !important;
+  display: flex; align-items: center; justify-content: center; padding: 0 4px;
+  font-size: 10px; font-weight: 800; color: #fff; line-height: 1;
+}
 .golden-navbar .nav-btn-login {
   color: #241a00 !important;
   border-color: rgba(0,0,0,0.3) !important;
@@ -101,7 +106,7 @@
       <div style="display:flex; gap: 4px;">
         <a href="/notifications" class="nav-icon-link">
           <i class="fas fa-bell"></i>
-          <span class="badge-dot"></span>
+          <span class="badge-dot notif-badge" id="notifBadge" style="display:none;"></span>
         </a>
         <a href="/profile/chat" class="nav-icon-link">
           <i class="fas fa-envelope"></i>

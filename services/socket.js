@@ -50,6 +50,13 @@ const initSocket = (server, sessionMiddleware) => {
     }
   });
 
+  // ==== নতুন রিয়েল-টাইম নোটিফিকেশন সিস্টেম (services/notify.js)-কে একই io instance দেওয়া ====
+  try {
+    require('./notify').initNotifyIo(io);
+  } catch (err) {
+    console.error('notify service wiring error:', err.message);
+  }
+
   // ===== নিরাপত্তা: socket handshake-এর সাথে Express session যুক্ত করা =====
   // এর ফলে socket.request.session.user থেকে আসল লগইন করা ইউজার/রোল পাওয়া যাবে,
   // ক্লায়েন্ট যা দাবি করে (senderId, isAdmin) তা আর বিশ্বাস করা হবে না।

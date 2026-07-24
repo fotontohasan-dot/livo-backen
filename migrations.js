@@ -107,6 +107,21 @@ async function runMigrations() {
       );
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_notif_user_unread ON notifications(user_id) WHERE is_read = false;`);
+
+    // অ্যাডমিন ব্রডকাস্ট নোটিফিকেশনের আলাদা অডিট লগ (কে কখন কী পাঠিয়েছে, কতজনকে)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS notification_broadcasts (
+        id SERIAL PRIMARY KEY,
+        admin_id INTEGER REFERENCES users(id),
+        admin_username VARCHAR(100),
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        type VARCHAR(20) DEFAULT 'announcement',
+        recipient_count INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS markets (

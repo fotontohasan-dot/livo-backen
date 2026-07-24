@@ -9,6 +9,7 @@ const { syncMatches } = require('../services/matchUpdater');
 const { runBackupNow, restoreFromBackup, getBackupStatus } = require('../services/backup');
 const { loadSettings, invalidateSettingsCache } = require('../services/settings');
 const { creditApprovedDeposit } = require('./payment');
+const { emitToUser, notifyUser, broadcastToAllUsers, notifyAdmins } = require('../services/notify');
 const bcrypt = require('bcryptjs');
 const { getDemoStats } = require('../services/socket');
 const {
@@ -600,6 +601,57 @@ router.post('/settings/admins/:id/demote', async (req, res) => {
   }
 });
 
+// ==================== NOTIFICATION BROADCAST ====================
+router.get('/notifications', async (req, res) => {
+  try {
+    const history = await pool.query(
+      `SELECT * FROM notification_broadcasts ORDER BY created_at DESC LIMIT 30`
+    );
+    const totalUsersRes = await pool.query('SELECT COUNT(*) AS cnt FROM users');
+    res.render('admin/notifications', {
+      history: history.rows,
+      totalUsers: parseInt(totalUsersRes.rows[0].cnt),
+    });
+  } catch (err) {
+    console.error('notifications page error:', err.message);
+    res.render('admin/notifications', { history: [], totalUsers: 0 });
+  }
+});
+
+router.post('/notifications/broadcast', adminFinancialLimiter, async (req, res) => {
+  try {
+    const title = sanitizeText(req.body.title || '', { maxLen: 150 });
+    const message = sanitizeText(req.body.message || '', { maxLen: 500 });
+    const allowedTypes = ['announcement', 'system', 'info', 'success', 'error'];
+    const type = allowedTypes.includes(req.body.type) ? req.body.type : 'announcement';
+
+    if (!title || !message) {
+      req.flash('error', 'শিরোনাম ও বার্তা দুটোই আবশ্যক');
+      return res.redirect('/admin/notifications');
+    }
+
+    const recipientCount = await broadcastToAllUsers({ title, message, type });
+
+    await pool.query(
+      `INSERT INTO notification_broadcasts (admin_id, admin_username, title, message, type, recipient_count)
+       VALUES ($1,$2,$3,$4,$5,$6)`,
+      [req.session.user.id, req.session.user.username, title, message, type, recipientCount]
+    );
+
+    await logAdminAction(
+      req.session.user.id, req.session.user.username, 'NOTIFICATION_BROADCAST',
+      `সব ইউজারকে (${recipientCount} জন) ব্রডকাস্ট পাঠানো হয়েছে: "${title}"`, req.ip
+    );
+
+    req.flash('success', `✅ ${recipientCount} জন ইউজারকে নোটিফিকেশন পাঠানো হয়েছে!`);
+    res.redirect('/admin/notifications');
+  } catch (err) {
+    console.error('broadcast error:', err.message);
+    req.flash('error', 'ব্রডকাস্ট পাঠাতে সমস্যা হয়েছে');
+    res.redirect('/admin/notifications');
+  }
+});
+
 // ==================== DASHBOARD ====================
 router.get('/dashboard', (req, res) => res.redirect('/admin'));
 
@@ -969,8 +1021,9 @@ router.post('/api/deposits/:id/approve', adminFinancialLimiter, requireIntParam(
       await client.query('ROLLBACK');
       return res.status(400).json({ success: false, error: 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে' });
     }
-    await creditApprovedDeposit(client, request);
+    const crApprove = await creditApprovedDeposit(client, request);
     await client.query('COMMIT');
+    if (crApprove && crApprove.notification) emitToUser(request.user_id, crApprove.notification);
     await logAdminAction(req.session.user.id, req.session.user.username, 'deposit_approve', `Deposit #${id} approved`, req.ip);
     res.json({ success: true });
   } catch (err) {
@@ -995,11 +1048,12 @@ router.post('/api/deposits/:id/reject', adminFinancialLimiter, requireIntParam('
       return res.status(400).json({ success: false, error: 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে' });
     }
     await client.query(`UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE id=$1`, [id]);
-    await client.query(
-      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'error')`,
+    const rejNotif = await client.query(
+      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'error') RETURNING *`,
       [request.user_id, 'ডিপোজিট বাতিল', `আপনার ${request.amount} টাকার ডিপোজিট বাতিল হয়েছে।${reason ? ' কারণ: ' + reason : ''}`]
     );
     await client.query('COMMIT');
+    if (rejNotif.rows[0]) emitToUser(request.user_id, rejNotif.rows[0]);
     await logAdminAction(req.session.user.id, req.session.user.username, 'deposit_reject', `Deposit #${id} rejected: ${reason || ''}`, req.ip);
     res.json({ success: true });
   } catch (err) {
@@ -1073,11 +1127,12 @@ router.post('/api/withdrawals/:id/approve', adminFinancialLimiter, requireIntPar
       `UPDATE payment_requests SET status='approved', transaction_id=COALESCE($1, transaction_id), updated_at=NOW() WHERE id=$2`,
       [txn || null, id]
     );
-    await client.query(
-      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'success')`,
+    const wApproveNotif = await client.query(
+      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'success') RETURNING *`,
       [request.user_id, 'উইথড্র অনুমোদন', `আপনার ${request.amount} টাকার উইথড্র সম্পন্ন হয়েছে!${txn ? ' Ref: ' + txn : ''}`]
     );
     await client.query('COMMIT');
+    if (wApproveNotif.rows[0]) emitToUser(request.user_id, wApproveNotif.rows[0]);
     await logAdminAction(req.session.user.id, req.session.user.username, 'withdraw_approve', `Withdrawal #${id} approved`, req.ip);
     res.json({ success: true });
   } catch (err) {
@@ -1104,11 +1159,12 @@ router.post('/api/withdrawals/:id/reject', adminFinancialLimiter, requireIntPara
     // উইথড্র রিকোয়েস্ট করার সময় কয়েন কেটে নেওয়া হয়, তাই বাতিল হলে ফেরত দিতে হবে
     await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
     await client.query(`UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE id=$1`, [id]);
-    await client.query(
-      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'error')`,
+    const wRejectNotif = await client.query(
+      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'error') RETURNING *`,
       [request.user_id, 'উইথড্র বাতিল', `আপনার ${request.amount} টাকার উইথড্র বাতিল হয়েছে, কয়েন ফেরত দেওয়া হয়েছে।${reason ? ' কারণ: ' + reason : ''}`]
     );
     await client.query('COMMIT');
+    if (wRejectNotif.rows[0]) emitToUser(request.user_id, wRejectNotif.rows[0]);
     await logAdminAction(req.session.user.id, req.session.user.username, 'withdraw_reject', `Withdrawal #${id} rejected: ${reason || ''}`, req.ip);
     res.json({ success: true });
   } catch (err) {
@@ -1579,21 +1635,27 @@ router.post('/markets/:marketId/settle', async (req, res) => {
     await client.query('BEGIN');
     const bets = await client.query(`SELECT * FROM bets WHERE market_id = $1 AND status = 'pending' FOR UPDATE`, [marketId]);
     let winnersCount = 0;
+    const notifsToEmit = [];
     for (const bet of bets.rows) {
       if (String(bet.runner) === String(winning_runner)) {
         const payout = Math.floor(Number(bet.stake) * Number(bet.odd));
         await client.query('UPDATE users SET coins = coins + $1 WHERE id = $2', [payout, bet.user_id]);
         await client.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'bet_win','বেট জয়')`, [bet.user_id, payout]);
         await client.query(`UPDATE bets SET status = 'won' WHERE id = $1`, [bet.id]);
-        await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট জয়!',$2,'success')`, [bet.user_id, `আপনি ${payout} কয়েন জিতেছেন!`]);
+        const wn = await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট জয়!',$2,'success') RETURNING *`, [bet.user_id, `আপনি ${payout} কয়েন জিতেছেন!`]);
+        notifsToEmit.push({ userId: bet.user_id, row: wn.rows[0] });
         winnersCount++;
       } else {
         await client.query(`UPDATE bets SET status = 'lost' WHERE id = $1`, [bet.id]);
+        const ln = await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট ফলাফল',$2,'error') RETURNING *`, [bet.user_id, `আপনার বেটটি হেরে গেছে।`]);
+        notifsToEmit.push({ userId: bet.user_id, row: ln.rows[0] });
       }
     }
     await client.query(`UPDATE markets SET status = 'settled', updated_at = NOW() WHERE id = $1`, [marketId]);
-    await settleSelectionsForMarket(client, marketId, winning_runner);
+    const accaNotifs = await settleSelectionsForMarket(client, marketId, winning_runner);
     await client.query('COMMIT');
+    notifsToEmit.push(...accaNotifs);
+    notifsToEmit.forEach(n => emitToUser(n.userId, n.row));
     try {
       const mRow = await pool.query('SELECT match_id FROM markets WHERE id = $1', [marketId]);
       if (mRow.rows[0]) await cache.del(cacheKeys.matchDetail(mRow.rows[0].match_id));
@@ -1671,14 +1733,16 @@ router.post('/bets/:id/settle', async (req, res) => {
       return res.redirect('/admin/bets');
     }
     await client.query('UPDATE bets SET status=$1 WHERE id=$2', [result, id]);
+    let settleNotif;
     if (result === 'won') {
       const payout = Math.floor(Number(bet.stake) * Number(bet.odd));
       await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [payout, bet.user_id]);
-      await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট জিতেছেন!',$2,'success')`, [bet.user_id, `আপনি ৳${payout} জিতেছেন!`]);
+      settleNotif = await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট জিতেছেন!',$2,'success') RETURNING *`, [bet.user_id, `আপনি ৳${payout} জিতেছেন!`]);
     } else {
-      await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট ফলাফল',$2,'error')`, [bet.user_id, `আপনার ৳${bet.stake} বেটটি হেরে গেছে।`]);
+      settleNotif = await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট ফলাফল',$2,'error') RETURNING *`, [bet.user_id, `আপনার ৳${bet.stake} বেটটি হেরে গেছে।`]);
     }
     await client.query('COMMIT');
+    if (settleNotif.rows[0]) emitToUser(bet.user_id, settleNotif.rows[0]);
     req.flash('success', 'বেট সেটেল হয়েছে');
     res.redirect('/admin/bets');
   } catch (err) {

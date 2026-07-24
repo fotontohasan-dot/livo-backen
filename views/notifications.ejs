@@ -4,14 +4,24 @@
 <div class="container" style="padding:1rem;padding-bottom:100px;max-width:800px;margin:0 auto;">
   <%- include('partials/flash') %>
 
-  <h1 style="font-size:1.8rem;font-weight:800;margin-bottom:1.5rem;">🔔 <%= t.notifications_title %></h1>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:10px;">
+    <h1 style="font-size:1.8rem;font-weight:800;margin:0;">🔔 <%= t.notifications_title %></h1>
+    <% if (notifications && notifications.some(n => !n.is_read)) { %>
+      <button id="markAllReadBtn" class="btn" style="font-size:0.8rem;padding:8px 14px;background:var(--bg-surface);color:var(--text-main);border:1px solid var(--border-glass);border-radius:10px;cursor:pointer;">
+        সব রিড করুন
+      </button>
+    <% } %>
+  </div>
 
   <div class="layout-grid" style="display:flex;flex-direction:column;gap:12px;">
     <% if (notifications && notifications.length > 0) { %>
+      <% const iconMap = { success:'✅', warning:'⚠️', error:'⚠️', security:'🔐', deposit:'💰', withdraw:'💸', bet:'🎯', announcement:'📢', system:'⚙️', info:'ℹ️' };
+         const colorMap = { success:'#10b981', warning:'#f59e0b', error:'#ef4444', security:'#ef4444', deposit:'#10b981', withdraw:'#3b82f6', bet:'#a855f7', announcement:'#f59e0b', system:'#64748b', info:'#3b82f6' }; %>
       <% notifications.forEach(n => { %>
-        <div class="glass-card" style="padding:1rem;display:flex;gap:15px;align-items:start;opacity:<%= n.is_read ? '0.7' : '1' %>;border-left:4px solid <%= n.type==='success'?'#10b981':n.type==='warning'?'#f59e0b':'#3b82f6' %>">
+        <div class="glass-card notif-item" data-id="<%= n.id %>" data-read="<%= n.is_read ? '1' : '0' %>"
+          style="padding:1rem;display:flex;gap:15px;align-items:start;opacity:<%= n.is_read ? '0.7' : '1' %>;border-left:4px solid <%= colorMap[n.type] || '#3b82f6' %>;cursor:<%= n.is_read ? 'default' : 'pointer' %>;">
           <div style="font-size:1.5rem;margin-top:4px;">
-            <%= n.type==='success'?'✅':n.type==='warning'?'⚠️':'ℹ️' %>
+            <%= iconMap[n.type] || 'ℹ️' %>
           </div>
           <div style="flex:1;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
@@ -19,7 +29,7 @@
                 <%= new Date(n.created_at).toLocaleString('bn-BD') %>
               </div>
               <% if (!n.is_read) { %>
-                <span style="width:8px;height:8px;background:var(--gold);border-radius:50%;"></span>
+                <span class="unread-dot" style="width:8px;height:8px;background:var(--gold);border-radius:50%;"></span>
               <% } %>
             </div>
             <div style="color:var(--text-main);font-weight:600;margin-bottom:2px;"><%= n.title %></div>
@@ -35,6 +45,59 @@
     <% } %>
   </div>
 </div>
+
+<script>
+  function refreshNavBadge() {
+    fetch('/notifications/count').then(function (r) { return r.json(); }).then(function (d) {
+      var els = document.querySelectorAll('#notifBadge, .notif-badge');
+      var count = d && d.count ? d.count : 0;
+      els.forEach(function (el) {
+        if (count > 0) { el.textContent = count > 99 ? '99+' : String(count); el.style.display = 'flex'; }
+        else { el.style.display = 'none'; }
+      });
+    }).catch(function () {});
+  }
+
+  document.querySelectorAll('.notif-item').forEach(function (item) {
+    item.addEventListener('click', function () {
+      if (item.getAttribute('data-read') === '1') return;
+      var id = item.getAttribute('data-id');
+      fetch('/notifications/' + id + '/read', { method: 'POST' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d && d.success) {
+            item.setAttribute('data-read', '1');
+            item.style.opacity = '0.7';
+            item.style.cursor = 'default';
+            var dot = item.querySelector('.unread-dot');
+            if (dot) dot.remove();
+            refreshNavBadge();
+          }
+        }).catch(function () {});
+    });
+  });
+
+  var markAllBtn = document.getElementById('markAllReadBtn');
+  if (markAllBtn) {
+    markAllBtn.addEventListener('click', function () {
+      fetch('/notifications/read-all', { method: 'POST' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d && d.success) {
+            document.querySelectorAll('.notif-item').forEach(function (item) {
+              item.setAttribute('data-read', '1');
+              item.style.opacity = '0.7';
+              item.style.cursor = 'default';
+              var dot = item.querySelector('.unread-dot');
+              if (dot) dot.remove();
+            });
+            markAllBtn.style.display = 'none';
+            refreshNavBadge();
+          }
+        }).catch(function () {});
+    });
+  }
+</script>
 
 <%- include('partials/bottom-nav') %>
 </body>

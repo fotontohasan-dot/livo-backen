@@ -102,5 +102,44 @@
       <% error.forEach(function (m) { %> LivoToast.show(<%- JSON.stringify(m) %>, 'error'); <% }) %>
     <% } %>
   });
+
+  // ==================== রিয়েল-টাইম নোটিফিকেশন (Deposit/Withdraw/Bet/Security/Announcement) ====================
+  <% if (typeof user !== 'undefined' && user) { %>
+  (function () {
+    function setBadge(count) {
+      var els = document.querySelectorAll('#notifBadge, .notif-badge');
+      els.forEach(function (el) {
+        if (count > 0) { el.textContent = count > 99 ? '99+' : String(count); el.style.display = 'flex'; }
+        else { el.style.display = 'none'; }
+      });
+    }
+
+    // পেজ লোডে আনরিড কাউন্ট নিয়ে আসা
+    fetch('/notifications/count').then(function (r) { return r.json(); }).then(function (d) {
+      setBadge(d && d.count ? d.count : 0);
+    }).catch(function () {});
+
+    // socket.io ক্লায়েন্ট লাইব্রেরি লোড করে সরাসরি রিয়েল-টাইম কানেকশন
+    var s = document.createElement('script');
+    s.src = '/socket.io/socket.io.js';
+    s.onload = function () {
+      try {
+        var socket = io();
+        socket.on('connect', function () { socket.emit('join'); });
+        socket.on('notification', function (n) {
+          if (!n) return;
+          var typeMap = { security: 'error', error: 'error', success: 'success', withdraw: 'info', deposit: 'success' };
+          var toastType = typeMap[n.type] || 'info';
+          if (window.LivoToast) LivoToast.show((n.title ? n.title + ': ' : '') + (n.message || ''), toastType);
+          // ব্রডকাস্ট বা নতুন নোটিফিকেশন এলে আনরিড কাউন্ট রিফ্রেশ করা
+          fetch('/notifications/count').then(function (r) { return r.json(); }).then(function (d) {
+            setBadge(d && d.count ? d.count : 0);
+          }).catch(function () {});
+        });
+      } catch (e) { /* socket ব্যর্থ হলেও পেজ স্বাভাবিকভাবে কাজ করবে */ }
+    };
+    document.body.appendChild(s);
+  })();
+  <% } %>
 </script>
 
