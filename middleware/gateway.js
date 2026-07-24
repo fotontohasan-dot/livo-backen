@@ -6,6 +6,7 @@ const rateLimit = require('express-rate-limit');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
 const { getIpRule, getClientIp } = require('../services/ipRules');
 const { logBotEvent, evaluateRequest } = require('../services/botDetection');
+const { getSetting } = require('../services/settings');
 
 // শুধু /api/ পাথের জন্য আলাদা rate limiter (login/register এর থেকে আলাদা)
 const apiLimiter = rateLimit({
@@ -70,6 +71,12 @@ function apiNotFound(req, res, next) {
 // একসাথে সব middleware চালানোর জন্য গেটওয়ে এন্ট্রিপয়েন্ট
 async function apiGateway(req, res, next) {
   if (!req.path.includes('/api/')) return next();
+  if (!req.path.startsWith('/admin')) {
+    const publicApiOn = await getSetting('api_public_enabled').catch(() => undefined);
+    if (publicApiOn === 'false') {
+      return res.status(503).json({ success: false, error: 'পাবলিক API সাময়িকভাবে বন্ধ আছে।' });
+    }
+  }
 
   // Bot Detection — ব্লকলিস্টেড IP হলে Public API-তেও সরাসরি প্রত্যাখ্যান
   try {

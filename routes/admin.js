@@ -437,8 +437,40 @@ const SETTING_KEYS = [
   'site_name', 'support_email', 'maintenance_mode', 'max_login_attempts',
   'min_bet', 'max_bet', 'turnover_multiplier', 'max_daily_bets',
   'deposit_commission_percent', 'withdraw_commission_percent', 'min_deposit', 'min_withdraw',
-  'maintenance_message', 'maintenance_eta', 'maintenance_allowed_ips', 'maintenance_bypass_token'
+  'maintenance_message', 'maintenance_eta', 'maintenance_allowed_ips', 'maintenance_bypass_token',
+  // ---- System Settings hub-এ যোগ হওয়া নতুন ক্যাটাগরি ---- (সব অ্যাক্টুয়াল secret .env-এই থাকে, এখানে শুধু non-secret কনফিগ)
+  'site_tagline', 'support_phone',
+  'smtp_host', 'smtp_port', 'smtp_secure', 'smtp_from_name', 'smtp_from_email',
+  'sms_provider', 'sms_sender_id',
+  'payment_deposit_enabled', 'payment_withdraw_enabled', 'payment_gateway_live_mode',
+  'api_public_enabled', 'api_rate_limit_per_15min',
+  'upload_max_size_mb', 'upload_allowed_types',
+  'session_idle_timeout_minutes',
+  'default_language', 'default_timezone', 'default_currency'
 ];
+
+router.get('/system-settings', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT key, value FROM site_settings');
+    const settings = {};
+    result.rows.forEach(r => { settings[r.key] = r.value; });
+    settings.maintenance_mode = settings.maintenance_mode === 'true';
+    settings.payment_deposit_enabled = settings.payment_deposit_enabled !== 'false';
+    settings.payment_withdraw_enabled = settings.payment_withdraw_enabled !== 'false';
+    settings.payment_gateway_live_mode = settings.payment_gateway_live_mode === 'true';
+    settings.api_public_enabled = settings.api_public_enabled !== 'false';
+    settings.smtp_secure = settings.smtp_secure !== 'false';
+
+    res.render('admin/system-settings', {
+      settings,
+      redisConnected: cache.getStatus().connected,
+      saved: req.query.saved === '1'
+    });
+  } catch (err) {
+    console.error('System settings load error:', err && err.stack ? err.stack : err);
+    res.render('admin/system-settings', { settings: {}, redisConnected: false, saved: false });
+  }
+});
 
 router.get('/settings', async (req, res) => {
   try {
@@ -532,10 +564,10 @@ router.post('/settings/update', async (req, res) => {
       console.error('logAdminAction failed (settings already saved):', e && e.stack ? e.stack : e);
     }
 
-    return res.redirect('/admin/settings?saved=1');
+    return res.redirect(`${req.body.redirect_to === 'system-settings' ? '/admin/system-settings' : '/admin/settings'}?saved=1`);
   } catch (err) {
     console.error('Settings update error:', err && err.stack ? err.stack : err);
-    if (!res.headersSent) return res.redirect('/admin/settings?error=1');
+    if (!res.headersSent) return res.redirect(`${req.body.redirect_to === 'system-settings' ? '/admin/system-settings' : '/admin/settings'}?error=1`);
   }
 });
 

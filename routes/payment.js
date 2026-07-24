@@ -12,6 +12,7 @@ const { verifyPin, getPinStatus } = require('../services/withdrawPin');
 const { evaluateTransaction } = require('../services/fraudDetection');
 const { isSessionNewDevice } = require('../services/deviceTracking');
 const { checkIp } = require('../services/vpnDetection');
+const { getSetting } = require('../services/settings');
 const { requireVerifiedEmail } = require('../middleware/auth');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
 
@@ -159,6 +160,12 @@ router.get('/deposit', requireLogin, (req, res) => {
 });
 
 router.post('/deposit', requireLogin, paymentLimiter, async (req, res) => {
+  const depositEnabled = await getSetting('payment_deposit_enabled');
+  if (depositEnabled === 'false') {
+    req.flash('error', 'বর্তমানে ডিপোজিট সাময়িকভাবে বন্ধ আছে। কিছুক্ষণ পর আবার চেষ্টা করুন।');
+    return res.redirect('/payment/deposit');
+  }
+
   const { method, account_number } = req.body;
   const transaction_id = (req.body.transaction_id || '').trim();
   const wantBonus = req.body.want_bonus === 'yes';
@@ -260,6 +267,12 @@ router.get('/withdraw', requireLogin, async (req, res) => {
 
 
 router.post('/withdraw', requireLogin, requireVerifiedEmail, paymentLimiter, async (req, res) => {
+  const withdrawEnabled = await getSetting('payment_withdraw_enabled');
+  if (withdrawEnabled === 'false') {
+    req.flash('error', 'বর্তমানে উইথড্র সাময়িকভাবে বন্ধ আছে। কিছুক্ষণ পর আবার চেষ্টা করুন।');
+    return res.redirect('/payment/withdraw');
+  }
+
   const { method, account_number, withdraw_pin } = req.body;
   const amount = parseAmount(req.body.amount);
   const userId = req.session.user.id;
