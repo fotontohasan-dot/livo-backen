@@ -3121,4 +3121,92 @@ router.post('/localization/refresh-cache', async (req, res) => {
   }
 });
 
+// ==================== Announcement / Broadcast System ====================
+router.get('/announcements', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT * FROM announcements ORDER BY created_at DESC');
+    res.render('admin/announcements', { list: r.rows, error: req.query.error || '', created: req.query.created === '1' });
+  } catch (err) {
+    console.error('Announcements list error:', err.message);
+    res.render('admin/announcements', { list: [], error: 'load_failed', created: false });
+  }
+});
+
+router.post('/announcements/create', async (req, res) => {
+  try {
+    const { type, title_bn, title_en, message_bn, message_en, target_type, target_role, target_user_id, starts_at, expires_at } = req.body;
+    if (!message_bn || !message_bn.trim()) {
+      return res.redirect('/admin/announcements?error=' + encodeURIComponent('বাংলা মেসেজ আবশ্যক'));
+    }
+    const r = await pool.query(
+      `INSERT INTO announcements (type, title_bn, title_en, message_bn, message_en, target_type, target_role, target_user_id, starts_at, expires_at, created_by, created_by_username)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8, COALESCE($9, NOW()), $10, $11, $12) RETURNING id`,
+      [
+        type || 'banner', title_bn || null, title_en || null, message_bn, message_en || null,
+        target_type || 'all', target_type === 'role' ? (target_role || null) : null,
+        target_type === 'user' ? (parseInt(target_user_id) || null) : null,
+        starts_at || null, expires_at || null,
+        req.session.user.id, req.session.user.username
+      ]
+    );
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ANNOUNCEMENT_CREATED', `নতুন ${type} announcement তৈরি হয়েছে (#${r.rows[0].id})`, req.ip);
+    res.redirect('/admin/announcements?created=1');
+  } catch (err) {
+    console.error('Announcement create error:', err.message);
+    res.redirect('/admin/announcements?error=' + encodeURIComponent('তৈরি করতে সমস্যা হয়েছে'));
+  }
+});
+
+router.post('/announcements/:id/update', async (req, res) => {
+  try {
+    const { type, title_bn, title_en, message_bn, message_en, target_type, target_role, target_user_id, starts_at, expires_at } = req.body;
+    await pool.query(
+      `UPDATE announcements SET type=$1, title_bn=$2, title_en=$3, message_bn=$4, message_en=$5,
+       target_type=$6, target_role=$7, target_user_id=$8, starts_at=COALESCE($9, starts_at), expires_at=$10, updated_at=NOW()
+       WHERE id=$11`,
+      [
+        type || 'banner', title_bn || null, title_en || null, message_bn, message_en || null,
+        target_type || 'all', target_type === 'role' ? (target_role || null) : null,
+        target_type === 'user' ? (parseInt(target_user_id) || null) : null,
+        starts_at || null, expires_at || null, req.params.id
+      ]
+    );
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ANNOUNCEMENT_UPDATED', `Announcement আপডেট হয়েছে (#${req.params.id})`, req.ip);
+    res.redirect('/admin/announcements?created=1');
+  } catch (err) {
+    console.error('Announcement update error:', err.message);
+    res.redirect('/admin/announcements?error=' + encodeURIComponent('আপডেট ব্যর্থ হয়েছে'));
+  }
+});
+
+router.post('/announcements/:id/toggle', async (req, res) => {
+  try {
+    const r = await pool.query('UPDATE announcements SET active = NOT active, updated_at = NOW() WHERE id = $1 RETURNING active', [req.params.id]);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ANNOUNCEMENT_TOGGLED', `Announcement #${req.params.id} ${r.rows[0].active ? 'সক্রিয়' : 'নিষ্ক্রিয়'} করা হয়েছে`, req.ip);
+    res.redirect('/admin/announcements');
+  } catch (err) {
+    res.redirect('/admin/announcements?error=toggle_failed');
+  }
+});
+
+router.post('/announcements/:id/expire-now', async (req, res) => {
+  try {
+    await pool.query('UPDATE announcements SET expires_at = NOW(), updated_at = NOW() WHERE id = $1', [req.params.id]);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ANNOUNCEMENT_EXPIRED', `Announcement #${req.params.id} এখনই expire করা হয়েছে`, req.ip);
+    res.redirect('/admin/announcements');
+  } catch (err) {
+    res.redirect('/admin/announcements?error=expire_failed');
+  }
+});
+
+router.post('/announcements/:id/delete', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM announcements WHERE id = $1', [req.params.id]);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ANNOUNCEMENT_DELETED', `Announcement #${req.params.id} ডিলিট করা হয়েছে`, req.ip);
+    res.redirect('/admin/announcements');
+  } catch (err) {
+    res.redirect('/admin/announcements?error=delete_failed');
+  }
+});
+
 module.exports = router;

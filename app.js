@@ -228,6 +228,14 @@ app.get('/lang/:code', (req, res) => {
   res.redirect(req.get('Referer') || '/');
 });
 
+app.post('/announcements/:id/dismiss', async (req, res) => {
+  try {
+    const { dismiss } = require('./services/announcements');
+    await dismiss(req.params.id, req.session.user ? req.session.user.id : null);
+    res.json({ ok: true });
+  } catch (e) { res.json({ ok: false }); }
+});
+
 app.use((req, res, next) => {
   res.locals.baseUrl = req.protocol + '://' + req.get('host');
   res.locals.user = req.session.user || null;
@@ -256,6 +264,15 @@ app.use((req, res, next) => {
   }
   res.locals.currentPage = page;
 
+  // সক্রিয় announcement (banner/scrolling/popup) — অ্যাডমিন পেজে দেখানো হবে না
+  if (!req.path.startsWith('/admin')) {
+    const { getAllActiveForUser } = require('./services/announcements');
+    getAllActiveForUser(req.session.user || null)
+      .then(list => { res.locals.activeAnnouncements = list; next(); })
+      .catch(() => { res.locals.activeAnnouncements = []; next(); });
+    return;
+  }
+  res.locals.activeAnnouncements = [];
   next();
 });
 

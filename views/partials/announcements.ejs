@@ -1,0 +1,51 @@
+<% if (typeof activeAnnouncements !== 'undefined' && activeAnnouncements && activeAnnouncements.length) {
+  const annLang = typeof lang !== 'undefined' ? lang : 'bn';
+  const banners = activeAnnouncements.filter(a => a.type === 'banner');
+  const scrolling = activeAnnouncements.filter(a => a.type === 'scrolling');
+  const popups = activeAnnouncements.filter(a => a.type === 'popup');
+  const inapp = activeAnnouncements.filter(a => a.type === 'inapp');
+%>
+  <% banners.forEach(function(a) { %>
+    <div class="livo-announce-banner" data-ann-id="<%= a.id %>" style="background:linear-gradient(90deg,#1a1a1a,#2a2205);border-bottom:1px solid rgba(234,179,8,0.35);color:#fff;padding:10px 16px;font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+      <span><i class="fas fa-bullhorn" style="color:var(--gold,#EAB308);margin-right:6px;"></i><%= annLang === 'en' && a.title_en ? a.title_en : (a.title_bn || '') %> — <%= annLang === 'en' && a.message_en ? a.message_en : a.message_bn %></span>
+      <button onclick="livoDismissAnnouncement(<%= a.id %>, this.closest('.livo-announce-banner'))" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:15px;">&times;</button>
+    </div>
+  <% }) %>
+
+  <% if (scrolling.length) { %>
+    <div class="livo-announce-scroll" style="background:#17181d;border-bottom:1px solid rgba(234,179,8,0.25);overflow:hidden;white-space:nowrap;padding:8px 0;">
+      <div style="display:inline-block;padding-left:100%;animation:livoScrollAnnounce 28s linear infinite;color:#EAB308;font-size:12.5px;font-weight:600;">
+        <% scrolling.forEach(function(a, i) { %>
+          <span style="margin-right:60px;"><i class="fas fa-circle" style="font-size:5px;vertical-align:middle;margin-right:8px;"></i><%= annLang === 'en' && a.message_en ? a.message_en : a.message_bn %></span>
+        <% }) %>
+      </div>
+    </div>
+    <style>@keyframes livoScrollAnnounce { from { transform: translateX(0); } to { transform: translateX(-100%); } }</style>
+  <% } %>
+
+  <% inapp.forEach(function(a) { %>
+    <div class="livo-toast info" style="cursor:default;" data-ann-id="<%= a.id %>">
+      <i class="fas fa-bullhorn"></i>
+      <span><%= annLang === 'en' && a.title_en ? a.title_en : a.title_bn %>: <%= annLang === 'en' && a.message_en ? a.message_en : a.message_bn %></span>
+    </div>
+  <% }) %>
+
+  <% if (popups.length) { %>
+    <% const p = popups[0]; %>
+    <div id="livoAnnouncePopupOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99998;display:flex;align-items:center;justify-content:center;padding:20px;">
+      <div style="background:#17181d;border:1px solid rgba(234,179,8,0.35);border-radius:20px;max-width:420px;width:100%;padding:24px;text-align:center;">
+        <i class="fas fa-bullhorn" style="color:var(--gold,#EAB308);font-size:30px;margin-bottom:12px;"></i>
+        <h3 style="color:#fff;font-size:17px;font-weight:800;margin:0 0 8px;"><%= annLang === 'en' && p.title_en ? p.title_en : (p.title_bn || '') %></h3>
+        <p style="color:#cbd5e1;font-size:13.5px;margin:0 0 18px;line-height:1.6;"><%= annLang === 'en' && p.message_en ? p.message_en : p.message_bn %></p>
+        <button onclick="livoDismissAnnouncement(<%= p.id %>, document.getElementById('livoAnnouncePopupOverlay'))" class="btn btn-gold" style="width:100%;padding:12px;border-radius:12px;"><%= annLang === 'en' ? 'Close' : 'বন্ধ করুন' %></button>
+      </div>
+    </div>
+  <% } %>
+
+  <script>
+    function livoDismissAnnouncement(id, el) {
+      fetch('/announcements/' + id + '/dismiss', { method: 'POST' }).catch(()=>{});
+      if (el) el.remove();
+    }
+  </script>
+<% } %>

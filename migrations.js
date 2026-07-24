@@ -799,6 +799,36 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_dead_letter_queue ON queue_dead_letter(queue_name);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_dead_letter_status ON queue_dead_letter(status);`);
 
+    // ==================== Announcement / Broadcast সিস্টেম ====================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS announcements (
+        id SERIAL PRIMARY KEY,
+        type VARCHAR(20) NOT NULL DEFAULT 'banner',
+        title_bn TEXT, title_en TEXT,
+        message_bn TEXT NOT NULL, message_en TEXT,
+        target_type VARCHAR(20) NOT NULL DEFAULT 'all',
+        target_role VARCHAR(20),
+        target_user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        active BOOLEAN DEFAULT true,
+        starts_at TIMESTAMP DEFAULT NOW(),
+        expires_at TIMESTAMP,
+        created_by INTEGER,
+        created_by_username TEXT,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_announcements_active ON announcements(active, starts_at, expires_at);`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS announcement_dismissals (
+        id SERIAL PRIMARY KEY,
+        announcement_id INTEGER REFERENCES announcements(id) ON DELETE CASCADE,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        dismissed_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(announcement_id, user_id)
+      );
+    `);
+
     console.log("✅ All tables migration completed successfully");
 
     await pool.query(`ALTER TABLE login_logs ADD COLUMN IF NOT EXISTS device_signature VARCHAR(64)`);
