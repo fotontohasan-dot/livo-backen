@@ -1,28 +1,41 @@
 <%
 function escapeHtml(str) {
   return String(str == null ? '' : str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
+    .replace(/&/g, '&')
+    .replace(/</g, '<')
+    .replace(/>/g, '>')
+    .replace(/"/g, '"')
     .replace(/'/g, '&#39;');
 }
+const totalDeposits = Number(stats.total_deposits_all_time || stats.total_deposit_all || 0);
+const totalWithdrawals = Number(stats.total_withdrawals_all_time || stats.total_withdraw_all || 0);
+const pendingTotal = Number(stats.pending_total || ((stats.pending_deposits||0)+(stats.pending_withdrawals||0)+(stats.pending_kyc||0)));
 %>
 <%- include('partials/admin-layout', { 
     title: 'Dashboard', 
     active: 'dashboard',
     body: `
 <div class="max-w-7xl mx-auto">
-    <!-- Welcome Header -->
-    <div class="flex items-end justify-between mb-8">
+    <!-- Welcome Header + Controls -->
+    <div class="flex flex-wrap items-end justify-between gap-4 mb-8">
         <div>
             <h1 class="text-3xl font-semibold text-slate-900">Welcome back, Admin 👋</h1>
-            <p class="text-slate-600 mt-1">Here's what's happening with your platform today.</p>
+            <p class="text-slate-600 mt-1">Real-time platform analytics & system health.</p>
         </div>
-        <div class="text-right">
+        <div class="text-right flex flex-col items-end gap-2">
+            <div class="flex items-center gap-2">
+                <label class="text-xs text-slate-500">Auto-refresh</label>
+                <select id="auto-refresh-interval" class="text-xs border border-slate-200 rounded-lg px-2 py-1">
+                    <option value="0">Off</option>
+                    <option value="15000">15s</option>
+                    <option value="20000" selected>20s</option>
+                    <option value="60000">60s</option>
+                </select>
+                <button id="btn-export-csv" class="text-xs px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 font-semibold">Export CSV</button>
+            </div>
             <div class="text-sm text-slate-500">Last updated</div>
             <div class="font-medium text-slate-700" id="current-time"></div>
-            <div class="mt-2 flex flex-col items-end gap-1.5">
+            <div class="mt-1 flex flex-col items-end gap-1.5">
                 <span class="px-3 py-1.5 rounded-xl text-xs font-semibold ${redisStatus.connected ? 'bg-emerald-100 text-emerald-700' : (redisStatus.enabled ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500')}">
                     <i class="fas fa-database mr-1"></i>Redis: ${redisStatus.connected ? 'Connected' : (redisStatus.enabled ? 'Disconnected' : 'Disabled')}
                 </span>
@@ -30,11 +43,14 @@ function escapeHtml(str) {
                 <a href="/admin/queues" class="px-3 py-1.5 rounded-xl text-xs font-semibold ${queueStatus.running ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'} hover:opacity-80">
                     <i class="fas fa-layer-group mr-1"></i>Queue: ${queueStatus.running ? 'Running' : 'Stopped'}${(queueStatus.failed || 0) > 0 ? ` · ${queueStatus.failed} failed` : ''}
                 </a>
+                <a href="/admin/system-diagnostics" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-50 text-blue-700 hover:opacity-80">
+                    <i class="fas fa-heart-pulse mr-1"></i>Server Health
+                </a>
             </div>
         </div>
     </div>
 
-    <!-- ডেমো (প্র্যাকটিস) কারেন্সি উইজেট -->
+    <!-- Demo Currency Widget -->
     <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 mb-8">
         <div class="flex items-center justify-between mb-4">
             <h3 class="font-semibold text-slate-800">🎮 ডেমো কারেন্সি ওভারভিউ <span class="text-xs font-normal text-emerald-600">● লাইভ</span></h3>
@@ -59,7 +75,7 @@ function escapeHtml(str) {
         </div>
     </div>
 
-    <!-- ==================== Fraud Detection Engine — Fraud Alerts উইজেট ==================== -->
+    <!-- Fraud Alerts -->
     <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 mb-8">
         <div class="flex items-center justify-between mb-4">
             <h3 class="font-semibold text-slate-800">🛡️ Fraud Alerts <span class="text-xs font-normal text-slate-400">ওপেন ফ্ল্যাগ</span></h3>
@@ -95,7 +111,7 @@ function escapeHtml(str) {
         }).join('') : '<p class="text-sm text-slate-400 text-center py-3">কোনো ওপেন ফ্রড ফ্ল্যাগ নেই</p>'}
     </div>
 
-    <!-- ==================== Duplicate Account Detection — উইজেট ==================== -->
+    <!-- Duplicate Accounts -->
     <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 mb-8">
         <div class="flex items-center justify-between mb-4">
             <h3 class="font-semibold text-slate-800">🧬 Duplicate Accounts <span class="text-xs font-normal text-slate-400">ওপেন ফ্ল্যাগ</span></h3>
@@ -111,7 +127,7 @@ function escapeHtml(str) {
                 <p class="text-xl font-bold ${dupAlerts.medium > 0 ? 'text-amber-600' : 'text-slate-900'} mt-1">${dupAlerts.medium || 0}</p>
             </div>
             <div class="p-4 rounded-2xl bg-slate-50">
-                <p class="text-xs text-slate-500">Low (&lt;40)</p>
+                <p class="text-xs text-slate-500">Low (<40)</p>
                 <p class="text-xl font-bold text-slate-900 mt-1">${dupAlerts.low || 0}</p>
             </div>
         </div>
@@ -129,9 +145,8 @@ function escapeHtml(str) {
         }).join('') : '<p class="text-sm text-slate-400 text-center py-3">কোনো ওপেন ডুপ্লিকেট ফ্ল্যাগ নেই</p>'}
     </div>
 
-    <!-- Stats Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-5 mb-8">
-        <!-- Total Users -->
+    <!-- Core Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-5 mb-8">
         <div class="stat-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
             <div class="flex justify-between items-start">
                 <div>
@@ -147,24 +162,11 @@ function escapeHtml(str) {
             </div>
         </div>
 
-<<<<<<< HEAD
-        <!-- Active Users (last 15 min) -->
-        <div class="stat-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
-            <div class="flex justify-between items-start">
-                <div>
-                    <p class="text-sm font-medium text-slate-500">Active Users</p>
-                    <p class="metric-value text-slate-900 mt-2">${Number(stats.active_users_now || 0).toLocaleString('en-US')}</p>
-                    <p class="text-slate-400 text-xs font-semibold mt-1">গত ১৫ মিনিটে</p>
-                </div>
-                <div class="w-11 h-11 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center">
-                    <i class="fas fa-signal text-xl"></i>
-=======
-        <!-- Total Coins In System (রিয়েল-টাইম) -->
         <div class="stat-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
             <div class="flex justify-between items-start">
                 <div>
                     <p class="text-sm font-medium text-slate-500">Total Coins</p>
-                    <p class="metric-value text-slate-900 mt-2" id="stat-total-coins">${Number(stats.total_coins_in_system || 0).toLocaleString('en-US')}</p>
+                    <p class="metric-value text-slate-900 mt-2" id="stat-total-coins">${Number(stats.total_coins_in_system || stats.total_coins || 0).toLocaleString('en-US')}</p>
                     <p class="text-slate-500 text-xs font-semibold mt-1">সব ইউজার মিলিয়ে সিস্টেমে</p>
                 </div>
                 <div class="w-11 h-11 bg-yellow-100 text-yellow-600 rounded-2xl flex items-center justify-center">
@@ -173,27 +175,24 @@ function escapeHtml(str) {
             </div>
         </div>
 
-        <!-- Active Users (গত ১৫ মিনিটে, রিয়েল-টাইম) -->
         <div class="stat-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
             <div class="flex justify-between items-start">
                 <div>
                     <p class="text-sm font-medium text-slate-500">Active Users</p>
-                    <p class="metric-value text-emerald-600 mt-2" id="stat-active-users">${Number(stats.active_users || 0).toLocaleString('en-US')}</p>
+                    <p class="metric-value text-emerald-600 mt-2" id="stat-active-users">${Number(stats.active_users || stats.active_users_now || 0).toLocaleString('en-US')}</p>
                     <p class="text-slate-500 text-xs font-semibold mt-1">গত ১৫ মিনিটে</p>
                 </div>
                 <div class="w-11 h-11 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center">
                     <i class="fas fa-user-clock text-xl"></i>
->>>>>>> e87a419 (feat(admin): live Total Coins + Active Users dashboard cards with 20s polling)
                 </div>
             </div>
         </div>
 
-        <!-- Total Deposits -->
         <div class="stat-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
             <div class="flex justify-between items-start">
                 <div>
                     <p class="text-sm font-medium text-slate-500">Total Deposits</p>
-                    <p class="metric-value text-slate-900 mt-2">৳ ${Number(stats.total_deposits_all_time || 0).toLocaleString('en-US')}</p>
+                    <p class="metric-value text-slate-900 mt-2">৳ ${totalDeposits.toLocaleString('en-US')}</p>
                     <p class="text-emerald-600 text-xs font-semibold mt-1 flex items-center gap-1">
                         <i class="fas fa-arrow-up"></i> +৳ ${Number(stats.today_deposit || 0).toLocaleString('en-US')} today
                     </p>
@@ -204,12 +203,11 @@ function escapeHtml(str) {
             </div>
         </div>
 
-        <!-- Total Withdrawals -->
         <div class="stat-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
             <div class="flex justify-between items-start">
                 <div>
                     <p class="text-sm font-medium text-slate-500">Total Withdrawals</p>
-                    <p class="metric-value text-slate-900 mt-2">৳ ${Number(stats.total_withdrawals_all_time || 0).toLocaleString('en-US')}</p>
+                    <p class="metric-value text-slate-900 mt-2">৳ ${totalWithdrawals.toLocaleString('en-US')}</p>
                     <p class="text-amber-600 text-xs font-semibold mt-1 flex items-center gap-1">
                         <i class="fas fa-arrow-up"></i> ৳ ${Number(stats.today_withdraw || 0).toLocaleString('en-US')} today
                     </p>
@@ -220,7 +218,6 @@ function escapeHtml(str) {
             </div>
         </div>
 
-        <!-- GGR Today -->
         <div class="stat-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
             <div class="flex justify-between items-start">
                 <div>
@@ -234,12 +231,11 @@ function escapeHtml(str) {
             </div>
         </div>
 
-        <!-- Pending Actions -->
         <div class="stat-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
             <div class="flex justify-between items-start">
                 <div>
                     <p class="text-sm font-medium text-slate-500">Pending Actions</p>
-                    <p class="metric-value text-orange-600 mt-2">${stats.pending_total || 0}</p>
+                    <p class="metric-value text-orange-600 mt-2">${pendingTotal}</p>
                     <p class="text-orange-600 text-xs font-semibold mt-1">${stats.pending_deposits || 0} deposits • ${stats.pending_withdrawals || 0} withdrawals • ${stats.pending_kyc || 0} KYC</p>
                 </div>
                 <div class="w-11 h-11 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center">
@@ -248,7 +244,6 @@ function escapeHtml(str) {
             </div>
         </div>
 
-        <!-- Pending Withdraw Requests (dedicated card) -->
         <a href="/admin/withdrawals" class="stat-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition block">
             <div class="flex justify-between items-start">
                 <div>
@@ -263,9 +258,20 @@ function escapeHtml(str) {
         </a>
     </div>
 
+    <!-- Charts: Revenue + User Growth -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+            <h3 class="font-semibold text-slate-800 mb-4">📈 Revenue Trend (14 days)</h3>
+            <canvas id="revenueChart" height="180"></canvas>
+        </div>
+        <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+            <h3 class="font-semibold text-slate-800 mb-4">👥 User Growth (14 days)</h3>
+            <canvas id="userGrowthChart" height="180"></canvas>
+        </div>
+    </div>
+
     <!-- Quick Actions + Recent Activity -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Quick Actions -->
         <div class="lg:col-span-1 bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
             <h3 class="font-semibold text-lg mb-4 flex items-center gap-2">
                 <i class="fas fa-bolt text-blue-500"></i> 
@@ -300,17 +306,22 @@ function escapeHtml(str) {
                     </div>
                     <i class="fas fa-chevron-right text-slate-300 group-hover:text-purple-500 transition-colors"></i>
                 </a>
+                <a href="/admin/reports" class="flex items-center justify-between p-3 hover:bg-slate-50 rounded-2xl transition-colors group">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-file-export text-slate-500 w-5"></i>
+                        <span class="font-medium text-sm">Full Reports (Date Range)</span>
+                    </div>
+                    <i class="fas fa-chevron-right text-slate-300 group-hover:text-slate-500 transition-colors"></i>
+                </a>
             </div>
         </div>
 
-        <!-- Recent Activity -->
         <div class="lg:col-span-2 bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="font-semibold text-lg">Recent Activity</h3>
                 <a href="/admin/reports" class="text-sm text-blue-600 hover:underline flex items-center gap-1">View all <i class="fas fa-arrow-right text-xs"></i></a>
             </div>
-            
-            <div class="space-y-4 text-sm">
+            <div class="space-y-4 text-sm" id="recent-activity-list">
                 ${recentWithdrawals.slice(0, 4).map(w => `
                 <div class="flex items-start gap-4">
                     <div class="w-8 h-8 bg-amber-100 text-amber-600 rounded-2xl flex-shrink-0 flex items-center justify-center"><i class="fas fa-arrow-up text-sm"></i></div>
@@ -339,9 +350,12 @@ function escapeHtml(str) {
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="/socket.io/socket.io.js"></script>
 <script>
-    // Update time
+    const revenueData = ${JSON.stringify((typeof revenueTrend !== 'undefined' ? revenueTrend : []).map(r => ({ day: r.day, deposit: r.deposit, withdraw: r.withdraw })))};
+    const userGrowthData = ${JSON.stringify((typeof userGrowth !== 'undefined' ? userGrowth : []).map(r => ({ day: r.day, count: r.count })))};
+
     function updateTime() {
         const el = document.getElementById('current-time');
         if (el) el.textContent = new Date().toLocaleString('en-BD', { hour: 'numeric', minute: '2-digit', hour12: true });
@@ -349,7 +363,6 @@ function escapeHtml(str) {
     setInterval(updateTime, 30000);
     updateTime();
 
-    // ডেমো কারেন্সি উইজেট — রিয়েল-টাইম আপডেট
     (function() {
         const socket = io();
         socket.emit('join_admin');
@@ -361,27 +374,63 @@ function escapeHtml(str) {
             });
         });
     })();
-    // ==== রিয়েল-টাইম স্ট্যাটিসটিক্স: Total Coins ও Active Users প্রতি ২০ সেকেন্ডে আপডেট ====
+
+    let pollTimer = null;
     function pollDashboardStats() {
         fetch('/admin/api/dashboard-stats').then(function(r) { return r.json(); }).then(function(data) {
             if (!data || !data.success) return;
             var s = data.stats || {};
             var coinsEl = document.getElementById('stat-total-coins');
-            if (coinsEl && typeof s.total_coins === 'number') {
-                coinsEl.textContent = Number(s.total_coins).toLocaleString('en-US');
-            }
+            if (coinsEl && typeof s.total_coins === 'number') coinsEl.textContent = Number(s.total_coins).toLocaleString('en-US');
             var activeEl = document.getElementById('stat-active-users');
-            if (activeEl && typeof s.active_users === 'number') {
-                activeEl.textContent = Number(s.active_users).toLocaleString('en-US');
-            }
+            if (activeEl && typeof s.active_users === 'number') activeEl.textContent = Number(s.active_users).toLocaleString('en-US');
             var usersEl = document.getElementById('stat-total-users');
-            if (usersEl && typeof s.total_users === 'number') {
-                usersEl.textContent = Number(s.total_users).toLocaleString('en-US');
-            }
+            if (usersEl && typeof s.total_users === 'number') usersEl.textContent = Number(s.total_users).toLocaleString('en-US');
+            updateTime();
         }).catch(function() {});
     }
-    setInterval(pollDashboardStats, 20000);
-    pollDashboardStats();
+
+    function setAutoRefresh(ms) {
+        if (pollTimer) clearInterval(pollTimer);
+        pollTimer = null;
+        if (ms > 0) {
+            pollTimer = setInterval(pollDashboardStats, ms);
+            pollDashboardStats();
+        }
+    }
+    setAutoRefresh(20000);
+    document.getElementById('auto-refresh-interval').addEventListener('change', function() {
+        setAutoRefresh(parseInt(this.value, 10) || 0);
+    });
+
+    document.getElementById('btn-export-csv').addEventListener('click', function() {
+        window.location.href = '/admin/activity/export.csv';
+    });
+
+    // Charts
+    if (window.Chart && revenueData.length) {
+        new Chart(document.getElementById('revenueChart'), {
+            type: 'line',
+            data: {
+                labels: revenueData.map(r => new Date(r.day).toLocaleDateString('en-BD', { month: 'short', day: 'numeric' })),
+                datasets: [
+                    { label: 'Deposit', data: revenueData.map(r => r.deposit), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', tension: 0.3, fill: true },
+                    { label: 'Withdraw', data: revenueData.map(r => r.withdraw), borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', tension: 0.3, fill: true }
+                ]
+            },
+            options: { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }
+        });
+    }
+    if (window.Chart && userGrowthData.length) {
+        new Chart(document.getElementById('userGrowthChart'), {
+            type: 'bar',
+            data: {
+                labels: userGrowthData.map(r => new Date(r.day).toLocaleDateString('en-BD', { month: 'short', day: 'numeric' })),
+                datasets: [{ label: 'New Users', data: userGrowthData.map(r => r.count), backgroundColor: '#3b82f6' }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+        });
+    }
 </script>
 ` 
 }) %>
