@@ -1060,6 +1060,31 @@ async function runMigrations() {
 
     console.log("✅ Backup & Restore System table ready");
 
+    // ==================== Feature Flags & Configuration Management ====================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS feature_flags (
+        id SERIAL PRIMARY KEY,
+        key TEXT NOT NULL UNIQUE,
+        label TEXT NOT NULL,
+        category TEXT NOT NULL CHECK (category IN ('feature', 'maintenance', 'beta', 'security', 'api')),
+        enabled BOOLEAN NOT NULL DEFAULT FALSE,
+        description TEXT,
+        updated_by_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        updated_by_username TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_feature_flags_category ON feature_flags(category);`);
+    await pool.query(`
+      INSERT INTO feature_flags (key, label, category, enabled, description) VALUES
+      ('beta_new_dashboard', 'New Dashboard UI', 'beta', false, 'নতুন ড্যাশবোর্ড ডিজাইন (টেস্টিং)'),
+      ('security_force_2fa_admin', 'Force 2FA for Admins', 'security', false, 'সব অ্যাডমিনের জন্য 2FA বাধ্যতামূলক করবে'),
+      ('api_public_stats', 'Public Stats API', 'api', true, 'পাবলিক /api/stats এন্ডপয়েন্ট চালু/বন্ধ')
+      ON CONFLICT (key) DO NOTHING;
+    `);
+    console.log("✅ Feature Flags table ready");
+
   } catch (err) {
     console.error("❌ Migration error:", err.message);
   }

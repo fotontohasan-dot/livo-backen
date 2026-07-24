@@ -2718,4 +2718,63 @@ router.post('/backups/:id/delete', async (req, res) => {
   }
 });
 
+// ==================== FEATURE FLAGS & CONFIGURATION MANAGEMENT ====================
+const featureFlags = require('../services/featureFlags');
+
+router.get('/feature-flags', async (req, res) => {
+  try {
+    const flags = await featureFlags.loadAllFlags();
+    res.render('admin/feature-flags', { flags: flags || [], created: req.query.created || '', error: req.query.error || '' });
+  } catch (err) {
+    console.error('Feature flags page error:', err && err.stack ? err.stack : err);
+    res.render('admin/feature-flags', { flags: [], created: '', error: 'load_failed' });
+  }
+});
+
+router.post('/feature-flags/:id/toggle', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT * FROM feature_flags WHERE id = $1', [req.params.id]);
+    const flag = r.rows[0];
+    if (!flag) return res.redirect('/admin/feature-flags?error=not_found');
+    const newState = !flag.enabled;
+    await featureFlags.setFlag(flag.key, newState, req.session.user.id, req.session.user.username);
+    await logAdminAction(
+      req.session.user.id, req.session.user.username, 'FEATURE_FLAG_TOGGLED',
+      `"${flag.label}" (${flag.key}) ${newState ? 'চালু' : 'বন্ধ'} করা হয়েছে`, req.ip
+    );
+    res.redirect('/admin/feature-flags');
+  } catch (err) {
+    console.error('Feature flag toggle error:', err && err.stack ? err.stack : err);
+    res.redirect('/admin/feature-flags?error=toggle_failed');
+  }
+});
+
+router.post('/feature-flags/create', async (req, res) => {
+  try {
+    const { key, label, category, description } = req.body;
+    const created = await featureFlags.createFlag({
+      key: (key || '').trim(), label: (label || '').trim(), category, description,
+      enabled: false, adminId: req.session.user.id, adminUsername: req.session.user.username
+    });
+    await logAdminAction(req.session.user.id, req.session.user.username, 'FEATURE_FLAG_CREATED', `নতুন ফ্ল্যাগ তৈরি হয়েছে: "${created.label}" (${created.key}, ${created.category})`, req.ip);
+    res.redirect('/admin/feature-flags?created=1');
+  } catch (err) {
+    console.error('Feature flag create error:', err && err.stack ? err.stack : err);
+    res.redirect(`/admin/feature-flags?error=${encodeURIComponent(err.message)}`);
+  }
+});
+
+router.post('/feature-flags/:id/delete', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT * FROM feature_flags WHERE id = $1', [req.params.id]);
+    const flag = r.rows[0];
+    await featureFlags.deleteFlag(req.params.id);
+    if (flag) await logAdminAction(req.session.user.id, req.session.user.username, 'FEATURE_FLAG_DELETED', `"${flag.label}" (${flag.key}) ডিলিট করা হয়েছে`, req.ip);
+    res.redirect('/admin/feature-flags');
+  } catch (err) {
+    console.error('Feature flag delete error:', err && err.stack ? err.stack : err);
+    res.redirect('/admin/feature-flags?error=delete_failed');
+  }
+});
+
 module.exports = router;
