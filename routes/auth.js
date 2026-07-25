@@ -396,23 +396,35 @@ router.post('/login', async (req, res) => {
       return res.redirect('/login');
     }
 
-    // ==================== VPN & Proxy Detection — কখনো লগইন ব্লক করে না, শুধু রিস্ক স্কোর অনুযায়ী step-up ভেরিফিকেশন চায় ====================
-    const vpnInfo = await checkIp(loginIp).catch(() => null);
+    // ==================== VPN & Proxy Detection — কখনো লগইন ব্লক করে না ====================
+    // step_up_verifications টেবিল না থাকলে বা INSERT ফেল হলে সরাসরি নরমাল লগইনে চলে যাবে
+    let vpnInfo = null;
+    try {
+      vpnInfo = await checkIp(loginIp);
+    } catch (e) {
+      console.error('checkIp error (non-blocking):', e.message);
+    }
+
     const needsStepUp = vpnInfo && (vpnInfo.isTor || vpnInfo.riskScore >= STEP_UP_RISK_THRESHOLD);
 
     if (needsStepUp && user.email && user.email_verified) {
-      const code = String(Math.floor(100000 + Math.random() * 900000));
-      await pool.query(
-        `INSERT INTO step_up_verifications (user_id, code, purpose, ip, expires_at)
-         VALUES ($1, $2, 'vpn_login', $3, NOW() + INTERVAL '${STEP_UP_CODE_TTL_MINUTES} minutes')`,
-        [user.id, code, loginIp]
-      );
-      sendQueuedEmail('otp', user.email, { otp: code }).catch(e => console.error('sendOTP queue error:', e.message));
+      try {
+        const code = String(Math.floor(100000 + Math.random() * 900000));
+        await pool.query(
+          `INSERT INTO step_up_verifications (user_id, code, purpose, ip, expires_at)
+           VALUES ($1, $2, 'vpn_login', $3, NOW() + INTERVAL '${STEP_UP_CODE_TTL_MINUTES} minutes')`,
+          [user.id, code, loginIp]
+        );
+        sendQueuedEmail('otp', user.email, { otp: code }).catch(e => console.error('sendOTP queue error:', e.message));
 
-      req.session.pendingLoginUserId = user.id;
-      req.session.pendingLoginVpnInfo = vpnInfo;
-      req.flash('success', `🔐 নিরাপত্তার কারণে আপনার ইমেইলে (${user.email}) একটি ভেরিফিকেশন কোড পাঠানো হয়েছে।`);
-      return res.redirect('/verify-access');
+        req.session.pendingLoginUserId = user.id;
+        req.session.pendingLoginVpnInfo = vpnInfo;
+        req.flash('success', `🔐 নিরাপত্তার কারণে আপনার ইমেইলে (${user.email}) একটি ভেরিফিকেশন কোড পাঠানো হয়েছে।`);
+        return res.redirect('/verify-access');
+      } catch (stepUpErr) {
+        // টেবিল মিসিং বা অন্য যেকোনো error — লগইন ব্লক করবে না, নরমাল লগইনে চলে যাবে
+        console.error('step_up insert error (falling back to normal login):', stepUpErr.message);
+      }
     }
 
     const redirectPath = await completeLogin(req, user, vpnInfo);
