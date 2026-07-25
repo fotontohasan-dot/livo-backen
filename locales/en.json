@@ -205,5 +205,21 @@
   "password": "Password",
   "no_account": "No account?",
   "register_now": "Register now",
-  "back_to_home": "Back to home"
+  "back_to_home": "Back to home",
+  "promotions_title": "Promotions",
+  "promo_1_title": "Welcome Bonus",
+  "promo_1_desc_short": "50% bonus on first deposit",
+  "promo_1_desc_long": "New users get up to 50% bonus on their first deposit. Terms apply.",
+  "valid_until": "Valid until",
+  "deposit_now": "Deposit Now",
+  "promo_2_title": "Daily Cashback",
+  "promo_2_desc_short": "Get back a portion of daily losses",
+  "promo_2_desc_long": "Claim a percentage of your daily losses as cashback. Once per day.",
+  "once_daily": "Once daily",
+  "get_bonus": "Get Bonus",
+  "promo_3_title": "Weekly Bonus",
+  "promo_3_desc_short": "Special reward every Monday",
+  "promo_3_desc_long": "Log in every Monday to claim your weekly bonus. Turnover conditions apply.",
+  "every_monday": "Every Monday",
+  "details": "Details"
 }
