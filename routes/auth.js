@@ -361,8 +361,13 @@ router.post('/login', async (req, res) => {
   }
 
   try {
+    // username / email / phone — তিনটাতেই লগইন করা যাবে (case-insensitive username/email)
     const result = await pool.query(
-      'SELECT * FROM users WHERE email = $1 OR phone = $1',
+      `SELECT * FROM users
+       WHERE LOWER(username) = LOWER($1)
+          OR LOWER(email) = LOWER($1)
+          OR phone = $1
+       LIMIT 1`,
       [identifier]
     );
     const user = result.rows[0];
