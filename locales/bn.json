@@ -199,5 +199,11 @@
   "withdraw_pin_placeholder": "আপনার ৬-সংখ্যার উইথড্র পিন দিন",
   "withdraw_pin_hint": "প্রতিটি উত্তোলনের আগে আপনার উইথড্র পিন যাচাই করা হবে।",
   "admin_withdraw_pin_reset_btn": "উইথড্র পিন রিসেট করুন",
-  "admin_withdraw_pin_reset_confirm": "এই ইউজারের উইথড্র পিন রিসেট করবেন? তাকে আবার নতুন করে পিন তৈরি করতে হবে।"
+  "admin_withdraw_pin_reset_confirm": "এই ইউজারের উইথড্র পিন রিসেট করবেন? তাকে আবার নতুন করে পিন তৈরি করতে হবে।",
+  "login_title": "লগইন",
+  "email_or_phone": "ইমেইল বা ফোন",
+  "password": "পাসওয়ার্ড",
+  "no_account": "অ্যাকাউন্ট নেই?",
+  "register_now": "এখনই রেজিস্টার করুন",
+  "back_to_home": "হোমে ফিরে যান"
 }

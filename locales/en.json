@@ -87,7 +87,7 @@
   "app_download": "App Download",
   "version": "Version",
   "accumulator_bet": "Accumulator Bet",
-  "accumulator_desc": "Multiple bets together â up to 30% boost!",
+  "accumulator_desc": "Multiple bets together — up to 30% boost!",
   "all": "All",
   "live_now": "LIVE Now",
   "upcoming_matches": "Upcoming Matches",
@@ -96,8 +96,8 @@
   "predict_now": "Predict Now",
   "login_to_predict": "Login to Predict",
   "connection_status": "Connecting...",
-  "live_status_ok": "Live â Auto update on",
-  "live_status_error": "Connection closed â retrying...",
+  "live_status_ok": "Live — Auto update on",
+  "live_status_error": "Connection closed — retrying...",
   "error_title": "Something went wrong",
   "server_error": "A server error occurred. Please try again later.",
   "page_not_found": "Page not found",
@@ -199,5 +199,11 @@
   "withdraw_pin_placeholder": "Enter your 6-digit Withdraw PIN",
   "withdraw_pin_hint": "Your Withdraw PIN will be verified before every withdrawal.",
   "admin_withdraw_pin_reset_btn": "Reset Withdraw PIN",
-  "admin_withdraw_pin_reset_confirm": "Reset this user's Withdraw PIN? They will need to set up a new one."
+  "admin_withdraw_pin_reset_confirm": "Reset this user's Withdraw PIN? They will need to set up a new one.",
+  "login_title": "Login",
+  "email_or_phone": "Email or Phone",
+  "password": "Password",
+  "no_account": "No account?",
+  "register_now": "Register now",
+  "back_to_home": "Back to home"
 }
