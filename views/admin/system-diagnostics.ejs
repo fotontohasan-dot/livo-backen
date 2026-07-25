@@ -1,8 +1,8 @@
 <%
 function escapeHtml(str) {
   return String(str == null ? '' : str)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    .replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>')
+    .replace(/"/g, '"').replace(/'/g, '&#39;');
 }
 function statusColor(status) {
   if (status === 'healthy') return { badge: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500', icon: 'fa-circle-check' };
@@ -37,7 +37,10 @@ function serviceCard(key, label, icon, c) {
   '</div>';
 }
 
-const r = result;
+// admin.js-এ দুটো রুট আছে — একটা result পাঠায়, আরেকটা diagnostics; দুটোই সাপোর্ট
+var r = (typeof result !== 'undefined' && result) ? result
+      : ((typeof diagnostics !== 'undefined' && diagnostics) ? diagnostics : null);
+var errMsg = (typeof error !== 'undefined' && error) ? error : null;
 const overallCol = r ? statusColor(r.overall) : statusColor('error');
 %>
 <%- include('partials/admin-layout', {
@@ -57,7 +60,7 @@ const overallCol = r ? statusColor(r.overall) : statusColor('error');
         </div>
     </div>
 
-    ${error ? `<div class="bg-red-50 border border-red-200 text-red-600 px-5 py-4 rounded-2xl text-sm">❌ ${escapeHtml(error)}</div>` : ''}
+    ${errMsg ? `<div class="bg-red-50 border border-red-200 text-red-600 px-5 py-4 rounded-2xl text-sm">❌ ${escapeHtml(errMsg)}</div>` : ''}
 
     ${r ? `
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
