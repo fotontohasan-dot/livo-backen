@@ -68,7 +68,28 @@ async function ensureCriticalTables() {
     )
   `, 'step_up_verifications');
 
-  console.log('✅ Critical tables ensured (ip_rules, announcements, step_up_verifications)');
+  await ensure(`
+    CREATE TABLE IF NOT EXISTS notification_templates (
+      id SERIAL PRIMARY KEY,
+      template_key VARCHAR(100) NOT NULL,
+      channel VARCHAR(20) NOT NULL CHECK (channel IN ('email', 'sms', 'in_app')),
+      lang VARCHAR(5) NOT NULL DEFAULT 'bn',
+      name VARCHAR(200) NOT NULL,
+      subject TEXT,
+      body TEXT NOT NULL,
+      variables JSONB DEFAULT '[]',
+      is_active BOOLEAN DEFAULT true,
+      created_by_id INTEGER,
+      created_by_username TEXT,
+      updated_by_id INTEGER,
+      updated_by_username TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(template_key, channel, lang)
+    )
+  `, 'notification_templates');
+
+  console.log('✅ Critical tables ensured (ip_rules, announcements, step_up_verifications, notification_templates)');
 }
 
 module.exports = { ensureCriticalTables };
