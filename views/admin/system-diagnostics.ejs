@@ -37,24 +37,27 @@ function serviceCard(key, label, icon, c) {
   '</div>';
 }
 
-// admin.js-এ দুটো রুট আছে — একটা result পাঠায়, আরেকটা diagnostics; দুটোই সাপোর্ট
-var r = (typeof result !== 'undefined' && result) ? result
-      : ((typeof diagnostics !== 'undefined' && diagnostics) ? diagnostics : null);
-var errMsg = (typeof error !== 'undefined' && error) ? error : null;
-const overallCol = r ? statusColor(r.overall) : statusColor('error');
+// locals থেকে নিরাপদে নেওয়া — undefined variable ReferenceError এড়ানো
+var data = null;
+try { if (typeof result !== 'undefined' && result) data = result; } catch (e) {}
+if (!data) { try { if (typeof diagnostics !== 'undefined' && diagnostics) data = diagnostics; } catch (e) {} }
+var errMsg = null;
+try { if (typeof error !== 'undefined' && error) errMsg = error; } catch (e) {}
+const overallCol = data ? statusColor(data.overall) : statusColor('error');
+const checks = (data && data.checks) ? data.checks : {};
 %>
 <%- include('partials/admin-layout', {
-    title: 'System Diagnostics',
+    title: 'Server Health',
     active: 'system-diagnostics',
     body: `
 <div class="max-w-6xl mx-auto space-y-6">
     <div class="flex items-center justify-between flex-wrap gap-3">
         <div>
-            <h2 class="text-2xl font-semibold text-slate-900">System Diagnostics</h2>
-            <p class="text-slate-500 mt-1 text-sm">ডাটাবেজ, রেডিস, কিউ, ইমেইল, ডিস্ক ও মেমরির রিয়েল-টাইম স্বাস্থ্য প্রতিবেদন</p>
+            <h2 class="text-2xl font-semibold text-slate-900">Server Health</h2>
+            <p class="text-slate-500 mt-1 text-sm">ডাটাবেজ, রেডিস, কিউ, ইমেইল, ডিস্ক ও মেমরির রিয়েল-টাইম স্বাস্থ্য</p>
         </div>
         <div class="flex items-center gap-3">
-            ${r ? `<span class="px-4 py-2 rounded-2xl text-sm font-bold ${overallCol.badge}"><i class="fas ${overallCol.icon}"></i> Overall: ${statusLabel(r.overall)}</span>` : ''}
+            ${data ? `<span class="px-4 py-2 rounded-2xl text-sm font-bold ${overallCol.badge}"><i class="fas ${overallCol.icon}"></i> Overall: ${statusLabel(data.overall)}</span>` : ''}
             <a href="/admin/system-diagnostics" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-sm font-semibold"><i class="fas fa-rotate-right"></i> রিফ্রেশ</a>
             <a href="/health" target="_blank" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-sm font-semibold"><i class="fas fa-arrow-up-right-from-square"></i> /health JSON</a>
         </div>
@@ -62,14 +65,14 @@ const overallCol = r ? statusColor(r.overall) : statusColor('error');
 
     ${errMsg ? `<div class="bg-red-50 border border-red-200 text-red-600 px-5 py-4 rounded-2xl text-sm">❌ ${escapeHtml(errMsg)}</div>` : ''}
 
-    ${r ? `
+    ${data ? `
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        ${serviceCard('database', 'PostgreSQL', 'fa-database', r.checks.database)}
-        ${serviceCard('redis', 'Redis Cache', 'fa-bolt', r.checks.redis)}
-        ${serviceCard('queue', 'Background Queue', 'fa-list-check', r.checks.queue)}
-        ${serviceCard('email', 'Email (SMTP)', 'fa-envelope', r.checks.email)}
-        ${serviceCard('disk', 'Disk Space', 'fa-hard-drive', r.checks.disk)}
-        ${serviceCard('memory', 'Memory Usage', 'fa-memory', r.checks.memory)}
+        ${serviceCard('database', 'PostgreSQL', 'fa-database', checks.database)}
+        ${serviceCard('redis', 'Redis Cache', 'fa-bolt', checks.redis)}
+        ${serviceCard('queue', 'Background Queue', 'fa-list-check', checks.queue)}
+        ${serviceCard('email', 'Email (SMTP)', 'fa-envelope', checks.email)}
+        ${serviceCard('disk', 'Disk Space', 'fa-hard-drive', checks.disk)}
+        ${serviceCard('memory', 'Memory Usage', 'fa-memory', checks.memory)}
     </div>
 
     <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
@@ -77,12 +80,12 @@ const overallCol = r ? statusColor(r.overall) : statusColor('error');
             <div class="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-500"><i class="fas fa-clock"></i></div>
             <p class="text-sm font-bold text-slate-800">Uptime</p>
         </div>
-        <p class="text-lg font-mono text-slate-700">${escapeHtml(r.checks.uptime.message)}</p>
-        <p class="text-xs text-slate-400 mt-1">সার্ভার চালু হয়েছে: ${new Date(r.checks.uptime.startedAt).toLocaleString('bn-BD')}</p>
+        <p class="text-lg font-mono text-slate-700">${escapeHtml((checks.uptime && checks.uptime.message) || '—')}</p>
+        <p class="text-xs text-slate-400 mt-1">সার্ভার চালু হয়েছে: ${checks.uptime && checks.uptime.startedAt ? new Date(checks.uptime.startedAt).toLocaleString('bn-BD') : '—'}</p>
     </div>
 
-    <p class="text-xs text-slate-400 text-center">সর্বশেষ চেক: ${new Date(r.timestamp).toLocaleString('bn-BD')}</p>
-    ` : ''}
+    <p class="text-xs text-slate-400 text-center">সর্বশেষ চেক: ${data.timestamp ? new Date(data.timestamp).toLocaleString('bn-BD') : '—'}</p>
+    ` : (errMsg ? '' : `<div class="bg-amber-50 border border-amber-200 text-amber-700 px-5 py-4 rounded-2xl text-sm">ডায়াগনস্টিক ডেটা পাওয়া যায়নি। রিফ্রেশ করুন।</div>`)}
 </div>
 `
 }) %>
