@@ -188,6 +188,9 @@ async function runAllChecks() {
   return { overall, checks, timestamp: new Date().toISOString() };
 }
 
+// admin.js-এর পুরনো রুট runDiagnostics নামে import করে — alias রাখা হয়েছে
+const runDiagnostics = runAllChecks;
+
 module.exports = {
   STATUS,
   checkDatabase,
@@ -197,5 +200,6 @@ module.exports = {
   checkDiskSpace,
   checkMemory,
   checkUptime,
-  runAllChecks
+  runAllChecks,
+  runDiagnostics
 };
