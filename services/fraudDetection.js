@@ -444,6 +444,55 @@ async function getFraudDashboardStats() {
   };
 }
 
+// ==================== অন-ডিমান্ড ফ্রড স্ক্যান (BullMQ 'fraud_scan' জব থেকে চলে) ====================
+// অ্যাডমিন প্যানেল থেকে ম্যানুয়ালি ট্রিগার করা যায়, অথবা ভবিষ্যতে শিডিউলড জব হিসেবে।
+// বিদ্যমান evaluateLogin/evaluateTransaction ফ্লো একদমই স্পর্শ করা হয়নি — এটা সম্পূর্ণ additive।
+async function runFraudScan(userId) {
+  try {
+    const signals = [];
+
+    const ipChange = await checkMultipleIpChanges(userId);
+    if (ipChange) {
+      signals.push({
+        type: 'multiple_ip_change', relatedUsers: [], relatedCount: 0,
+        description: `স্ক্যান: ${ipChange.windowHours} ঘণ্টায় ${ipChange.count}টি আলাদা IP থেকে লগইন`
+      });
+    }
+
+    const deviceChange = await checkMultipleDeviceChanges(userId);
+    if (deviceChange) {
+      signals.push({
+        type: 'multiple_device_change', relatedUsers: [], relatedCount: 0,
+        description: `স্ক্যান: ${deviceChange.windowHours} ঘণ্টায় ${deviceChange.count}টি আলাদা ডিভাইস থেকে লগইন`
+      });
+    }
+
+    const depositCount = await checkRapidTransactions(userId, 'deposit');
+    if (depositCount) {
+      signals.push({
+        type: 'rapid_transactions', relatedUsers: [], relatedCount: 0,
+        description: `স্ক্যান: ${depositCount.windowMinutes} মিনিটে ${depositCount.count}টি ডিপোজিট রিকোয়েস্ট`
+      });
+    }
+    const withdrawCount = await checkRapidTransactions(userId, 'withdraw');
+    if (withdrawCount) {
+      signals.push({
+        type: 'rapid_transactions', relatedUsers: [], relatedCount: 0,
+        description: `স্ক্যান: ${withdrawCount.windowMinutes} মিনিটে ${withdrawCount.count}টি উইথড্র রিকোয়েস্ট`
+      });
+    }
+
+    if (signals.length) {
+      const flag = await createFraudFlag(userId, signals);
+      return { userId, flagged: true, signalCount: signals.length, flag };
+    }
+    return { userId, flagged: false, signalCount: 0 };
+  } catch (err) {
+    console.error('runFraudScan error:', err.message);
+    throw err; // BullMQ handler-কে জানাতে হবে যাতে retry কাজ করে
+  }
+}
+
 module.exports = {
   evaluateRegistration,
   evaluateTransaction,
@@ -451,5 +500,6 @@ module.exports = {
   evaluateLogin,
   getUserFraudStatus,
   getFraudDashboardStats,
-  logAdminAction
+  logAdminAction,
+  runFraudScan
 };

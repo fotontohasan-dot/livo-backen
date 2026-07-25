@@ -7,11 +7,13 @@ const { processReferralDeposit } = require('../services/referral');
 const crypto = require('crypto');
 const sslcommerz = require('../services/sslcommerz');
 const { broadcastDemoStats, emitAdminAlert } = require('../services/socket');
+const { emitToUser, notifyUser } = require('../services/notify');
 const { notifyTelegram } = require('../services/telegramNotify');
 const { verifyPin, getPinStatus } = require('../services/withdrawPin');
 const { evaluateTransaction } = require('../services/fraudDetection');
 const { isSessionNewDevice } = require('../services/deviceTracking');
 const { checkIp } = require('../services/vpnDetection');
+const { getSetting } = require('../services/settings');
 const { requireVerifiedEmail } = require('../middleware/auth');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
 const { logEvent: logAuditEvent } = require('../services/auditLog');
@@ -135,12 +137,12 @@ async function creditApprovedDeposit(client, request) {
   const message = bonusGiven > 0
     ? `আপনার ${request.amount} টাকার ডিপোজিট + ${bonusGiven} বোনাস যোগ হয়েছে! (টার্নওভার প্রযোজ্য)`
     : `আপনার ${request.amount} টাকার ডিপোজিট অনুমোদন হয়েছে!`;
-  await client.query(
-    `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'success')`,
+  const notifResult = await client.query(
+    `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'success') RETURNING *`,
     [request.user_id, 'পেমেন্ট অনুমোদন', message]
   );
 
-  return bonusGiven;
+  return { bonusGiven, notification: notifResult.rows[0] };
 }
 
 const VALID_METHODS = ['bkash', 'nagad', 'rocket', 'upay', 'bank', 'crypto'];
@@ -160,6 +162,12 @@ router.get('/deposit', requireLogin, (req, res) => {
 });
 
 router.post('/deposit', requireLogin, paymentLimiter, async (req, res) => {
+  const depositEnabled = await getSetting('payment_deposit_enabled');
+  if (depositEnabled === 'false') {
+    req.flash('error', 'বর্তমানে ডিপোজিট সাময়িকভাবে বন্ধ আছে। কিছুক্ষণ পর আবার চেষ্টা করুন।');
+    return res.redirect('/payment/deposit');
+  }
+
   const { method, account_number } = req.body;
   const transaction_id = (req.body.transaction_id || '').trim();
   const wantBonus = req.body.want_bonus === 'yes';
@@ -267,6 +275,12 @@ router.get('/withdraw', requireLogin, async (req, res) => {
 
 
 router.post('/withdraw', requireLogin, requireVerifiedEmail, paymentLimiter, async (req, res) => {
+  const withdrawEnabled = await getSetting('payment_withdraw_enabled');
+  if (withdrawEnabled === 'false') {
+    req.flash('error', 'বর্তমানে উইথড্র সাময়িকভাবে বন্ধ আছে। কিছুক্ষণ পর আবার চেষ্টা করুন।');
+    return res.redirect('/payment/withdraw');
+  }
+
   const { method, account_number, withdraw_pin } = req.body;
   const amount = parseAmount(req.body.amount);
   const userId = req.session.user.id;
@@ -607,16 +621,20 @@ router.post('/admin/approve/:id', requireAdmin, async (req, res) => {
       return res.redirect('/payment/admin/payments');
     }
 
+    let notifRow = null;
     if (request.type === 'deposit') {
-      await creditApprovedDeposit(client, request);
+      const r = await creditApprovedDeposit(client, request);
+      notifRow = r && r.notification;
     } else {
       await client.query(`UPDATE payment_requests SET status='approved', updated_at=NOW() WHERE id=$1`, [id]);
-      await client.query(
-        `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'success')`,
+      const nr = await client.query(
+        `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'success') RETURNING *`,
         [request.user_id, 'পেমেন্ট অনুমোদন', `আপনার ${request.amount} টাকার উইথড্র অনুমোদন হয়েছে!`]
       );
+      notifRow = nr.rows[0];
     }
     await client.query('COMMIT');
+    if (notifRow) emitToUser(request.user_id, notifRow);
     req.flash('success', 'অনুমোদন হয়েছে');
     res.redirect('/payment/admin/payments');
   } catch (err) {
@@ -742,8 +760,9 @@ router.post('/sslcommerz/success', async (req, res) => {
       `UPDATE payment_requests SET gateway_val_id=$1, gateway_response=$2 WHERE id=$3`,
       [val_id, JSON.stringify(verification), request.id]
     );
-    await creditApprovedDeposit(client, request);
+    const cr2 = await creditApprovedDeposit(client, request);
     await client.query('COMMIT');
+    if (cr2 && cr2.notification) emitToUser(request.user_id, cr2.notification);
 
     if (req.session.user) {
       const u = await pool.query('SELECT coins FROM users WHERE id=$1', [request.user_id]);
@@ -804,14 +823,16 @@ router.post('/sslcommerz/ipn', async (req, res) => {
     const validStatus = verification.status === 'VALID' || verification.status === 'VALIDATED';
     const amountMatches = Math.round(Number(verification.amount)) === Math.round(Number(request.amount));
 
+    let cr3 = null;
     if (validStatus && amountMatches) {
       await client.query(
         `UPDATE payment_requests SET gateway_val_id=$1, gateway_response=$2 WHERE id=$3`,
         [val_id, JSON.stringify(verification), request.id]
       );
-      await creditApprovedDeposit(client, request);
+      cr3 = await creditApprovedDeposit(client, request);
     }
     await client.query('COMMIT');
+    if (cr3 && cr3.notification) emitToUser(request.user_id, cr3.notification);
     res.sendStatus(200);
   } catch (err) {
     await client.query('ROLLBACK');

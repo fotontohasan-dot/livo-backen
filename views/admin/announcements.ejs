@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Announcements • Livo Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
+    .ann-form-box { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 18px; margin-bottom: 18px; }
+    .ann-form-box input, .ann-form-box select, .ann-form-box textarea { width: 100%; background: #0f1115; color: #e2e8f0; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 9px 10px; font-size: 13px; }
+    .ann-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .ann-label { color: #94a3b8; font-size: 11.5px; display: block; margin-bottom: 4px; }
+    .ann-table-wrap { overflow-x: auto; background: rgba(255,255,255,0.03); border-radius: 14px; border: 1px solid rgba(255,255,255,0.06); }
+    table.ann-table { width: 100%; border-collapse: collapse; font-size: 12.5px; color: #cbd5e1; }
+    table.ann-table th { text-align: left; padding: 10px 12px; background: rgba(255,255,255,0.04); color: #94a3b8; white-space: nowrap; }
+    table.ann-table td { padding: 9px 12px; border-top: 1px solid rgba(255,255,255,0.05); vertical-align: top; }
+    .type-badge { padding: 2px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; }
+    .type-banner { background: rgba(59,130,246,0.15); color: #60a5fa; }
+    .type-popup { background: rgba(168,85,247,0.15); color: #c084fc; }
+    .type-scrolling { background: rgba(234,179,8,0.15); color: #facc15; }
+    .type-inapp { background: rgba(16,185,129,0.15); color: #34d399; }
+    .status-active { color: #10b981; font-weight: 700; }
+    .status-inactive { color: #94a3b8; }
+    .btn-xs { padding: 5px 10px; font-size: 11.5px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; margin-right: 4px; }
+  </style>
+  <%- include('./partials/pwa-head') %>
+</head>
+<body>
+  <div class="admin-wrap">
+    <%- include('./partials/sidebar', { active: 'announcements' }) %>
+    <div class="admin-content">
+      <%- include('./partials/header', { pageTitle: 'Announcements & Broadcast', pageSubtitle: 'Banner / Popup / Scrolling Notice / In-App Message' }) %>
+
+      <% if (error) { %><div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;color:#f87171;padding:10px 14px;border-radius:10px;margin-bottom:12px;font-size:13px;"><%= error %></div><% } %>
+      <% if (created) { %><div style="background:rgba(16,185,129,0.1);border:1px solid #10b981;color:#10b981;padding:10px 14px;border-radius:10px;margin-bottom:12px;font-size:13px;">✅ সংরক্ষণ হয়েছে।</div><% } %>
+
+      <div class="ann-form-box">
+        <b style="color:#fff;font-size:14px;">নতুন Announcement তৈরি করুন</b>
+        <form method="POST" action="/admin/announcements/create" style="margin-top:12px;">
+          <div class="ann-grid">
+            <div>
+              <label class="ann-label">Type</label>
+              <select name="type" required>
+                <option value="banner">Banner</option>
+                <option value="popup">Popup</option>
+                <option value="scrolling">Scrolling Notice</option>
+                <option value="inapp">In-App Broadcast</option>
+              </select>
+            </div>
+            <div>
+              <label class="ann-label">Target</label>
+              <select name="target_type" id="targetType" onchange="toggleTargetFields()" required>
+                <option value="all">সকল User</option>
+                <option value="role">নির্দিষ্ট Role</option>
+                <option value="user">নির্দিষ্ট User (ID)</option>
+              </select>
+            </div>
+          </div>
+          <div class="ann-grid" id="roleField" style="display:none;">
+            <div>
+              <label class="ann-label">Role</label>
+              <select name="target_role"><option value="user">user</option><option value="admin">admin</option></select>
+            </div>
+            <div></div>
+          </div>
+          <div class="ann-grid" id="userField" style="display:none;">
+            <div><label class="ann-label">Target User ID</label><input type="number" name="target_user_id" placeholder="যেমন: 1024"></div>
+            <div></div>
+          </div>
+          <div class="ann-grid">
+            <div><label class="ann-label">Title (বাংলা)</label><input type="text" name="title_bn" placeholder="শিরোনাম (ঐচ্ছিক)"></div>
+            <div><label class="ann-label">Title (English)</label><input type="text" name="title_en" placeholder="Title (optional)"></div>
+          </div>
+          <div class="ann-grid">
+            <div><label class="ann-label">Message (বাংলা) *</label><textarea name="message_bn" rows="2" required></textarea></div>
+            <div><label class="ann-label">Message (English)</label><textarea name="message_en" rows="2"></textarea></div>
+          </div>
+          <div class="ann-grid">
+            <div><label class="ann-label">Schedule শুরু (ঐচ্ছিক)</label><input type="datetime-local" name="starts_at"></div>
+            <div><label class="ann-label">Expire (ঐচ্ছিক)</label><input type="datetime-local" name="expires_at"></div>
+          </div>
+          <button type="submit" class="btn-xs" style="background:var(--gold,#EAB308);color:#1a1a1a;padding:9px 18px;font-size:13px;" onclick="LivoToast && LivoToast.setLoading(this, true, 'তৈরি হচ্ছে...')">Create Announcement</button>
+        </form>
+      </div>
+
+      <div class="ann-table-wrap">
+        <table class="ann-table">
+          <thead><tr><th>#</th><th>Type</th><th>Message (bn)</th><th>Target</th><th>Schedule</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody>
+            <% list.forEach(function(a) { %>
+            <tr>
+              <td>#<%= a.id %></td>
+              <td><span class="type-badge type-<%= a.type %>"><%= a.type %></span></td>
+              <td style="max-width:260px;white-space:normal;"><%= (a.message_bn||'').slice(0,80) %></td>
+              <td><%= a.target_type === 'all' ? 'সকলে' : (a.target_type === 'role' ? 'Role: ' + a.target_role : 'User #' + a.target_user_id) %></td>
+              <td style="font-size:11px;">
+                শুরু: <%= a.starts_at ? new Date(a.starts_at).toLocaleString('bn-BD') : '-' %><br>
+                শেষ: <%= a.expires_at ? new Date(a.expires_at).toLocaleString('bn-BD') : 'কখনো না' %>
+              </td>
+              <td>
+                <% const expired = a.expires_at && new Date(a.expires_at) < new Date(); %>
+                <% if (expired) { %><span style="color:#f87171;font-weight:700;">Expired</span>
+                <% } else if (a.active) { %><span class="status-active">Active</span>
+                <% } else { %><span class="status-inactive">Inactive</span><% } %>
+              </td>
+              <td style="white-space:nowrap;">
+                <form method="POST" action="/admin/announcements/<%= a.id %>/toggle" style="display:inline;">
+                  <button class="btn-xs" style="background:#334155;color:#fff;"><%= a.active ? 'Disable' : 'Enable' %></button>
+                </form>
+                <form method="POST" action="/admin/announcements/<%= a.id %>/expire-now" style="display:inline;">
+                  <button class="btn-xs" style="background:#f59e0b;color:#1a1a1a;">Expire Now</button>
+                </form>
+                <form method="POST" action="/admin/announcements/<%= a.id %>/delete" style="display:inline;" onsubmit="return confirm('ডিলিট করবেন?')">
+                  <button class="btn-xs" style="background:#ef4444;color:#fff;">Delete</button>
+                </form>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+  <script>
+    function toggleTargetFields() {
+      const v = document.getElementById('targetType').value;
+      document.getElementById('roleField').style.display = v === 'role' ? 'grid' : 'none';
+      document.getElementById('userField').style.display = v === 'user' ? 'grid' : 'none';
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<% const body = `
+<div class="max-w-4xl mx-auto space-y-6">
+
+    <div class="bg-white rounded-3xl border border-slate-100 p-6">
+        <h3 class="font-semibold text-slate-800 border-b pb-3 mb-4">📢 নতুন ব্রডকাস্ট নোটিফিকেশন পাঠান</h3>
+        <p class="text-sm text-slate-500 mb-4">এই মেসেজটি সাথে সাথে সব ইউজারকে (বর্তমানে <strong>${totalUsers}</strong> জন) রিয়েল-টাইমে পাঠানো হবে — যারা অনলাইনে আছে তারা সাথে সাথে দেখবে, যারা অফলাইনে আছে তারা পরে লগইন করলে Notification History-তে দেখতে পাবে।</p>
+
+        <form method="POST" action="/admin/notifications/broadcast" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium mb-1.5 text-slate-700">শিরোনাম</label>
+                <input type="text" name="title" required maxlength="150"
+                    class="w-full border border-slate-200 px-4 py-3 rounded-2xl text-sm outline-none focus:border-blue-300"
+                    placeholder="যেমন: সিস্টেম মেইনটেন্যান্স নোটিশ">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1.5 text-slate-700">বার্তা</label>
+                <textarea name="message" rows="3" required maxlength="500"
+                    class="w-full border border-slate-200 px-4 py-3 rounded-2xl text-sm outline-none focus:border-blue-300"
+                    placeholder="আপনার বার্তা লিখুন..."></textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1.5 text-slate-700">ধরন</label>
+                <select name="type" class="w-full border border-slate-200 px-4 py-3 rounded-2xl text-sm outline-none focus:border-blue-300">
+                    <option value="announcement">📢 Announcement</option>
+                    <option value="system">⚙️ System</option>
+                    <option value="info">ℹ️ Info</option>
+                    <option value="success">✅ Success</option>
+                    <option value="error">⚠️ Warning</option>
+                </select>
+            </div>
+            <button type="submit" onclick="return confirm('সব ইউজারকে এই নোটিফিকেশন পাঠাতে চান?')"
+                class="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-sm font-semibold">
+                <i class="fas fa-paper-plane"></i> সবাইকে পাঠান
+            </button>
+        </form>
+    </div>
+
+    <div class="bg-white rounded-3xl border border-slate-100 p-6">
+        <h3 class="font-semibold text-slate-800 border-b pb-3 mb-4">ব্রডকাস্ট হিস্টোরি</h3>
+        <div class="overflow-x-auto">
+        <table class="w-full modern-table">
+            <thead><tr class="text-left text-xs text-slate-400 uppercase">
+                <th class="px-4 py-2">শিরোনাম</th><th class="px-4 py-2">বার্তা</th><th class="px-4 py-2">ধরন</th>
+                <th class="px-4 py-2">প্রাপক</th><th class="px-4 py-2">পাঠিয়েছেন</th><th class="px-4 py-2">সময়</th>
+            </tr></thead>
+            <tbody>${(history || []).map(h => `
+                <tr class="border-b border-slate-100">
+                    <td class="px-4 py-3 text-sm font-medium">${h.title}</td>
+                    <td class="px-4 py-3 text-sm text-slate-500 max-w-xs truncate">${h.message}</td>
+                    <td class="px-4 py-3 text-xs"><span class="px-2 py-1 rounded-lg bg-slate-100 text-slate-600">${h.type}</span></td>
+                    <td class="px-4 py-3 text-sm">${h.recipient_count}</td>
+                    <td class="px-4 py-3 text-sm text-slate-500">${h.admin_username || '-'}</td>
+                    <td class="px-4 py-3 text-xs text-slate-400">${new Date(h.created_at).toLocaleString('en-US')}</td>
+                </tr>
+            `).join('') || '<tr><td colspan="6" class="px-4 py-6 text-center text-slate-400 text-sm">এখনো কোনো ব্রডকাস্ট পাঠানো হয়নি</td></tr>'}</tbody>
+        </table>
+        </div>
+    </div>
+</div>
+`
+%>
+<%- include('partials/admin-layout', { title: 'নোটিফিকেশন ব্রডকাস্ট', active: 'notifications', body }) %>

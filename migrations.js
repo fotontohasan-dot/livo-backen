@@ -107,6 +107,21 @@ async function runMigrations() {
       );
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_notif_user_unread ON notifications(user_id) WHERE is_read = false;`);
+
+    // অ্যাডমিন ব্রডকাস্ট নোটিফিকেশনের আলাদা অডিট লগ (কে কখন কী পাঠিয়েছে, কতজনকে)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS notification_broadcasts (
+        id SERIAL PRIMARY KEY,
+        admin_id INTEGER REFERENCES users(id),
+        admin_username VARCHAR(100),
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        type VARCHAR(20) DEFAULT 'announcement',
+        recipient_count INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS markets (
@@ -799,6 +814,36 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_dead_letter_queue ON queue_dead_letter(queue_name);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_dead_letter_status ON queue_dead_letter(status);`);
 
+    // ==================== Announcement / Broadcast সিস্টেম ====================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS announcements (
+        id SERIAL PRIMARY KEY,
+        type VARCHAR(20) NOT NULL DEFAULT 'banner',
+        title_bn TEXT, title_en TEXT,
+        message_bn TEXT NOT NULL, message_en TEXT,
+        target_type VARCHAR(20) NOT NULL DEFAULT 'all',
+        target_role VARCHAR(20),
+        target_user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        active BOOLEAN DEFAULT true,
+        starts_at TIMESTAMP DEFAULT NOW(),
+        expires_at TIMESTAMP,
+        created_by INTEGER,
+        created_by_username TEXT,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_announcements_active ON announcements(active, starts_at, expires_at);`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS announcement_dismissals (
+        id SERIAL PRIMARY KEY,
+        announcement_id INTEGER REFERENCES announcements(id) ON DELETE CASCADE,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        dismissed_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(announcement_id, user_id)
+      );
+    `);
+
     console.log("✅ All tables migration completed successfully");
 
     await pool.query(`ALTER TABLE login_logs ADD COLUMN IF NOT EXISTS device_signature VARCHAR(64)`);
@@ -1096,6 +1141,66 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_request_id ON audit_logs(request_id);`);
 
     console.log("✅ Advanced Audit Log System table ready");
+
+    // ==================== Feature Flags & Configuration Management ====================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS feature_flags (
+        id SERIAL PRIMARY KEY,
+        key TEXT NOT NULL UNIQUE,
+        label TEXT NOT NULL,
+        category TEXT NOT NULL CHECK (category IN ('feature', 'maintenance', 'beta', 'security', 'api')),
+        enabled BOOLEAN NOT NULL DEFAULT FALSE,
+        description TEXT,
+        updated_by_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        updated_by_username TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_feature_flags_category ON feature_flags(category);`);
+    await pool.query(`
+      INSERT INTO feature_flags (key, label, category, enabled, description) VALUES
+      ('beta_new_dashboard', 'New Dashboard UI', 'beta', false, 'নতুন ড্যাশবোর্ড ডিজাইন (টেস্টিং)'),
+      ('security_force_2fa_admin', 'Force 2FA for Admins', 'security', false, 'সব অ্যাডমিনের জন্য 2FA বাধ্যতামূলক করবে'),
+      ('api_public_stats', 'Public Stats API', 'api', true, 'পাবলিক /api/stats এন্ডপয়েন্ট চালু/বন্ধ')
+      ON CONFLICT (key) DO NOTHING;
+    `);
+    console.log("✅ Feature Flags table ready");
+
+    // ==================== Notification Template Management ====================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS notification_templates (
+        id SERIAL PRIMARY KEY,
+        template_key TEXT NOT NULL,
+        channel TEXT NOT NULL CHECK (channel IN ('email', 'sms', 'in_app')),
+        lang TEXT NOT NULL DEFAULT 'bn' CHECK (lang IN ('bn', 'en')),
+        name TEXT NOT NULL,
+        subject TEXT,
+        body TEXT NOT NULL,
+        variables JSONB DEFAULT '[]',
+        is_active BOOLEAN NOT NULL DEFAULT true,
+        created_by_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        created_by_username TEXT,
+        updated_by_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        updated_by_username TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(template_key, channel, lang)
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_notif_tmpl_key ON notification_templates(template_key);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_notif_tmpl_channel ON notification_templates(channel);`);
+    await pool.query(`
+      INSERT INTO notification_templates (template_key, channel, lang, name, subject, body, variables) VALUES
+      ('otp_verification', 'email', 'bn', 'OTP ভেরিফিকেশন (ইমেইল)', 'LIVO - আপনার OTP কোড', '<div style="font-family:sans-serif;max-width:400px;margin:auto;padding:20px;border:1px solid #eee;border-radius:10px"><h2 style="color:#e53e3e">LIVO</h2><p>হ্যালো {{name}},</p><p>আপনার OTP কোড:</p><h1 style="color:#e53e3e;letter-spacing:10px">{{otp}}</h1><p>এই কোড ৫ মিনিটের মধ্যে ব্যবহার করুন।</p></div>', '["name","otp"]'),
+      ('otp_verification', 'email', 'en', 'OTP Verification (Email)', 'LIVO - Your OTP Code', '<div style="font-family:sans-serif;max-width:400px;margin:auto;padding:20px;border:1px solid #eee;border-radius:10px"><h2 style="color:#e53e3e">LIVO</h2><p>Hello {{name}},</p><p>Your OTP code:</p><h1 style="color:#e53e3e;letter-spacing:10px">{{otp}}</h1><p>This code expires in 5 minutes.</p></div>', '["name","otp"]'),
+      ('deposit_success', 'in_app', 'bn', 'ডিপোজিট সফল (ইন-অ্যাপ)', NULL, 'আপনার {{amount}} টাকা ডিপোজিট সফলভাবে সম্পন্ন হয়েছে।', '["amount"]'),
+      ('deposit_success', 'in_app', 'en', 'Deposit Successful (In-app)', NULL, 'Your deposit of {{amount}} BDT has been completed successfully.', '["amount"]'),
+      ('withdraw_success', 'sms', 'bn', 'উইথড্র সফল (SMS)', NULL, 'প্রিয় {{name}}, আপনার {{amount}} টাকা উইথড্র সফল হয়েছে। - Livo', '["name","amount"]'),
+      ('withdraw_success', 'sms', 'en', 'Withdraw Successful (SMS)', NULL, 'Dear {{name}}, your withdrawal of {{amount}} BDT was successful. - Livo', '["name","amount"]')
+      ON CONFLICT (template_key, channel, lang) DO NOTHING;
+    `);
+    console.log("✅ Notification Templates table ready");
 
   } catch (err) {
     console.error("❌ Migration error:", err.message);

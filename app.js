@@ -212,14 +212,30 @@ app.use('/profile/update', financialLimiter);
 app.use('/profile/update-personal', financialLimiter);
 
 // ভাষা সেটিং
-const translations = {
-  bn: require('./locales/bn.json'),
-  en: require('./locales/en.json')
-};
+const fs = require('fs');
+const LOCALES_DIR = path.join(__dirname, 'locales');
+function loadTranslations() {
+  return {
+    bn: JSON.parse(fs.readFileSync(path.join(LOCALES_DIR, 'bn.json'), 'utf8')),
+    en: JSON.parse(fs.readFileSync(path.join(LOCALES_DIR, 'en.json'), 'utf8'))
+  };
+}
+let translations = loadTranslations();
+function refreshTranslationsCache() { translations = loadTranslations(); }
+app.set('refreshTranslationsCache', refreshTranslationsCache);
+app.set('getTranslations', () => translations);
 
 app.get('/lang/:code', (req, res) => {
   req.session.lang = req.params.code === 'en' ? 'en' : 'bn';
   res.redirect(req.get('Referer') || '/');
+});
+
+app.post('/announcements/:id/dismiss', async (req, res) => {
+  try {
+    const { dismiss } = require('./services/announcements');
+    await dismiss(req.params.id, req.session.user ? req.session.user.id : null);
+    res.json({ ok: true });
+  } catch (e) { res.json({ ok: false }); }
 });
 
 app.use((req, res, next) => {
@@ -250,6 +266,15 @@ app.use((req, res, next) => {
   }
   res.locals.currentPage = page;
 
+  // সক্রিয় announcement (banner/scrolling/popup) — অ্যাডমিন পেজে দেখানো হবে না
+  if (!req.path.startsWith('/admin')) {
+    const { getAllActiveForUser } = require('./services/announcements');
+    getAllActiveForUser(req.session.user || null)
+      .then(list => { res.locals.activeAnnouncements = list; next(); })
+      .catch(() => { res.locals.activeAnnouncements = []; next(); });
+    return;
+  }
+  res.locals.activeAnnouncements = [];
   next();
 });
 

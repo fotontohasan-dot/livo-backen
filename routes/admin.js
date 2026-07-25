@@ -9,6 +9,7 @@ const { syncMatches } = require('../services/matchUpdater');
 const { runBackupNow, restoreFromBackup, getBackupStatus } = require('../services/backup');
 const { loadSettings, invalidateSettingsCache } = require('../services/settings');
 const { creditApprovedDeposit } = require('./payment');
+const { emitToUser, notifyUser, broadcastToAllUsers, notifyAdmins } = require('../services/notify');
 const bcrypt = require('bcryptjs');
 const { getDemoStats } = require('../services/socket');
 const {
@@ -438,8 +439,40 @@ const SETTING_KEYS = [
   'site_name', 'support_email', 'maintenance_mode', 'max_login_attempts',
   'min_bet', 'max_bet', 'turnover_multiplier', 'max_daily_bets',
   'deposit_commission_percent', 'withdraw_commission_percent', 'min_deposit', 'min_withdraw',
-  'maintenance_message', 'maintenance_eta', 'maintenance_allowed_ips', 'maintenance_bypass_token'
+  'maintenance_message', 'maintenance_eta', 'maintenance_allowed_ips', 'maintenance_bypass_token',
+  // ---- System Settings hub-এ যোগ হওয়া নতুন ক্যাটাগরি ---- (সব অ্যাক্টুয়াল secret .env-এই থাকে, এখানে শুধু non-secret কনফিগ)
+  'site_tagline', 'support_phone',
+  'smtp_host', 'smtp_port', 'smtp_secure', 'smtp_from_name', 'smtp_from_email',
+  'sms_provider', 'sms_sender_id',
+  'payment_deposit_enabled', 'payment_withdraw_enabled', 'payment_gateway_live_mode',
+  'api_public_enabled', 'api_rate_limit_per_15min',
+  'upload_max_size_mb', 'upload_allowed_types',
+  'session_idle_timeout_minutes',
+  'default_language', 'default_timezone', 'default_currency'
 ];
+
+router.get('/system-settings', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT key, value FROM site_settings');
+    const settings = {};
+    result.rows.forEach(r => { settings[r.key] = r.value; });
+    settings.maintenance_mode = settings.maintenance_mode === 'true';
+    settings.payment_deposit_enabled = settings.payment_deposit_enabled !== 'false';
+    settings.payment_withdraw_enabled = settings.payment_withdraw_enabled !== 'false';
+    settings.payment_gateway_live_mode = settings.payment_gateway_live_mode === 'true';
+    settings.api_public_enabled = settings.api_public_enabled !== 'false';
+    settings.smtp_secure = settings.smtp_secure !== 'false';
+
+    res.render('admin/system-settings', {
+      settings,
+      redisConnected: cache.getStatus().connected,
+      saved: req.query.saved === '1'
+    });
+  } catch (err) {
+    console.error('System settings load error:', err && err.stack ? err.stack : err);
+    res.render('admin/system-settings', { settings: {}, redisConnected: false, saved: false });
+  }
+});
 
 router.get('/settings', async (req, res) => {
   try {
@@ -547,10 +580,10 @@ router.post('/settings/update', async (req, res) => {
       console.error('logAdminAction failed (settings already saved):', e && e.stack ? e.stack : e);
     }
 
-    return res.redirect('/admin/settings?saved=1');
+    return res.redirect(`${req.body.redirect_to === 'system-settings' ? '/admin/system-settings' : '/admin/settings'}?saved=1`);
   } catch (err) {
     console.error('Settings update error:', err && err.stack ? err.stack : err);
-    if (!res.headersSent) return res.redirect('/admin/settings?error=1');
+    if (!res.headersSent) return res.redirect(`${req.body.redirect_to === 'system-settings' ? '/admin/system-settings' : '/admin/settings'}?error=1`);
   }
 });
 
@@ -590,6 +623,57 @@ router.post('/settings/admins/:id/demote', async (req, res) => {
   } catch (err) {
     console.error('Admin demote error:', err.message);
     res.redirect('/admin/settings');
+  }
+});
+
+// ==================== NOTIFICATION BROADCAST ====================
+router.get('/notifications', async (req, res) => {
+  try {
+    const history = await pool.query(
+      `SELECT * FROM notification_broadcasts ORDER BY created_at DESC LIMIT 30`
+    );
+    const totalUsersRes = await pool.query('SELECT COUNT(*) AS cnt FROM users');
+    res.render('admin/notifications', {
+      history: history.rows,
+      totalUsers: parseInt(totalUsersRes.rows[0].cnt),
+    });
+  } catch (err) {
+    console.error('notifications page error:', err.message);
+    res.render('admin/notifications', { history: [], totalUsers: 0 });
+  }
+});
+
+router.post('/notifications/broadcast', adminFinancialLimiter, async (req, res) => {
+  try {
+    const title = sanitizeText(req.body.title || '', { maxLen: 150 });
+    const message = sanitizeText(req.body.message || '', { maxLen: 500 });
+    const allowedTypes = ['announcement', 'system', 'info', 'success', 'error'];
+    const type = allowedTypes.includes(req.body.type) ? req.body.type : 'announcement';
+
+    if (!title || !message) {
+      req.flash('error', 'শিরোনাম ও বার্তা দুটোই আবশ্যক');
+      return res.redirect('/admin/notifications');
+    }
+
+    const recipientCount = await broadcastToAllUsers({ title, message, type });
+
+    await pool.query(
+      `INSERT INTO notification_broadcasts (admin_id, admin_username, title, message, type, recipient_count)
+       VALUES ($1,$2,$3,$4,$5,$6)`,
+      [req.session.user.id, req.session.user.username, title, message, type, recipientCount]
+    );
+
+    await logAdminAction(
+      req.session.user.id, req.session.user.username, 'NOTIFICATION_BROADCAST',
+      `সব ইউজারকে (${recipientCount} জন) ব্রডকাস্ট পাঠানো হয়েছে: "${title}"`, req.ip
+    );
+
+    req.flash('success', `✅ ${recipientCount} জন ইউজারকে নোটিফিকেশন পাঠানো হয়েছে!`);
+    res.redirect('/admin/notifications');
+  } catch (err) {
+    console.error('broadcast error:', err.message);
+    req.flash('error', 'ব্রডকাস্ট পাঠাতে সমস্যা হয়েছে');
+    res.redirect('/admin/notifications');
   }
 });
 
@@ -962,8 +1046,9 @@ router.post('/api/deposits/:id/approve', adminFinancialLimiter, requireIntParam(
       await client.query('ROLLBACK');
       return res.status(400).json({ success: false, error: 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে' });
     }
-    await creditApprovedDeposit(client, request);
+    const crApprove = await creditApprovedDeposit(client, request);
     await client.query('COMMIT');
+    if (crApprove && crApprove.notification) emitToUser(request.user_id, crApprove.notification);
     await logAdminAction(req.session.user.id, req.session.user.username, 'deposit_approve', `Deposit #${id} approved`, req.ip);
     logAuditEvent({
       req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
@@ -993,11 +1078,12 @@ router.post('/api/deposits/:id/reject', adminFinancialLimiter, requireIntParam('
       return res.status(400).json({ success: false, error: 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে' });
     }
     await client.query(`UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE id=$1`, [id]);
-    await client.query(
-      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'error')`,
+    const rejNotif = await client.query(
+      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'error') RETURNING *`,
       [request.user_id, 'ডিপোজিট বাতিল', `আপনার ${request.amount} টাকার ডিপোজিট বাতিল হয়েছে।${reason ? ' কারণ: ' + reason : ''}`]
     );
     await client.query('COMMIT');
+    if (rejNotif.rows[0]) emitToUser(request.user_id, rejNotif.rows[0]);
     await logAdminAction(req.session.user.id, req.session.user.username, 'deposit_reject', `Deposit #${id} rejected: ${reason || ''}`, req.ip);
     logAuditEvent({
       req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
@@ -1076,11 +1162,12 @@ router.post('/api/withdrawals/:id/approve', adminFinancialLimiter, requireIntPar
       `UPDATE payment_requests SET status='approved', transaction_id=COALESCE($1, transaction_id), updated_at=NOW() WHERE id=$2`,
       [txn || null, id]
     );
-    await client.query(
-      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'success')`,
+    const wApproveNotif = await client.query(
+      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'success') RETURNING *`,
       [request.user_id, 'উইথড্র অনুমোদন', `আপনার ${request.amount} টাকার উইথড্র সম্পন্ন হয়েছে!${txn ? ' Ref: ' + txn : ''}`]
     );
     await client.query('COMMIT');
+    if (wApproveNotif.rows[0]) emitToUser(request.user_id, wApproveNotif.rows[0]);
     await logAdminAction(req.session.user.id, req.session.user.username, 'withdraw_approve', `Withdrawal #${id} approved`, req.ip);
     logAuditEvent({
       req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
@@ -1113,11 +1200,12 @@ router.post('/api/withdrawals/:id/reject', adminFinancialLimiter, requireIntPara
     // উইথড্র রিকোয়েস্ট করার সময় কয়েন কেটে নেওয়া হয়, তাই বাতিল হলে ফেরত দিতে হবে
     await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
     await client.query(`UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE id=$1`, [id]);
-    await client.query(
-      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'error')`,
+    const wRejectNotif = await client.query(
+      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'error') RETURNING *`,
       [request.user_id, 'উইথড্র বাতিল', `আপনার ${request.amount} টাকার উইথড্র বাতিল হয়েছে, কয়েন ফেরত দেওয়া হয়েছে।${reason ? ' কারণ: ' + reason : ''}`]
     );
     await client.query('COMMIT');
+    if (wRejectNotif.rows[0]) emitToUser(request.user_id, wRejectNotif.rows[0]);
     await logAdminAction(req.session.user.id, req.session.user.username, 'withdraw_reject', `Withdrawal #${id} rejected: ${reason || ''}`, req.ip);
     logAuditEvent({
       req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
@@ -1599,21 +1687,27 @@ router.post('/markets/:marketId/settle', async (req, res) => {
     await client.query('BEGIN');
     const bets = await client.query(`SELECT * FROM bets WHERE market_id = $1 AND status = 'pending' FOR UPDATE`, [marketId]);
     let winnersCount = 0;
+    const notifsToEmit = [];
     for (const bet of bets.rows) {
       if (String(bet.runner) === String(winning_runner)) {
         const payout = Math.floor(Number(bet.stake) * Number(bet.odd));
         await client.query('UPDATE users SET coins = coins + $1 WHERE id = $2', [payout, bet.user_id]);
         await client.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'bet_win','বেট জয়')`, [bet.user_id, payout]);
         await client.query(`UPDATE bets SET status = 'won' WHERE id = $1`, [bet.id]);
-        await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট জয়!',$2,'success')`, [bet.user_id, `আপনি ${payout} কয়েন জিতেছেন!`]);
+        const wn = await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট জয়!',$2,'success') RETURNING *`, [bet.user_id, `আপনি ${payout} কয়েন জিতেছেন!`]);
+        notifsToEmit.push({ userId: bet.user_id, row: wn.rows[0] });
         winnersCount++;
       } else {
         await client.query(`UPDATE bets SET status = 'lost' WHERE id = $1`, [bet.id]);
+        const ln = await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট ফলাফল',$2,'error') RETURNING *`, [bet.user_id, `আপনার বেটটি হেরে গেছে।`]);
+        notifsToEmit.push({ userId: bet.user_id, row: ln.rows[0] });
       }
     }
     await client.query(`UPDATE markets SET status = 'settled', updated_at = NOW() WHERE id = $1`, [marketId]);
-    await settleSelectionsForMarket(client, marketId, winning_runner);
+    const accaNotifs = await settleSelectionsForMarket(client, marketId, winning_runner);
     await client.query('COMMIT');
+    notifsToEmit.push(...accaNotifs);
+    notifsToEmit.forEach(n => emitToUser(n.userId, n.row));
     try {
       const mRow = await pool.query('SELECT match_id FROM markets WHERE id = $1', [marketId]);
       if (mRow.rows[0]) await cache.del(cacheKeys.matchDetail(mRow.rows[0].match_id));
@@ -1691,14 +1785,16 @@ router.post('/bets/:id/settle', async (req, res) => {
       return res.redirect('/admin/bets');
     }
     await client.query('UPDATE bets SET status=$1 WHERE id=$2', [result, id]);
+    let settleNotif;
     if (result === 'won') {
       const payout = Math.floor(Number(bet.stake) * Number(bet.odd));
       await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [payout, bet.user_id]);
-      await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট জিতেছেন!',$2,'success')`, [bet.user_id, `আপনি ৳${payout} জিতেছেন!`]);
+      settleNotif = await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট জিতেছেন!',$2,'success') RETURNING *`, [bet.user_id, `আপনি ৳${payout} জিতেছেন!`]);
     } else {
-      await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট ফলাফল',$2,'error')`, [bet.user_id, `আপনার ৳${bet.stake} বেটটি হেরে গেছে।`]);
+      settleNotif = await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট ফলাফল',$2,'error') RETURNING *`, [bet.user_id, `আপনার ৳${bet.stake} বেটটি হেরে গেছে।`]);
     }
     await client.query('COMMIT');
+    if (settleNotif.rows[0]) emitToUser(bet.user_id, settleNotif.rows[0]);
     req.flash('success', 'বেট সেটেল হয়েছে');
     res.redirect('/admin/bets');
   } catch (err) {
@@ -2121,6 +2217,178 @@ router.get('/activity', async (req, res) => {
   } catch (err) {
     console.error('Activity list error:', err.message);
     res.render('admin/activity', { logs: [], actionTypes: [], filters: { action_type: '', q: '' } });
+  }
+});
+
+// ==================== System Diagnostics / Health Check ====================
+router.get('/system-diagnostics', async (req, res) => {
+  try {
+    const { runDiagnostics } = require('../services/healthCheck');
+    const diagnostics = await runDiagnostics();
+    res.render('admin/system-diagnostics', { diagnostics, error: null });
+  } catch (err) {
+    console.error('System diagnostics error:', err.message);
+    res.render('admin/system-diagnostics', { diagnostics: null, error: err.message });
+  }
+});
+
+router.get('/api/system-diagnostics', async (req, res) => {
+  try {
+    const { runDiagnostics } = require('../services/healthCheck');
+    const diagnostics = await runDiagnostics();
+    res.json({ success: true, diagnostics });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ==================== Notification Template Management ====================
+const templates = require('../services/templates');
+const { sendSms } = require('../services/sms');
+
+router.get('/notification-templates', async (req, res) => {
+  try {
+    const { channel = '', lang = '', q = '' } = req.query;
+    const list = await templates.listTemplates({ channel, lang, q });
+    res.render('admin/notification-templates', { list, filters: { channel, lang, q }, error: null, success: null });
+  } catch (err) {
+    console.error('notification-templates list error:', err.message);
+    res.render('admin/notification-templates', { list: [], filters: { channel: '', lang: '', q: '' }, error: err.message, success: null });
+  }
+});
+
+router.get('/notification-templates/new', (req, res) => {
+  res.render('admin/notification-template-form', { tmpl: null, error: null });
+});
+
+router.post('/notification-templates', async (req, res) => {
+  try {
+    const { template_key, channel, lang, name, subject, body, is_active } = req.body;
+    const tmpl = await templates.createTemplate(
+      { template_key, channel, lang, name, subject, body, is_active: is_active === 'on' || is_active === 'true' },
+      req.session.user.id, req.session.user.username
+    );
+    await logAdminAction(req.session.user.id, req.session.user.username, 'TEMPLATE_CREATE',
+      `নতুন নোটিফিকেশন টেমপ্লেট তৈরি: ${tmpl.template_key} (${tmpl.channel}/${tmpl.lang})`, req.ip);
+    req.flash && req.flash('success', 'টেমপ্লেট তৈরি হয়েছে');
+    res.redirect('/admin/notification-templates');
+  } catch (err) {
+    console.error('template create error:', err.message);
+    res.render('admin/notification-template-form', { tmpl: req.body, error: err.message });
+  }
+});
+
+router.get('/notification-templates/:id/edit', async (req, res) => {
+  try {
+    const tmpl = await templates.getTemplateById(req.params.id);
+    if (!tmpl) return res.redirect('/admin/notification-templates');
+    res.render('admin/notification-template-form', { tmpl, error: null });
+  } catch (err) {
+    res.redirect('/admin/notification-templates');
+  }
+});
+
+router.post('/notification-templates/:id', async (req, res) => {
+  try {
+    const { name, subject, body, is_active } = req.body;
+    const tmpl = await templates.updateTemplate(
+      req.params.id,
+      { name, subject, body, is_active: is_active === 'on' || is_active === 'true' },
+      req.session.user.id, req.session.user.username
+    );
+    await logAdminAction(req.session.user.id, req.session.user.username, 'TEMPLATE_UPDATE',
+      `নোটিফিকেশন টেমপ্লেট আপডেট: ${tmpl.template_key} (${tmpl.channel}/${tmpl.lang})`, req.ip);
+    res.redirect('/admin/notification-templates');
+  } catch (err) {
+    console.error('template update error:', err.message);
+    const existing = await templates.getTemplateById(req.params.id).catch(() => null);
+    res.render('admin/notification-template-form', { tmpl: existing || { id: req.params.id, ...req.body }, error: err.message });
+  }
+});
+
+router.post('/notification-templates/:id/delete', async (req, res) => {
+  try {
+    const deleted = await templates.deleteTemplate(req.params.id);
+    if (deleted) {
+      await logAdminAction(req.session.user.id, req.session.user.username, 'TEMPLATE_DELETE',
+        `নোটিফিকেশন টেমপ্লেট ডিলিট: ${deleted.template_key} (${deleted.channel}/${deleted.lang})`, req.ip);
+    }
+    res.redirect('/admin/notification-templates');
+  } catch (err) {
+    console.error('template delete error:', err.message);
+    res.redirect('/admin/notification-templates');
+  }
+});
+
+// প্রিভিউ — নমুনা ভ্যারিয়েবল দিয়ে রেন্ডার করে দেখায় (AJAX)
+router.post('/notification-templates/:id/preview', async (req, res) => {
+  try {
+    const tmpl = await templates.getTemplateById(req.params.id);
+    if (!tmpl) return res.status(404).json({ success: false, error: 'টেমপ্লেট পাওয়া যায়নি' });
+
+    const sampleVars = {};
+    (tmpl.variables || []).forEach(v => {
+      const samples = { name: 'রহিম উদ্দিন', otp: '123456', amount: '৫,০০০', username: 'demo_user', date: new Date().toLocaleDateString('bn-BD') };
+      sampleVars[v] = samples[v] || `[${v}]`;
+    });
+    const rendered = templates.renderTemplateRow(tmpl, { ...sampleVars, ...(req.body.variables || {}) });
+    res.json({ success: true, subject: rendered.subject, body: rendered.body, sampleVars });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// টেস্ট সেন্ড — অ্যাডমিন নিজের ইমেইল/নম্বরে পাঠিয়ে দেখতে পারবে
+router.post('/notification-templates/:id/test-send', async (req, res) => {
+  try {
+    const tmpl = await templates.getTemplateById(req.params.id);
+    if (!tmpl) return res.status(404).json({ success: false, error: 'টেমপ্লেট পাওয়া যায়নি' });
+
+    const target = (req.body.target || '').trim();
+    if (!target) return res.status(400).json({ success: false, error: 'টেস্ট টার্গেট (ইমেইল/ফোন/ইউজার আইডি) দিন' });
+
+    const sampleVars = {};
+    (tmpl.variables || []).forEach(v => {
+      const samples = { name: req.session.user.username, otp: '123456', amount: '৫,০০০', username: req.session.user.username, date: new Date().toLocaleDateString('bn-BD') };
+      sampleVars[v] = samples[v] || `[${v}]`;
+    });
+    const rendered = templates.renderTemplateRow(tmpl, sampleVars);
+
+    let result;
+    if (tmpl.channel === 'email') {
+      const nodemailer = require('nodemailer');
+      const transporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com', port: 587, secure: false,
+        auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+        tls: { rejectUnauthorized: false }
+      });
+      await transporter.sendMail({
+        from: `"LIVO (Test)" <${process.env.EMAIL_USER}>`,
+        to: target,
+        subject: `[TEST] ${rendered.subject || tmpl.name}`,
+        html: rendered.body
+      });
+      result = { ok: true, message: `টেস্ট ইমেইল ${target}-এ পাঠানো হয়েছে` };
+    } else if (tmpl.channel === 'sms') {
+      result = await sendSms(target, rendered.body);
+    } else {
+      // in_app — সরাসরি notifications টেবিলে ইনসার্ট করা যায়, target হবে user id
+      const userId = parseInt(target, 10);
+      if (!userId) return res.status(400).json({ success: false, error: 'in-app টেস্টের জন্য বৈধ user ID দিন' });
+      await pool.query(
+        `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'info')`,
+        [userId, `[TEST] ${tmpl.name}`, rendered.body]
+      );
+      result = { ok: true, message: `টেস্ট নোটিফিকেশন user #${userId}-কে পাঠানো হয়েছে` };
+    }
+
+    await logAdminAction(req.session.user.id, req.session.user.username, 'TEMPLATE_TEST_SEND',
+      `টেমপ্লেট টেস্ট-সেন্ড: ${tmpl.template_key} (${tmpl.channel}/${tmpl.lang}) → ${target}`, req.ip);
+
+    res.json({ success: true, ...result });
+  } catch (err) {
+    console.error('template test-send error:', err.message);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -2874,6 +3142,168 @@ router.get('/audit-logs/export.csv', async (req, res) => {
   }
 });
 
+// ==================== FEATURE FLAGS & CONFIGURATION MANAGEMENT ====================
+const featureFlags = require('../services/featureFlags');
+
+router.get('/feature-flags', async (req, res) => {
+  try {
+    const flags = await featureFlags.loadAllFlags();
+    res.render('admin/feature-flags', { flags: flags || [], created: req.query.created || '', error: req.query.error || '' });
+  } catch (err) {
+    console.error('Feature flags page error:', err && err.stack ? err.stack : err);
+    res.render('admin/feature-flags', { flags: [], created: '', error: 'load_failed' });
+  }
+});
+
+router.post('/feature-flags/:id/toggle', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT * FROM feature_flags WHERE id = $1', [req.params.id]);
+    const flag = r.rows[0];
+    if (!flag) return res.redirect('/admin/feature-flags?error=not_found');
+    const newState = !flag.enabled;
+    await featureFlags.setFlag(flag.key, newState, req.session.user.id, req.session.user.username);
+    await logAdminAction(
+      req.session.user.id, req.session.user.username, 'FEATURE_FLAG_TOGGLED',
+      `"${flag.label}" (${flag.key}) ${newState ? 'চালু' : 'বন্ধ'} করা হয়েছে`, req.ip
+    );
+    res.redirect('/admin/feature-flags');
+  } catch (err) {
+    console.error('Feature flag toggle error:', err && err.stack ? err.stack : err);
+    res.redirect('/admin/feature-flags?error=toggle_failed');
+  }
+});
+
+router.post('/feature-flags/create', async (req, res) => {
+  try {
+    const { key, label, category, description } = req.body;
+    const created = await featureFlags.createFlag({
+      key: (key || '').trim(), label: (label || '').trim(), category, description,
+      enabled: false, adminId: req.session.user.id, adminUsername: req.session.user.username
+    });
+    await logAdminAction(req.session.user.id, req.session.user.username, 'FEATURE_FLAG_CREATED', `নতুন ফ্ল্যাগ তৈরি হয়েছে: "${created.label}" (${created.key}, ${created.category})`, req.ip);
+    res.redirect('/admin/feature-flags?created=1');
+  } catch (err) {
+    console.error('Feature flag create error:', err && err.stack ? err.stack : err);
+    res.redirect(`/admin/feature-flags?error=${encodeURIComponent(err.message)}`);
+  }
+});
+
+router.post('/feature-flags/:id/delete', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT * FROM feature_flags WHERE id = $1', [req.params.id]);
+    const flag = r.rows[0];
+    await featureFlags.deleteFlag(req.params.id);
+    if (flag) await logAdminAction(req.session.user.id, req.session.user.username, 'FEATURE_FLAG_DELETED', `"${flag.label}" (${flag.key}) ডিলিট করা হয়েছে`, req.ip);
+    res.redirect('/admin/feature-flags');
+  } catch (err) {
+    console.error('Feature flag delete error:', err && err.stack ? err.stack : err);
+    res.redirect('/admin/feature-flags?error=delete_failed');
+  }
+});
+
+const fs = require('fs');
+const path = require('path');
+const LOCALES_DIR = path.join(__dirname, '..', 'locales');
+
+function readLocale(code) {
+  return JSON.parse(fs.readFileSync(path.join(LOCALES_DIR, code + '.json'), 'utf8'));
+}
+function writeLocale(code, obj) {
+  const sorted = {};
+  Object.keys(obj).sort().forEach(k => sorted[k] = obj[k]);
+  fs.writeFileSync(path.join(LOCALES_DIR, code + '.json'), JSON.stringify(sorted, null, 2) + '\n', 'utf8');
+}
+function refreshCache(req) {
+  const fn = req.app.get('refreshTranslationsCache');
+  if (fn) fn();
+}
+
+router.get('/localization', (req, res) => {
+  try {
+    const bn = readLocale('bn');
+    const en = readLocale('en');
+    const q = (req.query.q || '').trim().toLowerCase();
+    const allKeys = Array.from(new Set([...Object.keys(bn), ...Object.keys(en)])).sort();
+    const rows = allKeys
+      .filter(k => !q || k.toLowerCase().includes(q) || (bn[k] || '').toLowerCase().includes(q) || (en[k] || '').toLowerCase().includes(q))
+      .map(k => ({ key: k, bn: bn[k] || '', en: en[k] || '', missingBn: !bn[k], missingEn: !en[k] }));
+    const missingCount = rows.filter(r => r.missingBn || r.missingEn).length;
+    res.render('admin/localization', { rows, q: req.query.q || '', total: allKeys.length, missingCount, saved: req.query.saved === '1' });
+  } catch (err) {
+    console.error('Localization load error:', err.message);
+    res.render('admin/localization', { rows: [], q: '', total: 0, missingCount: 0, saved: false });
+  }
+});
+
+router.post('/localization/create', async (req, res) => {
+  try {
+    const key = (req.body.key || '').trim();
+    const bnVal = req.body.bn || '';
+    const enVal = req.body.en || '';
+    if (!key || !/^[a-zA-Z0-9_]+$/.test(key)) {
+      req.flash('error', 'Key শুধু ইংরেজি অক্ষর, সংখ্যা ও আন্ডারস্কোর দিয়ে হতে হবে।');
+      return res.redirect('/admin/localization');
+    }
+    const bn = readLocale('bn'); const en = readLocale('en');
+    bn[key] = bnVal; en[key] = enVal;
+    writeLocale('bn', bn); writeLocale('en', en);
+    refreshCache(req);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'LOCALIZATION_KEY_CREATED', `Key তৈরি: ${key}`, req.ip);
+    req.flash('success', '✅ নতুন Key তৈরি হয়েছে।');
+    res.redirect('/admin/localization');
+  } catch (err) {
+    req.flash('error', 'Key তৈরি করতে সমস্যা হয়েছে।');
+    res.redirect('/admin/localization');
+  }
+});
+
+router.post('/localization/update', async (req, res) => {
+  try {
+    const key = (req.body.key || '').trim();
+    const bnVal = req.body.bn || '';
+    const enVal = req.body.en || '';
+    if (!key) { req.flash('error', 'Key পাওয়া যায়নি।'); return res.redirect('/admin/localization'); }
+    const bn = readLocale('bn'); const en = readLocale('en');
+    bn[key] = bnVal; en[key] = enVal;
+    writeLocale('bn', bn); writeLocale('en', en);
+    refreshCache(req);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'LOCALIZATION_KEY_UPDATED', `Key আপডেট: ${key}`, req.ip);
+    req.flash('success', '✅ Key আপডেট হয়েছে।');
+    res.redirect('/admin/localization');
+  } catch (err) {
+    req.flash('error', 'Key আপডেট করতে সমস্যা হয়েছে।');
+    res.redirect('/admin/localization');
+  }
+});
+
+router.post('/localization/delete', async (req, res) => {
+  try {
+    const key = (req.body.key || '').trim();
+    const bn = readLocale('bn'); const en = readLocale('en');
+    delete bn[key]; delete en[key];
+    writeLocale('bn', bn); writeLocale('en', en);
+    refreshCache(req);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'LOCALIZATION_KEY_DELETED', `Key ডিলিট: ${key}`, req.ip);
+    req.flash('success', '✅ Key ডিলিট হয়েছে।');
+    res.redirect('/admin/localization');
+  } catch (err) {
+    req.flash('error', 'Key ডিলিট করতে সমস্যা হয়েছে।');
+    res.redirect('/admin/localization');
+  }
+});
+
+router.get('/localization/export/:lang', (req, res) => {
+  try {
+    const lang = req.params.lang === 'en' ? 'en' : 'bn';
+    const data = readLocale(lang);
+    res.setHeader('Content-Disposition', `attachment; filename="${lang}.json"`);
+    res.setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify(data, null, 2));
+  } catch (err) {
+    res.status(500).send('Export failed');
+  }
+});
+
 router.get('/audit-logs/export.xlsx', async (req, res) => {
   try {
     const ExcelJS = require('exceljs');
@@ -2910,6 +3340,131 @@ router.get('/audit-logs/export.xlsx', async (req, res) => {
   } catch (err) {
     console.error('Audit log Excel export error:', err.message);
     res.status(500).send('Export failed');
+  }
+});
+
+router.post('/localization/import/:lang', async (req, res) => {
+  try {
+    const lang = req.params.lang === 'en' ? 'en' : 'bn';
+    let incoming;
+    try { incoming = JSON.parse(req.body.json || '{}'); } catch (e) {
+      req.flash('error', 'বৈধ JSON না — পার্স করা যায়নি।');
+      return res.redirect('/admin/localization');
+    }
+    if (typeof incoming !== 'object' || Array.isArray(incoming) || incoming === null) {
+      req.flash('error', 'JSON অবশ্যই key-value অবজেক্ট হতে হবে।');
+      return res.redirect('/admin/localization');
+    }
+    const current = readLocale(lang);
+    const merged = Object.assign({}, current, incoming);
+    writeLocale(lang, merged);
+    refreshCache(req);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'LOCALIZATION_IMPORTED', `${lang}.json import (${Object.keys(incoming).length}টি key)`, req.ip);
+    req.flash('success', `✅ ${Object.keys(incoming).length}টি Key ইম্পোর্ট হয়েছে (${lang})।`);
+    res.redirect('/admin/localization');
+  } catch (err) {
+    req.flash('error', 'ইম্পোর্ট ব্যর্থ হয়েছে।');
+    res.redirect('/admin/localization');
+  }
+});
+
+router.post('/localization/refresh-cache', async (req, res) => {
+  try {
+    refreshCache(req);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'LOCALIZATION_CACHE_REFRESHED', 'Translation cache রিফ্রেশ করা হয়েছে', req.ip);
+    req.flash('success', '✅ Cache রিফ্রেশ হয়েছে।');
+    res.redirect('/admin/localization');
+  } catch (err) {
+    req.flash('error', 'Cache রিফ্রেশ ব্যর্থ হয়েছে।');
+    res.redirect('/admin/localization');
+  }
+});
+
+// ==================== Announcement / Broadcast System ====================
+router.get('/announcements', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT * FROM announcements ORDER BY created_at DESC');
+    res.render('admin/announcements', { list: r.rows, error: req.query.error || '', created: req.query.created === '1' });
+  } catch (err) {
+    console.error('Announcements list error:', err.message);
+    res.render('admin/announcements', { list: [], error: 'load_failed', created: false });
+  }
+});
+
+router.post('/announcements/create', async (req, res) => {
+  try {
+    const { type, title_bn, title_en, message_bn, message_en, target_type, target_role, target_user_id, starts_at, expires_at } = req.body;
+    if (!message_bn || !message_bn.trim()) {
+      return res.redirect('/admin/announcements?error=' + encodeURIComponent('বাংলা মেসেজ আবশ্যক'));
+    }
+    const r = await pool.query(
+      `INSERT INTO announcements (type, title_bn, title_en, message_bn, message_en, target_type, target_role, target_user_id, starts_at, expires_at, created_by, created_by_username)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8, COALESCE($9, NOW()), $10, $11, $12) RETURNING id`,
+      [
+        type || 'banner', title_bn || null, title_en || null, message_bn, message_en || null,
+        target_type || 'all', target_type === 'role' ? (target_role || null) : null,
+        target_type === 'user' ? (parseInt(target_user_id) || null) : null,
+        starts_at || null, expires_at || null,
+        req.session.user.id, req.session.user.username
+      ]
+    );
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ANNOUNCEMENT_CREATED', `নতুন ${type} announcement তৈরি হয়েছে (#${r.rows[0].id})`, req.ip);
+    res.redirect('/admin/announcements?created=1');
+  } catch (err) {
+    console.error('Announcement create error:', err.message);
+    res.redirect('/admin/announcements?error=' + encodeURIComponent('তৈরি করতে সমস্যা হয়েছে'));
+  }
+});
+
+router.post('/announcements/:id/update', async (req, res) => {
+  try {
+    const { type, title_bn, title_en, message_bn, message_en, target_type, target_role, target_user_id, starts_at, expires_at } = req.body;
+    await pool.query(
+      `UPDATE announcements SET type=$1, title_bn=$2, title_en=$3, message_bn=$4, message_en=$5,
+       target_type=$6, target_role=$7, target_user_id=$8, starts_at=COALESCE($9, starts_at), expires_at=$10, updated_at=NOW()
+       WHERE id=$11`,
+      [
+        type || 'banner', title_bn || null, title_en || null, message_bn, message_en || null,
+        target_type || 'all', target_type === 'role' ? (target_role || null) : null,
+        target_type === 'user' ? (parseInt(target_user_id) || null) : null,
+        starts_at || null, expires_at || null, req.params.id
+      ]
+    );
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ANNOUNCEMENT_UPDATED', `Announcement আপডেট হয়েছে (#${req.params.id})`, req.ip);
+    res.redirect('/admin/announcements?created=1');
+  } catch (err) {
+    console.error('Announcement update error:', err.message);
+    res.redirect('/admin/announcements?error=' + encodeURIComponent('আপডেট ব্যর্থ হয়েছে'));
+  }
+});
+
+router.post('/announcements/:id/toggle', async (req, res) => {
+  try {
+    const r = await pool.query('UPDATE announcements SET active = NOT active, updated_at = NOW() WHERE id = $1 RETURNING active', [req.params.id]);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ANNOUNCEMENT_TOGGLED', `Announcement #${req.params.id} ${r.rows[0].active ? 'সক্রিয়' : 'নিষ্ক্রিয়'} করা হয়েছে`, req.ip);
+    res.redirect('/admin/announcements');
+  } catch (err) {
+    res.redirect('/admin/announcements?error=toggle_failed');
+  }
+});
+
+router.post('/announcements/:id/expire-now', async (req, res) => {
+  try {
+    await pool.query('UPDATE announcements SET expires_at = NOW(), updated_at = NOW() WHERE id = $1', [req.params.id]);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ANNOUNCEMENT_EXPIRED', `Announcement #${req.params.id} এখনই expire করা হয়েছে`, req.ip);
+    res.redirect('/admin/announcements');
+  } catch (err) {
+    res.redirect('/admin/announcements?error=expire_failed');
+  }
+});
+
+router.post('/announcements/:id/delete', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM announcements WHERE id = $1', [req.params.id]);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ANNOUNCEMENT_DELETED', `Announcement #${req.params.id} ডিলিট করা হয়েছে`, req.ip);
+    res.redirect('/admin/announcements');
+  } catch (err) {
+    res.redirect('/admin/announcements?error=delete_failed');
   }
 });
 
