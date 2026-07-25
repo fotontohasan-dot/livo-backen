@@ -3,6 +3,7 @@ const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
+const { sanitizeText, requireIntParam } = require('../middleware/validate');
 const bcrypt = require('bcryptjs');
 const { getTodayReward, claimDailyReward } = require('../services/dailyReward');
 const { getReferralStats } = require('../services/referral');
@@ -20,7 +21,7 @@ const { getLeaderboard, getPastContests } = require('../services/contest');
 const { getRewardStatus, claimRedPacket, claimGoldenEgg } = require('../services/redpacket');
 const { checkContent } = require('../utils/contentFilter');
 const { isWeakPin, createPin, updatePin, verifyPin, getPinStatus } = require('../services/withdrawPin');
-const { listActiveSessions, listLoginHistory, revokeDeviceSession, revokeAllOtherSessions } = require('../services/deviceTracking');
+const { listActiveSessions, listLoginHistory, revokeDeviceSession, revokeAllOtherSessions, listTrustedDevicesPage, renameDevice, setDeviceTrusted, removeDeviceWithNotification } = require('../services/deviceTracking');
 const { logAdminAction } = require('../services/fraudDetection');
 const cache = require('../services/cache');
 
@@ -434,6 +435,65 @@ router.post('/devices/logout-all-others', isAuth, async (req, res) => {
     req.flash('error', '❌ সমস্যা হয়েছে, আবার চেষ্টা করুন।');
   }
   res.redirect('/profile/security');
+});
+
+// ==================== Trusted Devices Management (নতুন পেজ) ====================
+router.get('/trusted-devices', isAuth, async (req, res) => {
+  try {
+    const devices = await listTrustedDevicesPage(req.session.user.id, req.sessionID);
+    res.render('profile/trusted-devices', { devices });
+  } catch (err) {
+    console.error('trusted-devices load error:', err.message);
+    res.render('profile/trusted-devices', { devices: [] });
+  }
+});
+
+router.post('/trusted-devices/:id/rename', isAuth, requireIntParam('id', '/profile/trusted-devices'), async (req, res) => {
+  try {
+    const label = sanitizeText(req.body.label || '', { maxLen: 100 });
+    const ok = label && await renameDevice(req.session.user.id, req.params.id, label);
+    req.flash(ok ? 'success' : 'error', ok ? '✅ ডিভাইসের নাম পরিবর্তন হয়েছে।' : '❌ সঠিক নাম দিন।');
+  } catch (err) {
+    console.error('device rename error:', err.message);
+    req.flash('error', '❌ সমস্যা হয়েছে, আবার চেষ্টা করুন।');
+  }
+  res.redirect('/profile/trusted-devices');
+});
+
+router.post('/trusted-devices/:id/trust', isAuth, requireIntParam('id', '/profile/trusted-devices'), async (req, res) => {
+  try {
+    const trusted = req.body.trusted === 'true' || req.body.trusted === '1';
+    const ok = await setDeviceTrusted(req.session.user.id, req.params.id, trusted, req.session.user.username);
+    req.flash(ok ? 'success' : 'error', ok
+      ? (trusted ? '✅ ডিভাইসটি Trusted করা হয়েছে।' : '✅ ডিভাইসটি Untrusted করা হয়েছে।')
+      : '❌ ডিভাইসটি খুঁজে পাওয়া যায়নি।');
+  } catch (err) {
+    console.error('device trust toggle error:', err.message);
+    req.flash('error', '❌ সমস্যা হয়েছে, আবার চেষ্টা করুন।');
+  }
+  res.redirect('/profile/trusted-devices');
+});
+
+router.post('/trusted-devices/:id/remove', isAuth, requireIntParam('id', '/profile/trusted-devices'), async (req, res) => {
+  try {
+    const ok = await removeDeviceWithNotification(req.session.user.id, req.params.id, req.session.user.username);
+    req.flash(ok ? 'success' : 'error', ok ? '✅ ডিভাইসটি সরানো হয়েছে।' : '❌ ডিভাইসটি খুঁজে পাওয়া যায়নি।');
+  } catch (err) {
+    console.error('device remove error:', err.message);
+    req.flash('error', '❌ সমস্যা হয়েছে, আবার চেষ্টা করুন।');
+  }
+  res.redirect('/profile/trusted-devices');
+});
+
+router.post('/trusted-devices/remove-all-others', isAuth, async (req, res) => {
+  try {
+    const count = await revokeAllOtherSessions(req.session.user.id, req.sessionID, req.session.user.username);
+    req.flash('success', count > 0 ? `✅ ${count}টি অন্য ডিভাইস সরানো হয়েছে।` : 'অন্য কোনো সক্রিয় ডিভাইস নেই।');
+  } catch (err) {
+    console.error('trusted-devices remove-all-others error:', err.message);
+    req.flash('error', '❌ সমস্যা হয়েছে, আবার চেষ্টা করুন।');
+  }
+  res.redirect('/profile/trusted-devices');
 });
 
 // ==================== সম্পূর্ণ লগইন হিস্ট্রি ====================

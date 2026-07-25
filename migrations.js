@@ -874,6 +874,18 @@ async function runMigrations() {
     await pool.query(`ALTER TABLE login_logs ADD COLUMN IF NOT EXISTS location VARCHAR(120)`);
     await pool.query(`ALTER TABLE device_sessions ADD COLUMN IF NOT EXISTS location VARCHAR(120)`);
 
+    // ==================== Trusted Devices Management ====================
+    // is_trusted/trusted_at — ইউজার নিজে কোনো ডিভাইসকে "Trusted" মার্ক করলে সেট হয়;
+    // device_label — ইউজারের নিজের দেওয়া নাম (রিনেম), সেট থাকলে অটো-ডিটেক্টেড device_name-এর
+    // বদলে এটাই দেখানো হয়, যাতে অটো-ডিটেকশন লজিক/কলাম অপরিবর্তিত থাকে (backward compatible)
+    await pool.query(`
+      ALTER TABLE device_sessions
+      ADD COLUMN IF NOT EXISTS is_trusted BOOLEAN DEFAULT false,
+      ADD COLUMN IF NOT EXISTS trusted_at TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS device_label VARCHAR(100);
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_device_sessions_trusted ON device_sessions(user_id, is_trusted);`);
+
     console.log("✅ Device tracking tables ready");
 
     await pool.query(`

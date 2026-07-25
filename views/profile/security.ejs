@@ -365,7 +365,10 @@
       <h3 style="color: var(--gold); font-size: 16px; margin-bottom: 6px; display: flex; align-items: center; gap: 10px;">
         <i class="fas fa-mobile-screen-button"></i> <%= t.active_devices_title %>
       </h3>
-      <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 18px;"><%= t.active_devices_subtitle %></p>
+      <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 10px;"><%= t.active_devices_subtitle %></p>
+      <a href="/profile/trusted-devices" style="display:inline-flex; align-items:center; gap:6px; color:var(--gold); font-size:12px; font-weight:700; text-decoration:none; margin-bottom: 14px;">
+        <i class="fas fa-shield-halved"></i> <%= t.view_trusted_devices %> <i class="fas fa-chevron-right" style="font-size:10px;"></i>
+      </a>
 
       <% if (activeSessions && activeSessions.length) { %>
         <% activeSessions.forEach(function(d) { %>
