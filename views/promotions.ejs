@@ -1,4 +1,10 @@
 <%- include('partials/head') %>
+<%
+  const validDate = new Date();
+  validDate.setDate(validDate.getDate() + 7);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const validUntilStr = validDate.getDate() + ' ' + months[validDate.getMonth()] + ' ' + validDate.getFullYear();
+%>
 
 <div class="container" style="padding:0; background: var(--bg-dark); min-height: 100vh; padding-bottom: 80px;">
 
@@ -23,7 +29,7 @@
         <div style="padding: 15px; background: var(--bg-surface);">
           <div style="font-size: 13px; color: var(--text-muted); line-height: 1.5;"><%= t.promo_1_desc_long %></div>
           <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
-            <div style="font-size: 11px; color: var(--gold); font-weight: bold;"><i class="fas fa-clock"></i> <%= t.valid_until %>: 31 Dec 2024</div>
+            <div style="font-size: 11px; color: var(--gold); font-weight: bold;"><i class="fas fa-clock"></i> <%= t.valid_until %>: <%= validUntilStr %></div>
             <button onclick="location.href='/payment/deposit'" style="background: var(--grad-gold); color: #000; border: none; padding: 8px 20px; border-radius: 20px; font-size: 12px; font-weight: bold;"><%= t.deposit_now %></button>
           </div>
         </div>
