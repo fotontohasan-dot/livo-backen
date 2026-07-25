@@ -1,8 +1,11 @@
 <%
 function escapeHtml(str) {
   return String(str == null ? '' : str)
-    .replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>')
-    .replace(/"/g, '"').replace(/'/g, '&#39;');
+    .replace(/&/g, '&')
+    .replace(/</g, '<')
+    .replace(/>/g, '>')
+    .replace(/"/g, '"')
+    .replace(/'/g, '&#39;');
 }
 function statusColor(status) {
   if (status === 'healthy') return { badge: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500', icon: 'fa-circle-check' };
@@ -14,8 +17,8 @@ function statusLabel(status) {
   if (status === 'warning') return 'Warning';
   return 'Error';
 }
-function serviceCard(key, label, icon, c) {
-  if (!c) return '';
+function serviceCard(label, icon, c) {
+  if (!c) c = { status: 'error', message: 'ডেটা নেই' };
   const col = statusColor(c.status);
   let extra = '';
   if (typeof c.usedPercent === 'number') {
@@ -37,14 +40,11 @@ function serviceCard(key, label, icon, c) {
   '</div>';
 }
 
-// locals থেকে নিরাপদে নেওয়া — undefined variable ReferenceError এড়ানো
-var data = null;
-try { if (typeof result !== 'undefined' && result) data = result; } catch (e) {}
-if (!data) { try { if (typeof diagnostics !== 'undefined' && diagnostics) data = diagnostics; } catch (e) {} }
-var errMsg = null;
-try { if (typeof error !== 'undefined' && error) errMsg = error; } catch (e) {}
-const overallCol = data ? statusColor(data.overall) : statusColor('error');
-const checks = (data && data.checks) ? data.checks : {};
+var data = (typeof result !== 'undefined' && result) ? result
+         : ((typeof diagnostics !== 'undefined' && diagnostics) ? diagnostics : null);
+var errMsg = (typeof error !== 'undefined' && error) ? error : null;
+var checks = (data && data.checks) ? data.checks : {};
+var overallCol = data ? statusColor(data.overall) : statusColor('error');
 %>
 <%- include('partials/admin-layout', {
     title: 'Server Health',
@@ -56,7 +56,7 @@ const checks = (data && data.checks) ? data.checks : {};
             <h2 class="text-2xl font-semibold text-slate-900">Server Health</h2>
             <p class="text-slate-500 mt-1 text-sm">ডাটাবেজ, রেডিস, কিউ, ইমেইল, ডিস্ক ও মেমরির রিয়েল-টাইম স্বাস্থ্য</p>
         </div>
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3 flex-wrap">
             ${data ? `<span class="px-4 py-2 rounded-2xl text-sm font-bold ${overallCol.badge}"><i class="fas ${overallCol.icon}"></i> Overall: ${statusLabel(data.overall)}</span>` : ''}
             <a href="/admin/system-diagnostics" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-sm font-semibold"><i class="fas fa-rotate-right"></i> রিফ্রেশ</a>
             <a href="/health" target="_blank" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-sm font-semibold"><i class="fas fa-arrow-up-right-from-square"></i> /health JSON</a>
@@ -65,14 +65,13 @@ const checks = (data && data.checks) ? data.checks : {};
 
     ${errMsg ? `<div class="bg-red-50 border border-red-200 text-red-600 px-5 py-4 rounded-2xl text-sm">❌ ${escapeHtml(errMsg)}</div>` : ''}
 
-    ${data ? `
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        ${serviceCard('database', 'PostgreSQL', 'fa-database', checks.database)}
-        ${serviceCard('redis', 'Redis Cache', 'fa-bolt', checks.redis)}
-        ${serviceCard('queue', 'Background Queue', 'fa-list-check', checks.queue)}
-        ${serviceCard('email', 'Email (SMTP)', 'fa-envelope', checks.email)}
-        ${serviceCard('disk', 'Disk Space', 'fa-hard-drive', checks.disk)}
-        ${serviceCard('memory', 'Memory Usage', 'fa-memory', checks.memory)}
+        ${serviceCard('PostgreSQL', 'fa-database', checks.database)}
+        ${serviceCard('Redis Cache', 'fa-bolt', checks.redis)}
+        ${serviceCard('Background Queue', 'fa-list-check', checks.queue)}
+        ${serviceCard('Email (SMTP)', 'fa-envelope', checks.email)}
+        ${serviceCard('Disk Space', 'fa-hard-drive', checks.disk)}
+        ${serviceCard('Memory Usage', 'fa-memory', checks.memory)}
     </div>
 
     <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
@@ -84,8 +83,7 @@ const checks = (data && data.checks) ? data.checks : {};
         <p class="text-xs text-slate-400 mt-1">সার্ভার চালু হয়েছে: ${checks.uptime && checks.uptime.startedAt ? new Date(checks.uptime.startedAt).toLocaleString('bn-BD') : '—'}</p>
     </div>
 
-    <p class="text-xs text-slate-400 text-center">সর্বশেষ চেক: ${data.timestamp ? new Date(data.timestamp).toLocaleString('bn-BD') : '—'}</p>
-    ` : (errMsg ? '' : `<div class="bg-amber-50 border border-amber-200 text-amber-700 px-5 py-4 rounded-2xl text-sm">ডায়াগনস্টিক ডেটা পাওয়া যায়নি। রিফ্রেশ করুন।</div>`)}
+    <p class="text-xs text-slate-400 text-center">সর্বশেষ চেক: ${data && data.timestamp ? new Date(data.timestamp).toLocaleString('bn-BD') : '—'}</p>
 </div>
 `
 }) %>
