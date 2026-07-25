@@ -3,8 +3,9 @@
   .admin-wrap { display: flex; min-height: 100vh; background: #0f1115; }
   .admin-sidebar {
     width: 250px; background: #14171f; border-right: 1px solid rgba(255,255,255,0.06);
-    position: fixed; top: 0; left: 0; bottom: 0; overflow-y: auto; z-index: 50;
-    transform: translateX(-100%); transition: transform 0.25s ease;
+    position: fixed; top: 0; left: 0; bottom: 0; overflow-y: auto; overflow-x: hidden;
+    z-index: 50; transform: translateX(-100%); transition: transform 0.25s ease;
+    -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
   }
   .admin-sidebar.open { transform: translateX(0); }
   .admin-sidebar-brand {
@@ -70,46 +71,39 @@
 <div class="admin-sidebar" id="adminSidebar">
   <div class="admin-sidebar-brand"><i class="fas fa-shield-alt"></i> Livo Admin</div>
 
-  <!-- ১. ড্যাশবোর্ড -->
   <div class="admin-nav-group-title">ড্যাশবোর্ড</div>
   <a href="/admin" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'dashboard' ? 'active' : '' %>"><i class="fas fa-chart-line"></i> ড্যাশবোর্ড</a>
   <a href="/admin/reports" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'reports' ? 'active' : '' %>"><i class="fas fa-file-export"></i> রিপোর্ট</a>
 
-  <!-- ২. ইউজার -->
   <div class="admin-nav-group-title">ইউজার</div>
   <a href="/admin/users" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'users' ? 'active' : '' %>"><i class="fas fa-users"></i> ইউজার ম্যানেজমেন্ট</a>
   <a href="/admin/kyc" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'kyc' ? 'active' : '' %>"><i class="fas fa-id-card"></i> KYC <span class="badge badge-red" id="navBadgeKyc" style="display:none;margin-left:auto;"></span></a>
   <a href="/admin/login-history" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'login-history' ? 'active' : '' %>"><i class="fas fa-right-to-bracket"></i> লগইন হিস্ট্রি</a>
   <a href="/admin/user-roles" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'user-roles' ? 'active' : '' %>"><i class="fas fa-user-tag"></i> ইউজার রোল</a>
 
-  <!-- ৩. পেমেন্ট -->
   <div class="admin-nav-group-title">পেমেন্ট</div>
   <a href="/admin/deposits" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'deposits' ? 'active' : '' %>"><i class="fas fa-arrow-down"></i> ডিপোজিট <span class="badge badge-red" id="navBadgeDeposits" style="display:none;margin-left:auto;"></span></a>
   <a href="/admin/withdrawals" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'withdrawals' ? 'active' : '' %>"><i class="fas fa-arrow-up"></i> উইথড্র <span class="badge badge-red" id="navBadgeWithdrawals" style="display:none;margin-left:auto;"></span></a>
   <a href="/admin/transactions" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'transactions' ? 'active' : '' %>"><i class="fas fa-exchange-alt"></i> ট্রানজেকশন লগ</a>
 
-  <!-- ৪. গেম ও বেটিং -->
   <div class="admin-nav-group-title">গেম ও বেটিং</div>
   <a href="/admin/matches" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'matches' ? 'active' : '' %>"><i class="fas fa-futbol"></i> ম্যাচসমূহ</a>
   <a href="/admin/bets" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'bets' ? 'active' : '' %>"><i class="fas fa-dice"></i> বেট ম্যানেজমেন্ট</a>
   <a href="/admin/tournaments" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'tournaments' ? 'active' : '' %>"><i class="fas fa-trophy"></i> টুর্নামেন্ট</a>
   <a href="/admin/games" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'games' ? 'active' : '' %>"><i class="fas fa-gamepad"></i> গেমস</a>
 
-  <!-- ৫. বোনাস ও প্রমো -->
   <div class="admin-nav-group-title">বোনাস ও প্রমোশন</div>
   <a href="/admin/bonuses" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'bonuses' ? 'active' : '' %>"><i class="fas fa-gift"></i> বোনাস</a>
   <a href="/admin/promotions" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'promotions' ? 'active' : '' %>"><i class="fas fa-bullhorn"></i> প্রমোশন ব্যানার</a>
   <a href="/admin/announcements" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'announcements' ? 'active' : '' %>"><i class="fas fa-megaphone"></i> অ্যানাউন্সমেন্ট</a>
   <a href="/admin/notifications" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'notifications' ? 'active' : '' %>"><i class="fas fa-bell"></i> নোটিফিকেশন ব্রডকাস্ট</a>
 
-  <!-- ৬. সাপোর্ট ও কন্টেন্ট -->
   <div class="admin-nav-group-title">সাপোর্ট ও কন্টেন্ট</div>
   <a href="/admin/support" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'support' ? 'active' : '' %>"><i class="fas fa-headset"></i> সাপোর্ট টিকেট</a>
   <a href="/chat/admin" class="admin-nav-link"><i class="fas fa-comments"></i> লাইভ চ্যাট</a>
   <a href="/admin/news" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'news' ? 'active' : '' %>"><i class="fas fa-newspaper"></i> নিউজ</a>
   <a href="/admin/notification-templates" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'notification-templates' ? 'active' : '' %>"><i class="fas fa-envelope-open-text"></i> নোটিফ টেমপ্লেট</a>
 
-  <!-- ৭. সিকিউরিটি ও ফ্রড -->
   <div class="admin-nav-group-title">সিকিউরিটি ও ফ্রড</div>
   <a href="/admin/security-overview" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'security-overview' ? 'active' : '' %>"><i class="fas fa-shield-halved"></i> সিকিউরিটি ওভারভিউ</a>
   <a href="/admin/fraud-monitoring" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'fraud-monitoring' ? 'active' : '' %>"><i class="fas fa-exclamation-triangle"></i> ফ্রড মনিটরিং</a>
@@ -119,7 +113,6 @@
   <a href="/admin/bot-monitoring/ip-rules" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'ip-rules' ? 'active' : '' %>"><i class="fas fa-ban"></i> IP ব্লক/হোয়াইটলিস্ট</a>
   <a href="/admin/2fa/setup" class="admin-nav-link <%= typeof active !== 'undefined' && active === '2fa' ? 'active' : '' %>"><i class="fas fa-lock"></i> 2FA সেটআপ</a>
 
-  <!-- ৮. সিস্টেম -->
   <div class="admin-nav-group-title">সিস্টেম</div>
   <a href="/admin/activity" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'activity' ? 'active' : '' %>"><i class="fas fa-bolt"></i> অ্যাক্টিভিটি লগ</a>
   <a href="/admin/audit-logs" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'audit-logs' ? 'active' : '' %>"><i class="fas fa-clipboard-list"></i> অডিট লগ</a>
@@ -129,7 +122,6 @@
   <a href="/admin/backups" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'backups' ? 'active' : '' %>"><i class="fas fa-box-archive"></i> Backup & Restore</a>
   <a href="/admin/system-diagnostics" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'system-diagnostics' ? 'active' : '' %>"><i class="fas fa-heart-pulse"></i> System Diagnostics</a>
 
-  <!-- ৯. সেটিংস -->
   <div class="admin-nav-group-title">সেটিংস</div>
   <a href="/admin/settings" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'settings' ? 'active' : '' %>"><i class="fas fa-cogs"></i> সাইট সেটিংস</a>
   <a href="/admin/system-settings" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'system-settings' ? 'active' : '' %>"><i class="fas fa-sliders"></i> সিস্টেম সেটিংস</a>
@@ -139,11 +131,11 @@
   <a href="/admin/api-logs" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'api-logs' ? 'active' : '' %>"><i class="fas fa-list-alt"></i> API Logs</a>
   <a href="/admin/localization" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'localization' ? 'active' : '' %>"><i class="fas fa-language"></i> Localization</a>
 
-  <!-- ১০. সাধারণ -->
   <div class="admin-nav-group-title">সাধারণ</div>
   <a href="/" class="admin-nav-link"><i class="fas fa-home"></i> সাইটে ফিরে যান</a>
   <a href="/admin/logout" class="admin-nav-link" style="color:#f87171"><i class="fas fa-sign-out-alt"></i> লগ আউট</a>
-  <div style="height:20px"></div>
+  <!-- বটম নেভ + সেফ এরিয়ার জন্য অতিরিক্ত স্পেস — শেষ আইটেম যেন দেখা যায় -->
+  <div style="height:100px;flex-shrink:0"></div>
 </div>
 
 <script>
