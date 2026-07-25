@@ -1,0 +1,85 @@
+<%
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+const s = status;
+const enabledBadge = s && s.enabled
+  ? '<span class="px-4 py-2 rounded-2xl text-sm font-bold bg-emerald-100 text-emerald-700"><i class="fas fa-circle-check"></i> চালু আছে</span>'
+  : '<span class="px-4 py-2 rounded-2xl text-sm font-bold bg-slate-100 text-slate-500"><i class="fas fa-circle-pause"></i> নিষ্ক্রিয়</span>';
+
+function row(label, value, mono) {
+  return '<div class="flex items-center justify-between py-3 border-b border-slate-50 last:border-0">' +
+    '<span class="text-sm text-slate-500">' + label + '</span>' +
+    '<span class="text-sm font-semibold text-slate-800' + (mono ? ' font-mono' : '') + '">' + escapeHtml(value) + '</span>' +
+  '</div>';
+}
+%>
+<%- include('partials/admin-layout', {
+    title: 'Sentry Monitoring',
+    active: 'sentry-status',
+    body: `
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="flex items-center justify-between flex-wrap gap-3">
+        <div>
+            <h2 class="text-2xl font-semibold text-slate-900">Sentry Monitoring</h2>
+            <p class="text-slate-500 mt-1 text-sm">Error ও Performance মনিটরিং স্ট্যাটাস ও কনফিগারেশন</p>
+        </div>
+        ${enabledBadge}
+    </div>
+
+    ${error ? `<div class="bg-red-50 border border-red-200 text-red-600 px-5 py-4 rounded-2xl text-sm">❌ ${escapeHtml(error)}</div>` : ''}
+    ${testSent ? `<div class="bg-emerald-50 border border-emerald-200 text-emerald-700 px-5 py-4 rounded-2xl text-sm">✅ টেস্ট এরর Sentry-তে পাঠানো হয়েছে — কিছুক্ষণের মধ্যে Sentry ড্যাশবোর্ডে দেখা যাবে।</div>` : ''}
+
+    ${s ? `
+    <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+        <h3 class="text-sm font-bold text-slate-800 mb-2">কনফিগারেশন</h3>
+        ${row('DSN কনফিগার করা আছে?', s.dsnConfigured ? 'হ্যাঁ' : 'না')}
+        ${s.dsnMasked ? row('DSN (মাস্কড)', s.dsnMasked, true) : ''}
+        ${row('Environment', s.environment)}
+        ${row('Release', s.release, true)}
+        ${row('Traces Sample Rate', s.tracesSampleRate)}
+        ${row('Profiles Sample Rate', s.profilesSampleRate)}
+        ${row('Init সম্পন্ন হয়েছে?', s.initialized ? 'হ্যাঁ' : 'না')}
+    </div>
+
+    <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+        <h3 class="text-sm font-bold text-slate-800 mb-3">এনভায়রনমেন্ট ভ্যারিয়েবল (Enable/Disable)</h3>
+        <div class="bg-slate-50 rounded-2xl p-4 font-mono text-xs text-slate-600 leading-relaxed overflow-x-auto">
+SENTRY_DSN=https://xxxx@oXXX.ingest.sentry.io/XXXX   <span class="text-slate-400"># সেট করলেই চালু হয়</span><br>
+SENTRY_ENABLED=false                                  <span class="text-slate-400"># DSN থাকলেও জোর করে বন্ধ রাখতে</span><br>
+SENTRY_ENVIRONMENT=production                         <span class="text-slate-400"># ডিফল্ট: NODE_ENV</span><br>
+SENTRY_RELEASE=1.2.3                                  <span class="text-slate-400"># ডিফল্ট: package.json version / git commit</span><br>
+SENTRY_TRACES_SAMPLE_RATE=0.1                         <span class="text-slate-400"># পারফরম্যান্স ট্রেসিং স্যাম্পল রেট</span><br>
+SENTRY_PROFILES_SAMPLE_RATE=0                         <span class="text-slate-400"># প্রোফাইলিং স্যাম্পল রেট</span>
+        </div>
+        <p class="text-xs text-slate-400 mt-3">এনভায়রনমেন্ট ভ্যারিয়েবল বদলানোর পর সার্ভার রিস্টার্ট করলে পরিবর্তন কার্যকর হবে।</p>
+    </div>
+
+    <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+        <h3 class="text-sm font-bold text-slate-800 mb-2">টেস্ট ইভেন্ট</h3>
+        <p class="text-xs text-slate-500 mb-4">Sentry ঠিকভাবে কাজ করছে কিনা যাচাই করতে একটা টেস্ট এরর পাঠান — Sentry ড্যাশবোর্ডে দেখা যাবে।</p>
+        <form method="POST" action="/admin/sentry-status/test-error">
+            <button type="submit" class="px-5 py-2.5 ${s.enabled ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-300 cursor-not-allowed'} text-white rounded-2xl text-sm font-semibold" ${s.enabled ? '' : 'disabled'}>
+                <i class="fas fa-bug"></i> টেস্ট এরর পাঠান
+            </button>
+        </form>
+    </div>
+
+    <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+        <h3 class="text-sm font-bold text-slate-800 mb-2">কী কী মনিটর হচ্ছে</h3>
+        <ul class="text-xs text-slate-500 space-y-1.5 list-disc pl-4">
+            <li>HTTP এরর ও Unhandled Exception (Express error handler)</li>
+            <li>Unhandled Promise Rejection ও Uncaught Exception (process-level)</li>
+            <li>Background Queue Job ব্যর্থতা (BullMQ worker)</li>
+            <li>Cron Job ব্যর্থতা (Scheduler)</li>
+            <li>PostgreSQL Pool এরর</li>
+            <li>লগইন করা থাকলে ইউজার কনটেক্সট (id, username, role) প্রতিটা ইভেন্টে যুক্ত হয়</li>
+            <li>সংবেদনশীল ফিল্ড (password, token, pin, otp, card_number ইত্যাদি) স্বয়ংক্রিয়ভাবে রিড্যাক্ট হয়</li>
+        </ul>
+    </div>
+    ` : ''}
+</div>
+`
+}) %>

@@ -32,6 +32,9 @@ function startWorkers() {
       const attemptsMade = job ? job.attemptsMade : '?';
       const maxAttempts = job ? job.opts.attempts : '?';
       console.error(`❌ [Queue:${name}] job #${job ? job.id : '?'} ব্যর্থ (attempt ${attemptsMade}/${maxAttempts}):`, err.message);
+      require('../services/sentry').captureException(err, {
+        queue: name, jobId: job ? job.id : null, jobName: job ? job.name : null, attemptsMade, maxAttempts
+      });
       try {
         const { logEvent } = require('../services/auditLog');
         logEvent({
@@ -47,6 +50,7 @@ function startWorkers() {
 
     worker.on('error', (err) => {
       console.error(`⚠️ [Queue:${name}] worker error:`, err.message);
+      require('../services/sentry').captureException(err, { queue: name, source: 'worker_error' });
     });
 
     return worker;

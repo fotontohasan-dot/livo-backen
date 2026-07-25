@@ -1,11 +1,23 @@
 require('dotenv').config();
 const process = require('node:process');
 
+// ==================== Sentry মনিটরিং — সবার আগে init করা হয় যাতে পরবর্তী
+// সব require/middleware/route-এর এরর স্বয়ংক্রিয়ভাবে ধরা পড়ে ====================
+const sentryService = require('./services/sentry');
+sentryService.init();
+
+// ==================== প্রসেস-লেভেল ক্র্যাশ গার্ড ====================
+// কোনো একটা জায়গায় unhandled promise rejection হলে Node.js (v15+) ডিফল্টভাবে
+// পুরো প্রসেস বন্ধ করে দেয় — তখন Render/হোস্টিং প্ল্যাটফর্মের জেনেরিক
+// "Internal Server Error" পেজ দেখা যায় যতক্ষণ না প্রসেস আবার রিস্টার্ট হয়।
+// এখানে সেটা আটকে শুধু লগ করে সার্ভার চালু রাখা হচ্ছে — এখন Sentry-তেও রিপোর্ট হয়।
 process.on('unhandledRejection', (reason) => {
   console.error('⚠️ Unhandled Rejection:', reason && reason.stack ? reason.stack : reason);
+  sentryService.captureException(reason instanceof Error ? reason : new Error(String(reason)), { source: 'unhandledRejection' });
 });
 process.on('uncaughtException', (err) => {
   console.error('⚠️ Uncaught Exception:', err && err.stack ? err.stack : err);
+  sentryService.captureException(err, { source: 'uncaughtException' });
 });
 
 const express = require('express');
@@ -135,6 +147,7 @@ const sessionMiddleware = session({
 });
 app.use(cookieParser());
 app.use(sessionMiddleware);
+app.use(sentryService.userContextMiddleware); // লগইন করা থাকলে Sentry ইভেন্টে ইউজার কনটেক্সট যোগ হবে
 
 initSocket(server, sessionMiddleware);
 
@@ -328,6 +341,8 @@ app.post('/telegram-webhook', express.json(), async (req, res) => {
   }
 });
 
+// Error Handling
+sentryService.attachExpressErrorHandler(app); // HTTP এরর অটোমেটিক Sentry-তে রিপোর্ট হবে (নিজের error handler-এর আগে বসাতে হয়)
 app.use((err, req, res, next) => {
   console.error('❌ Unhandled Error:', err.stack);
   pool.query(

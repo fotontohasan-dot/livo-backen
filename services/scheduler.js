@@ -212,6 +212,7 @@ async function runJob(key, { triggeredBy = 'schedule' } = {}) {
     status = 'error';
     message = err.message;
     console.error(`cron job "${key}" ব্যর্থ:`, err.message);
+    require('./sentry').captureException(err, { cronJob: key, triggeredBy });
   }
 
   const finishedAt = new Date();

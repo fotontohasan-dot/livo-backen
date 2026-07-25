@@ -10,6 +10,15 @@ const pool = new Pool({
   ssl: DB_SSL ? { rejectUnauthorized: false } : false
 });
 
+// pg Pool-এর idle ক্লায়েন্টে ব্যাকগ্রাউন্ডে এরর হলে (যেমন নেটওয়ার্ক ড্রপ) এটা না ধরলে
+// পুরো প্রসেস ক্র্যাশ করতে পারে — এখানে শুধু লগ + Sentry রিপোর্ট করে প্রসেস বাঁচানো হচ্ছে
+pool.on('error', (err) => {
+  console.error('❌ Unexpected PostgreSQL pool error:', err.message);
+  try {
+    require('./services/sentry').captureException(err, { source: 'pg_pool_idle_error' });
+  } catch (e) { /* সাইলেন্ট — Sentry ব্যর্থ হলেও DB pool চালু থাকবে */ }
+});
+
 const connectDB = async () => {
   if (!process.env.DATABASE_URL) {
     console.warn('⚠️ DATABASE_URL not set. Skipping DB connection.');

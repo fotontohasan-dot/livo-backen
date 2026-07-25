@@ -70,6 +70,9 @@ function apiNotFound(req, res, next) {
 
 // একসাথে সব middleware চালানোর জন্য গেটওয়ে এন্ট্রিপয়েন্ট
 async function apiGateway(req, res, next) {
+  require('../services/sentry').addBreadcrumb({
+    category: 'api', message: `${req.method} ${req.path}`, level: 'info'
+  });
   if (!req.path.includes('/api/')) return next();
   if (!req.path.startsWith('/admin')) {
     const publicApiOn = await getSetting('api_public_enabled').catch(() => undefined);

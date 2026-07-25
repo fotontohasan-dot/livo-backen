@@ -188,5 +188,5 @@ module.exports = {
   checkMemory,
   checkUptime,
   runAllChecks,
-  runDiagnostics
+  runDiagnostics: runAllChecks // alias — কিছু জায়গায় এই নামে কল করা হয়
 };

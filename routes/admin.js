@@ -2394,22 +2394,53 @@ router.get('/activity', async (req, res) => {
 // ==================== System Diagnostics / Health Check ====================
 router.get('/system-diagnostics', async (req, res) => {
   try {
-    const { runDiagnostics } = require('../services/healthCheck');
-    const diagnostics = await runDiagnostics();
-    res.render('admin/system-diagnostics', { diagnostics, error: null });
+    const { runAllChecks } = require('../services/healthCheck');
+    const result = await runAllChecks();
+    res.render('admin/system-diagnostics', { result, error: null });
   } catch (err) {
     console.error('System diagnostics error:', err.message);
-    res.render('admin/system-diagnostics', { diagnostics: null, error: err.message });
+    res.render('admin/system-diagnostics', { result: null, error: err.message });
   }
 });
 
 router.get('/api/system-diagnostics', async (req, res) => {
   try {
-    const { runDiagnostics } = require('../services/healthCheck');
-    const diagnostics = await runDiagnostics();
-    res.json({ success: true, diagnostics });
+    const { runAllChecks } = require('../services/healthCheck');
+    const result = await runAllChecks();
+    res.json({ success: true, result });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ==================== Sentry মনিটরিং স্ট্যাটাস ও কনফিগারেশন ====================
+router.get('/sentry-status', async (req, res) => {
+  try {
+    const sentryService = require('../services/sentry');
+    res.render('admin/sentry-status', { status: sentryService.getStatus(), error: null, testSent: req.query.test === '1' });
+  } catch (err) {
+    console.error('Sentry status page error:', err.message);
+    res.render('admin/sentry-status', { status: null, error: err.message, testSent: false });
+  }
+});
+
+router.post('/sentry-status/test-error', async (req, res) => {
+  try {
+    const sentryService = require('../services/sentry');
+    if (!sentryService.isEnabled()) {
+      req.flash('error', '❌ Sentry নিষ্ক্রিয় আছে — টেস্ট এরর পাঠানো যায়নি। আগে SENTRY_DSN সেট করুন।');
+      return res.redirect('/admin/sentry-status');
+    }
+    sentryService.captureException(new Error('Sentry টেস্ট এরর — অ্যাডমিন প্যানেল থেকে ম্যানুয়ালি পাঠানো হয়েছে'), {
+      triggeredBy: req.session.user.username,
+      testEvent: true
+    });
+    await logAdminAction(req.session.user.id, req.session.user.username, 'SENTRY_TEST_ERROR', 'অ্যাডমিন প্যানেল থেকে Sentry টেস্ট এরর পাঠানো হয়েছে', req.ip);
+    res.redirect('/admin/sentry-status?test=1');
+  } catch (err) {
+    console.error('Sentry test error send failed:', err.message);
+    req.flash('error', '❌ টেস্ট এরর পাঠাতে সমস্যা হয়েছে।');
+    res.redirect('/admin/sentry-status');
   }
 });
 
@@ -2879,18 +2910,6 @@ router.get('/login-history', async (req, res) => {
     res.render('admin/login-history', {
       logs: [], total: 0, page: 1, limit: 30, totalPages: 1, filters: { q: '', new_device: '', from: '', to: '' }
     });
-  }
-});
-
-// ==================== সিস্টেম ডায়াগনস্টিকস (Health Check) ====================
-router.get('/system-diagnostics', async (req, res) => {
-  try {
-    const healthCheck = require('../services/healthCheck');
-    const result = await healthCheck.runAllChecks();
-    res.render('admin/system-diagnostics', { result, error: null });
-  } catch (err) {
-    console.error('System diagnostics error:', err.message);
-    res.render('admin/system-diagnostics', { result: null, error: err.message });
   }
 });
 

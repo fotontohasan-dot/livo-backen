@@ -5,7 +5,8 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
-    "dev": "nodemon app.js"
+    "dev": "nodemon app.js",
+    "sentry:sourcemaps": "node scripts/sentry-sourcemaps.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.24.0",
@@ -48,6 +49,7 @@
     "postcss": "^8.5.19"
   },
   "devDependencies": {
+    "@sentry/cli": "^2.39.1",
     "@tailwindcss/postcss": "^4.3.2",
     "@types/node": "^26.0.1",
     "@types/react": "^19.2.17",
