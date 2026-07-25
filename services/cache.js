@@ -7,7 +7,7 @@ let Redis;
 try {
   Redis = require('ioredis');
 } catch (e) {
-  Redis = null; // প্যাকেজ ইনস্টল করা না থাকলেও অ্যাপ ক্র্যাশ করবে না, শুধু ক্যাশিং বন্ধ থাকবে
+  Redis = null;
 }
 
 const REDIS_ENABLED = String(process.env.REDIS_ENABLED || 'true').toLowerCase() !== 'false';
@@ -24,7 +24,8 @@ const state = {
   connected: false,
   lastError: null,
   lastErrorAt: null,
-  disabledReason: null
+  disabledReason: null,
+  lastLoggedErrorAt: 0
 };
 
 function log(...args) {
@@ -34,6 +35,10 @@ function log(...args) {
 function logError(context, err) {
   state.lastError = err && err.message ? err.message : String(err);
   state.lastErrorAt = new Date();
+  // প্রতি ৬০ সেকেন্ডে একবার লগ — ECONNREFUSED স্প্যাম বন্ধ
+  const now = Date.now();
+  if (now - state.lastLoggedErrorAt < 60000) return;
+  state.lastLoggedErrorAt = now;
   console.error('[redis-cache] ' + context + ':', state.lastError);
 }
 
@@ -49,6 +54,16 @@ function init() {
     return;
   }
 
+  // প্রোডাকশনে REDIS_URL না থাকলে localhost-এ কানেক্ট করার চেষ্টা বন্ধ —
+  // না হলে প্রতি কয়েক সেকেন্ডে ECONNREFUSED লগ স্প্যাম হয়
+  const isProd = process.env.NODE_ENV === 'production';
+  const hasExplicitHost = !!process.env.REDIS_HOST;
+  if (!REDIS_URL && isProd && !hasExplicitHost) {
+    state.disabledReason = 'REDIS_URL সেট করা নেই (production) — DB fallback';
+    log('no REDIS_URL in production — caching disabled, falling back to DB only');
+    return;
+  }
+
   try {
     const options = REDIS_URL
       ? undefined
@@ -59,12 +74,19 @@ function init() {
           db: REDIS_DB,
           connectTimeout: REDIS_CONNECT_TIMEOUT_MS,
           maxRetriesPerRequest: 1,
-          retryStrategy: (times) => Math.min(times * 500, 5000),
+          retryStrategy: (times) => {
+            if (times > 3) return null; // আর রিট্রাই না
+            return Math.min(times * 500, 5000);
+          },
           lazyConnect: false
         };
 
     state.client = REDIS_URL
-      ? new Redis(REDIS_URL, { connectTimeout: REDIS_CONNECT_TIMEOUT_MS, maxRetriesPerRequest: 1, retryStrategy: (times) => Math.min(times * 500, 5000) })
+      ? new Redis(REDIS_URL, {
+          connectTimeout: REDIS_CONNECT_TIMEOUT_MS,
+          maxRetriesPerRequest: 1,
+          retryStrategy: (times) => (times > 3 ? null : Math.min(times * 500, 5000))
+        })
       : new Redis(options);
 
     state.client.on('connect', () => {
@@ -97,7 +119,6 @@ function prefixed(key) {
 
 const stats = { hits: 0, misses: 0, sets: 0 };
 
-/** ক্যাশ থেকে মান পড়ে (JSON parse সহ)। Redis না থাকলে/এরর হলে null রিটার্ন করে — কখনো throw করে না। */
 async function get(key) {
   if (!isAvailable()) return null;
   try {
@@ -111,7 +132,6 @@ async function get(key) {
   }
 }
 
-/** ক্যাশে মান লেখে (JSON stringify সহ), TTL সেকেন্ডে। ব্যর্থ হলে silently ignore করে। */
 async function set(key, value, ttlSeconds) {
   if (!isAvailable()) return false;
   try {
@@ -126,7 +146,6 @@ async function set(key, value, ttlSeconds) {
   }
 }
 
-/** নির্দিষ্ট key(s) মুছে ফেলে — আপডেটের পর ক্যাশ invalidate করতে ব্যবহার হয়। */
 async function del(...keys) {
   if (!isAvailable() || !keys.length) return false;
   try {
@@ -138,15 +157,10 @@ async function del(...keys) {
   }
 }
 
-/** এই অ্যাপের নিজস্ব prefix-এর আওতায় থাকা সব ক্যাশ কী মুছে দেয় (অন্য অ্যাপের ডেটা স্পর্শ করে না)। অ্যাডমিন প্যানেলের "Clear All Cache" বাটনের জন্য। */
 async function flushAll() {
   return delByPattern('*');
 }
 
-/**
- * অ্যাডমিন ক্যাশ ম্যানেজমেন্ট পেজের জন্য বিস্তারিত পরিসংখ্যান — মোট কী সংখ্যা,
- * ক্যাটাগরি অনুযায়ী ব্রেকডাউন, মেমরি ব্যবহার, hit/miss রেট।
- */
 async function getDetailedStats() {
   const base = {
     ...getStatus(),
@@ -198,7 +212,6 @@ async function getDetailedStats() {
   return base;
 }
 
-/** prefix-ভিত্তিক bulk invalidate (যেমন 'profile:*') — SCAN ব্যবহার করে, KEYS ব্যবহার করে না (production-safe, ব্লক করে না)। */
 async function delByPattern(pattern) {
   if (!isAvailable()) return 0;
   try {
@@ -220,22 +233,17 @@ async function delByPattern(pattern) {
   }
 }
 
-/**
- * ক্যাশ-অ্যাসাইড হেল্পার: ক্যাশে থাকলে সরাসরি রিটার্ন করে, না থাকলে fetchFn() চালিয়ে
- * ফলাফল ক্যাশে বসিয়ে রিটার্ন করে। Redis সম্পূর্ণ ডাউন থাকলেও fetchFn() সবসময় চলে —
- * অর্থাৎ ফিচারটি কখনো ভাঙে না, শুধু ক্যাশের সুবিধা পাওয়া যায় না।
- */
 async function getOrSet(key, ttlSeconds, fetchFn) {
   const cached = await get(key);
   if (cached !== null) return cached;
   const fresh = await fetchFn();
-  set(key, fresh, ttlSeconds).catch(() => {}); // ফলাফল ফেরত দেওয়ার গতি ক্যাশ-রাইটের জন্য আটকানো হয় না
+  set(key, fresh, ttlSeconds).catch(() => {});
   return fresh;
 }
 
 function getStatus() {
   return {
-    enabled: REDIS_ENABLED && !!Redis,
+    enabled: REDIS_ENABLED && !!Redis && !state.disabledReason,
     connected: isAvailable(),
     host: REDIS_URL ? '(REDIS_URL)' : `${REDIS_HOST}:${REDIS_PORT}`,
     lastError: state.lastError,
@@ -244,11 +252,6 @@ function getStatus() {
   };
 }
 
-/**
- * Rate limiting-এর জন্য atomic counter — key না থাকলে ১ থেকে শুরু করে windowSeconds পর expire হয়ে যায়,
- * থাকলে শুধু বাড়ায় (TTL অপরিবর্তিত থাকে)। একাধিক সার্ভার ইনস্ট্যান্স জুড়ে শেয়ার্ড রেট-লিমিট কাউন্টের জন্য দরকার।
- * Redis অনুপলব্ধ থাকলে null রিটার্ন করে — caller-কে তখন in-memory fallback ব্যবহার করতে হবে।
- */
 async function incrWithExpiry(key, windowSeconds) {
   if (!isAvailable()) return null;
   try {
@@ -263,7 +266,6 @@ async function incrWithExpiry(key, windowSeconds) {
   }
 }
 
-/** নির্দিষ্ট rate-limit key রিসেট করার জন্য (যেমন সফল লগইনের পর failed-attempt কাউন্টার মুছে ফেলা)। */
 async function resetKey(key) {
   return del(key);
 }
