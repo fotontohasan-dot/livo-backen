@@ -1214,6 +1214,63 @@ async function runMigrations() {
     `);
     console.log("✅ Notification Templates table ready");
 
+    // ==================== Role & Permission Management (RBAC) ====================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS roles (
+        id SERIAL PRIMARY KEY,
+        key TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL,
+        description TEXT,
+        is_system BOOLEAN NOT NULL DEFAULT false,
+        permissions JSONB NOT NULL DEFAULT '{}'::jsonb,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    // users.role (TEXT: 'admin'/'user') বিদ্যমান সব isAdmin/গেট লজিক অপরিবর্তিত রাখতে স্পর্শ করা হয়নি।
+    // role_key নতুন, ঐচ্ছিক, granular permission layer — role_key না থাকলে (NULL) সেই admin
+    // আগের মতোই পূর্ণ অ্যাক্সেস পাবে (backward compatible, super_admin-এর সমতুল্য আচরণ)।
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role_key TEXT REFERENCES roles(key) ON DELETE SET NULL;`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_role_key ON users(role_key);`);
+
+    const ALL_PERMISSIONS_TRUE = {
+      dashboard_view: true, users_view: true, users_edit: true, users_ban: true, users_delete: true,
+      payments_view: true, payments_approve: true, payments_reject: true,
+      kyc_view: true, kyc_approve: true, kyc_reject: true,
+      support_view: true, support_reply: true,
+      games_manage: true, matches_manage: true,
+      settings_view: true, settings_edit: true,
+      roles_manage: true, activity_log_view: true,
+      bot_monitoring_manage: true, backups_manage: true, cron_jobs_manage: true, reports_view: true
+    };
+
+    const DEFAULT_ROLES = [
+      { key: 'super_admin', name: 'Super Admin', description: 'সব পারমিশন — কোনো রেস্ট্রিকশন ওভাররাইড করতে পারে', is_system: true, permissions: ALL_PERMISSIONS_TRUE },
+      { key: 'admin', name: 'Admin', description: 'roles_manage বাদে প্রায় সব পারমিশন', is_system: true, permissions: { ...ALL_PERMISSIONS_TRUE, roles_manage: false } },
+      { key: 'moderator', name: 'Moderator', description: 'ইউজার/সাপোর্ট/KYC মডারেশন', is_system: true, permissions: {
+        dashboard_view: true, users_view: true, users_ban: true, support_view: true, support_reply: true,
+        kyc_view: true, kyc_approve: true, kyc_reject: true, activity_log_view: true
+      } },
+      { key: 'support', name: 'Support', description: 'শুধু সাপোর্ট টিকিট ও ইউজার তথ্য দেখা', is_system: true, permissions: {
+        dashboard_view: true, users_view: true, support_view: true, support_reply: true
+      } },
+      { key: 'finance', name: 'Finance', description: 'ডিপোজিট/উইথড্র অনুমোদন ও রিপোর্ট', is_system: true, permissions: {
+        dashboard_view: true, payments_view: true, payments_approve: true, payments_reject: true,
+        users_view: true, reports_view: true
+      } }
+    ];
+
+    for (const role of DEFAULT_ROLES) {
+      await pool.query(
+        `INSERT INTO roles (key, name, description, is_system, permissions)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (key) DO NOTHING`,
+        [role.key, role.name, role.description, role.is_system, JSON.stringify(role.permissions)]
+      );
+    }
+
+    console.log("✅ RBAC (Role & Permission) tables ready");
+
   } catch (err) {
     console.error("❌ Migration error:", err.message);
   }

@@ -31,6 +31,9 @@ const RedisRateLimitStore = require('../services/redisRateLimitStore');
 
 const { requireIntParam, requireAmount, parseAmount, sanitizeText, isSafeUrl } = require('../middleware/validate');
 const { listIpRules, setIpRule, removeIpRule } = require('../services/ipRules');
+const rbac = require('../services/rbac');
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 } }); // JSON import-এর জন্য, ২MB সীমা
 
 // ==================== 2FA ভেরিফিকেশন রুটের জন্য কড়া rate limit ====================
 // এই দুটো রুটে কোড অনুমান করে ব্রুট-ফোর্স করার ঝুঁকি থাকে, তাই আলাদা কড়া সীমা।
@@ -2089,6 +2092,174 @@ router.get('/bot-monitoring', async (req, res) => {
 });
 
 // ==================== Cron / Scheduler Management ====================
+// ==================== Role & Permission Management (RBAC) ====================
+// এই সব রুট শুধু roles_manage permission থাকা admin ব্যবহার করতে পারবে;
+// role_key সেট না থাকা (backward-compatible সুপার-অ্যাডমিন-সমতুল্য) admin-রাও অ্যাক্সেস পাবে।
+router.get('/roles', rbac.requirePermission('roles_manage'), async (req, res) => {
+  try {
+    const roles = await rbac.listRoles();
+    res.render('admin/roles', { roles, permissionGroups: rbac.permissionGroups(), error: null });
+  } catch (err) {
+    console.error('roles list error:', err.message);
+    res.render('admin/roles', { roles: [], permissionGroups: rbac.permissionGroups(), error: err.message });
+  }
+});
+
+router.get('/roles/matrix', rbac.requirePermission('roles_manage'), async (req, res) => {
+  try {
+    const roles = await rbac.listRoles();
+    res.render('admin/roles-matrix', { roles, permissionGroups: rbac.permissionGroups() });
+  } catch (err) {
+    console.error('roles matrix error:', err.message);
+    req.flash('error', 'Matrix লোড করতে সমস্যা হয়েছে।');
+    res.redirect('/admin/roles');
+  }
+});
+
+router.post('/roles', rbac.requirePermission('roles_manage'), async (req, res) => {
+  try {
+    const permissions = {};
+    Object.keys(rbac.PERMISSIONS).forEach(key => { permissions[key] = req.body[`perm_${key}`] === 'on'; });
+    const role = await rbac.createRole({ name: req.body.name, description: sanitizeText(req.body.description || ''), permissions });
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ROLE_CREATED', `নতুন Role: ${role.name} (${role.key})`, req.ip);
+    req.flash('success', `Role "${role.name}" তৈরি হয়েছে।`);
+    res.redirect('/admin/roles');
+  } catch (err) {
+    req.flash('error', err.message);
+    res.redirect('/admin/roles');
+  }
+});
+
+router.get('/roles/:id/edit', rbac.requirePermission('roles_manage'), async (req, res) => {
+  try {
+    const role = await rbac.getRole(req.params.id);
+    if (!role) { req.flash('error', 'Role পাওয়া যায়নি।'); return res.redirect('/admin/roles'); }
+    res.render('admin/role-edit', { role, permissionGroups: rbac.permissionGroups() });
+  } catch (err) {
+    req.flash('error', err.message);
+    res.redirect('/admin/roles');
+  }
+});
+
+router.post('/roles/:id', rbac.requirePermission('roles_manage'), async (req, res) => {
+  try {
+    const existing = await rbac.getRole(req.params.id);
+    if (!existing) { req.flash('error', 'Role পাওয়া যায়নি।'); return res.redirect('/admin/roles'); }
+    const permissions = {};
+    Object.keys(rbac.PERMISSIONS).forEach(key => {
+      // Super Admin Role-এর permission UI থেকে বদলানো যাবে না — সবসময় সব true (override)
+      permissions[key] = existing.key === 'super_admin' ? true : req.body[`perm_${key}`] === 'on';
+    });
+    const role = await rbac.updateRole(req.params.id, { name: existing.is_system ? existing.name : req.body.name, description: sanitizeText(req.body.description || ''), permissions });
+    await logAdminAction(req.session.user.id, req.session.user.username, 'PERMISSION_CHANGED', `Role "${role.name}"-এর permission আপডেট করা হয়েছে`, req.ip);
+    req.flash('success', `Role "${role.name}" আপডেট হয়েছে।`);
+    res.redirect('/admin/roles');
+  } catch (err) {
+    req.flash('error', err.message);
+    res.redirect('/admin/roles');
+  }
+});
+
+router.post('/roles/:id/clone', rbac.requirePermission('roles_manage'), async (req, res) => {
+  try {
+    const role = await rbac.cloneRole(req.params.id, req.body.name);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ROLE_CLONED', `"${req.params.id}" থেকে ক্লোন করে নতুন Role: ${role.name}`, req.ip);
+    req.flash('success', `Role "${role.name}" ক্লোন হয়েছে — এখন এডিট করতে পারেন।`);
+    res.redirect(`/admin/roles/${role.id}/edit`);
+  } catch (err) {
+    req.flash('error', err.message);
+    res.redirect('/admin/roles');
+  }
+});
+
+router.post('/roles/:id/delete', rbac.requirePermission('roles_manage'), async (req, res) => {
+  try {
+    const role = await rbac.getRole(req.params.id);
+    await rbac.deleteRole(req.params.id);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ROLE_DELETED', `Role ডিলিট করা হয়েছে: ${role ? role.name : req.params.id}`, req.ip);
+    req.flash('success', 'Role ডিলিট করা হয়েছে।');
+    res.redirect('/admin/roles');
+  } catch (err) {
+    req.flash('error', err.message);
+    res.redirect('/admin/roles');
+  }
+});
+
+router.post('/roles/bulk-permission-update', rbac.requirePermission('roles_manage'), async (req, res) => {
+  try {
+    const roleIds = [].concat(req.body.role_ids || []);
+    const permKey = req.body.perm_key;
+    const value = req.body.perm_value === 'true';
+    if (!roleIds.length || !rbac.PERMISSIONS[permKey]) { req.flash('error', 'সঠিক Role ও Permission নির্বাচন করুন।'); return res.redirect('/admin/roles/matrix'); }
+    const updated = await rbac.bulkUpdatePermission(roleIds, permKey, value);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'PERMISSION_CHANGED', `বাল্ক আপডেট — "${permKey}" = ${value} এই Role-গুলোতে: ${updated.join(', ')}`, req.ip);
+    req.flash('success', `${updated.length}টা Role আপডেট হয়েছে।`);
+    res.redirect('/admin/roles/matrix');
+  } catch (err) {
+    req.flash('error', err.message);
+    res.redirect('/admin/roles/matrix');
+  }
+});
+
+router.get('/roles/export', rbac.requirePermission('roles_manage'), async (req, res) => {
+  try {
+    const roles = await rbac.listRoles();
+    const data = rbac.exportRoles(roles);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ROLES_EXPORTED', `${data.length}টা Role এক্সপোর্ট করা হয়েছে`, req.ip);
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="livo-roles-${new Date().toISOString().slice(0, 10)}.json"`);
+    res.send(JSON.stringify(data, null, 2));
+  } catch (err) {
+    req.flash('error', err.message);
+    res.redirect('/admin/roles');
+  }
+});
+
+router.post('/roles/import', rbac.requirePermission('roles_manage'), upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) throw new Error('একটা JSON ফাইল সিলেক্ট করুন।');
+    const data = JSON.parse(req.file.buffer.toString('utf8'));
+    const result = await rbac.importRoles(data);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ROLES_IMPORTED', `Import: ${result.created} তৈরি, ${result.updated} আপডেট, ${result.skipped} স্কিপ`, req.ip);
+    req.flash('success', `Import সম্পন্ন — ${result.created} তৈরি, ${result.updated} আপডেট, ${result.skipped} স্কিপ (সিস্টেম Role/অবৈধ এন্ট্রি)।`);
+    res.redirect('/admin/roles');
+  } catch (err) {
+    req.flash('error', 'Import ব্যর্থ: ' + err.message);
+    res.redirect('/admin/roles');
+  }
+});
+
+// ইউজারদের Role এসাইনমেন্ট
+router.get('/user-roles', rbac.requirePermission('roles_manage'), async (req, res) => {
+  try {
+    const search = req.query.q || '';
+    const params = [];
+    let where = "WHERE role = 'admin'";
+    if (search) { params.push(`%${search}%`); where += ` AND username ILIKE $${params.length}`; }
+    const usersRes = await pool.query(`SELECT id, username, email, role, role_key FROM users ${where} ORDER BY username ASC LIMIT 200`, params);
+    const roles = await rbac.listRoles();
+    res.render('admin/user-roles', { users: usersRes.rows, roles, search });
+  } catch (err) {
+    console.error('user-roles error:', err.message);
+    res.render('admin/user-roles', { users: [], roles: [], search: '' });
+  }
+});
+
+router.post('/user-roles/:userId/assign', rbac.requirePermission('roles_manage'), async (req, res) => {
+  try {
+    const userRes = await pool.query('SELECT username FROM users WHERE id=$1', [req.params.userId]);
+    if (!userRes.rows[0]) { req.flash('error', 'ইউজার পাওয়া যায়নি।'); return res.redirect('/admin/user-roles'); }
+    await rbac.assignUserRole(req.params.userId, req.body.role_key || null);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ROLE_CHANGED',
+      `"${userRes.rows[0].username}"-কে Role দেওয়া হয়েছে: ${req.body.role_key || '(কোনোটা না — সুপার-অ্যাডমিন-সমতুল্য)'}`, req.ip);
+    req.flash('success', 'Role আপডেট হয়েছে।');
+    res.redirect('/admin/user-roles');
+  } catch (err) {
+    req.flash('error', err.message);
+    res.redirect('/admin/user-roles');
+  }
+});
+
 router.get('/cron-jobs', async (req, res) => {
   try {
     const scheduler = require('../services/scheduler');
