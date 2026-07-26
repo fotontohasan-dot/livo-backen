@@ -11,7 +11,7 @@ const { evaluateDuplicateAccount } = require('../services/duplicateDetection');
 const { checkIp } = require('../services/vpnDetection');
 const { evaluateRequest, generateCaptcha, verifyCaptcha, logBotEvent } = require('../services/botDetection');
 const { getIpRule } = require('../services/ipRules');
-const { recordDeviceLogin, parseUserAgent } = require('../services/deviceTracking');
+const { recordDeviceLogin, parseUserAgent, computeSignature, extractIp, isSignatureTrusted, trustCurrentSession } = require('../services/deviceTracking');
 const cache = require('../services/cache');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
 const { logEvent: logAuditEvent } = require('../services/auditLog');
@@ -419,11 +419,43 @@ router.post('/login', async (req, res) => {
 
         req.session.pendingLoginUserId = user.id;
         req.session.pendingLoginVpnInfo = vpnInfo;
+        req.session.pendingLoginPurpose = 'vpn_login';
         req.flash('success', `🔐 নিরাপত্তার কারণে আপনার ইমেইলে (${user.email}) একটি ভেরিফিকেশন কোড পাঠানো হয়েছে।`);
         return res.redirect('/verify-access');
       } catch (stepUpErr) {
         // টেবিল মিসিং বা অন্য যেকোনো error — লগইন ব্লক করবে না, নরমাল লগইনে চলে যাবে
         console.error('step_up insert error (falling back to normal login):', stepUpErr.message);
+      }
+    }
+
+    // ==================== Trusted Devices — অজানা/অচেনা ডিভাইস হলে অতিরিক্ত ভেরিফিকেশন ====================
+    // VPN স্টেপ-আপ ইতিমধ্যে ট্রিগার না হলেই শুধু চেক করা হয় (একসাথে দুটো step-up দেখাবে না)।
+    // বিদ্যমান device_sessions.is_trusted কলামই ব্যবহার করা হচ্ছে — নতুন কোনো টেবিল লাগছে না।
+    if (!needsStepUp) {
+      try {
+        const ua = req.get('user-agent') || '';
+        const fingerprint = req.headers['x-device-fingerprint'] || req.body.device_fingerprint || null;
+        const signature = computeSignature(fingerprint, ua);
+        const trusted = await isSignatureTrusted(user.id, signature);
+
+        if (!trusted && user.email && user.email_verified) {
+          const code = String(Math.floor(100000 + Math.random() * 900000));
+          await pool.query(
+            `INSERT INTO step_up_verifications (user_id, code, purpose, ip, expires_at)
+             VALUES ($1, $2, 'new_device', $3, NOW() + INTERVAL '${STEP_UP_CODE_TTL_MINUTES} minutes')`,
+            [user.id, code, loginIp]
+          );
+          sendQueuedEmail('otp', user.email, { otp: code }).catch(e => console.error('sendOTP queue error:', e.message));
+
+          req.session.pendingLoginUserId = user.id;
+          req.session.pendingLoginVpnInfo = null;
+          req.session.pendingLoginPurpose = 'new_device';
+          req.flash('success', `🔐 এটি একটি নতুন/অচেনা ডিভাইস — নিরাপত্তার জন্য আপনার ইমেইলে (${user.email}) একটি ভেরিফিকেশন কোড পাঠানো হয়েছে।`);
+          return res.redirect('/verify-access');
+        }
+      } catch (deviceStepUpErr) {
+        // যেকোনো error — লগইন ব্লক করবে না, নরমাল লগইনে চলে যাবে
+        console.error('device step-up check error (falling back to normal login):', deviceStepUpErr.message);
       }
     }
 
@@ -439,20 +471,21 @@ router.post('/login', async (req, res) => {
 // ==================== VPN & Proxy Detection — Step-up Verification (ইমেইল OTP) ====================
 router.get('/verify-access', (req, res) => {
   if (!req.session.pendingLoginUserId) return res.redirect('/login');
-  res.render('verify-access');
+  res.render('verify-access', { purpose: req.session.pendingLoginPurpose || 'vpn_login' });
 });
 
 router.post('/verify-access', async (req, res) => {
   try {
     const pendingUserId = req.session.pendingLoginUserId;
     if (!pendingUserId) return res.redirect('/login');
+    const purpose = req.session.pendingLoginPurpose || 'vpn_login';
 
-    const { code } = req.body;
+    const { code, trustThisDevice } = req.body;
     const rowRes = await pool.query(
       `SELECT * FROM step_up_verifications
-       WHERE user_id = $1 AND purpose = 'vpn_login' AND verified_at IS NULL
+       WHERE user_id = $1 AND purpose = $2 AND verified_at IS NULL
        ORDER BY created_at DESC LIMIT 1`,
-      [pendingUserId]
+      [pendingUserId, purpose]
     );
     const row = rowRes.rows[0];
 
@@ -460,12 +493,14 @@ router.post('/verify-access', async (req, res) => {
       req.flash('error', '❌ কোডের মেয়াদ শেষ হয়ে গেছে। আবার লগইন করুন।');
       req.session.pendingLoginUserId = null;
       req.session.pendingLoginVpnInfo = null;
+      req.session.pendingLoginPurpose = null;
       return res.redirect('/login');
     }
     if (row.attempts >= 5) {
       req.flash('error', '❌ অনেকবার ভুল চেষ্টা হয়েছে। আবার লগইন করুন।');
       req.session.pendingLoginUserId = null;
       req.session.pendingLoginVpnInfo = null;
+      req.session.pendingLoginPurpose = null;
       return res.redirect('/login');
     }
     if (!code || code !== row.code) {
@@ -483,8 +518,15 @@ router.post('/verify-access', async (req, res) => {
     const vpnInfo = req.session.pendingLoginVpnInfo || null;
     req.session.pendingLoginUserId = null;
     req.session.pendingLoginVpnInfo = null;
+    req.session.pendingLoginPurpose = null;
 
     const redirectPath = await completeLogin(req, user, vpnInfo);
+
+    // নতুন-ডিভাইস ভেরিফিকেশনের ক্ষেত্রে, ইউজার চাইলে এই ডিভাইসকে Trusted হিসেবে সেভ করে দেওয়া হয়
+    if (purpose === 'new_device' && trustThisDevice) {
+      await trustCurrentSession(req.sessionID);
+    }
+
     req.flash('success', '✅ ভেরিফিকেশন সম্পন্ন! স্বাগতম।');
     res.redirect(redirectPath);
   } catch (err) {

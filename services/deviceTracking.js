@@ -372,6 +372,27 @@ async function getUserDeviceOverview(userId, limit = 10) {
   return { recentLogins, activeSessions };
 }
 
+// ==================== অজানা ডিভাইস থেকে লগইন — অতিরিক্ত ভেরিফিকেশন গেট-এর জন্য ====================
+// এই signature-এর কোনো আগের device_sessions রো is_trusted=true থাকলে, ওই ডিভাইস Trusted
+async function isSignatureTrusted(userId, signature) {
+  if (!signature) return false;
+  const r = await pool.query(
+    `SELECT 1 FROM device_sessions WHERE user_id = $1 AND device_signature = $2 AND is_trusted = true LIMIT 1`,
+    [userId, signature]
+  );
+  return r.rows.length > 0;
+}
+
+async function trustCurrentSession(sid) {
+  try {
+    await pool.query(`UPDATE device_sessions SET is_trusted = true, trusted_at = NOW() WHERE sid = $1`, [sid]);
+    return true;
+  } catch (e) {
+    console.error('trustCurrentSession error:', e.message);
+    return false;
+  }
+}
+
 module.exports = {
   parseUserAgent,
   buildDeviceName,
@@ -389,5 +410,7 @@ module.exports = {
   listTrustedDevicesPage,
   renameDevice,
   setDeviceTrusted,
-  removeDeviceWithNotification
+  removeDeviceWithNotification,
+  isSignatureTrusted,
+  trustCurrentSession
 };
