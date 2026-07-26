@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cron Jobs Monitor • Livo Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
+    .cron-job-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 16px; margin-bottom: 12px; }
+    .cron-job-card.disabled { opacity: 0.6; }
+    .cron-job-card.dead { border-color: rgba(239,68,68,0.4); }
+    .cron-meta { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin-top: 10px; font-size: 11px; color: #94a3b8; }
+    .cron-meta b { color: #e2e8f0; display: block; font-size: 12px; margin-top: 2px; }
+    .cron-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .btn-sm { padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; border: none; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
+    .flash-box { padding: 10px 14px; border-radius: 10px; font-size: 12px; margin-bottom: 10px; }
+    .flash-success { background: rgba(16,185,129,0.12); color: #10b981; border: 1px solid rgba(16,185,129,0.25); }
+    .flash-error { background: rgba(239,68,68,0.12); color: #ef4444; border: 1px solid rgba(239,68,68,0.25); }
+  </style>
+  <%- include('./partials/pwa-head') %>
+</head>
+<body>
+  <div class="admin-wrap">
+    <%- include('./partials/sidebar', { active: 'cron-jobs' }) %>
+    <div class="admin-content">
+      <%- include('./partials/header', { pageTitle: 'Cron Jobs Monitor', pageSubtitle: 'সব Scheduled Job-এর অবস্থা, লগ ও ম্যানুয়াল কন্ট্রোল' }) %>
+
+      <% if (typeof success !== 'undefined' && success && success.length) { %>
+        <% success.forEach(function(m) { %><div class="flash-box flash-success"><%= m %></div><% }) %>
+      <% } %>
+      <% if (typeof error !== 'undefined' && error && error.length) { %>
+        <% error.forEach(function(m) { %><div class="flash-box flash-error"><%= m %></div><% }) %>
+      <% } %>
+
+      <div class="grid grid-4" style="margin-bottom:16px;">
+        <div class="stat-card"><div class="stat-label">মোট Job</div><div class="stat-number" style="color:#f59e0b;"><%= jobs.length %></div></div>
+        <div class="stat-card"><div class="stat-label">সক্রিয়</div><div class="stat-number" style="color:#10b981;"><%= jobs.filter(j=>j.enabled).length %></div></div>
+        <div class="stat-card"><div class="stat-label">শেষ রান ব্যর্থ</div><div class="stat-number" style="color:#ef4444;"><%= jobs.filter(j=>j.last_status==='error').length %></div></div>
+        <div class="stat-card"><div class="stat-label">Dead Job</div><div class="stat-number" style="color:#94a3b8;"><%= jobs.filter(j=>j.isDead).length %></div></div>
+      </div>
+
+      <div class="admin-card-header" style="margin-bottom:10px;">সব Scheduled Job</div>
+
+      <% jobs.forEach(job => { %>
+        <div class="cron-job-card <%= job.enabled ? '' : 'disabled' %> <%= job.isDead ? 'dead' : '' %>">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+            <div>
+              <div style="font-weight:800;color:#fff;font-size:14px;">
+                <i class="fas fa-clock" style="color:#f59e0b;"></i> <%= job.label %>
+                <% if (job.isDead) { %><span class="badge badge-red">Dead</span><% } %>
+                <% if (job.enabled) { %><span class="badge badge-green">সক্রিয়</span><% } else { %><span class="badge badge-red">নিষ্ক্রিয়</span><% } %>
+                <% if (job.last_status === 'success') { %><span class="badge badge-green">শেষ রান: সফল</span><% } else if (job.last_status === 'error') { %><span class="badge badge-red">শেষ রান: ব্যর্থ</span><% } else { %><span class="badge badge-amber">এখনো রান হয়নি</span><% } %>
+              </div>
+              <div style="color:#94a3b8;font-size:12px;margin-top:4px;max-width:600px;"><%= job.description %></div>
+            </div>
+          </div>
+
+          <div class="cron-meta">
+            <div>ইন্টারভাল<b><%= Math.round(job.interval_ms/60000) %> মিনিট</b></div>
+            <div>ম্যাক্স রিট্রাই<b><%= job.max_retries %></b></div>
+            <div>শেষ রান<b><%= job.last_run_at ? new Date(job.last_run_at).toLocaleString('bn-BD') : '—' %></b></div>
+            <div>পরের রান<b><%= job.next_run_at ? new Date(job.next_run_at).toLocaleString('bn-BD') : '—' %></b></div>
+            <div>শেষ চেষ্টা সংখ্যা<b><%= job.last_attempts || '—' %></b></div>
+          </div>
+
+          <% if (job.last_message) { %>
+            <div style="margin-top:8px;font-size:11px;color:<%= job.last_status === 'error' ? '#ef4444' : '#64748b' %>;background:rgba(255,255,255,0.03);padding:8px;border-radius:8px;">
+              <%= job.last_message %>
+            </div>
+          <% } %>
+
+          <div class="cron-actions">
+            <form method="POST" action="/admin/cron-jobs/<%= job.key %>/run" style="display:inline;">
+              <button type="submit" class="btn-sm" style="background:#3b82f6;color:#fff;" <%= job.isDead ? 'disabled' : '' %>><i class="fas fa-play"></i> Run Now</button>
+            </form>
+            <% if (job.enabled) { %>
+              <form method="POST" action="/admin/cron-jobs/<%= job.key %>/toggle" style="display:inline;">
+                <input type="hidden" name="enabled" value="false">
+                <button type="submit" class="btn-sm" style="background:#ef4444;color:#fff;">নিষ্ক্রিয় করুন</button>
+              </form>
+            <% } else { %>
+              <form method="POST" action="/admin/cron-jobs/<%= job.key %>/toggle" style="display:inline;">
+                <input type="hidden" name="enabled" value="true">
+                <button type="submit" class="btn-sm" style="background:#10b981;color:#000;" <%= job.isDead ? 'disabled' : '' %>>সক্রিয় করুন</button>
+              </form>
+            <% } %>
+            <a href="/admin/cron-jobs/<%= job.key %>/logs" class="btn-sm" style="background:rgba(255,255,255,0.08);color:#e2e8f0;"><i class="fas fa-history"></i> হিস্ট্রি দেখুন</a>
+          </div>
+        </div>
+      <% }) %>
+
+      <div class="admin-card" style="margin-top:20px;">
+        <div class="admin-card-header">সাম্প্রতিক Execution Log (সব Job মিলিয়ে সর্বশেষ ২০টি)</div>
+        <div style="overflow-x:auto;">
+          <table class="admin-table">
+            <thead><tr><th>Job</th><th>Status</th><th>Attempts</th><th>Duration</th><th>Triggered By</th><th>Message</th><th>সময়</th></tr></thead>
+            <tbody>
+              <% if (recentLogs && recentLogs.length > 0) { %>
+                <% recentLogs.forEach(l => { %>
+                  <tr>
+                    <td style="font-weight:700;"><%= l.job_key %></td>
+                    <td><span class="badge <%= l.status === 'success' ? 'badge-green' : 'badge-red' %>"><%= l.status %></span></td>
+                    <td><%= l.attempts %></td>
+                    <td><%= l.duration_ms %>ms</td>
+                    <td style="font-size:11px;"><%= l.triggered_by %></td>
+                    <td style="font-size:11px;color:#94a3b8;max-width:260px;white-space:normal;"><%= l.message %></td>
+                    <td style="font-size:11px;"><%= new Date(l.started_at).toLocaleString('bn-BD') %></td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="7" style="text-align:center;color:#64748b;padding:20px;">এখনো কোনো লগ নেই</td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>

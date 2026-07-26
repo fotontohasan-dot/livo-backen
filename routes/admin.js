@@ -27,6 +27,7 @@ const { getQueueNames } = require('../services/queue/queues');
 const { runAllChecks } = require('../services/healthCheck');
 const { getUserDeviceOverview } = require('../services/deviceTracking');
 const cache = require('../services/cache');
+const scheduler = require('../services/scheduler');
 
 const { requireIntParam, requireAmount, parseAmount, sanitizeText, isSafeUrl } = require('../middleware/validate');
 
@@ -2140,6 +2141,90 @@ router.get('/diagnostics/json', async (req, res) => {
     res.json(report);
   } catch (err) {
     res.status(500).json({ overall: 'error', error: err.message });
+  }
+});
+
+// ==================== Cron Jobs Monitor (প্রোডাকশন-রেডি Scheduler ম্যানেজমেন্ট) ====================
+router.get('/cron-jobs', async (req, res) => {
+  try {
+    const jobs = await scheduler.listJobs();
+    const recentLogs = await scheduler.getRecentLogs(20);
+    res.render('admin/cron-jobs', { jobs, recentLogs, active: 'cron-jobs' });
+  } catch (err) {
+    console.error('Cron jobs list error:', err.message);
+    res.render('admin/cron-jobs', { jobs: [], recentLogs: [], active: 'cron-jobs' });
+  }
+});
+
+// একটা নির্দিষ্ট Job-এর সম্পূর্ণ Execution History
+router.get('/cron-jobs/:key/logs', async (req, res) => {
+  try {
+    const key = req.params.key;
+    const logs = await scheduler.getJobLogs(key, 100);
+    const jobs = await scheduler.listJobs();
+    const job = jobs.find(j => j.key === key) || { key, label: key, description: '' };
+    res.render('admin/cron-job-logs', { job, logs, active: 'cron-jobs' });
+  } catch (err) {
+    console.error('Cron job logs error:', err.message);
+    req.flash('error', 'জব হিস্ট্রি লোড করা যায়নি।');
+    res.redirect('/admin/cron-jobs');
+  }
+});
+
+// Run Now — ম্যানুয়ালি একটা Job অবিলম্বে ট্রিগার করা (schedule অপেক্ষা না করে)
+router.post('/cron-jobs/:key/run', adminActionLimiter, async (req, res) => {
+  try {
+    const key = req.params.key;
+    if (!scheduler.JOB_DEFINITIONS[key]) {
+      req.flash('error', `অজানা cron job: ${key}`);
+      return res.redirect('/admin/cron-jobs');
+    }
+    const result = await scheduler.runJob(key, { triggeredBy: `manual:${req.session.user.username}` });
+    await logAdminAction(
+      req.session.user.id, req.session.user.username, 'CRON_JOB_RUN_NOW',
+      `Cron job "${key}" ম্যানুয়ালি রান করা হয়েছে — status: ${result.status}, duration: ${result.durationMs}ms`,
+      req.ip
+    );
+    req.flash(result.status === 'success' ? 'success' : 'error',
+      `"${key}" রান হয়েছে (${result.durationMs}ms) — ${result.message}`);
+    res.redirect('/admin/cron-jobs');
+  } catch (err) {
+    console.error('Cron run-now error:', err.message);
+    req.flash('error', 'Job রান করা যায়নি: ' + err.message);
+    res.redirect('/admin/cron-jobs');
+  }
+});
+
+// Enable/Disable — সার্ভার রিস্টার্ট ছাড়াই কার্যকর হয় (প্রতিবার রানের আগে DB থেকে ফ্রেশ চেক হয়)
+router.post('/cron-jobs/:key/toggle', adminActionLimiter, async (req, res) => {
+  try {
+    const key = req.params.key;
+    if (!scheduler.JOB_DEFINITIONS[key]) {
+      req.flash('error', `অজানা cron job: ${key}`);
+      return res.redirect('/admin/cron-jobs');
+    }
+    const enabled = req.body.enabled === 'true' || req.body.enabled === '1';
+    await scheduler.setEnabled(key, enabled);
+    await logAdminAction(
+      req.session.user.id, req.session.user.username, 'CRON_JOB_TOGGLE',
+      `Cron job "${key}" ${enabled ? 'সক্রিয়' : 'নিষ্ক্রিয়'} করা হয়েছে`, req.ip
+    );
+    req.flash('success', `"${key}" ${enabled ? 'সক্রিয়' : 'নিষ্ক্রিয়'} করা হয়েছে।`);
+    res.redirect('/admin/cron-jobs');
+  } catch (err) {
+    console.error('Cron toggle error:', err.message);
+    req.flash('error', 'Job টগল করা যায়নি: ' + err.message);
+    res.redirect('/admin/cron-jobs');
+  }
+});
+
+// Cron Jobs JSON API (পোলিং — লাইভ লাস্ট-রান স্ট্যাটাসের জন্য)
+router.get('/cron-jobs/status/json', async (req, res) => {
+  try {
+    const jobs = await scheduler.listJobs();
+    res.json({ success: true, jobs });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 

@@ -889,6 +889,47 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_dup_flags_created ON duplicate_account_flags(created_at);`);
 
     console.log("✅ Duplicate Account Detection tables ready");
+
+    // ==================== Cron / Scheduler System (Production-Ready) ====================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS cron_jobs (
+        key TEXT PRIMARY KEY,
+        label TEXT NOT NULL,
+        description TEXT,
+        interval_ms BIGINT NOT NULL,
+        enabled BOOLEAN NOT NULL DEFAULT true,
+        max_retries INTEGER NOT NULL DEFAULT 1,
+        last_run_at TIMESTAMPTZ,
+        last_finished_at TIMESTAMPTZ,
+        last_status TEXT,
+        last_message TEXT,
+        last_attempts INTEGER,
+        next_run_at TIMESTAMPTZ,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    // পুরনো ইনস্টলেশনে টেবিল আগে থেকে থাকলেও max_retries/last_attempts কলাম যোগ করা হচ্ছে (additive)
+    await pool.query(`ALTER TABLE cron_jobs ADD COLUMN IF NOT EXISTS max_retries INTEGER NOT NULL DEFAULT 1;`);
+    await pool.query(`ALTER TABLE cron_jobs ADD COLUMN IF NOT EXISTS last_attempts INTEGER;`);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS cron_job_logs (
+        id SERIAL PRIMARY KEY,
+        job_key TEXT NOT NULL,
+        started_at TIMESTAMPTZ NOT NULL,
+        finished_at TIMESTAMPTZ,
+        duration_ms INTEGER,
+        status TEXT NOT NULL,
+        attempts INTEGER NOT NULL DEFAULT 1,
+        message TEXT,
+        triggered_by TEXT DEFAULT 'schedule'
+      );
+    `);
+    await pool.query(`ALTER TABLE cron_job_logs ADD COLUMN IF NOT EXISTS attempts INTEGER NOT NULL DEFAULT 1;`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_cron_job_logs_key ON cron_job_logs(job_key, started_at DESC);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_cron_job_logs_status ON cron_job_logs(status);`);
+
+    console.log("✅ Cron/Scheduler tables ready");
   } catch (err) {
     console.error("❌ Migration error:", err.message);
   }

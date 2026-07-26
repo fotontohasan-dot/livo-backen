@@ -14,6 +14,7 @@ process.on('uncaughtException', (err) => {
 });
 process.on('SIGTERM', async () => {
   try { const { stopWorkers } = require('./services/queue'); await stopWorkers(); } catch (e) {}
+  try { require('./services/scheduler').stop(); } catch (e) {}
   process.exit(0);
 });
 
@@ -391,6 +392,8 @@ async function startServer() {
         startWorkers(); // BullMQ Workers — Redis থাকলে শুরু হবে, না থাকলে skip
       }, 3000);
       scheduleDailyBackup();
+      require('./services/scheduler').start()
+        .catch(err => console.error('⚠️ Scheduler চালু করতে সমস্যা হয়েছে (সার্ভার চলতে থাকবে):', err.message));
     });
   } catch (err) {
     console.error('❌ Server startup failed:', err);
