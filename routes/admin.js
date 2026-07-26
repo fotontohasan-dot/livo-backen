@@ -32,6 +32,10 @@ const RedisRateLimitStore = require('../services/redisRateLimitStore');
 const { requireIntParam, requireAmount, parseAmount, sanitizeText, isSafeUrl } = require('../middleware/validate');
 const { listIpRules, setIpRule, removeIpRule } = require('../services/ipRules');
 const rbac = require('../services/rbac');
+const {
+  listVipLevelsAdmin, upsertVipLevel, toggleVipLevelActive,
+  getVipAnalytics, listAllRewardHistory, listAllUpgradeHistory
+} = require('../services/vip');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 } }); // JSON import-এর জন্য, ২MB সীমা
 
@@ -1863,6 +1867,97 @@ router.post('/bonuses/:id/cancel', async (req, res) => {
   } catch (err) {
     console.error('Bonus cancel error:', err.message);
     res.redirect('/admin/bonuses');
+  }
+});
+
+// ==================== VIP সিস্টেম ম্যানেজমেন্ট (প্রিমিয়াম) ====================
+router.get('/vip', rbac.requirePermission('vip_manage'), async (req, res) => {
+  try {
+    const levels = await listVipLevelsAdmin();
+    const analytics = await getVipAnalytics();
+    res.render('admin/vip', { levels, analytics, active: 'vip' });
+  } catch (err) {
+    console.error('Admin VIP list error:', err.message);
+    res.render('admin/vip', {
+      levels: [], analytics: { perLevel: [], upgradeStats: [], grandTotalBonus: 0 }, active: 'vip'
+    });
+  }
+});
+
+router.post('/vip/save', adminActionLimiter, rbac.requirePermission('vip_manage'), async (req, res) => {
+  try {
+    const data = {
+      level: req.body.level,
+      name: sanitizeText(req.body.name || '', { maxLen: 40 }),
+      min_turnover: req.body.min_turnover,
+      upgrade_bonus: req.body.upgrade_bonus,
+      daily_bonus: req.body.daily_bonus,
+      weekly_bonus: req.body.weekly_bonus,
+      monthly_bonus: req.body.monthly_bonus,
+      cashback_percent: req.body.cashback_percent,
+      withdrawal_limit: req.body.withdrawal_limit,
+      deposit_bonus_percent: req.body.deposit_bonus_percent,
+      birthday_bonus: req.body.birthday_bonus,
+      priority_support: req.body.priority_support === 'on' || req.body.priority_support === 'true',
+      exclusive_events: sanitizeText(req.body.exclusive_events || '', { maxLen: 500 }),
+      icon: sanitizeText(req.body.icon || '👑', { maxLen: 10 }),
+      is_active: req.body.is_active === 'on' || req.body.is_active === 'true'
+    };
+    const result = await upsertVipLevel(data);
+    await logAdminAction(
+      req.session.user.id, req.session.user.username,
+      result.created ? 'VIP_LEVEL_CREATE' : 'VIP_LEVEL_UPDATE',
+      `VIP লেভেল ${result.level} (${data.name}) ${result.created ? 'তৈরি' : 'আপডেট'} করা হয়েছে`,
+      req.ip
+    );
+    await logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: result.created ? 'VIP_LEVEL_CREATE' : 'VIP_LEVEL_UPDATE', category: 'settings', riskLevel: 'medium',
+      details: { level: result.level, ...data }
+    });
+    req.flash('success', `VIP লেভেল ${result.level} সফলভাবে সেভ হয়েছে।`);
+    res.redirect('/admin/vip');
+  } catch (err) {
+    console.error('Admin VIP save error:', err.message);
+    req.flash('error', 'VIP লেভেল সেভ করা যায়নি: ' + err.message);
+    res.redirect('/admin/vip');
+  }
+});
+
+router.post('/vip/:level/toggle', adminActionLimiter, rbac.requirePermission('vip_manage'), async (req, res) => {
+  try {
+    const level = parseInt(req.params.level, 10);
+    const isActive = req.body.is_active === 'true' || req.body.is_active === '1';
+    await toggleVipLevelActive(level, isActive);
+    await logAdminAction(
+      req.session.user.id, req.session.user.username, 'VIP_LEVEL_TOGGLE',
+      `VIP লেভেল ${level} ${isActive ? 'সক্রিয়' : 'নিষ্ক্রিয়'} করা হয়েছে`, req.ip
+    );
+    await logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'VIP_LEVEL_TOGGLE', category: 'settings', riskLevel: 'low', details: { level, isActive }
+    });
+    res.redirect('/admin/vip');
+  } catch (err) {
+    console.error('Admin VIP toggle error:', err.message);
+    res.redirect('/admin/vip');
+  }
+});
+
+router.get('/vip/history', rbac.requirePermission('vip_manage'), async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const rewardType = req.query.type || null;
+    const rewardHistory = await listAllRewardHistory({ page, limit: 50, rewardType });
+    const upgradeHistory = await listAllUpgradeHistory({ page: 1, limit: 50 });
+    res.render('admin/vip-history', { rewardHistory, upgradeHistory, page, rewardType, active: 'vip' });
+  } catch (err) {
+    console.error('Admin VIP history error:', err.message);
+    res.render('admin/vip-history', {
+      rewardHistory: { rows: [], total: 0, page: 1, totalPages: 1 },
+      upgradeHistory: { rows: [], total: 0, page: 1, totalPages: 1 },
+      page: 1, rewardType: null, active: 'vip'
+    });
   }
 });
 

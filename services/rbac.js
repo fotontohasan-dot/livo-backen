@@ -38,7 +38,8 @@ const PERMISSIONS = {
   bot_monitoring_manage: { label: 'Bot Monitoring ও IP Block/Whitelist', group: 'Security' },
   backups_manage: { label: 'Backup তৈরি/রিস্টোর/ডিলিট', group: 'System' },
   cron_jobs_manage: { label: 'Cron Jobs enable/disable/run', group: 'System' },
-  reports_view: { label: 'রিপোর্ট/ফাইন্যান্স সামারি দেখা', group: 'Reports' }
+  reports_view: { label: 'রিপোর্ট/ফাইন্যান্স সামারি দেখা', group: 'Reports' },
+  vip_manage: { label: 'VIP সিস্টেম ম্যানেজমেন্ট (লেভেল, বোনাস, অ্যানালিটিক্স)', group: 'Content' }
 };
 
 function permissionGroups() {

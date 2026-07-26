@@ -52,6 +52,37 @@
       <% } %>
     </div>
 
+    <!-- ==================== VIP প্রিমিয়াম বোনাস ক্লেইম (নতুন) ==================== -->
+    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;margin-bottom:16px;">
+      <div style="color:var(--text-main);font-weight:bold;margin-bottom:12px;">🎁 VIP বোনাস ক্লেইম করুন</div>
+      <div id="vipClaimBoxes" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;" data-vip-level="<%= vip.level %>">
+        <div class="vip-claim-card" data-type="daily" style="background:rgba(255,255,255,0.04);border-radius:12px;padding:10px;text-align:center;">
+          <div style="font-size:20px;">☀️</div>
+          <div style="color:#94a3b8;font-size:10px;margin:2px 0;">দৈনিক</div>
+          <div class="vip-claim-amount" style="color:#f59e0b;font-weight:bold;font-size:12px;">...</div>
+          <button class="vip-claim-btn" data-endpoint="/profile/vip/daily-claim" style="margin-top:6px;width:100%;background:#f59e0b;color:#000;border:none;border-radius:8px;padding:6px 4px;font-size:11px;font-weight:bold;cursor:pointer;" disabled>লোড হচ্ছে...</button>
+        </div>
+        <div class="vip-claim-card" data-type="weekly" style="background:rgba(255,255,255,0.04);border-radius:12px;padding:10px;text-align:center;">
+          <div style="font-size:20px;">📅</div>
+          <div style="color:#94a3b8;font-size:10px;margin:2px 0;">সাপ্তাহিক</div>
+          <div class="vip-claim-amount" style="color:#f59e0b;font-weight:bold;font-size:12px;">...</div>
+          <button class="vip-claim-btn" data-endpoint="/profile/vip/weekly-claim" style="margin-top:6px;width:100%;background:#f59e0b;color:#000;border:none;border-radius:8px;padding:6px 4px;font-size:11px;font-weight:bold;cursor:pointer;" disabled>লোড হচ্ছে...</button>
+        </div>
+        <div class="vip-claim-card" data-type="monthly" style="background:rgba(255,255,255,0.04);border-radius:12px;padding:10px;text-align:center;">
+          <div style="font-size:20px;">🗓️</div>
+          <div style="color:#94a3b8;font-size:10px;margin:2px 0;">মাসিক</div>
+          <div class="vip-claim-amount" style="color:#f59e0b;font-weight:bold;font-size:12px;">...</div>
+          <button class="vip-claim-btn" data-endpoint="/profile/vip/monthly-claim" style="margin-top:6px;width:100%;background:#f59e0b;color:#000;border:none;border-radius:8px;padding:6px 4px;font-size:11px;font-weight:bold;cursor:pointer;" disabled>লোড হচ্ছে...</button>
+        </div>
+      </div>
+      <div id="vipClaimMsg" style="text-align:center;font-size:12px;margin-top:10px;min-height:16px;"></div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-bottom:16px;">
+      <a href="/profile/vip/benefits/<%= vip.level %>" style="flex:1;text-align:center;background:rgba(255,255,255,0.05);border-radius:12px;padding:12px;color:var(--text-main);text-decoration:none;font-size:12px;font-weight:bold;">🎁 বেনিফিটস দেখুন</a>
+      <a href="/profile/vip/history" style="flex:1;text-align:center;background:rgba(255,255,255,0.05);border-radius:12px;padding:12px;color:var(--text-main);text-decoration:none;font-size:12px;font-weight:bold;">📜 হিস্ট্রি দেখুন</a>
+    </div>
+
     <!-- সব লেভেল তালিকা -->
     <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;">
       <div style="color:var(--text-main);font-weight:bold;margin-bottom:12px;">📊 VIP লেভেলসমূহ</div>
@@ -59,6 +90,7 @@
         const isCurrent = l.level === vip.level;
         const reached = vip.totalTurnover >= Number(l.min_turnover);
       %>
+        <a href="/profile/vip/benefits/<%= l.level %>" style="text-decoration:none;display:block;">
         <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;margin-bottom:8px;border-radius:10px;background:<%= isCurrent ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.03)' %>;border:1px solid <%= isCurrent ? '#f59e0b' : 'transparent' %>;">
           <div>
             <div style="color:<%= reached ? '#fff' : '#94a3b8' %>;font-size:14px;font-weight:bold;">
@@ -77,6 +109,7 @@
             <% } %>
           </div>
         </div>
+        </a>
       <% }) %>
     </div>
 
@@ -172,6 +205,89 @@
   });
 
   window.addEventListener('beforeunload', function () { clearInterval(pollTimer); });
+})();
+</script>
+<% } %>
+
+<% if (vip) { %>
+<script>
+(function () {
+  var msgBox = document.getElementById('vipClaimMsg');
+  var cards = document.querySelectorAll('.vip-claim-card');
+  if (!cards.length) return;
+
+  var statusEndpoints = {
+    daily: '/profile/api/vip/daily-status',
+    weekly: '/profile/api/vip/weekly-status',
+    monthly: '/profile/api/vip/monthly-status'
+  };
+
+  function showMsg(text, ok) {
+    if (!msgBox) return;
+    msgBox.textContent = text;
+    msgBox.style.color = ok ? '#10b981' : '#ef4444';
+  }
+
+  function updateCard(card, status) {
+    var amountEl = card.querySelector('.vip-claim-amount');
+    var btn = card.querySelector('.vip-claim-btn');
+    amountEl.textContent = Number(status.amount || 0).toLocaleString('bn-BD') + ' কয়েন';
+    if (status.claimed) {
+      btn.textContent = '✅ নেওয়া হয়েছে';
+      btn.disabled = true;
+      btn.style.background = 'rgba(255,255,255,0.1)';
+      btn.style.color = '#64748b';
+    } else if (!status.amount || status.amount <= 0) {
+      btn.textContent = 'এই লেভেলে নেই';
+      btn.disabled = true;
+      btn.style.background = 'rgba(255,255,255,0.1)';
+      btn.style.color = '#64748b';
+    } else {
+      btn.textContent = 'ক্লেইম করুন';
+      btn.disabled = false;
+      btn.style.background = '#f59e0b';
+      btn.style.color = '#000';
+    }
+  }
+
+  cards.forEach(function (card) {
+    var type = card.dataset.type;
+    fetch(statusEndpoints[type])
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.success) return;
+        updateCard(card, data);
+      })
+      .catch(function () { /* নীরবে ব্যর্থ */ });
+  });
+
+  document.querySelectorAll('.vip-claim-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var endpoint = btn.dataset.endpoint;
+      if (!endpoint || btn.disabled) return;
+      btn.disabled = true;
+      var originalText = btn.textContent;
+      btn.textContent = '...';
+      fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          showMsg(data.message || (data.success ? 'সফল হয়েছে!' : 'ব্যর্থ হয়েছে।'), data.success);
+          if (data.success) {
+            btn.textContent = '✅ নেওয়া হয়েছে';
+            btn.style.background = 'rgba(255,255,255,0.1)';
+            btn.style.color = '#64748b';
+          } else {
+            btn.textContent = originalText;
+            btn.disabled = false;
+          }
+        })
+        .catch(function () {
+          showMsg('সার্ভার ত্রুটি, আবার চেষ্টা করুন।', false);
+          btn.textContent = originalText;
+          btn.disabled = false;
+        });
+    });
+  });
 })();
 </script>
 <% } %>

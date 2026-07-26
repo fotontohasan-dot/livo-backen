@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VIP সিস্টেম ম্যানেজমেন্ট • Livo Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
+    .vip-level-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+    .vip-level-card.inactive { opacity: 0.55; }
+    .vip-form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin-top: 10px; }
+    .vip-form-grid label { font-size: 11px; color: #94a3b8; display: block; margin-bottom: 4px; }
+    .vip-toggle-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+    .flash-box { padding: 10px 14px; border-radius: 10px; font-size: 12px; margin-bottom: 10px; }
+    .flash-success { background: rgba(16,185,129,0.12); color: #10b981; border: 1px solid rgba(16,185,129,0.25); }
+    .flash-error { background: rgba(239,68,68,0.12); color: #ef4444; border: 1px solid rgba(239,68,68,0.25); }
+  </style>
+  <%- include('./partials/pwa-head') %>
+</head>
+<body>
+  <div class="admin-wrap">
+    <%- include('./partials/sidebar', { active: 'vip' }) %>
+    <div class="admin-content">
+      <%- include('./partials/header', { pageTitle: 'VIP সিস্টেম ম্যানেজমেন্ট', pageSubtitle: 'VIP লেভেল, বোনাস, ক্যাশব্যাক ও বেনিফিটস পরিচালনা করুন' }) %>
+
+      <% if (typeof success !== 'undefined' && success && success.length) { %>
+        <% success.forEach(function(m) { %><div class="flash-box flash-success"><%= m %></div><% }) %>
+      <% } %>
+      <% if (typeof error !== 'undefined' && error && error.length) { %>
+        <% error.forEach(function(m) { %><div class="flash-box flash-error"><%= m %></div><% }) %>
+      <% } %>
+
+      <!-- ==================== Analytics Dashboard ==================== -->
+      <div class="grid grid-4" style="margin-bottom:14px;">
+        <div class="stat-card"><div class="stat-label">মোট VIP লেভেল</div><div class="stat-number" style="color:#f59e0b;"><%= levels.length %></div></div>
+        <div class="stat-card"><div class="stat-label">মোট ইউজার (সব লেভেল)</div><div class="stat-number" style="color:#10b981;"><%= analytics.perLevel.reduce((a,l)=>a+l.userCount,0) %></div></div>
+        <div class="stat-card"><div class="stat-label">মোট আপগ্রেড সংখ্যা</div><div class="stat-number" style="color:#3b82f6;"><%= analytics.upgradeStats.reduce((a,u)=>a+u.upgradeCount,0) %></div></div>
+        <div class="stat-card"><div class="stat-label">মোট প্রদত্ত VIP বোনাস</div><div class="stat-number" style="color:#a855f7;"><%= Math.round(analytics.grandTotalBonus).toLocaleString('bn-BD') %></div></div>
+      </div>
+
+      <div class="admin-card" style="margin-bottom:16px;">
+        <div class="admin-card-header">প্রতি লেভেলে পরিসংখ্যান <a href="/admin/vip/history" style="float:right;font-size:12px;color:#f59e0b;text-decoration:none;"><i class="fas fa-history"></i> সম্পূর্ণ হিস্ট্রি দেখুন</a></div>
+        <div style="overflow-x:auto;">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>লেভেল</th><th>ইউজার সংখ্যা</th><th>মোট টার্নওভার</th>
+                <th>আপগ্রেড বোনাস প্রদান</th><th>দৈনিক বোনাস প্রদান</th><th>সাপ্তাহিক</th><th>মাসিক</th><th>ক্যাশব্যাক</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% analytics.perLevel.forEach(l => { %>
+                <tr>
+                  <td style="font-weight:700;"><%= l.icon %> <%= l.name %> (<%= l.level %>)</td>
+                  <td><%= l.userCount %></td>
+                  <td><%= Math.round(l.totalTurnover).toLocaleString('bn-BD') %></td>
+                  <td><%= Math.round(l.totalUpgradeBonus).toLocaleString('bn-BD') %></td>
+                  <td><%= Math.round(l.totalDailyBonus).toLocaleString('bn-BD') %></td>
+                  <td><%= Math.round(l.totalWeeklyBonus).toLocaleString('bn-BD') %></td>
+                  <td><%= Math.round(l.totalMonthlyBonus).toLocaleString('bn-BD') %></td>
+                  <td><%= Math.round(l.totalCashback).toLocaleString('bn-BD') %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ==================== Level Management (CRUD) ==================== -->
+      <div class="admin-card-header" style="margin-bottom:8px;">VIP লেভেল ম্যানেজমেন্ট</div>
+
+      <% levels.forEach(l => { %>
+        <div class="vip-level-card <%= l.is_active === false ? 'inactive' : '' %>">
+          <form method="POST" action="/admin/vip/save">
+            <input type="hidden" name="level" value="<%= l.level %>">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div style="font-weight:800;color:#fff;font-size:14px;"><%= l.icon || '👑' %> লেভেল <%= l.level %> <% if (l.is_active === false) { %><span class="badge badge-red">নিষ্ক্রিয়</span><% } else { %><span class="badge badge-green">সক্রিয়</span><% } %></div>
+              <button type="submit" class="btn btn-primary" style="padding:6px 14px;font-size:12px;"><i class="fas fa-save"></i> সেভ</button>
+            </div>
+            <div class="vip-form-grid">
+              <div><label>নাম</label><input class="input" type="text" name="name" value="<%= l.name %>" required></div>
+              <div><label>আইকন (ইমোজি)</label><input class="input" type="text" name="icon" value="<%= l.icon || '👑' %>"></div>
+              <div><label>ন্যূনতম টার্নওভার</label><input class="input" type="number" step="0.01" name="min_turnover" value="<%= l.min_turnover %>"></div>
+              <div><label>আপগ্রেড বোনাস</label><input class="input" type="number" step="0.01" name="upgrade_bonus" value="<%= l.upgrade_bonus %>"></div>
+              <div><label>দৈনিক বোনাস</label><input class="input" type="number" step="0.01" name="daily_bonus" value="<%= l.daily_bonus || 0 %>"></div>
+              <div><label>সাপ্তাহিক বোনাস</label><input class="input" type="number" step="0.01" name="weekly_bonus" value="<%= l.weekly_bonus || 0 %>"></div>
+              <div><label>মাসিক বোনাস</label><input class="input" type="number" step="0.01" name="monthly_bonus" value="<%= l.monthly_bonus || 0 %>"></div>
+              <div><label>ক্যাশব্যাক % (অতিরিক্ত)</label><input class="input" type="number" step="0.01" name="cashback_percent" value="<%= l.cashback_percent || 0 %>"></div>
+              <div><label>উইথড্র লিমিট (0=সীমাহীন)</label><input class="input" type="number" step="0.01" name="withdrawal_limit" value="<%= l.withdrawal_limit || 0 %>"></div>
+              <div><label>ডিপোজিট বোনাস %</label><input class="input" type="number" step="0.01" name="deposit_bonus_percent" value="<%= l.deposit_bonus_percent || 0 %>"></div>
+              <div><label>জন্মদিন বোনাস</label><input class="input" type="number" step="0.01" name="birthday_bonus" value="<%= l.birthday_bonus || 0 %>"></div>
+            </div>
+            <div style="margin-top:10px;">
+              <label>এক্সক্লুসিভ ইভেন্ট বিবরণ</label>
+              <input class="input" type="text" name="exclusive_events" value="<%= l.exclusive_events || '' %>" style="width:100%;">
+            </div>
+            <div class="vip-toggle-row">
+              <label style="display:flex;align-items:center;gap:6px;color:#cbd5e1;font-size:12px;">
+                <input type="checkbox" name="priority_support" <%= l.priority_support ? 'checked' : '' %>> প্রায়োরিটি সাপোর্ট
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;color:#cbd5e1;font-size:12px;">
+                <input type="checkbox" name="is_active" <%= l.is_active !== false ? 'checked' : '' %>> লেভেল সক্রিয়
+              </label>
+            </div>
+          </form>
+        </div>
+      <% }) %>
+
+      <div class="vip-level-card">
+        <div style="font-weight:800;color:#fff;font-size:14px;margin-bottom:8px;"><i class="fas fa-plus"></i> নতুন VIP লেভেল যোগ করুন</div>
+        <form method="POST" action="/admin/vip/save">
+          <div class="vip-form-grid">
+            <div><label>লেভেল নম্বর</label><input class="input" type="number" name="level" required></div>
+            <div><label>নাম</label><input class="input" type="text" name="name" required></div>
+            <div><label>আইকন</label><input class="input" type="text" name="icon" value="🏆"></div>
+            <div><label>ন্যূনতম টার্নওভার</label><input class="input" type="number" step="0.01" name="min_turnover" value="0"></div>
+            <div><label>আপগ্রেড বোনাস</label><input class="input" type="number" step="0.01" name="upgrade_bonus" value="0"></div>
+            <div><label>দৈনিক বোনাস</label><input class="input" type="number" step="0.01" name="daily_bonus" value="0"></div>
+            <div><label>সাপ্তাহিক বোনাস</label><input class="input" type="number" step="0.01" name="weekly_bonus" value="0"></div>
+            <div><label>মাসিক বোনাস</label><input class="input" type="number" step="0.01" name="monthly_bonus" value="0"></div>
+            <div><label>ক্যাশব্যাক %</label><input class="input" type="number" step="0.01" name="cashback_percent" value="0"></div>
+          </div>
+          <button type="submit" class="btn btn-primary" style="margin-top:10px;"><i class="fas fa-plus"></i> লেভেল তৈরি করুন</button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>

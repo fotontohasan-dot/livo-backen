@@ -341,6 +341,71 @@ async function runMigrations() {
       `);
     }
 
+    // ==================== VIP SYSTEM UPGRADE (Premium) ====================
+    // নিচের সব ALTER/CREATE সম্পূর্ণ additive — বিদ্যমান vip_levels টেবিল, কলাম বা ডেটা
+    // মোছা বা পরিবর্তন হয় না, শুধু নতুন কলাম/টেবিল যোগ হয়। পুরনো সব ফিচার (addVipTurnover,
+    // getVipStatus, /profile/vip পেজ) অপরিবর্তিত থাকে ও আগের মতোই চলবে।
+    await pool.query(`ALTER TABLE vip_levels ADD COLUMN IF NOT EXISTS icon VARCHAR(10) DEFAULT '👑';`);
+    await pool.query(`ALTER TABLE vip_levels ADD COLUMN IF NOT EXISTS cashback_percent NUMERIC(5,2) DEFAULT 0;`); // % পয়েন্ট, দৈনিক ক্যাশব্যাক রেটের সাথে যোগ হয়
+    await pool.query(`ALTER TABLE vip_levels ADD COLUMN IF NOT EXISTS daily_bonus NUMERIC(12,2) DEFAULT 0;`);
+    await pool.query(`ALTER TABLE vip_levels ADD COLUMN IF NOT EXISTS monthly_bonus NUMERIC(12,2) DEFAULT 0;`);
+    await pool.query(`ALTER TABLE vip_levels ADD COLUMN IF NOT EXISTS withdrawal_limit NUMERIC(14,2) DEFAULT 0;`); // 0 = সীমাহীন
+    await pool.query(`ALTER TABLE vip_levels ADD COLUMN IF NOT EXISTS deposit_bonus_percent NUMERIC(5,2) DEFAULT 0;`);
+    await pool.query(`ALTER TABLE vip_levels ADD COLUMN IF NOT EXISTS birthday_bonus NUMERIC(12,2) DEFAULT 0;`);
+    await pool.query(`ALTER TABLE vip_levels ADD COLUMN IF NOT EXISTS priority_support BOOLEAN DEFAULT false;`);
+    await pool.query(`ALTER TABLE vip_levels ADD COLUMN IF NOT EXISTS exclusive_events TEXT DEFAULT '';`);
+    await pool.query(`ALTER TABLE vip_levels ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;`);
+    await pool.query(`ALTER TABLE vip_levels ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_vip_levels_level ON vip_levels(level);`);
+
+    // প্রথমবার এই আপগ্রেডের পর ডিফল্ট প্রিমিয়াম ভ্যালু বসানো — শুধু যেসব রো এখনো
+    // touch করা হয়নি (cashback_percent ও daily_bonus উভয়ই ডিফল্ট 0) তাদের জন্যই,
+    // যাতে অ্যাডমিন পরে যা কাস্টমাইজ করবে তা কখনো ওভাররাইট না হয়।
+    await pool.query(`
+      UPDATE vip_levels SET
+        icon = CASE level WHEN 0 THEN '🥉' WHEN 1 THEN '🥈' WHEN 2 THEN '🥇' WHEN 3 THEN '💎' WHEN 4 THEN '👑' ELSE '🏆' END,
+        cashback_percent = CASE level WHEN 0 THEN 0 WHEN 1 THEN 1 WHEN 2 THEN 2 WHEN 3 THEN 3 WHEN 4 THEN 5 ELSE 8 END,
+        daily_bonus = CASE level WHEN 0 THEN 0 WHEN 1 THEN 20 WHEN 2 THEN 60 WHEN 3 THEN 150 WHEN 4 THEN 400 ELSE 1000 END,
+        monthly_bonus = CASE level WHEN 0 THEN 0 WHEN 1 THEN 300 WHEN 2 THEN 1000 WHEN 3 THEN 3000 WHEN 4 THEN 8000 ELSE 20000 END,
+        withdrawal_limit = CASE level WHEN 0 THEN 20000 WHEN 1 THEN 50000 WHEN 2 THEN 150000 WHEN 3 THEN 400000 WHEN 4 THEN 1000000 ELSE 0 END,
+        deposit_bonus_percent = CASE level WHEN 0 THEN 0 WHEN 1 THEN 2 WHEN 2 THEN 5 WHEN 3 THEN 8 WHEN 4 THEN 12 ELSE 20 END,
+        birthday_bonus = CASE level WHEN 0 THEN 0 WHEN 1 THEN 100 WHEN 2 THEN 300 WHEN 3 THEN 800 WHEN 4 THEN 2000 ELSE 5000 END,
+        priority_support = CASE WHEN level >= 2 THEN true ELSE false END,
+        exclusive_events = CASE WHEN level >= 3 THEN 'এক্সক্লুসিভ VIP ইভেন্ট ও টুর্নামেন্টে অগ্রাধিকার প্রবেশ' ELSE '' END
+      WHERE cashback_percent = 0 AND daily_bonus = 0;
+    `);
+
+    // ==================== VIP Reward History (সব ধরনের VIP বোনাস/ক্যাশব্যাক ক্লেইমের একীভূত হিস্ট্রি) ====================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS vip_reward_history (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        vip_level INTEGER NOT NULL DEFAULT 0,
+        reward_type VARCHAR(30) NOT NULL, -- upgrade_bonus | daily_bonus | weekly_bonus | monthly_bonus | cashback | birthday_bonus
+        amount NUMERIC(14,2) NOT NULL DEFAULT 0,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_vip_reward_history_user ON vip_reward_history(user_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_vip_reward_history_type ON vip_reward_history(reward_type);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_vip_reward_history_created ON vip_reward_history(created_at DESC);`);
+
+    // ==================== VIP Upgrade History (লেভেল পরিবর্তনের আলাদা লগ — from → to) ====================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS vip_upgrade_history (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        from_level INTEGER NOT NULL DEFAULT 0,
+        to_level INTEGER NOT NULL,
+        bonus NUMERIC(14,2) NOT NULL DEFAULT 0,
+        total_turnover_at_upgrade NUMERIC(16,2) DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_vip_upgrade_history_user ON vip_upgrade_history(user_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_vip_upgrade_history_created ON vip_upgrade_history(created_at DESC);`);
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS mission_defs (
         id SERIAL PRIMARY KEY,

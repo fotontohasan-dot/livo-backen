@@ -8,7 +8,13 @@ const bcrypt = require('bcryptjs');
 const { getTodayReward, claimDailyReward } = require('../services/dailyReward');
 const { getReferralStats } = require('../services/referral');
 const { getCashbackStatus, claimCashback } = require('../services/cashback');
-const { getVipStatus } = require('../services/vip');
+const {
+  getVipStatus, getVipBenefits,
+  getDailyBonusStatus, claimDailyBonus,
+  getWeeklyVipStatus, claimWeeklyVipReward,
+  getMonthlyVipStatus, claimMonthlyVipReward,
+  getRewardHistory, getUpgradeHistory
+} = require('../services/vip');
 const { getMissions, claimMission } = require('../services/missions');
 const { getSegments, canSpin, spin, getHistory: getWheelHistory } = require('../services/wheel');
 const { getLoyalty, redeemPoints } = require('../services/loyalty');
@@ -837,6 +843,100 @@ router.get('/api/vip-progress', isAuth, async (req, res) => {
   } catch (err) {
     console.error('vip progress api error:', err.message);
     res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি' });
+  }
+});
+
+// ---- VIP প্রিমিয়াম: প্রতিটি লেভেলের জন্য আলাদা বেনিফিটস পেজ ----
+router.get('/vip/benefits/:level', isAuth, async (req, res) => {
+  try {
+    const level = parseInt(req.params.level, 10);
+    if (!Number.isFinite(level) || level < 0) return res.redirect('/profile/vip');
+    const benefits = await getVipBenefits(level);
+    const vip = await getVipStatus(req.session.user.id);
+    if (!benefits) { req.flash('error', 'এই VIP লেভেল পাওয়া যায়নি।'); return res.redirect('/profile/vip'); }
+    res.render('profile/vip-benefits', { user: req.session.user, benefits, vip });
+  } catch (err) {
+    console.error('vip benefits page error:', err.message);
+    req.flash('error', 'VIP বেনিফিটস লোড করা যায়নি।');
+    res.redirect('/profile/vip');
+  }
+});
+
+// ---- VIP দৈনিক বোনাস ----
+router.get('/api/vip/daily-status', isAuth, async (req, res) => {
+  try {
+    const status = await getDailyBonusStatus(req.session.user.id);
+    res.json({ success: true, ...status });
+  } catch (err) {
+    console.error('vip daily status error:', err.message);
+    res.status(500).json({ success: false, message: 'সার্ভার ত্রুটি।' });
+  }
+});
+router.post('/vip/daily-claim', isAuth, claimLimiter, async (req, res) => {
+  try {
+    const result = await claimDailyBonus(req.session.user.id);
+    res.json(result);
+  } catch (err) {
+    console.error('vip daily claim error:', err.message);
+    res.status(500).json({ success: false, message: 'সার্ভার ত্রুটি।' });
+  }
+});
+
+// ---- সাপ্তাহিক VIP রিওয়ার্ড (লেভেল-ভিত্তিক ফ্ল্যাট বোনাস) ----
+router.get('/api/vip/weekly-status', isAuth, async (req, res) => {
+  try {
+    const status = await getWeeklyVipStatus(req.session.user.id);
+    res.json({ success: true, ...status });
+  } catch (err) {
+    console.error('vip weekly status error:', err.message);
+    res.status(500).json({ success: false, message: 'সার্ভার ত্রুটি।' });
+  }
+});
+router.post('/vip/weekly-claim', isAuth, claimLimiter, async (req, res) => {
+  try {
+    const result = await claimWeeklyVipReward(req.session.user.id);
+    res.json(result);
+  } catch (err) {
+    console.error('vip weekly claim error:', err.message);
+    res.status(500).json({ success: false, message: 'সার্ভার ত্রুটি।' });
+  }
+});
+
+// ---- মাসিক VIP রিওয়ার্ড ----
+router.get('/api/vip/monthly-status', isAuth, async (req, res) => {
+  try {
+    const status = await getMonthlyVipStatus(req.session.user.id);
+    res.json({ success: true, ...status });
+  } catch (err) {
+    console.error('vip monthly status error:', err.message);
+    res.status(500).json({ success: false, message: 'সার্ভার ত্রুটি।' });
+  }
+});
+router.post('/vip/monthly-claim', isAuth, claimLimiter, async (req, res) => {
+  try {
+    const result = await claimMonthlyVipReward(req.session.user.id);
+    res.json(result);
+  } catch (err) {
+    console.error('vip monthly claim error:', err.message);
+    res.status(500).json({ success: false, message: 'সার্ভার ত্রুটি।' });
+  }
+});
+
+// ---- VIP রিওয়ার্ড হিস্ট্রি + আপগ্রেড হিস্ট্রি (একই পেজে) ----
+router.get('/vip/history', isAuth, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const rewardHistory = await getRewardHistory(req.session.user.id, { page, limit: 15 });
+    const upgradeHistory = await getUpgradeHistory(req.session.user.id, { page: 1, limit: 15 });
+    res.render('profile/vip-history', { user: req.session.user, rewardHistory, upgradeHistory, page });
+  } catch (err) {
+    console.error('vip history page error:', err.message);
+    res.render('profile/vip-history', {
+      user: req.session.user,
+      rewardHistory: { rows: [], total: 0, page: 1, totalPages: 1 },
+      upgradeHistory: { rows: [], total: 0, page: 1, totalPages: 1 },
+      page: 1
+    });
   }
 });
 
