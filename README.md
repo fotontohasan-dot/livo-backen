@@ -108,6 +108,47 @@ App, PostgreSQL, Redis চালু হবে। মনিটরিং স্ট
 docker compose up -d --build app db redis
 ```
 
+## Automated Testing
+
+এই প্রজেক্টে Jest + Supertest দিয়ে একটা সম্পূর্ণ Automated Test System আছে — Auth, Admin, Payment, Public API, Health Check ও Security-এর ইউনিট + ইন্টিগ্রেশন টেস্ট। টেস্টগুলো production কোড পরিবর্তন না করেই আসল `app.js`-কে supertest দিয়ে বুট করে একটা **আলাদা, ডিসপোজেবল টেস্ট PostgreSQL ডাটাবেজের** বিপরীতে চালায়।
+
+### লোকালি টেস্ট চালানো
+
+```bash
+# ১) আলাদা টেস্ট ডাটাবেজ চালু করো (ডেভ/প্রোড ডাটাবেজের সাথে কোনো সম্পর্ক নেই)
+docker compose -f docker-compose.test.yml up -d
+
+# ২) টেস্ট চালাও
+npm test                 # সব টেস্ট (unit + integration), সিরিয়ালি
+npm run test:watch       # watch mode
+npm run test:coverage    # coverage রিপোর্ট সহ (coverage/ ফোল্ডারে HTML রিপোর্ট জেনারেট হয়)
+
+# ৩) শেষে টেস্ট ডাটাবেজ বন্ধ/পরিষ্কার করো
+docker compose -f docker-compose.test.yml down -v
+```
+
+Docker না থাকলে যেকোনো লোকাল PostgreSQL ইনস্ট্যান্স ব্যবহার করা যাবে — `.env.test`-এ `DATABASE_URL` পাল্টে দাও।
+
+### টেস্ট স্ট্রাকচার
+
+```
+tests/
+  setup/           # env ভ্যারিয়েবল + jest global config
+  helpers/         # waitForApp (migration-readiness পোলিং), humanAgent (bot-detection-safe test client), testUser
+  unit/            # DB ছাড়া pure/mocked ইউনিট টেস্ট (validate.js, apiKeyAuth.js)
+  integration/     # আসল test DB-এর বিপরীতে supertest দিয়ে পুরো app বুট করে চালানো টেস্ট
+    health.test.js     — /health, /ready
+    api.test.js        — পাবলিক /api/v1 এন্ডপয়েন্ট, API-key auth
+    auth.test.js        — রেজিস্ট্রেশন/লগইন/লগআউট, CSRF, SQL-injection safety
+    security.test.js   — security headers, admin/payment route protection, rate limiting
+    admin.test.js       — admin RBAC (role promote/demote)
+    payment.test.js    — deposit ফ্লো ভ্যালিডেশন
+```
+
+### CI (GitHub Actions)
+
+প্রতিটা push/PR-এ `.github/workflows/node.js.yml` একটা ephemeral PostgreSQL service কন্টেইনার চালু করে, `npm run test:coverage` রান করে, আর coverage রিপোর্ট আর্টিফ্যাক্ট হিসেবে আপলোড করে। কোনো টেস্ট ফেল করলে পুরো CI বিল্ড ফেল হয়ে যাবে (merge/deploy আটকে যাবে)।
+
 ## নিরাপত্তা সংক্রান্ত নোট
 
 - কোনো real API key/token/password কখনো git-এ commit করবে না বা চ্যাটে শেয়ার করবে না — leak হলে সেটাকে সাথে সাথে revoke/rotate করে ফেলা উচিত, শুধু মুছে দিলেই যথেষ্ট না।

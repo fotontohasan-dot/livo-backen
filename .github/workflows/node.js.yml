@@ -14,6 +14,35 @@ jobs:
       matrix:
         node-version: [18.x, 20.x, 22.x]
 
+    # ==================== Database Test Environment ====================
+    # প্রোডাকশন/ডেভেলপমেন্ট ডাটাবেজ থেকে সম্পূর্ণ আলাদা, ডিসপোজেবল Postgres
+    # সার্ভিস কন্টেইনার — শুধু এই CI জবের জীবদ্দশায় বেঁচে থাকে।
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: livo_test
+          POSTGRES_PASSWORD: livo_test
+          POSTGRES_DB: livo_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U livo_test -d livo_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      NODE_ENV: test
+      PORT: 0
+      DATABASE_URL: postgresql://livo_test:livo_test@127.0.0.1:5432/livo_test
+      DB_SSL: 'false'
+      SESSION_SECRET: ci-test-session-secret-not-for-production
+      REDIS_ENABLED: 'false'
+      SSLCZ_IS_LIVE: 'false'
+      SSLCZ_STORE_ID: test-store
+      SSLCZ_STORE_PASSWD: test-pass
+
     steps:
     - uses: actions/checkout@v4
     - name: Use Node.js ${{ matrix.node-version }}
@@ -22,4 +51,12 @@ jobs:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
     - run: npm install
-    # - run: npm test # No test script defined yet
+    - name: Run Automated Test Suite (with coverage)
+      run: npm run test:coverage
+    - name: Upload coverage report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report-node-${{ matrix.node-version }}
+        path: coverage/
+        retention-days: 14

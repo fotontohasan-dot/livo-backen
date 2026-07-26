@@ -12,3 +12,6 @@ build
 
 # Backup & Restore System — লোকাল ব্যাকআপ ফাইল কখনো কমিট হবে না
 /backups/
+
+# Automated Test System — coverage report কখনো কমিট হবে না (CI-তে regenerate হয়)
+/coverage/
