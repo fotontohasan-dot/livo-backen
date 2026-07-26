@@ -3,6 +3,7 @@ const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const { pool } = require('../db');
 const { createBonus, canWithdraw } = require('../services/turnover');
+const { applyVipDepositBonus } = require('../services/vip');
 const { processReferralDeposit } = require('../services/referral');
 const crypto = require('crypto');
 const sslcommerz = require('../services/sslcommerz');
@@ -132,17 +133,29 @@ async function creditApprovedDeposit(client, request) {
     console.error('processReferralDeposit failed, referral bonus skipped:', refErr.message);
   }
 
+  // ==== VIP Deposit Bonus — বর্তমান VIP লেভেল অনুযায়ী স্বয়ংক্রিয়, সম্পূর্ণ সার্ভার-সাইড গণনা ====
+  let vipBonus = 0;
+  await client.query('SAVEPOINT vip_bonus_sp');
+  try {
+    vipBonus = await applyVipDepositBonus(client, request.user_id, request.amount);
+    await client.query('RELEASE SAVEPOINT vip_bonus_sp');
+  } catch (vipErr) {
+    await client.query('ROLLBACK TO SAVEPOINT vip_bonus_sp');
+    console.error('applyVipDepositBonus failed, VIP bonus skipped but deposit continues:', vipErr.message);
+    vipBonus = 0;
+  }
+
   await client.query(`UPDATE payment_requests SET status='approved', updated_at=NOW() WHERE id=$1`, [request.id]);
 
   const message = bonusGiven > 0
-    ? `আপনার ${request.amount} টাকার ডিপোজিট + ${bonusGiven} বোনাস যোগ হয়েছে! (টার্নওভার প্রযোজ্য)`
-    : `আপনার ${request.amount} টাকার ডিপোজিট অনুমোদন হয়েছে!`;
+    ? `আপনার ${request.amount} টাকার ডিপোজিট + ${bonusGiven} বোনাস যোগ হয়েছে!${vipBonus > 0 ? ` + ${vipBonus} VIP বোনাস` : ''} (টার্নওভার প্রযোজ্য)`
+    : `আপনার ${request.amount} টাকার ডিপোজিট অনুমোদন হয়েছে!${vipBonus > 0 ? ` + ${vipBonus} VIP বোনাস যোগ হয়েছে` : ''}`;
   const notifResult = await client.query(
     `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'success') RETURNING *`,
     [request.user_id, 'পেমেন্ট অনুমোদন', message]
   );
 
-  return { bonusGiven, notification: notifResult.rows[0] };
+  return { bonusGiven, vipBonus, notification: notifResult.rows[0] };
 }
 
 const VALID_METHODS = ['bkash', 'nagad', 'rocket', 'upay', 'bank', 'crypto'];

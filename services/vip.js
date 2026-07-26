@@ -67,25 +67,32 @@ async function grantVipReward(client, { userId, level, rewardType, amount, descr
 
 // ==================== বাজিতে টার্নওভার যোগ + লেভেল চেক ====================
 // গেম/স্পোর্টস বাজির পর ডাকা হবে।
+// নিরাপত্তা নোট: পুরো সিকোয়েন্স (টার্নওভার আপডেট → লেভেল চেক → আপগ্রেড বোনাস) এখন
+// একটা single DB transaction-এ চলে। প্রথম UPDATE-টাই ইউজারের row-এ লক ধরে রাখে
+// (COMMIT পর্যন্ত), তাই একই ইউজারের জন্য একসাথে আসা একাধিক addVipTurnover() কল
+// সিরিয়ালাইজড হয়ে যায় — কেউ দুইবার একই আপগ্রেড বোনাস পাবে না (Race Condition/Duplicate-Bonus প্রতিরোধ)।
 async function addVipTurnover(userId, amount) {
   if (!amount || amount <= 0) return;
+  const client = await pool.connect();
   try {
-    // মোট টার্নওভার বাড়াও
-    const upd = await pool.query(
+    await client.query('BEGIN');
+
+    // মোট টার্নওভার বাড়াও — এই UPDATE-ই row-level lock নেয়, transaction শেষ না হওয়া পর্যন্ত
+    const upd = await client.query(
       `UPDATE users SET total_turnover = COALESCE(total_turnover,0) + $1 WHERE id = $2 RETURNING total_turnover, vip_level`,
       [amount, userId]
     );
-    if (upd.rowCount === 0) return;
+    if (upd.rowCount === 0) { await client.query('ROLLBACK'); return; }
 
     const totalTurnover = Number(upd.rows[0].total_turnover);
     const currentLevel = upd.rows[0].vip_level || 0;
 
     // এই টার্নওভারে সর্বোচ্চ কোন লেভেল প্রাপ্য?
-    const lvlRes = await pool.query(
-      `SELECT * FROM vip_levels WHERE min_turnover <= $1 ORDER BY level DESC LIMIT 1`,
+    const lvlRes = await client.query(
+      `SELECT * FROM vip_levels WHERE min_turnover <= $1 AND is_active = true ORDER BY level DESC LIMIT 1`,
       [totalTurnover]
     );
-    if (lvlRes.rows.length === 0) return;
+    if (lvlRes.rows.length === 0) { await client.query('COMMIT'); return; }
 
     const newLevel = lvlRes.rows[0].level;
 
@@ -94,44 +101,116 @@ async function addVipTurnover(userId, amount) {
       const bonus = lvlRes.rows[0].upgrade_bonus || 0;
       const name = lvlRes.rows[0].name;
 
-      await pool.query(`UPDATE users SET vip_level = $1 WHERE id = $2`, [newLevel, userId]);
+      // idempotency guard: WHERE-এ পুরনো vip_level মিলিয়ে conditional update —
+      // (ট্রানজেকশন লক ছাড়াও) ডাবল-চেক হিসেবে defense-in-depth
+      const levelUpd = await client.query(
+        `UPDATE users SET vip_level = $1 WHERE id = $2 AND vip_level = $3`,
+        [newLevel, userId, currentLevel]
+      );
+      if (levelUpd.rowCount === 0) {
+        // অন্য কোনো concurrent কল ইতিমধ্যে আপগ্রেড করে ফেলেছে — বোনাস আর দ্বিতীয়বার দেওয়া হবে না
+        await client.query('COMMIT');
+        return;
+      }
 
       if (bonus > 0) {
-        await pool.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [bonus, userId]);
-        await pool.query(
+        await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [bonus, userId]);
+        await client.query(
           `INSERT INTO coin_transactions (user_id, amount, type, description)
            VALUES ($1, $2, 'vip_upgrade', $3)`,
           [userId, bonus, `VIP ${name} আপগ্রেড বোনাস`]
         );
       }
-      const notifRow = (await pool.query(
+      const notifRow = (await client.query(
         `INSERT INTO notifications (user_id, title, message, type)
          VALUES ($1, 'VIP আপগ্রেড!', $2, 'success') RETURNING *`,
         [userId, `অভিনন্দন! আপনি VIP ${name} (লেভেল ${newLevel}) হয়েছেন।${bonus > 0 ? ' বোনাস: ' + bonus + ' কয়েন।' : ''}`]
       )).rows[0];
 
-      // ---- নতুন (additive): VIP Upgrade History + একীভূত Reward History এ একই ইভেন্ট রেকর্ড ----
-      try {
-        await pool.query(
-          `INSERT INTO vip_upgrade_history (user_id, from_level, to_level, bonus, total_turnover_at_upgrade)
-           VALUES ($1, $2, $3, $4, $5)`,
-          [userId, currentLevel, newLevel, bonus, totalTurnover]
+      await client.query(
+        `INSERT INTO vip_upgrade_history (user_id, from_level, to_level, bonus, total_turnover_at_upgrade)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [userId, currentLevel, newLevel, bonus, totalTurnover]
+      );
+      if (bonus > 0) {
+        await client.query(
+          `INSERT INTO vip_reward_history (user_id, vip_level, reward_type, amount, description)
+           VALUES ($1, $2, 'upgrade_bonus', $3, $4)`,
+          [userId, newLevel, bonus, `VIP ${name} আপগ্রেড বোনাস`]
         );
-        if (bonus > 0) {
-          await pool.query(
-            `INSERT INTO vip_reward_history (user_id, vip_level, reward_type, amount, description)
-             VALUES ($1, $2, 'upgrade_bonus', $3, $4)`,
-            [userId, newLevel, bonus, `VIP ${name} আপগ্রেড বোনাস`]
-          );
-        }
-        if (notifRow) { const n = getNotify(); if (n.emitToUser) n.emitToUser(userId, notifRow); }
-      } catch (histErr) {
-        console.error('vip upgrade history log error (non-blocking):', histErr.message);
       }
+
+      await client.query('COMMIT');
+
+      try {
+        const { logEvent: logAuditEvent } = require('./auditLog');
+        await logAuditEvent({
+          actorType: 'system', actorId: userId,
+          action: 'VIP_AUTO_UPGRADE', category: 'financial', riskLevel: 'low',
+          details: { userId, fromLevel: currentLevel, toLevel: newLevel, bonus, totalTurnover }
+        });
+      } catch (auditErr) {
+        console.error('vip upgrade audit log error (non-blocking):', auditErr.message);
+      }
+
+      if (notifRow) { const n = getNotify(); if (n.emitToUser) n.emitToUser(userId, notifRow); }
+    } else {
+      await client.query('COMMIT');
     }
   } catch (e) {
+    await client.query('ROLLBACK').catch(() => {});
     console.error('addVipTurnover error:', e.message);
+  } finally {
+    client.release();
   }
+}
+
+/**
+ * ==================== ডিপোজিট বোনাস (VIP Deposit Bonus) ====================
+ * সফল (approved) ডিপোজিটের পর ইউজারের বর্তমান VIP লেভেল অনুযায়ী deposit_bonus_percent
+ * প্রয়োগ করে। routes/payment.js-এর creditApprovedDeposit()-এর ভেতর থেকে, deposit approve-এর
+ * SAME transaction-এর client দিয়ে কল করা হয় (SAVEPOINT-এ wrap করা, ব্যর্থ হলেও মূল ডিপোজিট আটকাবে না)।
+ * Server-side-only হিসেবে ডিজাইন করা — ক্লায়েন্ট থেকে percent/amount কিছুই পাঠানো হয় না,
+ * সম্পূর্ণটাই vip_levels টেবিল থেকে DB-সাইডে গণনা হয়।
+ */
+async function applyVipDepositBonus(client, userId, depositAmount) {
+  if (!depositAmount || depositAmount <= 0) return 0;
+
+  const userRes = await client.query(`SELECT vip_level FROM users WHERE id = $1`, [userId]);
+  if (!userRes.rows[0]) return 0;
+  const level = userRes.rows[0].vip_level || 0;
+
+  const lvlRes = await client.query(`SELECT * FROM vip_levels WHERE level = $1 AND is_active = true`, [level]);
+  const lvl = lvlRes.rows[0];
+  if (!lvl || !lvl.deposit_bonus_percent || lvl.deposit_bonus_percent <= 0) return 0;
+
+  const bonus = Math.floor((Number(depositAmount) * Number(lvl.deposit_bonus_percent)) / 100);
+  if (bonus <= 0) return 0;
+
+  await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [bonus, userId]);
+  await client.query(
+    `INSERT INTO coin_transactions (user_id, amount, type, description)
+     VALUES ($1, $2, 'vip_deposit_bonus', $3)`,
+    [userId, bonus, `VIP ${lvl.name} ডিপোজিট বোনাস (${lvl.deposit_bonus_percent}%)`]
+  );
+  await client.query(
+    `INSERT INTO vip_reward_history (user_id, vip_level, reward_type, amount, description)
+     VALUES ($1, $2, 'deposit_bonus', $3, $4)`,
+    [userId, level, bonus, `৳${depositAmount} ডিপোজিটে ${lvl.deposit_bonus_percent}% VIP বোনাস`]
+  );
+
+  try {
+    const { logEvent: logAuditEvent } = require('./auditLog');
+    await logAuditEvent({
+      actorType: 'system', actorId: userId,
+      action: 'VIP_DEPOSIT_BONUS', category: 'financial', riskLevel: 'low',
+      details: { userId, level, depositAmount, bonus, percent: lvl.deposit_bonus_percent }
+    });
+  } catch (auditErr) {
+    console.error('vip deposit-bonus audit log error (non-blocking):', auditErr.message);
+  }
+
+  return bonus;
 }
 
 // ==================== VIP স্ট্যাটাস দেখা ====================
@@ -518,6 +597,8 @@ async function listAllUpgradeHistory({ page = 1, limit = 50 } = {}) {
 module.exports = {
   // বিদ্যমান (অপরিবর্তিত)
   addVipTurnover, getVipStatus,
+  // নতুন — VIP Deposit Bonus (স্বয়ংক্রিয়, সার্ভার-সাইড)
+  applyVipDepositBonus,
   // Daily/Weekly/Monthly VIP বোনাস
   getDailyBonusStatus, claimDailyBonus,
   getWeeklyVipStatus, claimWeeklyVipReward,
