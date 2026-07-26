@@ -18,7 +18,36 @@
     .pay-panel.active { display: block; }
     .pending-strip { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; font-size: 12px; color: #f59e0b; font-weight: 700; }
   </style>
+    <meta name="csrf-token" content="<%= locals.csrfToken || '' %>">
+    <script>
+    (function() {
+      var CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+      if (!CSRF_TOKEN) return;
+      function injectIntoForms() {
+        document.querySelectorAll('form').forEach(function(form) {
+          if ((form.getAttribute('method') || 'get').toLowerCase() !== 'post') return;
+          if (form.querySelector('input[name="_csrf"]')) return;
+          var input = document.createElement('input');
+          input.type = 'hidden'; input.name = '_csrf'; input.value = CSRF_TOKEN;
+          form.appendChild(input);
+        });
+      }
+      document.addEventListener('DOMContentLoaded', injectIntoForms);
+      new MutationObserver(injectIntoForms).observe(document.documentElement, { childList: true, subtree: true });
+      var origFetch = window.fetch;
+      window.fetch = function(input, init) {
+        init = init || {};
+        var method = (init.method || (typeof input === 'object' && input.method) || 'GET').toUpperCase();
+        if (['POST','PUT','PATCH','DELETE'].includes(method)) {
+          init.headers = new Headers(init.headers || {});
+          if (!init.headers.has('X-CSRF-Token')) init.headers.set('X-CSRF-Token', CSRF_TOKEN);
+        }
+        return origFetch.call(this, input, init);
+      };
+    })();
+    </script>
 </head>
+
 <body>
   <div class="admin-wrap">
     <%- include('../admin/partials/sidebar', { active: 'payments' }) %>

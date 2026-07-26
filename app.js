@@ -291,6 +291,10 @@ app.use((req, res, next) => {
   return next();
 });
 
+// ==================== CSRF টোকেন সুরক্ষা (Synchronizer Token Pattern) ====================
+const { csrfProtection } = require('./middleware/csrf');
+app.use(csrfProtection);
+
 app.use(responseHelpers);
 app.use(apiGateway);
 
