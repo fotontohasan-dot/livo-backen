@@ -1,0 +1,163 @@
+<%
+const r = report || {};
+const checks = r.checks || {};
+
+function statusColor(s) {
+  if (s === 'healthy') return { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', dot: 'bg-emerald-500', badge: 'bg-emerald-100 text-emerald-700' };
+  if (s === 'warning') return { bg: 'bg-amber-50',   border: 'border-amber-200',   text: 'text-amber-700',   dot: 'bg-amber-400',   badge: 'bg-amber-100 text-amber-700' };
+  return                       { bg: 'bg-red-50',     border: 'border-red-200',     text: 'text-red-700',     dot: 'bg-red-500',     badge: 'bg-red-100 text-red-700' };
+}
+
+function statusLabel(s) {
+  return s === 'healthy' ? 'Healthy' : s === 'warning' ? 'Warning' : 'Error';
+}
+
+function card(title, icon, check, extraHtml) {
+  const c = check || {};
+  const sc = statusColor(c.status || 'error');
+  return `
+<div class="bg-white rounded-3xl border ${sc.border} p-5 shadow-sm">
+  <div class="flex items-center justify-between mb-4">
+    <div class="flex items-center gap-3">
+      <span class="text-xl">${icon}</span>
+      <span class="font-semibold text-slate-800">${title}</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full ${sc.dot} inline-block"></span>
+      <span class="px-3 py-1 text-xs font-bold rounded-full ${sc.badge}">${statusLabel(c.status)}</span>
+    </div>
+  </div>
+  <div class="space-y-1 text-sm text-slate-500">
+    ${c.error ? `<p class="text-red-600 text-xs"><i class="fas fa-triangle-exclamation mr-1"></i>${c.error}</p>` : ''}
+    ${c.note  ? `<p class="text-amber-600 text-xs"><i class="fas fa-circle-info mr-1"></i>${c.note}</p>` : ''}
+    ${extraHtml || ''}
+  </div>
+</div>`;
+}
+
+function row(label, value) {
+  return `<div class="flex justify-between"><span>${label}</span><span class="font-medium text-slate-700">${value}</span></div>`;
+}
+
+const pg    = checks.postgres || {};
+const redis = checks.redis    || {};
+const queue = checks.queue    || {};
+const email = checks.email    || {};
+const mem   = checks.memory   || {};
+const disk  = checks.disk     || {};
+const up    = checks.uptime   || {};
+
+const pgExtra = [
+  pg.latencyMs   != null ? row('Latency', pg.latencyMs + ' ms') : '',
+  pg.userCount   != null ? row('Users', pg.userCount) : ''
+].join('');
+
+const redisExtra = [
+  redis.latencyMs != null ? row('Latency', redis.latencyMs + ' ms') : ''
+].join('');
+
+const queueExtra = [
+  queue.latencyMs  != null ? row('Latency', queue.latencyMs + ' ms') : '',
+  queue.totalActive != null ? row('Active Jobs', queue.totalActive) : '',
+  queue.totalWaiting!= null ? row('Waiting', queue.totalWaiting) : '',
+  queue.totalFailed != null ? row('Failed', queue.totalFailed) : ''
+].join('');
+
+const emailExtra = [
+  email.provider ? row('Provider', email.provider) : '',
+  email.latencyMs != null ? row('Latency', email.latencyMs + ' ms') : ''
+].join('');
+
+const memExtra = [
+  mem.usagePct   != null ? `<div class="mt-2 bg-slate-100 rounded-full h-1.5 overflow-hidden"><div class="h-1.5 rounded-full ${mem.usagePct > 90 ? 'bg-red-500' : mem.usagePct > 75 ? 'bg-amber-400' : 'bg-emerald-500'}" style="width:${mem.usagePct}%"></div></div>` : '',
+  mem.usagePct   != null ? row('RAM Used', mem.usagePct + '%') : '',
+  mem.freeMB     != null ? row('Free', mem.freeMB + ' MB') : '',
+  mem.totalMB    != null ? row('Total', mem.totalMB + ' MB') : '',
+  mem.heapUsedMB != null ? row('Heap Used', mem.heapUsedMB + ' MB') : '',
+  mem.rssMB      != null ? row('RSS', mem.rssMB + ' MB') : ''
+].join('');
+
+const diskExtra = [
+  disk.usagePct != null ? `<div class="mt-2 bg-slate-100 rounded-full h-1.5 overflow-hidden"><div class="h-1.5 rounded-full ${disk.usagePct > 90 ? 'bg-red-500' : disk.usagePct > 75 ? 'bg-amber-400' : 'bg-emerald-500'}" style="width:${disk.usagePct}%"></div></div>` : '',
+  disk.usagePct != null ? row('Used', disk.usagePct + '%') : '',
+  disk.usedMB   != null ? row('Used Space', disk.usedMB + ' MB') : '',
+  disk.availMB  != null ? row('Available', disk.availMB + ' MB') : '',
+  disk.totalMB  != null ? row('Total', disk.totalMB + ' MB') : ''
+].join('');
+
+const upExtra = [
+  up.appUptime  ? row('App Uptime', up.appUptime) : '',
+  up.sysUptime  ? row('System Uptime', up.sysUptime) : '',
+  up.nodeVersion? row('Node.js', up.nodeVersion) : '',
+  up.cpus       ? row('CPUs', up.cpus) : '',
+  up.pid        ? row('PID', up.pid) : ''
+].join('');
+
+const overallColor = statusColor(r.overall || 'error');
+const ts = r.timestamp ? new Date(r.timestamp).toLocaleString('bn-BD') : '';
+%>
+<%- include('partials/admin-layout', {
+  title: 'System Diagnostics',
+  active: 'diagnostics',
+  body: `
+<div class="max-w-6xl mx-auto" id="diagnostics-root">
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold text-slate-900">System Diagnostics</h1>
+      <p class="text-slate-400 text-sm mt-1">সর্বশেষ চেক: <span id="ts">${ts}</span></p>
+    </div>
+    <div class="flex gap-3 items-center">
+      <span id="overall-badge" class="px-4 py-1.5 text-sm font-bold rounded-full ${overallColor.badge}">
+        ${statusLabel(r.overall)}
+      </span>
+      <button onclick="refreshDiagnostics()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-semibold flex items-center gap-2">
+        <i class="fas fa-rotate-right" id="refresh-icon"></i> রিফ্রেশ
+      </button>
+    </div>
+  </div>
+
+  <!-- Cards Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" id="cards-grid">
+    ${card('PostgreSQL', '🐘', pg, pgExtra)}
+    ${card('Redis', '⚡', redis, redisExtra)}
+    ${card('Queue System', '📋', queue, queueExtra)}
+    ${card('Email Service', '📧', email, emailExtra)}
+    ${card('Memory', '🧠', mem, memExtra)}
+    ${card('Disk Space', '💾', disk, diskExtra)}
+    ${card('Uptime & Runtime', '⏱️', up, upExtra)}
+  </div>
+
+  <!-- Endpoint Info -->
+  <div class="mt-8 bg-slate-50 rounded-2xl p-5 border border-slate-200">
+    <p class="text-xs font-semibold text-slate-500 uppercase mb-3">Monitoring Endpoints</p>
+    <div class="flex flex-wrap gap-3">
+      <a href="/health" target="_blank" class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-600 hover:bg-slate-100">GET /health</a>
+      <a href="/ready"  target="_blank" class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-600 hover:bg-slate-100">GET /ready</a>
+      <a href="/admin/diagnostics/json" target="_blank" class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-600 hover:bg-slate-100">GET /admin/diagnostics/json</a>
+    </div>
+  </div>
+</div>
+
+<script>
+async function refreshDiagnostics() {
+  const icon = document.getElementById('refresh-icon');
+  const ts   = document.getElementById('ts');
+  icon.classList.add('fa-spin');
+  try {
+    const res  = await fetch('/admin/diagnostics/json');
+    const data = await res.json();
+    const statusLabel = (s) => s === 'healthy' ? 'Healthy' : s === 'warning' ? 'Warning' : 'Error';
+    const badgeClass  = (s) => s === 'healthy' ? 'bg-emerald-100 text-emerald-700' : s === 'warning' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700';
+    const ob = document.getElementById('overall-badge');
+    ob.textContent  = statusLabel(data.overall);
+    ob.className    = 'px-4 py-1.5 text-sm font-bold rounded-full ' + badgeClass(data.overall);
+    ts.textContent  = new Date(data.timestamp).toLocaleString('bn-BD');
+  } catch(e) {}
+  finally { icon.classList.remove('fa-spin'); }
+}
+// 30 সেকেন্ড পর পর অটো-রিফ্রেশ
+setInterval(refreshDiagnostics, 30000);
+</script>
+`
+}) %>

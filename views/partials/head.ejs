@@ -59,61 +59,6 @@
     @keyframes livoSpin { to { transform: rotate(360deg); } }
     button:disabled { opacity: 0.75; cursor: not-allowed; }
   </style>
-
-  <!-- ==================== CSRF টোকেন (Synchronizer Token Pattern) ====================
-       middleware/csrf.js প্রতিটা GET রিকোয়েস্টে res.locals.csrfToken সেট করে দেয়।
-       নিচের স্ক্রিপ্ট সব <form method="post"> এ স্বয়ংক্রিয়ভাবে hidden _csrf ফিল্ড বসায় এবং
-       fetch/XHR দিয়ে পাঠানো POST/PUT/PATCH/DELETE-এ X-CSRF-Token হেডার যোগ করে — কোনো
-       আলাদা ফর্ম বা JS ফাইল ম্যানুয়ালি এডিট না করেই পুরো সাইটে CSRF টোকেন কভারেজ পাওয়া যায়। -->
-  <meta name="csrf-token" content="<%= locals.csrfToken || '' %>">
-  <script>
-  (function() {
-    var CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-    if (!CSRF_TOKEN) return;
-
-    function injectIntoForms() {
-      document.querySelectorAll('form').forEach(function(form) {
-        var method = (form.getAttribute('method') || 'get').toLowerCase();
-        if (method !== 'post') return;
-        if (form.querySelector('input[name="_csrf"]')) return;
-        var input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = '_csrf';
-        input.value = CSRF_TOKEN;
-        form.appendChild(input);
-      });
-    }
-    document.addEventListener('DOMContentLoaded', injectIntoForms);
-    // ডাইনামিকভাবে JS দিয়ে যোগ হওয়া ফর্মও কভার করার জন্য
-    new MutationObserver(injectIntoForms).observe(document.documentElement, { childList: true, subtree: true });
-
-    // fetch() প্যাচ — সেইম-অরিজিন state-changing রিকোয়েস্টে অটো হেডার যোগ করে
-    var origFetch = window.fetch;
-    window.fetch = function(input, init) {
-      init = init || {};
-      var method = (init.method || (typeof input === 'object' && input.method) || 'GET').toUpperCase();
-      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
-        init.headers = new Headers(init.headers || {});
-        if (!init.headers.has('X-CSRF-Token')) init.headers.set('X-CSRF-Token', CSRF_TOKEN);
-      }
-      return origFetch.call(this, input, init);
-    };
-
-    // XMLHttpRequest প্যাচ — legacy AJAX কভার করার জন্য
-    var origOpen = XMLHttpRequest.prototype.open;
-    var origSend = XMLHttpRequest.prototype.send;
-    XMLHttpRequest.prototype.open = function(method) {
-      this._csrfMethod = (method || 'GET').toUpperCase();
-      return origOpen.apply(this, arguments);
-    };
-    XMLHttpRequest.prototype.send = function(body) {
-      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(this._csrfMethod)) {
-        try { this.setRequestHeader('X-CSRF-Token', CSRF_TOKEN); } catch (e) {}
-      }
-      return origSend.call(this, body);
-    };
-  })();
-  </script>
 </head>
 <body>
 
@@ -157,44 +102,5 @@
       <% error.forEach(function (m) { %> LivoToast.show(<%- JSON.stringify(m) %>, 'error'); <% }) %>
     <% } %>
   });
-
-  // ==================== রিয়েল-টাইম নোটিফিকেশন (Deposit/Withdraw/Bet/Security/Announcement) ====================
-  <% if (typeof user !== 'undefined' && user) { %>
-  (function () {
-    function setBadge(count) {
-      var els = document.querySelectorAll('#notifBadge, .notif-badge');
-      els.forEach(function (el) {
-        if (count > 0) { el.textContent = count > 99 ? '99+' : String(count); el.style.display = 'flex'; }
-        else { el.style.display = 'none'; }
-      });
-    }
-
-    // পেজ লোডে আনরিড কাউন্ট নিয়ে আসা
-    fetch('/notifications/count').then(function (r) { return r.json(); }).then(function (d) {
-      setBadge(d && d.count ? d.count : 0);
-    }).catch(function () {});
-
-    // socket.io ক্লায়েন্ট লাইব্রেরি লোড করে সরাসরি রিয়েল-টাইম কানেকশন
-    var s = document.createElement('script');
-    s.src = '/socket.io/socket.io.js';
-    s.onload = function () {
-      try {
-        var socket = io();
-        socket.on('connect', function () { socket.emit('join'); });
-        socket.on('notification', function (n) {
-          if (!n) return;
-          var typeMap = { security: 'error', error: 'error', success: 'success', withdraw: 'info', deposit: 'success' };
-          var toastType = typeMap[n.type] || 'info';
-          if (window.LivoToast) LivoToast.show((n.title ? n.title + ': ' : '') + (n.message || ''), toastType);
-          // ব্রডকাস্ট বা নতুন নোটিফিকেশন এলে আনরিড কাউন্ট রিফ্রেশ করা
-          fetch('/notifications/count').then(function (r) { return r.json(); }).then(function (d) {
-            setBadge(d && d.count ? d.count : 0);
-          }).catch(function () {});
-        });
-      } catch (e) { /* socket ব্যর্থ হলেও পেজ স্বাভাবিকভাবে কাজ করবে */ }
-    };
-    document.body.appendChild(s);
-  })();
-  <% } %>
 </script>
 

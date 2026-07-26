@@ -1,23 +1,20 @@
 require('dotenv').config();
 const process = require('node:process');
 
-// ==================== Sentry মনিটরিং — সবার আগে init করা হয় যাতে পরবর্তী
-// সব require/middleware/route-এর এরর স্বয়ংক্রিয়ভাবে ধরা পড়ে ====================
-const sentryService = require('./services/sentry');
-sentryService.init();
-
 // ==================== প্রসেস-লেভেল ক্র্যাশ গার্ড ====================
 // কোনো একটা জায়গায় unhandled promise rejection হলে Node.js (v15+) ডিফল্টভাবে
 // পুরো প্রসেস বন্ধ করে দেয় — তখন Render/হোস্টিং প্ল্যাটফর্মের জেনেরিক
 // "Internal Server Error" পেজ দেখা যায় যতক্ষণ না প্রসেস আবার রিস্টার্ট হয়।
-// এখানে সেটা আটকে শুধু লগ করে সার্ভার চালু রাখা হচ্ছে — এখন Sentry-তেও রিপোর্ট হয়।
+// এখানে সেটা আটকে শুধু লগ করে সার্ভার চালু রাখা হচ্ছে।
 process.on('unhandledRejection', (reason) => {
   console.error('⚠️ Unhandled Rejection:', reason && reason.stack ? reason.stack : reason);
-  sentryService.captureException(reason instanceof Error ? reason : new Error(String(reason)), { source: 'unhandledRejection' });
 });
 process.on('uncaughtException', (err) => {
   console.error('⚠️ Uncaught Exception:', err && err.stack ? err.stack : err);
-  sentryService.captureException(err, { source: 'uncaughtException' });
+});
+process.on('SIGTERM', async () => {
+  try { const { stopWorkers } = require('./services/queue'); await stopWorkers(); } catch (e) {}
+  process.exit(0);
 });
 
 const express = require('express');
@@ -30,18 +27,15 @@ const path = require('path');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const cors = require('cors');
-const cookieParser = require('cookie-parser');
 const compression = require('compression');
 const { connectDB, pool } = require('./db');
 const { syncMatches } = require('./services/matchUpdater');
 const runMigrations = require('./migrations');
 const { apiGateway, responseHelpers } = require('./middleware/gateway');
 const { scheduleDailyBackup } = require('./services/backup');
-const { scheduleAutoBackup } = require('./services/backupManager');
 const { touchDeviceActivity } = require('./services/deviceTracking');
-require('./services/cache');
-const appMetrics = require('./services/metrics');
-const { requireMetricsAccess } = require('./middleware/metricsAuth');
+require('./services/cache'); // অ্যাপ বুট হওয়ার সাথে সাথেই Redis কানেকশন অ্যাটেম্পট শুরু হয় (কানেক্ট না হলেও অ্যাপ চলতে থাকে)
+const { startWorkers, stopWorkers } = require('./services/queue');
 
 const app = express();
 app.use(compression());
@@ -53,6 +47,17 @@ const SESSION_SECRET = process.env.SESSION_SECRET || require('crypto').randomByt
 if (!process.env.SESSION_SECRET) {
   console.warn('⚠️ SESSION_SECRET সেট করা নেই — সাময়িক র‍্যানম সিক্রেট ব্যবহার হচ্ছে। প্রোডকশনে অবশ্যই SESSION_SECRET সেট করুন।');
 }
+
+
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: '0',
+  etag: false
+}));
+
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -81,31 +86,23 @@ if (process.env.NODE_ENV === 'production') {
   cspDirectives.upgradeInsecureRequests = [];
 }
 
-const isProdEnv = process.env.NODE_ENV === 'production';
-
 app.use(helmet({
   contentSecurityPolicy: { directives: cspDirectives },
+  // Cloudinary/Google Fonts/CDN-এর মতো ক্রস-অরিজিন রিসোর্স লোড করতে হয় বলে
+  // COEP বন্ধ রাখা হয়েছে — এটা চালু থাকলে ওই রিসোর্সগুলো ব্লক হয়ে যেত।
   crossOriginEmbedderPolicy: false,
   crossOriginResourcePolicy: { policy: 'cross-origin' },
-  hsts: isProdEnv ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
-  frameguard: { action: 'sameorigin' },
-  noSniff: true,
-  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
-app.use((req, res, next) => {
-  res.setHeader(
-    'Permissions-Policy',
-    'geolocation=(), camera=(), microphone=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), payment=(self), fullscreen=(self)'
-  );
-  next();
-});
-app.use(require('./middleware/requestId'));
-app.use(appMetrics.httpMiddleware);
+// লিগ্যাসি ব্রাউজারের জন্য X-XSS-Protection (আধুনিক ব্রাউজার CSP-ই যথেষ্ট মানে, হেডারটা ignore করে,
+// কিন্তু পুরনো ব্রাউজার সাপোর্টের জন্য স্ট্যান্ডার্ড হিসেবে রাখা হলো)
 app.use((req, res, next) => {
   res.setHeader('X-XSS-Protection', '1; mode=block');
   next();
 });
 
+// ==================== CORS ====================
+// কাস্টম ডোমেইন এখনো কেনা হয়নি, তাই আপাতত Render subdomain + লোকাল ডেভেলপমেন্ট origin-ই অনুমোদিত।
+// কাস্টম ডোমেইন কেনা হলে ALLOWED_ORIGINS-এ যোগ করে দিতে হবে।
 const ALLOWED_ORIGINS = [
   'https://livo-backen.onrender.com',
   'http://localhost:3000',
@@ -114,13 +111,14 @@ const LOCALHOST_ANY_PORT = /^http:\/\/localhost:\d+$/;
 
 app.use(cors({
   origin(origin, callback) {
+    // origin হেডার ছাড়া বা "null" (sandboxed webview/in-app browser) রিকোয়েস্ট অনুমোদিত
     if (!origin || origin === 'null') return callback(null, true);
     if (ALLOWED_ORIGINS.includes(origin) || LOCALHOST_ANY_PORT.test(origin)) {
       return callback(null, true);
     }
     return callback(null, false);
   },
-  credentials: true,
+  credentials: true, // session cookie পাঠাতে/পেতে দরকার
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
 }));
@@ -145,40 +143,36 @@ const sessionMiddleware = session({
     sameSite: 'lax'
   }
 });
-app.use(cookieParser());
 app.use(sessionMiddleware);
-app.use(sentryService.userContextMiddleware); // লগইন করা থাকলে Sentry ইভেন্টে ইউজার কনটেক্সট যোগ হবে
 
+// session middleware রেডি হওয়ার পর socket.io ইনিশিয়ালাইজ করা হচ্ছে,
+// যাতে socket connection-এও একই লগইন session ব্যবহার করে ইউজার/অ্যাডমিন যাচাই করা যায়
 initSocket(server, sessionMiddleware);
 
 app.use(flash());
-
-const RedisRateLimitStore = require('./services/redisRateLimitStore');
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
   message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
   standardHeaders: true,
-  legacyHeaders: false,
-  store: new RedisRateLimitStore('rl:login:')
+  legacyHeaders: false
 });
 
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 300,
   standardHeaders: true,
-  legacyHeaders: false,
-  store: new RedisRateLimitStore('rl:general:')
+  legacyHeaders: false
 });
 
+// ডিপোজিট/উইথড্র/কার্ড/পাসওয়ার্ড — টাকা-সংক্রান্ত ও অ্যাকাউন্ট-সংবেদনশীল রুটে কড়া রেট-লিমিট
 const financialLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
   message: 'অনেকবার চেষ্টা করেছেন। কিছুক্ষণ পর আবার চেষ্টা করুন।',
   standardHeaders: true,
-  legacyHeaders: false,
-  store: new RedisRateLimitStore('rl:financial:')
+  legacyHeaders: false
 });
 
 app.use(generalLimiter);
@@ -192,30 +186,15 @@ app.use('/profile/change-password', financialLimiter);
 app.use('/profile/update', financialLimiter);
 app.use('/profile/update-personal', financialLimiter);
 
-const fs = require('fs');
-const LOCALES_DIR = path.join(__dirname, 'locales');
-function loadTranslations() {
-  return {
-    bn: JSON.parse(fs.readFileSync(path.join(LOCALES_DIR, 'bn.json'), 'utf8')),
-    en: JSON.parse(fs.readFileSync(path.join(LOCALES_DIR, 'en.json'), 'utf8'))
-  };
-}
-let translations = loadTranslations();
-function refreshTranslationsCache() { translations = loadTranslations(); }
-app.set('refreshTranslationsCache', refreshTranslationsCache);
-app.set('getTranslations', () => translations);
+// ভাষা সেটিং
+const translations = {
+  bn: require('./locales/bn.json'),
+  en: require('./locales/en.json')
+};
 
 app.get('/lang/:code', (req, res) => {
   req.session.lang = req.params.code === 'en' ? 'en' : 'bn';
   res.redirect(req.get('Referer') || '/');
-});
-
-app.post('/announcements/:id/dismiss', async (req, res) => {
-  try {
-    const { dismiss } = require('./services/announcements');
-    await dismiss(req.params.id, req.session.user ? req.session.user.id : null);
-    res.json({ ok: true });
-  } catch (e) { res.json({ ok: false }); }
 });
 
 app.use((req, res, next) => {
@@ -224,12 +203,14 @@ app.use((req, res, next) => {
   res.locals.success = req.flash('success');
   res.locals.error = req.flash('error');
 
+  // ডিভাইস "last activity" আপডেট — থ্রটলড, নন-ব্লকিং, লগইন করা ইউজারের জন্যই শুধু
   if (req.session && req.session.user) {
     touchDeviceActivity(req).catch(() => {});
   }
 
   const lang = req.session.lang === 'en' ? 'en' : 'bn';
   const t_func = (key) => translations[lang][key] || key;
+  // Proxy allow both t('key') and t.key
   res.locals.t = new Proxy(t_func, {
     get: (target, prop) => translations[lang][prop] || prop
   });
@@ -244,43 +225,40 @@ app.use((req, res, next) => {
   }
   res.locals.currentPage = page;
 
-  if (!req.path.startsWith('/admin')) {
-    const { getAllActiveForUser } = require('./services/announcements');
-    getAllActiveForUser(req.session.user || null)
-      .then(list => { res.locals.activeAnnouncements = list; next(); })
-      .catch(() => { res.locals.activeAnnouncements = []; next(); });
-    return;
-  }
-  res.locals.activeAnnouncements = [];
   next();
 });
 
-app.use('/', require('./routes/health'));
-
-app.get('/metrics', requireMetricsAccess, async (req, res) => {
+app.get('/health', async (req, res) => {
   try {
-    if (!appMetrics.enabled) {
-      return res.status(503).type('text/plain').send('# metrics disabled: prom-client not installed\n');
-    }
-    await appMetrics.refreshAsyncMetrics();
-    res.set('Content-Type', appMetrics.register.contentType);
-    res.end(await appMetrics.register.metrics());
+    const { liveness } = require('./services/healthCheck');
+    const data = await liveness();
+    res.status(200).json(data);
   } catch (err) {
-    console.error('[metrics] /metrics endpoint error:', err.message);
-    res.status(500).type('text/plain').send('# error collecting metrics\n');
+    res.status(200).json({ status: 'ok' }); // liveness সবসময় 200
   }
 });
 
+app.get('/ready', async (req, res) => {
+  try {
+    const { readiness } = require('./services/healthCheck');
+    const data = await readiness();
+    res.status(200).json(data);
+  } catch (err) {
+    res.status(503).json({ status: 'not_ready', error: err.message });
+  }
+});
 app.get('/privacy', (req, res) => res.render('privacy'));
 app.get('/terms', (req, res) => res.render('terms'));
 app.get('/kyc', (req, res) => res.redirect('/extra/kyc'));
 app.get('/rules', (req, res) => res.render('rules'));
 
+// ==================== CSRF সুরক্ষা (Origin যাচাই) ====================
 app.use((req, res, next) => {
-  if (req.path.startsWith('/payment/sslcommerz/')) return next();
+  if (req.path.startsWith('/payment/sslcommerz/')) return next(); // গেটওয়ে ভিন্ন ডোমেইন থেকে POST করে
   if (!['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) return next();
   const host = req.get('host');
   const origin = req.get('origin');
+  // শুধু Origin থাকলে এবং ভুল হলে আটকাবে; না থাকলে ছেড়ে দেবে
   if (origin) {
     try {
       if (new URL(origin).host !== host) {
@@ -291,13 +269,14 @@ app.use((req, res, next) => {
   return next();
 });
 
-// ==================== CSRF টোকেন সুরক্ষা (Synchronizer Token Pattern) ====================
-const { csrfProtection } = require('./middleware/csrf');
-app.use(csrfProtection);
-
+// ==================== API GATEWAY ====================
 app.use(responseHelpers);
 app.use(apiGateway);
+// =======================================================
 
+// ==================== MAINTENANCE MODE ====================
+// অ্যাডমিন প্যানেল, পেমেন্ট গেটওয়ে callback, টেলিগ্রাম webhook, আর স্ট্যাটিক ফাইল
+// সবসময় চালু থাকবে — বিস্তারিত middleware/maintenance.js এ।
 const { maintenanceMiddleware } = require('./middleware/maintenance');
 app.use(maintenanceMiddleware);
 
@@ -307,29 +286,39 @@ app.use('/matches', require('./routes/matches'));
 app.use('/sports', require('./routes/sports'));
 app.use('/tournaments', require('./routes/tournaments'));
 app.get('/promotions', (req, res) => res.render('promotions', { currentPage: 'promotion' }));
+
+// ==================== Bonus (দৈনিক রিওয়ার্ড ভাউচার) ====================
+// প্রতিদিন রাত ১২টায় (Asia/Dhaka) অটোমেটিক রিসেট হয় — সার্ভার থেকে পরবর্তী মধ্যরাতের
+// সময় পাঠানো হয়, ক্লায়েন্ট সাইডে প্রতি সেকেন্ডে কাউন্টডাউন আপডেট হয় (views/bonus.ejs দেখুন)।
+// বোনাস (লাকি হুইল, সোনার ডিম, রেড কার্ড) এখন প্রোফাইল → Reward Center পেজের ভেতরেই
+// ইন্টিগ্রেটেড (দেখুন views/profile/rewards.ejs) — পুরনো /bonus লিংক ওখানেই রিডিরেক্ট করে।
 app.get('/bonus', (req, res) => res.redirect('/profile/rewards'));
 
 app.use('/coins', require('./routes/coins'));
 app.use('/news', require('./routes/news'));
 app.use('/profile', require('./routes/profile'));
 app.use('/leaderboard', require('./routes/leaderboard'));
-// Server Health — admin.js-এর আগে মাউন্ট (পুরনো broken handler এড়ানো)
-app.use('/admin', require('./routes/adminHealthFix'));
 app.use('/admin', require('./routes/admin'));
+app.use('/admin/games', require('./middleware/auth').isAdmin, require('./routes/adminGames'));
 app.use('/notifications', require('./routes/notifications'));
 app.use('/help-center', require('./routes/help-center'));
 app.use('/payment', require('./routes/payment'));
 app.use('/games', require('./routes/games'));
 app.use('/accumulator', require('./routes/accumulator'));
 app.use('/chat', require('./routes/chat'));
-app.use('/api', require('./routes/api'));
 app.use('/extra', require('./routes/extra'));
+// ===============================================
 
 app.get('/app/update', (req, res) => res.render('app/update'));
 
+// Telegram Bot Webhook
 const { handleMessage, verifyWebhookSecret } = require('./telegram-bot');
 app.post('/telegram-webhook', express.json(), async (req, res) => {
   try {
+    // নিরাপত্তা: Telegram থেকে সত্যিই এসেছে কিনা যাচাই করা হচ্ছে।
+    // এই header Telegram নিজে পাঠায় যদি setWebhook-এ secret_token দেওয়া থাকে।
+    // এটা না মিললে request বাতিল — এই বট GitHub-এ সরাসরি write করতে পারে,
+    // তাই এই চেক ছাড়া যে কেউ URL-এ POST করে কোড এডিট করাতে পারত।
     const incomingSecret = req.get('X-Telegram-Bot-Api-Secret-Token');
     if (!verifyWebhookSecret(incomingSecret)) {
       console.warn('⚠️ /telegram-webhook: অবৈধ বা অনুপস্থিত secret token — request বাতিল।');
@@ -346,7 +335,6 @@ app.post('/telegram-webhook', express.json(), async (req, res) => {
 });
 
 // Error Handling
-sentryService.attachExpressErrorHandler(app); // HTTP এরর অটোমেটিক Sentry-তে রিপোর্ট হবে (নিজের error handler-এর আগে বসাতে হয়)
 app.use((err, req, res, next) => {
   console.error('❌ Unhandled Error:', err.stack);
   pool.query(
@@ -362,6 +350,8 @@ app.use((err, req, res, next) => {
 
   const serverErrorMsg = (res.locals && res.locals.t && res.locals.t.server_error) ? res.locals.t.server_error : 'Server Error / সার্ভার ত্রুটি';
 
+  // fetch/AJAX/API কলে HTML পেজ ফেরত পাঠালে client-side JSON.parse ভেঙে যায়,
+  // তাই সেসব ক্ষেত্রে JSON error দেওয়া হচ্ছে — raw error message/stack কখনোই client-এ যাচ্ছে না
   const wantsJson = req.xhr
     || (req.headers.accept && req.headers.accept.includes('application/json'))
     || req.path.startsWith('/api')
@@ -394,28 +384,13 @@ async function startServer() {
     await runMigrations();
     console.log("✅ DB migration done");
 
-    try {
-      const { ensureCriticalTables } = require('./services/ensureCriticalTables');
-      await ensureCriticalTables();
-    } catch (e) {
-      console.error('ensureCriticalTables:', e.message);
-    }
-
-    try {
-      const { initQueueSystem } = require('./queues');
-      await initQueueSystem();
-    } catch (err) {
-      console.error('⚠️ Queue System চালু করতে সমস্যা হয়েছে (সার্ভার চলতে থাকবে):', err.message);
-    }
-
     server.listen(PORT, () => {
       console.log(`✅ Server running on port ${PORT}`);
       setTimeout(() => {
         syncMatches().catch(err => console.error('Initial match sync failed:', err));
+        startWorkers(); // BullMQ Workers — Redis থাকলে শুরু হবে, না থাকলে skip
       }, 3000);
       scheduleDailyBackup();
-      scheduleAutoBackup();
-      require('./services/scheduler').start().catch(err => console.error('⚠️ Scheduler চালু করতে সমস্যা হয়েছে (সার্ভার চলতে থাকবে):', err.message));
     });
   } catch (err) {
     console.error('❌ Server startup failed:', err);
@@ -424,17 +399,4 @@ async function startServer() {
 }
 
 startServer();
-
-async function gracefulShutdown() {
-  try {
-    const { shutdownQueueSystem } = require('./queues');
-    await shutdownQueueSystem();
-  } catch (err) {
-    console.error('Queue shutdown error:', err.message);
-  }
-  process.exit(0);
-}
-process.on('SIGTERM', gracefulShutdown);
-process.on('SIGINT', gracefulShutdown);
-
 module.exports = app;

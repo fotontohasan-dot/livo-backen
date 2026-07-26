@@ -1,5 +1,4 @@
 const { pool } = require('../db');
-const { getSetting } = require('../services/settings');
 
 const isAuth = (req, res, next) => {
   if (req.session && req.session.user) return next();
@@ -18,18 +17,6 @@ const isAdmin = async (req, res, next) => {
   };
 
   if (!req.session || !req.session.user) return denyResponse();
-
-  try {
-    const idleMinutes = parseInt(await getSetting('session_idle_timeout_minutes'), 10);
-    if (idleMinutes > 0) {
-      const now = Date.now();
-      if (req.session.lastAdminActivity && (now - req.session.lastAdminActivity) > idleMinutes * 60 * 1000) {
-        req.session.destroy(() => {});
-        return denyResponse();
-      }
-      req.session.lastAdminActivity = now;
-    }
-  } catch (e) {} // সেটিংস পড়তে সমস্যা হলে টাইমআউট চেক স্কিপ (fail-open, লগইন আটকাবে না)
 
   try {
     const result = await pool.query('SELECT role FROM users WHERE id = $1', [req.session.user.id]);

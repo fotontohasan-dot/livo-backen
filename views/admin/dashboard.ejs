@@ -1,436 +1,473 @@
 <%
 function escapeHtml(str) {
   return String(str == null ? '' : str)
-    .replace(/&/g, '&')
-    .replace(/</g, '<')
-    .replace(/>/g, '>')
-    .replace(/"/g, '"')
-    .replace(/'/g, '&#39;');
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
-const totalDeposits = Number(stats.total_deposits_all_time || stats.total_deposit_all || 0);
-const totalWithdrawals = Number(stats.total_withdrawals_all_time || stats.total_withdraw_all || 0);
-const pendingTotal = Number(stats.pending_total || ((stats.pending_deposits||0)+(stats.pending_withdrawals||0)+(stats.pending_kyc||0)));
+function fmt(n) { return Number(n||0).toLocaleString('en-US'); }
+function fmtBDT(n) { return '৳ ' + fmt(n); }
+function fmtDate(d) { return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
+
+const s = stats || {};
+const rf = revenueTrend || [];
+const ug = userGrowth   || [];
+const bs = betStats7    || [];
+const sc = securitySummary || {};
+const qh = queueHealth  || {};
+const kc = kycSummary   || {};
+const td = topDepositors|| [];
+const ra = recentActivity || [];
+const ds = demoStats    || {};
+const rs = redisStatus  || {};
+const fa = fraudAlerts  || {};
+const da = dupAlerts    || {};
+const rff= recentFraudFlags || [];
+const rdf= recentDupFlags   || [];
+
+// Chart data JSON strings
+const revLabels  = JSON.stringify(rf.map(r => fmtDate(r.day)));
+const revDep     = JSON.stringify(rf.map(r => Number(r.deposit)));
+const revWit     = JSON.stringify(rf.map(r => Number(r.withdraw)));
+const ugLabels   = JSON.stringify(ug.map(r => fmtDate(r.day)));
+const ugCounts   = JSON.stringify(ug.map(r => r.count));
+const bsLabels   = JSON.stringify(bs.map(r => fmtDate(r.day)));
+const bsCnts     = JSON.stringify(bs.map(r => r.cnt));
+const bsGGR      = JSON.stringify(bs.map(r => Math.max(0, r.ggr||0)));
 %>
-<%- include('partials/admin-layout', { 
-    title: 'Dashboard', 
-    active: 'dashboard',
-    body: `
-<div class="max-w-7xl mx-auto">
-    <!-- Welcome Header + Controls -->
-    <div class="flex flex-wrap items-end justify-between gap-4 mb-8">
-        <div>
-            <h1 class="text-3xl font-semibold text-slate-900">Welcome back, Admin 👋</h1>
-            <p class="text-slate-600 mt-1">Real-time platform analytics & system health.</p>
-        </div>
-        <div class="text-right flex flex-col items-end gap-2">
-            <div class="flex items-center gap-2">
-                <label class="text-xs text-slate-500">Auto-refresh</label>
-                <select id="auto-refresh-interval" class="text-xs border border-slate-200 rounded-lg px-2 py-1">
-                    <option value="0">Off</option>
-                    <option value="15000">15s</option>
-                    <option value="20000" selected>20s</option>
-                    <option value="60000">60s</option>
-                </select>
-                <button id="btn-export-csv" class="text-xs px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 font-semibold">Export CSV</button>
-            </div>
-            <div class="text-sm text-slate-500">Last updated</div>
-            <div class="font-medium text-slate-700" id="current-time"></div>
-            <div class="mt-1 flex flex-col items-end gap-1.5">
-                <span class="px-3 py-1.5 rounded-xl text-xs font-semibold ${redisStatus.connected ? 'bg-emerald-100 text-emerald-700' : (redisStatus.enabled ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500')}">
-                    <i class="fas fa-database mr-1"></i>Redis: ${redisStatus.connected ? 'Connected' : (redisStatus.enabled ? 'Disconnected' : 'Disabled')}
-                </span>
-                ${(!redisStatus.connected && redisStatus.lastError) ? `<div class="text-[11px] text-red-500 max-w-[220px] text-right">${escapeHtml(redisStatus.lastError)}</div>` : ''}
-                <a href="/admin/queues" class="px-3 py-1.5 rounded-xl text-xs font-semibold ${queueStatus.running ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'} hover:opacity-80">
-                    <i class="fas fa-layer-group mr-1"></i>Queue: ${queueStatus.running ? 'Running' : 'Stopped'}${(queueStatus.failed || 0) > 0 ? ` · ${queueStatus.failed} failed` : ''}
-                </a>
-                <a href="/admin/system-diagnostics" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-50 text-blue-700 hover:opacity-80">
-                    <i class="fas fa-heart-pulse mr-1"></i>Server Health
-                </a>
-            </div>
-        </div>
-    </div>
+<%- include('partials/admin-layout', {
+  title: 'Dashboard',
+  active: 'dashboard',
+  body: `
+<div class="max-w-7xl mx-auto" id="dash-root">
 
-    <!-- Demo Currency Widget -->
-    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 mb-8">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="font-semibold text-slate-800">🎮 ডেমো কারেন্সি ওভারভিউ <span class="text-xs font-normal text-emerald-600">● লাইভ</span></h3>
-        </div>
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div class="p-4 rounded-2xl bg-slate-50">
-                <p class="text-xs text-slate-500">মোট ডেমো</p>
-                <p class="text-xl font-bold text-slate-900 mt-1" id="demo-total">${Number(demoStats.totalDemo || 0).toLocaleString('en-US')}</p>
-            </div>
-            <div class="p-4 rounded-2xl bg-slate-50">
-                <p class="text-xs text-slate-500">ব্যবহারকারীদের কাছে থাকা ডেমো</p>
-                <p class="text-xl font-bold text-blue-600 mt-1" id="demo-held">${Number(demoStats.userHeldDemo || 0).toLocaleString('en-US')}</p>
-            </div>
-            <div class="p-4 rounded-2xl bg-slate-50">
-                <p class="text-xs text-slate-500">ক্যাসিনো বেট ডেমো</p>
-                <p class="text-xl font-bold text-purple-600 mt-1" id="demo-casino">${Number(demoStats.casinoDemoWagered || 0).toLocaleString('en-US')}</p>
-            </div>
-            <div class="p-4 rounded-2xl bg-slate-50">
-                <p class="text-xs text-slate-500">স্পোর্টস বেটিং ডেমো</p>
-                <p class="text-xl font-bold text-orange-600 mt-1" id="demo-sports">${Number(demoStats.sportsDemoWagered || 0).toLocaleString('en-US')}</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Fraud Alerts -->
-    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 mb-8">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="font-semibold text-slate-800">🛡️ Fraud Alerts <span class="text-xs font-normal text-slate-400">ওপেন ফ্ল্যাগ</span></h3>
-            <div class="flex items-center gap-3">
-                <a href="/admin/fraud-monitoring" class="text-xs font-semibold text-blue-600 hover:underline">মনিটরিং ড্যাশবোর্ড</a>
-                <a href="/admin/fraud-logs" class="text-xs font-semibold text-blue-600 hover:underline">সব দেখুন <i class="fas fa-arrow-right ml-1"></i></a>
-            </div>
-        </div>
-        <div class="grid grid-cols-3 gap-4 mb-4">
-            <div class="p-4 rounded-2xl ${fraudAlerts.high > 0 ? 'bg-red-50' : 'bg-slate-50'}">
-                <p class="text-xs text-slate-500">High Risk</p>
-                <p class="text-xl font-bold ${fraudAlerts.high > 0 ? 'text-red-600' : 'text-slate-900'} mt-1">${fraudAlerts.high || 0}</p>
-            </div>
-            <div class="p-4 rounded-2xl ${fraudAlerts.medium > 0 ? 'bg-amber-50' : 'bg-slate-50'}">
-                <p class="text-xs text-slate-500">Medium Risk</p>
-                <p class="text-xl font-bold ${fraudAlerts.medium > 0 ? 'text-amber-600' : 'text-slate-900'} mt-1">${fraudAlerts.medium || 0}</p>
-            </div>
-            <div class="p-4 rounded-2xl bg-slate-50">
-                <p class="text-xs text-slate-500">Low Risk</p>
-                <p class="text-xl font-bold text-slate-900 mt-1">${fraudAlerts.low || 0}</p>
-            </div>
-        </div>
-        ${(recentFraudFlags && recentFraudFlags.length) ? recentFraudFlags.map(f => {
-          const riskClass = f.risk_level === 'high' ? 'bg-red-100 text-red-700' : (f.risk_level === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600');
-          const uLabel = f.username ? escapeHtml(f.username) : ('#' + f.user_id);
-          return '<div class="flex items-center justify-between py-2 border-t border-slate-50">' +
-            '<div class="min-w-0 flex-1">' +
-              '<a href="/admin/users/' + f.user_id + '" class="text-sm font-semibold text-blue-600 hover:underline">' + uLabel + '</a>' +
-              '<p class="text-xs text-slate-500 truncate">' + escapeHtml(f.reason) + '</p>' +
-            '</div>' +
-            '<span class="px-2.5 py-1 text-xs font-bold rounded-full ' + riskClass + ' ml-3 flex-shrink-0">' + f.risk_level.toUpperCase() + '</span>' +
-          '</div>';
-        }).join('') : '<p class="text-sm text-slate-400 text-center py-3">কোনো ওপেন ফ্রড ফ্ল্যাগ নেই</p>'}
-    </div>
-
-    <!-- Duplicate Accounts -->
-    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 mb-8">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="font-semibold text-slate-800">🧬 Duplicate Accounts <span class="text-xs font-normal text-slate-400">ওপেন ফ্ল্যাগ</span></h3>
-            <a href="/admin/duplicate-accounts" class="text-xs font-semibold text-blue-600 hover:underline">সব দেখুন <i class="fas fa-arrow-right ml-1"></i></a>
-        </div>
-        <div class="grid grid-cols-3 gap-4 mb-4">
-            <div class="p-4 rounded-2xl ${dupAlerts.high > 0 ? 'bg-red-50' : 'bg-slate-50'}">
-                <p class="text-xs text-slate-500">High (70+)</p>
-                <p class="text-xl font-bold ${dupAlerts.high > 0 ? 'text-red-600' : 'text-slate-900'} mt-1">${dupAlerts.high || 0}</p>
-            </div>
-            <div class="p-4 rounded-2xl ${dupAlerts.medium > 0 ? 'bg-amber-50' : 'bg-slate-50'}">
-                <p class="text-xs text-slate-500">Medium (40-69)</p>
-                <p class="text-xl font-bold ${dupAlerts.medium > 0 ? 'text-amber-600' : 'text-slate-900'} mt-1">${dupAlerts.medium || 0}</p>
-            </div>
-            <div class="p-4 rounded-2xl bg-slate-50">
-                <p class="text-xs text-slate-500">Low (<40)</p>
-                <p class="text-xl font-bold text-slate-900 mt-1">${dupAlerts.low || 0}</p>
-            </div>
-        </div>
-        ${(recentDupFlags && recentDupFlags.length) ? recentDupFlags.map(f => {
-          const score = Number(f.risk_score) || 0;
-          const riskClass = score >= 70 ? 'bg-red-100 text-red-700' : (score >= 40 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600');
-          const uLabel = f.username ? escapeHtml(f.username) : ('#' + f.user_id);
-          return '<div class="flex items-center justify-between py-2 border-t border-slate-50">' +
-            '<div class="min-w-0 flex-1">' +
-              '<a href="/admin/users/' + f.user_id + '" class="text-sm font-semibold text-blue-600 hover:underline">' + uLabel + '</a>' +
-              '<p class="text-xs text-slate-500 truncate">' + escapeHtml(f.reason) + '</p>' +
-            '</div>' +
-            '<span class="px-2.5 py-1 text-xs font-bold rounded-full ' + riskClass + ' ml-3 flex-shrink-0">' + score + ' / 100</span>' +
-          '</div>';
-        }).join('') : '<p class="text-sm text-slate-400 text-center py-3">কোনো ওপেন ডুপ্লিকেট ফ্ল্যাগ নেই</p>'}
-    </div>
-
-    <!-- Core Stats Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-5 mb-8">
-        <div class="stat-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
-            <div class="flex justify-between items-start">
-                <div>
-                    <p class="text-sm font-medium text-slate-500">Total Users</p>
-                    <p class="metric-value text-slate-900 mt-2" id="stat-total-users">${Number(stats.total_users || 0).toLocaleString('en-US')}</p>
-                    <p class="text-emerald-600 text-xs font-semibold mt-1 flex items-center gap-1">
-                        <i class="fas fa-arrow-up"></i> +${Number(stats.new_users_today || 0).toLocaleString('en-US')} today
-                    </p>
-                </div>
-                <div class="w-11 h-11 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center">
-                    <i class="fas fa-users text-xl"></i>
-                </div>
-            </div>
-        </div>
-
-        <div class="stat-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
-            <div class="flex justify-between items-start">
-                <div>
-                    <p class="text-sm font-medium text-slate-500">Total Coins</p>
-                    <p class="metric-value text-slate-900 mt-2" id="stat-total-coins">${Number(stats.total_coins_in_system || stats.total_coins || 0).toLocaleString('en-US')}</p>
-                    <p class="text-slate-500 text-xs font-semibold mt-1">সব ইউজার মিলিয়ে সিস্টেমে</p>
-                </div>
-                <div class="w-11 h-11 bg-yellow-100 text-yellow-600 rounded-2xl flex items-center justify-center">
-                    <i class="fas fa-coins text-xl"></i>
-                </div>
-            </div>
-        </div>
-
-        <div class="stat-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
-            <div class="flex justify-between items-start">
-                <div>
-                    <p class="text-sm font-medium text-slate-500">Active Users</p>
-                    <p class="metric-value text-emerald-600 mt-2" id="stat-active-users">${Number(stats.active_users || stats.active_users_now || 0).toLocaleString('en-US')}</p>
-                    <p class="text-slate-500 text-xs font-semibold mt-1">গত ১৫ মিনিটে</p>
-                </div>
-                <div class="w-11 h-11 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center">
-                    <i class="fas fa-user-clock text-xl"></i>
-                </div>
-            </div>
-        </div>
-
-        <div class="stat-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
-            <div class="flex justify-between items-start">
-                <div>
-                    <p class="text-sm font-medium text-slate-500">Total Deposits</p>
-                    <p class="metric-value text-slate-900 mt-2">৳ ${totalDeposits.toLocaleString('en-US')}</p>
-                    <p class="text-emerald-600 text-xs font-semibold mt-1 flex items-center gap-1">
-                        <i class="fas fa-arrow-up"></i> +৳ ${Number(stats.today_deposit || 0).toLocaleString('en-US')} today
-                    </p>
-                </div>
-                <div class="w-11 h-11 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center">
-                    <i class="fas fa-arrow-down text-xl"></i>
-                </div>
-            </div>
-        </div>
-
-        <div class="stat-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
-            <div class="flex justify-between items-start">
-                <div>
-                    <p class="text-sm font-medium text-slate-500">Total Withdrawals</p>
-                    <p class="metric-value text-slate-900 mt-2">৳ ${totalWithdrawals.toLocaleString('en-US')}</p>
-                    <p class="text-amber-600 text-xs font-semibold mt-1 flex items-center gap-1">
-                        <i class="fas fa-arrow-up"></i> ৳ ${Number(stats.today_withdraw || 0).toLocaleString('en-US')} today
-                    </p>
-                </div>
-                <div class="w-11 h-11 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center">
-                    <i class="fas fa-arrow-up text-xl"></i>
-                </div>
-            </div>
-        </div>
-
-        <div class="stat-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
-            <div class="flex justify-between items-start">
-                <div>
-                    <p class="text-sm font-medium text-slate-500">GGR (Today)</p>
-                    <p class="metric-value text-emerald-600 mt-2">৳ ${Number(stats.today_profit || 0).toLocaleString('en-US')}</p>
-                    <p class="text-slate-500 text-xs font-semibold mt-1">${stats.today_bet_count || 0} bets today</p>
-                </div>
-                <div class="w-11 h-11 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center">
-                    <i class="fas fa-chart-line text-xl"></i>
-                </div>
-            </div>
-        </div>
-
-        <div class="stat-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
-            <div class="flex justify-between items-start">
-                <div>
-                    <p class="text-sm font-medium text-slate-500">Pending Actions</p>
-                    <p class="metric-value text-orange-600 mt-2">${pendingTotal}</p>
-                    <p class="text-orange-600 text-xs font-semibold mt-1">${stats.pending_deposits || 0} deposits • ${stats.pending_withdrawals || 0} withdrawals • ${stats.pending_kyc || 0} KYC</p>
-                </div>
-                <div class="w-11 h-11 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center">
-                    <i class="fas fa-clock text-xl"></i>
-                </div>
-            </div>
-        </div>
-
-        <a href="/admin/withdrawals" class="stat-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition block">
-            <div class="flex justify-between items-start">
-                <div>
-                    <p class="text-sm font-medium text-slate-500">Pending Withdraw Requests</p>
-                    <p class="metric-value text-red-600 mt-2">${stats.pending_withdrawals || 0}</p>
-                    <p class="text-slate-400 text-xs font-semibold mt-1">রিভিউ করতে ক্লিক করুন</p>
-                </div>
-                <div class="w-11 h-11 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center">
-                    <i class="fas fa-hand-holding-usd text-xl"></i>
-                </div>
-            </div>
-        </a>
-    </div>
-
-    <!-- Charts: Revenue + User Growth -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
-            <h3 class="font-semibold text-slate-800 mb-4">📈 Revenue Trend (14 days)</h3>
-            <canvas id="revenueChart" height="180"></canvas>
-        </div>
-        <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
-            <h3 class="font-semibold text-slate-800 mb-4">👥 User Growth (14 days)</h3>
-            <canvas id="userGrowthChart" height="180"></canvas>
-        </div>
-    </div>
-
-    <!-- Quick Actions + Recent Activity -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-1 bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
-            <h3 class="font-semibold text-lg mb-4 flex items-center gap-2">
-                <i class="fas fa-bolt text-blue-500"></i> 
-                <span>Quick Actions</span>
-            </h3>
-            <div class="space-y-2">
-                <a href="/admin/users" class="flex items-center justify-between p-3 hover:bg-slate-50 rounded-2xl transition-colors group">
-                    <div class="flex items-center gap-3">
-                        <i class="fas fa-user-plus text-blue-500 w-5"></i>
-                        <span class="font-medium text-sm">Add New User / Adjust Coins</span>
-                    </div>
-                    <i class="fas fa-chevron-right text-slate-300 group-hover:text-blue-500 transition-colors"></i>
-                </a>
-                <a href="/payment/admin/payments" class="flex items-center justify-between p-3 hover:bg-slate-50 rounded-2xl transition-colors group">
-                    <div class="flex items-center gap-3">
-                        <i class="fas fa-check-circle text-emerald-500 w-5"></i>
-                        <span class="font-medium text-sm">Approve Pending Deposits (${stats.pending_deposits || 0})</span>
-                    </div>
-                    <i class="fas fa-chevron-right text-slate-300 group-hover:text-emerald-500 transition-colors"></i>
-                </a>
-                <a href="/admin/kyc" class="flex items-center justify-between p-3 hover:bg-slate-50 rounded-2xl transition-colors group">
-                    <div class="flex items-center gap-3">
-                        <i class="fas fa-id-card text-indigo-500 w-5"></i>
-                        <span class="font-medium text-sm">Review Pending KYC (${stats.pending_kyc || 0})</span>
-                    </div>
-                    <i class="fas fa-chevron-right text-slate-300 group-hover:text-indigo-500 transition-colors"></i>
-                </a>
-                <a href="/chat/admin" class="flex items-center justify-between p-3 hover:bg-slate-50 rounded-2xl transition-colors group">
-                    <div class="flex items-center gap-3">
-                        <i class="fas fa-headset text-purple-500 w-5"></i>
-                        <span class="font-medium text-sm">Live Support Chat</span>
-                    </div>
-                    <i class="fas fa-chevron-right text-slate-300 group-hover:text-purple-500 transition-colors"></i>
-                </a>
-                <a href="/admin/reports" class="flex items-center justify-between p-3 hover:bg-slate-50 rounded-2xl transition-colors group">
-                    <div class="flex items-center gap-3">
-                        <i class="fas fa-file-export text-slate-500 w-5"></i>
-                        <span class="font-medium text-sm">Full Reports (Date Range)</span>
-                    </div>
-                    <i class="fas fa-chevron-right text-slate-300 group-hover:text-slate-500 transition-colors"></i>
-                </a>
-            </div>
-        </div>
-
-        <div class="lg:col-span-2 bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="font-semibold text-lg">Recent Activity</h3>
-                <a href="/admin/reports" class="text-sm text-blue-600 hover:underline flex items-center gap-1">View all <i class="fas fa-arrow-right text-xs"></i></a>
-            </div>
-            <div class="space-y-4 text-sm" id="recent-activity-list">
-                ${recentWithdrawals.slice(0, 4).map(w => `
-                <div class="flex items-start gap-4">
-                    <div class="w-8 h-8 bg-amber-100 text-amber-600 rounded-2xl flex-shrink-0 flex items-center justify-center"><i class="fas fa-arrow-up text-sm"></i></div>
-                    <div class="flex-1">
-                        <div class="flex justify-between">
-                            <span class="font-medium">Withdrawal ${w.status}</span>
-                            <span class="text-xs text-slate-500">${new Date(w.created_at).toLocaleString('en-BD', { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
-                        </div>
-                        <p class="text-slate-600">${escapeHtml(w.username)} • ৳ ${Number(w.amount).toLocaleString('en-US')}</p>
-                    </div>
-                </div>`).join('')}
-                ${recentBets.slice(0, 4).map(b => `
-                <div class="flex items-start gap-4">
-                    <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-2xl flex-shrink-0 flex items-center justify-center"><i class="fas fa-dice text-sm"></i></div>
-                    <div class="flex-1">
-                        <div class="flex justify-between">
-                            <span class="font-medium">Bet ${b.status}</span>
-                            <span class="text-xs text-slate-500">${new Date(b.created_at).toLocaleString('en-BD', { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
-                        </div>
-                        <p class="text-slate-600">${escapeHtml(b.username)} • ৳ ${Number(b.stake).toLocaleString('en-US')} on ${escapeHtml(b.title || (b.team_a + ' vs ' + b.team_b))}</p>
-                    </div>
-                </div>`).join('')}
-                ${(recentWithdrawals.length === 0 && recentBets.length === 0) ? '<p class="text-slate-400 text-sm">এখনো কোনো সাম্প্রতিক কার্যকলাপ নেই।</p>' : ''}
-            </div>
-        </div>
-    </div>
+<!-- ===== HEADER ===== -->
+<div class="flex flex-wrap items-end justify-between gap-4 mb-6">
+  <div>
+    <h1 class="text-2xl font-semibold text-slate-900">ড্যাশবোর্ড</h1>
+    <p class="text-slate-500 text-sm mt-0.5">সর্বশেষ আপডেট: <span id="current-time"></span></p>
+  </div>
+  <div class="flex flex-wrap gap-2 items-center">
+    <select id="range-select" onchange="changeRange(this.value)" class="border border-slate-200 rounded-2xl px-4 py-2 text-sm">
+      <option value="7">গত ৭ দিন</option>
+      <option value="14" selected>গত ১৪ দিন</option>
+      <option value="30">গত ৩০ দিন</option>
+      <option value="90">গত ৯০ দিন</option>
+    </select>
+    <button onclick="exportCSV()" class="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-2xl text-sm font-semibold hover:bg-slate-50">
+      <i class="fas fa-download mr-1"></i> Export
+    </button>
+    <button onclick="refreshAll()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-semibold">
+      <i class="fas fa-rotate-right mr-1" id="refresh-icon"></i> রিফ্রেশ
+    </button>
+    <span class="px-3 py-2 rounded-2xl text-xs font-semibold ${rs.connected ? 'bg-emerald-100 text-emerald-700' : (rs.enabled ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500')}">
+      <i class="fas fa-database mr-1"></i>Redis: ${rs.connected ? 'Connected' : (rs.enabled ? 'Disconnected' : 'Disabled')}
+    </span>
+  </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<!-- ===== KPI CARDS ===== -->
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+  ${[
+    { label:'মোট ব্যবহারকারী',  val: fmt(s.total_users),         sub:'+'+fmt(s.new_users_today)+' আজ',   icon:'fa-users',          color:'blue'   },
+    { label:'সক্রিয় (১৫ মিনিট)',val: fmt(s.active_users_now),   sub:'লাইভ',                              icon:'fa-signal',         color:'emerald'},
+    { label:'আজ ডিপোজিট',      val: fmtBDT(s.today_deposit),    sub:fmt(s.today_deposit_count)+' টি',   icon:'fa-arrow-down',     color:'emerald'},
+    { label:'আজ উইথড্র',        val: fmtBDT(s.today_withdraw),  sub:fmt(s.today_withdraw_count)+' টি',  icon:'fa-arrow-up',       color:'amber'  },
+    { label:'আজ GGR',           val: fmtBDT(s.today_profit),     sub:fmt(s.today_bet_count)+' বেট',      icon:'fa-chart-line',     color:'emerald'},
+    { label:'পেন্ডিং অ্যাকশন', val: String(s.pending_total||0), sub:fmt(s.pending_deposits)+' dep · '+fmt(s.pending_withdrawals)+' wit', icon:'fa-clock', color:'orange'},
+  ].map(c => `
+  <div class="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
+    <div class="flex justify-between items-start mb-2">
+      <p class="text-xs text-slate-500 font-medium leading-tight">${c.label}</p>
+      <div class="w-8 h-8 bg-${c.color}-100 text-${c.color}-600 rounded-xl flex items-center justify-center flex-shrink-0">
+        <i class="fas ${c.icon} text-sm"></i>
+      </div>
+    </div>
+    <p class="text-xl font-bold text-slate-900">${c.val}</p>
+    <p class="text-xs text-slate-400 mt-0.5">${c.sub}</p>
+  </div>`).join('')}
+</div>
+
+<!-- ===== CHARTS ROW ===== -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
+  <!-- Revenue Chart -->
+  <div class="lg:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-semibold text-slate-800">💰 Revenue Trend</h3>
+      <div class="flex gap-3 text-xs text-slate-500">
+        <span class="flex items-center gap-1"><span class="w-3 h-1 bg-emerald-500 rounded inline-block"></span>Deposit</span>
+        <span class="flex items-center gap-1"><span class="w-3 h-1 bg-amber-400 rounded inline-block"></span>Withdraw</span>
+      </div>
+    </div>
+    <div style="position:relative;height:200px"><canvas id="revenueChart"></canvas></div>
+  </div>
+
+  <!-- User Growth -->
+  <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5">
+    <h3 class="font-semibold text-slate-800 mb-4">👥 User Growth</h3>
+    <div style="position:relative;height:200px"><canvas id="userChart"></canvas></div>
+  </div>
+</div>
+
+<!-- ===== BET STATS + SECURITY ROW ===== -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
+  <!-- Bet Stats 7-day -->
+  <div class="lg:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-semibold text-slate-800">🎯 Bet Statistics (৭ দিন)</h3>
+      <a href="/admin/reports" class="text-xs text-blue-600 hover:underline">বিস্তারিত →</a>
+    </div>
+    <div style="position:relative;height:170px"><canvas id="betChart"></canvas></div>
+    <div class="grid grid-cols-3 gap-3 mt-4">
+      <div class="bg-slate-50 rounded-2xl p-3 text-center">
+        <p class="text-xs text-slate-500">মোট বেট</p>
+        <p class="font-bold text-slate-800">${fmt(bs.reduce((a,r)=>a+r.cnt,0))}</p>
+      </div>
+      <div class="bg-slate-50 rounded-2xl p-3 text-center">
+        <p class="text-xs text-slate-500">মোট বেটকৃত</p>
+        <p class="font-bold text-emerald-600">${fmtBDT(bs.reduce((a,r)=>a+r.staked,0))}</p>
+      </div>
+      <div class="bg-slate-50 rounded-2xl p-3 text-center">
+        <p class="text-xs text-slate-500">GGR (৭ দিন)</p>
+        <p class="font-bold text-blue-600">${fmtBDT(bs.reduce((a,r)=>a+(r.ggr||0),0))}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Security Summary -->
+  <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-semibold text-slate-800">🛡️ Security</h3>
+      <a href="/admin/diagnostics" class="text-xs text-blue-600 hover:underline">Diagnostics →</a>
+    </div>
+    <div class="space-y-3">
+      ${[
+        { label:'Fraud Alerts (Open)',    val: (sc.open_fraud||0),   color: sc.open_fraud>0?'red':'slate',    link:'/admin/fraud-logs'         },
+        { label:'Duplicate Accounts',    val: (sc.open_dup||0),     color: sc.open_dup>0?'amber':'slate',   link:'/admin/duplicate-accounts' },
+        { label:'Bot Activity (24h)',     val: (sc.bot_high_24h||0), color: sc.bot_high_24h>0?'amber':'slate',link:'/admin/bot-logs'           },
+        { label:'Banned Users',           val: (sc.banned_users||0), color: sc.banned_users>0?'red':'slate',  link:'/admin/users?status=banned' },
+      ].map(i=>`
+      <a href="${i.link}" class="flex items-center justify-between p-3 bg-slate-50 rounded-2xl hover:bg-slate-100 transition">
+        <span class="text-sm text-slate-600">${i.label}</span>
+        <span class="px-2.5 py-1 text-xs font-bold rounded-full bg-${i.color}-100 text-${i.color}-700">${fmt(i.val)}</span>
+      </a>`).join('')}
+    </div>
+    <!-- KYC -->
+    <div class="mt-4 pt-4 border-t border-slate-100">
+      <p class="text-xs text-slate-500 mb-2 font-medium">KYC Status</p>
+      <div class="flex gap-2">
+        <span class="px-2.5 py-1 bg-amber-50 text-amber-700 text-xs rounded-xl font-semibold">Pending: ${kc.pending||0}</span>
+        <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 text-xs rounded-xl font-semibold">Approved: ${kc.approved||0}</span>
+        <span class="px-2.5 py-1 bg-red-50 text-red-700 text-xs rounded-xl font-semibold">Rejected: ${kc.rejected||0}</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== QUEUE + DEMO + TOP DEPOSITORS ===== -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
+  <!-- Queue Health -->
+  <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-semibold text-slate-800">📋 Queue System</h3>
+      <span class="px-2.5 py-1 text-xs font-bold rounded-full ${qh.redisConnected ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${qh.redisConnected ? 'Connected' : 'Offline'}</span>
+    </div>
+    <div class="grid grid-cols-3 gap-2">
+      ${[
+        { label:'Active',  val: qh.totalActive||0,  color:'blue'   },
+        { label:'Waiting', val: qh.totalWaiting||0, color:'amber'  },
+        { label:'Failed',  val: qh.totalFailed||0,  color:'red'    },
+      ].map(q=>`
+      <div class="bg-slate-50 rounded-2xl p-3 text-center">
+        <p class="text-xs text-slate-500">${q.label}</p>
+        <p class="font-bold text-${q.color}-600 text-lg">${fmt(q.val)}</p>
+      </div>`).join('')}
+    </div>
+    <a href="/admin/diagnostics" class="mt-3 flex items-center justify-center gap-2 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-2xl text-sm text-slate-600 transition font-medium">
+      <i class="fas fa-heart-pulse"></i> System Diagnostics
+    </a>
+  </div>
+
+  <!-- Demo Currency -->
+  <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5">
+    <h3 class="font-semibold text-slate-800 mb-4">🎮 ডেমো কারেন্সি</h3>
+    <div class="grid grid-cols-2 gap-3">
+      ${[
+        { label:'মোট ডেমো',         id:'demo-total',  val: fmt(ds.totalDemo),           color:'slate'  },
+        { label:'ব্যবহারকারীর কাছে', id:'demo-held',   val: fmt(ds.userHeldDemo),        color:'blue'   },
+        { label:'ক্যাসিনো বেট',      id:'demo-casino', val: fmt(ds.casinoDemoWagered),   color:'purple' },
+        { label:'স্পোর্টস বেট',      id:'demo-sports', val: fmt(ds.sportsDemoWagered),   color:'orange' },
+      ].map(d=>`
+      <div class="bg-slate-50 rounded-2xl p-3">
+        <p class="text-xs text-slate-500">${d.label}</p>
+        <p class="font-bold text-${d.color}-600 text-sm mt-0.5" id="${d.id}">${d.val}</p>
+      </div>`).join('')}
+    </div>
+  </div>
+
+  <!-- Top Depositors Today -->
+  <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5">
+    <h3 class="font-semibold text-slate-800 mb-4">🏆 আজকের শীর্ষ ডিপোজিটকারী</h3>
+    ${td.length ? td.map((u,i)=>`
+    <div class="flex items-center justify-between py-2 ${i>0?'border-t border-slate-50':''}">
+      <div class="flex items-center gap-2">
+        <span class="w-6 h-6 rounded-full bg-slate-100 text-xs font-bold text-slate-500 flex items-center justify-center">${i+1}</span>
+        <span class="text-sm font-medium text-slate-700">${escapeHtml(u.username)}</span>
+      </div>
+      <span class="text-sm font-bold text-emerald-600">${fmtBDT(u.total)}</span>
+    </div>`).join('') : '<p class="text-sm text-slate-400 text-center py-4">আজ কোনো ডিপোজিট নেই</p>'}
+  </div>
+</div>
+
+<!-- ===== FRAUD + DUPLICATE ALERTS ===== -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+  <!-- Fraud Alerts -->
+  <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-semibold text-slate-800">🛡️ Fraud Alerts <span class="text-xs font-normal text-slate-400">ওপেন</span></h3>
+      <a href="/admin/fraud-logs" class="text-xs text-blue-600 hover:underline">সব →</a>
+    </div>
+    <div class="grid grid-cols-3 gap-3 mb-3">
+      <div class="p-3 rounded-2xl ${fa.high>0?'bg-red-50':'bg-slate-50'} text-center">
+        <p class="text-xs text-slate-500">High</p>
+        <p class="text-xl font-bold ${fa.high>0?'text-red-600':'text-slate-700'}">${fa.high||0}</p>
+      </div>
+      <div class="p-3 rounded-2xl ${fa.medium>0?'bg-amber-50':'bg-slate-50'} text-center">
+        <p class="text-xs text-slate-500">Medium</p>
+        <p class="text-xl font-bold ${fa.medium>0?'text-amber-600':'text-slate-700'}">${fa.medium||0}</p>
+      </div>
+      <div class="p-3 rounded-2xl bg-slate-50 text-center">
+        <p class="text-xs text-slate-500">Low</p>
+        <p class="text-xl font-bold text-slate-700">${fa.low||0}</p>
+      </div>
+    </div>
+    ${rff.length ? rff.map(f=>{
+      const rc = f.risk_level==='high'?'bg-red-100 text-red-700':(f.risk_level==='medium'?'bg-amber-100 text-amber-700':'bg-slate-100 text-slate-600');
+      return '<div class="flex items-center justify-between py-2 border-t border-slate-50">'+
+        '<a href="/admin/users/'+f.user_id+'" class="text-sm font-semibold text-blue-600 hover:underline">'+(f.username?escapeHtml(f.username):'#'+f.user_id)+'</a>'+
+        '<span class="px-2.5 py-1 text-xs font-bold rounded-full '+rc+'">'+f.risk_level.toUpperCase()+'</span>'+
+      '</div>';
+    }).join('') : '<p class="text-xs text-slate-400 text-center py-2">কোনো ফ্ল্যাগ নেই</p>'}
+  </div>
+
+  <!-- Duplicate Accounts -->
+  <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-semibold text-slate-800">🧬 Duplicate Accounts <span class="text-xs font-normal text-slate-400">ওপেন</span></h3>
+      <a href="/admin/duplicate-accounts" class="text-xs text-blue-600 hover:underline">সব →</a>
+    </div>
+    <div class="grid grid-cols-3 gap-3 mb-3">
+      <div class="p-3 rounded-2xl ${da.high>0?'bg-red-50':'bg-slate-50'} text-center">
+        <p class="text-xs text-slate-500">High</p>
+        <p class="text-xl font-bold ${da.high>0?'text-red-600':'text-slate-700'}">${da.high||0}</p>
+      </div>
+      <div class="p-3 rounded-2xl ${da.medium>0?'bg-amber-50':'bg-slate-50'} text-center">
+        <p class="text-xs text-slate-500">Medium</p>
+        <p class="text-xl font-bold ${da.medium>0?'text-amber-600':'text-slate-700'}">${da.medium||0}</p>
+      </div>
+      <div class="p-3 rounded-2xl bg-slate-50 text-center">
+        <p class="text-xs text-slate-500">Low</p>
+        <p class="text-xl font-bold text-slate-700">${da.low||0}</p>
+      </div>
+    </div>
+    ${rdf.length ? rdf.map(f=>{
+      const sc2 = Number(f.risk_score)||0;
+      const rc2 = sc2>=70?'bg-red-100 text-red-700':(sc2>=40?'bg-amber-100 text-amber-700':'bg-slate-100 text-slate-600');
+      return '<div class="flex items-center justify-between py-2 border-t border-slate-50">'+
+        '<a href="/admin/users/'+f.user_id+'" class="text-sm font-semibold text-blue-600 hover:underline">'+(f.username?escapeHtml(f.username):'#'+f.user_id)+'</a>'+
+        '<span class="px-2.5 py-1 text-xs font-bold rounded-full '+rc2+'">'+sc2+' / 100</span>'+
+      '</div>';
+    }).join('') : '<p class="text-xs text-slate-400 text-center py-2">কোনো ফ্ল্যাগ নেই</p>'}
+  </div>
+</div>
+
+<!-- ===== QUICK ACTIONS + RECENT ACTIVITY ===== -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
+  <!-- Quick Actions -->
+  <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5">
+    <h3 class="font-semibold text-slate-800 mb-4 flex items-center gap-2"><i class="fas fa-bolt text-blue-500"></i> Quick Actions</h3>
+    <div class="space-y-1.5">
+      ${[
+        { href:'/admin/users',               icon:'fa-user-plus',        color:'blue',   label:'ব্যবহারকারী ব্যবস্থাপনা'                                    },
+        { href:'/payment/admin/payments',    icon:'fa-check-circle',     color:'emerald',label:'পেন্ডিং ডিপোজিট অনুমোদন ('+fmt(s.pending_deposits)+')' },
+        { href:'/admin/withdrawals',         icon:'fa-hand-holding-usd', color:'amber',  label:'পেন্ডিং উইথড্র ('+fmt(s.pending_withdrawals)+')'         },
+        { href:'/admin/kyc',                 icon:'fa-id-card',          color:'indigo', label:'KYC পর্যালোচনা ('+fmt(s.pending_kyc)+')'                 },
+        { href:'/chat/admin',                icon:'fa-headset',          color:'purple', label:'লাইভ সাপোর্ট চ্যাট'                                      },
+        { href:'/admin/diagnostics',         icon:'fa-heart-pulse',      color:'red',    label:'System Diagnostics'                                       },
+      ].map(a=>`
+      <a href="${a.href}" class="flex items-center justify-between p-3 hover:bg-slate-50 rounded-2xl transition group">
+        <div class="flex items-center gap-3">
+          <i class="fas ${a.icon} text-${a.color}-500 w-5 text-sm"></i>
+          <span class="text-sm font-medium text-slate-700">${a.label}</span>
+        </div>
+        <i class="fas fa-chevron-right text-slate-300 text-xs group-hover:text-${a.color}-500 transition"></i>
+      </a>`).join('')}
+    </div>
+  </div>
+
+  <!-- Recent Activity Feed -->
+  <div class="lg:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-semibold text-slate-800">📋 সাম্প্রতিক কার্যক্রম</h3>
+      <a href="/admin/reports" class="text-xs text-blue-600 hover:underline">সব দেখুন →</a>
+    </div>
+    <div class="space-y-3 text-sm max-h-80 overflow-y-auto pr-1">
+      ${ra.length ? ra.slice(0,10).map(a => {
+        const icon = a.kind==='deposit'?'fa-arrow-down bg-emerald-100 text-emerald-600':(a.kind==='withdraw'?'fa-arrow-up bg-amber-100 text-amber-600':'fa-dice bg-blue-100 text-blue-600');
+        const label = a.kind==='deposit'?'ডিপোজিট':(a.kind==='withdraw'?'উইথড্র':'বেট');
+        const time = new Date(a.created_at).toLocaleString('en-BD',{hour:'numeric',minute:'2-digit',hour12:true});
+        return '<div class="flex items-start gap-3">'+
+          '<div class="w-8 h-8 rounded-2xl flex-shrink-0 flex items-center justify-center '+icon+'"><i class="fas '+icon.split(' ')[0]+' text-xs"></i></div>'+
+          '<div class="flex-1 min-w-0">'+
+            '<div class="flex justify-between gap-2">'+
+              '<span class="font-medium text-slate-700">'+label+' · '+escapeHtml(a.status)+'</span>'+
+              '<span class="text-xs text-slate-400 flex-shrink-0">'+time+'</span>'+
+            '</div>'+
+            '<p class="text-slate-500 text-xs truncate">'+escapeHtml(a.username)+' · ৳ '+fmt(a.amount)+(a.match?' · '+escapeHtml(a.match):'')+'</p>'+
+          '</div>'+
+        '</div>';
+      }).join('') : '<p class="text-slate-400 text-center py-6">কোনো কার্যক্রম নেই</p>'}
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="/socket.io/socket.io.js"></script>
 <script>
-    const revenueData = ${JSON.stringify((typeof revenueTrend !== 'undefined' ? revenueTrend : []).map(r => ({ day: r.day, deposit: r.deposit, withdraw: r.withdraw })))};
-    const userGrowthData = ${JSON.stringify((typeof userGrowth !== 'undefined' ? userGrowth : []).map(r => ({ day: r.day, count: r.count })))};
+// ===== Chart.js defaults =====
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.font.size   = 11;
+Chart.defaults.color       = '#94a3b8';
 
-    function updateTime() {
-        const el = document.getElementById('current-time');
-        if (el) el.textContent = new Date().toLocaleString('en-BD', { hour: 'numeric', minute: '2-digit', hour12: true });
+const revLabels  = ${revLabels};
+const revDep     = ${revDep};
+const revWit     = ${revWit};
+const ugLabels   = ${ugLabels};
+const ugCounts   = ${ugCounts};
+const bsLabels   = ${bsLabels};
+const bsCnts     = ${bsCnts};
+const bsGGR      = ${bsGGR};
+
+let revenueChart, userChart, betChart;
+
+function makeRevenue(labels, dep, wit) {
+  const ctx = document.getElementById('revenueChart');
+  if (!ctx) return;
+  if (revenueChart) revenueChart.destroy();
+  revenueChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label:'Deposit',  data:dep, backgroundColor:'rgba(16,185,129,0.7)', borderRadius:4 },
+        { label:'Withdraw', data:wit, backgroundColor:'rgba(251,191,36,0.7)',  borderRadius:4 }
+      ]
+    },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{grid:{display:false}},y:{grid:{color:'#f1f5f9'}, ticks:{callback:v=>'৳'+Number(v).toLocaleString()}}}}
+  });
+}
+
+function makeUserGrowth(labels, counts) {
+  const ctx = document.getElementById('userChart');
+  if (!ctx) return;
+  if (userChart) userChart.destroy();
+  userChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label:'New Users', data:counts,
+        borderColor:'#6366f1', backgroundColor:'rgba(99,102,241,0.1)',
+        tension:0.4, fill:true, pointRadius:3, pointBackgroundColor:'#6366f1'
+      }]
+    },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'#f1f5f9'}}}}
+  });
+}
+
+function makeBetChart(labels, cnts, ggr) {
+  const ctx = document.getElementById('betChart');
+  if (!ctx) return;
+  if (betChart) betChart.destroy();
+  betChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label:'বেট সংখ্যা', data:cnts, backgroundColor:'rgba(99,102,241,0.6)', borderRadius:4, yAxisID:'y' },
+        { label:'GGR',        data:ggr,  backgroundColor:'rgba(16,185,129,0.6)', borderRadius:4, yAxisID:'y2'}
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false, plugins:{legend:{display:true, position:'bottom'}},
+      scales:{
+        x:{grid:{display:false}},
+        y:{grid:{color:'#f1f5f9'}, position:'left'},
+        y2:{position:'right', grid:{display:false}, ticks:{callback:v=>'৳'+Number(v).toLocaleString()}}
+      }
     }
-    setInterval(updateTime, 30000);
-    updateTime();
+  });
+}
 
-    (function() {
-        const socket = io();
-        socket.emit('join_admin');
-        socket.on('demo_stats_update', function(stats) {
-            const map = { 'demo-total': stats.totalDemo, 'demo-held': stats.userHeldDemo, 'demo-casino': stats.casinoDemoWagered, 'demo-sports': stats.sportsDemoWagered };
-            Object.keys(map).forEach(function(id) {
-                const el = document.getElementById(id);
-                if (el) el.textContent = Number(map[id] || 0).toLocaleString('en-US');
-            });
-        });
-    })();
+makeRevenue(revLabels, revDep, revWit);
+makeUserGrowth(ugLabels, ugCounts);
+makeBetChart(bsLabels, bsCnts, bsGGR);
 
-    let pollTimer = null;
-    function pollDashboardStats() {
-        fetch('/admin/api/dashboard-stats').then(function(r) { return r.json(); }).then(function(data) {
-            if (!data || !data.success) return;
-            var s = data.stats || {};
-            var coinsEl = document.getElementById('stat-total-coins');
-            if (coinsEl && typeof s.total_coins === 'number') coinsEl.textContent = Number(s.total_coins).toLocaleString('en-US');
-            var activeEl = document.getElementById('stat-active-users');
-            if (activeEl && typeof s.active_users === 'number') activeEl.textContent = Number(s.active_users).toLocaleString('en-US');
-            var usersEl = document.getElementById('stat-total-users');
-            if (usersEl && typeof s.total_users === 'number') usersEl.textContent = Number(s.total_users).toLocaleString('en-US');
-            updateTime();
-        }).catch(function() {});
-    }
+// ===== Date range change =====
+async function changeRange(days) {
+  try {
+    const r = await fetch('/admin/api/analytics?days=' + days);
+    const d = await r.json();
+    const fDate = s => new Date(s).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    makeRevenue(d.revenue.map(r=>fDate(r.day)), d.revenue.map(r=>r.deposit), d.revenue.map(r=>r.withdraw));
+    makeUserGrowth(d.userGrowth.map(r=>fDate(r.day)), d.userGrowth.map(r=>r.count));
+  } catch(e) { console.error(e); }
+}
 
-    function setAutoRefresh(ms) {
-        if (pollTimer) clearInterval(pollTimer);
-        pollTimer = null;
-        if (ms > 0) {
-            pollTimer = setInterval(pollDashboardStats, ms);
-            pollDashboardStats();
-        }
-    }
-    setAutoRefresh(20000);
-    document.getElementById('auto-refresh-interval').addEventListener('change', function() {
-        setAutoRefresh(parseInt(this.value, 10) || 0);
+// ===== Export CSV =====
+function exportCSV() {
+  const days = document.getElementById('range-select')?.value || 14;
+  fetch('/admin/api/analytics?days='+days).then(r=>r.json()).then(d => {
+    const rows = [['Date','Deposit','Withdraw','Net Revenue','New Users']];
+    d.revenue.forEach((r,i) => {
+      const ug = d.userGrowth[i] || {};
+      rows.push([r.day, r.deposit, r.withdraw, r.net, ug.count||0]);
     });
+    const csv = rows.map(r=>r.join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    a.download = 'livo-analytics-' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click();
+  });
+}
 
-    document.getElementById('btn-export-csv').addEventListener('click', function() {
-        window.location.href = '/admin/activity/export.csv';
-    });
+// ===== Refresh =====
+async function refreshAll() {
+  const icon = document.getElementById('refresh-icon');
+  icon.classList.add('fa-spin');
+  try { await changeRange(document.getElementById('range-select')?.value || 14); } catch(e) {}
+  icon.classList.remove('fa-spin');
+}
 
-    // Charts
-    if (window.Chart && revenueData.length) {
-        new Chart(document.getElementById('revenueChart'), {
-            type: 'line',
-            data: {
-                labels: revenueData.map(r => new Date(r.day).toLocaleDateString('en-BD', { month: 'short', day: 'numeric' })),
-                datasets: [
-                    { label: 'Deposit', data: revenueData.map(r => r.deposit), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', tension: 0.3, fill: true },
-                    { label: 'Withdraw', data: revenueData.map(r => r.withdraw), borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', tension: 0.3, fill: true }
-                ]
-            },
-            options: { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }
-        });
-    }
-    if (window.Chart && userGrowthData.length) {
-        new Chart(document.getElementById('userGrowthChart'), {
-            type: 'bar',
-            data: {
-                labels: userGrowthData.map(r => new Date(r.day).toLocaleDateString('en-BD', { month: 'short', day: 'numeric' })),
-                datasets: [{ label: 'New Users', data: userGrowthData.map(r => r.count), backgroundColor: '#3b82f6' }]
-            },
-            options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
-        });
-    }
+// ===== Time =====
+function updateTime() {
+  const el = document.getElementById('current-time');
+  if (el) el.textContent = new Date().toLocaleString('en-BD',{hour:'numeric',minute:'2-digit',hour12:true});
+}
+updateTime();
+setInterval(updateTime, 30000);
+setInterval(refreshAll, 60000); // 60s auto-refresh
+
+// ===== Socket demo stats =====
+(function(){
+  const socket = io();
+  socket.emit('join_admin');
+  socket.on('demo_stats_update', function(st) {
+    const map = {'demo-total':st.totalDemo,'demo-held':st.userHeldDemo,'demo-casino':st.casinoDemoWagered,'demo-sports':st.sportsDemoWagered};
+    Object.keys(map).forEach(id => { const el=document.getElementById(id); if(el) el.textContent=Number(map[id]||0).toLocaleString('en-US'); });
+  });
+})();
 </script>
-` 
+`
 }) %>

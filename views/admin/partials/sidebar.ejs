@@ -1,32 +1,31 @@
 <!-- views/admin/partials/sidebar.ejs -->
+<!-- ব্যবহার: include './partials/sidebar' with { active: 'dashboard' } -->
 <style>
   .admin-wrap { display: flex; min-height: 100vh; background: #0f1115; }
   .admin-sidebar {
-    width: 250px; background: #14171f; border-right: 1px solid rgba(255,255,255,0.06);
-    position: fixed; top: 0; left: 0; bottom: 0; overflow-y: auto; overflow-x: hidden;
-    z-index: 50; transform: translateX(-100%); transition: transform 0.25s ease;
-    -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+    width: 240px; background: #14171f; border-right: 1px solid rgba(255,255,255,0.06);
+    position: fixed; top: 0; left: 0; bottom: 0; overflow-y: auto; z-index: 50;
+    transform: translateX(-100%); transition: transform 0.25s ease;
   }
   .admin-sidebar.open { transform: translateX(0); }
   .admin-sidebar-brand {
-    padding: 18px 16px; font-size: 15px; font-weight: 900; color: #f59e0b;
+    padding: 20px 18px; font-size: 16px; font-weight: 900; color: #f59e0b;
     border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; gap: 8px;
-    position: sticky; top: 0; background: #14171f; z-index: 2;
   }
   .admin-nav-group-title {
-    padding: 14px 16px 4px; font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+    padding: 16px 18px 6px; font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
     color: #64748b; font-weight: 700;
   }
   .admin-nav-link {
-    display: flex; align-items: center; gap: 10px; padding: 10px 16px; color: #cbd5e1;
+    display: flex; align-items: center; gap: 10px; padding: 11px 18px; color: #cbd5e1;
     text-decoration: none; font-size: 13px; font-weight: 600; border-left: 3px solid transparent;
   }
-  .admin-nav-link i { width: 18px; text-align: center; color: #94a3b8; font-size: 13px; flex-shrink: 0; }
+  .admin-nav-link i { width: 18px; text-align: center; color: #94a3b8; font-size: 13px; }
   .admin-nav-link:active { background: rgba(255,255,255,0.04); }
   .admin-nav-link.active { background: rgba(245,158,11,0.1); border-left-color: #f59e0b; color: #fff; }
   .admin-nav-link.active i { color: #f59e0b; }
 
-  .admin-content { flex: 1; min-width: 0; padding: 16px; padding-bottom: 80px; }
+  .admin-content { flex: 1; min-width: 0; padding: 16px; padding-bottom: 60px; }
   .admin-topbar {
     display: flex; align-items: center; gap: 12px; margin-bottom: 18px; position: sticky; top: 0;
     background: #0f1115; z-index: 40; padding: 4px 0;
@@ -48,12 +47,12 @@
   .grid { display: grid; gap: 12px; }
   .grid-2 { grid-template-columns: 1fr; }
   .grid-4 { grid-template-columns: 1fr 1fr; }
-  @media (min-width: 900px) {
+  @media (min-width: 700px) {
     .grid-2 { grid-template-columns: 1fr 1fr; }
     .grid-4 { grid-template-columns: repeat(4, 1fr); }
     .admin-sidebar { transform: translateX(0); position: sticky; }
     .admin-hamburger { display: none; }
-    .admin-content { padding: 22px; padding-bottom: 40px; }
+    .admin-content { padding: 22px; }
   }
 
   .admin-card { background: #171b23; border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; overflow: hidden; }
@@ -71,73 +70,38 @@
 <div class="admin-sidebar" id="adminSidebar">
   <div class="admin-sidebar-brand"><i class="fas fa-shield-alt"></i> Livo Admin</div>
 
-  <div class="admin-nav-group-title">ড্যাশবোর্ড</div>
+  <div class="admin-nav-group-title">Dashboard</div>
   <a href="/admin" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'dashboard' ? 'active' : '' %>"><i class="fas fa-chart-line"></i> ড্যাশবোর্ড</a>
-  <a href="/admin/reports" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'reports' ? 'active' : '' %>"><i class="fas fa-file-export"></i> রিপোর্ট</a>
 
   <div class="admin-nav-group-title">ইউজার</div>
   <a href="/admin/users" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'users' ? 'active' : '' %>"><i class="fas fa-users"></i> ইউজার ম্যানেজমেন্ট</a>
   <a href="/admin/kyc" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'kyc' ? 'active' : '' %>"><i class="fas fa-id-card"></i> KYC <span class="badge badge-red" id="navBadgeKyc" style="display:none;margin-left:auto;"></span></a>
-  <a href="/admin/login-history" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'login-history' ? 'active' : '' %>"><i class="fas fa-right-to-bracket"></i> লগইন হিস্ট্রি</a>
-  <a href="/admin/user-roles" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'user-roles' ? 'active' : '' %>"><i class="fas fa-user-tag"></i> ইউজার রোল</a>
 
   <div class="admin-nav-group-title">পেমেন্ট</div>
-  <a href="/admin/deposits" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'deposits' ? 'active' : '' %>"><i class="fas fa-arrow-down"></i> ডিপোজিট <span class="badge badge-red" id="navBadgeDeposits" style="display:none;margin-left:auto;"></span></a>
-  <a href="/admin/withdrawals" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'withdrawals' ? 'active' : '' %>"><i class="fas fa-arrow-up"></i> উইথড্র <span class="badge badge-red" id="navBadgeWithdrawals" style="display:none;margin-left:auto;"></span></a>
-  <a href="/admin/transactions" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'transactions' ? 'active' : '' %>"><i class="fas fa-exchange-alt"></i> ট্রানজেকশন লগ</a>
+  <a href="/payment/admin/payments" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'payments' ? 'active' : '' %>"><i class="fas fa-money-bill-wave"></i> ডিপোজিট/উইথড্র <span class="badge badge-red" id="navBadgePayments" style="display:none;margin-left:auto;"></span></a>
+  <a href="/payment/admin/deposits" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'deposits' ? 'active' : '' %>"><i class="fas fa-wallet"></i> ডিপোজিট ট্রানজেকশন</a>
+  <a href="/admin/backup/status" class="admin-nav-link"><i class="fas fa-database"></i> ব্যাকআপ স্ট্যাটাস</a>
 
   <div class="admin-nav-group-title">গেম ও বেটিং</div>
   <a href="/admin/matches" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'matches' ? 'active' : '' %>"><i class="fas fa-futbol"></i> ম্যাচসমূহ</a>
-  <a href="/admin/bets" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'bets' ? 'active' : '' %>"><i class="fas fa-dice"></i> বেট ম্যানেজমেন্ট</a>
   <a href="/admin/tournaments" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'tournaments' ? 'active' : '' %>"><i class="fas fa-trophy"></i> টুর্নামেন্ট</a>
-  <a href="/admin/games" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'games' ? 'active' : '' %>"><i class="fas fa-gamepad"></i> গেমস</a>
+  <a href="/admin/bets" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'bets' ? 'active' : '' %>"><i class="fas fa-dice"></i> বেট ম্যানেজমেন্ট</a>
 
   <div class="admin-nav-group-title">বোনাস ও প্রমোশন</div>
-  <a href="/admin/bonuses" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'bonuses' ? 'active' : '' %>"><i class="fas fa-gift"></i> বোনাস</a>
-  <a href="/admin/vip" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'vip' ? 'active' : '' %>"><i class="fas fa-crown"></i> VIP সিস্টেম</a>
+  <a href="/admin/bonuses" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'bonuses' ? 'active' : '' %>"><i class="fas fa-gift"></i> বোনাস ম্যানেজমেন্ট</a>
   <a href="/admin/promotions" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'promotions' ? 'active' : '' %>"><i class="fas fa-bullhorn"></i> প্রমোশন ব্যানার</a>
-  <a href="/admin/announcements" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'announcements' ? 'active' : '' %>"><i class="fas fa-megaphone"></i> অ্যানাউন্সমেন্ট</a>
-  <a href="/admin/notifications" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'notifications' ? 'active' : '' %>"><i class="fas fa-bell"></i> নোটিফিকেশন ব্রডকাস্ট</a>
 
-  <div class="admin-nav-group-title">সাপোর্ট ও কন্টেন্ট</div>
-  <a href="/admin/support" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'support' ? 'active' : '' %>"><i class="fas fa-headset"></i> সাপোর্ট টিকেট</a>
-  <a href="/chat/admin" class="admin-nav-link"><i class="fas fa-comments"></i> লাইভ চ্যাট</a>
+  <div class="admin-nav-group-title">রিপোর্ট ও সেটিংস</div>
+  <a href="/admin/reports" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'reports' ? 'active' : '' %>"><i class="fas fa-file-export"></i> রিপোর্টিং</a>
+  <a href="/admin/settings" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'settings' ? 'active' : '' %>"><i class="fas fa-cogs"></i> সেটিংস</a>
+
+  <div class="admin-nav-group-title">কন্টেন্ট ও সাপোর্ট</div>
   <a href="/admin/news" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'news' ? 'active' : '' %>"><i class="fas fa-newspaper"></i> নিউজ</a>
-  <a href="/admin/notification-templates" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'notification-templates' ? 'active' : '' %>"><i class="fas fa-envelope-open-text"></i> নোটিফ টেমপ্লেট</a>
-
-  <div class="admin-nav-group-title">সিকিউরিটি ও ফ্রড</div>
-  <a href="/admin/security-overview" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'security-overview' ? 'active' : '' %>"><i class="fas fa-shield-halved"></i> সিকিউরিটি ওভারভিউ</a>
-  <a href="/admin/fraud-monitoring" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'fraud-monitoring' ? 'active' : '' %>"><i class="fas fa-exclamation-triangle"></i> ফ্রড মনিটরিং</a>
-  <a href="/admin/fraud-logs" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'fraud-logs' ? 'active' : '' %>"><i class="fas fa-flag"></i> ফ্রড লগ</a>
-  <a href="/admin/duplicate-accounts" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'duplicate-accounts' ? 'active' : '' %>"><i class="fas fa-clone"></i> ডুপ্লিকেট অ্যাকাউন্ট</a>
-  <a href="/admin/bot-monitoring" class="admin-nav-link <%= typeof active !== 'undefined' && (active === 'bot-monitoring' || active === 'bot-logs') ? 'active' : '' %>"><i class="fas fa-robot"></i> বট মনিটরিং</a>
-  <a href="/admin/bot-monitoring/ip-rules" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'ip-rules' ? 'active' : '' %>"><i class="fas fa-ban"></i> IP ব্লক/হোয়াইটলিস্ট</a>
-  <a href="/admin/2fa/setup" class="admin-nav-link <%= typeof active !== 'undefined' && active === '2fa' ? 'active' : '' %>"><i class="fas fa-lock"></i> 2FA সেটআপ</a>
-
-  <div class="admin-nav-group-title">সিস্টেম</div>
-  <a href="/admin/activity" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'activity' ? 'active' : '' %>"><i class="fas fa-bolt"></i> অ্যাক্টিভিটি লগ</a>
-  <a href="/admin/audit-logs" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'audit-logs' ? 'active' : '' %>"><i class="fas fa-clipboard-list"></i> অডিট লগ</a>
-  <a href="/admin/queues" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'queues' ? 'active' : '' %>"><i class="fas fa-stream"></i> Queue</a>
-  <a href="/admin/cache" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'cache' ? 'active' : '' %>"><i class="fas fa-memory"></i> Redis Cache</a>
-  <a href="/admin/cron-jobs" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'cron-jobs' ? 'active' : '' %>"><i class="fas fa-clock"></i> Cron Jobs</a>
-  <a href="/admin/backups" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'backups' ? 'active' : '' %>"><i class="fas fa-box-archive"></i> Backup & Restore</a>
-  <a href="/admin/system-diagnostics" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'system-diagnostics' ? 'active' : '' %>"><i class="fas fa-heart-pulse"></i> System Diagnostics</a>
-  <a href="/admin/sentry-status" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'sentry-status' ? 'active' : '' %>"><i class="fas fa-bug"></i> Sentry Monitoring</a>
-
-  <div class="admin-nav-group-title">সেটিংস</div>
-  <a href="/admin/settings" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'settings' ? 'active' : '' %>"><i class="fas fa-cogs"></i> সাইট সেটিংস</a>
-  <a href="/admin/system-settings" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'system-settings' ? 'active' : '' %>"><i class="fas fa-sliders"></i> সিস্টেম সেটিংস</a>
-  <a href="/admin/feature-flags" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'feature-flags' ? 'active' : '' %>"><i class="fas fa-toggle-on"></i> Feature Flags</a>
-  <a href="/admin/roles" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'roles' ? 'active' : '' %>"><i class="fas fa-user-shield"></i> Roles & Permissions</a>
-  <a href="/admin/api-keys" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'api-keys' ? 'active' : '' %>"><i class="fas fa-key"></i> API Keys</a>
-  <a href="/admin/api-logs" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'api-logs' ? 'active' : '' %>"><i class="fas fa-list-alt"></i> API Logs</a>
-  <a href="/admin/localization" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'localization' ? 'active' : '' %>"><i class="fas fa-language"></i> Localization</a>
+  <a href="/chat/admin" class="admin-nav-link"><i class="fas fa-headset"></i> সাপোর্ট চ্যাট</a>
 
   <div class="admin-nav-group-title">সাধারণ</div>
   <a href="/" class="admin-nav-link"><i class="fas fa-home"></i> সাইটে ফিরে যান</a>
-  <a href="/admin/logout" class="admin-nav-link" style="color:#f87171"><i class="fas fa-sign-out-alt"></i> লগ আউট</a>
-  <!-- বটম নেভ + সেফ এরিয়ার জন্য অতিরিক্ত স্পেস — শেষ আইটেম যেন দেখা যায় -->
-  <div style="height:100px;flex-shrink:0"></div>
+  <a href="/logout" class="admin-nav-link" style="color:#f87171"><i class="fas fa-sign-out-alt"></i> লগ আউট</a>
 </div>
 
 <script>
@@ -150,21 +114,17 @@ function toggleAdminSidebar(force) {
 }
 
 function updateAdminNavBadges() {
-  fetch('/admin/api/notification-counts').then(function(r){ return r.json(); }).then(function(data){
-    var dep = document.getElementById('navBadgeDeposits');
-    var wd = document.getElementById('navBadgeWithdrawals');
-    var kyc = document.getElementById('navBadgeKyc');
-    if (dep) {
-      if (data.deposits > 0) { dep.textContent = data.deposits; dep.style.display = 'inline-block'; }
-      else { dep.style.display = 'none'; }
+  fetch('/admin/pending-counts').then(function(r){ return r.json(); }).then(function(data){
+    var payBadge = document.getElementById('navBadgePayments');
+    var kycBadge = document.getElementById('navBadgeKyc');
+    var payTotal = (data.deposits || 0) + (data.withdrawals || 0);
+    if (payBadge) {
+      if (payTotal > 0) { payBadge.textContent = payTotal; payBadge.style.display = 'inline-block'; }
+      else { payBadge.style.display = 'none'; }
     }
-    if (wd) {
-      if (data.withdrawals > 0) { wd.textContent = data.withdrawals; wd.style.display = 'inline-block'; }
-      else { wd.style.display = 'none'; }
-    }
-    if (kyc && data.kyc) {
-      if (data.kyc > 0) { kyc.textContent = data.kyc; kyc.style.display = 'inline-block'; }
-      else { kyc.style.display = 'none'; }
+    if (kycBadge) {
+      if (data.kyc > 0) { kycBadge.textContent = data.kyc; kycBadge.style.display = 'inline-block'; }
+      else { kycBadge.style.display = 'none'; }
     }
   }).catch(function(){});
 }

@@ -1,4 +1,3 @@
-const crypto = require('crypto');
 const { pool } = require('../db');
 const { logAdminAction } = require('./fraudDetection');
 
@@ -12,41 +11,6 @@ const RATE_THRESHOLD = 20;          // ১০ সেকেন্ডে ২০+ �
 const MIN_FORM_FILL_MS = 1200;      // পেজ লোড থেকে ফর্ম সাবমিটে ১.২ সেকেন্ডের কম হলে স্বয়ংক্রিয় স্ক্রিপ্ট সন্দেহ
 
 const requestLog = new Map(); // ip -> [timestamps]
-
-// ==================== Request Fingerprinting ====================
-// TLS/JS ছাড়া, শুধু হেডার প্রোফাইল থেকে হালকা ফিঙ্গারপ্রিন্ট — একই "ব্রাউজার প্রোফাইল"
-// অনেকগুলো ভিন্ন IP থেকে এলে (প্রক্সি/VPN রোটেশন ব্যবহার করা বট নেটওয়ার্কের সাধারণ লক্ষণ) ধরার জন্য।
-const FINGERPRINT_WINDOW_MS = 60 * 60 * 1000; // ১ ঘণ্টা
-const FINGERPRINT_IP_THRESHOLD = 5;           // ১ ঘণ্টায় ৫+ ভিন্ন IP থেকে একই ফিঙ্গারপ্রিন্ট
-const fingerprintIpMap = new Map(); // fingerprint -> Map(ip -> lastSeen)
-
-setInterval(() => {
-  const cutoff = Date.now() - FINGERPRINT_WINDOW_MS;
-  for (const [fp, ipMap] of fingerprintIpMap.entries()) {
-    for (const [ip, ts] of ipMap.entries()) if (ts < cutoff) ipMap.delete(ip);
-    if (ipMap.size === 0) fingerprintIpMap.delete(fp);
-  }
-}, 5 * 60 * 1000).unref();
-
-function computeFingerprint(req) {
-  const parts = [
-    req.get('user-agent') || '',
-    req.get('accept-language') || '',
-    req.get('accept-encoding') || '',
-    req.get('accept') || '',
-    req.get('sec-ch-ua') || '',
-    req.get('sec-ch-ua-platform') || ''
-  ].join('|');
-  return crypto.createHash('md5').update(parts).digest('hex').slice(0, 16);
-}
-
-function trackFingerprint(fingerprint, ip) {
-  if (!fingerprint || !ip) return 0;
-  let ipMap = fingerprintIpMap.get(fingerprint);
-  if (!ipMap) { ipMap = new Map(); fingerprintIpMap.set(fingerprint, ipMap); }
-  ipMap.set(ip, Date.now());
-  return ipMap.size;
-}
 
 // পুরনো এন্ট্রি নিয়মিত পরিষ্কার করে মেমরি বাড়তে না দেওয়ার জন্য
 setInterval(() => {
@@ -76,27 +40,6 @@ function isSuspiciousUserAgent(ua) {
   return { suspicious: false, reason: null };
 }
 
-// ==================== Headless Browser Detection (client hints) ====================
-// UA regex ছাড়াও, আসল ব্রাউজার সাধারণত sec-ch-ua/accept-language/accept-encoding হেডার
-// পাঠায়। "Mozilla/5.0" জাতীয় সাধারণ UA থাকা সত্ত্বেও এই হেডারগুলো অনুপস্থিত হলে সেটা
-// headless/scripted ক্লায়েন্টের লক্ষণ (Puppeteer/Playwright default profile প্রায়ই এমন)।
-function detectHeadlessSignals(req) {
-  const ua = req.get('user-agent') || '';
-  const looksLikeBrowser = /mozilla|chrome|safari|firefox|edg/i.test(ua);
-  if (!looksLikeBrowser) return null; // UA regex আলাদাভাবে ধরবে
-  const missing = [];
-  if (!req.get('accept-language')) missing.push('accept-language');
-  if (!req.get('accept-encoding')) missing.push('accept-encoding');
-  if (req.get('sec-ch-ua') === undefined && /chrome|edg/i.test(ua) && !/mobile/i.test(ua)) {
-    // আধুনিক Chromium ব্রাউজার সাধারণত sec-ch-ua পাঠায়; না থাকলে headless হতে পারে
-    missing.push('sec-ch-ua');
-  }
-  if (missing.length >= 2) {
-    return `ব্রাউজার-সদৃশ UA কিন্তু সাধারণ হেডার অনুপস্থিত (${missing.join(', ')}) — headless/automated ক্লায়েন্ট সন্দেহ`;
-  }
-  return null;
-}
-
 function generateCaptcha() {
   const a = Math.floor(Math.random() * 8) + 1;
   const b = Math.floor(Math.random() * 8) + 1;
@@ -116,14 +59,14 @@ function verifyCaptcha(session, submittedAnswer) {
   return ok;
 }
 
-async function logBotEvent({ ip, userId = null, endpoint, signals, riskLevel, userAgent, blocked, fingerprint = null }) {
+async function logBotEvent({ ip, userId = null, endpoint, signals, riskLevel, userAgent, blocked }) {
   try {
     const signalTypes = signals.map(s => s.type);
     const reason = signals.map(s => s.description).join('; ');
     await pool.query(
-      `INSERT INTO bot_activity_logs (ip, user_id, endpoint, signal_types, risk_level, reason, user_agent, blocked, fingerprint)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [ip, userId, endpoint, signalTypes, riskLevel, reason, userAgent, !!blocked, fingerprint]
+      `INSERT INTO bot_activity_logs (ip, user_id, endpoint, signal_types, risk_level, reason, user_agent, blocked)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [ip, userId, endpoint, signalTypes, riskLevel, reason, userAgent, !!blocked]
     );
     await logAdminAction(
       null, 'SYSTEM', 'BOT_ACTIVITY_DETECTED',
@@ -140,10 +83,8 @@ async function logBotEvent({ ip, userId = null, endpoint, signals, riskLevel, us
  * শুধু সিগন্যাল ও ঝুঁকি রিটার্ন করে; caller ঠিক করে CAPTCHA চাইবে কিনা।
  * options.honeypotTriggered — হানিপট ফিল্ড পূরণ হয়েছে কিনা (ফর্ম-ভিত্তিক রুটে)
  * options.formRenderedAt — ফর্ম কতক্ষণ আগে রেন্ডার হয়েছিল (ms epoch), খুব দ্রুত সাবমিট হলে সন্দেহজনক
- * options.req — (ঐচ্ছিক) মূল Express request object, দেওয়া হলে Request Fingerprinting +
- *               headless-browser client-hint চেক চালু হয়। না দিলে আগের আচরণ অপরিবর্তিত থাকে।
  */
-function evaluateRequest({ ip, userAgent, endpoint, honeypotTriggered = false, formRenderedAt = null, req = null }) {
+function evaluateRequest({ ip, userAgent, endpoint, honeypotTriggered = false, formRenderedAt = null }) {
   const signals = [];
   const rate = recordRequest(ip);
 
@@ -167,26 +108,12 @@ function evaluateRequest({ ip, userAgent, endpoint, honeypotTriggered = false, f
     }
   }
 
-  let fingerprint = null;
-  if (req) {
-    fingerprint = computeFingerprint(req);
-    const distinctIps = trackFingerprint(fingerprint, ip);
-    if (distinctIps >= FINGERPRINT_IP_THRESHOLD) {
-      signals.push({ type: 'fingerprint_ip_rotation', description: `একই ব্রাউজার-ফিঙ্গারপ্রিন্ট ${distinctIps}টি ভিন্ন IP থেকে ব্যবহৃত হয়েছে (১ ঘণ্টায়) — প্রক্সি/বট-নেটওয়ার্ক সন্দেহ` });
-    }
-    const headlessReason = detectHeadlessSignals(req);
-    if (headlessReason) {
-      signals.push({ type: 'headless_client_hints', description: headlessReason });
-    }
-  }
-
   let riskLevel = null;
   if (signals.some(s => s.type === 'honeypot_triggered')) riskLevel = 'high';
-  else if (signals.some(s => s.type === 'fingerprint_ip_rotation')) riskLevel = 'high';
   else if (signals.length >= 2) riskLevel = 'high';
   else if (signals.length === 1) riskLevel = 'medium';
 
-  return { signals, riskLevel, requiresCaptcha: !!riskLevel, fingerprint };
+  return { signals, riskLevel, requiresCaptcha: !!riskLevel };
 }
 
 module.exports = {
@@ -194,6 +121,5 @@ module.exports = {
   generateCaptcha,
   verifyCaptcha,
   logBotEvent,
-  isSuspiciousUserAgent,
-  computeFingerprint
+  isSuspiciousUserAgent
 };

@@ -5,24 +5,21 @@ const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const { pool } = require('../db');
 const { createReferral } = require('../services/referral');
-const { sendQueuedEmail } = require('../services/email');
+const { sendPasswordReset, sendVerificationEmail } = require('../services/email');
 const { evaluateRegistration, evaluateFailedLogin, evaluateLogin } = require('../services/fraudDetection');
 const { evaluateDuplicateAccount } = require('../services/duplicateDetection');
 const { checkIp } = require('../services/vpnDetection');
+const { sendOTP } = require('../services/email');
 const { evaluateRequest, generateCaptcha, verifyCaptcha, logBotEvent } = require('../services/botDetection');
-const { getIpRule } = require('../services/ipRules');
-const { recordDeviceLogin, parseUserAgent, computeSignature, extractIp, isSignatureTrusted, trustCurrentSession } = require('../services/deviceTracking');
+const { recordDeviceLogin, parseUserAgent } = require('../services/deviceTracking');
 const cache = require('../services/cache');
-const RedisRateLimitStore = require('../services/redisRateLimitStore');
-const { logEvent: logAuditEvent } = require('../services/auditLog');
 
 const resetLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
   message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
   standardHeaders: true,
-  legacyHeaders: false,
-  store: new RedisRateLimitStore('rl:reset:')
+  legacyHeaders: false
 });
 
 const verifyResendLimiter = rateLimit({
@@ -30,8 +27,7 @@ const verifyResendLimiter = rateLimit({
   max: 5,
   message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
   standardHeaders: true,
-  legacyHeaders: false,
-  store: new RedisRateLimitStore('rl:verifyresend:')
+  legacyHeaders: false
 });
 
 // ইউজার-সাইড ইভেন্ট (রেজিস্ট্রেশন, ভেরিফিকেশন) admin_logs টেবিলেই লগ হয়, যাতে
@@ -89,13 +85,6 @@ async function recordLogin(req, userId, vpnInfo = null) {
         (vpnInfo && vpnInfo.riskScore) || 0]
     );
     loginLogId = inserted.rows[0]?.id || null;
-
-    // Activity Log + Fraud Scan — Background Queue-এর মাধ্যমে (fire-and-forget, লগইন ফ্লো ব্লক করে না)
-    // এটা বিদ্যমান services/fraudDetection.js সিঙ্ক্রোনাস চেকের পাশাপাশি একটা এক্সট্রা,
-    // অ্যাসিঙ্ক্রোনাস হিউরিস্টিক লেয়ার (IP/device শেয়ারিং, rapid deposit-withdraw প্যাটার্ন)
-    const queues = require('../queues');
-    queues.enqueueActivityLog({ userId, actionType: 'login', details: 'ইউজার লগইন করেছে', ip, userAgent: ua }).catch(() => {});
-    queues.enqueueFraudScan({ userId, triggeredBy: 'login' }).catch(() => {});
   } catch (e) {
     console.error('recordLogin error:', e.message);
   }
@@ -130,7 +119,7 @@ router.get('/', async (req, res) => {
 
 router.get('/register', (req, res) => {
   const ref = req.query.ref || '';
-  const botCheck = evaluateRequest({ ip: getReqIp(req), userAgent: req.get('user-agent') || '', endpoint: '/register', req });
+  const botCheck = evaluateRequest({ ip: getReqIp(req), userAgent: req.get('user-agent') || '', endpoint: '/register' });
   let captcha = null;
   if (botCheck.requiresCaptcha) {
     captcha = generateCaptcha();
@@ -149,31 +138,21 @@ router.post('/register', async (req, res) => {
   const reqIp = getReqIp(req);
   const userAgent = req.get('user-agent') || '';
 
-  // ব্লকলিস্টেড IP হলে সরাসরি প্রত্যাখ্যান, whitelist হলে নিচের বট-চেক সম্পূর্ণ স্কিপ
-  const ipRule = await getIpRule(reqIp);
-  if (ipRule === 'block') {
-    logBotEvent({ ip: reqIp, endpoint: '/register', signals: [{ type: 'ip_blocklisted', description: 'অ্যাডমিন কর্তৃক ব্লকলিস্টেড IP' }], riskLevel: 'high', userAgent, blocked: true })
-      .catch(e => console.error('logBotEvent error:', e.message));
-    req.flash('error', '❌ এই অ্যাকশনটি সম্পন্ন করা যায়নি।');
-    return res.redirect('/register');
-  }
-
   // ==================== Bot Detection System — সন্দেহজনক হলে CAPTCHA পাস করা বাধ্যতামূলক ====================
-  const botCheck = ipRule === 'whitelist' ? { requiresCaptcha: false, signals: [], riskLevel: null } : evaluateRequest({
+  const botCheck = evaluateRequest({
     ip: reqIp, userAgent, endpoint: '/register',
     honeypotTriggered: !!(website && website.trim()),
-    formRenderedAt: form_rendered_at,
-    req
+    formRenderedAt: form_rendered_at
   });
   if (botCheck.requiresCaptcha) {
     const captchaOk = verifyCaptcha(req.session, captcha_answer);
     if (!captchaOk) {
-      logBotEvent({ ip: reqIp, endpoint: '/register', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: true , fingerprint: botCheck.fingerprint })
+      logBotEvent({ ip: reqIp, endpoint: '/register', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: true })
         .catch(e => console.error('logBotEvent error:', e.message));
       req.flash('error', '❌ সন্দেহজনক কার্যকলাপ শনাক্ত হয়েছে — নিচের ভেরিফিকেশন প্রশ্নের সঠিক উত্তর দিন।');
       return res.redirect('/register');
     }
-    logBotEvent({ ip: reqIp, endpoint: '/register', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: false , fingerprint: botCheck.fingerprint })
+    logBotEvent({ ip: reqIp, endpoint: '/register', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: false })
       .catch(e => console.error('logBotEvent error:', e.message));
   }
 
@@ -243,7 +222,7 @@ router.post('/register', async (req, res) => {
       try {
         const token = await issueVerificationToken(newUserId);
         const verifyUrl = `${req.protocol}://${req.get('host')}/verify-email/${token}`;
-        await sendQueuedEmail('verification', email, { verifyUrl });
+        await sendVerificationEmail(email, verifyUrl);
         req.session.user.verification_token = token; // sanitizeUser ইতিমধ্যে কপি করে ফেলেছে বলে সেশনেও আপডেট
         await logSystemEvent(newUserId, username, 'EMAIL_VERIFICATION_SENT', `রেজিস্ট্রেশনের সময় ভেরিফিকেশন ইমেইল পাঠানো হয়েছে: ${email}`, req.ip);
       } catch (mailErr) {
@@ -272,13 +251,6 @@ router.post('/register', async (req, res) => {
     req.flash('success', email
       ? '✅ রেজিস্ট্রেশন সফল হয়েছে! স্বাগতম! আপনার ইমেইলে একটা ভেরিফিকেশন লিঙ্ক পাঠানো হয়েছে।'
       : '✅ রেজিস্ট্রেশন সফল হয়েছে! স্বাগতম!');
-
-    logAuditEvent({
-      req, actorType: 'user', actorId: newUserId, actorUsername: username,
-      action: 'REGISTER', category: 'auth', status: 'success', riskLevel: 'low',
-      details: { hasEmail: !!email, hasPhone: !!phone, referred: !!referredById }
-    }).catch(e => console.error('logAuditEvent (REGISTER) error:', e.message));
-
     res.redirect('/');
   } catch (err) {
     console.error(err);
@@ -304,18 +276,11 @@ async function completeLogin(req, user, vpnInfo) {
     vpnInfo
   }).catch(e => console.error('evaluateLogin error:', e.message));
 
-  logAuditEvent({
-    req, actorType: user.role === 'admin' ? 'admin' : 'user', actorId: user.id, actorUsername: user.username,
-    action: 'LOGIN', category: 'auth', status: 'success',
-    riskLevel: (deviceResult && deviceResult.isNewDevice) ? 'medium' : 'low',
-    details: { newDevice: !!(deviceResult && deviceResult.isNewDevice), vpnDetected: !!(vpnInfo && (vpnInfo.isVpn || vpnInfo.isProxy || vpnInfo.isTor)) }
-  }).catch(e => console.error('logAuditEvent (LOGIN) error:', e.message));
-
   return (user.role && user.role.toLowerCase() === 'admin') ? '/admin' : '/';
 }
 
 router.get('/login', (req, res) => {
-  const botCheck = evaluateRequest({ ip: getReqIp(req), userAgent: req.get('user-agent') || '', endpoint: '/login', req });
+  const botCheck = evaluateRequest({ ip: getReqIp(req), userAgent: req.get('user-agent') || '', endpoint: '/login' });
   let captcha = null;
   if (botCheck.requiresCaptcha) {
     captcha = generateCaptcha();
@@ -333,41 +298,27 @@ router.post('/login', async (req, res) => {
   const reqIp = getReqIp(req);
   const userAgent = req.get('user-agent') || '';
 
-  const ipRule = await getIpRule(reqIp);
-  if (ipRule === 'block') {
-    logBotEvent({ ip: reqIp, endpoint: '/login', signals: [{ type: 'ip_blocklisted', description: 'অ্যাডমিন কর্তৃক ব্লকলিস্টেড IP' }], riskLevel: 'high', userAgent, blocked: true })
-      .catch(e => console.error('logBotEvent error:', e.message));
-    req.flash('error', '❌ এই অ্যাকশনটি সম্পন্ন করা যায়নি।');
-    return res.redirect('/login');
-  }
-
   // ==================== Bot Detection System — সন্দেহজনক হলে CAPTCHA পাস করা বাধ্যতামূলক ====================
-  const botCheck = ipRule === 'whitelist' ? { requiresCaptcha: false, signals: [], riskLevel: null } : evaluateRequest({
+  const botCheck = evaluateRequest({
     ip: reqIp, userAgent, endpoint: '/login',
     honeypotTriggered: !!(website && website.trim()),
-    formRenderedAt: form_rendered_at,
-    req
+    formRenderedAt: form_rendered_at
   });
   if (botCheck.requiresCaptcha) {
     const captchaOk = verifyCaptcha(req.session, captcha_answer);
     if (!captchaOk) {
-      logBotEvent({ ip: reqIp, endpoint: '/login', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: true , fingerprint: botCheck.fingerprint })
+      logBotEvent({ ip: reqIp, endpoint: '/login', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: true })
         .catch(e => console.error('logBotEvent error:', e.message));
       req.flash('error', '❌ সন্দেহজনক কার্যকলাপ শনাক্ত হয়েছে — নিচের ভেরিফিকেশন প্রশ্নের সঠিক উত্তর দিন।');
       return res.redirect('/login');
     }
-    logBotEvent({ ip: reqIp, endpoint: '/login', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: false , fingerprint: botCheck.fingerprint })
+    logBotEvent({ ip: reqIp, endpoint: '/login', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: false })
       .catch(e => console.error('logBotEvent error:', e.message));
   }
 
   try {
-    // username / email / phone — তিনটাতেই লগইন করা যাবে (case-insensitive username/email)
     const result = await pool.query(
-      `SELECT * FROM users
-       WHERE LOWER(username) = LOWER($1)
-          OR LOWER(email) = LOWER($1)
-          OR phone = $1
-       LIMIT 1`,
+      'SELECT * FROM users WHERE email = $1 OR phone = $1',
       [identifier]
     );
     const user = result.rows[0];
@@ -376,11 +327,6 @@ router.post('/login', async (req, res) => {
     if (!user || !(await bcrypt.compare(password, user.password))) {
       evaluateFailedLogin(identifier, user ? user.id : null, loginIp, req.get('user-agent') || '')
         .catch(e => console.error('evaluateFailedLogin error:', e.message));
-      logAuditEvent({
-        req, actorType: 'user', actorId: user ? user.id : null, actorUsername: user ? user.username : identifier,
-        action: 'LOGIN_FAILED', category: 'auth', status: 'failure', riskLevel: 'medium',
-        details: { identifier }
-      }).catch(e => console.error('logAuditEvent (LOGIN_FAILED) error:', e.message));
       req.flash('error', '❌ তথ্য অথবা পাসওয়ার্ড ভুল।');
       return res.redirect('/login');
     }
@@ -396,67 +342,23 @@ router.post('/login', async (req, res) => {
       return res.redirect('/login');
     }
 
-    // ==================== VPN & Proxy Detection — কখনো লগইন ব্লক করে না ====================
-    // step_up_verifications টেবিল না থাকলে বা INSERT ফেল হলে সরাসরি নরমাল লগইনে চলে যাবে
-    let vpnInfo = null;
-    try {
-      vpnInfo = await checkIp(loginIp);
-    } catch (e) {
-      console.error('checkIp error (non-blocking):', e.message);
-    }
-
+    // ==================== VPN & Proxy Detection — কখনো লগইন ব্লক করে না, শুধু রিস্ক স্কোর অনুযায়ী step-up ভেরিফিকেশন চায় ====================
+    const vpnInfo = await checkIp(loginIp).catch(() => null);
     const needsStepUp = vpnInfo && (vpnInfo.isTor || vpnInfo.riskScore >= STEP_UP_RISK_THRESHOLD);
 
     if (needsStepUp && user.email && user.email_verified) {
-      try {
-        const code = String(Math.floor(100000 + Math.random() * 900000));
-        await pool.query(
-          `INSERT INTO step_up_verifications (user_id, code, purpose, ip, expires_at)
-           VALUES ($1, $2, 'vpn_login', $3, NOW() + INTERVAL '${STEP_UP_CODE_TTL_MINUTES} minutes')`,
-          [user.id, code, loginIp]
-        );
-        sendQueuedEmail('otp', user.email, { otp: code }).catch(e => console.error('sendOTP queue error:', e.message));
+      const code = String(Math.floor(100000 + Math.random() * 900000));
+      await pool.query(
+        `INSERT INTO step_up_verifications (user_id, code, purpose, ip, expires_at)
+         VALUES ($1, $2, 'vpn_login', $3, NOW() + INTERVAL '${STEP_UP_CODE_TTL_MINUTES} minutes')`,
+        [user.id, code, loginIp]
+      );
+      sendOTP(user.email, code).catch(e => console.error('sendOTP error:', e.message));
 
-        req.session.pendingLoginUserId = user.id;
-        req.session.pendingLoginVpnInfo = vpnInfo;
-        req.session.pendingLoginPurpose = 'vpn_login';
-        req.flash('success', `🔐 নিরাপত্তার কারণে আপনার ইমেইলে (${user.email}) একটি ভেরিফিকেশন কোড পাঠানো হয়েছে।`);
-        return res.redirect('/verify-access');
-      } catch (stepUpErr) {
-        // টেবিল মিসিং বা অন্য যেকোনো error — লগইন ব্লক করবে না, নরমাল লগইনে চলে যাবে
-        console.error('step_up insert error (falling back to normal login):', stepUpErr.message);
-      }
-    }
-
-    // ==================== Trusted Devices — অজানা/অচেনা ডিভাইস হলে অতিরিক্ত ভেরিফিকেশন ====================
-    // VPN স্টেপ-আপ ইতিমধ্যে ট্রিগার না হলেই শুধু চেক করা হয় (একসাথে দুটো step-up দেখাবে না)।
-    // বিদ্যমান device_sessions.is_trusted কলামই ব্যবহার করা হচ্ছে — নতুন কোনো টেবিল লাগছে না।
-    if (!needsStepUp) {
-      try {
-        const ua = req.get('user-agent') || '';
-        const fingerprint = req.headers['x-device-fingerprint'] || req.body.device_fingerprint || null;
-        const signature = computeSignature(fingerprint, ua);
-        const trusted = await isSignatureTrusted(user.id, signature);
-
-        if (!trusted && user.email && user.email_verified) {
-          const code = String(Math.floor(100000 + Math.random() * 900000));
-          await pool.query(
-            `INSERT INTO step_up_verifications (user_id, code, purpose, ip, expires_at)
-             VALUES ($1, $2, 'new_device', $3, NOW() + INTERVAL '${STEP_UP_CODE_TTL_MINUTES} minutes')`,
-            [user.id, code, loginIp]
-          );
-          sendQueuedEmail('otp', user.email, { otp: code }).catch(e => console.error('sendOTP queue error:', e.message));
-
-          req.session.pendingLoginUserId = user.id;
-          req.session.pendingLoginVpnInfo = null;
-          req.session.pendingLoginPurpose = 'new_device';
-          req.flash('success', `🔐 এটি একটি নতুন/অচেনা ডিভাইস — নিরাপত্তার জন্য আপনার ইমেইলে (${user.email}) একটি ভেরিফিকেশন কোড পাঠানো হয়েছে।`);
-          return res.redirect('/verify-access');
-        }
-      } catch (deviceStepUpErr) {
-        // যেকোনো error — লগইন ব্লক করবে না, নরমাল লগইনে চলে যাবে
-        console.error('device step-up check error (falling back to normal login):', deviceStepUpErr.message);
-      }
+      req.session.pendingLoginUserId = user.id;
+      req.session.pendingLoginVpnInfo = vpnInfo;
+      req.flash('success', `🔐 নিরাপত্তার কারণে আপনার ইমেইলে (${user.email}) একটি ভেরিফিকেশন কোড পাঠানো হয়েছে।`);
+      return res.redirect('/verify-access');
     }
 
     const redirectPath = await completeLogin(req, user, vpnInfo);
@@ -471,21 +373,20 @@ router.post('/login', async (req, res) => {
 // ==================== VPN & Proxy Detection — Step-up Verification (ইমেইল OTP) ====================
 router.get('/verify-access', (req, res) => {
   if (!req.session.pendingLoginUserId) return res.redirect('/login');
-  res.render('verify-access', { purpose: req.session.pendingLoginPurpose || 'vpn_login' });
+  res.render('verify-access');
 });
 
 router.post('/verify-access', async (req, res) => {
   try {
     const pendingUserId = req.session.pendingLoginUserId;
     if (!pendingUserId) return res.redirect('/login');
-    const purpose = req.session.pendingLoginPurpose || 'vpn_login';
 
-    const { code, trustThisDevice } = req.body;
+    const { code } = req.body;
     const rowRes = await pool.query(
       `SELECT * FROM step_up_verifications
-       WHERE user_id = $1 AND purpose = $2 AND verified_at IS NULL
+       WHERE user_id = $1 AND purpose = 'vpn_login' AND verified_at IS NULL
        ORDER BY created_at DESC LIMIT 1`,
-      [pendingUserId, purpose]
+      [pendingUserId]
     );
     const row = rowRes.rows[0];
 
@@ -493,14 +394,12 @@ router.post('/verify-access', async (req, res) => {
       req.flash('error', '❌ কোডের মেয়াদ শেষ হয়ে গেছে। আবার লগইন করুন।');
       req.session.pendingLoginUserId = null;
       req.session.pendingLoginVpnInfo = null;
-      req.session.pendingLoginPurpose = null;
       return res.redirect('/login');
     }
     if (row.attempts >= 5) {
       req.flash('error', '❌ অনেকবার ভুল চেষ্টা হয়েছে। আবার লগইন করুন।');
       req.session.pendingLoginUserId = null;
       req.session.pendingLoginVpnInfo = null;
-      req.session.pendingLoginPurpose = null;
       return res.redirect('/login');
     }
     if (!code || code !== row.code) {
@@ -518,15 +417,8 @@ router.post('/verify-access', async (req, res) => {
     const vpnInfo = req.session.pendingLoginVpnInfo || null;
     req.session.pendingLoginUserId = null;
     req.session.pendingLoginVpnInfo = null;
-    req.session.pendingLoginPurpose = null;
 
     const redirectPath = await completeLogin(req, user, vpnInfo);
-
-    // নতুন-ডিভাইস ভেরিফিকেশনের ক্ষেত্রে, ইউজার চাইলে এই ডিভাইসকে Trusted হিসেবে সেভ করে দেওয়া হয়
-    if (purpose === 'new_device' && trustThisDevice) {
-      await trustCurrentSession(req.sessionID);
-    }
-
     req.flash('success', '✅ ভেরিফিকেশন সম্পন্ন! স্বাগতম।');
     res.redirect(redirectPath);
   } catch (err) {
@@ -598,7 +490,7 @@ router.post('/resend-verification', verifyResendLimiter, async (req, res) => {
 
     const token = await issueVerificationToken(user.id);
     const verifyUrl = `${req.protocol}://${req.get('host')}/verify-email/${token}`;
-    await sendQueuedEmail('verification', user.email, { verifyUrl });
+    await sendVerificationEmail(user.email, verifyUrl);
     await logSystemEvent(user.id, user.username, 'EMAIL_VERIFICATION_RESEND', `ভেরিফিকেশন ইমেইল আবার পাঠানো হয়েছে: ${user.email}`, req.ip);
 
     req.flash('success', '✅ ভেরিফিকেশন লিঙ্ক আবার পাঠানো হয়েছে, ইমেইল চেক করুন।');
@@ -613,51 +505,11 @@ router.post('/resend-verification', verifyResendLimiter, async (req, res) => {
 // ==================== পাসওয়ার্ড রিসেট (Forgot Password) ====================
 
 router.get('/forgot-password', (req, res) => {
-  const botCheck = evaluateRequest({ ip: getReqIp(req), userAgent: req.get('user-agent') || '', endpoint: '/forgot-password', req });
-  let captcha = null;
-  if (botCheck.requiresCaptcha) {
-    captcha = generateCaptcha();
-    req.session.botCaptcha = captcha;
-    logBotEvent({ ip: getReqIp(req), endpoint: '/forgot-password', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent: req.get('user-agent') || '', blocked: false })
-      .catch(e => console.error('logBotEvent error:', e.message));
-  } else {
-    req.session.botCaptcha = null;
-  }
-  res.render('forgot-password', { sent: false, captcha, formRenderedAt: Date.now() });
+  res.render('forgot-password', { sent: false });
 });
 
 router.post('/forgot-password', resetLimiter, async (req, res) => {
-  const { email, website, form_rendered_at, captcha_answer } = req.body;
-  const reqIp = getReqIp(req);
-  const userAgent = req.get('user-agent') || '';
-
-  const ipRule = await getIpRule(reqIp);
-  if (ipRule === 'block') {
-    logBotEvent({ ip: reqIp, endpoint: '/forgot-password', signals: [{ type: 'ip_blocklisted', description: 'অ্যাডমিন কর্তৃক ব্লকলিস্টেড IP' }], riskLevel: 'high', userAgent, blocked: true })
-      .catch(e => console.error('logBotEvent error:', e.message));
-    req.flash('error', '❌ এই অ্যাকশনটি সম্পন্ন করা যায়নি।');
-    return res.redirect('/forgot-password');
-  }
-
-  // ==================== Bot Detection System — সন্দেহজনক হলে CAPTCHA পাস করা বাধ্যতামূলক ====================
-  const botCheck = ipRule === 'whitelist' ? { requiresCaptcha: false, signals: [], riskLevel: null } : evaluateRequest({
-    ip: reqIp, userAgent, endpoint: '/forgot-password',
-    honeypotTriggered: !!(website && website.trim()),
-    formRenderedAt: form_rendered_at,
-    req
-  });
-  if (botCheck.requiresCaptcha) {
-    const captchaOk = verifyCaptcha(req.session, captcha_answer);
-    if (!captchaOk) {
-      logBotEvent({ ip: reqIp, endpoint: '/forgot-password', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: true , fingerprint: botCheck.fingerprint })
-        .catch(e => console.error('logBotEvent error:', e.message));
-      req.flash('error', '❌ সন্দেহজনক কার্যকলাপ শনাক্ত হয়েছে — নিচের ভেরিফিকেশন প্রশ্নের সঠিক উত্তর দিন।');
-      return res.redirect('/forgot-password');
-    }
-    logBotEvent({ ip: reqIp, endpoint: '/forgot-password', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: false , fingerprint: botCheck.fingerprint })
-      .catch(e => console.error('logBotEvent error:', e.message));
-  }
-
+  const { email } = req.body;
   try {
     if (!email) {
       req.flash('error', '❌ ইমেইল দিন।');
@@ -675,12 +527,13 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
         'UPDATE users SET reset_token = $1, reset_token_expiry = $2 WHERE id = $3',
         [token, expiry, user.id]
       );
-      // Redis-এ token → userId ক্যাশ করা হচ্ছে (TTL = DB expiry-এর সমান), যাতে verify-এর সময়
-      // বেশিরভাগ ক্ষেত্রে DB না ছুঁয়েই কাজ চলে। ব্যর্থ হলেও সমস্যা নেই — DB fallback তো থাকছেই।
-      cache.set(`reset_token:${token}`, user.id, 60 * 60).catch(() => {});
 
       const resetUrl = `${req.protocol}://${req.get('host')}/reset-password/${token}`;
-      await sendQueuedEmail('password_reset', user.email, { resetUrl });
+      try {
+        await sendPasswordReset(user.email, resetUrl);
+      } catch (mailErr) {
+        console.error('sendPasswordReset error:', mailErr.message);
+      }
     }
 
     res.render('forgot-password', { sent: true });
@@ -693,21 +546,15 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
 
 router.get('/reset-password/:token', async (req, res) => {
   try {
-    const token = req.params.token;
-    // আগে Redis-এ চেক করা হচ্ছে (দ্রুত, DB-তে না গিয়েই) — ক্যাশ মিস/Redis ডাউন হলে স্বাভাবিকভাবে DB fallback হবে
-    const cachedUserId = await cache.get(`reset_token:${token}`);
-    if (cachedUserId) {
-      return res.render('reset-password', { token });
-    }
     const result = await pool.query(
       'SELECT id FROM users WHERE reset_token = $1 AND reset_token_expiry > NOW()',
-      [token]
+      [req.params.token]
     );
     if (result.rows.length === 0) {
       req.flash('error', '❌ লিঙ্কটি অকার্যকর অথবা মেয়াদ শেষ হয়ে গেছে। আবার চেষ্টা করুন।');
       return res.redirect('/forgot-password');
     }
-    res.render('reset-password', { token });
+    res.render('reset-password', { token: req.params.token });
   } catch (err) {
     console.error('reset-password GET error:', err.message);
     res.redirect('/forgot-password');
@@ -741,7 +588,6 @@ router.post('/reset-password/:token', resetLimiter, async (req, res) => {
       'UPDATE users SET password = $1, reset_token = NULL, reset_token_expiry = NULL WHERE id = $2',
       [hashed, result.rows[0].id]
     );
-    cache.del(`reset_token:${token}`).catch(() => {});
 
     req.flash('success', '✅ পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে। এখন লগইন করুন।');
     res.redirect('/login');
@@ -754,13 +600,6 @@ router.post('/reset-password/:token', resetLimiter, async (req, res) => {
 
 router.get('/logout', async (req, res) => {
   try {
-    if (req.session && req.session.user) {
-      logAuditEvent({
-        req, actorType: req.session.user.role === 'admin' ? 'admin' : 'user',
-        actorId: req.session.user.id, actorUsername: req.session.user.username,
-        action: 'LOGOUT', category: 'auth', status: 'success', riskLevel: 'low'
-      }).catch(e => console.error('logAuditEvent (LOGOUT) error:', e.message));
-    }
     if (req.sessionID) {
       await pool.query(`UPDATE device_sessions SET revoked_at = NOW() WHERE sid = $1`, [req.sessionID]);
     }

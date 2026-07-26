@@ -5,24 +5,20 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
-    "dev": "nodemon app.js",
-    "sentry:sourcemaps": "node scripts/sentry-sourcemaps.js"
+    "dev": "nodemon app.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.24.0",
-    "@sentry/node": "^8.0.0",
     "bcryptjs": "^2.4.3",
-    "bullmq": "^5.34.0",
+    "bullmq": "^5.80.10",
     "cloudinary": "^2.5.1",
     "clsx": "^2.1.1",
     "compression": "^1.7.4",
     "connect-flash": "^0.1.1",
     "connect-pg-simple": "^9.0.1",
-    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
     "ejs": "^3.1.10",
-    "exceljs": "^4.4.0",
     "express": "^4.22.2",
     "express-rate-limit": "^7.4.1",
     "express-session": "^1.17.3",
@@ -35,21 +31,18 @@
     "next": "^15.5.19",
     "nodemailer": "^9.0.3",
     "pg": "^8.22.0",
-    "prom-client": "^15.1.0",
     "qrcode": "^1.5.3",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "socket.io": "^4.8.3",
     "speakeasy": "^2.0.0",
     "tailwind-merge": "^3.6.0",
-    "web-push": "^3.6.7",
     "zustand": "^5.0.14"
   },
   "overrides": {
     "postcss": "^8.5.19"
   },
   "devDependencies": {
-    "@sentry/cli": "^2.39.1",
     "@tailwindcss/postcss": "^4.3.2",
     "@types/node": "^26.0.1",
     "@types/react": "^19.2.17",

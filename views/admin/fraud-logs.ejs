@@ -39,14 +39,13 @@ function logRow(l) {
   return '<tr class="hover:bg-slate-50 align-top">' +
     '<td class="px-6 py-4"><a href="/admin/users/' + l.user_id + '" class="font-semibold text-blue-600 hover:underline">' + userLabel + '</a></td>' +
     '<td class="px-6 py-4">' + riskBadge(l.risk_level) + '</td>' +
-    '<td class="px-6 py-4 text-sm font-mono font-semibold text-slate-600">' + (l.risk_score != null ? l.risk_score : '-') + '</td>' +
     '<td class="px-6 py-4 text-sm text-slate-600 max-w-md">' + escapeHtml(l.reason) + '</td>' +
     '<td class="px-6 py-4">' + statusBadge(l.status) + '</td>' +
     '<td class="px-6 py-4 text-xs text-slate-400">' + fmtDate(l.created_at) + '</td>' +
     '<td class="px-6 py-4 text-center">' + actions + '</td>' +
   '</tr>';
 }
-const rows = (logs || []).map(logRow).join('') || '<tr><td colspan="7" class="px-6 py-10 text-center text-slate-400">কোনো ফ্রড ফ্ল্যাগ পাওয়া যায়নি</td></tr>';
+const rows = (logs || []).map(logRow).join('') || '<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400">কোনো ফ্রড ফ্ল্যাগ পাওয়া যায়নি</td></tr>';
 const f = filters || {};
 function qs(overrides) {
   const merged = Object.assign({ risk_level: f.risk_level, status: f.status, user_id: f.user_id, from: f.from, to: f.to }, overrides);
@@ -92,7 +91,6 @@ function qs(overrides) {
                 <tr>
                     <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">User</th>
                     <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Risk</th>
-                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Score</th>
                     <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Reason</th>
                     <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Status</th>
                     <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Date</th>

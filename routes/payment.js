@@ -3,29 +3,22 @@ const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const { pool } = require('../db');
 const { createBonus, canWithdraw } = require('../services/turnover');
-const { applyVipDepositBonus } = require('../services/vip');
 const { processReferralDeposit } = require('../services/referral');
 const crypto = require('crypto');
 const sslcommerz = require('../services/sslcommerz');
 const { broadcastDemoStats, emitAdminAlert } = require('../services/socket');
-const { emitToUser, notifyUser } = require('../services/notify');
 const { notifyTelegram } = require('../services/telegramNotify');
 const { verifyPin, getPinStatus } = require('../services/withdrawPin');
 const { evaluateTransaction } = require('../services/fraudDetection');
-const { isSessionNewDevice } = require('../services/deviceTracking');
 const { checkIp } = require('../services/vpnDetection');
-const { getSetting } = require('../services/settings');
 const { requireVerifiedEmail } = require('../middleware/auth');
-const RedisRateLimitStore = require('../services/redisRateLimitStore');
-const { logEvent: logAuditEvent } = require('../services/auditLog');
 
 const paymentLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 15,
   message: 'অনেকবার চেষ্টা করেছেন। কিছুক্ষণ পর আবার চেষ্টা করুন।',
   standardHeaders: true,
-  legacyHeaders: false,
-  store: new RedisRateLimitStore('rl:payment:')
+  legacyHeaders: false
 });
 
 function requireLogin(req, res, next) {
@@ -47,28 +40,17 @@ function parseAmount(raw) {
 async function notifyAdmins(title, message, alertType) {
   try {
     const admins = await pool.query("SELECT id FROM users WHERE role = 'admin'");
-    const userIds = admins.rows.map(a => a.id);
-    const result = await require('../queues').enqueueNotification('admin_alert', {
-      userIds,
-      title,
-      message,
-      telegramText: `🔔 <b>${title}</b>\n${message}`
-    });
-    if (!result || !result.queued) {
-      // fallback ইতিমধ্যে queues/producers.js নিজেই চালিয়ে দিয়েছে (inline mode);
-      // এখানে শুধু নিশ্চিত করি যে notifications টেবিল/Telegram কখনো মিস না হয়
-      for (const uid of userIds) {
-        await pool.query(
-          `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'info')`,
-          [uid, title, message]
-        ).catch(() => {});
-      }
-      notifyTelegram(`🔔 <b>${title}</b>\n${message}`);
+    for (const a of admins.rows) {
+      await pool.query(
+        `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'info')`,
+        [a.id, title, message]
+      );
     }
   } catch (e) {
     console.error('notifyAdmins error:', e.message);
   }
   if (alertType) emitAdminAlert(alertType, { title, message });
+  notifyTelegram(`🔔 <b>${title}</b>\n${message}`);
 }
 
 // ==================== রিলোড বোনাসের হার ====================
@@ -133,29 +115,17 @@ async function creditApprovedDeposit(client, request) {
     console.error('processReferralDeposit failed, referral bonus skipped:', refErr.message);
   }
 
-  // ==== VIP Deposit Bonus — বর্তমান VIP লেভেল অনুযায়ী স্বয়ংক্রিয়, সম্পূর্ণ সার্ভার-সাইড গণনা ====
-  let vipBonus = 0;
-  await client.query('SAVEPOINT vip_bonus_sp');
-  try {
-    vipBonus = await applyVipDepositBonus(client, request.user_id, request.amount);
-    await client.query('RELEASE SAVEPOINT vip_bonus_sp');
-  } catch (vipErr) {
-    await client.query('ROLLBACK TO SAVEPOINT vip_bonus_sp');
-    console.error('applyVipDepositBonus failed, VIP bonus skipped but deposit continues:', vipErr.message);
-    vipBonus = 0;
-  }
-
   await client.query(`UPDATE payment_requests SET status='approved', updated_at=NOW() WHERE id=$1`, [request.id]);
 
   const message = bonusGiven > 0
-    ? `আপনার ${request.amount} টাকার ডিপোজিট + ${bonusGiven} বোনাস যোগ হয়েছে!${vipBonus > 0 ? ` + ${vipBonus} VIP বোনাস` : ''} (টার্নওভার প্রযোজ্য)`
-    : `আপনার ${request.amount} টাকার ডিপোজিট অনুমোদন হয়েছে!${vipBonus > 0 ? ` + ${vipBonus} VIP বোনাস যোগ হয়েছে` : ''}`;
-  const notifResult = await client.query(
-    `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'success') RETURNING *`,
+    ? `আপনার ${request.amount} টাকার ডিপোজিট + ${bonusGiven} বোনাস যোগ হয়েছে! (টার্নওভার প্রযোজ্য)`
+    : `আপনার ${request.amount} টাকার ডিপোজিট অনুমোদন হয়েছে!`;
+  await client.query(
+    `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'success')`,
     [request.user_id, 'পেমেন্ট অনুমোদন', message]
   );
 
-  return { bonusGiven, vipBonus, notification: notifResult.rows[0] };
+  return bonusGiven;
 }
 
 const VALID_METHODS = ['bkash', 'nagad', 'rocket', 'upay', 'bank', 'crypto'];
@@ -175,12 +145,6 @@ router.get('/deposit', requireLogin, (req, res) => {
 });
 
 router.post('/deposit', requireLogin, paymentLimiter, async (req, res) => {
-  const depositEnabled = await getSetting('payment_deposit_enabled');
-  if (depositEnabled === 'false') {
-    req.flash('error', 'বর্তমানে ডিপোজিট সাময়িকভাবে বন্ধ আছে। কিছুক্ষণ পর আবার চেষ্টা করুন।');
-    return res.redirect('/payment/deposit');
-  }
-
   const { method, account_number } = req.body;
   const transaction_id = (req.body.transaction_id || '').trim();
   const wantBonus = req.body.want_bonus === 'yes';
@@ -248,12 +212,6 @@ router.post('/deposit', requireLogin, paymentLimiter, async (req, res) => {
         .catch(e => console.error('fraud evaluateTransaction (deposit) error:', e.message));
     }).catch(e => console.error('vpn checkIp (deposit) error:', e.message));
     await notifyAdmins('নতুন ডিপোজিট রিকোয়েস্ট', `${req.session.user.username} ${amount} টাকা ডিপোজিট চেয়েছে (${method})।`, 'deposit');
-    logAuditEvent({
-      req, actorType: 'user', actorId: userId, actorUsername: req.session.user.username,
-      action: 'DEPOSIT_REQUESTED', category: 'financial', status: 'success',
-      riskLevel: amount >= 10000 ? 'medium' : 'low',
-      details: { amount, method, transaction_id }
-    }).catch(e => console.error('logAuditEvent (DEPOSIT_REQUESTED) error:', e.message));
     req.flash('success', 'ডিপোজিট রিকোয়েস্ট পাঠানো হয়েছে!');
     res.redirect('/payment/history');
   } catch (err) {
@@ -288,12 +246,6 @@ router.get('/withdraw', requireLogin, async (req, res) => {
 
 
 router.post('/withdraw', requireLogin, requireVerifiedEmail, paymentLimiter, async (req, res) => {
-  const withdrawEnabled = await getSetting('payment_withdraw_enabled');
-  if (withdrawEnabled === 'false') {
-    req.flash('error', 'বর্তমানে উইথড্র সাময়িকভাবে বন্ধ আছে। কিছুক্ষণ পর আবার চেষ্টা করুন।');
-    return res.redirect('/payment/withdraw');
-  }
-
   const { method, account_number, withdraw_pin } = req.body;
   const amount = parseAmount(req.body.amount);
   const userId = req.session.user.id;
@@ -379,19 +331,12 @@ router.post('/withdraw', requireLogin, requireVerifiedEmail, paymentLimiter, asy
 
     if (req.session.user) req.session.user.coins = upd.rows[0].coins;
 
-    checkIp((req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim()).then(async (vpnInfo) => {
-      const isNewDevice = await isSessionNewDevice(req.sessionID).catch(() => false);
-      evaluateTransaction(userId, 'withdraw', { accountNumber: account_number, vpnInfo, amount, isNewDevice })
+    checkIp((req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim()).then(vpnInfo => {
+      evaluateTransaction(userId, 'withdraw', { accountNumber: account_number, vpnInfo })
         .catch(e => console.error('fraud evaluateTransaction (withdraw) error:', e.message));
     }).catch(e => console.error('vpn checkIp (withdraw) error:', e.message));
 
     await notifyAdmins('নতুন উইথড্র রিকোয়েস্ট', `${req.session.user.username} ${amount} টাকা উইথড্র চেয়েছে (${method})।`, 'withdraw');
-    logAuditEvent({
-      req, actorType: 'user', actorId: userId, actorUsername: req.session.user.username,
-      action: 'WITHDRAW_REQUESTED', category: 'financial', status: 'success',
-      riskLevel: amount >= 10000 ? 'high' : (amount >= 3000 ? 'medium' : 'low'),
-      details: { amount, method, accountNumber: account_number }
-    }).catch(e => console.error('logAuditEvent (WITHDRAW_REQUESTED) error:', e.message));
 
     req.flash('success', 'উইথড্র রিকোয়েস্ট পাঠানো হয়েছে!');
     res.redirect('/payment/history');
@@ -634,20 +579,16 @@ router.post('/admin/approve/:id', requireAdmin, async (req, res) => {
       return res.redirect('/payment/admin/payments');
     }
 
-    let notifRow = null;
     if (request.type === 'deposit') {
-      const r = await creditApprovedDeposit(client, request);
-      notifRow = r && r.notification;
+      await creditApprovedDeposit(client, request);
     } else {
       await client.query(`UPDATE payment_requests SET status='approved', updated_at=NOW() WHERE id=$1`, [id]);
-      const nr = await client.query(
-        `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'success') RETURNING *`,
+      await client.query(
+        `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'success')`,
         [request.user_id, 'পেমেন্ট অনুমোদন', `আপনার ${request.amount} টাকার উইথড্র অনুমোদন হয়েছে!`]
       );
-      notifRow = nr.rows[0];
     }
     await client.query('COMMIT');
-    if (notifRow) emitToUser(request.user_id, notifRow);
     req.flash('success', 'অনুমোদন হয়েছে');
     res.redirect('/payment/admin/payments');
   } catch (err) {
@@ -773,9 +714,8 @@ router.post('/sslcommerz/success', async (req, res) => {
       `UPDATE payment_requests SET gateway_val_id=$1, gateway_response=$2 WHERE id=$3`,
       [val_id, JSON.stringify(verification), request.id]
     );
-    const cr2 = await creditApprovedDeposit(client, request);
+    await creditApprovedDeposit(client, request);
     await client.query('COMMIT');
-    if (cr2 && cr2.notification) emitToUser(request.user_id, cr2.notification);
 
     if (req.session.user) {
       const u = await pool.query('SELECT coins FROM users WHERE id=$1', [request.user_id]);
@@ -836,16 +776,14 @@ router.post('/sslcommerz/ipn', async (req, res) => {
     const validStatus = verification.status === 'VALID' || verification.status === 'VALIDATED';
     const amountMatches = Math.round(Number(verification.amount)) === Math.round(Number(request.amount));
 
-    let cr3 = null;
     if (validStatus && amountMatches) {
       await client.query(
         `UPDATE payment_requests SET gateway_val_id=$1, gateway_response=$2 WHERE id=$3`,
         [val_id, JSON.stringify(verification), request.id]
       );
-      cr3 = await creditApprovedDeposit(client, request);
+      await creditApprovedDeposit(client, request);
     }
     await client.query('COMMIT');
-    if (cr3 && cr3.notification) emitToUser(request.user_id, cr3.notification);
     res.sendStatus(200);
   } catch (err) {
     await client.query('ROLLBACK');

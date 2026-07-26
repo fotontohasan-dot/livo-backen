@@ -1,295 +1,182 @@
-<!DOCTYPE html>
-<html lang="bn">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>গেম ম্যানেজমেন্ট • Livo Admin</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <style>
-    * { box-sizing: border-box; }
-    body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
+<%
+function esc(s) { return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+const f = { category: selectedCategory||'all', provider: selectedProvider||'all', badge: selectedBadge||'all', status: selectedStatus||'all' };
+function qstr(o) {
+  const m = Object.assign({category:f.category,provider:f.provider,badge:f.badge,status:f.status,q:searchQ||''},o);
+  return Object.entries(m).map(([k,v])=>k+'='+encodeURIComponent(v||'')).join('&');
+}
+const catLabels = {all:'সব',hot:'🔥 Hot',slots:'🎰 Slots',live:'📹 Live',sports:'⚽ Sports',poker:'♠️ Poker',casino:'🎲 Casino',fishing:'🎣 Fishing',table:'🃏 Table'};
+function fieldRow(id, label, tag, opts) {
+  return '<div><label class="block text-xs font-semibold text-slate-500 mb-1">'+label+'</label>'+tag+'</div>';
+}
+%>
+<%- include('partials/admin-layout', {
+  title: 'Games Management',
+  active: 'games',
+  body: `
+<div class="max-w-7xl mx-auto">
 
-    .games-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
-    .games-toolbar form { display: flex; gap: 8px; flex: 1; min-width: 180px; }
+  ${(success||[]).map(m=>'<div class="mb-4 px-4 py-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-2xl text-sm">'+esc(m)+'</div>').join('')}
+  ${(error||[]).map(m=>'<div class="mb-4 px-4 py-3 bg-red-50 border border-red-200 text-red-700 rounded-2xl text-sm">'+esc(m)+'</div>').join('')}
 
-    /* ক্যাটাগরি ট্যাব */
-    .cat-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 10px; scrollbar-width: none; }
-    .cat-tabs::-webkit-scrollbar { display: none; }
-    .cat-tab {
-      flex: 0 0 auto; padding: 8px 16px; border-radius: 20px; background: #1c2028;
-      border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; font-weight: 700; font-size: 12px;
-      text-decoration: none; white-space: nowrap;
-    }
-    .cat-tab.active { background: #f59e0b; color: #14171f; border-color: #f59e0b; }
-
-    /* সেকেন্ডারি "হট" ট্যাব — শুধু স্লটস ক্যাটাগরিতে */
-    .sec-tab { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 16px;
-      background: #1c2028; border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; font-weight: 700;
-      font-size: 11px; text-decoration: none; margin-bottom: 12px; }
-    .sec-tab.active { background: rgba(245,158,11,0.15); border-color: #f59e0b; color: #f59e0b; }
-
-    /* সাইড প্রোভাইডার লিস্ট + গেম টেবিল */
-    .games-layout { display: flex; gap: 12px; align-items: flex-start; }
-    .provider-side {
-      display: none; flex-direction: column; gap: 6px; width: 88px; flex-shrink: 0;
-      max-height: 560px; overflow-y: auto; scrollbar-width: none;
-    }
-    .provider-side::-webkit-scrollbar { display: none; }
-    .provider-side.show { display: flex; }
-    .provider-side-item {
-      background: #171b23; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px;
-      padding: 8px 4px; text-align: center; text-decoration: none; font-size: 10px; font-weight: 700;
-      color: #cbd5e1; line-height: 1.3;
-    }
-    .provider-side-item .cnt { display: block; font-size: 9px; color: #64748b; font-weight: 600; margin-top: 2px; }
-    .provider-side-item.active { border-color: #f59e0b; background: rgba(245,158,11,0.1); color: #f59e0b; }
-    .games-table-wrap { flex: 1; min-width: 0; overflow-x: auto; }
-
-    .emoji-cell { font-size: 18px; }
-    .switch { position: relative; display: inline-block; width: 38px; height: 20px; }
-    .switch input { opacity: 0; width: 0; height: 0; }
-    .switch-slider {
-      position: absolute; cursor: pointer; inset: 0; background: #3a3f4b; border-radius: 20px; transition: .2s;
-    }
-    .switch-slider:before {
-      content: ""; position: absolute; height: 14px; width: 14px; left: 3px; bottom: 3px;
-      background: #fff; border-radius: 50%; transition: .2s;
-    }
-    .switch input:checked + .switch-slider { background: #10b981; }
-    .switch input:checked + .switch-slider:before { transform: translateX(18px); }
-
-    .row-actions { display: flex; gap: 6px; }
-    .flash-box { padding: 10px 14px; border-radius: 10px; font-size: 12px; margin-bottom: 10px; }
-    .flash-success { background: rgba(16,185,129,0.12); color: #10b981; border: 1px solid rgba(16,185,129,0.25); }
-    .flash-error { background: rgba(239,68,68,0.12); color: #ef4444; border: 1px solid rgba(239,68,68,0.25); }
-
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .form-grid .full { grid-column: 1 / -1; }
-    label.field-label { font-size: 11px; color: #94a3b8; margin-bottom: 4px; display: block; font-weight: 700; }
-  </style>
-  <%- include('./partials/pwa-head') %>
-</head>
-<body>
-  <div class="admin-wrap">
-    <%- include('./partials/sidebar', { active: 'games' }) %>
-    <div class="admin-content">
-      <%- include('./partials/header', { pageTitle: 'গেম ম্যানেজমেন্ট', pageSubtitle: 'ক্যাটাগরি ও প্রোভাইডার অনুযায়ী গেম ফিল্টার করুন, নতুন গেম যোগ/এডিট/ডিলিট করুন' }) %>
-
-      <% if (typeof success !== 'undefined' && success && success.length) { %>
-        <% success.forEach(function(m) { %><div class="flash-box flash-success"><%= m %></div><% }) %>
-      <% } %>
-      <% if (typeof error !== 'undefined' && error && error.length) { %>
-        <% error.forEach(function(m) { %><div class="flash-box flash-error"><%= m %></div><% }) %>
-      <% } %>
-
-      <div class="grid grid-4" style="margin-bottom:14px;">
-        <div class="stat-card">
-          <div class="stat-label">মোট গেম</div>
-          <div class="stat-number"><%= totalGames %></div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">সক্রিয়</div>
-          <div class="stat-number" style="color:#10b981;"><%= activeGames %></div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">নিষ্ক্রিয়</div>
-          <div class="stat-number" style="color:#ef4444;"><%= totalGames - activeGames %></div>
-        </div>
-        <div class="stat-card" style="display:flex;align-items:center;justify-content:center;">
-          <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="openAddModal()">
-            <i class="fas fa-plus"></i> নতুন গেম যোগ করুন
-          </button>
-        </div>
-      </div>
-
-      <!-- ===== ক্যাটাগরি ট্যাব ===== -->
-      <div class="cat-tabs">
-        <a class="cat-tab <%= selectedCategory === 'all' ? 'active' : '' %>" href="/admin/games?category=all&status=<%= selectedStatus %>"><i class="fas fa-border-all"></i> সব</a>
-        <a class="cat-tab <%= selectedCategory === 'hot' ? 'active' : '' %>" href="/admin/games?category=hot&status=<%= selectedStatus %>"><i class="fas fa-fire"></i> হট</a>
-        <a class="cat-tab <%= selectedCategory === 'slots' ? 'active' : '' %>" href="/admin/games?category=slots&status=<%= selectedStatus %>"><i class="fas fa-gamepad"></i> স্লটস</a>
-        <a class="cat-tab <%= selectedCategory === 'live' ? 'active' : '' %>" href="/admin/games?category=live&status=<%= selectedStatus %>"><i class="fas fa-video"></i> লাইভ ক্যাসিনো</a>
-        <a class="cat-tab <%= selectedCategory === 'sports' ? 'active' : '' %>" href="/admin/games?category=sports&status=<%= selectedStatus %>"><i class="fas fa-running"></i> স্পোর্টস</a>
-        <a class="cat-tab <%= selectedCategory === 'poker' ? 'active' : '' %>" href="/admin/games?category=poker&status=<%= selectedStatus %>"><i class="fas fa-heart"></i> পোকার</a>
-      </div>
-
-      <!-- ===== সেকেন্ডারি "হট" ফিল্টার — শুধু স্লটস ক্যাটাগরিতে দেখাবে ===== -->
-      <% if (selectedCategory === 'slots') { %>
-        <div>
-          <a class="sec-tab <%= selectedBadge !== 'hot' ? 'active' : '' %>" href="/admin/games?category=slots&provider=<%= encodeURIComponent(selectedProvider) %>&status=<%= selectedStatus %>&badge=all">সব স্লটস</a>
-          <a class="sec-tab <%= selectedBadge === 'hot' ? 'active' : '' %>" href="/admin/games?category=slots&provider=<%= encodeURIComponent(selectedProvider) %>&status=<%= selectedStatus %>&badge=hot"><i class="fas fa-fire"></i> শুধু হট ব্যাজ</a>
-        </div>
-      <% } %>
-
-      <!-- ===== সার্চ + স্ট্যাটাস ফিল্টার ===== -->
-      <div class="games-toolbar">
-        <form method="GET" action="/admin/games">
-          <input type="hidden" name="category" value="<%= selectedCategory %>">
-          <input type="hidden" name="provider" value="<%= selectedProvider %>">
-          <input type="hidden" name="badge" value="<%= selectedBadge %>">
-          <input type="hidden" name="status" value="<%= selectedStatus %>">
-          <input class="input" type="text" name="q" value="<%= searchQ %>" placeholder="গেমের নাম দিয়ে খুঁজুন...">
-          <button class="btn" type="submit"><i class="fas fa-search"></i></button>
-        </form>
-        <select class="select" style="max-width:150px;" onchange="location.href='/admin/games?category=<%= selectedCategory %>&provider=<%= encodeURIComponent(selectedProvider) %>&badge=<%= selectedBadge %>&q=<%= encodeURIComponent(searchQ) %>&status=' + this.value">
-          <option value="all" <%= selectedStatus === 'all' ? 'selected' : '' %>>সব স্ট্যাটাস</option>
-          <option value="active" <%= selectedStatus === 'active' ? 'selected' : '' %>>শুধু সক্রিয়</option>
-          <option value="inactive" <%= selectedStatus === 'inactive' ? 'selected' : '' %>>শুধু নিষ্ক্রিয়</option>
-        </select>
-      </div>
-
-      <!-- ===== প্রোভাইডার সাইড লিস্ট (ছোট) + গেম টেবিল ===== -->
-      <div class="games-layout">
-        <div class="provider-side <%= providersInCategory.length ? 'show' : '' %>">
-          <a class="provider-side-item <%= selectedProvider === 'all' ? 'active' : '' %>" href="/admin/games?category=<%= selectedCategory %>&badge=<%= selectedBadge %>&status=<%= selectedStatus %>&provider=all">সব</a>
-          <% providersInCategory.forEach(function(p) { %>
-            <a class="provider-side-item <%= selectedProvider === p.provider ? 'active' : '' %>" href="/admin/games?category=<%= selectedCategory %>&badge=<%= selectedBadge %>&status=<%= selectedStatus %>&provider=<%= encodeURIComponent(p.provider) %>">
-              <%= p.provider %><span class="cnt"><%= p.count %></span>
-            </a>
-          <% }) %>
-        </div>
-
-        <div class="games-table-wrap admin-card">
-          <table class="admin-table">
-            <thead>
-              <tr>
-                <th></th><th>নাম</th><th>স্লাগ</th><th>ক্যাটাগরি</th><th>প্রোভাইডার</th><th>ব্যাজ</th><th>স্ট্যাটাস</th><th>অ্যাকশন</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% if (games && games.length > 0) { %>
-                <% games.forEach(function(g) { %>
-                  <tr>
-                    <td class="emoji-cell"><%= g.emoji %></td>
-                    <td><%= g.name %></td>
-                    <td style="color:#64748b;"><%= g.slug %></td>
-                    <td><%= g.category %></td>
-                    <td><%= g.provider %></td>
-                    <td><% if (g.badge) { %><span class="badge badge-amber"><%= g.badge %></span><% } else { %>-<% } %></td>
-                    <td>
-                      <form method="POST" action="/admin/games/<%= g.id %>/toggle" style="display:inline;">
-                        <label class="switch">
-                          <input type="checkbox" onchange="this.form.submit()" <%= g.is_active ? 'checked' : '' %>>
-                          <span class="switch-slider"></span>
-                        </label>
-                      </form>
-                    </td>
-                    <td>
-                      <div class="row-actions">
-                        <button class="btn btn-sm" type="button"
-                          data-id="<%= g.id %>" data-name="<%= g.name %>" data-slug="<%= g.slug %>"
-                          data-emoji="<%= g.emoji %>" data-category="<%= g.category %>"
-                          data-provider="<%= g.provider %>" data-badge="<%= g.badge || '' %>"
-                          onclick="openEditModalFromBtn(this)">
-                          <i class="fas fa-pen"></i>
-                        </button>
-                        <form method="POST" action="/admin/games/<%= g.id %>/delete" onsubmit="return confirm('গেমটি মুছে ফেলবেন?')">
-                          <button class="btn btn-sm btn-red" type="submit"><i class="fas fa-trash"></i></button>
-                        </form>
-                      </div>
-                    </td>
-                  </tr>
-                <% }) %>
-              <% } else { %>
-                <tr><td colspan="8"><div class="empty-state">কোনো গেম পাওয়া যায়নি</div></td></tr>
-              <% } %>
-            </tbody>
-          </table>
-        </div>
-      </div>
+  <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+    <div>
+      <h1 class="text-2xl font-semibold text-slate-900">Games Management</h1>
+      <p class="text-slate-500 text-sm mt-0.5">মোট ${totalGames} গেম &bull; ${activeGames} সক্রিয় &bull; ${totalGames-activeGames} নিষ্ক্রিয়</p>
     </div>
+    <button onclick="document.getElementById('addModal').classList.remove('hidden')"
+      class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-semibold flex items-center gap-2">
+      <i class="fas fa-plus"></i> নতুন গেম যোগ
+    </button>
   </div>
 
-  <!-- ===== Add/Edit Modal (শেয়ার্ড) ===== -->
-  <div class="modal-overlay" id="gameModal">
-    <div class="modal-box">
-      <div class="modal-header">
-        <h3 id="gameModalTitle">নতুন গেম যোগ করুন</h3>
-        <button class="modal-close" onclick="closeGameModal()"><i class="fas fa-times"></i></button>
-      </div>
-      <form method="POST" id="gameForm" action="/admin/games/add">
-        <div class="modal-body">
-          <div class="form-grid">
-            <div class="full">
-              <label class="field-label">গেমের নাম *</label>
-              <input class="input" type="text" name="name" id="f_name" required>
-            </div>
-            <div class="full">
-              <label class="field-label">স্লাগ (URL, খালি রাখলে নাম থেকে বানানো হবে)</label>
-              <input class="input" type="text" name="slug" id="f_slug" placeholder="যেমন: aviator">
-            </div>
-            <div>
-              <label class="field-label">ইমোজি আইকন</label>
-              <input class="input" type="text" name="emoji" id="f_emoji" placeholder="🎰" value="🎮">
-            </div>
-            <div>
-              <label class="field-label">ব্যাজ</label>
-              <select class="select" name="badge" id="f_badge">
-                <option value="">কোনো ব্যাজ নেই</option>
-                <option value="hot">Hot</option>
-                <option value="pop">Popular</option>
-                <option value="new">New</option>
-              </select>
-            </div>
-            <div>
-              <label class="field-label">ক্যাটাগরি *</label>
-              <select class="select" name="category" id="f_category" required>
-                <option value="slots">স্লটস</option>
-                <option value="live">লাইভ ক্যাসিনো</option>
-                <option value="sports">স্পোর্টস</option>
-                <option value="poker">পোকার</option>
-              </select>
-            </div>
-            <div>
-              <label class="field-label">প্রোভাইডার *</label>
-              <input class="input" type="text" name="provider" id="f_provider" placeholder="যেমন: Jili" required>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn" onclick="closeGameModal()">বাতিল</button>
-          <button type="submit" class="btn btn-primary" id="gameFormSubmit"><i class="fas fa-check"></i> সেভ করুন</button>
-        </div>
-      </form>
-    </div>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    ${[{l:'মোট গেম',v:totalGames,c:'slate'},{l:'সক্রিয়',v:activeGames,c:'emerald'},{l:'নিষ্ক্রিয়',v:totalGames-activeGames,c:'red'},{l:'এই পেজে',v:games.length,c:'blue'}].map(k=>'<div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 text-center"><p class="text-xs text-slate-500 mb-1">'+k.l+'</p><p class="text-2xl font-bold text-'+k.c+'-600">'+k.v+'</p></div>').join('')}
   </div>
 
-  <script>
-    function openAddModal() {
-      document.getElementById('gameModalTitle').textContent = 'নতুন গেম যোগ করুন';
-      document.getElementById('gameForm').action = '/admin/games/add';
-      document.getElementById('f_name').value = '';
-      document.getElementById('f_slug').value = '';
-      document.getElementById('f_emoji').value = '🎮';
-      document.getElementById('f_badge').value = '';
-      document.getElementById('f_category').value = 'slots';
-      document.getElementById('f_provider').value = '';
-      document.getElementById('gameModal').classList.add('show');
-    }
-    function openEditModalFromBtn(btn) {
-      openEditModal({
-        id: btn.dataset.id,
-        name: btn.dataset.name,
-        slug: btn.dataset.slug,
-        emoji: btn.dataset.emoji,
-        category: btn.dataset.category,
-        provider: btn.dataset.provider,
-        badge: btn.dataset.badge
-      });
-    }
-    function openEditModal(g) {
-      document.getElementById('gameModalTitle').textContent = 'গেম এডিট করুন — ' + g.name;
-      document.getElementById('gameForm').action = '/admin/games/' + g.id + '/edit';
-      document.getElementById('f_name').value = g.name || '';
-      document.getElementById('f_slug').value = g.slug || '';
-      document.getElementById('f_emoji').value = g.emoji || '🎮';
-      document.getElementById('f_badge').value = g.badge || '';
-      document.getElementById('f_category').value = g.category || 'slots';
-      document.getElementById('f_provider').value = g.provider || '';
-      document.getElementById('gameModal').classList.add('show');
-    }
-    function closeGameModal() {
-      document.getElementById('gameModal').classList.remove('show');
-    }
-  </script>
-</body>
-</html>
+  <div class="flex gap-2 overflow-x-auto pb-1 mb-4">
+    ${Object.entries(catLabels).map(([c,l])=>'<a href="/admin/games?'+qstr({category:c,page:1})+'" class="flex-shrink-0 px-4 py-2 rounded-2xl text-sm font-semibold border transition '+(f.category===c?'bg-indigo-600 text-white border-indigo-600':'bg-white border-slate-200 text-slate-600 hover:bg-slate-50')+'">'+l+'</a>').join('')}
+  </div>
+
+  <form method="GET" action="/admin/games" class="flex flex-wrap gap-3 mb-5">
+    <input type="hidden" name="category" value="${f.category}">
+    <input type="text" name="q" value="${esc(searchQ||'')}" placeholder="নাম / স্লাগ / প্রোভাইডার"
+      class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm flex-1 min-w-40 outline-none focus:border-indigo-300">
+    <select name="status" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+      <option value="all" ${f.status==='all'?'selected':''}>সব স্ট্যাটাস</option>
+      <option value="active" ${f.status==='active'?'selected':''}>সক্রিয়</option>
+      <option value="inactive" ${f.status==='inactive'?'selected':''}>নিষ্ক্রিয়</option>
+    </select>
+    <select name="badge" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+      <option value="all" ${f.badge==='all'?'selected':''}>সব ব্যাজ</option>
+      <option value="hot" ${f.badge==='hot'?'selected':''}>🔥 Hot</option>
+      <option value="pop" ${f.badge==='pop'?'selected':''}>⭐ Popular</option>
+      <option value="new" ${f.badge==='new'?'selected':''}>✨ New</option>
+    </select>
+    <button type="submit" class="px-5 py-2.5 bg-slate-800 text-white rounded-2xl text-sm font-semibold">ফিল্টার</button>
+    <a href="/admin/games" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">রিসেট</a>
+  </form>
+
+  <form method="POST" action="/admin/games/bulk-toggle" id="bulkForm">
+    <input type="hidden" name="action" id="bulkAction" value="">
+    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden overflow-x-auto mb-4">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-slate-50">
+        <span class="text-sm text-slate-500">মোট <strong>${total}</strong> ফলাফল &bull; পেজ ${page}/${totalPages}</span>
+        <div class="flex gap-2">
+          <button type="button" onclick="setBulk('activate')" class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-semibold">✅ সক্রিয়</button>
+          <button type="button" onclick="setBulk('deactivate')" class="px-3 py-1.5 bg-red-400 hover:bg-red-500 text-white rounded-xl text-xs font-semibold">❌ নিষ্ক্রিয়</button>
+        </div>
+      </div>
+      <table class="w-full text-sm">
+        <thead><tr class="bg-slate-50 text-left">
+          <th class="px-4 py-3"><input type="checkbox" id="selectAll" onchange="toggleAll(this)"></th>
+          <th class="px-4 py-3 text-slate-500 font-medium text-xs uppercase">আইকন</th>
+          <th class="px-4 py-3 text-slate-500 font-medium text-xs uppercase">নাম / স্লাগ</th>
+          <th class="px-4 py-3 text-slate-500 font-medium text-xs uppercase">ক্যাটাগরি</th>
+          <th class="px-4 py-3 text-slate-500 font-medium text-xs uppercase">প্রোভাইডার</th>
+          <th class="px-4 py-3 text-slate-500 font-medium text-xs uppercase">ব্যাজ</th>
+          <th class="px-4 py-3 text-slate-500 font-medium text-xs uppercase">স্ট্যাটাস</th>
+          <th class="px-4 py-3 text-slate-500 font-medium text-xs uppercase text-center">অ্যাকশন</th>
+        </tr></thead>
+        <tbody class="divide-y divide-slate-100">
+          ${games.length ? games.map(g => {
+            const bc = g.badge==='hot'?'bg-red-100 text-red-700':g.badge==='pop'?'bg-amber-100 text-amber-700':g.badge==='new'?'bg-blue-100 text-blue-700':'bg-slate-100 text-slate-500';
+            const safeEdit = [g.id, esc(g.name), esc(g.slug), esc(g.emoji||'🎮'), esc(g.category), esc(g.provider||''), esc(g.badge||'')].join("','");
+            return '<tr class="hover:bg-slate-50">'+
+              '<td class="px-4 py-3"><input type="checkbox" name="ids" value="'+g.id+'" class="row-check"></td>'+
+              '<td class="px-4 py-3 text-xl">'+esc(g.emoji||'🎮')+'</td>'+
+              '<td class="px-4 py-3"><p class="font-medium text-slate-800">'+esc(g.name)+'</p><p class="text-xs text-slate-400">'+esc(g.slug)+'</p></td>'+
+              '<td class="px-4 py-3 text-slate-600">'+esc(g.category)+'</td>'+
+              '<td class="px-4 py-3 text-slate-600">'+esc(g.provider||'-')+'</td>'+
+              '<td class="px-4 py-3">'+(g.badge?'<span class="px-2.5 py-1 text-xs font-bold rounded-full '+bc+'">'+g.badge+'</span>':'<span class="text-slate-300">-</span>')+'</td>'+
+              '<td class="px-4 py-3"><form method="POST" action="/admin/games/'+g.id+'/toggle"><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" onchange="this.form.submit()" '+(g.is_active?'checked':'')+' class="sr-only peer"><div class="w-9 h-5 bg-slate-200 peer-checked:bg-emerald-500 rounded-full peer peer-checked:after:translate-x-4 after:content-[\'\'] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all"></div></label></form></td>'+
+              '<td class="px-4 py-3"><div class="flex items-center justify-center gap-1.5">'+
+                '<button type="button" onclick="openEdit(\''+safeEdit+'\')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold"><i class="fas fa-pen"></i></button>'+
+                '<form method="POST" action="/admin/games/'+g.id+'/delete" onsubmit="return confirm(\'গেমটি মুছে ফেলবেন?\')"><button type="submit" class="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-semibold"><i class="fas fa-trash"></i></button></form>'+
+              '</div></td>'+
+            '</tr>';
+          }).join('') : '<tr><td colspan="8" class="px-6 py-10 text-center text-slate-400">কোনো গেম পাওয়া যায়নি</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+  </form>
+
+  <div class="flex justify-center gap-3 items-center">
+    ${page>1?'<a href="/admin/games?'+qstr({page:page-1})+'" class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50">← আগে</a>':''}
+    <span class="text-sm text-slate-500">পেজ ${page} / ${totalPages}</span>
+    ${page<totalPages?'<a href="/admin/games?'+qstr({page:page+1})+'" class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50">পরে →</a>':''}
+  </div>
+</div>
+
+<!-- Add Modal -->
+<div id="addModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-screen overflow-y-auto">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <h3 class="font-semibold text-slate-800">নতুন গেম যোগ করুন</h3>
+      <button onclick="document.getElementById('addModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+    </div>
+    <form method="POST" action="/admin/games/add" class="p-6 space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div class="col-span-2"><label class="block text-xs font-semibold text-slate-500 mb-1">গেমের নাম *</label><input name="name" required class="w-full border border-slate-200 px-4 py-2.5 rounded-2xl text-sm outline-none focus:border-indigo-300"></div>
+        <div class="col-span-2"><label class="block text-xs font-semibold text-slate-500 mb-1">স্লাগ (ফাঁকা = নাম থেকে)</label><input name="slug" class="w-full border border-slate-200 px-4 py-2.5 rounded-2xl text-sm outline-none focus:border-indigo-300" placeholder="aviator"></div>
+        <div><label class="block text-xs font-semibold text-slate-500 mb-1">ইমোজি</label><input name="emoji" value="🎮" class="w-full border border-slate-200 px-4 py-2.5 rounded-2xl text-sm outline-none focus:border-indigo-300"></div>
+        <div><label class="block text-xs font-semibold text-slate-500 mb-1">ব্যাজ</label><select name="badge" class="w-full border border-slate-200 px-4 py-2.5 rounded-2xl text-sm"><option value="">নেই</option><option value="hot">🔥 Hot</option><option value="pop">⭐ Popular</option><option value="new">✨ New</option></select></div>
+        <div><label class="block text-xs font-semibold text-slate-500 mb-1">ক্যাটাগরি *</label><select name="category" required class="w-full border border-slate-200 px-4 py-2.5 rounded-2xl text-sm"><option value="slots">Slots</option><option value="live">Live</option><option value="sports">Sports</option><option value="poker">Poker</option><option value="casino">Casino</option><option value="fishing">Fishing</option><option value="table">Table</option></select></div>
+        <div><label class="block text-xs font-semibold text-slate-500 mb-1">প্রোভাইডার *</label><input name="provider" required class="w-full border border-slate-200 px-4 py-2.5 rounded-2xl text-sm outline-none focus:border-indigo-300" placeholder="Jili"></div>
+      </div>
+      <div class="flex gap-3 justify-end pt-2">
+        <button type="button" onclick="document.getElementById('addModal').classList.add('hidden')" class="px-5 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-semibold">বাতিল</button>
+        <button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-semibold">যোগ করুন</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="editModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-screen overflow-y-auto">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <h3 class="font-semibold text-slate-800" id="editTitle">গেম এডিট করুন</h3>
+      <button onclick="document.getElementById('editModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+    </div>
+    <form method="POST" id="editForm" action="#" class="p-6 space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div class="col-span-2"><label class="block text-xs font-semibold text-slate-500 mb-1">গেমের নাম *</label><input id="e_name" name="name" required class="w-full border border-slate-200 px-4 py-2.5 rounded-2xl text-sm outline-none focus:border-indigo-300"></div>
+        <div class="col-span-2"><label class="block text-xs font-semibold text-slate-500 mb-1">স্লাগ *</label><input id="e_slug" name="slug" class="w-full border border-slate-200 px-4 py-2.5 rounded-2xl text-sm outline-none focus:border-indigo-300"></div>
+        <div><label class="block text-xs font-semibold text-slate-500 mb-1">ইমোজি</label><input id="e_emoji" name="emoji" class="w-full border border-slate-200 px-4 py-2.5 rounded-2xl text-sm outline-none focus:border-indigo-300"></div>
+        <div><label class="block text-xs font-semibold text-slate-500 mb-1">ব্যাজ</label><select id="e_badge" name="badge" class="w-full border border-slate-200 px-4 py-2.5 rounded-2xl text-sm"><option value="">নেই</option><option value="hot">🔥 Hot</option><option value="pop">⭐ Popular</option><option value="new">✨ New</option></select></div>
+        <div><label class="block text-xs font-semibold text-slate-500 mb-1">ক্যাটাগরি *</label><select id="e_category" name="category" required class="w-full border border-slate-200 px-4 py-2.5 rounded-2xl text-sm"><option value="slots">Slots</option><option value="live">Live</option><option value="sports">Sports</option><option value="poker">Poker</option><option value="casino">Casino</option><option value="fishing">Fishing</option><option value="table">Table</option></select></div>
+        <div><label class="block text-xs font-semibold text-slate-500 mb-1">প্রোভাইডার *</label><input id="e_provider" name="provider" required class="w-full border border-slate-200 px-4 py-2.5 rounded-2xl text-sm outline-none focus:border-indigo-300"></div>
+      </div>
+      <div class="flex gap-3 justify-end pt-2">
+        <button type="button" onclick="document.getElementById('editModal').classList.add('hidden')" class="px-5 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-semibold">বাতিল</button>
+        <button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-semibold">সেভ</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openEdit(id, name, slug, emoji, category, provider, badge) {
+  document.getElementById('editTitle').textContent = 'গেম এডিট: ' + name;
+  document.getElementById('editForm').action = '/admin/games/' + id + '/edit';
+  document.getElementById('e_name').value = name;
+  document.getElementById('e_slug').value = slug;
+  document.getElementById('e_emoji').value = emoji;
+  document.getElementById('e_category').value = category;
+  document.getElementById('e_provider').value = provider;
+  document.getElementById('e_badge').value = badge || '';
+  document.getElementById('editModal').classList.remove('hidden');
+}
+function toggleAll(cb) { document.querySelectorAll('.row-check').forEach(c => c.checked = cb.checked); }
+function setBulk(action) {
+  const checked = [...document.querySelectorAll('.row-check:checked')];
+  if (!checked.length) { alert('কোনো গেম নির্বাচিত হয়নি'); return; }
+  if (!confirm(checked.length + 'টি গেম ' + (action==='activate'?'সক্রিয়':'নিষ্ক্রিয়') + ' করবেন?')) return;
+  document.getElementById('bulkAction').value = action;
+  document.getElementById('bulkForm').submit();
+}
+</script>
+
+`
+}) %>

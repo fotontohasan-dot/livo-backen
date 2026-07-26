@@ -5,11 +5,7 @@
       <div class="card-header" style="justify-content:center;font-size:1.2rem;">🔐 অতিরিক্ত ভেরিফিকেশন প্রয়োজন</div>
       <div class="card-body">
         <p style="color:var(--text-muted);font-size:.88rem;margin-bottom:16px;text-align:center;">
-          <% if (typeof purpose !== 'undefined' && purpose === 'new_device') { %>
-            এটি একটি নতুন/অচেনা ডিভাইস — নিরাপত্তার কারণে আপনার ইমেইলে পাঠানো ৬ ডিজিটের কোডটি দিন।
-          <% } else { %>
-            নিরাপত্তার কারণে (VPN/Proxy/Tor শনাক্ত হয়েছে) আপনার ইমেইলে পাঠানো ৬ ডিজিটের কোডটি দিন।
-          <% } %>
+          নিরাপত্তার কারণে (VPN/Proxy/Tor শনাক্ত হয়েছে) আপনার ইমেইলে পাঠানো ৬ ডিজিটের কোডটি দিন।
         </p>
         <%- include('partials/flash') %>
         <form action="/verify-access" method="POST">
@@ -17,12 +13,6 @@
             <label class="form-label">ভেরিফিকেশন কোড</label>
             <input type="text" name="code" class="form-input" placeholder="যেমন: 123456" inputmode="numeric" maxlength="6" autofocus required style="text-align:center;letter-spacing:6px;font-size:1.2rem;">
           </div>
-          <% if (typeof purpose !== 'undefined' && purpose === 'new_device') { %>
-            <label style="display:flex;align-items:center;gap:8px;margin:10px 0 16px;color:var(--text-muted);font-size:.85rem;cursor:pointer;">
-              <input type="checkbox" name="trustThisDevice" value="1" checked style="width:16px;height:16px;">
-              এই ডিভাইসকে Trusted হিসেবে রাখুন (পরের বার এই ধাপ লাগবে না)
-            </label>
-          <% } %>
           <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;">নিশ্চিত করুন ✅</button>
         </form>
         <p style="text-align:center;margin-top:1rem;color:var(--text-muted);font-size:.9rem;">
