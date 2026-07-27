@@ -9,3 +9,4 @@ build
 .env.production.local
 .DS_Store
 *.log
+coverage/

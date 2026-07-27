@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics Dashboard • Livo Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 18px; }
+    .card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; padding: 16px; }
+    .card .label { color: #94a3b8; font-size: 11.5px; margin-bottom: 6px; }
+    .card .val { color: #fff; font-size: 22px; font-weight: 800; }
+    .card .sub { color: #64748b; font-size: 11px; margin-top: 4px; }
+    .chart-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; padding: 16px; margin-bottom: 18px; }
+    .chart-card canvas { max-height: 260px; }
+    .status-pill { padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; }
+    .status-healthy { background: rgba(16,185,129,0.15); color: #34d399; }
+    .status-warning { background: rgba(234,179,8,0.15); color: #facc15; }
+    .status-error { background: rgba(239,68,68,0.15); color: #f87171; }
+    .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+    .toolbar input, .toolbar select { background: #0f1115; color: #e2e8f0; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 7px 9px; font-size: 12.5px; }
+    .btn-xs { padding: 6px 12px; font-size: 12px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; }
+    table.mini { width: 100%; border-collapse: collapse; font-size: 12px; color: #cbd5e1; }
+    table.mini th { text-align: left; color: #94a3b8; padding: 6px 8px; }
+    table.mini td { padding: 6px 8px; border-top: 1px solid rgba(255,255,255,0.05); }
+  </style>
+  <%- include('./partials/pwa-head') %>
+</head>
+<body>
+  <div class="admin-wrap">
+    <%- include('./partials/sidebar', { active: 'analytics' }) %>
+    <div class="admin-content">
+      <%- include('./partials/header', { pageTitle: 'Analytics Dashboard', pageSubtitle: 'Real-time statistics ও system health' }) %>
+
+      <div class="toolbar">
+        <form method="GET" action="/admin/analytics" style="display:flex;gap:8px;">
+          <input type="date" name="from" value="<%= query.from || '' %>">
+          <input type="date" name="to" value="<%= query.to || '' %>">
+          <button class="btn-xs" style="background:var(--gold,#EAB308);color:#1a1a1a;">Filter</button>
+        </form>
+        <a href="/admin/analytics/export<%= query.from ? ('?from='+query.from+'&to='+(query.to||'')) : '' %>" class="btn-xs" style="background:#1e293b;color:#fff;text-decoration:none;"><i class="fas fa-download"></i> Export CSV</a>
+        <label style="color:#94a3b8;font-size:12px;display:flex;align-items:center;gap:5px;">
+          <input type="checkbox" id="autoRefreshToggle" checked> Auto Refresh (30s)
+        </label>
+        <span id="lastUpdated" style="color:#64748b;font-size:11px;"></span>
+      </div>
+
+      <% if (!data) { %>
+        <div style="color:#f87171;">Analytics লোড করতে সমস্যা হয়েছে।</div>
+      <% } else { %>
+
+      <div class="grid" id="realtimeGrid">
+        <div class="card"><div class="label">Active Users (15m)</div><div class="val"><%= data.realtime.active_now %></div></div>
+        <div class="card"><div class="label">Total Users</div><div class="val"><%= data.realtime.total_users %></div></div>
+        <div class="card"><div class="label">Bets (Last Hour)</div><div class="val"><%= data.realtime.bets_last_hour %></div></div>
+        <div class="card"><div class="label">Deposit (Last Hour)</div><div class="val">৳<%= Number(data.realtime.deposit_last_hour).toLocaleString() %></div></div>
+      </div>
+
+      <div class="grid">
+        <div class="card"><div class="label">Total Deposit</div><div class="val">৳<%= Number(data.depositWithdraw.total_deposit).toLocaleString() %></div><div class="sub"><%= data.depositWithdraw.deposit_count %>টি লেনদেন</div></div>
+        <div class="card"><div class="label">Total Withdraw</div><div class="val">৳<%= Number(data.depositWithdraw.total_withdraw).toLocaleString() %></div><div class="sub"><%= data.depositWithdraw.withdraw_count %>টি লেনদেন</div></div>
+        <div class="card"><div class="label">Pending Payments</div><div class="val"><%= data.depositWithdraw.pending_count %></div></div>
+        <div class="card"><div class="label">Total Bets Staked</div><div class="val">৳<%= Number(data.betStats.total_staked).toLocaleString() %></div><div class="sub"><%= data.betStats.total_bets %>টি বেট</div></div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <div class="label">Queue</div>
+          <span class="status-pill status-<%= data.health ? data.health.checks.queue.status : 'warning' %>"><i class="fas fa-circle" style="font-size:6px;"></i> <%= data.health ? data.health.checks.queue.status : 'unknown' %></span>
+        </div>
+        <div class="card">
+          <div class="label">Redis</div>
+          <span class="status-pill status-<%= data.health ? data.health.checks.redis.status : 'warning' %>"><i class="fas fa-circle" style="font-size:6px;"></i> <%= data.health ? data.health.checks.redis.status : 'unknown' %></span>
+        </div>
+        <div class="card">
+          <div class="label">Database</div>
+          <span class="status-pill status-<%= data.health ? data.health.checks.database.status : 'error' %>"><i class="fas fa-circle" style="font-size:6px;"></i> <%= data.health ? data.health.checks.database.status : 'unknown' %></span>
+        </div>
+        <div class="card">
+          <div class="label">Server Uptime</div>
+          <div class="val" style="font-size:15px;"><%= data.health ? data.health.checks.uptime.message : '-' %></div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card"><div class="label">API Requests</div><div class="val"><%= data.apiUsage.total_requests %></div><div class="sub"><%= data.apiUsage.error_requests %>টি error</div></div>
+        <div class="card"><div class="label">Avg Response Time</div><div class="val"><%= Math.round(data.apiUsage.avg_response_ms) %>ms</div></div>
+        <div class="card">
+          <div class="label">Fraud Alerts (Open)</div>
+          <div class="val" style="color:<%= data.fraudStats && data.fraudStats.riskByLevel.high > 0 ? '#f87171' : '#fff' %>">
+            <%= data.fraudStats ? (data.fraudStats.riskByLevel.high + data.fraudStats.riskByLevel.medium + data.fraudStats.riskByLevel.low) : 0 %>
+          </div>
+          <div class="sub"><%= data.fraudStats ? data.fraudStats.riskByLevel.high : 0 %> high-risk</div>
+        </div>
+        <div class="card"><div class="label">Avg Risk Score</div><div class="val"><%= data.fraudStats ? data.fraudStats.avgOpenRiskScore : 0 %></div></div>
+      </div>
+
+      <div class="chart-card"><canvas id="revenueChart"></canvas></div>
+      <div class="chart-card"><canvas id="growthChart"></canvas></div>
+
+      <div class="chart-card">
+        <b style="color:#fff;font-size:13px;">Recent Activity</b>
+        <table class="mini" style="margin-top:10px;">
+          <thead><tr><th>Admin</th><th>Action</th><th>Details</th><th>Time</th></tr></thead>
+          <tbody>
+            <% data.recentActivity.forEach(function(a) { %>
+              <tr><td><%= a.admin_username %></td><td><%= a.action_type %></td><td><%= (a.details||'').slice(0,60) %></td><td><%= new Date(a.created_at).toLocaleString('bn-BD') %></td></tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+      <script>
+        const revenueLabels = <%- JSON.stringify(data.revenueTrend.map(r => r.day)) %>;
+        const revenueDeposit = <%- JSON.stringify(data.revenueTrend.map(r => Number(r.deposit))) %>;
+        const revenueWithdraw = <%- JSON.stringify(data.revenueTrend.map(r => Number(r.withdraw))) %>;
+        new Chart(document.getElementById('revenueChart'), {
+          type: 'line',
+          data: { labels: revenueLabels, datasets: [
+            { label: 'Deposit', data: revenueDeposit, borderColor: '#10b981', tension: 0.3 },
+            { label: 'Withdraw', data: revenueWithdraw, borderColor: '#ef4444', tension: 0.3 }
+          ]},
+          options: { plugins: { legend: { labels: { color: '#cbd5e1' } } }, scales: { x: { ticks: { color: '#94a3b8' } }, y: { ticks: { color: '#94a3b8' } } } }
+        });
+
+        const growthLabels = <%- JSON.stringify(data.userGrowth.map(r => r.day)) %>;
+        const growthVals = <%- JSON.stringify(data.userGrowth.map(r => Number(r.new_users))) %>;
+        new Chart(document.getElementById('growthChart'), {
+          type: 'bar',
+          data: { labels: growthLabels, datasets: [{ label: 'New Users', data: growthVals, backgroundColor: '#EAB308' }] },
+          options: { plugins: { legend: { labels: { color: '#cbd5e1' } } }, scales: { x: { ticks: { color: '#94a3b8' } }, y: { ticks: { color: '#94a3b8' } } } }
+        });
+
+        let autoRefreshTimer = null;
+        function startAutoRefresh() {
+          autoRefreshTimer = setInterval(() => { window.location.reload(); }, 30000);
+        }
+        document.getElementById('autoRefreshToggle').addEventListener('change', function () {
+          if (this.checked) startAutoRefresh(); else clearInterval(autoRefreshTimer);
+        });
+        startAutoRefresh();
+        document.getElementById('lastUpdated').textContent = 'Last updated: ' + new Date().toLocaleTimeString('bn-BD');
+      </script>
+      <% } %>
+
+    </div>
+  </div>
+</body>
+</html>
