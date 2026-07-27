@@ -303,6 +303,20 @@ app.use('/coins', require('./routes/coins'));
 app.use('/news', require('./routes/news'));
 app.use('/profile', require('./routes/profile'));
 app.use('/leaderboard', require('./routes/leaderboard'));
+// ── API v1 (backward compatible — existing routes unchanged) ────────────────
+app.use('/api/v1', require('./routes/api/v1'));
+
+// ── Swagger / OpenAPI docs ──────────────────────────────────────────────────
+const swaggerUi = require('swagger-ui-express');
+const { swaggerSpec } = require('./services/swagger');
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customSiteTitle: 'Livo API Docs',
+  customCss: '.swagger-ui .topbar { background-color: #4f46e5; } .swagger-ui .topbar .link img { display:none; }',
+  swaggerOptions: { persistAuthorization: true, displayRequestDuration: true, filter: true }
+}));
+// Raw OpenAPI JSON
+app.get('/api/docs.json', (req, res) => res.json(swaggerSpec));
+
 app.use('/admin', require('./routes/admin'));
 app.use('/admin/games', require('./middleware/auth').isAdmin, require('./routes/adminGames'));
 app.use('/notifications', require('./routes/notifications'));
