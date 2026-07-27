@@ -15,3 +15,4 @@ build
 
 # Automated Test System — coverage report কখনো কমিট হবে না (CI-তে regenerate হয়)
 /coverage/
+.tmp-test-server.pid

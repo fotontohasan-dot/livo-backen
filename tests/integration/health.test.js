@@ -1,6 +1,6 @@
 // tests/integration/health.test.js
 const request = require('supertest');
-const app = require('../../app');
+const { BASE_URL: app } = require('../helpers/testServerConfig');
 const { waitForApp } = require('../helpers/waitForApp');
 
 describe('Health Check endpoints', () => {

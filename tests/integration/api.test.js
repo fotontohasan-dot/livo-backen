@@ -1,6 +1,6 @@
 // tests/integration/api.test.js
 const request = require('supertest');
-const app = require('../../app');
+const { BASE_URL: app } = require('../helpers/testServerConfig');
 const { waitForApp } = require('../helpers/waitForApp');
 
 describe('Public API (/api/v1)', () => {

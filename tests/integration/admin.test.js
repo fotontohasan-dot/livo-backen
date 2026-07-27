@@ -1,5 +1,5 @@
 // tests/integration/admin.test.js
-const app = require('../../app');
+const { BASE_URL: app } = require('../helpers/testServerConfig');
 const { pool } = require('../../db');
 const { waitForApp } = require('../helpers/waitForApp');
 const { buildTestUser, extractCsrfToken } = require('../helpers/testUser');

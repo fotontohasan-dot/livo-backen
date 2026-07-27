@@ -1,5 +1,5 @@
 // tests/integration/security.test.js
-const app = require('../../app');
+const { BASE_URL: app } = require('../helpers/testServerConfig');
 const { waitForApp } = require('../helpers/waitForApp');
 const { buildTestUser, extractCsrfToken } = require('../helpers/testUser');
 const { humanAgent, humanRequest, formRenderedAt } = require('../helpers/humanAgent');
