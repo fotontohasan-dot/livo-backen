@@ -11,6 +11,7 @@ const { loadSettings, invalidateSettingsCache } = require('../services/settings'
 const { creditApprovedDeposit } = require('./payment');
 const bcrypt = require('bcryptjs');
 const { getDemoStats } = require('../services/socket');
+const systemHealth = require('../services/systemHealth');
 const {
   generateTotpSetup,
   verifyTotpToken,
@@ -20,25 +21,26 @@ const {
   qrFromSecret
 } = require('../services/twofactor');
 const { getPinStatus, adminResetPin } = require('../services/withdrawPin');
-const { getUserFraudStatus } = require('../services/fraudDetection');
+const { getUserFraudStatus, getFraudDashboardStats } = require('../services/fraudDetection');
 const { listDuplicateFlags, reviewDuplicateFlag, scanAllUsers } = require('../services/duplicateDetection');
-const queueMonitor = require('../services/queue/monitor');
-const { getQueueNames } = require('../services/queue/queues');
-const { runAllChecks } = require('../services/healthCheck');
 const { getUserDeviceOverview } = require('../services/deviceTracking');
 const cache = require('../services/cache');
-const scheduler = require('../services/scheduler');
-const auditLog = require('../services/auditLog');
+const cacheKeys = require('../services/cacheKeys');
+const queue = require('../services/queue');
+const RedisRateLimitStore = require('../services/redisRateLimitStore');
 
 const { requireIntParam, requireAmount, parseAmount, sanitizeText, isSafeUrl } = require('../middleware/validate');
-
-const { createLimiter } = require('../middleware/rateLimitFactory');
+const { listIpRules, setIpRule, removeIpRule } = require('../services/ipRules');
 
 // ==================== 2FA ভেরিফিকেশন রুটের জন্য কড়া rate limit ====================
 // এই দুটো রুটে কোড অনুমান করে ব্রুট-ফোর্স করার ঝুঁকি থাকে, তাই আলাদা কড়া সীমা।
-const strict2FALimiter = createLimiter('admin_2fa', {
+const strict2FALimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many attempts, please try again later.',
+  store: new RedisRateLimitStore('rl:2fa:'),
   handler: (req, res) => {
     res.status(429).send('Too many attempts, please try again later.');
   }
@@ -46,24 +48,30 @@ const strict2FALimiter = createLimiter('admin_2fa', {
 
 // সব অ্যাডমিন রুটে (login-এর বাইরে) সাধারণ কড়া সীমা — app.js-এর generalLimiter (300/15min,
 // পুরো সাইটের জন্য) এর উপরে অতিরিক্ত স্তর, যেহেতু admin রুটগুলো সরাসরি DB write করে।
-const adminActionLimiter = createLimiter('admin_action', {
+const adminActionLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 150,
-  message: 'অনেকবার অ্যাকশন নেওয়া হয়েছে, কিছুক্ষণ পর আবার চেষ্টা করুন।'
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'অনেকবার অ্যাকশন নেওয়া হয়েছে, কিছুক্ষণ পর আবার চেষ্টা করুন।',
+  store: new RedisRateLimitStore('rl:adminaction:')
 });
 
 // টাকা/কয়েন সরাসরি নড়াচড়া করে এমন রুটে (approve/reject/coins add-remove) আরও কড়া সীমা —
 // কম্প্রোমাইজড সেশন বা স্ক্রিপ্টেড অপব্যবহার হলেও ক্ষতির পরিমাণ সীমিত রাখতে।
-const adminFinancialLimiter = createLimiter('admin_financial', {
+const adminFinancialLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 40,
-  message: 'অনেকবার আর্থিক অ্যাকশন নেওয়া হয়েছে, কিছুক্ষণ পর আবার চেষ্টা করুন।'
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'অনেকবার আর্থিক অ্যাকশন নেওয়া হয়েছে, কিছুক্ষণ পর আবার চেষ্টা করুন।',
+  store: new RedisRateLimitStore('rl:adminfinancial:')
 });
 
-// ==================== ADMIN ACTIVITY LOG HELPER ====================
-async function logAdminAction(adminId, adminUsername, actionType, details, ip = null) {
-    await auditLog.logAdminAction(adminId, adminUsername, actionType, details, ip);
-}
+// ==================== ADMIN ACTIVITY LOG — শেয়ার্ড ইউটিলিটি (services/auditLog.js) ====================
+const { logAdminAction } = require('../services/auditLog');
+const rbac = require('../services/rbac');
+const { requirePermission } = rbac;
 
 // ==================== অ্যাডমিন সেশনের জন্য কড়া কুকি পলিসি ====================
 // সাধারণ ইউজার সেশন থেকে আলাদা — অ্যাডমিন সেশন প্রোডাকশনে ৮ ঘণ্টা পর এক্সপায়ার হয়ে যাবে
@@ -83,10 +91,13 @@ router.get('/login', (req, res) => {
   res.render('admin/login', { error: null });
 });
 
-const adminLoginLimiter = createLimiter('admin_login', {
+const adminLoginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 8,
-  message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।'
+  message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new RedisRateLimitStore('rl:adminlogin:')
 });
 
 router.post('/login', adminLoginLimiter, async (req, res) => {
@@ -373,7 +384,7 @@ router.get('/kyc', async (req, res) => {
   }
 });
 
-router.post('/kyc/:id/approve', async (req, res) => {
+router.post('/kyc/:id/approve', requirePermission('kyc.manage'), async (req, res) => {
   try {
     const { id } = req.params;
     const r = await pool.query(
@@ -391,7 +402,7 @@ router.post('/kyc/:id/approve', async (req, res) => {
   }
 });
 
-router.post('/kyc/:id/reject', async (req, res) => {
+router.post('/kyc/:id/reject', requirePermission('kyc.manage'), async (req, res) => {
   try {
     const { id } = req.params;
     const reason = (req.body && req.body.reason) || '';
@@ -440,7 +451,7 @@ router.get('/settings', async (req, res) => {
   }
 });
 
-router.post('/settings/update', async (req, res) => {
+router.post('/settings/update', requirePermission('settings.manage'), async (req, res) => {
   try {
     for (const key of SETTING_KEYS) {
       if (key === 'maintenance_mode') continue; // নিচে আলাদাভাবে সামলানো হচ্ছে
@@ -488,7 +499,7 @@ router.post('/settings/update', async (req, res) => {
   }
 });
 
-router.post('/settings/admins/promote', async (req, res) => {
+router.post('/settings/admins/promote', requirePermission('admins.manage'), async (req, res) => {
   try {
     const { username } = req.body;
     const r = await pool.query("UPDATE users SET role = 'admin' WHERE username = $1 RETURNING id", [username]);
@@ -502,19 +513,93 @@ router.post('/settings/admins/promote', async (req, res) => {
   }
 });
 
-router.post('/settings/admins/:id/demote', async (req, res) => {
+router.post('/settings/admins/:id/demote', requirePermission('admins.manage'), async (req, res) => {
   try {
     const { id } = req.params;
     if (parseInt(id) === req.session.user.id) {
       return res.redirect('/admin/settings');
     }
-    await pool.query("UPDATE users SET role = 'user' WHERE id = $1", [id]);
+    await pool.query("UPDATE users SET role = 'user', role_key = NULL WHERE id = $1", [id]);
     await logAdminAction(req.session.user.id, req.session.user.username, 'ADMIN_DEMOTE', `অ্যাডমিন আইডি #${id} থেকে অ্যাডমিন অ্যাক্সেস সরানো হয়েছে`, req.ip);
     res.redirect('/admin/settings');
   } catch (err) {
     console.error('Admin demote error:', err.message);
     res.redirect('/admin/settings');
   }
+});
+
+// ==================== RBAC — Roles ও Permission ম্যানেজমেন্ট ====================
+router.get('/roles', requirePermission('roles.manage'), async (req, res) => {
+  try {
+    const [roles, adminsRes] = await Promise.all([
+      rbac.listRoles(),
+      pool.query(`SELECT id, username, email, role, role_key FROM users WHERE role = 'admin' ORDER BY username ASC`)
+    ]);
+    res.render('admin/roles', {
+      roles, admins: adminsRes.rows, permissionCatalog: rbac.PERMISSIONS
+    });
+  } catch (err) {
+    console.error('Roles list error:', err.message);
+    res.render('admin/roles', { roles: [], admins: [], permissionCatalog: rbac.PERMISSIONS });
+  }
+});
+
+router.post('/roles', requirePermission('roles.manage'), async (req, res) => {
+  try {
+    const { key, name, description } = req.body;
+    const permissions = Array.isArray(req.body.permissions) ? req.body.permissions : (req.body.permissions ? [req.body.permissions] : []);
+    await rbac.createRole({ key, name, description, permissions });
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ROLE_CREATED', `নতুন রোল তৈরি: "${key}" (${name})`, req.ip);
+    req.flash('success', '✅ রোল তৈরি হয়েছে।');
+  } catch (err) {
+    console.error('Role create error:', err.message);
+    req.flash('error', '❌ ' + err.message);
+  }
+  res.redirect('/admin/roles');
+});
+
+router.post('/roles/:key/update', requirePermission('roles.manage'), async (req, res) => {
+  try {
+    const { name, description } = req.body;
+    const permissions = Array.isArray(req.body.permissions) ? req.body.permissions : (req.body.permissions ? [req.body.permissions] : []);
+    await rbac.updateRole(req.params.key, { name, description, permissions });
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ROLE_UPDATED', `রোল আপডেট: "${req.params.key}"`, req.ip);
+    req.flash('success', '✅ রোল আপডেট হয়েছে।');
+  } catch (err) {
+    console.error('Role update error:', err.message);
+    req.flash('error', '❌ ' + err.message);
+  }
+  res.redirect('/admin/roles');
+});
+
+router.post('/roles/:key/delete', requirePermission('roles.manage'), async (req, res) => {
+  try {
+    await rbac.deleteRole(req.params.key);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ROLE_DELETED', `রোল ডিলিট: "${req.params.key}"`, req.ip);
+    req.flash('success', '✅ রোল ডিলিট হয়েছে।');
+  } catch (err) {
+    console.error('Role delete error:', err.message);
+    req.flash('error', '❌ ' + err.message);
+  }
+  res.redirect('/admin/roles');
+});
+
+router.post('/roles/assign', requirePermission('roles.manage'), async (req, res) => {
+  try {
+    const userId = parseInt(req.body.userId, 10);
+    if (!userId || userId < 1) {
+      req.flash('error', '❌ অবৈধ ইউজার আইডি।');
+      return res.redirect('/admin/roles');
+    }
+    const { roleKey } = req.body;
+    await rbac.assignUserRole(userId, roleKey || null);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ROLE_ASSIGNED', `ইউজার #${userId}-কে রোল "${roleKey || 'super_admin (default)'}" অ্যাসাইন করা হয়েছে`, req.ip);
+    req.flash('success', '✅ রোল অ্যাসাইন করা হয়েছে।');
+  } catch (err) {
+    console.error('Role assign error:', err.message);
+    req.flash('error', '❌ ' + err.message);
+  }
+  res.redirect('/admin/roles');
 });
 
 // ==================== DASHBOARD ====================
@@ -532,91 +617,133 @@ router.get('/api/demo-stats', async (req, res) => {
 
 router.get('/', async (req, res) => {
   try {
-    const users = await pool.query('SELECT COUNT(*) as count FROM users');
-    const totalCoins = await pool.query('SELECT SUM(coins) as total FROM users');
-    const matches = await pool.query('SELECT COUNT(*) as count FROM matches');
-    const totalBets = await pool.query('SELECT COUNT(*) as count FROM bets');
+    const rangeTo = (req.query.to && /^\d{4}-\d{2}-\d{2}$/.test(req.query.to)) ? req.query.to : new Date().toISOString().slice(0, 10);
+    const rangeFrom = (req.query.from && /^\d{4}-\d{2}-\d{2}$/.test(req.query.from)) ? req.query.from : new Date(Date.now() - 13 * 86400000).toISOString().slice(0, 10);
 
-    const recentMatchesRes = await pool.query(`SELECT * FROM matches ORDER BY start_time DESC LIMIT 8`);
-    const recentUsersRes = await pool.query(`SELECT * FROM users ORDER BY created_at DESC LIMIT 8`);
+    // ==================== পারফরম্যান্স: নিচের সব কোয়েরি একে অপরের থেকে স্বাধীন —
+    // আগে একটার পর একটা sequentially await হতো (N × round-trip latency),
+    // এখন Promise.all দিয়ে সমান্তরালে চালানো হচ্ছে (max round-trip latency)।
+    // ফলাফল/ভ্যারিয়েবল নাম অপরিবর্তিত — শুধু execution দ্রুত। ====================
+    const [
+      users, totalCoins, matches, totalBets,
+      recentMatchesRes, recentUsersRes,
+      todayDeposit, todayWithdraw, todayBets, todayProfitLoss, yesterdayProfitLoss,
+      totalDepositAll, totalWithdrawAll, newUsersToday, activeUsersNow,
+      pendingDeposits, pendingWithdrawals, pendingSupport,
+      revenueTrend, userGrowth,
+      recentBets, recentDeposits, recentWithdrawals,
+      suspicious, fraudCounts, recentFraudFlags, dupCounts, recentDupFlags
+    ] = await Promise.all([
+      pool.query('SELECT COUNT(*) as count FROM users'),
+      pool.query('SELECT SUM(coins) as total FROM users'),
+      pool.query('SELECT COUNT(*) as count FROM matches'),
+      pool.query('SELECT COUNT(*) as count FROM bets'),
 
-    const todayDeposit = await pool.query(
-      `SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS cnt FROM payment_requests 
-       WHERE type='deposit' AND status='approved' AND created_at::date = CURRENT_DATE`
-    );
-    const todayWithdraw = await pool.query(
-      `SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS cnt FROM payment_requests 
-       WHERE type='withdraw' AND status='approved' AND created_at::date = CURRENT_DATE`
-    );
-    const todayBets = await pool.query(
-      `SELECT COALESCE(SUM(stake),0) AS total, COUNT(*) AS cnt FROM bets WHERE created_at::date = CURRENT_DATE`
-    );
-    const todayProfitLoss = await pool.query(
-      `SELECT COALESCE(SUM(stake),0) AS staked,
-              COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS paidout
-       FROM bets WHERE created_at::date = CURRENT_DATE AND status IN ('won','lost')`
-    );
-    const yesterdayProfitLoss = await pool.query(
-      `SELECT COALESCE(SUM(stake),0) AS staked,
-              COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS paidout
-       FROM bets WHERE created_at::date = CURRENT_DATE - INTERVAL '1 day' AND status IN ('won','lost')`
-    );
+      pool.query(`SELECT * FROM matches ORDER BY start_time DESC LIMIT 8`),
+      pool.query(`SELECT * FROM users ORDER BY created_at DESC LIMIT 8`),
 
-    // ==== সর্বমোট (লাইফটাইম) ডিপোজিট/উইথড্র — ড্যাশবোর্ড কার্ডের আসল সংখ্যা ====
-    const totalDepositAll = await pool.query(
-      `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests WHERE type='deposit' AND status='approved'`
-    );
-    const totalWithdrawAll = await pool.query(
-      `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests WHERE type='withdraw' AND status='approved'`
-    );
-    const newUsersToday = await pool.query(
-      `SELECT COUNT(*) AS cnt FROM users WHERE created_at::date = CURRENT_DATE`
-    );
-    const activeUsersNow = await pool.query(
-      `SELECT COUNT(*) AS cnt FROM users WHERE last_login > NOW() - INTERVAL '15 minutes'`
-    );
+      pool.query(
+        `SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS cnt FROM payment_requests 
+         WHERE type='deposit' AND status='approved' AND created_at::date = CURRENT_DATE`
+      ),
+      pool.query(
+        `SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS cnt FROM payment_requests 
+         WHERE type='withdraw' AND status='approved' AND created_at::date = CURRENT_DATE`
+      ),
+      pool.query(
+        `SELECT COALESCE(SUM(stake),0) AS total, COUNT(*) AS cnt FROM bets WHERE created_at::date = CURRENT_DATE`
+      ),
+      pool.query(
+        `SELECT COALESCE(SUM(stake),0) AS staked,
+                COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS paidout
+         FROM bets WHERE created_at::date = CURRENT_DATE AND status IN ('won','lost')`
+      ),
+      pool.query(
+        `SELECT COALESCE(SUM(stake),0) AS staked,
+                COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS paidout
+         FROM bets WHERE created_at::date = CURRENT_DATE - INTERVAL '1 day' AND status IN ('won','lost')`
+      ),
 
-    // ==== পেন্ডিং অ্যাকশন — ডিপোজিট, উইথড্র, সাপোর্ট মেসেজ ====
-    const pendingDeposits = await pool.query(
-      `SELECT COUNT(*) AS cnt FROM payment_requests WHERE type='deposit' AND status='pending'`
-    );
-    const pendingWithdrawals = await pool.query(
-      `SELECT COUNT(*) AS cnt FROM payment_requests WHERE type='withdraw' AND status='pending'`
-    );
-    const pendingSupport = await pool.query(
-      `SELECT COUNT(DISTINCT sender_id) AS cnt FROM chat_messages WHERE is_admin=false AND is_read=false`
-    );
+      pool.query(
+        `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests WHERE type='deposit' AND status='approved'`
+      ),
+      pool.query(
+        `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests WHERE type='withdraw' AND status='approved'`
+      ),
+      pool.query(
+        `SELECT COUNT(*) AS cnt FROM users WHERE created_at::date = CURRENT_DATE`
+      ),
+      pool.query(
+        `SELECT COUNT(*) AS cnt FROM users WHERE last_login > NOW() - INTERVAL '15 minutes'`
+      ),
 
-    const revenueTrend = await pool.query(`
-      SELECT d::date AS day,
-        COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='deposit' AND status='approved' AND created_at::date = d::date),0) AS deposit,
-        COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='withdraw' AND status='approved' AND created_at::date = d::date),0) AS withdraw
-      FROM generate_series(CURRENT_DATE - INTERVAL '13 days', CURRENT_DATE, INTERVAL '1 day') d
-      ORDER BY day
-    `);
+      pool.query(
+        `SELECT COUNT(*) AS cnt FROM payment_requests WHERE type='deposit' AND status='pending'`
+      ),
+      pool.query(
+        `SELECT COUNT(*) AS cnt FROM payment_requests WHERE type='withdraw' AND status='pending'`
+      ),
+      pool.query(
+        `SELECT COUNT(DISTINCT sender_id) AS cnt FROM chat_messages WHERE is_admin=false AND is_read=false`
+      ),
 
-    const userGrowth = await pool.query(`
-      SELECT d::date AS day,
-        COALESCE((SELECT COUNT(*) FROM users WHERE created_at::date = d::date),0) AS new_users
-      FROM generate_series(CURRENT_DATE - INTERVAL '13 days', CURRENT_DATE, INTERVAL '1 day') d
-      ORDER BY day
-    `);
+      pool.query(`
+        SELECT d::date AS day,
+          COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='deposit' AND status='approved' AND created_at::date = d::date),0) AS deposit,
+          COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='withdraw' AND status='approved' AND created_at::date = d::date),0) AS withdraw
+        FROM generate_series($1::date, $2::date, INTERVAL '1 day') d
+        ORDER BY day
+      `, [rangeFrom, rangeTo]),
+      pool.query(`
+        SELECT d::date AS day,
+          COALESCE((SELECT COUNT(*) FROM users WHERE created_at::date = d::date),0) AS new_users
+        FROM generate_series($1::date, $2::date, INTERVAL '1 day') d
+        ORDER BY day
+      `, [rangeFrom, rangeTo]),
 
-    const recentBets = await pool.query(`
-      SELECT b.*, u.username, m.team_a, m.team_b, m.title
-      FROM bets b JOIN users u ON b.user_id = u.id LEFT JOIN matches m ON b.match_id = m.id
-      ORDER BY b.created_at DESC LIMIT 8
-    `);
+      pool.query(`
+        SELECT b.*, u.username, m.team_a, m.team_b, m.title
+        FROM bets b JOIN users u ON b.user_id = u.id LEFT JOIN matches m ON b.match_id = m.id
+        ORDER BY b.created_at DESC LIMIT 8
+      `),
+      pool.query(`
+        SELECT pr.*, u.username FROM payment_requests pr JOIN users u ON pr.user_id = u.id
+        WHERE pr.type='deposit' ORDER BY pr.created_at DESC LIMIT 8
+      `),
+      pool.query(`
+        SELECT pr.*, u.username FROM payment_requests pr JOIN users u ON pr.user_id = u.id
+        WHERE pr.type='withdraw' ORDER BY pr.created_at DESC LIMIT 8
+      `),
 
-    const recentDeposits = await pool.query(`
-      SELECT pr.*, u.username FROM payment_requests pr JOIN users u ON pr.user_id = u.id
-      WHERE pr.type='deposit' ORDER BY pr.created_at DESC LIMIT 8
-    `);
+      pool.query(`
+        SELECT last_ip, COUNT(*) AS cnt, ARRAY_AGG(username) AS usernames
+        FROM users WHERE last_ip IS NOT NULL
+        GROUP BY last_ip HAVING COUNT(*) > 1
+        ORDER BY cnt DESC LIMIT 5
+      `),
 
-    const recentWithdrawals = await pool.query(`
-      SELECT pr.*, u.username FROM payment_requests pr JOIN users u ON pr.user_id = u.id
-      WHERE pr.type='withdraw' ORDER BY pr.created_at DESC LIMIT 8
-    `);
+      pool.query(`
+        SELECT risk_level, COUNT(*) AS c FROM fraud_flags WHERE status = 'open' GROUP BY risk_level
+      `),
+      pool.query(`
+        SELECT f.*, u.username FROM fraud_flags f LEFT JOIN users u ON u.id = f.user_id
+        WHERE f.status = 'open' ORDER BY
+          CASE f.risk_level WHEN 'high' THEN 3 WHEN 'medium' THEN 2 ELSE 1 END DESC, f.created_at DESC
+        LIMIT 5
+      `),
+
+      pool.query(`
+        SELECT
+          COUNT(*) FILTER (WHERE risk_score >= 70) AS high,
+          COUNT(*) FILTER (WHERE risk_score >= 40 AND risk_score < 70) AS medium,
+          COUNT(*) FILTER (WHERE risk_score < 40) AS low
+        FROM duplicate_account_flags WHERE status = 'open'
+      `),
+      pool.query(`
+        SELECT f.*, u.username FROM duplicate_account_flags f LEFT JOIN users u ON u.id = f.user_id
+        WHERE f.status = 'open' ORDER BY f.risk_score DESC, f.created_at DESC LIMIT 5
+      `)
+    ]);
 
     // ==== সাম্প্রতিক অ্যাক্টিভিটি ফিড — ডিপোজিট, উইথড্র, বাজি একত্রে সময় অনুযায়ী ====
     const recentActivity = [
@@ -635,103 +762,36 @@ router.get('/', async (req, res) => {
       }))
     ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 8);
 
-    const suspicious = await pool.query(`
-      SELECT last_ip, COUNT(*) AS cnt, ARRAY_AGG(username) AS usernames
-      FROM users WHERE last_ip IS NOT NULL
-      GROUP BY last_ip HAVING COUNT(*) > 1
-      ORDER BY cnt DESC LIMIT 5
-    `);
-
     // ==================== Fraud Detection Engine — ড্যাশবোর্ড Fraud Alerts উইজেট ====================
-    const fraudCounts = await pool.query(`
-      SELECT risk_level, COUNT(*) AS c FROM fraud_flags WHERE status = 'open' GROUP BY risk_level
-    `);
     const fraudAlerts = { high: 0, medium: 0, low: 0 };
     fraudCounts.rows.forEach(r => { fraudAlerts[r.risk_level] = parseInt(r.c); });
-    const recentFraudFlags = await pool.query(`
-      SELECT f.*, u.username FROM fraud_flags f LEFT JOIN users u ON u.id = f.user_id
-      WHERE f.status = 'open' ORDER BY
-        CASE f.risk_level WHEN 'high' THEN 3 WHEN 'medium' THEN 2 ELSE 1 END DESC, f.created_at DESC
-      LIMIT 5
-    `);
 
     // ==================== Duplicate Account Detection — ড্যাশবোর্ড উইজেট ====================
-    const dupCounts = await pool.query(`
-      SELECT
-        COUNT(*) FILTER (WHERE risk_score >= 70) AS high,
-        COUNT(*) FILTER (WHERE risk_score >= 40 AND risk_score < 70) AS medium,
-        COUNT(*) FILTER (WHERE risk_score < 40) AS low
-      FROM duplicate_account_flags WHERE status = 'open'
-    `);
     const dupAlerts = {
       high: parseInt(dupCounts.rows[0].high) || 0,
       medium: parseInt(dupCounts.rows[0].medium) || 0,
       low: parseInt(dupCounts.rows[0].low) || 0
     };
-    const recentDupFlags = await pool.query(`
-      SELECT f.*, u.username FROM duplicate_account_flags f LEFT JOIN users u ON u.id = f.user_id
-      WHERE f.status = 'open' ORDER BY f.risk_score DESC, f.created_at DESC LIMIT 5
-    `);
-
-    // ==================== Analytics: Bet Stats 7-day ====================
-    const betStats7 = await pool.query(`
-      SELECT d::date AS day,
-        COALESCE((SELECT COUNT(*) FROM bets WHERE created_at::date = d::date),0) AS cnt,
-        COALESCE((SELECT SUM(stake) FROM bets WHERE created_at::date = d::date),0) AS staked,
-        COALESCE((SELECT SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END) FROM bets WHERE created_at::date = d::date AND status IN ('won','lost')),0) AS paidout
-      FROM generate_series(CURRENT_DATE - INTERVAL '6 days', CURRENT_DATE, INTERVAL '1 day') d ORDER BY day
-    `);
-
-    // ==================== Analytics: Top depositors today ====================
-    const topDepositors = await pool.query(`
-      SELECT u.username, SUM(pr.amount) AS total
-      FROM payment_requests pr JOIN users u ON pr.user_id = u.id
-      WHERE pr.type='deposit' AND pr.status='approved' AND pr.created_at::date = CURRENT_DATE
-      GROUP BY u.username ORDER BY total DESC LIMIT 5
-    `);
-
-    // ==================== Analytics: Security summary ====================
-    const securitySummary = await pool.query(`
-      SELECT
-        (SELECT COUNT(*) FROM fraud_flags WHERE status='open') AS open_fraud,
-        (SELECT COUNT(*) FROM duplicate_account_flags WHERE status='open') AS open_dup,
-        (SELECT COUNT(*) FROM bot_activity_logs WHERE risk_level='high' AND created_at > NOW()-INTERVAL '24h') AS bot_high_24h,
-        (SELECT COUNT(*) FROM users WHERE status='banned') AS banned_users
-    `);
-
-    // ==================== Analytics: Queue health ====================
-    let queueHealth = { redisConnected: false, totalFailed: 0, totalWaiting: 0, totalActive: 0 };
-    try {
-      const { getHealthSummary } = require('../services/queue/monitor');
-      queueHealth = await getHealthSummary();
-    } catch(e) {}
-
-    // ==================== Analytics: KYC summary ====================
-    const kycSummary = await pool.query(`
-      SELECT
-        COUNT(*) FILTER (WHERE kyc_status='pending') AS pending,
-        COUNT(*) FILTER (WHERE kyc_status='approved') AS approved,
-        COUNT(*) FILTER (WHERE kyc_status='rejected') AS rejected
-      FROM users WHERE kyc_status IS NOT NULL
-    `).catch(() => ({ rows: [{ pending:0, approved:0, rejected:0 }] }));
-
-    // ==================== Analytics: Today pending withdrawals amount ====================
-    const pendingWithdrawAmount = await pool.query(`
-      SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests WHERE type='withdraw' AND status='pending'
-    `);
-
-    const pendingKYC = await pool.query(`SELECT COUNT(*) AS cnt FROM users WHERE kyc_status='pending'`).catch(() => ({ rows: [{ cnt: 0 }] }));
-    const totalDepositsAllTime = totalDepositAll.rows[0].total;
-    const totalWithdrawalsAllTime = totalWithdrawAll.rows[0].total;
 
     const demoStats = await getDemoStats().catch(e => {
       console.error('demo stats error:', e.message);
       return { totalDemo: 0, userHeldDemo: 0, casinoDemoWagered: 0, sportsDemoWagered: 0 };
     });
 
+    // ==================== নতুন অ্যানালিটিক্স উইজেট — API Usage, Bet Stats, Server Health, Queue Health ====================
+    const [apiUsageStats, betStatistics, serverHealth, queueHealth] = await Promise.all([
+      systemHealth.getApiUsageStats(rangeFrom, rangeTo),
+      systemHealth.getBetStatistics(rangeFrom, rangeTo),
+      systemHealth.getServerHealth().catch(e => { console.error('server health error:', e.message); return null; }),
+      queue.getHealthStatus().catch(() => null)
+    ]);
+
     res.render('admin/dashboard', {
+      dateRange: { from: rangeFrom, to: rangeTo },
+      apiUsageStats, betStatistics, serverHealth, queueHealth,
       demoStats,
       redisStatus: cache.getStatus(),
+      queueStatus: Object.assign({}, queue.getStatus(), await queue.getStats().catch(() => ({ pending: 0, processing: 0, completed: 0, failed: 0 }))),
       stats: {
         total_users: users.rows[0].count,
         total_coins_in_system: totalCoins.rows[0].total || 0,
@@ -767,164 +827,94 @@ router.get('/', async (req, res) => {
       fraudAlerts,
       recentFraudFlags: recentFraudFlags.rows,
       dupAlerts,
-      recentDupFlags: recentDupFlags.rows,
-      // Analytics extras
-      betStats7: betStats7.rows.map(r => ({ day: r.day, cnt: parseInt(r.cnt), staked: Number(r.staked), paidout: Number(r.paidout), ggr: Number(r.staked) - Number(r.paidout) })),
-      topDepositors: topDepositors.rows,
-      securitySummary: securitySummary.rows[0],
-      queueHealth,
-      kycSummary: kycSummary.rows[0],
-      pendingWithdrawAmount: Number(pendingWithdrawAmount.rows[0].total),
-      stats: {
-        ...{
-          total_users: users.rows[0].count,
-          total_coins_in_system: totalCoins.rows[0].total || 0,
-          total_matches: matches.rows[0].count,
-          total_predictions: totalBets.rows[0].count,
-          today_deposit: Number(todayDeposit.rows[0].total),
-          today_deposit_count: parseInt(todayDeposit.rows[0].cnt),
-          today_withdraw: Number(todayWithdraw.rows[0].total),
-          today_withdraw_count: parseInt(todayWithdraw.rows[0].cnt),
-          today_bet_amount: Number(todayBets.rows[0].total),
-          today_bet_count: parseInt(todayBets.rows[0].cnt),
-          today_profit: Number(todayProfitLoss.rows[0].staked) - Number(todayProfitLoss.rows[0].paidout),
-          yesterday_profit: Number(yesterdayProfitLoss.rows[0].staked) - Number(yesterdayProfitLoss.rows[0].paidout),
-          total_deposit_all: Number(totalDepositAll.rows[0].total),
-          total_withdraw_all: Number(totalWithdrawAll.rows[0].total),
-          new_users_today: parseInt(newUsersToday.rows[0].cnt),
-          active_users_now: parseInt(activeUsersNow.rows[0].cnt),
-          pending_deposits: parseInt(pendingDeposits.rows[0].cnt),
-          pending_withdrawals: parseInt(pendingWithdrawals.rows[0].cnt),
-          pending_kyc: parseInt(pendingKYC.rows[0].cnt),
-          pending_support: parseInt(pendingSupport.rows[0].cnt),
-          pending_total: parseInt(pendingDeposits.rows[0].cnt) + parseInt(pendingWithdrawals.rows[0].cnt) + parseInt(pendingKYC.rows[0].cnt),
-          total_deposits_all_time: Number(totalDepositsAllTime),
-          total_withdrawals_all_time: Number(totalWithdrawalsAllTime)
-        }
-      }
+      recentDupFlags: recentDupFlags.rows
     });
   } catch (err) {
     console.error(err);
     res.render('admin/dashboard', {
+      dateRange: { from: new Date(Date.now() - 13 * 86400000).toISOString().slice(0, 10), to: new Date().toISOString().slice(0, 10) },
+      apiUsageStats: { totalRequests: 0, avgResponseMs: 0, errorCount: 0, errorRatePercent: 0, topEndpoints: [] },
+      betStatistics: { totalBets: 0, wonCount: 0, lostCount: 0, pendingCount: 0, winRatePercent: 0, totalStake: 0, totalPayout: 0, houseProfit: 0 },
+      serverHealth: null,
+      queueHealth: null,
       demoStats: { totalDemo: 9999999, userHeldDemo: 0, casinoDemoWagered: 0, sportsDemoWagered: 0 },
+      redisStatus: cache.getStatus(),
+      queueStatus: { enabled: false, running: false, pending: 0, processing: 0, completed: 0, failed: 0 },
       stats: {}, revenueTrend: [], userGrowth: [], recentBets: [], recentDeposits: [], recentWithdrawals: [], recentActivity: [], recentMatches: [], recentUsers: [], suspicious: [],
       fraudAlerts: { high: 0, medium: 0, low: 0 }, recentFraudFlags: [],
-      dupAlerts: { high: 0, medium: 0, low: 0 }, recentDupFlags: [],
-      betStats7: [], topDepositors: [], securitySummary: {}, queueHealth: {}, kycSummary: {}, pendingWithdrawAmount: 0
+      dupAlerts: { high: 0, medium: 0, low: 0 }, recentDupFlags: []
     });
-  }
-});
-// ==================== Analytics JSON API (date range, export) ====================
-router.get('/api/analytics', async (req, res) => {
-  try {
-    const days  = Math.min(90, Math.max(1, parseInt(req.query.days) || 14));
-    const interval = `${days} days`;
-
-    const [revenue, userGrowth, betStats, topUsers, kycSummary, queueH] = await Promise.all([
-      pool.query(`
-        SELECT d::date AS day,
-          COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='deposit'  AND status='approved' AND created_at::date=d::date),0) AS deposit,
-          COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='withdraw' AND status='approved' AND created_at::date=d::date),0) AS withdraw
-        FROM generate_series(CURRENT_DATE - INTERVAL '${interval}', CURRENT_DATE, INTERVAL '1 day') d ORDER BY day
-      `),
-      pool.query(`
-        SELECT d::date AS day,
-          COALESCE((SELECT COUNT(*) FROM users WHERE created_at::date=d::date),0) AS new_users
-        FROM generate_series(CURRENT_DATE - INTERVAL '${interval}', CURRENT_DATE, INTERVAL '1 day') d ORDER BY day
-      `),
-      pool.query(`
-        SELECT d::date AS day,
-          COALESCE((SELECT COUNT(*) FROM bets WHERE created_at::date=d::date),0) AS cnt,
-          COALESCE((SELECT SUM(stake) FROM bets WHERE created_at::date=d::date),0) AS staked
-        FROM generate_series(CURRENT_DATE - INTERVAL '${interval}', CURRENT_DATE, INTERVAL '1 day') d ORDER BY day
-      `),
-      pool.query(`
-        SELECT u.username, SUM(pr.amount) AS total FROM payment_requests pr
-        JOIN users u ON pr.user_id=u.id
-        WHERE pr.type='deposit' AND pr.status='approved' AND pr.created_at > NOW()-INTERVAL '${interval}'
-        GROUP BY u.username ORDER BY total DESC LIMIT 10
-      `),
-      pool.query(`
-        SELECT
-          COUNT(*) FILTER (WHERE kyc_status='pending')  AS pending,
-          COUNT(*) FILTER (WHERE kyc_status='approved') AS approved,
-          COUNT(*) FILTER (WHERE kyc_status='rejected') AS rejected
-        FROM users WHERE kyc_status IS NOT NULL
-      `).catch(() => ({ rows: [{ pending:0, approved:0, rejected:0 }] })),
-      (async () => {
-        try { const { getHealthSummary } = require('../services/queue/monitor'); return await getHealthSummary(); } catch(e) { return {}; }
-      })()
-    ]);
-
-    res.json({
-      days,
-      revenue:    revenue.rows.map(r => ({ day: r.day, deposit: Number(r.deposit), withdraw: Number(r.withdraw), net: Number(r.deposit) - Number(r.withdraw) })),
-      userGrowth: userGrowth.rows.map(r => ({ day: r.day, count: parseInt(r.new_users) })),
-      betStats:   betStats.rows.map(r => ({ day: r.day, cnt: parseInt(r.cnt), staked: Number(r.staked) })),
-      topDepositors: topUsers.rows,
-      kycSummary: kycSummary.rows[0],
-      queueHealth: queueH
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
   }
 });
 
 // ==================== ড্যাশবোর্ড লাইভ স্ট্যাটস (পোলিং API) ====================
 router.get('/api/dashboard-stats', async (req, res) => {
   try {
-    const users = await pool.query('SELECT COUNT(*) as count FROM users');
-
-    const todayDeposit = await pool.query(
-      `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests 
-       WHERE type='deposit' AND status='approved' AND created_at::date = CURRENT_DATE`
-    );
-    const todayWithdraw = await pool.query(
-      `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests 
-       WHERE type='withdraw' AND status='approved' AND created_at::date = CURRENT_DATE`
-    );
-    const todayProfitLoss = await pool.query(
-      `SELECT COALESCE(SUM(stake),0) AS staked,
-              COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS paidout
-       FROM bets WHERE created_at::date = CURRENT_DATE AND status IN ('won','lost')`
-    );
-    const yesterdayProfitLoss = await pool.query(
-      `SELECT COALESCE(SUM(stake),0) AS staked,
-              COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS paidout
-       FROM bets WHERE created_at::date = CURRENT_DATE - INTERVAL '1 day' AND status IN ('won','lost')`
-    );
-    const totalDepositAll = await pool.query(
-      `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests WHERE type='deposit' AND status='approved'`
-    );
-    const totalWithdrawAll = await pool.query(
-      `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests WHERE type='withdraw' AND status='approved'`
-    );
-    const newUsersToday = await pool.query(
-      `SELECT COUNT(*) AS cnt FROM users WHERE created_at::date = CURRENT_DATE`
-    );
-    const pendingDeposits = await pool.query(
-      `SELECT COUNT(*) AS cnt FROM payment_requests WHERE type='deposit' AND status='pending'`
-    );
-    const pendingWithdrawals = await pool.query(
-      `SELECT COUNT(*) AS cnt FROM payment_requests WHERE type='withdraw' AND status='pending'`
-    );
-    const pendingSupport = await pool.query(
-      `SELECT COUNT(DISTINCT sender_id) AS cnt FROM chat_messages WHERE is_admin=false AND is_read=false`
-    );
-
-    const recentDeposits = await pool.query(`
-      SELECT pr.*, u.username FROM payment_requests pr JOIN users u ON pr.user_id = u.id
-      WHERE pr.type='deposit' ORDER BY pr.created_at DESC LIMIT 8
-    `);
-    const recentWithdrawals = await pool.query(`
-      SELECT pr.*, u.username FROM payment_requests pr JOIN users u ON pr.user_id = u.id
-      WHERE pr.type='withdraw' ORDER BY pr.created_at DESC LIMIT 8
-    `);
-    const recentBets = await pool.query(`
-      SELECT b.*, u.username, m.team_a, m.team_b, m.title
-      FROM bets b JOIN users u ON b.user_id = u.id LEFT JOIN matches m ON b.match_id = m.id
-      ORDER BY b.created_at DESC LIMIT 8
-    `);
+    // পারফরম্যান্স: এই এন্ডপয়েন্টটা auto-refresh দিয়ে ঘনঘন পোল হয় — তাই সিকোয়েন্সিয়াল কোয়েরির
+    // পরিবর্তে সব স্বাধীন কোয়েরি Promise.all দিয়ে সমান্তরালে চালানো হচ্ছে।
+    const [
+      users, todayDeposit, todayWithdraw, todayProfitLoss, yesterdayProfitLoss,
+      totalDepositAll, totalWithdrawAll, newUsersToday, pendingDeposits, pendingWithdrawals, pendingSupport,
+      recentDeposits, recentWithdrawals, recentBets,
+      queueHealth, apiUsageToday, serverHealth, queueStatsForPoll
+    ] = await Promise.all([
+      pool.query('SELECT COUNT(*) as count FROM users'),
+      pool.query(
+        `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests 
+         WHERE type='deposit' AND status='approved' AND created_at::date = CURRENT_DATE`
+      ),
+      pool.query(
+        `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests 
+         WHERE type='withdraw' AND status='approved' AND created_at::date = CURRENT_DATE`
+      ),
+      pool.query(
+        `SELECT COALESCE(SUM(stake),0) AS staked,
+                COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS paidout
+         FROM bets WHERE created_at::date = CURRENT_DATE AND status IN ('won','lost')`
+      ),
+      pool.query(
+        `SELECT COALESCE(SUM(stake),0) AS staked,
+                COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS paidout
+         FROM bets WHERE created_at::date = CURRENT_DATE - INTERVAL '1 day' AND status IN ('won','lost')`
+      ),
+      pool.query(
+        `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests WHERE type='deposit' AND status='approved'`
+      ),
+      pool.query(
+        `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests WHERE type='withdraw' AND status='approved'`
+      ),
+      pool.query(
+        `SELECT COUNT(*) AS cnt FROM users WHERE created_at::date = CURRENT_DATE`
+      ),
+      pool.query(
+        `SELECT COUNT(*) AS cnt FROM payment_requests WHERE type='deposit' AND status='pending'`
+      ),
+      pool.query(
+        `SELECT COUNT(*) AS cnt FROM payment_requests WHERE type='withdraw' AND status='pending'`
+      ),
+      pool.query(
+        `SELECT COUNT(DISTINCT sender_id) AS cnt FROM chat_messages WHERE is_admin=false AND is_read=false`
+      ),
+      pool.query(`
+        SELECT pr.*, u.username FROM payment_requests pr JOIN users u ON pr.user_id = u.id
+        WHERE pr.type='deposit' ORDER BY pr.created_at DESC LIMIT 8
+      `),
+      pool.query(`
+        SELECT pr.*, u.username FROM payment_requests pr JOIN users u ON pr.user_id = u.id
+        WHERE pr.type='withdraw' ORDER BY pr.created_at DESC LIMIT 8
+      `),
+      pool.query(`
+        SELECT b.*, u.username, m.team_a, m.team_b, m.title
+        FROM bets b JOIN users u ON b.user_id = u.id LEFT JOIN matches m ON b.match_id = m.id
+        ORDER BY b.created_at DESC LIMIT 8
+      `),
+      queue.getHealthStatus().catch(() => null),
+      systemHealth.getApiUsageStats(
+        new Date().toISOString().slice(0, 10), new Date().toISOString().slice(0, 10)
+      ).catch(() => null),
+      systemHealth.getServerHealth().catch(() => null),
+      queue.getStats().catch(() => ({ pending: 0, processing: 0, completed: 0, failed: 0 }))
+    ]);
 
     const recentActivity = [
       ...recentDeposits.rows.map(r => ({ kind: 'deposit', status: r.status, username: r.username, amount: Number(r.amount), created_at: r.created_at, ref: r.id })),
@@ -947,11 +937,72 @@ router.get('/api/dashboard-stats', async (req, res) => {
         pending_withdrawals: parseInt(pendingWithdrawals.rows[0].cnt),
         pending_support: parseInt(pendingSupport.rows[0].cnt)
       },
-      recentActivity
+      recentActivity,
+      redisStatus: cache.getStatus(),
+      queueStatus: Object.assign({}, queue.getStatus(), queueStatsForPoll),
+      queueHealth,
+      apiUsageToday,
+      serverHealth
     });
   } catch (err) {
     console.error('dashboard-stats api error:', err.message);
     res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি' });
+  }
+});
+
+// ==================== ড্যাশবোর্ড অ্যানালিটিক্স Export (CSV) ====================
+router.get('/dashboard/export.csv', async (req, res) => {
+  try {
+    const to = (req.query.to && /^\d{4}-\d{2}-\d{2}$/.test(req.query.to)) ? req.query.to : new Date().toISOString().slice(0, 10);
+    const from = (req.query.from && /^\d{4}-\d{2}-\d{2}$/.test(req.query.from)) ? req.query.from : new Date(Date.now() - 13 * 86400000).toISOString().slice(0, 10);
+
+    const [depositRes, withdrawRes, usersRes, betStats, apiStats, queueStats] = await Promise.all([
+      pool.query(
+        `SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS cnt FROM payment_requests
+         WHERE type='deposit' AND status='approved' AND created_at BETWEEN $1 AND $2::date + INTERVAL '1 day'`, [from, to]),
+      pool.query(
+        `SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS cnt FROM payment_requests
+         WHERE type='withdraw' AND status='approved' AND created_at BETWEEN $1 AND $2::date + INTERVAL '1 day'`, [from, to]),
+      pool.query(
+        `SELECT COUNT(*) AS cnt FROM users WHERE created_at BETWEEN $1 AND $2::date + INTERVAL '1 day'`, [from, to]),
+      systemHealth.getBetStatistics(from, to),
+      systemHealth.getApiUsageStats(from, to),
+      queue.getStats().catch(() => ({ pending: 0, processing: 0, completed: 0, failed: 0, deadLetter: 0 }))
+    ]);
+
+    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const rows = [
+      ['metric', 'value'],
+      ['date_range', `${from} to ${to}`],
+      ['new_users', usersRes.rows[0].cnt],
+      ['deposit_total', Number(depositRes.rows[0].total)],
+      ['deposit_count', depositRes.rows[0].cnt],
+      ['withdraw_total', Number(withdrawRes.rows[0].total)],
+      ['withdraw_count', withdrawRes.rows[0].cnt],
+      ['bets_total', betStats.totalBets],
+      ['bets_won', betStats.wonCount],
+      ['bets_lost', betStats.lostCount],
+      ['bets_win_rate_percent', betStats.winRatePercent],
+      ['total_stake', betStats.totalStake],
+      ['total_payout', betStats.totalPayout],
+      ['house_profit', betStats.houseProfit],
+      ['api_requests_total', apiStats.totalRequests],
+      ['api_avg_response_ms', apiStats.avgResponseMs],
+      ['api_error_rate_percent', apiStats.errorRatePercent],
+      ['queue_pending', queueStats.pending],
+      ['queue_processing', queueStats.processing],
+      ['queue_completed', queueStats.completed],
+      ['queue_failed', queueStats.failed],
+      ['queue_dead_letter', queueStats.deadLetter || 0]
+    ];
+    const csv = rows.map(r => r.map(esc).join(',')).join('\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="dashboard-analytics-${from}_to_${to}.csv"`);
+    res.send('\uFEFF' + csv);
+  } catch (err) {
+    console.error('Dashboard export error:', err.message);
+    res.status(500).send('Export failed');
   }
 });
 
@@ -1370,7 +1421,7 @@ router.get('/users/:id', async (req, res) => {
 });
 
 // ==================== USER ACTIONS ====================
-router.post('/users/:id/ban', requireIntParam('id'), async (req, res) => {
+router.post('/users/:id/ban', requirePermission('users.manage'), requireIntParam('id'), async (req, res) => {
   try {
     const r = await pool.query('UPDATE users SET is_banned = NOT is_banned WHERE id = $1 RETURNING is_banned, username', [req.params.id]);
     if (r.rows[0]) {
@@ -1407,7 +1458,8 @@ router.get('/security-overview', async (req, res) => {
 
     const [
       totalUsersRes, emailUsersRes, emailVerifiedRes, pinConfiguredRes,
-      activeSessionsRes, newDeviceLoginsRes, pinLockedRes, recentLogsRes
+      activeSessionsRes, newDeviceLoginsRes, pinLockedRes, recentLogsRes,
+      totpEnabledRes, failedLogins24hRes
     ] = await Promise.all([
       pool.query(`SELECT COUNT(*) AS c FROM users`),
       pool.query(`SELECT COUNT(*) AS c FROM users WHERE email IS NOT NULL`),
@@ -1419,7 +1471,9 @@ router.get('/security-overview', async (req, res) => {
       pool.query(
         `SELECT * FROM admin_logs WHERE action_type = ANY($1) ORDER BY created_at DESC LIMIT 25`,
         [SECURITY_ACTION_TYPES]
-      )
+      ),
+      pool.query(`SELECT COUNT(*) AS c FROM users WHERE totp_enabled = true`),
+      pool.query(`SELECT COUNT(*) AS c FROM failed_login_attempts WHERE created_at >= NOW() - INTERVAL '24 hours'`)
     ]);
 
     const stats = {
@@ -1429,14 +1483,16 @@ router.get('/security-overview', async (req, res) => {
       pinConfigured: parseInt(pinConfiguredRes.rows[0].c),
       activeSessions: parseInt(activeSessionsRes.rows[0].c),
       newDeviceLogins7d: parseInt(newDeviceLoginsRes.rows[0].c),
-      pinLocked: parseInt(pinLockedRes.rows[0].c)
+      pinLocked: parseInt(pinLockedRes.rows[0].c),
+      totpEnabled: parseInt(totpEnabledRes.rows[0].c),
+      failedLogins24h: parseInt(failedLogins24hRes.rows[0].c)
     };
 
     res.render('admin/security-overview', { stats, recentLogs: recentLogsRes.rows });
   } catch (err) {
     console.error('security-overview error:', err.message);
     res.render('admin/security-overview', {
-      stats: { totalUsers: 0, emailUsers: 0, emailVerified: 0, pinConfigured: 0, activeSessions: 0, newDeviceLogins7d: 0, pinLocked: 0 },
+      stats: { totalUsers: 0, emailUsers: 0, emailVerified: 0, pinConfigured: 0, activeSessions: 0, newDeviceLogins7d: 0, pinLocked: 0, totpEnabled: 0, failedLogins24h: 0 },
       recentLogs: []
     });
   }
@@ -1515,7 +1571,7 @@ router.post('/users/:id/withdraw-pin/reset', adminActionLimiter, requireIntParam
   res.redirect('back');
 });
 
-router.post('/users/:id/coins/add', adminFinancialLimiter, requireIntParam('id'), requireAmount('amount', { max: 10_000_000 }), async (req, res) => {
+router.post('/users/:id/coins/add', requirePermission('users.manage'), adminFinancialLimiter, requireIntParam('id'), requireAmount('amount', { max: 10_000_000 }), async (req, res) => {
   try {
     const amount = req.body.amount; // requireAmount দিয়ে ইতিমধ্যে যাচাই ও normalize করা
     const reason = (req.body.reason || '').trim().slice(0, 200);
@@ -1527,7 +1583,7 @@ router.post('/users/:id/coins/add', adminFinancialLimiter, requireIntParam('id')
   res.redirect('back');
 });
 
-router.post('/users/:id/coins/remove', adminFinancialLimiter, requireIntParam('id'), requireAmount('amount', { max: 10_000_000 }), async (req, res) => {
+router.post('/users/:id/coins/remove', requirePermission('users.manage'), adminFinancialLimiter, requireIntParam('id'), requireAmount('amount', { max: 10_000_000 }), async (req, res) => {
   try {
     const amount = req.body.amount;
     const reason = (req.body.reason || '').trim().slice(0, 200);
@@ -1593,6 +1649,7 @@ router.post('/markets/update', async (req, res) => {
       INSERT INTO markets (match_id, type, name, odds, status) VALUES ($1,$2,$3,$4,$5)
       ON CONFLICT (match_id, type, name) DO UPDATE SET odds = EXCLUDED.odds, status = EXCLUDED.status, updated_at = NOW()
     `, [match_id, type, name, odds, status || 'open']);
+    await cache.del(cacheKeys.matchDetail(match_id)).catch(() => {});
     req.flash('success', 'মার্কেট আপডেট হয়েছে!');
     res.redirect(`/admin/markets/${match_id}`);
   } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); res.redirect('/admin/matches'); }
@@ -1600,7 +1657,8 @@ router.post('/markets/update', async (req, res) => {
 
 router.post('/markets/:marketId/toggle', async (req, res) => {
   try {
-    await pool.query('UPDATE markets SET status = $1 WHERE id = $2', [req.body.status, req.params.marketId]);
+    const mRes = await pool.query('UPDATE markets SET status = $1 WHERE id = $2 RETURNING match_id', [req.body.status, req.params.marketId]);
+    if (mRes.rows[0]) await cache.del(cacheKeys.matchDetail(mRes.rows[0].match_id)).catch(() => {});
     req.flash('success', 'মার্কেট আপডেট হয়েছে!');
   } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
   res.redirect('back');
@@ -1630,6 +1688,10 @@ router.post('/markets/:marketId/settle', async (req, res) => {
     await client.query(`UPDATE markets SET status = 'settled', updated_at = NOW() WHERE id = $1`, [marketId]);
     await settleSelectionsForMarket(client, marketId, winning_runner);
     await client.query('COMMIT');
+    try {
+      const mRow = await pool.query('SELECT match_id FROM markets WHERE id = $1', [marketId]);
+      if (mRow.rows[0]) await cache.del(cacheKeys.matchDetail(mRow.rows[0].match_id));
+    } catch (e) {}
     req.flash('success', `সেটেল সম্পন্ন! ${bets.rows.length} টি বেট, ${winnersCount} জন জিতেছে।`);
     res.redirect('back');
   } catch (err) {
@@ -1970,6 +2032,82 @@ router.get('/activity/export.csv', async (req, res) => {
 });
 
 // ==================== অ্যাক্টিভিটি লগ ====================
+
+// ==================== Bot Detection — Admin Monitoring ====================
+router.get('/bot-monitoring', async (req, res) => {
+  try {
+    const [statsToday, byRisk, byEndpoint, ipRules, recentLogs] = await Promise.all([
+      pool.query(`SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE blocked) AS blocked
+                  FROM bot_activity_logs WHERE created_at::date = CURRENT_DATE`),
+      pool.query(`SELECT risk_level, COUNT(*) AS cnt FROM bot_activity_logs
+                  WHERE created_at > NOW() - INTERVAL '7 days' GROUP BY risk_level`),
+      pool.query(`SELECT endpoint, COUNT(*) AS cnt FROM bot_activity_logs
+                  WHERE created_at > NOW() - INTERVAL '7 days' GROUP BY endpoint ORDER BY cnt DESC LIMIT 8`),
+      pool.query(`SELECT COUNT(*) FILTER (WHERE type='block') AS blocked_ips,
+                         COUNT(*) FILTER (WHERE type='whitelist') AS whitelisted_ips FROM ip_rules`),
+      pool.query(`SELECT * FROM bot_activity_logs ORDER BY created_at DESC LIMIT 20`)
+    ]);
+
+    res.render('admin/bot-monitoring', {
+      user: req.session.user,
+      statsToday: statsToday.rows[0],
+      byRisk: byRisk.rows,
+      byEndpoint: byEndpoint.rows,
+      ipRuleCounts: ipRules.rows[0],
+      recentLogs: recentLogs.rows
+    });
+  } catch (err) {
+    console.error('bot-monitoring dashboard error:', err.message);
+    res.render('admin/bot-monitoring', {
+      user: req.session.user,
+      statsToday: { total: 0, blocked: 0 },
+      byRisk: [], byEndpoint: [], ipRuleCounts: { blocked_ips: 0, whitelisted_ips: 0 }, recentLogs: []
+    });
+  }
+});
+
+router.get('/bot-monitoring/ip-rules', async (req, res) => {
+  try {
+    const rules = await listIpRules();
+    res.render('admin/bot-ip-rules', { user: req.session.user, rules });
+  } catch (err) {
+    console.error('ip-rules list error:', err.message);
+    res.render('admin/bot-ip-rules', { user: req.session.user, rules: [] });
+  }
+});
+
+router.post('/bot-monitoring/ip-rules', async (req, res) => {
+  const { ip, type, reason } = req.body;
+  try {
+    if (!ip || !['block', 'whitelist'].includes(type)) {
+      req.flash('error', 'সঠিক IP ও টাইপ দিন।');
+      return res.redirect('/admin/bot-monitoring/ip-rules');
+    }
+    await setIpRule(ip.trim(), type, sanitizeText(reason || ''), req.session.user.username);
+    await logAdminAction(req.session.user.id, req.session.user.username, type === 'block' ? 'IP_BLOCKED' : 'IP_WHITELISTED', `IP: ${ip} — কারণ: ${reason || '-'}`, req.ip);
+    req.flash('success', `IP ${ip} সফলভাবে ${type === 'block' ? 'ব্লক' : 'হোয়াইটলিস্ট'} করা হয়েছে।`);
+    res.redirect('/admin/bot-monitoring/ip-rules');
+  } catch (err) {
+    console.error('ip-rules add error:', err.message);
+    req.flash('error', 'সমস্যা হয়েছে।');
+    res.redirect('/admin/bot-monitoring/ip-rules');
+  }
+});
+
+router.post('/bot-monitoring/ip-rules/:ip/remove', async (req, res) => {
+  try {
+    const ip = decodeURIComponent(req.params.ip);
+    await removeIpRule(ip);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'IP_RULE_REMOVED', `IP: ${ip}`, req.ip);
+    req.flash('success', `IP ${ip}-এর রুল সরানো হয়েছে।`);
+    res.redirect('/admin/bot-monitoring/ip-rules');
+  } catch (err) {
+    console.error('ip-rules remove error:', err.message);
+    req.flash('error', 'সমস্যা হয়েছে।');
+    res.redirect('/admin/bot-monitoring/ip-rules');
+  }
+});
+
 router.get('/activity', async (req, res) => {
   try {
     const { action_type = '', q = '' } = req.query;
@@ -1994,6 +2132,23 @@ router.get('/activity', async (req, res) => {
 });
 
 // ==================== ফ্রড লগ (Fraud Detection) ====================
+// ==================== Fraud Monitoring Dashboard — Risk Score, Trend, Top Signals/Users ====================
+router.get('/fraud-monitoring', async (req, res) => {
+  try {
+    const dashStats = await getFraudDashboardStats();
+    res.render('admin/fraud-monitoring', { dashStats });
+  } catch (err) {
+    console.error('Fraud monitoring dashboard error:', err.message);
+    res.render('admin/fraud-monitoring', {
+      dashStats: {
+        riskByLevel: { high: 0, medium: 0, low: 0 },
+        statusCounts: { open: 0, reviewed: 0, dismissed: 0 },
+        topSignals: [], topUsers: [], trend: [], avgOpenRiskScore: 0
+      }
+    });
+  }
+});
+
 router.get('/fraud-logs', async (req, res) => {
   try {
     const { risk_level = '', status = '', user_id = '', from = '', to = '' } = req.query;
@@ -2036,7 +2191,7 @@ router.get('/fraud-logs', async (req, res) => {
   }
 });
 
-router.post('/fraud-logs/:id/review', requireIntParam('id'), async (req, res) => {
+router.post('/fraud-logs/:id/review', requirePermission('fraud.manage'), requireIntParam('id'), async (req, res) => {
   try {
     const { id } = req.params;
     const action = req.body.action === 'dismiss' ? 'dismissed' : 'reviewed';
@@ -2077,7 +2232,7 @@ router.get('/duplicate-accounts', async (req, res) => {
   }
 });
 
-router.post('/duplicate-accounts/:id/review', requireIntParam('id'), async (req, res) => {
+router.post('/duplicate-accounts/:id/review', requirePermission('fraud.manage'), requireIntParam('id'), async (req, res) => {
   try {
     const { id } = req.params;
     const action = req.body.action === 'dismiss' ? 'dismissed' : 'reviewed';
@@ -2090,7 +2245,7 @@ router.post('/duplicate-accounts/:id/review', requireIntParam('id'), async (req,
   res.redirect('back');
 });
 
-router.post('/duplicate-accounts/scan', async (req, res) => {
+router.post('/duplicate-accounts/scan', requirePermission('fraud.manage'), async (req, res) => {
   try {
     const count = await scanAllUsers();
     await logAdminAction(
@@ -2105,182 +2260,6 @@ router.post('/duplicate-accounts/scan', async (req, res) => {
   res.redirect('/admin/duplicate-accounts');
 });
 
-
-// ==================== System Diagnostics ====================
-router.get('/diagnostics', async (req, res) => {
-  try {
-    const report = await runAllChecks();
-    res.render('admin/diagnostics', { report, active: 'diagnostics' });
-  } catch (err) {
-    console.error('Diagnostics error:', err.message);
-    res.render('admin/diagnostics', {
-      report: { overall: 'error', timestamp: new Date().toISOString(), checks: {} },
-      active: 'diagnostics'
-    });
-  }
-});
-
-// Diagnostics JSON API (polling)
-router.get('/diagnostics/json', async (req, res) => {
-  try {
-    const report = await runAllChecks();
-    res.json(report);
-  } catch (err) {
-    res.status(500).json({ overall: 'error', error: err.message });
-  }
-});
-
-// ==================== Cron Jobs Monitor (প্রোডাকশন-রেডি Scheduler ম্যানেজমেন্ট) ====================
-router.get('/cron-jobs', async (req, res) => {
-  try {
-    const jobs = await scheduler.listJobs();
-    const recentLogs = await scheduler.getRecentLogs(20);
-    res.render('admin/cron-jobs', { jobs, recentLogs, active: 'cron-jobs' });
-  } catch (err) {
-    console.error('Cron jobs list error:', err.message);
-    res.render('admin/cron-jobs', { jobs: [], recentLogs: [], active: 'cron-jobs' });
-  }
-});
-
-// একটা নির্দিষ্ট Job-এর সম্পূর্ণ Execution History
-router.get('/cron-jobs/:key/logs', async (req, res) => {
-  try {
-    const key = req.params.key;
-    const logs = await scheduler.getJobLogs(key, 100);
-    const jobs = await scheduler.listJobs();
-    const job = jobs.find(j => j.key === key) || { key, label: key, description: '' };
-    res.render('admin/cron-job-logs', { job, logs, active: 'cron-jobs' });
-  } catch (err) {
-    console.error('Cron job logs error:', err.message);
-    req.flash('error', 'জব হিস্ট্রি লোড করা যায়নি।');
-    res.redirect('/admin/cron-jobs');
-  }
-});
-
-// Run Now — ম্যানুয়ালি একটা Job অবিলম্বে ট্রিগার করা (schedule অপেক্ষা না করে)
-router.post('/cron-jobs/:key/run', adminActionLimiter, async (req, res) => {
-  try {
-    const key = req.params.key;
-    if (!scheduler.JOB_DEFINITIONS[key]) {
-      req.flash('error', `অজানা cron job: ${key}`);
-      return res.redirect('/admin/cron-jobs');
-    }
-    const result = await scheduler.runJob(key, { triggeredBy: `manual:${req.session.user.username}` });
-    await logAdminAction(
-      req.session.user.id, req.session.user.username, 'CRON_JOB_RUN_NOW',
-      `Cron job "${key}" ম্যানুয়ালি রান করা হয়েছে — status: ${result.status}, duration: ${result.durationMs}ms`,
-      req.ip
-    );
-    req.flash(result.status === 'success' ? 'success' : 'error',
-      `"${key}" রান হয়েছে (${result.durationMs}ms) — ${result.message}`);
-    res.redirect('/admin/cron-jobs');
-  } catch (err) {
-    console.error('Cron run-now error:', err.message);
-    req.flash('error', 'Job রান করা যায়নি: ' + err.message);
-    res.redirect('/admin/cron-jobs');
-  }
-});
-
-// Enable/Disable — সার্ভার রিস্টার্ট ছাড়াই কার্যকর হয় (প্রতিবার রানের আগে DB থেকে ফ্রেশ চেক হয়)
-router.post('/cron-jobs/:key/toggle', adminActionLimiter, async (req, res) => {
-  try {
-    const key = req.params.key;
-    if (!scheduler.JOB_DEFINITIONS[key]) {
-      req.flash('error', `অজানা cron job: ${key}`);
-      return res.redirect('/admin/cron-jobs');
-    }
-    const enabled = req.body.enabled === 'true' || req.body.enabled === '1';
-    await scheduler.setEnabled(key, enabled);
-    await logAdminAction(
-      req.session.user.id, req.session.user.username, 'CRON_JOB_TOGGLE',
-      `Cron job "${key}" ${enabled ? 'সক্রিয়' : 'নিষ্ক্রিয়'} করা হয়েছে`, req.ip
-    );
-    req.flash('success', `"${key}" ${enabled ? 'সক্রিয়' : 'নিষ্ক্রিয়'} করা হয়েছে।`);
-    res.redirect('/admin/cron-jobs');
-  } catch (err) {
-    console.error('Cron toggle error:', err.message);
-    req.flash('error', 'Job টগল করা যায়নি: ' + err.message);
-    res.redirect('/admin/cron-jobs');
-  }
-});
-
-// Cron Jobs JSON API (পোলিং — লাইভ লাস্ট-রান স্ট্যাটাসের জন্য)
-router.get('/cron-jobs/status/json', async (req, res) => {
-  try {
-    const jobs = await scheduler.listJobs();
-    res.json({ success: true, jobs });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
-// ==================== Unified Audit Log Viewer (প্রোডাকশন-রেডি) ====================
-function parseLogFilters(req) {
-  return {
-    category: req.query.category || null,
-    severity: req.query.severity || null,
-    actorType: req.query.actor_type || null,
-    actorId: req.query.actor_id ? parseInt(req.query.actor_id, 10) : null,
-    search: req.query.search ? sanitizeText(req.query.search, { maxLen: 200 }) : null,
-    dateFrom: req.query.date_from || null,
-    dateTo: req.query.date_to || null,
-    page: Math.max(1, parseInt(req.query.page, 10) || 1),
-    limit: 50
-  };
-}
-
-router.get('/logs', async (req, res) => {
-  try {
-    const filters = parseLogFilters(req);
-    const result = await auditLog.listAuditLogs(filters);
-    const categoryCounts = await auditLog.getCategoryCounts();
-    const severityCounts = await auditLog.getSeverityCounts();
-    res.render('admin/logs', {
-      logs: result.rows, total: result.total, page: result.page, totalPages: result.totalPages,
-      filters, categoryCounts, severityCounts,
-      categories: auditLog.VALID_CATEGORIES, severities: auditLog.VALID_SEVERITIES,
-      active: 'logs'
-    });
-  } catch (err) {
-    console.error('Unified log viewer error:', err.message);
-    res.render('admin/logs', {
-      logs: [], total: 0, page: 1, totalPages: 1,
-      filters: parseLogFilters(req), categoryCounts: [], severityCounts: [],
-      categories: auditLog.VALID_CATEGORIES, severities: auditLog.VALID_SEVERITIES,
-      active: 'logs'
-    });
-  }
-});
-
-// CSV Export — বর্তমান ফিল্টার অনুযায়ী (সর্বোচ্চ ৫০,০০০ রো)
-router.get('/logs/export', async (req, res) => {
-  try {
-    const filters = parseLogFilters(req);
-    const csv = await auditLog.exportAuditLogsCsv(filters);
-    await logAdminAction(
-      req.session.user.id, req.session.user.username, 'AUDIT_LOG_EXPORT',
-      `Unified Audit Log CSV এক্সপোর্ট করা হয়েছে (ফিল্টার: ${JSON.stringify(filters)})`, req.ip
-    );
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="audit-logs-${new Date().toISOString().slice(0, 10)}.csv"`);
-    res.send('\uFEFF' + csv); // UTF-8 BOM — এক্সেলে বাংলা টেক্সট ঠিকভাবে দেখানোর জন্য
-  } catch (err) {
-    console.error('Audit log export error:', err.message);
-    req.flash('error', 'CSV এক্সপোর্ট করা যায়নি: ' + err.message);
-    res.redirect('/admin/logs');
-  }
-});
-
-// Unified Log JSON API (পোলিং/অন্য কোনো টুল ইন্টিগ্রেশনের জন্য)
-router.get('/logs/json', async (req, res) => {
-  try {
-    const filters = parseLogFilters(req);
-    const result = await auditLog.listAuditLogs(filters);
-    res.json({ success: true, ...result });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
 
 router.get('/reports', async (req, res) => {
   try {
@@ -2395,6 +2374,397 @@ router.get('/login-history', async (req, res) => {
     res.render('admin/login-history', {
       logs: [], total: 0, page: 1, limit: 30, totalPages: 1, filters: { q: '', new_device: '', from: '', to: '' }
     });
+  }
+});
+
+// ==================== ব্যাকগ্রাউন্ড জব কিউ মনিটরিং ====================
+router.get('/queue-jobs', requirePermission('queue.view'), async (req, res) => {
+  try {
+    const { status = '', type = '' } = req.query;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = 25;
+    const offset = (page - 1) * limit;
+
+    const conditions = [];
+    const params = [];
+    if (status) { params.push(status); conditions.push(`status = $${params.length}`); }
+    if (type) { params.push(type); conditions.push(`type = $${params.length}`); }
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const listParams = [...params, limit, offset];
+    const [countRes, jobsRes, typesRes, stats, statsByType, throughput, health] = await Promise.all([
+      pool.query(`SELECT COUNT(*) FROM job_queue ${where}`, params),
+      pool.query(
+        `SELECT * FROM job_queue ${where} ORDER BY id DESC LIMIT $${listParams.length - 1} OFFSET $${listParams.length}`,
+        listParams
+      ),
+      pool.query(`SELECT DISTINCT type FROM job_queue ORDER BY type`),
+      queue.getStats(),
+      queue.getStatsByType(),
+      queue.getThroughput(24),
+      queue.getHealthStatus()
+    ]);
+    const total = parseInt(countRes.rows[0].count);
+
+    res.render('admin/queue-jobs', {
+      jobs: jobsRes.rows,
+      page, totalPages: Math.max(1, Math.ceil(total / limit)), total,
+      filters: { status, type },
+      types: typesRes.rows.map(r => r.type),
+      stats, statsByType, throughput, health,
+      queueStatus: queue.getStatus()
+    });
+  } catch (err) {
+    console.error('Queue jobs list error:', err.message);
+    res.render('admin/queue-jobs', {
+      jobs: [], page: 1, totalPages: 1, total: 0,
+      filters: { status: '', type: '' }, types: [],
+      stats: { pending: 0, processing: 0, completed: 0, failed: 0, deadLetter: 0 },
+      statsByType: [], throughput: [],
+      health: { level: 'error', issues: ['লোড করতে ব্যর্থ'], enabled: false, running: false },
+      queueStatus: { enabled: false, running: false, registeredTypes: [] }
+    });
+  }
+});
+
+router.post('/queue-jobs/:id/retry', requirePermission('queue.manage'), requireIntParam('id'), async (req, res) => {
+  try {
+    const ok = await queue.retryJob(req.params.id);
+    if (ok) {
+      await logAdminAction(req.session.user.id, req.session.user.username, 'QUEUE_JOB_RETRIED', `জব #${req.params.id} আবার pending-এ পাঠানো হয়েছে`, req.ip);
+      req.flash('success', '✅ জব আবার কিউতে পাঠানো হয়েছে।');
+    } else {
+      req.flash('error', '❌ জবটি খুঁজে পাওয়া যায়নি বা এটি failed অবস্থায় নেই।');
+    }
+  } catch (err) {
+    console.error('Job retry error:', err.message);
+    req.flash('error', '❌ সমস্যা হয়েছে।');
+  }
+  res.redirect('/admin/queue-jobs');
+});
+
+router.post('/queue-jobs/retry-all', requirePermission('queue.manage'), async (req, res) => {
+  try {
+    const type = req.body.type || null;
+    const count = await queue.retryAllFailed(type);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'QUEUE_JOBS_BULK_RETRIED', `${count}টি ব্যর্থ জব আবার pending-এ পাঠানো হয়েছে${type ? ' (টাইপ: ' + type + ')' : ''}`, req.ip);
+    req.flash('success', `✅ ${count}টি জব আবার কিউতে পাঠানো হয়েছে।`);
+  } catch (err) {
+    console.error('Bulk retry error:', err.message);
+    req.flash('error', '❌ সমস্যা হয়েছে।');
+  }
+  res.redirect('/admin/queue-jobs');
+});
+
+// ==================== Dead Letter Queue (স্থায়ীভাবে ব্যর্থ জব-এর আর্কাইভ) ====================
+router.get('/queue-dlq', requirePermission('queue.view'), async (req, res) => {
+  try {
+    const { type = '' } = req.query;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = 25;
+    const offset = (page - 1) * limit;
+
+    const [{ rows, total }, typesRes] = await Promise.all([
+      queue.getDeadLetterJobs({ type }, limit, offset),
+      pool.query(`SELECT DISTINCT type FROM dead_letter_jobs ORDER BY type`)
+    ]);
+
+    res.render('admin/queue-dlq', {
+      jobs: rows,
+      page, totalPages: Math.max(1, Math.ceil(total / limit)), total,
+      filters: { type },
+      types: typesRes.rows.map(r => r.type)
+    });
+  } catch (err) {
+    console.error('DLQ list error:', err.message);
+    res.render('admin/queue-dlq', {
+      jobs: [], page: 1, totalPages: 1, total: 0, filters: { type: '' }, types: []
+    });
+  }
+});
+
+router.post('/queue-dlq/:id/requeue', requirePermission('queue.manage'), requireIntParam('id'), async (req, res) => {
+  try {
+    const ok = await queue.requeueDeadLetter(req.params.id);
+    if (ok) {
+      await logAdminAction(req.session.user.id, req.session.user.username, 'DLQ_JOB_REQUEUED', `DLQ জব #${req.params.id} আবার active কিউতে পাঠানো হয়েছে`, req.ip);
+      req.flash('success', '✅ জব আবার কিউতে পাঠানো হয়েছে।');
+    } else {
+      req.flash('error', '❌ জবটি খুঁজে পাওয়া যায়নি।');
+    }
+  } catch (err) {
+    console.error('DLQ requeue error:', err.message);
+    req.flash('error', '❌ সমস্যা হয়েছে।');
+  }
+  res.redirect('/admin/queue-dlq');
+});
+
+router.post('/queue-dlq/:id/purge', requirePermission('queue.manage'), requireIntParam('id'), async (req, res) => {
+  try {
+    const ok = await queue.purgeDeadLetter(req.params.id);
+    if (ok) {
+      await logAdminAction(req.session.user.id, req.session.user.username, 'DLQ_JOB_PURGED', `DLQ জব #${req.params.id} স্থায়ীভাবে মুছে ফেলা হয়েছে`, req.ip);
+      req.flash('success', '✅ জব মুছে ফেলা হয়েছে।');
+    } else {
+      req.flash('error', '❌ জবটি খুঁজে পাওয়া যায়নি।');
+    }
+  } catch (err) {
+    console.error('DLQ purge error:', err.message);
+    req.flash('error', '❌ সমস্যা হয়েছে।');
+  }
+  res.redirect('/admin/queue-dlq');
+});
+
+router.post('/queue-dlq/purge-all', requirePermission('queue.manage'), async (req, res) => {
+  try {
+    const olderThanDays = req.body.olderThanDays ? parseInt(req.body.olderThanDays) : null;
+    const count = await queue.purgeAllDeadLetter(olderThanDays);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'DLQ_BULK_PURGED', `${count}টি DLQ জব মুছে ফেলা হয়েছে${olderThanDays ? ' (' + olderThanDays + ' দিনের পুরনো)' : ''}`, req.ip);
+    req.flash('success', `✅ ${count}টি জব মুছে ফেলা হয়েছে।`);
+  } catch (err) {
+    console.error('DLQ bulk purge error:', err.message);
+    req.flash('error', '❌ সমস্যা হয়েছে।');
+  }
+  res.redirect('/admin/queue-dlq');
+});
+
+// ==================== API KEY ম্যানেজমেন্ট ====================
+const crypto = require('crypto');
+
+function generateApiKey() {
+  const raw = 'lvo_' + crypto.randomBytes(32).toString('hex'); // ব্যবহারকারীকে একবারই দেখানো হয়, DB-তে শুধু hash থাকে
+  const hash = crypto.createHash('sha256').update(raw).digest('hex');
+  return { raw, hash };
+}
+
+router.get('/api-keys', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT k.*, u.username AS created_by_username
+       FROM api_keys k LEFT JOIN users u ON u.id = k.created_by
+       ORDER BY k.created_at DESC`
+    );
+    res.render('admin/api-keys', { keys: result.rows, newKey: null });
+  } catch (err) {
+    console.error('API keys list error:', err.message);
+    res.render('admin/api-keys', { keys: [], newKey: null });
+  }
+});
+
+router.post('/api-keys/create', requirePermission('api_keys.manage'), async (req, res) => {
+  try {
+    const name = sanitizeText(req.body.name || '').slice(0, 100);
+    const description = sanitizeText(req.body.description || '').slice(0, 500);
+    const scopesInput = Array.isArray(req.body.scopes) ? req.body.scopes : (req.body.scopes ? [req.body.scopes] : []);
+    const allowedScopes = ['read:matches', 'read:leaderboard', 'read:tournaments'];
+    const scopes = scopesInput.filter(s => allowedScopes.includes(s));
+    const expiresInDays = parseInt(req.body.expires_in_days) || null;
+    const expiresAt = expiresInDays ? new Date(Date.now() + expiresInDays * 86400000) : null;
+
+    if (!name) {
+      req.flash('error', 'কী-এর নাম দিতে হবে।');
+      return res.redirect('/admin/api-keys');
+    }
+    if (!scopes.length) {
+      req.flash('error', 'অন্তত একটি scope নির্বাচন করতে হবে।');
+      return res.redirect('/admin/api-keys');
+    }
+
+    const { raw, hash } = generateApiKey();
+    const inserted = await pool.query(
+      `INSERT INTO api_keys (key_hash, name, description, scopes, expires_at, created_by)
+       VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
+      [hash, name, description || null, scopes, expiresAt, req.session.user.id]
+    );
+
+    await logAdminAction(req.session.user.id, req.session.user.username, 'API_KEY_CREATED',
+      `নতুন API key তৈরি: "${name}" (scopes: ${scopes.join(', ')})`, req.ip);
+
+    const result = await pool.query(
+      `SELECT k.*, u.username AS created_by_username
+       FROM api_keys k LEFT JOIN users u ON u.id = k.created_by
+       ORDER BY k.created_at DESC`
+    );
+    res.render('admin/api-keys', { keys: result.rows, newKey: raw });
+  } catch (err) {
+    console.error('API key create error:', err.message);
+    req.flash('error', 'API key তৈরি করতে সমস্যা হয়েছে।');
+    res.redirect('/admin/api-keys');
+  }
+});
+
+router.post('/api-keys/:id/toggle', requirePermission('api_keys.manage'), requireIntParam('id'), async (req, res) => {
+  try {
+    const r = await pool.query(`UPDATE api_keys SET enabled = NOT enabled WHERE id = $1 RETURNING name, enabled`, [req.params.id]);
+    if (r.rows[0]) {
+      await logAdminAction(req.session.user.id, req.session.user.username, 'API_KEY_TOGGLED',
+        `API key "${r.rows[0].name}" ${r.rows[0].enabled ? 'চালু' : 'বন্ধ'} করা হয়েছে`, req.ip);
+      req.flash('success', `API key ${r.rows[0].enabled ? 'চালু' : 'বন্ধ'} করা হয়েছে।`);
+    }
+  } catch (err) {
+    console.error('API key toggle error:', err.message);
+    req.flash('error', 'সমস্যা হয়েছে।');
+  }
+  res.redirect('/admin/api-keys');
+});
+
+router.post('/api-keys/:id/revoke', requirePermission('api_keys.manage'), requireIntParam('id'), async (req, res) => {
+  try {
+    const r = await pool.query(`UPDATE api_keys SET enabled = false WHERE id = $1 RETURNING name`, [req.params.id]);
+    if (r.rows[0]) {
+      await logAdminAction(req.session.user.id, req.session.user.username, 'API_KEY_REVOKED',
+        `API key "${r.rows[0].name}" revoke করা হয়েছে`, req.ip);
+      req.flash('success', 'API key revoke করা হয়েছে।');
+    }
+  } catch (err) {
+    console.error('API key revoke error:', err.message);
+    req.flash('error', 'সমস্যা হয়েছে।');
+  }
+  res.redirect('/admin/api-keys');
+});
+
+// ==================== API USAGE লগ ও অ্যানালিটিক্স ====================
+router.get('/api-logs', async (req, res) => {
+  try {
+    const { endpoint = '', method = '', status = '', ip = '', api_key_id = '', from = '', to = '' } = req.query;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = 40;
+    const offset = (page - 1) * limit;
+
+    const conditions = [];
+    const params = [];
+    if (endpoint) { params.push(`%${endpoint}%`); conditions.push(`l.endpoint ILIKE $${params.length}`); }
+    if (method) { params.push(method); conditions.push(`l.method = $${params.length}`); }
+    if (status) { params.push(parseInt(status)); conditions.push(`l.status_code = $${params.length}`); }
+    if (ip) { params.push(ip); conditions.push(`l.ip = $${params.length}`); }
+    if (api_key_id) { params.push(api_key_id); conditions.push(`l.api_key_id = $${params.length}`); }
+    if (from) { params.push(from); conditions.push(`l.created_at >= $${params.length}`); }
+    if (to) { params.push(to); conditions.push(`l.created_at <= $${params.length}::date + INTERVAL '1 day'`); }
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const countRes = await pool.query(`SELECT COUNT(*) FROM api_usage_logs l ${where}`, params);
+    const total = parseInt(countRes.rows[0].count);
+
+    const listParams = [...params, limit, offset];
+    const result = await pool.query(
+      `SELECT l.*, u.username, k.name AS api_key_name
+       FROM api_usage_logs l
+       LEFT JOIN users u ON u.id = l.user_id
+       LEFT JOIN api_keys k ON k.id = l.api_key_id
+       ${where}
+       ORDER BY l.created_at DESC LIMIT $${listParams.length - 1} OFFSET $${listParams.length}`,
+      listParams
+    );
+
+    // অ্যানালিটিক্স সারাংশ — একই ফিল্টার উইন্ডোতে key/status/response-time ব্রেকডাউন
+    const analytics = await pool.query(
+      `SELECT
+         COUNT(*) AS total_requests,
+         COUNT(*) FILTER (WHERE status_code >= 200 AND status_code < 300) AS success_count,
+         COUNT(*) FILTER (WHERE status_code >= 400) AS error_count,
+         COALESCE(AVG(response_time_ms), 0) AS avg_response_ms,
+         COALESCE(MAX(response_time_ms), 0) AS max_response_ms
+       FROM api_usage_logs l ${where}`,
+      params
+    );
+
+    const topKeys = await pool.query(
+      `SELECT k.name, COUNT(*) AS request_count
+       FROM api_usage_logs l JOIN api_keys k ON k.id = l.api_key_id
+       ${where ? where + ' AND' : 'WHERE'} l.api_key_id IS NOT NULL
+       GROUP BY k.name ORDER BY request_count DESC LIMIT 5`,
+      params
+    );
+
+    const keysForFilter = await pool.query(`SELECT id, name FROM api_keys ORDER BY name`);
+
+    res.render('admin/api-logs', {
+      logs: result.rows,
+      page,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      total,
+      filters: { endpoint, method, status, ip, api_key_id, from, to },
+      analytics: analytics.rows[0],
+      topKeys: topKeys.rows,
+      apiKeys: keysForFilter.rows
+    });
+  } catch (err) {
+    console.error('API logs list error:', err.message);
+    res.render('admin/api-logs', {
+      logs: [], page: 1, totalPages: 1, total: 0,
+      filters: { endpoint: '', method: '', status: '', ip: '', api_key_id: '', from: '', to: '' },
+      analytics: { total_requests: 0, success_count: 0, error_count: 0, avg_response_ms: 0, max_response_ms: 0 },
+      topKeys: [], apiKeys: []
+    });
+  }
+});
+
+router.get('/api-logs/export.csv', async (req, res) => {
+  try {
+    const { endpoint = '', method = '', status = '', ip = '', from = '', to = '' } = req.query;
+    const conditions = [];
+    const params = [];
+    if (endpoint) { params.push(`%${endpoint}%`); conditions.push(`l.endpoint ILIKE $${params.length}`); }
+    if (method) { params.push(method); conditions.push(`l.method = $${params.length}`); }
+    if (status) { params.push(parseInt(status)); conditions.push(`l.status_code = $${params.length}`); }
+    if (ip) { params.push(ip); conditions.push(`l.ip = $${params.length}`); }
+    if (from) { params.push(from); conditions.push(`l.created_at >= $${params.length}`); }
+    if (to) { params.push(to); conditions.push(`l.created_at <= $${params.length}::date + INTERVAL '1 day'`); }
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const result = await pool.query(
+      `SELECT l.*, u.username, k.name AS api_key_name
+       FROM api_usage_logs l
+       LEFT JOIN users u ON u.id = l.user_id
+       LEFT JOIN api_keys k ON k.id = l.api_key_id
+       ${where}
+       ORDER BY l.created_at DESC LIMIT 5000`,
+      params
+    );
+
+    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const header = ['id', 'created_at', 'method', 'endpoint', 'status_code', 'response_time_ms', 'ip', 'username', 'api_key_name'];
+    const rows = result.rows.map(r => header.map(h => esc(r[h])).join(','));
+    const csv = [header.join(','), ...rows].join('\n');
+
+    await logAdminAction(req.session.user.id, req.session.user.username, 'API_LOGS_EXPORTED', 'API usage logs CSV এক্সপোর্ট করা হয়েছে', req.ip);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="api-usage-logs-${Date.now()}.csv"`);
+    res.send('\uFEFF' + csv);
+  } catch (err) {
+    console.error('API logs CSV export error:', err.message);
+    res.status(500).send('Export failed');
+  }
+});
+
+// ==================== REDIS CACHE MANAGEMENT ====================
+router.get('/cache', async (req, res) => {
+  try {
+    const cacheStats = await cache.getDetailedStats();
+    res.render('admin/cache', { cacheStats, cleared: req.query.cleared || '' });
+  } catch (err) {
+    console.error('Cache page error:', err && err.stack ? err.stack : err);
+    res.render('admin/cache', {
+      cacheStats: { enabled: false, connected: false, totalKeys: 0, categories: [], hits: 0, misses: 0, hitRatePercent: null, memoryUsed: null },
+      cleared: ''
+    });
+  }
+});
+
+router.post('/cache/clear', async (req, res) => {
+  try {
+    const { pattern } = req.body;
+    let deleted;
+    if (pattern && pattern !== '*') {
+      deleted = await cache.delByPattern(pattern);
+    } else {
+      deleted = await cache.flushAll();
+    }
+    await logAdminAction(req.session.user.id, req.session.user.username, 'CACHE_CLEARED', `ক্যাশ পরিষ্কার করা হয়েছে (pattern: ${pattern || 'সব'}) — ${deleted} টি কী মুছে গেছে`, req.ip);
+    res.redirect(`/admin/cache?cleared=${deleted}`);
+  } catch (err) {
+    console.error('Cache clear error:', err && err.stack ? err.stack : err);
+    res.redirect('/admin/cache');
   }
 });
 

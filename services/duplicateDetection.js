@@ -4,7 +4,6 @@
 
 const { pool } = require('../db');
 const { logAdminAction } = require('./fraudDetection');
-const auditLog = require('./auditLog');
 
 // প্রতিটি সিগন্যাল টাইপের ভিত্তি ওজন (Risk Score গণনার জন্য, সর্বোচ্চ ১০০ পর্যন্ত)
 const WEIGHTS = {
@@ -91,8 +90,6 @@ async function createDuplicateFlag(userId, signals) {
   );
   const flag = inserted.rows[0];
 
-  await auditLog.logDuplicateAccountFlag({ userId, riskScore, reason, matchTypes, flagId: flag.id, legacyId: flag.id });
-
   await logAdminAction(
     null, 'SYSTEM', 'DUPLICATE_ACCOUNT_DETECTED',
     `ইউজার #${userId} — Risk Score: ${riskScore} — ${reason}`, null
@@ -154,22 +151,32 @@ async function evaluateDuplicateAccount(userId, { ip, deviceFingerprint, deviceS
  */
 async function scanAllUsers() {
   const users = await pool.query(`SELECT id, last_ip, last_device FROM users ORDER BY id`);
+
+  // আগে প্রতি ইউজারের জন্য আলাদা ২টা কোয়েরি চলতো (N+1) — এখন একটাই ব্যাচ কোয়েরি
+  // (DISTINCT ON দিয়ে প্রতি ইউজারের সবচেয়ে সাম্প্রতিক রেকর্ড বের করা হচ্ছে), তারপর মেমরিতে lookup।
+  const deviceRes = await pool.query(`
+    SELECT DISTINCT ON (user_id) user_id, device_fingerprint
+    FROM login_logs
+    WHERE device_fingerprint IS NOT NULL
+    ORDER BY user_id, created_at DESC
+  `);
+  const sessionRes = await pool.query(`
+    SELECT DISTINCT ON (user_id) user_id, device_signature, browser, os
+    FROM device_sessions
+    ORDER BY user_id, last_activity DESC
+  `);
+  const deviceByUser = new Map(deviceRes.rows.map(r => [r.user_id, r.device_fingerprint]));
+  const sessionByUser = new Map(sessionRes.rows.map(r => [r.user_id, r]));
+
   let flaggedCount = 0;
   for (const u of users.rows) {
-    const deviceRow = await pool.query(
-      `SELECT device_fingerprint FROM login_logs WHERE user_id = $1 AND device_fingerprint IS NOT NULL ORDER BY created_at DESC LIMIT 1`,
-      [u.id]
-    );
-    const sessionRow = await pool.query(
-      `SELECT device_signature, browser, os FROM device_sessions WHERE user_id = $1 ORDER BY last_activity DESC LIMIT 1`,
-      [u.id]
-    );
+    const session = sessionByUser.get(u.id);
     const flag = await evaluateDuplicateAccount(u.id, {
       ip: u.last_ip,
-      deviceFingerprint: deviceRow.rows[0]?.device_fingerprint || null,
-      deviceSignature: sessionRow.rows[0]?.device_signature || null,
-      browser: sessionRow.rows[0]?.browser || null,
-      os: sessionRow.rows[0]?.os || null
+      deviceFingerprint: deviceByUser.get(u.id) || null,
+      deviceSignature: session?.device_signature || null,
+      browser: session?.browser || null,
+      os: session?.os || null
     });
     if (flag) flaggedCount++;
   }

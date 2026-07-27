@@ -47,11 +47,7 @@ async function runMigrations() {
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token TEXT;`);
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_expiry TIMESTAMP;`);
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_verification_sent_at TIMESTAMP;`);
-    // যাদের ইমেইল নেই (শুধু ফোন দিয়ে রেজিস্টার করেছে) তাদের জন্য ভেরিফিকেশন গেট প্রযোজ্য না
     await pool.query(`UPDATE users SET email_verified = true WHERE email IS NULL AND email_verified = false;`);
-    // এই ফিচার চালুর আগে থেকে থাকা ইউজারদের (কখনো ভেরিফিকেশন টোকেন ইস্যু হয়নি) "verified" হিসেবে
-    // গ্র্যান্ডফাদার করা হলো — নাহলে সবার withdraw/সংবেদনশীল ফিচার হঠাৎ বন্ধ হয়ে যেত।
-    // নতুন রেজিস্ট্রেশন থেকেই শুধু ভেরিফিকেশন বাধ্যতামূলক থাকবে (তাদের টোকেন ইস্যু হবে)।
     await pool.query(`UPDATE users SET email_verified = true WHERE email_verified = false AND verification_token IS NULL;`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_verification_token ON users(verification_token);`);
 
@@ -93,8 +89,6 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_pr_status ON payment_requests(status);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_pr_type_method_created ON payment_requests(type, method, created_at);`);
 
-    // একই মেথডে একই TrxID দিয়ে একাধিকবার (rejected বাদে) ডিপোজিট আটকাতে partial unique index —
-    // rejected বাদ রাখা হয়েছে যাতে ভুল/টাইপো করে reject হওয়া ট্রানজেকশন আইডি আবার বৈধভাবে সাবমিট করা যায়
     await pool.query(`
       CREATE UNIQUE INDEX IF NOT EXISTS idx_pr_deposit_trxid_unique
       ON payment_requests (method, transaction_id)
@@ -113,7 +107,6 @@ async function runMigrations() {
       );
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id);`);
-    // ============================================================================================
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS markets (
@@ -347,7 +340,6 @@ async function runMigrations() {
     await pool.query(`ALTER TABLE mission_defs ADD COLUMN IF NOT EXISTS period VARCHAR(10) NOT NULL DEFAULT 'daily';`);
     await pool.query(`ALTER TABLE mission_defs ADD COLUMN IF NOT EXISTS start_date DATE;`);
     await pool.query(`ALTER TABLE mission_defs ADD COLUMN IF NOT EXISTS end_date DATE;`);
-    // মিশন তালিকা (ব্যালেন্সড ৪টি) — সঠিক সেট না থকলে রিসিড
     const missionVer = await pool.query(`SELECT COALESCE(SUM(reward),0) AS s, COUNT(*) AS c FROM mission_defs WHERE period = 'daily'`);
     const missionOk = parseInt(missionVer.rows[0].c) === 4 && parseInt(missionVer.rows[0].s) === 125;
     if (!missionOk) {
@@ -389,7 +381,6 @@ async function runMigrations() {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_umission_user_date ON user_missions(user_id, mission_date);`);
 
-    // সাপ্তাহিক/স্পেশাল মিশনের ক্লেইম ট্র্যাক করার টেবিল
     await pool.query(`
       CREATE TABLE IF NOT EXISTS mission_claims (
         id SERIAL PRIMARY KEY,
@@ -401,7 +392,6 @@ async function runMigrations() {
       );
     `);
 
-    // লাকি হুইল
     await pool.query(`
       CREATE TABLE IF NOT EXISTS wheel_spins (
         id SERIAL PRIMARY KEY,
@@ -414,7 +404,6 @@ async function runMigrations() {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_wheel_user_date ON wheel_spins(user_id, spin_date);`);
 
-    // লয়্যালটি পয়েন্ট
     await pool.query(`
       CREATE TABLE IF NOT EXISTS loyalty_ledger (
         id SERIAL PRIMARY KEY,
@@ -426,7 +415,6 @@ async function runMigrations() {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_loyalty_user ON loyalty_ledger(user_id);`);
 
-    // ব্যাজ ও অর্জন
     await pool.query(`
       CREATE TABLE IF NOT EXISTS user_badges (
         id SERIAL PRIMARY KEY,
@@ -438,7 +426,6 @@ async function runMigrations() {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_badge_user ON user_badges(user_id);`);
 
-    // ফ্রি বেট
     await pool.query(`
       CREATE TABLE IF NOT EXISTS free_bets (
         id SERIAL PRIMARY KEY,
@@ -453,8 +440,7 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_freebet_user ON free_bets(user_id);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_freebet_status ON free_bets(status);`);
 
-    // সাপ্তাহিক/মাসিক কইম রেকর্ড
-       await pool.query(`
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS periodic_claims (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id),
@@ -466,7 +452,6 @@ async function runMigrations() {
       );
     `);
 
-    // লাল প্যাকেট + সোনার ডিম দৈনিক রিওয়ার্ড
     await pool.query(`
       CREATE TABLE IF NOT EXISTS daily_rewards (
         id SERIAL PRIMARY KEY,
@@ -482,7 +467,6 @@ async function runMigrations() {
 
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_periodic_user ON periodic_claims(user_id);`);
 
-    // সোশ্যাল শেয়ার
     await pool.query(`
       CREATE TABLE IF NOT EXISTS social_shares (
         id SERIAL PRIMARY KEY,
@@ -525,19 +509,7 @@ async function runMigrations() {
       ADD COLUMN IF NOT EXISTS start_time TIMESTAMP,
       ADD COLUMN IF NOT EXISTS league TEXT;
     `);
-    // লাল প্যাকেট + সোনার ডিম দৈনিক রিওয়ার্ড
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS daily_rewards (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id),
-        reward_type VARCHAR(20) NOT NULL,
-        amount DECIMAL(12,2) NOT NULL,
-        claim_date DATE NOT NULL,
-        created_at TIMESTAMP DEFAULT NOW(),
-        UNIQUE (user_id, reward_type, claim_date)
-      );
-    `);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_dr_user_date ON daily_rewards(user_id, claim_date);`);
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS bank_cards (
         id SERIAL PRIMARY KEY,
@@ -548,7 +520,6 @@ async function runMigrations() {
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
-
 
     await pool.query(`
       ALTER TABLE payment_requests
@@ -576,9 +547,6 @@ async function runMigrations() {
       ON CONFLICT (key) DO NOTHING;
     `);
 
-    // জরুরি ফিক্স: maintenance_mode জোর করে বন্ধ — settings পেজে এরর থাকায়
-    // টগল দিয়ে অফ করা যাচ্ছিল না, তাই এখানে unconditionally 'false' সেট করা হলো
-    // (ON CONFLICT ... DO UPDATE, DO NOTHING না)।
     await pool.query(`
       INSERT INTO site_settings (key, value, updated_at) VALUES ('maintenance_mode', 'false', NOW())
       ON CONFLICT (key) DO UPDATE SET value = 'false', updated_at = NOW();
@@ -634,10 +602,6 @@ async function runMigrations() {
       );
     `);
 
-    // ==================== কয়েন লেনদেন লগ (coin_transactions) ====================
-    // এই টেবিলটা পুরো অ্যাপে (গেম, বেট, রেফারেল, মিশন, VIP, ক্যাশব্যাক, অ্যাডমিন
-    // কয়েন অ্যাডজাস্টমেন্ট ইত্যাদি) ব্যবহার হয়, কিন্তু আগে migrations.js-এ ছিল না —
-    // ফলে এই টেবিল না থাকলে রিয়েল-মানি গেম/বেট খেলাই ব্যর্থ হয়ে যেত।
     await pool.query(`
       CREATE TABLE IF NOT EXISTS coin_transactions (
         id SERIAL PRIMARY KEY,
@@ -651,7 +615,6 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_coin_tx_user ON coin_transactions(user_id);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_coin_tx_type ON coin_transactions(type);`);
 
-    // ==================== ডেমো (প্র্যাকটিস) কারেন্সি সিস্টেম ====================
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS demo_balance NUMERIC(14,2) DEFAULT 1000`);
     await pool.query(`ALTER TABLE bets ADD COLUMN IF NOT EXISTS is_demo BOOLEAN DEFAULT false`);
     await pool.query(`
@@ -666,7 +629,6 @@ async function runMigrations() {
       );
     `);
 
-    // ==================== অ্যাডমিন 2FA (TOTP) ====================
     await pool.query(`
       ALTER TABLE users
       ADD COLUMN IF NOT EXISTS totp_secret TEXT,
@@ -675,6 +637,26 @@ async function runMigrations() {
       ADD COLUMN IF NOT EXISTS backup_codes_viewed BOOLEAN DEFAULT false,
       ADD COLUMN IF NOT EXISTS permissions JSONB DEFAULT '{}'::jsonb;
     `);
+
+    // ==================== RBAC — Role-Based Access Control ====================
+    // users.role ('user'/'admin') অপরিবর্তিত থাকে — এটাই মূল গেট (isAdmin middleware)।
+    // users.role_key একটা গ্রানুলার role (roles.key) ধরে রাখে; NULL মানে legacy admin
+    // যাকে super_admin হিসেবে ট্রিট করা হয় (backward compatible — কারো অ্যাক্সেস কমে না)।
+    // users.permissions (আগে থেকেই ছিল) role-এর উপরে per-user override হিসেবে ব্যবহৃত হয়।
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role_key VARCHAR(30);`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS roles (
+        id SERIAL PRIMARY KEY,
+        key VARCHAR(30) UNIQUE NOT NULL,
+        name VARCHAR(100) NOT NULL,
+        description TEXT,
+        permissions JSONB NOT NULL DEFAULT '[]'::jsonb,
+        is_system BOOLEAN NOT NULL DEFAULT false,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    console.log("✅ RBAC roles table ready");
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS games (
@@ -707,13 +689,8 @@ async function runMigrations() {
       }
     }
 
-    // KYC রিজেক্ট করার সময় কারণ ইউজারকে দেখানোর জন্য (অ্যাডমিন প্যানেলে আগে থেকেই
-    // "কারণ লিখুন (ইউজারকে দেখানো হবে)" বলা ছিল, কিন্তু কলামই ছিল না)
     await pool.query(`ALTER TABLE kyc_requests ADD COLUMN IF NOT EXISTS reject_reason TEXT`);
 
-    // ==================== Withdraw PIN নিরাপত্তা সিস্টেম ====================
-    // ৬-সংখ্যার Withdraw PIN কখনো plain text এ রাখা হয় না — শুধু bcrypt হ্যাশ স্টোর হয়
-    // (users.totp_secret এর মতোই প্যাটার্ন — বিদ্যমান 2FA সিস্টেমের সাথে সামঞ্জস্যপূর্ণ)
     await pool.query(`
       ALTER TABLE users
       ADD COLUMN IF NOT EXISTS withdraw_pin_hash TEXT,
@@ -723,8 +700,6 @@ async function runMigrations() {
       ADD COLUMN IF NOT EXISTS withdraw_pin_locked_until TIMESTAMP;
     `);
 
-    // Withdraw PIN সম্পর্কিত সব ইভেন্টের (create/change/reset/verify/admin-reset) অডিট ট্রেইল —
-    // admin_logs থেকে আলাদা রাখা হয়েছে কারণ বেশিরভাগ ইভেন্ট user-initiated, admin-initiated না
     await pool.query(`
       CREATE TABLE IF NOT EXISTS withdraw_pin_logs (
         id SERIAL PRIMARY KEY,
@@ -741,8 +716,6 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_wpl_action ON withdraw_pin_logs(action_type);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_wpl_created ON withdraw_pin_logs(created_at);`);
 
-    // ==================== ফ্রড ডিটেকশন (Fraud Detection Foundation) ====================
-    // শুধু ফ্ল্যাগ করা হয়, কখনো অটোমেটিক ব্লক করা হয় না — সিদ্ধান্ত সবসময় অ্যাডমিন নেয়
     await pool.query(`ALTER TABLE login_logs ADD COLUMN IF NOT EXISTS device_fingerprint TEXT`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_login_device ON login_logs(device_fingerprint);`);
 
@@ -768,7 +741,6 @@ async function runMigrations() {
 
     console.log("✅ All tables migration completed successfully");
 
-    // ==================== ডিভাইস ট্র্যাকিং ও লগইন হিস্ট্রি (Feature 05) ====================
     await pool.query(`ALTER TABLE login_logs ADD COLUMN IF NOT EXISTS device_signature VARCHAR(64)`);
     await pool.query(`ALTER TABLE login_logs ADD COLUMN IF NOT EXISTS is_new_device BOOLEAN DEFAULT FALSE`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_login_signature ON login_logs(user_id, device_signature);`);
@@ -793,19 +765,63 @@ async function runMigrations() {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_device_sessions_user ON device_sessions(user_id);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_device_sessions_active ON device_sessions(user_id, revoked_at);`);
+    // পারফরম্যান্স: duplicateDetection.scanAllUsers()-এর ব্যাচ DISTINCT ON কোয়েরির জন্য
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_login_logs_user_created ON login_logs(user_id, created_at DESC);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_device_sessions_user_activity ON device_sessions(user_id, last_activity DESC);`);
 
-    // ==================== আনুমানিক লোকেশন (Feature 06 — geoip-lite দিয়ে, অফলাইন, কোনো API key লাগে না) ====================
     await pool.query(`ALTER TABLE login_logs ADD COLUMN IF NOT EXISTS location VARCHAR(120)`);
     await pool.query(`ALTER TABLE device_sessions ADD COLUMN IF NOT EXISTS location VARCHAR(120)`);
 
     console.log("✅ Device tracking tables ready");
 
-    // ==================== Security Center — পাসওয়ার্ড শেষ কবে বদলেছে তা ট্র্যাক করার জন্য ====================
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS job_queue (
+        id SERIAL PRIMARY KEY,
+        type VARCHAR(50) NOT NULL,
+        payload JSONB NOT NULL DEFAULT '{}',
+        status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','processing','completed','failed')),
+        attempts INTEGER NOT NULL DEFAULT 0,
+        max_attempts INTEGER NOT NULL DEFAULT 3,
+        last_error TEXT,
+        available_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        started_at TIMESTAMP,
+        completed_at TIMESTAMP
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_job_queue_poll ON job_queue(status, available_at);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_job_queue_type ON job_queue(type);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_job_queue_created ON job_queue(created_at);`);
+    await pool.query(`ALTER TABLE job_queue ADD COLUMN IF NOT EXISTS duration_ms INTEGER;`);
+
+    console.log("✅ Job queue table ready");
+
+    // ==================== Dead Letter Queue — max_attempts শেষ হওয়া জব-গুলোর আর্কাইভ ====================
+    // job_queue-এর row অপরিবর্তিত থাকে (status='failed', retry বাটন কাজ করে), এখানে শুধু একটা
+    // স্ন্যাপশট রাখা হয় যাতে permanently-dead job আলাদাভাবে দেখা/purge করা যায়।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS dead_letter_jobs (
+        id SERIAL PRIMARY KEY,
+        original_job_id INTEGER,
+        type VARCHAR(50) NOT NULL,
+        payload JSONB NOT NULL DEFAULT '{}',
+        attempts INTEGER NOT NULL DEFAULT 0,
+        max_attempts INTEGER NOT NULL DEFAULT 3,
+        last_error TEXT,
+        job_created_at TIMESTAMP,
+        dead_lettered_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_dlq_type ON dead_letter_jobs(type);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_dlq_dead_at ON dead_letter_jobs(dead_lettered_at);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_dlq_original_job ON dead_letter_jobs(original_job_id);`);
+
+    console.log("✅ Dead letter queue table ready");
+
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMP;`);
 
     console.log("✅ Security Center columns ready");
 
-    // ==================== Fraud Detection Engine — ব্যর্থ লগইন ট্র্যাকিং (ব্রুট-ফোর্স শনাক্তকরণ) ====================
     await pool.query(`
       CREATE TABLE IF NOT EXISTS failed_login_attempts (
         id SERIAL PRIMARY KEY,
@@ -822,7 +838,6 @@ async function runMigrations() {
 
     console.log("✅ Fraud detection tables ready");
 
-    // ==================== VPN & Proxy Detection System ====================
     await pool.query(`ALTER TABLE login_logs ADD COLUMN IF NOT EXISTS is_vpn BOOLEAN DEFAULT FALSE`);
     await pool.query(`ALTER TABLE login_logs ADD COLUMN IF NOT EXISTS is_proxy BOOLEAN DEFAULT FALSE`);
     await pool.query(`ALTER TABLE login_logs ADD COLUMN IF NOT EXISTS is_tor BOOLEAN DEFAULT FALSE`);
@@ -846,7 +861,6 @@ async function runMigrations() {
 
     console.log("✅ VPN & Proxy Detection tables ready");
 
-    // ==================== Bot Detection System ====================
     await pool.query(`
       CREATE TABLE IF NOT EXISTS bot_activity_logs (
         id SERIAL PRIMARY KEY,
@@ -864,10 +878,12 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_bot_logs_ip ON bot_activity_logs(ip);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_bot_logs_risk ON bot_activity_logs(risk_level);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_bot_logs_created ON bot_activity_logs(created_at);`);
+    // Request Fingerprinting — একই ব্রাউজার/হেডার-প্রোফাইল একাধিক IP থেকে এলে ধরার জন্য
+    await pool.query(`ALTER TABLE bot_activity_logs ADD COLUMN IF NOT EXISTS fingerprint VARCHAR(32);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bot_logs_fingerprint ON bot_activity_logs(fingerprint);`);
 
     console.log("✅ Bot Detection tables ready");
 
-    // ==================== Duplicate Account Detection System ====================
     await pool.query(`
       CREATE TABLE IF NOT EXISTS duplicate_account_flags (
         id SERIAL PRIMARY KEY,
@@ -890,155 +906,79 @@ async function runMigrations() {
 
     console.log("✅ Duplicate Account Detection tables ready");
 
-    // ==================== Cron / Scheduler System (Production-Ready) ====================
+    // ==================== API KEY MANAGEMENT ====================
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS cron_jobs (
-        key TEXT PRIMARY KEY,
-        label TEXT NOT NULL,
+      CREATE TABLE IF NOT EXISTS api_keys (
+        id SERIAL PRIMARY KEY,
+        key_hash TEXT UNIQUE NOT NULL,
+        name VARCHAR(100) NOT NULL,
         description TEXT,
-        interval_ms BIGINT NOT NULL,
-        enabled BOOLEAN NOT NULL DEFAULT true,
-        max_retries INTEGER NOT NULL DEFAULT 1,
-        last_run_at TIMESTAMPTZ,
-        last_finished_at TIMESTAMPTZ,
-        last_status TEXT,
-        last_message TEXT,
-        last_attempts INTEGER,
-        next_run_at TIMESTAMPTZ,
-        updated_at TIMESTAMPTZ DEFAULT NOW()
+        scopes TEXT[] DEFAULT '{}',
+        enabled BOOLEAN DEFAULT true,
+        expires_at TIMESTAMP,
+        last_used TIMESTAMP,
+        created_by INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT NOW()
       );
     `);
-    // পুরনো ইনস্টলেশনে টেবিল আগে থেকে থাকলেও max_retries/last_attempts কলাম যোগ করা হচ্ছে (additive)
-    await pool.query(`ALTER TABLE cron_jobs ADD COLUMN IF NOT EXISTS max_retries INTEGER NOT NULL DEFAULT 1;`);
-    await pool.query(`ALTER TABLE cron_jobs ADD COLUMN IF NOT EXISTS last_attempts INTEGER;`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_api_keys_enabled ON api_keys(enabled);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_api_keys_expires ON api_keys(expires_at);`);
 
+    // ==================== API USAGE LOGS & ANALYTICS ====================
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS cron_job_logs (
+      CREATE TABLE IF NOT EXISTS api_usage_logs (
         id SERIAL PRIMARY KEY,
-        job_key TEXT NOT NULL,
-        started_at TIMESTAMPTZ NOT NULL,
-        finished_at TIMESTAMPTZ,
-        duration_ms INTEGER,
-        status TEXT NOT NULL,
-        attempts INTEGER NOT NULL DEFAULT 1,
-        message TEXT,
-        triggered_by TEXT DEFAULT 'schedule'
+        api_key_id INTEGER REFERENCES api_keys(id) ON DELETE SET NULL,
+        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        ip VARCHAR(45),
+        endpoint TEXT NOT NULL,
+        method VARCHAR(10) NOT NULL,
+        status_code INTEGER,
+        response_time_ms INTEGER,
+        user_agent TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
       );
     `);
-    await pool.query(`ALTER TABLE cron_job_logs ADD COLUMN IF NOT EXISTS attempts INTEGER NOT NULL DEFAULT 1;`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_cron_job_logs_key ON cron_job_logs(job_key, started_at DESC);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_cron_job_logs_status ON cron_job_logs(status);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_api_usage_key ON api_usage_logs(api_key_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_api_usage_user ON api_usage_logs(user_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_api_usage_endpoint ON api_usage_logs(endpoint);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_api_usage_created ON api_usage_logs(created_at);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_api_usage_status ON api_usage_logs(status_code);`);
 
-    console.log("✅ Cron/Scheduler tables ready");
+    console.log("✅ API Keys and API Usage Logs tables ready");
 
-    // ==================== Unified Audit Log System (Production-Ready) ====================
-    // বিদ্যমান admin_logs, login_logs, error_logs, withdraw_pin_logs, failed_login_attempts,
-    // bot_activity_logs, fraud_flags, duplicate_account_flags — কোনোটাই মোছা/পরিবর্তন হয়নি।
-    // এই টেবিলটা নতুন, সবগুলো Log Category-কে একসাথে সার্চ/ফিল্টার করার জন্য একটা
-    // একীভূত (Unified) স্তর — legacy_source + legacy_id দিয়ে পুরনো এন্ট্রির সাথে সম্পর্কিত।
+    // ==================== Fraud Detection Engine — numeric Risk Score (Feature: Fraud Monitoring Dashboard) ====================
+    // বিদ্যমান risk_level (low/medium/high) এর পাশাপাশি একটা numeric 0-100 স্কোর যোগ করা হচ্ছে,
+    // পুরনো রো-গুলোর জন্য 0 ডিফল্ট (backward compatible, কিছু ভাঙে না)।
+    await pool.query(`ALTER TABLE fraud_flags ADD COLUMN IF NOT EXISTS risk_score INTEGER NOT NULL DEFAULT 0`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_fraud_flags_score ON fraud_flags(risk_score);`);
+
+    console.log("✅ Fraud Detection risk_score column ready");
+
+    // ==================== Bot Detection — IP Block/Whitelist ====================
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS audit_logs (
+      CREATE TABLE IF NOT EXISTS ip_rules (
         id SERIAL PRIMARY KEY,
-        category VARCHAR(30) NOT NULL,           -- admin | login | error | withdraw_pin | failed_login | bot | fraud | duplicate_account | cron | security | other
-        severity VARCHAR(10) NOT NULL DEFAULT 'info', -- info | warning | critical
-        actor_type VARCHAR(20) NOT NULL DEFAULT 'system', -- admin | user | system
-        actor_id INTEGER,
-        actor_username VARCHAR(150),
-        ip_address VARCHAR(64),
-        device_info TEXT,
-        action VARCHAR(150) NOT NULL,
-        resource_type VARCHAR(60),
-        resource_id VARCHAR(60),
-        metadata JSONB,
-        legacy_source VARCHAR(40),
-        legacy_id INTEGER,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        ip TEXT NOT NULL UNIQUE,
+        type TEXT NOT NULL CHECK (type IN ('block', 'whitelist')),
+        reason TEXT,
+        created_by TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_category ON audit_logs(category);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_severity ON audit_logs(severity);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_actor ON audit_logs(actor_type, actor_id);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_ip ON audit_logs(ip_address);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at DESC);`);
-    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_audit_logs_legacy ON audit_logs(legacy_source, legacy_id) WHERE legacy_source IS NOT NULL;`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_ip_rules_ip ON ip_rules(ip);`);
 
-    // ---- একবারের জন্য পুরনো ৮টা Log Table থেকে Unified টেবিলে Backfill ----
-    // ON CONFLICT (legacy_source, legacy_id) DO NOTHING থাকায় বারবার migration রান হলেও
-    // ডুপ্লিকেট হবে না (idempotent), এবং পুরনো ডেটা হারায় না (Backward Compatibility)।
-    await pool.query(`
-      INSERT INTO audit_logs (category, severity, actor_type, actor_id, actor_username, ip_address, action, metadata, legacy_source, legacy_id, created_at)
-      SELECT 'admin', 'info',
-        CASE WHEN admin_username = 'SYSTEM' THEN 'system' ELSE 'admin' END,
-        admin_id, admin_username, ip_address, action_type,
-        jsonb_build_object('details', details), 'admin_logs', id, created_at
-      FROM admin_logs
-      ON CONFLICT (legacy_source, legacy_id) DO NOTHING;
-    `).catch(e => console.error('audit_logs backfill (admin_logs) error:', e.message));
+    console.log("✅ IP Block/Whitelist table ready");
 
-    await pool.query(`
-      INSERT INTO audit_logs (category, severity, actor_type, actor_id, ip_address, device_info, action, metadata, legacy_source, legacy_id, created_at)
-      SELECT 'login', 'info', 'user', user_id, ip, user_agent, 'USER_LOGIN',
-        jsonb_build_object('is_vpn', is_vpn, 'is_proxy', is_proxy, 'is_tor', is_tor, 'ip_risk_score', ip_risk_score),
-        'login_logs', id, created_at
-      FROM login_logs
-      ON CONFLICT (legacy_source, legacy_id) DO NOTHING;
-    `).catch(e => console.error('audit_logs backfill (login_logs) error:', e.message));
+    // ==================== RBAC — ডিফল্ট রোল seed করা (আগে থেকে থাকলে ছুঁয়ে দেখে না) ====================
+    try {
+      const { seedDefaultRoles } = require('./services/rbac');
+      await seedDefaultRoles();
+      console.log("✅ RBAC default roles seeded");
+    } catch (err) {
+      console.error("❌ RBAC role seeding error:", err.message);
+    }
 
-    await pool.query(`
-      INSERT INTO audit_logs (category, severity, actor_type, actor_id, action, resource_type, metadata, legacy_source, legacy_id, created_at)
-      SELECT 'error', 'critical', 'system', user_id, 'UNHANDLED_ERROR', url,
-        jsonb_build_object('message', message, 'method', method), 'error_logs', id, created_at
-      FROM error_logs
-      ON CONFLICT (legacy_source, legacy_id) DO NOTHING;
-    `).catch(e => console.error('audit_logs backfill (error_logs) error:', e.message));
-
-    await pool.query(`
-      INSERT INTO audit_logs (category, severity, actor_type, actor_id, actor_username, ip_address, action, resource_type, resource_id, legacy_source, legacy_id, created_at)
-      SELECT 'security', 'warning', actor_type, actor_id, actor_username, ip_address, action_type, 'withdraw_pin', user_id::text,
-        'withdraw_pin_logs', id, created_at
-      FROM withdraw_pin_logs
-      ON CONFLICT (legacy_source, legacy_id) DO NOTHING;
-    `).catch(e => console.error('audit_logs backfill (withdraw_pin_logs) error:', e.message));
-
-    await pool.query(`
-      INSERT INTO audit_logs (category, severity, actor_type, actor_id, ip_address, device_info, action, legacy_source, legacy_id, created_at)
-      SELECT 'failed_login', 'warning', 'user', user_id, ip, user_agent, 'FAILED_LOGIN_ATTEMPT',
-        'failed_login_attempts', id, created_at
-      FROM failed_login_attempts
-      ON CONFLICT (legacy_source, legacy_id) DO NOTHING;
-    `).catch(e => console.error('audit_logs backfill (failed_login_attempts) error:', e.message));
-
-    await pool.query(`
-      INSERT INTO audit_logs (category, severity, actor_type, actor_id, ip_address, device_info, action, resource_type, metadata, legacy_source, legacy_id, created_at)
-      SELECT 'bot', CASE risk_level WHEN 'high' THEN 'critical' WHEN 'medium' THEN 'warning' ELSE 'info' END,
-        'system', user_id, ip, user_agent, 'BOT_ACTIVITY_DETECTED', endpoint,
-        jsonb_build_object('signal_types', signal_types, 'reason', reason, 'blocked', blocked),
-        'bot_activity_logs', id, created_at
-      FROM bot_activity_logs
-      ON CONFLICT (legacy_source, legacy_id) DO NOTHING;
-    `).catch(e => console.error('audit_logs backfill (bot_activity_logs) error:', e.message));
-
-    await pool.query(`
-      INSERT INTO audit_logs (category, severity, actor_type, actor_id, action, resource_type, resource_id, metadata, legacy_source, legacy_id, created_at)
-      SELECT 'fraud', CASE risk_level WHEN 'high' THEN 'critical' WHEN 'medium' THEN 'warning' ELSE 'info' END,
-        'system', user_id, 'FRAUD_FLAG_CREATED', 'fraud_flags', id::text,
-        jsonb_build_object('signal_types', signal_types, 'reason', reason, 'status', status),
-        'fraud_flags', id, created_at
-      FROM fraud_flags
-      ON CONFLICT (legacy_source, legacy_id) DO NOTHING;
-    `).catch(e => console.error('audit_logs backfill (fraud_flags) error:', e.message));
-
-    await pool.query(`
-      INSERT INTO audit_logs (category, severity, actor_type, actor_id, action, resource_type, resource_id, metadata, legacy_source, legacy_id, created_at)
-      SELECT 'duplicate_account', CASE WHEN risk_score >= 70 THEN 'critical' WHEN risk_score >= 40 THEN 'warning' ELSE 'info' END,
-        'system', user_id, 'DUPLICATE_ACCOUNT_DETECTED', 'duplicate_account_flags', id::text,
-        jsonb_build_object('match_types', match_types, 'risk_score', risk_score, 'reason', reason, 'status', status),
-        'duplicate_account_flags', id, created_at
-      FROM duplicate_account_flags
-      ON CONFLICT (legacy_source, legacy_id) DO NOTHING;
-    `).catch(e => console.error('audit_logs backfill (duplicate_account_flags) error:', e.message));
-
-    console.log("✅ Unified Audit Log System ready (audit_logs, backfilled from legacy log tables)");
   } catch (err) {
     console.error("❌ Migration error:", err.message);
   }
