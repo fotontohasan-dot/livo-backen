@@ -23,6 +23,17 @@ const { isWeakPin, createPin, updatePin, verifyPin, getPinStatus } = require('..
 const { listActiveSessions, listLoginHistory, revokeDeviceSession, revokeAllOtherSessions } = require('../services/deviceTracking');
 const { logAdminAction } = require('../services/fraudDetection');
 const cache = require('../services/cache');
+const { createLimiter } = require('../middleware/rateLimitFactory');
+
+// পাসওয়ার্ড, উইথড্র-পিন, ব্যাংক কার্ড — অ্যাকাউন্ট-টেকওভার সংশ্লিষ্ট সংবেদনশীল অ্যাকশন,
+// প্রতি ইউজারে ১৫ মিনিটে সর্বোচ্চ ৬ বার (আগে শুধু generalLimiter-এর ৩০০/১৫মিনিট দিয়ে
+// ঢিলেঢালাভাবে কভার হতো)।
+const accountSecurityLimiter = createLimiter('account_security', {
+  windowMs: 15 * 60 * 1000,
+  max: 6,
+  message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
+  keyGenerator: (req) => (req.session && req.session.user) ? `u_${req.session.user.id}` : req.ip
+});
 
 // ==== ইনপুট ভ্যালিডেশন হেল্পার (username, name, phone, bank card ফিল্ড) ====
 // লক্ষ্য: কোনো ফিল্ডেই <, >, স্ক্রিপ্ট, বা লিংক বসিয়ে ঢুকতে না পারা — কারণ এই মানগুলো
@@ -185,7 +196,7 @@ router.post('/update-personal', isAuth, async (req, res) => {
   res.redirect('/profile/security');
 });
 
-router.post('/add-bank-card', isAuth, async (req, res) => {
+router.post('/add-bank-card', isAuth, accountSecurityLimiter, async (req, res) => {
   try {
     const { bank_name, account_number, holder_name } = req.body;
     if (!isValidBankField(bank_name) || !isValidBankField(account_number) || !isValidName(holder_name)) {
@@ -203,7 +214,7 @@ router.post('/add-bank-card', isAuth, async (req, res) => {
   res.redirect('/profile/security');
 });
 
-router.post('/delete-bank-card/:id', isAuth, async (req, res) => {
+router.post('/delete-bank-card/:id', isAuth, accountSecurityLimiter, async (req, res) => {
   try {
     await pool.query(`DELETE FROM bank_cards WHERE id=$1 AND user_id=$2`, [req.params.id, req.session.user.id]);
     req.flash('success', '✅ কার্ড মুছে ফেলা হয়েছে!');
@@ -213,7 +224,7 @@ router.post('/delete-bank-card/:id', isAuth, async (req, res) => {
   res.redirect('/profile/security');
 });
 
-router.post('/change-password', isAuth, async (req, res) => {
+router.post('/change-password', isAuth, accountSecurityLimiter, async (req, res) => {
   try {
     const { current_password, new_password, currentPassword, newPassword, confirmPassword } = req.body;
     const cp = current_password || currentPassword;
@@ -410,7 +421,7 @@ router.get('/login-history', isAuth, async (req, res) => {
 });
 
 // ==================== Withdraw PIN তৈরি ====================
-router.post('/withdraw-pin/create', isAuth, async (req, res) => {
+router.post('/withdraw-pin/create', isAuth, accountSecurityLimiter, async (req, res) => {
   try {
     const userId = req.session.user.id;
     const status = await getPinStatus(userId);
@@ -441,7 +452,7 @@ router.post('/withdraw-pin/create', isAuth, async (req, res) => {
 });
 
 // ==================== Withdraw PIN পরিবর্তন (বর্তমান PIN জানা থাকলে) ====================
-router.post('/withdraw-pin/change', isAuth, async (req, res) => {
+router.post('/withdraw-pin/change', isAuth, accountSecurityLimiter, async (req, res) => {
   try {
     const userId = req.session.user.id;
     const { currentPin, newPin, confirmNewPin } = req.body;
@@ -486,7 +497,7 @@ router.post('/withdraw-pin/change', isAuth, async (req, res) => {
 });
 
 // ==================== Withdraw PIN রিসেট (PIN ভুলে গেলে — অ্যাকাউন্ট পাসওয়ার্ড দিয়ে যাচাই) ====================
-router.post('/withdraw-pin/reset', isAuth, async (req, res) => {
+router.post('/withdraw-pin/reset', isAuth, accountSecurityLimiter, async (req, res) => {
   try {
     const userId = req.session.user.id;
     const { accountPassword, newPin, confirmNewPin } = req.body;
@@ -580,13 +591,13 @@ router.get('/wheel', isAuth, async (req, res) => {
 });
 
 // প্রতি ইউজার/IP-তে মিনিটে সর্বোচ্চ ১০ বার claim/spin রিকোয়েস্ট — বট/স্প্যাম ঠেকাতে
-const claimLimiter = rateLimit({
+const claimLimiter = createLimiter('claim', {
   windowMs: 60 * 1000,
   max: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
   keyGenerator: (req) => (req.session && req.session.user ? String(req.session.user.id) : req.ip),
-  message: { ok: false, success: false, message: 'অনেকবার চেষ্টা করেছেন, একটু পরে আবার চেষ্টা করুন।' }
+  handler: (req, res) => {
+    res.status(429).json({ ok: false, success: false, message: 'অনেকবার চেষ্টা করেছেন, একটু পরে আবার চেষ্টা করুন।' });
+  }
 });
 
 router.post('/wheel/spin', isAuth, claimLimiter, async (req, res) => {
@@ -797,7 +808,7 @@ router.get('/cards', isAuth, async (req, res) => {
   }
 });
 
-router.post('/cards/add', isAuth, async (req, res) => {
+router.post('/cards/add', isAuth, accountSecurityLimiter, async (req, res) => {
   try {
     const { bank_name, account_number, holder_name } = req.body;
     await pool.query(
@@ -811,7 +822,7 @@ router.post('/cards/add', isAuth, async (req, res) => {
   res.redirect('/profile/cards');
 });
 
-router.post('/cards/delete/:id', isAuth, async (req, res) => {
+router.post('/cards/delete/:id', isAuth, accountSecurityLimiter, async (req, res) => {
   try {
     const { id } = req.params;
     await pool.query(

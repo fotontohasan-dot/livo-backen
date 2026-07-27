@@ -91,6 +91,15 @@ function isAvailable() {
   return !!(state.client && state.connected);
 }
 
+/**
+ * কাঁচা ioredis ক্লায়েন্ট — এই মডিউলের get/set/del ছাড়া অন্য কিছুর জন্য (যেমন
+ * express-rate-limit-এর কাস্টম Store, যেখানে atomic INCR/PEXPIRE দরকার)।
+ * isAvailable() false হলে null রিটার্ন করে — কলার-কে গ্রেসফুলি fallback করতে হবে।
+ */
+function getRawClient() {
+  return isAvailable() ? state.client : null;
+}
+
 function prefixed(key) {
   return REDIS_PREFIX + key;
 }
@@ -180,4 +189,4 @@ function getStatus() {
   };
 }
 
-module.exports = { get, set, del, delByPattern, getOrSet, isAvailable, getStatus };
+module.exports = { get, set, del, delByPattern, getOrSet, isAvailable, getStatus, getRawClient };

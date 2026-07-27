@@ -2,6 +2,16 @@ const express = require('express');
 const router = express.Router();
 const { isAuth } = require('../middleware/auth');
 const { pool } = require('../db');
+const { createLimiter } = require('../middleware/rateLimitFactory');
+
+// KYC জমাদানে সীমা — পরিচয়পত্র/ডকুমেন্ট বারবার জমা দেওয়া স্প্যাম/রিসোর্স অপব্যবহার
+// (অ্যাডমিন রিভিউ কিউ ভরিয়ে ফেলা) ঠেকাতে ঘণ্টায় সর্বোচ্চ ৫ বার।
+const kycLimiter = createLimiter('kyc_submit', {
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: 'অনেকবার KYC জমা দিয়েছেন। ১ ঘণ্টা পর আবার চেষ্টা করুন।',
+  keyGenerator: (req) => (req.session && req.session.user) ? `u_${req.session.user.id}` : req.ip
+});
 
 // ==== KYC ইনপুট ভ্যালিডেশন ====
 const KYC_NAME_RE = /^[\p{L}\p{M}\s.'-]{2,60}$/u;
@@ -55,7 +65,7 @@ router.get('/kyc', isAuth, async (req, res) => {
 });
 
 // KYC সাবমিট
-router.post('/kyc', isAuth, async (req, res) => {
+router.post('/kyc', isAuth, kycLimiter, async (req, res) => {
     const userId = req.session.user.id;
     const { full_name, document_type, document_number, document_url } = req.body;
 

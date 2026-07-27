@@ -32,14 +32,13 @@ const auditLog = require('../services/auditLog');
 
 const { requireIntParam, requireAmount, parseAmount, sanitizeText, isSafeUrl } = require('../middleware/validate');
 
+const { createLimiter } = require('../middleware/rateLimitFactory');
+
 // ==================== 2FA ভেরিফিকেশন রুটের জন্য কড়া rate limit ====================
 // এই দুটো রুটে কোড অনুমান করে ব্রুট-ফোর্স করার ঝুঁকি থাকে, তাই আলাদা কড়া সীমা।
-const strict2FALimiter = rateLimit({
+const strict2FALimiter = createLimiter('admin_2fa', {
   windowMs: 15 * 60 * 1000,
   max: 8,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: 'Too many attempts, please try again later.',
   handler: (req, res) => {
     res.status(429).send('Too many attempts, please try again later.');
   }
@@ -47,22 +46,18 @@ const strict2FALimiter = rateLimit({
 
 // সব অ্যাডমিন রুটে (login-এর বাইরে) সাধারণ কড়া সীমা — app.js-এর generalLimiter (300/15min,
 // পুরো সাইটের জন্য) এর উপরে অতিরিক্ত স্তর, যেহেতু admin রুটগুলো সরাসরি DB write করে।
-const adminActionLimiter = rateLimit({
+const adminActionLimiter = createLimiter('admin_action', {
   windowMs: 15 * 60 * 1000,
   max: 150,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: 'অনেকবার অ্যাকশন নেওয়া হয়েছে, কিছুক্ষণ পর আবার চেষ্টা করুন।',
+  message: 'অনেকবার অ্যাকশন নেওয়া হয়েছে, কিছুক্ষণ পর আবার চেষ্টা করুন।'
 });
 
 // টাকা/কয়েন সরাসরি নড়াচড়া করে এমন রুটে (approve/reject/coins add-remove) আরও কড়া সীমা —
 // কম্প্রোমাইজড সেশন বা স্ক্রিপ্টেড অপব্যবহার হলেও ক্ষতির পরিমাণ সীমিত রাখতে।
-const adminFinancialLimiter = rateLimit({
+const adminFinancialLimiter = createLimiter('admin_financial', {
   windowMs: 15 * 60 * 1000,
   max: 40,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: 'অনেকবার আর্থিক অ্যাকশন নেওয়া হয়েছে, কিছুক্ষণ পর আবার চেষ্টা করুন।',
+  message: 'অনেকবার আর্থিক অ্যাকশন নেওয়া হয়েছে, কিছুক্ষণ পর আবার চেষ্টা করুন।'
 });
 
 // ==================== ADMIN ACTIVITY LOG HELPER ====================
@@ -88,12 +83,10 @@ router.get('/login', (req, res) => {
   res.render('admin/login', { error: null });
 });
 
-const adminLoginLimiter = rateLimit({
+const adminLoginLimiter = createLimiter('admin_login', {
   windowMs: 15 * 60 * 1000,
   max: 8,
-  message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
-  standardHeaders: true,
-  legacyHeaders: false
+  message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।'
 });
 
 router.post('/login', adminLoginLimiter, async (req, res) => {

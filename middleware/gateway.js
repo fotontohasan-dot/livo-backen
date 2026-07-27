@@ -2,14 +2,12 @@
 // কেন্দ্রীয় API Gateway — সব /api/* রিকোয়েস্টের জন্য একটাই জায়গায়
 // rate-limit, logging, standardized response এবং error handling
 
-const rateLimit = require('express-rate-limit');
+const { createLimiter } = require('./rateLimitFactory');
 
 // শুধু /api/ পাথের জন্য আলাদা rate limiter (login/register এর থেকে আলাদা)
-const apiLimiter = rateLimit({
+const apiLimiter = createLimiter('public_api', {
   windowMs: 60 * 1000,
   max: 60, // প্রতি মিনিটে সর্বোচ্চ ৬০ টা API কল প্রতি IP/user থেকে
-  standardHeaders: true,
-  legacyHeaders: false,
   keyGenerator: (req) => (req.session && req.session.user) ? `u_${req.session.user.id}` : req.ip,
   handler: (req, res) => {
     res.status(429).json({ success: false, error: 'অনেকবার রিকোয়েস্ট করেছেন। একটু পর আবার চেষ্টা করুন।' });

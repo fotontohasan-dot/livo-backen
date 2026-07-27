@@ -116,6 +116,40 @@ async function logFailedLogin({ userId = null, ip = null, userAgent = null, iden
 }
 
 /** ==================== Bot Activity ==================== */
+/** ==================== Rate-Limit / API Abuse Logging ====================
+ *  যেকোনো rate limiter 429 রিটার্ন করলে এখানে কল হয় (middleware/rateLimitFactory.js থেকে)।
+ *  একই IP অল্প সময়ে বারবার লিমিটে ধরা পড়লে severity স্বয়ংক্রিয়ভাবে বেড়ে যায়
+ *  (একবার = সাধারণ ট্রাফিক স্পাইক হতে পারে, বারবার = সম্ভাব্য abuse/আক্রমণ)। */
+async function logRateLimitExceeded({ ip, userId = null, path, method, limiterName, userAgent = null }) {
+  try {
+    let severity = 'warning';
+    if (ip) {
+      const r = await pool.query(
+        `SELECT COUNT(*) FROM audit_logs
+         WHERE category = 'security' AND action = 'RATE_LIMIT_EXCEEDED'
+           AND ip_address = $1 AND created_at > NOW() - INTERVAL '10 minutes'`,
+        [ip]
+      );
+      const recentCount = parseInt(r.rows[0].count, 10);
+      if (recentCount >= 10) severity = 'critical';
+    }
+    await logEvent({
+      category: 'security',
+      severity,
+      actorType: userId ? 'user' : 'system',
+      actorId: userId,
+      ip,
+      device: userAgent,
+      action: 'RATE_LIMIT_EXCEEDED',
+      resourceType: 'route',
+      resourceId: path,
+      metadata: { method, limiter: limiterName }
+    });
+  } catch (err) {
+    console.error('logRateLimitExceeded error (non-blocking):', err.message);
+  }
+}
+
 function riskToSeverity(riskLevel) {
   if (riskLevel === 'high') return 'critical';
   if (riskLevel === 'medium') return 'warning';
@@ -218,6 +252,7 @@ module.exports = {
   logBotActivity,
   logFraudFlag,
   logDuplicateAccountFlag,
+  logRateLimitExceeded,
   listAuditLogs,
   exportAuditLogsCsv,
   getCategoryCounts,

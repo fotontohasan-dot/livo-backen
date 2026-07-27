@@ -152,28 +152,24 @@ initSocket(server, sessionMiddleware);
 
 app.use(flash());
 
-const loginLimiter = rateLimit({
+const { createLimiter } = require('./middleware/rateLimitFactory');
+
+const loginLimiter = createLimiter('login', {
   windowMs: 15 * 60 * 1000,
   max: 10,
-  message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
-  standardHeaders: true,
-  legacyHeaders: false
+  message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।'
 });
 
-const generalLimiter = rateLimit({
+const generalLimiter = createLimiter('general', {
   windowMs: 15 * 60 * 1000,
-  max: 300,
-  standardHeaders: true,
-  legacyHeaders: false
+  max: 300
 });
 
 // ডিপোজিট/উইথড্র/কার্ড/পাসওয়ার্ড — টাকা-সংক্রান্ত ও অ্যাকাউন্ট-সংবেদনশীল রুটে কড়া রেট-লিমিট
-const financialLimiter = rateLimit({
+const financialLimiter = createLimiter('financial', {
   windowMs: 15 * 60 * 1000,
   max: 20,
-  message: 'অনেকবার চেষ্টা করেছেন। কিছুক্ষণ পর আবার চেষ্টা করুন।',
-  standardHeaders: true,
-  legacyHeaders: false
+  message: 'অনেকবার চেষ্টা করেছেন। কিছুক্ষণ পর আবার চেষ্টা করুন।'
 });
 
 app.use(generalLimiter);

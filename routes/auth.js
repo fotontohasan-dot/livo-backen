@@ -15,20 +15,28 @@ const { recordDeviceLogin, parseUserAgent } = require('../services/deviceTrackin
 const cache = require('../services/cache');
 const auditLog = require('../services/auditLog');
 
-const resetLimiter = rateLimit({
+const { createLimiter } = require('../middleware/rateLimitFactory');
+
+const resetLimiter = createLimiter('password_reset', {
   windowMs: 15 * 60 * 1000,
   max: 5,
-  message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
-  standardHeaders: true,
-  legacyHeaders: false
+  message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।'
 });
 
-const verifyResendLimiter = rateLimit({
+const verifyResendLimiter = createLimiter('verify_resend', {
   windowMs: 15 * 60 * 1000,
   max: 5,
-  message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
-  standardHeaders: true,
-  legacyHeaders: false
+  message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।'
+});
+
+// স্টেপ-আপ ভেরিফিকেশন কোড (VPN/নতুন ডিভাইস থেকে লগইনের সময়) — ৬-ডিজিট কোড অনুমান করে
+// ব্রুট-ফোর্স করার ঝুঁকি থাকায় আলাদা কড়া সীমা (আগে শুধু generalLimiter-এর ৩০০/১৫মিনিট
+// দিয়ে ঢিলেঢালাভাবে কভার হতো, যা OTP অনুমানের জন্য যথেষ্ট কড়া না)।
+const verifyAccessLimiter = createLimiter('verify_access', {
+  windowMs: 15 * 60 * 1000,
+  max: 8,
+  message: 'অনেকবার ভুল কোড দিয়েছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
+  keyGenerator: (req) => req.session && req.session.pendingLoginUserId ? `u_${req.session.pendingLoginUserId}` : req.ip
 });
 
 // ইউজার-সাইড ইভেন্ট (রেজিস্ট্রেশন, ভেরিফিকেশন) admin_logs টেবিলেই লগ হয়, যাতে
@@ -375,7 +383,7 @@ router.get('/verify-access', (req, res) => {
   res.render('verify-access');
 });
 
-router.post('/verify-access', async (req, res) => {
+router.post('/verify-access', verifyAccessLimiter, async (req, res) => {
   try {
     const pendingUserId = req.session.pendingLoginUserId;
     if (!pendingUserId) return res.redirect('/login');

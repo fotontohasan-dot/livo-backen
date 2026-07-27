@@ -13,12 +13,25 @@ const { evaluateTransaction } = require('../services/fraudDetection');
 const { checkIp } = require('../services/vpnDetection');
 const { requireVerifiedEmail } = require('../middleware/auth');
 
-const paymentLimiter = rateLimit({
+const { createLimiter } = require('../middleware/rateLimitFactory');
+
+function paymentKeyGenerator(req) {
+  return (req.session && req.session.user) ? `u_${req.session.user.id}` : req.ip;
+}
+
+const depositLimiter = createLimiter('deposit', {
   windowMs: 15 * 60 * 1000,
   max: 15,
   message: 'অনেকবার চেষ্টা করেছেন। কিছুক্ষণ পর আবার চেষ্টা করুন।',
-  standardHeaders: true,
-  legacyHeaders: false
+  keyGenerator: paymentKeyGenerator
+});
+
+// উইথড্র — সরাসরি টাকা বের হয়, তাই ডিপোজিটের চেয়ে কড়া সীমা (আলাদা পলিসি)
+const withdrawLimiter = createLimiter('withdraw', {
+  windowMs: 15 * 60 * 1000,
+  max: 6,
+  message: 'অনেকবার উইথড্র রিকোয়েস্ট করেছেন। কিছুক্ষণ পর আবার চেষ্টা করুন।',
+  keyGenerator: paymentKeyGenerator
 });
 
 function requireLogin(req, res, next) {
@@ -144,7 +157,7 @@ router.get('/deposit', requireLogin, (req, res) => {
   res.render('payment/deposit', { user: req.session.user, payNumber: current });
 });
 
-router.post('/deposit', requireLogin, paymentLimiter, async (req, res) => {
+router.post('/deposit', requireLogin, depositLimiter, async (req, res) => {
   const { method, account_number } = req.body;
   const transaction_id = (req.body.transaction_id || '').trim();
   const wantBonus = req.body.want_bonus === 'yes';
@@ -245,7 +258,7 @@ router.get('/withdraw', requireLogin, async (req, res) => {
 });
 
 
-router.post('/withdraw', requireLogin, requireVerifiedEmail, paymentLimiter, async (req, res) => {
+router.post('/withdraw', requireLogin, requireVerifiedEmail, withdrawLimiter, async (req, res) => {
   const { method, account_number, withdraw_pin } = req.body;
   const amount = parseAmount(req.body.amount);
   const userId = req.session.user.id;
