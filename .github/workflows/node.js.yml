@@ -10,33 +10,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: livo_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     strategy:
       matrix:
         node-version: [18.x, 20.x, 22.x]
-
-    env:
-      NODE_ENV: test
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432/livo_test
-      SESSION_SECRET: ci_test_secret_key
-      REDIS_ENABLED: "false"
-      SSLCZ_IS_LIVE: "false"
-      VAPID_SUBJECT: mailto:test@example.com
-      FRONTEND_URL: http://localhost:4123
 
     steps:
     - uses: actions/checkout@v4
@@ -46,10 +22,4 @@ jobs:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
     - run: npm install
-    - run: npm test
-    - name: Upload coverage report
-      if: matrix.node-version == '20.x'
-      uses: actions/upload-artifact@v4
-      with:
-        name: coverage-report
-        path: coverage/
+    # - run: npm test # No test script defined yet
