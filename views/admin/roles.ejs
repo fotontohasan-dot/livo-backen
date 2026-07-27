@@ -1,124 +1,70 @@
 <%
 function escapeHtml(str) {
   return String(str == null ? '' : str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
-
-const permKeys = Object.keys(permissionCatalog || {});
-
-function permCheckboxes(formPrefix, selected) {
-  const sel = new Set(selected || []);
-  return permKeys.map(p =>
-    '<label class="flex items-start gap-2 text-xs py-1 cursor-pointer">' +
-      '<input type="checkbox" name="permissions" value="' + p + '" ' + (sel.has(p) ? 'checked' : '') + ' class="mt-0.5 rounded">' +
-      '<span><span class="font-mono text-slate-700">' + p + '</span><br><span class="text-slate-400">' + escapeHtml(permissionCatalog[p]) + '</span></span>' +
-    '</label>'
-  ).join('');
-}
-
-const roleCards = (roles || []).map(r => {
-  const perms = Array.isArray(r.permissions) ? r.permissions : [];
-  const isAll = perms.includes('*');
-  return `
-  <div class="bg-white rounded-3xl border border-slate-100 p-5">
-      <div class="flex items-center justify-between mb-3">
-          <div>
-              <h3 class="font-semibold text-slate-800">${escapeHtml(r.name)} ${r.is_system ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 ml-1">SYSTEM</span>' : ''}</h3>
-              <p class="text-xs text-slate-400 font-mono">${escapeHtml(r.key)}</p>
-          </div>
-          <button type="button" onclick="document.getElementById('edit-${r.key}').classList.toggle('hidden')" class="text-xs font-semibold text-blue-600 hover:underline">এডিট</button>
-      </div>
-      <p class="text-xs text-slate-500 mb-3">${escapeHtml(r.description || '')}</p>
-      <div class="flex flex-wrap gap-1 mb-3">
-          ${isAll ? '<span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-indigo-100 text-indigo-700">সব পারমিশন (*)</span>' :
-            perms.map(p => '<span class="px-2 py-0.5 text-[11px] font-mono rounded-full bg-slate-100 text-slate-600">' + escapeHtml(p) + '</span>').join('') || '<span class="text-xs text-slate-300">কোনো পারমিশন নেই</span>'}
-      </div>
-
-      <div id="edit-${r.key}" class="hidden border-t border-slate-100 pt-3 mt-3">
-          <form method="post" action="/admin/roles/${r.key}/update" class="space-y-2">
-              <input type="text" name="name" value="${escapeHtml(r.name)}" class="w-full text-sm border border-slate-200 rounded-xl px-3 py-1.5" placeholder="Display name">
-              <textarea name="description" class="w-full text-sm border border-slate-200 rounded-xl px-3 py-1.5" placeholder="Description" rows="2">${escapeHtml(r.description || '')}</textarea>
-              <div class="max-h-48 overflow-y-auto border border-slate-100 rounded-xl p-2">${permCheckboxes(r.key, perms)}</div>
-              <div class="flex items-center gap-2">
-                  <button type="submit" class="text-xs font-semibold bg-slate-800 text-white px-3 py-1.5 rounded-xl hover:bg-slate-900">সেভ করুন</button>
-                  ${!r.is_system ? `<button type="submit" formaction="/admin/roles/${r.key}/delete" onclick="return confirm('এই রোল ডিলিট করবেন?')" class="text-xs font-semibold bg-red-600 text-white px-3 py-1.5 rounded-xl hover:bg-red-700">ডিলিট</button>` : ''}
-              </div>
-          </form>
-      </div>
-  </div>`;
-}).join('');
-
-const adminRows = (admins || []).map(a => `
-  <tr class="hover:bg-slate-50">
-      <td class="px-6 py-3 text-sm font-medium text-slate-700">${escapeHtml(a.username)}</td>
-      <td class="px-6 py-3 text-xs text-slate-400">${escapeHtml(a.email || '-')}</td>
-      <td class="px-6 py-3 text-xs">
-          <span class="px-2.5 py-1 rounded-full font-bold ${a.role_key ? 'bg-blue-100 text-blue-700' : 'bg-indigo-100 text-indigo-700'}">${a.role_key ? escapeHtml(a.role_key) : 'super_admin (default)'}</span>
-      </td>
-      <td class="px-6 py-3">
-          <form method="post" action="/admin/roles/assign" class="flex items-center gap-2">
-              <input type="hidden" name="userId" value="${a.id}">
-              <select name="roleKey" class="text-xs border border-slate-200 rounded-xl px-2 py-1.5">
-                  <option value="">super_admin (default)</option>
-                  ${(roles || []).map(r => `<option value="${r.key}" ${a.role_key === r.key ? 'selected' : ''}>${escapeHtml(r.name)}</option>`).join('')}
-              </select>
-              <button type="submit" class="text-xs font-semibold bg-slate-800 text-white px-3 py-1.5 rounded-xl hover:bg-slate-900">অ্যাসাইন</button>
-          </form>
-      </td>
-  </tr>
-`).join('') || '<tr><td colspan="4" class="px-6 py-8 text-center text-slate-400">কোনো অ্যাডমিন পাওয়া যায়নি</td></tr>';
 %>
 <%- include('partials/admin-layout', {
     title: 'Roles & Permissions',
     active: 'roles',
     body: `
-<div class="max-w-7xl mx-auto space-y-8">
+<div class="max-w-6xl mx-auto">
+  <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
     <div>
-        <h1 class="text-2xl font-semibold text-slate-900">Roles &amp; Permissions</h1>
-        <p class="text-slate-500 mt-1 text-sm">RBAC — রোল তৈরি/এডিট/ডিলিট করুন এবং অ্যাডমিনদের রোল অ্যাসাইন করুন</p>
+      <h1 class="text-xl font-bold text-slate-800">🛡️ Roles & Permissions</h1>
+      <p class="text-sm text-slate-500">Super Admin, Admin, Moderator, Support, Finance ও Custom Role ম্যানেজ করুন</p>
     </div>
+    <div class="flex gap-2 flex-wrap">
+      <a href="/admin/roles/matrix" class="px-4 py-2 bg-slate-800 text-white rounded-xl text-sm font-semibold"><i class="fas fa-table-cells"></i> Permission Matrix</a>
+      <a href="/admin/user-roles" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold"><i class="fas fa-users-gear"></i> User Role Assignment</a>
+      <a href="/admin/roles/export" class="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold"><i class="fas fa-download"></i> Export</a>
+      <form method="POST" action="/admin/roles/import" enctype="multipart/form-data" class="flex items-center gap-1">
+        <input type="file" name="file" accept=".json" required class="text-xs w-40">
+        <button type="submit" class="px-3 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold"><i class="fas fa-upload"></i> Import</button>
+      </form>
+    </div>
+  </div>
 
-    <!-- নতুন রোল তৈরি -->
-    <div class="bg-white rounded-3xl border border-slate-100 p-5">
-        <h3 class="font-semibold text-slate-800 mb-3">➕ নতুন রোল তৈরি করুন</h3>
-        <form method="post" action="/admin/roles" class="space-y-3">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <input type="text" name="key" required pattern="[a-z0-9_]{2,30}" placeholder="role_key (lowercase_underscore)" class="text-sm border border-slate-200 rounded-xl px-3 py-2">
-                <input type="text" name="name" required placeholder="Display name (e.g. Finance Reviewer)" class="text-sm border border-slate-200 rounded-xl px-3 py-2">
+  ${error ? `<div class="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl text-sm">${escapeHtml(error)}</div>` : ''}
+
+  <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm mb-6">
+    <p class="text-sm font-bold text-slate-700 mb-3">নতুন Custom Role তৈরি করুন</p>
+    <form method="POST" action="/admin/roles" class="grid grid-cols-1 md:grid-cols-3 gap-2">
+      <input type="text" name="name" placeholder="Role নাম (যেমন: Content Editor)" required class="border px-3 py-2.5 rounded-xl text-sm md:col-span-1">
+      <input type="text" name="description" placeholder="বিবরণ (ঐচ্ছিক)" class="border px-3 py-2.5 rounded-xl text-sm md:col-span-1">
+      <button type="submit" class="px-4 py-2.5 bg-slate-800 text-white rounded-xl text-sm font-semibold">তৈরি করুন (পরে পারমিশন সেট করুন)</button>
+    </form>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    ${roles.map(role => `
+      <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="font-bold text-slate-800">${escapeHtml(role.name)}</h3>
+              ${role.is_system ? '<span class="px-2 py-0.5 text-xs font-bold rounded-full bg-slate-200 text-slate-600">System</span>' : '<span class="px-2 py-0.5 text-xs font-bold rounded-full bg-blue-100 text-blue-600">Custom</span>'}
             </div>
-            <textarea name="description" placeholder="বিবরণ (ঐচ্ছিক)" rows="2" class="w-full text-sm border border-slate-200 rounded-xl px-3 py-2"></textarea>
-            <div class="max-h-56 overflow-y-auto border border-slate-100 rounded-xl p-3 grid grid-cols-1 md:grid-cols-2 gap-x-4">${permCheckboxes('new', [])}</div>
-            <button type="submit" class="text-sm font-semibold bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700"><i class="fas fa-plus mr-1"></i>রোল তৈরি করুন</button>
-        </form>
-    </div>
-
-    <!-- বিদ্যমান রোল -->
-    <div>
-        <h3 class="font-semibold text-slate-800 mb-3">বিদ্যমান রোল</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">${roleCards}</div>
-    </div>
-
-    <!-- অ্যাডমিন ইউজার ও তাদের রোল -->
-    <div class="bg-white rounded-3xl border border-slate-100 overflow-x-auto">
-        <div class="px-6 py-4 border-b border-slate-100">
-            <h3 class="font-semibold text-slate-800">অ্যাডমিন ইউজার — রোল অ্যাসাইনমেন্ট</h3>
+            <p class="text-xs text-slate-400 font-mono mt-0.5">${escapeHtml(role.key)}</p>
+            <p class="text-xs text-slate-500 mt-1.5">${escapeHtml(role.description || '—')}</p>
+            <p class="text-xs text-slate-400 mt-1.5"><i class="fas fa-users"></i> ${role.user_count} জন ইউজার</p>
+          </div>
         </div>
-        <table class="w-full text-sm">
-            <thead class="bg-slate-50">
-                <tr>
-                    <th class="px-6 py-3 text-left font-medium text-slate-500 uppercase text-xs">Username</th>
-                    <th class="px-6 py-3 text-left font-medium text-slate-500 uppercase text-xs">Email</th>
-                    <th class="px-6 py-3 text-left font-medium text-slate-500 uppercase text-xs">বর্তমান রোল</th>
-                    <th class="px-6 py-3 text-left font-medium text-slate-500 uppercase text-xs">অ্যাসাইন করুন</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100">${adminRows}</tbody>
-        </table>
-    </div>
+        <div class="flex gap-2 mt-4 flex-wrap">
+          <a href="/admin/roles/${role.id}/edit" class="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-xs font-semibold"><i class="fas fa-pen"></i> Edit</a>
+          <form method="POST" action="/admin/roles/${role.id}/clone" class="inline-flex gap-1">
+            <input type="hidden" name="name" value="${escapeHtml(role.name)} (Copy)">
+            <button type="submit" class="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-xs font-semibold"><i class="fas fa-copy"></i> Clone</button>
+          </form>
+          ${!role.is_system ? `
+          <form method="POST" action="/admin/roles/${role.id}/delete" onsubmit="return confirm('Role \\'${escapeHtml(role.name)}\\' ডিলিট করবেন?')" class="inline-flex">
+            <button type="submit" class="px-3 py-1.5 bg-red-100 text-red-600 rounded-lg text-xs font-semibold"><i class="fas fa-trash"></i> Delete</button>
+          </form>` : ''}
+        </div>
+      </div>
+    `).join('') || '<p class="text-slate-400 text-center py-10 col-span-2">কোনো Role পাওয়া যায়নি।</p>'}
+  </div>
 </div>
 `
 }) %>

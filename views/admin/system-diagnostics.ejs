@@ -1,0 +1,89 @@
+<%
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&')
+    .replace(/</g, '<')
+    .replace(/>/g, '>')
+    .replace(/"/g, '"')
+    .replace(/'/g, '&#39;');
+}
+function statusColor(status) {
+  if (status === 'healthy') return { badge: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500', icon: 'fa-circle-check' };
+  if (status === 'warning') return { badge: 'bg-amber-100 text-amber-700', dot: 'bg-amber-500', icon: 'fa-triangle-exclamation' };
+  return { badge: 'bg-red-100 text-red-700', dot: 'bg-red-500', icon: 'fa-circle-xmark' };
+}
+function statusLabel(status) {
+  if (status === 'healthy') return 'Healthy';
+  if (status === 'warning') return 'Warning';
+  return 'Error';
+}
+function serviceCard(label, icon, c) {
+  if (!c) c = { status: 'error', message: 'ডেটা নেই' };
+  const col = statusColor(c.status);
+  let extra = '';
+  if (typeof c.usedPercent === 'number') {
+    extra = '<div class="mt-3 w-full bg-slate-100 rounded-full h-2 overflow-hidden"><div class="h-2 rounded-full ' + col.dot + '" style="width:' + c.usedPercent + '%"></div></div>';
+  }
+  return '<div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">' +
+    '<div class="flex items-center justify-between mb-3">' +
+      '<div class="flex items-center gap-2.5">' +
+        '<div class="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-500"><i class="fas ' + icon + '"></i></div>' +
+        '<div>' +
+          '<p class="text-sm font-bold text-slate-800">' + label + '</p>' +
+          (typeof c.responseTimeMs === 'number' ? '<p class="text-[11px] text-slate-400">' + c.responseTimeMs + 'ms</p>' : '') +
+        '</div>' +
+      '</div>' +
+      '<span class="px-2.5 py-1 text-[11px] font-bold rounded-full ' + col.badge + '"><i class="fas ' + col.icon + '"></i> ' + statusLabel(c.status) + '</span>' +
+    '</div>' +
+    '<p class="text-xs text-slate-500 leading-relaxed">' + escapeHtml(c.message || '') + '</p>' +
+    extra +
+  '</div>';
+}
+
+var data = (typeof result !== 'undefined' && result) ? result
+         : ((typeof diagnostics !== 'undefined' && diagnostics) ? diagnostics : null);
+var errMsg = (typeof error !== 'undefined' && error) ? error : null;
+var checks = (data && data.checks) ? data.checks : {};
+var overallCol = data ? statusColor(data.overall) : statusColor('error');
+%>
+<%- include('partials/admin-layout', {
+    title: 'Server Health',
+    active: 'system-diagnostics',
+    body: `
+<div class="max-w-6xl mx-auto space-y-6">
+    <div class="flex items-center justify-between flex-wrap gap-3">
+        <div>
+            <h2 class="text-2xl font-semibold text-slate-900">Server Health</h2>
+            <p class="text-slate-500 mt-1 text-sm">ডাটাবেজ, রেডিস, কিউ, ইমেইল, ডিস্ক ও মেমরির রিয়েল-টাইম স্বাস্থ্য</p>
+        </div>
+        <div class="flex items-center gap-3 flex-wrap">
+            ${data ? `<span class="px-4 py-2 rounded-2xl text-sm font-bold ${overallCol.badge}"><i class="fas ${overallCol.icon}"></i> Overall: ${statusLabel(data.overall)}</span>` : ''}
+            <a href="/admin/system-diagnostics" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-sm font-semibold"><i class="fas fa-rotate-right"></i> রিফ্রেশ</a>
+            <a href="/health" target="_blank" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-sm font-semibold"><i class="fas fa-arrow-up-right-from-square"></i> /health JSON</a>
+        </div>
+    </div>
+
+    ${errMsg ? `<div class="bg-red-50 border border-red-200 text-red-600 px-5 py-4 rounded-2xl text-sm">❌ ${escapeHtml(errMsg)}</div>` : ''}
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        ${serviceCard('PostgreSQL', 'fa-database', checks.database)}
+        ${serviceCard('Redis Cache', 'fa-bolt', checks.redis)}
+        ${serviceCard('Background Queue', 'fa-list-check', checks.queue)}
+        ${serviceCard('Email (SMTP)', 'fa-envelope', checks.email)}
+        ${serviceCard('Disk Space', 'fa-hard-drive', checks.disk)}
+        ${serviceCard('Memory Usage', 'fa-memory', checks.memory)}
+    </div>
+
+    <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+        <div class="flex items-center gap-2.5 mb-2">
+            <div class="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-500"><i class="fas fa-clock"></i></div>
+            <p class="text-sm font-bold text-slate-800">Uptime</p>
+        </div>
+        <p class="text-lg font-mono text-slate-700">${escapeHtml((checks.uptime && checks.uptime.message) || '—')}</p>
+        <p class="text-xs text-slate-400 mt-1">সার্ভার চালু হয়েছে: ${checks.uptime && checks.uptime.startedAt ? new Date(checks.uptime.startedAt).toLocaleString('bn-BD') : '—'}</p>
+    </div>
+
+    <p class="text-xs text-slate-400 text-center">সর্বশেষ চেক: ${data && data.timestamp ? new Date(data.timestamp).toLocaleString('bn-BD') : '—'}</p>
+</div>
+`
+}) %>

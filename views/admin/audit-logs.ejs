@@ -1,0 +1,194 @@
+<%
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function fmtDate(d) { return d ? new Date(d).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' }) : '-'; }
+
+const CATEGORY_LABELS = {
+  auth: 'Auth', financial: 'Financial', settings: 'Settings', role: 'Role Change',
+  security: 'Security', maintenance: 'Maintenance', backup: 'Backup', restore: 'Restore',
+  cron: 'Cron', queue: 'Queue', cache: 'Cache', api: 'API', other: 'Other'
+};
+
+function riskBadge(level) {
+  const map = {
+    critical: 'bg-red-600 text-white',
+    high: 'bg-red-100 text-red-700',
+    medium: 'bg-amber-100 text-amber-700',
+    low: 'bg-slate-100 text-slate-600'
+  };
+  return '<span class="px-2.5 py-1 text-xs font-bold rounded-full ' + (map[level] || map.low) + '">' + escapeHtml((level || '').toUpperCase()) + '</span>';
+}
+function statusBadge(status) {
+  return status === 'failure'
+    ? '<span class="px-2 py-0.5 text-xs font-bold rounded bg-red-50 text-red-600 border border-red-200">FAILURE</span>'
+    : '<span class="px-2 py-0.5 text-xs font-bold rounded bg-emerald-50 text-emerald-600 border border-emerald-200">SUCCESS</span>';
+}
+function actorBadge(type) {
+  const map = { admin: 'bg-indigo-50 text-indigo-600 border-indigo-200', user: 'bg-blue-50 text-blue-600 border-blue-200', system: 'bg-slate-50 text-slate-500 border-slate-200' };
+  return '<span class="px-2 py-0.5 text-[10px] font-bold rounded border ' + (map[type] || map.system) + '">' + escapeHtml((type || '').toUpperCase()) + '</span>';
+}
+
+function logRow(l) {
+  return '<tr class="hover:bg-slate-50 align-top cursor-pointer" onclick="openLogDetail(' + l.id + ')">' +
+    '<td class="px-5 py-3 text-xs text-slate-400">#' + l.id + '</td>' +
+    '<td class="px-5 py-3 text-xs text-slate-400 whitespace-nowrap">' + fmtDate(l.created_at) + '</td>' +
+    '<td class="px-5 py-3">' + actorBadge(l.actor_type) + '<div class="text-xs text-slate-600 mt-1">' + escapeHtml(l.actor_username || '-') + '</div></td>' +
+    '<td class="px-5 py-3 text-sm font-semibold text-slate-700">' + escapeHtml(l.action) + '</td>' +
+    '<td class="px-5 py-3"><span class="px-2 py-0.5 text-xs font-medium rounded bg-slate-100 text-slate-600">' + escapeHtml(CATEGORY_LABELS[l.category] || l.category) + '</span></td>' +
+    '<td class="px-5 py-3">' + statusBadge(l.status) + '</td>' +
+    '<td class="px-5 py-3">' + riskBadge(l.risk_level) + '</td>' +
+    '<td class="px-5 py-3 text-xs font-mono text-slate-500">' + escapeHtml(l.ip_address || '-') + '</td>' +
+    '<td class="px-5 py-3 text-xs text-slate-500">' + escapeHtml(l.location || '-') + '</td>' +
+  '</tr>';
+}
+const rows = (logs || []).map(logRow).join('') || '<tr><td colspan="9" class="px-6 py-10 text-center text-slate-400">কোনো audit log পাওয়া যায়নি</td></tr>';
+const f = filters || {};
+const qs = Object.keys(f).map(k => k + '=' + encodeURIComponent(f[k] || '')).join('&');
+
+const rc = riskCounts || { low: 0, medium: 0, high: 0, critical: 0 };
+const catRows = (categoryCounts || []).map(c =>
+  '<div class="flex justify-between text-sm py-1.5 border-b border-slate-100"><span class="text-slate-600">' + escapeHtml(CATEGORY_LABELS[c.category] || c.category) + '</span><span class="font-semibold text-slate-800">' + c.count + '</span></div>'
+).join('') || '<div class="text-xs text-slate-400 py-2">কোনো ডেটা নেই</div>';
+
+const categoryOptions = (categories || []).map(c => '<option value="' + c + '" ' + (f.category === c ? 'selected' : '') + '>' + (CATEGORY_LABELS[c] || c) + '</option>').join('');
+const riskOptions = (riskLevels || []).map(r => '<option value="' + r + '" ' + (f.riskLevel === r ? 'selected' : '') + '>' + r.toUpperCase() + '</option>').join('');
+%>
+<%- include('partials/admin-layout', {
+    title: 'Audit Log Dashboard',
+    active: 'audit-logs',
+    body: `
+<div class="max-w-7xl mx-auto space-y-6">
+    <div class="flex items-center justify-between flex-wrap gap-3">
+        <div>
+            <h1 class="text-2xl font-semibold text-slate-900">Audit Log Dashboard</h1>
+            <p class="text-slate-500 mt-1 text-sm">মোট ${total || 0}টি এন্ট্রি — User, Admin ও System-এর সব গুরুত্বপূর্ণ action</p>
+        </div>
+        <div class="flex gap-2">
+            <a href="/admin/audit-logs/export.csv?${qs}" class="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-sm font-semibold"><i class="fas fa-file-csv mr-1"></i>CSV</a>
+            <a href="/admin/audit-logs/export.xlsx?${qs}" class="px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-2xl text-sm font-semibold"><i class="fas fa-file-excel mr-1"></i>Excel</a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-white rounded-2xl border border-slate-100 p-5"><div class="text-xs text-slate-400 uppercase font-medium">Low Risk</div><div class="text-2xl font-bold text-slate-600 mt-1">${rc.low || 0}</div></div>
+        <div class="bg-white rounded-2xl border border-slate-100 p-5"><div class="text-xs text-slate-400 uppercase font-medium">Medium Risk</div><div class="text-2xl font-bold text-amber-600 mt-1">${rc.medium || 0}</div></div>
+        <div class="bg-white rounded-2xl border border-slate-100 p-5"><div class="text-xs text-slate-400 uppercase font-medium">High Risk</div><div class="text-2xl font-bold text-red-600 mt-1">${rc.high || 0}</div></div>
+        <div class="bg-white rounded-2xl border border-slate-100 p-5"><div class="text-xs text-slate-400 uppercase font-medium">Critical</div><div class="text-2xl font-bold text-red-700 mt-1">${rc.critical || 0}</div></div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div class="lg:col-span-1 bg-white rounded-3xl border border-slate-100 p-6 h-fit">
+            <h3 class="font-semibold text-slate-800 mb-2 text-sm"><i class="fas fa-chart-simple text-indigo-500 mr-2"></i>Category Breakdown</h3>
+            ${catRows}
+        </div>
+
+        <div class="lg:col-span-3 space-y-4">
+            <form method="GET" action="/admin/audit-logs" class="bg-white rounded-3xl border border-slate-100 p-5 flex flex-wrap gap-3">
+                <input type="text" name="q" value="${escapeHtml(f.q)}" placeholder="সার্চ (actor, action, details)" class="flex-1 min-w-[200px] border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+                <select name="actorType" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+                    <option value="">সব Actor</option>
+                    <option value="user" ${f.actorType === 'user' ? 'selected' : ''}>User</option>
+                    <option value="admin" ${f.actorType === 'admin' ? 'selected' : ''}>Admin</option>
+                    <option value="system" ${f.actorType === 'system' ? 'selected' : ''}>System</option>
+                </select>
+                <select name="category" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+                    <option value="">সব Category</option>
+                    ${categoryOptions}
+                </select>
+                <select name="status" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+                    <option value="">সব Status</option>
+                    <option value="success" ${f.status === 'success' ? 'selected' : ''}>Success</option>
+                    <option value="failure" ${f.status === 'failure' ? 'selected' : ''}>Failure</option>
+                </select>
+                <select name="riskLevel" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+                    <option value="">সব Risk</option>
+                    ${riskOptions}
+                </select>
+                <input type="text" name="action" value="${escapeHtml(f.action)}" placeholder="Action টাইপ" class="w-40 border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+                <input type="date" name="from" value="${f.from || ''}" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+                <input type="date" name="to" value="${f.to || ''}" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+                <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">ফিল্টার</button>
+                ${(f.q || f.actorType || f.category || f.status || f.riskLevel || f.action || f.from || f.to) ? '<a href="/admin/audit-logs" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">রিসেট</a>' : ''}
+            </form>
+
+            <div class="bg-white rounded-3xl border border-slate-100 overflow-x-auto modern-table">
+                <table class="w-full text-sm">
+                    <thead class="bg-slate-50">
+                        <tr>
+                            <th class="px-5 py-3 text-left font-medium text-slate-500 uppercase text-xs">ID</th>
+                            <th class="px-5 py-3 text-left font-medium text-slate-500 uppercase text-xs">Time</th>
+                            <th class="px-5 py-3 text-left font-medium text-slate-500 uppercase text-xs">Actor</th>
+                            <th class="px-5 py-3 text-left font-medium text-slate-500 uppercase text-xs">Action</th>
+                            <th class="px-5 py-3 text-left font-medium text-slate-500 uppercase text-xs">Category</th>
+                            <th class="px-5 py-3 text-left font-medium text-slate-500 uppercase text-xs">Status</th>
+                            <th class="px-5 py-3 text-left font-medium text-slate-500 uppercase text-xs">Risk</th>
+                            <th class="px-5 py-3 text-left font-medium text-slate-500 uppercase text-xs">IP</th>
+                            <th class="px-5 py-3 text-left font-medium text-slate-500 uppercase text-xs">Location</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">${rows}</tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-center gap-3">
+                ${page > 1 ? '<a href="/admin/audit-logs?page=' + (page - 1) + '&' + qs + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">← আগের পেজ</a>' : ''}
+                <span class="px-4 py-2 text-sm text-slate-500">পেজ ${page} / ${totalPages}</span>
+                ${page < totalPages ? '<a href="/admin/audit-logs?page=' + (page + 1) + '&' + qs + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">পরের পেজ →</a>' : ''}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Log Details Modal -->
+<div id="auditLogModalOverlay" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.5); z-index:9999; align-items:center; justify-content:center; padding:20px;">
+    <div style="background:#fff; border-radius:20px; max-width:640px; width:100%; max-height:85vh; overflow-y:auto; padding:0;">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:20px 24px; border-bottom:1px solid #f1f5f9;">
+            <h3 style="font-weight:700; font-size:16px; color:#1e293b; margin:0;"><i class="fas fa-circle-info" style="color:#6366f1; margin-right:8px;"></i>Audit Log Details</h3>
+            <button onclick="closeLogDetail()" style="background:none; border:none; font-size:18px; color:#94a3b8; cursor:pointer;">&times;</button>
+        </div>
+        <div id="auditLogModalBody" style="padding:24px; font-size:13px; color:#334155;">লোড হচ্ছে...</div>
+    </div>
+</div>
+<script>
+async function openLogDetail(id) {
+  const overlay = document.getElementById('auditLogModalOverlay');
+  const body = document.getElementById('auditLogModalBody');
+  overlay.style.display = 'flex';
+  body.innerHTML = 'লোড হচ্ছে...';
+  try {
+    const res = await fetch('/admin/audit-logs/' + id + '.json');
+    if (!res.ok) throw new Error('not found');
+    const log = await res.json();
+    const row = (label, value) => '<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #f8fafc;"><span style="color:#94a3b8; font-weight:600;">' + label + '</span><span style="color:#334155; text-align:right; max-width:60%; word-break:break-word;">' + (value == null || value === '' ? '-' : String(value)) + '</span></div>';
+    body.innerHTML =
+      row('ID', '#' + log.id) +
+      row('Time', new Date(log.created_at).toLocaleString('en-US')) +
+      row('Actor Type', (log.actor_type || '').toUpperCase()) +
+      row('Actor', log.actor_username) +
+      row('Action', log.action) +
+      row('Category', log.category) +
+      row('Status', (log.status || '').toUpperCase()) +
+      row('Risk Level', (log.risk_level || '').toUpperCase()) +
+      row('IP Address', log.ip_address) +
+      row('Device', log.device_name) +
+      row('Browser', log.browser) +
+      row('OS', log.os) +
+      row('Location', log.location) +
+      row('Request ID', log.request_id) +
+      '<div style="margin-top:12px;"><div style="color:#94a3b8; font-weight:600; margin-bottom:6px;">Details</div><pre style="background:#f8fafc; border-radius:10px; padding:12px; font-size:12px; overflow-x:auto; white-space:pre-wrap; word-break:break-word;">' + JSON.stringify(log.details || {}, null, 2) + '</pre></div>';
+  } catch (e) {
+    body.innerHTML = '<div style="color:#ef4444;">লোড করতে সমস্যা হয়েছে।</div>';
+  }
+}
+function closeLogDetail() {
+  document.getElementById('auditLogModalOverlay').style.display = 'none';
+}
+document.getElementById('auditLogModalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeLogDetail();
+});
+</script>
+`
+}) %>

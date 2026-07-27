@@ -1,5 +1,61 @@
 const express = require('express');
 const router = express.Router();
+
+router.get('/api/analytics', async (req, res) => {
+  try {
+    const days  = Math.min(90, Math.max(1, parseInt(req.query.days) || 14));
+    const interval = `${days} days`;
+
+    const [revenue, userGrowth, betStats, topUsers, kycSummary, queueH] = await Promise.all([
+      pool.query(`
+        SELECT d::date AS day,
+          COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='deposit'  AND status='approved' AND created_at::date=d::date),0) AS deposit,
+          COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='withdraw' AND status='approved' AND created_at::date=d::date),0) AS withdraw
+        FROM generate_series(CURRENT_DATE - INTERVAL '${interval}', CURRENT_DATE, INTERVAL '1 day') d ORDER BY day
+      `),
+      pool.query(`
+        SELECT d::date AS day,
+          COALESCE((SELECT COUNT(*) FROM users WHERE created_at::date=d::date),0) AS new_users
+        FROM generate_series(CURRENT_DATE - INTERVAL '${interval}', CURRENT_DATE, INTERVAL '1 day') d ORDER BY day
+      `),
+      pool.query(`
+        SELECT d::date AS day,
+          COALESCE((SELECT COUNT(*) FROM bets WHERE created_at::date=d::date),0) AS cnt,
+          COALESCE((SELECT SUM(stake) FROM bets WHERE created_at::date=d::date),0) AS staked
+        FROM generate_series(CURRENT_DATE - INTERVAL '${interval}', CURRENT_DATE, INTERVAL '1 day') d ORDER BY day
+      `),
+      pool.query(`
+        SELECT u.username, SUM(pr.amount) AS total FROM payment_requests pr
+        JOIN users u ON pr.user_id=u.id
+        WHERE pr.type='deposit' AND pr.status='approved' AND pr.created_at > NOW()-INTERVAL '${interval}'
+        GROUP BY u.username ORDER BY total DESC LIMIT 10
+      `),
+      pool.query(`
+        SELECT
+          COUNT(*) FILTER (WHERE kyc_status='pending')  AS pending,
+          COUNT(*) FILTER (WHERE kyc_status='approved') AS approved,
+          COUNT(*) FILTER (WHERE kyc_status='rejected') AS rejected
+        FROM users WHERE kyc_status IS NOT NULL
+      `).catch(() => ({ rows: [{ pending:0, approved:0, rejected:0 }] })),
+      (async () => {
+        try { const { getHealthSummary } = require('../services/queue/monitor'); return await getHealthSummary(); } catch(e) { return {}; }
+      })()
+    ]);
+
+    res.json({
+      days,
+      revenue:    revenue.rows.map(r => ({ day: r.day, deposit: Number(r.deposit), withdraw: Number(r.withdraw), net: Number(r.deposit) - Number(r.withdraw) })),
+      userGrowth: userGrowth.rows.map(r => ({ day: r.day, count: parseInt(r.new_users) })),
+      betStats:   betStats.rows.map(r => ({ day: r.day, cnt: parseInt(r.cnt), staked: Number(r.staked) })),
+      topDepositors: topUsers.rows,
+      kycSummary: kycSummary.rows[0],
+      queueHealth: queueH
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const rateLimit = require('express-rate-limit');
 const { pool } = require('../db');
 const { isAdmin } = require('../middleware/auth');
@@ -9,9 +65,9 @@ const { syncMatches } = require('../services/matchUpdater');
 const { runBackupNow, restoreFromBackup, getBackupStatus } = require('../services/backup');
 const { loadSettings, invalidateSettingsCache } = require('../services/settings');
 const { creditApprovedDeposit } = require('./payment');
+const { emitToUser, notifyUser, broadcastToAllUsers, notifyAdmins } = require('../services/notify');
 const bcrypt = require('bcryptjs');
 const { getDemoStats } = require('../services/socket');
-const systemHealth = require('../services/systemHealth');
 const {
   generateTotpSetup,
   verifyTotpToken,
@@ -22,15 +78,22 @@ const {
 } = require('../services/twofactor');
 const { getPinStatus, adminResetPin } = require('../services/withdrawPin');
 const { getUserFraudStatus, getFraudDashboardStats } = require('../services/fraudDetection');
+const { logEvent: logAuditEvent, listAuditLogs, getAuditLogById, exportAuditLogs, getCategoryCounts, getRiskCounts, VALID_CATEGORIES, VALID_RISK_LEVELS } = require('../services/auditLog');
 const { listDuplicateFlags, reviewDuplicateFlag, scanAllUsers } = require('../services/duplicateDetection');
 const { getUserDeviceOverview } = require('../services/deviceTracking');
 const cache = require('../services/cache');
 const cacheKeys = require('../services/cacheKeys');
-const queue = require('../services/queue');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
 
 const { requireIntParam, requireAmount, parseAmount, sanitizeText, isSafeUrl } = require('../middleware/validate');
 const { listIpRules, setIpRule, removeIpRule } = require('../services/ipRules');
+const rbac = require('../services/rbac');
+const {
+  listVipLevelsAdmin, upsertVipLevel, toggleVipLevelActive,
+  getVipAnalytics, listAllRewardHistory, listAllUpgradeHistory
+} = require('../services/vip');
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 } }); // JSON import-এর জন্য, ২MB সীমা
 
 // ==================== 2FA ভেরিফিকেশন রুটের জন্য কড়া rate limit ====================
 // এই দুটো রুটে কোড অনুমান করে ব্রুট-ফোর্স করার ঝুঁকি থাকে, তাই আলাদা কড়া সীমা।
@@ -68,10 +131,23 @@ const adminFinancialLimiter = rateLimit({
   store: new RedisRateLimitStore('rl:adminfinancial:')
 });
 
-// ==================== ADMIN ACTIVITY LOG — শেয়ার্ড ইউটিলিটি (services/auditLog.js) ====================
-const { logAdminAction } = require('../services/auditLog');
-const rbac = require('../services/rbac');
-const { requirePermission } = rbac;
+// ==================== ADMIN ACTIVITY LOG HELPER ====================
+async function logAdminAction(adminId, adminUsername, actionType, details, ip = null) {
+    // admin_logs কম-ভলিউম, তাই সরাসরি লেখা হয় (আগে এখানে পুরনো Postgres-queue দিয়ে যেত,
+    // এখন BullMQ Activity Log Queue দিয়ে যায় — সাথে সরাসরি admin_logs-এও লেখা থাকে যাতে কখনো না হারায়)
+    try {
+        await pool.query(
+            `INSERT INTO admin_logs (admin_id, admin_username, action_type, details, ip_address) 
+             VALUES ($1, $2, $3, $4, $5)`,
+            [adminId, adminUsername, actionType, details, ip]
+        );
+    } catch (err) {
+        console.error('Admin Log Error:', err.message);
+    }
+    try {
+        require('../queues').enqueueActivityLog({ userId: adminId, username: adminUsername, actionType, details, ip }).catch(() => {});
+    } catch (e) { /* queue মডিউল লোড না হলেও সমস্যা নেই */ }
+}
 
 // ==================== অ্যাডমিন সেশনের জন্য কড়া কুকি পলিসি ====================
 // সাধারণ ইউজার সেশন থেকে আলাদা — অ্যাডমিন সেশন প্রোডাকশনে ৮ ঘণ্টা পর এক্সপায়ার হয়ে যাবে
@@ -108,7 +184,7 @@ router.post('/login', adminLoginLimiter, async (req, res) => {
     // যেসব অ্যাডমিন ইমেইল দিয়ে লগইন করার চেষ্টা করতেন তাদের জন্য এটা সবসময় ব্যর্থ হতো।
     // এখন username অথবা email দুটোই মেলানো হচ্ছে (case-insensitive)।
     const result = await pool.query(
-      `SELECT id, username, email, password, role, status FROM users
+      `SELECT * FROM users
        WHERE (LOWER(username) = LOWER($1) OR LOWER(email) = LOWER($1))
          AND role = $2
        LIMIT 1`,
@@ -164,7 +240,7 @@ router.post('/login/2fa', strict2FALimiter, async (req, res) => {
 
   try {
     const { token, backupCode } = req.body;
-    const result = await pool.query('SELECT id, username, role, two_factor_secret, two_factor_enabled, totp_enabled, totp_secret, totp_backup_codes FROM users WHERE id = $1 LIMIT 1', [pending.id]);
+    const result = await pool.query('SELECT * FROM users WHERE id = $1 LIMIT 1', [pending.id]);
     const admin = result.rows[0];
 
     if (!admin || !admin.totp_enabled) {
@@ -306,7 +382,7 @@ router.post('/2fa/backup-codes/acknowledge', async (req, res) => {
 router.post('/2fa/disable', async (req, res) => {
   try {
     const { password, token } = req.body;
-    const result = await pool.query('SELECT id, username, password, two_factor_secret, two_factor_enabled, totp_enabled, totp_secret FROM users WHERE id = $1', [req.session.user.id]);
+    const result = await pool.query('SELECT * FROM users WHERE id = $1', [req.session.user.id]);
     const admin = result.rows[0];
 
     const passOk = admin && await bcrypt.compare(password || '', admin.password);
@@ -384,7 +460,7 @@ router.get('/kyc', async (req, res) => {
   }
 });
 
-router.post('/kyc/:id/approve', requirePermission('kyc.manage'), async (req, res) => {
+router.post('/kyc/:id/approve', async (req, res) => {
   try {
     const { id } = req.params;
     const r = await pool.query(
@@ -402,7 +478,7 @@ router.post('/kyc/:id/approve', requirePermission('kyc.manage'), async (req, res
   }
 });
 
-router.post('/kyc/:id/reject', requirePermission('kyc.manage'), async (req, res) => {
+router.post('/kyc/:id/reject', async (req, res) => {
   try {
     const { id } = req.params;
     const reason = (req.body && req.body.reason) || '';
@@ -425,8 +501,41 @@ router.post('/kyc/:id/reject', requirePermission('kyc.manage'), async (req, res)
 const SETTING_KEYS = [
   'site_name', 'support_email', 'maintenance_mode', 'max_login_attempts',
   'min_bet', 'max_bet', 'turnover_multiplier', 'max_daily_bets',
-  'deposit_commission_percent', 'withdraw_commission_percent', 'min_deposit', 'min_withdraw'
+  'deposit_commission_percent', 'withdraw_commission_percent', 'min_deposit', 'min_withdraw',
+  'maintenance_message', 'maintenance_eta', 'maintenance_allowed_ips', 'maintenance_bypass_token',
+  // ---- System Settings hub-এ যোগ হওয়া নতুন ক্যাটাগরি ---- (সব অ্যাক্টুয়াল secret .env-এই থাকে, এখানে শুধু non-secret কনফিগ)
+  'site_tagline', 'support_phone',
+  'smtp_host', 'smtp_port', 'smtp_secure', 'smtp_from_name', 'smtp_from_email',
+  'sms_provider', 'sms_sender_id',
+  'payment_deposit_enabled', 'payment_withdraw_enabled', 'payment_gateway_live_mode',
+  'api_public_enabled', 'api_rate_limit_per_15min',
+  'upload_max_size_mb', 'upload_allowed_types',
+  'session_idle_timeout_minutes',
+  'default_language', 'default_timezone', 'default_currency'
 ];
+
+router.get('/system-settings', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT key, value FROM site_settings');
+    const settings = {};
+    result.rows.forEach(r => { settings[r.key] = r.value; });
+    settings.maintenance_mode = settings.maintenance_mode === 'true';
+    settings.payment_deposit_enabled = settings.payment_deposit_enabled !== 'false';
+    settings.payment_withdraw_enabled = settings.payment_withdraw_enabled !== 'false';
+    settings.payment_gateway_live_mode = settings.payment_gateway_live_mode === 'true';
+    settings.api_public_enabled = settings.api_public_enabled !== 'false';
+    settings.smtp_secure = settings.smtp_secure !== 'false';
+
+    res.render('admin/system-settings', {
+      settings,
+      redisConnected: cache.getStatus().connected,
+      saved: req.query.saved === '1'
+    });
+  } catch (err) {
+    console.error('System settings load error:', err && err.stack ? err.stack : err);
+    res.render('admin/system-settings', { settings: {}, redisConnected: false, saved: false });
+  }
+});
 
 router.get('/settings', async (req, res) => {
   try {
@@ -451,14 +560,33 @@ router.get('/settings', async (req, res) => {
   }
 });
 
-router.post('/settings/update', requirePermission('settings.manage'), async (req, res) => {
+router.post('/settings/update', async (req, res) => {
   try {
+    // টগল করার আগের অবস্থা জেনে রাখা — যাতে ON/OFF কোন দিকে গেল সেটা স্পষ্টভাবে লগ করা যায়
+    const prevRes = await pool.query("SELECT value FROM site_settings WHERE key = 'maintenance_mode'");
+    const wasOn = prevRes.rows[0] && prevRes.rows[0].value === 'true';
+
     for (const key of SETTING_KEYS) {
       if (key === 'maintenance_mode') continue; // নিচে আলাদাভাবে সামলানো হচ্ছে
       if (!(key in req.body)) continue;
       let raw = req.body[key];
       if (Array.isArray(raw)) raw = raw[raw.length - 1];
-      const value = raw === null || raw === undefined ? '' : String(raw);
+      let value = raw === null || raw === undefined ? '' : String(raw);
+
+      // মেইনটেন্যান্স মেসেজ ইউজার-facing পেজে (মেইনটেন্যান্স স্ক্রিন) সরাসরি দেখানো হয়,
+      // তাই stored-XSS ঠেকাতে HTML স্ট্রিপ করে sanitize করা হচ্ছে
+      if (key === 'maintenance_message') value = sanitizeText(value, { maxLen: 500 });
+      // Allowed IP লিস্ট — শুধু বৈধ ফরম্যাটের এন্ট্রিগুলোই রাখা হচ্ছে (IPv4/IPv6, কমা/নিউলাইন দিয়ে আলাদা)
+      if (key === 'maintenance_allowed_ips') {
+        value = value
+          .split(/[\s,]+/)
+          .map(ip => ip.trim())
+          .filter(ip => /^[0-9a-fA-F:.]+$/.test(ip))
+          .join(',');
+      }
+      // Emergency bypass token — শুধু url-safe ক্যারেক্টার, বাড়তি স্পেস/HTML বাদ
+      if (key === 'maintenance_bypass_token') value = value.trim().replace(/[^A-Za-z0-9_\-]/g, '').slice(0, 128);
+
       await pool.query(
         `INSERT INTO site_settings (key, value, updated_at) VALUES ($1, $2, NOW())
          ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
@@ -487,24 +615,52 @@ router.post('/settings/update', requirePermission('settings.manage'), async (req
       console.error('loadSettings() cache refresh failed (settings already saved):', e && e.stack ? e.stack : e);
     }
     try {
-      await logAdminAction(req.session.user.id, req.session.user.username, 'SETTINGS_UPDATE', 'সাইট সেটিংস পরিবর্তন করা হয়েছে', req.ip);
+      if (maintenanceBool && !wasOn) {
+        const msg = sanitizeText(req.body.maintenance_message || '', { maxLen: 200 });
+        const eta = req.body.maintenance_eta ? String(req.body.maintenance_eta).slice(0, 100) : '';
+        await logAdminAction(req.session.user.id, req.session.user.username, 'MAINTENANCE_ON',
+          `মেইনটেন্যান্স মোড চালু করা হয়েছে${eta ? ' | আনুমানিক সময়: ' + eta : ''}${msg ? ' | বার্তা: ' + msg : ''}`, req.ip);
+        logAuditEvent({
+          req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+          action: 'MAINTENANCE_ENABLED', category: 'maintenance', status: 'success', riskLevel: 'high',
+          details: { eta, message: msg }
+        }).catch(e => console.error('logAuditEvent (MAINTENANCE_ENABLED) error:', e.message));
+      } else if (!maintenanceBool && wasOn) {
+        await logAdminAction(req.session.user.id, req.session.user.username, 'MAINTENANCE_OFF', 'মেইনটেন্যান্স মোড বন্ধ করা হয়েছে', req.ip);
+        logAuditEvent({
+          req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+          action: 'MAINTENANCE_DISABLED', category: 'maintenance', status: 'success', riskLevel: 'medium'
+        }).catch(e => console.error('logAuditEvent (MAINTENANCE_DISABLED) error:', e.message));
+      } else {
+        await logAdminAction(req.session.user.id, req.session.user.username, 'SETTINGS_UPDATE', 'সাইট সেটিংস পরিবর্তন করা হয়েছে', req.ip);
+        logAuditEvent({
+          req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+          action: 'SETTINGS_CHANGED', category: 'settings', status: 'success', riskLevel: 'medium',
+          details: { changedKeys: SETTING_KEYS.filter(k => k in req.body) }
+        }).catch(e => console.error('logAuditEvent (SETTINGS_CHANGED) error:', e.message));
+      }
     } catch (e) {
       console.error('logAdminAction failed (settings already saved):', e && e.stack ? e.stack : e);
     }
 
-    return res.redirect('/admin/settings?saved=1');
+    return res.redirect(`${req.body.redirect_to === 'system-settings' ? '/admin/system-settings' : '/admin/settings'}?saved=1`);
   } catch (err) {
     console.error('Settings update error:', err && err.stack ? err.stack : err);
-    if (!res.headersSent) return res.redirect('/admin/settings?error=1');
+    if (!res.headersSent) return res.redirect(`${req.body.redirect_to === 'system-settings' ? '/admin/system-settings' : '/admin/settings'}?error=1`);
   }
 });
 
-router.post('/settings/admins/promote', requirePermission('admins.manage'), async (req, res) => {
+router.post('/settings/admins/promote', async (req, res) => {
   try {
     const { username } = req.body;
     const r = await pool.query("UPDATE users SET role = 'admin' WHERE username = $1 RETURNING id", [username]);
     if (r.rows[0]) {
       await logAdminAction(req.session.user.id, req.session.user.username, 'ADMIN_PROMOTE', `${username} কে অ্যাডমিন করা হয়েছে`, req.ip);
+      logAuditEvent({
+        req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+        action: 'ROLE_CHANGED', category: 'role', status: 'success', riskLevel: 'high',
+        details: { targetUserId: r.rows[0].id, targetUsername: username, newRole: 'admin' }
+      }).catch(e => console.error('logAuditEvent (ROLE_CHANGED promote) error:', e.message));
     }
     res.redirect('/admin/settings');
   } catch (err) {
@@ -513,14 +669,19 @@ router.post('/settings/admins/promote', requirePermission('admins.manage'), asyn
   }
 });
 
-router.post('/settings/admins/:id/demote', requirePermission('admins.manage'), async (req, res) => {
+router.post('/settings/admins/:id/demote', async (req, res) => {
   try {
     const { id } = req.params;
     if (parseInt(id) === req.session.user.id) {
       return res.redirect('/admin/settings');
     }
-    await pool.query("UPDATE users SET role = 'user', role_key = NULL WHERE id = $1", [id]);
+    await pool.query("UPDATE users SET role = 'user' WHERE id = $1", [id]);
     await logAdminAction(req.session.user.id, req.session.user.username, 'ADMIN_DEMOTE', `অ্যাডমিন আইডি #${id} থেকে অ্যাডমিন অ্যাক্সেস সরানো হয়েছে`, req.ip);
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'ROLE_CHANGED', category: 'role', status: 'success', riskLevel: 'high',
+      details: { targetUserId: id, newRole: 'user' }
+    }).catch(e => console.error('logAuditEvent (ROLE_CHANGED demote) error:', e.message));
     res.redirect('/admin/settings');
   } catch (err) {
     console.error('Admin demote error:', err.message);
@@ -528,78 +689,55 @@ router.post('/settings/admins/:id/demote', requirePermission('admins.manage'), a
   }
 });
 
-// ==================== RBAC — Roles ও Permission ম্যানেজমেন্ট ====================
-router.get('/roles', requirePermission('roles.manage'), async (req, res) => {
+// ==================== NOTIFICATION BROADCAST ====================
+router.get('/notifications', async (req, res) => {
   try {
-    const [roles, adminsRes] = await Promise.all([
-      rbac.listRoles(),
-      pool.query(`SELECT id, username, email, role, role_key FROM users WHERE role = 'admin' ORDER BY username ASC`)
-    ]);
-    res.render('admin/roles', {
-      roles, admins: adminsRes.rows, permissionCatalog: rbac.PERMISSIONS
+    const history = await pool.query(
+      `SELECT * FROM notification_broadcasts ORDER BY created_at DESC LIMIT 30`
+    );
+    const totalUsersRes = await pool.query('SELECT COUNT(*) AS cnt FROM users');
+    res.render('admin/notifications', {
+      history: history.rows,
+      totalUsers: parseInt(totalUsersRes.rows[0].cnt),
     });
   } catch (err) {
-    console.error('Roles list error:', err.message);
-    res.render('admin/roles', { roles: [], admins: [], permissionCatalog: rbac.PERMISSIONS });
+    console.error('notifications page error:', err.message);
+    res.render('admin/notifications', { history: [], totalUsers: 0 });
   }
 });
 
-router.post('/roles', requirePermission('roles.manage'), async (req, res) => {
+router.post('/notifications/broadcast', adminFinancialLimiter, async (req, res) => {
   try {
-    const { key, name, description } = req.body;
-    const permissions = Array.isArray(req.body.permissions) ? req.body.permissions : (req.body.permissions ? [req.body.permissions] : []);
-    await rbac.createRole({ key, name, description, permissions });
-    await logAdminAction(req.session.user.id, req.session.user.username, 'ROLE_CREATED', `নতুন রোল তৈরি: "${key}" (${name})`, req.ip);
-    req.flash('success', '✅ রোল তৈরি হয়েছে।');
-  } catch (err) {
-    console.error('Role create error:', err.message);
-    req.flash('error', '❌ ' + err.message);
-  }
-  res.redirect('/admin/roles');
-});
+    const title = sanitizeText(req.body.title || '', { maxLen: 150 });
+    const message = sanitizeText(req.body.message || '', { maxLen: 500 });
+    const allowedTypes = ['announcement', 'system', 'info', 'success', 'error'];
+    const type = allowedTypes.includes(req.body.type) ? req.body.type : 'announcement';
 
-router.post('/roles/:key/update', requirePermission('roles.manage'), async (req, res) => {
-  try {
-    const { name, description } = req.body;
-    const permissions = Array.isArray(req.body.permissions) ? req.body.permissions : (req.body.permissions ? [req.body.permissions] : []);
-    await rbac.updateRole(req.params.key, { name, description, permissions });
-    await logAdminAction(req.session.user.id, req.session.user.username, 'ROLE_UPDATED', `রোল আপডেট: "${req.params.key}"`, req.ip);
-    req.flash('success', '✅ রোল আপডেট হয়েছে।');
-  } catch (err) {
-    console.error('Role update error:', err.message);
-    req.flash('error', '❌ ' + err.message);
-  }
-  res.redirect('/admin/roles');
-});
-
-router.post('/roles/:key/delete', requirePermission('roles.manage'), async (req, res) => {
-  try {
-    await rbac.deleteRole(req.params.key);
-    await logAdminAction(req.session.user.id, req.session.user.username, 'ROLE_DELETED', `রোল ডিলিট: "${req.params.key}"`, req.ip);
-    req.flash('success', '✅ রোল ডিলিট হয়েছে।');
-  } catch (err) {
-    console.error('Role delete error:', err.message);
-    req.flash('error', '❌ ' + err.message);
-  }
-  res.redirect('/admin/roles');
-});
-
-router.post('/roles/assign', requirePermission('roles.manage'), async (req, res) => {
-  try {
-    const userId = parseInt(req.body.userId, 10);
-    if (!userId || userId < 1) {
-      req.flash('error', '❌ অবৈধ ইউজার আইডি।');
-      return res.redirect('/admin/roles');
+    if (!title || !message) {
+      req.flash('error', 'শিরোনাম ও বার্তা দুটোই আবশ্যক');
+      return res.redirect('/admin/notifications');
     }
-    const { roleKey } = req.body;
-    await rbac.assignUserRole(userId, roleKey || null);
-    await logAdminAction(req.session.user.id, req.session.user.username, 'ROLE_ASSIGNED', `ইউজার #${userId}-কে রোল "${roleKey || 'super_admin (default)'}" অ্যাসাইন করা হয়েছে`, req.ip);
-    req.flash('success', '✅ রোল অ্যাসাইন করা হয়েছে।');
+
+    const recipientCount = await broadcastToAllUsers({ title, message, type });
+
+    await pool.query(
+      `INSERT INTO notification_broadcasts (admin_id, admin_username, title, message, type, recipient_count)
+       VALUES ($1,$2,$3,$4,$5,$6)`,
+      [req.session.user.id, req.session.user.username, title, message, type, recipientCount]
+    );
+
+    await logAdminAction(
+      req.session.user.id, req.session.user.username, 'NOTIFICATION_BROADCAST',
+      `সব ইউজারকে (${recipientCount} জন) ব্রডকাস্ট পাঠানো হয়েছে: "${title}"`, req.ip
+    );
+
+    req.flash('success', `✅ ${recipientCount} জন ইউজারকে নোটিফিকেশন পাঠানো হয়েছে!`);
+    res.redirect('/admin/notifications');
   } catch (err) {
-    console.error('Role assign error:', err.message);
-    req.flash('error', '❌ ' + err.message);
+    console.error('broadcast error:', err.message);
+    req.flash('error', 'ব্রডকাস্ট পাঠাতে সমস্যা হয়েছে');
+    res.redirect('/admin/notifications');
   }
-  res.redirect('/admin/roles');
 });
 
 // ==================== DASHBOARD ====================
@@ -617,155 +755,89 @@ router.get('/api/demo-stats', async (req, res) => {
 
 router.get('/', async (req, res) => {
   try {
-    const rangeTo = (req.query.to && /^\d{4}-\d{2}-\d{2}$/.test(req.query.to)) ? req.query.to : new Date().toISOString().slice(0, 10);
-    const rangeFrom = (req.query.from && /^\d{4}-\d{2}-\d{2}$/.test(req.query.from)) ? req.query.from : new Date(Date.now() - 13 * 86400000).toISOString().slice(0, 10);
+    const users = await pool.query('SELECT COUNT(*) as count FROM users');
+    const totalCoins = await pool.query('SELECT SUM(coins) as total FROM users');
+    const activeUsersNow = await pool.query(`SELECT COUNT(*) AS cnt FROM users WHERE last_login >= NOW() - INTERVAL '15 minutes'`);
+    const matches = await pool.query('SELECT COUNT(*) as count FROM matches');
+    const totalBets = await pool.query('SELECT COUNT(*) as count FROM bets');
 
-    // ── Stable KPI counts cached 30s (total users, coins, matches, bets) ──────
-    const [cachedCounts, stableRevenue] = await Promise.all([
-      cache.get('dashboard:kpi:counts'),
-      cache.get(`dashboard:revenue:${rangeFrom}:${rangeTo}`)
-    ]);
+    const recentMatchesRes = await pool.query(`SELECT * FROM matches ORDER BY start_time DESC LIMIT 8`);
+    const recentUsersRes = await pool.query(`SELECT * FROM users ORDER BY created_at DESC LIMIT 8`);
 
-    // ==================== পারফরম্যান্স: নিচের সব কোয়েরি একে অপরের থেকে স্বাধীন —
-    // আগে একটার পর একটা sequentially await হতো (N × round-trip latency),
-    // এখন Promise.all দিয়ে সমান্তরালে চালানো হচ্ছে (max round-trip latency)।
-    // ফলাফল/ভ্যারিয়েবল নাম অপরিবর্তিত — শুধু execution দ্রুত। ====================
-    const [
-      users, totalCoins, matches, totalBets,
-      recentMatchesRes, recentUsersRes,
-      todayDeposit, todayWithdraw, todayBets, todayProfitLoss, yesterdayProfitLoss,
-      totalDepositAll, totalWithdrawAll, newUsersToday, activeUsersNow,
-      pendingDeposits, pendingWithdrawals, pendingSupport,
-      revenueTrend, userGrowth,
-      recentBets, recentDeposits, recentWithdrawals,
-      suspicious, fraudCounts, recentFraudFlags, dupCounts, recentDupFlags
-    ] = await Promise.all([
-      pool.query('SELECT COUNT(*) as count FROM users'),
-      pool.query('SELECT SUM(coins) as total FROM users'),
-      pool.query('SELECT COUNT(*) as count FROM matches'),
-      pool.query('SELECT COUNT(*) as count FROM bets'),
+    const todayDeposit = await pool.query(
+      `SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS cnt FROM payment_requests 
+       WHERE type='deposit' AND status='approved' AND created_at::date = CURRENT_DATE`
+    );
+    const todayWithdraw = await pool.query(
+      `SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS cnt FROM payment_requests 
+       WHERE type='withdraw' AND status='approved' AND created_at::date = CURRENT_DATE`
+    );
+    const todayBets = await pool.query(
+      `SELECT COALESCE(SUM(stake),0) AS total, COUNT(*) AS cnt FROM bets WHERE created_at::date = CURRENT_DATE`
+    );
+    const todayProfitLoss = await pool.query(
+      `SELECT COALESCE(SUM(stake),0) AS staked,
+              COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS paidout
+       FROM bets WHERE created_at::date = CURRENT_DATE AND status IN ('won','lost')`
+    );
+    const yesterdayProfitLoss = await pool.query(
+      `SELECT COALESCE(SUM(stake),0) AS staked,
+              COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS paidout
+       FROM bets WHERE created_at::date = CURRENT_DATE - INTERVAL '1 day' AND status IN ('won','lost')`
+    );
 
-      pool.query(`SELECT id, title, team_a, team_b, sport, league, status, start_time, result FROM matches ORDER BY start_time DESC LIMIT 8`),
-      pool.query(`SELECT id, username, email, phone, status, balance, created_at, kyc_status FROM users ORDER BY created_at DESC LIMIT 8`),
+    // ==== সর্বমোট (লাইফটাইম) ডিপোজিট/উইথড্র — ড্যাশবোর্ড কার্ডের আসল সংখ্যা ====
+    const totalDepositAll = await pool.query(
+      `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests WHERE type='deposit' AND status='approved'`
+    );
+    const totalWithdrawAll = await pool.query(
+      `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests WHERE type='withdraw' AND status='approved'`
+    );
+    const newUsersToday = await pool.query(
+      `SELECT COUNT(*) AS cnt FROM users WHERE created_at::date = CURRENT_DATE`
+    );
 
-      pool.query(
-        `SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS cnt FROM payment_requests 
-         WHERE type='deposit' AND status='approved' AND created_at::date = CURRENT_DATE`
-      ),
-      pool.query(
-        `SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS cnt FROM payment_requests 
-         WHERE type='withdraw' AND status='approved' AND created_at::date = CURRENT_DATE`
-      ),
-      pool.query(
-        `SELECT COALESCE(SUM(stake),0) AS total, COUNT(*) AS cnt FROM bets WHERE created_at::date = CURRENT_DATE`
-      ),
-      pool.query(
-        `SELECT COALESCE(SUM(stake),0) AS staked,
-                COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS paidout
-         FROM bets WHERE created_at::date = CURRENT_DATE AND status IN ('won','lost')`
-      ),
-      pool.query(
-        `SELECT COALESCE(SUM(stake),0) AS staked,
-                COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS paidout
-         FROM bets WHERE created_at::date = CURRENT_DATE - INTERVAL '1 day' AND status IN ('won','lost')`
-      ),
+    // ==== পেন্ডিং অ্যাকশন — ডিপোজিট, উইথড্র, সাপোর্ট মেসেজ ====
+    const pendingDeposits = await pool.query(
+      `SELECT COUNT(*) AS cnt FROM payment_requests WHERE type='deposit' AND status='pending'`
+    );
+    const pendingWithdrawals = await pool.query(
+      `SELECT COUNT(*) AS cnt FROM payment_requests WHERE type='withdraw' AND status='pending'`
+    );
+    const pendingSupport = await pool.query(
+      `SELECT COUNT(DISTINCT sender_id) AS cnt FROM chat_messages WHERE is_admin=false AND is_read=false`
+    );
 
-      pool.query(
-        `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests WHERE type='deposit' AND status='approved'`
-      ),
-      pool.query(
-        `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests WHERE type='withdraw' AND status='approved'`
-      ),
-      pool.query(
-        `SELECT COUNT(*) AS cnt FROM users WHERE created_at::date = CURRENT_DATE`
-      ),
-      pool.query(
-        `SELECT COUNT(*) AS cnt FROM users WHERE last_login > NOW() - INTERVAL '15 minutes'`
-      ),
+    const revenueTrend = await pool.query(`
+      SELECT d::date AS day,
+        COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='deposit' AND status='approved' AND created_at::date = d::date),0) AS deposit,
+        COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='withdraw' AND status='approved' AND created_at::date = d::date),0) AS withdraw
+      FROM generate_series(CURRENT_DATE - INTERVAL '13 days', CURRENT_DATE, INTERVAL '1 day') d
+      ORDER BY day
+    `);
 
-      pool.query(
-        `SELECT COUNT(*) AS cnt FROM payment_requests WHERE type='deposit' AND status='pending'`
-      ),
-      pool.query(
-        `SELECT COUNT(*) AS cnt FROM payment_requests WHERE type='withdraw' AND status='pending'`
-      ),
-      pool.query(
-        `SELECT COUNT(DISTINCT sender_id) AS cnt FROM chat_messages WHERE is_admin=false AND is_read=false`
-      ),
+    const userGrowth = await pool.query(`
+      SELECT d::date AS day,
+        COALESCE((SELECT COUNT(*) FROM users WHERE created_at::date = d::date),0) AS new_users
+      FROM generate_series(CURRENT_DATE - INTERVAL '13 days', CURRENT_DATE, INTERVAL '1 day') d
+      ORDER BY day
+    `);
 
-      pool.query(`
-        SELECT
-          date_trunc('day', created_at)::date AS day,
-          SUM(CASE WHEN type='deposit'  THEN amount ELSE 0 END) AS deposit,
-          SUM(CASE WHEN type='withdraw' THEN amount ELSE 0 END) AS withdraw
-        FROM payment_requests
-        WHERE status='approved' AND created_at::date BETWEEN $1 AND $2
-        GROUP BY 1 ORDER BY 1
-      `, [rangeFrom, rangeTo]),
-      pool.query(`
-        SELECT created_at::date AS day, COUNT(*) AS new_users
-        FROM users
-        WHERE created_at::date BETWEEN $1 AND $2
-        GROUP BY 1 ORDER BY 1
-      `, [rangeFrom, rangeTo]),
+    const recentBets = await pool.query(`
+      SELECT b.*, u.username, m.team_a, m.team_b, m.title
+      FROM bets b JOIN users u ON b.user_id = u.id LEFT JOIN matches m ON b.match_id = m.id
+      ORDER BY b.created_at DESC LIMIT 8
+    `);
 
-      pool.query(`
-        SELECT b.*, u.username, m.team_a, m.team_b, m.title
-        FROM bets b JOIN users u ON b.user_id = u.id LEFT JOIN matches m ON b.match_id = m.id
-        ORDER BY b.created_at DESC LIMIT 8
-      `),
-      pool.query(`
-        SELECT pr.*, u.username FROM payment_requests pr JOIN users u ON pr.user_id = u.id
-        WHERE pr.type='deposit' ORDER BY pr.created_at DESC LIMIT 8
-      `),
-      pool.query(`
-        SELECT pr.*, u.username FROM payment_requests pr JOIN users u ON pr.user_id = u.id
-        WHERE pr.type='withdraw' ORDER BY pr.created_at DESC LIMIT 8
-      `),
+    const recentDeposits = await pool.query(`
+      SELECT pr.*, u.username FROM payment_requests pr JOIN users u ON pr.user_id = u.id
+      WHERE pr.type='deposit' ORDER BY pr.created_at DESC LIMIT 8
+    `);
 
-      pool.query(`
-        SELECT last_ip, COUNT(*) AS cnt, ARRAY_AGG(username) AS usernames
-        FROM users WHERE last_ip IS NOT NULL
-        GROUP BY last_ip HAVING COUNT(*) > 1
-        ORDER BY cnt DESC LIMIT 5
-      `),
-
-      pool.query(`
-        SELECT risk_level, COUNT(*) AS c FROM fraud_flags WHERE status = 'open' GROUP BY risk_level
-      `),
-      pool.query(`
-        SELECT f.*, u.username FROM fraud_flags f LEFT JOIN users u ON u.id = f.user_id
-        WHERE f.status = 'open' ORDER BY
-          CASE f.risk_level WHEN 'high' THEN 3 WHEN 'medium' THEN 2 ELSE 1 END DESC, f.created_at DESC
-        LIMIT 5
-      `),
-
-      pool.query(`
-        SELECT
-          COUNT(*) FILTER (WHERE risk_score >= 70) AS high,
-          COUNT(*) FILTER (WHERE risk_score >= 40 AND risk_score < 70) AS medium,
-          COUNT(*) FILTER (WHERE risk_score < 40) AS low
-        FROM duplicate_account_flags WHERE status = 'open'
-      `),
-      pool.query(`
-        SELECT f.*, u.username FROM duplicate_account_flags f LEFT JOIN users u ON u.id = f.user_id
-        WHERE f.status = 'open' ORDER BY f.risk_score DESC, f.created_at DESC LIMIT 5
-      `)
-    ]);
-
-    // Cache stable KPI counts (30s) — user/match/bet totals change slowly
-    if (!cachedCounts) {
-      cache.set('dashboard:kpi:counts', {
-        totalUsers: users.rows[0].count,
-        totalCoins: totalCoins.rows[0].total,
-        totalMatches: matches.rows[0].count,
-        totalBets: totalBets.rows[0].count
-      }, 30).catch(() => {});
-    }
-    // Cache revenue trend (120s) — date-range specific
-    if (!stableRevenue && revenueTrend.rows.length) {
-      cache.set(`dashboard:revenue:${rangeFrom}:${rangeTo}`, revenueTrend.rows, 120).catch(() => {});
-    }
+    const recentWithdrawals = await pool.query(`
+      SELECT pr.*, u.username FROM payment_requests pr JOIN users u ON pr.user_id = u.id
+      WHERE pr.type='withdraw' ORDER BY pr.created_at DESC LIMIT 8
+    `);
 
     // ==== সাম্প্রতিক অ্যাক্টিভিটি ফিড — ডিপোজিট, উইথড্র, বাজি একত্রে সময় অনুযায়ী ====
     const recentActivity = [
@@ -784,39 +856,66 @@ router.get('/', async (req, res) => {
       }))
     ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 8);
 
+    const suspicious = await pool.query(`
+      SELECT last_ip, COUNT(*) AS cnt, ARRAY_AGG(username) AS usernames
+      FROM users WHERE last_ip IS NOT NULL
+      GROUP BY last_ip HAVING COUNT(*) > 1
+      ORDER BY cnt DESC LIMIT 5
+    `);
+
     // ==================== Fraud Detection Engine — ড্যাশবোর্ড Fraud Alerts উইজেট ====================
+    const fraudCounts = await pool.query(`
+      SELECT risk_level, COUNT(*) AS c FROM fraud_flags WHERE status = 'open' GROUP BY risk_level
+    `);
     const fraudAlerts = { high: 0, medium: 0, low: 0 };
     fraudCounts.rows.forEach(r => { fraudAlerts[r.risk_level] = parseInt(r.c); });
+    const recentFraudFlags = await pool.query(`
+      SELECT f.*, u.username FROM fraud_flags f LEFT JOIN users u ON u.id = f.user_id
+      WHERE f.status = 'open' ORDER BY
+        CASE f.risk_level WHEN 'high' THEN 3 WHEN 'medium' THEN 2 ELSE 1 END DESC, f.created_at DESC
+      LIMIT 5
+    `);
 
     // ==================== Duplicate Account Detection — ড্যাশবোর্ড উইজেট ====================
+    const dupCounts = await pool.query(`
+      SELECT
+        COUNT(*) FILTER (WHERE risk_score >= 70) AS high,
+        COUNT(*) FILTER (WHERE risk_score >= 40 AND risk_score < 70) AS medium,
+        COUNT(*) FILTER (WHERE risk_score < 40) AS low
+      FROM duplicate_account_flags WHERE status = 'open'
+    `);
     const dupAlerts = {
       high: parseInt(dupCounts.rows[0].high) || 0,
       medium: parseInt(dupCounts.rows[0].medium) || 0,
       low: parseInt(dupCounts.rows[0].low) || 0
     };
+    const recentDupFlags = await pool.query(`
+      SELECT f.*, u.username FROM duplicate_account_flags f LEFT JOIN users u ON u.id = f.user_id
+      WHERE f.status = 'open' ORDER BY f.risk_score DESC, f.created_at DESC LIMIT 5
+    `);
 
     const demoStats = await getDemoStats().catch(e => {
       console.error('demo stats error:', e.message);
       return { totalDemo: 0, userHeldDemo: 0, casinoDemoWagered: 0, sportsDemoWagered: 0 };
     });
 
-    // ==================== নতুন অ্যানালিটিক্স উইজেট — API Usage, Bet Stats, Server Health, Queue Health ====================
-    const [apiUsageStats, betStatistics, serverHealth, queueHealth] = await Promise.all([
-      systemHealth.getApiUsageStats(rangeFrom, rangeTo),
-      systemHealth.getBetStatistics(rangeFrom, rangeTo),
-      systemHealth.getServerHealth().catch(e => { console.error('server health error:', e.message); return null; }),
-      queue.getHealthStatus().catch(() => null)
-    ]);
+    const bullHealth = await require('../queues').getQueueHealthStats().catch(() => ({ redisConnected: false, queues: [] }));
+    const queueStatus = bullHealth.queues.reduce((acc, q) => ({
+      pending: acc.pending + (q.counts.waiting || 0) + (q.counts.delayed || 0),
+      processing: acc.processing + (q.counts.active || 0),
+      completed: acc.completed + (q.counts.completed || 0),
+      failed: acc.failed + (q.counts.failed || 0),
+      running: bullHealth.redisConnected
+    }), { pending: 0, processing: 0, completed: 0, failed: 0, running: bullHealth.redisConnected });
 
     res.render('admin/dashboard', {
-      dateRange: { from: rangeFrom, to: rangeTo },
-      apiUsageStats, betStatistics, serverHealth, queueHealth,
       demoStats,
       redisStatus: cache.getStatus(),
-      queueStatus: Object.assign({}, queue.getStatus(), await queue.getStats().catch(() => ({ pending: 0, processing: 0, completed: 0, failed: 0 }))),
+      queueStatus,
       stats: {
         total_users: users.rows[0].count,
         total_coins_in_system: totalCoins.rows[0].total || 0,
+        active_users: parseInt(activeUsersNow.rows[0].cnt),
         total_matches: matches.rows[0].count,
         total_predictions: totalBets.rows[0].count,
         today_deposit: Number(todayDeposit.rows[0].total),
@@ -854,11 +953,6 @@ router.get('/', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.render('admin/dashboard', {
-      dateRange: { from: new Date(Date.now() - 13 * 86400000).toISOString().slice(0, 10), to: new Date().toISOString().slice(0, 10) },
-      apiUsageStats: { totalRequests: 0, avgResponseMs: 0, errorCount: 0, errorRatePercent: 0, topEndpoints: [] },
-      betStatistics: { totalBets: 0, wonCount: 0, lostCount: 0, pendingCount: 0, winRatePercent: 0, totalStake: 0, totalPayout: 0, houseProfit: 0 },
-      serverHealth: null,
-      queueHealth: null,
       demoStats: { totalDemo: 9999999, userHeldDemo: 0, casinoDemoWagered: 0, sportsDemoWagered: 0 },
       redisStatus: cache.getStatus(),
       queueStatus: { enabled: false, running: false, pending: 0, processing: 0, completed: 0, failed: 0 },
@@ -872,71 +966,60 @@ router.get('/', async (req, res) => {
 // ==================== ড্যাশবোর্ড লাইভ স্ট্যাটস (পোলিং API) ====================
 router.get('/api/dashboard-stats', async (req, res) => {
   try {
-    // পারফরম্যান্স: এই এন্ডপয়েন্টটা auto-refresh দিয়ে ঘনঘন পোল হয় — তাই সিকোয়েন্সিয়াল কোয়েরির
-    // পরিবর্তে সব স্বাধীন কোয়েরি Promise.all দিয়ে সমান্তরালে চালানো হচ্ছে।
-    const [
-      users, todayDeposit, todayWithdraw, todayProfitLoss, yesterdayProfitLoss,
-      totalDepositAll, totalWithdrawAll, newUsersToday, pendingDeposits, pendingWithdrawals, pendingSupport,
-      recentDeposits, recentWithdrawals, recentBets,
-      queueHealth, apiUsageToday, serverHealth, queueStatsForPoll
-    ] = await Promise.all([
-      pool.query('SELECT COUNT(*) as count FROM users'),
-      pool.query(
-        `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests 
-         WHERE type='deposit' AND status='approved' AND created_at::date = CURRENT_DATE`
-      ),
-      pool.query(
-        `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests 
-         WHERE type='withdraw' AND status='approved' AND created_at::date = CURRENT_DATE`
-      ),
-      pool.query(
-        `SELECT COALESCE(SUM(stake),0) AS staked,
-                COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS paidout
-         FROM bets WHERE created_at::date = CURRENT_DATE AND status IN ('won','lost')`
-      ),
-      pool.query(
-        `SELECT COALESCE(SUM(stake),0) AS staked,
-                COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS paidout
-         FROM bets WHERE created_at::date = CURRENT_DATE - INTERVAL '1 day' AND status IN ('won','lost')`
-      ),
-      pool.query(
-        `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests WHERE type='deposit' AND status='approved'`
-      ),
-      pool.query(
-        `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests WHERE type='withdraw' AND status='approved'`
-      ),
-      pool.query(
-        `SELECT COUNT(*) AS cnt FROM users WHERE created_at::date = CURRENT_DATE`
-      ),
-      pool.query(
-        `SELECT COUNT(*) AS cnt FROM payment_requests WHERE type='deposit' AND status='pending'`
-      ),
-      pool.query(
-        `SELECT COUNT(*) AS cnt FROM payment_requests WHERE type='withdraw' AND status='pending'`
-      ),
-      pool.query(
-        `SELECT COUNT(DISTINCT sender_id) AS cnt FROM chat_messages WHERE is_admin=false AND is_read=false`
-      ),
-      pool.query(`
-        SELECT pr.*, u.username FROM payment_requests pr JOIN users u ON pr.user_id = u.id
-        WHERE pr.type='deposit' ORDER BY pr.created_at DESC LIMIT 8
-      `),
-      pool.query(`
-        SELECT pr.*, u.username FROM payment_requests pr JOIN users u ON pr.user_id = u.id
-        WHERE pr.type='withdraw' ORDER BY pr.created_at DESC LIMIT 8
-      `),
-      pool.query(`
-        SELECT b.*, u.username, m.team_a, m.team_b, m.title
-        FROM bets b JOIN users u ON b.user_id = u.id LEFT JOIN matches m ON b.match_id = m.id
-        ORDER BY b.created_at DESC LIMIT 8
-      `),
-      queue.getHealthStatus().catch(() => null),
-      systemHealth.getApiUsageStats(
-        new Date().toISOString().slice(0, 10), new Date().toISOString().slice(0, 10)
-      ).catch(() => null),
-      systemHealth.getServerHealth().catch(() => null),
-      queue.getStats().catch(() => ({ pending: 0, processing: 0, completed: 0, failed: 0 }))
-    ]);
+    const users = await pool.query('SELECT COUNT(*) as count FROM users');
+    const totalCoinsPoll = await pool.query('SELECT COALESCE(SUM(coins),0) AS total FROM users');
+    const activeUsersPoll = await pool.query(`SELECT COUNT(*) AS cnt FROM users WHERE last_login >= NOW() - INTERVAL '15 minutes'`);
+
+    const todayDeposit = await pool.query(
+      `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests 
+       WHERE type='deposit' AND status='approved' AND created_at::date = CURRENT_DATE`
+    );
+    const todayWithdraw = await pool.query(
+      `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests 
+       WHERE type='withdraw' AND status='approved' AND created_at::date = CURRENT_DATE`
+    );
+    const todayProfitLoss = await pool.query(
+      `SELECT COALESCE(SUM(stake),0) AS staked,
+              COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS paidout
+       FROM bets WHERE created_at::date = CURRENT_DATE AND status IN ('won','lost')`
+    );
+    const yesterdayProfitLoss = await pool.query(
+      `SELECT COALESCE(SUM(stake),0) AS staked,
+              COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS paidout
+       FROM bets WHERE created_at::date = CURRENT_DATE - INTERVAL '1 day' AND status IN ('won','lost')`
+    );
+    const totalDepositAll = await pool.query(
+      `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests WHERE type='deposit' AND status='approved'`
+    );
+    const totalWithdrawAll = await pool.query(
+      `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests WHERE type='withdraw' AND status='approved'`
+    );
+    const newUsersToday = await pool.query(
+      `SELECT COUNT(*) AS cnt FROM users WHERE created_at::date = CURRENT_DATE`
+    );
+    const pendingDeposits = await pool.query(
+      `SELECT COUNT(*) AS cnt FROM payment_requests WHERE type='deposit' AND status='pending'`
+    );
+    const pendingWithdrawals = await pool.query(
+      `SELECT COUNT(*) AS cnt FROM payment_requests WHERE type='withdraw' AND status='pending'`
+    );
+    const pendingSupport = await pool.query(
+      `SELECT COUNT(DISTINCT sender_id) AS cnt FROM chat_messages WHERE is_admin=false AND is_read=false`
+    );
+
+    const recentDeposits = await pool.query(`
+      SELECT pr.*, u.username FROM payment_requests pr JOIN users u ON pr.user_id = u.id
+      WHERE pr.type='deposit' ORDER BY pr.created_at DESC LIMIT 8
+    `);
+    const recentWithdrawals = await pool.query(`
+      SELECT pr.*, u.username FROM payment_requests pr JOIN users u ON pr.user_id = u.id
+      WHERE pr.type='withdraw' ORDER BY pr.created_at DESC LIMIT 8
+    `);
+    const recentBets = await pool.query(`
+      SELECT b.*, u.username, m.team_a, m.team_b, m.title
+      FROM bets b JOIN users u ON b.user_id = u.id LEFT JOIN matches m ON b.match_id = m.id
+      ORDER BY b.created_at DESC LIMIT 8
+    `);
 
     const recentActivity = [
       ...recentDeposits.rows.map(r => ({ kind: 'deposit', status: r.status, username: r.username, amount: Number(r.amount), created_at: r.created_at, ref: r.id })),
@@ -948,6 +1031,8 @@ router.get('/api/dashboard-stats', async (req, res) => {
       success: true,
       stats: {
         total_users: parseInt(users.rows[0].count),
+        total_coins: Number(totalCoinsPoll.rows[0].total),
+        active_users: parseInt(activeUsersPoll.rows[0].cnt),
         today_deposit: Number(todayDeposit.rows[0].total),
         today_withdraw: Number(todayWithdraw.rows[0].total),
         today_profit: Number(todayProfitLoss.rows[0].staked) - Number(todayProfitLoss.rows[0].paidout),
@@ -959,72 +1044,11 @@ router.get('/api/dashboard-stats', async (req, res) => {
         pending_withdrawals: parseInt(pendingWithdrawals.rows[0].cnt),
         pending_support: parseInt(pendingSupport.rows[0].cnt)
       },
-      recentActivity,
-      redisStatus: cache.getStatus(),
-      queueStatus: Object.assign({}, queue.getStatus(), queueStatsForPoll),
-      queueHealth,
-      apiUsageToday,
-      serverHealth
+      recentActivity
     });
   } catch (err) {
     console.error('dashboard-stats api error:', err.message);
     res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি' });
-  }
-});
-
-// ==================== ড্যাশবোর্ড অ্যানালিটিক্স Export (CSV) ====================
-router.get('/dashboard/export.csv', async (req, res) => {
-  try {
-    const to = (req.query.to && /^\d{4}-\d{2}-\d{2}$/.test(req.query.to)) ? req.query.to : new Date().toISOString().slice(0, 10);
-    const from = (req.query.from && /^\d{4}-\d{2}-\d{2}$/.test(req.query.from)) ? req.query.from : new Date(Date.now() - 13 * 86400000).toISOString().slice(0, 10);
-
-    const [depositRes, withdrawRes, usersRes, betStats, apiStats, queueStats] = await Promise.all([
-      pool.query(
-        `SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS cnt FROM payment_requests
-         WHERE type='deposit' AND status='approved' AND created_at BETWEEN $1 AND $2::date + INTERVAL '1 day'`, [from, to]),
-      pool.query(
-        `SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS cnt FROM payment_requests
-         WHERE type='withdraw' AND status='approved' AND created_at BETWEEN $1 AND $2::date + INTERVAL '1 day'`, [from, to]),
-      pool.query(
-        `SELECT COUNT(*) AS cnt FROM users WHERE created_at BETWEEN $1 AND $2::date + INTERVAL '1 day'`, [from, to]),
-      systemHealth.getBetStatistics(from, to),
-      systemHealth.getApiUsageStats(from, to),
-      queue.getStats().catch(() => ({ pending: 0, processing: 0, completed: 0, failed: 0, deadLetter: 0 }))
-    ]);
-
-    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const rows = [
-      ['metric', 'value'],
-      ['date_range', `${from} to ${to}`],
-      ['new_users', usersRes.rows[0].cnt],
-      ['deposit_total', Number(depositRes.rows[0].total)],
-      ['deposit_count', depositRes.rows[0].cnt],
-      ['withdraw_total', Number(withdrawRes.rows[0].total)],
-      ['withdraw_count', withdrawRes.rows[0].cnt],
-      ['bets_total', betStats.totalBets],
-      ['bets_won', betStats.wonCount],
-      ['bets_lost', betStats.lostCount],
-      ['bets_win_rate_percent', betStats.winRatePercent],
-      ['total_stake', betStats.totalStake],
-      ['total_payout', betStats.totalPayout],
-      ['house_profit', betStats.houseProfit],
-      ['api_requests_total', apiStats.totalRequests],
-      ['api_avg_response_ms', apiStats.avgResponseMs],
-      ['api_error_rate_percent', apiStats.errorRatePercent],
-      ['queue_pending', queueStats.pending],
-      ['queue_processing', queueStats.processing],
-      ['queue_completed', queueStats.completed],
-      ['queue_failed', queueStats.failed],
-      ['queue_dead_letter', queueStats.deadLetter || 0]
-    ];
-    const csv = rows.map(r => r.map(esc).join(',')).join('\n');
-
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="dashboard-analytics-${from}_to_${to}.csv"`);
-    res.send('\uFEFF' + csv);
-  } catch (err) {
-    console.error('Dashboard export error:', err.message);
-    res.status(500).send('Export failed');
   }
 });
 
@@ -1085,9 +1109,15 @@ router.post('/api/deposits/:id/approve', adminFinancialLimiter, requireIntParam(
       await client.query('ROLLBACK');
       return res.status(400).json({ success: false, error: 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে' });
     }
-    await creditApprovedDeposit(client, request);
+    const crApprove = await creditApprovedDeposit(client, request);
     await client.query('COMMIT');
+    if (crApprove && crApprove.notification) emitToUser(request.user_id, crApprove.notification);
     await logAdminAction(req.session.user.id, req.session.user.username, 'deposit_approve', `Deposit #${id} approved`, req.ip);
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'DEPOSIT_APPROVED', category: 'financial', status: 'success', riskLevel: 'low',
+      details: { depositId: id, userId: request.user_id, amount: request.amount }
+    }).catch(e => console.error('logAuditEvent (DEPOSIT_APPROVED) error:', e.message));
     res.json({ success: true });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -1111,12 +1141,18 @@ router.post('/api/deposits/:id/reject', adminFinancialLimiter, requireIntParam('
       return res.status(400).json({ success: false, error: 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে' });
     }
     await client.query(`UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE id=$1`, [id]);
-    await client.query(
-      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'error')`,
+    const rejNotif = await client.query(
+      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'error') RETURNING *`,
       [request.user_id, 'ডিপোজিট বাতিল', `আপনার ${request.amount} টাকার ডিপোজিট বাতিল হয়েছে।${reason ? ' কারণ: ' + reason : ''}`]
     );
     await client.query('COMMIT');
+    if (rejNotif.rows[0]) emitToUser(request.user_id, rejNotif.rows[0]);
     await logAdminAction(req.session.user.id, req.session.user.username, 'deposit_reject', `Deposit #${id} rejected: ${reason || ''}`, req.ip);
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'DEPOSIT_REJECTED', category: 'financial', status: 'success', riskLevel: 'low',
+      details: { depositId: id, userId: request.user_id, amount: request.amount, reason }
+    }).catch(e => console.error('logAuditEvent (DEPOSIT_REJECTED) error:', e.message));
     res.json({ success: true });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -1189,12 +1225,19 @@ router.post('/api/withdrawals/:id/approve', adminFinancialLimiter, requireIntPar
       `UPDATE payment_requests SET status='approved', transaction_id=COALESCE($1, transaction_id), updated_at=NOW() WHERE id=$2`,
       [txn || null, id]
     );
-    await client.query(
-      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'success')`,
+    const wApproveNotif = await client.query(
+      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'success') RETURNING *`,
       [request.user_id, 'উইথড্র অনুমোদন', `আপনার ${request.amount} টাকার উইথড্র সম্পন্ন হয়েছে!${txn ? ' Ref: ' + txn : ''}`]
     );
     await client.query('COMMIT');
+    if (wApproveNotif.rows[0]) emitToUser(request.user_id, wApproveNotif.rows[0]);
     await logAdminAction(req.session.user.id, req.session.user.username, 'withdraw_approve', `Withdrawal #${id} approved`, req.ip);
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'WITHDRAW_APPROVED', category: 'financial', status: 'success',
+      riskLevel: request.amount >= 10000 ? 'medium' : 'low',
+      details: { withdrawId: id, userId: request.user_id, amount: request.amount, txn }
+    }).catch(e => console.error('logAuditEvent (WITHDRAW_APPROVED) error:', e.message));
     res.json({ success: true });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -1220,12 +1263,18 @@ router.post('/api/withdrawals/:id/reject', adminFinancialLimiter, requireIntPara
     // উইথড্র রিকোয়েস্ট করার সময় কয়েন কেটে নেওয়া হয়, তাই বাতিল হলে ফেরত দিতে হবে
     await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
     await client.query(`UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE id=$1`, [id]);
-    await client.query(
-      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'error')`,
+    const wRejectNotif = await client.query(
+      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'error') RETURNING *`,
       [request.user_id, 'উইথড্র বাতিল', `আপনার ${request.amount} টাকার উইথড্র বাতিল হয়েছে, কয়েন ফেরত দেওয়া হয়েছে।${reason ? ' কারণ: ' + reason : ''}`]
     );
     await client.query('COMMIT');
+    if (wRejectNotif.rows[0]) emitToUser(request.user_id, wRejectNotif.rows[0]);
     await logAdminAction(req.session.user.id, req.session.user.username, 'withdraw_reject', `Withdrawal #${id} rejected: ${reason || ''}`, req.ip);
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'WITHDRAW_REJECTED', category: 'financial', status: 'success', riskLevel: 'low',
+      details: { withdrawId: id, userId: request.user_id, amount: request.amount, reason }
+    }).catch(e => console.error('logAuditEvent (WITHDRAW_REJECTED) error:', e.message));
     res.json({ success: true });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -1373,7 +1422,7 @@ router.get('/users', async (req, res) => {
 router.get('/users/:id', async (req, res) => {
   try {
     const uId = req.params.id;
-    const userRes = await pool.query('SELECT id, username, email, phone, balance, coins, demo_balance, role, status, avatar, kyc_status, total_points, referred_by_id, referral_code, last_login, last_ip, created_at, two_factor_enabled, withdraw_pin FROM users WHERE id = $1', [uId]);
+    const userRes = await pool.query('SELECT * FROM users WHERE id = $1', [uId]);
     const user = userRes.rows[0];
     if (!user) {
       req.flash('error', 'ইউজার পাওয়া যায়নি!');
@@ -1390,12 +1439,12 @@ router.get('/users/:id', async (req, res) => {
     } catch (e) {}
 
     try {
-      const t = await pool.query(`SELECT id, user_id, amount, type, description, created_at FROM coin_transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50`, [uId]);
+      const t = await pool.query(`SELECT * FROM coin_transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50`, [uId]);
       transactions = t.rows;
     } catch (e) {}
 
     try {
-      const p = await pool.query(`SELECT id, user_id, type, amount, method, account_number, status, transaction_id, created_at FROM payment_requests WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50`, [uId]);
+      const p = await pool.query(`SELECT * FROM payment_requests WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50`, [uId]);
       payments = p.rows;
     } catch (e) {}
 
@@ -1443,11 +1492,17 @@ router.get('/users/:id', async (req, res) => {
 });
 
 // ==================== USER ACTIONS ====================
-router.post('/users/:id/ban', requirePermission('users.manage'), requireIntParam('id'), async (req, res) => {
+router.post('/users/:id/ban', requireIntParam('id'), async (req, res) => {
   try {
     const r = await pool.query('UPDATE users SET is_banned = NOT is_banned WHERE id = $1 RETURNING is_banned, username', [req.params.id]);
     if (r.rows[0]) {
       await logAdminAction(req.session.user.id, req.session.user.username, r.rows[0].is_banned ? 'USER_BAN' : 'USER_UNBAN', `${r.rows[0].username} (#${req.params.id}) কে ${r.rows[0].is_banned ? 'ব্যান' : 'আনব্যান'} করা হয়েছে`, req.ip);
+      logAuditEvent({
+        req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+        action: r.rows[0].is_banned ? 'USER_BANNED' : 'USER_UNBANNED', category: 'security', status: 'success',
+        riskLevel: r.rows[0].is_banned ? 'high' : 'medium',
+        details: { targetUserId: req.params.id, targetUsername: r.rows[0].username }
+      }).catch(e => console.error('logAuditEvent (USER_BAN/UNBAN) error:', e.message));
     }
     req.flash('success', 'স্ট্যাটাস আপডেট হয়েছে!');
   } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
@@ -1491,7 +1546,7 @@ router.get('/security-overview', async (req, res) => {
       pool.query(`SELECT COUNT(*) AS c FROM login_logs WHERE is_new_device = true AND created_at >= NOW() - INTERVAL '7 days'`),
       pool.query(`SELECT COUNT(*) AS c FROM users WHERE withdraw_pin_locked_until IS NOT NULL AND withdraw_pin_locked_until > NOW()`),
       pool.query(
-        `SELECT id, admin_id, admin_username, action_type, details, ip_address, created_at FROM admin_logs WHERE action_type = ANY($1) ORDER BY created_at DESC LIMIT 25`,
+        `SELECT * FROM admin_logs WHERE action_type = ANY($1) ORDER BY created_at DESC LIMIT 25`,
         [SECURITY_ACTION_TYPES]
       ),
       pool.query(`SELECT COUNT(*) AS c FROM users WHERE totp_enabled = true`),
@@ -1593,7 +1648,7 @@ router.post('/users/:id/withdraw-pin/reset', adminActionLimiter, requireIntParam
   res.redirect('back');
 });
 
-router.post('/users/:id/coins/add', requirePermission('users.manage'), adminFinancialLimiter, requireIntParam('id'), requireAmount('amount', { max: 10_000_000 }), async (req, res) => {
+router.post('/users/:id/coins/add', adminFinancialLimiter, requireIntParam('id'), requireAmount('amount', { max: 10_000_000 }), async (req, res) => {
   try {
     const amount = req.body.amount; // requireAmount দিয়ে ইতিমধ্যে যাচাই ও normalize করা
     const reason = (req.body.reason || '').trim().slice(0, 200);
@@ -1605,7 +1660,7 @@ router.post('/users/:id/coins/add', requirePermission('users.manage'), adminFina
   res.redirect('back');
 });
 
-router.post('/users/:id/coins/remove', requirePermission('users.manage'), adminFinancialLimiter, requireIntParam('id'), requireAmount('amount', { max: 10_000_000 }), async (req, res) => {
+router.post('/users/:id/coins/remove', adminFinancialLimiter, requireIntParam('id'), requireAmount('amount', { max: 10_000_000 }), async (req, res) => {
   try {
     const amount = req.body.amount;
     const reason = (req.body.reason || '').trim().slice(0, 200);
@@ -1630,7 +1685,7 @@ router.post('/users/:id/freebet', adminFinancialLimiter, requireIntParam('id'), 
 // ==================== MATCHES ====================
 router.get('/matches', async (req, res) => {
   try {
-    const matches = await pool.query('SELECT id, title, team_a, team_b, sport, league, status, start_time FROM matches ORDER BY start_time DESC');
+    const matches = await pool.query('SELECT * FROM matches ORDER BY start_time DESC');
     res.render('admin/matches', { matches: matches.rows });
   } catch (err) { res.render('admin/matches', { matches: [] }); }
 });
@@ -1656,10 +1711,10 @@ router.post('/matches/:id/delete', async (req, res) => {
 // ==================== MARKETS ====================
 router.get('/markets/:matchId', async (req, res) => {
   try {
-    const matchResult = await pool.query('SELECT id, title, team_a, team_b, sport, status, start_time FROM matches WHERE id = $1', [req.params.matchId]);
+    const matchResult = await pool.query('SELECT * FROM matches WHERE id = $1', [req.params.matchId]);
     const match = matchResult.rows[0];
     if (!match) return res.status(404).send('Match not found');
-    const markets = await pool.query('SELECT id, match_id, name, type, status, created_at FROM markets WHERE match_id = $1', [req.params.matchId]);
+    const markets = await pool.query('SELECT * FROM markets WHERE match_id = $1', [req.params.matchId]);
     res.render('admin/markets', { match: match, markets: markets.rows });
   } catch (err) { res.status(500).send('Server Error'); }
 });
@@ -1695,21 +1750,27 @@ router.post('/markets/:marketId/settle', async (req, res) => {
     await client.query('BEGIN');
     const bets = await client.query(`SELECT * FROM bets WHERE market_id = $1 AND status = 'pending' FOR UPDATE`, [marketId]);
     let winnersCount = 0;
+    const notifsToEmit = [];
     for (const bet of bets.rows) {
       if (String(bet.runner) === String(winning_runner)) {
         const payout = Math.floor(Number(bet.stake) * Number(bet.odd));
         await client.query('UPDATE users SET coins = coins + $1 WHERE id = $2', [payout, bet.user_id]);
         await client.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'bet_win','বেট জয়')`, [bet.user_id, payout]);
         await client.query(`UPDATE bets SET status = 'won' WHERE id = $1`, [bet.id]);
-        await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট জয়!',$2,'success')`, [bet.user_id, `আপনি ${payout} কয়েন জিতেছেন!`]);
+        const wn = await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট জয়!',$2,'success') RETURNING *`, [bet.user_id, `আপনি ${payout} কয়েন জিতেছেন!`]);
+        notifsToEmit.push({ userId: bet.user_id, row: wn.rows[0] });
         winnersCount++;
       } else {
         await client.query(`UPDATE bets SET status = 'lost' WHERE id = $1`, [bet.id]);
+        const ln = await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট ফলাফল',$2,'error') RETURNING *`, [bet.user_id, `আপনার বেটটি হেরে গেছে।`]);
+        notifsToEmit.push({ userId: bet.user_id, row: ln.rows[0] });
       }
     }
     await client.query(`UPDATE markets SET status = 'settled', updated_at = NOW() WHERE id = $1`, [marketId]);
-    await settleSelectionsForMarket(client, marketId, winning_runner);
+    const accaNotifs = await settleSelectionsForMarket(client, marketId, winning_runner);
     await client.query('COMMIT');
+    notifsToEmit.push(...accaNotifs);
+    notifsToEmit.forEach(n => emitToUser(n.userId, n.row));
     try {
       const mRow = await pool.query('SELECT match_id FROM markets WHERE id = $1', [marketId]);
       if (mRow.rows[0]) await cache.del(cacheKeys.matchDetail(mRow.rows[0].match_id));
@@ -1787,14 +1848,16 @@ router.post('/bets/:id/settle', async (req, res) => {
       return res.redirect('/admin/bets');
     }
     await client.query('UPDATE bets SET status=$1 WHERE id=$2', [result, id]);
+    let settleNotif;
     if (result === 'won') {
       const payout = Math.floor(Number(bet.stake) * Number(bet.odd));
       await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [payout, bet.user_id]);
-      await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট জিতেছেন!',$2,'success')`, [bet.user_id, `আপনি ৳${payout} জিতেছেন!`]);
+      settleNotif = await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট জিতেছেন!',$2,'success') RETURNING *`, [bet.user_id, `আপনি ৳${payout} জিতেছেন!`]);
     } else {
-      await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট ফলাফল',$2,'error')`, [bet.user_id, `আপনার ৳${bet.stake} বেটটি হেরে গেছে।`]);
+      settleNotif = await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট ফলাফল',$2,'error') RETURNING *`, [bet.user_id, `আপনার ৳${bet.stake} বেটটি হেরে গেছে।`]);
     }
     await client.query('COMMIT');
+    if (settleNotif.rows[0]) emitToUser(bet.user_id, settleNotif.rows[0]);
     req.flash('success', 'বেট সেটেল হয়েছে');
     res.redirect('/admin/bets');
   } catch (err) {
@@ -1863,10 +1926,101 @@ router.post('/bonuses/:id/cancel', async (req, res) => {
   }
 });
 
+// ==================== VIP সিস্টেম ম্যানেজমেন্ট (প্রিমিয়াম) ====================
+router.get('/vip', rbac.requirePermission('vip_manage'), async (req, res) => {
+  try {
+    const levels = await listVipLevelsAdmin();
+    const analytics = await getVipAnalytics();
+    res.render('admin/vip', { levels, analytics, active: 'vip' });
+  } catch (err) {
+    console.error('Admin VIP list error:', err.message);
+    res.render('admin/vip', {
+      levels: [], analytics: { perLevel: [], upgradeStats: [], grandTotalBonus: 0 }, active: 'vip'
+    });
+  }
+});
+
+router.post('/vip/save', adminActionLimiter, rbac.requirePermission('vip_manage'), async (req, res) => {
+  try {
+    const data = {
+      level: req.body.level,
+      name: sanitizeText(req.body.name || '', { maxLen: 40 }),
+      min_turnover: req.body.min_turnover,
+      upgrade_bonus: req.body.upgrade_bonus,
+      daily_bonus: req.body.daily_bonus,
+      weekly_bonus: req.body.weekly_bonus,
+      monthly_bonus: req.body.monthly_bonus,
+      cashback_percent: req.body.cashback_percent,
+      withdrawal_limit: req.body.withdrawal_limit,
+      deposit_bonus_percent: req.body.deposit_bonus_percent,
+      birthday_bonus: req.body.birthday_bonus,
+      priority_support: req.body.priority_support === 'on' || req.body.priority_support === 'true',
+      exclusive_events: sanitizeText(req.body.exclusive_events || '', { maxLen: 500 }),
+      icon: sanitizeText(req.body.icon || '👑', { maxLen: 10 }),
+      is_active: req.body.is_active === 'on' || req.body.is_active === 'true'
+    };
+    const result = await upsertVipLevel(data);
+    await logAdminAction(
+      req.session.user.id, req.session.user.username,
+      result.created ? 'VIP_LEVEL_CREATE' : 'VIP_LEVEL_UPDATE',
+      `VIP লেভেল ${result.level} (${data.name}) ${result.created ? 'তৈরি' : 'আপডেট'} করা হয়েছে`,
+      req.ip
+    );
+    await logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: result.created ? 'VIP_LEVEL_CREATE' : 'VIP_LEVEL_UPDATE', category: 'settings', riskLevel: 'medium',
+      details: { level: result.level, ...data }
+    });
+    req.flash('success', `VIP লেভেল ${result.level} সফলভাবে সেভ হয়েছে।`);
+    res.redirect('/admin/vip');
+  } catch (err) {
+    console.error('Admin VIP save error:', err.message);
+    req.flash('error', 'VIP লেভেল সেভ করা যায়নি: ' + err.message);
+    res.redirect('/admin/vip');
+  }
+});
+
+router.post('/vip/:level/toggle', adminActionLimiter, rbac.requirePermission('vip_manage'), async (req, res) => {
+  try {
+    const level = parseInt(req.params.level, 10);
+    const isActive = req.body.is_active === 'true' || req.body.is_active === '1';
+    await toggleVipLevelActive(level, isActive);
+    await logAdminAction(
+      req.session.user.id, req.session.user.username, 'VIP_LEVEL_TOGGLE',
+      `VIP লেভেল ${level} ${isActive ? 'সক্রিয়' : 'নিষ্ক্রিয়'} করা হয়েছে`, req.ip
+    );
+    await logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'VIP_LEVEL_TOGGLE', category: 'settings', riskLevel: 'low', details: { level, isActive }
+    });
+    res.redirect('/admin/vip');
+  } catch (err) {
+    console.error('Admin VIP toggle error:', err.message);
+    res.redirect('/admin/vip');
+  }
+});
+
+router.get('/vip/history', rbac.requirePermission('vip_manage'), async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const rewardType = req.query.type || null;
+    const rewardHistory = await listAllRewardHistory({ page, limit: 50, rewardType });
+    const upgradeHistory = await listAllUpgradeHistory({ page: 1, limit: 50 });
+    res.render('admin/vip-history', { rewardHistory, upgradeHistory, page, rewardType, active: 'vip' });
+  } catch (err) {
+    console.error('Admin VIP history error:', err.message);
+    res.render('admin/vip-history', {
+      rewardHistory: { rows: [], total: 0, page: 1, totalPages: 1 },
+      upgradeHistory: { rows: [], total: 0, page: 1, totalPages: 1 },
+      page: 1, rewardType: null, active: 'vip'
+    });
+  }
+});
+
 // ==================== প্রমোশন ব্যানার ====================
 router.get('/promotions', async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, title, description, image_url, position, is_active, created_at FROM promotions ORDER BY position ASC, created_at DESC');
+    const result = await pool.query('SELECT * FROM promotions ORDER BY position ASC, created_at DESC');
     res.render('admin/promotions', { promotions: result.rows });
   } catch (err) {
     console.error('Promotions list error:', err.message);
@@ -1984,7 +2138,7 @@ router.post('/tournaments/:id/delete', async (req, res) => {
 // ==================== নিউজ ====================
 router.get('/news', async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, title, content, image_url, is_active, created_at FROM news ORDER BY created_at DESC LIMIT 200');
+    const result = await pool.query('SELECT * FROM news ORDER BY created_at DESC LIMIT 200');
     res.render('admin/news', { newsList: result.rows });
   } catch (err) {
     console.error('News list error:', err.message);
@@ -2027,7 +2181,7 @@ router.get('/activity/export.csv', async (req, res) => {
   try {
     const { action_type = '', q = '' } = req.query;
     const params = [];
-    let query = 'SELECT id, admin_id, admin_username, action_type, details, ip_address, created_at FROM admin_logs WHERE 1=1';
+    let query = 'SELECT * FROM admin_logs WHERE 1=1';
     if (action_type) {
       params.push(action_type);
       query += ` AND action_type = $${params.length}`;
@@ -2067,7 +2221,7 @@ router.get('/bot-monitoring', async (req, res) => {
                   WHERE created_at > NOW() - INTERVAL '7 days' GROUP BY endpoint ORDER BY cnt DESC LIMIT 8`),
       pool.query(`SELECT COUNT(*) FILTER (WHERE type='block') AS blocked_ips,
                          COUNT(*) FILTER (WHERE type='whitelist') AS whitelisted_ips FROM ip_rules`),
-      pool.query(`SELECT id, ip, user_id, endpoint, signal_types, risk_level, reason, user_agent, blocked, created_at FROM bot_activity_logs ORDER BY created_at DESC LIMIT 20`)
+      pool.query(`SELECT * FROM bot_activity_logs ORDER BY created_at DESC LIMIT 20`)
     ]);
 
     res.render('admin/bot-monitoring', {
@@ -2085,6 +2239,175 @@ router.get('/bot-monitoring', async (req, res) => {
       statsToday: { total: 0, blocked: 0 },
       byRisk: [], byEndpoint: [], ipRuleCounts: { blocked_ips: 0, whitelisted_ips: 0 }, recentLogs: []
     });
+  }
+});
+
+// ==================== Cron / Scheduler Management ====================
+// ==================== Role & Permission Management (RBAC) ====================
+// এই সব রুট শুধু roles_manage permission থাকা admin ব্যবহার করতে পারবে;
+// role_key সেট না থাকা (backward-compatible সুপার-অ্যাডমিন-সমতুল্য) admin-রাও অ্যাক্সেস পাবে।
+router.get('/roles', rbac.requirePermission('roles_manage'), async (req, res) => {
+  try {
+    const roles = await rbac.listRoles();
+    res.render('admin/roles', { roles, permissionGroups: rbac.permissionGroups(), error: null });
+  } catch (err) {
+    console.error('roles list error:', err.message);
+    res.render('admin/roles', { roles: [], permissionGroups: rbac.permissionGroups(), error: err.message });
+  }
+});
+
+router.get('/roles/matrix', rbac.requirePermission('roles_manage'), async (req, res) => {
+  try {
+    const roles = await rbac.listRoles();
+    res.render('admin/roles-matrix', { roles, permissionGroups: rbac.permissionGroups() });
+  } catch (err) {
+    console.error('roles matrix error:', err.message);
+    req.flash('error', 'Matrix লোড করতে সমস্যা হয়েছে।');
+    res.redirect('/admin/roles');
+  }
+});
+
+router.post('/roles', rbac.requirePermission('roles_manage'), async (req, res) => {
+  try {
+    const permissions = {};
+    Object.keys(rbac.PERMISSIONS).forEach(key => { permissions[key] = req.body[`perm_${key}`] === 'on'; });
+    const role = await rbac.createRole({ name: req.body.name, description: sanitizeText(req.body.description || ''), permissions });
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ROLE_CREATED', `নতুন Role: ${role.name} (${role.key})`, req.ip);
+    req.flash('success', `Role "${role.name}" তৈরি হয়েছে।`);
+    res.redirect('/admin/roles');
+  } catch (err) {
+    req.flash('error', err.message);
+    res.redirect('/admin/roles');
+  }
+});
+
+router.get('/roles/:id/edit', rbac.requirePermission('roles_manage'), async (req, res) => {
+  try {
+    const role = await rbac.getRole(req.params.id);
+    if (!role) { req.flash('error', 'Role পাওয়া যায়নি।'); return res.redirect('/admin/roles'); }
+    res.render('admin/role-edit', { role, permissionGroups: rbac.permissionGroups() });
+  } catch (err) {
+    req.flash('error', err.message);
+    res.redirect('/admin/roles');
+  }
+});
+
+router.post('/roles/:id', rbac.requirePermission('roles_manage'), async (req, res) => {
+  try {
+    const existing = await rbac.getRole(req.params.id);
+    if (!existing) { req.flash('error', 'Role পাওয়া যায়নি।'); return res.redirect('/admin/roles'); }
+    const permissions = {};
+    Object.keys(rbac.PERMISSIONS).forEach(key => {
+      // Super Admin Role-এর permission UI থেকে বদলানো যাবে না — সবসময় সব true (override)
+      permissions[key] = existing.key === 'super_admin' ? true : req.body[`perm_${key}`] === 'on';
+    });
+    const role = await rbac.updateRole(req.params.id, { name: existing.is_system ? existing.name : req.body.name, description: sanitizeText(req.body.description || ''), permissions });
+    await logAdminAction(req.session.user.id, req.session.user.username, 'PERMISSION_CHANGED', `Role "${role.name}"-এর permission আপডেট করা হয়েছে`, req.ip);
+    req.flash('success', `Role "${role.name}" আপডেট হয়েছে।`);
+    res.redirect('/admin/roles');
+  } catch (err) {
+    req.flash('error', err.message);
+    res.redirect('/admin/roles');
+  }
+});
+
+router.post('/roles/:id/clone', rbac.requirePermission('roles_manage'), async (req, res) => {
+  try {
+    const role = await rbac.cloneRole(req.params.id, req.body.name);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ROLE_CLONED', `"${req.params.id}" থেকে ক্লোন করে নতুন Role: ${role.name}`, req.ip);
+    req.flash('success', `Role "${role.name}" ক্লোন হয়েছে — এখন এডিট করতে পারেন।`);
+    res.redirect(`/admin/roles/${role.id}/edit`);
+  } catch (err) {
+    req.flash('error', err.message);
+    res.redirect('/admin/roles');
+  }
+});
+
+router.post('/roles/:id/delete', rbac.requirePermission('roles_manage'), async (req, res) => {
+  try {
+    const role = await rbac.getRole(req.params.id);
+    await rbac.deleteRole(req.params.id);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ROLE_DELETED', `Role ডিলিট করা হয়েছে: ${role ? role.name : req.params.id}`, req.ip);
+    req.flash('success', 'Role ডিলিট করা হয়েছে।');
+    res.redirect('/admin/roles');
+  } catch (err) {
+    req.flash('error', err.message);
+    res.redirect('/admin/roles');
+  }
+});
+
+router.post('/roles/bulk-permission-update', rbac.requirePermission('roles_manage'), async (req, res) => {
+  try {
+    const roleIds = [].concat(req.body.role_ids || []);
+    const permKey = req.body.perm_key;
+    const value = req.body.perm_value === 'true';
+    if (!roleIds.length || !rbac.PERMISSIONS[permKey]) { req.flash('error', 'সঠিক Role ও Permission নির্বাচন করুন।'); return res.redirect('/admin/roles/matrix'); }
+    const updated = await rbac.bulkUpdatePermission(roleIds, permKey, value);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'PERMISSION_CHANGED', `বাল্ক আপডেট — "${permKey}" = ${value} এই Role-গুলোতে: ${updated.join(', ')}`, req.ip);
+    req.flash('success', `${updated.length}টা Role আপডেট হয়েছে।`);
+    res.redirect('/admin/roles/matrix');
+  } catch (err) {
+    req.flash('error', err.message);
+    res.redirect('/admin/roles/matrix');
+  }
+});
+
+router.get('/roles/export', rbac.requirePermission('roles_manage'), async (req, res) => {
+  try {
+    const roles = await rbac.listRoles();
+    const data = rbac.exportRoles(roles);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ROLES_EXPORTED', `${data.length}টা Role এক্সপোর্ট করা হয়েছে`, req.ip);
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="livo-roles-${new Date().toISOString().slice(0, 10)}.json"`);
+    res.send(JSON.stringify(data, null, 2));
+  } catch (err) {
+    req.flash('error', err.message);
+    res.redirect('/admin/roles');
+  }
+});
+
+router.post('/roles/import', rbac.requirePermission('roles_manage'), upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) throw new Error('একটা JSON ফাইল সিলেক্ট করুন।');
+    const data = JSON.parse(req.file.buffer.toString('utf8'));
+    const result = await rbac.importRoles(data);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ROLES_IMPORTED', `Import: ${result.created} তৈরি, ${result.updated} আপডেট, ${result.skipped} স্কিপ`, req.ip);
+    req.flash('success', `Import সম্পন্ন — ${result.created} তৈরি, ${result.updated} আপডেট, ${result.skipped} স্কিপ (সিস্টেম Role/অবৈধ এন্ট্রি)।`);
+    res.redirect('/admin/roles');
+  } catch (err) {
+    req.flash('error', 'Import ব্যর্থ: ' + err.message);
+    res.redirect('/admin/roles');
+  }
+});
+
+// ইউজারদের Role এসাইনমেন্ট
+router.get('/user-roles', rbac.requirePermission('roles_manage'), async (req, res) => {
+  try {
+    const search = req.query.q || '';
+    const params = [];
+    let where = "WHERE role = 'admin'";
+    if (search) { params.push(`%${search}%`); where += ` AND username ILIKE $${params.length}`; }
+    const usersRes = await pool.query(`SELECT id, username, email, role, role_key FROM users ${where} ORDER BY username ASC LIMIT 200`, params);
+    const roles = await rbac.listRoles();
+    res.render('admin/user-roles', { users: usersRes.rows, roles, search });
+  } catch (err) {
+    console.error('user-roles error:', err.message);
+    res.render('admin/user-roles', { users: [], roles: [], search: '' });
+  }
+});
+
+router.post('/user-roles/:userId/assign', rbac.requirePermission('roles_manage'), async (req, res) => {
+  try {
+    const userRes = await pool.query('SELECT username FROM users WHERE id=$1', [req.params.userId]);
+    if (!userRes.rows[0]) { req.flash('error', 'ইউজার পাওয়া যায়নি।'); return res.redirect('/admin/user-roles'); }
+    await rbac.assignUserRole(req.params.userId, req.body.role_key || null);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ROLE_CHANGED',
+      `"${userRes.rows[0].username}"-কে Role দেওয়া হয়েছে: ${req.body.role_key || '(কোনোটা না — সুপার-অ্যাডমিন-সমতুল্য)'}`, req.ip);
+    req.flash('success', 'Role আপডেট হয়েছে।');
+    res.redirect('/admin/user-roles');
+  } catch (err) {
+    req.flash('error', err.message);
+    res.redirect('/admin/user-roles');
   }
 });
 
@@ -2134,7 +2457,7 @@ router.get('/activity', async (req, res) => {
   try {
     const { action_type = '', q = '' } = req.query;
     const params = [];
-    let query = 'SELECT id, admin_id, admin_username, action_type, details, ip_address, created_at FROM admin_logs WHERE 1=1';
+    let query = 'SELECT * FROM admin_logs WHERE 1=1';
     if (action_type) {
       params.push(action_type);
       query += ` AND action_type = $${params.length}`;
@@ -2150,6 +2473,209 @@ router.get('/activity', async (req, res) => {
   } catch (err) {
     console.error('Activity list error:', err.message);
     res.render('admin/activity', { logs: [], actionTypes: [], filters: { action_type: '', q: '' } });
+  }
+});
+
+// ==================== System Diagnostics / Health Check ====================
+router.get('/system-diagnostics', async (req, res) => {
+  try {
+    const { runAllChecks } = require('../services/healthCheck');
+    const result = await runAllChecks();
+    res.render('admin/system-diagnostics', { result, error: null });
+  } catch (err) {
+    console.error('System diagnostics error:', err.message);
+    res.render('admin/system-diagnostics', { result: null, error: err.message });
+  }
+});
+
+router.get('/api/system-diagnostics', async (req, res) => {
+  try {
+    const { runAllChecks } = require('../services/healthCheck');
+    const result = await runAllChecks();
+    res.json({ success: true, result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ==================== Sentry মনিটরিং স্ট্যাটাস ও কনফিগারেশন ====================
+router.get('/sentry-status', async (req, res) => {
+  try {
+    const sentryService = require('../services/sentry');
+    res.render('admin/sentry-status', { status: sentryService.getStatus(), error: null, testSent: req.query.test === '1' });
+  } catch (err) {
+    console.error('Sentry status page error:', err.message);
+    res.render('admin/sentry-status', { status: null, error: err.message, testSent: false });
+  }
+});
+
+router.post('/sentry-status/test-error', async (req, res) => {
+  try {
+    const sentryService = require('../services/sentry');
+    if (!sentryService.isEnabled()) {
+      req.flash('error', '❌ Sentry নিষ্ক্রিয় আছে — টেস্ট এরর পাঠানো যায়নি। আগে SENTRY_DSN সেট করুন।');
+      return res.redirect('/admin/sentry-status');
+    }
+    sentryService.captureException(new Error('Sentry টেস্ট এরর — অ্যাডমিন প্যানেল থেকে ম্যানুয়ালি পাঠানো হয়েছে'), {
+      triggeredBy: req.session.user.username,
+      testEvent: true
+    });
+    await logAdminAction(req.session.user.id, req.session.user.username, 'SENTRY_TEST_ERROR', 'অ্যাডমিন প্যানেল থেকে Sentry টেস্ট এরর পাঠানো হয়েছে', req.ip);
+    res.redirect('/admin/sentry-status?test=1');
+  } catch (err) {
+    console.error('Sentry test error send failed:', err.message);
+    req.flash('error', '❌ টেস্ট এরর পাঠাতে সমস্যা হয়েছে।');
+    res.redirect('/admin/sentry-status');
+  }
+});
+
+// ==================== Notification Template Management ====================
+const templates = require('../services/templates');
+const { sendSms } = require('../services/sms');
+
+router.get('/notification-templates', async (req, res) => {
+  try {
+    const { channel = '', lang = '', q = '' } = req.query;
+    const list = await templates.listTemplates({ channel, lang, q });
+    res.render('admin/notification-templates', { list, filters: { channel, lang, q }, error: null, success: null });
+  } catch (err) {
+    console.error('notification-templates list error:', err.message);
+    res.render('admin/notification-templates', { list: [], filters: { channel: '', lang: '', q: '' }, error: err.message, success: null });
+  }
+});
+
+router.get('/notification-templates/new', (req, res) => {
+  res.render('admin/notification-template-form', { tmpl: null, error: null });
+});
+
+router.post('/notification-templates', async (req, res) => {
+  try {
+    const { template_key, channel, lang, name, subject, body, is_active } = req.body;
+    const tmpl = await templates.createTemplate(
+      { template_key, channel, lang, name, subject, body, is_active: is_active === 'on' || is_active === 'true' },
+      req.session.user.id, req.session.user.username
+    );
+    await logAdminAction(req.session.user.id, req.session.user.username, 'TEMPLATE_CREATE',
+      `নতুন নোটিফিকেশন টেমপ্লেট তৈরি: ${tmpl.template_key} (${tmpl.channel}/${tmpl.lang})`, req.ip);
+    req.flash && req.flash('success', 'টেমপ্লেট তৈরি হয়েছে');
+    res.redirect('/admin/notification-templates');
+  } catch (err) {
+    console.error('template create error:', err.message);
+    res.render('admin/notification-template-form', { tmpl: req.body, error: err.message });
+  }
+});
+
+router.get('/notification-templates/:id/edit', async (req, res) => {
+  try {
+    const tmpl = await templates.getTemplateById(req.params.id);
+    if (!tmpl) return res.redirect('/admin/notification-templates');
+    res.render('admin/notification-template-form', { tmpl, error: null });
+  } catch (err) {
+    res.redirect('/admin/notification-templates');
+  }
+});
+
+router.post('/notification-templates/:id', async (req, res) => {
+  try {
+    const { name, subject, body, is_active } = req.body;
+    const tmpl = await templates.updateTemplate(
+      req.params.id,
+      { name, subject, body, is_active: is_active === 'on' || is_active === 'true' },
+      req.session.user.id, req.session.user.username
+    );
+    await logAdminAction(req.session.user.id, req.session.user.username, 'TEMPLATE_UPDATE',
+      `নোটিফিকেশন টেমপ্লেট আপডেট: ${tmpl.template_key} (${tmpl.channel}/${tmpl.lang})`, req.ip);
+    res.redirect('/admin/notification-templates');
+  } catch (err) {
+    console.error('template update error:', err.message);
+    const existing = await templates.getTemplateById(req.params.id).catch(() => null);
+    res.render('admin/notification-template-form', { tmpl: existing || { id: req.params.id, ...req.body }, error: err.message });
+  }
+});
+
+router.post('/notification-templates/:id/delete', async (req, res) => {
+  try {
+    const deleted = await templates.deleteTemplate(req.params.id);
+    if (deleted) {
+      await logAdminAction(req.session.user.id, req.session.user.username, 'TEMPLATE_DELETE',
+        `নোটিফিকেশন টেমপ্লেট ডিলিট: ${deleted.template_key} (${deleted.channel}/${deleted.lang})`, req.ip);
+    }
+    res.redirect('/admin/notification-templates');
+  } catch (err) {
+    console.error('template delete error:', err.message);
+    res.redirect('/admin/notification-templates');
+  }
+});
+
+// প্রিভিউ — নমুনা ভ্যারিয়েবল দিয়ে রেন্ডার করে দেখায় (AJAX)
+router.post('/notification-templates/:id/preview', async (req, res) => {
+  try {
+    const tmpl = await templates.getTemplateById(req.params.id);
+    if (!tmpl) return res.status(404).json({ success: false, error: 'টেমপ্লেট পাওয়া যায়নি' });
+
+    const sampleVars = {};
+    (tmpl.variables || []).forEach(v => {
+      const samples = { name: 'রহিম উদ্দিন', otp: '123456', amount: '৫,০০০', username: 'demo_user', date: new Date().toLocaleDateString('bn-BD') };
+      sampleVars[v] = samples[v] || `[${v}]`;
+    });
+    const rendered = templates.renderTemplateRow(tmpl, { ...sampleVars, ...(req.body.variables || {}) });
+    res.json({ success: true, subject: rendered.subject, body: rendered.body, sampleVars });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// টেস্ট সেন্ড — অ্যাডমিন নিজের ইমেইল/নম্বরে পাঠিয়ে দেখতে পারবে
+router.post('/notification-templates/:id/test-send', async (req, res) => {
+  try {
+    const tmpl = await templates.getTemplateById(req.params.id);
+    if (!tmpl) return res.status(404).json({ success: false, error: 'টেমপ্লেট পাওয়া যায়নি' });
+
+    const target = (req.body.target || '').trim();
+    if (!target) return res.status(400).json({ success: false, error: 'টেস্ট টার্গেট (ইমেইল/ফোন/ইউজার আইডি) দিন' });
+
+    const sampleVars = {};
+    (tmpl.variables || []).forEach(v => {
+      const samples = { name: req.session.user.username, otp: '123456', amount: '৫,০০০', username: req.session.user.username, date: new Date().toLocaleDateString('bn-BD') };
+      sampleVars[v] = samples[v] || `[${v}]`;
+    });
+    const rendered = templates.renderTemplateRow(tmpl, sampleVars);
+
+    let result;
+    if (tmpl.channel === 'email') {
+      const nodemailer = require('nodemailer');
+      const transporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com', port: 587, secure: false,
+        auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+        tls: { rejectUnauthorized: false }
+      });
+      await transporter.sendMail({
+        from: `"LIVO (Test)" <${process.env.EMAIL_USER}>`,
+        to: target,
+        subject: `[TEST] ${rendered.subject || tmpl.name}`,
+        html: rendered.body
+      });
+      result = { ok: true, message: `টেস্ট ইমেইল ${target}-এ পাঠানো হয়েছে` };
+    } else if (tmpl.channel === 'sms') {
+      result = await sendSms(target, rendered.body);
+    } else {
+      // in_app — সরাসরি notifications টেবিলে ইনসার্ট করা যায়, target হবে user id
+      const userId = parseInt(target, 10);
+      if (!userId) return res.status(400).json({ success: false, error: 'in-app টেস্টের জন্য বৈধ user ID দিন' });
+      await pool.query(
+        `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'info')`,
+        [userId, `[TEST] ${tmpl.name}`, rendered.body]
+      );
+      result = { ok: true, message: `টেস্ট নোটিফিকেশন user #${userId}-কে পাঠানো হয়েছে` };
+    }
+
+    await logAdminAction(req.session.user.id, req.session.user.username, 'TEMPLATE_TEST_SEND',
+      `টেমপ্লেট টেস্ট-সেন্ড: ${tmpl.template_key} (${tmpl.channel}/${tmpl.lang}) → ${target}`, req.ip);
+
+    res.json({ success: true, ...result });
+  } catch (err) {
+    console.error('template test-send error:', err.message);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -2213,7 +2739,7 @@ router.get('/fraud-logs', async (req, res) => {
   }
 });
 
-router.post('/fraud-logs/:id/review', requirePermission('fraud.manage'), requireIntParam('id'), async (req, res) => {
+router.post('/fraud-logs/:id/review', requireIntParam('id'), async (req, res) => {
   try {
     const { id } = req.params;
     const action = req.body.action === 'dismiss' ? 'dismissed' : 'reviewed';
@@ -2254,7 +2780,7 @@ router.get('/duplicate-accounts', async (req, res) => {
   }
 });
 
-router.post('/duplicate-accounts/:id/review', requirePermission('fraud.manage'), requireIntParam('id'), async (req, res) => {
+router.post('/duplicate-accounts/:id/review', requireIntParam('id'), async (req, res) => {
   try {
     const { id } = req.params;
     const action = req.body.action === 'dismiss' ? 'dismissed' : 'reviewed';
@@ -2267,7 +2793,7 @@ router.post('/duplicate-accounts/:id/review', requirePermission('fraud.manage'),
   res.redirect('back');
 });
 
-router.post('/duplicate-accounts/scan', requirePermission('fraud.manage'), async (req, res) => {
+router.post('/duplicate-accounts/scan', async (req, res) => {
   try {
     const count = await scanAllUsers();
     await logAdminAction(
@@ -2314,25 +2840,25 @@ router.get('/reports', async (req, res) => {
     const bets = betsRes.rows[0];
     const netRevenue = parseFloat(bets.total_stake) - parseFloat(bets.total_payout);
 
-    // ==== দৈনিক GGR ট্রেন্ড (চার্টের জন্য) — GROUP BY replaces correlated subquery ====
+    // ==== দৈনিক GGR ট্রেন্ড (চার্টের জন্য) ====
     const ggrTrendRes = await pool.query(`
-      SELECT created_at::date AS day,
-             SUM(stake) AS staked,
-             SUM(CASE WHEN status='won' THEN stake * odd ELSE 0 END) AS payout
-      FROM bets
-      WHERE created_at::date BETWEEN $1 AND $2
-      GROUP BY 1 ORDER BY 1
+      SELECT d::date AS day,
+             COALESCE(SUM(b.stake) FILTER (WHERE b.created_at::date = d::date),0) AS staked,
+             COALESCE(SUM(b.stake * b.odd) FILTER (WHERE b.created_at::date = d::date AND b.status='won'),0) AS payout
+      FROM generate_series($1::date, $2::date, '1 day') d
+      LEFT JOIN bets b ON b.created_at::date = d::date
+      GROUP BY d ORDER BY d
     `, [from, to]);
     const ggrTrend = ggrTrendRes.rows.map(r => ({
       day: r.day, ggr: Number(r.staked) - Number(r.payout)
     }));
 
-    // ==== দৈনিক নতুন ইউজার ট্রেন্ড — GROUP BY replaces correlated subquery ====
+    // ==== দৈনিক নতুন ইউজার ট্রেন্ড ====
     const userTrendRes = await pool.query(`
-      SELECT created_at::date AS day, COUNT(*) AS cnt
-      FROM users
-      WHERE created_at::date BETWEEN $1 AND $2
-      GROUP BY 1 ORDER BY 1
+      SELECT d::date AS day, COUNT(u.id) AS cnt
+      FROM generate_series($1::date, $2::date, '1 day') d
+      LEFT JOIN users u ON u.created_at::date = d::date
+      GROUP BY d ORDER BY d
     `, [from, to]);
     const userTrend = userTrendRes.rows.map(r => ({ day: r.day, count: parseInt(r.cnt) }));
 
@@ -2348,6 +2874,79 @@ router.get('/reports', async (req, res) => {
       bets: { total_stake: 0, cnt: 0, total_payout: 0 }, newUsers: 0, netRevenue: 0,
       ggrTrend: [], userTrend: []
     });
+  }
+});
+
+// ==================== Background Queue System ড্যাশবোর্ড (BullMQ + Redis) ====================
+router.get('/queues', async (req, res) => {
+  try {
+    const { getQueueHealthStats } = require('../queues');
+    const health = await getQueueHealthStats();
+
+    const dlqRes = await pool.query(
+      `SELECT * FROM queue_dead_letter WHERE status = 'dead' ORDER BY created_at DESC LIMIT 100`
+    );
+
+    res.render('admin/queues', { health, deadLetterJobs: dlqRes.rows });
+  } catch (err) {
+    console.error('Queue dashboard error:', err.message);
+    res.render('admin/queues', { health: { redisConnected: false, queues: [] }, deadLetterJobs: [] });
+  }
+});
+
+// লাইভ স্ট্যাটাস পোলিং-এর জন্য JSON এন্ডপয়েন্ট (ড্যাশবোর্ড প্রতি কয়েক সেকেন্ডে রিফ্রেশ করে)
+router.get('/queues/api/stats', async (req, res) => {
+  try {
+    const { getQueueHealthStats } = require('../queues');
+    const health = await getQueueHealthStats();
+    res.json({ success: true, health });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
+// নির্দিষ্ট Queue-এর একটা state (waiting/active/failed ইত্যাদি)-এর জব লিস্ট
+router.get('/queues/api/jobs/:queueName', async (req, res) => {
+  try {
+    const { getRecentJobs } = require('../queues');
+    const state = req.query.state || 'failed';
+    const jobs = await getRecentJobs(req.params.queueName, state, 30);
+    res.json({ success: true, jobs });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
+// Dead-letter জব রিট্রাই (আবার মূল Queue-তে পাঠানো)
+router.post('/queues/dead-letter/:id/retry', async (req, res) => {
+  try {
+    const { retryDeadLetterJob } = require('../queues');
+    await retryDeadLetterJob(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
+// Dead-letter জব ডিলিট
+router.post('/queues/dead-letter/:id/delete', async (req, res) => {
+  try {
+    const { deleteDeadLetterJob } = require('../queues');
+    await deleteDeadLetterJob(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
+// ম্যানুয়ালি একটা Fraud Scan ট্রিগার করা (টেস্টিং/অ্যাডহক ব্যবহারের জন্য)
+router.post('/queues/fraud-scan/:userId', async (req, res) => {
+  try {
+    const { enqueueFraudScan } = require('../queues');
+    const result = await enqueueFraudScan({ userId: parseInt(req.params.userId, 10), triggeredBy: 'admin' });
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
   }
 });
 
@@ -2399,157 +2998,6 @@ router.get('/login-history', async (req, res) => {
   }
 });
 
-// ==================== ব্যাকগ্রাউন্ড জব কিউ মনিটরিং ====================
-router.get('/queue-jobs', requirePermission('queue.view'), async (req, res) => {
-  try {
-    const { status = '', type = '' } = req.query;
-    const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = 25;
-    const offset = (page - 1) * limit;
-
-    const conditions = [];
-    const params = [];
-    if (status) { params.push(status); conditions.push(`status = $${params.length}`); }
-    if (type) { params.push(type); conditions.push(`type = $${params.length}`); }
-    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
-
-    const listParams = [...params, limit, offset];
-    const [countRes, jobsRes, typesRes, stats, statsByType, throughput, health] = await Promise.all([
-      pool.query(`SELECT COUNT(*) FROM job_queue ${where}`, params),
-      pool.query(
-        `SELECT id, name, status, payload, attempts, max_attempts, error, run_at, started_at, finished_at, created_at FROM job_queue ${where} ORDER BY id DESC LIMIT $${listParams.length - 1} OFFSET $${listParams.length}`,
-        listParams
-      ),
-      pool.query(`SELECT DISTINCT type FROM job_queue ORDER BY type`),
-      queue.getStats(),
-      queue.getStatsByType(),
-      queue.getThroughput(24),
-      queue.getHealthStatus()
-    ]);
-    const total = parseInt(countRes.rows[0].count);
-
-    res.render('admin/queue-jobs', {
-      jobs: jobsRes.rows,
-      page, totalPages: Math.max(1, Math.ceil(total / limit)), total,
-      filters: { status, type },
-      types: typesRes.rows.map(r => r.type),
-      stats, statsByType, throughput, health,
-      queueStatus: queue.getStatus()
-    });
-  } catch (err) {
-    console.error('Queue jobs list error:', err.message);
-    res.render('admin/queue-jobs', {
-      jobs: [], page: 1, totalPages: 1, total: 0,
-      filters: { status: '', type: '' }, types: [],
-      stats: { pending: 0, processing: 0, completed: 0, failed: 0, deadLetter: 0 },
-      statsByType: [], throughput: [],
-      health: { level: 'error', issues: ['লোড করতে ব্যর্থ'], enabled: false, running: false },
-      queueStatus: { enabled: false, running: false, registeredTypes: [] }
-    });
-  }
-});
-
-router.post('/queue-jobs/:id/retry', requirePermission('queue.manage'), requireIntParam('id'), async (req, res) => {
-  try {
-    const ok = await queue.retryJob(req.params.id);
-    if (ok) {
-      await logAdminAction(req.session.user.id, req.session.user.username, 'QUEUE_JOB_RETRIED', `জব #${req.params.id} আবার pending-এ পাঠানো হয়েছে`, req.ip);
-      req.flash('success', '✅ জব আবার কিউতে পাঠানো হয়েছে।');
-    } else {
-      req.flash('error', '❌ জবটি খুঁজে পাওয়া যায়নি বা এটি failed অবস্থায় নেই।');
-    }
-  } catch (err) {
-    console.error('Job retry error:', err.message);
-    req.flash('error', '❌ সমস্যা হয়েছে।');
-  }
-  res.redirect('/admin/queue-jobs');
-});
-
-router.post('/queue-jobs/retry-all', requirePermission('queue.manage'), async (req, res) => {
-  try {
-    const type = req.body.type || null;
-    const count = await queue.retryAllFailed(type);
-    await logAdminAction(req.session.user.id, req.session.user.username, 'QUEUE_JOBS_BULK_RETRIED', `${count}টি ব্যর্থ জব আবার pending-এ পাঠানো হয়েছে${type ? ' (টাইপ: ' + type + ')' : ''}`, req.ip);
-    req.flash('success', `✅ ${count}টি জব আবার কিউতে পাঠানো হয়েছে।`);
-  } catch (err) {
-    console.error('Bulk retry error:', err.message);
-    req.flash('error', '❌ সমস্যা হয়েছে।');
-  }
-  res.redirect('/admin/queue-jobs');
-});
-
-// ==================== Dead Letter Queue (স্থায়ীভাবে ব্যর্থ জব-এর আর্কাইভ) ====================
-router.get('/queue-dlq', requirePermission('queue.view'), async (req, res) => {
-  try {
-    const { type = '' } = req.query;
-    const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = 25;
-    const offset = (page - 1) * limit;
-
-    const [{ rows, total }, typesRes] = await Promise.all([
-      queue.getDeadLetterJobs({ type }, limit, offset),
-      pool.query(`SELECT DISTINCT type FROM dead_letter_jobs ORDER BY type`)
-    ]);
-
-    res.render('admin/queue-dlq', {
-      jobs: rows,
-      page, totalPages: Math.max(1, Math.ceil(total / limit)), total,
-      filters: { type },
-      types: typesRes.rows.map(r => r.type)
-    });
-  } catch (err) {
-    console.error('DLQ list error:', err.message);
-    res.render('admin/queue-dlq', {
-      jobs: [], page: 1, totalPages: 1, total: 0, filters: { type: '' }, types: []
-    });
-  }
-});
-
-router.post('/queue-dlq/:id/requeue', requirePermission('queue.manage'), requireIntParam('id'), async (req, res) => {
-  try {
-    const ok = await queue.requeueDeadLetter(req.params.id);
-    if (ok) {
-      await logAdminAction(req.session.user.id, req.session.user.username, 'DLQ_JOB_REQUEUED', `DLQ জব #${req.params.id} আবার active কিউতে পাঠানো হয়েছে`, req.ip);
-      req.flash('success', '✅ জব আবার কিউতে পাঠানো হয়েছে।');
-    } else {
-      req.flash('error', '❌ জবটি খুঁজে পাওয়া যায়নি।');
-    }
-  } catch (err) {
-    console.error('DLQ requeue error:', err.message);
-    req.flash('error', '❌ সমস্যা হয়েছে।');
-  }
-  res.redirect('/admin/queue-dlq');
-});
-
-router.post('/queue-dlq/:id/purge', requirePermission('queue.manage'), requireIntParam('id'), async (req, res) => {
-  try {
-    const ok = await queue.purgeDeadLetter(req.params.id);
-    if (ok) {
-      await logAdminAction(req.session.user.id, req.session.user.username, 'DLQ_JOB_PURGED', `DLQ জব #${req.params.id} স্থায়ীভাবে মুছে ফেলা হয়েছে`, req.ip);
-      req.flash('success', '✅ জব মুছে ফেলা হয়েছে।');
-    } else {
-      req.flash('error', '❌ জবটি খুঁজে পাওয়া যায়নি।');
-    }
-  } catch (err) {
-    console.error('DLQ purge error:', err.message);
-    req.flash('error', '❌ সমস্যা হয়েছে।');
-  }
-  res.redirect('/admin/queue-dlq');
-});
-
-router.post('/queue-dlq/purge-all', requirePermission('queue.manage'), async (req, res) => {
-  try {
-    const olderThanDays = req.body.olderThanDays ? parseInt(req.body.olderThanDays) : null;
-    const count = await queue.purgeAllDeadLetter(olderThanDays);
-    await logAdminAction(req.session.user.id, req.session.user.username, 'DLQ_BULK_PURGED', `${count}টি DLQ জব মুছে ফেলা হয়েছে${olderThanDays ? ' (' + olderThanDays + ' দিনের পুরনো)' : ''}`, req.ip);
-    req.flash('success', `✅ ${count}টি জব মুছে ফেলা হয়েছে।`);
-  } catch (err) {
-    console.error('DLQ bulk purge error:', err.message);
-    req.flash('error', '❌ সমস্যা হয়েছে।');
-  }
-  res.redirect('/admin/queue-dlq');
-});
-
 // ==================== API KEY ম্যানেজমেন্ট ====================
 const crypto = require('crypto');
 
@@ -2573,7 +3021,7 @@ router.get('/api-keys', async (req, res) => {
   }
 });
 
-router.post('/api-keys/create', requirePermission('api_keys.manage'), async (req, res) => {
+router.post('/api-keys/create', async (req, res) => {
   try {
     const name = sanitizeText(req.body.name || '').slice(0, 100);
     const description = sanitizeText(req.body.description || '').slice(0, 500);
@@ -2601,6 +3049,11 @@ router.post('/api-keys/create', requirePermission('api_keys.manage'), async (req
 
     await logAdminAction(req.session.user.id, req.session.user.username, 'API_KEY_CREATED',
       `নতুন API key তৈরি: "${name}" (scopes: ${scopes.join(', ')})`, req.ip);
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'API_KEY_CREATED', category: 'api', status: 'success', riskLevel: 'medium',
+      details: { keyId: inserted.rows[0] && inserted.rows[0].id, name, scopes }
+    }).catch(e => console.error('logAuditEvent (API_KEY_CREATED) error:', e.message));
 
     const result = await pool.query(
       `SELECT k.*, u.username AS created_by_username
@@ -2615,7 +3068,7 @@ router.post('/api-keys/create', requirePermission('api_keys.manage'), async (req
   }
 });
 
-router.post('/api-keys/:id/toggle', requirePermission('api_keys.manage'), requireIntParam('id'), async (req, res) => {
+router.post('/api-keys/:id/toggle', requireIntParam('id'), async (req, res) => {
   try {
     const r = await pool.query(`UPDATE api_keys SET enabled = NOT enabled WHERE id = $1 RETURNING name, enabled`, [req.params.id]);
     if (r.rows[0]) {
@@ -2630,12 +3083,17 @@ router.post('/api-keys/:id/toggle', requirePermission('api_keys.manage'), requir
   res.redirect('/admin/api-keys');
 });
 
-router.post('/api-keys/:id/revoke', requirePermission('api_keys.manage'), requireIntParam('id'), async (req, res) => {
+router.post('/api-keys/:id/revoke', requireIntParam('id'), async (req, res) => {
   try {
     const r = await pool.query(`UPDATE api_keys SET enabled = false WHERE id = $1 RETURNING name`, [req.params.id]);
     if (r.rows[0]) {
       await logAdminAction(req.session.user.id, req.session.user.username, 'API_KEY_REVOKED',
         `API key "${r.rows[0].name}" revoke করা হয়েছে`, req.ip);
+      logAuditEvent({
+        req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+        action: 'API_KEY_REVOKED', category: 'api', status: 'success', riskLevel: 'medium',
+        details: { keyId: req.params.id, name: r.rows[0].name }
+      }).catch(e => console.error('logAuditEvent (API_KEY_REVOKED) error:', e.message));
       req.flash('success', 'API key revoke করা হয়েছে।');
     }
   } catch (err) {
@@ -2783,11 +3241,616 @@ router.post('/cache/clear', async (req, res) => {
       deleted = await cache.flushAll();
     }
     await logAdminAction(req.session.user.id, req.session.user.username, 'CACHE_CLEARED', `ক্যাশ পরিষ্কার করা হয়েছে (pattern: ${pattern || 'সব'}) — ${deleted} টি কী মুছে গেছে`, req.ip);
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'CACHE_CLEARED', category: 'cache', status: 'success', riskLevel: 'medium',
+      details: { pattern: pattern || '*', deletedCount: deleted }
+    }).catch(e => console.error('logAuditEvent (CACHE_CLEARED) error:', e.message));
     res.redirect(`/admin/cache?cleared=${deleted}`);
   } catch (err) {
     console.error('Cache clear error:', err && err.stack ? err.stack : err);
     res.redirect('/admin/cache');
   }
 });
+
+// ==================== BACKUP & RESTORE SYSTEM ====================
+const backupManager = require('../services/backupManager');
+
+router.get('/backups', async (req, res) => {
+  try {
+    const { type = '' } = req.query;
+    const backups = await backupManager.listBackups({ type, limit: 100 });
+    res.render('admin/backups', {
+      backups, filterType: type,
+      encryptionEnabled: backupManager.isEncryptionEnabled(),
+      created: req.query.created || '', restored: req.query.restored || '', error: req.query.error || ''
+    });
+  } catch (err) {
+    console.error('Backups page error:', err && err.stack ? err.stack : err);
+    res.render('admin/backups', { backups: [], filterType: '', encryptionEnabled: false, created: '', restored: '', error: 'load_failed' });
+  }
+});
+
+router.post('/backups/create', async (req, res) => {
+  try {
+    const { type } = req.body; // 'database' | 'uploads' | 'config' | 'all'
+    const ctx = { source: 'manual', createdById: req.session.user.id, createdByUsername: req.session.user.username };
+    const created = [];
+    if (type === 'database' || type === 'all') created.push(await backupManager.createDatabaseBackup(ctx));
+    if (type === 'uploads' || type === 'all') created.push(await backupManager.createUploadsBackup(ctx));
+    if (type === 'config' || type === 'all') created.push(await backupManager.createConfigBackup(ctx));
+
+    const failed = created.filter(c => c.status === 'failed');
+    for (const c of created) {
+      await logAdminAction(
+        req.session.user.id, req.session.user.username,
+        c.status === 'completed' ? 'BACKUP_CREATED' : 'BACKUP_FAILED',
+        `${c.type} ব্যাকআপ ${c.status === 'completed' ? 'সম্পন্ন হয়েছে' : 'ব্যর্থ হয়েছে: ' + c.error_message} (${c.filename})`,
+        req.ip
+      );
+      logAuditEvent({
+        req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+        action: 'BACKUP_CREATED', category: 'backup',
+        status: c.status === 'completed' ? 'success' : 'failure',
+        riskLevel: c.status === 'completed' ? 'low' : 'medium',
+        details: { type: c.type, filename: c.filename, error: c.error_message || null }
+      }).catch(e => console.error('logAuditEvent (BACKUP_CREATED) error:', e.message));
+    }
+    res.redirect(`/admin/backups?created=${created.length}${failed.length ? '&error=' + failed.length + '_failed' : ''}`);
+  } catch (err) {
+    console.error('Backup create error:', err && err.stack ? err.stack : err);
+    res.redirect('/admin/backups?error=1');
+  }
+});
+
+router.get('/backups/:id/download', async (req, res) => {
+  try {
+    const record = await backupManager.getBackupById(req.params.id);
+    if (!record || record.status !== 'completed') return res.status(404).send('ব্যাকআপ পাওয়া যায়নি।');
+    const filePath = backupManager.getBackupFilePath(record);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'BACKUP_DOWNLOADED', `${record.type} ব্যাকআপ ডাউনলোড হয়েছে (${record.filename})`, req.ip);
+    res.download(filePath, record.filename);
+  } catch (err) {
+    console.error('Backup download error:', err && err.stack ? err.stack : err);
+    res.status(500).send('ডাউনলোড ব্যর্থ।');
+  }
+});
+
+router.post('/backups/:id/restore', async (req, res) => {
+  try {
+    const record = await backupManager.getBackupById(req.params.id);
+    if (!record) return res.redirect('/admin/backups?error=not_found');
+    const result = await backupManager.restoreBackup(record);
+    await logAdminAction(
+      req.session.user.id, req.session.user.username, 'BACKUP_RESTORED',
+      `${record.type} ব্যাকআপ রিস্টোর করা হয়েছে (${record.filename}) — ${JSON.stringify(result).slice(0, 300)}`,
+      req.ip
+    );
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'BACKUP_RESTORED', category: 'restore', status: 'success', riskLevel: 'critical',
+      details: { backupId: req.params.id, type: record.type, filename: record.filename }
+    }).catch(e => console.error('logAuditEvent (BACKUP_RESTORED) error:', e.message));
+    res.redirect(`/admin/backups?restored=${record.type}`);
+  } catch (err) {
+    console.error('Backup restore error:', err && err.stack ? err.stack : err);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'BACKUP_RESTORE_FAILED', `রিস্টোর ব্যর্থ (#${req.params.id}): ${err.message}`, req.ip).catch(() => {});
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'BACKUP_RESTORE_FAILED', category: 'restore', status: 'failure', riskLevel: 'critical',
+      details: { backupId: req.params.id, error: err.message }
+    }).catch(e => console.error('logAuditEvent (BACKUP_RESTORE_FAILED) error:', e.message));
+    res.redirect(`/admin/backups?error=${encodeURIComponent(err.message)}`);
+  }
+});
+
+router.post('/backups/:id/delete', async (req, res) => {
+  try {
+    const record = await backupManager.getBackupById(req.params.id);
+    await backupManager.deleteBackup(req.params.id);
+    if (record) await logAdminAction(req.session.user.id, req.session.user.username, 'BACKUP_DELETED', `${record.type} ব্যাকআপ ডিলিট করা হয়েছে (${record.filename})`, req.ip);
+    res.redirect('/admin/backups');
+  } catch (err) {
+    console.error('Backup delete error:', err && err.stack ? err.stack : err);
+    res.redirect('/admin/backups?error=delete_failed');
+  }
+});
+
+// ==================== Advanced Audit Log Dashboard ====================
+router.get('/audit-logs', async (req, res) => {
+  try {
+    const { q = '', actorType = '', category = '', status = '', riskLevel = '', action = '', from = '', to = '' } = req.query;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const filters = { q, actorType, category, status, riskLevel, action, from, to };
+
+    const [{ rows, total, totalPages }, categoryCounts, riskCounts] = await Promise.all([
+      listAuditLogs(filters, { page, limit: 30 }),
+      getCategoryCounts(),
+      getRiskCounts()
+    ]);
+
+    res.render('admin/audit-logs', {
+      logs: rows, total, page, totalPages, filters,
+      categoryCounts, riskCounts,
+      categories: VALID_CATEGORIES, riskLevels: VALID_RISK_LEVELS
+    });
+  } catch (err) {
+    console.error('Audit log dashboard error:', err.message);
+    res.render('admin/audit-logs', {
+      logs: [], total: 0, page: 1, totalPages: 1,
+      filters: { q: '', actorType: '', category: '', status: '', riskLevel: '', action: '', from: '', to: '' },
+      categoryCounts: [], riskCounts: { low: 0, medium: 0, high: 0, critical: 0 },
+      categories: VALID_CATEGORIES, riskLevels: VALID_RISK_LEVELS
+    });
+  }
+});
+
+// Log Details Modal-এর জন্য — AJAX দিয়ে fetch হয়
+router.get('/audit-logs/:id.json', requireIntParam('id'), async (req, res) => {
+  try {
+    const log = await getAuditLogById(req.params.id);
+    if (!log) return res.status(404).json({ error: 'পাওয়া যায়নি' });
+    res.json(log);
+  } catch (err) {
+    console.error('Audit log detail error:', err.message);
+    res.status(500).json({ error: 'সার্ভার ত্রুটি' });
+  }
+});
+
+router.get('/audit-logs/export.csv', async (req, res) => {
+  try {
+    const { q = '', actorType = '', category = '', status = '', riskLevel = '', action = '', from = '', to = '' } = req.query;
+    const rows = await exportAuditLogs({ q, actorType, category, status, riskLevel, action, from, to });
+
+    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const header = ['id', 'created_at', 'actor_type', 'actor_username', 'action', 'category', 'status', 'risk_level', 'ip_address', 'device_name', 'browser', 'os', 'location', 'request_id', 'details'];
+    const csvRows = rows.map(r => header.map(h => esc(h === 'details' ? JSON.stringify(r[h]) : r[h])).join(','));
+    const csv = [header.join(','), ...csvRows].join('\n');
+
+    await logAdminAction(req.session.user.id, req.session.user.username, 'AUDIT_LOG_EXPORTED', `Audit log CSV এক্সপোর্ট (${rows.length} রো)`, req.ip);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="audit-logs-${Date.now()}.csv"`);
+    res.send('\uFEFF' + csv);
+  } catch (err) {
+    console.error('Audit log CSV export error:', err.message);
+    res.status(500).send('Export failed');
+  }
+});
+
+// ==================== FEATURE FLAGS & CONFIGURATION MANAGEMENT ====================
+const featureFlags = require('../services/featureFlags');
+
+router.get('/feature-flags', async (req, res) => {
+  try {
+    const flags = await featureFlags.loadAllFlags();
+    res.render('admin/feature-flags', { flags: flags || [], created: req.query.created || '', error: req.query.error || '' });
+  } catch (err) {
+    console.error('Feature flags page error:', err && err.stack ? err.stack : err);
+    res.render('admin/feature-flags', { flags: [], created: '', error: 'load_failed' });
+  }
+});
+
+router.post('/feature-flags/:id/toggle', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT * FROM feature_flags WHERE id = $1', [req.params.id]);
+    const flag = r.rows[0];
+    if (!flag) return res.redirect('/admin/feature-flags?error=not_found');
+    const newState = !flag.enabled;
+    await featureFlags.setFlag(flag.key, newState, req.session.user.id, req.session.user.username);
+    await logAdminAction(
+      req.session.user.id, req.session.user.username, 'FEATURE_FLAG_TOGGLED',
+      `"${flag.label}" (${flag.key}) ${newState ? 'চালু' : 'বন্ধ'} করা হয়েছে`, req.ip
+    );
+    res.redirect('/admin/feature-flags');
+  } catch (err) {
+    console.error('Feature flag toggle error:', err && err.stack ? err.stack : err);
+    res.redirect('/admin/feature-flags?error=toggle_failed');
+  }
+});
+
+router.post('/feature-flags/create', async (req, res) => {
+  try {
+    const { key, label, category, description } = req.body;
+    const created = await featureFlags.createFlag({
+      key: (key || '').trim(), label: (label || '').trim(), category, description,
+      enabled: false, adminId: req.session.user.id, adminUsername: req.session.user.username
+    });
+    await logAdminAction(req.session.user.id, req.session.user.username, 'FEATURE_FLAG_CREATED', `নতুন ফ্ল্যাগ তৈরি হয়েছে: "${created.label}" (${created.key}, ${created.category})`, req.ip);
+    res.redirect('/admin/feature-flags?created=1');
+  } catch (err) {
+    console.error('Feature flag create error:', err && err.stack ? err.stack : err);
+    res.redirect(`/admin/feature-flags?error=${encodeURIComponent(err.message)}`);
+  }
+});
+
+router.post('/feature-flags/:id/delete', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT * FROM feature_flags WHERE id = $1', [req.params.id]);
+    const flag = r.rows[0];
+    await featureFlags.deleteFlag(req.params.id);
+    if (flag) await logAdminAction(req.session.user.id, req.session.user.username, 'FEATURE_FLAG_DELETED', `"${flag.label}" (${flag.key}) ডিলিট করা হয়েছে`, req.ip);
+    res.redirect('/admin/feature-flags');
+  } catch (err) {
+    console.error('Feature flag delete error:', err && err.stack ? err.stack : err);
+    res.redirect('/admin/feature-flags?error=delete_failed');
+  }
+});
+
+const fs = require('fs');
+const path = require('path');
+const LOCALES_DIR = path.join(__dirname, '..', 'locales');
+
+function readLocale(code) {
+  return JSON.parse(fs.readFileSync(path.join(LOCALES_DIR, code + '.json'), 'utf8'));
+}
+function writeLocale(code, obj) {
+  const sorted = {};
+  Object.keys(obj).sort().forEach(k => sorted[k] = obj[k]);
+  fs.writeFileSync(path.join(LOCALES_DIR, code + '.json'), JSON.stringify(sorted, null, 2) + '\n', 'utf8');
+}
+function refreshCache(req) {
+  const fn = req.app.get('refreshTranslationsCache');
+  if (fn) fn();
+}
+
+router.get('/localization', (req, res) => {
+  try {
+    const bn = readLocale('bn');
+    const en = readLocale('en');
+    const q = (req.query.q || '').trim().toLowerCase();
+    const allKeys = Array.from(new Set([...Object.keys(bn), ...Object.keys(en)])).sort();
+    const rows = allKeys
+      .filter(k => !q || k.toLowerCase().includes(q) || (bn[k] || '').toLowerCase().includes(q) || (en[k] || '').toLowerCase().includes(q))
+      .map(k => ({ key: k, bn: bn[k] || '', en: en[k] || '', missingBn: !bn[k], missingEn: !en[k] }));
+    const missingCount = rows.filter(r => r.missingBn || r.missingEn).length;
+    res.render('admin/localization', { rows, q: req.query.q || '', total: allKeys.length, missingCount, saved: req.query.saved === '1' });
+  } catch (err) {
+    console.error('Localization load error:', err.message);
+    res.render('admin/localization', { rows: [], q: '', total: 0, missingCount: 0, saved: false });
+  }
+});
+
+router.post('/localization/create', async (req, res) => {
+  try {
+    const key = (req.body.key || '').trim();
+    const bnVal = req.body.bn || '';
+    const enVal = req.body.en || '';
+    if (!key || !/^[a-zA-Z0-9_]+$/.test(key)) {
+      req.flash('error', 'Key শুধু ইংরেজি অক্ষর, সংখ্যা ও আন্ডারস্কোর দিয়ে হতে হবে।');
+      return res.redirect('/admin/localization');
+    }
+    const bn = readLocale('bn'); const en = readLocale('en');
+    bn[key] = bnVal; en[key] = enVal;
+    writeLocale('bn', bn); writeLocale('en', en);
+    refreshCache(req);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'LOCALIZATION_KEY_CREATED', `Key তৈরি: ${key}`, req.ip);
+    req.flash('success', '✅ নতুন Key তৈরি হয়েছে।');
+    res.redirect('/admin/localization');
+  } catch (err) {
+    req.flash('error', 'Key তৈরি করতে সমস্যা হয়েছে।');
+    res.redirect('/admin/localization');
+  }
+});
+
+router.post('/localization/update', async (req, res) => {
+  try {
+    const key = (req.body.key || '').trim();
+    const bnVal = req.body.bn || '';
+    const enVal = req.body.en || '';
+    if (!key) { req.flash('error', 'Key পাওয়া যায়নি।'); return res.redirect('/admin/localization'); }
+    const bn = readLocale('bn'); const en = readLocale('en');
+    bn[key] = bnVal; en[key] = enVal;
+    writeLocale('bn', bn); writeLocale('en', en);
+    refreshCache(req);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'LOCALIZATION_KEY_UPDATED', `Key আপডেট: ${key}`, req.ip);
+    req.flash('success', '✅ Key আপডেট হয়েছে।');
+    res.redirect('/admin/localization');
+  } catch (err) {
+    req.flash('error', 'Key আপডেট করতে সমস্যা হয়েছে।');
+    res.redirect('/admin/localization');
+  }
+});
+
+router.post('/localization/delete', async (req, res) => {
+  try {
+    const key = (req.body.key || '').trim();
+    const bn = readLocale('bn'); const en = readLocale('en');
+    delete bn[key]; delete en[key];
+    writeLocale('bn', bn); writeLocale('en', en);
+    refreshCache(req);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'LOCALIZATION_KEY_DELETED', `Key ডিলিট: ${key}`, req.ip);
+    req.flash('success', '✅ Key ডিলিট হয়েছে।');
+    res.redirect('/admin/localization');
+  } catch (err) {
+    req.flash('error', 'Key ডিলিট করতে সমস্যা হয়েছে।');
+    res.redirect('/admin/localization');
+  }
+});
+
+router.get('/localization/export/:lang', (req, res) => {
+  try {
+    const lang = req.params.lang === 'en' ? 'en' : 'bn';
+    const data = readLocale(lang);
+    res.setHeader('Content-Disposition', `attachment; filename="${lang}.json"`);
+    res.setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify(data, null, 2));
+  } catch (err) {
+    res.status(500).send('Export failed');
+  }
+});
+
+router.get('/audit-logs/export.xlsx', async (req, res) => {
+  try {
+    const ExcelJS = require('exceljs');
+    const { q = '', actorType = '', category = '', status = '', riskLevel = '', action = '', from = '', to = '' } = req.query;
+    const rows = await exportAuditLogs({ q, actorType, category, status, riskLevel, action, from, to });
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Audit Logs');
+    sheet.columns = [
+      { header: 'ID', key: 'id', width: 8 },
+      { header: 'Time', key: 'created_at', width: 22 },
+      { header: 'Actor Type', key: 'actor_type', width: 12 },
+      { header: 'Actor', key: 'actor_username', width: 18 },
+      { header: 'Action', key: 'action', width: 22 },
+      { header: 'Category', key: 'category', width: 14 },
+      { header: 'Status', key: 'status', width: 10 },
+      { header: 'Risk Level', key: 'risk_level', width: 12 },
+      { header: 'IP', key: 'ip_address', width: 16 },
+      { header: 'Device', key: 'device_name', width: 24 },
+      { header: 'Browser', key: 'browser', width: 14 },
+      { header: 'OS', key: 'os', width: 14 },
+      { header: 'Location', key: 'location', width: 20 },
+      { header: 'Request ID', key: 'request_id', width: 24 },
+      { header: 'Details', key: 'details', width: 40 }
+    ];
+    sheet.getRow(1).font = { bold: true };
+    rows.forEach(r => sheet.addRow({ ...r, details: JSON.stringify(r.details || {}) }));
+
+    await logAdminAction(req.session.user.id, req.session.user.username, 'AUDIT_LOG_EXPORTED', `Audit log Excel এক্সপোর্ট (${rows.length} রো)`, req.ip);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="audit-logs-${Date.now()}.xlsx"`);
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error('Audit log Excel export error:', err.message);
+    res.status(500).send('Export failed');
+  }
+});
+
+router.post('/localization/import/:lang', async (req, res) => {
+  try {
+    const lang = req.params.lang === 'en' ? 'en' : 'bn';
+    let incoming;
+    try { incoming = JSON.parse(req.body.json || '{}'); } catch (e) {
+      req.flash('error', 'বৈধ JSON না — পার্স করা যায়নি।');
+      return res.redirect('/admin/localization');
+    }
+    if (typeof incoming !== 'object' || Array.isArray(incoming) || incoming === null) {
+      req.flash('error', 'JSON অবশ্যই key-value অবজেক্ট হতে হবে।');
+      return res.redirect('/admin/localization');
+    }
+    const current = readLocale(lang);
+    const merged = Object.assign({}, current, incoming);
+    writeLocale(lang, merged);
+    refreshCache(req);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'LOCALIZATION_IMPORTED', `${lang}.json import (${Object.keys(incoming).length}টি key)`, req.ip);
+    req.flash('success', `✅ ${Object.keys(incoming).length}টি Key ইম্পোর্ট হয়েছে (${lang})।`);
+    res.redirect('/admin/localization');
+  } catch (err) {
+    req.flash('error', 'ইম্পোর্ট ব্যর্থ হয়েছে।');
+    res.redirect('/admin/localization');
+  }
+});
+
+router.post('/localization/refresh-cache', async (req, res) => {
+  try {
+    refreshCache(req);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'LOCALIZATION_CACHE_REFRESHED', 'Translation cache রিফ্রেশ করা হয়েছে', req.ip);
+    req.flash('success', '✅ Cache রিফ্রেশ হয়েছে।');
+    res.redirect('/admin/localization');
+  } catch (err) {
+    req.flash('error', 'Cache রিফ্রেশ ব্যর্থ হয়েছে।');
+    res.redirect('/admin/localization');
+  }
+});
+
+// ==================== Announcement / Broadcast System ====================
+router.get('/announcements', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT * FROM announcements ORDER BY created_at DESC');
+    res.render('admin/announcements', { list: r.rows, error: req.query.error || '', created: req.query.created === '1' });
+  } catch (err) {
+    console.error('Announcements list error:', err.message);
+    res.render('admin/announcements', { list: [], error: 'load_failed', created: false });
+  }
+});
+
+router.post('/announcements/create', async (req, res) => {
+  try {
+    const { type, title_bn, title_en, message_bn, message_en, target_type, target_role, target_user_id, starts_at, expires_at } = req.body;
+    if (!message_bn || !message_bn.trim()) {
+      return res.redirect('/admin/announcements?error=' + encodeURIComponent('বাংলা মেসেজ আবশ্যক'));
+    }
+    const r = await pool.query(
+      `INSERT INTO announcements (type, title_bn, title_en, message_bn, message_en, target_type, target_role, target_user_id, starts_at, expires_at, created_by, created_by_username)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8, COALESCE($9, NOW()), $10, $11, $12) RETURNING id`,
+      [
+        type || 'banner', title_bn || null, title_en || null, message_bn, message_en || null,
+        target_type || 'all', target_type === 'role' ? (target_role || null) : null,
+        target_type === 'user' ? (parseInt(target_user_id) || null) : null,
+        starts_at || null, expires_at || null,
+        req.session.user.id, req.session.user.username
+      ]
+    );
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ANNOUNCEMENT_CREATED', `নতুন ${type} announcement তৈরি হয়েছে (#${r.rows[0].id})`, req.ip);
+    res.redirect('/admin/announcements?created=1');
+  } catch (err) {
+    console.error('Announcement create error:', err.message);
+    res.redirect('/admin/announcements?error=' + encodeURIComponent('তৈরি করতে সমস্যা হয়েছে'));
+  }
+});
+
+router.post('/announcements/:id/update', async (req, res) => {
+  try {
+    const { type, title_bn, title_en, message_bn, message_en, target_type, target_role, target_user_id, starts_at, expires_at } = req.body;
+    await pool.query(
+      `UPDATE announcements SET type=$1, title_bn=$2, title_en=$3, message_bn=$4, message_en=$5,
+       target_type=$6, target_role=$7, target_user_id=$8, starts_at=COALESCE($9, starts_at), expires_at=$10, updated_at=NOW()
+       WHERE id=$11`,
+      [
+        type || 'banner', title_bn || null, title_en || null, message_bn, message_en || null,
+        target_type || 'all', target_type === 'role' ? (target_role || null) : null,
+        target_type === 'user' ? (parseInt(target_user_id) || null) : null,
+        starts_at || null, expires_at || null, req.params.id
+      ]
+    );
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ANNOUNCEMENT_UPDATED', `Announcement আপডেট হয়েছে (#${req.params.id})`, req.ip);
+    res.redirect('/admin/announcements?created=1');
+  } catch (err) {
+    console.error('Announcement update error:', err.message);
+    res.redirect('/admin/announcements?error=' + encodeURIComponent('আপডেট ব্যর্থ হয়েছে'));
+  }
+});
+
+router.post('/announcements/:id/toggle', async (req, res) => {
+  try {
+    const r = await pool.query('UPDATE announcements SET active = NOT active, updated_at = NOW() WHERE id = $1 RETURNING active', [req.params.id]);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ANNOUNCEMENT_TOGGLED', `Announcement #${req.params.id} ${r.rows[0].active ? 'সক্রিয়' : 'নিষ্ক্রিয়'} করা হয়েছে`, req.ip);
+    res.redirect('/admin/announcements');
+  } catch (err) {
+    res.redirect('/admin/announcements?error=toggle_failed');
+  }
+});
+
+router.post('/announcements/:id/expire-now', async (req, res) => {
+  try {
+    await pool.query('UPDATE announcements SET expires_at = NOW(), updated_at = NOW() WHERE id = $1', [req.params.id]);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ANNOUNCEMENT_EXPIRED', `Announcement #${req.params.id} এখনই expire করা হয়েছে`, req.ip);
+    res.redirect('/admin/announcements');
+  } catch (err) {
+    res.redirect('/admin/announcements?error=expire_failed');
+  }
+});
+
+router.post('/announcements/:id/delete', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM announcements WHERE id = $1', [req.params.id]);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'ANNOUNCEMENT_DELETED', `Announcement #${req.params.id} ডিলিট করা হয়েছে`, req.ip);
+    res.redirect('/admin/announcements');
+  } catch (err) {
+    res.redirect('/admin/announcements?error=delete_failed');
+  }
+});
+
+router.get('/diagnostics', async (req, res) => {
+  try {
+    const report = await runAllChecks();
+    res.render('admin/diagnostics', { report, active: 'diagnostics' });
+  } catch (err) {
+    console.error('Diagnostics error:', err.message);
+    res.render('admin/diagnostics', {
+      report: { overall: 'error', timestamp: new Date().toISOString(), checks: {} },
+      active: 'diagnostics'
+    });
+  }
+});
+
+// Diagnostics JSON API (polling)
+router.get('/diagnostics/json', async (req, res) => {
+  try {
+    const report = await runAllChecks();
+    res.json(report);
+  } catch (err) {
+    res.status(500).json({ overall: 'error', error: err.message });
+  }
+});
+
+// ==================== Cron Jobs Monitor (প্রোডাকশন-রেডি Scheduler ম্যানেজমেন্ট) ====================
+router.get('/cron-jobs', async (req, res) => {
+  try {
+    const jobs = await scheduler.listJobs();
+    const recentLogs = await scheduler.getRecentLogs(20);
+    res.render('admin/cron-jobs', { jobs, recentLogs, active: 'cron-jobs' });
+  } catch (err) {
+    console.error('Cron jobs list error:', err.message);
+    res.render('admin/cron-jobs', { jobs: [], recentLogs: [], active: 'cron-jobs' });
+  }
+});
+
+// একটা নির্দিষ্ট Job-এর সম্পূর্ণ Execution History
+router.get('/cron-jobs/:key/logs', async (req, res) => {
+  try {
+    const key = req.params.key;
+    const logs = await scheduler.getJobLogs(key, 100);
+    const jobs = await scheduler.listJobs();
+    const job = jobs.find(j => j.key === key) || { key, label: key, description: '' };
+    res.render('admin/cron-job-logs', { job, logs, active: 'cron-jobs' });
+  } catch (err) {
+    console.error('Cron job logs error:', err.message);
+    req.flash('error', 'জব হিস্ট্রি লোড করা যায়নি।');
+    res.redirect('/admin/cron-jobs');
+  }
+});
+
+// Run Now — ম্যানুয়ালি একটা Job অবিলম্বে ট্রিগার করা (schedule অপেক্ষা না করে)
+router.post('/cron-jobs/:key/run', adminActionLimiter, async (req, res) => {
+  try {
+    const key = req.params.key;
+    if (!scheduler.JOB_DEFINITIONS[key]) {
+      req.flash('error', `অজানা cron job: ${key}`);
+      return res.redirect('/admin/cron-jobs');
+    }
+    const result = await scheduler.runJob(key, { triggeredBy: `manual:${req.session.user.username}` });
+    await logAdminAction(
+      req.session.user.id, req.session.user.username, 'CRON_JOB_RUN_NOW',
+      `Cron job "${key}" ম্যানুয়ালি রান করা হয়েছে — status: ${result.status}, duration: ${result.durationMs}ms`,
+      req.ip
+    );
+    req.flash(result.status === 'success' ? 'success' : 'error',
+      `"${key}" রান হয়েছে (${result.durationMs}ms) — ${result.message}`);
+    res.redirect('/admin/cron-jobs');
+  } catch (err) {
+    console.error('Cron run-now error:', err.message);
+    req.flash('error', 'Job রান করা যায়নি: ' + err.message);
+    res.redirect('/admin/cron-jobs');
+  }
+});
+
+// Enable/Disable — সার্ভার রিস্টার্ট ছাড়াই কার্যকর হয় (প্রতিবার রানের আগে DB থেকে ফ্রেশ চেক হয়)
+router.post('/cron-jobs/:key/toggle', adminActionLimiter, async (req, res) => {
+  try {
+    const key = req.params.key;
+    if (!scheduler.JOB_DEFINITIONS[key]) {
+      req.flash('error', `অজানা cron job: ${key}`);
+      return res.redirect('/admin/cron-jobs');
+    }
+    const enabled = req.body.enabled === 'true' || req.body.enabled === '1';
+    await scheduler.setEnabled(key, enabled);
+    await logAdminAction(
+      req.session.user.id, req.session.user.username, 'CRON_JOB_TOGGLE',
+      `Cron job "${key}" ${enabled ? 'সক্রিয়' : 'নিষ্ক্রিয়'} করা হয়েছে`, req.ip
+    );
+    req.flash('success', `"${key}" ${enabled ? 'সক্রিয়' : 'নিষ্ক্রিয়'} করা হয়েছে।`);
+    res.redirect('/admin/cron-jobs');
+  } catch (err) {
+    console.error('Cron toggle error:', err.message);
+    req.flash('error', 'Job টগল করা যায়নি: ' + err.message);
+    res.redirect('/admin/cron-jobs');
+  }
+});
+
+// Cron Jobs JSON API (পোলিং — লাইভ লাস্ট-রান স্ট্যাটাসের জন্য)
+router.get('/cron-jobs/status/json', async (req, res) => {
+  try {
+    const jobs = await scheduler.listJobs();
+    res.json({ success: true, jobs });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+
+// ==================== LOGIN HISTORY (সব ইউজারের, সার্চ/ফিল্টার সহ) ====================
 
 module.exports = router;

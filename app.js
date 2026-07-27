@@ -1,17 +1,23 @@
 require('dotenv').config();
 const process = require('node:process');
-require('./services/envValidator').runStartupValidation();
+
+// ==================== Sentry মনিটরিং — সবার আগে init করা হয় যাতে পরবর্তী
+// সব require/middleware/route-এর এরর স্বয়ংক্রিয়ভাবে ধরা পড়ে ====================
+const sentryService = require('./services/sentry');
+sentryService.init();
 
 // ==================== প্রসেস-লেভেল ক্র্যাশ গার্ড ====================
 // কোনো একটা জায়গায় unhandled promise rejection হলে Node.js (v15+) ডিফল্টভাবে
 // পুরো প্রসেস বন্ধ করে দেয় — তখন Render/হোস্টিং প্ল্যাটফর্মের জেনেরিক
 // "Internal Server Error" পেজ দেখা যায় যতক্ষণ না প্রসেস আবার রিস্টার্ট হয়।
-// এখানে সেটা আটকে শুধু লগ করে সার্ভার চালু রাখা হচ্ছে।
+// এখানে সেটা আটকে শুধু লগ করে সার্ভার চালু রাখা হচ্ছে — এখন Sentry-তেও রিপোর্ট হয়।
 process.on('unhandledRejection', (reason) => {
   console.error('⚠️ Unhandled Rejection:', reason && reason.stack ? reason.stack : reason);
+  sentryService.captureException(reason instanceof Error ? reason : new Error(String(reason)), { source: 'unhandledRejection' });
 });
 process.on('uncaughtException', (err) => {
   console.error('⚠️ Uncaught Exception:', err && err.stack ? err.stack : err);
+  sentryService.captureException(err, { source: 'uncaughtException' });
 });
 process.on('SIGTERM', async () => {
   try { const { stopWorkers } = require('./services/queue'); await stopWorkers(); } catch (e) {}
@@ -35,9 +41,13 @@ const { syncMatches } = require('./services/matchUpdater');
 const runMigrations = require('./migrations');
 const { apiGateway, responseHelpers } = require('./middleware/gateway');
 const { scheduleDailyBackup } = require('./services/backup');
+const { scheduleAutoBackup } = require('./services/backupManager');
 const { touchDeviceActivity } = require('./services/deviceTracking');
+const cookieParser = require('cookie-parser');
 require('./services/cache'); // অ্যাপ বুট হওয়ার সাথে সাথেই Redis কানেকশন অ্যাটেম্পট শুরু হয় (কানেক্ট না হলেও অ্যাপ চলতে থাকে)
 const { startWorkers, stopWorkers } = require('./services/queue');
+const appMetrics = require('./services/metrics');
+const { requireMetricsAccess } = require('./middleware/metricsAuth');
 
 const app = express();
 app.use(compression());
@@ -88,36 +98,31 @@ if (process.env.NODE_ENV === 'production') {
   cspDirectives.upgradeInsecureRequests = [];
 }
 
+const isProdEnv = process.env.NODE_ENV === 'production';
+
 app.use(helmet({
   contentSecurityPolicy: { directives: cspDirectives },
   // Cloudinary/Google Fonts/CDN-এর মতো ক্রস-অরিজিন রিসোর্স লোড করতে হয় বলে
   // COEP বন্ধ রাখা হয়েছে — এটা চালু থাকলে ওই রিসোর্সগুলো ব্লক হয়ে যেত।
   crossOriginEmbedderPolicy: false,
   crossOriginResourcePolicy: { policy: 'cross-origin' },
-  // Strict-Transport-Security — শুধু প্রোডাকশনে (HTTPS নিশ্চিত থাকলে) চালু, যাতে লোকাল
-  // ডেভেলপমেন্ট (HTTP) এ ব্রাউজার জোর করে HTTPS-এ রিডাইরেক্ট করতে গিয়ে ভেঙে না যায়।
-  hsts: isProdEnv ? { maxAge: 15552000, includeSubDomains: true, preload: false } : false,
-  // frameguard (X-Frame-Options: SAMEORIGIN) ও noSniff (X-Content-Type-Options: nosniff)
-  // helmet-এর ডিফল্টেই চালু থাকে — এখানে আলাদা করে uncheck/override করা হয়নি।
+  hsts: isProdEnv ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
+  frameguard: { action: 'sameorigin' },
+  noSniff: true,
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
-// Permissions-Policy — helmet v8-এর ডিফল্ট সেটে এটা নেই, তাই আলাদাভাবে যোগ করা হলো।
-// অপ্রয়োজনীয় ব্রাউজার ফিচার (ক্যামেরা/মাইক্রোফোন/জিওলোকেশন ইত্যাদি) ডিজেবল করে দেওয়া হচ্ছে,
-// পেমেন্ট রিকোয়েস্ট ফর্মে ইমেজ আপলোডের জন্য শুধু 'self' থেকে ক্যামেরা/জিওলোকেশন লাগতে পারে
-// এমন কোনো বিদ্যমান ফিচার নেই বলে নিরাপদে ব্লক করা হলো।
-app.use((req, res, next) => {
-  res.setHeader(
-    'Permissions-Policy',
-    'geolocation=(), camera=(), microphone=(), payment=(), usb=(), magnetometer=(), gyroscope=(), interest-cohort=()'
-  );
-  next();
-});
 // লিগ্যাসি ব্রাউজারের জন্য X-XSS-Protection (আধুনিক ব্রাউজার CSP-ই যথেষ্ট মানে, হেডারটা ignore করে,
 // কিন্তু পুরনো ব্রাউজার সাপোর্টের জন্য স্ট্যান্ডার্ড হিসেবে রাখা হলো)
 app.use((req, res, next) => {
   res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader(
+    'Permissions-Policy',
+    'geolocation=(), camera=(), microphone=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), payment=(self), fullscreen=(self)'
+  );
   next();
 });
+app.use(require('./middleware/requestId'));
+app.use(appMetrics.httpMiddleware);
 
 // ==================== CORS ====================
 // কাস্টম ডোমেইন এখনো কেনা হয়নি, তাই আপাতত Render subdomain + লোকাল ডেভেলপমেন্ট origin-ই অনুমোদিত।
@@ -163,31 +168,42 @@ const sessionMiddleware = session({
   }
 });
 app.use(sessionMiddleware);
+app.use(cookieParser());
 
 // session middleware রেডি হওয়ার পর socket.io ইনিশিয়ালাইজ করা হচ্ছে,
 // যাতে socket connection-এও একই লগইন session ব্যবহার করে ইউজার/অ্যাডমিন যাচাই করা যায়
 initSocket(server, sessionMiddleware);
 
 app.use(flash());
+app.use(sentryService.userContextMiddleware); // লগইন করা থাকলে Sentry ইভেন্টে ইউজার কনটেক্সট যোগ হবে
 
-const { createLimiter } = require('./middleware/rateLimitFactory');
+const RedisRateLimitStore = require('./services/redisRateLimitStore');
 
-const loginLimiter = createLimiter('login', {
+const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
-  message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।'
+  message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new RedisRateLimitStore('rl:login:')
 });
 
-const generalLimiter = createLimiter('general', {
+const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 300
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new RedisRateLimitStore('rl:general:')
 });
 
 // ডিপোজিট/উইথড্র/কার্ড/পাসওয়ার্ড — টাকা-সংক্রান্ত ও অ্যাকাউন্ট-সংবেদনশীল রুটে কড়া রেট-লিমিট
-const financialLimiter = createLimiter('financial', {
+const financialLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
-  message: 'অনেকবার চেষ্টা করেছেন। কিছুক্ষণ পর আবার চেষ্টা করুন।'
+  message: 'অনেকবার চেষ্টা করেছেন। কিছুক্ষণ পর আবার চেষ্টা করুন।',
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new RedisRateLimitStore('rl:financial:')
 });
 
 app.use(generalLimiter);
@@ -202,14 +218,30 @@ app.use('/profile/update', financialLimiter);
 app.use('/profile/update-personal', financialLimiter);
 
 // ভাষা সেটিং
-const translations = {
-  bn: require('./locales/bn.json'),
-  en: require('./locales/en.json')
-};
+const fs = require('fs');
+const LOCALES_DIR = path.join(__dirname, 'locales');
+function loadTranslations() {
+  return {
+    bn: JSON.parse(fs.readFileSync(path.join(LOCALES_DIR, 'bn.json'), 'utf8')),
+    en: JSON.parse(fs.readFileSync(path.join(LOCALES_DIR, 'en.json'), 'utf8'))
+  };
+}
+let translations = loadTranslations();
+function refreshTranslationsCache() { translations = loadTranslations(); }
+app.set('refreshTranslationsCache', refreshTranslationsCache);
+app.set('getTranslations', () => translations);
 
 app.get('/lang/:code', (req, res) => {
   req.session.lang = req.params.code === 'en' ? 'en' : 'bn';
   res.redirect(req.get('Referer') || '/');
+});
+
+app.post('/announcements/:id/dismiss', async (req, res) => {
+  try {
+    const { dismiss } = require('./services/announcements');
+    await dismiss(req.params.id, req.session.user ? req.session.user.id : null);
+    res.json({ ok: true });
+  } catch (e) { res.json({ ok: false }); }
 });
 
 app.use((req, res, next) => {
@@ -217,17 +249,6 @@ app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.success = req.flash('success');
   res.locals.error = req.flash('error');
-
-  // ---- XSS হার্ডেনিং হেল্পার (সব EJS টেমপ্লেটে উপলব্ধ) ----
-  // escapeHtml: প্লেইন-টেক্সট ডেটা <br> ইত্যাদির সাথে মেশানোর আগে ব্যবহার করতে হয়
-  res.locals.escapeHtml = (str) => String(str == null ? '' : str)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  // jsonScriptSafe: <script> ট্যাগ বা inline event handler-এর ভেতর JSON বসানোর সময় ব্যবহার
-  // করতে হয় — সাধারণ JSON.stringify()-এ "</script>" বা "<" থাকলে স্ক্রিপ্ট কনটেক্সট থেকে
-  // বের হয়ে HTML/JS ইনজেকশন সম্ভব; এই হেল্পার সেটা প্রতিরোধ করে।
-  res.locals.jsonScriptSafe = (obj) => JSON.stringify(obj)
-    .replace(/</g, '\\u003C').replace(/>/g, '\\u003E').replace(/&/g, '\\u0026').replace(/'/g, '\\u0027');
 
   // ডিভাইস "last activity" আপডেট — থ্রটলড, নন-ব্লকিং, লগইন করা ইউজারের জন্যই শুধু
   if (req.session && req.session.user) {
@@ -251,6 +272,14 @@ app.use((req, res, next) => {
   }
   res.locals.currentPage = page;
 
+  if (!req.path.startsWith('/admin')) {
+    const { getAllActiveForUser } = require('./services/announcements');
+    getAllActiveForUser(req.session.user || null)
+      .then(list => { res.locals.activeAnnouncements = list; next(); })
+      .catch(() => { res.locals.activeAnnouncements = []; next(); });
+    return;
+  }
+  res.locals.activeAnnouncements = [];
   next();
 });
 
@@ -271,6 +300,20 @@ app.get('/ready', async (req, res) => {
     res.status(200).json(data);
   } catch (err) {
     res.status(503).json({ status: 'not_ready', error: err.message });
+  }
+});
+
+app.get('/metrics', requireMetricsAccess, async (req, res) => {
+  try {
+    if (!appMetrics.enabled) {
+      return res.status(503).type('text/plain').send('# metrics disabled: prom-client not installed\n');
+    }
+    await appMetrics.refreshAsyncMetrics();
+    res.set('Content-Type', appMetrics.register.contentType);
+    res.end(await appMetrics.register.metrics());
+  } catch (err) {
+    console.error('[metrics] /metrics endpoint error:', err.message);
+    res.status(500).type('text/plain').send('# error collecting metrics\n');
   }
 });
 app.get('/privacy', (req, res) => res.render('privacy'));
@@ -328,26 +371,15 @@ app.use('/coins', require('./routes/coins'));
 app.use('/news', require('./routes/news'));
 app.use('/profile', require('./routes/profile'));
 app.use('/leaderboard', require('./routes/leaderboard'));
-// ── API v1 (backward compatible — existing routes unchanged) ────────────────
-app.use('/api/v1', require('./routes/api/v1'));
-
-// ── Swagger / OpenAPI docs ──────────────────────────────────────────────────
-const swaggerUi = require('swagger-ui-express');
-const { swaggerSpec } = require('./services/swagger');
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-  customSiteTitle: 'Livo API Docs',
-  customCss: '.swagger-ui .topbar { background-color: #4f46e5; } .swagger-ui .topbar .link img { display:none; }',
-  swaggerOptions: { persistAuthorization: true, displayRequestDuration: true, filter: true }
-}));
-// Raw OpenAPI JSON
-app.get('/api/docs.json', (req, res) => res.json(swaggerSpec));
-
+// Server Health — admin.js-এর আগে মাউন্ট (পুরনো broken handler এড়ানো)
+app.use('/admin', require('./routes/adminHealthFix'));
 app.use('/admin', require('./routes/admin'));
 app.use('/admin/games', require('./middleware/auth').isAdmin, require('./routes/adminGames'));
 app.use('/notifications', require('./routes/notifications'));
 app.use('/help-center', require('./routes/help-center'));
 app.use('/payment', require('./routes/payment'));
 app.use('/games', require('./routes/games'));
+app.use('/api', require('./routes/api'));
 app.use('/accumulator', require('./routes/accumulator'));
 app.use('/chat', require('./routes/chat'));
 app.use('/extra', require('./routes/extra'));
@@ -379,30 +411,19 @@ app.post('/telegram-webhook', express.json(), async (req, res) => {
 });
 
 // Error Handling
+sentryService.attachExpressErrorHandler(app); // HTTP এরর অটোমেটিক Sentry-তে রিপোর্ট হবে (নিজের error handler-এর আগে বসাতে হয়)
 app.use((err, req, res, next) => {
   console.error('❌ Unhandled Error:', err.stack);
-  const { redactUrl } = require('./services/urlRedact');
-  const safeUrl = redactUrl(req.originalUrl || null);
   pool.query(
-    `INSERT INTO error_logs (message, stack, url, method, user_id) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+    `INSERT INTO error_logs (message, stack, url, method, user_id) VALUES ($1, $2, $3, $4, $5)`,
     [
       err.message || 'Unknown error',
       err.stack || null,
-      safeUrl,
+      req.originalUrl || null,
       req.method || null,
       (req.session && req.session.user) ? req.session.user.id : null
     ]
-  ).then((r) => {
-    try {
-      require('./services/auditLog').logError({
-        userId: (req.session && req.session.user) ? req.session.user.id : null,
-        url: safeUrl,
-        method: req.method || null,
-        message: err.message || 'Unknown error',
-        legacyId: r.rows[0]?.id
-      });
-    } catch (e) { /* audit log ব্যর্থ হলেও মূল error handling চলবে */ }
-  }).catch(() => {});
+  ).catch(() => {});
 
   const serverErrorMsg = (res.locals && res.locals.t && res.locals.t.server_error) ? res.locals.t.server_error : 'Server Error / সার্ভার ত্রুটি';
 
@@ -440,6 +461,13 @@ async function startServer() {
     await runMigrations();
     console.log("✅ DB migration done");
 
+    try {
+      const { ensureCriticalTables } = require('./services/ensureCriticalTables');
+      await ensureCriticalTables();
+    } catch (e) {
+      console.error('ensureCriticalTables:', e.message);
+    }
+
     server.listen(PORT, () => {
       console.log(`✅ Server running on port ${PORT}`);
       setTimeout(() => {
@@ -447,6 +475,7 @@ async function startServer() {
         startWorkers(); // BullMQ Workers — Redis থাকলে শুরু হবে, না থাকলে skip
       }, 3000);
       scheduleDailyBackup();
+      scheduleAutoBackup();
       require('./services/scheduler').start()
         .catch(err => console.error('⚠️ Scheduler চালু করতে সমস্যা হয়েছে (সার্ভার চলতে থাকবে):', err.message));
     });

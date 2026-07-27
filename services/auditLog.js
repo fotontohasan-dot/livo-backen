@@ -1,25 +1,151 @@
 // services/auditLog.js
-// একমাত্র জায়গা যেখানে অ্যাডমিন/সিস্টেম অ্যাকশন admin_logs টেবিলে লেখা হয়।
-// আগে এই একই লজিক routes/admin.js এবং services/fraudDetection.js — দুই জায়গায় ডুপ্লিকেট ছিল।
-// এখন থেকে সবাই এখান থেকে ইম্পোর্ট করে (fraudDetection.js ব্যাকওয়ার্ড কম্প্যাটিবিলিটির জন্য re-export করে)।
+// Advanced Audit Log System — User/Admin/System-এর সব গুরুত্বপূর্ণ action (Login, Logout, Deposit,
+// Withdraw, API, Settings Change, Role Change, Security Event, Maintenance, Backup, Restore, Cron,
+// Queue, Cache) এখানে সমৃদ্ধ মেটাডেটাসহ (IP, Device, Browser, Location, Request ID, Risk Level) সংরক্ষিত হয়।
+//
+// এটা বিদ্যমান admin_logs টেবিলকে প্রতিস্থাপন করে না — সেটা যেভাবে আছে সেভাবেই চলতে থাকবে
+// (কোনো ফিচার ভাঙে না)। এই সার্ভিস সম্পূর্ণ নতুন, বিস্তারিত audit_logs টেবিলে লেখে।
+//
+// ডিজাইন নীতি: logEvent() কখনো throw করে না এবং caller-এর ফ্লো কখনো ব্লক করে না —
+// ব্যর্থ হলে শুধু console.error করে চুপচাপ এগিয়ে যায়।
 
 const { pool } = require('../db');
-const queue = require('./queue');
+const { parseUserAgent, extractIp, lookupLocation, buildDeviceName } = require('./deviceTracking');
 
-async function logAdminAction(adminId, adminUsername, actionType, details, ip = null) {
-  const jobId = await queue.enqueue('audit_log', { adminId, adminUsername, actionType, details, ip });
-  if (jobId) return; // কিউতে জমা হয়ে গেছে, ওয়ার্কার এটা প্রসেস করবে
+const VALID_CATEGORIES = ['auth', 'financial', 'settings', 'role', 'security', 'maintenance', 'backup', 'restore', 'cron', 'queue', 'cache', 'api', 'other'];
+const VALID_RISK_LEVELS = ['low', 'medium', 'high', 'critical'];
 
-  // কিউ এনকিউ ব্যর্থ হলে (যেমন DB সাময়িক আনরিচেবল) — সরাসরি লিখে ফেলা হচ্ছে যাতে অডিট লগ কখনো হারিয়ে না যায়
+/**
+ * একটা audit event রেকর্ড করে।
+ * req দেওয়া থাকলে IP/ডিভাইস/ব্রাউজার/OS/লোকেশন/রিকোয়েস্ট-ID স্বয়ংক্রিয়ভাবে বের করা হয়;
+ * ব্যাকগ্রাউন্ড জব/ক্রন/সিস্টেম ইভেন্টের ক্ষেত্রে req না থাকলে সেসব ফিল্ড খালি থাকে।
+ *
+ * @param {Object} opts
+ * @param {Object} [opts.req] - Express request object (ঐচ্ছিক, থাকলে IP/device/location/requestId অটো-এক্সট্র্যাক্ট হয়)
+ * @param {'user'|'admin'|'system'} [opts.actorType='system']
+ * @param {number|null} [opts.actorId]
+ * @param {string} [opts.actorUsername='SYSTEM']
+ * @param {string} opts.action - যেমন 'LOGIN', 'DEPOSIT_REQUESTED', 'SETTINGS_CHANGED'
+ * @param {string} [opts.category='other']
+ * @param {'success'|'failure'} [opts.status='success']
+ * @param {'low'|'medium'|'high'|'critical'} [opts.riskLevel='low']
+ * @param {Object} [opts.details={}] - অতিরিক্ত প্রসঙ্গ (JSON)
+ */
+async function logEvent(opts) {
   try {
-    await pool.query(
-      `INSERT INTO admin_logs (admin_id, admin_username, action_type, details, ip_address)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [adminId, adminUsername, actionType, details, ip]
+    const {
+      req, actorType = 'system', actorId = null, actorUsername = 'SYSTEM',
+      action, category = 'other', status = 'success', riskLevel = 'low', details = {}
+    } = opts || {};
+
+    if (!action) {
+      console.error('[auditLog] logEvent called without required "action" field — skipped');
+      return null;
+    }
+
+    const safeCategory = VALID_CATEGORIES.includes(category) ? category : 'other';
+    const safeRisk = VALID_RISK_LEVELS.includes(riskLevel) ? riskLevel : 'low';
+    const safeStatus = status === 'failure' ? 'failure' : 'success';
+
+    let ip = null, deviceName = null, browser = null, os = null, location = null, requestId = null;
+    if (req) {
+      try {
+        ip = extractIp(req);
+        const ua = req.get ? req.get('user-agent') : (req.headers && req.headers['user-agent']);
+        const parsed = parseUserAgent(ua || '');
+        browser = parsed.browser;
+        os = parsed.os;
+        deviceName = buildDeviceName(parsed);
+        location = lookupLocation(ip);
+        requestId = req.requestId || null;
+      } catch (e) {
+        console.error('[auditLog] request metadata extraction error (non-blocking):', e.message);
+      }
+    }
+
+    const result = await pool.query(
+      `INSERT INTO audit_logs
+        (actor_type, actor_id, actor_username, action, category, status, risk_level, details, ip_address, device_name, browser, os, location, request_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+       RETURNING id`,
+      [actorType, actorId, actorUsername, action, safeCategory, safeStatus, safeRisk, JSON.stringify(details || {}), ip, deviceName, browser, os, location, requestId]
     );
+    return result.rows[0]?.id || null;
   } catch (err) {
-    console.error('Admin Log Error (queue + direct write both failed):', err.message);
+    console.error('[auditLog] logEvent error (non-blocking):', err.message);
+    return null;
   }
 }
 
-module.exports = { logAdminAction };
+/** ফিল্টার + পেজিনেশনসহ audit log তালিকা — অ্যাডমিন ড্যাশবোর্ড/সার্চ/এক্সপোর্ট সবার জন্য একই কোয়েরি-বিল্ডার ব্যবহার হয়। */
+function buildFilterQuery(filters = {}) {
+  const conditions = [];
+  const params = [];
+
+  if (filters.q) {
+    params.push(`%${filters.q}%`);
+    conditions.push(`(actor_username ILIKE $${params.length} OR action ILIKE $${params.length} OR details::text ILIKE $${params.length})`);
+  }
+  if (filters.actorType) { params.push(filters.actorType); conditions.push(`actor_type = $${params.length}`); }
+  if (filters.category) { params.push(filters.category); conditions.push(`category = $${params.length}`); }
+  if (filters.status) { params.push(filters.status); conditions.push(`status = $${params.length}`); }
+  if (filters.riskLevel) { params.push(filters.riskLevel); conditions.push(`risk_level = $${params.length}`); }
+  if (filters.actorId) { params.push(filters.actorId); conditions.push(`actor_id = $${params.length}`); }
+  if (filters.action) { params.push(`%${filters.action}%`); conditions.push(`action ILIKE $${params.length}`); }
+  if (filters.from) { params.push(filters.from); conditions.push(`created_at >= $${params.length}`); }
+  if (filters.to) { params.push(filters.to); conditions.push(`created_at <= $${params.length}::date + INTERVAL '1 day'`); }
+
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  return { where, params };
+}
+
+async function listAuditLogs(filters = {}, { page = 1, limit = 25 } = {}) {
+  const { where, params } = buildFilterQuery(filters);
+  const offset = (page - 1) * limit;
+
+  const countRes = await pool.query(`SELECT COUNT(*) FROM audit_logs ${where}`, params);
+  const total = parseInt(countRes.rows[0].count, 10);
+
+  const listParams = [...params, limit, offset];
+  const rowsRes = await pool.query(
+    `SELECT * FROM audit_logs ${where} ORDER BY created_at DESC LIMIT $${listParams.length - 1} OFFSET $${listParams.length}`,
+    listParams
+  );
+
+  return { rows: rowsRes.rows, total, page, totalPages: Math.max(1, Math.ceil(total / limit)) };
+}
+
+async function getAuditLogById(id) {
+  const r = await pool.query(`SELECT * FROM audit_logs WHERE id = $1`, [id]);
+  return r.rows[0] || null;
+}
+
+/** এক্সপোর্টের জন্য (CSV/Excel) — সর্বোচ্চ ৫০০০ রো, ফিল্টার প্রযোজ্য */
+async function exportAuditLogs(filters = {}) {
+  const { where, params } = buildFilterQuery(filters);
+  const r = await pool.query(`SELECT * FROM audit_logs ${where} ORDER BY created_at DESC LIMIT 5000`, params);
+  return r.rows;
+}
+
+async function getCategoryCounts() {
+  const r = await pool.query(`SELECT category, COUNT(*) AS c FROM audit_logs GROUP BY category ORDER BY c DESC`);
+  return r.rows.map(row => ({ category: row.category, count: parseInt(row.c, 10) }));
+}
+
+async function getRiskCounts() {
+  const r = await pool.query(`SELECT risk_level, COUNT(*) AS c FROM audit_logs GROUP BY risk_level`);
+  const counts = { low: 0, medium: 0, high: 0, critical: 0 };
+  r.rows.forEach(row => { counts[row.risk_level] = parseInt(row.c, 10); });
+  return counts;
+}
+
+module.exports = {
+  logEvent,
+  listAuditLogs,
+  getAuditLogById,
+  exportAuditLogs,
+  getCategoryCounts,
+  getRiskCounts,
+  VALID_CATEGORIES,
+  VALID_RISK_LEVELS
+};
