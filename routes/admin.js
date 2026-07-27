@@ -28,6 +28,7 @@ const { runAllChecks } = require('../services/healthCheck');
 const { getUserDeviceOverview } = require('../services/deviceTracking');
 const cache = require('../services/cache');
 const scheduler = require('../services/scheduler');
+const auditLog = require('../services/auditLog');
 
 const { requireIntParam, requireAmount, parseAmount, sanitizeText, isSafeUrl } = require('../middleware/validate');
 
@@ -66,15 +67,7 @@ const adminFinancialLimiter = rateLimit({
 
 // ==================== ADMIN ACTIVITY LOG HELPER ====================
 async function logAdminAction(adminId, adminUsername, actionType, details, ip = null) {
-    try {
-        await pool.query(
-            `INSERT INTO admin_logs (admin_id, admin_username, action_type, details, ip_address) 
-             VALUES ($1, $2, $3, $4, $5)`,
-            [adminId, adminUsername, actionType, details, ip]
-        );
-    } catch (err) {
-        console.error('Admin Log Error:', err.message);
-    }
+    await auditLog.logAdminAction(adminId, adminUsername, actionType, details, ip);
 }
 
 // ==================== অ্যাডমিন সেশনের জন্য কড়া কুকি পলিসি ====================
@@ -2223,6 +2216,74 @@ router.get('/cron-jobs/status/json', async (req, res) => {
   try {
     const jobs = await scheduler.listJobs();
     res.json({ success: true, jobs });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ==================== Unified Audit Log Viewer (প্রোডাকশন-রেডি) ====================
+function parseLogFilters(req) {
+  return {
+    category: req.query.category || null,
+    severity: req.query.severity || null,
+    actorType: req.query.actor_type || null,
+    actorId: req.query.actor_id ? parseInt(req.query.actor_id, 10) : null,
+    search: req.query.search ? sanitizeText(req.query.search, { maxLen: 200 }) : null,
+    dateFrom: req.query.date_from || null,
+    dateTo: req.query.date_to || null,
+    page: Math.max(1, parseInt(req.query.page, 10) || 1),
+    limit: 50
+  };
+}
+
+router.get('/logs', async (req, res) => {
+  try {
+    const filters = parseLogFilters(req);
+    const result = await auditLog.listAuditLogs(filters);
+    const categoryCounts = await auditLog.getCategoryCounts();
+    const severityCounts = await auditLog.getSeverityCounts();
+    res.render('admin/logs', {
+      logs: result.rows, total: result.total, page: result.page, totalPages: result.totalPages,
+      filters, categoryCounts, severityCounts,
+      categories: auditLog.VALID_CATEGORIES, severities: auditLog.VALID_SEVERITIES,
+      active: 'logs'
+    });
+  } catch (err) {
+    console.error('Unified log viewer error:', err.message);
+    res.render('admin/logs', {
+      logs: [], total: 0, page: 1, totalPages: 1,
+      filters: parseLogFilters(req), categoryCounts: [], severityCounts: [],
+      categories: auditLog.VALID_CATEGORIES, severities: auditLog.VALID_SEVERITIES,
+      active: 'logs'
+    });
+  }
+});
+
+// CSV Export — বর্তমান ফিল্টার অনুযায়ী (সর্বোচ্চ ৫০,০০০ রো)
+router.get('/logs/export', async (req, res) => {
+  try {
+    const filters = parseLogFilters(req);
+    const csv = await auditLog.exportAuditLogsCsv(filters);
+    await logAdminAction(
+      req.session.user.id, req.session.user.username, 'AUDIT_LOG_EXPORT',
+      `Unified Audit Log CSV এক্সপোর্ট করা হয়েছে (ফিল্টার: ${JSON.stringify(filters)})`, req.ip
+    );
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="audit-logs-${new Date().toISOString().slice(0, 10)}.csv"`);
+    res.send('\uFEFF' + csv); // UTF-8 BOM — এক্সেলে বাংলা টেক্সট ঠিকভাবে দেখানোর জন্য
+  } catch (err) {
+    console.error('Audit log export error:', err.message);
+    req.flash('error', 'CSV এক্সপোর্ট করা যায়নি: ' + err.message);
+    res.redirect('/admin/logs');
+  }
+});
+
+// Unified Log JSON API (পোলিং/অন্য কোনো টুল ইন্টিগ্রেশনের জন্য)
+router.get('/logs/json', async (req, res) => {
+  try {
+    const filters = parseLogFilters(req);
+    const result = await auditLog.listAuditLogs(filters);
+    res.json({ success: true, ...result });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

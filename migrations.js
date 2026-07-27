@@ -930,6 +930,115 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_cron_job_logs_status ON cron_job_logs(status);`);
 
     console.log("✅ Cron/Scheduler tables ready");
+
+    // ==================== Unified Audit Log System (Production-Ready) ====================
+    // বিদ্যমান admin_logs, login_logs, error_logs, withdraw_pin_logs, failed_login_attempts,
+    // bot_activity_logs, fraud_flags, duplicate_account_flags — কোনোটাই মোছা/পরিবর্তন হয়নি।
+    // এই টেবিলটা নতুন, সবগুলো Log Category-কে একসাথে সার্চ/ফিল্টার করার জন্য একটা
+    // একীভূত (Unified) স্তর — legacy_source + legacy_id দিয়ে পুরনো এন্ট্রির সাথে সম্পর্কিত।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id SERIAL PRIMARY KEY,
+        category VARCHAR(30) NOT NULL,           -- admin | login | error | withdraw_pin | failed_login | bot | fraud | duplicate_account | cron | security | other
+        severity VARCHAR(10) NOT NULL DEFAULT 'info', -- info | warning | critical
+        actor_type VARCHAR(20) NOT NULL DEFAULT 'system', -- admin | user | system
+        actor_id INTEGER,
+        actor_username VARCHAR(150),
+        ip_address VARCHAR(64),
+        device_info TEXT,
+        action VARCHAR(150) NOT NULL,
+        resource_type VARCHAR(60),
+        resource_id VARCHAR(60),
+        metadata JSONB,
+        legacy_source VARCHAR(40),
+        legacy_id INTEGER,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_category ON audit_logs(category);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_severity ON audit_logs(severity);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_actor ON audit_logs(actor_type, actor_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_ip ON audit_logs(ip_address);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at DESC);`);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_audit_logs_legacy ON audit_logs(legacy_source, legacy_id) WHERE legacy_source IS NOT NULL;`);
+
+    // ---- একবারের জন্য পুরনো ৮টা Log Table থেকে Unified টেবিলে Backfill ----
+    // ON CONFLICT (legacy_source, legacy_id) DO NOTHING থাকায় বারবার migration রান হলেও
+    // ডুপ্লিকেট হবে না (idempotent), এবং পুরনো ডেটা হারায় না (Backward Compatibility)।
+    await pool.query(`
+      INSERT INTO audit_logs (category, severity, actor_type, actor_id, actor_username, ip_address, action, metadata, legacy_source, legacy_id, created_at)
+      SELECT 'admin', 'info',
+        CASE WHEN admin_username = 'SYSTEM' THEN 'system' ELSE 'admin' END,
+        admin_id, admin_username, ip_address, action_type,
+        jsonb_build_object('details', details), 'admin_logs', id, created_at
+      FROM admin_logs
+      ON CONFLICT (legacy_source, legacy_id) DO NOTHING;
+    `).catch(e => console.error('audit_logs backfill (admin_logs) error:', e.message));
+
+    await pool.query(`
+      INSERT INTO audit_logs (category, severity, actor_type, actor_id, ip_address, device_info, action, metadata, legacy_source, legacy_id, created_at)
+      SELECT 'login', 'info', 'user', user_id, ip, user_agent, 'USER_LOGIN',
+        jsonb_build_object('is_vpn', is_vpn, 'is_proxy', is_proxy, 'is_tor', is_tor, 'ip_risk_score', ip_risk_score),
+        'login_logs', id, created_at
+      FROM login_logs
+      ON CONFLICT (legacy_source, legacy_id) DO NOTHING;
+    `).catch(e => console.error('audit_logs backfill (login_logs) error:', e.message));
+
+    await pool.query(`
+      INSERT INTO audit_logs (category, severity, actor_type, actor_id, action, resource_type, metadata, legacy_source, legacy_id, created_at)
+      SELECT 'error', 'critical', 'system', user_id, 'UNHANDLED_ERROR', url,
+        jsonb_build_object('message', message, 'method', method), 'error_logs', id, created_at
+      FROM error_logs
+      ON CONFLICT (legacy_source, legacy_id) DO NOTHING;
+    `).catch(e => console.error('audit_logs backfill (error_logs) error:', e.message));
+
+    await pool.query(`
+      INSERT INTO audit_logs (category, severity, actor_type, actor_id, actor_username, ip_address, action, resource_type, resource_id, legacy_source, legacy_id, created_at)
+      SELECT 'security', 'warning', actor_type, actor_id, actor_username, ip_address, action_type, 'withdraw_pin', user_id::text,
+        'withdraw_pin_logs', id, created_at
+      FROM withdraw_pin_logs
+      ON CONFLICT (legacy_source, legacy_id) DO NOTHING;
+    `).catch(e => console.error('audit_logs backfill (withdraw_pin_logs) error:', e.message));
+
+    await pool.query(`
+      INSERT INTO audit_logs (category, severity, actor_type, actor_id, ip_address, device_info, action, legacy_source, legacy_id, created_at)
+      SELECT 'failed_login', 'warning', 'user', user_id, ip, user_agent, 'FAILED_LOGIN_ATTEMPT',
+        'failed_login_attempts', id, created_at
+      FROM failed_login_attempts
+      ON CONFLICT (legacy_source, legacy_id) DO NOTHING;
+    `).catch(e => console.error('audit_logs backfill (failed_login_attempts) error:', e.message));
+
+    await pool.query(`
+      INSERT INTO audit_logs (category, severity, actor_type, actor_id, ip_address, device_info, action, resource_type, metadata, legacy_source, legacy_id, created_at)
+      SELECT 'bot', CASE risk_level WHEN 'high' THEN 'critical' WHEN 'medium' THEN 'warning' ELSE 'info' END,
+        'system', user_id, ip, user_agent, 'BOT_ACTIVITY_DETECTED', endpoint,
+        jsonb_build_object('signal_types', signal_types, 'reason', reason, 'blocked', blocked),
+        'bot_activity_logs', id, created_at
+      FROM bot_activity_logs
+      ON CONFLICT (legacy_source, legacy_id) DO NOTHING;
+    `).catch(e => console.error('audit_logs backfill (bot_activity_logs) error:', e.message));
+
+    await pool.query(`
+      INSERT INTO audit_logs (category, severity, actor_type, actor_id, action, resource_type, resource_id, metadata, legacy_source, legacy_id, created_at)
+      SELECT 'fraud', CASE risk_level WHEN 'high' THEN 'critical' WHEN 'medium' THEN 'warning' ELSE 'info' END,
+        'system', user_id, 'FRAUD_FLAG_CREATED', 'fraud_flags', id::text,
+        jsonb_build_object('signal_types', signal_types, 'reason', reason, 'status', status),
+        'fraud_flags', id, created_at
+      FROM fraud_flags
+      ON CONFLICT (legacy_source, legacy_id) DO NOTHING;
+    `).catch(e => console.error('audit_logs backfill (fraud_flags) error:', e.message));
+
+    await pool.query(`
+      INSERT INTO audit_logs (category, severity, actor_type, actor_id, action, resource_type, resource_id, metadata, legacy_source, legacy_id, created_at)
+      SELECT 'duplicate_account', CASE WHEN risk_score >= 70 THEN 'critical' WHEN risk_score >= 40 THEN 'warning' ELSE 'info' END,
+        'system', user_id, 'DUPLICATE_ACCOUNT_DETECTED', 'duplicate_account_flags', id::text,
+        jsonb_build_object('match_types', match_types, 'risk_score', risk_score, 'reason', reason, 'status', status),
+        'duplicate_account_flags', id, created_at
+      FROM duplicate_account_flags
+      ON CONFLICT (legacy_source, legacy_id) DO NOTHING;
+    `).catch(e => console.error('audit_logs backfill (duplicate_account_flags) error:', e.message));
+
+    console.log("✅ Unified Audit Log System ready (audit_logs, backfilled from legacy log tables)");
   } catch (err) {
     console.error("❌ Migration error:", err.message);
   }

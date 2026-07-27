@@ -1,5 +1,6 @@
 const { pool } = require('../db');
 const { logAdminAction } = require('./fraudDetection');
+const auditLog = require('./auditLog');
 
 // ==================== Bot Detection System ====================
 // সন্দেহজনক Request Pattern, অস্বাভাবিক লগইন/রেজিস্ট্রেশন, অতিরিক্ত API Request ও
@@ -63,11 +64,15 @@ async function logBotEvent({ ip, userId = null, endpoint, signals, riskLevel, us
   try {
     const signalTypes = signals.map(s => s.type);
     const reason = signals.map(s => s.description).join('; ');
-    await pool.query(
+    const inserted = await pool.query(
       `INSERT INTO bot_activity_logs (ip, user_id, endpoint, signal_types, risk_level, reason, user_agent, blocked)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
       [ip, userId, endpoint, signalTypes, riskLevel, reason, userAgent, !!blocked]
     );
+    await auditLog.logBotActivity({
+      ip, userId, endpoint, riskLevel, reason, userAgent, blocked, signalTypes,
+      legacyId: inserted.rows[0]?.id
+    });
     await logAdminAction(
       null, 'SYSTEM', 'BOT_ACTIVITY_DETECTED',
       `[${endpoint}] IP: ${ip} — ঝুঁকি: ${riskLevel.toUpperCase()} — ${reason}${blocked ? ' (CAPTCHA আটকানো হয়েছে)' : ''}`,

@@ -13,6 +13,7 @@ const { sendOTP } = require('../services/email');
 const { evaluateRequest, generateCaptcha, verifyCaptcha, logBotEvent } = require('../services/botDetection');
 const { recordDeviceLogin, parseUserAgent } = require('../services/deviceTracking');
 const cache = require('../services/cache');
+const auditLog = require('../services/auditLog');
 
 const resetLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -33,14 +34,7 @@ const verifyResendLimiter = rateLimit({
 // ইউজার-সাইড ইভেন্ট (রেজিস্ট্রেশন, ভেরিফিকেশন) admin_logs টেবিলেই লগ হয়, যাতে
 // অ্যাডমিন প্যানেলের বিদ্যমান Activity Log-এই (ফিল্টার/সার্চ/CSV export সহ) দেখা যায়
 async function logSystemEvent(userId, username, actionType, details, ip = null) {
-  try {
-    await pool.query(
-      `INSERT INTO admin_logs (admin_id, admin_username, action_type, details, ip_address) VALUES ($1, $2, $3, $4, $5)`,
-      [userId, username, actionType, details, ip]
-    );
-  } catch (e) {
-    console.error('logSystemEvent error:', e.message);
-  }
+  await auditLog.logAdminAction(userId, username, actionType, details, ip);
 }
 
 async function issueVerificationToken(userId) {
@@ -85,6 +79,11 @@ async function recordLogin(req, userId, vpnInfo = null) {
         (vpnInfo && vpnInfo.riskScore) || 0]
     );
     loginLogId = inserted.rows[0]?.id || null;
+    await auditLog.logLogin({
+      userId, ip, userAgent: ua, deviceFingerprint,
+      metadata: { isVpn: !!(vpnInfo && vpnInfo.isVpn), isProxy: !!(vpnInfo && vpnInfo.isProxy), isTor: !!(vpnInfo && vpnInfo.isTor), riskScore: (vpnInfo && vpnInfo.riskScore) || 0 },
+      legacyId: loginLogId
+    });
   } catch (e) {
     console.error('recordLogin error:', e.message);
   }

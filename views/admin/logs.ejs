@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unified Log Viewer • Livo Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
+    .log-filter-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; padding: 14px 16px; }
+    .log-filter-form label { font-size: 10px; color: #94a3b8; display: block; margin-bottom: 3px; }
+    .log-filter-form .input, .log-filter-form select { width: 100%; background: #1c2028; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 7px 9px; color: #e2e8f0; font-size: 12px; }
+    .log-filter-actions { display: flex; gap: 8px; align-items: flex-end; }
+    .badge-cat { padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; background: rgba(59,130,246,0.15); color: #3b82f6; }
+    .flash-box { padding: 10px 14px; border-radius: 10px; font-size: 12px; margin-bottom: 10px; }
+    .flash-success { background: rgba(16,185,129,0.12); color: #10b981; border: 1px solid rgba(16,185,129,0.25); }
+    .flash-error { background: rgba(239,68,68,0.12); color: #ef4444; border: 1px solid rgba(239,68,68,0.25); }
+  </style>
+  <%- include('./partials/pwa-head') %>
+</head>
+<body>
+  <div class="admin-wrap">
+    <%- include('./partials/sidebar', { active: 'logs' }) %>
+    <div class="admin-content">
+      <%- include('./partials/header', { pageTitle: 'Unified Log Viewer', pageSubtitle: 'Admin, Login, Error, Fraud, Bot, Security — সব লগ একসাথে সার্চ ও ফিল্টার করুন' }) %>
+
+      <% if (typeof success !== 'undefined' && success && success.length) { %>
+        <% success.forEach(function(m) { %><div class="flash-box flash-success"><%= m %></div><% }) %>
+      <% } %>
+      <% if (typeof error !== 'undefined' && error && error.length) { %>
+        <% error.forEach(function(m) { %><div class="flash-box flash-error"><%= m %></div><% }) %>
+      <% } %>
+
+      <div class="grid grid-4" style="margin-bottom:16px;">
+        <div class="stat-card"><div class="stat-label">মোট লগ (ফিল্টার ছাড়া)</div><div class="stat-number" style="color:#f59e0b;"><%= categoryCounts.reduce((a,c)=>a+c.count,0) %></div></div>
+        <div class="stat-card"><div class="stat-label">Critical</div><div class="stat-number" style="color:#ef4444;"><%= (severityCounts.find(s=>s.severity==='critical')||{count:0}).count %></div></div>
+        <div class="stat-card"><div class="stat-label">Warning</div><div class="stat-number" style="color:#f59e0b;"><%= (severityCounts.find(s=>s.severity==='warning')||{count:0}).count %></div></div>
+        <div class="stat-card"><div class="stat-label">এই ফিল্টারে ফলাফল</div><div class="stat-number" style="color:#10b981;"><%= total %></div></div>
+      </div>
+
+      <div class="admin-card" style="margin-bottom:16px;">
+        <div class="admin-card-header">ফিল্টার / সার্চ</div>
+        <form method="GET" action="/admin/logs" class="log-filter-form">
+          <div>
+            <label>Category</label>
+            <select name="category">
+              <option value="">সব</option>
+              <% categories.forEach(c => { %><option value="<%= c %>" <%= filters.category===c?'selected':'' %>><%= c %></option><% }) %>
+            </select>
+          </div>
+          <div>
+            <label>Severity</label>
+            <select name="severity">
+              <option value="">সব</option>
+              <% severities.forEach(s => { %><option value="<%= s %>" <%= filters.severity===s?'selected':'' %>><%= s %></option><% }) %>
+            </select>
+          </div>
+          <div>
+            <label>Actor Type</label>
+            <select name="actor_type">
+              <option value="">সব</option>
+              <option value="admin" <%= filters.actorType==='admin'?'selected':'' %>>admin</option>
+              <option value="user" <%= filters.actorType==='user'?'selected':'' %>>user</option>
+              <option value="system" <%= filters.actorType==='system'?'selected':'' %>>system</option>
+            </select>
+          </div>
+          <div><label>Actor/User ID</label><input class="input" type="number" name="actor_id" value="<%= filters.actorId || '' %>"></div>
+          <div><label>তারিখ থেকে</label><input class="input" type="date" name="date_from" value="<%= filters.dateFrom || '' %>"></div>
+          <div><label>তারিখ পর্যন্ত</label><input class="input" type="date" name="date_to" value="<%= filters.dateTo || '' %>"></div>
+          <div style="grid-column:span 2;"><label>সার্চ (action/username/IP/metadata)</label><input class="input" type="text" name="search" value="<%= filters.search || '' %>" placeholder="যেকোনো শব্দ..."></div>
+          <div class="log-filter-actions">
+            <button type="submit" class="btn-sm" style="background:#f59e0b;color:#000;padding:8px 16px;border:none;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;"><i class="fas fa-filter"></i> ফিল্টার করুন</button>
+            <a href="/admin/logs" style="padding:8px 12px;border-radius:8px;font-size:12px;background:rgba(255,255,255,0.08);color:#e2e8f0;text-decoration:none;">রিসেট</a>
+          </div>
+        </form>
+        <div style="padding:0 16px 14px;">
+          <a href="/admin/logs/export?<%= new URLSearchParams(Object.entries(filters).filter(([k,v])=>v!==null&&v!=='')).toString() %>"
+             style="display:inline-block;padding:8px 16px;border-radius:8px;font-size:12px;background:#10b981;color:#000;text-decoration:none;font-weight:700;">
+            <i class="fas fa-file-csv"></i> CSV এক্সপোর্ট করুন (বর্তমান ফিল্টার অনুযায়ী)
+          </a>
+        </div>
+      </div>
+
+      <div class="admin-card">
+        <div class="admin-card-header">লগ এন্ট্রি (মোট <%= total %>, পেজ <%= page %>/<%= totalPages %>)</div>
+        <div style="overflow-x:auto;">
+          <table class="admin-table">
+            <thead>
+              <tr><th>সময়</th><th>Category</th><th>Severity</th><th>Actor</th><th>Action</th><th>Resource</th><th>IP</th><th>Metadata</th></tr>
+            </thead>
+            <tbody>
+              <% if (logs && logs.length > 0) { %>
+                <% logs.forEach(l => { %>
+                  <tr>
+                    <td style="font-size:11px;white-space:nowrap;"><%= new Date(l.created_at).toLocaleString('bn-BD') %></td>
+                    <td><span class="badge-cat"><%= l.category %></span></td>
+                    <td><span class="badge <%= l.severity==='critical'?'badge-red':(l.severity==='warning'?'badge-amber':'badge-green') %>"><%= l.severity %></span></td>
+                    <td style="font-size:11px;">
+                      <%= l.actor_type %><% if (l.actor_username) { %> — @<%= l.actor_username %><% } %><% if (l.actor_id) { %> (#<%= l.actor_id %>)<% } %>
+                    </td>
+                    <td style="font-weight:700;font-size:11px;"><%= l.action %></td>
+                    <td style="font-size:11px;"><%= l.resource_type || '' %><% if (l.resource_id) { %> #<%= l.resource_id %><% } %></td>
+                    <td style="font-size:11px;"><%= l.ip_address || '—' %></td>
+                    <td style="font-size:10px;color:#94a3b8;max-width:260px;white-space:normal;word-break:break-all;">
+                      <%= l.metadata ? JSON.stringify(l.metadata).slice(0, 200) : '' %>
+                    </td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="8" style="text-align:center;color:#64748b;padding:24px;">কোনো লগ পাওয়া যায়নি</td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+        <% if (totalPages > 1) { %>
+          <% const qs = (p) => { const params = new URLSearchParams(Object.entries(filters).filter(([k,v])=>v!==null&&v!=='')); params.set('page', p); return params.toString(); } %>
+          <div style="display:flex;gap:8px;justify-content:center;padding:14px;flex-wrap:wrap;">
+            <% for (let p = 1; p <= totalPages; p++) { %>
+              <a href="/admin/logs?<%= qs(p) %>" style="padding:5px 11px;border-radius:6px;font-size:12px;text-decoration:none;background:<%= p === page ? '#f59e0b' : 'rgba(255,255,255,0.05)' %>;color:<%= p === page ? '#000' : '#94a3b8' %>;"><%= p %></a>
+            <% } %>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="admin-card" style="margin-top:16px;">
+        <div class="admin-card-header">Category-ভিত্তিক ব্রেকডাউন</div>
+        <div style="overflow-x:auto;">
+          <table class="admin-table">
+            <thead><tr><th>Category</th><th>মোট</th></tr></thead>
+            <tbody>
+              <% categoryCounts.forEach(c => { %>
+                <tr><td><span class="badge-cat"><%= c.category %></span></td><td><%= c.count %></td></tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>

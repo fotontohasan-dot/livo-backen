@@ -4,6 +4,7 @@
 
 const { pool } = require('../db');
 const { logAdminAction } = require('./fraudDetection');
+const auditLog = require('./auditLog');
 
 // প্রতিটি সিগন্যাল টাইপের ভিত্তি ওজন (Risk Score গণনার জন্য, সর্বোচ্চ ১০০ পর্যন্ত)
 const WEIGHTS = {
@@ -89,6 +90,8 @@ async function createDuplicateFlag(userId, signals) {
     [userId, matchedUserIds, matchTypes, riskScore, reason, JSON.stringify(signals)]
   );
   const flag = inserted.rows[0];
+
+  await auditLog.logDuplicateAccountFlag({ userId, riskScore, reason, matchTypes, flagId: flag.id, legacyId: flag.id });
 
   await logAdminAction(
     null, 'SYSTEM', 'DUPLICATE_ACCOUNT_DETECTED',

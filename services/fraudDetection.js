@@ -1,4 +1,5 @@
 const { pool } = require('../db');
+const auditLog = require('./auditLog');
 
 const RAPID_WINDOW_MINUTES = 10;
 const RAPID_REGISTRATION_THRESHOLD = 3; // একই IP থেকে ১০ মিনিটে ৩+ রেজিস্ট্রেশন
@@ -14,15 +15,7 @@ const DEVICE_CHANGE_WINDOW_HOURS = 24;
 const DEVICE_CHANGE_THRESHOLD = 3;        // ২৪ ঘণ্টায় ৩+ আলাদা ডিভাইস থেকে লগইন
 
 async function logAdminAction(adminId, adminUsername, actionType, details, ip = null) {
-  try {
-    await pool.query(
-      `INSERT INTO admin_logs (admin_id, admin_username, action_type, details, ip_address)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [adminId, adminUsername, actionType, details, ip]
-    );
-  } catch (err) {
-    console.error('Fraud audit log error:', err.message);
-  }
+  await auditLog.logAdminAction(adminId, adminUsername, actionType, details, ip);
 }
 
 async function findRelatedUsersByIp(userId, ip) {
@@ -109,6 +102,8 @@ async function createFraudFlag(userId, signals) {
     [userId, riskLevel, signalTypes, reason, relatedUserIds, JSON.stringify(signals)]
   );
   const flag = inserted.rows[0];
+
+  await auditLog.logFraudFlag({ userId, riskLevel, reason, signalTypes, flagId: flag.id, legacyId: flag.id });
 
   await logAdminAction(
     null,
@@ -199,10 +194,11 @@ async function evaluateTransaction(userId, type, { accountNumber, vpnInfo } = {}
 // ==================== ব্যর্থ লগইন রেকর্ড ও ব্রুট-ফোর্স শনাক্তকরণ ====================
 async function recordFailedLogin(identifier, userId, ip, userAgent) {
   try {
-    await pool.query(
-      `INSERT INTO failed_login_attempts (identifier, user_id, ip, user_agent) VALUES ($1, $2, $3, $4)`,
+    const inserted = await pool.query(
+      `INSERT INTO failed_login_attempts (identifier, user_id, ip, user_agent) VALUES ($1, $2, $3, $4) RETURNING id`,
       [identifier || null, userId || null, ip || null, userAgent || null]
     );
+    await auditLog.logFailedLogin({ userId, ip, userAgent, identifier, legacyId: inserted.rows[0]?.id });
   } catch (e) {
     console.error('recordFailedLogin error (non-blocking):', e.message);
   }

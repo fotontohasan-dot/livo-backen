@@ -357,7 +357,7 @@ app.post('/telegram-webhook', express.json(), async (req, res) => {
 app.use((err, req, res, next) => {
   console.error('❌ Unhandled Error:', err.stack);
   pool.query(
-    `INSERT INTO error_logs (message, stack, url, method, user_id) VALUES ($1, $2, $3, $4, $5)`,
+    `INSERT INTO error_logs (message, stack, url, method, user_id) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
     [
       err.message || 'Unknown error',
       err.stack || null,
@@ -365,7 +365,17 @@ app.use((err, req, res, next) => {
       req.method || null,
       (req.session && req.session.user) ? req.session.user.id : null
     ]
-  ).catch(() => {});
+  ).then((r) => {
+    try {
+      require('./services/auditLog').logError({
+        userId: (req.session && req.session.user) ? req.session.user.id : null,
+        url: req.originalUrl || null,
+        method: req.method || null,
+        message: err.message || 'Unknown error',
+        legacyId: r.rows[0]?.id
+      });
+    } catch (e) { /* audit log ব্যর্থ হলেও মূল error handling চলবে */ }
+  }).catch(() => {});
 
   const serverErrorMsg = (res.locals && res.locals.t && res.locals.t.server_error) ? res.locals.t.server_error : 'Server Error / সার্ভার ত্রুটি';
 

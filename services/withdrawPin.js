@@ -13,6 +13,7 @@
 
 const bcrypt = require('bcryptjs');
 const { pool } = require('../db');
+const auditLog = require('./auditLog');
 
 const PIN_LENGTH = 6;
 const MAX_FAILED_ATTEMPTS = 5;
@@ -65,11 +66,12 @@ function lockRemainingMs(user) {
 async function logPinEvent(userId, actionType, opts = {}) {
   const { actorType = 'user', actorId = null, actorUsername = null, ip = null } = opts;
   try {
-    await pool.query(
+    const inserted = await pool.query(
       `INSERT INTO withdraw_pin_logs (user_id, action_type, actor_type, actor_id, actor_username, ip_address)
-       VALUES ($1,$2,$3,$4,$5,$6)`,
+       VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
       [userId, actionType, actorType, actorId, actorUsername, ip]
     );
+    await auditLog.logWithdrawPin({ userId, actionType, actorType, actorId, actorUsername, ip, legacyId: inserted.rows[0]?.id });
   } catch (e) {
     console.error('withdraw pin audit log error:', e.message);
   }

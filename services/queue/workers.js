@@ -48,10 +48,8 @@ async function processNotification(job) {
 // ==================== Activity Log Worker ====================
 async function processActivityLog(job) {
   const { adminId, adminUsername, actionType, details, ip } = job.data;
-  await pool.query(
-    `INSERT INTO admin_logs (admin_id, admin_username, action_type, details, ip_address) VALUES ($1, $2, $3, $4, $5)`,
-    [adminId || null, adminUsername || 'SYSTEM', actionType, details, ip || null]
-  );
+  const { logAdminAction } = require('../auditLog');
+  await logAdminAction(adminId || null, adminUsername || 'SYSTEM', actionType, details, ip || null);
 }
 
 // ==================== API Log Worker ====================
