@@ -10,38 +10,33 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [18.x, 20.x, 22.x]
-
-    # ==================== Database Test Environment ====================
-    # প্রোডাকশন/ডেভেলপমেন্ট ডাটাবেজ থেকে সম্পূর্ণ আলাদা, ডিসপোজেবল Postgres
-    # সার্ভিস কন্টেইনার — শুধু এই CI জবের জীবদ্দশায় বেঁচে থাকে।
     services:
       postgres:
-        image: postgres:15-alpine
+        image: postgres:16
         env:
-          POSTGRES_USER: livo_test
-          POSTGRES_PASSWORD: livo_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
           POSTGRES_DB: livo_test
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U livo_test -d livo_test"
-          --health-interval 5s
+          --health-cmd pg_isready
+          --health-interval 10s
           --health-timeout 5s
-          --health-retries 10
+          --health-retries 5
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x]
 
     env:
       NODE_ENV: test
-      PORT: 0
-      DATABASE_URL: postgresql://livo_test:livo_test@127.0.0.1:5432/livo_test
-      DB_SSL: 'false'
-      SESSION_SECRET: ci-test-session-secret-not-for-production
-      REDIS_ENABLED: 'false'
-      SSLCZ_IS_LIVE: 'false'
-      SSLCZ_STORE_ID: test-store
-      SSLCZ_STORE_PASSWD: test-pass
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/livo_test
+      SESSION_SECRET: ci_test_secret_key
+      REDIS_ENABLED: "false"
+      SSLCZ_IS_LIVE: "false"
+      VAPID_SUBJECT: mailto:test@example.com
+      FRONTEND_URL: http://localhost:4123
 
     steps:
     - uses: actions/checkout@v4
@@ -51,12 +46,10 @@ jobs:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
     - run: npm install
-    - name: Run Automated Test Suite (with coverage)
-      run: npm run test:coverage
+    - run: npm test
     - name: Upload coverage report
-      if: always()
+      if: matrix.node-version == '20.x'
       uses: actions/upload-artifact@v4
       with:
-        name: coverage-report-node-${{ matrix.node-version }}
+        name: coverage-report
         path: coverage/
-        retention-days: 14
