@@ -12,7 +12,7 @@ const { verifyPin, getPinStatus } = require('../services/withdrawPin');
 const { scanTransaction } = require('../services/fraudDetection');
 const { isSessionNewDevice } = require('../services/deviceTracking');
 const { checkIp } = require('../services/vpnDetection');
-const { requireVerifiedEmail } = require('../middleware/auth');
+const { requireVerifiedEmail, requireAdmin } = require('../middleware/auth');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
 const queue = require('../services/queue');
 
@@ -33,7 +33,7 @@ function requireLogin(req, res, next) {
 // আগে এখানে একটা লোকাল requireAdmin ছিল যেটা শুধু req.session.user.role চেক করতো (স্টেল সেশন —
 // ডিমোট করা admin-এর পুরনো সেশন দিয়েও ঢোকা যেত)। এখন middleware/auth.js-এর isAdmin ব্যবহার করা হচ্ছে,
 // যেটা প্রতিটা রিকোয়েস্টে DB থেকে বর্তমান role যাচাই করে — একই consistent authorization flow সব জায়গায়।
-const { requireAdmin } = require('../middleware/auth');
+// requireAdmin already imported above
 const { requirePermission } = require('../services/rbac');
 
 function parseAmount(raw) {

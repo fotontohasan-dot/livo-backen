@@ -80,7 +80,7 @@ const { getPinStatus, adminResetPin } = require('../services/withdrawPin');
 const { getUserFraudStatus, getFraudDashboardStats } = require('../services/fraudDetection');
 const { logEvent: logAuditEvent, listAuditLogs, getAuditLogById, exportAuditLogs, getCategoryCounts, getRiskCounts, VALID_CATEGORIES, VALID_RISK_LEVELS } = require('../services/auditLog');
 const { listDuplicateFlags, reviewDuplicateFlag, scanAllUsers } = require('../services/duplicateDetection');
-const { getUserDeviceOverview } = require('../services/deviceTracking');
+const { getUserDeviceOverview, parseUserAgent } = require('../services/deviceTracking');
 const cache = require('../services/cache');
 const cacheKeys = require('../services/cacheKeys');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
@@ -2983,7 +2983,6 @@ router.get('/login-history', async (req, res) => {
       listParams
     );
 
-    const { parseUserAgent } = require('../services/deviceTracking');
     const logs = result.rows.map(row => ({ ...row, ...parseUserAgent(row.user_agent) }));
 
     res.render('admin/login-history', {

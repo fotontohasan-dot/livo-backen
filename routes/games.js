@@ -13,6 +13,7 @@ const { addVipTurnover } = require('../services/vip');
 const { updateMissionProgress } = require('../services/missions');
 const { addPoints } = require('../services/loyalty');
 const { recordGameResult } = require('../services/streak');
+const { getSetting } = require('../services/settings');
 const { checkBadges } = require('../services/badges');
 const { broadcastDemoStats } = require('../services/socket');
 
@@ -209,8 +210,6 @@ router.get('/:slug', isAuth, (req, res) => {
     demoBalance: req.session.user.demo_balance
   });
 });
-
-const { getSetting } = require('../services/settings');
 
 router.post('/play', isAuth, async (req, res) => {
   const { gameSlug, amount, selection, demo } = req.body;
