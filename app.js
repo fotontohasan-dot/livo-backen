@@ -20,7 +20,7 @@ process.on('uncaughtException', (err) => {
   sentryService.captureException(err, { source: 'uncaughtException' });
 });
 process.on('SIGTERM', async () => {
-  try { const { stopWorkers } = require('./services/queue'); await stopWorkers(); } catch (e) {}
+  try { require('./services/queue').stopWorker(); } catch (e) {}
   try { require('./services/scheduler').stop(); } catch (e) {}
   process.exit(0);
 });
@@ -45,7 +45,7 @@ const { scheduleAutoBackup } = require('./services/backupManager');
 const { touchDeviceActivity } = require('./services/deviceTracking');
 const cookieParser = require('cookie-parser');
 require('./services/cache'); // অ্যাপ বুট হওয়ার সাথে সাথেই Redis কানেকশন অ্যাটেম্পট শুরু হয় (কানেক্ট না হলেও অ্যাপ চলতে থাকে)
-const { startWorkers, stopWorkers } = require('./services/queue');
+const queueService = require('./services/queue');
 const appMetrics = require('./services/metrics');
 const { requireMetricsAccess } = require('./middleware/metricsAuth');
 
@@ -472,7 +472,7 @@ async function startServer() {
       console.log(`✅ Server running on port ${PORT}`);
       setTimeout(() => {
         syncMatches().catch(err => console.error('Initial match sync failed:', err));
-        startWorkers(); // BullMQ Workers — Redis থাকলে শুরু হবে, না থাকলে skip
+        try { require('./services/queueHandlers'); queueService.startWorker(); } catch (e) { console.error('queue worker start error:', e.message); }
       }, 3000);
       scheduleDailyBackup();
       scheduleAutoBackup();
