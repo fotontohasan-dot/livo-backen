@@ -41,6 +41,8 @@
     "react-dom": "^19.2.7",
     "socket.io": "^4.8.3",
     "speakeasy": "^2.0.0",
+    "swagger-jsdoc": "^6.3.0",
+    "swagger-ui-express": "^5.0.1",
     "tailwind-merge": "^3.6.0",
     "web-push": "^3.6.7",
     "zustand": "^5.0.14"
@@ -49,6 +51,7 @@
     "postcss": "^8.5.19"
   },
   "devDependencies": {
+    "@sentry/cli": "^2.39.1",
     "@tailwindcss/postcss": "^4.3.2",
     "@types/node": "^26.0.1",
     "@types/react": "^19.2.17",
@@ -58,7 +61,6 @@
     "playwright": "^1.61.1",
     "postcss": "^8.5.19",
     "tailwindcss": "^4.3.2",
-    "typescript": "^6.0.3",
-    "@sentry/cli": "^2.39.1"
+    "typescript": "^6.0.3"
   }
 }
