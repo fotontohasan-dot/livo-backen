@@ -1,5 +1,6 @@
 require('dotenv').config();
 const process = require('node:process');
+require('./services/envValidator').runStartupValidation();
 
 // ==================== প্রসেস-লেভেল ক্র্যাশ গার্ড ====================
 // কোনো একটা জায়গায় unhandled promise rejection হলে Node.js (v15+) ডিফল্টভাবে
@@ -93,7 +94,24 @@ app.use(helmet({
   // COEP বন্ধ রাখা হয়েছে — এটা চালু থাকলে ওই রিসোর্সগুলো ব্লক হয়ে যেত।
   crossOriginEmbedderPolicy: false,
   crossOriginResourcePolicy: { policy: 'cross-origin' },
+  // Strict-Transport-Security — শুধু প্রোডাকশনে (HTTPS নিশ্চিত থাকলে) চালু, যাতে লোকাল
+  // ডেভেলপমেন্ট (HTTP) এ ব্রাউজার জোর করে HTTPS-এ রিডাইরেক্ট করতে গিয়ে ভেঙে না যায়।
+  hsts: isProdEnv ? { maxAge: 15552000, includeSubDomains: true, preload: false } : false,
+  // frameguard (X-Frame-Options: SAMEORIGIN) ও noSniff (X-Content-Type-Options: nosniff)
+  // helmet-এর ডিফল্টেই চালু থাকে — এখানে আলাদা করে uncheck/override করা হয়নি।
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
+// Permissions-Policy — helmet v8-এর ডিফল্ট সেটে এটা নেই, তাই আলাদাভাবে যোগ করা হলো।
+// অপ্রয়োজনীয় ব্রাউজার ফিচার (ক্যামেরা/মাইক্রোফোন/জিওলোকেশন ইত্যাদি) ডিজেবল করে দেওয়া হচ্ছে,
+// পেমেন্ট রিকোয়েস্ট ফর্মে ইমেজ আপলোডের জন্য শুধু 'self' থেকে ক্যামেরা/জিওলোকেশন লাগতে পারে
+// এমন কোনো বিদ্যমান ফিচার নেই বলে নিরাপদে ব্লক করা হলো।
+app.use((req, res, next) => {
+  res.setHeader(
+    'Permissions-Policy',
+    'geolocation=(), camera=(), microphone=(), payment=(), usb=(), magnetometer=(), gyroscope=(), interest-cohort=()'
+  );
+  next();
+});
 // লিগ্যাসি ব্রাউজারের জন্য X-XSS-Protection (আধুনিক ব্রাউজার CSP-ই যথেষ্ট মানে, হেডারটা ignore করে,
 // কিন্তু পুরনো ব্রাউজার সাপোর্টের জন্য স্ট্যান্ডার্ড হিসেবে রাখা হলো)
 app.use((req, res, next) => {
@@ -199,6 +217,17 @@ app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.success = req.flash('success');
   res.locals.error = req.flash('error');
+
+  // ---- XSS হার্ডেনিং হেল্পার (সব EJS টেমপ্লেটে উপলব্ধ) ----
+  // escapeHtml: প্লেইন-টেক্সট ডেটা <br> ইত্যাদির সাথে মেশানোর আগে ব্যবহার করতে হয়
+  res.locals.escapeHtml = (str) => String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  // jsonScriptSafe: <script> ট্যাগ বা inline event handler-এর ভেতর JSON বসানোর সময় ব্যবহার
+  // করতে হয় — সাধারণ JSON.stringify()-এ "</script>" বা "<" থাকলে স্ক্রিপ্ট কনটেক্সট থেকে
+  // বের হয়ে HTML/JS ইনজেকশন সম্ভব; এই হেল্পার সেটা প্রতিরোধ করে।
+  res.locals.jsonScriptSafe = (obj) => JSON.stringify(obj)
+    .replace(/</g, '\\u003C').replace(/>/g, '\\u003E').replace(/&/g, '\\u0026').replace(/'/g, '\\u0027');
 
   // ডিভাইস "last activity" আপডেট — থ্রটলড, নন-ব্লকিং, লগইন করা ইউজারের জন্যই শুধু
   if (req.session && req.session.user) {
@@ -352,12 +381,14 @@ app.post('/telegram-webhook', express.json(), async (req, res) => {
 // Error Handling
 app.use((err, req, res, next) => {
   console.error('❌ Unhandled Error:', err.stack);
+  const { redactUrl } = require('./services/urlRedact');
+  const safeUrl = redactUrl(req.originalUrl || null);
   pool.query(
     `INSERT INTO error_logs (message, stack, url, method, user_id) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
     [
       err.message || 'Unknown error',
       err.stack || null,
-      req.originalUrl || null,
+      safeUrl,
       req.method || null,
       (req.session && req.session.user) ? req.session.user.id : null
     ]
@@ -365,7 +396,7 @@ app.use((err, req, res, next) => {
     try {
       require('./services/auditLog').logError({
         userId: (req.session && req.session.user) ? req.session.user.id : null,
-        url: req.originalUrl || null,
+        url: safeUrl,
         method: req.method || null,
         message: err.message || 'Unknown error',
         legacyId: r.rows[0]?.id

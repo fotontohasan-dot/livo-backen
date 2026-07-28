@@ -151,10 +151,10 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     <% if (typeof success !== 'undefined' && success && success.length) { %>
-      <% success.forEach(function (m) { %> LivoToast.show(<%- JSON.stringify(m) %>, 'success'); <% }) %>
+      <% success.forEach(function (m) { %> LivoToast.show(<%- jsonScriptSafe(m) %>, 'success'); <% }) %>
     <% } %>
     <% if (typeof error !== 'undefined' && error && error.length) { %>
-      <% error.forEach(function (m) { %> LivoToast.show(<%- JSON.stringify(m) %>, 'error'); <% }) %>
+      <% error.forEach(function (m) { %> LivoToast.show(<%- jsonScriptSafe(m) %>, 'error'); <% }) %>
     <% } %>
   });
 </script>

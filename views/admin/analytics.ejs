@@ -114,9 +114,9 @@
       </div>
 
       <script>
-        const revenueLabels = <%- JSON.stringify(data.revenueTrend.map(r => r.day)) %>;
-        const revenueDeposit = <%- JSON.stringify(data.revenueTrend.map(r => Number(r.deposit))) %>;
-        const revenueWithdraw = <%- JSON.stringify(data.revenueTrend.map(r => Number(r.withdraw))) %>;
+        const revenueLabels = <%- jsonScriptSafe(data.revenueTrend.map(r => r.day)) %>;
+        const revenueDeposit = <%- jsonScriptSafe(data.revenueTrend.map(r => Number(r.deposit))) %>;
+        const revenueWithdraw = <%- jsonScriptSafe(data.revenueTrend.map(r => Number(r.withdraw))) %>;
         new Chart(document.getElementById('revenueChart'), {
           type: 'line',
           data: { labels: revenueLabels, datasets: [
@@ -126,8 +126,8 @@
           options: { plugins: { legend: { labels: { color: '#cbd5e1' } } }, scales: { x: { ticks: { color: '#94a3b8' } }, y: { ticks: { color: '#94a3b8' } } } }
         });
 
-        const growthLabels = <%- JSON.stringify(data.userGrowth.map(r => r.day)) %>;
-        const growthVals = <%- JSON.stringify(data.userGrowth.map(r => Number(r.new_users))) %>;
+        const growthLabels = <%- jsonScriptSafe(data.userGrowth.map(r => r.day)) %>;
+        const growthVals = <%- jsonScriptSafe(data.userGrowth.map(r => Number(r.new_users))) %>;
         new Chart(document.getElementById('growthChart'), {
           type: 'bar',
           data: { labels: growthLabels, datasets: [{ label: 'New Users', data: growthVals, backgroundColor: '#EAB308' }] },
