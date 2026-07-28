@@ -53,7 +53,7 @@ function isValidBankField(v) { return typeof v === 'string' && BANK_FIELD_RE.tes
 
 router.get('/', isAuth, async (req, res) => {
   try {
-    const user = await pool.query(`SELECT * FROM users WHERE id=$1`, [req.session.user.id]);
+    const user = await pool.query(`SELECT id, username, email, phone, balance, coins, demo_balance, role, status, avatar, kyc_status, total_points, referred_by_id, referral_code, last_login, last_ip, created_at, password, withdraw_pin, two_factor_secret, two_factor_enabled FROM users WHERE id=$1`, [req.session.user.id]);
 
     // প্রোফাইলের কয়েন ব্যালেন্স সবসময় সরাসরি DB থেকে (উপরে) নেওয়া হচ্ছে — এটা কখনো ক্যাশ করা হয় না।
     // নিচের প্রেডিকশন/টুর্নামেন্ট/স্ট্যাটস তুলনামূলক কম-সংবেদনশীল ও ভারী জয়েন কোয়েরি, তাই ১৫ সেকেন্ড ক্যাশ করা হয়েছে।
@@ -235,7 +235,7 @@ router.post('/change-password', isAuth, accountSecurityLimiter, async (req, res)
       return res.redirect('/profile/security');
     }
 
-    const user = await pool.query(`SELECT * FROM users WHERE id=$1`, [req.session.user.id]);
+    const user = await pool.query(`SELECT id, username, email, phone, balance, coins, demo_balance, role, status, avatar, kyc_status, total_points, referred_by_id, referral_code, last_login, last_ip, created_at, password, withdraw_pin, two_factor_secret, two_factor_enabled FROM users WHERE id=$1`, [req.session.user.id]);
     if (!(await bcrypt.compare(cp, user.rows[0].password))) {
       req.flash('error', '❌ বর্তমান পাসওয়ার্ড ভুল।');
       return res.redirect('/profile/security');
@@ -343,7 +343,7 @@ router.get('/stats', isAuth, async (req, res) => {
 
 router.get('/security', isAuth, async (req, res) => {
   try {
-    const cards = await pool.query('SELECT * FROM bank_cards WHERE user_id = $1 ORDER BY created_at DESC', [req.session.user.id]);
+    const cards = await pool.query('SELECT id, user_id, bank_name, account_number, account_name, is_default, created_at FROM bank_cards WHERE user_id = $1 ORDER BY created_at DESC', [req.session.user.id]);
     let pinStatus = { configured: false, locked: false };
     try { pinStatus = await getPinStatus(req.session.user.id); } catch (e) {}
 
@@ -775,7 +775,7 @@ router.get('/referral', isAuth, async (req, res) => {
 router.get('/transactions', isAuth, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM coin_transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50',
+      'SELECT id, user_id, amount, type, description, created_at FROM coin_transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50',
       [req.session.user.id]
     );
     res.render('profile/transactions', { user: req.session.user, transactions: result.rows });
@@ -787,7 +787,7 @@ router.get('/transactions', isAuth, async (req, res) => {
 router.get('/account-record', isAuth, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM coin_transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 100',
+      'SELECT id, user_id, amount, type, description, created_at FROM coin_transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 100',
       [req.session.user.id]
     );
     res.render('profile/transactions', { user: req.session.user, transactions: result.rows });
@@ -799,7 +799,7 @@ router.get('/account-record', isAuth, async (req, res) => {
 router.get('/cards', isAuth, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM bank_cards WHERE user_id = $1 ORDER BY created_at DESC',
+      'SELECT id, user_id, bank_name, account_number, account_name, is_default, created_at FROM bank_cards WHERE user_id = $1 ORDER BY created_at DESC',
       [req.session.user.id]
     );
     res.render('profile/cards', { user: req.session.user, cards: result.rows });

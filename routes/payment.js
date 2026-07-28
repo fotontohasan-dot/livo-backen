@@ -247,7 +247,7 @@ router.get('/withdraw', requireLogin, async (req, res) => {
     const coins = result.rows[0]?.coins || 0;
     let cards = [];
     try {
-      const cardRes = await pool.query('SELECT * FROM bank_cards WHERE user_id=$1', [req.session.user.id]);
+      const cardRes = await pool.query('SELECT id, user_id, bank_name, account_number, account_name, is_default, created_at FROM bank_cards WHERE user_id=$1', [req.session.user.id]);
       cards = cardRes.rows;
     } catch (e) { cards = []; }
     let pinStatus = { configured: false, locked: false };
@@ -399,7 +399,7 @@ router.get('/history', requireLogin, async (req, res) => {
     }
 
     const result = await pool.query(
-      `SELECT * FROM payment_requests WHERE ${conditions.join(' AND ')} ORDER BY created_at DESC LIMIT 200`,
+      `SELECT id, user_id, type, amount, method, account_number, status, transaction_id, gateway_tran_id, created_at FROM payment_requests WHERE ${conditions.join(' AND ')} ORDER BY created_at DESC LIMIT 200`,
       params
     );
     res.render('payment/history', {

@@ -970,6 +970,52 @@ async function runMigrations() {
 
     console.log("✅ IP Block/Whitelist table ready");
 
+    // ==================== Performance: Critical Missing Indexes ====================
+    // bets table — heavily queried, no indexes existed
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bets_user_id      ON bets(user_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bets_match_id     ON bets(match_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bets_status       ON bets(status);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bets_created_at   ON bets(created_at DESC);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bets_date_status  ON bets(created_at, status);`);
+
+    // payment_requests — dashboard queries filter by type+status+date constantly
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_pr_type_status         ON payment_requests(type, status);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_pr_created_at          ON payment_requests(created_at DESC);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_pr_type_status_created ON payment_requests(type, status, created_at);`);
+
+    // users — dashboard active-user, new-user queries
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_last_login   ON users(last_login);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_created_at   ON users(created_at DESC);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_status       ON users(status);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_last_ip      ON users(last_ip);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_kyc_status   ON users(kyc_status);`);
+
+    // matches — status + sport filter
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_matches_start_time ON matches(start_time DESC);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_matches_status_sport ON matches(status, sport);`);
+
+    // admin_logs — activity log pagination
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_admin_logs_created ON admin_logs(created_at DESC);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_admin_logs_type    ON admin_logs(action_type);`);
+
+    // fraud_flags — dashboard widget
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_fraud_status_level ON fraud_flags(status, risk_level);`);
+
+    // duplicate_account_flags — dashboard widget
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_dup_status_score ON duplicate_account_flags(status, risk_score DESC);`);
+
+    // games — lobby queries
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_games_category_active ON games(category, is_active);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_games_sort ON games(sort_order, is_active);`);
+
+    // notifications — unread count per user
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_notif_user_read ON notifications(user_id, is_read);`);
+
+    // login_logs — device tracking
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_login_logs_created ON login_logs(created_at DESC);`);
+
+    console.log("✅ Performance indexes ready");
+
     // ==================== RBAC — ডিফল্ট রোল seed করা (আগে থেকে থাকলে ছুঁয়ে দেখে না) ====================
     try {
       const { seedDefaultRoles } = require('./services/rbac');

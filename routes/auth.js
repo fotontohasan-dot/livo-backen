@@ -340,7 +340,7 @@ router.post('/login', async (req, res) => {
 
   try {
     const result = await pool.query(
-      'SELECT * FROM users WHERE email = $1 OR phone = $1',
+      'SELECT id, username, email, phone, status FROM users WHERE email = $1 OR phone = $1',
       [identifier]
     );
     const user = result.rows[0];
@@ -405,7 +405,7 @@ router.post('/verify-access', async (req, res) => {
 
     const { code } = req.body;
     const rowRes = await pool.query(
-      `SELECT * FROM step_up_verifications
+      `SELECT id, user_id, purpose, code, expires_at, verified_at, created_at FROM step_up_verifications
        WHERE user_id = $1 AND purpose = 'vpn_login' AND verified_at IS NULL
        ORDER BY created_at DESC LIMIT 1`,
       [pendingUserId]
@@ -432,7 +432,7 @@ router.post('/verify-access', async (req, res) => {
 
     await pool.query(`UPDATE step_up_verifications SET verified_at = NOW() WHERE id = $1`, [row.id]);
 
-    const userRes = await pool.query('SELECT * FROM users WHERE id = $1', [pendingUserId]);
+    const userRes = await pool.query('SELECT id, username, email, phone, balance, coins, demo_balance, role, status, avatar, kyc_status, two_factor_enabled FROM users WHERE id = $1', [pendingUserId]);
     const user = userRes.rows[0];
     if (!user) return res.redirect('/login');
 

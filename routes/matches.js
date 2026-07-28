@@ -12,6 +12,7 @@ const { addPoints } = require('../services/loyalty');
 const { checkBadges } = require('../services/badges');
 const { getSetting } = require('../services/settings');
 const { broadcastDemoStats } = require('../services/socket');
+const cache = require('../services/cache');
 
 function formatMatch(row) {
   return {
@@ -68,8 +69,14 @@ router.get('/football', (req, res) => {
 
 router.get('/api/live', async (req, res) => {
   try {
+    const CACHE_KEY = 'matches:live';
+    const cached = await cache.get(CACHE_KEY);
+    if (cached) return res.json(cached);
+
     const result = await pool.query(
-      `SELECT * FROM matches ORDER BY
+      `SELECT id, title, team_a, team_b, sport, league, status, start_time, result,
+              home_odds, draw_odds, away_odds, score_a, score_b
+       FROM matches ORDER BY
          CASE WHEN status = 'live' THEN 0 ELSE 1 END,
          start_time ASC NULLS LAST,
          id DESC
@@ -85,7 +92,9 @@ router.get('/api/live', async (req, res) => {
       else cricket.push(m);
     }
 
-    res.json({ success: true, cricket, football });
+    const payload = { success: true, cricket, football };
+    cache.set(CACHE_KEY, payload, 10).catch(() => {}); // 10s TTL — live data stays fresh
+    res.json(payload);
   } catch (err) {
     console.error('matches/api/live error:', err.message);
     res.json({ success: true, cricket: [], football: [] });

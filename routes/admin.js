@@ -108,7 +108,7 @@ router.post('/login', adminLoginLimiter, async (req, res) => {
     // যেসব অ্যাডমিন ইমেইল দিয়ে লগইন করার চেষ্টা করতেন তাদের জন্য এটা সবসময় ব্যর্থ হতো।
     // এখন username অথবা email দুটোই মেলানো হচ্ছে (case-insensitive)।
     const result = await pool.query(
-      `SELECT * FROM users
+      `SELECT id, username, email, password, role, status FROM users
        WHERE (LOWER(username) = LOWER($1) OR LOWER(email) = LOWER($1))
          AND role = $2
        LIMIT 1`,
@@ -164,7 +164,7 @@ router.post('/login/2fa', strict2FALimiter, async (req, res) => {
 
   try {
     const { token, backupCode } = req.body;
-    const result = await pool.query('SELECT * FROM users WHERE id = $1 LIMIT 1', [pending.id]);
+    const result = await pool.query('SELECT id, username, role, two_factor_secret, two_factor_enabled, totp_enabled, totp_secret, totp_backup_codes FROM users WHERE id = $1 LIMIT 1', [pending.id]);
     const admin = result.rows[0];
 
     if (!admin || !admin.totp_enabled) {
@@ -306,7 +306,7 @@ router.post('/2fa/backup-codes/acknowledge', async (req, res) => {
 router.post('/2fa/disable', async (req, res) => {
   try {
     const { password, token } = req.body;
-    const result = await pool.query('SELECT * FROM users WHERE id = $1', [req.session.user.id]);
+    const result = await pool.query('SELECT id, username, password, two_factor_secret, two_factor_enabled, totp_enabled, totp_secret FROM users WHERE id = $1', [req.session.user.id]);
     const admin = result.rows[0];
 
     const passOk = admin && await bcrypt.compare(password || '', admin.password);
@@ -620,6 +620,12 @@ router.get('/', async (req, res) => {
     const rangeTo = (req.query.to && /^\d{4}-\d{2}-\d{2}$/.test(req.query.to)) ? req.query.to : new Date().toISOString().slice(0, 10);
     const rangeFrom = (req.query.from && /^\d{4}-\d{2}-\d{2}$/.test(req.query.from)) ? req.query.from : new Date(Date.now() - 13 * 86400000).toISOString().slice(0, 10);
 
+    // ── Stable KPI counts cached 30s (total users, coins, matches, bets) ──────
+    const [cachedCounts, stableRevenue] = await Promise.all([
+      cache.get('dashboard:kpi:counts'),
+      cache.get(`dashboard:revenue:${rangeFrom}:${rangeTo}`)
+    ]);
+
     // ==================== পারফরম্যান্স: নিচের সব কোয়েরি একে অপরের থেকে স্বাধীন —
     // আগে একটার পর একটা sequentially await হতো (N × round-trip latency),
     // এখন Promise.all দিয়ে সমান্তরালে চালানো হচ্ছে (max round-trip latency)।
@@ -639,8 +645,8 @@ router.get('/', async (req, res) => {
       pool.query('SELECT COUNT(*) as count FROM matches'),
       pool.query('SELECT COUNT(*) as count FROM bets'),
 
-      pool.query(`SELECT * FROM matches ORDER BY start_time DESC LIMIT 8`),
-      pool.query(`SELECT * FROM users ORDER BY created_at DESC LIMIT 8`),
+      pool.query(`SELECT id, title, team_a, team_b, sport, league, status, start_time, result FROM matches ORDER BY start_time DESC LIMIT 8`),
+      pool.query(`SELECT id, username, email, phone, status, balance, created_at, kyc_status FROM users ORDER BY created_at DESC LIMIT 8`),
 
       pool.query(
         `SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS cnt FROM payment_requests 
@@ -688,17 +694,19 @@ router.get('/', async (req, res) => {
       ),
 
       pool.query(`
-        SELECT d::date AS day,
-          COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='deposit' AND status='approved' AND created_at::date = d::date),0) AS deposit,
-          COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='withdraw' AND status='approved' AND created_at::date = d::date),0) AS withdraw
-        FROM generate_series($1::date, $2::date, INTERVAL '1 day') d
-        ORDER BY day
+        SELECT
+          date_trunc('day', created_at)::date AS day,
+          SUM(CASE WHEN type='deposit'  THEN amount ELSE 0 END) AS deposit,
+          SUM(CASE WHEN type='withdraw' THEN amount ELSE 0 END) AS withdraw
+        FROM payment_requests
+        WHERE status='approved' AND created_at::date BETWEEN $1 AND $2
+        GROUP BY 1 ORDER BY 1
       `, [rangeFrom, rangeTo]),
       pool.query(`
-        SELECT d::date AS day,
-          COALESCE((SELECT COUNT(*) FROM users WHERE created_at::date = d::date),0) AS new_users
-        FROM generate_series($1::date, $2::date, INTERVAL '1 day') d
-        ORDER BY day
+        SELECT created_at::date AS day, COUNT(*) AS new_users
+        FROM users
+        WHERE created_at::date BETWEEN $1 AND $2
+        GROUP BY 1 ORDER BY 1
       `, [rangeFrom, rangeTo]),
 
       pool.query(`
@@ -744,6 +752,20 @@ router.get('/', async (req, res) => {
         WHERE f.status = 'open' ORDER BY f.risk_score DESC, f.created_at DESC LIMIT 5
       `)
     ]);
+
+    // Cache stable KPI counts (30s) — user/match/bet totals change slowly
+    if (!cachedCounts) {
+      cache.set('dashboard:kpi:counts', {
+        totalUsers: users.rows[0].count,
+        totalCoins: totalCoins.rows[0].total,
+        totalMatches: matches.rows[0].count,
+        totalBets: totalBets.rows[0].count
+      }, 30).catch(() => {});
+    }
+    // Cache revenue trend (120s) — date-range specific
+    if (!stableRevenue && revenueTrend.rows.length) {
+      cache.set(`dashboard:revenue:${rangeFrom}:${rangeTo}`, revenueTrend.rows, 120).catch(() => {});
+    }
 
     // ==== সাম্প্রতিক অ্যাক্টিভিটি ফিড — ডিপোজিট, উইথড্র, বাজি একত্রে সময় অনুযায়ী ====
     const recentActivity = [
@@ -1351,7 +1373,7 @@ router.get('/users', async (req, res) => {
 router.get('/users/:id', async (req, res) => {
   try {
     const uId = req.params.id;
-    const userRes = await pool.query('SELECT * FROM users WHERE id = $1', [uId]);
+    const userRes = await pool.query('SELECT id, username, email, phone, balance, coins, demo_balance, role, status, avatar, kyc_status, total_points, referred_by_id, referral_code, last_login, last_ip, created_at, two_factor_enabled, withdraw_pin FROM users WHERE id = $1', [uId]);
     const user = userRes.rows[0];
     if (!user) {
       req.flash('error', 'ইউজার পাওয়া যায়নি!');
@@ -1368,12 +1390,12 @@ router.get('/users/:id', async (req, res) => {
     } catch (e) {}
 
     try {
-      const t = await pool.query(`SELECT * FROM coin_transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50`, [uId]);
+      const t = await pool.query(`SELECT id, user_id, amount, type, description, created_at FROM coin_transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50`, [uId]);
       transactions = t.rows;
     } catch (e) {}
 
     try {
-      const p = await pool.query(`SELECT * FROM payment_requests WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50`, [uId]);
+      const p = await pool.query(`SELECT id, user_id, type, amount, method, account_number, status, transaction_id, created_at FROM payment_requests WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50`, [uId]);
       payments = p.rows;
     } catch (e) {}
 
@@ -1469,7 +1491,7 @@ router.get('/security-overview', async (req, res) => {
       pool.query(`SELECT COUNT(*) AS c FROM login_logs WHERE is_new_device = true AND created_at >= NOW() - INTERVAL '7 days'`),
       pool.query(`SELECT COUNT(*) AS c FROM users WHERE withdraw_pin_locked_until IS NOT NULL AND withdraw_pin_locked_until > NOW()`),
       pool.query(
-        `SELECT * FROM admin_logs WHERE action_type = ANY($1) ORDER BY created_at DESC LIMIT 25`,
+        `SELECT id, admin_id, admin_username, action_type, details, ip_address, created_at FROM admin_logs WHERE action_type = ANY($1) ORDER BY created_at DESC LIMIT 25`,
         [SECURITY_ACTION_TYPES]
       ),
       pool.query(`SELECT COUNT(*) AS c FROM users WHERE totp_enabled = true`),
@@ -1608,7 +1630,7 @@ router.post('/users/:id/freebet', adminFinancialLimiter, requireIntParam('id'), 
 // ==================== MATCHES ====================
 router.get('/matches', async (req, res) => {
   try {
-    const matches = await pool.query('SELECT * FROM matches ORDER BY start_time DESC');
+    const matches = await pool.query('SELECT id, title, team_a, team_b, sport, league, status, start_time FROM matches ORDER BY start_time DESC');
     res.render('admin/matches', { matches: matches.rows });
   } catch (err) { res.render('admin/matches', { matches: [] }); }
 });
@@ -1634,10 +1656,10 @@ router.post('/matches/:id/delete', async (req, res) => {
 // ==================== MARKETS ====================
 router.get('/markets/:matchId', async (req, res) => {
   try {
-    const matchResult = await pool.query('SELECT * FROM matches WHERE id = $1', [req.params.matchId]);
+    const matchResult = await pool.query('SELECT id, title, team_a, team_b, sport, status, start_time FROM matches WHERE id = $1', [req.params.matchId]);
     const match = matchResult.rows[0];
     if (!match) return res.status(404).send('Match not found');
-    const markets = await pool.query('SELECT * FROM markets WHERE match_id = $1', [req.params.matchId]);
+    const markets = await pool.query('SELECT id, match_id, name, type, status, created_at FROM markets WHERE match_id = $1', [req.params.matchId]);
     res.render('admin/markets', { match: match, markets: markets.rows });
   } catch (err) { res.status(500).send('Server Error'); }
 });
@@ -1844,7 +1866,7 @@ router.post('/bonuses/:id/cancel', async (req, res) => {
 // ==================== প্রমোশন ব্যানার ====================
 router.get('/promotions', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM promotions ORDER BY position ASC, created_at DESC');
+    const result = await pool.query('SELECT id, title, description, image_url, position, is_active, created_at FROM promotions ORDER BY position ASC, created_at DESC');
     res.render('admin/promotions', { promotions: result.rows });
   } catch (err) {
     console.error('Promotions list error:', err.message);
@@ -1962,7 +1984,7 @@ router.post('/tournaments/:id/delete', async (req, res) => {
 // ==================== নিউজ ====================
 router.get('/news', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM news ORDER BY created_at DESC LIMIT 200');
+    const result = await pool.query('SELECT id, title, content, image_url, is_active, created_at FROM news ORDER BY created_at DESC LIMIT 200');
     res.render('admin/news', { newsList: result.rows });
   } catch (err) {
     console.error('News list error:', err.message);
@@ -2005,7 +2027,7 @@ router.get('/activity/export.csv', async (req, res) => {
   try {
     const { action_type = '', q = '' } = req.query;
     const params = [];
-    let query = 'SELECT * FROM admin_logs WHERE 1=1';
+    let query = 'SELECT id, admin_id, admin_username, action_type, details, ip_address, created_at FROM admin_logs WHERE 1=1';
     if (action_type) {
       params.push(action_type);
       query += ` AND action_type = $${params.length}`;
@@ -2045,7 +2067,7 @@ router.get('/bot-monitoring', async (req, res) => {
                   WHERE created_at > NOW() - INTERVAL '7 days' GROUP BY endpoint ORDER BY cnt DESC LIMIT 8`),
       pool.query(`SELECT COUNT(*) FILTER (WHERE type='block') AS blocked_ips,
                          COUNT(*) FILTER (WHERE type='whitelist') AS whitelisted_ips FROM ip_rules`),
-      pool.query(`SELECT * FROM bot_activity_logs ORDER BY created_at DESC LIMIT 20`)
+      pool.query(`SELECT id, ip, user_id, endpoint, signal_types, risk_level, reason, user_agent, blocked, created_at FROM bot_activity_logs ORDER BY created_at DESC LIMIT 20`)
     ]);
 
     res.render('admin/bot-monitoring', {
@@ -2112,7 +2134,7 @@ router.get('/activity', async (req, res) => {
   try {
     const { action_type = '', q = '' } = req.query;
     const params = [];
-    let query = 'SELECT * FROM admin_logs WHERE 1=1';
+    let query = 'SELECT id, admin_id, admin_username, action_type, details, ip_address, created_at FROM admin_logs WHERE 1=1';
     if (action_type) {
       params.push(action_type);
       query += ` AND action_type = $${params.length}`;
@@ -2292,25 +2314,25 @@ router.get('/reports', async (req, res) => {
     const bets = betsRes.rows[0];
     const netRevenue = parseFloat(bets.total_stake) - parseFloat(bets.total_payout);
 
-    // ==== দৈনিক GGR ট্রেন্ড (চার্টের জন্য) ====
+    // ==== দৈনিক GGR ট্রেন্ড (চার্টের জন্য) — GROUP BY replaces correlated subquery ====
     const ggrTrendRes = await pool.query(`
-      SELECT d::date AS day,
-             COALESCE(SUM(b.stake) FILTER (WHERE b.created_at::date = d::date),0) AS staked,
-             COALESCE(SUM(b.stake * b.odd) FILTER (WHERE b.created_at::date = d::date AND b.status='won'),0) AS payout
-      FROM generate_series($1::date, $2::date, '1 day') d
-      LEFT JOIN bets b ON b.created_at::date = d::date
-      GROUP BY d ORDER BY d
+      SELECT created_at::date AS day,
+             SUM(stake) AS staked,
+             SUM(CASE WHEN status='won' THEN stake * odd ELSE 0 END) AS payout
+      FROM bets
+      WHERE created_at::date BETWEEN $1 AND $2
+      GROUP BY 1 ORDER BY 1
     `, [from, to]);
     const ggrTrend = ggrTrendRes.rows.map(r => ({
       day: r.day, ggr: Number(r.staked) - Number(r.payout)
     }));
 
-    // ==== দৈনিক নতুন ইউজার ট্রেন্ড ====
+    // ==== দৈনিক নতুন ইউজার ট্রেন্ড — GROUP BY replaces correlated subquery ====
     const userTrendRes = await pool.query(`
-      SELECT d::date AS day, COUNT(u.id) AS cnt
-      FROM generate_series($1::date, $2::date, '1 day') d
-      LEFT JOIN users u ON u.created_at::date = d::date
-      GROUP BY d ORDER BY d
+      SELECT created_at::date AS day, COUNT(*) AS cnt
+      FROM users
+      WHERE created_at::date BETWEEN $1 AND $2
+      GROUP BY 1 ORDER BY 1
     `, [from, to]);
     const userTrend = userTrendRes.rows.map(r => ({ day: r.day, count: parseInt(r.cnt) }));
 
@@ -2395,7 +2417,7 @@ router.get('/queue-jobs', requirePermission('queue.view'), async (req, res) => {
     const [countRes, jobsRes, typesRes, stats, statsByType, throughput, health] = await Promise.all([
       pool.query(`SELECT COUNT(*) FROM job_queue ${where}`, params),
       pool.query(
-        `SELECT * FROM job_queue ${where} ORDER BY id DESC LIMIT $${listParams.length - 1} OFFSET $${listParams.length}`,
+        `SELECT id, name, status, payload, attempts, max_attempts, error, run_at, started_at, finished_at, created_at FROM job_queue ${where} ORDER BY id DESC LIMIT $${listParams.length - 1} OFFSET $${listParams.length}`,
         listParams
       ),
       pool.query(`SELECT DISTINCT type FROM job_queue ORDER BY type`),
