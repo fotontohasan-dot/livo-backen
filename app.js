@@ -382,6 +382,11 @@ app.use('/help-center', require('./routes/help-center'));
 app.use('/payment', require('./routes/payment'));
 app.use('/games', require('./routes/games'));
 app.use('/api', require('./routes/api'));
+// ==================== OpenAPI / Swagger UI ====================
+const swaggerUi = require('swagger-ui-express');
+const { swaggerSpec } = require('./services/swagger');
+app.get('/api/docs.json', (req, res) => res.json(swaggerSpec));
+app.use('/api/docs', (req, res, next) => { res.removeHeader('Content-Security-Policy'); next(); }, swaggerUi.serve, swaggerUi.setup(swaggerSpec, { customSiteTitle: 'Livo API Docs' }));
 app.use('/accumulator', require('./routes/accumulator'));
 app.use('/chat', require('./routes/chat'));
 app.use('/extra', require('./routes/extra'));
