@@ -1,192 +1,189 @@
-/**
- * services/healthCheck.js
- */
+// services/healthCheck.js
+// সব সার্ভিসের health পরীক্ষা করে।
+// প্রতিটি চেক স্বাধীনভাবে timeout-safe — একটা ব্যর্থ হলেও বাকিগুলো চলে।
 
 const os = require('os');
-const { pool } = require('../db');
-const cache = require('./cache');
+const { execSync } = require('child_process');
 
-const STATUS = { OK: 'healthy', WARN: 'warning', ERROR: 'error' };
+const APP_START_TIME = Date.now();
 
-async function timed(fn) {
-  const start = Date.now();
+// ==================== helpers ====================
+function ms(start) { return Date.now() - start; }
+function toMB(bytes) { return Math.round(bytes / 1024 / 1024); }
+
+function withTimeout(promise, timeoutMs = 3000) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), timeoutMs))
+  ]);
+}
+
+// ==================== PostgreSQL ====================
+async function checkPostgres() {
+  const t = Date.now();
   try {
-    const result = await fn();
-    return { ...result, responseTimeMs: Date.now() - start };
+    const { pool } = require('../db');
+    const r = await withTimeout(pool.query('SELECT 1'), 3000);
+    const row = await withTimeout(pool.query(`SELECT COUNT(*) FROM users`), 3000);
+    return { status: 'healthy', latencyMs: ms(t), userCount: parseInt(row.rows[0].count) };
   } catch (err) {
-    return { status: STATUS.ERROR, message: err.message || String(err), responseTimeMs: Date.now() - start };
+    return { status: 'error', latencyMs: ms(t), error: err.message };
   }
 }
 
-async function checkDatabase() {
-  return timed(async () => {
-    await pool.query('SELECT 1');
-    return { status: STATUS.OK, message: 'সংযুক্ত' };
-  });
-}
-
+// ==================== Redis ====================
 async function checkRedis() {
-  return timed(async () => {
-    const status = cache.getStatus();
-    if (!status.enabled) {
-      return { status: STATUS.WARN, message: 'Redis কনফিগার করা নেই (ঐচ্ছিক — DB fallback দিয়ে চলছে)' };
+  const t = Date.now();
+  try {
+    const { isAvailable: cacheAvailable, getStatus } = require('./cache');
+    const st = getStatus();
+    if (!cacheAvailable()) {
+      return { status: 'warning', latencyMs: ms(t), note: st.disabledReason || 'Redis unavailable' };
     }
-    if (!status.connected) {
-      return { status: STATUS.WARN, message: status.lastError || status.disabledReason || 'সংযোগ বিচ্ছিন্ন — DB fallback দিয়ে চলছে' };
-    }
-    return { status: STATUS.OK, message: 'সংযুক্ত' };
-  });
+    // ping via cache set/get
+    const { set, get, del } = require('./cache');
+    const key = '_health_ping_' + Date.now();
+    await withTimeout(set(key, '1', 5), 2000);
+    await withTimeout(del(key), 2000);
+    return { status: 'healthy', latencyMs: ms(t) };
+  } catch (err) {
+    return { status: 'warning', latencyMs: ms(t), error: err.message };
+  }
 }
 
+// ==================== Queue ====================
 async function checkQueue() {
-  return timed(async () => {
-    try {
-      const { getQueueHealthStats } = require('../queues');
-      const stats = await getQueueHealthStats();
-      if (!stats.redisConnected) {
-        return { status: STATUS.WARN, message: 'কিউ সিস্টেম নিষ্ক্রিয় (Redis ছাড়া কাজ করে না, ঐচ্ছিক ফিচার)' };
-      }
-      const failedTotal = (stats.queues || []).reduce((sum, q) => sum + (q.counts?.failed || 0), 0);
-      const anyPaused = (stats.queues || []).some(q => q.paused);
-      const status = failedTotal > 50 ? STATUS.WARN : anyPaused ? STATUS.WARN : STATUS.OK;
-      return {
-        status,
-        message: `${(stats.queues || []).length}টা কিউ সক্রিয়${failedTotal ? `, ${failedTotal}টা ফেইলড জব` : ''}${anyPaused ? ' (কিছু paused)' : ''}`,
-        queues: (stats.queues || []).map(q => ({ name: q.name, ...q.counts }))
-      };
-    } catch (err) {
-      return { status: STATUS.WARN, message: err.message || 'Queue চেক ব্যর্থ' };
+  const t = Date.now();
+  try {
+    const { isAvailable } = require('./queue/connection');
+    if (!isAvailable()) {
+      return { status: 'warning', latencyMs: ms(t), note: 'Queue Redis disconnected — jobs falling back to sync mode' };
     }
-  });
+    const { getHealthSummary } = require('./queue/monitor');
+    const summary = await withTimeout(getHealthSummary(), 3000);
+    const status = summary.totalFailed > 50 ? 'warning' : 'healthy';
+    return { status, latencyMs: ms(t), totalFailed: summary.totalFailed, totalWaiting: summary.totalWaiting, totalActive: summary.totalActive };
+  } catch (err) {
+    return { status: 'warning', latencyMs: ms(t), error: err.message };
+  }
 }
 
+// ==================== Email ====================
 async function checkEmail() {
-  return timed(async () => {
+  const t = Date.now();
+  try {
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      return { status: STATUS.WARN, message: 'EMAIL_USER/EMAIL_PASS সেট করা নেই' };
+      return { status: 'warning', latencyMs: ms(t), note: 'EMAIL_USER / EMAIL_PASS সেট নেই' };
     }
-    try {
-      const emailService = require('./email');
-      if (typeof emailService.verifyConnection === 'function') {
-        await emailService.verifyConnection();
-      }
-      return { status: STATUS.OK, message: 'SMTP সংযোগ যাচাই সফল' };
-    } catch (err) {
-      return { status: STATUS.ERROR, message: err.message || 'Email চেক ব্যর্থ' };
-    }
-  });
+    const nodemailer = require('nodemailer');
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com', port: 587, secure: false,
+      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+      tls: { rejectUnauthorized: false }
+    });
+    await withTimeout(transporter.verify(), 5000);
+    return { status: 'healthy', latencyMs: ms(t), provider: 'smtp.gmail.com' };
+  } catch (err) {
+    return { status: 'warning', latencyMs: ms(t), error: err.message };
+  }
 }
 
-async function checkDiskSpace() {
-  return timed(async () => {
-    try {
-      if (typeof require('fs').statfs !== 'function') {
-        return { status: STATUS.WARN, message: 'এই Node.js ভার্সনে ডিস্ক চেক সাপোর্ট নেই' };
-      }
-      const stats = await new Promise((resolve, reject) => {
-        require('fs').statfs('.', (err, s) => (err ? reject(err) : resolve(s)));
-      });
-      const totalBytes = stats.blocks * stats.bsize;
-      const freeBytes = stats.bfree * stats.bsize;
-      const usedPercent = totalBytes > 0 ? Math.round(((totalBytes - freeBytes) / totalBytes) * 100) : 0;
-      const status = usedPercent >= 90 ? STATUS.ERROR : (usedPercent >= 75 ? STATUS.WARN : STATUS.OK);
-      return {
-        status,
-        message: `${usedPercent}% ব্যবহৃত`,
-        totalGB: +(totalBytes / 1e9).toFixed(2),
-        freeGB: +(freeBytes / 1e9).toFixed(2),
-        usedPercent
-      };
-    } catch (err) {
-      return { status: STATUS.WARN, message: 'ডিস্ক চেক করা যায়নি: ' + err.message };
-    }
-  });
-}
-
-async function checkMemory() {
-  return timed(async () => {
-    const totalMem = os.totalmem();
-    const freeMem = os.freemem();
-    const usedPercent = Math.round(((totalMem - freeMem) / totalMem) * 100);
-    const proc = process.memoryUsage();
-    const status = usedPercent >= 90 ? STATUS.ERROR : (usedPercent >= 75 ? STATUS.WARN : STATUS.OK);
-    return {
-      status,
-      message: `${usedPercent}% ব্যবহৃত`,
-      totalMB: Math.round(totalMem / 1e6),
-      freeMB: Math.round(freeMem / 1e6),
-      usedPercent,
-      processRssMB: Math.round(proc.rss / 1e6),
-      processHeapUsedMB: Math.round(proc.heapUsed / 1e6)
-    };
-  });
-}
-
-function checkUptime() {
-  const seconds = Math.floor(process.uptime());
-  const d = Math.floor(seconds / 86400);
-  const h = Math.floor((seconds % 86400) / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
+// ==================== Memory ====================
+function checkMemory() {
+  const used = process.memoryUsage();
+  const totalMB   = toMB(os.totalmem());
+  const freeMB    = toMB(os.freemem());
+  const heapUsed  = toMB(used.heapUsed);
+  const heapTotal = toMB(used.heapTotal);
+  const rss       = toMB(used.rss);
+  const usagePct  = Math.round(((totalMB - freeMB) / totalMB) * 100);
   return {
-    status: STATUS.OK,
-    message: `${d}দ ${h}ঘ ${m}মি ${s}সে`,
-    seconds,
-    startedAt: new Date(Date.now() - seconds * 1000).toISOString()
+    status: usagePct > 90 ? 'error' : usagePct > 75 ? 'warning' : 'healthy',
+    totalMB, freeMB, heapUsedMB: heapUsed, heapTotalMB: heapTotal, rssMB: rss, usagePct
   };
 }
 
-async function runAllChecks() {
+// ==================== Disk ====================
+function checkDisk() {
   try {
-    const [database, redis, queueStatus, email, disk, memory] = await Promise.all([
-      checkDatabase(),
-      checkRedis(),
-      checkQueue(),
-      checkEmail(),
-      checkDiskSpace(),
-      checkMemory()
-    ]);
-    const uptime = checkUptime();
-    const checks = { database, redis, queue: queueStatus, email, disk, memory, uptime };
-
-    let overall = STATUS.OK;
-    if (database.status === STATUS.ERROR) {
-      overall = STATUS.ERROR;
-    } else {
-      const others = [redis, queueStatus, email, disk, memory];
-      if (others.some(c => c.status === STATUS.ERROR)) overall = STATUS.WARN;
-      else if (others.some(c => c.status === STATUS.WARN)) overall = STATUS.WARN;
-    }
-
-    return { overall, checks, timestamp: new Date().toISOString() };
-  } catch (err) {
+    const out = execSync('df -k / 2>/dev/null', { timeout: 2000 }).toString().trim().split('\n');
+    const parts = out[1].trim().split(/\s+/);
+    const total   = Math.round(parseInt(parts[1]) / 1024);
+    const used    = Math.round(parseInt(parts[2]) / 1024);
+    const avail   = Math.round(parseInt(parts[3]) / 1024);
+    const usePct  = parseInt(parts[4]);
     return {
-      overall: STATUS.ERROR,
-      checks: {
-        database: { status: STATUS.ERROR, message: err.message },
-        redis: { status: STATUS.WARN, message: '—' },
-        queue: { status: STATUS.WARN, message: '—' },
-        email: { status: STATUS.WARN, message: '—' },
-        disk: { status: STATUS.WARN, message: '—' },
-        memory: { status: STATUS.WARN, message: '—' },
-        uptime: checkUptime()
-      },
-      timestamp: new Date().toISOString()
+      status: usePct > 90 ? 'error' : usePct > 75 ? 'warning' : 'healthy',
+      totalMB: total, usedMB: used, availMB: avail, usagePct: usePct
     };
+  } catch (err) {
+    return { status: 'warning', error: 'disk check unavailable' };
   }
 }
 
-const runDiagnostics = runAllChecks;
+// ==================== Uptime ====================
+function checkUptime() {
+  const appUptimeSec  = Math.floor((Date.now() - APP_START_TIME) / 1000);
+  const sysUptimeSec  = Math.floor(os.uptime());
+  const fmt = (s) => {
+    const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
+    return (d ? d + 'd ' : '') + (h ? h + 'h ' : '') + m + 'm';
+  };
+  return {
+    status: 'healthy',
+    appUptime: fmt(appUptimeSec), appUptimeSec,
+    sysUptime: fmt(sysUptimeSec), sysUptimeSec,
+    nodeVersion: process.version,
+    platform: process.platform,
+    cpus: os.cpus().length,
+    pid: process.pid
+  };
+}
 
-module.exports = {
-  STATUS,
-  checkDatabase,
-  checkRedis,
-  checkQueue,
-  checkEmail,
-  checkDiskSpace,
-  checkMemory,
-  checkUptime,
-  runAllChecks,
-  runDiagnostics: runAllChecks // alias — কিছু জায়গায় এই নামে কল করা হয়
-};
+// ==================== Full Diagnostics ====================
+async function runAllChecks() {
+  const [pg, redis, queue, email] = await Promise.allSettled([
+    checkPostgres(), checkRedis(), checkQueue(), checkEmail()
+  ]);
+
+  const memory = checkMemory();
+  const disk   = checkDisk();
+  const uptime = checkUptime();
+
+  const pick = (settled) => settled.status === 'fulfilled' ? settled.value : { status: 'error', error: settled.reason?.message };
+
+  const checks = {
+    postgres: pick(pg),
+    redis:    pick(redis),
+    queue:    pick(queue),
+    email:    pick(email),
+    memory,
+    disk,
+    uptime,
+  };
+
+  // সামগ্রিক status — যেকোনো 'error' থাকলে error, 'warning' থাকলে warning
+  const statuses = Object.values(checks).map(c => c.status);
+  const overall  = statuses.includes('error') ? 'error' : statuses.includes('warning') ? 'warning' : 'healthy';
+
+  return { overall, timestamp: new Date().toISOString(), checks };
+}
+
+// ==================== Liveness & Readiness ====================
+async function liveness() {
+  // শুধু প্রসেস জীবিত কিনা — সবসময় 200
+  return { status: 'ok', uptime: Math.floor((Date.now() - APP_START_TIME) / 1000) };
+}
+
+async function readiness() {
+  // DB connect হলেই ready
+  try {
+    const { pool } = require('../db');
+    await withTimeout(pool.query('SELECT 1'), 2000);
+    return { status: 'ready' };
+  } catch (err) {
+    throw new Error('DB not ready: ' + err.message);
+  }
+}
+
+module.exports = { runAllChecks, liveness, readiness };

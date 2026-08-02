@@ -94,7 +94,7 @@
                       <% } %>
                     </td>
                     <td style="text-align:right;">
-                      <button class="btn btn-sm" onclick='viewKyc(<%- JSON.stringify(k) %>)'>বিস্তারিত</button>
+                      <button class="btn btn-sm" onclick='viewKyc(<%- jsonScriptSafe(k) %>)'>বিস্তারিত</button>
                       <% if (k.status === 'pending') { %>
                         <button class="btn btn-sm btn-green" onclick="approveKyc(<%= k.id %>)">অনুমোদন</button>
                         <button class="btn btn-sm btn-red" onclick="rejectKyc(<%= k.id %>)">বাতিল</button>

@@ -133,17 +133,16 @@ Docker না থাকলে যেকোনো লোকাল PostgreSQL ই�
 
 ```
 tests/
-  setup/           # env ভ্যারিয়েবল + jest global config
-  helpers/         # waitForApp (migration-readiness পোলিং), humanAgent (bot-detection-safe test client), testUser
-  unit/            # DB ছাড়া pure/mocked ইউনিট টেস্ট (validate.js, apiKeyAuth.js)
-  integration/     # আসল test DB-এর বিপরীতে supertest দিয়ে পুরো app বুট করে চালানো টেস্ট
-    health.test.js     — /health, /ready
-    api.test.js        — পাবলিক /api/v1 এন্ডপয়েন্ট, API-key auth
-    auth.test.js        — রেজিস্ট্রেশন/লগইন/লগআউট, CSRF, SQL-injection safety
-    security.test.js   — security headers, admin/payment route protection, rate limiting
-    admin.test.js       — admin RBAC (role promote/demote)
-    payment.test.js    — deposit ফ্লো ভ্যালিডেশন
+  setup.js, afterEnv.js, globalSetup.js   # global jest config + migration bootstrap
+  helpers/app.js    # shared supertest agent/CSRF/username helpers
+  admin.test.js, api.test.js, auth.test.js, health.test.js, payment.test.js, security.test.js
+  unit/             # DB ছাড়া pure/mocked ইউনিট টেস্ট (validate.js, apiKeyAuth.js)
+  integration/
+    backup.test.js   — Backup & Restore System পূর্ণাঙ্গ audit (দেখুন AUDIT_REPORT.md)
+    profile.test.js  — প্রোফাইল রুট (balance, security, change-password)
 ```
+
+বিস্তারিত টেস্ট ডকুমেন্টেশনের জন্য দেখুন `TESTING.md`।
 
 ### CI (GitHub Actions)
 

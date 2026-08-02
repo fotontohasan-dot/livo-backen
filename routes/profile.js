@@ -3,18 +3,11 @@ const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
-const { sanitizeText, requireIntParam } = require('../middleware/validate');
 const bcrypt = require('bcryptjs');
 const { getTodayReward, claimDailyReward } = require('../services/dailyReward');
 const { getReferralStats } = require('../services/referral');
 const { getCashbackStatus, claimCashback } = require('../services/cashback');
-const {
-  getVipStatus, getVipBenefits,
-  getDailyBonusStatus, claimDailyBonus,
-  getWeeklyVipStatus, claimWeeklyVipReward,
-  getMonthlyVipStatus, claimMonthlyVipReward,
-  getRewardHistory, getUpgradeHistory
-} = require('../services/vip');
+const { getVipStatus } = require('../services/vip');
 const { getMissions, claimMission } = require('../services/missions');
 const { getSegments, canSpin, spin, getHistory: getWheelHistory } = require('../services/wheel');
 const { getLoyalty, redeemPoints } = require('../services/loyalty');
@@ -27,9 +20,20 @@ const { getLeaderboard, getPastContests } = require('../services/contest');
 const { getRewardStatus, claimRedPacket, claimGoldenEgg } = require('../services/redpacket');
 const { checkContent } = require('../utils/contentFilter');
 const { isWeakPin, createPin, updatePin, verifyPin, getPinStatus } = require('../services/withdrawPin');
-const { listActiveSessions, listLoginHistory, revokeDeviceSession, revokeAllOtherSessions, listTrustedDevicesPage, renameDevice, setDeviceTrusted, removeDeviceWithNotification } = require('../services/deviceTracking');
+const { listActiveSessions, listLoginHistory, revokeDeviceSession, revokeAllOtherSessions } = require('../services/deviceTracking');
 const { logAdminAction } = require('../services/fraudDetection');
 const cache = require('../services/cache');
+const { createLimiter } = require('../middleware/rateLimitFactory');
+
+// পাসওয়ার্ড, উইথড্র-পিন, ব্যাংক কার্ড — অ্যাকাউন্ট-টেকওভার সংশ্লিষ্ট সংবেদনশীল অ্যাকশন,
+// প্রতি ইউজারে ১৫ মিনিটে সর্বোচ্চ ৬ বার (আগে শুধু generalLimiter-এর ৩০০/১৫মিনিট দিয়ে
+// ঢিলেঢালাভাবে কভার হতো)।
+const accountSecurityLimiter = createLimiter('account_security', {
+  windowMs: 15 * 60 * 1000,
+  max: 6,
+  message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
+  keyGenerator: (req) => (req.session && req.session.user) ? `u_${req.session.user.id}` : req.ip
+});
 
 // ==== ইনপুট ভ্যালিডেশন হেল্পার (username, name, phone, bank card ফিল্ড) ====
 // লক্ষ্য: কোনো ফিল্ডেই <, >, স্ক্রিপ্ট, বা লিংক বসিয়ে ঢুকতে না পারা — কারণ এই মানগুলো
@@ -49,7 +53,7 @@ function isValidBankField(v) { return typeof v === 'string' && BANK_FIELD_RE.tes
 
 router.get('/', isAuth, async (req, res) => {
   try {
-    const user = await pool.query(`SELECT * FROM users WHERE id=$1`, [req.session.user.id]);
+    const user = await pool.query(`SELECT id, username, email, phone, coins, demo_balance, role, avatar, kyc_status, total_points, referred_by_id, referral_code, last_login, last_ip, created_at, password FROM users WHERE id=$1`, [req.session.user.id]);
 
     // প্রোফাইলের কয়েন ব্যালেন্স সবসময় সরাসরি DB থেকে (উপরে) নেওয়া হচ্ছে — এটা কখনো ক্যাশ করা হয় না।
     // নিচের প্রেডিকশন/টুর্নামেন্ট/স্ট্যাটস তুলনামূলক কম-সংবেদনশীল ও ভারী জয়েন কোয়েরি, তাই ১৫ সেকেন্ড ক্যাশ করা হয়েছে।
@@ -192,7 +196,7 @@ router.post('/update-personal', isAuth, async (req, res) => {
   res.redirect('/profile/security');
 });
 
-router.post('/add-bank-card', isAuth, async (req, res) => {
+router.post('/add-bank-card', isAuth, accountSecurityLimiter, async (req, res) => {
   try {
     const { bank_name, account_number, holder_name } = req.body;
     if (!isValidBankField(bank_name) || !isValidBankField(account_number) || !isValidName(holder_name)) {
@@ -210,7 +214,7 @@ router.post('/add-bank-card', isAuth, async (req, res) => {
   res.redirect('/profile/security');
 });
 
-router.post('/delete-bank-card/:id', isAuth, async (req, res) => {
+router.post('/delete-bank-card/:id', isAuth, accountSecurityLimiter, async (req, res) => {
   try {
     await pool.query(`DELETE FROM bank_cards WHERE id=$1 AND user_id=$2`, [req.params.id, req.session.user.id]);
     req.flash('success', '✅ কার্ড মুছে ফেলা হয়েছে!');
@@ -220,7 +224,7 @@ router.post('/delete-bank-card/:id', isAuth, async (req, res) => {
   res.redirect('/profile/security');
 });
 
-router.post('/change-password', isAuth, async (req, res) => {
+router.post('/change-password', isAuth, accountSecurityLimiter, async (req, res) => {
   try {
     const { current_password, new_password, currentPassword, newPassword, confirmPassword } = req.body;
     const cp = current_password || currentPassword;
@@ -231,7 +235,7 @@ router.post('/change-password', isAuth, async (req, res) => {
       return res.redirect('/profile/security');
     }
 
-    const user = await pool.query(`SELECT * FROM users WHERE id=$1`, [req.session.user.id]);
+    const user = await pool.query(`SELECT id, username, email, phone, coins, demo_balance, role, avatar, kyc_status, total_points, referred_by_id, referral_code, last_login, last_ip, created_at, password FROM users WHERE id=$1`, [req.session.user.id]);
     if (!(await bcrypt.compare(cp, user.rows[0].password))) {
       req.flash('error', '❌ বর্তমান পাসওয়ার্ড ভুল।');
       return res.redirect('/profile/security');
@@ -339,7 +343,7 @@ router.get('/stats', isAuth, async (req, res) => {
 
 router.get('/security', isAuth, async (req, res) => {
   try {
-    const cards = await pool.query('SELECT * FROM bank_cards WHERE user_id = $1 ORDER BY created_at DESC', [req.session.user.id]);
+    const cards = await pool.query('SELECT id, user_id, bank_name, account_number, account_name, is_default, created_at FROM bank_cards WHERE user_id = $1 ORDER BY created_at DESC', [req.session.user.id]);
     let pinStatus = { configured: false, locked: false };
     try { pinStatus = await getPinStatus(req.session.user.id); } catch (e) {}
 
@@ -350,13 +354,12 @@ router.get('/security', isAuth, async (req, res) => {
       recentLogins = await listLoginHistory(req.session.user.id, 5, 0);
     } catch (e) { console.error('security devices load error:', e.message); }
 
-    // ==================== Security Center — ইমেইল ভেরিফিকেশন, পাসওয়ার্ড ও 2FA স্ট্যাটাস (সবসময় DB থেকে ফ্রেশ, সেশন স্টেল হতে পারে) ====================
+    // ==================== Security Center — ইমেইল ভেরিফিকেশন ও পাসওয়ার্ড স্ট্যাটাস (সবসময় DB থেকে ফ্রেশ, সেশন স্টেল হতে পারে) ====================
     let emailStatus = { verified: true, hasEmail: false, lastSentAt: null };
     let passwordChangedAt = null;
-    let totpEnabled = false;
     try {
       const u = await pool.query(
-        'SELECT email, email_verified, last_verification_sent_at, password_changed_at, totp_enabled FROM users WHERE id = $1',
+        'SELECT email, email_verified, last_verification_sent_at, password_changed_at FROM users WHERE id = $1',
         [req.session.user.id]
       );
       if (u.rows[0]) {
@@ -366,56 +369,17 @@ router.get('/security', isAuth, async (req, res) => {
           lastSentAt: u.rows[0].last_verification_sent_at
         };
         passwordChangedAt = u.rows[0].password_changed_at;
-        totpEnabled = !!u.rows[0].totp_enabled;
       }
     } catch (e) { console.error('security email/password status load error:', e.message); }
 
-    // ==================== Security Alerts — নতুন ডিভাইস লগইন, ব্যর্থ লগইন চেষ্টা, ফ্রড ফ্ল্যাগ (তথ্যমূলক ভাষায়, ভীতিকর নয়) ====================
-    let securityAlerts = [];
-    try {
-      const newDeviceLogins = await pool.query(
-        `SELECT created_at, ip, user_agent FROM login_logs
-         WHERE user_id = $1 AND is_new_device = true
-         ORDER BY created_at DESC LIMIT 3`,
-        [req.session.user.id]
-      );
-      for (const row of newDeviceLogins.rows) {
-        securityAlerts.push({
-          level: 'medium', icon: 'fa-mobile-screen-button',
-          title: res.locals.lang === 'bn' ? 'নতুন ডিভাইস থেকে লগইন' : 'Login from a new device',
-          detail: (res.locals.lang === 'bn' ? 'IP: ' : 'IP: ') + (row.ip || '-'),
-          time: row.created_at
-        });
-      }
-
-      const failedAttempts = await pool.query(
-        `SELECT COUNT(*) AS cnt, MAX(created_at) AS last_at FROM failed_login_attempts
-         WHERE user_id = $1 AND created_at > NOW() - INTERVAL '24 hours'`,
-        [req.session.user.id]
-      );
-      const fa = failedAttempts.rows[0];
-      if (fa && parseInt(fa.cnt, 10) > 0) {
-        securityAlerts.push({
-          level: parseInt(fa.cnt, 10) >= 5 ? 'high' : 'low', icon: 'fa-triangle-exclamation',
-          title: res.locals.lang === 'bn' ? 'ব্যর্থ লগইন চেষ্টা' : 'Failed login attempts',
-          detail: (res.locals.lang === 'bn' ? `গত ২৪ ঘণ্টায় ${fa.cnt}টি ব্যর্থ চেষ্টা` : `${fa.cnt} failed attempt(s) in the last 24 hours`),
-          time: fa.last_at
-        });
-      }
-
-      securityAlerts.sort((a, b) => new Date(b.time) - new Date(a.time));
-      securityAlerts = securityAlerts.slice(0, 5);
-    } catch (e) { console.error('security alerts load error:', e.message); }
-
     res.render('profile/security', {
-      user: Object.assign({}, req.session.user, { totp_enabled: totpEnabled }),
-      bankCards: cards.rows, pinStatus, activeSessions, recentLogins,
-      emailStatus, passwordChangedAt, securityAlerts
+      user: req.session.user, bankCards: cards.rows, pinStatus, activeSessions, recentLogins,
+      emailStatus, passwordChangedAt
     });
   } catch (err) {
     res.render('profile/security', {
       user: req.session.user, bankCards: [], pinStatus: { configured: false, locked: false }, activeSessions: [], recentLogins: [],
-      emailStatus: { verified: true, hasEmail: false, lastSentAt: null }, passwordChangedAt: null, securityAlerts: []
+      emailStatus: { verified: true, hasEmail: false, lastSentAt: null }, passwordChangedAt: null
     });
   }
 });
@@ -443,65 +407,6 @@ router.post('/devices/logout-all-others', isAuth, async (req, res) => {
   res.redirect('/profile/security');
 });
 
-// ==================== Trusted Devices Management (নতুন পেজ) ====================
-router.get('/trusted-devices', isAuth, async (req, res) => {
-  try {
-    const devices = await listTrustedDevicesPage(req.session.user.id, req.sessionID);
-    res.render('profile/trusted-devices', { devices });
-  } catch (err) {
-    console.error('trusted-devices load error:', err.message);
-    res.render('profile/trusted-devices', { devices: [] });
-  }
-});
-
-router.post('/trusted-devices/:id/rename', isAuth, requireIntParam('id', '/profile/trusted-devices'), async (req, res) => {
-  try {
-    const label = sanitizeText(req.body.label || '', { maxLen: 100 });
-    const ok = label && await renameDevice(req.session.user.id, req.params.id, label);
-    req.flash(ok ? 'success' : 'error', ok ? '✅ ডিভাইসের নাম পরিবর্তন হয়েছে।' : '❌ সঠিক নাম দিন।');
-  } catch (err) {
-    console.error('device rename error:', err.message);
-    req.flash('error', '❌ সমস্যা হয়েছে, আবার চেষ্টা করুন।');
-  }
-  res.redirect('/profile/trusted-devices');
-});
-
-router.post('/trusted-devices/:id/trust', isAuth, requireIntParam('id', '/profile/trusted-devices'), async (req, res) => {
-  try {
-    const trusted = req.body.trusted === 'true' || req.body.trusted === '1';
-    const ok = await setDeviceTrusted(req.session.user.id, req.params.id, trusted, req.session.user.username);
-    req.flash(ok ? 'success' : 'error', ok
-      ? (trusted ? '✅ ডিভাইসটি Trusted করা হয়েছে।' : '✅ ডিভাইসটি Untrusted করা হয়েছে।')
-      : '❌ ডিভাইসটি খুঁজে পাওয়া যায়নি।');
-  } catch (err) {
-    console.error('device trust toggle error:', err.message);
-    req.flash('error', '❌ সমস্যা হয়েছে, আবার চেষ্টা করুন।');
-  }
-  res.redirect('/profile/trusted-devices');
-});
-
-router.post('/trusted-devices/:id/remove', isAuth, requireIntParam('id', '/profile/trusted-devices'), async (req, res) => {
-  try {
-    const ok = await removeDeviceWithNotification(req.session.user.id, req.params.id, req.session.user.username);
-    req.flash(ok ? 'success' : 'error', ok ? '✅ ডিভাইসটি সরানো হয়েছে।' : '❌ ডিভাইসটি খুঁজে পাওয়া যায়নি।');
-  } catch (err) {
-    console.error('device remove error:', err.message);
-    req.flash('error', '❌ সমস্যা হয়েছে, আবার চেষ্টা করুন।');
-  }
-  res.redirect('/profile/trusted-devices');
-});
-
-router.post('/trusted-devices/remove-all-others', isAuth, async (req, res) => {
-  try {
-    const count = await revokeAllOtherSessions(req.session.user.id, req.sessionID, req.session.user.username);
-    req.flash('success', count > 0 ? `✅ ${count}টি অন্য ডিভাইস সরানো হয়েছে।` : 'অন্য কোনো সক্রিয় ডিভাইস নেই।');
-  } catch (err) {
-    console.error('trusted-devices remove-all-others error:', err.message);
-    req.flash('error', '❌ সমস্যা হয়েছে, আবার চেষ্টা করুন।');
-  }
-  res.redirect('/profile/trusted-devices');
-});
-
 // ==================== সম্পূর্ণ লগইন হিস্ট্রি ====================
 router.get('/login-history', isAuth, async (req, res) => {
   try {
@@ -516,7 +421,7 @@ router.get('/login-history', isAuth, async (req, res) => {
 });
 
 // ==================== Withdraw PIN তৈরি ====================
-router.post('/withdraw-pin/create', isAuth, async (req, res) => {
+router.post('/withdraw-pin/create', isAuth, accountSecurityLimiter, async (req, res) => {
   try {
     const userId = req.session.user.id;
     const status = await getPinStatus(userId);
@@ -547,7 +452,7 @@ router.post('/withdraw-pin/create', isAuth, async (req, res) => {
 });
 
 // ==================== Withdraw PIN পরিবর্তন (বর্তমান PIN জানা থাকলে) ====================
-router.post('/withdraw-pin/change', isAuth, async (req, res) => {
+router.post('/withdraw-pin/change', isAuth, accountSecurityLimiter, async (req, res) => {
   try {
     const userId = req.session.user.id;
     const { currentPin, newPin, confirmNewPin } = req.body;
@@ -592,7 +497,7 @@ router.post('/withdraw-pin/change', isAuth, async (req, res) => {
 });
 
 // ==================== Withdraw PIN রিসেট (PIN ভুলে গেলে — অ্যাকাউন্ট পাসওয়ার্ড দিয়ে যাচাই) ====================
-router.post('/withdraw-pin/reset', isAuth, async (req, res) => {
+router.post('/withdraw-pin/reset', isAuth, accountSecurityLimiter, async (req, res) => {
   try {
     const userId = req.session.user.id;
     const { accountPassword, newPin, confirmNewPin } = req.body;
@@ -686,15 +591,13 @@ router.get('/wheel', isAuth, async (req, res) => {
 });
 
 // প্রতি ইউজার/IP-তে মিনিটে সর্বোচ্চ ১০ বার claim/spin রিকোয়েস্ট — বট/স্প্যাম ঠেকাতে
-const RedisRateLimitStore = require('../services/redisRateLimitStore');
-const claimLimiter = rateLimit({
+const claimLimiter = createLimiter('claim', {
   windowMs: 60 * 1000,
   max: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
   keyGenerator: (req) => (req.session && req.session.user ? String(req.session.user.id) : req.ip),
-  message: { ok: false, success: false, message: 'অনেকবার চেষ্টা করেছেন, একটু পরে আবার চেষ্টা করুন।' },
-  store: new RedisRateLimitStore('rl:claim:')
+  handler: (req, res) => {
+    res.status(429).json({ ok: false, success: false, message: 'অনেকবার চেষ্টা করেছেন, একটু পরে আবার চেষ্টা করুন।' });
+  }
 });
 
 router.post('/wheel/spin', isAuth, claimLimiter, async (req, res) => {
@@ -846,100 +749,6 @@ router.get('/api/vip-progress', isAuth, async (req, res) => {
   }
 });
 
-// ---- VIP প্রিমিয়াম: প্রতিটি লেভেলের জন্য আলাদা বেনিফিটস পেজ ----
-router.get('/vip/benefits/:level', isAuth, async (req, res) => {
-  try {
-    const level = parseInt(req.params.level, 10);
-    if (!Number.isFinite(level) || level < 0) return res.redirect('/profile/vip');
-    const benefits = await getVipBenefits(level);
-    const vip = await getVipStatus(req.session.user.id);
-    if (!benefits) { req.flash('error', 'এই VIP লেভেল পাওয়া যায়নি।'); return res.redirect('/profile/vip'); }
-    res.render('profile/vip-benefits', { user: req.session.user, benefits, vip });
-  } catch (err) {
-    console.error('vip benefits page error:', err.message);
-    req.flash('error', 'VIP বেনিফিটস লোড করা যায়নি।');
-    res.redirect('/profile/vip');
-  }
-});
-
-// ---- VIP দৈনিক বোনাস ----
-router.get('/api/vip/daily-status', isAuth, async (req, res) => {
-  try {
-    const status = await getDailyBonusStatus(req.session.user.id);
-    res.json({ success: true, ...status });
-  } catch (err) {
-    console.error('vip daily status error:', err.message);
-    res.status(500).json({ success: false, message: 'সার্ভার ত্রুটি।' });
-  }
-});
-router.post('/vip/daily-claim', isAuth, claimLimiter, async (req, res) => {
-  try {
-    const result = await claimDailyBonus(req.session.user.id);
-    res.json(result);
-  } catch (err) {
-    console.error('vip daily claim error:', err.message);
-    res.status(500).json({ success: false, message: 'সার্ভার ত্রুটি।' });
-  }
-});
-
-// ---- সাপ্তাহিক VIP রিওয়ার্ড (লেভেল-ভিত্তিক ফ্ল্যাট বোনাস) ----
-router.get('/api/vip/weekly-status', isAuth, async (req, res) => {
-  try {
-    const status = await getWeeklyVipStatus(req.session.user.id);
-    res.json({ success: true, ...status });
-  } catch (err) {
-    console.error('vip weekly status error:', err.message);
-    res.status(500).json({ success: false, message: 'সার্ভার ত্রুটি।' });
-  }
-});
-router.post('/vip/weekly-claim', isAuth, claimLimiter, async (req, res) => {
-  try {
-    const result = await claimWeeklyVipReward(req.session.user.id);
-    res.json(result);
-  } catch (err) {
-    console.error('vip weekly claim error:', err.message);
-    res.status(500).json({ success: false, message: 'সার্ভার ত্রুটি।' });
-  }
-});
-
-// ---- মাসিক VIP রিওয়ার্ড ----
-router.get('/api/vip/monthly-status', isAuth, async (req, res) => {
-  try {
-    const status = await getMonthlyVipStatus(req.session.user.id);
-    res.json({ success: true, ...status });
-  } catch (err) {
-    console.error('vip monthly status error:', err.message);
-    res.status(500).json({ success: false, message: 'সার্ভার ত্রুটি।' });
-  }
-});
-router.post('/vip/monthly-claim', isAuth, claimLimiter, async (req, res) => {
-  try {
-    const result = await claimMonthlyVipReward(req.session.user.id);
-    res.json(result);
-  } catch (err) {
-    console.error('vip monthly claim error:', err.message);
-    res.status(500).json({ success: false, message: 'সার্ভার ত্রুটি।' });
-  }
-});
-
-// ---- VIP রিওয়ার্ড হিস্ট্রি + আপগ্রেড হিস্ট্রি (একই পেজে) ----
-router.get('/vip/history', isAuth, async (req, res) => {
-  try {
-    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
-    const rewardHistory = await getRewardHistory(req.session.user.id, { page, limit: 15 });
-    const upgradeHistory = await getUpgradeHistory(req.session.user.id, { page: 1, limit: 15 });
-    res.render('profile/vip-history', { user: req.session.user, rewardHistory, upgradeHistory, page });
-  } catch (err) {
-    console.error('vip history page error:', err.message);
-    res.render('profile/vip-history', {
-      user: req.session.user,
-      rewardHistory: { rows: [], total: 0, page: 1, totalPages: 1 },
-      upgradeHistory: { rows: [], total: 0, page: 1, totalPages: 1 },
-      page: 1
-    });
-  }
-});
-
 // ==================== রেফারেল ====================
 router.get('/referral', isAuth, async (req, res) => {
   try {
@@ -966,7 +775,7 @@ router.get('/referral', isAuth, async (req, res) => {
 router.get('/transactions', isAuth, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM coin_transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50',
+      'SELECT id, user_id, amount, type, description, created_at FROM coin_transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50',
       [req.session.user.id]
     );
     res.render('profile/transactions', { user: req.session.user, transactions: result.rows });
@@ -978,7 +787,7 @@ router.get('/transactions', isAuth, async (req, res) => {
 router.get('/account-record', isAuth, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM coin_transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 100',
+      'SELECT id, user_id, amount, type, description, created_at FROM coin_transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 100',
       [req.session.user.id]
     );
     res.render('profile/transactions', { user: req.session.user, transactions: result.rows });
@@ -990,7 +799,7 @@ router.get('/account-record', isAuth, async (req, res) => {
 router.get('/cards', isAuth, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM bank_cards WHERE user_id = $1 ORDER BY created_at DESC',
+      'SELECT id, user_id, bank_name, account_number, account_name, is_default, created_at FROM bank_cards WHERE user_id = $1 ORDER BY created_at DESC',
       [req.session.user.id]
     );
     res.render('profile/cards', { user: req.session.user, cards: result.rows });
@@ -999,7 +808,7 @@ router.get('/cards', isAuth, async (req, res) => {
   }
 });
 
-router.post('/cards/add', isAuth, async (req, res) => {
+router.post('/cards/add', isAuth, accountSecurityLimiter, async (req, res) => {
   try {
     const { bank_name, account_number, holder_name } = req.body;
     await pool.query(
@@ -1013,7 +822,7 @@ router.post('/cards/add', isAuth, async (req, res) => {
   res.redirect('/profile/cards');
 });
 
-router.post('/cards/delete/:id', isAuth, async (req, res) => {
+router.post('/cards/delete/:id', isAuth, accountSecurityLimiter, async (req, res) => {
   try {
     const { id } = req.params;
     await pool.query(

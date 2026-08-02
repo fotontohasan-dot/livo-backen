@@ -13,7 +13,6 @@ const { checkBadges } = require('../services/badges');
 const { getSetting } = require('../services/settings');
 const { broadcastDemoStats } = require('../services/socket');
 const cache = require('../services/cache');
-const cacheKeys = require('../services/cacheKeys');
 
 function formatMatch(row) {
   return {
@@ -70,8 +69,14 @@ router.get('/football', (req, res) => {
 
 router.get('/api/live', async (req, res) => {
   try {
+    const CACHE_KEY = 'matches:live';
+    const cached = await cache.get(CACHE_KEY);
+    if (cached) return res.json(cached);
+
     const result = await pool.query(
-      `SELECT * FROM matches ORDER BY
+      `SELECT id, title, team_a, team_b, sport, league, status, start_time, result,
+              home_odds, draw_odds, away_odds, score_a, score_b
+       FROM matches ORDER BY
          CASE WHEN status = 'live' THEN 0 ELSE 1 END,
          start_time ASC NULLS LAST,
          id DESC
@@ -87,7 +92,9 @@ router.get('/api/live', async (req, res) => {
       else cricket.push(m);
     }
 
-    res.json({ success: true, cricket, football });
+    const payload = { success: true, cricket, football };
+    cache.set(CACHE_KEY, payload, 10).catch(() => {}); // 10s TTL — live data stays fresh
+    res.json(payload);
   } catch (err) {
     console.error('matches/api/live error:', err.message);
     res.json({ success: true, cricket: [], football: [] });
@@ -96,45 +103,36 @@ router.get('/api/live', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
   try {
-    const matchId = req.params.id;
-    // অডস ঘন ঘন বদলাতে পারে, তাই ছোট TTL (৮ সেকেন্ড) + admin মার্কেট আপডেট/টগল/সেটেল
-    // হলে সাথে সাথে invalidate — cacheKeys.matchDetail() এ।
-    const cached = await cache.getOrSet(cacheKeys.matchDetail(matchId), 8, async () => {
-      const matchRes = await pool.query(`SELECT * FROM matches WHERE id = $1`, [matchId]);
-      const row = matchRes.rows[0];
-      if (!row) return null;
+    const matchRes = await pool.query(`SELECT * FROM matches WHERE id = $1`, [req.params.id]);
+    const row = matchRes.rows[0];
+    if (!row) return res.redirect('/matches');
 
-      const match = {
-        id: row.id,
-        title: row.title,
-        teams: [row.team_a || 'Team A', row.team_b || 'Team B'],
-        sport: row.sport,
-        status: row.status || 'Upcoming',
-        score_a: row.score_a,
-        score_b: row.score_b,
-        overs: row.overs,
-        league: row.league
-      };
+    const match = {
+      id: row.id,
+      title: row.title,
+      teams: [row.team_a || 'Team A', row.team_b || 'Team B'],
+      sport: row.sport,
+      status: row.status || 'Upcoming',
+      score_a: row.score_a,
+      score_b: row.score_b,
+      overs: row.overs,
+      league: row.league
+    };
 
-      let markets = [];
-      try {
-        const marketRes = await pool.query(
-          `SELECT * FROM markets WHERE match_id = $1 AND status = 'open' ORDER BY id ASC`,
-          [matchId]
-        );
-        markets = marketRes.rows;
-      } catch (mErr) {
-        console.error('markets fetch error:', mErr.message);
-      }
-
-      return { match, markets };
-    });
-
-    if (!cached) return res.redirect('/matches');
+    let markets = [];
+    try {
+      const marketRes = await pool.query(
+        `SELECT * FROM markets WHERE match_id = $1 AND status = 'open' ORDER BY id ASC`,
+        [req.params.id]
+      );
+      markets = marketRes.rows;
+    } catch (mErr) {
+      console.error('markets fetch error:', mErr.message);
+    }
 
     res.render('match-detail', {
-      match: cached.match,
-      markets: cached.markets,
+      match,
+      markets,
       user: req.session ? req.session.user : null
     });
   } catch (err) {

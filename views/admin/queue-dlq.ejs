@@ -1,0 +1,92 @@
+<%
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function fmtDate(d) { return d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' }) : '-'; }
+
+function dlqRow(j) {
+  let payloadPreview = '';
+  try { payloadPreview = escapeHtml(JSON.stringify(typeof j.payload === 'string' ? JSON.parse(j.payload) : j.payload).slice(0, 80)); } catch (e) { payloadPreview = ''; }
+  return '<tr class="hover:bg-slate-50 align-top">' +
+    '<td class="px-6 py-4 text-xs text-slate-400">#' + j.id + '</td>' +
+    '<td class="px-6 py-4"><span class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-200">' + escapeHtml(j.type) + '</span></td>' +
+    '<td class="px-6 py-4 text-xs font-mono text-slate-500 max-w-xs truncate" title="' + payloadPreview + '">' + payloadPreview + '</td>' +
+    '<td class="px-6 py-4 text-xs text-slate-500">' + j.attempts + ' / ' + j.max_attempts + '</td>' +
+    '<td class="px-6 py-4 text-xs text-red-500 max-w-xs truncate" title="' + escapeHtml(j.last_error || '') + '">' + escapeHtml(j.last_error || '-') + '</td>' +
+    '<td class="px-6 py-4 text-xs text-slate-400">' + fmtDate(j.dead_lettered_at) + '</td>' +
+    '<td class="px-6 py-4 text-center">' +
+      '<div class="flex items-center justify-center gap-2">' +
+        '<form method="POST" action="/admin/queue-dlq/' + j.id + '/requeue" style="display:inline">' +
+          '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-blue-500 hover:bg-blue-600 text-white">Requeue</button>' +
+        '</form>' +
+        '<form method="POST" action="/admin/queue-dlq/' + j.id + '/purge" style="display:inline" onsubmit="return confirm(\'স্থায়ীভাবে মুছে ফেলবেন?\')">' +
+          '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-red-500 hover:bg-red-600 text-white">Purge</button>' +
+        '</form>' +
+      '</div>' +
+    '</td>' +
+  '</tr>';
+}
+
+const rows = (jobs || []).map(dlqRow).join('') || '<tr><td colspan="7" class="px-6 py-10 text-center text-slate-400">Dead Letter Queue খালি — কোনো স্থায়ীভাবে ব্যর্থ জব নেই</td></tr>';
+const f = filters || {};
+%>
+<%- include('partials/admin-layout', {
+    title: 'Dead Letter Queue',
+    active: 'queue-jobs',
+    body: `
+<div class="max-w-7xl mx-auto space-y-6">
+    <div class="flex items-center justify-between flex-wrap gap-3">
+        <div>
+            <h1 class="text-2xl font-semibold text-slate-900">Dead Letter Queue</h1>
+            <p class="text-slate-500 mt-1 text-sm">max_attempts শেষ হওয়া স্থায়ীভাবে ব্যর্থ জব — এখান থেকে Requeue বা স্থায়ীভাবে Purge করা যাবে</p>
+        </div>
+        <a href="/admin/queue-jobs" class="px-4 py-2 rounded-2xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200">
+            <i class="fas fa-arrow-left mr-1"></i>Job Queue Dashboard
+        </a>
+    </div>
+
+    <form method="GET" action="/admin/queue-dlq" class="flex flex-wrap gap-3">
+        <select name="type" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+            <option value="">সব টাইপ</option>
+            ${(types || []).map(t => '<option value="' + t + '" ' + (f.type === t ? 'selected' : '') + '>' + t + '</option>').join('')}
+        </select>
+        <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">ফিল্টার</button>
+        ${f.type ? '<a href="/admin/queue-dlq" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">রিসেট</a>' : ''}
+        ${(jobs && jobs.length) ? `
+        <form method="POST" action="/admin/queue-dlq/purge-all" onsubmit="return confirm('সব DLQ জব স্থায়ীভাবে মুছে ফেলতে চান? এই অ্যাকশন ফেরানো যাবে না।')" style="margin-left:auto" class="flex items-center gap-2">
+            <select name="olderThanDays" class="border border-slate-200 px-3 py-2.5 rounded-2xl text-xs">
+                <option value="">সব</option>
+                <option value="7">৭ দিনের পুরনো</option>
+                <option value="30">৩০ দিনের পুরনো</option>
+            </select>
+            <button type="submit" class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-2xl text-sm font-semibold"><i class="fas fa-trash mr-1"></i>সব Purge করুন</button>
+        </form>` : ''}
+    </form>
+
+    <div class="bg-white rounded-3xl border border-slate-100 overflow-x-auto modern-table">
+        <table class="w-full text-sm">
+            <thead class="bg-slate-50">
+                <tr>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">ID</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Type</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Payload</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Attempts</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Last Error</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Dead Lettered At</th>
+                    <th class="px-6 py-4 text-center font-medium text-slate-500 uppercase text-xs">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">${rows}</tbody>
+        </table>
+    </div>
+
+    <div class="flex justify-center gap-3">
+        ${page > 1 ? '<a href="/admin/queue-dlq?page=' + (page - 1) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">← আগের পেজ</a>' : ''}
+        <span class="px-4 py-2 text-sm text-slate-500">পেজ ${page} / ${totalPages}</span>
+        ${page < totalPages ? '<a href="/admin/queue-dlq?page=' + (page + 1) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">পরের পেজ →</a>' : ''}
+    </div>
+</div>
+`
+}) %>

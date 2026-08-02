@@ -2,7 +2,6 @@ const { Server } = require("socket.io");
 const { pool } = require('../db');
 const { getBotReply } = require('./chatbot');
 const { notifyTelegram } = require('./telegramNotify');
-const { sendPushToAdmins } = require('./push');
 
 // ===== "দেখা হয়েছে" (Seen) রিসিট — Messenger-এর মতো রিয়েল-টাইম নোটিফিকেশন =====
 const notifyUserSeen = (userId) => {
@@ -33,13 +32,6 @@ const emitAdminAlert = (type, data = {}) => {
   } catch (err) {
     console.error('emitAdminAlert error:', err.message);
   }
-  // পেজ বন্ধ/ব্যাকগ্রাউন্ডে থাকলেও পৌঁছানোর জন্য — এখন Notification Queue-এর মাধ্যমে
-  // (Redis না থাকলে queues/producers.js নিজেই সরাসরি sendPushToAdmins কল করে, তাই ফিচার অপরিবর্তিত থাকে)
-  try {
-    require('../queues').enqueueNotification(type, { title: data.title, message: data.message }).catch(() => {});
-  } catch (err) {
-    sendPushToAdmins(type, data.title, data.message).catch(() => {});
-  }
 };
 
 const initSocket = (server, sessionMiddleware) => {
@@ -49,13 +41,6 @@ const initSocket = (server, sessionMiddleware) => {
       methods: ["GET", "POST"]
     }
   });
-
-  // ==== নতুন রিয়েল-টাইম নোটিফিকেশন সিস্টেম (services/notify.js)-কে একই io instance দেওয়া ====
-  try {
-    require('./notify').initNotifyIo(io);
-  } catch (err) {
-    console.error('notify service wiring error:', err.message);
-  }
 
   // ===== নিরাপত্তা: socket handshake-এর সাথে Express session যুক্ত করা =====
   // এর ফলে socket.request.session.user থেকে আসল লগইন করা ইউজার/রোল পাওয়া যাবে,

@@ -10,10 +10,30 @@
 // ব্যর্থ হলে শুধু console.error করে চুপচাপ এগিয়ে যায়।
 
 const { pool } = require('../db');
-const { parseUserAgent, extractIp, lookupLocation, buildDeviceName } = require('./deviceTracking');
 
 const VALID_CATEGORIES = ['auth', 'financial', 'settings', 'role', 'security', 'maintenance', 'backup', 'restore', 'cron', 'queue', 'cache', 'api', 'other'];
 const VALID_RISK_LEVELS = ['low', 'medium', 'high', 'critical'];
+
+// ==================== Legacy admin_logs writer ====================
+// এটা services/fraudDetection.js, services/deviceTracking.js, services/botDetection.js,
+// routes/profile.js, routes/admin.js (backup/restore) সহ অনেক জায়গা থেকে ইমপোর্ট করা হয় —
+// আগে এই ফাইলে এক্সপোর্ট করা ছিল না (undefined ছিল), যার ফলে প্রতিটা `await logAdminAction(...)`
+// কল (যেগুলো .catch() দিয়ে গার্ড করা ছিল না, যেমন পাসওয়ার্ড/PIN পরিবর্তন) throw করে পুরো
+// অ্যাকশনকে ব্যর্থ হিসেবে দেখাত, যদিও মূল ডেটা-পরিবর্তন ইতিমধ্যে সফল হয়ে গিয়েছিল।
+async function logAdminAction(adminId, adminUsername, actionType, details, ip = null) {
+  try {
+    await pool.query(
+      `INSERT INTO admin_logs (admin_id, admin_username, action_type, details, ip_address)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [adminId, adminUsername, actionType, details, ip]
+    );
+  } catch (err) {
+    console.error('Admin Log Error:', err.message);
+  }
+  try {
+    require('../queues').enqueueActivityLog({ userId: adminId, username: adminUsername, actionType, details, ip }).catch(() => {});
+  } catch (e) { /* queue মডিউল লোড না হলেও সমস্যা নেই */ }
+}
 
 /**
  * একটা audit event রেকর্ড করে।
@@ -50,6 +70,7 @@ async function logEvent(opts) {
     let ip = null, deviceName = null, browser = null, os = null, location = null, requestId = null;
     if (req) {
       try {
+        const { parseUserAgent, extractIp, lookupLocation, buildDeviceName } = require('./deviceTracking');
         ip = extractIp(req);
         const ua = req.get ? req.get('user-agent') : (req.headers && req.headers['user-agent']);
         const parsed = parseUserAgent(ua || '');
@@ -141,6 +162,7 @@ async function getRiskCounts() {
 
 module.exports = {
   logEvent,
+  logAdminAction,
   listAuditLogs,
   getAuditLogById,
   exportAuditLogs,

@@ -196,7 +196,6 @@ async function settleSelectionsForMarket(client, marketId, winningRunner) {
     [marketId]
   )).rows;
 
-  const notifsToEmit = [];
   const affectedAccaIds = new Set();
   for (const sel of sels) {
     const won = String(sel.runner) === String(winningRunner);
@@ -230,12 +229,11 @@ async function settleSelectionsForMarket(client, marketId, winningRunner) {
         `UPDATE accumulators SET status = 'lost', settled_at = NOW() WHERE id = $1`,
         [accaId]
       );
-      const n = await client.query(
+      await client.query(
         `INSERT INTO notifications (user_id, title, message, type)
-         VALUES ($1, 'অ্যাকুমুলেটর', $2, 'error') RETURNING *`,
+         VALUES ($1, 'অ্যাকুমুলেটর', $2, 'error')`,
         [acca.user_id, 'দুঃখিত, আপনার অ্যাকুমুলেটর বাজিটি হেরে গেছে।']
       );
-      notifsToEmit.push({ userId: acca.user_id, row: n.rows[0] });
     } else if (!anyPending) {
       // সব জিতেছে — পেআউট
       const payout = acca.potential_win;
@@ -249,17 +247,16 @@ async function settleSelectionsForMarket(client, marketId, winningRunner) {
          VALUES ($1, $2, 'accumulator_win', 'অ্যাকুমুলেটর জয়')`,
         [acca.user_id, payout]
       );
-      const n = await client.query(
+      await client.query(
         `INSERT INTO notifications (user_id, title, message, type)
-         VALUES ($1, 'অ্যাকুমুলেটর জয়!', $2, 'success') RETURNING *`,
+         VALUES ($1, 'অ্যাকুমুলেটর জয়!', $2, 'success')`,
         [acca.user_id, `অভিনন্দন! আপনি অ্যাকুমুলেটরে ${payout} কয়েন জিতেছেন!`]
       );
-      notifsToEmit.push({ userId: acca.user_id, row: n.rows[0] });
     }
     // anyPending হলে এখনো অন্য সিলেকশন বাকি — কিছু করি না
   }
 
-  return notifsToEmit;
+  return affectedAccaIds.size;
 }
 
 module.exports = { placeAccumulator, getUserAccumulators, getOpenMarkets, boostFor, MIN_STAKE, settleSelectionsForMarket };

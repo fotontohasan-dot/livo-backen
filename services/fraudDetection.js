@@ -14,22 +14,8 @@ const DEVICE_CHANGE_WINDOW_HOURS = 24;
 const DEVICE_CHANGE_THRESHOLD = 3;        // ২৪ ঘণ্টায় ৩+ আলাদা ডিভাইস থেকে লগইন
 const LARGE_WITHDRAW_NEW_DEVICE_THRESHOLD = parseInt(process.env.FRAUD_LARGE_WITHDRAW_THRESHOLD || '10000', 10); // নতুন ডিভাইস থেকে এর বেশি উইথড্র হলে ফ্ল্যাগ
 
-async function logAdminAction(adminId, adminUsername, actionType, details, ip = null) {
-  // admin_logs কম-ভলিউম, তাই সরাসরি লেখা হয় (আগে এখানে পুরনো Postgres-queue দিয়ে যেত,
-  // এখন BullMQ Activity Log Queue দিয়ে যায় — সাথে সরাসরি admin_logs-এও লেখা থাকে যাতে কখনো না হারায়)
-  try {
-    await pool.query(
-      `INSERT INTO admin_logs (admin_id, admin_username, action_type, details, ip_address)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [adminId, adminUsername, actionType, details, ip]
-    );
-  } catch (err) {
-    console.error('Fraud audit log error:', err.message);
-  }
-  try {
-    require('../queues').enqueueActivityLog({ userId: adminId, username: adminUsername, actionType, details, ip }).catch(() => {});
-  } catch (e) { /* queue মডিউল লোড না হলেও সমস্যা নেই — admin_logs-এ তো লেখা হয়েই গেছে */ }
-}
+const queue = require('./queue');
+const { logAdminAction } = require('./auditLog'); // শেয়ার্ড ইউটিলিটি — ডুপ্লিকেট লজিক সরানো হয়েছে
 
 async function findRelatedUsersByIp(userId, ip) {
   if (!ip) return [];
@@ -444,53 +430,31 @@ async function getFraudDashboardStats() {
   };
 }
 
-// ==================== অন-ডিমান্ড ফ্রড স্ক্যান (BullMQ 'fraud_scan' জব থেকে চলে) ====================
-// অ্যাডমিন প্যানেল থেকে ম্যানুয়ালি ট্রিগার করা যায়, অথবা ভবিষ্যতে শিডিউলড জব হিসেবে।
-// বিদ্যমান evaluateLogin/evaluateTransaction ফ্লো একদমই স্পর্শ করা হয়নি — এটা সম্পূর্ণ additive।
-async function runFraudScan(userId) {
-  try {
-    const signals = [];
+// ==================== Queue-backed dispatchers — 'fraud_scan' জব হিসেবে ব্যাকগ্রাউন্ডে চালায় ====================
+// enqueue ব্যর্থ হলে (যেমন DB সাময়িক আনরিচেবল) সরাসরি সিঙ্ক্রোনাসভাবে evaluate ফাংশন কল হয়,
+// যাতে বিদ্যমান আচরণ (কখনো ব্লক করে না, silently fail-safe) অপরিবর্তিত থাকে।
+async function scanRegistration(userId, args) {
+  const jobId = await queue.enqueue('fraud_scan', { kind: 'registration', userId, args });
+  if (jobId) return;
+  await evaluateRegistration(userId, args);
+}
 
-    const ipChange = await checkMultipleIpChanges(userId);
-    if (ipChange) {
-      signals.push({
-        type: 'multiple_ip_change', relatedUsers: [], relatedCount: 0,
-        description: `স্ক্যান: ${ipChange.windowHours} ঘণ্টায় ${ipChange.count}টি আলাদা IP থেকে লগইন`
-      });
-    }
+async function scanLogin(userId, args) {
+  const jobId = await queue.enqueue('fraud_scan', { kind: 'login', userId, args });
+  if (jobId) return;
+  await evaluateLogin(userId, args);
+}
 
-    const deviceChange = await checkMultipleDeviceChanges(userId);
-    if (deviceChange) {
-      signals.push({
-        type: 'multiple_device_change', relatedUsers: [], relatedCount: 0,
-        description: `স্ক্যান: ${deviceChange.windowHours} ঘণ্টায় ${deviceChange.count}টি আলাদা ডিভাইস থেকে লগইন`
-      });
-    }
+async function scanFailedLogin(identifier, userId, ip, userAgent) {
+  const jobId = await queue.enqueue('fraud_scan', { kind: 'failed_login', identifier, userId, ip, userAgent });
+  if (jobId) return;
+  await evaluateFailedLogin(identifier, userId, ip, userAgent);
+}
 
-    const depositCount = await checkRapidTransactions(userId, 'deposit');
-    if (depositCount) {
-      signals.push({
-        type: 'rapid_transactions', relatedUsers: [], relatedCount: 0,
-        description: `স্ক্যান: ${depositCount.windowMinutes} মিনিটে ${depositCount.count}টি ডিপোজিট রিকোয়েস্ট`
-      });
-    }
-    const withdrawCount = await checkRapidTransactions(userId, 'withdraw');
-    if (withdrawCount) {
-      signals.push({
-        type: 'rapid_transactions', relatedUsers: [], relatedCount: 0,
-        description: `স্ক্যান: ${withdrawCount.windowMinutes} মিনিটে ${withdrawCount.count}টি উইথড্র রিকোয়েস্ট`
-      });
-    }
-
-    if (signals.length) {
-      const flag = await createFraudFlag(userId, signals);
-      return { userId, flagged: true, signalCount: signals.length, flag };
-    }
-    return { userId, flagged: false, signalCount: 0 };
-  } catch (err) {
-    console.error('runFraudScan error:', err.message);
-    throw err; // BullMQ handler-কে জানাতে হবে যাতে retry কাজ করে
-  }
+async function scanTransaction(userId, txType, args) {
+  const jobId = await queue.enqueue('fraud_scan', { kind: 'transaction', userId, txType, args });
+  if (jobId) return;
+  await evaluateTransaction(userId, txType, args);
 }
 
 module.exports = {
@@ -501,5 +465,8 @@ module.exports = {
   getUserFraudStatus,
   getFraudDashboardStats,
   logAdminAction,
-  runFraudScan
+  scanRegistration,
+  scanLogin,
+  scanFailedLogin,
+  scanTransaction
 };

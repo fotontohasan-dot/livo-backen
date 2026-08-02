@@ -1,5 +1,61 @@
 const express = require('express');
 const router = express.Router();
+
+router.get('/api/analytics', async (req, res) => {
+  try {
+    const days  = Math.min(90, Math.max(1, parseInt(req.query.days) || 14));
+    const interval = `${days} days`;
+
+    const [revenue, userGrowth, betStats, topUsers, kycSummary, queueH] = await Promise.all([
+      pool.query(`
+        SELECT d::date AS day,
+          COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='deposit'  AND status='approved' AND created_at::date=d::date),0) AS deposit,
+          COALESCE((SELECT SUM(amount) FROM payment_requests WHERE type='withdraw' AND status='approved' AND created_at::date=d::date),0) AS withdraw
+        FROM generate_series(CURRENT_DATE - INTERVAL '${interval}', CURRENT_DATE, INTERVAL '1 day') d ORDER BY day
+      `),
+      pool.query(`
+        SELECT d::date AS day,
+          COALESCE((SELECT COUNT(*) FROM users WHERE created_at::date=d::date),0) AS new_users
+        FROM generate_series(CURRENT_DATE - INTERVAL '${interval}', CURRENT_DATE, INTERVAL '1 day') d ORDER BY day
+      `),
+      pool.query(`
+        SELECT d::date AS day,
+          COALESCE((SELECT COUNT(*) FROM bets WHERE created_at::date=d::date),0) AS cnt,
+          COALESCE((SELECT SUM(stake) FROM bets WHERE created_at::date=d::date),0) AS staked
+        FROM generate_series(CURRENT_DATE - INTERVAL '${interval}', CURRENT_DATE, INTERVAL '1 day') d ORDER BY day
+      `),
+      pool.query(`
+        SELECT u.username, SUM(pr.amount) AS total FROM payment_requests pr
+        JOIN users u ON pr.user_id=u.id
+        WHERE pr.type='deposit' AND pr.status='approved' AND pr.created_at > NOW()-INTERVAL '${interval}'
+        GROUP BY u.username ORDER BY total DESC LIMIT 10
+      `),
+      pool.query(`
+        SELECT
+          COUNT(*) FILTER (WHERE kyc_status='pending')  AS pending,
+          COUNT(*) FILTER (WHERE kyc_status='approved') AS approved,
+          COUNT(*) FILTER (WHERE kyc_status='rejected') AS rejected
+        FROM users WHERE kyc_status IS NOT NULL
+      `).catch(() => ({ rows: [{ pending:0, approved:0, rejected:0 }] })),
+      (async () => {
+        try { const { getHealthSummary } = require('../services/queue/monitor'); return await getHealthSummary(); } catch(e) { return {}; }
+      })()
+    ]);
+
+    res.json({
+      days,
+      revenue:    revenue.rows.map(r => ({ day: r.day, deposit: Number(r.deposit), withdraw: Number(r.withdraw), net: Number(r.deposit) - Number(r.withdraw) })),
+      userGrowth: userGrowth.rows.map(r => ({ day: r.day, count: parseInt(r.new_users) })),
+      betStats:   betStats.rows.map(r => ({ day: r.day, cnt: parseInt(r.cnt), staked: Number(r.staked) })),
+      topDepositors: topUsers.rows,
+      kycSummary: kycSummary.rows[0],
+      queueHealth: queueH
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const rateLimit = require('express-rate-limit');
 const { pool } = require('../db');
 const { isAdmin } = require('../middleware/auth');
@@ -2355,72 +2411,6 @@ router.post('/user-roles/:userId/assign', rbac.requirePermission('roles_manage')
   }
 });
 
-router.get('/cron-jobs', async (req, res) => {
-  try {
-    const scheduler = require('../services/scheduler');
-    const jobs = await scheduler.listJobs();
-    res.render('admin/cron-jobs', { jobs, ran: req.query.ran || '', error: null });
-  } catch (err) {
-    console.error('cron-jobs page error:', err.message);
-    res.render('admin/cron-jobs', { jobs: [], ran: '', error: err.message });
-  }
-});
-
-router.get('/cron-jobs/:key/logs', async (req, res) => {
-  try {
-    const scheduler = require('../services/scheduler');
-    const jobs = await scheduler.listJobs();
-    const job = jobs.find(j => j.key === req.params.key);
-    if (!job) { req.flash('error', 'Job পাওয়া যায়নি।'); return res.redirect('/admin/cron-jobs'); }
-    const logs = await scheduler.getJobLogs(req.params.key, 50);
-    res.render('admin/cron-job-logs', { job, logs });
-  } catch (err) {
-    console.error('cron-job logs error:', err.message);
-    req.flash('error', 'লগ লোড করতে সমস্যা হয়েছে।');
-    res.redirect('/admin/cron-jobs');
-  }
-});
-
-router.post('/cron-jobs/:key/toggle', async (req, res) => {
-  try {
-    const scheduler = require('../services/scheduler');
-    const enabled = req.body.enabled === 'true';
-    await scheduler.setEnabled(req.params.key, enabled);
-    await logAdminAction(req.session.user.id, req.session.user.username, enabled ? 'CRON_JOB_ENABLED' : 'CRON_JOB_DISABLED', `Job: ${req.params.key}`, req.ip);
-    logAuditEvent({
-      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
-      action: enabled ? 'CRON_JOB_ENABLED' : 'CRON_JOB_DISABLED', category: 'cron', status: 'success', riskLevel: 'low',
-      details: { jobKey: req.params.key }
-    }).catch(e => console.error('logAuditEvent (CRON toggle) error:', e.message));
-    req.flash('success', `Job ${enabled ? 'চালু' : 'বন্ধ'} করা হয়েছে।`);
-    res.redirect('/admin/cron-jobs');
-  } catch (err) {
-    console.error('cron-job toggle error:', err.message);
-    req.flash('error', 'সমস্যা হয়েছে।');
-    res.redirect('/admin/cron-jobs');
-  }
-});
-
-router.post('/cron-jobs/:key/run', async (req, res) => {
-  try {
-    const scheduler = require('../services/scheduler');
-    const result = await scheduler.runJob(req.params.key, { triggeredBy: req.session.user.username });
-    await logAdminAction(req.session.user.id, req.session.user.username, 'CRON_JOB_MANUAL_RUN', `Job: ${req.params.key} — ফলাফল: ${result.status} — ${result.message}`, req.ip);
-    logAuditEvent({
-      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
-      action: 'CRON_JOB_MANUAL_RUN', category: 'cron',
-      status: result.status === 'success' ? 'success' : 'failure', riskLevel: 'low',
-      details: { jobKey: req.params.key, resultStatus: result.status, message: result.message }
-    }).catch(e => console.error('logAuditEvent (CRON manual run) error:', e.message));
-    req.flash(result.status === 'success' ? 'success' : 'error', `${req.params.key}: ${result.message}`);
-    res.redirect('/admin/cron-jobs');
-  } catch (err) {
-    console.error('cron-job manual run error:', err.message);
-    req.flash('error', 'Job রান করতে সমস্যা হয়েছে: ' + err.message);
-    res.redirect('/admin/cron-jobs');
-  }
-});
-
 router.get('/bot-monitoring/ip-rules', async (req, res) => {
   try {
     const rules = await listIpRules();
@@ -3752,5 +3742,115 @@ router.post('/announcements/:id/delete', async (req, res) => {
     res.redirect('/admin/announcements?error=delete_failed');
   }
 });
+
+router.get('/diagnostics', async (req, res) => {
+  try {
+    const report = await runAllChecks();
+    res.render('admin/diagnostics', { report, active: 'diagnostics' });
+  } catch (err) {
+    console.error('Diagnostics error:', err.message);
+    res.render('admin/diagnostics', {
+      report: { overall: 'error', timestamp: new Date().toISOString(), checks: {} },
+      active: 'diagnostics'
+    });
+  }
+});
+
+// Diagnostics JSON API (polling)
+router.get('/diagnostics/json', async (req, res) => {
+  try {
+    const report = await runAllChecks();
+    res.json(report);
+  } catch (err) {
+    res.status(500).json({ overall: 'error', error: err.message });
+  }
+});
+
+// ==================== Cron Jobs Monitor (প্রোডাকশন-রেডি Scheduler ম্যানেজমেন্ট) ====================
+router.get('/cron-jobs', async (req, res) => {
+  try {
+    const jobs = await scheduler.listJobs();
+    const recentLogs = await scheduler.getRecentLogs(20);
+    res.render('admin/cron-jobs', { jobs, recentLogs, active: 'cron-jobs' });
+  } catch (err) {
+    console.error('Cron jobs list error:', err.message);
+    res.render('admin/cron-jobs', { jobs: [], recentLogs: [], active: 'cron-jobs' });
+  }
+});
+
+// একটা নির্দিষ্ট Job-এর সম্পূর্ণ Execution History
+router.get('/cron-jobs/:key/logs', async (req, res) => {
+  try {
+    const key = req.params.key;
+    const logs = await scheduler.getJobLogs(key, 100);
+    const jobs = await scheduler.listJobs();
+    const job = jobs.find(j => j.key === key) || { key, label: key, description: '' };
+    res.render('admin/cron-job-logs', { job, logs, active: 'cron-jobs' });
+  } catch (err) {
+    console.error('Cron job logs error:', err.message);
+    req.flash('error', 'জব হিস্ট্রি লোড করা যায়নি।');
+    res.redirect('/admin/cron-jobs');
+  }
+});
+
+// Run Now — ম্যানুয়ালি একটা Job অবিলম্বে ট্রিগার করা (schedule অপেক্ষা না করে)
+router.post('/cron-jobs/:key/run', adminActionLimiter, async (req, res) => {
+  try {
+    const key = req.params.key;
+    if (!scheduler.JOB_DEFINITIONS[key]) {
+      req.flash('error', `অজানা cron job: ${key}`);
+      return res.redirect('/admin/cron-jobs');
+    }
+    const result = await scheduler.runJob(key, { triggeredBy: `manual:${req.session.user.username}` });
+    await logAdminAction(
+      req.session.user.id, req.session.user.username, 'CRON_JOB_RUN_NOW',
+      `Cron job "${key}" ম্যানুয়ালি রান করা হয়েছে — status: ${result.status}, duration: ${result.durationMs}ms`,
+      req.ip
+    );
+    req.flash(result.status === 'success' ? 'success' : 'error',
+      `"${key}" রান হয়েছে (${result.durationMs}ms) — ${result.message}`);
+    res.redirect('/admin/cron-jobs');
+  } catch (err) {
+    console.error('Cron run-now error:', err.message);
+    req.flash('error', 'Job রান করা যায়নি: ' + err.message);
+    res.redirect('/admin/cron-jobs');
+  }
+});
+
+// Enable/Disable — সার্ভার রিস্টার্ট ছাড়াই কার্যকর হয় (প্রতিবার রানের আগে DB থেকে ফ্রেশ চেক হয়)
+router.post('/cron-jobs/:key/toggle', adminActionLimiter, async (req, res) => {
+  try {
+    const key = req.params.key;
+    if (!scheduler.JOB_DEFINITIONS[key]) {
+      req.flash('error', `অজানা cron job: ${key}`);
+      return res.redirect('/admin/cron-jobs');
+    }
+    const enabled = req.body.enabled === 'true' || req.body.enabled === '1';
+    await scheduler.setEnabled(key, enabled);
+    await logAdminAction(
+      req.session.user.id, req.session.user.username, 'CRON_JOB_TOGGLE',
+      `Cron job "${key}" ${enabled ? 'সক্রিয়' : 'নিষ্ক্রিয়'} করা হয়েছে`, req.ip
+    );
+    req.flash('success', `"${key}" ${enabled ? 'সক্রিয়' : 'নিষ্ক্রিয়'} করা হয়েছে।`);
+    res.redirect('/admin/cron-jobs');
+  } catch (err) {
+    console.error('Cron toggle error:', err.message);
+    req.flash('error', 'Job টগল করা যায়নি: ' + err.message);
+    res.redirect('/admin/cron-jobs');
+  }
+});
+
+// Cron Jobs JSON API (পোলিং — লাইভ লাস্ট-রান স্ট্যাটাসের জন্য)
+router.get('/cron-jobs/status/json', async (req, res) => {
+  try {
+    const jobs = await scheduler.listJobs();
+    res.json({ success: true, jobs });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+
+// ==================== LOGIN HISTORY (সব ইউজারের, সার্চ/ফিল্টার সহ) ====================
 
 module.exports = router;

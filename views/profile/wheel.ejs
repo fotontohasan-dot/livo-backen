@@ -73,7 +73,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.9.3/confetti.browser.min.js"></script>
 <script>
-const segments = <%- JSON.stringify(segments || []) %>;
+const segments = <%- jsonScriptSafe(segments || []) %>;
 const colors = ['#fff6e0', '#ffe9b8'];
 const canvas = document.getElementById('wheelCanvas');
 const ctx = canvas.getContext('2d');

@@ -1,39 +1,51 @@
-<%
-function escapeHtml(str) {
-  return String(str == null ? '' : str)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-function fmtDate(d) { return d ? new Date(d).toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }) : '—'; }
-%>
-<%- include('partials/admin-layout', {
-    title: 'Cron Job Logs',
-    active: 'cron-jobs',
-    body: `
-<div class="max-w-5xl mx-auto">
-  <div class="flex items-center justify-between mb-5">
-    <h1 class="text-xl font-bold text-slate-800">📜 ${escapeHtml(job.label)} — Execution Log</h1>
-    <a href="/admin/cron-jobs" class="text-sm text-slate-500"><i class="fas fa-arrow-left"></i> ফিরে যান</a>
-  </div>
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= job.label %> — হিস্ট্রি • Livo Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
+  </style>
+  <%- include('./partials/pwa-head') %>
+</head>
+<body>
+  <div class="admin-wrap">
+    <%- include('./partials/sidebar', { active: 'cron-jobs' }) %>
+    <div class="admin-content">
+      <%- include('./partials/header', { pageTitle: job.label + ' — Execution History', pageSubtitle: job.description }) %>
 
-  <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-    <table class="w-full text-sm">
-      <thead><tr class="text-left text-slate-400 text-xs uppercase">
-        <th class="p-3">শুরু</th><th class="p-3">সময় লেগেছে</th><th class="p-3">স্ট্যাটাস</th><th class="p-3">যেভাবে ট্রিগার হয়েছে</th><th class="p-3">মেসেজ</th>
-      </tr></thead>
-      <tbody>
-        ${logs.map(l => `
-          <tr class="border-t border-slate-50">
-            <td class="p-3 text-slate-500 whitespace-nowrap">${fmtDate(l.started_at)}</td>
-            <td class="p-3">${l.duration_ms != null ? l.duration_ms + 'ms' : '—'}</td>
-            <td class="p-3">${l.status === 'success' ? '<span class="text-emerald-600 font-bold">✅ সফল</span>' : '<span class="text-red-500 font-bold">❌ ব্যর্থ</span>'}</td>
-            <td class="p-3 text-slate-500">${escapeHtml(l.triggered_by || 'schedule')}</td>
-            <td class="p-3 text-slate-600 max-w-md">${escapeHtml(l.message)}</td>
-          </tr>
-        `).join('') || '<tr><td colspan="5" class="p-6 text-center text-slate-400">কোনো এক্সিকিউশন লগ নেই এখনো</td></tr>'}
-      </tbody>
-    </table>
+      <a href="/admin/cron-jobs" style="color:#f59e0b;font-size:12px;text-decoration:none;display:inline-block;margin-bottom:12px;"><i class="fas fa-arrow-left"></i> Cron Jobs Monitor-এ ফিরে যান</a>
+
+      <div class="admin-card">
+        <div class="admin-card-header">সব রান (মোট <%= logs.length %>টি সাম্প্রতিক)</div>
+        <div style="overflow-x:auto;">
+          <table class="admin-table">
+            <thead><tr><th>Status</th><th>Attempts</th><th>Duration</th><th>Triggered By</th><th>Message</th><th>শুরু</th><th>শেষ</th></tr></thead>
+            <tbody>
+              <% if (logs && logs.length > 0) { %>
+                <% logs.forEach(l => { %>
+                  <tr>
+                    <td><span class="badge <%= l.status === 'success' ? 'badge-green' : 'badge-red' %>"><%= l.status %></span></td>
+                    <td><%= l.attempts %></td>
+                    <td><%= l.duration_ms %>ms</td>
+                    <td style="font-size:11px;"><%= l.triggered_by %></td>
+                    <td style="font-size:11px;color:#94a3b8;max-width:320px;white-space:normal;"><%= l.message %></td>
+                    <td style="font-size:11px;"><%= new Date(l.started_at).toLocaleString('bn-BD') %></td>
+                    <td style="font-size:11px;"><%= l.finished_at ? new Date(l.finished_at).toLocaleString('bn-BD') : '—' %></td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="7" style="text-align:center;color:#64748b;padding:20px;">এই Job-এর জন্য এখনো কোনো লগ নেই</td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
   </div>
-</div>
-`
-}) %>
+</body>
+</html>

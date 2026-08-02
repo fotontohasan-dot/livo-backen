@@ -7,28 +7,25 @@
 // ---------------------------------------------------------------------------
 const fs = require('fs');
 const path = require('path');
-const { BASE_URL: app } = require('../helpers/testServerConfig');
 const { pool } = require('../../db');
 const backupManager = require('../../services/backupManager');
-const { waitForApp } = require('../helpers/waitForApp');
-const { buildTestUser, extractCsrfToken } = require('../helpers/testUser');
-const { humanAgent, formRenderedAt } = require('../helpers/humanAgent');
+const { app, getCsrfAgent, uniqueUsername, REALISTIC_UA } = require('../helpers/app');
+const request = require('supertest');
 
 async function makeAdminAgent() {
-  const agent = humanAgent(app);
-  const page = await agent.get('/register');
-  const token = extractCsrfToken(page.text);
-  const user = buildTestUser();
-  await agent.post('/register').type('form').send({ ...user, _csrf: token, form_rendered_at: formRenderedAt() });
-  await pool.query('UPDATE users SET role = $1 WHERE username = $2', ['admin', user.username]);
-  return { agent, user };
+  const { agent, token } = await getCsrfAgent('/register');
+  const username = uniqueUsername();
+  const phone = '01' + String(Date.now()).slice(-9);
+  await agent
+    .post('/register')
+    .set('User-Agent', REALISTIC_UA)
+    .type('form')
+    .send({ username, phone, password: 'SecurePass123', confirmPassword: 'SecurePass123', _csrf: token });
+  await pool.query('UPDATE users SET role = $1 WHERE username = $2', ['admin', username]);
+  return { agent, username };
 }
 
 describe('Backup & Restore System', () => {
-  beforeAll(async () => {
-    await waitForApp(app);
-  }, 60000);
-
   // ==================== ১. Backup Flow Audit (সার্ভিস লেভেল) ====================
   describe('Service level: createDatabaseBackup / createConfigBackup / createUploadsBackup', () => {
     test('createDatabaseBackup(): সফল হলে status=completed, ফাইল ডিস্কে থাকে, checksum মেলে, backup_history-তে রেকর্ড হয়', async () => {
@@ -242,31 +239,26 @@ describe('Backup & Restore System', () => {
   // reproduce করে ডকুমেন্ট করে রাখে (AUDIT_REPORT.md-এ বিস্তারিত)।
   describe('Admin backup routes (HTTP, full functional flow)', () => {
     test('unauthenticated ব্যবহারকারী /admin/backups-এ অ্যাক্সেস পায় না', async () => {
-      const { humanRequest } = require('../helpers/humanAgent');
-      const res = await humanRequest(app).get('/admin/backups');
+      const res = await request(app).get('/admin/backups').set('User-Agent', REALISTIC_UA);
       expect(res.status).toBe(302);
       expect(res.headers.location).toBe('/admin/login');
     });
 
     test('[AUDIT FINDING] /admin/backups history পেজ ভেঙে পড়ে (500) যদি কোনো ব্যাকআপ রেকর্ডের সাইজ 1KB-এর কম হয় (views/admin/backups.ejs fmtSize() বাগ — BIGINT স্ট্রিং বনাম নাম্বার)', async () => {
-      const tinyRecord = await backupManager.createUploadsBackup({ source: 'manual' }); // ছোট uploads dir → size_bytes < 1024 এর সম্ভাবনা বেশি
+      const tinyRecord = await backupManager.createUploadsBackup({ source: 'manual' });
       const { agent } = await makeAdminAgent();
-      const res = await agent.get('/admin/backups');
+      const res = await agent.get('/admin/backups').set('User-Agent', REALISTIC_UA);
       if (Number(tinyRecord.size_bytes ?? tinyRecord.sizeBytes) < 1024) {
-        // বাগটা রিপ্রোডিউস হলো — এটাই বর্তমান (buggy) আচরণ, production কোড ঠিক না করা পর্যন্ত প্রত্যাশিত
         expect(res.status).toBe(500);
       } else {
         expect(res.status).toBe(200);
       }
     });
 
-    test('admin GET /admin/backups পেজ রেন্ডার করে, encryption status দেখায় (backup_history খালি অবস্থায়)', async () => {
+    test('admin GET /admin/backups পেজ রেন্ডার করে (backup_history খালি অবস্থায়)', async () => {
       const { agent } = await makeAdminAgent();
-      const res = await agent.get('/admin/backups');
-      // fmtSize বাগের প্রভাব এড়াতে এই টেস্ট শুধু নিশ্চিত করে যে খালি history-তে পেজ ভাঙে না —
-      // ≥1024 বাইটের রেকর্ড থাকলে পেজ ঠিকঠাক কাজ করে, সমস্যা শুধু <1KB সাইজের রেকর্ডে
+      const res = await agent.get('/admin/backups').set('User-Agent', REALISTIC_UA);
       if (res.status !== 200) {
-        // history-তে আগে থেকেই কোনো <1KB রেকর্ড থাকলে (অন্য টেস্ট থেকে) এটা প্রত্যাশিত বাগ, ফেইল নয়
         expect(res.status).toBe(500);
       } else {
         expect(res.status).toBe(200);
@@ -275,12 +267,12 @@ describe('Backup & Restore System', () => {
 
     test('admin POST /admin/backups/create type=all — manual backup তৈরি করে ও history-তে যোগ হয়', async () => {
       const { agent } = await makeAdminAgent();
-      const page = await agent.get('/login'); // CSRF টোকেন — /admin/backups নয় (fmtSize বাগ এড়াতে, দেখুন উপরের AUDIT FINDING)
-      const token = extractCsrfToken(page.text);
+      const page = await agent.get('/login').set('User-Agent', REALISTIC_UA);
+      const token = /<meta name="csrf-token" content="([^"]*)"/.exec(page.text || '')?.[1] || '';
 
-      const res = await agent.post('/admin/backups/create').type('form').send({ type: 'all', _csrf: token });
+      const res = await agent.post('/admin/backups/create').set('User-Agent', REALISTIC_UA).type('form').send({ type: 'all', _csrf: token });
       expect(res.status).toBe(302);
-      expect(res.headers.location).toMatch(/created=3/); // database + uploads + config = ৩টা
+      expect(res.headers.location).toMatch(/created=3/);
 
       const created = await backupManager.listBackups({ limit: 3 });
       expect(created.length).toBe(3);
@@ -291,7 +283,7 @@ describe('Backup & Restore System', () => {
       const record = await backupManager.createDatabaseBackup({ source: 'manual' });
       const { agent } = await makeAdminAgent();
 
-      const res = await agent.get(`/admin/backups/${record.id}/download`);
+      const res = await agent.get(`/admin/backups/${record.id}/download`).set('User-Agent', REALISTIC_UA);
       expect(res.status).toBe(200);
       expect(res.headers['content-disposition']).toMatch(new RegExp(record.filename));
     });
@@ -299,10 +291,10 @@ describe('Backup & Restore System', () => {
     test('admin POST /admin/backups/:id/restore — সফল হলে redirect করে restored= প্যারামিটার সহ', async () => {
       const record = await backupManager.createDatabaseBackup({ source: 'manual' });
       const { agent } = await makeAdminAgent();
-      const page = await agent.get('/login'); // CSRF টোকেন — /admin/backups নয় (fmtSize বাগ এড়াতে)
-      const token = extractCsrfToken(page.text);
+      const page = await agent.get('/login').set('User-Agent', REALISTIC_UA);
+      const token = /<meta name="csrf-token" content="([^"]*)"/.exec(page.text || '')?.[1] || '';
 
-      const res = await agent.post(`/admin/backups/${record.id}/restore`).type('form').send({ _csrf: token });
+      const res = await agent.post(`/admin/backups/${record.id}/restore`).set('User-Agent', REALISTIC_UA).type('form').send({ _csrf: token });
       expect(res.status).toBe(302);
       expect(res.headers.location).toMatch(/restored=database/);
     });
@@ -316,23 +308,23 @@ describe('Backup & Restore System', () => {
       fs.writeFileSync(filePath, corrupted);
 
       const { agent } = await makeAdminAgent();
-      const page = await agent.get('/login'); // CSRF টোকেন — /admin/backups নয় (fmtSize বাগ এড়াতে)
-      const token = extractCsrfToken(page.text);
+      const page = await agent.get('/login').set('User-Agent', REALISTIC_UA);
+      const token = /<meta name="csrf-token" content="([^"]*)"/.exec(page.text || '')?.[1] || '';
 
-      const res = await agent.post(`/admin/backups/${record.id}/restore`).type('form').send({ _csrf: token });
+      const res = await agent.post(`/admin/backups/${record.id}/restore`).set('User-Agent', REALISTIC_UA).type('form').send({ _csrf: token });
       expect(res.status).toBe(302);
       expect(res.headers.location).toMatch(/error=/);
 
-      fs.writeFileSync(filePath, original); // পরিষ্কার
+      fs.writeFileSync(filePath, original);
     });
 
     test('admin POST /admin/backups/:id/delete — history থেকে সরিয়ে দেয়', async () => {
       const record = await backupManager.createDatabaseBackup({ source: 'manual' });
       const { agent } = await makeAdminAgent();
-      const page = await agent.get('/login'); // CSRF টোকেন — /admin/backups নয় (fmtSize বাগ এড়াতে)
-      const token = extractCsrfToken(page.text);
+      const page = await agent.get('/login').set('User-Agent', REALISTIC_UA);
+      const token = /<meta name="csrf-token" content="([^"]*)"/.exec(page.text || '')?.[1] || '';
 
-      const res = await agent.post(`/admin/backups/${record.id}/delete`).type('form').send({ _csrf: token });
+      const res = await agent.post(`/admin/backups/${record.id}/delete`).set('User-Agent', REALISTIC_UA).type('form').send({ _csrf: token });
       expect(res.status).toBe(302);
 
       const gone = await backupManager.getBackupById(record.id);
@@ -340,13 +332,16 @@ describe('Backup & Restore System', () => {
     });
 
     test('non-admin (সাধারণ) লগইন করা ইউজার backup routes-এ অ্যাক্সেস পায় না', async () => {
-      const agent = humanAgent(app);
-      const page = await agent.get('/register');
-      const token = extractCsrfToken(page.text);
-      const user = buildTestUser();
-      await agent.post('/register').type('form').send({ ...user, _csrf: token, form_rendered_at: formRenderedAt() });
+      const { agent, token } = await getCsrfAgent('/register');
+      const username = uniqueUsername();
+      const phone = '01' + String(Date.now()).slice(-9);
+      await agent
+        .post('/register')
+        .set('User-Agent', REALISTIC_UA)
+        .type('form')
+        .send({ username, phone, password: 'SecurePass123', confirmPassword: 'SecurePass123', _csrf: token });
 
-      const res = await agent.get('/admin/backups');
+      const res = await agent.get('/admin/backups').set('User-Agent', REALISTIC_UA);
       expect(res.status).toBe(302);
       expect(res.headers.location).toBe('/admin/login');
     });

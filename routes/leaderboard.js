@@ -5,15 +5,17 @@ const cache = require('../services/cache');
 
 router.get('/', async (req, res) => {
   try {
-    const users = await cache.getOrSet('leaderboard:top50', 45, async () => {
+    const users = await cache.getOrSet('leaderboard:top50', 60, async () => {
       const result = await pool.query(`
         SELECT
-          id, username, avatar, total_points, coins,
-          (SELECT COUNT(*) FROM predictions WHERE user_id=users.id AND status='won') as wins,
-          (SELECT COUNT(*) FROM predictions WHERE user_id=users.id) as total_bets
-        FROM users
-        WHERE role='user' AND is_banned=false
-        ORDER BY total_points DESC
+          u.id, u.username, u.avatar, u.total_points, u.coins,
+          COUNT(b.id) FILTER (WHERE b.status='won') AS wins,
+          COUNT(b.id) AS total_bets
+        FROM users u
+        LEFT JOIN bets b ON b.user_id = u.id
+        WHERE u.role='user' AND (u.is_banned IS NULL OR u.is_banned=false)
+        GROUP BY u.id, u.username, u.avatar, u.total_points, u.coins
+        ORDER BY u.total_points DESC
         LIMIT 50
       `);
       return result.rows;

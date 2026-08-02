@@ -2,59 +2,92 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Livo Admin - <%= title || 'Panel' %></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Poppins:wght@500;600&display=swap');
-        body { font-family: 'Inter', system-ui, sans-serif; }
-        .logo-font { font-family: 'Poppins', system-ui, sans-serif; font-weight: 600; letter-spacing: -.025em; }
-        .nav-link { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
-        .nav-link:hover { background-color: #334155; transform: translateX(4px); }
-        .nav-link.active { background-color: #3b82f6; color: white; box-shadow: 0 10px 15px -3px rgb(59 130 246 / 0.3); }
-        .sidebar-item { border-radius: 8px; margin: 2px 8px; }
-
-        /* ===== Sidebar: always fixed + full-height scroll ===== */
-        .admin-sidebar-shell {
-          background: linear-gradient(to bottom, #0f172a, #1e293b);
-          position: fixed;
-          top: 0; left: 0; bottom: 0;
-          width: 288px;
-          z-index: 60;
-          display: flex;
-          flex-direction: column;
-          transform: translateX(-100%);
-          transition: transform 0.25s ease;
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&amp;family=Poppins:wght@500;600&amp;display=swap');
+        
+        :root {
+            --primary: #3b82f6;
         }
-        .admin-sidebar-shell.open { transform: translateX(0); }
-        .admin-sidebar-nav {
-          flex: 1 1 auto;
-          overflow-y: auto;
-          overflow-x: hidden;
-          -webkit-overflow-scrolling: touch;
-          overscroll-behavior: contain;
-          padding: 12px 8px 120px 8px; /* bottom padding so last items clear bottom-nav */
+        
+        body {
+            font-family: 'Inter', system_ui, sans-serif;
         }
-        .admin-sidebar-overlay {
-          display: none;
-          position: fixed; inset: 0;
-          background: rgba(0,0,0,0.5);
-          z-index: 55;
-        }
-        .admin-sidebar-overlay.show { display: block; }
-        .admin-main { min-width: 0; }
-        @media (min-width: 1024px) {
-          .admin-sidebar-shell {
-            transform: translateX(0);
-            position: sticky;
-            height: 100vh;
-            flex-shrink: 0;
-          }
-          .admin-sidebar-overlay { display: none !important; }
-          .admin-sidebar-nav { padding-bottom: 24px; }
+        
+        .logo-font {
+            font-family: 'Poppins', system_ui, sans-serif;
+            font-weight: 600;
+            letter-spacing: -.025em;
         }
 
+        .admin-sidebar {
+            background: linear-gradient(to bottom, #0f172a, #1e293b);
+        }
+
+        .nav-link {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .nav-link:hover {
+            background-color: #334155;
+            transform: translateX(4px);
+        }
+        
+        .nav-link.active {
+            background-color: #3b82f6;
+            color: white;
+            box-shadow: 0 10px 15px -3px rgb(59 130 246 / 0.3);
+        }
+
+        .stat-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+
+        .modern-table {
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.05);
+        }
+
+        .section-header {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .admin-header {
+            background: white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .metric-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .action-btn {
+            transition: all 0.1s ease;
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .sidebar-item {
+            border-radius: 8px;
+            margin: 2px 8px;
+        }
+
+        /* ==================== Livo Admin Toast / Loading ==================== */
         #livo-toast-root { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 99999; display: flex; flex-direction: column; gap: 10px; align-items: center; width: 100%; max-width: 440px; padding: 0 16px; pointer-events: none; }
         .livo-toast { pointer-events: auto; display: flex; align-items: center; gap: 10px; background: #1e293b; border: 1px solid rgba(234,179,8,0.4); color: #fff; padding: 13px 16px; border-radius: 14px; font-size: 13.5px; font-weight: 600; box-shadow: 0 10px 28px rgba(0,0,0,0.25); width: 100%; cursor: pointer; animation: livoToastIn .3s ease forwards; }
         .livo-toast.success { border-color: #10b981; } .livo-toast.success i { color: #34d399; }
@@ -68,54 +101,6 @@
         @keyframes livoSpin { to { transform: rotate(360deg); } }
         button:disabled { opacity: 0.75; cursor: not-allowed; }
     </style>
-
-    <!-- ==================== CSRF টোকেন (অ্যাডমিন প্যানেল) ==================== -->
-    <meta name="csrf-token" content="<%= locals.csrfToken || '' %>">
-    <script>
-    (function() {
-      var CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-      if (!CSRF_TOKEN) return;
-
-      function injectIntoForms() {
-        document.querySelectorAll('form').forEach(function(form) {
-          var method = (form.getAttribute('method') || 'get').toLowerCase();
-          if (method !== 'post') return;
-          if (form.querySelector('input[name="_csrf"]')) return;
-          var input = document.createElement('input');
-          input.type = 'hidden';
-          input.name = '_csrf';
-          input.value = CSRF_TOKEN;
-          form.appendChild(input);
-        });
-      }
-      document.addEventListener('DOMContentLoaded', injectIntoForms);
-      new MutationObserver(injectIntoForms).observe(document.documentElement, { childList: true, subtree: true });
-
-      var origFetch = window.fetch;
-      window.fetch = function(input, init) {
-        init = init || {};
-        var method = (init.method || (typeof input === 'object' && input.method) || 'GET').toUpperCase();
-        if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
-          init.headers = new Headers(init.headers || {});
-          if (!init.headers.has('X-CSRF-Token')) init.headers.set('X-CSRF-Token', CSRF_TOKEN);
-        }
-        return origFetch.call(this, input, init);
-      };
-
-      var origOpen = XMLHttpRequest.prototype.open;
-      var origSend = XMLHttpRequest.prototype.send;
-      XMLHttpRequest.prototype.open = function(method) {
-        this._csrfMethod = (method || 'GET').toUpperCase();
-        return origOpen.apply(this, arguments);
-      };
-      XMLHttpRequest.prototype.send = function(body) {
-        if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(this._csrfMethod)) {
-          try { this.setRequestHeader('X-CSRF-Token', CSRF_TOKEN); } catch (e) {}
-        }
-        return origSend.call(this, body);
-      };
-    })();
-    </script>
 </head>
 <body class="bg-slate-50">
     <div id="livo-toast-root"></div>
@@ -151,106 +136,187 @@
       })();
       document.addEventListener('DOMContentLoaded', function () {
         <% if (typeof success !== 'undefined' && success && success.length) { %>
-          <% success.forEach(function (m) { %> LivoToast.show(<%- JSON.stringify(m) %>, 'success'); <% }) %>
+          <% success.forEach(function (m) { %> LivoToast.show(<%- jsonScriptSafe(m) %>, 'success'); <% }) %>
         <% } %>
         <% if (typeof error !== 'undefined' && error && error.length) { %>
-          <% error.forEach(function (m) { %> LivoToast.show(<%- JSON.stringify(m) %>, 'error'); <% }) %>
+          <% error.forEach(function (m) { %> LivoToast.show(<%- jsonScriptSafe(m) %>, 'error'); <% }) %>
         <% } %>
       });
     </script>
-
-    <div class="admin-sidebar-overlay" id="adminSidebarOverlay" onclick="closeMobileSidebar()"></div>
-
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
-        <div class="admin-sidebar-shell text-white" id="adminSidebarShell">
-            <div class="px-6 py-5 flex items-center gap-x-3 border-b border-slate-700 flex-shrink-0">
+        <div class="w-72 admin-sidebar text-white flex-shrink-0 hidden lg:flex flex-col">
+            <!-- Logo -->
+            <div class="px-6 py-6 flex items-center gap-x-3 border-b border-slate-700">
                 <div class="w-11 h-11 bg-blue-600 rounded-2xl flex items-center justify-center shadow-inner">
-                    <i class="fas fa-chart-line text-white text-2xl"></i>
+                    <i class="fas fa-chart-line text-white text-3xl"></i>
                 </div>
                 <div>
-                    <span class="logo-font text-2xl font-semibold tracking-tighter">Livo</span>
-                    <span class="text-blue-400 text-lg font-semibold">Admin</span>
+                    <span class="logo-font text-3xl font-semibold tracking-tighter">Livo</span>
+                    <span class="text-blue-400 text-xl font-semibold">Admin</span>
                 </div>
             </div>
 
-            <div class="admin-sidebar-nav">
-                <div class="px-3 mb-2"><p class="text-xs font-semibold tracking-widest text-slate-400 px-3">MAIN</p></div>
+            <!-- Navigation -->
+            <div class="flex-1 px-3 py-6 overflow-y-auto">
+                <div class="px-3 mb-2">
+                    <p class="text-xs font-semibold tracking-widest text-slate-400 px-3">MAIN</p>
+                </div>
+                
+                <a href="/admin/dashboard" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'dashboard' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-home w-5"></i>
+                    <span>Dashboard</span>
+                </a>
+                
+                <a href="/admin/users" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'users' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-users w-5"></i>
+                    <span>User Management</span>
+                </a>
+                
+                <a href="/admin/bets" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'bets' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-dice w-5"></i>
+                    <span>Bets Management</span>
+                </a>
+                
+                <a href="/admin/deposits" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'deposits' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-arrow-down w-5"></i>
+                    <span>Deposits</span>
+                </a>
+                
+                <a href="/admin/withdrawals" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'withdrawals' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-arrow-up w-5"></i>
+                    <span>Withdrawals</span>
+                </a>
+                
+                <a href="/admin/support" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'support' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-headset w-5"></i>
+                    <span>Support Tickets</span>
+                </a>
+                
+                <a href="/admin/transactions" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'transactions' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-exchange-alt w-5"></i>
+                    <span>Transactions</span>
+                </a>
+                
+                <a href="/admin/fraud-monitoring" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'fraud-monitoring' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-radar w-5"></i>
+                    <span>Fraud Monitoring</span>
+                </a>
 
-                <a href="/admin" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'dashboard' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-home w-5"></i><span>Dashboard</span></a>
-                <a href="/admin/users" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'users' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-users w-5"></i><span>User Management</span></a>
-                <a href="/admin/kyc" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'kyc' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-id-card w-5"></i><span>KYC</span></a>
-                <a href="/admin/bets" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'bets' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-dice w-5"></i><span>Bets Management</span></a>
-                <a href="/admin/matches" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'matches' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-futbol w-5"></i><span>Matches</span></a>
-                <a href="/admin/deposits" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'deposits' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-arrow-down w-5"></i><span>Deposits</span></a>
-                <a href="/admin/withdrawals" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'withdrawals' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-arrow-up w-5"></i><span>Withdrawals</span></a>
-                <a href="/admin/transactions" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'transactions' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-exchange-alt w-5"></i><span>Transactions</span></a>
-                <a href="/admin/support" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'support' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-headset w-5"></i><span>Support Tickets</span></a>
-                <a href="/chat/admin" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link text-slate-300 hover:text-white"><i class="fas fa-comments w-5"></i><span>Live Chat</span></a>
-                <a href="/admin/notifications" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'notifications' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-bullhorn w-5"></i><span>Broadcast</span></a>
-                <a href="/admin/notification-templates" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'notification-templates' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-bell w-5"></i><span>Notification Templates</span></a>
-                <a href="/admin/announcements" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'announcements' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-megaphone w-5"></i><span>Announcements</span></a>
-                <a href="/admin/reports" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'reports' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-chart-bar w-5"></i><span>Reports</span></a>
+                <a href="/admin/fraud-logs" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'fraud-logs' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-shield-halved w-5"></i>
+                    <span>Fraud Log</span>
+                </a>
 
-                <div class="px-3 mt-5 mb-2"><p class="text-xs font-semibold tracking-widest text-slate-400 px-3">SECURITY</p></div>
-                <a href="/admin/security-overview" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'security-overview' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-shield-halved w-5"></i><span>Security Overview</span></a>
-                <a href="/admin/fraud-monitoring" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'fraud-monitoring' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-exclamation-triangle w-5"></i><span>Fraud Monitoring</span></a>
-                <a href="/admin/fraud-logs" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'fraud-logs' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-flag w-5"></i><span>Fraud Log</span></a>
-                <a href="/admin/duplicate-accounts" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'duplicate-accounts' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-clone w-5"></i><span>Duplicate Accounts</span></a>
-                <a href="/admin/login-history" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'login-history' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-clock-rotate-left w-5"></i><span>Login History</span></a>
-                <a href="/admin/bot-monitoring" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'bot-monitoring' || active === 'bot-logs' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-robot w-5"></i><span>Bot Monitoring</span></a>
-                <a href="/admin/audit-logs" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'audit-logs' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-clipboard-list w-5"></i><span>Audit Logs</span></a>
+                <a href="/admin/duplicate-accounts" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'duplicate-accounts' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-clone w-5"></i>
+                    <span>Duplicate Accounts</span>
+                </a>
 
-                <div class="px-3 mt-5 mb-2"><p class="text-xs font-semibold tracking-widest text-slate-400 px-3">SYSTEM</p></div>
-                <a href="/admin/system-diagnostics" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'system-diagnostics' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-heart-pulse w-5"></i><span>Server Health</span></a>
-                <a href="/admin/queues" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'queues' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-layer-group w-5"></i><span>Job Queue</span></a>
-                <a href="/admin/cache" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'cache' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-bolt w-5"></i><span>Cache</span></a>
-                <a href="/admin/cron-jobs" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'cron-jobs' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-clock w-5"></i><span>Cron Jobs</span></a>
-                <a href="/admin/backups" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'backups' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-database w-5"></i><span>Backup & Restore</span></a>
-                <a href="/admin/feature-flags" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'feature-flags' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-toggle-on w-5"></i><span>Feature Flags</span></a>
-                <a href="/admin/api-keys" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'api-keys' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-key w-5"></i><span>API Keys</span></a>
-                <a href="/admin/api-logs" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'api-logs' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-list-alt w-5"></i><span>API Logs</span></a>
-                <a href="/admin/system-settings" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'system-settings' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-sliders w-5"></i><span>System Settings</span></a>
-                <a href="/admin/settings" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'settings' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-cog w-5"></i><span>Settings</span></a>
-                <a href="/admin/localization" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'localization' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-language w-5"></i><span>Localization</span></a>
-                <a href="/admin/roles" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'roles' ? 'active' : 'text-slate-300 hover:text-white' %>"><i class="fas fa-user-shield w-5"></i><span>Roles</span></a>
-                <a href="/" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link text-slate-300 hover:text-white"><i class="fas fa-home w-5"></i><span>Back to Site</span></a>
-                <a href="/admin/logout" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link text-red-400 hover:text-red-300"><i class="fas fa-sign-out-alt w-5"></i><span>Logout</span></a>
+                <a href="/admin/login-history" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'login-history' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-clock-rotate-left w-5"></i>
+                    <span>Login History</span>
+                </a>
+
+                <a href="/admin/cache" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'cache' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-bolt w-5"></i>
+                    <span>Cache Management</span>
+                </a>
+
+                <a href="/admin/queue-jobs" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'queue-jobs' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-layer-group w-5"></i>
+                    <span>Job Queue</span>
+                </a>
+
+                <a href="/admin/roles" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'roles' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-user-shield w-5"></i>
+                    <span>Roles &amp; Permissions</span>
+                </a>
+
+                <a href="/admin/api-keys" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'api-keys' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-key w-5"></i>
+                    <span>API Keys</span>
+                </a>
+
+                <a href="/admin/api-logs" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'api-logs' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-list-alt w-5"></i>
+                    <span>API Logs</span>
+                </a>
+
+                <a href="/admin/security-overview" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'security-overview' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-shield-halved w-5"></i>
+                    <span>Security Overview</span>
+                </a>
+
+                <a href="/admin/bot-logs" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'bot-logs' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-robot w-5"></i>
+                    <span>Bot Activity</span>
+                </a>
+                
+                <a href="/admin/reports" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'reports' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-chart-bar w-5"></i>
+                    <span>Reports &amp; Analytics</span>
+                </a>
+
+                <div class="px-3 mt-6 mb-2">
+                    <p class="text-xs font-semibold tracking-widest text-slate-400 px-3">SYSTEM</p>
+                </div>
+                
+                <a href="/admin/settings" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'settings' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-cog w-5"></i>
+                    <span>Settings</span>
+                </a>
             </div>
 
-            <div class="px-4 py-4 border-t border-slate-700 bg-slate-900/50 flex-shrink-0">
+            <!-- Admin Profile -->
+            <div class="px-4 py-4 border-t border-slate-700 bg-slate-900/50">
                 <div class="flex items-center gap-x-3 px-2">
                     <div class="w-9 h-9 rounded-full ring-2 ring-blue-500/30 bg-blue-600 flex items-center justify-center font-bold text-sm flex-shrink-0">
-                        <%= (typeof user !== 'undefined' && user && user.username) ? user.username.charAt(0).toUpperCase() : 'A' %>
+                        <%= (user && user.username) ? user.username.charAt(0).toUpperCase() : 'A' %>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <p class="text-sm font-semibold text-white truncate"><%= (typeof user !== 'undefined' && user && user.username) || 'Admin' %></p>
+                        <p class="text-sm font-semibold text-white truncate"><%= (user && user.username) || 'Admin' %></p>
                         <p class="text-xs text-slate-400">Super Admin</p>
                     </div>
+                    <button onclick="logout()" class="text-slate-400 hover:text-red-400 transition-colors">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
                 </div>
             </div>
         </div>
 
         <!-- Main Content -->
-        <div class="flex-1 flex flex-col overflow-hidden admin-main lg:ml-0">
-            <div class="admin-header h-16 flex items-center justify-between px-4 sm:px-6 flex-shrink-0 bg-white shadow-sm">
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- Top Navbar -->
+            <div class="admin-header h-16 flex items-center justify-between px-6 flex-shrink-0">
                 <div class="flex items-center gap-x-4">
-                    <button type="button" class="lg:hidden text-slate-600 hover:text-slate-900 p-2" onclick="toggleMobileSidebar()" aria-label="Menu">
+                    <!-- Mobile Menu -->
+                    <button class="lg:hidden text-slate-600 hover:text-slate-900" onclick="toggleMobileSidebar()">
                         <i class="fas fa-bars text-xl"></i>
                     </button>
+                    
                     <div>
-                        <h1 class="text-lg sm:text-xl font-semibold text-slate-800"><%= title || 'Admin Panel' %></h1>
+                        <h1 class="text-xl font-semibold text-slate-800"><%= title || 'Admin Panel' %></h1>
                         <p class="text-xs text-slate-500 hidden md:block">Livo Betting Platform • Admin Dashboard</p>
                     </div>
                 </div>
-                <div class="flex items-center gap-x-2">
-                    <div class="w-9 h-9 rounded-2xl ring-2 ring-blue-100 bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
-                        <%= (typeof user !== 'undefined' && user && user.username) ? user.username.charAt(0).toUpperCase() : 'A' %>
+
+                <div class="flex items-center gap-x-4">
+                    <!-- Profile -->
+                    <div class="flex items-center gap-x-2 pl-3 border-l border-slate-200">
+                        <div class="text-right hidden md:block">
+                            <p class="text-sm font-semibold text-slate-700"><%= (user && user.username) || 'Admin' %></p>
+                            <p class="text-xs text-slate-500">Super Admin</p>
+                        </div>
+                        <div class="w-9 h-9 rounded-2xl ring-2 ring-blue-100 bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
+                            <%= (user && user.username) ? user.username.charAt(0).toUpperCase() : 'A' %>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="flex-1 overflow-auto p-4 sm:p-6 bg-slate-50" style="padding-bottom: 90px;">
+            <!-- Page Content -->
+            <div class="flex-1 overflow-auto p-6 bg-slate-50">
                 <%- body %>
             </div>
         </div>
@@ -258,20 +324,23 @@
 
     <script>
         function toggleMobileSidebar() {
-          var shell = document.getElementById('adminSidebarShell');
-          var ov = document.getElementById('adminSidebarOverlay');
-          if (!shell) return;
-          var open = shell.classList.toggle('open');
-          if (ov) ov.classList.toggle('show', open);
+            const sidebar = document.querySelector('.admin-sidebar');
+            if (sidebar) sidebar.classList.toggle('hidden');
         }
-        function closeMobileSidebar() {
-          var shell = document.getElementById('adminSidebarShell');
-          var ov = document.getElementById('adminSidebarOverlay');
-          if (shell) shell.classList.remove('open');
-          if (ov) ov.classList.remove('show');
-        }
+        
         function logout() {
-          if (confirm('Are you sure you want to logout?')) window.location.href = '/admin/logout';
+            if (confirm('Are you sure you want to logout?')) {
+                window.location.href = '/admin/logout';
+            }
+        }
+        
+        // Tailwind script
+        function initTailwind() {
+            document.documentElement.style.setProperty('--accent', '#3b82f6');
+        }
+        
+        window.onload = function() {
+            initTailwind();
         }
     </script>
 
