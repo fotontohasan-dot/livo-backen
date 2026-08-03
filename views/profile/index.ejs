@@ -1,181 +1,267 @@
 <%- include('../partials/head') %>
 
-<div class="container" style="padding: 15px; padding-bottom: 100px;">
+<div class="container pf-wrap">
   <%- include('../partials/flash') %>
 
   <% if (user.email && !user.email_verified) { %>
-  <div style="background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 14px; padding: 14px 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-    <i class="fas fa-triangle-exclamation" style="color: #f59e0b; font-size: 18px;"></i>
-    <div style="flex: 1; min-width: 200px; font-size: 13px; color: var(--text-main, #eee);">
-      আপনার ইমেইল এখনো ভেরিফাই করা হয়নি — কিছু ফিচার (যেমন উইথড্র) ব্যবহার করতে ভেরিফিকেশন লাগবে।
-    </div>
+  <div class="pf-verify-banner">
+    <i class="fas fa-triangle-exclamation"></i>
+    <div class="pf-verify-text">আপনার ইমেইল এখনো ভেরিফাই করা হয়নি — কিছু ফিচার (যেমন উইথড্র) ব্যবহার করতে ভেরিফিকেশন লাগবে।</div>
     <form action="/resend-verification" method="POST" style="margin:0;">
-      <button type="submit" style="background:#f59e0b;color:#1a1a1a;border:none;border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:800;cursor:pointer;white-space:nowrap;">লিঙ্ক পাঠান</button>
+      <button type="submit" class="pf-verify-btn">লিঙ্ক পাঠান</button>
     </form>
   </div>
   <% } %>
 
-  <!-- প্রোফাইল ব্যানার — হালকা ডার্ক শেড -->
-  <div style="background: linear-gradient(135deg, #2d3446, #454e64); border-radius: 24px; padding: 25px 20px; margin: 0 -15px 20px -15px; position: relative; overflow: hidden; border: 1px solid rgba(245, 158, 11, 0.25); box-shadow: 0 10px 30px rgba(0,0,0,0.25);">
-    <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: radial-gradient(circle, rgba(245,158,11,0.12) 0%, transparent 70%); border-radius: 50%;"></div>
-
-    <div style="display: flex; align-items: center; gap: 20px; position: relative; z-index: 1;">
-      <div style="position: relative;">
-        <div id="avatarCircle" onclick="openAvatarPicker()" style="width: 80px; height: 80px; border-radius: 50%; background: var(--grad-gold); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800; color: #000; box-shadow: 0 0 20px rgba(245, 158, 11, 0.45); border: 3px solid rgba(255,255,255,0.12); cursor: pointer; overflow: hidden; background-image: <%= user.avatar ? `url('${user.avatar}')` : 'none' %>; background-size: cover; background-position: center;">
+  <!-- ==================== 1. PROFILE HEADER ==================== -->
+  <div class="pf-header">
+    <div class="pf-header-glow"></div>
+    <div class="pf-header-top">
+      <div class="pf-avatar-wrap">
+        <div id="avatarCircle" onclick="openAvatarPicker()" class="pf-avatar" style="background-image: <%= user.avatar ? `url('${user.avatar}')` : 'none' %>;">
           <% if (!user.avatar) { %><%= user.username.charAt(0).toUpperCase() %><% } %>
         </div>
-        <div onclick="openAvatarPicker()" style="position: absolute; bottom: -5px; right: -5px; background: #000; border: 2px solid var(--gold); border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 13px; cursor: pointer;">
-          ✏️
-        </div>
+        <span class="pf-online-dot" title="অনলাইন"></span>
+        <div onclick="openAvatarPicker()" class="pf-avatar-edit">✏️</div>
       </div>
 
-      <div style="flex: 1; min-width: 0;">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span id="usernameText" style="color:var(--text-main); font-size: 20px; font-weight: 800; letter-spacing: 0.5px;"><%= user.username %></span>
-          <button onclick="copyUsername()" title="কপি করুন" style="background: rgba(245,158,11,0.15); border: none; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--gold); font-size: 11px; flex-shrink: 0;">
-            <i class="fas fa-copy"></i>
-          </button>
-          <a href="/profile/vip" style="text-decoration: none; background: linear-gradient(135deg, #f5d67d, #f59e0b, #d97706); color: #3a1e00; font-size: 12px; padding: 3px 12px 3px 8px; border-radius: 20px; font-weight: 900; letter-spacing: 1px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 8px rgba(245,158,11,0.4), inset 0 1px 0 rgba(255,255,255,0.5); border: 1px solid rgba(255,255,255,0.3);">
-            <i class="fas fa-crown" style="font-size: 11px;"></i>VIP
+      <div class="pf-id-block">
+        <div class="pf-username-row">
+          <span id="usernameText" class="pf-username"><%= user.username %></span>
+          <button onclick="copyUsername()" title="কপি করুন" class="pf-copy-btn"><i class="fas fa-copy"></i></button>
+          <a href="/profile/vip" class="pf-vip-badge">
+            <i class="fas fa-crown"></i><%= (vipStatus && vipStatus.current) ? vipStatus.current.name : 'VIP' %>
           </a>
         </div>
-        <div style="color: rgba(255,255,255,0.55); font-size: 12px; margin-top: 4px;">ID: <%= 100000 + user.id %></div>
-        <div style="display: flex; align-items: center; gap: 6px; margin-top: 8px;">
-           <div style="flex: 1; height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden;">
-              <div style="width: <%= (user.total_points % 1000) / 10 %>%; height: 100%; background: var(--grad-gold); border-radius: 10px;"></div>
-           </div>
-           <span style="font-family: 'Teko', sans-serif; font-size: 12px; color: var(--gold);"><%= user.total_points % 1000 %>/1000</span>
+        <div class="pf-uid-row">
+          <span>ID: <%= 100000 + user.id %></span>
+          <button onclick="copyUid()" title="কপি করুন" class="pf-copy-btn pf-copy-uid"><i class="fas fa-copy"></i></button>
         </div>
       </div>
-    </div>
 
-    <!-- Wallet Card -->
-    <div style="margin-top: 25px; background: rgba(0,0,0,0.3); border-radius: 16px; padding: 15px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(5px);">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <div style="color: rgba(255,255,255,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 1px;"><%= t.total_balance %></div>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <div id="balanceText" style="color: var(--gold); font-size: 30px; font-weight: 800; font-family: 'Teko', sans-serif; line-height: 1.2;">৳ <%= user.coins.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></div>
-            <button onclick="refreshBalance()" id="refreshBtn" title="রিফ্রেশ" style="background: rgba(245,158,11,0.12); border: none; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--gold); font-size: 12px; flex-shrink: 0;">
-              <i class="fas fa-sync-alt" id="refreshIcon"></i>
-            </button>
-          </div>
-        </div>
-        <a href="/profile/transactions" style="background: rgba(245, 158, 11, 0.1); color: var(--gold); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none;">
-          <i class="fas fa-history"></i>
-        </a>
-      </div>
+      <a href="/notifications" class="pf-notif-icon">
+        <i class="fas fa-bell"></i>
+        <% if (typeof rewardBadge !== 'undefined' && rewardBadge > 0) { %><span class="pf-notif-dot"></span><% } %>
+      </a>
+    </div>
+  </div>
 
-      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 15px;">
-        <a href="/payment/deposit" style="background: var(--grad-gold); color: #000; padding: 10px; border-radius: 12px; text-align: center; text-decoration: none; font-size: 13px; font-weight: 800; display: flex; flex-direction: column; gap: 4px; align-items: center;">
-          <i class="fas fa-plus-circle"></i>
-          <%= t.deposit %>
-        </a>
-        <a href="/payment/withdraw" style="background: rgba(255,255,255,0.08); color: var(--gold); padding: 10px; border-radius: 12px; text-align: center; text-decoration: none; font-size: 13px; font-weight: 800; border: 1px solid rgba(245, 158, 11, 0.3); display: flex; flex-direction: column; gap: 4px; align-items: center;">
-          <i class="fas fa-hand-holding-usd"></i>
-          <%= t.withdraw %>
-        </a>
-        <a href="/profile/cards" style="background: rgba(255,255,255,0.08); color:var(--text-main); padding: 10px; border-radius: 12px; text-align: center; text-decoration: none; font-size: 13px; font-weight: 800; border: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; gap: 4px; align-items: center;">
-          <i class="fas fa-credit-card"></i>
-          <%= t.my_cards %>
-        </a>
+  <!-- ==================== 2. VIP PROGRESS CARD ==================== -->
+  <% if (vipStatus) { %>
+  <div class="pf-card pf-vip-card">
+    <div class="pf-card-title-row">
+      <div class="pf-card-title"><i class="fas fa-crown" style="color:var(--gold);"></i> VIP <%= vipStatus.current ? vipStatus.current.name : '—' %></div>
+      <a href="/profile/vip" class="pf-mini-btn">VIP বেনিফিট <i class="fas fa-chevron-right" style="font-size:9px;"></i></a>
+    </div>
+    <div class="pf-vip-bar-row">
+      <div class="pf-vip-bar-track">
+        <div class="pf-vip-bar-fill" style="width: <%= Math.min(100, Math.round(vipStatus.progress / 10)) %>%;"></div>
+      </div>
+      <span class="pf-vip-pct"><%= Math.min(100, Math.round(vipStatus.progress / 10)) %>%</span>
+    </div>
+    <div class="pf-vip-sub">
+      <% if (vipStatus.next) { %>
+        পরবর্তী: <b>VIP <%= vipStatus.next.name %></b> — বাকি টার্নওভার <b><%= Math.round(vipStatus.toNext).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></b>
+      <% } else { %>
+        🎉 আপনি সর্বোচ্চ VIP লেভেলে পৌঁছে গেছেন!
+      <% } %>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- ==================== 3. WALLET SUMMARY CARD ==================== -->
+  <div class="pf-card pf-wallet-card">
+    <div class="pf-card-title-row">
+      <div class="pf-card-title"><i class="fas fa-wallet" style="color:var(--gold);"></i> <%= t.total_balance %></div>
+      <button onclick="refreshBalance()" id="refreshBtn" title="রিফ্রেশ" class="pf-icon-btn"><i class="fas fa-sync-alt" id="refreshIcon"></i></button>
+    </div>
+    <div id="balanceText" class="pf-total-balance">৳ <%= Number(user.coins).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></div>
+
+    <div class="pf-wallet-grid">
+      <div class="pf-wallet-mini">
+        <span class="pf-wm-label">মেইন ব্যালেন্স</span>
+        <span class="pf-wm-value">৳ <%= Number(user.coins).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span>
+      </div>
+      <div class="pf-wallet-mini">
+        <span class="pf-wm-label">বোনাস ব্যালেন্স</span>
+        <span class="pf-wm-value">৳ 0</span>
+      </div>
+      <div class="pf-wallet-mini">
+        <span class="pf-wm-label">লকড বোনাস</span>
+        <span class="pf-wm-value">৳ 0</span>
+      </div>
+      <div class="pf-wallet-mini">
+        <span class="pf-wm-label">উইথড্র-যোগ্য</span>
+        <span class="pf-wm-value">৳ <%= Number(user.coins).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span>
       </div>
     </div>
+    <div class="pf-wallet-updated">সর্বশেষ আপডেট: <span id="lastUpdatedText">এখনই</span></div>
+  </div>
+
+  <!-- ==================== 4. QUICK ACTIONS ==================== -->
+  <div class="pf-quick-actions">
+    <a href="/payment/deposit" class="pf-qa pf-qa-primary"><i class="fas fa-plus-circle"></i><span><%= t.deposit %></span></a>
+    <a href="/payment/withdraw" class="pf-qa"><i class="fas fa-hand-holding-usd"></i><span><%= t.withdraw %></span></a>
+    <a href="/profile/cards" class="pf-qa"><i class="fas fa-credit-card"></i><span><%= t.my_cards %></span></a>
+    <a href="/profile/vip" class="pf-qa"><i class="fas fa-crown"></i><span>VIP সেন্টার</span></a>
+    <a href="/profile/rewards" class="pf-qa"><i class="fas fa-trophy"></i><span>রিওয়ার্ড</span></a>
+    <a href="/profile/transactions" class="pf-qa"><i class="fas fa-clock-rotate-left"></i><span>ওয়ালেট হিস্টরি</span></a>
+    <a href="/payment/history" class="pf-qa"><i class="fas fa-receipt"></i><span>লেনদেন</span></a>
+    <a href="/profile/history" class="pf-qa"><i class="fas fa-list-alt"></i><span>বেটিং রেকর্ড</span></a>
+  </div>
+
+  <!-- ==================== 5. REWARD BANNER ==================== -->
+  <div class="pf-reward-banner">
+    <a href="/profile/rewards" class="pf-rb-item pf-rb-daily">
+      <i class="fas fa-gift"></i>
+      <span>ডেইলি বোনাস</span>
+    </a>
+    <a href="/profile/vip" class="pf-rb-item pf-rb-vip">
+      <i class="fas fa-crown"></i>
+      <span>VIP রিওয়ার্ড</span>
+    </a>
+    <a href="/profile/rewards" class="pf-rb-item pf-rb-promo">
+      <i class="fas fa-bullhorn"></i>
+      <span>প্রোমোশন</span>
+    </a>
+    <a href="/profile/wheel" class="pf-rb-item pf-rb-spin">
+      <i class="fas fa-dharmachakra"></i>
+      <span>লাকি স্পিন</span>
+    </a>
+  </div>
+
+  <!-- ==================== 6. SECURITY STATUS CARD ==================== -->
+  <div class="pf-card pf-security-card">
+    <div class="pf-card-title-row">
+      <div class="pf-card-title"><i class="fas fa-shield-halved" style="color:var(--gold);"></i> সিকিউরিটি স্ট্যাটাস</div>
+      <a href="/profile/security" class="pf-mini-btn">বিস্তারিত <i class="fas fa-chevron-right" style="font-size:9px;"></i></a>
+    </div>
+    <div class="pf-sec-score-row">
+      <div class="pf-vip-bar-track">
+        <div class="pf-sec-score-fill" style="width: <%= security.score %>%;"></div>
+      </div>
+      <span class="pf-vip-pct"><%= security.score %>%</span>
+    </div>
+    <div class="pf-sec-grid">
+      <div class="pf-sec-item <%= security.emailVerified ? 'ok' : '' %>"><i class="fas <%= security.emailVerified ? 'fa-circle-check' : 'fa-circle-xmark' %>"></i> ইমেইল</div>
+      <div class="pf-sec-item <%= security.phoneAdded ? 'ok' : '' %>"><i class="fas <%= security.phoneAdded ? 'fa-circle-check' : 'fa-circle-xmark' %>"></i> ফোন</div>
+      <div class="pf-sec-item <%= security.kycStatus === 'approved' ? 'ok' : '' %>"><i class="fas <%= security.kycStatus === 'approved' ? 'fa-circle-check' : 'fa-circle-xmark' %>"></i> KYC</div>
+      <div class="pf-sec-item <%= security.pinConfigured ? 'ok' : '' %>"><i class="fas <%= security.pinConfigured ? 'fa-circle-check' : 'fa-circle-xmark' %>"></i> উইথড্র PIN</div>
+      <div class="pf-sec-item <%= security.twoFactor ? 'ok' : '' %>"><i class="fas <%= security.twoFactor ? 'fa-circle-check' : 'fa-circle-xmark' %>"></i> 2FA</div>
+      <div class="pf-sec-item <%= security.trustedDevices > 0 ? 'ok' : '' %>"><i class="fas fa-mobile-screen"></i> <%= security.trustedDevices %> ডিভাইস</div>
+    </div>
+  </div>
+
+  <!-- ==================== 7. STATISTICS (LAST 30 DAYS) ==================== -->
+  <div class="pf-card pf-stats-card">
+    <div class="pf-card-title-row">
+      <div class="pf-card-title"><i class="fas fa-chart-line" style="color:var(--gold);"></i> গত ৩০ দিনের পরিসংখ্যান</div>
+    </div>
+    <div class="pf-stats-grid">
+      <div class="pf-stat-box">
+        <span class="pf-stat-label">মোট ডিপোজিট</span>
+        <span class="pf-stat-value">৳ <%= Number(stats30.deposit).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span>
+      </div>
+      <div class="pf-stat-box">
+        <span class="pf-stat-label">মোট উইথড্র</span>
+        <span class="pf-stat-value">৳ <%= Number(stats30.withdraw).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span>
+      </div>
+      <div class="pf-stat-box">
+        <span class="pf-stat-label">প্রফিট/লস</span>
+        <span class="pf-stat-value" style="color: <%= stats30.profitLoss >= 0 ? '#3ddc84' : '#f0554d' %>;"><%= stats30.profitLoss >= 0 ? '+' : '' %><%= Number(stats30.profitLoss).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span>
+      </div>
+      <div class="pf-stat-box">
+        <span class="pf-stat-label">মোট বাজি</span>
+        <span class="pf-stat-value"><%= stats30.totalBets %></span>
+      </div>
+    </div>
+    <% if (stats30.chart && stats30.chart.length > 1) {
+      const maxC = Math.max.apply(null, stats30.chart.map(function(p){return p.c;})) || 1;
+      const w = 300, h = 44, n = stats30.chart.length;
+      const pts = stats30.chart.map(function(p, i) {
+        const x = (i / (n - 1)) * w;
+        const y = h - (p.c / maxC) * (h - 6) - 3;
+        return x.toFixed(1) + ',' + y.toFixed(1);
+      }).join(' ');
+    %>
+    <div class="pf-sparkline">
+      <svg viewBox="0 0 <%= w %> <%= h %>" preserveAspectRatio="none" width="100%" height="44">
+        <polyline points="<%= pts %>" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div class="pf-sparkline-label">গত ৭ দিনের বাজি অ্যাক্টিভিটি</div>
+    </div>
+    <% } %>
   </div>
 
   <!-- অ্যাভাটার পিকার মোডাল -->
-  <div id="avatarModal" style="display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 999; align-items: flex-end; justify-content: center;">
-    <div style="background: #1c2128; width: 100%; max-width: 480px; border-radius: 22px 22px 0 0; padding: 20px; border: 1px solid rgba(245,158,11,0.25); max-height: 75vh; display: flex; flex-direction: column;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <span style="color:var(--text-main); font-size:16px; font-weight:800;">প্রোফাইল ছবি বাছাই করুন</span>
-        <span onclick="closeAvatarPicker()" style="color: rgba(255,255,255,0.6); font-size: 20px; cursor: pointer; padding: 0 6px;">&times;</span>
+  <div id="avatarModal" class="pf-modal-overlay">
+    <div class="pf-modal-sheet">
+      <div class="pf-modal-head">
+        <span>প্রোফাইল ছবি বাছাই করুন</span>
+        <span onclick="closeAvatarPicker()" class="pf-modal-close">&times;</span>
       </div>
-      <div id="avatarGrid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; overflow-y: auto; padding-bottom: 10px;"></div>
+      <div id="avatarGrid" class="pf-avatar-grid"></div>
     </div>
   </div>
 
-  <!-- Member Center — আইকন গ্রিড (স্ক্রিনশট রেফারেন্স অনুযায়ী) -->
+  <!-- ==================== 8. CATEGORIZED MENU ==================== -->
   <div class="member-center-card">
     <div class="mc-heading">
-      <span class="mc-pill">Member Center</span>
+      <span class="mc-pill">মেনু</span>
       <span class="mc-hairline"></span>
     </div>
 
-    <div class="mc-grid">
-      <a href="/profile/rewards" class="mc-item">
-        <span class="mc-icon-wrap">
-          <span class="mc-icon"><i class="fas fa-trophy"></i></span>
-          <% if (typeof rewardBadge !== 'undefined' && rewardBadge > 0) { %><span class="mc-badge"><%= rewardBadge %></span><% } %>
-        </span>
-        <span class="mc-label">Reward Center</span>
-      </a>
-      <a href="/profile/history" class="mc-item">
-        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-list-alt"></i></span></span>
-        <span class="mc-label">Betting Record</span>
-      </a>
-      <a href="/profile/stats" class="mc-item">
-        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-file-invoice-dollar"></i></span></span>
-        <span class="mc-label">Profit And Loss</span>
-      </a>
-      <a href="/payment/history?type=deposit" class="mc-item">
-        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-file-arrow-up"></i></span></span>
-        <span class="mc-label">Deposit Record</span>
-      </a>
+    <details class="menu-folder" open>
+      <summary><i class="fas fa-wallet" style="color:var(--gold); margin-right:8px;"></i>ওয়ালেট</summary>
+      <div class="menu-folder-body">
+        <a href="/payment/deposit"><i class="fas fa-plus-circle"></i>ডিপোজিট</a>
+        <a href="/payment/withdraw"><i class="fas fa-hand-holding-usd"></i>উইথড্র</a>
+        <a href="/profile/cards"><i class="fas fa-credit-card"></i>মাই কার্ডস</a>
+        <a href="/profile/transactions"><i class="fas fa-clock-rotate-left"></i>ট্রানজেকশন হিস্টরি</a>
+      </div>
+    </details>
 
-      <a href="/payment/history?type=withdraw" class="mc-item">
-        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-file-arrow-down"></i></span></span>
-        <span class="mc-label">Withdrawal Record</span>
-      </a>
-      <a href="/profile/transactions" class="mc-item">
-        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-clock-rotate-left"></i></span></span>
-        <span class="mc-label">Account Record</span>
-      </a>
-      <a href="/profile/security" class="mc-item">
-        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-user"></i></span></span>
-        <span class="mc-label">My Account</span>
-      </a>
-      <a href="/profile/security" class="mc-item">
-        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-shield-halved"></i></span></span>
-        <span class="mc-label">Security Center</span>
-      </a>
+    <details class="menu-folder">
+      <summary><i class="fas fa-dice" style="color:var(--gold); margin-right:8px;"></i>বেটিং</summary>
+      <div class="menu-folder-body">
+        <a href="/profile/history"><i class="fas fa-list-alt"></i>বেটিং রেকর্ড</a>
+        <a href="/profile/stats"><i class="fas fa-file-invoice-dollar"></i>প্রফিট অ্যান্ড লস</a>
+        <a href="/profile/cashback"><i class="fas fa-coins"></i>রিবেট</a>
+        <a href="/sports"><i class="fas fa-futbol"></i>স্পোর্টস বুক</a>
+      </div>
+    </details>
 
-      <a href="/profile/referral" class="mc-item">
-        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-user-plus"></i></span></span>
-        <span class="mc-label">Invite Friends</span>
-      </a>
-      <a href="/profile/missions" class="mc-item">
-        <span class="mc-icon-wrap">
-          <span class="mc-icon"><i class="fas fa-gift"></i></span>
-          <% if (typeof missionBadge !== 'undefined' && missionBadge > 0) { %><span class="mc-badge"><%= missionBadge %></span><% } %>
-        </span>
-        <span class="mc-label">Mission</span>
-      </a>
-      <a href="/profile/cashback" class="mc-item">
-        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-coins"></i></span></span>
-        <span class="mc-label">Rebate</span>
-      </a>
-      <a href="/notifications" class="mc-item">
-        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-at"></i></span></span>
-        <span class="mc-label">Internal Message</span>
-      </a>
+    <details class="menu-folder">
+      <summary><i class="fas fa-trophy" style="color:var(--gold); margin-right:8px;"></i>রিওয়ার্ড
+        <% if (typeof rewardBadge !== 'undefined' && rewardBadge > 0 || typeof missionBadge !== 'undefined' && missionBadge > 0) { %><span class="mc-inline-badge"><%= (rewardBadge||0) + (missionBadge||0) %></span><% } %>
+      </summary>
+      <div class="menu-folder-body">
+        <a href="/profile/rewards"><i class="fas fa-gift"></i>রিওয়ার্ড সেন্টার <% if (typeof rewardBadge !== 'undefined' && rewardBadge > 0) { %><span class="mc-inline-badge"><%= rewardBadge %></span><% } %></a>
+        <a href="/profile/missions"><i class="fas fa-bullseye"></i>মিশন <% if (typeof missionBadge !== 'undefined' && missionBadge > 0) { %><span class="mc-inline-badge"><%= missionBadge %></span><% } %></a>
+        <a href="/profile/vip"><i class="fas fa-crown"></i>VIP সেন্টার</a>
+        <a href="/profile/rewards"><i class="fas fa-calendar-day"></i>ডেইলি বোনাস</a>
+      </div>
+    </details>
 
-      <a href="/profile/feedback" class="mc-item">
-        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-comment-dots"></i></span></span>
-        <span class="mc-label">Suggestion</span>
-      </a>
-      <a href="/profile/app-download" class="mc-item">
-        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-mobile-screen-button"></i></span></span>
-        <span class="mc-label">Download APP</span>
-      </a>
-      <a href="/chat" class="mc-item">
-        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-headset"></i></span></span>
-        <span class="mc-label">Customer Service</span>
-      </a>
-      <a href="/chat" class="mc-item">
-        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-circle-question"></i></span></span>
-        <span class="mc-label">Help Center</span>
-      </a>
-    </div>
+    <details class="menu-folder">
+      <summary><i class="fas fa-user" style="color:var(--gold); margin-right:8px;"></i>অ্যাকাউন্ট</summary>
+      <div class="menu-folder-body">
+        <a href="/profile/security"><i class="fas fa-id-card"></i>মাই প্রোফাইল</a>
+        <a href="/profile/security"><i class="fas fa-shield-halved"></i>সিকিউরিটি সেন্টার</a>
+        <a href="/profile/security"><i class="fas fa-file-shield"></i>KYC</a>
+        <a href="/profile/security"><i class="fas fa-mobile-screen"></i>ট্রাস্টেড ডিভাইস</a>
+      </div>
+    </details>
+
+    <details class="menu-folder">
+      <summary><i class="fas fa-headset" style="color:var(--gold); margin-right:8px;"></i>সাপোর্ট</summary>
+      <div class="menu-folder-body">
+        <a href="/chat"><i class="fas fa-circle-question"></i>হেল্প সেন্টার</a>
+        <a href="/chat"><i class="fas fa-headset"></i>কাস্টমার সার্ভিস</a>
+        <a href="/notifications"><i class="fas fa-at"></i>ইন্টারনাল মেসেজ</a>
+        <a href="/profile/feedback"><i class="fas fa-comment-dots"></i>সাজেশন</a>
+      </div>
+    </details>
 
     <div class="mc-logout-row">
       <a href="/logout" class="mc-item">
@@ -185,123 +271,174 @@
     </div>
   </div>
 
+  <!-- ==================== 9. RECENT ACTIVITY ==================== -->
+  <% if (recentActivity && recentActivity.length > 0) { %>
+  <div class="pf-card pf-activity-card">
+    <div class="pf-card-title-row">
+      <div class="pf-card-title"><i class="fas fa-clock-rotate-left" style="color:var(--gold);"></i> সাম্প্রতিক অ্যাক্টিভিটি</div>
+    </div>
+    <div class="pf-activity-list">
+      <% recentActivity.forEach(function(a) {
+        let icon = 'fa-circle-info', label = 'অ্যাক্টিভিটি';
+        if (a.kind === 'login') { icon = 'fa-right-to-bracket'; label = 'লগইন'; }
+        else if (a.kind === 'deposit') { icon = 'fa-plus-circle'; label = 'ডিপোজিট'; }
+        else if (a.kind === 'withdraw') { icon = 'fa-hand-holding-usd'; label = 'উইথড্র'; }
+      %>
+      <div class="pf-activity-item">
+        <span class="pf-activity-icon"><i class="fas <%= icon %>"></i></span>
+        <span class="pf-activity-label"><%= label %><% if (a.amount) { %> — ৳<%= Number(a.amount).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %><% } %></span>
+        <span class="pf-activity-time"><%= new Date(a.created_at).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) %></span>
+      </div>
+      <% }); %>
+    </div>
+  </div>
+  <% } %>
+
   <div style="text-align: center; margin-top: 30px; padding-bottom: 20px;">
-    <div style="color: var(--text-muted); font-size: 12px;"><%= t.version %> 2.1.0</div>
+    <div style="color: var(--text-muted); font-size: 12px;"><%= t.version %> 2.2.0</div>
     <div style="color: var(--text-muted); font-size: 11px; margin-top: 5px;">© 2024 <%= siteName %> Gaming</div>
   </div>
 
 </div>
 
-<div id="copyToast" style="position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px); background: #1c2128; color: #fff; padding: 10px 20px; border-radius: 30px; font-size: 13px; font-weight: 600; border: 1px solid var(--gold); opacity: 0; transition: all 0.25s; z-index: 999; pointer-events: none;">✅ কপি হয়েছে!</div>
+<div id="copyToast" class="pf-toast">✅ কপি হয়েছে!</div>
 
 <style>
-.menu-folder {
-  background: var(--bg-card);
-  border-radius: 16px;
-  border: 1px solid var(--border-glass);
-  overflow: hidden;
-}
-.menu-folder summary {
-  list-style: none;
-  cursor: pointer;
-  padding: 16px 18px;
-  font-size: 14px;
-  font-weight: 700;
-  color:var(--text-main);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.menu-folder summary::-webkit-details-marker { display: none; }
-.menu-folder summary::after {
-  content: '▾';
-  color: var(--gold);
-  transition: transform 0.2s;
-  margin-left: auto;
-}
-.menu-folder[open] summary::after { transform: rotate(180deg); }
-.menu-folder-body {
-  padding: 4px 8px 10px 8px;
-  display: flex;
-  flex-direction: column;
-}
-.menu-folder-body a {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  color: var(--text-main);
-  text-decoration: none;
-  font-size: 13px;
-  font-weight: 600;
-  border-radius: 10px;
-}
-.menu-folder-body a i {
-  width: 20px;
-  text-align: center;
-  color: var(--gold);
-}
-.menu-folder-body a:active { background: rgba(255,255,255,0.05); }
+.pf-wrap { padding: 15px; padding-bottom: 100px; }
+
+/* ---------- verify banner ---------- */
+.pf-verify-banner { background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 14px; padding: 14px 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.pf-verify-banner i { color: #f59e0b; font-size: 18px; }
+.pf-verify-text { flex: 1; min-width: 200px; font-size: 13px; color: var(--text-main, #eee); }
+.pf-verify-btn { background: #f59e0b; color: #1a1a1a; border: none; border-radius: 8px; padding: 8px 14px; font-size: 12.5px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+
+/* ---------- header ---------- */
+.pf-header { background: linear-gradient(135deg, #2d3446, #454e64); border-radius: 24px; padding: 22px 18px; margin: 0 -15px 16px -15px; position: relative; overflow: hidden; border: 1px solid rgba(245, 158, 11, 0.25); box-shadow: 0 10px 30px rgba(0,0,0,0.25); }
+.pf-header-glow { position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: radial-gradient(circle, rgba(245,158,11,0.12) 0%, transparent 70%); border-radius: 50%; }
+.pf-header-top { display: flex; align-items: center; gap: 16px; position: relative; z-index: 1; }
+.pf-avatar-wrap { position: relative; flex-shrink: 0; }
+.pf-avatar { width: 72px; height: 72px; border-radius: 50%; background: var(--grad-gold); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 800; color: #000; box-shadow: 0 0 20px rgba(245, 158, 11, 0.45); border: 3px solid rgba(255,255,255,0.12); cursor: pointer; overflow: hidden; background-size: cover; background-position: center; }
+.pf-online-dot { position: absolute; top: 2px; right: 2px; width: 13px; height: 13px; border-radius: 50%; background: #3ddc84; border: 2px solid #2d3446; box-shadow: 0 0 6px rgba(61,220,132,0.7); }
+.pf-avatar-edit { position: absolute; bottom: -4px; right: -4px; background: #000; border: 2px solid var(--gold); border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 11px; cursor: pointer; }
+.pf-id-block { flex: 1; min-width: 0; }
+.pf-username-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pf-username { color: var(--text-main); font-size: 19px; font-weight: 800; letter-spacing: 0.5px; }
+.pf-copy-btn { background: rgba(245,158,11,0.15); border: none; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--gold); font-size: 10px; flex-shrink: 0; }
+.pf-vip-badge { text-decoration: none; background: linear-gradient(135deg, #f5d67d, #f59e0b, #d97706); color: #3a1e00; font-size: 11px; padding: 3px 12px 3px 8px; border-radius: 20px; font-weight: 900; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 8px rgba(245,158,11,0.4), inset 0 1px 0 rgba(255,255,255,0.5); border: 1px solid rgba(255,255,255,0.3); }
+.pf-uid-row { display: flex; align-items: center; gap: 6px; color: rgba(255,255,255,0.55); font-size: 12px; margin-top: 5px; }
+.pf-notif-icon { position: relative; background: rgba(255,255,255,0.08); color: var(--gold); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none; flex-shrink: 0; }
+.pf-notif-dot { position: absolute; top: 6px; right: 8px; width: 9px; height: 9px; border-radius: 50%; background: #e53935; border: 2px solid #2d3446; }
+
+/* ---------- generic premium card ---------- */
+.pf-card { background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 18px; padding: 16px; margin-bottom: 14px; box-shadow: 0 6px 20px rgba(0,0,0,0.18); }
+.pf-card-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 10px; }
+.pf-card-title { color: var(--text-main); font-size: 14.5px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+.pf-mini-btn { color: var(--gold); font-size: 11.5px; font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.pf-icon-btn { background: rgba(245,158,11,0.12); border: none; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--gold); font-size: 12px; }
+
+/* ---------- vip card ---------- */
+.pf-vip-bar-row { display: flex; align-items: center; gap: 8px; }
+.pf-vip-bar-track { flex: 1; height: 8px; background: rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; }
+.pf-vip-bar-fill { height: 100%; background: var(--grad-gold); border-radius: 10px; transition: width 0.4s; }
+.pf-vip-pct { font-family: 'Teko', sans-serif; font-size: 14px; color: var(--gold); min-width: 34px; text-align: right; }
+.pf-vip-sub { margin-top: 8px; font-size: 12px; color: var(--text-muted); }
+
+/* ---------- wallet card ---------- */
+.pf-total-balance { color: var(--gold); font-size: 30px; font-weight: 800; font-family: 'Teko', sans-serif; line-height: 1.2; }
 #refreshIcon.spinning { animation: spin 0.7s linear infinite; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.pf-wallet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+.pf-wallet-mini { background: rgba(0,0,0,0.22); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 3px; }
+.pf-wm-label { font-size: 10.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.pf-wm-value { font-size: 15px; font-weight: 800; color: var(--text-main); }
+.pf-wallet-updated { margin-top: 10px; font-size: 11px; color: var(--text-muted); text-align: right; }
 
-/* ---------- Member Center grid (screenshot reference) ---------- */
-.member-center-card {
-  /* ডার্ক মোডে (ডিফল্ট) হালকা গ্লাস-ডার্ক কার্ড */
-  background: var(--bg-card);
-  border: 1px solid var(--border-glass);
-  border-radius: 20px;
-  padding: 18px 14px 22px;
-  margin: 0 -15px 20px -15px;
-  box-shadow: 0 6px 24px rgba(0,0,0,0.25);
-}
-.mc-heading { display: flex; align-items: center; gap: 10px; padding: 0 6px; margin-bottom: 18px; }
-.mc-pill {
-  background: rgba(255,255,255,0.08); color: var(--text-muted); font-size: 12.5px; font-weight: 700;
-  padding: 6px 16px; border-radius: 999px; white-space: nowrap;
-}
+/* ---------- quick actions ---------- */
+.pf-quick-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+.pf-qa { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); color: var(--text-main); text-decoration: none; border-radius: 14px; padding: 12px 4px; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 700; text-align: center; }
+.pf-qa i { font-size: 17px; color: var(--gold); }
+.pf-qa-primary { background: var(--grad-gold); color: #1a1200; border-color: transparent; }
+.pf-qa-primary i { color: #1a1200; }
+
+/* ---------- reward banner ---------- */
+.pf-reward-banner { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+.pf-rb-item { border-radius: 14px; padding: 14px 6px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-decoration: none; font-size: 11px; font-weight: 800; color: #fff; text-align:center; }
+.pf-rb-item i { font-size: 18px; }
+.pf-rb-daily { background: linear-gradient(135deg,#ff6a6a,#e53935); }
+.pf-rb-vip { background: linear-gradient(135deg,#f5d67d,#d97706); color:#3a1e00; }
+.pf-rb-promo { background: linear-gradient(135deg,#5b8def,#3457c9); }
+.pf-rb-spin { background: linear-gradient(135deg,#9b6bff,#6a3fd6); }
+
+/* ---------- security card ---------- */
+.pf-sec-score-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.pf-sec-score-fill { height: 100%; background: linear-gradient(90deg,#e53935,#f59e0b,#3ddc84); border-radius: 10px; transition: width 0.4s; }
+.pf-sec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; }
+.pf-sec-item { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--text-muted); font-weight: 600; }
+.pf-sec-item i { font-size: 13px; color: #f0554d; }
+.pf-sec-item.ok { color: var(--text-main); }
+.pf-sec-item.ok i { color: #3ddc84; }
+
+/* ---------- stats card ---------- */
+.pf-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pf-stat-box { background: rgba(0,0,0,0.22); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 3px; }
+.pf-stat-label { font-size: 10.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.pf-stat-value { font-size: 15px; font-weight: 800; color: var(--text-main); }
+.pf-sparkline { margin-top: 14px; }
+.pf-sparkline-label { font-size: 10.5px; color: var(--text-muted); margin-top: 4px; text-align: center; }
+
+/* ---------- activity ---------- */
+.pf-activity-list { display: flex; flex-direction: column; gap: 2px; }
+.pf-activity-item { display: flex; align-items: center; gap: 10px; padding: 9px 2px; border-bottom: 1px solid var(--border-glass); }
+.pf-activity-item:last-child { border-bottom: none; }
+.pf-activity-icon { width: 32px; height: 32px; border-radius: 50%; background: rgba(245,158,11,0.12); color: var(--gold); display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+.pf-activity-label { flex: 1; font-size: 12.5px; color: var(--text-main); font-weight: 600; }
+.pf-activity-time { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+
+/* ---------- modal ---------- */
+.pf-modal-overlay { display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 999; align-items: flex-end; justify-content: center; }
+.pf-modal-sheet { background: #1c2128; width: 100%; max-width: 480px; border-radius: 22px 22px 0 0; padding: 20px; border: 1px solid rgba(245,158,11,0.25); max-height: 75vh; display: flex; flex-direction: column; }
+.pf-modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; color:var(--text-main); font-size:16px; font-weight:800; }
+.pf-modal-close { color: rgba(255,255,255,0.6); font-size: 20px; cursor: pointer; padding: 0 6px; }
+.pf-avatar-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; overflow-y: auto; padding-bottom: 10px; }
+
+/* ---------- toast ---------- */
+.pf-toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px); background: #1c2128; color: #fff; padding: 10px 20px; border-radius: 30px; font-size: 13px; font-weight: 600; border: 1px solid var(--gold); opacity: 0; transition: all 0.25s; z-index: 999; pointer-events: none; }
+
+/* ---------- menu folders (existing, kept) ---------- */
+.menu-folder { background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border-glass); overflow: hidden; margin-bottom: 8px; }
+.menu-folder summary { list-style: none; cursor: pointer; padding: 16px 18px; font-size: 14px; font-weight: 700; color:var(--text-main); display: flex; align-items: center; justify-content: space-between; }
+.menu-folder summary::-webkit-details-marker { display: none; }
+.menu-folder summary::after { content: '▾'; color: var(--gold); transition: transform 0.2s; margin-left: auto; }
+.menu-folder[open] summary::after { transform: rotate(180deg); }
+.menu-folder-body { padding: 4px 8px 10px 8px; display: flex; flex-direction: column; }
+.menu-folder-body a { display: flex; align-items: center; gap: 12px; padding: 12px 14px; color: var(--text-main); text-decoration: none; font-size: 13px; font-weight: 600; border-radius: 10px; }
+.menu-folder-body a i { width: 20px; text-align: center; color: var(--gold); }
+.menu-folder-body a:active { background: rgba(255,255,255,0.05); }
+.mc-inline-badge { background:#e53935; color:#fff; font-size:10px; font-weight:800; min-width:17px; height:17px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; padding:0 3px; margin-left:6px; }
+
+/* ---------- member center wrapper (existing, kept) ---------- */
+.member-center-card { background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 20px; padding: 18px 14px 22px; margin: 0 -15px 20px -15px; box-shadow: 0 6px 24px rgba(0,0,0,0.25); }
+.mc-heading { display: flex; align-items: center; gap: 10px; padding: 0 6px; margin-bottom: 14px; }
+.mc-pill { background: rgba(255,255,255,0.08); color: var(--text-muted); font-size: 12.5px; font-weight: 700; padding: 6px 16px; border-radius: 999px; white-space: nowrap; }
 .mc-hairline { flex: 1; height: 1px; background: var(--border-glass); }
-
-.mc-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  row-gap: 22px;
-  column-gap: 4px;
-}
-.mc-item {
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  text-decoration: none; text-align: center; padding: 0 2px;
-}
+.mc-logout-row { margin-top: 10px; padding: 0 2px 0 8px; }
+.mc-logout-row .mc-item { display:flex; align-items:center; gap:12px; text-decoration:none; width: fit-content; }
 .mc-icon-wrap { position: relative; }
-.mc-icon {
-  width: 56px; height: 56px; border-radius: 50%;
-  background: rgba(245, 158, 11, 0.14);
-  display: flex; align-items: center; justify-content: center;
-  color: var(--gold); font-size: 22px;
-}
-.mc-badge {
-  position: absolute; top: -4px; right: -4px;
-  background: #e53935; color: #fff; font-size: 11px; font-weight: 800;
-  min-width: 20px; height: 20px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  border: 2px solid var(--bg-surface); padding: 0 3px;
-}
-.mc-label { color: var(--text-main); font-size: 12.5px; font-weight: 600; line-height: 1.3; }
+.mc-icon { width: 40px; height: 40px; border-radius: 50%; background: rgba(245, 158, 11, 0.14); display: flex; align-items: center; justify-content: center; color: var(--gold); font-size: 16px; }
+.mc-label { color: var(--text-main); font-size: 13px; font-weight: 700; }
 
-.mc-logout-row { margin-top: 22px; padding: 0 2px; }
-.mc-logout-row .mc-item { align-items: flex-start; width: fit-content; }
-
-/* লাইট মোডে আগের মতোই — সাদা কার্ড + ক্রিম আইকন লুক */
-body.light-mode .member-center-card {
-  background: #ffffff;
-  border-color: rgba(0,0,0,0.05);
-  box-shadow: 0 6px 24px rgba(0,0,0,0.08);
-}
+/* light mode overrides (kept from original) */
+body.light-mode .member-center-card, body.light-mode .menu-folder, body.light-mode .pf-card, body.light-mode .pf-wallet-mini, body.light-mode .pf-stat-box { background: #ffffff; border-color: rgba(0,0,0,0.05); box-shadow: 0 6px 24px rgba(0,0,0,0.08); }
 body.light-mode .mc-pill { background: #eceef1; color: #4b5563; }
 body.light-mode .mc-hairline { background: #e5e7eb; }
 body.light-mode .mc-icon { background: #fbebd0; color: #b8863a; }
-body.light-mode .mc-badge { border-color: #fff; }
-body.light-mode .mc-label { color: #374151; }
+body.light-mode .mc-label, body.light-mode .menu-folder summary { color: #374151; }
+body.light-mode .pf-qa { background: #f3f4f6; border-color: #e5e7eb; }
+
+@media (min-width: 640px) {
+  .pf-quick-actions, .pf-reward-banner { grid-template-columns: repeat(4, 1fr); }
+  .pf-wallet-grid, .pf-stats-grid, .pf-sec-grid { grid-template-columns: repeat(4, 1fr); }
+}
 </style>
 
 <script>
@@ -318,11 +455,19 @@ function showToast(msg) {
 
 function copyUsername() {
   var name = document.getElementById('usernameText').textContent.trim();
+  copyText(name);
+}
+
+function copyUid() {
+  copyText('<%= 100000 + user.id %>');
+}
+
+function copyText(val) {
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(name).then(function () { showToast('✅ কপি হয়েছে!'); });
+    navigator.clipboard.writeText(val).then(function () { showToast('✅ কপি হয়েছে!'); });
   } else {
     var ta = document.createElement('textarea');
-    ta.value = name;
+    ta.value = val;
     document.body.appendChild(ta);
     ta.select();
     document.execCommand('copy');
@@ -396,6 +541,8 @@ function refreshBalance() {
     .then(function (data) {
       if (data.success) {
         document.getElementById('balanceText').textContent = '৳ ' + Number(data.coins).toLocaleString('<%= lang === "bn" ? "bn-BD" : "en-US" %>');
+        var lu = document.getElementById('lastUpdatedText');
+        if (lu) lu.textContent = 'এখনই';
         showToast('✅ ব্যালেন্স আপডেট হয়েছে');
       } else {
         showToast('❌ আপডেট ব্যর্থ হয়েছে');
