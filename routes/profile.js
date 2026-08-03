@@ -916,6 +916,11 @@ router.get('/app-download', isAuth, (req, res) => {
   res.render('profile/app-download', { user: req.session.user });
 });
 
+// ==================== সাপোর্ট সেন্টার — একটাই এন্ট্রি পয়েন্ট, বিদ্যমান /chat, /notifications, /profile/feedback রিইউজ করে ====================
+router.get('/support', isAuth, (req, res) => {
+  res.render('profile/support', { user: req.session.user });
+});
+
 router.get('/feedback', isAuth, (req, res) => {
   res.render('profile/feedback', { user: req.session.user });
 });

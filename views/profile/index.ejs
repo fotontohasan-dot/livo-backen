@@ -29,9 +29,9 @@
         <div class="pf-username-row">
           <span id="usernameText" class="pf-username"><%= user.username %></span>
           <button onclick="copyUsername()" title="কপি করুন" class="pf-copy-btn"><i class="fas fa-copy"></i></button>
-          <a href="/profile/vip" class="pf-vip-badge">
+          <span class="pf-vip-badge">
             <i class="fas fa-crown"></i><%= (vipStatus && vipStatus.current) ? vipStatus.current.name : 'VIP' %>
-          </a>
+          </span>
         </div>
         <div class="pf-uid-row">
           <span>ID: <%= 100000 + user.id %></span>
@@ -51,7 +51,7 @@
   <div class="pf-card pf-vip-card">
     <div class="pf-card-title-row">
       <div class="pf-card-title"><i class="fas fa-crown" style="color:var(--gold);"></i> VIP <%= vipStatus.current ? vipStatus.current.name : '—' %></div>
-      <a href="/profile/vip" class="pf-mini-btn">VIP বেনিফিট <i class="fas fa-chevron-right" style="font-size:9px;"></i></a>
+      <a href="/profile/vip" class="pf-mini-btn">VIP সেন্টার <i class="fas fa-chevron-right" style="font-size:9px;"></i></a>
     </div>
     <div class="pf-vip-bar-row">
       <div class="pf-vip-bar-track">
@@ -98,36 +98,13 @@
     <div class="pf-wallet-updated">সর্বশেষ আপডেট: <span id="lastUpdatedText">এখনই</span></div>
   </div>
 
-  <!-- ==================== 4. QUICK ACTIONS ==================== -->
-  <div class="pf-quick-actions">
-    <a href="/payment/deposit" class="pf-qa pf-qa-primary"><i class="fas fa-plus-circle"></i><span><%= t.deposit %></span></a>
-    <a href="/payment/withdraw" class="pf-qa"><i class="fas fa-hand-holding-usd"></i><span><%= t.withdraw %></span></a>
-    <a href="/profile/cards" class="pf-qa"><i class="fas fa-credit-card"></i><span><%= t.my_cards %></span></a>
+  <!-- ==================== 4. HUB QUICK ACTIONS — একটাই এন্ট্রি পয়েন্ট প্রতি ফিচারে ==================== -->
+  <div class="pf-quick-actions pf-hub-actions">
+    <a href="/payment/wallet" class="pf-qa pf-qa-primary"><i class="fas fa-wallet"></i><span>ওয়ালেট হাব</span></a>
     <a href="/profile/vip" class="pf-qa"><i class="fas fa-crown"></i><span>VIP সেন্টার</span></a>
-    <a href="/profile/rewards" class="pf-qa"><i class="fas fa-trophy"></i><span>রিওয়ার্ড</span></a>
-    <a href="/payment/wallet" class="pf-qa"><i class="fas fa-clock-rotate-left"></i><span>ওয়ালেট হাব</span></a>
-    <a href="/payment/history" class="pf-qa"><i class="fas fa-receipt"></i><span>লেনদেন</span></a>
-    <a href="/profile/history" class="pf-qa"><i class="fas fa-list-alt"></i><span>বেটিং রেকর্ড</span></a>
-  </div>
-
-  <!-- ==================== 5. REWARD BANNER ==================== -->
-  <div class="pf-reward-banner">
-    <a href="/profile/rewards" class="pf-rb-item pf-rb-daily">
-      <i class="fas fa-gift"></i>
-      <span>ডেইলি বোনাস</span>
-    </a>
-    <a href="/profile/vip" class="pf-rb-item pf-rb-vip">
-      <i class="fas fa-crown"></i>
-      <span>VIP রিওয়ার্ড</span>
-    </a>
-    <a href="/profile/rewards" class="pf-rb-item pf-rb-promo">
-      <i class="fas fa-bullhorn"></i>
-      <span>প্রোমোশন</span>
-    </a>
-    <a href="/profile/wheel" class="pf-rb-item pf-rb-spin">
-      <i class="fas fa-dharmachakra"></i>
-      <span>লাকি স্পিন</span>
-    </a>
+    <a href="/profile/rewards" class="pf-qa"><i class="fas fa-gift"></i><span>রিওয়ার্ড সেন্টার<% if (typeof rewardBadge !== 'undefined' && rewardBadge > 0) { %><span class="pf-qa-badge"><%= rewardBadge %></span><% } %></span></a>
+    <a href="/profile/security" class="pf-qa"><i class="fas fa-user-shield"></i><span>অ্যাকাউন্ট সেন্টার</span></a>
+    <a href="/profile/support" class="pf-qa"><i class="fas fa-headset"></i><span>সাপোর্ট সেন্টার</span></a>
   </div>
 
   <!-- ==================== 6. SECURITY STATUS CARD ==================== -->
@@ -211,15 +188,11 @@
       <span class="mc-hairline"></span>
     </div>
 
-    <details class="menu-folder" open>
-      <summary><i class="fas fa-wallet" style="color:var(--gold); margin-right:8px;"></i>ওয়ালেট</summary>
-      <div class="menu-folder-body">
-        <a href="/payment/deposit"><i class="fas fa-plus-circle"></i>ডিপোজিট</a>
-        <a href="/payment/withdraw"><i class="fas fa-hand-holding-usd"></i>উইথড্র</a>
-        <a href="/profile/cards"><i class="fas fa-credit-card"></i>মাই কার্ডস</a>
-        <a href="/profile/transactions"><i class="fas fa-clock-rotate-left"></i>ট্রানজেকশন হিস্টরি</a>
-      </div>
-    </details>
+    <a href="/payment/wallet" class="menu-folder menu-hub-row">
+      <i class="fas fa-wallet" style="color:var(--gold); margin-right:8px;"></i>
+      <span class="mc-hub-label">ওয়ালেট হাব</span>
+      <i class="fas fa-chevron-right mc-hub-chev"></i>
+    </a>
 
     <details class="menu-folder">
       <summary><i class="fas fa-dice" style="color:var(--gold); margin-right:8px;"></i>বেটিং</summary>
@@ -231,37 +204,30 @@
       </div>
     </details>
 
-    <details class="menu-folder">
-      <summary><i class="fas fa-trophy" style="color:var(--gold); margin-right:8px;"></i>রিওয়ার্ড
-        <% if (typeof rewardBadge !== 'undefined' && rewardBadge > 0 || typeof missionBadge !== 'undefined' && missionBadge > 0) { %><span class="mc-inline-badge"><%= (rewardBadge||0) + (missionBadge||0) %></span><% } %>
-      </summary>
-      <div class="menu-folder-body">
-        <a href="/profile/rewards"><i class="fas fa-gift"></i>রিওয়ার্ড সেন্টার <% if (typeof rewardBadge !== 'undefined' && rewardBadge > 0) { %><span class="mc-inline-badge"><%= rewardBadge %></span><% } %></a>
-        <a href="/profile/missions"><i class="fas fa-bullseye"></i>মিশন <% if (typeof missionBadge !== 'undefined' && missionBadge > 0) { %><span class="mc-inline-badge"><%= missionBadge %></span><% } %></a>
-        <a href="/profile/vip"><i class="fas fa-crown"></i>VIP সেন্টার</a>
-        <a href="/profile/rewards"><i class="fas fa-calendar-day"></i>ডেইলি বোনাস</a>
-      </div>
-    </details>
+    <a href="/profile/vip" class="menu-folder menu-hub-row">
+      <i class="fas fa-crown" style="color:var(--gold); margin-right:8px;"></i>
+      <span class="mc-hub-label">VIP সেন্টার</span>
+      <i class="fas fa-chevron-right mc-hub-chev"></i>
+    </a>
 
-    <details class="menu-folder">
-      <summary><i class="fas fa-user" style="color:var(--gold); margin-right:8px;"></i>অ্যাকাউন্ট</summary>
-      <div class="menu-folder-body">
-        <a href="/profile/security"><i class="fas fa-id-card"></i>মাই প্রোফাইল</a>
-        <a href="/profile/security"><i class="fas fa-shield-halved"></i>সিকিউরিটি সেন্টার</a>
-        <a href="/profile/security"><i class="fas fa-file-shield"></i>KYC</a>
-        <a href="/profile/security"><i class="fas fa-mobile-screen"></i>ট্রাস্টেড ডিভাইস</a>
-      </div>
-    </details>
+    <a href="/profile/rewards" class="menu-folder menu-hub-row">
+      <i class="fas fa-gift" style="color:var(--gold); margin-right:8px;"></i>
+      <span class="mc-hub-label">রিওয়ার্ড সেন্টার</span>
+      <% if ((typeof rewardBadge !== 'undefined' && rewardBadge > 0) || (typeof missionBadge !== 'undefined' && missionBadge > 0)) { %><span class="mc-inline-badge"><%= (rewardBadge||0) + (missionBadge||0) %></span><% } %>
+      <i class="fas fa-chevron-right mc-hub-chev"></i>
+    </a>
 
-    <details class="menu-folder">
-      <summary><i class="fas fa-headset" style="color:var(--gold); margin-right:8px;"></i>সাপোর্ট</summary>
-      <div class="menu-folder-body">
-        <a href="/chat"><i class="fas fa-circle-question"></i>হেল্প সেন্টার</a>
-        <a href="/chat"><i class="fas fa-headset"></i>কাস্টমার সার্ভিস</a>
-        <a href="/notifications"><i class="fas fa-at"></i>ইন্টারনাল মেসেজ</a>
-        <a href="/profile/feedback"><i class="fas fa-comment-dots"></i>সাজেশন</a>
-      </div>
-    </details>
+    <a href="/profile/security" class="menu-folder menu-hub-row">
+      <i class="fas fa-user-shield" style="color:var(--gold); margin-right:8px;"></i>
+      <span class="mc-hub-label">অ্যাকাউন্ট সেন্টার</span>
+      <i class="fas fa-chevron-right mc-hub-chev"></i>
+    </a>
+
+    <a href="/profile/support" class="menu-folder menu-hub-row">
+      <i class="fas fa-headset" style="color:var(--gold); margin-right:8px;"></i>
+      <span class="mc-hub-label">সাপোর্ট সেন্টার</span>
+      <i class="fas fa-chevron-right mc-hub-chev"></i>
+    </a>
 
     <div class="mc-logout-row">
       <a href="/logout" class="mc-item">
@@ -355,19 +321,17 @@
 
 /* ---------- quick actions ---------- */
 .pf-quick-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
-.pf-qa { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); color: var(--text-main); text-decoration: none; border-radius: 14px; padding: 12px 4px; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 700; text-align: center; }
+.pf-hub-actions { grid-template-columns: repeat(3, 1fr); }
+.pf-qa { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); color: var(--text-main); text-decoration: none; border-radius: 14px; padding: 12px 4px; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 700; text-align: center; position: relative; }
 .pf-qa i { font-size: 17px; color: var(--gold); }
 .pf-qa-primary { background: var(--grad-gold); color: #1a1200; border-color: transparent; }
 .pf-qa-primary i { color: #1a1200; }
+.pf-qa-badge { display: inline-flex; align-items: center; justify-content: center; background: #e53935; color: #fff; font-size: 9px; font-weight: 800; min-width: 15px; height: 15px; border-radius: 50%; margin-left: 3px; padding: 0 3px; vertical-align: top; }
 
-/* ---------- reward banner ---------- */
-.pf-reward-banner { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
-.pf-rb-item { border-radius: 14px; padding: 14px 6px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-decoration: none; font-size: 11px; font-weight: 800; color: #fff; text-align:center; }
-.pf-rb-item i { font-size: 18px; }
-.pf-rb-daily { background: linear-gradient(135deg,#ff6a6a,#e53935); }
-.pf-rb-vip { background: linear-gradient(135deg,#f5d67d,#d97706); color:#3a1e00; }
-.pf-rb-promo { background: linear-gradient(135deg,#5b8def,#3457c9); }
-.pf-rb-spin { background: linear-gradient(135deg,#9b6bff,#6a3fd6); }
+/* single-entry hub rows in the menu (Wallet Hub / VIP Center / Reward Center / Account Center / Support Center) */
+.menu-hub-row { display: flex; align-items: center; text-decoration: none; padding: 16px 18px; }
+.mc-hub-label { color: var(--text-main); font-size: 14px; font-weight: 700; flex: 1; }
+.mc-hub-chev { color: var(--text-muted); font-size: 12px; }
 
 /* ---------- security card ---------- */
 .pf-sec-score-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
@@ -436,7 +400,8 @@ body.light-mode .mc-label, body.light-mode .menu-folder summary { color: #374151
 body.light-mode .pf-qa { background: #f3f4f6; border-color: #e5e7eb; }
 
 @media (min-width: 640px) {
-  .pf-quick-actions, .pf-reward-banner { grid-template-columns: repeat(4, 1fr); }
+  .pf-quick-actions { grid-template-columns: repeat(4, 1fr); }
+  .pf-hub-actions { grid-template-columns: repeat(5, 1fr); }
   .pf-wallet-grid, .pf-stats-grid, .pf-sec-grid { grid-template-columns: repeat(4, 1fr); }
 }
 </style>

@@ -1,0 +1,70 @@
+<%- include('../partials/head') %>
+
+<div class="container sh-wrap">
+  <%- include('../partials/flash') %>
+
+  <div class="sh-topbar">
+    <a href="/profile" class="sh-back"><i class="fas fa-arrow-left"></i></a>
+    <span class="sh-title">সাপোর্ট সেন্টার</span>
+    <span style="width:40px;"></span>
+  </div>
+
+  <div class="sh-card">
+    <div class="sh-link-list">
+      <a href="/chat" class="sh-link-item">
+        <span class="sh-link-icon"><i class="fas fa-headset"></i></span>
+        <span class="sh-link-mid"><span class="sh-link-title">কাস্টমার সার্ভিস</span><span class="sh-link-sub">লাইভ চ্যাট সাপোর্ট</span></span>
+        <i class="fas fa-chevron-right sh-chev"></i>
+      </a>
+      <a href="/chat" class="sh-link-item">
+        <span class="sh-link-icon"><i class="fas fa-circle-question"></i></span>
+        <span class="sh-link-mid"><span class="sh-link-title">হেল্প সেন্টার</span><span class="sh-link-sub">সাহায্য ও গাইড</span></span>
+        <i class="fas fa-chevron-right sh-chev"></i>
+      </a>
+      <a href="/notifications" class="sh-link-item">
+        <span class="sh-link-icon"><i class="fas fa-envelope"></i></span>
+        <span class="sh-link-mid"><span class="sh-link-title">ইন্টারনাল মেসেজ</span><span class="sh-link-sub">আপনার নোটিফিকেশন ও বার্তা</span></span>
+        <i class="fas fa-chevron-right sh-chev"></i>
+      </a>
+      <a href="/profile/feedback" class="sh-link-item">
+        <span class="sh-link-icon"><i class="fas fa-comment-dots"></i></span>
+        <span class="sh-link-mid"><span class="sh-link-title">সাজেশন</span><span class="sh-link-sub">মতামত বা পরামর্শ দিন</span></span>
+        <i class="fas fa-chevron-right sh-chev"></i>
+      </a>
+    </div>
+  </div>
+
+  <div class="sh-card">
+    <div class="sh-card-title"><i class="fas fa-circle-info" style="color:var(--gold);"></i> সচরাচর জিজ্ঞাসা (FAQ)</div>
+    <details class="sh-faq"><summary>টাকা জমা দিতে কতক্ষণ লাগে?</summary><div class="sh-faq-body">সাধারণত ডিপোজিট মিনিটের মধ্যেই কনফার্ম হয়ে যায়। সমস্যা হলে কাস্টমার সার্ভিসে যোগাযোগ করুন।</div></details>
+    <details class="sh-faq"><summary>উইথড্র করতে কী লাগে?</summary><div class="sh-faq-body">ইমেইল ভেরিফিকেশন এবং উইথড্র PIN সেট থাকা প্রয়োজন। বিস্তারিত অ্যাকাউন্ট সেন্টারে দেখুন।</div></details>
+    <details class="sh-faq"><summary>KYC কেন প্রয়োজন?</summary><div class="sh-faq-body">নিরাপদ লেনদেন ও অ্যাকাউন্ট সুরক্ষার জন্য KYC ভেরিফিকেশন প্রয়োজন হতে পারে।</div></details>
+  </div>
+</div>
+
+<style>
+.sh-wrap { padding: 15px; padding-bottom: 100px; }
+.sh-topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.sh-back { color: var(--text-main); text-decoration: none; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.sh-title { color: var(--text-main); font-size: 17px; font-weight: 800; }
+.sh-card { background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 18px; padding: 12px 16px; margin-bottom: 14px; box-shadow: 0 6px 20px rgba(0,0,0,0.18); }
+.sh-card-title { color: var(--text-main); font-size: 14.5px; font-weight: 800; display: flex; align-items: center; gap: 8px; padding: 6px 2px 12px; }
+.sh-link-list { display: flex; flex-direction: column; }
+.sh-link-item { display: flex; align-items: center; gap: 12px; padding: 13px 4px; text-decoration: none; border-bottom: 1px solid var(--border-glass); }
+.sh-link-item:last-child { border-bottom: none; }
+.sh-link-icon { width: 38px; height: 38px; border-radius: 50%; background: rgba(245,158,11,0.12); color: var(--gold); display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+.sh-link-mid { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.sh-link-title { font-size: 13.5px; font-weight: 700; color: var(--text-main); }
+.sh-link-sub { font-size: 11px; color: var(--text-muted); }
+.sh-chev { font-size: 11px; color: var(--text-muted); }
+.sh-faq { border-bottom: 1px solid var(--border-glass); padding: 10px 2px; }
+.sh-faq:last-child { border-bottom: none; }
+.sh-faq summary { list-style: none; cursor: pointer; font-size: 13px; font-weight: 700; color: var(--text-main); }
+.sh-faq summary::-webkit-details-marker { display: none; }
+.sh-faq-body { font-size: 12.5px; color: var(--text-muted); margin-top: 8px; line-height: 1.6; }
+body.light-mode .sh-card { background: #ffffff; border-color: rgba(0,0,0,0.05); }
+body.light-mode .sh-link-title, body.light-mode .sh-card-title { color: #374151; }
+</style>
+
+<%- include('../partials/navbar') %>
+<%- include('../partials/bottom-nav') %>
