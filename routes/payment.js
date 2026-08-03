@@ -15,6 +15,7 @@ const { checkIp } = require('../services/vpnDetection');
 const { requireVerifiedEmail, requireAdmin } = require('../middleware/auth');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
 const queue = require('../services/queue');
+const cache = require('../services/cache');
 
 const paymentLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -152,6 +153,66 @@ const DEPOSIT_NUMBERS = [
   '01620992072'
 ];
 let depositRotation = 0;
+
+// ==================== WALLET HUB — একটাই পেজে ডিপোজিট/উইথড্র/কার্ড/হিস্টরির প্রিমিয়াম ওভারভিউ ====================
+// বিদ্যমান /deposit, /withdraw, /profile/cards, /history পেজগুলোই এখানে quick-action হিসেবে লিংক করা,
+// কোনো ফর্ম/বিজনেস লজিক ডুপ্লিকেট করা হয়নি — শুধু বিদ্যমান টেবিল থেকে read-only সামারি।
+router.get('/wallet', requireLogin, async (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const userRes = await pool.query('SELECT coins FROM users WHERE id=$1', [userId]);
+    const coins = Number(userRes.rows[0]?.coins || 0);
+
+    const recentTx = await pool.query(
+      `SELECT id, type, amount, method, status, transaction_id, created_at
+       FROM payment_requests WHERE user_id=$1 ORDER BY created_at DESC LIMIT 10`,
+      [userId]
+    );
+
+    const walletStats = await cache.getOrSet(`wallet:stats:${userId}`, 60, async () => {
+      const allTime = await pool.query(
+        `SELECT
+           COALESCE(SUM(CASE WHEN type='deposit' AND status='approved' THEN amount ELSE 0 END),0) AS total_deposit,
+           COALESCE(SUM(CASE WHEN type='withdraw' AND status='approved' THEN amount ELSE 0 END),0) AS total_withdraw
+         FROM payment_requests WHERE user_id=$1`,
+        [userId]
+      );
+      const last30 = await pool.query(
+        `SELECT
+           COALESCE(SUM(CASE WHEN type='deposit' AND status='approved' THEN amount ELSE 0 END),0) AS deposit_30d,
+           COALESCE(SUM(CASE WHEN type='withdraw' AND status='approved' THEN amount ELSE 0 END),0) AS withdraw_30d,
+           COUNT(*) FILTER (WHERE status='pending') AS pending_count
+         FROM payment_requests WHERE user_id=$1 AND created_at >= NOW() - INTERVAL '30 days'`,
+        [userId]
+      );
+      return {
+        totalDeposit: Number(allTime.rows[0].total_deposit),
+        totalWithdraw: Number(allTime.rows[0].total_withdraw),
+        deposit30d: Number(last30.rows[0].deposit_30d),
+        withdraw30d: Number(last30.rows[0].withdraw_30d),
+        pendingCount: Number(last30.rows[0].pending_count)
+      };
+    });
+
+    let cardCount = 0;
+    try {
+      const cardRes = await pool.query('SELECT COUNT(*) FROM bank_cards WHERE user_id=$1', [userId]);
+      cardCount = Number(cardRes.rows[0].count);
+    } catch (e) {}
+
+    res.render('payment/wallet', {
+      user: req.session.user,
+      coins,
+      recentTx: recentTx.rows,
+      walletStats,
+      cardCount
+    });
+  } catch (err) {
+    console.error('wallet hub error:', err.message);
+    req.flash('error', 'ওয়ালেট লোড করতে সমস্যা হয়েছে।');
+    res.redirect('/profile');
+  }
+});
 
 router.get('/deposit', requireLogin, (req, res) => {
   const current = DEPOSIT_NUMBERS[depositRotation % DEPOSIT_NUMBERS.length];

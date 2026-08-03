@@ -1,0 +1,218 @@
+<%- include('../partials/head') %>
+
+<div class="container wh-wrap">
+  <%- include('../partials/flash') %>
+
+  <div class="wh-topbar">
+    <a href="/profile" class="wh-back"><i class="fas fa-arrow-left"></i></a>
+    <span class="wh-title">ওয়ালেট হাব</span>
+    <span style="width:40px;"></span>
+  </div>
+
+  <!-- ==================== WALLET SUMMARY CARD ==================== -->
+  <div class="wh-card wh-summary-card">
+    <div class="wh-card-title-row">
+      <div class="wh-card-title"><i class="fas fa-wallet" style="color:var(--gold);"></i> ওয়ালেট সামারি</div>
+      <button onclick="refreshWalletBalance()" id="whRefreshBtn" title="রিফ্রেশ" class="wh-icon-btn"><i class="fas fa-sync-alt" id="whRefreshIcon"></i></button>
+    </div>
+    <div id="whBalanceText" class="wh-total-balance">৳ <%= Number(coins).toLocaleString('bn-BD') %></div>
+
+    <div class="wh-grid-4">
+      <div class="wh-mini">
+        <span class="wh-mini-label">মেইন ব্যালেন্স</span>
+        <span class="wh-mini-value">৳ <%= Number(coins).toLocaleString('bn-BD') %></span>
+      </div>
+      <div class="wh-mini">
+        <span class="wh-mini-label">বোনাস ব্যালেন্স</span>
+        <span class="wh-mini-value">৳ 0</span>
+      </div>
+      <div class="wh-mini">
+        <span class="wh-mini-label">লকড বোনাস</span>
+        <span class="wh-mini-value">৳ 0</span>
+      </div>
+      <div class="wh-mini">
+        <span class="wh-mini-label">উইথড্র-যোগ্য</span>
+        <span class="wh-mini-value">৳ <%= Number(coins).toLocaleString('bn-BD') %></span>
+      </div>
+    </div>
+    <div class="wh-updated">সর্বশেষ আপডেট: <span id="whUpdatedText">এখনই</span></div>
+  </div>
+
+  <!-- ==================== QUICK ACTIONS ==================== -->
+  <div class="wh-quick-actions">
+    <a href="/payment/deposit" class="wh-qa wh-qa-primary"><i class="fas fa-plus-circle"></i><span>ডিপোজিট</span></a>
+    <a href="/payment/withdraw" class="wh-qa"><i class="fas fa-hand-holding-usd"></i><span>উইথড্র</span></a>
+    <a href="/profile/cards" class="wh-qa"><i class="fas fa-credit-card"></i><span>মাই কার্ডস<% if (cardCount > 0) { %> (<%= cardCount %>)<% } %></span></a>
+    <a href="/payment/history" class="wh-qa"><i class="fas fa-clock-rotate-left"></i><span>ট্রানজেকশন হিস্টরি</span></a>
+  </div>
+
+  <!-- ==================== MERGED WALLET PAGES ==================== -->
+  <div class="wh-card">
+    <div class="wh-card-title-row">
+      <div class="wh-card-title"><i class="fas fa-layer-group" style="color:var(--gold);"></i> সব ওয়ালেট পেজ</div>
+    </div>
+    <div class="wh-link-list">
+      <a href="/payment/deposit" class="wh-link-item"><i class="fas fa-plus-circle"></i><span>ডিপোজিট</span><i class="fas fa-chevron-right wh-chev"></i></a>
+      <a href="/payment/withdraw" class="wh-link-item"><i class="fas fa-hand-holding-usd"></i><span>উইথড্র</span><i class="fas fa-chevron-right wh-chev"></i></a>
+      <a href="/profile/cards" class="wh-link-item"><i class="fas fa-credit-card"></i><span>ব্যাংক কার্ডস</span><i class="fas fa-chevron-right wh-chev"></i></a>
+      <a href="/payment/history" class="wh-link-item"><i class="fas fa-receipt"></i><span>ট্রানজেকশন হিস্টরি</span><i class="fas fa-chevron-right wh-chev"></i></a>
+      <a href="/payment/history?type=deposit" class="wh-link-item"><i class="fas fa-file-arrow-up"></i><span>ডিপোজিট হিস্টরি</span><i class="fas fa-chevron-right wh-chev"></i></a>
+      <a href="/payment/history?type=withdraw" class="wh-link-item"><i class="fas fa-file-arrow-down"></i><span>উইথড্র হিস্টরি</span><i class="fas fa-chevron-right wh-chev"></i></a>
+    </div>
+  </div>
+
+  <!-- ==================== WALLET STATISTICS ==================== -->
+  <div class="wh-card">
+    <div class="wh-card-title-row">
+      <div class="wh-card-title"><i class="fas fa-chart-pie" style="color:var(--gold);"></i> ওয়ালেট পরিসংখ্যান</div>
+    </div>
+    <div class="wh-grid-3">
+      <div class="wh-stat-box">
+        <span class="wh-stat-label">মোট ডিপোজিট</span>
+        <span class="wh-stat-value">৳ <%= Number(walletStats.totalDeposit).toLocaleString('bn-BD') %></span>
+      </div>
+      <div class="wh-stat-box">
+        <span class="wh-stat-label">মোট উইথড্র</span>
+        <span class="wh-stat-value">৳ <%= Number(walletStats.totalWithdraw).toLocaleString('bn-BD') %></span>
+      </div>
+      <div class="wh-stat-box">
+        <span class="wh-stat-label">বর্তমান ব্যালেন্স</span>
+        <span class="wh-stat-value">৳ <%= Number(coins).toLocaleString('bn-BD') %></span>
+      </div>
+    </div>
+    <div class="wh-30d-row">
+      <div class="wh-30d-title">গত ৩০ দিন</div>
+      <div class="wh-30d-grid">
+        <div><span class="wh-mini-label">ডিপোজিট</span><span class="wh-mini-value">৳ <%= Number(walletStats.deposit30d).toLocaleString('bn-BD') %></span></div>
+        <div><span class="wh-mini-label">উইথড্র</span><span class="wh-mini-value">৳ <%= Number(walletStats.withdraw30d).toLocaleString('bn-BD') %></span></div>
+        <div><span class="wh-mini-label">পেন্ডিং</span><span class="wh-mini-value"><%= walletStats.pendingCount %></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== RECENT TRANSACTIONS ==================== -->
+  <div class="wh-card">
+    <div class="wh-card-title-row">
+      <div class="wh-card-title"><i class="fas fa-list-ul" style="color:var(--gold);"></i> সাম্প্রতিক লেনদেন</div>
+      <a href="/payment/history" class="wh-mini-btn">সব দেখুন <i class="fas fa-chevron-right" style="font-size:9px;"></i></a>
+    </div>
+    <% if (recentTx && recentTx.length > 0) { %>
+    <div class="wh-tx-list">
+      <% recentTx.forEach(function(tx) {
+        var badgeClass = tx.status === 'approved' ? 'ok' : tx.status === 'rejected' ? 'bad' : 'pending';
+        var badgeText = tx.status === 'approved' ? 'Completed' : tx.status === 'rejected' ? 'Failed' : 'Pending';
+        var typeIcon = tx.type === 'deposit' ? 'fa-plus-circle' : 'fa-hand-holding-usd';
+      %>
+      <a href="/payment/history?type=<%= tx.type %>" class="wh-tx-item">
+        <span class="wh-tx-icon"><i class="fas <%= typeIcon %>"></i></span>
+        <span class="wh-tx-mid">
+          <span class="wh-tx-type"><%= tx.type === 'deposit' ? 'ডিপোজিট' : 'উইথড্র' %> <span class="wh-tx-method"><%= tx.method || '' %></span></span>
+          <span class="wh-tx-date"><%= new Date(tx.created_at).toLocaleDateString('bn-BD', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) %></span>
+        </span>
+        <span class="wh-tx-right">
+          <span class="wh-tx-amount">৳ <%= Number(tx.amount).toLocaleString('bn-BD') %></span>
+          <span class="wh-badge <%= badgeClass %>"><%= badgeText %></span>
+        </span>
+      </a>
+      <% }); %>
+    </div>
+    <% } else { %>
+    <div class="wh-empty">এখনো কোনো লেনদেন নেই।</div>
+    <% } %>
+  </div>
+
+</div>
+
+<style>
+.wh-wrap { padding: 15px; padding-bottom: 100px; }
+.wh-topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.wh-back { color: var(--text-main); text-decoration: none; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.wh-title { color: var(--text-main); font-size: 17px; font-weight: 800; }
+
+.wh-card { background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 18px; padding: 16px; margin-bottom: 14px; box-shadow: 0 6px 20px rgba(0,0,0,0.18); }
+.wh-card-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 10px; }
+.wh-card-title { color: var(--text-main); font-size: 14.5px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+.wh-mini-btn { color: var(--gold); font-size: 11.5px; font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.wh-icon-btn { background: rgba(245,158,11,0.12); border: none; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--gold); font-size: 12px; }
+
+.wh-summary-card { background: linear-gradient(135deg, #2d3446, #454e64); border: 1px solid rgba(245, 158, 11, 0.25); }
+.wh-total-balance { color: var(--gold); font-size: 32px; font-weight: 800; font-family: 'Teko', sans-serif; line-height: 1.2; }
+#whRefreshIcon.spinning { animation: whspin 0.7s linear infinite; }
+@keyframes whspin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.wh-grid-4 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+.wh-grid-3 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.wh-mini, .wh-stat-box { background: rgba(0,0,0,0.22); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 3px; }
+.wh-mini-label, .wh-stat-label { font-size: 10.5px; color: rgba(255,255,255,0.55); text-transform: uppercase; letter-spacing: 0.5px; }
+.wh-mini-value, .wh-stat-value { font-size: 15px; font-weight: 800; color: var(--text-main); }
+.wh-summary-card .wh-mini-label { color: rgba(255,255,255,0.55); }
+.wh-summary-card .wh-mini-value { color: #fff; }
+.wh-updated { margin-top: 10px; font-size: 11px; color: rgba(255,255,255,0.5); text-align: right; }
+
+.wh-quick-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+.wh-qa { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); color: var(--text-main); text-decoration: none; border-radius: 14px; padding: 12px 4px; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 700; text-align: center; }
+.wh-qa i { font-size: 17px; color: var(--gold); }
+.wh-qa-primary { background: var(--grad-gold); color: #1a1200; border-color: transparent; }
+.wh-qa-primary i { color: #1a1200; }
+
+.wh-link-list { display: flex; flex-direction: column; }
+.wh-link-item { display: flex; align-items: center; gap: 12px; padding: 13px 6px; color: var(--text-main); text-decoration: none; font-size: 13.5px; font-weight: 700; border-bottom: 1px solid var(--border-glass); }
+.wh-link-item:last-child { border-bottom: none; }
+.wh-link-item i:first-child { width: 20px; text-align: center; color: var(--gold); font-size: 15px; }
+.wh-link-item span { flex: 1; }
+.wh-chev { font-size: 11px; color: var(--text-muted); }
+
+.wh-30d-row { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-glass); }
+.wh-30d-title { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; }
+.wh-30d-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.wh-30d-grid > div { display: flex; flex-direction: column; gap: 2px; }
+
+.wh-tx-list { display: flex; flex-direction: column; }
+.wh-tx-item { display: flex; align-items: center; gap: 10px; padding: 10px 2px; border-bottom: 1px solid var(--border-glass); text-decoration: none; }
+.wh-tx-item:last-child { border-bottom: none; }
+.wh-tx-icon { width: 34px; height: 34px; border-radius: 50%; background: rgba(245,158,11,0.12); color: var(--gold); display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+.wh-tx-mid { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.wh-tx-type { font-size: 12.5px; font-weight: 700; color: var(--text-main); }
+.wh-tx-method { font-size: 10.5px; color: var(--text-muted); font-weight: 500; margin-left: 4px; }
+.wh-tx-date { font-size: 11px; color: var(--text-muted); }
+.wh-tx-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.wh-tx-amount { font-size: 13px; font-weight: 800; color: var(--text-main); }
+.wh-badge { font-size: 10px; font-weight: 800; padding: 2px 9px; border-radius: 20px; }
+.wh-badge.ok { background: rgba(61,220,132,0.15); color: #3ddc84; }
+.wh-badge.pending { background: rgba(245,158,11,0.15); color: #f59e0b; }
+.wh-badge.bad { background: rgba(240,85,77,0.15); color: #f0554d; }
+.wh-empty { text-align: center; color: var(--text-muted); font-size: 13px; padding: 20px 0; }
+
+body.light-mode .wh-card:not(.wh-summary-card) { background: #ffffff; border-color: rgba(0,0,0,0.05); box-shadow: 0 6px 24px rgba(0,0,0,0.08); }
+body.light-mode .wh-mini:not(.wh-summary-card .wh-mini), body.light-mode .wh-stat-box { background: #f3f4f6; }
+body.light-mode .wh-qa { background: #f3f4f6; border-color: #e5e7eb; }
+body.light-mode .wh-link-item, body.light-mode .wh-tx-type, body.light-mode .wh-tx-amount { color: #374151; }
+
+@media (min-width: 640px) {
+  .wh-grid-4, .wh-grid-3 { grid-template-columns: repeat(4, 1fr); }
+}
+</style>
+
+<script>
+function refreshWalletBalance() {
+  var icon = document.getElementById('whRefreshIcon');
+  icon.classList.add('spinning');
+  fetch('/profile/api/balance')
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.success) {
+        var formatted = '৳ ' + Number(data.coins).toLocaleString('bn-BD');
+        document.getElementById('whBalanceText').textContent = formatted;
+        document.querySelectorAll('.wh-summary-card .wh-mini-value')[0].textContent = formatted;
+        document.querySelectorAll('.wh-summary-card .wh-mini-value')[3].textContent = formatted;
+        document.getElementById('whUpdatedText').textContent = 'এখনই';
+      }
+    })
+    .catch(function () {})
+    .finally(function () {
+      setTimeout(function () { icon.classList.remove('spinning'); }, 400);
+    });
+}
+</script>
+
+<%- include('../partials/navbar') %>
+<%- include('../partials/bottom-nav') %>
