@@ -20,7 +20,7 @@ const { getLeaderboard, getPastContests } = require('../services/contest');
 const { getRewardStatus, claimRedPacket, claimGoldenEgg } = require('../services/redpacket');
 const { checkContent } = require('../utils/contentFilter');
 const { isWeakPin, createPin, updatePin, verifyPin, getPinStatus } = require('../services/withdrawPin');
-const { listActiveSessions, listLoginHistory, revokeDeviceSession, revokeAllOtherSessions, getUserDeviceOverview } = require('../services/deviceTracking');
+const { listActiveSessions, listLoginHistory, revokeDeviceSession, revokeAllOtherSessions, getUserDeviceOverview, lookupLocation } = require('../services/deviceTracking');
 const { logAdminAction } = require('../services/fraudDetection');
 const cache = require('../services/cache');
 const { createLimiter } = require('../middleware/rateLimitFactory');
@@ -53,7 +53,7 @@ function isValidBankField(v) { return typeof v === 'string' && BANK_FIELD_RE.tes
 
 router.get('/', isAuth, async (req, res) => {
   try {
-    const user = await pool.query(`SELECT id, username, email, phone, coins, demo_balance, role, avatar, kyc_status, total_points, total_turnover, vip_level, email_verified, totp_enabled, referred_by_id, referral_code, last_login, last_ip, created_at, password FROM users WHERE id=$1`, [req.session.user.id]);
+    const user = await pool.query(`SELECT id, username, email, phone, coins, demo_balance, role, avatar, kyc_status, total_points, total_turnover, vip_level, email_verified, totp_enabled, is_banned, referred_by_id, referral_code, last_login, last_ip, created_at, password FROM users WHERE id=$1`, [req.session.user.id]);
 
     // প্রোফাইলের কয়েন ব্যালেন্স সবসময় সরাসরি DB থেকে (উপরে) নেওয়া হচ্ছে — এটা কখনো ক্যাশ করা হয় না।
     // নিচের প্রেডিকশন/টুর্নামেন্ট/স্ট্যাটস তুলনামূলক কম-সংবেদনশীল ও ভারী জয়েন কোয়েরি, তাই ১৫ সেকেন্ড ক্যাশ করা হয়েছে।
@@ -126,7 +126,8 @@ router.get('/', isAuth, async (req, res) => {
       let pinConfigured = false;
       try { pinConfigured = !!(await getPinStatus(req.session.user.id)).configured; } catch (e) {}
       let trustedDevices = 0;
-      try { trustedDevices = (await getUserDeviceOverview(req.session.user.id, 5)).activeSessions.length; } catch (e) {}
+      let deviceOverview = { recentLogins: [], activeSessions: [] };
+      try { deviceOverview = await getUserDeviceOverview(req.session.user.id, 5); trustedDevices = deviceOverview.activeSessions.length; } catch (e) {}
 
       security.emailVerified = !!u.email_verified;
       security.phoneAdded = !!u.phone;
@@ -139,8 +140,59 @@ router.get('/', isAuth, async (req, res) => {
       security.score = Math.round((checks.filter(Boolean).length / checks.length) * 100);
     } catch (e) { console.error('security status error:', e.message); }
 
+    // সিকিউরিটি তথ্য কার্ড — শেষ লগইন, বর্তমান/আগের ডিভাইস, লগইন IP, অ্যাকাউন্ট স্ট্যাটাস
+    let securityInfo = { lastLoginTime: null, currentDevice: null, lastDevice: null, loginIp: null, accountStatus: 'active' };
+    try {
+      const u = user.rows[0];
+      const overview = await getUserDeviceOverview(req.session.user.id, 3);
+      const sessions = overview.activeSessions || [];
+      const logins = overview.recentLogins || [];
+      const current = sessions.find(s => s.is_current) || sessions[0] || null;
+      const last = logins[0] || null;
+      securityInfo = {
+        lastLoginTime: u.last_login || (last ? last.created_at : null),
+        currentDevice: current ? [current.os, current.browser].filter(Boolean).join(' · ') || current.device_name : null,
+        lastDevice: last ? [last.os, last.browser].filter(Boolean).join(' · ') : null,
+        loginIp: u.last_ip || (last ? last.ip : null),
+        loginLocation: lookupLocation(u.last_ip || (last ? last.ip : null)),
+        accountStatus: u.is_banned ? 'banned' : 'active'
+      };
+    } catch (e) { console.error('security info error:', e.message); }
+
+    // নোটিফিকেশন সেন্টার প্রিভিউ — বিদ্যমান notifications টেবিল, "read" মার্ক করে না (শুধু প্রিভিউ)
+    let notifPreview = { latest: [], unreadCount: 0 };
+    try {
+      notifPreview = await cache.getOrSet(`profile:notif_preview:${req.session.user.id}`, 20, async () => {
+        const latestRes = await pool.query(
+          `SELECT id, title, message, type, is_read, created_at FROM notifications WHERE user_id=$1 ORDER BY created_at DESC LIMIT 4`,
+          [req.session.user.id]
+        );
+        const countRes = await pool.query(
+          `SELECT COUNT(*) FROM notifications WHERE user_id=$1 AND is_read=false`,
+          [req.session.user.id]
+        );
+        return { latest: latestRes.rows, unreadCount: Number(countRes.rows[0].count) };
+      });
+    } catch (e) { console.error('notif preview error:', e.message); }
+
+    // অ্যাচিভমেন্ট/ব্যাজ প্রিভিউ — বিদ্যমান getBadges() রিইউজ
+    let badgesPreview = { earned: [], earnedCount: 0, totalCount: 0 };
+    try {
+      const all = await getBadges(req.session.user.id);
+      const earned = all.filter(b => b.earned).sort((a, b) => new Date(b.earnedAt) - new Date(a.earnedAt)).slice(0, 6);
+      badgesPreview = { earned, earnedCount: all.filter(b => b.earned).length, totalCount: all.length };
+    } catch (e) { console.error('badges preview error:', e.message); }
+
+    // প্রোফাইল কমপ্লিশন শতাংশ — অ্যাভাটার + ভেরিফিকেশন চেকলিস্ট
+    let profileCompletion = 0;
+    try {
+      const u = user.rows[0];
+      const items = [!!u.avatar, !!u.email_verified, !!u.phone, u.kyc_status === 'approved', security.pinConfigured, security.twoFactor];
+      profileCompletion = Math.round((items.filter(Boolean).length / items.length) * 100);
+    } catch (e) { console.error('profile completion error:', e.message); }
+
     // গত ৩০ দিনের স্ট্যাটিস্টিক্স (ডিপোজিট/উইথড্র/বাজি) — ১৫ মিনিট ক্যাশ, হালকা কোয়েরি
-    let stats30 = { deposit: 0, withdraw: 0, profitLoss: 0, totalBets: 0, chart: [] };
+    let stats30 = { deposit: 0, withdraw: 0, profitLoss: 0, totalBets: 0, totalBonus: 0, chart: [] };
     try {
       stats30 = await cache.getOrSet(`profile:stats30:${req.session.user.id}`, 900, async () => {
         const payRes = await pool.query(
@@ -156,6 +208,12 @@ router.get('/', isAuth, async (req, res) => {
            FROM bets WHERE user_id=$1 AND created_at >= NOW() - INTERVAL '30 days'`,
           [req.session.user.id]
         );
+        const bonusRes = await pool.query(
+          `SELECT COALESCE(SUM(amount),0) AS total_bonus FROM coin_transactions
+           WHERE user_id=$1 AND amount > 0 AND created_at >= NOW() - INTERVAL '30 days'
+             AND type IN ('badge','mission','loyalty_redeem','weekly_cashback','monthly_reward','social_share','daily_bonus','cashback','free_bet','lucky_wheel','vip_upgrade','win_streak')`,
+          [req.session.user.id]
+        );
         const dayRes = await pool.query(
           `SELECT to_char(created_at, 'MM-DD') AS d, COUNT(*) AS c
            FROM bets WHERE user_id=$1 AND created_at >= NOW() - INTERVAL '7 days'
@@ -167,12 +225,13 @@ router.get('/', isAuth, async (req, res) => {
           withdraw: Number(payRes.rows[0].withdraw),
           profitLoss: Number(betRes.rows[0].profit_loss),
           totalBets: Number(betRes.rows[0].total_bets),
+          totalBonus: Number(bonusRes.rows[0].total_bonus),
           chart: dayRes.rows.map(r => ({ d: r.d, c: Number(r.c) }))
         };
       });
     } catch (e) { console.error('stats30 error:', e.message); }
 
-    // সাম্প্রতিক অ্যাক্টিভিটি (শেষ ৫টা) — লগইন + ডিপোজিট/উইথড্র + বাজি ইতিহাস থেকে একত্রিত
+    // সাম্প্রতিক অ্যাক্টিভিটি (শেষ ৫টা) — লগইন + ডিপোজিট/উইথড্র + রিওয়ার্ড ক্লেইম + VIP আপগ্রেড থেকে একত্রিত
     let recentActivity = [];
     try {
       recentActivity = await cache.getOrSet(`profile:recent:${req.session.user.id}`, 20, async () => {
@@ -180,6 +239,11 @@ router.get('/', isAuth, async (req, res) => {
           `(SELECT 'login' AS kind, created_at, NULL::numeric AS amount FROM login_logs WHERE user_id=$1 ORDER BY created_at DESC LIMIT 5)
            UNION ALL
            (SELECT type AS kind, created_at, amount FROM payment_requests WHERE user_id=$1 AND status='approved' ORDER BY created_at DESC LIMIT 5)
+           UNION ALL
+           (SELECT CASE WHEN type='vip_upgrade' THEN 'vip_upgrade' ELSE 'reward_claim' END AS kind, created_at, amount
+              FROM coin_transactions WHERE user_id=$1 AND amount > 0
+                AND type IN ('badge','mission','loyalty_redeem','weekly_cashback','monthly_reward','social_share','daily_bonus','cashback','free_bet','lucky_wheel','vip_upgrade','win_streak')
+              ORDER BY created_at DESC LIMIT 5)
            ORDER BY created_at DESC LIMIT 5`,
           [req.session.user.id]
         );
@@ -216,9 +280,13 @@ router.get('/', isAuth, async (req, res) => {
       rewardBadge,
       vipStatus,
       security,
+      securityInfo,
       stats30,
       recentActivity,
-      referralSummary
+      referralSummary,
+      notifPreview,
+      badgesPreview,
+      profileCompletion
     });
   } catch (err) {
     console.error('Profile error:', err);
