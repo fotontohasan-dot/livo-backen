@@ -180,6 +180,25 @@ router.get('/', isAuth, async (req, res) => {
       });
     } catch (e) { console.error('recent activity error:', e.message); }
 
+    // রেফারেল সামারি কার্ড — বিদ্যমান getReferralStats রিইউজ করা হয়েছে, ৬০ সেকেন্ড ক্যাশ
+    let referralSummary = { totalInvites: 0, activeInvites: 0, totalCommission: 0, todayCommission: 0 };
+    try {
+      referralSummary = await cache.getOrSet(`profile:referral_summary:${req.session.user.id}`, 60, async () => {
+        const stats = await getReferralStats(req.session.user.id);
+        const activeInvites = (stats.team || []).filter(t => t.first_deposit_done).length;
+        const todayRes = await pool.query(
+          `SELECT COALESCE(SUM(amount),0) AS total FROM referral_commissions WHERE earner_id=$1 AND created_at::date = CURRENT_DATE`,
+          [req.session.user.id]
+        );
+        return {
+          totalInvites: stats.totalReferrals,
+          activeInvites,
+          totalCommission: stats.totalEarnings,
+          todayCommission: Number(todayRes.rows[0].total)
+        };
+      });
+    } catch (e) { console.error('referral summary error:', e.message); }
+
     res.render('profile/index', {
       user: user.rows[0],
       profileUser: user.rows[0],
@@ -191,7 +210,8 @@ router.get('/', isAuth, async (req, res) => {
       vipStatus,
       security,
       stats30,
-      recentActivity
+      recentActivity,
+      referralSummary
     });
   } catch (err) {
     console.error('Profile error:', err);

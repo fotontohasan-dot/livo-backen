@@ -237,6 +237,20 @@
     </div>
   </div>
 
+  <!-- ==================== 8.5 REFERRAL SUMMARY CARD ==================== -->
+  <div class="pf-card pf-referral-card">
+    <div class="pf-card-title-row">
+      <div class="pf-card-title"><i class="fas fa-users" style="color:var(--gold);"></i> রেফারেল সামারি</div>
+      <a href="/profile/referral" class="pf-mini-btn">রেফার করুন <i class="fas fa-chevron-right" style="font-size:9px;"></i></a>
+    </div>
+    <div class="pf-sec-grid" style="grid-template-columns: repeat(2, 1fr);">
+      <div class="pf-ref-stat"><span class="pf-ref-num"><%= referralSummary.totalInvites %></span><span class="pf-ref-label">মোট ইনভাইট</span></div>
+      <div class="pf-ref-stat"><span class="pf-ref-num"><%= referralSummary.activeInvites %></span><span class="pf-ref-label">সক্রিয় ইনভাইট</span></div>
+      <div class="pf-ref-stat"><span class="pf-ref-num">৳<%= Number(referralSummary.totalCommission).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span><span class="pf-ref-label">মোট কমিশন</span></div>
+      <div class="pf-ref-stat"><span class="pf-ref-num">৳<%= Number(referralSummary.todayCommission).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span><span class="pf-ref-label">আজকের কমিশন</span></div>
+    </div>
+  </div>
+
   <!-- ==================== 9. RECENT ACTIVITY ==================== -->
   <% if (recentActivity && recentActivity.length > 0) { %>
   <div class="pf-card pf-activity-card">
@@ -338,6 +352,9 @@
 .pf-sec-score-fill { height: 100%; background: linear-gradient(90deg,#e53935,#f59e0b,#3ddc84); border-radius: 10px; transition: width 0.4s; }
 .pf-sec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; }
 .pf-sec-item { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--text-muted); font-weight: 600; }
+.pf-ref-stat { display: flex; flex-direction: column; gap: 2px; padding: 8px 0; }
+.pf-ref-num { font-family: 'Teko', sans-serif; font-size: 22px; color: var(--gold); line-height: 1; }
+.pf-ref-label { font-size: 11px; color: var(--text-muted); font-weight: 600; }
 .pf-sec-item i { font-size: 13px; color: #f0554d; }
 .pf-sec-item.ok { color: var(--text-main); }
 .pf-sec-item.ok i { color: #3ddc84; }
