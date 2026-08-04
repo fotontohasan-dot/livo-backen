@@ -18,6 +18,7 @@ const REDIS_PASSWORD = process.env.REDIS_PASSWORD || undefined;
 const REDIS_DB = parseInt(process.env.REDIS_DB || '0', 10);
 const REDIS_PREFIX = process.env.REDIS_PREFIX || 'livo:';
 const REDIS_CONNECT_TIMEOUT_MS = parseInt(process.env.REDIS_CONNECT_TIMEOUT_MS || '3000', 10);
+const REDIS_MAX_RETRIES = parseInt(process.env.REDIS_MAX_RETRIES || '5', 10); // এর বেশি চেষ্টার পর থামিয়ে দেওয়া হবে (লগ স্প্যাম আটকাতে)
 
 const state = {
   client: null,
@@ -50,6 +51,20 @@ function init() {
   }
 
   try {
+    // times আসে ioredis থেকে (কতবার রিট্রাই হয়েছে) — REDIS_MAX_RETRIES ছাড়িয়ে গেলে null রিটার্ন করলে
+    // ioredis আর রিট্রাই করবে না, এতে Redis একদম না থাকলে (যেমন Render-এ কোনো Redis addon নেই)
+    // প্রতি ৫ সেকেন্ডে অনন্তকাল ধরে "connection error" লগ স্প্যাম হওয়া বন্ধ হয়।
+    const boundedRetryStrategy = (times) => {
+      if (times > REDIS_MAX_RETRIES) {
+        if (!state.disabledReason) {
+          state.disabledReason = `${REDIS_MAX_RETRIES}বার চেষ্টার পরও Redis-এ কানেক্ট করা যায়নি — DB fallback-এ চলছে`;
+          log(`giving up after ${REDIS_MAX_RETRIES} attempts — falling back to direct DB access (no more retries, no more log spam)`);
+        }
+        return null; // retry বন্ধ
+      }
+      return Math.min(times * 500, 5000);
+    };
+
     const options = REDIS_URL
       ? undefined
       : {
@@ -59,22 +74,23 @@ function init() {
           db: REDIS_DB,
           connectTimeout: REDIS_CONNECT_TIMEOUT_MS,
           maxRetriesPerRequest: 1,
-          retryStrategy: (times) => Math.min(times * 500, 5000),
+          retryStrategy: boundedRetryStrategy,
           lazyConnect: false
         };
 
     state.client = REDIS_URL
-      ? new Redis(REDIS_URL, { connectTimeout: REDIS_CONNECT_TIMEOUT_MS, maxRetriesPerRequest: 1, retryStrategy: (times) => Math.min(times * 500, 5000) })
+      ? new Redis(REDIS_URL, { connectTimeout: REDIS_CONNECT_TIMEOUT_MS, maxRetriesPerRequest: 1, retryStrategy: boundedRetryStrategy })
       : new Redis(options);
 
     state.client.on('connect', () => {
       state.connected = true;
+      state.disabledReason = null;
       log('connected');
     });
     state.client.on('ready', () => { state.connected = true; });
     state.client.on('error', (err) => {
       state.connected = false;
-      logError('connection error', err);
+      if (!state.disabledReason) logError('connection error', err); // চূড়ান্তভাবে থেমে যাওয়ার পর আর নতুন এরর লগ হবে না
     });
     state.client.on('close', () => {
       state.connected = false;
