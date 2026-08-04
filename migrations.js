@@ -971,6 +971,8 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_job_queue_poll ON job_queue(status, available_at);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_job_queue_type ON job_queue(type);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_job_queue_created ON job_queue(created_at);`);
+    // Add missing duration_ms column if not present
+    await pool.query(`ALTER TABLE job_queue ADD COLUMN IF NOT EXISTS duration_ms INTEGER;`);
 
     console.log("✅ Job queue table ready");
 

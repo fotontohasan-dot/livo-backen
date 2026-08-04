@@ -59,11 +59,12 @@ router.get('/', isAuth, async (req, res) => {
     // নিচের প্রেডিকশন/টুর্নামেন্ট/স্ট্যাটস তুলনামূলক কম-সংবেদনশীল ও ভারী জয়েন কোয়েরি, তাই ১৫ সেকেন্ড ক্যাশ করা হয়েছে।
     const { predictions, tournaments, stats } = await cache.getOrSet(`profile:activity:${req.session.user.id}`, 15, async () => {
       const predictionsRes = await pool.query(`
-        SELECT p.*, m.title, m.team_a, m.team_b, m.result
-        FROM predictions p
-        JOIN matches m ON p.match_id = m.id
-        WHERE p.user_id = $1
-        ORDER BY p.created_at DESC LIMIT 10
+        SELECT b.id, b.stake AS amount, b.odd, b.status, b.created_at,
+               m.title, m.team_a, m.team_b, m.result, b.selection
+        FROM bets b
+        JOIN matches m ON b.match_id = m.id
+        WHERE b.user_id = $1
+        ORDER BY b.created_at DESC LIMIT 10
       `, [req.session.user.id]);
 
       const tournamentsRes = await pool.query(`
@@ -76,14 +77,14 @@ router.get('/', isAuth, async (req, res) => {
         JOIN tournaments t ON tp.tournament_id = t.id
         WHERE tp.user_id = $1
         ORDER BY tp.joined_at DESC
-      `, [req.session.user.id]);
+      `, [req.session.user.id]).catch(() => ({ rows: [] }));
 
       const statsRes = await pool.query(`
         SELECT
           COUNT(*) as total,
           COUNT(CASE WHEN status='won' THEN 1 END) as won,
-          COALESCE(SUM(CASE WHEN status='won' THEN points_earned ELSE 0 END), 0) as total_earned
-        FROM predictions
+          COALESCE(SUM(CASE WHEN status='won' THEN stake*(odd-1) ELSE 0 END), 0) as total_earned
+        FROM bets
         WHERE user_id = $1
       `, [req.session.user.id]);
 
@@ -144,14 +145,14 @@ router.get('/', isAuth, async (req, res) => {
         );
         const betRes = await pool.query(
           `SELECT COUNT(*) AS total_bets,
-                  COALESCE(SUM(CASE WHEN status='won' THEN points_earned ELSE 0 END),0) -
-                  COALESCE(SUM(CASE WHEN status='lost' THEN points_earned ELSE 0 END),0) AS profit_loss
-           FROM predictions WHERE user_id=$1 AND created_at >= NOW() - INTERVAL '30 days'`,
+                  COALESCE(SUM(CASE WHEN status='won' THEN stake*(odd-1) ELSE 0 END),0) -
+                  COALESCE(SUM(CASE WHEN status='lost' THEN stake ELSE 0 END),0) AS profit_loss
+           FROM bets WHERE user_id=$1 AND created_at >= NOW() - INTERVAL '30 days'`,
           [req.session.user.id]
         );
         const dayRes = await pool.query(
           `SELECT to_char(created_at, 'MM-DD') AS d, COUNT(*) AS c
-           FROM predictions WHERE user_id=$1 AND created_at >= NOW() - INTERVAL '7 days'
+           FROM bets WHERE user_id=$1 AND created_at >= NOW() - INTERVAL '7 days'
            GROUP BY d ORDER BY d ASC`,
           [req.session.user.id]
         );
