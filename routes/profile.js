@@ -57,39 +57,45 @@ router.get('/', isAuth, async (req, res) => {
 
     // প্রোফাইলের কয়েন ব্যালেন্স সবসময় সরাসরি DB থেকে (উপরে) নেওয়া হচ্ছে — এটা কখনো ক্যাশ করা হয় না।
     // নিচের প্রেডিকশন/টুর্নামেন্ট/স্ট্যাটস তুলনামূলক কম-সংবেদনশীল ও ভারী জয়েন কোয়েরি, তাই ১৫ সেকেন্ড ক্যাশ করা হয়েছে।
-    const { predictions, tournaments, stats } = await cache.getOrSet(`profile:activity:${req.session.user.id}`, 15, async () => {
-      const predictionsRes = await pool.query(`
-        SELECT b.id, b.stake AS amount, b.odd, b.status, b.created_at,
-               m.title, m.team_a, m.team_b, m.score_a, m.score_b, b.selection
-        FROM bets b
-        JOIN matches m ON b.match_id = m.id
-        WHERE b.user_id = $1
-        ORDER BY b.created_at DESC LIMIT 10
-      `, [req.session.user.id]);
+    let predictions = [], tournaments = [], stats = { total: 0, won: 0, total_earned: 0 };
+    try {
+      const result = await cache.getOrSet(`profile:activity:${req.session.user.id}`, 15, async () => {
+        const predictionsRes = await pool.query(`
+          SELECT b.id, b.stake AS amount, b.odd, b.status, b.created_at,
+                 m.title, m.team_a, m.team_b, m.score_a, m.score_b, b.selection
+          FROM bets b
+          JOIN matches m ON b.match_id = m.id
+          WHERE b.user_id = $1
+          ORDER BY b.created_at DESC LIMIT 10
+        `, [req.session.user.id]);
 
-      const tournamentsRes = await pool.query(`
-        SELECT
-          COALESCE(t.name, 'টুর্নমেন্ট') as name,
-          COALESCE(t.sport, 'General') as sport,
-          COALESCE(tp.points, 0) as points,
-          tp.joined_at as joined_at
-        FROM tournament_participants tp
-        JOIN tournaments t ON tp.tournament_id = t.id
-        WHERE tp.user_id = $1
-        ORDER BY tp.joined_at DESC
-      `, [req.session.user.id]).catch(() => ({ rows: [] }));
+        const tournamentsRes = await pool.query(`
+          SELECT
+            COALESCE(t.name, 'টুর্নমেন্ট') as name,
+            COALESCE(t.sport, 'General') as sport,
+            COALESCE(tp.points, 0) as points,
+            tp.joined_at as joined_at
+          FROM tournament_participants tp
+          JOIN tournaments t ON tp.tournament_id = t.id
+          WHERE tp.user_id = $1
+          ORDER BY tp.joined_at DESC
+        `, [req.session.user.id]).catch(() => ({ rows: [] }));
 
-      const statsRes = await pool.query(`
-        SELECT
-          COUNT(*) as total,
-          COUNT(CASE WHEN status='won' THEN 1 END) as won,
-          COALESCE(SUM(CASE WHEN status='won' THEN stake*(odd-1) ELSE 0 END), 0) as total_earned
-        FROM bets
-        WHERE user_id = $1
-      `, [req.session.user.id]);
+        const statsRes = await pool.query(`
+          SELECT
+            COUNT(*) as total,
+            COUNT(CASE WHEN status='won' THEN 1 END) as won,
+            COALESCE(SUM(CASE WHEN status='won' THEN stake*(odd-1) ELSE 0 END), 0) as total_earned
+          FROM bets
+          WHERE user_id = $1
+        `, [req.session.user.id]);
 
-      return { predictions: predictionsRes.rows, tournaments: tournamentsRes.rows, stats: statsRes.rows[0] };
-    });
+        return { predictions: predictionsRes.rows, tournaments: tournamentsRes.rows, stats: statsRes.rows[0] };
+      });
+      predictions = result.predictions || [];
+      tournaments = result.tournaments || [];
+      stats = result.stats || stats;
+    } catch (e) { console.error('profile activity block error:', e.message); }
 
     // Member Center গ্রিডের ব্যাজ কাউন্ট — কোনো একটাতে সমস্যা হলেও পুরো প্রোফাইল পেজ যেন লোড হতে ব্যর্থ না হয়, তাই আলাদা try/catch
     let missionBadge = 0;
