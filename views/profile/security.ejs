@@ -371,6 +371,28 @@
         <div style="text-align:center; padding: 20px 0; color: var(--text-muted); font-size: 13px;"><%= t.no_login_history %></div>
       <% } %>
     </div>
+
+    <% if (typeof recentActivity !== 'undefined' && recentActivity.length > 0) { %>
+    <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
+      <h3 style="color: var(--gold); font-size: 16px; display: flex; align-items: center; gap: 10px; margin:0 0 18px 0;">
+        <i class="fas fa-list-check"></i> সাম্প্রতিক অ্যাক্টিভিটি
+      </h3>
+      <% recentActivity.forEach(function(a) {
+        let icon = 'fa-circle-info', label = 'অ্যাক্টিভিটি';
+        if (a.kind === 'login') { icon = 'fa-right-to-bracket'; label = 'লগইন'; }
+        else if (a.kind === 'deposit') { icon = 'fa-plus-circle'; label = 'ডিপোজিট'; }
+        else if (a.kind === 'withdraw') { icon = 'fa-hand-holding-usd'; label = 'উইথড্র'; }
+        else if (a.kind === 'vip_upgrade') { icon = 'fa-crown'; label = 'VIP আপগ্রেড'; }
+        else if (a.kind === 'reward_claim') { icon = 'fa-gift'; label = 'রিওয়ার্ড ক্লেইম'; }
+      %>
+      <div style="display:flex; align-items:center; gap:12px; padding:9px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+        <span style="width:34px; height:34px; border-radius:50%; background:rgba(245,158,11,0.12); color:var(--gold); display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0;"><i class="fas <%= icon %>"></i></span>
+        <span style="flex:1; color:var(--text-main); font-size:12.5px; font-weight:600;"><%= label %><% if (a.amount) { %> — ৳<%= Number(a.amount).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %><% } %></span>
+        <span style="color:var(--text-muted); font-size:11px; white-space:nowrap;"><%= new Date(a.created_at).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) %></span>
+      </div>
+      <% }); %>
+    </div>
+    <% } %>
   </div>
 
 </div>

@@ -266,52 +266,6 @@
   </div>
   <% } %>
 
-  <!-- ==================== NOTIFICATION CENTER PREVIEW ==================== -->
-  <% if (typeof notifPreview !== 'undefined') { %>
-  <div class="pf-card">
-    <div class="pf-card-title-row">
-      <div class="pf-card-title"><i class="fas fa-bell" style="color:var(--gold);"></i> নোটিফিকেশন
-        <% if (notifPreview.unreadCount > 0) { %><span class="mc-inline-badge"><%= notifPreview.unreadCount %></span><% } %>
-      </div>
-      <a href="/notifications" class="pf-mini-btn">সব দেখুন <i class="fas fa-chevron-right" style="font-size:9px;"></i></a>
-    </div>
-    <% if (notifPreview.latest && notifPreview.latest.length > 0) { %>
-    <div class="pf-info-list">
-      <% notifPreview.latest.forEach(function(n) { %>
-      <div class="pf-info-row">
-        <span class="pf-info-label" style="flex:1; max-width:none;"><i class="fas <%= !n.is_read ? 'fa-circle' : 'fa-circle-check' %>" style="font-size:7px; color: <%= !n.is_read ? '#e53935' : 'var(--text-muted)' %>;"></i> <%= n.title || n.message %></span>
-        <span class="pf-info-value" style="flex:0 0 auto;"><%= new Date(n.created_at).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { month:'short', day:'numeric' }) %></span>
-      </div>
-      <% }); %>
-    </div>
-    <% } else { %>
-    <div class="pf-empty-state"><i class="fas fa-inbox"></i><span>কোনো নোটিফিকেশন নেই</span></div>
-    <% } %>
-  </div>
-  <% } %>
-
-  <!-- ==================== ACHIEVEMENT / BADGE PREVIEW ==================== -->
-  <% if (typeof badgesPreview !== 'undefined') { %>
-  <div class="pf-card">
-    <div class="pf-card-title-row">
-      <div class="pf-card-title"><i class="fas fa-medal" style="color:var(--gold);"></i> অ্যাচিভমেন্ট (<%= badgesPreview.earnedCount %>/<%= badgesPreview.totalCount %>)</div>
-      <a href="/profile/badges" class="pf-mini-btn">সব দেখুন <i class="fas fa-chevron-right" style="font-size:9px;"></i></a>
-    </div>
-    <% if (badgesPreview.earned && badgesPreview.earned.length > 0) { %>
-    <div class="pf-badge-row">
-      <% badgesPreview.earned.forEach(function(b) { %>
-      <div class="pf-badge-chip" title="<%= b.desc %>">
-        <span class="pf-badge-icon"><%= b.icon %></span>
-        <span class="pf-badge-name"><%= b.name %></span>
-      </div>
-      <% }); %>
-    </div>
-    <% } else { %>
-    <div class="pf-empty-state"><i class="fas fa-medal"></i><span>এখনো কোনো ব্যাজ অর্জন করেননি</span></div>
-    <% } %>
-  </div>
-  <% } %>
-
   <!-- ==================== RECENTLY PLAYED ==================== -->
   <% if (typeof predictions !== 'undefined' && predictions.length > 0) { %>
   <div class="pf-card">
@@ -343,45 +297,6 @@
       <div id="avatarGrid" class="pf-avatar-grid"></div>
     </div>
   </div>
-
-  <!-- ==================== 8.5 REFERRAL SUMMARY CARD ==================== -->
-  <div class="pf-card pf-referral-card">
-    <div class="pf-card-title-row">
-      <div class="pf-card-title"><i class="fas fa-users" style="color:var(--gold);"></i> রেফারেল সামারি</div>
-      <a href="/profile/referral" class="pf-mini-btn">রেফার করুন <i class="fas fa-chevron-right" style="font-size:9px;"></i></a>
-    </div>
-    <div class="pf-sec-grid" style="grid-template-columns: repeat(2, 1fr);">
-      <div class="pf-ref-stat"><span class="pf-ref-num"><%= referralSummary.totalInvites %></span><span class="pf-ref-label">মোট ইনভাইট</span></div>
-      <div class="pf-ref-stat"><span class="pf-ref-num"><%= referralSummary.activeInvites %></span><span class="pf-ref-label">সক্রিয় ইনভাইট</span></div>
-      <div class="pf-ref-stat"><span class="pf-ref-num">৳<%= Number(referralSummary.totalCommission).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span><span class="pf-ref-label">মোট কমিশন</span></div>
-      <div class="pf-ref-stat"><span class="pf-ref-num">৳<%= Number(referralSummary.todayCommission).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span><span class="pf-ref-label">আজকের কমিশন</span></div>
-    </div>
-  </div>
-
-  <!-- ==================== 9. RECENT ACTIVITY ==================== -->
-  <% if (recentActivity && recentActivity.length > 0) { %>
-  <div class="pf-card pf-activity-card">
-    <div class="pf-card-title-row">
-      <div class="pf-card-title"><i class="fas fa-clock-rotate-left" style="color:var(--gold);"></i> সাম্প্রতিক অ্যাক্টিভিটি</div>
-    </div>
-    <div class="pf-activity-list">
-      <% recentActivity.forEach(function(a) {
-        let icon = 'fa-circle-info', label = 'অ্যাক্টিভিটি';
-        if (a.kind === 'login') { icon = 'fa-right-to-bracket'; label = 'লগইন'; }
-        else if (a.kind === 'deposit') { icon = 'fa-plus-circle'; label = 'ডিপোজিট'; }
-        else if (a.kind === 'withdraw') { icon = 'fa-hand-holding-usd'; label = 'উইথড্র'; }
-        else if (a.kind === 'vip_upgrade') { icon = 'fa-crown'; label = 'VIP আপগ্রেড'; }
-        else if (a.kind === 'reward_claim') { icon = 'fa-gift'; label = 'রিওয়ার্ড ক্লেইম'; }
-      %>
-      <div class="pf-activity-item">
-        <span class="pf-activity-icon"><i class="fas <%= icon %>"></i></span>
-        <span class="pf-activity-label"><%= label %><% if (a.amount) { %> — ৳<%= Number(a.amount).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %><% } %></span>
-        <span class="pf-activity-time"><%= new Date(a.created_at).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) %></span>
-      </div>
-      <% }); %>
-    </div>
-  </div>
-  <% } %>
 
   <div style="text-align: center; margin-top: 30px; padding-bottom: 20px;">
     <div style="color: var(--text-muted); font-size: 12px;"><%= t.version %> 2.2.0</div>

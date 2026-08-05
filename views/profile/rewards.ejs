@@ -7,6 +7,46 @@
     🎁 দৈনিক রিওয়ার্ড
   </h1>
 
+  <!-- ==================== অ্যাচিভমেন্ট প্রিভিউ ==================== -->
+  <% if (typeof badgesPreview !== 'undefined' && badgesPreview.totalCount > 0) { %>
+  <div class="card" style="margin-bottom:1rem;">
+    <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>🏅 অ্যাচিভমেন্ট (<%= badgesPreview.earnedCount %>/<%= badgesPreview.totalCount %>)</span>
+      <a href="/profile/badges" style="color:var(--gold);font-size:11.5px;font-weight:700;text-decoration:none;">সব দেখুন ›</a>
+    </div>
+    <div class="card-body" style="padding:.9rem;">
+      <% if (badgesPreview.earned.length > 0) { %>
+      <div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;">
+        <% badgesPreview.earned.forEach(function(b) { %>
+        <div title="<%= b.desc %>" style="flex:0 0 auto;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:72px;">
+          <span style="font-size:22px;"><%= b.icon %></span>
+          <span style="font-size:10px;color:var(--text-main);font-weight:700;text-align:center;line-height:1.3;"><%= b.name %></span>
+        </div>
+        <% }); %>
+      </div>
+      <% } else { %>
+      <div style="text-align:center;color:var(--muted);font-size:12.5px;padding:14px 0;">এখনো কোনো ব্যাজ অর্জন করেননি</div>
+      <% } %>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- ==================== রেফারেল সামারি ==================== -->
+  <% if (typeof referralSummary !== 'undefined' && referralSummary) { %>
+  <a href="/profile/referral" style="text-decoration:none;display:block;margin-bottom:1rem;">
+    <div class="card" style="background:linear-gradient(135deg,#5b8def,#3457c9);border:none;">
+      <div class="card-body" style="padding:1rem 1.1rem;display:flex;align-items:center;gap:14px;">
+        <div style="font-size:26px;">👥</div>
+        <div style="flex:1;min-width:0;">
+          <div style="color:#fff;font-weight:800;font-size:14px;">রেফারেল প্রোগ্রাম</div>
+          <div style="color:rgba(255,255,255,0.85);font-size:11.5px;margin-top:2px;"><%= referralSummary.totalInvites %> জন ইনভাইট · মোট কমিশন <%= Number(referralSummary.totalCommission).toLocaleString('bn-BD') %> টাকা</div>
+        </div>
+        <div style="color:#fff;font-size:13px;font-weight:700;background:rgba(255,255,255,0.2);padding:6px 12px;border-radius:16px;white-space:nowrap;">বিস্তারিত ›</div>
+      </div>
+    </div>
+  </a>
+  <% } %>
+
   <% if (reward) { %>
     <!-- আজকের টার্নওভার -->
     <div class="card" style="margin-bottom:1rem;">

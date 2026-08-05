@@ -543,14 +543,34 @@ router.get('/security', isAuth, async (req, res) => {
       }
     } catch (e) { console.error('security email/password status load error:', e.message); }
 
+    // সাম্প্রতিক অ্যাক্টিভিটি — লগইন + ডিপোজিট/উইথড্র + রিওয়ার্ড/VIP, একই cache key পুনঃব্যবহার করা হয়েছে যাতে ডুপ্লিকেট কোয়েরি না হয়
+    let recentActivity = [];
+    try {
+      recentActivity = await cache.getOrSet(`profile:recent:${req.session.user.id}`, 20, async () => {
+        const r = await pool.query(
+          `(SELECT 'login' AS kind, created_at, NULL::numeric AS amount FROM login_logs WHERE user_id=$1 ORDER BY created_at DESC LIMIT 5)
+           UNION ALL
+           (SELECT type AS kind, created_at, amount FROM payment_requests WHERE user_id=$1 AND status='approved' ORDER BY created_at DESC LIMIT 5)
+           UNION ALL
+           (SELECT CASE WHEN type='vip_upgrade' THEN 'vip_upgrade' ELSE 'reward_claim' END AS kind, created_at, amount
+              FROM coin_transactions WHERE user_id=$1 AND amount > 0
+                AND type IN ('badge','mission','loyalty_redeem','weekly_cashback','monthly_reward','social_share','daily_bonus','cashback','free_bet','lucky_wheel','vip_upgrade','win_streak')
+              ORDER BY created_at DESC LIMIT 5)
+           ORDER BY created_at DESC LIMIT 10`,
+          [req.session.user.id]
+        );
+        return r.rows;
+      });
+    } catch (e) { console.error('security recent activity error:', e.message); }
+
     res.render('profile/security', {
       user: req.session.user, bankCards: cards.rows, pinStatus, activeSessions, recentLogins,
-      emailStatus, passwordChangedAt
+      emailStatus, passwordChangedAt, recentActivity
     });
   } catch (err) {
     res.render('profile/security', {
       user: req.session.user, bankCards: [], pinStatus: { configured: false, locked: false }, activeSessions: [], recentLogins: [],
-      emailStatus: { verified: true, hasEmail: false, lastSentAt: null }, passwordChangedAt: null
+      emailStatus: { verified: true, hasEmail: false, lastSentAt: null }, passwordChangedAt: null, recentActivity: []
     });
   }
 });
@@ -807,10 +827,20 @@ router.post('/missions/claim/:id', isAuth, async (req, res) => {
 router.get('/rewards', isAuth, async (req, res) => {
   try {
     const reward = await getTodayReward(req.session.user.id);
-    res.render('profile/rewards', { user: req.session.user, reward });
+    let badgesPreview = { earned: [], earnedCount: 0, totalCount: 0 };
+    try {
+      const all = await getBadges(req.session.user.id);
+      badgesPreview = { earned: all.filter(b => b.earned).slice(0, 6), earnedCount: all.filter(b => b.earned).length, totalCount: all.length };
+    } catch (e) { console.error('rewards badges preview error:', e.message); }
+    let referralSummary = null;
+    try {
+      const rs = await getReferralStats(req.session.user.id);
+      referralSummary = { totalInvites: rs.totalReferrals, totalCommission: rs.totalEarnings };
+    } catch (e) { console.error('rewards referral summary error:', e.message); }
+    res.render('profile/rewards', { user: req.session.user, reward, badgesPreview, referralSummary });
   } catch (err) {
     console.error('rewards page error:', err.message);
-    res.render('profile/rewards', { user: req.session.user, reward: null });
+    res.render('profile/rewards', { user: req.session.user, reward: null, badgesPreview: { earned: [], earnedCount: 0, totalCount: 0 }, referralSummary: null });
   }
 });
 
