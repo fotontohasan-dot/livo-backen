@@ -121,6 +121,63 @@
     <a href="/profile/support" class="pf-qa"><i class="fas fa-headset"></i><span>সাপোর্ট সেন্টার</span></a>
   </div>
 
+  <!-- ==================== 8. CATEGORIZED MENU ==================== -->
+  <div class="member-center-card">
+    <div class="mc-heading">
+      <span class="mc-pill">মেনু</span>
+      <span class="mc-hairline"></span>
+    </div>
+
+    <a href="/payment/wallet" class="menu-folder menu-hub-row">
+      <i class="fas fa-wallet" style="color:var(--gold); margin-right:8px;"></i>
+      <span class="mc-hub-label">ওয়ালেট হাব</span>
+      <i class="fas fa-chevron-right mc-hub-chev"></i>
+    </a>
+
+    <details class="menu-folder">
+      <summary><i class="fas fa-dice" style="color:var(--gold); margin-right:8px;"></i>বেটিং</summary>
+      <div class="menu-folder-body">
+        <a href="/profile/history"><i class="fas fa-list-alt"></i>বেটিং রেকর্ড</a>
+        <a href="/profile/stats"><i class="fas fa-file-invoice-dollar"></i>প্রফিট অ্যান্ড লস</a>
+        <a href="/profile/cashback"><i class="fas fa-coins"></i>রিবেট</a>
+        <a href="/sports"><i class="fas fa-futbol"></i>স্পোর্টস বুক</a>
+      </div>
+    </details>
+
+    <a href="/profile/vip" class="menu-folder menu-hub-row">
+      <i class="fas fa-crown" style="color:var(--gold); margin-right:8px;"></i>
+      <span class="mc-hub-label">VIP সেন্টার</span>
+      <i class="fas fa-chevron-right mc-hub-chev"></i>
+    </a>
+
+    <a href="/profile/rewards" class="menu-folder menu-hub-row">
+      <i class="fas fa-gift" style="color:var(--gold); margin-right:8px;"></i>
+      <span class="mc-hub-label">রিওয়ার্ড সেন্টার</span>
+      <% if ((typeof rewardBadge !== 'undefined' && rewardBadge > 0) || (typeof missionBadge !== 'undefined' && missionBadge > 0)) { %><span class="mc-inline-badge"><%= (rewardBadge||0) + (missionBadge||0) %></span><% } %>
+      <i class="fas fa-chevron-right mc-hub-chev"></i>
+    </a>
+
+    <a href="/profile/security" class="menu-folder menu-hub-row">
+      <i class="fas fa-user-shield" style="color:var(--gold); margin-right:8px;"></i>
+      <span class="mc-hub-label">অ্যাকাউন্ট সেন্টার</span>
+      <i class="fas fa-chevron-right mc-hub-chev"></i>
+    </a>
+
+    <a href="/profile/support" class="menu-folder menu-hub-row">
+      <i class="fas fa-headset" style="color:var(--gold); margin-right:8px;"></i>
+      <span class="mc-hub-label">সাপোর্ট সেন্টার</span>
+      <i class="fas fa-chevron-right mc-hub-chev"></i>
+    </a>
+
+    <div class="mc-logout-row">
+      <a href="/logout" class="mc-item">
+        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-right-from-bracket"></i></span></span>
+        <span class="mc-label">Logout</span>
+      </a>
+    </div>
+  </div>
+
+
   <!-- ==================== 6. SECURITY STATUS CARD ==================== -->
   <div class="pf-card pf-security-card">
     <div class="pf-card-title-row">
@@ -284,62 +341,6 @@
         <span onclick="closeAvatarPicker()" class="pf-modal-close">&times;</span>
       </div>
       <div id="avatarGrid" class="pf-avatar-grid"></div>
-    </div>
-  </div>
-
-  <!-- ==================== 8. CATEGORIZED MENU ==================== -->
-  <div class="member-center-card">
-    <div class="mc-heading">
-      <span class="mc-pill">মেনু</span>
-      <span class="mc-hairline"></span>
-    </div>
-
-    <a href="/payment/wallet" class="menu-folder menu-hub-row">
-      <i class="fas fa-wallet" style="color:var(--gold); margin-right:8px;"></i>
-      <span class="mc-hub-label">ওয়ালেট হাব</span>
-      <i class="fas fa-chevron-right mc-hub-chev"></i>
-    </a>
-
-    <details class="menu-folder">
-      <summary><i class="fas fa-dice" style="color:var(--gold); margin-right:8px;"></i>বেটিং</summary>
-      <div class="menu-folder-body">
-        <a href="/profile/history"><i class="fas fa-list-alt"></i>বেটিং রেকর্ড</a>
-        <a href="/profile/stats"><i class="fas fa-file-invoice-dollar"></i>প্রফিট অ্যান্ড লস</a>
-        <a href="/profile/cashback"><i class="fas fa-coins"></i>রিবেট</a>
-        <a href="/sports"><i class="fas fa-futbol"></i>স্পোর্টস বুক</a>
-      </div>
-    </details>
-
-    <a href="/profile/vip" class="menu-folder menu-hub-row">
-      <i class="fas fa-crown" style="color:var(--gold); margin-right:8px;"></i>
-      <span class="mc-hub-label">VIP সেন্টার</span>
-      <i class="fas fa-chevron-right mc-hub-chev"></i>
-    </a>
-
-    <a href="/profile/rewards" class="menu-folder menu-hub-row">
-      <i class="fas fa-gift" style="color:var(--gold); margin-right:8px;"></i>
-      <span class="mc-hub-label">রিওয়ার্ড সেন্টার</span>
-      <% if ((typeof rewardBadge !== 'undefined' && rewardBadge > 0) || (typeof missionBadge !== 'undefined' && missionBadge > 0)) { %><span class="mc-inline-badge"><%= (rewardBadge||0) + (missionBadge||0) %></span><% } %>
-      <i class="fas fa-chevron-right mc-hub-chev"></i>
-    </a>
-
-    <a href="/profile/security" class="menu-folder menu-hub-row">
-      <i class="fas fa-user-shield" style="color:var(--gold); margin-right:8px;"></i>
-      <span class="mc-hub-label">অ্যাকাউন্ট সেন্টার</span>
-      <i class="fas fa-chevron-right mc-hub-chev"></i>
-    </a>
-
-    <a href="/profile/support" class="menu-folder menu-hub-row">
-      <i class="fas fa-headset" style="color:var(--gold); margin-right:8px;"></i>
-      <span class="mc-hub-label">সাপোর্ট সেন্টার</span>
-      <i class="fas fa-chevron-right mc-hub-chev"></i>
-    </a>
-
-    <div class="mc-logout-row">
-      <a href="/logout" class="mc-item">
-        <span class="mc-icon-wrap"><span class="mc-icon"><i class="fas fa-right-from-bracket"></i></span></span>
-        <span class="mc-label">Logout</span>
-      </a>
     </div>
   </div>
 
