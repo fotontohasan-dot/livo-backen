@@ -1,6 +1,135 @@
 <%- include('../partials/head') %>
 
-<div class="container pf-wrap">
+<style>
+/* ──────────────────── Profile CSS ──────────────────── */
+:root{--gold:#f5a623;--gold2:#ffd166;--gg:linear-gradient(135deg,#f5d67d,#f5a623,#d97706)}
+.pf-wrap{max-width:520px;margin:0 auto;padding:0 0 110px;background:transparent}
+
+/* Verify banner */
+.pf-verify-banner{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:14px;padding:12px 14px;margin:10px 12px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;color:rgba(255,255,255,.85)}
+.pf-verify-text{flex:1;min-width:0}
+.pf-verify-btn{background:rgba(239,68,68,.8);color:#fff;border:none;padding:6px 14px;border-radius:20px;font-size:12.5px;font-weight:700;cursor:pointer}
+
+/* Header */
+.pf-header{background:linear-gradient(160deg,#1a2235,#0d1117);padding:16px 14px 20px;position:relative;overflow:hidden}
+.pf-header-glow{position:absolute;top:-60px;right:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(245,166,35,.18),transparent 70%);border-radius:50%;pointer-events:none}
+.pf-header-top{display:flex;align-items:center;gap:14px;position:relative;z-index:2}
+.pf-avatar-wrap{position:relative;flex-shrink:0}
+.pf-avatar{width:68px;height:68px;border-radius:50%;background:var(--gg);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:#000;border:3px solid rgba(245,166,35,.5);box-shadow:0 0 20px rgba(245,166,35,.25);overflow:hidden;cursor:pointer;background-size:cover;background-position:center}
+.pf-avatar-edit-btn{position:absolute;bottom:-2px;right:-2px;background:#111;border:2px solid var(--gold);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer;color:var(--gold)}
+.pf-online-dot{position:absolute;top:2px;left:2px;width:12px;height:12px;background:#22c55e;border-radius:50%;border:2px solid #0d1117;animation:pdot 2s infinite}
+@keyframes pdot{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.4)}50%{box-shadow:0 0 0 5px rgba(34,197,94,0)}}
+.pf-user-info{flex:1;min-width:0}
+.pf-username-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.pf-username{color:#fff;font-size:18px;font-weight:800}
+.pf-vip-badge-sm{background:var(--gg);color:#3a1e00;font-size:10.5px;padding:2px 8px;border-radius:20px;font-weight:900;white-space:nowrap;text-decoration:none}
+.pf-user-id{color:rgba(255,255,255,.4);font-size:11.5px;margin-top:3px;display:flex;align-items:center;gap:5px}
+.pf-copy-id-btn{background:none;border:none;color:var(--gold);cursor:pointer;padding:0;font-size:11px}
+.pf-notif-btn{position:relative;background:rgba(255,255,255,.08);border:none;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.8);font-size:17px;cursor:pointer;flex-shrink:0;text-decoration:none}
+.pf-notif-dot{position:absolute;top:4px;right:4px;background:#e53935;color:#fff;font-size:9px;font-weight:800;min-width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1.5px solid #0d1117;padding:0 2px}
+
+/* Profile completion */
+.pf-completion{margin:10px 0 0;padding:8px 12px;background:rgba(255,255,255,.05);border-radius:10px;display:flex;align-items:center;gap:10px;font-size:12px;color:rgba(255,255,255,.6)}
+.pf-comp-bar{flex:1;height:5px;background:rgba(255,255,255,.1);border-radius:10px;overflow:hidden}
+.pf-comp-fill{height:100%;background:var(--gg);border-radius:10px}
+
+/* Cards */
+.pf-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:20px;margin:12px 12px 0;overflow:hidden}
+.pf-card-title-row{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px}
+.pf-card-title{color:#fff;font-size:15px;font-weight:800;display:flex;align-items:center;gap:7px}
+.pf-mini-btn{background:rgba(245,166,35,.15);color:var(--gold);border:1px solid rgba(245,166,35,.3);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap}
+
+/* VIP */
+.pf-vip-card{}
+.pf-vip-body{padding:0 16px 14px}
+.pf-vip-progress-bar{height:7px;background:rgba(255,255,255,.1);border-radius:10px;overflow:hidden;margin-bottom:7px}
+.pf-vip-progress-fill{height:100%;background:var(--gg);border-radius:10px;transition:width .8s}
+.pf-vip-info{color:rgba(255,255,255,.5);font-size:12px}
+.pf-vip-info b{color:rgba(255,255,255,.8)}
+.pf-wallet-mini{display:flex;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.06)}
+.pf-wm-label{color:rgba(255,255,255,.4);font-size:12px}
+.pf-wm-value{color:var(--gold);font-size:12px;font-weight:700}
+
+/* Wallet */
+.pf-wallet-card{}
+.pf-wallet-balance-row{padding:0 16px 12px;display:flex;align-items:flex-end;justify-content:space-between}
+.pf-balance-amount{color:var(--gold);font-size:30px;font-weight:800;font-family:'Teko',sans-serif;line-height:1.1}
+.pf-balance-label{color:rgba(255,255,255,.4);font-size:11px;margin-bottom:4px}
+.pf-refresh-btn{background:rgba(245,166,35,.12);border:none;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--gold);font-size:15px;transition:background .2s}
+.pf-refresh-btn:active{background:rgba(245,166,35,.3)}
+.pf-wallet-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px 14px}
+.pf-wallet-item{background:rgba(255,255,255,.04);border-radius:12px;padding:9px 12px;border:1px solid rgba(255,255,255,.05)}
+.pf-wi-label{color:rgba(255,255,255,.38);font-size:10.5px;margin-bottom:2px}
+.pf-wi-value{color:#fff;font-size:13px;font-weight:700}
+.pf-wi-value.demo{color:var(--gold)}
+.pf-last-updated{color:rgba(255,255,255,.3);font-size:11px;padding:0 16px 10px}
+
+/* Hub Quick Actions */
+.pf-hub-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:1px solid rgba(255,255,255,.06);margin:0 12px}
+.pf-hub-actions.card-style{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:20px;margin:12px 12px 0;overflow:hidden;padding:4px}
+.pf-qa{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 4px;text-decoration:none;transition:background .15s;border-radius:16px}
+.pf-qa:active{background:rgba(255,255,255,.06)}
+.pf-qa i{font-size:20px}
+.pf-qa span{color:rgba(255,255,255,.75);font-size:11.5px;font-weight:600;text-align:center;line-height:1.3}
+.pf-qa.deposit i{color:#22c55e}.pf-qa.withdraw i{color:#f87171}.pf-qa.cards i{color:#818cf8}.pf-qa.history i{color:#2dd4bf}
+.pf-qa.vip i{color:#c084fc}.pf-qa.reward i{color:var(--gold)}.pf-qa.security i{color:#38bdf8}.pf-qa.more i{color:rgba(255,255,255,.5)}
+
+/* Menu */
+.pf-menu-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:20px;margin:12px 12px 0;overflow:hidden}
+.mc-section-label{padding:12px 16px 6px;color:rgba(255,255,255,.35);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;display:flex;align-items:center;gap:6px}
+.mc-section-label i{color:var(--gold);font-size:12px}
+.mc-hub-item{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.04);text-decoration:none;transition:background .15s;cursor:pointer}
+.mc-hub-item:last-child{border-bottom:none}
+.mc-hub-item:active{background:rgba(255,255,255,.04)}
+.mc-hub-left{display:flex;align-items:center;gap:12px}
+.mc-hub-icon{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.mc-hub-label{color:rgba(255,255,255,.85);font-size:13.5px;font-weight:600}
+.mc-hub-sub{color:rgba(255,255,255,.35);font-size:11px;margin-top:1px}
+.mc-hub-right{display:flex;align-items:center;gap:6px}
+.mc-hub-badge{background:#e53935;color:#fff;font-size:10px;font-weight:800;min-width:20px;height:20px;border-radius:10px;display:flex;align-items:center;justify-content:center;padding:0 5px}
+.mc-hub-badge.amber{background:#f59e0b}
+.mc-hub-arrow{color:rgba(255,255,255,.2);font-size:11px}
+
+/* Icon color presets */
+.ic-gold{background:rgba(245,166,35,.15);color:var(--gold)}
+.ic-green{background:rgba(34,197,94,.12);color:#22c55e}
+.ic-red{background:rgba(239,68,68,.12);color:#f87171}
+.ic-blue{background:rgba(99,102,241,.15);color:#818cf8}
+.ic-purple{background:rgba(168,85,247,.12);color:#c084fc}
+.ic-teal{background:rgba(20,184,166,.12);color:#2dd4bf}
+.ic-orange{background:rgba(249,115,22,.12);color:#fb923c}
+.ic-sky{background:rgba(14,165,233,.12);color:#38bdf8}
+
+/* Logout */
+.pf-logout-row{margin:16px 12px 0;display:flex;align-items:center;gap:12px;padding:14px 16px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.15);border-radius:20px;text-decoration:none;transition:background .15s}
+.pf-logout-row:active{background:rgba(239,68,68,.14)}
+.pf-logout-icon{width:38px;height:38px;border-radius:12px;background:rgba(239,68,68,.12);color:#f87171;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.pf-logout-label{color:#f87171;font-size:14px;font-weight:700}
+.pf-version{text-align:center;margin-top:16px;margin-bottom:4px;color:rgba(255,255,255,.2);font-size:11px}
+
+/* Sticky deposit FAB */
+.pf-sticky-deposit{position:fixed;bottom:80px;right:16px;background:var(--gg);color:#000;width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 16px rgba(245,166,35,.4);text-decoration:none;z-index:100;transition:transform .15s}
+.pf-sticky-deposit:active{transform:scale(.93)}
+
+/* Toast */
+#pf-toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:#1c2533;color:#fff;padding:9px 20px;border-radius:30px;font-size:12.5px;font-weight:600;border:1px solid var(--gold);opacity:0;transition:all .25s;z-index:9999;pointer-events:none;white-space:nowrap}
+
+/* Spinning */
+.spinning{animation:sp360 .7s linear infinite}
+@keyframes sp360{to{transform:rotate(360deg)}}
+
+/* Light mode */
+body.light-mode .pf-header{background:linear-gradient(160deg,#e5e7eb,#d1d5db)}
+body.light-mode .pf-username{color:#111}
+body.light-mode .pf-card{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.08)}
+body.light-mode .mc-hub-label{color:#374151}
+body.light-mode .mc-hub-sub{color:#9ca3af}
+body.light-mode .pf-vip-info{color:#6b7280}
+body.light-mode .pf-wi-label{color:#9ca3af}
+body.light-mode .pf-wi-value{color:#111}
+body.light-mode .pf-balance-label{color:#9ca3af}
+</style>
+
   <%- include('../partials/flash') %>
 
   <% if (user.email && !user.email_verified) { %>
