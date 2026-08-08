@@ -52,17 +52,28 @@ async function checkRedis() {
 }
 
 // ==================== Queue ====================
+// নোট: পুরনো services/queue/ (BullMQ+Redis ফোল্ডার) ২৮ জুলাই "dead duplicate" হিসেবে
+// সরানো হয়েছিল — এখন services/queue.js (Postgres-backed job_queue) হলো একমাত্র সক্রিয়
+// কিউ সিস্টেম (app.js দেখুন)। এই ফাংশনটা তখন আপডেট হয়নি বলে চুপচাপ ব্যর্থ হচ্ছিল।
 async function checkQueue() {
   const t = Date.now();
   try {
-    const { isAvailable } = require('./queue/connection');
-    if (!isAvailable()) {
-      return { status: 'warning', latencyMs: ms(t), note: 'Queue Redis disconnected — jobs falling back to sync mode' };
-    }
-    const { getHealthSummary } = require('./queue/monitor');
-    const summary = await withTimeout(getHealthSummary(), 3000);
-    const status = summary.totalFailed > 50 ? 'warning' : 'healthy';
-    return { status, latencyMs: ms(t), totalFailed: summary.totalFailed, totalWaiting: summary.totalWaiting, totalActive: summary.totalActive };
+    const { getHealthStatus, getStats } = require('./queue');
+    const [health, stats] = await Promise.all([
+      withTimeout(getHealthStatus(), 3000),
+      withTimeout(getStats(), 3000)
+    ]);
+    const status = health.level === 'error' ? 'error' : health.level === 'warning' ? 'warning' : 'healthy';
+    return {
+      status,
+      latencyMs: ms(t),
+      running: health.running,
+      issues: health.issues,
+      totalPending: stats.pending,
+      totalProcessing: stats.processing,
+      totalFailed: stats.failed,
+      totalDeadLetter: stats.deadLetter
+    };
   } catch (err) {
     return { status: 'warning', latencyMs: ms(t), error: err.message };
   }

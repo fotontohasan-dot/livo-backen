@@ -93,48 +93,33 @@ function buildJobDefinitions() {
       defaultEnabled: true,
       maxRetries: 2,
       handler: async () => {
-        const { queueFraudScan } = require('./queue/queues');
-        const result = await pool.query(`
-          SELECT DISTINCT user_id FROM (
-            SELECT user_id FROM bets WHERE created_at > NOW() - INTERVAL '24 hours'
-            UNION
-            SELECT user_id FROM payment_requests WHERE created_at > NOW() - INTERVAL '24 hours'
-          ) AS active_users
-          LIMIT 100
-        `);
-        let queued = 0;
-        for (const row of result.rows) {
-          try {
-            await queueFraudScan(row.user_id, { source: 'cron' });
-            queued++;
-          } catch (e) { /* একটা ইউজারের স্ক্যান ব্যর্থ হলেও বাকিরা চলবে */ }
-        }
-        return `${queued}/${result.rows.length} জন সক্রিয় ইউজারের fraud scan কিউতে পাঠানো হয়েছে`;
+        // নোট: পুরনো BullMQ কিউ (services/queue/queues.js -> queueFraudScan) ২৮ জুলাই
+        // সরানো হয়েছে। বর্তমান সক্রিয় কিউ (services/queue.js)-এর fraud_scan হ্যান্ডলার
+        // (services/queueHandlers.js) শুধু event-ভিত্তিক kind (registration/login/
+        // failed_login/transaction) নেয় — এই cron-এর "সব সাম্প্রতিক সক্রিয় ইউজারের
+        // পর্যায়ক্রমিক জেনেরিক স্ক্যান" আচরণের কোনো সরাসরি সমতুল্য এখন নেই। ভুল kind
+        // দিয়ে জোর করে enqueue করলে প্রতিটা জব ব্যর্থ (dead-letter) হয়ে জমবে, তাই
+        // সিদ্ধান্ত না হওয়া পর্যন্ত এই টাস্কটা নিষ্ক্রিয় রাখা হলো।
+        return 'স্কিপ করা হয়েছে: এই জেনেরিক periodic fraud scan-এর জন্য বর্তমান fraud_scan হ্যান্ডলারে (event-ভিত্তিক kind প্রয়োজন) কোনো সমতুল্য নেই — পুনর্লিখন দরকার';
       }
     },
 
     queue_cleanup: {
       label: 'Queue Cleanup',
-      description: 'BullMQ-এর পুরনো completed (২৪ ঘণ্টা+) ও failed (৭ দিন+) জব মুছে ফেলে',
+      description: 'job_queue-এর পুরনো completed (২৪ ঘণ্টা+) রো ও পুরনো dead-letter (৭ দিন+) জব মুছে ফেলে',
       defaultIntervalMs: HOUR,
       defaultEnabled: true,
       maxRetries: 1,
       handler: async () => {
-        const { isAvailable } = require('./queue/connection');
-        if (!isAvailable()) return 'Queue সিস্টেম নিষ্ক্রিয় (Redis নেই) — কিছু করার নেই';
-        const { getQueue, getQueueNames } = require('./queue/queues');
-        let cleaned = 0;
-        const names = getQueueNames();
-        for (const name of names) {
-          const q = getQueue(name);
-          if (!q) continue;
-          try {
-            const completed = await q.clean(24 * HOUR, 1000, 'completed');
-            const failed = await q.clean(7 * DAY, 1000, 'failed');
-            cleaned += completed.length + failed.length;
-          } catch (e) { /* একটা কিউ ব্যর্থ হলেও বাকিরা চলবে */ }
-        }
-        return `${names.length}টা কিউ থেকে মোট ${cleaned}টা পুরনো জব মোছা হয়েছে`;
+        // নোট: পুরনো BullMQ-নির্ভর ভার্সন ২৮ জুলাই সরানো হয়েছে। বর্তমান সক্রিয় কিউ
+        // (services/queue.js, Postgres job_queue টেবিল) অনুযায়ী নতুন করে লেখা হলো।
+        const { purgeAllDeadLetter } = require('./queue');
+        const completed = await pool.query(
+          `DELETE FROM job_queue WHERE status = 'completed' AND completed_at < NOW() - INTERVAL '24 hours'`
+        );
+        const deadLettered = await purgeAllDeadLetter(7);
+        const cleaned = completed.rowCount + deadLettered;
+        return `job_queue থেকে ${completed.rowCount}টা পুরনো completed জব ও ${deadLettered}টা পুরনো dead-letter জব মুছে মোট ${cleaned}টা মোছা হয়েছে`;
       }
     },
 
