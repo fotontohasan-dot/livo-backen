@@ -14,6 +14,11 @@
 .pf-header{background:linear-gradient(160deg,#1a2235,#0d1117);padding:16px 14px 20px;position:relative;overflow:hidden}
 .pf-header-glow{position:absolute;top:-60px;right:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(245,166,35,.18),transparent 70%);border-radius:50%;pointer-events:none}
 .pf-header-top{display:flex;align-items:center;gap:14px;position:relative;z-index:2}
+.pf-header-balance-row{display:flex;align-items:flex-end;justify-content:space-between;margin-top:18px;position:relative;z-index:2}
+.pf-header-balance-label{color:rgba(255,255,255,.55);font-size:12px;font-weight:600}
+.pf-header-balance-value{font-family:'Teko',sans-serif;font-size:34px;color:var(--gold);line-height:1;margin-top:2px}
+.pf-header-refresh{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.7);width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.pf-quick-row.pf-header-quick-row{margin:16px 0 0}
 .pf-avatar-wrap{position:relative;flex-shrink:0}
 .pf-avatar{width:68px;height:68px;border-radius:50%;background:var(--gg);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:#000;border:3px solid rgba(245,166,35,.5);box-shadow:0 0 20px rgba(245,166,35,.25);overflow:hidden;cursor:pointer;background-size:cover;background-position:center}
 .pf-avatar-edit-btn{position:absolute;bottom:-2px;right:-2px;background:#111;border:2px solid var(--gold);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer;color:var(--gold)}
@@ -87,16 +92,21 @@
 .pf-quick-btn.withdraw i{color:#f87171}
 .pf-quick-btn.cards i{color:#818cf8}
 
-/* Member Center — বড় গ্রিড আইকন (Stake/BC.Game স্টাইল) */
-.mc-grid-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:20px;margin:14px 12px 0;overflow:hidden}
+/* Member Center — ৫টা বড় হাব টাইল (Wallet/VIP/Reward/Account/Support), ট্যাপ করলে সাব-আইটেম প্যানেল খোলে */
+.mc-grid-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:var(--radius-lg, 20px);margin:14px 12px 0;overflow:hidden}
 .mc-grid-title{padding:14px 16px 8px;color:#fff;font-size:15px;font-weight:800;display:flex;align-items:center;gap:7px}
-.mc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;padding:6px 8px 14px}
-.mc-grid-item{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:7px;padding:12px 4px;text-decoration:none;border-radius:16px;transition:background .15s}
-.mc-grid-item:active{background:rgba(255,255,255,.06)}
-.mc-grid-icon{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
-.mc-grid-item span{color:rgba(255,255,255,.75);font-size:11px;font-weight:600;text-align:center;line-height:1.25}
+.mc-hub-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:6px 8px 10px}
+.mc-hub-tile{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:7px;padding:14px 4px;text-decoration:none;border-radius:16px;transition:background .15s;background:none;border:none;font-family:inherit;cursor:pointer}
+.mc-hub-tile:active{background:rgba(255,255,255,.06)}
+.mc-hub-tile.active{background:rgba(234,179,8,.1)}
+.mc-hub-tile span:last-child{color:rgba(255,255,255,.75);font-size:11.5px;font-weight:700;text-align:center;line-height:1.25}
 .mc-grid-badge{position:absolute;top:6px;right:14px;background:#e53935;color:#fff;font-size:9px;font-weight:800;min-width:16px;height:16px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px;border:1.5px solid #12121f}
 .mc-grid-badge.amber{background:#f59e0b}
+.mc-hub-panel{display:none;grid-template-columns:repeat(2,1fr);gap:2px;padding:4px 8px 12px;border-top:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.015)}
+.mc-hub-panel.open{display:grid}
+.ic-sky-txt{color:#38bdf8}
+.mc-inline-badge{background:#e53935;color:#fff;font-size:10px;font-weight:800;min-width:16px;height:16px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px}
+.mc-inline-badge.amber{background:#f59e0b}
 
 /* Recent Activity */
 .pf-activity-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:20px;margin:12px 12px 0;overflow:hidden}
@@ -211,7 +221,7 @@ body.light-mode .pf-balance-label{color:#9ca3af}
   </div>
   <% } %>
 
-  <!-- ==================== 1. PROFILE HEADER ==================== -->
+  <!-- ==================== 1. UNIFIED HEADER CARD (Avatar/ID/VIP badge/Bell + Balance + Deposit/Withdraw/Cards) ==================== -->
   <div class="pf-header">
     <div class="pf-header-glow"></div>
     <div class="pf-header-top">
@@ -227,9 +237,9 @@ body.light-mode .pf-balance-label{color:#9ca3af}
         <div class="pf-username-row">
           <span id="usernameText" class="pf-username"><%= user.username %></span>
           <button onclick="copyUsername()" title="কপি করুন" class="pf-copy-btn"><i class="fas fa-copy"></i></button>
-          <span class="pf-vip-badge">
+          <a href="/profile/vip" class="pf-vip-badge-sm">
             <i class="fas fa-crown"></i><%= (vipStatus && vipStatus.current) ? vipStatus.current.name : 'VIP' %>
-          </span>
+          </a>
         </div>
         <div class="pf-uid-row">
           <span>ID: <%= 100000 + user.id %></span>
@@ -242,6 +252,23 @@ body.light-mode .pf-balance-label{color:#9ca3af}
         <% if (typeof notifPreview !== 'undefined' && notifPreview.unreadCount > 0) { %><span class="pf-notif-dot"></span><% } %>
       </a>
     </div>
+
+    <!-- Total Balance (Wallet Card বিলুপ্ত, এখানেই একীভূত) -->
+    <div class="pf-header-balance-row">
+      <div>
+        <div class="pf-header-balance-label"><%= t.total_balance %></div>
+        <div id="balanceText" class="pf-header-balance-value">৳ <%= Number(user.coins).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></div>
+        <div class="pf-wallet-updated">সর্বশেষ আপডেট: <span id="lastUpdatedText">এখনই</span></div>
+      </div>
+      <button onclick="refreshBalance()" id="refreshBtn" title="রিফ্রেশ" class="pf-icon-btn pf-header-refresh"><i class="fas fa-sync-alt" id="refreshIcon"></i></button>
+    </div>
+
+    <!-- Deposit / Withdraw / My Cards — হেডার কার্ডেই, আলাদা Wallet Card নেই -->
+    <div class="pf-quick-row pf-header-quick-row">
+      <a href="/payment/deposit" class="pf-quick-btn deposit"><i class="fas fa-arrow-down-circle"></i><span>ডিপোজিট</span></a>
+      <a href="/payment/withdraw" class="pf-quick-btn withdraw"><i class="fas fa-arrow-up-circle"></i><span>উইথড্র</span></a>
+      <a href="/profile/cards" class="pf-quick-btn cards"><i class="fas fa-credit-card"></i><span>আমার কার্ড</span></a>
+    </div>
   </div>
 
   <!-- ==================== PROFILE COMPLETION ==================== -->
@@ -252,148 +279,92 @@ body.light-mode .pf-balance-label{color:#9ca3af}
   </div>
   <% } %>
 
-  <!-- ==================== 2. VIP PROGRESS CARD ==================== -->
-  <% if (vipStatus) { %>
-  <div class="pf-card pf-vip-card">
-    <div class="pf-card-title-row">
-      <div class="pf-card-title"><i class="fas fa-crown" style="color:var(--gold);"></i> VIP <%= vipStatus.current ? vipStatus.current.name : '—' %></div>
-      <a href="/profile/vip" class="pf-mini-btn">VIP সেন্টার <i class="fas fa-chevron-right" style="font-size:9px;"></i></a>
-    </div>
-    <div class="pf-vip-bar-row">
-      <div class="pf-vip-bar-track">
-        <div class="pf-vip-bar-fill" style="width: <%= Math.min(100, Math.round(vipStatus.progress / 10)) %>%;"></div>
-      </div>
-      <span class="pf-vip-pct"><%= Math.min(100, Math.round(vipStatus.progress / 10)) %>%</span>
-    </div>
-    <div class="pf-vip-sub">
-      <% if (vipStatus.next) { %>
-        পরবর্তী: <b>VIP <%= vipStatus.next.name %></b> — বাকি টার্নওভার <b><%= Math.round(vipStatus.toNext).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></b>
-      <% } else { %>
-        🎉 আপনি সর্বোচ্চ VIP লেভেলে পৌঁছে গেছেন!
-      <% } %>
-    </div>
-    <% if (vipStatus.next) { %>
-    <div class="pf-vip-mini-grid">
-      <div class="pf-wallet-mini"><span class="pf-wm-label">পরবর্তী লেভেল</span><span class="pf-wm-value">VIP <%= vipStatus.next.name %></span></div>
-      <div class="pf-wallet-mini"><span class="pf-wm-label">প্রয়োজনীয় টার্নওভার</span><span class="pf-wm-value">৳ <%= Math.round(vipStatus.toNext).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span></div>
-    </div>
-    <% } %>
-  </div>
-  <% } %>
-
-  <!-- ==================== 3. WALLET SUMMARY CARD ==================== -->
-  <div class="pf-card pf-wallet-card">
-    <div class="pf-card-title-row">
-      <div class="pf-card-title"><i class="fas fa-wallet" style="color:var(--gold);"></i> <%= t.total_balance %></div>
-      <button onclick="refreshBalance()" id="refreshBtn" title="রিফ্রেশ" class="pf-icon-btn"><i class="fas fa-sync-alt" id="refreshIcon"></i></button>
-    </div>
-    <div id="balanceText" class="pf-total-balance">৳ <%= Number(user.coins).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></div>
-
-    <div class="pf-wallet-grid">
-      <div class="pf-wallet-mini">
-        <span class="pf-wm-label">মেইন ব্যালেন্স</span>
-        <span class="pf-wm-value">৳ <%= Number(user.coins).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span>
-      </div>
-      <div class="pf-wallet-mini">
-        <span class="pf-wm-label">বোনাস ব্যালেন্স</span>
-        <span class="pf-wm-value">৳ 0</span>
-      </div>
-      <div class="pf-wallet-mini">
-        <span class="pf-wm-label">লকড বোনাস</span>
-        <span class="pf-wm-value">৳ 0</span>
-      </div>
-      <div class="pf-wallet-mini">
-        <span class="pf-wm-label">উইথড্র-যোগ্য</span>
-        <span class="pf-wm-value">৳ <%= Number(user.coins).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span>
-      </div>
-    </div>
-    <div class="pf-wallet-updated">সর্বশেষ আপডেট: <span id="lastUpdatedText">এখনই</span></div>
-  </div>
-
-  <!-- ==================== 4. QUICK ACTIONS: DEPOSIT / WITHDRAW / MY CARDS (সরাসরি Wallet Card এর নিচে) ==================== -->
-  <div class="pf-quick-row">
-    <a href="/payment/deposit" class="pf-quick-btn deposit"><i class="fas fa-arrow-down-circle"></i><span>ডিপোজিট</span></a>
-    <a href="/payment/withdraw" class="pf-quick-btn withdraw"><i class="fas fa-arrow-up-circle"></i><span>উইথড্র</span></a>
-    <a href="/profile/cards" class="pf-quick-btn cards"><i class="fas fa-credit-card"></i><span>আমার কার্ড</span></a>
-  </div>
-
-  <!-- ==================== 5. MEMBER CENTER — বড় গ্রিড আইকন, একমাত্র মেনু এন্ট্রি পয়েন্ট ==================== -->
+  <!-- ==================== 2. MEMBER CENTER — Wallet Hub / VIP Center / Reward Center / Account Center / Support Center (৫টা বড় গ্রিড টাইল) ==================== -->
   <div class="mc-grid-card">
     <div class="mc-grid-title"><i class="fas fa-grid-2" style="color:var(--gold);"></i> মেম্বার সেন্টার</div>
-    <div class="mc-grid">
-      <a href="/profile/rewards" class="mc-grid-item">
+    <div class="mc-hub-grid">
+      <button type="button" onclick="toggleHub('wallet')" data-hub="wallet" class="mc-hub-tile">
+        <span class="mc-hub-icon" style="background:rgba(234,179,8,.15);color:var(--gold);"><i class="fas fa-wallet"></i></span>
+        <span>ওয়ালেট হাব</span>
+      </button>
+      <button type="button" onclick="toggleHub('vip')" data-hub="vip" class="mc-hub-tile">
+        <span class="mc-hub-icon" style="background:rgba(192,132,252,.15);color:#c084fc;"><i class="fas fa-crown"></i></span>
+        <span>VIP সেন্টার</span>
+      </button>
+      <button type="button" onclick="toggleHub('reward')" data-hub="reward" class="mc-hub-tile">
         <% if ((typeof rewardBadge !== 'undefined' && rewardBadge > 0) || (typeof missionBadge !== 'undefined' && missionBadge > 0)) { %>
         <span class="mc-grid-badge"><%= (rewardBadge||0) + (missionBadge||0) %></span>
         <% } %>
-        <span class="mc-grid-icon" style="background:rgba(245,166,35,.15);color:var(--gold);"><i class="fas fa-gift"></i></span>
+        <span class="mc-hub-icon" style="background:rgba(245,166,35,.15);color:var(--gold);"><i class="fas fa-gift"></i></span>
         <span>রিওয়ার্ড সেন্টার</span>
-      </a>
-      <a href="/profile/vip" class="mc-grid-item">
-        <span class="mc-grid-icon" style="background:rgba(192,132,252,.15);color:#c084fc;"><i class="fas fa-crown"></i></span>
-        <span>VIP সেন্টার</span>
-      </a>
-      <a href="/profile/history" class="mc-grid-item">
-        <span class="mc-grid-icon" style="background:rgba(45,212,191,.15);color:#2dd4bf;"><i class="fas fa-clipboard-list"></i></span>
-        <span>বেটিং রেকর্ড</span>
-      </a>
-      <a href="/profile/stats" class="mc-grid-item">
-        <span class="mc-grid-icon" style="background:rgba(56,189,248,.15);color:#38bdf8;"><i class="fas fa-chart-line"></i></span>
-        <span>প্রফিট &amp; লস</span>
-      </a>
-      <a href="/payment/history?type=deposit" class="mc-grid-item">
-        <span class="mc-grid-icon" style="background:rgba(34,197,94,.15);color:#22c55e;"><i class="fas fa-file-invoice-dollar"></i></span>
-        <span>ডিপোজিট রেকর্ড</span>
-      </a>
-      <a href="/payment/history?type=withdraw" class="mc-grid-item">
-        <span class="mc-grid-icon" style="background:rgba(248,113,113,.15);color:#f87171;"><i class="fas fa-file-invoice"></i></span>
-        <span>উইথড্র রেকর্ড</span>
-      </a>
-      <a href="/profile/transactions" class="mc-grid-item">
-        <span class="mc-grid-icon" style="background:rgba(129,140,248,.15);color:#818cf8;"><i class="fas fa-clock-rotate-left"></i></span>
-        <span>ট্রানজেকশন রেকর্ড</span>
-      </a>
-      <a href="/profile/security" class="mc-grid-item">
-        <span class="mc-grid-icon" style="background:rgba(56,189,248,.15);color:#38bdf8;"><i class="fas fa-user-circle"></i></span>
-        <span>আমার অ্যাকাউন্ট</span>
-      </a>
-      <a href="/profile/security" class="mc-grid-item">
+      </button>
+      <button type="button" onclick="toggleHub('account')" data-hub="account" class="mc-hub-tile">
         <% if (typeof security !== 'undefined' && security && (security.score || 0) < 60) { %>
         <span class="mc-grid-badge amber">!</span>
         <% } %>
-        <span class="mc-grid-icon" style="background:rgba(56,189,248,.15);color:#38bdf8;"><i class="fas fa-shield-halved"></i></span>
-        <span>সিকিউরিটি সেন্টার</span>
-      </a>
-      <a href="/profile/referral" class="mc-grid-item">
-        <span class="mc-grid-icon" style="background:rgba(96,165,250,.15);color:#60a5fa;"><i class="fas fa-users"></i></span>
-        <span>ইনভাইট ফ্রেন্ডস</span>
-      </a>
-      <a href="/profile/cashback" class="mc-grid-item">
-        <span class="mc-grid-icon" style="background:rgba(245,166,35,.15);color:var(--gold);"><i class="fas fa-coins"></i></span>
-        <span>রিবেট</span>
-      </a>
-      <a href="/notifications" class="mc-grid-item">
+        <span class="mc-hub-icon" style="background:rgba(56,189,248,.15);color:#38bdf8;"><i class="fas fa-user-shield"></i></span>
+        <span>অ্যাকাউন্ট সেন্টার</span>
+      </button>
+      <button type="button" onclick="toggleHub('support')" data-hub="support" class="mc-hub-tile">
         <% if (typeof notifPreview !== 'undefined' && notifPreview.unreadCount > 0) { %>
         <span class="mc-grid-badge"><%= notifPreview.unreadCount %></span>
         <% } %>
-        <span class="mc-grid-icon" style="background:rgba(167,139,250,.15);color:#a78bfa;"><i class="fas fa-envelope"></i></span>
-        <span>ইন্টারনাল মেসেজ</span>
-      </a>
-      <a href="/profile/app-download" class="mc-grid-item">
-        <span class="mc-grid-icon" style="background:rgba(45,212,191,.15);color:#2dd4bf;"><i class="fas fa-mobile-screen-button"></i></span>
-        <span>অ্যাপ ডাউনলোড</span>
-      </a>
-      <a href="/profile/chat" class="mc-grid-item">
-        <span class="mc-grid-icon" style="background:rgba(34,197,94,.15);color:#22c55e;"><i class="fas fa-headset"></i></span>
-        <span>কাস্টমার সার্ভিস</span>
-      </a>
-      <a href="/help-center" class="mc-grid-item">
-        <span class="mc-grid-icon" style="background:rgba(96,165,250,.15);color:#60a5fa;"><i class="fas fa-circle-question"></i></span>
-        <span>হেল্প সেন্টার</span>
-      </a>
-      <a href="/logout" class="mc-grid-item">
-        <span class="mc-grid-icon" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);"><i class="fas fa-right-from-bracket"></i></span>
+        <span class="mc-hub-icon" style="background:rgba(34,197,94,.15);color:#22c55e;"><i class="fas fa-headset"></i></span>
+        <span>সাপোর্ট সেন্টার</span>
+      </button>
+      <a href="/logout" class="mc-hub-tile" style="text-decoration:none;">
+        <span class="mc-hub-icon" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);"><i class="fas fa-right-from-bracket"></i></span>
         <span>লগআউট</span>
       </a>
+    </div>
+
+    <!-- Wallet Hub sub-items -->
+    <div id="hub-wallet" class="mc-hub-panel">
+      <a href="/payment/deposit" class="mc-sub-item"><i class="fas fa-arrow-down-circle ic-green-txt"></i>ডিপোজিট</a>
+      <a href="/payment/withdraw" class="mc-sub-item"><i class="fas fa-arrow-up-circle ic-red-txt"></i>উইথড্র</a>
+      <a href="/profile/cards" class="mc-sub-item"><i class="fas fa-credit-card ic-blue-txt"></i>আমার কার্ড</a>
+      <a href="/profile/transactions" class="mc-sub-item"><i class="fas fa-clock-rotate-left ic-teal-txt"></i>ট্রানজেকশন হিস্টোরি</a>
+    </div>
+
+    <!-- VIP Center sub-items -->
+    <div id="hub-vip" class="mc-hub-panel">
+      <a href="/profile/vip" class="mc-sub-item"><i class="fas fa-chart-line ic-purple-txt"></i>VIP প্রগ্রেস</a>
+      <a href="/profile/vip" class="mc-sub-item"><i class="fas fa-gift ic-gold-txt"></i>VIP রিওয়ার্ড</a>
+      <a href="/profile/vip" class="mc-sub-item"><i class="fas fa-history ic-teal-txt"></i>VIP হিস্টোরি</a>
+      <a href="/profile/vip" class="mc-sub-item"><i class="fas fa-star ic-gold-txt"></i>VIP সুবিধা</a>
+    </div>
+
+    <!-- Reward Center sub-items -->
+    <div id="hub-reward" class="mc-hub-panel">
+      <a href="/profile/rewards" class="mc-sub-item"><i class="fas fa-calendar-day ic-orange-txt"></i>ডেইলি বোনাস</a>
+      <a href="/profile/rewards" class="mc-sub-item"><i class="fas fa-calendar-week ic-orange-txt"></i>উইকলি বোনাস</a>
+      <a href="/profile/rewards" class="mc-sub-item"><i class="fas fa-calendar ic-orange-txt"></i>মান্থলি বোনাস</a>
+      <a href="/profile/wheel" class="mc-sub-item"><i class="fas fa-circle-dot ic-pink-txt"></i>লাকি স্পিন</a>
+      <a href="/profile/wheel" class="mc-sub-item"><i class="fas fa-egg ic-gold-txt"></i>গোল্ডেন এগ</a>
+      <a href="/profile/cashback" class="mc-sub-item"><i class="fas fa-coins ic-gold-txt"></i>ক্যাশব্যাক</a>
+      <a href="/profile/rewards" class="mc-sub-item"><i class="fas fa-ticket ic-teal-txt"></i>কুপন</a>
+      <a href="/profile/missions" class="mc-sub-item"><i class="fas fa-flag-checkered ic-teal-txt"></i>মিশন</a>
+      <a href="/profile/badges" class="mc-sub-item"><i class="fas fa-trophy ic-gold-txt"></i>অ্যাচিভমেন্ট</a>
+    </div>
+
+    <!-- Account Center sub-items -->
+    <div id="hub-account" class="mc-hub-panel">
+      <a href="/profile/security" class="mc-sub-item"><i class="fas fa-user-circle ic-blue-txt"></i>আমার প্রোফাইল</a>
+      <a href="/profile/security" class="mc-sub-item"><i class="fas fa-shield-halved ic-blue-txt"></i>সিকিউরিটি সেন্টার</a>
+      <a href="/profile/login-history" class="mc-sub-item"><i class="fas fa-clock-rotate-left ic-purple-txt"></i>লগইন হিস্টোরি</a>
+      <a href="/profile/security" class="mc-sub-item"><i class="fas fa-chart-line ic-sky-txt"></i>সাম্প্রতিক অ্যাক্টিভিটি</a>
+      <a href="/profile/security" class="mc-sub-item"><i class="fas fa-mobile-screen ic-pink-txt"></i>ট্রাস্টেড ডিভাইস</a>
+      <a href="/extra/kyc" class="mc-sub-item"><i class="fas fa-id-card ic-green-txt"></i>KYC
+        <% if (typeof security !== 'undefined' && security && security.kycStatus !== 'approved') { %><span class="mc-inline-badge amber" style="margin-left:4px;font-size:9px">!</span><% } %>
+      </a>
+    </div>
+
+    <!-- Support Center sub-items -->
+    <div id="hub-support" class="mc-hub-panel">
+      <a href="/profile/chat" class="mc-sub-item"><i class="fas fa-headset ic-green-txt"></i>কাস্টমার সার্ভিস</a>
+      <a href="/help-center" class="mc-sub-item"><i class="fas fa-circle-question ic-blue-txt"></i>হেল্প সেন্টার</a>
+      <a href="/profile/feedback" class="mc-sub-item"><i class="fas fa-comment-dots ic-orange-txt"></i>পরামর্শ</a>
+      <a href="/notifications" class="mc-sub-item"><i class="fas fa-envelope ic-purple-txt"></i>ইন্টারনাল মেসেজ</a>
     </div>
   </div>
 
@@ -435,6 +406,19 @@ body.light-mode .pf-balance-label{color:#9ca3af}
 
 
 <script>
+function toggleHub(name) {
+  var panel = document.getElementById('hub-' + name);
+  var tile = document.querySelector('.mc-hub-tile[data-hub="' + name + '"]');
+  var isOpen = panel && panel.classList.contains('open');
+  document.querySelectorAll('.mc-hub-panel.open').forEach(function (p) { p.classList.remove('open'); });
+  document.querySelectorAll('.mc-hub-tile.active').forEach(function (t) { t.classList.remove('active'); });
+  if (!isOpen && panel) {
+    panel.classList.add('open');
+    if (tile) tile.classList.add('active');
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
 function showToast(msg) {
   var el = document.getElementById('copyToast');
   el.textContent = msg;

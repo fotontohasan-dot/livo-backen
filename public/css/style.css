@@ -9,7 +9,7 @@
   --red: #ef4444;
 
   /* Surfaces & Backgrounds */
-  --bg-dark: #050505;
+  --bg-dark: #0B0B0B;
   --bg-surface: #121212;
   --bg-card: rgba(255, 255, 255, 0.03);
   --bg-glass: rgba(255, 255, 255, 0.05);
@@ -32,6 +32,34 @@
   /* Effects */
   --shadow-neon: 0 0 15px var(--primary-glow);
   --glass-blur: blur(0px);
+  --warning: #f59e0b;
+
+  /* ==================== Global Design Tokens ==================== */
+  /* Border Radius */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-full: 999px;
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+
+  /* Shadows (dark theme) */
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.35);
+  --shadow-elevated: 0 10px 30px rgba(0, 0, 0, 0.45);
+
+  /* Typography scale */
+  --font-xs: 11px;
+  --font-sm: 13px;
+  --font-md: 15px;
+  --font-lg: 18px;
+  --font-xl: 24px;
+  --font-display: 32px;
 }
 
 body.light-mode {
@@ -47,6 +75,9 @@ body.light-mode {
   --text-muted: #64748b;
 
   --grad-surface: linear-gradient(135deg, rgba(255,255,255,0.8), rgba(255,255,255,0.4));
+  --shadow-card: 0 2px 14px rgba(0, 0, 0, 0.08);
+  --shadow-elevated: 0 8px 28px rgba(0, 0, 0, 0.12);
+  --grad-header: linear-gradient(135deg, #fff9ec, #fff);
 }
 
 body.light-mode {
