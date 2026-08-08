@@ -732,3 +732,251 @@ body.menu-open {
     position: fixed;
     width: 100%;
 }
+
+/* ==================== AUTH PAGES (Login / Registration) ====================
+   লগইন ও রেজিস্ট্রেশন পেজের শেয়ার্ড ডিজাইন সিস্টেম। উপরের গ্লোবাল থিম ভ্যারিয়েবলই
+   ব্যবহার করা হয়েছে (body.light-mode override স্বয়ংক্রিয়ভাবে কাজ করে), আলাদা কোনো
+   থিম সিস্টেম তৈরি করা হয়নি। */
+
+.auth-page {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-5) var(--space-4);
+    background: var(--bg-dark);
+}
+
+.auth-shell {
+    width: 100%;
+    max-width: 420px;
+}
+
+.auth-brand {
+    text-align: center;
+    margin-bottom: var(--space-5);
+}
+
+.auth-brand__logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-md);
+    background: var(--grad-primary);
+    box-shadow: var(--shadow-neon);
+    font-size: 26px;
+    line-height: 1;
+    margin-bottom: var(--space-3);
+}
+
+.auth-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-elevated);
+    padding: var(--space-6) var(--space-5) var(--space-5);
+}
+
+.auth-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-main);
+    text-align: center;
+    margin: 0 0 var(--space-2);
+}
+
+.auth-subtitle {
+    font-size: var(--font-sm);
+    color: var(--text-muted);
+    text-align: center;
+    margin: 0 0 var(--space-6);
+    line-height: 1.5;
+}
+
+.auth-field {
+    margin-bottom: var(--space-4);
+}
+
+.auth-label {
+    display: block;
+    font-size: var(--font-sm);
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: var(--space-2);
+}
+
+.auth-label__optional {
+    font-weight: 400;
+    color: var(--text-muted);
+}
+
+.auth-input-wrap {
+    position: relative;
+}
+
+.auth-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 13px var(--space-4);
+    font-size: 16px; /* iOS-এ ফোকাসে অটো-জুম ঠেকাতে ১৬px-এর নিচে নয় */
+    font-family: inherit;
+    color: var(--text-main);
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-md);
+    outline: none;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.auth-input::placeholder { color: var(--text-muted); opacity: .75; }
+
+.auth-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-glow);
+}
+
+.auth-input:disabled { opacity: .6; cursor: not-allowed; }
+
+/* পাসওয়ার্ড ফিল্ডে টেক্সট যেন eye বাটনের নিচে ঢুকে না যায় */
+.auth-input--password { padding-right: 52px; }
+
+.auth-eye {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 17px;
+    line-height: 1;
+}
+
+.auth-eye:hover { color: var(--text-main); }
+.auth-eye:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+.auth-hint {
+    display: block;
+    font-size: var(--font-xs);
+    color: var(--text-muted);
+    margin-top: 6px;
+}
+
+/* ফিল্ড-লেভেল ভ্যালিডেশন বার্তা — শুধু রঙের উপর নির্ভর না করে আইকনসহ দেখানো হয় */
+.auth-error {
+    display: none;
+    font-size: var(--font-xs);
+    color: var(--red);
+    margin-top: 6px;
+    line-height: 1.4;
+}
+
+.auth-error.is-visible { display: block; }
+.auth-input.has-error { border-color: var(--red); }
+.auth-input.has-error:focus { box-shadow: 0 0 0 3px rgba(239, 68, 68, .25); }
+
+.auth-ok {
+    display: none;
+    font-size: var(--font-xs);
+    color: var(--green);
+    margin-top: 6px;
+}
+.auth-ok.is-visible { display: block; }
+
+.auth-note {
+    font-size: var(--font-xs);
+    color: var(--text-muted);
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-sm);
+    padding: 10px var(--space-3);
+    margin: calc(var(--space-2) * -1) 0 var(--space-4);
+    line-height: 1.5;
+}
+
+.auth-forgot {
+    display: block;
+    text-align: right;
+    font-size: var(--font-sm);
+    color: var(--text-muted);
+    text-decoration: none;
+    margin: calc(var(--space-2) * -1) 0 var(--space-5);
+}
+.auth-forgot:hover { color: var(--text-main); }
+
+.auth-submit {
+    width: 100%;
+    padding: 14px;
+    font-size: var(--font-md);
+    font-weight: 700;
+    font-family: inherit;
+    color: var(--text-white);
+    background: var(--grad-primary);
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    box-shadow: var(--shadow-neon);
+    transition: opacity .15s ease, transform .1s ease;
+}
+
+.auth-submit:hover:not(:disabled) { opacity: .93; }
+.auth-submit:active:not(:disabled) { transform: translateY(1px); }
+.auth-submit:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.auth-submit:disabled { opacity: .65; cursor: not-allowed; box-shadow: none; }
+
+.auth-alt {
+    text-align: center;
+    font-size: var(--font-sm);
+    color: var(--text-muted);
+    margin: var(--space-5) 0 0;
+}
+
+.auth-alt a { color: var(--primary); font-weight: 600; text-decoration: none; }
+.auth-alt a:hover { text-decoration: underline; }
+
+.auth-terms {
+    font-size: var(--font-xs);
+    color: var(--text-muted);
+    text-align: center;
+    line-height: 1.6;
+    margin: var(--space-4) 0 0;
+}
+.auth-terms a { color: var(--text-muted); text-decoration: underline; }
+
+.auth-back {
+    text-align: center;
+    margin: var(--space-5) 0 0;
+}
+.auth-back a {
+    color: var(--text-muted);
+    font-size: var(--font-sm);
+    text-decoration: none;
+}
+.auth-back a:hover { color: var(--text-main); }
+
+/* হানিপট — ইউজারের কাছে অদৃশ্য, বট স্ক্রিপ্ট প্রায়ই পূরণ করে ফেলে */
+.auth-honeypot {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 0;
+    overflow: hidden;
+    opacity: 0;
+}
+
+/* ছোট ফোনে (৩২০-৩৭৫px) একটু কম প্যাডিং, যাতে ভার্টিক্যাল স্ক্রল কম লাগে */
+@media (max-width: 380px) {
+    .auth-page { padding: var(--space-4) var(--space-3); }
+    .auth-card { padding: var(--space-5) var(--space-4) var(--space-4); }
+    .auth-title { font-size: 20px; }
+}

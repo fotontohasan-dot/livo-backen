@@ -1,42 +1,163 @@
 <%- include('partials/head') %>
-<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg-dark);">
-  <div style="width:100%;max-width:400px;padding:1rem;">
-    <div class="card glass">
-      <div class="card-header" style="justify-content:center;font-size:1.2rem;">🔐 <%= t.login_title %></div>
-      <div class="card-body">
-        <form action="/login" method="POST" onsubmit="LivoToast.setLoading(document.getElementById('loginSubmitBtn'), true, 'লগইন হচ্ছে...')">
-          <input type="hidden" name="form_rendered_at" value="<%= formRenderedAt %>">
-          <!-- হানিপট — সাধারণ ইউজারদের কাছে অদৃশ্য, স্বয়ংক্রিয় বট স্ক্রিপ্ট প্রায়ই এই ফিল্ড পূরণ করে ফেলে -->
-          <div style="position:absolute;left:-9999px;opacity:0;height:0;overflow:hidden;" aria-hidden="true">
-            <label for="website">Website</label>
-            <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
-          </div>
-          <div class="form-group">
-            <label class="form-label"><%= t.email_or_phone %></label>
-            <input type="text" name="identifier" class="form-input" placeholder="<%= t.email_or_phone %>" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label"><%= t.password %></label>
-            <input type="password" name="password" class="form-input" placeholder="••••••••" required>
-          </div>
-          <p style="text-align:right;margin:-8px 0 12px;">
-            <a href="/forgot-password" style="color:var(--text-muted);font-size:.82rem;text-decoration:none;">পাসওয়ার্ড ভুলে গেছেন?</a>
-          </p>
-          <% if (captcha) { %>
-          <div class="form-group">
-            <label class="form-label">🤖 যাচাই করুন: <%= captcha.question %></label>
-            <input type="text" name="captcha_answer" class="form-input" placeholder="উত্তর লিখুন" inputmode="numeric" required>
-          </div>
-          <% } %>
-          <button type="submit" id="loginSubmitBtn" class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;"><%= t.login %> 🚀</button>
-        </form>
-        <p style="text-align:center;margin-top:1rem;color:var(--text-muted);font-size:.9rem;">
-          <%= t.no_account %> <a href="/register" style="color:var(--secondary)"><%= t.register_now %></a>
-        </p>
-      </div>
+<div class="auth-page">
+  <div class="auth-shell">
+
+    <div class="auth-brand">
+      <div class="auth-brand__logo" aria-hidden="true">🔐</div>
     </div>
-    <p style="text-align:center;margin-top:2rem;">
-      <a href="/" style="color:var(--text-muted);text-decoration:none;font-size:.85rem;"><%= t.back_to_home %></a>
+
+    <div class="auth-card">
+      <h1 class="auth-title"><%= t.login_title %></h1>
+      <p class="auth-subtitle"><%= t.login_subtitle %></p>
+
+      <form action="/login" method="POST" id="loginForm" novalidate>
+        <input type="hidden" name="form_rendered_at" value="<%= formRenderedAt %>">
+
+        <!-- হানিপট — বট ডিটেকশন (ব্যাকএন্ড এই ফিল্ড চেক করে), পরিবর্তন করা হয়নি -->
+        <div class="auth-honeypot" aria-hidden="true">
+          <label for="website">Website</label>
+          <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+        </div>
+
+        <div class="auth-field">
+          <label class="auth-label" for="identifier"><%= t.email_or_phone %></label>
+          <div class="auth-input-wrap">
+            <input
+              type="text"
+              id="identifier"
+              name="identifier"
+              class="auth-input"
+              placeholder="<%= t.email_or_phone_placeholder %>"
+              autocomplete="username"
+              autocapitalize="none"
+              spellcheck="false"
+              aria-describedby="identifierError"
+              required>
+          </div>
+          <span class="auth-error" id="identifierError" role="alert"></span>
+        </div>
+
+        <div class="auth-field">
+          <label class="auth-label" for="password"><%= t.password %></label>
+          <div class="auth-input-wrap">
+            <input
+              type="password"
+              id="password"
+              name="password"
+              class="auth-input auth-input--password"
+              placeholder="<%= t.password_placeholder %>"
+              autocomplete="current-password"
+              aria-describedby="passwordError"
+              required>
+            <button
+              type="button"
+              class="auth-eye"
+              data-toggle-password="password"
+              aria-label="<%= t.show_password %>"
+              data-label-show="<%= t.show_password %>"
+              data-label-hide="<%= t.hide_password %>">
+              <span aria-hidden="true">👁️</span>
+            </button>
+          </div>
+          <span class="auth-error" id="passwordError" role="alert"></span>
+        </div>
+
+        <a href="/forgot-password" class="auth-forgot">পাসওয়ার্ড ভুলে গেছেন?</a>
+
+        <% if (captcha) { %>
+        <div class="auth-field">
+          <label class="auth-label" for="captcha_answer">🤖 যাচাই করুন: <%= captcha.question %></label>
+          <input
+            type="text"
+            id="captcha_answer"
+            name="captcha_answer"
+            class="auth-input"
+            placeholder="উত্তর লিখুন"
+            inputmode="numeric"
+            autocomplete="off"
+            required>
+        </div>
+        <% } %>
+
+        <button type="submit" id="loginSubmitBtn" class="auth-submit"><%= t.login %></button>
+      </form>
+
+      <p class="auth-alt">
+        <%= t.no_account %> <a href="/register"><%= t.register_now %></a>
+      </p>
+    </div>
+
+    <p class="auth-back">
+      <a href="/"><%= t.back_to_home %></a>
     </p>
+
   </div>
 </div>
+
+<script>
+(function () {
+  var MSG = {
+    identifierRequired: <%- jsonScriptSafe(t.error_identifier_required) %>,
+    passwordRequired: <%- jsonScriptSafe(t.error_password_required) %>,
+    signingIn: <%- jsonScriptSafe(t.signing_in) %>
+  };
+
+  // ==================== পাসওয়ার্ড Show/Hide ====================
+  document.querySelectorAll('[data-toggle-password]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var input = document.getElementById(btn.getAttribute('data-toggle-password'));
+      if (!input) return;
+      var willShow = input.type === 'password';
+      input.type = willShow ? 'text' : 'password';
+      btn.setAttribute('aria-label', willShow ? btn.dataset.labelHide : btn.dataset.labelShow);
+      btn.querySelector('span').textContent = willShow ? '🙈' : '👁️';
+    });
+  });
+
+  // ==================== ফিল্ড-লেভেল ভ্যালিডেশন (ফ্রন্টএন্ড; ব্যাকএন্ড ভ্যালিডেশন অপরিবর্তিত) ====
+  var form = document.getElementById('loginForm');
+  var submitBtn = document.getElementById('loginSubmitBtn');
+  var submitted = false;
+
+  function showError(input, errEl, message) {
+    input.classList.add('has-error');
+    input.setAttribute('aria-invalid', 'true');
+    errEl.textContent = '⚠ ' + message;
+    errEl.classList.add('is-visible');
+  }
+  function clearError(input, errEl) {
+    input.classList.remove('has-error');
+    input.removeAttribute('aria-invalid');
+    errEl.textContent = '';
+    errEl.classList.remove('is-visible');
+  }
+
+  var identifier = document.getElementById('identifier');
+  var identifierError = document.getElementById('identifierError');
+  var password = document.getElementById('password');
+  var passwordError = document.getElementById('passwordError');
+
+  // ইউজার ঠিক করা শুরু করলেই এরর সরে যাবে
+  identifier.addEventListener('input', function () { clearError(identifier, identifierError); });
+  password.addEventListener('input', function () { clearError(password, passwordError); });
+
+  form.addEventListener('submit', function (e) {
+    // ডাবল সাবমিশন প্রতিরোধ
+    if (submitted) { e.preventDefault(); return; }
+
+    var valid = true;
+    if (!identifier.value.trim()) { showError(identifier, identifierError, MSG.identifierRequired); valid = false; }
+    if (!password.value) { showError(password, passwordError, MSG.passwordRequired); valid = false; }
+
+    if (!valid) {
+      e.preventDefault();
+      var firstBad = form.querySelector('.has-error');
+      if (firstBad) firstBad.focus();
+      return;
+    }
+
+    submitted = true;
+    LivoToast.setLoading(submitBtn, true, MSG.signingIn);
+  });
+})();
+</script>
