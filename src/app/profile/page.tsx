@@ -7,21 +7,20 @@ import {
   ChevronRight, CreditCard, Gift, PieChart,
   MessageSquare, HeartPulse, Mail, Crown, Trophy
 } from 'lucide-react';
-import Link from 'next/link';
 
 export default function ProfilePage() {
   // Account & Support quick links (no duplicates: Transaction/Records live under
   // the Wallet hub, Invite Friends & Missions live under Reward/VIP hubs)
   const accountActions = [
-    { icon: <History size={24} />, label: "Bet Record" },
-    { icon: <PieChart size={24} />, label: "Profit & Loss" },
-    { icon: <ShieldCheck size={24} />, label: "Security Center" },
-    { icon: <HeartPulse size={24} />, label: "Responsible Gaming" },
-    { icon: <Mail size={24} />, label: "Mail", badge: 2 },
-    { icon: <MessageSquare size={24} />, label: "Feedback" },
-    { icon: <Download size={24} />, label: "App Download" },
-    { icon: <HelpCircle size={24} />, label: "Support" },
-    { icon: <LogOut size={24} />, label: "Logout" },
+    { icon: <History size={24} />, label: "Bet Record", href: "/profile/history" },
+    { icon: <PieChart size={24} />, label: "Profit & Loss", href: "/profile/stats" },
+    { icon: <ShieldCheck size={24} />, label: "Security Center", href: "/profile/security" },
+    { icon: <HeartPulse size={24} />, label: "Responsible Gaming", href: "/profile/responsible" },
+    { icon: <Mail size={24} />, label: "Mail", badge: 2, href: "/profile/chat" },
+    { icon: <MessageSquare size={24} />, label: "Feedback", href: "/profile/feedback" },
+    { icon: <Download size={24} />, label: "App Download", href: "/profile/app-download" },
+    { icon: <HelpCircle size={24} />, label: "Support", href: "/profile/support" },
+    { icon: <LogOut size={24} />, label: "Logout", href: "/logout" },
   ];
 
   return (
@@ -30,20 +29,20 @@ export default function ProfilePage() {
       <header className="p-4 sm:p-5 lg:px-8 flex items-center justify-between border-b border-white/5 bg-background/50 backdrop-blur-md sticky top-0 z-50">
         <h1 className="text-lg sm:text-xl lg:text-2xl font-black italic tracking-tighter uppercase">Member Center</h1>
         <div className="flex items-center gap-3 sm:gap-4">
-          <Link href="/settings" className="shrink-0">
+          <a href="/profile/security" className="shrink-0">
             <Settings size={22} className="text-text-muted" />
-          </Link>
+          </a>
           {/* Single Notification Bell */}
-          <div className="relative shrink-0">
+          <a href="/notifications" className="relative shrink-0">
             <Bell size={22} className="text-text-muted" />
             <div className="absolute top-0 right-0 w-2 h-2 bg-accent rounded-full border-2 border-background" />
-          </div>
+          </a>
         </div>
       </header>
 
       <main className="max-w-md sm:max-w-2xl lg:max-w-5xl xl:max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8">
         {/* User Info Card */}
-        <section className="card-premium p-5 sm:p-6 relative overflow-hidden">
+        <a href="/profile" className="card-premium p-5 sm:p-6 relative overflow-hidden block hover:border-primary/30 transition-colors">
           <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-3xl -mr-16 -mt-16" />
 
           <div className="flex items-center gap-4 relative z-10 min-w-0">
@@ -70,7 +69,7 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
-        </section>
+        </a>
 
         {/* Main Hubs: Wallet, VIP Center, Reward Center */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -89,9 +88,9 @@ export default function ProfilePage() {
             </div>
 
             <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-6">
-              <FinanceBtn icon={<Wallet size={18} />} label="Deposit" primary />
-              <FinanceBtn icon={<CreditCard size={18} />} label="Withdraw" />
-              <FinanceBtn icon={<History size={18} />} label="Records" />
+              <FinanceBtn icon={<Wallet size={18} />} label="Deposit" href="/payment/deposit" primary />
+              <FinanceBtn icon={<CreditCard size={18} />} label="Withdraw" href="/payment/withdraw" />
+              <FinanceBtn icon={<History size={18} />} label="Records" href="/profile/transactions" />
             </div>
           </section>
 
@@ -108,9 +107,9 @@ export default function ProfilePage() {
             </div>
 
             <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-6">
-              <FinanceBtn icon={<Trophy size={18} />} label="Missions" />
-              <FinanceBtn icon={<Gift size={18} />} label="Benefits" />
-              <FinanceBtn icon={<History size={18} />} label="History" />
+              <FinanceBtn icon={<Trophy size={18} />} label="Missions" href="/profile/missions" />
+              <FinanceBtn icon={<Gift size={18} />} label="Benefits" href="/profile/vip" />
+              <FinanceBtn icon={<History size={18} />} label="History" href="/profile/vip" />
             </div>
           </section>
 
@@ -127,9 +126,9 @@ export default function ProfilePage() {
             </div>
 
             <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-6">
-              <FinanceBtn icon={<span className="text-base leading-none">🎁</span>} label="Daily" primary />
-              <FinanceBtn icon={<span className="text-base leading-none">🎡</span>} label="Wheel" />
-              <FinanceBtn icon={<Users size={18} />} label="Invite" />
+              <FinanceBtn icon={<span className="text-base leading-none">🎁</span>} label="Daily" href="/profile/rewards" primary />
+              <FinanceBtn icon={<span className="text-base leading-none">🎡</span>} label="Wheel" href="/profile/wheel" />
+              <FinanceBtn icon={<Users size={18} />} label="Invite" href="/profile/referral" />
             </div>
           </section>
         </div>
@@ -146,7 +145,7 @@ export default function ProfilePage() {
         </section>
 
         {/* Support Banner */}
-        <div className="card-premium p-4 sm:p-5 bg-primary/5 border-primary/20 flex items-center justify-between gap-3 group cursor-pointer hover:bg-primary/10 transition-colors">
+        <a href="/profile/chat" className="card-premium p-4 sm:p-5 bg-primary/5 border-primary/20 flex items-center justify-between gap-3 group cursor-pointer hover:bg-primary/10 transition-colors">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 shrink-0 rounded-full bg-primary/20 flex items-center justify-center text-primary">
               <MessageSquare size={20} />
@@ -157,21 +156,21 @@ export default function ProfilePage() {
             </div>
           </div>
           <ChevronRight size={18} className="text-text-muted group-hover:text-primary transition-colors shrink-0" />
-        </div>
+        </a>
       </main>
     </div>
   );
 }
 
-function FinanceBtn({ icon, label, primary = false }: { icon: React.ReactNode, label: string, primary?: boolean }) {
+function FinanceBtn({ icon, label, href, primary = false }: { icon: React.ReactNode, label: string, href: string, primary?: boolean }) {
   return (
-    <button className={`flex flex-col items-center gap-2 py-2.5 sm:py-3 rounded-xl transition-all active:scale-95 border w-full ${
+    <a href={href} className={`flex flex-col items-center gap-2 py-2.5 sm:py-3 rounded-xl transition-all active:scale-95 border w-full ${
       primary
         ? 'bg-gold-gradient text-black border-transparent shadow-[0_5px_15px_rgba(251,191,36,0.3)]'
         : 'bg-white/5 text-text-main border-white/10 hover:bg-white/10'
     }`}>
       {icon}
       <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-tighter">{label}</span>
-    </button>
+    </a>
   );
 }
