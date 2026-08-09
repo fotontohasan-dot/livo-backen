@@ -1,6 +1,5 @@
-const request = require('supertest');
 const { pool } = require('../../db');
-const { app, getCsrfAgent, uniqueUsername, REALISTIC_UA, fakeIp } = require('../helpers/app');
+const { app, getCsrfAgent, uniqueUsername, uniquePhone, REALISTIC_UA, fakeIp, freshRequest } = require('../helpers/app');
 
 // অথেন্টিকেশন সুরক্ষার আচরণ যাচাই (পাসওয়ার্ড স্টোরেজ, সেশন, এনুমারেশন, বট-হানিপট)।
 // tests/auth.test.js মূল ফ্লো কভার করে; এখানে শুধু সুরক্ষা-নির্দিষ্ট দিকগুলো যোগ করা হয়েছে।
@@ -10,19 +9,19 @@ describe('Authentication Security', () => {
   async function registerUser(password = 'SecurePass123') {
     const { agent, token } = await getCsrfAgent('/register');
     const username = uniqueUsername();
-    const phone = '01' + String(Date.now()).slice(-9) + Math.floor(Math.random() * 10);
+    const phone = uniquePhone();
     const res = await agent
       .post('/register')
       .type('form')
       .send({
         username,
-        phone: phone.slice(0, 11),
+        phone,
         password,
         confirmPassword: password,
         _csrf: token
       });
     createdUsernames.push(username);
-    return { agent, username, phone: phone.slice(0, 11), password, res };
+    return { agent, username, phone, password, res };
   }
 
   afterAll(async () => {
@@ -60,7 +59,7 @@ describe('Authentication Security', () => {
         .type('form')
         .send({
           username,
-          phone: '01' + String(Date.now()).slice(-9),
+          phone: uniquePhone(),
           password: 'short1',
           confirmPassword: 'short1',
           _csrf: token
@@ -105,7 +104,7 @@ describe('Authentication Security', () => {
 
   describe('সেশন নিরাপত্তা', () => {
     test('সেশন কুকি HttpOnly ফ্ল্যাগসহ সেট হয়', async () => {
-      const res = await request(app).get('/login').set('User-Agent', REALISTIC_UA);
+      const res = await freshRequest().get('/login').set('User-Agent', REALISTIC_UA);
       const cookies = res.headers['set-cookie'] || [];
       const sessionCookie = cookies.find((c) => c.startsWith('connect.sid'));
       expect(sessionCookie).toBeTruthy();
@@ -113,7 +112,7 @@ describe('Authentication Security', () => {
     });
 
     test('সেশন কুকিতে SameSite নীতি থাকে', async () => {
-      const res = await request(app).get('/login').set('User-Agent', REALISTIC_UA);
+      const res = await freshRequest().get('/login').set('User-Agent', REALISTIC_UA);
       const cookies = res.headers['set-cookie'] || [];
       const sessionCookie = cookies.find((c) => c.startsWith('connect.sid'));
       expect(sessionCookie).toMatch(/SameSite/i);
@@ -142,7 +141,7 @@ describe('Authentication Security', () => {
     });
 
     test('লগইন ছাড়া অ্যাডমিন API রুট সুরক্ষিত', async () => {
-      const res = await request(app)
+      const res = await freshRequest()
         .get('/admin/users')
         .set('User-Agent', REALISTIC_UA);
       expect([302, 401, 403]).toContain(res.status);
@@ -158,7 +157,7 @@ describe('Authentication Security', () => {
         .type('form')
         .send({
           username,
-          phone: '01' + String(Date.now()).slice(-9),
+          phone: uniquePhone(),
           password: 'SecurePass123',
           confirmPassword: 'SecurePass123',
           website: 'http://spam-bot-filled-this.example', // হানিপট
@@ -179,7 +178,7 @@ describe('Authentication Security', () => {
         .type('form')
         .send({
           username, // একই ইউজারনেম
-          phone: '01' + String(Date.now()).slice(-9),
+          phone: uniquePhone(),
           password: 'AnotherPass123',
           confirmPassword: 'AnotherPass123',
           _csrf: token

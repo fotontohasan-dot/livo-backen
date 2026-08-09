@@ -1,36 +1,34 @@
-const request = require('supertest');
-const { app, getCsrfAgent, uniqueUsername, REALISTIC_UA } = require('./helpers/app');
+const { getCsrfAgent, uniqueUsername, uniquePhone, REALISTIC_UA, freshRequest } = require('./helpers/app');
 
 describe('Authentication', () => {
   test('POST without a CSRF token is rejected with 403', async () => {
-    const res = await request(app)
+    const res = await freshRequest()
       .post('/login')
-      .set('User-Agent', REALISTIC_UA)
       .type('form')
       .send({ identifier: 'someone@test.com', password: 'whatever' });
     expect(res.status).toBe(403);
   });
 
   test('Protected route redirects to /login when not authenticated', async () => {
-    const res = await request(app).get('/profile/security');
+    const res = await freshRequest().get('/profile/security');
     expect(res.status).toBe(302);
     expect(res.headers.location).toMatch(/\/login/);
   });
 
   test('GET /register renders the registration page', async () => {
-    const res = await request(app).get('/register');
+    const res = await freshRequest().get('/register');
     expect(res.status).toBe(200);
   });
 
   test('GET /login renders the login page', async () => {
-    const res = await request(app).get('/login');
+    const res = await freshRequest().get('/login');
     expect(res.status).toBe(200);
   });
 
   test('POST /register successfully creates a user and logs in (redirect to /)', async () => {
     const { agent, token } = await getCsrfAgent('/register');
     const username = uniqueUsername();
-    const phone = '01' + String(Date.now()).slice(-9);
+    const phone = uniquePhone();
     const res = await agent
       .post('/register')
       .set('User-Agent', REALISTIC_UA)
@@ -43,7 +41,7 @@ describe('Authentication', () => {
   test('POST /login with correct credentials logs the user in', async () => {
     const regAgentInfo = await getCsrfAgent('/register');
     const username = uniqueUsername();
-    const phone = '01' + String(Date.now()).slice(-9);
+    const phone = uniquePhone();
     await regAgentInfo.agent
       .post('/register')
       .set('User-Agent', REALISTIC_UA)

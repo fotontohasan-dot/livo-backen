@@ -1,5 +1,4 @@
-const request = require('supertest');
-const { app, getCsrfAgent, extractCsrfToken, uniqueUsername, REALISTIC_UA, fakeIp } = require('../helpers/app');
+const { app, getCsrfAgent, extractCsrfToken, uniqueUsername, REALISTIC_UA, fakeIp, freshRequest } = require('../helpers/app');
 
 // middleware/csrf.js — Synchronizer Token Pattern।
 // এখানে শুধু middleware-এর আচরণ যাচাই করা হচ্ছে; কোনো সুরক্ষা লজিক পরিবর্তন করা হয়নি।
@@ -104,12 +103,12 @@ describe('CSRF Protection (middleware/csrf.js)', () => {
 
   describe('নিরাপদ মেথড ও এক্সেম্পট পাথ', () => {
     test('GET রিকোয়েস্ট কখনো CSRF-এ ব্লক হয় না', async () => {
-      const res = await request(app).get('/login').set('User-Agent', REALISTIC_UA);
+      const res = await freshRequest().get('/login').set('User-Agent', REALISTIC_UA);
       expect(res.status).toBe(200);
     });
 
     test('/telegram-webhook এক্সেম্পট — CSRF নয়, নিজস্ব secret যাচাইয়ে আটকায়', async () => {
-      const res = await request(app)
+      const res = await freshRequest()
         .post('/telegram-webhook')
         .set('User-Agent', REALISTIC_UA)
         .send({ update_id: 1 });
@@ -118,7 +117,7 @@ describe('CSRF Protection (middleware/csrf.js)', () => {
     });
 
     test('/api/* এক্সেম্পট — CSRF এরর কোড দেয় না', async () => {
-      const res = await request(app)
+      const res = await freshRequest()
         .post('/api/v1/nonexistent-endpoint')
         .set('User-Agent', REALISTIC_UA)
         .send({});
@@ -128,7 +127,7 @@ describe('CSRF Protection (middleware/csrf.js)', () => {
 
   describe('সুরক্ষিত রুটে প্রয়োগ', () => {
     test('/register টোকেন ছাড়া POST 403 দেয়', async () => {
-      const res = await request(app)
+      const res = await freshRequest()
         .post('/register')
         .set('User-Agent', REALISTIC_UA)
         .set('X-Forwarded-For', fakeIp())
@@ -138,7 +137,7 @@ describe('CSRF Protection (middleware/csrf.js)', () => {
     });
 
     test('/admin/login টোকেন ছাড়া POST 403 দেয়', async () => {
-      const res = await request(app)
+      const res = await freshRequest()
         .post('/admin/login')
         .set('User-Agent', REALISTIC_UA)
         .set('X-Forwarded-For', fakeIp())

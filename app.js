@@ -475,6 +475,17 @@ async function startServer() {
       console.error('ensureCriticalTables:', e.message);
     }
 
+    // টেস্ট মোডে (NODE_ENV=test) সার্ভার listen করে না এবং কোনো ব্যাকগ্রাউন্ড
+    // ওয়ার্কার/টাইমার (match sync, queue worker, backup ও scheduler) চালু করে না।
+    // supertest নিজেই ephemeral সার্ভার তৈরি করে, তাই listen অপ্রয়োজনীয়; আর ওই
+    // ব্যাকগ্রাউন্ড কাজগুলো টেস্ট চলাকালীন শেয়ার্ড DB পরিবর্তন করত ও টেস্ট শেষ হওয়ার
+    // পরেও লগ/কোয়েরি চালিয়ে যেত — অর্থাৎ এক টেস্ট ফাইলের প্রভাব আরেকটায় লিক করত।
+    // প্রোডাকশন/ডেভেলপমেন্টে আচরণ হুবহু আগের মতোই থাকে।
+    if (process.env.NODE_ENV === 'test') {
+      console.log('🧪 test mode — server listen ও ব্যাকগ্রাউন্ড ওয়ার্কার বাদ দেওয়া হলো');
+      return;
+    }
+
     server.listen(PORT, () => {
       console.log(`✅ Server running on port ${PORT}`);
       setTimeout(() => {

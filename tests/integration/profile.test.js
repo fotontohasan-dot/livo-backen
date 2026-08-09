@@ -1,11 +1,10 @@
 // tests/integration/profile.test.js
-const request = require('supertest');
-const { app, getCsrfAgent, uniqueUsername, REALISTIC_UA } = require('../helpers/app');
+const { app, getCsrfAgent, uniqueUsername, uniquePhone, REALISTIC_UA, freshRequest } = require('../helpers/app');
 
 async function registerAgent() {
   const { agent, token } = await getCsrfAgent('/register');
   const username = uniqueUsername();
-  const phone = '01' + String(Date.now()).slice(-9);
+  const phone = uniquePhone();
   const password = 'SecurePass123';
   await agent
     .post('/register')
@@ -17,7 +16,7 @@ async function registerAgent() {
 
 describe('Profile routes', () => {
   test('unauthenticated GET /profile/security redirects to /login', async () => {
-    const res = await request(app).get('/profile/security');
+    const res = await freshRequest().get('/profile/security');
     expect(res.status).toBe(302);
     expect(res.headers.location).toMatch(/\/login/);
   });

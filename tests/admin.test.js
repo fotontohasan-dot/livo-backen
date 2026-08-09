@@ -1,14 +1,13 @@
-const request = require('supertest');
-const { app, getCsrfAgent } = require('./helpers/app');
+const { getCsrfAgent, freshRequest } = require('./helpers/app');
 
 describe('Admin Panel', () => {
   test('GET /admin/login renders the admin login page', async () => {
-    const res = await request(app).get('/admin/login');
+    const res = await freshRequest().get('/admin/login');
     expect(res.status).toBe(200);
   });
 
   test('GET /admin redirects to /admin/login when not authenticated', async () => {
-    const res = await request(app).get('/admin');
+    const res = await freshRequest().get('/admin');
     expect(res.status).toBe(302);
     expect(res.headers.location).toMatch(/\/admin\/login/);
   });
@@ -23,7 +22,7 @@ describe('Admin Panel', () => {
   });
 
   test('Admin API-style route rejects unauthenticated access with 403 JSON', async () => {
-    const res = await request(app).get('/admin/api/some-protected-endpoint');
+    const res = await freshRequest().get('/admin/api/some-protected-endpoint');
     expect([403, 404]).toContain(res.status);
   });
 });

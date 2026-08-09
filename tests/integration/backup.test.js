@@ -9,13 +9,12 @@ const fs = require('fs');
 const path = require('path');
 const { pool } = require('../../db');
 const backupManager = require('../../services/backupManager');
-const { app, getCsrfAgent, uniqueUsername, REALISTIC_UA } = require('../helpers/app');
-const request = require('supertest');
+const { app, getCsrfAgent, uniqueUsername, uniquePhone, REALISTIC_UA, freshRequest } = require('../helpers/app');
 
 async function makeAdminAgent() {
   const { agent, token } = await getCsrfAgent('/register');
   const username = uniqueUsername();
-  const phone = '01' + String(Date.now()).slice(-9);
+  const phone = uniquePhone();
   await agent
     .post('/register')
     .set('User-Agent', REALISTIC_UA)
@@ -239,7 +238,7 @@ describe('Backup & Restore System', () => {
   // reproduce করে ডকুমেন্ট করে রাখে (AUDIT_REPORT.md-এ বিস্তারিত)।
   describe('Admin backup routes (HTTP, full functional flow)', () => {
     test('unauthenticated ব্যবহারকারী /admin/backups-এ অ্যাক্সেস পায় না', async () => {
-      const res = await request(app).get('/admin/backups').set('User-Agent', REALISTIC_UA);
+      const res = await freshRequest().get('/admin/backups').set('User-Agent', REALISTIC_UA);
       expect(res.status).toBe(302);
       expect(res.headers.location).toBe('/admin/login');
     });
@@ -334,7 +333,7 @@ describe('Backup & Restore System', () => {
     test('non-admin (সাধারণ) লগইন করা ইউজার backup routes-এ অ্যাক্সেস পায় না', async () => {
       const { agent, token } = await getCsrfAgent('/register');
       const username = uniqueUsername();
-      const phone = '01' + String(Date.now()).slice(-9);
+      const phone = uniquePhone();
       await agent
         .post('/register')
         .set('User-Agent', REALISTIC_UA)
