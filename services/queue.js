@@ -13,6 +13,8 @@ const POLL_INTERVAL_MS = parseInt(process.env.QUEUE_POLL_INTERVAL_MS || '2000', 
 const BATCH_SIZE = parseInt(process.env.QUEUE_BATCH_SIZE || '5', 10);
 const DEFAULT_MAX_ATTEMPTS = parseInt(process.env.QUEUE_MAX_ATTEMPTS || '3', 10);
 const QUEUE_ENABLED = String(process.env.QUEUE_ENABLED || 'true').toLowerCase() !== 'false';
+// 'processing'-এ কত পুরোনো হলে জব stalled ধরা হবে (ওয়ার্কার ক্র্যাশ/রিস্টার্ট রিকভারি ও হেলথ চেক — দুটোতেই ব্যবহৃত)
+const STALLED_THRESHOLD_MS = parseInt(process.env.QUEUE_STALLED_THRESHOLD_MS || '300000', 10); // ৫ মিনিট
 
 const handlers = new Map(); // type -> async (payload) => void
 const state = {
@@ -59,6 +61,16 @@ async function processOneBatch() {
   let jobs = [];
   try {
     await client.query('BEGIN');
+    // Stalled job recovery — কন্টেইনার রিস্টার্ট/ক্র্যাশে (Docker SIGTERM, redeploy) যেসব জব
+    // 'processing' অবস্থায় আটকে ছিল সেগুলো আর কখনো তোলা হতো না, কারণ নিচের কোয়েরি শুধু
+    // 'pending' খোঁজে। থ্রেশহোল্ডের চেয়ে পুরোনো হলে আবার pending-এ ফেরত পাঠানো হচ্ছে যাতে
+    // অন্তত একবার প্রসেস হওয়ার নিশ্চয়তা থাকে (attempts বাড়ে না — এটা ওয়ার্কার ব্যর্থতা,
+    // জব ব্যর্থতা নয়; max-attempts লজিক অপরিবর্তিত)।
+    await client.query(
+      `UPDATE job_queue SET status = 'pending', started_at = NULL
+       WHERE status = 'processing' AND started_at < NOW() - ($1 || ' milliseconds')::interval`,
+      [STALLED_THRESHOLD_MS]
+    );
     const picked = await client.query(
       `SELECT * FROM job_queue
        WHERE status = 'pending' AND available_at <= NOW()
@@ -234,7 +246,6 @@ async function getThroughput(hours = 24) {
   }));
 }
 
-const STALLED_THRESHOLD_MS = parseInt(process.env.QUEUE_STALLED_THRESHOLD_MS || '300000', 10); // ৫ মিনিট
 
 /** কিউ হেলথ স্ট্যাটাস — Healthy/Warning/Error, System Diagnostics পেজেও ব্যবহৃত হয় */
 async function getHealthStatus() {
