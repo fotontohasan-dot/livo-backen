@@ -7,7 +7,10 @@ providers:
     type: file
     disableDeletion: false
     updateIntervalSeconds: 30
-    allowUiUpdates: true
+    # ড্যাশবোর্ড ফোল্ডারটা docker-compose.yml-এ read-only (:ro) হিসেবে মাউন্ট করা, তাই UI থেকে
+    # করা এডিট ফাইলে লিখে রাখা সম্ভব না — allowUiUpdates: true থাকলে Grafana সেভ করতে গিয়ে
+    # ব্যর্থ হয় ও এরর লগ করে। false রাখলে ড্যাশবোর্ড ফাইলই একমাত্র উৎস (provisioning-as-code)।
+    allowUiUpdates: false
     options:
       path: /var/lib/grafana/dashboards
       foldersFromFilesStructure: false
