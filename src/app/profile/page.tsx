@@ -5,16 +5,16 @@ import {
   Settings, Bell, ShieldCheck, History, Users,
   HelpCircle, Download, LogOut, Wallet,
   ChevronRight, CreditCard, Gift, PieChart,
-  MessageSquare, HeartPulse, Mail
+  MessageSquare, HeartPulse, Mail, Crown, Trophy
 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function ProfilePage() {
-  const memberActions = [
-    { icon: <Users size={24} />, label: "Invite Friends" },
+  // Account & Support quick links (no duplicates: Transaction/Records live under
+  // the Wallet hub, Invite Friends & Missions live under Reward/VIP hubs)
+  const accountActions = [
     { icon: <History size={24} />, label: "Bet Record" },
     { icon: <PieChart size={24} />, label: "Profit & Loss" },
-    { icon: <History size={24} />, label: "Transaction" },
     { icon: <ShieldCheck size={24} />, label: "Security Center" },
     { icon: <HeartPulse size={24} />, label: "Responsible Gaming" },
     { icon: <Mail size={24} />, label: "Mail", badge: 2 },
@@ -42,49 +42,49 @@ export default function ProfilePage() {
       </header>
 
       <main className="max-w-md sm:max-w-2xl lg:max-w-5xl xl:max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8">
-        {/* Top row: User Info + Balance side-by-side on desktop */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          {/* User Info Card (Account) */}
-          <section className="card-premium p-5 sm:p-6 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-3xl -mr-16 -mt-16" />
+        {/* User Info Card */}
+        <section className="card-premium p-5 sm:p-6 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-3xl -mr-16 -mt-16" />
 
-            <div className="flex items-center gap-4 relative z-10 min-w-0">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-full border-2 border-primary/50 p-1 bg-background shadow-[0_0_15px_rgba(251,191,36,0.3)]">
-                <div className="w-full h-full rounded-full bg-gradient-to-br from-primary/40 to-primary/10 flex items-center justify-center text-xl sm:text-2xl font-black italic text-primary">
-                  LH
-                </div>
+          <div className="flex items-center gap-4 relative z-10 min-w-0">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-full border-2 border-primary/50 p-1 bg-background shadow-[0_0_15px_rgba(251,191,36,0.3)]">
+              <div className="w-full h-full rounded-full bg-gradient-to-br from-primary/40 to-primary/10 flex items-center justify-center text-xl sm:text-2xl font-black italic text-primary">
+                LH
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-base sm:text-lg font-black italic tracking-tighter truncate">tuhinhasan73</h2>
-                  <VIPBadge level={3} />
-                </div>
-                <p className="text-[10px] text-text-muted font-bold tracking-widest mt-0.5">MEMBER SINCE 2023</p>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-base sm:text-lg font-black italic tracking-tighter truncate">tuhinhasan73</h2>
+                <VIPBadge level={3} />
+              </div>
+              <p className="text-[10px] text-text-muted font-bold tracking-widest mt-0.5">MEMBER SINCE 2023</p>
 
-                <div className="mt-3 space-y-1.5">
-                  <div className="flex justify-between text-[9px] font-black uppercase tracking-tighter">
-                    <span className="text-primary">VIP 3 Progress</span>
-                    <span className="text-text-muted">75%</span>
-                  </div>
-                  <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
-                    <div className="h-full bg-gold-gradient w-[75%] rounded-full shadow-[0_0_10px_rgba(251,191,36,0.5)]" />
-                  </div>
+              <div className="mt-3 space-y-1.5">
+                <div className="flex justify-between text-[9px] font-black uppercase tracking-tighter">
+                  <span className="text-primary">VIP 3 Progress</span>
+                  <span className="text-text-muted">75%</span>
+                </div>
+                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+                  <div className="h-full bg-gold-gradient w-[75%] rounded-full shadow-[0_0_10px_rgba(251,191,36,0.5)]" />
                 </div>
               </div>
             </div>
-          </section>
+          </div>
+        </section>
 
-          {/* Balance & Quick Finance (Wallet) */}
-          <section className="card-premium p-5 sm:p-6 bg-gradient-to-br from-[#1e293b] to-[#0f172a] border-primary/20">
+        {/* Main Hubs: Wallet, VIP Center, Reward Center */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+          {/* Wallet Hub */}
+          <section className="card-premium p-5 sm:p-6 bg-gradient-to-br from-[#1e293b] to-[#0f172a] border-primary/20 flex flex-col">
             <div className="flex justify-between items-start gap-3">
               <div className="min-w-0">
-                <p className="text-[10px] font-black text-text-muted tracking-widest uppercase">Total Balance</p>
-                <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black italic text-primary tracking-tighter mt-1 truncate">
+                <p className="text-[10px] font-black text-text-muted tracking-widest uppercase">Wallet</p>
+                <h3 className="text-2xl sm:text-3xl font-black italic text-primary tracking-tighter mt-1 truncate">
                   ৳1,568,523.00
                 </h3>
               </div>
               <div className="bg-primary/20 p-2 rounded-xl border border-primary/30 shrink-0">
-                <Wallet className="text-primary" size={24} />
+                <Wallet className="text-primary" size={22} />
               </div>
             </div>
 
@@ -94,25 +94,55 @@ export default function ProfilePage() {
               <FinanceBtn icon={<History size={18} />} label="Records" />
             </div>
           </section>
+
+          {/* VIP Center Hub */}
+          <section className="card-premium p-5 sm:p-6 flex flex-col">
+            <div className="flex justify-between items-start gap-3">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black text-text-muted tracking-widest uppercase">VIP Center</p>
+                <h3 className="text-2xl sm:text-3xl font-black italic text-primary tracking-tighter mt-1">Level 3</h3>
+              </div>
+              <div className="bg-primary/20 p-2 rounded-xl border border-primary/30 shrink-0">
+                <Crown className="text-primary" size={22} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-6">
+              <FinanceBtn icon={<Trophy size={18} />} label="Missions" />
+              <FinanceBtn icon={<Gift size={18} />} label="Benefits" />
+              <FinanceBtn icon={<History size={18} />} label="History" />
+            </div>
+          </section>
+
+          {/* Reward Center Hub */}
+          <section className="card-premium p-5 sm:p-6 flex flex-col">
+            <div className="flex justify-between items-start gap-3">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black text-text-muted tracking-widest uppercase">Reward Center</p>
+                <h3 className="text-2xl sm:text-3xl font-black italic text-primary tracking-tighter mt-1">3 Ready</h3>
+              </div>
+              <div className="bg-primary/20 p-2 rounded-xl border border-primary/30 shrink-0">
+                <Gift className="text-primary" size={22} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-6">
+              <FinanceBtn icon={<span className="text-base leading-none">🎁</span>} label="Daily" primary />
+              <FinanceBtn icon={<span className="text-base leading-none">🎡</span>} label="Wheel" />
+              <FinanceBtn icon={<Users size={18} />} label="Invite" />
+            </div>
+          </section>
         </div>
 
-        {/* Bonus & Rewards Grid (VIP / Reward) */}
+        {/* Account & Support Links */}
         <section>
           <h3 className="text-xs sm:text-sm font-black text-primary tracking-widest uppercase mb-4 px-1 flex items-center gap-2">
-            <Gift size={14} />
-            Bonuses & Rewards
+            <ShieldCheck size={14} />
+            Account &amp; Support
           </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-            <RewardCard title="Daily Reward" sub="Check-in & Earn" icon="🎁" />
-            <RewardCard title="Cashback" sub="Weekly Return" icon="💰" color="text-secondary" />
-            <RewardCard title="Lucky Wheel" sub="Spin to Win" icon="🎡" />
-            <RewardCard title="VIP Mission" sub="Exclusive Tasks" icon="🏆" />
+          <div className="card-premium p-2 sm:p-4">
+            <IconGrid items={accountActions} columns={4} />
           </div>
-        </section>
-
-        {/* Member Center Links (Account / Support shortcuts) */}
-        <section className="card-premium p-2 sm:p-4">
-          <IconGrid items={memberActions} columns={4} />
         </section>
 
         {/* Support Banner */}
@@ -143,17 +173,5 @@ function FinanceBtn({ icon, label, primary = false }: { icon: React.ReactNode, l
       {icon}
       <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-tighter">{label}</span>
     </button>
-  );
-}
-
-function RewardCard({ title, sub, icon, color = "text-primary" }: { title: string, sub: string, icon: string, color?: string }) {
-  return (
-    <div className="card-premium p-3 sm:p-4 flex items-center gap-3 hover:border-primary/30 transition-colors cursor-pointer group min-w-0">
-      <div className="text-2xl shrink-0 group-hover:scale-110 transition-transform">{icon}</div>
-      <div className="min-w-0">
-        <h4 className="text-[11px] font-black italic uppercase tracking-tighter leading-none truncate">{title}</h4>
-        <p className={`text-[9px] font-bold ${color} mt-1 leading-none truncate`}>{sub}</p>
-      </div>
-    </div>
   );
 }
