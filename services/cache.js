@@ -217,4 +217,16 @@ async function incrWithExpiry(key, ttlSeconds) {
   }
 }
 
-module.exports = { get, set, del, delByPattern, getOrSet, isAvailable, getStatus, incrWithExpiry, getRawClient };
+/** নির্দিষ্ট rate-limit key রিসেট করে (services/redisRateLimitStore.js ব্যবহার করে)। Redis অনুপলব্ধ হলে/এরর হলে silently ignore করে — কখনো throw করে না। */
+async function resetKey(key) {
+  if (!isAvailable()) return false;
+  try {
+    await state.client.del(prefixed(key));
+    return true;
+  } catch (err) {
+    logError('resetKey(' + key + ')', err);
+    return false;
+  }
+}
+
+module.exports = { get, set, del, delByPattern, getOrSet, isAvailable, getStatus, incrWithExpiry, getRawClient, resetKey };

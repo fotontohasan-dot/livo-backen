@@ -90,6 +90,20 @@ function validateEnv() {
     }
   }
 
+  // ---- প্রোডাকশনে Redis কনফিগার করা না থাকলে warning (fail-fast নয়, শুধু সতর্কতা) ----
+  // Redis ছাড়াও অ্যাপ চলবে (cache/rate-limit স্বয়ংক্রিয়ভাবে in-memory/DB ফলব্যাকে যায়),
+  // কিন্তু একাধিক ইনস্ট্যান্স/কন্টেইনার চললে rate-limit কাউন্টার শেয়ার্ড থাকে না এবং
+  // ক্যাশ প্রতি-ইনস্ট্যান্স আলাদা থাকে — তাই প্রোডাকশন অপারেটরকে সতর্ক করা হয়।
+  if (isProd) {
+    const redisEnabled = String(process.env.REDIS_ENABLED || 'true').toLowerCase() !== 'false';
+    const hasRedisConfig = !!(process.env.REDIS_URL || process.env.REDIS_HOST);
+    if (!redisEnabled) {
+      warnings.push('Redis: REDIS_ENABLED=false — প্রোডাকশনে cache ও rate-limit in-memory/DB ফলব্যাকে চলবে (একাধিক ইনস্ট্যান্স থাকলে rate-limit শেয়ার্ড থাকবে না)');
+    } else if (!hasRedisConfig) {
+      warnings.push('Redis: REDIS_URL/REDIS_HOST কোনোটাই সেট করা নেই — প্রোডাকশনে cache ও rate-limit in-memory/DB ফলব্যাকে চলবে (একাধিক ইনস্ট্যান্স থাকলে rate-limit শেয়ার্ড থাকবে না)');
+    }
+  }
+
   return { ok: errors.length === 0, errors, warnings };
 }
 

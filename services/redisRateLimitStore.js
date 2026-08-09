@@ -39,7 +39,7 @@ class RedisRateLimitStore {
       // Redis অনুপলব্ধ — নিরবে in-memory fallback-এ চলে যাচ্ছে, রিকোয়েস্ট আটকাচ্ছে না
       return this._memoryIncr(key);
     }
-    return { totalHits: result.count, resetTime: new Date(Date.now() + result.ttlMs) };
+    return { totalHits: result.count, resetTime: new Date(Date.now() + result.ttl * 1000) };
   }
 
   async decrement(key) {
