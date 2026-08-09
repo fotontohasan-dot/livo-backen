@@ -38,7 +38,7 @@ router.get('/api/analytics', async (req, res) => {
         FROM users WHERE kyc_status IS NOT NULL
       `).catch(() => ({ rows: [{ pending:0, approved:0, rejected:0 }] })),
       (async () => {
-        try { const { getHealthSummary } = require('../services/queue/monitor'); return await getHealthSummary(); } catch(e) { return {}; }
+        try { const { getHealthStatus } = require('../services/queue'); return await getHealthStatus(); } catch(e) { return {}; }
       })()
     ]);
 
