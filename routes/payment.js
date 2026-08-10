@@ -474,7 +474,7 @@ router.get('/history', requireLogin, async (req, res) => {
   }
 });
 
-router.get('/admin/payments', requireAdmin, requirePermission('payments.view'), async (req, res) => {
+router.get('/admin/payments', requireAdmin, requirePermission('payments_view'), async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT pr.*, u.username FROM payment_requests pr JOIN users u ON pr.user_id = u.id ORDER BY pr.created_at DESC`
@@ -499,7 +499,7 @@ function addDaysStr(dateStr, days) {
 function dhakaStartOf(dateStr) { return new Date(dateStr + 'T00:00:00+06:00'); }
 function dhakaEndOf(dateStr) { return new Date(dateStr + 'T23:59:59.999+06:00'); }
 
-router.get('/admin/deposits', requireAdmin, requirePermission('payments.view'), async (req, res) => {
+router.get('/admin/deposits', requireAdmin, requirePermission('payments_view'), async (req, res) => {
   try {
     const method = ['bkash', 'nagad', 'rocket'].includes(req.query.method) ? req.query.method : 'bkash';
     const quick = req.query.quick || 'today';
@@ -559,7 +559,7 @@ router.get('/admin/deposits', requireAdmin, requirePermission('payments.view'), 
   }
 });
 
-router.get('/admin/summary', requireAdmin, requirePermission('payments.view'), async (req, res) => {
+router.get('/admin/summary', requireAdmin, requirePermission('payments_view'), async (req, res) => {
   try {
     const quick = req.query.quick || 'today';
     const today = dhakaTodayStr();
@@ -643,7 +643,7 @@ router.get('/admin/summary', requireAdmin, requirePermission('payments.view'), a
   }
 });
 
-router.post('/admin/approve/:id', requireAdmin, requirePermission('payments.approve'), async (req, res) => {
+router.post('/admin/approve/:id', requireAdmin, requirePermission('payments_approve'), async (req, res) => {
   const { id } = req.params;
   const client = await pool.connect();
   try {
@@ -678,7 +678,7 @@ router.post('/admin/approve/:id', requireAdmin, requirePermission('payments.appr
   }
 });
 
-router.post('/admin/reject/:id', requireAdmin, requirePermission('payments.approve'), async (req, res) => {
+router.post('/admin/reject/:id', requireAdmin, requirePermission('payments_approve'), async (req, res) => {
   const { id } = req.params;
   const client = await pool.connect();
   try {

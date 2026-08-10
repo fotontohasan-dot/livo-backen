@@ -91,17 +91,13 @@ function requirePermission(permKey) {
       const allowed = await hasPermission(req.session.user.id, permKey);
       if (allowed) return next();
 
-      // routes/admin.js-এর logAdminAction এক্সপোর্ট করা নেই (module.exports = router মাত্র),
-      // তাই সেই ফাইল স্পর্শ না করে এখানে সরাসরি admin_logs-এ লগ করা হচ্ছে (একই প্যাটার্ন — queue দিয়ে, ব্যর্থ হলে direct insert)
+      // routes/admin.js-এর logAdminAction এক্সপোর্ট করা নেই (module.exports = router মাত্র), তাই সেই
+      // ফাইল স্পর্শ না করে এখানে সরাসরি admin_logs-এ লগ করা হচ্ছে। এটা services/queue.js-এর PG queue না,
+      // queues/enqueueActivityLog() ব্যবহার করা হয়নি — সেটা সবসময় activity_logs টেবিলে লেখে (queued হোক
+      // বা inline fallback হোক, দুই ক্ষেত্রেই), admin_logs-এ না — যা Admin প্যানেলের Activity Log পাতা
+      // (routes/admin.js-এর SELECT ... FROM admin_logs) কখনো দেখাত না। তাই সরাসরি admin_logs-এ ইনসার্ট করা হচ্ছে।
       (async () => {
         try {
-          const jobId = await require('../queues').enqueueActivityLog({
-            userId: req.session.user.id, username: req.session.user.username,
-            actionType: 'UNAUTHORIZED_ACCESS',
-            details: `প্রয়োজনীয় permission ছাড়া অ্যাক্সেসের চেষ্টা: ${permKey} (${req.method} ${req.originalUrl})`,
-            ip: req.ip
-          }).catch(() => null);
-          if (jobId) return;
           await pool.query(
             `INSERT INTO admin_logs (admin_id, admin_username, action_type, details, ip_address) VALUES ($1,$2,$3,$4,$5)`,
             [req.session.user.id, req.session.user.username, 'UNAUTHORIZED_ACCESS',
