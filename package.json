@@ -17,7 +17,6 @@
     "bcryptjs": "^2.4.3",
     "bullmq": "^5.80.10",
     "cloudinary": "^2.5.1",
-    "clsx": "^2.1.1",
     "compression": "^1.7.4",
     "connect-flash": "^0.1.1",
     "connect-pg-simple": "^9.0.1",
@@ -46,9 +45,7 @@
     "speakeasy": "^2.0.0",
     "swagger-jsdoc": "^6.3.0",
     "swagger-ui-express": "^5.0.1",
-    "tailwind-merge": "^3.6.0",
-    "web-push": "^3.6.7",
-    "zustand": "^5.0.14"
+    "web-push": "^3.6.7"
   },
   "overrides": {
     "postcss": "^8.5.19",
