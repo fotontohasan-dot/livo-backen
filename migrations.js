@@ -999,7 +999,69 @@ async function runMigrations() {
 
     console.log("✅ Job queue table ready");
 
+    // ==================== Accumulator (multi-selection বাজি) ====================
+    // services/accumulator.js ও routes/accumulator.js (app.js-এ /accumulator পাথে মাউন্ট করা)
+    // এই দুইটা টেবিলে INSERT/SELECT/UPDATE করে, কিন্তু কোথাও টেবিল তৈরি করা হতো না —
+    // ফলে অ্যাকুমুলেটর ফিচারের প্রতিটা কোয়েরি "relation does not exist" এরর দিত।
+    // কলামগুলো ওই ফাইলের কোয়েরির সাথে হুবহু মিলিয়ে রাখা হয়েছে।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS accumulators (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        stake NUMERIC(14,2) NOT NULL,
+        total_odd NUMERIC(12,4) NOT NULL,
+        boost_percent NUMERIC(6,2) DEFAULT 0,
+        potential_win NUMERIC(14,2) NOT NULL,
+        selection_count INTEGER NOT NULL DEFAULT 0,
+        status VARCHAR(20) NOT NULL DEFAULT 'pending',
+        settled_at TIMESTAMP,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS accumulator_selections (
+        id SERIAL PRIMARY KEY,
+        acca_id INTEGER NOT NULL REFERENCES accumulators(id) ON DELETE CASCADE,
+        match_id INTEGER,
+        market_id INTEGER,
+        market_name VARCHAR(120),
+        runner VARCHAR(120),
+        odd NUMERIC(12,4) NOT NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'pending',
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_accumulators_user ON accumulators(user_id, created_at DESC);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_acca_sel_acca ON accumulator_selections(acca_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_acca_sel_market ON accumulator_selections(market_id, status);`);
+
+    console.log("✅ Accumulator tables ready");
+
+    // ==================== Web Push সাবস্ক্রিপশন ====================
+    // services/push.js (queues/processors/notification.js থেকে ব্যবহৃত) এই টেবিলে
+    // INSERT ... ON CONFLICT (endpoint) করে, তাই endpoint-এ UNIQUE থাকা আবশ্যক।
+    // টেবিলটা আগে কোথাও তৈরি হতো না, ফলে সব পুশ-সাবস্ক্রিপশন অপারেশন ব্যর্থ হতো।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS push_subscriptions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        endpoint TEXT NOT NULL UNIQUE,
+        p256dh TEXT NOT NULL,
+        auth TEXT NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_push_subs_user ON push_subscriptions(user_id);`);
+
+    console.log("✅ Push subscription table ready");
+
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMP;`);
+
+    // routes/coins.js-এর POST /coins/daily-bonus এই কলামটা SET ও WHERE দুই জায়গাতেই ব্যবহার করে
+    // ("দিনে একবার" গার্ড হিসেবে), কিন্তু কলামটা কোথাও তৈরি করা হতো না — ফলে ডেইলি বোনাস
+    // ক্লেইম করতে গেলেই "column last_bonus_date does not exist" এরর হতো।
+    // ADD COLUMN IF NOT EXISTS — বিদ্যমান ডেটা অপরিবর্তিত থাকে (নতুন কলাম NULL)।
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_bonus_date TIMESTAMP;`);
 
     console.log("✅ Security Center columns ready");
 
