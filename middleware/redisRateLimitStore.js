@@ -23,7 +23,9 @@ class RedisRateLimitStore {
   }
 
   fullKey(key) {
-    return this.prefix + key;
+    // cache.prefixKey() দিয়ে অন্য সব Redis key-এর মতো একই REDIS_PREFIX namespace ব্যবহার করা হচ্ছে,
+    // নাহলে এই store-এর key admin cache stats/clear (services/cache.js) থেকে অদৃশ্য থাকে।
+    return cache.prefixKey(this.prefix + key);
   }
 
   _localIncrement(key) {

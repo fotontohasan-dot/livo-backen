@@ -25,8 +25,28 @@ const state = {
   connected: false,
   lastError: null,
   lastErrorAt: null,
-  disabledReason: null
+  disabledReason: null,
+  hits: 0,
+  misses: 0,
+  sets: 0
 };
+
+// admin/cache.ejs-এ দেখানো ক্যাটাগরি ব্রেকডাউনের জন্য — আসল কোডে ব্যবহৃত key prefix-গুলোর তালিকা।
+const CACHE_CATEGORIES = [
+  { label: 'সাইট সেটিংস', pattern: 'settings:*' },
+  { label: 'Feature Flags', pattern: 'feature_flags:*' },
+  { label: 'ম্যাচ/অডস', pattern: 'matches:*' },
+  { label: 'হোমপেজ', pattern: 'homepage:*' },
+  { label: 'লিডারবোর্ড', pattern: 'leaderboard:*' },
+  { label: 'প্রোফাইল অ্যাক্টিভিটি', pattern: 'profile:*' },
+  { label: 'ওয়ালেট স্ট্যাটস', pattern: 'wallet:*' },
+  { label: 'নোটিফিকেশন', pattern: 'notif:*' },
+  { label: 'RBAC রোল', pattern: 'role:*' },
+  { label: 'IP রুলস', pattern: 'ip_rule:*' },
+  { label: 'পাবলিক API', pattern: 'api:*' },
+  { label: 'পাসওয়ার্ড রিসেট টোকেন', pattern: 'reset_token:*' },
+  { label: 'রেট-লিমিট কাউন্টার', pattern: 'rl:*' }
+];
 
 function log(...args) {
   console.log('[redis-cache]', ...args);
@@ -123,7 +143,11 @@ async function get(key) {
   if (!isAvailable()) return null;
   try {
     const raw = await state.client.get(prefixed(key));
-    if (raw === null || raw === undefined) return null;
+    if (raw === null || raw === undefined) {
+      state.misses++;
+      return null;
+    }
+    state.hits++;
     try { return JSON.parse(raw); } catch { return raw; }
   } catch (err) {
     logError('get(' + key + ')', err);
@@ -138,6 +162,7 @@ async function set(key, value, ttlSeconds) {
     const raw = typeof value === 'string' ? value : JSON.stringify(value);
     if (ttlSeconds) await state.client.set(prefixed(key), raw, 'EX', ttlSeconds);
     else await state.client.set(prefixed(key), raw);
+    state.sets++;
     return true;
   } catch (err) {
     logError('set(' + key + ')', err);
@@ -203,6 +228,67 @@ function getStatus() {
   };
 }
 
+/** এই অ্যাপের সব Redis key যে prefix ব্যবহার করে (REDIS_PREFIX) — কোনো caller-কে নিজে
+ * prefix জোড়া লাগাতে হলে (যেমন raw client দিয়ে সরাসরি কাজ করার সময়) এটা দিয়ে সামঞ্জস্যপূর্ণভাবে
+ * করা উচিত, নাহলে সেই key admin cache stats/clear-এর মতো prefix-নির্ভর টুলে অদৃশ্য থেকে যায়। */
+function prefixKey(key) {
+  return prefixed(key);
+}
+
+async function countKeys(pattern) {
+  if (!isAvailable()) return 0;
+  try {
+    let cursor = '0';
+    let count = 0;
+    const fullPattern = prefixed(pattern);
+    do {
+      const [nextCursor, keys] = await state.client.scan(cursor, 'MATCH', fullPattern, 'COUNT', 200);
+      cursor = nextCursor;
+      count += keys.length;
+    } while (cursor !== '0');
+    return count;
+  } catch (err) {
+    logError('countKeys(' + pattern + ')', err);
+    return 0;
+  }
+}
+
+/** admin/cache.ejs-এর জন্য বিস্তারিত ক্যাশ স্ট্যাটাস — মোট key সংখ্যা, ক্যাটাগরি-ভিত্তিক ব্রেকডাউন,
+ * hit/miss/write কাউন্টার (এই প্রসেসের আয়ুষ্কাল ধরে) ও আনুমানিক মেমরি ব্যবহার। */
+async function getDetailedStats() {
+  const base = getStatus();
+  if (!isAvailable()) {
+    return { ...base, totalKeys: 0, categories: [], hits: state.hits, misses: state.misses, sets: state.sets, hitRatePercent: null, memoryUsed: null };
+  }
+  try {
+    const categories = [];
+    let totalKeys = 0;
+    for (const cat of CACHE_CATEGORIES) {
+      const count = await countKeys(cat.pattern);
+      categories.push({ label: cat.label, pattern: cat.pattern, count });
+      totalKeys += count;
+    }
+    let memoryUsed = null;
+    try {
+      const info = await state.client.info('memory');
+      const match = /used_memory_human:(\S+)/.exec(info);
+      if (match) memoryUsed = match[1];
+    } catch { /* non-fatal, memory info is best-effort */ }
+    const totalRequests = state.hits + state.misses;
+    const hitRatePercent = totalRequests > 0 ? Math.round((state.hits / totalRequests) * 100) : null;
+    return { ...base, totalKeys, categories, hits: state.hits, misses: state.misses, sets: state.sets, hitRatePercent, memoryUsed };
+  } catch (err) {
+    logError('getDetailedStats', err);
+    return { ...base, totalKeys: 0, categories: [], hits: state.hits, misses: state.misses, sets: state.sets, hitRatePercent: null, memoryUsed: null };
+  }
+}
+
+/** এই অ্যাপের নিজের সব Redis key মুছে ফেলে (শুধু REDIS_PREFIX-এর আওতায় থাকা key — একই Redis
+ * ইনস্ট্যান্স শেয়ার করা অন্য সিস্টেমের (যেমন BullMQ queue) ডেটা কখনো ছোঁয় না)। */
+async function flushAll() {
+  return delByPattern('*');
+}
+
 async function incrWithExpiry(key, ttlSeconds) {
   if (!isAvailable()) return null;
   try {
@@ -229,4 +315,4 @@ async function resetKey(key) {
   }
 }
 
-module.exports = { get, set, del, delByPattern, getOrSet, isAvailable, getStatus, incrWithExpiry, getRawClient, resetKey };
+module.exports = { get, set, del, delByPattern, getOrSet, isAvailable, getStatus, incrWithExpiry, getRawClient, resetKey, getDetailedStats, flushAll, prefixKey };
