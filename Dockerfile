@@ -5,7 +5,7 @@ RUN apk add --no-cache curl tar gzip
 
 FROM base AS deps
 COPY package*.json ./
-RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
+RUN npm ci --omit=dev --legacy-peer-deps || npm install --omit=dev --legacy-peer-deps
 
 FROM base AS production
 ENV NODE_ENV=production
