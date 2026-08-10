@@ -513,7 +513,7 @@ router.get('/stats', isAuth, async (req, res) => {
 
 router.get('/security', isAuth, async (req, res) => {
   try {
-    const cards = await pool.query('SELECT id, user_id, bank_name, account_number, account_name, is_default, created_at FROM bank_cards WHERE user_id = $1 ORDER BY created_at DESC', [req.session.user.id]);
+    const cards = await pool.query('SELECT id, user_id, bank_name, account_number, holder_name, created_at FROM bank_cards WHERE user_id = $1 ORDER BY created_at DESC', [req.session.user.id]);
     let pinStatus = { configured: false, locked: false };
     try { pinStatus = await getPinStatus(req.session.user.id); } catch (e) {}
 
@@ -999,7 +999,7 @@ router.get('/account-record', isAuth, async (req, res) => {
 router.get('/cards', isAuth, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, user_id, bank_name, account_number, account_name, is_default, created_at FROM bank_cards WHERE user_id = $1 ORDER BY created_at DESC',
+      'SELECT id, user_id, bank_name, account_number, holder_name, created_at FROM bank_cards WHERE user_id = $1 ORDER BY created_at DESC',
       [req.session.user.id]
     );
     res.render('profile/cards', { user: req.session.user, cards: result.rows });

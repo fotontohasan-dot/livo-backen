@@ -29,6 +29,13 @@ const RESTORE_ORDER = [
   'ip_rules', 'backup_history'
 ];
 
+// RESTORE_ORDER-এর প্রায় সব টেবিলের প্রাইমারি কী 'id', কিন্তু site_settings-এর কী 'key'
+// (migrations.js দেখুন: CREATE TABLE site_settings (key TEXT PRIMARY KEY, ...)) — আগে সব
+// টেবিলের জন্য হার্ডকোড করা `ON CONFLICT (id)` ব্যবহার হতো, ফলে site_settings রিস্টোরের
+// প্রতিটা row-ই "column id does not exist" এরর দিয়ে সবসময় সাইলেন্টলি স্কিপ হয়ে যেত
+// (নিচের catch-এ) — site_settings ব্যাকআপ থেকে কখনো রিস্টোর হতোই না।
+const TABLE_CONFLICT_KEY = { site_settings: 'key' };
+
 function ensureBackupDir() {
   if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
 }
@@ -278,14 +285,15 @@ async function restoreDatabaseBackup(record) {
     if (!rows || rows.length === 0) { results[table] = 0; continue; }
     const columns = Object.keys(rows[0]);
     const colList = columns.map(c => `"${c}"`).join(', ');
+    const conflictKey = TABLE_CONFLICT_KEY[table] || 'id';
     let inserted = 0;
     for (const row of rows) {
       const values = columns.map(c => row[c]);
       const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
       try {
-        // বিদ্যমান ডেটা কখনো মোছা/ওভাররাইট হয় না — শুধু id conflict এ skip (নন-ডেস্ট্রাক্টিভ রিস্টোর)
+        // বিদ্যমান ডেটা কখনো মোছা/ওভাররাইট হয় না — শুধু প্রাইমারি-কী conflict এ skip (নন-ডেস্ট্রাক্টিভ রিস্টোর)
         const r = await pool.query(
-          `INSERT INTO "${table}" (${colList}) VALUES (${placeholders}) ON CONFLICT (id) DO NOTHING`,
+          `INSERT INTO "${table}" (${colList}) VALUES (${placeholders}) ON CONFLICT ("${conflictKey}") DO NOTHING`,
           values
         );
         inserted += r.rowCount;
