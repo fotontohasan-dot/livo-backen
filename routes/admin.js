@@ -61,11 +61,9 @@ const { pool } = require('../db');
 const { isAdmin } = require('../middleware/auth');
 const { settleSelectionsForMarket } = require('../services/accumulator');
 const { grantFreeBet } = require('../services/freebet');
-const { syncMatches } = require('../services/matchUpdater');
-const { runBackupNow, restoreFromBackup, getBackupStatus } = require('../services/backup');
 const { loadSettings, invalidateSettingsCache } = require('../services/settings');
 const { creditApprovedDeposit } = require('./payment');
-const { emitToUser, notifyUser, broadcastToAllUsers, notifyAdmins } = require('../services/notify');
+const { emitToUser, broadcastToAllUsers } = require('../services/notify');
 const bcrypt = require('bcryptjs');
 const { getDemoStats } = require('../services/socket');
 const {

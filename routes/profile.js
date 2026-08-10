@@ -1,5 +1,4 @@
 const express = require('express');
-const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
