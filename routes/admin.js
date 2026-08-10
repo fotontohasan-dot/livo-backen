@@ -1,7 +1,11 @@
 const express = require('express');
 const router = express.Router();
+const { isAdmin } = require('../middleware/auth');
 
-router.get('/api/analytics', async (req, res) => {
+// এই এন্ডপয়েন্টে আগে কোনো auth middleware ছিল না (নিচের router.use(isAdmin)-এর
+// আগে ডিফাইন করা ছিল বলে সেটার আওতায় পড়ছিল না) — ফলে যে কেউ লগইন ছাড়াই রেভিনিউ,
+// ইউজার গ্রোথ, টপ ডিপোজিটরদের নাম+পরিমাণ ও KYC সামারি দেখতে পারতো। route-level isAdmin দিয়ে ঠিক করা হলো।
+router.get('/api/analytics', isAdmin, async (req, res) => {
   try {
     const days  = Math.min(90, Math.max(1, parseInt(req.query.days) || 14));
     const interval = `${days} days`;
@@ -58,7 +62,6 @@ router.get('/api/analytics', async (req, res) => {
 
 const rateLimit = require('express-rate-limit');
 const { pool } = require('../db');
-const { isAdmin } = require('../middleware/auth');
 const { settleSelectionsForMarket } = require('../services/accumulator');
 const { grantFreeBet } = require('../services/freebet');
 const { loadSettings, invalidateSettingsCache } = require('../services/settings');

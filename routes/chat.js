@@ -17,9 +17,27 @@ const isAuth = (req, res, next) => {
   res.redirect('/login');
 };
 
-const isAdmin = (req, res, next) => {
-  if (req.session.user && req.session.user.role === 'admin') return next();
-  res.status(403).send('Access denied');
+// নোট: আগে এখানে শুধু req.session.user.role চেক হতো — ডিমোট করা অ্যাডমিনের পুরনো
+// (স্টেল) সেশন দিয়েও অ্যাক্সেস করা যেত। এখন প্রতিটা রিকোয়েস্টে DB থেকে বর্তমান role
+// যাচাই করা হয় (middleware/auth.js-এর isAdmin-এর একই প্যাটার্ন), এই রাউটারের সব
+// admin এন্ডপয়েন্ট AJAX/JSON হওয়ায় আগের মতোই JSON 403 রেসপন্স রাখা হয়েছে।
+const isAdmin = async (req, res, next) => {
+  if (!req.session || !req.session.user) {
+    return res.status(403).send('Access denied');
+  }
+  try {
+    const result = await pool.query('SELECT role FROM users WHERE id = $1', [req.session.user.id]);
+    const currentRole = result.rows[0] && result.rows[0].role;
+    if (currentRole !== 'admin') {
+      req.session.destroy(() => {});
+      return res.status(403).send('Access denied');
+    }
+    req.session.user.role = currentRole;
+    return next();
+  } catch (err) {
+    console.error('chat isAdmin role check error:', err.message);
+    return res.status(403).send('Access denied');
+  }
 };
 
 // ==================== ফাইল আপলোড: শুধু নির্দিষ্ট image/video ফরম্যাট ====================
