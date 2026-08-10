@@ -69,9 +69,18 @@ async function logBotEvent({ ip, userId = null, endpoint, signals, riskLevel, us
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
       [ip, userId, endpoint, signalTypes, riskLevel, reason, userAgent, !!blocked]
     );
-    await auditLog.logBotActivity({
-      ip, userId, endpoint, riskLevel, reason, userAgent, blocked, signalTypes,
-      legacyId: inserted.rows[0]?.id
+    // পূর্বে এখানে auditLog.logBotActivity(...) কল করা হতো, কিন্তু services/auditLog.js-এ
+    // ওই নামে কোনো ফাংশন এক্সপোর্ট করা নেই — ফলে প্রতিবার TypeError হয়ে catch-এ চলে যেত এবং
+    // নিচের logAdminAction() কলটা কখনোই চলত না, অর্থাৎ বট-ডিটেকশন ইভেন্ট অডিট ট্রেইলে উঠত না।
+    // প্রকৃত এক্সপোর্ট করা logEvent() দিয়ে সেটাই রেকর্ড করা হচ্ছে (security ক্যাটাগরিতে)।
+    await auditLog.logEvent({
+      action: 'BOT_ACTIVITY_DETECTED',
+      category: 'security',
+      actorType: userId ? 'user' : 'system',
+      actorId: userId,
+      status: blocked ? 'failure' : 'success',
+      riskLevel: riskLevel || 'medium',
+      details: { ip, endpoint, reason, userAgent, blocked: !!blocked, signalTypes, legacyId: inserted.rows[0]?.id }
     });
     await logAdminAction(
       null, 'SYSTEM', 'BOT_ACTIVITY_DETECTED',

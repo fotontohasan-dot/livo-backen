@@ -30,7 +30,7 @@ describe('Backup & Restore System', () => {
     test('createDatabaseBackup(): সফল হলে status=completed, ফাইল ডিস্কে থাকে, checksum মেলে, backup_history-তে রেকর্ড হয়', async () => {
       const record = await backupManager.createDatabaseBackup({ source: 'manual' });
       expect(record.status).toBe('completed');
-      expect(record.filename).toMatch(/^db-\d+\.bak$/);
+      expect(record.filename).toMatch(/^db-\d+-[0-9a-f]+\.bak$/);
       expect(record.checksum).toHaveLength(64); // sha256 hex
 
       const filePath = backupManager.getBackupFilePath(record);
@@ -72,7 +72,7 @@ describe('Backup & Restore System', () => {
     test('createUploadsBackup(): public/uploads ফোল্ডার tar.gz করে ব্যাকআপ হয়', async () => {
       const record = await backupManager.createUploadsBackup({ source: 'manual' });
       expect(record.status).toBe('completed');
-      expect(record.filename).toMatch(/^uploads-\d+\.bak$/);
+      expect(record.filename).toMatch(/^uploads-\d+-[0-9a-f]+\.bak$/);
       const filePath = backupManager.getBackupFilePath(record);
       const buffer = fs.readFileSync(filePath);
       expect(buffer[0]).toBe(0x02); // flag 2 = tar.gz, এনক্রিপ্টেড নয়

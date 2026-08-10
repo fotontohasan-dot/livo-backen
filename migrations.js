@@ -974,6 +974,29 @@ async function runMigrations() {
     // Add missing duration_ms column if not present
     await pool.query(`ALTER TABLE job_queue ADD COLUMN IF NOT EXISTS duration_ms INTEGER;`);
 
+    // ==================== Dead Letter Queue (services/queue.js) ====================
+    // max_attempts শেষ হয়ে স্থায়ীভাবে ব্যর্থ হওয়া জব এখানে আর্কাইভ হয়, যাতে পরে
+    // পরীক্ষা করে requeue বা purge করা যায়। এই টেবিলটা আগে কোথাও তৈরি করা হতো না,
+    // ফলে (ক) প্রতিটা স্থায়ীভাবে ব্যর্থ জবের পেলোড হারিয়ে যেত এবং (খ) getQueueStats()
+    // এর COUNT কোয়েরি ব্যর্থ হয়ে queue-এর সব Prometheus মেট্রিক আপডেট বন্ধ হয়ে যেত।
+    // কলামগুলো services/queue.js এর moveToDeadLetter/getDeadLetterJobs/requeueDeadLetter/
+    // purgeAllDeadLetter কোয়েরির সাথে হুবহু মিলিয়ে রাখা হয়েছে।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS dead_letter_jobs (
+        id SERIAL PRIMARY KEY,
+        original_job_id INTEGER,
+        type VARCHAR(50) NOT NULL,
+        payload JSONB NOT NULL DEFAULT '{}',
+        attempts INTEGER NOT NULL DEFAULT 0,
+        max_attempts INTEGER NOT NULL DEFAULT 3,
+        last_error TEXT,
+        job_created_at TIMESTAMP,
+        dead_lettered_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_dead_letter_jobs_type ON dead_letter_jobs(type);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_dead_letter_jobs_at ON dead_letter_jobs(dead_lettered_at);`);
+
     console.log("✅ Job queue table ready");
 
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMP;`);

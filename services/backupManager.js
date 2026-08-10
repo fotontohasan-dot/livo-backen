@@ -33,6 +33,14 @@ function ensureBackupDir() {
   if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
 }
 
+// ব্যাকআপ ফাইলের নাম — শুধু Date.now() ব্যবহার করলে একই মিলিসেকেন্ডে তৈরি হওয়া দুইটা ব্যাকআপ
+// হুবহু একই ফাইলনেম পেত: দ্বিতীয়টা প্রথমটার ফাইল ওভাররাইট করত, এবং যেকোনো একটা ডিলিট করলে
+// অন্যটার রেকর্ড ডিস্কে ফাইলবিহীন হয়ে পড়ত (restore/download স্থায়ীভাবে ব্যর্থ)। তাই শেষে
+// একটা ছোট র‍্যান্ডম সাফিক্স যোগ করা হয়, যাতে নাম সবসময় ইউনিক থাকে।
+function backupFilename(prefix) {
+  return `${prefix}-${Date.now()}-${crypto.randomBytes(3).toString('hex')}.bak`;
+}
+
 function getEncryptionKey() {
   if (!ENC_KEY_RAW) return null;
   // যেকোনো length-এর পাসফ্রেজকে scrypt দিয়ে ঠিক ৩২ বাইট AES-256 কী-তে ডিরাইভ করা হয়
@@ -117,7 +125,7 @@ async function createDatabaseBackup({ source = 'manual', createdById, createdByU
     const json = JSON.stringify({ type: 'database', generated_at: new Date().toISOString(), tables: dump });
     const packed = packBuffer(Buffer.from(json, 'utf8'));
     const checksum = sha256(packed);
-    const filename = `db-${Date.now()}.bak`;
+    const filename = backupFilename('db');
     await fsp.writeFile(path.join(BACKUP_DIR, filename), packed);
     return await saveBackupRecord({
       type: 'database', filename, sizeBytes: packed.length, checksum,
@@ -169,7 +177,7 @@ async function createUploadsBackup({ source = 'manual', createdById, createdByUs
       packed = Buffer.concat([Buffer.from([0x03]), iv, authTag, encrypted]); // flag 3 = tar.gz + এনক্রিপ্টেড
     }
     const checksum = sha256(packed);
-    const filename = `uploads-${Date.now()}.bak`;
+    const filename = backupFilename('uploads');
     await fsp.writeFile(path.join(BACKUP_DIR, filename), packed);
     return await saveBackupRecord({
       type: 'uploads', filename, sizeBytes: packed.length, checksum,
@@ -229,7 +237,7 @@ async function createConfigBackup({ source = 'manual', createdById, createdByUse
     const json = JSON.stringify(payload);
     const packed = packBuffer(Buffer.from(json, 'utf8'));
     const checksum = sha256(packed);
-    const filename = `config-${Date.now()}.bak`;
+    const filename = backupFilename('config');
     await fsp.writeFile(path.join(BACKUP_DIR, filename), packed);
     return await saveBackupRecord({
       type: 'config', filename, sizeBytes: packed.length, checksum,
