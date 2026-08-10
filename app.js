@@ -21,6 +21,7 @@ process.on('uncaughtException', (err) => {
 });
 process.on('SIGTERM', async () => {
   try { require('./services/queue').stopWorker(); } catch (e) {}
+  try { await require('./queues').shutdownQueueSystem(); } catch (e) {}
   try { require('./services/scheduler').stop(); } catch (e) {}
   process.exit(0);
 });
@@ -491,6 +492,13 @@ async function startServer() {
       setTimeout(() => {
         syncMatches().catch(err => console.error('Initial match sync failed:', err));
         try { require('./services/queueHandlers'); queueService.startWorker(); } catch (e) { console.error('queue worker start error:', e.message); }
+        // queues/index.js (BullMQ, activity-log/fraud-scan/admin queue dashboard) — এটার নিজস্ব
+        // comment-এই বলা ছিল app.js থেকে initQueueSystem() কল করা দরকার, কিন্তু কোথাও কল হতো না।
+        // ফলে REDIS_URL সেট থাকলেও Redis connection/worker কখনো চালু হতো না — producers.js এর
+        // ইনলাইন fallback-এর কারণে জব হারাতো না, কিন্তু queue.enqueue* কখনো আসলে queue হতো না
+        // এবং /admin/queues ড্যাশবোর্ড সবসময় "বন্ধ" দেখাতো। REDIS_URL না থাকলে এটা নিরাপদে
+        // false রিটার্ন করে স্কিপ করে (connection.js দেখুন) — কোনো নতুন hard dependency যোগ হয়নি।
+        require('./queues').initQueueSystem().catch(err => console.error('queues initQueueSystem error:', err.message));
       }, 3000);
       scheduleDailyBackup();
       scheduleAutoBackup();
