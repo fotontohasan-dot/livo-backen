@@ -84,11 +84,27 @@ describe('A-Z User Journey', () => {
     expect(Number(coinsRow.rows[0].coins)).toBeGreaterThanOrEqual(1000);
   });
 
+  test('6b. Transaction (history reflects the deposit)', async () => {
+    const res = await agent.get('/profile/transactions');
+    expect(res.status).toBe(200);
+    const tx = await pool.query(`SELECT * FROM coin_transactions WHERE user_id=$1 ORDER BY created_at DESC LIMIT 5`, [userId]);
+    expect(tx.rows.length).toBeGreaterThan(0);
+  });
+
   test('7. Rewards', async () => {
     const res = await agent.get('/profile/rewards');
     expect(res.status).toBe(200);
     const status = await agent.get('/profile/daily-rewards/status');
     expect(status.status).toBe(200);
+  });
+
+  test('7b. Lucky Wheel', async () => {
+    const page = await agent.get('/profile/wheel');
+    expect(page.status).toBe(200);
+    const csrf = await csrfFor(agent, '/profile/wheel');
+    const spin = await agent.post('/profile/wheel/spin').type('form').send({ _csrf: csrf });
+    expect(spin.status).toBe(200);
+    expect(typeof spin.body.success).toBe('boolean');
   });
 
   test('8. VIP', async () => {
@@ -156,6 +172,33 @@ describe('A-Z User Journey', () => {
     // ধাপ ৬-এ ডিপোজিট অনুমোদনের সময় notifications টেবিলে একটা এন্ট্রি তৈরি হওয়ার কথা
     const n = await pool.query('SELECT * FROM notifications WHERE user_id=$1', [userId]);
     expect(n.rows.length).toBeGreaterThan(0);
+  });
+
+  test('12b. Games/Sports', async () => {
+    const gamesPage = await agent.get('/games/play?game=slots');
+    expect(gamesPage.status).toBe(200);
+    const before = await pool.query('SELECT coins FROM users WHERE id=$1', [userId]);
+    const csrf = await csrfFor(agent, '/games/play?game=slots');
+    const play = await agent.post('/games/play').type('form').send({
+      gameSlug: 'slots', amount: '50', _csrf: csrf
+    });
+    expect(play.status).toBe(200);
+    expect(play.body.success).toBe(true);
+    const after = await pool.query('SELECT coins FROM users WHERE id=$1', [userId]);
+    expect(Number(after.rows[0].coins)).not.toBe(Number(before.rows[0].coins));
+
+    const matchIns = await pool.query(`INSERT INTO matches (title, team_a, team_b, sport, status) VALUES ('Journey Test Match','X','Y','cricket','live') RETURNING id`);
+    const marketIns = await pool.query(`INSERT INTO markets (match_id, type, name, odds, status) VALUES ($1,'match_winner','Match Winner','{}','open') RETURNING id`, [matchIns.rows[0].id]);
+    const matchPage = await agent.get(`/matches/${matchIns.rows[0].id}`);
+    expect(matchPage.status).toBe(200);
+    const betCsrf = await csrfFor(agent, `/matches/${matchIns.rows[0].id}`);
+    const bet = await agent.post(`/matches/${matchIns.rows[0].id}/bet`).type('form').send({
+      market_id: marketIns.rows[0].id, runner: 'X', odd: '1.80', stake: '50', _csrf: betCsrf
+    });
+    expect(bet.status).toBe(200);
+    expect(bet.body.success).toBe(true);
+    const betRow = await pool.query(`SELECT * FROM bets WHERE user_id=$1 AND match_id=$2`, [userId, matchIns.rows[0].id]);
+    expect(betRow.rows.length).toBe(1);
   });
 
   test('13. Withdraw', async () => {

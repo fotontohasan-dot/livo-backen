@@ -92,6 +92,12 @@ async function creditApprovedDeposit(client, request) {
 
   await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [amount, request.user_id]);
   await client.query('UPDATE users SET total_deposited = COALESCE(total_deposited,0) + $1 WHERE id=$2', [request.amount, request.user_id]);
+  // ইউজারের /profile/transactions পেজ coin_transactions টেবিল থেকে পড়ে — এই ইনসার্ট ছাড়া
+  // অনুমোদিত ডিপোজিট কখনো সেই হিস্ট্রিতে দেখা যেত না (ব্যালেন্স ঠিকই বাড়ত, শুধু রেকর্ড থাকত না)।
+  await client.query(
+    `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, 'deposit', $3)`,
+    [request.user_id, amount, `ডিপোজিট অনুমোদন (${request.method})`]
+  );
 
   // ডিপোজিট করলে ইউজারের ডেমো ব্যালেন্সও একই পরিমাণ বেড়ে যাবে (স্বয়ংক্রিয়)
   await client.query('UPDATE users SET demo_balance = COALESCE(demo_balance,0) + $1 WHERE id=$2', [amount, request.user_id]);
@@ -113,6 +119,10 @@ async function creditApprovedDeposit(client, request) {
       try {
         await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [bonusGiven, request.user_id]);
         await createBonus(client, request.user_id, 'deposit', bonusGiven);
+        await client.query(
+          `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, 'deposit_bonus', 'ডিপোজিট বোনাস')`,
+          [request.user_id, bonusGiven]
+        );
         await client.query('RELEASE SAVEPOINT bonus_sp');
       } catch (bonusErr) {
         await client.query('ROLLBACK TO SAVEPOINT bonus_sp');
@@ -405,6 +415,11 @@ router.post('/withdraw', requireLogin, requireVerifiedEmail, paymentLimiter, asy
       `INSERT INTO payment_requests (user_id, type, method, amount, account_number, status) VALUES ($1, 'withdraw', $2, $3, $4, 'pending')`,
       [userId, method, amount, account_number]
     );
+    // ডিপোজিটের মতো — coin_transactions-এ না লিখলে /profile/transactions-এ উইথড্র কখনো দেখা যেত না
+    await client.query(
+      `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, 'withdraw', $3)`,
+      [userId, -amount, `উইথড্র রিকোয়েস্ট (${method})`]
+    );
     broadcastDemoStats().catch(e => console.error('demo stats:', e.message));
 
     await client.query('COMMIT');
@@ -696,6 +711,10 @@ router.post('/admin/reject/:id', requireAdmin, requirePermission('payments_appro
     }
     if (request.type === 'withdraw') {
       await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [Math.round(Number(request.amount)), request.user_id]);
+      await client.query(
+        `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, 'withdraw_refund', 'বাতিলকৃত উইথড্র ফেরত')`,
+        [request.user_id, Math.round(Number(request.amount))]
+      );
     }
     await client.query(`UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE id=$1`, [id]);
     await client.query(

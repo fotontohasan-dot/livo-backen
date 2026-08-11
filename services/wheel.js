@@ -138,4 +138,13 @@ async function spin(userId) {
   }
 }
 
-module.exports = { getSegments, canSpin, spin };
+/** ইউজারের সাম্প্রতিক স্পিন ইতিহাস — routes/profile.js-এর GET /wheel পেজ এটা দেখায়। */
+async function getHistory(userId, limit = 10) {
+  const res = await pool.query(
+    `SELECT id, spin_date, prize, created_at FROM wheel_spins WHERE user_id = $1 ORDER BY spin_date DESC LIMIT $2`,
+    [userId, limit]
+  );
+  return res.rows;
+}
+
+module.exports = { getSegments, canSpin, spin, getHistory };
