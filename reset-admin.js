@@ -2,15 +2,34 @@
 // একবার চালানোর স্ক্রিপ্ট: বিদ্যমান সব admin অ্যাকাউন্ট সরিয়ে দিয়ে, ঠিক একটামাত্র নতুন
 // admin অ্যাকাউন্ট (তোমার দেওয়া ইমেইল+পাসওয়ার্ড দিয়ে) তৈরি/আপডেট করে।
 //
-// ব্যবহার:
-//   1. নিচে NEW_ADMIN_EMAIL আর NEW_ADMIN_PASSWORD-এ নিজের চাওয়া ইমেইল ও পাসওয়ার্ড বসাও
-//   2. এই ফাইলটা প্রোডাকশন সার্ভারে রাখো (Render Shell থেকে, অথবা প্রোডাকশন DATABASE_URL
-//      এনভায়রনমেন্ট ভ্যারিয়েবল হিসেবে সেট করে লোকাল থেকেও চালানো যায়)
-//   3. চালাও:  node reset-admin.js
-//   4. কাজ শেষ হলে এই ফাইলটা ডিলিট করে দাও (পাসওয়ার্ড প্লেইনটেক্সটে আছে বলে)
+// ⚠️ গুরুত্বপূর্ণ: শুধু Render-এ environment variable সেট করে "Deploy" করলে এই স্ক্রিপ্ট
+// কখনো চলবে না। Deploy শুধু অ্যাপটা (app.js) রিস্টার্ট করে — এই আলাদা ফাইলটা কখনো
+// স্বয়ংক্রিয়ভাবে রান হয় না। নিচের ধাপ ৩-এ বলা কমান্ডটা ম্যানুয়ালি Render Shell থেকে
+// একবার নিজে চালাতে হবে।
+//
+// ব্যবহার (২টা উপায়ের যেকোনো একটা):
+//
+// উপায় ১ (সহজ, সুপারিশকৃত) — Render env var দিয়ে:
+//   1. Render Dashboard → তোমার সার্ভিস → Environment → এই দুটো Environment Variable যোগ করো:
+//        NEW_ADMIN_EMAIL = তোমার চাওয়া ইমেইল
+//        NEW_ADMIN_PASSWORD = তোমার চাওয়া পাসওয়ার্ড
+//      (Save করলে Render নিজে থেকেই রিডিপ্লয় করবে — কিন্তু এতে স্ক্রিপ্ট চলে না, শুধু ভ্যারিয়েবল সেভ হয়)
+//   2. Render Dashboard → তোমার সার্ভিস → উপরে "Shell" ট্যাবে ক্লিক করো (একটা টার্মিনাল খুলবে)
+//   3. সেই Shell-এ টাইপ করো:  node reset-admin.js
+//   4. ফলাফল দেখবে সেখানেই — "✅ সম্পন্ন" লেখা আসলে হয়ে গেছে
+//
+// উপায় ২ — ফাইলে সরাসরি বসিয়ে:
+//   1. নিচে NEW_ADMIN_EMAIL_FALLBACK আর NEW_ADMIN_PASSWORD_FALLBACK-এ নিজের চাওয়া ইমেইল ও পাসওয়ার্ড বসাও
+//   2. তারপর Render Shell থেকে চালাও:  node reset-admin.js
+//
+// কাজ শেষ হলে এই ফাইলটা ডিলিট করে দাও এবং Render থেকে NEW_ADMIN_EMAIL/NEW_ADMIN_PASSWORD
+// environment variable দুটোও মুছে ফেলো (পাসওয়ার্ড প্লেইনটেক্সটে থাকে বলে)।
 
-const NEW_ADMIN_EMAIL = 'তোমার-নতুন-ইমেইল@example.com';   // <-- এখানে বসাও
-const NEW_ADMIN_PASSWORD = 'তোমার-নতুন-শক্তিশালী-পাসওয়ার্ড'; // <-- এখানে বসাও
+const NEW_ADMIN_EMAIL_FALLBACK = 'তোমার-নতুন-ইমেইল@example.com';   // <-- উপায় ২ ব্যবহার করলে এখানে বসাও
+const NEW_ADMIN_PASSWORD_FALLBACK = 'তোমার-নতুন-শক্তিশালী-পাসওয়ার্ড'; // <-- উপায় ২ ব্যবহার করলে এখানে বসাও
+
+const NEW_ADMIN_EMAIL = process.env.NEW_ADMIN_EMAIL || NEW_ADMIN_EMAIL_FALLBACK;
+const NEW_ADMIN_PASSWORD = process.env.NEW_ADMIN_PASSWORD || NEW_ADMIN_PASSWORD_FALLBACK;
 
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
@@ -20,7 +39,7 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 if (NEW_ADMIN_EMAIL.includes('example.com') || NEW_ADMIN_PASSWORD.includes('তোমার')) {
-  console.error('❌ উপরে NEW_ADMIN_EMAIL ও NEW_ADMIN_PASSWORD বদলাওনি — স্ক্রিপ্ট চালানোর আগে বদলাও।');
+  console.error('❌ ইমেইল/পাসওয়ার্ড সেট করা হয়নি। হয় Render-এ NEW_ADMIN_EMAIL/NEW_ADMIN_PASSWORD এনভায়রনমেন্ট ভ্যারিয়েবল সেট করো, অথবা এই ফাইলের উপরে সরাসরি বসাও — তারপর node reset-admin.js চালাও।');
   process.exit(1);
 }
 
