@@ -304,10 +304,21 @@ app.get('/health', async (req, res) => {
 // variable Render থেকে মুছে ফেলো (অথবা এই পুরো ব্লকটা কোড থেকেই সরিয়ে দাও) — এটা স্থায়ীভাবে
 // রেখে দেওয়া নিরাপদ না, যেকেউ token অনুমান করতে পারলে admin অ্যাকাউন্ট বদলে ফেলতে পারবে।
 if (process.env.ADMIN_RESET_TOKEN) {
+  // ডায়াগনস্টিক: env var আদৌ Render-এ সেট হয়েছে কিনা, ভ্যালু ফাঁস না করেই যাচাই করার উপায়।
+  app.get('/internal/reset-admin/status', (req, res) => {
+    res.type('text/plain').send(
+      `ADMIN_RESET_TOKEN: ${process.env.ADMIN_RESET_TOKEN ? 'সেট করা আছে (' + process.env.ADMIN_RESET_TOKEN.length + ' ক্যারেকটার)' : 'সেট করা নেই'}\n` +
+      `NEW_ADMIN_EMAIL: ${process.env.NEW_ADMIN_EMAIL || 'সেট করা নেই'}\n` +
+      `NEW_ADMIN_PASSWORD: ${process.env.NEW_ADMIN_PASSWORD ? 'সেট করা আছে (' + process.env.NEW_ADMIN_PASSWORD.length + ' ক্যারেকটার)' : 'সেট করা নেই'}`
+    );
+  });
+
   app.get('/internal/reset-admin', async (req, res) => {
     const crypto = require('crypto');
-    const provided = Buffer.from(String(req.query.token || ''));
-    const expected = Buffer.from(String(process.env.ADMIN_RESET_TOKEN));
+    // Render-এর ওয়েব UI-তে পেস্ট করার সময় প্রায়ই অজান্তে শেষে একটা স্পেস/নিউলাইন চলে আসে —
+    // trim() দিয়ে সেই সাধারণ ভুলটা এড়ানো হচ্ছে, নাহলে সঠিক টোকেন দিলেও মিলত না।
+    const provided = Buffer.from(String(req.query.token || '').trim());
+    const expected = Buffer.from(String(process.env.ADMIN_RESET_TOKEN).trim());
     const tokenOk = provided.length === expected.length && crypto.timingSafeEqual(provided, expected);
     if (!tokenOk) return res.status(404).send('Not found');
 
