@@ -7,8 +7,71 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        body {
+        /* ==================== ফলব্যাক স্টাইল (CDN-নির্ভরতাহীন) ====================
+           উপরের cdn.tailwindcss.com স্ক্রিপ্টের উপর পুরো পেজটা নির্ভরশীল ছিল — সেই CDN কোনো
+           কারণে না লোড হলে (ধীর/ব্লকড নেটওয়ার্ক, অ্যাডব্লকার, CDN ডাউন) পুরো পেজ স্টাইলবিহীন
+           প্লেইন টেক্সটের স্তূপ হয়ে যেত — একদম আনপ্রফেশনাল দেখাত। নিচের CSS সাধারণ
+           element/id সিলেক্টর দিয়ে (কোনো Tailwind ক্লাসের উপর নির্ভর না করে) একই ডিজাইন
+           পুনরায় তৈরি করে, যাতে Tailwind লোড না হলেও পেজটা পুরোপুরি প্রফেশনাল দেখায়।
+           Tailwind সফলভাবে লোড হলে তার ইউটিলিটি ক্লাসগুলো (বেশি স্পেসিফিসিটি + পরে ডিক্লেয়ার্ড
+           না হলেও ইনলাইন ইউটিলিটি হওয়ায়) স্বাভাবিকভাবেই এর উপর প্রাধান্য পায়, তাই দুটো
+           একসাথে কনফ্লিক্ট করে না। */
+        * { box-sizing: border-box; }
+        html, body {
+            margin: 0; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            display: flex; align-items: center; justify-content: center; padding: 16px;
+        }
+        body > div { width: 100%; max-width: 28rem; }
+        body > div > div:first-child { text-align: center; margin-bottom: 2rem; }
+        body > div > div:first-child > div {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 4rem; height: 4rem; background: #2563eb; border-radius: 1rem; margin-bottom: 1rem;
+        }
+        body > div > div:first-child i { color: #fff; font-size: 1.875rem; }
+        body > div > div:first-child h1 { color: #fff; font-size: 1.875rem; font-weight: 700; margin: 0; }
+        body > div > div:first-child p { color: #94a3b8; margin: 0.5rem 0 0; }
+        .admin-card {
+            background: #1e293b; border: 1px solid #334155; border-radius: 1.5rem; padding: 2rem;
+        }
+        .admin-card h2 { color: #fff; font-size: 1.5rem; font-weight: 600; margin: 0; }
+        .admin-card > div:first-of-type p { color: #94a3b8; font-size: 0.875rem; margin: 0.25rem 0 0; }
+        form label { display: block; color: #cbd5e1; font-size: 0.875rem; font-weight: 500; margin: 1.25rem 0 0.5rem; }
+        form > div:first-of-type label { margin-top: 0; }
+        form input[type="text"], form input[type="password"] {
+            width: 100%; background: #0f172a; border: 1px solid #334155; color: #fff;
+            padding: 0.875rem 1rem 0.875rem 2.75rem; border-radius: 1rem; font-size: 1rem;
+        }
+        form input[type="text"]:focus, form input[type="password"]:focus {
+            outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+        }
+        form input::placeholder { color: #64748b; }
+        form .relative { position: relative; }
+        form .relative > div:first-child {
+            position: absolute; top: 0; bottom: 0; left: 0; padding-left: 1rem;
+            display: flex; align-items: center; pointer-events: none; color: #64748b;
+        }
+        form .relative > button {
+            position: absolute; top: 0; bottom: 0; right: 0; padding-right: 1rem;
+            display: flex; align-items: center; background: none; border: none; color: #64748b; cursor: pointer; font-size: 1rem;
+        }
+        form > div[class*="justify-between"] {
+            display: flex; align-items: center; justify-content: space-between; font-size: 0.875rem; margin-top: 1.25rem;
+        }
+        form > div[class*="justify-between"] label { display: flex; align-items: center; gap: 0.5rem; margin: 0; color: #cbd5e1; cursor: pointer; }
+        form button[type="submit"] {
+            width: 100%; background: #2563eb; color: #fff; font-weight: 600; font-size: 1rem;
+            padding: 0.875rem; border: none; border-radius: 1rem; margin-top: 1.25rem; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+        }
+        form button[type="submit"]:hover { background: #1d4ed8; }
+        form a { color: #60a5fa; font-size: 0.875rem; text-decoration: none; }
+        form a:hover { text-decoration: underline; }
+        body > div > p:last-child { text-align: center; color: #64748b; font-size: 0.75rem; margin-top: 2rem; }
+        [class*="bg-red-500"] {
+            background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #f87171;
+            padding: 0.75rem 1rem; border-radius: 1rem; font-size: 0.875rem; margin-bottom: 1.5rem;
+            display: flex; align-items: center; gap: 0.75rem;
         }
         .admin-card {
             box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.4);
