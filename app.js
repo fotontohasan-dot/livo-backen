@@ -322,8 +322,10 @@ if (process.env.ADMIN_RESET_TOKEN) {
     const tokenOk = provided.length === expected.length && crypto.timingSafeEqual(provided, expected);
     if (!tokenOk) return res.status(404).send('Not found');
 
-    const email = process.env.NEW_ADMIN_EMAIL;
-    const password = process.env.NEW_ADMIN_PASSWORD;
+    // token-এর মতো NEW_ADMIN_EMAIL/NEW_ADMIN_PASSWORD-এও Render-এ পেস্ট করার সময় অজান্তে
+    // শেষে স্পেস/নিউলাইন ঢুকে যাওয়ার একই ঝুঁকি আছে — trim() দিয়ে সেটা এড়ানো হচ্ছে।
+    const email = (process.env.NEW_ADMIN_EMAIL || '').trim();
+    const password = (process.env.NEW_ADMIN_PASSWORD || '').trim();
     if (!email || !password) {
       return res.status(400).send('NEW_ADMIN_EMAIL / NEW_ADMIN_PASSWORD environment variable সেট করা নেই।');
     }
