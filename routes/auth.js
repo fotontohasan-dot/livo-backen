@@ -231,11 +231,16 @@ router.post('/register', async (req, res) => {
     const regDevice = await recordDeviceLogin(req, newUserId, regLogin.loginLogId);
 
     // ==== ইমেইল ভেরিফিকেশন লিঙ্ক পাঠানো (থাকলে) — কখনো রেজিস্ট্রেশন ব্লক করে না ====
+    // আগে এখানে sendQueuedEmail()-কে await করা হতো, যা এই ফাংশনের নিজের কমেন্টের সাথেই সাংঘর্ষিক —
+    // SMTP সংযোগ ধীর/ব্লকড হলে (অনেক হোস্টিং প্রোভাইডার আউটবাউন্ড SMTP পোর্ট ব্লক করে) পুরো
+    // রেজিস্ট্রেশন রিকোয়েস্ট আটকে থাকত। নিচের লাইনে (OTP resend) একই ফাইলে ইতিমধ্যে সঠিক
+    // fire-and-forget প্যাটার্ন আছে (.catch() সহ, await ছাড়া) — এখানেও সেটাই ব্যবহার করা হচ্ছে।
     if (email) {
       try {
         const token = await issueVerificationToken(newUserId);
         const verifyUrl = `${req.protocol}://${req.get('host')}/verify-email/${token}`;
-        await sendQueuedEmail('verification', email, { verifyUrl });
+        sendQueuedEmail('verification', email, { verifyUrl })
+          .catch(e => console.error('registration verification email error:', e.message));
         req.session.user.verification_token = token; // sanitizeUser ইতিমধ্যে কপি করে ফেলেছে বলে সেশনেও আপডেট
         await logSystemEvent(newUserId, username, 'EMAIL_VERIFICATION_SENT', `রেজিস্ট্রেশনের সময় ভেরিফিকেশন ইমেইল পাঠানো হয়েছে: ${email}`, req.ip);
       } catch (mailErr) {
@@ -512,7 +517,8 @@ router.post('/resend-verification', verifyResendLimiter, async (req, res) => {
 
     const token = await issueVerificationToken(user.id);
     const verifyUrl = `${req.protocol}://${req.get('host')}/verify-email/${token}`;
-    await sendQueuedEmail('verification', user.email, { verifyUrl });
+    sendQueuedEmail('verification', user.email, { verifyUrl })
+      .catch(e => console.error('resend-verification email error:', e.message));
     await logSystemEvent(user.id, user.username, 'EMAIL_VERIFICATION_RESEND', `ভেরিফিকেশন ইমেইল আবার পাঠানো হয়েছে: ${user.email}`, req.ip);
 
     req.flash('success', '✅ ভেরিফিকেশন লিঙ্ক আবার পাঠানো হয়েছে, ইমেইল চেক করুন।');
@@ -594,7 +600,8 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
       cache.set(`reset_token:${token}`, user.id, 60 * 60).catch(() => {});
 
       const resetUrl = `${req.protocol}://${req.get('host')}/reset-password/${token}`;
-      await sendQueuedEmail('password_reset', user.email, { resetUrl });
+      sendQueuedEmail('password_reset', user.email, { resetUrl })
+        .catch(e => console.error('forgot-password email error:', e.message));
     }
 
     res.render('forgot-password', { sent: true });

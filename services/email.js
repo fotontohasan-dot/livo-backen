@@ -10,7 +10,14 @@ const transporter = nodemailer.createTransport({
   },
   tls: {
     rejectUnauthorized: false
-  }
+  },
+  // অনেক হোস্টিং প্রোভাইডার (Render ইত্যাদি) আউটবাউন্ড SMTP পোর্ট ব্লক করে দেয় —
+  // timeout ছাড়া nodemailer তখন OS-লেভেল TCP timeout (৬০-১২০+ সেকেন্ড) পর্যন্ত ঝুলে থাকে।
+  // এই তিনটা timeout সেট করা থাকলে ব্যর্থ হলে দ্রুত (কয়েক সেকেন্ডে) ব্যর্থ হবে, ঝুলে থাকবে না —
+  // যেকোনো caller ভুলবশত এটাকে await করলেও (যেমন register route) পুরো রিকোয়েস্ট দীর্ঘক্ষণ আটকাবে না।
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 10000
 });
 
 async function sendOTP(email, otp) {
@@ -89,4 +96,21 @@ async function sendNewDeviceAlert(email, { username, deviceName, ip, location, t
   });
 }
 
-module.exports = { sendOTP, sendPasswordReset, sendVerificationEmail, sendNewDeviceAlert };
+/**
+ * routes/auth.js (register/resend-verification/forgot-password/login-OTP) এই ফাংশনটা কল করে
+ * ধরে নিয়ে যে এটা আছে — কিন্তু আগে এটা এই ফাইলে এক্সপোর্টই করা ছিল না (শুধু sendOTP/
+ * sendPasswordReset/sendVerificationEmail/sendNewDeviceAlert ছিল), ফলে সব verification/
+ * password-reset/OTP ইমেইল বাস্তবে কখনো পাঠানো হয়নি — কল করার সাথে সাথেই
+ * "sendQueuedEmail is not a function" থ্রো হয়ে সাইলেন্টলি catch হয়ে যেত।
+ *
+ * services/queue.js-এ ইতিমধ্যে একটা সঠিক 'email' job handler আছে (services/queueHandlers.js,
+ * payload.kind অনুযায়ী sendOTP/sendPasswordReset/sendVerificationEmail-এ dispatch করে) —
+ * এই ফাংশন সেই queue-তে enqueue করে, যাতে আসল ইমেইল পাঠানো ব্যাকগ্রাউন্ড ওয়ার্কারে (রিট্রাই/
+ * ব্যাকঅফসহ) হয়, কোনো HTTP রিকোয়েস্ট কখনো SMTP-এর জন্য অপেক্ষা না করে।
+ */
+async function sendQueuedEmail(kind, to, data = {}) {
+  const { enqueue } = require('./queue');
+  return enqueue('email', { kind, to, ...data });
+}
+
+module.exports = { sendOTP, sendPasswordReset, sendVerificationEmail, sendNewDeviceAlert, sendQueuedEmail };

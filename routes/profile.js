@@ -61,7 +61,7 @@ router.get('/', isAuth, async (req, res) => {
       const result = await cache.getOrSet(`profile:activity:${req.session.user.id}`, 15, async () => {
         const predictionsRes = await pool.query(`
           SELECT b.id, b.stake AS amount, b.odd, b.status, b.created_at,
-                 m.title, m.team_a, m.team_b, m.score_a, m.score_b, b.selection
+                 m.title, m.team_a, m.team_b, m.score_a, m.score_b, b.runner AS selection
           FROM bets b
           JOIN matches m ON b.match_id = m.id
           WHERE b.user_id = $1

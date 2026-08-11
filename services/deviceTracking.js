@@ -218,6 +218,22 @@ async function getUserDeviceOverview(userId, limit = 10) {
   return { recentLogins, activeSessions };
 }
 
+/**
+ * routes/payment.js-এর মতো caller-রা withdraw/deposit-এর সময় ফ্রড স্ক্যানে "এই সেশনের ডিভাইসটা
+ * কি নতুন?" জানতে চায় — recordDeviceLogin() লগইনের সময় device_sessions-এ is_new_device সেভ করে
+ * রাখে, এই ফাংশন সেটা পরে যেকোনো সময় sessionID দিয়ে লুকআপ করে।
+ */
+async function isSessionNewDevice(sessionId) {
+  if (!sessionId) return false;
+  try {
+    const res = await pool.query('SELECT is_new_device FROM device_sessions WHERE sid = $1 LIMIT 1', [sessionId]);
+    return res.rows[0] ? !!res.rows[0].is_new_device : false;
+  } catch (err) {
+    console.error('isSessionNewDevice error (non-blocking):', err.message);
+    return false;
+  }
+}
+
 module.exports = {
   parseUserAgent,
   buildDeviceName,
@@ -229,5 +245,7 @@ module.exports = {
   listLoginHistory,
   revokeDeviceSession,
   revokeAllOtherSessions,
-  getUserDeviceOverview
+  getUserDeviceOverview,
+  isSessionNewDevice,
+  lookupLocation
 };

@@ -305,7 +305,11 @@ router.post('/deposit', requireLogin, paymentLimiter, async (req, res) => {
 router.get('/withdraw', requireLogin, async (req, res) => {
   try {
     const result = await pool.query('SELECT coins FROM users WHERE id=$1', [req.session.user.id]);
-    const coins = result.rows[0]?.coins || 0;
+    // pg ড্রাইভার NUMERIC(14,2) কলাম স্ট্রিং হিসেবে ফেরত দেয় (যেমন "1499.00"), সংখ্যা হিসেবে না —
+    // Number() দিয়ে কনভার্ট না করলে views/payment/withdraw.ejs-এর (coins || 0).toFixed(2) ক্র্যাশ
+    // করত ("toFixed is not a function") যেহেতু স্ট্রিংয়ে সেই মেথড নেই। ফলে যেকোনো নন-জিরো
+    // ব্যালেন্সের ইউজারের জন্য পুরো Withdraw পেজটাই 500 এরর দিয়ে ভেঙে যেত।
+    const coins = Number(result.rows[0]?.coins) || 0;
     let cards = [];
     try {
       const cardRes = await pool.query('SELECT id, user_id, bank_name, account_number, holder_name, created_at FROM bank_cards WHERE user_id=$1', [req.session.user.id]);

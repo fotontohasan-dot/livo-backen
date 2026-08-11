@@ -71,7 +71,17 @@ async function logPinEvent(userId, actionType, opts = {}) {
        VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
       [userId, actionType, actorType, actorId, actorUsername, ip]
     );
-    await auditLog.logWithdrawPin({ userId, actionType, actorType, actorId, actorUsername, ip, legacyId: inserted.rows[0]?.id });
+    // পুরনো/legacy withdraw_pin_logs টেবিলে (উপরে) ইতিমধ্যে সঠিকভাবে রেকর্ড হয়েছে — এটা এখন
+    // কেন্দ্রীয় audit_logs টেবিলেও (Admin প্যানেলের একীভূত Audit Log সার্চ/এক্সপোর্ট যা ব্যবহার করে)
+    // মিরর করা হচ্ছে। আগে এখানে auditLog.logWithdrawPin() কল হতো যেটা কখনো এক্সপোর্টই করা ছিল না
+    // (শুধু logEvent() আছে) — ফলে এই ইভেন্টগুলো কেন্দ্রীয় audit log-এ কখনো দেখা যেত না।
+    await auditLog.logEvent({
+      actorType, actorId, actorUsername,
+      action: `withdraw_pin_${actionType}`.toLowerCase(),
+      category: 'security',
+      riskLevel: actionType === 'RESET' || actionType === 'ADMIN_RESET' ? 'medium' : 'low',
+      details: { userId, actionType, legacyId: inserted.rows[0]?.id }
+    });
   } catch (e) {
     console.error('withdraw pin audit log error:', e.message);
   }
