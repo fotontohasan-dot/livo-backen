@@ -8,6 +8,7 @@
 // ওয়েবসাইটের কোনো রিকোয়েস্ট-রেসপন্স ফ্লো প্রভাবিত হয় না।
 
 const { pool } = require('../db');
+const sentryService = require('./sentry');
 
 const POLL_INTERVAL_MS = parseInt(process.env.QUEUE_POLL_INTERVAL_MS || '2000', 10);
 const BATCH_SIZE = parseInt(process.env.QUEUE_BATCH_SIZE || '5', 10);
@@ -118,6 +119,13 @@ async function runJob(job) {
     const attempts = job.attempts + 1;
     const errMsg = (err && err.message) ? err.message.slice(0, 500) : String(err).slice(0, 500);
     console.error(`[queue] job #${job.id} (${job.type}) failed (attempt ${attempts}/${job.max_attempts}):`, errMsg);
+
+    // কনসোল লগ ও dead_letter_jobs রেকর্ডিং-এর পাশাপাশি Sentry-তেও রিপোর্ট — services/sentry.js-এর
+    // captureException() নিজে কখনো থ্রো করে না এবং DSN/SENTRY_ENABLED না থাকলে no-op, তাই queue-এর
+    // retry/DLQ লজিক এতে প্রভাবিত হয় না।
+    sentryService.captureException(err instanceof Error ? err : new Error(errMsg), {
+      source: 'queue.runJob', jobId: job.id, jobType: job.type, attempts, maxAttempts: job.max_attempts
+    });
 
     if (attempts >= job.max_attempts) {
       const durationMs = Date.now() - startedAt.getTime();
