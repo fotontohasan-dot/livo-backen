@@ -108,4 +108,32 @@ describe('Admin Panel', () => {
       expect(res.body.bets.some(b => b.username === uname)).toBe(true);
     });
   });
+
+  describe('GET /admin (dashboard)', () => {
+    // রিগ্রেশন গার্ড: dashboard.ejs dateRange/betStatistics/apiUsageStats/serverHealth/queueHealth
+    // আশা করে, কিন্তু আগে এগুলো res.render()-এ পাস করা হতো না — ফলে লগইনের ঠিক পরের পেজেই
+    // (dashboard, সব admin-এর জন্য প্রথম যা দেখা যায়) সবসময় 500 ক্র্যাশ হতো।
+    test('সফল লগইনের পর dashboard ক্র্যাশ ছাড়া সম্পূর্ণ রেন্ডার হয়', async () => {
+      const agent = await makeAdminAgent();
+      const res = await agent.get('/admin');
+      expect(res.status).toBe(200);
+      expect(res.text).not.toMatch(/is not defined|ReferenceError/);
+      expect(res.text).toContain('dashboard');
+    });
+
+    test('?from=/&to= কুয়েরি প্যারাম দিয়ে কাস্টম dateRange গ্রহণ করে', async () => {
+      const agent = await makeAdminAgent();
+      const res = await agent.get('/admin?from=2024-01-01&to=2024-01-31');
+      expect(res.status).toBe(200);
+      expect(res.text).toContain('2024-01-01');
+      expect(res.text).toContain('2024-01-31');
+    });
+
+    test('অকার্যকর/ম্যালফর্মড from/to প্যারামিটার নিরাপদে ডিফল্টে ফিরে যায় (ক্র্যাশ করে না)', async () => {
+      const agent = await makeAdminAgent();
+      const res = await agent.get('/admin?from=not-a-date&to=<script>');
+      expect(res.status).toBe(200);
+      expect(res.text).not.toMatch(/is not defined|ReferenceError/);
+    });
+  });
 });

@@ -777,6 +777,17 @@ router.get('/api/demo-stats', async (req, res) => {
 
 router.get('/', async (req, res) => {
   try {
+    // views/admin/dashboard.ejs date-filter ফর্ম ও Export CSV লিংক dateRange.from/dateRange.to আশা করে,
+    // কিন্তু এই ভ্যারিয়েবলটা কখনো তৈরি/পাস করা হতো না — ফলে প্রতিবার লগইনের পর প্রথম পেজ
+    // (dashboard) 500 এরর দিয়ে ক্র্যাশ করত ("dateRange is not defined")। ডিফল্ট গত ৩০ দিন,
+    // query param দিয়ে ওভাররাইড করা যায়।
+    const today = new Date().toISOString().slice(0, 10);
+    const thirtyDaysAgo = new Date(Date.now() - 29 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const dateRange = {
+      from: /^\d{4}-\d{2}-\d{2}$/.test(req.query.from || '') ? req.query.from : thirtyDaysAgo,
+      to: /^\d{4}-\d{2}-\d{2}$/.test(req.query.to || '') ? req.query.to : today
+    };
+
     const users = await pool.query('SELECT COUNT(*) as count FROM users');
     const totalCoins = await pool.query('SELECT SUM(coins) as total FROM users');
     const activeUsersNow = await pool.query(`SELECT COUNT(*) AS cnt FROM users WHERE last_login >= NOW() - INTERVAL '15 minutes'`);
@@ -930,7 +941,70 @@ router.get('/', async (req, res) => {
       running: bullHealth.redisConnected
     }), { pending: 0, processing: 0, completed: 0, failed: 0, running: bullHealth.redisConnected });
 
+    // views/admin/dashboard.ejs আরও ৪টা ভ্যারিয়েবল আশা করে যেগুলো আগে কখনো res.render()-এ
+    // পাস করা হতো না (betStatistics, apiUsageStats, serverHealth, queueHealth) — ফলে ড্যাশবোর্ড
+    // (লগইনের পরের প্রথম পেজ) সবসময় 500 ক্র্যাশ করত। হালকা, বাস্তব হিসাব দিয়ে পূরণ করা হচ্ছে।
+    const betStatsRes = await pool.query(`
+      SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE status='won') AS won,
+             COUNT(*) FILTER (WHERE status='lost') AS lost, COUNT(*) FILTER (WHERE status='pending') AS pending,
+             COALESCE(SUM(stake),0) AS staked
+      FROM bets WHERE created_at BETWEEN $1 AND $2
+    `, [dateRange.from, dateRange.to + ' 23:59:59']).catch(() => null);
+    const betPayoutRes = await pool.query(`
+      SELECT COALESCE(SUM(stake * odd),0) AS payout FROM bets WHERE status='won' AND created_at BETWEEN $1 AND $2
+    `, [dateRange.from, dateRange.to + ' 23:59:59']).catch(() => null);
+    const totalBetsN = betStatsRes ? parseInt(betStatsRes.rows[0].total) : 0;
+    const wonN = betStatsRes ? parseInt(betStatsRes.rows[0].won) : 0;
+    const totalStakeN = betStatsRes ? Number(betStatsRes.rows[0].staked) : 0;
+    const totalPayoutN = betPayoutRes ? Number(betPayoutRes.rows[0].payout) : 0;
+    const betStatistics = {
+      totalBets: totalBetsN,
+      wonCount: wonN,
+      lostCount: betStatsRes ? parseInt(betStatsRes.rows[0].lost) : 0,
+      pendingCount: betStatsRes ? parseInt(betStatsRes.rows[0].pending) : 0,
+      winRatePercent: totalBetsN > 0 ? Math.round((wonN / totalBetsN) * 100) : 0,
+      totalStake: totalStakeN,
+      totalPayout: totalPayoutN,
+      houseProfit: totalStakeN - totalPayoutN
+    };
+
+    const apiLogStatsRes = await pool.query(`
+      SELECT COUNT(*) AS total, COALESCE(AVG(response_time_ms),0) AS avg_ms,
+             COUNT(*) FILTER (WHERE status_code >= 400) AS errors
+      FROM api_usage_logs WHERE created_at BETWEEN $1 AND $2
+    `, [dateRange.from, dateRange.to + ' 23:59:59']).catch(() => null);
+    const totalReqN = apiLogStatsRes ? parseInt(apiLogStatsRes.rows[0].total) : 0;
+    const apiUsageStats = {
+      totalRequests: totalReqN,
+      avgResponseMs: apiLogStatsRes ? Math.round(Number(apiLogStatsRes.rows[0].avg_ms)) : 0,
+      errorRatePercent: totalReqN > 0 ? Math.round((parseInt(apiLogStatsRes.rows[0].errors) / totalReqN) * 100) : 0,
+      topEndpoints: []
+    };
+
+    const os = require('os');
+    const freeMemMb = Math.round(os.freemem() / 1024 / 1024);
+    const totalMemMb = Math.round(os.totalmem() / 1024 / 1024);
+    const usedMemPercent = totalMemMb > 0 ? Math.round(((totalMemMb - freeMemMb) / totalMemMb) * 100) : 0;
+    const serverHealth = {
+      level: usedMemPercent > 90 ? 'critical' : (usedMemPercent > 75 ? 'warning' : 'healthy'),
+      uptimeSec: Math.round(process.uptime()),
+      cpu: { loadAvg1m: os.loadavg()[0].toFixed(2), count: os.cpus().length },
+      system: { usedMemPercent, freeMemMb },
+      disk: null,
+      issues: usedMemPercent > 90 ? ['মেমরি ব্যবহার ৯০%-এর বেশি'] : []
+    };
+
+    const queueHealth = {
+      level: !bullHealth.redisConnected ? 'warning' : (queueStatus.failed > 0 ? 'warning' : 'healthy'),
+      issues: !bullHealth.redisConnected ? ['Redis সংযুক্ত নেই — BullMQ queue বন্ধ, সব জব inline চলছে'] : (queueStatus.failed > 0 ? [`${queueStatus.failed}টা জব ব্যর্থ হয়েছে`] : [])
+    };
+
     res.render('admin/dashboard', {
+      dateRange,
+      betStatistics,
+      apiUsageStats,
+      serverHealth,
+      queueHealth,
       demoStats,
       redisStatus: cache.getStatus(),
       queueStatus,
@@ -974,7 +1048,14 @@ router.get('/', async (req, res) => {
     });
   } catch (err) {
     console.error(err);
+    const today = new Date().toISOString().slice(0, 10);
+    const thirtyDaysAgo = new Date(Date.now() - 29 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     res.render('admin/dashboard', {
+      dateRange: { from: thirtyDaysAgo, to: today },
+      betStatistics: { totalBets: 0, wonCount: 0, lostCount: 0, pendingCount: 0, winRatePercent: 0, totalStake: 0, totalPayout: 0, houseProfit: 0 },
+      apiUsageStats: { totalRequests: 0, avgResponseMs: 0, errorRatePercent: 0, topEndpoints: [] },
+      serverHealth: { level: 'healthy', uptimeSec: 0, cpu: { loadAvg1m: '0.00', count: 1 }, system: { usedMemPercent: 0, freeMemMb: 0 }, disk: null, issues: [] },
+      queueHealth: { level: 'healthy', issues: [] },
       demoStats: { totalDemo: 9999999, userHeldDemo: 0, casinoDemoWagered: 0, sportsDemoWagered: 0 },
       redisStatus: cache.getStatus(),
       queueStatus: { enabled: false, running: false, pending: 0, processing: 0, completed: 0, failed: 0 },
