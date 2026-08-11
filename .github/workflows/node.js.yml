@@ -10,16 +10,44 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [18.x, 20.x, 22.x]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: livo_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/livo_test
+      SESSION_SECRET: test_secret_key_for_ci_only
+      REDIS_ENABLED: false
+      SSLCZ_IS_LIVE: false
+      VAPID_SUBJECT: mailto:test@example.com
+      FRONTEND_URL: http://localhost:4123
 
     steps:
     - uses: actions/checkout@v4
-    - name: Use Node.js ${{ matrix.node-version }}
+
+    - name: Use Node.js 22.x
       uses: actions/setup-node@v4
       with:
-        node-version: ${{ matrix.node-version }}
+        node-version: 22.x
         cache: 'npm'
-    - run: npm install
-    # - run: npm test # No test script defined yet
+
+    - name: Install dependencies
+      run: npm ci --legacy-peer-deps
+
+    - name: Run tests
+      run: npm test
+
+    - name: Build
+      run: npm run build
