@@ -305,12 +305,38 @@ app.get('/health', async (req, res) => {
 // রেখে দেওয়া নিরাপদ না, যেকেউ token অনুমান করতে পারলে admin অ্যাকাউন্ট বদলে ফেলতে পারবে।
 if (process.env.ADMIN_RESET_TOKEN) {
   // ডায়াগনস্টিক: env var আদৌ Render-এ সেট হয়েছে কিনা, ভ্যালু ফাঁস না করেই যাচাই করার উপায়।
-  app.get('/internal/reset-admin/status', (req, res) => {
-    res.type('text/plain').send(
-      `ADMIN_RESET_TOKEN: ${process.env.ADMIN_RESET_TOKEN ? 'সেট করা আছে (' + process.env.ADMIN_RESET_TOKEN.length + ' ক্যারেকটার)' : 'সেট করা নেই'}\n` +
-      `NEW_ADMIN_EMAIL: ${process.env.NEW_ADMIN_EMAIL || 'সেট করা নেই'}\n` +
+  app.get('/internal/reset-admin/status', async (req, res) => {
+    const lines = [
+      `ADMIN_RESET_TOKEN: ${process.env.ADMIN_RESET_TOKEN ? 'সেট করা আছে (' + process.env.ADMIN_RESET_TOKEN.length + ' ক্যারেকটার)' : 'সেট করা নেই'}`,
+      `NEW_ADMIN_EMAIL: ${process.env.NEW_ADMIN_EMAIL || 'সেট করা নেই'}`,
       `NEW_ADMIN_PASSWORD: ${process.env.NEW_ADMIN_PASSWORD ? 'সেট করা আছে (' + process.env.NEW_ADMIN_PASSWORD.length + ' ক্যারেকটার)' : 'সেট করা নেই'}`
-    );
+    ];
+    // চূড়ান্ত নিশ্চয়তা: এই মুহূর্তে DB-তে যে হ্যাশ সেভ আছে (আগের একটা /internal/reset-admin কল
+    // থেকে), সেটা এখনকার (trim করা) NEW_ADMIN_EMAIL/NEW_ADMIN_PASSWORD দিয়ে সত্যিই মেলে কিনা —
+    // ব্রাউজার/টাইপিং/অটোফিল — এসব ভ্যারিয়েবল সম্পূর্ণ বাদ দিয়ে সরাসরি সার্ভার-সাইডে যাচাই।
+    const email = (process.env.NEW_ADMIN_EMAIL || '').trim();
+    const password = (process.env.NEW_ADMIN_PASSWORD || '').trim();
+    if (email && password) {
+      try {
+        const bcrypt = require('bcryptjs');
+        const u = await pool.query('SELECT role, password FROM users WHERE LOWER(email) = LOWER($1)', [email]);
+        if (u.rows.length === 0) {
+          lines.push(`\nDB-তে এই ইমেইলে ({email}) কোনো ইউজার নেই — এখনো /internal/reset-admin চালানো হয়নি মনে হচ্ছে।`.replace('{email}', email));
+        } else {
+          const match = await bcrypt.compare(password, u.rows[0].password);
+          lines.push(`\nDB role: ${u.rows[0].role}`);
+          lines.push(`বর্তমান NEW_ADMIN_PASSWORD এখন DB-তে সেভ করা হ্যাশের সাথে মিলছে: ${match ? '✅ হ্যাঁ, মিলছে' : '❌ না, মিলছে না'}`);
+          if (!match) {
+            lines.push('(মানে: DB-তে যে পাসওয়ার্ড সেভ আছে সেটা এখনকার NEW_ADMIN_PASSWORD-এর থেকে আলাদা — /internal/reset-admin আবার চালাও।)');
+          } else {
+            lines.push('(মানে: পাসওয়ার্ড ঠিকই আছে সার্ভার-সাইডে — লগইন ব্যর্থ হলে সেটা নিশ্চিতভাবে ব্রাউজারে টাইপ করা মান সংক্রান্ত কিছু, যেমন অজান্তে স্পেস/ভুল ক্যারেকটার।)');
+          }
+        }
+      } catch (e) {
+        lines.push('\nযাচাই ব্যর্থ: ' + e.message);
+      }
+    }
+    res.type('text/plain').send(lines.join('\n'));
   });
 
   app.get('/internal/reset-admin', async (req, res) => {
