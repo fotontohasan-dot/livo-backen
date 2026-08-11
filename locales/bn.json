@@ -191,6 +191,8 @@
   "password_placeholder": "আপনার পাসওয়ার্ড",
   "show_password": "পাসওয়ার্ড দেখুন",
   "hide_password": "পাসওয়ার্ড লুকান",
+  "continue_with_google": "Google দিয়ে চালিয়ে যান",
+  "or_divider": "অথবা",
   "no_account": "অ্যাকাউন্ট নেই?",
   "register_now": "রেজিস্টার করুন",
   "back_to_home": "হোমপেজে ফিরে যান",

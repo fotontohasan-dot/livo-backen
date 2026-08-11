@@ -191,6 +191,8 @@
   "password_placeholder": "Your password",
   "show_password": "Show password",
   "hide_password": "Hide password",
+  "continue_with_google": "Continue with Google",
+  "or_divider": "or",
   "no_account": "Don't have an account?",
   "register_now": "Create one",
   "back_to_home": "Back to home",

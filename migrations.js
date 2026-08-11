@@ -51,6 +51,15 @@ async function runMigrations() {
     await pool.query(`UPDATE users SET email_verified = true WHERE email_verified = false AND verification_token IS NULL;`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_verification_token ON users(verification_token);`);
 
+    // ==================== Google Sign-In (OAuth 2.0 / OpenID Connect) ====================
+    // google_id = Google-এর 'sub' (স্থায়ী, ইউনিক আইডেন্টিফায়ার) — কখনো Google পাসওয়ার্ড স্টোর করা হয় না।
+    // auth_provider শুধু তথ্যমূলক (কোন মাধ্যমে অ্যাকাউন্ট তৈরি হয়েছিল), লগইন-যোগ্যতা নির্ধারণ করে না —
+    // Google দিয়ে সাইন-ইন করা অ্যাকাউন্টও পরে চাইলে ইমেইল/ফোন+পাসওয়ার্ড দিয়ে লগইন করতে পারবে (password কলাম
+    // তখনও পূরণ থাকে, শুধু একটা র‍্যান্ডম আনইউজেবল ভ্যালু দিয়ে — ইউজার কখনো সেটা জানে না/ব্যবহার করতে পারে না)।
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT UNIQUE;`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_provider VARCHAR(20) DEFAULT 'local';`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);`);
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS matches (
         id SERIAL PRIMARY KEY,

@@ -944,6 +944,43 @@ body.menu-open {
 .auth-alt a { color: var(--primary); font-weight: 600; text-decoration: none; }
 .auth-alt a:hover { text-decoration: underline; }
 
+/* ==================== Google Sign-In ==================== */
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin: var(--space-5) 0;
+    color: var(--text-muted);
+    font-size: var(--font-xs);
+}
+.auth-divider::before, .auth-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-glass);
+}
+.auth-google-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: 13px;
+    font-size: var(--font-md);
+    font-weight: 600;
+    font-family: inherit;
+    color: var(--text-main);
+    background: var(--bg-card, #fff);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    cursor: pointer;
+    transition: background .15s ease, transform .1s ease;
+}
+.auth-google-btn:hover { background: var(--bg-hover, rgba(255,255,255,0.06)); }
+.auth-google-btn:active { transform: translateY(1px); }
+.auth-google-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+
 .auth-terms {
     font-size: var(--font-xs);
     color: var(--text-muted);

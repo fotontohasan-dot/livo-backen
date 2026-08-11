@@ -14,6 +14,7 @@ const { getIpRule } = require('../services/ipRules');
 const { recordDeviceLogin, parseUserAgent } = require('../services/deviceTracking');
 const cache = require('../services/cache');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
+const googleAuth = require('../services/googleAuth');
 
 const resetLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -31,6 +32,16 @@ const verifyResendLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   store: new RedisRateLimitStore('rl:verifyresend:')
+});
+
+// Google OAuth redirect/callback — pre-authentication, তাই IP-ভিত্তিক রেট-লিমিট (ব্রুটফোর্স/abuse ঠেকাতে)
+const googleAuthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new RedisRateLimitStore('rl:googleoauth:')
 });
 
 // ইউজার-সাইড ইভেন্ট (রেজিস্ট্রেশন, ভেরিফিকেশন) admin_logs টেবিলেই লগ হয়, যাতে
@@ -296,6 +307,117 @@ async function completeLogin(req, user, vpnInfo) {
 
   return (user.role && user.role.toLowerCase() === 'admin') ? '/admin' : '/';
 }
+
+// ==================== Google Sign-In (OAuth 2.0 / OpenID Connect) ====================
+
+function googleRedirectUri(req) {
+  return `${req.protocol}://${req.get('host')}/auth/google/callback`;
+}
+
+/**
+ * ভেরিফাইড Google প্রোফাইল দিয়ে ইউজার খুঁজে বের করে বা তৈরি করে:
+ * 1. আগে থেকে এই google_id দিয়ে লিংক করা অ্যাকাউন্ট থাকলে সেটাই।
+ * 2. না থাকলে কিন্তু একই ইমেইলের local অ্যাকাউন্ট থাকলে — সেটার সাথে google_id লিংক করে দেওয়া হয়
+ *    (একবার লিংক হলে ভবিষ্যতে সরাসরি ধাপ ১-এই মিলে যাবে)। পাসওয়ার্ড/অন্য কোনো ডেটা বদলানো হয় না।
+ * 3. দুটোর কোনোটাই না থাকলে — নতুন অ্যাকাউন্ট, কখনো Google-এর আসল পাসওয়ার্ড স্টোর করা হয় না
+ *    (এমনকি Google আমাদের কখনো সেটা দেয়ও না) — বরং একটা র‍্যান্ডম, কখনো কাউকে না-জানানো ৩২-বাইট
+ *    সিক্রেটের bcrypt hash বসানো হয় শুধু NOT NULL কলাম পূরণের জন্য, যা দিয়ে কখনো লগইন করা সম্ভব না।
+ */
+async function findOrCreateGoogleUser(profile) {
+  let existing = await pool.query('SELECT * FROM users WHERE google_id = $1', [profile.googleId]);
+  if (existing.rows[0]) return existing.rows[0];
+
+  if (profile.email) {
+    existing = await pool.query('SELECT * FROM users WHERE email = $1', [profile.email]);
+    if (existing.rows[0]) {
+      await pool.query('UPDATE users SET google_id = $1 WHERE id = $2', [profile.googleId, existing.rows[0].id]);
+      existing.rows[0].google_id = profile.googleId;
+      return existing.rows[0];
+    }
+  }
+
+  const unusablePassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
+  const baseUsername = ((profile.email || '').split('@')[0] || 'user').replace(/[^A-Za-z0-9_.]/g, '').slice(0, 15) || 'user';
+  let username = baseUsername;
+  let suffix = 0;
+  while (true) {
+    const clash = await pool.query('SELECT 1 FROM users WHERE username = $1', [username]);
+    if (clash.rows.length === 0) break;
+    suffix++;
+    username = `${baseUsername}${suffix}`.slice(0, 20);
+  }
+  const myCode = username.toUpperCase().slice(0, 4) + Math.floor(1000 + Math.random() * 9000);
+
+  const created = await pool.query(`
+    INSERT INTO users (username, email, password, role, coins, referral_code, email_verified, google_id, auth_provider, full_name, avatar, created_at)
+    VALUES ($1, $2, $3, 'user', 0, $4, $5, $6, 'google', $7, $8, NOW()) RETURNING *
+  `, [username, profile.email, unusablePassword, myCode, profile.emailVerified, profile.googleId, profile.name, profile.picture]);
+
+  logSystemEvent(created.rows[0].id, username, 'GOOGLE_ACCOUNT_CREATED', `Google Sign-In দিয়ে নতুন অ্যাকাউন্ট তৈরি: ${profile.email || ''}`, null)
+    .catch(e => console.error('logSystemEvent error:', e.message));
+
+  return created.rows[0];
+}
+
+router.get('/auth/google', googleAuthLimiter, (req, res) => {
+  if (!googleAuth.isConfigured()) {
+    req.flash('error', '❌ এই মুহূর্তে Google দিয়ে লগইন উপলব্ধ নয়।');
+    return res.redirect('/login');
+  }
+  const state = crypto.randomBytes(24).toString('hex');
+  const nonce = crypto.randomBytes(24).toString('hex');
+  req.session.googleOAuthState = state;
+  req.session.googleOAuthNonce = nonce;
+  res.redirect(googleAuth.generateAuthUrl(googleRedirectUri(req), state, nonce));
+});
+
+router.get('/auth/google/callback', googleAuthLimiter, async (req, res) => {
+  const expectedState = req.session.googleOAuthState;
+  const expectedNonce = req.session.googleOAuthNonce;
+  delete req.session.googleOAuthState;
+  delete req.session.googleOAuthNonce;
+
+  try {
+    const { code, state, error: oauthError } = req.query;
+    if (oauthError) {
+      req.flash('error', '❌ Google লগইন বাতিল করা হয়েছে।');
+      return res.redirect('/login');
+    }
+    if (!code || !state || !expectedState || state !== expectedState) {
+      req.flash('error', '❌ অকার্যকর অথবা মেয়াদোত্তীর্ণ Google লগইন রিকোয়েস্ট। আবার চেষ্টা করুন।');
+      return res.redirect('/login');
+    }
+    if (!googleAuth.isConfigured()) {
+      req.flash('error', '❌ এই মুহূর্তে Google দিয়ে লগইন উপলব্ধ নয়।');
+      return res.redirect('/login');
+    }
+
+    const profile = await googleAuth.exchangeCodeForProfile(googleRedirectUri(req), code, expectedNonce);
+    if (!profile.email || !profile.emailVerified) {
+      req.flash('error', '❌ আপনার Google ইমেইল ভেরিফাই করা নেই — এই ইমেইল দিয়ে লগইন করা যাবে না।');
+      return res.redirect('/login');
+    }
+
+    const user = await findOrCreateGoogleUser(profile);
+    if (user.is_banned) {
+      req.flash('error', '❌ আপনার অ্যাকাউন্ট ব্যান করা হয়েছে।');
+      return res.redirect('/login');
+    }
+    if (user.self_exclude_until && new Date(user.self_exclude_until) > new Date()) {
+      const until = new Date(user.self_exclude_until).toLocaleDateString('bn-BD');
+      req.flash('error', `আপনি নিজে অ্যাকাউন্ট বন্ধ রেখেছেন। ${until} পর্যন্ত লগইন করা যাবে না।`);
+      return res.redirect('/login');
+    }
+
+    const vpnInfo = await checkIp(getReqIp(req)).catch(() => null);
+    const redirectPath = await completeLogin(req, user, vpnInfo);
+    res.redirect(redirectPath);
+  } catch (err) {
+    console.error('google oauth callback error:', err.message);
+    req.flash('error', '❌ Google লগইন ব্যর্থ হয়েছে, আবার চেষ্টা করুন।');
+    res.redirect('/login');
+  }
+});
 
 router.get('/login', (req, res) => {
   const botCheck = evaluateRequest({ ip: getReqIp(req), userAgent: req.get('user-agent') || '', endpoint: '/login', req });
