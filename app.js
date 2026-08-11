@@ -296,6 +296,66 @@ app.get('/health', async (req, res) => {
   }
 });
 
+// ==================== সাময়িক: এক-বারের admin রিসেট (Render Free Plan-এ Shell নেই বলে) ====================
+// Render-এর Free Plan-এ Shell/SSH অ্যাক্সেস থাকে না, তাই reset-admin.js ফাইলটা সরাসরি চালানো যায় না।
+// এই রুটটা ঠিক একই কাজ করে কিন্তু ব্রাউজার দিয়ে ভিজিট করা যায় — শুধুমাত্র ADMIN_RESET_TOKEN
+// environment variable সেট করা থাকলেই এই রুট সক্রিয় থাকে (না থাকলে 404, ডিফল্টভাবে নিষ্ক্রিয়)।
+// ব্যবহারের পর ADMIN_RESET_TOKEN/NEW_ADMIN_EMAIL/NEW_ADMIN_PASSWORD — এই তিনটা environment
+// variable Render থেকে মুছে ফেলো (অথবা এই পুরো ব্লকটা কোড থেকেই সরিয়ে দাও) — এটা স্থায়ীভাবে
+// রেখে দেওয়া নিরাপদ না, যেকেউ token অনুমান করতে পারলে admin অ্যাকাউন্ট বদলে ফেলতে পারবে।
+if (process.env.ADMIN_RESET_TOKEN) {
+  app.get('/internal/reset-admin', async (req, res) => {
+    const crypto = require('crypto');
+    const provided = Buffer.from(String(req.query.token || ''));
+    const expected = Buffer.from(String(process.env.ADMIN_RESET_TOKEN));
+    const tokenOk = provided.length === expected.length && crypto.timingSafeEqual(provided, expected);
+    if (!tokenOk) return res.status(404).send('Not found');
+
+    const email = process.env.NEW_ADMIN_EMAIL;
+    const password = process.env.NEW_ADMIN_PASSWORD;
+    if (!email || !password) {
+      return res.status(400).send('NEW_ADMIN_EMAIL / NEW_ADMIN_PASSWORD environment variable সেট করা নেই।');
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const demoted = await client.query(
+        `UPDATE users SET role = 'user', role_key = NULL WHERE role = 'admin' RETURNING id, username, email`
+      );
+      const bcrypt = require('bcryptjs');
+      const hashed = await bcrypt.hash(password, 10);
+      const existing = await client.query('SELECT id FROM users WHERE LOWER(email) = LOWER($1)', [email]);
+      let resultLine;
+      if (existing.rows.length > 0) {
+        await client.query(
+          `UPDATE users SET password = $1, role = 'admin', role_key = NULL, email_verified = true, is_banned = false WHERE id = $2`,
+          [hashed, existing.rows[0].id]
+        );
+        resultLine = `বিদ্যমান ইউজার #${existing.rows[0].id}-কে admin বানানো হলো: ${email}`;
+      } else {
+        const username = 'admin_' + Math.random().toString(36).slice(2, 8);
+        const created = await client.query(
+          `INSERT INTO users (username, email, password, role, coins, referral_code, email_verified)
+           VALUES ($1, $2, $3, 'admin', 0, $4, true) RETURNING id`,
+          [username, email, hashed, username.toUpperCase().slice(0, 8)]
+        );
+        resultLine = `নতুন admin অ্যাকাউন্ট তৈরি হলো — #${created.rows[0].id}, username: ${username}, email: ${email}`;
+      }
+      await client.query('COMMIT');
+      res.type('text/plain').send(
+        `সম্পন্ন।\n${demoted.rows.length}টা পুরনো admin অ্যাকাউন্ট থেকে অ্যাডমিন-অ্যাক্সেস সরানো হলো।\n${resultLine}\n\nএখন /admin/login-এ গিয়ে লগইন করো। তারপর Render থেকে ADMIN_RESET_TOKEN, NEW_ADMIN_EMAIL, NEW_ADMIN_PASSWORD এই তিনটা environment variable মুছে ফেলো।`
+      );
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('reset-admin route error:', err.message);
+      res.status(500).type('text/plain').send('ব্যর্থ হয়েছে, কোনো পরিবর্তন হয়নি: ' + err.message);
+    } finally {
+      client.release();
+    }
+  });
+}
+
 app.get('/ready', async (req, res) => {
   try {
     const { readiness } = require('./services/healthCheck');
