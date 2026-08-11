@@ -313,6 +313,27 @@ router.get('/api/notification-counts', async (req, res) => {
   }
 });
 
+// ==================== সাইডবার ব্যাজ কাউন্ট (Payments/KYC) — views/admin/partials/sidebar.ejs প্রতি ২০ সেকেন্ডে পোল করে ====================
+// উপরের /api/notification-counts-এর মতোই প্যাটার্ন (deposits/withdrawals), শুধু chats-এর বদলে kyc যোগ করা।
+router.get('/pending-counts', async (req, res) => {
+  try {
+    const [deposits, withdrawals, kyc] = await Promise.all([
+      pool.query(`SELECT COUNT(*)::int AS c FROM payment_requests WHERE type='deposit' AND status='pending'`),
+      pool.query(`SELECT COUNT(*)::int AS c FROM payment_requests WHERE type='withdraw' AND status='pending'`),
+      pool.query(`SELECT COUNT(*)::int AS c FROM kyc_requests WHERE status='pending'`)
+    ]);
+    res.json({
+      success: true,
+      deposits: deposits.rows[0].c,
+      withdrawals: withdrawals.rows[0].c,
+      kyc: kyc.rows[0].c
+    });
+  } catch (err) {
+    console.error('pending-counts error:', err.message);
+    res.json({ success: false, deposits: 0, withdrawals: 0, kyc: 0 });
+  }
+});
+
 // ==================== 2FA সেটআপ (QR কোড) ====================
 router.get('/2fa/setup', async (req, res) => {
   try {
@@ -1828,6 +1849,54 @@ router.get('/bets', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.render('admin/bets', { bets: [], page: 1, totalPages: 1, total: 0, status: '', pendingSettlement: 0, todayStake: 0, todayGgr: 0 });
+  }
+});
+
+// ==================== লাইভ বেট টেবিল (Auto-refresh, প্রতি ৪ সেকেন্ডে) — views/admin/bets.ejs পোল করে ====================
+// উপরের GET /bets পেজ-রেন্ডার হ্যান্ডলারের ঠিক একই কোয়েরি-লজিক, শুধু res.render()-এর বদলে JSON রেসপন্স।
+router.get('/api/bets-live', async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = 30;
+    const offset = (page - 1) * limit;
+    const status = req.query.status || '';
+    const conditions = [];
+    const params = [];
+    if (['pending', 'won', 'lost'].includes(status)) {
+      params.push(status);
+      conditions.push(`b.status = $${params.length}`);
+    }
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const countRes = await pool.query(`SELECT COUNT(*) FROM bets b ${where}`, params);
+    const total = parseInt(countRes.rows[0].count);
+
+    params.push(limit, offset);
+    const bets = await pool.query(`
+      SELECT b.*, u.username, m.team_a, m.team_b, m.title
+      FROM bets b JOIN users u ON b.user_id = u.id LEFT JOIN matches m ON b.match_id = m.id
+      ${where} ORDER BY b.created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}
+    `, params);
+
+    const pendingCountRes = await pool.query(`SELECT COUNT(*) FROM bets WHERE status='pending'`);
+    const todayStakeRes = await pool.query(`SELECT COALESCE(SUM(stake),0) AS total FROM bets WHERE created_at::date = CURRENT_DATE`);
+    const todayGgrRes = await pool.query(`
+      SELECT COALESCE(SUM(stake),0) AS staked,
+             COALESCE(SUM(CASE WHEN status='won' THEN stake*odd ELSE 0 END),0) AS paidout
+      FROM bets WHERE created_at::date = CURRENT_DATE AND status IN ('won','lost')
+    `);
+
+    res.json({
+      success: true,
+      bets: bets.rows,
+      total,
+      pendingSettlement: parseInt(pendingCountRes.rows[0].count),
+      todayStake: Number(todayStakeRes.rows[0].total),
+      todayGgr: Number(todayGgrRes.rows[0].staked) - Number(todayGgrRes.rows[0].paidout)
+    });
+  } catch (err) {
+    console.error('bets-live error:', err.message);
+    res.json({ success: false, bets: [], total: 0, pendingSettlement: 0, todayStake: 0, todayGgr: 0 });
   }
 });
 
