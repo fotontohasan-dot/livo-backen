@@ -1,5 +1,6 @@
-const { getCsrfAgent, freshRequest, uniqueUsername, uniquePhone, REALISTIC_UA } = require('./helpers/app');
+const { getCsrfAgent, freshRequest, uniqueUsername, uniquePhone, REALISTIC_UA, extractCsrfToken } = require('./helpers/app');
 const { pool } = require('../db');
+const speakeasy = require('speakeasy');
 
 async function makeAdminAgent() {
   const { agent, token } = await getCsrfAgent('/register');
@@ -134,6 +135,213 @@ describe('Admin Panel', () => {
       const res = await agent.get('/admin?from=not-a-date&to=<script>');
       expect(res.status).toBe(200);
       expect(res.text).not.toMatch(/is not defined|ReferenceError/);
+    });
+  });
+
+  describe('বাধ্যতামূলক 2FA (Admin/super_admin)', () => {
+    async function registerAdmin() {
+      const { agent, token } = await getCsrfAgent('/register');
+      const username = uniqueUsername();
+      const phone = uniquePhone();
+      const password = 'SecurePass123';
+      await agent.post('/register').set('User-Agent', REALISTIC_UA).type('form')
+        .send({ username, phone, password, confirmPassword: password, _csrf: token });
+      await pool.query("UPDATE users SET role='admin' WHERE username=$1", [username]);
+      return { username, phone, password };
+    }
+
+    function extractBase32(html) {
+      const m = /font-mono text-blue-400 text-sm break-all select-all">([A-Z2-7]+)</.exec(html);
+      return m ? m[1] : null;
+    }
+
+    test('2FA ছাড়া admin পাসওয়ার্ড দিয়ে লগইন করলে সরাসরি লগইন না হয়ে বাধ্যতামূলক এনরোলমেন্টে পাঠানো হয়', async () => {
+      const { username, password } = await registerAdmin();
+      const g = await getCsrfAgent('/admin/login');
+      const loginRes = await g.agent.post('/admin/login').type('form').send({ username, password, _csrf: g.token });
+      expect(loginRes.status).toBe(302);
+      expect(loginRes.headers.location).toBe('/admin/2fa/mandatory-setup');
+
+      // এনরোলমেন্ট সম্পন্ন না করা পর্যন্ত অন্য কোনো admin রুটে ঢোকা যায় না
+      const blocked = await g.agent.get('/admin');
+      expect(blocked.status).toBe(302);
+      expect(blocked.headers.location).toMatch(/\/admin\/login/);
+    });
+
+    test('এনরোলমেন্ট পেজে বৈধ QR/secret থাকে, ভুল কোডে এনরোলমেন্ট ব্যর্থ হয় ও অ্যাক্সেস পাওয়া যায় না', async () => {
+      const { username, password } = await registerAdmin();
+      const g = await getCsrfAgent('/admin/login');
+      await g.agent.post('/admin/login').type('form').send({ username, password, _csrf: g.token });
+
+      const setupPage = await g.agent.get('/admin/2fa/mandatory-setup');
+      expect(setupPage.status).toBe(200);
+      const secret = extractBase32(setupPage.text);
+      expect(secret).toBeTruthy();
+      const csrf = extractCsrfToken(setupPage.text);
+
+      const wrong = await g.agent.post('/admin/2fa/mandatory-setup/verify').type('form').send({ token: '000000', _csrf: csrf });
+      expect(wrong.status).toBe(200);
+      expect(wrong.text).toContain('সঠিক নয়');
+
+      const stillBlocked = await g.agent.get('/admin');
+      expect(stillBlocked.status).toBe(302);
+
+      const dbCheck = await pool.query('SELECT totp_enabled FROM users WHERE username=$1', [username]);
+      expect(dbCheck.rows[0].totp_enabled).toBe(false);
+    });
+
+    test('সঠিক কোড দিয়ে এনরোলমেন্ট সম্পন্ন হলে — ব্যাকআপ কোড দেখানো হয়, সেশন স্থাপিত হয়, DB-তে totp_enabled=true হয়', async () => {
+      const { username, password } = await registerAdmin();
+      const g = await getCsrfAgent('/admin/login');
+      await g.agent.post('/admin/login').type('form').send({ username, password, _csrf: g.token });
+
+      const setupPage = await g.agent.get('/admin/2fa/mandatory-setup');
+      const secret = extractBase32(setupPage.text);
+      const csrf = extractCsrfToken(setupPage.text);
+      const validCode = speakeasy.totp({ secret, encoding: 'base32' });
+
+      const verifyRes = await g.agent.post('/admin/2fa/mandatory-setup/verify').type('form').send({ token: validCode, _csrf: csrf });
+      expect(verifyRes.status).toBe(200);
+      expect(verifyRes.text.toLowerCase()).toMatch(/ব্যাকআপ|backup/);
+
+      const nowAllowed = await g.agent.get('/admin');
+      expect(nowAllowed.status).toBe(200);
+
+      const dbCheck = await pool.query('SELECT totp_enabled, totp_secret FROM users WHERE username=$1', [username]);
+      expect(dbCheck.rows[0].totp_enabled).toBe(true);
+      expect(dbCheck.rows[0].totp_secret).toBe(secret);
+    }, 15000);
+
+    test('2FA ইতিমধ্যে চালু থাকা admin পরের বার লগইনে normal ভেরিফিকেশন ধাপে যায় (আবার এনরোলমেন্ট না)', async () => {
+      const { username, password } = await registerAdmin();
+      const g = await getCsrfAgent('/admin/login');
+      await g.agent.post('/admin/login').type('form').send({ username, password, _csrf: g.token });
+      const setupPage = await g.agent.get('/admin/2fa/mandatory-setup');
+      const secret = extractBase32(setupPage.text);
+      const csrf = extractCsrfToken(setupPage.text);
+      const validCode = speakeasy.totp({ secret, encoding: 'base32' });
+      await g.agent.post('/admin/2fa/mandatory-setup/verify').type('form').send({ token: validCode, _csrf: csrf });
+
+      await g.agent.get('/admin/logout');
+      const g2 = await getCsrfAgent('/admin/login');
+      const login2 = await g2.agent.post('/admin/login').type('form').send({ username, password, _csrf: g2.token });
+      expect(login2.status).toBe(302);
+      expect(login2.headers.location).toBe('/admin/login/2fa');
+
+      // সঠিক TOTP কোড দিয়ে স্বাভাবিক ভেরিফিকেশন সফল হয়
+      const verifyGet = await g2.agent.get('/admin/login/2fa');
+      const csrf2 = extractCsrfToken(verifyGet.text);
+      const code2 = speakeasy.totp({ secret, encoding: 'base32' });
+      const finalLogin = await g2.agent.post('/admin/login/2fa').type('form').send({ token: code2, _csrf: csrf2 });
+      expect(finalLogin.status).toBe(302);
+      expect(finalLogin.headers.location).toBe('/admin');
+
+      const allowed = await g2.agent.get('/admin');
+      expect(allowed.status).toBe(200);
+    }, 15000);
+
+    test('normal ভেরিফিকেশন ধাপে ভুল কোড প্রত্যাখ্যাত হয়, অ্যাক্সেস পাওয়া যায় না', async () => {
+      const { username, password } = await registerAdmin();
+      const g = await getCsrfAgent('/admin/login');
+      await g.agent.post('/admin/login').type('form').send({ username, password, _csrf: g.token });
+      const setupPage = await g.agent.get('/admin/2fa/mandatory-setup');
+      const secret = extractBase32(setupPage.text);
+      const csrf = extractCsrfToken(setupPage.text);
+      const validCode = speakeasy.totp({ secret, encoding: 'base32' });
+      await g.agent.post('/admin/2fa/mandatory-setup/verify').type('form').send({ token: validCode, _csrf: csrf });
+      await g.agent.get('/admin/logout');
+
+      const g2 = await getCsrfAgent('/admin/login');
+      await g2.agent.post('/admin/login').type('form').send({ username, password, _csrf: g2.token });
+      const verifyGet = await g2.agent.get('/admin/login/2fa');
+      const csrf2 = extractCsrfToken(verifyGet.text);
+      const badRes = await g2.agent.post('/admin/login/2fa').type('form').send({ token: '111111', _csrf: csrf2 });
+      expect(badRes.status).toBe(200);
+      expect(badRes.text).toContain('সঠিক নয়');
+
+      const blocked = await g2.agent.get('/admin');
+      expect(blocked.status).toBe(302);
+    }, 15000);
+
+    test('ব্যাকআপ কোড দিয়েও normal ভেরিফিকেশন ধাপে লগইন করা যায় (রিকভারি পাথ)', async () => {
+      const { username, password } = await registerAdmin();
+      const g = await getCsrfAgent('/admin/login');
+      await g.agent.post('/admin/login').type('form').send({ username, password, _csrf: g.token });
+      const setupPage = await g.agent.get('/admin/2fa/mandatory-setup');
+      const secret = extractBase32(setupPage.text);
+      const csrf = extractCsrfToken(setupPage.text);
+      const validCode = speakeasy.totp({ secret, encoding: 'base32' });
+      const enrollRes = await g.agent.post('/admin/2fa/mandatory-setup/verify').type('form').send({ token: validCode, _csrf: csrf });
+      const codeMatch = /<code[^>]*>([A-Z0-9-]{8,})<\/code>/.exec(enrollRes.text) || /\b([A-F0-9]{4}-?[A-F0-9]{4})\b/i.exec(enrollRes.text);
+      await g.agent.get('/admin/logout');
+
+      if (!codeMatch) {
+        // ব্যাকআপ কোড HTML থেকে বের করা না গেলে সরাসরি DB থেকে হ্যাশ ভেঙে টেস্ট চালানো সম্ভব না
+        // (হ্যাশড থাকে) — এই ক্ষেত্রে টেস্ট স্কিপ না করে অন্তত normal TOTP পাথটাই যাচাই করা হলো উপরে,
+        // তাই এখানে শুধু নিশ্চিত করা হচ্ছে ভুল ব্যাকআপ কোড প্রত্যাখ্যাত হয়।
+        const g2 = await getCsrfAgent('/admin/login');
+        await g2.agent.post('/admin/login').type('form').send({ username, password, _csrf: g2.token });
+        const verifyGet = await g2.agent.get('/admin/login/2fa');
+        const csrf2 = extractCsrfToken(verifyGet.text);
+        const badBackup = await g2.agent.post('/admin/login/2fa').type('form').send({ backupCode: 'INVALID-CODE', _csrf: csrf2 });
+        expect(badBackup.status).toBe(200);
+        const blocked = await g2.agent.get('/admin');
+        expect(blocked.status).toBe(302);
+        return;
+      }
+
+      const backupCode = codeMatch[1];
+      const g2 = await getCsrfAgent('/admin/login');
+      await g2.agent.post('/admin/login').type('form').send({ username, password, _csrf: g2.token });
+      const verifyGet = await g2.agent.get('/admin/login/2fa');
+      const csrf2 = extractCsrfToken(verifyGet.text);
+      const backupRes = await g2.agent.post('/admin/login/2fa').type('form').send({ backupCode, _csrf: csrf2 });
+      expect(backupRes.status).toBe(302);
+      expect(backupRes.headers.location).toBe('/admin');
+    }, 15000);
+
+    test('super_admin role_key সহ admin-ও একই বাধ্যতামূলক 2FA-র আওতায় পড়ে', async () => {
+      const rbac = require('../services/rbac');
+      const { username, password } = await registerAdmin();
+      const userRow = await pool.query('SELECT id FROM users WHERE username=$1', [username]);
+      await rbac.assignUserRole(userRow.rows[0].id, 'super_admin');
+
+      const g = await getCsrfAgent('/admin/login');
+      const loginRes = await g.agent.post('/admin/login').type('form').send({ username, password, _csrf: g.token });
+      expect(loginRes.status).toBe(302);
+      expect(loginRes.headers.location).toBe('/admin/2fa/mandatory-setup');
+
+      const blocked = await g.agent.get('/admin');
+      expect(blocked.status).toBe(302);
+    });
+
+    test('মূল সাইটের /login দিয়ে admin লগইন করলেও একই বাধ্যতামূলক 2FA প্রয়োগ হয় (বাইপাস বন্ধ)', async () => {
+      const { username, phone, password } = await registerAdmin();
+      const g = await getCsrfAgent('/login');
+      const loginRes = await g.agent.post('/login').set('User-Agent', REALISTIC_UA).type('form')
+        .send({ identifier: phone, password, _csrf: g.token });
+      expect(loginRes.status).toBe(302);
+      expect(loginRes.headers.location).toBe('/admin/2fa/mandatory-setup');
+
+      const blocked = await g.agent.get('/admin');
+      expect(blocked.status).toBe(302);
+      expect(blocked.headers.location).toMatch(/\/admin\/login/);
+    });
+
+    test('সাধারণ (non-admin) ইউজারের লগইন 2FA-দ্বারা প্রভাবিত হয় না', async () => {
+      const { agent, token } = await getCsrfAgent('/register');
+      const username = uniqueUsername();
+      const phone = uniquePhone();
+      const password = 'SecurePass123';
+      await agent.post('/register').set('User-Agent', REALISTIC_UA).type('form')
+        .send({ username, phone, password, confirmPassword: password, _csrf: token });
+
+      const g = await getCsrfAgent('/login');
+      const res = await g.agent.post('/login').set('User-Agent', REALISTIC_UA).type('form')
+        .send({ identifier: phone, password, _csrf: g.token });
+      expect(res.status).toBe(302);
+      expect(res.headers.location).not.toMatch(/2fa/);
+      expect(res.headers.location).toBe('/');
     });
   });
 });

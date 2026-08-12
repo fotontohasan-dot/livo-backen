@@ -214,15 +214,13 @@ router.post('/login', adminLoginLimiter, async (req, res) => {
       return res.redirect('/admin/login/2fa');
     }
 
-    req.session.user = {
-      id: admin.id,
-      username: admin.username,
-      role: admin.role
-    };
-    applyAdminSessionPolicy(req);
-    logAdminAction(admin.id, admin.username, 'LOGIN', 'লগইন সম্পন্ন', req.ip);
-
-    res.redirect('/admin');
+    // ==================== 2FA বাধ্যতামূলক — এখনো চালু না করা থাকলে সরাসরি লগইন না করিয়ে ====================
+    // এনরোলমেন্ট সম্পন্ন করানো হয় (পাসওয়ার্ড লিক হলেও 2FA ছাড়া অ্যাকাউন্টে ঢোকা যাবে না)।
+    // req.session.user এখনো সেট করা হচ্ছে না — pendingEnrollment শুধু সেই একটামাত্র এনরোলমেন্ট
+    // ফ্লো-তেই কাজ করে, isAdmin (router.use(isAdmin), নিচে) এটা চেনে না, তাই এনরোলমেন্ট সম্পূর্ণ
+    // না হলে অন্য কোনো admin রুটে ঢোকা সম্ভব না।
+    req.session.pendingEnrollment = { id: admin.id, username: admin.username, role: admin.role };
+    return res.redirect('/admin/2fa/mandatory-setup');
   } catch (err) {
     console.error(err);
     res.render('admin/login', { error: 'সার্ভার এরর হয়েছে' });
@@ -279,6 +277,83 @@ router.post('/login/2fa', strict2FALimiter, async (req, res) => {
   } catch (err) {
     console.error('2FA verify error:', err.message);
     res.render('admin/2fa-verify', { error: 'সার্ভার এরর হয়েছে', username: pending.username });
+  }
+});
+
+// ==================== 2FA বাধ্যতামূলক এনরোলমেন্ট (পাসওয়ার্ড সঠিক, কিন্তু 2FA এখনো চালু করা হয়নি) ====================
+// req.session.user এখনো সেট হয়নি এই পুরো ফ্লো জুড়ে — শুধু TOTP verify সফল হওয়ার পরই লগইন সম্পন্ন হয়।
+// তার আগে অন্য কোনো admin রুটে যাওয়ার চেষ্টা করলে isAdmin (নিচে) req.session.user না পেয়ে
+// /admin/login-এ ফেরত পাঠাবে — তাই এনরোলমেন্ট এড়িয়ে যাওয়ার কোনো উপায় নেই।
+router.get('/2fa/mandatory-setup', async (req, res) => {
+  const pending = req.session.pendingEnrollment;
+  if (!pending) return res.redirect('/admin/login');
+  try {
+    const fresh = await pool.query('SELECT totp_enabled FROM users WHERE id = $1', [pending.id]);
+    if (fresh.rows[0]?.totp_enabled) {
+      // অন্য কোনো ট্যাব/সেশনে ইতিমধ্যে এনাবল হয়ে থাকলে — আবার এনরোল করানোর দরকার নেই, লগইন-2FA ফ্লোতে পাঠানো হচ্ছে
+      req.session.pending2FA = pending;
+      req.session.pendingEnrollment = null;
+      req.session.twoFAAttempts = 0;
+      return res.redirect('/admin/login/2fa');
+    }
+    const setup = await generateTotpSetup(pending.username);
+    req.session.pendingEnrollmentSecret = setup.base32;
+    res.render('admin/2fa-setup', {
+      alreadyEnabled: false,
+      qrDataUrl: setup.qrDataUrl,
+      base32: setup.base32,
+      error: null,
+      formAction: '/admin/2fa/mandatory-setup/verify',
+      mandatory: true
+    });
+  } catch (err) {
+    console.error('mandatory 2fa setup error:', err.message);
+    res.render('admin/2fa-setup', {
+      alreadyEnabled: false, qrDataUrl: null, base32: null,
+      error: 'QR কোড তৈরি করতে সমস্যা হয়েছে', formAction: '/admin/2fa/mandatory-setup/verify', mandatory: true
+    });
+  }
+});
+
+router.post('/2fa/mandatory-setup/verify', strict2FALimiter, async (req, res) => {
+  const pending = req.session.pendingEnrollment;
+  if (!pending) return res.redirect('/admin/login');
+
+  try {
+    const pendingSecret = req.session.pendingEnrollmentSecret;
+    const { token } = req.body;
+
+    if (!pendingSecret) return res.redirect('/admin/2fa/mandatory-setup');
+    if (!verifyTotpToken(pendingSecret, token)) {
+      const dataUrlAgain = await qrFromSecret(pendingSecret, pending.username);
+      return res.render('admin/2fa-setup', {
+        alreadyEnabled: false, qrDataUrl: dataUrlAgain, base32: pendingSecret,
+        error: 'কোডটি সঠিক নয়, আবার চেষ্টা করুন', formAction: '/admin/2fa/mandatory-setup/verify', mandatory: true
+      });
+    }
+
+    const backupCodes = generateBackupCodes(8);
+    const backupCodesJson = await hashBackupCodes(backupCodes);
+    await pool.query(
+      'UPDATE users SET totp_secret = $1, totp_enabled = true, totp_backup_codes = $2, backup_codes_viewed = false WHERE id = $3',
+      [pendingSecret, backupCodesJson, pending.id]
+    );
+
+    // এনরোলমেন্ট সম্পন্ন — এখন প্রকৃত লগইন সেশন স্থাপন করা হচ্ছে (এতক্ষণ ছিল না)
+    req.session.user = { id: pending.id, username: pending.username, role: pending.role };
+    req.session.pendingEnrollment = null;
+    req.session.pendingEnrollmentSecret = null;
+    applyAdminSessionPolicy(req);
+    await logAdminAction(pending.id, pending.username, '2FA_ENABLED', 'বাধ্যতামূলক 2FA এনরোলমেন্ট সম্পন্ন (লগইনের সময়)', req.ip);
+    logAdminAction(pending.id, pending.username, 'LOGIN', '2FA এনরোলমেন্টসহ লগইন সম্পন্ন', req.ip);
+
+    res.render('admin/2fa-backup-codes', { codes: backupCodes });
+  } catch (err) {
+    console.error('mandatory 2fa setup verify error:', err.message);
+    res.render('admin/2fa-setup', {
+      alreadyEnabled: false, qrDataUrl: null, base32: null,
+      error: 'সার্ভার এরর হয়েছে', formAction: '/admin/2fa/mandatory-setup/verify', mandatory: true
+    });
   }
 });
 

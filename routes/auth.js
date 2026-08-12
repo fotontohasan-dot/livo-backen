@@ -293,6 +293,22 @@ const STEP_UP_CODE_TTL_MINUTES = 10;
 
 // ভেরিফিকেশন সফল/অপ্রয়োজনীয় হলে লগইন সম্পন্ন করে — session সেট, device/fraud লগ, রিডাইরেক্ট পাথ রিটার্ন করে
 async function completeLogin(req, user, vpnInfo) {
+  // admin অ্যাকাউন্টের জন্য 2FA বাধ্যতামূলক — completeLogin() যেখান থেকেই কল হোক না কেন (মূল
+  // /login, VPN step-up ভেরিফিকেশনের পর, Google Sign-In callback) একইভাবে প্রয়োগ হয়, যাতে কোনো
+  // admin অ্যাকাউন্ট /admin/login-এর বদলে সাইটের সাধারণ /login (বা Google দিয়ে) ঢুকে
+  // routes/admin.js-এর বাধ্যতামূলক 2FA এড়িয়ে যেতে না পারে — দুই জায়গাতেই একই
+  // pending2FA/pendingEnrollment সেশন-স্টেট ও রুট ব্যবহার হয় (routes/admin.js-এই ডিফাইন করা)।
+  if (user.role && user.role.toLowerCase() === 'admin') {
+    const fresh = await pool.query('SELECT totp_enabled FROM users WHERE id = $1', [user.id]);
+    if (fresh.rows[0]?.totp_enabled) {
+      req.session.pending2FA = { id: user.id, username: user.username, role: user.role };
+      req.session.twoFAAttempts = 0;
+      return '/admin/login/2fa';
+    }
+    req.session.pendingEnrollment = { id: user.id, username: user.username, role: user.role };
+    return '/admin/2fa/mandatory-setup';
+  }
+
   const loginResult = await recordLogin(req, user.id, vpnInfo);
   req.session.user = sanitizeUser(user);
   const deviceResult = await recordDeviceLogin(req, user.id, loginResult.loginLogId);
@@ -467,7 +483,7 @@ router.post('/login', async (req, res) => {
 
   try {
     const result = await pool.query(
-      'SELECT id, username, email, phone, password FROM users WHERE email = $1 OR phone = $1',
+      'SELECT id, username, email, phone, password, role FROM users WHERE email = $1 OR phone = $1',
       [identifier]
     );
     const user = result.rows[0];

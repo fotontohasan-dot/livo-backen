@@ -73,6 +73,13 @@
                 </div>
             <% } %>
 
+            <% if (typeof mandatory !== 'undefined' && mandatory) { %>
+                <div class="bg-amber-500/10 border border-amber-500/30 text-amber-400 px-4 py-3 rounded-2xl text-sm flex items-center gap-3">
+                    <i class="fas fa-shield-halved"></i>
+                    <span>নিরাপত্তার জন্য সব admin অ্যাকাউন্টে 2FA বাধ্যতামূলক — লগইন সম্পন্ন করতে নিচের ধাপগুলো শেষ করুন।</span>
+                </div>
+            <% } %>
+
             <% if (alreadyEnabled) { %>
                 <!-- ==================== ইতিমধ্যে চালু আছে — বন্ধ করার অপশন ==================== -->
                 <div class="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-4 py-3 rounded-2xl text-sm flex items-center gap-3">
@@ -117,7 +124,7 @@
                 </div>
                 <% } %>
 
-                <form action="/admin/2fa/setup/verify" method="POST" class="space-y-4">
+                <form action="<%= locals.formAction || '/admin/2fa/setup/verify' %>" method="POST" class="space-y-4">
                     <p class="text-slate-300 text-sm">২) অ্যাপে দেখানো ৬-ডিজিট কোডটা দিয়ে নিশ্চিত করুন:</p>
                     <input type="text" name="token" maxlength="6" inputmode="numeric" pattern="[0-9]*" required autofocus
                         class="otp-input w-full bg-slate-900 border border-slate-700 text-white py-4 rounded-2xl focus:outline-none focus:border-blue-500 placeholder:text-slate-600"
