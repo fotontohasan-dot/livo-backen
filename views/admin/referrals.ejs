@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>রেফারেল ম্যানেজমেন্ট • Livo Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
+  </style>
+  <%- include('./partials/pwa-head') %>
+</head>
+<body>
+  <div class="admin-wrap">
+    <%- include('./partials/sidebar', { active: 'referrals' }) %>
+    <div class="admin-content">
+      <%- include('./partials/header', { pageTitle: 'রেফারেল ম্যানেজমেন্ট', pageSubtitle: 'রেফারার/রেফার্ড ইউজার, বোনাস ও কমিশন স্ট্যাটাস' }) %>
+
+      <div class="grid grid-4" style="margin-bottom:14px;">
+        <div class="stat-card"><div class="stat-label">মোট রেফারেল</div><div class="stat-number"><%= summary.totalReferrals %></div></div>
+        <div class="stat-card"><div class="stat-label">বোনাস প্রদত্ত</div><div class="stat-number" style="color:#10b981;"><%= summary.bonusPaidCount %></div></div>
+        <div class="stat-card"><div class="stat-label">পেন্ডিং</div><div class="stat-number" style="color:#f59e0b;"><%= summary.totalReferrals - summary.bonusPaidCount %></div></div>
+        <div class="stat-card"><div class="stat-label">মোট কমিশন পরিশোধিত</div><div class="stat-number">৳ <%= Number(summary.totalCommissionPaid).toLocaleString('en-US') %></div></div>
+      </div>
+
+      <div class="admin-card" style="padding:14px;margin-bottom:14px;">
+        <form method="GET" action="/admin/referrals" style="display:flex;gap:10px;flex-wrap:wrap;">
+          <input class="input" style="flex:1;min-width:220px;" type="text" name="search" value="<%= search || '' %>" placeholder="রেফারার বা রেফার্ড ইউজারনেম দিয়ে খুঁজুন...">
+          <select class="select" style="max-width:200px;" name="status">
+            <option value="">সব স্ট্যাটাস</option>
+            <option value="bonus_paid" <%= status === 'bonus_paid' ? 'selected' : '' %>>বোনাস প্রদত্ত</option>
+            <option value="pending" <%= status === 'pending' ? 'selected' : '' %>>পেন্ডিং</option>
+          </select>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> খুঁজুন</button>
+          <% if (search || status) { %>
+            <a class="btn" href="/admin/referrals">রিসেট</a>
+          <% } %>
+        </form>
+      </div>
+
+      <div class="admin-card">
+        <div class="admin-card-header">সকল রেফারেল (মোট <%= total %>টা)</div>
+        <div style="overflow-x:auto;">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>রেফারার</th>
+                <th>রেফার্ড ইউজার</th>
+                <th>স্ট্যাটাস</th>
+                <th>মোট কমিশন</th>
+                <th>রেফারেল তারিখ</th>
+                <th style="text-align:right;">অ্যাকশন</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (referrals && referrals.length > 0) { %>
+                <% referrals.forEach(r => { %>
+                  <tr>
+                    <td>
+                      <div style="font-weight:700;">@<%= r.referrer_username %></div>
+                      <div style="font-size:11px;color:#64748b;">কোড: <%= r.referrer_code || '-' %></div>
+                    </td>
+                    <td>
+                      <div style="font-weight:700;">@<%= r.referred_username %></div>
+                      <div style="font-size:11px;color:#64748b;">যোগদান: <%= r.referred_joined_at ? new Date(r.referred_joined_at).toLocaleDateString('bn-BD') : '—' %></div>
+                    </td>
+                    <td>
+                      <% if (r.signup_bonus_paid) { %>
+                        <span class="badge badge-green">বোনাস প্রদত্ত</span>
+                      <% } else { %>
+                        <span class="badge badge-amber">পেন্ডিং</span>
+                      <% } %>
+                      <div style="font-size:10px;color:#64748b;margin-top:3px;">
+                        <%= r.first_deposit_done ? 'ডিপোজিট সম্পন্ন' : 'ডিপোজিট বাকি' %>
+                      </div>
+                    </td>
+                    <td style="font-weight:700;">৳ <%= Number(r.commission_earned || 0).toLocaleString('en-US') %></td>
+                    <td><%= r.created_at ? new Date(r.created_at).toLocaleDateString('bn-BD') : '—' %></td>
+                    <td style="text-align:right;white-space:nowrap;">
+                      <a class="btn btn-sm" href="/admin/users/<%= r.referrer_id %>">রেফারার</a>
+                      <a class="btn btn-sm" href="/admin/users/<%= r.referred_id %>">রেফার্ড</a>
+                    </td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="6"><div class="empty-state">কোনো রেফারেল পাওয়া যায়নি</div></td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:center;gap:10px;margin-top:16px;">
+        <% if (page > 1) { %>
+          <a class="btn" href="/admin/referrals?page=<%= page - 1 %>&search=<%= encodeURIComponent(search || '') %>&status=<%= status || '' %>">← আগের পেজ</a>
+        <% } %>
+        <span style="padding:9px 12px;color:#94a3b8;font-size:12px;">পেজ <%= page %> / <%= totalPages %></span>
+        <% if (page < totalPages) { %>
+          <a class="btn" href="/admin/referrals?page=<%= page + 1 %>&search=<%= encodeURIComponent(search || '') %>&status=<%= status || '' %>">পরের পেজ →</a>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

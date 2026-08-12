@@ -1554,6 +1554,77 @@ router.get('/transactions', rbac.requirePermission('reports_view'), async (req, 
   }
 });
 
+// ==================== রেফারেল ম্যানেজমেন্ট ====================
+// services/referral.js-এর বিদ্যমান referrals/referral_commissions টেবিল থেকে শুধু পড়া হচ্ছে —
+// কোনো নতুন বোনাস/কমিশন লজিক এখানে যোগ করা হয়নি (সেটা এখনো শুধু ডিপোজিট-approve ও বাজি ধরার
+// সময় services/referral.js-এই ঘটে, অপরিবর্তিত)।
+router.get('/referrals', rbac.requirePermission('reports_view'), async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = 25;
+    const offset = (page - 1) * limit;
+    const search = (req.query.search || '').trim();
+    const status = req.query.status || '';
+
+    const conditions = [];
+    const params = [];
+    if (search) {
+      params.push(`%${search}%`);
+      conditions.push(`(ru.username ILIKE $${params.length} OR rd.username ILIKE $${params.length})`);
+    }
+    if (status === 'bonus_paid') conditions.push('r.signup_bonus_paid = true');
+    if (status === 'pending') conditions.push('r.signup_bonus_paid = false');
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const countRes = await pool.query(
+      `SELECT COUNT(*) FROM referrals r
+       JOIN users ru ON r.referrer_id = ru.id
+       JOIN users rd ON r.referred_id = rd.id
+       ${where}`,
+      params
+    );
+    const total = parseInt(countRes.rows[0].count);
+
+    const summaryRes = await pool.query(`
+      SELECT COUNT(*) AS total_referrals,
+             COUNT(*) FILTER (WHERE signup_bonus_paid = true) AS bonus_paid_count
+      FROM referrals
+    `);
+    const commissionSummaryRes = await pool.query(`SELECT COALESCE(SUM(amount), 0) AS total FROM referral_commissions`);
+
+    params.push(limit, offset);
+    const referrals = await pool.query(
+      `SELECT r.id, r.referrer_id, r.referred_id, r.first_deposit_done, r.signup_bonus_paid, r.created_at,
+              ru.username AS referrer_username, ru.referral_code AS referrer_code,
+              rd.username AS referred_username, rd.created_at AS referred_joined_at,
+              COALESCE((SELECT SUM(amount) FROM referral_commissions WHERE earner_id = r.referrer_id AND from_user_id = r.referred_id), 0) AS commission_earned
+       FROM referrals r
+       JOIN users ru ON r.referrer_id = ru.id
+       JOIN users rd ON r.referred_id = rd.id
+       ${where}
+       ORDER BY r.created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`,
+      params
+    );
+
+    res.render('admin/referrals', {
+      referrals: referrals.rows,
+      page, totalPages: Math.max(1, Math.ceil(total / limit)), total,
+      search, status,
+      summary: {
+        totalReferrals: parseInt(summaryRes.rows[0].total_referrals),
+        bonusPaidCount: parseInt(summaryRes.rows[0].bonus_paid_count),
+        totalCommissionPaid: Number(commissionSummaryRes.rows[0].total)
+      }
+    });
+  } catch (err) {
+    console.error('referrals list error:', err.message);
+    res.render('admin/referrals', {
+      referrals: [], page: 1, totalPages: 1, total: 0, search: '', status: '',
+      summary: { totalReferrals: 0, bonusPaidCount: 0, totalCommissionPaid: 0 }
+    });
+  }
+});
+
 // ==================== USERS ====================
 router.get('/users', rbac.requirePermission('users_view'), async (req, res) => {
   try {
