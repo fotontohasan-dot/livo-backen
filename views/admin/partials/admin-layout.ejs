@@ -232,14 +232,19 @@
                     <span>Bets Management</span>
                 </a>
                 
-                <a href="/admin/deposits" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'deposits' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-arrow-down w-5"></i>
-                    <span>Deposits</span>
+                <a href="/payment/admin/payments" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'payments' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-money-bill-wave w-5"></i>
+                    <span>Payment Approvals</span>
                 </a>
-                
-                <a href="/admin/withdrawals" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'withdrawals' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-arrow-up w-5"></i>
-                    <span>Withdrawals</span>
+
+                <a href="/payment/admin/deposits" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'deposits' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-chart-column w-5"></i>
+                    <span>Deposit Report</span>
+                </a>
+
+                <a href="/admin/transactions" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'transactions' ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas fa-receipt w-5"></i>
+                    <span>Transaction History</span>
                 </a>
                 
                 <a href="/admin/support" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'support' ? 'active' : 'text-slate-300 hover:text-white' %>">

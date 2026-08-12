@@ -1231,7 +1231,17 @@ router.get('/api/dashboard-stats', rbac.requirePermission('dashboard_view'), asy
 });
 
 // ==================== ডিপোজিট ম্যানেজমেন্ট ====================
-router.get('/deposits', rbac.requirePermission('payments_view'), async (req, res) => {
+// ==================== ডিপোজিট (ডুপ্লিকেট — ক্যানোনিকাল পেজে রিডাইরেক্ট) ====================
+// এই পেজটা /payment/admin/payments-এর ডিপোজিট ট্যাবের সাথে হুবহু একই কাজ করত (পেন্ডিং তালিকা +
+// approve/reject)। দুটো আলাদা জায়গায় একই কিউ থাকায় অ্যাডমিনরা কোনটা "আসল" তা নিয়ে বিভ্রান্ত হতো
+// এবং একজন এক পেজে approve করলে অন্যজনের খোলা পেজে বাসি ডেটা থেকে যেত। এখন একটাই ক্যানোনিকাল
+// অনুমোদন-কিউ: /payment/admin/payments (যেখানে বাল্ক অ্যাকশনও আছে)। পুরনো URL/বুকমার্ক যাতে না
+// ভাঙে সেজন্য রিডাইরেক্ট রাখা হলো — RBAC গেট আগের মতোই বহাল।
+router.get('/deposits', rbac.requirePermission('payments_view'), (req, res) => {
+  res.redirect('/payment/admin/payments');
+});
+
+router.get('/deposits/legacy-disabled', rbac.requirePermission('payments_view'), async (req, res) => {
   try {
     const { from, to } = req.query;
     const pending = await pool.query(`
@@ -1342,7 +1352,13 @@ router.post('/api/deposits/:id/reject', rbac.requirePermission('payments_reject'
 });
 
 // ==================== উইথড্র ম্যানেজমেন্ট ====================
-router.get('/withdrawals', rbac.requirePermission('payments_view'), async (req, res) => {
+// ==================== উইথড্র (ডুপ্লিকেট — ক্যানোনিকাল পেজে রিডাইরেক্ট) ====================
+// উপরের /deposits-এর মতোই কারণ: /payment/admin/payments-এর উইথড্র ট্যাবই এখন একমাত্র কিউ।
+router.get('/withdrawals', rbac.requirePermission('payments_view'), (req, res) => {
+  res.redirect('/payment/admin/payments?tab=withdraw');
+});
+
+router.get('/withdrawals/legacy-disabled', rbac.requirePermission('payments_view'), async (req, res) => {
   try {
     const { from, to } = req.query;
     const pending = await pool.query(`
