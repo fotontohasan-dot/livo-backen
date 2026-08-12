@@ -15,6 +15,31 @@ async function makeAdminAgent() {
   return agent;
 }
 
+// bulk-action টেস্টগুলোর জন্য — একই সেশনের csrfSecret পুরো সেশন জুড়ে বৈধ থাকে বলে
+// রেজিস্ট্রেশনের সময়কার token-ই fetch()-স্টাইল JSON POST-এ (X-CSRF-Token হেডার দিয়ে) পুনরায়
+// ব্যবহারযোগ্য — বিদ্যমান makeAdminAgent()-এর রিটার্ন সিগনেচার বদলানো হয়নি, এটা আলাদা হেল্পার।
+async function makeAdminAgentWithToken() {
+  const { agent, token } = await getCsrfAgent('/register');
+  const username = uniqueUsername();
+  const phone = uniquePhone();
+  await agent
+    .post('/register')
+    .set('User-Agent', REALISTIC_UA)
+    .type('form')
+    .send({ username, phone, password: 'SecurePass123', confirmPassword: 'SecurePass123', _csrf: token });
+  const row = (await pool.query('UPDATE users SET role = $1 WHERE username = $2 RETURNING id', ['admin', username])).rows[0];
+  return { agent, token, userId: row.id, username };
+}
+
+async function registerPlainUser() {
+  const { agent, token } = await getCsrfAgent('/register');
+  const username = uniqueUsername();
+  await agent.post('/register').set('User-Agent', REALISTIC_UA).type('form')
+    .send({ username, phone: uniquePhone(), password: 'SecurePass123', confirmPassword: 'SecurePass123', _csrf: token });
+  const row = (await pool.query('SELECT id FROM users WHERE username=$1', [username])).rows[0];
+  return { userId: row.id, username };
+}
+
 describe('Admin Panel', () => {
   test('GET /admin/login renders the admin login page', async () => {
     const res = await freshRequest().get('/admin/login');
@@ -342,6 +367,213 @@ describe('Admin Panel', () => {
       expect(res.status).toBe(302);
       expect(res.headers.location).not.toMatch(/2fa/);
       expect(res.headers.location).toBe('/');
+    });
+  });
+
+  describe('বাল্ক অ্যাকশন — Users bulk ban', () => {
+    test('অথেন্টিকেশন ছাড়া প্রত্যাখ্যাত হয়', async () => {
+      const res = await freshRequest().post('/admin/users/bulk-ban').set('X-CSRF-Token', 'x').send({ ids: [1] });
+      expect(res.status).not.toBe(200);
+    });
+
+    test('CSRF টোকেন ছাড়া প্রত্যাখ্যাত হয় (403)', async () => {
+      const { agent } = await makeAdminAgentWithToken();
+      const { userId } = await registerPlainUser();
+      const res = await agent.post('/admin/users/bulk-ban').send({ ids: [userId] });
+      expect(res.status).toBe(403);
+    });
+
+    test('users_ban permission ছাড়া প্রত্যাখ্যাত হয়', async () => {
+      const rbac = require('../services/rbac');
+      const { agent, token, userId: adminId } = await makeAdminAgentWithToken();
+      const { userId } = await registerPlainUser();
+      const role = await rbac.createRole({ name: `NoBan-${uniqueUsername()}`, permissions: {} });
+      await rbac.assignUserRole(adminId, role.key);
+      const res = await agent.post('/admin/users/bulk-ban').set('X-CSRF-Token', token).send({ ids: [userId] });
+      expect(res.status).toBe(302);
+      const check = await pool.query('SELECT is_banned FROM users WHERE id=$1', [userId]);
+      expect(check.rows[0].is_banned).toBe(false);
+    });
+
+    test('বৈধ ID-গুলো সফলভাবে ব্যান হয়, অ্যাডমিন_লগে এন্ট্রি হয়, রেসপন্সে সঠিক সংখ্যা থাকে', async () => {
+      const { agent, token } = await makeAdminAgentWithToken();
+      const u1 = await registerPlainUser();
+      const u2 = await registerPlainUser();
+
+      const res = await agent.post('/admin/users/bulk-ban').set('X-CSRF-Token', token).send({ ids: [u1.userId, u2.userId] });
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.succeeded).toBe(2);
+      expect(res.body.failed).toBe(0);
+
+      const check = await pool.query('SELECT id, is_banned FROM users WHERE id IN ($1,$2)', [u1.userId, u2.userId]);
+      expect(check.rows.every((r) => r.is_banned)).toBe(true);
+
+      const log = await pool.query("SELECT * FROM admin_logs WHERE action_type='BULK_USER_BAN' ORDER BY id DESC LIMIT 1");
+      expect(log.rows.length).toBe(1);
+      expect(log.rows[0].details).toContain('2টা সফল');
+    });
+
+    test('অস্তিত্বহীন ID মিশ্রিত থাকলে partial failure নিরাপদে হ্যান্ডল হয় (বাকিগুলো প্রভাবিত হয় না)', async () => {
+      const { agent, token } = await makeAdminAgentWithToken();
+      const u1 = await registerPlainUser();
+
+      const res = await agent.post('/admin/users/bulk-ban').set('X-CSRF-Token', token).send({ ids: [u1.userId, 999999999] });
+      expect(res.status).toBe(200);
+      expect(res.body.succeeded).toBe(1);
+      expect(res.body.failed).toBe(1);
+      const check = await pool.query('SELECT is_banned FROM users WHERE id=$1', [u1.userId]);
+      expect(check.rows[0].is_banned).toBe(true);
+    });
+
+    test('অ্যাডমিন নিজেকে নিজে বাল্ক-ব্যান করতে পারে না', async () => {
+      const { agent, token, userId: adminId } = await makeAdminAgentWithToken();
+      const res = await agent.post('/admin/users/bulk-ban').set('X-CSRF-Token', token).send({ ids: [adminId] });
+      expect(res.status).toBe(400);
+      const check = await pool.query('SELECT is_banned FROM users WHERE id=$1', [adminId]);
+      expect(check.rows[0].is_banned).toBe(false);
+    });
+
+    test('খালি নির্বাচন প্রত্যাখ্যাত হয়', async () => {
+      const { agent, token } = await makeAdminAgentWithToken();
+      const res = await agent.post('/admin/users/bulk-ban').set('X-CSRF-Token', token).send({ ids: [] });
+      expect(res.status).toBe(400);
+    });
+
+    test('১০০টার বেশি আইডি একসাথে প্রত্যাখ্যাত হয়', async () => {
+      const { agent, token } = await makeAdminAgentWithToken();
+      const tooManyIds = Array.from({ length: 101 }, (_, i) => 5000000 + i); // অ্যাডমিনের নিজের id-র সাথে সংঘর্ষ এড়াতে বড় রেঞ্জ
+      const res = await agent.post('/admin/users/bulk-ban').set('X-CSRF-Token', token).send({ ids: tooManyIds });
+      expect(res.status).toBe(400);
+    });
+
+    test('একক /users/:id/ban রুটের toggle আচরণ অপরিবর্তিত আছে', async () => {
+      const { agent, token } = await makeAdminAgentWithToken();
+      const u1 = await registerPlainUser();
+      const res1 = await agent.post(`/admin/users/${u1.userId}/ban`).type('form').send({ _csrf: token });
+      expect(res1.status).toBe(302);
+      const check1 = await pool.query('SELECT is_banned FROM users WHERE id=$1', [u1.userId]);
+      expect(check1.rows[0].is_banned).toBe(true);
+      const res2 = await agent.post(`/admin/users/${u1.userId}/ban`).type('form').send({ _csrf: token });
+      const check2 = await pool.query('SELECT is_banned FROM users WHERE id=$1', [u1.userId]);
+      expect(check2.rows[0].is_banned).toBe(false); // টোগল করে আনব্যান হয়ে গেছে — আগের আচরণই বজায় আছে
+    });
+  });
+
+  describe('বাল্ক অ্যাকশন — Payments bulk approve/reject', () => {
+    async function makePendingDeposit(userId, amount) {
+      const r = await pool.query(
+        `INSERT INTO payment_requests (user_id, type, method, amount, account_number, status) VALUES ($1,'deposit','bkash',$2,'01700000000','pending') RETURNING id`,
+        [userId, amount]
+      );
+      return r.rows[0].id;
+    }
+    async function makePendingWithdraw(userId, amount) {
+      const r = await pool.query(
+        `INSERT INTO payment_requests (user_id, type, method, amount, account_number, status) VALUES ($1,'withdraw','bkash',$2,'01700000000','pending') RETURNING id`,
+        [userId, amount]
+      );
+      return r.rows[0].id;
+    }
+
+    test('অথেন্টিকেশন ছাড়া প্রত্যাখ্যাত হয়', async () => {
+      const res = await freshRequest().post('/payment/admin/payments/bulk-approve').set('X-CSRF-Token', 'x').send({ ids: [1] });
+      expect(res.status).not.toBe(200);
+    });
+
+    test('CSRF টোকেন ছাড়া প্রত্যাখ্যাত হয় (403)', async () => {
+      const { agent } = await makeAdminAgentWithToken();
+      const res = await agent.post('/payment/admin/payments/bulk-approve').send({ ids: [1] });
+      expect(res.status).toBe(403);
+    });
+
+    test('payments_approve permission ছাড়া প্রত্যাখ্যাত হয়', async () => {
+      const rbac = require('../services/rbac');
+      const { agent, token, userId: adminId } = await makeAdminAgentWithToken();
+      const { userId } = await registerPlainUser();
+      const depositId = await makePendingDeposit(userId, 1000);
+      const role = await rbac.createRole({ name: `NoApprove-${uniqueUsername()}`, permissions: {} });
+      await rbac.assignUserRole(adminId, role.key);
+      const res = await agent.post('/payment/admin/payments/bulk-approve').set('X-CSRF-Token', token).send({ ids: [depositId] });
+      expect(res.status).toBe(302);
+      const check = await pool.query('SELECT status FROM payment_requests WHERE id=$1', [depositId]);
+      expect(check.rows[0].status).toBe('pending');
+    });
+
+    test('বাল্ক approve — coins সঠিকভাবে ক্রেডিট হয়, অ্যাডমিন_লগে এন্ট্রি হয়', async () => {
+      const { agent, token } = await makeAdminAgentWithToken();
+      const { userId } = await registerPlainUser();
+      const id1 = await makePendingDeposit(userId, 1000);
+      const id2 = await makePendingDeposit(userId, 500);
+
+      const res = await agent.post('/payment/admin/payments/bulk-approve').set('X-CSRF-Token', token).send({ ids: [id1, id2] });
+      expect(res.status).toBe(200);
+      expect(res.body.succeeded).toBe(2);
+      expect(res.body.failed).toBe(0);
+
+      const coins = await pool.query('SELECT coins FROM users WHERE id=$1', [userId]);
+      expect(Number(coins.rows[0].coins)).toBeGreaterThanOrEqual(1500);
+
+      const statusCheck = await pool.query('SELECT status FROM payment_requests WHERE id IN ($1,$2)', [id1, id2]);
+      expect(statusCheck.rows.every((r) => r.status === 'approved')).toBe(true);
+
+      const log = await pool.query("SELECT * FROM admin_logs WHERE action_type='BULK_PAYMENT_APPROVE' ORDER BY id DESC LIMIT 1");
+      expect(log.rows.length).toBe(1);
+    });
+
+    test('বাল্ক reject — উইথড্র হলে coins ফেরত দেওয়া হয়, অ্যাডমিন_লগে এন্ট্রি হয়', async () => {
+      const { agent, token } = await makeAdminAgentWithToken();
+      const { userId } = await registerPlainUser();
+      const withdrawId = await makePendingWithdraw(userId, 300);
+
+      const res = await agent.post('/payment/admin/payments/bulk-reject').set('X-CSRF-Token', token).send({ ids: [withdrawId] });
+      expect(res.status).toBe(200);
+      expect(res.body.succeeded).toBe(1);
+
+      const coins = await pool.query('SELECT coins FROM users WHERE id=$1', [userId]);
+      expect(Number(coins.rows[0].coins)).toBe(300);
+
+      const statusCheck = await pool.query('SELECT status FROM payment_requests WHERE id=$1', [withdrawId]);
+      expect(statusCheck.rows[0].status).toBe('rejected');
+
+      const log = await pool.query("SELECT * FROM admin_logs WHERE action_type='BULK_PAYMENT_REJECT' ORDER BY id DESC LIMIT 1");
+      expect(log.rows.length).toBe(1);
+    });
+
+    test('অস্তিত্বহীন/ইতিমধ্যে-প্রসেসড আইডি মিশ্রিত থাকলে partial failure নিরাপদে হ্যান্ডল হয়', async () => {
+      const { agent, token } = await makeAdminAgentWithToken();
+      const { userId } = await registerPlainUser();
+      const validId = await makePendingDeposit(userId, 1000);
+
+      const res = await agent.post('/payment/admin/payments/bulk-approve').set('X-CSRF-Token', token).send({ ids: [validId, 88888888] });
+      expect(res.status).toBe(200);
+      expect(res.body.succeeded).toBe(1);
+      expect(res.body.failed).toBe(1);
+
+      // একই আইডি আবার approve করার চেষ্টা — নিরাপদে ব্যর্থ হওয়া উচিত, ডাবল-ক্রেডিট না হওয়া উচিত
+      const coinsBefore = await pool.query('SELECT coins FROM users WHERE id=$1', [userId]);
+      const reRes = await agent.post('/payment/admin/payments/bulk-approve').set('X-CSRF-Token', token).send({ ids: [validId] });
+      expect(reRes.body.succeeded).toBe(0);
+      expect(reRes.body.failed).toBe(1);
+      const coinsAfter = await pool.query('SELECT coins FROM users WHERE id=$1', [userId]);
+      expect(coinsAfter.rows[0].coins).toBe(coinsBefore.rows[0].coins); // ডাবল-ক্রেডিট হয়নি
+    });
+
+    test('খালি নির্বাচন প্রত্যাখ্যাত হয়', async () => {
+      const { agent, token } = await makeAdminAgentWithToken();
+      const res = await agent.post('/payment/admin/payments/bulk-approve').set('X-CSRF-Token', token).send({ ids: [] });
+      expect(res.status).toBe(400);
+    });
+
+    test('একক /admin/approve/:id ও /admin/reject/:id রুটের আচরণ অপরিবর্তিত আছে', async () => {
+      const { agent, token } = await makeAdminAgentWithToken();
+      const { userId } = await registerPlainUser();
+      const depositId = await makePendingDeposit(userId, 1000);
+
+      const res = await agent.post(`/payment/admin/approve/${depositId}`).type('form').send({ _csrf: token });
+      expect(res.status).toBe(302);
+      const check = await pool.query('SELECT status FROM payment_requests WHERE id=$1', [depositId]);
+      expect(check.rows[0].status).toBe('approved');
     });
   });
 });

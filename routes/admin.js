@@ -1758,6 +1758,56 @@ router.post('/users/:id/ban', rbac.requirePermission('users_ban'), requireIntPar
   res.redirect('back');
 });
 
+// ==================== বাল্ক ইউজার ব্যান ====================
+// একক /users/:id/ban রুট toggle (ব্যান↔আনব্যান) করে — একসাথে অনেক ইউজারে সেই সিমান্টিক্স
+// অপ্রত্যাশিত ফলাফল দিত (কেউ ব্যান হতো, কেউ আনব্যান)। তাই বাল্ক অ্যাকশনটা স্পষ্টভাবে is_banned=true
+// সেট করে (প্রকৃত "ban", toggle না) — একক রুটের কোনো আচরণ বদলানো হয়নি।
+router.post('/users/bulk-ban', rbac.requirePermission('users_ban'), async (req, res) => {
+  const ids = Array.isArray(req.body.ids) ? req.body.ids : (req.body.ids ? [req.body.ids] : []);
+  const cleanIds = [...new Set(ids.map((x) => parseInt(x, 10)).filter((x) => Number.isInteger(x) && x > 0))]
+    .filter((id) => id !== req.session.user.id); // নিজের অ্যাকাউন্ট নিজে ব্যান করা যাবে না
+  if (cleanIds.length === 0) {
+    return res.status(400).json({ success: false, error: 'কোনো বৈধ ইউজার নির্বাচন করা হয়নি' });
+  }
+  if (cleanIds.length > 100) {
+    return res.status(400).json({ success: false, error: 'একবারে সর্বোচ্চ ১০০ জন ইউজার প্রসেস করা যাবে' });
+  }
+
+  const results = [];
+  for (const id of cleanIds) {
+    try {
+      const r = await pool.query('UPDATE users SET is_banned = true WHERE id = $1 AND is_banned = false RETURNING username', [id]);
+      if (r.rows[0]) {
+        results.push({ id, success: true, username: r.rows[0].username });
+      } else {
+        // ইউজার নেই, অথবা আগে থেকেই ব্যান করা — দুটোই "নতুন করে কিছু হয়নি" হিসেবে গণ্য, ত্রুটি না
+        const exists = await pool.query('SELECT username, is_banned FROM users WHERE id = $1', [id]);
+        if (!exists.rows[0]) results.push({ id, success: false, error: 'ইউজার পাওয়া যায়নি' });
+        else results.push({ id, success: true, username: exists.rows[0].username, alreadyBanned: true });
+      }
+    } catch (err) {
+      results.push({ id, success: false, error: err.message });
+    }
+  }
+
+  const succeeded = results.filter((r) => r.success);
+  const failed = results.filter((r) => !r.success);
+
+  logAdminAction(
+    req.session.user.id, req.session.user.username, 'BULK_USER_BAN',
+    `বাল্ক ব্যান: ${succeeded.length}টা সফল, ${failed.length}টা ব্যর্থ (আইডি: ${cleanIds.join(',')})`, req.ip
+  );
+  succeeded.forEach((r) => {
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'USER_BANNED', category: 'security', status: 'success', riskLevel: 'high',
+      details: { targetUserId: r.id, targetUsername: r.username, via: 'bulk' }
+    }).catch((e) => console.error('logAuditEvent (BULK_USER_BAN) error:', e.message));
+  });
+
+  res.json({ success: true, total: cleanIds.length, succeeded: succeeded.length, failed: failed.length, results });
+});
+
 router.post('/users/:id/delete', rbac.requirePermission('users_delete'), requireIntParam('id'), async (req, res) => {
   try {
     if (String(req.session.user.id) === String(req.params.id)) {

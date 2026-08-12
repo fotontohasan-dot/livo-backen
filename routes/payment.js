@@ -36,6 +36,7 @@ function requireLogin(req, res, next) {
 // যেটা প্রতিটা রিকোয়েস্টে DB থেকে বর্তমান role যাচাই করে — একই consistent authorization flow সব জায়গায়।
 // requireAdmin already imported above
 const { requirePermission } = require('../services/rbac');
+const { logAdminAction, logEvent: logAuditEvent } = require('../services/auditLog');
 
 function parseAmount(raw) {
   const n = Number(raw);
@@ -662,8 +663,12 @@ router.get('/admin/summary', requireAdmin, requirePermission('payments_view'), a
   }
 });
 
-router.post('/admin/approve/:id', requireAdmin, requirePermission('payments_approve'), async (req, res) => {
-  const { id } = req.params;
+// ==================== একক / বাল্ক approve-reject-এর জন্য শেয়ার্ড লজিক ====================
+// একক রুট (POST /admin/approve/:id, /admin/reject/:id) ও নতুন বাল্ক রুট — দুটোই এই একই
+// ফাংশন কল করে, যাতে ব্যবসায়িক লজিক (coin credit/refund, notification, status আপডেট)
+// দুই জায়গায় ডুপ্লিকেট না হয়। প্রতিটা আইটেম নিজস্ব BEGIN/COMMIT-এ চলে, তাই বাল্ক অপারেশনে
+// একটা আইটেম ব্যর্থ হলে বাকিগুলো প্রভাবিত হয় না (partial failure নিরাপদে হ্যান্ডল হয়)।
+async function approvePaymentRequestById(id) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -671,8 +676,7 @@ router.post('/admin/approve/:id', requireAdmin, requirePermission('payments_appr
     const request = result.rows[0];
     if (!request || request.status !== 'pending') {
       await client.query('ROLLBACK');
-      req.flash('error', 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে');
-      return res.redirect('/payment/admin/payments');
+      return { id, success: false, error: 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে' };
     }
 
     if (request.type === 'deposit') {
@@ -685,20 +689,17 @@ router.post('/admin/approve/:id', requireAdmin, requirePermission('payments_appr
       );
     }
     await client.query('COMMIT');
-    req.flash('success', 'অনুমোদন হয়েছে');
-    res.redirect('/payment/admin/payments');
+    return { id, success: true, userId: request.user_id, type: request.type, amount: request.amount };
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('approve error:', err.message);
-    req.flash('error', 'সমস্যা হয়েছে');
-    res.redirect('/payment/admin/payments');
+    return { id, success: false, error: 'সমস্যা হয়েছে' };
   } finally {
     client.release();
   }
-});
+}
 
-router.post('/admin/reject/:id', requireAdmin, requirePermission('payments_approve'), async (req, res) => {
-  const { id } = req.params;
+async function rejectPaymentRequestById(id) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -706,8 +707,7 @@ router.post('/admin/reject/:id', requireAdmin, requirePermission('payments_appro
     const request = result.rows[0];
     if (!request || request.status !== 'pending') {
       await client.query('ROLLBACK');
-      req.flash('error', 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে');
-      return res.redirect('/payment/admin/payments');
+      return { id, success: false, error: 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে' };
     }
     if (request.type === 'withdraw') {
       await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [Math.round(Number(request.amount)), request.user_id]);
@@ -722,15 +722,101 @@ router.post('/admin/reject/:id', requireAdmin, requirePermission('payments_appro
       [request.user_id, 'পেমেন্ট বাতিল', `আপনার ${request.amount} টাকার রিকোয়েস্ট বাতিল হয়েছে।`]
     );
     await client.query('COMMIT');
-    req.flash('error', 'বাতিল করা হয়েছে');
-    res.redirect('/payment/admin/payments');
+    return { id, success: true, userId: request.user_id, type: request.type, amount: request.amount };
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('reject error:', err.message);
-    res.redirect('/payment/admin/payments');
+    return { id, success: false, error: 'সমস্যা হয়েছে' };
   } finally {
     client.release();
   }
+}
+
+router.post('/admin/approve/:id', requireAdmin, requirePermission('payments_approve'), async (req, res) => {
+  const { id } = req.params;
+  const result = await approvePaymentRequestById(id);
+  if (result.success) {
+    req.flash('success', 'অনুমোদন হয়েছে');
+  } else {
+    req.flash('error', result.error);
+  }
+  res.redirect('/payment/admin/payments');
+});
+
+router.post('/admin/reject/:id', requireAdmin, requirePermission('payments_approve'), async (req, res) => {
+  const { id } = req.params;
+  const result = await rejectPaymentRequestById(id);
+  if (result.success) {
+    req.flash('error', 'বাতিল করা হয়েছে');
+  } else {
+    req.flash('error', result.error);
+  }
+  res.redirect('/payment/admin/payments');
+});
+
+// ==================== বাল্ক approve/reject ====================
+router.post('/admin/payments/bulk-approve', requireAdmin, requirePermission('payments_approve'), async (req, res) => {
+  const ids = Array.isArray(req.body.ids) ? req.body.ids : (req.body.ids ? [req.body.ids] : []);
+  const cleanIds = ids.map((x) => parseInt(x, 10)).filter((x) => Number.isInteger(x) && x > 0);
+  if (cleanIds.length === 0) {
+    return res.status(400).json({ success: false, error: 'কোনো আইটেম নির্বাচন করা হয়নি' });
+  }
+  if (cleanIds.length > 100) {
+    return res.status(400).json({ success: false, error: 'একবারে সর্বোচ্চ ১০০টা আইটেম প্রসেস করা যাবে' });
+  }
+
+  const results = [];
+  for (const id of cleanIds) {
+    results.push(await approvePaymentRequestById(id));
+  }
+  const succeeded = results.filter((r) => r.success);
+  const failed = results.filter((r) => !r.success);
+
+  logAdminAction(
+    req.session.user.id, req.session.user.username, 'BULK_PAYMENT_APPROVE',
+    `বাল্ক অনুমোদন: ${succeeded.length}টা সফল, ${failed.length}টা ব্যর্থ (আইডি: ${cleanIds.join(',')})`, req.ip
+  );
+  succeeded.forEach((r) => {
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'PAYMENT_APPROVED', category: 'financial', status: 'success', riskLevel: 'medium',
+      details: { paymentRequestId: r.id, targetUserId: r.userId, type: r.type, amount: r.amount, via: 'bulk' }
+    }).catch((e) => console.error('logAuditEvent (BULK_PAYMENT_APPROVE) error:', e.message));
+  });
+
+  res.json({ success: true, total: cleanIds.length, succeeded: succeeded.length, failed: failed.length, results });
+});
+
+router.post('/admin/payments/bulk-reject', requireAdmin, requirePermission('payments_approve'), async (req, res) => {
+  const ids = Array.isArray(req.body.ids) ? req.body.ids : (req.body.ids ? [req.body.ids] : []);
+  const cleanIds = ids.map((x) => parseInt(x, 10)).filter((x) => Number.isInteger(x) && x > 0);
+  if (cleanIds.length === 0) {
+    return res.status(400).json({ success: false, error: 'কোনো আইটেম নির্বাচন করা হয়নি' });
+  }
+  if (cleanIds.length > 100) {
+    return res.status(400).json({ success: false, error: 'একবারে সর্বোচ্চ ১০০টা আইটেম প্রসেস করা যাবে' });
+  }
+
+  const results = [];
+  for (const id of cleanIds) {
+    results.push(await rejectPaymentRequestById(id));
+  }
+  const succeeded = results.filter((r) => r.success);
+  const failed = results.filter((r) => !r.success);
+
+  logAdminAction(
+    req.session.user.id, req.session.user.username, 'BULK_PAYMENT_REJECT',
+    `বাল্ক বাতিল: ${succeeded.length}টা সফল, ${failed.length}টা ব্যর্থ (আইডি: ${cleanIds.join(',')})`, req.ip
+  );
+  succeeded.forEach((r) => {
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'PAYMENT_REJECTED', category: 'financial', status: 'success', riskLevel: 'medium',
+      details: { paymentRequestId: r.id, targetUserId: r.userId, type: r.type, amount: r.amount, via: 'bulk' }
+    }).catch((e) => console.error('logAuditEvent (BULK_PAYMENT_REJECT) error:', e.message));
+  });
+
+  res.json({ success: true, total: cleanIds.length, succeeded: succeeded.length, failed: failed.length, results });
 });
 
 // ==================== SSLCommerz (বিকাশ/নগদ/রকেট/কার্ড) — সম্পূর্ণ অটোমেটিক ====================
