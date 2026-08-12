@@ -73,32 +73,59 @@
   <div class="admin-nav-group-title">Dashboard</div>
   <a href="/admin" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'dashboard' ? 'active' : '' %>"><i class="fas fa-chart-line"></i> ড্যাশবোর্ড</a>
 
-  <div class="admin-nav-group-title">ইউজার</div>
+  <div class="admin-nav-group-title">Management</div>
   <a href="/admin/users" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'users' ? 'active' : '' %>"><i class="fas fa-users"></i> ইউজার ম্যানেজমেন্ট</a>
   <a href="/admin/kyc" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'kyc' ? 'active' : '' %>"><i class="fas fa-id-card"></i> KYC <span class="badge badge-red" id="navBadgeKyc" style="display:none;margin-left:auto;"></span></a>
-
-  <div class="admin-nav-group-title">পেমেন্ট</div>
-  <a href="/payment/admin/payments" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'payments' ? 'active' : '' %>"><i class="fas fa-money-bill-wave"></i> ডিপোজিট/উইথড্র <span class="badge badge-red" id="navBadgePayments" style="display:none;margin-left:auto;"></span></a>
-  <a href="/payment/admin/deposits" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'deposits' ? 'active' : '' %>"><i class="fas fa-wallet"></i> ডিপোজিট ট্রানজেকশন</a>
-  <a href="/admin/backup/status" class="admin-nav-link"><i class="fas fa-database"></i> ব্যাকআপ স্ট্যাটাস</a>
-
-  <div class="admin-nav-group-title">গেম ও বেটিং</div>
+  <a href="/admin/vip" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'vip' ? 'active' : '' %>"><i class="fas fa-crown"></i> VIP ম্যানেজমেন্ট</a>
+  <a href="/admin/vip/history" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'vip-history' ? 'active' : '' %>"><i class="fas fa-history"></i> VIP হিস্ট্রি</a>
+  <a href="/admin/bonuses" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'bonuses' ? 'active' : '' %>"><i class="fas fa-gift"></i> বোনাস ম্যানেজমেন্ট</a>
+  <a href="/admin/promotions" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'promotions' ? 'active' : '' %>"><i class="fas fa-bullhorn"></i> প্রমোশন ব্যানার</a>
+  <a href="/admin/announcements" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'announcements' ? 'active' : '' %>"><i class="fas fa-bell"></i> ঘোষণা</a>
+  <a href="/admin/news" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'news' ? 'active' : '' %>"><i class="fas fa-newspaper"></i> নিউজ</a>
   <a href="/admin/matches" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'matches' ? 'active' : '' %>"><i class="fas fa-futbol"></i> ম্যাচসমূহ</a>
   <a href="/admin/tournaments" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'tournaments' ? 'active' : '' %>"><i class="fas fa-trophy"></i> টুর্নামেন্ট</a>
   <a href="/admin/bets" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'bets' ? 'active' : '' %>"><i class="fas fa-dice"></i> বেট ম্যানেজমেন্ট</a>
+  <a href="/admin/notifications" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'notifications' ? 'active' : '' %>"><i class="fas fa-paper-plane"></i> নোটিফিকেশন পাঠান</a>
+  <a href="/admin/notification-templates" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'notification-templates' ? 'active' : '' %>"><i class="fas fa-envelope-open-text"></i> নোটিফিকেশন টেমপ্লেট</a>
 
-  <div class="admin-nav-group-title">বোনাস ও প্রমোশন</div>
-  <a href="/admin/bonuses" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'bonuses' ? 'active' : '' %>"><i class="fas fa-gift"></i> বোনাস ম্যানেজমেন্ট</a>
-  <a href="/admin/promotions" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'promotions' ? 'active' : '' %>"><i class="fas fa-bullhorn"></i> প্রমোশন ব্যানার</a>
+  <div class="admin-nav-group-title">Payments</div>
+  <a href="/payment/admin/payments" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'payments' ? 'active' : '' %>"><i class="fas fa-money-bill-wave"></i> ডিপোজিট/উইথড্র <span class="badge badge-red" id="navBadgePayments" style="display:none;margin-left:auto;"></span></a>
+  <a href="/payment/admin/deposits" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'deposits' ? 'active' : '' %>"><i class="fas fa-wallet"></i> ডিপোজিট ট্রানজেকশন</a>
+  <a href="/admin/transactions" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'transactions' ? 'active' : '' %>"><i class="fas fa-receipt"></i> ট্রানজেকশন হিস্ট্রি</a>
 
-  <div class="admin-nav-group-title">রিপোর্ট ও সেটিংস</div>
+  <div class="admin-nav-group-title">Security</div>
+  <a href="/admin/roles" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'roles' ? 'active' : '' %>"><i class="fas fa-user-shield"></i> Roles &amp; Permissions</a>
+  <a href="/admin/roles/matrix" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'roles-matrix' ? 'active' : '' %>"><i class="fas fa-table-cells"></i> Permission Matrix</a>
+  <a href="/admin/user-roles" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'user-roles' ? 'active' : '' %>"><i class="fas fa-user-tag"></i> User Roles</a>
+  <a href="/admin/login-history" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'login-history' ? 'active' : '' %>"><i class="fas fa-clock-rotate-left"></i> লগইন হিস্ট্রি</a>
+  <a href="/admin/security-overview" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'security-overview' ? 'active' : '' %>"><i class="fas fa-shield-halved"></i> সিকিউরিটি ওভারভিউ</a>
+  <a href="/admin/fraud-monitoring" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'fraud-monitoring' ? 'active' : '' %>"><i class="fas fa-triangle-exclamation"></i> ফ্রড মনিটরিং</a>
+  <a href="/admin/fraud-logs" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'fraud-logs' ? 'active' : '' %>"><i class="fas fa-file-shield"></i> ফ্রড লগ</a>
+  <a href="/admin/duplicate-accounts" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'duplicate-accounts' ? 'active' : '' %>"><i class="fas fa-clone"></i> ডুপ্লিকেট অ্যাকাউন্ট</a>
+  <a href="/admin/bot-monitoring" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'bot-monitoring' ? 'active' : '' %>"><i class="fas fa-robot"></i> বট মনিটরিং</a>
+  <a href="/admin/bot-monitoring/ip-rules" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'ip-rules' ? 'active' : '' %>"><i class="fas fa-network-wired"></i> IP রুলস</a>
+  <a href="/admin/bot-logs" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'bot-logs' ? 'active' : '' %>"><i class="fas fa-list-ul"></i> বট লগ</a>
+  <a href="/admin/audit-logs" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'audit-logs' ? 'active' : '' %>"><i class="fas fa-file-contract"></i> অডিট লগ</a>
+
+  <div class="admin-nav-group-title">Reports</div>
   <a href="/admin/reports" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'reports' ? 'active' : '' %>"><i class="fas fa-file-export"></i> রিপোর্টিং</a>
-  <a href="/admin/cron-jobs" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'cron-jobs' ? 'active' : '' %>"><i class="fas fa-clock"></i> Cron Jobs</a>
-  <a href="/admin/logs" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'logs' ? 'active' : '' %>"><i class="fas fa-list-check"></i> Unified Log Viewer</a>
-  <a href="/admin/settings" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'settings' ? 'active' : '' %>"><i class="fas fa-cogs"></i> সেটিংস</a>
+  <a href="/admin/activity" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'logs' ? 'active' : '' %>"><i class="fas fa-list-check"></i> Unified Log Viewer</a>
+  <a href="/admin/api-logs" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'api-logs' ? 'active' : '' %>"><i class="fas fa-code-compare"></i> API লগ</a>
 
-  <div class="admin-nav-group-title">কন্টেন্ট ও সাপোর্ট</div>
-  <a href="/admin/news" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'news' ? 'active' : '' %>"><i class="fas fa-newspaper"></i> নিউজ</a>
+  <div class="admin-nav-group-title">System / Infrastructure</div>
+  <a href="/admin/settings" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'settings' ? 'active' : '' %>"><i class="fas fa-cogs"></i> সেটিংস</a>
+  <a href="/admin/cron-jobs" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'cron-jobs' ? 'active' : '' %>"><i class="fas fa-clock"></i> Cron Jobs</a>
+  <a href="/admin/queues" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'queues' ? 'active' : '' %>"><i class="fas fa-layer-group"></i> Queue Monitoring</a>
+  <a href="/admin/cache" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'cache' ? 'active' : '' %>"><i class="fas fa-bolt"></i> Cache Management</a>
+  <a href="/admin/backups" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'backups' ? 'active' : '' %>"><i class="fas fa-database"></i> ব্যাকআপ ও রিস্টোর</a>
+  <a href="/admin/feature-flags" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'feature-flags' ? 'active' : '' %>"><i class="fas fa-flag"></i> Feature Flags</a>
+  <a href="/admin/localization" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'localization' ? 'active' : '' %>"><i class="fas fa-language"></i> Localization</a>
+  <a href="/admin/system-diagnostics" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'system-diagnostics' ? 'active' : '' %>"><i class="fas fa-heart-pulse"></i> System Diagnostics</a>
+  <a href="/admin/sentry-status" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'sentry-status' ? 'active' : '' %>"><i class="fas fa-bug"></i> Sentry Status</a>
+
+  <div class="admin-nav-group-title">Integrations</div>
+  <a href="/admin/api-keys" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'api-keys' ? 'active' : '' %>"><i class="fas fa-key"></i> API Keys</a>
+  <a href="/admin/support" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'support' ? 'active' : '' %>"><i class="fas fa-life-ring"></i> সাপোর্ট টিকেট</a>
   <a href="/chat/admin" class="admin-nav-link"><i class="fas fa-headset"></i> সাপোর্ট চ্যাট</a>
 
   <div class="admin-nav-group-title">সাধারণ</div>
