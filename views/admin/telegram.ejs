@@ -1,0 +1,179 @@
+<%
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+const st = status || {};
+const cats = st.categories || {};
+
+const statusBadge = st.active
+  ? '<span class="px-4 py-2 rounded-2xl text-sm font-semibold bg-emerald-50 text-emerald-700"><i class="fas fa-circle-check"></i> সক্রিয়</span>'
+  : (st.enabled
+      ? '<span class="px-4 py-2 rounded-2xl text-sm font-semibold bg-amber-50 text-amber-700"><i class="fas fa-triangle-exclamation"></i> কনফিগার করা হয়নি</span>'
+      : '<span class="px-4 py-2 rounded-2xl text-sm font-semibold bg-slate-100 text-slate-500"><i class="fas fa-circle-pause"></i> বন্ধ</span>');
+
+function sourceTag(src) {
+  if (src === 'database') return '<span class="text-xs px-2 py-0.5 rounded-lg bg-blue-50 text-blue-600">Admin প্যানেল</span>';
+  if (src === 'env') return '<span class="text-xs px-2 py-0.5 rounded-lg bg-slate-100 text-slate-500">.env ফাইল</span>';
+  return '<span class="text-xs px-2 py-0.5 rounded-lg bg-red-50 text-red-500">সেট করা নেই</span>';
+}
+
+const categoryRows = (categories || []).map(key =>
+  '<label class="flex items-center gap-3 py-2.5 border-b border-slate-50 last:border-0">' +
+    '<input type="checkbox" name="categories[' + key + ']" value="true" ' + (cats[key] !== false ? 'checked' : '') + ' class="w-5 h-5 rounded">' +
+    '<span class="text-sm font-medium text-slate-700 flex-1">' + escapeHtml((categoryLabels || {})[key] || key) + '</span>' +
+    '<button type="button" onclick="sendTest(\'' + key + '\')" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200">টেস্ট পাঠান</button>' +
+  '</label>'
+).join('');
+
+const lastTest = st.lastTestAt
+  ? '<p class="text-xs mt-2 ' + (st.lastTestStatus === 'success' ? 'text-emerald-600' : 'text-red-500') + '">' +
+      '<i class="fas ' + (st.lastTestStatus === 'success' ? 'fa-check' : 'fa-xmark') + '"></i> সর্বশেষ টেস্ট: ' +
+      escapeHtml(new Date(st.lastTestAt).toLocaleString('en-GB')) +
+      (st.lastTestBot ? ' — ' + escapeHtml(st.lastTestBot) : '') +
+      (st.lastTestStatus !== 'success' && st.lastTestError ? '<br>' + escapeHtml(st.lastTestError) : '') +
+    '</p>'
+  : '<p class="text-xs text-slate-400 mt-2">এখনো কোনো কানেকশন টেস্ট চালানো হয়নি।</p>';
+%>
+<%- include('partials/admin-layout', {
+    title: 'Telegram Integration',
+    active: 'telegram',
+    body: `
+<div class="max-w-4xl mx-auto">
+    <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <div>
+            <h1 class="text-2xl font-semibold text-slate-900"><i class="fab fa-telegram text-sky-500"></i> Telegram Integration</h1>
+            <p class="text-slate-500 mt-1 text-sm">ডিপোজিট/উইথড্র/সাপোর্ট/সিস্টেম অ্যালার্ট Telegram-এ পাঠানোর কনফিগারেশন</p>
+        </div>
+        ${statusBadge}
+    </div>
+
+    ${saved ? '<div class="mb-5 px-5 py-3 rounded-2xl bg-emerald-50 text-emerald-700 text-sm font-semibold"><i class="fas fa-check-circle"></i> সেভ হয়েছে</div>' : ''}
+    ${saveError ? '<div class="mb-5 px-5 py-3 rounded-2xl bg-red-50 text-red-600 text-sm font-semibold"><i class="fas fa-circle-exclamation"></i> ' + escapeHtml(saveError) + '</div>' : ''}
+
+    <!-- ==================== স্ট্যাটাস ==================== -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+            <p class="text-sm font-medium text-slate-500">Bot Token</p>
+            <p class="mt-2 text-base font-bold ${st.tokenSet ? 'text-slate-900' : 'text-red-500'} font-mono">${st.tokenSet ? escapeHtml(st.tokenMasked) : 'সেট করা নেই'}</p>
+            <p class="mt-2">${sourceTag(st.tokenSource)}</p>
+        </div>
+        <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+            <p class="text-sm font-medium text-slate-500">Chat ID</p>
+            <p class="mt-2 text-base font-bold ${st.chatId ? 'text-slate-900' : 'text-red-500'} font-mono">${st.chatId ? escapeHtml(st.chatId) : 'সেট করা নেই'}</p>
+            <p class="mt-2">${sourceTag(st.chatIdSource)}</p>
+        </div>
+        <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+            <p class="text-sm font-medium text-slate-500">Webhook Secret (AI বট)</p>
+            <p class="mt-2 text-base font-bold ${st.webhookSecretSet ? 'text-emerald-600' : 'text-amber-600'}">${st.webhookSecretSet ? 'সেট আছে' : 'সেট নেই'}</p>
+            <p class="text-xs text-slate-400 mt-2">শুধু .env থেকে (TELEGRAM_WEBHOOK_SECRET)</p>
+        </div>
+    </div>
+
+    <!-- ==================== কানেকশন টেস্ট ==================== -->
+    <div class="bg-white rounded-3xl border border-slate-100 p-6 mb-6">
+        <h2 class="font-semibold text-slate-900 mb-1"><i class="fas fa-plug text-blue-600"></i> কানেকশন টেস্ট</h2>
+        <p class="text-sm text-slate-500 mb-4">getMe দিয়ে টোকেন যাচাই করা হয়; চাইলে chat-এ একটা টেস্ট মেসেজও পাঠানো যায়।</p>
+        <div class="flex flex-wrap gap-3">
+            <button type="button" onclick="runTest(false)" class="px-4 py-2.5 text-sm font-semibold rounded-2xl bg-slate-900 text-white hover:bg-slate-800"><i class="fas fa-vial"></i> টোকেন যাচাই</button>
+            <button type="button" onclick="runTest(true)" class="px-4 py-2.5 text-sm font-semibold rounded-2xl bg-blue-600 text-white hover:bg-blue-700"><i class="fas fa-paper-plane"></i> টেস্ট মেসেজ পাঠান</button>
+        </div>
+        <div id="testResult" class="mt-4 text-sm"></div>
+        ${lastTest}
+    </div>
+
+    <!-- ==================== সেটিংস ==================== -->
+    <form method="POST" action="/admin/telegram/settings" class="bg-white rounded-3xl border border-slate-100 p-6 mb-6">
+        <h2 class="font-semibold text-slate-900 mb-4"><i class="fas fa-sliders text-blue-600"></i> নোটিফিকেশন সেটিংস</h2>
+
+        <label class="flex items-center gap-3 py-2 mb-4">
+            <input type="hidden" name="enabled" value="false">
+            <input type="checkbox" name="enabled" value="true" ${st.enabled ? 'checked' : ''} class="w-5 h-5 rounded">
+            <span class="text-sm font-medium text-slate-700">Telegram নোটিফিকেশন চালু
+                <span class="block text-xs text-slate-400 font-normal">বন্ধ করলে কোনো ক্যাটাগরির মেসেজই পাঠানো হবে না (বাকি ফ্লো অপরিবর্তিত থাকে)</span>
+            </span>
+        </label>
+
+        <div class="mb-5">
+            <label class="block text-sm font-medium mb-1.5 text-slate-700">Admin Chat ID</label>
+            <input type="text" name="chat_id" value="${st.chatIdSource === 'database' ? escapeHtml(st.chatId || '') : ''}"
+                placeholder="${st.chatIdSource === 'env' ? escapeHtml(st.chatId || '') + ' (.env থেকে)' : 'যেমন: 123456789 অথবা -1001234567890'}"
+                class="w-full border border-slate-200 px-4 py-3 rounded-2xl text-sm outline-none focus:border-blue-300 font-mono">
+            <p class="text-xs text-slate-400 mt-1.5">খালি রাখলে .env-এর TELEGRAM_ADMIN_CHAT_ID / TELEGRAM_CHAT_ID ব্যবহার হবে।</p>
+        </div>
+
+        <p class="text-sm font-medium text-slate-700 mb-1">কোন কোন ইভেন্টে পাঠানো হবে</p>
+        <div class="mb-5">${categoryRows}</div>
+
+        <button type="submit" class="px-5 py-2.5 text-sm font-semibold rounded-2xl bg-blue-600 text-white hover:bg-blue-700"><i class="fas fa-floppy-disk"></i> সেটিংস সেভ করুন</button>
+    </form>
+
+    <!-- ==================== Bot Token ==================== -->
+    <form method="POST" action="/admin/telegram/token" class="bg-white rounded-3xl border border-slate-100 p-6 mb-6" onsubmit="return confirm('Bot token পরিবর্তন করবেন?')">
+        <h2 class="font-semibold text-slate-900 mb-1"><i class="fas fa-key text-amber-500"></i> Bot Token</h2>
+        <p class="text-sm text-slate-500 mb-4">টোকেন AES-256-GCM দিয়ে এনক্রিপ্ট করে সংরক্ষিত হয় এবং কখনো পুরোটা আর দেখানো হয় না।</p>
+
+        ${!st.encryptionAvailable ? '<div class="mb-4 px-4 py-3 rounded-2xl bg-red-50 text-red-600 text-sm"><i class="fas fa-lock"></i> এনক্রিপশন কী (TELEGRAM_SETTINGS_KEY / SESSION_SECRET) সেট নেই — টোকেন সেভ করা যাবে না।</div>' : ''}
+
+        <input type="hidden" name="action" value="set">
+        <input type="password" name="bot_token" autocomplete="new-password" placeholder="123456789:AAExxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+            class="w-full border border-slate-200 px-4 py-3 rounded-2xl text-sm outline-none focus:border-blue-300 font-mono mb-4">
+
+        <div class="flex flex-wrap gap-3">
+            <button type="submit" ${st.encryptionAvailable ? '' : 'disabled'} class="px-5 py-2.5 text-sm font-semibold rounded-2xl bg-slate-900 text-white hover:bg-slate-800"><i class="fas fa-rotate"></i> টোকেন সেভ / রোটেট</button>
+            ${st.tokenSource === 'database' ? '<button type="submit" name="action" value="clear" formnovalidate class="px-5 py-2.5 text-sm font-semibold rounded-2xl bg-red-50 text-red-600 hover:bg-red-100"><i class="fas fa-trash"></i> DB থেকে মুছে .env ফলব্যাকে ফিরুন</button>' : ''}
+        </div>
+    </form>
+
+    <div class="bg-slate-50 border border-slate-100 rounded-3xl p-5 text-sm text-slate-500">
+        <p class="font-semibold text-slate-700 mb-2">নোট</p>
+        <ul class="list-disc pl-5 space-y-1">
+            <li>এই পেজের প্রতিটা পরিবর্তন Activity Log ও Audit Log — দুই জায়গাতেই রেকর্ড হয়।</li>
+            <li>Bot token কখনো পেজ, API response বা লগে plaintext আকারে যায় না।</li>
+            <li>AI assistant বটের webhook (TELEGRAM_WEBHOOK_SECRET) আলাদা — সেটা শুধু .env থেকেই নিয়ন্ত্রিত।</li>
+        </ul>
+    </div>
+</div>
+
+<script>
+function tgResult(html, ok) {
+  document.getElementById('testResult').innerHTML =
+    '<div class="px-4 py-3 rounded-2xl ' + (ok ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600') + '">' + html + '</div>';
+}
+
+async function runTest(sendMessage) {
+  tgResult('<span class="livo-spinner"></span> টেস্ট চলছে...', true);
+  try {
+    const res = await fetch('/admin/telegram/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ send_message: !!sendMessage })
+    });
+    const data = await res.json();
+    if (data.success) {
+      tgResult('<i class="fas fa-check-circle"></i> কানেকশন ঠিক আছে' + (data.botUsername ? ' — ' + data.botUsername : '') + (data.messageSent ? ' (টেস্ট মেসেজ পাঠানো হয়েছে)' : ''), true);
+    } else {
+      tgResult('<i class="fas fa-circle-exclamation"></i> ' + (data.error || 'টেস্ট ব্যর্থ'), false);
+    }
+  } catch (e) {
+    tgResult('<i class="fas fa-circle-exclamation"></i> রিকোয়েস্ট ব্যর্থ: ' + e.message, false);
+  }
+}
+
+async function sendTest(category) {
+  tgResult('<span class="livo-spinner"></span> নোটিফিকেশন পাঠানো হচ্ছে...', true);
+  try {
+    const res = await fetch('/admin/telegram/test-notification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category: category })
+    });
+    const data = await res.json();
+    tgResult((data.success ? '<i class="fas fa-check-circle"></i> ' + data.message : '<i class="fas fa-circle-exclamation"></i> ' + (data.error || 'পাঠানো যায়নি')), !!data.success);
+  } catch (e) {
+    tgResult('<i class="fas fa-circle-exclamation"></i> রিকোয়েস্ট ব্যর্থ: ' + e.message, false);
+  }
+}
+</script>
+` }) %>

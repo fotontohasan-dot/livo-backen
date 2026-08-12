@@ -477,6 +477,7 @@ app.use('/leaderboard', require('./routes/leaderboard'));
 app.use('/admin', require('./routes/adminHealthFix'));
 app.use('/admin', require('./routes/admin'));
 app.use('/admin/games', require('./middleware/auth').isAdmin, require('./routes/adminGames'));
+app.use('/admin/telegram', require('./middleware/auth').isAdmin, require('./routes/adminTelegram'));
 app.use('/notifications', require('./routes/notifications'));
 app.use('/help-center', require('./routes/help-center'));
 app.use('/payment', require('./routes/payment'));

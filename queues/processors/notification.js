@@ -14,7 +14,7 @@ async function processNotificationJob(job) {
         [uid, data.title, data.message]
       );
     }
-    if (data.telegramText) await notifyTelegram(data.telegramText);
+    if (data.telegramText) await notifyTelegram(data.telegramText, { category: data.telegramCategory });
   }
 
   // ব্রাউজার/মোবাইল Web Push — সব সাবস্ক্রাইবড অ্যাডমিনকে

@@ -165,7 +165,7 @@ function buildJobDefinitions() {
             const failed = Object.entries(result.checks || {})
               .filter(([, v]) => v.status === 'error')
               .map(([k]) => k).join(', ');
-            await notifyTelegram(`🚨 <b>System Health: ERROR</b>\nসমস্যাযুক্ত সার্ভিস: ${failed}`);
+            await notifyTelegram(`🚨 <b>System Health: ERROR</b>\nসমস্যাযুক্ত সার্ভিস: ${failed}`, { category: 'system' });
           } catch (e) { /* টেলিগ্রাম না পাঠাতে পারলেও হেলথ চেক নিজে ব্যর্থ ধরা হবে না */ }
         }
         return `Overall: ${result.overall}`;

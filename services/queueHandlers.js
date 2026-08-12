@@ -29,7 +29,7 @@ queue.registerHandler('email', async (payload) => {
 
 // ==================== NOTIFICATION (in-app notifications টেবিলে ইনসার্ট + Telegram) ====================
 queue.registerHandler('notification', async (payload) => {
-  const { userIds, title, message, telegramText } = payload;
+  const { userIds, title, message, telegramText, telegramCategory } = payload;
   if (Array.isArray(userIds) && userIds.length) {
     for (const uid of userIds) {
       await pool.query(
@@ -39,7 +39,7 @@ queue.registerHandler('notification', async (payload) => {
     }
   }
   if (telegramText) {
-    await notifyTelegram(telegramText);
+    await notifyTelegram(telegramText, { category: telegramCategory });
   }
 });
 
