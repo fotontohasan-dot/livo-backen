@@ -167,4 +167,52 @@ describe('RBAC (services/rbac.js)', () => {
       }
     });
   });
+
+  describe('সম্প্রতি সুরক্ষিত admin.js রুট — অনুমতি প্রয়োগ (প্রতিনিধিত্বমূলক নমুনা, বিভিন্ন permission key জুড়ে)', () => {
+    const cases = [
+      { method: 'get', path: '/admin/kyc', permission: 'kyc_view' },
+      { method: 'get', path: '/admin/users', permission: 'users_view' },
+      { method: 'get', path: '/admin/backups', permission: 'backups_manage' },
+      { method: 'get', path: '/admin/cron-jobs', permission: 'cron_jobs_manage' },
+      { method: 'get', path: '/admin/bot-monitoring', permission: 'bot_monitoring_manage' },
+      { method: 'get', path: '/admin/matches', permission: 'matches_manage' },
+      { method: 'get', path: '/admin/bets', permission: 'games_manage' },
+      { method: 'get', path: '/admin/reports', permission: 'reports_view' },
+      { method: 'get', path: '/admin/support', permission: 'support_view' },
+      { method: 'get', path: '/admin/audit-logs', permission: 'activity_log_view' }
+    ];
+
+    test.each(cases)('$path — সংশ্লিষ্ট permission ($permission) ছাড়া প্রত্যাখ্যাত, থাকলে গৃহীত', async ({ path: routePath, permission }) => {
+      const { agent, userId } = await makeAdminAgent();
+
+      // (ক) কোনো permission ছাড়াই — ব্লক হওয়া উচিত (302, dashboard-এ ফেরত অথবা /admin/login)
+      const noPermRole = await rbac.createRole({ name: `NoPerm-${permission}-${uniqueUsername()}`, permissions: {} });
+      await rbac.assignUserRole(userId, noPermRole.key);
+      const denied = await agent.get(routePath);
+      expect(denied.status).toBe(302);
+
+      // (খ) সঠিক permission দিয়ে — গৃহীত হওয়া উচিত (403/302-denial না)
+      const withPermRole = await rbac.createRole({ name: `WithPerm-${permission}-${uniqueUsername()}`, permissions: { [permission]: true } });
+      await rbac.assignUserRole(userId, withPermRole.key);
+      const allowed = await agent.get(routePath);
+      expect(allowed.status).toBe(200);
+    });
+
+    test('super_admin role_key দিয়ে সব সুরক্ষিত রুটে অ্যাক্সেস বজায় থাকে', async () => {
+      const { agent, userId } = await makeAdminAgent();
+      await rbac.assignUserRole(userId, 'super_admin');
+      for (const { path: routePath } of cases) {
+        const res = await agent.get(routePath);
+        expect(res.status).toBe(200);
+      }
+    });
+
+    test('role_key NULL (ব্যাকওয়ার্ড-কম্প্যাটিবল ডিফল্ট admin) দিয়েও সব সুরক্ষিত রুটে অ্যাক্সেস বজায় থাকে', async () => {
+      const { agent } = await makeAdminAgent(); // role_key কখনো সেট করা হয়নি এখানে
+      for (const { path: routePath } of cases) {
+        const res = await agent.get(routePath);
+        expect(res.status).toBe(200);
+      }
+    });
+  });
 });

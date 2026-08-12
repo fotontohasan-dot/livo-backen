@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const { isAdmin } = require('../middleware/auth');
+const rbac = require('../services/rbac');
 
 // এই এন্ডপয়েন্টে আগে কোনো auth middleware ছিল না (নিচের router.use(isAdmin)-এর
 // আগে ডিফাইন করা ছিল বলে সেটার আওতায় পড়ছিল না) — ফলে যে কেউ লগইন ছাড়াই রেভিনিউ,
 // ইউজার গ্রোথ, টপ ডিপোজিটরদের নাম+পরিমাণ ও KYC সামারি দেখতে পারতো। route-level isAdmin দিয়ে ঠিক করা হলো।
-router.get('/api/analytics', isAdmin, async (req, res) => {
+router.get('/api/analytics', isAdmin, rbac.requirePermission('dashboard_view'), async (req, res) => {
   try {
     const days  = Math.min(90, Math.max(1, parseInt(req.query.days) || 14));
     const interval = `${days} days`;
@@ -88,7 +89,6 @@ const RedisRateLimitStore = require('../services/redisRateLimitStore');
 
 const { requireIntParam, requireAmount, parseAmount, sanitizeText, isSafeUrl } = require('../middleware/validate');
 const { listIpRules, setIpRule, removeIpRule } = require('../services/ipRules');
-const rbac = require('../services/rbac');
 const {
   listVipLevelsAdmin, upsertVipLevel, toggleVipLevelActive,
   getVipAnalytics, listAllRewardHistory, listAllUpgradeHistory
@@ -436,7 +436,7 @@ router.post('/2fa/disable', async (req, res) => {
 
 
 // ==================== KYC ভেরিফিকেশন ====================
-router.get('/kyc', async (req, res) => {
+router.get('/kyc', rbac.requirePermission('kyc_view'), async (req, res) => {
   try {
     const status = req.query.status || '';
     const q = req.query.q || '';
@@ -482,7 +482,7 @@ router.get('/kyc', async (req, res) => {
   }
 });
 
-router.post('/kyc/:id/approve', async (req, res) => {
+router.post('/kyc/:id/approve', rbac.requirePermission('kyc_approve'), async (req, res) => {
   try {
     const { id } = req.params;
     const r = await pool.query(
@@ -500,7 +500,7 @@ router.post('/kyc/:id/approve', async (req, res) => {
   }
 });
 
-router.post('/kyc/:id/reject', async (req, res) => {
+router.post('/kyc/:id/reject', rbac.requirePermission('kyc_reject'), async (req, res) => {
   try {
     const { id } = req.params;
     const reason = (req.body && req.body.reason) || '';
@@ -536,7 +536,7 @@ const SETTING_KEYS = [
   'default_language', 'default_timezone', 'default_currency'
 ];
 
-router.get('/system-settings', async (req, res) => {
+router.get('/system-settings', rbac.requirePermission('settings_view'), async (req, res) => {
   try {
     const result = await pool.query('SELECT key, value FROM site_settings');
     const settings = {};
@@ -559,7 +559,7 @@ router.get('/system-settings', async (req, res) => {
   }
 });
 
-router.get('/settings', async (req, res) => {
+router.get('/settings', rbac.requirePermission('settings_view'), async (req, res) => {
   try {
     const result = await pool.query('SELECT key, value FROM site_settings');
     const settings = {};
@@ -582,7 +582,7 @@ router.get('/settings', async (req, res) => {
   }
 });
 
-router.post('/settings/update', async (req, res) => {
+router.post('/settings/update', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     // টগল করার আগের অবস্থা জেনে রাখা — যাতে ON/OFF কোন দিকে গেল সেটা স্পষ্টভাবে লগ করা যায়
     const prevRes = await pool.query("SELECT value FROM site_settings WHERE key = 'maintenance_mode'");
@@ -672,7 +672,7 @@ router.post('/settings/update', async (req, res) => {
   }
 });
 
-router.post('/settings/admins/promote', async (req, res) => {
+router.post('/settings/admins/promote', rbac.requirePermission('roles_manage'), async (req, res) => {
   try {
     const { username } = req.body;
     const r = await pool.query("UPDATE users SET role = 'admin' WHERE username = $1 RETURNING id", [username]);
@@ -691,7 +691,7 @@ router.post('/settings/admins/promote', async (req, res) => {
   }
 });
 
-router.post('/settings/admins/:id/demote', async (req, res) => {
+router.post('/settings/admins/:id/demote', rbac.requirePermission('roles_manage'), async (req, res) => {
   try {
     const { id } = req.params;
     if (parseInt(id) === req.session.user.id) {
@@ -712,7 +712,7 @@ router.post('/settings/admins/:id/demote', async (req, res) => {
 });
 
 // ==================== NOTIFICATION BROADCAST ====================
-router.get('/notifications', async (req, res) => {
+router.get('/notifications', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const history = await pool.query(
       `SELECT * FROM notification_broadcasts ORDER BY created_at DESC LIMIT 30`
@@ -728,7 +728,7 @@ router.get('/notifications', async (req, res) => {
   }
 });
 
-router.post('/notifications/broadcast', adminFinancialLimiter, async (req, res) => {
+router.post('/notifications/broadcast', rbac.requirePermission('settings_edit'), adminFinancialLimiter, async (req, res) => {
   try {
     const title = sanitizeText(req.body.title || '', { maxLen: 150 });
     const message = sanitizeText(req.body.message || '', { maxLen: 500 });
@@ -775,7 +775,7 @@ router.get('/api/demo-stats', async (req, res) => {
   }
 });
 
-router.get('/', async (req, res) => {
+router.get('/', rbac.requirePermission('dashboard_view'), async (req, res) => {
   try {
     // views/admin/dashboard.ejs date-filter ফর্ম ও Export CSV লিংক dateRange.from/dateRange.to আশা করে,
     // কিন্তু এই ভ্যারিয়েবলটা কখনো তৈরি/পাস করা হতো না — ফলে প্রতিবার লগইনের পর প্রথম পেজ
@@ -1067,7 +1067,7 @@ router.get('/', async (req, res) => {
 });
 
 // ==================== ড্যাশবোর্ড লাইভ স্ট্যাটস (পোলিং API) ====================
-router.get('/api/dashboard-stats', async (req, res) => {
+router.get('/api/dashboard-stats', rbac.requirePermission('dashboard_view'), async (req, res) => {
   try {
     const users = await pool.query('SELECT COUNT(*) as count FROM users');
     const totalCoinsPoll = await pool.query('SELECT COALESCE(SUM(coins),0) AS total FROM users');
@@ -1156,7 +1156,7 @@ router.get('/api/dashboard-stats', async (req, res) => {
 });
 
 // ==================== ডিপোজিট ম্যানেজমেন্ট ====================
-router.get('/deposits', async (req, res) => {
+router.get('/deposits', rbac.requirePermission('payments_view'), async (req, res) => {
   try {
     const { from, to } = req.query;
     const pending = await pool.query(`
@@ -1201,7 +1201,7 @@ router.get('/deposits', async (req, res) => {
   }
 });
 
-router.post('/api/deposits/:id/approve', adminFinancialLimiter, requireIntParam('id'), async (req, res) => {
+router.post('/api/deposits/:id/approve', rbac.requirePermission('payments_approve'), adminFinancialLimiter, requireIntParam('id'), async (req, res) => {
   const { id } = req.params;
   const client = await pool.connect();
   try {
@@ -1231,7 +1231,7 @@ router.post('/api/deposits/:id/approve', adminFinancialLimiter, requireIntParam(
   }
 });
 
-router.post('/api/deposits/:id/reject', adminFinancialLimiter, requireIntParam('id'), async (req, res) => {
+router.post('/api/deposits/:id/reject', rbac.requirePermission('payments_reject'), adminFinancialLimiter, requireIntParam('id'), async (req, res) => {
   const { id } = req.params;
   const reason = sanitizeText(req.body.reason || '', { maxLen: 300 });
   const client = await pool.connect();
@@ -1267,7 +1267,7 @@ router.post('/api/deposits/:id/reject', adminFinancialLimiter, requireIntParam('
 });
 
 // ==================== উইথড্র ম্যানেজমেন্ট ====================
-router.get('/withdrawals', async (req, res) => {
+router.get('/withdrawals', rbac.requirePermission('payments_view'), async (req, res) => {
   try {
     const { from, to } = req.query;
     const pending = await pool.query(`
@@ -1312,7 +1312,7 @@ router.get('/withdrawals', async (req, res) => {
   }
 });
 
-router.post('/api/withdrawals/:id/approve', adminFinancialLimiter, requireIntParam('id'), async (req, res) => {
+router.post('/api/withdrawals/:id/approve', rbac.requirePermission('payments_approve'), adminFinancialLimiter, requireIntParam('id'), async (req, res) => {
   const { id } = req.params;
   const txn = req.body.txn ? sanitizeText(req.body.txn, { maxLen: 120 }) : null;
   const client = await pool.connect();
@@ -1351,7 +1351,7 @@ router.post('/api/withdrawals/:id/approve', adminFinancialLimiter, requireIntPar
   }
 });
 
-router.post('/api/withdrawals/:id/reject', adminFinancialLimiter, requireIntParam('id'), async (req, res) => {
+router.post('/api/withdrawals/:id/reject', rbac.requirePermission('payments_reject'), adminFinancialLimiter, requireIntParam('id'), async (req, res) => {
   const { id } = req.params;
   const reason = sanitizeText(req.body.reason || '', { maxLen: 300 });
   const client = await pool.connect();
@@ -1389,7 +1389,7 @@ router.post('/api/withdrawals/:id/reject', adminFinancialLimiter, requireIntPara
 });
 
 // ==================== সাপোর্ট টিকেট ====================
-router.get('/support', async (req, res) => {
+router.get('/support', rbac.requirePermission('support_view'), async (req, res) => {
   try {
     const msgs = await pool.query(`
       SELECT cm.*, u.username FROM chat_messages cm
@@ -1428,7 +1428,7 @@ router.get('/support', async (req, res) => {
   }
 });
 
-router.post('/api/support/:userId/reply', requireIntParam('userId'), async (req, res) => {
+router.post('/api/support/:userId/reply', rbac.requirePermission('support_reply'), requireIntParam('userId'), async (req, res) => {
   try {
     const userId = req.params.userId;
     const message = sanitizeText(req.body.message || '', { maxLen: 2000 });
@@ -1446,7 +1446,7 @@ router.post('/api/support/:userId/reply', requireIntParam('userId'), async (req,
   }
 });
 
-router.post('/api/support/:userId/resolve', requireIntParam('userId'), async (req, res) => {
+router.post('/api/support/:userId/resolve', rbac.requirePermission('support_reply'), requireIntParam('userId'), async (req, res) => {
   try {
     const userId = req.params.userId;
     await pool.query(`UPDATE chat_messages SET is_read=true WHERE sender_id=$1 AND is_admin=false`, [userId]);
@@ -1458,7 +1458,7 @@ router.post('/api/support/:userId/resolve', requireIntParam('userId'), async (re
 });
 
 // ==================== ট্রানজেকশন লগ ====================
-router.get('/transactions', async (req, res) => {
+router.get('/transactions', rbac.requirePermission('reports_view'), async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = 40;
@@ -1480,7 +1480,7 @@ router.get('/transactions', async (req, res) => {
 });
 
 // ==================== USERS ====================
-router.get('/users', async (req, res) => {
+router.get('/users', rbac.requirePermission('users_view'), async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = 25;
@@ -1522,7 +1522,7 @@ router.get('/users', async (req, res) => {
 });
 
 // ==================== USER DETAIL ====================
-router.get('/users/:id', async (req, res) => {
+router.get('/users/:id', rbac.requirePermission('users_view'), async (req, res) => {
   try {
     const uId = req.params.id;
     const userRes = await pool.query('SELECT * FROM users WHERE id = $1', [uId]);
@@ -1595,7 +1595,7 @@ router.get('/users/:id', async (req, res) => {
 });
 
 // ==================== USER ACTIONS ====================
-router.post('/users/:id/ban', requireIntParam('id'), async (req, res) => {
+router.post('/users/:id/ban', rbac.requirePermission('users_ban'), requireIntParam('id'), async (req, res) => {
   try {
     const r = await pool.query('UPDATE users SET is_banned = NOT is_banned WHERE id = $1 RETURNING is_banned, username', [req.params.id]);
     if (r.rows[0]) {
@@ -1612,7 +1612,7 @@ router.post('/users/:id/ban', requireIntParam('id'), async (req, res) => {
   res.redirect('back');
 });
 
-router.post('/users/:id/delete', requireIntParam('id'), async (req, res) => {
+router.post('/users/:id/delete', rbac.requirePermission('users_delete'), requireIntParam('id'), async (req, res) => {
   try {
     if (String(req.session.user.id) === String(req.params.id)) {
       req.flash('error', 'নিজের অ্যাকাউন্ট ডিলিট করা যাবে না!');
@@ -1628,7 +1628,7 @@ router.post('/users/:id/delete', requireIntParam('id'), async (req, res) => {
 });
 
 // ==================== Security Overview — Security Center-এর অ্যাডমিন-সাইড ড্যাশবোর্ড ====================
-router.get('/security-overview', async (req, res) => {
+router.get('/security-overview', rbac.requirePermission('activity_log_view'), async (req, res) => {
   try {
     const SECURITY_ACTION_TYPES = [
       'PASSWORD_CHANGED', 'WITHDRAW_PIN_CREATED', 'WITHDRAW_PIN_CHANGED', 'WITHDRAW_PIN_RESET',
@@ -1679,7 +1679,7 @@ router.get('/security-overview', async (req, res) => {
 });
 
 // ==================== Bot Detection System — Admin Bot Activity ও Alerts ====================
-router.get('/bot-logs', async (req, res) => {
+router.get('/bot-logs', rbac.requirePermission('bot_monitoring_manage'), async (req, res) => {
   try {
     const { risk_level = '', endpoint = '', ip = '', from = '', to = '' } = req.query;
     const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -1733,7 +1733,7 @@ router.get('/bot-logs', async (req, res) => {
 
 // অ্যাডমিন আসল PIN কখনো দেখতে/সেট করতে পারবে না — শুধু হ্যাশ ক্লিয়ার করে দেয়, ইউজারকে
 // আবার নতুন PIN তৈরি করতে হবে। প্রতিটি রিসেট withdraw_pin_logs + admin_logs উভয় জায়গায় লগ হয়।
-router.post('/users/:id/withdraw-pin/reset', adminActionLimiter, requireIntParam('id'), async (req, res) => {
+router.post('/users/:id/withdraw-pin/reset', rbac.requirePermission('users_edit'), adminActionLimiter, requireIntParam('id'), async (req, res) => {
   try {
     await adminResetPin(req.params.id, req.session.user.id, req.session.user.username, req.ip);
     await logAdminAction(
@@ -1751,7 +1751,7 @@ router.post('/users/:id/withdraw-pin/reset', adminActionLimiter, requireIntParam
   res.redirect('back');
 });
 
-router.post('/users/:id/coins/add', adminFinancialLimiter, requireIntParam('id'), requireAmount('amount', { max: 10_000_000 }), async (req, res) => {
+router.post('/users/:id/coins/add', rbac.requirePermission('users_edit'), adminFinancialLimiter, requireIntParam('id'), requireAmount('amount', { max: 10_000_000 }), async (req, res) => {
   try {
     const amount = req.body.amount; // requireAmount দিয়ে ইতিমধ্যে যাচাই ও normalize করা
     const reason = (req.body.reason || '').trim().slice(0, 200);
@@ -1763,7 +1763,7 @@ router.post('/users/:id/coins/add', adminFinancialLimiter, requireIntParam('id')
   res.redirect('back');
 });
 
-router.post('/users/:id/coins/remove', adminFinancialLimiter, requireIntParam('id'), requireAmount('amount', { max: 10_000_000 }), async (req, res) => {
+router.post('/users/:id/coins/remove', rbac.requirePermission('users_edit'), adminFinancialLimiter, requireIntParam('id'), requireAmount('amount', { max: 10_000_000 }), async (req, res) => {
   try {
     const amount = req.body.amount;
     const reason = (req.body.reason || '').trim().slice(0, 200);
@@ -1775,7 +1775,7 @@ router.post('/users/:id/coins/remove', adminFinancialLimiter, requireIntParam('i
   res.redirect('back');
 });
 
-router.post('/users/:id/freebet', adminFinancialLimiter, requireIntParam('id'), requireAmount('amount', { max: 1_000_000 }), async (req, res) => {
+router.post('/users/:id/freebet', rbac.requirePermission('users_edit'), adminFinancialLimiter, requireIntParam('id'), requireAmount('amount', { max: 1_000_000 }), async (req, res) => {
   try {
     const amount = req.body.amount;
     await grantFreeBet(req.params.id, amount, 'admin');
@@ -1786,14 +1786,14 @@ router.post('/users/:id/freebet', adminFinancialLimiter, requireIntParam('id'), 
 });
 
 // ==================== MATCHES ====================
-router.get('/matches', async (req, res) => {
+router.get('/matches', rbac.requirePermission('matches_manage'), async (req, res) => {
   try {
     const matches = await pool.query('SELECT * FROM matches ORDER BY start_time DESC');
     res.render('admin/matches', { matches: matches.rows });
   } catch (err) { res.render('admin/matches', { matches: [] }); }
 });
 
-router.post('/matches/add', async (req, res) => {
+router.post('/matches/add', rbac.requirePermission('matches_manage'), async (req, res) => {
   try {
     const { title, sport, team_a, team_b, start_time } = req.body;
     if (!team_a || !team_b) { req.flash('error', 'দুই দলের নাম দিন!'); return res.redirect('/admin/matches'); }
@@ -1805,14 +1805,14 @@ router.post('/matches/add', async (req, res) => {
   res.redirect('/admin/matches');
 });
 
-router.post('/matches/:id/delete', async (req, res) => {
+router.post('/matches/:id/delete', rbac.requirePermission('matches_manage'), async (req, res) => {
   try { await pool.query('DELETE FROM matches WHERE id = $1', [req.params.id]); req.flash('success', 'ম্যাচ মুছে ফেলা হয়েছে!'); }
   catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
   res.redirect('/admin/matches');
 });
 
 // ==================== MARKETS ====================
-router.get('/markets/:matchId', async (req, res) => {
+router.get('/markets/:matchId', rbac.requirePermission('matches_manage'), async (req, res) => {
   try {
     const matchResult = await pool.query('SELECT * FROM matches WHERE id = $1', [req.params.matchId]);
     const match = matchResult.rows[0];
@@ -1822,7 +1822,7 @@ router.get('/markets/:matchId', async (req, res) => {
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
-router.post('/markets/update', async (req, res) => {
+router.post('/markets/update', rbac.requirePermission('matches_manage'), async (req, res) => {
   try {
     const { match_id, type, name, odds, status } = req.body;
     await pool.query(`
@@ -1835,7 +1835,7 @@ router.post('/markets/update', async (req, res) => {
   } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); res.redirect('/admin/matches'); }
 });
 
-router.post('/markets/:marketId/toggle', async (req, res) => {
+router.post('/markets/:marketId/toggle', rbac.requirePermission('matches_manage'), async (req, res) => {
   try {
     const mRes = await pool.query('UPDATE markets SET status = $1 WHERE id = $2 RETURNING match_id', [req.body.status, req.params.marketId]);
     if (mRes.rows[0]) await cache.del(cacheKeys.matchDetail(mRes.rows[0].match_id)).catch(() => {});
@@ -1844,7 +1844,7 @@ router.post('/markets/:marketId/toggle', async (req, res) => {
   res.redirect('back');
 });
 
-router.post('/markets/:marketId/settle', async (req, res) => {
+router.post('/markets/:marketId/settle', rbac.requirePermission('matches_manage'), async (req, res) => {
   const marketId = req.params.marketId;
   const { winning_runner } = req.body;
   if (!winning_runner) { req.flash('error', 'জয় নির্বাচন করুন!'); return res.redirect('back'); }
@@ -1888,7 +1888,7 @@ router.post('/markets/:marketId/settle', async (req, res) => {
 });
 
 // ==================== BETS ====================
-router.get('/bets', async (req, res) => {
+router.get('/bets', rbac.requirePermission('games_manage'), async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = 30;
@@ -1935,7 +1935,7 @@ router.get('/bets', async (req, res) => {
 
 // ==================== লাইভ বেট টেবিল (Auto-refresh, প্রতি ৪ সেকেন্ডে) — views/admin/bets.ejs পোল করে ====================
 // উপরের GET /bets পেজ-রেন্ডার হ্যান্ডলারের ঠিক একই কোয়েরি-লজিক, শুধু res.render()-এর বদলে JSON রেসপন্স।
-router.get('/api/bets-live', async (req, res) => {
+router.get('/api/bets-live', rbac.requirePermission('games_manage'), async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = 30;
@@ -1981,7 +1981,7 @@ router.get('/api/bets-live', async (req, res) => {
   }
 });
 
-router.post('/bets/:id/settle', async (req, res) => {
+router.post('/bets/:id/settle', rbac.requirePermission('games_manage'), async (req, res) => {
   const { id } = req.params;
   const { result } = req.body;
   if (!['won', 'lost'].includes(result)) {
@@ -2021,7 +2021,7 @@ router.post('/bets/:id/settle', async (req, res) => {
 });
 
 // ==================== বোনাস ম্যানেজমেন্ট ====================
-router.get('/bonuses', async (req, res) => {
+router.get('/bonuses', rbac.requirePermission('users_edit'), async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT b.*, u.username FROM bonuses b LEFT JOIN users u ON u.id = b.user_id
@@ -2042,7 +2042,7 @@ router.get('/bonuses', async (req, res) => {
   }
 });
 
-router.post('/bonuses/add', async (req, res) => {
+router.post('/bonuses/add', rbac.requirePermission('users_edit'), async (req, res) => {
   try {
     const { username } = req.body;
     const bonus_type = sanitizeText(req.body.bonus_type || '', { maxLen: 50 });
@@ -2065,7 +2065,7 @@ router.post('/bonuses/add', async (req, res) => {
   }
 });
 
-router.post('/bonuses/:id/cancel', async (req, res) => {
+router.post('/bonuses/:id/cancel', rbac.requirePermission('users_edit'), async (req, res) => {
   try {
     const { id } = req.params;
     await pool.query("UPDATE bonuses SET status = 'cancelled', updated_at = NOW() WHERE id = $1", [id]);
@@ -2169,7 +2169,7 @@ router.get('/vip/history', rbac.requirePermission('vip_manage'), async (req, res
 });
 
 // ==================== প্রমোশন ব্যানার ====================
-router.get('/promotions', async (req, res) => {
+router.get('/promotions', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM promotions ORDER BY position ASC, created_at DESC');
     res.render('admin/promotions', { promotions: result.rows });
@@ -2179,7 +2179,7 @@ router.get('/promotions', async (req, res) => {
   }
 });
 
-router.post('/promotions/add', async (req, res) => {
+router.post('/promotions/add', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const title = sanitizeText(req.body.title || '', { maxLen: 200 }) || null;
     const image_url = req.body.image_url && isSafeUrl(req.body.image_url) ? req.body.image_url.trim() : null;
@@ -2198,7 +2198,7 @@ router.post('/promotions/add', async (req, res) => {
   }
 });
 
-router.post('/promotions/:id/toggle', async (req, res) => {
+router.post('/promotions/:id/toggle', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const { id } = req.params;
     await pool.query('UPDATE promotions SET active = NOT active WHERE id = $1', [id]);
@@ -2209,7 +2209,7 @@ router.post('/promotions/:id/toggle', async (req, res) => {
   }
 });
 
-router.post('/promotions/:id/delete', async (req, res) => {
+router.post('/promotions/:id/delete', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const { id } = req.params;
     await pool.query('DELETE FROM promotions WHERE id = $1', [id]);
@@ -2222,7 +2222,7 @@ router.post('/promotions/:id/delete', async (req, res) => {
 });
 
 // ==================== টুর্নামেন্ট ====================
-router.get('/tournaments', async (req, res) => {
+router.get('/tournaments', rbac.requirePermission('matches_manage'), async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT t.*, COUNT(p.id) AS participant_count
@@ -2245,7 +2245,7 @@ router.get('/tournaments', async (req, res) => {
   }
 });
 
-router.post('/tournaments/add', async (req, res) => {
+router.post('/tournaments/add', rbac.requirePermission('matches_manage'), async (req, res) => {
   try {
     const { name, sport, description, entry_fee, prize_pool, max_participants, start_date, end_date } = req.body;
     await pool.query(
@@ -2261,7 +2261,7 @@ router.post('/tournaments/add', async (req, res) => {
   }
 });
 
-router.post('/tournaments/:id/status', async (req, res) => {
+router.post('/tournaments/:id/status', rbac.requirePermission('matches_manage'), async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -2274,7 +2274,7 @@ router.post('/tournaments/:id/status', async (req, res) => {
   }
 });
 
-router.post('/tournaments/:id/delete', async (req, res) => {
+router.post('/tournaments/:id/delete', rbac.requirePermission('matches_manage'), async (req, res) => {
   try {
     const { id } = req.params;
     await pool.query('DELETE FROM tournaments WHERE id = $1', [id]);
@@ -2287,7 +2287,7 @@ router.post('/tournaments/:id/delete', async (req, res) => {
 });
 
 // ==================== নিউজ ====================
-router.get('/news', async (req, res) => {
+router.get('/news', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM news ORDER BY created_at DESC LIMIT 200');
     res.render('admin/news', { newsList: result.rows });
@@ -2297,7 +2297,7 @@ router.get('/news', async (req, res) => {
   }
 });
 
-router.post('/news/add', async (req, res) => {
+router.post('/news/add', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const title = sanitizeText(req.body.title || '', { maxLen: 200 });
     const content = sanitizeText(req.body.content || '', { maxLen: 20000 });
@@ -2316,7 +2316,7 @@ router.post('/news/add', async (req, res) => {
   }
 });
 
-router.post('/news/:id/delete', requireIntParam('id'), async (req, res) => {
+router.post('/news/:id/delete', rbac.requirePermission('settings_edit'), requireIntParam('id'), async (req, res) => {
   try {
     const { id } = req.params;
     await pool.query('DELETE FROM news WHERE id = $1', [id]);
@@ -2328,7 +2328,7 @@ router.post('/news/:id/delete', requireIntParam('id'), async (req, res) => {
   }
 });
 
-router.get('/activity/export.csv', async (req, res) => {
+router.get('/activity/export.csv', rbac.requirePermission('activity_log_view'), async (req, res) => {
   try {
     const { action_type = '', q = '' } = req.query;
     const params = [];
@@ -2361,7 +2361,7 @@ router.get('/activity/export.csv', async (req, res) => {
 // ==================== অ্যাক্টিভিটি লগ ====================
 
 // ==================== Bot Detection — Admin Monitoring ====================
-router.get('/bot-monitoring', async (req, res) => {
+router.get('/bot-monitoring', rbac.requirePermission('bot_monitoring_manage'), async (req, res) => {
   try {
     const [statsToday, byRisk, byEndpoint, ipRules, recentLogs] = await Promise.all([
       pool.query(`SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE blocked) AS blocked
@@ -2562,7 +2562,7 @@ router.post('/user-roles/:userId/assign', rbac.requirePermission('roles_manage')
   }
 });
 
-router.get('/bot-monitoring/ip-rules', async (req, res) => {
+router.get('/bot-monitoring/ip-rules', rbac.requirePermission('bot_monitoring_manage'), async (req, res) => {
   try {
     const rules = await listIpRules();
     res.render('admin/bot-ip-rules', { user: req.session.user, rules });
@@ -2572,7 +2572,7 @@ router.get('/bot-monitoring/ip-rules', async (req, res) => {
   }
 });
 
-router.post('/bot-monitoring/ip-rules', async (req, res) => {
+router.post('/bot-monitoring/ip-rules', rbac.requirePermission('bot_monitoring_manage'), async (req, res) => {
   const { ip, type, reason } = req.body;
   try {
     if (!ip || !['block', 'whitelist'].includes(type)) {
@@ -2590,7 +2590,7 @@ router.post('/bot-monitoring/ip-rules', async (req, res) => {
   }
 });
 
-router.post('/bot-monitoring/ip-rules/:ip/remove', async (req, res) => {
+router.post('/bot-monitoring/ip-rules/:ip/remove', rbac.requirePermission('bot_monitoring_manage'), async (req, res) => {
   try {
     const ip = decodeURIComponent(req.params.ip);
     await removeIpRule(ip);
@@ -2604,7 +2604,7 @@ router.post('/bot-monitoring/ip-rules/:ip/remove', async (req, res) => {
   }
 });
 
-router.get('/activity', async (req, res) => {
+router.get('/activity', rbac.requirePermission('activity_log_view'), async (req, res) => {
   try {
     const { action_type = '', q = '' } = req.query;
     const params = [];
@@ -2684,7 +2684,7 @@ router.post('/sentry-status/test-error', async (req, res) => {
 const templates = require('../services/templates');
 const { sendSms } = require('../services/sms');
 
-router.get('/notification-templates', async (req, res) => {
+router.get('/notification-templates', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const { channel = '', lang = '', q = '' } = req.query;
     const list = await templates.listTemplates({ channel, lang, q });
@@ -2695,11 +2695,11 @@ router.get('/notification-templates', async (req, res) => {
   }
 });
 
-router.get('/notification-templates/new', (req, res) => {
+router.get('/notification-templates/new', rbac.requirePermission('settings_edit'), (req, res) => {
   res.render('admin/notification-template-form', { tmpl: null, error: null });
 });
 
-router.post('/notification-templates', async (req, res) => {
+router.post('/notification-templates', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const { template_key, channel, lang, name, subject, body, is_active } = req.body;
     const tmpl = await templates.createTemplate(
@@ -2716,7 +2716,7 @@ router.post('/notification-templates', async (req, res) => {
   }
 });
 
-router.get('/notification-templates/:id/edit', async (req, res) => {
+router.get('/notification-templates/:id/edit', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const tmpl = await templates.getTemplateById(req.params.id);
     if (!tmpl) return res.redirect('/admin/notification-templates');
@@ -2726,7 +2726,7 @@ router.get('/notification-templates/:id/edit', async (req, res) => {
   }
 });
 
-router.post('/notification-templates/:id', async (req, res) => {
+router.post('/notification-templates/:id', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const { name, subject, body, is_active } = req.body;
     const tmpl = await templates.updateTemplate(
@@ -2744,7 +2744,7 @@ router.post('/notification-templates/:id', async (req, res) => {
   }
 });
 
-router.post('/notification-templates/:id/delete', async (req, res) => {
+router.post('/notification-templates/:id/delete', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const deleted = await templates.deleteTemplate(req.params.id);
     if (deleted) {
@@ -2759,7 +2759,7 @@ router.post('/notification-templates/:id/delete', async (req, res) => {
 });
 
 // প্রিভিউ — নমুনা ভ্যারিয়েবল দিয়ে রেন্ডার করে দেখায় (AJAX)
-router.post('/notification-templates/:id/preview', async (req, res) => {
+router.post('/notification-templates/:id/preview', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const tmpl = await templates.getTemplateById(req.params.id);
     if (!tmpl) return res.status(404).json({ success: false, error: 'টেমপ্লেট পাওয়া যায়নি' });
@@ -2777,7 +2777,7 @@ router.post('/notification-templates/:id/preview', async (req, res) => {
 });
 
 // টেস্ট সেন্ড — অ্যাডমিন নিজের ইমেইল/নম্বরে পাঠিয়ে দেখতে পারবে
-router.post('/notification-templates/:id/test-send', async (req, res) => {
+router.post('/notification-templates/:id/test-send', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const tmpl = await templates.getTemplateById(req.params.id);
     if (!tmpl) return res.status(404).json({ success: false, error: 'টেমপ্লেট পাওয়া যায়নি' });
@@ -2832,7 +2832,7 @@ router.post('/notification-templates/:id/test-send', async (req, res) => {
 
 // ==================== ফ্রড লগ (Fraud Detection) ====================
 // ==================== Fraud Monitoring Dashboard — Risk Score, Trend, Top Signals/Users ====================
-router.get('/fraud-monitoring', async (req, res) => {
+router.get('/fraud-monitoring', rbac.requirePermission('bot_monitoring_manage'), async (req, res) => {
   try {
     const dashStats = await getFraudDashboardStats();
     res.render('admin/fraud-monitoring', { dashStats });
@@ -2848,7 +2848,7 @@ router.get('/fraud-monitoring', async (req, res) => {
   }
 });
 
-router.get('/fraud-logs', async (req, res) => {
+router.get('/fraud-logs', rbac.requirePermission('bot_monitoring_manage'), async (req, res) => {
   try {
     const { risk_level = '', status = '', user_id = '', from = '', to = '' } = req.query;
     const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -2890,7 +2890,7 @@ router.get('/fraud-logs', async (req, res) => {
   }
 });
 
-router.post('/fraud-logs/:id/review', requireIntParam('id'), async (req, res) => {
+router.post('/fraud-logs/:id/review', rbac.requirePermission('bot_monitoring_manage'), requireIntParam('id'), async (req, res) => {
   try {
     const { id } = req.params;
     const action = req.body.action === 'dismiss' ? 'dismissed' : 'reviewed';
@@ -2913,7 +2913,7 @@ router.post('/fraud-logs/:id/review', requireIntParam('id'), async (req, res) =>
 });
 
 // ==================== Duplicate Account Detection ====================
-router.get('/duplicate-accounts', async (req, res) => {
+router.get('/duplicate-accounts', rbac.requirePermission('bot_monitoring_manage'), async (req, res) => {
   try {
     const { status = '', min_score = '', user_id = '' } = req.query;
     const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -2931,7 +2931,7 @@ router.get('/duplicate-accounts', async (req, res) => {
   }
 });
 
-router.post('/duplicate-accounts/:id/review', requireIntParam('id'), async (req, res) => {
+router.post('/duplicate-accounts/:id/review', rbac.requirePermission('bot_monitoring_manage'), requireIntParam('id'), async (req, res) => {
   try {
     const { id } = req.params;
     const action = req.body.action === 'dismiss' ? 'dismissed' : 'reviewed';
@@ -2944,7 +2944,7 @@ router.post('/duplicate-accounts/:id/review', requireIntParam('id'), async (req,
   res.redirect('back');
 });
 
-router.post('/duplicate-accounts/scan', async (req, res) => {
+router.post('/duplicate-accounts/scan', rbac.requirePermission('bot_monitoring_manage'), async (req, res) => {
   try {
     const count = await scanAllUsers();
     await logAdminAction(
@@ -2960,7 +2960,7 @@ router.post('/duplicate-accounts/scan', async (req, res) => {
 });
 
 
-router.get('/reports', async (req, res) => {
+router.get('/reports', rbac.requirePermission('reports_view'), async (req, res) => {
   try {
     const from = req.query.from || new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
     const to = req.query.to || new Date().toISOString().slice(0, 10);
@@ -3102,7 +3102,7 @@ router.post('/queues/fraud-scan/:userId', async (req, res) => {
 });
 
 // ==================== LOGIN HISTORY (সব ইউজারের, সার্চ/ফিল্টার সহ) ====================
-router.get('/login-history', async (req, res) => {
+router.get('/login-history', rbac.requirePermission('activity_log_view'), async (req, res) => {
   try {
     const { q = '', new_device = '', from = '', to = '' } = req.query;
     const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -3254,7 +3254,7 @@ router.post('/api-keys/:id/revoke', requireIntParam('id'), async (req, res) => {
 });
 
 // ==================== API USAGE লগ ও অ্যানালিটিক্স ====================
-router.get('/api-logs', async (req, res) => {
+router.get('/api-logs', rbac.requirePermission('reports_view'), async (req, res) => {
   try {
     const { endpoint = '', method = '', status = '', ip = '', api_key_id = '', from = '', to = '' } = req.query;
     const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -3329,7 +3329,7 @@ router.get('/api-logs', async (req, res) => {
   }
 });
 
-router.get('/api-logs/export.csv', async (req, res) => {
+router.get('/api-logs/export.csv', rbac.requirePermission('reports_view'), async (req, res) => {
   try {
     const { endpoint = '', method = '', status = '', ip = '', from = '', to = '' } = req.query;
     const conditions = [];
@@ -3406,7 +3406,7 @@ router.post('/cache/clear', async (req, res) => {
 // ==================== BACKUP & RESTORE SYSTEM ====================
 const backupManager = require('../services/backupManager');
 
-router.get('/backups', async (req, res) => {
+router.get('/backups', rbac.requirePermission('backups_manage'), async (req, res) => {
   try {
     const { type = '' } = req.query;
     const backups = await backupManager.listBackups({ type, limit: 100 });
@@ -3421,7 +3421,7 @@ router.get('/backups', async (req, res) => {
   }
 });
 
-router.post('/backups/create', async (req, res) => {
+router.post('/backups/create', rbac.requirePermission('backups_manage'), async (req, res) => {
   try {
     const { type } = req.body; // 'database' | 'uploads' | 'config' | 'all'
     const ctx = { source: 'manual', createdById: req.session.user.id, createdByUsername: req.session.user.username };
@@ -3453,7 +3453,7 @@ router.post('/backups/create', async (req, res) => {
   }
 });
 
-router.get('/backups/:id/download', async (req, res) => {
+router.get('/backups/:id/download', rbac.requirePermission('backups_manage'), async (req, res) => {
   try {
     const record = await backupManager.getBackupById(req.params.id);
     if (!record || record.status !== 'completed') return res.status(404).send('ব্যাকআপ পাওয়া যায়নি।');
@@ -3466,7 +3466,7 @@ router.get('/backups/:id/download', async (req, res) => {
   }
 });
 
-router.post('/backups/:id/restore', async (req, res) => {
+router.post('/backups/:id/restore', rbac.requirePermission('backups_manage'), async (req, res) => {
   try {
     const record = await backupManager.getBackupById(req.params.id);
     if (!record) return res.redirect('/admin/backups?error=not_found');
@@ -3494,7 +3494,7 @@ router.post('/backups/:id/restore', async (req, res) => {
   }
 });
 
-router.post('/backups/:id/delete', async (req, res) => {
+router.post('/backups/:id/delete', rbac.requirePermission('backups_manage'), async (req, res) => {
   try {
     const record = await backupManager.getBackupById(req.params.id);
     await backupManager.deleteBackup(req.params.id);
@@ -3507,7 +3507,7 @@ router.post('/backups/:id/delete', async (req, res) => {
 });
 
 // ==================== Advanced Audit Log Dashboard ====================
-router.get('/audit-logs', async (req, res) => {
+router.get('/audit-logs', rbac.requirePermission('activity_log_view'), async (req, res) => {
   try {
     const { q = '', actorType = '', category = '', status = '', riskLevel = '', action = '', from = '', to = '' } = req.query;
     const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -3536,7 +3536,7 @@ router.get('/audit-logs', async (req, res) => {
 });
 
 // Log Details Modal-এর জন্য — AJAX দিয়ে fetch হয়
-router.get('/audit-logs/:id.json', requireIntParam('id'), async (req, res) => {
+router.get('/audit-logs/:id.json', rbac.requirePermission('activity_log_view'), requireIntParam('id'), async (req, res) => {
   try {
     const log = await getAuditLogById(req.params.id);
     if (!log) return res.status(404).json({ error: 'পাওয়া যায়নি' });
@@ -3547,7 +3547,7 @@ router.get('/audit-logs/:id.json', requireIntParam('id'), async (req, res) => {
   }
 });
 
-router.get('/audit-logs/export.csv', async (req, res) => {
+router.get('/audit-logs/export.csv', rbac.requirePermission('activity_log_view'), async (req, res) => {
   try {
     const { q = '', actorType = '', category = '', status = '', riskLevel = '', action = '', from = '', to = '' } = req.query;
     const rows = await exportAuditLogs({ q, actorType, category, status, riskLevel, action, from, to });
@@ -3570,7 +3570,7 @@ router.get('/audit-logs/export.csv', async (req, res) => {
 // ==================== FEATURE FLAGS & CONFIGURATION MANAGEMENT ====================
 const featureFlags = require('../services/featureFlags');
 
-router.get('/feature-flags', async (req, res) => {
+router.get('/feature-flags', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const flags = await featureFlags.loadAllFlags();
     res.render('admin/feature-flags', { flags: flags || [], created: req.query.created || '', error: req.query.error || '' });
@@ -3580,7 +3580,7 @@ router.get('/feature-flags', async (req, res) => {
   }
 });
 
-router.post('/feature-flags/:id/toggle', async (req, res) => {
+router.post('/feature-flags/:id/toggle', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const r = await pool.query('SELECT * FROM feature_flags WHERE id = $1', [req.params.id]);
     const flag = r.rows[0];
@@ -3598,7 +3598,7 @@ router.post('/feature-flags/:id/toggle', async (req, res) => {
   }
 });
 
-router.post('/feature-flags/create', async (req, res) => {
+router.post('/feature-flags/create', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const { key, label, category, description } = req.body;
     const created = await featureFlags.createFlag({
@@ -3613,7 +3613,7 @@ router.post('/feature-flags/create', async (req, res) => {
   }
 });
 
-router.post('/feature-flags/:id/delete', async (req, res) => {
+router.post('/feature-flags/:id/delete', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const r = await pool.query('SELECT * FROM feature_flags WHERE id = $1', [req.params.id]);
     const flag = r.rows[0];
@@ -3643,7 +3643,7 @@ function refreshCache(req) {
   if (fn) fn();
 }
 
-router.get('/localization', (req, res) => {
+router.get('/localization', rbac.requirePermission('settings_edit'), (req, res) => {
   try {
     const bn = readLocale('bn');
     const en = readLocale('en');
@@ -3660,7 +3660,7 @@ router.get('/localization', (req, res) => {
   }
 });
 
-router.post('/localization/create', async (req, res) => {
+router.post('/localization/create', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const key = (req.body.key || '').trim();
     const bnVal = req.body.bn || '';
@@ -3682,7 +3682,7 @@ router.post('/localization/create', async (req, res) => {
   }
 });
 
-router.post('/localization/update', async (req, res) => {
+router.post('/localization/update', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const key = (req.body.key || '').trim();
     const bnVal = req.body.bn || '';
@@ -3701,7 +3701,7 @@ router.post('/localization/update', async (req, res) => {
   }
 });
 
-router.post('/localization/delete', async (req, res) => {
+router.post('/localization/delete', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const key = (req.body.key || '').trim();
     const bn = readLocale('bn'); const en = readLocale('en');
@@ -3717,7 +3717,7 @@ router.post('/localization/delete', async (req, res) => {
   }
 });
 
-router.get('/localization/export/:lang', (req, res) => {
+router.get('/localization/export/:lang', rbac.requirePermission('settings_edit'), (req, res) => {
   try {
     const lang = req.params.lang === 'en' ? 'en' : 'bn';
     const data = readLocale(lang);
@@ -3729,7 +3729,7 @@ router.get('/localization/export/:lang', (req, res) => {
   }
 });
 
-router.get('/audit-logs/export.xlsx', async (req, res) => {
+router.get('/audit-logs/export.xlsx', rbac.requirePermission('activity_log_view'), async (req, res) => {
   try {
     const ExcelJS = require('exceljs');
     const { q = '', actorType = '', category = '', status = '', riskLevel = '', action = '', from = '', to = '' } = req.query;
@@ -3768,7 +3768,7 @@ router.get('/audit-logs/export.xlsx', async (req, res) => {
   }
 });
 
-router.post('/localization/import/:lang', async (req, res) => {
+router.post('/localization/import/:lang', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const lang = req.params.lang === 'en' ? 'en' : 'bn';
     let incoming;
@@ -3793,7 +3793,7 @@ router.post('/localization/import/:lang', async (req, res) => {
   }
 });
 
-router.post('/localization/refresh-cache', async (req, res) => {
+router.post('/localization/refresh-cache', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     refreshCache(req);
     await logAdminAction(req.session.user.id, req.session.user.username, 'LOCALIZATION_CACHE_REFRESHED', 'Translation cache রিফ্রেশ করা হয়েছে', req.ip);
@@ -3806,7 +3806,7 @@ router.post('/localization/refresh-cache', async (req, res) => {
 });
 
 // ==================== Announcement / Broadcast System ====================
-router.get('/announcements', async (req, res) => {
+router.get('/announcements', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const r = await pool.query('SELECT * FROM announcements ORDER BY created_at DESC');
     res.render('admin/announcements', { list: r.rows, error: req.query.error || '', created: req.query.created === '1' });
@@ -3816,7 +3816,7 @@ router.get('/announcements', async (req, res) => {
   }
 });
 
-router.post('/announcements/create', async (req, res) => {
+router.post('/announcements/create', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const { type, title_bn, title_en, message_bn, message_en, target_type, target_role, target_user_id, starts_at, expires_at } = req.body;
     if (!message_bn || !message_bn.trim()) {
@@ -3841,7 +3841,7 @@ router.post('/announcements/create', async (req, res) => {
   }
 });
 
-router.post('/announcements/:id/update', async (req, res) => {
+router.post('/announcements/:id/update', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const { type, title_bn, title_en, message_bn, message_en, target_type, target_role, target_user_id, starts_at, expires_at } = req.body;
     await pool.query(
@@ -3863,7 +3863,7 @@ router.post('/announcements/:id/update', async (req, res) => {
   }
 });
 
-router.post('/announcements/:id/toggle', async (req, res) => {
+router.post('/announcements/:id/toggle', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const r = await pool.query('UPDATE announcements SET active = NOT active, updated_at = NOW() WHERE id = $1 RETURNING active', [req.params.id]);
     await logAdminAction(req.session.user.id, req.session.user.username, 'ANNOUNCEMENT_TOGGLED', `Announcement #${req.params.id} ${r.rows[0].active ? 'সক্রিয়' : 'নিষ্ক্রিয়'} করা হয়েছে`, req.ip);
@@ -3873,7 +3873,7 @@ router.post('/announcements/:id/toggle', async (req, res) => {
   }
 });
 
-router.post('/announcements/:id/expire-now', async (req, res) => {
+router.post('/announcements/:id/expire-now', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     await pool.query('UPDATE announcements SET expires_at = NOW(), updated_at = NOW() WHERE id = $1', [req.params.id]);
     await logAdminAction(req.session.user.id, req.session.user.username, 'ANNOUNCEMENT_EXPIRED', `Announcement #${req.params.id} এখনই expire করা হয়েছে`, req.ip);
@@ -3883,7 +3883,7 @@ router.post('/announcements/:id/expire-now', async (req, res) => {
   }
 });
 
-router.post('/announcements/:id/delete', async (req, res) => {
+router.post('/announcements/:id/delete', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     await pool.query('DELETE FROM announcements WHERE id = $1', [req.params.id]);
     await logAdminAction(req.session.user.id, req.session.user.username, 'ANNOUNCEMENT_DELETED', `Announcement #${req.params.id} ডিলিট করা হয়েছে`, req.ip);
@@ -3917,7 +3917,7 @@ router.get('/diagnostics/json', async (req, res) => {
 });
 
 // ==================== Cron Jobs Monitor (প্রোডাকশন-রেডি Scheduler ম্যানেজমেন্ট) ====================
-router.get('/cron-jobs', async (req, res) => {
+router.get('/cron-jobs', rbac.requirePermission('cron_jobs_manage'), async (req, res) => {
   try {
     const jobs = await scheduler.listJobs();
     const recentLogs = await scheduler.getRecentLogs(20);
@@ -3929,7 +3929,7 @@ router.get('/cron-jobs', async (req, res) => {
 });
 
 // একটা নির্দিষ্ট Job-এর সম্পূর্ণ Execution History
-router.get('/cron-jobs/:key/logs', async (req, res) => {
+router.get('/cron-jobs/:key/logs', rbac.requirePermission('cron_jobs_manage'), async (req, res) => {
   try {
     const key = req.params.key;
     const logs = await scheduler.getJobLogs(key, 100);
@@ -3944,7 +3944,7 @@ router.get('/cron-jobs/:key/logs', async (req, res) => {
 });
 
 // Run Now — ম্যানুয়ালি একটা Job অবিলম্বে ট্রিগার করা (schedule অপেক্ষা না করে)
-router.post('/cron-jobs/:key/run', adminActionLimiter, async (req, res) => {
+router.post('/cron-jobs/:key/run', rbac.requirePermission('cron_jobs_manage'), adminActionLimiter, async (req, res) => {
   try {
     const key = req.params.key;
     if (!scheduler.JOB_DEFINITIONS[key]) {
@@ -3968,7 +3968,7 @@ router.post('/cron-jobs/:key/run', adminActionLimiter, async (req, res) => {
 });
 
 // Enable/Disable — সার্ভার রিস্টার্ট ছাড়াই কার্যকর হয় (প্রতিবার রানের আগে DB থেকে ফ্রেশ চেক হয়)
-router.post('/cron-jobs/:key/toggle', adminActionLimiter, async (req, res) => {
+router.post('/cron-jobs/:key/toggle', rbac.requirePermission('cron_jobs_manage'), adminActionLimiter, async (req, res) => {
   try {
     const key = req.params.key;
     if (!scheduler.JOB_DEFINITIONS[key]) {
@@ -3991,7 +3991,7 @@ router.post('/cron-jobs/:key/toggle', adminActionLimiter, async (req, res) => {
 });
 
 // Cron Jobs JSON API (পোলিং — লাইভ লাস্ট-রান স্ট্যাটাসের জন্য)
-router.get('/cron-jobs/status/json', async (req, res) => {
+router.get('/cron-jobs/status/json', rbac.requirePermission('cron_jobs_manage'), async (req, res) => {
   try {
     const jobs = await scheduler.listJobs();
     res.json({ success: true, jobs });
