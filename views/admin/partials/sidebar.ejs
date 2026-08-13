@@ -87,6 +87,7 @@
   <a href="/admin/matches" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'matches' ? 'active' : '' %>"><i class="fas fa-futbol"></i> ম্যাচসমূহ</a>
   <a href="/admin/tournaments" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'tournaments' ? 'active' : '' %>"><i class="fas fa-trophy"></i> টুর্নামেন্ট</a>
   <a href="/admin/bets" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'bets' ? 'active' : '' %>"><i class="fas fa-dice"></i> বেট ম্যানেজমেন্ট</a>
+  <a href="/admin/games" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'games' ? 'active' : '' %>"><i class="fas fa-gamepad"></i> গেমস ম্যানেজমেন্ট</a>
   <a href="/admin/notifications" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'notifications' ? 'active' : '' %>"><i class="fas fa-paper-plane"></i> নোটিফিকেশন পাঠান</a>
   <a href="/admin/notification-templates" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'notification-templates' ? 'active' : '' %>"><i class="fas fa-envelope-open-text"></i> নোটিফিকেশন টেমপ্লেট</a>
 
@@ -117,6 +118,7 @@
 
   <div class="admin-nav-group-title">System / Infrastructure</div>
   <a href="/admin/settings" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'settings' ? 'active' : '' %>"><i class="fas fa-cogs"></i> সেটিংস</a>
+  <a href="/admin/system-settings" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'system-settings' ? 'active' : '' %>"><i class="fas fa-sliders"></i> সিস্টেম সেটিংস</a>
   <a href="/admin/cron-jobs" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'cron-jobs' ? 'active' : '' %>"><i class="fas fa-clock"></i> Cron Jobs</a>
   <a href="/admin/queues" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'queues' ? 'active' : '' %>"><i class="fas fa-layer-group"></i> Queue Monitoring</a>
   <a href="/admin/cache" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'cache' ? 'active' : '' %>"><i class="fas fa-bolt"></i> Cache Management</a>
@@ -125,12 +127,13 @@
   <a href="/admin/localization" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'localization' ? 'active' : '' %>"><i class="fas fa-language"></i> Localization</a>
   <a href="/admin/telegram" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'telegram' ? 'active' : '' %>"><i class="fab fa-telegram"></i> Telegram ইন্টিগ্রেশন</a>
   <a href="/admin/system-diagnostics" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'system-diagnostics' ? 'active' : '' %>"><i class="fas fa-heart-pulse"></i> System Diagnostics</a>
+  <a href="/admin/diagnostics" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'diagnostics' ? 'active' : '' %>"><i class="fas fa-stethoscope"></i> ডায়াগনস্টিকস</a>
   <a href="/admin/sentry-status" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'sentry-status' ? 'active' : '' %>"><i class="fas fa-bug"></i> Sentry Status</a>
 
   <div class="admin-nav-group-title">Integrations</div>
   <a href="/admin/api-keys" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'api-keys' ? 'active' : '' %>"><i class="fas fa-key"></i> API Keys</a>
   <a href="/admin/support" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'support' ? 'active' : '' %>"><i class="fas fa-life-ring"></i> সাপোর্ট টিকেট</a>
-  <a href="/chat/admin" class="admin-nav-link"><i class="fas fa-headset"></i> সাপোর্ট চ্যাট</a>
+  <a href="/chat/admin" class="admin-nav-link <%= typeof active !== 'undefined' && active === 'chat' ? 'active' : '' %>"><i class="fas fa-headset"></i> সাপোর্ট চ্যাট</a>
 
   <div class="admin-nav-group-title">সাধারণ</div>
   <a href="/" class="admin-nav-link"><i class="fas fa-home"></i> সাইটে ফিরে যান</a>
