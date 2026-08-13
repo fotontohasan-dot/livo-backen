@@ -28,6 +28,10 @@ jobs:
     env:
       NODE_ENV: test
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/livo_test
+      # postgres:16 সার্ভিস কন্টেইনারে SSL বন্ধ থাকে, তাই CI-তে প্লেইন TCP কানেকশন।
+      # NODE_ENV=test হলে db.js এমনিতেই SSL বন্ধ করে; এখানে স্পষ্ট করে লেখা হলো যাতে
+      # কনফিগারেশনটা ওয়ার্কফ্লো পড়েই বোঝা যায়।
+      DATABASE_SSL: false
       SESSION_SECRET: test_secret_key_for_ci_only
       REDIS_ENABLED: false
       SSLCZ_IS_LIVE: false
