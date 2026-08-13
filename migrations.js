@@ -1441,6 +1441,30 @@ async function runMigrations() {
 
     console.log("✅ RBAC (Role & Permission) tables ready");
 
+    // ==================== Telegram Integration Settings ====================
+    // এক-সারির কনফিগ টেবিল (id সবসময় 1)। bot_token_enc-এ টোকেন AES-256-GCM দিয়ে
+    // এনক্রিপ্ট করে রাখা হয় (services/telegramConfig.js) — plaintext কখনো লেখা হয় না।
+    // সারি না থাকলে services/telegramConfig.js .env-ভিত্তিক আগের আচরণেই চলে,
+    // তাই বিদ্যমান ডিপ্লয়মেন্টে কোনো নোটিফিকেশন বন্ধ হয় না।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS telegram_settings (
+        id SMALLINT PRIMARY KEY DEFAULT 1,
+        enabled BOOLEAN NOT NULL DEFAULT true,
+        chat_id TEXT,
+        bot_token_enc TEXT,
+        categories JSONB NOT NULL DEFAULT '{"deposit":true,"withdraw":true,"support":true,"security":true,"system":true}'::jsonb,
+        last_test_at TIMESTAMPTZ,
+        last_test_status TEXT,
+        last_test_error TEXT,
+        last_test_bot TEXT,
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_by INTEGER,
+        updated_by_username TEXT,
+        CONSTRAINT telegram_settings_single_row CHECK (id = 1)
+      );
+    `);
+    console.log("✅ Telegram Settings table ready");
+
   } catch (err) {
     console.error("❌ Migration error:", err.message);
   }

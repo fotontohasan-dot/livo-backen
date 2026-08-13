@@ -52,7 +52,8 @@ async function notifyAdmins(title, message, alertType) {
       userIds,
       title,
       message,
-      telegramText: `🔔 <b>${title}</b>\n${message}`
+      telegramText: `🔔 <b>${title}</b>\n${message}`,
+      telegramCategory: alertType || null
     });
     if (!jobId) {
       // কিউ এনকিউ ব্যর্থ হলে সরাসরি পাঠিয়ে দেওয়া হচ্ছে যাতে অ্যাডমিন নোটিফিকেশন মিস না হয়
@@ -62,7 +63,7 @@ async function notifyAdmins(title, message, alertType) {
           [uid, title, message]
         );
       }
-      notifyTelegram(`🔔 <b>${title}</b>\n${message}`);
+      notifyTelegram(`🔔 <b>${title}</b>\n${message}`, { category: alertType || null });
     }
   } catch (e) {
     console.error('notifyAdmins error:', e.message);

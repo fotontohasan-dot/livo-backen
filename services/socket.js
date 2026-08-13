@@ -127,7 +127,7 @@ const initSocket = (server, sessionMiddleware) => {
             title: 'নতুন সাপোর্ট মেসেজ',
             message: message || 'একটি ফাইল পাঠানো হয়েছে'
           });
-          notifyTelegram(`💬 <b>নতুন সাপোর্ট মেসেজ</b>\n${u.username || 'ইউজার'}: ${message || '(ফাইল পাঠানো হয়েছে)'}`);
+          notifyTelegram(`💬 <b>নতুন সাপোর্ট মেসেজ</b>\n${u.username || 'ইউজার'}: ${message || '(ফাইল পাঠানো হয়েছে)'}`, { category: 'support' });
 
           // ===== বট মোড হলে অটো-রিপ্লাই =====
           if (data && data.botMode && message) {
