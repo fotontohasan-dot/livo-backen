@@ -3,8 +3,8 @@ version: '3.9'
 x-app-env: &app-env
   NODE_ENV: production
   PORT: 3000
-  DATABASE_URL: postgres://livo:${DB_PASSWORD:-changeme}@db:5432/livo
-  REDIS_URL: redis://:${REDIS_PASSWORD:-changeme}@redis:6379
+  DATABASE_URL: postgres://livo:${DB_PASSWORD:?DB_PASSWORD is required}@db:5432/livo
+  REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
   SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required}
 
 services:
@@ -44,7 +44,7 @@ services:
     environment:
       POSTGRES_DB: livo
       POSTGRES_USER: livo
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -59,13 +59,13 @@ services:
     image: redis:7-alpine
     container_name: livo-redis
     restart: unless-stopped
-    command: redis-server --requirepass ${REDIS_PASSWORD:-changeme}
+    command: redis-server --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     volumes:
       - redis_data:/data
     networks:
       - livo-net
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-changeme}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -79,7 +79,7 @@ services:
       app:
         condition: service_healthy
     environment:
-      METRICS_TOKEN: ${METRICS_TOKEN:-}
+      METRICS_TOKEN: ${METRICS_TOKEN:?METRICS_TOKEN is required — না দিলে Prometheus /metrics স্ক্র্যাপ করতে পারবে না (401)}
     volumes:
       - ./docker/prometheus/prometheus.yml.template:/etc/prometheus/prometheus.yml.template:ro
       - prometheus_data:/prometheus
@@ -110,7 +110,7 @@ services:
       - "${GRAFANA_PORT:-3001}:3000"
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-changeme}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
       GF_USERS_ALLOW_SIGN_UP: "false"
     volumes:
       - grafana_data:/var/lib/grafana

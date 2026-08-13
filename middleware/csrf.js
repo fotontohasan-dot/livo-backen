@@ -95,9 +95,12 @@ function csrfProtection(req, res, next) {
     return next();
   }
 
-  // সেশনই না থাকলে (স্টোর ডাউন ইত্যাদি) ব্লক না করে যেতে দেওয়া হয় — বিদ্যমান origin-check
-  // মিডলওয়্যার ইতিমধ্যেই cross-origin POST আটকায়; এটা সেই সুরক্ষার উপর একটা অতিরিক্ত স্তর।
-  if (!secret) return next();
+  // সেশন/সিক্রেট না থাকলে state-changing রিকোয়েস্ট আর পাস করতে দেওয়া হয় না।
+  // আগে এখানে next() করা হতো, এই যুক্তিতে যে origin-check ইতিমধ্যেই cross-origin POST আটকায়।
+  // কিন্তু app.js-এর ওই origin-check শুধু তখনই ব্লক করে যখন Origin হেডার আসলেই পাঠানো হয়েছে
+  // এবং মিলছে না — Origin হেডার একেবারে না থাকলে সেটা রিকোয়েস্ট ছেড়ে দেয়। ফলে সেশন স্টোর ডাউন
+  // থাকলে (বা কুকি না পাঠালে) CSRF সুরক্ষা কার্যত বাইপাস হয়ে যেত। এখন fail-closed।
+  if (!secret) return sendCsrfError(req, res);
 
   const submitted = extractSubmittedToken(req);
   if (!submitted || submitted !== secret) {

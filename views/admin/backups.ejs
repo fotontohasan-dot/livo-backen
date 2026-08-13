@@ -6,9 +6,13 @@ function escapeHtml(str) {
 }
 function fmtDate(d) { return new Date(d).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); }
 function fmtSize(bytes) {
-  if (!bytes) return '0 B';
+  // size_bytes কলামটা BIGINT — pg ড্রাইভার এটাকে স্ট্রিং হিসেবে ফেরত দেয়। ১০২৪-এর কম হলে
+  // নিচের while লুপ একবারও চলে না, ফলে n স্ট্রিং থেকেই যেত এবং n.toFixed() TypeError দিত
+  // (পুরো /admin/backups পেজ 500 হয়ে যেত)। তাই শুরুতেই Number()-এ কনভার্ট করা হচ্ছে।
+  const total = Number(bytes);
+  if (!total || !Number.isFinite(total)) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB'];
-  let i = 0, n = bytes;
+  let i = 0, n = total;
   while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
   return n.toFixed(1) + ' ' + units[i];
 }

@@ -12,7 +12,11 @@ ENV NODE_ENV=production
 RUN addgroup -S nodejs && adduser -S nodejs -G nodejs
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN mkdir -p /app/public/uploads && chown -R nodejs:nodejs /app
+# /app/backups ইমেজেই তৈরি করে nodejs-এর মালিকানায় দেওয়া হচ্ছে। docker-compose.yml এখানে
+# backups_data নামের ভলিউম মাউন্ট করে — মাউন্ট-পাথ ইমেজে না থাকলে Docker সেটা root:root
+# হিসেবে বানায়, আর কন্টেইনার USER nodejs হিসেবে চলে বলে services/backupManager.js-এর
+# সব রাইট EACCES-এ ব্যর্থ হতো (ব্যাকআপ ফিচার কন্টেইনারে সম্পূর্ণ অকেজো থাকত)।
+RUN mkdir -p /app/public/uploads /app/backups && chown -R nodejs:nodejs /app
 USER nodejs
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \

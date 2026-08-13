@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { isAdmin } = require('../middleware/auth');
+const { redirectBack } = require('../utils/redirectBack');
 const rbac = require('../services/rbac');
 
 // এই এন্ডপয়েন্টে আগে কোনো auth middleware ছিল না (নিচের router.use(isAdmin)-এর
@@ -2050,7 +2051,7 @@ router.post('/users/:id/ban', rbac.requirePermission('users_ban'), requireIntPar
     }
     req.flash('success', 'স্ট্যাটাস আপডেট হয়েছে!');
   } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
-  res.redirect('back');
+  redirectBack(req, res, '/admin');
 });
 
 // ==================== বাল্ক ইউজার ব্যান ====================
@@ -2239,7 +2240,7 @@ router.post('/users/:id/withdraw-pin/reset', rbac.requirePermission('users_edit'
     console.error('admin withdraw pin reset error:', err.message);
     req.flash('error', 'সমস্যা হয়েছে!');
   }
-  res.redirect('back');
+  redirectBack(req, res, '/admin');
 });
 
 router.post('/users/:id/coins/add', rbac.requirePermission('users_edit'), adminFinancialLimiter, requireIntParam('id'), requireAmount('amount', { max: 10_000_000 }), async (req, res) => {
@@ -2251,7 +2252,7 @@ router.post('/users/:id/coins/add', rbac.requirePermission('users_edit'), adminF
     await logAdminAction(req.session.user.id, req.session.user.username, 'COIN_ADD', `ইউজার #${req.params.id}-কে ${amount} কয়েন যোগ${reason ? ' — কারণ: ' + reason : ''}`, req.ip);
     req.flash('success', '✅ কয়েন যোগ হয়েছে!');
   } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
-  res.redirect('back');
+  redirectBack(req, res, '/admin');
 });
 
 router.post('/users/:id/coins/remove', rbac.requirePermission('users_edit'), adminFinancialLimiter, requireIntParam('id'), requireAmount('amount', { max: 10_000_000 }), async (req, res) => {
@@ -2263,7 +2264,7 @@ router.post('/users/:id/coins/remove', rbac.requirePermission('users_edit'), adm
     await logAdminAction(req.session.user.id, req.session.user.username, 'COIN_REMOVE', `ইউজার #${req.params.id}-এর ${amount} কয়েন কমানো${reason ? ' — কারণ: ' + reason : ''}`, req.ip);
     req.flash('success', '✅ কয়েন কমানো হয়েছে!');
   } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
-  res.redirect('back');
+  redirectBack(req, res, '/admin');
 });
 
 router.post('/users/:id/freebet', rbac.requirePermission('users_edit'), adminFinancialLimiter, requireIntParam('id'), requireAmount('amount', { max: 1_000_000 }), async (req, res) => {
@@ -2273,7 +2274,7 @@ router.post('/users/:id/freebet', rbac.requirePermission('users_edit'), adminFin
     await logAdminAction(req.session.user.id, req.session.user.username, 'freebet_grant', `${amount} taka free bet to user #${req.params.id}`, req.ip);
     req.flash('success', `✅ ${amount} টাকার ফ্রি বেট দেওয়া হয়েছে!`);
   } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
-  res.redirect('back');
+  redirectBack(req, res, '/admin');
 });
 
 // ==================== MATCHES ====================
@@ -2332,13 +2333,13 @@ router.post('/markets/:marketId/toggle', rbac.requirePermission('matches_manage'
     if (mRes.rows[0]) await cache.del(cacheKeys.matchDetail(mRes.rows[0].match_id)).catch(() => {});
     req.flash('success', 'মার্কেট আপডেট হয়েছে!');
   } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
-  res.redirect('back');
+  redirectBack(req, res, '/admin');
 });
 
 router.post('/markets/:marketId/settle', rbac.requirePermission('matches_manage'), async (req, res) => {
   const marketId = req.params.marketId;
   const { winning_runner } = req.body;
-  if (!winning_runner) { req.flash('error', 'জয় নির্বাচন করুন!'); return res.redirect('back'); }
+  if (!winning_runner) { req.flash('error', 'জয় নির্বাচন করুন!'); return redirectBack(req, res, '/admin'); }
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -2370,11 +2371,11 @@ router.post('/markets/:marketId/settle', rbac.requirePermission('matches_manage'
       if (mRow.rows[0]) await cache.del(cacheKeys.matchDetail(mRow.rows[0].match_id));
     } catch (e) {}
     req.flash('success', `সেটেল সম্পন্ন! ${bets.rows.length} টি বেট, ${winnersCount} জন জিতেছে।`);
-    res.redirect('back');
+    redirectBack(req, res, '/admin');
   } catch (err) {
     await client.query('ROLLBACK');
     req.flash('error', 'সেটেল সমস্যা!');
-    res.redirect('back');
+    redirectBack(req, res, '/admin');
   } finally { client.release(); }
 });
 
@@ -3393,7 +3394,7 @@ router.post('/fraud-logs/:id/review', rbac.requirePermission('bot_monitoring_man
     console.error('Fraud flag review error:', err.message);
     req.flash('error', 'সমস্যা হয়েছে!');
   }
-  res.redirect('back');
+  redirectBack(req, res, '/admin');
 });
 
 // ==================== Duplicate Account Detection ====================
@@ -3425,7 +3426,7 @@ router.post('/duplicate-accounts/:id/review', rbac.requirePermission('bot_monito
     console.error('Duplicate flag review error:', err.message);
     req.flash('error', 'সমস্যা হয়েছে!');
   }
-  res.redirect('back');
+  redirectBack(req, res, '/admin');
 });
 
 router.post('/duplicate-accounts/scan', rbac.requirePermission('bot_monitoring_manage'), async (req, res) => {

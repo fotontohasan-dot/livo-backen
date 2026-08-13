@@ -90,13 +90,13 @@ router.get('/', rbac.requirePermission('reports_view'), async (req, res) => {
     const dataRes = await pool.query(
       `WITH base AS (
          SELECT
-           u.id, u.username, u.avatar, u.email, u.total_points, u.coins, u.is_banned, u.created_at,
+           u.id, u.username, u.avatar, u.email, u.phone, u.total_points, u.coins, u.is_banned, u.created_at,
            COUNT(b.id) FILTER (WHERE b.status = 'won') AS wins,
            COUNT(b.id) AS total_bets
          FROM users u
          LEFT JOIN bets b ON b.user_id = u.id
          WHERE u.role = 'user'
-         GROUP BY u.id, u.username, u.avatar, u.email, u.total_points, u.coins, u.is_banned, u.created_at
+         GROUP BY u.id, u.username, u.avatar, u.email, u.phone, u.total_points, u.coins, u.is_banned, u.created_at
        ),
        ranked AS (
          SELECT base.*,

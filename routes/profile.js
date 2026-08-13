@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
+const { redirectBack } = require('../utils/redirectBack');
 const { isAuth } = require('../middleware/auth');
 const bcrypt = require('bcryptjs');
 const { getTodayReward, claimDailyReward } = require('../services/dailyReward');
@@ -1033,7 +1034,7 @@ router.post('/cards/delete/:id', isAuth, accountSecurityLimiter, async (req, res
   } catch (err) {
     req.flash('error', '❌ কার্ড মুছতে সমস্যা হয়েছে।');
   }
-  res.redirect('back');
+  redirectBack(req, res, '/profile');
 });
 
 router.get('/app-download', isAuth, (req, res) => {

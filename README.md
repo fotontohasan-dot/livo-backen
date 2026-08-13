@@ -2,6 +2,13 @@
 
 স্পোর্টস ম্যাচ প্রেডিকশন প্ল্যাটফর্ম — Express (EJS views) + PostgreSQL ব্যাকএন্ড, সাথে একটা Next.js অংশ (`src/`) ও Telegram bot (`telegram-bot.js`)।
 
+> **প্রোডাকশনে কোনটা চলে:** প্রোডাকশন সার্ভার একমাত্র Express অ্যাপ (`node app.js`) — সব পেজ
+> `views/`-এর EJS টেমপ্লেট থেকে রেন্ডার হয়। `src/`-এর Next.js অংশটা এখনো ডেভেলপমেন্ট/প্রিভিউ
+> পর্যায়ে; এটা কোনো প্রোডাকশন ট্র্যাফিক সার্ভ করে না, Docker ইমেজেও বিল্ড হয় না। সেজন্য
+> `next`, `react`, `react-dom`, `framer-motion`, `lucide-react` — এগুলো `devDependencies`-এ
+> রাখা হয়েছে, ফলে প্রোডাকশন ইমেজ (`npm ci --omit=dev`) অনেক ছোট থাকে ও কম attack surface পায়।
+> `npm run build` শুধু Next অংশটার বিল্ড যাচাই করে (CI-তেও তাই), সার্ভার চালু করার জন্য দরকার নেই।
+
 ## চালানোর আগে
 
 ```bash

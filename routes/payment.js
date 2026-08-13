@@ -920,25 +920,62 @@ router.post('/sslcommerz/success', async (req, res) => {
   }
 });
 
-router.post('/sslcommerz/fail', async (req, res) => {
-  const { tran_id } = req.body;
-  try {
-    await pool.query(
-      `UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE gateway_tran_id=$1 AND status='pending'`,
-      [tran_id]
+// fail/cancel কলব্যাক দুটো CSRF-এক্সেম্পট (middleware/csrf.js) এবং /success ও /ipn-এর মতো
+// গেটওয়ে ভ্যালিডেশনও করে না — আগে শুধু tran_id মিললেই pending রিকোয়েস্ট rejected করে দিত।
+// অর্থাৎ কারো tran_id জানা থাকলে (এটা গোপন নয় — গেটওয়েতে যায়, /payment/history-তেও দেখা যায়)
+// সে অন্যের চলমান ডিপোজিট বাতিল করে দিতে পারত। এখন দুই স্তরের যাচাই:
+//   ১) লগইন করা ইউজারের নিজের রিকোয়েস্ট হলে সরাসরি বাতিল করা যায় (user_id দিয়ে স্কোপড),
+//   ২) সেশন না থাকলে (গেটওয়ে সরাসরি সার্ভার-টু-সার্ভার পোস্ট করলে) গেটওয়েতে ভ্যালিডেট করে
+//      নিশ্চিত হওয়া হয় যে পেমেন্টটা আসলেই সফল হয়নি — তবেই rejected করা হয়।
+async function rejectPendingGatewayRequest(req, tranId) {
+  if (!tranId) return false;
+
+  const sessionUserId = req.session && req.session.user ? req.session.user.id : null;
+  if (sessionUserId) {
+    const scoped = await pool.query(
+      `UPDATE payment_requests SET status='rejected', updated_at=NOW()
+       WHERE gateway_tran_id=$1 AND status='pending' AND user_id=$2`,
+      [tranId, sessionUserId]
     );
+    return scoped.rowCount > 0;
+  }
+
+  const existing = await pool.query(
+    `SELECT id FROM payment_requests WHERE gateway_tran_id=$1 AND status='pending'`,
+    [tranId]
+  );
+  if (!existing.rows[0]) return false;
+
+  // সেশন নেই — গেটওয়ের কাছে যাচাই না করে কিছুতেই স্ট্যাটাস বদলানো হবে না।
+  let verification = null;
+  try {
+    verification = await sslcommerz.validateByTransactionId(tranId);
+  } catch (e) {
+    console.error('sslcommerz fail/cancel validation error:', e.message);
+    return false;
+  }
+  const paidStatus = verification && (verification.status === 'VALID' || verification.status === 'VALIDATED');
+  if (paidStatus) return false; // আসলে পেমেন্ট সফল — /ipn এটাকে ক্রেডিট করবে, এখানে হাত দেওয়া যাবে না
+
+  const updated = await pool.query(
+    `UPDATE payment_requests SET status='rejected', gateway_response=$2, updated_at=NOW()
+     WHERE gateway_tran_id=$1 AND status='pending'`,
+    [tranId, JSON.stringify(verification || {})]
+  );
+  return updated.rowCount > 0;
+}
+
+router.post('/sslcommerz/fail', async (req, res) => {
+  try {
+    await rejectPendingGatewayRequest(req, req.body.tran_id);
   } catch (e) { console.error('sslcommerz fail error:', e.message); }
   req.flash('error', 'পেমেন্ট ব্যর্থ হয়েছে।');
   res.redirect('/payment/deposit');
 });
 
 router.post('/sslcommerz/cancel', async (req, res) => {
-  const { tran_id } = req.body;
   try {
-    await pool.query(
-      `UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE gateway_tran_id=$1 AND status='pending'`,
-      [tran_id]
-    );
+    await rejectPendingGatewayRequest(req, req.body.tran_id);
   } catch (e) { console.error('sslcommerz cancel error:', e.message); }
   req.flash('error', 'পেমেন্ট বাতিল করা হয়েছে।');
   res.redirect('/payment/deposit');

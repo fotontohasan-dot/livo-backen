@@ -5,6 +5,7 @@
 const express = require('express');
 const router  = express.Router();
 const { pool } = require('../db');
+const { redirectBack } = require('../utils/redirectBack');
 const { logAdminAction } = require('../services/fraudDetection');
 const rbac = require('../services/rbac');
 
@@ -215,7 +216,7 @@ router.post('/:id/toggle', rbac.requirePermission('games_manage'), async (req, r
     console.error('game toggle error:', err.message);
     req.flash('error', 'স্ট্যাটাস পরিবর্তনে সমস্যা: ' + err.message);
   }
-  res.redirect('back');
+  redirectBack(req, res, '/admin/games');
 });
 
 // ==================== POST /admin/games/:id/delete ====================

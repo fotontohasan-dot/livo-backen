@@ -69,4 +69,25 @@ async function validatePayment(valId) {
   return data; // data.status === 'VALID' / 'VALIDATED' হলে সফল
 }
 
-module.exports = { initPayment, validatePayment };
+// tran_id দিয়ে ট্রানজেকশনের বর্তমান অবস্থা যাচাই করে। fail/cancel কলব্যাকে val_id আসে না,
+// তাই ওখানে এই এন্ডপয়েন্ট দিয়েই নিশ্চিত হওয়া হয় যে পেমেন্টটা আসলেই সফল হয়নি — তবেই
+// রিকোয়েস্ট rejected করা হয় (নাহলে tran_id জানা যে কেউ অন্যের ডিপোজিট বাতিল করতে পারত)।
+// রিটার্ন: { status, amount, raw }। কোনো ট্রানজেকশন না পাওয়া গেলে status = 'NOT_FOUND'।
+async function validateByTransactionId(tranId) {
+  if (!STORE_ID || !STORE_PASSWD) {
+    throw new Error('SSLCZ_STORE_ID / SSLCZ_STORE_PASSWD সেট করা নেই (.env)');
+  }
+  const params = new URLSearchParams({
+    tran_id: tranId,
+    store_id: STORE_ID,
+    store_passwd: STORE_PASSWD,
+    format: 'json'
+  });
+  const res = await fetch(`${BASE_URL}/validator/api/merchantTransIDvalidationAPI.php?${params.toString()}`);
+  const data = await res.json();
+  const element = Array.isArray(data.element) && data.element.length ? data.element[0] : null;
+  if (!element) return { status: 'NOT_FOUND', amount: null, raw: data };
+  return { status: element.status, amount: element.currency_amount || element.amount || null, raw: data };
+}
+
+module.exports = { initPayment, validatePayment, validateByTransactionId };

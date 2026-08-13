@@ -4,7 +4,18 @@
 // (METRICS_TOKEN env var, Docker/internal network-এ scrape করার জন্য)। কোনোটাই না মিললে 401 — কখনো
 // রিডাইরেক্ট করে না, যাতে monitoring টুল সরাসরি স্ট্যাটাস কোড বুঝতে পারে।
 
+const crypto = require('crypto');
 const { pool } = require('../db');
+
+/** টোকেন তুলনা constant-time-এ — সাধারণ === তুলনায় প্রতি-বাইট টাইমিং পার্থক্য থেকে
+ *  টোকেন ধীরে ধীরে অনুমান করে ফেলা তাত্ত্বিকভাবে সম্ভব। দৈর্ঘ্য ফাঁস হওয়া ঠেকাতে দুই পাশের
+ *  SHA-256 ডাইজেস্ট তুলনা করা হয় (সবসময় সমান ৩২ বাইট)। */
+function safeTokenEquals(provided, expected) {
+  if (typeof provided !== 'string' || typeof expected !== 'string' || !provided || !expected) return false;
+  const a = crypto.createHash('sha256').update(provided).digest();
+  const b = crypto.createHash('sha256').update(expected).digest();
+  return crypto.timingSafeEqual(a, b);
+}
 
 async function requireMetricsAccess(req, res, next) {
   try {
@@ -12,7 +23,7 @@ async function requireMetricsAccess(req, res, next) {
     const configuredToken = process.env.METRICS_TOKEN;
     if (configuredToken) {
       const provided = req.headers['x-metrics-token'] || (req.query && req.query.token);
-      if (provided && provided === configuredToken) {
+      if (safeTokenEquals(provided, configuredToken)) {
         return next();
       }
     }

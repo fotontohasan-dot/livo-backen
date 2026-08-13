@@ -229,13 +229,13 @@ describe('Backup & Restore System', () => {
   });
 
   // ==================== ৭. Admin Route — Full Functional Test (HTTP) ====================
-  // AUDIT FINDING (production bug, NOT fixed here per "no existing code changes" constraint):
-  // views/admin/backups.ejs-এর fmtSize(bytes) ফাংশন `bytes < 1024` হলে while লুপ একবারও
-  // চলে না, ফলে `n` তখনও pg ড্রাইভারের রিটার্ন করা BIGINT স্ট্রিং-ই থেকে যায় (নাম্বার নয়) —
-  // আর `n.toFixed(1)` স্ট্রিং-এ কল করলে "n.toFixed is not a function" থ্রো করে, পুরো পেজ 500 দেয়।
-  // অর্থাৎ 1KB-এর কম সাইজের যেকোনো ব্যাকআপ রেকর্ড (ছোট config/uploads ব্যাকআপ, বা ব্যর্থ ব্যাকআপ
-  // যার size_bytes=0) থাকলেই পুরো /admin/backups history পেজ ভেঙে পড়ে। নিচের টেস্টটা এই বাগ
-  // reproduce করে ডকুমেন্ট করে রাখে (AUDIT_REPORT.md-এ বিস্তারিত)।
+  // পূর্বের AUDIT FINDING (এখন ঠিক করা হয়েছে): views/admin/backups.ejs-এর fmtSize(bytes)
+  // ফাংশনে `bytes < 1024` হলে while লুপ একবারও চলত না, ফলে `n` তখনও pg ড্রাইভারের রিটার্ন
+  // করা BIGINT স্ট্রিং-ই থেকে যেত (নাম্বার নয়) — আর `n.toFixed(1)` স্ট্রিং-এ কল করলে
+  // "n.toFixed is not a function" থ্রো করত, পুরো পেজ 500 দিত। অর্থাৎ 1KB-এর কম সাইজের
+  // যেকোনো ব্যাকআপ রেকর্ড (ছোট config/uploads ব্যাকআপ, বা ব্যর্থ ব্যাকআপ যার size_bytes=0)
+  // থাকলেই /admin/backups history পেজ ভেঙে পড়ত। fmtSize() এখন শুরুতেই Number()-এ কনভার্ট
+  // করে, আর নিচের টেস্টটা সেই ফিক্সের রিগ্রেশন গার্ড হিসেবে কাজ করে।
   describe('Admin backup routes (HTTP, full functional flow)', () => {
     test('unauthenticated ব্যবহারকারী /admin/backups-এ অ্যাক্সেস পায় না', async () => {
       const res = await freshRequest().get('/admin/backups').set('User-Agent', REALISTIC_UA);
@@ -243,15 +243,16 @@ describe('Backup & Restore System', () => {
       expect(res.headers.location).toBe('/admin/login');
     });
 
-    test('[AUDIT FINDING] /admin/backups history পেজ ভেঙে পড়ে (500) যদি কোনো ব্যাকআপ রেকর্ডের সাইজ 1KB-এর কম হয় (views/admin/backups.ejs fmtSize() বাগ — BIGINT স্ট্রিং বনাম নাম্বার)', async () => {
+    test('[AUDIT FIX] /admin/backups history পেজ 1KB-এর কম সাইজের ব্যাকআপ রেকর্ড থাকলেও 200 দেয় (views/admin/backups.ejs fmtSize() — BIGINT স্ট্রিং এখন Number()-এ কনভার্ট হয়)', async () => {
+      // আগে এই টেস্টটা বাগটাকেই ডকুমেন্ট করত (সাইজ < 1KB হলে 500 আশা করত), কারণ pg
+      // BIGINT-কে স্ট্রিং হিসেবে ফেরত দেয় আর ১০২৪-এর নিচে while লুপ না চলায় n স্ট্রিং
+      // থেকেই যেত এবং n.toFixed() TypeError দিত। fmtSize() ঠিক করার পর সাইজ যাই হোক
+      // পেজ স্বাভাবিকভাবে রেন্ডার হয় — তাই এখন সবসময় 200 আশা করা হচ্ছে।
       const tinyRecord = await backupManager.createUploadsBackup({ source: 'manual' });
       const { agent } = await makeAdminAgent();
       const res = await agent.get('/admin/backups').set('User-Agent', REALISTIC_UA);
-      if (Number(tinyRecord.size_bytes ?? tinyRecord.sizeBytes) < 1024) {
-        expect(res.status).toBe(500);
-      } else {
-        expect(res.status).toBe(200);
-      }
+      expect(res.status).toBe(200);
+      expect(res.text).toContain(tinyRecord.filename);
     });
 
     test('admin GET /admin/backups পেজ রেন্ডার করে (backup_history খালি অবস্থায়)', async () => {

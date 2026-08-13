@@ -104,6 +104,14 @@ function validateEnv() {
     }
   }
 
+  // ---- প্রোডাকশনে METRICS_TOKEN না থাকলে warning ----
+  // /metrics শুধু অ্যাডমিন সেশন অথবা X-Metrics-Token দিয়ে খোলে (middleware/metricsAuth.js)।
+  // Prometheus স্ক্র্যাপার কুকি/সেশন পাঠাতে পারে না, তাই METRICS_TOKEN না থাকলে প্রতিটা স্ক্র্যাপ
+  // নীরবে 401 খেতে থাকে — ড্যাশবোর্ড দেখতে "কনফিগার করা" মনে হলেও কোনো ডেটা জমা হয় না।
+  if (isProd && !process.env.METRICS_TOKEN) {
+    warnings.push('METRICS_TOKEN সেট করা নেই — Prometheus /metrics স্ক্র্যাপ করতে পারবে না (প্রতিটা রিকোয়েস্ট 401 হবে)। মনিটরিং ব্যবহার করলে টোকেন সেট করুন: openssl rand -hex 24');
+  }
+
   return { ok: errors.length === 0, errors, warnings };
 }
 

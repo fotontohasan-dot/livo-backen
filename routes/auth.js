@@ -131,6 +131,47 @@ router.get('/', async (req, res) => {
   }
 });
 
+// ==================== রেফারেল কোড জেনারেশন (কলিশন-সেফ) ====================
+// কোড = ইউজারনেমের প্রথম ৪ অক্ষর (পড়তে সহজ রাখার জন্য, আগের ফরম্যাটের সাথে সামঞ্জস্যপূর্ণ)
+// + crypto.randomBytes থেকে নেওয়া ৬ ক্যারেক্টার base32-সদৃশ সাফিক্স। বিভ্রান্তিকর অক্ষর
+// (O/0, I/1) বাদ দেওয়া হয়েছে যাতে ইউজার হাতে টাইপ করতে ভুল না করে।
+const REFERRAL_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // ৩২টা ক্যারেক্টার
+const REFERRAL_CODE_SUFFIX_LEN = 6; // ৩২^৬ ≈ ১০৭ কোটি সম্ভাবনা প্রতি প্রিফিক্সে
+const REFERRAL_CODE_MAX_ATTEMPTS = 5;
+
+function generateReferralCode(username) {
+  const prefix = String(username || 'USER').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4) || 'USER';
+  const bytes = crypto.randomBytes(REFERRAL_CODE_SUFFIX_LEN);
+  let suffix = '';
+  for (let i = 0; i < REFERRAL_CODE_SUFFIX_LEN; i++) {
+    suffix += REFERRAL_CODE_ALPHABET[bytes[i] % REFERRAL_CODE_ALPHABET.length];
+  }
+  return prefix + suffix;
+}
+
+/**
+ * insertFn(code) কল করে ইউজার ইনসার্ট করে। referral_code-এ ইউনিক কনস্ট্রেইন্ট ভাঙলে
+ * (Postgres error code 23505) নতুন কোড নিয়ে আবার চেষ্টা করে। শুধু referral_code-এর কলিশনেই
+ * রিট্রাই হয় — username/phone/email ডুপ্লিকেট হলে (সেগুলোও 23505) এররটা যথারীতি উপরে ছুড়ে
+ * দেওয়া হয়, কারণ ওগুলো ইউজারের ইনপুট এবং কলার সেগুলো আলাদাভাবে হ্যান্ডল করে।
+ * সাধারণ রেজিস্ট্রেশন ও Google Sign-In — দুই পথেই একই হেল্পার ব্যবহার হয়।
+ */
+async function insertWithUniqueReferralCode(username, insertFn) {
+  let lastErr = null;
+  for (let attempt = 0; attempt < REFERRAL_CODE_MAX_ATTEMPTS; attempt++) {
+    const code = generateReferralCode(username);
+    try {
+      return await insertFn(code);
+    } catch (err) {
+      const isReferralCollision = err && err.code === '23505' && err.constraint === 'users_referral_code_key';
+      if (!isReferralCollision) throw err;
+      lastErr = err;
+      console.warn(`referral_code কলিশন (${code}) — নতুন কোড দিয়ে আবার চেষ্টা করা হচ্ছে (${attempt + 1}/${REFERRAL_CODE_MAX_ATTEMPTS})`);
+    }
+  }
+  throw lastErr;
+}
+
 router.get('/register', (req, res) => {
   const ref = req.query.ref || '';
   const botCheck = evaluateRequest({ ip: getReqIp(req), userAgent: req.get('user-agent') || '', endpoint: '/register', req });
@@ -218,7 +259,6 @@ router.post('/register', async (req, res) => {
     }
 
     const hashed = await bcrypt.hash(password, 10);
-    const myCode = username.toUpperCase().slice(0, 4) + Math.floor(1000 + Math.random() * 9000);
 
     let referredById = null;
     if (ref) {
@@ -226,10 +266,16 @@ router.post('/register', async (req, res) => {
       if (referrer.rows[0]) referredById = referrer.rows[0].id;
     }
 
-    const result = await pool.query(`
+    // রেফারেল কোড ইনসার্ট — কলিশন-সেফ।
+    // আগে কোড ছিল username-এর প্রথম ৪ অক্ষর + ৪ ডিজিট র‍্যান্ডম, অর্থাৎ একই ৪-অক্ষরের প্রিফিক্স
+    // ওয়ালা ইউজারদের জন্য মাত্র ৯,০০০টা সম্ভাব্য কোড — কোনো uniqueness চেক বা রিট্রাই ছিল না।
+    // ফলে users_referral_code_key ইউনিক কনস্ট্রেইন্ট ভেঙে পুরো রেজিস্ট্রেশন catch-এ চলে যেত
+    // এবং ইউজার শুধু "রেজিস্ট্রেশন ব্যর্থ হয়েছে" দেখত (নিজে থেকে রিকভার করার উপায় ছিল না)।
+    // এখন crypto.randomBytes-ভিত্তিক অনেক বড় স্পেস, আর কলিশন হলেও (23505) নতুন কোড নিয়ে রিট্রাই হয়।
+    const result = await insertWithUniqueReferralCode(username, (code) => pool.query(`
       INSERT INTO users (username, email, phone, password, role, coins, referral_code, referred_by_id, created_at)
       VALUES ($1, $2, $3, $4, 'user', 0, $5, $6, NOW()) RETURNING *
-    `, [username, email || null, phone || null, hashed, myCode, referredById]);
+    `, [username, email || null, phone || null, hashed, code, referredById]));
 
     const newUserId = result.rows[0].id;
 
@@ -362,12 +408,12 @@ async function findOrCreateGoogleUser(profile) {
     suffix++;
     username = `${baseUsername}${suffix}`.slice(0, 20);
   }
-  const myCode = username.toUpperCase().slice(0, 4) + Math.floor(1000 + Math.random() * 9000);
-
-  const created = await pool.query(`
+  // সাধারণ রেজিস্ট্রেশনের মতোই কলিশন-সেফ কোড — এখানেও আগে ৪ ডিজিট র‍্যান্ডম ব্যবহার হতো,
+  // ফলে একই ইউনিক-কনস্ট্রেইন্ট ব্যর্থতায় Google Sign-In-ও ভেঙে পড়তে পারত।
+  const created = await insertWithUniqueReferralCode(username, (code) => pool.query(`
     INSERT INTO users (username, email, password, role, coins, referral_code, email_verified, google_id, auth_provider, full_name, avatar, created_at)
     VALUES ($1, $2, $3, 'user', 0, $4, $5, $6, 'google', $7, $8, NOW()) RETURNING *
-  `, [username, profile.email, unusablePassword, myCode, profile.emailVerified, profile.googleId, profile.name, profile.picture]);
+  `, [username, profile.email, unusablePassword, code, profile.emailVerified, profile.googleId, profile.name, profile.picture]));
 
   logSystemEvent(created.rows[0].id, username, 'GOOGLE_ACCOUNT_CREATED', `Google Sign-In দিয়ে নতুন অ্যাকাউন্ট তৈরি: ${profile.email || ''}`, null)
     .catch(e => console.error('logSystemEvent error:', e.message));

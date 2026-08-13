@@ -1,6 +1,13 @@
 require('dotenv').config();
 const process = require('node:process');
 
+// ==================== Environment Variable ভ্যালিডেশন ====================
+// services/envValidator.js লেখা হয়েছিল বুটের শুরুতে চলার জন্য (প্রোডাকশনে ক্রিটিক্যাল
+// ভ্যারিয়েবল না থাকলে fail-fast), কিন্তু এতদিন এটা কোথাও require-ই করা হয়নি — অর্থাৎ
+// সুরক্ষাটা কাগজে ছিল, বাস্তবে চলত না। dotenv-এর ঠিক পরে (কোনো ./services বা ./db
+// require করার আগে) কল করা হচ্ছে, যাতে ভুল কনফিগ নিয়ে সার্ভার আদৌ উঠতে না পারে।
+require('./services/envValidator').runStartupValidation();
+
 // ==================== Sentry মনিটরিং — সবার আগে init করা হয় যাতে পরবর্তী
 // সব require/middleware/route-এর এরর স্বয়ংক্রিয়ভাবে ধরা পড়ে ====================
 const sentryService = require('./services/sentry');
