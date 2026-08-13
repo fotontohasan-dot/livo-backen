@@ -112,11 +112,14 @@ const banColor = u.is_banned ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-6
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2 space-y-6">
             <div class="bg-white border border-slate-100 rounded-3xl p-6">
-                <h3 class="font-semibold text-slate-800 mb-4"><i class="fas fa-user text-blue-500 mr-2"></i>প্রোফাইল তথ্য</h3>
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold text-slate-800"><i class="fas fa-user text-blue-500 mr-2"></i>প্রোফাইল তথ্য</h3>
+                    <button type="button" onclick="document.getElementById('editProfileModal').classList.add('show')" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100"><i class="fas fa-pen"></i> এডিট করুন</button>
+                </div>
                 <div class="grid grid-cols-2 gap-y-4 text-sm">
                     <div><div class="text-slate-400 text-xs">পূর্ণ নাম</div><div class="font-medium mt-0.5">${escapeHtml(u.full_name || 'দেওয়া হয়নি')}</div></div>
                     <div><div class="text-slate-400 text-xs">ফোন</div><div class="font-medium mt-0.5">${escapeHtml(u.phone || 'দেওয়া হয়নি')}</div></div>
-                    <div><div class="text-slate-400 text-xs">ইমেইল</div><div class="font-medium mt-0.5">${escapeHtml(u.email || 'দেওয়া হয়নি')}</div></div>
+                    <div><div class="text-slate-400 text-xs">ইমেইল</div><div class="font-medium mt-0.5">${escapeHtml(u.email || 'দেওয়া হয়নি')} ${u.email ? (u.email_verified ? '<span class="text-emerald-600 text-xs">(ভেরিফায়েড)</span>' : '<span class="text-amber-600 text-xs">(অভেরিফায়েড)</span>') : ''}</div></div>
                     <div><div class="text-slate-400 text-xs">রেফারেল</div><div class="font-medium mt-0.5">${referralCount} জনকে রেফার করেছেন</div></div>
                     <div><div class="text-slate-400 text-xs">শেষ লগইন IP</div><div class="font-medium mt-0.5">${escapeHtml(u.last_ip || '-')}</div></div>
                     <div><div class="text-slate-400 text-xs">KYC স্ট্যাটাস</div><div class="font-medium mt-0.5 capitalize">${escapeHtml(u.kyc_status || 'none')}</div></div>
@@ -220,5 +223,34 @@ const banColor = u.is_banned ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-6
         </div>
     </div>
 </div>
+
+<div class="modal-overlay" id="editProfileModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:100;padding:16px;">
+    <div style="background:#fff;border-radius:20px;width:100%;max-width:420px;">
+        <div style="padding:16px 20px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
+            <h3 style="font-weight:700;font-size:14px;margin:0;">প্রোফাইল তথ্য এডিট করুন</h3>
+            <button type="button" onclick="document.getElementById('editProfileModal').classList.remove('show')" style="background:none;border:none;cursor:pointer;color:#64748b;"><i class="fas fa-times"></i></button>
+        </div>
+        <form method="POST" action="/admin/users/${u.id}/edit-profile" style="padding:20px;">
+            <div style="margin-bottom:14px;">
+                <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:5px;">ইউজারনেম</label>
+                <input type="text" name="username" value="${escapeHtml(u.username || '')}" required pattern="[A-Za-z0-9_.]{3,20}" title="৩-২০ ক্যারেক্টার, শুধু লেটার/সংখ্যা/আন্ডারস্কোর/ডট" style="width:100%;border:1px solid #e2e8f0;padding:10px 12px;border-radius:10px;font-size:13px;">
+            </div>
+            <div style="margin-bottom:14px;">
+                <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:5px;">ইমেইল</label>
+                <input type="email" name="email" value="${escapeHtml(u.email || '')}" style="width:100%;border:1px solid #e2e8f0;padding:10px 12px;border-radius:10px;font-size:13px;">
+                <p style="font-size:11px;color:#f59e0b;margin:5px 0 0;">ইমেইল বদলালে সেটা আবার অভেরিফায়েড (unverified) হয়ে যাবে — ইউজারকে নতুন করে ভেরিফাই করতে হবে।</p>
+            </div>
+            <div style="margin-bottom:16px;">
+                <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:5px;">ফোন</label>
+                <input type="text" name="phone" value="${escapeHtml(u.phone || '')}" pattern="[0-9+\\-\\s]{6,20}" title="৬-২০ ক্যারেক্টার, সংখ্যা/+/-" style="width:100%;border:1px solid #e2e8f0;padding:10px 12px;border-radius:10px;font-size:13px;">
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;">
+                <button type="button" onclick="document.getElementById('editProfileModal').classList.remove('show')" style="padding:9px 16px;border-radius:10px;font-size:12px;font-weight:700;background:#f1f5f9;border:none;cursor:pointer;">বাতিল</button>
+                <button type="submit" style="padding:9px 16px;border-radius:10px;font-size:12px;font-weight:700;background:#2563eb;color:#fff;border:none;cursor:pointer;">সেভ করুন</button>
+            </div>
+        </form>
+    </div>
+</div>
+<style>#editProfileModal.show{display:flex !important;}</style>
 `
 }) %>

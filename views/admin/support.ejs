@@ -15,10 +15,12 @@ function ticketListItem(t) {
   '</div>';
 }
 const ticketsHtml = (tickets || []).map(ticketListItem).join('') || '<div class="text-center text-slate-400 py-10 text-sm">কোনো সাপোর্ট মেসেজ নেই</div>';
-// JSON.stringify escapes quotes/backslashes কিন্তু "</script>" সিকোয়েন্স আটকায় না।
-// কোনো user message/username-এ "</script>" থাকলে <script> ব্লক ভেঙে আর্বিট্রারি HTML/JS ইনজেক্ট হতে পারত,
-// তাই '<' কে '\u003c' দিয়ে replace করে script-breakout বন্ধ করা হচ্ছে।
-const ticketsData = JSON.stringify((tickets || []).map(t => ({ userId: t.userId, username: t.username, messages: t.messages, status: t.status }))).replace(/</g, '\\u003c');
+// টিকেট লিস্টে এখন আর প্রতিটার পূর্ণ মেসেজ থ্রেড এমবেড করা হয় না (মেমোরি/পেজ-লোড খরচ কমাতে) —
+// শুধু userId/username/lastMessage/status; আসল মেসেজ থ্রেড ক্লিক করলে on-demand fetch হয়।
+const ticketsData = JSON.stringify((tickets || []).map(t => ({ userId: t.userId, username: t.username, status: t.status }))).replace(/</g, '\\u003c');
+const curPage = typeof page !== 'undefined' ? page : 1;
+const curTotalPages = typeof totalPages !== 'undefined' ? totalPages : 1;
+const curSearch = typeof search !== 'undefined' ? search : '';
 %>
 <%- include('partials/admin-layout', { 
     title: 'Support Tickets', 
@@ -28,16 +30,21 @@ const ticketsData = JSON.stringify((tickets || []).map(t => ({ userId: t.userId,
     <div class="flex justify-between mb-6">
         <div>
             <h2 class="text-2xl font-semibold">Support Tickets</h2>
-            <p class="text-sm text-slate-600">${openCount || 0} open tickets</p>
+            <p class="text-sm text-slate-600">${openCount || 0} open tickets · মোট ${total || 0}টা টিকেট</p>
         </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
         <div class="lg:col-span-5 bg-white rounded-3xl border border-slate-100 p-1">
-            <div class="p-4">
-                <input type="text" placeholder="Search tickets..." class="w-full border px-4 py-2.5 rounded-2xl text-sm mb-4" onkeyup="filterTickets(this.value)">
-            </div>
+            <form method="GET" action="/admin/support" class="p-4">
+                <input type="text" name="search" value="${esc(curSearch)}" placeholder="ইউজারনেম দিয়ে খুঁজুন..." class="w-full border px-4 py-2.5 rounded-2xl text-sm mb-4" onkeyup="filterTickets(this.value)">
+            </form>
             <div id="ticketsList" class="max-h-[520px] overflow-auto px-2">${ticketsHtml}</div>
+            <div class="flex items-center justify-center gap-2 py-3 border-t border-slate-100 text-xs">
+                ${curPage > 1 ? `<a class="px-3 py-1.5 rounded-xl bg-slate-100" href="/admin/support?page=${curPage - 1}&search=${encodeURIComponent(curSearch)}">← আগের</a>` : ''}
+                <span class="text-slate-400">পেজ ${curPage} / ${curTotalPages}</span>
+                ${curPage < curTotalPages ? `<a class="px-3 py-1.5 rounded-xl bg-slate-100" href="/admin/support?page=${curPage + 1}&search=${encodeURIComponent(curSearch)}">পরের →</a>` : ''}
+            </div>
         </div>
 
         <div class="lg:col-span-7 bg-white rounded-3xl border border-slate-100 flex flex-col h-[580px]">
@@ -71,17 +78,10 @@ function filterTickets(term) {
     });
 }
 
-function openTicket(userId) {
-    currentUserId = userId;
-    const ticket = tickets.find(t => t.userId === userId);
-    if (!ticket) return;
-
-    document.getElementById('chatUserName').textContent = ticket.username;
-    document.getElementById('chatUserId').textContent = '#' + ticket.userId;
-
+function renderMessages(messages) {
     const chatBox = document.getElementById('chatMessages');
     chatBox.innerHTML = '';
-    ticket.messages.forEach(m => {
+    (messages || []).forEach(m => {
         const msgDiv = document.createElement('div');
         msgDiv.className = m.from === 'admin' ? 'flex justify-end' : '';
         const bubble = document.createElement('div');
@@ -91,10 +91,30 @@ function openTicket(userId) {
         chatBox.appendChild(msgDiv);
     });
     chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+async function openTicket(userId) {
+    currentUserId = userId;
+    const ticket = tickets.find(t => t.userId === userId);
+    if (!ticket) return;
+
+    document.getElementById('chatUserName').textContent = ticket.username;
+    document.getElementById('chatUserId').textContent = '#' + ticket.userId;
 
     document.querySelectorAll('#ticketsList > div').forEach(el => el.classList.remove('border-blue-300', 'bg-blue-50'));
     const activeEl = document.getElementById('ticket-item-' + userId);
     if (activeEl) activeEl.classList.add('border-blue-300', 'bg-blue-50');
+
+    const chatBox = document.getElementById('chatMessages');
+    chatBox.innerHTML = '<div class="text-center text-slate-400 text-xs py-6">লোড হচ্ছে...</div>';
+    try {
+        const res = await fetch('/admin/api/support/' + userId + '/messages');
+        const data = await res.json();
+        if (data.success) renderMessages(data.messages);
+        else chatBox.innerHTML = '<div class="text-center text-red-400 text-xs py-6">মেসেজ লোড করা যায়নি</div>';
+    } catch (e) {
+        chatBox.innerHTML = '<div class="text-center text-red-400 text-xs py-6">সার্ভার এরর</div>';
+    }
 }
 
 async function sendReply() {
@@ -108,8 +128,7 @@ async function sendReply() {
         const data = await res.json();
         if (data.success) {
             const ticket = tickets.find(t => t.userId === currentUserId);
-            ticket.messages.push({ from: 'admin', text: message, time: new Date().toISOString() });
-            ticket.status = 'Resolved';
+            if (ticket) ticket.status = 'Resolved';
             input.value = '';
             openTicket(currentUserId);
         } else {

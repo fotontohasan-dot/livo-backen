@@ -1465,6 +1465,31 @@ async function runMigrations() {
     `);
     console.log("✅ Telegram Settings table ready");
 
+    // ==================== Referral Contest Payout Tracking ====================
+    // মাসিক রেফারেল কনটেস্টের (services/contest.js) টপ ৫ বিজয়ীর প্রাইজ ম্যানুয়ালি
+    // (নগদ/মোবাইল ব্যাংকিং ইত্যাদি) দেওয়া হয় — এই টেবিল শুধু কে/কবে/কোন অ্যাডমিন
+    // পেমেন্ট মার্ক করেছে তার হিসাব রাখে (routes/adminLeaderboard.js)। username স্ন্যাপশট
+    // হিসেবে রাখা হয়, যাতে ইউজার নাম বদলালে/ডিলিট হলেও হিস্ট্রি পড়া যায়।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS referral_contest_payouts (
+        id SERIAL PRIMARY KEY,
+        contest_month TEXT NOT NULL,
+        rank SMALLINT NOT NULL,
+        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        username TEXT,
+        referrals_count INTEGER NOT NULL DEFAULT 0,
+        prize_label TEXT,
+        status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'paid')),
+        paid_at TIMESTAMPTZ,
+        paid_by INTEGER,
+        paid_by_username TEXT,
+        notes TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        CONSTRAINT referral_contest_payouts_month_rank UNIQUE (contest_month, rank)
+      );
+    `);
+    console.log("✅ Referral Contest Payout Tracking table ready");
+
   } catch (err) {
     console.error("❌ Migration error:", err.message);
   }

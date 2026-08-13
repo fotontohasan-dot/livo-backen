@@ -61,12 +61,20 @@
         <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> ফিল্টার</button>
       </form>
 
+      <div class="admin-card" id="kycBulkBar" style="display:none;padding:10px 14px;margin-bottom:14px;background:rgba(245,158,11,0.08);border-color:rgba(245,158,11,0.25);">
+        <span style="font-size:12px;color:#e2e8f0;font-weight:600;"><span id="kycSelectedCount">0</span>টি নির্বাচিত</span>
+        <button type="button" class="btn btn-sm btn-green" style="margin-left:10px;" onclick="bulkApproveKyc()"><i class="fas fa-check"></i> বাল্ক অনুমোদন</button>
+        <button type="button" class="btn btn-sm btn-red" onclick="bulkRejectKyc()"><i class="fas fa-times"></i> বাল্ক বাতিল</button>
+        <button type="button" class="btn btn-sm" onclick="clearKycSelection()">নির্বাচন মুছুন</button>
+      </div>
+
       <div class="admin-card">
         <div class="admin-card-header">KYC আবেদনসমূহ</div>
         <div style="overflow-x:auto;">
           <table class="admin-table">
             <thead>
               <tr>
+                <th style="width:34px;"><input type="checkbox" id="kycSelectAll" onchange="toggleKycSelectAll(this)"></th>
                 <th>ইউজার</th>
                 <th>ডকুমেন্ট</th>
                 <th>জমার তারিখ</th>
@@ -78,6 +86,11 @@
               <% if (kycList && kycList.length > 0) { %>
                 <% kycList.forEach(k => { %>
                   <tr>
+                    <td>
+                      <% if (k.status === 'pending') { %>
+                        <input type="checkbox" class="kyc-row-check" value="<%= k.id %>" onchange="updateKycBulkBar()">
+                      <% } %>
+                    </td>
                     <td>
                       <div style="font-weight:700;"><%= k.full_name || k.username || 'N/A' %></div>
                       <div style="color:#64748b;font-size:11px;">@<%= k.username || '—' %> · <%= k.phone || '—' %></div>
@@ -136,6 +149,24 @@
       <div class="modal-footer">
         <button class="btn" onclick="closeModal('rejectModal')">বাতিল করুন</button>
         <button class="btn btn-red" id="confirmRejectBtn">বাতিল নিশ্চিত করুন</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk Reject Modal -->
+  <div class="modal-overlay" id="bulkRejectModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>বাল্ক বাতিলের কারণ</h3>
+        <button class="modal-close" onclick="closeModal('bulkRejectModal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:12px;color:#94a3b8;margin-top:0;"><span id="bulkRejectCount">0</span>টি আবেদন বাতিল করা হবে। এই কারণ সবগুলোর জন্য প্রযোজ্য হবে।</p>
+        <textarea class="input" id="bulkRejectReason" rows="3" placeholder="কারণ লিখুন (ইউজারকে দেখানো হবে)"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal('bulkRejectModal')">বাতিল করুন</button>
+        <button class="btn btn-red" id="confirmBulkRejectBtn">বাতিল নিশ্চিত করুন</button>
       </div>
     </div>
   </div>
@@ -215,6 +246,93 @@
           closeModal('rejectModal');
           if (data.success) { showAdminToast('আবেদন বাতিল করা হয়েছে'); setTimeout(function(){ location.reload(); }, 700); }
           else { alert(data.message || 'সমস্যা হয়েছে'); }
+        })
+        .catch(function () { alert('সার্ভার এরর'); });
+    });
+
+    // ==================== বাল্ক নির্বাচন ও অ্যাকশন ====================
+    function getKycSelectedIds() {
+      return Array.from(document.querySelectorAll('.kyc-row-check:checked')).map(function (el) { return el.value; });
+    }
+
+    function updateKycBulkBar() {
+      var count = getKycSelectedIds().length;
+      var bar = document.getElementById('kycBulkBar');
+      document.getElementById('kycSelectedCount').textContent = count;
+      bar.style.display = count > 0 ? 'block' : 'none';
+      var selectAll = document.getElementById('kycSelectAll');
+      var rowChecks = document.querySelectorAll('.kyc-row-check');
+      selectAll.checked = rowChecks.length > 0 && count === rowChecks.length;
+    }
+
+    function toggleKycSelectAll(el) {
+      document.querySelectorAll('.kyc-row-check').forEach(function (cb) { cb.checked = el.checked; });
+      updateKycBulkBar();
+    }
+
+    function clearKycSelection() {
+      document.querySelectorAll('.kyc-row-check').forEach(function (cb) { cb.checked = false; });
+      document.getElementById('kycSelectAll').checked = false;
+      updateKycBulkBar();
+    }
+
+    function bulkResultSummary(data) {
+      var msg = data.succeeded + ' টি সফল';
+      if (data.failed > 0) {
+        var failedReasons = (data.results || []).filter(function (r) { return !r.success; })
+          .map(function (r) { return '#' + r.id + ': ' + (r.error || 'ব্যর্থ'); }).join('\n');
+        msg += ', ' + data.failed + ' টি ব্যর্থ\n\n' + failedReasons;
+      }
+      return msg;
+    }
+
+    function bulkApproveKyc() {
+      var ids = getKycSelectedIds();
+      if (!ids.length) return;
+      if (!confirm(ids.length + ' টি KYC আবেদন অনুমোদন করবেন?')) return;
+      fetch('/admin/kyc/bulk-approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: ids })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.success) {
+            showAdminToast(bulkResultSummary(data));
+            setTimeout(function () { location.reload(); }, data.failed > 0 ? 1500 : 700);
+          } else {
+            alert(data.error || 'সমস্যা হয়েছে');
+          }
+        })
+        .catch(function () { alert('সার্ভার এরর'); });
+    }
+
+    function bulkRejectKyc() {
+      var ids = getKycSelectedIds();
+      if (!ids.length) return;
+      document.getElementById('bulkRejectCount').textContent = ids.length;
+      document.getElementById('bulkRejectReason').value = '';
+      document.getElementById('bulkRejectModal').classList.add('show');
+    }
+
+    document.getElementById('confirmBulkRejectBtn').addEventListener('click', function () {
+      var ids = getKycSelectedIds();
+      if (!ids.length) { closeModal('bulkRejectModal'); return; }
+      var reason = document.getElementById('bulkRejectReason').value.trim();
+      fetch('/admin/kyc/bulk-reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: ids, reason: reason })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          closeModal('bulkRejectModal');
+          if (data.success) {
+            showAdminToast(bulkResultSummary(data));
+            setTimeout(function () { location.reload(); }, data.failed > 0 ? 1500 : 700);
+          } else {
+            alert(data.error || 'সমস্যা হয়েছে');
+          }
         })
         .catch(function () { alert('সার্ভার এরর'); });
     });

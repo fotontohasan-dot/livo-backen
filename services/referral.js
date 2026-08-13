@@ -16,9 +16,29 @@
 //    Tier 3           → ০.৮%
 
 const { pool } = require('../db');
+const { getSetting } = require('./settings');
 
 const MIN_DEPOSIT_FOR_BONUS = 500;          // বোনাস পেতে রেফারের ন্যূনতম ডিপোজিট
-const COMMISSION_RATES = [0.025, 0.015, 0.008]; // Tier 1,2,3
+// ডিফল্ট রেট (Tier 1,2,3) — অ্যাডমিন প্যানেল থেকে (/admin/settings) পরিবর্তন করা না থাকলে এই মানই ব্যবহার হয়।
+// আসল মান services/settings.js-এর DEFAULTS-এও (referral_commission_tierN_percent) সিঙ্কে রাখা আছে।
+const DEFAULT_COMMISSION_RATES = [0.025, 0.015, 0.008]; // Tier 1,2,3
+
+// অ্যাডমিন-কনফিগারড কমিশন রেট (fraction, যেমন 0.025 = 2.5%) — site_settings থেকে,
+// ৩০ সেকেন্ড ক্যাশড getSetting() দিয়ে, তাই প্রতি বাজিতে আলাদা DB কল লাগে না।
+async function getCommissionRates() {
+  const keys = [
+    'referral_commission_tier1_percent',
+    'referral_commission_tier2_percent',
+    'referral_commission_tier3_percent'
+  ];
+  const rates = [];
+  for (let i = 0; i < keys.length; i++) {
+    const raw = await getSetting(keys[i]);
+    const n = parseFloat(raw);
+    rates.push(Number.isFinite(n) && n >= 0 && n <= 100 ? n / 100 : DEFAULT_COMMISSION_RATES[i]);
+  }
+  return rates;
+}
 
 // সফল রেফার সংখ্যা অনুযায়ী প্রথম-ডিপোজিট বোনাস
 function signupBonusFor(successfulCount) {
@@ -111,6 +131,7 @@ async function processReferralDeposit(client, referredUserId, depositAmount) {
 async function distributeCommission(bettorId, stake) {
   if (!stake || stake <= 0) return;
 
+  const rates = await getCommissionRates();
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -127,7 +148,7 @@ async function distributeCommission(bettorId, stake) {
       const referrerId = r.rows[0] ? r.rows[0].referrer_id : null;
       if (!referrerId) break; // আর উপরে কেউ নেই
 
-      const rate = COMMISSION_RATES[level - 1];
+      const rate = rates[level - 1];
       const commission = Math.floor(stake * rate);
 
       if (commission > 0) {
@@ -215,6 +236,7 @@ module.exports = {
   distributeCommission,
   getReferralStats,
   signupBonusFor,
-  COMMISSION_RATES,
+  getCommissionRates,
+  DEFAULT_COMMISSION_RATES,
   MIN_DEPOSIT_FOR_BONUS
 };

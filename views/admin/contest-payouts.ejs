@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>রেফারেল কনটেস্ট পেআউট • Livo Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
+  </style>
+  <%- include('./partials/pwa-head') %>
+</head>
+<body>
+  <div class="admin-wrap">
+    <%- include('./partials/sidebar', { active: 'leaderboard' }) %>
+    <div class="admin-content">
+      <%- include('./partials/header', { pageTitle: 'রেফারেল কনটেস্ট পেআউট', pageSubtitle: 'মাসিক টপ-৫ বিজয়ীর প্রাইজ প্রদানের অবস্থা ও হিস্ট্রি' }) %>
+
+      <% if (saved) { %>
+        <div class="admin-card" style="padding:12px 16px;margin-bottom:14px;background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.3);color:#10b981;font-weight:700;font-size:13px;">
+          <i class="fas fa-check-circle"></i> সফলভাবে আপডেট হয়েছে
+        </div>
+      <% } %>
+      <% if (saveError) { %>
+        <div class="admin-card" style="padding:12px 16px;margin-bottom:14px;background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.3);color:#ef4444;font-weight:700;font-size:13px;">
+          <i class="fas fa-circle-exclamation"></i> <%= saveError %>
+        </div>
+      <% } %>
+
+      <div class="admin-card" style="padding:14px;margin-bottom:14px;">
+        <form method="GET" action="/admin/leaderboard/contest/payouts" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <label style="font-size:12px;color:#94a3b8;">কত মাস আগে:</label>
+          <select class="select" style="max-width:160px;" name="months" onchange="this.form.submit()">
+            <% for (let i = 1; i <= 12; i++) { %>
+              <option value="<%= i %>" <%= monthsBack === i ? 'selected' : '' %>><%= i %> মাস আগে</option>
+            <% } %>
+          </select>
+          <span style="font-size:13px;color:#e2e8f0;font-weight:600;"><%= monthName || '—' %></span>
+          <a class="btn btn-sm" href="/admin/leaderboard" style="margin-left:auto;"><i class="fas fa-arrow-left"></i> লিডারবোর্ডে ফিরুন</a>
+        </form>
+      </div>
+
+      <div class="admin-card" style="margin-bottom:20px;">
+        <div class="admin-card-header"><%= monthName || '—' %> — টপ ৫ বিজয়ী</div>
+        <div style="overflow-x:auto;">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>র‍্যাঙ্ক</th>
+                <th>ইউজার</th>
+                <th>রেফারেল</th>
+                <th>প্রাইজ</th>
+                <th>স্ট্যাটাস</th>
+                <th>পরিশোধের বিবরণ</th>
+                <th style="text-align:right;">অ্যাকশন</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (payouts && payouts.length > 0) { %>
+                <% payouts.forEach(p => { %>
+                  <tr>
+                    <td class="lb-rank">#<%= p.rank %></td>
+                    <td>@<%= p.username || '—' %></td>
+                    <td><%= p.referrals_count %></td>
+                    <td><%= p.prize_label || '—' %></td>
+                    <td>
+                      <% if (p.status === 'paid') { %>
+                        <span class="badge badge-green">পরিশোধিত</span>
+                      <% } else { %>
+                        <span class="badge badge-amber">বাকি</span>
+                      <% } %>
+                    </td>
+                    <td style="font-size:11px;color:#64748b;">
+                      <% if (p.status === 'paid') { %>
+                        <%= p.paid_at ? new Date(p.paid_at).toLocaleString('bn-BD') : '—' %><br>
+                        by <%= p.paid_by_username || '—' %>
+                        <% if (p.notes) { %><br>নোট: <%= p.notes %><% } %>
+                      <% } else { %>—<% } %>
+                    </td>
+                    <td style="text-align:right;white-space:nowrap;">
+                      <% if (p.status === 'pending') { %>
+                        <button type="button" class="btn btn-sm btn-green" onclick="openMarkPaid(<%= p.id %>, '<%= (p.username || '').replace(/'/g, "\\'") %>')"><i class="fas fa-check"></i> Paid হিসেবে মার্ক করুন</button>
+                      <% } else { %>
+                        <span style="color:#64748b;font-size:11px;">চূড়ান্ত</span>
+                      <% } %>
+                    </td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="7"><div class="empty-state">এই মাসে কোনো বিজয়ী নেই (কোনো রেফারেল হয়নি)</div></td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="admin-card">
+        <div class="admin-card-header">পেআউট হিস্ট্রি (সর্বশেষ ৫০টি, সব মাস)</div>
+        <div style="overflow-x:auto;">
+          <table class="admin-table">
+            <thead>
+              <tr><th>মাস</th><th>র‍্যাঙ্ক</th><th>ইউজার</th><th>প্রাইজ</th><th>পরিশোধের তারিখ</th><th>অ্যাডমিন</th></tr>
+            </thead>
+            <tbody>
+              <% if (history && history.length > 0) { %>
+                <% history.forEach(h => { %>
+                  <tr>
+                    <td><%= h.contest_month %></td>
+                    <td>#<%= h.rank %></td>
+                    <td>@<%= h.username || '—' %></td>
+                    <td><%= h.prize_label || '—' %></td>
+                    <td><%= h.paid_at ? new Date(h.paid_at).toLocaleString('bn-BD') : '—' %></td>
+                    <td><%= h.paid_by_username || '—' %></td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="6"><div class="empty-state">এখনো কোনো পেআউট মার্ক করা হয়নি</div></td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Mark Paid Modal -->
+  <div class="modal-overlay" id="markPaidModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>প্রাইজ প্রদান নিশ্চিত করুন</h3>
+        <button class="modal-close" onclick="document.getElementById('markPaidModal').classList.remove('show')"><i class="fas fa-times"></i></button>
+      </div>
+      <form method="POST" id="markPaidForm">
+        <div class="modal-body">
+          <p style="font-size:13px;color:#e2e8f0;margin-top:0;"><span id="markPaidUsername"></span>-কে প্রাইজ প্রদান করা হয়েছে বলে নিশ্চিত করবেন? এই অ্যাকশন আনডু করা যাবে না।</p>
+          <textarea class="input" name="notes" rows="2" placeholder="নোট (ঐচ্ছিক, যেমন: bKash TrxID)"></textarea>
+          <input type="hidden" name="months" value="<%= monthsBack %>">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" onclick="document.getElementById('markPaidModal').classList.remove('show')">বাতিল</button>
+          <button type="submit" class="btn btn-green"><i class="fas fa-check"></i> নিশ্চিত করুন</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function openMarkPaid(id, username) {
+      document.getElementById('markPaidUsername').textContent = '@' + username;
+      document.getElementById('markPaidForm').action = '/admin/leaderboard/contest/payouts/' + id + '/mark-paid';
+      document.getElementById('markPaidModal').classList.add('show');
+    }
+  </script>
+</body>
+</html>

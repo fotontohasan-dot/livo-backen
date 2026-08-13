@@ -48,6 +48,14 @@ function adminRow(a, currentAdminId) {
             ${field('withdraw_commission_percent', 'উইথড্র কমিশন (%)', 'number', s.withdraw_commission_percent || 0, '0.1')}
         </div>
 
+        <h3 class="font-semibold text-slate-800 border-b pb-3 pt-2">রেফারেল কমিশন (মাল্টি-লেভেল, বাজির উপর)</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            ${field('referral_commission_tier1_percent', 'Tier 1 — সরাসরি রেফার (%)', 'number', s.referral_commission_tier1_percent || 2.5, '0.01')}
+            ${field('referral_commission_tier2_percent', 'Tier 2 (%)', 'number', s.referral_commission_tier2_percent || 1.5, '0.01')}
+            ${field('referral_commission_tier3_percent', 'Tier 3 (%)', 'number', s.referral_commission_tier3_percent || 0.8, '0.01')}
+        </div>
+        <p class="text-xs text-slate-400 -mt-3">প্রতিটা মান ০–১০০-এর মধ্যে হতে হবে। পরিবর্তন সাথে সাথে নতুন বাজিতে কার্যকর হয় (৩০ সেকেন্ড ক্যাশ)।</p>
+
         <h3 class="font-semibold text-slate-800 border-b pb-3 pt-2">নিরাপত্তা</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-center">
             ${field('max_login_attempts', 'সর্বোচ্চ লগইন চেষ্টা', 'number', s.max_login_attempts || 5)}

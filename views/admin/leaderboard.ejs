@@ -132,6 +132,7 @@
       <div class="admin-card" style="margin-bottom:20px;">
         <div class="admin-card-header">
           চলতি মাসের রেফারেল কনটেস্ট<% if (contest.monthName) { %> — <%= contest.monthName %><% } %>
+          <a href="/admin/leaderboard/contest/payouts" class="btn btn-sm" style="float:right;margin-left:8px;"><i class="fas fa-money-check-dollar"></i> পেআউট ট্র্যাকিং</a>
           <button type="button" class="btn btn-sm" style="float:right;" onclick="loadContestHistory()"><i class="fas fa-clock-rotate-left"></i> আগের মাসগুলো</button>
         </div>
         <div style="overflow-x:auto;">

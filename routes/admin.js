@@ -594,11 +594,114 @@ router.post('/kyc/:id/reject', rbac.requirePermission('kyc_reject'), async (req,
   }
 });
 
+// ==================== KYC বাল্ক অনুমোদন/বাতিল ====================
+// users/bulk-ban-এর মতোই প্যাটার্ন: প্রতিটা আইডি আলাদাভাবে try/catch-এ প্রসেস হয়,
+// তাই একটা আইডি ব্যর্থ হলে বাকিগুলো আটকায় না (partial-failure safe)। শুধু 'pending'
+// অবস্থায় থাকা রিকোয়েস্টই প্রসেস করা হয় — আগে থেকে approved/rejected কে আবার
+// প্রসেস করার চেষ্টা "কিছুই বদলায়নি" হিসেবে গণ্য হয়, এরর হিসেবে না।
+router.post('/kyc/bulk-approve', rbac.requirePermission('kyc_approve'), async (req, res) => {
+  const ids = Array.isArray(req.body.ids) ? req.body.ids : (req.body.ids ? [req.body.ids] : []);
+  const cleanIds = [...new Set(ids.map((x) => parseInt(x, 10)).filter((x) => Number.isInteger(x) && x > 0))];
+  if (cleanIds.length === 0) {
+    return res.status(400).json({ success: false, error: 'কোনো বৈধ KYC আবেদন নির্বাচন করা হয়নি' });
+  }
+  if (cleanIds.length > 100) {
+    return res.status(400).json({ success: false, error: 'একবারে সর্বোচ্চ ১০০টি আবেদন প্রসেস করা যাবে' });
+  }
+
+  const results = [];
+  for (const id of cleanIds) {
+    try {
+      const r = await pool.query(
+        "UPDATE kyc_requests SET status = 'approved', updated_at = NOW() WHERE id = $1 AND status = 'pending' RETURNING user_id",
+        [id]
+      );
+      if (r.rows[0]) {
+        await pool.query("UPDATE users SET kyc_status = 'approved' WHERE id = $1", [r.rows[0].user_id]);
+        results.push({ id, success: true, userId: r.rows[0].user_id });
+      } else {
+        const existing = await pool.query('SELECT status FROM kyc_requests WHERE id = $1', [id]);
+        if (!existing.rows[0]) results.push({ id, success: false, error: 'আবেদন পাওয়া যায়নি' });
+        else results.push({ id, success: false, error: `ইতিমধ্যে "${existing.rows[0].status}" অবস্থায় আছে`, alreadyProcessed: true });
+      }
+    } catch (err) {
+      results.push({ id, success: false, error: err.message });
+    }
+  }
+
+  const succeeded = results.filter((r) => r.success);
+  const failed = results.filter((r) => !r.success);
+
+  await logAdminAction(
+    req.session.user.id, req.session.user.username, 'KYC_BULK_APPROVE',
+    `বাল্ক KYC অনুমোদন: ${succeeded.length}টা সফল, ${failed.length}টা ব্যর্থ (আইডি: ${cleanIds.join(',')})`, req.ip
+  );
+  succeeded.forEach((r) => {
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'KYC_APPROVED', category: 'other', status: 'success', riskLevel: 'medium',
+      details: { kycId: r.id, targetUserId: r.userId, via: 'bulk' }
+    }).catch((e) => console.error('logAuditEvent (KYC_BULK_APPROVE) error:', e.message));
+  });
+
+  res.json({ success: true, total: cleanIds.length, succeeded: succeeded.length, failed: failed.length, results });
+});
+
+router.post('/kyc/bulk-reject', rbac.requirePermission('kyc_reject'), async (req, res) => {
+  const ids = Array.isArray(req.body.ids) ? req.body.ids : (req.body.ids ? [req.body.ids] : []);
+  const cleanIds = [...new Set(ids.map((x) => parseInt(x, 10)).filter((x) => Number.isInteger(x) && x > 0))];
+  const reason = sanitizeText(req.body.reason || '', { maxLen: 500 });
+  if (cleanIds.length === 0) {
+    return res.status(400).json({ success: false, error: 'কোনো বৈধ KYC আবেদন নির্বাচন করা হয়নি' });
+  }
+  if (cleanIds.length > 100) {
+    return res.status(400).json({ success: false, error: 'একবারে সর্বোচ্চ ১০০টি আবেদন প্রসেস করা যাবে' });
+  }
+
+  const results = [];
+  for (const id of cleanIds) {
+    try {
+      const r = await pool.query(
+        "UPDATE kyc_requests SET status = 'rejected', reject_reason = $2, updated_at = NOW() WHERE id = $1 AND status = 'pending' RETURNING user_id",
+        [id, reason || null]
+      );
+      if (r.rows[0]) {
+        await pool.query("UPDATE users SET kyc_status = 'rejected' WHERE id = $1", [r.rows[0].user_id]);
+        results.push({ id, success: true, userId: r.rows[0].user_id });
+      } else {
+        const existing = await pool.query('SELECT status FROM kyc_requests WHERE id = $1', [id]);
+        if (!existing.rows[0]) results.push({ id, success: false, error: 'আবেদন পাওয়া যায়নি' });
+        else results.push({ id, success: false, error: `ইতিমধ্যে "${existing.rows[0].status}" অবস্থায় আছে`, alreadyProcessed: true });
+      }
+    } catch (err) {
+      results.push({ id, success: false, error: err.message });
+    }
+  }
+
+  const succeeded = results.filter((r) => r.success);
+  const failed = results.filter((r) => !r.success);
+
+  await logAdminAction(
+    req.session.user.id, req.session.user.username, 'KYC_BULK_REJECT',
+    `বাল্ক KYC বাতিল: ${succeeded.length}টা সফল, ${failed.length}টা ব্যর্থ (আইডি: ${cleanIds.join(',')})। কারণ: ${reason || '—'}`, req.ip
+  );
+  succeeded.forEach((r) => {
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'KYC_REJECTED', category: 'other', status: 'success', riskLevel: 'medium',
+      details: { kycId: r.id, targetUserId: r.userId, reason: reason || null, via: 'bulk' }
+    }).catch((e) => console.error('logAuditEvent (KYC_BULK_REJECT) error:', e.message));
+  });
+
+  res.json({ success: true, total: cleanIds.length, succeeded: succeeded.length, failed: failed.length, results });
+});
+
 // ==================== সেটিংস ====================
 const SETTING_KEYS = [
   'site_name', 'support_email', 'maintenance_mode', 'max_login_attempts',
   'min_bet', 'max_bet', 'turnover_multiplier', 'max_daily_bets',
   'deposit_commission_percent', 'withdraw_commission_percent', 'min_deposit', 'min_withdraw',
+  'referral_commission_tier1_percent', 'referral_commission_tier2_percent', 'referral_commission_tier3_percent',
   'maintenance_message', 'maintenance_eta', 'maintenance_allowed_ips', 'maintenance_bypass_token',
   // ---- System Settings hub-এ যোগ হওয়া নতুন ক্যাটাগরি ---- (সব অ্যাক্টুয়াল secret .env-এই থাকে, এখানে শুধু non-secret কনফিগ)
   'site_tagline', 'support_phone',
@@ -683,6 +786,13 @@ router.post('/settings/update', rbac.requirePermission('settings_edit'), async (
       }
       // Emergency bypass token — শুধু url-safe ক্যারেক্টার, বাড়তি স্পেস/HTML বাদ
       if (key === 'maintenance_bypass_token') value = value.trim().replace(/[^A-Za-z0-9_\-]/g, '').slice(0, 128);
+      // রেফারেল কমিশন রেট — ০-১০০-এর মধ্যে সংখ্যা না হলে সেভ না করে আগের মান রেখে দেওয়া হয়
+      // (ভুল মান যেমন negative বা খালি স্ট্রিং সেভ হলে distributeCommission()-এ ভুল কমিশন যেতে পারত)
+      if (['referral_commission_tier1_percent', 'referral_commission_tier2_percent', 'referral_commission_tier3_percent'].includes(key)) {
+        const n = parseFloat(value);
+        if (!Number.isFinite(n) || n < 0 || n > 100) continue;
+        value = String(n);
+      }
 
       await pool.query(
         `INSERT INTO site_settings (key, value, updated_at) VALUES ($1, $2, NOW())
@@ -1480,42 +1590,105 @@ router.post('/api/withdrawals/:id/reject', rbac.requirePermission('payments_reje
 });
 
 // ==================== সাপোর্ট টিকেট ====================
+// আগে এই রুট পুরো chat_messages টেবিল (সব ইউজারের সব মেসেজ, দুই আলাদা কুয়েরিতে) মেমোরিতে
+// লোড করে JS-এ গ্রুপ করত এবং প্রতিটা টিকেটের সম্পূর্ণ মেসেজ হিস্ট্রি পেজ লোডের সাথেই ফ্রন্টএন্ডে
+// এমবেড করে পাঠাত — ইউজার/মেসেজ সংখ্যা বাড়ার সাথে সাথে এটা মেমোরি ও পেজ-লোড টাইমে স্কেল করত না।
+// এখন শুধু টিকেট লিস্টের জন্য প্রতি ইউজারের সর্বশেষ মেসেজ + আনরিড কাউন্ট (LATERAL join দিয়ে,
+// routes/chat.js-এর /admin/conversations-এ ব্যবহৃত একই প্যাটার্ন) পেজিনেটেড আকারে আনা হয়;
+// একটা নির্দিষ্ট টিকেটের পূর্ণ মেসেজ থ্রেড শুধু ক্লিক করলেই (GET /api/support/:userId/messages)
+// on-demand লোড হয়, এবং সেখানেও সর্বশেষ ২০০টা মেসেজে সীমাবদ্ধ থাকে।
 router.get('/support', rbac.requirePermission('support_view'), async (req, res) => {
   try {
-    const msgs = await pool.query(`
-      SELECT cm.*, u.username FROM chat_messages cm
-      JOIN users u ON cm.sender_id = u.id AND cm.is_admin = false
-      ORDER BY cm.created_at ASC
-    `);
-    // প্রতি ইউজারের মেসেজগুলো একটা "টিকেট" হিসেবে গ্রুপ করা
-    const ticketMap = new Map();
-    for (const m of msgs.rows) {
-      if (!ticketMap.has(m.sender_id)) {
-        ticketMap.set(m.sender_id, { userId: m.sender_id, username: m.username, messages: [], hasUnread: false });
-      }
-      const t = ticketMap.get(m.sender_id);
-      t.messages.push({ from: 'user', text: m.message, time: m.created_at });
-      if (!m.is_read) t.hasUnread = true;
-    }
-    const adminMsgs = await pool.query(`
-      SELECT cm.* FROM chat_messages cm WHERE cm.is_admin = true AND cm.receiver_id IS NOT NULL
-      ORDER BY cm.created_at ASC
-    `);
-    for (const m of adminMsgs.rows) {
-      if (ticketMap.has(m.receiver_id)) {
-        ticketMap.get(m.receiver_id).messages.push({ from: 'admin', text: m.message, time: m.created_at });
-      }
-    }
-    const tickets = Array.from(ticketMap.values()).map(t => {
-      t.messages.sort((a, b) => new Date(a.time) - new Date(b.time));
-      const last = t.messages[t.messages.length - 1];
-      return { ...t, lastMessage: last ? last.text : '', status: t.hasUnread ? 'Open' : 'Resolved' };
-    }).sort((a, b) => (a.status === 'Open' ? -1 : 1) - (b.status === 'Open' ? -1 : 1));
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = 30;
+    const offset = (page - 1) * limit;
+    const search = (req.query.search || '').trim();
 
-    res.render('admin/support', { tickets, openCount: tickets.filter(t => t.status === 'Open').length });
+    const searchParams = [];
+    let searchClause = '';
+    if (search) {
+      searchParams.push(`%${search}%`);
+      searchClause = `AND u.username ILIKE $${searchParams.length}`;
+    }
+
+    const countRes = await pool.query(
+      `SELECT COUNT(*) FROM users u
+       WHERE u.role != 'admin' AND EXISTS (
+         SELECT 1 FROM chat_messages cm WHERE cm.sender_id = u.id OR cm.receiver_id = u.id
+       ) ${searchClause}`,
+      searchParams
+    );
+    const total = parseInt(countRes.rows[0].count);
+
+    const openCountRes = await pool.query(
+      `SELECT COUNT(*) FROM users u
+       WHERE u.role != 'admin' AND EXISTS (
+         SELECT 1 FROM chat_messages cm WHERE cm.sender_id = u.id AND cm.is_admin = false AND cm.is_read = false
+       )`
+    );
+
+    const listParams = [...searchParams, limit, offset];
+    const listRes = await pool.query(
+      `SELECT u.id AS user_id, u.username,
+         lm.message AS last_message, lm.created_at AS last_message_time,
+         COALESCE(uc.unread, 0) AS unread_count
+       FROM users u
+       JOIN LATERAL (
+         SELECT message, created_at FROM chat_messages
+         WHERE sender_id = u.id OR receiver_id = u.id
+         ORDER BY created_at DESC LIMIT 1
+       ) lm ON true
+       LEFT JOIN LATERAL (
+         SELECT COUNT(*)::int AS unread FROM chat_messages
+         WHERE sender_id = u.id AND is_admin = false AND is_read = false
+       ) uc ON true
+       WHERE u.role != 'admin' ${searchClause}
+       ORDER BY lm.created_at DESC
+       LIMIT $${listParams.length - 1} OFFSET $${listParams.length}`,
+      listParams
+    );
+
+    const tickets = listRes.rows.map(r => ({
+      userId: r.user_id,
+      username: r.username,
+      lastMessage: r.last_message,
+      status: r.unread_count > 0 ? 'Open' : 'Resolved'
+    }));
+
+    res.render('admin/support', {
+      tickets,
+      openCount: parseInt(openCountRes.rows[0].count),
+      page,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      total,
+      search
+    });
   } catch (err) {
     console.error('support list error:', err.message);
-    res.render('admin/support', { tickets: [], openCount: 0 });
+    res.render('admin/support', { tickets: [], openCount: 0, page: 1, totalPages: 1, total: 0, search: '' });
+  }
+});
+
+// একটা নির্দিষ্ট টিকেটের পূর্ণ মেসেজ থ্রেড — on-demand (ticket ক্লিক করলে) লোড হয়,
+// সর্বশেষ ২০০টা মেসেজে সীমাবদ্ধ যাতে খুব দীর্ঘ কনভারসেশনও মেমোরিতে সমস্যা না করে।
+router.get('/api/support/:userId/messages', rbac.requirePermission('support_view'), requireIntParam('userId'), async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const result = await pool.query(
+      `SELECT message, is_admin, created_at FROM chat_messages
+       WHERE sender_id = $1 OR receiver_id = $1
+       ORDER BY created_at DESC LIMIT 200`,
+      [userId]
+    );
+    const messages = result.rows.reverse().map(m => ({
+      from: m.is_admin ? 'admin' : 'user',
+      text: m.message,
+      time: m.created_at
+    }));
+    res.json({ success: true, messages });
+  } catch (err) {
+    console.error('support messages fetch error:', err.message);
+    res.status(500).json({ success: false, error: 'সার্ভার এরর' });
   }
 });
 
@@ -1753,6 +1926,112 @@ router.get('/users/:id', rbac.requirePermission('users_view'), async (req, res) 
     console.error('user detail error:', err.message);
     req.flash('error', 'সমস্যা হয়েছে!');
     res.redirect('/admin/users');
+  }
+});
+
+// ==================== ইউজার প্রোফাইল এডিট (username/email/phone) ====================
+// routes/auth.js-এর /register ও routes/profile.js-এর একই ফরম্যাট নিয়ম রি-ইউজ করা হয়েছে
+// (নতুন কোনো ভ্যালিডেশন স্ট্যান্ডার্ড তৈরি করা হয়নি)।
+const ADMIN_EDIT_USERNAME_RE = /^[A-Za-z0-9_.]{3,20}$/;
+const ADMIN_EDIT_PHONE_RE = /^[0-9+\-\s]{6,20}$/;
+const ADMIN_EDIT_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+router.post('/users/:id/edit-profile', rbac.requirePermission('users_edit'), adminActionLimiter, requireIntParam('id'), async (req, res) => {
+  const uId = req.params.id;
+  try {
+    const existingRes = await pool.query('SELECT username, email, phone, email_verified FROM users WHERE id = $1', [uId]);
+    const existing = existingRes.rows[0];
+    if (!existing) {
+      req.flash('error', 'ইউজার পাওয়া যায়নি!');
+      return res.redirect('/admin/users');
+    }
+
+    const newUsername = req.body.username !== undefined ? String(req.body.username).trim() : existing.username;
+    const newEmail = req.body.email !== undefined ? (String(req.body.email).trim() || null) : existing.email;
+    const newPhone = req.body.phone !== undefined ? (String(req.body.phone).trim() || null) : existing.phone;
+
+    // ==================== ভ্যালিডেশন ====================
+    if (!newUsername || !ADMIN_EDIT_USERNAME_RE.test(newUsername)) {
+      req.flash('error', '❌ ইউজারনেমে শুধু লেটার, সংখ্যা, আন্ডারস্কোর, ডট ব্যবহার করা যাবে (৩-২০ ক্যারেক্টার)।');
+      return res.redirect('/admin/users/' + uId);
+    }
+    if (newEmail && !ADMIN_EDIT_EMAIL_RE.test(newEmail)) {
+      req.flash('error', '❌ সঠিক ইমেইল ফরম্যাট দিন।');
+      return res.redirect('/admin/users/' + uId);
+    }
+    if (newPhone && !ADMIN_EDIT_PHONE_RE.test(newPhone)) {
+      req.flash('error', '❌ সঠিক ফোন নাম্বার ফরম্যাট দিন (৬-২০ ক্যারেক্টার, সংখ্যা/+/-)।');
+      return res.redirect('/admin/users/' + uId);
+    }
+    if (!newEmail && !newPhone) {
+      req.flash('error', '❌ ইমেইল অথবা ফোন নাম্বার অন্তত একটি থাকতে হবে।');
+      return res.redirect('/admin/users/' + uId);
+    }
+
+    // ==================== ডুপ্লিকেট চেক (নিজেকে বাদ দিয়ে) ====================
+    if (newUsername !== existing.username) {
+      const dup = await pool.query('SELECT id FROM users WHERE username = $1 AND id <> $2', [newUsername, uId]);
+      if (dup.rows.length) {
+        req.flash('error', '❌ এই ইউজারনেম আগেই ব্যবহৃত হচ্ছে।');
+        return res.redirect('/admin/users/' + uId);
+      }
+    }
+    if (newEmail && newEmail !== existing.email) {
+      const dup = await pool.query('SELECT id FROM users WHERE email = $1 AND id <> $2', [newEmail, uId]);
+      if (dup.rows.length) {
+        req.flash('error', '❌ এই ইমেইল আগেই অন্য অ্যাকাউন্টে ব্যবহৃত হচ্ছে।');
+        return res.redirect('/admin/users/' + uId);
+      }
+    }
+    if (newPhone && newPhone !== existing.phone) {
+      const dup = await pool.query('SELECT id FROM users WHERE phone = $1 AND id <> $2', [newPhone, uId]);
+      if (dup.rows.length) {
+        req.flash('error', '❌ এই ফোন নাম্বার আগেই অন্য অ্যাকাউন্টে ব্যবহৃত হচ্ছে।');
+        return res.redirect('/admin/users/' + uId);
+      }
+    }
+
+    const emailChanged = newEmail !== existing.email;
+
+    // ==================== সেভ ====================
+    // ইমেইল বদলালে email_verified বাধ্যতামূলকভাবে false-এ রিসেট করা হয় — নাহলে অ্যাডমিন-বসানো
+    // একটা নতুন ইমেইল ভুলভাবে "ভেরিফায়েড" দেখাত, যদিও ইউজার নিজে কখনো সেই ইমেইলের মালিকানা
+    // প্রমাণ করেনি। পুরনো ইমেইলের জন্য পাঠানো verification_token-ও invalidate করা হয়, যাতে
+    // সেটা নতুন ইমেইলে ব্যবহার করা না যায়। নতুন ভেরিফিকেশন মেইল পাঠানো হয় না এখান থেকে —
+    // ইউজার নিজের প্রোফাইল পেজ থেকে "Resend Verification" ব্যবহার করে চাইলে পাঠাতে পারবে।
+    if (emailChanged) {
+      await pool.query(
+        `UPDATE users SET username=$1, email=$2, phone=$3, email_verified=false, verification_token=NULL, verification_token_expiry=NULL WHERE id=$4`,
+        [newUsername, newEmail, newPhone, uId]
+      );
+    } else {
+      await pool.query(`UPDATE users SET username=$1, email=$2, phone=$3 WHERE id=$4`, [newUsername, newEmail, newPhone, uId]);
+    }
+
+    const changedFields = [];
+    if (newUsername !== existing.username) changedFields.push(`username: "${existing.username}" → "${newUsername}"`);
+    if (emailChanged) changedFields.push(`email: "${existing.email || '—'}" → "${newEmail || '—'}" (re-verification প্রয়োজন)`);
+    if (newPhone !== existing.phone) changedFields.push(`phone: "${existing.phone || '—'}" → "${newPhone || '—'}"`);
+
+    if (changedFields.length) {
+      await logAdminAction(
+        req.session.user.id, req.session.user.username, 'USER_PROFILE_EDITED',
+        `ইউজার #${uId}-এর প্রোফাইল তথ্য পরিবর্তন: ${changedFields.join(', ')}`, req.ip
+      );
+      logAuditEvent({
+        req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+        action: 'USER_PROFILE_EDITED', category: 'security', status: 'success',
+        riskLevel: emailChanged ? 'high' : 'medium',
+        details: { targetUserId: uId, changed: changedFields, emailReVerificationRequired: emailChanged }
+      }).catch(e => console.error('logAuditEvent (USER_PROFILE_EDITED) error:', e.message));
+    }
+
+    req.flash('success', changedFields.length ? 'প্রোফাইল তথ্য আপডেট হয়েছে।' : 'কোনো পরিবর্তন হয়নি।');
+    return res.redirect('/admin/users/' + uId);
+  } catch (err) {
+    console.error('user profile edit error:', err.message);
+    req.flash('error', 'সমস্যা হয়েছে!');
+    return res.redirect('/admin/users/' + uId);
   }
 });
 
@@ -2840,17 +3119,10 @@ router.get('/activity', rbac.requirePermission('activity_log_view'), async (req,
 });
 
 // ==================== System Diagnostics / Health Check ====================
-router.get('/system-diagnostics', async (req, res) => {
-  try {
-    const { runAllChecks } = require('../services/healthCheck');
-    const result = await runAllChecks();
-    res.render('admin/system-diagnostics', { result, error: null });
-  } catch (err) {
-    console.error('System diagnostics error:', err.message);
-    res.render('admin/system-diagnostics', { result: null, error: err.message });
-  }
-});
-
+// GET /system-diagnostics-এর নিজস্ব হ্যান্ডলার এখানে ইচ্ছাকৃতভাবে নেই — app.js-এ
+// routes/adminHealthFix.js এই একই পাথ (/admin/system-diagnostics) admin.js-এর
+// আগে মাউন্ট হয়, তাই এখানে থাকা একটা কপি Express-এ কখনো রিচ হতো না (dead code)।
+// আসল/একমাত্র অ্যাক্টিভ হ্যান্ডলার: routes/adminHealthFix.js
 router.get('/api/system-diagnostics', async (req, res) => {
   try {
     const { runAllChecks } = require('../services/healthCheck');
@@ -3281,10 +3553,17 @@ router.get('/queues/api/jobs/:queueName', async (req, res) => {
 });
 
 // Dead-letter জব রিট্রাই (আবার মূল Queue-তে পাঠানো)
-router.post('/queues/dead-letter/:id/retry', async (req, res) => {
+router.post('/queues/dead-letter/:id/retry', rbac.requirePermission('cron_jobs_manage'), requireIntParam('id'), async (req, res) => {
   try {
     const { retryDeadLetterJob } = require('../queues');
     await retryDeadLetterJob(req.params.id);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'QUEUE_DLQ_RETRY',
+      `Dead-letter job #${req.params.id} রিট্রাই করা হয়েছে`, req.ip);
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'QUEUE_DLQ_RETRIED', category: 'queue', status: 'success', riskLevel: 'medium',
+      details: { jobId: req.params.id }
+    }).catch(e => console.error('logAuditEvent (QUEUE_DLQ_RETRIED) error:', e.message));
     res.json({ success: true });
   } catch (err) {
     res.json({ success: false, error: err.message });
@@ -3292,10 +3571,17 @@ router.post('/queues/dead-letter/:id/retry', async (req, res) => {
 });
 
 // Dead-letter জব ডিলিট
-router.post('/queues/dead-letter/:id/delete', async (req, res) => {
+router.post('/queues/dead-letter/:id/delete', rbac.requirePermission('cron_jobs_manage'), requireIntParam('id'), async (req, res) => {
   try {
     const { deleteDeadLetterJob } = require('../queues');
     await deleteDeadLetterJob(req.params.id);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'QUEUE_DLQ_DELETE',
+      `Dead-letter job #${req.params.id} মুছে ফেলা হয়েছে`, req.ip);
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'QUEUE_DLQ_DELETED', category: 'queue', status: 'success', riskLevel: 'medium',
+      details: { jobId: req.params.id }
+    }).catch(e => console.error('logAuditEvent (QUEUE_DLQ_DELETED) error:', e.message));
     res.json({ success: true });
   } catch (err) {
     res.json({ success: false, error: err.message });
@@ -3303,10 +3589,17 @@ router.post('/queues/dead-letter/:id/delete', async (req, res) => {
 });
 
 // ম্যানুয়ালি একটা Fraud Scan ট্রিগার করা (টেস্টিং/অ্যাডহক ব্যবহারের জন্য)
-router.post('/queues/fraud-scan/:userId', async (req, res) => {
+router.post('/queues/fraud-scan/:userId', rbac.requirePermission('cron_jobs_manage'), requireIntParam('userId'), async (req, res) => {
   try {
     const { enqueueFraudScan } = require('../queues');
     const result = await enqueueFraudScan({ userId: parseInt(req.params.userId, 10), triggeredBy: 'admin' });
+    await logAdminAction(req.session.user.id, req.session.user.username, 'QUEUE_FRAUD_SCAN_TRIGGERED',
+      `ইউজার #${req.params.userId}-এর জন্য ম্যানুয়ালি fraud scan ট্রিগার করা হয়েছে`, req.ip);
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'QUEUE_FRAUD_SCAN_TRIGGERED', category: 'queue', status: 'success', riskLevel: 'low',
+      details: { targetUserId: req.params.userId }
+    }).catch(e => console.error('logAuditEvent (QUEUE_FRAUD_SCAN_TRIGGERED) error:', e.message));
     res.json({ success: true, ...result });
   } catch (err) {
     res.json({ success: false, error: err.message });
@@ -3369,7 +3662,7 @@ function generateApiKey() {
   return { raw, hash };
 }
 
-router.get('/api-keys', async (req, res) => {
+router.get('/api-keys', rbac.requirePermission('settings_view'), async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT k.*, u.username AS created_by_username
@@ -3383,7 +3676,7 @@ router.get('/api-keys', async (req, res) => {
   }
 });
 
-router.post('/api-keys/create', async (req, res) => {
+router.post('/api-keys/create', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const name = sanitizeText(req.body.name || '').slice(0, 100);
     const description = sanitizeText(req.body.description || '').slice(0, 500);
@@ -3430,12 +3723,17 @@ router.post('/api-keys/create', async (req, res) => {
   }
 });
 
-router.post('/api-keys/:id/toggle', requireIntParam('id'), async (req, res) => {
+router.post('/api-keys/:id/toggle', rbac.requirePermission('settings_edit'), requireIntParam('id'), async (req, res) => {
   try {
     const r = await pool.query(`UPDATE api_keys SET enabled = NOT enabled WHERE id = $1 RETURNING name, enabled`, [req.params.id]);
     if (r.rows[0]) {
       await logAdminAction(req.session.user.id, req.session.user.username, 'API_KEY_TOGGLED',
         `API key "${r.rows[0].name}" ${r.rows[0].enabled ? 'চালু' : 'বন্ধ'} করা হয়েছে`, req.ip);
+      logAuditEvent({
+        req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+        action: 'API_KEY_TOGGLED', category: 'api', status: 'success', riskLevel: 'medium',
+        details: { keyId: req.params.id, name: r.rows[0].name, enabled: r.rows[0].enabled }
+      }).catch(e => console.error('logAuditEvent (API_KEY_TOGGLED) error:', e.message));
       req.flash('success', `API key ${r.rows[0].enabled ? 'চালু' : 'বন্ধ'} করা হয়েছে।`);
     }
   } catch (err) {
@@ -3445,7 +3743,7 @@ router.post('/api-keys/:id/toggle', requireIntParam('id'), async (req, res) => {
   res.redirect('/admin/api-keys');
 });
 
-router.post('/api-keys/:id/revoke', requireIntParam('id'), async (req, res) => {
+router.post('/api-keys/:id/revoke', rbac.requirePermission('settings_edit'), requireIntParam('id'), async (req, res) => {
   try {
     const r = await pool.query(`UPDATE api_keys SET enabled = false WHERE id = $1 RETURNING name`, [req.params.id]);
     if (r.rows[0]) {
@@ -3593,7 +3891,7 @@ router.get('/cache', async (req, res) => {
   }
 });
 
-router.post('/cache/clear', async (req, res) => {
+router.post('/cache/clear', rbac.requirePermission('cron_jobs_manage'), async (req, res) => {
   try {
     const { pattern } = req.body;
     let deleted;

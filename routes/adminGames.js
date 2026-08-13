@@ -6,6 +6,7 @@ const express = require('express');
 const router  = express.Router();
 const { pool } = require('../db');
 const { logAdminAction } = require('../services/fraudDetection');
+const rbac = require('../services/rbac');
 
 // ==================== Validation ====================
 const VALID_CATEGORIES = ['slots', 'live', 'sports', 'poker', 'casino', 'fishing', 'table'];
@@ -37,7 +38,7 @@ function validateGame(body) {
 }
 
 // ==================== GET /admin/games ====================
-router.get('/', async (req, res) => {
+router.get('/', rbac.requirePermission('games_manage'), async (req, res) => {
   try {
     const {
       category = 'all', provider = 'all', badge = 'all',
@@ -111,7 +112,7 @@ router.get('/', async (req, res) => {
 });
 
 // ==================== POST /admin/games/add ====================
-router.post('/add', async (req, res) => {
+router.post('/add', rbac.requirePermission('games_manage'), async (req, res) => {
   const { errors, data } = validateGame(req.body);
 
   if (errors.length) {
@@ -150,7 +151,7 @@ router.post('/add', async (req, res) => {
 });
 
 // ==================== POST /admin/games/:id/edit ====================
-router.post('/:id/edit', async (req, res) => {
+router.post('/:id/edit', rbac.requirePermission('games_manage'), async (req, res) => {
   const id = parseInt(req.params.id);
   if (!id || isNaN(id)) { req.flash('error', 'অবৈধ গেম ID'); return res.redirect('/admin/games'); }
 
@@ -190,7 +191,7 @@ router.post('/:id/edit', async (req, res) => {
 });
 
 // ==================== POST /admin/games/:id/toggle ====================
-router.post('/:id/toggle', async (req, res) => {
+router.post('/:id/toggle', rbac.requirePermission('games_manage'), async (req, res) => {
   const id = parseInt(req.params.id);
   if (!id || isNaN(id)) { req.flash('error', 'অবৈধ গেম ID'); return res.redirect('/admin/games'); }
 
@@ -218,7 +219,7 @@ router.post('/:id/toggle', async (req, res) => {
 });
 
 // ==================== POST /admin/games/:id/delete ====================
-router.post('/:id/delete', async (req, res) => {
+router.post('/:id/delete', rbac.requirePermission('games_manage'), async (req, res) => {
   const id = parseInt(req.params.id);
   if (!id || isNaN(id)) { req.flash('error', 'অবৈধ গেম ID'); return res.redirect('/admin/games'); }
 
@@ -245,7 +246,7 @@ router.post('/:id/delete', async (req, res) => {
 });
 
 // ==================== POST /admin/games/bulk-toggle ====================
-router.post('/bulk-toggle', async (req, res) => {
+router.post('/bulk-toggle', rbac.requirePermission('games_manage'), async (req, res) => {
   const { ids, action } = req.body;
   if (!ids || !action) { req.flash('error', 'অবৈধ রিকোয়েস্ট'); return res.redirect('/admin/games'); }
 
@@ -271,7 +272,7 @@ router.post('/bulk-toggle', async (req, res) => {
 
 // ==================== POST /admin/games/sort ====================
 // body: { order: [id1, id2, ...] } — drag-drop sort (JSON POST)
-router.post('/sort', async (req, res) => {
+router.post('/sort', rbac.requirePermission('games_manage'), async (req, res) => {
   try {
     const order = req.body.order;
     if (!Array.isArray(order)) return res.status(400).json({ ok: false, error: 'Invalid order' });

@@ -39,7 +39,7 @@ const { requireIntParam } = require('../middleware/validate');
 const { logAdminAction, logEvent: logAuditEvent } = require('../services/auditLog');
 const cache = require('../services/cache');
 const cacheKeys = require('../services/cacheKeys');
-const { getLeaderboard: getContestLeaderboard, getPastContests, PRIZES } = require('../services/contest');
+const { getLeaderboard: getContestLeaderboard, getPastContests, getContestWinnersForMonth, PRIZES } = require('../services/contest');
 
 const PAGE_SIZE = 25;
 
@@ -202,6 +202,96 @@ router.post('/:id/toggle-ban', rbac.requirePermission('users_ban'), requireIntPa
   } catch (err) {
     console.error('Admin leaderboard ban toggle error:', err && err.stack ? err.stack : err);
     return redirectWith('error=' + encodeURIComponent('স্ট্যাটাস পরিবর্তন করা যায়নি।'));
+  }
+});
+
+// ==================== রেফারেল কনটেস্ট প্রাইজ পেআউট ট্র্যাকিং ====================
+// প্রাইজ (নগদ/মোবাইল ব্যাংকিং) অ্যাডমিন ম্যানুয়ালি (অফ-প্ল্যাটফর্ম) দেয় — এই পেজ শুধু
+// কে/কবে/কোন অ্যাডমিন পেমেন্ট মার্ক করেছে তার হিসাব রাখে। selected মাসের টপ ৫ বিজয়ীর
+// রেকর্ড না থাকলে এখানেই lazily তৈরি হয় (getContestWinnersForMonth() থেকে), যাতে
+// আলাদা কোনো cron/migration ছাড়াই আগের যেকোনো মাসের জন্য ট্র্যাকিং শুরু করা যায়।
+router.get('/contest/payouts', rbac.requirePermission('reports_view'), async (req, res) => {
+  try {
+    const monthsBack = Math.min(24, Math.max(1, parseInt(req.query.months) || 1));
+    const { monthKey, monthName, leaders } = await getContestWinnersForMonth(monthsBack);
+
+    // এই মাসের বিজয়ীদের জন্য payout রো নিশ্চিত করা (আগে থেকে থাকলে touch করা হয় না —
+    // status/paid_at/paid_by অপরিবর্তিত থাকে, শুধু rank/username-এর জন্য নতুন হলে insert)
+    for (const l of leaders) {
+      await pool.query(
+        `INSERT INTO referral_contest_payouts (contest_month, rank, user_id, username, referrals_count, prize_label)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (contest_month, rank) DO NOTHING`,
+        [monthKey, l.rank, l.userId, l.username, l.referrals, l.prize]
+      ).catch(e => console.error('adminLeaderboard: payout row ensure ব্যর্থ:', e.message));
+    }
+
+    const payoutsRes = await pool.query(
+      `SELECT * FROM referral_contest_payouts WHERE contest_month = $1 ORDER BY rank ASC`,
+      [monthKey]
+    );
+
+    const historyRes = await pool.query(
+      `SELECT * FROM referral_contest_payouts WHERE status = 'paid' ORDER BY paid_at DESC LIMIT 50`
+    );
+
+    res.render('admin/contest-payouts', {
+      monthKey,
+      monthName,
+      monthsBack,
+      payouts: payoutsRes.rows,
+      history: historyRes.rows,
+      saved: req.query.saved === '1',
+      saveError: req.query.error ? String(req.query.error) : ''
+    });
+  } catch (err) {
+    console.error('Admin contest payouts load error:', err && err.stack ? err.stack : err);
+    res.render('admin/contest-payouts', {
+      monthKey: '', monthName: '', monthsBack: 1, payouts: [], history: [],
+      saved: false, saveError: 'পেআউট তথ্য লোড করা যায়নি।'
+    });
+  }
+});
+
+// একটা নির্দিষ্ট পেআউট রেকর্ড "Paid" হিসেবে মার্ক করা — শুধু pending থাকলেই কার্যকর হয়
+// (already-paid রেকর্ড দ্বিতীয়বার মার্ক করা/ওভাররাইট করা যাবে না — accidental double-click
+// বা রিপ্লে-জাতীয় রিকোয়েস্টে ভুল paid_by/paid_at বসে যাওয়া ঠেকাতে)।
+router.post('/contest/payouts/:id/mark-paid', rbac.requirePermission('users_edit'), requireIntParam('id'), async (req, res) => {
+  const monthsBack = parseInt(req.body.months) || 1;
+  const redirectWith = (param) => res.redirect(`/admin/leaderboard/contest/payouts?months=${monthsBack}&${param}`);
+
+  try {
+    const notes = req.body.notes ? String(req.body.notes).trim().slice(0, 300) : null;
+    const actor = actorOf(req);
+
+    const r = await pool.query(
+      `UPDATE referral_contest_payouts
+       SET status = 'paid', paid_at = NOW(), paid_by = $2, paid_by_username = $3, notes = $4
+       WHERE id = $1 AND status = 'pending'
+       RETURNING contest_month, rank, username, prize_label`,
+      [req.params.id, actor.id, actor.username, notes]
+    );
+
+    if (!r.rows.length) {
+      return redirectWith('error=' + encodeURIComponent('রেকর্ড পাওয়া যায়নি অথবা ইতিমধ্যে Paid হিসেবে চিহ্নিত।'));
+    }
+
+    const row = r.rows[0];
+    await logAdminAction(
+      actor.id, actor.username, 'REFERRAL_CONTEST_PAYOUT_MARKED_PAID',
+      `রেফারেল কনটেস্ট প্রাইজ প্রদান নিশ্চিত: ${row.contest_month} মাসের #${row.rank} স্থান (${row.username}, ${row.prize_label || '—'})`,
+      req.ip
+    );
+    logAuditEvent({
+      req, actorType: 'admin', actorId: actor.id, actorUsername: actor.username,
+      action: 'REFERRAL_CONTEST_PAYOUT_MARKED_PAID', category: 'financial', status: 'success', riskLevel: 'medium',
+      details: { payoutId: req.params.id, contestMonth: row.contest_month, rank: row.rank, username: row.username, prize: row.prize_label }
+    }).catch(e => console.error('logAuditEvent (REFERRAL_CONTEST_PAYOUT_MARKED_PAID) error:', e.message));
+
+    return redirectWith('saved=1');
+  } catch (err) {
+    console.error('Admin contest payout mark-paid error:', err && err.stack ? err.stack : err);
+    return redirectWith('error=' + encodeURIComponent('পেআউট মার্ক করা যায়নি।'));
   }
 });
 
