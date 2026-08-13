@@ -100,19 +100,101 @@ npm run dev       # nodemon দিয়ে, ডেভেলপমেন্ট�
 
 ## Docker (এক কমান্ডে পুরো সিস্টেম)
 
-```bash
-docker compose up -d --build
+### ধাপ ১ — `.env` ফাইল তৈরি করা (Compose চালানোর আগেই আবশ্যক)
+
+`docker-compose.yml`-এ `env_file: .env` আছে, আর `.env` ফাইলটা `.gitignore`-এ (রিপোতে কমিট
+হয় না)। তাই **ফ্রেশ ক্লোনে `.env` না বানিয়ে Compose চালালে সেটা শুরুই হবে না**:
+
 ```
+env file /path/to/livo-backen/.env not found
+```
+
+টেমপ্লেট থেকে কপি করে নাও, তারপর ভ্যালু বসাও:
+
+```bash
+cp .env.example .env
+```
+
+Compose চালু করতে হলে নিচের ভ্যারিয়েবলগুলো `.env`-এ **অবশ্যই** থাকতে হবে (ফাঁকা থাকলে
+Compose ইচ্ছাকৃতভাবেই থেমে যাবে — দুর্বল ডিফল্ট পাসওয়ার্ড নিয়ে যেন কেউ ভুল করে প্রোডাকশনে
+না ওঠে, সেজন্য এগুলোতে `${VAR:?}` required-syntax ব্যবহার করা হয়েছে):
+
+| Variable | কী জন্য | কীভাবে বানাবে |
+|---|---|---|
+| `DB_PASSWORD` | PostgreSQL (`db` সার্ভিস) পাসওয়ার্ড | `openssl rand -hex 24` |
+| `REDIS_PASSWORD` | Redis `requirepass` | `openssl rand -hex 24` |
+| `SESSION_SECRET` | সেশন কুকি সাইনিং (অন্তত ৩২ ক্যারেক্টার) | `openssl rand -hex 32` |
+| `METRICS_TOKEN` | Prometheus-কে `/metrics` স্ক্র্যাপ করতে দেয় | `openssl rand -hex 24` |
+| `GRAFANA_ADMIN_PASSWORD` | Grafana অ্যাডমিন লগইন | `openssl rand -hex 16` |
+
+এক কমান্ডে পাঁচটাই জেনারেট করে `.env`-এ যোগ করতে চাইলে:
+
+```bash
+{
+  echo "DB_PASSWORD=$(openssl rand -hex 24)"
+  echo "REDIS_PASSWORD=$(openssl rand -hex 24)"
+  echo "SESSION_SECRET=$(openssl rand -hex 32)"
+  echo "METRICS_TOKEN=$(openssl rand -hex 24)"
+  echo "GRAFANA_ADMIN_PASSWORD=$(openssl rand -hex 16)"
+} >> .env
+```
+
+সঠিকভাবে সেট হয়েছে কিনা যাচাই করতে (কনটেইনার চালু না করেই):
+
+```bash
+docker compose -f docker-compose.yml config >/dev/null && echo "config OK"
+```
+
+কোনোটা বাদ পড়লে এরকম মেসেজ আসবে: `required variable DB_PASSWORD is missing a value`।
+
+### ধাপ ২ — প্রোডাকশনে চালানো
+
+```bash
+docker compose -f docker-compose.yml up -d --build
+```
+
+> ⚠️ **প্রোডাকশনে `-f docker-compose.yml` লেখাটা বাধ্যতামূলক।**
+>
+> এই রিপোতে `docker-compose.override.yml` ফাইলটা কমিট করা আছে (লোকাল ডেভেলপমেন্টের
+> সুবিধার জন্য), আর Docker Compose কনভেনশন অনুযায়ী **override ফাইলটা `docker compose`
+> কমান্ডে নিজে থেকেই যুক্ত হয়ে যায়**। অর্থাৎ শুধু `docker compose up -d --build` লিখলে
+> যা হবে:
+>
+> - ইমেজ বিল্ড হবে `development` টার্গেট থেকে, `production` টার্গেট থেকে নয়
+> - `NODE_ENV=development` হয়ে যাবে
+> - সোর্স কোড bind-mount হয়ে ইমেজের কনটেন্ট ঢেকে দেবে, আর অ্যাপ চলবে `nodemon`-এ
+> - `DB_PASSWORD`/`REDIS_PASSWORD`/`SESSION_SECRET`-এ override ফাইলের দুর্বল ডেভ-ডিফল্ট
+>   (`changeme`, `dev-secret-change-me`) কার্যকর হবে
+>
+> `-f docker-compose.yml` দিলে Compose শুধু ওই একটা ফাইলই পড়ে, override সম্পূর্ণ উপেক্ষা
+> করে — তাই প্রোডাকশন ইমেজ, `NODE_ENV=production` এবং আসল সিক্রেটগুলোই ব্যবহার হয়।
+
+চালু আছে কিনা দেখতে:
+
+```bash
+docker compose -f docker-compose.yml ps
+curl -f http://localhost:${PORT:-4000}/health
+```
+
+### ধাপ ৩ — লোকাল ডেভেলপমেন্টে চালানো (override সহ)
+
+লোকাল ডেভে override ফাইলটাই কাজে লাগে — এখানে `-f` ছাড়া চালানোই উদ্দেশ্য:
+
+```bash
+docker compose up -d --build     # development টার্গেট + nodemon + live reload
+```
+
+### মনিটরিং
 
 App, PostgreSQL, Redis চালু হবে। মনিটরিং স্ট্যাক (Prometheus + Grafana) একই কমান্ডে চালু হয়:
 
-- Prometheus: `http://localhost:9090` — `/metrics` স্ক্র্যাপ করে (`METRICS_TOKEN` .env-এ সেট থাকলে সেটা ব্যবহার করে)
-- Grafana: `http://localhost:${GRAFANA_PORT:-3001}` — লগইন `GRAFANA_ADMIN_USER`/`GRAFANA_ADMIN_PASSWORD` (ডিফল্ট `admin`/`changeme`, প্রোডাকশনে অবশ্যই পাল্টাও); "Livo" ফোল্ডারে "Livo — Application Overview" ড্যাশবোর্ড অটো-ইম্পোর্ট হয়ে থাকবে (CPU, Memory, Request Rate, Response Time, Error Rate, Redis, PostgreSQL, Queue, Active Users, API Metrics)
+- Prometheus: `http://localhost:9090` — `/metrics` স্ক্র্যাপ করে (`METRICS_TOKEN` দিয়ে; টোকেন না দিলে প্রতিটা স্ক্র্যাপ 401 হবে)
+- Grafana: `http://localhost:${GRAFANA_PORT:-3001}` — লগইন `GRAFANA_ADMIN_USER`/`GRAFANA_ADMIN_PASSWORD` (`.env`-এ সেট করা বাধ্যতামূলক); "Livo" ফোল্ডারে "Livo — Application Overview" ড্যাশবোর্ড অটো-ইম্পোর্ট হয়ে থাকবে (CPU, Memory, Request Rate, Response Time, Error Rate, Redis, PostgreSQL, Queue, Active Users, API Metrics)
 
 মনিটরিং স্ট্যাক ছাড়া শুধু app+db+redis চালাতে চাইলে:
 
 ```bash
-docker compose up -d --build app db redis
+docker compose -f docker-compose.yml up -d --build app db redis
 ```
 
 ## Automated Testing
