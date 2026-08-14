@@ -25,6 +25,7 @@
   <div class="admin-wrap">
     <%- include('./partials/sidebar', { active: 'cron-jobs' }) %>
     <div class="admin-content">
+      <%- include('./partials/load-error') %>
       <%- include('./partials/header', { pageTitle: 'Cron Jobs Monitor', pageSubtitle: 'সব Scheduled Job-এর অবস্থা, লগ ও ম্যানুয়াল কন্ট্রোল' }) %>
 
       <% if (typeof success !== 'undefined' && success && success.length) { %>

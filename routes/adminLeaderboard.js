@@ -134,7 +134,7 @@ router.get('/', rbac.requirePermission('reports_view'), async (req, res) => {
     });
   } catch (err) {
     console.error('Admin leaderboard load error:', err && err.stack ? err.stack : err);
-    res.render('admin/leaderboard', {
+    res.render('admin/leaderboard', { loadError: true,
       entries: [], page: 1, totalPages: 1, total: 0, search: '', status: '',
       contest: { leaders: [], myRank: null, prizes: PRIZES, monthName: '' },
       saved: false, saveError: 'লিডারবোর্ড লোড করা যায়নি।'
@@ -246,7 +246,7 @@ router.get('/contest/payouts', rbac.requirePermission('reports_view'), async (re
     });
   } catch (err) {
     console.error('Admin contest payouts load error:', err && err.stack ? err.stack : err);
-    res.render('admin/contest-payouts', {
+    res.render('admin/contest-payouts', { loadError: true,
       monthKey: '', monthName: '', monthsBack: 1, payouts: [], history: [],
       saved: false, saveError: 'পেআউট তথ্য লোড করা যায়নি।'
     });

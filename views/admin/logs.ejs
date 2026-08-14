@@ -23,6 +23,7 @@
   <div class="admin-wrap">
     <%- include('./partials/sidebar', { active: 'logs' }) %>
     <div class="admin-content">
+      <%- include('./partials/load-error') %>
       <%- include('./partials/header', { pageTitle: 'Unified Log Viewer', pageSubtitle: 'Admin, Login, Error, Fraud, Bot, Security — সব লগ একসাথে সার্চ ও ফিল্টার করুন' }) %>
 
       <% if (typeof success !== 'undefined' && success && success.length) { %>

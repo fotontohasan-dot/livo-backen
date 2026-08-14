@@ -23,6 +23,7 @@
   <div class="admin-wrap">
     <%- include('./partials/sidebar', { active: 'vip' }) %>
     <div class="admin-content">
+      <%- include('./partials/load-error') %>
       <%- include('./partials/header', { pageTitle: 'VIP সিস্টেম ম্যানেজমেন্ট', pageSubtitle: 'VIP লেভেল, বোনাস, ক্যাশব্যাক ও বেনিফিটস পরিচালনা করুন' }) %>
 
       <% if (typeof success !== 'undefined' && success && success.length) { %>

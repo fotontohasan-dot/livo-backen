@@ -15,6 +15,7 @@
   <div class="admin-wrap">
     <%- include('./partials/sidebar', { active: 'vip' }) %>
     <div class="admin-content">
+      <%- include('./partials/load-error') %>
       <%- include('./partials/header', { pageTitle: 'VIP রিওয়ার্ড ও আপগ্রেড হিস্ট্রি', pageSubtitle: 'সব ইউজারের VIP ক্লেইম ও লেভেল পরিবর্তনের সম্পূর্ণ লগ' }) %>
 
       <a href="/admin/vip" style="color:#f59e0b;font-size:12px;text-decoration:none;display:inline-block;margin-bottom:12px;"><i class="fas fa-arrow-left"></i> VIP ম্যানেজমেন্টে ফিরে যান</a>

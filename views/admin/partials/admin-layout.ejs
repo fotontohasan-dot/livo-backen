@@ -189,10 +189,22 @@
         return { show: show, setLoading: setLoading };
       })();
       document.addEventListener('DOMContentLoaded', function () {
-        <% if (typeof success !== 'undefined' && success && success.length) { %>
+        <%#
+          success/error এখানে connect-flash-এর অ্যারে (res.locals) ধরে নেওয়া হতো। কিন্তু কিছু
+          অ্যাডমিন পেজ (backups, feature-flags, roles, sentry-status, notification-templates)
+          render locals-এ `error` নামে একটা *স্ট্রিং* পাঠায় পেজের ভেতরে দেখানোর জন্য — সেটা
+          ফ্ল্যাশ অ্যারেটাকে shadow করত। স্ট্রিং-এরও .length আছে, তাই শর্তটা true হয়ে
+          error.forEach() চালাত → TypeError → পুরো পেজ 500।
+
+          ফলাফল ছিল উল্টো: রিস্টোর ব্যর্থ হলে অ্যাডমিনকে /admin/backups?error=... এ পাঠানো
+          হতো আর সেই পেজটাই 500 দিত, অর্থাৎ এরর বার্তাটা কখনো দেখাই যেত না। Array.isArray()
+          দিয়ে শুধু আসল ফ্ল্যাশ অ্যারের ক্ষেত্রেই টোস্ট দেখানো হয়; স্ট্রিং `error` পেজের
+          নিজের বডিতে আগের মতোই রেন্ডার হয়।
+        -%>
+        <% if (typeof success !== 'undefined' && Array.isArray(success) && success.length) { %>
           <% success.forEach(function (m) { %> LivoToast.show(<%- jsonScriptSafe(m) %>, 'success'); <% }) %>
         <% } %>
-        <% if (typeof error !== 'undefined' && error && error.length) { %>
+        <% if (typeof error !== 'undefined' && Array.isArray(error) && error.length) { %>
           <% error.forEach(function (m) { %> LivoToast.show(<%- jsonScriptSafe(m) %>, 'error'); <% }) %>
         <% } %>
       });

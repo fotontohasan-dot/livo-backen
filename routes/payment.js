@@ -491,7 +491,7 @@ router.get('/history', requireLogin, async (req, res) => {
     });
   } catch (err) {
     console.error('history error:', err.message);
-    res.render('payment/history', { user: req.session.user, requests: [], filter: { type: '', quick: '', from: '', to: '' } });
+    res.render('payment/history', { loadError: true, user: req.session.user, requests: [], filter: { type: '', quick: '', from: '', to: '' } });
   }
 });
 
@@ -656,7 +656,7 @@ router.get('/admin/summary', requireAdmin, requirePermission('payments_view'), a
     });
   } catch (err) {
     console.error('summary error:', err.message);
-    res.render('payment/summary', {
+    res.render('payment/summary', { loadError: true,
       user: req.session.user,
       quick: 'today',
       from: dhakaTodayStr(),

@@ -19,6 +19,7 @@
   <div class="admin-wrap">
     <%- include('./partials/sidebar', { active: 'activity' }) %>
     <div class="admin-content">
+      <%- include('./partials/load-error') %>
       <%- include('./partials/header', { pageTitle: 'অ্যাক্টিভিটি লগ', pageSubtitle: 'অ্যাডমিনদের কার্যকলাপের ইতিহাস' }) %>
 
       <form class="activity-filters" method="GET" action="/admin/activity">

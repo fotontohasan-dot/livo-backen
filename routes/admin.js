@@ -58,7 +58,9 @@ router.get('/api/analytics', isAdmin, rbac.requirePermission('dashboard_view'), 
       queueHealth: queueH
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    // err.message-এ ব্যর্থ SQL/কলাম/টেবিলের নাম চলে আসত — সেটা ব্রাউজারে পাঠানো হয় না।
+    console.error('admin analytics API error:', err.message);
+    res.status(500).json({ error: 'ডেটা লোড করা যায়নি' });
   }
 });
 
@@ -550,7 +552,7 @@ router.get('/kyc', rbac.requirePermission('kyc_view'), async (req, res) => {
     });
   } catch (err) {
     console.error('KYC list error:', err.message);
-    res.render('admin/kyc', {
+    res.render('admin/kyc', { loadError: true,
       kycList: [],
       stats: { total: 0, pending: 0, approved: 0, rejected: 0 },
       filters: { status: '', q: '' }
@@ -734,7 +736,7 @@ router.get('/system-settings', rbac.requirePermission('settings_view'), async (r
     });
   } catch (err) {
     console.error('System settings load error:', err && err.stack ? err.stack : err);
-    res.render('admin/system-settings', { settings: {}, redisConnected: false, saved: false });
+    res.render('admin/system-settings', { loadError: true, settings: {}, redisConnected: false, saved: false });
   }
 });
 
@@ -757,7 +759,7 @@ router.get('/settings', rbac.requirePermission('settings_view'), async (req, res
     });
   } catch (err) {
     console.error('Settings load error:', err && err.stack ? err.stack : err);
-    res.render('admin/settings', { settings: {}, admins: [], saved: false, saveError: false });
+    res.render('admin/settings', { loadError: true, settings: {}, admins: [], saved: false, saveError: false });
   }
 });
 
@@ -910,7 +912,7 @@ router.get('/notifications', rbac.requirePermission('settings_edit'), async (req
     });
   } catch (err) {
     console.error('notifications page error:', err.message);
-    res.render('admin/notifications', { history: [], totalUsers: 0 });
+    res.render('admin/notifications', { loadError: true, history: [], totalUsers: 0 });
   }
 });
 
@@ -1236,7 +1238,7 @@ router.get('/', rbac.requirePermission('dashboard_view'), async (req, res) => {
     console.error(err);
     const today = new Date().toISOString().slice(0, 10);
     const thirtyDaysAgo = new Date(Date.now() - 29 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    res.render('admin/dashboard', {
+    res.render('admin/dashboard', { loadError: true,
       dateRange: { from: thirtyDaysAgo, to: today },
       betStatistics: { totalBets: 0, wonCount: 0, lostCount: 0, pendingCount: 0, winRatePercent: 0, totalStake: 0, totalPayout: 0, houseProfit: 0 },
       apiUsageStats: { totalRequests: 0, avgResponseMs: 0, errorRatePercent: 0, topEndpoints: [] },
@@ -1393,7 +1395,7 @@ router.get('/deposits/legacy-disabled', rbac.requirePermission('payments_view'),
     });
   } catch (err) {
     console.error('deposits list error:', err.message);
-    res.render('admin/deposits', { pendingDeposits: [], recentDeposits: [], pendingCount: 0, pendingTotal: 0, filterFrom: '', filterTo: '' });
+    res.render('admin/deposits', { loadError: true, pendingDeposits: [], recentDeposits: [], pendingCount: 0, pendingTotal: 0, filterFrom: '', filterTo: '' });
   }
 });
 
@@ -1510,7 +1512,7 @@ router.get('/withdrawals/legacy-disabled', rbac.requirePermission('payments_view
     });
   } catch (err) {
     console.error('withdrawals list error:', err.message);
-    res.render('admin/withdrawals', { pendingWithdrawals: [], recentWithdrawals: [], pendingCount: 0, pendingTotal: 0, filterFrom: '', filterTo: '' });
+    res.render('admin/withdrawals', { loadError: true, pendingWithdrawals: [], recentWithdrawals: [], pendingCount: 0, pendingTotal: 0, filterFrom: '', filterTo: '' });
   }
 });
 
@@ -1666,7 +1668,7 @@ router.get('/support', rbac.requirePermission('support_view'), async (req, res) 
     });
   } catch (err) {
     console.error('support list error:', err.message);
-    res.render('admin/support', { tickets: [], openCount: 0, page: 1, totalPages: 1, total: 0, search: '' });
+    res.render('admin/support', { loadError: true, tickets: [], openCount: 0, page: 1, totalPages: 1, total: 0, search: '' });
   }
 });
 
@@ -1808,7 +1810,7 @@ router.get('/referrals', rbac.requirePermission('reports_view'), async (req, res
     });
   } catch (err) {
     console.error('referrals list error:', err.message);
-    res.render('admin/referrals', {
+    res.render('admin/referrals', { loadError: true,
       referrals: [], page: 1, totalPages: 1, total: 0, search: '', status: '',
       summary: { totalReferrals: 0, bonusPaidCount: 0, totalCommissionPaid: 0 }
     });
@@ -2163,7 +2165,7 @@ router.get('/security-overview', rbac.requirePermission('activity_log_view'), as
     res.render('admin/security-overview', { stats, recentLogs: recentLogsRes.rows });
   } catch (err) {
     console.error('security-overview error:', err.message);
-    res.render('admin/security-overview', {
+    res.render('admin/security-overview', { loadError: true,
       stats: { totalUsers: 0, emailUsers: 0, emailVerified: 0, pinConfigured: 0, activeSessions: 0, newDeviceLogins7d: 0, pinLocked: 0, totpEnabled: 0, failedLogins24h: 0 },
       recentLogs: []
     });
@@ -2214,7 +2216,7 @@ router.get('/bot-logs', rbac.requirePermission('bot_monitoring_manage'), async (
     });
   } catch (err) {
     console.error('Bot logs list error:', err.message);
-    res.render('admin/bot-logs', {
+    res.render('admin/bot-logs', { loadError: true,
       logs: [], page: 1, totalPages: 1, total: 0,
       filters: { risk_level: '', endpoint: '', ip: '', from: '', to: '' },
       summary: { last24h: 0, high24h: 0, blocked24h: 0 }
@@ -2282,7 +2284,7 @@ router.get('/matches', rbac.requirePermission('matches_manage'), async (req, res
   try {
     const matches = await pool.query('SELECT * FROM matches ORDER BY start_time DESC');
     res.render('admin/matches', { matches: matches.rows });
-  } catch (err) { res.render('admin/matches', { matches: [] }); }
+  } catch (err) { res.render('admin/matches', { loadError: true, matches: [] }); }
 });
 
 router.post('/matches/add', rbac.requirePermission('matches_manage'), async (req, res) => {
@@ -2421,7 +2423,7 @@ router.get('/bets', rbac.requirePermission('games_manage'), async (req, res) => 
     });
   } catch (err) {
     console.error(err);
-    res.render('admin/bets', { bets: [], page: 1, totalPages: 1, total: 0, status: '', pendingSettlement: 0, todayStake: 0, todayGgr: 0 });
+    res.render('admin/bets', { loadError: true, bets: [], page: 1, totalPages: 1, total: 0, status: '', pendingSettlement: 0, todayStake: 0, todayGgr: 0 });
   }
 });
 
@@ -2530,7 +2532,7 @@ router.get('/bonuses', rbac.requirePermission('users_edit'), async (req, res) =>
     res.render('admin/bonuses', { bonuses: result.rows, stats: statsRes.rows[0] });
   } catch (err) {
     console.error('Bonuses list error:', err.message);
-    res.render('admin/bonuses', { bonuses: [], stats: { active: 0, completed: 0, cancelled: 0, total_active_amount: 0 } });
+    res.render('admin/bonuses', { loadError: true, bonuses: [], stats: { active: 0, completed: 0, cancelled: 0, total_active_amount: 0 } });
   }
 });
 
@@ -2577,7 +2579,7 @@ router.get('/vip', rbac.requirePermission('vip_manage'), async (req, res) => {
     res.render('admin/vip', { levels, analytics, active: 'vip' });
   } catch (err) {
     console.error('Admin VIP list error:', err.message);
-    res.render('admin/vip', {
+    res.render('admin/vip', { loadError: true,
       levels: [], analytics: { perLevel: [], upgradeStats: [], grandTotalBonus: 0 }, active: 'vip'
     });
   }
@@ -2652,7 +2654,7 @@ router.get('/vip/history', rbac.requirePermission('vip_manage'), async (req, res
     res.render('admin/vip-history', { rewardHistory, upgradeHistory, page, rewardType, active: 'vip' });
   } catch (err) {
     console.error('Admin VIP history error:', err.message);
-    res.render('admin/vip-history', {
+    res.render('admin/vip-history', { loadError: true,
       rewardHistory: { rows: [], total: 0, page: 1, totalPages: 1 },
       upgradeHistory: { rows: [], total: 0, page: 1, totalPages: 1 },
       page: 1, rewardType: null, active: 'vip'
@@ -2667,7 +2669,7 @@ router.get('/promotions', rbac.requirePermission('settings_edit'), async (req, r
     res.render('admin/promotions', { promotions: result.rows });
   } catch (err) {
     console.error('Promotions list error:', err.message);
-    res.render('admin/promotions', { promotions: [] });
+    res.render('admin/promotions', { loadError: true, promotions: [] });
   }
 });
 
@@ -2733,7 +2735,7 @@ router.get('/tournaments', rbac.requirePermission('matches_manage'), async (req,
     res.render('admin/tournaments', { tournaments: result.rows, stats: statsRes.rows[0] });
   } catch (err) {
     console.error('Tournaments list error:', err.message);
-    res.render('admin/tournaments', { tournaments: [], stats: { total: 0, live: 0, upcoming: 0, completed: 0 } });
+    res.render('admin/tournaments', { loadError: true, tournaments: [], stats: { total: 0, live: 0, upcoming: 0, completed: 0 } });
   }
 });
 
@@ -2785,7 +2787,7 @@ router.get('/news', rbac.requirePermission('settings_edit'), async (req, res) =>
     res.render('admin/news', { newsList: result.rows });
   } catch (err) {
     console.error('News list error:', err.message);
-    res.render('admin/news', { newsList: [] });
+    res.render('admin/news', { loadError: true, newsList: [] });
   }
 });
 
@@ -2877,7 +2879,7 @@ router.get('/bot-monitoring', rbac.requirePermission('bot_monitoring_manage'), a
     });
   } catch (err) {
     console.error('bot-monitoring dashboard error:', err.message);
-    res.render('admin/bot-monitoring', {
+    res.render('admin/bot-monitoring', { loadError: true,
       user: req.session.user,
       statsToday: { total: 0, blocked: 0 },
       byRisk: [], byEndpoint: [], ipRuleCounts: { blocked_ips: 0, whitelisted_ips: 0 }, recentLogs: []
@@ -2895,7 +2897,7 @@ router.get('/roles', rbac.requirePermission('roles_manage'), async (req, res) =>
     res.render('admin/roles', { roles, permissionGroups: rbac.permissionGroups(), error: null });
   } catch (err) {
     console.error('roles list error:', err.message);
-    res.render('admin/roles', { roles: [], permissionGroups: rbac.permissionGroups(), error: err.message });
+    res.render('admin/roles', { loadError: true, roles: [], permissionGroups: rbac.permissionGroups(), error: 'Role তালিকা লোড করা যায়নি।' });
   }
 });
 
@@ -3035,7 +3037,7 @@ router.get('/user-roles', rbac.requirePermission('roles_manage'), async (req, re
     res.render('admin/user-roles', { users: usersRes.rows, roles, search });
   } catch (err) {
     console.error('user-roles error:', err.message);
-    res.render('admin/user-roles', { users: [], roles: [], search: '' });
+    res.render('admin/user-roles', { loadError: true, users: [], roles: [], search: '' });
   }
 });
 
@@ -3060,7 +3062,7 @@ router.get('/bot-monitoring/ip-rules', rbac.requirePermission('bot_monitoring_ma
     res.render('admin/bot-ip-rules', { user: req.session.user, rules });
   } catch (err) {
     console.error('ip-rules list error:', err.message);
-    res.render('admin/bot-ip-rules', { user: req.session.user, rules: [] });
+    res.render('admin/bot-ip-rules', { loadError: true, user: req.session.user, rules: [] });
   }
 });
 
@@ -3115,7 +3117,7 @@ router.get('/activity', rbac.requirePermission('activity_log_view'), async (req,
     res.render('admin/activity', { logs: result.rows, actionTypes: typesRes.rows.map(r => r.action_type), filters: { action_type, q } });
   } catch (err) {
     console.error('Activity list error:', err.message);
-    res.render('admin/activity', { logs: [], actionTypes: [], filters: { action_type: '', q: '' } });
+    res.render('admin/activity', { loadError: true, logs: [], actionTypes: [], filters: { action_type: '', q: '' } });
   }
 });
 
@@ -3130,7 +3132,8 @@ router.get('/api/system-diagnostics', async (req, res) => {
     const result = await runAllChecks();
     res.json({ success: true, result });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    console.error('system-diagnostics API error:', err.message);
+    res.status(500).json({ success: false, error: 'ডায়াগনস্টিক চালানো যায়নি' });
   }
 });
 
@@ -3141,7 +3144,7 @@ router.get('/sentry-status', async (req, res) => {
     res.render('admin/sentry-status', { status: sentryService.getStatus(), error: null, testSent: req.query.test === '1' });
   } catch (err) {
     console.error('Sentry status page error:', err.message);
-    res.render('admin/sentry-status', { status: null, error: err.message, testSent: false });
+    res.render('admin/sentry-status', { loadError: true, status: null, error: 'Sentry স্ট্যাটাস লোড করা যায়নি।', testSent: false });
   }
 });
 
@@ -3176,7 +3179,7 @@ router.get('/notification-templates', rbac.requirePermission('settings_edit'), a
     res.render('admin/notification-templates', { list, filters: { channel, lang, q }, error: null, success: null });
   } catch (err) {
     console.error('notification-templates list error:', err.message);
-    res.render('admin/notification-templates', { list: [], filters: { channel: '', lang: '', q: '' }, error: err.message, success: null });
+    res.render('admin/notification-templates', { loadError: true, list: [], filters: { channel: '', lang: '', q: '' }, error: 'টেমপ্লেট তালিকা লোড করা যায়নি।', success: null });
   }
 });
 
@@ -3323,7 +3326,7 @@ router.get('/fraud-monitoring', rbac.requirePermission('bot_monitoring_manage'),
     res.render('admin/fraud-monitoring', { dashStats });
   } catch (err) {
     console.error('Fraud monitoring dashboard error:', err.message);
-    res.render('admin/fraud-monitoring', {
+    res.render('admin/fraud-monitoring', { loadError: true,
       dashStats: {
         riskByLevel: { high: 0, medium: 0, low: 0 },
         statusCounts: { open: 0, reviewed: 0, dismissed: 0 },
@@ -3368,7 +3371,7 @@ router.get('/fraud-logs', rbac.requirePermission('bot_monitoring_manage'), async
     });
   } catch (err) {
     console.error('Fraud logs list error:', err.message);
-    res.render('admin/fraud-logs', {
+    res.render('admin/fraud-logs', { loadError: true,
       logs: [], page: 1, totalPages: 1, total: 0,
       filters: { risk_level: '', status: '', user_id: '', from: '', to: '' }
     });
@@ -3409,7 +3412,7 @@ router.get('/duplicate-accounts', rbac.requirePermission('bot_monitoring_manage'
     });
   } catch (err) {
     console.error('Duplicate accounts list error:', err.message);
-    res.render('admin/duplicate-accounts', {
+    res.render('admin/duplicate-accounts', { loadError: true,
       logs: [], page: 1, totalPages: 1, total: 0,
       filters: { status: '', min_score: '', user_id: '' }
     });
@@ -3504,7 +3507,7 @@ router.get('/reports', rbac.requirePermission('reports_view'), async (req, res) 
     });
   } catch (err) {
     console.error('Reports error:', err.message);
-    res.render('admin/reports', {
+    res.render('admin/reports', { loadError: true,
       from: '', to: '',
       deposits: { total: 0, cnt: 0 }, withdrawals: { total: 0, cnt: 0 },
       bets: { total_stake: 0, cnt: 0, total_payout: 0 }, newUsers: 0, netRevenue: 0,
@@ -3526,7 +3529,7 @@ router.get('/queues', async (req, res) => {
     res.render('admin/queues', { health, deadLetterJobs: dlqRes.rows });
   } catch (err) {
     console.error('Queue dashboard error:', err.message);
-    res.render('admin/queues', { health: { redisConnected: false, queues: [] }, deadLetterJobs: [] });
+    res.render('admin/queues', { loadError: true, health: { redisConnected: false, queues: [] }, deadLetterJobs: [] });
   }
 });
 
@@ -3648,7 +3651,7 @@ router.get('/login-history', rbac.requirePermission('activity_log_view'), async 
     });
   } catch (err) {
     console.error('Login history error:', err && err.stack ? err.stack : err);
-    res.render('admin/login-history', {
+    res.render('admin/login-history', { loadError: true,
       logs: [], total: 0, page: 1, limit: 30, totalPages: 1, filters: { q: '', new_device: '', from: '', to: '' }
     });
   }
@@ -3673,7 +3676,7 @@ router.get('/api-keys', rbac.requirePermission('settings_view'), async (req, res
     res.render('admin/api-keys', { keys: result.rows, newKey: null });
   } catch (err) {
     console.error('API keys list error:', err.message);
-    res.render('admin/api-keys', { keys: [], newKey: null });
+    res.render('admin/api-keys', { loadError: true, keys: [], newKey: null });
   }
 });
 
@@ -3831,7 +3834,7 @@ router.get('/api-logs', rbac.requirePermission('reports_view'), async (req, res)
     });
   } catch (err) {
     console.error('API logs list error:', err.message);
-    res.render('admin/api-logs', {
+    res.render('admin/api-logs', { loadError: true,
       logs: [], page: 1, totalPages: 1, total: 0,
       filters: { endpoint: '', method: '', status: '', ip: '', api_key_id: '', from: '', to: '' },
       analytics: { total_requests: 0, success_count: 0, error_count: 0, avg_response_ms: 0, max_response_ms: 0 },
@@ -3885,7 +3888,7 @@ router.get('/cache', async (req, res) => {
     res.render('admin/cache', { cacheStats, cleared: req.query.cleared || '' });
   } catch (err) {
     console.error('Cache page error:', err && err.stack ? err.stack : err);
-    res.render('admin/cache', {
+    res.render('admin/cache', { loadError: true,
       cacheStats: { enabled: false, connected: false, totalKeys: 0, categories: [], hits: 0, misses: 0, hitRatePercent: null, memoryUsed: null },
       cleared: ''
     });
@@ -3924,11 +3927,11 @@ router.get('/backups', rbac.requirePermission('backups_manage'), async (req, res
     res.render('admin/backups', {
       backups, filterType: type,
       encryptionEnabled: backupManager.isEncryptionEnabled(),
-      created: req.query.created || '', restored: req.query.restored || '', error: req.query.error || ''
+      created: req.query.created || '', restored: req.query.restored || '', error: adminErrorMessage(req.query.error)
     });
   } catch (err) {
     console.error('Backups page error:', err && err.stack ? err.stack : err);
-    res.render('admin/backups', { backups: [], filterType: '', encryptionEnabled: false, created: '', restored: '', error: 'load_failed' });
+    res.render('admin/backups', { loadError: true, backups: [], filterType: '', encryptionEnabled: false, created: '', restored: '', error: adminErrorMessage('load_failed') });
   }
 });
 
@@ -4001,7 +4004,10 @@ router.post('/backups/:id/restore', rbac.requirePermission('backups_manage'), as
       action: 'BACKUP_RESTORE_FAILED', category: 'restore', status: 'failure', riskLevel: 'critical',
       details: { backupId: req.params.id, error: err.message }
     }).catch(e => console.error('logAuditEvent (BACKUP_RESTORE_FAILED) error:', e.message));
-    res.redirect(`/admin/backups?error=${encodeURIComponent(err.message)}`);
+    // err.message-এ pg-এর কাঁচা মেসেজ (টেবিল/কলামের নাম, কনস্ট্রেইন্ট, ফাইল পাথ) থাকতে
+    // পারে। সেটা রিডাইরেক্ট URL-এ বসালে ব্রাউজার হিস্ট্রি, রেফারার হেডার ও প্রক্সি/অ্যাক্সেস
+    // লগে ডেটাবেস internals লিখে যায়। পূর্ণ কারণটা সার্ভার লগ ও অডিট লগেই থাকে।
+    res.redirect('/admin/backups?error=restore_failed');
   }
 });
 
@@ -4037,7 +4043,7 @@ router.get('/audit-logs', rbac.requirePermission('activity_log_view'), async (re
     });
   } catch (err) {
     console.error('Audit log dashboard error:', err.message);
-    res.render('admin/audit-logs', {
+    res.render('admin/audit-logs', { loadError: true,
       logs: [], total: 0, page: 1, totalPages: 1,
       filters: { q: '', actorType: '', category: '', status: '', riskLevel: '', action: '', from: '', to: '' },
       categoryCounts: [], riskCounts: { low: 0, medium: 0, high: 0, critical: 0 },
@@ -4078,16 +4084,32 @@ router.get('/audit-logs/export.csv', rbac.requirePermission('activity_log_view')
   }
 });
 
+// অ্যাডমিন পেজে ?error=<code> কোডগুলোকে পড়ার মতো বার্তায় রূপান্তর।
+// কাঁচা err.message কখনো URL-এ যায় না (ব্রাউজার হিস্ট্রি/রেফারার/প্রক্সি লগে ডেটাবেস
+// internals লিখে যেত), তাই রুটগুলো ছোট কোড পাঠায় এবং সেই কোডই এখানে ম্যাপ হয়।
+// অচেনা কোড এলে একটা জেনেরিক বার্তা — ইউজার-কন্ট্রোল্ড query string সরাসরি পেজে বসে না।
+const ADMIN_ERROR_MESSAGES = {
+  load_failed: 'তথ্য লোড করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।',
+  not_found: 'রেকর্ডটি পাওয়া যায়নি।',
+  restore_failed: 'রিস্টোর ব্যর্থ হয়েছে — বিস্তারিত সার্ভার লগ ও অডিট লগে আছে।',
+  create_failed: 'তৈরি করা যায়নি — বিস্তারিত সার্ভার লগে আছে।',
+  delete_failed: 'মুছে ফেলা যায়নি — বিস্তারিত সার্ভার লগে আছে।'
+};
+function adminErrorMessage(code) {
+  if (!code) return '';
+  return ADMIN_ERROR_MESSAGES[code] || 'একটি সমস্যা হয়েছে।';
+}
+
 // ==================== FEATURE FLAGS & CONFIGURATION MANAGEMENT ====================
 const featureFlags = require('../services/featureFlags');
 
 router.get('/feature-flags', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const flags = await featureFlags.loadAllFlags();
-    res.render('admin/feature-flags', { flags: flags || [], created: req.query.created || '', error: req.query.error || '' });
+    res.render('admin/feature-flags', { flags: flags || [], created: req.query.created || '', error: adminErrorMessage(req.query.error) });
   } catch (err) {
     console.error('Feature flags page error:', err && err.stack ? err.stack : err);
-    res.render('admin/feature-flags', { flags: [], created: '', error: 'load_failed' });
+    res.render('admin/feature-flags', { loadError: true, flags: [], created: '', error: adminErrorMessage('load_failed') });
   }
 });
 
@@ -4120,7 +4142,8 @@ router.post('/feature-flags/create', rbac.requirePermission('settings_edit'), as
     res.redirect('/admin/feature-flags?created=1');
   } catch (err) {
     console.error('Feature flag create error:', err && err.stack ? err.stack : err);
-    res.redirect(`/admin/feature-flags?error=${encodeURIComponent(err.message)}`);
+    // উপরের backups রিস্টোরের মতোই — কাঁচা DB এরর URL-এ যায় না।
+    res.redirect('/admin/feature-flags?error=create_failed');
   }
 });
 
@@ -4167,7 +4190,7 @@ router.get('/localization', rbac.requirePermission('settings_edit'), (req, res) 
     res.render('admin/localization', { rows, q: req.query.q || '', total: allKeys.length, missingCount, saved: req.query.saved === '1' });
   } catch (err) {
     console.error('Localization load error:', err.message);
-    res.render('admin/localization', { rows: [], q: '', total: 0, missingCount: 0, saved: false });
+    res.render('admin/localization', { loadError: true, rows: [], q: '', total: 0, missingCount: 0, saved: false });
   }
 });
 
@@ -4323,7 +4346,7 @@ router.get('/announcements', rbac.requirePermission('settings_edit'), async (req
     res.render('admin/announcements', { list: r.rows, error: req.query.error || '', created: req.query.created === '1' });
   } catch (err) {
     console.error('Announcements list error:', err.message);
-    res.render('admin/announcements', { list: [], error: 'load_failed', created: false });
+    res.render('admin/announcements', { loadError: true, list: [], error: 'load_failed', created: false });
   }
 });
 
@@ -4410,7 +4433,7 @@ router.get('/diagnostics', async (req, res) => {
     res.render('admin/diagnostics', { report, active: 'diagnostics' });
   } catch (err) {
     console.error('Diagnostics error:', err.message);
-    res.render('admin/diagnostics', {
+    res.render('admin/diagnostics', { loadError: true,
       report: { overall: 'error', timestamp: new Date().toISOString(), checks: {} },
       active: 'diagnostics'
     });
@@ -4423,7 +4446,8 @@ router.get('/diagnostics/json', async (req, res) => {
     const report = await runAllChecks();
     res.json(report);
   } catch (err) {
-    res.status(500).json({ overall: 'error', error: err.message });
+    console.error('diagnostics json error:', err.message);
+    res.status(500).json({ overall: 'error', error: 'ডায়াগনস্টিক চালানো যায়নি' });
   }
 });
 
@@ -4435,7 +4459,7 @@ router.get('/cron-jobs', rbac.requirePermission('cron_jobs_manage'), async (req,
     res.render('admin/cron-jobs', { jobs, recentLogs, active: 'cron-jobs' });
   } catch (err) {
     console.error('Cron jobs list error:', err.message);
-    res.render('admin/cron-jobs', { jobs: [], recentLogs: [], active: 'cron-jobs' });
+    res.render('admin/cron-jobs', { loadError: true, jobs: [], recentLogs: [], active: 'cron-jobs' });
   }
 });
 

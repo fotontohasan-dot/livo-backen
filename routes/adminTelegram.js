@@ -77,7 +77,7 @@ router.get('/', rbac.requirePermission('settings_view'), async (req, res) => {
     });
   } catch (err) {
     console.error('Telegram settings load error:', err && err.stack ? err.stack : err);
-    res.render('admin/telegram', {
+    res.render('admin/telegram', { loadError: true,
       status: {
         enabled: false, chatId: null, categories: telegramConfig.DEFAULT_CATEGORIES, tokenSet: false,
         tokenMasked: '', tokenSource: 'none', chatIdSource: 'none', ready: false, active: false,

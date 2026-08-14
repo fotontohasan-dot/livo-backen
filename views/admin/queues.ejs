@@ -43,6 +43,7 @@
   <div class="admin-wrap">
     <%- include('./partials/sidebar', { active: 'queues' }) %>
     <div class="admin-content">
+      <%- include('./partials/load-error') %>
       <%- include('./partials/header', { pageTitle: 'Queue Dashboard', pageSubtitle: 'Background Job Queue — Health, Statistics ও Dead Letter Queue' }) %>
 
       <div id="redisBanner" class="redis-banner <%= health.redisConnected ? 'up' : 'down' %>">

@@ -19,6 +19,7 @@
   <div class="admin-wrap">
     <%- include('./partials/sidebar', { active: 'leaderboard' }) %>
     <div class="admin-content">
+      <%- include('./partials/load-error') %>
       <%- include('./partials/header', { pageTitle: 'লিডারবোর্ড ম্যানেজমেন্ট', pageSubtitle: 'পয়েন্ট র‍্যাঙ্কিং, রেফারেল কনটেস্ট প্রাইজ ও মডারেশন — এক জায়গায়' }) %>
 
       <% if (saved) { %>

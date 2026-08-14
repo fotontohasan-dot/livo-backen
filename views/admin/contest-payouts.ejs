@@ -15,6 +15,7 @@
   <div class="admin-wrap">
     <%- include('./partials/sidebar', { active: 'leaderboard' }) %>
     <div class="admin-content">
+      <%- include('./partials/load-error') %>
       <%- include('./partials/header', { pageTitle: 'রেফারেল কনটেস্ট পেআউট', pageSubtitle: 'মাসিক টপ-৫ বিজয়ীর প্রাইজ প্রদানের অবস্থা ও হিস্ট্রি' }) %>
 
       <% if (saved) { %>
