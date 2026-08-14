@@ -19,8 +19,15 @@ const UPLOADS_DIR = path.join(__dirname, '..', 'public', 'uploads');
 
 // SKIP_TABLES: সেশন/ভারী-লগ টাইপ টেবিল বাদ (services/backup.js এর সাথে সামঞ্জস্যপূর্ণ)
 const SKIP_TABLES = ['session'];
+// ক্রম গুরুত্বপূর্ণ — প্রতিটা টেবিল তার নির্ভরশীল (FK) টেবিলের পরে আসতে হবে, নাহলে INSERT
+// foreign-key violation-এ নিচের catch-এ সাইলেন্টলি স্কিপ হয়ে যায় এবং রিস্টোর "সফল" দেখায়।
+//   • 'roles' users-এর আগে যোগ করা হয়েছে: users.role_key → roles(key) FK। roles রিস্টোর না
+//     হওয়ায় role_key সেট করা প্রতিটা স্টাফ/অ্যাডমিন অ্যাকাউন্ট রিস্টোরে হারিয়ে যেত।
+//   • 'coin_transactions' একেবারেই তালিকায় ছিল না — ব্যাকআপে ডেটা থাকা সত্ত্বেও রিস্টোরের পর
+//     পুরো ওয়ালেট লেজার খালি থাকত, অথচ users.coins রিস্টোর হতো (ব্যালেন্স ও লেজার অসামঞ্জস্য)।
 const RESTORE_ORDER = [
-  'users', 'matches', 'markets', 'bets', 'payment_requests', 'notifications',
+  'roles',
+  'users', 'coin_transactions', 'matches', 'markets', 'bets', 'payment_requests', 'notifications',
   'chat_messages', 'news', 'kyc_requests', 'error_logs', 'login_logs', 'bonuses',
   'daily_reward_tiers', 'user_daily_rewards', 'referrals', 'referral_commissions',
   'daily_losses', 'vip_levels', 'mission_defs', 'user_missions', 'mission_claims',
@@ -34,7 +41,15 @@ const RESTORE_ORDER = [
 // টেবিলের জন্য হার্ডকোড করা `ON CONFLICT (id)` ব্যবহার হতো, ফলে site_settings রিস্টোরের
 // প্রতিটা row-ই "column id does not exist" এরর দিয়ে সবসময় সাইলেন্টলি স্কিপ হয়ে যেত
 // (নিচের catch-এ) — site_settings ব্যাকআপ থেকে কখনো রিস্টোর হতোই না।
-const TABLE_CONFLICT_KEY = { site_settings: 'key' };
+// roles-এর PK 'id' হলেও migrations সিস্টেম রোলগুলো নিজেই সিড করে, তাই ফ্রেশ DB-তে id নয়,
+// 'key' দিয়েই ডুপ্লিকেট চেনা দরকার (নাহলে একই key দুইবার ঢোকানোর চেষ্টা UNIQUE-এ ভেঙে যেত)।
+const TABLE_CONFLICT_KEY = { site_settings: 'key', roles: 'key' };
+
+// users.referred_by_id → users(id) — নিজের টেবিলকেই রেফার করে। ডাম্পের সারিগুলো id-ক্রমে
+// ইনসার্ট হয়, তাই কেউ যদি তার চেয়ে পরে ইনসার্ট হওয়া ইউজারকে রেফার করে থাকে, সেই সারিটা
+// FK violation-এ স্কিপ হয়ে যেত (নীরব ডেটা লস)। তাই এই কলামগুলো প্রথম পাসে NULL রেখে
+// ইনসার্ট করা হয়, সব সারি ঢোকার পর দ্বিতীয় পাসে আসল মান বসানো হয়।
+const SELF_REFERENCING_COLUMNS = { users: ['referred_by_id'] };
 
 function ensureBackupDir() {
   if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
@@ -280,15 +295,18 @@ async function restoreDatabaseBackup(record) {
   }
 
   const results = {};
+  const skipped = {};
   for (const table of RESTORE_ORDER) {
     const rows = parsed.tables[table];
     if (!rows || rows.length === 0) { results[table] = 0; continue; }
     const columns = Object.keys(rows[0]);
     const colList = columns.map(c => `"${c}"`).join(', ');
     const conflictKey = TABLE_CONFLICT_KEY[table] || 'id';
+    const deferred = (SELF_REFERENCING_COLUMNS[table] || []).filter(c => columns.includes(c));
     let inserted = 0;
+    let failed = 0;
     for (const row of rows) {
-      const values = columns.map(c => row[c]);
+      const values = columns.map(c => (deferred.includes(c) ? null : row[c]));
       const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
       try {
         // বিদ্যমান ডেটা কখনো মোছা/ওভাররাইট হয় না — শুধু প্রাইমারি-কী conflict এ skip (নন-ডেস্ট্রাক্টিভ রিস্টোর)
@@ -298,11 +316,32 @@ async function restoreDatabaseBackup(record) {
         );
         inserted += r.rowCount;
       } catch (e) {
+        failed++;
         console.error(`restore: ${table} row skip —`, e.message);
       }
     }
+
+    // দ্বিতীয় পাস — সব সারি ঢোকার পর self-referencing কলামগুলোর আসল মান বসানো হয়।
+    for (const col of deferred) {
+      for (const row of rows) {
+        if (row[col] === null || row[col] === undefined) continue;
+        try {
+          await pool.query(
+            `UPDATE "${table}" SET "${col}" = $1 WHERE "${conflictKey}" = $2 AND "${col}" IS NULL`,
+            [row[col], row[conflictKey]]
+          );
+        } catch (e) {
+          console.error(`restore: ${table}.${col} backfill skip —`, e.message);
+        }
+      }
+    }
+
     results[table] = inserted;
+    // আগে ব্যর্থ সারিগুলো শুধু console-এ যেত, রিটার্ন ভ্যালুতে কিছু বোঝা যেত না — অ্যাডমিন
+    // প্যানেলে রিস্টোর সবসময় "সফল" দেখাত যদিও সারি হারিয়ে যেত। এখন গুনতিটা রিপোর্ট হয়।
+    if (failed > 0) skipped[table] = failed;
   }
+  if (Object.keys(skipped).length) results._skipped = skipped;
 
   await pool.query('UPDATE backup_history SET restored_at = NOW() WHERE id = $1', [record.id]);
   return results;

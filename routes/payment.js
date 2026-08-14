@@ -823,6 +823,18 @@ router.post('/admin/payments/bulk-reject', requireAdmin, requirePermission('paym
 // ==================== SSLCommerz (বিকাশ/নগদ/রকেট/কার্ড) — সম্পূর্ণ অটোমেটিক ====================
 // অ্যাডমিনকে কোনো কিছু ম্যানুয়ালি অনুমোদন করতে হয় না — গেটওয়ে ভ্যালিডেশন পাশ করলেই কয়েন যোগ হয়ে যায়।
 
+// val_id গেটওয়ে থেকে আসে ঠিকই, কিন্তু সেটা *কোন* ট্রানজেকশনের val_id — আগে সেটা যাচাই করা হতো না।
+// validatePayment() শুধু status ও amount ফেরত দিত এবং কোডটা সেই দুটোই মিলিয়ে ক্রেডিট করে দিত।
+// ফলে একজন ইউজার নিজের আগের সফল ডিপোজিটের val_id (যেটা success_url-এ তার ব্রাউজারেই আসে, গোপন নয়)
+// রেখে দিয়ে বারবার নতুন pending ডিপোজিট খুলে সেই একই val_id রিপ্লে করলে প্রতিবারই কয়েন পেয়ে যেত —
+// একই টাকা দিয়ে সীমাহীন ক্রেডিট। এখন verification-এর tran_id অবশ্যই যে রিকোয়েস্টটা ক্রেডিট হচ্ছে
+// তার gateway_tran_id-র সমান হতে হবে। গেটওয়ে tran_id না দিলে fail-closed (ক্রেডিট হবে না)।
+function isVerificationForRequest(verification, request) {
+  const returnedTran = verification && (verification.tran_id || verification.tranId);
+  if (!returnedTran) return false;
+  return String(returnedTran) === String(request.gateway_tran_id);
+}
+
 router.post('/sslcommerz/init', requireLogin, async (req, res) => {
   const wantBonus = req.body.want_bonus === 'yes';
   const amount = parseAmount(req.body.amount);
@@ -886,8 +898,9 @@ router.post('/sslcommerz/success', async (req, res) => {
     const verification = await sslcommerz.validatePayment(val_id);
     const validStatus = verification.status === 'VALID' || verification.status === 'VALIDATED';
     const amountMatches = Math.round(Number(verification.amount)) === Math.round(Number(request.amount));
+    const tranMatches = isVerificationForRequest(verification, request);
 
-    if (!validStatus || !amountMatches) {
+    if (!validStatus || !amountMatches || !tranMatches) {
       await client.query(
         `UPDATE payment_requests SET status='rejected', gateway_val_id=$1, gateway_response=$2, updated_at=NOW() WHERE id=$3`,
         [val_id, JSON.stringify(verification), request.id]
@@ -999,8 +1012,9 @@ router.post('/sslcommerz/ipn', async (req, res) => {
     const verification = await sslcommerz.validatePayment(val_id);
     const validStatus = verification.status === 'VALID' || verification.status === 'VALIDATED';
     const amountMatches = Math.round(Number(verification.amount)) === Math.round(Number(request.amount));
+    const tranMatches = isVerificationForRequest(verification, request);
 
-    if (validStatus && amountMatches) {
+    if (validStatus && amountMatches && tranMatches) {
       await client.query(
         `UPDATE payment_requests SET gateway_val_id=$1, gateway_response=$2 WHERE id=$3`,
         [val_id, JSON.stringify(verification), request.id]

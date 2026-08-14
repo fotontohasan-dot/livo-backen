@@ -14,10 +14,19 @@ const crypto = require('crypto');
 // এই পাথগুলোতে সেশন/কুকি-ভিত্তিক অথ ব্যবহার হয় না (API-key বা এক্সটার্নাল ওয়েবহুক) —
 // তাই CSRF চেক এখানে প্রযোজ্য না।
 const EXEMPT_PREFIXES = [
-  '/api/',           // পাবলিক API — API key দিয়ে অথেন্টিকেটেড (routes/api.js + middleware/apiKeyAuth)
-  '/payment/sslcommerz/' // পেমেন্ট গেটওয়ের সার্ভার-টু-সার্ভার কলব্যাক/IPN — কোনো ব্রাউজার সেশন নেই
+  '/api/'            // পাবলিক API — API key দিয়ে অথেন্টিকেটেড (routes/api.js + middleware/apiKeyAuth)
 ];
-const EXEMPT_EXACT = ['/health', '/ready', '/telegram-webhook']; // টেলিগ্রাম-নিজস্ব secret-token যাচাই থাকে, CSRF প্রযোজ্য না
+const EXEMPT_EXACT = [
+  '/health', '/ready', '/telegram-webhook', // টেলিগ্রাম-নিজস্ব secret-token যাচাই থাকে, CSRF প্রযোজ্য না
+  // পেমেন্ট গেটওয়ের কলব্যাক/IPN — গেটওয়ে পোস্ট করে, ব্রাউজার সেশন/টোকেন থাকে না।
+  // আগে পুরো '/payment/sslcommerz/' প্রিফিক্স এক্সেম্পট ছিল, ফলে '/payment/sslcommerz/init'-ও
+  // এক্সেম্পট হয়ে যেত — অথচ ওটা লগইন করা ইউজারের নিজের ব্রাউজার থেকে আসা state-changing POST
+  // (pending payment_request তৈরি করে)। এখন শুধু আসল গেটওয়ে কলব্যাকগুলোই এক্সেম্পট।
+  '/payment/sslcommerz/success',
+  '/payment/sslcommerz/fail',
+  '/payment/sslcommerz/cancel',
+  '/payment/sslcommerz/ipn'
+];
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 

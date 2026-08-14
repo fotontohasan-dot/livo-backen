@@ -312,8 +312,10 @@
       var f = document.createElement('form');
       f.method = 'POST';
       f.action = '/payment/sslcommerz/init';
+      var csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
       f.innerHTML = '<input type="hidden" name="amount" value="' + amt + '">' +
-                    '<input type="hidden" name="want_bonus" value="' + wantBonus + '">';
+                    '<input type="hidden" name="want_bonus" value="' + wantBonus + '">' +
+                    '<input type="hidden" name="_csrf" value="' + csrf + '">';
       document.body.appendChild(f);
       f.submit();
     });
