@@ -159,6 +159,39 @@ describe('Backup path containment', () => {
     expect(() => bm.getBackupFilePath({ filename })).toThrow(/অবৈধ/);
   });
 
+  // path.resolve() সিমলিংক অনুসরণ করে না, তাই BACKUP_DIR-এর ভেতরে বসানো একটা সিমলিংক
+  // লেক্সিক্যাল চেক পাস করেও বাইরের ফাইল পড়তে/মুছতে পারত — realpath যাচাই সেটা আটকায়।
+  test('BACKUP_DIR-এর ভেতরের সিমলিংক বাইরে নির্দেশ করলে প্রত্যাখ্যাত হয়', () => {
+    const os = require('os');
+    const outside = path.join(os.tmpdir(), `outside-${Date.now()}.txt`);
+    fs.writeFileSync(outside, 'SECRET');
+    const linkName = `symlink-${Date.now()}.bak`;
+    const linkPath = path.join(bm.BACKUP_DIR, linkName);
+    fs.symlinkSync(outside, linkPath);
+    try {
+      expect(() => bm.getBackupFilePath({ filename: linkName })).toThrow(/অবৈধ/);
+    } finally {
+      fs.unlinkSync(linkPath);
+      fs.unlinkSync(outside);
+    }
+  });
+
+  test('BACKUP_DIR-এর ভেতরে থাকা সিমলিংক (ভেতরের ফাইলেই নির্দেশ করলে) গ্রহণযোগ্য', async () => {
+    const rec = await bm.createDatabaseBackup({ source: 'manual' });
+    const linkName = `inner-${Date.now()}.bak`;
+    fs.symlinkSync(bm.getBackupFilePath(rec), path.join(bm.BACKUP_DIR, linkName));
+    try {
+      expect(() => bm.getBackupFilePath({ filename: linkName })).not.toThrow();
+    } finally {
+      fs.unlinkSync(path.join(bm.BACKUP_DIR, linkName));
+      await bm.deleteBackup(rec.id);
+    }
+  });
+
+  test('এখনো তৈরি হয়নি এমন বৈধ ফাইলনেম গ্রহণযোগ্য (তৈরির পথ ভাঙে না)', () => {
+    expect(() => bm.getBackupFilePath({ filename: 'db-does-not-exist-yet.bak' })).not.toThrow();
+  });
+
   test('জাল filename-এর রেকর্ড restore/verify করা যায় না', async () => {
     const forged = (await pool.query(
       `INSERT INTO backup_history (type, filename, size_bytes, encrypted, compressed, status, source)
@@ -168,5 +201,58 @@ describe('Backup path containment', () => {
     // তবু অ্যাডমিন যেন খারাপ সারিটা মুছে ফেলতে পারে
     await expect(bm.deleteBackup(forged.id)).resolves.toBe(true);
     expect(await bm.getBackupById(forged.id)).toBeNull();
+  });
+});
+
+describe('Backup path containment — HTTP স্তরে', () => {
+  const { getCsrfAgent, uniqueUsername, uniquePhone, REALISTIC_UA } = require('./helpers/app');
+
+  async function makeBackupAdmin() {
+    const { agent, token } = await getCsrfAgent('/register');
+    const username = uniqueUsername();
+    await agent.post('/register').set('User-Agent', REALISTIC_UA).type('form')
+      .send({ username, phone: uniquePhone(), password: 'SecurePass123', confirmPassword: 'SecurePass123', _csrf: token });
+    await pool.query("UPDATE users SET role='admin', role_key='super_admin' WHERE username=$1", [username]);
+    return { agent, token };
+  }
+
+  async function forgeRecord(filename) {
+    return (await pool.query(
+      `INSERT INTO backup_history (type, filename, size_bytes, encrypted, compressed, status, source)
+       VALUES ('database',$1,1,false,true,'completed','manual') RETURNING *`,
+      [filename]
+    )).rows[0];
+  }
+
+  test.each([
+    ['ট্রাভার্সাল', '../../etc/passwd'],
+    ['অ্যাবসোলিউট পাথ', '/etc/passwd'],
+    ['সিবলিং ডিরেক্টরি', '../public/uploads/../../etc/hostname']
+  ])('%s filename দিয়ে ডাউনলোড ফাইল সার্ভ করে না', async (_label, filename) => {
+    const admin = await makeBackupAdmin();
+    const rec = await forgeRecord(filename);
+    const res = await admin.agent.get(`/admin/backups/${rec.id}/download`);
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.text || '').not.toMatch(/root:x:/);
+    await pool.query('DELETE FROM backup_history WHERE id=$1', [rec.id]);
+  });
+
+  test('ট্রাভার্সাল filename দিয়ে রিস্টোর করা যায় না (এরর পেজে রিডাইরেক্ট)', async () => {
+    const admin = await makeBackupAdmin();
+    const rec = await forgeRecord('../../etc/passwd');
+    const res = await admin.agent.post(`/admin/backups/${rec.id}/restore`)
+      .type('form').send({ _csrf: admin.token });
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toMatch(/error=/);
+    await pool.query('DELETE FROM backup_history WHERE id=$1', [rec.id]);
+  });
+
+  test('বৈধ ব্যাকআপ আগের মতোই ডাউনলোড হয় (রিগ্রেশন গার্ড)', async () => {
+    const admin = await makeBackupAdmin();
+    const rec = await bm.createDatabaseBackup({ source: 'manual' });
+    const res = await admin.agent.get(`/admin/backups/${rec.id}/download`);
+    expect(res.status).toBe(200);
+    expect(res.headers['content-disposition']).toMatch(new RegExp(rec.filename));
+    await bm.deleteBackup(rec.id);
   });
 });

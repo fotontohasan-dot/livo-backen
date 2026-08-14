@@ -1740,7 +1740,7 @@ router.get('/transactions', rbac.requirePermission('reports_view'), async (req, 
     });
   } catch (err) {
     console.error('transactions list error:', err.message);
-    res.render('admin/transactions', { transactions: [], page: 1, totalPages: 1, total: 0 });
+    res.render('admin/transactions', { transactions: [], page: 1, totalPages: 1, total: 0, loadError: true });
   }
 });
 
@@ -1853,7 +1853,7 @@ router.get('/users', rbac.requirePermission('users_view'), async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.render('admin/users', { users: [], page: 1, totalPages: 1, total: 0, search: '', status: '' });
+    res.render('admin/users', { users: [], page: 1, totalPages: 1, total: 0, search: '', status: '', loadError: true });
   }
 });
 

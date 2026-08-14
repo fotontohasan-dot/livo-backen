@@ -430,14 +430,35 @@ async function deleteBackup(id) {
 
 // filename সবসময় backupFilename() দিয়ে সার্ভার-সাইডে তৈরি হয়, তাই এখানে path traversal-এর
 // কোনো পরিচিত রিচেবল পাথ নেই। কিন্তু backup_history নিজেই একটা রিস্টোরযোগ্য টেবিল — অর্থাৎ
-// ব্যাকআপ পে-লোড থেকে আসা মান এই কলামে বসতে পারে। তাই defense-in-depth হিসেবে রিজলভ করা
-// পাথ BACKUP_DIR-এর ভেতরে আছে কিনা কঠোরভাবে যাচাই করা হয়; না হলে ফাইল খোলা/মোছা হয় না।
+// ব্যাকআপ পে-লোড থেকে আসা মান এই কলামে বসতে পারে। তাই defense-in-depth হিসেবে দুই স্তরের যাচাই:
+//   ১) লেক্সিক্যাল — রিজলভ করা পাথ BACKUP_DIR-এর সরাসরি সন্তান হতে হবে ('../', অ্যাবসোলিউট
+//      পাথ, নেস্টেড সাবডিরেক্টরি — সবই বাতিল)।
+//   ২) realpath — path.resolve() সিমলিংক অনুসরণ করে না, তাই BACKUP_DIR-এর ভেতরে বসানো একটা
+//      সিমলিংক লেক্সিক্যাল চেক পাস করেও বাইরের ফাইল পড়তে/মুছতে পারত। ফাইলটা আসলে থাকলে তার
+//      realpath-ও ডিরেক্টরির ভেতরে আছে কিনা মিলিয়ে দেখা হয়। BACKUP_DIR নিজে সিমলিংক হলে
+//      (যেমন কন্টেইনারে মাউন্ট করা ভলিউম) সমস্যা হয় না, কারণ দুই পাশেই realpath নেওয়া হয়।
 function getBackupFilePath(record) {
   const filename = String(record && record.filename ? record.filename : '');
   const root = path.resolve(BACKUP_DIR);
   const resolved = path.resolve(root, filename);
   if (resolved !== path.join(root, path.basename(resolved)) || !resolved.startsWith(root + path.sep)) {
     throw new Error('ব্যাকআপ ফাইলের নাম অবৈধ — ব্যাকআপ ডিরেক্টরির বাইরের পাথ গ্রহণ করা হয় না।');
+  }
+
+  let realResolved;
+  try {
+    realResolved = fs.realpathSync(resolved);
+  } catch (e) {
+    return resolved; // ফাইল এখনো নেই — লেক্সিক্যাল চেকই যথেষ্ট (তৈরি হওয়ার পথ)
+  }
+  let realRoot;
+  try {
+    realRoot = fs.realpathSync(root);
+  } catch (e) {
+    realRoot = root;
+  }
+  if (realResolved !== path.join(realRoot, path.basename(realResolved)) || !realResolved.startsWith(realRoot + path.sep)) {
+    throw new Error('ব্যাকআপ ফাইলের নাম অবৈধ — সিমলিংক ব্যাকআপ ডিরেক্টরির বাইরে নির্দেশ করছে।');
   }
   return resolved;
 }

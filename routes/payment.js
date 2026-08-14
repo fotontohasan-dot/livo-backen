@@ -502,7 +502,10 @@ router.get('/admin/payments', requireAdmin, requirePermission('payments_view'), 
     );
     res.render('payment/admin', { user: req.session.user, requests: result.rows });
   } catch (err) {
-    res.render('payment/admin', { user: req.session.user, requests: [] });
+    // ক্যোয়ারি ব্যর্থ হলে আগে খালি তালিকা রেন্ডার হতো — অ্যাডমিনের কাছে সেটা "কোনো পেন্ডিং
+    // রিকোয়েস্ট নেই"-এর মতোই দেখাত। loadError দিয়ে পেজে স্পষ্ট সতর্কতা দেখানো হয়।
+    console.error('admin payments list error:', err.message);
+    res.render('payment/admin', { user: req.session.user, requests: [], loadError: true });
   }
 });
 
@@ -575,7 +578,8 @@ router.get('/admin/deposits', requireAdmin, requirePermission('payments_view'), 
       from: dhakaTodayStr(),
       to: dhakaTodayStr(),
       totals: { bkash: { total: 0, cnt: 0 }, nagad: { total: 0, cnt: 0 }, rocket: { total: 0, cnt: 0 } },
-      requests: []
+      requests: [],
+      loadError: true
     });
   }
 });

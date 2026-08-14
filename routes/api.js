@@ -65,7 +65,10 @@ router.get('/v1/matches', requireApiKey('read:matches'), perKeyLimiter, validate
       const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
       params.push(limit, offset);
       const result = await pool.query(
-        `SELECT id, title, team_a, team_b, sport, status, start_time, result
+        // 'result' নামে matches টেবিলে কোনো কলাম নেই (স্কিমা: score_a/score_b) — আগে এই
+        // ক্যোয়ারিটাই "column \"result\" does not exist" দিয়ে ব্যর্থ হতো, ফলে এই পাবলিক
+        // এন্ডপয়েন্ট সবসময় 500 ফেরত দিত। আসল স্কোর কলাম দুটোই ফলাফল হিসেবে দেওয়া হচ্ছে।
+        `SELECT id, title, team_a, team_b, sport, status, start_time, score_a, score_b
          FROM matches ${where}
          ORDER BY start_time DESC LIMIT $${params.length - 1} OFFSET $${params.length}`,
         params
@@ -86,9 +89,12 @@ router.get('/v1/leaderboard', requireApiKey('read:leaderboard'), perKeyLimiter, 
     const { limit, offset } = req.pagination;
     const data = await cache.getOrSet(`api:leaderboard:${limit}:${offset}`, 45, async () => {
       const result = await pool.query(
+        // 'predictions' নামে কোনো টেবিল নেই — বাজির টেবিলটার নাম 'bets' (routes/profile.js,
+        // routes/adminLeaderboard.js একই টেবিল ব্যবহার করে)। আগে এই সাব-ক্যোয়ারি দুটোর জন্যই
+        // এন্ডপয়েন্টটা সবসময় 500 দিত।
         `SELECT id, username, avatar, total_points,
-                (SELECT COUNT(*) FROM predictions WHERE user_id=users.id AND status='won') as wins,
-                (SELECT COUNT(*) FROM predictions WHERE user_id=users.id) as total_bets
+                (SELECT COUNT(*) FROM bets WHERE user_id=users.id AND status='won') as wins,
+                (SELECT COUNT(*) FROM bets WHERE user_id=users.id) as total_bets
          FROM users
          WHERE role='user' AND is_banned=false
          ORDER BY total_points DESC
