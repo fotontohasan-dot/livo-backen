@@ -276,7 +276,7 @@ async function createConfigBackup({ source = 'manual', createdById, createdByUse
 // ==================== Restore ====================
 /** ফাইল ডিস্কে ঠিক আছে কিনা যাচাই করে (Restore Verification) — checksum মিলছে কিনা, ফরম্যাট ভ্যালিড কিনা। */
 async function verifyBackupFile(record) {
-  const filePath = path.join(BACKUP_DIR, record.filename);
+  const filePath = getBackupFilePath(record); // containment-চেক করা পাথ
   if (!fs.existsSync(filePath)) throw new Error('ব্যাকআপ ফাইল ডিস্কে পাওয়া যায়নি।');
   const buffer = await fsp.readFile(filePath);
   const actualChecksum = sha256(buffer);
@@ -417,14 +417,29 @@ async function getBackupById(id) {
 async function deleteBackup(id) {
   const record = await getBackupById(id);
   if (!record) throw new Error('ব্যাকআপ পাওয়া যায়নি।');
-  const filePath = path.join(BACKUP_DIR, record.filename);
-  await fsp.unlink(filePath).catch(() => {}); // ফাইল আগে থেকে না থাকলেও সমস্যা নেই
+  // filename অবৈধ (ডিরেক্টরির বাইরে) হলে ডিস্কে হাত দেওয়া হয় না, কিন্তু DB রেকর্ডটা যেন
+  // মুছে ফেলা যায় — নাহলে একটা খারাপ সারি চিরকাল অ্যাডমিন প্যানেলে আটকে থাকত।
+  try {
+    await fsp.unlink(getBackupFilePath(record)).catch(() => {}); // ফাইল আগে থেকে না থাকলেও সমস্যা নেই
+  } catch (e) {
+    console.error('deleteBackup: ফাইল পাথ প্রত্যাখ্যাত —', e.message);
+  }
   await pool.query('DELETE FROM backup_history WHERE id = $1', [id]);
   return true;
 }
 
+// filename সবসময় backupFilename() দিয়ে সার্ভার-সাইডে তৈরি হয়, তাই এখানে path traversal-এর
+// কোনো পরিচিত রিচেবল পাথ নেই। কিন্তু backup_history নিজেই একটা রিস্টোরযোগ্য টেবিল — অর্থাৎ
+// ব্যাকআপ পে-লোড থেকে আসা মান এই কলামে বসতে পারে। তাই defense-in-depth হিসেবে রিজলভ করা
+// পাথ BACKUP_DIR-এর ভেতরে আছে কিনা কঠোরভাবে যাচাই করা হয়; না হলে ফাইল খোলা/মোছা হয় না।
 function getBackupFilePath(record) {
-  return path.join(BACKUP_DIR, record.filename);
+  const filename = String(record && record.filename ? record.filename : '');
+  const root = path.resolve(BACKUP_DIR);
+  const resolved = path.resolve(root, filename);
+  if (resolved !== path.join(root, path.basename(resolved)) || !resolved.startsWith(root + path.sep)) {
+    throw new Error('ব্যাকআপ ফাইলের নাম অবৈধ — ব্যাকআপ ডিরেক্টরির বাইরের পাথ গ্রহণ করা হয় না।');
+  }
+  return resolved;
 }
 
 // ==================== Scheduled Backup ====================

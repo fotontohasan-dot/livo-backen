@@ -69,6 +69,48 @@ describe('Docker ডিপ্লয়মেন্ট কনফিগ স্ম�
     test('ব্যাকআপ ভলিউম /app/backups-এ মাউন্ট করা হয়', () => {
       expect(compose).toMatch(/backups_data:\/app\/backups/);
     });
+
+    test('METRICS_TOKEN-ও fail-closed (Prometheus /metrics স্ক্র্যাপ করতে পারবে না নাহলে)', () => {
+      expect(compose).toMatch(/\$\{METRICS_TOKEN:\?/);
+    });
+  });
+
+  describe('প্রোডাকশন বনাম ডেভেলপমেন্ট কনফিগ আলাদা থাকে', () => {
+    const fsMod = require('fs');
+    const pathMod = require('path');
+    const ROOT = pathMod.join(__dirname, '..', '..');
+    const override = fsMod.readFileSync(pathMod.join(ROOT, 'docker-compose.override.yml'), 'utf8');
+    const envExample = fsMod.readFileSync(pathMod.join(ROOT, '.env.example'), 'utf8');
+
+    test('বেস compose প্রোডাকশন বিল্ড টার্গেট ব্যবহার করে', () => {
+      expect(compose).toMatch(/target:\s*production/);
+      expect(compose).not.toMatch(/target:\s*development/);
+    });
+
+    test('override ফাইল ডেভেলপমেন্ট টার্গেট ব্যবহার করে এবং সতর্কবার্তা বহন করে', () => {
+      expect(override).toMatch(/target:\s*development/);
+      expect(override).toMatch(/docker-compose\.yml/); // প্রোডাকশনে কীভাবে চালাতে হবে তা লেখা আছে
+    });
+
+    test('override-এর দুর্বল ডেভ-ডিফল্ট বেস (প্রোডাকশন) ফাইলে লিক করেনি', () => {
+      expect(override).toMatch(/changeme/);   // ডেভে ডিফল্ট আছে
+      expect(compose).not.toMatch(/changeme/); // প্রোডাকশনে নেই
+      expect(compose).not.toMatch(/dev-secret-change-me/);
+    });
+
+    test('.env.example-এ compose-এর সব আবশ্যক ভ্যারিয়েবল আছে', () => {
+      for (const key of ['DB_PASSWORD', 'REDIS_PASSWORD', 'SESSION_SECRET', 'METRICS_TOKEN', 'GRAFANA_ADMIN_PASSWORD']) {
+        expect(envExample).toMatch(new RegExp('^' + key + '=', 'm'));
+      }
+    });
+
+    test('.env.example কোনো আসল সিক্রেট মান বহন করে না (সব খালি/প্লেসহোল্ডার)', () => {
+      for (const key of ['DB_PASSWORD', 'REDIS_PASSWORD', 'SESSION_SECRET', 'METRICS_TOKEN', 'GRAFANA_ADMIN_PASSWORD']) {
+        const line = envExample.split('\n').find(l => l.startsWith(key + '='));
+        const value = (line || '').slice(key.length + 1).trim();
+        expect(value).not.toMatch(/changeme|admin123|password|secret123/i);
+      }
+    });
   });
 });
 

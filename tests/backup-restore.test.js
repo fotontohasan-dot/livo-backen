@@ -135,3 +135,38 @@ describe('Database restore', () => {
     fs.unlinkSync(bm.getBackupFilePath(rec));
   });
 });
+
+describe('Backup path containment', () => {
+  // রিগ্রেশন: getBackupFilePath() আগে শুধু path.join(BACKUP_DIR, filename) করত। filename
+  // সার্ভার-জেনারেটেড হলেও backup_history নিজেই একটা রিস্টোরযোগ্য টেবিল, তাই ব্যাকআপ পে-লোড
+  // থেকে আসা মান ওই কলামে বসতে পারত এবং '../' দিয়ে ডিরেক্টরির বাইরে বেরোনো যেত।
+  test('স্বাভাবিক সার্ভার-জেনারেটেড ফাইলনেম আগের মতোই কাজ করে', async () => {
+    const rec = await bm.createDatabaseBackup({ source: 'manual' });
+    const fp = bm.getBackupFilePath(rec);
+    expect(fp).toBe(path.join(path.resolve(bm.BACKUP_DIR), rec.filename));
+    expect(fs.existsSync(fp)).toBe(true);
+    await bm.deleteBackup(rec.id);
+  });
+
+  test.each([
+    '../../etc/passwd',
+    '..%2f..%2fetc%2fpasswd'.replace(/%2f/g, '/'),
+    'sub/dir/file.bak',
+    '/etc/passwd',
+    '..',
+    ''
+  ])('ডিরেক্টরির বাইরের পাথ প্রত্যাখ্যাত হয়: %s', (filename) => {
+    expect(() => bm.getBackupFilePath({ filename })).toThrow(/অবৈধ/);
+  });
+
+  test('জাল filename-এর রেকর্ড restore/verify করা যায় না', async () => {
+    const forged = (await pool.query(
+      `INSERT INTO backup_history (type, filename, size_bytes, encrypted, compressed, status, source)
+       VALUES ('database','../../etc/passwd',1,false,true,'completed','manual') RETURNING *`
+    )).rows[0];
+    await expect(bm.restoreBackup(forged)).rejects.toThrow(/অবৈধ/);
+    // তবু অ্যাডমিন যেন খারাপ সারিটা মুছে ফেলতে পারে
+    await expect(bm.deleteBackup(forged.id)).resolves.toBe(true);
+    expect(await bm.getBackupById(forged.id)).toBeNull();
+  });
+});

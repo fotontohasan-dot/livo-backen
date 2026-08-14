@@ -111,11 +111,22 @@ describe('Admin Leaderboard Management (routes/adminLeaderboard.js)', () => {
     test('status=banned ফিল্টার শুধু ব্যান করা ইউজার দেখায়', async () => {
       const { agent, token } = await makeAdminAgent();
       const target = await makeTargetUser();
+      const notBanned = await makeTargetUser();
       await agent.post(`/admin/leaderboard/${target.userId}/toggle-ban`).type('form').send({ _csrf: token });
 
-      const res = await agent.get('/admin/leaderboard?status=banned');
+      // search সহ কল করা হচ্ছে কারণ তালিকাটা পেজিনেটেড এবং ব্যান করা ইউজাররা total_points
+      // অনুযায়ী সাজানো — শুধু ?status=banned দিলে দীর্ঘজীবী টেস্ট DB-তে যথেষ্ট ব্যান করা
+      // ইউজার জমে গেলে সদ্য তৈরি (০ পয়েন্ট) টার্গেট প্রথম পেজ থেকে ছিটকে যেত (flaky)।
+      const res = await agent.get(`/admin/leaderboard?status=banned&search=${target.username}`);
       expect(res.status).toBe(200);
-      expect(res.text).toContain(target.username);
+      expect(res.text).toContain(`/admin/leaderboard/${target.userId}/toggle-ban`);
+
+      // ফিল্টারটা আসলেই ফিল্টার করছে কিনা — ব্যান না করা ইউজারের সারি এখানে আসা যাবে না।
+      // সার্চ টার্মটা সার্চ-বক্সের value="" এ প্রতিধ্বনিত হয়, তাই ইউজারনেম নয়, সারির
+      // নিজস্ব অ্যাকশন-URL দিয়ে যাচাই করা হচ্ছে।
+      const other = await agent.get(`/admin/leaderboard?status=banned&search=${notBanned.username}`);
+      expect(other.status).toBe(200);
+      expect(other.text).not.toContain(`/admin/leaderboard/${notBanned.userId}/toggle-ban`);
     });
   });
 

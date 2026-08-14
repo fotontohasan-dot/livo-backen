@@ -145,4 +145,37 @@ describe('SSLCommerz deposit callbacks', () => {
     await owner.agent.post('/payment/sslcommerz/cancel').type('form').send({ tran_id: row.gateway_tran_id });
     expect((await prById(row.id)).status).toBe('rejected');
   });
+  // success ও IPN — দুটো পথ একই ট্রানজেকশনকে দুইবার ক্রেডিট করতে পারে না।
+  test('success-এর পর IPN এলে দ্বিতীয়বার ক্রেডিট হয় না', async () => {
+    const u = await makeUser();
+    const start = await coinsOf(u.userId);
+    const { row } = await initDeposit(u, 900);
+    sslcommerz.__store.set('VAL_BOTH', { tran_id: row.gateway_tran_id, amount: 900 });
+
+    await u.agent.post('/payment/sslcommerz/success').type('form')
+      .send({ tran_id: row.gateway_tran_id, val_id: 'VAL_BOTH' });
+    expect(await coinsOf(u.userId)).toBe(start + 900);
+
+    await freshRequest().post('/payment/sslcommerz/ipn').type('form')
+      .send({ tran_id: row.gateway_tran_id, val_id: 'VAL_BOTH' });
+    expect(await coinsOf(u.userId)).toBe(start + 900);
+
+    const tx = await pool.query(
+      "SELECT COUNT(*) c FROM coin_transactions WHERE user_id=$1 AND type='deposit'", [u.userId]);
+    expect(Number(tx.rows[0].c)).toBe(1);
+  });
+
+  // গেটওয়ে যদি tran_id ফেরত না দেয়, ক্রেডিট হবে না (fail-closed) — নিরাপত্তার দিকে ঝুঁকে থাকা।
+  test('verification-এ tran_id না থাকলে ক্রেডিট হয় না (fail-closed)', async () => {
+    const u = await makeUser();
+    const start = await coinsOf(u.userId);
+    const { row } = await initDeposit(u, 500);
+    const spy = jest.spyOn(sslcommerz, 'validatePayment')
+      .mockResolvedValueOnce({ status: 'VALID', amount: 500 }); // tran_id অনুপস্থিত
+    await u.agent.post('/payment/sslcommerz/success').type('form')
+      .send({ tran_id: row.gateway_tran_id, val_id: 'VAL_NO_TRAN' });
+    expect(await coinsOf(u.userId)).toBe(start);
+    expect((await prById(row.id)).status).toBe('rejected');
+    spy.mockRestore();
+  });
 });
