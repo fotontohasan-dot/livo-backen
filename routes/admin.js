@@ -3,6 +3,10 @@ const router = express.Router();
 const { isAdmin } = require('../middleware/auth');
 const { redirectBack } = require('../utils/redirectBack');
 const rbac = require('../services/rbac');
+// publicMessage(): ইচ্ছাকৃত (PublicError) ভ্যালিডেশন বার্তা যেমন আছে তেমনই দেখায়, কিন্তু
+// অপ্রত্যাশিত pg/ইন্টারনাল এররের কাঁচা err.message ব্রাউজারে যেতে দেয় না। বিস্তারিত
+// কারণটা আগের মতোই console.error()-এ সার্ভার লগে থাকে। utils/safeError.js দেখুন।
+const { publicMessage } = require('../utils/safeError');
 
 // এই এন্ডপয়েন্টে আগে কোনো auth middleware ছিল না (নিচের router.use(isAdmin)-এর
 // আগে ডিফাইন করা ছিল বলে সেটার আওতায় পড়ছিল না) — ফলে যে কেউ লগইন ছাড়াই রেভিনিউ,
@@ -628,7 +632,10 @@ router.post('/kyc/bulk-approve', rbac.requirePermission('kyc_approve'), async (r
         else results.push({ id, success: false, error: `ইতিমধ্যে "${existing.rows[0].status}" অবস্থায় আছে`, alreadyProcessed: true });
       }
     } catch (err) {
-      results.push({ id, success: false, error: err.message });
+      // প্রতি-সারির ব্যর্থতা ক্লায়েন্টে JSON হিসেবে ফেরত যায়, তাই কাঁচা pg মেসেজ (টেবিল/কলাম/
+      // কনস্ট্রেইন্টের নাম) এখানে বসানো যাবে না — গুনতি ও আইডি রিপোর্ট হয়, কারণ লগে থাকে।
+      console.error(`bulk operation row ${id} failed:`, err && err.stack ? err.stack : err);
+      results.push({ id, success: false, error: 'সার্ভার/ডেটাবেস ত্রুটির কারণে প্রসেস করা যায়নি' });
     }
   }
 
@@ -677,7 +684,10 @@ router.post('/kyc/bulk-reject', rbac.requirePermission('kyc_reject'), async (req
         else results.push({ id, success: false, error: `ইতিমধ্যে "${existing.rows[0].status}" অবস্থায় আছে`, alreadyProcessed: true });
       }
     } catch (err) {
-      results.push({ id, success: false, error: err.message });
+      // প্রতি-সারির ব্যর্থতা ক্লায়েন্টে JSON হিসেবে ফেরত যায়, তাই কাঁচা pg মেসেজ (টেবিল/কলাম/
+      // কনস্ট্রেইন্টের নাম) এখানে বসানো যাবে না — গুনতি ও আইডি রিপোর্ট হয়, কারণ লগে থাকে।
+      console.error(`bulk operation row ${id} failed:`, err && err.stack ? err.stack : err);
+      results.push({ id, success: false, error: 'সার্ভার/ডেটাবেস ত্রুটির কারণে প্রসেস করা যায়নি' });
     }
   }
 
@@ -2084,7 +2094,10 @@ router.post('/users/bulk-ban', rbac.requirePermission('users_ban'), async (req, 
         else results.push({ id, success: true, username: exists.rows[0].username, alreadyBanned: true });
       }
     } catch (err) {
-      results.push({ id, success: false, error: err.message });
+      // প্রতি-সারির ব্যর্থতা ক্লায়েন্টে JSON হিসেবে ফেরত যায়, তাই কাঁচা pg মেসেজ (টেবিল/কলাম/
+      // কনস্ট্রেইন্টের নাম) এখানে বসানো যাবে না — গুনতি ও আইডি রিপোর্ট হয়, কারণ লগে থাকে।
+      console.error(`bulk operation row ${id} failed:`, err && err.stack ? err.stack : err);
+      results.push({ id, success: false, error: 'সার্ভার/ডেটাবেস ত্রুটির কারণে প্রসেস করা যায়নি' });
     }
   }
 
@@ -2619,8 +2632,8 @@ router.post('/vip/save', adminActionLimiter, rbac.requirePermission('vip_manage'
     req.flash('success', `VIP লেভেল ${result.level} সফলভাবে সেভ হয়েছে।`);
     res.redirect('/admin/vip');
   } catch (err) {
-    console.error('Admin VIP save error:', err.message);
-    req.flash('error', 'VIP লেভেল সেভ করা যায়নি: ' + err.message);
+    console.error('Admin VIP save error:', err && err.stack ? err.stack : err);
+    req.flash('error', publicMessage(err, 'VIP লেভেল সেভ করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।'));
     res.redirect('/admin/vip');
   }
 });
@@ -2921,7 +2934,8 @@ router.post('/roles', rbac.requirePermission('roles_manage'), async (req, res) =
     req.flash('success', `Role "${role.name}" তৈরি হয়েছে।`);
     res.redirect('/admin/roles');
   } catch (err) {
-    req.flash('error', err.message);
+    console.error('role management error:', err && err.stack ? err.stack : err);
+    req.flash('error', publicMessage(err, 'অনুরোধটি সম্পন্ন করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।'));
     res.redirect('/admin/roles');
   }
 });
@@ -2932,7 +2946,8 @@ router.get('/roles/:id/edit', rbac.requirePermission('roles_manage'), async (req
     if (!role) { req.flash('error', 'Role পাওয়া যায়নি।'); return res.redirect('/admin/roles'); }
     res.render('admin/role-edit', { role, permissionGroups: rbac.permissionGroups() });
   } catch (err) {
-    req.flash('error', err.message);
+    console.error('role management error:', err && err.stack ? err.stack : err);
+    req.flash('error', publicMessage(err, 'অনুরোধটি সম্পন্ন করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।'));
     res.redirect('/admin/roles');
   }
 });
@@ -2951,7 +2966,8 @@ router.post('/roles/:id', rbac.requirePermission('roles_manage'), async (req, re
     req.flash('success', `Role "${role.name}" আপডেট হয়েছে।`);
     res.redirect('/admin/roles');
   } catch (err) {
-    req.flash('error', err.message);
+    console.error('role management error:', err && err.stack ? err.stack : err);
+    req.flash('error', publicMessage(err, 'অনুরোধটি সম্পন্ন করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।'));
     res.redirect('/admin/roles');
   }
 });
@@ -2963,7 +2979,8 @@ router.post('/roles/:id/clone', rbac.requirePermission('roles_manage'), async (r
     req.flash('success', `Role "${role.name}" ক্লোন হয়েছে — এখন এডিট করতে পারেন।`);
     res.redirect(`/admin/roles/${role.id}/edit`);
   } catch (err) {
-    req.flash('error', err.message);
+    console.error('role management error:', err && err.stack ? err.stack : err);
+    req.flash('error', publicMessage(err, 'অনুরোধটি সম্পন্ন করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।'));
     res.redirect('/admin/roles');
   }
 });
@@ -2976,7 +2993,8 @@ router.post('/roles/:id/delete', rbac.requirePermission('roles_manage'), async (
     req.flash('success', 'Role ডিলিট করা হয়েছে।');
     res.redirect('/admin/roles');
   } catch (err) {
-    req.flash('error', err.message);
+    console.error('role management error:', err && err.stack ? err.stack : err);
+    req.flash('error', publicMessage(err, 'অনুরোধটি সম্পন্ন করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।'));
     res.redirect('/admin/roles');
   }
 });
@@ -2992,7 +3010,8 @@ router.post('/roles/bulk-permission-update', rbac.requirePermission('roles_manag
     req.flash('success', `${updated.length}টা Role আপডেট হয়েছে।`);
     res.redirect('/admin/roles/matrix');
   } catch (err) {
-    req.flash('error', err.message);
+    console.error('role bulk permission update error:', err && err.stack ? err.stack : err);
+    req.flash('error', publicMessage(err, 'বাল্ক আপডেট সম্পন্ন করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।'));
     res.redirect('/admin/roles/matrix');
   }
 });
@@ -3006,7 +3025,8 @@ router.get('/roles/export', rbac.requirePermission('roles_manage'), async (req, 
     res.setHeader('Content-Disposition', `attachment; filename="livo-roles-${new Date().toISOString().slice(0, 10)}.json"`);
     res.send(JSON.stringify(data, null, 2));
   } catch (err) {
-    req.flash('error', err.message);
+    console.error('role management error:', err && err.stack ? err.stack : err);
+    req.flash('error', publicMessage(err, 'অনুরোধটি সম্পন্ন করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।'));
     res.redirect('/admin/roles');
   }
 });
@@ -3020,7 +3040,10 @@ router.post('/roles/import', rbac.requirePermission('roles_manage'), upload.sing
     req.flash('success', `Import সম্পন্ন — ${result.created} তৈরি, ${result.updated} আপডেট, ${result.skipped} স্কিপ (সিস্টেম Role/অবৈধ এন্ট্রি)।`);
     res.redirect('/admin/roles');
   } catch (err) {
-    req.flash('error', 'Import ব্যর্থ: ' + err.message);
+    // JSON.parse / pg এরর মেসেজে ফাইল পাথ ও ইন্টারনাল বিবরণ আসতে পারে — শুধু ইচ্ছাকৃত
+    // ভ্যালিডেশন বার্তাগুলোই (PublicError) অ্যাডমিনকে দেখানো হয়।
+    console.error('roles import error:', err && err.stack ? err.stack : err);
+    req.flash('error', 'Import ব্যর্থ: ' + publicMessage(err, 'ফাইলটি পড়া যায়নি বা সঠিক ফরম্যাটে নেই।'));
     res.redirect('/admin/roles');
   }
 });
@@ -3051,7 +3074,8 @@ router.post('/user-roles/:userId/assign', rbac.requirePermission('roles_manage')
     req.flash('success', 'Role আপডেট হয়েছে।');
     res.redirect('/admin/user-roles');
   } catch (err) {
-    req.flash('error', err.message);
+    console.error('user role assign error:', err && err.stack ? err.stack : err);
+    req.flash('error', publicMessage(err, 'Role আপডেট করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।'));
     res.redirect('/admin/user-roles');
   }
 });
@@ -3199,8 +3223,8 @@ router.post('/notification-templates', rbac.requirePermission('settings_edit'), 
     req.flash && req.flash('success', 'টেমপ্লেট তৈরি হয়েছে');
     res.redirect('/admin/notification-templates');
   } catch (err) {
-    console.error('template create error:', err.message);
-    res.render('admin/notification-template-form', { tmpl: req.body, error: err.message });
+    console.error('template create error:', err && err.stack ? err.stack : err);
+    res.render('admin/notification-template-form', { tmpl: req.body, error: publicMessage(err, 'টেমপ্লেট তৈরি করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।') });
   }
 });
 
@@ -3226,9 +3250,9 @@ router.post('/notification-templates/:id', rbac.requirePermission('settings_edit
       `নোটিফিকেশন টেমপ্লেট আপডেট: ${tmpl.template_key} (${tmpl.channel}/${tmpl.lang})`, req.ip);
     res.redirect('/admin/notification-templates');
   } catch (err) {
-    console.error('template update error:', err.message);
+    console.error('template update error:', err && err.stack ? err.stack : err);
     const existing = await templates.getTemplateById(req.params.id).catch(() => null);
-    res.render('admin/notification-template-form', { tmpl: existing || { id: req.params.id, ...req.body }, error: err.message });
+    res.render('admin/notification-template-form', { tmpl: existing || { id: req.params.id, ...req.body }, error: publicMessage(err, 'টেমপ্লেট আপডেট করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।') });
   }
 });
 
@@ -3260,7 +3284,8 @@ router.post('/notification-templates/:id/preview', rbac.requirePermission('setti
     const rendered = templates.renderTemplateRow(tmpl, { ...sampleVars, ...(req.body.variables || {}) });
     res.json({ success: true, subject: rendered.subject, body: rendered.body, sampleVars });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    console.error('template preview error:', err && err.stack ? err.stack : err);
+    res.status(500).json({ success: false, error: 'প্রিভিউ তৈরি করা যায়নি — সার্ভার ত্রুটি।' });
   }
 });
 
@@ -3313,8 +3338,9 @@ router.post('/notification-templates/:id/test-send', rbac.requirePermission('set
 
     res.json({ success: true, ...result });
   } catch (err) {
-    console.error('template test-send error:', err.message);
-    res.status(500).json({ success: false, error: err.message });
+    // SMTP/SMS এরর মেসেজে হোস্ট, পোর্ট, ক্রেডেনশিয়াল-সংক্রান্ত ইঙ্গিত থাকতে পারে।
+    console.error('template test-send error:', err && err.stack ? err.stack : err);
+    res.status(500).json({ success: false, error: 'টেস্ট পাঠানো যায়নি — বিস্তারিত সার্ভার লগে আছে।' });
   }
 });
 
@@ -3517,7 +3543,11 @@ router.get('/reports', rbac.requirePermission('reports_view'), async (req, res) 
 });
 
 // ==================== Background Queue System ড্যাশবোর্ড (BullMQ + Redis) ====================
-router.get('/queues', async (req, res) => {
+// এই তিনটে read এন্ডপয়েন্টে requirePermission ছিল না, অথচ নিচের সব queue mutation রুট
+// 'cron_jobs_manage' চায়। ফলে সীমিত-অনুমতির স্টাফ অ্যাকাউন্ট (support/finance ইত্যাদি)
+// dead-letter জবের পে-লোড, ব্যর্থ জবের বিবরণ ও Redis হেলথ দেখে ফেলতে পারত। mutation
+// রুটগুলোর সাথে মিলিয়ে একই permission-এ আনা হলো (isAdmin গেট আগের মতোই অপরিবর্তিত)।
+router.get('/queues', rbac.requirePermission('cron_jobs_manage'), async (req, res) => {
   try {
     const { getQueueHealthStats } = require('../queues');
     const health = await getQueueHealthStats();
@@ -3528,31 +3558,34 @@ router.get('/queues', async (req, res) => {
 
     res.render('admin/queues', { health, deadLetterJobs: dlqRes.rows });
   } catch (err) {
-    console.error('Queue dashboard error:', err.message);
+    console.error('Queue dashboard error:', err && err.stack ? err.stack : err);
     res.render('admin/queues', { loadError: true, health: { redisConnected: false, queues: [] }, deadLetterJobs: [] });
   }
 });
 
 // লাইভ স্ট্যাটাস পোলিং-এর জন্য JSON এন্ডপয়েন্ট (ড্যাশবোর্ড প্রতি কয়েক সেকেন্ডে রিফ্রেশ করে)
-router.get('/queues/api/stats', async (req, res) => {
+router.get('/queues/api/stats', rbac.requirePermission('cron_jobs_manage'), async (req, res) => {
   try {
     const { getQueueHealthStats } = require('../queues');
     const health = await getQueueHealthStats();
     res.json({ success: true, health });
   } catch (err) {
-    res.json({ success: false, error: err.message });
+    // Redis/BullMQ এররে হোস্ট, পোর্ট ও কানেকশন বিবরণ থাকে — ব্রাউজারে পাঠানো হয় না।
+    console.error('queue stats API error:', err && err.stack ? err.stack : err);
+    res.json({ success: false, error: 'Queue স্ট্যাটাস লোড করা যায়নি।' });
   }
 });
 
 // নির্দিষ্ট Queue-এর একটা state (waiting/active/failed ইত্যাদি)-এর জব লিস্ট
-router.get('/queues/api/jobs/:queueName', async (req, res) => {
+router.get('/queues/api/jobs/:queueName', rbac.requirePermission('cron_jobs_manage'), async (req, res) => {
   try {
     const { getRecentJobs } = require('../queues');
     const state = req.query.state || 'failed';
     const jobs = await getRecentJobs(req.params.queueName, state, 30);
     res.json({ success: true, jobs });
   } catch (err) {
-    res.json({ success: false, error: err.message });
+    console.error('queue jobs API error:', err && err.stack ? err.stack : err);
+    res.json({ success: false, error: 'Job তালিকা লোড করা যায়নি।' });
   }
 });
 
@@ -3570,7 +3603,8 @@ router.post('/queues/dead-letter/:id/retry', rbac.requirePermission('cron_jobs_m
     }).catch(e => console.error('logAuditEvent (QUEUE_DLQ_RETRIED) error:', e.message));
     res.json({ success: true });
   } catch (err) {
-    res.json({ success: false, error: err.message });
+    console.error('queue DLQ retry error:', err && err.stack ? err.stack : err);
+    res.json({ success: false, error: 'Job রিট্রাই করা যায়নি — বিস্তারিত সার্ভার লগে আছে।' });
   }
 });
 
@@ -3588,7 +3622,8 @@ router.post('/queues/dead-letter/:id/delete', rbac.requirePermission('cron_jobs_
     }).catch(e => console.error('logAuditEvent (QUEUE_DLQ_DELETED) error:', e.message));
     res.json({ success: true });
   } catch (err) {
-    res.json({ success: false, error: err.message });
+    console.error('queue DLQ delete error:', err && err.stack ? err.stack : err);
+    res.json({ success: false, error: 'Job মুছে ফেলা যায়নি — বিস্তারিত সার্ভার লগে আছে।' });
   }
 });
 
@@ -3606,7 +3641,8 @@ router.post('/queues/fraud-scan/:userId', rbac.requirePermission('cron_jobs_mana
     }).catch(e => console.error('logAuditEvent (QUEUE_FRAUD_SCAN_TRIGGERED) error:', e.message));
     res.json({ success: true, ...result });
   } catch (err) {
-    res.json({ success: false, error: err.message });
+    console.error('queue fraud-scan enqueue error:', err && err.stack ? err.stack : err);
+    res.json({ success: false, error: 'Fraud scan ট্রিগার করা যায়নি — বিস্তারিত সার্ভার লগে আছে।' });
   }
 });
 
@@ -3927,11 +3963,12 @@ router.get('/backups', rbac.requirePermission('backups_manage'), async (req, res
     res.render('admin/backups', {
       backups, filterType: type,
       encryptionEnabled: backupManager.isEncryptionEnabled(),
-      created: req.query.created || '', restored: req.query.restored || '', error: adminErrorMessage(req.query.error)
+      created: req.query.created || '', restored: req.query.restored || '',
+      skipped: req.query.skipped || '', error: adminErrorMessage(req.query.error)
     });
   } catch (err) {
     console.error('Backups page error:', err && err.stack ? err.stack : err);
-    res.render('admin/backups', { loadError: true, backups: [], filterType: '', encryptionEnabled: false, created: '', restored: '', error: adminErrorMessage('load_failed') });
+    res.render('admin/backups', { loadError: true, backups: [], filterType: '', encryptionEnabled: false, created: '', restored: '', skipped: '', error: adminErrorMessage('load_failed') });
   }
 });
 
@@ -3985,17 +4022,32 @@ router.post('/backups/:id/restore', rbac.requirePermission('backups_manage'), as
     const record = await backupManager.getBackupById(req.params.id);
     if (!record) return res.redirect('/admin/backups?error=not_found');
     const result = await backupManager.restoreBackup(record);
+
+    // restoreDatabaseBackup() FK/কনস্ট্রেইন্টে ব্যর্থ হওয়া সারিগুলো result._skipped-এ গোনে।
+    // আগে সেই গুনতিটা শুধু অডিট লগে যেত আর অ্যাডমিন পেজে নিঃশর্তভাবে "রিস্টোর সম্পন্ন হয়েছে"
+    // দেখানো হতো — অর্থাৎ আংশিক (ডেটা-হারানো) রিস্টোর পুরোপুরি সফল বলে রিপোর্ট হতো, যেটা
+    // ঠিক করার জন্যই skipped-গণনা যোগ করা হয়েছিল। এখন সেটা ব্যানারেও পৌঁছায়।
+    const skipped = (result && result._skipped) || null;
+    const skippedRows = skipped ? Object.values(skipped).reduce((a, b) => a + b, 0) : 0;
+
     await logAdminAction(
-      req.session.user.id, req.session.user.username, 'BACKUP_RESTORED',
+      req.session.user.id, req.session.user.username,
+      skippedRows > 0 ? 'BACKUP_RESTORE_PARTIAL' : 'BACKUP_RESTORED',
       `${record.type} ব্যাকআপ রিস্টোর করা হয়েছে (${record.filename}) — ${JSON.stringify(result).slice(0, 300)}`,
       req.ip
     );
     logAuditEvent({
       req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
-      action: 'BACKUP_RESTORED', category: 'restore', status: 'success', riskLevel: 'critical',
-      details: { backupId: req.params.id, type: record.type, filename: record.filename }
+      action: skippedRows > 0 ? 'BACKUP_RESTORE_PARTIAL' : 'BACKUP_RESTORED', category: 'restore',
+      status: skippedRows > 0 ? 'failure' : 'success', riskLevel: 'critical',
+      details: { backupId: req.params.id, type: record.type, filename: record.filename, skipped }
     }).catch(e => console.error('logAuditEvent (BACKUP_RESTORED) error:', e.message));
-    res.redirect(`/admin/backups?restored=${record.type}`);
+
+    if (skippedRows > 0) {
+      // টেবিলের নাম বা pg-এর কারণ URL-এ যায় না — শুধু গুনতি, বাকিটা সার্ভার/অডিট লগে।
+      return res.redirect(`/admin/backups?restored=${encodeURIComponent(record.type)}&skipped=${skippedRows}&error=restore_partial`);
+    }
+    res.redirect(`/admin/backups?restored=${encodeURIComponent(record.type)}`);
   } catch (err) {
     console.error('Backup restore error:', err && err.stack ? err.stack : err);
     await logAdminAction(req.session.user.id, req.session.user.username, 'BACKUP_RESTORE_FAILED', `রিস্টোর ব্যর্থ (#${req.params.id}): ${err.message}`, req.ip).catch(() => {});
@@ -4092,6 +4144,7 @@ const ADMIN_ERROR_MESSAGES = {
   load_failed: 'তথ্য লোড করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।',
   not_found: 'রেকর্ডটি পাওয়া যায়নি।',
   restore_failed: 'রিস্টোর ব্যর্থ হয়েছে — বিস্তারিত সার্ভার লগ ও অডিট লগে আছে।',
+  restore_partial: 'রিস্টোর আংশিকভাবে সম্পন্ন হয়েছে — কিছু সারি ঢোকানো যায়নি। এটি সম্পূর্ণ সফল রিস্টোর নয়; বিস্তারিত সার্ভার লগ ও অডিট লগে আছে।',
   create_failed: 'তৈরি করা যায়নি — বিস্তারিত সার্ভার লগে আছে।',
   delete_failed: 'মুছে ফেলা যায়নি — বিস্তারিত সার্ভার লগে আছে।'
 };
@@ -4496,8 +4549,8 @@ router.post('/cron-jobs/:key/run', rbac.requirePermission('cron_jobs_manage'), a
       `"${key}" রান হয়েছে (${result.durationMs}ms) — ${result.message}`);
     res.redirect('/admin/cron-jobs');
   } catch (err) {
-    console.error('Cron run-now error:', err.message);
-    req.flash('error', 'Job রান করা যায়নি: ' + err.message);
+    console.error('Cron run-now error:', err && err.stack ? err.stack : err);
+    req.flash('error', publicMessage(err, 'Job রান করা যায়নি — বিস্তারিত সার্ভার লগে আছে।'));
     res.redirect('/admin/cron-jobs');
   }
 });
@@ -4519,8 +4572,8 @@ router.post('/cron-jobs/:key/toggle', rbac.requirePermission('cron_jobs_manage')
     req.flash('success', `"${key}" ${enabled ? 'সক্রিয়' : 'নিষ্ক্রিয়'} করা হয়েছে।`);
     res.redirect('/admin/cron-jobs');
   } catch (err) {
-    console.error('Cron toggle error:', err.message);
-    req.flash('error', 'Job টগল করা যায়নি: ' + err.message);
+    console.error('Cron toggle error:', err && err.stack ? err.stack : err);
+    req.flash('error', publicMessage(err, 'Job টগল করা যায়নি — বিস্তারিত সার্ভার লগে আছে।'));
     res.redirect('/admin/cron-jobs');
   }
 });
@@ -4531,7 +4584,8 @@ router.get('/cron-jobs/status/json', rbac.requirePermission('cron_jobs_manage'),
     const jobs = await scheduler.listJobs();
     res.json({ success: true, jobs });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error('Cron status JSON error:', err && err.stack ? err.stack : err);
+    res.status(500).json({ success: false, message: 'Cron স্ট্যাটাস লোড করা যায়নি।' });
   }
 });
 

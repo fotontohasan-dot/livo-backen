@@ -28,7 +28,7 @@ const categoryRows = (s.categories || []).map(c =>
             <h1 class="text-2xl font-semibold text-slate-900">Redis Cache Management</h1>
             <p class="text-slate-500 mt-1 text-sm">Frequently-used ডেটা (Settings, Matches/Odds, Leaderboard, Profile) ক্যাশ স্ট্যাটাস ও ম্যানেজমেন্ট</p>
         </div>
-        ${cleared ? '<span class="px-4 py-2 bg-emerald-50 text-emerald-700 rounded-2xl text-sm font-semibold"><i class="fas fa-check-circle"></i> ' + cleared + ' টি কী পরিষ্কার হয়েছে</span>' : ''}
+        ${cleared ? '<span class="px-4 py-2 bg-emerald-50 text-emerald-700 rounded-2xl text-sm font-semibold"><i class="fas fa-check-circle"></i> ' + escapeHtml(cleared) + ' টি কী পরিষ্কার হয়েছে</span>' : ''}
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

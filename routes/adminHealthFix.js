@@ -14,11 +14,14 @@ router.get('/system-diagnostics', isAdmin, async (req, res) => {
       user: req.session.user
     });
   } catch (err) {
-    console.error('System diagnostics error:', err.message);
+    // err.message-এ DB/Redis কানেকশন স্ট্রিং, হোস্ট/পোর্ট ও ফাইল পাথ চলে আসত — সেটা
+    // পেজে রেন্ডার না করে শুধু সার্ভার লগে রাখা হয়।
+    console.error('System diagnostics error:', err && err.stack ? err.stack : err);
     res.render('admin/system-diagnostics', {
+      loadError: true,
       result: null,
       diagnostics: null,
-      error: err.message || 'ডায়াগনস্টিক চালাতে সমস্যা হয়েছে',
+      error: 'ডায়াগনস্টিক চালাতে সমস্যা হয়েছে — বিস্তারিত সার্ভার লগে আছে।',
       user: req.session.user
     });
   }
@@ -30,7 +33,8 @@ router.get('/api/system-diagnostics', isAdmin, async (req, res) => {
     const result = await healthCheck.runAllChecks();
     res.json({ success: true, diagnostics: result, result });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    console.error('System diagnostics API error:', err && err.stack ? err.stack : err);
+    res.status(500).json({ success: false, error: 'ডায়াগনস্টিক চালাতে সমস্যা হয়েছে।' });
   }
 });
 

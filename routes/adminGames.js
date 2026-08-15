@@ -8,6 +8,10 @@ const { pool } = require('../db');
 const { redirectBack } = require('../utils/redirectBack');
 const { logAdminAction } = require('../services/fraudDetection');
 const rbac = require('../services/rbac');
+// catch ব্লকে কাঁচা err.message ফ্ল্যাশ/JSON-এ যেত — pg এরর মেসেজে টেবিল/কলাম/কনস্ট্রেইন্টের
+// নাম ও সার্ভার পাথ থাকে, যা অ্যাডমিন ব্রাউজারে (এবং XSS হলে আক্রমণকারীর কাছে) পৌঁছাত।
+// এখন ইচ্ছাকৃত ভ্যালিডেশন বার্তা ছাড়া বাকি সব জেনেরিক বাংলা বার্তায় রূপান্তরিত হয়।
+const { publicMessage } = require('../utils/safeError');
 
 // ==================== Validation ====================
 const VALID_CATEGORIES = ['slots', 'live', 'sports', 'poker', 'casino', 'fishing', 'table'];
@@ -106,9 +110,19 @@ router.get('/', rbac.requirePermission('games_manage'), async (req, res) => {
       active: 'games'
     });
   } catch (err) {
-    console.error('admin games list error:', err.message);
-    req.flash('error', 'গেম লোড করতে সমস্যা হয়েছে: ' + err.message);
-    res.redirect('/admin');
+    // আগে এখানে /admin-এ রিডাইরেক্ট হতো — অ্যাডমিন কেন গেম পেজে যেতে পারল না তার কোনো
+    // ইঙ্গিত পেত না, আর err.message-এ DB internals ফ্ল্যাশ বার্তায় চলে যেত। এখন অন্য
+    // তালিকা-পেজগুলোর মতোই পেজটাই রেন্ডার হয় loadError ব্যানারসহ (partials/load-error)।
+    console.error('admin games list error:', err && err.stack ? err.stack : err);
+    res.render('admin/games', {
+      loadError: true,
+      games: [], totalGames: 0, activeGames: 0,
+      selectedCategory: 'all', selectedProvider: 'all', selectedBadge: 'all', selectedStatus: 'all',
+      searchQ: '', providersInCategory: [],
+      page: 1, totalPages: 1, total: 0,
+      success: [], error: [],
+      active: 'games'
+    });
   }
 });
 
@@ -144,8 +158,8 @@ router.post('/add', rbac.requirePermission('games_manage'), async (req, res) => 
     if (err.code === '23505') {
       req.flash('error', `স্লাগ "${data.slug}" ইতোমধ্যে বিদ্যমান। অন্য স্লাগ ব্যবহার করুন।`);
     } else {
-      console.error('game add error:', err.message);
-      req.flash('error', 'গেম যোগ করতে সমস্যা: ' + err.message);
+      console.error('game add error:', err && err.stack ? err.stack : err);
+      req.flash('error', publicMessage(err, 'গেম যোগ করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।'));
     }
   }
   res.redirect('/admin/games');
@@ -184,8 +198,8 @@ router.post('/:id/edit', rbac.requirePermission('games_manage'), async (req, res
     if (err.code === '23505') {
       req.flash('error', `স্লাগ "${data.slug}" ইতোমধ্যে বিদ্যমান।`);
     } else {
-      console.error('game edit error:', err.message);
-      req.flash('error', 'গেম আপডেট করতে সমস্যা: ' + err.message);
+      console.error('game edit error:', err && err.stack ? err.stack : err);
+      req.flash('error', publicMessage(err, 'গেম আপডেট করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।'));
     }
   }
   res.redirect('/admin/games');
@@ -213,8 +227,8 @@ router.post('/:id/toggle', rbac.requirePermission('games_manage'), async (req, r
 
     req.flash('success', `"${name}" ${is_active ? 'সক্রিয়' : 'নিষ্ক্রিয়'} করা হয়েছে।`);
   } catch (err) {
-    console.error('game toggle error:', err.message);
-    req.flash('error', 'স্ট্যাটাস পরিবর্তনে সমস্যা: ' + err.message);
+    console.error('game toggle error:', err && err.stack ? err.stack : err);
+    req.flash('error', publicMessage(err, 'স্ট্যাটাস পরিবর্তন করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।'));
   }
   redirectBack(req, res, '/admin/games');
 });
@@ -240,8 +254,8 @@ router.post('/:id/delete', rbac.requirePermission('games_manage'), async (req, r
 
     req.flash('success', `"${name}" সফলভাবে মুছে ফেলা হয়েছে।`);
   } catch (err) {
-    console.error('game delete error:', err.message);
-    req.flash('error', 'গেম মুছতে সমস্যা: ' + err.message);
+    console.error('game delete error:', err && err.stack ? err.stack : err);
+    req.flash('error', publicMessage(err, 'গেম মুছে ফেলা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।'));
   }
   res.redirect('/admin/games');
 });
@@ -265,8 +279,8 @@ router.post('/bulk-toggle', rbac.requirePermission('games_manage'), async (req, 
     );
     req.flash('success', `${idList.length}টি গেম ${isActive ? 'সক্রিয়' : 'নিষ্ক্রিয়'} করা হয়েছে।`);
   } catch (err) {
-    console.error('bulk toggle error:', err.message);
-    req.flash('error', 'Bulk toggle-এ সমস্যা: ' + err.message);
+    console.error('bulk toggle error:', err && err.stack ? err.stack : err);
+    req.flash('error', publicMessage(err, 'Bulk toggle সম্পন্ন করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।'));
   }
   res.redirect('/admin/games');
 });
@@ -288,8 +302,8 @@ router.post('/sort', rbac.requirePermission('games_manage'), async (req, res) =>
     );
     res.json({ ok: true });
   } catch (err) {
-    console.error('game sort error:', err.message);
-    res.status(500).json({ ok: false, error: err.message });
+    console.error('game sort error:', err && err.stack ? err.stack : err);
+    res.status(500).json({ ok: false, error: 'সর্ট অর্ডার সেভ করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।' });
   }
 });
 

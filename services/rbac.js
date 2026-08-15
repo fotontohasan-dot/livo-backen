@@ -11,6 +11,10 @@
 
 const { pool } = require('../db');
 const cache = require('./cache');
+// এই ফাইলের throw করা প্রতিটা এরর ইচ্ছাকৃত, অ্যাডমিনকে দেখানোর জন্য লেখা বাংলা ভ্যালিডেশন
+// বার্তা — তাই PublicError। রুটের catch ব্লক publicMessage() দিয়ে শুধু এগুলোই পাস করে,
+// একই try-এর ভেতরে ঘটা pg/ইন্টারনাল এরর জেনেরিক বার্তায় চাপা পড়ে।
+const { PublicError } = require('../utils/safeError');
 
 // ==================== Permission Catalog ====================
 // key -> { label, group } — Admin UI-এর Permission Matrix এই লিস্ট থেকেই তৈরি হয়।
@@ -139,9 +143,9 @@ function sanitizeKey(name) {
 
 async function createRole({ name, description, permissions }) {
   const key = sanitizeKey(name);
-  if (!key) throw new Error('সঠিক Role নাম দিন।');
+  if (!key) throw new PublicError('সঠিক Role নাম দিন।');
   const existing = await pool.query('SELECT 1 FROM roles WHERE key = $1', [key]);
-  if (existing.rows.length) throw new Error('এই নামে ইতিমধ্যে একটা Role আছে।');
+  if (existing.rows.length) throw new PublicError('এই নামে ইতিমধ্যে একটা Role আছে।');
   const r = await pool.query(
     `INSERT INTO roles (key, name, description, is_system, permissions) VALUES ($1,$2,$3,false,$4) RETURNING *`,
     [key, name.trim(), description || null, JSON.stringify(permissions || {})]
@@ -151,7 +155,7 @@ async function createRole({ name, description, permissions }) {
 
 async function updateRole(id, { name, description, permissions }) {
   const role = await getRole(id);
-  if (!role) throw new Error('Role পাওয়া যায়নি।');
+  if (!role) throw new PublicError('Role পাওয়া যায়নি।');
   const r = await pool.query(
     `UPDATE roles SET name=$2, description=$3, permissions=$4, updated_at=NOW() WHERE id=$1 RETURNING *`,
     [role.id, name || role.name, description ?? role.description, JSON.stringify(permissions || {})]
@@ -162,17 +166,17 @@ async function updateRole(id, { name, description, permissions }) {
 
 async function deleteRole(id) {
   const role = await getRole(id);
-  if (!role) throw new Error('Role পাওয়া যায়নি।');
-  if (role.is_system) throw new Error('সিস্টেম Role (Super Admin/Admin/Moderator/Support/Finance) ডিলিট করা যাবে না।');
+  if (!role) throw new PublicError('Role পাওয়া যায়নি।');
+  if (role.is_system) throw new PublicError('সিস্টেম Role (Super Admin/Admin/Moderator/Support/Finance) ডিলিট করা যাবে না।');
   const usersRes = await pool.query('SELECT COUNT(*)::int AS cnt FROM users WHERE role_key = $1', [role.key]);
-  if (usersRes.rows[0].cnt > 0) throw new Error(`এই Role-এ ${usersRes.rows[0].cnt} জন ইউজার আছে — আগে তাদের অন্য Role-এ সরান।`);
+  if (usersRes.rows[0].cnt > 0) throw new PublicError(`এই Role-এ ${usersRes.rows[0].cnt} জন ইউজার আছে — আগে তাদের অন্য Role-এ সরান।`);
   await pool.query('DELETE FROM roles WHERE id = $1', [role.id]);
   await cache.del(`role:${role.key}`);
 }
 
 async function cloneRole(id, newName) {
   const role = await getRole(id);
-  if (!role) throw new Error('Role পাওয়া যায়নি।');
+  if (!role) throw new PublicError('Role পাওয়া যায়নি।');
   return createRole({ name: newName || `${role.name} (Copy)`, description: role.description, permissions: role.permissions });
 }
 
@@ -193,7 +197,7 @@ async function bulkUpdatePermission(roleIds, permKey, value) {
 async function assignUserRole(userId, roleKey) {
   if (roleKey) {
     const role = await getRole(roleKey);
-    if (!role) throw new Error('Role পাওয়া যায়নি।');
+    if (!role) throw new PublicError('Role পাওয়া যায়নি।');
   }
   await pool.query('UPDATE users SET role_key = $2 WHERE id = $1', [userId, roleKey || null]);
 }
@@ -203,7 +207,7 @@ function exportRoles(roles) {
 }
 
 async function importRoles(data) {
-  if (!Array.isArray(data)) throw new Error('সঠিক ফরম্যাটে JSON array দিন।');
+  if (!Array.isArray(data)) throw new PublicError('সঠিক ফরম্যাটে JSON array দিন।');
   let created = 0, updated = 0, skipped = 0;
   for (const item of data) {
     if (!item.key || !item.name) { skipped++; continue; }

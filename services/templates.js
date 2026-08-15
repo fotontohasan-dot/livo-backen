@@ -2,6 +2,7 @@
 // ==================== Notification Template Engine ====================
 
 const { pool } = require('../db');
+const { PublicError } = require('../utils/safeError'); // ইচ্ছাকৃত, অ্যাডমিন-মুখী ভ্যালিডেশন বার্তা
 
 const VALID_CHANNELS = ['email', 'sms', 'in_app'];
 const VALID_LANGS = ['bn', 'en'];
@@ -121,9 +122,9 @@ async function getTemplateById(id) {
 
 async function createTemplate(data, adminId, adminUsername) {
   await ensureTable();
-  if (!VALID_CHANNELS.includes(data.channel)) throw new Error('অবৈধ চ্যানেল');
-  if (!VALID_LANGS.includes(data.lang)) throw new Error('অবৈধ ভাষা');
-  if (!data.template_key || !data.name || !data.body) throw new Error('টেমপ্লেট key, নাম ও body আবশ্যক');
+  if (!VALID_CHANNELS.includes(data.channel)) throw new PublicError('অবৈধ চ্যানেল');
+  if (!VALID_LANGS.includes(data.lang)) throw new PublicError('অবৈধ ভাষা');
+  if (!data.template_key || !data.name || !data.body) throw new PublicError('টেমপ্লেট key, নাম ও body আবশ্যক');
 
   const variables = extractVariableNames(data.body, data.subject);
   const r = await pool.query(
@@ -143,7 +144,7 @@ async function createTemplate(data, adminId, adminUsername) {
 async function updateTemplate(id, data, adminId, adminUsername) {
   await ensureTable();
   const existing = await getTemplateById(id);
-  if (!existing) throw new Error('টেমপ্লেট পাওয়া যায়নি');
+  if (!existing) throw new PublicError('টেমপ্লেট পাওয়া যায়নি');
 
   const variables = extractVariableNames(data.body, data.subject);
   const r = await pool.query(

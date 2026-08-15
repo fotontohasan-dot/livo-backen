@@ -1,6 +1,7 @@
 // services/featureFlags.js
 const { pool } = require('../db');
 const cache = require('./cache');
+const { PublicError } = require('../utils/safeError'); // ইচ্ছাকৃত, অ্যাডমিন-মুখী ভ্যালিডেশন বার্তা
 
 const CACHE_KEY = 'feature_flags:all';
 const CACHE_TTL = 30;
@@ -44,8 +45,8 @@ async function setFlag(key, enabled, adminId, adminUsername) {
 }
 
 async function createFlag({ key, label, category, enabled, description, adminId, adminUsername }) {
-  if (!VALID_CATEGORIES.includes(category)) throw new Error('অবৈধ ক্যাটাগরি');
-  if (!/^[a-z0-9_]{3,60}$/.test(key || '')) throw new Error('key শুধু lowercase, সংখ্যা, আন্ডারস্কোর (৩-৬০ ক্যারেক্টার)');
+  if (!VALID_CATEGORIES.includes(category)) throw new PublicError('অবৈধ ক্যাটাগরি');
+  if (!/^[a-z0-9_]{3,60}$/.test(key || '')) throw new PublicError('key শুধু lowercase, সংখ্যা, আন্ডারস্কোর (৩-৬০ ক্যারেক্টার)');
   const r = await pool.query(
     `INSERT INTO feature_flags (key, label, category, enabled, description, updated_by_id, updated_by_username)
      VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,

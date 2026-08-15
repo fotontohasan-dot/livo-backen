@@ -311,8 +311,26 @@ app.get('/health', async (req, res) => {
 // variable Render থেকে মুছে ফেলো (অথবা এই পুরো ব্লকটা কোড থেকেই সরিয়ে দাও) — এটা স্থায়ীভাবে
 // রেখে দেওয়া নিরাপদ না, যেকেউ token অনুমান করতে পারলে admin অ্যাকাউন্ট বদলে ফেলতে পারবে।
 if (process.env.ADMIN_RESET_TOKEN) {
+  // /internal/reset-admin ও তার status — দুটোতেই একই টোকেন গেট। টোকেন না মিললে 404,
+  // যাতে রুটটার অস্তিত্বই ফাঁস না হয়। timingSafeEqual ব্যবহার করা হয় যাতে বাইট-বাই-বাইট
+  // তুলনার সময় থেকে টোকেন অনুমান করা না যায় (দুই রুটে হুবহু একই যাচাই)।
+  function resetAdminTokenOk(req) {
+    const crypto = require('crypto');
+    // Render-এর ওয়েব UI-তে পেস্ট করার সময় প্রায়ই অজান্তে শেষে একটা স্পেস/নিউলাইন চলে আসে —
+    // trim() দিয়ে সেই সাধারণ ভুলটা এড়ানো হচ্ছে, নাহলে সঠিক টোকেন দিলেও মিলত না।
+    const provided = Buffer.from(String(req.query.token || '').trim());
+    const expected = Buffer.from(String(process.env.ADMIN_RESET_TOKEN).trim());
+    return provided.length === expected.length && crypto.timingSafeEqual(provided, expected);
+  }
+
   // ডায়াগনস্টিক: env var আদৌ Render-এ সেট হয়েছে কিনা, ভ্যালু ফাঁস না করেই যাচাই করার উপায়।
+  //
+  // এই রুটে আগে কোনো টোকেন যাচাই ছিল না — ADMIN_RESET_TOKEN সেট থাকলেই যে কেউ, লগইন ছাড়াই,
+  // NEW_ADMIN_EMAIL-এর পুরো মান, পাসওয়ার্ডের দৈর্ঘ্য, DB-তে অ্যাকাউন্টের role এবং
+  // "পাসওয়ার্ডটা DB-র হ্যাশের সাথে মেলে কিনা" — এই শেষেরটা কার্যত একটা যাচাই-অরাকল —
+  // সব দেখে ফেলতে পারত। এখন নিচের mutation রুটের মতোই একই টোকেন গেট।
   app.get('/internal/reset-admin/status', async (req, res) => {
+    if (!resetAdminTokenOk(req)) return res.status(404).send('Not found');
     const lines = [
       `ADMIN_RESET_TOKEN: ${process.env.ADMIN_RESET_TOKEN ? 'সেট করা আছে (' + process.env.ADMIN_RESET_TOKEN.length + ' ক্যারেকটার)' : 'সেট করা নেই'}`,
       `NEW_ADMIN_EMAIL: ${process.env.NEW_ADMIN_EMAIL || 'সেট করা নেই'}`,
@@ -347,13 +365,7 @@ if (process.env.ADMIN_RESET_TOKEN) {
   });
 
   app.get('/internal/reset-admin', async (req, res) => {
-    const crypto = require('crypto');
-    // Render-এর ওয়েব UI-তে পেস্ট করার সময় প্রায়ই অজান্তে শেষে একটা স্পেস/নিউলাইন চলে আসে —
-    // trim() দিয়ে সেই সাধারণ ভুলটা এড়ানো হচ্ছে, নাহলে সঠিক টোকেন দিলেও মিলত না।
-    const provided = Buffer.from(String(req.query.token || '').trim());
-    const expected = Buffer.from(String(process.env.ADMIN_RESET_TOKEN).trim());
-    const tokenOk = provided.length === expected.length && crypto.timingSafeEqual(provided, expected);
-    if (!tokenOk) return res.status(404).send('Not found');
+    if (!resetAdminTokenOk(req)) return res.status(404).send('Not found');
 
     // token-এর মতো NEW_ADMIN_EMAIL/NEW_ADMIN_PASSWORD-এও Render-এ পেস্ট করার সময় অজান্তে
     // শেষে স্পেস/নিউলাইন ঢুকে যাওয়ার একই ঝুঁকি আছে — trim() দিয়ে সেটা এড়ানো হচ্ছে।
@@ -408,7 +420,11 @@ app.get('/ready', async (req, res) => {
     const data = await readiness();
     res.status(200).json(data);
   } catch (err) {
-    res.status(503).json({ status: 'not_ready', error: err.message });
+    // /ready অথেন্টিকেশন ছাড়াই পাবলিক (লোড ব্যালান্সার/অর্কেস্ট্রেটর প্রোব)। err.message-এ
+    // readiness() থেকে আসা pg কানেকশন এরর থাকে — হোস্ট, পোর্ট, ডেটাবেসের নাম, কখনো
+    // ইউজারনেম পর্যন্ত। প্রোবের জন্য স্ট্যাটাস কোডটাই যথেষ্ট, কারণ সার্ভার লগে থাকে।
+    console.error('readiness check failed:', err && err.stack ? err.stack : err);
+    res.status(503).json({ status: 'not_ready' });
   }
 });
 

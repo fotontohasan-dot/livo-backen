@@ -69,8 +69,12 @@ const rows = (backups || []).map(row).join('') || '<tr><td colspan="8" class="px
         ${!encryptionEnabled ? '<span class="px-4 py-2 bg-amber-50 text-amber-700 rounded-2xl text-sm font-semibold"><i class="fas fa-triangle-exclamation"></i> BACKUP_ENCRYPTION_KEY সেট নেই — ব্যাকআপ এনক্রিপ্ট হচ্ছে না</span>' : '<span class="px-4 py-2 bg-emerald-50 text-emerald-700 rounded-2xl text-sm font-semibold"><i class="fas fa-lock"></i> Encryption চালু</span>'}
     </div>
 
-    ${created ? '<div class="mb-4 px-4 py-3 bg-emerald-50 text-emerald-700 rounded-2xl text-sm font-medium">✅ ' + created + ' টি ব্যাকআপ তৈরি হয়েছে</div>' : ''}
-    ${restored ? '<div class="mb-4 px-4 py-3 bg-blue-50 text-blue-700 rounded-2xl text-sm font-medium">✅ ' + restored + ' রিস্টোর সম্পন্ন হয়েছে</div>' : ''}
+    ${created ? '<div class="mb-4 px-4 py-3 bg-emerald-50 text-emerald-700 rounded-2xl text-sm font-medium">✅ ' + escapeHtml(created) + ' টি ব্যাকআপ তৈরি হয়েছে</div>' : ''}
+    ${restored ? (locals.skipped
+      // আংশিক রিস্টোর কখনো সবুজ "সম্পন্ন" ব্যানারে দেখানো হয় না — সারি বাদ পড়লে সেটা
+      // স্পষ্টভাবে সতর্কতা হিসেবে দেখাতে হবে, নাহলে অ্যাডমিন ডেটা-হারানো টের পায় না।
+      ? '<div class="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl text-sm font-medium">⚠️ ' + escapeHtml(restored) + ' রিস্টোর <b>আংশিকভাবে</b> সম্পন্ন হয়েছে — ' + escapeHtml(locals.skipped) + ' টি সারি ঢোকানো যায়নি।</div>'
+      : '<div class="mb-4 px-4 py-3 bg-blue-50 text-blue-700 rounded-2xl text-sm font-medium">✅ ' + escapeHtml(restored) + ' রিস্টোর সম্পন্ন হয়েছে</div>') : ''}
     ${error ? '<div class="mb-4 px-4 py-3 bg-red-50 text-red-700 rounded-2xl text-sm font-medium">❌ ' + escapeHtml(error) + '</div>' : ''}
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

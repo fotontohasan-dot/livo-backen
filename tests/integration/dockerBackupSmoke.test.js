@@ -114,6 +114,63 @@ describe('Docker ডিপ্লয়মেন্ট কনফিগ স্ম�
   });
 });
 
+// ---------------------------------------------------------------------------
+// compose ফাইলগুলোর পার্সার-স্তরের যাচাই। `docker compose config` চালাতে Docker ডিমন
+// লাগে, যা CI-তে সবসময় থাকে না — কিন্তু compose যে YAML সেমান্টিক্সের উপর দাঁড়িয়ে আছে
+// সেটা ডিমন ছাড়াই যাচাই করা যায়, এবং সবচেয়ে বিপজ্জনক ভুলটা ঠিক এখানেই ধরা পড়ে:
+//
+//   docker compose config                      → override **স্বয়ংক্রিয়ভাবে** যুক্ত হয় → development
+//   docker compose -f docker-compose.yml config → শুধু বেস ফাইল                        → production
+//
+// প্রোডাকশন সার্ভারে ভুল করে প্রথমটা চালালে অ্যাপ development মোডে, nodemon-এ, এবং
+// override-এর দুর্বল ডিফল্ট পাসওয়ার্ড নিয়ে উঠে যাবে। তাই দুটোর পার্থক্যটাই এখানে লক করা।
+// ---------------------------------------------------------------------------
+describe('compose কনফিগ পার্সার-স্তরের যাচাই (Docker ডিমন ছাড়াই)', () => {
+  const yaml = require('js-yaml');
+  const baseDoc = yaml.load(compose);
+  const overrideDoc = yaml.load(fs.readFileSync(path.join(ROOT, 'docker-compose.override.yml'), 'utf8'));
+
+  test('তিনটে compose ফাইলই সিনট্যাক্টিক্যালি বৈধ YAML', () => {
+    expect(baseDoc).toBeTruthy();
+    expect(overrideDoc).toBeTruthy();
+    expect(yaml.load(fs.readFileSync(path.join(ROOT, 'docker-compose.test.yml'), 'utf8'))).toBeTruthy();
+  });
+
+  test('বেস ফাইল একাই (docker compose -f docker-compose.yml) production দেয়', () => {
+    expect(baseDoc.services.app.build.target).toBe('production');
+    expect(baseDoc.services.app.environment.NODE_ENV).toBe('production');
+  });
+
+  test('override যুক্ত হলে (খালি docker compose) development-এ নেমে আসে — এটাই প্রত্যাশিত ডেভ আচরণ', () => {
+    // compose-এর merge সেমান্টিক্স: override-এর স্কেলার মান বেসেরটা প্রতিস্থাপন করে
+    const mergedTarget = overrideDoc.services.app.build.target;
+    const mergedNodeEnv = overrideDoc.services.app.environment.NODE_ENV;
+    expect(mergedTarget).toBe('development');
+    expect(mergedNodeEnv).toBe('development');
+    // override শুধু app সার্ভিসেই হাত দেয় — db/redis/monitoring প্রোডাকশন কনফিগেই থাকে
+    expect(Object.keys(overrideDoc.services)).toEqual(['app']);
+  });
+
+  test('প্রোডাকশন app সার্ভিসে DATABASE_URL ও REDIS_URL দুটোই fail-closed', () => {
+    expect(baseDoc.services.app.environment.DATABASE_URL).toMatch(/\$\{DB_PASSWORD:\?/);
+    expect(baseDoc.services.app.environment.REDIS_URL).toMatch(/\$\{REDIS_PASSWORD:\?/);
+  });
+
+  test('app সার্ভিসে healthcheck ও পোর্ট ম্যাপিং দুটোই আছে', () => {
+    expect(baseDoc.services.app.healthcheck.test.join(' ')).toMatch(/\/health/);
+    expect(baseDoc.services.app.ports.join(' ')).toMatch(/:3000/);
+  });
+
+  test('uploads ও backups — দুটো ভলিউমই ইমেজে তৈরি করা পাথে মাউন্ট হয়', () => {
+    const mounts = baseDoc.services.app.volumes.join(' ');
+    expect(mounts).toContain('/app/public/uploads');
+    expect(mounts).toContain('/app/backups');
+    // ইমেজে পাথ দুটো আগেই তৈরি না থাকলে Docker সেগুলো root:root বানায়, USER nodejs লিখতে পারে না
+    expect(dockerfile).toMatch(/mkdir\s+-p[^\n]*\/app\/public\/uploads/);
+    expect(dockerfile).toMatch(/mkdir\s+-p[^\n]*\/app\/backups/);
+  });
+});
+
 describe('ব্যাকআপ create → restore রাউন্ড-ট্রিপ (কন্টেইনার-সদৃশ আলাদা BACKUP_DIR-এ)', () => {
   const tmpBackupDir = path.join(ROOT, 'tmp-backup-smoke');
   let backupManager;
