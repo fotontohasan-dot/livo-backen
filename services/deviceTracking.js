@@ -6,7 +6,7 @@ const crypto = require('crypto');
 const geoip = require('geoip-lite');
 const { pool } = require('../db');
 const { logAdminAction } = require('./fraudDetection');
-const { sendNewDeviceAlert } = require('./email');
+const { sendQueuedEmail } = require('./email');
 
 const ACTIVITY_TOUCH_INTERVAL_MS = 5 * 60 * 1000; // বারবার DB আপডেট না করে ৫ মিনিট পরপর last_activity রিফ্রেশ
 
@@ -115,14 +115,22 @@ async function recordDeviceLogin(req, userId, loginLogId) {
         `ইউজার #${userId} — নতুন ডিভাইস থেকে লগইন: ${deviceName} — IP ${ip} — ${location}`, null
       );
 
-      // নতুন ডিভাইস থেকে লগইন হলে ইউজারকে ইমেইল সতর্কতা — ব্যর্থ হলেও লগইন ফ্লো কখনো আটকাবে না
+      // নতুন ডিভাইস থেকে লগইন হলে ইউজারকে ইমেইল সতর্কতা।
+      // আগে এখানে sendNewDeviceAlert()-কে সরাসরি await করা হতো। try/catch শুধু এররটাই আটকাত,
+      // অপেক্ষাটা নয় — আর recordDeviceLogin() নিজেই routes/auth.js-এর register (২৮৮ লাইন) ও
+      // login (৩৬০ লাইন) দুই জায়গাতেই await করা হয়। ফলে আউটবাউন্ড SMTP ব্লকড/ধীর হলে
+      // (Render-এ যেটা স্বাভাবিক — services/email.js-এর কমেন্টেই লেখা আছে) প্রতিটা নতুন-ডিভাইস
+      // লগইন ও রেজিস্ট্রেশন পুরো connectionTimeout (১০ সেকেন্ড) ধরে ঝুলে থাকত।
+      // এখন এই ফাইলের বাকি ইমেইলগুলোর মতোই queue-তে পাঠানো হয় (services/queueHandlers.js-এর
+      // 'email' হ্যান্ডলারে kind='new_device'), তাই SMTP-এর জন্য কোনো HTTP রিকোয়েস্ট অপেক্ষা করে না
+      // এবং ব্যর্থ হলে ব্যাকগ্রাউন্ড ওয়ার্কারে রিট্রাই/ব্যাকঅফ পাওয়া যায়।
       try {
         const userRes = await pool.query('SELECT email, username FROM users WHERE id = $1', [userId]);
         const u = userRes.rows[0];
         if (u && u.email) {
-          await sendNewDeviceAlert(u.email, {
+          sendQueuedEmail('new_device', u.email, {
             username: u.username, deviceName, ip, location, time: new Date()
-          });
+          }).catch(e => console.error('sendNewDeviceAlert enqueue error (non-blocking):', e.message));
         }
       } catch (mailErr) {
         console.error('sendNewDeviceAlert error (non-blocking):', mailErr.message);

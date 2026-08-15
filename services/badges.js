@@ -62,10 +62,20 @@ async function checkBadges(userId) {
     for (const b of BADGES) {
       if (earned.includes(b.code)) continue;
       if (b.check(stats)) {
-        await pool.query(
-          `INSERT INTO user_badges (user_id, badge_code) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+        // গুরুত্বপূর্ণ: ON CONFLICT DO NOTHING কনফ্লিক্টটা "গিলে ফেলে" — কোনো এরর থ্রো হয় না।
+        // আগে রিটার্ন ভ্যালু দেখা হতো না, ফলে দুইটা concurrent checkBadges() (routes/games.js ও
+        // routes/matches.js প্রতিটা বাজিতে await ছাড়া এটা ডাকে, অর্থাৎ একই ইউজারের একাধিক কল
+        // সহজেই ওভারল্যাপ করে) দুটোই earned-লিস্ট ফাঁকা দেখত, একজনের INSERT সফল হতো আর
+        // অন্যজনেরটা নীরবে skip হতো — কিন্তু দুজনেই coins ক্রেডিট করত। একই ব্যাজের রিওয়ার্ড
+        // বারবার ইস্যু করা সম্ভব ছিল (unlimited coin duplication)।
+        // RETURNING id দিয়ে এখন শুধু যে কলটা আসলেই রো ইনসার্ট করেছে সেটাই রিওয়ার্ড দেয়।
+        const insertedBadge = await pool.query(
+          `INSERT INTO user_badges (user_id, badge_code) VALUES ($1, $2)
+           ON CONFLICT (user_id, badge_code) DO NOTHING RETURNING id`,
           [userId, b.code]
         );
+        if (insertedBadge.rowCount === 0) continue; // অন্য একটা concurrent কল ইতিমধ্যে এই ব্যাজ দিয়ে দিয়েছে
+
         if (b.reward > 0) {
           await pool.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [b.reward, userId]);
           await pool.query(

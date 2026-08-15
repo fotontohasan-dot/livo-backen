@@ -33,7 +33,16 @@ async function addVipTurnover(userId, amount) {
       const bonus = lvlRes.rows[0].upgrade_bonus || 0;
       const name = lvlRes.rows[0].name;
 
-      await pool.query(`UPDATE users SET vip_level = $1 WHERE id = $2`, [newLevel, userId]);
+      // লেভেল আপগ্রেডটা atomic ভাবে করা হয় (`vip_level < $1` গার্ড সহ)। আগে শর্তহীন UPDATE ছিল,
+      // আর উপরের currentLevel পড়া হয়েছিল আলাদা কোয়েরিতে — একই ইউজারের দুইটা বাজি একসাথে এলে
+      // দুটোই একই পুরনো currentLevel দেখত, দুটোই newLevel > currentLevel পেত এবং দুটোই
+      // upgrade_bonus ক্রেডিট করত (একই আপগ্রেডের বোনাস দুইবার)। এখন কেবল যে কোয়েরিটা আসলে
+      // লেভেল বাড়িয়েছে (rowCount === 1) সেটাই বোনাস দেয়; হেরে যাওয়া কলটা কিছুই করে না।
+      const levelUp = await pool.query(
+        `UPDATE users SET vip_level = $1 WHERE id = $2 AND COALESCE(vip_level, 0) < $1 RETURNING id`,
+        [newLevel, userId]
+      );
+      if (levelUp.rowCount === 0) return;
 
       if (bonus > 0) {
         await pool.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [bonus, userId]);

@@ -22,6 +22,15 @@ queue.registerHandler('email', async (payload) => {
     case 'verification':
       await emailService.sendVerificationEmail(to, payload.verifyUrl);
       break;
+    case 'new_device':
+      await emailService.sendNewDeviceAlert(to, {
+        username: payload.username,
+        deviceName: payload.deviceName,
+        ip: payload.ip,
+        location: payload.location,
+        time: payload.time
+      });
+      break;
     default:
       throw new Error(`অজানা email job kind: "${kind}"`);
   }

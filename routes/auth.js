@@ -11,7 +11,7 @@ const { evaluateDuplicateAccount } = require('../services/duplicateDetection');
 const { checkIp } = require('../services/vpnDetection');
 const { evaluateRequest, generateCaptcha, verifyCaptcha, logBotEvent } = require('../services/botDetection');
 const { getIpRule } = require('../services/ipRules');
-const { recordDeviceLogin, parseUserAgent } = require('../services/deviceTracking');
+const { recordDeviceLogin, parseUserAgent, revokeAllOtherSessions } = require('../services/deviceTracking');
 const cache = require('../services/cache');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
 const googleAuth = require('../services/googleAuth');
@@ -832,21 +832,36 @@ router.post('/reset-password/:token', resetLimiter, async (req, res) => {
       return res.redirect(`/reset-password/${token}`);
     }
 
-    const result = await pool.query(
-      'SELECT id FROM users WHERE reset_token = $1 AND reset_token_expiry > NOW()',
-      [token]
+    const hashed = await bcrypt.hash(password, 10);
+
+    // টোকেন যাচাই + পাসওয়ার্ড আপডেট + টোকেন invalidate — সব একটাই atomic UPDATE-এ।
+    // আগে আলাদা SELECT ... তারপর UPDATE ছিল; দুটোর মাঝে কোনো লক ছিল না, তাই একই টোকেন নিয়ে
+    // দুটো রিকোয়েস্ট একসাথে এলে দুটোই SELECT-এ রো পেত এবং দুটোই পাসওয়ার্ড সেট করত —
+    // অর্থাৎ টোকেনটা কার্যত single-use ছিল না। WHERE-এ reset_token রাখার ফলে দ্বিতীয় কলটা
+    // rowCount 0 পায় (প্রথমটা ইতিমধ্যে NULL করে দিয়েছে) এবং কিছুই পরিবর্তন করতে পারে না।
+    const updated = await pool.query(
+      `UPDATE users SET password = $1, reset_token = NULL, reset_token_expiry = NULL
+       WHERE reset_token = $2 AND reset_token_expiry > NOW()
+       RETURNING id, username`,
+      [hashed, token]
     );
-    if (result.rows.length === 0) {
+    if (updated.rowCount === 0) {
       req.flash('error', '❌ লিঙ্কটি অকার্যকর অথবা মেয়াদ শেষ হয়ে গেছে। আবার চেষ্টা করুন।');
       return res.redirect('/forgot-password');
     }
-
-    const hashed = await bcrypt.hash(password, 10);
-    await pool.query(
-      'UPDATE users SET password = $1, reset_token = NULL, reset_token_expiry = NULL WHERE id = $2',
-      [hashed, result.rows[0].id]
-    );
     cache.del(`reset_token:${token}`).catch(() => {});
+
+    // পাসওয়ার্ড রিসেটের পর ওই অ্যাকাউন্টের সব পুরনো সেশন বাতিল করা হয়।
+    // এটা না থাকলে অ্যাকাউন্ট টেকওভারের পর ভিকটিম পাসওয়ার্ড রিসেট করলেও আক্রমণকারীর
+    // আগের লগইন সেশনটা বহাল থাকত — রিসেট করেও অ্যাকাউন্ট ফেরত পাওয়া যেত না।
+    // services/deviceTracking.js-এর বিদ্যমান হেল্পারটাই ব্যবহার করা হচ্ছে; currentSid হিসেবে
+    // ফাঁকা স্ট্রিং দেওয়া হয় (এই রিকোয়েস্টটা unauthenticated, বাদ দেওয়ার মতো নিজস্ব সেশন নেই),
+    // ফলে `sid != ''` শর্তে ইউজারের সব সক্রিয় সেশনই বাতিল হয়।
+    try {
+      await revokeAllOtherSessions(updated.rows[0].id, '', 'PASSWORD_RESET');
+    } catch (e) {
+      console.error('reset-password session revoke error:', e.message);
+    }
 
     req.flash('success', '✅ পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে। এখন লগইন করুন।');
     res.redirect('/login');
