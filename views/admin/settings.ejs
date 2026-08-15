@@ -77,10 +77,12 @@ function adminRow(a, currentAdminId) {
             <input type="text" name="username" placeholder="ইউজারনেম দিয়ে নতুন অ্যাডমিন যোগ করুন" required class="flex-1 border px-4 py-2.5 rounded-2xl text-sm">
             <button type="submit" class="px-5 bg-slate-800 text-white rounded-2xl text-sm font-semibold">Promote</button>
         </form>
-        <table class="w-full">
-            <thead><tr class="text-left text-xs text-slate-400 uppercase"><th class="px-4 py-2">Username</th><th class="px-4 py-2">Email</th><th class="px-4 py-2">Since</th><th class="px-4 py-2 text-center">Action</th></tr></thead>
-            <tbody>${(admins || []).map(a => adminRow(a, user.id)).join('') || '<tr><td colspan="4" class="px-4 py-6 text-center text-slate-400 text-sm">কোনো অ্যাডমিন নেই</td></tr>'}</tbody>
-        </table>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead><tr class="text-left text-xs text-slate-400 uppercase"><th class="px-4 py-2">Username</th><th class="px-4 py-2">Email</th><th class="px-4 py-2">Since</th><th class="px-4 py-2 text-center">Action</th></tr></thead>
+                <tbody>${(admins || []).map(a => adminRow(a, user.id)).join('') || '<tr><td colspan="4" class="px-4 py-6 text-center text-slate-400 text-sm">কোনো অ্যাডমিন নেই</td></tr>'}</tbody>
+            </table>
+        </div>
     </div>
 
     <div class="bg-white rounded-3xl border border-slate-100 p-6">

@@ -30,7 +30,7 @@ const rows = (transactions || []).map(txnRow).join('') || '<tr><td colspan="6" c
         <p class="text-sm text-slate-500">মোট ${total || 0} টি • পেজ ${page || 1} / ${totalPages || 1}</p>
     </div>
     
-    <div class="bg-white rounded-3xl border p-1 overflow-hidden modern-table">
+    <div class="bg-white rounded-3xl border p-1 overflow-x-auto modern-table">
         <table class="w-full text-sm">
             <thead class="bg-slate-50">
                 <tr>

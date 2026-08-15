@@ -56,7 +56,7 @@ const categoryRows = (s.categories || []).map(c =>
         </div>
     </div>
 
-    <div class="bg-white rounded-3xl border border-slate-100 overflow-hidden mb-6">
+    <div class="bg-white rounded-3xl border border-slate-100 overflow-x-auto mb-6">
         <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
             <h2 class="font-semibold text-slate-900">Cache Categories</h2>
             <form method="POST" action="/admin/cache/clear" onsubmit="return confirm('সমস্ত ক্যাশ (এই অ্যাপের) পরিষ্কার করবেন? এতে সাময়িকভাবে ডাটাবেজে লোড বাড়তে পারে।')">

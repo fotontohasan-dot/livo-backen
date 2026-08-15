@@ -23,6 +23,7 @@
     .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
     .toolbar input, .toolbar select { background: #0f1115; color: #e2e8f0; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 7px 9px; font-size: 12.5px; }
     .btn-xs { padding: 6px 12px; font-size: 12px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; }
+    .table-scroll { overflow-x: auto; }
     table.mini { width: 100%; border-collapse: collapse; font-size: 12px; color: #cbd5e1; }
     table.mini th { text-align: left; color: #94a3b8; padding: 6px 8px; }
     table.mini td { padding: 6px 8px; border-top: 1px solid rgba(255,255,255,0.05); }
@@ -104,14 +105,16 @@
 
       <div class="chart-card">
         <b style="color:#fff;font-size:13px;">Recent Activity</b>
-        <table class="mini" style="margin-top:10px;">
-          <thead><tr><th>Admin</th><th>Action</th><th>Details</th><th>Time</th></tr></thead>
-          <tbody>
-            <% data.recentActivity.forEach(function(a) { %>
-              <tr><td><%= a.admin_username %></td><td><%= a.action_type %></td><td><%= (a.details||'').slice(0,60) %></td><td><%= new Date(a.created_at).toLocaleString('bn-BD') %></td></tr>
-            <% }) %>
-          </tbody>
-        </table>
+        <div class="table-scroll">
+          <table class="mini" style="margin-top:10px;">
+            <thead><tr><th>Admin</th><th>Action</th><th>Details</th><th>Time</th></tr></thead>
+            <tbody>
+              <% data.recentActivity.forEach(function(a) { %>
+                <tr><td><%= a.admin_username %></td><td><%= a.action_type %></td><td><%= (a.details||'').slice(0,60) %></td><td><%= new Date(a.created_at).toLocaleString('bn-BD') %></td></tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <script>

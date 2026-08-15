@@ -173,7 +173,7 @@ docker compose -f docker-compose.yml up -d --build
 
 ```bash
 docker compose -f docker-compose.yml ps
-curl -f http://localhost:${PORT:-4000}/health
+curl -f http://localhost:${PORT:-3000}/health
 ```
 
 ### ধাপ ৩ — লোকাল ডেভেলপমেন্টে চালানো (override সহ)
