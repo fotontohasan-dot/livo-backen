@@ -273,6 +273,9 @@ app.use((req, res, next) => {
   });
   res.locals.lang = lang;
   res.locals.siteName = 'Livo';
+  // canonical/og:url-এর জন্য query-string ছাড়া পাথ। হোমপেজে '/' নয়, খালি স্ট্রিং —
+  // তাতে baseUrl-এর সাথে জোড়া লাগলে "https://host/" হয়, ডাবল স্ল্যাশ হয় না।
+  res.locals.canonicalPath = req.path === '/' ? '/' : req.path.replace(/\/+$/, '');
 
   const pathParts = req.path.split('/').filter(Boolean);
   let page = 'home';

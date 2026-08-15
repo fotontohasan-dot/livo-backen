@@ -464,20 +464,81 @@ function getBackupFilePath(record) {
 }
 
 // ==================== Scheduled Backup ====================
+//
+// আগে এই রানার প্রতিটা create*Backup() কল করে ফলাফল ফেলে দিত এবং শেষে সবসময়
+// "✅ Scheduled backup সম্পন্ন।" ছাপাত। create*Backup() নিজে throw করে না — ব্যর্থ হলে
+// status:'failed' রেকর্ড ফেরত দেয়। ফলে ডিস্ক ভরে যাওয়া, পারমিশন সমস্যা বা pg কানেকশন
+// হারানোর মতো কারণে রাতের পর রাত ব্যাকআপ ব্যর্থ হলেও অ্যাডমিন কিছুই জানতেন না — শুধু
+// /admin/backups খুলে দেখলে ধরা পড়ত। এখন ব্যর্থ/আংশিক ফলাফলে একবারই Telegram অ্যালার্ট
+// যায় (category 'system')। সফল ব্যাকআপে কোনো নোটিফিকেশন যায় না — স্প্যাম এড়াতে।
+
+// Telegram-এ পাঠানোর আগে এরর মেসেজ ছোট করা ও টোকেন-সদৃশ লম্বা স্ট্রিং ঢেকে দেওয়া হয়,
+// যাতে ভুল করেও কোনো সিক্রেট/ইন্টারনাল ডিটেইল নোটিফিকেশনে চলে না যায়।
+function sanitizeAlertText(message) {
+  return String(message || 'অজানা ত্রুটি')
+    .replace(/[A-Za-z0-9_\-]{24,}/g, '***')
+    .replace(/\s+/g, ' ')
+    .slice(0, 160);
+}
+
+async function runScheduledBackups() {
+  console.log('🗄️ Scheduled backup শুরু হচ্ছে...');
+  const failures = [];
+
+  const steps = [
+    ['database', createDatabaseBackup],
+    ['uploads', createUploadsBackup],
+    ['config', createConfigBackup]
+  ];
+
+  // একটা টাইপ ব্যর্থ হলেও বাকিগুলো যেন চলে — আগে throw হলে পরেরগুলো বাদ পড়ে যেত
+  for (const [type, fn] of steps) {
+    try {
+      const record = await fn({ source: 'scheduled' });
+      if (!record || record.status !== 'completed') {
+        failures.push({ type, error: sanitizeAlertText(record && record.error_message) });
+      }
+    } catch (err) {
+      failures.push({ type, error: sanitizeAlertText(err.message) });
+    }
+  }
+
+  try {
+    await pruneOldScheduledBackups();
+  } catch (err) {
+    failures.push({ type: 'prune', error: sanitizeAlertText(err.message) });
+  }
+
+  if (failures.length === 0) {
+    console.log('✅ Scheduled backup সম্পন্ন।');
+    return { ok: true, failures: [] };
+  }
+
+  const summary = failures.map((f) => `• <b>${f.type}</b>: ${f.error}`).join('\n');
+  console.error(`❌ Scheduled backup আংশিক/সম্পূর্ণ ব্যর্থ (${failures.length}টি):\n${summary}`);
+
+  try {
+    const { notifyTelegram } = require('./telegramNotify');
+    await notifyTelegram(
+      `🚨 <b>Scheduled Backup ব্যর্থ</b>\n${failures.length}টি ধাপ ব্যর্থ হয়েছে:\n${summary}\n\n<i>/admin/backups থেকে বিস্তারিত দেখুন।</i>`,
+      { category: 'system' }
+    );
+  } catch (e) {
+    // Telegram না পাঠাতে পারলেও ব্যাকআপ রানার নিজে ক্র্যাশ করবে না
+    console.error('backup alert পাঠানো যায়নি:', e.message);
+  }
+
+  return { ok: false, failures };
+}
+
 let scheduleHandle = null;
 function scheduleAutoBackup() {
   if (scheduleHandle) return;
   const hours = parseInt(process.env.BACKUP_SCHEDULE_HOURS || '24', 10);
   if (!hours || hours <= 0) return; // 0/negative দিয়ে বন্ধ করা যায়
   const intervalMs = hours * 60 * 60 * 1000;
-  const run = async () => {
-    console.log('🗄️ Scheduled backup শুরু হচ্ছে...');
-    await createDatabaseBackup({ source: 'scheduled' });
-    await createUploadsBackup({ source: 'scheduled' });
-    await createConfigBackup({ source: 'scheduled' });
-    await pruneOldScheduledBackups();
-    console.log('✅ Scheduled backup সম্পন্ন।');
-  };
+  // rejection যেন কখনো unhandled না হয় — টাইমার কলব্যাকে reject হলে প্রসেস ক্র্যাশ করতে পারে
+  const run = () => runScheduledBackups().catch((e) => console.error('scheduled backup runner error:', e.message));
   setTimeout(run, 5 * 60 * 1000); // সার্ভার স্টার্টের ৫ মিনিট পর প্রথমবার
   scheduleHandle = setInterval(run, intervalMs);
   if (scheduleHandle.unref) scheduleHandle.unref();
@@ -497,5 +558,5 @@ async function pruneOldScheduledBackups() {
 module.exports = {
   createDatabaseBackup, createUploadsBackup, createConfigBackup,
   restoreBackup, listBackups, getBackupById, deleteBackup, getBackupFilePath,
-  scheduleAutoBackup, isEncryptionEnabled, BACKUP_DIR
+  scheduleAutoBackup, runScheduledBackups, isEncryptionEnabled, BACKUP_DIR
 };

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="<%= locals.lang || 'bn' %>">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,14 +15,17 @@
   <meta name="keywords" content="<%= locals.keywords || 'Livo, স্পোর্টস প্রেডিকশন, অনলাইন ক্যাসিনো, বাংলাদেশ বেটিং, ক্রিকেট প্রেডিকশন, লাইভ ক্যাসিনো, অনলাইন গেমিং বাংলাদেশ' %>">
   <meta name="theme-color" content="#006519">
 
+  <!-- Canonical — query-string/ট্র্যাকিং প্যারামিটারসহ URL যেন আলাদা পেজ হিসেবে ইনডেক্স না হয় -->
+  <link rel="canonical" href="<%= (locals.baseUrl || '') + (locals.canonicalPath || '') %>">
+
   <!-- Open Graph / ফেসবুক-হোয়াটসঅ্যাপে শেয়ার করলে যেভাবে দেখাবে -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Livo">
   <meta property="og:title" content="<%= locals.title || 'Livo - সেরা স্পোর্টস প্রেডিকশন ও ক্যাসিনো প্ল্যাটফর্ম' %>">
   <meta property="og:description" content="<%= locals.description || 'Livo-তে খেলুন বাংলাদেশের সেরা স্পোর্টস প্রেডিকশন ও ক্যাসিনো গেম, জিতুন রিয়েল রিওয়ার্ড, নিরাপদ ও দ্রুত ডিপোজিট-উইথড্র সুবিধাসহ।' %>">
   <meta property="og:image" content="<%= locals.baseUrl || '' %>/icon-512.png">
-  <meta property="og:url" content="<%= locals.baseUrl || '' %>">
-  <meta property="og:locale" content="bn_BD">
+  <meta property="og:url" content="<%= (locals.baseUrl || '') + (locals.canonicalPath || '') %>">
+  <meta property="og:locale" content="<%= locals.lang === 'en' ? 'en_US' : 'bn_BD' %>">
 
   <!-- Twitter/X Card -->
   <meta name="twitter:card" content="summary_large_image">

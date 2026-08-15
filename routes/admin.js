@@ -1197,12 +1197,45 @@ router.get('/', rbac.requirePermission('dashboard_view'), async (req, res) => {
       issues: !bullHealth.redisConnected ? ['Redis সংযুক্ত নেই — BullMQ queue বন্ধ, সব জব inline চলছে'] : (queueStatus.failed > 0 ? [`${queueStatus.failed}টা জব ব্যর্থ হয়েছে`] : [])
     };
 
+    // ==== ব্যাকআপ স্ট্যাটাস ====
+    // ব্যাকআপ ব্যর্থ হলে এখন Telegram অ্যালার্ট যায়, কিন্তু Telegram কনফিগার করা না থাকলে
+    // বা মেসেজ মিস হলে অ্যাডমিনের জানার একমাত্র উপায় ছিল /admin/backups খুলে দেখা।
+    // ড্যাশবোর্ডেই শেষ সফল ব্যাকআপ কবে হয়েছে সেটা দেখানো হয় — ডেটা backup_history-তে
+    // আগে থেকেই ছিল, শুধু কোথাও তুলে ধরা হতো না।
+    let backupHealth = { level: 'healthy', lastSuccessAt: null, lastFailedAt: null, issues: [] };
+    try {
+      const b = await pool.query(`
+        SELECT
+          MAX(created_at) FILTER (WHERE status = 'completed') AS last_success,
+          MAX(created_at) FILTER (WHERE status = 'failed')    AS last_failed
+        FROM backup_history
+      `);
+      const lastSuccess = b.rows[0] && b.rows[0].last_success ? new Date(b.rows[0].last_success) : null;
+      const lastFailed = b.rows[0] && b.rows[0].last_failed ? new Date(b.rows[0].last_failed) : null;
+      const ageHours = lastSuccess ? (Date.now() - lastSuccess.getTime()) / 36e5 : null;
+      const issues = [];
+      // BACKUP_SCHEDULE_HOURS ডিফল্ট ২৪; ৪৮ ঘণ্টা পেরোলে নিশ্চিতভাবেই একটা সাইকেল মিস হয়েছে
+      if (!lastSuccess) issues.push('কোনো সফল ব্যাকআপ রেকর্ড নেই');
+      else if (ageHours > 48) issues.push(`শেষ সফল ব্যাকআপ ${Math.round(ageHours)} ঘণ্টা আগে`);
+      if (lastFailed && (!lastSuccess || lastFailed > lastSuccess)) issues.push('সর্বশেষ ব্যাকআপ চেষ্টা ব্যর্থ হয়েছে');
+      backupHealth = {
+        level: issues.length === 0 ? 'healthy' : (!lastSuccess || (ageHours && ageHours > 48) ? 'critical' : 'warning'),
+        lastSuccessAt: lastSuccess,
+        lastFailedAt: lastFailed,
+        issues
+      };
+    } catch (e) {
+      // ব্যাকআপ স্ট্যাটাস তুলতে না পারলেও ড্যাশবোর্ড যেন ভেঙে না যায়
+      backupHealth = { level: 'unknown', lastSuccessAt: null, lastFailedAt: null, issues: ['ব্যাকআপ স্ট্যাটাস পড়া যায়নি'] };
+    }
+
     res.render('admin/dashboard', {
       dateRange,
       betStatistics,
       apiUsageStats,
       serverHealth,
       queueHealth,
+      backupHealth,
       demoStats,
       redisStatus: cache.getStatus(),
       queueStatus,
@@ -1254,6 +1287,7 @@ router.get('/', rbac.requirePermission('dashboard_view'), async (req, res) => {
       apiUsageStats: { totalRequests: 0, avgResponseMs: 0, errorRatePercent: 0, topEndpoints: [] },
       serverHealth: { level: 'healthy', uptimeSec: 0, cpu: { loadAvg1m: '0.00', count: 1 }, system: { usedMemPercent: 0, freeMemMb: 0 }, disk: null, issues: [] },
       queueHealth: { level: 'healthy', issues: [] },
+      backupHealth: { level: 'unknown', lastSuccessAt: null, lastFailedAt: null, issues: [] },
       demoStats: { totalDemo: 9999999, userHeldDemo: 0, casinoDemoWagered: 0, sportsDemoWagered: 0 },
       redisStatus: cache.getStatus(),
       queueStatus: { enabled: false, running: false, pending: 0, processing: 0, completed: 0, failed: 0 },

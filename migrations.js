@@ -1490,6 +1490,32 @@ async function runMigrations() {
     `);
     console.log("✅ Referral Contest Payout Tracking table ready");
 
+    // ==================== হট-পাথ ইনডেক্স ====================
+    // `bets` টেবিলে এতদিন একটাও ইনডেক্স ছিল না, অথচ এটাই সবচেয়ে ব্যস্ত ও টাকা-সংক্রান্ত
+    // টেবিলগুলোর একটা। যেসব কোয়েরি প্রতিবার পুরো টেবিল স্ক্যান করত:
+    //   • routes/profile.js — ইউজারের বেট হিস্ট্রি/স্ট্যাট (user_id + created_at ফিল্টার)
+    //   • routes/api.js     — লিডারবোর্ডে প্রতি ইউজারের জন্য COUNT(*) সাবকোয়েরি (user_id, status)
+    //   • routes/admin.js   — ড্যাশবোর্ড স্ট্যাট (status, created_at)
+    //   • মার্কেট সেটলমেন্ট  — match_id/market_id দিয়ে বেট খোঁজা
+    // রো সংখ্যা বাড়ার সাথে সাথে এগুলোর খরচ লিনিয়ারলি বাড়ত। ইনডেক্সগুলো কোনো আচরণ
+    // বদলায় না, শুধু প্ল্যানারকে seq-scan-এর বদলে index-scan বেছে নিতে দেয়।
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bets_user_created ON bets(user_id, created_at DESC);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bets_user_status ON bets(user_id, status);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bets_match_id ON bets(match_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bets_market_id ON bets(market_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bets_status ON bets(status);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bets_created_at ON bets(created_at DESC);`);
+
+    // error_logs-এও কোনো ইনডেক্স ছিল না। services/scheduler.js-এর log_cleanup জব
+    // প্রতি ঘণ্টায় `DELETE ... WHERE created_at < NOW() - INTERVAL '90 days'` চালায়, আর
+    // অ্যাডমিন লগ পেজ created_at DESC-এ সাজায় — দুটোই ফুল স্ক্যান করত।
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_error_logs_created_at ON error_logs(created_at DESC);`);
+
+    // payment_requests-এ (status) ও (type, method, created_at) আছে, কিন্তু অ্যাডমিনের
+    // ডিপোজিট/উইথড্র পেজ সবসময় type + status একসাথে ফিল্টার করে পেন্ডিং তালিকা দেখায়।
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_payment_requests_type_status ON payment_requests(type, status, created_at DESC);`);
+    console.log("✅ Hot-path indexes ready");
+
   } catch (err) {
     console.error("❌ Migration error:", err.message);
   }
