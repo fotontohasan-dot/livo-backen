@@ -498,6 +498,167 @@ body.light-mode .promo-banner {
   </a>
 </div>
 
+<!-- ===== Main Category Navigation (সাইটের প্রধান বিভাগ) ===== -->
+<!--
+  কেন যোগ করা হলো: হোমপেজে আগে শুধু গেম-গ্রিড ফিল্টার করার ট্যাব ছিল (Hot/Slots/Live/
+  Sports/Poker) — ওগুলো ক্যাসিনো গেমের ক্যাটাগরি, আসল স্পোর্টস নয়। ফলে ফুটবল, ক্রিকেট,
+  লাইভ ম্যাচ, টুর্নামেন্ট বা বেটিং — কোনোটাই হোমপেজ থেকে খুঁজে পাওয়া যেত না।
+  এখানে প্রতিটা লিংক বাস্তবে বিদ্যমান রুটে যায় (সবগুলো যাচাই করা হয়েছে); কোনো ডেড
+  বাটন নেই এবং আইকনের পাশাপাশি টেক্সট লেবেলও আছে।
+-->
+<style>
+  .main-cat-nav {
+    display: flex; gap: 8px; padding: 4px 12px 14px;
+    overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  }
+  .main-cat-nav::-webkit-scrollbar { display: none; }
+  .main-cat-item {
+    flex: 0 0 auto; min-width: 62px; min-height: 62px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+    padding: 9px 10px; border-radius: 14px; text-decoration: none;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    color: var(--text-muted); font-size: 10.5px; font-weight: 700; line-height: 1.1;
+    text-align: center; transition: background .2s, color .2s, border-color .2s;
+  }
+  .main-cat-item i { font-size: 17px; }
+  .main-cat-item:active { background: rgba(255,255,255,0.09); }
+  .main-cat-item.is-primary {
+    background: var(--fa-gold-gradient); color: #1a1a1a; border-color: transparent;
+  }
+  @media (min-width: 768px) {
+    .main-cat-nav { flex-wrap: wrap; justify-content: center; overflow-x: visible; }
+    .main-cat-item { min-width: 88px; font-size: 12px; }
+    .main-cat-item i { font-size: 20px; }
+  }
+</style>
+<nav class="main-cat-nav" aria-label="প্রধান বিভাগ">
+  <a href="/sports" class="main-cat-item is-primary"><i class="fas fa-futbol"></i><span>স্পোর্টস</span></a>
+  <a href="/matches/football" class="main-cat-item"><i class="fas fa-futbol"></i><span>ফুটবল</span></a>
+  <a href="/matches/cricket" class="main-cat-item"><i class="fas fa-baseball"></i><span>ক্রিকেট</span></a>
+  <a href="/matches" class="main-cat-item"><i class="fas fa-tower-broadcast"></i><span>লাইভ ম্যাচ</span></a>
+  <a href="#mainGridWrap" class="main-cat-item"><i class="fas fa-dice"></i><span>ক্যাসিনো</span></a>
+  <a href="/tournaments" class="main-cat-item"><i class="fas fa-trophy"></i><span>টুর্নামেন্ট</span></a>
+  <a href="/leaderboard" class="main-cat-item"><i class="fas fa-ranking-star"></i><span>লিডারবোর্ড</span></a>
+  <a href="/promotions" class="main-cat-item"><i class="fas fa-gift"></i><span>প্রমোশন</span></a>
+</nav>
+
+<!-- ===== Live / Upcoming Sports (আসল ম্যাচ ডেটা) ===== -->
+<!--
+  ডেটা সোর্স: বিদ্যমান /matches/api/live এন্ডপয়েন্ট — নতুন কোনো পোলিং লুপ বা এন্ডপয়েন্ট
+  তৈরি করা হয়নি। কোনো ম্যাচ হার্ডকোড করা নেই; খালি হলে খালি-স্টেট, ব্যর্থ হলে এরর-স্টেট
+  দেখানো হয় এবং বাকি হোমপেজ অক্ষত থাকে।
+-->
+<style>
+  .home-sports { padding: 2px 0 20px; }
+  .home-sports-head {
+    display: flex; align-items: center; justify-content: space-between; padding: 0 12px 10px;
+  }
+  .home-sports-head h2 {
+    margin: 0; font-size: 14px; font-weight: 800; color: var(--text-main, #fff);
+    display: flex; align-items: center; gap: 7px;
+  }
+  .home-sports-head a { font-size: 11.5px; font-weight: 700; color: var(--fa-gold, #E6B93D); text-decoration: none; }
+  .home-sports-rail {
+    display: flex; gap: 10px; padding: 0 12px 4px; overflow-x: auto;
+    scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  }
+  .home-sports-rail::-webkit-scrollbar { display: none; }
+  .match-card {
+    flex: 0 0 auto; width: 236px; max-width: 78vw; box-sizing: border-box;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 14px; padding: 11px 12px; text-decoration: none; color: inherit;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .match-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .match-league {
+    font-size: 10px; font-weight: 700; color: var(--text-muted, #9aa0a6);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;
+  }
+  .match-badge {
+    font-size: 9px; font-weight: 800; padding: 3px 7px; border-radius: 999px;
+    background: rgba(255,255,255,0.08); color: var(--text-muted, #9aa0a6); white-space: nowrap;
+  }
+  .match-badge.is-live { background: #c8102e; color: #fff; }
+  .match-team { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .match-team-name {
+    font-size: 12.5px; font-weight: 700; color: var(--text-main, #fff);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .match-team-score { font-size: 12.5px; font-weight: 800; color: var(--fa-gold, #E6B93D); white-space: nowrap; }
+  .home-sports-state {
+    margin: 0 12px; padding: 18px 14px; border-radius: 14px; text-align: center;
+    background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.12);
+    color: var(--text-muted, #9aa0a6); font-size: 12.5px;
+  }
+  .home-sports-state a {
+    display: inline-block; margin-top: 10px; padding: 8px 18px; border-radius: 999px;
+    background: var(--fa-gold-gradient, #E6B93D); color: #1a1a1a;
+    font-size: 12px; font-weight: 800; text-decoration: none;
+  }
+  @media (min-width: 768px) {
+    .match-card { width: 280px; max-width: none; }
+  }
+</style>
+<section class="home-sports" id="homeSports">
+  <div class="home-sports-head">
+    <h2><i class="fas fa-tower-broadcast" style="color:#c8102e;"></i> লাইভ ও আসন্ন ম্যাচ</h2>
+    <a href="/matches">সব দেখুন <i class="fas fa-chevron-right" style="font-size:9px;"></i></a>
+  </div>
+  <div class="home-sports-state" id="homeSportsState">ম্যাচ লোড হচ্ছে…</div>
+  <div class="home-sports-rail" id="homeSportsRail" hidden></div>
+</section>
+<script>
+(function () {
+  var rail = document.getElementById('homeSportsRail');
+  var state = document.getElementById('homeSportsState');
+  if (!rail || !state) return;
+
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function showState(html) { state.innerHTML = html; state.hidden = false; rail.hidden = true; }
+
+  function card(m) {
+    var isLive = m.status === 'live';
+    var icon = m.sport === 'football' ? '⚽' : '🏏';
+    // লিগ/সিরিজের নাম প্রোভাইডার দিলে দেখানো হয়, না দিলে খেলার নাম — বানানো হয় না
+    var league = m.league || (m.sport === 'football' ? 'ফুটবল' : 'ক্রিকেট');
+    var a = m.homeScore == null ? '' : '<span class="match-team-score">' + esc(m.homeScore) + '</span>';
+    var b = m.awayScore == null ? '' : '<span class="match-team-score">' + esc(m.awayScore) + '</span>';
+    return '<a class="match-card" href="/matches/' + encodeURIComponent(m.id) + '">'
+      + '<div class="match-card-top">'
+      + '<span class="match-league">' + icon + ' ' + esc(league) + '</span>'
+      + '<span class="match-badge ' + (isLive ? 'is-live' : '') + '">' + (isLive ? 'LIVE' : 'আসন্ন') + '</span>'
+      + '</div>'
+      + '<div class="match-team"><span class="match-team-name">' + esc(m.teams[0]) + '</span>' + a + '</div>'
+      + '<div class="match-team"><span class="match-team-name">' + esc(m.teams[1]) + '</span>' + b + '</div>'
+      + '</a>';
+  }
+
+  fetch('/matches/api/live', { headers: { 'Accept': 'application/json' } })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      var all = (data.cricket || []).concat(data.football || []);
+      if (!all.length) {
+        showState('কোনো লাইভ ম্যাচ নেই<br><a href="/matches">আসন্ন ম্যাচ দেখুন</a>');
+        return;
+      }
+      // লাইভ ম্যাচ আগে, তারপর আসন্ন — সর্বোচ্চ ১২টা (হোমপেজ হালকা রাখতে)
+      all.sort(function (x, y) { return (y.status === 'live') - (x.status === 'live'); });
+      rail.innerHTML = all.slice(0, 12).map(card).join('');
+      state.hidden = true;
+      rail.hidden = false;
+    })
+    .catch(function () {
+      // এন্ডপয়েন্ট ব্যর্থ হলেও বাকি হোমপেজ অক্ষত থাকে
+      showState('ম্যাচ লোড করা যায়নি।<br><a href="/matches">ম্যাচ পেজে যান</a>');
+    });
+})();
+</script>
+
 <!-- ===== Popular Games (কিউরেটেড হাইলাইট স্ট্রিপ) ===== -->
 <style>
 .popular-games-section { padding: 8px 0 22px; }
@@ -755,57 +916,70 @@ body.light-mode .promo-banner {
 .win-item:last-child { border-bottom: none; }
 .game-name { color: #ffdd88; font-weight: 500; }
 .win-amount { color: #00ff9d; font-weight: bold; }
+.win-empty { padding: 14px 4px; text-align: center; color: #ffdd88; font-size: 12.5px; }
+.jackpot-tagline { color: #fff; font-size: 13px; font-weight: 700; margin-top: 6px; text-shadow: 0 2px 6px rgba(0,0,0,.5); }
 </style>
 <!-- Mega Jackpot -->
+<!--
+  আগে এখানে একটা স্থির, বানানো আট-অঙ্কের টাকার অঙ্ক লেখা ছিল যা কোনো ব্যাকএন্ড
+  ডেটার সাথে যুক্ত ছিল না। ব্যাকএন্ডে কোনো জ্যাকপট পুল টেবিল নেই, তাই বানানো
+  সংখ্যার বদলে ব্র্যান্ডিং ব্যানার হিসেবে রাখা হলো — কোনো আর্থিক দাবি ছাড়া।
+-->
 <div class="mega-jackpot">
   <div class="jackpot-container">
     <div class="jackpot-text">
       <h2>MEGA JACKPOT</h2>
-      <div class="jackpot-amount">৳ 88,885,063.59</div>
+      <div class="jackpot-tagline">প্রতিদিন বড় জেতার সুযোগ</div>
     </div>
     <div class="jackpot-girl">
       <video src="/videos/jackpot-girl.mp4" poster="/images/jackpot-girl-poster.jpg" style="width:130px; border-radius:8px; display:block;" autoplay loop muted playsinline></video>
     </div>
   </div>
 </div>
-<!-- Recent Big Wins -->
+<!-- Recent Big Wins — আসল ডেটা /games/api/recent-wins থেকে -->
 <div class="recent-wins">
   <h3>Recent Big Wins</h3>
   <div class="wins-container" id="winsContainer">
-    <!-- JS দিয়ে এখানে আইটেম যোগ হবে -->
+    <div class="win-empty" id="winsState">লোড হচ্ছে…</div>
   </div>
 </div>
 <script>
-const wins = [
-  { user: "******119", game: "Super Ace II", amount: "৳ 11,892,652" },
-  { user: "******642", game: "Mega Fishing", amount: "৳ 10,663,489" },
-  { user: "******458", game: "Fortune King", amount: "৳ 10,592,349" },
-  { user: "******622", game: "Bombing Fishing", amount: "৳ 9,739,137" },
-  { user: "******778", game: "Boxing King", amount: "৳ 11,258,690" }
-];
-let winsIndex = 0;
-const winsContainerEl = document.getElementById('winsContainer');
-function addWin() {
-  const w = wins[winsIndex];
-  const item = document.createElement('div');
-  item.className = 'win-item';
-  item.innerHTML = `
-    <div>
-      <span>${w.user}</span><br>
-      <span class="game-name">${w.game}</span>
-    </div>
-    <div class="win-amount">${w.amount}</div>
-  `;
-  winsContainerEl.appendChild(item);
-  if (winsContainerEl.children.length > 5) {
-    winsContainerEl.removeChild(winsContainerEl.children[0]);
+(function () {
+  var box = document.getElementById('winsContainer');
+  var state = document.getElementById('winsState');
+  if (!box || !state) return;
+
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
   }
-  winsIndex = (winsIndex + 1) % wins.length;
-}
-// প্রথমে ৪টা আইটেম যোগ করি
-for (let i = 0; i < 4; i++) addWin();
-// প্রতি ২.৫ সেকেন্ডে নতুন আইটেম যোগ হবে
-setInterval(addWin, 2500);
+
+  function money(n) {
+    return '৳ ' + Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 });
+  }
+
+  fetch('/games/api/recent-wins', { headers: { 'Accept': 'application/json' } })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      var wins = (data && data.wins) || [];
+      if (!wins.length) {
+        // কোনো বানানো ডেটা নয় — সত্যিকারের খালি অবস্থা
+        state.textContent = 'এখনো কোনো বড় জয় নেই। প্রথম হোন!';
+        return;
+      }
+      box.innerHTML = wins.map(function (w) {
+        return '<div class="win-item">'
+          + '<div><span>' + esc(w.user) + '</span><br>'
+          + '<span class="game-name">' + esc(w.game) + '</span></div>'
+          + '<div class="win-amount">' + money(w.amount) + '</div>'
+          + '</div>';
+      }).join('');
+    })
+    .catch(function () {
+      state.textContent = 'সাম্প্রতিক জয় লোড করা যায়নি।';
+    });
+})();
 </script>
 
 <!-- ===== Why Choose Us / Benefits ===== -->

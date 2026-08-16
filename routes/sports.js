@@ -10,10 +10,16 @@ router.get('/', (req, res) => {
 });
 
 // Cricket Section
+// দ্রষ্টব্য: এখানে views/matches.ejs রেন্ডার করা হয়, আর ওই ভিউ `sport` ও `user`
+// লোকাল দুটো বাধ্যতামূলকভাবে ব্যবহার করে (CURRENT_SPORT, IS_LOGGED_IN)। আগে সেগুলো
+// পাস করা হতো না, তাই /sports/cricket প্রতিবার 500 এরর দিত — মেনুতে থাকা একটা
+// সম্পূর্ণ ডেড লিংক। routes/matches.js-এর /cricket হ্যান্ডলারের মতোই লোকাল দেওয়া হলো।
 router.get('/cricket', (req, res) => {
-  res.render('matches', { 
+  res.render('matches', {
     currentPage: 'cricket',
-    title: 'Cricket Live'
+    sport: 'cricket',
+    title: 'Cricket Live',
+    user: req.session ? req.session.user : null
   });
 });
 

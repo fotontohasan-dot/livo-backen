@@ -183,6 +183,46 @@ const gameHandlers = {
   }
 };
 
+// ==================== সাম্প্রতিক বড় জয় (পাবলিক, রিড-অনলি) ====================
+// হোমপেজের "Recent Big Wins" সেকশন আগে একটা হার্ডকোড করা অ্যারে থেকে বানানো
+// ইউজারনেম ও বানানো টাকার অঙ্ক দেখাত (******119 → ৳ 11,892,652)। সেটা বাস্তব
+// প্রোডাকশন ডেটা নয়, তাই সরিয়ে এই এন্ডপয়েন্ট যোগ করা হলো।
+//
+// ডেটা সোর্স: coin_transactions — গেম খেলার নিট ফল এখানেই লেখা হয়
+// (type='game_play')। ধনাত্মক amount মানে ইউজার জিতেছে। নতুন কোনো আর্থিক
+// টেবিল বা লেজার তৈরি করা হয়নি; যা আগে থেকেই লেখা হচ্ছিল সেটাই পড়া হচ্ছে।
+//
+// গোপনীয়তা: ইউজারনেম কখনো পুরোটা যায় না — শুধু শেষ ৩ অক্ষর, আগে তারকা চিহ্ন।
+// user_id, ইমেইল, ফোন বা ব্যালেন্স কিছুই বের হয় না। ফলে সেকশনটা পাবলিক থাকতে পারে।
+router.get('/api/recent-wins', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT u.username, ct.amount, ct.description, ct.created_at
+       FROM coin_transactions ct
+       JOIN users u ON u.id = ct.user_id
+       WHERE ct.type = 'game_play' AND ct.amount > 0
+       ORDER BY ct.created_at DESC
+       LIMIT 10`
+    );
+
+    const wins = result.rows.map((row) => {
+      const name = String(row.username || '');
+      const tail = name.length > 3 ? name.slice(-3) : name;
+      return {
+        user: `******${tail}`,
+        game: row.description || 'Game',
+        amount: Number(row.amount)
+      };
+    });
+
+    res.json({ success: true, wins });
+  } catch (err) {
+    console.error('recent-wins error:', err.message);
+    // ব্যর্থ হলেও হোমপেজ যেন না ভাঙে — খালি তালিকা, ২০০ নয় বরং সৎ খালি ফল
+    res.json({ success: true, wins: [] });
+  }
+});
+
 router.get('/play', isAuth, (req, res) => {
   const gameSlug = req.query.game || 'slots';
   if (!supportedGames[gameSlug]) {

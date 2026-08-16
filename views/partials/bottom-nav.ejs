@@ -13,6 +13,14 @@
     flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 2px; padding: 6px 4px 5px; margin: 5px 2px; color: rgba(36,26,0,0.75); text-decoration: none;
     font-size: 9.5px; font-weight: 700; position: relative; transition: background .2s, color .2s;
+    min-width: 0; /* flex আইটেম যেন কনটেন্টের চেয়ে ছোট হতে পারে — ৩২০px-এ ওভারফ্লো ঠেকায় */
+  }
+  .pub-nav-item span:not(.pub-active-bar):not(.pub-promo-circle):not(.pub-nav-dot) {
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  @media (max-width: 359px) {
+    .pub-nav-item { font-size: 8.5px; padding: 6px 2px 5px; margin: 5px 1px; }
+    .pub-nav-item i { font-size: 14px; }
   }
   /* আইটেমগুলোর মাঝে পাতলা ডিভাইডার লাইন (অ্যাক্টিভ/প্রোমোর পাশে বাদে) */
   .pub-nav-item:not(:first-child)::after {
@@ -72,6 +80,13 @@
   <a href="/" class="pub-nav-item <%= locals.currentPage === 'home' ? 'active' : '' %>">
     <i class="fas fa-house"></i>
     <span>হোম</span>
+    <span class="pub-active-bar"></span>
+  </a>
+  <!-- স্পোর্টস — আগে বটম নেভে স্পোর্টসের কোনো প্রবেশপথ ছিল না, ফলে ফুটবল/ক্রিকেট/
+       লাইভ ম্যাচ খুঁজে পাওয়া কঠিন ছিল। কোনো আইটেম সরানো হয়নি, শুধু যোগ করা হয়েছে। -->
+  <a href="/sports" class="pub-nav-item <%= ['sports','football','cricket','matches'].includes(locals.currentPage) ? 'active' : '' %>">
+    <i class="fas fa-futbol"></i>
+    <span>স্পোর্টস</span>
     <span class="pub-active-bar"></span>
   </a>
   <a href="/extra/invitation" class="pub-nav-item <%= locals.currentPage === 'invitation' ? 'active' : '' %>">
