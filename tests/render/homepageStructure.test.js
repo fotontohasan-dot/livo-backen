@@ -66,28 +66,11 @@ describe('হোমপেজ — প্রধান ক্যাটাগরি 
   });
 });
 
-describe('হোমপেজ — লাইভ/আসন্ন ম্যাচ সেকশন', () => {
-  test('স্পোর্টস সেকশন রেন্ডার হয় এবং বিদ্যমান API ব্যবহার করে', async () => {
-    const res = await request(app).get('/');
-    expect(res.text).toContain('id="homeSportsRail"');
-    // নতুন কোনো এন্ডপয়েন্ট নয় — বিদ্যমান /matches/api/live
-    expect(res.text).toContain("fetch('/matches/api/live'");
-  });
-
-  test('লোডিং, খালি ও এরর — তিনটা স্টেটই আছে', async () => {
-    const res = await request(app).get('/');
-    expect(res.text).toContain('ম্যাচ লোড হচ্ছে');
-    expect(res.text).toContain('কোনো লাইভ ম্যাচ নেই');
-    expect(res.text).toContain('ম্যাচ লোড করা যায়নি');
-  });
-
-  test('কোনো ম্যাচ হার্ডকোড করা নেই', async () => {
-    const res = await request(app).get('/');
-    const section = res.text.slice(res.text.indexOf('id="homeSports"'), res.text.indexOf('Popular Games'));
-    // দলের নাম/স্কোর সবই রানটাইমে API থেকে আসে
-    expect(section).not.toMatch(/India|Australia|Real Madrid|Barcelona/);
-  });
-
+// দ্রষ্টব্য: হোমপেজের লাইভ/আসন্ন ম্যাচ রেল ইচ্ছাকৃতভাবে সরিয়ে ফেলা হয়েছে —
+// নতুন UX-এ ইউজার প্রথমে খেলা বেছে নেয়, তারপর ম্যাচ দেখে। সেই আচরণের কভারেজ
+// এখন tests/render/sportsCategoryUx.test.js-এ আছে। এখানে শুধু নিশ্চিত করা হচ্ছে
+// যে ম্যাচ-ডেটার এন্ডপয়েন্টটা এখনো কাজ করছে (Football/Cricket পেজ এটাই ব্যবহার করে)।
+describe('ম্যাচ ডেটা এন্ডপয়েন্ট', () => {
   test('/matches/api/live এখনো কাজ করে', async () => {
     const res = await request(app).get('/matches/api/live');
     expect(res.status).toBe(200);

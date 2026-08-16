@@ -315,127 +315,10 @@ body.light-mode .promo-banner {
 }
 </style>
 
-<!-- ===== HERO SECTION ===== -->
-<style>
-@keyframes heroSweep {
-  0%   { transform: translateX(-120%) skewX(-15deg); }
-  100% { transform: translateX(220%) skewX(-15deg); }
-}
-@keyframes heroFloat {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-8px); }
-}
-
-.hero-section {
-  position: relative;
-  overflow: hidden;
-  padding: 52px 18px 40px;
-  min-height: 400px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  background:
-    radial-gradient(circle at 15% 10%, rgba(200,16,46,0.32) 0%, transparent 45%),
-    radial-gradient(circle at 88% 20%, rgba(234,179,8,0.22) 0%, transparent 42%),
-    radial-gradient(circle at 50% 100%, rgba(234,179,8,0.10) 0%, transparent 55%),
-    linear-gradient(180deg, #0c0c12 0%, #050505 100%);
-  border-bottom: 1px solid rgba(212,175,55,0.18);
-  text-align: center;
-}
-/* মৃদু ডট-গ্রিড টেক্সচার — কার্ড-টেবিলের মতো গভীরতা দেয় */
-.hero-section::before {
-  content: "";
-  position: absolute; inset: 0;
-  background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
-  background-size: 22px 22px;
-  mask-image: radial-gradient(ellipse at center, rgba(0,0,0,0.9) 0%, transparent 75%);
-  pointer-events: none;
-}
-/* সিগনেচার — ধীরে চলমান সোনালি আলোর ঝলক */
-.hero-section::after {
-  content: "";
-  position: absolute; top: 0; left: 0; width: 45%; height: 100%;
-  background: linear-gradient(100deg, transparent 0%, rgba(255,235,160,0.10) 45%, rgba(255,215,0,0.16) 50%, rgba(255,235,160,0.10) 55%, transparent 100%);
-  animation: heroSweep 7s ease-in-out infinite;
-  pointer-events: none;
-}
-.hero-inner { position: relative; z-index: 2; }
-
-.hero-live-badge {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: rgba(255,255,255,0.06); border: 1px solid rgba(212,175,55,0.35);
-  padding: 7px 16px; border-radius: 22px; font-size: 12px; font-weight: 700;
-  color: var(--fa-gold-light); margin-bottom: 18px;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.3);
-  animation: heroFloat 4s ease-in-out infinite;
-}
-.hero-live-dot { width:8px; height:8px; border-radius:50%; background:#22c55e; box-shadow: 0 0 8px #22c55e; animation: livedot 1.5s infinite; }
-
-.hero-heading {
-  font-family: 'Teko', sans-serif; font-weight: 700; text-transform: uppercase;
-  font-size: 44px; line-height: 1.02; letter-spacing: 0.5px; margin: 0 0 14px;
-  background: linear-gradient(135deg, #ffffff 25%, var(--fa-gold-light) 60%, var(--fa-gold) 85%);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-  filter: drop-shadow(0 2px 18px rgba(212,175,55,0.25));
-}
-.hero-heading .accent { color: var(--primary); -webkit-text-fill-color: var(--primary); }
-
-.hero-sub {
-  font-size: 14px; color: #d3d5dc; max-width: 440px; margin: 0 auto 26px; line-height: 1.7;
-  font-weight: 500;
-}
-
-.hero-cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 28px; }
-.hero-btn {
-  padding: 15px 30px; border-radius: 32px; font-weight: 800; font-size: 14.5px;
-  text-decoration: none; display: inline-flex; align-items: center; gap: 9px;
-  transition: transform .15s ease, box-shadow .15s ease;
-}
-.hero-btn:hover { transform: translateY(-2px); }
-.hero-btn:active { transform: scale(0.96); }
-.hero-btn-primary {
-  background: var(--fa-gold-gradient); color: #000;
-  box-shadow: 0 8px 24px rgba(212,175,55,0.4);
-}
-.hero-btn-primary:hover { box-shadow: 0 10px 30px rgba(212,175,55,0.55); }
-.hero-btn-secondary {
-  background: rgba(255,255,255,0.07); color: #fff; border: 1.5px solid rgba(255,255,255,0.2);
-}
-.hero-btn-secondary:hover { background: rgba(255,255,255,0.12); border-color: rgba(212,175,55,0.4); }
-
-.hero-stats-row { display: flex; justify-content: center; gap: 30px; flex-wrap: wrap; }
-.hero-stat { text-align: center; }
-.hero-stat-num { font-family: 'Teko', sans-serif; font-size: 25px; font-weight: 700; color: var(--fa-gold); line-height: 1; }
-.hero-stat-label { font-size: 10.5px; color: var(--text-muted); margin-top: 4px; letter-spacing: 0.2px; }
-
-@media (min-width: 640px) {
-  .hero-section { padding: 72px 24px 52px; min-height: 480px; }
-  .hero-heading { font-size: 64px; }
-  .hero-sub { font-size: 16.5px; max-width: 580px; }
-  .hero-btn { padding: 17px 36px; font-size: 15.5px; }
-}
-</style>
-
-<div class="hero-section">
-  <div class="hero-inner">
-    <div class="hero-live-badge"><span class="hero-live-dot"></span> ২,৮৪০+ জন এখন অনলাইনে খেলছেন</div>
-    <h1 class="hero-heading">বাংলাদেশের <span class="accent">#১</span><br>প্রেডিকশন ও ক্যাসিনো প্ল্যাটফর্ম</h1>
-    <p class="hero-sub">লাইভ ম্যাচ প্রেডিক্ট করুন, প্রিমিয়াম ক্যাসিনো গেম খেলুন এবং সেকেন্ডেই জিতুন রিয়েল রিওয়ার্ড — নিরাপদ, দ্রুত ও সম্পূর্ণ লাইসেন্সপ্রাপ্ত।</p>
-    <div class="hero-cta-row">
-      <a href="#categoryTabs" class="hero-btn hero-btn-primary"><i class="fas fa-play"></i> এখনই খেলুন</a>
-      <% if (!locals.user) { %>
-        <a href="/register" class="hero-btn hero-btn-secondary"><i class="fas fa-user-plus"></i> ফ্রি অ্যাকাউন্ট খুলুন</a>
-      <% } else { %>
-        <a href="/payment/deposit" class="hero-btn hero-btn-secondary"><i class="fas fa-wallet"></i> ডিপোজিট করুন</a>
-      <% } %>
-    </div>
-    <div class="hero-stats-row">
-      <div class="hero-stat"><div class="hero-stat-num">১১৮+</div><div class="hero-stat-label">গেমস</div></div>
-      <div class="hero-stat"><div class="hero-stat-num">২৪/৭</div><div class="hero-stat-label">সাপোর্ট</div></div>
-      <div class="hero-stat"><div class="hero-stat-num">৫ মিনিট</div><div class="hero-stat-label">উইথড্র</div></div>
-    </div>
-  </div>
-</div>
+<!-- HERO SECTION সরানো হয়েছে (ইউজারের অনুরোধে) —
+     বড় প্রোমোশনাল হেডলাইন ব্যানার এবং
+     তার CTA/স্ট্যাট ব্লকসহ সম্পূর্ণ সেকশনটা বাদ দেওয়া হয়েছে। সংশ্লিষ্ট .hero-* CSS
+     শুধু এই সেকশনেই ব্যবহৃত হতো, তাই সেটাও একসাথে সরানো হলো। -->
 
 <!-- ===== Marquee Ticker ===== -->
 <div class="marquee-container-premium">
@@ -542,166 +425,14 @@ body.light-mode .promo-banner {
   <a href="/promotions" class="main-cat-item"><i class="fas fa-gift"></i><span>প্রমোশন</span></a>
 </nav>
 
-<!-- ===== Live / Upcoming Sports (আসল ম্যাচ ডেটা) ===== -->
-<!--
-  ডেটা সোর্স: বিদ্যমান /matches/api/live এন্ডপয়েন্ট — নতুন কোনো পোলিং লুপ বা এন্ডপয়েন্ট
-  তৈরি করা হয়নি। কোনো ম্যাচ হার্ডকোড করা নেই; খালি হলে খালি-স্টেট, ব্যর্থ হলে এরর-স্টেট
-  দেখানো হয় এবং বাকি হোমপেজ অক্ষত থাকে।
--->
-<style>
-  .home-sports { padding: 2px 0 20px; }
-  .home-sports-head {
-    display: flex; align-items: center; justify-content: space-between; padding: 0 12px 10px;
-  }
-  .home-sports-head h2 {
-    margin: 0; font-size: 14px; font-weight: 800; color: var(--text-main, #fff);
-    display: flex; align-items: center; gap: 7px;
-  }
-  .home-sports-head a { font-size: 11.5px; font-weight: 700; color: var(--fa-gold, #E6B93D); text-decoration: none; }
-  .home-sports-rail {
-    display: flex; gap: 10px; padding: 0 12px 4px; overflow-x: auto;
-    scrollbar-width: none; -webkit-overflow-scrolling: touch;
-  }
-  .home-sports-rail::-webkit-scrollbar { display: none; }
-  .match-card {
-    flex: 0 0 auto; width: 236px; max-width: 78vw; box-sizing: border-box;
-    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
-    border-radius: 14px; padding: 11px 12px; text-decoration: none; color: inherit;
-    display: flex; flex-direction: column; gap: 8px;
-  }
-  .match-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-  .match-league {
-    font-size: 10px; font-weight: 700; color: var(--text-muted, #9aa0a6);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;
-  }
-  .match-badge {
-    font-size: 9px; font-weight: 800; padding: 3px 7px; border-radius: 999px;
-    background: rgba(255,255,255,0.08); color: var(--text-muted, #9aa0a6); white-space: nowrap;
-  }
-  .match-badge.is-live { background: #c8102e; color: #fff; }
-  .match-team { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-  .match-team-name {
-    font-size: 12.5px; font-weight: 700; color: var(--text-main, #fff);
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
-  .match-team-score { font-size: 12.5px; font-weight: 800; color: var(--fa-gold, #E6B93D); white-space: nowrap; }
-  .home-sports-state {
-    margin: 0 12px; padding: 18px 14px; border-radius: 14px; text-align: center;
-    background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.12);
-    color: var(--text-muted, #9aa0a6); font-size: 12.5px;
-  }
-  .home-sports-state a {
-    display: inline-block; margin-top: 10px; padding: 8px 18px; border-radius: 999px;
-    background: var(--fa-gold-gradient, #E6B93D); color: #1a1a1a;
-    font-size: 12px; font-weight: 800; text-decoration: none;
-  }
-  @media (min-width: 768px) {
-    .match-card { width: 280px; max-width: none; }
-  }
-</style>
-<section class="home-sports" id="homeSports">
-  <div class="home-sports-head">
-    <h2><i class="fas fa-tower-broadcast" style="color:#c8102e;"></i> লাইভ ও আসন্ন ম্যাচ</h2>
-    <a href="/matches">সব দেখুন <i class="fas fa-chevron-right" style="font-size:9px;"></i></a>
-  </div>
-  <div class="home-sports-state" id="homeSportsState">ম্যাচ লোড হচ্ছে…</div>
-  <div class="home-sports-rail" id="homeSportsRail" hidden></div>
-</section>
-<script>
-(function () {
-  var rail = document.getElementById('homeSportsRail');
-  var state = document.getElementById('homeSportsState');
-  if (!rail || !state) return;
+<!-- হোমপেজ থেকে লাইভ/আসন্ন ম্যাচের তালিকা সরানো হয়েছে।
+     নতুন UX: ইউজার প্রথমে খেলা বেছে নেয় (উপরের ক্যাটাগরি ন্যাভ থেকে Football/Cricket),
+     তারপর সেই খেলার Live ও Upcoming ম্যাচ দেখে। ম্যাচ রেন্ডার করার কোড এখন শুধু
+     views/matches.ejs-এ, যেটা /matches/football ও /matches/cricket দুটোই সার্ভ করে। -->
 
-  function esc(v) {
-    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
-
-  function showState(html) { state.innerHTML = html; state.hidden = false; rail.hidden = true; }
-
-  function card(m) {
-    var isLive = m.status === 'live';
-    var icon = m.sport === 'football' ? '⚽' : '🏏';
-    // লিগ/সিরিজের নাম প্রোভাইডার দিলে দেখানো হয়, না দিলে খেলার নাম — বানানো হয় না
-    var league = m.league || (m.sport === 'football' ? 'ফুটবল' : 'ক্রিকেট');
-    var a = m.homeScore == null ? '' : '<span class="match-team-score">' + esc(m.homeScore) + '</span>';
-    var b = m.awayScore == null ? '' : '<span class="match-team-score">' + esc(m.awayScore) + '</span>';
-    return '<a class="match-card" href="/matches/' + encodeURIComponent(m.id) + '">'
-      + '<div class="match-card-top">'
-      + '<span class="match-league">' + icon + ' ' + esc(league) + '</span>'
-      + '<span class="match-badge ' + (isLive ? 'is-live' : '') + '">' + (isLive ? 'LIVE' : 'আসন্ন') + '</span>'
-      + '</div>'
-      + '<div class="match-team"><span class="match-team-name">' + esc(m.teams[0]) + '</span>' + a + '</div>'
-      + '<div class="match-team"><span class="match-team-name">' + esc(m.teams[1]) + '</span>' + b + '</div>'
-      + '</a>';
-  }
-
-  fetch('/matches/api/live', { headers: { 'Accept': 'application/json' } })
-    .then(function (r) { return r.json(); })
-    .then(function (data) {
-      var all = (data.cricket || []).concat(data.football || []);
-      if (!all.length) {
-        showState('কোনো লাইভ ম্যাচ নেই<br><a href="/matches">আসন্ন ম্যাচ দেখুন</a>');
-        return;
-      }
-      // লাইভ ম্যাচ আগে, তারপর আসন্ন — সর্বোচ্চ ১২টা (হোমপেজ হালকা রাখতে)
-      all.sort(function (x, y) { return (y.status === 'live') - (x.status === 'live'); });
-      rail.innerHTML = all.slice(0, 12).map(card).join('');
-      state.hidden = true;
-      rail.hidden = false;
-    })
-    .catch(function () {
-      // এন্ডপয়েন্ট ব্যর্থ হলেও বাকি হোমপেজ অক্ষত থাকে
-      showState('ম্যাচ লোড করা যায়নি।<br><a href="/matches">ম্যাচ পেজে যান</a>');
-    });
-})();
-</script>
-
-<!-- ===== Popular Games (কিউরেটেড হাইলাইট স্ট্রিপ) ===== -->
-<style>
-.popular-games-section { padding: 8px 0 22px; }
-.popular-games-heading {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 14px 14px;
-}
-.popular-games-heading h2 {
-  font-family: 'Teko', sans-serif; font-size: 24px; font-weight: 700; letter-spacing: 0.4px;
-  color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 9px;
-}
-.popular-games-heading h2 .fire-icon {
-  width: 30px; height: 30px; border-radius: 9px; display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, rgba(212,175,55,0.18) 0%, rgba(255,77,79,0.14) 100%);
-  border: 1px solid rgba(212,175,55,0.25);
-  color: #ff6b47; font-size: 14px;
-}
-.popular-games-heading .see-all-btn {
-  font-size: 11.5px; font-weight: 800; color: #0a0a0a; text-decoration: none;
-  display: inline-flex; align-items: center; gap: 5px;
-  background: var(--fa-gold-gradient);
-  padding: 7px 14px; border-radius: 20px;
-  box-shadow: 0 3px 10px rgba(212,175,55,0.3);
-  transition: transform 0.15s ease;
-}
-.popular-games-heading .see-all-btn:hover { transform: translateY(-1px); }
-.popular-games-scroll {
-  display: flex; gap: 14px; overflow-x: auto; padding: 2px 14px 10px;
-  scroll-snap-type: x proximity;
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-.popular-games-scroll::-webkit-scrollbar { display: none; }
-.popular-games-scroll .game-card-premium { flex: 0 0 138px; scroll-snap-align: start; }
-</style>
-<div class="popular-games-section">
-  <div class="popular-games-heading">
-    <h2><span class="fire-icon"><i class="fas fa-fire"></i></span> Popular Games</h2>
-    <a href="#categoryTabs" class="see-all-btn">সব দেখুন <i class="fas fa-chevron-right" style="font-size:9px;"></i></a>
-  </div>
-  <div class="popular-games-scroll" id="popularGamesRow"></div>
-</div>
+<!-- জনপ্রিয় গেমের হাইলাইট স্ট্রিপ সরানো হয়েছে (ইউজারের অনুরোধে)।
+     নিচের ক্যাটাগরি ট্যাব + গেম গ্রিড থেকে একই গেমগুলো এখনো পাওয়া যায়,
+     তাই কোনো গেম দুর্গম হয়ে যায়নি। -->
 
 <!-- ===== Horizontal Navigation Tabs (Hot, Slots, Live, Sports, Poker, Favorites, Recent) ===== -->
 <div class="horizontal-nav-container" id="categoryTabs">
@@ -1266,26 +997,6 @@ function renderCatalogProviderList() {
   downBtn.addEventListener('click', () => list.scrollBy({ top: 150, behavior: 'smooth' }));
 })();
 
-// ==================== Popular Games (হাইলাইট স্ট্রিপ) — 'hot' ব্যাজযুক্ত গেম থেকে প্রথম কয়েকটা ====================
-function renderPopularGames() {
-  const row = document.getElementById('popularGamesRow');
-  if (!row) return;
-  const popular = allGames.filter(g => g.badge === 'hot').slice(0, 12);
-  const list = popular.length > 0 ? popular : allGames.slice(0, 12);
-  row.innerHTML = list.map(g => `
-    <a href="/games/${g.slug}" class="game-card-premium">
-      <div class="game-thumb-wrapper">
-        <span class="game-emoji">${g.emoji}</span>
-        ${g.badge ? `<div class="game-badge-premium badge-${g.badge}">${g.badge}</div>` : ''}
-      </div>
-      <div class="game-info-premium">
-        <div class="game-title-premium">${g.name}</div>
-        <div class="game-provider-premium">${g.provider}</div>
-      </div>
-    </a>
-  `).join('');
-}
-
 // ==================== গেইম গ্রিড রেন্ডার ====================
 function renderGames() {
   const c = document.getElementById('gameContainer');
@@ -1423,7 +1134,6 @@ document.addEventListener('DOMContentLoaded', () => {
   renderCatalogProviderList();
   applyLayout();
   renderGames();
-  renderPopularGames();
 });
 </script>
 

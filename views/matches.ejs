@@ -205,11 +205,18 @@ function buildMatchCard(m, isLive) {
 function renderMatches(matches) {
   const live = [];
   const upcoming = [];
-  
+
+  // ডাটাবেজে matches.status-এর মান তিনটাই: 'live' | 'upcoming' | 'finished'
+  // (services/providers/normalizedMatch.js-এর VALID_STATUSES দ্রষ্টব্য)। আগে এখানে
+  // শুধু 'live' খোঁজা হতো আর বাকি সবকিছু "upcoming" ধরে নেওয়া হতো — ফলে শেষ হয়ে
+  // যাওয়া ম্যাচও "আসন্ন ম্যাচ" তালিকায় দেখাত। নতুন কোনো স্ট্যাটাস কনভেনশন তৈরি করা
+  // হয়নি; বিদ্যমান তিনটা মানকেই সঠিকভাবে আলাদা করা হলো।
   matches.forEach(m => {
     const status = (m.status || '').toLowerCase();
-    if (status.includes('live') || status === 'live' || status.includes('in play') || status.includes('progress')) {
+    if (status === 'live' || status.includes('live') || status.includes('in play') || status.includes('progress')) {
       live.push(m);
+    } else if (status === 'finished' || status.includes('finished') || status.includes('ended')) {
+      // শেষ হওয়া ম্যাচ কোনো তালিকাতেই যাবে না — বিস্তারিত /matches/:id পেজে আগের মতোই দেখা যায়
     } else {
       upcoming.push(m);
     }
