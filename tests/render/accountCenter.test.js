@@ -33,7 +33,9 @@ const REQUIRED_DESTINATIONS = [
   '/profile/missions',
   '/profile/badges',
   '/profile/security',
-  '/profile/login-history',
+  // দ্রষ্টব্য: /profile/login-history ইচ্ছাকৃতভাবে এই তালিকায় নেই — এখন সেটা
+  // সিকিউরিটি সেন্টারের ভেতর দিয়ে পৌঁছানো হয়, প্রোফাইল হোমপেজের সরাসরি টাইল নয়।
+  // কভারেজ: tests/render/loginHistoryAndWheel.test.js
   '/extra/kyc',
   '/profile/chat',
   '/help-center',
@@ -169,30 +171,9 @@ describe('অ্যাকাউন্ট সেন্টার — ফ্ল্�
 });
 
 describe('অ্যাকাউন্ট সেন্টার — ডেটা স্টেট ও লেআউট নিরাপত্তা', () => {
-  test('অ্যাক্টিভিটি কার্ড কখনো ফাঁকা থাকে না — হয় সারি, নয় খালি-বার্তা', async () => {
-    const { agent } = await makeUserAgent();
-    const res = await agent.get('/profile');
-
-    const cardStart = res.text.indexOf('pf-activity-list');
-    expect(cardStart).toBeGreaterThan(-1);
-    const card = res.text.slice(cardStart, cardStart + 4000);
-
-    // রেজিস্ট্রেশনেই একটা লগইন রেকর্ড তৈরি হয়, তাই নতুন ইউজারেরও সাধারণত সারি থাকে।
-    // দুটোর একটাও না থাকা মানে সাদা ফাঁকা ব্লক — সেটাই ঠেকানো হচ্ছে।
-    const hasRows = card.includes('pf-activity-row');
-    const hasEmpty = card.includes('এখনো কোনো অ্যাক্টিভিটি নেই');
-    expect(hasRows || hasEmpty).toBe(true);
-  });
-
-  test('খালি অবস্থার বার্তা টেমপ্লেটে সংজ্ঞায়িত আছে', () => {
-    const fs = require('fs');
-    const path = require('path');
-    const view = fs.readFileSync(
-      path.join(__dirname, '..', '..', 'views', 'profile', 'index.ejs'), 'utf8'
-    );
-    expect(view).toContain('এখনো কোনো অ্যাক্টিভিটি নেই');
-    expect(view).toContain('pf-activity-empty');
-  });
+  // অ্যাক্টিভিটি ফিড কার্ড প্রোফাইল হোমপেজ থেকে সরিয়ে সিকিউরিটি সেন্টারে নেওয়া হয়েছে,
+  // তাই এখানে তার খালি-অবস্থার কভারেজ আর প্রযোজ্য নয়।
+  // নতুন কভারেজ: tests/render/loginHistoryAndWheel.test.js
 
   test('লম্বা ইউজারনেম লেআউট ভাঙে না (wrap সেট করা আছে)', async () => {
     const { agent } = await makeUserAgent();

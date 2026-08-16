@@ -126,6 +126,30 @@ function drawWheel() {
 }
 drawWheel();
 
+// স্পিনের ফলাফল সার্ভার থেকে এনে দেখানো। ফ্রন্টএন্ড নিজে কোনো পুরস্কার হিসাব করে না —
+// spin() ইতিমধ্যে যা wheel_spins-এ লিখেছে, সেটাই পড়া হয়।
+async function revealResult() {
+  const el = document.getElementById('result');
+  try {
+    const res = await fetch('/profile/wheel/result', { headers: { 'Accept': 'application/json' } });
+    const data = await res.json();
+    if (!data.success) {
+      el.style.color = '#94a3b8';
+      el.innerText = data.message || 'ফলাফল আনা যায়নি।';
+      return;
+    }
+    el.style.color = '#10b981';
+    el.innerText = '🎉 ' + data.message;
+    if (data.prize > 0 && window.confetti) {
+      confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
+    }
+    setTimeout(() => location.reload(), 2500);
+  } catch (err) {
+    el.style.color = '#94a3b8';
+    el.innerText = 'ফলাফল আনা যায়নি। পেজ রিফ্রেশ করুন।';
+  }
+}
+
 const spinBtn = document.getElementById('spinBtn');
 if (spinBtn) {
   spinBtn.addEventListener('click', async () => {
@@ -169,10 +193,9 @@ if (spinBtn) {
         if (t < 1) {
           requestAnimationFrame(animate);
         } else {
-          document.getElementById('result').style.color = '#10b981';
-          document.getElementById('result').innerText = '🎉 ' + data.message;
-          if (data.prize > 0 && window.confetti) confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
-          setTimeout(() => location.reload(), 2500);
+          // অ্যানিমেশন শেষ — এখন সার্ভার-নিশ্চিত ফলাফল আনা হয়। স্পিন রেসপন্সে পুরস্কার
+          // বা জয়ের বার্তা আসে না, তাই হুইল থামার আগে ফলাফল জানার উপায় নেই।
+          revealResult();
         }
       }
       requestAnimationFrame(animate);

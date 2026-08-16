@@ -9,7 +9,7 @@ const { getReferralStats } = require('../services/referral');
 const { getCashbackStatus, claimCashback } = require('../services/cashback');
 const { getVipStatus } = require('../services/vip');
 const { getMissions, claimMission } = require('../services/missions');
-const { getSegments, canSpin, spin, getHistory: getWheelHistory } = require('../services/wheel');
+const { getSegments, canSpin, spin, getHistory: getWheelHistory, getTodayResult: getWheelTodayResult } = require('../services/wheel');
 const { getLoyalty, redeemPoints } = require('../services/loyalty');
 const { getStreak } = require('../services/streak');
 const { getBadges } = require('../services/badges');
@@ -231,25 +231,10 @@ router.get('/', isAuth, async (req, res) => {
       });
     } catch (e) { console.error('stats30 error:', e.message); }
 
-    // সাম্প্রতিক অ্যাক্টিভিটি (শেষ ৫টা) — লগইন + ডিপোজিট/উইথড্র + রিওয়ার্ড ক্লেইম + VIP আপগ্রেড থেকে একত্রিত
-    let recentActivity = [];
-    try {
-      recentActivity = await cache.getOrSet(`profile:recent:${req.session.user.id}`, 20, async () => {
-        const r = await pool.query(
-          `(SELECT 'login' AS kind, created_at, NULL::numeric AS amount FROM login_logs WHERE user_id=$1 ORDER BY created_at DESC LIMIT 5)
-           UNION ALL
-           (SELECT type AS kind, created_at, amount FROM payment_requests WHERE user_id=$1 AND status='approved' ORDER BY created_at DESC LIMIT 5)
-           UNION ALL
-           (SELECT CASE WHEN type='vip_upgrade' THEN 'vip_upgrade' ELSE 'reward_claim' END AS kind, created_at, amount
-              FROM coin_transactions WHERE user_id=$1 AND amount > 0
-                AND type IN ('badge','mission','loyalty_redeem','weekly_cashback','monthly_reward','social_share','daily_bonus','cashback','free_bet','lucky_wheel','vip_upgrade','win_streak')
-              ORDER BY created_at DESC LIMIT 5)
-           ORDER BY created_at DESC LIMIT 5`,
-          [req.session.user.id]
-        );
-        return r.rows;
-      });
-    } catch (e) { console.error('recent activity error:', e.message); }
+    // দ্রষ্টব্য: প্রোফাইল হোমপেজের "সাম্প্রতিক অ্যাক্টিভিটি" কার্ড সরিয়ে ফেলা হয়েছে, তাই
+    // এখানে আর recentActivity তোলা হয় না — প্রতি পেজ লোডে একটা অপ্রয়োজনীয় UNION কোয়েরি বাঁচে।
+    // ফাংশনটা মুছে ফেলা হয়নি: GET /profile/security-এ হুবহু একই কোয়েরি এখনো চলে এবং
+    // সিকিউরিটি সেন্টার ওই ডেটা দেখায়। কোনো ব্যাকএন্ড ক্ষমতা বা ডেটা হারায়নি।
 
     // রেফারেল সামারি কার্ড — বিদ্যমান getReferralStats রিইউজ করা হয়েছে, ৬০ সেকেন্ড ক্যাশ
     let referralSummary = { totalInvites: 0, activeInvites: 0, totalCommission: 0, todayCommission: 0 };
@@ -282,7 +267,6 @@ router.get('/', isAuth, async (req, res) => {
       security,
       securityInfo,
       stats30,
-      recentActivity,
       referralSummary,
       notifPreview,
       badgesPreview,
@@ -793,11 +777,33 @@ const claimLimiter = createLimiter('claim', {
 
 router.post('/wheel/spin', isAuth, claimLimiter, async (req, res) => {
   try {
+    // spin() অপরিবর্তিত — এটাই যোগ্যতা যাচাই, ডুপ্লিকেট প্রতিরোধ, পুরস্কার নির্বাচন,
+    // ওয়ালেট ক্রেডিট ও নোটিফিকেশন — সবই ট্রানজেকশনের ভেতরে করে।
     const result = await spin(req.session.user.id);
-    res.json(result);
+
+    if (!result.success) return res.json(result);
+
+    // আগে এখানে পুরো result (prize + জয়ের বার্তা) পাঠানো হতো, অথচ হুইলের অ্যানিমেশন
+    // চলত আরও ৪ সেকেন্ড। ফলে ইউজার হুইল থামার আগেই নেটওয়ার্ক রেসপন্সে ফলাফল দেখে
+    // ফেলতে পারত। এখন শুধু index যায় — অ্যানিমেশন কোন ঘরে থামবে সেটা আঁকতে ওটুকুই লাগে।
+    // আসল পুরস্কার ও বার্তা অ্যানিমেশন শেষ হওয়ার পর /wheel/result থেকে আনা হয়।
+    res.json({ success: true, index: result.index });
   } catch (err) {
     console.error('wheel spin error:', err.message);
     res.json({ success: false, message: 'সার্ভার ত্রুটি।' });
+  }
+});
+
+// অ্যানিমেশন শেষ হওয়ার পর সার্ভার-নিশ্চিত ফলাফল। রিড-অনলি — কোনো পুরস্কার হিসাব করে না,
+// spin() যা ইতিমধ্যে wheel_spins-এ লিখেছে শুধু সেটাই ফেরত দেয়।
+router.get('/wheel/result', isAuth, async (req, res) => {
+  try {
+    const result = await getWheelTodayResult(req.session.user.id);
+    if (!result) return res.json({ success: false, message: 'আজ কোনো স্পিন পাওয়া যায়নি।' });
+    res.json({ success: true, prize: result.prize, message: result.message });
+  } catch (err) {
+    console.error('wheel result error:', err.message);
+    res.json({ success: false, message: 'ফলাফল আনা যায়নি।' });
   }
 });
 

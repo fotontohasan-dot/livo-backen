@@ -147,4 +147,28 @@ async function getHistory(userId, limit = 10) {
   return res.rows;
 }
 
-module.exports = { getSegments, canSpin, spin, getHistory };
+/**
+ * আজকের স্পিনের সার্ভার-রেকর্ডেড ফলাফল পড়ে (রিড-অনলি)।
+ *
+ * কেন দরকার: POST /wheel/spin আগে রেসপন্সেই prize ও জয়ের বার্তা পাঠিয়ে দিত, অথচ
+ * হুইলের অ্যানিমেশন চলত আরও ৪ সেকেন্ড। ফলে ইউজার হুইল থামার আগেই নেটওয়ার্ক রেসপন্সে
+ * পুরস্কারটা দেখে ফেলতে পারত। এখন স্পিন রেসপন্সে শুধু কোন ঘরে থামবে সেই index যায়,
+ * আর অ্যানিমেশন শেষ হওয়ার পর ফ্রন্টএন্ড এই ফাংশনের মাধ্যমে সার্ভার-নিশ্চিত ফলাফল আনে।
+ *
+ * এটা কোনো পুরস্কার হিসাব করে না — spin() যা ইতিমধ্যে wheel_spins-এ লিখে ফেলেছে
+ * শুধু সেটাই ফেরত দেয়। পুরস্কার নির্বাচন, ওয়ালেট ক্রেডিট ও নোটিফিকেশন অপরিবর্তিত।
+ */
+async function getTodayResult(userId) {
+  const r = await pool.query(
+    `SELECT prize FROM wheel_spins WHERE user_id = $1 AND spin_date = $2`,
+    [userId, today()]
+  );
+  if (!r.rows[0]) return null;
+  const prize = Number(r.rows[0].prize);
+  return {
+    prize,
+    message: prize > 0 ? `${prize} কয়েন জিতেছেন!` : 'এবার কিছু পাননি। আগামীকাল আবার চেষ্টা করুন!'
+  };
+}
+
+module.exports = { getSegments, canSpin, spin, getHistory, getTodayResult };

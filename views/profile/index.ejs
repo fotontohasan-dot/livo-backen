@@ -108,21 +108,11 @@
 .mc-tile-badge{position:absolute;top:4px;right:8px;background:#e53935;color:#fff;font-size:9px;font-weight:800;
   min-width:16px;height:16px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px;border:1.5px solid #12121f;z-index:1}
 .mc-tile-badge.amber{background:#f59e0b}
+.mc-tile-sub{color:rgba(255,255,255,.4);font-size:9px;font-weight:600;text-align:center;line-height:1.2;margin-top:-3px}
 @media (max-width:339px){.mc-flat-grid{grid-template-columns:repeat(3,1fr)}}
 @media (min-width:768px){.mc-flat-grid{grid-template-columns:repeat(6,1fr)}.mc-tile-label{font-size:12px}}
 .ic-sky-txt{color:#38bdf8}
 
-/* Recent Activity */
-.pf-activity-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:20px;margin:12px 12px 0;overflow:hidden}
-.pf-activity-list{padding:0 8px 8px}
-.pf-activity-row{display:flex;align-items:center;gap:12px;padding:10px 8px;border-bottom:1px solid rgba(255,255,255,.04)}
-.pf-activity-row:last-child{border-bottom:none}
-.pf-activity-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
-.pf-activity-body{flex:1;min-width:0}
-.pf-activity-title{color:rgba(255,255,255,.85);font-size:12.5px;font-weight:600}
-.pf-activity-time{color:rgba(255,255,255,.35);font-size:10.5px;margin-top:1px}
-.pf-activity-amount{font-size:12.5px;font-weight:700;white-space:nowrap;flex-shrink:0}
-.pf-activity-empty{padding:24px 16px;text-align:center;color:rgba(255,255,255,.3);font-size:12.5px}
 
 /* Footer */
 .pf-footer{text-align:center;padding:22px 16px 10px;color:rgba(255,255,255,.28);font-size:11px}
@@ -301,10 +291,6 @@ body.light-mode .pf-balance-label{color:#9ca3af}
         <span class="mc-tile-icon" style="background:rgba(34,197,94,.15);color:#22c55e;"><i class="fas fa-chart-pie"></i></span>
         <span class="mc-tile-label">লাভ/ক্ষতি</span>
       </a>
-      <a href="/profile/login-history" class="mc-tile">
-        <span class="mc-tile-icon" style="background:rgba(148,163,184,.15);color:#94a3b8;"><i class="fas fa-right-to-bracket"></i></span>
-        <span class="mc-tile-label">লগইন হিস্টোরি</span>
-      </a>
       <a href="/notifications" class="mc-tile">
         <% if (typeof notifPreview !== 'undefined' && notifPreview.unreadCount > 0) { %>
         <span class="mc-tile-badge"><%= notifPreview.unreadCount %></span>
@@ -364,6 +350,7 @@ body.light-mode .pf-balance-label{color:#9ca3af}
         <% } %>
         <span class="mc-tile-icon" style="background:rgba(56,189,248,.15);color:#38bdf8;"><i class="fas fa-shield-halved"></i></span>
         <span class="mc-tile-label">সিকিউরিটি সেন্টার</span>
+        <span class="mc-tile-sub">লগইন হিস্টোরি</span>
       </a>
       <a href="/extra/kyc" class="mc-tile">
         <% if (typeof security !== 'undefined' && security && security.kycStatus !== 'approved') { %>
@@ -403,35 +390,11 @@ body.light-mode .pf-balance-label{color:#9ca3af}
     </div>
   </div>
 
-  <!-- ==================== 6. RECENT ACTIVITY ==================== -->
-  <div class="pf-activity-card">
-    <div class="pf-card-title-row">
-      <div class="pf-card-title"><i class="fas fa-clock-rotate-left" style="color:var(--gold);"></i> সাম্প্রতিক অ্যাক্টিভিটি</div>
-    </div>
-    <div class="pf-activity-list">
-      <% if (typeof recentActivity !== 'undefined' && recentActivity && recentActivity.length > 0) { %>
-        <% recentActivity.forEach(function(act){
-             var iconMap = { login: ['fa-right-to-bracket', '#38bdf8'], deposit: ['fa-arrow-down-circle', '#22c55e'], withdraw: ['fa-arrow-up-circle', '#f87171'], vip_upgrade: ['fa-crown', '#c084fc'], reward_claim: ['fa-gift', 'var(--gold)'] };
-             var meta = iconMap[act.kind] || ['fa-circle-dot', 'rgba(255,255,255,.5)'];
-             var labelMap = { login: 'লগইন', deposit: 'ডিপোজিট', withdraw: 'উইথড্র', vip_upgrade: 'VIP আপগ্রেড', reward_claim: 'রিওয়ার্ড ক্লেইম' };
-             var label = labelMap[act.kind] || act.kind;
-        %>
-        <div class="pf-activity-row">
-          <span class="pf-activity-icon" style="background:<%= meta[1] %>22;color:<%= meta[1] %>;"><i class="fas <%= meta[0] %>"></i></span>
-          <div class="pf-activity-body">
-            <div class="pf-activity-title"><%= label %></div>
-            <div class="pf-activity-time"><%= new Date(act.created_at).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) %></div>
-          </div>
-          <% if (act.amount !== null && act.amount !== undefined) { %>
-          <div class="pf-activity-amount" style="color:<%= act.kind === 'withdraw' ? '#f87171' : '#22c55e' %>;">৳<%= Number(act.amount).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></div>
-          <% } %>
-        </div>
-        <% }); %>
-      <% } else { %>
-        <div class="pf-activity-empty">এখনো কোনো অ্যাক্টিভিটি নেই</div>
-      <% } %>
-    </div>
-  </div>
+  <!-- অ্যাক্টিভিটি ফিড কার্ড প্রোফাইল হোমপেজ থেকে সরানো হয়েছে।
+       ওই কার্ডে লগইন এন্ট্রিগুলো সরাসরি হোমপেজে তালিকাভুক্ত হতো। লগইন হিস্টোরির
+       সঠিক জায়গা সিকিউরিটি সেন্টার — সেখানে আগে থেকেই "সাম্প্রতিক লগইন অ্যাক্টিভিটি"
+       তালিকা ও পূর্ণ হিস্টোরির লিংক (/profile/login-history) দুটোই আছে।
+       কোনো ব্যাকএন্ড ডেটা বা রুট মোছা হয়নি — শুধু UI অবস্থান বদলেছে। -->
 
   <!-- ==================== 7. FOOTER ==================== -->
   <div class="pf-footer">
