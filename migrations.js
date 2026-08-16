@@ -599,6 +599,34 @@ async function runMigrations() {
       ADD COLUMN IF NOT EXISTS league TEXT;
     `);
 
+    // ==================== ম্যাচ আইডেন্টিটি (provider + external_id) ====================
+    // সমস্যা: matches টেবিলে কোনো UNIQUE কনস্ট্রেইন্ট ছিল না, অথচ services/matchUpdater.js
+    // `INSERT ... ON CONFLICT DO NOTHING` ব্যবহার করত। কনস্ট্রেইন্ট না থাকায় কোনো কনফ্লিক্টই
+    // কখনো ঘটত না — প্রতি ১৫ মিনিটের প্রতিটা পোলে একই ম্যাচের জন্য নতুন রো ঢুকত
+    // (দিনে ৯৬ বার × প্রতিটা ম্যাচ)। এখন প্রতিটা এক্সটার্নাল ম্যাচের স্থায়ী পরিচয়
+    // (provider, external_id) — টিমের নাম নয়, কারণ নামের বানান/সংক্ষেপ প্রোভাইডারভেদে বদলায়।
+    // provider কলামটা আইডেন্টিটির অংশ, তাই দুটো ভিন্ন প্রোভাইডার একই external_id দিলেও
+    // সেগুলো আলাদা রো থাকে, সংঘর্ষ হয় না।
+    await pool.query(`
+      ALTER TABLE matches
+      ADD COLUMN IF NOT EXISTS provider VARCHAR(40),
+      ADD COLUMN IF NOT EXISTS external_id TEXT,
+      ADD COLUMN IF NOT EXISTS provider_metadata JSONB,
+      ADD COLUMN IF NOT EXISTS synced_at TIMESTAMP;
+    `);
+
+    // PARTIAL unique index — শুধু সেই রোগুলোর উপর যেগুলোর provider ও external_id দুটোই আছে।
+    // এটা ইচ্ছাকৃত ও প্রোডাকশন-সেফ: পুরনো (legacy) রোগুলোতে এই দুটো কলাম NULL, তাই
+    // ইনডেক্স তৈরির সময় বিদ্যমান ডুপ্লিকেটে মাইগ্রেশন ব্যর্থ হয় না এবং কোনো ঐতিহাসিক
+    // রেকর্ড মুছতে হয় না। অ্যাডমিনের হাতে তৈরি ম্যাচেও (provider NULL) কোনো বাধা আসে না।
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS uniq_matches_provider_external
+      ON matches(provider, external_id)
+      WHERE provider IS NOT NULL AND external_id IS NOT NULL;
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_matches_provider ON matches(provider);`);
+    console.log("✅ Match provider identity columns ready");
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS bank_cards (
         id SERIAL PRIMARY KEY,

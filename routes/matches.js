@@ -73,9 +73,16 @@ router.get('/api/live', async (req, res) => {
     const cached = await cache.get(CACHE_KEY);
     if (cached) return res.json(cached);
 
+    // দ্রষ্টব্য: এখানে আগে `result, home_odds, draw_odds, away_odds` কলামগুলোও SELECT করা
+    // হতো, কিন্তু matches টেবিলে ওই কলামগুলো কখনো তৈরিই হয়নি। ফলে কোয়েরিটা প্রতিবার
+    // "column \"result\" does not exist" এরর দিত, নিচের catch ব্লক সেটা গিলে ফেলে
+    // `{ success: true, cricket: [], football: [] }` ফেরত দিত — অর্থাৎ ম্যাচ পেজে
+    // কখনোই কোনো ম্যাচ দেখাত না, অথচ HTTP 200 আসায় সমস্যাটা ধরা পড়ত না।
+    // formatMatch() ওই চারটা কলামের একটাও ব্যবহার করে না, তাই SELECT থেকে বাদ দেওয়াই
+    // সবচেয়ে ছোট নিরাপদ ফিক্স — কোনো আউটপুট ফিল্ড হারায় না।
     const result = await pool.query(
-      `SELECT id, title, team_a, team_b, sport, league, status, start_time, result,
-              home_odds, draw_odds, away_odds, score_a, score_b
+      `SELECT id, title, team_a, team_b, sport, league, status, start_time,
+              score_a, score_b, overs
        FROM matches ORDER BY
          CASE WHEN status = 'live' THEN 0 ELSE 1 END,
          start_time ASC NULLS LAST,
