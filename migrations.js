@@ -1611,6 +1611,58 @@ async function runMigrations() {
     await addFk('withdraw_pin_logs', 'actor_id', 'users', 'id', 'SET NULL', 'fk_withdraw_pin_actor');
     console.log("✅ Referential integrity constraints ready");
 
+    // ==================== অরফান login_logs মেরামত ও FK ভ্যালিডেশন ====================
+    // login_logs.user_id-এ ফরেন কী যোগ হওয়ার আগে ইউজার হার্ড-ডিলিট হলে লগ সারিগুলো
+    // অরফান হয়ে যেত — user_id এমন একটা আইডি দেখাত যার কোনো ইউজার আর নেই।
+    //
+    // ওই আইডি দিয়ে আর কিছুই resolve করা যায় না, কিন্তু ফরেনসিক দিক থেকে এটুকু জানা
+    // মূল্যবান যে "এই কয়টা লগইন একই (মুছে যাওয়া) অ্যাকাউন্টের"। তাই সারি মুছে ফেলা বা
+    // আইডি নিঃশব্দে হারিয়ে ফেলা — কোনোটাই করা হয় না। বদলে:
+    //   ১. মূল আইডিটা deleted_user_id কলামে সরিয়ে রাখা হয় (কিছুই হারায় না);
+    //   ২. user_id NULL করা হয় — ঠিক যা ON DELETE SET NULL করত যদি FK আগে থাকত;
+    //   ৩. তারপর কনস্ট্রেইন্ট VALIDATE করা হয়।
+    // ip, user_agent, device fingerprint, timestamp — অডিট রেকর্ডের সবকিছু অক্ষত থাকে।
+    await pool.query(`ALTER TABLE login_logs ADD COLUMN IF NOT EXISTS deleted_user_id INTEGER;`);
+
+    const loginFk = await pool.query(
+      `SELECT convalidated FROM pg_constraint WHERE conname = 'fk_login_logs_user'`
+    );
+    if (loginFk.rows.length > 0 && loginFk.rows[0].convalidated === false) {
+      const repaired = await pool.query(
+        `UPDATE login_logs l
+            SET deleted_user_id = COALESCE(l.deleted_user_id, l.user_id),
+                user_id = NULL
+          WHERE l.user_id IS NOT NULL
+            AND NOT EXISTS (SELECT 1 FROM users u WHERE u.id = l.user_id)`
+      );
+      if (repaired.rowCount > 0) {
+        console.log(
+          `🔧 ${repaired.rowCount}টি অরফান login_logs সারি মেরামত করা হয়েছে ` +
+          `(মূল user_id → deleted_user_id-এ সংরক্ষিত, কোনো সারি মোছা হয়নি)।`
+        );
+      }
+      // এখন আর অরফান নেই, তাই কনস্ট্রেইন্টটা নিরাপদে ভ্যালিডেট করা যায়।
+      // VALIDATE ব্যর্থ হলেও বুট আটকাবে না — কনস্ট্রেইন্ট NOT VALID অবস্থায় থেকে যাবে
+      // এবং নতুন অরফান তখনও আটকাবে।
+      try {
+        await pool.query(`ALTER TABLE login_logs VALIDATE CONSTRAINT fk_login_logs_user;`);
+        console.log("✅ fk_login_logs_user validated");
+      } catch (e) {
+        console.warn(`⚠️ fk_login_logs_user ভ্যালিডেট করা যায়নি: ${e.message}`);
+      }
+    }
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_login_logs_deleted_user ON login_logs(deleted_user_id) WHERE deleted_user_id IS NOT NULL;`);
+
+    // ==================== সফট-ডিলিট / অ্যানোনিমাইজেশন ====================
+    // অ্যাডমিন কোনো ইউজার ডিলিট করতে চাইলে ডাটাবেজ আর্থিক ইতিহাস রক্ষা করে (payment_requests,
+    // bets, referral_commissions ইত্যাদির FK RESTRICT), ফলে হার্ড ডিলিট ব্যর্থ হয়। ওই ক্ষেত্রে
+    // অ্যাকাউন্ট অ্যানোনিমাইজ করে নিষ্ক্রিয় করা হয় — deleted_at দিয়ে সেটা চিহ্নিত থাকে।
+    // is_banned আলাদাভাবেও true করা হয়, যাতে Phase 01-এর isAuth এনফোর্সমেন্ট (middleware/auth.js)
+    // পুনর্ব্যবহার হয় এবং দ্বিতীয় কোনো auth-চেক মেকানিজম তৈরি করতে না হয়।
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_deleted_at ON users(deleted_at) WHERE deleted_at IS NOT NULL;`);
+
+
     // accumulator_selections.match_id-এ ফরেন কী যোগ হলো, কিন্তু PostgreSQL রেফারেন্সিং
     // কলামে স্বয়ংক্রিয় ইনডেক্স বানায় না। ম্যাচ ডিলিট/আপডেটের সময় FK যাচাই এবং
     // ম্যাচভিত্তিক সেটলমেন্ট কোয়েরি — দুটোতেই এই ইনডেক্স লাগে।

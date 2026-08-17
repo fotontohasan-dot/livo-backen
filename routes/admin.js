@@ -92,6 +92,7 @@ const { listDuplicateFlags, reviewDuplicateFlag, scanAllUsers } = require('../se
 const { getUserDeviceOverview, parseUserAgent } = require('../services/deviceTracking');
 const cache = require('../services/cache');
 const cacheKeys = require('../services/cacheKeys');
+const { deleteOrDeactivateUser } = require('../services/userDeletion');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
 
 const { requireIntParam, requireAmount, parseAmount, sanitizeText, isSafeUrl } = require('../middleware/validate');
@@ -2158,15 +2159,54 @@ router.post('/users/bulk-ban', rbac.requirePermission('users_ban'), async (req, 
   res.json({ success: true, total: cleanIds.length, succeeded: succeeded.length, failed: failed.length, results });
 });
 
+// আগে এখানে সরাসরি `DELETE FROM users` চালানো হতো। কিন্তু users-এর দিকে ২৯টা ফরেন কী
+// RESTRICT (payment_requests, bets, referral_commissions, kyc_requests ...), তাই আর্থিক
+// রেকর্ডওয়ালা যেকোনো ইউজারের ডিলিট ব্যর্থ হতো এবং অ্যাডমিন শুধু "ডিলিট করতে সমস্যা!"
+// দেখতেন — কী ঘটল বা কী করণীয় কিছুই বোঝা যেত না।
+//
+// FK দুর্বল করা হয়নি — আর্থিক ইতিহাস সুরক্ষিতই থাকে। services/userDeletion.js এখন
+// সুরক্ষিত রেকর্ড না থাকলে সত্যিকারের ডিলিট করে, আর থাকলে অ্যাকাউন্ট অ্যানোনিমাইজ করে
+// নিষ্ক্রিয় করে। দুই ক্ষেত্রেই সেশন বাতিল হয় এবং অ্যাডমিনকে স্পষ্ট করে জানানো হয়
+// আসলে কোনটা ঘটেছে।
 router.post('/users/:id/delete', rbac.requirePermission('users_delete'), requireIntParam('id'), async (req, res) => {
   try {
     if (String(req.session.user.id) === String(req.params.id)) {
       req.flash('error', 'নিজের অ্যাকাউন্ট ডিলিট করা যাবে না!');
       return res.redirect('/admin/users');
     }
-    await pool.query('DELETE FROM users WHERE id = $1', [req.params.id]);
-    await cache.del(cacheKeys.userActiveStatus(req.params.id)).catch(() => {});
-    req.flash('success', 'ইউজার ডিলিট করা হয়েছে!');
+
+    const outcome = await deleteOrDeactivateUser(req.params.id, req.session.user.username);
+
+    if (outcome.mode === 'not_found') {
+      req.flash('error', 'ইউজার পাওয়া যায়নি!');
+      return res.redirect('/admin/users');
+    }
+
+    if (outcome.mode === 'deleted') {
+      req.flash('success', `ইউজার "${outcome.username}" স্থায়ীভাবে ডিলিট করা হয়েছে।`);
+    } else {
+      req.flash('success',
+        `ইউজার "${outcome.username}"-এর আর্থিক/অডিট রেকর্ড থাকায় অ্যাকাউন্টটি স্থায়ীভাবে ডিলিট করা হয়নি। ` +
+        `অ্যাকাউন্টটি অ্যানোনিমাইজ ও নিষ্ক্রিয় করা হয়েছে (লগইন বন্ধ, সব সেশন বাতিল), ` +
+        `আর্থিক ইতিহাস হিসাবরক্ষণের জন্য অক্ষত রাখা হয়েছে।`);
+    }
+
+    await logAdminAction(
+      req.session.user.id, req.session.user.username,
+      outcome.mode === 'deleted' ? 'USER_DELETE' : 'USER_DEACTIVATE',
+      `${outcome.username} (#${req.params.id}) — ${outcome.mode === 'deleted' ? 'স্থায়ীভাবে ডিলিট' : 'অ্যানোনিমাইজ ও নিষ্ক্রিয়'} (${outcome.sessionsRevoked || 0}টি সেশন বাতিল)`,
+      req.ip
+    );
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: outcome.mode === 'deleted' ? 'USER_DELETED' : 'USER_DEACTIVATED',
+      category: 'security', status: 'success', riskLevel: 'high',
+      details: {
+        targetUserId: req.params.id, targetUsername: outcome.username,
+        mode: outcome.mode, sessionsRevoked: outcome.sessionsRevoked || 0,
+        blockedBy: outcome.blockedBy || null
+      }
+    }).catch(e => console.error('logAuditEvent (USER_DELETE) error:', e.message));
   } catch (err) {
     console.error('delete error:', err.message);
     req.flash('error', 'ডিলিট করতে সমস্যা!');
