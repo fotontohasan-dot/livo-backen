@@ -278,6 +278,21 @@
       eye.classList.add('fa-eye-slash');
     }
   }
+
+  function toggleWithdrawPin() {
+    const pin = document.getElementById('withdrawPinField');
+    const eye = document.getElementById('withdrawPinEye');
+    if (!pin || !eye) return;
+    if (pin.type === 'password') {
+      pin.type = 'text';
+      eye.classList.remove('fa-eye-slash');
+      eye.classList.add('fa-eye');
+    } else {
+      pin.type = 'password';
+      eye.classList.remove('fa-eye');
+      eye.classList.add('fa-eye-slash');
+    }
+  }
 </script>
 
 <%- include('../partials/bottom-nav') %>

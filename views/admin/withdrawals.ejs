@@ -1,4 +1,12 @@
 <%
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 function fmtDate(d) {
   const dt = new Date(d);
   return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' ' + dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
@@ -6,6 +14,9 @@ function fmtDate(d) {
 function wRow(w, isPending) {
   const statusColor = w.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : w.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700';
   const statusLabel = w.status === 'approved' ? 'Paid' : w.status === 'rejected' ? 'Rejected' : 'Pending';
+  const safeUsername = escapeHtml(w.username);
+  const safeMethod = escapeHtml(w.method || '-');
+  const safeAccountNumber = escapeHtml(w.account_number || '-');
   const actions = isPending
     ? '<div class="flex justify-center gap-2">' +
         '<button onclick="approveWithdrawal(' + w.id + ')" class="px-3.5 py-1.5 text-xs bg-emerald-600 text-white rounded-xl font-bold">Approve + TXN</button>' +
@@ -13,9 +24,9 @@ function wRow(w, isPending) {
       '</div>'
     : '<span class="text-xs text-slate-500 font-medium">' + statusLabel + '</span>';
   return '<tr id="wd-row-' + w.id + '">' +
-    '<td class="px-6 py-4"><div class="font-semibold">' + w.username + '</div><div class="text-xs text-slate-500">#' + w.user_id + '</div></td>' +
+    '<td class="px-6 py-4"><div class="font-semibold">' + safeUsername + '</div><div class="text-xs text-slate-500">#' + w.user_id + '</div></td>' +
     '<td class="px-6 py-4 font-mono font-bold text-red-600">৳ ' + Number(w.amount).toLocaleString('en-US') + '</td>' +
-    '<td class="px-6 py-4 text-sm"><div>' + (w.method || '-') + '</div><div class="text-xs text-slate-500">' + (w.account_number || '-') + '</div></td>' +
+    '<td class="px-6 py-4 text-sm"><div>' + safeMethod + '</div><div class="text-xs text-slate-500">' + safeAccountNumber + '</div></td>' +
     '<td class="px-6 py-4 text-sm">' + fmtDate(w.created_at) + '</td>' +
     '<td class="px-6 py-4 text-center"><span class="px-3 py-1 text-xs font-bold rounded-full ' + statusColor + '">' + statusLabel + '</span></td>' +
     '<td class="px-6 py-4 text-center">' + actions + '</td>' +

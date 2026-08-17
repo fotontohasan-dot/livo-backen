@@ -234,6 +234,14 @@ router.post('/register', async (req, res) => {
       req.flash('error', '❌ ইমেইল অথবা ফোন নাম্বার অন্তত একটি দিতে হবে।');
       return res.redirect('/register');
     }
+    if (email && !/^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+$/.test(email.trim())) {
+      req.flash('error', '❌ সঠিক ইমেইল ফরম্যাট দিন।');
+      return res.redirect('/register');
+    }
+    if (phone && !/^01\d{9}$/.test(phone.trim())) {
+      req.flash('error', '❌ সঠিক ফোন নাম্বার ফরম্যাট দিন।');
+      return res.redirect('/register');
+    }
     if (password.length < 8) {
       req.flash('error', '❌ পাসওয়ার্ড কমপক্ষে ৮ অক্ষর হতে হবে।');
       return res.redirect('/register');

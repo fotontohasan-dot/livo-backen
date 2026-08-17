@@ -1,4 +1,12 @@
 <%
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 function fmtDate(d) {
   return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
@@ -13,13 +21,15 @@ function userRow(u) {
       : '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-700"><i class="fas fa-triangle-exclamation"></i> Unverified</span>');
   const banLabel = u.is_banned ? 'Unban' : 'Ban';
   const banColor = u.is_banned ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-red-500 hover:bg-red-600';
+  const safeUsername = escapeHtml(u.username);
+  const safeContact = escapeHtml(u.email || u.phone || '-');
   return '<tr class="hover:bg-slate-50">' +
     '<td class="px-4 py-4">' +
       (u.is_banned ? '' : '<input type="checkbox" class="user-row-check w-4 h-4 rounded" data-id="' + u.id + '" onchange="updateBulkBar()">') +
     '</td>' +
     '<td class="px-6 py-4">' +
-      '<div class="font-semibold text-slate-800">' + u.username + '</div>' +
-      '<div class="text-xs text-slate-500">#' + u.id + ' • ' + (u.email || u.phone || '-') + '</div>' +
+      '<div class="font-semibold text-slate-800">' + safeUsername + '</div>' +
+      '<div class="text-xs text-slate-500">#' + u.id + ' • ' + safeContact + '</div>' +
     '</td>' +
     '<td class="px-6 py-4 font-mono font-semibold">৳ ' + Number(u.coins || 0).toLocaleString('en-US') + '</td>' +
     '<td class="px-6 py-4 text-sm">' + Number(u.total_points || 0).toLocaleString('en-US') + '</td>' +
