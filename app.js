@@ -57,6 +57,7 @@ const queueService = require('./services/queue');
 const appMetrics = require('./services/metrics');
 const { requireMetricsAccess } = require('./middleware/metricsAuth');
 
+const { backUrl } = require('./utils/redirectBack');
 const app = express();
 app.use(compression());
 const server = http.createServer(app);
@@ -264,7 +265,13 @@ app.set('getTranslations', () => translations);
 
 app.get('/lang/:code', (req, res) => {
   req.session.lang = req.params.code === 'en' ? 'en' : 'bn';
-  res.redirect(req.get('Referer') || '/');
+  // Referer সম্পূর্ণভাবে ক্লায়েন্ট-নিয়ন্ত্রিত। আগে এটা সরাসরি res.redirect()-এ বসানো হতো,
+  // ফলে `/lang/en` একটা open redirect ছিল — Referer হিসেবে https://evil.example.com,
+  // //evil.example.com বা javascript: স্কিম পাঠালে ব্রাউজার সেখানেই চলে যেত (যাচাই করা হয়েছে)।
+  // utils/redirectBack.js-এর backUrl() আগে থেকেই এই সমস্যার নিরাপদ সমাধান রাখে
+  // (same-host যাচাই, protocol-relative ও non-http স্কিম প্রত্যাখ্যান), তাই নতুন কিছু
+  // না বানিয়ে সেটাই পুনর্ব্যবহার করা হলো। বৈধ সাইট-অভ্যন্তরীণ Referer আগের মতোই কাজ করে।
+  res.redirect(backUrl(req, '/'));
 });
 
 app.post('/announcements/:id/dismiss', async (req, res) => {

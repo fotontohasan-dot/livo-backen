@@ -3285,16 +3285,9 @@ router.get('/activity', rbac.requirePermission('activity_log_view'), async (req,
 // routes/adminHealthFix.js এই একই পাথ (/admin/system-diagnostics) admin.js-এর
 // আগে মাউন্ট হয়, তাই এখানে থাকা একটা কপি Express-এ কখনো রিচ হতো না (dead code)।
 // আসল/একমাত্র অ্যাক্টিভ হ্যান্ডলার: routes/adminHealthFix.js
-router.get('/api/system-diagnostics', async (req, res) => {
-  try {
-    const { runAllChecks } = require('../services/healthCheck');
-    const result = await runAllChecks();
-    res.json({ success: true, result });
-  } catch (err) {
-    console.error('system-diagnostics API error:', err.message);
-    res.status(500).json({ success: false, error: 'ডায়াগনস্টিক চালানো যায়নি' });
-  }
-});
+// GET /api/system-diagnostics-এর হ্যান্ডলারও এখানে ইচ্ছাকৃতভাবে নেই — একই কারণে।
+// আগে এখানে একটা কপি ছিল যেটা Express-এ কখনো রিচ হতো না (adminHealthFix আগে মাউন্ট),
+// অর্থাৎ dead code। সেটা সরানো হয়েছে যাতে ভবিষ্যতে কেউ ভুল কপিটা সম্পাদনা না করে।
 
 // ==================== Sentry মনিটরিং স্ট্যাটাস ও কনফিগারেশন ====================
 router.get('/sentry-status', async (req, res) => {

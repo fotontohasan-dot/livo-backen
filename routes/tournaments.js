@@ -3,12 +3,18 @@ const router = express.Router();
 const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
 
+// দ্রষ্টব্য: tournaments টেবিলে কোনো `title` কলাম নেই (migrations.js — id, name, sport,
+// description, entry_fee, prize_pool, max_participants, start_date, end_date, status,
+// created_at)। নিচের কোয়েরিতে আগে অস্তিত্বহীন title কলামটাও রেফার করা হতো, ফলে প্রতিবার
+// "column does not exist" (SQLSTATE 42703) এরর হতো এবং catch ব্লক নীরবে
+// `tournaments: []` রেন্ডার করত — /tournaments পেজে কখনোই কোনো টুর্নামেন্ট দেখা যেত না,
+// অথচ HTTP 200 আসায় সমস্যাটা ধরা পড়ত না। name কলামটা NOT NULL, তাই সেটাই যথেষ্ট।
 router.get('/', async (req, res) => {
   try {
     const tournaments = await pool.query(`
       SELECT
         t.*,
-        COALESCE(t.name, t.title, 'টুর্নামেন্ট') as display_name,
+        COALESCE(t.name, 'টুর্নামেন্ট') as display_name,
         COUNT(tp.user_id) as participant_count
       FROM tournaments t
       LEFT JOIN tournament_participants tp ON t.id = tp.tournament_id
@@ -42,7 +48,7 @@ router.get('/:id', isAuth, async (req, res) => {
     `, [req.params.id, req.session.user.id]);
 
     const tournament = t.rows[0];
-    tournament.name = tournament.name || tournament.title || 'টুর্নামেন্ট';
+    tournament.name = tournament.name || 'টুর্নামেন্ট'; // title কলামটা বিদ্যমান নয়
 
     res.render('tournament-detail', {
       tournament,
@@ -108,7 +114,7 @@ router.post('/:id/join', isAuth, async (req, res) => {
 
     await client.query('COMMIT');
 
-    const name = tournament.name || tournament.title || 'টুর্নামেন্ট';
+    const name = tournament.name || 'টুর্নামেন্ট'; // title কলামটা বিদ্যমান নয়
     req.flash('success', `${name}-এ যোগ দিয়েছেন!`);
   } catch (err) {
     await client.query('ROLLBACK');
