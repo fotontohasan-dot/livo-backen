@@ -255,4 +255,57 @@ describe('Password recovery — token lifecycle', () => {
     );
     expect(after.rows[0].c).toBe(0);
   });
+
+  // রিগ্রেশন: একই টোকেন দিয়ে দুইটা POST একই সাথে (সিকোয়েন্সিয়াল replay না — সত্যিকারের race)
+  // পাঠালে atomic UPDATE...WHERE reset_token=...RETURNING নিশ্চিত করে যে ঠিক একটাই সফল হয়।
+  // আগে আলাদা SELECT তারপর UPDATE থাকলে দুটোই SELECT-এ রো পেয়ে যেত এবং দুটোই সফল হতো।
+  test('একই টোকেন দিয়ে একযোগে (concurrent) দুইটা রিসেট রিকোয়েস্ট এলে ঠিক একটাই সফল হয়', async () => {
+    const email = uniqueEmail();
+    await registerUser(email, 'SecurePass123');
+    const token = await requestReset(email);
+
+    const a = await getCsrfAgent(`/reset-password/${token}`);
+    const b = await getCsrfAgent(`/reset-password/${token}`);
+
+    const [resA, resB] = await Promise.all([
+      a.agent
+        .post(`/reset-password/${token}`)
+        .type('form')
+        .send({ password: 'ConcurrentA123', confirmPassword: 'ConcurrentA123', _csrf: a.token }),
+      b.agent
+        .post(`/reset-password/${token}`)
+        .type('form')
+        .send({ password: 'ConcurrentB123', confirmPassword: 'ConcurrentB123', _csrf: b.token })
+    ]);
+
+    const outcomes = [resA, resB].map((r) => r.headers.location);
+    const succeeded = outcomes.filter((loc) => loc === '/login');
+    const rejected = outcomes.filter((loc) => loc === '/forgot-password');
+
+    // ঠিক একটা সফল (/login-এ রিডাইরেক্ট), অন্যটা প্রত্যাখ্যাত (/forgot-password-এ রিডাইরেক্ট) —
+    // দুটোই সফল হওয়া মানে token single-use গ্যারান্টি race condition-এ ভেঙে গেছে।
+    expect(succeeded.length).toBe(1);
+    expect(rejected.length).toBe(1);
+
+    // ঠিক কোন পাসওয়ার্ডটা জিতেছে তা টেবিলে গিয়ে নিশ্চিত করা — winning পাসওয়ার্ড দিয়েই লগইন
+    // সফল হওয়া উচিত, losing পাসওয়ার্ড দিয়ে না।
+    const winningPassword = succeeded[0] ? (resA.headers.location === '/login' ? 'ConcurrentA123' : 'ConcurrentB123') : null;
+    const losingPassword = winningPassword === 'ConcurrentA123' ? 'ConcurrentB123' : 'ConcurrentA123';
+
+    const winCheck = await getCsrfAgent('/login');
+    const winLogin = await winCheck.agent
+      .post('/login')
+      .set('User-Agent', REALISTIC_UA)
+      .type('form')
+      .send({ identifier: email, password: winningPassword, _csrf: winCheck.token });
+    expect(winLogin.headers.location).not.toMatch(/\/login/);
+
+    const loseCheck = await getCsrfAgent('/login');
+    const loseLogin = await loseCheck.agent
+      .post('/login')
+      .set('User-Agent', REALISTIC_UA)
+      .type('form')
+      .send({ identifier: email, password: losingPassword, _csrf: loseCheck.token });
+    expect(loseLogin.headers.location).toMatch(/\/login/);
+  });
 });

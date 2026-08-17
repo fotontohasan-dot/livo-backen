@@ -67,6 +67,19 @@ describe('CSRF Protection (middleware/csrf.js)', () => {
         .send({ identifier: 'nonexistent_csrf_user@test.com', password: 'wrongpass' });
       expect(res.status).not.toBe(403);
     });
+
+    // রিগ্রেশন: query string-এ ?_csrf= পাঠিয়ে টোকেন যাচাই পাস করা আগে সম্ভব ছিল — কিন্তু
+    // URL-এ থাকা টোকেন ব্রাউজার হিস্ট্রি/সার্ভার লগ/Referer-এর মাধ্যমে ফাঁস হতে পারে বলে
+    // সেই সাপোর্ট সরানো হয়েছে (middleware/csrf.js: extractSubmittedToken)। এখন body/header
+    // ছাড়া শুধু query string দিয়ে বৈধ টোকেন পাঠালেও 403 হওয়া উচিত।
+    test('শুধু query string-এ বৈধ _csrf টোকেন পাঠালে আর গ্রহণযোগ্য নয় (403)', async () => {
+      const { agent, token } = await getCsrfAgent('/login');
+      const res = await agent
+        .post(`/login?_csrf=${encodeURIComponent(token)}`)
+        .type('form')
+        .send({ identifier: 'nonexistent_csrf_user@test.com', password: 'wrongpass' });
+      expect(res.status).toBe(403);
+    });
   });
 
   describe('এরর রেসপন্সের ধরন', () => {

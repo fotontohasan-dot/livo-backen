@@ -45,13 +45,28 @@ function getOrCreateSecret(req) {
 }
 
 function extractSubmittedToken(req) {
+  // query string থেকে _csrf আগে গ্রহণযোগ্য ছিল — কিন্তু URL-এ থাকা টোকেন ব্রাউজার হিস্ট্রি,
+  // সার্ভার অ্যাক্সেস লগ, এবং Referer হেডারের মাধ্যমে (থার্ড-পার্টি লিঙ্কে ক্লিক করলে) ফাঁস হতে
+  // পারে। এই রিপোর প্রকৃত এক্সটার্নাল কলব্যাক/webhook (payment gateway ইত্যাদি) EXEMPT_EXACT/
+  // EXEMPT_PREFIXES দিয়ে আলাদাভাবে বাদ দেওয়া আছে, তাই কোনো বৈধ ফ্লো query-string টোকেনের উপর
+  // নির্ভর করে না — body/header-ভিত্তিক টোকেনই যথেষ্ট এবং নিরাপদ।
   return (
     (req.body && req.body._csrf) ||
-    (req.query && req.query._csrf) ||
     req.get('x-csrf-token') ||
     req.get('x-xsrf-token') ||
     null
   );
+}
+
+// টাইমিং-সেফ তুলনা: সরল === ব্যবহার করলে ক্যারেক্টার-বাই-ক্যারেক্টার মিসম্যাচে early-exit হয়,
+// যা তাত্ত্বিকভাবে টাইমিং সাইড-চ্যানেল দিয়ে টোকেন অনুমান করার সুযোগ তৈরি করতে পারে। দৈর্ঘ্য
+// আলাদা হলে timingSafeEqual নিজেই থ্রো করে, তাই আগে দৈর্ঘ্য মিলিয়ে নেওয়া হচ্ছে।
+function safeCompare(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
 }
 
 function isAjaxOrJson(req) {
@@ -112,7 +127,7 @@ function csrfProtection(req, res, next) {
   if (!secret) return sendCsrfError(req, res);
 
   const submitted = extractSubmittedToken(req);
-  if (!submitted || submitted !== secret) {
+  if (!submitted || !safeCompare(submitted, secret)) {
     return sendCsrfError(req, res);
   }
 

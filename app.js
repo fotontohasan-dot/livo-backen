@@ -63,9 +63,22 @@ const server = http.createServer(app);
 
 app.set('trust proxy', 1);
 
-const SESSION_SECRET = process.env.SESSION_SECRET || require('crypto').randomBytes(32).toString('hex');
-if (!process.env.SESSION_SECRET) {
-  console.warn('⚠️ SESSION_SECRET সেট করা নেই — সাময়িক র‍্যানম সিক্রেট ব্যবহার হচ্ছে। প্রোডকশনে অবশ্যই SESSION_SECRET সেট করুন।');
+// services/envValidator.js (এই ফাইলের একদম শুরুতে, কোনো require-এর আগেই কল করা হয়) প্রোডাকশনে
+// SESSION_SECRET অনুপস্থিত/দুর্বল থাকলে ইতিমধ্যেই process.exit(1) করে বুট আটকে দেয় — অর্থাৎ
+// প্রোডাকশনে এই কোড আদৌ চলার কথা না। কিন্তু আগে এখানে "না থাকলে র‍্যান্ডম সিক্রেট বানাও" এই
+// fallback-টা রাখা ছিল, যেটা নিজেই একটা সুপ্ত ঝুঁকি: যদি কখনো ভুলবশত ভ্যালিডেটর কল করা বাদ পড়ে,
+// রিফ্যাক্টরে ক্রম বদলে যায়, বা কেউ import ভেঙে ফেলে — তাহলে প্রোডাকশন সাইলেন্টলি একটা এলোমেলো
+// (এবং প্রতি রিস্টার্টে ভিন্ন, একাধিক ইনস্ট্যান্স চললে প্রতি ইনস্ট্যান্সেও ভিন্ন) secret নিয়ে চলতে
+// শুরু করত — কোনো এরর ছাড়াই। তাই এখানে defense-in-depth হিসেবে সরাসরি hard-fail করা হচ্ছে;
+// শুধু ডেভেলপমেন্টেই সুবিধার জন্য এলোমেলো (in-memory-only, প্রতি রিস্টার্টে বদলানো) secret চলে।
+let SESSION_SECRET = process.env.SESSION_SECRET;
+if (!SESSION_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('❌ SESSION_SECRET প্রোডাকশনে সেট করা আবশ্যক — সার্ভার বুট বন্ধ করা হচ্ছে।');
+    process.exit(1);
+  }
+  SESSION_SECRET = require('crypto').randomBytes(32).toString('hex');
+  console.warn('⚠️ SESSION_SECRET সেট করা নেই — শুধুমাত্র ডেভেলপমেন্টের জন্য সাময়িক র‍্যান্ডম সিক্রেট ব্যবহার হচ্ছে (প্রতি রিস্টার্টে বদলাবে, সব সেশন invalid হয়ে যাবে)। প্রোডাকশনে এটা চলবে না।');
 }
 
 
@@ -143,8 +156,18 @@ const LOCALHOST_ANY_PORT = /^http:\/\/localhost:\d+$/;
 
 app.use(cors({
   origin(origin, callback) {
-    // origin হেডার ছাড়া বা "null" (sandboxed webview/in-app browser) রিকোয়েস্ট অনুমোদিত
-    if (!origin || origin === 'null') return callback(null, true);
+    // Origin হেডার একদম না থাকা (সরাসরি সার্ভার-টু-সার্ভার কল, cURL, নেটিভ HTTP ক্লায়েন্ট —
+    // ব্রাউজার নয়) অনুমোদিত, কারণ ব্রাউজার-চালিত cross-site অ্যাটাক সবসময় কোনো না কোনো
+    // Origin হেডার পাঠায়।
+    //
+    // কিন্তু Origin: "null" ব্রাউজার নিজেই পাঠায় sandboxed <iframe>, data:/file: URL, বা
+    // redirect chain থেকে — আর এগুলো ঠিক সেই ভেক্টর যেটা credentialed cross-origin অ্যাটাকে
+    // ব্যবহার করা যায় (আক্রমণকারী নিজের ডোমেইনে একটা sandboxed iframe বসিয়ে ব্রাউজারের
+    // সেশন কুকি সমেত এই সার্ভারে ক্রেডেনশিয়াল রিকোয়েস্ট পাঠাতে পারত)। এই রিপোতে এমন কোনো
+    // বৈধ ফ্লো (নেটিভ WebView শেল, sandboxed callback ইত্যাদি) পাওয়া যায়নি যা "null" origin-এ
+    // নির্ভর করে — তাই আর সেটা আলাদা করে অনুমোদন করা হচ্ছে না, ডিফল্ট allow-list আচরণেই পড়বে
+    // (অর্থাৎ প্রত্যাখ্যাত হবে)।
+    if (!origin) return callback(null, true);
     if (ALLOWED_ORIGINS.includes(origin) || LOCALHOST_ANY_PORT.test(origin)) {
       return callback(null, true);
     }
@@ -455,13 +478,21 @@ app.use((req, res, next) => {
   if (!['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) return next();
   const host = req.get('host');
   const origin = req.get('origin');
-  // শুধু Origin থাকলে এবং ভুল হলে আটকাবে; না থাকলে ছেড়ে দেবে
+  // শুধু Origin থাকলে এবং ভুল হলে আটকাবে; একদম না থাকলে ছেড়ে দেবে (নন-ব্রাউজার ক্লায়েন্ট)।
+  // কিন্তু Origin থাকা সত্ত্বেও পার্স করা না গেলে (যেমন "null" — sandboxed iframe/data:/file:
+  // URL থেকে আসা, যেটা new URL() থ্রো করে) আগে সেটা নিঃশব্দে next()-এ চলে যেত (খালি catch)।
+  // অর্থাৎ malformed/"null" Origin দিয়ে এই origin-check কার্যত বাইপাস হয়ে যেত। এখন পার্স করা
+  // না গেলে (Origin হেডার পাঠানো হয়েছে কিন্তু বৈধ URL না) আটকে দেওয়া হয় — fail-closed।
   if (origin) {
+    let parsedHost;
     try {
-      if (new URL(origin).host !== host) {
-        return res.status(403).send('Invalid request origin');
-      }
-    } catch (e) {}
+      parsedHost = new URL(origin).host;
+    } catch (e) {
+      return res.status(403).send('Invalid request origin');
+    }
+    if (parsedHost !== host) {
+      return res.status(403).send('Invalid request origin');
+    }
   }
   return next();
 });

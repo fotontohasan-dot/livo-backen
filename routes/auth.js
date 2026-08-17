@@ -6,7 +6,7 @@ const rateLimit = require('express-rate-limit');
 const { pool } = require('../db');
 const { createReferral } = require('../services/referral');
 const { sendQueuedEmail } = require('../services/email');
-const { scanRegistration, scanFailedLogin, scanLogin } = require('../services/fraudDetection');
+const { scanRegistration, scanFailedLogin, scanLogin, isAccountThrottled } = require('../services/fraudDetection');
 const { evaluateDuplicateAccount } = require('../services/duplicateDetection');
 const { checkIp } = require('../services/vpnDetection');
 const { evaluateRequest, generateCaptcha, verifyCaptcha, logBotEvent } = require('../services/botDetection');
@@ -534,6 +534,17 @@ router.post('/login', async (req, res) => {
     );
     const user = result.rows[0];
     const loginIp = reqIp;
+
+    // অ্যাকাউন্ট-ভিত্তিক থ্রটল — একই অ্যাকাউন্টে অল্প সময়ে অনেক ব্যর্থ চেষ্টা হলে (IP নির্বিশেষে)
+    // সংক্ষিপ্ত সময়ের জন্য নতুন চেষ্টা আটকানো হয়। রেসপন্স ইচ্ছাকৃতভাবে ভুল পাসওয়ার্ডের মতোই —
+    // আলাদা মেসেজ দিলে সেটা "এই অ্যাকাউন্ট আসলেই বিদ্যমান" ফাঁস করে দিত।
+    if (user) {
+      const throttle = await isAccountThrottled(user.id).catch(() => ({ throttled: false }));
+      if (throttle.throttled) {
+        req.flash('error', '❌ তথ্য অথবা পাসওয়ার্ড ভুল।');
+        return res.redirect('/login');
+      }
+    }
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
       scanFailedLogin(identifier, user ? user.id : null, loginIp, req.get('user-agent') || '')

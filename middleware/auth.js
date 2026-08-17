@@ -1,8 +1,55 @@
 const { pool } = require('../db');
+const cache = require('../services/cache');
+const cacheKeys = require('../services/cacheKeys');
 
-const isAuth = (req, res, next) => {
-  if (req.session && req.session.user) return next();
-  res.redirect('/login');
+// isAuth আগে শুধু req.session.user-এর অস্তিত্ব দেখত — অর্থাৎ কাউকে ব্যান/ডিলিট করার পরও
+// তার আগের সেশন দিয়ে (লগআউট না করা পর্যন্ত) পুরো সাইট ব্যবহার করা যেত। isAdmin-এ এই
+// সমস্যা আগে থেকেই ঠিক করা ছিল (প্রতি রিকোয়েস্টে DB থেকে role যাচাই), কিন্তু isAuth-এ ছিল
+// না — অথচ isAuth ৯০+ জায়গায় ব্যবহৃত হয়, তাই প্রতি রিকোয়েস্টে সরাসরি DB কল করা পারফরম্যান্সে
+// আঘাত করত। তাই এখানে একটা সংক্ষিপ্ত-মেয়াদি (৩০ সেকেন্ড) cache-ব্যাকড active-check —
+// Redis থাকলে দ্রুত, Redis না থাকলে/ডাউন থাকলে services/cache.js এমনিতেই DB fallback করে
+// (getOrSet-এর ভেতরের fetchFn সবসময় নিরাপদ)। ব্যান/আনব্যান হওয়ার সাথে সাথেই effective
+// হওয়া দরকার এমন জায়গায় (routes/admin.js ব্যান টগল) এই ক্যাশ invalidate করা হয়, তাই
+// worst-case বিলম্ব ৩০ সেকেন্ডের বেশি না এমনকি cache invalidate মিস হলেও।
+const ACTIVE_STATUS_TTL_SECONDS = 30;
+
+async function isUserActive(userId) {
+  const key = cacheKeys.userActiveStatus(userId);
+  try {
+    const cached = await cache.getOrSet(key, ACTIVE_STATUS_TTL_SECONDS, async () => {
+      const result = await pool.query('SELECT is_banned FROM users WHERE id = $1', [userId]);
+      if (!result.rows[0]) return { exists: false, banned: false };
+      return { exists: true, banned: !!result.rows[0].is_banned };
+    });
+    if (!cached) {
+      // ক্যাশ লেয়ার সম্পূর্ণ ব্যর্থ হলে (Redis-ও নেই, getOrSet-ও fetchFn চালাতে পারেনি) —
+      // fail-open না করে সরাসরি একবার DB চেষ্টা করা হয়, যাতে ব্যানড ইউজার ভুলবশত ঢুকতে না পারে।
+      const result = await pool.query('SELECT is_banned FROM users WHERE id = $1', [userId]);
+      if (!result.rows[0]) return { exists: false, banned: false };
+      return { exists: true, banned: !!result.rows[0].is_banned };
+    }
+    return cached;
+  } catch (err) {
+    console.error('isUserActive check error:', err.message);
+    // DB নিজেই ব্যর্থ হলে (temporary outage) বিদ্যমান লগইন সেশন সাথে সাথে ভেঙে না দিয়ে
+    // fail-open থাকা হয় — সাইট-ওয়াইড DB hiccup-এ সবাইকে লগ-আউট করে দেওয়া বেশি ক্ষতিকর।
+    return { exists: true, banned: false, checkFailed: true };
+  }
+}
+
+const isAuth = async (req, res, next) => {
+  if (!(req.session && req.session.user)) return res.redirect('/login');
+
+  const status = await isUserActive(req.session.user.id);
+  if (!status.exists || status.banned) {
+    req.session.destroy(() => {});
+    if (req.path.includes('/api/')) {
+      return res.status(401).json({ success: false, error: 'সেশন আর বৈধ নয়, দয়া করে আবার লগইন করুন।' });
+    }
+    return res.redirect('/login');
+  }
+
+  return next();
 };
 
 // অ্যাডমিন রুটে ঢোকার প্রতিটা রিকোয়েস্টে সেশনের পুরনো role না মেনে,

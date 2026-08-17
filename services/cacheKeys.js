@@ -8,4 +8,5 @@ module.exports = {
   leaderboardApiPattern: () => 'api:leaderboard:*',
   profileActivity: (userId) => `profile:activity:${userId}`,
   homepageGames: () => 'homepage:games',
+  userActiveStatus: (userId) => `auth:active:${userId}`,
 };

@@ -2087,6 +2087,10 @@ router.post('/users/:id/ban', rbac.requirePermission('users_ban'), requireIntPar
   try {
     const r = await pool.query('UPDATE users SET is_banned = NOT is_banned WHERE id = $1 RETURNING is_banned, username', [req.params.id]);
     if (r.rows[0]) {
+      // isAuth মিডলওয়্যার active/banned স্ট্যাটাস ৩০ সেকেন্ডের জন্য ক্যাশ করে (middleware/auth.js)।
+      // ব্যান/আনব্যান সাথে সাথেই effective করতে হলে ওই ক্যাশ এখানেই invalidate করা দরকার,
+      // নাহলে সদ্য-ব্যান হওয়া ইউজার পুরনো সেশন দিয়ে আরও কিছুক্ষণ অ্যাক্সেস পেতে পারত।
+      await cache.del(cacheKeys.userActiveStatus(req.params.id)).catch(() => {});
       await logAdminAction(req.session.user.id, req.session.user.username, r.rows[0].is_banned ? 'USER_BAN' : 'USER_UNBAN', `${r.rows[0].username} (#${req.params.id}) কে ${r.rows[0].is_banned ? 'ব্যান' : 'আনব্যান'} করা হয়েছে`, req.ip);
       logAuditEvent({
         req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
@@ -2120,6 +2124,7 @@ router.post('/users/bulk-ban', rbac.requirePermission('users_ban'), async (req, 
     try {
       const r = await pool.query('UPDATE users SET is_banned = true WHERE id = $1 AND is_banned = false RETURNING username', [id]);
       if (r.rows[0]) {
+        await cache.del(cacheKeys.userActiveStatus(id)).catch(() => {});
         results.push({ id, success: true, username: r.rows[0].username });
       } else {
         // ইউজার নেই, অথবা আগে থেকেই ব্যান করা — দুটোই "নতুন করে কিছু হয়নি" হিসেবে গণ্য, ত্রুটি না
@@ -2160,6 +2165,7 @@ router.post('/users/:id/delete', rbac.requirePermission('users_delete'), require
       return res.redirect('/admin/users');
     }
     await pool.query('DELETE FROM users WHERE id = $1', [req.params.id]);
+    await cache.del(cacheKeys.userActiveStatus(req.params.id)).catch(() => {});
     req.flash('success', 'ইউজার ডিলিট করা হয়েছে!');
   } catch (err) {
     console.error('delete error:', err.message);

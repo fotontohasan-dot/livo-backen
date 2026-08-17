@@ -457,6 +457,49 @@ async function scanTransaction(userId, txType, args) {
   await evaluateTransaction(userId, txType, args);
 }
 
+// ==================== অ্যাকাউন্ট-ভিত্তিক লগইন থ্রটলিং ====================
+// আগে ব্রুট-ফোর্স সুরক্ষা ছিল শুধু IP-ভিত্তিক (app.js-এর loginLimiter, ১৫ মিনিটে ১০ চেষ্টা)
+// আর একটা প্যাসিভ fraud flag (evaluateFailedLogin) — যেটা কখনো লগইন ফ্লো ব্লক করে না, শুধু
+// অ্যাডমিন প্যানেলে দেখায়। ফলে আক্রমণকারী অনেকগুলো ভিন্ন IP (বটনেট/প্রক্সি) ব্যবহার করলে
+// একটা নির্দিষ্ট অ্যাকাউন্টের বিরুদ্ধে কোনো throttling ছাড়াই বারবার পাসওয়ার্ড অনুমান করতে পারত।
+//
+// এখানে অ্যাকাউন্ট-স্কোপড (IP নির্বিশেষে) সংক্ষিপ্ত কুলডাউন যোগ করা হলো — বিদ্যমান
+// failed_login_attempts টেবিলই ব্যবহার করে, নতুন কোনো স্টেট/টেবিল দরকার হয়নি। ইচ্ছাকৃতভাবে
+// এটা স্থায়ী "account lockout" না (permanent lock exponential/attacker-triggerable DoS হয়ে
+// যেত — কেউ ভিকটিমের ইমেইল দিয়ে বারবার ভুল পাসওয়ার্ড দিয়ে তাকে লক করে দিতে পারত), বরং একটা
+// ছোট, capped কুলডাউন উইন্ডো যেটা সময়ের সাথে নিজে থেকেই শেষ হয়ে যায়।
+const ACCOUNT_THROTTLE_THRESHOLD = 8;        // এই উইন্ডোতে (IP নির্বিশেষে, শুধু এই অ্যাকাউন্টে) এর বেশি ব্যর্থ হলে থ্রটল শুরু
+const ACCOUNT_THROTTLE_WINDOW_MINUTES = 15;
+const ACCOUNT_THROTTLE_COOLDOWN_SECONDS = 60; // থ্রটল হলে এই কতক্ষণ নতুন চেষ্টা আটকানো হয় (স্থায়ী লক না)
+
+/**
+ * userId নির্দিষ্ট থাকলে (identifier মিলেছে) এই অ্যাকাউন্টে সাম্প্রতিক ব্যর্থ লগইন সংখ্যা
+ * থ্রেশহোল্ডের বেশি কিনা যাচাই করে — IP নির্বিশেষে। থ্রটল করা থাকলে { throttled: true,
+ * retryAfterSeconds } রিটার্ন করে, নাহলে { throttled: false }।
+ */
+async function isAccountThrottled(userId) {
+  if (!userId) return { throttled: false }; // অস্তিত্বহীন অ্যাকাউন্টের জন্য enumeration ঝুঁকি এড়াতে থ্রটল প্রযোজ্য না (IP rate-limit যথেষ্ট)
+  try {
+    const r = await pool.query(
+      `SELECT COUNT(*)::int AS c, MAX(created_at) AS last_at
+       FROM failed_login_attempts
+       WHERE user_id = $1 AND created_at > NOW() - INTERVAL '${ACCOUNT_THROTTLE_WINDOW_MINUTES} minutes'`,
+      [userId]
+    );
+    const count = r.rows[0].c;
+    if (count < ACCOUNT_THROTTLE_THRESHOLD) return { throttled: false };
+
+    const lastAt = new Date(r.rows[0].last_at).getTime();
+    const elapsedSeconds = (Date.now() - lastAt) / 1000;
+    if (elapsedSeconds >= ACCOUNT_THROTTLE_COOLDOWN_SECONDS) return { throttled: false };
+
+    return { throttled: true, retryAfterSeconds: Math.ceil(ACCOUNT_THROTTLE_COOLDOWN_SECONDS - elapsedSeconds) };
+  } catch (err) {
+    console.error('isAccountThrottled error (fail-open):', err.message);
+    return { throttled: false }; // চেক নিজেই ব্যর্থ হলে বৈধ ইউজারকে লক-আউট করে না
+  }
+}
+
 module.exports = {
   evaluateRegistration,
   evaluateTransaction,
@@ -468,5 +511,6 @@ module.exports = {
   scanRegistration,
   scanLogin,
   scanFailedLogin,
-  scanTransaction
+  scanTransaction,
+  isAccountThrottled
 };
