@@ -93,6 +93,23 @@ const { getUserDeviceOverview, parseUserAgent } = require('../services/deviceTra
 const cache = require('../services/cache');
 const cacheKeys = require('../services/cacheKeys');
 const { deleteOrDeactivateUser } = require('../services/userDeletion');
+
+// একাধিক সারি একসাথে বদলাতে হলে ছোট ট্রানজেকশন র‍্যাপার — ব্যালেন্স আর coin_transactions
+// লেজার যেন কখনো আলাদা হয়ে না যায়। কলব্যাক থ্রো করলে সবকিছু rollback হয়।
+async function withTransaction(fn) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await fn(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+}
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
 
 const { requireIntParam, requireAmount, parseAmount, sanitizeText, isSafeUrl } = require('../middleware/validate');
@@ -1614,6 +1631,17 @@ router.post('/api/withdrawals/:id/reject', rbac.requirePermission('payments_reje
     }
     // উইথড্র রিকোয়েস্ট করার সময় কয়েন কেটে নেওয়া হয়, তাই বাতিল হলে ফেরত দিতে হবে
     await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
+    // ফেরতটা coin_transactions লেজারেও লিখতে হয়। আগে এই রুটে শুধু ব্যালেন্স বাড়ত, কোনো
+    // লেজার সারি লেখা হতো না — অথচ উইথড্র রিকোয়েস্টের সময় -amount সারিটা লেখা হয়েছিল।
+    // ফলে ইউজারের ব্যালেন্স আর coin_transactions-এর যোগফল আলাদা হয়ে যেত (প্রতি বাতিল
+    // উইথড্রে ঠিক amount পরিমাণ গরমিল), আর /profile/transactions-এ ডেবিট দেখা যেত কিন্তু
+    // ফেরত কখনো দেখা যেত না। routes/payment.js-এর rejectPaymentRequestById আগে থেকেই
+    // এই সারিটা লেখে — এখানে একই আচরণ মেলানো হলো।
+    await client.query(
+      `INSERT INTO coin_transactions (user_id, amount, type, description)
+       VALUES ($1, $2, 'withdraw_refund', 'বাতিলকৃত উইথড্র ফেরত')`,
+      [request.user_id, request.amount]
+    );
     await client.query(`UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE id=$1`, [id]);
     const wRejectNotif = await client.query(
       `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'error') RETURNING *`,
@@ -2342,8 +2370,13 @@ router.post('/users/:id/coins/add', rbac.requirePermission('users_edit'), adminF
   try {
     const amount = req.body.amount; // requireAmount দিয়ে ইতিমধ্যে যাচাই ও normalize করা
     const reason = (req.body.reason || '').trim().slice(0, 200);
-    await pool.query('UPDATE users SET coins = coins + $1 WHERE id = $2', [amount, req.params.id]);
-    await pool.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'admin_add',$3)`, [req.params.id, amount, reason || 'অ্যাডমিন কয়েন যোগ']);
+    // ব্যালেন্স আপডেট ও লেজার এন্ট্রি — দুটো আলাদা pool.query ছিল, কোনো ট্রানজেকশন ছাড়া।
+    // দ্বিতীয়টা ব্যর্থ হলে (বা মাঝপথে প্রসেস মরলে) কয়েন যোগ হয়ে যেত কিন্তু coin_transactions-এ
+    // কোনো রেকর্ড থাকত না — ব্যালেন্স আর লেজার স্থায়ীভাবে আলাদা হয়ে যেত। এখন একসাথে commit হয়।
+    await withTransaction(async (client) => {
+      await client.query('UPDATE users SET coins = coins + $1 WHERE id = $2', [amount, req.params.id]);
+      await client.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'admin_add',$3)`, [req.params.id, amount, reason || 'অ্যাডমিন কয়েন যোগ']);
+    });
     await logAdminAction(req.session.user.id, req.session.user.username, 'COIN_ADD', `ইউজার #${req.params.id}-কে ${amount} কয়েন যোগ${reason ? ' — কারণ: ' + reason : ''}`, req.ip);
     req.flash('success', '✅ কয়েন যোগ হয়েছে!');
   } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
@@ -2354,10 +2387,32 @@ router.post('/users/:id/coins/remove', rbac.requirePermission('users_edit'), adm
   try {
     const amount = req.body.amount;
     const reason = (req.body.reason || '').trim().slice(0, 200);
-    await pool.query('UPDATE users SET coins = GREATEST(coins - $1, 0) WHERE id = $2', [amount, req.params.id]);
-    await pool.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'admin_remove',$3)`, [req.params.id, -amount, reason || 'অ্যাডমিন কয়েন কমানো']);
-    await logAdminAction(req.session.user.id, req.session.user.username, 'COIN_REMOVE', `ইউজার #${req.params.id}-এর ${amount} কয়েন কমানো${reason ? ' — কারণ: ' + reason : ''}`, req.ip);
-    req.flash('success', '✅ কয়েন কমানো হয়েছে!');
+    // দুটো বাগ ছিল এখানে:
+    //   ১. ব্যালেন্স ও লেজার আলাদা pool.query-তে, কোনো ট্রানজেকশন ছাড়া।
+    //   ২. GREATEST(coins - $1, 0) ব্যালেন্সকে শূন্যে আটকায়, কিন্তু লেজারে পুরো -amount
+    //      লেখা হতো। ১০০ কয়েনের ইউজার থেকে ৫০০ কমালে ব্যালেন্স হতো ০ (আসলে কমেছে ১০০)
+    //      অথচ লেজার বলত -৫০০ — স্থায়ী ৪০০ কয়েনের গরমিল।
+    // এখন দুটোই এক ট্রানজেকশনে, আর লেজারে ঠিক যতটা সত্যিই কমেছে সেটাই লেখা হয়।
+    // ব্যালেন্স আগের মতোই শূন্যের নিচে নামে না।
+    const removed = await withTransaction(async (client) => {
+      // FOR UPDATE দিয়ে সারি লক করে আগের ব্যালেন্স পড়া হয়, যাতে সমান্তরাল অন্য কোনো
+      // মিউটেশনের সাথে check-then-update রেস না হয়।
+      const before = await client.query('SELECT coins FROM users WHERE id = $1 FOR UPDATE', [req.params.id]);
+      if (!before.rows[0]) return 0;
+
+      const beforeCoins = Number(before.rows[0].coins);
+      const actualRemoved = Math.min(amount, beforeCoins); // ব্যালেন্স শূন্যের নিচে নামে না
+      if (actualRemoved <= 0) return 0;
+
+      await client.query('UPDATE users SET coins = coins - $1 WHERE id = $2', [actualRemoved, req.params.id]);
+      await client.query(
+        `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'admin_remove',$3)`,
+        [req.params.id, -actualRemoved, reason || 'অ্যাডমিন কয়েন কমানো']
+      );
+      return actualRemoved;
+    });
+    await logAdminAction(req.session.user.id, req.session.user.username, 'COIN_REMOVE', `ইউজার #${req.params.id}-এর ${removed} কয়েন কমানো${reason ? ' — কারণ: ' + reason : ''}`, req.ip);
+    req.flash('success', `✅ ${removed} কয়েন কমানো হয়েছে!`);
   } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
   redirectBack(req, res, '/admin');
 });
