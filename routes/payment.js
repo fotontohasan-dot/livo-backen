@@ -6,6 +6,8 @@ const { createBonus, canWithdraw } = require('../services/turnover');
 const { processReferralDeposit } = require('../services/referral');
 const crypto = require('crypto');
 const sslcommerz = require('../services/sslcommerz');
+// যাচাইয়ের বিশুদ্ধ যুক্তি — গেটওয়ে মডিউল mock করা হলেও এটা চলতেই থাকে
+const paymentVerification = require('../services/paymentVerification');
 const { broadcastDemoStats, emitAdminAlert } = require('../services/socket');
 const { notifyTelegram } = require('../services/telegramNotify');
 const { verifyPin, getPinStatus } = require('../services/withdrawPin');
@@ -901,10 +903,14 @@ router.post('/sslcommerz/success', async (req, res) => {
 
     const verification = await sslcommerz.validatePayment(val_id);
     const validStatus = verification.status === 'VALID' || verification.status === 'VALIDATED';
-    const amountMatches = Math.round(Number(verification.amount)) === Math.round(Number(request.amount));
+    // অঙ্ক তুলনা সবসময় স্টোর-কারেন্সির (BDT) মানের সাথে — currency_amount নয়।
+    const amountMatches = paymentVerification.amountMatchesRequest(verification, request.amount);
     const tranMatches = isVerificationForRequest(verification, request);
+    // আগে currency কখনো যাচাই হতো না — অন্য মুদ্রায় সেটল হওয়া ট্রানজেকশনের সংখ্যাগত
+    // তুলনা পাস করে যেতে পারত যদিও আসল মূল্য বহুগুণ কম।
+    const currencyMatches = paymentVerification.isExpectedCurrency(verification);
 
-    if (!validStatus || !amountMatches || !tranMatches) {
+    if (!validStatus || !amountMatches || !tranMatches || !currencyMatches) {
       await client.query(
         `UPDATE payment_requests SET status='rejected', gateway_val_id=$1, gateway_response=$2, updated_at=NOW() WHERE id=$3`,
         [val_id, JSON.stringify(verification), request.id]
@@ -1015,10 +1021,14 @@ router.post('/sslcommerz/ipn', async (req, res) => {
 
     const verification = await sslcommerz.validatePayment(val_id);
     const validStatus = verification.status === 'VALID' || verification.status === 'VALIDATED';
-    const amountMatches = Math.round(Number(verification.amount)) === Math.round(Number(request.amount));
+    // অঙ্ক তুলনা সবসময় স্টোর-কারেন্সির (BDT) মানের সাথে — currency_amount নয়।
+    const amountMatches = paymentVerification.amountMatchesRequest(verification, request.amount);
     const tranMatches = isVerificationForRequest(verification, request);
+    // আগে currency কখনো যাচাই হতো না — অন্য মুদ্রায় সেটল হওয়া ট্রানজেকশনের সংখ্যাগত
+    // তুলনা পাস করে যেতে পারত যদিও আসল মূল্য বহুগুণ কম।
+    const currencyMatches = paymentVerification.isExpectedCurrency(verification);
 
-    if (validStatus && amountMatches && tranMatches) {
+    if (validStatus && amountMatches && tranMatches && currencyMatches) {
       await client.query(
         `UPDATE payment_requests SET gateway_val_id=$1, gateway_response=$2 WHERE id=$3`,
         [val_id, JSON.stringify(verification), request.id]

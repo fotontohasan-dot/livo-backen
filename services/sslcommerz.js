@@ -2,6 +2,10 @@
 // SSLCommerz পেমেন্ট গেটওয়ে — সেশন তৈরি ও ট্রানজেকশন ভ্যালিডেশন
 // native fetch ব্যবহার করা হয়েছে (Node 24+ এ বিল্ট-ইন), আলাদা প্যাকেজ লাগবে না
 
+// যাচাইয়ের বিশুদ্ধ যুক্তি আলাদা মডিউলে — টেস্টে এই গেটওয়ে মডিউলটা jest.mock() দিয়ে
+// বদলে ফেলা হয়, তাই যাচাই এখানে রাখলে সেটা টেস্ট-ডাবল দিয়ে নিষ্ক্রিয় হয়ে যেত।
+const { storeAmountOf } = require('./paymentVerification');
+
 const STORE_ID = process.env.SSLCZ_STORE_ID;
 const STORE_PASSWD = process.env.SSLCZ_STORE_PASSWD;
 const IS_LIVE = process.env.SSLCZ_IS_LIVE === 'true';
@@ -87,7 +91,9 @@ async function validateByTransactionId(tranId) {
   const data = await res.json();
   const element = Array.isArray(data.element) && data.element.length ? data.element[0] : null;
   if (!element) return { status: 'NOT_FOUND', amount: null, raw: data };
-  return { status: element.status, amount: element.currency_amount || element.amount || null, raw: data };
+  // স্টোর-কারেন্সির amount-কেই অগ্রাধিকার (আগে currency_amount আগে দেখা হতো, যা ভিন্ন
+  // মুদ্রার অঙ্ক হতে পারে এবং BDT-র সাথে তুলনা করলে ভুল ফল দিত)
+  return { status: element.status, amount: storeAmountOf(element), currency: element.currency_type || element.currency || null, raw: data };
 }
 
 module.exports = { initPayment, validatePayment, validateByTransactionId };

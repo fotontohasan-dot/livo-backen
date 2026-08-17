@@ -1662,6 +1662,60 @@ async function runMigrations() {
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_deleted_at ON users(deleted_at) WHERE deleted_at IS NOT NULL;`);
 
+    // ==================== আর্থিক ডেটা CHECK কনস্ট্রেইন্ট ====================
+    // payment_requests-এ এতদিন একটাও CHECK কনস্ট্রেইন্ট ছিল না — শুধু PK আর user_id FK।
+    // অর্থাৎ অ্যাপ্লিকেশন-লেভেল ভ্যালিডেশন (parseAmount, VALID_METHODS, স্ট্যাটাস গার্ড)
+    // ফাঁকি দিয়ে বা ভবিষ্যতের কোনো নতুন কোডপাথ দিয়ে amount = -5000 বা
+    // status = 'anything' ডাটাবেজে বসানো সম্ভব ছিল। টাকার টেবিলে শেষ প্রতিরক্ষা
+    // ডাটাবেজেই থাকা উচিত, কারণ অ্যাপের প্রতিটা পথ ভুল করতে পারে।
+    //
+    // যোগ করার আগে বাস্তব ডেটা যাচাই করা হয়; নিয়মভঙ্গকারী সারি থাকলে কনস্ট্রেইন্ট
+    // NOT VALID হিসেবে যোগ হয় — নতুন খারাপ সারি আটকায়, কিন্তু কোনো আর্থিক ইতিহাস
+    // মুছে ফেলা হয় না এবং মাইগ্রেশন ব্যর্থ হয়ে অ্যাপ বুট আটকে দেয় না।
+    const addCheck = async (table, constraintName, definition, violationQuery) => {
+      const exists = await pool.query(
+        `SELECT 1 FROM pg_constraint WHERE conname = $1 AND conrelid = $2::regclass`,
+        [constraintName, table]
+      );
+      if (exists.rows.length > 0) return;
+
+      const bad = await pool.query(violationQuery);
+      const badCount = bad.rows[0] ? Number(bad.rows[0].c) : 0;
+
+      if (badCount > 0) {
+        console.warn(
+          `⚠️ ${table}: ${constraintName} — ${badCount}টি সারি নিয়ম মানছে না। ` +
+          `আর্থিক ইতিহাস অক্ষত রাখতে কনস্ট্রেইন্টটা NOT VALID হিসেবে যোগ করা হচ্ছে; ` +
+          `পর্যালোচনার পর VALIDATE CONSTRAINT চালানো যাবে।`
+        );
+        await pool.query(`ALTER TABLE ${table} ADD CONSTRAINT ${constraintName} CHECK (${definition}) NOT VALID`);
+      } else {
+        await pool.query(`ALTER TABLE ${table} ADD CONSTRAINT ${constraintName} CHECK (${definition})`);
+      }
+    };
+
+    await addCheck(
+      'payment_requests', 'payment_requests_amount_positive', 'amount > 0',
+      `SELECT COUNT(*)::int AS c FROM payment_requests WHERE amount IS NULL OR amount <= 0`
+    );
+    await addCheck(
+      'payment_requests', 'payment_requests_status_valid',
+      `status IN ('pending','approved','rejected')`,
+      `SELECT COUNT(*)::int AS c FROM payment_requests WHERE status NOT IN ('pending','approved','rejected')`
+    );
+    await addCheck(
+      'payment_requests', 'payment_requests_type_valid',
+      `type IN ('deposit','withdraw')`,
+      `SELECT COUNT(*)::int AS c FROM payment_requests WHERE type NOT IN ('deposit','withdraw')`
+    );
+    // ইউজারের ব্যালেন্স কখনো ঋণাত্মক হওয়ার কথা নয় — সব ডেবিট `AND coins >= $1` গার্ড
+    // দিয়ে atomic ভাবে হয়। এটা সেই invariant-এর ডাটাবেজ-স্তরের নিশ্চয়তা।
+    await addCheck(
+      'users', 'users_coins_non_negative', 'coins IS NULL OR coins >= 0',
+      `SELECT COUNT(*)::int AS c FROM users WHERE coins < 0`
+    );
+    console.log("✅ Financial CHECK constraints ready");
+
 
     // accumulator_selections.match_id-এ ফরেন কী যোগ হলো, কিন্তু PostgreSQL রেফারেন্সিং
     // কলামে স্বয়ংক্রিয় ইনডেক্স বানায় না। ম্যাচ ডিলিট/আপডেটের সময় FK যাচাই এবং
