@@ -1544,6 +1544,93 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_payment_requests_type_status ON payment_requests(type, status, created_at DESC);`);
     console.log("✅ Hot-path indexes ready");
 
+    // ==================== রেফারেনশিয়াল ইন্টিগ্রিটি ====================
+    // নিচের কলামগুলো কোডে অন্য টেবিলের প্রাইমারি কী হিসেবে ব্যবহৃত হয়, কিন্তু ডাটাবেজে
+    // কোনো ফরেন কী ছিল না। ফলে ভুল/মুছে যাওয়া আইডি নীরবে বসে যেত এবং অরফান রেকর্ড
+    // তৈরি হতো — বিশেষ করে accumulator_selections, যেখানে ম্যাচ/মার্কেট আইডি দিয়ে
+    // সেটলমেন্ট হয় (services/accumulator.js:103, 195)।
+    //
+    // প্রোডাকশন-সেফটি: বিদ্যমান ডেটায় অরফান থাকলে কনস্ট্রেইন্ট যোগ করতে গিয়ে মাইগ্রেশন
+    // ব্যর্থ হবে এবং অ্যাপ বুট আটকে যাবে। তাই প্রতিটা কনস্ট্রেইন্ট যোগ করার আগে অরফান
+    // গোনা হয়। অরফান থাকলে সেগুলো মুছে ফেলা হয় না (ঐতিহাসিক ডেটা নষ্ট করা যাবে না);
+    // বরং কনস্ট্রেইন্টটা NOT VALID হিসেবে যোগ করা হয় — নতুন কোনো অরফান আর ঢুকতে পারে
+    // না, পুরনোগুলো লগে রিপোর্ট হয় এবং অ্যাডমিন হাতে সিদ্ধান্ত নিতে পারেন।
+    //
+    // ON DELETE নীতি:
+    //   • accumulator_selections → matches/markets : NO ACTION (bets টেবিলের হুবহু একই
+    //     নীতি) — ম্যাচ মুছে ফেলে বাজি/সিলেকশন অরফান করা যাবে না।
+    //   • লগ/অডিট টেবিল (login_logs, error_logs, chat_messages, news, withdraw_pin_logs)
+    //     : SET NULL — ইউজার মুছলেও অডিট ট্রেইল থেকে যায়, আবার ডিলিটও আটকায় না।
+    const addFk = async (table, column, refTable, refColumn, onDelete, constraintName) => {
+      // ইতিমধ্যে থাকলে কিছু করার নেই — মাইগ্রেশন বারবার চালানো নিরাপদ (idempotent)
+      const exists = await pool.query(
+        `SELECT 1 FROM pg_constraint WHERE conname = $1 AND conrelid = $2::regclass`,
+        [constraintName, table]
+      );
+      if (exists.rows.length > 0) return;
+
+      // টেবিল/কলাম না থাকলে চুপচাপ বাদ (পুরনো ডাটাবেজে কলামটা নাও থাকতে পারে)
+      const col = await pool.query(
+        `SELECT 1 FROM information_schema.columns WHERE table_name=$1 AND column_name=$2`,
+        [table, column]
+      );
+      if (col.rows.length === 0) return;
+
+      const orphans = await pool.query(
+        `SELECT COUNT(*)::int AS c FROM ${table} t
+         WHERE t.${column} IS NOT NULL
+           AND NOT EXISTS (SELECT 1 FROM ${refTable} r WHERE r.${refColumn} = t.${column})`
+      );
+      const orphanCount = orphans.rows[0].c;
+
+      if (orphanCount > 0) {
+        console.warn(
+          `⚠️ ${table}.${column} → ${refTable}.${refColumn}: ${orphanCount}টি অরফান রেকর্ড পাওয়া গেছে। ` +
+          `ঐতিহাসিক ডেটা নষ্ট না করতে কনস্ট্রেইন্টটা NOT VALID হিসেবে যোগ করা হচ্ছে — ` +
+          `নতুন অরফান আর ঢুকবে না। পুরনোগুলো পর্যালোচনার পর VALIDATE CONSTRAINT চালানো যাবে।`
+        );
+        await pool.query(
+          `ALTER TABLE ${table} ADD CONSTRAINT ${constraintName}
+           FOREIGN KEY (${column}) REFERENCES ${refTable}(${refColumn}) ON DELETE ${onDelete} NOT VALID`
+        );
+      } else {
+        await pool.query(
+          `ALTER TABLE ${table} ADD CONSTRAINT ${constraintName}
+           FOREIGN KEY (${column}) REFERENCES ${refTable}(${refColumn}) ON DELETE ${onDelete}`
+        );
+      }
+    };
+
+    await addFk('accumulator_selections', 'match_id', 'matches', 'id', 'NO ACTION', 'fk_acca_sel_match');
+    await addFk('accumulator_selections', 'market_id', 'markets', 'id', 'NO ACTION', 'fk_acca_sel_market');
+    await addFk('login_logs', 'user_id', 'users', 'id', 'SET NULL', 'fk_login_logs_user');
+    await addFk('error_logs', 'user_id', 'users', 'id', 'SET NULL', 'fk_error_logs_user');
+    await addFk('chat_messages', 'sender_id', 'users', 'id', 'SET NULL', 'fk_chat_sender');
+    await addFk('chat_messages', 'receiver_id', 'users', 'id', 'SET NULL', 'fk_chat_receiver');
+    await addFk('news', 'author_id', 'users', 'id', 'SET NULL', 'fk_news_author');
+    await addFk('withdraw_pin_logs', 'actor_id', 'users', 'id', 'SET NULL', 'fk_withdraw_pin_actor');
+    console.log("✅ Referential integrity constraints ready");
+
+    // accumulator_selections.match_id-এ ফরেন কী যোগ হলো, কিন্তু PostgreSQL রেফারেন্সিং
+    // কলামে স্বয়ংক্রিয় ইনডেক্স বানায় না। ম্যাচ ডিলিট/আপডেটের সময় FK যাচাই এবং
+    // ম্যাচভিত্তিক সেটলমেন্ট কোয়েরি — দুটোতেই এই ইনডেক্স লাগে।
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_acca_sel_match ON accumulator_selections(match_id);`);
+
+    // পাসওয়ার্ড রিসেটের প্রতিটা রিকোয়েস্টে users.reset_token দিয়ে খোঁজা হয়
+    // (routes/auth.js — SELECT ... WHERE reset_token = $1, এবং টোকেন single-use করার
+    // atomic UPDATE ... WHERE reset_token = $1)। কোনো ইনডেক্স ছিল না, তাই প্রতিবার
+    // পুরো users টেবিল স্ক্যান হতো। partial — শুধু সক্রিয় টোকেনওয়ালা সারি ইনডেক্সে থাকে।
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_reset_token ON users(reset_token) WHERE reset_token IS NOT NULL;`);
+
+    // হুবহু ডুপ্লিকেট ইনডেক্স সরানো: users.google_id ও users.referral_code — দুটোতেই
+    // UNIQUE কনস্ট্রেইন্ট আছে, আর UNIQUE কনস্ট্রেইন্ট নিজেই একটা ইনডেক্স তৈরি করে
+    // (users_google_id_key, users_referral_code_key)। অতিরিক্ত non-unique ইনডেক্সগুলো
+    // একই কলামে দ্বিতীয় কপি — প্রতিটা INSERT/UPDATE-এ বাড়তি লেখার খরচ, কোনো লাভ নেই।
+    await pool.query(`DROP INDEX IF EXISTS idx_users_google_id;`);
+    await pool.query(`DROP INDEX IF EXISTS idx_users_referral;`);
+    console.log("✅ Index integrity ready");
+
+
   } catch (err) {
     console.error("❌ Migration error:", err.message);
   }
