@@ -1736,6 +1736,28 @@ async function runMigrations() {
     await pool.query(`DROP INDEX IF EXISTS idx_users_referral;`);
     console.log("✅ Index integrity ready");
 
+    // ==================== Phase 06: হট-পাথ সিকুয়েনশিয়াল স্ক্যান ====================
+    // দুটোই EXPLAIN দিয়ে যাচাই করা — আন্দাজে যোগ করা হয়নি।
+    //
+    // users.last_ip: services/fraudDetection.js প্রতিটা লগইনে
+    // `SELECT COUNT(*) FROM users WHERE last_ip = $1 AND created_at > NOW() - INTERVAL ...`
+    // চালায় (rapid-registration যাচাই)। কোনো ইনডেক্স না থাকায় EXPLAIN দেখাত
+    // `Seq Scan on users` — অর্থাৎ প্রতি লগইনে পুরো users টেবিল স্ক্যান, আর ইউজার
+    // বাড়ার সাথে সাথে প্রতিটা লগইন ধীর হতে থাকত। একই কলাম
+    // routes/admin.js-এর same-IP অ্যাকাউন্ট তালিকা ও ডুপ্লিকেট-স্ক্যানেও ব্যবহৃত।
+    // partial — last_ip NULL হওয়া সারি (যারা কখনো লগইন করেনি) ইনডেক্সে রাখার দরকার নেই।
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_last_ip ON users(last_ip) WHERE last_ip IS NOT NULL;`);
+
+    // bank_cards.user_id: টেবিলটায় প্রাইমারি কী ছাড়া কোনো ইনডেক্সই ছিল না, অথচ
+    // প্রতিটা কোয়েরিই user_id দিয়ে ফিল্টার করে — ডিপোজিট পেজ (routes/payment.js),
+    // উইথড্র পেজ, প্রোফাইলের কার্ড তালিকা। EXPLAIN দেখাত `Seq Scan on bank_cards`।
+    // account_number-এ ডুপ্লিকেট-অ্যাকাউন্ট সনাক্তকরণ (services/duplicateDetection.js)
+    // লুকআপ করে, সেটাও ইনডেক্সবিহীন ছিল।
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bank_cards_user ON bank_cards(user_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bank_cards_account ON bank_cards(account_number);`);
+    console.log("✅ Phase 06 hot-path indexes ready");
+
+
 
   } catch (err) {
     console.error("❌ Migration error:", err.message);

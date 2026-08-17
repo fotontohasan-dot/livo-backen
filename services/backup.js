@@ -99,11 +99,22 @@ async function runBackupNow() {
 }
 
 // প্রতি ২৪ ঘণ্টা পরপর অটো ব্যাকআপ (সার্ভার চালু থাকা অবস্থায়)
+//
+// আগে দুটো সমস্যা ছিল — দুটোই সহোদর services/backupManager.js-এর scheduleAutoBackup()-এ
+// ইতিমধ্যে সমাধান করা ছিল, কিন্তু এখানে ছিল না:
+//   ১. একাধিকবার কল করলে প্রতিবার নতুন setInterval তৈরি হতো (হ্যান্ডল কোথাও রাখা হতো না),
+//      ফলে একই দিনে একাধিক ব্যাকআপ চলার ঝুঁকি থাকত এবং টাইমার বাতিলও করা যেত না।
+//   ২. টাইমারে .unref() ছিল না, তাই ইন্টারভালটা Node-এর ইভেন্ট লুপ জীবিত রাখত —
+//      প্রসেস স্বাভাবিকভাবে শেষ হতে পারত না (graceful shutdown ও টেস্টে open handle)।
+let dailyBackupHandle = null;
 function scheduleDailyBackup() {
+  if (dailyBackupHandle) return; // দুবার শিডিউল হওয়া ঠেকানো
   const DAY_MS = 24 * 60 * 60 * 1000;
-  // সার্ভার স্টার্ট হওয়ার ৳৫ মিনিট পর প্রথম ব্যাকআপ (DB কানেকশন স্টাবল হওয়ার সময় দিয়ে)
-  setTimeout(runBackupNow, 5 * 60 * 1000);
-  setInterval(runBackupNow, DAY_MS);
+  // সার্ভার স্টার্ট হওয়ার ৫ মিনিট পর প্রথম ব্যাকআপ (DB কানেকশন স্টাবল হওয়ার সময় দিয়ে)
+  const firstRun = setTimeout(runBackupNow, 5 * 60 * 1000);
+  if (firstRun.unref) firstRun.unref();
+  dailyBackupHandle = setInterval(runBackupNow, DAY_MS);
+  if (dailyBackupHandle.unref) dailyBackupHandle.unref();
 }
 
 function getBackupStatus() {
