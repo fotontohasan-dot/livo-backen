@@ -176,6 +176,17 @@ function buildJobDefinitions() {
 
 const JOB_DEFINITIONS = buildJobDefinitions();
 const intervalHandles = {};
+// start()-এ প্রতিটা জব stagger করে রেজিস্টার হয় (setTimeout)। ওই টাইমআউটগুলোর হ্যান্ডল
+// আগে কোথাও রাখা হতো না, ফলে stagger উইন্ডোর ভেতরে stop() ডাকলে পেন্ডিং টাইমআউটগুলো
+// পরে ফায়ার করে নতুন setInterval বানাত — stop() সেগুলো আর কখনো clear করতে পারত না
+// (orphan interval), আর started=false হয়ে যাওয়ায় পরের start() দ্বিতীয় সেট রেজিস্টার করত।
+const staggerHandles = [];
+// একই জব একসাথে দুইবার চলা ঠেকানোর ইন-ফ্লাইট গার্ড। প্রয়োজন হয় কারণ (ক) হ্যান্ডলার
+// ইন্টারভালের চেয়ে বেশি সময় নিলে পরের টিক আগেরটা চলা অবস্থাতেই শুরু হয়ে যায়, আর
+// (খ) অ্যাডমিন ম্যানুয়ালি ট্রিগার করলে শিডিউলড রানের সাথে একসাথে চলতে পারে।
+// দ্রষ্টব্য: এটা প্রসেস-লোকাল। একাধিক অ্যাপ ইনস্ট্যান্স চললে ক্রস-ইনস্ট্যান্স ডুপ্লিকেশন
+// এতে আটকাবে না — সেটার জন্য ডিস্ট্রিবিউটেড লক লাগবে।
+const inFlight = new Set();
 let started = false;
 
 async function ensureJobsSeeded() {
@@ -222,6 +233,36 @@ async function runJob(key, { triggeredBy = 'schedule' } = {}) {
   const def = JOB_DEFINITIONS[key];
   if (!def) throw new Error(`অজানা cron job: ${key}`);
 
+  // একই জব ইতিমধ্যে চলছে — দ্বিতীয় ইনস্ট্যান্স চালানো হয় না। আগে কোনো গার্ড ছিল না,
+  // তাই হ্যান্ডলার ইন্টারভালের চেয়ে বেশি সময় নিলে বা অ্যাডমিন ম্যানুয়ালি ট্রিগার করলে
+  // একই জব একসাথে দুইবার চলত (যাচাই করে দেখা হয়েছে)। ক্লিনআপ/DELETE জবের ক্ষেত্রে
+  // এতে একই সারিতে দুটো ট্রানজেকশন লড়ত, আর রিট্রাই ব্যাকঅফ (সর্বোচ্চ ৩০ সেকেন্ড ঘুম)
+  // রান সময় আরও বাড়িয়ে ওভারল্যাপের সম্ভাবনা বাড়াত।
+  if (inFlight.has(key)) {
+    const skipMsg = `আগের রান এখনো চলছে — এই ${triggeredBy} ট্রিগার স্কিপ করা হলো`;
+    console.warn(`cron "${key}": ${skipMsg}`);
+    // নীরবে গিলে ফেলা হয় না — লগে থাকে, যাতে বারবার স্কিপ হলে অ্যাডমিন দেখতে পান
+    try {
+      await pool.query(
+        `INSERT INTO cron_job_logs (job_key, started_at, finished_at, duration_ms, status, attempts, message, triggered_by)
+         VALUES ($1, NOW(), NOW(), 0, 'skipped', 0, $2, $3)`,
+        [key, skipMsg, triggeredBy]
+      );
+    } catch (e) {
+      console.error('cron skip log error:', e.message);
+    }
+    return { skipped: true, status: 'skipped', message: skipMsg };
+  }
+  inFlight.add(key);
+
+  try {
+    return await executeJob(key, def, triggeredBy);
+  } finally {
+    inFlight.delete(key); // ব্যর্থ হলেও গার্ড আটকে থাকে না
+  }
+}
+
+async function executeJob(key, def, triggeredBy) {
   const maxAttempts = Math.max(1, (def.maxRetries || 0) + 1);
   const startedAt = new Date();
   let status = 'success';
@@ -289,7 +330,7 @@ async function start() {
   Object.entries(JOB_DEFINITIONS).forEach(([key, def], index) => {
     // সব জব একসাথে না চালিয়ে সামান্য stagger করা হচ্ছে
     const staggerMs = index * 5000;
-    setTimeout(() => {
+    const staggerHandle = setTimeout(() => {
       const handle = setInterval(async () => {
         if (await isJobEnabled(key)) {
           runJob(key, { triggeredBy: 'schedule' }).catch((e) => console.error(`cron "${key}" runtime error:`, e.message));
@@ -297,6 +338,7 @@ async function start() {
       }, def.defaultIntervalMs);
       intervalHandles[key] = handle;
     }, staggerMs);
+    staggerHandles.push(staggerHandle);
   });
 
   console.log(`✅ Scheduler চালু হয়েছে (${Object.keys(JOB_DEFINITIONS).length}টা job রেজিস্টার করা হয়েছে)`);
@@ -304,8 +346,13 @@ async function start() {
 
 /** টেস্ট/গ্রেসফুল-শাটডাউনের জন্য — সব ইন্টারভাল বন্ধ করে দেয়। */
 function stop() {
+  // পেন্ডিং stagger টাইমআউটগুলোও বাতিল করতে হয়। নাহলে stop() করার পরেও ওগুলো ফায়ার করে
+  // নতুন ইন্টারভাল বানাত যেগুলো আর কখনো clear করা যেত না।
+  staggerHandles.forEach((h) => clearTimeout(h));
+  staggerHandles.length = 0;
   Object.values(intervalHandles).forEach((h) => clearInterval(h));
   for (const k of Object.keys(intervalHandles)) delete intervalHandles[k];
+  inFlight.clear();
   started = false;
   console.log('🛑 Scheduler বন্ধ করা হয়েছে।');
 }
