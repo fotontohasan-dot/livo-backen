@@ -98,6 +98,9 @@ function extensionMatchesDetectedType(ext, detectedMime) {
   return false;
 }
 
+// একটা কথোপকথনে সর্বোচ্চ কতগুলো মেসেজ ফেরত যাবে (সবচেয়ে সাম্প্রতিকগুলো)
+const MAX_HISTORY_MESSAGES = 500;
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 20 * 1024 * 1024 },
@@ -152,9 +155,18 @@ router.post('/upload', isAuth, upload.single('file'), async (req, res) => {
 router.get('/history', isAuth, async (req, res) => {
   try {
     const userId = req.session.user.id;
+    // সার্ভার-সাইড বাউন্ড: আগে পুরো কথোপকথন LIMIT ছাড়াই ফেরত যেত, তাই দীর্ঘদিনের
+    // চ্যাটে রেসপন্স অনির্দিষ্টভাবে বড় হতে পারত। সবচেয়ে সাম্প্রতিক MAX_HISTORY_MESSAGES
+    // টা নেওয়া হয়, তারপর আগের মতোই পুরনো→নতুন ক্রমে সাজিয়ে দেওয়া হয় — রেসপন্সের
+    // আকার (প্লেইন অ্যারে) ও ক্রম অপরিবর্তিত, তাই ফ্রন্টএন্ড কনট্র্যাক্ট ভাঙে না।
     const result = await pool.query(
-      'SELECT * FROM chat_messages WHERE sender_id = $1 OR receiver_id = $1 ORDER BY created_at ASC',
-      [userId]
+      `SELECT * FROM (
+         SELECT * FROM chat_messages
+          WHERE sender_id = $1 OR receiver_id = $1
+          ORDER BY created_at DESC
+          LIMIT $2
+       ) t ORDER BY created_at ASC`,
+      [userId, MAX_HISTORY_MESSAGES]
     );
     const upd = await pool.query(
       `UPDATE chat_messages SET is_read = true WHERE receiver_id = $1 AND is_admin = true AND is_read = false`,
@@ -201,9 +213,15 @@ router.get('/admin/conversations', isAdmin, async (req, res) => {
 
 router.get('/admin/history/:userId', isAdmin, async (req, res) => {
   try {
+    // উপরের /history-এর মতোই বাউন্ড
     const result = await pool.query(
-      'SELECT * FROM chat_messages WHERE sender_id = $1 OR receiver_id = $1 ORDER BY created_at ASC',
-      [req.params.userId]
+      `SELECT * FROM (
+         SELECT * FROM chat_messages
+          WHERE sender_id = $1 OR receiver_id = $1
+          ORDER BY created_at DESC
+          LIMIT $2
+       ) t ORDER BY created_at ASC`,
+      [req.params.userId, MAX_HISTORY_MESSAGES]
     );
     const upd = await pool.query(
       `UPDATE chat_messages SET is_read = true WHERE sender_id = $1 AND is_admin = false AND is_read = false`,

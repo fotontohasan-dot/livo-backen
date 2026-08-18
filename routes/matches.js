@@ -1,4 +1,5 @@
 const express = require('express');
+const { requireIntParam } = require('../middleware/validate');
 const router = express.Router();
 const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
@@ -108,7 +109,11 @@ router.get('/api/live', async (req, res) => {
   }
 });
 
-router.get('/:id', async (req, res) => {
+// ত্রুটিপূর্ণ id (abc, 1e309, ইত্যাদি) আগে সরাসরি PostgreSQL-এ পৌঁছে 22P02/22003 এরর
+// ঘটাত, তারপর catch ব্লক ধরে রিডাইরেক্ট করত। ইউজার নিরাপদ উত্তরই পেত, কিন্তু প্রতিটা
+// এমন রিকোয়েস্টে অপ্রয়োজনীয় DB রাউন্ড-ট্রিপ হতো। এখন রুটে ঢোকার আগেই যাচাই হয়;
+// গন্তব্য আগের catch ব্লকের মতোই।
+router.get('/:id', requireIntParam('id', '/matches'), async (req, res) => {
   try {
     const matchRes = await pool.query(`SELECT * FROM matches WHERE id = $1`, [req.params.id]);
     const row = matchRes.rows[0];

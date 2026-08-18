@@ -112,7 +112,7 @@ async function withTransaction(fn) {
 }
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
 
-const { requireIntParam, requireAmount, parseAmount, sanitizeText, isSafeUrl } = require('../middleware/validate');
+const { requireIntParam, requireAmount, parseAmount, sanitizeText, isSafeUrl, clampPage } = require('../middleware/validate');
 const { listIpRules, setIpRule, removeIpRule } = require('../services/ipRules');
 const {
   listVipLevelsAdmin, upsertVipLevel, toggleVipLevelActive,
@@ -1675,7 +1675,7 @@ router.post('/api/withdrawals/:id/reject', rbac.requirePermission('payments_reje
 // on-demand লোড হয়, এবং সেখানেও সর্বশেষ ২০০টা মেসেজে সীমাবদ্ধ থাকে।
 router.get('/support', rbac.requirePermission('support_view'), async (req, res) => {
   try {
-    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const page = clampPage(req.query.page);
     const limit = 30;
     const offset = (page - 1) * limit;
     const search = (req.query.search || '').trim();
@@ -1800,7 +1800,7 @@ router.post('/api/support/:userId/resolve', rbac.requirePermission('support_repl
 // ==================== ট্রানজেকশন লগ ====================
 router.get('/transactions', rbac.requirePermission('reports_view'), async (req, res) => {
   try {
-    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const page = clampPage(req.query.page);
     const limit = 40;
     const offset = (page - 1) * limit;
     const countRes = await pool.query(`SELECT COUNT(*) FROM payment_requests`);
@@ -1825,7 +1825,7 @@ router.get('/transactions', rbac.requirePermission('reports_view'), async (req, 
 // সময় services/referral.js-এই ঘটে, অপরিবর্তিত)।
 router.get('/referrals', rbac.requirePermission('reports_view'), async (req, res) => {
   try {
-    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const page = clampPage(req.query.page);
     const limit = 25;
     const offset = (page - 1) * limit;
     const search = (req.query.search || '').trim();
@@ -1893,7 +1893,7 @@ router.get('/referrals', rbac.requirePermission('reports_view'), async (req, res
 // ==================== USERS ====================
 router.get('/users', rbac.requirePermission('users_view'), async (req, res) => {
   try {
-    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const page = clampPage(req.query.page);
     const limit = 25;
     const offset = (page - 1) * limit;
     const search = (req.query.search || '').trim();
@@ -2297,7 +2297,7 @@ router.get('/security-overview', rbac.requirePermission('activity_log_view'), as
 router.get('/bot-logs', rbac.requirePermission('bot_monitoring_manage'), async (req, res) => {
   try {
     const { risk_level = '', endpoint = '', ip = '', from = '', to = '' } = req.query;
-    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const page = clampPage(req.query.page);
     const limit = 25;
     const offset = (page - 1) * limit;
 
@@ -2532,7 +2532,7 @@ router.post('/markets/:marketId/settle', rbac.requirePermission('matches_manage'
 // ==================== BETS ====================
 router.get('/bets', rbac.requirePermission('games_manage'), async (req, res) => {
   try {
-    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const page = clampPage(req.query.page);
     const limit = 30;
     const offset = (page - 1) * limit;
     const status = req.query.status || '';
@@ -2579,7 +2579,7 @@ router.get('/bets', rbac.requirePermission('games_manage'), async (req, res) => 
 // উপরের GET /bets পেজ-রেন্ডার হ্যান্ডলারের ঠিক একই কোয়েরি-লজিক, শুধু res.render()-এর বদলে JSON রেসপন্স।
 router.get('/api/bets-live', rbac.requirePermission('games_manage'), async (req, res) => {
   try {
-    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const page = clampPage(req.query.page);
     const limit = 30;
     const offset = (page - 1) * limit;
     const status = req.query.status || '';
@@ -2795,7 +2795,7 @@ router.post('/vip/:level/toggle', adminActionLimiter, rbac.requirePermission('vi
 
 router.get('/vip/history', rbac.requirePermission('vip_manage'), async (req, res) => {
   try {
-    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const page = clampPage(req.query.page);
     const rewardType = req.query.type || null;
     const rewardHistory = await listAllRewardHistory({ page, limit: 50, rewardType });
     const upgradeHistory = await listAllUpgradeHistory({ page: 1, limit: 50 });
@@ -3493,7 +3493,7 @@ router.get('/fraud-monitoring', rbac.requirePermission('bot_monitoring_manage'),
 router.get('/fraud-logs', rbac.requirePermission('bot_monitoring_manage'), async (req, res) => {
   try {
     const { risk_level = '', status = '', user_id = '', from = '', to = '' } = req.query;
-    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const page = clampPage(req.query.page);
     const limit = 25;
     const offset = (page - 1) * limit;
 
@@ -3558,7 +3558,7 @@ router.post('/fraud-logs/:id/review', rbac.requirePermission('bot_monitoring_man
 router.get('/duplicate-accounts', rbac.requirePermission('bot_monitoring_manage'), async (req, res) => {
   try {
     const { status = '', min_score = '', user_id = '' } = req.query;
-    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const page = clampPage(req.query.page);
     const result = await listDuplicateFlags({ status, minScore: min_score, userId: user_id, page, limit: 25 });
     res.render('admin/duplicate-accounts', {
       logs: result.logs, page: result.page, totalPages: result.totalPages, total: result.total,
@@ -3778,7 +3778,7 @@ router.post('/queues/fraud-scan/:userId', rbac.requirePermission('cron_jobs_mana
 router.get('/login-history', rbac.requirePermission('activity_log_view'), async (req, res) => {
   try {
     const { q = '', new_device = '', from = '', to = '' } = req.query;
-    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const page = clampPage(req.query.page);
     const limit = 30;
     const offset = (page - 1) * limit;
 
@@ -3935,7 +3935,7 @@ router.post('/api-keys/:id/revoke', rbac.requirePermission('settings_edit'), req
 router.get('/api-logs', rbac.requirePermission('reports_view'), async (req, res) => {
   try {
     const { endpoint = '', method = '', status = '', ip = '', api_key_id = '', from = '', to = '' } = req.query;
-    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const page = clampPage(req.query.page);
     const limit = 40;
     const offset = (page - 1) * limit;
 
@@ -4207,7 +4207,7 @@ router.post('/backups/:id/delete', rbac.requirePermission('backups_manage'), asy
 router.get('/audit-logs', rbac.requirePermission('activity_log_view'), async (req, res) => {
   try {
     const { q = '', actorType = '', category = '', status = '', riskLevel = '', action = '', from = '', to = '' } = req.query;
-    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const page = clampPage(req.query.page);
     const filters = { q, actorType, category, status, riskLevel, action, from, to };
 
     const [{ rows, total, totalPages }, categoryCounts, riskCounts] = await Promise.all([

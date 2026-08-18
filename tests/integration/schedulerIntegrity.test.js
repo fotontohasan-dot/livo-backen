@@ -179,13 +179,17 @@ describe('অন্যান্য শিডিউলারের গার্�
     expect(manager).toMatch(/scheduleHandle\.unref/);
   });
 
-  test('SIGTERM হ্যান্ডলার worker, queue ও scheduler থামায়', () => {
+  // Phase 11-এ শাটডাউন লজিক ইনলাইন SIGTERM হ্যান্ডলার থেকে সরিয়ে gracefulShutdown()-এ
+  // নেওয়া হয়েছে (SIGINT-ও যোগ হয়েছে), তাই এখন ওই ফাংশনের ভেতরটাই যাচাই করা হয়।
+  test('শাটডাউন পাথ worker, queue ও scheduler থামায়', () => {
     const fs = require('fs');
     const path = require('path');
     const src = fs.readFileSync(path.join(__dirname, '..', '..', 'app.js'), 'utf8');
-    const block = src.slice(src.indexOf("process.on('SIGTERM'"), src.indexOf("process.on('SIGTERM'") + 500);
+    const block = src.slice(src.indexOf('async function gracefulShutdown'), src.indexOf("process.on('SIGTERM'"));
     expect(block).toMatch(/stopWorker/);
     expect(block).toMatch(/shutdownQueueSystem/);
     expect(block).toMatch(/scheduler'\)\.stop\(\)/);
+    expect(src).toMatch(/process\.on\('SIGTERM'/);
+    expect(src).toMatch(/process\.on\('SIGINT'/);
   });
 });

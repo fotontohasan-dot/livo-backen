@@ -26,12 +26,52 @@ process.on('uncaughtException', (err) => {
   console.error('⚠️ Uncaught Exception:', err && err.stack ? err.stack : err);
   sentryService.captureException(err, { source: 'uncaughtException' });
 });
-process.on('SIGTERM', async () => {
-  try { require('./services/queue').stopWorker(); } catch (e) {}
-  try { await require('./queues').shutdownQueueSystem(); } catch (e) {}
+// গ্রেসফুল শাটডাউন। আগে শুধু SIGTERM হ্যান্ডেল হতো (SIGINT নয়, অর্থাৎ Ctrl+C-তে
+// ব্যাকগ্রাউন্ড কাজ ও কানেকশন গুছিয়ে বন্ধ হতো না), আর হ্যান্ডলারটা সরাসরি
+// process.exit(0) ডাকত — চলমান কাজ শেষ হওয়ার সুযোগ বা PG/Redis কানেকশন বন্ধ করার
+// ধাপ ছাড়াই। এখন দুটো সিগন্যালই এক পথে যায়, একবারের বেশি চলে না, এবং সময়সীমার
+// মধ্যে গুছিয়ে বেরোয়। সময়সীমা পেরোলে জোর করে বেরিয়ে যায় যাতে কখনো ঝুলে না থাকে।
+let shuttingDown = false;
+const SHUTDOWN_TIMEOUT_MS = 10000;
+
+async function gracefulShutdown(signal) {
+  if (shuttingDown) return; // ডুপ্লিকেট সিগন্যালে দুবার চলবে না
+  shuttingDown = true;
+  console.log(`↩️ ${signal} পাওয়া গেছে — গ্রেসফুল শাটডাউন শুরু`);
+
+  // যত সময়ই লাগুক, প্রসেস যেন চিরকাল ঝুলে না থাকে
+  const forceExit = setTimeout(() => {
+    console.error('⚠️ শাটডাউন সময়সীমা পেরিয়েছে — জোর করে বন্ধ করা হচ্ছে');
+    process.exit(1);
+  }, SHUTDOWN_TIMEOUT_MS);
+  if (forceExit.unref) forceExit.unref();
+
+  // ১. নতুন কাজ নেওয়া বন্ধ (worker + scheduler টাইমার)
   try { require('./services/scheduler').stop(); } catch (e) {}
+  try { require('./services/queue').stopWorker(); } catch (e) {}
+  // ২. চলমান কিউ কাজ গুছিয়ে শেষ করা
+  try { await require('./queues').shutdownQueueSystem(); } catch (e) {}
+  // ৩. HTTP সার্ভার নতুন কানেকশন নেওয়া বন্ধ করে চলমানগুলো শেষ করুক
+  try {
+    if (global.__livoServer) {
+      await new Promise((resolve) => global.__livoServer.close(resolve));
+    }
+  } catch (e) {}
+  // ৪. ডাটাবেজ/ক্যাশ কানেকশন বন্ধ (lazy require — হ্যান্ডলারটা ইম্পোর্টের আগেই সংজ্ঞায়িত)
+  try {
+    const cache = require('./services/cache');
+    const client = cache.getRawClient && cache.getRawClient();
+    if (client && typeof client.quit === 'function') await client.quit();
+  } catch (e) {}
+  try { await require('./db').pool.end(); } catch (e) {}
+
+  clearTimeout(forceExit);
+  console.log('✅ গ্রেসফুল শাটডাউন সম্পন্ন');
   process.exit(0);
-});
+}
+
+process.on('SIGTERM', () => { gracefulShutdown('SIGTERM'); });
+process.on('SIGINT', () => { gracefulShutdown('SIGINT'); });
 
 const express = require('express');
 const http = require('http');
@@ -61,6 +101,7 @@ const { backUrl } = require('./utils/redirectBack');
 const app = express();
 app.use(compression());
 const server = http.createServer(app);
+global.__livoServer = server; // গ্রেসফুল শাটডাউনে চলমান রিকোয়েস্ট শেষ করার জন্য
 
 app.set('trust proxy', 1);
 

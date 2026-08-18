@@ -1,3 +1,14 @@
+// অ্যাডমিন তালিকার page প্যারামিটার। নিচের দিকে ১-এ ক্ল্যাম্প করা আগেও হতো, কিন্তু
+// উপরের দিকে কোনো সীমা ছিল না — ?page=99999999 দিলে OFFSET বিশাল হয়ে যেত এবং
+// PostgreSQL ওই সব সারি স্ক্যান করে ফেলে দিত (অপ্রয়োজনীয় কাজ, ধীর রেসপন্স)।
+// স্বাভাবিক পেজিনেশন অপরিবর্তিত; শুধু অস্বাভাবিক বড় মান নিরাপদে ক্ল্যাম্প হয়।
+const MAX_PAGE = 10000;
+function clampPage(value, max = MAX_PAGE) {
+  const n = parseInt(value, 10);
+  if (!Number.isFinite(n) || n < 1) return 1;
+  return Math.min(n, max);
+}
+
 /**
  * middleware/validate.js
  * ---------------------------------------------------------------------------
@@ -12,6 +23,15 @@
  *   const amount = parseAmount(req.body.amount, {max: 1000});
  * ---------------------------------------------------------------------------
  */
+
+// দ্রষ্টব্য: redirectTo==='back' হলে আগে সরাসরি req.get('Referer') ব্যবহার করা হতো।
+// Referer সম্পূর্ণ ক্লায়েন্ট-নিয়ন্ত্রিত, তাই বাইরের কোনো পেজ থেকে ত্রুটিপূর্ণ id/amount-সহ
+// লিংকে ক্লিক করালে অ্যাডমিনকে ওই বাইরের সাইটেই ফেরত পাঠানো যেত — যাচাই করে দেখা গেছে
+// Location হেডারে আক্রমণকারীর URL-ই বসত (open redirect)। utils/redirectBack.js-এর
+// backUrl() একই সমস্যার নিরাপদ সমাধান আগে থেকেই রাখে: same-host যাচাই করে, আর
+// protocol-relative বা non-http স্কিম প্রত্যাখ্যান করে।
+const { backUrl } = require('../utils/redirectBack');
+
 
 // ==================== প্রাইমারি হেল্পার ফাংশন ====================
 
@@ -64,7 +84,7 @@ function requireIntParam(name, redirectTo = 'back') {
     const n = parsePositiveInt(req.params[name]);
     if (n === null) {
       req.flash('error', 'অবৈধ আইডি।');
-      return res.redirect(redirectTo === 'back' ? (req.get('Referer') || '/admin') : redirectTo);
+      return res.redirect(redirectTo === 'back' ? backUrl(req, '/admin') : redirectTo);
     }
     req.params[name] = n; // normalize
     next();
@@ -77,7 +97,7 @@ function requireAmount(name, opts = {}, redirectTo = 'back') {
     const n = parseAmount(req.body[name], opts);
     if (n === null) {
       req.flash('error', 'সঠিক পরিমাণ দিন (সীমার মধ্যে)।');
-      return res.redirect(redirectTo === 'back' ? (req.get('Referer') || '/admin') : redirectTo);
+      return res.redirect(redirectTo === 'back' ? backUrl(req, '/admin') : redirectTo);
     }
     req.body[name] = n; // normalize
     next();
@@ -89,6 +109,8 @@ module.exports = {
   parseAmount,
   sanitizeText,
   isSafeUrl,
+  clampPage,
+  MAX_PAGE,
   requireIntParam,
   requireAmount,
 };

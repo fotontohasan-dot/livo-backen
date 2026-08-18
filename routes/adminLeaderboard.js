@@ -35,7 +35,7 @@ const router = express.Router();
 
 const { pool } = require('../db');
 const rbac = require('../services/rbac');
-const { requireIntParam } = require('../middleware/validate');
+const { requireIntParam, clampPage } = require('../middleware/validate');
 const { logAdminAction, logEvent: logAuditEvent } = require('../services/auditLog');
 const cache = require('../services/cache');
 const cacheKeys = require('../services/cacheKeys');
@@ -53,7 +53,7 @@ function actorOf(req) {
 // ==================== পয়েন্ট লিডারবোর্ড (সার্চ/ফিল্টার/পেজিনেশনসহ) ====================
 router.get('/', rbac.requirePermission('reports_view'), async (req, res) => {
   try {
-    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const page = clampPage(req.query.page);
     const offset = (page - 1) * PAGE_SIZE;
     const search = (req.query.search || '').trim();
     const status = req.query.status || ''; // '', 'active', 'banned'

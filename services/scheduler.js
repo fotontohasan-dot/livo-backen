@@ -323,9 +323,19 @@ async function start() {
     console.log('ℹ️ Scheduler আগে থেকেই চালু আছে, দ্বিতীয়বার শুরু করা হলো না (duplicate scheduler প্রতিরোধ)।');
     return;
   }
-  started = true;
+  // started ফ্ল্যাগটা আগে seeding-এর *আগে* সেট করা হতো। ensureJobsSeeded() ব্যর্থ হলে
+  // (যেমন বুটের সময় DB না ওঠা) start() reject করত, অথচ started=true থেকে যেত — ফলে
+  // কোনো জব রেজিস্টার না হয়েও স্কিডিউলার চিরতরে "চালু" হিসেবে চিহ্নিত থাকত এবং পরে
+  // আবার start() ডাকলেও কিছুই হতো না। এখন seeding সফল হলে তবেই started সেট হয়,
+  // তাই ব্যর্থ স্টার্টআপের পর পুনরায় চেষ্টা করা যায়। সফল স্টার্টআপের আচরণ অপরিবর্তিত।
+  try {
+    await ensureJobsSeeded();
+  } catch (err) {
+    started = false;
+    throw err;
+  }
 
-  await ensureJobsSeeded();
+  started = true;
 
   Object.entries(JOB_DEFINITIONS).forEach(([key, def], index) => {
     // সব জব একসাথে না চালিয়ে সামান্য stagger করা হচ্ছে
