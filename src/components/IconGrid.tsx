@@ -27,16 +27,16 @@ export const IconGrid = ({ items, columns = 4 }: IconGridProps) => {
             key={index}
             href={item.href}
             onClick={item.onClick}
-            className="flex flex-col items-center gap-2 p-2 sm:p-3 rounded-2xl hover:bg-white/5 transition-colors group relative min-w-0"
+            className="flex flex-col items-center gap-2 p-2 sm:p-3 rounded-2xl hover:bg-accent-soft transition-colors group relative min-w-0"
           >
-            <div className="text-primary group-hover:scale-110 transition-transform">
+            <div className="text-icon-primary group-hover:text-accent group-hover:scale-110 transition-all">
               {item.icon}
             </div>
-            <span className="text-[10px] sm:text-[11px] font-medium text-text-muted group-hover:text-text-main transition-colors text-center leading-tight break-words">
+            <span className="text-[10px] sm:text-[11px] font-medium text-text-muted group-hover:text-text-primary transition-colors text-center leading-tight break-words">
               {item.label}
             </span>
             {item.badge && (
-              <div className="absolute top-2 right-2 sm:right-4 bg-accent text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-background">
+              <div className="absolute top-2 right-2 sm:right-4 bg-danger text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-background">
                 {item.badge}
               </div>
             )}

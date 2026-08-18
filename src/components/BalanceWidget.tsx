@@ -13,10 +13,10 @@ export const BalanceWidget = () => {
   };
 
   return (
-    <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5">
+    <div className="flex items-center gap-2 bg-surface-elevated border border-border rounded-full px-4 py-1.5">
       <div className="flex flex-col">
         <span className="text-[10px] text-text-muted leading-none">Balance</span>
-        <span className="text-primary font-bold text-lg leading-none mt-1">
+        <span className="text-accent font-bold text-lg leading-none mt-1">
           ৳{balance.toLocaleString('en-US')}
         </span>
       </div>
@@ -24,7 +24,7 @@ export const BalanceWidget = () => {
         animate={{ rotate: isRefreshing ? 360 : 0 }}
         transition={{ duration: 1, repeat: isRefreshing ? Infinity : 0, ease: "linear" }}
         onClick={refreshBalance}
-        className="text-primary hover:text-primary-dark transition-colors"
+        className="text-accent hover:text-accent-hover transition-colors"
       >
         <RefreshCw size={18} />
       </motion.button>

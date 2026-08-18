@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { ThemeProvider, THEME_INIT_SCRIPT } from "@/lib/theme";
 
 // next/font/google বিল্ড-টাইমে fonts.googleapis.com থেকে ফন্ট ডাউনলোড করার চেষ্টা করে —
 // নেটওয়ার্ক-সীমিত CI, কন্টেইনার বা এয়ার-গ্যাপড এনভায়রনমেন্টে সেটা `next build`-কেই ফেল
@@ -17,8 +18,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Runs before first paint so the stored/system theme applies
+            immediately — no flash of the wrong theme on load or refresh. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
+      <body suppressHydrationWarning>
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
     </html>
   );
 }
