@@ -1,44 +1,54 @@
 :root {
-  /* Colors */
-  --primary: #C8102E;
-  --primary-glow: rgba(200, 16, 46, 0.4);
-  --secondary: #9B1C2E;
-  --accent: #EAB308;
-  --gold: #EAB308;
+  /* ==================== Livo Design Tokens ====================
+     Premium + Classic + Modern + Comfortable + Minimal Luxury.
+     Deep Obsidian + Dark Forest Green + Champagne Gold (dark theme);
+     Warm White + Cream + Champagne Gold (light theme). Gold is an
+     ACCENT, never a primary background/fill. Red is reserved for
+     notification/alert states only — it is not a brand action color. */
+
+  /* Brand / accent (Champagne Gold) */
+  --primary: #C9A227;
+  --primary-glow: rgba(201, 162, 39, 0.35);
+  --secondary: #1B3A26;
+  --accent: #C9A227;
+  --gold: #C9A227;
+  --gold-hover: #E5C968;
+  --gold-soft: rgba(201, 162, 39, 0.12);
   --green: #10b981;
-  --red: #ef4444;
+  --red: #C83B3B;
+  --warning: #E0A537;
 
-  /* Surfaces & Backgrounds */
-  --bg-dark: #0B0B0B;
-  --bg-surface: #121212;
-  --bg-card: rgba(255, 255, 255, 0.03);
-  --bg-glass: rgba(255, 255, 255, 0.05);
-  --border-glass: rgba(255, 255, 255, 0.1);
-  --bg-nav: rgba(5, 5, 5, 0.95);
+  /* Surfaces & Backgrounds (Deep Obsidian / Dark Forest Green) */
+  --bg-dark: #080D0B;
+  --bg-surface: #111815;
+  --bg-surface-elevated: #17201B;
+  --bg-card: rgba(245, 241, 230, 0.03);
+  --bg-glass: rgba(245, 241, 230, 0.05);
+  --border-glass: #29342D;
+  --bg-nav: rgba(8, 13, 11, 0.95);
 
-  /* Text */
-  --text-main: #ffffff;
-  --text-inverse: #000000;
-  --text-muted: #94a3b8;
-  --text-white: #ffffff; /* Consistent white for colored backgrounds */
+  /* Text (Warm White) */
+  --text-main: #F5F1E6;
+  --text-inverse: #14110A;
+  --text-muted: #7F8982;
+  --text-white: #ffffff; /* theme-invariant — for text over images/brand artwork only */
 
   /* Gradients */
-  --grad-primary: linear-gradient(135deg, #C8102E, #9B1C2E);
-  --grad-secondary: linear-gradient(135deg, #9B1C2E, #7A1624);
-  --grad-gold: linear-gradient(135deg, #EAB308, #FCD34D);
-  --grad-dark: linear-gradient(180deg, #121212, #050505);
-  --grad-surface: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));
+  --grad-primary: linear-gradient(135deg, #C9A227, #E5C968);
+  --grad-secondary: linear-gradient(135deg, #1B3A26, #0D1411);
+  --grad-gold: linear-gradient(135deg, #C9A227, #E5C968);
+  --grad-dark: linear-gradient(180deg, #111815, #080D0B);
+  --grad-surface: linear-gradient(135deg, rgba(245,241,230,0.05), rgba(245,241,230,0.01));
 
   /* Effects */
   --shadow-neon: 0 0 15px var(--primary-glow);
   --glass-blur: blur(0px);
-  --warning: #f59e0b;
 
   /* ==================== Global Design Tokens ==================== */
   /* Border Radius */
-  --radius-sm: 8px;
+  --radius-sm: 10px;
   --radius-md: 14px;
-  --radius-lg: 20px;
+  --radius-lg: 18px;
   --radius-full: 999px;
 
   /* Spacing scale */
@@ -49,7 +59,7 @@
   --space-5: 20px;
   --space-6: 24px;
 
-  /* Shadows (dark theme) */
+  /* Shadows (dark theme — kept subtle per spec) */
   --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.35);
   --shadow-elevated: 0 10px 30px rgba(0, 0, 0, 0.45);
 
@@ -63,27 +73,41 @@
 }
 
 body.light-mode {
-  --bg-dark: #f0f2f5;
-  --bg-surface: #ffffff;
-  --bg-card: rgba(0, 0, 0, 0.03);
-  --bg-glass: rgba(255, 255, 255, 0.7);
-  --border-glass: rgba(0, 0, 0, 0.1);
-  --bg-nav: #ffffff;
+  --primary: #B88918;
+  --primary-glow: rgba(184, 137, 24, 0.22);
+  --secondary: #2F6B45;
+  --accent: #B88918;
+  --gold: #B88918;
+  --gold-hover: #D4AF37;
+  --gold-soft: #FFF6D9;
+  --warning: #C97D0E;
 
-  --text-main: #1a1a1a;
-  --text-inverse: #ffffff;
-  --text-muted: #64748b;
+  --bg-dark: #FAFAF7;
+  --bg-surface: #FFFFFF;
+  --bg-surface-elevated: #FFFFFF;
+  --bg-card: rgba(24, 27, 25, 0.035);
+  --bg-glass: rgba(24, 27, 25, 0.04);
+  --border-glass: #E5E1D6;
+  --bg-nav: rgba(255, 255, 255, 0.95);
 
+  --text-main: #181B19;
+  --text-inverse: #14110A;
+  --text-muted: #858B86;
+
+  --grad-primary: linear-gradient(135deg, #B88918, #D4AF37);
+  --grad-secondary: linear-gradient(135deg, #2F6B45, #1F4B31);
+  --grad-gold: linear-gradient(135deg, #B88918, #D4AF37);
+  --grad-dark: linear-gradient(180deg, #FFFFFF, #F4F3EE);
   --grad-surface: linear-gradient(135deg, rgba(255,255,255,0.8), rgba(255,255,255,0.4));
-  --shadow-card: 0 2px 14px rgba(0, 0, 0, 0.08);
-  --shadow-elevated: 0 8px 28px rgba(0, 0, 0, 0.12);
-  --grad-header: linear-gradient(135deg, #fff9ec, #fff);
+  --shadow-card: 0 2px 14px rgba(24, 27, 25, 0.08);
+  --shadow-elevated: 0 8px 28px rgba(24, 27, 25, 0.12);
+  --grad-header: linear-gradient(135deg, #FFF6D9, #fff);
 }
 
 body.light-mode {
     background-image:
-        radial-gradient(circle at 0% 0%, rgba(0, 150, 37, 0.05) 0%, transparent 35%),
-        radial-gradient(circle at 100% 100%, rgba(245, 158, 11, 0.05) 0%, transparent 35%);
+        radial-gradient(circle at 0% 0%, rgba(47, 107, 69, 0.05) 0%, transparent 35%),
+        radial-gradient(circle at 100% 100%, rgba(184, 137, 24, 0.05) 0%, transparent 35%);
 }
 
 body.light-mode .bottom-nav {
@@ -101,8 +125,8 @@ body.light-mode .bottom-nav {
 body {
     background-color: var(--bg-dark);
     background-image:
-        radial-gradient(circle at 0% 0%, rgba(0, 150, 37, 0.1) 0%, transparent 40%),
-        radial-gradient(circle at 100% 100%, rgba(245, 158, 11, 0.05) 0%, transparent 40%);
+        radial-gradient(circle at 0% 0%, rgba(27, 58, 38, 0.25) 0%, transparent 40%),
+        radial-gradient(circle at 100% 100%, rgba(201, 162, 39, 0.05) 0%, transparent 40%);
     color: var(--text-main);
     font-family: 'Hind Siliguri', 'Segoe UI', Roboto, sans-serif;
     line-height: 1.7;
@@ -253,7 +277,7 @@ body.light-mode .nav-balance-box {
 
 .nav-btn-register {
     background: var(--grad-gold);
-    color: #000;
+    color: var(--text-inverse);
 }
 
 .nav-theme-btn {
@@ -296,7 +320,7 @@ body.light-mode .nav-balance-box {
 
 .lang-switch-nav a.active {
     background: var(--gold);
-    color: #000;
+    color: var(--text-inverse);
 }
 
 .nav-icon-link {
@@ -321,7 +345,7 @@ body.light-mode .nav-balance-box {
     right: 8px;
     width: 8px;
     height: 8px;
-    background: #ef4444;
+    background: var(--red);
     border-radius: 50%;
     border: 2px solid var(--bg-surface);
 }
@@ -371,9 +395,9 @@ body.light-mode .nav-balance-box {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #000;
+    color: var(--text-inverse);
     font-size: 15px;
-    box-shadow: 0 0 10px rgba(245, 158, 11, 0.6);
+    box-shadow: 0 0 10px var(--primary-glow);
 }
 
 .promotion-link span:last-child {
@@ -397,13 +421,13 @@ body.light-mode .nav-balance-box {
 
 .btn-primary {
     background: var(--grad-primary);
-    color: var(--text-white);
-    box-shadow: 0 4px 15px rgba(0, 150, 37, 0.3);
+    color: var(--text-inverse);
+    box-shadow: 0 4px 15px var(--primary-glow);
 }
 
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 150, 37, 0.4);
+    box-shadow: 0 6px 20px var(--primary-glow);
 }
 
 .btn-secondary {
@@ -595,8 +619,8 @@ p {
     border-radius: 8px;
 }
 
-.tx-positive { color: #10b981; }
-.tx-negative { color: #ef4444; }
+.tx-positive { color: var(--green); }
+.tx-negative { color: var(--red); }
 
 .teko {
     font-family: 'Teko', sans-serif;
@@ -629,7 +653,7 @@ p {
 
 .lang-btn.active {
     background: var(--gold);
-    color: #000;
+    color: var(--text-inverse);
     border-color: var(--gold);
 }
 
@@ -639,7 +663,7 @@ p {
 }
 
 .cat-item.active div {
-    color: #000 !important;
+    color: var(--text-inverse) !important;
 }
 
 .side-menu {
@@ -650,7 +674,7 @@ p {
     max-width: 82%;
     height: 100%;
     height: 100dvh;
-    background-color: #121212;
+    background-color: var(--bg-surface);
     background: var(--bg-surface);
     border-right: 1px solid var(--border-glass);
     z-index: 100001;
@@ -711,7 +735,7 @@ p {
     color: var(--text-main);
     text-decoration: none;
     font-size: 15px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid var(--border-glass);
     transition: background 0.2s ease;
 }
 
@@ -977,7 +1001,7 @@ body.menu-open {
     cursor: pointer;
     transition: background .15s ease, transform .1s ease;
 }
-.auth-google-btn:hover { background: var(--bg-hover, rgba(255,255,255,0.06)); }
+.auth-google-btn:hover { background: var(--bg-glass); }
 .auth-google-btn:active { transform: translateY(1px); }
 .auth-google-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
 

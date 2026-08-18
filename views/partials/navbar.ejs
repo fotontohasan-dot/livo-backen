@@ -9,7 +9,7 @@
         <button id="lvClose" style="background:none;border:none;color:var(--text-main);font-size:22px;cursor:pointer;">✕</button>
 
   </div>
-  <div style="padding:10px 20px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:center;">
+  <div style="padding:10px 20px; border-bottom:1px solid var(--border-glass); display:flex; justify-content:center;">
     <div class="lang-switch" style="background: var(--bg-glass); border-radius: 20px; padding: 2px; border: 1px solid var(--border-glass); width: 100%; display: flex;">
       <a href="/lang/bn" class="lang-btn <%= lang === 'bn' ? 'active' : '' %>" style="border:none; padding: 8px 0; border-radius: 18px; flex:1; text-align:center;">BN</a>
       <a href="/lang/en" class="lang-btn <%= lang === 'en' ? 'active' : '' %>" style="border:none; padding: 8px 0; border-radius: 18px; flex:1; text-align:center;">EN</a>
@@ -17,7 +17,7 @@
   </div>
   <% if(locals.user) { %>
   <div style="padding:15px 20px;border-bottom:1px solid var(--border-glass);display:flex;align-items:center;gap:12px;">
-    <div style="width:45px;height:45px;border-radius:50%;background:var(--grad-primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;color:var(--text-white);box-shadow: 0 0 10px var(--primary-glow);">
+    <div style="width:45px;height:45px;border-radius:50%;background:var(--grad-primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;color:var(--text-inverse);box-shadow: 0 0 10px var(--primary-glow);">
       <%= user.username[0].toUpperCase() %>
     </div>
     <div>
@@ -41,9 +41,9 @@
   <a href="/admin" class="menu-item" style="color:var(--primary) !important;"><i class="fas fa-cog"></i> <%= t.menu_admin %></a>
   <% } %>
   <% if(locals.user) { %>
-  <a href="/logout" class="menu-item" style="color:#ef4444 !important;"><i class="fas fa-sign-out-alt"></i> <%= t.logout %></a>
+  <a href="/logout" class="menu-item" style="color:var(--red) !important;"><i class="fas fa-sign-out-alt"></i> <%= t.logout %></a>
   <% } else { %>
-  <a href="/login" class="menu-item" style="color:#10b981 !important;"><i class="fas fa-sign-in-alt"></i> <%= t.login %></a>
+  <a href="/login" class="menu-item" style="color:var(--green) !important;"><i class="fas fa-sign-in-alt"></i> <%= t.login %></a>
   <a href="/register" class="menu-item" style="color:var(--gold) !important;"><i class="fas fa-user-plus"></i> <%= t.register %></a>
   <% } %>
 </div>
@@ -51,38 +51,11 @@
 <div class="menu-overlay" id="menuOverlay"></div>
 
 
-<style>
-.golden-navbar {
-  background: linear-gradient(135deg, #FFE9A8 0%, #EAB308 40%, #B8860B 100%) !important;
-  box-shadow: 0 4px 18px rgba(212,175,55,0.35);
-}
-.golden-navbar .nav-brand,
-.golden-navbar > div > button,
-.golden-navbar .nav-icon-link,
-.golden-navbar .nav-balance-box,
-.golden-navbar .nav-refresh-btn {
-  color: #241a00 !important;
-}
-.golden-navbar .nav-balance-box {
-  background: rgba(0,0,0,0.14);
-  border-color: rgba(0,0,0,0.22);
-}
-.golden-navbar .nav-icon-link:hover { background: rgba(0,0,0,0.12); }
-.golden-navbar .badge-dot { border-color: #B8860B; }
-.golden-navbar .nav-btn-login {
-  color: #241a00 !important;
-  border-color: rgba(0,0,0,0.3) !important;
-}
-.golden-navbar .nav-btn-register {
-  background: #241a00 !important;
-  color: #FFD700 !important;
-}
-</style>
 <% if (locals.currentPage === 'home') { %>
-<nav class="navbar golden-navbar" style="position:relative; z-index:1000;">
+<nav class="navbar" style="position:relative; z-index:1000;">
   <div style="display:flex;align-items:center;gap:12px;">
-    <button onclick="toggleMenu()" style="background:none;border:none;color:#241a00;font-size:24px;cursor:pointer;padding:0 12px;"><i class="fas fa-bars"></i></button>
-    <div class="nav-brand" style="color: #241a00; font-family: 'Teko', sans-serif; font-size: 1.8rem; letter-spacing: 1px;"><%= siteName %></div>
+    <button onclick="toggleMenu()" style="background:none;border:none;color:var(--text-main);font-size:24px;cursor:pointer;padding:0 12px;"><i class="fas fa-bars"></i></button>
+    <div class="nav-brand" style="color: var(--gold); font-family: 'Teko', sans-serif; font-size: 1.8rem; letter-spacing: 1px;"><%= siteName %></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
         
