@@ -586,7 +586,25 @@ app.post('/telegram-webhook', express.json(), async (req, res) => {
 // Error Handling
 sentryService.attachExpressErrorHandler(app); // HTTP এরর অটোমেটিক Sentry-তে রিপোর্ট হবে (নিজের error handler-এর আগে বসাতে হয়)
 app.use((err, req, res, next) => {
-  console.error('❌ Unhandled Error:', err.stack);
+  // ক্লায়েন্টের পাঠানো ত্রুটিপূর্ণ রিকোয়েস্ট (ভাঙা JSON, অতিরিক্ত বড় বডি, ভুল
+  // content-type) body-parser থেকে err.status/err.statusCode সহ আসে — যেমন
+  // SyntaxError হলে 400, entity.too.large হলে 413। আগে এই হ্যান্ডলার সেগুলো উপেক্ষা
+  // করে সবকিছুকেই 500 বানাত। ফলে (ক) ক্লায়েন্ট বুঝত না দোষটা তার রিকোয়েস্টের,
+  // (খ) প্রতিটা ভাঙা রিকোয়েস্ট error_logs ও Sentry-তে "সার্ভার ত্রুটি" হিসেবে জমা হয়ে
+  // আসল সার্ভার বাগ ঢেকে দিত, আর (গ) কেউ ইচ্ছা করে ভাঙা বডি পাঠিয়ে error_logs
+  // ফোলাতে পারত। 4xx হলে এখন সেটাই ফেরত যায় এবং error_logs-এ লেখা হয় না।
+  const rawStatus = Number(err.status || err.statusCode);
+  const isClientError = Number.isInteger(rawStatus) && rawStatus >= 400 && rawStatus < 500;
+  const statusCode = isClientError ? rawStatus : 500;
+
+  if (isClientError) {
+    console.warn(`⚠️ Client error ${statusCode} on ${req.method} ${req.originalUrl}: ${err.message}`);
+  } else {
+    console.error('❌ Unhandled Error:', err.stack);
+  }
+
+  // ক্লায়েন্টের ভুলে সার্ভারের error_logs ভরানো হয় না — শুধু আসল 5xx লগ হয়
+  if (!isClientError) {
   pool.query(
     `INSERT INTO error_logs (message, stack, url, method, user_id) VALUES ($1, $2, $3, $4, $5)`,
     [
@@ -597,6 +615,7 @@ app.use((err, req, res, next) => {
       (req.session && req.session.user) ? req.session.user.id : null
     ]
   ).catch(() => {});
+  }
 
   const serverErrorMsg = (res.locals && res.locals.t && res.locals.t.server_error) ? res.locals.t.server_error : 'Server Error / সার্ভার ত্রুটি';
 
@@ -606,12 +625,18 @@ app.use((err, req, res, next) => {
     || (req.headers.accept && req.headers.accept.includes('application/json'))
     || req.path.startsWith('/api')
     || (req.headers['content-type'] || '').includes('json');
+  // ক্লায়েন্ট-ত্রুটির জন্য সাধারণ বার্তা; err.message বা stack কখনো ক্লায়েন্টে যায় না
+  const clientErrorMsg = statusCode === 413
+    ? 'রিকোয়েস্টের আকার অনুমোদিত সীমার চেয়ে বড়।'
+    : 'রিকোয়েস্টটি সঠিক ফরম্যাটে নেই।';
+  const message = isClientError ? clientErrorMsg : serverErrorMsg;
+
   if (wantsJson) {
-    return res.status(500).json({ success: false, message: serverErrorMsg });
+    return res.status(statusCode).json({ success: false, message });
   }
 
-  res.status(500).render('error', {
-    message: serverErrorMsg,
+  res.status(statusCode).render('error', {
+    message,
     siteName: 'Livo'
   });
 });
