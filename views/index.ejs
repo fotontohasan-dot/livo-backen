@@ -8,19 +8,13 @@
 }
 @keyframes marquee-text { 0%{transform:translateX(100%)} 100%{transform:translateX(-100%)} }
 
-/* FA999 Gold Theme Styles */
-:root {
-  --fa-gold-light: #FFEFA6;
-  --fa-gold: #D4AF37;
-  --fa-gold-dark: #AA7C11;
-  --fa-gold-gradient: linear-gradient(135deg, #FFF3C4 0%, #FFD700 50%, #B8860B 100%);
-  --fa-dark-gradient: linear-gradient(180deg, #1A1C20 0%, #0F1012 100%);
-  --fa-card-bg: rgba(255, 255, 255, 0.05);
-}
+/* এই সেকশনের সব var(--fa-gold*)/var(--fa-*) রেফারেন্স নিচের গ্লোবাল থিম টোকেনে
+   (public/css/style.css) সরাসরি পয়েন্ট করা হয়েছে, যাতে body.light-mode টগলে হোমপেজের
+   হিরো ব্যাজ/ক্যাটাগরি/প্রোভাইডার বাটন ইত্যাদিও বাকি সাইটের মতো থিম-অ্যাওয়্যার থাকে। */
 
 .promo-banner {
   background: linear-gradient(135deg, #1C1E22 0%, #0F1012 100%);
-  border: 1px solid rgba(212, 175, 55, 0.3);
+  border: 1px solid rgba(201, 162, 39, 0.3);
   border-left: none;
   border-right: none;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
@@ -42,7 +36,7 @@
 }
 
 .promo-banner-badge {
-  background: var(--fa-gold-gradient);
+  background: var(--grad-gold);
   color: #000;
   font-size: 10px;
   font-weight: 900;
@@ -51,7 +45,7 @@
   align-self: flex-start;
   text-transform: uppercase;
   letter-spacing: 1px;
-  box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+  box-shadow: 0 0 10px rgba(201, 162, 39, 0.5);
 }
 
 /* Shortcuts Menu Bar */
@@ -60,9 +54,9 @@
   grid-template-columns: repeat(4, 1fr);
   gap: 4px;
   margin: 0 0 12px 0;
-  background: rgba(255, 255, 255, 0.02);
-  border-top: 1px solid rgba(212, 175, 55, 0.1);
-  border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-glass);
+  border-bottom: 1px solid var(--border-glass);
   border-radius: 0;
   padding: 7px 0;
 }
@@ -93,7 +87,7 @@
   align-items: center;
   justify-content: center;
   font-size: 18px;
-  color: var(--fa-gold);
+  color: var(--gold);
   margin-bottom: 3px;
   box-shadow: none;
 }
@@ -122,8 +116,8 @@
   flex: 0 0 auto;
   padding: 10px 20px;
   border-radius: 30px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
   color: var(--text-muted);
   font-weight: 600;
   font-size: 13px;
@@ -135,15 +129,15 @@
 }
 
 .nav-tab-item.active {
-  background: var(--fa-gold-gradient);
-  color: #000 !important;
+  background: var(--grad-gold);
+  color: var(--text-inverse) !important;
   border-color: transparent;
   font-weight: 700;
-  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4);
+  box-shadow: 0 4px 15px rgba(201, 162, 39, 0.4);
 }
 
 .nav-tab-item.active i {
-  color: #000;
+  color: var(--text-inverse);
 }
 
 .game-grid-premium {
@@ -154,8 +148,9 @@
 }
 
 .game-card-premium {
-  background: linear-gradient(135deg, rgba(30, 32, 38, 0.8) 0%, rgba(15, 16, 18, 0.9) 100%);
-  border: 1px solid rgba(212, 175, 55, 0.1);
+  background: var(--grad-surface);
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-glass);
   border-radius: 16px;
   overflow: hidden;
   position: relative;
@@ -167,18 +162,18 @@
 
 .game-card-premium:hover {
   transform: scale(1.02);
-  border-color: var(--fa-gold);
+  border-color: var(--gold);
 }
 
 .game-thumb-wrapper {
   aspect-ratio: 16/10;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--bg-card);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 44px;
   position: relative;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--border-glass);
 }
 
 .game-info-premium {
@@ -191,7 +186,7 @@
 .game-title-premium {
   font-size: 13px;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-main);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -200,7 +195,7 @@
 .game-provider-premium {
   font-size: 10px;
   font-weight: 600;
-  color: var(--fa-gold);
+  color: var(--gold);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -219,16 +214,16 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  background: var(--fa-gold-gradient);
-  box-shadow: 0 2px 8px rgba(212,175,55,0.45);
+  background: var(--grad-gold);
+  box-shadow: 0 2px 8px rgba(201, 162, 39,0.45);
 }
 .game-badge-premium.badge-new { background: linear-gradient(135deg, #6ee7ff 0%, #3b82f6 100%); color: #04121f; box-shadow: 0 2px 8px rgba(59,130,246,0.4); }
 .game-badge-premium.badge-hot::before { content: "\f06d"; font-family: "Font Awesome 6 Free"; font-weight: 900; font-size: 7px; }
 .game-badge-premium.badge-new::before { content: "\f005"; font-family: "Font Awesome 6 Free"; font-weight: 900; font-size: 7px; }
 
 .marquee-container-premium {
-  background: rgba(212, 175, 55, 0.08);
-  border: 1px solid rgba(212, 175, 55, 0.2);
+  background: rgba(201, 162, 39, 0.08);
+  border: 1px solid rgba(201, 162, 39, 0.2);
   border-radius: 8px;
   margin: 10px 12px;
   padding: 8px 12px;
@@ -238,7 +233,7 @@
 }
 
 .marquee-label-premium {
-  color: var(--fa-gold);
+  color: var(--gold);
   font-size: 11px;
   font-weight: 800;
   display: flex;
@@ -253,17 +248,17 @@
   100% { transform: translateX(250%) skewX(-20deg); }
 }
 @keyframes goldGlowPulse {
-  0%, 100% { text-shadow: 0 0 8px rgba(255,215,0,0.35), 0 0 18px rgba(212,175,55,0.25), 0 2px 4px rgba(0,0,0,0.6); }
-  50%      { text-shadow: 0 0 16px rgba(255,215,0,0.65), 0 0 32px rgba(212,175,55,0.5), 0 2px 4px rgba(0,0,0,0.6); }
+  0%, 100% { text-shadow: 0 0 8px rgba(255,215,0,0.35), 0 0 18px rgba(201, 162, 39,0.25), 0 2px 4px rgba(0,0,0,0.6); }
+  50%      { text-shadow: 0 0 16px rgba(255,215,0,0.65), 0 0 32px rgba(201, 162, 39,0.5), 0 2px 4px rgba(0,0,0,0.6); }
 }
 
 .promo-banner {
   background:
     radial-gradient(circle at 15% 15%, rgba(255,215,0,0.16) 0%, transparent 45%),
-    radial-gradient(circle at 90% 85%, rgba(212,175,55,0.14) 0%, transparent 50%),
+    radial-gradient(circle at 90% 85%, rgba(201, 162, 39,0.14) 0%, transparent 50%),
     linear-gradient(135deg, #1C1E22 0%, #0F1012 100%) !important;
-  border: 1px solid rgba(212, 175, 55, 0.4) !important;
-  box-shadow: 0 4px 25px rgba(0,0,0,0.5), inset 0 0 25px rgba(212,175,55,0.08) !important;
+  border: 1px solid rgba(201, 162, 39, 0.4) !important;
+  box-shadow: 0 4px 25px rgba(0,0,0,0.5), inset 0 0 25px rgba(201, 162, 39,0.08) !important;
 }
 
 .promo-banner::after {
@@ -310,8 +305,8 @@
 
 /* Light mode: keep the same rich dark gold card, but frame it so it visibly floats off a white page */
 body.light-mode .promo-banner {
-  border: 1.5px solid var(--fa-gold) !important;
-  box-shadow: 0 10px 30px rgba(212,175,55,0.3), 0 2px 10px rgba(0,0,0,0.12) !important;
+  border: 1.5px solid var(--gold) !important;
+  box-shadow: 0 10px 30px rgba(201, 162, 39,0.3), 0 2px 10px rgba(0,0,0,0.12) !important;
 }
 </style>
 
@@ -336,14 +331,14 @@ body.light-mode .promo-banner {
 <div class="promo-banner">
   <div class="promo-banner-content">
     <div class="promo-banner-badge"><%= t.welcome_bonus %></div>
-    <h1 class="promo-banner-title" style="font-family:'Teko', sans-serif; font-size: 30px; color: var(--fa-gold-light); line-height: 1.1; margin: 8px 0 3px 0; text-transform: uppercase;">
+    <h1 class="promo-banner-title" style="font-family:'Teko', sans-serif; font-size: 30px; color: var(--gold-hover); line-height: 1.1; margin: 8px 0 3px 0; text-transform: uppercase;">
       100% Welcome Bonus
     </h1>
     <p style="font-size: 11px; color: #E0E2E5; margin-bottom: 10px; font-weight: 500;">
       <%= t.welcome_bonus_desc %> - Up to 50,000 BDT match bonus on first deposit.
     </p>
     <div>
-      <a href="/payment/deposit" class="btn" style="background: var(--fa-gold-gradient); color: #000; font-weight: 800; font-size: 11px; border-radius: 20px; padding: 7px 18px;">
+      <a href="/payment/deposit" class="btn" style="background: var(--grad-gold); color: #000; font-weight: 800; font-size: 11px; border-radius: 20px; padding: 7px 18px;">
         <%= t.get_now %> <i class="fas fa-chevron-right" style="font-size: 9px; margin-left: 4px;"></i>
       </a>
     </div>
@@ -406,7 +401,7 @@ body.light-mode .promo-banner {
   .main-cat-item i { font-size: 17px; }
   .main-cat-item:active { background: rgba(255,255,255,0.09); }
   .main-cat-item.is-primary {
-    background: var(--fa-gold-gradient); color: #1a1a1a; border-color: transparent;
+    background: var(--grad-gold); color: #1a1a1a; border-color: transparent;
   }
   @media (min-width: 768px) {
     .main-cat-nav { flex-wrap: wrap; justify-content: center; overflow-x: visible; }
@@ -475,7 +470,7 @@ body.light-mode .promo-banner {
     width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border-glass);
     background: var(--bg-surface); color: var(--text-muted); cursor: pointer; font-size: 13px;
   }
-  .layout-btn.active { background: var(--fa-gold); color: #1a1a1a; border-color: var(--fa-gold); }
+  .layout-btn.active { background: var(--gold); color: #1a1a1a; border-color: var(--gold); }
 
   /* ===== Secondary Filter Pills (All/Hot/Favorites/Recent) — Slots/Live/Sports/Poker ক্যাটাগরির ভেতরে ===== */
   .secondary-tabs-container {
@@ -489,8 +484,8 @@ body.light-mode .promo-banner {
     display: flex; align-items: center; gap: 6px; transition: all 0.2s ease;
   }
   .secondary-tab-item.active {
-    background: var(--fa-gold-gradient); color: #000 !important; border-color: transparent;
-    box-shadow: 0 3px 10px rgba(212,175,55,0.35);
+    background: var(--grad-gold); color: #000 !important; border-color: transparent;
+    box-shadow: 0 3px 10px rgba(201, 162, 39,0.35);
   }
   .secondary-tab-item.active i { color: #000; }
 
@@ -504,7 +499,7 @@ body.light-mode .promo-banner {
     background: rgba(255,255,255,0.08); color: var(--text-muted); font-size: 13px;
     display: flex; align-items: center; justify-content: center; transition: all 0.15s ease;
   }
-  .provider-scroll-btn:active { background: var(--fa-gold-gradient); color: #000; }
+  .provider-scroll-btn:active { background: var(--grad-gold); color: #000; }
   #catalogProviderList {
     display: flex; flex-direction: column; gap: 8px;
     height: 420px; overflow-y: scroll; scrollbar-width: none; scroll-behavior: smooth;
@@ -516,7 +511,7 @@ body.light-mode .promo-banner {
     border-radius: 12px; padding: 8px 4px; display: flex; flex-direction: column;
     align-items: center; gap: 6px; cursor: pointer; transition: all 0.15s ease; flex-shrink: 0;
   }
-  .catalog-provider-item.active { border-color: var(--fa-gold); box-shadow: 0 0 0 2px rgba(212,175,55,0.25); }
+  .catalog-provider-item.active { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(201, 162, 39,0.25); }
   .catalog-provider-item img { width: 100%; max-height: 28px; object-fit: contain; border-radius: 4px; }
   .catalog-provider-item .fallback {
     width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center;
@@ -544,7 +539,7 @@ body.light-mode .promo-banner {
 <!-- ===== Search Bar ===== -->
 <div style="padding: 0 12px 15px 12px;">
   <div style="position:relative;">
-    <input type="text" id="gameSearch" class="form-input" placeholder="<%= t.search_placeholder %>" style="padding-right:45px; border-radius: 30px; background: rgba(255,255,255,0.04); border-color: rgba(212,175,55,0.2);">
+    <input type="text" id="gameSearch" class="form-input" placeholder="<%= t.search_placeholder %>" style="padding-right:45px; border-radius: 30px; background: rgba(255,255,255,0.04); border-color: rgba(201, 162, 39,0.2);">
     <i class="fas fa-search" style="position:absolute;right:18px;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
   </div>
 </div>
@@ -618,14 +613,14 @@ body.light-mode .promo-banner {
 /* Recent Big Wins */
 .recent-wins {
   margin: 0 0 20px;
-  background: rgba(0, 0, 0, 0.85);
+  background: var(--bg-card);
   border-radius: 0;
   padding: 12px;
-  border-top: 2px solid #ffd700;
-  border-bottom: 2px solid #ffd700;
+  border-top: 2px solid var(--gold);
+  border-bottom: 2px solid var(--gold);
 }
 .recent-wins h3 {
-  color: #ffd700;
+  color: var(--gold);
   margin: 0 0 12px 0;
   font-size: 18px;
   text-align: center;
@@ -639,15 +634,15 @@ body.light-mode .promo-banner {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  color: white;
+  color: var(--text-main);
   padding: 9px 8px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid var(--border-glass);
   font-size: 14px;
 }
 .win-item:last-child { border-bottom: none; }
-.game-name { color: #ffdd88; font-weight: 500; }
-.win-amount { color: #00ff9d; font-weight: bold; }
-.win-empty { padding: 14px 4px; text-align: center; color: #ffdd88; font-size: 12.5px; }
+.game-name { color: var(--gold-hover); font-weight: 500; }
+.win-amount { color: var(--green); font-weight: bold; }
+.win-empty { padding: 14px 4px; text-align: center; color: var(--text-muted); font-size: 12.5px; }
 .jackpot-tagline { color: #fff; font-size: 13px; font-weight: 700; margin-top: 6px; text-shadow: 0 2px 6px rgba(0,0,0,.5); }
 </style>
 <!-- Mega Jackpot -->
@@ -719,7 +714,7 @@ body.light-mode .promo-banner {
 .why-us-heading { text-align: center; margin-bottom: 24px; }
 .why-us-heading h2 {
   font-family: 'Teko', sans-serif; font-size: 30px; font-weight: 700; letter-spacing: 0.4px;
-  background: linear-gradient(135deg, #fff 40%, var(--fa-gold-light) 90%);
+  background: linear-gradient(135deg, var(--text-main) 40%, var(--gold-hover) 90%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
   margin: 0 0 6px;
 }
@@ -727,28 +722,29 @@ body.light-mode .promo-banner {
 .why-us-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
 .why-us-card {
   position: relative;
-  background: linear-gradient(135deg, rgba(32,34,40,0.85) 0%, rgba(14,15,17,0.95) 100%);
-  border: 1px solid rgba(212,175,55,0.15); border-radius: 18px; padding: 22px 16px; text-align: center;
+  background: var(--grad-surface);
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-glass); border-radius: 18px; padding: 22px 16px; text-align: center;
   overflow: hidden;
   transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
 .why-us-card::before {
   content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-  background: var(--fa-gold-gradient);
+  background: var(--grad-gold);
   opacity: 0; transition: opacity 0.25s ease;
 }
 .why-us-card:hover {
   transform: translateY(-4px);
-  border-color: rgba(212,175,55,0.5);
-  box-shadow: 0 12px 28px rgba(0,0,0,0.35), 0 0 0 1px rgba(212,175,55,0.08);
+  border-color: rgba(201, 162, 39,0.5);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.35), 0 0 0 1px rgba(201, 162, 39,0.08);
 }
 .why-us-card:hover::before { opacity: 1; }
 .why-us-icon {
   width: 54px; height: 54px; border-radius: 16px; margin: 0 auto 14px;
   display: flex; align-items: center; justify-content: center; font-size: 22px;
-  background: linear-gradient(135deg, rgba(212,175,55,0.22) 0%, rgba(212,175,55,0.06) 100%);
-  border: 1px solid rgba(212,175,55,0.25);
-  color: var(--fa-gold-light);
+  background: linear-gradient(135deg, rgba(201, 162, 39,0.22) 0%, rgba(201, 162, 39,0.06) 100%);
+  border: 1px solid rgba(201, 162, 39,0.25);
+  color: var(--gold-hover);
 }
 .why-us-card h3 { font-size: 14.5px; font-weight: 800; color: var(--text-main); margin: 0 0 7px; letter-spacing: 0.2px; }
 .why-us-card p { font-size: 11.5px; color: var(--text-muted); line-height: 1.6; margin: 0; }
@@ -797,7 +793,7 @@ body.light-mode .promo-banner {
   border-radius: 14px; padding: 14px;
   transition: border-color 0.2s ease;
 }
-.trust-badge-item:hover { border-color: rgba(212,175,55,0.3); }
+.trust-badge-item:hover { border-color: rgba(201, 162, 39,0.3); }
 .trust-badge-item i { font-size: 18px; color: #3ddc84; flex-shrink: 0; width: 22px; text-align: center; }
 .trust-badge-item .label { font-size: 12px; font-weight: 700; color: var(--text-main); line-height: 1.3; }
 .trust-badge-item .sub { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
@@ -961,7 +957,7 @@ function renderCatalogProviderList() {
 
   const allItem = document.createElement('div');
   allItem.className = 'catalog-provider-item' + (selectedProvider === 'all' ? ' active' : '');
-  allItem.innerHTML = `<div class="fallback" style="background:var(--fa-gold);color:#000;">সব</div><div class="name"><%= t.all %></div>`;
+  allItem.innerHTML = `<div class="fallback" style="background:var(--gold);color:#000;">সব</div><div class="name"><%= t.all %></div>`;
   allItem.addEventListener('click', () => {
     selectedProvider = 'all';
     renderCatalogProviderList();
