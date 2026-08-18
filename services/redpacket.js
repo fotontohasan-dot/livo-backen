@@ -62,6 +62,15 @@ async function claimRedPacket(userId) {
       [userId, amount, todayStr()]
     );
     await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [amount, userId]);
+    // ব্যালেন্স বাড়ানোর পাশাপাশি coin_transactions লেজারেও লিখতে হয়। আগে শুধু
+    // daily_rewards ও bonuses টেবিলে লেখা হতো, coin_transactions-এ কিছুই যেত না —
+    // ফলে ইউজারের ব্যালেন্স আর লেনদেন-ইতিহাসের যোগফল স্থায়ীভাবে আলাদা হয়ে যেত এবং
+    // /profile/transactions-এ এই কয়েনগুলো কোথা থেকে এল তা দেখাই যেত না।
+    await client.query(
+      `INSERT INTO coin_transactions (user_id, amount, type, description)
+       VALUES ($1, $2, 'red_packet', 'লাল খামের দৈনিক পুরস্কার')`,
+      [userId, amount]
+    );
     await createBonus(client, userId, 'daily', amount);
     await client.query('COMMIT');
     return { ok: true, amount };
@@ -95,6 +104,12 @@ async function claimGoldenEgg(userId, pickedIndex) {
       [userId, wonAmount, todayStr()]
     );
     await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [wonAmount, userId]);
+    // উপরের মতোই — লেজার এন্ট্রি ছাড়া ব্যালেন্স বাড়ানো হয় না
+    await client.query(
+      `INSERT INTO coin_transactions (user_id, amount, type, description)
+       VALUES ($1, $2, 'golden_egg', 'গোল্ডেন এগের দৈনিক পুরস্কার')`,
+      [userId, wonAmount]
+    );
     await createBonus(client, userId, 'daily', wonAmount);
     await client.query('COMMIT');
     return { ok: true, amount: wonAmount, reveal, pickedIndex };
