@@ -16,6 +16,19 @@ function getClient(redirectUri) {
   return new OAuth2Client(CLIENT_ID, CLIENT_SECRET, redirectUri);
 }
 
+// google-auth-library-এর getToken()/verifyIdToken() নিজে কোনো timeout option দেয় না —
+// Google-এর টোকেন এন্ডপয়েন্ট/সার্টিফিকেট সার্ভার ধীর হলে বা সাড়া না দিলে এই কল অনির্দিষ্টকাল
+// ঝুলে থাকতে পারে (services/sslcommerz.js-এ একই কারণে fetch timeout যোগ করা হয়েছে)।
+// Promise.race দিয়ে caller-এর অপেক্ষা bounded রাখা হচ্ছে।
+const GOOGLE_AUTH_TIMEOUT_MS = Number(process.env.GOOGLE_AUTH_TIMEOUT_MS) || 15000;
+
+function withTimeout(promise, message) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(message)), GOOGLE_AUTH_TIMEOUT_MS))
+  ]);
+}
+
 /**
  * Google-এর consent স্ক্রিনের URL তৈরি করে। state ও nonce — দুটোই caller-কে (routes/auth.js)
  * ক্রিপ্টোগ্রাফিকভাবে র‍্যান্ডম তৈরি করে সেশনে সেভ করতে হয়, এই ফাংশন শুধু সেগুলো URL-এ বসায়।
@@ -41,10 +54,13 @@ function generateAuthUrl(redirectUri, state, nonce) {
  */
 async function exchangeCodeForProfile(redirectUri, code, expectedNonce) {
   const client = getClient(redirectUri);
-  const { tokens } = await client.getToken(code);
+  const { tokens } = await withTimeout(client.getToken(code), 'Google থেকে সময়মতো সাড়া পাওয়া যায়নি (timeout)');
   if (!tokens || !tokens.id_token) throw new Error('Google থেকে id_token পাওয়া যায়নি');
 
-  const ticket = await client.verifyIdToken({ idToken: tokens.id_token, audience: CLIENT_ID });
+  const ticket = await withTimeout(
+    client.verifyIdToken({ idToken: tokens.id_token, audience: CLIENT_ID }),
+    'Google id_token ভেরিফিকেশনে সময়মতো সাড়া পাওয়া যায়নি (timeout)'
+  );
   const payload = ticket.getPayload();
   if (!payload) throw new Error('id_token পেলোড খালি (ভেরিফিকেশন ব্যর্থ)');
   if (!payload.sub) throw new Error('id_token-এ sub (Google user id) নেই');

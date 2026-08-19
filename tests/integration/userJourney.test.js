@@ -138,7 +138,7 @@ describe('A-Z User Journey', () => {
     const csrf = await csrfFor(agent, '/extra/kyc');
     const res = await agent.post('/extra/kyc').type('form').send({
       full_name: 'Journey Test User', document_type: 'nid', document_number: `NID-${Date.now()}`,
-      document_url: 'https://res.cloudinary.com/demo/image/upload/v1/nid.jpg', _csrf: csrf
+      document_url: `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/v1/livo/chat/nid.jpg`, _csrf: csrf
     });
     expect(res.status).toBe(302);
     const k = await pool.query('SELECT status FROM kyc_requests WHERE user_id=$1', [userId]);

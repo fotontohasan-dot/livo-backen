@@ -18,6 +18,7 @@ const OPTIONAL_GROUPS = {
   Cloudinary: ['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET'],
   Email: ['EMAIL_USER', 'EMAIL_PASS'],
   SSLCommerz: ['SSLCZ_STORE_ID', 'SSLCZ_STORE_PASSWD'],
+  'Google OAuth': ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'],
   'Web Push (VAPID)': ['VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY'],
   Telegram: ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_WEBHOOK_SECRET'],
   Redis: ['REDIS_URL'] // একা থাকলেও যথেষ্ট (REDIS_HOST/PORT ফলব্যাক আছে), তাই গ্রুপ-চেক প্রযোজ্য না — এখানে শুধু তথ্যের জন্য

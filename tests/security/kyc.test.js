@@ -8,7 +8,9 @@
 const { pool } = require('../../db');
 const { getCsrfAgent, uniqueUsername, uniquePhone, REALISTIC_UA } = require('../helpers/app');
 
-const VALID_DOC_URL = 'https://res.cloudinary.com/demo/image/upload/v1/nid.jpg';
+// document_url যাচাই এখন শুধু হোস্টনেম নয়, cloud_name (আমাদের নিজের CLOUDINARY_CLOUD_NAME)
+// ও আপলোড ফোল্ডার (livo/chat) মেলে কিনা — routes/extra.js-এর isSafeCloudinaryUrl() দ্রষ্টব্য।
+const VALID_DOC_URL = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/v1/livo/chat/nid.jpg`;
 
 async function registerUser() {
   const { agent, token } = await getCsrfAgent('/register');
@@ -128,7 +130,14 @@ describe('KYC Security', () => {
       'https://res.cloudinary.com.evil.com/nid.jpg', // hostname-এর মধ্যে সাবস্ট্রিং ট্রিক
       'javascript:alert(1)', // scheme injection
       'file:///etc/passwd', // local file scheme
-      'ftp://res.cloudinary.com/nid.jpg' // অসমর্থিত scheme
+      'ftp://res.cloudinary.com/nid.jpg', // অসমর্থিত scheme
+      // রিগ্রেশন: শুধু হোস্টনেম res.cloudinary.com মিললেই আগে গৃহীত হয়ে যেত — res.cloudinary.com
+      // একটা শেয়ার্ড মাল্টি-টেন্যান্ট CDN, আসল টেন্যান্ট (cloud_name) কখনো যাচাই হতো না।
+      // Cloudinary-র নিজের পাবলিক ডেমো অ্যাকাউন্টের URL (আমাদের cloud_name নয়) — এখন প্রত্যাখ্যাত হওয়া উচিত।
+      'https://res.cloudinary.com/demo/image/upload/v1/nid.jpg',
+      // সঠিক cloud_name কিন্তু আমাদের নিজস্ব আপলোড ফোল্ডারের (livo/chat) বাইরে — অন্য কোনোভাবে
+      // একই অ্যাকাউন্টে আপলোড হওয়া/থাকা কোনো অ্যাসেট নিজের KYC ডকুমেন্ট হিসেবে দাবি করা যাবে না।
+      `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/v1/some/other/folder/nid.jpg`
     ];
 
     test.each(badUrls)('অস্বীকৃত হয়: %s', async (badUrl) => {

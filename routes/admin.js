@@ -3468,7 +3468,13 @@ router.post('/notification-templates/:id/test-send', rbac.requirePermission('set
       const transporter = nodemailer.createTransport({
         host: 'smtp.gmail.com', port: 587, secure: false,
         auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-        tls: { rejectUnauthorized: false }
+        tls: { rejectUnauthorized: false },
+        // services/email.js-এর মূল transporter-এ যে কারণে এই timeout তিনটা আছে (অনেক হোস্টিং
+        // প্রোভাইডার আউটবাউন্ড SMTP পোর্ট ব্লক করে দেয়, timeout ছাড়া ৬০-১২০+ সেকেন্ড ঝুলে থাকে)
+        // — এই আলাদা টেস্ট-সেন্ড transporter-এও একই কারণ প্রযোজ্য।
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 10000
       });
       await transporter.sendMail({
         from: `"LIVO (Test)" <${process.env.EMAIL_USER}>`,
@@ -3493,7 +3499,11 @@ router.post('/notification-templates/:id/test-send', rbac.requirePermission('set
     await logAdminAction(req.session.user.id, req.session.user.username, 'TEMPLATE_TEST_SEND',
       `টেমপ্লেট টেস্ট-সেন্ড: ${tmpl.template_key} (${tmpl.channel}/${tmpl.lang}) → ${target}`, req.ip);
 
-    res.json({ success: true, ...result });
+    // রিগ্রেশন: আগে success সবসময় hardcoded true থাকত, ফলে sendSms() ভেতরে ব্যর্থ হয়ে
+    // { ok: false, message: '...' } রিটার্ন করলেও (services/sms.js কখনো throw করে না) এখানে
+    // success:true স্প্রেড হয়ে যেত — অ্যাডমিন UI (data.success দেখেই) একটা আসল গেটওয়ে
+    // ব্যর্থতাকে সবুজ "পাঠানো হয়েছে" হিসেবে দেখাত। এখন success আসল result.ok থেকে আসে।
+    res.json({ ...result, success: !!result.ok });
   } catch (err) {
     // SMTP/SMS এরর মেসেজে হোস্ট, পোর্ট, ক্রেডেনশিয়াল-সংক্রান্ত ইঙ্গিত থাকতে পারে।
     console.error('template test-send error:', err && err.stack ? err.stack : err);

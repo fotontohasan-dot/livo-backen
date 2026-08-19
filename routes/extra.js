@@ -18,11 +18,23 @@ const KYC_NAME_RE = /^[\p{L}\p{M}\s.'-]{2,60}$/u;
 const KYC_DOCNUM_RE = /^[A-Za-z0-9\-\s]{3,30}$/;
 const KYC_DOCTYPE_RE = /^[A-Za-z_\-\s]{2,40}$/;
 
+// res.cloudinary.com একটা শেয়ার্ড মাল্টি-টেন্যান্ট CDN হোস্ট — আসল টেন্যান্ট শনাক্ত হয়
+// URL পাথের প্রথম সেগমেন্ট (cloud_name) দিয়ে। শুধু হোস্টনেম চেক করলে যে কেউ *যেকোনো*
+// Cloudinary অ্যাকাউন্টের পাবলিক URL (এমনকি Cloudinary-র নিজের পাবলিক ডেমো অ্যাসেট)
+// document_url হিসেবে জমা দিতে পারত এবং সেটা নিজের KYC ডকুমেন্ট হিসেবে গৃহীত হয়ে যেত।
+// এখন cloud_name আমাদের নিজের (CLOUDINARY_CLOUD_NAME) কিনা এবং পাথ আমাদের নিজস্ব
+// আপলোড ফোল্ডারের (routes/chat.js-এর 'livo/chat', যেটা KYC আপলোডও ব্যবহার করে) ভেতরে
+// কিনা — দুটোই যাচাই করা হয়।
 function isSafeCloudinaryUrl(url) {
   if (typeof url !== 'string' || !url) return false;
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  if (!cloudName) return false;
   try {
     const parsed = new URL(url);
-    return parsed.protocol === 'https:' && parsed.hostname === 'res.cloudinary.com';
+    if (parsed.protocol !== 'https:' || parsed.hostname !== 'res.cloudinary.com') return false;
+    const expectedPrefix = `/${cloudName}/`;
+    if (!parsed.pathname.startsWith(expectedPrefix)) return false;
+    return parsed.pathname.includes('/livo/chat/');
   } catch (e) {
     return false;
   }
