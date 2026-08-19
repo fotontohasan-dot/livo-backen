@@ -888,7 +888,7 @@ router.post('/settings/update', rbac.requirePermission('settings_edit'), async (
   }
 });
 
-router.post('/settings/admins/promote', rbac.requirePermission('roles_manage'), async (req, res) => {
+router.post('/settings/admins/promote', rbac.requireSuperAdmin(), async (req, res) => {
   try {
     const { username } = req.body;
     const r = await pool.query("UPDATE users SET role = 'admin' WHERE username = $1 RETURNING id", [username]);
@@ -3203,9 +3203,23 @@ router.post('/user-roles/:userId/assign', rbac.requirePermission('roles_manage')
   try {
     const userRes = await pool.query('SELECT username FROM users WHERE id=$1', [req.params.userId]);
     if (!userRes.rows[0]) { req.flash('error', 'ইউজার পাওয়া যায়নি।'); return res.redirect('/admin/user-roles'); }
-    await rbac.assignUserRole(req.params.userId, req.body.role_key || null);
+    const requestedRoleKey = req.body.role_key || null;
+    // role_key=NULL বা 'super_admin' বসানো মানে (getUserPermissions()-এ) টার্গেট পূর্ণ
+    // super_admin-সমতুল্য অ্যাক্সেস পেয়ে যাওয়া — এই রুট আগে শুধু requirePermission('roles_manage')
+    // দিয়ে গার্ড করা ছিল, অর্থাৎ শুধু roles_manage পাওয়া একজন সীমিত অ্যাডমিনও নিজেকে (বা যেকোনো
+    // অ্যাডমিনকে) এভাবে সরাসরি super_admin বানিয়ে নিতে পারতেন। তাই শুধু এই নির্দিষ্ট
+    // super-admin-grant করা assignment-এর জন্য caller-কেই আগে থেকে super_admin হতে হবে —
+    // সীমিত/কাস্টম role এসাইন করা (roles_manage-এর আসল উদ্দেশ্য) আগের মতোই অপরিবর্তিত থাকে।
+    if (requestedRoleKey === null || requestedRoleKey === 'super_admin') {
+      const { isSuperAdmin } = await rbac.getUserPermissions(req.session.user.id);
+      if (!isSuperAdmin) {
+        req.flash('error', '❌ শুধু super admin কাউকে super-admin অ্যাক্সেস দিতে পারেন।');
+        return res.redirect('/admin/user-roles');
+      }
+    }
+    await rbac.assignUserRole(req.params.userId, requestedRoleKey);
     await logAdminAction(req.session.user.id, req.session.user.username, 'ROLE_CHANGED',
-      `"${userRes.rows[0].username}"-কে Role দেওয়া হয়েছে: ${req.body.role_key || '(কোনোটা না — সুপার-অ্যাডমিন-সমতুল্য)'}`, req.ip);
+      `"${userRes.rows[0].username}"-কে Role দেওয়া হয়েছে: ${requestedRoleKey || '(কোনোটা না — সুপার-অ্যাডমিন-সমতুল্য)'}`, req.ip);
     req.flash('success', 'Role আপডেট হয়েছে।');
     res.redirect('/admin/user-roles');
   } catch (err) {

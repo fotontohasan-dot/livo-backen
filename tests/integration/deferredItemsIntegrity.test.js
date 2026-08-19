@@ -106,6 +106,39 @@ describe('চ্যাট হিস্টোরি — সার্ভার-স
   });
 });
 
+describe('কয়েন ট্রানজেকশন হিস্টোরি — সার্ভার-সাইড বাউন্ড', () => {
+  test('/coins/history-এ LIMIT প্রয়োগ হয় (আগে পুরো হিস্ট্রি আনবাউন্ডেড আসত)', () => {
+    const src = fs.readFileSync(path.join(ROOT, 'routes', 'coins.js'), 'utf8');
+    expect(src).toMatch(/FROM coin_transactions WHERE user_id=\$1 ORDER BY created_at DESC LIMIT 500/);
+  });
+
+  test('৮,০০০ সারির ইতিহাস থাকা ইউজারের /coins/history রেসপন্সে সর্বোচ্চ ৫০০টা সাম্প্রতিক সারি আসে, ক্রম নতুন→পুরনো', async () => {
+    const { agent, token } = await getCsrfAgent('/register');
+    const username = uniqueUsername();
+    await agent.post('/register').type('form').send({
+      username, phone: uniquePhone(), password: 'SecurePass123',
+      confirmPassword: 'SecurePass123', _csrf: token
+    });
+    const uid = (await pool.query('SELECT id FROM users WHERE username = $1', [username])).rows[0].id;
+
+    await pool.query(
+      `INSERT INTO coin_transactions (user_id, type, amount, description, created_at)
+       SELECT $1, 'bet', 1, 'perf-' || g, NOW() - (g || ' minutes')::interval
+       FROM generate_series(1, 8000) g`,
+      [uid]
+    );
+
+    const res = await agent.get('/coins/history');
+    expect(res.status).toBe(200);
+    // সবচেয়ে সাম্প্রতিক row (g=1) থাকা উচিত, কিন্তু ৫০০-এর বাইরের পুরনো row (g=7999) থাকা উচিত না
+    expect(res.text).toMatch(/perf-1(?!\d)/);
+    expect(res.text).not.toMatch(/perf-7999/);
+
+    await pool.query('DELETE FROM coin_transactions WHERE user_id = $1', [uid]);
+    await pool.query('DELETE FROM users WHERE id = $1', [uid]);
+  }, 30000);
+});
+
 describe('অ্যাডমিন পেজিনেশন — উপরের সীমা', () => {
   const { clampPage, MAX_PAGE } = require('../../middleware/validate');
 
