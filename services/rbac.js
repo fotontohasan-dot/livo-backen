@@ -122,6 +122,45 @@ function requirePermission(permKey) {
   };
 }
 
+/**
+ * শুধু super_admin-এর জন্য — role_key দেওয়া কোনো নির্দিষ্ট permission নয়, কারণ role='admin'
+ * বসিয়ে role_key NULL রেখে দেওয়াটাই (getUserPermissions()-এ) super_admin-সমতুল্য অ্যাক্সেস দেয়।
+ * আগে /admin/settings/admins/promote শুধু requirePermission('roles_manage') দিয়ে গার্ড করা
+ * ছিল — অর্থাৎ শুধু "Role ও Permission ম্যানেজমেন্ট" পারমিশন পাওয়া একজন সীমিত অ্যাডমিনও যেকোনো
+ * ইউজারকে (নিজের একটা alt অ্যাকাউন্ট সহ) role_key ছাড়া admin বানিয়ে নিজের জন্য পূর্ণ
+ * super_admin অ্যাক্সেস তৈরি করে নিতে পারতেন — RBAC-এর least-privilege সীমা পুরোপুরি
+ * পাশ কাটিয়ে। যে রুট role_key=NULL দিয়ে অ্যাডমিন বানায়, সেটা তাই এখন সরাসরি isSuperAdmin
+ * চেক করে, কোনো permission key দিয়ে নয়।
+ */
+function requireSuperAdmin() {
+  return async function (req, res, next) {
+    try {
+      if (!req.session || !req.session.user) return res.redirect('/admin/login');
+      const { isSuperAdmin } = await getUserPermissions(req.session.user.id);
+      if (isSuperAdmin) return next();
+
+      (async () => {
+        try {
+          await pool.query(
+            `INSERT INTO admin_logs (admin_id, admin_username, action_type, details, ip_address) VALUES ($1,$2,$3,$4,$5)`,
+            [req.session.user.id, req.session.user.username, 'UNAUTHORIZED_ACCESS',
+             `super_admin ছাড়া অ্যাক্সেসের চেষ্টা: (${req.method} ${req.originalUrl})`, req.ip]
+          );
+        } catch (e) { console.error('UNAUTHORIZED_ACCESS log error:', e.message); }
+      })();
+
+      if (req.path.includes('/api/')) {
+        return res.status(403).json({ success: false, error: 'এই অ্যাকশনের জন্য super admin অ্যাক্সেস প্রয়োজন।' });
+      }
+      req.flash && req.flash('error', '❌ এই অ্যাকশনের জন্য super admin অ্যাক্সেস প্রয়োজন।');
+      return res.redirect('/admin');
+    } catch (err) {
+      console.error('requireSuperAdmin error:', err.message);
+      return res.status(500).send('Permission check failed');
+    }
+  };
+}
+
 // ==================== Role CRUD ====================
 async function listRoles() {
   const r = await pool.query(`
@@ -229,7 +268,7 @@ async function importRoles(data) {
 
 module.exports = {
   PERMISSIONS, permissionGroups,
-  getUserPermissions, hasPermission, requirePermission,
+  getUserPermissions, hasPermission, requirePermission, requireSuperAdmin,
   listRoles, getRole, createRole, updateRole, deleteRole, cloneRole,
   bulkUpdatePermission, assignUserRole, exportRoles, importRoles
 };

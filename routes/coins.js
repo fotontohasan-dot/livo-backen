@@ -14,9 +14,13 @@ router.get('/', isAuth, async (req, res) => {
   }
 });
 
+// LIMIT ছাড়া পুরো coin_transactions হিস্ট্রি ফেরত দিত — দীর্ঘদিনের সক্রিয় ইউজারের (প্রতিটা
+// bet/reward/bonus আলাদা row) হাজার হাজার row জমে HTML রেসপন্স ও রেন্ডারিং ভারী হয়ে যেত।
+// Phase 11-এ /chat/history-তে একই প্যাটার্নের ফিক্স করা হয়েছিল — এখানেও একই কৌশল: সাম্প্রতিক
+// ৫০০টা রাখা হচ্ছে (ক্রম ও রেসপন্স শেপ অপরিবর্তিত)।
 router.get('/history', isAuth, async (req, res) => {
   try {
-    const transactions = await pool.query(`SELECT * FROM coin_transactions WHERE user_id=$1 ORDER BY created_at DESC`, [req.session.user.id]);
+    const transactions = await pool.query(`SELECT * FROM coin_transactions WHERE user_id=$1 ORDER BY created_at DESC LIMIT 500`, [req.session.user.id]);
     res.render('coins', { transactions: transactions.rows, coins: req.session.user.coins });
   } catch (err) {
     req.flash('error', 'সার্র ত্রুটি');

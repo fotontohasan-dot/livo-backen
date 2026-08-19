@@ -215,4 +215,142 @@ describe('RBAC (services/rbac.js)', () => {
       }
     });
   });
+
+  describe('POST /admin/settings/admins/promote — role_key=NULL দিয়ে super_admin এসকেলেশন', () => {
+    // দ্রষ্টব্য: আগে এই রুট শুধু requirePermission('roles_manage') দিয়ে গার্ড করা ছিল।
+    // role_key ছাড়া role='admin' বসানো মানেই (getUserPermissions()-এ) super_admin-সমতুল্য
+    // পূর্ণ অ্যাক্সেস — অর্থাৎ শুধু "roles_manage" পারমিশনধারী একজন সীমিত অ্যাডমিনও নিজের
+    // একটা alt অ্যাকাউন্টকে এই রুট দিয়ে পূর্ণ super_admin বানিয়ে নিতে পারতেন। এখন রুটটা
+    // requireSuperAdmin() দিয়ে গার্ড করা — শুধু roles_manage থাকলে আর যথেষ্ট নয়।
+    async function makeAdminAgentWithToken() {
+      const { agent, token } = await getCsrfAgent('/register');
+      const username = uniqueUsername();
+      const phone = uniquePhone();
+      await agent
+        .post('/register')
+        .set('User-Agent', REALISTIC_UA)
+        .type('form')
+        .send({ username, phone, password: 'SecurePass123', confirmPassword: 'SecurePass123', _csrf: token });
+      const userRes = await pool.query('UPDATE users SET role = $1 WHERE username = $2 RETURNING id', ['admin', username]);
+      return { agent, token, username, userId: userRes.rows[0].id };
+    }
+
+    test('শুধু roles_manage পারমিশন থাকা admin (super_admin নয়) প্রত্যাখ্যাত হয়, টার্গেট প্রোমোট হয় না', async () => {
+      const { agent, token, userId } = await makeAdminAgentWithToken();
+      const role = await rbac.createRole({ name: `RolesManageOnly-${uniqueUsername()}`, permissions: { roles_manage: true } });
+      await rbac.assignUserRole(userId, role.key);
+
+      const target = await makeAdminAgentWithToken(); // role='admin' কিন্তু role_key এখনো সেট হয়নি
+      await pool.query('UPDATE users SET role = $1 WHERE id = $2', ['user', target.userId]); // সাধারণ ইউজারে নামানো, প্রোমোট করার আগের অবস্থা
+
+      const res = await agent.post('/admin/settings/admins/promote').type('form').send({ username: target.username, _csrf: token });
+      expect(res.status).toBe(302);
+
+      const check = await pool.query('SELECT role, role_key FROM users WHERE id = $1', [target.userId]);
+      expect(check.rows[0].role).toBe('user'); // প্রোমোট হয়নি
+    });
+
+    test('সত্যিকার super_admin (role_key=super_admin) সফলভাবে প্রোমোট করতে পারেন', async () => {
+      const { agent, token, userId } = await makeAdminAgentWithToken();
+      await rbac.assignUserRole(userId, 'super_admin');
+
+      const target = await makeAdminAgentWithToken();
+      await pool.query('UPDATE users SET role = $1 WHERE id = $2', ['user', target.userId]);
+
+      const res = await agent.post('/admin/settings/admins/promote').type('form').send({ username: target.username, _csrf: token });
+      expect(res.status).toBe(302);
+
+      const check = await pool.query('SELECT role FROM users WHERE id = $1', [target.userId]);
+      expect(check.rows[0].role).toBe('admin');
+    });
+
+    test('role_key=NULL (ব্যাকওয়ার্ড-কম্প্যাটিবল ডিফল্ট super_admin) দিয়েও প্রোমোট করা যায়', async () => {
+      const { agent, token } = await makeAdminAgentWithToken(); // role_key সেট করা হয়নি — ডিফল্ট super_admin-সমতুল্য
+
+      const target = await makeAdminAgentWithToken();
+      await pool.query('UPDATE users SET role = $1 WHERE id = $2', ['user', target.userId]);
+
+      const res = await agent.post('/admin/settings/admins/promote').type('form').send({ username: target.username, _csrf: token });
+      expect(res.status).toBe(302);
+
+      const check = await pool.query('SELECT role FROM users WHERE id = $1', [target.userId]);
+      expect(check.rows[0].role).toBe('admin');
+    });
+  });
+
+  describe('POST /admin/user-roles/:userId/assign — role_key=NULL/super_admin এসকেলেশন', () => {
+    async function makeAdminAgentWithToken() {
+      const { agent, token } = await getCsrfAgent('/register');
+      const username = uniqueUsername();
+      const phone = uniquePhone();
+      await agent
+        .post('/register')
+        .set('User-Agent', REALISTIC_UA)
+        .type('form')
+        .send({ username, phone, password: 'SecurePass123', confirmPassword: 'SecurePass123', _csrf: token });
+      const userRes = await pool.query('UPDATE users SET role = $1 WHERE username = $2 RETURNING id', ['admin', username]);
+      return { agent, token, username, userId: userRes.rows[0].id };
+    }
+
+    test('শুধু roles_manage থাকা admin role_key খালি রেখে (NULL) নিজেকে/অন্যকে super_admin বানাতে পারেন না', async () => {
+      const { agent, token, userId } = await makeAdminAgentWithToken();
+      const role = await rbac.createRole({ name: `RolesManageOnly-${uniqueUsername()}`, permissions: { roles_manage: true } });
+      await rbac.assignUserRole(userId, role.key);
+
+      const target = await makeAdminAgentWithToken();
+      await rbac.assignUserRole(target.userId, role.key); // টার্গেটও একই সীমিত role-এ শুরু
+
+      const res = await agent.post(`/admin/user-roles/${target.userId}/assign`).type('form').send({ role_key: '', _csrf: token });
+      expect(res.status).toBe(302);
+
+      const check = await pool.query('SELECT role_key FROM users WHERE id = $1', [target.userId]);
+      expect(check.rows[0].role_key).toBe(role.key); // অপরিবর্তিত — NULL হয়ে যায়নি
+    });
+
+    test('শুধু roles_manage থাকা admin সরাসরি role_key="super_admin" বসাতে পারেন না', async () => {
+      const { agent, token, userId } = await makeAdminAgentWithToken();
+      const role = await rbac.createRole({ name: `RolesManageOnly2-${uniqueUsername()}`, permissions: { roles_manage: true } });
+      await rbac.assignUserRole(userId, role.key);
+
+      const target = await makeAdminAgentWithToken();
+      await rbac.assignUserRole(target.userId, role.key);
+
+      const res = await agent.post(`/admin/user-roles/${target.userId}/assign`).type('form').send({ role_key: 'super_admin', _csrf: token });
+      expect(res.status).toBe(302);
+
+      const check = await pool.query('SELECT role_key FROM users WHERE id = $1', [target.userId]);
+      expect(check.rows[0].role_key).toBe(role.key); // অপরিবর্তিত
+    });
+
+    test('শুধু roles_manage থাকা admin এখনও সীমিত/কাস্টম role এসাইন করতে পারেন (আসল উদ্দেশ্য অক্ষত)', async () => {
+      const { agent, token, userId } = await makeAdminAgentWithToken();
+      const managerRole = await rbac.createRole({ name: `RolesManageOnly3-${uniqueUsername()}`, permissions: { roles_manage: true } });
+      await rbac.assignUserRole(userId, managerRole.key);
+
+      const target = await makeAdminAgentWithToken();
+      const limitedRole = await rbac.createRole({ name: `Limited-${uniqueUsername()}`, permissions: { users_view: true } });
+
+      const res = await agent.post(`/admin/user-roles/${target.userId}/assign`).type('form').send({ role_key: limitedRole.key, _csrf: token });
+      expect(res.status).toBe(302);
+
+      const check = await pool.query('SELECT role_key FROM users WHERE id = $1', [target.userId]);
+      expect(check.rows[0].role_key).toBe(limitedRole.key); // সীমিত role এসাইন সফল
+    });
+
+    test('সত্যিকার super_admin role_key=NULL বা super_admin দুটোই বসাতে পারেন', async () => {
+      const { agent, token, userId } = await makeAdminAgentWithToken();
+      await rbac.assignUserRole(userId, 'super_admin');
+
+      const target = await makeAdminAgentWithToken();
+      const res1 = await agent.post(`/admin/user-roles/${target.userId}/assign`).type('form').send({ role_key: 'super_admin', _csrf: token });
+      expect(res1.status).toBe(302);
+      let check = await pool.query('SELECT role_key FROM users WHERE id = $1', [target.userId]);
+      expect(check.rows[0].role_key).toBe('super_admin');
+
+      const res2 = await agent.post(`/admin/user-roles/${target.userId}/assign`).type('form').send({ role_key: '', _csrf: token });
+      expect(res2.status).toBe(302);
+      check = await pool.query('SELECT role_key FROM users WHERE id = $1', [target.userId]);
+      expect(check.rows[0].role_key).toBeNull();
+    });
+  });
 });
