@@ -124,6 +124,19 @@ describe('EJS রেন্ডার স্মোক টেস্ট', () => {
       expect(res.text).not.toContain('লিডারবোর্ড লোড করা যায়নি');
     });
 
+    test('/news/:id — আর্টিকেল ক্র্যাশ ছাড়াই রেন্ডার হয় এবং content HTML-escape করা থাকে', async () => {
+      const news = await pool.query(
+        `INSERT INTO news (title, content, sport) VALUES ($1, $2, 'cricket') RETURNING id`,
+        ['Smoke Test Article', 'Line one<script>alert(1)</script>\nLine two']
+      );
+      const res = await freshRequest().get(`/news/${news.rows[0].id}`);
+      expect(res.status).toBe(200);
+      expect(res.text).not.toContain('<script>alert(1)</script>');
+      expect(res.text).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+      expect(res.text).toContain('Line one');
+      expect(res.text).toContain('Line two');
+    });
+
     test('গুরুত্বপূর্ণ পাবলিক পেজগুলো কোনোটাই 500 দেয় না', async () => {
       const paths = ['/', '/login', '/register', '/leaderboard', '/matches', '/sports', '/news', '/promotions', '/tournaments'];
       const failures = [];

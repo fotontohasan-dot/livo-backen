@@ -133,16 +133,6 @@ app.use(express.static(path.join(__dirname, 'public'), {
   etag: false
 }));
 
-
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public'), {
-  maxAge: '0',
-  etag: false
-}));
-
 const cspDirectives = {
   defaultSrc: ["'self'"],
   scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
@@ -330,6 +320,15 @@ app.use((req, res, next) => {
   res.locals.error = req.flash('error');
   // views/partials/head.ejs ফ্ল্যাশ মেসেজ ইনলাইন <script>-এ নিরাপদে বসানোর জন্য এটা ব্যবহার করে
   res.locals.jsonScriptSafe = (value) => JSON.stringify(String(value == null ? '' : value));
+  // views/news-detail.ejs আগে একটা কখনো সংজ্ঞায়িত না-হওয়া escapeHtml() কল করত (ReferenceError,
+  // প্রতিটা /news/:id ভিজিটে 500 ক্র্যাশ করত)। এটা একটা প্রকৃত HTML-escape ফাংশন — <%- %>-এর
+  // ভেতরে raw HTML বসানোর আগে ব্যবহারকারী/admin-লেখা কনটেন্ট নিরাপদ করতে।
+  res.locals.escapeHtml = (value) => String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 
   // ডিভাইস "last activity" আপডেট — থ্রটলড, নন-ব্লকিং, লগইন করা ইউজারের জন্যই শুধু
   if (req.session && req.session.user) {

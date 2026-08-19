@@ -76,6 +76,9 @@ const { loadSettings, invalidateSettingsCache } = require('../services/settings'
 const { creditApprovedDeposit } = require('./payment');
 const { emitToUser, broadcastToAllUsers } = require('../services/notify');
 const bcrypt = require('bcryptjs');
+// routes/auth.js-এর মতোই — অস্তিত্বহীন অ্যাডমিন username/email-এ bcrypt.compare() না চালালে
+// টাইমিং দিয়ে বৈধ অ্যাডমিন অ্যাকাউন্ট এনিউমারেট করা যায়, তাই ডামি হ্যাশের বিপরীতে তুলনা।
+const DUMMY_BCRYPT_HASH = bcrypt.hashSync('dummy-password-for-constant-time-compare', 10);
 const { getDemoStats } = require('../services/socket');
 const {
   generateTotpSetup,
@@ -217,14 +220,10 @@ router.post('/login', adminLoginLimiter, async (req, res) => {
       [username, 'admin']
     );
 
-    if (result.rows.length === 0) {
-      return res.render('admin/login', { error: 'ইউজারনেম বা পাসওয়ার্ড ভুল' });
-    }
-
     const admin = result.rows[0];
-    const isMatch = await bcrypt.compare(password, admin.password);
+    const isMatch = await bcrypt.compare(password, admin ? admin.password : DUMMY_BCRYPT_HASH);
 
-    if (!isMatch) {
+    if (!admin || !isMatch) {
       return res.render('admin/login', { error: 'ইউজারনেম বা পাসওয়ার্ড ভুল' });
     }
 
@@ -907,7 +906,10 @@ router.post('/settings/admins/promote', rbac.requireSuperAdmin(), async (req, re
   }
 });
 
-router.post('/settings/admins/:id/demote', rbac.requirePermission('roles_manage'), async (req, res) => {
+// শুধু roles_manage পারমিশন-ওয়ালা (super_admin নয়, এমন) অ্যাডমিনও আগে এই রুট দিয়ে
+// যেকোনো অ্যাডমিনকে — এমনকি আসল super_admin-কেও — ডিমোট করে দিতে পারত। sibling
+// /promote রুট আগে থেকেই requireSuperAdmin() ব্যবহার করে; এখানেও একই বাউন্ডারি প্রয়োজন।
+router.post('/settings/admins/:id/demote', rbac.requireSuperAdmin(), async (req, res) => {
   try {
     const { id } = req.params;
     if (parseInt(id) === req.session.user.id) {
@@ -2499,8 +2501,15 @@ router.post('/markets/:marketId/settle', rbac.requirePermission('matches_manage'
     for (const bet of bets.rows) {
       if (String(bet.runner) === String(winning_runner)) {
         const payout = Math.floor(Number(bet.stake) * Number(bet.odd));
-        await client.query('UPDATE users SET coins = coins + $1 WHERE id = $2', [payout, bet.user_id]);
-        await client.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'bet_win','বেট জয়')`, [bet.user_id, payout]);
+        // ডেমো বেট স্টেক নেওয়া হয়েছিল demo_balance থেকে (routes/matches.js) — জেতার
+        // পেঅাউটও একই কলামে যেতে হবে, নাহলে ডেমো বাজি থেকে সত্যিকারের তোলাযোগ্য coins তৈরি হয়ে যায়।
+        if (bet.is_demo) {
+          await client.query('UPDATE users SET demo_balance = COALESCE(demo_balance,0) + $1 WHERE id = $2', [payout, bet.user_id]);
+          await client.query(`INSERT INTO demo_transactions (user_id, category, type, amount, description) VALUES ($1,'sports','bet_win',$2,'বেট জয় (ডেমো)')`, [bet.user_id, payout]);
+        } else {
+          await client.query('UPDATE users SET coins = coins + $1 WHERE id = $2', [payout, bet.user_id]);
+          await client.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'bet_win','বেট জয়')`, [bet.user_id, payout]);
+        }
         await client.query(`UPDATE bets SET status = 'won' WHERE id = $1`, [bet.id]);
         const wn = await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট জয়!',$2,'success') RETURNING *`, [bet.user_id, `আপনি ${payout} কয়েন জিতেছেন!`]);
         notifsToEmit.push({ userId: bet.user_id, row: wn.rows[0] });
@@ -2644,7 +2653,13 @@ router.post('/bets/:id/settle', rbac.requirePermission('games_manage'), async (r
     let settleNotif;
     if (result === 'won') {
       const payout = Math.floor(Number(bet.stake) * Number(bet.odd));
-      await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [payout, bet.user_id]);
+      if (bet.is_demo) {
+        await client.query('UPDATE users SET demo_balance = COALESCE(demo_balance,0) + $1 WHERE id=$2', [payout, bet.user_id]);
+        await client.query(`INSERT INTO demo_transactions (user_id, category, type, amount, description) VALUES ($1,'sports','bet_win',$2,'বেট জয় (ডেমো)')`, [bet.user_id, payout]);
+      } else {
+        await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [payout, bet.user_id]);
+        await client.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'bet_win','বেট জয়')`, [bet.user_id, payout]);
+      }
       settleNotif = await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট জিতেছেন!',$2,'success') RETURNING *`, [bet.user_id, `আপনি ৳${payout} জিতেছেন!`]);
     } else {
       settleNotif = await client.query(`INSERT INTO notifications (user_id, title, message, type) VALUES ($1,'বেট ফলাফল',$2,'error') RETURNING *`, [bet.user_id, `আপনার ৳${bet.stake} বেটটি হেরে গেছে।`]);

@@ -2,6 +2,12 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+// অস্তিত্বহীন ইউজারের ক্ষেত্রে bcrypt.compare() একদমই না চালালে (শুধু `!user ||` শর্ট-সার্কিটে থেমে গেলে)
+// রেসপন্স প্রায় তাৎক্ষণিক আসে, কিন্তু ভুল পাসওয়ার্ড দিলে পুরো bcrypt cost (~৫০-১০০ms) লাগে — যদিও
+// এরর মেসেজ দুই ক্ষেত্রেই এক, এই টাইমিং পার্থক্য দিয়েই ইমেইল/ফোন অস্তিত্ব যাচাই (এনিউমারেশন) করা যায়।
+// তাই ইউজার না থাকলেও একটা ডামি হ্যাশের বিপরীতে bcrypt.compare() চালানো হয়, যাতে দুই পথের সময়
+// প্রায় সমান থাকে।
+const DUMMY_BCRYPT_HASH = bcrypt.hashSync('dummy-password-for-constant-time-compare', 10);
 const rateLimit = require('express-rate-limit');
 const { pool } = require('../db');
 const { createReferral } = require('../services/referral');
@@ -554,7 +560,8 @@ router.post('/login', async (req, res) => {
       }
     }
 
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    const passwordMatches = await bcrypt.compare(password, user ? user.password : DUMMY_BCRYPT_HASH);
+    if (!user || !passwordMatches) {
       scanFailedLogin(identifier, user ? user.id : null, loginIp, req.get('user-agent') || '')
         .catch(e => console.error('scanFailedLogin error:', e.message));
       req.flash('error', '❌ তথ্য অথবা পাসওয়ার্ড ভুল।');

@@ -4,7 +4,33 @@
 const { pool } = require('../../db');
 const { checkBadges } = require('../../services/badges');
 const { addVipTurnover } = require('../../services/vip');
+const { recordGameResult } = require('../../services/streak');
 const { uniqueUsername } = require('../helpers/app');
+
+// coin_transactions-এ ইনসার্ট হওয়ার সাথে সাথে ব্যর্থ করে দেয় (শুধু নির্দিষ্ট userId-এর জন্য) —
+// balance UPDATE ও ledger INSERT একই ট্রানজেকশনে কিনা যাচাই করতে ব্যবহৃত হয়।
+async function withFailingLedgerInsert(userId, fn) {
+  await pool.query(`
+    CREATE OR REPLACE FUNCTION zz_fail_coin_tx_for_test() RETURNS trigger AS $$
+    BEGIN
+      IF NEW.user_id = ${userId} THEN
+        RAISE EXCEPTION 'injected coin_transactions failure (test)';
+      END IF;
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+  `);
+  await pool.query(`
+    CREATE TRIGGER zz_fail_coin_tx_trigger BEFORE INSERT ON coin_transactions
+    FOR EACH ROW EXECUTE FUNCTION zz_fail_coin_tx_for_test();
+  `);
+  try {
+    return await fn();
+  } finally {
+    await pool.query('DROP TRIGGER IF EXISTS zz_fail_coin_tx_trigger ON coin_transactions');
+    await pool.query('DROP FUNCTION IF EXISTS zz_fail_coin_tx_for_test()');
+  }
+}
 
 async function createUser() {
   const name = uniqueUsername('ri');
@@ -128,5 +154,56 @@ describe('Reward integrity — VIP upgrade bonus', () => {
       [userId]
     );
     expect(credits.rows[0].c).toBe(1);
+  });
+});
+
+describe('Reward integrity — ব্যালেন্স ↔ লেজার atomicity (fire-and-forget নয়)', () => {
+  // এই তিনটা রিওয়ার্ড পাথে আগে balance UPDATE ও coin_transactions INSERT দুটো আলাদা,
+  // কোনো ট্রানজেকশন ছাড়া pool.query() কল ছিল — মাঝপথে ব্যর্থ হলে ব্যালেন্স বেড়ে যেত
+  // কিন্তু লেজার এন্ট্রি স্থায়ীভাবে হারিয়ে যেত। এখন একই ট্রানজেকশনে, তাই লেজার-ইনসার্ট
+  // ব্যর্থ হলে পুরো রিওয়ার্ডই (balance-সহ) রোলব্যাক হয়ে যাওয়া উচিত।
+
+  test('badge রিওয়ার্ডে ledger-ইনসার্ট ব্যর্থ হলে coins বৃদ্ধিও রোলব্যাক হয়', async () => {
+    const userId = await createUser();
+    await pool.query(
+      `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, -10, 'bet', 'test bet')`,
+      [userId]
+    );
+
+    await withFailingLedgerInsert(userId, () => checkBadges(userId));
+
+    expect(await coinsOf(userId)).toBe(0); // রোলব্যাক — কয়েন বাড়েনি
+    // ব্যাজ-ইনসার্টও একই ট্রানজেকশনে থাকায় রোলব্যাক হয়ে গেছে — earned হিসেবে "আটকে" থাকেনি
+    const badgeRows = await pool.query(
+      `SELECT COUNT(*)::int AS c FROM user_badges WHERE user_id = $1 AND badge_code = 'first_bet'`,
+      [userId]
+    );
+    expect(badgeRows.rows[0].c).toBe(0);
+
+    // ট্রিগার সরানোর পর পরের কলে ঠিকমতো ব্যাজ + reward দুটোই পাওয়া যায়
+    const retry = await checkBadges(userId);
+    expect(retry.map(x => x.code)).toContain('first_bet');
+    expect(await coinsOf(userId)).toBe(20);
+  });
+
+  test('VIP আপগ্রেড বোনাসে ledger-ইনসার্ট ব্যর্থ হলে coins বৃদ্ধিও রোলব্যাক হয়', async () => {
+    const userId = await createUser();
+    const silver = await pool.query(`SELECT min_turnover FROM vip_levels WHERE level = 1`);
+    const threshold = Number(silver.rows[0].min_turnover);
+
+    await withFailingLedgerInsert(userId, () => addVipTurnover(userId, threshold));
+
+    expect(await coinsOf(userId)).toBe(0); // রোলব্যাক — বোনাস কয়েন যোগ হয়নি
+  });
+
+  test('উইন স্ট্রিক বোনাসে ledger-ইনসার্ট ব্যর্থ হলে coins বৃদ্ধিও রোলব্যাক হয়', async () => {
+    const userId = await createUser();
+    // স্ট্রিক ৩-এ পৌঁছাতে ৩ বার জয় রেকর্ড করা (৩ = প্রথম মাইলস্টোন)
+    await recordGameResult(userId, true, 100);
+    await recordGameResult(userId, true, 100);
+
+    await withFailingLedgerInsert(userId, () => recordGameResult(userId, true, 100));
+
+    expect(await coinsOf(userId)).toBe(0); // রোলব্যাক — বোনাস কয়েন যোগ হয়নি
   });
 });

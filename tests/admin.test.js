@@ -61,6 +61,19 @@ describe('Admin Panel', () => {
     expect(res.status).toBe(200); // renders login page again with error, not a redirect
   });
 
+  test('অস্তিত্বহীন admin username দিয়ে লগইনেও bcrypt.compare() চালানো হয় (টাইমিং এনিউমারেশন গার্ড)', async () => {
+    const bcrypt = require('bcryptjs');
+    const spy = jest.spyOn(bcrypt, 'compare');
+    try {
+      const { agent, token } = await getCsrfAgent('/admin/login');
+      await agent.post('/admin/login').type('form')
+        .send({ username: 'no-such-admin-timing-probe', password: 'wrongpass', _csrf: token });
+      expect(spy).toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   test('Admin API-style route rejects unauthenticated access with 403 JSON', async () => {
     const res = await freshRequest().get('/admin/api/some-protected-endpoint');
     expect([403, 404]).toContain(res.status);
@@ -132,6 +145,71 @@ describe('Admin Panel', () => {
       );
       const res = await agent.get('/admin/api/bets-live');
       expect(res.body.bets.some(b => b.username === uname)).toBe(true);
+    });
+  });
+
+  describe('POST /admin/bets/:id/settle', () => {
+    test('জয়ী বেট সেটেল করলে ব্যালেন্স ও coin_transactions লেজার উভয়ই আপডেট হয়', async () => {
+      const { agent, token } = await makeAdminAgentWithToken();
+      const uname = uniqueUsername();
+      const u = await pool.query(`INSERT INTO users (username, phone, password, coins) VALUES ($1,$2,'x',1000) RETURNING id`, [uname, uniquePhone()]);
+      const m = await pool.query(`INSERT INTO matches (title, team_a, team_b, sport) VALUES ('Test Match','A','B','cricket') RETURNING id`);
+      const bet = await pool.query(
+        `INSERT INTO bets (user_id, match_id, runner, odd, stake, status) VALUES ($1,$2,'A','2.00',100,'pending') RETURNING id`,
+        [u.rows[0].id, m.rows[0].id]
+      );
+
+      const beforeLedger = await pool.query(`SELECT COALESCE(SUM(amount),0) AS sum FROM coin_transactions WHERE user_id=$1`, [u.rows[0].id]);
+
+      const res = await agent.post(`/admin/bets/${bet.rows[0].id}/settle`).set('X-CSRF-Token', token).type('form').send({ result: 'won' });
+      expect(res.status).toBe(302);
+
+      const userRow = await pool.query('SELECT coins FROM users WHERE id=$1', [u.rows[0].id]);
+      const afterLedger = await pool.query(`SELECT COALESCE(SUM(amount),0) AS sum FROM coin_transactions WHERE user_id=$1`, [u.rows[0].id]);
+
+      const balanceDelta = Number(userRow.rows[0].coins) - 1000;
+      const ledgerDelta = Number(afterLedger.rows[0].sum) - Number(beforeLedger.rows[0].sum);
+      expect(balanceDelta).toBe(200); // stake(100) * odd(2.00)
+      expect(ledgerDelta).toBe(balanceDelta); // লেজার ↔ ব্যালেন্স মিলতে হবে
+    });
+
+    test('ডেমো বেট জেতালে demo_balance বাড়ে, real coins বাড়ে না', async () => {
+      const { agent, token } = await makeAdminAgentWithToken();
+      const uname = uniqueUsername();
+      const u = await pool.query(`INSERT INTO users (username, phone, password, coins, demo_balance) VALUES ($1,$2,'x',1000,1000) RETURNING id`, [uname, uniquePhone()]);
+      const m = await pool.query(`INSERT INTO matches (title, team_a, team_b, sport) VALUES ('Test Match','A','B','cricket') RETURNING id`);
+      const bet = await pool.query(
+        `INSERT INTO bets (user_id, match_id, runner, odd, stake, status, is_demo) VALUES ($1,$2,'A','2.00',100,'pending',true) RETURNING id`,
+        [u.rows[0].id, m.rows[0].id]
+      );
+
+      const res = await agent.post(`/admin/bets/${bet.rows[0].id}/settle`).set('X-CSRF-Token', token).type('form').send({ result: 'won' });
+      expect(res.status).toBe(302);
+
+      const userRow = await pool.query('SELECT coins, demo_balance FROM users WHERE id=$1', [u.rows[0].id]);
+      expect(Number(userRow.rows[0].coins)).toBe(1000); // ডেমো বাজি থেকে সত্যিকারের কয়েন তৈরি হওয়া উচিত না
+      expect(Number(userRow.rows[0].demo_balance)).toBe(1200); // 1000 + payout(200)
+    });
+  });
+
+  describe('POST /admin/markets/:marketId/settle', () => {
+    test('ডেমো বেট মার্কেট সেটেলমেন্টে জিতলেও demo_balance বাড়ে, real coins বাড়ে না', async () => {
+      const { agent, token } = await makeAdminAgentWithToken();
+      const uname = uniqueUsername();
+      const u = await pool.query(`INSERT INTO users (username, phone, password, coins, demo_balance) VALUES ($1,$2,'x',1000,1000) RETURNING id`, [uname, uniquePhone()]);
+      const m = await pool.query(`INSERT INTO matches (title, team_a, team_b, sport) VALUES ('Test Match','A','B','cricket') RETURNING id`);
+      const market = await pool.query(`INSERT INTO markets (match_id, type, name, odds, status) VALUES ($1,'match_winner','Match Winner','{}','open') RETURNING id`, [m.rows[0].id]);
+      await pool.query(
+        `INSERT INTO bets (user_id, match_id, market_id, runner, odd, stake, status, is_demo) VALUES ($1,$2,$3,'A','2.00',100,'pending',true)`,
+        [u.rows[0].id, m.rows[0].id, market.rows[0].id]
+      );
+
+      const res = await agent.post(`/admin/markets/${market.rows[0].id}/settle`).set('X-CSRF-Token', token).type('form').send({ winning_runner: 'A' });
+      expect(res.status).toBe(302);
+
+      const userRow = await pool.query('SELECT coins, demo_balance FROM users WHERE id=$1', [u.rows[0].id]);
+      expect(Number(userRow.rows[0].coins)).toBe(1000);
+      expect(Number(userRow.rows[0].demo_balance)).toBe(1200);
     });
   });
 
@@ -574,6 +652,25 @@ describe('Admin Panel', () => {
       expect(res.status).toBe(302);
       const check = await pool.query('SELECT status FROM payment_requests WHERE id=$1', [depositId]);
       expect(check.rows[0].status).toBe('approved');
+    });
+  });
+
+  describe('POST /admin/settings/admins/:id/demote — উল্লম্ব প্রিভিলেজ সীমানা', () => {
+    test('শুধু roles_manage পারমিশন-ওয়ালা (super_admin নয়) admin আসল super_admin-কে ডিমোট করতে পারে না', async () => {
+      const rbac = require('../services/rbac');
+      const target = await makeAdminAgentWithToken();
+      await rbac.assignUserRole(target.userId, 'super_admin');
+
+      const attacker = await makeAdminAgentWithToken();
+      const role = await rbac.createRole({ name: `RolesOnly-${uniqueUsername()}`, permissions: { roles_manage: true } });
+      await rbac.assignUserRole(attacker.userId, role.key);
+
+      const res = await attacker.agent.post(`/admin/settings/admins/${target.userId}/demote`)
+        .set('X-CSRF-Token', attacker.token).send({});
+      expect([302, 403]).toContain(res.status);
+
+      const check = await pool.query('SELECT role FROM users WHERE id=$1', [target.userId]);
+      expect(check.rows[0].role).toBe('admin'); // ডিমোট হয়নি
     });
   });
 });

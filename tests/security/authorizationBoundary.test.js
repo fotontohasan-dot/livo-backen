@@ -204,6 +204,55 @@ describe('auth-state বদলের পর পুরনো সেশন', () =>
     expect((await U.agent.get('/profile')).status).toBe(302);
     await dropUser(U.userId);
   });
+
+  test('সেল্ফ-এক্সক্লুশনের পর অন্য ডিভাইসের আগের সেশনও ব্লক হয়ে যায়', async () => {
+    const U = await makeUser();
+    const phone = (await pool.query('SELECT phone FROM users WHERE id=$1', [U.userId])).rows[0].phone;
+    // একই ইউজার হিসেবে দ্বিতীয় ডিভাইস/ব্রাউজারে লগইন (লগইন username নয়, email/phone দিয়ে হয়)
+    const second = await getCsrfAgent('/login');
+    const loginRes = await second.agent.post('/login').type('form')
+      .send({ identifier: phone, password: 'SecurePass123', _csrf: second.token });
+    expect(loginRes.status).toBe(302);
+    expect(loginRes.headers.location).not.toMatch(/\/login/);
+    expect((await second.agent.get('/profile')).status).toBe(200);
+
+    // প্রথম সেশন দিয়ে নিজেকে self-exclude করা
+    const page = await U.agent.get('/profile/responsible');
+    const csrf = /<meta name="csrf-token" content="([^"]*)"/.exec(page.text)[1];
+    const res = await U.agent.post('/profile/responsible/self-exclude').type('form')
+      .send({ days: 7, _csrf: csrf });
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toMatch(/\/login/);
+
+    // দ্বিতীয় ডিভাইসের আগের সেশনও এখন আর কাজ করবে না
+    expect((await second.agent.get('/profile')).status).toBe(302);
+
+    await dropUser(U.userId);
+  });
+
+  test('সেলফ-সার্ভিস পাসওয়ার্ড পরিবর্তনের পর অন্য ডিভাইসের আগের সেশন কাজ করে না', async () => {
+    const U = await makeUser();
+    const phone = (await pool.query('SELECT phone FROM users WHERE id=$1', [U.userId])).rows[0].phone;
+    const second = await getCsrfAgent('/login');
+    await second.agent.post('/login').type('form')
+      .send({ identifier: phone, password: 'SecurePass123', _csrf: second.token });
+    expect((await second.agent.get('/profile')).status).toBe(200);
+
+    // প্রথম সেশন দিয়ে পাসওয়ার্ড পরিবর্তন
+    const page = await U.agent.get('/profile/security');
+    const csrf = /<meta name="csrf-token" content="([^"]*)"/.exec(page.text)[1];
+    const res = await U.agent.post('/profile/change-password').type('form').send({
+      currentPassword: 'SecurePass123', newPassword: 'BrandNewPass99', confirmPassword: 'BrandNewPass99', _csrf: csrf
+    });
+    expect(res.status).toBe(302);
+
+    // বর্তমান সেশন (যেটা পরিবর্তন করেছে) এখনো কাজ করা উচিত
+    expect((await U.agent.get('/profile')).status).toBe(200);
+    // দ্বিতীয় ডিভাইসের আগের সেশন আর কাজ করবে না
+    expect((await second.agent.get('/profile')).status).toBe(302);
+
+    await dropUser(U.userId);
+  });
 });
 
 describe('টোকেন সীমানা', () => {

@@ -14,7 +14,7 @@ const { verifyPin, getPinStatus } = require('../services/withdrawPin');
 const { scanTransaction } = require('../services/fraudDetection');
 const { isSessionNewDevice } = require('../services/deviceTracking');
 const { checkIp } = require('../services/vpnDetection');
-const { requireVerifiedEmail, requireAdmin } = require('../middleware/auth');
+const { isAuth, requireVerifiedEmail, requireAdmin } = require('../middleware/auth');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
 const queue = require('../services/queue');
 const cache = require('../services/cache');
@@ -28,10 +28,10 @@ const paymentLimiter = rateLimit({
   store: new RedisRateLimitStore('rl:payment:')
 });
 
-function requireLogin(req, res, next) {
-  if (!req.session.user) return res.redirect('/login');
-  next();
-}
+// ব্যান/ডিলিট হওয়া ইউজার যেন পুরনো সেশন দিয়ে ডিপোজিট/উইথড্র করতে না পারে, তাই এখানে
+// শুধু req.session.user-এর অস্তিত্ব চেক করা আগের স্থানীয় requireLogin-এর বদলে
+// middleware/auth.js-এর isAuth ব্যবহার করা হচ্ছে — এটা প্রতিটা রিকোয়েস্টে DB থেকে
+// is_banned যাচাই করে (৩০ সেকেন্ড ক্যাশসহ)।
 
 // আগে এখানে একটা লোকাল requireAdmin ছিল যেটা শুধু req.session.user.role চেক করতো (স্টেল সেশন —
 // ডিমোট করা admin-এর পুরনো সেশন দিয়েও ঢোকা যেত)। এখন middleware/auth.js-এর isAdmin ব্যবহার করা হচ্ছে,
@@ -171,7 +171,7 @@ let depositRotation = 0;
 // ==================== WALLET HUB — একটাই পেজে ডিপোজিট/উইথড্র/কার্ড/হিস্টরির প্রিমিয়াম ওভারভিউ ====================
 // বিদ্যমান /deposit, /withdraw, /profile/cards, /history পেজগুলোই এখানে quick-action হিসেবে লিংক করা,
 // কোনো ফর্ম/বিজনেস লজিক ডুপ্লিকেট করা হয়নি — শুধু বিদ্যমান টেবিল থেকে read-only সামারি।
-router.get('/wallet', requireLogin, async (req, res) => {
+router.get('/wallet', isAuth, async (req, res) => {
   try {
     const userId = req.session.user.id;
     const userRes = await pool.query('SELECT coins FROM users WHERE id=$1', [userId]);
@@ -228,13 +228,13 @@ router.get('/wallet', requireLogin, async (req, res) => {
   }
 });
 
-router.get('/deposit', requireLogin, (req, res) => {
+router.get('/deposit', isAuth, (req, res) => {
   const current = DEPOSIT_NUMBERS[depositRotation % DEPOSIT_NUMBERS.length];
   depositRotation = (depositRotation + 1) % DEPOSIT_NUMBERS.length;
   res.render('payment/deposit', { user: req.session.user, payNumber: current });
 });
 
-router.post('/deposit', requireLogin, paymentLimiter, async (req, res) => {
+router.post('/deposit', isAuth, paymentLimiter, async (req, res) => {
   const { method, account_number } = req.body;
   const transaction_id = (req.body.transaction_id || '').trim();
   const wantBonus = req.body.want_bonus === 'yes';
@@ -316,7 +316,7 @@ router.post('/deposit', requireLogin, paymentLimiter, async (req, res) => {
   }
 });
 
-router.get('/withdraw', requireLogin, async (req, res) => {
+router.get('/withdraw', isAuth, async (req, res) => {
   try {
     const result = await pool.query('SELECT coins FROM users WHERE id=$1', [req.session.user.id]);
     // pg ড্রাইভার NUMERIC(14,2) কলাম স্ট্রিং হিসেবে ফেরত দেয় (যেমন "1499.00"), সংখ্যা হিসেবে না —
@@ -339,7 +339,7 @@ router.get('/withdraw', requireLogin, async (req, res) => {
 });
 
 
-router.post('/withdraw', requireLogin, requireVerifiedEmail, paymentLimiter, async (req, res) => {
+router.post('/withdraw', isAuth, requireVerifiedEmail, paymentLimiter, async (req, res) => {
   const { method, account_number, withdraw_pin } = req.body;
   const amount = parseAmount(req.body.amount);
   const userId = req.session.user.id;
@@ -450,7 +450,7 @@ router.post('/withdraw', requireLogin, requireVerifiedEmail, paymentLimiter, asy
   }
 });
 
-router.get('/history', requireLogin, async (req, res) => {
+router.get('/history', isAuth, async (req, res) => {
   try {
     const { type, quick, from, to } = req.query;
     const conditions = ['user_id=$1'];
@@ -841,7 +841,7 @@ function isVerificationForRequest(verification, request) {
   return String(returnedTran) === String(request.gateway_tran_id);
 }
 
-router.post('/sslcommerz/init', requireLogin, async (req, res) => {
+router.post('/sslcommerz/init', isAuth, async (req, res) => {
   const wantBonus = req.body.want_bonus === 'yes';
   const amount = parseAmount(req.body.amount);
   const userId = req.session.user.id;
