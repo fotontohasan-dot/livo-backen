@@ -44,17 +44,30 @@ async function recordGameResult(userId, won, betAmount) {
     // প্রতি ৩ জয়ে বোনাস (৩, ৬, ৯, ১২...)
     if (streak > 0 && streak % STREAK_INTERVAL === 0) {
       const bonus = calcStreakBonus(betAmount);
-      await pool.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [bonus, userId]);
-      await pool.query(
-        `INSERT INTO coin_transactions (user_id, amount, type, description)
-         VALUES ($1, $2, 'win_streak', $3)`,
-        [userId, bonus, `${streak} টানা জয় বোনাস`]
-      );
-      await pool.query(
-        `INSERT INTO notifications (user_id, title, message, type)
-         VALUES ($1, 'উইন স্ট্রিক!', $2, 'success')`,
-        [userId, `🔥 ${streak} টানা জয়! আপনি ${bonus} কয়েন বোনাস পেয়েছেন!`]
-      );
+      // ব্যালেন্স UPDATE ও coin_transactions INSERT আগে দুটো আলাদা pool.query() কল ছিল,
+      // কোনো ট্রানজেকশন ছাড়া — মাঝখানে কানেকশন সমস্যা হলে ব্যালেন্স বেড়ে যেত কিন্তু লেজার
+      // এন্ট্রি স্থায়ীভাবে হারিয়ে যেত। এখন একটাই ট্রানজেকশনে।
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [bonus, userId]);
+        await client.query(
+          `INSERT INTO coin_transactions (user_id, amount, type, description)
+           VALUES ($1, $2, 'win_streak', $3)`,
+          [userId, bonus, `${streak} টানা জয় বোনাস`]
+        );
+        await client.query(
+          `INSERT INTO notifications (user_id, title, message, type)
+           VALUES ($1, 'উইন স্ট্রিক!', $2, 'success')`,
+          [userId, `🔥 ${streak} টানা জয়! আপনি ${bonus} কয়েন বোনাস পেয়েছেন!`]
+        );
+        await client.query('COMMIT');
+      } catch (e) {
+        await client.query('ROLLBACK');
+        throw e;
+      } finally {
+        client.release();
+      }
       return { streak, bonus, milestone: streak };
     }
 

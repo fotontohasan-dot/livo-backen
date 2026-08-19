@@ -13,27 +13,31 @@ const cacheKeys = require('../services/cacheKeys');
 // worst-case বিলম্ব ৩০ সেকেন্ডের বেশি না এমনকি cache invalidate মিস হলেও।
 const ACTIVE_STATUS_TTL_SECONDS = 30;
 
+function rowToStatus(row) {
+  if (!row) return { exists: false, banned: false, selfExcluded: false };
+  const selfExcluded = !!(row.self_exclude_until && new Date(row.self_exclude_until) > new Date());
+  return { exists: true, banned: !!row.is_banned, selfExcluded };
+}
+
 async function isUserActive(userId) {
   const key = cacheKeys.userActiveStatus(userId);
   try {
     const cached = await cache.getOrSet(key, ACTIVE_STATUS_TTL_SECONDS, async () => {
-      const result = await pool.query('SELECT is_banned FROM users WHERE id = $1', [userId]);
-      if (!result.rows[0]) return { exists: false, banned: false };
-      return { exists: true, banned: !!result.rows[0].is_banned };
+      const result = await pool.query('SELECT is_banned, self_exclude_until FROM users WHERE id = $1', [userId]);
+      return rowToStatus(result.rows[0]);
     });
     if (!cached) {
       // ক্যাশ লেয়ার সম্পূর্ণ ব্যর্থ হলে (Redis-ও নেই, getOrSet-ও fetchFn চালাতে পারেনি) —
       // fail-open না করে সরাসরি একবার DB চেষ্টা করা হয়, যাতে ব্যানড ইউজার ভুলবশত ঢুকতে না পারে।
-      const result = await pool.query('SELECT is_banned FROM users WHERE id = $1', [userId]);
-      if (!result.rows[0]) return { exists: false, banned: false };
-      return { exists: true, banned: !!result.rows[0].is_banned };
+      const result = await pool.query('SELECT is_banned, self_exclude_until FROM users WHERE id = $1', [userId]);
+      return rowToStatus(result.rows[0]);
     }
     return cached;
   } catch (err) {
     console.error('isUserActive check error:', err.message);
     // DB নিজেই ব্যর্থ হলে (temporary outage) বিদ্যমান লগইন সেশন সাথে সাথে ভেঙে না দিয়ে
     // fail-open থাকা হয় — সাইট-ওয়াইড DB hiccup-এ সবাইকে লগ-আউট করে দেওয়া বেশি ক্ষতিকর।
-    return { exists: true, banned: false, checkFailed: true };
+    return { exists: true, banned: false, selfExcluded: false, checkFailed: true };
   }
 }
 
@@ -41,7 +45,11 @@ const isAuth = async (req, res, next) => {
   if (!(req.session && req.session.user)) return res.redirect('/login');
 
   const status = await isUserActive(req.session.user.id);
-  if (!status.exists || status.banned) {
+  // self-exclude আগে শুধু লগইন করার সময় (routes/auth.js) চেক হতো — অর্থাৎ এক্সক্লুশন সেট করার
+  // মুহূর্তে যেসব সেশন ইতিমধ্যে লগইন করা ছিল (অন্য ডিভাইস/ব্রাউজার) সেগুলো দিয়ে পুরো
+  // এক্সক্লুশন পিরিয়ড জুড়ে ডিপোজিট/উইথড্র/বেট করা যেত। এখন প্রতিটা isAuth-সুরক্ষিত রিকোয়েস্টেই
+  // যাচাই হয়, যেমন is_banned হয়।
+  if (!status.exists || status.banned || status.selfExcluded) {
     req.session.destroy(() => {});
     if (req.path.includes('/api/')) {
       return res.status(401).json({ success: false, error: 'সেশন আর বৈধ নয়, দয়া করে আবার লগইন করুন।' });

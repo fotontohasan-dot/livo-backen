@@ -45,12 +45,24 @@ async function addVipTurnover(userId, amount) {
       if (levelUp.rowCount === 0) return;
 
       if (bonus > 0) {
-        await pool.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [bonus, userId]);
-        await pool.query(
-          `INSERT INTO coin_transactions (user_id, amount, type, description)
-           VALUES ($1, $2, 'vip_upgrade', $3)`,
-          [userId, bonus, `VIP ${name} আপগ্রেড বোনাস`]
-        );
+        // ব্যালেন্স UPDATE ও coin_transactions INSERT আগে আলাদা, কোনো ট্রানজেকশন ছাড়া
+        // pool.query() কল ছিল — মাঝপথে ব্যর্থ হলে ব্যালেন্স-লেজার গরমিল স্থায়ী থেকে যেত।
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [bonus, userId]);
+          await client.query(
+            `INSERT INTO coin_transactions (user_id, amount, type, description)
+             VALUES ($1, $2, 'vip_upgrade', $3)`,
+            [userId, bonus, `VIP ${name} আপগ্রেড বোনাস`]
+          );
+          await client.query('COMMIT');
+        } catch (e) {
+          await client.query('ROLLBACK');
+          throw e;
+        } finally {
+          client.release();
+        }
       }
       await pool.query(
         `INSERT INTO notifications (user_id, title, message, type)

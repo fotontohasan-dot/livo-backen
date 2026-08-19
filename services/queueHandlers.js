@@ -37,18 +37,23 @@ queue.registerHandler('email', async (payload) => {
 });
 
 // ==================== NOTIFICATION (in-app notifications টেবিলে ইনসার্ট + Telegram) ====================
+// আগে userIds-এর জন্য একটা লুপে আলাদা আলাদা INSERT চলত। জব ব্যর্থ হলে (queue.js পুরো জবটাই
+// রিট্রাই করে, সর্বোচ্চ ৩ বার) লুপের মাঝপথে-ব্যর্থ হওয়া অংশ retry-তে আবার ইনসার্ট হতো —
+// আগেই সফলভাবে insert হওয়া userId-গুলোর জন্য ডুপ্লিকেট নোটিফিকেশন রো তৈরি হতো। এখন একটাই
+// atomic multi-row INSERT (UNNEST), তাই আংশিক-সম্পন্ন অবস্থা সম্ভবই না — হয় সবগুলো insert
+// হয়, নাহলে একটাও না। Telegram পাঠানো ব্যর্থ হলেও (ইনসার্ট ইতিমধ্যে সফল হয়ে থাকলে) পুরো জব
+// রিট্রাই করা হয় না — শুধু লগ হয়, নাহলে retry-তে আগের ইনসার্টগুলো আবার ডুপ্লিকেট হতো।
 queue.registerHandler('notification', async (payload) => {
   const { userIds, title, message, telegramText, telegramCategory } = payload;
   if (Array.isArray(userIds) && userIds.length) {
-    for (const uid of userIds) {
-      await pool.query(
-        `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'info')`,
-        [uid, title, message]
-      );
-    }
+    await pool.query(
+      `INSERT INTO notifications (user_id, title, message, type)
+       SELECT uid, $2, $3, 'info' FROM UNNEST($1::int[]) AS uid`,
+      [userIds, title, message]
+    );
   }
   if (telegramText) {
-    await notifyTelegram(telegramText, { category: telegramCategory });
+    await notifyTelegram(telegramText, { category: telegramCategory }).catch(e => console.error('notification job telegram error:', e.message));
   }
 });
 

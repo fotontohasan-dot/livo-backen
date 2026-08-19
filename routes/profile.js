@@ -23,6 +23,7 @@ const { isWeakPin, createPin, updatePin, verifyPin, getPinStatus } = require('..
 const { listActiveSessions, listLoginHistory, revokeDeviceSession, revokeAllOtherSessions, getUserDeviceOverview, lookupLocation } = require('../services/deviceTracking');
 const { logAdminAction } = require('../services/fraudDetection');
 const cache = require('../services/cache');
+const cacheKeys = require('../services/cacheKeys');
 const { createLimiter } = require('../middleware/rateLimitFactory');
 
 // পাসওয়ার্ড, উইথড্র-পিন, ব্যাংক কার্ড — অ্যাকাউন্ট-টেকওভার সংশ্লিষ্ট সংবেদনশীল অ্যাকশন,
@@ -398,7 +399,11 @@ router.post('/change-password', isAuth, accountSecurityLimiter, async (req, res)
     const hashed = await bcrypt.hash(np, 10);
     await pool.query(`UPDATE users SET password=$1, password_changed_at=NOW() WHERE id=$2`, [hashed, req.session.user.id]);
     await logAdminAction(req.session.user.id, req.session.user.username, 'PASSWORD_CHANGED', `ইউজার #${req.session.user.id} নিজের পাসওয়ার্ড পরিবর্তন করেছে`, req.ip);
-    req.flash('success', '✅ পাসওয়ার্ড পরিবর্তন হয়েছে!');
+    // forgot-password রিসেট ফ্লো (routes/auth.js) আগে থেকেই অন্য সব সেশন রিভোক করে, যাতে
+    // হাইজ্যাক করা কোনো সেশন পাসওয়ার্ড বদলের পরও বেঁচে না থাকে — এই সেলফ-সার্ভিস
+    // change-password ফ্লোতেও একই সুরক্ষা প্রয়োজন, বর্তমান সেশন বাদে বাকি সব রিভোক করা হচ্ছে।
+    await revokeAllOtherSessions(req.session.user.id, req.sessionID, req.session.user.username).catch(() => {});
+    req.flash('success', '✅ পাসওয়ার্ড পরিবর্তন হয়েছে! অন্য সব ডিভাইস থেকে লগআউট করা হয়েছে।');
     res.redirect('/profile/security');
   } catch (err) {
     req.flash('error', '❌ পাসওয়ার্ড পরিবর্তন করতে সমস্যা হয়েছে।');
@@ -742,7 +747,14 @@ router.post('/responsible/self-exclude', isAuth, async (req, res) => {
     }
     const until = new Date();
     until.setDate(until.getDate() + days);
-    await pool.query(`UPDATE users SET self_exclude_until = $1 WHERE id = $2`, [until, req.session.user.id]);
+    const userId = req.session.user.id;
+    await pool.query(`UPDATE users SET self_exclude_until = $1 WHERE id = $2`, [until, userId]);
+    // isAuth-এর ৩০ সেকেন্ডের active-status ক্যাশ অবিলম্বে invalidate করা, নাহলে অন্য
+    // ডিভাইসের সেশন সেই সময়টুকু এক্সক্লুশন উপেক্ষা করে চলতে পারত (is_banned-এর মতোই)।
+    await cache.del(cacheKeys.userActiveStatus(userId)).catch(() => {});
+    // শুধু বর্তমান সেশন ধ্বংস করলে অন্য ডিভাইস/ব্রাউজারে লগইন করা থাকলে সেটা দিয়ে পুরো
+    // এক্সক্লুশন পিরিয়ড জুড়ে অ্যাকাউন্ট ব্যবহার করা যেত — এখন সব ডিভাইস থেকেই লগআউট হয়।
+    await revokeAllOtherSessions(userId, '', req.session.user.username).catch(() => {});
     req.flash('success', `আপনার অ্যাকাউন্ট ${days} দিনের জন্য বন্ধ করা হযছে।`);
     return req.session.destroy(() => res.redirect('/login'));
   } catch (err) {

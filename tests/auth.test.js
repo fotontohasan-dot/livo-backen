@@ -1,4 +1,5 @@
 const { getCsrfAgent, uniqueUsername, uniquePhone, REALISTIC_UA, freshRequest } = require('./helpers/app');
+const bcrypt = require('bcryptjs');
 
 describe('Authentication', () => {
   test('POST without a CSRF token is rejected with 403', async () => {
@@ -86,5 +87,20 @@ describe('Authentication', () => {
       .type('form')
       .send({ identifier: 'nonexistent_user_xyz@test.com', password: 'wrongpass', _csrf: token });
     expect([302, 429]).toContain(res.status);
+  });
+
+  test('অস্তিত্বহীন identifier দিয়ে লগইনেও bcrypt.compare() চালানো হয় (টাইমিং এনিউমারেশন গার্ড)', async () => {
+    // ইউজার না পাওয়া গেলে bcrypt.compare() স্কিপ করলে রেসপন্স-টাইম দিয়ে অস্তিত্ব
+    // এনিউমারেট করা যায় (একই এরর মেসেজ হলেও)। এই টেস্ট নিশ্চিত করে bcrypt.compare()
+    // বাস্তবেই কল হচ্ছে দুই পথেই — শুধু মেসেজ এক হওয়াই যথেষ্ট না।
+    const spy = jest.spyOn(bcrypt, 'compare');
+    try {
+      const { agent, token } = await getCsrfAgent('/login');
+      await agent.post('/login').set('User-Agent', REALISTIC_UA).type('form')
+        .send({ identifier: 'no-such-user-timing-probe@test.com', password: 'wrongpass', _csrf: token });
+      expect(spy).toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

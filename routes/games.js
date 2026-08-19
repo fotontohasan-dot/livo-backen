@@ -281,12 +281,21 @@ router.post('/play', isAuth, async (req, res) => {
       const crashPoint = (1 + Math.random() * 9).toFixed(2);
       req.session.gameState = { game: gameSlug, betAmount, crashPoint: parseFloat(crashPoint), startTime: Date.now(), isDemo };
       await client.query(`UPDATE users SET ${balanceCol} = ${balanceCol} - $1 WHERE id = $2`, [betAmount, userId]);
+      // লেজার-ইনসার্ট আগে COMMIT-এর পরে আলাদা, অ-await করা pool.query(...).catch(...) হিসেবে
+      // হতো — ব্যালেন্স কর্তন স্থায়ীভাবে commit হয়ে যাওয়ার পরও ওই ইনসার্ট ব্যর্থ হলে (কানেকশন
+      // সমস্যা ইত্যাদি) শুধু লগ হতো, ব্যালেন্স-লেজার গরমিল স্থায়ীভাবে থেকে যেত। এখন একই
+      // ট্রানজেকশনে, COMMIT-এর আগে — অন্য সব ব্যালেন্স-মিউটেশন পাথের মতোই।
+      if (isDemo) {
+        await client.query('INSERT INTO demo_transactions (user_id, category, type, amount, description) VALUES ($1, $2, $3, $4, $5)',
+          [userId, 'casino', 'bet', betAmount, `${supportedGames[gameSlug] || gameSlug} (ডেমো)`]);
+      } else {
+        await client.query('INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, $3, $4)',
+          [userId, betAmount, 'casino_bet', `${supportedGames[gameSlug] || gameSlug} বাজি`]);
+      }
       await client.query('COMMIT');
 
       if (isDemo) {
         req.session.user.demo_balance = Number(req.session.user.demo_balance || 0) - betAmount;
-        await client.query('INSERT INTO demo_transactions (user_id, category, type, amount, description) VALUES ($1, $2, $3, $4, $5)',
-          [userId, 'casino', 'bet', betAmount, `${supportedGames[gameSlug] || gameSlug} (ডেমো)`]).catch(e => console.error('demo tx:', e.message));
         broadcastDemoStats().catch(e => console.error('demo stats:', e.message));
         return res.json({ success: true, message: 'গেম শুরু হয়েছে (ডেমো)', demo: true, newBalance: req.session.user.demo_balance });
       }
@@ -298,8 +307,6 @@ router.post('/play', isAuth, async (req, res) => {
       updateMissionProgress(userId, betAmount).catch(e => console.error('mission:', e.message));
       addPoints(userId, betAmount).catch(e => console.error('loyalty:', e.message));
       checkBadges(userId).catch(e => console.error('badges:', e.message));
-      pool.query('INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, $3, $4)',
-        [userId, betAmount, 'casino_bet', `${supportedGames[gameSlug] || gameSlug} বাজি`]).catch(e => console.error('coin tx:', e.message));
       broadcastDemoStats().catch(e => console.error('demo stats:', e.message));
 
       return res.json({ success: true, message: 'গেম শুরু হয়েছে' });

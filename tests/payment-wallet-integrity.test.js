@@ -17,6 +17,8 @@
 
 const { getCsrfAgent, uniqueUsername, uniquePhone, REALISTIC_UA } = require('./helpers/app');
 const { pool } = require('../db');
+const cache = require('../services/cache');
+const cacheKeys = require('../services/cacheKeys');
 
 async function makeUser({ admin = false } = {}) {
   const { agent, token } = await getCsrfAgent('/register');
@@ -153,5 +155,28 @@ describe('ওয়ালেট ইন্টিগ্রিটি — অভ্�
 
     await admin.agent.post(`/payment/admin/reject/${id}`).type('form').send({ _csrf: admin.token });
     expect(await coinsOf(target.userId)).toBe(before);
+  });
+
+  test('ব্যান হওয়া ইউজারের পুরনো সেশন দিয়ে ওয়ালেট/ডিপোজিট/উইথড্র রুট আর অ্যাক্সেসযোগ্য থাকে না', async () => {
+    const target = await makeUser();
+
+    // ব্যান হওয়ার আগে অ্যাক্সেস স্বাভাবিক
+    const before = await target.agent.get('/payment/wallet');
+    expect(before.status).toBe(200);
+
+    await pool.query('UPDATE users SET is_banned = true WHERE id=$1', [target.userId]);
+    await cache.del(cacheKeys.userActiveStatus(target.userId)).catch(() => {});
+
+    const wallet = await target.agent.get('/payment/wallet');
+    expect(wallet.status).toBe(302);
+    expect(wallet.headers.location).toMatch(/\/login/);
+
+    const deposit = await target.agent.get('/payment/deposit');
+    expect(deposit.status).toBe(302);
+    expect(deposit.headers.location).toMatch(/\/login/);
+
+    const withdraw = await target.agent.get('/payment/withdraw');
+    expect(withdraw.status).toBe(302);
+    expect(withdraw.headers.location).toMatch(/\/login/);
   });
 });
