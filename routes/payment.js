@@ -497,10 +497,20 @@ router.get('/history', isAuth, async (req, res) => {
   }
 });
 
+// এই পেজটা টেবিলের প্রতিটা ঐতিহাসিক deposit/withdraw রিকোয়েস্ট (pending/approved/rejected —
+// সবগুলো, কোনো WHERE ছাড়াই) ক্লায়েন্ট-সাইড ট্যাব-ফিল্টারের জন্য একবারে লোড করে
+// (views/payment/admin.ejs-এর allRequests)। আগে কোনো LIMIT ছিল না — payment_requests
+// বাড়ার সাথে সাথে প্রতিটা অ্যাডমিন পেজ-লোডে পুরো টেবিল স্ক্যান+সিরিয়ালাইজ হতো।
+// সাম্প্রতিক ইতিহাস দেখানোই এই পেজের উদ্দেশ্য বলে বড় কিন্তু বাউন্ডেড LIMIT — বাস্তবিক
+// ব্যবহারে কোনো পার্থক্য পড়ে না, কিন্তু ওয়ার্স্ট-কেস কোয়েরি/রেসপন্স সাইজ বাউন্ডেড থাকে।
+const ADMIN_PAYMENTS_LIST_LIMIT = 2000;
+
 router.get('/admin/payments', requireAdmin, requirePermission('payments_view'), async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT pr.*, u.username FROM payment_requests pr JOIN users u ON pr.user_id = u.id ORDER BY pr.created_at DESC`
+      `SELECT pr.*, u.username FROM payment_requests pr JOIN users u ON pr.user_id = u.id
+       ORDER BY pr.created_at DESC LIMIT $1`,
+      [ADMIN_PAYMENTS_LIST_LIMIT]
     );
     res.render('payment/admin', { user: req.session.user, requests: result.rows });
   } catch (err) {
@@ -841,7 +851,7 @@ function isVerificationForRequest(verification, request) {
   return String(returnedTran) === String(request.gateway_tran_id);
 }
 
-router.post('/sslcommerz/init', isAuth, async (req, res) => {
+router.post('/sslcommerz/init', isAuth, paymentLimiter, async (req, res) => {
   const wantBonus = req.body.want_bonus === 'yes';
   const amount = parseAmount(req.body.amount);
   const userId = req.session.user.id;
@@ -875,6 +885,13 @@ router.post('/sslcommerz/init', isAuth, async (req, res) => {
     res.redirect(gatewayUrl);
   } catch (err) {
     console.error('sslcommerz init error:', err.message);
+    // গেটওয়ে সেশন শুরু করা যায়নি (timeout/network/config এরর) — উপরে ইতিমধ্যে ঢোকানো
+    // pending রো-টা চিরস্থায়ীভাবে pending থেকে যাওয়ার বদলে rejected করে দেওয়া হচ্ছে,
+    // নাহলে ইউজারের history/admin ড্যাশবোর্ডে একটা কখনো-সেটল-না-হওয়া রো থেকে যায়।
+    await pool.query(
+      `UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE gateway_tran_id=$1 AND status='pending'`,
+      [tranId]
+    ).catch((e) => console.error('sslcommerz init cleanup error:', e.message));
     req.flash('error', 'পেমেন্ট গেটওয়ে চালু করা যায়নি। আবার চেষ্টা করুন।');
     res.redirect('/payment/deposit');
   }
@@ -1040,7 +1057,13 @@ router.post('/sslcommerz/ipn', async (req, res) => {
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('sslcommerz ipn error:', err.message);
-    res.sendStatus(200);
+    // IPN হলো ব্রাউজার success_url-এ ফিরে না এলে ব্যাকআপ ডেলিভারি পথ (উপরের কমেন্ট দ্রষ্টব্য)।
+    // আগে এখানে সবসময় 200 রিটার্ন হতো — অভ্যন্তরীণ ব্যর্থতাতেও (DB এরর, গেটওয়ে timeout) —
+    // ফলে SSLCommerz সেটাকে "ডেলিভারড" ধরে নিয়ে আর রিট্রাই করত না, আর যে ডিপোজিট আসলে
+    // সফল হয়েছিল সেটা চিরস্থায়ীভাবে pending থেকে যেতে পারত। এখন শুধু "কিছু করার নেই"
+    // কেসগুলোতেই (রিকোয়েস্ট নেই / ইতিমধ্যে প্রসেসড — try ব্লকের প্রথম দিকে) 200 যায়;
+    // সত্যিকারের অভ্যন্তরীণ ব্যর্থতায় 500 যায় যাতে গেটওয়ে তার নিজস্ব রিট্রাই নীতি অনুযায়ী আবার পাঠায়।
+    res.sendStatus(500);
   } finally {
     client.release();
   }

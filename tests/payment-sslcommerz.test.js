@@ -170,12 +170,83 @@ describe('SSLCommerz deposit callbacks', () => {
     const u = await makeUser();
     const start = await coinsOf(u.userId);
     const { row } = await initDeposit(u, 500);
-    const spy = jest.spyOn(sslcommerz, 'validatePayment')
-      .mockResolvedValueOnce({ status: 'VALID', amount: 500 }); // tran_id অনুপস্থিত
+    // jest.spyOn(sslcommerz, ...).mockRestore() ব্যবহার করা হয়নি — sslcommerz ইতিমধ্যে
+    // jest.mock() ফ্যাক্টরি দিয়ে সম্পূর্ণ মকড থাকায় এর ওপর spyOn().mockRestore() করলে
+    // এই ফাইলের *পরবর্তী* টেস্টগুলোতে validatePayment স্থায়ীভাবে ভেঙে যায় (store-based
+    // ডিফল্ট ইমপ্লিমেন্টেশনে আর ফিরে যায় না, ফলে পরের কলে undefined রিটার্ন হয়) —
+    // ...Once ভ্যারিয়েন্ট নিজে থেকেই এক কলের পর ডিফল্টে ফিরে যায়, তাই restore লাগে না।
+    sslcommerz.validatePayment.mockResolvedValueOnce({ status: 'VALID', amount: 500 }); // tran_id অনুপস্থিত
     await u.agent.post('/payment/sslcommerz/success').type('form')
       .send({ tran_id: row.gateway_tran_id, val_id: 'VAL_NO_TRAN' });
     expect(await coinsOf(u.userId)).toBe(start);
     expect((await prById(row.id)).status).toBe('rejected');
-    spy.mockRestore();
+  });
+
+  // রিগ্রেশন: IPN প্রসেসিং-এ অভ্যন্তরীণ ব্যর্থতা (DB এরর/গেটওয়ে timeout) হলেও আগে সবসময়
+  // HTTP 200 ফেরত যেত — SSLCommerz সেটাকে "ডেলিভারড" ধরে নিয়ে আর রিট্রাই করত না, ফলে
+  // আসলে সফল একটা ডিপোজিট চিরস্থায়ীভাবে pending থেকে যেতে পারত। এখন অভ্যন্তরীণ ব্যর্থতায়
+  // non-2xx ফেরত যায় যাতে গেটওয়ে তার নিজস্ব রিট্রাই নীতি অনুযায়ী আবার IPN পাঠায়।
+  test('IPN প্রসেসিং-এ অভ্যন্তরীণ ব্যর্থতা হলে non-200 রিটার্ন হয় (গেটওয়ে রিট্রাই করতে পারে)', async () => {
+    const u = await makeUser();
+    const start = await coinsOf(u.userId);
+    const { row } = await initDeposit(u, 500);
+    sslcommerz.__store.set('VAL_IPN_FAIL', { tran_id: row.gateway_tran_id, amount: 500 });
+
+    // mockRejectedValueOnce সরাসরি জেস্ট মকের ওপর — jest.spyOn(...).mockRestore() এখানে
+    // ব্যবহার করা হয়নি কারণ sslcommerz ইতিমধ্যে jest.mock() ফ্যাক্টরি দিয়ে সম্পূর্ণ মকড;
+    // এটার ওপর spyOn().mockRestore() করলে পরবর্তী কলে undefined রিটার্ন হয় (ফ্যাক্টরির
+    // আসল store-based ইমপ্লিমেন্টেশনে সঠিকভাবে ফিরে যায় না) — "...Once" নিজে থেকেই
+    // এক কলের পর ডিফল্ট (store-based) ইমপ্লিমেন্টেশনে ফিরে যায়, তাই restore লাগে না।
+    sslcommerz.validatePayment.mockRejectedValueOnce(new Error('gateway network boom'));
+    const res = await freshRequest().post('/payment/sslcommerz/ipn').type('form')
+      .send({ tran_id: row.gateway_tran_id, val_id: 'VAL_IPN_FAIL' });
+
+    expect(res.status).not.toBe(200);
+    // রো টা এখনো pending — হারিয়ে যায়নি, গেটওয়ে রিট্রাই করলে এখনো ক্রেডিট করা যায়।
+    expect((await prById(row.id)).status).toBe('pending');
+    expect(await coinsOf(u.userId)).toBe(start);
+
+    // আসল রিট্রাই: একই IPN আবার আসলে এবার ঠিকভাবে ক্রেডিট হয়।
+    await freshRequest().post('/payment/sslcommerz/ipn').type('form')
+      .send({ tran_id: row.gateway_tran_id, val_id: 'VAL_IPN_FAIL' });
+    expect(await coinsOf(u.userId)).toBe(start + 500);
+  });
+
+  // রিগ্রেশন: গেটওয়ে সেশন শুরু করা যায়নি (initPayment ব্যর্থ) হলে আগে insert করা pending
+  // রো-টা চিরস্থায়ীভাবে pending থেকে যেত (কখনো ইউজার আর ফিরে আসবে না)। এখন সেটা rejected
+  // হিসেবে বন্ধ হয়ে যাওয়া উচিত।
+  test('initPayment ব্যর্থ হলে pending রো orphaned না থেকে rejected হয়', async () => {
+    const u = await makeUser();
+    const before = (await pool.query(
+      "SELECT COUNT(*) c FROM payment_requests WHERE user_id=$1 AND status='pending'", [u.userId]
+    )).rows[0].c;
+
+    sslcommerz.initPayment.mockRejectedValueOnce(new Error('SSLCommerz গেটওয়ে সময়মতো সাড়া দেয়নি (timeout)'));
+    await u.agent.post('/payment/sslcommerz/init').type('form')
+      .send({ amount: '500', _csrf: u.token });
+
+    const after = (await pool.query(
+      "SELECT COUNT(*) c FROM payment_requests WHERE user_id=$1 AND status='pending'", [u.userId]
+    )).rows[0].c;
+    expect(Number(after)).toBe(Number(before)); // কোনো নতুন pending রো থেকে যায়নি
+
+    const row = (await pool.query(
+      "SELECT status FROM payment_requests WHERE user_id=$1 ORDER BY id DESC LIMIT 1", [u.userId]
+    )).rows[0];
+    expect(row.status).toBe('rejected');
+  });
+
+  // রিগ্রেশন: /sslcommerz/init আগে কোনো পেমেন্ট-নির্দিষ্ট rate limiter ছাড়াই ছিল (শুধু generalLimiter),
+  // অথচ প্রতিটা কল একটা real আউটবাউন্ড গেটওয়ে কল ট্রিগার করে — /deposit ও /withdraw-এর মতোই
+  // paymentLimiter (15/15min) দিয়ে বাউন্ড করা দরকার।
+  test('/sslcommerz/init বারবার কল করলে rate-limit হয়ে যায়', async () => {
+    const u = await makeUser();
+    let sawLimit = false;
+    for (let i = 0; i < 20; i++) {
+      const res = await u.agent.post('/payment/sslcommerz/init').type('form')
+        .send({ amount: '100', _csrf: u.token });
+      if (res.status === 429) { sawLimit = true; break; }
+    }
+    expect(sawLimit).toBe(true);
   });
 });

@@ -1757,7 +1757,37 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_bank_cards_account ON bank_cards(account_number);`);
     console.log("✅ Phase 06 hot-path indexes ready");
 
+    // ==================== Phase 07: পোস্ট-মাস্টার-অডিট কোয়েরি পারফরম্যান্স ====================
+    // প্রতিটা EXPLAIN দিয়ে যাচাই করা (tests/integration/dbQueryPerformance.test.js), আন্দাজে যোগ করা হয়নি।
+    //
+    // users/bets — routes/admin.js-এর ড্যাশবোর্ড ও services/analytics.js প্রতিটাতেই
+    // `WHERE created_at::date = CURRENT_DATE` (বা `= d::date`) প্যাটার্নে চলে, অন্য কোনো
+    // ফিল্টার ছাড়াই। কলামের ওপর ::date cast করায় সাধারণ btree(created_at) ইনডেক্স (যেটা
+    // bets-এ আগে থেকেই আছে) ব্যবহার করা যায় না — planner পুরো টেবিল স্ক্যান করে প্রতিটা
+    // সারির created_at cast করে তুলনা করত। এই expression ইনডেক্স ঠিক একই cast প্যাটার্ন
+    // ধরে রাখে বলে planner সরাসরি ব্যবহার করতে পারে। users-এ এখন পর্যন্ত created_at-এ
+    // কোনো ইনডেক্সই ছিল না (এমনকি সাধারণ btree-ও না)।
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_created_date ON users((created_at::date));`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bets_created_date ON bets((created_at::date));`);
 
+    // payment_requests.account_number: bank_cards.account_number ইনডেক্স করা হলেও (Phase 06),
+    // services/duplicateDetection.js ও services/fraudDetection.js-এর "একই পেমেন্ট অ্যাকাউন্ট
+    // অন্য কোনো ইউজার ব্যবহার করেছে কিনা" চেক payment_requests.account_number-ও লুকআপ করে
+    // (প্রতিটা ডিপোজিট/উইথড্র রিকোয়েস্টে) — এটা ইনডেক্সবিহীন ছিল।
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_pr_account_number ON payment_requests(account_number);`);
+
+    // payment_requests.created_at: routes/admin.js-এর /transactions পেজ কোনো type/status
+    // ফিল্টার ছাড়াই `ORDER BY created_at DESC LIMIT/OFFSET` চালায় — বিদ্যমান কম্পোজিট
+    // ইনডেক্সগুলো (type, status, created_at) leading কলাম হিসেবে type/status চায়, তাই
+    // ফিল্টারবিহীন এই সর্টে ব্যবহার হয় না।
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_pr_created_at ON payment_requests(created_at DESC);`);
+
+    // device_sessions.device_signature / (browser, os): services/duplicateDetection.js-এর
+    // evaluateDuplicateAccount() প্রতিটা রেজিস্ট্রেশন/ডিপোজিটে এই দুটো প্যাটার্নে ডুপ্লিকেট-
+    // অ্যাকাউন্ট স্ক্যান চালায় — device_sessions টেবিলে user_id ছাড়া অন্য কোনো ইনডেক্স ছিল না।
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_device_sessions_signature ON device_sessions(device_signature);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_device_sessions_browser_os ON device_sessions(browser, os);`);
+    console.log("✅ Phase 07 কোয়েরি পারফরম্যান্স ইনডেক্স ready");
 
   } catch (err) {
     console.error("❌ Migration error:", err.message);

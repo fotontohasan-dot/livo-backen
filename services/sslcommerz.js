@@ -14,6 +14,27 @@ const BASE_URL = IS_LIVE
   ? 'https://securepay.sslcommerz.com'
   : 'https://sandbox.sslcommerz.com';
 
+// গেটওয়ে ধীর হলে বা সাড়া না দিলে fetch() timeout ছাড়া OS-লেভেল TCP timeout
+// (৬০-১২০+ সেকেন্ড) পর্যন্ত ঝুলে থাকে — যতক্ষণ /success ও /ipn এই কল await করে,
+// ততক্ষণ পেমেন্ট রো-এর row lock ও DB connection ধরে রাখে (services/email.js-এ
+// একই কারণে যোগ করা timeout প্যাটার্নটাই এখানে অনুসরণ করা হয়েছে)।
+const GATEWAY_TIMEOUT_MS = Number(process.env.SSLCZ_TIMEOUT_MS) || 15000;
+
+async function fetchWithTimeout(url, options) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), GATEWAY_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('SSLCommerz গেটওয়ে সময়মতো সাড়া দেয়নি (timeout)');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // পেমেন্ট সেশন শুরু করে GatewayPageURL রিটার্ন করে
 async function initPayment({ amount, tranId, customer, baseUrl }) {
   if (!STORE_ID || !STORE_PASSWD) {
@@ -44,7 +65,7 @@ async function initPayment({ amount, tranId, customer, baseUrl }) {
     num_of_item: '1'
   });
 
-  const res = await fetch(`${BASE_URL}/gwprocess/v4/api.php`, {
+  const res = await fetchWithTimeout(`${BASE_URL}/gwprocess/v4/api.php`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: params.toString()
@@ -68,7 +89,7 @@ async function validatePayment(valId) {
     store_passwd: STORE_PASSWD,
     format: 'json'
   });
-  const res = await fetch(`${BASE_URL}/validator/api/validationserverAPI.php?${params.toString()}`);
+  const res = await fetchWithTimeout(`${BASE_URL}/validator/api/validationserverAPI.php?${params.toString()}`);
   const data = await res.json();
   return data; // data.status === 'VALID' / 'VALIDATED' হলে সফল
 }
@@ -87,7 +108,7 @@ async function validateByTransactionId(tranId) {
     store_passwd: STORE_PASSWD,
     format: 'json'
   });
-  const res = await fetch(`${BASE_URL}/validator/api/merchantTransIDvalidationAPI.php?${params.toString()}`);
+  const res = await fetchWithTimeout(`${BASE_URL}/validator/api/merchantTransIDvalidationAPI.php?${params.toString()}`);
   const data = await res.json();
   const element = Array.isArray(data.element) && data.element.length ? data.element[0] : null;
   if (!element) return { status: 'NOT_FOUND', amount: null, raw: data };
