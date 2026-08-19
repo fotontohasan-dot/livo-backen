@@ -365,8 +365,10 @@ test.describe('অ্যাডমিন ফ্লো', () => {
     await page.goto('/admin/login', { waitUntil: 'domcontentloaded' });
     await page.fill('input[name="username"]', adminUsername);
     await page.fill('input[name="password"]', adminPassword);
-    await page.click('button[type="submit"]');
-    await page.waitForLoadState('domcontentloaded');
+    await Promise.all([
+      page.waitForURL('**/admin/login/2fa'),
+      page.click('button[type="submit"]')
+    ]);
     expect(page.url()).toContain('/admin/login/2fa');
 
     // views/admin/2fa-verify.ejs-এর tokenInput-এ একটা input listener আছে যেটা মান ৬ ক্যারেক্টার
@@ -374,9 +376,15 @@ test.describe('অ্যাডমিন ফ্লো', () => {
     // — page.fill() নিজেই input ইভেন্ট ডিসপ্যাচ করে, তাই fill() কলটাই ফর্ম সাবমিট করে ফেলে,
     // এরপর আলাদা করে সাবমিট বাটনে ক্লিক করার দরকার নেই (বাটনটা ততক্ষণে নতুন পেজে চলে যাওয়ায়
     // আর খুঁজে পাওয়া যায় না)।
+    // fill() করার সাথে সাথেই অটো-সাবমিট নেভিগেশন শুরু হয়, কিন্তু সেটা অ্যাসিনক্রোনাস —
+    // waitForLoadState('domcontentloaded') তখন *পুরোনো* পেজের ইতিমধ্যে-সম্পন্ন লোড দেখে
+    // সঙ্গে সঙ্গে রিটার্ন করত, ফলে নেভিগেশন শেষ হওয়ার আগেই URL চেক হয়ে ফেল করত।
+    // তাই নেভিগেশনের জন্য স্পষ্টভাবে অপেক্ষা করা হচ্ছে।
     const code = speakeasy.totp({ secret: totpSecret, encoding: 'base32' });
-    await page.fill('input[name="token"]', code);
-    await page.waitForLoadState('domcontentloaded');
+    await Promise.all([
+      page.waitForURL((url) => !url.pathname.startsWith('/admin/login')),
+      page.fill('input[name="token"]', code)
+    ]);
     expect(page.url()).not.toContain('/admin/login');
     assertClean(issues);
 

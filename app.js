@@ -248,6 +248,19 @@ const loginLimiter = rateLimit({
   message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
   standardHeaders: true,
   legacyHeaders: false,
+  // ==================== শুধু আসল লগইন-চেষ্টা (POST) গোনা হয় ====================
+  // এই লিমিটারটা `app.use('/login', ...)`, `app.use('/register', ...)` ও
+  // `app.use('/admin/login', ...)` — তিন জায়গায় একই ইনস্ট্যান্স হিসেবে বসানো, অর্থাৎ
+  // তিনটা পাথ একটাই কাউন্টার (IP-ভিত্তিক) শেয়ার করে। আগে এখানে কোনো `skip` না থাকায়
+  // GET পেজ-লোডও গোনা হতো, ফলে দুটো বাস্তব সমস্যা হতো:
+  //   ১. কেউ শুধু লগইন পেজটা ১০ বার রিফ্রেশ করলেই — একটাও পাসওয়ার্ড সাবমিট না করে —
+  //      ১৫ মিনিটের জন্য লক হয়ে যেত (429), লগইন পেজটাই আর খুলত না।
+  //   ২. কাউন্টার শেয়ার্ড হওয়ায় সাধারণ ইউজারদের /login + /register ট্রাফিকই
+  //      /admin/login-কে নিঃশেষ করে দিত — শেয়ার্ড/CGNAT IP-তে (মোবাইল ক্যারিয়ার)
+  //      এতে অ্যাডমিন লগইন পেজ পুরোপুরি অ্যাক্সেসহীন হয়ে যেতে পারত।
+  // ব্রুট-ফোর্স সুরক্ষা আসলে POST চেষ্টার উপর নির্ভরশীল, GET পেজ-ভিউয়ের উপর না — তাই
+  // GET/HEAD বাদ দেওয়া হচ্ছে; POST-এর সীমা আগের মতোই অপরিবর্তিত।
+  skip: (req) => req.method !== 'POST',
   store: new RedisRateLimitStore('rl:login:')
 });
 
@@ -319,7 +332,28 @@ app.use((req, res, next) => {
   res.locals.success = req.flash('success');
   res.locals.error = req.flash('error');
   // views/partials/head.ejs ফ্ল্যাশ মেসেজ ইনলাইন <script>-এ নিরাপদে বসানোর জন্য এটা ব্যবহার করে
-  res.locals.jsonScriptSafe = (value) => JSON.stringify(String(value == null ? '' : value));
+  // ==================== <script> ব্লকে নিরাপদে JSON বসানোর হেল্পার ====================
+  // আগে এটা ছিল `JSON.stringify(String(value == null ? '' : value))` — অর্থাৎ মানটাকে
+  // আগে String-এ কোয়ার্স করা হতো। স্ট্রিং পাঠালে ঠিকঠাক কাজ করত, কিন্তু অ্যারে/অবজেক্ট
+  // পাঠালে `String([{...}])` → "[object Object]" হয়ে যেত, ফলে টেমপ্লেটে বসত
+  //     const allRequests = "[object Object]";
+  // এবং ব্রাউজারে "allRequests.filter is not a function" uncaught error দিয়ে পুরো
+  // ক্লায়েন্ট-সাইড রেন্ডারিং ভেঙে পড়ত। এতে একসাথে চারটা পেজ নষ্ট হচ্ছিল:
+  //   • views/payment/admin.ejs      — অ্যাডমিন পেমেন্ট অনুমোদন কিউ (কোনো রো দেখাত না)
+  //   • views/admin/analytics.ejs    — সব চার্টের ডেটা (revenueTrend / userGrowth)
+  //   • views/admin/kyc.ejs          — viewKyc() ডিটেইল মডাল
+  //   • views/profile/wheel.ejs      — স্পিন-হুইলের সেগমেন্ট
+  // এখন আসল মানটাই JSON হিসেবে সিরিয়ালাইজ করা হয়। স্ট্রিং ইনপুটের আউটপুট আগের মতোই
+  // (JSON.stringify('x') === '"x"'), তাই বিদ্যমান স্ট্রিং কলারগুলো অপরিবর্তিত থাকে।
+  // `<`, `>`, `&` ও U+2028/U+2029 ইউনিকোড-এস্কেপ করা হচ্ছে যাতে ডেটার ভেতরে থাকা
+  // "</script>" দিয়ে স্ক্রিপ্ট ব্লক ভেঙে XSS করা না যায়।
+  res.locals.jsonScriptSafe = (value) =>
+    JSON.stringify(value === undefined ? null : value)
+      .replace(/</g, '\\u003c')
+      .replace(/>/g, '\\u003e')
+      .replace(/&/g, '\\u0026')
+      .replace(/\u2028/g, '\\u2028')
+      .replace(/\u2029/g, '\\u2029');
   // views/news-detail.ejs আগে একটা কখনো সংজ্ঞায়িত না-হওয়া escapeHtml() কল করত (ReferenceError,
   // প্রতিটা /news/:id ভিজিটে 500 ক্র্যাশ করত)। এটা একটা প্রকৃত HTML-escape ফাংশন — <%- %>-এর
   // ভেতরে raw HTML বসানোর আগে ব্যবহারকারী/admin-লেখা কনটেন্ট নিরাপদ করতে।
