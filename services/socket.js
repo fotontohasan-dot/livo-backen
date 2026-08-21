@@ -195,8 +195,11 @@ const TOTAL_DEMO_FIXED = 9999999;
 
 const getDemoStats = async () => {
   const heldByUsers = await pool.query(`SELECT COALESCE(SUM(coins),0) AS total FROM users`);
+  // casino_bet এন্ট্রি এখন ঠিক সাইনে (নেগেটিভ, debit) লেখা হয় — মাস্টার অডিট
+  // BUG-002 দেখুন (migrations.js Phase 08)। এখানে wagered টোটাল পূর্বের মতোই
+  // ধনাত্মক দেখাতে -amount নেওয়া হচ্ছে (আচরণ অপরিবর্তিত রাখা)।
   const casinoWagered = await pool.query(
-    `SELECT COALESCE(SUM(amount),0) AS total FROM coin_transactions WHERE type='casino_bet'`
+    `SELECT COALESCE(SUM(-amount),0) AS total FROM coin_transactions WHERE type='casino_bet'`
   );
   const sportsWagered = await pool.query(
     `SELECT COALESCE(SUM(stake),0) AS total FROM bets WHERE is_demo = false`

@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('crypto');
 const router = express.Router();
 const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
@@ -279,7 +280,19 @@ router.post('/play', isAuth, async (req, res) => {
 
     if (['aviator', 'crash-game'].includes(gameSlug)) {
       const crashPoint = (1 + Math.random() * 9).toFixed(2);
-      req.session.gameState = { game: gameSlug, betAmount, crashPoint: parseFloat(crashPoint), startTime: Date.now(), isDemo };
+      const roundToken = crypto.randomUUID();
+      // রাউন্ড এখন DB-তে (game_rounds) রেকর্ড হয় — crash_point/bet_amount/started_at
+      // সার্ভার-সাইড অথরিটি, session শুধু কোন রাউন্ড claim করতে হবে তার token রাখে।
+      // মাস্টার অডিট BUG-001 fix: শুধু session-নির্ভরতায় (ক) elapsed-time যাচাই ছাড়া
+      // যেকোনো multiplier দাবি করা যেত, (খ) সমান্তরাল রিকোয়েস্ট একই session snapshot
+      // পড়ে ডাবল-ক্যাশআউট করতে পারত — atomic DB claim (UPDATE ... WHERE settled_at
+      // IS NULL) দুটোই বন্ধ করে।
+      await client.query(
+        `INSERT INTO game_rounds (round_token, user_id, game_slug, bet_amount, crash_point, is_demo)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [roundToken, userId, gameSlug, betAmount, crashPoint, isDemo]
+      );
+      req.session.gameState = { game: gameSlug, roundToken, isDemo };
       await client.query(`UPDATE users SET ${balanceCol} = ${balanceCol} - $1 WHERE id = $2`, [betAmount, userId]);
       // লেজার-ইনসার্ট আগে COMMIT-এর পরে আলাদা, অ-await করা pool.query(...).catch(...) হিসেবে
       // হতো — ব্যালেন্স কর্তন স্থায়ীভাবে commit হয়ে যাওয়ার পরও ওই ইনসার্ট ব্যর্থ হলে (কানেকশন
@@ -289,8 +302,13 @@ router.post('/play', isAuth, async (req, res) => {
         await client.query('INSERT INTO demo_transactions (user_id, category, type, amount, description) VALUES ($1, $2, $3, $4, $5)',
           [userId, 'casino', 'bet', betAmount, `${supportedGames[gameSlug] || gameSlug} (ডেমো)`]);
       } else {
+        // BUG-002: casino_bet ব্যালেন্স থেকে debit — লেজারে নেগেটিভ হওয়া উচিত, অন্য সব
+        // ব্যালেন্স-প্রভাবিত এন্ট্রির মতো (দেখুন tests/integration/financialLedgerIntegrity.test.js-এর
+        // ইনভেরিয়েন্ট: balance == starting + SUM(coin_transactions))। আগে ধনাত্মক লেখা হতো
+        // বলে এই ইনভেরিয়েন্ট ভাঙত। services/socket.js-এর wagered-total stat সাইন-বদলের
+        // জন্য আলাদাভাবে সামঞ্জস্য করা হয়েছে (আচরণ অপরিবর্তিত)।
         await client.query('INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, $3, $4)',
-          [userId, betAmount, 'casino_bet', `${supportedGames[gameSlug] || gameSlug} বাজি`]);
+          [userId, -betAmount, 'casino_bet', `${supportedGames[gameSlug] || gameSlug} বাজি`]);
       }
       await client.query('COMMIT');
 
@@ -338,8 +356,11 @@ router.post('/play', isAuth, async (req, res) => {
 
     await client.query('INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, $3, $4)', 
                        [userId, netChange, 'game_play', `${supportedGames[gameSlug] || gameSlug} গেম`]);
+    // BUG-002: এখানে game_play এন্ট্রি (netChange) ইতিমধ্যেই আসল ব্যালেন্স-পরিবর্তন ব্যাখ্যা
+    // করে; casino_bet শুধু wager-ভলিউম রেকর্ড — কিন্তু ধনাত্মক লেখা হলে SUM(coin_transactions)
+    // প্রকৃত ব্যালেন্স-পরিবর্তনের চেয়ে betAmount বেশি দেখাত। নেগেটিভ করে ইনভেরিয়েন্ট রাখা হলো।
     await client.query('INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, $3, $4)',
-                       [userId, betAmount, 'casino_bet', `${supportedGames[gameSlug] || gameSlug} বাজি`]);
+                       [userId, -betAmount, 'casino_bet', `${supportedGames[gameSlug] || gameSlug} বাজি`]);
     await client.query('COMMIT');
     req.session.user.coins += netChange;
     broadcastDemoStats().catch(e => console.error('demo stats:', e.message));
@@ -364,13 +385,21 @@ router.post('/play', isAuth, async (req, res) => {
   }
 });
 
+// ক্লায়েন্ট-সাইড multiplier-growth curve-এর সাথে মেলানো (views/games/aviator.ejs:
+// multiplier = 1 + elapsed^1.5 * 0.18, elapsed সেকেন্ডে)। সার্ভার independently এই
+// একই সূত্র দিয়ে হিসাব করে, নেটওয়ার্ক/টাইমার জিটার সামলাতে সামান্য tolerance সহ।
+const MULTIPLIER_TIMING_TOLERANCE = 0.05;
+function maxReachableMultiplier(elapsedSeconds) {
+  return 1 + Math.pow(Math.max(0, elapsedSeconds), 1.5) * 0.18;
+}
+
 router.post('/cashout', isAuth, async (req, res) => {
   const userId = req.session.user.id;
   const { gameSlug, multiplier } = req.body;
 
   const state = req.session.gameState;
 
-  if (!state || state.game !== gameSlug) {
+  if (!state || state.game !== gameSlug || !state.roundToken) {
     return res.status(400).json({ success: false, message: 'কোনো চলমান গেম নেই' });
   }
 
@@ -382,9 +411,41 @@ router.post('/cashout', isAuth, async (req, res) => {
     return res.status(400).json({ success: false, message: 'অকার্যকর মাল্টিপ্লায়ার' });
   }
 
+  // atomic claim: শুধু settled_at IS NULL অবস্থায় থাকা রাউন্ড claim করা যাবে। Postgres-এর
+  // row-level lock সমান্তরাল claim সিরিয়ালাইজ করে — একই round_token-এ একসাথে একাধিক
+  // cashout রিকোয়েস্ট এলে ঠিক একটাই UPDATE সফল হয়, বাকিগুলো ০ সারি পায় (ডাবল-ক্যাশআউট
+  // বন্ধ, replay prevention)। elapsed_seconds একই কোয়েরিতে DB-এর NOW() দিয়ে গণনা করা
+  // হয় — অ্যাপ-সার্ভার ক্লক স্কিউ-এর ওপর নির্ভর করে না।
+  const claim = await pool.query(
+    `UPDATE game_rounds SET settled_at = NOW()
+     WHERE round_token = $1 AND user_id = $2 AND settled_at IS NULL
+     RETURNING bet_amount, crash_point, is_demo, EXTRACT(EPOCH FROM (NOW() - started_at)) AS elapsed_seconds`,
+    [state.roundToken, userId]
+  );
   req.session.gameState = null;
 
-  if (cashMultiplier > state.crashPoint) {
+  if (claim.rowCount === 0) {
+    return res.status(400).json({ success: false, message: 'এই রাউন্ড ইতিমধ্যে নিষ্পত্তি হয়ে গেছে' });
+  }
+
+  const round = claim.rows[0];
+  const betAmount = Number(round.bet_amount);
+  const crashPoint = Number(round.crash_point);
+  const elapsedSeconds = Number(round.elapsed_seconds);
+
+  // BUG-001: এই যাচাই ছাড়া বাজি বসানোর সাথে সাথেই যেকোনো multiplier দাবি করে ক্যাশআউট
+  // করা যেত — crashPoint uniform(1,10) হওয়ায় প্রায় সবসময় জিতে যাওয়া সম্ভব ছিল
+  // (পুনরুৎপাদন করা হয়েছে: ৪০ রাউন্ডে ৩৬ জয়, ১.৫x ইনস্ট্যান্ট ক্যাশআউটে)। এখন claimed
+  // multiplier বাস্তবে অতিবাহিত সময়ে ওঠা সম্ভব এমন সর্বোচ্চ মাল্টিপ্লায়ারের বেশি হতে
+  // পারবে না। রাউন্ড ইতিমধ্যে claim হয়ে গেছে (settled_at সেট), তাই legit ইউজার আবার
+  // চেষ্টা করতে চাইলে নতুন গেম শুরু করতে হবে — এটা ইচ্ছাকৃত: premature claim মানেই
+  // ক্লায়েন্ট UI বাইপাস করে সরাসরি API কল, legit অ্যানিমেশন কখনো displayed multiplier-এর
+  // চেয়ে বেশি claim পাঠায় না।
+  if (cashMultiplier > maxReachableMultiplier(elapsedSeconds) + MULTIPLIER_TIMING_TOLERANCE) {
+    return res.status(400).json({ success: false, message: 'এখনো এই মাল্টিপ্লায়ারে পৌঁছায়নি' });
+  }
+
+  if (cashMultiplier > crashPoint) {
     recordGameResult(userId, false).catch(e => console.error('streak:', e.message));
     return res.json({
       success: true,
@@ -392,11 +453,11 @@ router.post('/cashout', isAuth, async (req, res) => {
       winAmount: 0,
       demo: isDemo,
       newBalance: isDemo ? req.session.user.demo_balance : req.session.user.coins,
-      message: `উড়োজাহাজ ${state.crashPoint}x-এ ক্র্যাশ করেছে!`
+      message: `উড়োজাহাজ ${crashPoint}x-এ ক্র্যাশ করেছে!`
     });
   }
 
-  const winAmount = Math.floor(state.betAmount * cashMultiplier);
+  const winAmount = Math.floor(betAmount * cashMultiplier);
 
   const client = await pool.connect();
   try {
@@ -430,7 +491,7 @@ router.post('/cashout', isAuth, async (req, res) => {
     req.session.user.coins = upd.rows[0].coins;
     broadcastDemoStats().catch(e => console.error('demo stats:', e.message));
 
-    recordGameResult(userId, true, state.betAmount).catch(e => console.error('streak:', e.message));
+    recordGameResult(userId, true, betAmount).catch(e => console.error('streak:', e.message));
     checkBadges(userId).catch(e => console.error('badges:', e.message));
     if (winAmount > 0) addWin(userId, winAmount, cashbackCategory(gameSlug)).catch(e => console.error('cashback:', e.message));
 

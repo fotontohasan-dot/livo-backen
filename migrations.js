@@ -1789,6 +1789,49 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_device_sessions_browser_os ON device_sessions(browser, os);`);
     console.log("✅ Phase 07 কোয়েরি পারফরম্যান্স ইনডেক্স ready");
 
+    // ==================== Phase 08: মাস্টার অডিট — Aviator/Crash রাউন্ড অখণ্ডতা ====================
+    // BUG-001: routes/games.js-এ cashout শুধু session-এর gameState-এর ওপর নির্ভর করত।
+    // (ক) কোনো elapsed-time যাচাই ছিল না — বেট বসানোর সাথে সাথেই ক্লায়েন্ট যেকোনো
+    //     multiplier দাবি করে ক্যাশআউট করতে পারত (crashPoint uniform(1,10) হওয়ায়
+    //     প্রায় সবসময় জিতে যাওয়া যেত — পুনরুৎপাদন করা হয়েছে, ৪০ রাউন্ডে ৩৬ জয়)।
+    // (খ) session-ভিত্তিক single-use স্টেট concurrent request-এর বিরুদ্ধে atomic নয় —
+    //     resave:false হওয়ায় একাধিক সমান্তরাল অনুরোধ একই gameState পড়ে ফেলতে পারে,
+    //     একই রাউন্ড একাধিকবার ক্যাশআউট হয় (পুনরুৎপাদন: ১০টা সমান্তরাল রিকোয়েস্টে ৯টা সফল)।
+    // এই টেবিল রাউন্ডের crash_point/bet_amount/started_at DB-তে রাখে এবং settled_at
+    // atomic `UPDATE ... WHERE settled_at IS NULL RETURNING` দিয়ে একবারই claim করা যায় —
+    // Postgres-এর row-level lock স্বাভাবিকভাবেই সমান্তরাল claim সিরিয়ালাইজ করে।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS game_rounds (
+        id BIGSERIAL PRIMARY KEY,
+        round_token UUID NOT NULL UNIQUE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        game_slug VARCHAR(50) NOT NULL,
+        bet_amount NUMERIC(14,2) NOT NULL,
+        crash_point NUMERIC(6,2) NOT NULL,
+        is_demo BOOLEAN NOT NULL DEFAULT false,
+        started_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        settled_at TIMESTAMP
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_game_rounds_user ON game_rounds(user_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_game_rounds_token ON game_rounds(round_token);`);
+    console.log("✅ Phase 08 game_rounds টেবিল ready");
+
+    // ==================== Phase 08: মাস্টার অডিট — BUG-002 casino_bet লেজার সাইন ====================
+    // routes/games.js-এ 'casino_bet' এন্ট্রি সবসময় ধনাত্মক betAmount হিসেবে লেখা হতো, অথচ
+    // এটা প্রকৃতপক্ষে ব্যালেন্স থেকে টাকা কাটার (debit) এন্ট্রি — অন্য সব ফ্লোতে (withdraw,
+    // admin add/remove — দেখুন tests/integration/financialLedgerIntegrity.test.js) এই কোডবেসের
+    // মূল ইনভেরিয়েন্ট হলো balance == starting_balance + SUM(coin_transactions.amount)। ধনাত্মক
+    // casino_bet এই ইনভেরিয়েন্ট ভাঙত: প্রতিটা ক্যাসিনো বাজিতে SUM(amount) আসল ব্যালেন্স-পরিবর্তনের
+    // চেয়ে betAmount বেশি দেখাত (aviator/crash-এ ২×betAmount, বাকি ইনস্ট্যান্ট গেমে ১×betAmount,
+    // কারণ সেখানে game_play এন্ট্রিও আলাদাভাবে লেখা হয়)। কোড-সাইন এখন ঠিক করা হলো (নিচে
+    // routes/games.js দেখুন); এই ব্যাকফিল পুরনো সারিগুলোকেও সঙ্গতিপূর্ণ করে — শুধু ledger-এর
+    // amount কলাম বদলায়, users.coins বা কোনো বাস্তব ব্যালেন্সে হাত দেয় না, তাই idempotent ও নিরাপদ।
+    const casinoBetBackfill = await pool.query(
+      `UPDATE coin_transactions SET amount = -amount WHERE type = 'casino_bet' AND amount > 0`
+    );
+    console.log(`✅ Phase 08 casino_bet ledger sign backfill: ${casinoBetBackfill.rowCount} সারি ঠিক করা হলো`);
+
   } catch (err) {
     console.error("❌ Migration error:", err.message);
   }
