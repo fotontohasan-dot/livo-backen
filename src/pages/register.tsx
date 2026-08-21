@@ -5,9 +5,11 @@
 // =============================================
 
 import { useState } from 'react';
+import { useRouter } from 'next/router';
 import { Eye, EyeOff, Check, X } from 'lucide-react';
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -52,15 +54,37 @@ export default function RegisterPage() {
     if (!validateForm()) return;
 
     setLoading(true);
-    // TODO: Backend API call এখানে করবেন
-    console.log('Registration Data:', formData);
-    setLoading(false);
+    try {
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setErrors(data.errors || { general: 'রেজিস্ট্রেশন ব্যর্থ হয়েছে। পরে আবার চেষ্টা করুন।' });
+        return;
+      }
+
+      router.push('/');
+    } catch (err) {
+      setErrors({ general: 'নেটওয়ার্ক সমস্যা হয়েছে। পরে আবার চেষ্টা করুন।' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-background text-text-primary flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <form onSubmit={handleSubmit} className="space-y-6">
+
+          {errors.general && (
+            <p className="text-danger text-sm bg-danger/10 border border-danger/30 rounded-lg px-4 py-3">
+              {errors.general}
+            </p>
+          )}
 
           {/* Username */}
           <div>
@@ -73,6 +97,7 @@ export default function RegisterPage() {
               className="w-full bg-surface-elevated border border-border rounded-lg px-4 py-3 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent"
               placeholder="কয় খান"
             />
+            {errors.username && <p className="text-danger text-sm mt-1">{errors.username}</p>}
           </div>
 
           {/* Email */}
@@ -94,6 +119,7 @@ export default function RegisterPage() {
                 OTP পাঠান
               </button>
             </div>
+            {errors.email && <p className="text-danger text-sm mt-1">{errors.email}</p>}
           </div>
 
           {/* Password with Show/Hide */}
@@ -160,6 +186,7 @@ export default function RegisterPage() {
               className="w-full bg-surface-elevated border border-border rounded-lg px-4 py-3 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent"
               placeholder="রেফারেল কোড থাকলে দিন"
             />
+            {errors.referralCode && <p className="text-danger text-sm mt-1">{errors.referralCode}</p>}
           </div>
 
           {/* Submit Button */}
