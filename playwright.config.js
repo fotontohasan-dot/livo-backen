@@ -5,7 +5,10 @@ module.exports = {
   projects: [
     {
       name: 'chromium',
-      use: { browserName: 'chromium' },
+      use: {
+        browserName: 'chromium',
+        launchOptions: { executablePath: '/opt/pw-browsers/chromium' },
+      },
     },
   ],
 };
