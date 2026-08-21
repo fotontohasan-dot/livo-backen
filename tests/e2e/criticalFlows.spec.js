@@ -375,8 +375,9 @@ test.describe('অ্যাডমিন ফ্লো', () => {
     // এরপর আলাদা করে সাবমিট বাটনে ক্লিক করার দরকার নেই (বাটনটা ততক্ষণে নতুন পেজে চলে যাওয়ায়
     // আর খুঁজে পাওয়া যায় না)।
     const code = speakeasy.totp({ secret: totpSecret, encoding: 'base32' });
+    const navigated = page.waitForURL((url) => !url.pathname.includes('/admin/login'), { waitUntil: 'domcontentloaded' });
     await page.fill('input[name="token"]', code);
-    await page.waitForLoadState('domcontentloaded');
+    await navigated;
     expect(page.url()).not.toContain('/admin/login');
     assertClean(issues);
 
