@@ -5,87 +5,87 @@
 
   <div class="wh-topbar">
     <a href="/profile" class="wh-back"><i class="fas fa-arrow-left"></i></a>
-    <span class="wh-title">ওয়ালেট হাব</span>
+    <span class="wh-title"><%= t.wallet_hub %></span>
     <span style="width:40px;"></span>
   </div>
 
   <!-- ==================== WALLET SUMMARY CARD ==================== -->
   <div class="wh-card wh-summary-card">
     <div class="wh-card-title-row">
-      <div class="wh-card-title"><i class="fas fa-wallet" style="color:var(--gold);"></i> ওয়ালেট সামারি</div>
-      <button onclick="refreshWalletBalance()" id="whRefreshBtn" title="রিফ্রেশ" class="wh-icon-btn"><i class="fas fa-sync-alt" id="whRefreshIcon"></i></button>
+      <div class="wh-card-title"><i class="fas fa-wallet" style="color:var(--gold);"></i> <%= t.wallet_summary %></div>
+      <button onclick="refreshWalletBalance()" id="whRefreshBtn" title="<%= t.refresh %>" class="wh-icon-btn"><i class="fas fa-sync-alt" id="whRefreshIcon"></i></button>
     </div>
     <div id="whBalanceText" class="wh-total-balance">৳ <%= Number(coins).toLocaleString('bn-BD') %></div>
 
     <div class="wh-grid-4">
       <div class="wh-mini">
-        <span class="wh-mini-label">মেইন ব্যালেন্স</span>
+        <span class="wh-mini-label"><%= t.main_balance %></span>
         <span class="wh-mini-value">৳ <%= Number(coins).toLocaleString('bn-BD') %></span>
       </div>
       <div class="wh-mini">
-        <span class="wh-mini-label">বোনাস ব্যালেন্স</span>
+        <span class="wh-mini-label"><%= t.bonus_balance %></span>
         <span class="wh-mini-value">৳ 0</span>
       </div>
       <div class="wh-mini">
-        <span class="wh-mini-label">লকড বোনাস</span>
+        <span class="wh-mini-label"><%= t.locked_bonus %></span>
         <span class="wh-mini-value">৳ 0</span>
       </div>
       <div class="wh-mini">
-        <span class="wh-mini-label">উইথড্র-যোগ্য</span>
+        <span class="wh-mini-label"><%= t.withdrawable %></span>
         <span class="wh-mini-value">৳ <%= Number(coins).toLocaleString('bn-BD') %></span>
       </div>
     </div>
-    <div class="wh-updated">সর্বশেষ আপডেট: <span id="whUpdatedText">এখনই</span></div>
+    <div class="wh-updated"><%= t.last_updated %> <span id="whUpdatedText"><%= t.just_now %></span></div>
   </div>
 
   <!-- ==================== QUICK ACTIONS ==================== -->
   <div class="wh-quick-actions">
-    <a href="/payment/deposit" class="wh-qa wh-qa-primary"><i class="fas fa-plus-circle"></i><span>ডিপোজিট</span></a>
-    <a href="/payment/withdraw" class="wh-qa"><i class="fas fa-hand-holding-usd"></i><span>উইথড্র</span></a>
-    <a href="/profile/cards" class="wh-qa"><i class="fas fa-credit-card"></i><span>মাই কার্ডস<% if (cardCount > 0) { %> (<%= cardCount %>)<% } %></span></a>
-    <a href="/payment/history" class="wh-qa"><i class="fas fa-clock-rotate-left"></i><span>ট্রানজেকশন হিস্টরি</span></a>
+    <a href="/payment/deposit" class="wh-qa wh-qa-primary"><i class="fas fa-plus-circle"></i><span><%= t.deposit %></span></a>
+    <a href="/payment/withdraw" class="wh-qa"><i class="fas fa-hand-holding-usd"></i><span><%= t.withdraw %></span></a>
+    <a href="/profile/cards" class="wh-qa"><i class="fas fa-credit-card"></i><span><%= t.my_cards_count %><% if (cardCount > 0) { %> (<%= cardCount %>)<% } %></span></a>
+    <a href="/payment/history" class="wh-qa"><i class="fas fa-clock-rotate-left"></i><span><%= t.transaction_history %></span></a>
   </div>
 
   <!-- ==================== MERGED WALLET PAGES ==================== -->
   <div class="wh-card">
     <div class="wh-card-title-row">
-      <div class="wh-card-title"><i class="fas fa-layer-group" style="color:var(--gold);"></i> সব ওয়ালেট পেজ</div>
+      <div class="wh-card-title"><i class="fas fa-layer-group" style="color:var(--gold);"></i> <%= t.all_wallet_pages %></div>
     </div>
     <div class="wh-link-list">
-      <a href="/payment/deposit" class="wh-link-item"><i class="fas fa-plus-circle"></i><span>ডিপোজিট</span><i class="fas fa-chevron-right wh-chev"></i></a>
-      <a href="/payment/withdraw" class="wh-link-item"><i class="fas fa-hand-holding-usd"></i><span>উইথড্র</span><i class="fas fa-chevron-right wh-chev"></i></a>
-      <a href="/profile/cards" class="wh-link-item"><i class="fas fa-credit-card"></i><span>ব্যাংক কার্ডস</span><i class="fas fa-chevron-right wh-chev"></i></a>
-      <a href="/payment/history" class="wh-link-item"><i class="fas fa-receipt"></i><span>ট্রানজেকশন হিস্টরি</span><i class="fas fa-chevron-right wh-chev"></i></a>
-      <a href="/payment/history?type=deposit" class="wh-link-item"><i class="fas fa-file-arrow-up"></i><span>ডিপোজিট হিস্টরি</span><i class="fas fa-chevron-right wh-chev"></i></a>
-      <a href="/payment/history?type=withdraw" class="wh-link-item"><i class="fas fa-file-arrow-down"></i><span>উইথড্র হিস্টরি</span><i class="fas fa-chevron-right wh-chev"></i></a>
+      <a href="/payment/deposit" class="wh-link-item"><i class="fas fa-plus-circle"></i><span><%= t.deposit %></span><i class="fas fa-chevron-right wh-chev"></i></a>
+      <a href="/payment/withdraw" class="wh-link-item"><i class="fas fa-hand-holding-usd"></i><span><%= t.withdraw %></span><i class="fas fa-chevron-right wh-chev"></i></a>
+      <a href="/profile/cards" class="wh-link-item"><i class="fas fa-credit-card"></i><span><%= t.bank_cards %></span><i class="fas fa-chevron-right wh-chev"></i></a>
+      <a href="/payment/history" class="wh-link-item"><i class="fas fa-receipt"></i><span><%= t.transaction_history %></span><i class="fas fa-chevron-right wh-chev"></i></a>
+      <a href="/payment/history?type=deposit" class="wh-link-item"><i class="fas fa-file-arrow-up"></i><span><%= t.deposit_history %></span><i class="fas fa-chevron-right wh-chev"></i></a>
+      <a href="/payment/history?type=withdraw" class="wh-link-item"><i class="fas fa-file-arrow-down"></i><span><%= t.withdraw_history %></span><i class="fas fa-chevron-right wh-chev"></i></a>
     </div>
   </div>
 
   <!-- ==================== WALLET STATISTICS ==================== -->
   <div class="wh-card">
     <div class="wh-card-title-row">
-      <div class="wh-card-title"><i class="fas fa-chart-pie" style="color:var(--gold);"></i> ওয়ালেট পরিসংখ্যান</div>
+      <div class="wh-card-title"><i class="fas fa-chart-pie" style="color:var(--gold);"></i> <%= t.wallet_stats %></div>
     </div>
     <div class="wh-grid-3">
       <div class="wh-stat-box">
-        <span class="wh-stat-label">মোট ডিপোজিট</span>
+        <span class="wh-stat-label"><%= t.total_deposit %></span>
         <span class="wh-stat-value">৳ <%= Number(walletStats.totalDeposit).toLocaleString('bn-BD') %></span>
       </div>
       <div class="wh-stat-box">
-        <span class="wh-stat-label">মোট উইথড্র</span>
+        <span class="wh-stat-label"><%= t.total_withdraw %></span>
         <span class="wh-stat-value">৳ <%= Number(walletStats.totalWithdraw).toLocaleString('bn-BD') %></span>
       </div>
       <div class="wh-stat-box">
-        <span class="wh-stat-label">বর্তমান ব্যালেন্স</span>
+        <span class="wh-stat-label"><%= t.current_balance %></span>
         <span class="wh-stat-value">৳ <%= Number(coins).toLocaleString('bn-BD') %></span>
       </div>
     </div>
     <div class="wh-30d-row">
-      <div class="wh-30d-title">গত ৩০ দিন</div>
+      <div class="wh-30d-title"><%= t.last_30_days %></div>
       <div class="wh-30d-grid">
-        <div><span class="wh-mini-label">ডিপোজিট</span><span class="wh-mini-value">৳ <%= Number(walletStats.deposit30d).toLocaleString('bn-BD') %></span></div>
-        <div><span class="wh-mini-label">উইথড্র</span><span class="wh-mini-value">৳ <%= Number(walletStats.withdraw30d).toLocaleString('bn-BD') %></span></div>
-        <div><span class="wh-mini-label">পেন্ডিং</span><span class="wh-mini-value"><%= walletStats.pendingCount %></span></div>
+        <div><span class="wh-mini-label"><%= t.deposit %></span><span class="wh-mini-value">৳ <%= Number(walletStats.deposit30d).toLocaleString('bn-BD') %></span></div>
+        <div><span class="wh-mini-label"><%= t.withdraw %></span><span class="wh-mini-value">৳ <%= Number(walletStats.withdraw30d).toLocaleString('bn-BD') %></span></div>
+        <div><span class="wh-mini-label"><%= t.pending %></span><span class="wh-mini-value"><%= walletStats.pendingCount %></span></div>
       </div>
     </div>
   </div>
@@ -93,8 +93,8 @@
   <!-- ==================== RECENT TRANSACTIONS ==================== -->
   <div class="wh-card">
     <div class="wh-card-title-row">
-      <div class="wh-card-title"><i class="fas fa-list-ul" style="color:var(--gold);"></i> সাম্প্রতিক লেনদেন</div>
-      <a href="/payment/history" class="wh-mini-btn">সব দেখুন <i class="fas fa-chevron-right" style="font-size:9px;"></i></a>
+      <div class="wh-card-title"><i class="fas fa-list-ul" style="color:var(--gold);"></i> <%= t.recent_transactions %></div>
+      <a href="/payment/history" class="wh-mini-btn"><%= t.view_all %> <i class="fas fa-chevron-right" style="font-size:9px;"></i></a>
     </div>
     <% if (recentTx && recentTx.length > 0) { %>
     <div class="wh-tx-list">
@@ -117,7 +117,7 @@
       <% }); %>
     </div>
     <% } else { %>
-    <div class="wh-empty">এখনো কোনো লেনদেন নেই।</div>
+    <div class="wh-empty"><%= t.no_transactions_yet %></div>
     <% } %>
   </div>
 

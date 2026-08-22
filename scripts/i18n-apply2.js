@@ -60,7 +60,11 @@ function main() {
     if (!fs.existsSync(full)) { misses.push(`${file}: FILE NOT FOUND`); continue; }
     let src = fs.readFileSync(full, 'utf8');
 
-    for (const [text, key, english] of entries) {
+    // দীর্ঘতম স্ট্রিং আগে প্রতিস্থাপন করা হয়। নাহলে একটা ছোট শব্দ (যেমন "উত্তোলন")
+    // বড় বাক্যের ভেতরে বসে থাকলে সেটাও বদলে যায় এবং বাক্যটা ভেঙে যায় — বাস্তবে
+    // withdraw.ejs-এ ঠিক সেটাই ঘটেছিল।
+    const ordered = [...entries].sort((a, b) => b[0].length - a[0].length);
+    for (const [text, key, english] of ordered) {
       if (!(key in bn)) { bn[key] = text; added += 1; }
       if (!(key in en)) en[key] = english;
       const r = replaceLiteral(src, text, `<%= t.${key} %>`);
