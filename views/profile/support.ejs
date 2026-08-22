@@ -5,7 +5,7 @@
 
   <div class="sh-topbar">
     <a href="/profile" class="sh-back"><i class="fas fa-arrow-left"></i></a>
-    <span class="sh-title">সাপোর্ট সেন্টার</span>
+    <span class="sh-title"><%= t.support_center %></span>
     <span style="width:40px;"></span>
   </div>
 
@@ -13,32 +13,32 @@
     <div class="sh-link-list">
       <a href="/chat" class="sh-link-item">
         <span class="sh-link-icon"><i class="fas fa-headset"></i></span>
-        <span class="sh-link-mid"><span class="sh-link-title">কাস্টমার সার্ভিস</span><span class="sh-link-sub">লাইভ চ্যাট সাপোর্ট</span></span>
+        <span class="sh-link-mid"><span class="sh-link-title"><%= t.customer_service %></span><span class="sh-link-sub"><%= t.live_chat_support %></span></span>
         <i class="fas fa-chevron-right sh-chev"></i>
       </a>
       <a href="/chat" class="sh-link-item">
         <span class="sh-link-icon"><i class="fas fa-circle-question"></i></span>
-        <span class="sh-link-mid"><span class="sh-link-title">হেল্প সেন্টার</span><span class="sh-link-sub">সাহায্য ও গাইড</span></span>
+        <span class="sh-link-mid"><span class="sh-link-title"><%= t.help_center %></span><span class="sh-link-sub"><%= t.help_and_guides %></span></span>
         <i class="fas fa-chevron-right sh-chev"></i>
       </a>
       <a href="/notifications" class="sh-link-item">
         <span class="sh-link-icon"><i class="fas fa-envelope"></i></span>
-        <span class="sh-link-mid"><span class="sh-link-title">ইন্টারনাল মেসেজ</span><span class="sh-link-sub">আপনার নোটিফিকেশন ও বার্তা</span></span>
+        <span class="sh-link-mid"><span class="sh-link-title"><%= t.internal_messages %></span><span class="sh-link-sub"><%= t.your_notifications_messages %></span></span>
         <i class="fas fa-chevron-right sh-chev"></i>
       </a>
       <a href="/profile/feedback" class="sh-link-item">
         <span class="sh-link-icon"><i class="fas fa-comment-dots"></i></span>
-        <span class="sh-link-mid"><span class="sh-link-title">সাজেশন</span><span class="sh-link-sub">মতামত বা পরামর্শ দিন</span></span>
+        <span class="sh-link-mid"><span class="sh-link-title"><%= t.suggestions %></span><span class="sh-link-sub"><%= t.give_feedback %></span></span>
         <i class="fas fa-chevron-right sh-chev"></i>
       </a>
     </div>
   </div>
 
   <div class="sh-card">
-    <div class="sh-card-title"><i class="fas fa-circle-info" style="color:var(--gold);"></i> সচরাচর জিজ্ঞাসা (FAQ)</div>
-    <details class="sh-faq"><summary>টাকা জমা দিতে কতক্ষণ লাগে?</summary><div class="sh-faq-body">সাধারণত ডিপোজিট মিনিটের মধ্যেই কনফার্ম হয়ে যায়। সমস্যা হলে কাস্টমার সার্ভিসে যোগাযোগ করুন।</div></details>
-    <details class="sh-faq"><summary>উইথড্র করতে কী লাগে?</summary><div class="sh-faq-body">ইমেইল ভেরিফিকেশন এবং উইথড্র PIN সেট থাকা প্রয়োজন। বিস্তারিত অ্যাকাউন্ট সেন্টারে দেখুন।</div></details>
-    <details class="sh-faq"><summary>KYC কেন প্রয়োজন?</summary><div class="sh-faq-body">নিরাপদ লেনদেন ও অ্যাকাউন্ট সুরক্ষার জন্য KYC ভেরিফিকেশন প্রয়োজন হতে পারে।</div></details>
+    <div class="sh-card-title"><i class="fas fa-circle-info" style="color:var(--gold);"></i> <%= t.faq_title %></div>
+    <details class="sh-faq"><summary><%= t.faq_deposit_time_q %></summary><div class="sh-faq-body"><%= t.faq_deposit_time_a %></div></details>
+    <details class="sh-faq"><summary><%= t.faq_withdraw_req_q %></summary><div class="sh-faq-body"><%= t.faq_withdraw_req_a %></div></details>
+    <details class="sh-faq"><summary><%= t.faq_kyc_q %></summary><div class="sh-faq-body"><%= t.faq_kyc_a %></div></details>
   </div>
 </div>
 

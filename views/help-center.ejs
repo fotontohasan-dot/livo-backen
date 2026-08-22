@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ব্যাটিং হেল্প সেন্টার</title>
+    <title><%= t.help_center_title %></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
@@ -345,61 +345,61 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>ব্যাটিং হেল্প সেন্টার</h1>
-            <p>টিকেট, ফুটবল, ডিপোজিট, অ্যাকাউন্ট এবং অন্যান্য সকল ইস্যুতে সাহায্যের জন্য আমরা এখানে আছি</p>
+            <h1><%= t.help_center_title %></h1>
+            <p><%= t.help_center_subtitle %></p>
         </div>
 
         <div class="main-content">
             <div class="sidebar">
                 <div class="logo">
-                    <h2>দ্রুত সাহায্য</h2>
+                    <h2><%= t.quick_help %></h2>
                 </div>
-                <h3>ক্যাটাগরি</h3>
+                <h3><%= t.category %></h3>
                 <ul class="category-list">
-                    <li data-msg="ডিপোজিট সমস্যা"><i class="fas fa-wallet"></i> ডিপোজিট সমস্যা</li>
-                    <li data-msg="উইথড্র সমস্যা"><i class="fas fa-money-bill-wave"></i> উইথড্র সমস্যা</li>
-                    <li data-msg="লগইন সমস্যা"><i class="fas fa-right-to-bracket"></i> লগইন সমস্যা</li>
-                    <li data-msg="অ্যাকাউন্ট ভেরিফিকেশন"><i class="fas fa-id-card"></i> KYC ভেরিফিকেশন</li>
-                    <li data-msg="বোনাস সমস্যা"><i class="fas fa-gift"></i> বোনাস সমস্যা</li>
-                    <li data-msg="টিকেট ইস্যু"><i class="fas fa-ticket-alt"></i> টিকেট ইস্যু</li>
-                    <li data-msg="ফুটবল ইস্যু"><i class="fas fa-futbol"></i> ফুটবল ইস্যু</li>
+                    <li data-msg="<%= t.deposit_issue %>"><i class="fas fa-wallet"></i> <%= t.deposit_issue %></li>
+                    <li data-msg="<%= t.withdraw_issue %>"><i class="fas fa-money-bill-wave"></i> <%= t.withdraw_issue %></li>
+                    <li data-msg="<%= t.login_issue %>"><i class="fas fa-right-to-bracket"></i> <%= t.login_issue %></li>
+                    <li data-msg="অ্যাকাউন্ট ভেরিফিকেশন"><i class="fas fa-id-card"></i> <%= t.kyc_verification_title %></li>
+                    <li data-msg="<%= t.bonus_issue %>"><i class="fas fa-gift"></i> <%= t.bonus_issue %></li>
+                    <li data-msg="<%= t.ticket_issue %>"><i class="fas fa-ticket-alt"></i> <%= t.ticket_issue %></li>
+                    <li data-msg="<%= t.football_issue %>"><i class="fas fa-futbol"></i> <%= t.football_issue %></li>
                 </ul>
             </div>
 
             <div class="chat-container">
                 <div class="chat-header">
-                    <span>সাপোর্ট বট</span>
-                    <span class="online-indicator"><span class="online-dot"></span> অনলাইন</span>
+                    <span><%= t.support_bot %></span>
+                    <span class="online-indicator"><span class="online-dot"></span> <%= t.online %></span>
                 </div>
 
                 <div class="chat-messages" id="chat-messages">
                     <div class="message bot-message">
-                        হ্যালো! আমি Livo সাপোর্ট বট। আপনার সমস্যাটি লিখুন অথবা বাম পাশের ক্যাটাগরি থেকে বেছে নিন।
+                        <%= t.support_bot_greeting %>
                         <div class="message-time" id="init-time"></div>
                     </div>
                 </div>
 
-                <div class="bot-typing" id="bot-typing">বট লিখছে...</div>
+                <div class="bot-typing" id="bot-typing"><%= t.bot_typing %></div>
 
                 <div class="quick-replies">
-                    <button class="quick-reply" data-msg="ডিপোজিট সমস্যা">ডিপোজিট সমস্যা</button>
-                    <button class="quick-reply" data-msg="উইথড্র সমস্যা">উইথড্র সমস্যা</button>
-                    <button class="quick-reply" data-msg="বোনাস সমস্যা">বোনাস সমস্যা</button>
-                    <button class="quick-reply" data-msg="লগইন সমস্যা">লগইন সমস্যা</button>
+                    <button class="quick-reply" data-msg="<%= t.deposit_issue %>"><%= t.deposit_issue %></button>
+                    <button class="quick-reply" data-msg="<%= t.withdraw_issue %>"><%= t.withdraw_issue %></button>
+                    <button class="quick-reply" data-msg="<%= t.bonus_issue %>"><%= t.bonus_issue %></button>
+                    <button class="quick-reply" data-msg="<%= t.login_issue %>"><%= t.login_issue %></button>
                 </div>
 
                 <div class="chat-input-container">
                     <div class="chat-input-row">
-                        <input type="text" class="chat-input" id="chat-input" placeholder="আপনার সমস্যা লিখুন...">
-                        <button class="send-button" id="send-button">পাঠান</button>
+                        <input type="text" class="chat-input" id="chat-input" placeholder="<%= t.describe_your_issue %>">
+                        <button class="send-button" id="send-button"><%= t.send %></button>
                     </div>
-                    <div class="cf-warning" id="cf-warning">⚠️ অনুপযুক্ত/অশ্লীল কনটেন্ট শনাক্ত হয়েছে — অনুগ্রহ করে লেখাটি ঠিক করুন।</div>
+                    <div class="cf-warning" id="cf-warning"><%= t.inappropriate_content %></div>
                 </div>
             </div>
         </div>
 
         <div class="footer">
-            সমস্যা সমাধান না হলে লাইভ এজেন্টের সাথে কথা বলুন — প্রোফাইল → সাপোর্ট চ্যাট।
+            <%= t.contact_live_agent %>
         </div>
     </div>
 
