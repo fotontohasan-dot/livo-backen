@@ -5,15 +5,15 @@
 
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
     <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
-    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">👑 VIP প্রোগ্রাম</h1>
+    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;"><%= t.vip_program %></h1>
   </div>
 
   <% if (vip) { %>
-    <!-- বর্তমান লেভেল কার্ড -->
+    <!-- বর্তমান <%= t.level_paren %> কার্ড -->
     <div style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:16px;padding:24px;margin-bottom:16px;text-align:center;">
       <div style="font-size:44px;margin-bottom:4px;">👑</div>
       <div style="color:var(--text-main);font-size:22px;font-weight:900;"><%= vip.current.name %></div>
-      <div style="color:rgba(255,255,255,0.9);font-size:13px;margin-top:2px;">VIP লেভেল <%= vip.level %></div>
+      <div style="color:rgba(255,255,255,0.9);font-size:13px;margin-top:2px;"><%= t.vip_level %> <%= vip.level %></div>
     </div>
 
     <!-- প্রোগ্রেস -->
@@ -21,7 +21,7 @@
          data-progress="<%= vip.progress %>" data-total-turnover="<%= vip.totalTurnover %>" data-to-next="<%= vip.toNext %>"
          data-next-name="<%= vip.next ? vip.next.name : '' %>" data-is-max="<%= vip.next ? '0' : '1' %>">
       <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-        <span style="color:#94a3b8;font-size:13px;">মোট টার্নওভার</span>
+        <span style="color:#94a3b8;font-size:13px;"><%= t.total_turnover %></span>
         <span id="vipTurnoverText" style="color:#f59e0b;font-size:14px;font-weight:bold;"><%= Number(vip.totalTurnover).toLocaleString('bn-BD') %></span>
       </div>
 
@@ -39,22 +39,22 @@
       </div>
 
       <div style="color:#64748b;font-size:11px;text-align:center;margin-top:2px;">
-        প্রোগ্রেস: <span id="vipProgressNum" style="color:#f59e0b;font-weight:bold;">0</span> / ১০০০
+        <%= t.progress_label %> <span id="vipProgressNum" style="color:#f59e0b;font-weight:bold;">0</span> / ১০০০
       </div>
 
       <% if (vip.next) { %>
         <div style="color:#94a3b8;font-size:12px;text-align:center;margin-top:8px;">
-          পরের লেভেল <strong style="color:var(--text-main);"><%= vip.next.name %></strong> পেতে আরও
-          <strong id="vipToNextText" style="color:#f59e0b;"><%= Number(vip.toNext).toLocaleString('bn-BD') %></strong> টার্নওভার দরকার
+          <%= t.next_level %> <strong style="color:var(--text-main);"><%= vip.next.name %></strong> <%= t.need_more %>
+          <strong id="vipToNextText" style="color:#f59e0b;"><%= Number(vip.toNext).toLocaleString('bn-BD') %></strong> <%= t.turnover_required %>
         </div>
       <% } else { %>
-        <div id="vipMaxMsg" style="color:#10b981;font-size:13px;text-align:center;font-weight:bold;margin-top:8px;">🎉 আপনি সর্বোচ্চ VIP লেভেলে আছেন!</div>
+        <div id="vipMaxMsg" style="color:#10b981;font-size:13px;text-align:center;font-weight:bold;margin-top:8px;"><%= t.max_vip_reached %></div>
       <% } %>
     </div>
 
-    <!-- সব লেভেল তালিকা -->
+    <!-- সব <%= t.level_paren %> তালিকা -->
     <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;">
-      <div style="color:var(--text-main);font-weight:bold;margin-bottom:12px;">📊 VIP লেভেলসমূহ</div>
+      <div style="color:var(--text-main);font-weight:bold;margin-bottom:12px;"><%= t.vip_levels %></div>
       <% vip.levels.forEach(l => {
         const isCurrent = l.level === vip.level;
         const reached = vip.totalTurnover >= Number(l.min_turnover);
@@ -62,18 +62,18 @@
         <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;margin-bottom:8px;border-radius:10px;background:<%= isCurrent ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.03)' %>;border:1px solid <%= isCurrent ? '#f59e0b' : 'transparent' %>;">
           <div>
             <div style="color:<%= reached ? '#fff' : '#94a3b8' %>;font-size:14px;font-weight:bold;">
-              <%= reached ? '✅' : '🔒' %> <%= l.name %> (লেভেল <%= l.level %>)
+              <%= reached ? '✅' : '🔒' %> <%= l.name %> (<%= t.level_paren %> <%= l.level %>)
             </div>
             <div style="color:#94a3b8;font-size:11px;margin-top:2px;">
-              টার্নওভার: <%= Number(l.min_turnover).toLocaleString('bn-BD') %>
+              <%= t.turnover_label %> <%= Number(l.min_turnover).toLocaleString('bn-BD') %>
             </div>
           </div>
           <div style="text-align:right;">
             <% if (l.upgrade_bonus > 0) { %>
               <div style="color:#10b981;font-size:12px;font-weight:bold;">+<%= l.upgrade_bonus %></div>
-              <div style="color:#94a3b8;font-size:10px;">আপগ্রেড বোনাস</div>
+              <div style="color:#94a3b8;font-size:10px;"><%= t.upgrade_bonus %></div>
             <% } else { %>
-              <div style="color:#94a3b8;font-size:11px;">শুরুর লেভেল</div>
+              <div style="color:#94a3b8;font-size:11px;"><%= t.starting_level %></div>
             <% } %>
           </div>
         </div>
@@ -81,13 +81,13 @@
     </div>
 
     <p style="font-size:.75rem;color:#94a3b8;text-align:center;margin-top:1rem;line-height:1.6;">
-      যত বেশি খেলবেন (টার্নওভার), তত উঁচু VIP লেভেল।<br>
-      প্রতি নতুন লেভেলে আপগ্রেড বোনাস স্বয়ংক্রিয়ভাবে যোগ হয়।
+      <%= t.vip_note_1 %><br>
+      <%= t.vip_note_2 %>
     </p>
 
   <% } else { %>
     <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:30px;text-align:center;color:#94a3b8;">
-      VIP তথ্য লোড করা যায়নি। পরে আবার চেষ্টা করুন।
+      <%= t.vip_load_failed %>
     </div>
   <% } %>
 

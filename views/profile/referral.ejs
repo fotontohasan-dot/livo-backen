@@ -5,13 +5,13 @@
 
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
     <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
-    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">👥 বন্ধুদের আমন্ত্রণ</h1>
+    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;"><%= t.invite_friends_title %></h1>
   </div>
 
   <!-- ব্যানার -->
   <div style="background:linear-gradient(135deg,#10b981,#06b6d4);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center;">
     <div style="font-size:40px;margin-bottom:8px;">🎁</div>
-    <div style="color:var(--text-main);font-size:16px;font-weight:bold;margin-bottom:4px;">বন্ধু রেফার করে আয় করুন!</div>
+    <div style="color:var(--text-main);font-size:16px;font-weight:bold;margin-bottom:4px;"><%= t.refer_and_earn %></div>
     <div style="color:rgba(255,255,255,0.9);font-size:13px;">
       বন্ধুর প্রথম ডিপোজিটে বোনাস + আজীবন কমিশন (২.৫% / ১.৫% / ০.৮%)
     </div>
@@ -21,50 +21,50 @@
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
     <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:14px;text-align:center;">
       <div style="color:#f59e0b;font-size:22px;font-weight:bold;"><%= stats.totalReferrals %></div>
-      <div style="color:#94a3b8;font-size:11px;margin-top:4px;">মোট রেফার</div>
+      <div style="color:#94a3b8;font-size:11px;margin-top:4px;"><%= t.total_referrals %></div>
     </div>
     <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:14px;text-align:center;">
       <div style="color:#10b981;font-size:22px;font-weight:bold;"><%= stats.successfulReferrals %></div>
-      <div style="color:#94a3b8;font-size:11px;margin-top:4px;">সফল রেফার</div>
+      <div style="color:#94a3b8;font-size:11px;margin-top:4px;"><%= t.successful_referrals %></div>
     </div>
     <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:14px;text-align:center;">
       <div style="color:#fbbf24;font-size:22px;font-weight:bold;"><%= Number(stats.totalEarnings).toLocaleString('bn-BD') %></div>
-      <div style="color:#94a3b8;font-size:11px;margin-top:4px;">মোট আয়</div>
+      <div style="color:#94a3b8;font-size:11px;margin-top:4px;"><%= t.total_earnings %></div>
     </div>
   </div>
 
   <!-- পরের বোনাস তথ্য -->
   <div style="background:rgba(245,158,11,0.1);border:1px solid #f59e0b;border-radius:12px;padding:14px;margin-bottom:16px;text-align:center;">
-    <div style="color:var(--text-main);font-size:13px;">আপনার পরের সফল রেফারে পাবেন</div>
+    <div style="color:var(--text-main);font-size:13px;"><%= t.next_referral_reward %></div>
     <div style="color:#f59e0b;font-size:24px;font-weight:bold;margin-top:4px;"><%= stats.nextBonus %> কয়েন</div>
-    <div style="color:#94a3b8;font-size:11px;margin-top:4px;">শর্ত: বন্ধুকে ৫০০+ টাকা ডিপোজিট করতে হবে</div>
+    <div style="color:#94a3b8;font-size:11px;margin-top:4px;"><%= t.referral_condition %></div>
   </div>
 
   <!-- রেফারেল কোড -->
   <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;margin-bottom:14px;">
-    <div style="color:#94a3b8;font-size:13px;margin-bottom:8px;">আপনার রেফারেল কোড</div>
+    <div style="color:#94a3b8;font-size:13px;margin-bottom:8px;"><%= t.your_referral_code %></div>
     <div style="display:flex;gap:8px;align-items:center;">
       <div id="ref-code" style="flex:1;background:rgba(255,255,255,0.1);border-radius:8px;padding:12px;color:#f59e0b;font-size:18px;font-weight:bold;letter-spacing:2px;text-align:center;">
         <%= user.referral_code || 'N/A' %>
       </div>
-      <button onclick="copyCode()" style="background:#8b5cf6;color:#fff;border:none;border-radius:8px;padding:12px 16px;cursor:pointer;">কপি</button>
+      <button onclick="copyCode()" style="background:#8b5cf6;color:#fff;border:none;border-radius:8px;padding:12px 16px;cursor:pointer;"><%= t.copy_short %></button>
     </div>
   </div>
 
   <!-- রেফারেল লিংক -->
   <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;margin-bottom:16px;">
-    <div style="color:#94a3b8;font-size:13px;margin-bottom:8px;">আপনার রেফারেল লিংক</div>
+    <div style="color:#94a3b8;font-size:13px;margin-bottom:8px;"><%= t.your_referral_link %></div>
     <div style="display:flex;gap:8px;align-items:center;">
       <div style="flex:1;background:rgba(255,255,255,0.1);border-radius:8px;padding:10px;color:var(--text-main);font-size:12px;word-break:break-all;" id="ref-link">
         <%= baseUrl %>/register?ref=<%= user.referral_code %>
       </div>
-      <button onclick="shareLink()" style="background:#10b981;color:#fff;border:none;border-radius:8px;padding:12px 16px;cursor:pointer;">শেয়ার</button>
+      <button onclick="shareLink()" style="background:#10b981;color:#fff;border:none;border-radius:8px;padding:12px 16px;cursor:pointer;"><%= t.share %></button>
     </div>
   </div>
 
   <!-- আমার টিম -->
   <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;margin-bottom:16px;">
-    <div style="color:var(--text-main);font-weight:bold;margin-bottom:12px;">👨‍👩‍👧 আমার টিম</div>
+    <div style="color:var(--text-main);font-weight:bold;margin-bottom:12px;"><%= t.my_team %></div>
     <% if (stats.team && stats.team.length > 0) { %>
       <% stats.team.forEach(t => { %>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
@@ -74,23 +74,23 @@
           </div>
           <div>
             <% if (t.signup_bonus_paid) { %>
-              <span style="color:#10b981;font-size:11px;">✅ সফল</span>
+              <span style="color:#10b981;font-size:11px;"><%= t.successful %></span>
             <% } else if (t.first_deposit_done) { %>
-              <span style="color:#f59e0b;font-size:11px;">ডিপোজিট হয়েছে</span>
+              <span style="color:#f59e0b;font-size:11px;"><%= t.deposited %></span>
             <% } else { %>
-              <span style="color:#94a3b8;font-size:11px;">⏳ অপেকমাণ</span>
+              <span style="color:#94a3b8;font-size:11px;"><%= t.awaiting %></span>
             <% } %>
           </div>
         </div>
       <% }) %>
     <% } else { %>
-      <div style="color:#94a3b8;font-size:13px;text-align:center;padding:10px;">এখনো কেউ রেফার হয়নি</div>
+      <div style="color:#94a3b8;font-size:13px;text-align:center;padding:10px;"><%= t.no_referrals_yet %></div>
     <% } %>
   </div>
 
   <!-- আয়ের হিস্ট্রি -->
   <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;">
-    <div style="color:var(--text-main);font-weight:bold;margin-bottom:12px;">💰 আয়ের হিস্ট্রি</div>
+    <div style="color:var(--text-main);font-weight:bold;margin-bottom:12px;"><%= t.earnings_history %></div>
     <% if (stats.history && stats.history.length > 0) { %>
       <% stats.history.forEach(h => { %>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
@@ -106,7 +106,7 @@
         </div>
       <% }) %>
     <% } else { %>
-      <div style="color:#94a3b8;font-size:13px;text-align:center;padding:10px;">এখনো কোনো আয় নেই</div>
+      <div style="color:#94a3b8;font-size:13px;text-align:center;padding:10px;"><%= t.no_earnings_yet %></div>
     <% } %>
   </div>
 </div>
