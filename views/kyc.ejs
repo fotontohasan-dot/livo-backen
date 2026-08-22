@@ -2,7 +2,7 @@
 <%- include('partials/navbar') %>
 
 <div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto">
-  <h1 style="color:var(--gold);font-size:24px;font-weight:800;margin-bottom:6px"><%= t.kyc_verification_title %></h1>
+  <h1 style="color: var(--text-accent);font-size:24px;font-weight:800;margin-bottom:6px"><%= t.kyc_verification_title %></h1>
   <p style="color:var(--text-muted);font-size:13px;margin-bottom:20px"><%= t.kyc_intro %></p>
 
   <% if (kyc && kyc.status === 'approved') { %>
@@ -19,14 +19,14 @@
     <!-- ===== পর্যালোচনাধীন ===== -->
     <div class="glass-card" style="padding:28px 20px;text-align:center;border:1px solid rgba(234,179,8,0.35);border-radius:20px;background:rgba(234,179,8,0.06)">
       <div style="width:64px;height:64px;border-radius:50%;background:rgba(234,179,8,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
-        <i class="fas fa-hourglass-half" style="color:var(--gold);font-size:24px"></i>
+        <i class="fas fa-hourglass-half" style="color: var(--text-accent);font-size:24px"></i>
       </div>
-      <h2 style="color:var(--gold);font-size:18px;font-weight:800;margin-bottom:6px"><%= t.kyc_pending_title %></h2>
+      <h2 style="color: var(--text-accent);font-size:18px;font-weight:800;margin-bottom:6px"><%= t.kyc_pending_title %></h2>
       <p style="color:var(--text-muted);font-size:13px;margin-bottom:14px"><%= t.kyc_pending_desc %></p>
       <div style="text-align:left;background:rgba(255,255,255,0.03);border-radius:12px;padding:14px;font-size:12px;color:#cbd5e1">
-        <div style="margin-bottom:4px"><b style="color:#94a3b8"><%= t.name_label %></b> <%= kyc.full_name %></div>
-        <div style="margin-bottom:4px"><b style="color:#94a3b8"><%= t.document_number_label %></b> <%= kyc.document_number %></div>
-        <div><b style="color:#94a3b8"><%= t.submitted_on %></b> <%= new Date(kyc.created_at).toLocaleDateString('bn-BD') %></div>
+        <div style="margin-bottom:4px"><b style="color:var(--text-muted)"><%= t.name_label %></b> <%= kyc.full_name %></div>
+        <div style="margin-bottom:4px"><b style="color:var(--text-muted)"><%= t.document_number_label %></b> <%= kyc.document_number %></div>
+        <div><b style="color:var(--text-muted)"><%= t.submitted_on %></b> <%= new Date(kyc.created_at).toLocaleDateString('bn-BD') %></div>
       </div>
     </div>
 
@@ -46,7 +46,7 @@
 
     <!-- আপলোড গাইডলাইন -->
     <div class="glass-card" style="padding:16px 18px;border-radius:16px;margin-bottom:20px;background:rgba(234,179,8,0.06);border:1px solid rgba(234,179,8,0.25)">
-      <div style="color:var(--gold);font-weight:700;font-size:13px;margin-bottom:8px"><i class="fas fa-circle-info"></i> <%= t.before_upload_note %></div>
+      <div style="color: var(--text-accent);font-weight:700;font-size:13px;margin-bottom:8px"><i class="fas fa-circle-info"></i> <%= t.before_upload_note %></div>
       <ul style="margin:0;padding-left:18px;color:#cbd5e1;font-size:12.5px;line-height:1.9">
         <li><%= t.kyc_doc_types_note %></li>
         <li><%= t.kyc_photo_clear_note %></li>
@@ -90,7 +90,7 @@
       <input type="hidden" name="document_url" id="documentUrl" value="">
 
       <label id="uploadBox" for="documentFile" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border:2px dashed rgba(234,179,8,0.4);border-radius:16px;padding:28px 16px;cursor:pointer;margin-bottom:8px;background:rgba(255,255,255,0.02);text-align:center">
-        <i id="uploadIcon" class="fas fa-cloud-arrow-up" style="color:var(--gold);font-size:26px"></i>
+        <i id="uploadIcon" class="fas fa-cloud-arrow-up" style="color: var(--text-accent);font-size:26px"></i>
         <span id="uploadText" style="color:var(--text-muted);font-size:13px"><%= t.tap_to_upload %></span>
         <img id="previewImg" style="display:none;max-width:140px;max-height:140px;border-radius:10px;margin-top:6px" />
       </label>

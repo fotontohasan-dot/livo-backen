@@ -36,7 +36,7 @@
             <div style="width:<%= m.pct %>%;height:100%;background:linear-gradient(90deg,#10b981,#34d399);transition:width .5s;"></div>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div style="color:#94a3b8;font-size:11px;">
+            <div style="color:var(--text-muted);font-size:11px;">
               <%= Number(m.progress).toLocaleString('bn-BD') %> / <%= Number(m.target).toLocaleString('bn-BD') %>
             </div>
 
@@ -49,13 +49,13 @@
                 </button>
               </form>
             <% } else { %>
-              <span style="color:#94a3b8;font-size:12px;">চলমান...</span>
+              <span style="color:var(--text-muted);font-size:12px;">চলমান...</span>
             <% } %>
           </div>
         </div>
       <% }) %>
     <% } else { %>
-      <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:30px;text-align:center;color:#94a3b8;">
+      <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:30px;text-align:center;color: var(--text-muted);">
         এই মুহূর্তে কোনো মিশন নেই।
       </div>
     <% } %>
@@ -73,7 +73,7 @@
     });
   </script>
 
-  <p style="font-size:.75rem;color:#94a3b8;text-align:center;margin-top:1rem;line-height:1.6;">
+  <p style="font-size:.75rem;color:var(--text-muted);text-align:center;margin-top:1rem;line-height:1.6;">
     ⏰ প্রতিদিন রাত ১২টায় মিশন রিসেট হয়।<br>
     গেম বা স্পোর্টস — দুটোই মিশনে গণনা হয়।
   </p>

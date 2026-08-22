@@ -29,7 +29,7 @@ export const IconGrid = ({ items, columns = 4 }: IconGridProps) => {
             onClick={item.onClick}
             className="flex flex-col items-center gap-2 p-2 sm:p-3 rounded-2xl hover:bg-accent-soft transition-colors group relative min-w-0"
           >
-            <div className="text-icon-primary group-hover:text-accent group-hover:scale-110 transition-all">
+            <div className="text-icon-primary group-hover:text-accent-text group-hover:scale-110 transition-all">
               {item.icon}
             </div>
             <span className="text-[10px] sm:text-[11px] font-medium text-text-muted group-hover:text-text-primary transition-colors text-center leading-tight break-words">

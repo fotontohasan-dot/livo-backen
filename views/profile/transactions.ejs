@@ -13,7 +13,7 @@
             <div style="font-size:24px"><%= t.type === 'deposit' ? '⬇️' : t.type === 'withdraw' ? '⬆️' : '🎯' %></div>
             <div>
               <div style="color:var(--text-main);font-size:14px"><%= t.description || t.type %></div>
-              <div style="color:#94a3b8;font-size:12px"><%= new Date(t.created_at).toLocaleDateString('bn-BD') %></div>
+              <div style="color:var(--text-muted);font-size:12px"><%= new Date(t.created_at).toLocaleDateString('bn-BD') %></div>
             </div>
           </div>
           <div style="color:<%= t.amount > 0 ? '#10b981' : '#ef4444' %>;font-weight:bold;font-size:16px">
@@ -23,7 +23,7 @@
       <% }) %>
     </div>
   <% } else { %>
-    <div style="text-align:center;padding:40px;color:#94a3b8">
+    <div style="text-align:center;padding:40px;color:var(--text-muted)">
       <div style="font-size:48px;margin-bottom:12px">📭</div>
       <div>কোনো লেনদেন নেই</div>
     </div>

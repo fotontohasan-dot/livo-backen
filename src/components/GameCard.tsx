@@ -19,7 +19,7 @@ export const GameCard = ({ name, emoji, provider, badge, slug }: GameCardProps) 
         <div className={`absolute top-2 left-2 z-10 px-2 py-0.5 rounded text-[10px] font-bold ${
           badge === 'HOT' ? 'bg-accent text-on-accent' :
           badge === 'NEW' ? 'bg-success text-white' :
-          'bg-accent-soft text-accent'
+          'bg-accent-soft text-accent-text'
         }`}>
           {badge}
         </div>
@@ -31,7 +31,7 @@ export const GameCard = ({ name, emoji, provider, badge, slug }: GameCardProps) 
 
       <div className="p-3 bg-surface/85 backdrop-blur-sm border-t border-border">
         <div className="text-sm font-bold truncate text-text-primary">{name}</div>
-        <div className="text-[10px] text-accent font-medium tracking-wider">{provider}</div>
+        <div className="text-[10px] text-accent-text font-medium tracking-wider">{provider}</div>
       </div>
 
       <motion.div

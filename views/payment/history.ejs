@@ -41,13 +41,13 @@
             <div>
               <div style="color:var(--text-main); font-size: 14px; font-weight: 700;">
                 <%= tx.type === 'deposit' ? '⬇️ ডিপোজিট' : '⬆️ উইথড্র' %>
-                <% if (tx.gateway === 'sslcommerz') { %><span style="font-size: 10px; color: var(--gold); font-weight: 600;"> (অটো)</span><% } %>
+                <% if (tx.gateway === 'sslcommerz') { %><span style="font-size: 10px; color: var(--text-accent); font-weight: 600;"> (অটো)</span><% } %>
               </div>
               <div style="color: var(--text-muted); font-size: 11px; margin-top: 3px;"><%= tx.method || '-' %> · <%= new Date(tx.created_at).toLocaleString('bn-BD') %></div>
               <% if (tx.transaction_id) { %><div style="color: var(--text-muted); font-size: 11px; margin-top: 2px;">TrxID: <%= tx.transaction_id %></div><% } %>
             </div>
             <div style="text-align: right;">
-              <div style="color: var(--gold); font-size: 15px; font-weight: 800;">৳<%= Number(tx.amount).toLocaleString('bn-BD') %></div>
+              <div style="color: var(--text-accent); font-size: 15px; font-weight: 800;">৳<%= Number(tx.amount).toLocaleString('bn-BD') %></div>
               <div style="color: <%= statusColor %>; font-size: 11px; font-weight: 700; margin-top: 3px;"><%= statusText %></div>
             </div>
           </div>

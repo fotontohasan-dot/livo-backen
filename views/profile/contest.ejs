@@ -40,25 +40,25 @@
         %>
           <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;margin-bottom:6px;border-radius:10px;background:<%= l.isMe ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.03)' %>;border:1px solid <%= l.isMe ? '#f59e0b' : 'transparent' %>;">
             <div style="display:flex;align-items:center;gap:10px;">
-              <span style="color:#94a3b8;font-size:14px;font-weight:bold;min-width:24px;"><%= medal %></span>
+              <span style="color:var(--text-muted);font-size:14px;font-weight:bold;min-width:24px;"><%= medal %></span>
               <span style="color:var(--text-main);font-size:13px;"><%= l.username %><%= l.isMe ? ' (আপনি)' : '' %></span>
             </div>
             <span style="color:#10b981;font-size:13px;font-weight:bold;"><%= l.referrals %> রেফার</span>
           </div>
         <% }) %>
       <% } else { %>
-        <div style="color:#94a3b8;font-size:13px;text-align:center;padding:10px;">এই মাসে এখনো কেউ রেফার করেনি। আপনিই প্রথম হোন!</div>
+        <div style="color:var(--text-muted);font-size:13px;text-align:center;padding:10px;">এই মাসে এখনো কেউ রেফার করেনি। আপনিই প্রথম হোন!</div>
       <% } %>
 
       <!-- আমার অবস্থান (টপ ২০-তে না থাকলে) -->
       <% if (contest.myRank) { %>
-        <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.1);text-align:center;color:#94a3b8;font-size:12px;">
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.1);text-align:center;color:var(--text-muted);font-size:12px;">
           এই মাসে আপনার রেফার: <strong style="color:#f59e0b;"><%= contest.myRank.referrals %></strong> জন — লিডারবোর্ডে উঠতে আরও রেফার করুন!
         </div>
       <% } %>
     </div>
 
-    <p style="font-size:.75rem;color:#94a3b8;text-align:center;margin-top:1rem;line-height:1.6;">
+    <p style="font-size:.75rem;color:var(--text-muted);text-align:center;margin-top:1rem;line-height:1.6;">
       মাস শেষে শীর্ষ রেফারকারীদের প্রাইজ দেওয়া হবে।<br>
       আপনার রেফারেল লিংক বন্ধুদের সাথে শেয়ার করুন!
     </p>
@@ -73,7 +73,7 @@
         <div style="color:var(--text-main);font-weight:bold;font-size:15px;margin-bottom:12px;">📜 আগের মাসের ফলাফল</div>
         <% pastContests.forEach(pc => { %>
           <div style="background:rgba(255,255,255,0.05);border-radius:14px;padding:16px;margin-bottom:12px;">
-            <div style="color:#94a3b8;font-size:12px;margin-bottom:8px;"><%= pc.monthName %></div>
+            <div style="color:var(--text-muted);font-size:12px;margin-bottom:8px;"><%= pc.monthName %></div>
             <% pc.leaders.forEach(l => {
               const medal = l.rank === 1 ? '🥇' : l.rank === 2 ? '🥈' : l.rank === 3 ? '🥉' : l.rank + '.';
             %>
@@ -88,7 +88,7 @@
     <% } %>
 
   <% } else { %>
-    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:30px;text-align:center;color:#94a3b8;">
+    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:30px;text-align:center;color: var(--text-muted);">
       কনটেস্ট তথ্য লোড করা যায়নি। পরে আবার চেষ্টা করুন।
     </div>
   <% } %>

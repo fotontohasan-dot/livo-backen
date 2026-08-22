@@ -8,7 +8,7 @@
   <% banners.forEach(function(a) { %>
     <div class="livo-announce-banner" data-ann-id="<%= a.id %>" style="background:linear-gradient(90deg,#1a1a1a,#2a2205);border-bottom:1px solid rgba(234,179,8,0.35);color:#fff;padding:10px 16px;font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
       <span><i class="fas fa-bullhorn" style="color:var(--gold,#EAB308);margin-right:6px;"></i><%= annLang === 'en' && a.title_en ? a.title_en : (a.title_bn || '') %> — <%= annLang === 'en' && a.message_en ? a.message_en : a.message_bn %></span>
-      <button onclick="livoDismissAnnouncement(<%= a.id %>, this.closest('.livo-announce-banner'))" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:15px;">&times;</button>
+      <button onclick="livoDismissAnnouncement(<%= a.id %>, this.closest('.livo-announce-banner'))" style="background:none;border:none;color: var(--text-muted);cursor:pointer;font-size:15px;">&times;</button>
     </div>
   <% }) %>
 

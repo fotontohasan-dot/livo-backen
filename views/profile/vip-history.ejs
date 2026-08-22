@@ -10,11 +10,11 @@
 
   <div style="display:flex;gap:8px;margin-bottom:16px;">
     <div style="flex:1;background:rgba(255,255,255,0.05);border-radius:12px;padding:12px;text-align:center;">
-      <div style="color:#94a3b8;font-size:11px;">মোট ক্লেইম</div>
+      <div style="color:var(--text-muted);font-size:11px;">মোট ক্লেইম</div>
       <div style="color:#10b981;font-weight:900;font-size:18px;"><%= rewardHistory.total %></div>
     </div>
     <div style="flex:1;background:rgba(255,255,255,0.05);border-radius:12px;padding:12px;text-align:center;">
-      <div style="color:#94a3b8;font-size:11px;">মোট আপগ্রেড</div>
+      <div style="color:var(--text-muted);font-size:11px;">মোট আপগ্রেড</div>
       <div style="color:#f59e0b;font-weight:900;font-size:18px;"><%= upgradeHistory.total %></div>
     </div>
   </div>
@@ -25,7 +25,7 @@
       <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
         <div>
           <div style="color:#fff;font-size:13px;font-weight:600;"><%= r.description %></div>
-          <div style="color:#64748b;font-size:11px;margin-top:2px;"><%= new Date(r.created_at).toLocaleString('bn-BD') %></div>
+          <div style="color:var(--text-muted);font-size:11px;margin-top:2px;"><%= new Date(r.created_at).toLocaleString('bn-BD') %></div>
         </div>
         <div style="color:#10b981;font-weight:800;font-size:14px;white-space:nowrap;">+<%= Number(r.amount).toLocaleString('bn-BD') %></div>
       </div>
@@ -38,7 +38,7 @@
       </div>
     <% } %>
   <% } else { %>
-    <div style="text-align:center;color:#64748b;padding:24px;font-size:13px;">এখনো কোনো VIP রিওয়ার্ড ক্লেইম করা হয়নি।</div>
+    <div style="text-align:center;color:var(--text-muted);padding:24px;font-size:13px;">এখনো কোনো VIP রিওয়ার্ড ক্লেইম করা হয়নি।</div>
   <% } %>
 
   <div style="color:var(--text-main);font-weight:bold;margin:20px 0 10px;">⬆️ VIP আপগ্রেড হিস্ট্রি</div>
@@ -47,13 +47,13 @@
       <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
         <div>
           <div style="color:#fff;font-size:13px;font-weight:600;">লেভেল <%= u.from_level %> → লেভেল <%= u.to_level %></div>
-          <div style="color:#64748b;font-size:11px;margin-top:2px;"><%= new Date(u.created_at).toLocaleString('bn-BD') %></div>
+          <div style="color:var(--text-muted);font-size:11px;margin-top:2px;"><%= new Date(u.created_at).toLocaleString('bn-BD') %></div>
         </div>
         <div style="color:#f59e0b;font-weight:800;font-size:14px;white-space:nowrap;">+<%= Number(u.bonus).toLocaleString('bn-BD') %></div>
       </div>
     <% }) %>
   <% } else { %>
-    <div style="text-align:center;color:#64748b;padding:24px;font-size:13px;">এখনো কোনো VIP আপগ্রেড হয়নি।</div>
+    <div style="text-align:center;color:var(--text-muted);padding:24px;font-size:13px;">এখনো কোনো VIP আপগ্রেড হয়নি।</div>
   <% } %>
 </div>
 <%- include('../partials/bottom-nav') %>

@@ -20,7 +20,7 @@ export const QuickLinkButton = ({ href, icon, label, badge, color }: QuickLinkPr
           </div>
         )}
       </div>
-      <span className="text-[10px] font-bold text-text-primary group-hover:text-accent transition-colors">{label}</span>
+      <span className="text-[10px] font-bold text-text-primary group-hover:text-accent-text transition-colors">{label}</span>
     </Link>
   );
 };

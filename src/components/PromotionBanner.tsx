@@ -16,7 +16,7 @@ export const PromotionBanner = ({ title, description, cta, image, className }: P
       style={{ backgroundImage: 'var(--hero-bg)' }}
     >
       <div className="z-10 relative flex-1">
-        <h2 className="text-3xl font-black text-accent italic leading-tight tracking-tighter uppercase">
+        <h2 className="text-3xl font-black text-accent-text italic leading-tight tracking-tighter uppercase">
           {title}
         </h2>
         <p className="text-text-secondary text-sm mt-1 font-medium max-w-[200px]">
@@ -28,7 +28,7 @@ export const PromotionBanner = ({ title, description, cta, image, className }: P
       </div>
 
       <div className="absolute right-0 top-1/2 -translate-y-1/2 opacity-20 pointer-events-none">
-        <Trophy size={140} className="text-accent" />
+        <Trophy size={140} className="text-accent-text" />
       </div>
 
       {/* Decorative particles/glow */}

@@ -14,7 +14,7 @@
     </div>
     <div style="display: flex; gap: 8px; align-items: center;">
       <input type="date" name="from" value="<%= filter.from %>" style="flex:1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px 10px; color:var(--text-main); font-size: 12px;">
-      <span style="color: #94a3b8; font-size: 12px;">থেকে</span>
+      <span style="color:var(--text-muted); font-size: 12px;">থেকে</span>
       <input type="date" name="to" value="<%= filter.to %>" style="flex:1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px 10px; color:var(--text-main); font-size: 12px;">
       <button type="submit" style="background: linear-gradient(90deg,#f59e0b,#fbbf24); border: none; color: #000; padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 800;">ফিল্টার</button>
     </div>
@@ -22,11 +22,11 @@
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
     <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;text-align:center;border:1px solid rgba(255,255,255,0.1)">
-      <div style="color:#94a3b8;font-size:12px;margin-bottom:8px">মোট বেট</div>
+      <div style="color:var(--text-muted);font-size:12px;margin-bottom:8px">মোট বেট</div>
       <div style="color:#f59e0b;font-size:28px;font-weight:bold"><%= stats.total %></div>
     </div>
     <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;text-align:center;border:1px solid rgba(255,255,255,0.1)">
-      <div style="color:#94a3b8;font-size:12px;margin-bottom:8px">জয় / হার</div>
+      <div style="color:var(--text-muted);font-size:12px;margin-bottom:8px">জয় / হার</div>
       <div style="color:#10b981;font-size:22px;font-weight:bold"><%= stats.won %> <span style="color:#ef4444">/ <%= stats.lost %></span></div>
     </div>
   </div>
@@ -38,11 +38,11 @@
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">
     <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:16px;border:1px solid rgba(255,255,255,0.1)">
-      <div style="color:#94a3b8;font-size:11px;margin-bottom:6px">মোট স্টেক</div>
+      <div style="color:var(--text-muted);font-size:11px;margin-bottom:6px">মোট স্টেক</div>
       <div style="color:var(--text-main);font-size:18px;font-weight:bold">৳<%= stats.total_staked.toLocaleString('bn-BD') %></div>
     </div>
     <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:16px;border:1px solid rgba(255,255,255,0.1)">
-      <div style="color:#94a3b8;font-size:11px;margin-bottom:6px">মোট জিতেছে</div>
+      <div style="color:var(--text-muted);font-size:11px;margin-bottom:6px">মোট জিতেছে</div>
       <div style="color:#10b981;font-size:18px;font-weight:bold">৳<%= stats.total_won_amount.toLocaleString('bn-BD') %></div>
     </div>
   </div>

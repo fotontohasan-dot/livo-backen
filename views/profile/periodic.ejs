@@ -9,19 +9,19 @@
   </div>
 
   <!-- সাপ্তাহিক ক্যাশব্যাক -->
-  <div style="background:linear-gradient(135deg,#0ea5e9,#0284c7);border-radius:16px;padding:20px;margin-bottom:16px;">
-    <div style="color:var(--text-main);font-size:16px;font-weight:bold;margin-bottom:4px;">🗓️ সাপ্তাহিক ক্যাশব্যাক</div>
+  <div style="background:linear-gradient(135deg,#0B7EB2,#026598);border-radius:16px;padding:20px;margin-bottom:16px;">
+    <div style="color:#fff;font-size:16px;font-weight:bold;margin-bottom:4px;">🗓️ সাপ্তাহিক ক্যাশব্যাক</div>
     <div style="color:rgba(255,255,255,0.9);font-size:12px;margin-bottom:14px;">গত ৭ দিনের নিট লসের ১০% (সর্বোচ্চ ৫০,০০০)</div>
 
     <% if (weekly) { %>
       <div style="background:rgba(0,0,0,0.2);border-radius:10px;padding:12px;margin-bottom:12px;">
         <div style="display:flex;justify-content:space-between;padding:4px 0;">
           <span style="color:rgba(255,255,255,0.85);font-size:13px;">গত ৭ দিনের নিট লস</span>
-          <span style="color:var(--text-main);font-size:13px;font-weight:bold;"><%= Number(weekly.netLoss).toLocaleString('bn-BD') %></span>
+          <span style="color:#fff;font-size:13px;font-weight:bold;"><%= Number(weekly.netLoss).toLocaleString('bn-BD') %></span>
         </div>
         <div style="display:flex;justify-content:space-between;padding:4px 0;">
           <span style="color:rgba(255,255,255,0.85);font-size:13px;">ক্যাশব্যাক (১০%)</span>
-          <span style="color:var(--text-main);font-size:15px;font-weight:bold;"><%= Number(weekly.amount).toLocaleString('bn-BD') %> কয়েন</span>
+          <span style="color:#fff;font-size:15px;font-weight:bold;"><%= Number(weekly.amount).toLocaleString('bn-BD') %> কয়েন</span>
         </div>
       </div>
       <% if (weekly.claimed) { %>
@@ -42,18 +42,18 @@
 
   <!-- মাসিক রিওয়ার্ড -->
   <div style="background:linear-gradient(135deg,#7c3aed,#5b21b6);border-radius:16px;padding:20px;margin-bottom:16px;">
-    <div style="color:var(--text-main);font-size:16px;font-weight:bold;margin-bottom:4px;">📆 মাসিক রিওয়ার্ড</div>
+    <div style="color:#fff;font-size:16px;font-weight:bold;margin-bottom:4px;">📆 মাসিক রিওয়ার্ড</div>
     <div style="color:rgba(255,255,255,0.9);font-size:12px;margin-bottom:14px;">গত মাসের মোট বাজির উপর টিয়ার বোনাস</div>
 
     <% if (monthly) { %>
       <div style="background:rgba(0,0,0,0.2);border-radius:10px;padding:12px;margin-bottom:12px;">
         <div style="display:flex;justify-content:space-between;padding:4px 0;">
           <span style="color:rgba(255,255,255,0.85);font-size:13px;">গত মাসের মোট বাজি</span>
-          <span style="color:var(--text-main);font-size:13px;font-weight:bold;"><%= Number(monthly.turnover).toLocaleString('bn-BD') %></span>
+          <span style="color:#fff;font-size:13px;font-weight:bold;"><%= Number(monthly.turnover).toLocaleString('bn-BD') %></span>
         </div>
         <div style="display:flex;justify-content:space-between;padding:4px 0;">
           <span style="color:rgba(255,255,255,0.85);font-size:13px;">প্রাপ্য বোনাস</span>
-          <span style="color:var(--text-main);font-size:15px;font-weight:bold;"><%= Number(monthly.bonus).toLocaleString('bn-BD') %> কয়েন</span>
+          <span style="color:#fff;font-size:15px;font-weight:bold;"><%= Number(monthly.bonus).toLocaleString('bn-BD') %> কয়েন</span>
         </div>
       </div>
 
@@ -83,7 +83,7 @@
     <% } %>
   </div>
 
-  <p style="font-size:.75rem;color:#94a3b8;text-align:center;line-height:1.6;">
+  <p style="font-size:.75rem;color:var(--text-muted);text-align:center;line-height:1.6;">
     সাপ্তাহিক ক্যাশব্যাক সপ্তাহে একবার, মাসিক রিওয়ার্ড মাসে একবার ক্লেইম করা যায়।
   </p>
 

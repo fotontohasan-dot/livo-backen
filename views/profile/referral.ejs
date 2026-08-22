@@ -21,15 +21,15 @@
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
     <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:14px;text-align:center;">
       <div style="color:#f59e0b;font-size:22px;font-weight:bold;"><%= stats.totalReferrals %></div>
-      <div style="color:#94a3b8;font-size:11px;margin-top:4px;"><%= t.total_referrals %></div>
+      <div style="color:var(--text-muted);font-size:11px;margin-top:4px;"><%= t.total_referrals %></div>
     </div>
     <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:14px;text-align:center;">
       <div style="color:#10b981;font-size:22px;font-weight:bold;"><%= stats.successfulReferrals %></div>
-      <div style="color:#94a3b8;font-size:11px;margin-top:4px;"><%= t.successful_referrals %></div>
+      <div style="color:var(--text-muted);font-size:11px;margin-top:4px;"><%= t.successful_referrals %></div>
     </div>
     <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:14px;text-align:center;">
       <div style="color:#fbbf24;font-size:22px;font-weight:bold;"><%= Number(stats.totalEarnings).toLocaleString('bn-BD') %></div>
-      <div style="color:#94a3b8;font-size:11px;margin-top:4px;"><%= t.total_earnings %></div>
+      <div style="color:var(--text-muted);font-size:11px;margin-top:4px;"><%= t.total_earnings %></div>
     </div>
   </div>
 
@@ -37,12 +37,12 @@
   <div style="background:rgba(245,158,11,0.1);border:1px solid #f59e0b;border-radius:12px;padding:14px;margin-bottom:16px;text-align:center;">
     <div style="color:var(--text-main);font-size:13px;"><%= t.next_referral_reward %></div>
     <div style="color:#f59e0b;font-size:24px;font-weight:bold;margin-top:4px;"><%= stats.nextBonus %> কয়েন</div>
-    <div style="color:#94a3b8;font-size:11px;margin-top:4px;"><%= t.referral_condition %></div>
+    <div style="color:var(--text-muted);font-size:11px;margin-top:4px;"><%= t.referral_condition %></div>
   </div>
 
   <!-- রেফারেল কোড -->
   <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;margin-bottom:14px;">
-    <div style="color:#94a3b8;font-size:13px;margin-bottom:8px;"><%= t.your_referral_code %></div>
+    <div style="color:var(--text-muted);font-size:13px;margin-bottom:8px;"><%= t.your_referral_code %></div>
     <div style="display:flex;gap:8px;align-items:center;">
       <div id="ref-code" style="flex:1;background:rgba(255,255,255,0.1);border-radius:8px;padding:12px;color:#f59e0b;font-size:18px;font-weight:bold;letter-spacing:2px;text-align:center;">
         <%= user.referral_code || 'N/A' %>
@@ -53,7 +53,7 @@
 
   <!-- রেফারেল লিংক -->
   <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;margin-bottom:16px;">
-    <div style="color:#94a3b8;font-size:13px;margin-bottom:8px;"><%= t.your_referral_link %></div>
+    <div style="color:var(--text-muted);font-size:13px;margin-bottom:8px;"><%= t.your_referral_link %></div>
     <div style="display:flex;gap:8px;align-items:center;">
       <div style="flex:1;background:rgba(255,255,255,0.1);border-radius:8px;padding:10px;color:var(--text-main);font-size:12px;word-break:break-all;" id="ref-link">
         <%= baseUrl %>/register?ref=<%= user.referral_code %>
@@ -70,7 +70,7 @@
         <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
           <div>
             <div style="color:var(--text-main);font-size:13px;"><%= t.username %></div>
-            <div style="color:#94a3b8;font-size:10px;"><%= new Date(t.created_at).toLocaleDateString('bn-BD') %></div>
+            <div style="color:var(--text-muted);font-size:10px;"><%= new Date(t.created_at).toLocaleDateString('bn-BD') %></div>
           </div>
           <div>
             <% if (t.signup_bonus_paid) { %>
@@ -78,13 +78,13 @@
             <% } else if (t.first_deposit_done) { %>
               <span style="color:#f59e0b;font-size:11px;"><%= t.deposited %></span>
             <% } else { %>
-              <span style="color:#94a3b8;font-size:11px;"><%= t.awaiting %></span>
+              <span style="color:var(--text-muted);font-size:11px;"><%= t.awaiting %></span>
             <% } %>
           </div>
         </div>
       <% }) %>
     <% } else { %>
-      <div style="color:#94a3b8;font-size:13px;text-align:center;padding:10px;"><%= t.no_referrals_yet %></div>
+      <div style="color:var(--text-muted);font-size:13px;text-align:center;padding:10px;"><%= t.no_referrals_yet %></div>
     <% } %>
   </div>
 
@@ -98,7 +98,7 @@
             <div style="color:var(--text-main);font-size:12px;">
               <%= h.reason === 'signup' ? '🎁 রেফার বোনাস' : `💸 কমিশন (লেভেল ${h.level})` %>
             </div>
-            <div style="color:#94a3b8;font-size:10px;">
+            <div style="color:var(--text-muted);font-size:10px;">
               <%= h.from_username || 'ইউজার' %> · <%= new Date(h.created_at).toLocaleDateString('bn-BD') %>
             </div>
           </div>
@@ -106,7 +106,7 @@
         </div>
       <% }) %>
     <% } else { %>
-      <div style="color:#94a3b8;font-size:13px;text-align:center;padding:10px;"><%= t.no_earnings_yet %></div>
+      <div style="color:var(--text-muted);font-size:13px;text-align:center;padding:10px;"><%= t.no_earnings_yet %></div>
     <% } %>
   </div>
 </div>
