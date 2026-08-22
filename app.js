@@ -341,6 +341,11 @@ app.use((req, res, next) => {
   res.locals.t = new Proxy(t_func, {
     get: (target, prop) => translations[lang][prop] || prop
   });
+  // রুট হ্যান্ডলারের জন্য একই অনুবাদক। res.locals.t শুধু টেমপ্লেটে পাওয়া যায়, কিন্তু
+  // req.flash()/res.json()-এর মেসেজগুলো রুটেই তৈরি হয় — সেগুলো যেন ইউজারের নির্বাচিত
+  // ভাষায় যায়, তাই req.t() যোগ করা হলো। ব্যবহার: req.flash('success', req.t('key'))
+  req.t = t_func;
+  req.lang = lang;
   res.locals.lang = lang;
   res.locals.siteName = 'Livo';
   // canonical/og:url-এর জন্য query-string ছাড়া পাথ। হোমপেজে '/' নয়, খালি স্ট্রিং —

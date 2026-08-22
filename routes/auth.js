@@ -338,8 +338,8 @@ router.post('/register', async (req, res) => {
     }).catch(e => console.error('duplicate account evaluate error:', e.message));
 
     req.flash('success', email
-      ? '✅ রেজিস্ট্রেশন সফল হয়েছে! স্বাগতম! আপনার ইমেইলে একটা ভেরিফিকেশন লিঙ্ক পাঠানো হয়েছে।'
-      : '✅ রেজিস্ট্রেশন সফল হয়েছে! স্বাগতম!');
+      ? req.t('register_success_verify')
+      : req.t('register_success'));
     res.redirect('/');
   } catch (err) {
     console.error(err);
@@ -659,7 +659,7 @@ router.post('/verify-access', async (req, res) => {
     req.session.pendingLoginVpnInfo = null;
 
     const redirectPath = await completeLogin(req, user, vpnInfo);
-    req.flash('success', '✅ ভেরিফিকেশন সম্পন্ন! স্বাগতম।');
+    req.flash('success', req.t('email_verified_welcome'));
     res.redirect(redirectPath);
   } catch (err) {
     console.error('verify-access error:', err.message);

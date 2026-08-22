@@ -82,19 +82,19 @@
 <nav class="pub-bottom-nav" id="pubBottomNav">
   <a href="/" class="pub-nav-item <%= locals.currentPage === 'home' ? 'active' : '' %>">
     <i class="fas fa-house"></i>
-    <span>হোম</span>
+    <span><%= t.nav_home %></span>
     <span class="pub-active-bar"></span>
   </a>
   <!-- স্পোর্টস — আগে বটম নেভে স্পোর্টসের কোনো প্রবেশপথ ছিল না, ফলে ফুটবল/ক্রিকেট/
        লাইভ ম্যাচ খুঁজে পাওয়া কঠিন ছিল। কোনো আইটেম সরানো হয়নি, শুধু যোগ করা হয়েছে। -->
   <a href="/sports" class="pub-nav-item <%= ['sports','football','cricket','matches'].includes(locals.currentPage) ? 'active' : '' %>">
     <i class="fas fa-futbol"></i>
-    <span>স্পোর্টস</span>
+    <span><%= t.nav_sports %></span>
     <span class="pub-active-bar"></span>
   </a>
   <a href="/extra/invitation" class="pub-nav-item <%= locals.currentPage === 'invitation' ? 'active' : '' %>">
     <i class="fas fa-handshake"></i>
-    <span>আমন্ত্রণ</span>
+    <span><%= t.nav_invite %></span>
     <span class="pub-active-bar"></span>
   </a>
   <a href="/promotions" class="pub-nav-item pub-nav-promo <%= locals.currentPage === 'promotion' ? 'active' : '' %>">
@@ -102,16 +102,16 @@
       <i class="fas fa-gift"></i>
       <span class="pub-nav-dot"></span>
     </span>
-    <span>প্রমোশন</span>
+    <span><%= t.nav_promotions %></span>
   </a>
   <a href="/chat" class="pub-nav-item <%= locals.currentPage === 'chat' ? 'active' : '' %>">
     <i class="fas fa-headset"></i>
-    <span>সেবা</span>
+    <span><%= t.nav_support %></span>
     <span class="pub-active-bar"></span>
   </a>
   <a href="/profile" class="pub-nav-item <%= locals.currentPage === 'profile' ? 'active' : '' %>">
     <i class="fas fa-circle-user"></i>
-    <span>প্রোফাইল</span>
+    <span><%= t.nav_profile %></span>
     <span class="pub-active-bar"></span>
   </a>
 </nav>

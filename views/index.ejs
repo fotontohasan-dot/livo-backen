@@ -322,7 +322,7 @@ body.light-mode .promo-banner {
   </div>
   <div style="flex:1; overflow:hidden;">
     <div style="font-size:12px; color:var(--text-muted); white-space:nowrap; animation:marquee-text 18s linear infinite;">
-      📢 প্রিয় গ্রাহক, LIVO-তে আপনাকে স্বাগতম! 🌟 Deposit, Withdrawal, Reward, এবং Rebate-এর চমৎকার সুবিধা উপভোগ করুন। প্রতিদিন ১ লক্ষ টাকা পর্যন্ত Rebate বোনাস জেতার সুযোগ! 💰
+      <%= t.home_marquee %>
     </div>
   </div>
 </div>
@@ -409,15 +409,15 @@ body.light-mode .promo-banner {
     .main-cat-item i { font-size: 20px; }
   }
 </style>
-<nav class="main-cat-nav" aria-label="প্রধান বিভাগ">
-  <a href="/sports" class="main-cat-item is-primary"><i class="fas fa-futbol"></i><span>স্পোর্টস</span></a>
-  <a href="/matches/football" class="main-cat-item"><i class="fas fa-futbol"></i><span>ফুটবল</span></a>
-  <a href="/matches/cricket" class="main-cat-item"><i class="fas fa-baseball"></i><span>ক্রিকেট</span></a>
-  <a href="/matches" class="main-cat-item"><i class="fas fa-tower-broadcast"></i><span>লাইভ ম্যাচ</span></a>
-  <a href="#mainGridWrap" class="main-cat-item"><i class="fas fa-dice"></i><span>ক্যাসিনো</span></a>
-  <a href="/tournaments" class="main-cat-item"><i class="fas fa-trophy"></i><span>টুর্নামেন্ট</span></a>
-  <a href="/leaderboard" class="main-cat-item"><i class="fas fa-ranking-star"></i><span>লিডারবোর্ড</span></a>
-  <a href="/promotions" class="main-cat-item"><i class="fas fa-gift"></i><span>প্রমোশন</span></a>
+<nav class="main-cat-nav" aria-label="<%= t.main_categories %>">
+  <a href="/sports" class="main-cat-item is-primary"><i class="fas fa-futbol"></i><span><%= t.cat_sports %></span></a>
+  <a href="/matches/football" class="main-cat-item"><i class="fas fa-futbol"></i><span><%= t.cat_football %></span></a>
+  <a href="/matches/cricket" class="main-cat-item"><i class="fas fa-baseball"></i><span><%= t.cat_cricket %></span></a>
+  <a href="/matches" class="main-cat-item"><i class="fas fa-tower-broadcast"></i><span><%= t.cat_live_matches %></span></a>
+  <a href="#mainGridWrap" class="main-cat-item"><i class="fas fa-dice"></i><span><%= t.cat_casino %></span></a>
+  <a href="/tournaments" class="main-cat-item"><i class="fas fa-trophy"></i><span><%= t.cat_tournaments %></span></a>
+  <a href="/leaderboard" class="main-cat-item"><i class="fas fa-ranking-star"></i><span><%= t.cat_leaderboard %></span></a>
+  <a href="/promotions" class="main-cat-item"><i class="fas fa-gift"></i><span><%= t.cat_promotions %></span></a>
 </nav>
 
 <!-- হোমপেজ থেকে লাইভ/আসন্ন ম্যাচের তালিকা সরানো হয়েছে।
@@ -450,19 +450,19 @@ body.light-mode .promo-banner {
     <i class="fas fa-heart"></i> <%= t.cat_poker %>
   </div>
   <div class="nav-tab-item" data-category="favorites">
-    <i class="fas fa-star"></i> ফেভারিটস
+    <i class="fas fa-star"></i> <%= t.cat_favorites %>
   </div>
   <div class="nav-tab-item" data-category="recent">
-    <i class="fas fa-clock-rotate-left"></i> রিসেন্ট
+    <i class="fas fa-clock-rotate-left"></i> <%= t.cat_recent %>
   </div>
 </div>
 
 <!-- ===== Layout Switcher ===== -->
 <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:0 12px 10px;">
-  <span style="font-size:11px;color:var(--text-muted);margin-right:2px;">লেআউট:</span>
-  <button type="button" class="layout-btn" data-layout="compact" title="কমপ্যাক্ট"><i class="fas fa-table-cells"></i></button>
-  <button type="button" class="layout-btn active" data-layout="standard" title="স্ট্যান্ডার্ড"><i class="fas fa-table-cells-large"></i></button>
-  <button type="button" class="layout-btn" data-layout="list" title="লিস্ট"><i class="fas fa-list"></i></button>
+  <span style="font-size:11px;color:var(--text-muted);margin-right:2px;"><%= t.layout_label %></span>
+  <button type="button" class="layout-btn" data-layout="compact" title="<%= t.layout_compact %>"><i class="fas fa-table-cells"></i></button>
+  <button type="button" class="layout-btn active" data-layout="standard" title="<%= t.layout_standard %>"><i class="fas fa-table-cells-large"></i></button>
+  <button type="button" class="layout-btn" data-layout="list" title="<%= t.layout_list %>"><i class="fas fa-list"></i></button>
 </div>
 
 <style>
@@ -549,8 +549,8 @@ body.light-mode .promo-banner {
 <!-- ===== Secondary Filter Pills (শুধু Slots/Live/Sports/Poker ক্যাটাগরিতে দেখাবে) ===== -->
 <div class="secondary-tabs-container" id="secondaryTabs" style="display:none;">
   <div class="secondary-tab-item active" data-secondary="hot"><i class="fas fa-fire"></i> <%= t.cat_hot %></div>
-  <div class="secondary-tab-item" data-secondary="favorites"><i class="fas fa-star"></i> ফেভারিটস</div>
-  <div class="secondary-tab-item" data-secondary="recent"><i class="fas fa-clock-rotate-left"></i> রিসেন্ট</div>
+  <div class="secondary-tab-item" data-secondary="favorites"><i class="fas fa-star"></i> <%= t.cat_favorites %></div>
+  <div class="secondary-tab-item" data-secondary="recent"><i class="fas fa-clock-rotate-left"></i> <%= t.cat_recent %></div>
 </div>
 
 <!-- ===== High-Fidelity Premium Game Grid (বাম পাশে প্রোভাইডার কলাম সহ, Slots/Live/Sports/Poker-এ) ===== -->
@@ -655,7 +655,7 @@ body.light-mode .promo-banner {
   <div class="jackpot-container">
     <div class="jackpot-text">
       <h2>MEGA JACKPOT</h2>
-      <div class="jackpot-tagline">প্রতিদিন বড় জেতার সুযোগ</div>
+      <div class="jackpot-tagline"><%= t.jackpot_tagline %></div>
     </div>
     <div class="jackpot-girl">
       <video src="/videos/jackpot-girl.mp4" poster="/images/jackpot-girl-poster.jpg" style="width:130px; border-radius:8px; display:block;" autoplay loop muted playsinline></video>
@@ -666,7 +666,7 @@ body.light-mode .promo-banner {
 <div class="recent-wins">
   <h3>Recent Big Wins</h3>
   <div class="wins-container" id="winsContainer">
-    <div class="win-empty" id="winsState">লোড হচ্ছে…</div>
+    <div class="win-empty" id="winsState"><%= t.loading %></div>
   </div>
 </div>
 <script>
@@ -756,29 +756,29 @@ body.light-mode .promo-banner {
 </style>
 <div class="why-us-section">
   <div class="why-us-heading">
-    <h2>কেন Livo বেছে নেবেন?</h2>
-    <p>আমরা যা দিচ্ছি, তা আপনার খেলা আরও নিরাপদ ও আনন্দময় করে তোলে</p>
+    <h2><%= t.why_livo_title %></h2>
+    <p><%= t.why_livo_subtitle %></p>
   </div>
   <div class="why-us-grid">
     <div class="why-us-card">
       <div class="why-us-icon"><i class="fas fa-bolt"></i></div>
-      <h3>দ্রুত উইথড্র</h3>
-      <p>মাত্র ৫ মিনিটে আপনার জেতা টাকা তুলে নিন, কোনো ঝামেলা ছাড়াই।</p>
+      <h3><%= t.feature_fast_withdraw %></h3>
+      <p><%= t.feature_fast_withdraw_desc %></p>
     </div>
     <div class="why-us-card">
       <div class="why-us-icon"><i class="fas fa-chart-line"></i></div>
-      <h3>লাইভ প্রেডিকশন</h3>
-      <p>রিয়েল-টাইম ম্যাচ ডেটা দেখে সঠিক প্রেডিকশন করার সুযোগ।</p>
+      <h3><%= t.feature_live_prediction %></h3>
+      <p><%= t.feature_live_prediction_desc %></p>
     </div>
     <div class="why-us-card">
       <div class="why-us-icon"><i class="fas fa-headset"></i></div>
-      <h3>২৪/৭ সাপোর্ট</h3>
-      <p>যেকোনো সমস্যায় আমাদের সাপোর্ট টিম সবসময় আপনার পাশে।</p>
+      <h3><%= t.feature_support %></h3>
+      <p><%= t.feature_support_desc %></p>
     </div>
     <div class="why-us-card">
       <div class="why-us-icon"><i class="fas fa-gift"></i></div>
-      <h3>দুর্দান্ত বোনাস</h3>
-      <p>প্রতিদিন রিওয়ার্ড, রিবেট ও ওয়েলকাম বোনাস জেতার সুযোগ।</p>
+      <h3><%= t.feature_bonus %></h3>
+      <p><%= t.feature_bonus_desc %></p>
     </div>
   </div>
 </div>
@@ -804,19 +804,19 @@ body.light-mode .promo-banner {
   <div class="trust-badges-grid">
     <div class="trust-badge-item">
       <i class="fas fa-shield-halved"></i>
-      <div><div class="label">নিরাপদ পেমেন্ট</div><div class="sub">SSL এনক্রিপ্টেড</div></div>
+      <div><div class="label"><%= t.trust_secure_payment %></div><div class="sub"><%= t.trust_ssl %></div></div>
     </div>
     <div class="trust-badge-item">
       <i class="fas fa-headset"></i>
-      <div><div class="label">২৪/৭ সাপোর্ট</div><div class="sub">সবসময় পাশে আছি</div></div>
+      <div><div class="label"><%= t.feature_support %></div><div class="sub"><%= t.trust_always_here %></div></div>
     </div>
     <div class="trust-badge-item">
       <i class="fas fa-certificate"></i>
-      <div><div class="label">লাইসেন্সপ্রাপ্ত</div><div class="sub">Curacao Licensed</div></div>
+      <div><div class="label"><%= t.trust_licensed %></div><div class="sub">Curacao Licensed</div></div>
     </div>
     <div class="trust-badge-item">
       <i class="fas fa-bolt"></i>
-      <div><div class="label">দ্রুত উইথড্র</div><div class="sub">৫ মিনিটের মধ্যে</div></div>
+      <div><div class="label"><%= t.feature_fast_withdraw %></div><div class="sub"><%= t.trust_within_5_min %></div></div>
     </div>
   </div>
 </div>

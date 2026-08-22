@@ -142,13 +142,13 @@
 
         <% if (captcha) { %>
         <div class="auth-field">
-          <label class="auth-label" for="captcha_answer">🤖 যাচাই করুন: <%= captcha.question %></label>
+          <label class="auth-label" for="captcha_answer"><%= t.captcha_verify %> <%= captcha.question %></label>
           <input
             type="text"
             id="captcha_answer"
             name="captcha_answer"
             class="auth-input"
-            placeholder="উত্তর লিখুন"
+            placeholder="<%= t.captcha_answer_placeholder %>"
             inputmode="numeric"
             autocomplete="off"
             required>

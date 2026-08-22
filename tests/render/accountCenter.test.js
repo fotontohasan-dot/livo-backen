@@ -70,7 +70,10 @@ describe('অ্যাকাউন্ট সেন্টার — অ্যা�
     const { agent } = await makeUserAgent();
     const res = await agent.get('/profile');
     expect(res.status).toBe(200);
-    expect(res.text).toContain('মেম্বার সেন্টার');
+    // মেম্বার সেন্টারের শিরোনাম এখন লোকালাইজড, তাই হার্ডকোড বাংলা টেক্সটের বদলে
+    // বর্তমান লোকেলের অনুবাদটাই যাচাই করা হয় — ভাষা বদলালেও টেস্ট অর্থবহ থাকে।
+    const bnLocale = require('../../locales/bn.json');
+    expect(res.text).toContain(bnLocale.member_center);
   });
 });
 
