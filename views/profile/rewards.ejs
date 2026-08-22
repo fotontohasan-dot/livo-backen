@@ -4,15 +4,15 @@
   <%- include('../partials/flash') %>
 
   <h1 style="font-size:1.4rem;font-weight:800;margin-bottom:1rem;text-align:center;color:var(--gold);">
-    🎁 দৈনিক রিওয়ার্ড
+    <%= t.daily_reward_title %>
   </h1>
 
   <!-- ==================== অ্যাচিভমেন্ট প্রিভিউ ==================== -->
   <% if (typeof badgesPreview !== 'undefined' && badgesPreview.totalCount > 0) { %>
   <div class="card" style="margin-bottom:1rem;">
     <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
-      <span>🏅 অ্যাচিভমেন্ট (<%= badgesPreview.earnedCount %>/<%= badgesPreview.totalCount %>)</span>
-      <a href="/profile/badges" style="color:var(--gold);font-size:11.5px;font-weight:700;text-decoration:none;">সব দেখুন ›</a>
+      <span><%= t.achievements_label %> (<%= badgesPreview.earnedCount %>/<%= badgesPreview.totalCount %>)</span>
+      <a href="/profile/badges" style="color:var(--gold);font-size:11.5px;font-weight:700;text-decoration:none;"><%= t.view_all_arrow %></a>
     </div>
     <div class="card-body" style="padding:.9rem;">
       <% if (badgesPreview.earned.length > 0) { %>
@@ -25,7 +25,7 @@
         <% }); %>
       </div>
       <% } else { %>
-      <div style="text-align:center;color:var(--muted);font-size:12.5px;padding:14px 0;">এখনো কোনো ব্যাজ অর্জন করেননি</div>
+      <div style="text-align:center;color:var(--muted);font-size:12.5px;padding:14px 0;"><%= t.no_badges_yet %></div>
       <% } %>
     </div>
   </div>
@@ -38,10 +38,10 @@
       <div class="card-body" style="padding:1rem 1.1rem;display:flex;align-items:center;gap:14px;">
         <div style="font-size:26px;">👥</div>
         <div style="flex:1;min-width:0;">
-          <div style="color:#fff;font-weight:800;font-size:14px;">রেফারেল প্রোগ্রাম</div>
-          <div style="color:rgba(255,255,255,0.85);font-size:11.5px;margin-top:2px;"><%= referralSummary.totalInvites %> জন ইনভাইট · মোট কমিশন <%= Number(referralSummary.totalCommission).toLocaleString('bn-BD') %> টাকা</div>
+          <div style="color:#fff;font-weight:800;font-size:14px;"><%= t.referral_program %></div>
+          <div style="color:rgba(255,255,255,0.85);font-size:11.5px;margin-top:2px;"><%= referralSummary.totalInvites %> <%= t.invited_total_commission %> <%= Number(referralSummary.totalCommission).toLocaleString('bn-BD') %><%= t.taka %></div>
         </div>
-        <div style="color:#fff;font-size:13px;font-weight:700;background:rgba(255,255,255,0.2);padding:6px 12px;border-radius:16px;white-space:nowrap;">বিস্তারিত ›</div>
+        <div style="color:#fff;font-size:13px;font-weight:700;background:rgba(255,255,255,0.2);padding:6px 12px;border-radius:16px;white-space:nowrap;"><%= t.details_arrow %></div>
       </div>
     </div>
   </a>
@@ -51,7 +51,7 @@
     <!-- আজকের টার্নওভার -->
     <div class="card" style="margin-bottom:1rem;">
       <div class="card-body" style="text-align:center;padding:1.2rem;">
-        <div style="font-size:.8rem;color:var(--muted);">আজকের স্পোর্টস টার্নওভার</div>
+        <div style="font-size:.8rem;color:var(--muted);"><%= t.todays_sports_turnover %></div>
         <div style="font-size:2rem;font-weight:900;color:var(--gold);margin:.3rem 0;">
           <%= Number(reward.turnover).toLocaleString('bn-BD') %>
         </div>
@@ -80,33 +80,31 @@
     <div class="card" style="margin-bottom:1rem;border:1px solid var(--gold);">
       <div class="card-body" style="text-align:center;padding:1.2rem;">
         <% if (reward.currentTier) { %>
-          <div style="font-size:.85rem;color:var(--text-main);">আপনার বর্তমান প্রাপ্য বোনাস</div>
+          <div style="font-size:.85rem;color:var(--text-main);"><%= t.your_current_bonus %></div>
           <div style="font-size:1.8rem;font-weight:900;color:#10b981;margin:.3rem 0;">
-            <%= reward.currentTier.bonus_amount %> কয়েন
-          </div>
+            <%= reward.currentTier.bonus_amount %><%= t.coins %></div>
           <% if (reward.claimed) { %>
             <button class="btn" style="width:100%;background:rgba(255,255,255,0.1);color:var(--muted);cursor:not-allowed;" disabled>
-              ✅ আজকের রিওয়ার্ড নেওয়া হয়েছে (<%= reward.claimedAmount %> কয়েন)
+              <%= t.reward_claimed_today %> (<%= reward.claimedAmount %> <%= t.coins %>)
             </button>
           <% } else { %>
             <form action="/profile/rewards/claim" method="POST">
               <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;font-weight:700;">
-                🎁 ক্লেইম করুন
+                <%= t.claim_reward %>
               </button>
             </form>
           <% } %>
         <% } else { %>
           <div style="font-size:.9rem;color:var(--muted);">
-            রিওয়ার্ড পেতে আজ আরও স্পোর্টস বেট করুন।<br>
-            সর্বনিম্ন টিয়ার: <%= reward.tiers.length ? Number(reward.tiers[0].min_turnover).toLocaleString('bn-BD') : '5,000' %> টার্নওভার
-          </div>
+            <%= t.bet_more_for_reward %><br>
+            <%= t.min_tier_label %> <%= reward.tiers.length ? Number(reward.tiers[0].min_turnover).toLocaleString('bn-BD') : '5,000' %><%= t.turnover %></div>
         <% } %>
       </div>
     </div>
 
     <!-- ==================== বোনাস (৩টি ফিচার) ==================== -->
     <div class="card" style="margin-bottom:1rem;">
-      <div class="card-header">🎫 বোনাস</div>
+      <div class="card-header"><%= t.bonus_ticket %></div>
       <div class="card-body" style="padding:.9rem;">
         <div style="display:flex;flex-direction:column;gap:12px;">
 
@@ -114,10 +112,10 @@
           <a href="/profile/wheel" style="text-decoration:none;display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#f5273f,#fb5570);border-radius:16px;padding:12px 14px;">
             <div style="font-size:26px;">🎡</div>
             <div style="flex:1;min-width:0;">
-              <div style="color:#fff;font-weight:800;font-size:14px;">লাকি হুইল</div>
-              <div style="color:rgba(255,255,255,0.85);font-size:11.5px;margin-top:1px;">প্রতিদিন স্পিন করে কয়েন জিতুন</div>
+              <div style="color:#fff;font-weight:800;font-size:14px;"><%= t.lucky_wheel %></div>
+              <div style="color:rgba(255,255,255,0.85);font-size:11.5px;margin-top:1px;"><%= t.spin_daily_win_coins %></div>
             </div>
-            <div style="color:#fff;font-size:13px;font-weight:700;background:rgba(255,255,255,0.2);padding:6px 12px;border-radius:16px;white-space:nowrap;">স্পিন</div>
+            <div style="color:#fff;font-size:13px;font-weight:700;background:rgba(255,255,255,0.2);padding:6px 12px;border-radius:16px;white-space:nowrap;"><%= t.spin %></div>
           </a>
 
           <!-- সোনার ডিম -->
@@ -125,10 +123,10 @@
             <div style="display:flex;align-items:center;gap:12px;">
               <div style="font-size:26px;">🥚</div>
               <div style="flex:1;min-width:0;">
-                <div style="color:#fff;font-weight:800;font-size:14px;">সোনার ডিম</div>
-                <div id="goldenEggStatus" style="color:rgba(255,255,255,0.85);font-size:11.5px;margin-top:1px;">লোড হচ্ছে...</div>
+                <div style="color:#fff;font-weight:800;font-size:14px;"><%= t.golden_egg %></div>
+                <div id="goldenEggStatus" style="color:rgba(255,255,255,0.85);font-size:11.5px;margin-top:1px;"><%= t.loading_dots %></div>
               </div>
-              <button id="goldenEggBtn" type="button" style="color:#ff2331;font-size:13px;font-weight:700;background:#fff;border:none;padding:6px 12px;border-radius:16px;white-space:nowrap;cursor:pointer;" disabled>ডিম ভাঙুন</button>
+              <button id="goldenEggBtn" type="button" style="color:#ff2331;font-size:13px;font-weight:700;background:#fff;border:none;padding:6px 12px;border-radius:16px;white-space:nowrap;cursor:pointer;" disabled><%= t.crack_egg %></button>
             </div>
             <div id="goldenEggGrid" style="display:none;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px;"></div>
             <div id="goldenEggResult" style="display:none;color:#fff;font-weight:700;font-size:13px;text-align:center;margin-top:10px;"></div>
@@ -138,26 +136,26 @@
           <div id="redCardCard" style="display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#f634d1,#fb5cc7);border-radius:16px;padding:12px 14px;">
             <div style="font-size:26px;">🧧</div>
             <div style="flex:1;min-width:0;">
-              <div style="color:#fff;font-weight:800;font-size:14px;">রেড কার্ড</div>
-              <div id="redCardStatus" style="color:rgba(255,255,255,0.85);font-size:11.5px;margin-top:1px;">লোড হচ্ছে...</div>
+              <div style="color:#fff;font-weight:800;font-size:14px;"><%= t.red_card %></div>
+              <div id="redCardStatus" style="color:rgba(255,255,255,0.85);font-size:11.5px;margin-top:1px;"><%= t.loading_dots %></div>
             </div>
-            <button id="redCardBtn" type="button" style="color:#c81aa0;font-size:13px;font-weight:700;background:#fff;border:none;padding:6px 12px;border-radius:16px;white-space:nowrap;cursor:pointer;" disabled>খুলুন</button>
+            <button id="redCardBtn" type="button" style="color:#c81aa0;font-size:13px;font-weight:700;background:#fff;border:none;padding:6px 12px;border-radius:16px;white-space:nowrap;cursor:pointer;" disabled><%= t.open %></button>
           </div>
 
         </div>
-        <div style="font-size:.72rem;color:var(--muted);text-align:center;margin-top:10px;">🔒 সোনার ডিম ও রেড কার্ড আনলক করতে আজ একটি ডিপোজিট করুন। প্রতিদিন রাত ১২টায় রিসেট হয়।</div>
+        <div style="font-size:.72rem;color:var(--muted);text-align:center;margin-top:10px;"><%= t.unlock_egg_card_notice %></div>
       </div>
     </div>
 
     <!-- টিয়ার তালিকা (আলাদা রাখা হয়েছে) -->
     <div class="card">
-      <div class="card-header">📊 টিয়ার তালিকা</div>
+      <div class="card-header"><%= t.tier_list %></div>
       <div class="card-body" style="padding:0;">
         <table style="width:100%;border-collapse:collapse;">
           <thead>
             <tr style="border-bottom:1px solid var(--border-glass);">
-              <th style="padding:.7rem;text-align:left;font-size:.8rem;color:var(--muted);">দৈনিক টার্নওভার</th>
-              <th style="padding:.7rem;text-align:right;font-size:.8rem;color:var(--muted);">বোনাস</th>
+              <th style="padding:.7rem;text-align:left;font-size:.8rem;color:var(--muted);"><%= t.daily_turnover %></th>
+              <th style="padding:.7rem;text-align:right;font-size:.8rem;color:var(--muted);"><%= t.bonus_label %></th>
             </tr>
           </thead>
           <tbody>
@@ -169,8 +167,7 @@
                   <%= reached ? '✅ ' : '' %><%= Number(t.min_turnover).toLocaleString('bn-BD') %>+
                 </td>
                 <td style="padding:.7rem;text-align:right;font-weight:700;color:var(--gold);">
-                  <%= t.bonus_amount %> টাকা
-                </td>
+                  <%= t.bonus_amount %><%= t.taka %></td>
               </tr>
             <% }) %>
           </tbody>
@@ -179,13 +176,13 @@
     </div>
 
     <p style="font-size:.75rem;color:var(--muted);text-align:center;margin-top:1rem;line-height:1.6;">
-      ⏰ প্রতিদিন রাত ১২টায় টার্নওভার রিসেট হয়।<br>
-      শুধু স্পোর্টস বেটিং গণনা হয়। দিনে একবার ক্লেইম করা যায়।
+      <%= t.turnover_resets_midnight %><br>
+      <%= t.sports_only_once_daily %>
     </p>
 
   <% } else { %>
     <div class="card"><div class="card-body" style="text-align:center;padding:2rem;color:var(--muted);">
-      রিওয়ার্ড তথ্য লোড করা যায়নি। পরে আবার চেষ্টা করুন।
+      <%= t.reward_load_failed %>
     </div></div>
   <% } %>
 

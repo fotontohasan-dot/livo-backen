@@ -2,8 +2,8 @@
 <%- include('partials/navbar') %>
 
 <div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto">
-  <h1 style="color:var(--gold);font-size:24px;font-weight:800;margin-bottom:6px">KYC ভেরিফিকেশন</h1>
-  <p style="color:var(--text-muted);font-size:13px;margin-bottom:20px">আপনার পরিচয় যাচাই করে অ্যাকাউন্ট সম্পূর্ণ আনলক করুন — নিরাপদ ও দ্রুত উইথড্রর জন্য এটি প্রয়োজন।</p>
+  <h1 style="color:var(--gold);font-size:24px;font-weight:800;margin-bottom:6px"><%= t.kyc_verification_title %></h1>
+  <p style="color:var(--text-muted);font-size:13px;margin-bottom:20px"><%= t.kyc_intro %></p>
 
   <% if (kyc && kyc.status === 'approved') { %>
     <!-- ===== অনুমোদিত ===== -->
@@ -11,8 +11,8 @@
       <div style="width:64px;height:64px;border-radius:50%;background:rgba(16,185,129,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
         <i class="fas fa-check" style="color:#10b981;font-size:26px"></i>
       </div>
-      <h2 style="color:#10b981;font-size:18px;font-weight:800;margin-bottom:6px">আপনার KYC অনুমোদিত হয়েছে</h2>
-      <p style="color:var(--text-muted);font-size:13px">আপনার অ্যাকাউন্ট সম্পূর্ণ যাচাইকৃত। কোনো সীমা ছাড়াই ডিপোজিট ও উইথড্র করতে পারবেন।</p>
+      <h2 style="color:#10b981;font-size:18px;font-weight:800;margin-bottom:6px"><%= t.kyc_approved_title %></h2>
+      <p style="color:var(--text-muted);font-size:13px"><%= t.kyc_approved_desc %></p>
     </div>
 
   <% } else if (kyc && kyc.status === 'pending') { %>
@@ -21,12 +21,12 @@
       <div style="width:64px;height:64px;border-radius:50%;background:rgba(234,179,8,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
         <i class="fas fa-hourglass-half" style="color:var(--gold);font-size:24px"></i>
       </div>
-      <h2 style="color:var(--gold);font-size:18px;font-weight:800;margin-bottom:6px">আপনার তথ্য পর্যালোচনাধীন</h2>
-      <p style="color:var(--text-muted);font-size:13px;margin-bottom:14px">সাধারণত ২৪ ঘণ্টার মধ্যে যাচাই সম্পন্ন হয়। ফলাফল পেলে জানিয়ে দেওয়া হবে।</p>
+      <h2 style="color:var(--gold);font-size:18px;font-weight:800;margin-bottom:6px"><%= t.kyc_pending_title %></h2>
+      <p style="color:var(--text-muted);font-size:13px;margin-bottom:14px"><%= t.kyc_pending_desc %></p>
       <div style="text-align:left;background:rgba(255,255,255,0.03);border-radius:12px;padding:14px;font-size:12px;color:#cbd5e1">
-        <div style="margin-bottom:4px"><b style="color:#94a3b8">নাম:</b> <%= kyc.full_name %></div>
-        <div style="margin-bottom:4px"><b style="color:#94a3b8">ডকুমেন্ট নম্বর:</b> <%= kyc.document_number %></div>
-        <div><b style="color:#94a3b8">জমা দেওয়া হয়েছে:</b> <%= new Date(kyc.created_at).toLocaleDateString('bn-BD') %></div>
+        <div style="margin-bottom:4px"><b style="color:#94a3b8"><%= t.name_label %></b> <%= kyc.full_name %></div>
+        <div style="margin-bottom:4px"><b style="color:#94a3b8"><%= t.document_number_label %></b> <%= kyc.document_number %></div>
+        <div><b style="color:#94a3b8"><%= t.submitted_on %></b> <%= new Date(kyc.created_at).toLocaleDateString('bn-BD') %></div>
       </div>
     </div>
 
@@ -36,22 +36,22 @@
     <% if (kyc && kyc.status === 'rejected') { %>
       <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.35);border-radius:16px;padding:16px;margin-bottom:20px">
         <div style="display:flex;align-items:center;gap:8px;color:#f87171;font-weight:700;font-size:14px;margin-bottom:6px">
-          <i class="fas fa-circle-xmark"></i> আপনার আগের আবেদনটি বাতিল হয়েছে
+          <i class="fas fa-circle-xmark"></i> <%= t.kyc_rejected_title %>
         </div>
         <p style="color:#fca5a5;font-size:12.5px;margin:0">
-          <b>কারণ:</b> <%= kyc.reject_reason && kyc.reject_reason.trim() ? kyc.reject_reason : 'নির্দিষ্ট করা হয়নি — অনুগ্রহ করে সাপোর্টে যোগাযোগ করুন।' %>
+          <b><%= t.reason_label %></b> <%= kyc.reject_reason && kyc.reject_reason.trim() ? kyc.reject_reason : 'নির্দিষ্ট করা হয়নি — অনুগ্রহ করে সাপোর্টে যোগাযোগ করুন।' %>
         </p>
       </div>
     <% } %>
 
     <!-- আপলোড গাইডলাইন -->
     <div class="glass-card" style="padding:16px 18px;border-radius:16px;margin-bottom:20px;background:rgba(234,179,8,0.06);border:1px solid rgba(234,179,8,0.25)">
-      <div style="color:var(--gold);font-weight:700;font-size:13px;margin-bottom:8px"><i class="fas fa-circle-info"></i> আপলোড করার আগে খেয়াল রাখুন</div>
+      <div style="color:var(--gold);font-weight:700;font-size:13px;margin-bottom:8px"><i class="fas fa-circle-info"></i> <%= t.before_upload_note %></div>
       <ul style="margin:0;padding-left:18px;color:#cbd5e1;font-size:12.5px;line-height:1.9">
-        <li>NID / পাসপোর্ট / ড্রাইভিং লাইসেন্স — যেকোনো একটি বৈধ সরকারি ডকুমেন্ট</li>
-        <li>ছবি স্পষ্ট হতে হবে, ডকুমেন্টের চারটি কোণ দৃশ্যমান থাকতে হবে</li>
-        <li>ফরম্যাট: JPG, JPEG, PNG বা WEBP — সর্বোচ্চ ২০MB</li>
-        <li>নাম ও নম্বর ডকুমেন্টে যা লেখা আছে হুবহু মিলিয়ে দিন</li>
+        <li><%= t.kyc_doc_types_note %></li>
+        <li><%= t.kyc_photo_clear_note %></li>
+        <li><%= t.kyc_format_note %></li>
+        <li><%= t.kyc_match_note %></li>
       </ul>
     </div>
 
@@ -60,38 +60,38 @@
       <!-- ধাপ ১ -->
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
         <div style="width:26px;height:26px;border-radius:50%;background:var(--gold);color:#1a1a1a;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
-        <span style="color:var(--text-main);font-weight:700;font-size:14px">ব্যক্তিগত তথ্য</span>
+        <span style="color:var(--text-main);font-weight:700;font-size:14px"><%= t.personal_information %></span>
       </div>
       <div style="margin-bottom:12px">
-        <label style="color:var(--text-muted);font-size:12px;display:block;margin-bottom:5px">ডকুমেন্টে থাকা পূর্ণ নাম</label>
-        <input type="text" name="full_name" required maxlength="60" class="form-input" placeholder="যেমন: Md. Rahim Uddin" value="<%= kyc ? kyc.full_name : '' %>">
+        <label style="color:var(--text-muted);font-size:12px;display:block;margin-bottom:5px"><%= t.full_name_on_document %></label>
+        <input type="text" name="full_name" required maxlength="60" class="form-input" placeholder="<%= t.name_example_placeholder %>" value="<%= kyc ? kyc.full_name : '' %>">
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
         <div>
-          <label style="color:var(--text-muted);font-size:12px;display:block;margin-bottom:5px">ডকুমেন্টের ধরন</label>
+          <label style="color:var(--text-muted);font-size:12px;display:block;margin-bottom:5px"><%= t.document_type %></label>
           <select name="document_type" required class="form-input">
-            <option value="NID">জাতীয় পরিচয়পত্র (NID)</option>
-            <option value="Passport">পাসপোর্ট</option>
-            <option value="Driving License">ড্রাইভিং লাইসেন্স</option>
+            <option value="NID"><%= t.doc_nid %></option>
+            <option value="Passport"><%= t.doc_passport %></option>
+            <option value="Driving License"><%= t.doc_driving_licence %></option>
           </select>
         </div>
         <div>
-          <label style="color:var(--text-muted);font-size:12px;display:block;margin-bottom:5px">ডকুমেন্ট নম্বর</label>
-          <input type="text" name="document_number" required maxlength="30" class="form-input" placeholder="নম্বর লিখুন">
+          <label style="color:var(--text-muted);font-size:12px;display:block;margin-bottom:5px"><%= t.document_number %></label>
+          <input type="text" name="document_number" required maxlength="30" class="form-input" placeholder="<%= t.enter_number %>">
         </div>
       </div>
 
       <!-- ধাপ ২ -->
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
         <div style="width:26px;height:26px;border-radius:50%;background:var(--gold);color:#1a1a1a;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
-        <span style="color:var(--text-main);font-weight:700;font-size:14px">ডকুমেন্টের ছবি আপলোড</span>
+        <span style="color:var(--text-main);font-weight:700;font-size:14px"><%= t.upload_document_photo %></span>
       </div>
 
       <input type="hidden" name="document_url" id="documentUrl" value="">
 
       <label id="uploadBox" for="documentFile" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border:2px dashed rgba(234,179,8,0.4);border-radius:16px;padding:28px 16px;cursor:pointer;margin-bottom:8px;background:rgba(255,255,255,0.02);text-align:center">
         <i id="uploadIcon" class="fas fa-cloud-arrow-up" style="color:var(--gold);font-size:26px"></i>
-        <span id="uploadText" style="color:var(--text-muted);font-size:13px">ছবি আপলোড করতে এখানে ট্যাপ করুন</span>
+        <span id="uploadText" style="color:var(--text-muted);font-size:13px"><%= t.tap_to_upload %></span>
         <img id="previewImg" style="display:none;max-width:140px;max-height:140px;border-radius:10px;margin-top:6px" />
       </label>
       <input type="file" id="documentFile" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" style="display:none" onchange="handleFileSelect(event)">
@@ -101,11 +101,11 @@
       <!-- ধাপ ৩ -->
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
         <div style="width:26px;height:26px;border-radius:50%;background:var(--gold);color:#1a1a1a;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
-        <span style="color:var(--text-main);font-weight:700;font-size:14px">জমা দিন</span>
+        <span style="color:var(--text-main);font-weight:700;font-size:14px"><%= t.submit_kyc %></span>
       </div>
 
       <button type="submit" id="submitBtn" class="btn btn-gold" style="width:100%;padding:14px;font-size:14px;border-radius:14px" disabled>
-        <span id="submitBtnText">প্রথমে ছবি আপলোড করুন</span>
+        <span id="submitBtnText"><%= t.upload_photo_first %></span>
       </button>
     </form>
   <% } %>
