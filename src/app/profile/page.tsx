@@ -48,7 +48,7 @@ export default function ProfilePage() {
 
           <div className="flex items-center gap-4 relative z-10 min-w-0">
             <div className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-full border-2 border-accent/50 p-1 bg-background shadow-[0_0_15px_var(--glow-accent)]">
-              <div className="w-full h-full rounded-full bg-gradient-to-br from-accent/40 to-accent/10 flex items-center justify-center text-xl sm:text-2xl font-black italic text-accent">
+              <div className="w-full h-full rounded-full bg-gradient-to-br from-accent/40 to-accent/10 flex items-center justify-center text-xl sm:text-2xl font-black italic text-accent-text">
                 LH
               </div>
             </div>
@@ -61,7 +61,7 @@ export default function ProfilePage() {
 
               <div className="mt-3 space-y-1.5">
                 <div className="flex justify-between text-[9px] font-black uppercase tracking-tighter">
-                  <span className="text-accent">VIP 3 Progress</span>
+                  <span className="text-accent-text">VIP 3 Progress</span>
                   <span className="text-text-muted">75%</span>
                 </div>
                 <div className="h-1.5 w-full bg-background-secondary rounded-full overflow-hidden border border-border">
@@ -75,7 +75,7 @@ export default function ProfilePage() {
         {/* Appearance */}
         <section className="card-premium p-4 sm:p-5 flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <h3 className="text-xs sm:text-sm font-black text-accent tracking-widest uppercase">Appearance</h3>
+            <h3 className="text-xs sm:text-sm font-black text-accent-text tracking-widest uppercase">Appearance</h3>
             <p className="text-[10px] sm:text-xs text-text-muted font-medium mt-0.5">Choose how Livo looks on this device</p>
           </div>
           <ThemeToggle />
@@ -88,12 +88,12 @@ export default function ProfilePage() {
             <div className="flex justify-between items-start gap-3">
               <div className="min-w-0">
                 <p className="text-[10px] font-black text-text-muted tracking-widest uppercase">Wallet</p>
-                <h3 className="text-2xl sm:text-3xl font-black italic text-accent tracking-tighter mt-1 truncate">
+                <h3 className="text-2xl sm:text-3xl font-black italic text-accent-text tracking-tighter mt-1 truncate">
                   ৳1,568,523.00
                 </h3>
               </div>
               <div className="bg-accent-soft p-2 rounded-xl border border-accent/30 shrink-0">
-                <Wallet className="text-accent" size={22} />
+                <Wallet className="text-accent-text" size={22} />
               </div>
             </div>
 
@@ -109,10 +109,10 @@ export default function ProfilePage() {
             <div className="flex justify-between items-start gap-3">
               <div className="min-w-0">
                 <p className="text-[10px] font-black text-text-muted tracking-widest uppercase">VIP Center</p>
-                <h3 className="text-2xl sm:text-3xl font-black italic text-accent tracking-tighter mt-1">Level 3</h3>
+                <h3 className="text-2xl sm:text-3xl font-black italic text-accent-text tracking-tighter mt-1">Level 3</h3>
               </div>
               <div className="bg-accent-soft p-2 rounded-xl border border-accent/30 shrink-0">
-                <Crown className="text-accent" size={22} />
+                <Crown className="text-accent-text" size={22} />
               </div>
             </div>
 
@@ -128,10 +128,10 @@ export default function ProfilePage() {
             <div className="flex justify-between items-start gap-3">
               <div className="min-w-0">
                 <p className="text-[10px] font-black text-text-muted tracking-widest uppercase">Reward Center</p>
-                <h3 className="text-2xl sm:text-3xl font-black italic text-accent tracking-tighter mt-1">3 Ready</h3>
+                <h3 className="text-2xl sm:text-3xl font-black italic text-accent-text tracking-tighter mt-1">3 Ready</h3>
               </div>
               <div className="bg-accent-soft p-2 rounded-xl border border-accent/30 shrink-0">
-                <Gift className="text-accent" size={22} />
+                <Gift className="text-accent-text" size={22} />
               </div>
             </div>
 
@@ -145,7 +145,7 @@ export default function ProfilePage() {
 
         {/* Account & Support Links */}
         <section>
-          <h3 className="text-xs sm:text-sm font-black text-accent tracking-widest uppercase mb-4 px-1 flex items-center gap-2">
+          <h3 className="text-xs sm:text-sm font-black text-accent-text tracking-widest uppercase mb-4 px-1 flex items-center gap-2">
             <ShieldCheck size={14} />
             Account &amp; Support
           </h3>
@@ -157,7 +157,7 @@ export default function ProfilePage() {
         {/* Support Banner */}
         <a href="/profile/chat" className="card-premium p-4 sm:p-5 bg-accent-soft border-accent/20 flex items-center justify-between gap-3 group cursor-pointer hover:brightness-95 transition-all">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 shrink-0 rounded-full bg-accent/20 flex items-center justify-center text-accent">
+            <div className="w-10 h-10 shrink-0 rounded-full bg-accent/20 flex items-center justify-center text-accent-text">
               <MessageSquare size={20} />
             </div>
             <div className="min-w-0">
@@ -165,7 +165,7 @@ export default function ProfilePage() {
               <p className="text-[10px] sm:text-xs text-text-muted font-medium truncate">We are here to help you</p>
             </div>
           </div>
-          <ChevronRight size={18} className="text-icon-secondary group-hover:text-accent transition-colors shrink-0" />
+          <ChevronRight size={18} className="text-icon-secondary group-hover:text-accent-text transition-colors shrink-0" />
         </a>
       </main>
     </div>

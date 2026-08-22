@@ -6,7 +6,7 @@
       <i class="fas fa-chevron-left"></i>
     </a>
     <h1 style="color:var(--text-main); font-size: 20px; font-weight: 800; letter-spacing: 0.5px;">
-      <i class="fas fa-shield-halved" style="color:var(--gold);"></i> <%= t.trusted_devices_title %>
+      <i class="fas fa-shield-halved" style="color: var(--text-accent);"></i> <%= t.trusted_devices_title %>
     </h1>
   </div>
 
@@ -32,10 +32,10 @@
         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom: 10px;">
           <div style="flex:1; min-width:0;">
             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;" id="dev-name-<%= d.id %>">
-              <i class="fas <%= d.device_type === 'Mobile' ? 'fa-mobile-screen' : (d.device_type === 'Tablet' ? 'fa-tablet-screen-button' : 'fa-desktop') %>" style="color:var(--gold);"></i>
+              <i class="fas <%= d.device_type === 'Mobile' ? 'fa-mobile-screen' : (d.device_type === 'Tablet' ? 'fa-tablet-screen-button' : 'fa-desktop') %>" style="color: var(--text-accent);"></i>
               <span style="color:var(--text-main); font-size:15px; font-weight:800;"><%= d.display_name %></span>
               <% if (d.is_current) { %><span style="background:rgba(16,185,129,0.15); color:#10b981; font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px;"><%= t.current_device_badge %></span><% } %>
-              <% if (d.is_new_device) { %><span style="background:rgba(245,158,11,0.15); color:var(--gold); font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px;"><%= t.new_device_badge %></span><% } %>
+              <% if (d.is_new_device) { %><span style="background:rgba(245,158,11,0.15); color: var(--text-accent); font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px;"><%= t.new_device_badge %></span><% } %>
             </div>
           </div>
           <span style="flex-shrink:0; background: <%= d.is_trusted ? 'rgba(16,185,129,0.15)' : 'rgba(148,163,184,0.15)' %>; color: <%= d.is_trusted ? '#10b981' : '#94a3b8' %>; font-size:11px; font-weight:800; padding:5px 10px; border-radius:20px; white-space:nowrap;">

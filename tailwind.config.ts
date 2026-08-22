@@ -26,6 +26,7 @@ const config: Config = {
         "accent-hover": "var(--accent-hover)",
         "accent-soft": "var(--accent-soft)",
         "on-accent": "var(--on-accent)",
+        "accent-text": "var(--text-accent)",
         success: "var(--success)",
         warning: "var(--warning)",
         danger: "var(--danger)",

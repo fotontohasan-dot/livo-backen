@@ -25,7 +25,7 @@ export default function HomePage() {
       <header className="sticky top-0 z-50 glass border-b border-border px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Menu className="text-icon-secondary" size={24} />
-          <div className="text-2xl font-black italic tracking-tighter text-accent flex items-center gap-1">
+          <div className="text-2xl font-black italic tracking-tighter text-accent-text flex items-center gap-1">
             LIVO
             <div className="w-1.5 h-1.5 bg-danger rounded-full animate-pulse mt-2" />
           </div>
@@ -41,7 +41,7 @@ export default function HomePage() {
             <Link href="/profile">
               <div className="relative">
                 <div className="w-8 h-8 rounded-full bg-accent-soft border border-accent/40 flex items-center justify-center">
-                  <UserCircle size={20} className="text-accent" />
+                  <UserCircle size={20} className="text-accent-text" />
                 </div>
                 <div className="absolute -bottom-1 -right-1 scale-75">
                   <VIPBadge level={3} />
@@ -77,8 +77,8 @@ export default function HomePage() {
         {/* 3. Quick Links */}
         <section className="card-premium p-4">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xs font-black text-accent tracking-widest uppercase">Quick Actions</h3>
-            <span className="text-[10px] text-text-muted font-bold cursor-pointer hover:text-accent transition-colors">SEE ALL →</span>
+            <h3 className="text-xs font-black text-accent-text tracking-widest uppercase">Quick Actions</h3>
+            <span className="text-[10px] text-text-muted font-bold cursor-pointer hover:text-accent-text transition-colors">SEE ALL →</span>
           </div>
           <div className="grid grid-cols-5 gap-2">
             <QuickLinkButton href="#" icon="⏱️" label="In-Play" color="linear-gradient(135deg,#ef4444,#dc2626)" badge="LIVE" />
@@ -97,7 +97,7 @@ export default function HomePage() {
             { value: "6.5M", label: "PLAYERS" }
           ].map((stat, i) => (
             <div key={i} className="card-premium p-3 text-center">
-              <div className="text-xl font-black italic text-accent leading-none tracking-tighter">{stat.value}</div>
+              <div className="text-xl font-black italic text-accent-text leading-none tracking-tighter">{stat.value}</div>
               <div className="text-[8px] font-bold text-text-muted mt-1 tracking-widest">{stat.label}</div>
             </div>
           ))}
@@ -113,7 +113,7 @@ export default function HomePage() {
             <div className="flex items-center gap-2">
               <Search size={16} className="text-icon-secondary" />
               <div className="h-4 w-[1px] bg-border" />
-              <span className="text-[10px] font-black text-accent">VIEW ALL</span>
+              <span className="text-[10px] font-black text-accent-text">VIEW ALL</span>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -130,7 +130,7 @@ export default function HomePage() {
         <section className="card-premium overflow-hidden">
           <div className="p-4 border-b border-border flex items-center justify-between">
             <h3 className="text-sm font-black italic uppercase flex items-center gap-2">
-              <Trophy size={16} className="text-accent" />
+              <Trophy size={16} className="text-accent-text" />
               Live Winners
             </h3>
             <div className="flex items-center gap-1.5">
@@ -140,7 +140,7 @@ export default function HomePage() {
           </div>
           <div className="divide-y divide-border">
             {[
-              { user: "***882", amount: "৳15,68,523", icon: "🥇", color: "text-accent" },
+              { user: "***882", amount: "৳15,68,523", icon: "🥇", color: "text-accent-text" },
               { user: "***742", amount: "৳11,44,556", icon: "🥈", color: "text-text-muted" },
               { user: "***118", amount: "৳9,98,541", icon: "🥉", color: "text-orange-400" },
             ].map((winner, i) => (
@@ -159,7 +159,7 @@ export default function HomePage() {
         <div className="grid grid-cols-2 gap-3">
           <div className="card-premium p-4 border-l-4 border-l-accent group cursor-pointer">
             <div className="text-[10px] font-black text-text-muted uppercase mb-1">Welcome</div>
-            <div className="text-2xl font-black italic text-accent group-hover:scale-105 transition-transform origin-left tracking-tighter">100% BONUS</div>
+            <div className="text-2xl font-black italic text-accent-text group-hover:scale-105 transition-transform origin-left tracking-tighter">100% BONUS</div>
           </div>
           <div className="card-premium p-4 border-l-4 border-l-success group cursor-pointer">
             <div className="text-[10px] font-black text-text-muted uppercase mb-1">Daily</div>
@@ -193,7 +193,7 @@ export default function HomePage() {
         <Link href="/" className="relative -mt-10 group">
           <div className="w-16 h-16 rounded-full bg-gold-gradient p-1 shadow-[0_0_20px_var(--glow-accent)] group-active:scale-95 transition-transform">
             <div className="w-full h-full rounded-full bg-background flex items-center justify-center">
-              <div className="text-accent font-black italic tracking-tighter">HOME</div>
+              <div className="text-accent-text font-black italic tracking-tighter">HOME</div>
             </div>
           </div>
         </Link>
@@ -206,7 +206,7 @@ export default function HomePage() {
 
 function BottomNavLink({ icon, label, active = false }: { icon: React.ReactNode, label: string, active?: boolean }) {
   return (
-    <div className={`flex flex-col items-center gap-1.5 cursor-pointer transition-colors ${active ? 'text-accent' : 'text-icon-primary'}`}>
+    <div className={`flex flex-col items-center gap-1.5 cursor-pointer transition-colors ${active ? 'text-accent-text' : 'text-icon-primary'}`}>
       {icon}
       <span className="text-[9px] font-black uppercase tracking-widest">{label}</span>
     </div>

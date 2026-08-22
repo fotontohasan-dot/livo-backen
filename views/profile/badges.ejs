@@ -26,19 +26,19 @@
       <div style="background:<%= b.earned ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.04)' %>;border:1px solid <%= b.earned ? '#10b981' : 'rgba(255,255,255,0.08)' %>;border-radius:14px;padding:16px;text-align:center;<%= b.earned ? '' : 'opacity:0.55;' %>">
         <div style="font-size:38px;margin-bottom:6px;<%= b.earned ? '' : 'filter:grayscale(1);' %>"><%= b.icon %></div>
         <div style="color:var(--text-main);font-size:13px;font-weight:bold;"><%= b.name %></div>
-        <div style="color:#94a3b8;font-size:11px;margin-top:3px;line-height:1.4;"><%= b.desc %></div>
+        <div style="color:var(--text-muted);font-size:11px;margin-top:3px;line-height:1.4;"><%= b.desc %></div>
         <div style="margin-top:8px;">
           <% if (b.earned) { %>
             <span style="color:#10b981;font-size:11px;font-weight:bold;">✅ অর্জিত (+<%= b.reward %>)</span>
           <% } else { %>
-            <span style="color:#64748b;font-size:11px;">🔒 +<%= b.reward %> কয়েন</span>
+            <span style="color:var(--text-muted);font-size:11px;">🔒 +<%= b.reward %> কয়েন</span>
           <% } %>
         </div>
       </div>
     <% }) %>
   </div>
 
-  <p style="font-size:.75rem;color:#94a3b8;text-align:center;margin-top:1rem;line-height:1.6;">
+  <p style="font-size:.75rem;color:var(--text-muted);text-align:center;margin-top:1rem;line-height:1.6;">
     খেলতে খেলতে স্বয়ংক্রিয়ভাবে ব্যাজ আনলক হয়।<br>
     প্রতিটি ব্যাজে বোনাস কয়েন পাওয়া যায়।
   </p>

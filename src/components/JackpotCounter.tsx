@@ -18,15 +18,15 @@ export const JackpotCounter = () => {
       <div className="absolute -top-10 -left-10 w-32 h-32 bg-accent/20 blur-[60px]" />
       <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-accent/20 blur-[60px]" />
 
-      <div className="text-accent text-xs font-black tracking-[0.3em] uppercase mb-4 flex items-center justify-center gap-2">
+      <div className="text-accent-text text-xs font-black tracking-[0.3em] uppercase mb-4 flex items-center justify-center gap-2">
         <span className="w-8 h-[1px] bg-accent/50" />
         Mega Jackpot
         <span className="w-8 h-[1px] bg-accent/50" />
       </div>
 
       <div className="flex items-center justify-center gap-2">
-        <span className="text-accent text-3xl font-bold self-start mt-2">৳</span>
-        <div className="text-accent text-6xl font-black tracking-tighter drop-shadow-[0_0_15px_var(--glow-accent)]">
+        <span className="text-accent-text text-3xl font-bold self-start mt-2">৳</span>
+        <div className="text-accent-text text-6xl font-black tracking-tighter drop-shadow-[0_0_15px_var(--glow-accent)]">
           {value.toLocaleString('en-US')}
         </div>
       </div>

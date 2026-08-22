@@ -17,16 +17,16 @@
   </div>
 
   <% if (matches && matches.length > 0) { %>
-    <div style="color:#94a3b8;font-size:13px;margin-bottom:10px;"><%= t.select_selection_msg %></div>
+    <div style="color:var(--text-muted);font-size:13px;margin-bottom:10px;"><%= t.select_selection_msg %></div>
 
     <% matches.forEach(m => { %>
       <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:14px;margin-bottom:12px;">
-        <div style="color:var(--text-main);font-size:14px;font-weight:600;margin-bottom:10px;"><%= m.title %> <span style="color:#64748b;font-size:11px;">(<%= m.sport %>)</span></div>
+        <div style="color:var(--text-main);font-size:14px;font-weight:600;margin-bottom:10px;"><%= m.title %> <span style="color:var(--text-muted);font-size:11px;">(<%= m.sport %>)</span></div>
         <% m.markets.forEach(mk => {
           const runners = mk.odds && typeof mk.odds === 'object' ? Object.keys(mk.odds) : [];
         %>
           <div style="margin-bottom:8px;">
-            <div style="color:#94a3b8;font-size:12px;margin-bottom:5px;"><%= mk.market_name %></div>
+            <div style="color:var(--text-muted);font-size:12px;margin-bottom:5px;"><%= mk.market_name %></div>
             <div style="display:flex;flex-wrap:wrap;gap:6px;">
               <% runners.forEach(rn => {
                 const odd = mk.odds[rn];
@@ -47,7 +47,7 @@
       </div>
     <% }) %>
   <% } else { %>
-    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:30px;text-align:center;color:#94a3b8;">
+    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:30px;text-align:center;color: var(--text-muted);">
       <%= t.no_open_markets_msg %>
     </div>
   <% } %>
@@ -65,7 +65,7 @@
             <span style="color:var(--text-main);font-size:13px;font-weight:600;"><%= a.selection_count %> <%= t.selections_label %> <%= a.boost_percent > 0 ? '(+' + a.boost_percent + '% ' + t.boost_label + ')' : '' %></span>
             <span style="color:<%= color %>;font-size:12px;font-weight:bold;"><%= label %></span>
           </div>
-          <div style="color:#94a3b8;font-size:11px;">
+          <div style="color:var(--text-muted);font-size:11px;">
             <%= t.stake_label %>: <%= a.stake %> · <%= t.total_odds_label %>: <%= a.total_odd %> · <%= t.potential_win_label %>: <span style="color:#f59e0b;"><%= a.potential_win %></span>
           </div>
           <div style="margin-top:8px;">
@@ -93,7 +93,7 @@
     <input type="number" id="slipStake" placeholder="<%= t.stake_placeholder_short %>" min="10" style="flex:1;background:#1e1e1e;border:1px solid #333;color:#fff;padding:10px;border-radius:8px;">
     <button onclick="placeAcca()" style="background:#f59e0b;color:#000;border:none;border-radius:8px;padding:10px 16px;font-weight:bold;font-size:13px;cursor:pointer;"><%= t.place_bet %></button>
   </div>
-  <div id="slipInfo" style="color:#94a3b8;font-size:11px;margin-top:6px;text-align:center;"></div>
+  <div id="slipInfo" style="color:var(--text-muted);font-size:11px;margin-top:6px;text-align:center;"></div>
 </div>
 
 <script>

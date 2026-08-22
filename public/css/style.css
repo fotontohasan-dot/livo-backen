@@ -16,6 +16,10 @@
   --gold-soft: rgba(201, 162, 39, 0.12);
   --green: #10b981;
   --red: #C83B3B;
+  /* --red যখন background-fill (badge/live-indicator) সেটার সাথে brand-accurate থাকা
+     দরকার; সরাসরি সারফেসের ওপর টেক্সট রঙ হিসেবে --red ব্যবহার করলে dark থিমে (~3.5:1)
+     AA মিস করে — তাই টেক্সটের জন্য আলাদা, উজ্জ্বল ভ্যারিয়েন্ট। */
+  --red-text: #E65A5A;
   --warning: #E0A537;
 
   /* Surfaces & Backgrounds (Deep Obsidian / Dark Forest Green) */
@@ -30,8 +34,13 @@
   /* Text (Warm White) */
   --text-main: #F5F1E6;
   --text-inverse: #14110A;
-  --text-muted: #7F8982;
+  --text-muted: #8A948D;
   --text-white: #ffffff; /* theme-invariant — for text over images/brand artwork only */
+  /* গোল্ড/প্রাইমারি টেক্সটের জন্য — --gold/--primary/--accent শুধু ব্যাকগ্রাউন্ড-ফিল হিসেবেই
+     ব্র্যান্ড-নির্ভুল থাকা দরকার (বাটন/ব্যাজে তার ওপর --text-inverse বসে); সারফেসের ওপর
+     সরাসরি টেক্সট রঙ হিসেবে ব্যবহারের জন্য এই আলাদা টোকেন — dark থিমে গোল্ডের কনট্রাস্ট
+     এমনিতেই যথেষ্ট (~7-8:1) তাই একই মান রাখা হয়েছে। */
+  --text-accent: #C9A227;
 
   /* Gradients */
   --grad-primary: linear-gradient(135deg, #C9A227, #E5C968);
@@ -80,6 +89,7 @@ body.light-mode {
   --gold: #B88918;
   --gold-hover: #D4AF37;
   --gold-soft: #FFF6D9;
+  --red-text: #C83B3B;
   --warning: #C97D0E;
 
   --bg-dark: #FAFAF7;
@@ -92,7 +102,8 @@ body.light-mode {
 
   --text-main: #181B19;
   --text-inverse: #14110A;
-  --text-muted: #858B86;
+  --text-muted: #646965;
+  --text-accent: #8C6912;
 
   --grad-primary: linear-gradient(135deg, #B88918, #D4AF37);
   --grad-secondary: linear-gradient(135deg, #2F6B45, #1F4B31);
@@ -221,7 +232,7 @@ body.light-mode .navbar {
 .nav-refresh-btn {
     background: none;
     border: none;
-    color: var(--gold);
+    color: var(--text-accent);
     cursor: pointer;
     padding: 5px;
     display: flex;
@@ -254,7 +265,7 @@ body.light-mode .navbar {
     font-family: 'Teko', sans-serif;
     font-weight: 600;
     font-size: 1.1rem;
-    color: var(--gold);
+    color: var(--text-accent);
 }
 
 body.light-mode .nav-balance-box {
@@ -286,7 +297,7 @@ body.light-mode .nav-balance-box {
     border-radius: 50%;
     border: 1px solid var(--border-glass);
     background: var(--bg-glass);
-    color: var(--gold);
+    color: var(--text-accent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -380,7 +391,7 @@ body.light-mode .nav-balance-box {
 }
 
 .nav-link.active {
-    color: var(--gold);
+    color: var(--text-accent);
 }
 
 .nav-link.active i {
@@ -401,7 +412,7 @@ body.light-mode .nav-balance-box {
 }
 
 .promotion-link span:last-child {
-    color: var(--gold);
+    color: var(--text-accent);
 }
 
 .btn {
@@ -493,7 +504,7 @@ body.light-mode .nav-balance-box {
 .stat-value, .stat-number {
     font-family: 'Teko', sans-serif;
     font-size: 2.2rem;
-    color: var(--gold);
+    color: var(--text-accent);
     line-height: 1.2;
 }
 
@@ -577,7 +588,7 @@ body.light-mode .nav-balance-box {
 }
 
 .section-title i {
-    color: var(--gold);
+    color: var(--text-accent);
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -602,7 +613,7 @@ p {
 }
 
 .balance-amount {
-    color: var(--gold);
+    color: var(--text-accent);
     font-weight: 700;
     font-family: 'Teko', sans-serif;
     font-size: 1.2rem;
@@ -620,7 +631,7 @@ p {
 }
 
 .tx-positive { color: var(--green); }
-.tx-negative { color: var(--red); }
+.tx-negative { color: var(--red-text); }
 
 .teko {
     font-family: 'Teko', sans-serif;
@@ -634,7 +645,7 @@ p {
 .bg-card { background-color: var(--bg-surface) !important; }
 .border-glass { border-color: var(--border-glass) !important; }
 .text-inverse { color: var(--text-inverse) !important; }
-.text-gold { color: var(--gold) !important; }
+.text-gold { color: var(--text-accent) !important; }
 
 .lang-switch {
     display: flex;
@@ -742,7 +753,7 @@ p {
 .menu-item i {
     width: 22px;
     text-align: center;
-    color: var(--gold);
+    color: var(--text-accent);
     font-size: 16px;
 }
 
@@ -900,7 +911,7 @@ body.menu-open {
 .auth-error {
     display: none;
     font-size: var(--font-xs);
-    color: var(--red);
+    color: var(--red-text);
     margin-top: 6px;
     line-height: 1.4;
 }
@@ -965,7 +976,7 @@ body.menu-open {
     margin: var(--space-5) 0 0;
 }
 
-.auth-alt a { color: var(--primary); font-weight: 600; text-decoration: none; }
+.auth-alt a { color: var(--text-accent); font-weight: 600; text-decoration: none; }
 .auth-alt a:hover { text-decoration: underline; }
 
 /* ==================== Google Sign-In ==================== */

@@ -23,6 +23,10 @@
   --accent-hover: #D4AF37;
   --accent-soft: #FFF6D9;
   --on-accent: #14110A;
+  /* accent যখন background-fill (badge/button, তার ওপর --on-accent বসে) সেটার সাথে
+     brand-accurate থাকা দরকার; সরাসরি surface-এর ওপর টেক্সট/আইকন রঙ হিসেবে --accent
+     ব্যবহার করলে (৩.১৭:১) AA normal-text থ্রেশহোল্ড মিস করে — তাই আলাদা, গাঢ় টোকেন। */
+  --text-accent: #8C6912;
 
   --success: #2E8B44;
   --warning: #C97D0E;
@@ -53,12 +57,13 @@
 
   --text-primary: #F5F1E6;
   --text-secondary: #B8BDB7;
-  --text-muted: #7F8982;
+  --text-muted: #8A948D;
 
   --accent: #C9A227;
   --accent-hover: #E5C968;
   --accent-soft: rgba(201, 162, 39, 0.12);
   --on-accent: #14110A;
+  --text-accent: #C9A227;
 
   --success: #3FAE58;
   --warning: #E0A537;
@@ -86,10 +91,11 @@
     --border: #29342D;
     --text-primary: #F5F1E6;
     --text-secondary: #B8BDB7;
-    --text-muted: #7F8982;
+    --text-muted: #8A948D;
     --accent: #C9A227;
     --accent-hover: #E5C968;
     --accent-soft: rgba(201, 162, 39, 0.12);
+    --text-accent: #C9A227;
     --success: #3FAE58;
     --warning: #E0A537;
     --icon-primary: #B8BDB7;
@@ -129,6 +135,7 @@ body {
   --color-accent-hover: var(--accent-hover);
   --color-accent-soft: var(--accent-soft);
   --color-on-accent: var(--on-accent);
+  --color-accent-text: var(--text-accent);
 
   --color-success: var(--success);
   --color-warning: var(--warning);

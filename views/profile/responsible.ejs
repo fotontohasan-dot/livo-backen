@@ -18,7 +18,7 @@
   <!-- দৈনিক ডিপোজিট সীমা -->
   <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;margin-bottom:16px;">
     <div style="color:var(--text-main);font-weight:bold;margin-bottom:6px;">💰 দৈনিক ডিপোজিট সীমা</div>
-    <div style="color:#94a3b8;font-size:12px;margin-bottom:12px;">
+    <div style="color:var(--text-muted);font-size:12px;margin-bottom:12px;">
       প্রতিদিন সর্বোচ্চ কত টাকা ডিপোজিট করতে পারবেন তা ঠিক করুন। এর বেশি ডিপোজিট আটকে যাবে।
     </div>
     <% if (rg && rg.daily_deposit_limit) { %>
@@ -36,7 +36,7 @@
   <!-- সেল্ফ এক্সক্লুশন -->
   <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;">
     <div style="color:var(--text-main);font-weight:bold;margin-bottom:6px;">⏸️ অ্যাকাউন্ট বিরতি (Self-Exclusion)</div>
-    <div style="color:#94a3b8;font-size:12px;margin-bottom:12px;">
+    <div style="color:var(--text-muted);font-size:12px;margin-bottom:12px;">
       নির্দিষ্ট সময়ের জন্য নিজের অ্যাকাউন্ট বন্ধ রাখুন। এই সময়ে লগইন করা যাবে না। বিরতি শুরু হলে সাথে সাথে লগআউট হবে।
     </div>
     <% if (rg && rg.self_exclude_until && (new Date(rg.self_exclude_until) > new Date())) { %>
@@ -58,7 +58,7 @@
     <% } %>
   </div>
 
-  <p style="font-size:.75rem;color:#94a3b8;text-align:center;margin-top:1rem;line-height:1.6;">
+  <p style="font-size:.75rem;color:var(--text-muted);text-align:center;margin-top:1rem;line-height:1.6;">
     জুয়া আসক্তি তৈরি করতে পারে। দায়িত্বের সাথে খেলুন।<br>
     সাহায্য দরকার হলে সাপোর্টে যোগাযোগ করুন।
   </p>

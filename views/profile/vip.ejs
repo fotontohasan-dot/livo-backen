@@ -21,7 +21,7 @@
          data-progress="<%= vip.progress %>" data-total-turnover="<%= vip.totalTurnover %>" data-to-next="<%= vip.toNext %>"
          data-next-name="<%= vip.next ? vip.next.name : '' %>" data-is-max="<%= vip.next ? '0' : '1' %>">
       <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-        <span style="color:#94a3b8;font-size:13px;"><%= t.total_turnover %></span>
+        <span style="color:var(--text-muted);font-size:13px;"><%= t.total_turnover %></span>
         <span id="vipTurnoverText" style="color:#f59e0b;font-size:14px;font-weight:bold;"><%= Number(vip.totalTurnover).toLocaleString('bn-BD') %></span>
       </div>
 
@@ -38,12 +38,12 @@
         <div id="vipDeltaPop" style="position:absolute;top:-26px;right:0;color:#4ade80;font-size:12px;font-weight:800;opacity:0;transition:opacity .3s, transform .6s;pointer-events:none;">+0</div>
       </div>
 
-      <div style="color:#64748b;font-size:11px;text-align:center;margin-top:2px;">
+      <div style="color:var(--text-muted);font-size:11px;text-align:center;margin-top:2px;">
         <%= t.progress_label %> <span id="vipProgressNum" style="color:#f59e0b;font-weight:bold;">0</span> / ১০০০
       </div>
 
       <% if (vip.next) { %>
-        <div style="color:#94a3b8;font-size:12px;text-align:center;margin-top:8px;">
+        <div style="color:var(--text-muted);font-size:12px;text-align:center;margin-top:8px;">
           <%= t.next_level %> <strong style="color:var(--text-main);"><%= vip.next.name %></strong> <%= t.need_more %>
           <strong id="vipToNextText" style="color:#f59e0b;"><%= Number(vip.toNext).toLocaleString('bn-BD') %></strong> <%= t.turnover_required %>
         </div>
@@ -64,29 +64,29 @@
             <div style="color:<%= reached ? '#fff' : '#94a3b8' %>;font-size:14px;font-weight:bold;">
               <%= reached ? '✅' : '🔒' %> <%= l.name %> (<%= t.level_paren %> <%= l.level %>)
             </div>
-            <div style="color:#94a3b8;font-size:11px;margin-top:2px;">
+            <div style="color:var(--text-muted);font-size:11px;margin-top:2px;">
               <%= t.turnover_label %> <%= Number(l.min_turnover).toLocaleString('bn-BD') %>
             </div>
           </div>
           <div style="text-align:right;">
             <% if (l.upgrade_bonus > 0) { %>
               <div style="color:#10b981;font-size:12px;font-weight:bold;">+<%= l.upgrade_bonus %></div>
-              <div style="color:#94a3b8;font-size:10px;"><%= t.upgrade_bonus %></div>
+              <div style="color:var(--text-muted);font-size:10px;"><%= t.upgrade_bonus %></div>
             <% } else { %>
-              <div style="color:#94a3b8;font-size:11px;"><%= t.starting_level %></div>
+              <div style="color:var(--text-muted);font-size:11px;"><%= t.starting_level %></div>
             <% } %>
           </div>
         </div>
       <% }) %>
     </div>
 
-    <p style="font-size:.75rem;color:#94a3b8;text-align:center;margin-top:1rem;line-height:1.6;">
+    <p style="font-size:.75rem;color:var(--text-muted);text-align:center;margin-top:1rem;line-height:1.6;">
       <%= t.vip_note_1 %><br>
       <%= t.vip_note_2 %>
     </p>
 
   <% } else { %>
-    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:30px;text-align:center;color:#94a3b8;">
+    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:30px;text-align:center;color: var(--text-muted);">
       <%= t.vip_load_failed %>
     </div>
   <% } %>

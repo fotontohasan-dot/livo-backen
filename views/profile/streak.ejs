@@ -20,7 +20,7 @@
     <!-- পরের মাইলস্টোন -->
     <% if (streak.nextMilestone) { %>
       <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;margin-bottom:16px;text-align:center;">
-        <div style="color:#94a3b8;font-size:13px;">পরের বনাসের জন্য দরকার</div>
+        <div style="color:var(--text-muted);font-size:13px;">পরের বনাসের জন্য দরকার</div>
         <div style="color:#f59e0b;font-size:16px;font-weight:bold;margin-top:4px;">
           আরও <%= streak.nextMilestone - streak.current %> টান জয় → বেট এর <%= streak.nextMultiplier %> গুণ বোনাস
         </div>
@@ -50,23 +50,23 @@
           <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
             <div>
               <div style="color:var(--text-main);font-size:13px;"><%= h.description %></div>
-              <div style="color:#64748b;font-size:11px;"><%= new Date(h.created_at).toLocaleDateString('bn-BD') %></div>
+              <div style="color:var(--text-muted);font-size:11px;"><%= new Date(h.created_at).toLocaleDateString('bn-BD') %></div>
             </div>
             <div style="color:#10b981;font-size:13px;font-weight:bold;">+<%= h.amount %></div>
           </div>
         <% }) %>
       <% } else { %>
-        <div style="color:#94a3b8;font-size:13px;text-align:center;padding:10px;">এখনো কোনো মাইলস্টোন বোনাস নেই।</div>
+        <div style="color:var(--text-muted);font-size:13px;text-align:center;padding:10px;">এখনো কোনো মাইলস্টোন বোনাস নেই।</div>
       <% } %>
     </div>
 
-    <p style="font-size:.75rem;color:#94a3b8;text-align:center;margin-top:1rem;line-height:1.6;">
+    <p style="font-size:.75rem;color:var(--text-muted);text-align:center;margin-top:1rem;line-height:1.6;">
       ক্যাসিনো গেম পরপর জিতলে স্ট্রিক বাড়ে।<br>
       একবর হারলে স্ট্রিক ০ থেকে আবার শুরু। বোনাস স্বযক্রিয়ভাবে যোগ হয়।
     </p>
 
   <% } else { %>
-    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:30px;text-align:center;color:#94a3b8;">
+    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:30px;text-align:center;color: var(--text-muted);">
       স্ট্রিক তথ্য লোড করা যায়নি। পরে আবার চেষ্টা করুন।
     </div>
   <% } %>

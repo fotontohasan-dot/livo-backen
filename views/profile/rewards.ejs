@@ -3,7 +3,7 @@
 <div class="container page" style="max-width:600px;margin:0 auto;padding:15px;">
   <%- include('../partials/flash') %>
 
-  <h1 style="font-size:1.4rem;font-weight:800;margin-bottom:1rem;text-align:center;color:var(--gold);">
+  <h1 style="font-size:1.4rem;font-weight:800;margin-bottom:1rem;text-align:center;color: var(--text-accent);">
     <%= t.daily_reward_title %>
   </h1>
 
@@ -12,7 +12,7 @@
   <div class="card" style="margin-bottom:1rem;">
     <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
       <span><%= t.achievements_label %> (<%= badgesPreview.earnedCount %>/<%= badgesPreview.totalCount %>)</span>
-      <a href="/profile/badges" style="color:var(--gold);font-size:11.5px;font-weight:700;text-decoration:none;"><%= t.view_all_arrow %></a>
+      <a href="/profile/badges" style="color: var(--text-accent);font-size:11.5px;font-weight:700;text-decoration:none;"><%= t.view_all_arrow %></a>
     </div>
     <div class="card-body" style="padding:.9rem;">
       <% if (badgesPreview.earned.length > 0) { %>
@@ -34,7 +34,7 @@
   <!-- ==================== রেফারেল সামারি ==================== -->
   <% if (typeof referralSummary !== 'undefined' && referralSummary) { %>
   <a href="/profile/referral" style="text-decoration:none;display:block;margin-bottom:1rem;">
-    <div class="card" style="background:linear-gradient(135deg,#5b8def,#3457c9);border:none;">
+    <div class="card" style="background:linear-gradient(135deg,#4B75C6,#2B48A7);border:none;">
       <div class="card-body" style="padding:1rem 1.1rem;display:flex;align-items:center;gap:14px;">
         <div style="font-size:26px;">👥</div>
         <div style="flex:1;min-width:0;">
@@ -52,7 +52,7 @@
     <div class="card" style="margin-bottom:1rem;">
       <div class="card-body" style="text-align:center;padding:1.2rem;">
         <div style="font-size:.8rem;color:var(--muted);"><%= t.todays_sports_turnover %></div>
-        <div style="font-size:2rem;font-weight:900;color:var(--gold);margin:.3rem 0;">
+        <div style="font-size:2rem;font-weight:900;color: var(--text-accent);margin:.3rem 0;">
           <%= Number(reward.turnover).toLocaleString('bn-BD') %>
         </div>
 
@@ -71,7 +71,7 @@
         <div style="position:relative;background:rgba(255,255,255,0.1);border-radius:20px;height:16px;overflow:hidden;margin:.6rem 0;">
           <div id="turnoverProgressFill" data-target="<%= pct %>" style="width:0%;height:100%;background:var(--grad-gold,linear-gradient(90deg,#f59e0b,#fbbf24));transition:width 1s ease-out;"></div>
         </div>
-        <div style="font-size:.78rem;font-weight:800;color:var(--gold);"><span id="turnoverProgressPct">0</span>%</div>
+        <div style="font-size:.78rem;font-weight:800;color: var(--text-accent);"><span id="turnoverProgressPct">0</span>%</div>
         <div style="font-size:.78rem;color:var(--muted);margin-top:2px;"><%= nextText %></div>
       </div>
     </div>
@@ -109,7 +109,7 @@
         <div style="display:flex;flex-direction:column;gap:12px;">
 
           <!-- লাকি হুইল -->
-          <a href="/profile/wheel" style="text-decoration:none;display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#f5273f,#fb5570);border-radius:16px;padding:12px 14px;">
+          <a href="/profile/wheel" style="text-decoration:none;display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#C92034,#CE465C);border-radius:16px;padding:12px 14px;">
             <div style="font-size:26px;">🎡</div>
             <div style="flex:1;min-width:0;">
               <div style="color:#fff;font-weight:800;font-size:14px;"><%= t.lucky_wheel %></div>
@@ -119,7 +119,7 @@
           </a>
 
           <!-- সোনার ডিম -->
-          <div id="goldenEggCard" style="background:linear-gradient(135deg,#ff2331,#ff6b39);border-radius:16px;padding:12px 14px;">
+          <div id="goldenEggCard" style="background:linear-gradient(135deg,#C51B26,#C5532C);border-radius:16px;padding:12px 14px;">
             <div style="display:flex;align-items:center;gap:12px;">
               <div style="font-size:26px;">🥚</div>
               <div style="flex:1;min-width:0;">
@@ -133,7 +133,7 @@
           </div>
 
           <!-- রেড কার্ড -->
-          <div id="redCardCard" style="display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#f634d1,#fb5cc7);border-radius:16px;padding:12px 14px;">
+          <div id="redCardCard" style="display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#BE28A2,#C2479A);border-radius:16px;padding:12px 14px;">
             <div style="font-size:26px;">🧧</div>
             <div style="flex:1;min-width:0;">
               <div style="color:#fff;font-weight:800;font-size:14px;"><%= t.red_card %></div>
@@ -166,7 +166,7 @@
                 <td style="padding:.7rem;font-size:.9rem;color:<%= reached ? '#10b981' : '#fff' %>;">
                   <%= reached ? '✅ ' : '' %><%= Number(t.min_turnover).toLocaleString('bn-BD') %>+
                 </td>
-                <td style="padding:.7rem;text-align:right;font-weight:700;color:var(--gold);">
+                <td style="padding:.7rem;text-align:right;font-weight:700;color: var(--text-accent);">
                   <%= t.bonus_amount %><%= t.taka %></td>
               </tr>
             <% }) %>

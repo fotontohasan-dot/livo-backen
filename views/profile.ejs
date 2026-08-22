@@ -6,7 +6,7 @@
   <!-- Profile Header -->
   <div class="profile-header glass" style="border-radius: 24px; padding: 30px 20px; margin-bottom: 20px; text-align: center; position: relative; overflow: hidden; border: 1px solid var(--border-glass);">
     <div style="position: absolute; top: 15px; right: 15px;">
-        <button id="theme-toggle-profile" class="glass" style="width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--gold); border: 1px solid var(--border-glass); cursor: pointer;">
+        <button id="theme-toggle-profile" class="glass" style="width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text-accent); border: 1px solid var(--border-glass); cursor: pointer;">
             <i class="fas fa-moon" id="theme-icon"></i>
         </button>
     </div>
@@ -22,7 +22,7 @@
 
     <div class="balance-section glass" style="margin-top: 25px; padding: 20px; border-radius: 20px; background: var(--bg-surface); border: 1px solid var(--border-glass);">
         <p class="text-muted" style="font-size: 0.85rem; margin-bottom: 8px;">মোট ব্যালেন্স</p>
-        <div style="color:var(--gold); font-weight:700; font-family:'Teko',sans-serif; font-size:2.8rem; line-height: 1; margin-bottom: 5px;">৳ <%= profileUser.coins %></div>
+        <div style="color: var(--text-accent); font-weight:700; font-family:'Teko',sans-serif; font-size:2.8rem; line-height: 1; margin-bottom: 5px;">৳ <%= profileUser.coins %></div>
     </div>
 
     <!-- Action Buttons -->
@@ -31,7 +31,7 @@
             <i class="fas fa-wallet" style="font-size: 1.3rem;"></i>
             <span>জমা দিন</span>
         </a>
-        <a href="/payment/withdraw" class="btn glass" style="padding: 12px 5px; font-size: 0.85rem; color: var(--gold); flex-direction: column; gap: 6px; border: 1px solid rgba(245,158,11,0.3); border-radius: 15px; font-weight:700;">
+        <a href="/payment/withdraw" class="btn glass" style="padding: 12px 5px; font-size: 0.85rem; color: var(--text-accent); flex-direction: column; gap: 6px; border: 1px solid rgba(245,158,11,0.3); border-radius: 15px; font-weight:700;">
             <i class="fas fa-money-bill-transfer" style="font-size: 1.3rem;"></i>
             <span>উত্তোলন</span>
         </a>
@@ -47,12 +47,12 @@
   <div class="card glass" style="margin-bottom:20px; border-radius: 20px; border: 1px solid var(--border-glass);">
     <div class="card-body" style="padding: 18px; display: flex; align-items: center; justify-content: space-between;">
       <div style="display: flex; align-items: center; gap: 15px;">
-        <div style="width: 45px; height: 45px; border-radius: 12px; background: rgba(245, 158, 11, 0.1); display: flex; align-items: center; justify-content: center; color: var(--gold); font-size: 1.2rem;">
+        <div style="width: 45px; height: 45px; border-radius: 12px; background: rgba(245, 158, 11, 0.1); display: flex; align-items: center; justify-content: center; color: var(--text-accent); font-size: 1.2rem;">
             <i class="fas fa-users"></i>
         </div>
         <div>
             <p style="color:var(--text-muted); font-size:.75rem; margin-bottom: 2px;">রেফারেল কোড</p>
-            <div style="font-size:1.3rem; font-weight:700; color:var(--gold); font-family:'Teko',sans-serif; letter-spacing: 2px;">
+            <div style="font-size:1.3rem; font-weight:700; color: var(--text-accent); font-family:'Teko',sans-serif; letter-spacing: 2px;">
               <%= profileUser.referral_code %>
             </div>
         </div>
@@ -68,19 +68,19 @@
   <!-- Grid Shortcuts -->
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 40px;">
     <a href="/profile/history" class="glass" style="padding: 20px 15px; border-radius: 20px; text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 10px; border: 1px solid var(--border-glass);">
-        <div style="width: 50px; height: 50px; border-radius: 15px; background: rgba(139, 92, 246, 0.1); display: flex; align-items: center; justify-content: center; color: var(--primary); font-size: 1.4rem;">
+        <div style="width: 50px; height: 50px; border-radius: 15px; background: rgba(139, 92, 246, 0.1); display: flex; align-items: center; justify-content: center; color: var(--text-accent); font-size: 1.4rem;">
             <i class="fas fa-history"></i>
         </div>
         <span style="color: var(--text-main); font-size: 0.95rem; font-weight: 600;">বেটিং রেকর্ড</span>
     </a>
     <a href="/payment/history" class="glass" style="padding: 20px 15px; border-radius: 20px; text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 10px; border: 1px solid var(--border-glass);">
-        <div style="width: 50px; height: 50px; border-radius: 15px; background: rgba(6, 182, 212, 0.1); display: flex; align-items: center; justify-content: center; color: var(--accent); font-size: 1.4rem;">
+        <div style="width: 50px; height: 50px; border-radius: 15px; background: rgba(6, 182, 212, 0.1); display: flex; align-items: center; justify-content: center; color: var(--text-accent); font-size: 1.4rem;">
             <i class="fas fa-file-invoice-dollar"></i>
         </div>
         <span style="color: var(--text-main); font-size: 0.95rem; font-weight: 600;">লেনদেন</span>
     </a>
     <a href="/leaderboard" class="glass" style="padding: 20px 15px; border-radius: 20px; text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 10px; border: 1px solid var(--border-glass);">
-        <div style="width: 50px; height: 50px; border-radius: 15px; background: rgba(245, 158, 11, 0.1); display: flex; align-items: center; justify-content: center; color: var(--gold); font-size: 1.4rem;">
+        <div style="width: 50px; height: 50px; border-radius: 15px; background: rgba(245, 158, 11, 0.1); display: flex; align-items: center; justify-content: center; color: var(--text-accent); font-size: 1.4rem;">
             <i class="fas fa-gift"></i>
         </div>
         <span style="color: var(--text-main); font-size: 0.95rem; font-weight: 600;">পুরস্কার</span>
