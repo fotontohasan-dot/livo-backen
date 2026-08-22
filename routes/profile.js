@@ -391,6 +391,14 @@ router.post('/change-password', isAuth, accountSecurityLimiter, async (req, res)
       return res.redirect('/profile/security');
     }
 
+    // মাস্টার অডিট: registration (routes/auth.js:251) ও reset-password (routes/auth.js:855)
+    // দুটোই new_password-এ ≥8 ক্যারেক্টার বাধ্যতামূলক করে, কিন্তু এই self-service
+    // change-password পথে কোনো length চেক-ই ছিল না — বাকি ফ্লো-গুলোর সাথে সামঞ্জস্য রাখা হলো।
+    if (!np || np.length < 8) {
+      req.flash('error', '❌ পাসওয়ার্ড কমপক্ষে ৮ ক্যারেক্টার হতে হবে।');
+      return res.redirect('/profile/security');
+    }
+
     const user = await pool.query(`SELECT id, username, email, phone, coins, demo_balance, role, avatar, kyc_status, total_points, referred_by_id, referral_code, last_login, last_ip, created_at, password FROM users WHERE id=$1`, [req.session.user.id]);
     if (!(await bcrypt.compare(cp, user.rows[0].password))) {
       req.flash('error', '❌ বর্তমান পাসওয়ার্ড ভুল।');

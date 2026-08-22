@@ -584,7 +584,10 @@ router.post('/login', async (req, res) => {
     const needsStepUp = vpnInfo && (vpnInfo.isTor || vpnInfo.riskScore >= STEP_UP_RISK_THRESHOLD);
 
     if (needsStepUp && user.email && user.email_verified) {
-      const code = String(Math.floor(100000 + Math.random() * 900000));
+      // মাস্টার অডিট: Math.random() একটা নিরাপত্তা-সংবেদনশীল কোডের জন্য CSPRNG নয়
+      // (predictable seed/state) — crypto.randomInt একটা uniform, cryptographically
+      // secure ৬-অঙ্কের কোড দেয়।
+      const code = String(crypto.randomInt(100000, 1000000));
       await pool.query(
         `INSERT INTO step_up_verifications (user_id, code, purpose, ip, expires_at)
          VALUES ($1, $2, 'vpn_login', $3, NOW() + INTERVAL '${STEP_UP_CODE_TTL_MINUTES} minutes')`,
@@ -620,7 +623,7 @@ router.post('/verify-access', async (req, res) => {
 
     const { code } = req.body;
     const rowRes = await pool.query(
-      `SELECT id, user_id, purpose, code, expires_at, verified_at, created_at FROM step_up_verifications
+      `SELECT id, user_id, purpose, code, expires_at, verified_at, created_at, attempts FROM step_up_verifications
        WHERE user_id = $1 AND purpose = 'vpn_login' AND verified_at IS NULL
        ORDER BY created_at DESC LIMIT 1`,
       [pendingUserId]

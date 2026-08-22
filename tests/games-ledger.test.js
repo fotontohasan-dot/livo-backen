@@ -5,6 +5,12 @@
 // লেজার-ইনসার্ট হতো COMMIT-এর পরে, আলাদা অ-await করা pool.query(...).catch(...) হিসেবে।
 // অর্থাৎ ব্যালেন্স কর্তন স্থায়ী হয়ে যাওয়ার পরও ওই ইনসার্ট ব্যর্থ হলে ব্যালেন্স-লেজার
 // গরমিল স্থায়ীভাবে থেকে যেত। এই টেস্ট নিশ্চিত করে balance delta == ledger delta।
+//
+// মাস্টার অডিট BUG-002: এই casino_bet এন্ট্রি আগে ধনাত্মক betAmount হিসেবে লেখা হতো,
+// অথচ aviator বাজি বসানোর মুহূর্তে এটাই ওই ব্যালেন্স-কর্তনের একমাত্র লেজার রেকর্ড —
+// codebase-এর বাকি সব ফ্লো-র মতোই (withdraw, admin add/remove — দেখুন
+// tests/integration/financialLedgerIntegrity.test.js) এখানেও debit নেগেটিভ হওয়া উচিত।
+// এখন সাইন ঠিক করা হয়েছে বলে আর abs() লাগে না — সরাসরি সমতা যাচাই করা হচ্ছে।
 // ---------------------------------------------------------------------------
 
 const { getCsrfAgent, uniqueUsername, uniquePhone, REALISTIC_UA } = require('./helpers/app');
@@ -41,9 +47,9 @@ describe('POST /games/play — aviator বাজি বসানোর লেজ
     const balanceDelta = after - before;
     const ledgerDelta = afterLedger - beforeLedger;
     expect(balanceDelta).toBe(-100);
-    // লেজারে casino_bet এন্ট্রি positive amount(betAmount) হিসেবে লেখা হয় (staked amount রেকর্ড),
-    // কিন্তু আসল ব্যালেন্স-ইফেক্ট নেগেটিভ — তাই এখানে abs তুলনা: এন্ট্রি সত্যিই লেখা হয়েছে কিনা যাচাই।
-    expect(Math.abs(ledgerDelta)).toBe(Math.abs(balanceDelta));
+    // casino_bet এখন সঠিক সাইনে (নেগেটিভ) লেখা হয় — ledger delta সরাসরি balance delta-র
+    // সমান হওয়া উচিত, abs() workaround ছাড়াই।
+    expect(ledgerDelta).toBe(balanceDelta);
 
     const txCount = await pool.query(
       `SELECT COUNT(*) c FROM coin_transactions WHERE user_id=$1 AND type='casino_bet'`, [U.userId]
@@ -88,4 +94,36 @@ describe('POST /games/play — aviator বাজি বসানোর লেজ
     const after = Number((await pool.query('SELECT coins FROM users WHERE id=$1', [U.userId])).rows[0].coins);
     expect(after).toBe(before); // রোলব্যাক — ব্যালেন্স অপরিবর্তিত
   });
+});
+
+describe('migrations.js Phase 08 — পুরনো ধনাত্মক casino_bet সারি ব্যাকফিল (BUG-002 historical impact)', () => {
+  test('ধনাত্মক casino_bet সারি নেগেটিভে ব্যাকফিল হয়, users.coins স্পর্শ করে না, এবং idempotent', async () => {
+    const runMigrations = require('../migrations');
+    const U = await makeUser();
+    const before = Number((await pool.query('SELECT coins FROM users WHERE id=$1', [U.userId])).rows[0].coins);
+
+    // পুরনো (fixed-এর আগের) ধরনে একটা ইচ্ছাকৃত ধনাত্মক casino_bet সারি ইনসার্ট
+    await pool.query(
+      `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, 250, 'casino_bet', 'legacy positive row')`,
+      [U.userId]
+    );
+
+    await runMigrations();
+
+    let row = (await pool.query(
+      `SELECT amount FROM coin_transactions WHERE user_id=$1 AND type='casino_bet' ORDER BY id DESC LIMIT 1`, [U.userId]
+    )).rows[0];
+    expect(Number(row.amount)).toBe(-250);
+
+    // দ্বিতীয়বার চালালে আর কিছু বদলায় না (idempotent — শুধু amount > 0 সারি টার্গেট করে)
+    await runMigrations();
+    row = (await pool.query(
+      `SELECT amount FROM coin_transactions WHERE user_id=$1 AND type='casino_bet' ORDER BY id DESC LIMIT 1`, [U.userId]
+    )).rows[0];
+    expect(Number(row.amount)).toBe(-250);
+
+    // users.coins ব্যাকফিলের কারণে বদলায়নি — এটা শুধু লেজার রিপোর্টিং ঠিক করে, বাস্তব ব্যালেন্স নয়
+    const after = Number((await pool.query('SELECT coins FROM users WHERE id=$1', [U.userId])).rows[0].coins);
+    expect(after).toBe(before);
+  }, 30000);
 });
