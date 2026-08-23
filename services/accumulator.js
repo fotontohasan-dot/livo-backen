@@ -197,6 +197,7 @@ async function settleSelectionsForMarket(client, marketId, winningRunner) {
   )).rows;
 
   const affectedAccaIds = new Set();
+  const notifsToEmit = []; // {userId, row} — কলার (routes/admin.js) এগুলো real-time emitToUser()-এ পাঠায়
   for (const sel of sels) {
     const won = String(sel.runner) === String(winningRunner);
     await client.query(
@@ -229,11 +230,12 @@ async function settleSelectionsForMarket(client, marketId, winningRunner) {
         `UPDATE accumulators SET status = 'lost', settled_at = NOW() WHERE id = $1`,
         [accaId]
       );
-      await client.query(
+      const ln = await client.query(
         `INSERT INTO notifications (user_id, title, message, type)
-         VALUES ($1, 'অ্যাকুমুলেটর', $2, 'error')`,
+         VALUES ($1, 'অ্যাকুমুলেটর', $2, 'error') RETURNING *`,
         [acca.user_id, 'দুঃখিত, আপনার অ্যাকুমুলেটর বাজিটি হেরে গেছে।']
       );
+      notifsToEmit.push({ userId: acca.user_id, row: ln.rows[0] });
     } else if (!anyPending) {
       // সব জিতেছে — পেআউট
       const payout = acca.potential_win;
@@ -247,16 +249,23 @@ async function settleSelectionsForMarket(client, marketId, winningRunner) {
          VALUES ($1, $2, 'accumulator_win', 'অ্যাকুমুলেটর জয়')`,
         [acca.user_id, payout]
       );
-      await client.query(
+      const wn = await client.query(
         `INSERT INTO notifications (user_id, title, message, type)
-         VALUES ($1, 'অ্যাকুমুলেটর জয়!', $2, 'success')`,
+         VALUES ($1, 'অ্যাকুমুলেটর জয়!', $2, 'success') RETURNING *`,
         [acca.user_id, `অভিনন্দন! আপনি অ্যাকুমুলেটরে ${payout} কয়েন জিতেছেন!`]
       );
+      notifsToEmit.push({ userId: acca.user_id, row: wn.rows[0] });
     }
     // anyPending হলে এখনো অন্য সিলেকশন বাকি — কিছু করি না
   }
 
-  return affectedAccaIds.size;
+  // আগে এখানে affectedAccaIds.size (একটা সংখ্যা) রিটার্ন হতো, কিন্তু কলার
+  // (routes/admin.js POST /markets/:marketId/settle) সেটাকে notifsToEmit.push(...accaNotifs)
+  // দিয়ে spread করার চেষ্টা করত — সংখ্যা iterable না হওয়ায় প্রতিবার TypeError থ্রো করত
+  // (COMMIT-এর পরে, তাই আসল সেটেলমেন্ট ঠিকই হয়ে যেত কিন্তু অ্যাডমিনকে ভুলভাবে "সেটেল সমস্যা!"
+  // দেখানো হতো, real-time notification/audit log কখনো পাঠানো হতো না)। এখন প্রকৃত
+  // {userId, row} নোটিফিকেশন অবজেক্টের অ্যারে রিটার্ন করা হয়, যেটা কলারের প্রত্যাশার সাথে মেলে।
+  return notifsToEmit;
 }
 
 module.exports = { placeAccumulator, getUserAccumulators, getOpenMarkets, boostFor, MIN_STAKE, settleSelectionsForMarket };

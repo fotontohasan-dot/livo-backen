@@ -159,4 +159,45 @@ describe('Admin Referral Management (/admin/referrals)', () => {
     const kycPage = await agent.get('/admin/kyc');
     expect(kycPage.text).toContain('href="/admin/referrals"');
   });
+
+  test('একই রেফার্ড ইউজারের দুইটা সমসাময়িক (concurrent) qualifying ডিপোজিট রেফারারকে মাত্র একবারই signup বোনাস দেয়', async () => {
+    const { userId: referrerId } = await registerUser();
+    const { userId: referredId } = await registerUser();
+    await createReferral(null, referrerId, referredId);
+
+    const before = await pool.query('SELECT coins FROM users WHERE id=$1', [referrerId]);
+    const coinsBefore = Number(before.rows[0].coins);
+
+    // দুইটা আলাদা connection, প্রতিটা নিজের সম্পূর্ণ BEGIN..COMMIT transaction-এ — যেমন
+    // admin bulk-approve, SSLCommerz success-redirect ও IPN callback প্রতিটা নিজের সম্পূর্ণ
+    // transaction-এ processReferralDeposit ডাকে (creditApprovedDeposit-এর মতো)
+    async function runInOwnTransaction(amount) {
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        await processReferralDeposit(client, referredId, amount);
+        await client.query('COMMIT');
+      } finally {
+        client.release();
+      }
+    }
+    await Promise.all([
+      runInOwnTransaction(1000),
+      runInOwnTransaction(1500)
+    ]);
+
+    const after = await pool.query('SELECT coins FROM users WHERE id=$1', [referrerId]);
+    const coinsAfter = Number(after.rows[0].coins);
+    // ১ম রেফারেলের বোনাস সবসময় ১০০ কয়েন (signupBonusFor(1) === 100) — দুইবার দিলে ২০০ হতো
+    expect(coinsAfter - coinsBefore).toBe(100);
+
+    const refRow = await pool.query('SELECT signup_bonus_paid FROM referrals WHERE referrer_id=$1 AND referred_id=$2', [referrerId, referredId]);
+    expect(refRow.rows[0].signup_bonus_paid).toBe(true);
+
+    const commissionCount = await pool.query(
+      `SELECT COUNT(*) FROM referral_commissions WHERE earner_id=$1 AND from_user_id=$2 AND reason='signup'`,
+      [referrerId, referredId]
+    );
+    expect(parseInt(commissionCount.rows[0].count)).toBe(1);
+  });
 });

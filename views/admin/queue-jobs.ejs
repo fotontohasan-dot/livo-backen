@@ -127,7 +127,7 @@ const throughputTotal24h = (throughput || []).reduce((sum, t) => sum + t.complet
         ${(f.status || f.type) ? '<a href="/admin/queue-jobs" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">রিসেট</a>' : ''}
         ${(s.failed > 0) ? `
         <form method="POST" action="/admin/queue-jobs/retry-all" onsubmit="return confirm('সব ব্যর্থ জব আবার কিউতে পাঠাতে চান?')" style="margin-left:auto">
-            ${f.type ? '<input type="hidden" name="type" value="' + f.type + '">' : ''}
+            ${f.type ? '<input type="hidden" name="type" value="' + escapeHtml(f.type) + '">' : ''}
             <button type="submit" class="px-5 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-2xl text-sm font-semibold"><i class="fas fa-rotate-right mr-1"></i>সব Failed Retry করুন</button>
         </form>` : ''}
     </form>

@@ -53,7 +53,7 @@ const topKeysHtml = (topKeys || []).map(k => '<div class="flex justify-between t
     </div>
 
     <form method="GET" action="/admin/api-logs" class="flex flex-wrap gap-3">
-        <input type="text" name="endpoint" value="${f.endpoint || ''}" placeholder="Endpoint সার্চ" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm w-40">
+        <input type="text" name="endpoint" value="${escapeHtml(f.endpoint || '')}" placeholder="Endpoint সার্চ" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm w-40">
         <select name="method" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
             <option value="">সব Method</option>
             <option value="GET" ${f.method === 'GET' ? 'selected' : ''}>GET</option>
@@ -61,14 +61,14 @@ const topKeysHtml = (topKeys || []).map(k => '<div class="flex justify-between t
             <option value="PUT" ${f.method === 'PUT' ? 'selected' : ''}>PUT</option>
             <option value="DELETE" ${f.method === 'DELETE' ? 'selected' : ''}>DELETE</option>
         </select>
-        <input type="number" name="status" value="${f.status || ''}" placeholder="Status" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm w-24">
-        <input type="text" name="ip" value="${f.ip || ''}" placeholder="IP" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm w-36">
+        <input type="number" name="status" value="${escapeHtml(f.status || '')}" placeholder="Status" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm w-24">
+        <input type="text" name="ip" value="${escapeHtml(f.ip || '')}" placeholder="IP" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm w-36">
         <select name="api_key_id" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
             <option value="">সব API Key</option>
             ${(apiKeys || []).map(k => '<option value="' + k.id + '" ' + (f.api_key_id == k.id ? 'selected' : '') + '>' + escapeHtml(k.name) + '</option>').join('')}
         </select>
-        <input type="date" name="from" value="${f.from || ''}" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
-        <input type="date" name="to" value="${f.to || ''}" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+        <input type="date" name="from" value="${escapeHtml(f.from || '')}" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+        <input type="date" name="to" value="${escapeHtml(f.to || '')}" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
         <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">ফিল্টার</button>
         <a href="/admin/api-logs/export.csv?${qsString}" class="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-sm font-semibold"><i class="fas fa-download mr-1"></i>CSV Export</a>
     </form>

@@ -215,6 +215,26 @@ describe('Withdraw PIN (services/withdrawPin.js)', () => {
       expect(result.success).toBe(true);
     });
 
+    test(`${MAX_FAILED_ATTEMPTS}+ সমসাময়িক (concurrent) ভুল গেসেও অ্যাকাউন্ট লক হয় (race-condition রিগ্রেশন)`, async () => {
+      const userId = await makeUser();
+      await createPin(userId, '284617', '10.0.0.1');
+
+      // একগুচ্ছ concurrent ভুল PIN গেস — আগে সবগুলো একই stale failed_attempts count থেকে
+      // পড়ত (read-then-write race), ফলে কাউন্টার কখনো MAX_FAILED_ATTEMPTS-এ পৌঁছাতো না।
+      const guesses = Array.from({ length: MAX_FAILED_ATTEMPTS + 2 }, () => verifyPin(userId, '999888', '10.0.0.1'));
+      const results = await Promise.all(guesses);
+
+      expect(results.some((r) => r.locked === true)).toBe(true);
+
+      const status = await getPinStatus(userId);
+      expect(status.locked).toBe(true);
+
+      // লক থাকা অবস্থায় সঠিক PIN দিলেও প্রত্যাখ্যাত হওয়া উচিত
+      const afterLock = await verifyPin(userId, '284617', '10.0.0.1');
+      expect(afterLock.success).toBe(false);
+      expect(afterLock.locked).toBe(true);
+    });
+
     test('isLocked() ভবিষ্যৎ/অতীত টাইমস্ট্যাম্প সঠিকভাবে বিচার করে', () => {
       expect(isLocked({ withdraw_pin_locked_until: new Date(Date.now() + 60000) })).toBe(true);
       expect(isLocked({ withdraw_pin_locked_until: new Date(Date.now() - 60000) })).toBe(false);

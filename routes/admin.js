@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { isAdmin } = require('../middleware/auth');
 const { redirectBack } = require('../utils/redirectBack');
+const { regenerateSession } = require('../utils/sessionRegenerate');
 const rbac = require('../services/rbac');
 // publicMessage(): ইচ্ছাকৃত (PublicError) ভ্যালিডেশন বার্তা যেমন আছে তেমনই দেখায়, কিন্তু
 // অপ্রত্যাশিত pg/ইন্টারনাল এররের কাঁচা err.message ব্রাউজারে যেতে দেয় না। বিস্তারিত
@@ -292,6 +293,9 @@ router.post('/login/2fa', strict2FALimiter, async (req, res) => {
       return res.render('admin/2fa-verify', { error: 'কোডটি সঠিক নয়, আবার চেষ্টা করুন', username: pending.username });
     }
 
+    // session fixation প্রতিরোধ: 2FA সম্পন্ন হওয়ার মুহূর্তে (অথেন্টিকেশন লেভেল বদলানোর সময়)
+    // সেশন আইডি রোটেট করা হয়
+    await regenerateSession(req);
     req.session.user = { id: admin.id, username: admin.username, role: admin.role };
     req.session.pending2FA = null;
     req.session.twoFAAttempts = 0;
@@ -363,7 +367,9 @@ router.post('/2fa/mandatory-setup/verify', strict2FALimiter, async (req, res) =>
       [pendingSecret, backupCodesJson, pending.id]
     );
 
-    // এনরোলমেন্ট সম্পন্ন — এখন প্রকৃত লগইন সেশন স্থাপন করা হচ্ছে (এতক্ষণ ছিল না)
+    // এনরোলমেন্ট সম্পন্ন — এখন প্রকৃত লগইন সেশন স্থাপন করা হচ্ছে (এতক্ষণ ছিল না)।
+    // session fixation প্রতিরোধে সেশন আইডি রোটেট করা হয় এই মুহূর্তেই।
+    await regenerateSession(req);
     req.session.user = { id: pending.id, username: pending.username, role: pending.role };
     req.session.pendingEnrollment = null;
     req.session.pendingEnrollmentSecret = null;
@@ -2529,6 +2535,12 @@ router.post('/markets/:marketId/settle', rbac.requirePermission('matches_manage'
       const mRow = await pool.query('SELECT match_id FROM markets WHERE id = $1', [marketId]);
       if (mRow.rows[0]) await cache.del(cacheKeys.matchDetail(mRow.rows[0].match_id));
     } catch (e) {}
+    await logAdminAction(req.session.user.id, req.session.user.username, 'MARKET_SETTLED', `Market #${marketId} settled — winning_runner=${winning_runner}, ${bets.rows.length} bets, ${winnersCount} winners`, req.ip);
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'MARKET_SETTLED', category: 'financial', status: 'success', riskLevel: 'high',
+      details: { marketId, winningRunner: winning_runner, betsSettled: bets.rows.length, winnersCount }
+    }).catch(e => console.error('logAuditEvent (MARKET_SETTLED) error:', e.message));
     req.flash('success', `সেটেল সম্পন্ন! ${bets.rows.length} টি বেট, ${winnersCount} জন জিতেছে।`);
     redirectBack(req, res, '/admin');
   } catch (err) {
@@ -2666,6 +2678,12 @@ router.post('/bets/:id/settle', rbac.requirePermission('games_manage'), async (r
     }
     await client.query('COMMIT');
     if (settleNotif.rows[0]) emitToUser(bet.user_id, settleNotif.rows[0]);
+    await logAdminAction(req.session.user.id, req.session.user.username, 'BET_SETTLED', `Bet #${id} settled as ${result} (user #${bet.user_id}, stake ${bet.stake})`, req.ip);
+    logAuditEvent({
+      req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+      action: 'BET_SETTLED', category: 'financial', status: 'success', riskLevel: 'high',
+      details: { betId: id, result, userId: bet.user_id, stake: bet.stake, odd: bet.odd }
+    }).catch(e => console.error('logAuditEvent (BET_SETTLED) error:', e.message));
     req.flash('success', 'বেট সেটেল হয়েছে');
     res.redirect('/admin/bets');
   } catch (err) {

@@ -40,7 +40,7 @@
               <% if (n.image_url) { %><img src="<%= n.image_url %>" onerror="this.style.display='none'"><% } %>
               <div style="flex:1;min-width:0;">
                 <div style="font-weight:700;color:#fff;font-size:13px;"><%= n.title %></div>
-                <div style="color:#64748b;font-size:11px;margin-top:3px;">
+                <div style="color:#94a3b8;font-size:11px;margin-top:3px;">
                   <%= n.sport || 'সাধারণ' %> · <%= n.views || 0 %> ভিউ · <%= n.created_at ? new Date(n.created_at).toLocaleDateString('bn-BD') : '—' %>
                 </div>
                 <div style="color:#94a3b8;font-size:12px;margin-top:4px;max-height:36px;overflow:hidden;">

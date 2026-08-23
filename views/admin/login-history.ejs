@@ -49,8 +49,8 @@ function qs(overrides) {
             <option value="">সব লগইন</option>
             <option value="1" ${f.new_device === '1' ? 'selected' : ''}>শুধু নতুন ডিভাইস</option>
         </select>
-        <input type="date" name="from" value="${f.from || ''}" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
-        <input type="date" name="to" value="${f.to || ''}" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+        <input type="date" name="from" value="${escapeHtml(f.from || '')}" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+        <input type="date" name="to" value="${escapeHtml(f.to || '')}" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
         <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">ফিল্টার</button>
         ${(f.q || f.new_device || f.from || f.to) ? '<a href="/admin/login-history" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">রিসেট</a>' : ''}
     </form>

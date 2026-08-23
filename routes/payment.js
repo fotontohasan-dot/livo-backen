@@ -223,7 +223,7 @@ router.get('/wallet', isAuth, async (req, res) => {
     });
   } catch (err) {
     console.error('wallet hub error:', err.message);
-    req.flash('error', 'ওয়ালেট লোড করতে সমস্যা হয়েছে।');
+    req.flash('error', req.t('payment_wallet_load_error'));
     res.redirect('/profile');
   }
 });
@@ -242,15 +242,15 @@ router.post('/deposit', isAuth, paymentLimiter, async (req, res) => {
   const userId = req.session.user.id;
 
   if (!VALID_METHODS.includes(method)) {
-    req.flash('error', 'অকার্যকর পেমেন্ট মেথড');
+    req.flash('error', req.t('payment_invalid_method'));
     return res.redirect('/payment/deposit');
   }
   if (!method || amount === null || !transaction_id || !account_number) {
-    req.flash('error', 'সব তথ্য সঠিকভাবে দিন');
+    req.flash('error', req.t('payment_all_fields_required'));
     return res.redirect('/payment/deposit');
   }
   if (amount < 100) {
-    req.flash('error', 'সর্বনিম্ন ডিপোজিট ১০০ টাকা');
+    req.flash('error', req.t('payment_min_deposit_100'));
     return res.redirect('/payment/deposit');
   }
 
@@ -266,7 +266,7 @@ router.post('/deposit', isAuth, paymentLimiter, async (req, res) => {
       );
       const already = Number(todayDep.rows[0].total);
       if (already + amount > limit) {
-        req.flash('error', `দৈনিক ডিপোজিট সীমা ${limit} টাকা। আজ আর ${Math.max(0, limit - already)} টাকা ডিপোজিট করতে পারবেন।`);
+        req.flash('error', req.t('payment_daily_deposit_limit').replace('{value1}', limit).replace('{value2}', Math.max(0, limit - already)));
         return res.redirect('/payment/deposit');
       }
     }
@@ -285,7 +285,7 @@ router.post('/deposit', isAuth, paymentLimiter, async (req, res) => {
       [method, transaction_id]
     );
     if (dupCheck.rows.length > 0) {
-      req.flash('error', 'এই ট্রানজেকশন আইডি আগে ব্যবহার করা হয়েছে।');
+      req.flash('error', req.t('payment_duplicate_transaction_id'));
       return res.redirect('/payment/deposit');
     }
   } catch (e) {
@@ -302,16 +302,16 @@ router.post('/deposit', isAuth, paymentLimiter, async (req, res) => {
         .catch(e => console.error('fraud scanTransaction (deposit) error:', e.message));
     }).catch(e => console.error('vpn checkIp (deposit) error:', e.message));
     await notifyAdmins('নতুন ডিপোজিট রিকোয়েস্ট', `${req.session.user.username} ${amount} টাকা ডিপোজিট চেয়েছে (${method})।`, 'deposit');
-    req.flash('success', 'ডিপোজিট রিকোয়েস্ট পাঠানো হয়েছে!');
+    req.flash('success', req.t('payment_deposit_request_sent'));
     res.redirect('/payment/history');
   } catch (err) {
     // DB-এর unique constraint (race condition-এ দুইটা রিকোয়েস্ট একসাথে এলে) ধরার জন্য দ্বিতীয় স্তরের সুরক্ষা
     if (err.code === '23505') {
-      req.flash('error', 'এই ট্রানজেকশন আইডি আগে ব্যবহার করা হয়েছে।');
+      req.flash('error', req.t('payment_duplicate_transaction_id'));
       return res.redirect('/payment/deposit');
     }
     console.error('deposit error:', err.message);
-    req.flash('error', 'সমস্যা হয়েছে');
+    req.flash('error', req.t('payment_generic_error'));
     res.redirect('/payment/deposit');
   }
 });
@@ -345,15 +345,15 @@ router.post('/withdraw', isAuth, requireVerifiedEmail, paymentLimiter, async (re
   const userId = req.session.user.id;
 
   if (!VALID_METHODS.includes(method)) {
-    req.flash('error', 'অকার্যকর পেমেন্ট মেথড');
+    req.flash('error', req.t('payment_invalid_method'));
     return res.redirect('/payment/withdraw');
   }
   if (!method || amount === null || !account_number) {
-    req.flash('error', 'সব তথ্য সঠিকভাবে দিন');
+    req.flash('error', req.t('payment_all_fields_required'));
     return res.redirect('/payment/withdraw');
   }
   if (amount < 200) {
-    req.flash('error', 'সর্বনিম্ন উইথড্র ২০০ টাকা');
+    req.flash('error', req.t('payment_min_withdraw_200'));
     return res.redirect('/payment/withdraw');
   }
 
@@ -364,33 +364,33 @@ router.post('/withdraw', isAuth, requireVerifiedEmail, paymentLimiter, async (re
     const pinCheck = await verifyPin(userId, withdraw_pin, req.ip);
 
     if (pinCheck.notConfigured) {
-      req.flash('error', 'উত্তোলনের আগে আপনার Withdraw PIN সেট করতে হবে। Security পেজ থেকে PIN তৈরি করুন।');
+      req.flash('error', req.t('payment_withdraw_pin_not_set'));
       return res.redirect('/profile/security');
     }
     if (pinCheck.locked) {
       const mins = Math.max(1, Math.ceil((pinCheck.remainingMs || 0) / 60000));
-      req.flash('error', `অনেকবার ভুল Withdraw PIN দেওয়ার কারণে উত্তোলন সাময়িকভাবে লক করা হয়েছে। ${mins} মিনিট পর আবার চেষ্টা করুন।`);
+      req.flash('error', req.t('payment_withdraw_pin_locked').replace('{value}', mins));
       return res.redirect('/payment/withdraw');
     }
     if (!pinCheck.success) {
-      const left = pinCheck.attemptsLeft != null ? ` (আর ${pinCheck.attemptsLeft} বার সুযোগ আছে)` : '';
-      req.flash('error', `Withdraw PIN ভুল হয়েছে${left}।`);
+      const left = pinCheck.attemptsLeft != null ? req.t('payment_withdraw_pin_attempts_left').replace('{value}', pinCheck.attemptsLeft) : '';
+      req.flash('error', req.t('payment_withdraw_pin_wrong').replace('{value}', left));
       return res.redirect('/payment/withdraw');
     }
   } catch (e) {
     console.error('withdraw pin verification error:', e.message);
-    req.flash('error', 'PIN যাচাই করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।');
+    req.flash('error', req.t('payment_pin_verification_error'));
     return res.redirect('/payment/withdraw');
   }
 
   try {
     const check = await canWithdraw(userId);
     if (!check.allowed) {
-      let msg = 'উত্তোলনের আগে বোনাসের টার্নওভার পূরণ করুন। বাকি: ';
+      let msg = req.t('payment_turnover_incomplete_prefix');
       const parts = [];
       check.pending.forEach(p => {
-        if (p.sportsLeft > 0) parts.push(`স্পোর্টস ${p.sportsLeft.toFixed(0)}`);
-        if (p.casinoLeft > 0) parts.push(`ক্যাসিনো ${p.casinoLeft.toFixed(0)}`);
+        if (p.sportsLeft > 0) parts.push(req.t('payment_turnover_sports_left').replace('{value}', p.sportsLeft.toFixed(0)));
+        if (p.casinoLeft > 0) parts.push(req.t('payment_turnover_casino_left').replace('{value}', p.casinoLeft.toFixed(0)));
       });
       msg += parts.join(', ');
       req.flash('error', msg);
@@ -411,7 +411,7 @@ router.post('/withdraw', isAuth, requireVerifiedEmail, paymentLimiter, async (re
 
     if (upd.rowCount === 0) {
       await client.query('ROLLBACK');
-      req.flash('error', 'পর্যাপ্ত কয়েন নেই');
+      req.flash('error', req.t('payment_insufficient_coins'));
       return res.redirect('/payment/withdraw');
     }
 
@@ -438,12 +438,12 @@ router.post('/withdraw', isAuth, requireVerifiedEmail, paymentLimiter, async (re
 
     await notifyAdmins('নতুন উইথড্র রিকোয়েস্ট', `${req.session.user.username} ${amount} টাকা উইথড্র চেয়েছে (${method})।`, 'withdraw');
 
-    req.flash('success', 'উইথড্র রিকোয়েস্ট পাঠানো হয়েছে!');
+    req.flash('success', req.t('payment_withdraw_request_sent'));
     res.redirect('/payment/history');
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('withdraw error:', err.message);
-    req.flash('error', 'সমস্যা হয়েছে');
+    req.flash('error', req.t('payment_generic_error'));
     res.redirect('/payment/withdraw');
   } finally {
     client.release();
@@ -685,7 +685,10 @@ router.get('/admin/summary', requireAdmin, requirePermission('payments_view'), a
 // ফাংশন কল করে, যাতে ব্যবসায়িক লজিক (coin credit/refund, notification, status আপডেট)
 // দুই জায়গায় ডুপ্লিকেট না হয়। প্রতিটা আইটেম নিজস্ব BEGIN/COMMIT-এ চলে, তাই বাল্ক অপারেশনে
 // একটা আইটেম ব্যর্থ হলে বাকিগুলো প্রভাবিত হয় না (partial failure নিরাপদে হ্যান্ডল হয়)।
-async function approvePaymentRequestById(id) {
+// `t` — ওই রিকোয়েস্ট যে অ্যাডমিনের সেশনের ভাষায় ফেরত পাঠাতে হবে তার req.t। কলার (একক
+// approve/reject রুট বা বাল্ক লুপ) সবসময় req সহ কল করে, তাই এখানে ফলব্যাক হিসেবে raw key
+// ফেরত দেওয়া identity ফাংশন যথেষ্ট (কখনো ব্যবহার না হওয়ার কথা)।
+async function approvePaymentRequestById(id, t = (k) => k) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -693,7 +696,7 @@ async function approvePaymentRequestById(id) {
     const request = result.rows[0];
     if (!request || request.status !== 'pending') {
       await client.query('ROLLBACK');
-      return { id, success: false, error: 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে' };
+      return { id, success: false, error: t('payment_request_not_found_or_processed') };
     }
 
     if (request.type === 'deposit') {
@@ -710,13 +713,13 @@ async function approvePaymentRequestById(id) {
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('approve error:', err.message);
-    return { id, success: false, error: 'সমস্যা হয়েছে' };
+    return { id, success: false, error: t('payment_generic_error') };
   } finally {
     client.release();
   }
 }
 
-async function rejectPaymentRequestById(id) {
+async function rejectPaymentRequestById(id, t = (k) => k) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -724,7 +727,7 @@ async function rejectPaymentRequestById(id) {
     const request = result.rows[0];
     if (!request || request.status !== 'pending') {
       await client.query('ROLLBACK');
-      return { id, success: false, error: 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে' };
+      return { id, success: false, error: t('payment_request_not_found_or_processed') };
     }
     if (request.type === 'withdraw') {
       await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [Math.round(Number(request.amount)), request.user_id]);
@@ -743,7 +746,7 @@ async function rejectPaymentRequestById(id) {
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('reject error:', err.message);
-    return { id, success: false, error: 'সমস্যা হয়েছে' };
+    return { id, success: false, error: t('payment_generic_error') };
   } finally {
     client.release();
   }
@@ -751,9 +754,9 @@ async function rejectPaymentRequestById(id) {
 
 router.post('/admin/approve/:id', requireAdmin, requirePermission('payments_approve'), async (req, res) => {
   const { id } = req.params;
-  const result = await approvePaymentRequestById(id);
+  const result = await approvePaymentRequestById(id, req.t);
   if (result.success) {
-    req.flash('success', 'অনুমোদন হয়েছে');
+    req.flash('success', req.t('payment_approved'));
   } else {
     req.flash('error', result.error);
   }
@@ -762,9 +765,9 @@ router.post('/admin/approve/:id', requireAdmin, requirePermission('payments_appr
 
 router.post('/admin/reject/:id', requireAdmin, requirePermission('payments_approve'), async (req, res) => {
   const { id } = req.params;
-  const result = await rejectPaymentRequestById(id);
+  const result = await rejectPaymentRequestById(id, req.t);
   if (result.success) {
-    req.flash('error', 'বাতিল করা হয়েছে');
+    req.flash('error', req.t('payment_rejected'));
   } else {
     req.flash('error', result.error);
   }
@@ -784,7 +787,7 @@ router.post('/admin/payments/bulk-approve', requireAdmin, requirePermission('pay
 
   const results = [];
   for (const id of cleanIds) {
-    results.push(await approvePaymentRequestById(id));
+    results.push(await approvePaymentRequestById(id, req.t));
   }
   const succeeded = results.filter((r) => r.success);
   const failed = results.filter((r) => !r.success);
@@ -816,7 +819,7 @@ router.post('/admin/payments/bulk-reject', requireAdmin, requirePermission('paym
 
   const results = [];
   for (const id of cleanIds) {
-    results.push(await rejectPaymentRequestById(id));
+    results.push(await rejectPaymentRequestById(id, req.t));
   }
   const succeeded = results.filter((r) => r.success);
   const failed = results.filter((r) => !r.success);
@@ -857,7 +860,7 @@ router.post('/sslcommerz/init', isAuth, paymentLimiter, async (req, res) => {
   const userId = req.session.user.id;
 
   if (amount === null || amount < 100) {
-    req.flash('error', 'সর্বনিম্ন ডিপোজিট ১০০ টাকা');
+    req.flash('error', req.t('payment_min_deposit_100'));
     return res.redirect('/payment/deposit');
   }
 
@@ -892,7 +895,7 @@ router.post('/sslcommerz/init', isAuth, paymentLimiter, async (req, res) => {
       `UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE gateway_tran_id=$1 AND status='pending'`,
       [tranId]
     ).catch((e) => console.error('sslcommerz init cleanup error:', e.message));
-    req.flash('error', 'পেমেন্ট গেটওয়ে চালু করা যায়নি। আবার চেষ্টা করুন।');
+    req.flash('error', req.t('payment_gateway_init_failed'));
     res.redirect('/payment/deposit');
   }
 });
@@ -910,7 +913,7 @@ router.post('/sslcommerz/success', async (req, res) => {
 
     if (!request) {
       await client.query('ROLLBACK');
-      req.flash('error', 'ট্রানজেকশন খুঁজে পাওয়া যায়নি');
+      req.flash('error', req.t('payment_transaction_not_found'));
       return res.redirect('/payment/deposit');
     }
     if (request.status !== 'pending') {
@@ -933,7 +936,7 @@ router.post('/sslcommerz/success', async (req, res) => {
         [val_id, JSON.stringify(verification), request.id]
       );
       await client.query('COMMIT');
-      req.flash('error', 'পেমেন্ট ভেরিফাই করা যায়নি।');
+      req.flash('error', req.t('payment_verification_failed'));
       return res.redirect('/payment/deposit');
     }
 
@@ -948,12 +951,12 @@ router.post('/sslcommerz/success', async (req, res) => {
       const u = await pool.query('SELECT coins FROM users WHERE id=$1', [request.user_id]);
       req.session.user.coins = u.rows[0].coins;
     }
-    req.flash('success', `আপনার ${request.amount} টাকার ডিপোজিট সফল হয়েছে!`);
+    req.flash('success', req.t('payment_deposit_success_amount').replace('{value}', request.amount));
     res.redirect('/payment/history');
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('sslcommerz success error:', err.message);
-    req.flash('error', 'সমস্যা হয়েছে, সাপোর্টে যোগাযোগ করুন।');
+    req.flash('error', req.t('payment_error_contact_support'));
     res.redirect('/payment/deposit');
   } finally {
     client.release();
@@ -1009,7 +1012,7 @@ router.post('/sslcommerz/fail', async (req, res) => {
   try {
     await rejectPendingGatewayRequest(req, req.body.tran_id);
   } catch (e) { console.error('sslcommerz fail error:', e.message); }
-  req.flash('error', 'পেমেন্ট ব্যর্থ হয়েছে।');
+  req.flash('error', req.t('payment_failed'));
   res.redirect('/payment/deposit');
 });
 
@@ -1017,7 +1020,7 @@ router.post('/sslcommerz/cancel', async (req, res) => {
   try {
     await rejectPendingGatewayRequest(req, req.body.tran_id);
   } catch (e) { console.error('sslcommerz cancel error:', e.message); }
-  req.flash('error', 'পেমেন্ট বাতিল করা হয়েছে।');
+  req.flash('error', req.t('payment_cancelled'));
   res.redirect('/payment/deposit');
 });
 

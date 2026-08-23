@@ -21,6 +21,7 @@ const { recordDeviceLogin, parseUserAgent, revokeAllOtherSessions } = require('.
 const cache = require('../services/cache');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
 const googleAuth = require('../services/googleAuth');
+const { regenerateSession } = require('../utils/sessionRegenerate');
 
 const resetLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -204,7 +205,7 @@ router.post('/register', async (req, res) => {
   if (ipRule === 'block') {
     logBotEvent({ ip: reqIp, endpoint: '/register', signals: [{ type: 'ip_blocklisted', description: 'অ্যাডমিন কর্তৃক ব্লকলিস্টেড IP' }], riskLevel: 'high', userAgent, blocked: true })
       .catch(e => console.error('logBotEvent error:', e.message));
-    req.flash('error', '❌ এই অ্যাকশনটি সম্পন্ন করা যায়নি।');
+    req.flash('error', req.t('error_action_not_completed'));
     return res.redirect('/register');
   }
 
@@ -220,7 +221,7 @@ router.post('/register', async (req, res) => {
     if (!captchaOk) {
       logBotEvent({ ip: reqIp, endpoint: '/register', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: true , fingerprint: botCheck.fingerprint })
         .catch(e => console.error('logBotEvent error:', e.message));
-      req.flash('error', '❌ সন্দেহজনক কার্যকলাপ শনাক্ত হয়েছে — নিচের ভেরিফিকেশন প্রশ্নের সঠিক উত্তর দিন।');
+      req.flash('error', req.t('error_suspicious_activity_captcha'));
       return res.redirect('/register');
     }
     logBotEvent({ ip: reqIp, endpoint: '/register', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: false , fingerprint: botCheck.fingerprint })
@@ -229,45 +230,45 @@ router.post('/register', async (req, res) => {
 
   try {
     if (!username || !password) {
-      req.flash('error', '❌ ইউজারনেম এবং পাসওয়ার্ড আবশ্যক।');
+      req.flash('error', req.t('auth_username_password_required'));
       return res.redirect('/register');
     }
     if (!/^[A-Za-z0-9_.]{3,20}$/.test(username.trim())) {
-      req.flash('error', '❌ ইউজারনেমে শুধু লেটার, সংখ্যা, আন্ডারস্কোর, ডট ব্যবহার করা যাবে (৩-২০ ক্যারেক্টার)।');
+      req.flash('error', req.t('auth_username_format_invalid'));
       return res.redirect('/register');
     }
     if (!email && !phone) {
-      req.flash('error', '❌ ইমেইল অথবা ফোন নাম্বার অন্তত একটি দিতে হবে।');
+      req.flash('error', req.t('auth_email_or_phone_required'));
       return res.redirect('/register');
     }
     if (email && !/^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+$/.test(email.trim())) {
-      req.flash('error', '❌ সঠিক ইমেইল ফরম্যাট দিন।');
+      req.flash('error', req.t('auth_email_format_invalid'));
       return res.redirect('/register');
     }
     if (phone && !/^01\d{9}$/.test(phone.trim())) {
-      req.flash('error', '❌ সঠিক ফোন নাম্বার ফরম্যাট দিন।');
+      req.flash('error', req.t('auth_phone_format_invalid'));
       return res.redirect('/register');
     }
     if (password.length < 8) {
-      req.flash('error', '❌ পাসওয়ার্ড কমপক্ষে ৮ অক্ষর হতে হবে।');
+      req.flash('error', req.t('auth_password_min_length'));
       return res.redirect('/register');
     }
     if (confirmPassword && password !== confirmPassword) {
-      req.flash('error', '❌ পাসওয়ার্ড মিলছে না।');
+      req.flash('error', req.t('auth_password_mismatch'));
       return res.redirect('/register');
     }
 
     if (email) {
       const existingEmail = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
       if (existingEmail.rows.length > 0) {
-        req.flash('error', '❌ এই ইমেইল আগেই নিবন্ধিত।');
+        req.flash('error', req.t('auth_email_already_registered'));
         return res.redirect('/register');
       }
     }
     if (phone) {
       const existingPhone = await pool.query('SELECT id FROM users WHERE phone = $1', [phone]);
       if (existingPhone.rows.length > 0) {
-        req.flash('error', '❌ এই ফোন নাম্বার আগেই নিবন্ধিত।');
+        req.flash('error', req.t('auth_phone_already_registered'));
         return res.redirect('/register');
       }
     }
@@ -343,7 +344,7 @@ router.post('/register', async (req, res) => {
     res.redirect('/');
   } catch (err) {
     console.error(err);
-    req.flash('error', '❌ রেজিস্ট্রেশন ব্যর্থ হয়েছে।');
+    req.flash('error', req.t('auth_registration_failed'));
     res.redirect('/register');
   }
 });
@@ -369,6 +370,9 @@ async function completeLogin(req, user, vpnInfo) {
     return '/admin/2fa/mandatory-setup';
   }
 
+  // session fixation প্রতিরোধ: লগইন সফল হওয়ার মুহূর্তে সেশন আইডি রোটেট করা হয়, যাতে
+  // অথেন্টিকেশনের আগে থেকে পরিচিত/সেট করা কোনো পুরনো সেশন আইডি লগইনের পরও কার্যকর না থাকে
+  await regenerateSession(req);
   const loginResult = await recordLogin(req, user.id, vpnInfo);
   req.session.user = sanitizeUser(user);
   const deviceResult = await recordDeviceLogin(req, user.id, loginResult.loginLogId);
@@ -437,7 +441,7 @@ async function findOrCreateGoogleUser(profile) {
 
 router.get('/auth/google', googleAuthLimiter, (req, res) => {
   if (!googleAuth.isConfigured()) {
-    req.flash('error', '❌ এই মুহূর্তে Google দিয়ে লগইন উপলব্ধ নয়।');
+    req.flash('error', req.t('auth_google_login_unavailable'));
     return res.redirect('/login');
   }
   const state = crypto.randomBytes(24).toString('hex');
@@ -456,32 +460,32 @@ router.get('/auth/google/callback', googleAuthLimiter, async (req, res) => {
   try {
     const { code, state, error: oauthError } = req.query;
     if (oauthError) {
-      req.flash('error', '❌ Google লগইন বাতিল করা হয়েছে।');
+      req.flash('error', req.t('auth_google_login_cancelled'));
       return res.redirect('/login');
     }
     if (!code || !state || !expectedState || state !== expectedState) {
-      req.flash('error', '❌ অকার্যকর অথবা মেয়াদোত্তীর্ণ Google লগইন রিকোয়েস্ট। আবার চেষ্টা করুন।');
+      req.flash('error', req.t('auth_google_login_invalid_request'));
       return res.redirect('/login');
     }
     if (!googleAuth.isConfigured()) {
-      req.flash('error', '❌ এই মুহূর্তে Google দিয়ে লগইন উপলব্ধ নয়।');
+      req.flash('error', req.t('auth_google_login_unavailable'));
       return res.redirect('/login');
     }
 
     const profile = await googleAuth.exchangeCodeForProfile(googleRedirectUri(req), code, expectedNonce);
     if (!profile.email || !profile.emailVerified) {
-      req.flash('error', '❌ আপনার Google ইমেইল ভেরিফাই করা নেই — এই ইমেইল দিয়ে লগইন করা যাবে না।');
+      req.flash('error', req.t('auth_google_email_not_verified'));
       return res.redirect('/login');
     }
 
     const user = await findOrCreateGoogleUser(profile);
     if (user.is_banned) {
-      req.flash('error', '❌ আপনার অ্যাকাউন্ট ব্যান করা হয়েছে।');
+      req.flash('error', req.t('auth_account_banned'));
       return res.redirect('/login');
     }
     if (user.self_exclude_until && new Date(user.self_exclude_until) > new Date()) {
       const until = new Date(user.self_exclude_until).toLocaleDateString('bn-BD');
-      req.flash('error', `আপনি নিজে অ্যাকাউন্ট বন্ধ রেখেছেন। ${until} পর্যন্ত লগইন করা যাবে না।`);
+      req.flash('error', req.t('auth_self_excluded_until').replace('{value}', until));
       return res.redirect('/login');
     }
 
@@ -490,7 +494,7 @@ router.get('/auth/google/callback', googleAuthLimiter, async (req, res) => {
     res.redirect(redirectPath);
   } catch (err) {
     console.error('google oauth callback error:', err.message);
-    req.flash('error', '❌ Google লগইন ব্যর্থ হয়েছে, আবার চেষ্টা করুন।');
+    req.flash('error', req.t('auth_google_login_failed'));
     res.redirect('/login');
   }
 });
@@ -518,7 +522,7 @@ router.post('/login', async (req, res) => {
   if (ipRule === 'block') {
     logBotEvent({ ip: reqIp, endpoint: '/login', signals: [{ type: 'ip_blocklisted', description: 'অ্যাডমিন কর্তৃক ব্লকলিস্টেড IP' }], riskLevel: 'high', userAgent, blocked: true })
       .catch(e => console.error('logBotEvent error:', e.message));
-    req.flash('error', '❌ এই অ্যাকশনটি সম্পন্ন করা যায়নি।');
+    req.flash('error', req.t('error_action_not_completed'));
     return res.redirect('/login');
   }
 
@@ -534,7 +538,7 @@ router.post('/login', async (req, res) => {
     if (!captchaOk) {
       logBotEvent({ ip: reqIp, endpoint: '/login', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: true , fingerprint: botCheck.fingerprint })
         .catch(e => console.error('logBotEvent error:', e.message));
-      req.flash('error', '❌ সন্দেহজনক কার্যকলাপ শনাক্ত হয়েছে — নিচের ভেরিফিকেশন প্রশ্নের সঠিক উত্তর দিন।');
+      req.flash('error', req.t('error_suspicious_activity_captcha'));
       return res.redirect('/login');
     }
     logBotEvent({ ip: reqIp, endpoint: '/login', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: false , fingerprint: botCheck.fingerprint })
@@ -555,7 +559,7 @@ router.post('/login', async (req, res) => {
     if (user) {
       const throttle = await isAccountThrottled(user.id).catch(() => ({ throttled: false }));
       if (throttle.throttled) {
-        req.flash('error', '❌ তথ্য অথবা পাসওয়ার্ড ভুল।');
+        req.flash('error', req.t('auth_invalid_credentials'));
         return res.redirect('/login');
       }
     }
@@ -564,18 +568,18 @@ router.post('/login', async (req, res) => {
     if (!user || !passwordMatches) {
       scanFailedLogin(identifier, user ? user.id : null, loginIp, req.get('user-agent') || '')
         .catch(e => console.error('scanFailedLogin error:', e.message));
-      req.flash('error', '❌ তথ্য অথবা পাসওয়ার্ড ভুল।');
+      req.flash('error', req.t('auth_invalid_credentials'));
       return res.redirect('/login');
     }
     if (user.is_banned) {
-      req.flash('error', '❌ আপনার অ্যাকাউন্ট ব্যান করা হয়েছে।');
+      req.flash('error', req.t('auth_account_banned'));
       return res.redirect('/login');
     }
 
     // সেল্ফ-এক্সকশন চেক — নির্দিষ্ট সময় পর্যন্ত লগইন বন্ধ
     if (user.self_exclude_until && new Date(user.self_exclude_until) > new Date()) {
       const until = new Date(user.self_exclude_until).toLocaleDateString('bn-BD');
-      req.flash('error', `আপনি নিজে অ্যাকাউন্ট বন্ধ রেখেছেন। ${until} পর্যন্ত লগইন করা যাবে না।`);
+      req.flash('error', req.t('auth_self_excluded_until').replace('{value}', until));
       return res.redirect('/login');
     }
 
@@ -597,7 +601,7 @@ router.post('/login', async (req, res) => {
 
       req.session.pendingLoginUserId = user.id;
       req.session.pendingLoginVpnInfo = vpnInfo;
-      req.flash('success', `🔐 নিরাপত্তার কারণে আপনার ইমেইলে (${user.email}) একটি ভেরিফিকেশন কোড পাঠানো হয়েছে।`);
+      req.flash('success', req.t('auth_stepup_code_sent').replace('{value}', user.email));
       return res.redirect('/verify-access');
     }
 
@@ -605,7 +609,7 @@ router.post('/login', async (req, res) => {
     res.redirect(redirectPath);
   } catch (err) {
     console.error(err);
-    req.flash('error', '❌ লগইন ব্যর্থ হয়েছে।');
+    req.flash('error', req.t('auth_login_failed'));
     res.redirect('/login');
   }
 });
@@ -631,20 +635,20 @@ router.post('/verify-access', async (req, res) => {
     const row = rowRes.rows[0];
 
     if (!row || new Date(row.expires_at) < new Date()) {
-      req.flash('error', '❌ কোডের মেয়াদ শেষ হয়ে গেছে। আবার লগইন করুন।');
+      req.flash('error', req.t('auth_code_expired_relogin'));
       req.session.pendingLoginUserId = null;
       req.session.pendingLoginVpnInfo = null;
       return res.redirect('/login');
     }
     if (row.attempts >= 5) {
-      req.flash('error', '❌ অনেকবার ভুল চেষ্টা হয়েছে। আবার লগইন করুন।');
+      req.flash('error', req.t('auth_too_many_attempts_relogin'));
       req.session.pendingLoginUserId = null;
       req.session.pendingLoginVpnInfo = null;
       return res.redirect('/login');
     }
     if (!code || code !== row.code) {
       await pool.query(`UPDATE step_up_verifications SET attempts = attempts + 1 WHERE id = $1`, [row.id]);
-      req.flash('error', '❌ কোড সঠিক নয়।');
+      req.flash('error', req.t('auth_code_incorrect'));
       return res.redirect('/verify-access');
     }
 
@@ -663,7 +667,7 @@ router.post('/verify-access', async (req, res) => {
     res.redirect(redirectPath);
   } catch (err) {
     console.error('verify-access error:', err.message);
-    req.flash('error', '❌ ভেরিফিকেশন ব্যর্থ হয়েছে।');
+    req.flash('error', req.t('auth_verification_failed'));
     res.redirect('/login');
   }
 });
@@ -679,7 +683,7 @@ router.get('/verify-email/:token', async (req, res) => {
     const user = result.rows[0];
 
     if (!user) {
-      req.flash('error', '❌ লিঙ্কটি অকার্যকর অথবা মেয়াদ শেষ হয়ে গেছে। নতুন লিঙ্কের জন্য অনুরোধ করুন।');
+      req.flash('error', req.t('auth_link_invalid_request_new'));
       return res.redirect('/profile');
     }
 
@@ -692,11 +696,11 @@ router.get('/verify-email/:token', async (req, res) => {
     }
     await logSystemEvent(user.id, user.username, 'EMAIL_VERIFIED', `ইমেইল ভেরিফাই সম্পন্ন হয়েছে: ${user.email}`, req.ip);
 
-    req.flash('success', '✅ আপনার ইমেইল সফলভাবে ভেরিফাই হয়েছে!');
+    req.flash('success', req.t('auth_email_verified_success'));
     res.redirect(req.session.user ? '/profile' : '/login');
   } catch (err) {
     console.error('verify-email error:', err.message);
-    req.flash('error', '❌ কিছু একটা সমস্যা হয়েছে, আবার চেষ্টা করুন।');
+    req.flash('error', req.t('auth_generic_error_retry'));
     res.redirect('/');
   }
 });
@@ -704,7 +708,7 @@ router.get('/verify-email/:token', async (req, res) => {
 router.post('/resend-verification', verifyResendLimiter, async (req, res) => {
   try {
     if (!req.session.user) {
-      req.flash('error', '❌ আগে লগইন করুন।');
+      req.flash('error', req.t('auth_login_required_first'));
       return res.redirect('/login');
     }
 
@@ -715,16 +719,16 @@ router.post('/resend-verification', verifyResendLimiter, async (req, res) => {
     const user = result.rows[0];
 
     if (!user || !user.email) {
-      req.flash('error', '❌ আপনার অ্যাকাউন্টে কোনো ইমেইল যুক্ত নেই।');
+      req.flash('error', req.t('auth_no_email_on_account'));
       return res.redirect('/profile');
     }
     if (user.email_verified) {
-      req.flash('success', '✅ আপনার ইমেইল ইতিমধ্যে ভেরিফাই করা আছে।');
+      req.flash('success', req.t('auth_email_already_verified'));
       return res.redirect('/profile');
     }
     // অ্যাকাউন্ট-ভিত্তিক কুলডাউন — বারবার স্প্যাম-ক্লিকেও ৬০ সেকেন্ডে একবারের বেশি পাঠানো যাবে না
     if (user.last_verification_sent_at && (Date.now() - new Date(user.last_verification_sent_at).getTime()) < 60 * 1000) {
-      req.flash('error', '❌ একটু আগেই পাঠানো হয়েছে, ৬০ সেকেন্ড পর আবার চেষ্টা করুন।');
+      req.flash('error', req.t('auth_resend_cooldown'));
       return res.redirect('/profile');
     }
 
@@ -734,11 +738,11 @@ router.post('/resend-verification', verifyResendLimiter, async (req, res) => {
       .catch(e => console.error('resend-verification email error:', e.message));
     await logSystemEvent(user.id, user.username, 'EMAIL_VERIFICATION_RESEND', `ভেরিফিকেশন ইমেইল আবার পাঠানো হয়েছে: ${user.email}`, req.ip);
 
-    req.flash('success', '✅ ভেরিফিকেশন লিঙ্ক আবার পাঠানো হয়েছে, ইমেইল চেক করুন।');
+    req.flash('success', req.t('auth_verification_link_resent'));
     res.redirect('/profile');
   } catch (err) {
     console.error('resend-verification error:', err.message);
-    req.flash('error', '❌ কিছু একটা সমস্যা হয়েছে, আবার চেষ্টা করুন।');
+    req.flash('error', req.t('auth_generic_error_retry'));
     res.redirect('/profile');
   }
 });
@@ -768,7 +772,7 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
   if (ipRule === 'block') {
     logBotEvent({ ip: reqIp, endpoint: '/forgot-password', signals: [{ type: 'ip_blocklisted', description: 'অ্যাডমিন কর্তৃক ব্লকলিস্টেড IP' }], riskLevel: 'high', userAgent, blocked: true })
       .catch(e => console.error('logBotEvent error:', e.message));
-    req.flash('error', '❌ এই অ্যাকশনটি সম্পন্ন করা যায়নি।');
+    req.flash('error', req.t('error_action_not_completed'));
     return res.redirect('/forgot-password');
   }
 
@@ -784,7 +788,7 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
     if (!captchaOk) {
       logBotEvent({ ip: reqIp, endpoint: '/forgot-password', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: true , fingerprint: botCheck.fingerprint })
         .catch(e => console.error('logBotEvent error:', e.message));
-      req.flash('error', '❌ সন্দেহজনক কার্যকলাপ শনাক্ত হয়েছে — নিচের ভেরিফিকেশন প্রশ্নের সঠিক উত্তর দিন।');
+      req.flash('error', req.t('error_suspicious_activity_captcha'));
       return res.redirect('/forgot-password');
     }
     logBotEvent({ ip: reqIp, endpoint: '/forgot-password', signals: botCheck.signals, riskLevel: botCheck.riskLevel, userAgent, blocked: false , fingerprint: botCheck.fingerprint })
@@ -793,7 +797,7 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
 
   try {
     if (!email) {
-      req.flash('error', '❌ ইমেইল দিন।');
+      req.flash('error', req.t('auth_email_required'));
       return res.redirect('/forgot-password');
     }
 
@@ -820,7 +824,7 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
     res.render('forgot-password', { sent: true });
   } catch (err) {
     console.error('forgot-password error:', err.message);
-    req.flash('error', '❌ কিছু একটা সমস্যা হয়েছে, আবার চেষ্টা করুন।');
+    req.flash('error', req.t('auth_generic_error_retry'));
     res.redirect('/forgot-password');
   }
 });
@@ -838,7 +842,7 @@ router.get('/reset-password/:token', async (req, res) => {
       [token]
     );
     if (result.rows.length === 0) {
-      req.flash('error', '❌ লিঙ্কটি অকার্যকর অথবা মেয়াদ শেষ হয়ে গেছে। আবার চেষ্টা করুন।');
+      req.flash('error', req.t('auth_link_invalid_retry'));
       return res.redirect('/forgot-password');
     }
     res.render('reset-password', { token });
@@ -853,11 +857,11 @@ router.post('/reset-password/:token', resetLimiter, async (req, res) => {
   const { token } = req.params;
   try {
     if (!password || password.length < 8) {
-      req.flash('error', '❌ পাসওয়ার্ড কমপক্ষে ৮ অক্ষর হতে হবে।');
+      req.flash('error', req.t('auth_password_min_length'));
       return res.redirect(`/reset-password/${token}`);
     }
     if (password !== confirmPassword) {
-      req.flash('error', '❌ পাসওয়ার্ড মিলছে না।');
+      req.flash('error', req.t('auth_password_mismatch'));
       return res.redirect(`/reset-password/${token}`);
     }
 
@@ -875,7 +879,7 @@ router.post('/reset-password/:token', resetLimiter, async (req, res) => {
       [hashed, token]
     );
     if (updated.rowCount === 0) {
-      req.flash('error', '❌ লিঙ্কটি অকার্যকর অথবা মেয়াদ শেষ হয়ে গেছে। আবার চেষ্টা করুন।');
+      req.flash('error', req.t('auth_link_invalid_retry'));
       return res.redirect('/forgot-password');
     }
     cache.del(`reset_token:${token}`).catch(() => {});
@@ -892,11 +896,11 @@ router.post('/reset-password/:token', resetLimiter, async (req, res) => {
       console.error('reset-password session revoke error:', e.message);
     }
 
-    req.flash('success', '✅ পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে। এখন লগইন করুন।');
+    req.flash('success', req.t('auth_password_reset_success'));
     res.redirect('/login');
   } catch (err) {
     console.error('reset-password POST error:', err.message);
-    req.flash('error', '❌ কিছু একটা সমস্যা হয়েছে, আবার চেষ্টা করুন।');
+    req.flash('error', req.t('auth_generic_error_retry'));
     res.redirect(`/reset-password/${token}`);
   }
 });

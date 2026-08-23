@@ -2,6 +2,34 @@ const { Server } = require("socket.io");
 const { pool } = require('../db');
 const { getBotReply } = require('./chatbot');
 const { notifyTelegram } = require('./telegramNotify');
+const cache = require('./cache');
+
+// ===== চ্যাট মেসেজ রেট-লিমিট =====
+// HTTP রুটগুলো সবই কোনো না কোনো rate limiter-এর পেছনে, কিন্তু Socket.IO ইভেন্ট একটা আলাদা চ্যানেল
+// যেখানে আগে কোনো সীমা ছিল না — একটা অ্যাকাউন্ট থেকে দ্রুতগতিতে send_message পাঠালে প্রতিটাই DB-তে
+// ইনসার্ট হতো, সব admin-এর লাইভ সেশনে broadcast হতো, আর Telegram bot API-তেও কল যেত (bot-এর নিজের
+// rate limit শেষ করে দেওয়া সম্ভব)। এখন প্রতি ইউজারে প্রতি উইন্ডোতে বার্তার সংখ্যা সীমিত করা হচ্ছে।
+const CHAT_RATE_LIMIT = 15;      // প্রতি উইন্ডোতে সর্বোচ্চ বার্তা
+const CHAT_RATE_WINDOW_SEC = 10; // ১০ সেকেন্ড উইন্ডো
+// Redis অনুপলব্ধ থাকলে (cache.incrWithExpiry null দেয়) ইন-প্রসেস fallback — multi-instance
+// deployment-এ perfectly synchronized না হলেও single-instance/dev/test-এ কার্যকর সুরক্ষা দেয়,
+// আর Redis চালু থাকলে সেটাই আসল উৎস (সব instance জুড়ে সমন্বিত)।
+const inMemoryChatRate = new Map();
+async function allowChatMessage(userId) {
+  const key = `chat:msg:${userId}`;
+  const result = await cache.incrWithExpiry(key, CHAT_RATE_WINDOW_SEC);
+  if (result) return result.count <= CHAT_RATE_LIMIT;
+
+  const now = Date.now();
+  const windowMs = CHAT_RATE_WINDOW_SEC * 1000;
+  const entry = inMemoryChatRate.get(userId);
+  if (!entry || now - entry.start > windowMs) {
+    inMemoryChatRate.set(userId, { start: now, count: 1 });
+    return true;
+  }
+  entry.count += 1;
+  return entry.count <= CHAT_RATE_LIMIT;
+}
 
 // ===== "দেখা হয়েছে" (Seen) রিসিট — Messenger-এর মতো রিয়েল-টাইম নোটিফিকেশন =====
 const notifyUserSeen = (userId) => {
@@ -90,6 +118,9 @@ const initSocket = (server, sessionMiddleware) => {
         if (!u) return; // লগইন ছাড়া মেসেজ পাঠানো যাবে না
 
         const senderId = u.id; // ক্লায়েন্টের senderId উপেক্ষা করা হচ্ছে, session-ই একমাত্র সত্য উৎস
+
+        if (!(await allowChatMessage(senderId))) return; // রেট-লিমিট ছাড়িয়ে গেলে নীরবে ড্রপ
+
         const isAdmin = u.role === 'admin';
         const receiverId = (data && data.receiverId) || null;
         const message = (data && data.message) || null;
@@ -223,4 +254,4 @@ const broadcastDemoStats = async () => {
   }
 };
 
-module.exports = { initSocket, updateLiveScore, getDemoStats, broadcastDemoStats, emitAdminAlert, notifyUserSeen, notifyAdminsSeen };
+module.exports = { initSocket, updateLiveScore, getDemoStats, broadcastDemoStats, emitAdminAlert, notifyUserSeen, notifyAdminsSeen, allowChatMessage, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_SEC };

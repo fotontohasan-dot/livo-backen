@@ -27,7 +27,7 @@
     .queue-stat-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; text-align: center; }
     .queue-stat { padding: 6px 2px; border-radius: 8px; background: rgba(255,255,255,0.03); }
     .queue-stat-num { font-size: 15px; font-weight: 800; color: #fff; }
-    .queue-stat-label { font-size: 8.5px; color: #64748b; text-transform: uppercase; margin-top: 2px; }
+    .queue-stat-label { font-size: 8.5px; color: #94a3b8; text-transform: uppercase; margin-top: 2px; }
     .queue-stat.failed .queue-stat-num { color: #ef4444; }
     .queue-stat.active .queue-stat-num { color: #f59e0b; }
     .queue-stat.completed .queue-stat-num { color: #10b981; }
@@ -94,7 +94,7 @@
                     <td class="dlq-data"><%= JSON.stringify(j.job_data) %></td>
                     <td class="dlq-reason"><%= (j.failed_reason || '').slice(0, 120) %></td>
                     <td><%= j.attempts_made %></td>
-                    <td style="font-size:10px;color:#64748b;"><%= new Date(j.created_at).toLocaleString('bn-BD') %></td>
+                    <td style="font-size:10px;color:#94a3b8;"><%= new Date(j.created_at).toLocaleString('bn-BD') %></td>
                     <td>
                       <button class="btn btn-sm btn-green" onclick="retryDlq(<%= j.id %>)"><i class="fas fa-redo"></i> রিট্রাই</button>
                       <button class="btn btn-sm btn-red" onclick="deleteDlq(<%= j.id %>)"><i class="fas fa-trash"></i></button>

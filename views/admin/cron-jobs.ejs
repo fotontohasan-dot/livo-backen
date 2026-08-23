@@ -67,7 +67,7 @@
           </div>
 
           <% if (job.last_message) { %>
-            <div style="margin-top:8px;font-size:11px;color:<%= job.last_status === 'error' ? '#ef4444' : '#64748b' %>;background:rgba(255,255,255,0.03);padding:8px;border-radius:8px;">
+            <div style="margin-top:8px;font-size:11px;color:<%= job.last_status === 'error' ? '#ef4444' : '#94a3b8' %>;background:rgba(255,255,255,0.03);padding:8px;border-radius:8px;">
               <%= job.last_message %>
             </div>
           <% } %>
@@ -111,7 +111,7 @@
                   </tr>
                 <% }) %>
               <% } else { %>
-                <tr><td colspan="7" style="text-align:center;color:#64748b;padding:20px;">এখনো কোনো লগ নেই</td></tr>
+                <tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:20px;">এখনো কোনো লগ নেই</td></tr>
               <% } %>
             </tbody>
           </table>
