@@ -245,11 +245,15 @@ describe('Withdraw PIN (services/withdrawPin.js)', () => {
     });
   });
 
+  // withdraw_pin_logs.actor_id একটা FK (fk_withdraw_pin_actor) যা users(id) কে রেফার করে,
+  // তাই adminId হিসেবে বাস্তব user row দরকার — নাহলে audit-log insert চুপচাপ ব্যর্থ হয়
+  // (logPinEvent কখনো throw করে না) এবং log-নির্ভর assertion অনির্দিষ্টভাবে ব্যর্থ হতে পারে।
   describe('adminResetPin()', () => {
     test('অ্যাডমিন রিসেটের পর PIN আর কনফিগার করা থাকে না', async () => {
       const userId = await makeUser();
+      const adminId = await makeUser();
       await createPin(userId, '284617', '10.0.0.1');
-      await adminResetPin(userId, 1, 'admin', '10.0.0.9');
+      await adminResetPin(userId, adminId, 'admin', '10.0.0.9');
 
       const status = await getPinStatus(userId);
       expect(status.configured).toBe(false);
@@ -258,19 +262,21 @@ describe('Withdraw PIN (services/withdrawPin.js)', () => {
 
     test('অ্যাডমিন রিসেট লক-আউটও মুছে দেয়', async () => {
       const userId = await makeUser();
+      const adminId = await makeUser();
       await createPin(userId, '284617', '10.0.0.1');
       for (let i = 0; i < MAX_FAILED_ATTEMPTS; i++) {
         await verifyPin(userId, '999888', '10.0.0.1');
       }
-      await adminResetPin(userId, 1, 'admin', '10.0.0.9');
+      await adminResetPin(userId, adminId, 'admin', '10.0.0.9');
       const status = await getPinStatus(userId);
       expect(status.locked).toBe(false);
     });
 
     test('অ্যাডমিন রিসেট actor_type=admin সহ অডিট লগে রেকর্ড হয়', async () => {
       const userId = await makeUser();
+      const adminId = await makeUser();
       await createPin(userId, '284617', '10.0.0.1');
-      await adminResetPin(userId, 1, 'admin_user', '10.0.0.9');
+      await adminResetPin(userId, adminId, 'admin_user', '10.0.0.9');
       const logs = await pool.query(
         `SELECT action_type, actor_type, actor_username FROM withdraw_pin_logs
          WHERE user_id=$1 AND action_type='admin_reset'`,
