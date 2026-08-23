@@ -60,7 +60,7 @@ const rows = (users || []).map(userRow).join('') || '<tr><td colspan="7" class="
     </div>
 
     <form method="GET" action="/admin/users" class="flex flex-wrap gap-3 mb-6">
-        <input type="text" name="search" value="${search || ''}" placeholder="নাম, ইমেইল বা ফোন দিয়ে খুঁজুন..."
+        <input type="text" name="search" value="${escapeHtml(search || '')}" placeholder="নাম, ইমেইল বা ফোন দিয়ে খুঁজুন..."
                class="flex-1 min-w-[220px] border border-slate-200 px-4 py-2.5 rounded-2xl text-sm outline-none focus:border-blue-300">
         <select name="status" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
             <option value="">সব স্ট্যাটাস</option>

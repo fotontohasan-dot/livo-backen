@@ -108,8 +108,8 @@ const riskOptions = (riskLevels || []).map(r => '<option value="' + r + '" ' + (
                     ${riskOptions}
                 </select>
                 <input type="text" name="action" value="${escapeHtml(f.action)}" placeholder="Action টাইপ" class="w-40 border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
-                <input type="date" name="from" value="${f.from || ''}" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
-                <input type="date" name="to" value="${f.to || ''}" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+                <input type="date" name="from" value="${escapeHtml(f.from || '')}" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+                <input type="date" name="to" value="${escapeHtml(f.to || '')}" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
                 <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">ফিল্টার</button>
                 ${(f.q || f.actorType || f.category || f.status || f.riskLevel || f.action || f.from || f.to) ? '<a href="/admin/audit-logs" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">রিসেট</a>' : ''}
             </form>
@@ -153,6 +153,14 @@ const riskOptions = (riskLevels || []).map(r => '<option value="' + r + '" ' + (
     </div>
 </div>
 <script>
+function escHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 async function openLogDetail(id) {
   const overlay = document.getElementById('auditLogModalOverlay');
   const body = document.getElementById('auditLogModalBody');
@@ -162,7 +170,10 @@ async function openLogDetail(id) {
     const res = await fetch('/admin/audit-logs/' + id + '.json');
     if (!res.ok) throw new Error('not found');
     const log = await res.json();
-    const row = (label, value) => '<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #f8fafc;"><span style="color:#94a3b8; font-weight:600;">' + label + '</span><span style="color:#334155; text-align:right; max-width:60%; word-break:break-word;">' + (value == null || value === '' ? '-' : String(value)) + '</span></div>';
+    // log.actor_username/action/details ইত্যাদি admin-লেখা ফ্রি-টেক্সট হতে পারে (যেমন একটা
+    // rejection reason) — আগে এখানে কোনো escape ছাড়াই innerHTML-এ বসানো হতো, ফলে একজন admin-এর
+    // টাইপ করা HTML/JS পরে অন্য একজন admin-এর ব্রাউজারে live কোড হিসেবে চলত (stored XSS)।
+    const row = (label, value) => '<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #f8fafc;"><span style="color:#94a3b8; font-weight:600;">' + escHtml(label) + '</span><span style="color:#334155; text-align:right; max-width:60%; word-break:break-word;">' + (value == null || value === '' ? '-' : escHtml(String(value))) + '</span></div>';
     body.innerHTML =
       row('ID', '#' + log.id) +
       row('Time', new Date(log.created_at).toLocaleString('en-US')) +
@@ -178,7 +189,7 @@ async function openLogDetail(id) {
       row('OS', log.os) +
       row('Location', log.location) +
       row('Request ID', log.request_id) +
-      '<div style="margin-top:12px;"><div style="color:#94a3b8; font-weight:600; margin-bottom:6px;">Details</div><pre style="background:#f8fafc; border-radius:10px; padding:12px; font-size:12px; overflow-x:auto; white-space:pre-wrap; word-break:break-word;">' + JSON.stringify(log.details || {}, null, 2) + '</pre></div>';
+      '<div style="margin-top:12px;"><div style="color:#94a3b8; font-weight:600; margin-bottom:6px;">Details</div><pre style="background:#f8fafc; border-radius:10px; padding:12px; font-size:12px; overflow-x:auto; white-space:pre-wrap; word-break:break-word;">' + escHtml(JSON.stringify(log.details || {}, null, 2)) + '</pre></div>';
   } catch (e) {
     body.innerHTML = '<div style="color:#ef4444;">লোড করতে সমস্যা হয়েছে।</div>';
   }

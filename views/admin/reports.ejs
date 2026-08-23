@@ -1,4 +1,12 @@
 <%
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 const ggrLabels = JSON.stringify((ggrTrend || []).map(r => new Date(r.day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })));
 const ggrData = JSON.stringify((ggrTrend || []).map(r => Number(r.ggr)));
 const userLabels = JSON.stringify((userTrend || []).map(r => new Date(r.day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })));
@@ -12,9 +20,9 @@ const userData = JSON.stringify((userTrend || []).map(r => r.count));
     <div class="flex items-center justify-between mb-6">
         <h2 class="text-2xl font-semibold">Reports & Analytics</h2>
         <form method="GET" action="/admin/reports" class="flex items-center gap-2 text-sm">
-            <input type="date" name="from" value="${from}" class="border px-3 py-2 rounded-xl">
+            <input type="date" name="from" value="${escapeHtml(from)}" class="border px-3 py-2 rounded-xl">
             <span class="text-slate-400">থেকে</span>
-            <input type="date" name="to" value="${to}" class="border px-3 py-2 rounded-xl">
+            <input type="date" name="to" value="${escapeHtml(to)}" class="border px-3 py-2 rounded-xl">
             <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold">ফিল্টার</button>
         </form>
     </div>

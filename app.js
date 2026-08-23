@@ -318,8 +318,18 @@ app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.success = req.flash('success');
   res.locals.error = req.flash('error');
-  // views/partials/head.ejs ফ্ল্যাশ মেসেজ ইনলাইন <script>-এ নিরাপদে বসানোর জন্য এটা ব্যবহার করে
-  res.locals.jsonScriptSafe = (value) => JSON.stringify(String(value == null ? '' : value));
+  // views/partials/head.ejs ফ্ল্যাশ মেসেজ ইনলাইন <script>-এ নিরাপদে বসানোর জন্য এটা ব্যবহার করে।
+  // আগে JSON.stringify(String(value)) করত — array/object পাঠালে String() সেটাকে "[object Object],..."
+  // এ ভেঙে ফেলত (analytics.ejs, kyc.ejs, payment/admin.ejs, profile/wheel.ejs ভাঙত)। এখন value-টা
+  // সরাসরি JSON.stringify হয় (array/object/string/number সব ঠিকভাবে সিরিয়ালাইজ হয়), আর
+  // </script>, <!--, লাইন-সেপারেটর ক্যারেক্টার escape করা হয় যাতে JSON স্ট্রিং-এর ভেতরের কোনো
+  // ইউজার/অ্যাডমিন কনটেন্ট দিয়ে <script> ব্লক ভাঙা বা HTML ইনজেক্ট করা না যায়।
+  res.locals.jsonScriptSafe = (value) => JSON.stringify(value === undefined ? null : value)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
   // views/news-detail.ejs আগে একটা কখনো সংজ্ঞায়িত না-হওয়া escapeHtml() কল করত (ReferenceError,
   // প্রতিটা /news/:id ভিজিটে 500 ক্র্যাশ করত)। এটা একটা প্রকৃত HTML-escape ফাংশন — <%- %>-এর
   // ভেতরে raw HTML বসানোর আগে ব্যবহারকারী/admin-লেখা কনটেন্ট নিরাপদ করতে।

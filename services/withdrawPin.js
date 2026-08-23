@@ -138,20 +138,32 @@ async function verifyPin(userId, pin, ip) {
     return { success: true };
   }
 
-  const attempts = (user.withdraw_pin_failed_attempts || 0) + 1;
+  // আগে এখানে failed_attempts আলাদাভাবে SELECT করে, JS-এ +1 করে, তারপর UPDATE দিয়ে লেখা হতো —
+  // দুই ধাপের মাঝে কোনো লক না থাকায় একগুচ্ছ concurrent ভুল PIN গেস (paymentLimiter-এর সীমার
+  // মধ্যেই, কিন্তু ৫-এর বেশি) সবাই একই stale count থেকে attempts=1 হিসাব করত, ফলে ১৫-মিনিট
+  // লক কখনোই ট্রিগার হতো না। এখন একটাই atomic UPDATE ... SET col = col + 1 ব্যবহার করা হয়েছে
+  // যা Postgres-এ row-level lock নিয়ে সিরিয়ালাইজড হয় — concurrent রিকোয়েস্টগুলো একে একে
+  // (queued) প্রসেস হয়, প্রতিটা আসল আগের মান দেখে বাড়ায়, তাই কাউন্ট মিস হয় না।
+  const lockedUntil = new Date(Date.now() + LOCK_DURATION_MS);
+  const upd = await pool.query(
+    `UPDATE users
+     SET withdraw_pin_failed_attempts = withdraw_pin_failed_attempts + 1,
+         withdraw_pin_locked_until = CASE
+           WHEN withdraw_pin_failed_attempts + 1 >= $2 THEN $3
+           ELSE withdraw_pin_locked_until
+         END
+     WHERE id = $1
+     RETURNING withdraw_pin_failed_attempts, withdraw_pin_locked_until`,
+    [userId, MAX_FAILED_ATTEMPTS, lockedUntil]
+  );
+  const attempts = upd.rows[0].withdraw_pin_failed_attempts;
 
   if (attempts >= MAX_FAILED_ATTEMPTS) {
-    const lockedUntil = new Date(Date.now() + LOCK_DURATION_MS);
-    await pool.query(
-      `UPDATE users SET withdraw_pin_failed_attempts=$1, withdraw_pin_locked_until=$2 WHERE id=$3`,
-      [attempts, lockedUntil, userId]
-    );
     await logPinEvent(userId, 'verify_failed', { ip });
     await logPinEvent(userId, 'locked', { ip });
     return { success: false, locked: true, remainingMs: LOCK_DURATION_MS };
   }
 
-  await pool.query(`UPDATE users SET withdraw_pin_failed_attempts=$1 WHERE id=$2`, [attempts, userId]);
   await logPinEvent(userId, 'verify_failed', { ip });
   return { success: false, attemptsLeft: MAX_FAILED_ATTEMPTS - attempts };
 }

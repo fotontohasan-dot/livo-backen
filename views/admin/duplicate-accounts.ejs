@@ -87,7 +87,7 @@ function qs(overrides) {
             <option value="70" ${f.min_score === '70' ? 'selected' : ''}>High (70+)</option>
             <option value="40" ${f.min_score === '40' ? 'selected' : ''}>Medium (40+)</option>
         </select>
-        <input type="text" name="user_id" value="${f.user_id || ''}" placeholder="ইউজার ID"
+        <input type="text" name="user_id" value="${escapeHtml(f.user_id || '')}" placeholder="ইউজার ID"
                class="w-32 border border-slate-200 px-4 py-2.5 rounded-2xl text-sm outline-none focus:border-blue-300">
         <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">ফিল্টার</button>
         ${(f.status || f.min_score || f.user_id) ? '<a href="/admin/duplicate-accounts" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">রিসেট</a>' : ''}

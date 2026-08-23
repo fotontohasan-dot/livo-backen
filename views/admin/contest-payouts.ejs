@@ -72,7 +72,7 @@
                         <span class="badge badge-amber">বাকি</span>
                       <% } %>
                     </td>
-                    <td style="font-size:11px;color:#64748b;">
+                    <td style="font-size:11px;color:#94a3b8;">
                       <% if (p.status === 'paid') { %>
                         <%= p.paid_at ? new Date(p.paid_at).toLocaleString('bn-BD') : '—' %><br>
                         by <%= p.paid_by_username || '—' %>
@@ -83,7 +83,7 @@
                       <% if (p.status === 'pending') { %>
                         <button type="button" class="btn btn-sm btn-green" onclick="openMarkPaid(<%= p.id %>, '<%= (p.username || '').replace(/'/g, "\\'") %>')"><i class="fas fa-check"></i> Paid হিসেবে মার্ক করুন</button>
                       <% } else { %>
-                        <span style="color:#64748b;font-size:11px;">চূড়ান্ত</span>
+                        <span style="color:#94a3b8;font-size:11px;">চূড়ান্ত</span>
                       <% } %>
                     </td>
                   </tr>

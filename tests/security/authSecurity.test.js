@@ -1,7 +1,8 @@
 const { pool } = require('../../db');
 const cache = require('../../services/cache');
 const cacheKeys = require('../../services/cacheKeys');
-const { app, getCsrfAgent, uniqueUsername, uniquePhone, REALISTIC_UA, fakeIp, freshRequest } = require('../helpers/app');
+const { app, getCsrfAgent, extractCsrfToken, uniqueUsername, uniquePhone, REALISTIC_UA, fakeIp, wrapAgentWithIp, freshRequest } = require('../helpers/app');
+const request = require('supertest');
 
 // অথেন্টিকেশন সুরক্ষার আচরণ যাচাই (পাসওয়ার্ড স্টোরেজ, সেশন, এনুমারেশন, বট-হানিপট)।
 // tests/auth.test.js মূল ফ্লো কভার করে; এখানে শুধু সুরক্ষা-নির্দিষ্ট দিকগুলো যোগ করা হয়েছে।
@@ -118,6 +119,38 @@ describe('Authentication Security', () => {
       const cookies = res.headers['set-cookie'] || [];
       const sessionCookie = cookies.find((c) => c.startsWith('connect.sid'));
       expect(sessionCookie).toMatch(/SameSite/i);
+    });
+
+    test('সফল লগইনে সেশন আইডি রোটেট হয় (session fixation প্রতিরোধ)', async () => {
+      // /login শুধু email অথবা phone দিয়ে ইউজার খোঁজে (username দিয়ে নয়) — তাই identifier
+      // হিসেবে phone ব্যবহার করা হচ্ছে, নাহলে login ব্যর্থ হয়ে "invalid credentials"-এ পড়ে যাবে
+      const { phone, password } = await registerUser();
+
+      const agent = wrapAgentWithIp(request.agent(app), fakeIp());
+      const preLoginRes = await agent.get('/login');
+      const token = extractCsrfToken(preLoginRes.text);
+      const preLoginCookies = preLoginRes.headers['set-cookie'] || [];
+      const preLoginSidCookie = preLoginCookies.find((c) => c.startsWith('connect.sid'));
+      expect(preLoginSidCookie).toBeTruthy();
+      const preLoginSid = preLoginSidCookie.split(';')[0];
+
+      const loginRes = await agent
+        .post('/login')
+        .type('form')
+        .send({ identifier: phone, password, _csrf: token });
+
+      expect(loginRes.status).toBe(302);
+      const postLoginCookies = loginRes.headers['set-cookie'] || [];
+      const postLoginSidCookie = postLoginCookies.find((c) => c.startsWith('connect.sid'));
+      expect(postLoginSidCookie).toBeTruthy();
+      const postLoginSid = postLoginSidCookie.split(';')[0];
+
+      // লগইনের আগে ও পরের connect.sid মান আলাদা হওয়া উচিত — না হলে session fixation সম্ভব
+      expect(postLoginSid).not.toBe(preLoginSid);
+
+      // রোটেশনের পরও সেশন কার্যকর থাকা উচিত (লগইন-পরবর্তী প্রোটেক্টেড রুট অ্যাক্সেসযোগ্য)
+      const protectedRes = await agent.get('/profile/security');
+      expect(protectedRes.status).toBe(200);
     });
 
     test('লগআউটের পর সুরক্ষিত রুট আর অ্যাক্সেস করা যায় না', async () => {

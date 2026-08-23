@@ -60,11 +60,11 @@
                   <tr>
                     <td>
                       <div style="font-weight:700;">@<%= r.referrer_username %></div>
-                      <div style="font-size:11px;color:#64748b;">কোড: <%= r.referrer_code || '-' %></div>
+                      <div style="font-size:11px;color:#94a3b8;">কোড: <%= r.referrer_code || '-' %></div>
                     </td>
                     <td>
                       <div style="font-weight:700;">@<%= r.referred_username %></div>
-                      <div style="font-size:11px;color:#64748b;">যোগদান: <%= r.referred_joined_at ? new Date(r.referred_joined_at).toLocaleDateString('bn-BD') : '—' %></div>
+                      <div style="font-size:11px;color:#94a3b8;">যোগদান: <%= r.referred_joined_at ? new Date(r.referred_joined_at).toLocaleDateString('bn-BD') : '—' %></div>
                     </td>
                     <td>
                       <% if (r.signup_bonus_paid) { %>
@@ -72,7 +72,7 @@
                       <% } else { %>
                         <span class="badge badge-amber">পেন্ডিং</span>
                       <% } %>
-                      <div style="font-size:10px;color:#64748b;margin-top:3px;">
+                      <div style="font-size:10px;color:#94a3b8;margin-top:3px;">
                         <%= r.first_deposit_done ? 'ডিপোজিট সম্পন্ন' : 'ডিপোজিট বাকি' %>
                       </div>
                     </td>

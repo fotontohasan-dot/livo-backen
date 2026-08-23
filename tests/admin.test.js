@@ -190,6 +190,34 @@ describe('Admin Panel', () => {
       expect(Number(userRow.rows[0].coins)).toBe(1000); // ডেমো বাজি থেকে সত্যিকারের কয়েন তৈরি হওয়া উচিত না
       expect(Number(userRow.rows[0].demo_balance)).toBe(1200); // 1000 + payout(200)
     });
+
+    // রিগ্রেশন: আগে এই রুট real coins নাড়ানোর পরও কোনো audit log (admin_logs বা audit_logs)
+    // রেকর্ড করত না — কোন admin, কখন, কী রেজাল্ট দিয়ে সেটেল করেছে তার কোনো ট্রেস থাকত না।
+    test('বেট সেটেল করলে admin_logs ও audit_logs উভয়েই BET_SETTLED রেকর্ড হয়', async () => {
+      const { agent, token } = await makeAdminAgentWithToken();
+      const uname = uniqueUsername();
+      const u = await pool.query(`INSERT INTO users (username, phone, password, coins) VALUES ($1,$2,'x',1000) RETURNING id`, [uname, uniquePhone()]);
+      const m = await pool.query(`INSERT INTO matches (title, team_a, team_b, sport) VALUES ('Test Match','A','B','cricket') RETURNING id`);
+      const bet = await pool.query(
+        `INSERT INTO bets (user_id, match_id, runner, odd, stake, status) VALUES ($1,$2,'A','2.00',100,'pending') RETURNING id`,
+        [u.rows[0].id, m.rows[0].id]
+      );
+
+      const res = await agent.post(`/admin/bets/${bet.rows[0].id}/settle`).set('X-CSRF-Token', token).type('form').send({ result: 'won' });
+      expect(res.status).toBe(302);
+
+      const adminLog = await pool.query(
+        `SELECT * FROM admin_logs WHERE action_type='BET_SETTLED' AND details LIKE $1 ORDER BY id DESC LIMIT 1`,
+        [`%#${bet.rows[0].id}%`]
+      );
+      expect(adminLog.rows.length).toBe(1);
+
+      const auditLog = await pool.query(
+        `SELECT * FROM audit_logs WHERE action='BET_SETTLED' AND category='financial' ORDER BY id DESC LIMIT 1`
+      );
+      expect(auditLog.rows.length).toBe(1);
+      expect(auditLog.rows[0].risk_level).toBe('high');
+    });
   });
 
   describe('POST /admin/markets/:marketId/settle', () => {
@@ -210,6 +238,34 @@ describe('Admin Panel', () => {
       const userRow = await pool.query('SELECT coins, demo_balance FROM users WHERE id=$1', [u.rows[0].id]);
       expect(Number(userRow.rows[0].coins)).toBe(1000);
       expect(Number(userRow.rows[0].demo_balance)).toBe(1200);
+    });
+
+    // রিগ্রেশন: market settle করলেও আগে কোনো audit log হতো না
+    test('মার্কেট সেটেল করলে admin_logs ও audit_logs উভয়েই MARKET_SETTLED রেকর্ড হয়', async () => {
+      const { agent, token } = await makeAdminAgentWithToken();
+      const uname = uniqueUsername();
+      const u = await pool.query(`INSERT INTO users (username, phone, password, coins) VALUES ($1,$2,'x',1000) RETURNING id`, [uname, uniquePhone()]);
+      const m = await pool.query(`INSERT INTO matches (title, team_a, team_b, sport) VALUES ('Test Match','A','B','cricket') RETURNING id`);
+      const market = await pool.query(`INSERT INTO markets (match_id, type, name, odds, status) VALUES ($1,'match_winner','Match Winner','{}','open') RETURNING id`, [m.rows[0].id]);
+      await pool.query(
+        `INSERT INTO bets (user_id, match_id, market_id, runner, odd, stake, status) VALUES ($1,$2,$3,'A','2.00',100,'pending')`,
+        [u.rows[0].id, m.rows[0].id, market.rows[0].id]
+      );
+
+      const res = await agent.post(`/admin/markets/${market.rows[0].id}/settle`).set('X-CSRF-Token', token).type('form').send({ winning_runner: 'A' });
+      expect(res.status).toBe(302);
+
+      const adminLog = await pool.query(
+        `SELECT * FROM admin_logs WHERE action_type='MARKET_SETTLED' AND details LIKE $1 ORDER BY id DESC LIMIT 1`,
+        [`%#${market.rows[0].id}%`]
+      );
+      expect(adminLog.rows.length).toBe(1);
+
+      const auditLog = await pool.query(
+        `SELECT * FROM audit_logs WHERE action='MARKET_SETTLED' AND category='financial' ORDER BY id DESC LIMIT 1`
+      );
+      expect(auditLog.rows.length).toBe(1);
+      expect(auditLog.rows[0].risk_level).toBe('high');
     });
   });
 

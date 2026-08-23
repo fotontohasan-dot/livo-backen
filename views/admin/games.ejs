@@ -39,7 +39,7 @@ function fieldRow(id, label, tag, opts) {
   </div>
 
   <form method="GET" action="/admin/games" class="flex flex-wrap gap-3 mb-5">
-    <input type="hidden" name="category" value="${f.category}">
+    <input type="hidden" name="category" value="${esc(f.category)}">
     <input type="text" name="q" value="${esc(searchQ||'')}" placeholder="নাম / স্লাগ / প্রোভাইডার"
       class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm flex-1 min-w-40 outline-none focus:border-indigo-300">
     <select name="status" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">

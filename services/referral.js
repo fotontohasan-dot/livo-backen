@@ -72,23 +72,29 @@ async function createReferral(client, referrerId, referredId) {
 // রেফার করা ইউজার প্রথমবার (৫০০+) ডিপোজিট করলে — রেফারারকে প্রোগ্রেসিভ বোনাস।
 async function processReferralDeposit(client, referredUserId, depositAmount) {
   try {
-    // এই ইউজার কারো রেফার কিনা, আর বোনাস আগে দেওয়া হয়েছে কিনা
-    const refRes = await client.query(
-      `SELECT * FROM referrals WHERE referred_id = $1`,
-      [referredUserId]
-    );
-    const ref = refRes.rows[0];
-    if (!ref) return;                         // কেউ রেফার করেনি
-    if (ref.signup_bonus_paid) return;        // আগেই বোনাস দেওয়া হয়েছে
     if (depositAmount < MIN_DEPOSIT_FOR_BONUS) return; // ৫০০-র কম, বোনাস নেই
 
-    // রেফারার এ পর্যন্ত কতজনকে সফল রেফার করেছে (বোনাস পাওয়া) — তার পরের জন এইটি
+    // আগে এখানে SELECT দিয়ে signup_bonus_paid যাচাই করে, পরে আলাদা UPDATE দিয়ে flag সেট করা হতো —
+    // দুটো ধাপের মাঝে কোনো লক ছিল না, তাই একই রেফার্ড ইউজারের দুইটা ডিপোজিট কাছাকাছি সময়ে
+    // approve হলে (দুই admin ট্যাব, বা success-redirect ও IPN-এর race) দুটোই signup_bonus_paid=false
+    // পড়ত আর দুইবার বোনাস দিত। এখন একটা atomic conditional UPDATE দিয়ে flag claim করা হয় —
+    // WHERE signup_bonus_paid=false শর্তসহ, যেটা single-statement হওয়ায় সবসময় exactly-once গ্যারান্টি দেয়,
+    // client কোনো transaction-এ থাকুক বা না থাকুক। rowCount 0 মানে অন্য কোনো concurrent কল আগেই claim করেছে।
+    const claimRes = await client.query(
+      `UPDATE referrals SET first_deposit_done = true, signup_bonus_paid = true
+       WHERE referred_id = $1 AND signup_bonus_paid = false
+       RETURNING id, referrer_id`,
+      [referredUserId]
+    );
+    const ref = claimRes.rows[0];
+    if (!ref) return; // কেউ রেফার করেনি, অথবা বোনাস আগেই claim হয়ে গেছে (রেস জেতেনি)
+
+    // রেফারার এ পর্যন্ত কতজনকে সফল রেফার করেছে (বোনাস পাওয়া, এই রেফারটিসহ) — সেটাই এর অবস্থান
     const cntRes = await client.query(
       `SELECT COUNT(*) FROM referrals WHERE referrer_id = $1 AND signup_bonus_paid = true`,
       [ref.referrer_id]
     );
-    const alreadyPaid = parseInt(cntRes.rows[0].count);
-    const thisIsNumber = alreadyPaid + 1;     // এই রেফারটি ধরে কতজন হলো
+    const thisIsNumber = parseInt(cntRes.rows[0].count); // এই রেফারটি ধরে কতজন হলো
 
     const bonus = signupBonusFor(thisIsNumber);
 
@@ -96,11 +102,6 @@ async function processReferralDeposit(client, referredUserId, depositAmount) {
     await client.query(
       `UPDATE users SET coins = coins + $1 WHERE id = $2`,
       [bonus, ref.referrer_id]
-    );
-    // রেফারেল রেকর্ড আপডেট
-    await client.query(
-      `UPDATE referrals SET first_deposit_done = true, signup_bonus_paid = true WHERE id = $1`,
-      [ref.id]
     );
     // কমিশন হিস্ট্রি (অডিট)
     await client.query(

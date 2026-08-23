@@ -80,15 +80,15 @@
                       <% if (u.rank) { %>
                         <span class="lb-rank <%= u.rank == 1 ? 'lb-rank-1' : (u.rank == 2 ? 'lb-rank-2' : (u.rank == 3 ? 'lb-rank-3' : '')) %>">#<%= u.rank %></span>
                         <% if (u.rank <= 50) { %>
-                          <div style="font-size:10px;color:#64748b;margin-top:2px;">পাবলিক Top 50-এ</div>
+                          <div style="font-size:10px;color:#94a3b8;margin-top:2px;">পাবলিক Top 50-এ</div>
                         <% } %>
                       <% } else { %>
-                        <span style="color:#64748b;">—</span>
+                        <span style="color:#94a3b8;">—</span>
                       <% } %>
                     </td>
                     <td>
                       <div style="font-weight:700;">@<%= u.username %></div>
-                      <div style="font-size:11px;color:#64748b;">#<%= u.id %><% if (u.email) { %> · <%= u.email %><% } %></div>
+                      <div style="font-size:11px;color:#94a3b8;">#<%= u.id %><% if (u.email) { %> · <%= u.email %><% } %></div>
                     </td>
                     <td style="font-weight:700;color:#f59e0b;"><%= Number(u.total_points || 0).toLocaleString('en-US') %></td>
                     <td><%= Number(u.coins || 0).toLocaleString('en-US') %></td>
@@ -166,12 +166,12 @@
   <script>
     async function loadContestHistory() {
       const box = document.getElementById('contestHistory');
-      box.innerHTML = '<p style="color:#64748b;font-size:12px;">লোড হচ্ছে...</p>';
+      box.innerHTML = '<p style="color:#94a3b8;font-size:12px;">লোড হচ্ছে...</p>';
       try {
         const res = await fetch('/admin/leaderboard/contest/history?months=3');
         const data = await res.json();
         if (!data.success || !data.past || !data.past.length) {
-          box.innerHTML = '<p style="color:#64748b;font-size:12px;">আগের কোনো মাসের কনটেস্ট রেজাল্ট নেই।</p>';
+          box.innerHTML = '<p style="color:#94a3b8;font-size:12px;">আগের কোনো মাসের কনটেস্ট রেজাল্ট নেই।</p>';
           return;
         }
         box.innerHTML = data.past.map(function (m) {
