@@ -7,9 +7,9 @@
     "start": "node app.js",
     "dev": "nodemon app.js",
     "sentry:sourcemaps": "node scripts/sentry-sourcemaps.js",
-    "test": "cross-env NODE_ENV=test jest --runInBand --coverage",
-    "test:watch": "cross-env NODE_ENV=test jest --runInBand --watch",
-    "test:coverage": "cross-env NODE_ENV=test jest --runInBand --coverage",
+    "test": "cross-env NODE_ENV=test jest --maxWorkers=1 --workerIdleMemoryLimit=512MB --coverage",
+    "test:watch": "cross-env NODE_ENV=test jest --maxWorkers=1 --watch",
+    "test:coverage": "cross-env NODE_ENV=test jest --maxWorkers=1 --workerIdleMemoryLimit=512MB --coverage",
     "build": "next build"
   },
   "dependencies": {
