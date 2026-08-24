@@ -1087,5 +1087,16 @@
   "admin_game_toggled": "\"{value1}\" {value2} করা হয়েছে।",
   "admin_games_bulk_toggled": "{value1}টি গেম {value2} করা হয়েছে।",
   "admin_record_not_found_or_paid": "রেকর্ড পাওয়া যায়নি অথবা ইতিমধ্যে Paid হিসেবে চিহ্নিত।",
-  "admin_financial_history_preserved": "আর্থিক ইতিহাস হিসাবরক্ষণের জন্য অক্ষত রাখা হয়েছে।"
+  "admin_financial_history_preserved": "আর্থিক ইতিহাস হিসাবরক্ষণের জন্য অক্ষত রাখা হয়েছে।",
+  "admin_bengali_message_required": "বাংলা মেসেজ আবশ্যক",
+  "admin_game_name_required": "গেমের নাম আবশ্যক",
+  "admin_game_name_too_long": "নাম ১০০ অক্ষরের বেশি হবে না",
+  "admin_game_slug_format": "স্লাগ শুধু lowercase, সংখ্যা ও হাইফেন দিয়ে হবে",
+  "admin_invalid_category_prefix": "অবৈধ ক্যাটাগরি: ",
+  "admin_provider_required": "প্রোভাইডার আবশ্যক",
+  "admin_provider_name_too_long": "প্রোভাইডার নাম ৮০ অক্ষরের বেশি হবে না",
+  "admin_invalid_badge_prefix": "অবৈধ ব্যাজ: ",
+  "admin_chat_id_invalid": "Chat ID সঠিক নয় (সংখ্যা অথবা @username হতে হবে)।",
+  "admin_bot_token_format_invalid": "Bot token-এর ফরম্যাট সঠিক নয়।",
+  "admin_encryption_key_missing": "এনক্রিপশন কী সেট নেই — TELEGRAM_SETTINGS_KEY (বা SESSION_SECRET) ছাড়া টোকেন সেভ করা হবে না।"
 }

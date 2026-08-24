@@ -1087,5 +1087,16 @@
   "admin_game_toggled": "\"{value1}\" has been {value2}.",
   "admin_games_bulk_toggled": "{value1} games have been {value2}.",
   "admin_record_not_found_or_paid": "The record was not found or is already marked as Paid.",
-  "admin_financial_history_preserved": "The financial history has been preserved for accounting purposes."
+  "admin_financial_history_preserved": "The financial history has been preserved for accounting purposes.",
+  "admin_bengali_message_required": "Bengali message is required",
+  "admin_game_name_required": "Game name is required",
+  "admin_game_name_too_long": "Name must not exceed 100 characters",
+  "admin_game_slug_format": "Slug may contain only lowercase letters, numbers and hyphens",
+  "admin_invalid_category_prefix": "Invalid category: ",
+  "admin_provider_required": "Provider is required",
+  "admin_provider_name_too_long": "Provider name must not exceed 80 characters",
+  "admin_invalid_badge_prefix": "Invalid badge: ",
+  "admin_chat_id_invalid": "Chat ID is not valid (must be a number or @username).",
+  "admin_bot_token_format_invalid": "Bot token format is not valid.",
+  "admin_encryption_key_missing": "Encryption key is not set — the token will not be saved without TELEGRAM_SETTINGS_KEY (or SESSION_SECRET)."
 }

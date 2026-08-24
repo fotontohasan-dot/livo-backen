@@ -239,3 +239,93 @@ describe('rate-limiter মেসেজ module scope-এ req ছোঁয় ন�
     }).not.toThrow();
   });
 });
+
+// ---------------------------------------------------------------------------
+// রিভার্স চেক — কোডে ব্যবহৃত প্রতিটা key locale ফাইলে সত্যিই আছে কিনা।
+//
+// উপরের parity টেস্ট শুধু bn.json ↔ en.json মেলায়। কিন্তু একটা key যদি *দুই*
+// ফাইলেই না থাকে, parity তবু সবুজ থাকে — অথচ app.js-এর Proxy আর utils/i18n-এর
+// t() দুটোই অনুপস্থিত key-এর বদলে key-এর নামটাই ফেরত দেয়। ফলে অ্যাডমিন/ইউজার
+// মেসেজের জায়গায় কাঁচা "admin_game_name_required" দেখে।
+//
+// এভাবেই d53e689 (backend i18n) কমিটে ১১টা key locale ফাইলে যোগ না করেই
+// routes/adminGames.js, routes/adminTelegram.js ও routes/admin.js-এ ব্যবহার
+// হয়ে গিয়েছিল। এই টেস্ট সেই শ্রেণির রিগ্রেশন ধরবে।
+// ---------------------------------------------------------------------------
+
+// কমেন্ট লাইনগুলো ফাঁকা করে দেয় (লাইন-নম্বর অটুট রেখে) — ডকুমেন্টেশনে লেখা
+// উদাহরণ, যেমন app.js-এর `req.t('key')` বা rateLimitFactory.js-এর
+// `tr(req, 'key')`, যেন সত্যিকারের key হিসেবে গোনা না হয়।
+//
+// ইচ্ছাকৃতভাবে লাইন-ভিত্তিক, ক্যারেক্টার-ভিত্তিক স্ক্যানার নয়: এই রিপোতে
+// `.replace(/'/g, '&#39;')`-এর মতো রেগেক্স লিটারেল আছে, যেগুলোর ভেতরের কোট
+// একটা সাধারণ কোট-স্টেট ট্র্যাকারকে ডিসিঙ্ক করে দেয় এবং তারপরের আসল
+// কমেন্টগুলো আর সরে না।
+function stripComments(src) {
+  let inBlock = false;
+  return src.split('\n').map((line) => {
+    const trimmed = line.trim();
+    if (inBlock) {
+      if (trimmed.includes('*/')) inBlock = false;
+      return '';
+    }
+    if (trimmed.startsWith('/*')) {
+      if (!trimmed.includes('*/')) inBlock = true;
+      return '';
+    }
+    if (trimmed.startsWith('//') || trimmed.startsWith('*')) return '';
+    return line;
+  }).join('\n');
+}
+
+function collectSourceFiles() {
+  const files = ['app.js'];
+  const walk = (rel) => {
+    const abs = path.join(ROOT, rel);
+    if (!fs.existsSync(abs)) return;
+    for (const entry of fs.readdirSync(abs, { withFileTypes: true })) {
+      const child = path.join(rel, entry.name);
+      if (entry.isDirectory()) walk(child);
+      else if (entry.name.endsWith('.js')) files.push(child);
+    }
+  };
+  ['routes', 'middleware', 'services', 'utils'].forEach(walk);
+  return files;
+}
+
+// req.t('key') / res.locals.t('key') / t(lang, 'key') / tr(req, 'key')
+const KEY_CALLS = [
+  /(?:req\.t|res\.locals\.t)\s*\(\s*'([A-Za-z0-9_]+)'\s*\)/g,
+  /\bt\s*\(\s*(?:lang|language|req\.lang|langOf\([^)]*\))\s*,\s*'([A-Za-z0-9_]+)'\s*\)/g,
+  /\btr\s*\(\s*req\s*,\s*'([A-Za-z0-9_]+)'\s*\)/g
+];
+
+describe('কোডে ব্যবহৃত প্রতিটা i18n key locale ফাইলে আছে', () => {
+  const used = new Map(); // key -> "file:line"
+
+  beforeAll(() => {
+    for (const rel of collectSourceFiles()) {
+      const lines = stripComments(fs.readFileSync(path.join(ROOT, rel), 'utf8')).split('\n');
+      lines.forEach((line, idx) => {
+        for (const re of KEY_CALLS) {
+          re.lastIndex = 0;
+          let m;
+          while ((m = re.exec(line))) {
+            if (!used.has(m[1])) used.set(m[1], `${rel}:${idx + 1}`);
+          }
+        }
+      });
+    }
+  });
+
+  test('স্ক্যানার আসলে key খুঁজে পাচ্ছে (টেস্ট নিজেই নিষ্ক্রিয় হয়ে যায়নি)', () => {
+    expect(used.size).toBeGreaterThan(200);
+  });
+
+  test('অনুপস্থিত কোনো key নেই — কাঁচা key-নাম ইউজারকে দেখানো হবে না', () => {
+    const missing = [...used.entries()]
+      .filter(([k]) => !(k in bn) || !(k in en))
+      .map(([k, where]) => `${k} (${where})`);
+    expect(missing).toEqual([]);
+  });
+});
