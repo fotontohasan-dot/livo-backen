@@ -81,7 +81,7 @@
       <div class="card-body" style="text-align:center;padding:1.2rem;">
         <% if (reward.currentTier) { %>
           <div style="font-size:.85rem;color:var(--text-main);"><%= t.your_current_bonus %></div>
-          <div style="font-size:1.8rem;font-weight:900;color:#10b981;margin:.3rem 0;">
+          <div style="font-size:1.8rem;font-weight:900;color:var(--green-text);margin:.3rem 0;">
             <%= reward.currentTier.bonus_amount %><%= t.coins %></div>
           <% if (reward.claimed) { %>
             <button class="btn" style="width:100%;background:rgba(255,255,255,0.1);color:var(--muted);cursor:not-allowed;" disabled>

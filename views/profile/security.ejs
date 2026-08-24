@@ -96,11 +96,11 @@
       <form action="/profile/update-personal" method="POST" style="display: flex; flex-direction: column; gap: 15px;">
         <div>
           <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.username_fixed %></label>
-          <input type="text" value="<%= user.username %>" disabled style="width: 100%; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 15px; color: rgba(255,255,255,0.5); font-size: 14px;">
+          <input type="text" value="<%= user.username %>" disabled style="width: 100%; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 15px; color: var(--text-muted); font-size: 14px;">
         </div>
         <div>
           <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.email %></label>
-          <input type="email" value="<%= user.email %>" disabled style="width: 100%; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 15px; color: rgba(255,255,255,0.5); font-size: 14px;">
+          <input type="email" value="<%= user.email %>" disabled style="width: 100%; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 15px; color: var(--text-muted); font-size: 14px;">
         </div>
         <div>
           <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.full_name %></label>
@@ -177,7 +177,7 @@
           <% if (!emailStatus || !emailStatus.hasEmail) { %>
             <div style="font-weight:700; font-size: 14px; color: var(--text-muted);"><i class="fas fa-circle-minus"></i> <%= lang === 'bn' ? 'প্রযোজ্য নয়' : 'Not applicable' %></div>
           <% } else if (emailStatus.verified) { %>
-            <div style="font-weight:700; font-size: 14px; color: #10b981;"><i class="fas fa-circle-check"></i> <%= lang === 'bn' ? 'ভেরিফাইড' : 'Verified' %></div>
+            <div style="font-weight:700; font-size: 14px; color: var(--green-text);"><i class="fas fa-circle-check"></i> <%= lang === 'bn' ? 'ভেরিফাইড' : 'Verified' %></div>
           <% } else { %>
             <div style="font-weight:700; font-size: 14px; color: #ef4444;"><i class="fas fa-circle-xmark"></i> <%= lang === 'bn' ? 'ভেরিফাই করা হয়নি' : 'Not verified' %></div>
           <% } %>
@@ -325,7 +325,7 @@
               <div style="flex:1; min-width:0;">
                 <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                   <span style="color:var(--text-main); font-size:14px; font-weight:700;"><i class="fas <%= d.device_type === 'Mobile' ? 'fa-mobile-screen' : (d.device_type === 'Tablet' ? 'fa-tablet-screen-button' : 'fa-desktop') %>"></i> <%= d.device_name %></span>
-                  <% if (d.is_current) { %><span style="background:rgba(16,185,129,0.15); color:#10b981; font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px;"><%= t.current_device_badge %></span><% } %>
+                  <% if (d.is_current) { %><span style="background:rgba(16,185,129,0.15); color:var(--green-text); font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px;"><%= t.current_device_badge %></span><% } %>
                   <% if (d.is_new_device) { %><span style="background:rgba(245,158,11,0.15); color: var(--text-accent); font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px;"><%= t.new_device_badge %></span><% } %>
                 </div>
                 <div style="color:var(--text-muted); font-size:11px; margin-top:6px;"><%= d.ip %></div>

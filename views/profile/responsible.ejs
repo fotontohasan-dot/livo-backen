@@ -22,7 +22,7 @@
       প্রতিদিন সর্বোচ্চ কত টাকা ডিপোজিট করতে পারবেন তা ঠিক করুন। এর বেশি ডিপোজিট আটকে যাবে।
     </div>
     <% if (rg && rg.daily_deposit_limit) { %>
-      <div style="background:rgba(16,185,129,0.1);border:1px solid #10b981;border-radius:8px;padding:10px;margin-bottom:12px;color:#10b981;font-size:13px;">
+      <div style="background:rgba(16,185,129,0.1);border:1px solid #10b981;border-radius:8px;padding:10px;margin-bottom:12px;color:var(--green-text);font-size:13px;">
         বর্তমান সীমা: <strong><%= Number(rg.daily_deposit_limit).toLocaleString('bn-BD') %> টাকা</strong>
       </div>
     <% } %>

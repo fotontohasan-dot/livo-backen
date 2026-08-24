@@ -25,7 +25,7 @@
       %>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
           <span style="color:var(--text-main);font-size:13px;"><%= medal %> <%= p.rank %>ম স্থান</span>
-          <span style="color:#f59e0b;font-size:13px;font-weight:bold;"><%= p.prize %></span>
+          <span style="color:var(--text-accent);font-size:13px;font-weight:bold;"><%= p.prize %></span>
         </div>
       <% }) %>
     </div>
@@ -43,7 +43,7 @@
               <span style="color:var(--text-muted);font-size:14px;font-weight:bold;min-width:24px;"><%= medal %></span>
               <span style="color:var(--text-main);font-size:13px;"><%= l.username %><%= l.isMe ? ' (আপনি)' : '' %></span>
             </div>
-            <span style="color:#10b981;font-size:13px;font-weight:bold;"><%= l.referrals %> রেফার</span>
+            <span style="color:var(--green-text);font-size:13px;font-weight:bold;"><%= l.referrals %> রেফার</span>
           </div>
         <% }) %>
       <% } else { %>
@@ -53,7 +53,7 @@
       <!-- আমার অবস্থান (টপ ২০-তে না থাকলে) -->
       <% if (contest.myRank) { %>
         <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.1);text-align:center;color:var(--text-muted);font-size:12px;">
-          এই মাসে আপনার রেফার: <strong style="color:#f59e0b;"><%= contest.myRank.referrals %></strong> জন — লিডারবোর্ডে উঠতে আরও রেফার করুন!
+          এই মাসে আপনার রেফার: <strong style="color:var(--text-accent);"><%= contest.myRank.referrals %></strong> জন — লিডারবোর্ডে উঠতে আরও রেফার করুন!
         </div>
       <% } %>
     </div>
@@ -63,7 +63,7 @@
       আপনার রেফারেল লিংক বন্ধুদের সাথে শেয়ার করুন!
     </p>
 
-    <a href="/profile/referral" style="display:block;text-align:center;background:var(--gold,#f59e0b);color:#000;text-decoration:none;padding:12px;border-radius:10px;font-weight:bold;margin-top:12px;">
+    <a href="/profile/referral" style="display:block;text-align:center;background:var(--gold,#f59e0b);color:var(--text-inverse);text-decoration:none;padding:12px;border-radius:10px;font-weight:bold;margin-top:12px;">
       🔗 আমার রেফারেল লিংক দেখুন
     </a>
 
@@ -77,7 +77,7 @@
             <% pc.leaders.forEach(l => {
               const medal = l.rank === 1 ? '🥇' : l.rank === 2 ? '🥈' : l.rank === 3 ? '🥉' : l.rank + '.';
             %>
-              <div style="display:flex;justify-content:space-between;padding:6px 0;<%= l.isMe ? 'color:#f59e0b;' : 'color:#e2e8f0;' %>font-size:13px;">
+              <div style="display:flex;justify-content:space-between;padding:6px 0;<%= l.isMe ? 'color:var(--text-accent);' : 'color:var(--text-main);' %>font-size:13px;">
                 <span><%= medal %> <%= l.username %><%= l.isMe ? ' (আপনি)' : '' %></span>
                 <span><%= l.referrals %> রেফার<% if (l.prize) { %> — <%= l.prize %><% } %></span>
               </div>

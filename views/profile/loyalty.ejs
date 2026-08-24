@@ -24,7 +24,7 @@
     <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;margin-bottom:16px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <div style="color:var(--text-main);font-weight:bold;">👑 VIP <%= vip.current ? vip.current.name : '০' %> (লেভেল <%= vip.level %>)</div>
-        <a href="/profile/vip" style="color:#f59e0b;font-size:12px;">বিস্তারিত →</a>
+        <a href="/profile/vip" style="color:var(--text-accent);font-size:12px;">বিস্তারিত →</a>
       </div>
       <div style="background:rgba(255,255,255,0.1);border-radius:20px;height:10px;overflow:hidden;margin-bottom:6px;">
         <div style="width:<%= vip.progress %>%;height:100%;background:linear-gradient(90deg,#f59e0b,#fbbf24);"></div>

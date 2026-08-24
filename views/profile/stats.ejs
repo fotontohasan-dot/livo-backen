@@ -23,17 +23,17 @@
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
     <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;text-align:center;border:1px solid rgba(255,255,255,0.1)">
       <div style="color:var(--text-muted);font-size:12px;margin-bottom:8px">মোট বেট</div>
-      <div style="color:#f59e0b;font-size:28px;font-weight:bold"><%= stats.total %></div>
+      <div style="color:var(--text-accent);font-size:28px;font-weight:bold"><%= stats.total %></div>
     </div>
     <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;text-align:center;border:1px solid rgba(255,255,255,0.1)">
       <div style="color:var(--text-muted);font-size:12px;margin-bottom:8px">জয় / হার</div>
-      <div style="color:#10b981;font-size:22px;font-weight:bold"><%= stats.won %> <span style="color:#ef4444">/ <%= stats.lost %></span></div>
+      <div style="color:var(--green-text);font-size:22px;font-weight:bold"><%= stats.won %> <span style="color:#ef4444">/ <%= stats.lost %></span></div>
     </div>
   </div>
 
   <div style="background: <%= stats.net_profit >= 0 ? 'linear-gradient(135deg,#10b981,#059669)' : 'linear-gradient(135deg,#ef4444,#b91c1c)' %>;border-radius:16px;padding:20px;text-align:center">
-    <div style="color:rgba(255,255,255,0.85);font-size:13px;margin-bottom:6px">নেট লাভ/ক্ষতি (সেটেল হওয়া বেট থেকে)</div>
-    <div style="color:var(--text-main);font-size:32px;font-weight:bold"><%= stats.net_profit >= 0 ? '+' : '' %>৳<%= stats.net_profit.toLocaleString('bn-BD') %></div>
+    <div style="color:#FFFFFF;font-size:13px;margin-bottom:6px">নেট লাভ/ক্ষতি (সেটেল হওয়া বেট থেকে)</div>
+    <div style="color:#FFFFFF;font-size:32px;font-weight:bold"><%= stats.net_profit >= 0 ? '+' : '' %>৳<%= stats.net_profit.toLocaleString('bn-BD') %></div>
   </div>
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">
@@ -43,7 +43,7 @@
     </div>
     <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:16px;border:1px solid rgba(255,255,255,0.1)">
       <div style="color:var(--text-muted);font-size:11px;margin-bottom:6px">মোট জিতেছে</div>
-      <div style="color:#10b981;font-size:18px;font-weight:bold">৳<%= stats.total_won_amount.toLocaleString('bn-BD') %></div>
+      <div style="color:var(--green-text);font-size:18px;font-weight:bold">৳<%= stats.total_won_amount.toLocaleString('bn-BD') %></div>
     </div>
   </div>
 
@@ -53,7 +53,7 @@
     <div style="background:rgba(255,255,255,0.1);border-radius:10px;height:12px;overflow:hidden">
       <div style="background:linear-gradient(90deg,#f59e0b,#fbbf24);height:12px;width:<%= winRate %>%"></div>
     </div>
-    <div style="text-align:right;color:#f59e0b;font-size:14px;margin-top:6px"><%= winRate %>%</div>
+    <div style="text-align:right;color:var(--text-accent);font-size:14px;margin-top:6px"><%= winRate %>%</div>
   </div>
 </div>
 <%- include('../partials/navbar') %>

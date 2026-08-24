@@ -43,7 +43,7 @@
           <div style="color: var(--text-muted); font-size: 11px; margin-top: 6px;"><%= b.runner %> · অড <%= b.odd %></div>
           <div style="display: flex; justify-content: space-between; margin-top: 8px; align-items: center;">
             <div style="color: var(--text-muted); font-size: 11px;"><%= new Date(b.created_at).toLocaleString('bn-BD') %></div>
-            <div style="color: var(--text-accent); font-size: 14px; font-weight: 800;">৳<%= b.stake %> <% if (b.status === 'won') { %><span style="color:#10b981">→ ৳<%= Math.floor(b.stake * b.odd) %></span><% } %></div>
+            <div style="color: var(--text-accent); font-size: 14px; font-weight: 800;">৳<%= b.stake %> <% if (b.status === 'won') { %><span style="color:var(--green-text)">→ ৳<%= Math.floor(b.stake * b.odd) %></span><% } %></div>
           </div>
         </div>
       <% }) %>

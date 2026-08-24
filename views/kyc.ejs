@@ -9,9 +9,9 @@
     <!-- ===== অনুমোদিত ===== -->
     <div class="glass-card" style="padding:28px 20px;text-align:center;border:1px solid rgba(16,185,129,0.35);border-radius:20px;background:rgba(16,185,129,0.06)">
       <div style="width:64px;height:64px;border-radius:50%;background:rgba(16,185,129,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
-        <i class="fas fa-check" style="color:#10b981;font-size:26px"></i>
+        <i class="fas fa-check" style="color:var(--green-text);font-size:26px"></i>
       </div>
-      <h2 style="color:#10b981;font-size:18px;font-weight:800;margin-bottom:6px"><%= t.kyc_approved_title %></h2>
+      <h2 style="color:var(--green-text);font-size:18px;font-weight:800;margin-bottom:6px"><%= t.kyc_approved_title %></h2>
       <p style="color:var(--text-muted);font-size:13px"><%= t.kyc_approved_desc %></p>
     </div>
 
@@ -23,7 +23,7 @@
       </div>
       <h2 style="color: var(--text-accent);font-size:18px;font-weight:800;margin-bottom:6px"><%= t.kyc_pending_title %></h2>
       <p style="color:var(--text-muted);font-size:13px;margin-bottom:14px"><%= t.kyc_pending_desc %></p>
-      <div style="text-align:left;background:rgba(255,255,255,0.03);border-radius:12px;padding:14px;font-size:12px;color:#cbd5e1">
+      <div style="text-align:left;background:rgba(255,255,255,0.03);border-radius:12px;padding:14px;font-size:12px;color:var(--text-muted)">
         <div style="margin-bottom:4px"><b style="color:var(--text-muted)"><%= t.name_label %></b> <%= kyc.full_name %></div>
         <div style="margin-bottom:4px"><b style="color:var(--text-muted)"><%= t.document_number_label %></b> <%= kyc.document_number %></div>
         <div><b style="color:var(--text-muted)"><%= t.submitted_on %></b> <%= new Date(kyc.created_at).toLocaleDateString('bn-BD') %></div>
@@ -35,10 +35,10 @@
 
     <% if (kyc && kyc.status === 'rejected') { %>
       <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.35);border-radius:16px;padding:16px;margin-bottom:20px">
-        <div style="display:flex;align-items:center;gap:8px;color:#f87171;font-weight:700;font-size:14px;margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:8px;color:var(--red-text);font-weight:700;font-size:14px;margin-bottom:6px">
           <i class="fas fa-circle-xmark"></i> <%= t.kyc_rejected_title %>
         </div>
-        <p style="color:#fca5a5;font-size:12.5px;margin:0">
+        <p style="color:var(--red-text);font-size:12.5px;margin:0">
           <b><%= t.reason_label %></b> <%= kyc.reject_reason && kyc.reject_reason.trim() ? kyc.reject_reason : 'নির্দিষ্ট করা হয়নি — অনুগ্রহ করে সাপোর্টে যোগাযোগ করুন।' %>
         </p>
       </div>
@@ -47,7 +47,7 @@
     <!-- আপলোড গাইডলাইন -->
     <div class="glass-card" style="padding:16px 18px;border-radius:16px;margin-bottom:20px;background:rgba(234,179,8,0.06);border:1px solid rgba(234,179,8,0.25)">
       <div style="color: var(--text-accent);font-weight:700;font-size:13px;margin-bottom:8px"><i class="fas fa-circle-info"></i> <%= t.before_upload_note %></div>
-      <ul style="margin:0;padding-left:18px;color:#cbd5e1;font-size:12.5px;line-height:1.9">
+      <ul style="margin:0;padding-left:18px;color:var(--text-muted);font-size:12.5px;line-height:1.9">
         <li><%= t.kyc_doc_types_note %></li>
         <li><%= t.kyc_photo_clear_note %></li>
         <li><%= t.kyc_format_note %></li>
@@ -59,7 +59,7 @@
 
       <!-- ধাপ ১ -->
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-        <div style="width:26px;height:26px;border-radius:50%;background:var(--gold);color:#1a1a1a;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
+        <div style="width:26px;height:26px;border-radius:50%;background:var(--gold);color:var(--text-inverse);font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
         <span style="color:var(--text-main);font-weight:700;font-size:14px"><%= t.personal_information %></span>
       </div>
       <div style="margin-bottom:12px">
@@ -83,7 +83,7 @@
 
       <!-- ধাপ ২ -->
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-        <div style="width:26px;height:26px;border-radius:50%;background:var(--gold);color:#1a1a1a;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
+        <div style="width:26px;height:26px;border-radius:50%;background:var(--gold);color:var(--text-inverse);font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
         <span style="color:var(--text-main);font-weight:700;font-size:14px"><%= t.upload_document_photo %></span>
       </div>
 
@@ -95,12 +95,12 @@
         <img id="previewImg" style="display:none;max-width:140px;max-height:140px;border-radius:10px;margin-top:6px" />
       </label>
       <input type="file" id="documentFile" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" style="display:none" onchange="handleFileSelect(event)">
-      <div id="uploadError" style="color:#f87171;font-size:12px;margin-bottom:16px;display:none"></div>
+      <div id="uploadError" style="color:var(--red-text);font-size:12px;margin-bottom:16px;display:none"></div>
       <div style="margin-bottom:20px"></div>
 
       <!-- ধাপ ৩ -->
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-        <div style="width:26px;height:26px;border-radius:50%;background:var(--gold);color:#1a1a1a;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
+        <div style="width:26px;height:26px;border-radius:50%;background:var(--gold);color:var(--text-inverse);font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
         <span style="color:var(--text-main);font-weight:700;font-size:14px"><%= t.submit_kyc %></span>
       </div>
 

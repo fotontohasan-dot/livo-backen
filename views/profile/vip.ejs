@@ -22,7 +22,7 @@
          data-next-name="<%= vip.next ? vip.next.name : '' %>" data-is-max="<%= vip.next ? '0' : '1' %>">
       <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
         <span style="color:var(--text-muted);font-size:13px;"><%= t.total_turnover %></span>
-        <span id="vipTurnoverText" style="color:#f59e0b;font-size:14px;font-weight:bold;"><%= Number(vip.totalTurnover).toLocaleString('bn-BD') %></span>
+        <span id="vipTurnoverText" style="color:var(--text-accent);font-size:14px;font-weight:bold;"><%= Number(vip.totalTurnover).toLocaleString('bn-BD') %></span>
       </div>
 
       <!-- বার + ভাসমান সংখ্যা -->
@@ -35,20 +35,20 @@
           0 / 1000
         </div>
         <!-- +পরিমাণ পপ-আপ (লাইভ বৃদ্ধি দেখানোর জন্য) -->
-        <div id="vipDeltaPop" style="position:absolute;top:-26px;right:0;color:#4ade80;font-size:12px;font-weight:800;opacity:0;transition:opacity .3s, transform .6s;pointer-events:none;">+0</div>
+        <div id="vipDeltaPop" style="position:absolute;top:-26px;right:0;color:var(--green-text);font-size:12px;font-weight:800;opacity:0;transition:opacity .3s, transform .6s;pointer-events:none;">+0</div>
       </div>
 
       <div style="color:var(--text-muted);font-size:11px;text-align:center;margin-top:2px;">
-        <%= t.progress_label %> <span id="vipProgressNum" style="color:#f59e0b;font-weight:bold;">0</span> / ১০০০
+        <%= t.progress_label %> <span id="vipProgressNum" style="color:var(--text-accent);font-weight:bold;">0</span> / ১০০০
       </div>
 
       <% if (vip.next) { %>
         <div style="color:var(--text-muted);font-size:12px;text-align:center;margin-top:8px;">
           <%= t.next_level %> <strong style="color:var(--text-main);"><%= vip.next.name %></strong> <%= t.need_more %>
-          <strong id="vipToNextText" style="color:#f59e0b;"><%= Number(vip.toNext).toLocaleString('bn-BD') %></strong> <%= t.turnover_required %>
+          <strong id="vipToNextText" style="color:var(--text-accent);"><%= Number(vip.toNext).toLocaleString('bn-BD') %></strong> <%= t.turnover_required %>
         </div>
       <% } else { %>
-        <div id="vipMaxMsg" style="color:#10b981;font-size:13px;text-align:center;font-weight:bold;margin-top:8px;"><%= t.max_vip_reached %></div>
+        <div id="vipMaxMsg" style="color:var(--green-text);font-size:13px;text-align:center;font-weight:bold;margin-top:8px;"><%= t.max_vip_reached %></div>
       <% } %>
     </div>
 
@@ -70,7 +70,7 @@
           </div>
           <div style="text-align:right;">
             <% if (l.upgrade_bonus > 0) { %>
-              <div style="color:#10b981;font-size:12px;font-weight:bold;">+<%= l.upgrade_bonus %></div>
+              <div style="color:var(--green-text);font-size:12px;font-weight:bold;">+<%= l.upgrade_bonus %></div>
               <div style="color:var(--text-muted);font-size:10px;"><%= t.upgrade_bonus %></div>
             <% } else { %>
               <div style="color:var(--text-muted);font-size:11px;"><%= t.starting_level %></div>

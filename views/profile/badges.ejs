@@ -29,7 +29,7 @@
         <div style="color:var(--text-muted);font-size:11px;margin-top:3px;line-height:1.4;"><%= b.desc %></div>
         <div style="margin-top:8px;">
           <% if (b.earned) { %>
-            <span style="color:#10b981;font-size:11px;font-weight:bold;">✅ অর্জিত (+<%= b.reward %>)</span>
+            <span style="color:var(--green-text);font-size:11px;font-weight:bold;">✅ অর্জিত (+<%= b.reward %>)</span>
           <% } else { %>
             <span style="color:var(--text-muted);font-size:11px;">🔒 +<%= b.reward %> কয়েন</span>
           <% } %>

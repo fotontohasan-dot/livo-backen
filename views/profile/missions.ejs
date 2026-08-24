@@ -29,7 +29,7 @@
         <div style="background:rgba(255,255,255,0.05);border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid <%= m.done && !m.claimed ? '#10b981' : 'transparent' %>;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
             <div style="color:var(--text-main);font-size:14px;font-weight:600;"><%= m.title %></div>
-            <div style="color:#f59e0b;font-size:13px;font-weight:bold;">+<%= m.reward %> 🪙</div>
+            <div style="color:var(--text-accent);font-size:13px;font-weight:bold;">+<%= m.reward %> 🪙</div>
           </div>
 
           <div style="background:rgba(255,255,255,0.1);border-radius:20px;height:10px;overflow:hidden;margin-bottom:6px;">
@@ -41,7 +41,7 @@
             </div>
 
             <% if (m.claimed) { %>
-              <span style="color:#10b981;font-size:12px;font-weight:bold;">✅ নেওয়া হয়েছে</span>
+              <span style="color:var(--green-text);font-size:12px;font-weight:bold;">✅ নেওয়া হয়েছে</span>
             <% } else if (m.done) { %>
               <form action="/profile/missions/claim/<%= m.id %>" method="POST" style="margin:0;">
                 <button type="submit" style="background:#10b981;color:#fff;border:none;border-radius:8px;padding:6px 16px;font-size:12px;font-weight:bold;cursor:pointer;">
