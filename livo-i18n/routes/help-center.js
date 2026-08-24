@@ -1,0 +1,44 @@
+// routes/help-center.js
+// ---------------------------------------------------------------------------
+// "ব্যাটিং হেল্প সেন্টার" পেজ + এর ছোট FAQ চ্যাটবট API।
+// বট রিপ্লাই লজিকের জন্য services/chatbot.js (একই ফাইল যেটা লাইভ সাপোর্ট চ্যাটের
+// বট-মোডেও ব্যবহার হয়) রিইউজ করা হয়েছে, যাতে দুই জায়গায় আলাদা/অসামঞ্জস্যপূর্ণ
+// FAQ লজিক না থাকে।
+// ---------------------------------------------------------------------------
+
+const express = require('express');
+const router = express.Router();
+const { filterMiddleware } = require('../middleware/filterMiddleware');
+const { getBotReply } = require('../services/chatbot');
+
+// হেল্প সেন্টার পেজ রেন্ডার করবে
+router.get('/', (req, res) => {
+  res.render('help-center', {
+    title: req.t('help_center_title'),
+    user: (req.session && req.session.user) || null
+  });
+});
+
+// চ্যাটবট এপিআই এন্ডপয়েন্ট
+// filterMiddleware() → req.body.message-এ গালাগালি/অশ্লীল/১৮+ কনটেন্ট থাকলে
+// এখানেই 400 রিটার্ন করে দেয়, নিচের কোড আর চলে না।
+router.post('/api/chat', filterMiddleware(), async (req, res) => {
+  const userMessage = (req.body && req.body.message) || '';
+
+  if (!userMessage.trim()) {
+    return res.status(400).json({ success: false, error: req.t('common_message_empty') });
+  }
+
+  try {
+    const reply = await getBotReply(userMessage);
+    res.json({ success: true, reply });
+  } catch (err) {
+    console.error('help-center /api/chat error:', err.message);
+    res.status(500).json({
+      success: false,
+      error: req.t('help_center_bot_unavailable')
+    });
+  }
+});
+
+module.exports = router;
