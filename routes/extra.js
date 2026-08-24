@@ -9,7 +9,7 @@ const { createLimiter } = require('../middleware/rateLimitFactory');
 const kycLimiter = createLimiter('kyc_submit', {
   windowMs: 60 * 60 * 1000,
   max: 5,
-  message: 'অনেকবার KYC জমা দিয়েছেন। ১ ঘণ্টা পর আবার চেষ্টা করুন।',
+  message: (req) => req.t('kyc_rate_limited'),
   keyGenerator: (req) => (req.session && req.session.user) ? `u_${req.session.user.id}` : req.ip
 });
 
@@ -50,7 +50,7 @@ router.get('/invitation', isAuth, async (req, res) => {
         res.render('extra/invitation', { referralCode, referralCount: parseInt(referrals.rows[0].count) });
     } catch (err) {
         console.error(err);
-        res.render('extra/placeholder', { title: 'আমন্ত্রণ' });
+        res.render('extra/placeholder', { title: req.t('invite') });
     }
 });
 
@@ -82,27 +82,27 @@ router.post('/kyc', isAuth, kycLimiter, async (req, res) => {
     const { full_name, document_type, document_number, document_url } = req.body;
 
     if (!full_name || !document_number) {
-        req.flash('error', 'নাম ও ডকুমেন্ট নাম্বার দিন!');
+        req.flash('error', req.t('kyc_name_and_number_required'));
         return res.redirect('/extra/kyc');
     }
     if (!document_url) {
-        req.flash('error', 'ডকুমেন্টের ছবি আপলোড করুন!');
+        req.flash('error', req.t('kyc_document_image_required'));
         return res.redirect('/extra/kyc');
     }
     if (!isSafeCloudinaryUrl(document_url)) {
-        req.flash('error', 'ডকুমেন্ট ছবি আমাদের নিজস্ব আপলোড সিস্টেম থেকে আসতে হবে।');
+        req.flash('error', req.t('kyc_document_image_source_invalid'));
         return res.redirect('/extra/kyc');
     }
     if (!KYC_NAME_RE.test(full_name.trim())) {
-        req.flash('error', 'নামে অস্বাভাবিক ক্যারেক্টার বা লিংক থাকা যাবে না।');
+        req.flash('error', req.t('common_name_invalid_characters'));
         return res.redirect('/extra/kyc');
     }
     if (!KYC_DOCNUM_RE.test(document_number.trim())) {
-        req.flash('error', 'ডকুমেন্ট নম্বরে শুধু লেটার, সংখ্যা, স্পেস, হাইফেন ব্যবহার করা যাবে।');
+        req.flash('error', req.t('kyc_document_number_format'));
         return res.redirect('/extra/kyc');
     }
     if (document_type && !KYC_DOCTYPE_RE.test(document_type.trim())) {
-        req.flash('error', 'ডকুমেন্ট টাইপ সঠিক নয়।');
+        req.flash('error', req.t('kyc_document_type_invalid'));
         return res.redirect('/extra/kyc');
     }
 
@@ -113,7 +113,7 @@ router.post('/kyc', isAuth, kycLimiter, async (req, res) => {
             [userId]
         );
         if (existing.rows[0]) {
-            req.flash('error', 'আপনার একটি KYC রিকোয়েস্ট ইতিমধ্যে যাচাইযর অপেক্ষায় আছে।');
+            req.flash('error', req.t('kyc_request_already_pending'));
             return res.redirect('/extra/kyc');
         }
 
@@ -124,11 +124,11 @@ router.post('/kyc', isAuth, kycLimiter, async (req, res) => {
         );
         await pool.query("UPDATE users SET kyc_status = 'pending' WHERE id = $1", [userId]);
 
-        req.flash('success', 'KYC তথ্য জমা হয়েছে! যাচাইয়ের পর জানানো হবে।');
+        req.flash('success', req.t('kyc_submitted'));
         res.redirect('/extra/kyc');
     } catch (err) {
         console.error('kyc submit error:', err.message);
-        req.flash('error', 'জমা দিতে সমস্যা হয়েছে।');
+        req.flash('error', req.t('common_submit_failed'));
         res.redirect('/extra/kyc');
     }
 });

@@ -23,11 +23,11 @@ router.post('/place', isAuth, async (req, res) => {
     if (typeof sel === 'string') {
       try { sel = JSON.parse(sel); } catch (e) { sel = []; }
     }
-    const result = await placeAccumulator(req.session.user.id, stake, sel);
+    const result = await placeAccumulator(req.session.user.id, stake, sel, req.lang);
     res.json(result);
   } catch (err) {
     console.error('accumulator place error:', err.message);
-    res.json({ success: false, message: 'সার্ভার ত্রুটি।' });
+    res.json({ success: false, message: req.t('common_server_error') });
   }
 });
 

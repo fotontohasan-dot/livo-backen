@@ -12,6 +12,7 @@
 
 const rateLimit = require('express-rate-limit');
 const { createRedisStore } = require('./redisRateLimitStore');
+const { tr } = require('../utils/i18n');
 
 function getUserId(req) {
   return (req.session && req.session.user) ? req.session.user.id : null;
@@ -44,7 +45,11 @@ function createLimiter(name, options = {}) {
 
       if (typeof customHandler === 'function') return customHandler(req, res, next, opts);
 
-      const msg = message || 'অনেকবার চেষ্টা করেছেন। কিছুক্ষণ পর আবার চেষ্টা করুন।';
+      // message ফাংশন হলে এখানে রিজলভ করা হয় — লোকালাইজেশনের পরে অনেক limiter
+      // `message: (req) => tr(req, 'key')` পাঠায় (module scope-এ req থাকে না)।
+      // আগে ফাংশনটাই সরাসরি res.send()-এ যেত, ফলে 429-এর বদলে 500 হতো।
+      const resolved = typeof message === 'function' ? message(req, res) : message;
+      const msg = resolved || tr(req, 'common_rate_limited');
       const accept = req.get('accept') || '';
       if (req.xhr || accept.includes('application/json') || (req.get('content-type') || '').includes('application/json')) {
         return res.status(429).json({ success: false, error: msg });

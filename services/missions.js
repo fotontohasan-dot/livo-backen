@@ -2,6 +2,7 @@
 // মিশন — ডেইলি (প্রতিদিন), উইকলি (এই সপ্তাহ), স্পেশাল (নির্দিষ্ট ইভেন্ট সময়কাল)।
 
 const { pool } = require('../db');
+const { t } = require('../utils/i18n');
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -122,7 +123,7 @@ async function getMissions(userId) {
   return { daily, weekly, special };
 }
 
-async function claimMission(userId, missionId) {
+async function claimMission(userId, missionId, lang = 'bn') {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -130,7 +131,7 @@ async function claimMission(userId, missionId) {
     const d = (await client.query(`SELECT * FROM mission_defs WHERE id = $1 AND active = true`, [missionId])).rows[0];
     if (!d) {
       await client.query('ROLLBACK');
-      return { success: false, message: 'মিশন পাওয়া যায়নি।' };
+      return { success: false, message: t(lang, 'missions_not_found') };
     }
 
     let finalReward = d.reward;
@@ -141,13 +142,13 @@ async function claimMission(userId, missionId) {
         [userId, today()]
       );
       const row = um.rows[0];
-      if (!row) { await client.query('ROLLBACK'); return { success: false, message: 'আজ এখনো কোনো অগ্রগতি নেই।' }; }
+      if (!row) { await client.query('ROLLBACK'); return { success: false, message: t(lang, 'missions_no_progress_today') }; }
 
       const claimedIds = row.claimed_ids || [];
-      if (claimedIds.includes(missionId)) { await client.query('ROLLBACK'); return { success: false, message: 'এই মিশন আগেই ক্লেইম করা হয়েছে।' }; }
+      if (claimedIds.includes(missionId)) { await client.query('ROLLBACK'); return { success: false, message: t(lang, 'missions_already_claimed') }; }
 
       const progress = d.target_type === 'bet_count' ? Number(row.bet_count) : Number(row.turnover);
-      if (progress < Number(d.target_value)) { await client.query('ROLLBACK'); return { success: false, message: 'মিশন এখনো সম্পূর্ণ হয়নি।' }; }
+      if (progress < Number(d.target_value)) { await client.query('ROLLBACK'); return { success: false, message: t(lang, 'missions_not_complete') }; }
 
       // দৈনিক মিশন রিওয়ার্ড ক্যাপ — একই দিনে সর্বোচ্চ ১০০ কয়েন
       const DAILY_MISSION_CAP = 100;
@@ -160,7 +161,7 @@ async function claimMission(userId, missionId) {
       const remainingCap = DAILY_MISSION_CAP - alreadyEarned;
       if (remainingCap <= 0) {
         await client.query('ROLLBACK');
-        return { success: false, message: 'আজকের সর্বোচ্চ মিশন রিওয়ার্ড সীমা (১০০ কয়েন) শেষ হয়ে গেছে।' };
+        return { success: false, message: t(lang, 'missions_daily_cap_reached') };
       }
       finalReward = Math.min(d.reward, remainingCap);
 
@@ -176,7 +177,7 @@ async function claimMission(userId, missionId) {
         `SELECT 1 FROM mission_claims WHERE user_id = $1 AND mission_id = $2 AND period_key = $3`,
         [userId, missionId, periodKey]
       );
-      if (already.rows.length > 0) { await client.query('ROLLBACK'); return { success: false, message: 'এই মিশন আগেই ক্লেইম করা হয়েছে।' }; }
+      if (already.rows.length > 0) { await client.query('ROLLBACK'); return { success: false, message: t(lang, 'missions_already_claimed') }; }
 
       const agg = await client.query(
         `SELECT COALESCE(SUM(bet_count),0) AS bet_count, COALESCE(SUM(turnover),0) AS turnover
@@ -185,7 +186,7 @@ async function claimMission(userId, missionId) {
       );
       const row = agg.rows[0];
       const progress = d.target_type === 'bet_count' ? Number(row.bet_count) : Number(row.turnover);
-      if (progress < Number(d.target_value)) { await client.query('ROLLBACK'); return { success: false, message: 'মিশন এখনো সম্পূর্ণ হয়নি।' }; }
+      if (progress < Number(d.target_value)) { await client.query('ROLLBACK'); return { success: false, message: t(lang, 'missions_not_complete') }; }
 
       await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [d.reward, userId]);
       await client.query(
@@ -204,11 +205,11 @@ async function claimMission(userId, missionId) {
     );
 
     await client.query('COMMIT');
-    return { success: true, reward: finalReward, message: `${finalReward} কয়েন পেয়েছেন!` };
+    return { success: true, reward: finalReward, message: t(lang, 'reward_coins_received').replace('{value}', finalReward) };
   } catch (e) {
     await client.query('ROLLBACK');
     console.error('claimMission error:', e.message);
-    return { success: false, message: 'সার্ভার ত্রুটি।' };
+    return { success: false, message: t(lang, 'common_server_error') };
   } finally {
     client.release();
   }

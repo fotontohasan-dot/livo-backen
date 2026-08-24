@@ -62,7 +62,7 @@ router.get('/:id', requireIntParam('id', '/tournaments'), isAuth, async (req, re
     });
   } catch (err) {
     console.error('Tournament detail error:', err);
-    req.flash('error', 'টুর্নামেন্ট লোড করতে সমস্যা হয়েছে।');
+    req.flash('error', req.t('tournaments_load_failed'));
     res.redirect('/tournaments');
   }
 });
@@ -87,7 +87,7 @@ router.post('/:id/join', isAuth, async (req, res) => {
     );
     if (already.rows[0]) {
       await client.query('ROLLBACK');
-      req.flash('error', 'আপনি আগেই এই টুর্নামেন্টে যোগ দিয়েছেন।');
+      req.flash('error', req.t('tournaments_already_joined'));
       return res.redirect(`/tournaments/${tId}`);
     }
 
@@ -100,7 +100,7 @@ router.post('/:id/join', isAuth, async (req, res) => {
       );
       if (upd.rowCount === 0) {
         await client.query('ROLLBACK');
-        req.flash('error', 'যথেষ্ট কয়েন নেই!');
+        req.flash('error', req.t('common_insufficient_coins_x'));
         return res.redirect(`/tournaments/${tId}`);
       }
       await client.query(
@@ -120,11 +120,11 @@ router.post('/:id/join', isAuth, async (req, res) => {
     await client.query('COMMIT');
 
     const name = tournament.name || 'টুর্নামেন্ট'; // title কলামটা বিদ্যমান নয়
-    req.flash('success', `${name}-এ যোগ দিয়েছেন!`);
+    req.flash('success', req.t('tournaments_joined').replace('{value}', name));
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Join tournament error:', err.message);
-    req.flash('error', 'যোগ দিতে সমস্যা হয়েছে।');
+    req.flash('error', req.t('tournaments_join_failed'));
   } finally {
     client.release();
   }

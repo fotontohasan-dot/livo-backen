@@ -26,7 +26,7 @@ const { regenerateSession } = require('../utils/sessionRegenerate');
 const resetLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
-  message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
+  message: (req) => req.t('common_rate_limited_15m'),
   standardHeaders: true,
   legacyHeaders: false,
   store: new RedisRateLimitStore('rl:reset:')
@@ -35,7 +35,7 @@ const resetLimiter = rateLimit({
 const verifyResendLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
-  message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
+  message: (req) => req.t('common_rate_limited_15m'),
   standardHeaders: true,
   legacyHeaders: false,
   store: new RedisRateLimitStore('rl:verifyresend:')
@@ -45,7 +45,7 @@ const verifyResendLimiter = rateLimit({
 const googleAuthLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
-  message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
+  message: (req) => req.t('common_rate_limited_15m'),
   standardHeaders: true,
   legacyHeaders: false,
   store: new RedisRateLimitStore('rl:googleoauth:')
@@ -736,7 +736,7 @@ router.post('/resend-verification', verifyResendLimiter, async (req, res) => {
     const verifyUrl = `${req.protocol}://${req.get('host')}/verify-email/${token}`;
     sendQueuedEmail('verification', user.email, { verifyUrl })
       .catch(e => console.error('resend-verification email error:', e.message));
-    await logSystemEvent(user.id, user.username, 'EMAIL_VERIFICATION_RESEND', `ভেরিফিকেশন ইমেইল আবার পাঠানো হয়েছে: ${user.email}`, req.ip);
+    await logSystemEvent(user.id, user.username, 'EMAIL_VERIFICATION_RESEND', req.t('auth_verification_email_resent').replace('{value}', user.email), req.ip);
 
     req.flash('success', req.t('auth_verification_link_resent'));
     res.redirect('/profile');

@@ -65,7 +65,7 @@ router.get('/api/analytics', isAdmin, rbac.requirePermission('dashboard_view'), 
   } catch (err) {
     // err.message-এ ব্যর্থ SQL/কলাম/টেবিলের নাম চলে আসত — সেটা ব্রাউজারে পাঠানো হয় না।
     console.error('admin analytics API error:', err.message);
-    res.status(500).json({ error: 'ডেটা লোড করা যায়নি' });
+    res.status(500).json({ error: req.t('admin_data_load_failed') });
   }
 });
 
@@ -146,7 +146,7 @@ const adminActionLimiter = rateLimit({
   max: 150,
   standardHeaders: true,
   legacyHeaders: false,
-  message: 'অনেকবার অ্যাকশন নেওয়া হয়েছে, কিছুক্ষণ পর আবার চেষ্টা করুন।',
+  message: (req) => tr(req, 'admin_rate_limited_action'),
   store: new RedisRateLimitStore('rl:adminaction:')
 });
 
@@ -157,7 +157,7 @@ const adminFinancialLimiter = rateLimit({
   max: 40,
   standardHeaders: true,
   legacyHeaders: false,
-  message: 'অনেকবার আর্থিক অ্যাকশন নেওয়া হয়েছে, কিছুক্ষণ পর আবার চেষ্টা করুন।',
+  message: (req) => tr(req, 'admin_rate_limited_financial'),
   store: new RedisRateLimitStore('rl:adminfinancial:')
 });
 
@@ -200,7 +200,7 @@ router.get('/login', (req, res) => {
 const adminLoginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 8,
-  message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
+  message: (req) => tr(req, 'common_rate_limited_15m'),
   standardHeaders: true,
   legacyHeaders: false,
   store: new RedisRateLimitStore('rl:adminlogin:')
@@ -225,7 +225,7 @@ router.post('/login', adminLoginLimiter, async (req, res) => {
     const isMatch = await bcrypt.compare(password, admin ? admin.password : DUMMY_BCRYPT_HASH);
 
     if (!admin || !isMatch) {
-      return res.render('admin/login', { error: 'ইউজারনেম বা পাসওয়ার্ড ভুল' });
+      return res.render('admin/login', { error: req.t('admin_login_invalid_credentials') });
     }
 
     // ==================== 2FA চালু থাকলে সরাসরি লগইন না করিয়ে ভেরিফিকেশন স্টেপে পাঠানো ====================
@@ -248,7 +248,7 @@ router.post('/login', adminLoginLimiter, async (req, res) => {
     return res.redirect('/admin/2fa/mandatory-setup');
   } catch (err) {
     console.error(err);
-    res.render('admin/login', { error: 'সার্ভার এরর হয়েছে' });
+    res.render('admin/login', { error: req.t('admin_server_error') });
   }
 });
 
@@ -288,9 +288,9 @@ router.post('/login/2fa', strict2FALimiter, async (req, res) => {
       req.session.twoFAAttempts = (req.session.twoFAAttempts || 0) + 1;
       if (req.session.twoFAAttempts >= 5) {
         req.session.pending2FA = null;
-        return res.render('admin/login', { error: 'বারবার ভুল কোড — আবার লগইন করুন' });
+        return res.render('admin/login', { error: req.t('admin_2fa_too_many_wrong_codes') });
       }
-      return res.render('admin/2fa-verify', { error: 'কোডটি সঠিক নয়, আবার চেষ্টা করুন', username: pending.username });
+      return res.render('admin/2fa-verify', { error: req.t('admin_2fa_code_invalid'), username: pending.username });
     }
 
     // session fixation প্রতিরোধ: 2FA সম্পন্ন হওয়ার মুহূর্তে (অথেন্টিকেশন লেভেল বদলানোর সময়)
@@ -304,7 +304,7 @@ router.post('/login/2fa', strict2FALimiter, async (req, res) => {
     res.redirect('/admin');
   } catch (err) {
     console.error('2FA verify error:', err.message);
-    res.render('admin/2fa-verify', { error: 'সার্ভার এরর হয়েছে', username: pending.username });
+    res.render('admin/2fa-verify', { error: req.t('admin_server_error'), username: pending.username });
   }
 });
 
@@ -338,7 +338,7 @@ router.get('/2fa/mandatory-setup', async (req, res) => {
     console.error('mandatory 2fa setup error:', err.message);
     res.render('admin/2fa-setup', {
       alreadyEnabled: false, qrDataUrl: null, base32: null,
-      error: 'QR কোড তৈরি করতে সমস্যা হয়েছে', formAction: '/admin/2fa/mandatory-setup/verify', mandatory: true
+      error: req.t('admin_2fa_qr_failed'), formAction: '/admin/2fa/mandatory-setup/verify', mandatory: true
     });
   }
 });
@@ -356,7 +356,7 @@ router.post('/2fa/mandatory-setup/verify', strict2FALimiter, async (req, res) =>
       const dataUrlAgain = await qrFromSecret(pendingSecret, pending.username);
       return res.render('admin/2fa-setup', {
         alreadyEnabled: false, qrDataUrl: dataUrlAgain, base32: pendingSecret,
-        error: 'কোডটি সঠিক নয়, আবার চেষ্টা করুন', formAction: '/admin/2fa/mandatory-setup/verify', mandatory: true
+        error: req.t('admin_2fa_code_invalid'), formAction: '/admin/2fa/mandatory-setup/verify', mandatory: true
       });
     }
 
@@ -382,7 +382,7 @@ router.post('/2fa/mandatory-setup/verify', strict2FALimiter, async (req, res) =>
     console.error('mandatory 2fa setup verify error:', err.message);
     res.render('admin/2fa-setup', {
       alreadyEnabled: false, qrDataUrl: null, base32: null,
-      error: 'সার্ভার এরর হয়েছে', formAction: '/admin/2fa/mandatory-setup/verify', mandatory: true
+      error: req.t('admin_server_error'), formAction: '/admin/2fa/mandatory-setup/verify', mandatory: true
     });
   }
 });
@@ -456,7 +456,7 @@ router.get('/2fa/setup', async (req, res) => {
     });
   } catch (err) {
     console.error('2fa/setup error:', err.message);
-    res.render('admin/2fa-setup', { alreadyEnabled: false, qrDataUrl: null, base32: null, error: 'QR কোড তৈরি করতে সমস্যা হয়েছে' });
+    res.render('admin/2fa-setup', { alreadyEnabled: false, qrDataUrl: null, base32: null, error: req.t('admin_2fa_qr_failed') });
   }
 });
 
@@ -472,7 +472,7 @@ router.post('/2fa/setup/verify', strict2FALimiter, async (req, res) => {
       const dataUrlAgain = await qrFromSecret(pendingSecret, req.session.user.username);
       return res.render('admin/2fa-setup', {
         alreadyEnabled: false, qrDataUrl: dataUrlAgain, base32: pendingSecret,
-        error: 'কোডটি সঠিক নয়, আবার চেষ্টা করুন'
+        error: req.t('admin_2fa_code_invalid')
       });
     }
 
@@ -489,7 +489,7 @@ router.post('/2fa/setup/verify', strict2FALimiter, async (req, res) => {
     res.render('admin/2fa-backup-codes', { codes: backupCodes });
   } catch (err) {
     console.error('2fa/setup/verify error:', err.message);
-    res.render('admin/2fa-setup', { alreadyEnabled: false, qrDataUrl: null, base32: null, error: 'সার্ভার এরর হয়েছে' });
+    res.render('admin/2fa-setup', { alreadyEnabled: false, qrDataUrl: null, base32: null, error: req.t('admin_server_error') });
   }
 });
 
@@ -523,7 +523,7 @@ router.post('/2fa/disable', async (req, res) => {
     if (!passOk || !codeOk) {
       return res.render('admin/2fa-setup', {
         alreadyEnabled: true, qrDataUrl: null, base32: null,
-        error: 'পাসওয়ার্ড অথবা 2FA কোড/ব্যাকআপ কোড সঠিক নয়'
+        error: req.t('admin_2fa_password_or_code_invalid')
       });
     }
 
@@ -601,7 +601,7 @@ router.post('/kyc/:id/approve', rbac.requirePermission('kyc_approve'), async (re
     res.json({ success: true });
   } catch (err) {
     console.error('KYC approve error:', err.message);
-    res.status(500).json({ success: false, message: 'সার্ভার এরর' });
+    res.status(500).json({ success: false, message: req.t('admin_server_error_short') });
   }
 });
 
@@ -620,7 +620,7 @@ router.post('/kyc/:id/reject', rbac.requirePermission('kyc_reject'), async (req,
     res.json({ success: true });
   } catch (err) {
     console.error('KYC reject error:', err.message);
-    res.status(500).json({ success: false, message: 'সার্ভার এরর' });
+    res.status(500).json({ success: false, message: req.t('admin_server_error_short') });
   }
 });
 
@@ -633,10 +633,10 @@ router.post('/kyc/bulk-approve', rbac.requirePermission('kyc_approve'), async (r
   const ids = Array.isArray(req.body.ids) ? req.body.ids : (req.body.ids ? [req.body.ids] : []);
   const cleanIds = [...new Set(ids.map((x) => parseInt(x, 10)).filter((x) => Number.isInteger(x) && x > 0))];
   if (cleanIds.length === 0) {
-    return res.status(400).json({ success: false, error: 'কোনো বৈধ KYC আবেদন নির্বাচন করা হয়নি' });
+    return res.status(400).json({ success: false, error: req.t('admin_kyc_none_selected') });
   }
   if (cleanIds.length > 100) {
-    return res.status(400).json({ success: false, error: 'একবারে সর্বোচ্চ ১০০টি আবেদন প্রসেস করা যাবে' });
+    return res.status(400).json({ success: false, error: req.t('admin_kyc_bulk_limit') });
   }
 
   const results = [];
@@ -651,14 +651,14 @@ router.post('/kyc/bulk-approve', rbac.requirePermission('kyc_approve'), async (r
         results.push({ id, success: true, userId: r.rows[0].user_id });
       } else {
         const existing = await pool.query('SELECT status FROM kyc_requests WHERE id = $1', [id]);
-        if (!existing.rows[0]) results.push({ id, success: false, error: 'আবেদন পাওয়া যায়নি' });
-        else results.push({ id, success: false, error: `ইতিমধ্যে "${existing.rows[0].status}" অবস্থায় আছে`, alreadyProcessed: true });
+        if (!existing.rows[0]) results.push({ id, success: false, error: req.t('admin_application_not_found') });
+        else results.push({ id, success: false, error: req.t('admin_already_in_status').replace('{value}', existing.rows[0].status), alreadyProcessed: true });
       }
     } catch (err) {
       // প্রতি-সারির ব্যর্থতা ক্লায়েন্টে JSON হিসেবে ফেরত যায়, তাই কাঁচা pg মেসেজ (টেবিল/কলাম/
       // কনস্ট্রেইন্টের নাম) এখানে বসানো যাবে না — গুনতি ও আইডি রিপোর্ট হয়, কারণ লগে থাকে।
       console.error(`bulk operation row ${id} failed:`, err && err.stack ? err.stack : err);
-      results.push({ id, success: false, error: 'সার্ভার/ডেটাবেস ত্রুটির কারণে প্রসেস করা যায়নি' });
+      results.push({ id, success: false, error: req.t('admin_process_failed_db') });
     }
   }
 
@@ -685,10 +685,10 @@ router.post('/kyc/bulk-reject', rbac.requirePermission('kyc_reject'), async (req
   const cleanIds = [...new Set(ids.map((x) => parseInt(x, 10)).filter((x) => Number.isInteger(x) && x > 0))];
   const reason = sanitizeText(req.body.reason || '', { maxLen: 500 });
   if (cleanIds.length === 0) {
-    return res.status(400).json({ success: false, error: 'কোনো বৈধ KYC আবেদন নির্বাচন করা হয়নি' });
+    return res.status(400).json({ success: false, error: req.t('admin_kyc_none_selected') });
   }
   if (cleanIds.length > 100) {
-    return res.status(400).json({ success: false, error: 'একবারে সর্বোচ্চ ১০০টি আবেদন প্রসেস করা যাবে' });
+    return res.status(400).json({ success: false, error: req.t('admin_kyc_bulk_limit') });
   }
 
   const results = [];
@@ -703,14 +703,14 @@ router.post('/kyc/bulk-reject', rbac.requirePermission('kyc_reject'), async (req
         results.push({ id, success: true, userId: r.rows[0].user_id });
       } else {
         const existing = await pool.query('SELECT status FROM kyc_requests WHERE id = $1', [id]);
-        if (!existing.rows[0]) results.push({ id, success: false, error: 'আবেদন পাওয়া যায়নি' });
-        else results.push({ id, success: false, error: `ইতিমধ্যে "${existing.rows[0].status}" অবস্থায় আছে`, alreadyProcessed: true });
+        if (!existing.rows[0]) results.push({ id, success: false, error: req.t('admin_application_not_found') });
+        else results.push({ id, success: false, error: req.t('admin_already_in_status').replace('{value}', existing.rows[0].status), alreadyProcessed: true });
       }
     } catch (err) {
       // প্রতি-সারির ব্যর্থতা ক্লায়েন্টে JSON হিসেবে ফেরত যায়, তাই কাঁচা pg মেসেজ (টেবিল/কলাম/
       // কনস্ট্রেইন্টের নাম) এখানে বসানো যাবে না — গুনতি ও আইডি রিপোর্ট হয়, কারণ লগে থাকে।
       console.error(`bulk operation row ${id} failed:`, err && err.stack ? err.stack : err);
-      results.push({ id, success: false, error: 'সার্ভার/ডেটাবেস ত্রুটির কারণে প্রসেস করা যায়নি' });
+      results.push({ id, success: false, error: req.t('admin_process_failed_db') });
     }
   }
 
@@ -960,7 +960,7 @@ router.post('/notifications/broadcast', rbac.requirePermission('settings_edit'),
     const type = allowedTypes.includes(req.body.type) ? req.body.type : 'announcement';
 
     if (!title || !message) {
-      req.flash('error', 'শিরোনাম ও বার্তা দুটোই আবশ্যক');
+      req.flash('error', req.t('admin_title_and_message_required'));
       return res.redirect('/admin/notifications');
     }
 
@@ -977,11 +977,11 @@ router.post('/notifications/broadcast', rbac.requirePermission('settings_edit'),
       `সব ইউজারকে (${recipientCount} জন) ব্রডকাস্ট পাঠানো হয়েছে: "${title}"`, req.ip
     );
 
-    req.flash('success', `✅ ${recipientCount} জন ইউজারকে নোটিফিকেশন পাঠানো হয়েছে!`);
+    req.flash('success', req.t('admin_broadcast_sent').replace('{value}', recipientCount));
     res.redirect('/admin/notifications');
   } catch (err) {
     console.error('broadcast error:', err.message);
-    req.flash('error', 'ব্রডকাস্ট পাঠাতে সমস্যা হয়েছে');
+    req.flash('error', req.t('admin_broadcast_failed'));
     res.redirect('/admin/notifications');
   }
 });
@@ -1409,7 +1409,7 @@ router.get('/api/dashboard-stats', rbac.requirePermission('dashboard_view'), asy
     });
   } catch (err) {
     console.error('dashboard-stats api error:', err.message);
-    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি' });
+    res.status(500).json({ success: false, error: req.t('common_server_error_short') });
   }
 });
 
@@ -1478,7 +1478,7 @@ router.post('/api/deposits/:id/approve', rbac.requirePermission('payments_approv
     const request = result.rows[0];
     if (!request || request.type !== 'deposit' || request.status !== 'pending') {
       await client.query('ROLLBACK');
-      return res.status(400).json({ success: false, error: 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে' });
+      return res.status(400).json({ success: false, error: req.t('payment_request_not_found_or_processed') });
     }
     const crApprove = await creditApprovedDeposit(client, request);
     await client.query('COMMIT');
@@ -1493,7 +1493,7 @@ router.post('/api/deposits/:id/approve', rbac.requirePermission('payments_approv
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('deposit approve error:', err);
-    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি, পরে আবার চেষ্টা করুন।' });
+    res.status(500).json({ success: false, error: req.t('admin_server_error_retry') });
   } finally {
     client.release();
   }
@@ -1509,12 +1509,12 @@ router.post('/api/deposits/:id/reject', rbac.requirePermission('payments_reject'
     const request = result.rows[0];
     if (!request || request.type !== 'deposit' || request.status !== 'pending') {
       await client.query('ROLLBACK');
-      return res.status(400).json({ success: false, error: 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে' });
+      return res.status(400).json({ success: false, error: req.t('payment_request_not_found_or_processed') });
     }
     await client.query(`UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE id=$1`, [id]);
     const rejNotif = await client.query(
       `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'error') RETURNING *`,
-      [request.user_id, 'ডিপোজিট বাতিল', `আপনার ${request.amount} টাকার ডিপোজিট বাতিল হয়েছে।${reason ? ' কারণ: ' + reason : ''}`]
+      [request.user_id, req.t('admin_deposit_cancelled_title'), `আপনার ${request.amount} টাকার ডিপোজিট বাতিল হয়েছে।${reason ? ' কারণ: ' + reason : ''}`]
     );
     await client.query('COMMIT');
     if (rejNotif.rows[0]) emitToUser(request.user_id, rejNotif.rows[0]);
@@ -1528,7 +1528,7 @@ router.post('/api/deposits/:id/reject', rbac.requirePermission('payments_reject'
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('deposit reject error:', err);
-    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি, পরে আবার চেষ্টা করুন।' });
+    res.status(500).json({ success: false, error: req.t('admin_server_error_retry') });
   } finally {
     client.release();
   }
@@ -1596,7 +1596,7 @@ router.post('/api/withdrawals/:id/approve', rbac.requirePermission('payments_app
     const request = result.rows[0];
     if (!request || request.type !== 'withdraw' || request.status !== 'pending') {
       await client.query('ROLLBACK');
-      return res.status(400).json({ success: false, error: 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে' });
+      return res.status(400).json({ success: false, error: req.t('payment_request_not_found_or_processed') });
     }
     await client.query(
       `UPDATE payment_requests SET status='approved', transaction_id=COALESCE($1, transaction_id), updated_at=NOW() WHERE id=$2`,
@@ -1619,7 +1619,7 @@ router.post('/api/withdrawals/:id/approve', rbac.requirePermission('payments_app
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('withdraw approve error:', err);
-    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি, পরে আবার চেষ্টা করুন।' });
+    res.status(500).json({ success: false, error: req.t('admin_server_error_retry') });
   } finally {
     client.release();
   }
@@ -1635,7 +1635,7 @@ router.post('/api/withdrawals/:id/reject', rbac.requirePermission('payments_reje
     const request = result.rows[0];
     if (!request || request.type !== 'withdraw' || request.status !== 'pending') {
       await client.query('ROLLBACK');
-      return res.status(400).json({ success: false, error: 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে' });
+      return res.status(400).json({ success: false, error: req.t('payment_request_not_found_or_processed') });
     }
     // উইথড্র রিকোয়েস্ট করার সময় কয়েন কেটে নেওয়া হয়, তাই বাতিল হলে ফেরত দিতে হবে
     await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
@@ -1653,7 +1653,7 @@ router.post('/api/withdrawals/:id/reject', rbac.requirePermission('payments_reje
     await client.query(`UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE id=$1`, [id]);
     const wRejectNotif = await client.query(
       `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'error') RETURNING *`,
-      [request.user_id, 'উইথড্র বাতিল', `আপনার ${request.amount} টাকার উইথড্র বাতিল হয়েছে, কয়েন ফেরত দেওয়া হয়েছে।${reason ? ' কারণ: ' + reason : ''}`]
+      [request.user_id, req.t('admin_withdraw_cancelled_title'), `আপনার ${request.amount} টাকার উইথড্র বাতিল হয়েছে, কয়েন ফেরত দেওয়া হয়েছে।${reason ? ' কারণ: ' + reason : ''}`]
     );
     await client.query('COMMIT');
     if (wRejectNotif.rows[0]) emitToUser(request.user_id, wRejectNotif.rows[0]);
@@ -1667,7 +1667,7 @@ router.post('/api/withdrawals/:id/reject', rbac.requirePermission('payments_reje
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('withdraw reject error:', err);
-    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি, পরে আবার চেষ্টা করুন।' });
+    res.status(500).json({ success: false, error: req.t('admin_server_error_retry') });
   } finally {
     client.release();
   }
@@ -1772,7 +1772,7 @@ router.get('/api/support/:userId/messages', rbac.requirePermission('support_view
     res.json({ success: true, messages });
   } catch (err) {
     console.error('support messages fetch error:', err.message);
-    res.status(500).json({ success: false, error: 'সার্ভার এরর' });
+    res.status(500).json({ success: false, error: req.t('admin_server_error_short') });
   }
 });
 
@@ -1780,7 +1780,7 @@ router.post('/api/support/:userId/reply', rbac.requirePermission('support_reply'
   try {
     const userId = req.params.userId;
     const message = sanitizeText(req.body.message || '', { maxLen: 2000 });
-    if (!message) return res.status(400).json({ success: false, error: 'মেসেজ লিখুন' });
+    if (!message) return res.status(400).json({ success: false, error: req.t('admin_write_a_message') });
     await pool.query(
       `INSERT INTO chat_messages (sender_id, receiver_id, message, is_admin, is_read, created_at) VALUES ($1,$2,$3,true,true,NOW())`,
       [req.session.user.id, userId, message]
@@ -1790,7 +1790,7 @@ router.post('/api/support/:userId/reply', rbac.requirePermission('support_reply'
     res.json({ success: true });
   } catch (err) {
     console.error('support reply error:', err);
-    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি, পরে আবার চেষ্টা করুন।' });
+    res.status(500).json({ success: false, error: req.t('admin_server_error_retry') });
   }
 });
 
@@ -1801,7 +1801,7 @@ router.post('/api/support/:userId/resolve', rbac.requirePermission('support_repl
     res.json({ success: true });
   } catch (err) {
     console.error('support resolve error:', err);
-    res.status(500).json({ success: false, error: 'সার্ভার ত্রুটি, পরে আবার চেষ্টা করুন।' });
+    res.status(500).json({ success: false, error: req.t('admin_server_error_retry') });
   }
 });
 
@@ -1947,7 +1947,7 @@ router.get('/users/:id', rbac.requirePermission('users_view'), async (req, res) 
     const userRes = await pool.query('SELECT * FROM users WHERE id = $1', [uId]);
     const user = userRes.rows[0];
     if (!user) {
-      req.flash('error', 'ইউজার পাওয়া যায়নি!');
+      req.flash('error', req.t('admin_user_not_found_x'));
       return res.redirect('/admin/users');
     }
 
@@ -2008,7 +2008,7 @@ router.get('/users/:id', rbac.requirePermission('users_view'), async (req, res) 
     res.render('admin/user-detail', { u: user, bets, transactions, payments, sameIp, referralCount, stats, pinStatus, fraudStatus, deviceOverview });
   } catch (err) {
     console.error('user detail error:', err.message);
-    req.flash('error', 'সমস্যা হয়েছে!');
+    req.flash('error', req.t('admin_something_went_wrong_x'));
     res.redirect('/admin/users');
   }
 });
@@ -2026,7 +2026,7 @@ router.post('/users/:id/edit-profile', rbac.requirePermission('users_edit'), adm
     const existingRes = await pool.query('SELECT username, email, phone, email_verified FROM users WHERE id = $1', [uId]);
     const existing = existingRes.rows[0];
     if (!existing) {
-      req.flash('error', 'ইউজার পাওয়া যায়নি!');
+      req.flash('error', req.t('admin_user_not_found_x'));
       return res.redirect('/admin/users');
     }
 
@@ -2036,19 +2036,19 @@ router.post('/users/:id/edit-profile', rbac.requirePermission('users_edit'), adm
 
     // ==================== ভ্যালিডেশন ====================
     if (!newUsername || !ADMIN_EDIT_USERNAME_RE.test(newUsername)) {
-      req.flash('error', '❌ ইউজারনেমে শুধু লেটার, সংখ্যা, আন্ডারস্কোর, ডট ব্যবহার করা যাবে (৩-২০ ক্যারেক্টার)।');
+      req.flash('error', req.t('auth_username_format_invalid'));
       return res.redirect('/admin/users/' + uId);
     }
     if (newEmail && !ADMIN_EDIT_EMAIL_RE.test(newEmail)) {
-      req.flash('error', '❌ সঠিক ইমেইল ফরম্যাট দিন।');
+      req.flash('error', req.t('auth_email_format_invalid'));
       return res.redirect('/admin/users/' + uId);
     }
     if (newPhone && !ADMIN_EDIT_PHONE_RE.test(newPhone)) {
-      req.flash('error', '❌ সঠিক ফোন নাম্বার ফরম্যাট দিন (৬-২০ ক্যারেক্টার, সংখ্যা/+/-)।');
+      req.flash('error', req.t('admin_phone_format_invalid'));
       return res.redirect('/admin/users/' + uId);
     }
     if (!newEmail && !newPhone) {
-      req.flash('error', '❌ ইমেইল অথবা ফোন নাম্বার অন্তত একটি থাকতে হবে।');
+      req.flash('error', req.t('admin_email_or_phone_required'));
       return res.redirect('/admin/users/' + uId);
     }
 
@@ -2056,21 +2056,21 @@ router.post('/users/:id/edit-profile', rbac.requirePermission('users_edit'), adm
     if (newUsername !== existing.username) {
       const dup = await pool.query('SELECT id FROM users WHERE username = $1 AND id <> $2', [newUsername, uId]);
       if (dup.rows.length) {
-        req.flash('error', '❌ এই ইউজারনেম আগেই ব্যবহৃত হচ্ছে।');
+        req.flash('error', req.t('admin_username_taken'));
         return res.redirect('/admin/users/' + uId);
       }
     }
     if (newEmail && newEmail !== existing.email) {
       const dup = await pool.query('SELECT id FROM users WHERE email = $1 AND id <> $2', [newEmail, uId]);
       if (dup.rows.length) {
-        req.flash('error', '❌ এই ইমেইল আগেই অন্য অ্যাকাউন্টে ব্যবহৃত হচ্ছে।');
+        req.flash('error', req.t('admin_email_taken'));
         return res.redirect('/admin/users/' + uId);
       }
     }
     if (newPhone && newPhone !== existing.phone) {
       const dup = await pool.query('SELECT id FROM users WHERE phone = $1 AND id <> $2', [newPhone, uId]);
       if (dup.rows.length) {
-        req.flash('error', '❌ এই ফোন নাম্বার আগেই অন্য অ্যাকাউন্টে ব্যবহৃত হচ্ছে।');
+        req.flash('error', req.t('admin_phone_taken'));
         return res.redirect('/admin/users/' + uId);
       }
     }
@@ -2110,11 +2110,11 @@ router.post('/users/:id/edit-profile', rbac.requirePermission('users_edit'), adm
       }).catch(e => console.error('logAuditEvent (USER_PROFILE_EDITED) error:', e.message));
     }
 
-    req.flash('success', changedFields.length ? 'প্রোফাইল তথ্য আপডেট হয়েছে।' : 'কোনো পরিবর্তন হয়নি।');
+    req.flash('success', changedFields.length ? req.t('admin_profile_updated') : req.t('admin_no_changes'));
     return res.redirect('/admin/users/' + uId);
   } catch (err) {
     console.error('user profile edit error:', err.message);
-    req.flash('error', 'সমস্যা হয়েছে!');
+    req.flash('error', req.t('admin_something_went_wrong_x'));
     return res.redirect('/admin/users/' + uId);
   }
 });
@@ -2136,8 +2136,8 @@ router.post('/users/:id/ban', rbac.requirePermission('users_ban'), requireIntPar
         details: { targetUserId: req.params.id, targetUsername: r.rows[0].username }
       }).catch(e => console.error('logAuditEvent (USER_BAN/UNBAN) error:', e.message));
     }
-    req.flash('success', 'স্ট্যাটাস আপডেট হয়েছে!');
-  } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
+    req.flash('success', req.t('admin_status_updated'));
+  } catch (err) { req.flash('error', req.t('admin_something_went_wrong_x')); }
   redirectBack(req, res, '/admin');
 });
 
@@ -2150,10 +2150,10 @@ router.post('/users/bulk-ban', rbac.requirePermission('users_ban'), async (req, 
   const cleanIds = [...new Set(ids.map((x) => parseInt(x, 10)).filter((x) => Number.isInteger(x) && x > 0))]
     .filter((id) => id !== req.session.user.id); // নিজের অ্যাকাউন্ট নিজে ব্যান করা যাবে না
   if (cleanIds.length === 0) {
-    return res.status(400).json({ success: false, error: 'কোনো বৈধ ইউজার নির্বাচন করা হয়নি' });
+    return res.status(400).json({ success: false, error: req.t('admin_no_valid_user_selected') });
   }
   if (cleanIds.length > 100) {
-    return res.status(400).json({ success: false, error: 'একবারে সর্বোচ্চ ১০০ জন ইউজার প্রসেস করা যাবে' });
+    return res.status(400).json({ success: false, error: req.t('admin_user_bulk_limit') });
   }
 
   const results = [];
@@ -2166,14 +2166,14 @@ router.post('/users/bulk-ban', rbac.requirePermission('users_ban'), async (req, 
       } else {
         // ইউজার নেই, অথবা আগে থেকেই ব্যান করা — দুটোই "নতুন করে কিছু হয়নি" হিসেবে গণ্য, ত্রুটি না
         const exists = await pool.query('SELECT username, is_banned FROM users WHERE id = $1', [id]);
-        if (!exists.rows[0]) results.push({ id, success: false, error: 'ইউজার পাওয়া যায়নি' });
+        if (!exists.rows[0]) results.push({ id, success: false, error: req.t('common_user_not_found') });
         else results.push({ id, success: true, username: exists.rows[0].username, alreadyBanned: true });
       }
     } catch (err) {
       // প্রতি-সারির ব্যর্থতা ক্লায়েন্টে JSON হিসেবে ফেরত যায়, তাই কাঁচা pg মেসেজ (টেবিল/কলাম/
       // কনস্ট্রেইন্টের নাম) এখানে বসানো যাবে না — গুনতি ও আইডি রিপোর্ট হয়, কারণ লগে থাকে।
       console.error(`bulk operation row ${id} failed:`, err && err.stack ? err.stack : err);
-      results.push({ id, success: false, error: 'সার্ভার/ডেটাবেস ত্রুটির কারণে প্রসেস করা যায়নি' });
+      results.push({ id, success: false, error: req.t('admin_process_failed_db') });
     }
   }
 
@@ -2207,24 +2207,24 @@ router.post('/users/bulk-ban', rbac.requirePermission('users_ban'), async (req, 
 router.post('/users/:id/delete', rbac.requirePermission('users_delete'), requireIntParam('id'), async (req, res) => {
   try {
     if (String(req.session.user.id) === String(req.params.id)) {
-      req.flash('error', 'নিজের অ্যাকাউন্ট ডিলিট করা যাবে না!');
+      req.flash('error', req.t('admin_cannot_delete_self'));
       return res.redirect('/admin/users');
     }
 
     const outcome = await deleteOrDeactivateUser(req.params.id, req.session.user.username);
 
     if (outcome.mode === 'not_found') {
-      req.flash('error', 'ইউজার পাওয়া যায়নি!');
+      req.flash('error', req.t('admin_user_not_found_x'));
       return res.redirect('/admin/users');
     }
 
     if (outcome.mode === 'deleted') {
-      req.flash('success', `ইউজার "${outcome.username}" স্থায়ীভাবে ডিলিট করা হয়েছে।`);
+      req.flash('success', req.t('admin_user_deleted_permanently').replace('{value}', outcome.username));
     } else {
       req.flash('success',
-        `ইউজার "${outcome.username}"-এর আর্থিক/অডিট রেকর্ড থাকায় অ্যাকাউন্টটি স্থায়ীভাবে ডিলিট করা হয়নি। ` +
-        `অ্যাকাউন্টটি অ্যানোনিমাইজ ও নিষ্ক্রিয় করা হয়েছে (লগইন বন্ধ, সব সেশন বাতিল), ` +
-        `আর্থিক ইতিহাস হিসাবরক্ষণের জন্য অক্ষত রাখা হয়েছে।`);
+        req.t('admin_user_delete_blocked_records').replace('{value}', outcome.username) +
+        req.t('admin_user_anonymized') +
+        req.t('admin_financial_history_preserved'));
     }
 
     await logAdminAction(
@@ -2245,7 +2245,7 @@ router.post('/users/:id/delete', rbac.requirePermission('users_delete'), require
     }).catch(e => console.error('logAuditEvent (USER_DELETE) error:', e.message));
   } catch (err) {
     console.error('delete error:', err.message);
-    req.flash('error', 'ডিলিট করতে সমস্যা!');
+    req.flash('error', req.t('admin_delete_failed'));
   }
   res.redirect('/admin/users');
 });
@@ -2366,10 +2366,10 @@ router.post('/users/:id/withdraw-pin/reset', rbac.requirePermission('users_edit'
       `ইউজার #${req.params.id}-এর Withdraw PIN রিসেট করা হয়েছে`,
       req.ip
     );
-    req.flash('success', '✅ ইউজারের Withdraw PIN রিসেট করা হয়েছে। ইউজারকে এখন নতুন PIN সেট করতে হবে।');
+    req.flash('success', req.t('admin_user_pin_reset'));
   } catch (err) {
     console.error('admin withdraw pin reset error:', err.message);
-    req.flash('error', 'সমস্যা হয়েছে!');
+    req.flash('error', req.t('admin_something_went_wrong_x'));
   }
   redirectBack(req, res, '/admin');
 });
@@ -2386,8 +2386,8 @@ router.post('/users/:id/coins/add', rbac.requirePermission('users_edit'), adminF
       await client.query(`INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'admin_add',$3)`, [req.params.id, amount, reason || 'অ্যাডমিন কয়েন যোগ']);
     });
     await logAdminAction(req.session.user.id, req.session.user.username, 'COIN_ADD', `ইউজার #${req.params.id}-কে ${amount} কয়েন যোগ${reason ? ' — কারণ: ' + reason : ''}`, req.ip);
-    req.flash('success', '✅ কয়েন যোগ হয়েছে!');
-  } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
+    req.flash('success', req.t('admin_coins_added'));
+  } catch (err) { req.flash('error', req.t('admin_something_went_wrong_x')); }
   redirectBack(req, res, '/admin');
 });
 
@@ -2420,8 +2420,8 @@ router.post('/users/:id/coins/remove', rbac.requirePermission('users_edit'), adm
       return actualRemoved;
     });
     await logAdminAction(req.session.user.id, req.session.user.username, 'COIN_REMOVE', `ইউজার #${req.params.id}-এর ${removed} কয়েন কমানো${reason ? ' — কারণ: ' + reason : ''}`, req.ip);
-    req.flash('success', `✅ ${removed} কয়েন কমানো হয়েছে!`);
-  } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
+    req.flash('success', req.t('admin_coins_removed').replace('{value}', removed));
+  } catch (err) { req.flash('error', req.t('admin_something_went_wrong_x')); }
   redirectBack(req, res, '/admin');
 });
 
@@ -2430,8 +2430,8 @@ router.post('/users/:id/freebet', rbac.requirePermission('users_edit'), adminFin
     const amount = req.body.amount;
     await grantFreeBet(req.params.id, amount, 'admin');
     await logAdminAction(req.session.user.id, req.session.user.username, 'freebet_grant', `${amount} taka free bet to user #${req.params.id}`, req.ip);
-    req.flash('success', `✅ ${amount} টাকার ফ্রি বেট দেওয়া হয়েছে!`);
-  } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
+    req.flash('success', req.t('admin_freebet_granted').replace('{value}', amount));
+  } catch (err) { req.flash('error', req.t('admin_something_went_wrong_x')); }
   redirectBack(req, res, '/admin');
 });
 
@@ -2446,18 +2446,18 @@ router.get('/matches', rbac.requirePermission('matches_manage'), async (req, res
 router.post('/matches/add', rbac.requirePermission('matches_manage'), async (req, res) => {
   try {
     const { title, sport, team_a, team_b, start_time } = req.body;
-    if (!team_a || !team_b) { req.flash('error', 'দুই দলের নাম দিন!'); return res.redirect('/admin/matches'); }
+    if (!team_a || !team_b) { req.flash('error', req.t('admin_both_team_names_required')); return res.redirect('/admin/matches'); }
     await pool.query(
       `INSERT INTO matches (title, sport, team_a, team_b, status, start_time) VALUES ($1,$2,$3,$4,'upcoming',$5)`,
       [title || `${team_a} vs ${team_b}`, sport || 'cricket', team_a, team_b, start_time || null]);
-    req.flash('success', 'নতুন ম্যাচ যোগ হয়েছে!');
-  } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
+    req.flash('success', req.t('admin_match_added'));
+  } catch (err) { req.flash('error', req.t('admin_something_went_wrong_x')); }
   res.redirect('/admin/matches');
 });
 
 router.post('/matches/:id/delete', rbac.requirePermission('matches_manage'), async (req, res) => {
-  try { await pool.query('DELETE FROM matches WHERE id = $1', [req.params.id]); req.flash('success', 'ম্যাচ মুছে ফেলা হয়েছে!'); }
-  catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
+  try { await pool.query('DELETE FROM matches WHERE id = $1', [req.params.id]); req.flash('success', req.t('admin_match_deleted')); }
+  catch (err) { req.flash('error', req.t('admin_something_went_wrong_x')); }
   res.redirect('/admin/matches');
 });
 
@@ -2480,24 +2480,24 @@ router.post('/markets/update', rbac.requirePermission('matches_manage'), async (
       ON CONFLICT (match_id, type, name) DO UPDATE SET odds = EXCLUDED.odds, status = EXCLUDED.status, updated_at = NOW()
     `, [match_id, type, name, odds, status || 'open']);
     await cache.del(cacheKeys.matchDetail(match_id)).catch(() => {});
-    req.flash('success', 'মার্কেট আপডেট হয়েছে!');
+    req.flash('success', req.t('admin_market_updated'));
     res.redirect(`/admin/markets/${match_id}`);
-  } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); res.redirect('/admin/matches'); }
+  } catch (err) { req.flash('error', req.t('admin_something_went_wrong_x')); res.redirect('/admin/matches'); }
 });
 
 router.post('/markets/:marketId/toggle', rbac.requirePermission('matches_manage'), async (req, res) => {
   try {
     const mRes = await pool.query('UPDATE markets SET status = $1 WHERE id = $2 RETURNING match_id', [req.body.status, req.params.marketId]);
     if (mRes.rows[0]) await cache.del(cacheKeys.matchDetail(mRes.rows[0].match_id)).catch(() => {});
-    req.flash('success', 'মার্কেট আপডেট হয়েছে!');
-  } catch (err) { req.flash('error', 'সমস্যা হয়েছে!'); }
+    req.flash('success', req.t('admin_market_updated'));
+  } catch (err) { req.flash('error', req.t('admin_something_went_wrong_x')); }
   redirectBack(req, res, '/admin');
 });
 
 router.post('/markets/:marketId/settle', rbac.requirePermission('matches_manage'), async (req, res) => {
   const marketId = req.params.marketId;
   const { winning_runner } = req.body;
-  if (!winning_runner) { req.flash('error', 'জয় নির্বাচন করুন!'); return redirectBack(req, res, '/admin'); }
+  if (!winning_runner) { req.flash('error', req.t('admin_select_winner')); return redirectBack(req, res, '/admin'); }
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -2541,11 +2541,11 @@ router.post('/markets/:marketId/settle', rbac.requirePermission('matches_manage'
       action: 'MARKET_SETTLED', category: 'financial', status: 'success', riskLevel: 'high',
       details: { marketId, winningRunner: winning_runner, betsSettled: bets.rows.length, winnersCount }
     }).catch(e => console.error('logAuditEvent (MARKET_SETTLED) error:', e.message));
-    req.flash('success', `সেটেল সম্পন্ন! ${bets.rows.length} টি বেট, ${winnersCount} জন জিতেছে।`);
+    req.flash('success', req.t('admin_settle_done').replace('{value1}', bets.rows.length).replace('{value2}', winnersCount));
     redirectBack(req, res, '/admin');
   } catch (err) {
     await client.query('ROLLBACK');
-    req.flash('error', 'সেটেল সমস্যা!');
+    req.flash('error', req.t('admin_settle_failed'));
     redirectBack(req, res, '/admin');
   } finally { client.release(); }
 });
@@ -2648,7 +2648,7 @@ router.post('/bets/:id/settle', rbac.requirePermission('games_manage'), async (r
   const { id } = req.params;
   const { result } = req.body;
   if (!['won', 'lost'].includes(result)) {
-    req.flash('error', 'ভুল রেজাল্ট');
+    req.flash('error', req.t('admin_invalid_result'));
     return res.redirect('/admin/bets');
   }
   const client = await pool.connect();
@@ -2658,7 +2658,7 @@ router.post('/bets/:id/settle', rbac.requirePermission('games_manage'), async (r
     const bet = b.rows[0];
     if (!bet || bet.status !== 'pending') {
       await client.query('ROLLBACK');
-      req.flash('error', 'বেট পাওয়া যায়নি অথবা আগেই সেটেল হয়েছে');
+      req.flash('error', req.t('admin_bet_not_found_or_settled'));
       return res.redirect('/admin/bets');
     }
     await client.query('UPDATE bets SET status=$1 WHERE id=$2', [result, id]);
@@ -2684,11 +2684,11 @@ router.post('/bets/:id/settle', rbac.requirePermission('games_manage'), async (r
       action: 'BET_SETTLED', category: 'financial', status: 'success', riskLevel: 'high',
       details: { betId: id, result, userId: bet.user_id, stake: bet.stake, odd: bet.odd }
     }).catch(e => console.error('logAuditEvent (BET_SETTLED) error:', e.message));
-    req.flash('success', 'বেট সেটেল হয়েছে');
+    req.flash('success', req.t('admin_bet_settled'));
     res.redirect('/admin/bets');
   } catch (err) {
     await client.query('ROLLBACK');
-    req.flash('error', 'সমস্যা হয়েছে');
+    req.flash('error', req.t('payment_generic_error'));
     res.redirect('/admin/bets');
   } finally {
     client.release();
@@ -2724,7 +2724,7 @@ router.post('/bonuses/add', rbac.requirePermission('users_edit'), async (req, re
     const bonus_amount = parseAmount(req.body.bonus_amount, { max: 1_000_000 });
     const sports_required = Number.isFinite(Number(req.body.sports_required)) ? Math.max(0, parseInt(req.body.sports_required) || 0) : 0;
     const casino_required = Number.isFinite(Number(req.body.casino_required)) ? Math.max(0, parseInt(req.body.casino_required) || 0) : 0;
-    if (!bonus_amount) { req.flash('error', 'সঠিক বোনাস পরিমাণ দিন'); return res.redirect('/admin/bonuses'); }
+    if (!bonus_amount) { req.flash('error', req.t('admin_valid_bonus_amount')); return res.redirect('/admin/bonuses'); }
     const userRes = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
     if (!userRes.rows[0]) return res.redirect('/admin/bonuses');
     await pool.query(
@@ -2797,11 +2797,11 @@ router.post('/vip/save', adminActionLimiter, rbac.requirePermission('vip_manage'
       action: result.created ? 'VIP_LEVEL_CREATE' : 'VIP_LEVEL_UPDATE', category: 'settings', riskLevel: 'medium',
       details: { level: result.level, ...data }
     });
-    req.flash('success', `VIP লেভেল ${result.level} সফলভাবে সেভ হয়েছে।`);
+    req.flash('success', req.t('admin_vip_level_saved').replace('{value}', result.level));
     res.redirect('/admin/vip');
   } catch (err) {
     console.error('Admin VIP save error:', err && err.stack ? err.stack : err);
-    req.flash('error', publicMessage(err, 'VIP লেভেল সেভ করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।'));
+    req.flash('error', publicMessage(err, req.t('admin_vip_level_save_failed')));
     res.redirect('/admin/vip');
   }
 });
@@ -2860,7 +2860,7 @@ router.post('/promotions/add', rbac.requirePermission('settings_edit'), async (r
     const image_url = req.body.image_url && isSafeUrl(req.body.image_url) ? req.body.image_url.trim() : null;
     const link_url = req.body.link_url && isSafeUrl(req.body.link_url) ? req.body.link_url.trim() : null;
     const position = Number.isFinite(Number(req.body.position)) ? parseInt(req.body.position) || 0 : 0;
-    if (!image_url) { req.flash('error', 'বৈধ ইমেজ URL দিন'); return res.redirect('/admin/promotions'); }
+    if (!image_url) { req.flash('error', req.t('admin_valid_image_url')); return res.redirect('/admin/promotions'); }
     await pool.query(
       'INSERT INTO promotions (title, image_url, link_url, position, active) VALUES ($1, $2, $3, $4, true)',
       [title, image_url, link_url, position]
@@ -2978,7 +2978,7 @@ router.post('/news/add', rbac.requirePermission('settings_edit'), async (req, re
     const content = sanitizeText(req.body.content || '', { maxLen: 20000 });
     const image_url = req.body.image_url && isSafeUrl(req.body.image_url) ? req.body.image_url.trim() : null;
     const sport = sanitizeText(req.body.sport || '', { maxLen: 50 }) || null;
-    if (!title) { req.flash('error', 'শিরোনাম আবশ্যক'); return res.redirect('/admin/news'); }
+    if (!title) { req.flash('error', req.t('admin_title_required')); return res.redirect('/admin/news'); }
     await pool.query(
       'INSERT INTO news (title, content, image_url, sport, author_id) VALUES ($1, $2, $3, $4, $5)',
       [title, content || null, image_url, sport, req.session.user.id]
@@ -3078,7 +3078,7 @@ router.get('/roles', rbac.requirePermission('roles_manage'), async (req, res) =>
     res.render('admin/roles', { roles, permissionGroups: rbac.permissionGroups(), error: null });
   } catch (err) {
     console.error('roles list error:', err.message);
-    res.render('admin/roles', { loadError: true, roles: [], permissionGroups: rbac.permissionGroups(), error: 'Role তালিকা লোড করা যায়নি।' });
+    res.render('admin/roles', { loadError: true, roles: [], permissionGroups: rbac.permissionGroups(), error: req.t('admin_roles_load_failed') });
   }
 });
 
@@ -3088,7 +3088,7 @@ router.get('/roles/matrix', rbac.requirePermission('roles_manage'), async (req, 
     res.render('admin/roles-matrix', { roles, permissionGroups: rbac.permissionGroups() });
   } catch (err) {
     console.error('roles matrix error:', err.message);
-    req.flash('error', 'Matrix লোড করতে সমস্যা হয়েছে।');
+    req.flash('error', req.t('admin_matrix_load_failed'));
     res.redirect('/admin/roles');
   }
 });
@@ -3099,11 +3099,11 @@ router.post('/roles', rbac.requirePermission('roles_manage'), async (req, res) =
     Object.keys(rbac.PERMISSIONS).forEach(key => { permissions[key] = req.body[`perm_${key}`] === 'on'; });
     const role = await rbac.createRole({ name: req.body.name, description: sanitizeText(req.body.description || ''), permissions });
     await logAdminAction(req.session.user.id, req.session.user.username, 'ROLE_CREATED', `নতুন Role: ${role.name} (${role.key})`, req.ip);
-    req.flash('success', `Role "${role.name}" তৈরি হয়েছে।`);
+    req.flash('success', req.t('admin_role_created').replace('{value}', role.name));
     res.redirect('/admin/roles');
   } catch (err) {
     console.error('role management error:', err && err.stack ? err.stack : err);
-    req.flash('error', publicMessage(err, 'অনুরোধটি সম্পন্ন করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।'));
+    req.flash('error', publicMessage(err, req.t('admin_request_failed_db')));
     res.redirect('/admin/roles');
   }
 });
@@ -3111,11 +3111,11 @@ router.post('/roles', rbac.requirePermission('roles_manage'), async (req, res) =
 router.get('/roles/:id/edit', rbac.requirePermission('roles_manage'), async (req, res) => {
   try {
     const role = await rbac.getRole(req.params.id);
-    if (!role) { req.flash('error', 'Role পাওয়া যায়নি।'); return res.redirect('/admin/roles'); }
+    if (!role) { req.flash('error', req.t('admin_role_not_found')); return res.redirect('/admin/roles'); }
     res.render('admin/role-edit', { role, permissionGroups: rbac.permissionGroups() });
   } catch (err) {
     console.error('role management error:', err && err.stack ? err.stack : err);
-    req.flash('error', publicMessage(err, 'অনুরোধটি সম্পন্ন করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।'));
+    req.flash('error', publicMessage(err, req.t('admin_request_failed_db')));
     res.redirect('/admin/roles');
   }
 });
@@ -3123,7 +3123,7 @@ router.get('/roles/:id/edit', rbac.requirePermission('roles_manage'), async (req
 router.post('/roles/:id', rbac.requirePermission('roles_manage'), async (req, res) => {
   try {
     const existing = await rbac.getRole(req.params.id);
-    if (!existing) { req.flash('error', 'Role পাওয়া যায়নি।'); return res.redirect('/admin/roles'); }
+    if (!existing) { req.flash('error', req.t('admin_role_not_found')); return res.redirect('/admin/roles'); }
     const permissions = {};
     Object.keys(rbac.PERMISSIONS).forEach(key => {
       // Super Admin Role-এর permission UI থেকে বদলানো যাবে না — সবসময় সব true (override)
@@ -3131,11 +3131,11 @@ router.post('/roles/:id', rbac.requirePermission('roles_manage'), async (req, re
     });
     const role = await rbac.updateRole(req.params.id, { name: existing.is_system ? existing.name : req.body.name, description: sanitizeText(req.body.description || ''), permissions });
     await logAdminAction(req.session.user.id, req.session.user.username, 'PERMISSION_CHANGED', `Role "${role.name}"-এর permission আপডেট করা হয়েছে`, req.ip);
-    req.flash('success', `Role "${role.name}" আপডেট হয়েছে।`);
+    req.flash('success', req.t('admin_role_updated').replace('{value}', role.name));
     res.redirect('/admin/roles');
   } catch (err) {
     console.error('role management error:', err && err.stack ? err.stack : err);
-    req.flash('error', publicMessage(err, 'অনুরোধটি সম্পন্ন করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।'));
+    req.flash('error', publicMessage(err, req.t('admin_request_failed_db')));
     res.redirect('/admin/roles');
   }
 });
@@ -3144,11 +3144,11 @@ router.post('/roles/:id/clone', rbac.requirePermission('roles_manage'), async (r
   try {
     const role = await rbac.cloneRole(req.params.id, req.body.name);
     await logAdminAction(req.session.user.id, req.session.user.username, 'ROLE_CLONED', `"${req.params.id}" থেকে ক্লোন করে নতুন Role: ${role.name}`, req.ip);
-    req.flash('success', `Role "${role.name}" ক্লোন হয়েছে — এখন এডিট করতে পারেন।`);
+    req.flash('success', req.t('admin_role_cloned').replace('{value}', role.name));
     res.redirect(`/admin/roles/${role.id}/edit`);
   } catch (err) {
     console.error('role management error:', err && err.stack ? err.stack : err);
-    req.flash('error', publicMessage(err, 'অনুরোধটি সম্পন্ন করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।'));
+    req.flash('error', publicMessage(err, req.t('admin_request_failed_db')));
     res.redirect('/admin/roles');
   }
 });
@@ -3158,11 +3158,11 @@ router.post('/roles/:id/delete', rbac.requirePermission('roles_manage'), async (
     const role = await rbac.getRole(req.params.id);
     await rbac.deleteRole(req.params.id);
     await logAdminAction(req.session.user.id, req.session.user.username, 'ROLE_DELETED', `Role ডিলিট করা হয়েছে: ${role ? role.name : req.params.id}`, req.ip);
-    req.flash('success', 'Role ডিলিট করা হয়েছে।');
+    req.flash('success', req.t('admin_role_deleted'));
     res.redirect('/admin/roles');
   } catch (err) {
     console.error('role management error:', err && err.stack ? err.stack : err);
-    req.flash('error', publicMessage(err, 'অনুরোধটি সম্পন্ন করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।'));
+    req.flash('error', publicMessage(err, req.t('admin_request_failed_db')));
     res.redirect('/admin/roles');
   }
 });
@@ -3172,14 +3172,14 @@ router.post('/roles/bulk-permission-update', rbac.requirePermission('roles_manag
     const roleIds = [].concat(req.body.role_ids || []);
     const permKey = req.body.perm_key;
     const value = req.body.perm_value === 'true';
-    if (!roleIds.length || !rbac.PERMISSIONS[permKey]) { req.flash('error', 'সঠিক Role ও Permission নির্বাচন করুন।'); return res.redirect('/admin/roles/matrix'); }
+    if (!roleIds.length || !rbac.PERMISSIONS[permKey]) { req.flash('error', req.t('admin_select_role_and_permission')); return res.redirect('/admin/roles/matrix'); }
     const updated = await rbac.bulkUpdatePermission(roleIds, permKey, value);
     await logAdminAction(req.session.user.id, req.session.user.username, 'PERMISSION_CHANGED', `বাল্ক আপডেট — "${permKey}" = ${value} এই Role-গুলোতে: ${updated.join(', ')}`, req.ip);
-    req.flash('success', `${updated.length}টা Role আপডেট হয়েছে।`);
+    req.flash('success', req.t('admin_roles_updated_count').replace('{value}', updated.length));
     res.redirect('/admin/roles/matrix');
   } catch (err) {
     console.error('role bulk permission update error:', err && err.stack ? err.stack : err);
-    req.flash('error', publicMessage(err, 'বাল্ক আপডেট সম্পন্ন করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।'));
+    req.flash('error', publicMessage(err, req.t('admin_bulk_update_failed')));
     res.redirect('/admin/roles/matrix');
   }
 });
@@ -3194,24 +3194,24 @@ router.get('/roles/export', rbac.requirePermission('roles_manage'), async (req, 
     res.send(JSON.stringify(data, null, 2));
   } catch (err) {
     console.error('role management error:', err && err.stack ? err.stack : err);
-    req.flash('error', publicMessage(err, 'অনুরোধটি সম্পন্ন করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।'));
+    req.flash('error', publicMessage(err, req.t('admin_request_failed_db')));
     res.redirect('/admin/roles');
   }
 });
 
 router.post('/roles/import', rbac.requirePermission('roles_manage'), upload.single('file'), async (req, res) => {
   try {
-    if (!req.file) throw new Error('একটা JSON ফাইল সিলেক্ট করুন।');
+    if (!req.file) throw new Error(req.t('admin_select_json_file'));
     const data = JSON.parse(req.file.buffer.toString('utf8'));
     const result = await rbac.importRoles(data);
     await logAdminAction(req.session.user.id, req.session.user.username, 'ROLES_IMPORTED', `Import: ${result.created} তৈরি, ${result.updated} আপডেট, ${result.skipped} স্কিপ`, req.ip);
-    req.flash('success', `Import সম্পন্ন — ${result.created} তৈরি, ${result.updated} আপডেট, ${result.skipped} স্কিপ (সিস্টেম Role/অবৈধ এন্ট্রি)।`);
+    req.flash('success', req.t('admin_import_done').replace('{value1}', result.created).replace('{value2}', result.updated).replace('{value3}', result.skipped));
     res.redirect('/admin/roles');
   } catch (err) {
     // JSON.parse / pg এরর মেসেজে ফাইল পাথ ও ইন্টারনাল বিবরণ আসতে পারে — শুধু ইচ্ছাকৃত
     // ভ্যালিডেশন বার্তাগুলোই (PublicError) অ্যাডমিনকে দেখানো হয়।
     console.error('roles import error:', err && err.stack ? err.stack : err);
-    req.flash('error', 'Import ব্যর্থ: ' + publicMessage(err, 'ফাইলটি পড়া যায়নি বা সঠিক ফরম্যাটে নেই।'));
+    req.flash('error', req.t('admin_import_failed_prefix') + publicMessage(err, req.t('admin_file_unreadable')));
     res.redirect('/admin/roles');
   }
 });
@@ -3235,7 +3235,7 @@ router.get('/user-roles', rbac.requirePermission('roles_manage'), async (req, re
 router.post('/user-roles/:userId/assign', rbac.requirePermission('roles_manage'), async (req, res) => {
   try {
     const userRes = await pool.query('SELECT username FROM users WHERE id=$1', [req.params.userId]);
-    if (!userRes.rows[0]) { req.flash('error', 'ইউজার পাওয়া যায়নি।'); return res.redirect('/admin/user-roles'); }
+    if (!userRes.rows[0]) { req.flash('error', req.t('admin_user_not_found_dot')); return res.redirect('/admin/user-roles'); }
     const requestedRoleKey = req.body.role_key || null;
     // role_key=NULL বা 'super_admin' বসানো মানে (getUserPermissions()-এ) টার্গেট পূর্ণ
     // super_admin-সমতুল্য অ্যাক্সেস পেয়ে যাওয়া — এই রুট আগে শুধু requirePermission('roles_manage')
@@ -3246,18 +3246,18 @@ router.post('/user-roles/:userId/assign', rbac.requirePermission('roles_manage')
     if (requestedRoleKey === null || requestedRoleKey === 'super_admin') {
       const { isSuperAdmin } = await rbac.getUserPermissions(req.session.user.id);
       if (!isSuperAdmin) {
-        req.flash('error', '❌ শুধু super admin কাউকে super-admin অ্যাক্সেস দিতে পারেন।');
+        req.flash('error', req.t('admin_only_super_admin_can_grant'));
         return res.redirect('/admin/user-roles');
       }
     }
     await rbac.assignUserRole(req.params.userId, requestedRoleKey);
     await logAdminAction(req.session.user.id, req.session.user.username, 'ROLE_CHANGED',
       `"${userRes.rows[0].username}"-কে Role দেওয়া হয়েছে: ${requestedRoleKey || '(কোনোটা না — সুপার-অ্যাডমিন-সমতুল্য)'}`, req.ip);
-    req.flash('success', 'Role আপডেট হয়েছে।');
+    req.flash('success', req.t('admin_user_role_updated'));
     res.redirect('/admin/user-roles');
   } catch (err) {
     console.error('user role assign error:', err && err.stack ? err.stack : err);
-    req.flash('error', publicMessage(err, 'Role আপডেট করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।'));
+    req.flash('error', publicMessage(err, req.t('admin_user_role_update_failed')));
     res.redirect('/admin/user-roles');
   }
 });
@@ -3276,16 +3276,16 @@ router.post('/bot-monitoring/ip-rules', rbac.requirePermission('bot_monitoring_m
   const { ip, type, reason } = req.body;
   try {
     if (!ip || !['block', 'whitelist'].includes(type)) {
-      req.flash('error', 'সঠিক IP ও টাইপ দিন।');
+      req.flash('error', req.t('admin_valid_ip_and_type'));
       return res.redirect('/admin/bot-monitoring/ip-rules');
     }
     await setIpRule(ip.trim(), type, sanitizeText(reason || ''), req.session.user.username);
     await logAdminAction(req.session.user.id, req.session.user.username, type === 'block' ? 'IP_BLOCKED' : 'IP_WHITELISTED', `IP: ${ip} — কারণ: ${reason || '-'}`, req.ip);
-    req.flash('success', `IP ${ip} সফলভাবে ${type === 'block' ? 'ব্লক' : 'হোয়াইটলিস্ট'} করা হয়েছে।`);
+    req.flash('success', req.t('admin_ip_rule_added').replace('{value1}', ip).replace('{value2}', req.t(type === 'block' ? 'admin_word_blocked' : 'admin_word_whitelisted')));
     res.redirect('/admin/bot-monitoring/ip-rules');
   } catch (err) {
     console.error('ip-rules add error:', err.message);
-    req.flash('error', 'সমস্যা হয়েছে।');
+    req.flash('error', req.t('common_something_went_wrong'));
     res.redirect('/admin/bot-monitoring/ip-rules');
   }
 });
@@ -3295,11 +3295,11 @@ router.post('/bot-monitoring/ip-rules/:ip/remove', rbac.requirePermission('bot_m
     const ip = decodeURIComponent(req.params.ip);
     await removeIpRule(ip);
     await logAdminAction(req.session.user.id, req.session.user.username, 'IP_RULE_REMOVED', `IP: ${ip}`, req.ip);
-    req.flash('success', `IP ${ip}-এর রুল সরানো হয়েছে।`);
+    req.flash('success', req.t('admin_ip_rule_removed').replace('{value}', ip));
     res.redirect('/admin/bot-monitoring/ip-rules');
   } catch (err) {
     console.error('ip-rules remove error:', err.message);
-    req.flash('error', 'সমস্যা হয়েছে।');
+    req.flash('error', req.t('common_something_went_wrong'));
     res.redirect('/admin/bot-monitoring/ip-rules');
   }
 });
@@ -3343,7 +3343,7 @@ router.get('/sentry-status', async (req, res) => {
     res.render('admin/sentry-status', { status: sentryService.getStatus(), error: null, testSent: req.query.test === '1' });
   } catch (err) {
     console.error('Sentry status page error:', err.message);
-    res.render('admin/sentry-status', { loadError: true, status: null, error: 'Sentry স্ট্যাটাস লোড করা যায়নি।', testSent: false });
+    res.render('admin/sentry-status', { loadError: true, status: null, error: req.t('admin_sentry_status_failed'), testSent: false });
   }
 });
 
@@ -3351,7 +3351,7 @@ router.post('/sentry-status/test-error', async (req, res) => {
   try {
     const sentryService = require('../services/sentry');
     if (!sentryService.isEnabled()) {
-      req.flash('error', '❌ Sentry নিষ্ক্রিয় আছে — টেস্ট এরর পাঠানো যায়নি। আগে SENTRY_DSN সেট করুন।');
+      req.flash('error', req.t('admin_sentry_disabled'));
       return res.redirect('/admin/sentry-status');
     }
     sentryService.captureException(new Error('Sentry টেস্ট এরর — অ্যাডমিন প্যানেল থেকে ম্যানুয়ালি পাঠানো হয়েছে'), {
@@ -3362,7 +3362,7 @@ router.post('/sentry-status/test-error', async (req, res) => {
     res.redirect('/admin/sentry-status?test=1');
   } catch (err) {
     console.error('Sentry test error send failed:', err.message);
-    req.flash('error', '❌ টেস্ট এরর পাঠাতে সমস্যা হয়েছে।');
+    req.flash('error', req.t('admin_sentry_test_failed'));
     res.redirect('/admin/sentry-status');
   }
 });
@@ -3378,7 +3378,7 @@ router.get('/notification-templates', rbac.requirePermission('settings_edit'), a
     res.render('admin/notification-templates', { list, filters: { channel, lang, q }, error: null, success: null });
   } catch (err) {
     console.error('notification-templates list error:', err.message);
-    res.render('admin/notification-templates', { loadError: true, list: [], filters: { channel: '', lang: '', q: '' }, error: 'টেমপ্লেট তালিকা লোড করা যায়নি।', success: null });
+    res.render('admin/notification-templates', { loadError: true, list: [], filters: { channel: '', lang: '', q: '' }, error: req.t('admin_templates_load_failed'), success: null });
   }
 });
 
@@ -3395,11 +3395,11 @@ router.post('/notification-templates', rbac.requirePermission('settings_edit'), 
     );
     await logAdminAction(req.session.user.id, req.session.user.username, 'TEMPLATE_CREATE',
       `নতুন নোটিফিকেশন টেমপ্লেট তৈরি: ${tmpl.template_key} (${tmpl.channel}/${tmpl.lang})`, req.ip);
-    req.flash && req.flash('success', 'টেমপ্লেট তৈরি হয়েছে');
+    req.flash && req.flash('success', req.t('admin_template_created'));
     res.redirect('/admin/notification-templates');
   } catch (err) {
     console.error('template create error:', err && err.stack ? err.stack : err);
-    res.render('admin/notification-template-form', { tmpl: req.body, error: publicMessage(err, 'টেমপ্লেট তৈরি করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।') });
+    res.render('admin/notification-template-form', { tmpl: req.body, error: publicMessage(err, req.t('admin_template_create_failed')) });
   }
 });
 
@@ -3427,7 +3427,7 @@ router.post('/notification-templates/:id', rbac.requirePermission('settings_edit
   } catch (err) {
     console.error('template update error:', err && err.stack ? err.stack : err);
     const existing = await templates.getTemplateById(req.params.id).catch(() => null);
-    res.render('admin/notification-template-form', { tmpl: existing || { id: req.params.id, ...req.body }, error: publicMessage(err, 'টেমপ্লেট আপডেট করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।') });
+    res.render('admin/notification-template-form', { tmpl: existing || { id: req.params.id, ...req.body }, error: publicMessage(err, req.t('admin_template_update_failed')) });
   }
 });
 
@@ -3449,18 +3449,18 @@ router.post('/notification-templates/:id/delete', rbac.requirePermission('settin
 router.post('/notification-templates/:id/preview', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const tmpl = await templates.getTemplateById(req.params.id);
-    if (!tmpl) return res.status(404).json({ success: false, error: 'টেমপ্লেট পাওয়া যায়নি' });
+    if (!tmpl) return res.status(404).json({ success: false, error: req.t('admin_template_not_found') });
 
     const sampleVars = {};
     (tmpl.variables || []).forEach(v => {
-      const samples = { name: 'রহিম উদ্দিন', otp: '123456', amount: '৫,০০০', username: 'demo_user', date: new Date().toLocaleDateString('bn-BD') };
+      const samples = { name: req.t('admin_template_preview_sample_name'), otp: '123456', amount: '৫,০০০', username: 'demo_user', date: new Date().toLocaleDateString('bn-BD') };
       sampleVars[v] = samples[v] || `[${v}]`;
     });
     const rendered = templates.renderTemplateRow(tmpl, { ...sampleVars, ...(req.body.variables || {}) });
     res.json({ success: true, subject: rendered.subject, body: rendered.body, sampleVars });
   } catch (err) {
     console.error('template preview error:', err && err.stack ? err.stack : err);
-    res.status(500).json({ success: false, error: 'প্রিভিউ তৈরি করা যায়নি — সার্ভার ত্রুটি।' });
+    res.status(500).json({ success: false, error: req.t('admin_preview_failed') });
   }
 });
 
@@ -3468,10 +3468,10 @@ router.post('/notification-templates/:id/preview', rbac.requirePermission('setti
 router.post('/notification-templates/:id/test-send', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const tmpl = await templates.getTemplateById(req.params.id);
-    if (!tmpl) return res.status(404).json({ success: false, error: 'টেমপ্লেট পাওয়া যায়নি' });
+    if (!tmpl) return res.status(404).json({ success: false, error: req.t('admin_template_not_found') });
 
     const target = (req.body.target || '').trim();
-    if (!target) return res.status(400).json({ success: false, error: 'টেস্ট টার্গেট (ইমেইল/ফোন/ইউজার আইডি) দিন' });
+    if (!target) return res.status(400).json({ success: false, error: req.t('admin_test_target_required') });
 
     const sampleVars = {};
     (tmpl.variables || []).forEach(v => {
@@ -3500,18 +3500,18 @@ router.post('/notification-templates/:id/test-send', rbac.requirePermission('set
         subject: `[TEST] ${rendered.subject || tmpl.name}`,
         html: rendered.body
       });
-      result = { ok: true, message: `টেস্ট ইমেইল ${target}-এ পাঠানো হয়েছে` };
+      result = { ok: true, message: req.t('admin_test_email_sent').replace('{value}', target) };
     } else if (tmpl.channel === 'sms') {
       result = await sendSms(target, rendered.body);
     } else {
       // in_app — সরাসরি notifications টেবিলে ইনসার্ট করা যায়, target হবে user id
       const userId = parseInt(target, 10);
-      if (!userId) return res.status(400).json({ success: false, error: 'in-app টেস্টের জন্য বৈধ user ID দিন' });
+      if (!userId) return res.status(400).json({ success: false, error: req.t('admin_test_valid_user_id') });
       await pool.query(
         `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'info')`,
         [userId, `[TEST] ${tmpl.name}`, rendered.body]
       );
-      result = { ok: true, message: `টেস্ট নোটিফিকেশন user #${userId}-কে পাঠানো হয়েছে` };
+      result = { ok: true, message: req.t('admin_test_notification_sent_user').replace('{value}', userId) };
     }
 
     await logAdminAction(req.session.user.id, req.session.user.username, 'TEMPLATE_TEST_SEND',
@@ -3525,7 +3525,7 @@ router.post('/notification-templates/:id/test-send', rbac.requirePermission('set
   } catch (err) {
     // SMTP/SMS এরর মেসেজে হোস্ট, পোর্ট, ক্রেডেনশিয়াল-সংক্রান্ত ইঙ্গিত থাকতে পারে।
     console.error('template test-send error:', err && err.stack ? err.stack : err);
-    res.status(500).json({ success: false, error: 'টেস্ট পাঠানো যায়নি — বিস্তারিত সার্ভার লগে আছে।' });
+    res.status(500).json({ success: false, error: req.t('admin_test_send_failed') });
   }
 });
 
@@ -3603,10 +3603,10 @@ router.post('/fraud-logs/:id/review', rbac.requirePermission('bot_monitoring_man
         `ফ্রড ফ্ল্যাগ #${id} (ইউজার #${r.rows[0].user_id}) কে "${action}" হিসেবে চিহ্নিত করা হয়েছে`, req.ip
       );
     }
-    req.flash('success', 'ফ্রড ফ্ল্যাগ আপডেট হয়েছে!');
+    req.flash('success', req.t('admin_fraud_flag_updated'));
   } catch (err) {
     console.error('Fraud flag review error:', err.message);
-    req.flash('error', 'সমস্যা হয়েছে!');
+    req.flash('error', req.t('admin_something_went_wrong_x'));
   }
   redirectBack(req, res, '/admin');
 });
@@ -3635,10 +3635,10 @@ router.post('/duplicate-accounts/:id/review', rbac.requirePermission('bot_monito
     const { id } = req.params;
     const action = req.body.action === 'dismiss' ? 'dismissed' : 'reviewed';
     await reviewDuplicateFlag(id, action, req.session.user.id, req.session.user.username, req.ip);
-    req.flash('success', 'ডুপ্লিকেট ফ্ল্যাগ আপডেট হয়েছে!');
+    req.flash('success', req.t('admin_duplicate_flag_updated'));
   } catch (err) {
     console.error('Duplicate flag review error:', err.message);
-    req.flash('error', 'সমস্যা হয়েছে!');
+    req.flash('error', req.t('admin_something_went_wrong_x'));
   }
   redirectBack(req, res, '/admin');
 });
@@ -3650,10 +3650,10 @@ router.post('/duplicate-accounts/scan', rbac.requirePermission('bot_monitoring_m
       req.session.user.id, req.session.user.username, 'DUPLICATE_ACCOUNT_SCAN_RUN',
       `ম্যানুয়াল স্ক্যান চালানো হয়েছে — ${count}টি নতুন ফ্ল্যাগ তৈরি হয়েছে`, req.ip
     );
-    req.flash('success', `স্ক্যান সম্পন্ন! ${count}টি নতুন ফ্ল্যাগ তৈরি হয়েছে।`);
+    req.flash('success', req.t('admin_scan_complete').replace('{value}', count));
   } catch (err) {
     console.error('Duplicate account scan error:', err.message);
-    req.flash('error', 'স্ক্যান ব্যর্থ হয়েছে!');
+    req.flash('error', req.t('admin_scan_failed'));
   }
   res.redirect('/admin/duplicate-accounts');
 });
@@ -3757,7 +3757,7 @@ router.get('/queues/api/stats', rbac.requirePermission('cron_jobs_manage'), asyn
   } catch (err) {
     // Redis/BullMQ এররে হোস্ট, পোর্ট ও কানেকশন বিবরণ থাকে — ব্রাউজারে পাঠানো হয় না।
     console.error('queue stats API error:', err && err.stack ? err.stack : err);
-    res.json({ success: false, error: 'Queue স্ট্যাটাস লোড করা যায়নি।' });
+    res.json({ success: false, error: req.t('admin_queue_status_failed') });
   }
 });
 
@@ -3770,7 +3770,7 @@ router.get('/queues/api/jobs/:queueName', rbac.requirePermission('cron_jobs_mana
     res.json({ success: true, jobs });
   } catch (err) {
     console.error('queue jobs API error:', err && err.stack ? err.stack : err);
-    res.json({ success: false, error: 'Job তালিকা লোড করা যায়নি।' });
+    res.json({ success: false, error: req.t('admin_jobs_load_failed') });
   }
 });
 
@@ -3789,7 +3789,7 @@ router.post('/queues/dead-letter/:id/retry', rbac.requirePermission('cron_jobs_m
     res.json({ success: true });
   } catch (err) {
     console.error('queue DLQ retry error:', err && err.stack ? err.stack : err);
-    res.json({ success: false, error: 'Job রিট্রাই করা যায়নি — বিস্তারিত সার্ভার লগে আছে।' });
+    res.json({ success: false, error: req.t('admin_job_retry_failed') });
   }
 });
 
@@ -3808,7 +3808,7 @@ router.post('/queues/dead-letter/:id/delete', rbac.requirePermission('cron_jobs_
     res.json({ success: true });
   } catch (err) {
     console.error('queue DLQ delete error:', err && err.stack ? err.stack : err);
-    res.json({ success: false, error: 'Job মুছে ফেলা যায়নি — বিস্তারিত সার্ভার লগে আছে।' });
+    res.json({ success: false, error: req.t('admin_job_delete_failed') });
   }
 });
 
@@ -3827,7 +3827,7 @@ router.post('/queues/fraud-scan/:userId', rbac.requirePermission('cron_jobs_mana
     res.json({ success: true, ...result });
   } catch (err) {
     console.error('queue fraud-scan enqueue error:', err && err.stack ? err.stack : err);
-    res.json({ success: false, error: 'Fraud scan ট্রিগার করা যায়নি — বিস্তারিত সার্ভার লগে আছে।' });
+    res.json({ success: false, error: req.t('admin_fraud_scan_trigger_failed') });
   }
 });
 
@@ -3912,11 +3912,11 @@ router.post('/api-keys/create', rbac.requirePermission('settings_edit'), async (
     const expiresAt = expiresInDays ? new Date(Date.now() + expiresInDays * 86400000) : null;
 
     if (!name) {
-      req.flash('error', 'কী-এর নাম দিতে হবে।');
+      req.flash('error', req.t('admin_key_name_required'));
       return res.redirect('/admin/api-keys');
     }
     if (!scopes.length) {
-      req.flash('error', 'অন্তত একটি scope নির্বাচন করতে হবে।');
+      req.flash('error', req.t('admin_scope_required'));
       return res.redirect('/admin/api-keys');
     }
 
@@ -3943,7 +3943,7 @@ router.post('/api-keys/create', rbac.requirePermission('settings_edit'), async (
     res.render('admin/api-keys', { keys: result.rows, newKey: raw });
   } catch (err) {
     console.error('API key create error:', err.message);
-    req.flash('error', 'API key তৈরি করতে সমস্যা হয়েছে।');
+    req.flash('error', req.t('admin_api_key_create_failed'));
     res.redirect('/admin/api-keys');
   }
 });
@@ -3959,11 +3959,11 @@ router.post('/api-keys/:id/toggle', rbac.requirePermission('settings_edit'), req
         action: 'API_KEY_TOGGLED', category: 'api', status: 'success', riskLevel: 'medium',
         details: { keyId: req.params.id, name: r.rows[0].name, enabled: r.rows[0].enabled }
       }).catch(e => console.error('logAuditEvent (API_KEY_TOGGLED) error:', e.message));
-      req.flash('success', `API key ${r.rows[0].enabled ? 'চালু' : 'বন্ধ'} করা হয়েছে।`);
+      req.flash('success', req.t('admin_api_key_toggled').replace('{value}', req.t(r.rows[0].enabled ? 'admin_word_enabled' : 'admin_word_disabled')));
     }
   } catch (err) {
     console.error('API key toggle error:', err.message);
-    req.flash('error', 'সমস্যা হয়েছে।');
+    req.flash('error', req.t('common_something_went_wrong'));
   }
   res.redirect('/admin/api-keys');
 });
@@ -3979,11 +3979,11 @@ router.post('/api-keys/:id/revoke', rbac.requirePermission('settings_edit'), req
         action: 'API_KEY_REVOKED', category: 'api', status: 'success', riskLevel: 'medium',
         details: { keyId: req.params.id, name: r.rows[0].name }
       }).catch(e => console.error('logAuditEvent (API_KEY_REVOKED) error:', e.message));
-      req.flash('success', 'API key revoke করা হয়েছে।');
+      req.flash('success', req.t('admin_api_key_revoked'));
     }
   } catch (err) {
     console.error('API key revoke error:', err.message);
-    req.flash('error', 'সমস্যা হয়েছে।');
+    req.flash('error', req.t('common_something_went_wrong'));
   }
   res.redirect('/admin/api-keys');
 });
@@ -4192,13 +4192,13 @@ router.post('/backups/create', rbac.requirePermission('backups_manage'), async (
 router.get('/backups/:id/download', rbac.requirePermission('backups_manage'), async (req, res) => {
   try {
     const record = await backupManager.getBackupById(req.params.id);
-    if (!record || record.status !== 'completed') return res.status(404).send('ব্যাকআপ পাওয়া যায়নি।');
+    if (!record || record.status !== 'completed') return res.status(404).send(req.t('admin_backup_not_found'));
     const filePath = backupManager.getBackupFilePath(record);
     await logAdminAction(req.session.user.id, req.session.user.username, 'BACKUP_DOWNLOADED', `${record.type} ব্যাকআপ ডাউনলোড হয়েছে (${record.filename})`, req.ip);
     res.download(filePath, record.filename);
   } catch (err) {
     console.error('Backup download error:', err && err.stack ? err.stack : err);
-    res.status(500).send('ডাউনলোড ব্যর্থ।');
+    res.status(500).send(req.t('admin_download_failed'));
   }
 });
 
@@ -4293,11 +4293,11 @@ router.get('/audit-logs', rbac.requirePermission('activity_log_view'), async (re
 router.get('/audit-logs/:id.json', rbac.requirePermission('activity_log_view'), requireIntParam('id'), async (req, res) => {
   try {
     const log = await getAuditLogById(req.params.id);
-    if (!log) return res.status(404).json({ error: 'পাওয়া যায়নি' });
+    if (!log) return res.status(404).json({ error: req.t('admin_not_found') });
     res.json(log);
   } catch (err) {
     console.error('Audit log detail error:', err.message);
-    res.status(500).json({ error: 'সার্ভার ত্রুটি' });
+    res.status(500).json({ error: req.t('common_server_error_short') });
   }
 });
 
@@ -4400,6 +4400,7 @@ router.post('/feature-flags/:id/delete', rbac.requirePermission('settings_edit')
 
 const fs = require('fs');
 const path = require('path');
+const { tr } = require('../utils/i18n');
 const LOCALES_DIR = path.join(__dirname, '..', 'locales');
 
 function readLocale(code) {
@@ -4438,7 +4439,7 @@ router.post('/localization/create', rbac.requirePermission('settings_edit'), asy
     const bnVal = req.body.bn || '';
     const enVal = req.body.en || '';
     if (!key || !/^[a-zA-Z0-9_]+$/.test(key)) {
-      req.flash('error', 'Key শুধু ইংরেজি অক্ষর, সংখ্যা ও আন্ডারস্কোর দিয়ে হতে হবে।');
+      req.flash('error', req.t('admin_key_format'));
       return res.redirect('/admin/localization');
     }
     const bn = readLocale('bn'); const en = readLocale('en');
@@ -4446,10 +4447,10 @@ router.post('/localization/create', rbac.requirePermission('settings_edit'), asy
     writeLocale('bn', bn); writeLocale('en', en);
     refreshCache(req);
     await logAdminAction(req.session.user.id, req.session.user.username, 'LOCALIZATION_KEY_CREATED', `Key তৈরি: ${key}`, req.ip);
-    req.flash('success', '✅ নতুন Key তৈরি হয়েছে।');
+    req.flash('success', req.t('admin_key_created'));
     res.redirect('/admin/localization');
   } catch (err) {
-    req.flash('error', 'Key তৈরি করতে সমস্যা হয়েছে।');
+    req.flash('error', req.t('admin_key_create_failed'));
     res.redirect('/admin/localization');
   }
 });
@@ -4459,16 +4460,16 @@ router.post('/localization/update', rbac.requirePermission('settings_edit'), asy
     const key = (req.body.key || '').trim();
     const bnVal = req.body.bn || '';
     const enVal = req.body.en || '';
-    if (!key) { req.flash('error', 'Key পাওয়া যায়নি।'); return res.redirect('/admin/localization'); }
+    if (!key) { req.flash('error', req.t('admin_key_not_found')); return res.redirect('/admin/localization'); }
     const bn = readLocale('bn'); const en = readLocale('en');
     bn[key] = bnVal; en[key] = enVal;
     writeLocale('bn', bn); writeLocale('en', en);
     refreshCache(req);
     await logAdminAction(req.session.user.id, req.session.user.username, 'LOCALIZATION_KEY_UPDATED', `Key আপডেট: ${key}`, req.ip);
-    req.flash('success', '✅ Key আপডেট হয়েছে।');
+    req.flash('success', req.t('admin_key_updated'));
     res.redirect('/admin/localization');
   } catch (err) {
-    req.flash('error', 'Key আপডেট করতে সমস্যা হয়েছে।');
+    req.flash('error', req.t('admin_key_update_failed'));
     res.redirect('/admin/localization');
   }
 });
@@ -4481,10 +4482,10 @@ router.post('/localization/delete', rbac.requirePermission('settings_edit'), asy
     writeLocale('bn', bn); writeLocale('en', en);
     refreshCache(req);
     await logAdminAction(req.session.user.id, req.session.user.username, 'LOCALIZATION_KEY_DELETED', `Key ডিলিট: ${key}`, req.ip);
-    req.flash('success', '✅ Key ডিলিট হয়েছে।');
+    req.flash('success', req.t('admin_key_deleted'));
     res.redirect('/admin/localization');
   } catch (err) {
-    req.flash('error', 'Key ডিলিট করতে সমস্যা হয়েছে।');
+    req.flash('error', req.t('admin_key_delete_failed'));
     res.redirect('/admin/localization');
   }
 });
@@ -4545,11 +4546,11 @@ router.post('/localization/import/:lang', rbac.requirePermission('settings_edit'
     const lang = req.params.lang === 'en' ? 'en' : 'bn';
     let incoming;
     try { incoming = JSON.parse(req.body.json || '{}'); } catch (e) {
-      req.flash('error', 'বৈধ JSON না — পার্স করা যায়নি।');
+      req.flash('error', req.t('admin_invalid_json'));
       return res.redirect('/admin/localization');
     }
     if (typeof incoming !== 'object' || Array.isArray(incoming) || incoming === null) {
-      req.flash('error', 'JSON অবশ্যই key-value অবজেক্ট হতে হবে।');
+      req.flash('error', req.t('admin_json_must_be_object'));
       return res.redirect('/admin/localization');
     }
     const current = readLocale(lang);
@@ -4557,10 +4558,10 @@ router.post('/localization/import/:lang', rbac.requirePermission('settings_edit'
     writeLocale(lang, merged);
     refreshCache(req);
     await logAdminAction(req.session.user.id, req.session.user.username, 'LOCALIZATION_IMPORTED', `${lang}.json import (${Object.keys(incoming).length}টি key)`, req.ip);
-    req.flash('success', `✅ ${Object.keys(incoming).length}টি Key ইম্পোর্ট হয়েছে (${lang})।`);
+    req.flash('success', req.t('admin_keys_imported').replace('{value1}', Object.keys(incoming).length).replace('{value2}', lang));
     res.redirect('/admin/localization');
   } catch (err) {
-    req.flash('error', 'ইম্পোর্ট ব্যর্থ হয়েছে।');
+    req.flash('error', req.t('admin_import_failed'));
     res.redirect('/admin/localization');
   }
 });
@@ -4569,10 +4570,10 @@ router.post('/localization/refresh-cache', rbac.requirePermission('settings_edit
   try {
     refreshCache(req);
     await logAdminAction(req.session.user.id, req.session.user.username, 'LOCALIZATION_CACHE_REFRESHED', 'Translation cache রিফ্রেশ করা হয়েছে', req.ip);
-    req.flash('success', '✅ Cache রিফ্রেশ হয়েছে।');
+    req.flash('success', req.t('admin_cache_refreshed'));
     res.redirect('/admin/localization');
   } catch (err) {
-    req.flash('error', 'Cache রিফ্রেশ ব্যর্থ হয়েছে।');
+    req.flash('error', req.t('admin_cache_refresh_failed'));
     res.redirect('/admin/localization');
   }
 });
@@ -4592,7 +4593,7 @@ router.post('/announcements/create', rbac.requirePermission('settings_edit'), as
   try {
     const { type, title_bn, title_en, message_bn, message_en, target_type, target_role, target_user_id, starts_at, expires_at } = req.body;
     if (!message_bn || !message_bn.trim()) {
-      return res.redirect('/admin/announcements?error=' + encodeURIComponent('বাংলা মেসেজ আবশ্যক'));
+      return res.redirect('/admin/announcements?error=' + encodeURIComponent(req.t('admin_bengali_message_required')));
     }
     const r = await pool.query(
       `INSERT INTO announcements (type, title_bn, title_en, message_bn, message_en, target_type, target_role, target_user_id, starts_at, expires_at, created_by, created_by_username)
@@ -4609,7 +4610,7 @@ router.post('/announcements/create', rbac.requirePermission('settings_edit'), as
     res.redirect('/admin/announcements?created=1');
   } catch (err) {
     console.error('Announcement create error:', err.message);
-    res.redirect('/admin/announcements?error=' + encodeURIComponent('তৈরি করতে সমস্যা হয়েছে'));
+    res.redirect('/admin/announcements?error=' + encodeURIComponent(req.t('admin_create_failed')));
   }
 });
 
@@ -4631,7 +4632,7 @@ router.post('/announcements/:id/update', rbac.requirePermission('settings_edit')
     res.redirect('/admin/announcements?created=1');
   } catch (err) {
     console.error('Announcement update error:', err.message);
-    res.redirect('/admin/announcements?error=' + encodeURIComponent('আপডেট ব্যর্থ হয়েছে'));
+    res.redirect('/admin/announcements?error=' + encodeURIComponent(req.t('admin_update_failed')));
   }
 });
 
@@ -4685,7 +4686,7 @@ router.get('/diagnostics/json', async (req, res) => {
     res.json(report);
   } catch (err) {
     console.error('diagnostics json error:', err.message);
-    res.status(500).json({ overall: 'error', error: 'ডায়াগনস্টিক চালানো যায়নি' });
+    res.status(500).json({ overall: 'error', error: req.t('admin_diagnostic_failed') });
   }
 });
 
@@ -4711,7 +4712,7 @@ router.get('/cron-jobs/:key/logs', rbac.requirePermission('cron_jobs_manage'), a
     res.render('admin/cron-job-logs', { job, logs, active: 'cron-jobs' });
   } catch (err) {
     console.error('Cron job logs error:', err.message);
-    req.flash('error', 'জব হিস্ট্রি লোড করা যায়নি।');
+    req.flash('error', req.t('admin_job_history_failed'));
     res.redirect('/admin/cron-jobs');
   }
 });
@@ -4721,7 +4722,7 @@ router.post('/cron-jobs/:key/run', rbac.requirePermission('cron_jobs_manage'), a
   try {
     const key = req.params.key;
     if (!scheduler.JOB_DEFINITIONS[key]) {
-      req.flash('error', `অজানা cron job: ${key}`);
+      req.flash('error', req.t('admin_unknown_cron_job').replace('{value}', key));
       return res.redirect('/admin/cron-jobs');
     }
     const result = await scheduler.runJob(key, { triggeredBy: `manual:${req.session.user.username}` });
@@ -4731,11 +4732,11 @@ router.post('/cron-jobs/:key/run', rbac.requirePermission('cron_jobs_manage'), a
       req.ip
     );
     req.flash(result.status === 'success' ? 'success' : 'error',
-      `"${key}" রান হয়েছে (${result.durationMs}ms) — ${result.message}`);
+      req.t('admin_cron_job_ran').replace('{value1}', key).replace('{value2}', result.durationMs).replace('{value3}', result.message));
     res.redirect('/admin/cron-jobs');
   } catch (err) {
     console.error('Cron run-now error:', err && err.stack ? err.stack : err);
-    req.flash('error', publicMessage(err, 'Job রান করা যায়নি — বিস্তারিত সার্ভার লগে আছে।'));
+    req.flash('error', publicMessage(err, req.t('admin_job_run_failed')));
     res.redirect('/admin/cron-jobs');
   }
 });
@@ -4745,7 +4746,7 @@ router.post('/cron-jobs/:key/toggle', rbac.requirePermission('cron_jobs_manage')
   try {
     const key = req.params.key;
     if (!scheduler.JOB_DEFINITIONS[key]) {
-      req.flash('error', `অজানা cron job: ${key}`);
+      req.flash('error', req.t('admin_unknown_cron_job').replace('{value}', key));
       return res.redirect('/admin/cron-jobs');
     }
     const enabled = req.body.enabled === 'true' || req.body.enabled === '1';
@@ -4754,11 +4755,11 @@ router.post('/cron-jobs/:key/toggle', rbac.requirePermission('cron_jobs_manage')
       req.session.user.id, req.session.user.username, 'CRON_JOB_TOGGLE',
       `Cron job "${key}" ${enabled ? 'সক্রিয়' : 'নিষ্ক্রিয়'} করা হয়েছে`, req.ip
     );
-    req.flash('success', `"${key}" ${enabled ? 'সক্রিয়' : 'নিষ্ক্রিয়'} করা হয়েছে।`);
+    req.flash('success', req.t('admin_cron_job_toggled').replace('{value1}', key).replace('{value2}', req.t(enabled ? 'admin_word_active' : 'admin_word_inactive')));
     res.redirect('/admin/cron-jobs');
   } catch (err) {
     console.error('Cron toggle error:', err && err.stack ? err.stack : err);
-    req.flash('error', publicMessage(err, 'Job টগল করা যায়নি — বিস্তারিত সার্ভার লগে আছে।'));
+    req.flash('error', publicMessage(err, req.t('admin_job_toggle_failed')));
     res.redirect('/admin/cron-jobs');
   }
 });
@@ -4770,7 +4771,7 @@ router.get('/cron-jobs/status/json', rbac.requirePermission('cron_jobs_manage'),
     res.json({ success: true, jobs });
   } catch (err) {
     console.error('Cron status JSON error:', err && err.stack ? err.stack : err);
-    res.status(500).json({ success: false, message: 'Cron স্ট্যাটাস লোড করা যায়নি।' });
+    res.status(500).json({ success: false, message: req.t('admin_cron_status_failed') });
   }
 });
 

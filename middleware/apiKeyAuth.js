@@ -7,6 +7,7 @@
 
 const crypto = require('crypto');
 const { pool } = require('../db');
+const { tr } = require('../utils/i18n');
 
 function hashKey(raw) {
   return crypto.createHash('sha256').update(raw).digest('hex');
@@ -19,7 +20,7 @@ function requireApiKey(requiredScope) {
       const raw = header && header.startsWith('Bearer ') ? header.slice(7) : header;
 
       if (!raw) {
-        return res.status(401).json({ error: 'unauthorized', message: 'X-API-Key হেডার প্রয়োজন।' });
+        return res.status(401).json({ error: 'unauthorized', message: tr(req, 'api_key_header_required') });
       }
 
       const hash = hashKey(raw);
@@ -27,16 +28,16 @@ function requireApiKey(requiredScope) {
       const key = result.rows[0];
 
       if (!key) {
-        return res.status(401).json({ error: 'unauthorized', message: 'অবৈধ API key।' });
+        return res.status(401).json({ error: 'unauthorized', message: tr(req, 'api_key_invalid') });
       }
       if (!key.enabled) {
-        return res.status(403).json({ error: 'forbidden', message: 'এই API key নিষ্ক্রিয়/revoke করা হয়েছে।' });
+        return res.status(403).json({ error: 'forbidden', message: tr(req, 'api_key_revoked') });
       }
       if (key.expires_at && new Date(key.expires_at) < new Date()) {
-        return res.status(403).json({ error: 'forbidden', message: 'এই API key-এর মেয়াদ শেষ হয়ে গেছে।' });
+        return res.status(403).json({ error: 'forbidden', message: tr(req, 'api_key_expired') });
       }
       if (requiredScope && !(key.scopes || []).includes(requiredScope)) {
-        return res.status(403).json({ error: 'forbidden', message: `এই key-এর "${requiredScope}" scope নেই।` });
+        return res.status(403).json({ error: 'forbidden', message: tr(req, 'api_key_missing_scope').replace('{value}', requiredScope) });
       }
 
       req.apiKey = key;
@@ -47,7 +48,7 @@ function requireApiKey(requiredScope) {
       next();
     } catch (err) {
       console.error('[apiKeyAuth] error:', err.message);
-      res.status(500).json({ error: 'server_error', message: 'API key যাচাই করতে সমস্যা হয়েছে।' });
+      res.status(500).json({ error: 'server_error', message: tr(req, 'api_key_verify_failed') });
     }
   };
 }

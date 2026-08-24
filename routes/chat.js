@@ -107,10 +107,10 @@ const upload = multer({
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname || '').toLowerCase();
     if (!ALLOWED_EXTENSIONS.includes(ext)) {
-      return cb(new Error('শুধু jpg, jpeg, png, webp, mp4, mov, webm ফাইল আপলোড করা যাবে'));
+      return cb(new Error(req.t('chat_allowed_file_types')));
     }
     if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-      return cb(new Error('অসমর্থিত ফাইল টাইপ'));
+      return cb(new Error(req.t('chat_unsupported_file_type')));
     }
     cb(null, true);
   }
@@ -125,7 +125,7 @@ router.get('/admin', isAdmin, (req, res) => {
 });
 
 router.post('/upload', isAuth, upload.single('file'), async (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'ফাইল পাওয়া যায়নি' });
+  if (!req.file) return res.status(400).json({ error: req.t('chat_file_not_found') });
   try {
     const ext = path.extname(req.file.originalname || '').toLowerCase();
     const detectedMime = detectMagicBytes(req.file.buffer);
@@ -134,7 +134,7 @@ router.post('/upload', isAuth, upload.single('file'), async (req, res) => {
     // অথবা extension যা দাবি করছে তার সাথে প্রকৃত কনটেন্ট না মিললে — reject।
     // এভাবে কেউ malicious ফাইলের নাম/এক্সটেনশন/Content-Type বদলে ফাঁকি দিতে পারবে না।
     if (!detectedMime || !extensionMatchesDetectedType(ext, detectedMime)) {
-      return res.status(400).json({ error: 'ফাইলের প্রকৃত কনটেন্ট অনুমোদিত ফরম্যাটের (jpg, jpeg, png, webp, mp4, mov, webm) সাথে মেলেনি' });
+      return res.status(400).json({ error: req.t('chat_file_content_mismatch') });
     }
 
     const isVideo = detectedMime.startsWith('video');
@@ -151,7 +151,7 @@ router.post('/upload', isAuth, upload.single('file'), async (req, res) => {
     res.json({ url: result.secure_url, fileType: isVideo ? 'video' : 'image' });
   } catch (err) {
     console.error('Cloudinary error:', err);
-    res.status(500).json({ error: 'আপলোড ব্যর্থ হয়েছে' });
+    res.status(500).json({ error: req.t('upload_fail') });
   }
 });
 
@@ -178,7 +178,7 @@ router.get('/history', isAuth, async (req, res) => {
     if (upd.rowCount > 0) notifyAdminsSeen(userId);
     res.json(result.rows);
   } catch (err) {
-    res.status(500).json({ error: 'সার্ভার ত্রুটি' });
+    res.status(500).json({ error: req.t('common_server_error_short') });
   }
 });
 
@@ -210,7 +210,7 @@ router.get('/admin/conversations', isAdmin, async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error('admin/conversations error:', err.message);
-    res.status(500).json({ error: 'সার্ভার ত্রুটি' });
+    res.status(500).json({ error: req.t('common_server_error_short') });
   }
 });
 
@@ -233,7 +233,7 @@ router.get('/admin/history/:userId', isAdmin, async (req, res) => {
     if (upd.rowCount > 0) notifyUserSeen(req.params.userId);
     res.json(result.rows);
   } catch (err) {
-    res.status(500).json({ error: 'সার্ভার ত্রুটি' });
+    res.status(500).json({ error: req.t('common_server_error_short') });
   }
 });
 
@@ -241,7 +241,7 @@ router.get('/admin/history/:userId', isAdmin, async (req, res) => {
 // (global HTML error page-এর বদলে, যেহেতু ফ্রন্টএন্ড JSON আশা করে)
 router.use((err, req, res, next) => {
   if (req.path === '/upload') {
-    return res.status(400).json({ error: err.message || 'আপলোড ব্যর্থ হয়েছে' });
+    return res.status(400).json({ error: err.message || req.t('upload_fail') });
   }
   next(err);
 });

@@ -227,7 +227,7 @@ router.get('/api/recent-wins', async (req, res) => {
 router.get('/play', isAuth, (req, res) => {
   const gameSlug = req.query.game || 'slots';
   if (!supportedGames[gameSlug]) {
-    req.flash('error', 'গেমটি পাওয়া যায়নি');
+    req.flash('error', req.t('games_not_found'));
     return res.redirect('/');
   }
   res.render('games/play', {
@@ -241,7 +241,7 @@ router.get('/play', isAuth, (req, res) => {
 router.get('/:slug', isAuth, (req, res) => {
   const gameSlug = req.params.slug;
   if (!supportedGames[gameSlug]) {
-    req.flash('error', 'গেমটি পাওয়া যায়নি');
+    req.flash('error', req.t('games_not_found'));
     return res.redirect('/');
   }
   res.render('games/play', {
@@ -258,12 +258,12 @@ router.post('/play', isAuth, async (req, res) => {
   const betAmount = parseInt(amount);
   const isDemo = !!demo;
 
-  if (isNaN(betAmount) || betAmount <= 0) return res.status(400).json({ success: false, message: 'সঠিক পরিমাণ দিন' });
+  if (isNaN(betAmount) || betAmount <= 0) return res.status(400).json({ success: false, message: req.t('common_enter_valid_amount') });
 
   const minBet = Number(await getSetting('min_bet'));
   const maxBet = Number(await getSetting('max_bet'));
-  if (betAmount < minBet) return res.status(400).json({ success: false, message: `সর্বনিম্ন বাজি ৳${minBet}` });
-  if (betAmount > maxBet) return res.status(400).json({ success: false, message: `সর্বোচ্চ বাজি ৳${maxBet}` });
+  if (betAmount < minBet) return res.status(400).json({ success: false, message: req.t('bet_min_amount').replace('{value}', minBet) });
+  if (betAmount > maxBet) return res.status(400).json({ success: false, message: req.t('bet_max_amount').replace('{value}', maxBet) });
 
   const client = await pool.connect();
   try {
@@ -272,7 +272,7 @@ router.post('/play', isAuth, async (req, res) => {
     const userResult = await client.query(`SELECT ${balanceCol} FROM users WHERE id = $1 FOR UPDATE`, [userId]);
     if (userResult.rows[0][balanceCol] < betAmount) {
       await client.query('ROLLBACK');
-      return res.status(400).json({ success: false, message: isDemo ? 'পর্যাপ্ত ডেমো ব্যালেন্স নেই' : 'পর্যাপ্ত ব্যালেন্স নেই' });
+      return res.status(400).json({ success: false, message: isDemo ? req.t('balance_insufficient_demo') : req.t('balance_insufficient') });
     }
 
     let winAmount = 0;
@@ -315,7 +315,7 @@ router.post('/play', isAuth, async (req, res) => {
       if (isDemo) {
         req.session.user.demo_balance = Number(req.session.user.demo_balance || 0) - betAmount;
         broadcastDemoStats().catch(e => console.error('demo stats:', e.message));
-        return res.json({ success: true, message: 'গেম শুরু হয়েছে (ডেমো)', demo: true, newBalance: req.session.user.demo_balance });
+        return res.json({ success: true, message: req.t('games_started_demo'), demo: true, newBalance: req.session.user.demo_balance });
       }
 
       addTurnover(userId, 'casino', betAmount).catch(e => console.error('turnover:', e.message));
@@ -327,7 +327,7 @@ router.post('/play', isAuth, async (req, res) => {
       checkBadges(userId).catch(e => console.error('badges:', e.message));
       broadcastDemoStats().catch(e => console.error('demo stats:', e.message));
 
-      return res.json({ success: true, message: 'গেম শুরু হয়েছে' });
+      return res.json({ success: true, message: req.t('games_started') });
     }
 
     if (gameHandlers[gameSlug]) {
@@ -379,7 +379,7 @@ router.post('/play', isAuth, async (req, res) => {
 
   } catch (err) {
     await client.query('ROLLBACK');
-    res.status(500).json({ success: false, message: 'সার্ভার ত্রুটি' });
+    res.status(500).json({ success: false, message: req.t('common_server_error_short') });
   } finally {
     client.release();
   }
@@ -400,7 +400,7 @@ router.post('/cashout', isAuth, async (req, res) => {
   const state = req.session.gameState;
 
   if (!state || state.game !== gameSlug || !state.roundToken) {
-    return res.status(400).json({ success: false, message: 'কোনো চলমান গেম নেই' });
+    return res.status(400).json({ success: false, message: req.t('games_no_active_round') });
   }
 
   const isDemo = !!state.isDemo;
@@ -408,7 +408,7 @@ router.post('/cashout', isAuth, async (req, res) => {
 
   const cashMultiplier = parseFloat(multiplier);
   if (isNaN(cashMultiplier) || cashMultiplier < 1) {
-    return res.status(400).json({ success: false, message: 'অকার্যকর মাল্টিপ্লায়ার' });
+    return res.status(400).json({ success: false, message: req.t('games_invalid_multiplier') });
   }
 
   // atomic claim: শুধু settled_at IS NULL অবস্থায় থাকা রাউন্ড claim করা যাবে। Postgres-এর
@@ -425,7 +425,7 @@ router.post('/cashout', isAuth, async (req, res) => {
   req.session.gameState = null;
 
   if (claim.rowCount === 0) {
-    return res.status(400).json({ success: false, message: 'এই রাউন্ড ইতিমধ্যে নিষ্পত্তি হয়ে গেছে' });
+    return res.status(400).json({ success: false, message: req.t('games_round_already_settled') });
   }
 
   const round = claim.rows[0];
@@ -442,7 +442,7 @@ router.post('/cashout', isAuth, async (req, res) => {
   // ক্লায়েন্ট UI বাইপাস করে সরাসরি API কল, legit অ্যানিমেশন কখনো displayed multiplier-এর
   // চেয়ে বেশি claim পাঠায় না।
   if (cashMultiplier > maxReachableMultiplier(elapsedSeconds) + MULTIPLIER_TIMING_TOLERANCE) {
-    return res.status(400).json({ success: false, message: 'এখনো এই মাল্টিপ্লায়ারে পৌঁছায়নি' });
+    return res.status(400).json({ success: false, message: req.t('games_multiplier_not_reached') });
   }
 
   if (cashMultiplier > crashPoint) {
@@ -453,7 +453,7 @@ router.post('/cashout', isAuth, async (req, res) => {
       winAmount: 0,
       demo: isDemo,
       newBalance: isDemo ? req.session.user.demo_balance : req.session.user.coins,
-      message: `উড়োজাহাজ ${crashPoint}x-এ ক্র্যাশ করেছে!`
+      message: req.t('games_aviator_crashed_at').replace('{value}', crashPoint)
     });
   }
 
@@ -505,7 +505,7 @@ router.post('/cashout', isAuth, async (req, res) => {
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('cashout error:', err.message);
-    res.status(500).json({ success: false, message: 'সার্ভার ত্রুটি' });
+    res.status(500).json({ success: false, message: req.t('common_server_error_short') });
   } finally {
     client.release();
   }

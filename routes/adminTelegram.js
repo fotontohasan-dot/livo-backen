@@ -22,6 +22,7 @@ const RedisRateLimitStore = require('../services/redisRateLimitStore');
 const { logAdminAction, logEvent: logAuditEvent } = require('../services/auditLog');
 const telegramConfig = require('../services/telegramConfig');
 const { notifyTelegram } = require('../services/telegramNotify');
+const { tr } = require('../utils/i18n');
 
 // Telegram API-তে বাইরের কল যায় এমন রুটে (test/test-notification) কড়া সীমা
 const telegramTestLimiter = rateLimit({
@@ -29,9 +30,9 @@ const telegramTestLimiter = rateLimit({
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
-  message: 'অনেকবার টেস্ট করা হয়েছে, কিছুক্ষণ পর আবার চেষ্টা করুন।',
+  message: (req) => tr(req, 'admin_rate_limited_test'),
   store: new RedisRateLimitStore('rl:tgtest:'),
-  handler: (req, res) => res.status(429).json({ success: false, error: 'অনেকবার টেস্ট করা হয়েছে, কিছুক্ষণ পর আবার চেষ্টা করুন।' })
+  handler: (req, res) => res.status(429).json({ success: false, error: tr(req, 'admin_rate_limited_test') })
 });
 
 const telegramSaveLimiter = rateLimit({
@@ -39,7 +40,7 @@ const telegramSaveLimiter = rateLimit({
   max: 40,
   standardHeaders: true,
   legacyHeaders: false,
-  message: 'অনেকবার সেভ করা হয়েছে, কিছুক্ষণ পর আবার চেষ্টা করুন।',
+  message: (req) => tr(req, 'admin_rate_limited_save'),
   store: new RedisRateLimitStore('rl:tgsave:')
 });
 
@@ -96,7 +97,7 @@ router.get('/status', rbac.requirePermission('settings_view'), async (req, res) 
   try {
     res.json({ success: true, status: await telegramConfig.getStatus() });
   } catch (err) {
-    res.status(500).json({ success: false, error: 'স্ট্যাটাস লোড করা যায়নি।' });
+    res.status(500).json({ success: false, error: req.t('admin_status_load_failed') });
   }
 });
 
@@ -105,7 +106,7 @@ router.post('/settings', telegramSaveLimiter, rbac.requirePermission('settings_e
   try {
     const rawChatId = req.body.chat_id === undefined || req.body.chat_id === null ? '' : String(req.body.chat_id).trim();
     if (rawChatId && !telegramConfig.isValidChatId(rawChatId)) {
-      return res.redirect('/admin/telegram?error=' + encodeURIComponent('Chat ID সঠিক নয় (সংখ্যা অথবা @username হতে হবে)।'));
+      return res.redirect('/admin/telegram?error=' + encodeURIComponent(req.t('admin_chat_id_invalid')));
     }
 
     const enabled = ['true', 'on', '1'].includes(String(req.body.enabled).toLowerCase());
@@ -127,7 +128,7 @@ router.post('/settings', telegramSaveLimiter, rbac.requirePermission('settings_e
     return res.redirect('/admin/telegram?saved=1');
   } catch (err) {
     console.error('Telegram settings save error:', err && err.stack ? err.stack : err);
-    if (!res.headersSent) return res.redirect('/admin/telegram?error=' + encodeURIComponent('সেটিংস সেভ করা যায়নি।'));
+    if (!res.headersSent) return res.redirect('/admin/telegram?error=' + encodeURIComponent(req.t('admin_settings_save_failed')));
   }
 });
 
@@ -149,10 +150,10 @@ router.post('/token', telegramSaveLimiter, rbac.requirePermission('settings_edit
 
     const token = String(req.body.bot_token || '').trim();
     if (!telegramConfig.isValidBotToken(token)) {
-      return res.redirect('/admin/telegram?error=' + encodeURIComponent('Bot token-এর ফরম্যাট সঠিক নয়।'));
+      return res.redirect('/admin/telegram?error=' + encodeURIComponent(req.t('admin_bot_token_format_invalid')));
     }
     if (!telegramConfig.isEncryptionAvailable()) {
-      return res.redirect('/admin/telegram?error=' + encodeURIComponent('এনক্রিপশন কী সেট নেই — TELEGRAM_SETTINGS_KEY (বা SESSION_SECRET) ছাড়া টোকেন সেভ করা হবে না।'));
+      return res.redirect('/admin/telegram?error=' + encodeURIComponent(req.t('admin_encryption_key_missing')));
     }
 
     await telegramConfig.saveConfig({ botToken: token }, actorOf(req));
@@ -169,7 +170,7 @@ router.post('/token', telegramSaveLimiter, rbac.requirePermission('settings_edit
     return res.redirect('/admin/telegram?saved=1');
   } catch (err) {
     console.error('Telegram token save error:', err && err.stack ? err.stack : err);
-    if (!res.headersSent) return res.redirect('/admin/telegram?error=' + encodeURIComponent('টোকেন সেভ করা যায়নি।'));
+    if (!res.headersSent) return res.redirect('/admin/telegram?error=' + encodeURIComponent(req.t('admin_token_save_failed')));
   }
 });
 
@@ -198,7 +199,7 @@ router.post('/test', telegramTestLimiter, rbac.requirePermission('settings_edit'
     return res.status(result.success ? 200 : 400).json({ ...result, status });
   } catch (err) {
     console.error('Telegram test error:', err && err.stack ? err.stack : err);
-    return res.status(500).json({ success: false, error: 'টেস্ট চালানো যায়নি।' });
+    return res.status(500).json({ success: false, error: req.t('admin_test_run_failed') });
   }
 });
 
@@ -218,9 +219,9 @@ router.post('/test-notification', telegramTestLimiter, rbac.requirePermission('s
       disabled: 'ইন্টিগ্রেশন বন্ধ আছে।',
       not_configured: 'Bot token বা Chat ID সেট করা নেই।',
       category_disabled: 'এই ক্যাটাগরির নোটিফিকেশন বন্ধ আছে।',
-      api_error: 'Telegram API রিকোয়েস্ট প্রত্যাখ্যান করেছে।',
-      network_error: 'Telegram API-তে পৌঁছানো যায়নি।',
-      config_error: 'কনফিগ লোড করা যায়নি।'
+      api_error: req.t('admin_telegram_api_rejected'),
+      network_error: req.t('admin_telegram_api_unreachable'),
+      config_error: req.t('admin_config_load_failed')
     };
 
     await audit(req, {
@@ -232,11 +233,11 @@ router.post('/test-notification', telegramTestLimiter, rbac.requirePermission('s
       meta: { category, sent: result.sent, reason: result.reason || null }
     });
 
-    if (result.sent) return res.json({ success: true, message: 'টেস্ট নোটিফিকেশন পাঠানো হয়েছে।' });
-    return res.status(400).json({ success: false, error: reasonText[result.reason] || 'নোটিফিকেশন পাঠানো যায়নি।', reason: result.reason });
+    if (result.sent) return res.json({ success: true, message: req.t('admin_test_notification_sent') });
+    return res.status(400).json({ success: false, error: reasonText[result.reason] || req.t('admin_notification_send_failed'), reason: result.reason });
   } catch (err) {
     console.error('Telegram test notification error:', err && err.stack ? err.stack : err);
-    return res.status(500).json({ success: false, error: 'টেস্ট নোটিফিকেশন পাঠানো যায়নি।' });
+    return res.status(500).json({ success: false, error: req.t('admin_test_notification_failed') });
   }
 });
 

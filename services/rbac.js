@@ -15,6 +15,7 @@ const cache = require('./cache');
 // বার্তা — তাই PublicError। রুটের catch ব্লক publicMessage() দিয়ে শুধু এগুলোই পাস করে,
 // একই try-এর ভেতরে ঘটা pg/ইন্টারনাল এরর জেনেরিক বার্তায় চাপা পড়ে।
 const { PublicError } = require('../utils/safeError');
+const { tr } = require('../utils/i18n');
 
 // ==================== Permission Catalog ====================
 // key -> { label, group } — Admin UI-এর Permission Matrix এই লিস্ট থেকেই তৈরি হয়।
@@ -111,9 +112,9 @@ function requirePermission(permKey) {
       })();
 
       if (req.path.includes('/api/')) {
-        return res.status(403).json({ success: false, error: 'এই অ্যাকশনের জন্য আপনার পর্যাপ্ত অনুমতি নেই।' });
+        return res.status(403).json({ success: false, error: tr(req, 'rbac_permission_denied') });
       }
-      req.flash && req.flash('error', '❌ এই অ্যাকশনের জন্য আপনার পর্যাপ্ত অনুমতি নেই।');
+      req.flash && req.flash('error', tr(req, 'rbac_permission_denied_x'));
       return res.redirect('/admin');
     } catch (err) {
       console.error('requirePermission error:', err.message);
@@ -150,9 +151,9 @@ function requireSuperAdmin() {
       })();
 
       if (req.path.includes('/api/')) {
-        return res.status(403).json({ success: false, error: 'এই অ্যাকশনের জন্য super admin অ্যাক্সেস প্রয়োজন।' });
+        return res.status(403).json({ success: false, error: tr(req, 'rbac_super_admin_required') });
       }
-      req.flash && req.flash('error', '❌ এই অ্যাকশনের জন্য super admin অ্যাক্সেস প্রয়োজন।');
+      req.flash && req.flash('error', tr(req, 'rbac_super_admin_required_x'));
       return res.redirect('/admin');
     } catch (err) {
       console.error('requireSuperAdmin error:', err.message);

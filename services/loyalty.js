@@ -3,6 +3,7 @@
 // নিয়ম: প্রতি ১০০ বাজিতে ১ পয়েন্ট। ১০০ পয়েন্ট = ১০ কয়েন (রূপান্তরে)।
 
 const { pool } = require('../db');
+const { t } = require('../utils/i18n');
 
 const POINTS_PER_100_STAKE = 1;   // প্রতি ১০০ বাজিতে ১ পয়েন্ট
 const POINT_TO_COIN = 0.1;        // ১ পয়েন্ট = ০.১ কয়েন (১০০ পয়েন্ট = ১০ কয়েন)
@@ -44,10 +45,10 @@ async function getLoyalty(userId) {
 }
 
 // ==================== পয়েন্ট কয়েনে রূপান্তর ====================
-async function redeemPoints(userId, redeemPoints) {
+async function redeemPoints(userId, redeemPoints, lang = 'bn') {
   const pts = parseInt(redeemPoints);
   if (isNaN(pts) || pts < MIN_REDEEM) {
-    return { success: false, message: `সর্বনিম্ন ${MIN_REDEEM} পয়েন্ট রূপান্তর করা যায়।` };
+    return { success: false, message: t(lang, 'loyalty_min_redeem').replace('{value}', MIN_REDEEM) };
   }
 
   const client = await pool.connect();
@@ -59,13 +60,13 @@ async function redeemPoints(userId, redeemPoints) {
 
     if (have < pts) {
       await client.query('ROLLBACK');
-      return { success: false, message: 'পর্যাপ্ত পয়েন্ট নেই।' };
+      return { success: false, message: t(lang, 'loyalty_insufficient_points') };
     }
 
     const coins = Math.floor(pts * POINT_TO_COIN);
     if (coins <= 0) {
       await client.query('ROLLBACK');
-      return { success: false, message: 'রূপান্তরের পরিমাণ খুব কম।' };
+      return { success: false, message: t(lang, 'loyalty_amount_too_small') };
     }
 
     await client.query(`UPDATE users SET loyalty_points = loyalty_points - $1, coins = coins + $2 WHERE id = $3`, [pts, coins, userId]);
@@ -83,11 +84,11 @@ async function redeemPoints(userId, redeemPoints) {
     );
 
     await client.query('COMMIT');
-    return { success: true, coins, message: `${coins} কয়েন পেয়েছেন!` };
+    return { success: true, coins, message: t(lang, 'reward_coins_received_coins').replace('{value}', coins) };
   } catch (e) {
     await client.query('ROLLBACK');
     console.error('redeemPoints error:', e.message);
-    return { success: false, message: 'সার্ভার ত্রুটি।' };
+    return { success: false, message: t(lang, 'common_server_error') };
   } finally {
     client.release();
   }

@@ -31,6 +31,7 @@ function clampPage(value, max = MAX_PAGE) {
 // backUrl() একই সমস্যার নিরাপদ সমাধান আগে থেকেই রাখে: same-host যাচাই করে, আর
 // protocol-relative বা non-http স্কিম প্রত্যাখ্যান করে।
 const { backUrl } = require('../utils/redirectBack');
+const { tr } = require('../utils/i18n');
 
 
 // ==================== প্রাইমারি হেল্পার ফাংশন ====================
@@ -83,7 +84,7 @@ function requireIntParam(name, redirectTo = 'back') {
   return (req, res, next) => {
     const n = parsePositiveInt(req.params[name]);
     if (n === null) {
-      req.flash('error', 'অবৈধ আইডি।');
+      req.flash('error', tr(req, 'validate_invalid_id'));
       return res.redirect(redirectTo === 'back' ? backUrl(req, '/admin') : redirectTo);
     }
     req.params[name] = n; // normalize
@@ -96,7 +97,7 @@ function requireAmount(name, opts = {}, redirectTo = 'back') {
   return (req, res, next) => {
     const n = parseAmount(req.body[name], opts);
     if (n === null) {
-      req.flash('error', 'সঠিক পরিমাণ দিন (সীমার মধ্যে)।');
+      req.flash('error', tr(req, 'validate_invalid_amount'));
       return res.redirect(redirectTo === 'back' ? backUrl(req, '/admin') : redirectTo);
     }
     req.body[name] = n; // normalize

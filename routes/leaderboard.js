@@ -23,7 +23,7 @@ router.get('/', async (req, res) => {
     res.render('leaderboard', { users });
   } catch (err) {
     console.error('Leaderboard error:', err);
-    req.flash('error', 'লিডারবোর্ড লোড করতে সমস্যা হয়েছে।');
+    req.flash('error', req.t('leaderboard_load_failed'));
     res.render('leaderboard', { users: [] });
   }
 });

@@ -9,7 +9,7 @@ router.get('/', isAuth, async (req, res) => {
     const user = await pool.query(`SELECT coins FROM users WHERE id=$1`, [req.session.user.id]);
     res.render('coins', { transactions: transactions.rows, coins: user.rows[0].coins });
   } catch (err) {
-    req.flash('error', 'সার্ভার ত্রুটি');
+    req.flash('error', req.t('common_server_error_short'));
     res.redirect('/');
   }
 });
@@ -23,7 +23,7 @@ router.get('/history', isAuth, async (req, res) => {
     const transactions = await pool.query(`SELECT * FROM coin_transactions WHERE user_id=$1 ORDER BY created_at DESC LIMIT 500`, [req.session.user.id]);
     res.render('coins', { transactions: transactions.rows, coins: req.session.user.coins });
   } catch (err) {
-    req.flash('error', 'সার্র ত্রুটি');
+    req.flash('error', req.t('common_server_error_short'));
     res.redirect('/coins');
   }
 });
@@ -58,7 +58,7 @@ router.post('/daily-bonus', isAuth, async (req, res) => {
 
     if (upd.rowCount === 0) {
       await client.query('ROLLBACK');
-      req.flash('error', 'আজকের বোনাস আগেই নওয়া হয়েছে! আগামীকাল আবার আসুন।');
+      req.flash('error', req.t('coins_daily_bonus_already_claimed'));
       return res.redirect('/coins');
     }
 
@@ -79,7 +79,7 @@ router.post('/daily-bonus', isAuth, async (req, res) => {
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('daily-bonus error:', err.message);
-    req.flash('error', 'সার্ভার ত্রুটি');
+    req.flash('error', req.t('common_server_error_short'));
     res.redirect('/coins');
   } finally {
     client.release();

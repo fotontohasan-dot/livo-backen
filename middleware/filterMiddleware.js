@@ -16,6 +16,7 @@
  */
 
 const { checkContent } = require('../utils/contentFilter');
+const { tr } = require('../utils/i18n');
 
 // ডিফল্টভাবে যেসব ফিল্ড নাম চেক করা হবে — প্রজেক্টের সব ফর্মে এর কোনো না কোনোটাই আছে
 const DEFAULT_FIELDS = [
@@ -42,7 +43,7 @@ function filterMiddleware(options = {}) {
       if (result.flagged) {
         return res.status(400).json({
           success: false,
-          error: 'আপনার লেখায় অনুপযুক্ত/অশ্লীল কনটেন্ট শনাক্ত হয়েছে। অনুগ্রহ করে সংশোধন করে আবার চেষ্টা করুন।',
+          error: tr(req, 'content_filter_blocked'),
           errorEn: 'Inappropriate content detected. Please revise your message and try again.',
           field,
         });

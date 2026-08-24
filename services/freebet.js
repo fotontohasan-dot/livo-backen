@@ -4,6 +4,7 @@
 
 const { pool } = require('../db');
 const { createBonus } = require('./turnover');
+const { t } = require('../utils/i18n');
 
 // ইউজারকে ফ্রি বেট দেওয়া
 async function grantFreeBet(userId, amount, reason) {
@@ -43,7 +44,7 @@ async function getAllFreeBets(userId) {
 }
 
 // ফ্রি বেট ক্লেইম — বোনাস কয়েন + টার্নওভার বোনাস
-async function claimFreeBet(userId, freeBetId) {
+async function claimFreeBet(userId, freeBetId, lang = 'bn') {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -55,7 +56,7 @@ async function claimFreeBet(userId, freeBetId) {
     const fb = r.rows[0];
     if (!fb) {
       await client.query('ROLLBACK');
-      return { success: false, message: 'ফ্রি বেট পাওয়া যায়নি বা আগেই ব্যবহার হয়েছে।' };
+      return { success: false, message: t(lang, 'freebet_not_found_or_used') };
     }
 
     // কয়েন যোগ + টার্নওভার বোনাস তৈরি
@@ -73,11 +74,11 @@ async function claimFreeBet(userId, freeBetId) {
     );
 
     await client.query('COMMIT');
-    return { success: true, amount: fb.amount, message: `${fb.amount} ফ্রি বেট কয়েন পেয়েছেন! (টার্নওভার প্রযোজ্য)` };
+    return { success: true, amount: fb.amount, message: t(lang, 'freebet_received').replace('{value}', fb.amount) };
   } catch (e) {
     await client.query('ROLLBACK');
     console.error('claimFreeBet error:', e.message);
-    return { success: false, message: 'সার্ভার ত্রুটি।' };
+    return { success: false, message: t(lang, 'common_server_error') };
   } finally {
     client.release();
   }

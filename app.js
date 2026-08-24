@@ -88,6 +88,7 @@ const { connectDB, pool } = require('./db');
 const { syncMatches } = require('./services/matchUpdater');
 const runMigrations = require('./migrations');
 const { apiGateway, responseHelpers } = require('./middleware/gateway');
+const { tr } = require('./utils/i18n');
 const { scheduleDailyBackup } = require('./services/backup');
 const { scheduleAutoBackup } = require('./services/backupManager');
 const { touchDeviceActivity } = require('./services/deviceTracking');
@@ -245,7 +246,9 @@ const RedisRateLimitStore = require('./services/redisRateLimitStore');
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
-  message: 'অনেকবার চেষ্টা করেছেন। ১৫ মিনিট পর আবার চেষ্টা করুন।',
+  // এই limiter ভাষা-মিডলওয়্যারের আগে বসানো, তাই req.t() এখনো নেই — utils/i18n
+  // session থেকে ভাষা পড়ে একই bn.json/en.json থেকেই অনুবাদ দেয়।
+  message: (req) => tr(req, 'common_rate_limited_15m'),
   standardHeaders: true,
   legacyHeaders: false,
   store: new RedisRateLimitStore('rl:login:')
@@ -263,7 +266,7 @@ const generalLimiter = rateLimit({
 const financialLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
-  message: 'অনেকবার চেষ্টা করেছেন। কিছুক্ষণ পর আবার চেষ্টা করুন।',
+  message: (req) => tr(req, 'common_rate_limited'),
   standardHeaders: true,
   legacyHeaders: false,
   store: new RedisRateLimitStore('rl:financial:')

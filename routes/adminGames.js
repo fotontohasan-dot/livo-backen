@@ -12,6 +12,7 @@ const rbac = require('../services/rbac');
 // নাম ও সার্ভার পাথ থাকে, যা অ্যাডমিন ব্রাউজারে (এবং XSS হলে আক্রমণকারীর কাছে) পৌঁছাত।
 // এখন ইচ্ছাকৃত ভ্যালিডেশন বার্তা ছাড়া বাকি সব জেনেরিক বাংলা বার্তায় রূপান্তরিত হয়।
 const { publicMessage } = require('../utils/safeError');
+const { t } = require('../utils/i18n');
 
 // ==================== Validation ====================
 const VALID_CATEGORIES = ['slots', 'live', 'sports', 'poker', 'casino', 'fishing', 'table'];
@@ -22,7 +23,7 @@ function makeSlug(name) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80);
 }
 
-function validateGame(body) {
+function validateGame(body, lang = 'bn') {
   const errors = [];
   const name     = (body.name     || '').trim();
   const slug     = (body.slug     || '').trim() || makeSlug(name);
@@ -31,13 +32,13 @@ function validateGame(body) {
   const emoji    = (body.emoji    || '🎮').trim();
   const badge    = (body.badge    || '').trim();
 
-  if (!name)                          errors.push('গেমের নাম আবশ্যক');
-  else if (name.length > 100)         errors.push('নাম ১০০ অক্ষরের বেশি হবে না');
-  if (!slug || !SLUG_RE.test(slug))   errors.push('স্লাগ শুধু lowercase, সংখ্যা ও হাইফেন দিয়ে হবে');
-  if (!VALID_CATEGORIES.includes(category)) errors.push('অবৈধ ক্যাটাগরি: ' + category);
-  if (!provider)                      errors.push('প্রোভাইডার আবশ্যক');
-  if (provider.length > 80)           errors.push('প্রোভাইডার নাম ৮০ অক্ষরের বেশি হবে না');
-  if (!VALID_BADGES.includes(badge))  errors.push('অবৈধ ব্যাজ: ' + badge);
+  if (!name)                          errors.push(t(lang, 'admin_game_name_required'));
+  else if (name.length > 100)         errors.push(t(lang, 'admin_game_name_too_long'));
+  if (!slug || !SLUG_RE.test(slug))   errors.push(t(lang, 'admin_game_slug_format'));
+  if (!VALID_CATEGORIES.includes(category)) errors.push(t(lang, 'admin_invalid_category_prefix') + category);
+  if (!provider)                      errors.push(t(lang, 'admin_provider_required'));
+  if (provider.length > 80)           errors.push(t(lang, 'admin_provider_name_too_long'));
+  if (!VALID_BADGES.includes(badge))  errors.push(t(lang, 'admin_invalid_badge_prefix') + badge);
 
   return { errors, data: { name, slug, category, provider, emoji: emoji.slice(0,4)||'🎮', badge: badge||null } };
 }
@@ -128,7 +129,7 @@ router.get('/', rbac.requirePermission('games_manage'), async (req, res) => {
 
 // ==================== POST /admin/games/add ====================
 router.post('/add', rbac.requirePermission('games_manage'), async (req, res) => {
-  const { errors, data } = validateGame(req.body);
+  const { errors, data } = validateGame(req.body, req.lang);
 
   if (errors.length) {
     req.flash('error', errors.join(' | '));
@@ -153,13 +154,13 @@ router.post('/add', rbac.requirePermission('games_manage'), async (req, res) => 
       req.ip
     );
 
-    req.flash('success', `"${data.name}" সফলভাবে যোগ করা হয়েছে।`);
+    req.flash('success', req.t('admin_game_added').replace('{value}', data.name));
   } catch (err) {
     if (err.code === '23505') {
-      req.flash('error', `স্লাগ "${data.slug}" ইতোমধ্যে বিদ্যমান। অন্য স্লাগ ব্যবহার করুন।`);
+      req.flash('error', req.t('admin_slug_exists_use_another').replace('{value}', data.slug));
     } else {
       console.error('game add error:', err && err.stack ? err.stack : err);
-      req.flash('error', publicMessage(err, 'গেম যোগ করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।'));
+      req.flash('error', publicMessage(err, req.t('admin_game_add_failed')));
     }
   }
   res.redirect('/admin/games');
@@ -168,9 +169,9 @@ router.post('/add', rbac.requirePermission('games_manage'), async (req, res) => 
 // ==================== POST /admin/games/:id/edit ====================
 router.post('/:id/edit', rbac.requirePermission('games_manage'), async (req, res) => {
   const id = parseInt(req.params.id);
-  if (!id || isNaN(id)) { req.flash('error', 'অবৈধ গেম ID'); return res.redirect('/admin/games'); }
+  if (!id || isNaN(id)) { req.flash('error', req.t('admin_invalid_game_id')); return res.redirect('/admin/games'); }
 
-  const { errors, data } = validateGame(req.body);
+  const { errors, data } = validateGame(req.body, req.lang);
 
   if (errors.length) {
     req.flash('error', errors.join(' | '));
@@ -179,7 +180,7 @@ router.post('/:id/edit', rbac.requirePermission('games_manage'), async (req, res
 
   try {
     const existing = await pool.query('SELECT * FROM games WHERE id = $1', [id]);
-    if (!existing.rows.length) { req.flash('error', 'গেম পাওয়া যায়নি'); return res.redirect('/admin/games'); }
+    if (!existing.rows.length) { req.flash('error', req.t('admin_game_not_found')); return res.redirect('/admin/games'); }
 
     await pool.query(
       `UPDATE games SET name=$1, slug=$2, emoji=$3, category=$4, provider=$5, badge=$6 WHERE id=$7`,
@@ -193,13 +194,13 @@ router.post('/:id/edit', rbac.requirePermission('games_manage'), async (req, res
       req.ip
     );
 
-    req.flash('success', `"${data.name}" সফলভাবে আপডেট করা হয়েছে।`);
+    req.flash('success', req.t('admin_game_updated').replace('{value}', data.name));
   } catch (err) {
     if (err.code === '23505') {
-      req.flash('error', `স্লাগ "${data.slug}" ইতোমধ্যে বিদ্যমান।`);
+      req.flash('error', req.t('admin_slug_exists').replace('{value}', data.slug));
     } else {
       console.error('game edit error:', err && err.stack ? err.stack : err);
-      req.flash('error', publicMessage(err, 'গেম আপডেট করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।'));
+      req.flash('error', publicMessage(err, req.t('admin_game_update_failed')));
     }
   }
   res.redirect('/admin/games');
@@ -208,14 +209,14 @@ router.post('/:id/edit', rbac.requirePermission('games_manage'), async (req, res
 // ==================== POST /admin/games/:id/toggle ====================
 router.post('/:id/toggle', rbac.requirePermission('games_manage'), async (req, res) => {
   const id = parseInt(req.params.id);
-  if (!id || isNaN(id)) { req.flash('error', 'অবৈধ গেম ID'); return res.redirect('/admin/games'); }
+  if (!id || isNaN(id)) { req.flash('error', req.t('admin_invalid_game_id')); return res.redirect('/admin/games'); }
 
   try {
     const r = await pool.query(
       `UPDATE games SET is_active = NOT is_active WHERE id = $1 RETURNING name, is_active`,
       [id]
     );
-    if (!r.rows.length) { req.flash('error', 'গেম পাওয়া যায়নি'); return res.redirect('/admin/games'); }
+    if (!r.rows.length) { req.flash('error', req.t('admin_game_not_found')); return res.redirect('/admin/games'); }
 
     const { name, is_active } = r.rows[0];
     await logAdminAction(
@@ -225,10 +226,10 @@ router.post('/:id/toggle', rbac.requirePermission('games_manage'), async (req, r
       req.ip
     );
 
-    req.flash('success', `"${name}" ${is_active ? 'সক্রিয়' : 'নিষ্ক্রিয়'} করা হয়েছে।`);
+    req.flash('success', req.t('admin_game_toggled').replace('{value1}', name).replace('{value2}', req.t(is_active ? 'admin_word_active' : 'admin_word_inactive')));
   } catch (err) {
     console.error('game toggle error:', err && err.stack ? err.stack : err);
-    req.flash('error', publicMessage(err, 'স্ট্যাটাস পরিবর্তন করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।'));
+    req.flash('error', publicMessage(err, req.t('admin_status_change_failed_db')));
   }
   redirectBack(req, res, '/admin/games');
 });
@@ -236,11 +237,11 @@ router.post('/:id/toggle', rbac.requirePermission('games_manage'), async (req, r
 // ==================== POST /admin/games/:id/delete ====================
 router.post('/:id/delete', rbac.requirePermission('games_manage'), async (req, res) => {
   const id = parseInt(req.params.id);
-  if (!id || isNaN(id)) { req.flash('error', 'অবৈধ গেম ID'); return res.redirect('/admin/games'); }
+  if (!id || isNaN(id)) { req.flash('error', req.t('admin_invalid_game_id')); return res.redirect('/admin/games'); }
 
   try {
     const existing = await pool.query('SELECT name, slug FROM games WHERE id = $1', [id]);
-    if (!existing.rows.length) { req.flash('error', 'গেম পাওয়া যায়নি'); return res.redirect('/admin/games'); }
+    if (!existing.rows.length) { req.flash('error', req.t('admin_game_not_found')); return res.redirect('/admin/games'); }
 
     const { name, slug } = existing.rows[0];
     await pool.query('DELETE FROM games WHERE id = $1', [id]);
@@ -252,10 +253,10 @@ router.post('/:id/delete', rbac.requirePermission('games_manage'), async (req, r
       req.ip
     );
 
-    req.flash('success', `"${name}" সফলভাবে মুছে ফেলা হয়েছে।`);
+    req.flash('success', req.t('admin_game_deleted').replace('{value}', name));
   } catch (err) {
     console.error('game delete error:', err && err.stack ? err.stack : err);
-    req.flash('error', publicMessage(err, 'গেম মুছে ফেলা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।'));
+    req.flash('error', publicMessage(err, req.t('admin_game_delete_failed')));
   }
   res.redirect('/admin/games');
 });
@@ -263,10 +264,10 @@ router.post('/:id/delete', rbac.requirePermission('games_manage'), async (req, r
 // ==================== POST /admin/games/bulk-toggle ====================
 router.post('/bulk-toggle', rbac.requirePermission('games_manage'), async (req, res) => {
   const { ids, action } = req.body;
-  if (!ids || !action) { req.flash('error', 'অবৈধ রিকোয়েস্ট'); return res.redirect('/admin/games'); }
+  if (!ids || !action) { req.flash('error', req.t('admin_invalid_request')); return res.redirect('/admin/games'); }
 
   const idList = (Array.isArray(ids) ? ids : [ids]).map(Number).filter(n => n > 0);
-  if (!idList.length) { req.flash('error', 'কোনো গেম নির্বাচিত হয়নি'); return res.redirect('/admin/games'); }
+  if (!idList.length) { req.flash('error', req.t('admin_no_game_selected')); return res.redirect('/admin/games'); }
 
   const isActive = action === 'activate';
   try {
@@ -277,10 +278,10 @@ router.post('/bulk-toggle', rbac.requirePermission('games_manage'), async (req, 
       `${idList.length}টি গেম ${isActive ? 'সক্রিয়' : 'নিষ্ক্রিয়'} করা হয়েছে (ids: ${idList.join(',')})`,
       req.ip
     );
-    req.flash('success', `${idList.length}টি গেম ${isActive ? 'সক্রিয়' : 'নিষ্ক্রিয়'} করা হয়েছে।`);
+    req.flash('success', req.t('admin_games_bulk_toggled').replace('{value1}', idList.length).replace('{value2}', req.t(isActive ? 'admin_word_active' : 'admin_word_inactive')));
   } catch (err) {
     console.error('bulk toggle error:', err && err.stack ? err.stack : err);
-    req.flash('error', publicMessage(err, 'Bulk toggle সম্পন্ন করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।'));
+    req.flash('error', publicMessage(err, req.t('admin_bulk_toggle_failed')));
   }
   res.redirect('/admin/games');
 });
@@ -303,7 +304,7 @@ router.post('/sort', rbac.requirePermission('games_manage'), async (req, res) =>
     res.json({ ok: true });
   } catch (err) {
     console.error('game sort error:', err && err.stack ? err.stack : err);
-    res.status(500).json({ ok: false, error: 'সর্ট অর্ডার সেভ করা যায়নি — সার্ভার/ডেটাবেস ত্রুটি।' });
+    res.status(500).json({ ok: false, error: req.t('admin_sort_order_save_failed') });
   }
 });
 

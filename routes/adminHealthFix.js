@@ -21,7 +21,7 @@ router.get('/system-diagnostics', isAdmin, async (req, res) => {
       loadError: true,
       result: null,
       diagnostics: null,
-      error: 'ডায়াগনস্টিক চালাতে সমস্যা হয়েছে — বিস্তারিত সার্ভার লগে আছে।',
+      error: req.t('admin_diagnostic_failed_log'),
       user: req.session.user
     });
   }
@@ -34,7 +34,7 @@ router.get('/api/system-diagnostics', isAdmin, async (req, res) => {
     res.json({ success: true, diagnostics: result, result });
   } catch (err) {
     console.error('System diagnostics API error:', err && err.stack ? err.stack : err);
-    res.status(500).json({ success: false, error: 'ডায়াগনস্টিক চালাতে সমস্যা হয়েছে।' });
+    res.status(500).json({ success: false, error: req.t('admin_diagnostic_failed_dot') });
   }
 });
 

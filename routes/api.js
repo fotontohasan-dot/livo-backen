@@ -18,7 +18,7 @@ const globalIpLimiter = rateLimit({
   max: 300,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'rate_limited', message: 'অনেকবার রিকোয়েস্ট করা হয়েছে, কিছুক্ষণ পর আবার চেষ্টা করুন।' },
+  message: (req) => ({ error: 'rate_limited', message: req.t('api_rate_limited') }),
   store: new RedisRateLimitStore('rl:api:ip:')
 });
 
@@ -29,7 +29,7 @@ const perKeyLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => (req.apiKey ? `key:${req.apiKey.id}` : req.ip),
-  message: { error: 'rate_limited', message: 'এই API key-এর রেট লিমিট অতিক্রম করেছে।' },
+  message: (req) => ({ error: 'rate_limited', message: req.t('api_key_rate_limit_exceeded') }),
   store: new RedisRateLimitStore('rl:api:key:')
 });
 
@@ -41,10 +41,10 @@ function validatePagination(req, res, next) {
   const limit = parseInt(req.query.limit) || 20;
   const offset = parseInt(req.query.offset) || 0;
   if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
-    return res.status(400).json({ error: 'invalid_request', message: 'limit 1 থেকে 100-এর মধ্যে হতে হবে।' });
+    return res.status(400).json({ error: 'invalid_request', message: req.t('api_limit_range') });
   }
   if (!Number.isInteger(offset) || offset < 0) {
-    return res.status(400).json({ error: 'invalid_request', message: 'offset ঋণাত্মক হতে পারবে না।' });
+    return res.status(400).json({ error: 'invalid_request', message: req.t('api_offset_negative') });
   }
   req.pagination = { limit, offset };
   next();
@@ -79,7 +79,7 @@ router.get('/v1/matches', requireApiKey('read:matches'), perKeyLimiter, validate
     res.json({ data, pagination: { limit, offset, count: data.length } });
   } catch (err) {
     console.error('[api] /v1/matches error:', err.message);
-    res.status(500).json({ error: 'server_error', message: 'ম্যাচ ডেটা আনতে সমস্যা হয়েছে।' });
+    res.status(500).json({ error: 'server_error', message: req.t('api_matches_fetch_failed') });
   }
 });
 
@@ -107,7 +107,7 @@ router.get('/v1/leaderboard', requireApiKey('read:leaderboard'), perKeyLimiter, 
     res.json({ data, pagination: { limit, offset, count: data.length } });
   } catch (err) {
     console.error('[api] /v1/leaderboard error:', err.message);
-    res.status(500).json({ error: 'server_error', message: 'লিডারবোর্ড ডেটা আনতে সমস্যা হয়েছে।' });
+    res.status(500).json({ error: 'server_error', message: req.t('api_leaderboard_fetch_failed') });
   }
 });
 
@@ -128,7 +128,7 @@ router.get('/v1/tournaments', requireApiKey('read:tournaments'), perKeyLimiter, 
     res.json({ data, pagination: { limit, offset, count: data.length } });
   } catch (err) {
     console.error('[api] /v1/tournaments error:', err.message);
-    res.status(500).json({ error: 'server_error', message: 'টুর্নামেন্ট ডেটা আনতে সমস্যা হয়েছে।' });
+    res.status(500).json({ error: 'server_error', message: req.t('api_tournaments_fetch_failed') });
   }
 });
 

@@ -9,6 +9,7 @@ const { addBet } = require('./cashback');
 const { addVipTurnover } = require('./vip');
 const { updateMissionProgress } = require('./missions');
 const { addPoints } = require('./loyalty');
+const { t } = require('../utils/i18n');
 
 const MIN_STAKE = 10;
 const MAX_SELECTIONS = 12;
@@ -23,22 +24,22 @@ function boostFor(count) {
 
 // অ্যাকুমুলেটর বাজি স্থাপন
 // selections = [{ match_id, market_id, market_name, runner, odd }, ...]
-async function placeAccumulator(userId, stake, selections) {
+async function placeAccumulator(userId, stake, selections, lang = 'bn') {
   stake = parseInt(stake);
   if (isNaN(stake) || stake < MIN_STAKE) {
-    return { success: false, message: `সর্বনিম্ন স্টেক ${MIN_STAKE} কয়েন।` };
+    return { success: false, message: t(lang, 'accumulator_min_stake').replace('{value}', MIN_STAKE) };
   }
   if (!Array.isArray(selections) || selections.length < 2) {
-    return { success: false, message: 'অ্যাকুমুলেটরে কমপক্ষে ২টি সিলেকশন লাগবে।' };
+    return { success: false, message: t(lang, 'accumulator_min_selections') };
   }
   if (selections.length > MAX_SELECTIONS) {
-    return { success: false, message: `সর্বোচ্চ ${MAX_SELECTIONS}টি সিলেকশন।` };
+    return { success: false, message: t(lang, 'accumulator_max_selections').replace('{value}', MAX_SELECTIONS) };
   }
 
   // ডুপ্লিকেট ম্যাচ চেক (একই ম্যাচে দুই সিলেকশন নয়)
   const matchIds = selections.map(s => s.match_id);
   if (new Set(matchIds).size !== matchIds.length) {
-    return { success: false, message: 'একই ম্যাচ থেকে একাধিক সিলেকশন নেওয়া যাবে না।' };
+    return { success: false, message: t(lang, 'accumulator_duplicate_match') };
   }
 
   const client = await pool.connect();
@@ -53,7 +54,7 @@ async function placeAccumulator(userId, stake, selections) {
       const market = m.rows[0];
       if (!market || market.status !== 'open') {
         await client.query('ROLLBACK');
-        return { success: false, message: 'একটি মার্কেট এখন বাজির জন্য খোলা নেই।' };
+        return { success: false, message: t(lang, 'accumulator_market_closed') };
       }
       // অডস বের করা — odds JSONB তে runner→odd, নাহলে ক্লায়েন্ট অডস (fallback)
       let odd = parseFloat(sel.odd);
@@ -64,7 +65,7 @@ async function placeAccumulator(userId, stake, selections) {
       } catch (e) {}
       if (isNaN(odd) || odd <= 1) {
         await client.query('ROLLBACK');
-        return { success: false, message: 'একটি সিলেকশনের অডস অকার্যকর।' };
+        return { success: false, message: t(lang, 'accumulator_invalid_odds') };
       }
       totalOdd *= odd;
       verified.push({
@@ -87,7 +88,7 @@ async function placeAccumulator(userId, stake, selections) {
     );
     if (upd.rowCount === 0) {
       await client.query('ROLLBACK');
-      return { success: false, message: 'পর্যাপ্ত কয়েন নেই।' };
+      return { success: false, message: t(lang, 'common_insufficient_coins') };
     }
 
     // acca তৈরি
@@ -128,12 +129,12 @@ async function placeAccumulator(userId, stake, selections) {
       totalOdd,
       boost,
       potentialWin,
-      message: `অ্যাকুমুলেটর বাজি সফল! সম্ভাব্য জয়: ${potentialWin} কয়েন`
+      message: t(lang, 'accumulator_bet_placed').replace('{value}', potentialWin)
     };
   } catch (e) {
     await client.query('ROLLBACK');
     console.error('placeAccumulator error:', e.message);
-    return { success: false, message: 'সার্ভার ত্রুটি।' };
+    return { success: false, message: t(lang, 'common_server_error') };
   } finally {
     client.release();
   }

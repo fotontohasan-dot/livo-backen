@@ -14,7 +14,7 @@ const { getBotReply } = require('../services/chatbot');
 // হেল্প সেন্টার পেজ রেন্ডার করবে
 router.get('/', (req, res) => {
   res.render('help-center', {
-    title: 'ব্যাটিং হেল্প সেন্টার',
+    title: req.t('help_center_title'),
     user: (req.session && req.session.user) || null
   });
 });
@@ -26,7 +26,7 @@ router.post('/api/chat', filterMiddleware(), async (req, res) => {
   const userMessage = (req.body && req.body.message) || '';
 
   if (!userMessage.trim()) {
-    return res.status(400).json({ success: false, error: 'বার্তা খালি রাখা যাবে না।' });
+    return res.status(400).json({ success: false, error: req.t('common_message_empty') });
   }
 
   try {
@@ -36,7 +36,7 @@ router.post('/api/chat', filterMiddleware(), async (req, res) => {
     console.error('help-center /api/chat error:', err.message);
     res.status(500).json({
       success: false,
-      error: 'দুঃখিত, এই মুহূর্তে উত্তর দিতে পারছি না। এডমিন শীঘ্রই যোগাযোগ করবে।'
+      error: req.t('help_center_bot_unavailable')
     });
   }
 });

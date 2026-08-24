@@ -36,7 +36,7 @@ router.get('/', (req, res) => {
   res.render('matches', {
     currentPage: 'matches',
     sport: 'all',
-    title: 'আসন্ন ম্যাচসমূহ',
+    title: req.t('matches_upcoming_title'),
     user: req.session ? req.session.user : null
   });
 });
@@ -164,16 +164,16 @@ router.post('/:id/bet', isAuth, async (req, res) => {
   const minBet = Number(await getSetting('min_bet'));
   const maxBet = Number(await getSetting('max_bet'));
   if (isNaN(stake) || stake < minBet) {
-    return res.status(400).json({ success: false, message: `সর্বনিম্ন বাজি ৳${minBet}` });
+    return res.status(400).json({ success: false, message: req.t('bet_min_amount').replace('{value}', minBet) });
   }
   if (stake > maxBet) {
-    return res.status(400).json({ success: false, message: `সর্বোচ্চ বাজি ৳${maxBet}` });
+    return res.status(400).json({ success: false, message: req.t('bet_max_amount').replace('{value}', maxBet) });
   }
   if (isNaN(oddNum) || oddNum <= 1) {
-    return res.status(400).json({ success: false, message: 'অকার্যকর ওডস' });
+    return res.status(400).json({ success: false, message: req.t('matches_invalid_odds') });
   }
   if (!market_id) {
-    return res.status(400).json({ success: false, message: 'মার্কেট পাওয়া যায়নি' });
+    return res.status(400).json({ success: false, message: req.t('matches_market_not_found') });
   }
 
   const client = await pool.connect();
@@ -183,7 +183,7 @@ router.post('/:id/bet', isAuth, async (req, res) => {
     const m = await client.query(`SELECT * FROM markets WHERE id = $1`, [market_id]);
     if (!m.rows[0] || m.rows[0].status !== 'open') {
       await client.query('ROLLBACK');
-      return res.status(400).json({ success: false, message: 'এই মার্কেটে এখন বেট করা যাবে না' });
+      return res.status(400).json({ success: false, message: req.t('matches_market_closed') });
     }
 
     const balanceCol = isDemo ? 'demo_balance' : 'coins';
@@ -193,7 +193,7 @@ router.post('/:id/bet', isAuth, async (req, res) => {
     );
     if (upd.rowCount === 0) {
       await client.query('ROLLBACK');
-      return res.status(400).json({ success: false, message: isDemo ? 'পর্যাপ্ত ডেমো ব্যালেন্স নেই' : 'পর্যাপ্ত কয়েন নেই' });
+      return res.status(400).json({ success: false, message: isDemo ? req.t('balance_insufficient_demo') : req.t('payment_insufficient_coins') });
     }
 
     await client.query(
@@ -213,7 +213,7 @@ router.post('/:id/bet', isAuth, async (req, res) => {
       req.session.user.demo_balance = upd.rows[0].demo_balance;
       broadcastDemoStats().catch(e => console.error('demo stats:', e.message));
 
-      return res.json({ success: true, message: 'ডেমো বেট সফল হয়েছে!', demo: true, newBalance: upd.rows[0].demo_balance });
+      return res.json({ success: true, message: req.t('matches_demo_bet_placed'), demo: true, newBalance: upd.rows[0].demo_balance });
     }
 
     await client.query(
@@ -236,11 +236,11 @@ router.post('/:id/bet', isAuth, async (req, res) => {
     addPoints(userId, stake).catch(e => console.error('loyalty:', e.message));
     checkBadges(userId).catch(e => console.error('badges:', e.message));
 
-    res.json({ success: true, message: 'বেট সফল হয়েছে!', newBalance: upd.rows[0].coins });
+    res.json({ success: true, message: req.t('matches_bet_placed'), newBalance: upd.rows[0].coins });
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('bet error:', err.message);
-    res.status(500).json({ success: false, message: 'সার্ভার ত্রুটি' });
+    res.status(500).json({ success: false, message: req.t('common_server_error_short') });
   } finally {
     client.release();
   }

@@ -3,6 +3,7 @@
 // বাস্তব শেয়ার যাচাই সম্ভব নয়, তাই দিনে একবার ক্লেইমের সুযোগ দেওয়া হয়।
 
 const { pool } = require('../db');
+const { t } = require('../utils/i18n');
 
 const SHARE_BONUS = 20; // প্রতিদিন শেয়ারে ২০ কয়েন
 
@@ -24,7 +25,7 @@ async function getShareStatus(userId) {
 }
 
 // শেয়ার বোনাস ক্লেইম
-async function claimShare(userId) {
+async function claimShare(userId, lang = 'bn') {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -35,7 +36,7 @@ async function claimShare(userId) {
     );
     if (dup.rows.length > 0) {
       await client.query('ROLLBACK');
-      return { success: false, message: 'আজ শেয়ার বোনাস আগেই নেওয়া হয়েছে। আগামীকাল আবার আসুন।' };
+      return { success: false, message: t(lang, 'social_share_bonus_claimed') };
     }
 
     await client.query(
@@ -53,11 +54,11 @@ async function claimShare(userId) {
     );
 
     await client.query('COMMIT');
-    return { success: true, bonus: SHARE_BONUS, message: `${SHARE_BONUS} কয়েন পেয়েছেন!` };
+    return { success: true, bonus: SHARE_BONUS, message: t(lang, 'reward_coins_received_share').replace('{value}', SHARE_BONUS) };
   } catch (e) {
     await client.query('ROLLBACK');
     console.error('claimShare error:', e.message);
-    return { success: false, message: 'সার্ভার ত্রুটি।' };
+    return { success: false, message: t(lang, 'common_server_error') };
   } finally {
     client.release();
   }

@@ -3,6 +3,7 @@
 // নিট লোকসান = মোট বাজি - মোট জয়। লোকসান হলেই ক্যাশব্যাক, লাভ হলে কিছু না।
 
 const { pool } = require('../db');
+const { t } = require('../utils/i18n');
 
 const CASHBACK_RATE = 0.05;   // নিট লোকসানের ৫%
 const MIN_CASHBACK = 10;      // সর্বনিম্ন ক্লেইম ১০ কয়েন
@@ -102,7 +103,7 @@ async function getPeriodSummary(userId, days) {
 }
 
 // ক্যাশব্যাক ক্লেইম (নির্দিষ্ট ক্যাটাগরির গতকালের লোকসানের উপর)
-async function claimCashback(userId, category = 'sports') {
+async function claimCashback(userId, category = 'sports', lang = 'bn') {
   if (!CATEGORIES.includes(category)) category = 'sports';
   const d = new Date();
   d.setDate(d.getDate() - 1);
@@ -120,23 +121,23 @@ async function claimCashback(userId, category = 'sports') {
 
     if (!row) {
       await client.query('ROLLBACK');
-      return { success: false, message: `গতকাল ${CATEGORY_LABEL[category]}-এ কোনো খেলা নেই।` };
+      return { success: false, message: t(lang, 'cashback_no_play_yesterday').replace('{value}', CATEGORY_LABEL[category]) };
     }
     if (row.cashback_claimed) {
       await client.query('ROLLBACK');
-      return { success: false, message: 'গতকালের ক্যাশব্যাক আগেই নেওয়া হয়েছে।' };
+      return { success: false, message: t(lang, 'cashback_already_claimed') };
     }
 
     const netLoss = Number(row.total_bet) - Number(row.total_win);
     if (netLoss <= 0) {
       await client.query('ROLLBACK');
-      return { success: false, message: 'গতকাল কোনো লোকসান হয়নি, ক্যাশব্যাক নেই।' };
+      return { success: false, message: t(lang, 'cashback_no_loss') };
     }
 
     const amount = Math.floor(netLoss * CASHBACK_RATE);
     if (amount < MIN_CASHBACK) {
       await client.query('ROLLBACK');
-      return { success: false, message: `সর্বনিম্ন ক্যাশব্যাক ${MIN_CASHBACK} কয়েন।` };
+      return { success: false, message: t(lang, 'cashback_min_amount').replace('{value}', MIN_CASHBACK) };
     }
 
     await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [amount, userId]);
@@ -153,11 +154,11 @@ async function claimCashback(userId, category = 'sports') {
     );
 
     await client.query('COMMIT');
-    return { success: true, amount, message: `${amount} কয়েন ক্যাশব্যাক পেয়েছেন!` };
+    return { success: true, amount, message: t(lang, 'cashback_received').replace('{value}', amount) };
   } catch (e) {
     await client.query('ROLLBACK');
     console.error('claimCashback error:', e.message);
-    return { success: false, message: 'সার্ভার ত্রুটি।' };
+    return { success: false, message: t(lang, 'common_server_error') };
   } finally {
     client.release();
   }

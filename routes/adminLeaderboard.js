@@ -150,7 +150,7 @@ router.get('/contest/history', rbac.requirePermission('reports_view'), async (re
     res.json({ success: true, past });
   } catch (err) {
     console.error('Admin leaderboard contest history error:', err.message);
-    res.status(500).json({ success: false, error: 'আগের কনটেস্ট রেজাল্ট লোড করা যায়নি।' });
+    res.status(500).json({ success: false, error: req.t('admin_past_contest_load_failed') });
   }
 });
 
@@ -176,7 +176,7 @@ router.post('/:id/toggle-ban', rbac.requirePermission('users_ban'), requireIntPa
       [req.params.id]
     );
     if (!r.rows.length) {
-      return redirectWith('error=' + encodeURIComponent('ইউজার পাওয়া যায়নি।'));
+      return redirectWith('error=' + encodeURIComponent(req.t('admin_user_not_found_dot')));
     }
 
     const nowBanned = r.rows[0].is_banned;
@@ -201,7 +201,7 @@ router.post('/:id/toggle-ban', rbac.requirePermission('users_ban'), requireIntPa
     return redirectWith('saved=1');
   } catch (err) {
     console.error('Admin leaderboard ban toggle error:', err && err.stack ? err.stack : err);
-    return redirectWith('error=' + encodeURIComponent('স্ট্যাটাস পরিবর্তন করা যায়নি।'));
+    return redirectWith('error=' + encodeURIComponent(req.t('admin_status_change_failed')));
   }
 });
 
@@ -273,7 +273,7 @@ router.post('/contest/payouts/:id/mark-paid', rbac.requirePermission('users_edit
     );
 
     if (!r.rows.length) {
-      return redirectWith('error=' + encodeURIComponent('রেকর্ড পাওয়া যায়নি অথবা ইতিমধ্যে Paid হিসেবে চিহ্নিত।'));
+      return redirectWith('error=' + encodeURIComponent(req.t('admin_record_not_found_or_paid')));
     }
 
     const row = r.rows[0];
@@ -291,7 +291,7 @@ router.post('/contest/payouts/:id/mark-paid', rbac.requirePermission('users_edit
     return redirectWith('saved=1');
   } catch (err) {
     console.error('Admin contest payout mark-paid error:', err && err.stack ? err.stack : err);
-    return redirectWith('error=' + encodeURIComponent('পেআউট মার্ক করা যায়নি।'));
+    return redirectWith('error=' + encodeURIComponent(req.t('admin_payout_mark_failed')));
   }
 });
 

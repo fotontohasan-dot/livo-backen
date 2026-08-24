@@ -3,6 +3,7 @@
 // rate-limit, logging, standardized response এবং error handling
 
 const { createLimiter } = require('./rateLimitFactory');
+const { tr } = require('../utils/i18n');
 
 // শুধু /api/ পাথের জন্য আলাদা rate limiter (login/register এর থেকে আলাদা)
 const apiLimiter = createLimiter('public_api', {
@@ -10,7 +11,7 @@ const apiLimiter = createLimiter('public_api', {
   max: 60, // প্রতি মিনিটে সর্বোচ্চ ৬০ টা API কল প্রতি IP/user থেকে
   keyGenerator: (req) => (req.session && req.session.user) ? `u_${req.session.user.id}` : req.ip,
   handler: (req, res) => {
-    res.status(429).json({ success: false, error: 'অনেকবার রিকোয়েস্ট করেছেন। একটু পর আবার চেষ্টা করুন।' });
+    res.status(429).json({ success: false, error: tr(req, 'api_rate_limited_soft') });
   }
 });
 
@@ -39,7 +40,7 @@ function responseHelpers(req, res, next) {
 // /api/ পাথ ম্যাচ না করলে (unknown API route) JSON 404
 function apiNotFound(req, res, next) {
   if (req.path.includes('/api/')) {
-    return res.status(404).json({ success: false, error: 'API রুট খুঁজে পাওয়া যায়নি।' });
+    return res.status(404).json({ success: false, error: tr(req, 'api_route_not_found') });
   }
   next();
 }

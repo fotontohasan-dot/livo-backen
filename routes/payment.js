@@ -22,7 +22,7 @@ const cache = require('../services/cache');
 const paymentLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 15,
-  message: 'অনেকবার চেষ্টা করেছেন। কিছুক্ষণ পর আবার চেষ্টা করুন।',
+  message: (req) => req.t('common_rate_limited'),
   standardHeaders: true,
   legacyHeaders: false,
   store: new RedisRateLimitStore('rl:payment:')
@@ -301,7 +301,7 @@ router.post('/deposit', isAuth, paymentLimiter, async (req, res) => {
       scanTransaction(userId, 'deposit', { accountNumber: account_number, vpnInfo })
         .catch(e => console.error('fraud scanTransaction (deposit) error:', e.message));
     }).catch(e => console.error('vpn checkIp (deposit) error:', e.message));
-    await notifyAdmins('নতুন ডিপোজিট রিকোয়েস্ট', `${req.session.user.username} ${amount} টাকা ডিপোজিট চেয়েছে (${method})।`, 'deposit');
+    await notifyAdmins(req.t('payment_new_deposit_request'), req.t('payment_deposit_request_detail').replace('{value1}', req.session.user.username).replace('{value2}', amount).replace('{value3}', method), 'deposit');
     req.flash('success', req.t('payment_deposit_request_sent'));
     res.redirect('/payment/history');
   } catch (err) {
@@ -436,7 +436,7 @@ router.post('/withdraw', isAuth, requireVerifiedEmail, paymentLimiter, async (re
         .catch(e => console.error('fraud scanTransaction (withdraw) error:', e.message));
     }).catch(e => console.error('vpn checkIp (withdraw) error:', e.message));
 
-    await notifyAdmins('নতুন উইথড্র রিকোয়েস্ট', `${req.session.user.username} ${amount} টাকা উইথড্র চেয়েছে (${method})।`, 'withdraw');
+    await notifyAdmins(req.t('payment_new_withdraw_request'), req.t('payment_withdraw_request_detail').replace('{value1}', req.session.user.username).replace('{value2}', amount).replace('{value3}', method), 'withdraw');
 
     req.flash('success', req.t('payment_withdraw_request_sent'));
     res.redirect('/payment/history');
@@ -779,10 +779,10 @@ router.post('/admin/payments/bulk-approve', requireAdmin, requirePermission('pay
   const ids = Array.isArray(req.body.ids) ? req.body.ids : (req.body.ids ? [req.body.ids] : []);
   const cleanIds = ids.map((x) => parseInt(x, 10)).filter((x) => Number.isInteger(x) && x > 0);
   if (cleanIds.length === 0) {
-    return res.status(400).json({ success: false, error: 'কোনো আইটেম নির্বাচন করা হয়নি' });
+    return res.status(400).json({ success: false, error: req.t('common_no_item_selected') });
   }
   if (cleanIds.length > 100) {
-    return res.status(400).json({ success: false, error: 'একবারে সর্বোচ্চ ১০০টা আইটেম প্রসেস করা যাবে' });
+    return res.status(400).json({ success: false, error: req.t('common_bulk_limit_100') });
   }
 
   const results = [];
@@ -811,10 +811,10 @@ router.post('/admin/payments/bulk-reject', requireAdmin, requirePermission('paym
   const ids = Array.isArray(req.body.ids) ? req.body.ids : (req.body.ids ? [req.body.ids] : []);
   const cleanIds = ids.map((x) => parseInt(x, 10)).filter((x) => Number.isInteger(x) && x > 0);
   if (cleanIds.length === 0) {
-    return res.status(400).json({ success: false, error: 'কোনো আইটেম নির্বাচন করা হয়নি' });
+    return res.status(400).json({ success: false, error: req.t('common_no_item_selected') });
   }
   if (cleanIds.length > 100) {
-    return res.status(400).json({ success: false, error: 'একবারে সর্বোচ্চ ১০০টা আইটেম প্রসেস করা যাবে' });
+    return res.status(400).json({ success: false, error: req.t('common_bulk_limit_100') });
   }
 
   const results = [];

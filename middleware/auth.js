@@ -1,6 +1,7 @@
 const { pool } = require('../db');
 const cache = require('../services/cache');
 const cacheKeys = require('../services/cacheKeys');
+const { tr } = require('../utils/i18n');
 
 // isAuth আগে শুধু req.session.user-এর অস্তিত্ব দেখত — অর্থাৎ কাউকে ব্যান/ডিলিট করার পরও
 // তার আগের সেশন দিয়ে (লগআউট না করা পর্যন্ত) পুরো সাইট ব্যবহার করা যেত। isAdmin-এ এই
@@ -52,7 +53,7 @@ const isAuth = async (req, res, next) => {
   if (!status.exists || status.banned || status.selfExcluded) {
     req.session.destroy(() => {});
     if (req.path.includes('/api/')) {
-      return res.status(401).json({ success: false, error: 'সেশন আর বৈধ নয়, দয়া করে আবার লগইন করুন।' });
+      return res.status(401).json({ success: false, error: tr(req, 'auth_session_invalid') });
     }
     return res.redirect('/login');
   }
@@ -66,7 +67,7 @@ const isAuth = async (req, res, next) => {
 const isAdmin = async (req, res, next) => {
   const denyResponse = () => {
     if (req.path.includes('/api/')) {
-      return res.status(403).json({ success: false, error: 'অ্যাক্সেস অনুমোদিত নয়, দয়া করে অ্যাডমিন হিসেবে লগইন করুন।' });
+      return res.status(403).json({ success: false, error: tr(req, 'auth_admin_required') });
     }
     return res.redirect('/admin/login');
   };
@@ -110,9 +111,9 @@ const requireVerifiedEmail = async (req, res, next) => {
     }
 
     if (req.path.includes('/api/')) {
-      return res.status(403).json({ success: false, error: 'এই ফিচার ব্যবহার করতে আগে ইমেইল ভেরিফাই করুন।' });
+      return res.status(403).json({ success: false, error: tr(req, 'auth_email_verify_required') });
     }
-    req.flash && req.flash('error', '❌ এই ফিচার ব্যবহার করতে আগে আপনার ইমেইল ভেরিফাই করুন। প্রোফাইল পেজ থেকে ভেরিফিকেশন লিঙ্ক পুনরায় পাঠাতে পারেন।');
+    req.flash && req.flash('error', tr(req, 'auth_email_verify_required_detail'));
     return res.redirect('/profile');
   } catch (err) {
     console.error('requireVerifiedEmail error:', err.message);

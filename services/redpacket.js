@@ -2,6 +2,7 @@
 // লাল প্যাকেট + সোনার ডিম দৈনিক রিওয়ার্ড
 const { pool } = require('../db');
 const { createBonus } = require('./turnover');
+const { t } = require('../utils/i18n');
 
 function todayStr() {
   const d = new Date();
@@ -45,12 +46,12 @@ function randInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-async function claimRedPacket(userId) {
+async function claimRedPacket(userId, lang = 'bn') {
   if (await hasClaimedToday(userId, 'red_packet')) {
-    return { ok: false, message: 'আজকের লাল প্যাকেট ইতিমধ্যে নেওয়া হয়েছে' };
+    return { ok: false, message: t(lang, 'redpacket_already_claimed') };
   }
   if (!(await hasQualifyingActivityToday(userId))) {
-    return { ok: false, message: '🔒 প্যাকেট লক করা আছে। আজ ডিপোজিট করুন, তারপর দাবি করতে পারবেন।' };
+    return { ok: false, message: t(lang, 'redpacket_locked_deposit_required') };
   }
   const amount = randInt(10, 50);
   const client = await pool.connect();
@@ -76,18 +77,18 @@ async function claimRedPacket(userId) {
     return { ok: true, amount };
   } catch (e) {
     await client.query('ROLLBACK');
-    return { ok: false, message: 'সমস্যা হয়েছে, আবার চেষ্টা করুন' };
+    return { ok: false, message: t(lang, 'common_retry_error_plain') };
   } finally {
     client.release();
   }
 }
 
-async function claimGoldenEgg(userId, pickedIndex) {
+async function claimGoldenEgg(userId, pickedIndex, lang = 'bn') {
   if (await hasClaimedToday(userId, 'golden_egg')) {
-    return { ok: false, message: 'আজকের সোনার ডিম ইতিমধ্যে নেওয়া হয়েছে' };
+    return { ok: false, message: t(lang, 'goldenegg_already_claimed') };
   }
   if (!(await hasQualifyingActivityToday(userId))) {
-    return { ok: false, message: '🔒 ডিম লক করা আছে। আজ ডিপোজিট করুন, তারপর ভাঙতে পারবেন।' };
+    return { ok: false, message: t(lang, 'goldenegg_locked_deposit_required') };
   }
   const wonAmount = randInt(10, 30);
   const reveal = [];
@@ -115,7 +116,7 @@ async function claimGoldenEgg(userId, pickedIndex) {
     return { ok: true, amount: wonAmount, reveal, pickedIndex };
   } catch (e) {
     await client.query('ROLLBACK');
-    return { ok: false, message: 'সমস্যা হয়েছে, আবার চেষ্টা করুন' };
+    return { ok: false, message: t(lang, 'common_retry_error_plain') };
   } finally {
     client.release();
   }

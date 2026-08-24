@@ -3,6 +3,7 @@
 // পুরস্কারগুলো নির্দিষ্ট, সার্ভারেই র‍্যান্ডম নির্বাচন (ক্লায়েন্ট ঠকাতে পারবে না)।
 
 const { pool } = require('../db');
+const { t } = require('../utils/i18n');
 
 // হুইলের ঘর (পুরস্কার) — weight যত বেশি, আসার সম্ভাবনা তত বেশি
 const SEGMENTS = [
@@ -72,7 +73,7 @@ function pickPrize() {
 }
 
 // স্পিন করা (দিনে একবার, transaction সহ)
-async function spin(userId) {
+async function spin(userId, lang = 'bn') {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -84,14 +85,14 @@ async function spin(userId) {
     );
     if (existing.rows.length > 0) {
       await client.query('ROLLBACK');
-      return { success: false, message: 'আজ আপনি আগেই স্পিন করেছেন। আগামীকাল আবার আসুন।' };
+      return { success: false, message: t(lang, 'wheel_already_spun_today') };
     }
 
     // লক চেক: আজ ডিপোজিট বা গেম/বেট খেলা না থাকলে স্পিন করা যাবে না
     const qualifies = await hasQualifyingActivityToday(userId);
     if (!qualifies) {
       await client.query('ROLLBACK');
-      return { success: false, message: 'হুইল লক করা আছে। আজ ডিপোজিট করুন, তারপর স্পিন করতে পারবেন।' };
+      return { success: false, message: t(lang, 'wheel_locked_deposit_required') };
     }
 
     // পুরস্কার নির্বাচন
@@ -127,12 +128,12 @@ async function spin(userId) {
 
     // ফ্রন্টএন্ডে কোন ঘরে থামবে তার ইনডেক্স
     const index = SEGMENTS.findIndex(s => s.prize === prize);
-    const message = prize > 0 ? `${prize} কয়েন জিতেছেন!` : 'এবার কিছু পাননি। আগামীকাল আবার চেষ্টা করুন!';
+    const message = prize > 0 ? t(lang, 'reward_coins_won').replace('{value}', prize) : t(lang, 'wheel_no_prize');
     return { success: true, prize, index, message };
   } catch (e) {
     await client.query('ROLLBACK');
     console.error('wheel spin error:', e.message);
-    return { success: false, message: 'সার্ভার ত্রুটি।' };
+    return { success: false, message: t(lang, 'common_server_error') };
   } finally {
     client.release();
   }
@@ -158,7 +159,7 @@ async function getHistory(userId, limit = 10) {
  * এটা কোনো পুরস্কার হিসাব করে না — spin() যা ইতিমধ্যে wheel_spins-এ লিখে ফেলেছে
  * শুধু সেটাই ফেরত দেয়। পুরস্কার নির্বাচন, ওয়ালেট ক্রেডিট ও নোটিফিকেশন অপরিবর্তিত।
  */
-async function getTodayResult(userId) {
+async function getTodayResult(userId, lang = 'bn') {
   const r = await pool.query(
     `SELECT prize FROM wheel_spins WHERE user_id = $1 AND spin_date = $2`,
     [userId, today()]
@@ -167,7 +168,7 @@ async function getTodayResult(userId) {
   const prize = Number(r.rows[0].prize);
   return {
     prize,
-    message: prize > 0 ? `${prize} কয়েন জিতেছেন!` : 'এবার কিছু পাননি। আগামীকাল আবার চেষ্টা করুন!'
+    message: prize > 0 ? t(lang, 'reward_coins_won').replace('{value}', prize) : t(lang, 'wheel_no_prize')
   };
 }
 
