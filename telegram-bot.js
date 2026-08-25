@@ -34,6 +34,34 @@ function verifyWebhookSecret(headerValue) {
 const GITHUB_OWNER = 'fotontohasan-dot';
 const GITHUB_REPO = 'livo-backen';
 
+// নিরাপত্তা: AI-র বলা ফাইলপাথ সরাসরি GitHub API URL-এ বসানো যাবে না।
+// `..` দিয়ে repo-র বাইরে যাওয়া, `?`/`#` দিয়ে query বা ref বদলে দেওয়া
+// (যেমন `app.js?ref=other-branch`), বা absolute path — সবই এখানে আটকানো হয়।
+// বৈধ পাথ: repo-relative, শুধু অক্ষর/সংখ্যা/`.`/`-`/`_`/`/`।
+const SAFE_PATH_RE = /^[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*$/;
+
+function sanitizeRepoPath(rawPath) {
+  if (typeof rawPath !== 'string') return null;
+  const filePath = rawPath.trim();
+  if (!filePath || filePath.length > 255) return null;
+  if (filePath.startsWith('/') || filePath.endsWith('/')) return null;
+  if (!SAFE_PATH_RE.test(filePath)) return null;
+  if (filePath.split('/').some((segment) => segment === '.' || segment === '..')) return null;
+  return filePath;
+}
+
+// Anthropic response-এ text ছাড়া অন্য block-ও থাকতে পারে; content[0].text ধরে
+// নিলে undefined হয়ে পরের `.includes()` throw করে, ফলে admin শুধু generic
+// "সমস্যা হয়েছে" দেখত। তাই সব text block জোড়া লাগানো হচ্ছে।
+function extractText(response) {
+  const blocks = Array.isArray(response?.content) ? response.content : [];
+  return blocks
+    .filter((block) => block && block.type === 'text' && typeof block.text === 'string')
+    .map((block) => block.text)
+    .join('\n')
+    .trim();
+}
+
 const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
 const conversations = {};
 
@@ -75,7 +103,10 @@ async function telegramAPI(method, data) {
 
 // GitHub: ফাইল পড়া
 async function githubReadFile(filePath) {
-  const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${filePath}`;
+  const safePath = sanitizeRepoPath(filePath);
+  if (!safePath) return null;
+  const encodedPath = safePath.split('/').map(encodeURIComponent).join('/');
+  const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${encodedPath}`;
   const response = await fetch(url, {
     headers: {
       'Authorization': `token ${GITHUB_TOKEN}`,
@@ -94,11 +125,15 @@ async function githubReadFile(filePath) {
 
 // GitHub: ফাইল edit করা
 async function githubEditFile(filePath, newContent, commitMessage) {
+  const safePath = sanitizeRepoPath(filePath);
+  if (!safePath) return { success: false, error: 'অবৈধ ফাইলপাথ' };
+
   // আগে SHA নিতে হবে
-  const existing = await githubReadFile(filePath);
+  const existing = await githubReadFile(safePath);
   if (!existing) return { success: false, error: 'ফাইল পাওয়া যায়নি' };
 
-  const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${filePath}`;
+  const encodedPath = safePath.split('/').map(encodeURIComponent).join('/');
+  const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${encodedPath}`;
   const response = await fetch(url, {
     method: 'PUT',
     headers: {
@@ -107,7 +142,7 @@ async function githubEditFile(filePath, newContent, commitMessage) {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      message: commitMessage || `🤖 Bot: ${filePath} updated`,
+      message: commitMessage || `🤖 Bot: ${safePath} updated`,
       content: Buffer.from(newContent).toString('base64'),
       sha: existing.sha
     })
@@ -121,7 +156,11 @@ async function processGithubAction(responseText, chatId) {
   if (responseText.includes('GITHUB_ACTION: read_file')) {
     const fileMatch = responseText.match(/FILE: (.+)/);
     if (fileMatch) {
-      const filePath = fileMatch[1].trim();
+      const filePath = sanitizeRepoPath(fileMatch[1]);
+      if (!filePath) {
+        await telegramAPI('sendMessage', { chat_id: chatId, text: '❌ অবৈধ ফাইলপাথ — অনুরোধ বাতিল।' });
+        return;
+      }
       await telegramAPI('sendMessage', {
         chat_id: chatId,
         text: `📂 *${filePath}* পড়ছি...`,
@@ -146,8 +185,12 @@ async function processGithubAction(responseText, chatId) {
     const fileMatch = responseText.match(/FILE: (.+)/);
     const contentMatch = responseText.match(/CONTENT: ([\s\S]+)/);
     if (fileMatch && contentMatch) {
-      const filePath = fileMatch[1].trim();
+      const filePath = sanitizeRepoPath(fileMatch[1]);
       const newContent = contentMatch[1].trim();
+      if (!filePath) {
+        await telegramAPI('sendMessage', { chat_id: chatId, text: '❌ অবৈধ ফাইলপাথ — কোনো পরিবর্তন করা হয়নি।' });
+        return;
+      }
 
       // সরাসরি commit না করে, আগে admin-কে দেখিয়ে "হ্যাঁ" চাওয়া হচ্ছে।
       pendingActions[chatId] = {
@@ -284,7 +327,12 @@ async function handleMessage(msg) {
       messages: conversations[chatId]
     });
 
-    const assistantMessage = response.content[0].text;
+    const assistantMessage = extractText(response);
+    if (!assistantMessage) {
+      conversations[chatId].pop();
+      await telegramAPI('sendMessage', { chat_id: chatId, text: '❌ কোনো উত্তর পাওয়া যায়নি, আবার চেষ্টা করো।' });
+      return;
+    }
     conversations[chatId].push({ role: 'assistant', content: assistantMessage });
 
     await processGithubAction(assistantMessage, chatId);
@@ -299,4 +347,4 @@ async function handleMessage(msg) {
 }
 
 setWebhook();
-module.exports = { handleMessage, verifyWebhookSecret };
+module.exports = { handleMessage, verifyWebhookSecret, sanitizeRepoPath, extractText };
