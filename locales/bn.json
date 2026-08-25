@@ -1098,5 +1098,7 @@
   "admin_invalid_badge_prefix": "অবৈধ ব্যাজ: ",
   "admin_chat_id_invalid": "Chat ID সঠিক নয় (সংখ্যা অথবা @username হতে হবে)।",
   "admin_bot_token_format_invalid": "Bot token-এর ফরম্যাট সঠিক নয়।",
-  "admin_encryption_key_missing": "এনক্রিপশন কী সেট নেই — TELEGRAM_SETTINGS_KEY (বা SESSION_SECRET) ছাড়া টোকেন সেভ করা হবে না।"
+  "admin_encryption_key_missing": "এনক্রিপশন কী সেট নেই — TELEGRAM_SETTINGS_KEY (বা SESSION_SECRET) ছাড়া টোকেন সেভ করা হবে না।",
+  "payment_turnover_check_failed": "এই মুহূর্তে আপনার বোনাস টার্নওভার যাচাই করা যায়নি। একটু পরে আবার চেষ্টা করুন।",
+  "payment_limit_check_failed": "এই মুহূর্তে আপনার দৈনিক ডিপোজিট সীমা যাচাই করা যায়নি। একটু পরে আবার চেষ্টা করুন।"
 }
