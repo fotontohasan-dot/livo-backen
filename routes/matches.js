@@ -12,6 +12,7 @@ const { updateMissionProgress } = require('../services/missions');
 const { addPoints } = require('../services/loyalty');
 const { checkBadges } = require('../services/badges');
 const { getSetting } = require('../services/settings');
+const { resolveOdd } = require('../services/oddsResolver');
 const { broadcastDemoStats } = require('../services/socket');
 const cache = require('../services/cache');
 
@@ -156,9 +157,8 @@ router.get('/:id', requireIntParam('id', '/matches'), async (req, res) => {
 router.post('/:id/bet', isAuth, async (req, res) => {
   const userId = req.session.user.id;
   const matchId = req.params.id;
-  const { market_id, runner, odd, demo } = req.body;
+  const { market_id, runner, demo } = req.body;
   const stake = parseInt(req.body.stake);
-  const oddNum = parseFloat(odd);
   const isDemo = !!demo;
 
   const minBet = Number(await getSetting('min_bet'));
@@ -168,9 +168,6 @@ router.post('/:id/bet', isAuth, async (req, res) => {
   }
   if (stake > maxBet) {
     return res.status(400).json({ success: false, message: req.t('bet_max_amount').replace('{value}', maxBet) });
-  }
-  if (isNaN(oddNum) || oddNum <= 1) {
-    return res.status(400).json({ success: false, message: req.t('matches_invalid_odds') });
   }
   if (!market_id) {
     return res.status(400).json({ success: false, message: req.t('matches_market_not_found') });
@@ -184,6 +181,15 @@ router.post('/:id/bet', isAuth, async (req, res) => {
     if (!m.rows[0] || m.rows[0].status !== 'open') {
       await client.query('ROLLBACK');
       return res.status(400).json({ success: false, message: req.t('matches_market_closed') });
+    }
+
+    // অডস সার্ভার থেকেই নির্ধারিত। আগে req.body.odd সরাসরি bets.odd-এ যেত, আর
+    // সেটেলমেন্ট পেআউট হিসাব করে stake * bets.odd দিয়ে — ফলে বড় odd পাঠিয়ে
+    // যেকোনো পরিমাণ কয়েন তোলা যেত। ক্লায়েন্টের পাঠানো odd এখন উপেক্ষিত।
+    const oddNum = resolveOdd(m.rows[0], runner);
+    if (oddNum === null) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ success: false, message: req.t('matches_invalid_odds') });
     }
 
     const balanceCol = isDemo ? 'demo_balance' : 'coins';

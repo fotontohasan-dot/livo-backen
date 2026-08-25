@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const { normalizeEmail, normalizeUsername, normalizePhone, normalizeIdentifier } = require('../utils/identity');
 // অস্তিত্বহীন ইউজারের ক্ষেত্রে bcrypt.compare() একদমই না চালালে (শুধু `!user ||` শর্ট-সার্কিটে থেমে গেলে)
 // রেসপন্স প্রায় তাৎক্ষণিক আসে, কিন্তু ভুল পাসওয়ার্ড দিলে পুরো bcrypt cost (~৫০-১০০ms) লাগে — যদিও
 // এরর মেসেজ দুই ক্ষেত্রেই এক, এই টাইমিং পার্থক্য দিয়েই ইমেইল/ফোন অস্তিত্ব যাচাই (এনিউমারেশন) করা যায়।
@@ -195,7 +196,12 @@ router.get('/register', (req, res) => {
 });
 
 router.post('/register', async (req, res) => {
-  const { username, email, phone, password, confirmPassword, referralCode, website, form_rendered_at, captcha_answer } = req.body;
+  const { username: rawUsername, email: rawEmail, phone: rawPhone, password, confirmPassword, referralCode, website, form_rendered_at, captcha_answer } = req.body;
+  // সংরক্ষণ ও খোঁজা — দুটোই normalize করা মানেই হয়, নাহলে কেস/স্পেসের
+  // ভিন্নতায় একই ইমেইলে একাধিক অ্যাকাউন্ট তৈরি হয় (utils/identity.js দেখুন)।
+  const username = normalizeUsername(rawUsername);
+  const email = normalizeEmail(rawEmail);
+  const phone = normalizePhone(rawPhone);
   const ref = referralCode || req.query.ref || '';
   const reqIp = getReqIp(req);
   const userAgent = req.get('user-agent') || '';
@@ -233,7 +239,7 @@ router.post('/register', async (req, res) => {
       req.flash('error', req.t('auth_username_password_required'));
       return res.redirect('/register');
     }
-    if (!/^[A-Za-z0-9_.]{3,20}$/.test(username.trim())) {
+    if (!/^[A-Za-z0-9_.]{3,20}$/.test(username)) {
       req.flash('error', req.t('auth_username_format_invalid'));
       return res.redirect('/register');
     }
@@ -241,11 +247,11 @@ router.post('/register', async (req, res) => {
       req.flash('error', req.t('auth_email_or_phone_required'));
       return res.redirect('/register');
     }
-    if (email && !/^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+$/.test(email.trim())) {
+    if (email && !/^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+$/.test(email)) {
       req.flash('error', req.t('auth_email_format_invalid'));
       return res.redirect('/register');
     }
-    if (phone && !/^01\d{9}$/.test(phone.trim())) {
+    if (phone && !/^01\d{9}$/.test(phone)) {
       req.flash('error', req.t('auth_phone_format_invalid'));
       return res.redirect('/register');
     }
@@ -259,7 +265,7 @@ router.post('/register', async (req, res) => {
     }
 
     if (email) {
-      const existingEmail = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+      const existingEmail = await pool.query('SELECT id FROM users WHERE LOWER(email) = $1', [email]);
       if (existingEmail.rows.length > 0) {
         req.flash('error', req.t('auth_email_already_registered'));
         return res.redirect('/register');
@@ -408,7 +414,7 @@ async function findOrCreateGoogleUser(profile) {
   if (existing.rows[0]) return existing.rows[0];
 
   if (profile.email) {
-    existing = await pool.query('SELECT * FROM users WHERE email = $1', [profile.email]);
+    existing = await pool.query('SELECT * FROM users WHERE LOWER(email) = $1', [normalizeEmail(profile.email)]);
     if (existing.rows[0]) {
       await pool.query('UPDATE users SET google_id = $1 WHERE id = $2', [profile.googleId, existing.rows[0].id]);
       existing.rows[0].google_id = profile.googleId;
@@ -431,7 +437,7 @@ async function findOrCreateGoogleUser(profile) {
   const created = await insertWithUniqueReferralCode(username, (code) => pool.query(`
     INSERT INTO users (username, email, password, role, coins, referral_code, email_verified, google_id, auth_provider, full_name, avatar, created_at)
     VALUES ($1, $2, $3, 'user', 0, $4, $5, $6, 'google', $7, $8, NOW()) RETURNING *
-  `, [username, profile.email, unusablePassword, code, profile.emailVerified, profile.googleId, profile.name, profile.picture]));
+  `, [username, normalizeEmail(profile.email), unusablePassword, code, profile.emailVerified, profile.googleId, profile.name, profile.picture]));
 
   logSystemEvent(created.rows[0].id, username, 'GOOGLE_ACCOUNT_CREATED', `Google Sign-In দিয়ে নতুন অ্যাকাউন্ট তৈরি: ${profile.email || ''}`, null)
     .catch(e => console.error('logSystemEvent error:', e.message));
@@ -546,9 +552,11 @@ router.post('/login', async (req, res) => {
   }
 
   try {
+    // LOWER(email) — পুরোনো রেকর্ড মিশ্র-কেসে জমা থাকতে পারে, সেগুলোতেও লগইন কাজ করবে।
+    const loginIdentifier = normalizeIdentifier(identifier);
     const result = await pool.query(
-      'SELECT id, username, email, phone, password, role FROM users WHERE email = $1 OR phone = $1',
-      [identifier]
+      'SELECT id, username, email, phone, password, role FROM users WHERE LOWER(email) = $1 OR phone = $1',
+      [loginIdentifier]
     );
     const user = result.rows[0];
     const loginIp = reqIp;
@@ -764,7 +772,8 @@ router.get('/forgot-password', (req, res) => {
 });
 
 router.post('/forgot-password', resetLimiter, async (req, res) => {
-  const { email, website, form_rendered_at, captcha_answer } = req.body;
+  const { email: rawResetEmail, website, form_rendered_at, captcha_answer } = req.body;
+  const email = normalizeEmail(rawResetEmail);
   const reqIp = getReqIp(req);
   const userAgent = req.get('user-agent') || '';
 
@@ -801,7 +810,7 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
       return res.redirect('/forgot-password');
     }
 
-    const result = await pool.query('SELECT id, email FROM users WHERE email = $1', [email]);
+    const result = await pool.query('SELECT id, email FROM users WHERE LOWER(email) = $1', [email]);
     const user = result.rows[0];
 
     // ইউজার থাকুক বা না থাকুক একই সাফল্যের মেসেজ দেখানো হয় (ইমেইল enumeration ঠেকাতে)
