@@ -10,6 +10,8 @@ const { addVipTurnover } = require('./vip');
 const { updateMissionProgress } = require('./missions');
 const { addPoints } = require('./loyalty');
 const { t } = require('../utils/i18n');
+const { getSetting } = require('./settings');
+const { resolveOdd } = require('./oddsResolver');
 
 const MIN_STAKE = 10;
 const MAX_SELECTIONS = 12;
@@ -28,6 +30,12 @@ async function placeAccumulator(userId, stake, selections, lang = 'bn') {
   stake = parseInt(stake);
   if (isNaN(stake) || stake < MIN_STAKE) {
     return { success: false, message: t(lang, 'accumulator_min_stake').replace('{value}', MIN_STAKE) };
+  }
+  // সর্বোচ্চ স্টেক — routes/games.js ও routes//:id/bet একই max_bet সেটিং মানে,
+  // কিন্তু অ্যাকুমুলেটরে কোনো ঊর্ধ্বসীমা ছিল না, তাই এই পথে সীমা পুরোপুরি এড়ানো যেত।
+  const maxBet = Number(await getSetting('max_bet'));
+  if (Number.isFinite(maxBet) && maxBet > 0 && stake > maxBet) {
+    return { success: false, message: t(lang, 'bet_max_amount').replace('{value}', maxBet) };
   }
   if (!Array.isArray(selections) || selections.length < 2) {
     return { success: false, message: t(lang, 'accumulator_min_selections') };
@@ -56,14 +64,11 @@ async function placeAccumulator(userId, stake, selections, lang = 'bn') {
         await client.query('ROLLBACK');
         return { success: false, message: t(lang, 'accumulator_market_closed') };
       }
-      // অডস বের করা — odds JSONB তে runner→odd, নাহলে ক্লায়েন্ট অডস (fallback)
-      let odd = parseFloat(sel.odd);
-      try {
-        if (market.odds && sel.runner && market.odds[sel.runner]) {
-          odd = parseFloat(market.odds[sel.runner]);
-        }
-      } catch (e) {}
-      if (isNaN(odd) || odd <= 1) {
+      // অডস পুরোপুরি সার্ভার থেকে। আগে market.odds-এ রানার না থাকলে ক্লায়েন্টের
+      // পাঠানো sel.odd fallback হিসেবে ব্যবহৃত হতো — potential_win সেখান থেকেই
+      // হিসাব হয়, তাই ইচ্ছেমতো বড় odd পাঠিয়ে পেআউট বাড়ানো যেত।
+      const odd = resolveOdd(market, sel.runner);
+      if (odd === null) {
         await client.query('ROLLBACK');
         return { success: false, message: t(lang, 'accumulator_invalid_odds') };
       }
