@@ -1,6 +1,7 @@
 const { pool } = require('../db');
 const { logAdminAction } = require('./fraudDetection');
 const auditLog = require('./auditLog');
+const secureRandom = require('../utils/secureRandom');
 
 // ==================== Bot Detection System ====================
 // সন্দেহজনক Request Pattern, অস্বাভাবিক লগইন/রেজিস্ট্রেশন, অতিরিক্ত API Request ও
@@ -42,13 +43,13 @@ function isSuspiciousUserAgent(ua) {
 }
 
 function generateCaptcha() {
-  const a = Math.floor(Math.random() * 8) + 1;
-  const b = Math.floor(Math.random() * 8) + 1;
+  const a = secureRandom.randomIntInclusive(1, 8);
+  const b = secureRandom.randomIntInclusive(1, 8);
   const ops = [
     { symbol: '+', fn: (x, y) => x + y },
     { symbol: '-', fn: (x, y) => Math.max(x, y) - Math.min(x, y) }
   ];
-  const op = ops[Math.floor(Math.random() * ops.length)];
+  const op = secureRandom.pick(ops);
   const question = op.symbol === '+' ? `${a} + ${b}` : `${Math.max(a, b)} - ${Math.min(a, b)}`;
   return { question: `${question} = ?`, answer: String(op.fn(a, b)) };
 }

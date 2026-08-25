@@ -1,5 +1,6 @@
 const express = require('express');
 const crypto = require('crypto');
+const secureRandom = require('../utils/secureRandom');
 const router = express.Router();
 const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
@@ -142,39 +143,39 @@ const supportedGames = {
 const gameHandlers = {
   slots: (betAmount) => {
     const symbols = ["🍒", "🍋", "🍊", "🍇", "🔔", "💎", "7️⃣", "⭐", "🌟", "👑"];
-    const r = [symbols[Math.floor(Math.random() * symbols.length)], symbols[Math.floor(Math.random() * symbols.length)], symbols[Math.floor(Math.random() * symbols.length)]];
+    const r = [secureRandom.pick(symbols), secureRandom.pick(symbols), secureRandom.pick(symbols)];
     let multiplier = 0;
     if (r[0] === r[1] && r[1] === r[2]) multiplier = 10;
     else if (r[0] === r[1] || r[1] === r[2] || r[0] === r[2]) multiplier = 2;
     return { winAmount: betAmount * multiplier, gameResult: { results: r } };
   },
   roulette: (betAmount, selection) => {
-    const number = Math.floor(Math.random() * 37);
+    const number = secureRandom.randomInt(37);
     const isRed = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36].includes(number);
     let winAmount = 0;
     if ((selection === 'Red' && isRed) || (selection === 'Black' && number !== 0 && !isRed)) winAmount = betAmount * 2;
     return { winAmount, gameResult: { number, color: number === 0 ? 'Green' : (isRed ? 'Red' : 'Black') } };
   },
   'andar-bahar': (betAmount, selection) => {
-    const isAndar = Math.random() < 0.5;
+    const isAndar = secureRandom.chance(0.5);
     const winAmount = (isAndar && selection === 'Andar') || (!isAndar && selection === 'Bahar') ? betAmount * 1.9 : 0;
     return { winAmount, gameResult: { side: isAndar ? 'Andar' : 'Bahar' } };
   },
   'teen-patti': (betAmount) => {
-    const winAmount = Math.random() < 0.40 ? betAmount * 1.95 : 0;
+    const winAmount = secureRandom.chance(0.40) ? betAmount * 1.95 : 0;
     return { winAmount, gameResult: {} };
   },
   blackjack: (betAmount) => {
-    const winAmount = Math.random() < 0.42 ? betAmount * 2 : 0;
+    const winAmount = secureRandom.chance(0.42) ? betAmount * 2 : 0;
     return { winAmount, gameResult: {} };
   },
   poker: (betAmount) => {
-    const winAmount = Math.random() < 0.35 ? betAmount * 2.5 : 0;
+    const winAmount = secureRandom.chance(0.35) ? betAmount * 2.5 : 0;
     return { winAmount, gameResult: {} };
   },
   baccarat: (betAmount, selection) => {
     const resultOptions = ['Player', 'Banker', 'Tie'];
-    const outcome = resultOptions[Math.floor(Math.random() * resultOptions.length)];
+    const outcome = secureRandom.pick(resultOptions);
     let winAmount = 0;
     if (outcome === selection) {
       if (outcome === 'Tie') winAmount = betAmount * 8;
@@ -279,7 +280,7 @@ router.post('/play', isAuth, async (req, res) => {
     let gameResult = {};
 
     if (['aviator', 'crash-game'].includes(gameSlug)) {
-      const crashPoint = (1 + Math.random() * 9).toFixed(2);
+      const crashPoint = (1 + secureRandom.randomFloat() * 9).toFixed(2);
       const roundToken = crypto.randomUUID();
       // রাউন্ড এখন DB-তে (game_rounds) রেকর্ড হয় — crash_point/bet_amount/started_at
       // সার্ভার-সাইড অথরিটি, session শুধু কোন রাউন্ড claim করতে হবে তার token রাখে।
@@ -335,7 +336,7 @@ router.post('/play', isAuth, async (req, res) => {
       winAmount = result.winAmount;
       gameResult = result.gameResult;
     } else {
-      winAmount = Math.random() < 0.45 ? betAmount * 2 : 0;
+      winAmount = secureRandom.chance(0.45) ? betAmount * 2 : 0;
     }
 
     const netChange = winAmount - betAmount;
