@@ -1,5 +1,5 @@
 const express = require('express');
-const { requireIntParam } = require('../middleware/validate');
+const { requireIntParam, parsePositiveInt } = require('../middleware/validate');
 const router = express.Router();
 const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
@@ -14,6 +14,7 @@ const { checkBadges } = require('../services/badges');
 const { getSetting } = require('../services/settings');
 const { broadcastDemoStats } = require('../services/socket');
 const cache = require('../services/cache');
+const { resolveOdd } = require('../services/marketOdds');
 
 function formatMatch(row) {
   return {
@@ -155,22 +156,32 @@ router.get('/:id', requireIntParam('id', '/matches'), async (req, res) => {
 
 router.post('/:id/bet', isAuth, async (req, res) => {
   const userId = req.session.user.id;
-  const matchId = req.params.id;
-  const { market_id, runner, odd, demo } = req.body;
+  // matchId আগে যাচাই না করেই bets.match_id-তে ইনসার্ট হতো — ত্রুটিপূর্ণ মান
+  // (abc, 1e309) সরাসরি Postgres-এ গিয়ে 22P02 এরর ঘটিয়ে 500 দিত। GET /:id-এ
+  // এই যাচাই আগে থেকেই ছিল (requireIntParam), এখানেও একই মান প্রয়োগ করা হলো।
+  const matchId = parsePositiveInt(req.params.id);
+  if (matchId === null) {
+    return res.status(400).json({ success: false, message: req.t('matches_market_not_found') });
+  }
+  // দ্রষ্টব্য: req.body.odd ইচ্ছাকৃতভাবে destructure করা হয় না। ক্লায়েন্ট চাইলে ফিল্ডটা
+  // পাঠাতে পারে (পুরনো ফ্রন্টএন্ড এখনো পাঠায়), কিন্তু সেটা কোথাও পড়া হয় না — অডস
+  // সবসময় DB-র markets.odds থেকেই আসে (services/marketOdds.js)।
+  const { market_id, runner, demo } = req.body;
   const stake = parseInt(req.body.stake);
-  const oddNum = parseFloat(odd);
   const isDemo = !!demo;
 
   const minBet = Number(await getSetting('min_bet'));
   const maxBet = Number(await getSetting('max_bet'));
-  if (isNaN(stake) || stake < minBet) {
-    return res.status(400).json({ success: false, message: req.t('bet_min_amount').replace('{value}', minBet) });
+  // সেটিংস টেবিলে অবৈধ/অসংখ্যা মান থাকলে Number() NaN দেয়, আর NaN-এর সাথে যেকোনো
+  // তুলনাই false — অর্থাৎ আগে ভুল কনফিগে বাজির সীমা নিঃশব্দে সম্পূর্ণ বন্ধ হয়ে যেত।
+  // এখন নিরাপদ ডিফল্টে fallback করা হয় (services/settings.js-এর DEFAULTS-এর সমান)।
+  const effMinBet = Number.isFinite(minBet) && minBet > 0 ? minBet : 10;
+  const effMaxBet = Number.isFinite(maxBet) && maxBet > 0 ? maxBet : 50000;
+  if (isNaN(stake) || stake < effMinBet) {
+    return res.status(400).json({ success: false, message: req.t('bet_min_amount').replace('{value}', effMinBet) });
   }
-  if (stake > maxBet) {
-    return res.status(400).json({ success: false, message: req.t('bet_max_amount').replace('{value}', maxBet) });
-  }
-  if (isNaN(oddNum) || oddNum <= 1) {
-    return res.status(400).json({ success: false, message: req.t('matches_invalid_odds') });
+  if (stake > effMaxBet) {
+    return res.status(400).json({ success: false, message: req.t('bet_max_amount').replace('{value}', effMaxBet) });
   }
   if (!market_id) {
     return res.status(400).json({ success: false, message: req.t('matches_market_not_found') });
@@ -185,6 +196,26 @@ router.post('/:id/bet', isAuth, async (req, res) => {
       await client.query('ROLLBACK');
       return res.status(400).json({ success: false, message: req.t('matches_market_closed') });
     }
+    // মার্কেটটা সত্যিই এই ম্যাচেরই কিনা — আগে যাচাই হতো না, ফলে এক ম্যাচের URL দিয়ে
+    // অন্য ম্যাচের মার্কেটে বাজি ধরা যেত এবং bets.match_id ভুল রেফারেন্স ধরে রাখত।
+    if (Number(m.rows[0].match_id) !== Number(matchId)) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ success: false, message: req.t('matches_market_not_found') });
+    }
+
+    // ==================== অডস — একমাত্র authoritative উৎস DB ====================
+    // ক্লায়েন্টের পাঠানো odd সম্পূর্ণভাবে উপেক্ষিত। runner অবশ্যই markets.odds-এর
+    // একটা প্রকৃত কী হতে হবে; না হলে বাজি প্রত্যাখ্যাত (fail-closed)।
+    const resolved = resolveOdd(m.rows[0], runner);
+    if (!resolved.ok) {
+      await client.query('ROLLBACK');
+      const msg = (resolved.reason === 'unknown_runner' || resolved.reason === 'invalid_runner')
+        ? req.t('matches_invalid_runner')
+        : req.t('matches_invalid_odds');
+      return res.status(400).json({ success: false, message: msg });
+    }
+    const oddNum = resolved.odd;
+    const runnerKey = resolved.runner;
 
     const balanceCol = isDemo ? 'demo_balance' : 'coins';
     const upd = await client.query(
@@ -199,7 +230,7 @@ router.post('/:id/bet', isAuth, async (req, res) => {
     await client.query(
       `INSERT INTO bets (user_id, match_id, market_id, market_type, runner, odd, stake, status, is_demo)
        VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8)`,
-      [userId, matchId, market_id, m.rows[0].type, runner || null, oddNum, stake, isDemo]
+      [userId, matchId, market_id, m.rows[0].type, runnerKey, oddNum, stake, isDemo]
     );
 
     if (isDemo) {

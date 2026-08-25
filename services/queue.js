@@ -158,7 +158,21 @@ async function moveToDeadLetter(job, attempts, errMsg) {
   }
 }
 
+// ==================== ওভারল্যাপ গার্ড (অডিট P2-14) ====================
+// startWorker() একটা setInterval দিয়ে প্রতি POLL_INTERVAL_MS-এ tick() ডাকে। একটা ব্যাচ
+// ইন্টারভালের চেয়ে বেশি সময় নিলে (ধীর হ্যান্ডলার, ইমেইল/HTTP কল) আগের tick শেষ হওয়ার
+// আগেই পরেরটা শুরু হয়ে যেত এবং tick-গুলো জমতে থাকত। প্রতিটা tick একটা pool client
+// ধরে রাখে, আর pg.Pool-এর ডিফল্ট সিলিং ১০ — অর্থাৎ কিউ ধীর হলে সেটা ওয়েব রিকোয়েস্টের
+// কানেকশনও খেয়ে ফেলতে পারত। FOR UPDATE SKIP LOCKED একই জব দুবার তোলা আটকাত, কিন্তু
+// কানেকশন-ক্ষুধা আটকাত না। এখন একসাথে সর্বোচ্চ একটাই tick চলে।
+let tickInFlight = false;
+
 async function tick() {
+  if (tickInFlight) {
+    // আগের ব্যাচ এখনো চলছে — এই টিকটা নীরবে বাদ, পরের ইন্টারভালে আবার চেষ্টা হবে।
+    return;
+  }
+  tickInFlight = true;
   state.lastTickAt = new Date();
   try {
     await processOneBatch();
@@ -166,6 +180,8 @@ async function tick() {
     state.lastError = err.message;
     state.lastErrorAt = new Date();
     console.error('[queue] worker tick error (non-blocking, will retry next tick):', err.message);
+  } finally {
+    tickInFlight = false;
   }
 }
 

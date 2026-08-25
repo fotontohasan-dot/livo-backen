@@ -206,6 +206,7 @@ router.get('/admin/conversations', isAdmin, async (req, res) => {
       ) uc ON true
       WHERE u.role != 'admin'
       ORDER BY lm.created_at DESC
+      LIMIT 200
     `);
     res.json(result.rows);
   } catch (err) {

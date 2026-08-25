@@ -3,6 +3,8 @@
 const { pool } = require('../db');
 const { createBonus } = require('./turnover');
 const { t } = require('../utils/i18n');
+// পুরস্কারের অঙ্ক টাকার ফলাফল, তাই CSPRNG (services/rng.js) — Math.random() নয়।
+const { secureInt } = require('./rng');
 
 function todayStr() {
   const d = new Date();
@@ -43,7 +45,7 @@ async function getRewardStatus(userId) {
 }
 
 function randInt(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+  return secureInt(min, max);
 }
 
 async function claimRedPacket(userId, lang = 'bn') {

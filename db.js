@@ -24,9 +24,29 @@ function resolveSslConfig() {
   return { rejectUnauthorized: false };
 }
 
+// ==================== কানেকশন পুলের স্পষ্ট সীমা (অডিট P2-14) ====================
+// আগে কোনো পুল কনফিগ ছিল না, অর্থাৎ pg-র ডিফল্ট max=10 এবং কোনো
+// connectionTimeoutMillis নেই — পুল নিঃশেষ হলে রিকোয়েস্ট *চিরকাল* অপেক্ষা করত
+// (কোনো এরর নয়, শুধু ঝুলে থাকা)। এখন মানগুলো স্পষ্ট, env দিয়ে টিউনযোগ্য, এবং
+// অপেক্ষার একটা সীমা আছে যাতে পুল-ক্ষুধা দ্রুত ব্যর্থতা হিসেবে ধরা পড়ে।
+const POOL_MAX = Number(process.env.PGPOOL_MAX) > 0 ? Number(process.env.PGPOOL_MAX) : 20;
+const POOL_IDLE_TIMEOUT_MS = Number(process.env.PGPOOL_IDLE_TIMEOUT_MS) > 0
+  ? Number(process.env.PGPOOL_IDLE_TIMEOUT_MS) : 30000;
+const POOL_CONNECTION_TIMEOUT_MS = Number(process.env.PGPOOL_CONNECTION_TIMEOUT_MS) > 0
+  ? Number(process.env.PGPOOL_CONNECTION_TIMEOUT_MS) : 10000;
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: resolveSslConfig()
+  ssl: resolveSslConfig(),
+  max: POOL_MAX,
+  idleTimeoutMillis: POOL_IDLE_TIMEOUT_MS,
+  connectionTimeoutMillis: POOL_CONNECTION_TIMEOUT_MS
+});
+
+// একটা idle ক্লায়েন্ট এরর দিলে (নেটওয়ার্ক ড্রপ, সার্ভার রিস্টার্ট) pg সেটাকে
+// unhandled 'error' ইভেন্ট হিসেবে ছাড়ে — লিসেনার না থাকলে পুরো প্রসেস ক্র্যাশ করে।
+pool.on('error', (err) => {
+  console.error('⚠️ Postgres pool idle client error (পুল নিজেই রিকভার করবে):', err.message);
 });
 
 const connectDB = async () => {

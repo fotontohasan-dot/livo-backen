@@ -394,115 +394,38 @@ app.get('/health', async (req, res) => {
   }
 });
 
-// ==================== সাময়িক: এক-বারের admin রিসেট (Render Free Plan-এ Shell নেই বলে) ====================
-// Render-এর Free Plan-এ Shell/SSH অ্যাক্সেস থাকে না, তাই reset-admin.js ফাইলটা সরাসরি চালানো যায় না।
-// এই রুটটা ঠিক একই কাজ করে কিন্তু ব্রাউজার দিয়ে ভিজিট করা যায় — শুধুমাত্র ADMIN_RESET_TOKEN
-// environment variable সেট করা থাকলেই এই রুট সক্রিয় থাকে (না থাকলে 404, ডিফল্টভাবে নিষ্ক্রিয়)।
-// ব্যবহারের পর ADMIN_RESET_TOKEN/NEW_ADMIN_EMAIL/NEW_ADMIN_PASSWORD — এই তিনটা environment
-// variable Render থেকে মুছে ফেলো (অথবা এই পুরো ব্লকটা কোড থেকেই সরিয়ে দাও) — এটা স্থায়ীভাবে
-// রেখে দেওয়া নিরাপদ না, যেকেউ token অনুমান করতে পারলে admin অ্যাকাউন্ট বদলে ফেলতে পারবে।
+// ==================== অ্যাডমিন রিকভারি ====================
+// এখানে আগে একটা `/internal/reset-admin` HTTP রুট ছিল (এবং তার সঙ্গী
+// `/internal/reset-admin/status`), যেটা ADMIN_RESET_TOKEN সেট থাকলেই সক্রিয় হয়ে যেত।
+// অডিটে ধরা পড়া সমস্যাগুলো (P1-04):
+//   • এটা ছিল একটা **GET** রিকোয়েস্ট যা প্রতিটা বিদ্যমান অ্যাডমিনকে ডিমোট করে নতুন
+//     একজনকে বসিয়ে দিত — অর্থাৎ অ্যাপের সবচেয়ে শক্তিশালী কাজটা একটা লিঙ্কে ক্লিক
+//     করলেই হয়ে যেত (CSRF মিডলওয়্যার নিরাপদ মেথড হিসেবে GET ছেড়ে দেয়)।
+//   • পুরো ~১১০ লাইনের ব্লকে একটাও logAdminAction/logEvent কল ছিল না — অ্যাপের অন্য
+//     প্রতিটা প্রিভিলেজ-এস্কালেশন পথ লগ হয়, শুধু এটাই হতো না।
+//   • `/status` রুটটা কার্যত একটা পাসওয়ার্ড অরাকল ছিল: টোকেন জানা থাকলে সেটা বলে
+//     দিত অনুমান করা NEW_ADMIN_PASSWORD এখন DB-র হ্যাশের সাথে মেলে কিনা।
+//   • টোকেনটা query-string-এ যেত, তাই access log, Referer এবং (৫০০ হলে) error_logs
+//     টেবিলেও জমা হতে পারত।
+//
+// একটা স্থায়ীভাবে ইন্টারনেট-থেকে-পৌঁছানো যায় এমন অ্যাডমিন-টেকওভার দরজার কোনো নিরাপদ
+// সংস্করণ হয় না, তাই রুট দুটো সম্পূর্ণ সরিয়ে দেওয়া হলো। একই রিকভারি কাজটা আগে থেকেই
+// রিপোতে থাকা `reset-admin.js` স্ক্রিপ্ট দিয়ে করা যায় — সেটা চালাতে হোস্টে শেল/ডিপ্লয়
+// অ্যাক্সেস লাগে, অর্থাৎ ক্ষমতাটা ইতিমধ্যেই অবকাঠামো-স্তরের অথেন্টিকেশনের পেছনে:
+//     node reset-admin.js
+// Render-এর Free Plan-এ শেল নেই বলে এই রুটটা বানানো হয়েছিল; সেক্ষেত্রে সঠিক সমাধান
+// হলো এককালীন Job/one-off command চালানো অথবা সাময়িকভাবে প্ল্যান আপগ্রেড করা —
+// পাবলিক HTTP সারফেসে স্থায়ী ব্যাকডোর রেখে দেওয়া নয়।
+//
+// ADMIN_RESET_TOKEN এখনো সেট করা থাকলে বুটে জোরালো সতর্কবার্তা দেওয়া হয়, যাতে
+// অপারেটর বুঝতে পারেন ভ্যারিয়েবলটা এখন অকার্যকর এবং মুছে ফেলা উচিত।
 if (process.env.ADMIN_RESET_TOKEN) {
-  // /internal/reset-admin ও তার status — দুটোতেই একই টোকেন গেট। টোকেন না মিললে 404,
-  // যাতে রুটটার অস্তিত্বই ফাঁস না হয়। timingSafeEqual ব্যবহার করা হয় যাতে বাইট-বাই-বাইট
-  // তুলনার সময় থেকে টোকেন অনুমান করা না যায় (দুই রুটে হুবহু একই যাচাই)।
-  function resetAdminTokenOk(req) {
-    const crypto = require('crypto');
-    // Render-এর ওয়েব UI-তে পেস্ট করার সময় প্রায়ই অজান্তে শেষে একটা স্পেস/নিউলাইন চলে আসে —
-    // trim() দিয়ে সেই সাধারণ ভুলটা এড়ানো হচ্ছে, নাহলে সঠিক টোকেন দিলেও মিলত না।
-    const provided = Buffer.from(String(req.query.token || '').trim());
-    const expected = Buffer.from(String(process.env.ADMIN_RESET_TOKEN).trim());
-    return provided.length === expected.length && crypto.timingSafeEqual(provided, expected);
-  }
-
-  // ডায়াগনস্টিক: env var আদৌ Render-এ সেট হয়েছে কিনা, ভ্যালু ফাঁস না করেই যাচাই করার উপায়।
-  //
-  // এই রুটে আগে কোনো টোকেন যাচাই ছিল না — ADMIN_RESET_TOKEN সেট থাকলেই যে কেউ, লগইন ছাড়াই,
-  // NEW_ADMIN_EMAIL-এর পুরো মান, পাসওয়ার্ডের দৈর্ঘ্য, DB-তে অ্যাকাউন্টের role এবং
-  // "পাসওয়ার্ডটা DB-র হ্যাশের সাথে মেলে কিনা" — এই শেষেরটা কার্যত একটা যাচাই-অরাকল —
-  // সব দেখে ফেলতে পারত। এখন নিচের mutation রুটের মতোই একই টোকেন গেট।
-  app.get('/internal/reset-admin/status', async (req, res) => {
-    if (!resetAdminTokenOk(req)) return res.status(404).send('Not found');
-    const lines = [
-      `ADMIN_RESET_TOKEN: ${process.env.ADMIN_RESET_TOKEN ? 'সেট করা আছে (' + process.env.ADMIN_RESET_TOKEN.length + ' ক্যারেকটার)' : 'সেট করা নেই'}`,
-      `NEW_ADMIN_EMAIL: ${process.env.NEW_ADMIN_EMAIL || 'সেট করা নেই'}`,
-      `NEW_ADMIN_PASSWORD: ${process.env.NEW_ADMIN_PASSWORD ? 'সেট করা আছে (' + process.env.NEW_ADMIN_PASSWORD.length + ' ক্যারেকটার)' : 'সেট করা নেই'}`
-    ];
-    // চূড়ান্ত নিশ্চয়তা: এই মুহূর্তে DB-তে যে হ্যাশ সেভ আছে (আগের একটা /internal/reset-admin কল
-    // থেকে), সেটা এখনকার (trim করা) NEW_ADMIN_EMAIL/NEW_ADMIN_PASSWORD দিয়ে সত্যিই মেলে কিনা —
-    // ব্রাউজার/টাইপিং/অটোফিল — এসব ভ্যারিয়েবল সম্পূর্ণ বাদ দিয়ে সরাসরি সার্ভার-সাইডে যাচাই।
-    const email = (process.env.NEW_ADMIN_EMAIL || '').trim();
-    const password = (process.env.NEW_ADMIN_PASSWORD || '').trim();
-    if (email && password) {
-      try {
-        const bcrypt = require('bcryptjs');
-        const u = await pool.query('SELECT role, password FROM users WHERE LOWER(email) = LOWER($1)', [email]);
-        if (u.rows.length === 0) {
-          lines.push(`\nDB-তে এই ইমেইলে ({email}) কোনো ইউজার নেই — এখনো /internal/reset-admin চালানো হয়নি মনে হচ্ছে।`.replace('{email}', email));
-        } else {
-          const match = await bcrypt.compare(password, u.rows[0].password);
-          lines.push(`\nDB role: ${u.rows[0].role}`);
-          lines.push(`বর্তমান NEW_ADMIN_PASSWORD এখন DB-তে সেভ করা হ্যাশের সাথে মিলছে: ${match ? '✅ হ্যাঁ, মিলছে' : '❌ না, মিলছে না'}`);
-          if (!match) {
-            lines.push('(মানে: DB-তে যে পাসওয়ার্ড সেভ আছে সেটা এখনকার NEW_ADMIN_PASSWORD-এর থেকে আলাদা — /internal/reset-admin আবার চালাও।)');
-          } else {
-            lines.push('(মানে: পাসওয়ার্ড ঠিকই আছে সার্ভার-সাইডে — লগইন ব্যর্থ হলে সেটা নিশ্চিতভাবে ব্রাউজারে টাইপ করা মান সংক্রান্ত কিছু, যেমন অজান্তে স্পেস/ভুল ক্যারেকটার।)');
-          }
-        }
-      } catch (e) {
-        lines.push('\nযাচাই ব্যর্থ: ' + e.message);
-      }
-    }
-    res.type('text/plain').send(lines.join('\n'));
-  });
-
-  app.get('/internal/reset-admin', async (req, res) => {
-    if (!resetAdminTokenOk(req)) return res.status(404).send('Not found');
-
-    // token-এর মতো NEW_ADMIN_EMAIL/NEW_ADMIN_PASSWORD-এও Render-এ পেস্ট করার সময় অজান্তে
-    // শেষে স্পেস/নিউলাইন ঢুকে যাওয়ার একই ঝুঁকি আছে — trim() দিয়ে সেটা এড়ানো হচ্ছে।
-    const email = (process.env.NEW_ADMIN_EMAIL || '').trim();
-    const password = (process.env.NEW_ADMIN_PASSWORD || '').trim();
-    if (!email || !password) {
-      return res.status(400).send('NEW_ADMIN_EMAIL / NEW_ADMIN_PASSWORD environment variable সেট করা নেই।');
-    }
-
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-      const demoted = await client.query(
-        `UPDATE users SET role = 'user', role_key = NULL WHERE role = 'admin' RETURNING id, username, email`
-      );
-      const bcrypt = require('bcryptjs');
-      const hashed = await bcrypt.hash(password, 10);
-      const existing = await client.query('SELECT id FROM users WHERE LOWER(email) = LOWER($1)', [email]);
-      let resultLine;
-      if (existing.rows.length > 0) {
-        await client.query(
-          `UPDATE users SET password = $1, role = 'admin', role_key = NULL, email_verified = true, is_banned = false WHERE id = $2`,
-          [hashed, existing.rows[0].id]
-        );
-        resultLine = `বিদ্যমান ইউজার #${existing.rows[0].id}-কে admin বানানো হলো: ${email}`;
-      } else {
-        const username = 'admin_' + Math.random().toString(36).slice(2, 8);
-        const created = await client.query(
-          `INSERT INTO users (username, email, password, role, coins, referral_code, email_verified)
-           VALUES ($1, $2, $3, 'admin', 0, $4, true) RETURNING id`,
-          [username, email, hashed, username.toUpperCase().slice(0, 8)]
-        );
-        resultLine = `নতুন admin অ্যাকাউন্ট তৈরি হলো — #${created.rows[0].id}, username: ${username}, email: ${email}`;
-      }
-      await client.query('COMMIT');
-      res.type('text/plain').send(
-        `সম্পন্ন।\n${demoted.rows.length}টা পুরনো admin অ্যাকাউন্ট থেকে অ্যাডমিন-অ্যাক্সেস সরানো হলো।\n${resultLine}\n\nএখন /admin/login-এ গিয়ে লগইন করো। তারপর Render থেকে ADMIN_RESET_TOKEN, NEW_ADMIN_EMAIL, NEW_ADMIN_PASSWORD এই তিনটা environment variable মুছে ফেলো।`
-      );
-    } catch (err) {
-      await client.query('ROLLBACK');
-      console.error('reset-admin route error:', err.message);
-      res.status(500).type('text/plain').send('ব্যর্থ হয়েছে, কোনো পরিবর্তন হয়নি: ' + err.message);
-    } finally {
-      client.release();
-    }
-  });
+  console.warn(
+    '⚠️ ADMIN_RESET_TOKEN সেট করা আছে, কিন্তু /internal/reset-admin রুটটি নিরাপত্তার কারণে ' +
+    'সরিয়ে ফেলা হয়েছে। ভ্যারিয়েবলটির আর কোনো কার্যকারিতা নেই — ADMIN_RESET_TOKEN, ' +
+    'NEW_ADMIN_EMAIL ও NEW_ADMIN_PASSWORD এনভায়রনমেন্ট থেকে মুছে ফেলুন। ' +
+    'অ্যাডমিন রিকভারির জন্য শেল/ডিপ্লয় অ্যাক্সেস নিয়ে `node reset-admin.js` চালান।'
+  );
 }
 
 app.get('/ready', async (req, res) => {

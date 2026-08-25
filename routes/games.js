@@ -17,6 +17,19 @@ const { recordGameResult } = require('../services/streak');
 const { getSetting } = require('../services/settings');
 const { checkBadges } = require('../services/badges');
 const { broadcastDemoStats } = require('../services/socket');
+const { secureRandom, secureInt, securePick } = require('../services/rng');
+const { generateCrashPoint, playBaccarat, isValidBaccaratSelection } = require('../services/gameFairness');
+
+// ক্র্যাশ গেমের হাউস এজ ও সর্বোচ্চ মাল্টিপ্লায়ার — env দিয়ে টিউন করা যায়, কিন্তু
+// অবৈধ/অনুপস্থিত মানে নিরাপদ ডিফল্টে পড়ে (কখনো ০ এজ বা unbounded ceiling নয়)।
+function crashConfig() {
+  const rawEdge = Number(process.env.CRASH_HOUSE_EDGE);
+  const rawMax = Number(process.env.CRASH_MAX_MULTIPLIER);
+  return {
+    edge: Number.isFinite(rawEdge) && rawEdge > 0 && rawEdge < 1 ? rawEdge : 0.03,
+    maxMultiplier: Number.isFinite(rawMax) && rawMax > 1 ? rawMax : 1000
+  };
+}
 
 const supportedGames = {
   "aviator": "Aviator",
@@ -139,48 +152,55 @@ const supportedGames = {
   "sakura-fortune": "Sakura Fortune"
 };
 
+// প্রতিটা হ্যান্ডলারে Math.random() → services/rng.js-এর CSPRNG (P1-01)।
+// যেসব হ্যান্ডলার ক্লায়েন্টের selection পড়ে, সেগুলো এখন অবৈধ selection স্পষ্টভাবে
+// প্রত্যাখ্যান করে (আগে অবৈধ মান নীরবে "হার" হিসেবে গণ্য হতো — ইউজার বুঝতেও পারত না
+// কেন তার বাজি হারল, আর টাইপো-জাতীয় ভুল নিঃশব্দে টাকা কেটে নিত)।
+class InvalidSelectionError extends Error {}
+
 const gameHandlers = {
   slots: (betAmount) => {
     const symbols = ["🍒", "🍋", "🍊", "🍇", "🔔", "💎", "7️⃣", "⭐", "🌟", "👑"];
-    const r = [symbols[Math.floor(Math.random() * symbols.length)], symbols[Math.floor(Math.random() * symbols.length)], symbols[Math.floor(Math.random() * symbols.length)]];
+    const r = [securePick(symbols), securePick(symbols), securePick(symbols)];
     let multiplier = 0;
     if (r[0] === r[1] && r[1] === r[2]) multiplier = 10;
     else if (r[0] === r[1] || r[1] === r[2] || r[0] === r[2]) multiplier = 2;
     return { winAmount: betAmount * multiplier, gameResult: { results: r } };
   },
   roulette: (betAmount, selection) => {
-    const number = Math.floor(Math.random() * 37);
+    if (selection !== 'Red' && selection !== 'Black') throw new InvalidSelectionError();
+    const number = secureInt(0, 36);
     const isRed = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36].includes(number);
     let winAmount = 0;
     if ((selection === 'Red' && isRed) || (selection === 'Black' && number !== 0 && !isRed)) winAmount = betAmount * 2;
     return { winAmount, gameResult: { number, color: number === 0 ? 'Green' : (isRed ? 'Red' : 'Black') } };
   },
   'andar-bahar': (betAmount, selection) => {
-    const isAndar = Math.random() < 0.5;
+    if (selection !== 'Andar' && selection !== 'Bahar') throw new InvalidSelectionError();
+    const isAndar = secureRandom() < 0.5;
     const winAmount = (isAndar && selection === 'Andar') || (!isAndar && selection === 'Bahar') ? betAmount * 1.9 : 0;
     return { winAmount, gameResult: { side: isAndar ? 'Andar' : 'Bahar' } };
   },
   'teen-patti': (betAmount) => {
-    const winAmount = Math.random() < 0.40 ? betAmount * 1.95 : 0;
+    const winAmount = secureRandom() < 0.40 ? betAmount * 1.95 : 0;
     return { winAmount, gameResult: {} };
   },
   blackjack: (betAmount) => {
-    const winAmount = Math.random() < 0.42 ? betAmount * 2 : 0;
+    const winAmount = secureRandom() < 0.42 ? betAmount * 2 : 0;
     return { winAmount, gameResult: {} };
   },
   poker: (betAmount) => {
-    const winAmount = Math.random() < 0.35 ? betAmount * 2.5 : 0;
+    const winAmount = secureRandom() < 0.35 ? betAmount * 2.5 : 0;
     return { winAmount, gameResult: {} };
   },
+  // ব্যাকারাট: আগে তিনটা ফলাফল সমান ১/৩ সম্ভাবনায় বাছা হতো আর Tie ৮× পে করত —
+  // মাপা RTP ২৬৬%, অর্থাৎ Tie-তে বাজি ধরাটা ছিল একটা টাকার কল। এখন প্রকৃত ৮-ডেক
+  // ব্যাকারাটের সম্ভাবনা ও পেআউট (Tie হলে Player/Banker বাজি push সহ) —
+  // বিস্তারিত ও RTP হিসাব services/gameFairness.js-এ।
   baccarat: (betAmount, selection) => {
-    const resultOptions = ['Player', 'Banker', 'Tie'];
-    const outcome = resultOptions[Math.floor(Math.random() * resultOptions.length)];
-    let winAmount = 0;
-    if (outcome === selection) {
-      if (outcome === 'Tie') winAmount = betAmount * 8;
-      else winAmount = betAmount * 1.95;
-    }
-    return { winAmount, gameResult: { outcome } };
+    if (!isValidBaccaratSelection(selection)) throw new InvalidSelectionError();
+    const { outcome, multiplier } = playBaccarat(selection);
+    return { winAmount: Math.floor(betAmount * multiplier), gameResult: { outcome } };
   }
 };
 
@@ -262,8 +282,13 @@ router.post('/play', isAuth, async (req, res) => {
 
   const minBet = Number(await getSetting('min_bet'));
   const maxBet = Number(await getSetting('max_bet'));
-  if (betAmount < minBet) return res.status(400).json({ success: false, message: req.t('bet_min_amount').replace('{value}', minBet) });
-  if (betAmount > maxBet) return res.status(400).json({ success: false, message: req.t('bet_max_amount').replace('{value}', maxBet) });
+  // site_settings-এ অবৈধ/অসংখ্যা মান থাকলে Number() NaN দেয়, আর NaN-এর সাথে যেকোনো
+  // তুলনাই false — অর্থাৎ আগে একটা ভুল কনফিগ এন্ট্রি নিঃশব্দে বাজির উভয় সীমাই বন্ধ
+  // করে দিত। এখন নিরাপদ ডিফল্টে fallback (services/settings.js-এর DEFAULTS-এর সমান)।
+  const effMinBet = Number.isFinite(minBet) && minBet > 0 ? minBet : 10;
+  const effMaxBet = Number.isFinite(maxBet) && maxBet > 0 ? maxBet : 50000;
+  if (betAmount < effMinBet) return res.status(400).json({ success: false, message: req.t('bet_min_amount').replace('{value}', effMinBet) });
+  if (betAmount > effMaxBet) return res.status(400).json({ success: false, message: req.t('bet_max_amount').replace('{value}', effMaxBet) });
 
   const client = await pool.connect();
   try {
@@ -279,7 +304,12 @@ router.post('/play', isAuth, async (req, res) => {
     let gameResult = {};
 
     if (['aviator', 'crash-game'].includes(gameSlug)) {
-      const crashPoint = (1 + Math.random() * 9).toFixed(2);
+      // আগে: (1 + Math.random() * 9) — Uniform(1,10), যার ফলে m×-এ ক্যাশআউটের
+      // প্রত্যাশিত রিটার্ন = m(10−m)/9, অর্থাৎ 1 < m < 9 পুরো রেঞ্জেই খেলোয়াড়ের পক্ষে
+      // (৫×-এ মাপা RTP ২৭৭%)। এখন কনফিগার করা হাউস এজসহ সঠিক ক্র্যাশ বণ্টন, যেখানে
+      // ক্যাশআউট পয়েন্ট যাই হোক RTP ধ্রুবক (1 − edge) থাকে।
+      const cfg = crashConfig();
+      const crashPoint = generateCrashPoint(cfg).toFixed(2);
       const roundToken = crypto.randomUUID();
       // রাউন্ড এখন DB-তে (game_rounds) রেকর্ড হয় — crash_point/bet_amount/started_at
       // সার্ভার-সাইড অথরিটি, session শুধু কোন রাউন্ড claim করতে হবে তার token রাখে।
@@ -331,11 +361,22 @@ router.post('/play', isAuth, async (req, res) => {
     }
 
     if (gameHandlers[gameSlug]) {
-      const result = gameHandlers[gameSlug](betAmount, selection);
+      let result;
+      try {
+        result = gameHandlers[gameSlug](betAmount, selection);
+      } catch (selErr) {
+        if (selErr instanceof InvalidSelectionError) {
+          // ব্যালেন্স এখনো স্পর্শ করা হয়নি (কর্তন নিচে netChange-এ হয়) — রোলব্যাক করে
+          // ৪০০ ফেরত, যাতে অবৈধ selection নিঃশব্দে "হার" হিসেবে টাকা না কাটে।
+          await client.query('ROLLBACK');
+          return res.status(400).json({ success: false, message: req.t('games_invalid_selection') });
+        }
+        throw selErr;
+      }
       winAmount = result.winAmount;
       gameResult = result.gameResult;
     } else {
-      winAmount = Math.random() < 0.45 ? betAmount * 2 : 0;
+      winAmount = secureRandom() < 0.45 ? betAmount * 2 : 0;
     }
 
     const netChange = winAmount - betAmount;

@@ -383,6 +383,11 @@ router.post('/withdraw', isAuth, requireVerifiedEmail, paymentLimiter, async (re
     return res.redirect('/payment/withdraw');
   }
 
+  // ==================== fail-closed টার্নওভার গেট (অডিট P2-01) ====================
+  // আগে এই try/catch এররটা শুধু console.error করে নিঃশব্দে এগিয়ে যেত — অর্থাৎ
+  // canWithdraw()-এ যেকোনো ব্যতিক্রম (DB hiccup, bonuses টেবিলের সমস্যা) হলেই
+  // টার্নওভার শর্ত সম্পূর্ণ বাইপাস হয়ে উইথড্র চলে যেত। একটা আর্থিক নিয়ন্ত্রণ
+  // কখনোই ব্যর্থতায় "অনুমোদন" অর্থ করতে পারে না।
   try {
     const check = await canWithdraw(userId);
     if (!check.allowed) {
@@ -397,7 +402,9 @@ router.post('/withdraw', isAuth, requireVerifiedEmail, paymentLimiter, async (re
       return res.redirect('/payment/withdraw');
     }
   } catch (e) {
-    console.error('turnover check error:', e.message);
+    console.error('turnover check error (withdrawal blocked, fail-closed):', e.message);
+    req.flash('error', req.t('payment_generic_error'));
+    return res.redirect('/payment/withdraw');
   }
 
   const client = await pool.connect();

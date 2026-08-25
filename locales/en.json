@@ -1098,5 +1098,10 @@
   "admin_invalid_badge_prefix": "Invalid badge: ",
   "admin_chat_id_invalid": "Chat ID is not valid (must be a number or @username).",
   "admin_bot_token_format_invalid": "Bot token format is not valid.",
-  "admin_encryption_key_missing": "Encryption key is not set — the token will not be saved without TELEGRAM_SETTINGS_KEY (or SESSION_SECRET)."
+  "admin_encryption_key_missing": "Encryption key is not set — the token will not be saved without TELEGRAM_SETTINGS_KEY (or SESSION_SECRET).",
+  "matches_invalid_runner": "That option does not exist on this market",
+  "accumulator_invalid_runner": "An accumulator selection has an invalid option",
+  "accumulator_max_stake": "Maximum stake is {value} coins",
+  "games_invalid_selection": "Invalid selection",
+  "chat_message_too_long": "Message is too long"
 }

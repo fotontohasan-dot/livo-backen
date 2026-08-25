@@ -50,16 +50,30 @@ async function addTurnover(userId, category, stake) {
       [userId]
     );
 
+    // ==================== lost update ফিক্স (অডিট P1-07) ====================
+    // আগে এখানে JS-এ `Number(b.sports_done) + Number(stake)` হিসাব করে সেই ফলাফল
+    // `SET sports_done = $1` দিয়ে লেখা হতো। দুটো বাজি প্রায় একই সময়ে সেটল হলে দুজনেই
+    // একই পুরনো মান পড়ত এবং শেষেরটা আগেরটার ইনক্রিমেন্ট মুছে দিত — একটা বৃদ্ধি হারিয়ে
+    // যেত। দিকটা সবসময় under-count, অর্থাৎ ইউজারের টার্নওভার শর্ত পূরণ হতে দেরি হতো
+    // (কখনো আগে নয়) — তাই এটা হাউসের ক্ষতি নয়, ইউজারের প্রতি অন্যায্যতা।
+    // এখন ইনক্রিমেন্টটা একটাই SQL স্টেটমেন্টে (`SET col = col + $1`) হয়, যা Postgres
+    // row-level lock নিয়ে সিরিয়ালাইজ করে — সমান্তরাল আপডেট আর কখনো হারায় না।
+    // status = 'active' শর্তটাও WHERE-এ রাখা হয়েছে, যাতে ইতিমধ্যে completed হয়ে যাওয়া
+    // বোনাসে দেরিতে আসা কোনো বাজি আর টার্নওভার যোগ না করে।
     for (const b of res.rows) {
       if (category === 'sports') {
-        const newDone = Number(b.sports_done) + Number(stake);
-        await pool.query(`UPDATE bonuses SET sports_done = $1, updated_at = NOW() WHERE id = $2`, [newDone, b.id]);
-      } else {
+        await pool.query(
+          `UPDATE bonuses SET sports_done = sports_done + $1, updated_at = NOW()
+           WHERE id = $2 AND status = 'active'`,
+          [stake, b.id]
+        );
+      } else if (Number(b.casino_required) > 0) {
         // casino_required 0 হলে (daily reward) ক্যাসিনো গণনা হবে না
-        if (Number(b.casino_required) > 0) {
-          const newDone = Number(b.casino_done) + Number(stake);
-          await pool.query(`UPDATE bonuses SET casino_done = $1, updated_at = NOW() WHERE id = $2`, [newDone, b.id]);
-        }
+        await pool.query(
+          `UPDATE bonuses SET casino_done = casino_done + $1, updated_at = NOW()
+           WHERE id = $2 AND status = 'active'`,
+          [stake, b.id]
+        );
       }
 
       // শর্ত পূরণ হয়েছে কিনা চেক করে completed করা

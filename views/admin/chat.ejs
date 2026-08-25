@@ -244,22 +244,57 @@
                     : (user.last_file_url ? '📎 ফাইল পাঠানো হয়েছে' : 'No messages yet');
                 const prefix = user.last_is_admin ? 'আপনি: ' : '';
 
-                div.innerHTML = `
-                    <div class="w-9 h-9 bg-gray-700 rounded-full flex-shrink-0 flex items-center justify-center relative">
-                        <i class="fas fa-user text-gray-400"></i>
-                        ${isUnread ? '<span class="absolute -top-0.5 -right-0.5 w-3 h-3 bg-yellow-500 rounded-full border-2 border-gray-900"></span>' : ''}
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center justify-between">
-                            <div class="font-medium truncate ${isUnread ? 'text-white font-bold' : 'text-gray-300'}">${user.username}</div>
-                            <div class="text-[10px] text-gray-500">${user.last_message_time ? new Date(user.last_message_time).toLocaleTimeString('bn-BD', {hour:'2-digit', minute:'2-digit'}) : ''}</div>
-                        </div>
-                        <div class="flex items-center justify-between gap-2">
-                            <div class="text-xs truncate ${isUnread ? 'text-gray-100 font-semibold' : 'text-gray-500'}">${prefix}${lastPreview}</div>
-                            ${isUnread ? `<span class="flex-shrink-0 min-w-[18px] h-[18px] px-1 bg-yellow-500 text-black text-[10px] font-bold rounded-full flex items-center justify-center">${user.unread_count > 9 ? '9+' : user.unread_count}</span>` : ''}
-                        </div>
-                    </div>
-                `;
+                // ==================== Stored XSS ফিক্স (অডিট P0-05) ====================
+                // আগে এই পুরো ব্লকটা innerHTML দিয়ে বসানো হতো, যার ভেতরে ${user.username}
+                // ও ${lastPreview} (= ইউজারের পাঠানো চ্যাট বার্তা) কাঁচা অবস্থায় ঢুকত।
+                // CSP-তে script-src/script-src-attr দুটোতেই 'unsafe-inline' আছে, তাই
+                // ইনজেক্ট করা <script> বা onerror= কিছুই ব্লক হতো না — যেকোনো সাধারণ
+                // ইউজার একটা বার্তা পাঠিয়েই অ্যাডমিনের সেশনে কোড চালাতে পারত।
+                // এখন সব ইউজার-নিয়ন্ত্রিত মান textContent দিয়ে বসে, তাই সেগুলো কখনোই
+                // HTML হিসেবে পার্স হয় না। প্যাটার্নটা views/profile/chat.ejs থেকে নেওয়া।
+                const avatarWrap = document.createElement('div');
+                avatarWrap.className = 'w-9 h-9 bg-gray-700 rounded-full flex-shrink-0 flex items-center justify-center relative';
+                const avatarIcon = document.createElement('i');
+                avatarIcon.className = 'fas fa-user text-gray-400';
+                avatarWrap.appendChild(avatarIcon);
+                if (isUnread) {
+                    const dot = document.createElement('span');
+                    dot.className = 'absolute -top-0.5 -right-0.5 w-3 h-3 bg-yellow-500 rounded-full border-2 border-gray-900';
+                    avatarWrap.appendChild(dot);
+                }
+
+                const body = document.createElement('div');
+                body.className = 'flex-1 min-w-0';
+
+                const topRow = document.createElement('div');
+                topRow.className = 'flex items-center justify-between';
+                const nameEl = document.createElement('div');
+                nameEl.className = 'font-medium truncate ' + (isUnread ? 'text-white font-bold' : 'text-gray-300');
+                nameEl.textContent = user.username == null ? '' : String(user.username);
+                const timeEl = document.createElement('div');
+                timeEl.className = 'text-[10px] text-gray-500';
+                timeEl.textContent = user.last_message_time
+                    ? new Date(user.last_message_time).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' })
+                    : '';
+                topRow.appendChild(nameEl);
+                topRow.appendChild(timeEl);
+
+                const bottomRow = document.createElement('div');
+                bottomRow.className = 'flex items-center justify-between gap-2';
+                const previewEl = document.createElement('div');
+                previewEl.className = 'text-xs truncate ' + (isUnread ? 'text-gray-100 font-semibold' : 'text-gray-500');
+                previewEl.textContent = String(prefix) + String(lastPreview == null ? '' : lastPreview);
+                bottomRow.appendChild(previewEl);
+                if (isUnread) {
+                    const badge = document.createElement('span');
+                    badge.className = 'flex-shrink-0 min-w-[18px] h-[18px] px-1 bg-yellow-500 text-black text-[10px] font-bold rounded-full flex items-center justify-center';
+                    badge.textContent = Number(user.unread_count) > 9 ? '9+' : String(Number(user.unread_count) || 0);
+                    bottomRow.appendChild(badge);
+                }
+
+                body.appendChild(topRow);
+                body.appendChild(bottomRow);
+                div.replaceChildren(avatarWrap, body);
 
                 div.onclick = () => selectUser(user.id, user.username, div);
                 container.appendChild(div);
@@ -331,6 +366,22 @@
         loadConversations();
     }
 
+    // ক্লায়েন্ট-সাইড দ্বিতীয় স্তরের সুরক্ষা (সার্ভারেও একই allow-list প্রয়োগ করা হয় —
+    // services/mediaUrl.js)। পুরনো, ফিক্সের আগে DB-তে জমা হয়ে যাওয়া বিষাক্ত রো-গুলোও
+    // যাতে রেন্ডার না হয়, তাই রেন্ডার-টাইমেও যাচাই করা হচ্ছে।
+    function safeMediaUrl(raw) {
+        if (typeof raw !== 'string' || !raw) return null;
+        try {
+            const u = new URL(raw, window.location.origin);
+            if (u.protocol !== 'https:') return null;
+            const allowed = ['res.cloudinary.com'];
+            if (!allowed.includes(u.hostname)) return null;
+            return u.href;
+        } catch (e) {
+            return null;
+        }
+    }
+
     function appendMessage(text, isAdmin, timestamp, fileUrl, fileType) {
         const messagesDiv = document.getElementById('messages');
         const prev = messagesDiv.lastElementChild;
@@ -341,28 +392,47 @@
         div.dataset.admin = String(isAdmin);
         div.style.marginTop = grouped ? '2px' : '12px';
         
-        let content = '';
-        
-        if (fileUrl) {
+        // ==================== Stored XSS ফিক্স (অডিট P0-05) ====================
+        // আগে text ও fileUrl দুটোই innerHTML-এ কাঁচা বসত। fileUrl আরও খারাপ ছিল —
+        // সেটা onclick="window.open('${fileUrl}')" অ্যাট্রিবিউটের ভেতরেও যেত, আর
+        // fileUrl আসে সরাসরি socket পেলোড থেকে (services/socket.js), অর্থাৎ পুরোপুরি
+        // ক্লায়েন্ট-নিয়ন্ত্রিত। এখন সবকিছু DOM API দিয়ে তৈরি — কোনো HTML পার্সিং নেই।
+        const bubble = document.createElement('div');
+        bubble.className = 'max-w-[75%]';
+
+        // fileUrl শুধু তখনই ব্যবহার হয় যখন সেটা একটা নিরাপদ https:// URL — নাহলে
+        // মিডিয়া এলিমেন্টই তৈরি হয় না (javascript:, data: ইত্যাদি স্কিম প্রত্যাখ্যাত)।
+        const safeFileUrl = safeMediaUrl(fileUrl);
+        if (safeFileUrl) {
             if (fileType === 'image') {
-                content += `<img src="${fileUrl}" class="max-w-[220px] rounded-2xl mb-1 cursor-pointer" onclick="window.open('${fileUrl}', '_blank')">`;
+                const img = document.createElement('img');
+                img.src = safeFileUrl;
+                img.className = 'max-w-[220px] rounded-2xl mb-1 cursor-pointer';
+                img.addEventListener('click', () => window.open(safeFileUrl, '_blank', 'noopener'));
+                bubble.appendChild(img);
             } else if (fileType === 'video') {
-                content += `<video src="${fileUrl}" controls class="max-w-[220px] rounded-2xl mb-1"></video>`;
+                const video = document.createElement('video');
+                video.src = safeFileUrl;
+                video.controls = true;
+                video.className = 'max-w-[220px] rounded-2xl mb-1';
+                bubble.appendChild(video);
             }
         }
-        
+
         if (text) {
-            content += `<div class="px-4 py-2.5 rounded-3xl text-sm ${isAdmin ? 'bg-yellow-500 text-black' : 'bg-gray-800 text-white'}">${text}</div>`;
+            const msg = document.createElement('div');
+            msg.className = 'px-4 py-2.5 rounded-3xl text-sm ' + (isAdmin ? 'bg-yellow-500 text-black' : 'bg-gray-800 text-white');
+            msg.textContent = String(text);
+            bubble.appendChild(msg);
         }
-        
+
         const time = new Date(timestamp).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
-        
-        div.innerHTML = `
-            <div class="max-w-[75%]">
-                ${content}
-                <div class="text-[10px] text-gray-500 mt-1 px-1 ${isAdmin ? 'text-right' : ''}">${time}</div>
-            </div>
-        `;
+        const timeEl = document.createElement('div');
+        timeEl.className = 'text-[10px] text-gray-500 mt-1 px-1 ' + (isAdmin ? 'text-right' : '');
+        timeEl.textContent = time;
+        bubble.appendChild(timeEl);
+
+        div.replaceChildren(bubble);
         
         messagesDiv.appendChild(div);
         if (isAdmin) { seenByCurrentUser = false; renderSeenIndicator(); }

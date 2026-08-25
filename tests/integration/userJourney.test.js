@@ -188,17 +188,23 @@ describe('A-Z User Journey', () => {
     expect(Number(after.rows[0].coins)).not.toBe(Number(before.rows[0].coins));
 
     const matchIns = await pool.query(`INSERT INTO matches (title, team_a, team_b, sport, status) VALUES ('Journey Test Match','X','Y','cricket','live') RETURNING id`);
-    const marketIns = await pool.query(`INSERT INTO markets (match_id, type, name, odds, status) VALUES ($1,'match_winner','Match Winner','{}','open') RETURNING id`, [matchIns.rows[0].id]);
+    // মার্কেটে এখন প্রকৃত অডস থাকতে হবে। আগে এই টেস্টে odds ছিল '{}' এবং অডসটা
+    // ক্লায়েন্ট (odd: '1.80') থেকে পাঠানো হতো — অর্থাৎ টেস্টটা অডিটে ধরা পড়া
+    // P0-01 দুর্বলতাটাকেই "সঠিক আচরণ" হিসেবে লক করে রেখেছিল। এখন সার্ভারই অডস
+    // নির্ধারণ করে, তাই খালি odds map মানে কোনো বাজিই সম্ভব নয়।
+    const marketIns = await pool.query(`INSERT INTO markets (match_id, type, name, odds, status) VALUES ($1,'match_winner','Match Winner','{"X":"1.80","Y":"2.10"}','open') RETURNING id`, [matchIns.rows[0].id]);
     const matchPage = await agent.get(`/matches/${matchIns.rows[0].id}`);
     expect(matchPage.status).toBe(200);
     const betCsrf = await csrfFor(agent, `/matches/${matchIns.rows[0].id}`);
     const bet = await agent.post(`/matches/${matchIns.rows[0].id}/bet`).type('form').send({
-      market_id: marketIns.rows[0].id, runner: 'X', odd: '1.80', stake: '50', _csrf: betCsrf
+      market_id: marketIns.rows[0].id, runner: 'X', odd: '999999', stake: '50', _csrf: betCsrf
     });
     expect(bet.status).toBe(200);
     expect(bet.body.success).toBe(true);
     const betRow = await pool.query(`SELECT * FROM bets WHERE user_id=$1 AND match_id=$2`, [userId, matchIns.rows[0].id]);
     expect(betRow.rows.length).toBe(1);
+    // ক্লায়েন্ট ৯৯৯৯৯৯ পাঠালেও সংরক্ষিত অডস মার্কেটের ১.৮০-ই থাকে
+    expect(Number(betRow.rows[0].odd)).toBe(1.8);
   });
 
   test('13. Withdraw', async () => {

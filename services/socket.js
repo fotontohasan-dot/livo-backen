@@ -3,6 +3,7 @@ const { pool } = require('../db');
 const { getBotReply } = require('./chatbot');
 const { notifyTelegram } = require('./telegramNotify');
 const cache = require('./cache');
+const { safeMediaUrl, safeFileType, safeMessageText } = require('./mediaUrl');
 
 // ===== চ্যাট মেসেজ রেট-লিমিট =====
 // HTTP রুটগুলো সবই কোনো না কোনো rate limiter-এর পেছনে, কিন্তু Socket.IO ইভেন্ট একটা আলাদা চ্যানেল
@@ -44,6 +45,21 @@ const notifyAdminsSeen = (userId) => {
   catch (err) { console.error('notifyAdminsSeen error:', err.message); }
 };
 
+// সেশনে ক্যাশ করা role বিশ্বাস করা হয় না (অডিট P1-03)। middleware/auth.js-এর isAdmin
+// ও routes/chat.js উভয়েই প্রতিটা রিকোয়েস্টে DB থেকে বর্তমান role পড়ে — socket পথটাই
+// একমাত্র জায়গা ছিল যেখানে ডিমোট করা অ্যাডমিনের পুরনো সেশন দিয়ে 'admins' রুমে ঢোকা
+// যেত এবং প্রতিটা ডিপোজিট/উইথড্র অ্যালার্ট পড়া যেত। এখন এখানেও DB-ই কর্তৃপক্ষ।
+async function isCurrentlyAdmin(user) {
+  if (!user || !user.id) return false;
+  try {
+    const r = await pool.query('SELECT role FROM users WHERE id = $1', [user.id]);
+    return !!(r.rows[0] && r.rows[0].role === 'admin');
+  } catch (err) {
+    console.error('socket isCurrentlyAdmin check error:', err.message);
+    return false; // fail-closed
+  }
+}
+
 let io;
 
 // ===== অ্যাডমিন প্যানেলে রিয়েল-টাইম নোটিফিকেশন (ডিপোজিট/উইথড্র/চ্যাট) =====
@@ -62,11 +78,43 @@ const emitAdminAlert = (type, data = {}) => {
   }
 };
 
+// ==================== অনুমোদিত origin (অডিট P1-03) ====================
+// আগে এখানে `origin: "*"` ছিল, অথচ নিচেই io.engine.use(sessionMiddleware) দিয়ে
+// socket-গুলো লগইন সেশনের সাথে বাঁধা। WebSocket আপগ্রেড CORS প্রিফ্লাইটের আওতায়
+// পড়ে না এবং ব্রাউজার cross-origin WS হ্যান্ডশেকেও কুকি পাঠায় (sameSite:lax এটা
+// আটকায় না) — অর্থাৎ যেকোনো তৃতীয়-পক্ষ পেজ ভিক্টিমের সেশনে socket খুলে তার হয়ে
+// বার্তা পাঠাতে পারত, আর ভিক্টিম অ্যাডমিন হলে 'admins' রুমে ঢুকে প্রতিটা
+// ডিপোজিট/উইথড্র অ্যালার্ট (ইউজারনেম ও অঙ্কসহ) পড়তে পারত।
+// তালিকাটা app.js-এর HTTP CORS allow-list-এর সাথে ইচ্ছাকৃতভাবে অভিন্ন।
+const ALLOWED_SOCKET_ORIGINS = [
+  'https://livo-backen.onrender.com',
+  'http://localhost:3000'
+];
+const LOCALHOST_ANY_PORT = /^http:\/\/localhost:\d+$/;
+
+function isAllowedSocketOrigin(origin) {
+  // Origin হেডার একেবারে না থাকা = নন-ব্রাউজার ক্লায়েন্ট (নেটিভ অ্যাপ, টেস্ট
+  // হারনেস, সার্ভার-টু-সার্ভার)। ব্রাউজার-চালিত cross-site আক্রমণ সবসময় কোনো না
+  // কোনো Origin পাঠায়, তাই app.js-এর HTTP CORS-এর মতোই এটা অনুমোদিত।
+  if (!origin) return true;
+  if (process.env.NODE_ENV === 'test') return true;
+  return ALLOWED_SOCKET_ORIGINS.includes(origin) || LOCALHOST_ANY_PORT.test(origin);
+}
+
 const initSocket = (server, sessionMiddleware) => {
   io = new Server(server, {
     cors: {
-      origin: "*",
+      origin: (origin, callback) => callback(null, isAllowedSocketOrigin(origin)),
+      credentials: true,
       methods: ["GET", "POST"]
+    },
+    // cors অপশনটা শুধু HTTP polling ট্রান্সপোর্টে প্রযোজ্য। allowRequest প্রতিটা
+    // হ্যান্ডশেকে চলে — WebSocket আপগ্রেড সহ — তাই আসল গেটটা এখানেই।
+    allowRequest: (req, callback) => {
+      const origin = req.headers.origin;
+      if (isAllowedSocketOrigin(origin)) return callback(null, true);
+      console.warn('⚠️ socket handshake প্রত্যাখ্যাত — অননুমোদিত origin:', origin);
+      return callback('origin_not_allowed', false);
     }
   });
 
@@ -89,7 +137,8 @@ const initSocket = (server, sessionMiddleware) => {
     const authUser = getSessionUser();
     if (authUser) {
       socket.join(`user:${authUser.id}`);
-      if (authUser.role === 'admin') socket.join('admins');
+      isCurrentlyAdmin(authUser).then((ok) => { if (ok) socket.join('admins'); })
+        .catch(() => {});
     }
 
     // ===== ম্যাচ রুম (লাইভ স্কোর) — পাবলিক তথ্য, লগইন লাগবে না =====
@@ -108,7 +157,7 @@ const initSocket = (server, sessionMiddleware) => {
     // ===== অ্যাডমিন চ্যাট রুম — শুধু আসল admin session হলেই =====
     socket.on("join_admin", () => {
       const u = getSessionUser();
-      if (u && u.role === 'admin') socket.join("admins");
+      isCurrentlyAdmin(u).then((ok) => { if (ok) socket.join("admins"); }).catch(() => {});
     });
 
     // ===== চ্যাট মেসেজ পাঠানো/গ্রহণ =====
@@ -121,12 +170,21 @@ const initSocket = (server, sessionMiddleware) => {
 
         if (!(await allowChatMessage(senderId))) return; // রেট-লিমিট ছাড়িয়ে গেলে নীরবে ড্রপ
 
-        const isAdmin = u.role === 'admin';
+        const isAdmin = await isCurrentlyAdmin(u);
         const receiverId = (data && data.receiverId) || null;
-        const message = (data && data.message) || null;
-        const fileUrl = (data && data.fileUrl) || null;
-        const fileType = (data && data.fileType) || null;
+        // ==================== ইনপুট যাচাই (অডিট P0-05) ====================
+        // আগে message/fileUrl/fileType তিনটাই socket পেলোড থেকে হুবহু নিয়ে DB-তে
+        // লেখা হতো — কোনো টাইপ চেক, দৈর্ঘ্য সীমা বা URL যাচাই ছাড়া। fileUrl-টা পরে
+        // অ্যাডমিন প্যানেলে রেন্ডার হতো, তাই সেটাই ছিল stored XSS-এর মূল উৎস।
+        // এখন উৎসেই fail-closed: অননুমোদিত হোস্টের URL বা অজানা fileType বাদ পড়ে।
+        const message = safeMessageText(data && data.message);
+        const fileUrl = safeMediaUrl(data && data.fileUrl);
+        const fileType = fileUrl ? safeFileType(data && data.fileType) : null;
 
+        // ফাইল দাবি করা হয়েছে কিন্তু URL/টাইপ যাচাইয়ে টেকেনি — নীরবে ড্রপ,
+        // কারণ বৈধ ক্লায়েন্ট কখনো এমন পেলোড পাঠায় না (/chat/upload-ই একমাত্র উৎস)।
+        if (data && data.fileUrl && !fileUrl) return;
+        if (fileUrl && !fileType) return;
         if (!message && !fileUrl) return;
 
         const createdAt = new Date();

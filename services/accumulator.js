@@ -10,9 +10,20 @@ const { addVipTurnover } = require('./vip');
 const { updateMissionProgress } = require('./missions');
 const { addPoints } = require('./loyalty');
 const { t } = require('../utils/i18n');
+const { resolveOdd } = require('./marketOdds');
+const { getSetting } = require('./settings');
 
 const MIN_STAKE = 10;
 const MAX_SELECTIONS = 12;
+// অন্য দুটো বাজি-পথ (routes/games.js, routes/matches.js) site_settings-এর max_bet
+// প্রয়োগ করে, কিন্তু অ্যাকুমুলেটরে কোনো উপরের সীমাই ছিল না — একই কনফিগ এখানেও প্রয়োগ
+// করা হচ্ছে যাতে সিলিং সব পথে অভিন্ন থাকে।
+const FALLBACK_MAX_STAKE = 50000;
+
+async function effectiveMaxStake() {
+  const raw = Number(await getSetting('max_bet'));
+  return Number.isFinite(raw) && raw > 0 ? raw : FALLBACK_MAX_STAKE;
+}
 
 // সিলেকশন সংখ্যা অনুযায়ী Boost শতাংশ
 function boostFor(count) {
@@ -28,6 +39,10 @@ async function placeAccumulator(userId, stake, selections, lang = 'bn') {
   stake = parseInt(stake);
   if (isNaN(stake) || stake < MIN_STAKE) {
     return { success: false, message: t(lang, 'accumulator_min_stake').replace('{value}', MIN_STAKE) };
+  }
+  const maxStake = await effectiveMaxStake();
+  if (stake > maxStake) {
+    return { success: false, message: t(lang, 'accumulator_max_stake').replace('{value}', maxStake) };
   }
   if (!Array.isArray(selections) || selections.length < 2) {
     return { success: false, message: t(lang, 'accumulator_min_selections') };
@@ -56,23 +71,28 @@ async function placeAccumulator(userId, stake, selections, lang = 'bn') {
         await client.query('ROLLBACK');
         return { success: false, message: t(lang, 'accumulator_market_closed') };
       }
-      // অডস বের করা — odds JSONB তে runner→odd, নাহলে ক্লায়েন্ট অডস (fallback)
-      let odd = parseFloat(sel.odd);
-      try {
-        if (market.odds && sel.runner && market.odds[sel.runner]) {
-          odd = parseFloat(market.odds[sel.runner]);
-        }
-      } catch (e) {}
-      if (isNaN(odd) || odd <= 1) {
+      // ==================== অডস — একমাত্র authoritative উৎস DB ====================
+      // আগে এখানে `let odd = parseFloat(sel.odd)` দিয়ে ক্লায়েন্টের অডস নেওয়া হতো এবং
+      // শুধুমাত্র market.odds[sel.runner] সত্যি হলে সেটা DB-র মান দিয়ে overwrite হতো।
+      // markets.odds ডিফল্ট '{}' হওয়ায় (migrations.js) — বা runner কি-টা odds-এ না
+      // থাকলে — ক্লায়েন্টের পাঠানো অডসই ব্যবহৃত হতো, potential_win সেখান থেকেই হিসাব
+      // হতো, আর সেটেলমেন্ট সেই potential_win হুবহু পে করত। এখন services/marketOdds.js
+      // দিয়ে fail-closed: runner অবশ্যই market.odds-এর প্রকৃত কী হতে হবে।
+      const resolved = resolveOdd(market, sel.runner);
+      if (!resolved.ok) {
         await client.query('ROLLBACK');
-        return { success: false, message: t(lang, 'accumulator_invalid_odds') };
+        const key = (resolved.reason === 'unknown_runner' || resolved.reason === 'invalid_runner')
+          ? 'accumulator_invalid_runner'
+          : 'accumulator_invalid_odds';
+        return { success: false, message: t(lang, key) };
       }
+      const odd = resolved.odd;
       totalOdd *= odd;
       verified.push({
-        match_id: sel.match_id,
+        match_id: market.match_id,   // ক্লায়েন্টের match_id নয় — DB-র মার্কেট রো-ই কর্তৃপক্ষ
         market_id: sel.market_id,
         market_name: market.name,
-        runner: sel.runner || null,
+        runner: resolved.runner,
         odd
       });
     }

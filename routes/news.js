@@ -9,7 +9,9 @@ router.get('/', async (req, res) => {
     let query = `SELECT n.*, u.username as author FROM news n LEFT JOIN users u ON n.author_id=u.id`;
     const params = [];
     if (sport) { params.push(sport); query += ` WHERE n.sport=$1`; }
-    query += ` ORDER BY n.created_at DESC`;
+    // পাবলিক ও unauthenticated রুট, আগে কোনো LIMIT ছাড়াই পুরো news টেবিল পড়ত (P2-16)।
+    params.push(100);
+    query += ` ORDER BY n.created_at DESC LIMIT $${params.length}`;
     const news = await pool.query(query, params);
     res.render('news', { news: news.rows, sport });
   } catch (err) {

@@ -96,7 +96,18 @@ describe('ইন্টারনাল/অ্যাডমিন এন্ডপ�
 // আর সেটা app.js লোড হওয়ার সময় একবারই পড়া হয়। তাই আলাদা module registry-তে env সেট
 // করে অ্যাপটা নতুন করে লোড করা হয় — চলমান টেস্ট অ্যাপের কনফিগ অপরিবর্তিত থাকে।
 // ---------------------------------------------------------------------------
-describe('/internal/reset-admin/status টোকেন গেট', () => {
+// ==================== অ্যাডমিন-রিকভারি রুট অপসারণ (অডিট P1-04) ====================
+// এই describe ব্লকটা আগে যাচাই করত যে /internal/reset-admin/status টোকেন ছাড়া 404 দেয়,
+// কিন্তু সঠিক টোকেনে "আগের মতোই কাজ করে"। অডিটে ধরা পড়ে যে রুটটা নিজেই একটা স্থায়ী
+// আনঅথেন্টিকেটেড অ্যাডমিন-টেকওভার দরজা ছিল:
+//   • GET রিকোয়েস্টেই প্রতিটা অ্যাডমিনকে ডিমোট করে নতুন একজনকে বসিয়ে দিত
+//   • পুরো ব্লকে একটাও অডিট-লগ কল ছিল না
+//   • /status কার্যত একটা পাসওয়ার্ড অরাকল ছিল (bcrypt.compare-এর ফলাফল দেখাত)
+//   • টোকেন query-string-এ যেত, তাই access log/Referer/error_logs-এ জমা হতে পারত
+// রুট দুটো সম্পূর্ণ সরিয়ে দেওয়া হয়েছে। তাই টেস্টের প্রত্যাশাও উল্টে গেছে: এখন সঠিক
+// টোকেন দিলেও ৪০৪ পাওয়াই কাঙ্ক্ষিত আচরণ। রিকভারি এখন `node reset-admin.js` দিয়ে,
+// অর্থাৎ শেল/ডিপ্লয় অ্যাক্সেসের পেছনে।
+describe('/internal/reset-admin — রুট সম্পূর্ণ অপসারিত (P1-04)', () => {
   const TOKEN = 'reset-token-for-regression-test-only';
   let isolatedApp;
   let request;
@@ -119,23 +130,32 @@ describe('/internal/reset-admin/status টোকেন গেট', () => {
     jest.resetModules();
   });
 
-  test('টোকেন ছাড়া status এন্ডপয়েন্ট 404 দেয় এবং কিছুই ফাঁস করে না', async () => {
-    const res = await request(isolatedApp).get('/internal/reset-admin/status');
+  test('সঠিক টোকেন দিয়েও status এন্ডপয়েন্ট আর নেই (404)', async () => {
+    const res = await request(isolatedApp).get(`/internal/reset-admin/status?token=${encodeURIComponent(TOKEN)}`);
     expect(res.status).toBe(404);
     expect(res.text).not.toContain('secret-admin@internal.example');
-    expect(res.text).not.toContain('সেট করা আছে');
+    expect(res.text).not.toContain('ADMIN_RESET_TOKEN');
     expect(res.text).not.toContain('মিলছে');
   });
 
-  test('ভুল টোকেনেও 404 — রুটের অস্তিত্ব ফাঁস হয় না', async () => {
-    const res = await request(isolatedApp).get('/internal/reset-admin/status?token=wrong-token');
+  test('সঠিক টোকেন দিয়েও ধ্বংসাত্মক রিসেট রুট আর নেই (404)', async () => {
+    const res = await request(isolatedApp).get(`/internal/reset-admin?token=${encodeURIComponent(TOKEN)}`);
     expect(res.status).toBe(404);
-    expect(res.text).not.toContain('secret-admin@internal.example');
   });
 
-  test('সঠিক টোকেনে ডায়াগনস্টিক আগের মতোই কাজ করে (আচরণ অপরিবর্তিত)', async () => {
-    const res = await request(isolatedApp).get(`/internal/reset-admin/status?token=${encodeURIComponent(TOKEN)}`);
-    expect(res.status).toBe(200);
-    expect(res.text).toContain('ADMIN_RESET_TOKEN');
+  test('টোকেন ছাড়া বা ভুল টোকেনেও 404 — কিছুই ফাঁস হয় না', async () => {
+    for (const url of ['/internal/reset-admin/status', '/internal/reset-admin/status?token=wrong-token', '/internal/reset-admin']) {
+      const res = await request(isolatedApp).get(url);
+      expect(res.status).toBe(404);
+      expect(res.text).not.toContain('secret-admin@internal.example');
+    }
+  });
+
+  test('সোর্সে রুট হ্যান্ডলারটাই আর নেই (কমেন্ট বাদে)', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(path.join(__dirname, '..', '..', 'app.js'), 'utf8');
+    const code = src.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
+    expect(code).not.toMatch(/app\.(get|post)\(\s*['"`]\/internal\/reset-admin/);
   });
 });

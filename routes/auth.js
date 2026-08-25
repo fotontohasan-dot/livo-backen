@@ -259,14 +259,17 @@ router.post('/register', async (req, res) => {
     }
 
     if (email) {
-      const existingEmail = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+      // আগে `WHERE email = $1` — case-SENSITIVE। ফলে User@x.com ও user@x.com দুটোই
+      // রেজিস্টার করা যেত, অথচ /admin/login `LOWER(email) = LOWER($1) ... LIMIT 1`
+      // দিয়ে খোঁজে — অর্থাৎ দুটো রো থাকলে কোনটা ফিরবে তা অনির্দিষ্ট (P2-03)।
+      const existingEmail = await pool.query('SELECT id FROM users WHERE LOWER(email) = LOWER($1)', [email.trim()]);
       if (existingEmail.rows.length > 0) {
         req.flash('error', req.t('auth_email_already_registered'));
         return res.redirect('/register');
       }
     }
     if (phone) {
-      const existingPhone = await pool.query('SELECT id FROM users WHERE phone = $1', [phone]);
+      const existingPhone = await pool.query('SELECT id FROM users WHERE phone = $1', [phone.trim()]);
       if (existingPhone.rows.length > 0) {
         req.flash('error', req.t('auth_phone_already_registered'));
         return res.redirect('/register');
@@ -287,10 +290,17 @@ router.post('/register', async (req, res) => {
     // ফলে users_referral_code_key ইউনিক কনস্ট্রেইন্ট ভেঙে পুরো রেজিস্ট্রেশন catch-এ চলে যেত
     // এবং ইউজার শুধু "রেজিস্ট্রেশন ব্যর্থ হয়েছে" দেখত (নিজে থেকে রিকভার করার উপায় ছিল না)।
     // এখন crypto.randomBytes-ভিত্তিক অনেক বড় স্পেস, আর কলিশন হলেও (23505) নতুন কোড নিয়ে রিট্রাই হয়।
-    const result = await insertWithUniqueReferralCode(username, (code) => pool.query(`
+    // আগে ভ্যালিডেশন চলত username.trim()-এর উপর কিন্তু ইনসার্ট হতো কাঁচা username —
+    // ফলে "admin " আর "admin" দুটো আলাদা রো হিসেবে থাকতে পারত (UNIQUE কনস্ট্রেইন্ট
+    // exact match দেখে), যা ডিসপ্লে-নেম ইমপারসোনেশনের সুযোগ দিত। এখন যেটা যাচাই করা
+    // হয়েছে সেটাই সংরক্ষিত হয়। ইমেইলও lowercase-এ নরমালাইজ করা হচ্ছে (নিচের P2-03)।
+    const cleanUsername = username.trim();
+    const cleanEmail = email ? email.trim().toLowerCase() : null;
+    const cleanPhone = phone ? phone.trim() : null;
+    const result = await insertWithUniqueReferralCode(cleanUsername, (code) => pool.query(`
       INSERT INTO users (username, email, phone, password, role, coins, referral_code, referred_by_id, created_at)
       VALUES ($1, $2, $3, $4, 'user', 0, $5, $6, NOW()) RETURNING *
-    `, [username, email || null, phone || null, hashed, code, referredById]));
+    `, [cleanUsername, cleanEmail, cleanPhone, hashed, code, referredById]));
 
     const newUserId = result.rows[0].id;
 
@@ -408,7 +418,7 @@ async function findOrCreateGoogleUser(profile) {
   if (existing.rows[0]) return existing.rows[0];
 
   if (profile.email) {
-    existing = await pool.query('SELECT * FROM users WHERE email = $1', [profile.email]);
+    existing = await pool.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [profile.email]);
     if (existing.rows[0]) {
       await pool.query('UPDATE users SET google_id = $1 WHERE id = $2', [profile.googleId, existing.rows[0].id]);
       existing.rows[0].google_id = profile.googleId;
@@ -546,9 +556,28 @@ router.post('/login', async (req, res) => {
   }
 
   try {
+    // ==================== schema/code drift ফিক্স (অডিট P1-02) ====================
+    // আগে এই SELECT-এ ছিল শুধু id, username, email, phone, password, role — অথচ নিচের
+    // তিনটা চেক এমন কলাম পড়ত যা এখানে আনাই হতো না, ফলে তিনটাই সবসময় undefined-এ
+    // মূল্যায়িত হতো:
+    //   • if (user.is_banned)            → ব্যানড ইউজার লগইন সম্পন্ন করতে পারত
+    //   • if (user.self_exclude_until)   → সেল্ফ-এক্সক্লুশন লগইন-গেটে কার্যকর হতো না
+    //   • needsStepUp && user.email_verified → VPN/Tor স্টেপ-আপ OTP কখনোই ট্রিগার হতো না
+    // প্রথম দুটোর জন্য middleware/auth.js-এর isAuth প্রতি রিকোয়েস্টে DB থেকে আবার যাচাই
+    // করে (তাই ক্ষতি সীমিত ছিল), কিন্তু তৃতীয়টার কোনো compensating control ছিল না —
+    // ওই নিরাপত্তা নিয়ন্ত্রণটা কার্যত সম্পূর্ণ নিষ্ক্রিয় ছিল।
+    // Google OAuth পথ (findOrCreateGoogleUser) SELECT * করে বলে সেখানকার একই চেকগুলো
+    // ঠিকই কাজ করত — অর্থাৎ এটা ডিজাইন সিদ্ধান্ত নয়, সরু SELECT-এর রিগ্রেশন।
+    // coins/demo_balance-ও যোগ করা হলো: sanitizeUser(user) সরাসরি req.session.user
+    // হয়ে যায়, আর একাধিক ভিউ (games/play.ejs ইত্যাদি) সেখান থেকেই ব্যালেন্স পড়ে —
+    // এগুলো অনুপস্থিত থাকায় লগইনের পর ব্যালেন্স undefined দেখাত।
     const result = await pool.query(
-      'SELECT id, username, email, phone, password, role FROM users WHERE email = $1 OR phone = $1',
-      [identifier]
+      `SELECT id, username, email, phone, password, role,
+              is_banned, self_exclude_until, email_verified,
+              coins, demo_balance, avatar, kyc_status
+       FROM users WHERE LOWER(email) = LOWER($1) OR phone = $1
+       LIMIT 1`,
+      [typeof identifier === 'string' ? identifier.trim() : identifier]
     );
     const user = result.rows[0];
     const loginIp = reqIp;
@@ -801,7 +830,7 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
       return res.redirect('/forgot-password');
     }
 
-    const result = await pool.query('SELECT id, email FROM users WHERE email = $1', [email]);
+    const result = await pool.query('SELECT id, email FROM users WHERE LOWER(email) = LOWER($1)', [email.trim()]);
     const user = result.rows[0];
 
     // ইউজার থাকুক বা না থাকুক একই সাফল্যের মেসেজ দেখানো হয় (ইমেইল enumeration ঠেকাতে)

@@ -2438,8 +2438,21 @@ router.post('/users/:id/freebet', rbac.requirePermission('users_edit'), adminFin
 // ==================== MATCHES ====================
 router.get('/matches', rbac.requirePermission('matches_manage'), async (req, res) => {
   try {
-    const matches = await pool.query('SELECT * FROM matches ORDER BY start_time DESC');
-    res.render('admin/matches', { matches: matches.rows });
+    // আগে কোনো LIMIT ছিল না — matches টেবিল বড় হলে প্রতিটা পেজ-লোডে পুরো টেবিল
+    // মেমরিতে উঠত, একই ১০-কানেকশনের পুলে যেটা পেমেন্ট/অথ ট্রাফিকও ব্যবহার করে (P2-16)।
+    const page = clampPage(req.query.page);
+    const limit = 100;
+    const offset = (page - 1) * limit;
+    const countRes = await pool.query('SELECT COUNT(*)::int AS c FROM matches');
+    const total = countRes.rows[0].c;
+    const matches = await pool.query(
+      'SELECT * FROM matches ORDER BY start_time DESC NULLS LAST, id DESC LIMIT $1 OFFSET $2',
+      [limit, offset]
+    );
+    res.render('admin/matches', {
+      matches: matches.rows,
+      page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit))
+    });
   } catch (err) { res.render('admin/matches', { loadError: true, matches: [] }); }
 });
 

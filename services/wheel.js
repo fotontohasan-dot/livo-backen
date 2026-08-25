@@ -4,6 +4,8 @@
 
 const { pool } = require('../db');
 const { t } = require('../utils/i18n');
+// পুরস্কার নির্বাচন টাকার ফলাফল নির্ধারণ করে, তাই CSPRNG (services/rng.js) — Math.random() নয়।
+const { secureRandom } = require('./rng');
 
 // হুইলের ঘর (পুরস্কার) — weight যত বেশি, আসার সম্ভাবনা তত বেশি
 const SEGMENTS = [
@@ -64,7 +66,7 @@ async function canSpin(userId) {
 // weighted random — পুরস্কার নির্বাচন
 function pickPrize() {
   const total = SEGMENTS.reduce((s, x) => s + x.weight, 0);
-  let rnd = Math.random() * total;
+  let rnd = secureRandom() * total;
   for (const seg of SEGMENTS) {
     if (rnd < seg.weight) return seg.prize;
     rnd -= seg.weight;

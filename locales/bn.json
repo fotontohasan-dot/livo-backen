@@ -1098,5 +1098,10 @@
   "admin_invalid_badge_prefix": "অবৈধ ব্যাজ: ",
   "admin_chat_id_invalid": "Chat ID সঠিক নয় (সংখ্যা অথবা @username হতে হবে)।",
   "admin_bot_token_format_invalid": "Bot token-এর ফরম্যাট সঠিক নয়।",
-  "admin_encryption_key_missing": "এনক্রিপশন কী সেট নেই — TELEGRAM_SETTINGS_KEY (বা SESSION_SECRET) ছাড়া টোকেন সেভ করা হবে না।"
+  "admin_encryption_key_missing": "এনক্রিপশন কী সেট নেই — TELEGRAM_SETTINGS_KEY (বা SESSION_SECRET) ছাড়া টোকেন সেভ করা হবে না।",
+  "matches_invalid_runner": "এই মার্কেটে এমন কোনো অপশন নেই",
+  "accumulator_invalid_runner": "অ্যাকুমুলেটরের একটি সিলেকশনে অবৈধ অপশন",
+  "accumulator_max_stake": "সর্বোচ্চ স্টেক {value} কয়েন",
+  "games_invalid_selection": "অকার্যকর সিলেকশন",
+  "chat_message_too_long": "বার্তাটি অনেক বড়"
 }
