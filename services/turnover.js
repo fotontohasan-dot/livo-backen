@@ -51,15 +51,22 @@ async function addTurnover(userId, category, stake) {
     );
 
     for (const b of res.rows) {
+      // অ্যাটমিক ইনক্রিমেন্ট — আগে done মানটা আগে SELECT করে, JS-এ যোগ করে, তারপর
+      // সেই ফলাফল লেখা হতো। একই ইউজারের দুটো বাজি প্রায় একসাথে সেটেল হলে দুটোই
+      // একই পুরোনো মান পড়ত এবং একটার হিসাব হারিয়ে যেত (lost update), ফলে
+      // টার্নওভার প্রগ্রেস বাস্তবের চেয়ে কম দেখাত। column = column + $1 করলে
+      // যোগটা DB-তেই হয়, তাই সমান্তরাল আপডেটেও কোনো স্টেক হারায় না।
       if (category === 'sports') {
-        const newDone = Number(b.sports_done) + Number(stake);
-        await pool.query(`UPDATE bonuses SET sports_done = $1, updated_at = NOW() WHERE id = $2`, [newDone, b.id]);
-      } else {
+        await pool.query(
+          `UPDATE bonuses SET sports_done = sports_done + $1, updated_at = NOW() WHERE id = $2 AND status = 'active'`,
+          [Number(stake), b.id]
+        );
+      } else if (Number(b.casino_required) > 0) {
         // casino_required 0 হলে (daily reward) ক্যাসিনো গণনা হবে না
-        if (Number(b.casino_required) > 0) {
-          const newDone = Number(b.casino_done) + Number(stake);
-          await pool.query(`UPDATE bonuses SET casino_done = $1, updated_at = NOW() WHERE id = $2`, [newDone, b.id]);
-        }
+        await pool.query(
+          `UPDATE bonuses SET casino_done = casino_done + $1, updated_at = NOW() WHERE id = $2 AND status = 'active'`,
+          [Number(stake), b.id]
+        );
       }
 
       // শর্ত পূরণ হয়েছে কিনা চেক করে completed করা

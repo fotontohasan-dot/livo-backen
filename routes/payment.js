@@ -271,7 +271,11 @@ router.post('/deposit', isAuth, paymentLimiter, async (req, res) => {
       }
     }
   } catch (e) {
+    // fail-closed — দায়িত্বশীল-জুয়া (responsible gambling) সীমা যাচাই করা না গেলে
+    // সীমাটা এড়িয়ে ডিপোজিট চালিয়ে দেওয়া চলে না। আগে শুধু লগ হয়ে নিচে চলে যেত।
     console.error('deposit limit check error:', e.message);
+    req.flash('error', req.t('payment_limit_check_failed'));
+    return res.redirect('/payment/deposit');
   }
 
   // ==== Duplicate Transaction ID ব্লক ====
@@ -397,7 +401,13 @@ router.post('/withdraw', isAuth, requireVerifiedEmail, paymentLimiter, async (re
       return res.redirect('/payment/withdraw');
     }
   } catch (e) {
+    // fail-closed। আগে এই catch শুধু লগ করে নিচে চলে যেত, অর্থাৎ canWithdraw()
+    // ব্যর্থ হলে (DB সমস্যা ইত্যাদি) টার্নওভার গেটটাই এড়িয়ে উইথড্র সম্পন্ন হয়ে যেত —
+    // অসম্পূর্ণ ওয়েজারিং থাকা বোনাস তুলে নেওয়ার সরাসরি পথ। এখন যাচাই করা না গেলে
+    // রিকোয়েস্ট আটকে যায়; ইউজার পরে আবার চেষ্টা করতে পারে।
     console.error('turnover check error:', e.message);
+    req.flash('error', req.t('payment_turnover_check_failed'));
+    return res.redirect('/payment/withdraw');
   }
 
   const client = await pool.connect();
