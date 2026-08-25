@@ -17,3 +17,5 @@ build
 coverage/
 .tmp-test-server.pid
 tsconfig.tsbuildinfo
+
+.security-backup-*/
