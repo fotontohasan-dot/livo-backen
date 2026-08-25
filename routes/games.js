@@ -404,9 +404,6 @@ router.post('/cashout', isAuth, async (req, res) => {
     return res.status(400).json({ success: false, message: req.t('games_no_active_round') });
   }
 
-  const isDemo = !!state.isDemo;
-  const balanceCol = isDemo ? 'demo_balance' : 'coins';
-
   const cashMultiplier = parseFloat(multiplier);
   if (isNaN(cashMultiplier) || cashMultiplier < 1) {
     return res.status(400).json({ success: false, message: req.t('games_invalid_multiplier') });
@@ -433,6 +430,13 @@ router.post('/cashout', isAuth, async (req, res) => {
   const betAmount = Number(round.bet_amount);
   const crashPoint = Number(round.crash_point);
   const elapsedSeconds = Number(round.elapsed_seconds);
+  // ডেমো কি না তার একমাত্র উৎস game_rounds সারি — যে সারি থেকে bet_amount ও
+  // crash_point আসছে, ঠিক সেটাই। আগে এই সিদ্ধান্ত req.session.gameState.isDemo
+  // থেকে নেওয়া হতো, অথচ কোয়েরিটা is_demo ফেরত এনেও ব্যবহার করত না — অর্থাৎ
+  // কোন ব্যালেন্সে পেআউট যাবে তা ঠিক হতো সেশন-কপি দেখে, রাউন্ড রেকর্ড দেখে নয়।
+  // একই রাউন্ডের স্টেক আর পেআউট সবসময় এক কলামেই থাকা চাই।
+  const isDemo = !!round.is_demo;
+  const balanceCol = isDemo ? 'demo_balance' : 'coins';
 
   // BUG-001: এই যাচাই ছাড়া বাজি বসানোর সাথে সাথেই যেকোনো multiplier দাবি করে ক্যাশআউট
   // করা যেত — crashPoint uniform(1,10) হওয়ায় প্রায় সবসময় জিতে যাওয়া সম্ভব ছিল
@@ -447,7 +451,12 @@ router.post('/cashout', isAuth, async (req, res) => {
   }
 
   if (cashMultiplier > crashPoint) {
-    recordGameResult(userId, false).catch(e => console.error('streak:', e.message));
+    // ডেমো রাউন্ডের ফল আসল win_streak-এ লেখা হবে না। আগে এই কলটা isDemo চেক-এর
+    // আগে ছিল, তাই ডেমোতে ক্র্যাশ করলেই আসল স্ট্রিক ০ হয়ে যেত এবং স্ট্রিক বোনাস
+    // (services/streak.js — আসল কয়েন) হারাত।
+    if (!isDemo) {
+      recordGameResult(userId, false).catch(e => console.error('streak:', e.message));
+    }
     return res.json({
       success: true,
       crashed: true,
