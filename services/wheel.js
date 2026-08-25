@@ -4,6 +4,7 @@
 
 const { pool } = require('../db');
 const { t } = require('../utils/i18n');
+const secureRandom = require('../utils/secureRandom');
 
 // হুইলের ঘর (পুরস্কার) — weight যত বেশি, আসার সম্ভাবনা তত বেশি
 const SEGMENTS = [
@@ -63,13 +64,10 @@ async function canSpin(userId) {
 
 // weighted random — পুরস্কার নির্বাচন
 function pickPrize() {
-  const total = SEGMENTS.reduce((s, x) => s + x.weight, 0);
-  let rnd = Math.random() * total;
-  for (const seg of SEGMENTS) {
-    if (rnd < seg.weight) return seg.prize;
-    rnd -= seg.weight;
-  }
-  return SEGMENTS[0].prize;
+  // CSPRNG-ভিত্তিক weighted নির্বাচন — পুরস্কার সরাসরি কয়েনে রূপান্তরিত হয়,
+  // তাই Math.random() (predictable state) এখানে ব্যবহার করা যাবে না।
+  const index = secureRandom.weightedIndex(SEGMENTS.map((seg) => seg.weight));
+  return SEGMENTS[index].prize;
 }
 
 // স্পিন করা (দিনে একবার, transaction সহ)

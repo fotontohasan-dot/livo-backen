@@ -3,6 +3,7 @@
 const { pool } = require('../db');
 const { createBonus } = require('./turnover');
 const { t } = require('../utils/i18n');
+const secureRandom = require('../utils/secureRandom');
 
 function todayStr() {
   const d = new Date();
@@ -43,7 +44,8 @@ async function getRewardStatus(userId) {
 }
 
 function randInt(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+  // পুরস্কারের পরিমাণ — CSPRNG, কারণ এটা সরাসরি ব্যালেন্সে যোগ হয়।
+  return secureRandom.randomIntInclusive(min, max);
 }
 
 async function claimRedPacket(userId, lang = 'bn') {
