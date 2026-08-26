@@ -22,11 +22,11 @@
         <div class="stat-card"><div class="stat-label">মোট</div><div class="stat-number"><%= stats.total || 0 %></div></div>
         <div class="stat-card"><div class="stat-label">লাইভ</div><div class="stat-number" style="color:#10b981;"><%= stats.live || 0 %></div></div>
         <div class="stat-card"><div class="stat-label">আসন্ন</div><div class="stat-number" style="color:#f59e0b;"><%= stats.upcoming || 0 %></div></div>
-        <div class="stat-card"><div class="stat-label">সম্পন্ন</div><div class="stat-number" style="color:#94a3b8;"><%= stats.completed || 0 %></div></div>
+        <div class="stat-card"><div class="stat-label">সম্পন্ন</div><div class="stat-number" style="color:var(--text-muted);"><%= stats.completed || 0 %></div></div>
       </div>
 
       <div class="admin-card" style="padding:16px;margin-bottom:16px;">
-        <div style="font-weight:800;color:#fff;font-size:13px;margin-bottom:12px;"><i class="fas fa-trophy" style="color:#f59e0b;"></i> নতুন টুর্নামেন্ট তৈরি করুন</div>
+        <div style="font-weight:800;color:var(--text-main);font-size:13px;margin-bottom:12px;"><i class="fas fa-trophy" style="color:#f59e0b;"></i> নতুন টুর্নামেন্ট তৈরি করুন</div>
         <form method="POST" action="/admin/tournaments/add" style="display:grid;grid-template-columns:1fr;gap:10px;">
           <input class="input" type="text" name="name" placeholder="টুর্নামেন্টের নাম" required>
           <input class="input" type="text" name="sport" placeholder="স্পোর্ট (যেমন: cricket, football)">
@@ -34,9 +34,9 @@
           <input class="input" type="number" name="entry_fee" placeholder="এন্ট্রি ফি">
           <input class="input" type="number" name="prize_pool" placeholder="প্রাইজ পুল">
           <input class="input" type="number" name="max_participants" placeholder="সর্বোচ্চ অংশগ্রহণকারী" value="100">
-          <label style="font-size:11px;color:#94a3b8;">শুরুর সময়</label>
+          <label style="font-size:11px;color:var(--text-muted);">শুরুর সময়</label>
           <input class="input" type="datetime-local" name="start_date">
-          <label style="font-size:11px;color:#94a3b8;">শেষের সময়</label>
+          <label style="font-size:11px;color:var(--text-muted);">শেষের সময়</label>
           <input class="input" type="datetime-local" name="end_date">
           <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> তৈরি করুন</button>
         </form>

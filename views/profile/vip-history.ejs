@@ -24,7 +24,7 @@
     <% rewardHistory.rows.forEach(r => { %>
       <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
         <div>
-          <div style="color:#fff;font-size:13px;font-weight:600;"><%= r.description %></div>
+          <div style="color:var(--text-main);font-size:13px;font-weight:600;"><%= r.description %></div>
           <div style="color:var(--text-muted);font-size:11px;margin-top:2px;"><%= new Date(r.created_at).toLocaleString('bn-BD') %></div>
         </div>
         <div style="color:#10b981;font-weight:800;font-size:14px;white-space:nowrap;">+<%= Number(r.amount).toLocaleString('bn-BD') %></div>
@@ -33,7 +33,7 @@
     <% if (rewardHistory.totalPages > 1) { %>
       <div style="display:flex;gap:8px;justify-content:center;margin:12px 0;">
         <% for (let p = 1; p <= rewardHistory.totalPages; p++) { %>
-          <a href="/profile/vip/history?page=<%= p %>" style="padding:4px 10px;border-radius:6px;font-size:12px;text-decoration:none;background:<%= p === page ? '#f59e0b' : 'rgba(255,255,255,0.05)' %>;color:<%= p === page ? '#000' : '#94a3b8' %>;"><%= p %></a>
+          <a href="/profile/vip/history?page=<%= p %>" style="padding:4px 10px;border-radius:6px;font-size:12px;text-decoration:none;background:<%= p === page ? '#f59e0b' : 'rgba(255,255,255,0.05)' %>;color:<%= p === page ? '#000' : 'var(--text-muted)' %>;"><%= p %></a>
         <% } %>
       </div>
     <% } %>
@@ -46,7 +46,7 @@
     <% upgradeHistory.rows.forEach(u => { %>
       <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
         <div>
-          <div style="color:#fff;font-size:13px;font-weight:600;">লেভেল <%= u.from_level %> → লেভেল <%= u.to_level %></div>
+          <div style="color:var(--text-main);font-size:13px;font-weight:600;">লেভেল <%= u.from_level %> → লেভেল <%= u.to_level %></div>
           <div style="color:var(--text-muted);font-size:11px;margin-top:2px;"><%= new Date(u.created_at).toLocaleString('bn-BD') %></div>
         </div>
         <div style="color:#f59e0b;font-weight:800;font-size:14px;white-space:nowrap;">+<%= Number(u.bonus).toLocaleString('bn-BD') %></div>

@@ -33,13 +33,13 @@
                     <td><%= l.attempts %></td>
                     <td><%= l.duration_ms %>ms</td>
                     <td style="font-size:11px;"><%= l.triggered_by %></td>
-                    <td style="font-size:11px;color:#94a3b8;max-width:320px;white-space:normal;"><%= l.message %></td>
+                    <td style="font-size:11px;color:var(--text-muted);max-width:320px;white-space:normal;"><%= l.message %></td>
                     <td style="font-size:11px;"><%= new Date(l.started_at).toLocaleString('bn-BD') %></td>
                     <td style="font-size:11px;"><%= l.finished_at ? new Date(l.finished_at).toLocaleString('bn-BD') : '—' %></td>
                   </tr>
                 <% }) %>
               <% } else { %>
-                <tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:20px;">এই Job-এর জন্য এখনো কোনো লগ নেই</td></tr>
+                <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;">এই Job-এর জন্য এখনো কোনো লগ নেই</td></tr>
               <% } %>
             </tbody>
           </table>

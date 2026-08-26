@@ -77,7 +77,7 @@
           <form method="POST" action="/admin/vip/save">
             <input type="hidden" name="level" value="<%= l.level %>">
             <div style="display:flex;justify-content:space-between;align-items:center;">
-              <div style="font-weight:800;color:#fff;font-size:14px;"><%= l.icon || '👑' %> লেভেল <%= l.level %> <% if (l.is_active === false) { %><span class="badge badge-red">নিষ্ক্রিয়</span><% } else { %><span class="badge badge-green">সক্রিয়</span><% } %></div>
+              <div style="font-weight:800;color:var(--text-main);font-size:14px;"><%= l.icon || '👑' %> লেভেল <%= l.level %> <% if (l.is_active === false) { %><span class="badge badge-red">নিষ্ক্রিয়</span><% } else { %><span class="badge badge-green">সক্রিয়</span><% } %></div>
               <button type="submit" class="btn btn-primary" style="padding:6px 14px;font-size:12px;"><i class="fas fa-save"></i> সেভ</button>
             </div>
             <div class="vip-form-grid">
@@ -98,10 +98,10 @@
               <input class="input" type="text" name="exclusive_events" value="<%= l.exclusive_events || '' %>" style="width:100%;">
             </div>
             <div class="vip-toggle-row">
-              <label style="display:flex;align-items:center;gap:6px;color:#cbd5e1;font-size:12px;">
+              <label style="display:flex;align-items:center;gap:6px;color:var(--text-muted);font-size:12px;">
                 <input type="checkbox" name="priority_support" <%= l.priority_support ? 'checked' : '' %>> প্রায়োরিটি সাপোর্ট
               </label>
-              <label style="display:flex;align-items:center;gap:6px;color:#cbd5e1;font-size:12px;">
+              <label style="display:flex;align-items:center;gap:6px;color:var(--text-muted);font-size:12px;">
                 <input type="checkbox" name="is_active" <%= l.is_active !== false ? 'checked' : '' %>> লেভেল সক্রিয়
               </label>
             </div>
@@ -110,7 +110,7 @@
       <% }) %>
 
       <div class="vip-level-card">
-        <div style="font-weight:800;color:#fff;font-size:14px;margin-bottom:8px;"><i class="fas fa-plus"></i> নতুন VIP লেভেল যোগ করুন</div>
+        <div style="font-weight:800;color:var(--text-main);font-size:14px;margin-bottom:8px;"><i class="fas fa-plus"></i> নতুন VIP লেভেল যোগ করুন</div>
         <form method="POST" action="/admin/vip/save">
           <div class="vip-form-grid">
             <div><label>লেভেল নম্বর</label><input class="input" type="number" name="level" required></div>

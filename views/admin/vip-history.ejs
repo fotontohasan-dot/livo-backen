@@ -33,12 +33,12 @@
                     <td><%= r.vip_level %></td>
                     <td><span class="badge badge-amber"><%= r.reward_type %></span></td>
                     <td style="color:#10b981;font-weight:700;">+<%= Number(r.amount).toLocaleString('bn-BD') %></td>
-                    <td style="font-size:11px;color:#94a3b8;"><%= r.description %></td>
+                    <td style="font-size:11px;color:var(--text-muted);"><%= r.description %></td>
                     <td style="font-size:11px;"><%= new Date(r.created_at).toLocaleString('bn-BD') %></td>
                   </tr>
                 <% }) %>
               <% } else { %>
-                <tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:20px;">কোনো রেকর্ড নেই</td></tr>
+                <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">কোনো রেকর্ড নেই</td></tr>
               <% } %>
             </tbody>
           </table>
@@ -46,7 +46,7 @@
         <% if (rewardHistory.totalPages > 1) { %>
           <div style="display:flex;gap:8px;justify-content:center;padding:12px;">
             <% for (let p = 1; p <= rewardHistory.totalPages; p++) { %>
-              <a href="/admin/vip/history?page=<%= p %>" style="padding:4px 10px;border-radius:6px;font-size:12px;text-decoration:none;background:<%= p === page ? '#f59e0b' : 'rgba(255,255,255,0.05)' %>;color:<%= p === page ? '#000' : '#94a3b8' %>;"><%= p %></a>
+              <a href="/admin/vip/history?page=<%= p %>" style="padding:4px 10px;border-radius:6px;font-size:12px;text-decoration:none;background:<%= p === page ? '#f59e0b' : 'rgba(255,255,255,0.05)' %>;color:<%= p === page ? '#000' : 'var(--text-muted)' %>;"><%= p %></a>
             <% } %>
           </div>
         <% } %>
@@ -70,7 +70,7 @@
                   </tr>
                 <% }) %>
               <% } else { %>
-                <tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:20px;">কোনো রেকর্ড নেই</td></tr>
+                <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">কোনো রেকর্ড নেই</td></tr>
               <% } %>
             </tbody>
           </table>

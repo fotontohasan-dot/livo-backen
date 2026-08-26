@@ -94,7 +94,7 @@
                     <td class="dlq-data"><%= JSON.stringify(j.job_data) %></td>
                     <td class="dlq-reason"><%= (j.failed_reason || '').slice(0, 120) %></td>
                     <td><%= j.attempts_made %></td>
-                    <td style="font-size:10px;color:#94a3b8;"><%= new Date(j.created_at).toLocaleString('bn-BD') %></td>
+                    <td style="font-size:10px;color:var(--text-muted);"><%= new Date(j.created_at).toLocaleString('bn-BD') %></td>
                     <td>
                       <button class="btn btn-sm btn-green" onclick="retryDlq(<%= j.id %>)"><i class="fas fa-redo"></i> রিট্রাই</button>
                       <button class="btn btn-sm btn-red" onclick="deleteDlq(<%= j.id %>)"><i class="fas fa-trash"></i></button>

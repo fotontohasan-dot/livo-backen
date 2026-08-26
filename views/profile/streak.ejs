@@ -34,7 +34,7 @@
         const reached = streak.current >= m.streak;
       %>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;margin-bottom:8px;border-radius:10px;background:<%= reached ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.03)' %>;border:1px solid <%= reached ? '#10b981' : 'transparent' %>;">
-          <div style="color:<%= reached ? '#fff' : '#94a3b8' %>;font-size:14px;font-weight:bold;">
+          <div style="color:<%= reached ? 'var(--text-main)' : 'var(--text-muted)' %>;font-size:14px;font-weight:bold;">
             <%= reached ? '✅' : '🔒' %> <%= m.streak %> টানা জয়
           </div>
           <div style="color:#f59e0b;font-size:13px;font-weight:bold;"><%= m.multiplier %>x 🪙</div>

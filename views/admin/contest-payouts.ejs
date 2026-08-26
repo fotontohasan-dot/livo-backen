@@ -31,13 +31,13 @@
 
       <div class="admin-card" style="padding:14px;margin-bottom:14px;">
         <form method="GET" action="/admin/leaderboard/contest/payouts" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-          <label style="font-size:12px;color:#94a3b8;">কত মাস আগে:</label>
+          <label style="font-size:12px;color:var(--text-muted);">কত মাস আগে:</label>
           <select class="select" style="max-width:160px;" name="months" onchange="this.form.submit()">
             <% for (let i = 1; i <= 12; i++) { %>
               <option value="<%= i %>" <%= monthsBack === i ? 'selected' : '' %>><%= i %> মাস আগে</option>
             <% } %>
           </select>
-          <span style="font-size:13px;color:#e2e8f0;font-weight:600;"><%= monthName || '—' %></span>
+          <span style="font-size:13px;color:var(--text-muted);font-weight:600;"><%= monthName || '—' %></span>
           <a class="btn btn-sm" href="/admin/leaderboard" style="margin-left:auto;"><i class="fas fa-arrow-left"></i> লিডারবোর্ডে ফিরুন</a>
         </form>
       </div>
@@ -72,7 +72,7 @@
                         <span class="badge badge-amber">বাকি</span>
                       <% } %>
                     </td>
-                    <td style="font-size:11px;color:#94a3b8;">
+                    <td style="font-size:11px;color:var(--text-muted);">
                       <% if (p.status === 'paid') { %>
                         <%= p.paid_at ? new Date(p.paid_at).toLocaleString('bn-BD') : '—' %><br>
                         by <%= p.paid_by_username || '—' %>
@@ -83,7 +83,7 @@
                       <% if (p.status === 'pending') { %>
                         <button type="button" class="btn btn-sm btn-green" onclick="openMarkPaid(<%= p.id %>, '<%= (p.username || '').replace(/'/g, "\\'") %>')"><i class="fas fa-check"></i> Paid হিসেবে মার্ক করুন</button>
                       <% } else { %>
-                        <span style="color:#94a3b8;font-size:11px;">চূড়ান্ত</span>
+                        <span style="color:var(--text-muted);font-size:11px;">চূড়ান্ত</span>
                       <% } %>
                     </td>
                   </tr>
@@ -135,7 +135,7 @@
       </div>
       <form method="POST" id="markPaidForm">
         <div class="modal-body">
-          <p style="font-size:13px;color:#e2e8f0;margin-top:0;"><span id="markPaidUsername"></span>-কে প্রাইজ প্রদান করা হয়েছে বলে নিশ্চিত করবেন? এই অ্যাকশন আনডু করা যাবে না।</p>
+          <p style="font-size:13px;color:var(--text-muted);margin-top:0;"><span id="markPaidUsername"></span>-কে প্রাইজ প্রদান করা হয়েছে বলে নিশ্চিত করবেন? এই অ্যাকশন আনডু করা যাবে না।</p>
           <textarea class="input" name="notes" rows="2" placeholder="নোট (ঐচ্ছিক, যেমন: bKash TrxID)"></textarea>
           <input type="hidden" name="months" value="<%= monthsBack %>">
         </div>

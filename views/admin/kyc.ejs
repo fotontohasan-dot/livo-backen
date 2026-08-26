@@ -63,7 +63,7 @@
       </form>
 
       <div class="admin-card" id="kycBulkBar" style="display:none;padding:10px 14px;margin-bottom:14px;background:rgba(245,158,11,0.08);border-color:rgba(245,158,11,0.25);">
-        <span style="font-size:12px;color:#e2e8f0;font-weight:600;"><span id="kycSelectedCount">0</span>টি নির্বাচিত</span>
+        <span style="font-size:12px;color:var(--text-muted);font-weight:600;"><span id="kycSelectedCount">0</span>টি নির্বাচিত</span>
         <button type="button" class="btn btn-sm btn-green" style="margin-left:10px;" onclick="bulkApproveKyc()"><i class="fas fa-check"></i> বাল্ক অনুমোদন</button>
         <button type="button" class="btn btn-sm btn-red" onclick="bulkRejectKyc()"><i class="fas fa-times"></i> বাল্ক বাতিল</button>
         <button type="button" class="btn btn-sm" onclick="clearKycSelection()">নির্বাচন মুছুন</button>
@@ -94,7 +94,7 @@
                     </td>
                     <td>
                       <div style="font-weight:700;"><%= k.full_name || k.username || 'N/A' %></div>
-                      <div style="color:#94a3b8;font-size:11px;">@<%= k.username || '—' %> · <%= k.phone || '—' %></div>
+                      <div style="color:var(--text-muted);font-size:11px;">@<%= k.username || '—' %> · <%= k.phone || '—' %></div>
                     </td>
                     <td><%= k.document_type || '—' %></td>
                     <td><%= k.created_at ? new Date(k.created_at).toLocaleDateString('bn-BD') : '—' %></td>
@@ -162,7 +162,7 @@
         <button class="modal-close" onclick="closeModal('bulkRejectModal')"><i class="fas fa-times"></i></button>
       </div>
       <div class="modal-body">
-        <p style="font-size:12px;color:#94a3b8;margin-top:0;"><span id="bulkRejectCount">0</span>টি আবেদন বাতিল করা হবে। এই কারণ সবগুলোর জন্য প্রযোজ্য হবে।</p>
+        <p style="font-size:12px;color:var(--text-muted);margin-top:0;"><span id="bulkRejectCount">0</span>টি আবেদন বাতিল করা হবে। এই কারণ সবগুলোর জন্য প্রযোজ্য হবে।</p>
         <textarea class="input" id="bulkRejectReason" rows="3" placeholder="কারণ লিখুন (ইউজারকে দেখানো হবে)"></textarea>
       </div>
       <div class="modal-footer">

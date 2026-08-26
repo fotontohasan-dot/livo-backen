@@ -92,7 +92,7 @@
         <div class="card"><div class="label">Avg Response Time</div><div class="val"><%= Math.round(data.apiUsage.avg_response_ms) %>ms</div></div>
         <div class="card">
           <div class="label">Fraud Alerts (Open)</div>
-          <div class="val" style="color:<%= data.fraudStats && data.fraudStats.riskByLevel.high > 0 ? '#f87171' : '#fff' %>">
+          <div class="val" style="color:<%= data.fraudStats && data.fraudStats.riskByLevel.high > 0 ? '#f87171' : 'var(--text-main)' %>">
             <%= data.fraudStats ? (data.fraudStats.riskByLevel.high + data.fraudStats.riskByLevel.medium + data.fraudStats.riskByLevel.low) : 0 %>
           </div>
           <div class="sub"><%= data.fraudStats ? data.fraudStats.riskByLevel.high : 0 %> high-risk</div>
@@ -104,7 +104,7 @@
       <div class="chart-card"><canvas id="growthChart"></canvas></div>
 
       <div class="chart-card">
-        <b style="color:#fff;font-size:13px;">Recent Activity</b>
+        <b style="color:var(--text-main);font-size:13px;">Recent Activity</b>
         <div class="table-scroll">
           <table class="mini" style="margin-top:10px;">
             <thead><tr><th>Admin</th><th>Action</th><th>Details</th><th>Time</th></tr></thead>

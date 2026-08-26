@@ -25,7 +25,7 @@
       <%- include('./partials/header', { pageTitle: 'প্রমোশন ব্যানার', pageSubtitle: 'হোমপেজের প্রমোশনাল ব্যানার পরিচালনা করুন' }) %>
 
       <div class="admin-card" style="padding:16px;margin-bottom:16px;">
-        <div style="font-weight:800;color:#fff;font-size:13px;margin-bottom:12px;"><i class="fas fa-plus-circle" style="color:#f59e0b;"></i> নতুন ব্যানার যোগ করুন</div>
+        <div style="font-weight:800;color:var(--text-main);font-size:13px;margin-bottom:12px;"><i class="fas fa-plus-circle" style="color:#f59e0b;"></i> নতুন ব্যানার যোগ করুন</div>
         <form method="POST" action="/admin/promotions/add" style="display:grid;grid-template-columns:1fr;gap:10px;">
           <input class="input" type="text" name="title" placeholder="ব্যানারের শিরোনাম (ঐচ্ছিক)">
           <input class="input" type="text" name="image_url" placeholder="ইমেজ URL" required>
