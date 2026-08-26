@@ -14,13 +14,39 @@ const { Pool } = require('pg');
 //   • NODE_ENV=test (লোকাল টেস্ট ও CI) হলে SSL বন্ধ — লোকাল/সার্ভিস-কন্টেইনার ডাটাবেস
 //     প্লেইন TCP-তেই চলে।
 //   • বাকি সব ক্ষেত্রে (production সহ) আগের আচরণ অপরিবর্তিত।
+// TLS সার্টিফিকেট যাচাই।
+//
+// আগে সব ক্ষেত্রেই `{ rejectUnauthorized: false }` ছিল — অর্থাৎ কানেকশন
+// এনক্রিপ্টেড হতো, কিন্তু সার্ভার আসলেই আমাদের ডাটাবেস কি না তা কখনো যাচাই
+// হতো না। ফলে MITM বা rogue এন্ডপয়েন্ট পুরো ট্রাফিক (ক্রেডেনশিয়াল সহ) পড়তে
+// পারত এবং TLS থাকা সত্ত্বেও কেউ টের পেত না।
+//
+// এখন প্রোডাকশনে যাচাই চালু। কিছু ম্যানেজড হোস্ট (যেমন Render-এর ইন্টারনাল
+// PostgreSQL) self-signed সার্টিফিকেট দেয় — সেক্ষেত্রে DATABASE_CA_CERT-এ CA
+// সার্টিফিকেট দিলে যাচাই ওই CA-র বিপরীতে হবে।
+//
+// একান্তই দরকার হলে DATABASE_SSL_INSECURE=true দিয়ে যাচাই বন্ধ করা যায়,
+// কিন্তু তখন স্টার্টআপে স্পষ্ট সতর্কবার্তা লগ হয় — নিঃশব্দে অনিরাপদ থাকে না।
 function resolveSslConfig() {
   const explicit = (process.env.DATABASE_SSL || '').trim().toLowerCase();
   if (explicit === 'false' || explicit === '0' || explicit === 'off') return false;
-  if (explicit === 'true' || explicit === '1' || explicit === 'on') return { rejectUnauthorized: false };
 
   if (process.env.NODE_ENV === 'test') return false;
 
+  const isProduction = process.env.NODE_ENV === 'production';
+  const ca = (process.env.DATABASE_CA_CERT || '').trim();
+  const insecure = (process.env.DATABASE_SSL_INSECURE || '').trim().toLowerCase();
+  const allowInsecure = insecure === 'true' || insecure === '1' || insecure === 'on';
+
+  if (isProduction && allowInsecure) {
+    console.warn('⚠️ DATABASE_SSL_INSECURE চালু — ডাটাবেস TLS সার্টিফিকেট যাচাই করা হচ্ছে না (MITM ঝুঁকি)।');
+    return { rejectUnauthorized: false };
+  }
+
+  if (ca) return { rejectUnauthorized: true, ca };
+  if (isProduction) return { rejectUnauthorized: true };
+
+  // ডেভেলপমেন্ট: লোকাল/স্টেজিং সার্টিফিকেট প্রায়ই self-signed, তাই যাচাই শিথিল।
   return { rejectUnauthorized: false };
 }
 

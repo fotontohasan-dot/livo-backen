@@ -1,4 +1,5 @@
 const express = require('express');
+const { buildUrl, getBaseUrl } = require('../utils/publicUrl');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const { pool } = require('../db');
@@ -279,14 +280,24 @@ router.post('/deposit', isAuth, paymentLimiter, async (req, res) => {
   }
 
   // ==== Duplicate Transaction ID ব্লক ====
-  // একই TrxID দিয়ে আগে pending/approved ডিপোজিট থাকলে আটকানো হচ্ছে —
-  // rejected বাদ রাখা হয়েছে যাতে ভুল/টাইপো করে reject হওয়া ট্রানজেকশন আইডি বৈধভাবে আবার সাবমিট করা যায়
+  // দুটো আলাদা নিয়ম, কারণ ঝুঁকিও আলাদা:
+  //
+  //   ১. **অন্য ইউজারের ব্যবহার করা TrxID** — status যাই হোক, সবসময় ব্লক।
+  //      আগে শর্ত ছিল শুধু `status != 'rejected'`, তাই একবার reject হওয়া
+  //      ট্রানজেকশন আইডি অন্য যেকোনো অ্যাকাউন্ট থেকে আবার দাবি করা যেত।
+  //      একই পেমেন্ট রেফারেন্স দুই অ্যাকাউন্টে বসানো মানে payment identity
+  //      confusion — কোন জমাটা আসলে কার, রেকর্ড থেকে আর বলা যায় না।
+  //
+  //   ২. **নিজের rejected TrxID** — আবার সাবমিট করা যাবে। টাইপো করে reject
+  //      হওয়া আইডি শুদ্ধ করে দেওয়ার বৈধ প্রয়োজন আছে, আর নিজের রেকর্ডে
+  //      পরিচয়-বিভ্রান্তির ঝুঁকি নেই।
   try {
     const dupCheck = await pool.query(
       `SELECT id FROM payment_requests
-       WHERE type='deposit' AND method=$1 AND transaction_id=$2 AND status != 'rejected'
+       WHERE type='deposit' AND method=$1 AND transaction_id=$2
+         AND (user_id <> $3 OR status <> 'rejected')
        LIMIT 1`,
-      [method, transaction_id]
+      [method, transaction_id, userId]
     );
     if (dupCheck.rows.length > 0) {
       req.flash('error', req.t('payment_duplicate_transaction_id'));
@@ -883,7 +894,7 @@ router.post('/sslcommerz/init', isAuth, paymentLimiter, async (req, res) => {
       [userId, amount, wantBonus, tranId]
     );
 
-    const baseUrl = req.protocol + '://' + req.get('host');
+    const baseUrl = getBaseUrl(req);
     const gatewayUrl = await sslcommerz.initPayment({
       amount,
       tranId,

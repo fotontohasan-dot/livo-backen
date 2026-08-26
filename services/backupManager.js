@@ -63,8 +63,19 @@ function backupFilename(prefix) {
   return `${prefix}-${Date.now()}-${crypto.randomBytes(3).toString('hex')}.bak`;
 }
 
+function isProduction() {
+  return process.env.NODE_ENV === 'production';
+}
+
+// কী-এর দৈর্ঘ্য যাচাই: খুব ছোট পাসফ্রেজ scrypt দিয়ে ৩২ বাইটে ডিরাইভ হলেও
+// এনট্রপি বাড়ে না। ১৬ অক্ষরের নিচে হলে প্রোডাকশনে গ্রহণ করা হয় না।
+const MIN_KEY_LENGTH = 16;
+
 function getEncryptionKey() {
   if (!ENC_KEY_RAW) return null;
+  if (ENC_KEY_RAW.length < MIN_KEY_LENGTH && isProduction()) {
+    throw new Error(`BACKUP_ENCRYPTION_KEY খুব ছোট — অন্তত ${MIN_KEY_LENGTH} অক্ষর দরকার।`);
+  }
   // যেকোনো length-এর পাসফ্রেজকে scrypt দিয়ে ঠিক ৩২ বাইট AES-256 কী-তে ডিরাইভ করা হয়
   return crypto.scryptSync(ENC_KEY_RAW, 'livo-backup-salt', 32);
 }
@@ -78,7 +89,15 @@ function packBuffer(buffer) {
   const gzipped = zlib.gzipSync(buffer);
   const key = getEncryptionKey();
   if (!key) {
-    return Buffer.concat([Buffer.from([0x00]), gzipped]); // flag 0 = শুধু কম্প্রেসড, এনক্রিপ্টেড নয়
+    // প্রোডাকশনে কী না থাকলে প্লেইনটেক্সট ব্যাকআপ লেখা হবে না — fail closed।
+    // ব্যাকআপে users, payment_requests, kyc_requests, coin_transactions সব
+    // থাকে; কী ছাড়া সেটা ডিস্কে প্লেইনটেক্সটে পড়ে থাকা মানে একটা ফাইল ফাঁস
+    // হলেই পূর্ণ ডেটা ব্রিচ। নিঃশব্দে অরক্ষিত ব্যাকআপ তৈরি করার চেয়ে ব্যাকআপ
+    // ব্যর্থ হওয়া ভালো — ব্যর্থতা অন্তত চোখে পড়ে।
+    if (isProduction()) {
+      throw new Error('BACKUP_ENCRYPTION_KEY সেট করা নেই — প্রোডাকশনে এনক্রিপশন ছাড়া ব্যাকআপ নেওয়া হয় না।');
+    }
+    return Buffer.concat([Buffer.from([0x00]), gzipped]); // flag 0 = শুধু কম্প্রেসড, এনক্রিপ্টেড নয় (ডেভ/টেস্ট)
   }
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);

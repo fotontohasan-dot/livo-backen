@@ -664,9 +664,16 @@ async function runMigrations() {
       ON CONFLICT (key) DO NOTHING;
     `);
 
+    // maintenance_mode আগে প্রতিটা স্টার্টআপে জোর করে 'false' করা হতো
+    // (`DO UPDATE SET value = 'false'`)। ফলে অ্যাডমিন মেইনটেন্যান্স চালু করার
+    // পর সার্ভার রিস্টার্ট হলেই — ডিপ্লয়, ক্র্যাশ রিকভারি বা Render-এর
+    // অটো-রিস্টার্টে — সাইট নিঃশব্দে আবার লাইভ হয়ে যেত, ঠিক যে মুহূর্তে
+    // অ্যাডমিন সেটা বন্ধ রাখতে চেয়েছিলেন।
+    //
+    // সিডিং শুধু প্রথমবারের জন্য; বিদ্যমান মান অ্যাডমিনের সিদ্ধান্ত, মাইগ্রেশনের নয়।
     await pool.query(`
       INSERT INTO site_settings (key, value, updated_at) VALUES ('maintenance_mode', 'false', NOW())
-      ON CONFLICT (key) DO UPDATE SET value = 'false', updated_at = NOW();
+      ON CONFLICT (key) DO NOTHING;
     `);
 
     await pool.query(`

@@ -1,4 +1,5 @@
 const express = require('express');
+const { buildUrl, getBaseUrl } = require('../utils/publicUrl');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
@@ -316,7 +317,7 @@ router.post('/register', async (req, res) => {
     if (email) {
       try {
         const token = await issueVerificationToken(newUserId);
-        const verifyUrl = `${req.protocol}://${req.get('host')}/verify-email/${token}`;
+        const verifyUrl = buildUrl(req, `/verify-email/${token}`);
         sendQueuedEmail('verification', email, { verifyUrl })
           .catch(e => console.error('registration verification email error:', e.message));
         req.session.user.verification_token = token; // sanitizeUser ইতিমধ্যে কপি করে ফেলেছে বলে সেশনেও আপডেট
@@ -397,7 +398,7 @@ async function completeLogin(req, user, vpnInfo) {
 // ==================== Google Sign-In (OAuth 2.0 / OpenID Connect) ====================
 
 function googleRedirectUri(req) {
-  return `${req.protocol}://${req.get('host')}/auth/google/callback`;
+  return buildUrl(req, '/auth/google/callback');
 }
 
 /**
@@ -741,7 +742,7 @@ router.post('/resend-verification', verifyResendLimiter, async (req, res) => {
     }
 
     const token = await issueVerificationToken(user.id);
-    const verifyUrl = `${req.protocol}://${req.get('host')}/verify-email/${token}`;
+    const verifyUrl = buildUrl(req, `/verify-email/${token}`);
     sendQueuedEmail('verification', user.email, { verifyUrl })
       .catch(e => console.error('resend-verification email error:', e.message));
     await logSystemEvent(user.id, user.username, 'EMAIL_VERIFICATION_RESEND', req.t('auth_verification_email_resent').replace('{value}', user.email), req.ip);
@@ -825,7 +826,7 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
       // বেশিরভাগ ক্ষেত্রে DB না ছুঁয়েই কাজ চলে। ব্যর্থ হলেও সমস্যা নেই — DB fallback তো থাকছেই।
       cache.set(`reset_token:${token}`, user.id, 60 * 60).catch(() => {});
 
-      const resetUrl = `${req.protocol}://${req.get('host')}/reset-password/${token}`;
+      const resetUrl = buildUrl(req, `/reset-password/${token}`);
       sendQueuedEmail('password_reset', user.email, { resetUrl })
         .catch(e => console.error('forgot-password email error:', e.message));
     }

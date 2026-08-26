@@ -87,10 +87,14 @@ function buildJobDefinitions() {
     },
 
     fraud_scan: {
-      label: 'Fraud Scan',
-      description: 'গত ২৪ ঘণ্টায় সক্রিয় (বেট/ডিপোজিট) ইউজারদের ব্যাচ Fraud Heuristic স্ক্যান কিউতে পাঠায়',
+      label: 'Fraud Scan (নিষ্ক্রিয় — বাস্তবায়ন বাকি)',
+      description: 'পর্যায়ক্রমিক জেনেরিক fraud স্ক্যান এখনো বাস্তবায়িত হয়নি। ইভেন্ট-ভিত্তিক fraud যাচাই (রেজিস্ট্রেশন/লগইন/লেনদেন) আলাদাভাবে চালু আছে।',
       defaultIntervalMs: 6 * HOUR,
-      defaultEnabled: true,
+      // আগে defaultEnabled: true ছিল, অথচ হ্যান্ডলার শুধু "স্কিপ করা হয়েছে"
+      // ফেরত দিত। অ্যাডমিন প্যানেলে জবটা সক্রিয় ও সফল দেখাত, বাস্তবে কোনো
+      // স্ক্যান হতো না — অর্থাৎ একটা নিরাপত্তা ফিচার আছে বলে ভুল আশ্বাস দিত।
+      // বাস্তবায়ন না হওয়া পর্যন্ত নিষ্ক্রিয়, নাম ও বিবরণেও সেটা স্পষ্ট।
+      defaultEnabled: false,
       maxRetries: 2,
       handler: async () => {
         // নোট: পুরনো BullMQ কিউ (services/queue/queues.js -> queueFraudScan) ২৮ জুলাই

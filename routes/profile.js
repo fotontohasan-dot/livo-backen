@@ -1,4 +1,5 @@
 const express = require('express');
+const { buildUrl, getBaseUrl } = require('../utils/publicUrl');
 const router = express.Router();
 const { pool } = require('../db');
 const { redirectBack } = require('../utils/redirectBack');
@@ -980,7 +981,7 @@ router.get('/api/vip-progress', isAuth, async (req, res) => {
 router.get('/referral', isAuth, async (req, res) => {
   try {
     const stats = await getReferralStats(req.session.user.id);
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const baseUrl = getBaseUrl(req);
     res.render('profile/referral', {
       user: req.session.user,
       referralCount: stats.totalReferrals,
@@ -989,7 +990,7 @@ router.get('/referral', isAuth, async (req, res) => {
     });
   } catch (err) {
     console.error('referral page error:', err.message);
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const baseUrl = getBaseUrl(req);
     res.render('profile/referral', {
       user: req.session.user,
       referralCount: 0,
@@ -1207,11 +1208,11 @@ router.post('/periodic/monthly', isAuth, async (req, res) => {
 router.get('/share', isAuth, async (req, res) => {
   try {
     const share = await getShareStatus(req.session.user.id);
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const baseUrl = getBaseUrl(req);
     res.render('profile/share', { user: req.session.user, share, baseUrl });
   } catch (err) {
     console.error('share page error:', err.message);
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const baseUrl = getBaseUrl(req);
     res.render('profile/share', { user: req.session.user, share: null, baseUrl });
   }
 });

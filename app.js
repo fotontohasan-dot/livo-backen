@@ -748,6 +748,14 @@ async function startServer() {
         // false রিটার্ন করে স্কিপ করে (connection.js দেখুন) — কোনো নতুন hard dependency যোগ হয়নি।
         require('./queues').initQueueSystem().catch(err => console.error('queues initQueueSystem error:', err.message));
       }, 3000);
+      // পাবলিক URL কনফিগার যাচাই — ভুল/অনুপস্থিত কনফিগ প্রথম রিসেট ইমেইলের
+      // সময় নয়, ডিপ্লয়ের সময়ই ধরা পড়ুক।
+      try {
+        require('./utils/publicUrl').assertConfigured();
+      } catch (err) {
+        console.error('❌ কনফিগারেশন সমস্যা:', err.message);
+        process.exit(1);
+      }
       scheduleDailyBackup();
       scheduleAutoBackup();
       require('./services/scheduler').start()

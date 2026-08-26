@@ -1100,5 +1100,6 @@
   "admin_bot_token_format_invalid": "Bot token format is not valid.",
   "admin_encryption_key_missing": "Encryption key is not set — the token will not be saved without TELEGRAM_SETTINGS_KEY (or SESSION_SECRET).",
   "payment_turnover_check_failed": "Couldn't verify your bonus turnover just now. Please try again in a moment.",
-  "payment_limit_check_failed": "Couldn't verify your daily deposit limit just now. Please try again in a moment."
+  "payment_limit_check_failed": "Couldn't verify your daily deposit limit just now. Please try again in a moment.",
+  "auth_status_unavailable": "We are having a temporary problem — please try again shortly."
 }

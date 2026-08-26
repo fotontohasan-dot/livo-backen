@@ -83,17 +83,48 @@ self.addEventListener('fetch', (event) => {
   // শুধু GET রিকোয়েস্ট ক্যাশ করা হবে; API/POST কল সরাসরি নেটওয়ার্কে যাবে
   if (req.method !== 'GET') return;
 
-  // অ্যাডমিন প্যানেল ও লাইভ ডেটা কখনো ক্যাশ করা হবে না — সবসময় ফ্রেশ
+  // ব্যক্তিগত/প্রমাণীকৃত পেইজ কখনো ক্যাশ করা হবে না।
+  //
+  // আগে শুধু /admin, /api আর /socket.io বাদ দেওয়া হতো। ফলে /profile,
+  // /wallet, /payment, /kyc, /history — সব ব্যক্তিগত পেইজ ক্যাশে জমা হতো।
+  // দুটো সমস্যা: (১) শেয়ার করা ডিভাইসে লগ-আউটের পরও আগের ইউজারের ব্যালেন্স,
+  // লেনদেন ও KYC তথ্য ক্যাশ থেকে দেখা যেত; (২) ক্যাশ করা পেইজে পুরনো CSRF
+  // টোকেন থাকায় ফর্ম সাবমিট ব্যর্থ হতো।
   const url = new URL(req.url);
-  if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/api') || url.pathname.startsWith('/socket.io')) {
+
+  // অন্য অরিজিনের রিকোয়েস্ট আমাদের ক্যাশে ঢুকবে না
+  if (url.origin !== self.location.origin) return;
+
+  const PRIVATE_PREFIXES = [
+    '/admin', '/api', '/socket.io',
+    '/profile', '/wallet', '/payment', '/payments', '/kyc',
+    '/history', '/transactions', '/withdraw', '/deposit',
+    '/games', '/bets', '/notifications', '/chat',
+    '/login', '/register', '/reset-password', '/verify-email', '/logout'
+  ];
+  if (PRIVATE_PREFIXES.some((prefix) => url.pathname === prefix || url.pathname.startsWith(prefix + '/'))) {
     return;
   }
+
+  // সার্ভার নিজে no-store বললে সেটাই চূড়ান্ত — প্রিফিক্স তালিকা ভবিষ্যতে
+  // অসম্পূর্ণ থাকলেও এই যাচাইটা ধরে ফেলবে।
+  const cacheControl = req.headers.get('Cache-Control') || '';
+  if (cacheControl.includes('no-store')) return;
 
   event.respondWith(
     fetch(req)
       .then((res) => {
-        const resClone = res.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone)).catch(() => {});
+        // রেসপন্স নিজে no-store/private বললে ক্যাশ করা হবে না — এটা শেষ প্রতিরক্ষা,
+        // কারণ কোন পেইজ ব্যক্তিগত সেটা সার্ভারই সবচেয়ে ভালো জানে।
+        const resCacheControl = res.headers.get('Cache-Control') || '';
+        const cacheable = res.ok
+          && res.type === 'basic'
+          && !resCacheControl.includes('no-store')
+          && !resCacheControl.includes('private');
+        if (cacheable) {
+          const resClone = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone)).catch(() => {});
+        }
         return res;
       })
       .catch(() =>

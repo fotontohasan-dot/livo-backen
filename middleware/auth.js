@@ -36,9 +36,18 @@ async function isUserActive(userId) {
     return cached;
   } catch (err) {
     console.error('isUserActive check error:', err.message);
-    // DB নিজেই ব্যর্থ হলে (temporary outage) বিদ্যমান লগইন সেশন সাথে সাথে ভেঙে না দিয়ে
-    // fail-open থাকা হয় — সাইট-ওয়াইড DB hiccup-এ সবাইকে লগ-আউট করে দেওয়া বেশি ক্ষতিকর।
-    return { exists: true, banned: false, selfExcluded: false, checkFailed: true };
+    // DB ব্যর্থ হলে আগে fail-open করা হতো — `{ exists: true, banned: false }`
+    // ফেরত দিয়ে রিকোয়েস্ট চালিয়ে যাওয়া হতো, যুক্তি ছিল DB hiccup-এ সবাইকে
+    // লগ-আউট করা বেশি ক্ষতিকর।
+    //
+    // কিন্তু এটা টাকার প্ল্যাটফর্ম। fail-open মানে DB অস্থির থাকা অবস্থায়
+    // ব্যানড ইউজার, self-excluded ইউজার (দায়িত্বশীল জুয়া), আর ডিলিট করা
+    // অ্যাকাউন্ট — সবাই ডিপোজিট, বাজি ও উইথড্র করতে পারত। যাচাই করা যাচ্ছে
+    // না মানে যাচাই পাস করেছে নয়।
+    //
+    // এখন fail-closed: স্ট্যাটাস অজানা থাকলে অ্যাক্সেস দেওয়া হয় না। সেশন
+    // ধ্বংস করা হয় না — DB ফিরলে ইউজার রিফ্রেশ করলেই আবার ঢুকতে পারবে।
+    return { exists: false, banned: false, selfExcluded: false, checkFailed: true };
   }
 }
 
@@ -50,6 +59,19 @@ const isAuth = async (req, res, next) => {
   // মুহূর্তে যেসব সেশন ইতিমধ্যে লগইন করা ছিল (অন্য ডিভাইস/ব্রাউজার) সেগুলো দিয়ে পুরো
   // এক্সক্লুশন পিরিয়ড জুড়ে ডিপোজিট/উইথড্র/বেট করা যেত। এখন প্রতিটা isAuth-সুরক্ষিত রিকোয়েস্টেই
   // যাচাই হয়, যেমন is_banned হয়।
+  // স্ট্যাটাস যাচাই করা যায়নি (DB/ক্যাশ ব্যর্থ) — সেশন ধ্বংস না করে 503।
+  // ইউজারের দোষ নয়, তাই লগ-আউট করানো হয় না; কিন্তু যাচাই ছাড়া ভেতরেও ঢুকতে
+  // দেওয়া হয় না।
+  if (status.checkFailed) {
+    if (req.path.includes('/api/')) {
+      return res.status(503).json({ success: false, error: tr(req, 'auth_status_unavailable') });
+    }
+    return res.status(503).render('error', {
+      user: req.session.user || null,
+      message: tr(req, 'auth_status_unavailable')
+    });
+  }
+
   if (!status.exists || status.banned || status.selfExcluded) {
     req.session.destroy(() => {});
     if (req.path.includes('/api/')) {

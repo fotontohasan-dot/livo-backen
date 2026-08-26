@@ -92,10 +92,24 @@
 
     // fetch() প্যাচ — সেইম-অরিজিন state-changing রিকোয়েস্টে অটো হেডার যোগ করে
     var origFetch = window.fetch;
+    /* CSRF টোকেন শুধু নিজেদের অরিজিনে যাবে।
+       আগে অরিজিন যাচাই ছাড়াই সব POST/PUT/PATCH/DELETE-এ হেডার বসত — অর্থাৎ
+       পেইজের কোনো স্ক্রিপ্ট (তৃতীয় পক্ষের উইজেট, ব্রাউজার এক্সটেনশন, ভবিষ্যতে
+       যোগ হওয়া কোনো ইন্টিগ্রেশন) বাইরের সার্ভারে রিকোয়েস্ট করলে আমাদের বৈধ
+       CSRF টোকেনও সেখানে চলে যেত। */
+    function isSameOrigin(url) {
+      try {
+        return new URL(url, window.location.href).origin === window.location.origin;
+      } catch (e) {
+        return false; // পার্স করা না গেলে নিরাপদ দিক — টোকেন পাঠাব না
+      }
+    }
+
     window.fetch = function(input, init) {
       init = init || {};
       var method = (init.method || (typeof input === 'object' && input.method) || 'GET').toUpperCase();
-      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+      var url = (typeof input === 'string') ? input : (input && input.url) || '';
+      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) && isSameOrigin(url)) {
         init.headers = new Headers(init.headers || {});
         if (!init.headers.has('X-CSRF-Token')) init.headers.set('X-CSRF-Token', CSRF_TOKEN);
       }
@@ -105,12 +119,13 @@
     // XMLHttpRequest প্যাচ — legacy AJAX কভার করার জন্য
     var origOpen = XMLHttpRequest.prototype.open;
     var origSend = XMLHttpRequest.prototype.send;
-    XMLHttpRequest.prototype.open = function(method) {
+    XMLHttpRequest.prototype.open = function(method, url) {
       this._csrfMethod = (method || 'GET').toUpperCase();
+      this._csrfSameOrigin = isSameOrigin(url);
       return origOpen.apply(this, arguments);
     };
     XMLHttpRequest.prototype.send = function(body) {
-      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(this._csrfMethod)) {
+      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(this._csrfMethod) && this._csrfSameOrigin) {
         try { this.setRequestHeader('X-CSRF-Token', CSRF_TOKEN); } catch (e) {}
       }
       return origSend.call(this, body);

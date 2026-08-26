@@ -27,8 +27,12 @@ async function getUserStats(userId) {
     [userId]
   )).rows[0] || {};
 
+  // বাজির সংখ্যা গোনা হয় বাজি-এন্ট্রি থেকে, জয়-এন্ট্রি থেকে নয়।
+  // 'game_play' এখন শুধু জয়ের ক্রেডিট (হারলে কোনো সারি লেখা হয় না), তাই আগের
+  // মতো ওটা গুনলে হেরে যাওয়া বাজিগুলো বাদ পড়ত এবং ব্যাজ কখনো আনলক হতো না।
+  // 'casino_bet' প্রতিটা ক্যাসিনো বাজিতেই লেখা হয় — জয় বা হার, দুটোতেই।
   const betsRow = (await pool.query(
-    `SELECT COUNT(*) AS c FROM coin_transactions WHERE user_id = $1 AND type IN ('bet','game_play')`,
+    `SELECT COUNT(*) AS c FROM coin_transactions WHERE user_id = $1 AND type IN ('bet','casino_bet')`,
     [userId]
   )).rows[0];
 

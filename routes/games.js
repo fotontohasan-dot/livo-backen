@@ -355,13 +355,26 @@ router.post('/play', isAuth, async (req, res) => {
       return res.json({ success: true, demo: true, newBalance: req.session.user.demo_balance, winAmount, gameResult });
     }
 
-    await client.query('INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, $3, $4)', 
-                       [userId, netChange, 'game_play', `${supportedGames[gameSlug] || gameSlug} গেম`]);
-    // BUG-002: এখানে game_play এন্ট্রি (netChange) ইতিমধ্যেই আসল ব্যালেন্স-পরিবর্তন ব্যাখ্যা
-    // করে; casino_bet শুধু wager-ভলিউম রেকর্ড — কিন্তু ধনাত্মক লেখা হলে SUM(coin_transactions)
-    // প্রকৃত ব্যালেন্স-পরিবর্তনের চেয়ে betAmount বেশি দেখাত। নেগেটিভ করে ইনভেরিয়েন্ট রাখা হলো।
+    // লেজারের দুটো এন্ট্রি মিলে ঠিক ব্যালেন্স-পরিবর্তনটাই ব্যাখ্যা করে:
+    //
+    //     casino_bet (-betAmount) + game_play (+winAmount) = netChange
+    //
+    // আগে game_play-তে netChange লেখা হতো আর তার পাশে casino_bet(-betAmount) —
+    // অর্থাৎ বাজির টাকা দুবার বিয়োগ হতো। এই কোডবেসের মূল ইনভেরিয়েন্ট
+    // (balance == starting + SUM(coin_transactions.amount), দেখুন
+    // tests/integration/financialLedgerIntegrity.test.js) প্রতিটা ইনস্ট্যান্ট
+    // গেমে betAmount পরিমাণ ভাঙত — লেজার প্রকৃত ব্যালেন্সের চেয়ে কম দেখাত।
+    //
+    // এখন casino_bet = বাজি (ডেবিট), game_play = ফেরত পাওয়া টাকা (ক্রেডিট)।
+    // হারলে winAmount শূন্য, তাই তখন এন্ট্রিও লেখা হয় না — শূন্য-অঙ্কের সারি
+    // লেজারে অর্থহীন। Aviator পথ আগে থেকেই এই মডেলেই চলে (casino_bet বাজির
+    // সময়, game_win ক্যাশআউটে)।
     await client.query('INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, $3, $4)',
                        [userId, -betAmount, 'casino_bet', `${supportedGames[gameSlug] || gameSlug} বাজি`]);
+    if (winAmount > 0) {
+      await client.query('INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, $3, $4)',
+                         [userId, winAmount, 'game_play', `${supportedGames[gameSlug] || gameSlug} জয়`]);
+    }
     await client.query('COMMIT');
     req.session.user.coins += netChange;
     broadcastDemoStats().catch(e => console.error('demo stats:', e.message));
