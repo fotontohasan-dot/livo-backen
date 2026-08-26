@@ -147,6 +147,12 @@
   padding: 0 12px;
 }
 
+/* এখনো চালু হয়নি এমন গেম — দেখা যায়, কিন্তু খেলা যায় না।
+   সার্ভারে লজিক নেই বলে ক্লিক নিষ্ক্রিয়; ব্যাজে "শীঘ্রই" লেখা থাকে। */
+.game-card-soon { opacity: .55; cursor: not-allowed; filter: grayscale(.6); }
+.game-card-soon:hover { transform: none; }
+.badge-soon { background: #6b7280; color: #fff; }
+
 .game-card-premium {
   background: var(--grad-surface);
   background-color: var(--bg-card);
@@ -833,6 +839,11 @@ body.light-mode .promo-banner {
 // টেবিল খালি থাকলে (মাইগ্রেশন এখনো না চললে) নিচের হার্ডকোড করা তালিকা ফলব্যাক হিসেবে কাজ করবে
 const SERVER_GAMES = <%- JSON.stringify((typeof dbGames !== 'undefined' && dbGames) ? dbGames : []).replace(/</g, '\\u003C') %>;
 
+// সার্ভারে যেসব গেমের আসল লজিক আছে — শুধু এগুলোই খেলা যায়। বাকিগুলো কার্ডে
+// দেখা যাবে কিন্তু "শীঘ্রই" অবস্থায়, ক্লিক করলে কিছু হবে না। তালিকাটা
+// services/gameRegistry.js থেকে আসে, লবি নিজে অনুমান করে না।
+const PLAYABLE_SLUGS = new Set(<%- JSON.stringify(typeof playableSlugs !== 'undefined' ? playableSlugs : []).replace(/</g, '\\u003C') %>);
+
 const allGames = SERVER_GAMES.length > 0 ? SERVER_GAMES : [
   { name: 'Aviator', emoji: '🎰', type: 'slots', slug: 'aviator', badge: 'hot', provider: 'Spribe' },
   { name: 'Slots', emoji: '💎', type: 'slots', slug: 'slots', badge: 'pop', provider: 'Playtech' },
@@ -1041,11 +1052,15 @@ function renderGames() {
   }
 
   filtered.forEach(g => {
-    const badgeHTML = g.badge ? `<div class="game-badge-premium badge-${g.badge}">${g.badge}</div>` : '';
+    const playable = PLAYABLE_SLUGS.size === 0 || PLAYABLE_SLUGS.has(g.slug);
+    const badgeHTML = !playable
+      ? `<div class="game-badge-premium badge-soon">শীঘ্রই</div>`
+      : (g.badge ? `<div class="game-badge-premium badge-${g.badge}">${g.badge}</div>` : '');
     const isFav = favs.includes(g.slug);
     const card = document.createElement('a');
-    card.href = '/games/' + g.slug;
-    card.className = 'game-card-premium';
+    card.href = playable ? '/games/' + g.slug : 'javascript:void(0)';
+    card.className = 'game-card-premium' + (playable ? '' : ' game-card-soon');
+    if (!playable) card.setAttribute('aria-disabled', 'true');
     card.innerHTML = `
       <div class="game-thumb-wrapper">
         <i class="fa-star fav-star ${isFav ? 'fas active' : 'far'}" data-slug="${g.slug}"></i>
@@ -1056,7 +1071,10 @@ function renderGames() {
         <div class="game-title-premium">${g.name}</div>
         <div class="game-provider-premium">${g.provider}</div>
       </div>`;
-    card.addEventListener('click', () => pushRecent(g.slug));
+    card.addEventListener('click', (e) => {
+      if (!playable) { e.preventDefault(); return; }
+      pushRecent(g.slug);
+    });
     const star = card.querySelector('.fav-star');
     star.addEventListener('click', (e) => {
       e.preventDefault();
