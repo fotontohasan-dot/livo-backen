@@ -1101,6 +1101,5 @@
   "admin_encryption_key_missing": "এনক্রিপশন কী সেট নেই — TELEGRAM_SETTINGS_KEY (বা SESSION_SECRET) ছাড়া টোকেন সেভ করা হবে না।",
   "payment_turnover_check_failed": "এই মুহূর্তে আপনার বোনাস টার্নওভার যাচাই করা যায়নি। একটু পরে আবার চেষ্টা করুন।",
   "payment_limit_check_failed": "এই মুহূর্তে আপনার দৈনিক ডিপোজিট সীমা যাচাই করা যায়নি। একটু পরে আবার চেষ্টা করুন।",
-  "auth_status_unavailable": "সাময়িক সমস্যা হচ্ছে — একটু পরে আবার চেষ্টা করুন।",
-  "admin_kyc_not_pending": "এই KYC রিকোয়েস্ট আর pending অবস্থায় নেই — আগেই প্রক্রিয়া করা হয়েছে।"
+  "games_not_available": "এই গেমটি এখনো চালু হয়নি — শীঘ্রই আসছে"
 }

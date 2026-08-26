@@ -135,7 +135,10 @@ router.get('/', async (req, res) => {
       console.error('Homepage games fetch error:', gErr.message);
       dbGames = [];
     }
-    res.render('index', { user: req.session.user || null, dbGames });
+    // কোন গেম আসলে খেলা যায় সেটা সার্ভারই বলে দেয় — লবি নিজে অনুমান করে না।
+    // লজিক না থাকা গেম কার্ডে "শীঘ্রই" ব্যাজ পায় এবং ক্লিক করা যায় না।
+    const playableSlugs = require('../services/gameRegistry').playableSlugs();
+    res.render('index', { user: req.session.user || null, dbGames, playableSlugs });
   } catch (err) {
     console.error('Error rendering index:', err);
     res.status(500).send('Render Error');
