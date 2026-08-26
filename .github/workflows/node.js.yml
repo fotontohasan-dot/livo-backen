@@ -37,6 +37,11 @@ jobs:
       SSLCZ_IS_LIVE: false
       VAPID_SUBJECT: mailto:test@example.com
       FRONTEND_URL: http://localhost:4123
+      # routes/extra.js-এর isSafeCloudinaryUrl() ফেল-ক্লোজড — CLOUDINARY_CLOUD_NAME
+      # সেট না থাকলে যেকোনো document_url বাতিল হয়, তাই KYC সাবমিশন E2E-তে কখনো
+      # সফল হতো না। টেস্টও এই একই ডিফল্ট নামই ব্যবহার করে (কোনো লাইভ Cloudinary
+      # ক্রেডেনশিয়াল নয় — শুধু URL যাচাইয়ের জন্য টেন্যান্ট নাম)।
+      CLOUDINARY_CLOUD_NAME: livo_test_cloud
 
     steps:
     - uses: actions/checkout@v5
@@ -76,6 +81,20 @@ jobs:
     - name: Fail job if tests failed
       if: steps.tests.outcome == 'failure'
       run: |
+        # Actions-এর লগ blob storage অনেক নেটওয়ার্ক থেকে পড়া যায় না এবং
+        # artifact ডাউনলোডও সবসময় সম্ভব হয় না। তাই ব্যর্থ সুইট/টেস্টের নাম ও
+        # সারাংশ annotation হিসেবেও বের করা হয় — PR-এর Checks ট্যাবে সরাসরি দেখা যায়।
+        grep -E '^(FAIL|Tests:|Test Suites:)' jest-output.log | head -40 | while IFS= read -r line; do
+          echo "::error::$line"
+        done || true
+        grep -E '^\s+●' jest-output.log | grep -v 'Console' | head -40 | while IFS= read -r line; do
+          echo "::error::$line"
+        done || true
+        # ব্যর্থ assertion-এর আসল বিবরণ (expected/received, ফাইল ও লাইন) —
+        # নাম জানা গেলেও কারণ না জানলে ডিবাগ করা যায় না।
+        awk '/^\s+●/ && !/Console/ {c=20} c-- > 0' jest-output.log | head -120 | while IFS= read -r line; do
+          echo "::error::$line"
+        done || true
         echo "::error::npm test ব্যর্থ — jest-output artifact দেখো।"
         exit 1
 

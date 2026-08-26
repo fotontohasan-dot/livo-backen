@@ -24,7 +24,7 @@ const { recordDeviceLogin, parseUserAgent, revokeAllOtherSessions } = require('.
 const cache = require('../services/cache');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
 const googleAuth = require('../services/googleAuth');
-const { regenerateSession } = require('../utils/sessionRegenerate');
+const { regenerateSession, saveSession } = require('../utils/sessionRegenerate');
 
 const resetLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -399,6 +399,12 @@ async function completeLogin(req, user, vpnInfo) {
     location: deviceResult && deviceResult.location,
     vpnInfo
   }).catch(e => console.error('scanLogin error:', e.message));
+
+  // redirect-এর আগে সেশন স্টোরে লেখা নিশ্চিত করা হচ্ছে। express-session ডিফল্টে
+  // fire-and-forget ভঙ্গিতে লেখে, তাই regenerate()-এর পরপরই redirect করলে ব্রাউজারের
+  // পরের রিকোয়েস্ট নতুন sid নিয়ে পৌঁছে যেতে পারে সেশন সারি কমিট হওয়ার আগেই —
+  // ফলাফল: লগইন সফল হলেও ইউজার সঙ্গে সঙ্গে লগইন পেজে ফেরত যায়।
+  await saveSession(req);
 
   return (user.role && user.role.toLowerCase() === 'admin') ? '/admin' : '/';
 }

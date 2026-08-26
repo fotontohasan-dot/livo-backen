@@ -23,4 +23,27 @@ function regenerateSession(req) {
   });
 }
 
-module.exports = { regenerateSession };
+/**
+ * সেশন স্টোরে লেখা শেষ না হওয়া পর্যন্ত অপেক্ষা করে।
+ *
+ * কেন দরকার: express-session ডিফল্টে রেসপন্স পাঠানোর সাথে সাথে (fire-and-forget)
+ * স্টোরে লেখে। লগইনের ঠিক পরেই যখন redirect করা হয়, ব্রাউজার নতুন সেশন কুকি নিয়ে
+ * পরের রিকোয়েস্ট পাঠিয়ে দিতে পারে *তার আগেই* — অর্থাৎ PostgreSQL সেশন স্টোরে
+ * সারিটা তখনো কমিট হয়নি। তখন express-session ওই sid খুঁজে না পেয়ে একদম নতুন
+ * (খালি) সেশন বানায়, req.session.user থাকে না, আর ইউজার/অ্যাডমিন সঙ্গে সঙ্গে
+ * আবার লগইন পেজে ফেরত যায়। সেশন রোটেশনের (regenerate) পর ঝুঁকিটা সবচেয়ে বেশি,
+ * কারণ পুরনো sid ততক্ষণে মুছে ফেলা হয়েছে।
+ *
+ * তাই redirect করার আগে এখানে স্পষ্টভাবে save() সম্পন্ন হওয়ার জন্য অপেক্ষা করা হয়।
+ */
+function saveSession(req) {
+  return new Promise((resolve, reject) => {
+    if (!req.session || typeof req.session.save !== 'function') {
+      resolve();
+      return;
+    }
+    req.session.save((err) => (err ? reject(err) : resolve()));
+  });
+}
+
+module.exports = { regenerateSession, saveSession };
