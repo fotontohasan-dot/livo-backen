@@ -90,6 +90,11 @@ jobs:
         grep -E '^\s+●' jest-output.log | grep -v 'Console' | head -40 | while IFS= read -r line; do
           echo "::error::$line"
         done || true
+        # ব্যর্থ assertion-এর আসল বিবরণ (expected/received, ফাইল ও লাইন) —
+        # নাম জানা গেলেও কারণ না জানলে ডিবাগ করা যায় না।
+        awk '/^\s+●/ && !/Console/ {c=20} c-- > 0' jest-output.log | head -120 | while IFS= read -r line; do
+          echo "::error::$line"
+        done || true
         echo "::error::npm test ব্যর্থ — jest-output artifact দেখো।"
         exit 1
 
