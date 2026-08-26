@@ -1106,5 +1106,9 @@
   "admin_kyc_not_pending": "এই KYC রিকোয়েস্ট আর pending অবস্থায় নেই — আগেই প্রক্রিয়া করা হয়েছে।",
   "tournaments_closed": "এই টুর্নামেন্টে আর যোগ দেওয়া যাবে না।",
   "tournaments_already_started": "টুর্নামেন্ট ইতিমধ্যে শুরু হয়ে গেছে।",
-  "tournaments_full": "অংশগ্রহণকারীর সর্বোচ্চ সংখ্যা পূর্ণ হয়ে গেছে।"
+  "tournaments_full": "অংশগ্রহণকারীর সর্বোচ্চ সংখ্যা পূর্ণ হয়ে গেছে।",
+  "admin_kyc_document_not_found": "ডকুমেন্ট পাওয়া যায়নি",
+  "admin_kyc_document_invalid_url": "অবৈধ ডকুমেন্ট URL",
+  "admin_kyc_document_fetch_failed": "ডকুমেন্ট আনা যায়নি",
+  "admin_kyc_document_bad_format": "অসমর্থিত ডকুমেন্ট ফরম্যাট"
 }

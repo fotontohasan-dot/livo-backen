@@ -1,4 +1,5 @@
 const { getCsrfAgent, freshRequest, uniqueUsername, uniquePhone, REALISTIC_UA, extractCsrfToken } = require('./helpers/app');
+const secretBox = require('../utils/secretBox');
 const { pool } = require('../db');
 const speakeasy = require('speakeasy');
 
@@ -368,7 +369,14 @@ describe('Admin Panel', () => {
 
       const dbCheck = await pool.query('SELECT totp_enabled, totp_secret FROM users WHERE username=$1', [username]);
       expect(dbCheck.rows[0].totp_enabled).toBe(true);
-      expect(dbCheck.rows[0].totp_secret).toBe(secret);
+
+      // TOTP সিক্রেট এখন at-rest এনক্রিপ্টেড (utils/secretBox.js)। আগে এই
+      // অ্যাসারশন প্লেইনটেক্সট মিল খুঁজত — অর্থাৎ অনিরাপদ আচরণটাই পাহারা দিত।
+      // এখন যাচাই হয়: (১) সংরক্ষিত মান কাঁচা সিক্রেট নয়, (২) ডিক্রিপ্ট করলে
+      // ঠিক সেই সিক্রেটই ফেরত আসে — অর্থাৎ এনরোল করা অথেন্টিকেটর কাজ করবে।
+      expect(dbCheck.rows[0].totp_secret).not.toBe(secret);
+      expect(secretBox.isEncrypted(dbCheck.rows[0].totp_secret)).toBe(true);
+      expect(secretBox.decrypt(dbCheck.rows[0].totp_secret)).toBe(secret);
     }, 15000);
 
     test('2FA ইতিমধ্যে চালু থাকা admin পরের বার লগইনে normal ভেরিফিকেশন ধাপে যায় (আবার এনরোলমেন্ট না)', async () => {

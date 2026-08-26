@@ -34,6 +34,28 @@ async function balanceOf(userId) {
   return Number((await pool.query('SELECT coins FROM users WHERE id=$1', [userId])).rows[0].coins);
 }
 
+// ব্যাজ রিওয়ার্ড বাজি ধরার ফল, ক্যাশআউটের নয়।
+//
+// 'প্রথম বাজি' ব্যাজ (+২০ কয়েন) আনলক হয় বাজি ধরার সাথে সাথেই। আগে ব্যাজের
+// বাজি-গণনা 'game_play' এন্ট্রি গুনত, আর aviator বাজির সময় শুধু 'casino_bet'
+// লেখা হয় — তাই ব্যাজটা তখন ফায়ার করত না। গণনা 'casino_bet'-এ সরানোর পর
+// (হারা বাজিও যাতে গোনা হয়) ব্যাজটা যথাসময়েই আনলক হচ্ছে।
+//
+// এই টেস্টগুলোর উদ্দেশ্য "ক্যাশআউট থেকে কোনো পেআউট হয়নি" — ব্যাজ সেই হিসাবের
+// বাইরে, তাই ব্যালেন্স মেলানোর সময় ব্যাজ-ক্রেডিট বাদ দেওয়া হয়।
+async function badgeCreditsOf(userId) {
+  const r = await pool.query(
+    `SELECT COALESCE(SUM(amount),0) AS s FROM coin_transactions WHERE user_id=$1 AND type='badge'`,
+    [userId]
+  );
+  return Number(r.rows[0].s);
+}
+
+/** ব্যাজ রিওয়ার্ড বাদ দিয়ে ব্যালেন্স — গেমিং কার্যকলাপের প্রকৃত ফল। */
+async function balanceExcludingBadges(userId) {
+  return (await balanceOf(userId)) - (await badgeCreditsOf(userId));
+}
+
 describe('POST /games/cashout — টাইমিং যাচাই (BUG-001)', () => {
   test('বেট বসানোর সাথে সাথেই উচ্চ multiplier দাবি করে ক্যাশআউট রিজেক্ট হয় (400), কোনো পেআউট হয় না', async () => {
     const U = await makeUser();
@@ -50,7 +72,7 @@ describe('POST /games/cashout — টাইমিং যাচাই (BUG-001)',
     expect(coRes.body.success).toBe(false);
 
     // বাজির টাকা কাটা গেছে (বাজি বসানো সবসময়ই স্বাভাবিক), কিন্তু কোনো জেতা টাকা credit হয়নি
-    expect(await balanceOf(U.userId)).toBe(before - 100);
+    expect(await balanceExcludingBadges(U.userId)).toBe(before - 100);
   });
 
   test('৪০ রাউন্ড ইনস্ট্যান্ট ১.৫x ক্যাশআউট — কোনোটাই জেতে না (আগে ~৯৪% জিততো)', async () => {
@@ -71,7 +93,7 @@ describe('POST /games/cashout — টাইমিং যাচাই (BUG-001)',
     }
 
     expect(paidOut).toBe(0);
-    expect(await balanceOf(U.userId)).toBe(before - N * BET); // ঠিক পুরো বাজিই খোয়া গেছে, কোনো ফাঁকি-জয় নেই
+    expect(await balanceExcludingBadges(U.userId)).toBe(before - N * BET); // ঠিক পুরো বাজিই খোয়া গেছে, কোনো ফাঁকি-জয় নেই
   }, 60000);
 
   test('পর্যাপ্ত সময় অতিবাহিত হওয়ার পর ন্যায্য multiplier claim করলে ক্যাশআউট স্বাভাবিকভাবে কাজ করে', async () => {
@@ -92,7 +114,7 @@ describe('POST /games/cashout — টাইমিং যাচাই (BUG-001)',
     // crashPoint র‍্যান্ডম বলে জেতা বা ক্র্যাশ করা দুটোই বৈধ ফলাফল — কিন্তু কখনোই রিজেক্ট (400) নয়
     expect(coRes.body.success).toBe(true);
     if (!coRes.body.crashed) {
-      expect(await balanceOf(U.userId)).toBe(before - 100 + Math.floor(100 * 1.05));
+      expect(await balanceExcludingBadges(U.userId)).toBe(before - 100 + Math.floor(100 * 1.05));
     } else {
       expect(await balanceOf(U.userId)).toBe(before - 100);
     }
@@ -118,7 +140,7 @@ describe('POST /games/cashout — সমান্তরাল রিকোয়
     const successfulPayouts = results.filter((r) => r.body && r.body.success && !r.body.crashed).length;
     expect(successfulPayouts).toBeLessThanOrEqual(1);
 
-    const after = await balanceOf(U.userId);
+    const after = await balanceExcludingBadges(U.userId);
     if (successfulPayouts === 1) {
       expect(after).toBe(before - 100 + Math.floor(100 * 1.01));
     } else {

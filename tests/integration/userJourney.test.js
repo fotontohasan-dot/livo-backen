@@ -29,8 +29,20 @@ describe('A-Z User Journey', () => {
   });
 
   test('2. Verify (email)', async () => {
-    const t = await pool.query('SELECT verification_token FROM users WHERE id=$1', [userId]);
-    verifyToken = t.rows[0].verification_token;
+    // DB-তে টোকেনের SHA-256 হ্যাশ থাকে, কাঁচা টোকেন নয় (utils/tokens.js) — তাই
+    // সেটা পড়ে লিংকে বসানো যায় না। ইউজার যেভাবে পায় সেভাবেই নেওয়া হচ্ছে:
+    // পাঠানো ভেরিফিকেশন ইমেইলের payload থেকে।
+    const stored = await pool.query('SELECT verification_token FROM users WHERE id=$1', [userId]);
+    expect(stored.rows[0].verification_token).toBeTruthy();
+
+    const jobs = await pool.query(
+      `SELECT payload FROM job_queue
+        WHERE type = 'email' AND payload->>'kind' = 'verification'
+        ORDER BY id DESC LIMIT 1`
+    );
+    const payload = typeof jobs.rows[0].payload === 'string'
+      ? JSON.parse(jobs.rows[0].payload) : jobs.rows[0].payload;
+    verifyToken = String(payload.verifyUrl || '').match(/\/verify-email\/([a-f0-9]+)/i)[1];
     expect(verifyToken).toBeTruthy();
     const res = await agent.get(`/verify-email/${verifyToken}`);
     expect(res.status).toBe(302);
@@ -188,7 +200,11 @@ describe('A-Z User Journey', () => {
     expect(Number(after.rows[0].coins)).not.toBe(Number(before.rows[0].coins));
 
     const matchIns = await pool.query(`INSERT INTO matches (title, team_a, team_b, sport, status) VALUES ('Journey Test Match','X','Y','cricket','live') RETURNING id`);
-    const marketIns = await pool.query(`INSERT INTO markets (match_id, type, name, odds, status) VALUES ($1,'match_winner','Match Winner','{}','open') RETURNING id`, [matchIns.rows[0].id]);
+    // মার্কেটে রানারের অডস অবশ্যই থাকতে হবে। আগে খালি `'{}'` দিয়েও বাজি বসত,
+    // কারণ অচেনা রানারের জন্য সার্ভার একটা ফলব্যাক অডস ধরে নিত — ফলে বানানো
+    // রানার নামেও বাজি হয়ে যেত, আর সেটেলমেন্টে সেটা কোনো ফলাফলের সাথে মিলত না।
+    // এখন অচেনা রানার প্রত্যাখ্যাত, তাই টেস্টেও বাস্তব মার্কেটের মতো অডস দেওয়া হলো।
+    const marketIns = await pool.query(`INSERT INTO markets (match_id, type, name, odds, status) VALUES ($1,'match_winner','Match Winner','{"X":1.80,"Y":2.10}','open') RETURNING id`, [matchIns.rows[0].id]);
     const matchPage = await agent.get(`/matches/${matchIns.rows[0].id}`);
     expect(matchPage.status).toBe(200);
     const betCsrf = await csrfFor(agent, `/matches/${matchIns.rows[0].id}`);

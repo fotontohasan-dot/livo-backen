@@ -1106,5 +1106,9 @@
   "admin_kyc_not_pending": "This KYC request is no longer pending — it has already been processed.",
   "tournaments_closed": "This tournament is no longer open to join.",
   "tournaments_already_started": "This tournament has already started.",
-  "tournaments_full": "This tournament has reached its participant limit."
+  "tournaments_full": "This tournament has reached its participant limit.",
+  "admin_kyc_document_not_found": "Document not found",
+  "admin_kyc_document_invalid_url": "Invalid document URL",
+  "admin_kyc_document_fetch_failed": "Could not fetch the document",
+  "admin_kyc_document_bad_format": "Unsupported document format"
 }

@@ -2,6 +2,7 @@
 //   forgot-password ফর্ম → টোকেন ইস্যু → reset-password → টোকেন invalidate →
 //   নতুন পাসওয়ার্ডে লগইন → পুরনো পাসওয়ার্ড অকার্যকর।
 const request = require('supertest');
+const { hashToken } = require('../../utils/tokens');
 const app = require('../../app.js');
 const { pool } = require('../../db');
 const {
@@ -34,13 +35,35 @@ async function registerUser(email, password) {
   return row.rows[0].id;
 }
 
-// forgot-password ফর্ম সাবমিট করে DB থেকে ইস্যু হওয়া reset_token পড়ে আনে
+// forgot-password ফর্ম সাবমিট করে ইস্যু হওয়া আসল টোকেন আনে।
+//
+// আগে টোকেনটা সরাসরি `users.reset_token` থেকে পড়া হতো। এখন DB-তে শুধু
+// SHA-256 হ্যাশ থাকে (utils/tokens.js) — হ্যাশ থেকে টোকেন ফেরানো যায় না,
+// আর সেটাই উদ্দেশ্য: ডাটাবেস পড়তে পারলেও কেউ যেন রিসেট টোকেন না পায়।
+//
+// তাই টোকেন নেওয়া হয় ঠিক যেখান থেকে ব্যবহারকারী পায় — পাঠানো ইমেইল থেকে।
+// ইমেইল কিউতে (`job_queue`) যায় এবং তার payload-এ পুরো resetUrl থাকে।
+// এতে টেস্টটা বরং আরও বাস্তব হলো: ইউজার যে লিংকে ক্লিক করবে, সেটাই যাচাই হয়।
 async function requestReset(email) {
   const { agent, token } = await getCsrfAgent('/forgot-password');
   const res = await agent.post('/forgot-password').type('form').send({ email, _csrf: token });
   expect(res.status).toBe(200);
-  const row = await pool.query('SELECT reset_token FROM users WHERE email = $1', [email]);
-  return row.rows[0].reset_token;
+  return await latestResetTokenFromEmail(email);
+}
+
+/** কিউ করা password_reset ইমেইলের payload থেকে টোকেন বের করে। */
+async function latestResetTokenFromEmail(email) {
+  const jobs = await pool.query(
+    `SELECT payload FROM job_queue
+      WHERE type = 'email' AND payload->>'kind' = 'password_reset' AND payload->>'to' = $1
+      ORDER BY id DESC LIMIT 1`,
+    [email]
+  );
+  if (!jobs.rows[0]) return null;
+  const payload = typeof jobs.rows[0].payload === 'string'
+    ? JSON.parse(jobs.rows[0].payload) : jobs.rows[0].payload;
+  const match = String(payload.resetUrl || '').match(/\/reset-password\/([a-f0-9]+)/i);
+  return match ? match[1] : null;
 }
 
 describe('Password recovery — forgot-password form', () => {
@@ -227,8 +250,9 @@ describe('Password recovery — token lifecycle', () => {
       .send({ password: 'LongEnough123', confirmPassword: 'DifferentOne123', _csrf: mismatchTry.token });
     expect(mismatch.headers.location).toBe(`/reset-password/${token}`);
 
+    // DB-তে টোকেনের হ্যাশ থাকে, কাঁচা টোকেন নয় — তাই মেলানোর সময়ও হ্যাশ করে নিতে হয়।
     const still = await pool.query('SELECT reset_token FROM users WHERE id = $1', [userId]);
-    expect(still.rows[0].reset_token).toBe(token);
+    expect(still.rows[0].reset_token).toBe(hashToken(token));
   });
 
   // রিগ্রেশন: অ্যাকাউন্ট টেকওভারের পর ভিকটিম রিসেট করলেও আক্রমণকারীর সেশন বহাল থাকত
