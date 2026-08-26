@@ -22,7 +22,7 @@
       <%- include('./partials/header', { pageTitle: 'নিউজ', pageSubtitle: 'স্পোর্টস নিউজ পোস্ট ও পরিচালনা করুন' }) %>
 
       <div class="admin-card" style="padding:16px;margin-bottom:16px;">
-        <div style="font-weight:800;color:#fff;font-size:13px;margin-bottom:12px;"><i class="fas fa-newspaper" style="color:#f59e0b;"></i> নতুন নিউজ যোগ করুন</div>
+        <div style="font-weight:800;color:var(--text-main);font-size:13px;margin-bottom:12px;"><i class="fas fa-newspaper" style="color:#f59e0b;"></i> নতুন নিউজ যোগ করুন</div>
         <form method="POST" action="/admin/news/add" style="display:grid;grid-template-columns:1fr;gap:10px;">
           <input class="input" type="text" name="title" placeholder="শিরোনাম" required>
           <textarea class="input" name="content" rows="4" placeholder="বিস্তারিত"></textarea>

@@ -80,15 +80,15 @@
                       <% if (u.rank) { %>
                         <span class="lb-rank <%= u.rank == 1 ? 'lb-rank-1' : (u.rank == 2 ? 'lb-rank-2' : (u.rank == 3 ? 'lb-rank-3' : '')) %>">#<%= u.rank %></span>
                         <% if (u.rank <= 50) { %>
-                          <div style="font-size:10px;color:#94a3b8;margin-top:2px;">পাবলিক Top 50-এ</div>
+                          <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">পাবলিক Top 50-এ</div>
                         <% } %>
                       <% } else { %>
-                        <span style="color:#94a3b8;">—</span>
+                        <span style="color:var(--text-muted);">—</span>
                       <% } %>
                     </td>
                     <td>
                       <div style="font-weight:700;">@<%= u.username %></div>
-                      <div style="font-size:11px;color:#94a3b8;">#<%= u.id %><% if (u.email) { %> · <%= u.email %><% } %></div>
+                      <div style="font-size:11px;color:var(--text-muted);">#<%= u.id %><% if (u.email) { %> · <%= u.email %><% } %></div>
                     </td>
                     <td style="font-weight:700;color:#f59e0b;"><%= Number(u.total_points || 0).toLocaleString('en-US') %></td>
                     <td><%= Number(u.coins || 0).toLocaleString('en-US') %></td>
@@ -123,7 +123,7 @@
         <% if (page > 1) { %>
           <a class="btn" href="/admin/leaderboard?page=<%= page - 1 %>&search=<%= encodeURIComponent(search || '') %>&status=<%= status || '' %>">← আগের পেজ</a>
         <% } %>
-        <span style="padding:9px 12px;color:#94a3b8;font-size:12px;">পেজ <%= page %> / <%= totalPages %></span>
+        <span style="padding:9px 12px;color:var(--text-muted);font-size:12px;">পেজ <%= page %> / <%= totalPages %></span>
         <% if (page < totalPages) { %>
           <a class="btn" href="/admin/leaderboard?page=<%= page + 1 %>&search=<%= encodeURIComponent(search || '') %>&status=<%= status || '' %>">পরের পেজ →</a>
         <% } %>
@@ -166,19 +166,19 @@
   <script>
     async function loadContestHistory() {
       const box = document.getElementById('contestHistory');
-      box.innerHTML = '<p style="color:#94a3b8;font-size:12px;">লোড হচ্ছে...</p>';
+      box.innerHTML = '<p style="color:var(--text-muted);font-size:12px;">লোড হচ্ছে...</p>';
       try {
         const res = await fetch('/admin/leaderboard/contest/history?months=3');
         const data = await res.json();
         if (!data.success || !data.past || !data.past.length) {
-          box.innerHTML = '<p style="color:#94a3b8;font-size:12px;">আগের কোনো মাসের কনটেস্ট রেজাল্ট নেই।</p>';
+          box.innerHTML = '<p style="color:var(--text-muted);font-size:12px;">আগের কোনো মাসের কনটেস্ট রেজাল্ট নেই।</p>';
           return;
         }
         box.innerHTML = data.past.map(function (m) {
           const rows = m.leaders.map(function (l) {
             return '<tr><td class="lb-rank">#' + l.rank + '</td><td>@' + l.username + '</td><td>' + l.referrals + '</td><td>' + (l.prize || '—') + '</td></tr>';
           }).join('');
-          return '<div style="margin-top:14px;"><div style="font-weight:700;color:#e2e8f0;font-size:13px;margin-bottom:6px;">' + m.monthName + '</div>' +
+          return '<div style="margin-top:14px;"><div style="font-weight:700;color:var(--text-muted);font-size:13px;margin-bottom:6px;">' + m.monthName + '</div>' +
             '<table class="admin-table"><thead><tr><th>র‍্যাঙ্ক</th><th>ইউজার</th><th>রেফারেল</th><th>প্রাইজ</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
         }).join('');
       } catch (e) {

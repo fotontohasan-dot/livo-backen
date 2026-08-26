@@ -61,7 +61,7 @@
       %>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;margin-bottom:8px;border-radius:10px;background:<%= isCurrent ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.03)' %>;border:1px solid <%= isCurrent ? '#f59e0b' : 'transparent' %>;">
           <div>
-            <div style="color:<%= reached ? '#fff' : '#94a3b8' %>;font-size:14px;font-weight:bold;">
+            <div style="color:<%= reached ? 'var(--text-main)' : 'var(--text-muted)' %>;font-size:14px;font-weight:bold;">
               <%= reached ? '✅' : '🔒' %> <%= l.name %> (<%= t.level_paren %> <%= l.level %>)
             </div>
             <div style="color:var(--text-muted);font-size:11px;margin-top:2px;">

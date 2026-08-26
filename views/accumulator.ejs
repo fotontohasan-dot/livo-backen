@@ -116,7 +116,7 @@ function renderSlip() {
   if (slip.length === 0) { box.style.display='none'; return; }
   box.style.display='block';
   items.innerHTML = slip.map((s,i) =>
-    '<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;color:#cbd5e1;">'
+    '<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;color:var(--text-muted);">'
     + '<span>'+s.mname+' — '+s.runner+' <span style="color:#f59e0b;">'+s.odd+'</span></span>'
     + '<span onclick="removePick('+i+')" style="color:#ef4444;cursor:pointer;">✕</span></div>'
   ).join('');

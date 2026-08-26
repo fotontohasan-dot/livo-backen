@@ -38,7 +38,7 @@
               <% if (d.is_new_device) { %><span style="background:rgba(245,158,11,0.15); color: var(--text-accent); font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px;"><%= t.new_device_badge %></span><% } %>
             </div>
           </div>
-          <span style="flex-shrink:0; background: <%= d.is_trusted ? 'rgba(16,185,129,0.15)' : 'rgba(148,163,184,0.15)' %>; color: <%= d.is_trusted ? '#10b981' : '#94a3b8' %>; font-size:11px; font-weight:800; padding:5px 10px; border-radius:20px; white-space:nowrap;">
+          <span style="flex-shrink:0; background: <%= d.is_trusted ? 'rgba(16,185,129,0.15)' : 'rgba(148,163,184,0.15)' %>; color: <%= d.is_trusted ? '#10b981' : 'var(--text-muted)' %>; font-size:11px; font-weight:800; padding:5px 10px; border-radius:20px; white-space:nowrap;">
             <i class="fas <%= d.is_trusted ? 'fa-shield-check' : 'fa-shield' %>"></i> <%= d.is_trusted ? t.trusted_badge : t.not_trusted_badge %>
           </span>
         </div>
@@ -61,7 +61,7 @@
 
           <form method="POST" action="/profile/trusted-devices/<%= d.id %>/trust" style="display:inline;">
             <input type="hidden" name="trusted" value="<%= d.is_trusted ? 'false' : 'true' %>">
-            <button type="submit" style="background: <%= d.is_trusted ? 'rgba(148,163,184,0.12)' : 'rgba(16,185,129,0.12)' %>; border:none; color: <%= d.is_trusted ? '#94a3b8' : '#10b981' %>; padding:8px 12px; border-radius:10px; font-size:11px; font-weight:700; cursor:pointer;">
+            <button type="submit" style="background: <%= d.is_trusted ? 'rgba(148,163,184,0.12)' : 'rgba(16,185,129,0.12)' %>; border:none; color: <%= d.is_trusted ? 'var(--text-muted)' : '#10b981' %>; padding:8px 12px; border-radius:10px; font-size:11px; font-weight:700; cursor:pointer;">
               <i class="fas <%= d.is_trusted ? 'fa-shield' : 'fa-shield-check' %>"></i> <%= d.is_trusted ? t.mark_untrusted : t.mark_trusted %>
             </button>
           </form>

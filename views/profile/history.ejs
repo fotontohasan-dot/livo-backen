@@ -24,8 +24,8 @@
       <button type="submit" style="background: var(--grad-gold); border: none; color: #000; padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 800;">ফিল্টার</button>
     </div>
     <div style="display: flex; gap: 8px;">
-      <button type="submit" name="status" value="won" style="flex:1; padding: 8px; border-radius: 10px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.status === 'won' ? '#10b981' : 'var(--bg-card)' %>; color: <%= filter.status === 'won' ? '#fff' : 'var(--text-main)' %>;">জয়</button>
-      <button type="submit" name="status" value="lost" style="flex:1; padding: 8px; border-radius: 10px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.status === 'lost' ? '#ef4444' : 'var(--bg-card)' %>; color: <%= filter.status === 'lost' ? '#fff' : 'var(--text-main)' %>;">হার</button>
+      <button type="submit" name="status" value="won" style="flex:1; padding: 8px; border-radius: 10px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.status === 'won' ? '#10b981' : 'var(--bg-card)' %>; color: <%= filter.status === 'won' ? 'var(--text-main)' : 'var(--text-main)' %>;">জয়</button>
+      <button type="submit" name="status" value="lost" style="flex:1; padding: 8px; border-radius: 10px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.status === 'lost' ? '#ef4444' : 'var(--bg-card)' %>; color: <%= filter.status === 'lost' ? 'var(--text-main)' : 'var(--text-main)' %>;">হার</button>
       <button type="submit" name="status" value="pending" style="flex:1; padding: 8px; border-radius: 10px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.status === 'pending' ? '#f59e0b' : 'var(--bg-card)' %>; color: <%= filter.status === 'pending' ? '#000' : 'var(--text-main)' %>;">পেন্ডিং</button>
     </div>
   </form>

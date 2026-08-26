@@ -23,7 +23,7 @@
       </div>
       <h2 style="color: var(--text-accent);font-size:18px;font-weight:800;margin-bottom:6px"><%= t.kyc_pending_title %></h2>
       <p style="color:var(--text-muted);font-size:13px;margin-bottom:14px"><%= t.kyc_pending_desc %></p>
-      <div style="text-align:left;background:rgba(255,255,255,0.03);border-radius:12px;padding:14px;font-size:12px;color:#cbd5e1">
+      <div style="text-align:left;background:rgba(255,255,255,0.03);border-radius:12px;padding:14px;font-size:12px;color:var(--text-muted)">
         <div style="margin-bottom:4px"><b style="color:var(--text-muted)"><%= t.name_label %></b> <%= kyc.full_name %></div>
         <div style="margin-bottom:4px"><b style="color:var(--text-muted)"><%= t.document_number_label %></b> <%= kyc.document_number %></div>
         <div><b style="color:var(--text-muted)"><%= t.submitted_on %></b> <%= new Date(kyc.created_at).toLocaleDateString('bn-BD') %></div>
@@ -47,7 +47,7 @@
     <!-- আপলোড গাইডলাইন -->
     <div class="glass-card" style="padding:16px 18px;border-radius:16px;margin-bottom:20px;background:rgba(234,179,8,0.06);border:1px solid rgba(234,179,8,0.25)">
       <div style="color: var(--text-accent);font-weight:700;font-size:13px;margin-bottom:8px"><i class="fas fa-circle-info"></i> <%= t.before_upload_note %></div>
-      <ul style="margin:0;padding-left:18px;color:#cbd5e1;font-size:12.5px;line-height:1.9">
+      <ul style="margin:0;padding-left:18px;color:var(--text-muted);font-size:12.5px;line-height:1.9">
         <li><%= t.kyc_doc_types_note %></li>
         <li><%= t.kyc_photo_clear_note %></li>
         <li><%= t.kyc_format_note %></li>

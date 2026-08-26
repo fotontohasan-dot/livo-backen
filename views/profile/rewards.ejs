@@ -163,7 +163,7 @@
               const reached = reward.turnover >= Number(t.min_turnover);
             %>
               <tr style="border-bottom:1px solid var(--border-glass);">
-                <td style="padding:.7rem;font-size:.9rem;color:<%= reached ? '#10b981' : '#fff' %>;">
+                <td style="padding:.7rem;font-size:.9rem;color:<%= reached ? '#10b981' : 'var(--text-main)' %>;">
                   <%= reached ? '✅ ' : '' %><%= Number(t.min_turnover).toLocaleString('bn-BD') %>+
                 </td>
                 <td style="padding:.7rem;text-align:right;font-weight:700;color: var(--text-accent);">

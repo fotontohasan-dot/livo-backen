@@ -81,6 +81,21 @@
   --font-display: 32px;
 }
 
+/* ==================== Legacy Aliases ====================
+   পুরোনো টেমপ্লেটে এই নামগুলো ব্যবহার করা হয়েছিল কিন্তু কোথাও ডিফাইন করা ছিল না —
+   ফলে var() রেজলভ হতো না, টেক্সট ইনহেরিট করা রঙ নিত আর Light Mode-এ ফ্যাকাশে/অদৃশ্য
+   দেখাত। body-তে ডিফাইন করা হয়েছে যাতে body.light-mode-এর ওভাররাইড করা টোকেন থেকেই
+   মান নেয় — দুই থিমেই ঠিক থাকে। */
+body {
+  --text: var(--text-main);
+  --muted: var(--text-muted);
+  --border: var(--border-glass);
+  --card2: var(--bg-surface-elevated);
+  --accent-color: var(--text-accent);
+  --primary-gradient: var(--grad-primary);
+  --gg: var(--grad-gold);
+}
+
 body.light-mode {
   --primary: #B88918;
   --primary-glow: rgba(184, 137, 24, 0.22);

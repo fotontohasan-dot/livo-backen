@@ -39,7 +39,7 @@
         <div class="stat-card"><div class="stat-label">মোট Job</div><div class="stat-number" style="color:#f59e0b;"><%= jobs.length %></div></div>
         <div class="stat-card"><div class="stat-label">সক্রিয়</div><div class="stat-number" style="color:#10b981;"><%= jobs.filter(j=>j.enabled).length %></div></div>
         <div class="stat-card"><div class="stat-label">শেষ রান ব্যর্থ</div><div class="stat-number" style="color:#ef4444;"><%= jobs.filter(j=>j.last_status==='error').length %></div></div>
-        <div class="stat-card"><div class="stat-label">Dead Job</div><div class="stat-number" style="color:#94a3b8;"><%= jobs.filter(j=>j.isDead).length %></div></div>
+        <div class="stat-card"><div class="stat-label">Dead Job</div><div class="stat-number" style="color:var(--text-muted);"><%= jobs.filter(j=>j.isDead).length %></div></div>
       </div>
 
       <div class="admin-card-header" style="margin-bottom:10px;">সব Scheduled Job</div>
@@ -48,13 +48,13 @@
         <div class="cron-job-card <%= job.enabled ? '' : 'disabled' %> <%= job.isDead ? 'dead' : '' %>">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
             <div>
-              <div style="font-weight:800;color:#fff;font-size:14px;">
+              <div style="font-weight:800;color:var(--text-main);font-size:14px;">
                 <i class="fas fa-clock" style="color:#f59e0b;"></i> <%= job.label %>
                 <% if (job.isDead) { %><span class="badge badge-red">Dead</span><% } %>
                 <% if (job.enabled) { %><span class="badge badge-green">সক্রিয়</span><% } else { %><span class="badge badge-red">নিষ্ক্রিয়</span><% } %>
                 <% if (job.last_status === 'success') { %><span class="badge badge-green">শেষ রান: সফল</span><% } else if (job.last_status === 'error') { %><span class="badge badge-red">শেষ রান: ব্যর্থ</span><% } else { %><span class="badge badge-amber">এখনো রান হয়নি</span><% } %>
               </div>
-              <div style="color:#94a3b8;font-size:12px;margin-top:4px;max-width:600px;"><%= job.description %></div>
+              <div style="color:var(--text-muted);font-size:12px;margin-top:4px;max-width:600px;"><%= job.description %></div>
             </div>
           </div>
 
@@ -67,7 +67,7 @@
           </div>
 
           <% if (job.last_message) { %>
-            <div style="margin-top:8px;font-size:11px;color:<%= job.last_status === 'error' ? '#ef4444' : '#94a3b8' %>;background:rgba(255,255,255,0.03);padding:8px;border-radius:8px;">
+            <div style="margin-top:8px;font-size:11px;color:<%= job.last_status === 'error' ? '#ef4444' : 'var(--text-muted)' %>;background:rgba(255,255,255,0.03);padding:8px;border-radius:8px;">
               <%= job.last_message %>
             </div>
           <% } %>
@@ -87,7 +87,7 @@
                 <button type="submit" class="btn-sm" style="background:#10b981;color:#000;" <%= job.isDead ? 'disabled' : '' %>>সক্রিয় করুন</button>
               </form>
             <% } %>
-            <a href="/admin/cron-jobs/<%= job.key %>/logs" class="btn-sm" style="background:rgba(255,255,255,0.08);color:#e2e8f0;"><i class="fas fa-history"></i> হিস্ট্রি দেখুন</a>
+            <a href="/admin/cron-jobs/<%= job.key %>/logs" class="btn-sm" style="background:rgba(255,255,255,0.08);color:var(--text-muted);"><i class="fas fa-history"></i> হিস্ট্রি দেখুন</a>
           </div>
         </div>
       <% }) %>
@@ -106,12 +106,12 @@
                     <td><%= l.attempts %></td>
                     <td><%= l.duration_ms %>ms</td>
                     <td style="font-size:11px;"><%= l.triggered_by %></td>
-                    <td style="font-size:11px;color:#94a3b8;max-width:260px;white-space:normal;"><%= l.message %></td>
+                    <td style="font-size:11px;color:var(--text-muted);max-width:260px;white-space:normal;"><%= l.message %></td>
                     <td style="font-size:11px;"><%= new Date(l.started_at).toLocaleString('bn-BD') %></td>
                   </tr>
                 <% }) %>
               <% } else { %>
-                <tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:20px;">এখনো কোনো লগ নেই</td></tr>
+                <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;">এখনো কোনো লগ নেই</td></tr>
               <% } %>
             </tbody>
           </table>

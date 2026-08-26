@@ -73,7 +73,7 @@ byRisk.forEach(r => { riskMap[r.risk_level] = parseInt(r.cnt); });
             <td class="p-3 text-slate-500 whitespace-nowrap">${new Date(l.created_at).toLocaleString('en-US', { timeZone: 'Asia/Dhaka' })}</td>
             <td class="p-3 font-mono">${escapeHtml(l.ip)}</td>
             <td class="p-3">${escapeHtml(l.endpoint)}</td>
-            <td class="p-3"><span style="color:${riskColor[l.risk_level] || '#64748b'};font-weight:700;">${escapeHtml(l.risk_level || '-')}</span></td>
+            <td class="p-3"><span style="color:${riskColor[l.risk_level] || 'var(--text-muted)'};font-weight:700;">${escapeHtml(l.risk_level || '-')}</span></td>
             <td class="p-3 text-slate-500 max-w-xs truncate" title="${escapeHtml(l.reason)}">${escapeHtml((l.reason || '').slice(0, 60))}</td>
             <td class="p-3">${l.blocked ? '<span class="text-red-500 font-bold">হ্যাঁ</span>' : '<span class="text-slate-400">না</span>'}</td>
           </tr>
