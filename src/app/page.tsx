@@ -91,10 +91,15 @@ export default function HomePage() {
 
         {/* 4. Stats Bar */}
         <div className="grid grid-cols-3 gap-3">
+          {/* এখানে আগে হার্ডকোড করা "500+ GAMES" ও "6.5M PLAYERS" দেখানো হতো।
+              কোনোটাই বাস্তব ডেটা থেকে আসত না — সংখ্যা দুটো কেবল লেখা ছিল।
+              বাস্তব প্ল্যাটফর্মে খেলার যোগ্য গেম ৯টি, আর প্লেয়ার সংখ্যা
+              কোথাও গোনা হয় না। ভুয়া পরিসংখ্যান বিজ্ঞাপন-নিয়ন্ত্রণের দিক
+              থেকেও ঝুঁকিপূর্ণ, তাই যাচাইযোগ্য দাবিগুলোই রাখা হলো। */}
           {[
-            { value: "500+", label: "GAMES" },
             { value: "24/7", label: "SUPPORT" },
-            { value: "6.5M", label: "PLAYERS" }
+            { value: "BDT", label: "PAYOUTS" },
+            { value: "18+", label: "AGE LIMIT" }
           ].map((stat, i) => (
             <div key={i} className="card-premium p-3 text-center">
               <div className="text-xl font-black italic text-accent-text leading-none tracking-tighter">{stat.value}</div>
@@ -178,7 +183,16 @@ export default function HomePage() {
           </div>
           <div className="flex justify-center gap-4">
             <div className="glass px-3 py-1 rounded-full text-danger text-[10px] font-black">🔞 18+</div>
-            <div className="glass px-3 py-1 rounded-full text-text-muted text-[10px] font-black">CURACAO LICENSED</div>
+            {/* "CURACAO LICENSED" ব্যাজ সরানো হলো। রিপোজিটরিতে কোনো লাইসেন্স
+                নম্বর, ইস্যুকারী বা যাচাই-লিংক নেই। অস্তিত্বহীন লাইসেন্সের দাবি
+                করা ভুয়া পরিসংখ্যানের চেয়েও গুরুতর — এটা নিয়ন্ত্রক দাবি।
+                প্রকৃত লাইসেন্স থাকলে NEXT_PUBLIC_LICENSE_NOTICE-এ নম্বরসহ
+                বসানো যাবে, তখনই ব্যাজটা দেখাবে। */}
+            {process.env.NEXT_PUBLIC_LICENSE_NOTICE ? (
+              <div className="glass px-3 py-1 rounded-full text-text-muted text-[10px] font-black">
+                {process.env.NEXT_PUBLIC_LICENSE_NOTICE}
+              </div>
+            ) : null}
           </div>
           <p className="text-[9px] text-text-muted/60 leading-relaxed max-w-[280px] mx-auto font-medium">
             © 2024 LIVO Gaming. All Rights Reserved. Play responsibly and within your limits.

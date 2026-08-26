@@ -804,6 +804,21 @@ async function runMigrations() {
 
     await pool.query(`ALTER TABLE kyc_requests ADD COLUMN IF NOT EXISTS reject_reason TEXT`);
 
+    // একজন ইউজারের একসাথে একটাই pending KYC রিকোয়েস্ট থাকতে পারে।
+    //
+    // routes/extra.js-এ আগে শুধু SELECT করে দেখা হতো pending আছে কি না, তারপর
+    // INSERT — দুটোর মাঝে কোনো লক ছিল না। দুটো রিকোয়েস্ট একসাথে এলে দুটোই
+    // SELECT-এ খালি পেত এবং দুটোই ঢুকে যেত। ফলে একজনের দুটো pending KYC
+    // থাকত; অ্যাডমিন পুরনোটা approve করলে ইউজার approved হয়ে যেত অথচ নতুন
+    // (হয়তো ভিন্ন ডকুমেন্টের) রিকোয়েস্ট তখনো pending — স্ট্যাটাস মিথ্যা বলত।
+    //
+    // partial index — শুধু pending সারিতে প্রযোজ্য, তাই একই ইউজারের অনেক
+    // approved/rejected ইতিহাস আগের মতোই থাকতে পারে।
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS uniq_kyc_pending_per_user
+      ON kyc_requests (user_id) WHERE status = 'pending'
+    `).catch(e => console.error('kyc pending unique index:', e.message));
+
     await pool.query(`
       ALTER TABLE users
       ADD COLUMN IF NOT EXISTS withdraw_pin_hash TEXT,

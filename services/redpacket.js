@@ -5,10 +5,13 @@ const { createBonus } = require('./turnover');
 const { t } = require('../utils/i18n');
 const secureRandom = require('../utils/secureRandom');
 
+// হাতে করা `+6 ঘণ্টা` অফসেটের বদলে কেন্দ্রীয় ব্যবসায়িক-দিন সংজ্ঞা।
+// আগে এই ফাইল একা UTC+6 ধরত, অথচ বাকি ফিচারগুলো UTC বা SQL CURRENT_DATE —
+// ফলে একই ইউজারের কাছে "আজ" ফিচারভেদে আলাদা সময়ে পাল্টাত।
+const { today: businessToday } = require('../utils/businessTime');
+
 function todayStr() {
-  const d = new Date();
-  const bd = new Date(d.getTime() + 6 * 3600 * 1000);
-  return bd.toISOString().slice(0, 10);
+  return businessToday();
 }
 
 async function hasClaimedToday(userId, type) {

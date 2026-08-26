@@ -31,10 +31,21 @@ describe('oddsResolver: odds come from the server only (P2-04)', () => {
     expect(resolveOdd({ type: 'match_winner', odds: 'abc' }, 'X')).toBeNull();
   });
 
-  test('a market with no stored odds falls back to a server-side value', () => {
-    // ক্লায়েন্টের পাঠানো odd এখানেও ব্যবহার হয় না — এটাই P2-04-এর মূল কথা।
-    expect(resolveOdd({ type: 'match_winner', odds: {} }, 'X')).toBe(FALLBACK_ODD);
-    expect(resolveOdd({ type: 'fancy', odds: {} }, 'no')).toBe(FALLBACK_ODD);
+  test('মার্কেটে না থাকা রানার প্রত্যাখ্যাত হয়, ফলব্যাক অডস দেওয়া হয় না', () => {
+    // আগের আচরণ: অচেনা রানারের জন্যও FALLBACK_ODD ফেরত যেত, তাই বানানো রানার
+    // নামে বাজি বসে যেত। সেটেলমেন্টে ওই রানার কোনো ফলাফলের সাথে মিলত না —
+    // বাজি অনির্দিষ্টকাল pending থাকত বা ভুলভাবে সেটেল হতো।
+    //
+    // এখন অচেনা রানার মানে null, আর কলার বাজিটাই বাতিল করে।
+    expect(resolveOdd({ type: 'match_winner', odds: {} }, 'X')).toBeNull();
+    expect(resolveOdd({ type: 'fancy', odds: {} }, 'no')).toBeNull();
+
+    // মার্কেট-টাইপের ডিফল্ট তালিকায় থাকা রানার আগের মতোই সার্ভার-নির্ধারিত
+    // অডস পায় — এই পরিবর্তনে বৈধ বাজি আটকায়নি।
+    expect(resolveOdd({ type: 'bookmaker', odds: {} }, '0')).toBe(1.85);
+    expect(resolveOdd({ type: 'bookmaker', odds: {} }, '1')).toBe(2.10);
+    expect(resolveOdd({ type: 'fancy', odds: {} }, 'yes')).toBe(1.75);
+
     expect(FALLBACK_ODD).toBeGreaterThan(1);
     expect(FALLBACK_ODD).toBeLessThanOrEqual(MAX_ODD);
   });
@@ -54,12 +65,13 @@ describe('oddsResolver: odds come from the server only (P2-04)', () => {
     expect(resolveOdd({ type: 'bookmaker', odds: { '0': null } }, '0')).toBe(1.85);
   });
 
-  test('a runner key cannot smuggle a number in as the odd', () => {
-    // ক্লায়েন্ট runner হিসেবে সংখ্যা পাঠালেও সেটা কী, মান নয় — ৯৯৯ পাঠালে
-    // ৯৯৯x অডস নয়, ফলব্যাক অডসই পাওয়া যায়।
+  test('runner কী দিয়ে অডস পাচার করা যায় না', () => {
+    // ক্লায়েন্ট runner হিসেবে ৯৯৯ পাঠালে সেটা কী, মান নয়। মার্কেটে '999'
+    // নামে কোনো রানার নেই, তাই এখন বাজিটাই প্রত্যাখ্যাত — আগে ফলব্যাক অডসে
+    // বসে যেত।
     const market = { type: 'bookmaker', odds: { '0': 1.85 } };
-    expect(resolveOdd(market, 999)).toBe(FALLBACK_ODD);
-    expect(resolveOdd(market, '1000')).toBe(FALLBACK_ODD);
+    expect(resolveOdd(market, 999)).toBeNull();
+    expect(resolveOdd(market, '1000')).toBeNull();
     expect(resolveOdd(market, 999)).not.toBe(999);
   });
 });

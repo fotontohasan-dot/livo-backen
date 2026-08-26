@@ -177,8 +177,23 @@ router.post('/:id/bet', isAuth, async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    const m = await client.query(`SELECT * FROM markets WHERE id = $1`, [market_id]);
-    if (!m.rows[0] || m.rows[0].status !== 'open') {
+    // মার্কেটটা সত্যিই এই ম্যাচেরই কি না — আগে যাচাই হতো না।
+    //
+    // ক্লায়েন্ট `matchId` ও `market_id` আলাদাভাবে পাঠায়, আর কোয়েরি শুধু
+    // market_id ধরে মার্কেট তুলত। ফলে A ম্যাচের পাতা থেকে B ম্যাচের একটা
+    // খোলা মার্কেটের আইডি পাঠিয়ে দিলে বাজিটা `bets.match_id = A` অথচ
+    // `bets.market_id = B` নিয়ে বসে যেত। সেটেলমেন্ট চলে মার্কেট ধরে, আর
+    // রিপোর্টিং চলে ম্যাচ ধরে — দুটো আর মেলে না, এবং একটা শেষ হয়ে যাওয়া
+    // ম্যাচের ফলাফল জেনে অন্য ম্যাচের নামে বাজি ধরার সুযোগ তৈরি হয়।
+    const m = await client.query(
+      `SELECT * FROM markets WHERE id = $1 AND match_id = $2`,
+      [market_id, matchId]
+    );
+    if (!m.rows[0]) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ success: false, message: req.t('matches_market_not_found') });
+    }
+    if (m.rows[0].status !== 'open') {
       await client.query('ROLLBACK');
       return res.status(400).json({ success: false, message: req.t('matches_market_closed') });
     }

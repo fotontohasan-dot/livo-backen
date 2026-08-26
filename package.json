@@ -10,7 +10,8 @@
     "test": "cross-env NODE_ENV=test jest --runInBand --coverage",
     "test:watch": "cross-env NODE_ENV=test jest --runInBand --watch",
     "test:coverage": "cross-env NODE_ENV=test jest --runInBand --coverage",
-    "build": "next build"
+    "build": "next build",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.24.0",

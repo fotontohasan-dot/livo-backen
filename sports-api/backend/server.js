@@ -19,6 +19,35 @@ const wss = new WebSocketServer({ server });
 const cache = { football: [], cricket: [] };
 const predictions = {};
 
+// ==================== অ্যাক্সেস নিয়ন্ত্রণ ====================
+// এই সার্ভিসটা মূল Express অ্যাপের (app.js) সাথে যুক্ত নয় — আলাদা প্রক্রিয়া।
+// কিন্তু কেউ ডিপ্লয় করলে `/api/predict` ছিল সম্পূর্ণ উন্মুক্ত: ক্লায়েন্ট
+// নিজেই `userId` পাঠাত এবং সার্ভার সেটা বিশ্বাস করে যেকোনো ইউজারের
+// প্রেডিকশন লিখে বা বদলে দিত। প্রমাণীকরণ নেই, রেট-লিমিট নেই।
+//
+// এখন লেখার রুটে শেয়ার্ড কী বাধ্যতামূলক, আর কী সেট না থাকলে সার্ভিসটা
+// একেবারে চালুই হয় না — অরক্ষিত অবস্থায় ভুল করে ডিপ্লয় হওয়া ঠেকাতে।
+const SPORTS_API_KEY = process.env.SPORTS_API_KEY || '';
+
+if (!SPORTS_API_KEY) {
+  console.error(
+    'SPORTS_API_KEY সেট করা নেই। এই সার্ভিসের /api/predict রুট প্রমাণীকরণ ছাড়া ' +
+    'চালানো নিরাপদ নয়, তাই সার্ভার চালু করা হলো না।\n' +
+    'এটি প্রোডাকশনের অংশ না হলে সার্ভিসটি ডিপ্লয় থেকে বাদ দিন — ' +
+    'sports-api/README.md দেখুন।'
+  );
+  process.exit(1);
+}
+
+/** লেখার রুটে শেয়ার্ড-কী যাচাই। পড়ার রুট (স্কোর/ট্যালি) আগের মতোই পাবলিক। */
+function requireApiKey(req, res, next) {
+  const provided = req.get('x-api-key') || '';
+  if (provided !== SPORTS_API_KEY) {
+    return res.status(401).json({ error: 'unauthorized' });
+  }
+  next();
+}
+
 function broadcast(type, data) {
   const msg = JSON.stringify({ type, data });
   wss.clients.forEach((c) => c.readyState === 1 && c.send(msg));
@@ -65,7 +94,10 @@ app.get("/api/cricket/match/:id", async (req, res) => {
   }
 });
 
-app.post("/api/predict", (req, res) => {
+// `userId` এখনো বডিতে নেওয়া হয়, কিন্তু রুটটা শুধু কী-ধারী কলার (মূল অ্যাপের
+// সার্ভার-সাইড) ব্যবহার করতে পারে — ব্রাউজার সরাসরি নয়। অর্থাৎ পরিচয় আসে
+// বিশ্বস্ত সার্ভার থেকে, ক্লায়েন্টের দাবি থেকে নয়।
+app.post("/api/predict", requireApiKey, (req, res) => {
   const { matchId, userId, pick } = req.body;
   if (!matchId || !userId || !pick)
     return res.status(400).json({ error: "matchId, userId, pick required" });

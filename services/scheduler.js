@@ -259,11 +259,58 @@ async function runJob(key, { triggeredBy = 'schedule' } = {}) {
   }
   inFlight.add(key);
 
+  // উপরের `inFlight` গার্ড শুধু **এই প্রসেসের** ভেতরে কাজ করে। একাধিক
+  // অ্যাপ ইনস্ট্যান্স চললে (Render-এ স্কেল আপ, ব্লু-গ্রিন ডিপ্লয়ের সময়
+  // ওভারল্যাপ) প্রতিটা ইনস্ট্যান্সের নিজের setInterval থাকে, তাই একই জব
+  // একই সময়ে দুই জায়গায় চলত — ক্লিনআপ জব একই সারি দুবার মুছত, বোনাস জব
+  // দুবার ক্রেডিট করত।
+  //
+  // PostgreSQL advisory lock পুরো ডাটাবেস জুড়ে কাজ করে, তাই যেকোনো এক
+  // ইনস্ট্যান্সই জবটা চালায়। লক সেশন-স্কোপড — প্রসেস মারা গেলে কানেকশন
+  // বন্ধ হয়ে লক নিজেই ছেড়ে যায়, কোনো stale লক পড়ে থাকে না।
+  //
+  // ম্যানুয়াল (অ্যাডমিন-ট্রিগারড) রানেও একই লক প্রযোজ্য — নাহলে শিডিউলড
+  // রানের সাথে সংঘর্ষ হতে পারত।
+  let lockClient = null;
+  try {
+    lockClient = await pool.connect();
+    const lockId = advisoryLockId(key);
+    const got = await lockClient.query('SELECT pg_try_advisory_lock($1) AS locked', [lockId]);
+    if (!got.rows[0] || got.rows[0].locked !== true) {
+      const skipMsg = `অন্য একটি ইনস্ট্যান্স এই জবটি চালাচ্ছে — এই ${triggeredBy} ট্রিগার স্কিপ করা হলো`;
+      console.warn(`cron "${key}": ${skipMsg}`);
+      return { skipped: true, status: 'skipped', message: skipMsg };
+    }
+  } catch (e) {
+    // লক নিতে না পারলে (DB সমস্যা) জবটা চালানো হয় না — ডুপ্লিকেট চালানোর
+    // চেয়ে একটা রান বাদ যাওয়া নিরাপদ, পরের ইন্টারভালে আবার চেষ্টা হবে।
+    console.error(`cron "${key}": advisory lock নেওয়া যায়নি —`, e.message);
+    if (lockClient) lockClient.release();
+    inFlight.delete(key);
+    return { skipped: true, status: 'skipped', message: 'advisory lock নেওয়া যায়নি' };
+  }
+
   try {
     return await executeJob(key, def, triggeredBy);
   } finally {
     inFlight.delete(key); // ব্যর্থ হলেও গার্ড আটকে থাকে না
+    try {
+      await lockClient.query('SELECT pg_advisory_unlock($1)', [advisoryLockId(key)]);
+    } catch (e) {
+      console.error(`cron "${key}": advisory unlock ব্যর্থ —`, e.message);
+    }
+    lockClient.release();
   }
+}
+
+/** জব-কী থেকে স্থিতিশীল 32-bit লক আইডি (pg_try_advisory_lock int নেয়)। */
+function advisoryLockId(key) {
+  let hash = 0;
+  const prefixed = `livo:cron:${key}`;
+  for (let i = 0; i < prefixed.length; i++) {
+    hash = ((hash << 5) - hash + prefixed.charCodeAt(i)) | 0;
+  }
+  return hash;
 }
 
 async function executeJob(key, def, triggeredBy) {
