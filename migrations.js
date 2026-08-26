@@ -538,6 +538,28 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_freebet_user ON free_bets(user_id);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_freebet_status ON free_bets(status);`);
 
+    // services/freebet.js-এর grantFreeBet() `ON CONFLICT DO NOTHING` দিয়ে ডুপ্লিকেট
+    // আটকানোর দাবি করে, কিন্তু (user_id, reason)-এ কোনো unique constraint ছিল না —
+    // ON CONFLICT DO NOTHING তখন কোনো কিছুতেই সংঘর্ষ পায় না, প্রতিটা কল নতুন সারি
+    // ঢোকায় এবং rowCount সবসময় ১ থাকে। ফলে সমান্তরাল/পুনরাবৃত্ত কল একই কারণে
+    // একাধিক ফ্রি বেট (ও একাধিক নোটিফিকেশন) দিয়ে দিত।
+    // ইনডেক্স তৈরির আগে পুরনো ডুপ্লিকেট সরানো দরকার, নইলে CREATE UNIQUE INDEX ব্যর্থ হবে।
+    // সবচেয়ে পুরোনো সারিটা (MIN(id)) রাখা হয় — সেটাই ইউজার আসলে পেয়েছিল।
+    await pool.query(`
+      DELETE FROM free_bets a
+      USING free_bets b
+      WHERE a.reason IS NOT NULL
+        AND a.user_id IS NOT NULL
+        AND a.user_id = b.user_id
+        AND a.reason = b.reason
+        AND a.id > b.id;
+    `);
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS uniq_free_bet_user_reason
+        ON free_bets(user_id, reason)
+        WHERE reason IS NOT NULL;
+    `);
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS periodic_claims (
         id SERIAL PRIMARY KEY,
@@ -1041,6 +1063,13 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_job_queue_created ON job_queue(created_at);`);
     // Add missing duration_ms column if not present
     await pool.query(`ALTER TABLE job_queue ADD COLUMN IF NOT EXISTS duration_ms INTEGER;`);
+    // services/queue.js প্রতিটা জব ধরার সময় lease টোকেন হিসেবে worker_id লেখে
+    // (`UPDATE job_queue SET status='processing', worker_id = $2 ...`) এবং stalled
+    // রিকভারিতে worker_id = NULL করে। কলামটা কোথাও তৈরি হতো না, তাই প্রতিটা claim
+    // কোয়েরি `column "worker_id" does not exist` দিয়ে ব্যর্থ হতো — অর্থাৎ ওয়ার্কার
+    // একটাও জব প্রক্রিয়া করতে পারত না।
+    await pool.query(`ALTER TABLE job_queue ADD COLUMN IF NOT EXISTS worker_id VARCHAR(120);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_job_queue_worker ON job_queue(worker_id);`);
 
     // ==================== Dead Letter Queue (services/queue.js) ====================
     // max_attempts শেষ হয়ে স্থায়ীভাবে ব্যর্থ হওয়া জব এখানে আর্কাইভ হয়, যাতে পরে
