@@ -19,3 +19,6 @@ coverage/
 tsconfig.tsbuildinfo
 
 .security-backup-*/
+
+# CI টেস্ট আউটপুট — artifact হিসেবে আপলোড হয়, রিপোতে কমিট হবে না
+jest-output.log

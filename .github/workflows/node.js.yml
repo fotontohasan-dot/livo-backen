@@ -39,10 +39,10 @@ jobs:
       FRONTEND_URL: http://localhost:4123
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Use Node.js 22.x
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v5
       with:
         node-version: 22.x
         cache: 'npm'
@@ -51,7 +51,33 @@ jobs:
       run: npm ci --legacy-peer-deps
 
     - name: Run tests
-      run: npm test
+      # টেস্ট ফেল করলেও পরের ধাপগুলো চলবে, যাতে লগ artifact আপলোড হয় এবং
+      # ব্যর্থতার কারণ পরে দেখা যায়। জবের চূড়ান্ত ফল শেষ ধাপে ঠিক করা হয়।
+      id: tests
+      continue-on-error: true
+      run: |
+        set -o pipefail
+        npm test 2>&1 | tee jest-output.log
+
+    # Actions-এর নিজস্ব লগ blob storage-এ থাকে, যা অনেক নেটওয়ার্ক থেকে
+    # পড়া যায় না। artifact হিসেবে রাখলে ব্যর্থ রানের কারণ নির্ণয় করতে
+    # আর লগ-অ্যাক্সেসের উপর নির্ভর করতে হয় না।
+    - name: Upload test logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: jest-output-${{ github.run_number }}
+        path: |
+          jest-output.log
+          coverage/lcov-report/
+        retention-days: 14
+        if-no-files-found: warn
+
+    - name: Fail job if tests failed
+      if: steps.tests.outcome == 'failure'
+      run: |
+        echo "::error::npm test ব্যর্থ — jest-output artifact দেখো।"
+        exit 1
 
     - name: Build
       run: npm run build
