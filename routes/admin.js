@@ -3,7 +3,7 @@ const secretBox = require('../utils/secretBox');
 const router = express.Router();
 const { isAdmin } = require('../middleware/auth');
 const { redirectBack } = require('../utils/redirectBack');
-const { regenerateSession } = require('../utils/sessionRegenerate');
+const { regenerateSession, saveSession } = require('../utils/sessionRegenerate');
 const rbac = require('../services/rbac');
 // publicMessage(): ইচ্ছাকৃত (PublicError) ভ্যালিডেশন বার্তা যেমন আছে তেমনই দেখায়, কিন্তু
 // অপ্রত্যাশিত pg/ইন্টারনাল এররের কাঁচা err.message ব্রাউজারে যেতে দেয় না। বিস্তারিত
@@ -302,6 +302,10 @@ router.post('/login/2fa', strict2FALimiter, async (req, res) => {
     req.session.twoFAAttempts = 0;
     applyAdminSessionPolicy(req);
     logAdminAction(admin.id, admin.username, 'LOGIN_2FA', '2FA দিয়ে লগইন সম্পন্ন', req.ip);
+    // redirect-এর আগে সেশন স্টোরে লেখা নিশ্চিত করা হচ্ছে — নইলে ব্রাউজারের পরের
+    // রিকোয়েস্ট (GET /admin) নতুন sid নিয়ে পৌঁছে যেতে পারে সেশন সারি কমিট হওয়ার
+    // আগেই, আর অ্যাডমিন সঙ্গে সঙ্গে আবার লগইন পেজে ফেরত যায়।
+    await saveSession(req);
     res.redirect('/admin');
   } catch (err) {
     console.error('2FA verify error:', err.message);
@@ -378,6 +382,7 @@ router.post('/2fa/mandatory-setup/verify', strict2FALimiter, async (req, res) =>
     await logAdminAction(pending.id, pending.username, '2FA_ENABLED', 'বাধ্যতামূলক 2FA এনরোলমেন্ট সম্পন্ন (লগইনের সময়)', req.ip);
     logAdminAction(pending.id, pending.username, 'LOGIN', '2FA এনরোলমেন্টসহ লগইন সম্পন্ন', req.ip);
 
+    await saveSession(req);
     res.render('admin/2fa-backup-codes', { codes: backupCodes });
   } catch (err) {
     console.error('mandatory 2fa setup verify error:', err.message);

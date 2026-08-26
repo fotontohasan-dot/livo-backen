@@ -37,6 +37,11 @@ jobs:
       SSLCZ_IS_LIVE: false
       VAPID_SUBJECT: mailto:test@example.com
       FRONTEND_URL: http://localhost:4123
+      # routes/extra.js-এর isSafeCloudinaryUrl() ফেল-ক্লোজড — CLOUDINARY_CLOUD_NAME
+      # সেট না থাকলে যেকোনো document_url বাতিল হয়, তাই KYC সাবমিশন E2E-তে কখনো
+      # সফল হতো না। টেস্টও এই একই ডিফল্ট নামই ব্যবহার করে (কোনো লাইভ Cloudinary
+      # ক্রেডেনশিয়াল নয় — শুধু URL যাচাইয়ের জন্য টেন্যান্ট নাম)।
+      CLOUDINARY_CLOUD_NAME: livo_test_cloud
 
     steps:
     - uses: actions/checkout@v5

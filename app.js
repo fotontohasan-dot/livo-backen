@@ -295,6 +295,13 @@ const loginLimiter = rateLimit({
   // এই limiter ভাষা-মিডলওয়্যারের আগে বসানো, তাই req.t() এখনো নেই — utils/i18n
   // session থেকে ভাষা পড়ে একই bn.json/en.json থেকেই অনুবাদ দেয়।
   message: (req) => tr(req, 'common_rate_limited_15m'),
+  // লিমিটারটা /login, /register ও /admin/login — তিন জায়গাতেই একই কী (IP) দিয়ে গোনে।
+  // আগে GET রিকোয়েস্টও গোনা হতো, অর্থাৎ শুধু পেজ লোড করলেই কোটা ফুরাত: একই IP থেকে
+  // ১৫ মিনিটে ১০ বার লগইন/রেজিস্টার পেজ *দেখলেই* ফর্মের বদলে "rate limited" বার্তা
+  // আসত (শেয়ার্ড অফিস IP বা মোবাইল CGNAT-এ খুবই বাস্তব সমস্যা, আর E2E-তে অ্যাডমিন
+  // লগইন পেজ এভাবেই ফাঁকা আসত)। ব্রুট-ফোর্স সুরক্ষা আসে আসল চেষ্টাগুলো (POST) গুনে,
+  // তাই GET/HEAD আর গোনা হয় না।
+  skip: (req) => req.method === 'GET' || req.method === 'HEAD',
   standardHeaders: true,
   legacyHeaders: false,
   store: new RedisRateLimitStore('rl:login:')
