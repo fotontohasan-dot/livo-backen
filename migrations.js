@@ -429,10 +429,19 @@ async function runMigrations() {
     await pool.query(`ALTER TABLE mission_defs ADD COLUMN IF NOT EXISTS period VARCHAR(10) NOT NULL DEFAULT 'daily';`);
     await pool.query(`ALTER TABLE mission_defs ADD COLUMN IF NOT EXISTS start_date DATE;`);
     await pool.query(`ALTER TABLE mission_defs ADD COLUMN IF NOT EXISTS end_date DATE;`);
-    const missionVer = await pool.query(`SELECT COALESCE(SUM(reward),0) AS s, COUNT(*) AS c FROM mission_defs WHERE period = 'daily'`);
-    const missionOk = parseInt(missionVer.rows[0].c) === 4 && parseInt(missionVer.rows[0].s) === 125;
-    if (!missionOk) {
-      await pool.query(`DELETE FROM mission_defs WHERE period = 'daily'`);
+    // ডেইলি মিশন **শুধু প্রথমবার** সিড করা হয়।
+    //
+    // আগে প্রতিটা স্টার্টআপে গোনা হতো: ঠিক ৪টা মিশন আর মোট রিওয়ার্ড ১২৫ না
+    // হলে `DELETE FROM mission_defs WHERE period = 'daily'` চালিয়ে ডিফল্ট
+    // আবার বসানো হতো। অর্থাৎ অ্যাডমিন প্যানেল থেকে একটা মিশনের রিওয়ার্ড
+    // বদলালে, নতুন মিশন যোগ করলে, বা পুরনো একটা নিষ্ক্রিয় করলে — পরের
+    // ডিপ্লয় বা রিস্টার্টেই সেই কাজ নিঃশব্দে মুছে যেত।
+    //
+    // মাইগ্রেশনের কাজ স্কিমা ও প্রথম ডেটা তৈরি করা, অ্যাডমিনের কনফিগারেশন
+    // ফিরিয়ে নেওয়া নয়। টেবিল খালি থাকলেই কেবল সিড হয় — অন্য সব সিডিংয়ের
+    // (weekly, special) মতোই।
+    const dailyCount = await pool.query(`SELECT COUNT(*) AS c FROM mission_defs WHERE period = 'daily'`);
+    if (parseInt(dailyCount.rows[0].c) === 0) {
       await pool.query(`
         INSERT INTO mission_defs (title, target_type, target_value, reward, period) VALUES
         ('আজ ৩টি বাজি ধরুন', 'bet_count', 3, 10, 'daily'),
@@ -803,6 +812,26 @@ async function runMigrations() {
     }
 
     await pool.query(`ALTER TABLE kyc_requests ADD COLUMN IF NOT EXISTS reject_reason TEXT`);
+
+    // job_queue.worker_id — কোন ওয়ার্কার প্রক্রিয়া জবটা ধরে আছে।
+    // stalled recovery আগে শুধু সময় দেখে সিদ্ধান্ত নিত, তাই ধীর কিন্তু জীবিত
+    // জবও দ্বিতীয়বার শুরু হয়ে যেতে পারত (ইমেইল দুবার যাওয়া ইত্যাদি)।
+    await pool.query(`ALTER TABLE job_queue ADD COLUMN IF NOT EXISTS worker_id TEXT`)
+      .catch(e => console.error('job_queue worker_id column:', e.message));
+
+    // একই কারণে একজন ইউজারকে একটাই ফ্রি বেট।
+    //
+    // services/freebet.js-এ hasFreeBetReason() দিয়ে কলার আগে দেখে নিত, কিন্তু
+    // সেটা check-then-insert — দুটো সমান্তরাল কল দুটোই খালি দেখে দুটোই
+    // ঢুকিয়ে দিত। মিশন সম্পন্ন হওয়ার মতো ইভেন্ট একসাথে দুবার ফায়ার হলে
+    // ইউজার দুটো ফ্রি বেট পেত।
+    //
+    // 'reward' হলো সাধারণ/পুনরাবৃত্তিযোগ্য কারণ — সেটা এই নিয়মের বাইরে,
+    // কারণ ওটা বারবার দেওয়াই উদ্দেশ্য।
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS uniq_free_bet_user_reason
+      ON free_bets (user_id, reason) WHERE reason <> 'reward'
+    `).catch(e => console.error('free_bets unique index:', e.message));
 
     // একজন ইউজারের একসাথে একটাই pending KYC রিকোয়েস্ট থাকতে পারে।
     //

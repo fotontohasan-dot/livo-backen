@@ -152,7 +152,53 @@ if (process.env.NODE_ENV === 'production') {
   cspDirectives.upgradeInsecureRequests = [];
 }
 
+// ==================== CSP কড়াকড়ির পথ ====================
+// প্রয়োগ করা নীতিতে এখনো `'unsafe-inline'` আছে, কারণ কোডবেসে ৭০টি ফাইলে
+// ইনলাইন `onclick=` হ্যান্ডলার ও একাধিক ইনলাইন `<script>` ব্লক আছে। ওগুলো
+// একসাথে সরালে সাইট ভেঙে পড়ত, আর ভাঙা সাইট XSS-এর চেয়ে দ্রুত ক্ষতি করে।
+//
+// তাই দুই ধাপ: প্রথমে **Report-Only** হিসেবে কড়া নীতি পাঠানো হয়। ব্রাউজার
+// কিছু ব্লক করে না, শুধু লঙ্ঘনগুলো রিপোর্ট করে — অর্থাৎ ইনলাইন কোড কোথায়
+// কোথায় আছে তার বাস্তব তালিকা তৈরি হয়। সেগুলো সরানোর পর এই নীতিটাই
+// প্রয়োগে তোলা যাবে।
+//
+// অগ্রগতি ও ধাপগুলো: docs/CSP.md
+const reportOnlyDirectives = {
+  ...cspDirectives,
+  scriptSrc: cspDirectives.scriptSrc.filter((v) => v !== "'unsafe-inline'"),
+  scriptSrcAttr: ["'none'"],
+  styleSrc: cspDirectives.styleSrc.filter((v) => v !== "'unsafe-inline'"),
+  reportUri: ['/csp-report']
+};
+
 const isProdEnv = process.env.NODE_ENV === 'production';
+
+// Report-Only নীতি — ব্লক করে না, শুধু লঙ্ঘন জানায়।
+app.use(helmet.contentSecurityPolicy({
+  directives: reportOnlyDirectives,
+  reportOnly: true
+}));
+
+// লঙ্ঘন রিপোর্ট গ্রহণ। ব্রাউজার এখানে POST করে; শুধু গোনা ও লগ করা হয়,
+// কোনো ব্যবহারকারী-ডেটা সংরক্ষণ করা হয় না।
+const cspViolationCounts = new Map();
+app.post('/csp-report', express.json({ type: ['application/csp-report', 'application/json'] }), (req, res) => {
+  try {
+    const report = (req.body && (req.body['csp-report'] || req.body)) || {};
+    const directive = String(report['violated-directive'] || report.violatedDirective || 'unknown').slice(0, 80);
+    const source = String(report['source-file'] || report.sourceFile || '').slice(0, 200);
+    const key = `${directive} | ${source}`;
+    const count = (cspViolationCounts.get(key) || 0) + 1;
+    cspViolationCounts.set(key, count);
+    // প্রতিটা রিপোর্ট লগ করলে লগ ভেসে যাবে — প্রথমবার আর তারপর প্রতি ১০০তমবার।
+    if (count === 1 || count % 100 === 0) {
+      console.warn(`[csp] ${key} (${count} বার)`);
+    }
+  } catch (e) {
+    // রিপোর্ট পার্স না হলেও ২০৪ — ব্রাউজারকে রিট্রাই করানোর কিছু নেই
+  }
+  res.status(204).end();
+});
 
 app.use(helmet({
   contentSecurityPolicy: { directives: cspDirectives },

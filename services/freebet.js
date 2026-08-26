@@ -10,11 +10,16 @@ const { t } = require('../utils/i18n');
 async function grantFreeBet(userId, amount, reason) {
   if (!amount || amount <= 0) return;
   try {
-    // একই কারণে ডুপ্লিকেট ফ্রি বেট আটকাতে — শুধু mission-ভিত্তিক হলে চেক
-    await pool.query(
-      `INSERT INTO free_bets (user_id, amount, reason, status) VALUES ($1, $2, $3, 'active')`,
+    // ডুপ্লিকেট আটকানোর আসল ভরসা DB-র uniq_free_bet_user_reason ইনডেক্স।
+    // hasFreeBetReason() দিয়ে কলারের আগাম চেকটা দ্রুত ও বন্ধুত্বপূর্ণ, কিন্তু
+    // সমান্তরাল দুটো কল দুটোই ওই চেক পাস করতে পারে — তখন ইনডেক্সই থামায়।
+    const inserted = await pool.query(
+      `INSERT INTO free_bets (user_id, amount, reason, status) VALUES ($1, $2, $3, 'active')
+       ON CONFLICT DO NOTHING RETURNING id`,
       [userId, amount, reason || 'reward']
     );
+    // ইতিমধ্যে দেওয়া হয়ে গেছে — দ্বিতীয় নোটিফিকেশন পাঠানোর দরকার নেই।
+    if (inserted.rowCount === 0) return;
     await pool.query(
       `INSERT INTO notifications (user_id, title, message, type)
        VALUES ($1, 'ফ্রি বেট!', $2, 'success')`,

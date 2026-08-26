@@ -17,6 +17,23 @@ const QUEUE_ENABLED = String(process.env.QUEUE_ENABLED || 'true').toLowerCase() 
 // 'processing'-এ কত পুরোনো হলে জব stalled ধরা হবে (ওয়ার্কার ক্র্যাশ/রিস্টার্ট রিকভারি ও হেলথ চেক — দুটোতেই ব্যবহৃত)
 const STALLED_THRESHOLD_MS = parseInt(process.env.QUEUE_STALLED_THRESHOLD_MS || '300000', 10); // ৫ মিনিট
 
+// এই ওয়ার্কার প্রক্রিয়ার পরিচয় — কোন ইনস্ট্যান্স কোন জব ধরেছে তা জানার জন্য।
+// stalled recovery ও ডিবাগিং দুটোতেই কাজে লাগে (job_queue.worker_id)।
+const WORKER_ID = `${process.env.HOSTNAME || 'local'}:${process.pid}:${Date.now().toString(36)}`;
+
+// চলমান জব started_at তাজা রাখে, যাতে ধীর কিন্তু জীবিত জব stalled হিসেবে
+// ভুলভাবে ফেরত না নেওয়া হয়। heartbeat থেমে যাওয়া মানেই প্রক্রিয়াটা আর নেই।
+const HEARTBEAT_MS = Math.max(5000, Math.floor(STALLED_THRESHOLD_MS / 3));
+
+function startHeartbeat(jobId) {
+  const timer = setInterval(() => {
+    pool.query('UPDATE job_queue SET started_at = NOW() WHERE id = $1 AND status = $2', [jobId, 'processing'])
+      .catch((e) => console.error(`[queue] heartbeat #${jobId} ব্যর্থ:`, e.message));
+  }, HEARTBEAT_MS);
+  if (timer.unref) timer.unref();
+  return timer;
+}
+
 const handlers = new Map(); // type -> async (payload) => void
 const state = {
   running: false,
@@ -67,9 +84,20 @@ async function processOneBatch() {
     // 'pending' খোঁজে। থ্রেশহোল্ডের চেয়ে পুরোনো হলে আবার pending-এ ফেরত পাঠানো হচ্ছে যাতে
     // অন্তত একবার প্রসেস হওয়ার নিশ্চয়তা থাকে (attempts বাড়ে না — এটা ওয়ার্কার ব্যর্থতা,
     // জব ব্যর্থতা নয়; max-attempts লজিক অপরিবর্তিত)।
+    // Stalled recovery — কিন্তু শুধু সেই জব যেটার ওয়ার্কার আর বেঁচে নেই।
+    //
+    // আগে শুধু সময় দেখা হতো: থ্রেশহোল্ডের চেয়ে পুরনো 'processing' জব pending
+    // করে দেওয়া হতো। কিন্তু ওয়ার্কার হয়তো সত্যিই এখনো চালাচ্ছে (ধীর SMTP,
+    // বড় রিপোর্ট) — তখন একই জব দ্বিতীয়বার শুরু হয়ে যেত। ইমেইল দুবার যেত,
+    // আর আর্থিক হ্যান্ডলারের ক্ষেত্রে প্রভাব আরও খারাপ হতো।
+    //
+    // এখন প্রতিটা ওয়ার্কার জব ধরার সময় নিজের lease টোকেন (worker_id) বসায়
+    // এবং চলাকালীন heartbeat দিয়ে started_at তাজা রাখে। heartbeat বন্ধ মানে
+    // প্রক্রিয়াটা সত্যিই আর নেই — তখনই কেবল জব ফেরত নেওয়া হয়।
     await client.query(
-      `UPDATE job_queue SET status = 'pending', started_at = NULL
-       WHERE status = 'processing' AND started_at < NOW() - ($1 || ' milliseconds')::interval`,
+      `UPDATE job_queue SET status = 'pending', started_at = NULL, worker_id = NULL
+       WHERE status = 'processing'
+         AND started_at < NOW() - ($1 || ' milliseconds')::interval`,
       [STALLED_THRESHOLD_MS]
     );
     const picked = await client.query(
@@ -84,8 +112,8 @@ async function processOneBatch() {
     if (jobs.length) {
       const ids = jobs.map(j => j.id);
       await client.query(
-        `UPDATE job_queue SET status = 'processing', started_at = NOW() WHERE id = ANY($1::int[])`,
-        [ids]
+        `UPDATE job_queue SET status = 'processing', started_at = NOW(), worker_id = $2 WHERE id = ANY($1::int[])`,
+        [ids, WORKER_ID]
       );
     }
     await client.query('COMMIT');
@@ -105,6 +133,7 @@ async function processOneBatch() {
 async function runJob(job) {
   const handler = handlers.get(job.type);
   const startedAt = job.started_at ? new Date(job.started_at) : new Date();
+  const heartbeat = startHeartbeat(job.id);
   try {
     if (!handler) throw new Error(`কোনো হ্যান্ডলার রেজিস্টার করা নেই টাইপের জন্য: "${job.type}"`);
     const payload = typeof job.payload === 'string' ? JSON.parse(job.payload) : job.payload;
@@ -138,10 +167,12 @@ async function runJob(job) {
     } else {
       const retryAt = new Date(Date.now() + backoffSeconds(attempts) * 1000);
       await pool.query(
-        `UPDATE job_queue SET status = 'pending', attempts = $1, last_error = $2, available_at = $3 WHERE id = $4`,
+        `UPDATE job_queue SET status = 'pending', attempts = $1, last_error = $2, available_at = $3, worker_id = NULL WHERE id = $4`,
         [attempts, errMsg, retryAt, job.id]
       );
     }
+  } finally {
+    clearInterval(heartbeat);
   }
 }
 
@@ -186,9 +217,21 @@ function stopWorker() {
 }
 
 /** ব্যর্থ জব আবার pending-এ ফেরত পাঠায় (ম্যানুয়াল রিট্রাই, অ্যাডমিন প্যানেল থেকে) */
+// ম্যানুয়াল রিট্রাই attempts শূন্যে নামায়।
+//
+// আগে শুধু status 'pending' করা হতো, attempts আগের মতোই থাকত। কিন্তু জব
+// 'failed' হয় তখনই যখন attempts >= max_attempts — তাই রিট্রাই করা জব পরের
+// রানেই আবার সেই সীমায় পড়ে সঙ্গে সঙ্গে ব্যর্থ হতো। অ্যাডমিন "রিট্রাই" চাপতেন,
+// জব এক মুহূর্তের জন্য pending দেখাত, তারপর আবার failed — কার্যত রিট্রাই
+// বোতামটা কাজই করত না।
+//
+// attempts_before_retry-তে আগের সংখ্যা রেখে দেওয়া হয় যাতে অডিট ইতিহাস
+// হারিয়ে না যায়; last_error মুছে ফেলা হয় কারণ ওটা আগের রানের।
 async function retryJob(jobId) {
   const r = await pool.query(
-    `UPDATE job_queue SET status = 'pending', available_at = NOW(), last_error = NULL
+    `UPDATE job_queue
+       SET status = 'pending', available_at = NOW(), last_error = NULL,
+           attempts = 0, started_at = NULL
      WHERE id = $1 AND status = 'failed' RETURNING id`,
     [jobId]
   );
@@ -198,7 +241,7 @@ async function retryJob(jobId) {
 async function retryAllFailed(type = null) {
   const params = type ? [type] : [];
   const where = type ? `WHERE status = 'failed' AND type = $1` : `WHERE status = 'failed'`;
-  const r = await pool.query(`UPDATE job_queue SET status = 'pending', available_at = NOW(), last_error = NULL ${where} RETURNING id`, params);
+  const r = await pool.query(`UPDATE job_queue SET status = 'pending', available_at = NOW(), last_error = NULL, attempts = 0, started_at = NULL ${where} RETURNING id`, params);
   return r.rows.length;
 }
 
