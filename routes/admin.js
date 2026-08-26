@@ -591,6 +591,64 @@ router.get('/kyc', rbac.requirePermission('kyc_view'), async (req, res) => {
   }
 });
 
+// ==================== KYC ডকুমেন্ট — প্রমাণীকৃত প্রক্সি ====================
+// KYC ডকুমেন্ট Cloudinary-র পাবলিক URL-এ থাকে। আগে অ্যাডমিন প্যানেল সেই URL
+// সরাসরি HTML-এ বসাত — অর্থাৎ জাতীয় পরিচয়পত্র/পাসপোর্টের ঠিকানা ব্রাউজার
+// ইতিহাস, রেফারার হেডার, এক্সটেনশন ও স্ক্রিনশটে ছড়িয়ে পড়ত, আর একবার URL
+// জানা গেলে যে কেউ প্রমাণীকরণ ছাড়াই ডকুমেন্টটা দেখতে পারত।
+//
+// এই রুট ডকুমেন্টটা সার্ভার থেকে স্ট্রিম করে: অনুমতি যাচাই হয়, অ্যাক্সেস
+// অডিট লগে যায়, আর ব্রাউজারে আসল URL কখনো পৌঁছায় না।
+//
+// ⚠️ সীমাবদ্ধতা, সৎভাবে বলা: অ্যাসেটটা এখনো Cloudinary-তে পাবলিক। আগে থেকে
+// URL জানা কেউ সরাসরি সেটা খুলতে পারবে। পূর্ণ সমাধান হলো Cloudinary-র
+// authenticated delivery type ব্যবহার করা ও signed URL দিয়ে আপলোড করা —
+// সেটা আলাদা কাজ, docs/KYC_STORAGE.md দেখুন।
+router.get('/kyc/:id/document', rbac.requirePermission('kyc_view'), requireIntParam('id'), async (req, res) => {
+  try {
+    const r = await pool.query('SELECT document_url, user_id FROM kyc_requests WHERE id = $1', [req.params.id]);
+    const row = r.rows[0];
+    if (!row || !row.document_url) return res.status(404).send('ডকুমেন্ট পাওয়া যায়নি');
+
+    // সংরক্ষিত URL আমাদের নিজের Cloudinary অ্যাকাউন্টেরই কিনা — DB-তে বসে থাকা
+    // পুরনো/কারচুপি করা মান দিয়ে যেন সার্ভারকে যেকোনো ঠিকানায় রিকোয়েস্ট
+    // করানো না যায় (SSRF)।
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    let target;
+    try {
+      target = new URL(row.document_url);
+    } catch (e) {
+      return res.status(400).send('অবৈধ ডকুমেন্ট URL');
+    }
+    if (target.protocol !== 'https:' || target.hostname !== 'res.cloudinary.com'
+        || !cloudName || !target.pathname.startsWith(`/${cloudName}/`)) {
+      return res.status(400).send('অবৈধ ডকুমেন্ট URL');
+    }
+
+    await logAdminAction(
+      req.session.user.id, req.session.user.username, 'KYC_DOCUMENT_VIEWED',
+      `KYC #${req.params.id} (ইউজার #${row.user_id}) এর ডকুমেন্ট দেখা হয়েছে`, req.ip
+    );
+
+    const upstream = await fetch(target.href);
+    if (!upstream.ok) return res.status(502).send('ডকুমেন্ট আনা যায়নি');
+
+    const contentType = upstream.headers.get('content-type') || 'application/octet-stream';
+    if (!/^image\/(jpeg|png|webp|gif)$/.test(contentType)) {
+      return res.status(415).send('অসমর্থিত ডকুমেন্ট ফরম্যাট');
+    }
+    res.set('Content-Type', contentType);
+    // ব্যক্তিগত ডকুমেন্ট — কোথাও ক্যাশ হবে না
+    res.set('Cache-Control', 'no-store, private');
+    res.set('Referrer-Policy', 'no-referrer');
+    const buf = Buffer.from(await upstream.arrayBuffer());
+    return res.send(buf);
+  } catch (err) {
+    console.error('KYC document proxy error:', err.message);
+    return res.status(500).send('সার্ভার সমস্যা');
+  }
+});
+
 router.post('/kyc/:id/approve', rbac.requirePermission('kyc_approve'), async (req, res) => {
   try {
     const { id } = req.params;

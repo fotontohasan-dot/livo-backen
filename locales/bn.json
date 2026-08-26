@@ -896,7 +896,7 @@
   "common_retry_error_plain": "সমস্যা হয়েছে, আবার চেষ্টা করুন",
   "goldenegg_already_claimed": "আজকের সোনার ডিম ইতিমধ্যে নেওয়া হয়েছে",
   "goldenegg_locked_deposit_required": "🔒 ডিম লক করা আছে। আজ ডিপোজিট করুন, তারপর ভাঙতে পারবেন।",
-  "social_share_bonus_claimed": "আজ শেয়ার বোনাস আগেই নেওয়া হয়েছে। আগামীকাল আবার আসুন।",
+  "social_share_bonus_claimed": "আজকের বোনাস আগেই নেওয়া হয়েছে। আগামীকাল আবার আসুন।",
   "reward_coins_received_share": "{value} কয়েন পেয়েছেন!",
   "accumulator_min_stake": "সর্বনিম্ন স্টেক {value} কয়েন।",
   "accumulator_min_selections": "অ্যাকুমুলেটরে কমপক্ষে ২টি সিলেকশন লাগবে।",
@@ -1101,5 +1101,10 @@
   "admin_encryption_key_missing": "এনক্রিপশন কী সেট নেই — TELEGRAM_SETTINGS_KEY (বা SESSION_SECRET) ছাড়া টোকেন সেভ করা হবে না।",
   "payment_turnover_check_failed": "এই মুহূর্তে আপনার বোনাস টার্নওভার যাচাই করা যায়নি। একটু পরে আবার চেষ্টা করুন।",
   "payment_limit_check_failed": "এই মুহূর্তে আপনার দৈনিক ডিপোজিট সীমা যাচাই করা যায়নি। একটু পরে আবার চেষ্টা করুন।",
-  "games_not_available": "এই গেমটি এখনো চালু হয়নি — শীঘ্রই আসছে"
+  "games_not_available": "এই গেমটি এখনো চালু হয়নি — শীঘ্রই আসছে",
+  "auth_status_unavailable": "সাময়িক সমস্যা হচ্ছে — একটু পরে আবার চেষ্টা করুন।",
+  "admin_kyc_not_pending": "এই KYC রিকোয়েস্ট আর pending অবস্থায় নেই — আগেই প্রক্রিয়া করা হয়েছে।",
+  "tournaments_closed": "এই টুর্নামেন্টে আর যোগ দেওয়া যাবে না।",
+  "tournaments_already_started": "টুর্নামেন্ট ইতিমধ্যে শুরু হয়ে গেছে।",
+  "tournaments_full": "অংশগ্রহণকারীর সর্বোচ্চ সংখ্যা পূর্ণ হয়ে গেছে।"
 }

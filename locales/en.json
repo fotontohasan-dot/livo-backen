@@ -896,7 +896,7 @@
   "common_retry_error_plain": "Something went wrong. Please try again",
   "goldenegg_already_claimed": "Today's golden egg has already been claimed",
   "goldenegg_locked_deposit_required": "🔒 The egg is locked. Make a deposit today to crack it.",
-  "social_share_bonus_claimed": "Today's share bonus has already been claimed. Come back tomorrow.",
+  "social_share_bonus_claimed": "Today's bonus has already been claimed. Come back tomorrow.",
   "reward_coins_received_share": "You received {value} coins!",
   "accumulator_min_stake": "The minimum stake is {value} coins.",
   "accumulator_min_selections": "An accumulator needs at least 2 selections.",
@@ -1101,5 +1101,10 @@
   "admin_encryption_key_missing": "Encryption key is not set — the token will not be saved without TELEGRAM_SETTINGS_KEY (or SESSION_SECRET).",
   "payment_turnover_check_failed": "Couldn't verify your bonus turnover just now. Please try again in a moment.",
   "payment_limit_check_failed": "Couldn't verify your daily deposit limit just now. Please try again in a moment.",
-  "games_not_available": "This game is not available yet — coming soon"
+  "games_not_available": "This game is not available yet — coming soon",
+  "auth_status_unavailable": "We are having a temporary problem — please try again shortly.",
+  "admin_kyc_not_pending": "This KYC request is no longer pending — it has already been processed.",
+  "tournaments_closed": "This tournament is no longer open to join.",
+  "tournaments_already_started": "This tournament has already started.",
+  "tournaments_full": "This tournament has reached its participant limit."
 }

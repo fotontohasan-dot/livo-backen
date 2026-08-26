@@ -74,11 +74,41 @@ router.post('/:id/join', isAuth, async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    const t = await client.query(`SELECT * FROM tournaments WHERE id=$1`, [tId]);
+    // FOR UPDATE — অংশগ্রহণকারীর সীমা গোনা ও ঢোকানোর মাঝে যেন অন্য কেউ
+    // ঢুকে না পড়ে। লক ছাড়া সমান্তরাল রিকোয়েস্টগুলো একই গুনতি দেখত এবং
+    // সবাই সীমার নিচে আছে ভেবে ঢুকে যেত।
+    const t = await client.query(`SELECT * FROM tournaments WHERE id=$1 FOR UPDATE`, [tId]);
     const tournament = t.rows[0];
     if (!tournament) {
       await client.query('ROLLBACK');
       return res.redirect('/tournaments');
+    }
+
+    // ==== জয়েন করার নিয়ম — আগে সার্ভারে কিছুই যাচাই হতো না ====
+    // status, সময়সীমা ও সর্বোচ্চ অংশগ্রহণকারী — তিনটাই শুধু UI-তে দেখানো
+    // হতো, কিন্তু POST সরাসরি করলে সব উপেক্ষিত হতো। ফলে শেষ হয়ে যাওয়া
+    // টুর্নামেন্টে (এমনকি ফলাফল জানার পর) জয়েন করা যেত, বাতিল টুর্নামেন্টেও,
+    // আর max_participants ছাড়িয়ে যত খুশি লোক ঢুকতে পারত — প্রাইজ পুল
+    // যেহেতু নির্দিষ্ট, তাতে হিসাব ভেঙে পড়ত।
+    if (tournament.status === 'completed' || tournament.status === 'cancelled') {
+      await client.query('ROLLBACK');
+      req.flash('error', req.t('tournaments_closed'));
+      return res.redirect(`/tournaments/${tId}`);
+    }
+
+    const now = new Date();
+    if (tournament.end_date && new Date(tournament.end_date) < now) {
+      await client.query('ROLLBACK');
+      req.flash('error', req.t('tournaments_closed'));
+      return res.redirect(`/tournaments/${tId}`);
+    }
+
+    // শুরু হয়ে যাওয়া টুর্নামেন্টে দেরিতে ঢোকা যাবে না — অন্যরা ইতিমধ্যে
+    // পয়েন্ট জমিয়ে ফেলেছে, একই প্রাইজ পুলে দেরিতে ঢোকা অন্যায্য।
+    if (tournament.start_date && new Date(tournament.start_date) < now) {
+      await client.query('ROLLBACK');
+      req.flash('error', req.t('tournaments_already_started'));
+      return res.redirect(`/tournaments/${tId}`);
     }
 
     const already = await client.query(
@@ -89,6 +119,19 @@ router.post('/:id/join', isAuth, async (req, res) => {
       await client.query('ROLLBACK');
       req.flash('error', req.t('tournaments_already_joined'));
       return res.redirect(`/tournaments/${tId}`);
+    }
+
+    const maxParticipants = parseInt(tournament.max_participants) || 0;
+    if (maxParticipants > 0) {
+      const countRow = await client.query(
+        `SELECT COUNT(*)::int AS c FROM tournament_participants WHERE tournament_id=$1`,
+        [tId]
+      );
+      if (countRow.rows[0].c >= maxParticipants) {
+        await client.query('ROLLBACK');
+        req.flash('error', req.t('tournaments_full'));
+        return res.redirect(`/tournaments/${tId}`);
+      }
     }
 
     const entryFee = parseInt(tournament.entry_fee) || 0;

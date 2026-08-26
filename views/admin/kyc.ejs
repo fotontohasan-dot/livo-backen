@@ -185,13 +185,14 @@
     }
 
     // ডকুমেন্ট URL শুধুমাত্র আমাদের Cloudinary আপলোড থেকেই আসা উচিত
-    function safeDocUrl(url) {
-      if (typeof url !== 'string' || !url) return null;
-      try {
-        const parsed = new URL(url, window.location.origin);
-        if (parsed.protocol !== 'https:' || parsed.hostname !== 'res.cloudinary.com') return null;
-        return parsed.href;
-      } catch (e) { return null; }
+    /* ডকুমেন্ট এখন সার্ভার-প্রক্সি হয়ে আসে, Cloudinary URL সরাসরি নয়।
+       আগে আসল URL পেইজের HTML-এ বসত — জাতীয় পরিচয়পত্রের ঠিকানা ব্রাউজার
+       ইতিহাস, রেফারার হেডার ও এক্সটেনশনে ছড়িয়ে পড়ত, আর URL জানা থাকলে
+       যে কেউ প্রমাণীকরণ ছাড়াই দেখতে পারত। প্রক্সি রুটে অনুমতি যাচাই হয়
+       এবং প্রতিটা দেখা অডিট লগে যায়। */
+    function docProxyUrl(k) {
+      if (!k || !k.id || !k.document_url) return null;
+      return '/admin/kyc/' + encodeURIComponent(k.id) + '/document';
     }
 
     function closeModal(id) {
@@ -206,7 +207,7 @@
       html += '<div class="kv-row"><span>ডকুমেন্ট টাইপ</span><span>' + escapeHtml(k.document_type || '—') + '</span></div>';
       html += '<div class="kv-row"><span>ডকুমেন্ট নম্বর</span><span>' + escapeHtml(k.document_number || '—') + '</span></div>';
       html += '<div class="kv-row"><span>জমার তারিখ</span><span>' + (k.created_at ? new Date(k.created_at).toLocaleString('bn-BD') : '—') + '</span></div>';
-      var docUrl = safeDocUrl(k.document_url);
+      var docUrl = docProxyUrl(k);
       if (docUrl) {
         html += '<a href="' + escapeHtml(docUrl) + '" target="_blank" rel="noopener noreferrer"><img class="doc-preview" src="' + escapeHtml(docUrl) + '" onerror="this.style.display=\'none\'"></a>';
         html += '<a class="btn btn-sm" style="margin-top:8px;" href="' + escapeHtml(docUrl) + '" target="_blank" rel="noopener noreferrer"><i class="fas fa-external-link-alt"></i> মূল ডকুমেন্ট দেখুন</a>';

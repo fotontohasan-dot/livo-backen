@@ -390,6 +390,38 @@ async function restoreDatabaseBackup(record) {
   }
   if (Object.keys(skipped).length) results._skipped = skipped;
 
+  // আর্থিক টেবিলে একটা সারিও হারানো চলে না।
+  //
+  // আগে যেকোনো টেবিলের ব্যর্থ সারি শুধু গোনা হতো, রিস্টোর তবু "সম্পন্ন" ধরা
+  // হতো। ব্যালেন্স, লেজার বা পেমেন্ট রেকর্ডের ক্ষেত্রে এটা বিপজ্জনক: users
+  // রিস্টোর হলো কিন্তু coin_transactions-এর কিছু সারি বাদ পড়ল — তখন ব্যালেন্স
+  // ও লেজার আর মেলে না, অথচ অ্যাডমিন জানেন রিস্টোর সফল হয়েছে।
+  //
+  // এখন এসব টেবিলে সারি বাদ পড়লে রিস্টোর স্পষ্টভাবে ব্যর্থ হয়। জরুরি
+  // পুনরুদ্ধারে আংশিক ডেটা নিয়েও এগোতে হলে BACKUP_ALLOW_PARTIAL_RESTORE=true
+  // দিয়ে সচেতনভাবে অনুমতি দিতে হবে — নিঃশব্দে নয়।
+  const FINANCIAL_TABLES = [
+    'users', 'coin_transactions', 'payment_requests', 'bets',
+    'kyc_requests', 'loyalty_ledger', 'bank_cards'
+  ];
+  const financialLoss = Object.entries(skipped).filter(([table]) => FINANCIAL_TABLES.includes(table));
+  const allowPartial = String(process.env.BACKUP_ALLOW_PARTIAL_RESTORE || '').toLowerCase() === 'true';
+
+  if (financialLoss.length && !allowPartial) {
+    const detail = financialLoss.map(([t, n]) => `${t}: ${n}টি সারি`).join(', ');
+    await pool.query(
+      `UPDATE backup_history SET status = 'restore_failed', error_message = $2 WHERE id = $1`,
+      [record.id, `আর্থিক টেবিলে সারি হারিয়েছে — ${detail}`]
+    ).catch(() => {});
+    const err = new Error(
+      `রিস্টোর বাতিল: আর্থিক টেবিলে সারি রিস্টোর হয়নি (${detail})। ` +
+      'ব্যালেন্স ও লেজার অসামঞ্জস্যপূর্ণ থেকে যেত। ব্যাকআপ ফাইল যাচাই করুন, ' +
+      'অথবা জেনেশুনে এগোতে চাইলে BACKUP_ALLOW_PARTIAL_RESTORE=true দিন।'
+    );
+    err.restoreReport = results;
+    throw err;
+  }
+
   await pool.query('UPDATE backup_history SET restored_at = NOW() WHERE id = $1', [record.id]);
   return results;
 }

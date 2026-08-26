@@ -123,32 +123,92 @@ async function githubReadFile(filePath) {
   return null;
 }
 
-// GitHub: ফাইল edit করা
+// বট যে ব্রাঞ্চে লেখে। ডিফল্ট `main` **নয়** — ইচ্ছাকৃতভাবে।
+//
+// আগে বট সরাসরি ডিফল্ট ব্রাঞ্চে কমিট করত। অর্থাৎ যার হাতে Telegram
+// অ্যাকাউন্ট বা বট টোকেন পড়ত, সে সরাসরি প্রোডাকশন কোড বদলাতে পারত — কোনো
+// রিভিউ, CI বা মানুষের অনুমোদন ছাড়াই। একটা মেসেজেই পেমেন্ট রুট বা
+// প্রমাণীকরণ মিডলওয়্যার বদলে দেওয়া সম্ভব ছিল।
+//
+// এখন লেখা যায় শুধু একটা আলাদা ব্রাঞ্চে। সেখান থেকে কোড প্রোডাকশনে যেতে
+// হলে PR খুলতে হবে, CI পাস করতে হবে, আর মানুষকে মার্জ করতে হবে — অর্থাৎ
+// বটের কোনো পরিবর্তন কখনো নিজে থেকে লাইভ হবে না।
+const BOT_BRANCH = process.env.GITHUB_BOT_BRANCH || 'bot/automated-edits';
+const PROTECTED_BRANCHES = ['main', 'master', 'production'];
+
+/** বট-ব্রাঞ্চ না থাকলে ডিফল্ট ব্রাঞ্চের HEAD থেকে তৈরি করে। */
+async function ensureBotBranch() {
+  const base = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}`;
+  const headers = {
+    'Authorization': `token ${GITHUB_TOKEN}`,
+    'Accept': 'application/vnd.github.v3+json'
+  };
+
+  const existing = await fetch(`${base}/git/ref/heads/${encodeURIComponent(BOT_BRANCH)}`, { headers });
+  if (existing.ok) return true;
+
+  const repo = await fetch(base, { headers });
+  if (!repo.ok) return false;
+  const defaultBranch = (await repo.json()).default_branch;
+
+  const head = await fetch(`${base}/git/ref/heads/${encodeURIComponent(defaultBranch)}`, { headers });
+  if (!head.ok) return false;
+  const sha = (await head.json()).object.sha;
+
+  const created = await fetch(`${base}/git/refs`, {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ref: `refs/heads/${BOT_BRANCH}`, sha })
+  });
+  return created.ok;
+}
+
+// GitHub: ফাইল edit করা — শুধু বট-ব্রাঞ্চে
 async function githubEditFile(filePath, newContent, commitMessage) {
   const safePath = sanitizeRepoPath(filePath);
   if (!safePath) return { success: false, error: 'অবৈধ ফাইলপাথ' };
 
-  // আগে SHA নিতে হবে
-  const existing = await githubReadFile(safePath);
-  if (!existing) return { success: false, error: 'ফাইল পাওয়া যায়নি' };
+  // দ্বিগুণ সুরক্ষা: কনফিগে ভুল করে সুরক্ষিত ব্রাঞ্চ বসিয়ে দিলেও লেখা হবে না।
+  if (PROTECTED_BRANCHES.includes(BOT_BRANCH)) {
+    return { success: false, error: `বট সুরক্ষিত ব্রাঞ্চে (${BOT_BRANCH}) লিখতে পারে না — GITHUB_BOT_BRANCH বদলান।` };
+  }
 
+  const ready = await ensureBotBranch();
+  if (!ready) return { success: false, error: `বট-ব্রাঞ্চ (${BOT_BRANCH}) তৈরি করা যায়নি` };
+
+  // SHA অবশ্যই বট-ব্রাঞ্চের ফাইলেরই হতে হবে, ডিফল্ট ব্রাঞ্চের নয়।
   const encodedPath = safePath.split('/').map(encodeURIComponent).join('/');
   const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${encodedPath}`;
+  const headers = {
+    'Authorization': `token ${GITHUB_TOKEN}`,
+    'Accept': 'application/vnd.github.v3+json',
+    'Content-Type': 'application/json'
+  };
+
+  let sha;
+  const existing = await fetch(`${url}?ref=${encodeURIComponent(BOT_BRANCH)}`, { headers });
+  if (existing.ok) {
+    sha = (await existing.json()).sha;
+  }
+
   const response = await fetch(url, {
     method: 'PUT',
-    headers: {
-      'Authorization': `token ${GITHUB_TOKEN}`,
-      'Accept': 'application/vnd.github.v3+json',
-      'Content-Type': 'application/json'
-    },
+    headers,
     body: JSON.stringify({
       message: commitMessage || `🤖 Bot: ${safePath} updated`,
       content: Buffer.from(newContent).toString('base64'),
-      sha: existing.sha
+      branch: BOT_BRANCH,
+      ...(sha ? { sha } : {})
     })
   });
   const result = await response.json();
-  return result.commit ? { success: true } : { success: false, error: JSON.stringify(result) };
+  if (!result.commit) return { success: false, error: JSON.stringify(result) };
+
+  return {
+    success: true,
+    branch: BOT_BRANCH,
+    prUrl: `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/pull/new/${BOT_BRANCH}`
+  };
 }
 
 // GitHub action process করা
@@ -284,9 +344,13 @@ async function handleMessage(msg) {
         });
         const result = await githubEditFile(pending.filePath, pending.newContent, `🤖 Bot: ${pending.filePath} updated via Telegram (admin confirmed)`);
         if (result.success) {
+          // বার্তাটা আগে বলত "Render এ deploy হচ্ছে..." — সেটা এখন মিথ্যা হতো,
+          // কারণ পরিবর্তন বট-ব্রাঞ্চে যায়, প্রোডাকশনে নয়। ভুল আশ্বাস দিলে
+          // অ্যাডমিন ভাবতেন কাজ শেষ, অথচ কোড কোথাও যায়নি।
           await telegramAPI('sendMessage', {
             chat_id: chatId,
-            text: `✅ *${pending.filePath}* সফলভাবে update হয়েছে! Render এ deploy হচ্ছে...`,
+            text: `✅ *${pending.filePath}* \`${result.branch}\` ব্রাঞ্চে কমিট হয়েছে।\n\n` +
+                  `⚠️ এটি এখনো লাইভ নয়। প্রোডাকশনে নিতে PR খুলে মার্জ করুন:\n${result.prUrl}`,
             parse_mode: 'Markdown'
           });
         } else {
