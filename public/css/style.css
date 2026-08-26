@@ -1071,31 +1071,54 @@ body.menu-open {
 /* ==================================================================
    FORCED TEXT CONTRAST — A to Z
    ডার্ক মোডে সাইটের সব লেখা সাদা, হোয়াইট মোডে সব লেখা কালো।
-   ইনলাইন style-এ হার্ডকোড করা রঙও এতে ওভাররাইড হয় (!important)।
+   টেমপ্লেটে ইনলাইন style-এ হার্ডকোড করা রঙও এতে ওভাররাইড হয় (!important),
+   কারণ ইনলাইন ডিক্লারেশন !important ছাড়া এই নিয়মের কাছে হারে।
    ================================================================== */
 
 /* --- ডার্ক মোড: সব লেখা সাদা --- */
 body:not(.light-mode),
-body:not(.light-mode) *:not(.keep-color):not(.keep-color *) {
+body:not(.light-mode) * {
   color: #FFFFFF !important;
+  -webkit-text-fill-color: #FFFFFF !important;
 }
 
 /* --- হোয়াইট মোড: সব লেখা কালো --- */
 body.light-mode,
-body.light-mode *:not(.keep-color):not(.keep-color *) {
+body.light-mode * {
   color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
 }
 
-/* --- প্লেসহোল্ডারও একই নিয়মে --- */
-body:not(.light-mode) ::placeholder { color: #FFFFFF !important; opacity: .6; }
-body.light-mode ::placeholder      { color: #000000 !important; opacity: .55; }
+/* --- ইনপুট প্লেসহোল্ডারও একই নিয়মে --- */
+body:not(.light-mode) ::placeholder {
+  color: #FFFFFF !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+  opacity: .6;
+}
+body.light-mode ::placeholder {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  opacity: .55;
+}
 
-/* --- একমাত্র ব্যতিক্রম: যেসব কনটেইনার দুই মোডেই কালো থাকে ---
-   (গেম ক্যানভাস `background:#000`) — এখানে কালো লেখা হলে কিছুই দেখা যেত না,
-   তাই ভেতরের লেখা সবসময় সাদা। */
+/* --- ব্যতিক্রম ১: যেসব কনটেইনার দুই মোডেই কালো থাকে ---
+   গেম ক্যানভাসের ব্যাকগ্রাউন্ড `#000`, থিম বদলালেও বদলায় না। এখানে কালো লেখা
+   হলে কিছুই দেখা যেত না, তাই ভেতরের লেখা সবসময় সাদা। */
 body.light-mode .game-canvas-area,
 body.light-mode .game-canvas-area *,
 body.light-mode #gameUI,
-body.light-mode #gameUI * {
+body.light-mode #gameUI *,
+body.light-mode #gameCanvas,
+body.light-mode #gameCanvas * {
   color: #FFFFFF !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+}
+
+/* --- ব্যতিক্রম ২: ম্যানুয়াল অপ-আউট ---
+   কোনো লেখায় ব্র্যান্ড রঙ (গোল্ড/সবুজ/লাল) ধরে রাখতে হলে ওই এলিমেন্টে
+   class="keep-color" দিলে সেটি ও তার ভেতরের সব লেখা নিজের রঙ রাখে। */
+body .keep-color,
+body .keep-color * {
+  color: inherit !important;
+  -webkit-text-fill-color: currentColor !important;
 }
