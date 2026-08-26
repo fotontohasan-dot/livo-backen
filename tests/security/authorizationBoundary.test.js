@@ -17,6 +17,7 @@
 // ---------------------------------------------------------------------------
 
 const { pool } = require('../../db');
+const { hashToken } = require('../../utils/tokens');
 const cache = require('../../services/cache');
 const cacheKeys = require('../../services/cacheKeys');
 const { getCsrfAgent, uniqueUsername, uniquePhone, freshRequest } = require('../helpers/app');
@@ -258,10 +259,13 @@ describe('auth-state বদলের পর পুরনো সেশন', () =>
 describe('টোকেন সীমানা', () => {
   test('রিসেট টোকেন একবারই ব্যবহার করা যায়, রিপ্লে হয় না', async () => {
     const U = await makeUser();
+    // ইমেইলে যায় কাঁচা টোকেন, DB-তে থাকে তার SHA-256 হ্যাশ (utils/tokens.js)।
+    // টেস্টে সরাসরি টোকেন বসানোর সময়ও তাই হ্যাশটাই বসাতে হয়, নাহলে রুট
+    // মেলাতে পারবে না — যা আসলে সুরক্ষাটা ঠিকঠাক কাজ করার প্রমাণ।
     const token = `phase09probe${Date.now()}`;
     await pool.query(
       `UPDATE users SET reset_token = $2, reset_token_expiry = NOW() + INTERVAL '1 hour' WHERE id = $1`,
-      [U.userId, token]
+      [U.userId, hashToken(token)]
     );
 
     const first = await getCsrfAgent(`/reset-password/${token}`);

@@ -608,7 +608,7 @@ router.get('/kyc/:id/document', rbac.requirePermission('kyc_view'), requireIntPa
   try {
     const r = await pool.query('SELECT document_url, user_id FROM kyc_requests WHERE id = $1', [req.params.id]);
     const row = r.rows[0];
-    if (!row || !row.document_url) return res.status(404).send('ডকুমেন্ট পাওয়া যায়নি');
+    if (!row || !row.document_url) return res.status(404).send(req.t('admin_kyc_document_not_found'));
 
     // সংরক্ষিত URL আমাদের নিজের Cloudinary অ্যাকাউন্টেরই কিনা — DB-তে বসে থাকা
     // পুরনো/কারচুপি করা মান দিয়ে যেন সার্ভারকে যেকোনো ঠিকানায় রিকোয়েস্ট
@@ -618,11 +618,11 @@ router.get('/kyc/:id/document', rbac.requirePermission('kyc_view'), requireIntPa
     try {
       target = new URL(row.document_url);
     } catch (e) {
-      return res.status(400).send('অবৈধ ডকুমেন্ট URL');
+      return res.status(400).send(req.t('admin_kyc_document_invalid_url'));
     }
     if (target.protocol !== 'https:' || target.hostname !== 'res.cloudinary.com'
         || !cloudName || !target.pathname.startsWith(`/${cloudName}/`)) {
-      return res.status(400).send('অবৈধ ডকুমেন্ট URL');
+      return res.status(400).send(req.t('admin_kyc_document_invalid_url'));
     }
 
     await logAdminAction(
@@ -631,11 +631,11 @@ router.get('/kyc/:id/document', rbac.requirePermission('kyc_view'), requireIntPa
     );
 
     const upstream = await fetch(target.href);
-    if (!upstream.ok) return res.status(502).send('ডকুমেন্ট আনা যায়নি');
+    if (!upstream.ok) return res.status(502).send(req.t('admin_kyc_document_fetch_failed'));
 
     const contentType = upstream.headers.get('content-type') || 'application/octet-stream';
     if (!/^image\/(jpeg|png|webp|gif)$/.test(contentType)) {
-      return res.status(415).send('অসমর্থিত ডকুমেন্ট ফরম্যাট');
+      return res.status(415).send(req.t('admin_kyc_document_bad_format'));
     }
     res.set('Content-Type', contentType);
     // ব্যক্তিগত ডকুমেন্ট — কোথাও ক্যাশ হবে না
@@ -645,7 +645,7 @@ router.get('/kyc/:id/document', rbac.requirePermission('kyc_view'), requireIntPa
     return res.send(buf);
   } catch (err) {
     console.error('KYC document proxy error:', err.message);
-    return res.status(500).send('সার্ভার সমস্যা');
+    return res.status(500).send(req.t('common_server_error_short'));
   }
 });
 
