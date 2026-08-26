@@ -22,3 +22,12 @@ tsconfig.tsbuildinfo
 
 # CI টেস্ট আউটপুট — artifact হিসেবে আপলোড হয়, রিপোতে কমিট হবে না
 jest-output.log
+
+# ডাটাবেস ডাম্প / ব্যাকআপ আর্টিফ্যাক্ট — কখনো কমিট হবে না।
+# services/backup.js আগে প্রতিদিন db-backups/backup-latest.json রিপোতে কমিট
+# করত; সেই গন্তব্য সরানো হয়েছে। এই নিয়মগুলো দুর্ঘটনাক্রমেও যেন ফিরে না আসে।
+/db-backups/
+*.dump
+*.sql.gz
+backup-*.json
+backup-*.bin
