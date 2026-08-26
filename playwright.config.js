@@ -12,7 +12,10 @@ module.exports = {
   retries: process.env.CI ? 1 : 0,
   workers: 1,
   timeout: 60000,
-  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
+  // CI-তে `github` রিপোর্টার যোগ করা হলো: ব্যর্থ টেস্ট GitHub annotation হিসেবে
+  // চেক-রানে দেখা যায়, তাই Actions-এর লগ blob storage পড়তে না পারলেও (অনেক
+  // নেটওয়ার্ক থেকে ব্লকড) ব্যর্থতার কারণ সরাসরি PR-এ দেখা যায়।
+  reporter: process.env.CI ? [['github'], ['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: process.env.E2E_BASE_URL || 'http://localhost:3000',
     trace: 'retain-on-failure',
