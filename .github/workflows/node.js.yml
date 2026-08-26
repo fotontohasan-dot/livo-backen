@@ -107,6 +107,14 @@ jobs:
 
     - name: Boot smoke test
       env:
+        # জব-লেভেলে NODE_ENV=test সেট করা আছে (Jest-এর জন্য), কিন্তু app.js
+        # test মোডে ইচ্ছাকৃতভাবে `server.listen()` বাদ দেয় ("🧪 test mode —
+        # server listen ও ব্যাকগ্রাউন্ড ওয়ার্কার বাদ দেওয়া হলো")। ফলে বুট
+        # স্মোক টেস্টে অ্যাপ কোনো পোর্টেই শোনে না এবং /health-এ curl কখনো
+        # সাড়া পায় না — ধাপটা সবসময় ৬০ সেকেন্ড পরে ব্যর্থ হতো।
+        # নিচের E2E ধাপের মতোই এখানে NODE_ENV=development ব্যবহার করা হলো,
+        # যাতে আসল রানটাইম পথটাই (listen + ব্যাকগ্রাউন্ড ওয়ার্কার) যাচাই হয়।
+        NODE_ENV: development
         PUBLIC_APP_URL: http://localhost:3000
         PORT: 3000
       run: |
