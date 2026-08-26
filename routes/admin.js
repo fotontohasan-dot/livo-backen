@@ -1,4 +1,5 @@
 const express = require('express');
+const secretBox = require('../utils/secretBox');
 const router = express.Router();
 const { isAdmin } = require('../middleware/auth');
 const { redirectBack } = require('../utils/redirectBack');
@@ -281,7 +282,7 @@ router.post('/login/2fa', strict2FALimiter, async (req, res) => {
         await pool.query('UPDATE users SET totp_backup_codes = $1 WHERE id = $2', [check.remainingJson, admin.id]);
       }
     } else if (token && token.trim()) {
-      ok = verifyTotpToken(admin.totp_secret, token);
+      ok = verifyTotpToken(secretBox.decrypt(admin.totp_secret), token);
     }
 
     if (!ok) {
@@ -364,7 +365,7 @@ router.post('/2fa/mandatory-setup/verify', strict2FALimiter, async (req, res) =>
     const backupCodesJson = await hashBackupCodes(backupCodes);
     await pool.query(
       'UPDATE users SET totp_secret = $1, totp_enabled = true, totp_backup_codes = $2, backup_codes_viewed = false WHERE id = $3',
-      [pendingSecret, backupCodesJson, pending.id]
+      [secretBox.encrypt(pendingSecret), backupCodesJson, pending.id]
     );
 
     // এনরোলমেন্ট সম্পন্ন — এখন প্রকৃত লগইন সেশন স্থাপন করা হচ্ছে (এতক্ষণ ছিল না)।
@@ -481,7 +482,7 @@ router.post('/2fa/setup/verify', strict2FALimiter, async (req, res) => {
 
     await pool.query(
       'UPDATE users SET totp_secret = $1, totp_enabled = true, totp_backup_codes = $2, backup_codes_viewed = false WHERE id = $3',
-      [pendingSecret, backupCodesJson, req.session.user.id]
+      [secretBox.encrypt(pendingSecret), backupCodesJson, req.session.user.id]
     );
     req.session.pending2FASetup = null;
     await logAdminAction(req.session.user.id, req.session.user.username, '2FA_ENABLED', '2FA চালু করা হয়েছে', req.ip);
@@ -506,7 +507,10 @@ router.post('/2fa/backup-codes/acknowledge', async (req, res) => {
   }
 });
 
-router.post('/2fa/disable', async (req, res) => {
+// 2FA বন্ধ করার রুটেও একই কড়া রেট-লিমিট। আগে এটা বাদ ছিল, অথচ এখানেও
+// পাসওয়ার্ড + TOTP/ব্যাকআপ কোড যাচাই হয় — অর্থাৎ ব্রুট-ফোর্স করার জন্য
+// এটাই ছিল সবচেয়ে সহজ দরজা, আর সফল হলে দ্বিতীয় ফ্যাক্টর একেবারে উঠে যেত।
+router.post('/2fa/disable', strict2FALimiter, async (req, res) => {
   try {
     const { password, token } = req.body;
     const result = await pool.query('SELECT * FROM users WHERE id = $1', [req.session.user.id]);
@@ -514,7 +518,7 @@ router.post('/2fa/disable', async (req, res) => {
 
     const passOk = admin && await bcrypt.compare(password || '', admin.password);
     // TOTP কোড অথবা ব্যাকআপ কোড — যেকোনো একটা দিয়ে যাচাই করা যাবে
-    let codeOk = admin && verifyTotpToken(admin.totp_secret, token);
+    let codeOk = admin && verifyTotpToken(secretBox.decrypt(admin.totp_secret), token);
     if (!codeOk && admin && admin.totp_backup_codes) {
       const backupCheck = await verifyAndConsumeBackupCode(admin.totp_backup_codes, token);
       if (backupCheck.valid) codeOk = true;
@@ -590,12 +594,36 @@ router.get('/kyc', rbac.requirePermission('kyc_view'), async (req, res) => {
 router.post('/kyc/:id/approve', rbac.requirePermission('kyc_approve'), async (req, res) => {
   try {
     const { id } = req.params;
-    const r = await pool.query(
-      "UPDATE kyc_requests SET status = 'approved', updated_at = NOW() WHERE id = $1 RETURNING user_id",
-      [id]
-    );
-    if (r.rows[0]) {
-      await pool.query("UPDATE users SET kyc_status = 'approved' WHERE id = $1", [r.rows[0].user_id]);
+    // দুটো পরিবর্তন, দুটোই আগে অনুপস্থিত ছিল:
+    //
+    // ১. **স্টেট গার্ড** — আগে যেকোনো অবস্থা থেকে approved করা যেত, তাই
+    //    আগে reject করা KYC পরে approve, বা উল্টোটা করা যেত। বাল্ক অপারেশনে
+    //    শুধু 'pending' প্রসেস হতো, একক রুটে সেই নিয়ম ছিল না — দুই পথে দুই
+    //    নিয়ম। এখন দুটোতেই একই: শুধু pending → approved।
+    //
+    // ২. **atomicity** — kyc_requests ও users দুটো আলাদা কোয়েরিতে আপডেট হতো।
+    //    প্রথমটা সফল হয়ে দ্বিতীয়টা ব্যর্থ হলে রিকোয়েস্ট approved দেখাত অথচ
+    //    ইউজারের kyc_status আগের অবস্থাতেই থেকে যেত।
+    const client = await pool.connect();
+    let userId = null;
+    try {
+      await client.query('BEGIN');
+      const r = await client.query(
+        "UPDATE kyc_requests SET status = 'approved', updated_at = NOW() WHERE id = $1 AND status = 'pending' RETURNING user_id",
+        [id]
+      );
+      if (r.rowCount === 0) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ success: false, message: req.t('admin_kyc_not_pending') });
+      }
+      userId = r.rows[0].user_id;
+      await client.query("UPDATE users SET kyc_status = 'approved' WHERE id = $1", [userId]);
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw e;
+    } finally {
+      client.release();
     }
     await logAdminAction(req.session.user.id, req.session.user.username, 'KYC_APPROVE', `KYC #${id} অনুমোদন করা হয়েছে`, req.ip);
     res.json({ success: true });
@@ -609,12 +637,25 @@ router.post('/kyc/:id/reject', rbac.requirePermission('kyc_reject'), async (req,
   try {
     const { id } = req.params;
     const reason = (req.body && req.body.reason) || '';
-    const r = await pool.query(
-      "UPDATE kyc_requests SET status = 'rejected', reject_reason = $2, updated_at = NOW() WHERE id = $1 RETURNING user_id",
-      [id, reason || null]
-    );
-    if (r.rows[0]) {
-      await pool.query("UPDATE users SET kyc_status = 'rejected' WHERE id = $1", [r.rows[0].user_id]);
+    // approve-এর মতোই: শুধু pending → rejected, এবং দুই টেবিল একই ট্রানজেকশনে।
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const r = await client.query(
+        "UPDATE kyc_requests SET status = 'rejected', reject_reason = $2, updated_at = NOW() WHERE id = $1 AND status = 'pending' RETURNING user_id",
+        [id, reason || null]
+      );
+      if (r.rowCount === 0) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ success: false, message: req.t('admin_kyc_not_pending') });
+      }
+      await client.query("UPDATE users SET kyc_status = 'rejected' WHERE id = $1", [r.rows[0].user_id]);
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw e;
+    } finally {
+      client.release();
     }
     await logAdminAction(req.session.user.id, req.session.user.username, 'KYC_REJECT', `KYC #${id} বাতিল করা হয়েছে। কারণ: ${reason}`, req.ip);
     res.json({ success: true });

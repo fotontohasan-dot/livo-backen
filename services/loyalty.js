@@ -14,14 +14,24 @@ async function addPoints(userId, stake) {
   if (!stake || stake <= 0) return;
   const points = Math.floor(stake / 100) * POINTS_PER_100_STAKE;
   if (points <= 0) return;
+  // পয়েন্ট আপডেট ও লেজার-ইনসার্ট আগে দুটো আলাদা কোয়েরি ছিল। প্রথমটা সফল হয়ে
+  // দ্বিতীয়টা ব্যর্থ হলে (কানেকশন ড্রপ, ডেডলক) ইউজারের পয়েন্ট বেড়ে যেত কিন্তু
+  // লেজারে কোনো রেকর্ড থাকত না — ব্যালেন্স ও ইতিহাস স্থায়ীভাবে অসামঞ্জস্যপূর্ণ।
+  // এখন একই ট্রানজেকশনে, তাই দুটোই হয় নয়তো কোনোটাই হয় না।
+  const client = await pool.connect();
   try {
-    await pool.query(`UPDATE users SET loyalty_points = COALESCE(loyalty_points,0) + $1 WHERE id = $2`, [points, userId]);
-    await pool.query(
+    await client.query('BEGIN');
+    await client.query(`UPDATE users SET loyalty_points = COALESCE(loyalty_points,0) + $1 WHERE id = $2`, [points, userId]);
+    await client.query(
       `INSERT INTO loyalty_ledger (user_id, points, reason) VALUES ($1, $2, 'earn')`,
       [userId, points]
     );
+    await client.query('COMMIT');
   } catch (e) {
+    await client.query('ROLLBACK').catch(() => {});
     console.error('addPoints error:', e.message);
+  } finally {
+    client.release();
   }
 }
 

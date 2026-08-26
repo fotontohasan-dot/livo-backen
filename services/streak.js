@@ -30,26 +30,33 @@ async function recordGameResult(userId, won, betAmount) {
       return { streak: 0, bonus: 0, milestone: 0 };
     }
 
-    // জিতলে স্ট্রিক +১ + best_streak আপডেট
-    const upd = await pool.query(
-      `UPDATE users
-         SET win_streak = COALESCE(win_streak,0) + 1,
-             best_streak = GREATEST(COALESCE(best_streak,0), COALESCE(win_streak,0) + 1)
-       WHERE id = $1
-       RETURNING win_streak`,
-      [userId]
-    );
-    const streak = upd.rows[0] ? upd.rows[0].win_streak : 0;
+    // স্ট্রিক বৃদ্ধি ও মাইলস্টোন বোনাস — একই ট্রানজেকশনে।
+    //
+    // আগে স্ট্রিক আলাদা কোয়েরিতে কমিট হয়ে যেত, তারপর বোনাস আলাদা ট্রানজেকশনে।
+    // বোনাস ব্যর্থ হলে স্ট্রিক বেড়েই থাকত কিন্তু বোনাস হারিয়ে যেত, আর পরের
+    // জয়ে স্ট্রিক ৪ হয়ে যাওয়ায় মাইলস্টোনটা আর কখনো ফিরত না।
+    //
+    // FOR UPDATE লক: একই ইউজারের দুটো জয় একসাথে সেটেল হলে আগে দুটোই একই
+    // স্ট্রিক নম্বর দেখতে পারত এবং একই মাইলস্টোনের বোনাস দুবার দিত। লকের
+    // ফলে দুটো জয় ক্রমানুসারে প্রক্রিয়া হয়।
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('SELECT id FROM users WHERE id = $1 FOR UPDATE', [userId]);
 
-    // প্রতি ৩ জয়ে বোনাস (৩, ৬, ৯, ১২...)
-    if (streak > 0 && streak % STREAK_INTERVAL === 0) {
-      const bonus = calcStreakBonus(betAmount);
-      // ব্যালেন্স UPDATE ও coin_transactions INSERT আগে দুটো আলাদা pool.query() কল ছিল,
-      // কোনো ট্রানজেকশন ছাড়া — মাঝখানে কানেকশন সমস্যা হলে ব্যালেন্স বেড়ে যেত কিন্তু লেজার
-      // এন্ট্রি স্থায়ীভাবে হারিয়ে যেত। এখন একটাই ট্রানজেকশনে।
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
+      const upd = await client.query(
+        `UPDATE users
+           SET win_streak = COALESCE(win_streak,0) + 1,
+               best_streak = GREATEST(COALESCE(best_streak,0), COALESCE(win_streak,0) + 1)
+         WHERE id = $1
+         RETURNING win_streak`,
+        [userId]
+      );
+      const streak = upd.rows[0] ? upd.rows[0].win_streak : 0;
+
+      // প্রতি ৩ জয়ে বোনাস (৩, ৬, ৯, ১২...)
+      if (streak > 0 && streak % STREAK_INTERVAL === 0) {
+        const bonus = calcStreakBonus(betAmount);
         await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [bonus, userId]);
         await client.query(
           `INSERT INTO coin_transactions (user_id, amount, type, description)
@@ -62,16 +69,17 @@ async function recordGameResult(userId, won, betAmount) {
           [userId, `🔥 ${streak} টানা জয়! আপনি ${bonus} কয়েন বোনাস পেয়েছেন!`]
         );
         await client.query('COMMIT');
-      } catch (e) {
-        await client.query('ROLLBACK');
-        throw e;
-      } finally {
-        client.release();
+        return { streak, bonus, milestone: streak };
       }
-      return { streak, bonus, milestone: streak };
-    }
 
-    return { streak, bonus: 0, milestone: 0 };
+      await client.query('COMMIT');
+      return { streak, bonus: 0, milestone: 0 };
+    } catch (e) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw e;
+    } finally {
+      client.release();
+    }
   } catch (e) {
     console.error('recordGameResult error:', e.message);
     return { streak: 0, bonus: 0, milestone: 0 };

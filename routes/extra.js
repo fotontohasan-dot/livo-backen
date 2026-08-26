@@ -117,12 +117,31 @@ router.post('/kyc', isAuth, kycLimiter, async (req, res) => {
             return res.redirect('/extra/kyc');
         }
 
-        await pool.query(
-            `INSERT INTO kyc_requests (user_id, full_name, document_type, document_number, document_url, status)
-             VALUES ($1, $2, $3, $4, $5, 'pending')`,
-            [userId, full_name, document_type || null, document_number, document_url || null]
-        );
-        await pool.query("UPDATE users SET kyc_status = 'pending' WHERE id = $1", [userId]);
+        // উপরের SELECT-টা দ্রুত ও বন্ধুত্বপূর্ণ বার্তা দেয়, কিন্তু সেটাই একমাত্র
+        // ভরসা নয় — সমান্তরাল দুটো সাবমিশন দুটোই ওই চেক পাস করতে পারে।
+        // আসল নিশ্চয়তা DB-র partial unique index (uniq_kyc_pending_per_user)।
+        // দুই টেবিল একই ট্রানজেকশনে, যাতে রিকোয়েস্ট ঢুকে গিয়ে users.kyc_status
+        // পিছিয়ে না থাকে।
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            await client.query(
+                `INSERT INTO kyc_requests (user_id, full_name, document_type, document_number, document_url, status)
+                 VALUES ($1, $2, $3, $4, $5, 'pending')`,
+                [userId, full_name, document_type || null, document_number, document_url || null]
+            );
+            await client.query("UPDATE users SET kyc_status = 'pending' WHERE id = $1", [userId]);
+            await client.query('COMMIT');
+        } catch (e) {
+            await client.query('ROLLBACK').catch(() => {});
+            if (e.code === '23505') { // unique_violation — অন্য রিকোয়েস্ট আগে ঢুকে গেছে
+                req.flash('error', req.t('kyc_request_already_pending'));
+                return res.redirect('/extra/kyc');
+            }
+            throw e;
+        } finally {
+            client.release();
+        }
 
         req.flash('success', req.t('kyc_submitted'));
         res.redirect('/extra/kyc');

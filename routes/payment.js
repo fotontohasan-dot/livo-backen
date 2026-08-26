@@ -1,5 +1,6 @@
 const express = require('express');
 const { buildUrl, getBaseUrl } = require('../utils/publicUrl');
+const businessTime = require('../utils/businessTime');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const { pool } = require('../db');
@@ -255,6 +256,9 @@ router.post('/deposit', isAuth, paymentLimiter, async (req, res) => {
     return res.redirect('/payment/deposit');
   }
 
+  // দৈনিক ডিপোজিট লিমিটের চূড়ান্ত যাচাই নিচে INSERT-এর সাথে একই ট্রানজেকশনে
+  // হয় (row lock সহ)। এখানকার যাচাইটা শুধু দ্রুত, বন্ধুত্বপূর্ণ প্রত্যাখ্যানের
+  // জন্য — এটাই একমাত্র ভরসা নয়।
   try {
     const u = await pool.query(`SELECT daily_deposit_limit FROM users WHERE id = $1`, [userId]);
     const limit = u.rows[0] && u.rows[0].daily_deposit_limit ? Number(u.rows[0].daily_deposit_limit) : null;
@@ -262,8 +266,8 @@ router.post('/deposit', isAuth, paymentLimiter, async (req, res) => {
       const todayDep = await pool.query(
         `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests
          WHERE user_id = $1 AND type = 'deposit' AND status != 'rejected'
-           AND created_at::date = CURRENT_DATE`,
-        [userId]
+           AND created_at >= $2 AND created_at < $3`,
+        [userId, businessTime.startOfDay(), businessTime.endOfDay()]
       );
       const already = Number(todayDep.rows[0].total);
       if (already + amount > limit) {
@@ -308,10 +312,52 @@ router.post('/deposit', isAuth, paymentLimiter, async (req, res) => {
   }
 
   try {
-    await pool.query(
-      `INSERT INTO payment_requests (user_id, type, method, amount, transaction_id, account_number, status, want_bonus) VALUES ($1, 'deposit', $2, $3, $4, $5, 'pending', $6)`,
-      [userId, method, amount, transaction_id, account_number, wantBonus]
-    );
+    // লিমিট যাচাই ও INSERT একই ট্রানজেকশনে, ইউজারের সারিতে লক নিয়ে।
+    //
+    // আগে যাচাই ছিল আলাদা SELECT, তারপর আলাদা INSERT। দুটো ডিপোজিট একসাথে
+    // এলে দুটোই একই SUM দেখত, দুটোই লিমিটের নিচে মনে হতো, দুটোই ঢুকে যেত —
+    // অর্থাৎ দায়িত্বশীল-জুয়ার দৈনিক সীমা কার্যত এড়ানো যেত। `FOR UPDATE`
+    // দুটো রিকোয়েস্টকে ক্রমানুসারে চালায়, তাই দ্বিতীয়টা প্রথমটার অঙ্ক দেখতে পায়।
+    //
+    // দিনের সীমানাও এখন ব্যবসায়িক টাইমজোন থেকে (utils/businessTime.js),
+    // আগের `CURRENT_DATE` নয় — সেটা DB সার্ভারের টাইমজোন (UTC) ধরত, ফলে
+    // বাংলাদেশ সময় সন্ধ্যা ৬টায় লিমিট রিসেট হয়ে যেত।
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const lockRow = await client.query(
+        'SELECT daily_deposit_limit FROM users WHERE id = $1 FOR UPDATE',
+        [userId]
+      );
+      const limit = lockRow.rows[0] && lockRow.rows[0].daily_deposit_limit
+        ? Number(lockRow.rows[0].daily_deposit_limit) : null;
+
+      if (limit) {
+        const sum = await client.query(
+          `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests
+           WHERE user_id = $1 AND type = 'deposit' AND status != 'rejected'
+             AND created_at >= $2 AND created_at < $3`,
+          [userId, businessTime.startOfDay(), businessTime.endOfDay()]
+        );
+        const already = Number(sum.rows[0].total);
+        if (already + amount > limit) {
+          await client.query('ROLLBACK');
+          req.flash('error', req.t('payment_daily_deposit_limit').replace('{value1}', limit).replace('{value2}', Math.max(0, limit - already)));
+          return res.redirect('/payment/deposit');
+        }
+      }
+
+      await client.query(
+        `INSERT INTO payment_requests (user_id, type, method, amount, transaction_id, account_number, status, want_bonus) VALUES ($1, 'deposit', $2, $3, $4, $5, 'pending', $6)`,
+        [userId, method, amount, transaction_id, account_number, wantBonus]
+      );
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw e;
+    } finally {
+      client.release();
+    }
     checkIp((req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim()).then(vpnInfo => {
       scanTransaction(userId, 'deposit', { accountNumber: account_number, vpnInfo })
         .catch(e => console.error('fraud scanTransaction (deposit) error:', e.message));
