@@ -2,6 +2,44 @@ const express = require('express');
 const router = express.Router();
 const { isAuth } = require('../middleware/auth');
 const { pool } = require('../db');
+const { createLimiter } = require('../middleware/rateLimitFactory');
+
+// KYC জমাদানে সীমা — পরিচয়পত্র/ডকুমেন্ট বারবার জমা দেওয়া স্প্যাম/রিসোর্স অপব্যবহার
+// (অ্যাডমিন রিভিউ কিউ ভরিয়ে ফেলা) ঠেকাতে ঘণ্টায় সর্বোচ্চ ৫ বার।
+const kycLimiter = createLimiter('kyc_submit', {
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: (req) => req.t('kyc_rate_limited'),
+  keyGenerator: (req) => (req.session && req.session.user) ? `u_${req.session.user.id}` : req.ip
+});
+
+// ==== KYC ইনপুট ভ্যালিডেশন ====
+const KYC_NAME_RE = /^[\p{L}\p{M}\s.'-]{2,60}$/u;
+const KYC_DOCNUM_RE = /^[A-Za-z0-9\-\s]{3,30}$/;
+const KYC_DOCTYPE_RE = /^[A-Za-z_\-\s]{2,40}$/;
+
+// res.cloudinary.com একটা শেয়ার্ড মাল্টি-টেন্যান্ট CDN হোস্ট — আসল টেন্যান্ট শনাক্ত হয়
+// URL পাথের প্রথম সেগমেন্ট (cloud_name) দিয়ে। শুধু হোস্টনেম চেক করলে যে কেউ *যেকোনো*
+// Cloudinary অ্যাকাউন্টের পাবলিক URL (এমনকি Cloudinary-র নিজের পাবলিক ডেমো অ্যাসেট)
+// document_url হিসেবে জমা দিতে পারত এবং সেটা নিজের KYC ডকুমেন্ট হিসেবে গৃহীত হয়ে যেত।
+// এখন cloud_name আমাদের নিজের (CLOUDINARY_CLOUD_NAME) কিনা এবং পাথ আমাদের নিজস্ব
+// আপলোড ফোল্ডারের (routes/chat.js-এর 'livo/chat', যেটা KYC আপলোডও ব্যবহার করে) ভেতরে
+// কিনা — দুটোই যাচাই করা হয়।
+function isSafeCloudinaryUrl(url) {
+  if (typeof url !== 'string' || !url) return false;
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  if (!cloudName) return false;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:' || parsed.hostname !== 'res.cloudinary.com') return false;
+    const expectedPrefix = `/${cloudName}/`;
+    if (!parsed.pathname.startsWith(expectedPrefix)) return false;
+    return parsed.pathname.includes('/livo/chat/');
+  } catch (e) {
+    return false;
+  }
+}
+
 
 router.get('/invitation', isAuth, async (req, res) => {
     try {
@@ -12,7 +50,7 @@ router.get('/invitation', isAuth, async (req, res) => {
         res.render('extra/invitation', { referralCode, referralCount: parseInt(referrals.rows[0].count) });
     } catch (err) {
         console.error(err);
-        res.render('extra/placeholder', { title: 'আমন্ত্রণ' });
+        res.render('extra/placeholder', { title: req.t('invite') });
     }
 });
 
@@ -39,12 +77,32 @@ router.get('/kyc', isAuth, async (req, res) => {
 });
 
 // KYC সাবমিট
-router.post('/kyc', isAuth, async (req, res) => {
+router.post('/kyc', isAuth, kycLimiter, async (req, res) => {
     const userId = req.session.user.id;
     const { full_name, document_type, document_number, document_url } = req.body;
 
     if (!full_name || !document_number) {
-        req.flash('error', 'নাম ও ডকুমেন্ট নাম্বার দিন!');
+        req.flash('error', req.t('kyc_name_and_number_required'));
+        return res.redirect('/extra/kyc');
+    }
+    if (!document_url) {
+        req.flash('error', req.t('kyc_document_image_required'));
+        return res.redirect('/extra/kyc');
+    }
+    if (!isSafeCloudinaryUrl(document_url)) {
+        req.flash('error', req.t('kyc_document_image_source_invalid'));
+        return res.redirect('/extra/kyc');
+    }
+    if (!KYC_NAME_RE.test(full_name.trim())) {
+        req.flash('error', req.t('common_name_invalid_characters'));
+        return res.redirect('/extra/kyc');
+    }
+    if (!KYC_DOCNUM_RE.test(document_number.trim())) {
+        req.flash('error', req.t('kyc_document_number_format'));
+        return res.redirect('/extra/kyc');
+    }
+    if (document_type && !KYC_DOCTYPE_RE.test(document_type.trim())) {
+        req.flash('error', req.t('kyc_document_type_invalid'));
         return res.redirect('/extra/kyc');
     }
 
@@ -55,7 +113,7 @@ router.post('/kyc', isAuth, async (req, res) => {
             [userId]
         );
         if (existing.rows[0]) {
-            req.flash('error', 'আপনার একটি KYC রিকোয়েস্ট ইতিমধ্যে যাচাইযর অপেক্ষায় আছে।');
+            req.flash('error', req.t('kyc_request_already_pending'));
             return res.redirect('/extra/kyc');
         }
 
@@ -66,11 +124,11 @@ router.post('/kyc', isAuth, async (req, res) => {
         );
         await pool.query("UPDATE users SET kyc_status = 'pending' WHERE id = $1", [userId]);
 
-        req.flash('success', 'KYC তথ্য জমা হয়েছে! যাচাইয়ের পর জানানো হবে।');
+        req.flash('success', req.t('kyc_submitted'));
         res.redirect('/extra/kyc');
     } catch (err) {
         console.error('kyc submit error:', err.message);
-        req.flash('error', 'জমা দিতে সমস্যা হয়েছে।');
+        req.flash('error', req.t('common_submit_failed'));
         res.redirect('/extra/kyc');
     }
 });

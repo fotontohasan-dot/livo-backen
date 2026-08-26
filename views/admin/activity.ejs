@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>অ্যাক্টিভিটি লগ • Livo Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
+    .activity-filters { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+    .activity-filters .input-icon-wrap { flex: 1; min-width: 180px; }
+    .log-row { display: flex; gap: 10px; padding: 11px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .log-icon { width: 32px; height: 32px; border-radius: 8px; background: rgba(245,158,11,0.1); color: #f59e0b; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 13px; }
+  </style>
+  <%- include('./partials/pwa-head') %>
+</head>
+<body>
+  <div class="admin-wrap">
+    <%- include('./partials/sidebar', { active: 'activity' }) %>
+    <div class="admin-content">
+      <%- include('./partials/load-error') %>
+      <%- include('./partials/header', { pageTitle: 'অ্যাক্টিভিটি লগ', pageSubtitle: 'অ্যাডমিনদের কার্যকলাপের ইতিহাস' }) %>
+
+      <form class="activity-filters" method="GET" action="/admin/activity">
+        <div class="input-icon-wrap">
+          <i class="fas fa-search"></i>
+          <input class="input" type="text" name="q" placeholder="অ্যাডমিন বা বিবরণ দিয়ে খুঁজুন..." value="<%= filters.q || '' %>">
+        </div>
+        <select class="select" name="action_type" onchange="this.form.submit()" style="width:auto;min-width:160px;">
+          <option value="">সব ধরনের অ্যাকশন</option>
+          <% actionTypes.forEach(t => { %>
+            <option value="<%= t %>" <%= filters.action_type === t ? 'selected' : '' %>><%= t %></option>
+          <% }) %>
+        </select>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> ফিল্টার</button>
+        <a class="btn btn-secondary" href="/admin/activity/export.csv?q=<%= encodeURIComponent(filters.q || '') %>&action_type=<%= encodeURIComponent(filters.action_type || '') %>">
+          <i class="fas fa-download"></i> CSV এক্সপোর্ট
+        </a>
+      </form>
+
+      <div class="admin-card">
+        <div class="admin-card-header">সাম্প্রতিক কার্যকলাপ</div>
+        <% if (logs && logs.length > 0) { %>
+          <% logs.forEach(l => { %>
+            <div class="log-row">
+              <div class="log-icon"><i class="fas fa-bolt"></i></div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:12px;color:var(--text-muted);">
+                  <span style="font-weight:700;color:var(--text-main);">@<%= l.admin_username || 'system' %></span>
+                  &nbsp;<span class="badge badge-amber" style="font-size:9px;"><%= l.action_type %></span>
+                </div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:3px;"><%= l.details || '' %></div>
+                <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">
+                  <%= l.created_at ? new Date(l.created_at).toLocaleString('bn-BD') : '' %> <%= l.ip_address ? '· ' + l.ip_address : '' %>
+                </div>
+              </div>
+            </div>
+          <% }) %>
+        <% } else { %>
+          <div class="empty-state">কোনো অ্যাক্টিভিটি পাওয়া যায়নি</div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

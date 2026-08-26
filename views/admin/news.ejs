@@ -1,47 +1,62 @@
-<%- include('../partials/head') %>
-<%- include('../partials/navbar') %>
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>নিউজ • Livo Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
+    .news-row { display: flex; gap: 12px; padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .news-row img { width: 70px; height: 70px; object-fit: cover; border-radius: 8px; flex-shrink: 0; background: #0f1115; }
+    .news-row:last-child { border-bottom: none; }
+  </style>
+  <%- include('./partials/pwa-head') %>
+</head>
+<body>
+  <div class="admin-wrap">
+    <%- include('./partials/sidebar', { active: 'news' }) %>
+    <div class="admin-content">
+      <%- include('./partials/load-error') %>
+      <%- include('./partials/header', { pageTitle: 'নিউজ', pageSubtitle: 'স্পোর্টস নিউজ পোস্ট ও পরিচালনা করুন' }) %>
 
-<div class="container" style="padding-top: 20px;">
-  <h2>📰 নিউজ ম্যানেজমেন্ট</h2>
-  <a href="/admin" class="btn btn-secondary">← ড্যাশবোর্ড</a>
+      <div class="admin-card" style="padding:16px;margin-bottom:16px;">
+        <div style="font-weight:800;color:var(--text-main);font-size:13px;margin-bottom:12px;"><i class="fas fa-newspaper" style="color:#f59e0b;"></i> নতুন নিউজ যোগ করুন</div>
+        <form method="POST" action="/admin/news/add" style="display:grid;grid-template-columns:1fr;gap:10px;">
+          <input class="input" type="text" name="title" placeholder="শিরোনাম" required>
+          <textarea class="input" name="content" rows="4" placeholder="বিস্তারিত"></textarea>
+          <input class="input" type="text" name="image_url" placeholder="ইমেজ URL (ঐচ্ছিক)">
+          <input class="input" type="text" name="sport" placeholder="স্পোর্ট (ঐচ্ছিক)">
+          <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> পোস্ট করুন</button>
+        </form>
+      </div>
 
-  <div class="card" style="margin: 20px 0; padding: 20px;">
-    <h5>নতুন নিউজ লিখুন</h5>
-    <form action="/admin/news" method="POST">
-      <input type="text" name="title" placeholder="শিরোনাম" required class="form-control" style="margin-bottom:10px;">
-
-      <textarea name="content" placeholder="বিস্তারিত লেখা..." rows="6" class="form-control" style="margin-bottom:10px;"></textarea>
-
-      <input type="text" name="image_url" placeholder="ছবির লিংক (ঐচ্ছিক)" class="form-control" style="margin-bottom:10px;">
-
-      <select name="sport" class="form-control" style="margin-bottom:10px;">
-        <option value="">-- ক্যাটাগরি (ঐচ্ছিক) --</option>
-        <option value="cricket">ক্রিকেট</option>
-        <option value="football">ফুটবল</option>
-        <option value="general">সাধারণ</option>
-      </select>
-
-      <button type="submit" class="btn btn-success" style="width:100%;">প্রকাশ করুন</button>
-    </form>
-  </div>
-
-  <h5>প্রকাশিত নিউজ</h5>
-  <% if (news.length === 0) { %>
-    <p style="color:#888;">এখনো কোনো নিউজ নেই।</p>
-  <% } %>
-  <% news.forEach(item => { %>
-    <div class="card" style="margin-bottom:12px; padding:15px;">
-      <strong><%= item.title %></strong>
-      <% if (item.sport) { %><span class="badge bg-info"><%= item.sport %></span><% } %>
-      <p style="font-size:13px; color:#aaa; margin:6px 0;">👁️ <%= item.views || 0 %> ভিউ</p>
-
-      <form action="/admin/news/<%= item.id %>/delete" method="POST" style="display:inline;"
-            onsubmit="return confirm('এই নিউজটি মুছে ফেলবেন?');">
-        <button type="submit" class="btn btn-sm btn-danger">🗑️ মুছুন</button>
-      </form>
+      <div class="admin-card">
+        <div class="admin-card-header">সকল নিউজ</div>
+        <% if (newsList && newsList.length > 0) { %>
+          <% newsList.forEach(n => { %>
+            <div class="news-row">
+              <% if (n.image_url) { %><img src="<%= n.image_url %>" onerror="this.style.display='none'"><% } %>
+              <div style="flex:1;min-width:0;">
+                <div style="font-weight:700;color:#fff;font-size:13px;"><%= n.title %></div>
+                <div style="color:#94a3b8;font-size:11px;margin-top:3px;">
+                  <%= n.sport || 'সাধারণ' %> · <%= n.views || 0 %> ভিউ · <%= n.created_at ? new Date(n.created_at).toLocaleDateString('bn-BD') : '—' %>
+                </div>
+                <div style="color:#94a3b8;font-size:12px;margin-top:4px;max-height:36px;overflow:hidden;">
+                  <%= (n.content || '').slice(0, 120) %><%= (n.content || '').length > 120 ? '...' : '' %>
+                </div>
+              </div>
+              <form method="POST" action="/admin/news/<%= n.id %>/delete" onsubmit="return confirm('মুছে ফেলবেন?')">
+                <button class="btn btn-sm btn-red" type="submit"><i class="fas fa-trash"></i></button>
+              </form>
+            </div>
+          <% }) %>
+        <% } else { %>
+          <div class="empty-state">কোনো নিউজ পাওয়া যায়নি</div>
+        <% } %>
+      </div>
     </div>
-  <% }) %>
-
-</div>
-
-<%- include('../partials/bottom-nav') %>
+  </div>
+</body>
+</html>

@@ -1,29 +1,55 @@
 <%- include('../partials/head') %>
 <div class="container" style="padding:16px;padding-bottom:100px">
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-    <a href="/profile" style="color:#fff;text-decoration:none;font-size:20px">←</a>
-    <h1 style="color:#fff;font-size:18px;font-weight:bold">💰 লাভ এবং লস</h1>
+    <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px">←</a>
+    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold">💰 প্রফিট এন্ড লস</h1>
   </div>
+
+  <form method="GET" action="/profile/stats" style="margin-bottom: 16px;">
+    <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 10px;">
+      <button type="submit" name="quick" value="today" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); background: <%= filter.quick === 'today' ? 'linear-gradient(90deg,#f59e0b,#fbbf24)' : 'rgba(255,255,255,0.05)' %>; color: <%= filter.quick === 'today' ? '#000' : 'var(--text-main)' %>;">আজ</button>
+      <button type="submit" name="quick" value="yesterday" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); background: <%= filter.quick === 'yesterday' ? 'linear-gradient(90deg,#f59e0b,#fbbf24)' : 'rgba(255,255,255,0.05)' %>; color: <%= filter.quick === 'yesterday' ? '#000' : 'var(--text-main)' %>;">গতকাল</button>
+      <button type="submit" name="quick" value="7days" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); background: <%= filter.quick === '7days' ? 'linear-gradient(90deg,#f59e0b,#fbbf24)' : 'rgba(255,255,255,0.05)' %>; color: <%= filter.quick === '7days' ? '#000' : 'var(--text-main)' %>;">গত ৭ দিন</button>
+      <a href="/profile/stats" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color:var(--text-main); text-decoration:none;">সব</a>
+    </div>
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <input type="date" name="from" value="<%= filter.from %>" style="flex:1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px 10px; color:var(--text-main); font-size: 12px;">
+      <span style="color:var(--text-muted); font-size: 12px;">থেকে</span>
+      <input type="date" name="to" value="<%= filter.to %>" style="flex:1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px 10px; color:var(--text-main); font-size: 12px;">
+      <button type="submit" style="background: linear-gradient(90deg,#f59e0b,#fbbf24); border: none; color: #000; padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 800;">ফিল্টার</button>
+    </div>
+  </form>
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
     <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;text-align:center;border:1px solid rgba(255,255,255,0.1)">
-      <div style="color:#94a3b8;font-size:12px;margin-bottom:8px">মোট প্রেডিকশন</div>
+      <div style="color:var(--text-muted);font-size:12px;margin-bottom:8px">মোট বেট</div>
       <div style="color:#f59e0b;font-size:28px;font-weight:bold"><%= stats.total %></div>
     </div>
     <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;text-align:center;border:1px solid rgba(255,255,255,0.1)">
-      <div style="color:#94a3b8;font-size:12px;margin-bottom:8px">জয</div>
-      <div style="color:#10b981;font-size:28px;font-weight:bold"><%= stats.won %></div>
+      <div style="color:var(--text-muted);font-size:12px;margin-bottom:8px">জয় / হার</div>
+      <div style="color:#10b981;font-size:22px;font-weight:bold"><%= stats.won %> <span style="color:#ef4444">/ <%= stats.lost %></span></div>
     </div>
   </div>
 
-  <div style="background:linear-gradient(135deg,#10b981,#059669);border-radius:16px;padding:20px;text-align:center">
-    <div style="color:rgba(255,255,255,0.8);font-size:13px;margin-bottom:6px">মোট অর্জিত পয়েন্ট</div>
-    <div style="color:#fff;font-size:32px;font-weight:bold">+<%= stats.total_earned %></div>
+  <div style="background: <%= stats.net_profit >= 0 ? 'linear-gradient(135deg,#10b981,#059669)' : 'linear-gradient(135deg,#ef4444,#b91c1c)' %>;border-radius:16px;padding:20px;text-align:center">
+    <div style="color:rgba(255,255,255,0.85);font-size:13px;margin-bottom:6px">নেট লাভ/ক্ষতি (সেটেল হওয়া বেট থেকে)</div>
+    <div style="color:var(--text-main);font-size:32px;font-weight:bold"><%= stats.net_profit >= 0 ? '+' : '' %>৳<%= stats.net_profit.toLocaleString('bn-BD') %></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">
+    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:16px;border:1px solid rgba(255,255,255,0.1)">
+      <div style="color:var(--text-muted);font-size:11px;margin-bottom:6px">মোট স্টেক</div>
+      <div style="color:var(--text-main);font-size:18px;font-weight:bold">৳<%= stats.total_staked.toLocaleString('bn-BD') %></div>
+    </div>
+    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:16px;border:1px solid rgba(255,255,255,0.1)">
+      <div style="color:var(--text-muted);font-size:11px;margin-bottom:6px">মোট জিতেছে</div>
+      <div style="color:#10b981;font-size:18px;font-weight:bold">৳<%= stats.total_won_amount.toLocaleString('bn-BD') %></div>
+    </div>
   </div>
 
   <% const winRate = stats.total > 0 ? Math.round((stats.won / stats.total) * 100) : 0; %>
   <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;margin-top:16px;border:1px solid rgba(255,255,255,0.1)">
-    <div style="color:#fff;font-weight:bold;margin-bottom:12px">জয়ের হার</div>
+    <div style="color:var(--text-main);font-weight:bold;margin-bottom:12px">জয়ের হার</div>
     <div style="background:rgba(255,255,255,0.1);border-radius:10px;height:12px;overflow:hidden">
       <div style="background:linear-gradient(90deg,#f59e0b,#fbbf24);height:12px;width:<%= winRate %>%"></div>
     </div>
@@ -31,3 +57,4 @@
   </div>
 </div>
 <%- include('../partials/navbar') %>
+<%- include('../partials/bottom-nav') %>

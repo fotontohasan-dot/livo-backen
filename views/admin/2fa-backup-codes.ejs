@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ব্যাকআপ কোড • Livo Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
+        .admin-card { box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.4); }
+    </style>
+
+<!-- ==================== CSRF টোকেন ==================== -->
+<meta name="csrf-token" content="<%= locals.csrfToken || '' %>">
+<script>
+(function() {
+  var CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+  if (!CSRF_TOKEN) return;
+  function injectIntoForms() {
+    document.querySelectorAll('form').forEach(function(form) {
+      if ((form.getAttribute('method') || 'get').toLowerCase() !== 'post') return;
+      if (form.querySelector('input[name="_csrf"]')) return;
+      var input = document.createElement('input');
+      input.type = 'hidden'; input.name = '_csrf'; input.value = CSRF_TOKEN;
+      form.appendChild(input);
+    });
+  }
+  document.addEventListener('DOMContentLoaded', injectIntoForms);
+  new MutationObserver(injectIntoForms).observe(document.documentElement, { childList: true, subtree: true });
+  var origFetch = window.fetch;
+  window.fetch = function(input, init) {
+    init = init || {};
+    var method = (init.method || (typeof input === 'object' && input.method) || 'GET').toUpperCase();
+    if (['POST','PUT','PATCH','DELETE'].includes(method)) {
+      init.headers = new Headers(init.headers || {});
+      if (!init.headers.has('X-CSRF-Token')) init.headers.set('X-CSRF-Token', CSRF_TOKEN);
+    }
+    return origFetch.call(this, input, init);
+  };
+  var origOpen = XMLHttpRequest.prototype.open;
+  var origSend = XMLHttpRequest.prototype.send;
+  XMLHttpRequest.prototype.open = function(method) {
+    this._csrfMethod = (method || 'GET').toUpperCase();
+    return origOpen.apply(this, arguments);
+  };
+  XMLHttpRequest.prototype.send = function(body) {
+    if (['POST','PUT','PATCH','DELETE'].includes(this._csrfMethod)) {
+      try { this.setRequestHeader('X-CSRF-Token', CSRF_TOKEN); } catch (e) {}
+    }
+    return origSend.call(this, body);
+  };
+})();
+</script>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md">
+        <div class="text-center mb-6">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-emerald-600 rounded-2xl mb-4">
+                <i class="fas fa-check text-white text-3xl"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-white">2FA চালু হয়ে গেছে ✅</h1>
+            <p class="text-slate-400 mt-2 text-sm">এই ব্যাকআপ কোডগুলো সংরক্ষণ করুন — অথেনটিকেটর অ্যাপ হারিয়ে গেলে এগুলো দিয়ে লগইন করতে পারবেন</p>
+        </div>
+
+        <div class="bg-slate-800 border border-slate-700 rounded-3xl p-8 admin-card space-y-6">
+            <div class="bg-amber-500/10 border border-amber-500/30 text-amber-400 px-4 py-3 rounded-2xl text-sm flex items-start gap-3">
+                <i class="fas fa-triangle-exclamation mt-0.5"></i>
+                <span>প্রতিটা কোড <b>একবারই</b> ব্যবহার করা যাবে। এই পেজ বন্ধ করলে এগুলো আর দেখা যাবে না — এখনই সংরক্ষণ করুন।</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 font-mono text-sm">
+                <% codes.forEach(code => { %>
+                    <div class="bg-slate-900 border border-slate-700 rounded-xl py-3 text-center text-blue-300"><%= code %></div>
+                <% }) %>
+            </div>
+
+            <button onclick="copyAll()" id="copyBtn"
+                class="w-full bg-slate-700 hover:bg-slate-600 transition-all text-white font-semibold py-3 rounded-2xl text-sm flex items-center justify-center gap-2">
+                <i class="fas fa-copy"></i> সব কোড কপি করুন
+            </button>
+
+            <form method="POST" action="/admin/2fa/backup-codes/acknowledge">
+                <button type="submit"
+                    class="block text-center w-full bg-blue-600 hover:bg-blue-700 transition-all text-white font-semibold py-3.5 rounded-2xl text-base shadow-lg shadow-blue-600/30">
+                    বুঝেছি, সংরক্ষণ করেছি
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function copyAll() {
+            const codes = [<% codes.forEach((c,i) => { %>"<%= c %>"<%= i < codes.length - 1 ? ',' : '' %><% }) %>];
+            navigator.clipboard.writeText(codes.join('\n')).then(() => {
+                const btn = document.getElementById('copyBtn');
+                btn.innerHTML = '<i class="fas fa-check"></i> কপি হয়েছে!';
+                setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy"></i> সব কোড কপি করুন'; }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="<%= locals.lang || 'bn' %>">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title><%= locals.title || 'Livo - সরা স্পোর্টস প্রেডিকশন প্ল্যাটফর্ম' %></title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= locals.title || 'Livo - সেরা স্পোর্টস প্রেডিকশন ও ক্যাসিনো প্ল্যাটফর্ম' %></title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,7 +11,166 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/css/style.css?v=<%= Date.now() %>">
 
-  <meta name="description" content="LIVO - বাংলাদেশের সরা স্পোর্টস প্রেডিকশন প্ল্যাটফর্ম। মচ প্রেডিকশন করুন, কয়েন জিতুন।">
-  <meta name="theme-color" content="#006519">
+  <meta name="description" content="<%= locals.description || 'Livo-তে খেলুন বাংলাদেশের সেরা স্পোর্টস প্রেডিকশন ও ক্যাসিনো গেম, জিতুন রিয়েল রিওয়ার্ড, নিরাপদ ও দ্রুত ডিপোজিট-উইথড্র সুবিধাসহ।' %>">
+  <meta name="keywords" content="<%= locals.keywords || 'Livo, স্পোর্টস প্রেডিকশন, অনলাইন ক্যাসিনো, বাংলাদেশ বেটিং, ক্রিকেট প্রেডিকশন, লাইভ ক্যাসিনো, অনলাইন গেমিং বাংলাদেশ' %>">
+  <meta name="theme-color" content="#080D0B">
+
+  <!-- Canonical — query-string/ট্র্যাকিং প্যারামিটারসহ URL যেন আলাদা পেজ হিসেবে ইনডেক্স না হয় -->
+  <link rel="canonical" href="<%= (locals.baseUrl || '') + (locals.canonicalPath || '') %>">
+
+  <!-- Open Graph / ফেসবুক-হোয়াটসঅ্যাপে শেয়ার করলে যেভাবে দেখাবে -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Livo">
+  <meta property="og:title" content="<%= locals.title || 'Livo - সেরা স্পোর্টস প্রেডিকশন ও ক্যাসিনো প্ল্যাটফর্ম' %>">
+  <meta property="og:description" content="<%= locals.description || 'Livo-তে খেলুন বাংলাদেশের সেরা স্পোর্টস প্রেডিকশন ও ক্যাসিনো গেম, জিতুন রিয়েল রিওয়ার্ড, নিরাপদ ও দ্রুত ডিপোজিট-উইথড্র সুবিধাসহ।' %>">
+  <meta property="og:image" content="<%= locals.baseUrl || '' %>/icon-512.png">
+  <meta property="og:url" content="<%= (locals.baseUrl || '') + (locals.canonicalPath || '') %>">
+  <meta property="og:locale" content="<%= locals.lang === 'en' ? 'en_US' : 'bn_BD' %>">
+
+  <!-- Twitter/X Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="<%= locals.title || 'Livo - সেরা স্পোর্টস প্রেডিকশন ও ক্যাসিনো প্ল্যাটফর্ম' %>">
+  <meta name="twitter:description" content="<%= locals.description || 'Livo-তে খেলুন বাংলাদেশের সেরা স্পোর্টস প্রেডিকশন ও ক্যাসিনো গেম, জিতুন রিয়েল রিওয়ার্ড।' %>">
+  <meta name="twitter:image" content="<%= locals.baseUrl || '' %>/icon-512.png">
+
+  <!-- ফেভিকন -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png">
+  <link rel="shortcut icon" href="/favicon.ico">
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Livo">
+  <script src="/pwa.js" defer></script>
+  <script src="/js/age-gate.js" defer></script>
+  <style>
+    /* ==================== Livo Toast / Loading System ==================== */
+    #livo-toast-root { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 99999; display: flex; flex-direction: column; gap: 10px; align-items: center; width: 100%; max-width: 440px; padding: 0 16px; pointer-events: none; }
+    .livo-toast { pointer-events: auto; display: flex; align-items: center; gap: 10px; background: #131a17; border: 1px solid rgba(201,162,39,0.35); color: #fff; padding: 13px 16px; border-radius: 14px; font-size: 13.5px; font-weight: 600; box-shadow: 0 10px 28px rgba(0,0,0,0.4); width: 100%; cursor: pointer; animation: livoToastIn .3s ease forwards; }
+    .livo-toast.success { border-color: #10b981; } .livo-toast.success i { color: #10b981; }
+    .livo-toast.error { border-color: #C83B3B; } .livo-toast.error i { color: #e57373; }
+    .livo-toast.info { border-color: var(--gold, #C9A227); } .livo-toast.info i { color: var(--gold, #C9A227); }
+    .livo-toast.leaving { animation: livoToastOut .25s ease forwards; }
+    .livo-toast i { font-size: 16px; flex-shrink: 0; }
+    @keyframes livoToastIn { from { opacity: 0; transform: translateY(-16px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes livoToastOut { to { opacity: 0; transform: translateY(-10px) scale(.96); } }
+    .livo-spinner { width: 15px; height: 15px; border: 2.5px solid rgba(255,255,255,0.3); border-top-color: currentColor; border-radius: 50%; display: inline-block; vertical-align: -3px; margin-right: 6px; animation: livoSpin .7s linear infinite; }
+    @keyframes livoSpin { to { transform: rotate(360deg); } }
+    button:disabled { opacity: 0.75; cursor: not-allowed; }
+  </style>
+
+  <!-- ==================== CSRF টোকেন (Synchronizer Token Pattern) ====================
+       middleware/csrf.js প্রতিটা GET রিকোয়েস্টে res.locals.csrfToken সেট করে দেয়।
+       নিচের স্ক্রিপ্ট সব <form method="post"> এ স্বয়ংক্রিয়ভাবে hidden _csrf ফিল্ড বসায় এবং
+       fetch/XHR দিয়ে পাঠানো POST/PUT/PATCH/DELETE-এ X-CSRF-Token হেডার যোগ করে — কোনো
+       আলাদা ফর্ম বা JS ফাইল ম্যানুয়ালি এডিট না করেই পুরো সাইটে CSRF টোকেন কভারেজ পাওয়া যায়। -->
+  <meta name="csrf-token" content="<%= locals.csrfToken || '' %>">
+  <script>
+  (function() {
+    var CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    if (!CSRF_TOKEN) return;
+
+    function injectIntoForms() {
+      document.querySelectorAll('form').forEach(function(form) {
+        var method = (form.getAttribute('method') || 'get').toLowerCase();
+        if (method !== 'post') return;
+        if (form.querySelector('input[name="_csrf"]')) return;
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = '_csrf';
+        input.value = CSRF_TOKEN;
+        form.appendChild(input);
+      });
+    }
+    document.addEventListener('DOMContentLoaded', injectIntoForms);
+    // ডাইনামিকভাবে JS দিয়ে যোগ হওয়া ফর্মও কভার করার জন্য
+    new MutationObserver(injectIntoForms).observe(document.documentElement, { childList: true, subtree: true });
+
+    // fetch() প্যাচ — সেইম-অরিজিন state-changing রিকোয়েস্টে অটো হেডার যোগ করে
+    var origFetch = window.fetch;
+    window.fetch = function(input, init) {
+      init = init || {};
+      var method = (init.method || (typeof input === 'object' && input.method) || 'GET').toUpperCase();
+      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+        init.headers = new Headers(init.headers || {});
+        if (!init.headers.has('X-CSRF-Token')) init.headers.set('X-CSRF-Token', CSRF_TOKEN);
+      }
+      return origFetch.call(this, input, init);
+    };
+
+    // XMLHttpRequest প্যাচ — legacy AJAX কভার করার জন্য
+    var origOpen = XMLHttpRequest.prototype.open;
+    var origSend = XMLHttpRequest.prototype.send;
+    XMLHttpRequest.prototype.open = function(method) {
+      this._csrfMethod = (method || 'GET').toUpperCase();
+      return origOpen.apply(this, arguments);
+    };
+    XMLHttpRequest.prototype.send = function(body) {
+      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(this._csrfMethod)) {
+        try { this.setRequestHeader('X-CSRF-Token', CSRF_TOKEN); } catch (e) {}
+      }
+      return origSend.call(this, body);
+    };
+  })();
+  </script>
 </head>
 <body>
+<script>
+  /* থিম প্রথম পেইন্টের আগেই বসিয়ে দেয় — Light Mode ইউজার যেন রিফ্রেশে এক মুহূর্তের
+     জন্যও Dark Mode ফ্ল্যাশ না দেখে। navbar.ejs-এর টগল স্ক্রিপ্টের সাথে একই
+     localStorage key ('livo-theme') ও class ('light-mode') ব্যবহার করে। */
+  (function () {
+    try {
+      if (localStorage.getItem('livo-theme') === 'light') {
+        document.body.classList.add('light-mode');
+      }
+    } catch (e) {}
+  })();
+</script>
+
+<div id="livo-toast-root"></div>
+<script>
+  window.LivoToast = (function () {
+    function ensureRoot() { return document.getElementById('livo-toast-root'); }
+    function show(message, type, duration) {
+      type = type || 'info'; duration = duration || 4000;
+      const root = ensureRoot();
+      if (!root || !message) return;
+      const el = document.createElement('div');
+      el.className = 'livo-toast ' + type;
+      const icon = type === 'success' ? 'fa-circle-check' : (type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-info');
+      el.innerHTML = '<i class="fas ' + icon + '"></i><span></span>';
+      el.querySelector('span').textContent = message;
+      const dismiss = () => { el.classList.add('leaving'); setTimeout(() => el.remove(), 250); };
+      el.addEventListener('click', dismiss);
+      root.appendChild(el);
+      setTimeout(dismiss, duration);
+    }
+    function setLoading(btn, loading, loadingText) {
+      if (!btn) return;
+      if (loading) {
+        if (!btn.dataset.livoOriginalHtml) btn.dataset.livoOriginalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="livo-spinner"></span>' + (loadingText || 'অপেক্ষা করুন...');
+      } else {
+        btn.disabled = false;
+        if (btn.dataset.livoOriginalHtml) btn.innerHTML = btn.dataset.livoOriginalHtml;
+      }
+    }
+    return { show: show, setLoading: setLoading };
+  })();
+
+  document.addEventListener('DOMContentLoaded', function () {
+    <% if (typeof success !== 'undefined' && success && success.length) { %>
+      <% success.forEach(function (m) { %> LivoToast.show(<%- jsonScriptSafe(m) %>, 'success'); <% }) %>
+    <% } %>
+    <% if (typeof error !== 'undefined' && error && error.length) { %>
+      <% error.forEach(function (m) { %> LivoToast.show(<%- jsonScriptSafe(m) %>, 'error'); <% }) %>
+    <% } %>
+  });
+</script>
+

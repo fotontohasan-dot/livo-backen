@@ -1,0 +1,127 @@
+<%
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+function fmtDate(d) {
+  const dt = new Date(d);
+  return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' ' + dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+function wRow(w, isPending) {
+  const statusColor = w.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : w.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700';
+  const statusLabel = w.status === 'approved' ? 'Paid' : w.status === 'rejected' ? 'Rejected' : 'Pending';
+  const safeUsername = escapeHtml(w.username);
+  const safeMethod = escapeHtml(w.method || '-');
+  const safeAccountNumber = escapeHtml(w.account_number || '-');
+  const actions = isPending
+    ? '<div class="flex justify-center gap-2">' +
+        '<button onclick="approveWithdrawal(' + w.id + ')" class="px-3.5 py-1.5 text-xs bg-emerald-600 text-white rounded-xl font-bold">Approve + TXN</button>' +
+        '<button onclick="rejectWithdrawal(' + w.id + ')" class="px-3.5 py-1.5 text-xs bg-red-600 text-white rounded-xl font-bold">Reject</button>' +
+      '</div>'
+    : '<span class="text-xs text-slate-500 font-medium">' + statusLabel + '</span>';
+  return '<tr id="wd-row-' + w.id + '">' +
+    '<td class="px-6 py-4"><div class="font-semibold">' + safeUsername + '</div><div class="text-xs text-slate-500">#' + w.user_id + '</div></td>' +
+    '<td class="px-6 py-4 font-mono font-bold text-red-600">৳ ' + Number(w.amount).toLocaleString('en-US') + '</td>' +
+    '<td class="px-6 py-4 text-sm"><div>' + safeMethod + '</div><div class="text-xs text-slate-500">' + safeAccountNumber + '</div></td>' +
+    '<td class="px-6 py-4 text-sm">' + fmtDate(w.created_at) + '</td>' +
+    '<td class="px-6 py-4 text-center"><span class="px-3 py-1 text-xs font-bold rounded-full ' + statusColor + '">' + statusLabel + '</span></td>' +
+    '<td class="px-6 py-4 text-center">' + actions + '</td>' +
+  '</tr>';
+}
+const pendingRows = (pendingWithdrawals || []).map(w => wRow(w, true)).join('') || '<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400">কোনো পেন্ডিং উইথড্র নেই</td></tr>';
+const recentRows = (recentWithdrawals || []).map(w => wRow(w, false)).join('');
+%>
+<%- include('partials/admin-layout', { 
+    title: 'Withdrawals Management', 
+    active: 'withdrawals',
+    body: `
+<div class="max-w-7xl mx-auto">
+    <div class="flex justify-between mb-6">
+        <div>
+            <h2 class="text-2xl font-semibold">Withdrawals Management</h2>
+            <p class="text-sm text-slate-600">${pendingCount || 0} pending withdrawals • Total: ৳ ${Number(pendingTotal || 0).toLocaleString('en-US')}</p>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-3xl border border-slate-100 overflow-x-auto modern-table mb-8">
+        <div class="px-6 py-4 border-b border-slate-100 font-semibold text-slate-700">পেন্ডিং (${pendingCount || 0})</div>
+        <table class="w-full text-sm">
+            <thead class="bg-slate-50">
+                <tr>
+                    <th class="px-6 py-4 text-left">User</th>
+                    <th class="px-6 py-4 text-left">Amount</th>
+                    <th class="px-6 py-4 text-left">Method / Details</th>
+                    <th class="px-6 py-4 text-left">Date</th>
+                    <th class="px-6 py-4 text-center">Status</th>
+                    <th class="px-6 py-4 text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y">${pendingRows}</tbody>
+        </table>
+    </div>
+
+    <div class="bg-white rounded-3xl border border-slate-100 p-5 mb-6">
+        <form method="GET" action="/admin/withdrawals" class="flex flex-wrap items-end gap-3">
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">শুরুর তারিখ</label>
+                <input type="date" name="from" value="${escapeHtml(filterFrom || '')}" class="border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">শেষ তারিখ</label>
+                <input type="date" name="to" value="${escapeHtml(filterTo || '')}" class="border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            </div>
+            <button type="submit" class="px-5 py-2 bg-emerald-600 text-white text-sm font-bold rounded-xl">🔍 ফিল্টার করুন</button>
+            ${(filterFrom || filterTo) ? '<a href="/admin/withdrawals" class="px-5 py-2 bg-slate-100 text-slate-600 text-sm font-bold rounded-xl">✕ ক্লিয়ার</a>' : ''}
+        </form>
+    </div>
+
+    <div class="bg-white rounded-3xl border border-slate-100 overflow-x-auto modern-table">
+        <div class="px-6 py-4 border-b border-slate-100 font-semibold text-slate-700">${(filterFrom || filterTo) ? 'ফিল্টারকৃত ফলাফল' : 'সাম্প্রতিক (শেষ ৩০টি)'}</div>
+        <table class="w-full text-sm">
+            <thead class="bg-slate-50">
+                <tr>
+                    <th class="px-6 py-4 text-left">User</th>
+                    <th class="px-6 py-4 text-left">Amount</th>
+                    <th class="px-6 py-4 text-left">Method / Details</th>
+                    <th class="px-6 py-4 text-left">Date</th>
+                    <th class="px-6 py-4 text-center">Status</th>
+                    <th class="px-6 py-4 text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y">${recentRows}</tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+async function approveWithdrawal(id) {
+    const txn = prompt('Transaction ID / Reference দিন:', 'TXN' + Date.now().toString().slice(-8));
+    if (txn === null) return;
+    try {
+        const res = await fetch('/admin/api/withdrawals/' + id + '/approve', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ txn })
+        });
+        const data = await res.json();
+        if (data.success) { alert('✅ উইথড্র Approve হয়েছে!'); location.reload(); }
+        else alert('❌ ' + (data.error || 'সমস্যা হয়েছে'));
+    } catch (e) { alert('❌ সার্ভার এরর'); }
+}
+async function rejectWithdrawal(id) {
+    const reason = prompt('বাতিলের কারণ লিখুন:', '');
+    if (reason === null) return;
+    try {
+        const res = await fetch('/admin/api/withdrawals/' + id + '/reject', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason })
+        });
+        const data = await res.json();
+        if (data.success) { alert('✅ উইথড্র বাতিল হয়েছে, কয়েন ফেরত দেওয়া হয়েছে।'); location.reload(); }
+        else alert('❌ ' + (data.error || 'সমস্যা হয়েছে'));
+    } catch (e) { alert('❌ সার্ভার এরর'); }
+}
+</script>
+` 
+}) %>

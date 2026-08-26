@@ -1,29 +1,118 @@
-<% if (locals.currentPage === 'home') { %>
-<div class="bottom-nav">
-  <a href="/" onclick="location.href='/'; return false;" class="nav-link <%= locals.currentPage === 'home' ? 'active' : '' %>">
-    <i class="fas fa-home"></i>
-    <span><%= t.home %></span>
-  </a>
+<!-- views/partials/bottom-nav.ejs -->
+<!-- সাধারণ ইউজারদের জন্য ফিক্সড বটম নেভিগেশন বার — active/inactive-এ শুধু গোল্ড অ্যাকসেন্ট,
+     পুরো বার আর গোল্ড দিয়ে ভরাট করা হয় না (থিম টোকেন অনুসরণ করে, dark/light দুটোতেই)। -->
+<style>
+  .pub-bottom-nav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 900;
+    max-width: 480px; margin: 0 auto;
+    display: flex; align-items: stretch;
+    background: var(--bg-nav);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-top: 1px solid var(--border-glass);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-shadow: 0 -4px 18px rgba(0,0,0,0.25);
+  }
+  .pub-nav-item {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; padding: 6px 4px 5px; margin: 5px 2px; color: var(--text-muted); text-decoration: none;
+    font-size: 9.5px; font-weight: 700; position: relative; transition: background .2s, color .2s;
+    min-width: 0; /* flex আইটেম যেন কনটেন্টের চেয়ে ছোট হতে পারে — ৩২০px-এ ওভারফ্লো ঠেকায় */
+  }
+  .pub-nav-item span:not(.pub-active-bar):not(.pub-promo-circle):not(.pub-nav-dot) {
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  @media (max-width: 359px) {
+    .pub-nav-item { font-size: 8.5px; padding: 6px 2px 5px; margin: 5px 1px; }
+    .pub-nav-item i { font-size: 14px; }
+  }
+  /* আইটেমগুলোর মাঝে পাতলা ডিভাইডার লাইন (অ্যাক্টিভ/প্রোমোর পাশে বাদে) */
+  .pub-nav-item:not(:first-child)::after {
+    content: ''; position: absolute; left: -2px; top: 20%; bottom: 20%; width: 1px;
+    background: var(--border-glass);
+  }
+  .pub-nav-item.active::after,
+  .pub-nav-item.active + .pub-nav-item::after,
+  .pub-nav-promo::after,
+  .pub-nav-promo + .pub-nav-item::after { display: none; }
 
-  <a href="/extra/invitation" onclick="location.href='/extra/invitation'; return false;" class="nav-link <%= locals.currentPage === 'invitation' ? 'active' : '' %>">
-    <i class="fas fa-user-plus"></i>
-    <span><%= t.invite %></span>
-  </a>
+  .pub-nav-item i {
+    font-size: 15px; transition: filter .2s, transform .2s;
+  }
+  .pub-nav-item.active {
+    color: var(--text-accent);
+  }
+  .pub-nav-item.active i {
+    filter: drop-shadow(0 0 6px var(--primary-glow));
+  }
+  /* অ্যাক্টিভ ট্যাব — সফট-গোল্ড হাইলাইটেড কার্ড (প্রোমো বাদে, ওর নিজস্ব গ্লো সার্কেল আছে) */
+  .pub-nav-item.active:not(.pub-nav-promo)::before {
+    content: ''; position: absolute; inset: 0; margin: -5px 2px;
+    background: var(--gold-soft);
+    border-radius: 12px; z-index: -1;
+  }
+  /* অ্যাক্টিভ ট্যাবের নিচে ছোট হোম-ইন্ডিকেটর বার */
+  .pub-nav-item.active:not(.pub-nav-promo) .pub-active-bar {
+    position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
+    width: 22px; height: 3px; border-radius: 3px;
+    background: var(--grad-gold); box-shadow: 0 0 6px var(--primary-glow);
+  }
+  .pub-nav-item:not(.pub-nav-promo):active { background: var(--bg-glass); border-radius: 12px; }
 
-  <a href="/extra/promotion" onclick="location.href='/extra/promotion'; return false;" class="nav-link <%= locals.currentPage === 'promotion' ? 'active' : '' %>">
-    <i class="fas fa-gift"></i>
-    <span><%= t.promotion %></span>
-  </a>
+  /* মাঝের "প্রমোশন" আইকন — কমপ্যাক্ট গোল্ড FAB, ডার্ক আইকন (স্পেক অনুযায়ী) */
+  .pub-nav-promo { padding-top: 0; }
+  .pub-promo-circle {
+    width: 42px; height: 42px; border-radius: 50%;
+    background: var(--grad-gold);
+    display: flex; align-items: center; justify-content: center;
+    margin-top: -11px; position: relative;
+    box-shadow: 0 0 0 3px var(--bg-nav), 0 0 16px var(--primary-glow), 0 4px 10px rgba(0,0,0,0.3);
+  }
+  .pub-promo-circle i { color: var(--text-inverse); font-size: 18px; }
+  .pub-nav-promo span { margin-top: 1px; }
 
-  <a href="/chat" onclick="location.href='/chat'; return false;" class="nav-link <%= locals.currentPage === 'chat' ? 'active' : '' %>">
+  /* ছোট রেড নোটিফিকেশন ডট (শুধু প্রমোশনে — কোনো সংখ্যা নেই) */
+  .pub-nav-dot {
+    position: absolute; top: -2px; right: -2px; width: 12px; height: 12px;
+    background: var(--red); border-radius: 50%; border: 2px solid var(--bg-nav);
+    box-shadow: 0 0 6px rgba(200,59,59,0.6);
+  }
+</style>
+
+<nav class="pub-bottom-nav" id="pubBottomNav">
+  <a href="/" class="pub-nav-item <%= locals.currentPage === 'home' ? 'active' : '' %>">
+    <i class="fas fa-house"></i>
+    <span><%= t.nav_home %></span>
+    <span class="pub-active-bar"></span>
+  </a>
+  <!-- স্পোর্টস — আগে বটম নেভে স্পোর্টসের কোনো প্রবেশপথ ছিল না, ফলে ফুটবল/ক্রিকেট/
+       লাইভ ম্যাচ খুঁজে পাওয়া কঠিন ছিল। কোনো আইটেম সরানো হয়নি, শুধু যোগ করা হয়েছে। -->
+  <a href="/sports" class="pub-nav-item <%= ['sports','football','cricket','matches'].includes(locals.currentPage) ? 'active' : '' %>">
+    <i class="fas fa-futbol"></i>
+    <span><%= t.nav_sports %></span>
+    <span class="pub-active-bar"></span>
+  </a>
+  <a href="/extra/invitation" class="pub-nav-item <%= locals.currentPage === 'invitation' ? 'active' : '' %>">
+    <i class="fas fa-handshake"></i>
+    <span><%= t.nav_invite %></span>
+    <span class="pub-active-bar"></span>
+  </a>
+  <a href="/promotions" class="pub-nav-item pub-nav-promo <%= locals.currentPage === 'promotion' ? 'active' : '' %>">
+    <span class="pub-promo-circle">
+      <i class="fas fa-gift"></i>
+      <span class="pub-nav-dot"></span>
+    </span>
+    <span><%= t.nav_promotions %></span>
+  </a>
+  <a href="/chat" class="pub-nav-item <%= locals.currentPage === 'chat' ? 'active' : '' %>">
     <i class="fas fa-headset"></i>
-    <span><%= t.support %></span>
+    <span><%= t.nav_support %></span>
+    <span class="pub-active-bar"></span>
   </a>
-
-  <a href="/profile" onclick="location.href='/profile'; return false;" class="nav-link <%= locals.currentPage === 'profile' ? 'active' : '' %>">
-    <i class="fas fa-user-circle"></i>
-    <span><%= t.member %></span>
+  <a href="/profile" class="pub-nav-item <%= locals.currentPage === 'profile' ? 'active' : '' %>">
+    <i class="fas fa-circle-user"></i>
+    <span><%= t.nav_profile %></span>
+    <span class="pub-active-bar"></span>
   </a>
-</div>
-<% } %>
+</nav>
 

@@ -1,59 +1,188 @@
 @import "tailwindcss";
 
+/* =========================================================================
+   Livo Design Tokens — one design system, two complete themes.
+   Every color a component uses must come from a semantic token below.
+   Switching [data-theme] on <html> re-themes the entire app at once.
+   ========================================================================= */
+
 :root {
-  --background: #0a0f1c;
-  --foreground: #f1f5f9;
+  color-scheme: light;
+
+  --background: #FAFAF7;
+  --background-secondary: #F4F3EE;
+  --surface: #FFFFFF;
+  --surface-elevated: #FFFFFF;
+  --border: #E5E1D6;
+
+  --text-primary: #181B19;
+  --text-secondary: #59615B;
+  --text-muted: #858B86;
+
+  --accent: #B88918;
+  --accent-hover: #D4AF37;
+  --accent-soft: #FFF6D9;
+  --on-accent: #14110A;
+  /* accent যখন background-fill (badge/button, তার ওপর --on-accent বসে) সেটার সাথে
+     brand-accurate থাকা দরকার; সরাসরি surface-এর ওপর টেক্সট/আইকন রঙ হিসেবে --accent
+     ব্যবহার করলে (৩.১৭:১) AA normal-text থ্রেশহোল্ড মিস করে — তাই আলাদা, গাঢ় টোকেন। */
+  --text-accent: #8C6912;
+
+  --success: #2E8B44;
+  --warning: #C97D0E;
+  --danger: #C83B3B;
+
+  --icon-primary: #59615B;
+  --icon-secondary: #858B86;
+
+  --overlay-hover: rgba(24, 21, 12, 0.035);
+  --glow-accent: rgba(184, 137, 24, 0.22);
+  --shadow-card: 0 4px 16px rgba(24, 27, 25, 0.08);
+  --hero-bg: linear-gradient(135deg, #FFF6D9 0%, #FAFAF7 100%);
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 20px;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --background: #080D0B;
+  --background-secondary: #0D1411;
+  --surface: #111815;
+  --surface-elevated: #17201B;
+  --border: #29342D;
+
+  --text-primary: #F5F1E6;
+  --text-secondary: #B8BDB7;
+  --text-muted: #8A948D;
+
+  --accent: #C9A227;
+  --accent-hover: #E5C968;
+  --accent-soft: rgba(201, 162, 39, 0.12);
+  --on-accent: #14110A;
+  --text-accent: #C9A227;
+
+  --success: #3FAE58;
+  --warning: #E0A537;
+  --danger: #C83B3B;
+
+  --icon-primary: #B8BDB7;
+  --icon-secondary: #7F8982;
+
+  --overlay-hover: rgba(245, 241, 230, 0.05);
+  --glow-accent: rgba(201, 162, 39, 0.35);
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.35);
+  --hero-bg: linear-gradient(135deg, #0E2417 0%, #081109 100%);
+}
+
+/* No stored preference yet (or JS disabled): honor the OS setting so the
+   very first paint is never wrong. The blocking script in <head> normally
+   sets [data-theme] before paint; this is the no-JS / pre-hydration net. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    color-scheme: dark;
+    --background: #080D0B;
+    --background-secondary: #0D1411;
+    --surface: #111815;
+    --surface-elevated: #17201B;
+    --border: #29342D;
+    --text-primary: #F5F1E6;
+    --text-secondary: #B8BDB7;
+    --text-muted: #8A948D;
+    --accent: #C9A227;
+    --accent-hover: #E5C968;
+    --accent-soft: rgba(201, 162, 39, 0.12);
+    --text-accent: #C9A227;
+    --success: #3FAE58;
+    --warning: #E0A537;
+    --icon-primary: #B8BDB7;
+    --icon-secondary: #7F8982;
+    --overlay-hover: rgba(245, 241, 230, 0.05);
+    --glow-accent: rgba(201, 162, 39, 0.35);
+    --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.35);
+    --hero-bg: linear-gradient(135deg, #0E2417 0%, #081109 100%);
+  }
 }
 
 body {
-  color: var(--foreground);
   background: var(--background);
-  font-family: 'Inter', sans-serif;
+  color: var(--text-primary);
+  /* কোনো বাহ্যিক ফন্ট ডাউনলোড ছাড়াই — Inter ইনস্টল থাকলে সেটা, নাহলে সিস্টেম ফন্ট */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-@theme {
-  --color-background: #0A0F1C;
-  --color-card-default: #1A2338;
-  --color-primary-default: #FBBF24;
-  --color-primary-dark: #D97706;
-  --color-secondary: #10B981;
-  --color-text-main: #F1F5F9;
-  --color-text-muted: #94A3B8;
-  --color-accent: #EF4444;
+/* Maps every semantic token onto Tailwind utilities (bg-background,
+   text-text-primary, border-border, shadow-… etc). Kept as var()
+   references (not resolved literals) so switching [data-theme] at
+   runtime re-themes already-generated utility classes with zero rebuild. */
+@theme inline {
+  --color-background: var(--background);
+  --color-background-secondary: var(--background-secondary);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-border: var(--border);
 
-  --background-image-gold-gradient: linear-gradient(135deg, #FBBF24, #D97706);
-  --background-image-card-gradient: linear-gradient(145deg, #1A2338, #111827);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+  --color-accent-text: var(--text-accent);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+
+  --color-icon-primary: var(--icon-primary);
+  --color-icon-secondary: var(--icon-secondary);
+
+  --background-image-gold-gradient: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  --background-image-card-gradient: linear-gradient(145deg, var(--surface), var(--surface-elevated));
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
 }
 
 @utility glass {
   backdrop-filter: blur(12px);
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: var(--overlay-hover);
+  border: 1px solid var(--border);
 }
 
 @utility card-premium {
-  background-image: linear-gradient(to bottom right, #1A2338, #111827);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 1rem;
+  background-image: var(--background-image-card-gradient);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   overflow: hidden;
+  box-shadow: var(--shadow-card);
 }
 
 @utility btn-gold {
-  background-image: linear-gradient(135deg, #FBBF24, #D97706);
-  color: black;
+  background-image: var(--background-image-gold-gradient);
+  color: var(--on-accent);
   font-weight: bold;
   padding-top: 0.75rem;
   padding-bottom: 0.75rem;
   padding-left: 1.5rem;
   padding-right: 1.5rem;
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   transition-property: all;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
 }
 
 .btn-gold:hover {
-  filter: brightness(1.1);
+  filter: brightness(1.08);
 }
 
 .btn-gold:active {
@@ -61,9 +190,9 @@ body {
 }
 
 .gold-glow {
-  box-shadow: 0 0 20px rgba(251, 191, 36, 0.2);
+  box-shadow: 0 0 20px var(--glow-accent);
 }
 
 .gold-glow:hover {
-  box-shadow: 0 0 30px rgba(251, 191, 36, 0.4);
+  box-shadow: 0 0 30px var(--glow-accent);
 }

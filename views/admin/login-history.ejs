@@ -1,0 +1,81 @@
+<%
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function fmtDate(d) { return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); }
+function deviceBadge(l) {
+  const label = [l.browser, l.os].filter(Boolean).join(' · ') || 'Unknown';
+  return escapeHtml(label) + (l.deviceType && l.deviceType !== 'Desktop' ? ' <span class="text-slate-400">(' + escapeHtml(l.deviceType) + ')</span>' : '');
+}
+function logRow(l) {
+  const userLabel = l.username ? escapeHtml(l.username) + ' <span class="text-slate-400">(#' + l.user_id + ')</span>' : '#' + (l.user_id || '-');
+  const newBadge = l.is_new_device
+    ? '<span class="px-2.5 py-1 text-xs font-bold rounded-full bg-amber-100 text-amber-700">নতুন ডিভাইস</span>'
+    : '<span class="text-xs text-slate-400">-</span>';
+  return '<tr class="hover:bg-slate-50 align-top">' +
+    '<td class="px-6 py-4"><a href="/admin/users/' + (l.user_id || '') + '" class="font-semibold text-blue-600 hover:underline">' + userLabel + '</a></td>' +
+    '<td class="px-6 py-4 text-sm text-slate-700">' + deviceBadge(l) + '</td>' +
+    '<td class="px-6 py-4 text-sm font-mono text-slate-600">' + escapeHtml(l.ip) + '</td>' +
+    '<td class="px-6 py-4 text-sm text-slate-600">' + escapeHtml(l.location || 'অজানা') + '</td>' +
+    '<td class="px-6 py-4">' + newBadge + '</td>' +
+    '<td class="px-6 py-4 text-xs text-slate-400">' + fmtDate(l.created_at) + '</td>' +
+  '</tr>';
+}
+const rows = (logs || []).map(logRow).join('') || '<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400">কোনো লগইন রেকর্ড পাওয়া যায়নি</td></tr>';
+const f = filters || {};
+function qs(overrides) {
+  const merged = Object.assign({ q: f.q, new_device: f.new_device, from: f.from, to: f.to }, overrides);
+  return Object.keys(merged).map(k => k + '=' + encodeURIComponent(merged[k] || '')).join('&');
+}
+%>
+<%- include('partials/admin-layout', {
+    title: 'Login History',
+    active: 'login-history',
+    body: `
+<div class="max-w-7xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-semibold text-slate-900">Login History</h1>
+            <p class="text-slate-500 mt-1 text-sm">মোট ${total || 0}টি লগইন রেকর্ড — সব ইউজারের ডিভাইস, IP ও আনুমানিক লোকেশনসহ</p>
+        </div>
+    </div>
+
+    <form method="GET" action="/admin/login-history" class="flex flex-wrap gap-3 mb-6">
+        <input type="text" name="q" value="${escapeHtml(f.q || '')}" placeholder="ইউজারনেম, IP, বা লোকেশন দিয়ে খুঁজুন"
+               class="flex-1 min-w-[220px] border border-slate-200 px-4 py-2.5 rounded-2xl text-sm outline-none focus:border-blue-300">
+        <select name="new_device" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+            <option value="">সব লগইন</option>
+            <option value="1" ${f.new_device === '1' ? 'selected' : ''}>শুধু নতুন ডিভাইস</option>
+        </select>
+        <input type="date" name="from" value="${escapeHtml(f.from || '')}" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+        <input type="date" name="to" value="${escapeHtml(f.to || '')}" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+        <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">ফিল্টার</button>
+        ${(f.q || f.new_device || f.from || f.to) ? '<a href="/admin/login-history" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">রিসেট</a>' : ''}
+    </form>
+
+    <div class="bg-white rounded-3xl border border-slate-100 overflow-x-auto modern-table">
+        <table class="w-full text-sm">
+            <thead class="bg-slate-50">
+                <tr>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">User</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Device / Browser</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">IP</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Location</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Status</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Date</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">${rows}</tbody>
+        </table>
+    </div>
+
+    <div class="flex justify-center gap-3 mt-6">
+        ${page > 1 ? '<a href="/admin/login-history?page=' + (page - 1) + '&' + qs({}) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">← আগের পেজ</a>' : ''}
+        <span class="px-4 py-2 text-sm text-slate-500">পেজ ${page} / ${totalPages}</span>
+        ${page < totalPages ? '<a href="/admin/login-history?page=' + (page + 1) + '&' + qs({}) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">পরের পেজ →</a>' : ''}
+    </div>
+</div>
+`
+}) %>

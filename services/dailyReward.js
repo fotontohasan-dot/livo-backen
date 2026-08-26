@@ -4,6 +4,7 @@
 // দিন বদলালে (reward_date) অটো রিসেট — নতুন দিনের নতুন রো।
 
 const { pool } = require('../db');
+const { t } = require('../utils/i18n');
 
 // আজকের তারিখ (সার্ভার লোকাল) — YYYY-MM-DD
 function today() {
@@ -65,7 +66,7 @@ async function getTodayReward(userId) {
 // ==================== ৩. রিওয়ার্ড ক্লেইম ====================
 // নিরাপত্তা: transaction + FOR UPDATE, দিনে একবারই, টিয়ার সার্ভারে যাচাই।
 // ফেরত দেয়: {success, amount, message}
-async function claimDailyReward(userId) {
+async function claimDailyReward(userId, lang = 'bn') {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -79,11 +80,11 @@ async function claimDailyReward(userId) {
 
     if (!row) {
       await client.query('ROLLBACK');
-      return { success: false, message: 'আজ কোনো স্পোর্টস বেট করেননি।' };
+      return { success: false, message: t(lang, 'daily_reward_no_bets') };
     }
     if (row.claimed) {
       await client.query('ROLLBACK');
-      return { success: false, message: 'আজকের রিওয়ার্ড আগেই নেওয়া হয়েছে।' };
+      return { success: false, message: t(lang, 'daily_reward_already_claimed') };
     }
 
     // সার্ভারে টিয়ার যাচাই — turnover অনুযায়ী সর্বোচ্চ বোনাস
@@ -96,7 +97,7 @@ async function claimDailyReward(userId) {
 
     if (tierRes.rows.length === 0) {
       await client.query('ROLLBACK');
-      return { success: false, message: 'রিওয়ার্ড পেতে আরও বেট করুন।' };
+      return { success: false, message: t(lang, 'daily_reward_more_bets_needed') };
     }
 
     const bonusAmount = tierRes.rows[0].bonus_amount;
@@ -130,11 +131,11 @@ async function claimDailyReward(userId) {
     );
 
     await client.query('COMMIT');
-    return { success: true, amount: bonusAmount, message: `${bonusAmount} কয়েন পেয়েছেন!` };
+    return { success: true, amount: bonusAmount, message: t(lang, 'reward_coins_received_bonus').replace('{value}', bonusAmount) };
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('claimDailyReward error:', err.message);
-    return { success: false, message: 'সার্ভার ত্রুটি।' };
+    return { success: false, message: t(lang, 'common_server_error') };
   } finally {
     client.release();
   }

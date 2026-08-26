@@ -1,0 +1,52 @@
+<%- include('../partials/head') %>
+
+<div class="container" style="padding: 15px; padding-bottom: 100px;">
+  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+    <a href="/profile/security" style="color:var(--text-main); text-decoration: none; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+      <i class="fas fa-chevron-left"></i>
+    </a>
+    <h1 style="color:var(--text-main); font-size: 20px; font-weight: 800;"><%= t.login_history_title %></h1>
+  </div>
+
+  <%- include('../partials/flash') %>
+
+  <div style="display: flex; flex-direction: column; gap: 10px;">
+    <% if (logins && logins.length) { %>
+      <% logins.forEach(function(l) { %>
+        <div style="background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 14px; padding: 14px 16px;">
+          <div style="display: flex; justify-content: space-between; align-items:flex-start; gap:10px;">
+            <div>
+              <div style="color:var(--text-main); font-size: 13px; font-weight: 700;">
+                <i class="fas <%= l.deviceType === 'Mobile' ? 'fa-mobile-screen' : (l.deviceType === 'Tablet' ? 'fa-tablet-screen-button' : 'fa-desktop') %>"></i>
+                <%= l.browser %> · <%= l.os %>
+              </div>
+              <div style="color: var(--text-muted); font-size: 11px; margin-top: 6px;"><%= l.ip %><%= l.location ? ' · ' + l.location : '' %></div>
+            </div>
+            <% if (l.is_new_device) { %>
+              <span style="background:rgba(245,158,11,0.15); color: var(--text-accent); font-size:10px; font-weight:800; padding:3px 8px; border-radius:20px; white-space:nowrap;"><%= t.new_device_badge %></span>
+            <% } %>
+          </div>
+          <div style="color: var(--text-muted); font-size: 11px; margin-top: 8px; text-align:right;">
+            <%= new Date(l.created_at).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %>
+          </div>
+        </div>
+      <% }) %>
+    <% } else { %>
+      <div style="text-align:center; padding: 40px 0; color: var(--text-muted); font-size: 13px;"><%= t.no_login_history %></div>
+    <% } %>
+  </div>
+
+  <% if ((page && page > 1) || hasMore) { %>
+    <div style="display:flex; justify-content:space-between; gap:10px; margin-top: 18px;">
+      <% if (page > 1) { %>
+        <a href="/profile/login-history?page=<%= page - 1 %>" style="flex:1; text-align:center; background: var(--bg-card); border:1px solid var(--border-glass); color:var(--text-main); padding:12px; border-radius:12px; font-size:12px; font-weight:700; text-decoration:none;"><%= t.back_to_page_prev %></a>
+      <% } %>
+      <% if (hasMore) { %>
+        <a href="/profile/login-history?page=<%= page + 1 %>" style="flex:1; text-align:center; background: var(--grad-gold); color:#000; padding:12px; border-radius:12px; font-size:12px; font-weight:800; text-decoration:none;"><%= t.back_to_page_next %></a>
+      <% } %>
+    </div>
+  <% } %>
+</div>
+
+<%- include('../partials/navbar') %>
+<%- include('../partials/bottom-nav') %>

@@ -48,6 +48,10 @@ async function getCricketCurrentMatches() {
       teamInfo: m.teamInfo || [],
       score: m.score || [],
       matchType: m.matchType,
+      // প্রোভাইডার এই ফিল্ডগুলো পাঠালে হারিয়ে যেত — অ্যাডাপ্টারে league/metadata
+      // নরমালাইজ করার জন্য দরকার। না পাঠালে undefined থাকে, বানানো হয় না।
+      series_id: m.series_id,
+      series: m.series,
       sport: 'cricket',
     }));
     setCache('cricket:current', matches);

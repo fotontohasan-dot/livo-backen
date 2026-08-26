@@ -45,6 +45,8 @@
   .dr-box { position: relative; max-width: 360px; width: 100%; border-radius: 20px; overflow: hidden; }
   .dr-red { background: radial-gradient(circle at 50% 0%, #b91c1c, #7f1d1d 70%); padding: 18px 16px 20px; }
   .dr-egg { background: radial-gradient(circle at 50% 0%, #3b2f0b, #1a1505 75%); padding: 18px 16px 20px; }
+  .dr-banner-wrap{position:relative;text-align:center;margin-bottom:4px;}
+  .dr-crown{font-size:34px;filter:drop-shadow(0 3px 4px rgba(0,0,0,.4));margin-bottom:-8px;}
   .dr-banner { background: linear-gradient(180deg,#ff4d4d,#d61f1f); color: #fff; font-weight: 800; font-size: 17px; text-align: center; padding: 9px 0; border-radius: 30px; margin: 0 auto 6px; max-width: 70%; border: 2px solid #ffd06b; }
   .dr-subtitle { color: #ffe08a; font-size: 13px; text-align: center; font-weight: 700; margin: 8px 6px 12px; line-height: 1.5; }
   .dr-close { position: absolute; top: 10px; right: 10px; width: 38px; height: 38px; background: rgba(0,0,0,0.45); color: #fff; border: 2px solid #fff; border-radius: 50%; font-size: 22px; font-weight: bold; cursor: pointer; z-index: 6; }
@@ -53,13 +55,27 @@
   .dr-timer .t-cell { background: #fff; color: #c81d1d; font-weight: 800; font-size: 18px; border-radius: 7px; padding: 4px 9px; min-width: 36px; text-align: center; }
   .dr-timer .t-colon { color: #fff; font-weight: 800; }
   .dr-bigpack { text-align: center; font-size: 110px; line-height: 1; margin: 6px 0 4px; }
-  .dr-eggs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 4px 0 10px; }
-  .dr-egg-item { position: relative; aspect-ratio: 3/4; border-radius: 12px; background: radial-gradient(circle at 50% 35%, rgba(255,215,120,0.25), rgba(0,0,0,0)); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
-  .dr-egg-item .egg-emoji { font-size: 34px; }
+
+  /* সোনার ডিম — লাল স্ট্যান্ডে বসানো ডিম */
+  .dr-eggs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 10px 0 10px; }
+  .dr-egg-item { position: relative; aspect-ratio: 3/4.4; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; cursor: pointer; }
+  .dr-egg-item .egg-glow{ position:absolute; top:2px; left:50%; transform:translateX(-50%); width:60%; height:55%; background:radial-gradient(circle,rgba(255,215,120,.55),rgba(255,215,120,0) 70%); border-radius:50%; }
+  .dr-egg-item .egg-emoji { font-size: 34px; position:relative; z-index:2; filter:drop-shadow(0 3px 3px rgba(0,0,0,.5)); }
+  .dr-egg-item .egg-stand{ width:70%; height:14px; background:linear-gradient(180deg,#c81d1d,#7f1d1d); border-radius:6px 6px 3px 3px; margin-top:-6px; box-shadow:0 3px 6px rgba(0,0,0,.5); position:relative; z-index:1; }
   .dr-egg-item.opened .egg-emoji { font-size: 22px; opacity: .5; }
   .dr-egg-item .egg-amt { display: none; font-size: 13px; font-weight: 800; color: #ffd700; margin-top: 2px; }
   .dr-egg-item.opened .egg-amt { display: block; }
   .dr-egg-item.win .egg-amt { color: #4ade80; font-size: 15px; }
+
+  /* লাল প্যাকেট — কয়েন সহ স্তুপাকার প্যাকেট */
+  .dr-red-stack{ position:relative; width:220px; height:220px; margin:4px auto 10px; }
+  .dr-red-stack .env{ position:absolute; width:150px; height:190px; left:50%; top:50%; border-radius:14px; background:linear-gradient(180deg,#ff6b6b,#c81d1d); border:2px solid #ffd06b; box-shadow:0 8px 18px rgba(0,0,0,.4); }
+  .dr-red-stack .env::after{ content:''; position:absolute; left:50%; top:52%; transform:translate(-50%,-50%); width:38px; height:38px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#ffe9a8,#d4a11a); border:2px solid #fff3cf; }
+  .dr-red-stack .env.e1{ transform:translate(-50%,-50%) rotate(-18deg) translateX(-46px); z-index:1; opacity:.9;}
+  .dr-red-stack .env.e2{ transform:translate(-50%,-50%) rotate(18deg) translateX(46px); z-index:1; opacity:.9;}
+  .dr-red-stack .env.e3{ transform:translate(-50%,-50%); z-index:3; }
+  .dr-red-stack .coin{ position:absolute; width:26px; height:26px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#ffe9a8,#d4a11a); border:2px solid #fff3cf; box-shadow:0 3px 6px rgba(0,0,0,.4); z-index:4; }
+
   .dr-claim { display: block; width: 86%; margin: 6px auto 4px; padding: 13px; border: none; border-radius: 30px; background: linear-gradient(180deg,#ffd86b,#f0a91e); color: #7a3e00; font-size: 16px; font-weight: 800; cursor: pointer; }
   .dr-claim:disabled { opacity: .6; }
   .dr-hint { text-align: center; color: #ffe08a; font-size: 11px; margin-top: 6px; }
@@ -71,22 +87,23 @@
   .lpFrame-close { position: absolute; top: 10px; right: 10px; width: 40px; height: 40px; background: rgba(0,0,0,0.6); color: #fff; border: 2px solid #fff; border-radius: 50%; font-size: 24px; font-weight: bold; cursor: pointer; z-index: 6; }
 </style>
 
-<div id="lpPopup"><div class="pp-box"><button class="pp-close" id="lpPopClose">×</button><div class="pp-scroll"><div id="lpPopupBody"></div><div class="pp-dots" id="lpPopupDots"></div></div><div class="pp-actions"><button class="pp-prev" id="lpPopPrev">পূর্ববর্তী</button><button class="pp-next" id="lpPopNext">পরবর্তী</button></div></div></div>
+<div id="lpPopup"><div class="pp-box"><button class="pp-close" id="lpPopClose">×</button><div class="pp-scroll"><div id="lpPopupBody"></div><div class="pp-dots" id="lpPopupDots"></div></div><div class="pp-actions"><button class="pp-prev" id="lpPopPrev"><%= t.previous %></button><button class="pp-next" id="lpPopNext"><%= t.next %></button></div></div></div>
 
-<div class="dr-overlay" id="drRedOverlay"><div class="dr-box dr-red"><button class="dr-close" id="drRedClose">×</button><div class="dr-banner">পুরস্কার</div><div class="dr-subtitle">দৈনিক লগইন লল খাম — সর্বোচ্চ পুরস্কার ৯৯,৯৯৯</div><div class="dr-timer"><span class="t-label">অবশিষ্ট সময়</span><span class="t-cell" id="drRedH">00</span><span class="t-colon">:</span><span class="t-cell" id="drRedM">00</span><span class="t-colon">:</span><span class="t-cell" id="drRedS">00</span></div><div class="dr-bigpack">🧧</div><div id="drRedResult"></div><button class="dr-claim" id="drRedBtn">দাবি করুন</button><div class="dr-hint">দিনে একবার দাবি করা যাবে</div></div></div>
+<div class="dr-overlay" id="drRedOverlay"><div class="dr-box dr-red"><button class="dr-close" id="drRedClose">×</button><div class="dr-banner-wrap"><div class="dr-crown">👑</div><div class="dr-banner"><%= t.prize %></div></div><div class="dr-subtitle"><%= t.red_packet_desc %></div><div class="dr-timer"><span class="t-label"><%= t.time_remaining %></span><span class="t-cell" id="drRedH">00</span><span class="t-colon">:</span><span class="t-cell" id="drRedM">00</span><span class="t-colon">:</span><span class="t-cell" id="drRedS">00</span></div><div class="dr-red-stack"><div class="env e1"></div><div class="env e2"></div><div class="env e3"></div><div class="coin" style="left:20px;top:6px;"></div><div class="coin" style="right:20px;top:0px;"></div><div class="coin" style="left:50%;top:-8px;transform:translateX(-50%);"></div></div><div id="drRedResult"></div><button class="dr-claim" id="drRedBtn"><%= t.claim %></button><div class="dr-hint"><%= t.claim_once_per_day %></div></div></div>
 
-<div class="dr-overlay" id="drEggOverlay"><div class="dr-box dr-egg"><button class="dr-close" id="drEggClose">×</button><div class="dr-banner">পুরস্কার</div><div class="dr-subtitle">প্রতিদন লগইন করলেই গোল্ডেন এগ ভাঙতে পারবেন</div><div class="dr-timer"><span class="t-label">অবশিষ্ট সময়</span><span class="t-cell" id="drEggH">00</span><span class="t-colon">:</span><span class="t-cell" id="drEggM">00</span><span class="t-colon">:</span><span class="t-cell" id="drEggS">00</span></div><div class="dr-eggs" id="drEggGrid"></div><div id="drEggResult"></div><div class="dr-hint" id="drEggHint">একটি ডিমে চাপ দিন</div></div></div>
+<div class="dr-overlay" id="drEggOverlay"><div class="dr-box dr-egg"><button class="dr-close" id="drEggClose">×</button><div class="dr-banner-wrap"><div class="dr-crown">👑</div><div class="dr-banner"><%= t.prize %></div></div><div class="dr-subtitle"><%= t.golden_egg_desc %></div><div class="dr-timer"><span class="t-label"><%= t.time_remaining %></span><span class="t-cell" id="drEggH">00</span><span class="t-colon">:</span><span class="t-cell" id="drEggM">00</span><span class="t-colon">:</span><span class="t-cell" id="drEggS">00</span></div><div class="dr-eggs" id="drEggGrid"></div><div id="drEggResult"></div><div class="dr-hint" id="drEggHint"><%= t.tap_an_egg %></div></div></div>
 
 <div class="lpFrame-overlay" id="lpFrameOverlay"><div class="lpFrame-box"><button class="lpFrame-close" id="lpFrameClose">×</button><iframe id="lpFrame" src="about:blank"></iframe></div></div>
 
 <div id="lpPanel"><div class="lp-top"><button class="lp-close" id="lpBtnClose">×</button><button class="lp-up" id="lpBtnUp">⌃</button></div>
-<button class="lp-item" id="lpBtnTour"><div class="lp-icon lp-ic-trophy">🏆</div><div class="lp-label">টুর্নামেন্ট</div></button>
-<button class="lp-item" id="lpBtnWheel"><div class="lp-icon lp-ic-wheel">🎡</div><div class="lp-label">লাকি স্পিন</div></button>
-<button class="lp-item" id="lpBtnEgg"><div class="lp-icon lp-ic-egg">🥚</div><div class="lp-label">সোনার ডিম</div></button>
-<button class="lp-item" id="lpBtnRed"><div class="lp-icon lp-ic-packet">🧧</div><div class="lp-label">লাল পকেট</div></button></div>
+<button class="lp-item" id="lpBtnTour"><div class="lp-icon lp-ic-trophy">🏆</div><div class="lp-label"><%= t.tournaments %></div></button>
+<button class="lp-item" id="lpBtnWheel"><div class="lp-icon lp-ic-wheel">🎡</div><div class="lp-label"><%= t.lucky_spin %></div></button>
+<button class="lp-item" id="lpBtnEgg"><div class="lp-icon lp-ic-egg">🥚</div><div class="lp-label"><%= t.golden_egg %></div></button>
+<button class="lp-item" id="lpBtnRed"><div class="lp-icon lp-ic-packet">🧧</div><div class="lp-label"><%= t.red_packet %></div></button></div>
 
 <div id="lpPromo"><div class="lp-dot"></div><div class="lp-pack">🧧</div></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.9.3/confetti.browser.min.js"></script>
 <script>
 function _g(id){ return document.getElementById(id); }
 var lpStatus = { redPacket:{claimed:false}, goldenEgg:{claimed:false} };
@@ -98,14 +115,14 @@ window.lpClosePanel = lpClosePanelFn;
 function lpOpenFrame(url){ lpClosePanelFn(); var f=_g('lpFrame'); if(f) f.src=url; var ov=_g('lpFrameOverlay'); if(ov) ov.style.display='flex'; }
 function lpCloseFrame(){ var ov=_g('lpFrameOverlay'); if(ov) ov.style.display='none'; var f=_g('lpFrame'); if(f) f.src='about:blank'; }
 
-function drOpenRedFn(){ lpClosePanelFn(); var rr=_g('drRedResult'); if(rr) rr.innerHTML=''; var btn=_g('drRedBtn'); if(btn){ if(lpStatus.redPacket.claimed){btn.disabled=true;btn.textContent='আজ নওয়া হয়েছে';}else{btn.disabled=false;btn.textContent='দাবি করুন';} } var ov=_g('drRedOverlay'); if(ov) ov.style.display='flex'; }
+function drOpenRedFn(){ lpClosePanelFn(); var rr=_g('drRedResult'); if(rr) rr.innerHTML=''; var btn=_g('drRedBtn'); if(btn){ if(lpStatus.redPacket.claimed){btn.disabled=true;btn.textContent='আজ নওয়া হয়েছে';}else if(lpStatus.redPacket.locked){btn.disabled=true;btn.textContent='🔒 আজ ডিপোজিট করুন';}else{btn.disabled=false;btn.textContent='দাবি করুন';} } var ov=_g('drRedOverlay'); if(ov) ov.style.display='flex'; }
 function drCloseRedFn(){ var e=_g('drRedOverlay'); if(e) e.style.display='none'; }
-function drClaimRedFn(){ var btn=_g('drRedBtn'); if(!btn) return; btn.disabled=true; btn.textContent='অপেক্ষা করুন...'; fetch('/profile/daily-rewards/red-packet/claim',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).then(function(r){return r.json();}).then(function(d){ if(d.ok){ lpStatus.redPacket.claimed=true; _g('drRedResult').innerHTML='<div class="dr-success">🎉 আপনি পেলেন '+d.amount+' কযন!</div>'; btn.textContent='সফল হয়েছে'; setTimeout(drCloseRedFn,2500); }else{ _g('drRedResult').innerHTML='<div class="dr-hint">'+(d.message||'সমস্যা')+'</div>'; btn.disabled=false; btn.textContent='দাব করুন'; } }).catch(function(){ btn.disabled=false; btn.textContent='দাবি করুন'; }); }
+function drClaimRedFn(){ var btn=_g('drRedBtn'); if(!btn) return; btn.disabled=true; btn.textContent='অপেক্ষা করুন...'; fetch('/profile/daily-rewards/red-packet/claim',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).then(function(r){return r.json();}).then(function(d){ if(d.ok){ lpStatus.redPacket.claimed=true; _g('drRedResult').innerHTML='<div class="dr-success">🎉 আপনি পেলেন '+d.amount+' কযন!</div>'; btn.textContent='সফল হয়েছে'; if(window.confetti) confetti({particleCount:120,spread:80,origin:{y:0.6}}); setTimeout(drCloseRedFn,2500); }else{ _g('drRedResult').innerHTML='<div class="dr-hint">'+(d.message||'সমস্যা')+'</div>'; btn.disabled=false; btn.textContent='দাব করুন'; } }).catch(function(){ btn.disabled=false; btn.textContent='দাবি করুন'; }); }
 
 var _eggClaimed=false;
-function drOpenEggFn(){ lpClosePanelFn(); var grid=_g('drEggGrid'); if(grid){ grid.innerHTML=''; for(var i=0;i<8;i++){ var d=document.createElement('div'); d.className='dr-egg-item'; d.innerHTML='<span class="egg-emoji">🥚</span><span class="egg-amt"></span>'; d.onclick=(function(idx){return function(){drPickEgg(idx);};})(i); grid.appendChild(d); } } var hint=_g('drEggHint'); if(hint) hint.textContent='একটি ডিমে চাপ দিন'; var rr=_g('drEggResult'); if(rr) rr.innerHTML=''; _eggClaimed=false; if(lpStatus.goldenEgg.claimed){ if(hint) hint.textContent='আজকের ডিম ইতিমধ্যে নেওয়া হয়েছে'; var items=document.querySelectorAll('#drEggGrid .dr-egg-item'); for(var j=0;j<items.length;j++){ items[j].style.opacity='.4'; items[j].onclick=null; } } var ov=_g('drEggOverlay'); if(ov) ov.style.display='flex'; }
+function drOpenEggFn(){ lpClosePanelFn(); var grid=_g('drEggGrid'); if(grid){ grid.innerHTML=''; for(var i=0;i<8;i++){ var d=document.createElement('div'); d.className='dr-egg-item'; d.innerHTML='<div class="egg-glow"></div><span class="egg-emoji">🥚</span><div class="egg-stand"></div><span class="egg-amt"></span>'; d.onclick=(function(idx){return function(){drPickEgg(idx);};})(i); grid.appendChild(d); } } var hint=_g('drEggHint'); if(hint) hint.textContent='একটি ডিমে চাপ দিন'; var rr=_g('drEggResult'); if(rr) rr.innerHTML=''; _eggClaimed=false; if(lpStatus.goldenEgg.claimed){ if(hint) hint.textContent='আজকের ডিম ইতিমধ্যে নেওয়া হয়েছে'; var items=document.querySelectorAll('#drEggGrid .dr-egg-item'); for(var j=0;j<items.length;j++){ items[j].style.opacity='.4'; items[j].onclick=null; } } else if(lpStatus.goldenEgg.locked){ if(hint) hint.textContent='🔒 ডিম লক করা আছে। আজ ডিপোজিট করুন।'; var items2=document.querySelectorAll('#drEggGrid .dr-egg-item'); for(var k=0;k<items2.length;k++){ items2[k].style.opacity='.4'; items2[k].onclick=null; } } var ov=_g('drEggOverlay'); if(ov) ov.style.display='flex'; }
 function drCloseEggFn(){ var e=_g('drEggOverlay'); if(e) e.style.display='none'; }
-function drPickEgg(idx){ if(_eggClaimed||lpStatus.goldenEgg.claimed) return; _eggClaimed=true; var hint=_g('drEggHint'); if(hint) hint.textContent='অপেক্ষা করুন...'; fetch('/profile/daily-rewards/golden-egg/claim',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pickedIndex:idx})}).then(function(r){return r.json();}).then(function(d){ if(d.ok){ lpStatus.goldenEgg.claimed=true; var items=document.querySelectorAll('#drEggGrid .dr-egg-item'); for(var i=0;i<items.length;i++){ items[i].classList.add('opened'); if(i===d.pickedIndex) items[i].classList.add('win'); items[i].querySelector('.egg-amt').textContent=d.reveal[i]; items[i].onclick=null; } _g('drEggResult').innerHTML='<div class="dr-success">🎉 আপনি পেলেন '+d.amount+' কয়েন!</div>'; if(hint) hint.textContent='অন্যান্য ডিমে আরও বড় পুরস্কার ছিল!'; setTimeout(drCloseEggFn,4000); }else{ if(hint) hint.textContent=d.message||'সমস্যা'; _eggClaimed=false; } }).catch(function(){ _eggClaimed=false; if(hint) hint.textContent='সমস্যা হয়েছে'; }); }
+function drPickEgg(idx){ if(_eggClaimed||lpStatus.goldenEgg.claimed) return; _eggClaimed=true; var hint=_g('drEggHint'); if(hint) hint.textContent='অপেক্ষা করুন...'; fetch('/profile/daily-rewards/golden-egg/claim',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pickedIndex:idx})}).then(function(r){return r.json();}).then(function(d){ if(d.ok){ lpStatus.goldenEgg.claimed=true; var items=document.querySelectorAll('#drEggGrid .dr-egg-item'); for(var i=0;i<items.length;i++){ items[i].classList.add('opened'); if(i===d.pickedIndex) items[i].classList.add('win'); items[i].querySelector('.egg-amt').textContent=d.reveal[i]; items[i].onclick=null; } _g('drEggResult').innerHTML='<div class="dr-success">🎉 আপনি পেলেন '+d.amount+' কয়েন!</div>'; if(window.confetti) confetti({particleCount:150,spread:90,origin:{y:0.6}}); if(hint) hint.textContent='অন্যান্য ডিমে আরও বড় পুরস্কার ছিল!'; setTimeout(drCloseEggFn,4000); }else{ if(hint) hint.textContent=d.message||'সমস্যা'; _eggClaimed=false; } }).catch(function(){ _eggClaimed=false; if(hint) hint.textContent='সমস্যা হয়েছে'; }); }
 
 var LP_IMG = ["<%= popupImg1 %>","<%= popupImg2 %>","<%= popupImg3 %>"];
 var LP_TIT = ["সদস্য উদযাপন দিবস","VIP সদস্যদের জন্য আরও সুবিধা","এখনই অযাপ ডাউনলোড করুন"];

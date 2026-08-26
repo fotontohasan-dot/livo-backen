@@ -1,10 +1,68 @@
 const { Server } = require("socket.io");
 const { pool } = require('../db');
 const { getBotReply } = require('./chatbot');
+const { notifyTelegram } = require('./telegramNotify');
+const cache = require('./cache');
+
+// ===== চ্যাট মেসেজ রেট-লিমিট =====
+// HTTP রুটগুলো সবই কোনো না কোনো rate limiter-এর পেছনে, কিন্তু Socket.IO ইভেন্ট একটা আলাদা চ্যানেল
+// যেখানে আগে কোনো সীমা ছিল না — একটা অ্যাকাউন্ট থেকে দ্রুতগতিতে send_message পাঠালে প্রতিটাই DB-তে
+// ইনসার্ট হতো, সব admin-এর লাইভ সেশনে broadcast হতো, আর Telegram bot API-তেও কল যেত (bot-এর নিজের
+// rate limit শেষ করে দেওয়া সম্ভব)। এখন প্রতি ইউজারে প্রতি উইন্ডোতে বার্তার সংখ্যা সীমিত করা হচ্ছে।
+const CHAT_RATE_LIMIT = 15;      // প্রতি উইন্ডোতে সর্বোচ্চ বার্তা
+const CHAT_RATE_WINDOW_SEC = 10; // ১০ সেকেন্ড উইন্ডো
+// Redis অনুপলব্ধ থাকলে (cache.incrWithExpiry null দেয়) ইন-প্রসেস fallback — multi-instance
+// deployment-এ perfectly synchronized না হলেও single-instance/dev/test-এ কার্যকর সুরক্ষা দেয়,
+// আর Redis চালু থাকলে সেটাই আসল উৎস (সব instance জুড়ে সমন্বিত)।
+const inMemoryChatRate = new Map();
+async function allowChatMessage(userId) {
+  const key = `chat:msg:${userId}`;
+  const result = await cache.incrWithExpiry(key, CHAT_RATE_WINDOW_SEC);
+  if (result) return result.count <= CHAT_RATE_LIMIT;
+
+  const now = Date.now();
+  const windowMs = CHAT_RATE_WINDOW_SEC * 1000;
+  const entry = inMemoryChatRate.get(userId);
+  if (!entry || now - entry.start > windowMs) {
+    inMemoryChatRate.set(userId, { start: now, count: 1 });
+    return true;
+  }
+  entry.count += 1;
+  return entry.count <= CHAT_RATE_LIMIT;
+}
+
+// ===== "দেখা হয়েছে" (Seen) রিসিট — Messenger-এর মতো রিয়েল-টাইম নোটিফিকেশন =====
+const notifyUserSeen = (userId) => {
+  if (!io || !userId) return;
+  try { io.to(`user:${userId}`).emit('messages_seen', { by: 'admin' }); }
+  catch (err) { console.error('notifyUserSeen error:', err.message); }
+};
+
+const notifyAdminsSeen = (userId) => {
+  if (!io || !userId) return;
+  try { io.to('admins').emit('messages_seen', { by: Number(userId) }); }
+  catch (err) { console.error('notifyAdminsSeen error:', err.message); }
+};
 
 let io;
 
-const initSocket = (server) => {
+// ===== অ্যাডমিন প্যানেলে রিয়েল-টাইম নোটিফিকেশন (ডিপোজিট/উইথড্র/চ্যাট) =====
+// type: 'deposit' | 'withdraw' | 'chat'
+const emitAdminAlert = (type, data = {}) => {
+  if (!io) return;
+  try {
+    io.to('admins').emit('admin_alert', {
+      type,
+      title: data.title || '',
+      message: data.message || '',
+      createdAt: new Date()
+    });
+  } catch (err) {
+    console.error('emitAdminAlert error:', err.message);
+  }
+};
+
+const initSocket = (server, sessionMiddleware) => {
   io = new Server(server, {
     cors: {
       origin: "*",
@@ -12,43 +70,64 @@ const initSocket = (server) => {
     }
   });
 
+  // ===== নিরাপত্তা: socket handshake-এর সাথে Express session যুক্ত করা =====
+  // এর ফলে socket.request.session.user থেকে আসল লগইন করা ইউজার/রোল পাওয়া যাবে,
+  // ক্লায়েন্ট যা দাবি করে (senderId, isAdmin) তা আর বিশ্বাস করা হবে না।
+  if (sessionMiddleware) {
+    io.engine.use(sessionMiddleware);
+  }
+
   io.on("connection", (socket) => {
     console.log("🟢 User connected:", socket.id);
 
-    // ===== ম্যাচ রুম (লাইভ স্কোর) =====
+    const getSessionUser = () => {
+      const s = socket.request && socket.request.session;
+      return (s && s.user) ? s.user : null;
+    };
+
+    // লগইন করা থাকলে সাথে সাথে নিজের চ্যাট রুমে ও (অ্যাডমিন হলে) admins রুমে জয়েন করানো
+    const authUser = getSessionUser();
+    if (authUser) {
+      socket.join(`user:${authUser.id}`);
+      if (authUser.role === 'admin') socket.join('admins');
+    }
+
+    // ===== ম্যাচ রুম (লাইভ স্কোর) — পাবলিক তথ্য, লগইন লাগবে না =====
     socket.on("joinMatch", (matchId) => {
       socket.join(`match:${matchId}`);
     });
     socket.on("join_matches", () => socket.join("matches"));
     socket.on("leave_matches", () => socket.leave("matches"));
 
-    // ===== ইউজার নিজের চ্যাট রুমে জয়েন =====
-    socket.on("join", (userId) => {
-      if (userId) socket.join(`user:${userId}`);
+    // ===== ইউজার নিজের চ্যাট রুমে জয়েন — শুধু নিজের রুমে, session দিয়ে যাচাই করে =====
+    socket.on("join", () => {
+      const u = getSessionUser();
+      if (u) socket.join(`user:${u.id}`);
     });
 
-    // ===== অ্যাডমিন চ্যাট রুম =====
+    // ===== অ্যাডমিন চ্যাট রুম — শুধু আসল admin session হলেই =====
     socket.on("join_admin", () => {
-      socket.join("admins");
+      const u = getSessionUser();
+      if (u && u.role === 'admin') socket.join("admins");
     });
 
     // ===== চ্যাট মেসেজ পাঠানো/গ্রহণ =====
     socket.on("send_message", async (data) => {
       try {
-        const senderId = data && data.senderId;
+        const u = getSessionUser();
+        if (!u) return; // লগইন ছাড়া মেসেজ পাঠানো যাবে না
+
+        const senderId = u.id; // ক্লায়েন্টের senderId উপেক্ষা করা হচ্ছে, session-ই একমাত্র সত্য উৎস
+
+        if (!(await allowChatMessage(senderId))) return; // রেট-লিমিট ছাড়িয়ে গেলে নীরবে ড্রপ
+
+        const isAdmin = u.role === 'admin';
         const receiverId = (data && data.receiverId) || null;
         const message = (data && data.message) || null;
         const fileUrl = (data && data.fileUrl) || null;
         const fileType = (data && data.fileType) || null;
-        let isAdmin = !!(data && data.isAdmin);
 
-        if (!senderId || (!message && !fileUrl)) return;
-
-        // নিরাপত্তা: কেউ isAdmin:true দাবি করলেও ডেটাবেস থেকে আসল রোল যাচাই
-        if (isAdmin) {
-          const r = await pool.query('SELECT role FROM users WHERE id = $1', [senderId]);
-          isAdmin = !!(r.rows[0] && r.rows[0].role === 'admin');
-        }
+        if (!message && !fileUrl) return;
 
         const createdAt = new Date();
 
@@ -75,6 +154,11 @@ const initSocket = (server) => {
         } else {
           // ইউজার → সব অ্যাডমিনের কাছে
           io.to("admins").emit("new_message", payload);
+          emitAdminAlert('chat', {
+            title: 'নতুন সাপোর্ট মেসেজ',
+            message: message || 'একটি ফাইল পাঠানো হয়েছে'
+          });
+          notifyTelegram(`💬 <b>নতুন সাপোর্ট মেসেজ</b>\n${u.username || 'ইউজার'}: ${message || '(ফাইল পাঠানো হয়েছে)'}`, { category: 'support' });
 
           // ===== বট মোড হলে অটো-রিপ্লাই =====
           if (data && data.botMode && message) {
@@ -133,4 +217,41 @@ const updateLiveScore = async (matchId, scoreData) => {
   }
 };
 
-module.exports = { initSocket, updateLiveScore };
+// ===== ডেমো (প্র্যাকটিস) কারেন্সি স্ট্যাটস — অ্যাডমিন ড্যাশবোর্ড =====
+// মোট ডেমো সংখ্যাটি স্থায়ীভাবে নির্ধারিত (ফিক্সড) — এটি কোনো হিসাব থেকে আসে না,
+// কেউ এটি পরিবর্তন/কমাতে-বাড়াতে পারবে না।
+// বাকি তিনটি স্ট্যাট এখন সরাসরি ইউজারের আসল ব্যালেন্স (coins) ও বাজি থেকে
+// রিয়েল-টাইম হিসাব হয় — তাই এটা ইউজারের প্রোফাইলে দেখা ব্যালেন্সের সাথে মিলবে।
+const TOTAL_DEMO_FIXED = 9999999;
+
+const getDemoStats = async () => {
+  const heldByUsers = await pool.query(`SELECT COALESCE(SUM(coins),0) AS total FROM users`);
+  // casino_bet এন্ট্রি এখন ঠিক সাইনে (নেগেটিভ, debit) লেখা হয় — মাস্টার অডিট
+  // BUG-002 দেখুন (migrations.js Phase 08)। এখানে wagered টোটাল পূর্বের মতোই
+  // ধনাত্মক দেখাতে -amount নেওয়া হচ্ছে (আচরণ অপরিবর্তিত রাখা)।
+  const casinoWagered = await pool.query(
+    `SELECT COALESCE(SUM(-amount),0) AS total FROM coin_transactions WHERE type='casino_bet'`
+  );
+  const sportsWagered = await pool.query(
+    `SELECT COALESCE(SUM(stake),0) AS total FROM bets WHERE is_demo = false`
+  );
+
+  return {
+    totalDemo: TOTAL_DEMO_FIXED,
+    userHeldDemo: Number(heldByUsers.rows[0].total),
+    casinoDemoWagered: Number(casinoWagered.rows[0].total),
+    sportsDemoWagered: Number(sportsWagered.rows[0].total)
+  };
+};
+
+const broadcastDemoStats = async () => {
+  if (!io) return;
+  try {
+    const stats = await getDemoStats();
+    io.to("admins").emit("demo_stats_update", stats);
+  } catch (err) {
+    console.error("Demo stats broadcast error:", err.message);
+  }
+};
+
+module.exports = { initSocket, updateLiveScore, getDemoStats, broadcastDemoStats, emitAdminAlert, notifyUserSeen, notifyAdminsSeen, allowChatMessage, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_SEC };

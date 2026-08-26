@@ -1,58 +1,139 @@
 :root {
-  /* Colors */
-  --primary: #C8102E;
-  --primary-glow: rgba(200, 16, 46, 0.4);
-  --secondary: #9B1C2E;
-  --accent: #EAB308;
-  --gold: #EAB308;
+  /* ==================== Livo Design Tokens ====================
+     Premium + Classic + Modern + Comfortable + Minimal Luxury.
+     Deep Obsidian + Dark Forest Green + Champagne Gold (dark theme);
+     Warm White + Cream + Champagne Gold (light theme). Gold is an
+     ACCENT, never a primary background/fill. Red is reserved for
+     notification/alert states only — it is not a brand action color. */
+
+  /* Brand / accent (Champagne Gold) */
+  --primary: #C9A227;
+  --primary-glow: rgba(201, 162, 39, 0.35);
+  --secondary: #1B3A26;
+  --accent: #C9A227;
+  --gold: #C9A227;
+  --gold-hover: #E5C968;
+  --gold-soft: rgba(201, 162, 39, 0.12);
   --green: #10b981;
-  --red: #ef4444;
+  --red: #C83B3B;
+  /* --red যখন background-fill (badge/live-indicator) সেটার সাথে brand-accurate থাকা
+     দরকার; সরাসরি সারফেসের ওপর টেক্সট রঙ হিসেবে --red ব্যবহার করলে dark থিমে (~3.5:1)
+     AA মিস করে — তাই টেক্সটের জন্য আলাদা, উজ্জ্বল ভ্যারিয়েন্ট। */
+  --red-text: #E65A5A;
+  --warning: #E0A537;
 
-  /* Surfaces & Backgrounds */
-  --bg-dark: #050505;
-  --bg-surface: #121212;
-  --bg-card: rgba(255, 255, 255, 0.03);
-  --bg-glass: rgba(255, 255, 255, 0.05);
-  --border-glass: rgba(255, 255, 255, 0.1);
-  --bg-nav: rgba(5, 5, 5, 0.95);
+  /* Surfaces & Backgrounds (Deep Obsidian / Dark Forest Green) */
+  --bg-dark: #080D0B;
+  --bg-surface: #111815;
+  --bg-surface-elevated: #17201B;
+  --bg-card: rgba(245, 241, 230, 0.03);
+  --bg-glass: rgba(245, 241, 230, 0.05);
+  --border-glass: #29342D;
+  --bg-nav: rgba(8, 13, 11, 0.95);
 
-  /* Text */
-  --text-main: #ffffff;
-  --text-inverse: #000000;
-  --text-muted: #94a3b8;
-  --text-white: #ffffff; /* Consistent white for colored backgrounds */
+  /* Text (Warm White) */
+  --text-main: #F5F1E6;
+  --text-inverse: #14110A;
+  --text-muted: #8A948D;
+  --text-white: #ffffff; /* theme-invariant — for text over images/brand artwork only */
+  /* গোল্ড/প্রাইমারি টেক্সটের জন্য — --gold/--primary/--accent শুধু ব্যাকগ্রাউন্ড-ফিল হিসেবেই
+     ব্র্যান্ড-নির্ভুল থাকা দরকার (বাটন/ব্যাজে তার ওপর --text-inverse বসে); সারফেসের ওপর
+     সরাসরি টেক্সট রঙ হিসেবে ব্যবহারের জন্য এই আলাদা টোকেন — dark থিমে গোল্ডের কনট্রাস্ট
+     এমনিতেই যথেষ্ট (~7-8:1) তাই একই মান রাখা হয়েছে। */
+  --text-accent: #C9A227;
 
   /* Gradients */
-  --grad-primary: linear-gradient(135deg, #C8102E, #9B1C2E);
-  --grad-secondary: linear-gradient(135deg, #9B1C2E, #7A1624);
-  --grad-gold: linear-gradient(135deg, #EAB308, #FCD34D);
-  --grad-dark: linear-gradient(180deg, #121212, #050505);
-  --grad-surface: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));
+  --grad-primary: linear-gradient(135deg, #C9A227, #E5C968);
+  --grad-secondary: linear-gradient(135deg, #1B3A26, #0D1411);
+  --grad-gold: linear-gradient(135deg, #C9A227, #E5C968);
+  --grad-dark: linear-gradient(180deg, #111815, #080D0B);
+  --grad-surface: linear-gradient(135deg, rgba(245,241,230,0.05), rgba(245,241,230,0.01));
 
   /* Effects */
   --shadow-neon: 0 0 15px var(--primary-glow);
   --glass-blur: blur(0px);
+
+  /* ==================== Global Design Tokens ==================== */
+  /* Border Radius */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-full: 999px;
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+
+  /* Shadows (dark theme — kept subtle per spec) */
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.35);
+  --shadow-elevated: 0 10px 30px rgba(0, 0, 0, 0.45);
+
+  /* Typography scale */
+  --font-xs: 11px;
+  --font-sm: 13px;
+  --font-md: 15px;
+  --font-lg: 18px;
+  --font-xl: 24px;
+  --font-display: 32px;
+}
+
+/* ==================== Legacy Aliases ====================
+   পুরোনো টেমপ্লেটে এই নামগুলো ব্যবহার করা হয়েছিল কিন্তু কোথাও ডিফাইন করা ছিল না —
+   ফলে var() রেজলভ হতো না, টেক্সট ইনহেরিট করা রঙ নিত আর Light Mode-এ ফ্যাকাশে/অদৃশ্য
+   দেখাত। body-তে ডিফাইন করা হয়েছে যাতে body.light-mode-এর ওভাররাইড করা টোকেন থেকেই
+   মান নেয় — দুই থিমেই ঠিক থাকে। */
+body {
+  --text: var(--text-main);
+  --muted: var(--text-muted);
+  --border: var(--border-glass);
+  --card2: var(--bg-surface-elevated);
+  --accent-color: var(--text-accent);
+  --primary-gradient: var(--grad-primary);
+  --gg: var(--grad-gold);
 }
 
 body.light-mode {
-  --bg-dark: #f0f2f5;
-  --bg-surface: #ffffff;
-  --bg-card: rgba(0, 0, 0, 0.03);
-  --bg-glass: rgba(255, 255, 255, 0.7);
-  --border-glass: rgba(0, 0, 0, 0.1);
-  --bg-nav: #ffffff;
+  --primary: #B88918;
+  --primary-glow: rgba(184, 137, 24, 0.22);
+  --secondary: #2F6B45;
+  --accent: #B88918;
+  --gold: #B88918;
+  --gold-hover: #D4AF37;
+  --gold-soft: #FFF6D9;
+  --red-text: #C83B3B;
+  --warning: #C97D0E;
 
-  --text-main: #1a1a1a;
-  --text-inverse: #ffffff;
-  --text-muted: #64748b;
+  --bg-dark: #FAFAF7;
+  --bg-surface: #FFFFFF;
+  --bg-surface-elevated: #FFFFFF;
+  --bg-card: rgba(24, 27, 25, 0.035);
+  --bg-glass: rgba(24, 27, 25, 0.04);
+  --border-glass: #E5E1D6;
+  --bg-nav: rgba(255, 255, 255, 0.95);
 
+  --text-main: #181B19;
+  --text-inverse: #14110A;
+  --text-muted: #646965;
+  --text-accent: #8C6912;
+
+  --grad-primary: linear-gradient(135deg, #B88918, #D4AF37);
+  --grad-secondary: linear-gradient(135deg, #2F6B45, #1F4B31);
+  --grad-gold: linear-gradient(135deg, #B88918, #D4AF37);
+  --grad-dark: linear-gradient(180deg, #FFFFFF, #F4F3EE);
   --grad-surface: linear-gradient(135deg, rgba(255,255,255,0.8), rgba(255,255,255,0.4));
+  --shadow-card: 0 2px 14px rgba(24, 27, 25, 0.08);
+  --shadow-elevated: 0 8px 28px rgba(24, 27, 25, 0.12);
+  --grad-header: linear-gradient(135deg, #FFF6D9, #fff);
 }
 
 body.light-mode {
     background-image:
-        radial-gradient(circle at 0% 0%, rgba(0, 150, 37, 0.05) 0%, transparent 35%),
-        radial-gradient(circle at 100% 100%, rgba(245, 158, 11, 0.05) 0%, transparent 35%);
+        radial-gradient(circle at 0% 0%, rgba(47, 107, 69, 0.05) 0%, transparent 35%),
+        radial-gradient(circle at 100% 100%, rgba(184, 137, 24, 0.05) 0%, transparent 35%);
 }
 
 body.light-mode .bottom-nav {
@@ -70,8 +151,8 @@ body.light-mode .bottom-nav {
 body {
     background-color: var(--bg-dark);
     background-image:
-        radial-gradient(circle at 0% 0%, rgba(0, 150, 37, 0.1) 0%, transparent 40%),
-        radial-gradient(circle at 100% 100%, rgba(245, 158, 11, 0.05) 0%, transparent 40%);
+        radial-gradient(circle at 0% 0%, rgba(27, 58, 38, 0.25) 0%, transparent 40%),
+        radial-gradient(circle at 100% 100%, rgba(201, 162, 39, 0.05) 0%, transparent 40%);
     color: var(--text-main);
     font-family: 'Hind Siliguri', 'Segoe UI', Roboto, sans-serif;
     line-height: 1.7;
@@ -166,7 +247,7 @@ body.light-mode .navbar {
 .nav-refresh-btn {
     background: none;
     border: none;
-    color: var(--gold);
+    color: var(--text-accent);
     cursor: pointer;
     padding: 5px;
     display: flex;
@@ -199,7 +280,7 @@ body.light-mode .navbar {
     font-family: 'Teko', sans-serif;
     font-weight: 600;
     font-size: 1.1rem;
-    color: var(--gold);
+    color: var(--text-accent);
 }
 
 body.light-mode .nav-balance-box {
@@ -222,7 +303,7 @@ body.light-mode .nav-balance-box {
 
 .nav-btn-register {
     background: var(--grad-gold);
-    color: #000;
+    color: var(--text-inverse);
 }
 
 .nav-theme-btn {
@@ -231,7 +312,7 @@ body.light-mode .nav-balance-box {
     border-radius: 50%;
     border: 1px solid var(--border-glass);
     background: var(--bg-glass);
-    color: var(--gold);
+    color: var(--text-accent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -265,7 +346,7 @@ body.light-mode .nav-balance-box {
 
 .lang-switch-nav a.active {
     background: var(--gold);
-    color: #000;
+    color: var(--text-inverse);
 }
 
 .nav-icon-link {
@@ -290,7 +371,7 @@ body.light-mode .nav-balance-box {
     right: 8px;
     width: 8px;
     height: 8px;
-    background: #ef4444;
+    background: var(--red);
     border-radius: 50%;
     border: 2px solid var(--bg-surface);
 }
@@ -325,7 +406,7 @@ body.light-mode .nav-balance-box {
 }
 
 .nav-link.active {
-    color: var(--gold);
+    color: var(--text-accent);
 }
 
 .nav-link.active i {
@@ -340,13 +421,13 @@ body.light-mode .nav-balance-box {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #000;
+    color: var(--text-inverse);
     font-size: 15px;
-    box-shadow: 0 0 10px rgba(245, 158, 11, 0.6);
+    box-shadow: 0 0 10px var(--primary-glow);
 }
 
 .promotion-link span:last-child {
-    color: var(--gold);
+    color: var(--text-accent);
 }
 
 .btn {
@@ -366,13 +447,13 @@ body.light-mode .nav-balance-box {
 
 .btn-primary {
     background: var(--grad-primary);
-    color: var(--text-white);
-    box-shadow: 0 4px 15px rgba(0, 150, 37, 0.3);
+    color: var(--text-inverse);
+    box-shadow: 0 4px 15px var(--primary-glow);
 }
 
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 150, 37, 0.4);
+    box-shadow: 0 6px 20px var(--primary-glow);
 }
 
 .btn-secondary {
@@ -438,7 +519,7 @@ body.light-mode .nav-balance-box {
 .stat-value, .stat-number {
     font-family: 'Teko', sans-serif;
     font-size: 2.2rem;
-    color: var(--gold);
+    color: var(--text-accent);
     line-height: 1.2;
 }
 
@@ -522,7 +603,7 @@ body.light-mode .nav-balance-box {
 }
 
 .section-title i {
-    color: var(--gold);
+    color: var(--text-accent);
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -547,7 +628,7 @@ p {
 }
 
 .balance-amount {
-    color: var(--gold);
+    color: var(--text-accent);
     font-weight: 700;
     font-family: 'Teko', sans-serif;
     font-size: 1.2rem;
@@ -564,8 +645,8 @@ p {
     border-radius: 8px;
 }
 
-.tx-positive { color: #10b981; }
-.tx-negative { color: #ef4444; }
+.tx-positive { color: var(--green); }
+.tx-negative { color: var(--red-text); }
 
 .teko {
     font-family: 'Teko', sans-serif;
@@ -574,8 +655,12 @@ p {
 .text-white { color: var(--text-white) !important; }
 .text-main { color: var(--text-main) !important; }
 .text-muted { color: var(--text-muted) !important; }
+.bg-surface { background-color: var(--bg-surface) !important; }
+.bg-dark { background-color: var(--bg-dark) !important; }
+.bg-card { background-color: var(--bg-surface) !important; }
+.border-glass { border-color: var(--border-glass) !important; }
 .text-inverse { color: var(--text-inverse) !important; }
-.text-gold { color: var(--gold) !important; }
+.text-gold { color: var(--text-accent) !important; }
 
 .lang-switch {
     display: flex;
@@ -594,7 +679,7 @@ p {
 
 .lang-btn.active {
     background: var(--gold);
-    color: #000;
+    color: var(--text-inverse);
     border-color: var(--gold);
 }
 
@@ -604,7 +689,7 @@ p {
 }
 
 .cat-item.active div {
-    color: #000 !important;
+    color: var(--text-inverse) !important;
 }
 
 .side-menu {
@@ -615,7 +700,7 @@ p {
     max-width: 82%;
     height: 100%;
     height: 100dvh;
-    background-color: #121212;
+    background-color: var(--bg-surface);
     background: var(--bg-surface);
     border-right: 1px solid var(--border-glass);
     z-index: 100001;
@@ -676,14 +761,14 @@ p {
     color: var(--text-main);
     text-decoration: none;
     font-size: 15px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid var(--border-glass);
     transition: background 0.2s ease;
 }
 
 .menu-item i {
     width: 22px;
     text-align: center;
-    color: var(--gold);
+    color: var(--text-accent);
     font-size: 16px;
 }
 
@@ -696,4 +781,344 @@ body.menu-open {
     overflow: hidden;
     position: fixed;
     width: 100%;
+}
+
+/* ==================== AUTH PAGES (Login / Registration) ====================
+   লগইন ও রেজিস্ট্রেশন পেজের শেয়ার্ড ডিজাইন সিস্টেম। উপরের গ্লোবাল থিম ভ্যারিয়েবলই
+   ব্যবহার করা হয়েছে (body.light-mode override স্বয়ংক্রিয়ভাবে কাজ করে), আলাদা কোনো
+   থিম সিস্টেম তৈরি করা হয়নি। */
+
+.auth-page {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-5) var(--space-4);
+    background: var(--bg-dark);
+}
+
+.auth-shell {
+    width: 100%;
+    max-width: 420px;
+}
+
+.auth-brand {
+    text-align: center;
+    margin-bottom: var(--space-5);
+}
+
+.auth-brand__logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-md);
+    background: var(--grad-primary);
+    box-shadow: var(--shadow-neon);
+    font-size: 26px;
+    line-height: 1;
+    margin-bottom: var(--space-3);
+}
+
+.auth-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-elevated);
+    padding: var(--space-6) var(--space-5) var(--space-5);
+}
+
+.auth-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-main);
+    text-align: center;
+    margin: 0 0 var(--space-2);
+}
+
+.auth-subtitle {
+    font-size: var(--font-sm);
+    color: var(--text-muted);
+    text-align: center;
+    margin: 0 0 var(--space-6);
+    line-height: 1.5;
+}
+
+.auth-field {
+    margin-bottom: var(--space-4);
+}
+
+.auth-label {
+    display: block;
+    font-size: var(--font-sm);
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: var(--space-2);
+}
+
+.auth-label__optional {
+    font-weight: 400;
+    color: var(--text-muted);
+}
+
+.auth-input-wrap {
+    position: relative;
+}
+
+.auth-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 13px var(--space-4);
+    font-size: 16px; /* iOS-এ ফোকাসে অটো-জুম ঠেকাতে ১৬px-এর নিচে নয় */
+    font-family: inherit;
+    color: var(--text-main);
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-md);
+    outline: none;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.auth-input::placeholder { color: var(--text-muted); opacity: .75; }
+
+.auth-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-glow);
+}
+
+.auth-input:disabled { opacity: .6; cursor: not-allowed; }
+
+/* পাসওয়ার্ড ফিল্ডে টেক্সট যেন eye বাটনের নিচে ঢুকে না যায় */
+.auth-input--password { padding-right: 52px; }
+
+.auth-eye {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 17px;
+    line-height: 1;
+}
+
+.auth-eye:hover { color: var(--text-main); }
+.auth-eye:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+.auth-hint {
+    display: block;
+    font-size: var(--font-xs);
+    color: var(--text-muted);
+    margin-top: 6px;
+}
+
+/* ফিল্ড-লেভেল ভ্যালিডেশন বার্তা — শুধু রঙের উপর নির্ভর না করে আইকনসহ দেখানো হয় */
+.auth-error {
+    display: none;
+    font-size: var(--font-xs);
+    color: var(--red-text);
+    margin-top: 6px;
+    line-height: 1.4;
+}
+
+.auth-error.is-visible { display: block; }
+.auth-input.has-error { border-color: var(--red); }
+.auth-input.has-error:focus { box-shadow: 0 0 0 3px rgba(239, 68, 68, .25); }
+
+.auth-ok {
+    display: none;
+    font-size: var(--font-xs);
+    color: var(--green);
+    margin-top: 6px;
+}
+.auth-ok.is-visible { display: block; }
+
+.auth-note {
+    font-size: var(--font-xs);
+    color: var(--text-muted);
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-sm);
+    padding: 10px var(--space-3);
+    margin: calc(var(--space-2) * -1) 0 var(--space-4);
+    line-height: 1.5;
+}
+
+.auth-forgot {
+    display: block;
+    text-align: right;
+    font-size: var(--font-sm);
+    color: var(--text-muted);
+    text-decoration: none;
+    margin: calc(var(--space-2) * -1) 0 var(--space-5);
+}
+.auth-forgot:hover { color: var(--text-main); }
+
+.auth-submit {
+    width: 100%;
+    padding: 14px;
+    font-size: var(--font-md);
+    font-weight: 700;
+    font-family: inherit;
+    color: var(--text-white);
+    background: var(--grad-primary);
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    box-shadow: var(--shadow-neon);
+    transition: opacity .15s ease, transform .1s ease;
+}
+
+.auth-submit:hover:not(:disabled) { opacity: .93; }
+.auth-submit:active:not(:disabled) { transform: translateY(1px); }
+.auth-submit:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.auth-submit:disabled { opacity: .65; cursor: not-allowed; box-shadow: none; }
+
+.auth-alt {
+    text-align: center;
+    font-size: var(--font-sm);
+    color: var(--text-muted);
+    margin: var(--space-5) 0 0;
+}
+
+.auth-alt a { color: var(--text-accent); font-weight: 600; text-decoration: none; }
+.auth-alt a:hover { text-decoration: underline; }
+
+/* ==================== Google Sign-In ==================== */
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin: var(--space-5) 0;
+    color: var(--text-muted);
+    font-size: var(--font-xs);
+}
+.auth-divider::before, .auth-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-glass);
+}
+.auth-google-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: 13px;
+    font-size: var(--font-md);
+    font-weight: 600;
+    font-family: inherit;
+    color: var(--text-main);
+    background: var(--bg-card, #fff);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    cursor: pointer;
+    transition: background .15s ease, transform .1s ease;
+}
+.auth-google-btn:hover { background: var(--bg-glass); }
+.auth-google-btn:active { transform: translateY(1px); }
+.auth-google-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+.auth-terms {
+    font-size: var(--font-xs);
+    color: var(--text-muted);
+    text-align: center;
+    line-height: 1.6;
+    margin: var(--space-4) 0 0;
+}
+.auth-terms a { color: var(--text-muted); text-decoration: underline; }
+
+.auth-back {
+    text-align: center;
+    margin: var(--space-5) 0 0;
+}
+.auth-back a {
+    color: var(--text-muted);
+    font-size: var(--font-sm);
+    text-decoration: none;
+}
+.auth-back a:hover { color: var(--text-main); }
+
+/* হানিপট — ইউজারের কাছে অদৃশ্য, বট স্ক্রিপ্ট প্রায়ই পূরণ করে ফেলে */
+.auth-honeypot {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 0;
+    overflow: hidden;
+    opacity: 0;
+}
+
+/* ছোট ফোনে (৩২০-৩৭৫px) একটু কম প্যাডিং, যাতে ভার্টিক্যাল স্ক্রল কম লাগে */
+@media (max-width: 380px) {
+    .auth-page { padding: var(--space-4) var(--space-3); }
+    .auth-card { padding: var(--space-5) var(--space-4) var(--space-4); }
+    .auth-title { font-size: 20px; }
+}
+
+/* ==================================================================
+   FORCED TEXT CONTRAST — A to Z
+   ডার্ক মোডে সাইটের সব লেখা সাদা, হোয়াইট মোডে সব লেখা কালো।
+   টেমপ্লেটে ইনলাইন style-এ হার্ডকোড করা রঙও এতে ওভাররাইড হয় (!important),
+   কারণ ইনলাইন ডিক্লারেশন !important ছাড়া এই নিয়মের কাছে হারে।
+   ================================================================== */
+
+/* --- ডার্ক মোড: সব লেখা সাদা --- */
+body:not(.light-mode),
+body:not(.light-mode) * {
+  color: #FFFFFF !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+}
+
+/* --- হোয়াইট মোড: সব লেখা কালো --- */
+body.light-mode,
+body.light-mode * {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+
+/* --- ইনপুট প্লেসহোল্ডারও একই নিয়মে --- */
+body:not(.light-mode) ::placeholder {
+  color: #FFFFFF !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+  opacity: .6;
+}
+body.light-mode ::placeholder {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  opacity: .55;
+}
+
+/* --- ব্যতিক্রম ১: যেসব কনটেইনার দুই মোডেই কালো থাকে ---
+   গেম ক্যানভাসের ব্যাকগ্রাউন্ড `#000`, থিম বদলালেও বদলায় না। এখানে কালো লেখা
+   হলে কিছুই দেখা যেত না, তাই ভেতরের লেখা সবসময় সাদা। */
+body.light-mode .game-canvas-area,
+body.light-mode .game-canvas-area *,
+body.light-mode #gameUI,
+body.light-mode #gameUI *,
+body.light-mode #gameCanvas,
+body.light-mode #gameCanvas * {
+  color: #FFFFFF !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+}
+
+/* --- ব্যতিক্রম ২: ম্যানুয়াল অপ-আউট ---
+   কোনো লেখায় ব্র্যান্ড রঙ (গোল্ড/সবুজ/লাল) ধরে রাখতে হলে ওই এলিমেন্টে
+   class="keep-color" দিলে সেটি ও তার ভেতরের সব লেখা নিজের রঙ রাখে। */
+body .keep-color,
+body .keep-color * {
+  color: inherit !important;
+  -webkit-text-fill-color: currentColor !important;
 }

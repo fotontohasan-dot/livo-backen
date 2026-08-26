@@ -1,0 +1,32 @@
+# docker-compose.override.yml
+# ---------------------------------------------------------------------------
+# ⚠️ এটা শুধুমাত্র লোকাল ডেভেলপমেন্টের জন্য — প্রোডাকশনে এই ফাইল ব্যবহার করা যাবে না।
+#
+# Docker Compose কনভেনশন অনুযায়ী এই ফাইলটা `docker compose ...` কমান্ডে **নিজে থেকেই**
+# যুক্ত হয়ে যায় (আলাদা করে -f দিতে হয় না)। ফলে প্রোডাকশন সার্ভারে শুধু
+# `docker compose up -d --build` লিখলে অ্যাপ ভুল করে development মোডে উঠে যাবে:
+# development বিল্ড টার্গেট, NODE_ENV=development, সোর্স bind-mount, nodemon, এবং
+# নিচের দুর্বল ডেভ-ডিফল্ট পাসওয়ার্ডগুলো (changeme / dev-secret-change-me)।
+#
+# প্রোডাকশনে সবসময় override বাদ দিয়ে শুধু বেস ফাইলটা ব্যবহার করতে হবে:
+#     docker compose -f docker-compose.yml up -d --build
+#
+# বিস্তারিত README.md-এর "Docker (এক কমান্ডে পুরো সিস্টেম)" সেকশনে।
+# ---------------------------------------------------------------------------
+version: '3.9'
+
+services:
+  app:
+    build:
+      context: .
+      target: development
+    container_name: livo-app-dev
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgres://livo:${DB_PASSWORD:-changeme}@db:5432/livo
+      REDIS_URL: redis://:${REDIS_PASSWORD:-changeme}@redis:6379
+      SESSION_SECRET: ${SESSION_SECRET:-dev-secret-change-me}
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: ["npx", "nodemon", "app.js"]

@@ -25,21 +25,51 @@
 
   .method-card {
     transition: all 0.2s ease;
+    position: relative;
   }
   .method-card.selected {
-    border-color: #e61e26;
-    background-color: var(--bg-surface);
+    border-color: #e61e26 !important;
+    background-color: rgba(230, 30, 38, 0.08) !important;
+    box-shadow: 0 0 0 2px rgba(230, 30, 38, 0.25);
+  }
+  .method-card .check-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #e61e26;
+    color: #fff;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  }
+  .method-card.selected .check-badge {
+    display: flex;
   }
 
+  .channel-btn {
+    transition: all 0.2s ease;
+    position: relative;
+  }
   .channel-btn.selected {
-    background-color: #e61e26;
-    color: white;
-    border-color: #e61e26;
+    background-color: #e61e26 !important;
+    color: #fff !important;
+    border-color: #e61e26 !important;
+    box-shadow: 0 0 0 2px rgba(230, 30, 38, 0.25);
   }
 
+  .amount-btn {
+    position: relative;
+  }
   .amount-btn.selected {
-    border-color: #e61e26;
-    color: #e61e26;
+    border-color: #e61e26 !important;
+    color: #e61e26 !important;
+    background-color: rgba(230, 30, 38, 0.08) !important;
+    box-shadow: 0 0 0 2px rgba(230, 30, 38, 0.25);
   }
 </style>
 
@@ -47,53 +77,72 @@
   <!-- Top Bar -->
   <div class="red-theme-bg text-white px-4 py-4 flex items-center gap-4 sticky top-0 z-50 shadow-md">
     <a href="/profile" class="text-xl"><i class="fas fa-chevron-left"></i></a>
-    <h1 class="text-lg font-bold">জমা দিন (Deposit)</h1>
+    <h1 class="text-lg font-bold"><%= t.deposit_title %></h1>
   </div>
 
   <div class="p-4 max-w-[480px] mx-auto">
-    <%- include('../partials/flash') %>
 
-    <form action="/payment/deposit" method="POST" id="depositForm">
+    <form action="/payment/deposit" method="POST" id="depositForm" onsubmit="LivoToast.setLoading(document.getElementById('depSubmitBtn'), true, 'জমা হচ্ছে...')">
 
       <!-- Step 1: Method & Amount -->
       <div id="step1">
         <!-- Payment Method -->
         <div class="mb-6">
-          <label class="block text-muted font-bold mb-3 text-[15px]">পেমেন্ট মেথড সিলেক্টর</label>
+          <label class="block text-muted font-bold mb-3 text-[15px]"><%= t.payment_method_selector %></label>
           <div class="grid grid-cols-2 gap-4">
             <!-- bKash -->
             <div id="method-bkash" class="method-card selected border-2 border-glass bg-surface rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer" onclick="selectMethod('bkash')">
-              <div class="h-12 w-12 rounded-full bg-[#D12053] flex items-center justify-center mb-2 shadow-sm">
-                <span class="text-white font-bold text-xl">b</span>
+              <div class="check-badge"><i class="fas fa-check"></i></div>
+              <div class="h-12 w-12 rounded-2xl bg-[#E2136E] flex items-center justify-center mb-2 shadow-sm">
+                <span class="text-white font-black text-lg" style="letter-spacing:-1px;">bK</span>
               </div>
               <span class="text-sm font-bold text-main">bKash</span>
               <input type="radio" name="method" value="bkash" id="radio-bkash" class="hidden" checked>
             </div>
             <!-- Nagad -->
             <div id="method-nagad" class="method-card border-2 border-glass bg-surface rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer" onclick="selectMethod('nagad')">
-              <div class="h-12 w-12 rounded-full bg-[#F47321] flex items-center justify-center mb-2 shadow-sm">
-                <span class="text-white font-bold text-xl">n</span>
+              <div class="check-badge"><i class="fas fa-check"></i></div>
+              <div class="h-12 w-12 rounded-2xl bg-[#EE3123] flex items-center justify-center mb-2 shadow-sm">
+                <span class="text-white font-black text-lg" style="letter-spacing:-1px;">Ng</span>
               </div>
               <span class="text-sm font-bold text-main">Nagad</span>
               <input type="radio" name="method" value="nagad" id="radio-nagad" class="hidden">
+            </div>
+            <!-- Rocket -->
+            <div id="method-rocket" class="method-card border-2 border-glass bg-surface rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer" onclick="selectMethod('rocket')">
+              <div class="check-badge"><i class="fas fa-check"></i></div>
+              <div class="h-12 w-12 rounded-2xl bg-[#8C3494] flex items-center justify-center mb-2 shadow-sm">
+                <span class="text-white font-black text-lg" style="letter-spacing:-1px;">Rk</span>
+              </div>
+              <span class="text-sm font-bold text-main">Rocket</span>
+              <input type="radio" name="method" value="rocket" id="radio-rocket" class="hidden">
+            </div>
+            <!-- Upay -->
+            <div id="method-upay" class="method-card border-2 border-glass bg-surface rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer" onclick="selectMethod('upay')">
+              <div class="check-badge"><i class="fas fa-check"></i></div>
+              <div class="h-12 w-12 rounded-2xl bg-[#D4145A] flex items-center justify-center mb-2 shadow-sm">
+                <span class="text-white font-black text-lg" style="letter-spacing:-1px;">Up</span>
+              </div>
+              <span class="text-sm font-bold text-main">Upay</span>
+              <input type="radio" name="method" value="upay" id="radio-upay" class="hidden">
             </div>
           </div>
         </div>
 
         <!-- Payment Channel -->
         <div class="mb-6">
-          <label class="block text-muted font-bold mb-3 text-[15px]">পেমেন্ট চ্যানেল</label>
+          <label class="block text-muted font-bold mb-3 text-[15px]"><%= t.payment_channel %></label>
           <div class="grid grid-cols-2 gap-3">
-            <button type="button" class="channel-btn selected border-2 border-glass bg-surface rounded-xl py-3 text-sm font-bold transition-all" onclick="selectChannel(this)">চ্যানেল ১</button>
-            <button type="button" class="channel-btn border-2 border-glass bg-surface rounded-xl py-3 text-sm font-bold transition-all" onclick="selectChannel(this)">চ্যানেল ৪</button>
-            <button type="button" class="channel-btn border-2 border-glass bg-surface rounded-xl py-3 text-sm font-bold transition-all" onclick="selectChannel(this)">চ্যানেল ৫</button>
-            <button type="button" class="channel-btn border-2 border-glass bg-surface rounded-xl py-3 text-sm font-bold transition-all" onclick="selectChannel(this)">চ্যানেল ১০</button>
+            <button type="button" class="channel-btn selected border-2 border-glass bg-surface rounded-xl py-3 text-sm font-bold transition-all" onclick="selectChannel(this)"><%= t.channel_1 %></button>
+            <button type="button" class="channel-btn border-2 border-glass bg-surface rounded-xl py-3 text-sm font-bold transition-all" onclick="selectChannel(this)"><%= t.channel_4 %></button>
+            <button type="button" class="channel-btn border-2 border-glass bg-surface rounded-xl py-3 text-sm font-bold transition-all" onclick="selectChannel(this)"><%= t.channel_5 %></button>
+            <button type="button" class="channel-btn border-2 border-glass bg-surface rounded-xl py-3 text-sm font-bold transition-all" onclick="selectChannel(this)"><%= t.channel_1 %>০</button>
           </div>
         </div>
 
         <!-- Amount Selection -->
         <div class="mb-6">
-          <label class="block text-muted font-bold mb-3 text-[15px]">অ্যামাউন্ট সিলেকশন (Fast Amount)</label>
+          <label class="block text-muted font-bold mb-3 text-[15px]"><%= t.fast_amount %></label>
           <div class="grid grid-cols-3 gap-2 mb-4">
             <% [100, 200, 500, 1000, 3000, 5000, 20000, 30000, 50000].forEach(amt => { %>
               <button type="button"
@@ -108,15 +157,28 @@
             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <span class="text-muted font-bold text-lg">৳</span>
             </div>
-            <input type="number" name="amount" id="amountInput" value="200" placeholder="১০০ ~ ৫০,০০০" min="100" max="50000" class="block w-full pl-10 pr-4 py-4 border-2 border-glass rounded-2xl text-lg font-bold text-main bg-surface focus:outline-none" required>
+            <input type="number" name="amount" id="amountInput" value="200" placeholder="<%= t.amount_range_hint %>" min="100" max="50000" class="block w-full pl-10 pr-4 py-4 border-2 border-glass rounded-2xl text-lg font-bold text-main bg-surface focus:outline-none" required>
           </div>
         </div>
 
-        <!-- Next Button -->
-        <div class="mt-8">
-                        <button type="button" id="depNextBtn" class="w-full red-theme-bg text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 active:scale-95 transition-all">
+        <!-- Auto Pay (SSLCommerz — bKash/Nagad/Rocket/Card, অটোমেটিক) -->
+        <div class="mt-4">
+          <label class="flex items-center gap-2 mb-3 text-xs text-muted">
+            <input type="checkbox" id="autoBonusCheck" value="yes" class="w-4 h-4 accent-red-600"> <%= t.with_bonus_turnover %>
+          </label>
+          <!-- বাটন + নিচের লাইনটা অস্থায়ীভাবে হাইড করা হয়েছে — প্রয়োজন হলে কমেন্ট খুলে দিলেই ফিরে আসবে
+          <button type="button" id="autoPayBtn" class="w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 active:scale-95 transition-all">
+            ⚡ অটো পে (bKash/Nagad/Rocket/Card)
+          </button>
+          <p class="text-[11px] text-muted text-center mt-2">সরাসরি গেটওয়েতে পে করুন — সাথে সাথে কয়েন যোগ হবে, ম্যানুয়াল অপেক্ষা লাগবে না।</p>
+          -->
+        </div>
 
-                পরবর্তী (Next)
+        <!-- Next Button (ম্যানুয়াল পদ্ধতি) -->
+        <div class="mt-4">
+                        <button type="button" id="depNextBtn" class="w-full bg-surface border-2 border-glass text-main py-4 rounded-2xl font-bold text-lg transition-all">
+
+                <%= t.deposit_manually_next %>
             </button>
         </div>
       </div>
@@ -124,25 +186,25 @@
       <!-- Step 2: Confirmation & Instructions -->
       <div id="step2" class="step-2">
         <div class="bg-surface rounded-2xl p-6 border border-glass shadow-sm mb-6">
-          <p class="text-muted text-sm mb-3 text-center">নিচের নম্বরে টাকা পাঠান:</p>
+          <p class="text-muted text-sm mb-3 text-center"><%= t.send_money_to_number %></p>
           <div class="bg-dark rounded-2xl p-5 flex flex-col items-center border border-glass">
             <span class="text-3xl font-black tracking-widest text-main" id="displayNumber"><%= payNumber %></span>
-                        <button type="button" id="depCopyBtn" class="mt-3 px-4 py-1 bg-surface border border-glass rounded-full text-blue-400 text-xs font-bold uppercase shadow-sm"><i class="far fa-copy mr-1"></i> কপি করুন</button>
+                        <button type="button" id="depCopyBtn" class="mt-3 px-4 py-1 bg-surface border border-glass rounded-full text-blue-400 text-xs font-bold uppercase shadow-sm"><i class="far fa-copy mr-1"></i> <%= t.copy %></button>
 
           </div>
           <div class="mt-4 space-y-2 text-sm text-muted text-center">
             <p>📲 <span id="selectedMethodName" class="font-bold">bKash</span> Personal</p>
-            <p class="text-xs text-red-400 font-medium">⚠️ Send Money করুন, তারপর নিচের ফর্ম পূরণ করুন।</p>
+            <p class="text-xs text-red-400 font-medium"><%= t.send_money_first_notice %></p>
           </div>
         </div>
 
         <div class="space-y-4">
           <div>
-            <label class="block text-main font-bold mb-2">ট্রানজেকশন আইডি</label>
-            <input type="text" name="transaction_id" placeholder="TrxID লিখুন" class="w-full p-4 border-2 border-glass rounded-2xl focus:outline-none bg-surface text-main font-mono font-bold" required>
+            <label class="block text-main font-bold mb-2"><%= t.transaction_id %></label>
+            <input type="text" name="transaction_id" placeholder="<%= t.enter_trxid %>" class="w-full p-4 border-2 border-glass rounded-2xl focus:outline-none bg-surface text-main font-mono font-bold" required>
           </div>
           <div>
-            <label class="block text-main font-bold mb-2">আপনার নম্বর (যেটা থেকে পাঠিয়েছেন)</label>
+            <label class="block text-main font-bold mb-2"><%= t.your_sending_number %></label>
             <input type="text" name="account_number" placeholder="01XXXXXXXXX" class="w-full p-4 border-2 border-glass rounded-2xl focus:outline-none bg-surface text-main font-bold" required>
           </div>
         </div>
@@ -151,20 +213,19 @@
           <label class="flex items-start gap-3 cursor-pointer">
             <input type="checkbox" name="want_bonus" value="yes" class="mt-1 w-5 h-5 accent-red-600">
             <div>
-              <span class="block font-bold text-orange-800 text-sm mb-1">🎁 ডিপোজিট বোনাস নিন</span>
+              <span class="block font-bold text-orange-800 text-sm mb-1"><%= t.take_deposit_bonus %></span>
               <span class="text-[11px] text-orange-700 leading-relaxed block">
-                ১ম ডিপোজিট ১০০%, ২য় ডিপোজিট ৫০%, প্রতি শুক্রবার ৮০% রিলোড, এরপর সব ডিপোজিটে ১৫% বোনাস
-                (সর্বোচ্চ ১৫,০০০)। বোনাস নিলে উত্তোলনের আগে টার্নওভার পূরণ করতে হবে।
+                <%= t.deposit_bonus_terms %>
               </span>
             </div>
           </label>
         </div>
 
         <div class="flex gap-3 mt-8">
-                    <button type="button" id="depBackBtn" class="flex-1 bg-gray-200 text-gray-700 py-4 rounded-2xl font-bold">পিছনে</button>
+                    <button type="button" id="depBackBtn" class="flex-1 bg-gray-200 text-gray-700 py-4 rounded-2xl font-bold"><%= t.back %></button>
 
-          <button type="submit" class="flex-[2] red-theme-bg text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 active:scale-95 transition-all">
-            সাবমিট করুন
+          <button type="submit" id="depSubmitBtn" class="flex-[2] red-theme-bg text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 active:scale-95 transition-all">
+            <%= t.submit %>
           </button>
         </div>
       </div>
@@ -176,16 +237,18 @@
 <script>
   function selectMethod(method) {
     document.querySelectorAll('.method-card').forEach(c => {
-      c.classList.remove('selected', 'border-red-600');
-      c.classList.add('border-gray-200');
+      c.classList.remove('selected');
     });
 
     const el = document.getElementById('method-' + method);
-    el.classList.add('selected', 'border-red-600');
-    el.classList.remove('border-gray-200');
+    if (!el) return;
+    el.classList.add('selected');
 
-    document.getElementById('radio-' + method).checked = true;
-    document.getElementById('selectedMethodName').innerText = method.charAt(0).toUpperCase() + method.slice(1);
+    const radio = document.getElementById('radio-' + method);
+    if (radio) radio.checked = true;
+
+    const nameEl = document.getElementById('selectedMethodName');
+    if (nameEl) nameEl.innerText = method.charAt(0).toUpperCase() + method.slice(1);
   }
 
   function selectChannel(el) {
@@ -196,25 +259,11 @@
   }
 
   function setAmount(amt, el) {
-    const input = document.getElementById('amountInput');
-    input.value = amt;
-    // Force focus and trigger input/change events to ensure reactivity
-    input.focus();
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-
+    document.getElementById('amountInput').value = amt;
     document.querySelectorAll('.amount-btn').forEach(b => {
-      b.classList.remove('selected', 'border-red-600', 'text-red-600');
-      b.classList.add('border-glass', 'text-main');
+      b.classList.remove('selected');
     });
-    if (el) {
-      el.classList.add('selected', 'border-red-600', 'text-red-600');
-      el.classList.remove('border-glass', 'text-main');
-    }
-
-    // Add visual feedback to input
-    input.classList.add('ring-2', 'ring-red-600');
-    setTimeout(() => input.classList.remove('ring-2', 'ring-red-600'), 500);
+    el.classList.add('selected');
   }
 
   function goToStep2() {
@@ -249,14 +298,26 @@
     document.querySelectorAll('.channel-btn').forEach(function(b){
       b.addEventListener('click', function(){ selectChannel(b); });
     });
-    var mb = document.getElementById('method-bkash');
-    if (mb) mb.addEventListener('click', function(){ selectMethod('bkash'); });
-    var mn = document.getElementById('method-nagad');
-    if (mn) mn.addEventListener('click', function(){ selectMethod('nagad'); });
     var cb = document.getElementById('depCopyBtn');
     if (cb) cb.addEventListener('click', copyNumber);
     var bb = document.getElementById('depBackBtn');
     if (bb) bb.addEventListener('click', goToStep1);
+
+    var apBtn = document.getElementById('autoPayBtn');
+    if (apBtn) apBtn.addEventListener('click', function () {
+      var amt = document.getElementById('amountInput').value;
+      if (!amt || amt < 100) { alert('সর্বনিম্ন ১০০ টাকা জমা দিন'); return; }
+      var wantBonus = document.getElementById('autoBonusCheck').checked ? 'yes' : 'no';
+      var f = document.createElement('form');
+      f.method = 'POST';
+      f.action = '/payment/sslcommerz/init';
+      var csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+      f.innerHTML = '<input type="hidden" name="amount" value="' + amt + '">' +
+                    '<input type="hidden" name="want_bonus" value="' + wantBonus + '">' +
+                    '<input type="hidden" name="_csrf" value="' + csrf + '">';
+      document.body.appendChild(f);
+      f.submit();
+    });
   });
 </script>
 

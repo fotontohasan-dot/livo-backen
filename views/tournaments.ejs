@@ -12,30 +12,30 @@
         <div><%= t.no_tournaments %></div>
       </div>
     <% } else { %>
-      <% tournaments.forEach(t => { %>
+      <% tournaments.forEach(tour => { %>
         <div class="card glass">
           <div style="padding:15px; border-bottom:1px solid var(--border-glass); display:flex; justify-content:space-between; align-items:center;">
-            <h3 style="font-size:1rem; font-weight:700; color:#fff;"><%= t.name %></h3>
-            <span class="status-badge status-<%= t.status %>"><%= t.status === 'open' ? t.running : t.status %></span>
+            <h3 style="font-size:1rem; font-weight:700; color:var(--text-main);"><%= tour.name %></h3>
+            <span class="status-badge status-<%= tour.status %>"><%= tour.status === 'open' ? t.running : tour.status %></span>
           </div>
           <div class="card-body" style="padding:15px;">
             <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
-              <div class="glass" style="padding:5px 12px; border-radius:8px; font-size:13px; color:var(--gold); border-color:rgba(245,158,11,0.2);">
-                <i class="fas fa-coins"></i> <%= t.prize %>: <%= t.prize_pool %>
+              <div class="glass" style="padding:5px 12px; border-radius:8px; font-size:13px; color: var(--text-accent); border-color:rgba(245,158,11,0.2);">
+                <i class="fas fa-coins"></i> <%= t.prize %>: <%= tour.prize_pool %>
               </div>
-              <div class="glass" style="padding:5px 12px; border-radius:8px; font-size:13px; color:var(--primary); border-color:rgba(139,92,246,0.2);">
-                <i class="fas fa-futbol"></i> <%= t.sport.toUpperCase() %>
+              <div class="glass" style="padding:5px 12px; border-radius:8px; font-size:13px; color: var(--text-accent); border-color:rgba(139,92,246,0.2);">
+                <i class="fas fa-futbol"></i> <%= (tour.sport || '').toUpperCase() %>
               </div>
             </div>
             <p style="font-size:.85rem; color:var(--text-muted); margin-bottom:15px">
-              <%= t.description %>
+              <%= tour.description %>
             </p>
             <div style="font-size:.8rem; color:var(--text-muted); display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
-              <div><i class="fas fa-users"></i> <%= t.participant_count %> / <%= t.max_participants %> <%= t.participants %></div>
-              <div><i class="fas fa-ticket-alt"></i> <%= t.entry_fee_label %>: <%= t.entry_fee > 0 ? t.entry_fee : t.free %></div>
-              <div style="grid-column:1/-1;"><i class="fas fa-calendar-alt"></i> <%= t.start %>: <%= new Date(t.start_date).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US') %></div>
+              <div><i class="fas fa-users"></i> <%= tour.participant_count %> / <%= tour.max_participants %> <%= t.participants %></div>
+              <div><i class="fas fa-ticket-alt"></i> <%= t.entry_fee_label %>: <%= tour.entry_fee > 0 ? tour.entry_fee : t.free %></div>
+              <div style="grid-column:1/-1;"><i class="fas fa-calendar-alt"></i> <%= t.start %>: <%= new Date(tour.start_date).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US') %></div>
             </div>
-            <a href="/tournaments/<%= t.id %>" class="btn btn-primary" style="width:100%; border-radius:12px;"><%= t.details %></a>
+            <a href="/tournaments/<%= tour.id %>" class="btn btn-primary" style="width:100%; border-radius:12px;"><%= t.details %></a>
           </div>
         </div>
       <% }) %>

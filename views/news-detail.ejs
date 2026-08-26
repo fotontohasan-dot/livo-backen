@@ -16,7 +16,7 @@
             <span>⚽ <%= article.sport %></span>
           </div>
           <div style="line-height:1.8;color:var(--text)">
-            <%- article.content.replace(/\n/g,'<br>') %>
+            <%- escapeHtml(article.content).replace(/\n/g,'<br>') %>
           </div>
         </div>
       </div>

@@ -4,7 +4,7 @@
 
   <!-- Header -->
   <div style="background: var(--grad-primary); padding: 20px; display: flex; align-items: center; gap: 15px; position: sticky; top: 0; z-index: 100;">
-    <h1 style="color: #fff; font-size: 18px; font-weight: bold; margin: 0;"><%= t.promotions_title %></h1>
+    <h1 style="color:var(--text-main); font-size: 18px; font-weight: bold; margin: 0;"><%= t.promotions_title %></h1>
   </div>
 
   <div style="padding: 15px;">
@@ -16,14 +16,14 @@
         <div style="height: 140px; background: linear-gradient(135deg, #006519, #004d13); display: flex; align-items: center; justify-content: center; position: relative;">
           <div style="font-size: 80px; opacity: 0.1; position: absolute; right: 20px;">🧧</div>
           <div style="text-align: center; z-index: 1;">
-            <div style="font-family: 'Teko', sans-serif; font-size: 32px; color: var(--gold); line-height: 1;"><%= t.promo_1_title %></div>
-            <div style="font-size: 12px; color: #fff; margin-top: 5px;"><%= t.promo_1_desc_short %></div>
+            <div style="font-family: 'Teko', sans-serif; font-size: 32px; color: #fff; line-height: 1;"><%= t.promo_1_title %></div>
+            <div style="font-size: 12px; color:#fff; margin-top: 5px;"><%= t.promo_1_desc_short %></div>
           </div>
         </div>
         <div style="padding: 15px; background: var(--bg-surface);">
           <div style="font-size: 13px; color: var(--text-muted); line-height: 1.5;"><%= t.promo_1_desc_long %></div>
           <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
-            <div style="font-size: 11px; color: var(--gold); font-weight: bold;"><i class="fas fa-clock"></i> <%= t.valid_until %>: 31 Dec 2024</div>
+            <div style="font-size: 11px; color: var(--text-accent); font-weight: bold;"><i class="fas fa-clock"></i> <%= t.valid_until %>: 31 Dec 2024</div>
             <button onclick="location.href='/payment/deposit'" style="background: var(--grad-gold); color: #000; border: none; padding: 8px 20px; border-radius: 20px; font-size: 12px; font-weight: bold;"><%= t.deposit_now %></button>
           </div>
         </div>
@@ -35,14 +35,14 @@
           <div style="font-size: 80px; opacity: 0.1; position: absolute; right: 20px;">💎</div>
           <div style="text-align: center; z-index: 1;">
             <div style="font-family: 'Teko', sans-serif; font-size: 32px; color: #60a5fa; line-height: 1;"><%= t.promo_2_title %></div>
-            <div style="font-size: 12px; color: #fff; margin-top: 5px;"><%= t.promo_2_desc_short %></div>
+            <div style="font-size: 12px; color:var(--text-main); margin-top: 5px;"><%= t.promo_2_desc_short %></div>
           </div>
         </div>
         <div style="padding: 15px; background: var(--bg-surface);">
           <div style="font-size: 13px; color: var(--text-muted); line-height: 1.5;"><%= t.promo_2_desc_long %></div>
           <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
             <div style="font-size: 11px; color: #60a5fa; font-weight: bold;"><i class="fas fa-sync"></i> <%= t.once_daily %></div>
-            <button onclick="location.href='/payment/deposit'" style="background: #3b82f6; color: #fff; border: none; padding: 8px 20px; border-radius: 20px; font-size: 12px; font-weight: bold;"><%= t.get_bonus %></button>
+            <button onclick="location.href='/payment/deposit'" style="background: #3473DA; color: #fff; border: none; padding: 8px 20px; border-radius: 20px; font-size: 12px; font-weight: bold;"><%= t.get_bonus %></button>
           </div>
         </div>
       </div>
@@ -53,14 +53,14 @@
           <div style="font-size: 80px; opacity: 0.1; position: absolute; right: 20px;">🎁</div>
           <div style="text-align: center; z-index: 1;">
             <div style="font-family: 'Teko', sans-serif; font-size: 32px; color: #f87171; line-height: 1;"><%= t.promo_3_title %></div>
-            <div style="font-size: 12px; color: #fff; margin-top: 5px;"><%= t.promo_3_desc_short %></div>
+            <div style="font-size: 12px; color:var(--text-main); margin-top: 5px;"><%= t.promo_3_desc_short %></div>
           </div>
         </div>
         <div style="padding: 15px; background: var(--bg-surface);">
           <div style="font-size: 13px; color: var(--text-muted); line-height: 1.5;"><%= t.promo_3_desc_long %></div>
           <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
             <div style="font-size: 11px; color: #f87171; font-weight: bold;"><i class="fas fa-calendar-check"></i> <%= t.every_monday %></div>
-            <button class="btn glass" style="padding: 8px 20px; border-radius: 20px; font-size: 12px; color: #fff; border-color: rgba(255,255,255,0.1);"><%= t.details %></button>
+            <button class="btn glass" style="padding: 8px 20px; border-radius: 20px; font-size: 12px; color:var(--text-main); border-color: rgba(255,255,255,0.1);"><%= t.details %></button>
           </div>
         </div>
       </div>

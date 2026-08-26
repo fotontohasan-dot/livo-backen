@@ -67,7 +67,7 @@
   <div class="red-theme-bg text-white px-4 py-4 flex items-center justify-between sticky top-0 z-50">
     <div class="flex items-center gap-4">
         <a href="/profile" class="text-xl"><i class="fas fa-chevron-left"></i></a>
-        <h1 class="text-lg font-bold">উত্তোলন</h1>
+        <h1 class="text-lg font-bold"><%= t.withdrawal %></h1>
     </div>
     <div class="flex gap-4">
         <i class="fas fa-file-alt text-xl"></i>
@@ -89,11 +89,10 @@
   </a>
 
   <div class="px-4">
-    <%- include('../partials/flash') %>
 
     <!-- Bound Wallet Section -->
     <div class="mb-6">
-        <h2 class="text-muted font-bold mb-4">আবদ্ধ E wallet (<%= cards ? cards.length : 0 %>/5)</h2>
+        <h2 class="text-muted font-bold mb-4"><%= t.linked_ewallet_count %> (<%= cards ? cards.length : 0 %>/5)</h2>
 
         <% if (cards && cards.length > 0) { %>
             <div class="space-y-3">
@@ -119,70 +118,153 @@
         <% } else { %>
             <div class="flex flex-col items-center py-8">
                 <img src="https://img.icons8.com/illustrations/64/credit-card.png" class="opacity-20 mb-2" alt="empty">
-                <p class="text-gray-400 font-bold">খালি ই-ওয়ালেট</p>
+                <p class="text-gray-400 font-bold"><%= t.empty_ewallet %></p>
             </div>
         <% } %>
     </div>
 
     <!-- Instructions Section -->
     <div class="text-[13px] text-main leading-snug mb-6">
-        <p class="text-muted mb-2">উত্তোলন সময়: 24 ঘণ্টা</p>
-        <p class="font-bold mb-1">💬 প্রিয় সদস্য, শুভেচ্ছা! 🎯</p>
-        <p class="font-bold mb-2">আপনার <span class="red-theme-text uppercase"><%= siteName %></span> অ্যাকাউন্টে উত্তোলনের আগে অনুগ্রহ করে আপনার ওয়ালেট (বিকাশ/নগদ/রকেট ইত্যাদি) সঠিকভাবে সংযুক্ত হয়েছে কিনা তা যাচাই করুন। ভুল ওয়ালেট সংযোগের কারণে টাকা স্থানান্তরে বিলম্ব বা ব্যর্থতা ঘটতে পারে।</p>
-        <p class="font-bold mb-4">🔒 দয়া করে আবার পরীক্ষা করুন এবং নিরাপদে উত্তোলন সম্পন্ন করুন! 💰</p>
+        <p class="text-muted mb-2"><%= t.withdrawal_time_24h %></p>
+        <p class="font-bold mb-1"><%= t.dear_member_greeting %></p>
+        <p class="font-bold mb-2"><%= t.your_word %><span class="red-theme-text uppercase"><%= siteName %></span> <%= t.withdraw_wallet_check_notice %></p>
+        <p class="font-bold mb-4"><%= t.withdraw_double_check %></p>
 
         <div class="text-muted space-y-1">
-            <p>দৈনিক উত্তোলন ৯৯,৯৯৯ (বার), অবশিষ্ট উত্তোলন ৯৯,৯৯৯ (বার)</p>
-            <p>প্রধান ওয়ালেট :৳ <%= (coins || 0).toFixed(2) %></p>
-            <p>উপলব্ধ পরিমাণ : ৳ <%= (coins || 0).toFixed(2) %></p>
+            <p><%= t.daily_withdraw_limit %></p>
+            <p><%= t.main_wallet_label %>৳ <%= (coins || 0).toFixed(2) %></p>
+            <p><%= t.available_amount_label %> ৳ <%= (coins || 0).toFixed(2) %></p>
         </div>
 
         <button onclick="location.reload()" class="w-full mt-4 py-2.5 bg-blue-100 text-blue-600 rounded-full font-bold flex items-center justify-center gap-2 text-sm">
-            <i class="fas fa-sync-alt"></i> আপনার ব্যালেন্স রিফ্রেশ করুন
+            <i class="fas fa-sync-alt"></i> <%= t.refresh_your_balance %>
         </button>
     </div>
 
-    <form action="/payment/withdraw" method="POST">
-      <!-- Withdrawal Form -->
-      <div class="space-y-5">
-        <div>
-          <label class="block text-main font-bold mb-2">পেমেন্ট মেথড</label>
-          <select name="method" class="w-full p-4 border-2 border-glass rounded-xl focus:outline-none bg-surface text-main font-bold" required>
-            <option value="bkash">bKash</option>
-            <option value="nagad">Nagad</option>
-            <option value="rocket">Rocket</option>
-            <option value="upay">Upay</option>
-            <option value="bank"><%= t.bank_transfer %></option>
-            <option value="crypto">USDT (TRC20)</option>
-          </select>
+    <% var locked = (typeof withdrawLock !== 'undefined') && withdrawLock && withdrawLock.allowed === false; %>
+    <% var pinNotConfigured = (typeof pinStatus !== 'undefined') && pinStatus && !pinStatus.configured; %>
+    <% var pinLocked = (typeof pinStatus !== 'undefined') && pinStatus && pinStatus.locked; %>
+
+    <% if (pinNotConfigured) { %>
+      <div class="rounded-xl p-4 mb-6" style="background: rgba(230,30,38,0.1); border: 1.5px solid #e61e26;">
+        <div class="flex items-center gap-2 mb-2">
+          <i class="fas fa-shield-alt red-theme-text"></i>
+          <span class="font-bold red-theme-text"><%= t.withdraw_pin_required %></span>
         </div>
+        <p class="text-sm text-main mb-3"><%= t.withdraw_pin_setup_notice %></p>
+        <a href="/profile/security" class="inline-block red-theme-bg text-white font-bold px-5 py-2.5 rounded-full text-sm">
+          <i class="fas fa-lock"></i> <%= t.create_pin_now %>
+        </a>
+      </div>
+    <% } else if (pinLocked) { %>
+      <div class="rounded-xl p-4 mb-6" style="background: rgba(230,30,38,0.1); border: 1.5px solid #e61e26;">
+        <div class="flex items-center gap-2 mb-2">
+          <i class="fas fa-lock red-theme-text"></i>
+          <span class="font-bold red-theme-text"><%= t.withdraw_pin_locked %></span>
+        </div>
+        <p class="text-sm text-main"><%= t.pin_locked_retry %></p>
+      </div>
+    <% } %>
+
+    <% if (locked) { %>
+      <div class="rounded-xl p-4 mb-6" style="background: rgba(230,30,38,0.1); border: 1.5px solid #e61e26;">
+        <div class="flex items-center gap-2 mb-2">
+          <i class="fas fa-lock red-theme-text"></i>
+          <span class="font-bold red-theme-text"><%= t.withdrawal_currently_locked %></span>
+        </div>
+        <p class="text-sm text-main mb-2"><%= t.withdraw_turnover_notice %></p>
+        <div class="text-xs text-muted space-y-1">
+          <% withdrawLock.pending.forEach(function(p) { %>
+            <% if (p.sportsLeft > 0) { %><p><%= t.sports_turnover_left %>৳ <%= p.sportsLeft.toFixed(2) %></p><% } %>
+            <% if (p.casinoLeft > 0) { %><p><%= t.casino_turnover_left %>৳ <%= p.casinoLeft.toFixed(2) %></p><% } %>
+          <% }) %>
+        </div>
+      </div>
+    <% } %>
+
+    <form action="/payment/withdraw" method="POST" id="withdrawForm" onsubmit="LivoToast.setLoading(document.getElementById('withdrawSubmitBtn'), true, 'উইথড্র অনুরোধ পাঠানো হচ্ছে...')">
+      <!-- Withdrawal Form -->
+      <% var formGated = locked || pinNotConfigured || pinLocked; %>
+      <fieldset <%= formGated ? 'disabled' : '' %> class="space-y-5 <%= formGated ? 'opacity-50' : '' %>">
+
+        <% if (!cards || cards.length === 0) { %>
+          <div class="bg-surface border border-glass rounded-xl p-4 text-center">
+            <p class="text-muted font-bold mb-3"><%= t.add_ewallet_first %></p>
+            <a href="/profile/cards" class="inline-block red-theme-bg text-white font-bold px-5 py-2.5 rounded-full text-sm">
+              <i class="fas fa-plus"></i> <%= t.add_ewallet %>
+            </a>
+          </div>
+        <% } else { %>
+          <div>
+            <label class="block text-main font-bold mb-2"><%= t.select_ewallet %></label>
+            <select id="walletSelect" class="w-full p-4 border-2 border-glass rounded-xl focus:outline-none bg-surface text-main font-bold" required onchange="syncWallet()">
+              <option value="" disabled selected><%= t.choose_linked_wallet %></option>
+              <% cards.forEach(c => {
+                   const bn = (c.bank_name || '').toLowerCase();
+                   let methodCode = 'bank';
+                   if (bn.includes('bkash')) methodCode = 'bkash';
+                   else if (bn.includes('nagad')) methodCode = 'nagad';
+                   else if (bn.includes('rocket')) methodCode = 'rocket';
+                   else if (bn.includes('upay')) methodCode = 'upay';
+              %>
+                <option value="<%= c.id %>" data-method="<%= methodCode %>" data-number="<%= c.account_number %>">
+                  <%= c.bank_name %> — <%= c.account_number %>
+                </option>
+              <% }) %>
+            </select>
+            <p class="text-muted text-xs mt-2"><i class="fas fa-lock"></i> <%= t.ewallet_number_only_notice %> <a href="/profile/cards" class="red-theme-text font-bold"><%= t.ewallet %></a> <%= t.add_from_there %></p>
+          </div>
+
+          <!-- এই দুটো hidden ফিল্ড ই সার্ভারে পাঠানো হবে, ইউজার নিজে থেকে টাইপ করতে পারবে না -->
+          <input type="hidden" name="method" id="methodField">
+          <input type="hidden" name="account_number" id="accountNumberField">
+        <% } %>
 
         <div>
-          <label class="block text-main font-bold mb-2">পরিমাণ (১০০ ~ ৫০,০০০)</label>
+          <label class="block text-main font-bold mb-2"><%= t.amount_range_label %></label>
           <div class="relative">
             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <span class="text-muted font-bold">৳</span>
             </div>
-            <input type="number" name="amount" placeholder="টাকার পরিমাণ লিখুন" min="100" max="50000" class="w-full pl-10 p-4 border-2 border-glass rounded-xl focus:outline-none bg-surface text-lg font-bold text-red-600" required>
+            <input type="number" name="amount" placeholder="<%= t.enter_amount %>" min="100" max="50000" class="w-full pl-10 p-4 border-2 border-glass rounded-xl focus:outline-none bg-surface text-lg font-bold text-red-600" required>
           </div>
         </div>
 
         <div class="relative">
-            <span class="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-main">পাসওয়ার্ড</span>
-            <input type="password" id="secPassword" name="password" placeholder="পাসওয়ার্ড" class="input-field pl-24 text-right" required>
+            <span class="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-main"><%= t.password %></span>
+            <input type="password" id="secPassword" name="password" placeholder="<%= t.password %>" class="input-field pl-24 text-right" required>
             <button type="button" onclick="togglePassword()" class="absolute right-4 top-1/2 -translate-y-1/2 text-muted">
                 <i class="fas fa-eye-slash" id="eyeIcon"></i>
             </button>
         </div>
 
-        <button type="submit" class="w-full red-theme-bg text-white py-4 rounded-lg font-bold text-lg mt-6 shadow-lg active:scale-95 transition-all">
-            জমা দিন
+        <div>
+          <label class="block text-main font-bold mb-2"><i class="fas fa-shield-alt red-theme-text"></i> Withdraw PIN</label>
+          <div class="relative">
+              <input type="password" id="withdrawPinField" name="withdraw_pin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" autocomplete="off" placeholder="<%= t.enter_6_digit_pin %>" class="input-field pr-12 text-right" style="letter-spacing:4px;" required>
+              <button type="button" onclick="toggleWithdrawPin()" class="absolute right-4 top-1/2 -translate-y-1/2 text-muted">
+                  <i class="fas fa-eye-slash" id="withdrawPinEye"></i>
+              </button>
+          </div>
+          <p class="text-muted text-xs mt-2"><i class="fas fa-info-circle"></i> <%= t.withdraw_pin_verify_notice %></p>
+        </div>
+
+        <button type="submit" id="withdrawSubmitBtn" <%= (!cards || cards.length === 0 || formGated) ? 'disabled' : '' %> class="w-full red-theme-bg text-white py-4 rounded-lg font-bold text-lg mt-6 shadow-lg active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+            <%= locked ? 'টার্নওভার সম্পন্ন করুন' : 'জমা দিন' %>
         </button>
+      </fieldset>
     </form>
   </div>
 </div>
 
 <script>
+  function syncWallet() {
+    const sel = document.getElementById('walletSelect');
+    const opt = sel.options[sel.selectedIndex];
+    document.getElementById('methodField').value = opt.dataset.method || '';
+    document.getElementById('accountNumberField').value = opt.dataset.number || '';
+  }
+
   function togglePassword() {
     const pwd = document.getElementById('secPassword');
     const eye = document.getElementById('eyeIcon');
@@ -192,6 +274,21 @@
       eye.classList.add('fa-eye');
     } else {
       pwd.type = 'password';
+      eye.classList.remove('fa-eye');
+      eye.classList.add('fa-eye-slash');
+    }
+  }
+
+  function toggleWithdrawPin() {
+    const pin = document.getElementById('withdrawPinField');
+    const eye = document.getElementById('withdrawPinEye');
+    if (!pin || !eye) return;
+    if (pin.type === 'password') {
+      pin.type = 'text';
+      eye.classList.remove('fa-eye-slash');
+      eye.classList.add('fa-eye');
+    } else {
+      pin.type = 'password';
       eye.classList.remove('fa-eye');
       eye.classList.add('fa-eye-slash');
     }

@@ -1,11 +1,35 @@
 <%- include('../partials/head') %>
 
 <div style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto">
-  <h1 style="color:var(--gold);font-size:22px;font-weight:800;margin-bottom:16px">💬 <%= t.chat_support %></h1>
+  <h1 style="color: var(--text-accent);font-size:22px;font-weight:800;margin-bottom:16px">💬 <%= t.chat_support %></h1>
+
+  <!-- ==================== দ্রুত সাহায্য (help-center পেজের সেম কালার/ডিজাইন) ==================== -->
+  <div style="background:linear-gradient(135deg,#1a2a6c 0%,#2a5298 100%);border-radius:16px;padding:18px 16px 16px;margin-bottom:14px;position:relative;overflow:hidden">
+    <div style="position:absolute;left:0;right:0;bottom:0;height:3px;background:linear-gradient(90deg,#ff8a00,#e52e71)"></div>
+    <div style="color:#fff;font-weight:800;font-size:18px;margin-bottom:12px">দ্রুত সাহায্য</div>
+    <div style="color:rgba(255,255,255,0.85);font-size:12px;font-weight:700;margin-bottom:8px;letter-spacing:.3px">ক্যাটাগরি</div>
+    <div id="quick-category-row" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch">
+      <button onclick="sendQuickMessage('ডিপোজিট সমস্যা')" class="qc-chip">💳 ডিপোজিট সমস্যা</button>
+      <button onclick="sendQuickMessage('উইথড্র সমস্যা')" class="qc-chip">💵 উইথড্র সমস্যা</button>
+      <button onclick="sendQuickMessage('বোনাস সমস্যা')" class="qc-chip">🎁 বোনাস সমস্যা</button>
+      <button onclick="sendQuickMessage('লগইন সমস্যা')" class="qc-chip">🔑 লগইন সমস্যা</button>
+      <button onclick="sendQuickMessage('অ্যাকাউন্ট ভেরিফিকেশন')" class="qc-chip">🪪 KYC ভেরিফিকেশন</button>
+      <button onclick="sendQuickMessage('টিকেট ইস্যু')" class="qc-chip">🎫 টিকেট ইস্যু</button>
+      <button onclick="sendQuickMessage('ফুটবল ইস্যু')" class="qc-chip">⚽ ফুটবল ইস্যু</button>
+    </div>
+  </div>
+  <style>
+    .qc-chip{
+      flex:0 0 auto; white-space:nowrap; background:rgba(255,255,255,0.12); color:#fff;
+      border:1px solid rgba(255,255,255,0.25); border-radius:10px; padding:10px 14px;
+      font-size:13px; font-weight:600; cursor:pointer; transition:background-color .2s;
+    }
+    .qc-chip:hover{ background:rgba(255,255,255,0.22); }
+  </style>
 
   <div style="display:flex;gap:8px;margin-bottom:12px">
     <button id="mode-bot" onclick="setMode(true)" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border-glass);background:var(--grad-gold);color:#000;font-weight:bold;cursor:pointer;font-size:13px">🤖 বট সহায়তা</button>
-    <button id="mode-agent" onclick="setMode(false)" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border-glass);background:rgba(255,255,255,0.08);color:#fff;font-weight:bold;cursor:pointer;font-size:13px">👤 লাইভ এজেন্ট</button>
+    <button id="mode-agent" onclick="setMode(false)" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border-glass);background:rgba(255,255,255,0.08);color:var(--text-main);font-weight:bold;cursor:pointer;font-size:13px">👤 লাইভ এজেন্ট</button>
   </div>
 
   <div id="chat-container" style="background:rgba(255,255,255,0.03);border:1px solid var(--border-glass);border-radius:16px;display:flex;flex-direction:column;height:70vh">
@@ -18,12 +42,12 @@
         <button onclick="clearFile()" style="color:#ef4444;font-size:12px;margin-left:8px;background:none;border:none;cursor:pointer">✕ <%= t.cancel %></button>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
-        <label style="background:rgba(255,255,255,0.08);color:#fff;padding:10px 12px;border-radius:8px;cursor:pointer;font-size:18px">
+        <label style="background:rgba(255,255,255,0.08);color:var(--text-main);padding:10px 12px;border-radius:8px;cursor:pointer;font-size:18px">
           📎
           <input type="file" id="file-input" style="display:none" accept="image/*,video/*">
         </label>
         <input type="text" id="message-input"
-          style="flex:1;background:rgba(255,255,255,0.08);border:1px solid var(--border-glass);border-radius:8px;padding:10px 14px;color:#fff;font-size:14px;outline:none"
+          style="flex:1;background:rgba(255,255,255,0.08);border:1px solid var(--border-glass);border-radius:8px;padding:10px 14px;color:var(--text-main);font-size:14px;outline:none"
           placeholder="<%= t.message_placeholder %>">
         <button id="send-button"
           style="background:var(--grad-gold);color:#000;padding:10px 16px;border-radius:8px;border:none;font-weight:bold;cursor:pointer;font-size:14px">
@@ -35,6 +59,7 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="/js/content-filter.js"></script>
 <script>
   const socket = io();
   const userId = <%= user.id %>;
@@ -73,7 +98,7 @@
           <div style="width:40px;height:40px;border-radius:50%;background:var(--grad-gold);display:flex;align-items:center;justify-content:center;color:#000;font-weight:800;font-size:18px">L</div>
           <div>
             <div style="font-weight:800;color:#111"><%= siteName %> Support</div>
-            <div style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:1px"><%= t.support_service %></div>
+            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px"><%= t.support_service %></div>
           </div>
         </div>
         <div style="padding:16px">
@@ -132,7 +157,7 @@
     div.style.cssText = `display:flex;justify-content:${isAdmin ? 'flex-start' : 'flex-end'}`;
 
     const inner = document.createElement('div');
-    inner.style.cssText = `max-width:80%;border-radius:12px;padding:10px 14px;${isAdmin ? 'background:rgba(255,255,255,0.1);color:#fff' : 'background:var(--grad-gold);color:#000'}`;
+    inner.style.cssText = `max-width:80%;border-radius:12px;padding:10px 14px;${isAdmin ? 'background:rgba(255,255,255,0.1);color:var(--text-main)' : 'background:var(--grad-gold);color:#000'}`;
 
     if (fileUrl) {
       if (fileType === 'image') {
@@ -174,6 +199,12 @@
     const text = messageInput.value.trim();
     if (!text && !selectedFile) return;
 
+    // ==== রিয়েল-টাইম ফ্রন্টএন্ড ফিল্টার — পাঠানোর আগে শেষবার চেক ====
+    if (text && window.contentFilterIsBad(text)) {
+      alert('⚠️ আপনার লেখায় অনুপযুক্ত/অশ্লীল কনটেন্ট আছে। অনুগ্রহ করে ঠিক করে আবার পাঠান।');
+      return;
+    }
+
     let fileUrl = null;
     let fileType = null;
 
@@ -210,6 +241,14 @@
   sendButton.addEventListener('click', sendMessage);
   messageInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') sendMessage();
+  });
+
+  // ==== টাইপ করার সময় রিয়েল-টাইম ভিজুয়াল ওয়ার্নিং (লাল বর্ডার + মেসেজ) ====
+  attachContentFilter('#message-input', { submitButton: sendButton });
+
+  // ==== ব্যাকএন্ড (socket.js) থেকে ব্লক হলে ইউজারকে জানানো ====
+  socket.on('message_blocked', (data) => {
+    alert('⚠️ ' + (data && data.text ? data.text : 'মেসেজটি পাঠানো যায়নি।'));
   });
 
   socket.on('new_message', (data) => {

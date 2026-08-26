@@ -1,542 +1,559 @@
 <%- include('../partials/head') %>
+
 <style>
-  :root {
-    --gold-bright: #fbbf24;
-    --gold-dark: #d97706;
-    --bg-profile: #ffffff;
-    --card-profile: #f8fafc;
-    --text-dark: #1e293b;
-    --text-muted: #64748b;
-    --border-light: #e2e8f0;
-  }
+/* ──────────────────── Profile CSS ──────────────────── */
+:root{--gold:#f5a623;--gold2:#ffd166;--gg:linear-gradient(135deg,#f5d67d,#f5a623,#d97706)}
+.pf-wrap{max-width:520px;margin:0 auto;padding:0 0 110px;background:transparent}
 
-  body {
-    background: var(--bg-profile) !important;
-    color: var(--text-dark) !important;
-    margin: 0;
-    padding: 0;
-  }
+/* Verify banner */
+.pf-verify-banner{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:14px;padding:12px 14px;margin:10px 12px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;color:rgba(255,255,255,.85)}
+.pf-verify-text{flex:1;min-width:0}
+.pf-verify-btn{background:rgba(239,68,68,.8);color:#fff;border:none;padding:6px 14px;border-radius:20px;font-size:12.5px;font-weight:700;cursor:pointer}
 
-  /* Fill empty side spaces */
-  .main-wrapper {
-    width: 100%;
-    max-width: 100%;
-    margin: 0 auto;
-  }
+/* Header */
+.pf-header{background:linear-gradient(160deg,#1a2235,#0d1117);padding:16px 14px 20px;position:relative;overflow:hidden}
+.pf-header-glow{position:absolute;top:-60px;right:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(245,166,35,.18),transparent 70%);border-radius:50%;pointer-events:none}
+.pf-header-top{display:flex;align-items:center;gap:14px;position:relative;z-index:2}
+.pf-header-balance-row{display:flex;align-items:flex-end;justify-content:space-between;margin-top:18px;position:relative;z-index:2}
+.pf-header-balance-label{color:rgba(255,255,255,.55);font-size:12px;font-weight:600}
+.pf-header-balance-value{font-family:'Teko',sans-serif;font-size:34px;color: var(--text-accent);line-height:1;margin-top:2px}
+.pf-header-refresh{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.7);width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.pf-quick-row.pf-header-quick-row{margin:16px 0 0}
+.pf-avatar-wrap{position:relative;flex-shrink:0}
+.pf-avatar{width:68px;height:68px;border-radius:50%;background:var(--gg);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:#000;border:3px solid rgba(245,166,35,.5);box-shadow:0 0 20px rgba(245,166,35,.25);overflow:hidden;cursor:pointer;background-size:cover;background-position:center}
+.pf-avatar-edit-btn{position:absolute;bottom:-2px;right:-2px;background:#111;border:2px solid var(--gold);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer;color: var(--text-accent)}
+.pf-online-dot{position:absolute;top:2px;left:2px;width:12px;height:12px;background:#22c55e;border-radius:50%;border:2px solid #0d1117;animation:pdot 2s infinite}
+@keyframes pdot{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.4)}50%{box-shadow:0 0 0 5px rgba(34,197,94,0)}}
+.pf-user-info{flex:1;min-width:0}
+.pf-username-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.pf-username{color:#fff;font-size:18px;font-weight:800}
+.pf-vip-badge-sm{background:var(--gg);color:#3a1e00;font-size:10.5px;padding:2px 8px;border-radius:20px;font-weight:900;white-space:nowrap;text-decoration:none}
+.pf-user-id{color:rgba(255,255,255,.4);font-size:11.5px;margin-top:3px;display:flex;align-items:center;gap:5px}
+.pf-copy-id-btn{background:none;border:none;color: var(--text-accent);cursor:pointer;padding:0;font-size:11px}
+.pf-notif-btn{position:relative;background:rgba(255,255,255,.08);border:none;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.8);font-size:17px;cursor:pointer;flex-shrink:0;text-decoration:none}
+.pf-notif-dot{position:absolute;top:4px;right:4px;background:#e53935;color:#fff;font-size:9px;font-weight:800;min-width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1.5px solid #0d1117;padding:0 2px}
 
-  .container {
-    max-width: none !important;
-    width: 100% !important;
-    padding: 0 !important;
-  }
+/* Profile completion */
+.pf-completion{margin:10px 0 0;padding:8px 12px;background:rgba(255,255,255,.05);border-radius:10px;display:flex;align-items:center;gap:10px;font-size:12px;color:rgba(255,255,255,.6)}
+.pf-comp-bar{flex:1;height:5px;background:rgba(255,255,255,.1);border-radius:10px;overflow:hidden}
+.pf-comp-fill{height:100%;background:var(--gg);border-radius:10px}
 
-  .profile-header {
-    background: linear-gradient(135deg, #fffbeb, #fef3c7);
-    padding: 40px 20px;
-    position: relative;
-    overflow: hidden;
-    border-bottom: 1px solid var(--gold-bright);
-    width: 100%;
-    box-sizing: border-box;
-  }
+/* Cards */
+.pf-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:20px;margin:12px 12px 0;overflow:hidden}
+.pf-card-title-row{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px}
+.pf-card-title{color:#fff;font-size:15px;font-weight:800;display:flex;align-items:center;gap:7px}
+.pf-mini-btn{background:rgba(245,166,35,.15);color: var(--text-accent);border:1px solid rgba(245,166,35,.3);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap}
 
-  .avatar-container {
-    width: 90px;
-    height: 90px;
-    border-radius: 50%;
-    border: 3px solid #fff;
-    overflow: hidden;
-    background: #fff;
-    cursor: pointer;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-  }
+/* VIP */
+.pf-vip-card{}
+.pf-vip-body{padding:0 16px 14px}
+.pf-vip-progress-bar{height:7px;background:rgba(255,255,255,.1);border-radius:10px;overflow:hidden;margin-bottom:7px}
+.pf-vip-progress-fill{height:100%;background:var(--gg);border-radius:10px;transition:width .8s}
+.pf-vip-info{color:rgba(255,255,255,.5);font-size:12px}
+.pf-vip-info b{color:rgba(255,255,255,.8)}
+.pf-wallet-mini{display:flex;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.06)}
+.pf-wm-label{color:rgba(255,255,255,.4);font-size:12px}
+.pf-wm-value{color: var(--text-accent);font-size:12px;font-weight:700}
 
-  .avatar-container img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
+/* Wallet */
+.pf-wallet-card{}
+.pf-wallet-balance-row{padding:0 16px 12px;display:flex;align-items:flex-end;justify-content:space-between}
+.pf-balance-amount{color: var(--text-accent);font-size:30px;font-weight:800;font-family:'Teko',sans-serif;line-height:1.1}
+.pf-balance-label{color:rgba(255,255,255,.4);font-size:11px;margin-bottom:4px}
+.pf-refresh-btn{background:rgba(245,166,35,.12);border:none;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color: var(--text-accent);font-size:15px;transition:background .2s}
+.pf-refresh-btn:active{background:rgba(245,166,35,.3)}
+.pf-wallet-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px 14px}
+.pf-wallet-item{background:rgba(255,255,255,.04);border-radius:12px;padding:9px 12px;border:1px solid rgba(255,255,255,.05)}
+.pf-wi-label{color:rgba(255,255,255,.38);font-size:10.5px;margin-bottom:2px}
+.pf-wi-value{color:#fff;font-size:13px;font-weight:700}
+.pf-wi-value.demo{color: var(--text-accent)}
+.pf-last-updated{color:rgba(255,255,255,.3);font-size:11px;padding:0 16px 10px}
 
-  .vip-badge {
-    background: #000;
-    color: var(--gold-bright);
-    font-size: 12px;
-    font-weight: 900;
-    padding: 4px 12px;
-    border-radius: 6px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-  }
+/* Hub Quick Actions */
+.pf-hub-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:1px solid rgba(255,255,255,.06);margin:0 12px}
+.pf-hub-actions.card-style{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:20px;margin:12px 12px 0;overflow:hidden;padding:4px}
+.pf-qa{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 4px;text-decoration:none;transition:background .15s;border-radius:16px}
+.pf-qa:active{background:rgba(255,255,255,.06)}
+.pf-qa i{font-size:20px}
+.pf-qa span{color:rgba(255,255,255,.75);font-size:11.5px;font-weight:600;text-align:center;line-height:1.3}
+.pf-qa.deposit i{color:#22c55e}.pf-qa.withdraw i{color:#f87171}.pf-qa.cards i{color:#818cf8}.pf-qa.history i{color:#2dd4bf}
+.pf-qa.vip i{color:#c084fc}.pf-qa.reward i{color: var(--text-accent)}.pf-qa.security i{color:#38bdf8}.pf-qa.more i{color:rgba(255,255,255,.5)}
 
-  .copy-btn {
-    background: rgba(0, 0, 0, 0.05);
-    border: none;
-    color: var(--text-muted);
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .copy-btn:active {
-    transform: scale(0.9);
-    background: rgba(0,0,0,0.1);
-  }
+/* Menu */
+.pf-menu-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:20px;margin:12px 12px 0;overflow:hidden}
 
-  .refresh-icon {
-    transition: transform 0.5s ease;
-  }
-  .refresh-icon.spinning {
-    animation: spin 1s linear infinite;
-  }
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
+/* Quick Actions (Deposit/Withdraw/My Cards) — সরাসরি Wallet Card এর নিচে, একবারে দৃশ্যমান */
+.pf-quick-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 12px 0}
+.pf-quick-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:14px 6px;border-radius:16px;text-decoration:none;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);transition:transform .12s,background .15s}
+.pf-quick-btn:active{transform:scale(.96);background:rgba(255,255,255,.08)}
+.pf-quick-btn i{font-size:19px}
+.pf-quick-btn span{color:rgba(255,255,255,.8);font-size:12px;font-weight:700}
+.pf-quick-btn.deposit i{color:#22c55e}
+.pf-quick-btn.withdraw i{color:#f87171}
+.pf-quick-btn.cards i{color:#818cf8}
 
-  .progress-container {
-    margin-top: 15px;
-    background: #e2e8f0;
-    height: 12px;
-    border-radius: 6px;
-    overflow: hidden;
-    position: relative;
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
-  }
+/* Member Center — ৫টা বড় হাব টাইল (Wallet/VIP/Reward/Account/Support), ট্যাপ করলে সাব-আইটেম প্যানেল খোলে */
+.mc-grid-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:var(--radius-lg, 20px);margin:14px 12px 0;overflow:hidden}
+.mc-grid-title{padding:14px 16px 8px;color:#fff;font-size:15px;font-weight:800;display:flex;align-items:center;gap:7px}
+/* ফ্ল্যাট গ্রিড — প্রতিটা আইটেম স্বাধীন, নেস্টেড কার্ড বা অ্যাকর্ডিয়ন নেই।
+   মোবাইলে ৪ কলাম (৩২০px-এও লেবেল ভাঙে না), ছোট স্ক্রিনে ৩, ডেস্কটপে ৬। */
+.mc-flat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;padding:2px 6px 10px}
+.mc-tile{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+  gap:7px;padding:12px 3px;min-height:64px;text-decoration:none;border-radius:14px;transition:background .15s}
+.mc-tile:active{background:rgba(255,255,255,.06)}
+.mc-tile:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
+.mc-tile-icon{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.mc-tile-label{color:rgba(255,255,255,.78);font-size:10.5px;font-weight:700;text-align:center;line-height:1.25;
+  overflow-wrap:anywhere;hyphens:auto;max-width:100%}
+.mc-tile-badge{position:absolute;top:4px;right:8px;background:#e53935;color:#fff;font-size:9px;font-weight:800;
+  min-width:16px;height:16px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px;border:1.5px solid #12121f;z-index:1}
+.mc-tile-badge.amber{background:#f59e0b;color:#14110A}
+.mc-tile-sub{color:rgba(255,255,255,.4);font-size:9px;font-weight:600;text-align:center;line-height:1.2;margin-top:-3px}
+@media (max-width:339px){.mc-flat-grid{grid-template-columns:repeat(3,1fr)}}
+@media (min-width:768px){.mc-flat-grid{grid-template-columns:repeat(6,1fr)}.mc-tile-label{font-size:12px}}
+.ic-sky-txt{color:#38bdf8}
 
-  .progress-bar {
-    height: 100%;
-    background: linear-gradient(90deg, #fbbf24, #f59e0b, #d97706);
-    transition: width 0.5s ease-out;
-    position: relative;
-  }
 
-  .progress-bar::after {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0) 100%);
-    animation: shine 2s infinite;
-  }
+/* Footer */
+.pf-footer{text-align:center;padding:22px 16px 10px;color:rgba(255,255,255,.28);font-size:11px}
+.pf-footer .ver{margin-top:4px;color:rgba(255,255,255,.2)}
 
-  @keyframes shine {
-    from { transform: translateX(-100%); }
-    to { transform: translateX(100%); }
-  }
+.mc-section-label{padding:12px 16px 6px;color:rgba(255,255,255,.35);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;display:flex;align-items:center;gap:6px}
+.mc-section-label i{color: var(--text-accent);font-size:12px}
 
-  .folder-section {
-    background: var(--card-profile);
-    margin: 15px;
-    border-radius: 16px;
-    overflow: hidden;
-    border: 1px solid var(--border-light);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-  }
+/* Icon color presets */
+.ic-gold{background:rgba(245,166,35,.15);color: var(--text-accent)}
+.ic-green{background:rgba(34,197,94,.12);color:#22c55e}
+.ic-red{background:rgba(239,68,68,.12);color:#f87171}
+.ic-blue{background:rgba(99,102,241,.15);color:#818cf8}
+.ic-purple{background:rgba(168,85,247,.12);color:#c084fc}
+.ic-teal{background:rgba(20,184,166,.12);color:#2dd4bf}
+.ic-orange{background:rgba(249,115,22,.12);color:#fb923c}
+.ic-sky{background:rgba(14,165,233,.12);color:#38bdf8}
 
-  .folder-header {
-    background: #f1f5f9;
-    padding: 12px 15px;
-    font-size: 13px;
-    font-weight: 800;
-    color: var(--text-dark);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-bottom: 1px solid var(--border-light);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .folder-header i {
-      color: var(--gold-dark);
-  }
+/* Logout */
+.pf-logout-row{margin:16px 12px 0;display:flex;align-items:center;gap:12px;padding:14px 16px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.15);border-radius:20px;text-decoration:none;transition:background .15s}
+.pf-logout-row:active{background:rgba(239,68,68,.14)}
+.pf-logout-icon{width:38px;height:38px;border-radius:12px;background:rgba(239,68,68,.12);color:#f87171;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.pf-logout-label{color:#f87171;font-size:14px;font-weight:700}
+.pf-version{text-align:center;margin-top:16px;margin-bottom:4px;color:rgba(255,255,255,.2);font-size:11px}
 
-  .menu-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    padding: 20px 15px;
-  }
+/* Sticky deposit FAB */
+.pf-sticky-deposit{position:fixed;bottom:80px;right:16px;background:var(--gg);color:#000;width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 16px rgba(245,166,35,.4);text-decoration:none;z-index:100;transition:transform .15s}
+.pf-sticky-deposit:active{transform:scale(.93)}
 
-  .menu-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    text-decoration: none;
-    color: var(--text-dark);
-    font-size: 12px;
-    text-align: center;
-    padding: 10px 5px;
-    border-radius: 12px;
-    transition: background 0.2s;
-  }
-  .menu-item:active {
-      background: #f1f5f9;
-  }
+/* Toast */
+#pf-toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:#1c2533;color:#fff;padding:9px 20px;border-radius:30px;font-size:12.5px;font-weight:600;border:1px solid var(--gold);opacity:0;transition:all .25s;z-index:9999;pointer-events:none;white-space:nowrap}
 
-  .menu-icon {
-    width: 50px;
-    height: 50px;
-    background: #fff;
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--gold-dark);
-    font-size: 22px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    border: 1px solid var(--border-light);
-  }
+/* Spinning */
+.spinning{animation:sp360 .7s linear infinite}
+@keyframes sp360{to{transform:rotate(360deg)}}
 
-  /* Modal Styles */
-  .modal {
-    display: none;
-    position: fixed;
-    z-index: 2000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.6);
-    backdrop-filter: blur(4px);
-    align-items: center;
-    justify-content: center;
-  }
-  .modal-content {
-    background: #fff;
-    padding: 24px;
-    border-radius: 20px;
-    width: 90%;
-    max-width: 400px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-  }
-  .avatar-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 15px;
-    margin-top: 15px;
-  }
-  .avatar-option {
-    aspect-ratio: 1/1;
-    border-radius: 50%;
-    overflow: hidden;
-    border: 3px solid transparent;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .avatar-option.selected {
-    border-color: var(--gold-bright);
-    transform: scale(1.1);
-  }
-  .avatar-option img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
 
-  /* Floating text for progress */
-  .floating-progress {
-      position: absolute;
-      top: -20px;
-      right: 0;
-      background: var(--gold-dark);
-      color: white;
-      padding: 2px 6px;
-      border-radius: 10px;
-      font-size: 10px;
-      font-weight: bold;
-      pointer-events: none;
-      animation: floatUp 2s ease-out forwards;
-  }
+/* Icon text colors */
+.ic-gold{background:rgba(245,166,35,.15);color: var(--text-accent)}
+.ic-purple{background:rgba(168,85,247,.12);color:#c084fc}
+.ic-orange{background:rgba(249,115,22,.12);color:#fb923c}
+.ic-sky{background:rgba(14,165,233,.12);color:#38bdf8}
+.ic-teal{background:rgba(20,184,166,.12);color:#2dd4bf}
+.ic-gold-txt{color: var(--text-accent)}
+.ic-green-txt{color:#22c55e}
+.ic-red-txt{color:#f87171}
+.ic-blue-txt{color:#818cf8}
+.ic-teal-txt{color:#2dd4bf}
+.ic-purple-txt{color:#c084fc}
+.ic-orange-txt{color:#fb923c}
+.ic-pink-txt{color:#f472b6}
 
-  @keyframes floatUp {
-      from { transform: translateY(0); opacity: 1; }
-      to { transform: translateY(-20px); opacity: 0; }
-  }
+
+/* Light mode */
+body.light-mode .pf-header{background:linear-gradient(160deg,#e5e7eb,#d1d5db)}
+body.light-mode .pf-username{color:#111}
+body.light-mode .mc-tile-label{color:#374151}
+body.light-mode .pf-card{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.08)}
+body.light-mode .pf-vip-info{color: var(--text-muted)}
+body.light-mode .pf-wi-label{color: var(--text-muted)}
+body.light-mode .pf-wi-value{color:#111}
+body.light-mode .pf-balance-label{color: var(--text-muted)}
+body.light-mode .mc-grid-title{color:#111}
+body.light-mode .mc-section-label{color:rgba(0,0,0,.6)}
+body.light-mode .mc-tile-badge{border-color:#fff}
+body.light-mode .mc-tile-sub{color:rgba(0,0,0,.6)}
+body.light-mode .pf-card-title{color:#111}
+body.light-mode .pf-completion{background:rgba(0,0,0,.04);color:rgba(0,0,0,.65)}
+body.light-mode .pf-footer{color:rgba(0,0,0,.5)}
+body.light-mode .pf-header-balance-label{color:rgba(0,0,0,.65)}
+body.light-mode .pf-header-refresh{background:rgba(0,0,0,.06);border-color:rgba(0,0,0,.12);color:rgba(0,0,0,.7)}
+body.light-mode .pf-last-updated{color:rgba(0,0,0,.5)}
+body.light-mode .pf-notif-btn{background:rgba(0,0,0,.06);color:rgba(0,0,0,.75)}
+body.light-mode .pf-quick-btn{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.08)}
+body.light-mode .pf-user-id{color:rgba(0,0,0,.6)}
+body.light-mode .pf-verify-banner{color:#7a1520}
+body.light-mode .pf-version,body.light-mode .ver{color:rgba(0,0,0,.4)}
+body.light-mode .pf-wm-label{color:rgba(0,0,0,.6)}
+body.light-mode .pf-wallet-item{background:rgba(0,0,0,.03);border-color:rgba(0,0,0,.06)}
+body.light-mode .pf-hub-actions.card-style{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.08)}
+body.light-mode .pf-menu-card{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.08)}
+body.light-mode .mc-grid-card{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.08)}
 </style>
 
-<div class="main-wrapper pb-24">
-  <!-- Header -->
-  <div class="profile-header">
-    <div style="display: flex; align-items: center; gap: 20px;">
-      <div class="avatar-container" onclick="openAvatarModal()">
-        <img src="<%= user.avatar_url || 'https://i.ibb.co/mR70f6V/default-avatar.png' %>" alt="Avatar" id="currentAvatar">
-      </div>
-      <div style="flex: 1;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <h2 style="color: var(--text-dark); font-size: 20px; font-weight: 800; margin: 0;"><%= user.username %></h2>
-          <button class="copy-btn" onclick="copyUsername('<%= user.username %>')">
-            <i class="far fa-copy"></i>
-          </button>
-        </div>
-        <div style="margin-top: 8px; display: flex; align-items: center; gap: 12px;">
-          <div class="vip-badge">
-             <i class="fas fa-crown"></i> VIP <%= user.vip_level %>
-          </div>
-          <span style="color: var(--text-muted); font-size: 13px; font-weight: 600;">ID: <%= 100000 + user.id %></span>
-        </div>
-      </div>
-    </div>
+  <%- include('../partials/flash') %>
 
-    <!-- Balance Section -->
-    <div style="margin-top: 30px; background: #fff; border-radius: 20px; padding: 25px; border: 1px solid var(--gold-bright); box-shadow: 0 10px 25px rgba(217, 119, 6, 0.1);">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <p style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">ব্যালেন্স</p>
-          <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
-             <h3 style="color: var(--text-dark); font-size: 36px; font-weight: 900; margin: 0; font-family: 'Teko', sans-serif;" id="userBalance">৳ <%= user.coins.toLocaleString() %></h3>
-             <i class="fas fa-sync-alt refresh-icon" style="color: var(--gold-dark); cursor: pointer; font-size: 20px;" onclick="refreshBalance()"></i>
-          </div>
+  <% if (user.email && !user.email_verified) { %>
+  <div class="pf-verify-banner">
+    <i class="fas fa-triangle-exclamation"></i>
+    <div class="pf-verify-text"><%= t.email_not_verified_notice %></div>
+    <form action="/resend-verification" method="POST" style="margin:0;">
+      <button type="submit" class="pf-verify-btn"><%= t.send_link %></button>
+    </form>
+  </div>
+  <% } %>
+
+  <!-- ==================== 1. UNIFIED HEADER CARD (Avatar/ID/VIP badge/Bell + Balance + Deposit/Withdraw/Cards) ==================== -->
+  <div class="pf-header">
+    <div class="pf-header-glow"></div>
+    <div class="pf-header-top">
+      <div class="pf-avatar-wrap">
+        <div id="avatarCircle" onclick="openAvatarPicker()" class="pf-avatar" style="background-image: <%= user.avatar ? `url('${user.avatar}')` : 'none' %>;">
+          <% if (!user.avatar) { %><%= user.username.charAt(0).toUpperCase() %><% } %>
         </div>
-        <div>
-          <a href="/payment/deposit" style="background: linear-gradient(to right, var(--gold-bright), var(--gold-dark)); color: #fff; padding: 12px 24px; border-radius: 12px; text-decoration: none; font-weight: 800; font-size: 15px; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.3); display: block;">ডিপোজিট</a>
-        </div>
+        <span class="pf-online-dot" title="<%= t.online %>"></span>
+        <div onclick="openAvatarPicker()" class="pf-avatar-edit">✏️</div>
       </div>
 
-      <!-- VIP Progress -->
-      <div style="margin-top: 25px; position: relative;">
-        <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 800; text-transform: uppercase; margin-bottom: 6px;">
-          <span style="color: var(--text-dark);">VIP <%= user.vip_level %> প্রগ্রেস</span>
-          <span style="color: var(--gold-dark);" id="progressText"><%= vip.progress %>/1000</span>
+      <div class="pf-id-block">
+        <div class="pf-username-row">
+          <span id="usernameText" class="pf-username"><%= user.username %></span>
+          <button onclick="copyUsername()" title="<%= t.copy %>" class="pf-copy-btn"><i class="fas fa-copy"></i></button>
+          <a href="/profile/vip" class="pf-vip-badge-sm">
+            <i class="fas fa-crown"></i><%= (vipStatus && vipStatus.current) ? vipStatus.current.name : 'VIP' %>
+          </a>
         </div>
-        <div class="progress-container" id="progressBarContainer">
-          <div class="progress-bar" id="progressBar" style="width: <%= (vip.progress / 1000) * 100 %>%;"></div>
+        <div class="pf-uid-row">
+          <span>ID: <%= 100000 + user.id %></span>
+          <button onclick="copyUid()" title="<%= t.copy %>" class="pf-copy-btn pf-copy-uid"><i class="fas fa-copy"></i></button>
         </div>
       </div>
+
+      <a href="/notifications" class="pf-notif-icon">
+        <i class="fas fa-bell"></i>
+        <% if (typeof notifPreview !== 'undefined' && notifPreview.unreadCount > 0) { %><span class="pf-notif-dot"></span><% } %>
+      </a>
+    </div>
+
+    <!-- Total Balance (Wallet Card বিলুপ্ত, এখানেই একীভূত) -->
+    <div class="pf-header-balance-row">
+      <div>
+        <div class="pf-header-balance-label"><%= t.total_balance %></div>
+        <div id="balanceText" class="pf-header-balance-value">৳ <%= Number(user.coins).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></div>
+        <div class="pf-wallet-updated"><%= t.last_updated %> <span id="lastUpdatedText"><%= t.just_now %></span></div>
+      </div>
+      <button onclick="refreshBalance()" id="refreshBtn" title="<%= t.refresh %>" class="pf-icon-btn pf-header-refresh"><i class="fas fa-sync-alt" id="refreshIcon"></i></button>
+    </div>
+
+    <!-- Deposit / Withdraw / My Cards — হেডার কার্ডেই, আলাদা Wallet Card নেই -->
+    <div class="pf-quick-row pf-header-quick-row">
+      <a href="/payment/deposit" class="pf-quick-btn deposit"><i class="fas fa-arrow-down-circle"></i><span><%= t.deposit %></span></a>
+      <a href="/payment/withdraw" class="pf-quick-btn withdraw"><i class="fas fa-arrow-up-circle"></i><span><%= t.withdraw %></span></a>
+      <a href="/profile/cards" class="pf-quick-btn cards"><i class="fas fa-credit-card"></i><span><%= t.my_cards %></span></a>
     </div>
   </div>
 
-  <!-- Folder A: Account Management -->
-  <div class="folder-section">
-    <div class="folder-header"><i class="fas fa-folder"></i> Folder A: একাউন্ট সেটিংস (Account Management)</div>
-    <div class="menu-grid">
-      <a href="/profile/security" class="menu-item">
-        <div class="menu-icon"><i class="fas fa-id-card"></i></div>
-        <span>মাই একাউন্ট</span>
+  <!-- ==================== PROFILE COMPLETION ==================== -->
+  <% if (typeof profileCompletion !== 'undefined') { %>
+  <div class="pf-completion-row">
+    <div class="pf-completion-track"><div class="pf-completion-fill" style="width: <%= profileCompletion %>%;"></div></div>
+    <span class="pf-completion-text"><%= t.profile_completion %> <b><%= profileCompletion %>%</b></span>
+  </div>
+  <% } %>
+
+  <!-- ==================== 2. MEMBER CENTER (ফ্ল্যাট আইকন গ্রিড) ====================
+       আগে এখানে ৫টা বড় "হাব" টাইল ছিল; প্রতিটাতে ট্যাপ করলে নিচে একটা অ্যাকর্ডিয়ন
+       প্যানেল খুলে সাব-আইটেম দেখাত। ফলে ইউজারের কাঙ্ক্ষিত জিনিসটা (যেমন "মিশন" বা
+       "লগইন হিস্টোরি") কোন হাবের ভেতরে আছে সেটা আন্দাজ করতে হতো — কার্ডের ভেতরে কার্ড,
+       আর দুই ট্যাপ ছাড়া কিছুই পাওয়া যেত না।
+
+       এখন প্রতিটা আইটেম স্বাধীন ও সরাসরি দৃশ্যমান, বিষয়ভিত্তিক সেকশনে ভাগ করা।
+       আগের হাবগুলোতে যত গন্তব্য ছিল তার একটাও বাদ যায়নি — VIP-এর চারটে একই লিংক
+       (/profile/vip) একটাতে মিলিয়ে দেওয়া হয়েছে, আর রিওয়ার্ডের ডেইলি/উইকলি/মান্থলি/কুপন
+       চারটে একই /profile/rewards পেজে যেত বলে সেটাও একটা এন্ট্রি।
+       প্রতিটা টাইলে আইকনের পাশাপাশি টেক্সট লেবেল আছে, এবং ন্যূনতম টাচ টার্গেট ৬৪px। -->
+  <div class="mc-grid-card">
+    <div class="mc-grid-title"><i class="fas fa-table-cells-large" style="color: var(--text-accent);"></i> <%= t.member_center %></div>
+
+    <div class="mc-section-label"><i class="fas fa-wallet"></i> <%= t.wallet_and_transactions %></div>
+    <div class="mc-flat-grid">
+      <a href="/profile/transactions" class="mc-tile">
+        <span class="mc-tile-icon" style="background:rgba(45,212,191,.15);color:#2dd4bf;"><i class="fas fa-receipt"></i></span>
+        <span class="mc-tile-label"><%= t.transactions %></span>
       </a>
-      <a href="/profile/security" class="menu-item">
-        <div class="menu-icon"><i class="fas fa-user-shield"></i></div>
-        <span>সিকিউরিটি</span>
+      <a href="/payment/history" class="mc-tile">
+        <span class="mc-tile-icon" style="background:rgba(248,113,113,.15);color:#f87171;"><i class="fas fa-arrow-up-from-bracket"></i></span>
+        <span class="mc-tile-label"><%= t.deposit_withdraw %></span>
       </a>
-      <a href="/profile/referral" class="menu-item">
-        <div class="menu-icon"><i class="fas fa-user-plus"></i></div>
-        <span>ইনভাইট ফ্রেন্ড</span>
+      <a href="/profile/account-record" class="mc-tile">
+        <span class="mc-tile-icon" style="background:rgba(129,140,248,.15);color:#818cf8;"><i class="fas fa-book"></i></span>
+        <span class="mc-tile-label"><%= t.account_record %></span>
+      </a>
+      <a href="/profile/cards" class="mc-tile">
+        <span class="mc-tile-icon" style="background:rgba(56,189,248,.15);color:#38bdf8;"><i class="fas fa-credit-card"></i></span>
+        <span class="mc-tile-label"><%= t.my_cards %></span>
+      </a>
+    </div>
+
+    <div class="mc-section-label"><i class="fas fa-chart-line"></i> <%= t.activity_and_records %></div>
+    <div class="mc-flat-grid">
+      <a href="/profile/history" class="mc-tile">
+        <span class="mc-tile-icon" style="background:rgba(192,132,252,.15);color:#c084fc;"><i class="fas fa-clock-rotate-left"></i></span>
+        <span class="mc-tile-label"><%= t.betting_record %></span>
+      </a>
+      <a href="/profile/stats" class="mc-tile">
+        <span class="mc-tile-icon" style="background:rgba(34,197,94,.15);color:#22c55e;"><i class="fas fa-chart-pie"></i></span>
+        <span class="mc-tile-label"><%= t.profit_loss %></span>
+      </a>
+      <a href="/notifications" class="mc-tile">
+        <% if (typeof notifPreview !== 'undefined' && notifPreview.unreadCount > 0) { %>
+        <span class="mc-tile-badge"><%= notifPreview.unreadCount %></span>
+        <% } %>
+        <span class="mc-tile-icon" style="background:rgba(236,72,153,.15);color:#ec4899;"><i class="fas fa-bell"></i></span>
+        <span class="mc-tile-label"><%= t.notifications %></span>
+      </a>
+    </div>
+
+    <div class="mc-section-label"><i class="fas fa-gift"></i> <%= t.rewards_and_vip %></div>
+    <div class="mc-flat-grid">
+      <a href="/profile/rewards" class="mc-tile">
+        <% if (typeof rewardBadge !== 'undefined' && rewardBadge > 0) { %>
+        <span class="mc-tile-badge"><%= rewardBadge %></span>
+        <% } %>
+        <span class="mc-tile-icon" style="background:rgba(245,166,35,.15);color: var(--text-accent);"><i class="fas fa-gift"></i></span>
+        <span class="mc-tile-label"><%= t.reward_center %></span>
+      </a>
+      <a href="/profile/missions" class="mc-tile">
+        <% if (typeof missionBadge !== 'undefined' && missionBadge > 0) { %>
+        <span class="mc-tile-badge"><%= missionBadge %></span>
+        <% } %>
+        <span class="mc-tile-icon" style="background:rgba(45,212,191,.15);color:#2dd4bf;"><i class="fas fa-flag-checkered"></i></span>
+        <span class="mc-tile-label"><%= t.missions %></span>
+      </a>
+      <a href="/profile/cashback" class="mc-tile">
+        <span class="mc-tile-icon" style="background:rgba(245,166,35,.15);color: var(--text-accent);"><i class="fas fa-coins"></i></span>
+        <span class="mc-tile-label"><%= t.cashback %></span>
+      </a>
+      <a href="/profile/vip" class="mc-tile">
+        <span class="mc-tile-icon" style="background:rgba(192,132,252,.15);color:#c084fc;"><i class="fas fa-crown"></i></span>
+        <span class="mc-tile-label"><%= t.vip_center %></span>
+      </a>
+      <a href="/profile/wheel" class="mc-tile">
+        <span class="mc-tile-icon" style="background:rgba(236,72,153,.15);color:#ec4899;"><i class="fas fa-circle-dot"></i></span>
+        <span class="mc-tile-label"><%= t.lucky_spin %></span>
+      </a>
+      <a href="/profile/badges" class="mc-tile">
+        <span class="mc-tile-icon" style="background:rgba(245,166,35,.15);color: var(--text-accent);"><i class="fas fa-trophy"></i></span>
+        <span class="mc-tile-label"><%= t.achievements %></span>
+      </a>
+      <a href="/profile/freebet" class="mc-tile">
+        <span class="mc-tile-icon" style="background:rgba(34,197,94,.15);color:#22c55e;"><i class="fas fa-ticket"></i></span>
+        <span class="mc-tile-label"><%= t.free_bet %></span>
+      </a>
+      <a href="/profile/referral" class="mc-tile">
+        <span class="mc-tile-icon" style="background:rgba(56,189,248,.15);color:#38bdf8;"><i class="fas fa-user-plus"></i></span>
+        <span class="mc-tile-label"><%= t.invite_friends %></span>
+      </a>
+    </div>
+
+    <div class="mc-section-label"><i class="fas fa-shield-halved"></i> <%= t.account_and_security %></div>
+    <div class="mc-flat-grid">
+      <a href="/profile/security" class="mc-tile">
+        <% if (typeof security !== 'undefined' && security && (security.score || 0) < 60) { %>
+        <span class="mc-tile-badge amber">!</span>
+        <% } %>
+        <span class="mc-tile-icon" style="background:rgba(56,189,248,.15);color:#38bdf8;"><i class="fas fa-shield-halved"></i></span>
+        <span class="mc-tile-label"><%= t.security_center %></span>
+        <span class="mc-tile-sub"><%= t.login_history %></span>
+      </a>
+      <a href="/extra/kyc" class="mc-tile">
+        <% if (typeof security !== 'undefined' && security && security.kycStatus !== 'approved') { %>
+        <span class="mc-tile-badge amber">!</span>
+        <% } %>
+        <span class="mc-tile-icon" style="background:rgba(34,197,94,.15);color:#22c55e;"><i class="fas fa-id-card"></i></span>
+        <span class="mc-tile-label"><%= t.kyc_verification %></span>
+      </a>
+      <a href="/profile/responsible" class="mc-tile">
+        <span class="mc-tile-icon" style="background:rgba(148,163,184,.15);color: var(--text-muted);"><i class="fas fa-hand"></i></span>
+        <span class="mc-tile-label"><%= t.responsible_gaming %></span>
+      </a>
+      <a href="/profile/loyalty" class="mc-tile">
+        <span class="mc-tile-icon" style="background:rgba(245,166,35,.15);color: var(--text-accent);"><i class="fas fa-star"></i></span>
+        <span class="mc-tile-label"><%= t.loyalty_points %></span>
+      </a>
+    </div>
+
+    <div class="mc-section-label"><i class="fas fa-headset"></i> <%= t.support %></div>
+    <div class="mc-flat-grid">
+      <a href="/profile/chat" class="mc-tile">
+        <span class="mc-tile-icon" style="background:rgba(34,197,94,.15);color:#22c55e;"><i class="fas fa-headset"></i></span>
+        <span class="mc-tile-label"><%= t.customer_service %></span>
+      </a>
+      <a href="/help-center" class="mc-tile">
+        <span class="mc-tile-icon" style="background:rgba(56,189,248,.15);color:#38bdf8;"><i class="fas fa-circle-question"></i></span>
+        <span class="mc-tile-label"><%= t.help_center %></span>
+      </a>
+      <a href="/profile/feedback" class="mc-tile">
+        <span class="mc-tile-icon" style="background:rgba(251,146,60,.15);color:#fb923c;"><i class="fas fa-comment-dots"></i></span>
+        <span class="mc-tile-label"><%= t.feedback %></span>
+      </a>
+      <a href="/profile/app-download" class="mc-tile">
+        <span class="mc-tile-icon" style="background:rgba(129,140,248,.15);color:#818cf8;"><i class="fas fa-mobile-screen-button"></i></span>
+        <span class="mc-tile-label"><%= t.app_download %></span>
       </a>
     </div>
   </div>
 
-  <!-- Folder B: Transaction History -->
-  <div class="folder-section">
-    <div class="folder-header"><i class="fas fa-folder"></i> Folder B: ট্রানজেকশন রেকর্ড (Transaction History)</div>
-    <div class="menu-grid">
-      <a href="/payment/history?type=deposit" class="menu-item">
-        <div class="menu-icon"><i class="fas fa-arrow-circle-down"></i></div>
-        <span>ডিপোজিট রেকর্ড</span>
-      </a>
-      <a href="/payment/history?type=withdraw" class="menu-item">
-        <div class="menu-icon"><i class="fas fa-arrow-circle-up"></i></div>
-        <span>উইথড্র রেকর্ড</span>
-      </a>
-      <a href="/profile/transactions" class="menu-item">
-        <div class="menu-icon"><i class="fas fa-file-invoice-dollar"></i></div>
-        <span>একাউন্ট রেকর্ড</span>
-      </a>
-    </div>
+  <!-- অ্যাক্টিভিটি ফিড কার্ড প্রোফাইল হোমপেজ থেকে সরানো হয়েছে।
+       ওই কার্ডে লগইন এন্ট্রিগুলো সরাসরি হোমপেজে তালিকাভুক্ত হতো। লগইন হিস্টোরির
+       সঠিক জায়গা সিকিউরিটি সেন্টার — সেখানে আগে থেকেই "সাম্প্রতিক লগইন অ্যাক্টিভিটি"
+       তালিকা ও পূর্ণ হিস্টোরির লিংক (/profile/login-history) দুটোই আছে।
+       কোনো ব্যাকএন্ড ডেটা বা রুট মোছা হয়নি — শুধু UI অবস্থান বদলেছে। -->
+
+  <!-- ==================== 7. FOOTER ==================== -->
+  <div class="pf-footer">
+    <div>© <%= new Date().getFullYear() %> <%= t.copyright_livo %></div>
+    <div class="ver">v2.2.0</div>
   </div>
 
-  <!-- Folder C: Gaming Activity -->
-  <div class="folder-section">
-    <div class="folder-header"><i class="fas fa-folder"></i> Folder C: বেটিং ও গেম হিস্ট্রি (Gaming Activity)</div>
-    <div class="menu-grid">
-      <a href="/profile/history" class="menu-item">
-        <div class="menu-icon"><i class="fas fa-gamepad"></i></div>
-        <span>বেটিং রেকর্ড</span>
-      </a>
-      <a href="/profile/stats" class="menu-item">
-        <div class="menu-icon"><i class="fas fa-chart-pie"></i></div>
-        <span>প্রফিট এন্ড লস</span>
-      </a>
-    </div>
-  </div>
-
-  <!-- Folder D: Rewards & Missions -->
-  <div class="folder-section">
-    <div class="folder-header"><i class="fas fa-folder"></i> Folder D: রিওয়ার্ড ও মিশন (Rewards & Missions)</div>
-    <div class="menu-grid">
-      <a href="/profile/rewards" class="menu-item">
-        <div class="menu-icon"><i class="fas fa-trophy"></i></div>
-        <span>বোনাস রিওয়ার্ড</span>
-      </a>
-      <a href="/profile/missions" class="menu-item">
-        <div class="menu-icon"><i class="fas fa-tasks"></i></div>
-        <span>মিশন পয়েন্ট</span>
-      </a>
-      <a href="/profile/wheel" class="menu-item">
-        <div class="menu-icon"><i class="fas fa-dharmachakra"></i></div>
-        <span>লাকি হুইল</span>
-      </a>
-      <a href="/profile/streak" class="menu-item">
-        <div class="menu-icon"><i class="fas fa-fire-alt"></i></div>
-        <span>উইন স্ট্রিক</span>
-      </a>
-    </div>
-  </div>
-
-  <!-- Folder E: General -->
-  <div class="folder-section">
-    <div class="folder-header"><i class="fas fa-folder"></i> Folder E: কাস্টমার সাপোর্ট ও অন্যান্য (General)</div>
-    <div class="menu-grid">
-      <a href="mailto:support@livo.com" class="menu-item">
-        <div class="menu-icon"><i class="fas fa-envelope"></i></div>
-        <span>ইন্টারন্যাশনাল মেইল</span>
-      </a>
-      <a href="/feedback" class="menu-item">
-        <div class="menu-icon"><i class="fas fa-comment-dots"></i></div>
-        <span>সাজেশন</span>
-      </a>
-      <a href="/profile/app-download" class="menu-item">
-        <div class="menu-icon"><i class="fas fa-mobile-alt"></i></div>
-        <span>অ্যাপ ডাউনলোড</span>
-      </a>
-      <a href="/chat" class="menu-item">
-        <div class="menu-icon"><i class="fas fa-headset"></i></div>
-        <span>কাস্টমার সেন্টার</span>
-      </a>
-      <a href="/help-center" class="menu-item">
-        <div class="menu-icon"><i class="fas fa-info-circle"></i></div>
-        <span>হেল্প সেন্টার</span>
-      </a>
-      <a href="/logout" class="menu-item">
-        <div class="menu-icon" style="color: #ef4444; background: #fee2e2; border-color: #fecaca;"><i class="fas fa-power-off"></i></div>
-        <span>লগ আউট</span>
-      </a>
-    </div>
-  </div>
-
-  <div style="text-align: center; margin-top: 30px; color: var(--text-muted); font-size: 13px; padding-bottom: 40px; font-weight: 600;">
-    ভার্সন ৩.২.০ | © ২০২৪ <%= siteName %> Gaming
-  </div>
-</div>
-
-<!-- Avatar Modal -->
-<div id="avatarModal" class="modal">
-  <div class="modal-content">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-      <h3 style="color: var(--text-dark); margin: 0; font-weight: 800;">অবতার সিলেক্ট করুন</h3>
-      <span style="color: var(--text-muted); cursor: pointer; font-size: 28px; line-height: 1;" onclick="closeAvatarModal()">&times;</span>
-    </div>
-    <div class="avatar-grid">
-      <%
-        const avatars = [
-          { url: 'https://i.ibb.co/mR70f6V/default-avatar.png', name: 'Default' },
-          { url: 'https://i.ibb.co/L5hYvj9/elon-musk.png', name: 'Elon Musk' },
-          { url: 'https://i.ibb.co/3WqPZqS/zuckerberg.png', name: 'Zuckerberg' },
-          { url: 'https://i.ibb.co/0Xz8z3R/jeff-bezos.png', name: 'Jeff Bezos' },
-          { url: 'https://i.ibb.co/vV1J7fT/bill-gates.png', name: 'Bill Gates' },
-          { url: 'https://i.ibb.co/D8mQ0Z8/warren-buffett.png', name: 'Warren Buffett' }
-        ];
-        avatars.forEach(av => {
-      %>
-        <div class="avatar-option <%= user.avatar_url === av.url ? 'selected' : '' %>" onclick="selectAvatar('<%= av.url %>')">
-          <img src="<%= av.url %>" alt="<%= av.name %>">
-        </div>
-      <% }) %>
-    </div>
-  </div>
-</div>
 
 <!-- Custom Copy Alert -->
 <div id="copyToast" style="display:none; position:fixed; bottom:100px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.8); color:#fff; padding:10px 20px; border-radius:30px; font-size:14px; z-index:9999; font-weight:bold;">কপি হয়েছে! ✅</div>
 
 <script>
-  function copyUsername(text) {
-    navigator.clipboard.writeText(text).then(() => {
-      const toast = document.getElementById('copyToast');
-      toast.style.display = 'block';
-      setTimeout(() => toast.style.display = 'none', 2000);
-    });
-  }
+function showToast(msg) {
+  var el = document.getElementById('copyToast');
+  el.textContent = msg;
+  el.style.opacity = '1';
+  el.style.transform = 'translateX(-50%) translateY(0)';
+  setTimeout(function () {
+    el.style.opacity = '0';
+    el.style.transform = 'translateX(-50%) translateY(20px)';
+  }, 1800);
+}
 
-  async function refreshBalance() {
-    const icon = document.querySelector('.refresh-icon');
-    const balanceEl = document.getElementById('userBalance');
-    icon.classList.add('spinning');
-    try {
-      const res = await fetch('/profile/api/balance');
-      const data = await res.json();
-      if (data.success) {
-        // Simple animation
-        let current = parseInt(balanceEl.innerText.replace(/[৳,]/g, ''));
-        let target = data.coins;
-        balanceEl.innerText = '৳ ' + data.coins.toLocaleString();
+function copyUsername() {
+  var name = document.getElementById('usernameText').textContent.trim();
+  copyText(name);
+}
 
-        // Show floating point update if increased
-        if(target > current) {
-            showFloatingText('+' + (target - current), balanceEl);
-        }
-      }
-    } catch (e) {}
-    setTimeout(() => icon.classList.remove('spinning'), 1000);
-  }
+function copyUid() {
+  copyText('<%= 100000 + user.id %>');
+}
 
-  function showFloatingText(text, parent) {
-      const el = document.createElement('div');
-      el.className = 'floating-progress';
-      el.innerText = text;
-      el.style.left = '50%';
-      parent.parentElement.style.position = 'relative';
-      parent.parentElement.appendChild(el);
-      setTimeout(() => el.remove(), 2000);
+function copyText(val) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(val).then(function () { showToast('✅ কপি হয়েছে!'); });
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = val;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('✅ কপি হয়েছে!');
   }
+}
 
-  function openAvatarModal() {
-    document.getElementById('avatarModal').style.display = 'flex';
-  }
-  function closeAvatarModal() {
-    document.getElementById('avatarModal').style.display = 'none';
-  }
+var AVATAR_OPTIONS = [
+  'https://i.pravatar.cc/300?img=12',
+  'https://i.pravatar.cc/300?img=33',
+  'https://i.pravatar.cc/300?img=5',
+  'https://i.pravatar.cc/300?img=47',
+  'https://i.pravatar.cc/300?img=8',
+  'https://i.pravatar.cc/300?img=25',
+  'https://i.pravatar.cc/300?img=15',
+  'https://i.pravatar.cc/300?img=44',
+  'https://i.pravatar.cc/300?img=68',
+  'https://i.pravatar.cc/300?img=32',
+  'https://i.pravatar.cc/300?img=60',
+  'https://i.pravatar.cc/300?img=51',
+  'https://i.pravatar.cc/300?img=20',
+  'https://i.pravatar.cc/300?img=49',
+  'https://i.pravatar.cc/300?img=65',
+  'https://i.pravatar.cc/300?img=57'
+];
 
-  async function selectAvatar(url) {
-    try {
-      const res = await fetch('/profile/avatar/update', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ avatar_url: url })
-      });
-      if (res.ok) {
-        document.getElementById('currentAvatar').src = url;
-        // Update selection state in modal
-        document.querySelectorAll('.avatar-option').forEach(opt => {
-            opt.classList.remove('selected');
-            if(opt.querySelector('img').src === url) opt.classList.add('selected');
-        });
-        closeAvatarModal();
-      }
-    } catch (e) {
-      alert('অবতার আপডেট করতে সমস্যা হয়েছে।');
-    }
-  }
-
-  window.onclick = function(event) {
-    const modal = document.getElementById('avatarModal');
-    if (event.target == modal) {
-      closeAvatarModal();
-    }
-  }
-
-  // Initial call to simulate progress bar animation
-  document.addEventListener('DOMContentLoaded', () => {
-      const bar = document.getElementById('progressBar');
-      const finalWidth = bar.style.width;
-      bar.style.width = '0%';
-      setTimeout(() => {
-          bar.style.width = finalWidth;
-      }, 300);
+function openAvatarPicker() {
+  var grid = document.getElementById('avatarGrid');
+  grid.innerHTML = '';
+  AVATAR_OPTIONS.forEach(function (url) {
+    var img = document.createElement('img');
+    img.src = url;
+    img.loading = 'lazy';
+    img.style.cssText = 'width:100%; aspect-ratio:1/1; border-radius:14px; background:rgba(255,255,255,0.06); border:2px solid rgba(255,255,255,0.08); cursor:pointer; padding:6px;';
+    img.onclick = function () { selectAvatar(url); };
+    grid.appendChild(img);
   });
+  document.getElementById('avatarModal').style.display = 'flex';
+}
+
+function closeAvatarPicker() {
+  document.getElementById('avatarModal').style.display = 'none';
+}
+
+function selectAvatar(url) {
+  fetch('/profile/update-avatar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ avatar: url })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.success) {
+        var circle = document.getElementById('avatarCircle');
+        circle.style.backgroundImage = "url('" + url + "')";
+        circle.textContent = '';
+        closeAvatarPicker();
+        showToast('✅ প্রোফাইল ছবি পরিবর্তন হয়েছে!');
+      } else {
+        showToast('❌ আপডেট ব্যর্থ হয়েছে');
+      }
+    })
+    .catch(function () { showToast('❌ সমস্যা হয়েছে'); });
+}
+
+function refreshBalance() {
+  var icon = document.getElementById('refreshIcon');
+  icon.classList.add('spinning');
+  fetch('/profile/api/balance')
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.success) {
+        document.getElementById('balanceText').textContent = '৳ ' + Number(data.coins).toLocaleString('<%= lang === "bn" ? "bn-BD" : "en-US" %>');
+        var lu = document.getElementById('lastUpdatedText');
+        if (lu) lu.textContent = 'এখনই';
+        showToast('✅ ব্যালেন্স আপডেট হয়েছে');
+      } else {
+        showToast('❌ আপডেট ব্যর্থ হয়েছে');
+      }
+    })
+    .catch(function () { showToast('❌ সমস্যা হয়েছে'); })
+    .finally(function () {
+      setTimeout(function () { icon.classList.remove('spinning'); }, 400);
+    });
+}
 </script>
 
+<a href="/payment/deposit" class="pf-sticky-deposit" title="<%= t.quick_deposit %>"><i class="fas fa-plus"></i></a>
+
+<div id="copyToast" style="position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:#1c2533;color:#fff;padding:9px 20px;border-radius:30px;font-size:12.5px;font-weight:600;border:1px solid var(--gold);opacity:0;transition:all .25s;z-index:9999;pointer-events:none;white-space:nowrap"></div>
+
+<div id="avatarModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10000;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#12121f;border-radius:20px;padding:20px;max-width:420px;width:100%;max-height:80vh;overflow-y:auto;border:1px solid rgba(255,255,255,.08)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <span style="color:#fff;font-weight:800;font-size:15px"><%= t.choose_avatar %></span>
+      <button type="button" onclick="closeAvatarPicker()" style="background:none;border:none;color:rgba(255,255,255,.6);font-size:18px;cursor:pointer">✕</button>
+    </div>
+    <div id="avatarGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px"></div>
+  </div>
+</div>
+
+<%- include('../partials/navbar') %>
 <%- include('../partials/bottom-nav') %>

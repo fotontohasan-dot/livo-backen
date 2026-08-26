@@ -1,85 +1,460 @@
-<%- include('../partials/head') %>
-<%- include('../partials/navbar') %>
-<div class="admin-layout">
-  <div class="admin-sidebar">
-    <div style="padding:0 1.5rem 1rem;font-size:.75rem;color:var(--muted);text-transform:uppercase;">অ্যাডমিন প্যানেল</div>
-    <a href="/admin" class="admin-nav-link active">📊 ড্যাশবোর্ড</a>
-    <a href="/admin/users" class="admin-nav-link">👥 ব্যবহারকারী</a>
-    <a href="/admin/matches" class="admin-nav-link">⚽ ম্যাচসমূহ</a>
-    <a href="/admin/tournaments" class="admin-nav-link">🏆 টুর্নামেন্ট</a>
-    <a href="/admin/news" class="admin-nav-link">📰 নিউজ</a>
-    <a href="/chat/admin" class="admin-nav-link">💬 সাপোর্ট চ্যাট</a>
-    <a href="/payment/admin/payments" class="admin-nav-link">💳 পেমেন্ট</a>
-    <a href="/" class="admin-nav-link">🏠 সাইটে ফিরে যান</a>
-  </div>
-  <div class="admin-content">
-    <%- include('../partials/flash') %>
-    <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:1.5rem;">📊 ড্যাশবোর্ড</h1>
-    <div class="grid grid-4" style="margin-bottom:2rem;">
-      <div class="stat-card"><div class="stat-number"><%= stats.total_users %></div><div class="stat-label">মোট ইউজার</div></div>
-      <div class="stat-card"><div class="stat-number" style="color:var(--secondary)"><%= stats.total_matches %></div><div class="stat-label">মোট ম্যাচ</div></div>
-      <div class="stat-card"><div class="stat-number" style="color:var(--green)"><%= stats.total_predictions %></div><div class="stat-label">প্রেডিকশন</div></div>
-      <div class="stat-card"><div class="stat-number" style="color:var(--gold)"><%= stats.total_coins_in_system %></div><div class="stat-label">সিস্টেম কয়েন</div></div>
-    </div>
-    <div class="grid grid-2">
-      <div class="card">
-        <div class="card-header">👥 সাম্প্রতিক ইউজার</div>
-        <table class="table">
-          <thead><tr><th>ইউজারনেম</th><th>ইমেইল</th><th>কয়েন</th><th>যোগদান</th></tr></thead>
-          <tbody>
-            <% recentUsers.forEach(u => { %>
-              <tr>
-                <td><%= u.username %></td>
-                <td style="font-size:.8rem;color:var(--muted)"><%= u.email %></td>
-                <td style="color:var(--gold)"><%= u.coins %></td>
-                <td style="font-size:.8rem;color:var(--muted)"><%= new Date(u.created_at).toLocaleDateString() %></td>
-              </tr>
-            <% }) %>
-          </tbody>
-        </table>
-      </div>
-      <div class="card">
-        <div class="card-header">⚽ সাম্প্রতিক ম্যাচ</div>
-        <table class="table">
-          <thead><tr><th>ম্যাচ</th><th>স্ট্যাটাস</th><th>তারিখ</th></tr></thead>
-          <tbody>
-            <% recentMatches.forEach(m => { %>
-              <tr>
-                <td style="font-size:.85rem"><%= m.team_a %> vs <%= m.team_b %></td>
-                <td><span class="status-badge status-<%= m.status %>"><%= m.status %></span></td>
-                <td style="font-size:.8rem;color:var(--muted)"><%= new Date(m.match_date).toLocaleDateString() %></td>
-              </tr>
-            <% }) %>
-          </tbody>
-        </table>
-      </div>
-    </div>
-    <div class="card" style="margin-top:1.5rem;">
-      <div class="card-header">📢 ব্রডকাস্ট নোটিফিকেশন</div>
-      <div class="card-body">
-        <div class="form-group">
-          <label class="form-label">টাইটেল</label>
-          <input type="text" class="form-input" id="notifTitle" placeholder="নোটিফিকেশন টাইটেল">
-        </div>
-        <div class="form-group">
-          <label class="form-label">মেসেজ</label>
-          <input type="text" class="form-input" id="notifMsg" placeholder="সব ইউজারদের জন্য মেসেজ">
-        </div>
-        <button onclick="broadcastNotif()" class="btn btn-primary">📢 সব ইউজারকে পাঠান</button>
-      </div>
-    </div>
-  </div>
-</div>
-<script>
-function broadcastNotif() {
-  const form = document.createElement('form');
-  form.method = 'POST'; form.action = '/admin/notify-all';
-  [['title','notifTitle'],['message','notifMsg']].forEach(([n,id]) => {
-    const i = document.createElement('input');
-    i.name = n; i.value = document.getElementById(id).value;
-    form.appendChild(i);
-  });
-  document.body.appendChild(form); form.submit();
+<%
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
+%>
+<%- include('partials/admin-layout', { 
+    title: 'Dashboard', 
+    active: 'dashboard',
+    body: `
+<div class="max-w-7xl mx-auto">
+    <!-- Welcome Header -->
+    <div class="flex items-end justify-between mb-8">
+        <div>
+            <h1 class="text-3xl font-semibold text-slate-900">Welcome back, Admin 👋</h1>
+            <p class="text-slate-600 mt-1">Here's what's happening with your platform today.</p>
+        </div>
+        <div class="text-right">
+            <div class="text-sm text-slate-500">Last updated</div>
+            <div class="font-medium text-slate-700" id="current-time"></div>
+            <div class="mt-2 flex flex-col items-end gap-1.5">
+                <span class="px-3 py-1.5 rounded-xl text-xs font-semibold ${redisStatus.connected ? 'bg-emerald-100 text-emerald-700' : (redisStatus.enabled ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500')}">
+                    <i class="fas fa-database mr-1"></i>Redis: ${redisStatus.connected ? 'Connected' : (redisStatus.enabled ? 'Disconnected' : 'Disabled')}
+                </span>
+                ${(!redisStatus.connected && redisStatus.lastError) ? `<div class="text-[11px] text-red-500 max-w-[220px] text-right">${escapeHtml(redisStatus.lastError)}</div>` : ''}
+                <a href="/admin/queue-jobs" class="px-3 py-1.5 rounded-xl text-xs font-semibold ${queueStatus.running ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'} hover:opacity-80">
+                    <i class="fas fa-layer-group mr-1"></i>Queue: ${queueStatus.running ? 'Running' : 'Stopped'}${(queueStatus.failed || 0) > 0 ? ` · ${queueStatus.failed} failed` : ''}
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ডেমো (প্র্যাকটিস) কারেন্সি উইজেট -->
+    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 mb-8">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-slate-800">🎮 ডেমো কারেন্সি ওভারভিউ <span class="text-xs font-normal text-emerald-600">● লাইভ</span></h3>
+        </div>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="p-4 rounded-2xl bg-slate-50">
+                <p class="text-xs text-slate-500">মোট ডেমো</p>
+                <p class="text-xl font-bold text-slate-900 mt-1" id="demo-total">${Number(demoStats.totalDemo || 0).toLocaleString('en-US')}</p>
+            </div>
+            <div class="p-4 rounded-2xl bg-slate-50">
+                <p class="text-xs text-slate-500">ব্যবহারকারীদের কাছে থাকা ডেমো</p>
+                <p class="text-xl font-bold text-blue-600 mt-1" id="demo-held">${Number(demoStats.userHeldDemo || 0).toLocaleString('en-US')}</p>
+            </div>
+            <div class="p-4 rounded-2xl bg-slate-50">
+                <p class="text-xs text-slate-500">ক্যাসিনো বেট ডেমো</p>
+                <p class="text-xl font-bold text-purple-600 mt-1" id="demo-casino">${Number(demoStats.casinoDemoWagered || 0).toLocaleString('en-US')}</p>
+            </div>
+            <div class="p-4 rounded-2xl bg-slate-50">
+                <p class="text-xs text-slate-500">স্পোর্টস বেটিং ডেমো</p>
+                <p class="text-xl font-bold text-orange-600 mt-1" id="demo-sports">${Number(demoStats.sportsDemoWagered || 0).toLocaleString('en-US')}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== Date Range Filter / Export / Auto Refresh ==================== -->
+    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 mb-8 flex items-center justify-between flex-wrap gap-4">
+        <form method="get" action="/admin" class="flex items-center gap-2 flex-wrap">
+            <label class="text-xs text-slate-500 font-medium">থেকে</label>
+            <input type="date" name="from" value="${dateRange.from}" class="text-sm border border-slate-200 rounded-xl px-3 py-1.5">
+            <label class="text-xs text-slate-500 font-medium">পর্যন্ত</label>
+            <input type="date" name="to" value="${dateRange.to}" class="text-sm border border-slate-200 rounded-xl px-3 py-1.5">
+            <button type="submit" class="text-sm font-semibold bg-slate-800 text-white px-4 py-1.5 rounded-xl hover:bg-slate-900"><i class="fas fa-filter mr-1"></i>ফিল্টার</button>
+            <a href="/admin/dashboard/export.csv?from=${dateRange.from}&to=${dateRange.to}" class="text-sm font-semibold bg-emerald-600 text-white px-4 py-1.5 rounded-xl hover:bg-emerald-700"><i class="fas fa-download mr-1"></i>Export CSV</a>
+        </form>
+        <div class="flex items-center gap-2">
+            <label class="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none">
+                <input type="checkbox" id="auto-refresh-toggle" class="rounded">
+                Auto Refresh
+            </label>
+            <select id="auto-refresh-interval" class="text-xs border border-slate-200 rounded-xl px-2 py-1.5">
+                <option value="15000">15s</option>
+                <option value="30000" selected>30s</option>
+                <option value="60000">60s</option>
+            </select>
+            <span id="auto-refresh-status" class="text-xs text-slate-400"></span>
+        </div>
+    </div>
+
+    <!-- ==================== Bet Statistics ==================== -->
+    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 mb-8">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-slate-800">🎯 Bet Statistics <span class="text-xs font-normal text-slate-400">${dateRange.from} → ${dateRange.to}</span></h3>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="p-4 rounded-2xl bg-slate-50">
+                <p class="text-xs text-slate-500">মোট বাজি</p>
+                <p class="text-xl font-bold text-slate-900 mt-1">${betStatistics.totalBets.toLocaleString('en-US')}</p>
+                <p class="text-[11px] text-slate-400 mt-0.5">Won ${betStatistics.wonCount} · Lost ${betStatistics.lostCount} · Pending ${betStatistics.pendingCount}</p>
+            </div>
+            <div class="p-4 rounded-2xl bg-slate-50">
+                <p class="text-xs text-slate-500">উইন রেট</p>
+                <p class="text-xl font-bold text-blue-600 mt-1">${betStatistics.winRatePercent}%</p>
+            </div>
+            <div class="p-4 rounded-2xl bg-slate-50">
+                <p class="text-xs text-slate-500">মোট স্টেক / পেআউট</p>
+                <p class="text-lg font-bold text-slate-900 mt-1">৳ ${betStatistics.totalStake.toLocaleString('en-US')} / ৳ ${betStatistics.totalPayout.toLocaleString('en-US')}</p>
+            </div>
+            <div class="p-4 rounded-2xl ${betStatistics.houseProfit >= 0 ? 'bg-emerald-50' : 'bg-red-50'}">
+                <p class="text-xs text-slate-500">হাউজ প্রফিট</p>
+                <p class="text-xl font-bold ${betStatistics.houseProfit >= 0 ? 'text-emerald-600' : 'text-red-600'} mt-1">৳ ${betStatistics.houseProfit.toLocaleString('en-US')}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== API Usage ==================== -->
+    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 mb-8">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-slate-800">🔌 API Usage <span class="text-xs font-normal text-slate-400">${dateRange.from} → ${dateRange.to}</span></h3>
+            <a href="/admin/api-logs" class="text-xs font-semibold text-blue-600 hover:underline">সব দেখুন <i class="fas fa-arrow-right ml-1"></i></a>
+        </div>
+        <div class="grid grid-cols-3 gap-4 mb-4">
+            <div class="p-4 rounded-2xl bg-slate-50">
+                <p class="text-xs text-slate-500">মোট রিকোয়েস্ট</p>
+                <p class="text-xl font-bold text-slate-900 mt-1" id="api-total-requests">${apiUsageStats.totalRequests.toLocaleString('en-US')}</p>
+            </div>
+            <div class="p-4 rounded-2xl bg-slate-50">
+                <p class="text-xs text-slate-500">গড় রেসপন্স টাইম</p>
+                <p class="text-xl font-bold text-blue-600 mt-1" id="api-avg-response">${apiUsageStats.avgResponseMs} ms</p>
+            </div>
+            <div class="p-4 rounded-2xl ${apiUsageStats.errorRatePercent > 5 ? 'bg-red-50' : 'bg-slate-50'}">
+                <p class="text-xs text-slate-500">এরর রেট</p>
+                <p class="text-xl font-bold ${apiUsageStats.errorRatePercent > 5 ? 'text-red-600' : 'text-slate-900'} mt-1" id="api-error-rate">${apiUsageStats.errorRatePercent}%</p>
+            </div>
+        </div>
+        ${(apiUsageStats.topEndpoints && apiUsageStats.topEndpoints.length) ? apiUsageStats.topEndpoints.map(e =>
+          '<div class="flex items-center justify-between py-2 border-t border-slate-50 text-sm">' +
+            '<span class="font-mono text-xs text-slate-600">' + escapeHtml(e.method) + ' ' + escapeHtml(e.endpoint) + '</span>' +
+            '<span class="text-xs text-slate-400">' + e.count + ' রিকোয়েস্ট · ' + e.avgMs + ' ms</span>' +
+          '</div>'
+        ).join('') : '<p class="text-sm text-slate-400 text-center py-3">এই রেঞ্জে কোনো API রিকোয়েস্ট নেই</p>'}
+    </div>
+
+    <!-- ==================== Server Health / Queue Health / Backup Health ==================== -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-semibold text-slate-800">🖥️ Server Health</h3>
+                ${serverHealth ? `<span class="px-2.5 py-1 text-xs font-bold rounded-full ${serverHealth.level === 'healthy' ? 'bg-emerald-100 text-emerald-700' : (serverHealth.level === 'warning' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700')}" id="server-health-badge">${serverHealth.level.toUpperCase()}</span>` : '<span class="px-2.5 py-1 text-xs font-bold rounded-full bg-slate-100 text-slate-500">N/A</span>'}
+            </div>
+            ${serverHealth ? `
+            <div class="grid grid-cols-2 gap-3 text-sm">
+                <div class="p-3 rounded-xl bg-slate-50"><p class="text-xs text-slate-500">Uptime</p><p class="font-semibold" id="sh-uptime">${Math.floor(serverHealth.uptimeSec / 3600)}h ${Math.floor((serverHealth.uptimeSec % 3600) / 60)}m</p></div>
+                <div class="p-3 rounded-xl bg-slate-50"><p class="text-xs text-slate-500">CPU Load (1m)</p><p class="font-semibold" id="sh-load">${serverHealth.cpu.loadAvg1m} / ${serverHealth.cpu.count} cores</p></div>
+                <div class="p-3 rounded-xl bg-slate-50"><p class="text-xs text-slate-500">Memory</p><p class="font-semibold" id="sh-memory">${serverHealth.system.usedMemPercent}% (${serverHealth.system.freeMemMb} MB free)</p></div>
+                <div class="p-3 rounded-xl bg-slate-50"><p class="text-xs text-slate-500">Disk</p><p class="font-semibold" id="sh-disk">${serverHealth.disk ? serverHealth.disk.usedPercent + '% (' + serverHealth.disk.freeMb + ' MB free)' : 'N/A'}</p></div>
+            </div>
+            ${(serverHealth.issues && serverHealth.issues.length) ? '<div class="mt-3 text-xs text-amber-700 bg-amber-50 rounded-xl p-3 space-y-1">' + serverHealth.issues.map(i => '<div><i class="fas fa-triangle-exclamation mr-1"></i>' + escapeHtml(i) + '</div>').join('') + '</div>' : ''}
+            ` : '<p class="text-sm text-slate-400 text-center py-3">সার্ভার হেলথ ডেটা পাওয়া যায়নি</p>'}
+        </div>
+
+        <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-semibold text-slate-800">📥 Queue Health</h3>
+                ${queueHealth ? `<span class="px-2.5 py-1 text-xs font-bold rounded-full ${queueHealth.level === 'healthy' ? 'bg-emerald-100 text-emerald-700' : (queueHealth.level === 'warning' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700')}" id="queue-health-badge">${queueHealth.level.toUpperCase()}</span>` : '<span class="px-2.5 py-1 text-xs font-bold rounded-full bg-slate-100 text-slate-500">N/A</span>'}
+            </div>
+            <div class="grid grid-cols-2 gap-3 text-sm">
+                <div class="p-3 rounded-xl bg-slate-50"><p class="text-xs text-slate-500">Pending</p><p class="font-semibold" id="qh-pending">${stats.pending_deposits !== undefined ? (queueStatus.pending || 0) : 0}</p></div>
+                <div class="p-3 rounded-xl bg-slate-50"><p class="text-xs text-slate-500">Failed</p><p class="font-semibold" id="qh-failed">${queueStatus.failed || 0}</p></div>
+            </div>
+            ${(queueHealth && queueHealth.issues && queueHealth.issues.length) ? '<div class="mt-3 text-xs text-amber-700 bg-amber-50 rounded-xl p-3 space-y-1">' + queueHealth.issues.map(i => '<div><i class="fas fa-triangle-exclamation mr-1"></i>' + escapeHtml(i) + '</div>').join('') + '</div>' : ''}
+            <a href="/admin/queue-jobs" class="mt-3 inline-block text-xs font-semibold text-blue-600 hover:underline">বিস্তারিত মনিটরিং ড্যাশবোর্ড <i class="fas fa-arrow-right ml-1"></i></a>
+        </div>
+
+        <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-semibold text-slate-800">🗄️ Backup Health</h3>
+                ${backupHealth ? `<span class="px-2.5 py-1 text-xs font-bold rounded-full ${backupHealth.level === 'healthy' ? 'bg-emerald-100 text-emerald-700' : (backupHealth.level === 'warning' ? 'bg-amber-100 text-amber-700' : (backupHealth.level === 'unknown' ? 'bg-slate-100 text-slate-500' : 'bg-red-100 text-red-700'))}" id="backup-health-badge">${backupHealth.level.toUpperCase()}</span>` : '<span class="px-2.5 py-1 text-xs font-bold rounded-full bg-slate-100 text-slate-500">N/A</span>'}
+            </div>
+            <div class="grid grid-cols-2 gap-3 text-sm">
+                <div class="p-3 rounded-xl bg-slate-50"><p class="text-xs text-slate-500">শেষ সফল</p><p class="font-semibold" id="bh-last-success">${(backupHealth && backupHealth.lastSuccessAt) ? new Date(backupHealth.lastSuccessAt).toLocaleString('bn-BD') : '—'}</p></div>
+                <div class="p-3 rounded-xl bg-slate-50"><p class="text-xs text-slate-500">শেষ ব্যর্থ</p><p class="font-semibold" id="bh-last-failed">${(backupHealth && backupHealth.lastFailedAt) ? new Date(backupHealth.lastFailedAt).toLocaleString('bn-BD') : '—'}</p></div>
+            </div>
+            ${(backupHealth && backupHealth.issues && backupHealth.issues.length) ? '<div class="mt-3 text-xs text-amber-700 bg-amber-50 rounded-xl p-3 space-y-1">' + backupHealth.issues.map(i => '<div><i class="fas fa-triangle-exclamation mr-1"></i>' + escapeHtml(i) + '</div>').join('') + '</div>' : ''}
+            <a href="/admin/backups" class="mt-3 inline-block text-xs font-semibold text-blue-600 hover:underline">ব্যাকআপ তালিকা <i class="fas fa-arrow-right ml-1"></i></a>
+        </div>
+    </div>
+    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 mb-8">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-slate-800">🛡️ Fraud Alerts <span class="text-xs font-normal text-slate-400">ওপেন ফ্ল্যাগ</span></h3>
+            <div class="flex items-center gap-3">
+                <a href="/admin/fraud-monitoring" class="text-xs font-semibold text-blue-600 hover:underline">মনিটরিং ড্যাশবোর্ড</a>
+                <a href="/admin/fraud-logs" class="text-xs font-semibold text-blue-600 hover:underline">সব দেখুন <i class="fas fa-arrow-right ml-1"></i></a>
+            </div>
+        </div>
+        <div class="grid grid-cols-3 gap-4 mb-4">
+            <div class="p-4 rounded-2xl ${fraudAlerts.high > 0 ? 'bg-red-50' : 'bg-slate-50'}">
+                <p class="text-xs text-slate-500">High Risk</p>
+                <p class="text-xl font-bold ${fraudAlerts.high > 0 ? 'text-red-600' : 'text-slate-900'} mt-1">${fraudAlerts.high || 0}</p>
+            </div>
+            <div class="p-4 rounded-2xl ${fraudAlerts.medium > 0 ? 'bg-amber-50' : 'bg-slate-50'}">
+                <p class="text-xs text-slate-500">Medium Risk</p>
+                <p class="text-xl font-bold ${fraudAlerts.medium > 0 ? 'text-amber-600' : 'text-slate-900'} mt-1">${fraudAlerts.medium || 0}</p>
+            </div>
+            <div class="p-4 rounded-2xl bg-slate-50">
+                <p class="text-xs text-slate-500">Low Risk</p>
+                <p class="text-xl font-bold text-slate-900 mt-1">${fraudAlerts.low || 0}</p>
+            </div>
+        </div>
+        ${(recentFraudFlags && recentFraudFlags.length) ? recentFraudFlags.map(f => {
+          const riskClass = f.risk_level === 'high' ? 'bg-red-100 text-red-700' : (f.risk_level === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600');
+          const uLabel = f.username ? escapeHtml(f.username) : ('#' + f.user_id);
+          return '<div class="flex items-center justify-between py-2 border-t border-slate-50">' +
+            '<div class="min-w-0 flex-1">' +
+              '<a href="/admin/users/' + f.user_id + '" class="text-sm font-semibold text-blue-600 hover:underline">' + uLabel + '</a>' +
+              '<p class="text-xs text-slate-500 truncate">' + escapeHtml(f.reason) + '</p>' +
+            '</div>' +
+            '<span class="px-2.5 py-1 text-xs font-bold rounded-full ' + riskClass + ' ml-3 flex-shrink-0">' + f.risk_level.toUpperCase() + '</span>' +
+          '</div>';
+        }).join('') : '<p class="text-sm text-slate-400 text-center py-3">কোনো ওপেন ফ্রড ফ্ল্যাগ নেই</p>'}
+    </div>
+
+    <!-- ==================== Duplicate Account Detection — উইজেট ==================== -->
+    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 mb-8">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-slate-800">🧬 Duplicate Accounts <span class="text-xs font-normal text-slate-400">ওপেন ফ্ল্যাগ</span></h3>
+            <a href="/admin/duplicate-accounts" class="text-xs font-semibold text-blue-600 hover:underline">সব দেখুন <i class="fas fa-arrow-right ml-1"></i></a>
+        </div>
+        <div class="grid grid-cols-3 gap-4 mb-4">
+            <div class="p-4 rounded-2xl ${dupAlerts.high > 0 ? 'bg-red-50' : 'bg-slate-50'}">
+                <p class="text-xs text-slate-500">High (70+)</p>
+                <p class="text-xl font-bold ${dupAlerts.high > 0 ? 'text-red-600' : 'text-slate-900'} mt-1">${dupAlerts.high || 0}</p>
+            </div>
+            <div class="p-4 rounded-2xl ${dupAlerts.medium > 0 ? 'bg-amber-50' : 'bg-slate-50'}">
+                <p class="text-xs text-slate-500">Medium (40-69)</p>
+                <p class="text-xl font-bold ${dupAlerts.medium > 0 ? 'text-amber-600' : 'text-slate-900'} mt-1">${dupAlerts.medium || 0}</p>
+            </div>
+            <div class="p-4 rounded-2xl bg-slate-50">
+                <p class="text-xs text-slate-500">Low (&lt;40)</p>
+                <p class="text-xl font-bold text-slate-900 mt-1">${dupAlerts.low || 0}</p>
+            </div>
+        </div>
+        ${(recentDupFlags && recentDupFlags.length) ? recentDupFlags.map(f => {
+          const score = Number(f.risk_score) || 0;
+          const riskClass = score >= 70 ? 'bg-red-100 text-red-700' : (score >= 40 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600');
+          const uLabel = f.username ? escapeHtml(f.username) : ('#' + f.user_id);
+          return '<div class="flex items-center justify-between py-2 border-t border-slate-50">' +
+            '<div class="min-w-0 flex-1">' +
+              '<a href="/admin/users/' + f.user_id + '" class="text-sm font-semibold text-blue-600 hover:underline">' + uLabel + '</a>' +
+              '<p class="text-xs text-slate-500 truncate">' + escapeHtml(f.reason) + '</p>' +
+            '</div>' +
+            '<span class="px-2.5 py-1 text-xs font-bold rounded-full ' + riskClass + ' ml-3 flex-shrink-0">' + score + ' / 100</span>' +
+          '</div>';
+        }).join('') : '<p class="text-sm text-slate-400 text-center py-3">কোনো ওপেন ডুপ্লিকেট ফ্ল্যাগ নেই</p>'}
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5 mb-8">
+        <!-- Total Users -->
+        <div class="stat-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">Total Users</p>
+                    <p class="metric-value text-slate-900 mt-2">${Number(stats.total_users || 0).toLocaleString('en-US')}</p>
+                    <p class="text-emerald-600 text-xs font-semibold mt-1 flex items-center gap-1">
+                        <i class="fas fa-arrow-up"></i> +${Number(stats.new_users_today || 0).toLocaleString('en-US')} today
+                    </p>
+                </div>
+                <div class="w-11 h-11 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center">
+                    <i class="fas fa-users text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Users (last 15 min) -->
+        <div class="stat-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">Active Users</p>
+                    <p class="metric-value text-slate-900 mt-2">${Number(stats.active_users_now || 0).toLocaleString('en-US')}</p>
+                    <p class="text-slate-400 text-xs font-semibold mt-1">গত ১৫ মিনিটে</p>
+                </div>
+                <div class="w-11 h-11 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center">
+                    <i class="fas fa-signal text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Deposits -->
+        <div class="stat-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">Total Deposits</p>
+                    <p class="metric-value text-slate-900 mt-2">৳ ${Number(stats.total_deposits_all_time || 0).toLocaleString('en-US')}</p>
+                    <p class="text-emerald-600 text-xs font-semibold mt-1 flex items-center gap-1">
+                        <i class="fas fa-arrow-up"></i> +৳ ${Number(stats.today_deposit || 0).toLocaleString('en-US')} today
+                    </p>
+                </div>
+                <div class="w-11 h-11 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center">
+                    <i class="fas fa-arrow-down text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Withdrawals -->
+        <div class="stat-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">Total Withdrawals</p>
+                    <p class="metric-value text-slate-900 mt-2">৳ ${Number(stats.total_withdrawals_all_time || 0).toLocaleString('en-US')}</p>
+                    <p class="text-amber-600 text-xs font-semibold mt-1 flex items-center gap-1">
+                        <i class="fas fa-arrow-up"></i> ৳ ${Number(stats.today_withdraw || 0).toLocaleString('en-US')} today
+                    </p>
+                </div>
+                <div class="w-11 h-11 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center">
+                    <i class="fas fa-arrow-up text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- GGR Today -->
+        <div class="stat-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">GGR (Today)</p>
+                    <p class="metric-value text-emerald-600 mt-2">৳ ${Number(stats.today_profit || 0).toLocaleString('en-US')}</p>
+                    <p class="text-slate-500 text-xs font-semibold mt-1">${stats.today_bet_count || 0} bets today</p>
+                </div>
+                <div class="w-11 h-11 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center">
+                    <i class="fas fa-chart-line text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Actions -->
+        <div class="stat-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">Pending Actions</p>
+                    <p class="metric-value text-orange-600 mt-2">${stats.pending_total || 0}</p>
+                    <p class="text-orange-600 text-xs font-semibold mt-1">${stats.pending_deposits || 0} deposits • ${stats.pending_withdrawals || 0} withdrawals • ${stats.pending_kyc || 0} KYC</p>
+                </div>
+                <div class="w-11 h-11 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center">
+                    <i class="fas fa-clock text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Withdraw Requests (dedicated card) -->
+        <a href="/admin/withdrawals" class="stat-card bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition block">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">Pending Withdraw Requests</p>
+                    <p class="metric-value text-red-600 mt-2">${stats.pending_withdrawals || 0}</p>
+                    <p class="text-slate-400 text-xs font-semibold mt-1">রিভিউ করতে ক্লিক করুন</p>
+                </div>
+                <div class="w-11 h-11 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center">
+                    <i class="fas fa-hand-holding-usd text-xl"></i>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Quick Actions + Recent Activity -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Quick Actions -->
+        <div class="lg:col-span-1 bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+            <h3 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                <i class="fas fa-bolt text-blue-500"></i> 
+                <span>Quick Actions</span>
+            </h3>
+            <div class="space-y-2">
+                <a href="/admin/users" class="flex items-center justify-between p-3 hover:bg-slate-50 rounded-2xl transition-colors group">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-user-plus text-blue-500 w-5"></i>
+                        <span class="font-medium text-sm">Add New User / Adjust Coins</span>
+                    </div>
+                    <i class="fas fa-chevron-right text-slate-300 group-hover:text-blue-500 transition-colors"></i>
+                </a>
+                <a href="/payment/admin/payments" class="flex items-center justify-between p-3 hover:bg-slate-50 rounded-2xl transition-colors group">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-check-circle text-emerald-500 w-5"></i>
+                        <span class="font-medium text-sm">Approve Pending Deposits (${stats.pending_deposits || 0})</span>
+                    </div>
+                    <i class="fas fa-chevron-right text-slate-300 group-hover:text-emerald-500 transition-colors"></i>
+                </a>
+                <a href="/admin/kyc" class="flex items-center justify-between p-3 hover:bg-slate-50 rounded-2xl transition-colors group">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-id-card text-indigo-500 w-5"></i>
+                        <span class="font-medium text-sm">Review Pending KYC (${stats.pending_kyc || 0})</span>
+                    </div>
+                    <i class="fas fa-chevron-right text-slate-300 group-hover:text-indigo-500 transition-colors"></i>
+                </a>
+                <a href="/chat/admin" class="flex items-center justify-between p-3 hover:bg-slate-50 rounded-2xl transition-colors group">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-headset text-purple-500 w-5"></i>
+                        <span class="font-medium text-sm">Live Support Chat</span>
+                    </div>
+                    <i class="fas fa-chevron-right text-slate-300 group-hover:text-purple-500 transition-colors"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="lg:col-span-2 bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-semibold text-lg">Recent Activity</h3>
+                <a href="/admin/reports" class="text-sm text-blue-600 hover:underline flex items-center gap-1">View all <i class="fas fa-arrow-right text-xs"></i></a>
+            </div>
+            
+            <div class="space-y-4 text-sm">
+                ${recentWithdrawals.slice(0, 4).map(w => `
+                <div class="flex items-start gap-4">
+                    <div class="w-8 h-8 bg-amber-100 text-amber-600 rounded-2xl flex-shrink-0 flex items-center justify-center"><i class="fas fa-arrow-up text-sm"></i></div>
+                    <div class="flex-1">
+                        <div class="flex justify-between">
+                            <span class="font-medium">Withdrawal ${w.status}</span>
+                            <span class="text-xs text-slate-500">${new Date(w.created_at).toLocaleString('en-BD', { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
+                        </div>
+                        <p class="text-slate-600">${escapeHtml(w.username)} • ৳ ${Number(w.amount).toLocaleString('en-US')}</p>
+                    </div>
+                </div>`).join('')}
+                ${recentBets.slice(0, 4).map(b => `
+                <div class="flex items-start gap-4">
+                    <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-2xl flex-shrink-0 flex items-center justify-center"><i class="fas fa-dice text-sm"></i></div>
+                    <div class="flex-1">
+                        <div class="flex justify-between">
+                            <span class="font-medium">Bet ${b.status}</span>
+                            <span class="text-xs text-slate-500">${new Date(b.created_at).toLocaleString('en-BD', { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
+                        </div>
+                        <p class="text-slate-600">${escapeHtml(b.username)} • ৳ ${Number(b.stake).toLocaleString('en-US')} on ${escapeHtml(b.title || (b.team_a + ' vs ' + b.team_b))}</p>
+                    </div>
+                </div>`).join('')}
+                ${(recentWithdrawals.length === 0 && recentBets.length === 0) ? '<p class="text-slate-400 text-sm">এখনো কোনো সাম্প্রতিক কার্যকলাপ নেই।</p>' : ''}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    // Update time
+    function updateTime() {
+        const el = document.getElementById('current-time');
+        if (el) el.textContent = new Date().toLocaleString('en-BD', { hour: 'numeric', minute: '2-digit', hour12: true });
+    }
+    setInterval(updateTime, 30000);
+    updateTime();
+
+    // ডেমো কারেন্সি উইজেট — রিয়েল-টাইম আপডেট
+    (function() {
+        const socket = io();
+        socket.emit('join_admin');
+        socket.on('demo_stats_update', function(stats) {
+            const map = { 'demo-total': stats.totalDemo, 'demo-held': stats.userHeldDemo, 'demo-casino': stats.casinoDemoWagered, 'demo-sports': stats.sportsDemoWagered };
+            Object.keys(map).forEach(function(id) {
+                const el = document.getElementById(id);
+                if (el) el.textContent = Number(map[id] || 0).toLocaleString('en-US');
+            });
+        });
+    })();
 </script>
-</body></html>
+` 
+}) %>

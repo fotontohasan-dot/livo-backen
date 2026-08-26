@@ -1,31 +1,52 @@
 <%- include('../partials/head') %>
 <%- include('../partials/navbar') %>
+<style>
+  .fa-crown-banner{position:relative;text-align:center;margin:6px auto 18px;max-width:340px;}
+  .fa-crown-banner .crown{font-size:38px;filter:drop-shadow(0 3px 4px rgba(0,0,0,.4));}
+  .fa-crown-banner .ribbon{background:linear-gradient(180deg,#ff6b6b,#d61f1f);color:#fff;font-weight:800;font-size:18px;padding:8px 0;border-radius:30px;margin-top:-10px;border:2px solid #ffd06b;box-shadow:0 4px 10px rgba(0,0,0,.35);}
+  .fa-wheel-wrap{position:relative;width:300px;height:300px;margin:0 auto 20px;}
+  .fa-wheel-ring{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 50% 50%,#ffdf8a 0%,#f0a91e 60%,#c9791a 100%);box-shadow:0 0 40px rgba(245,158,11,.5), inset 0 0 0 6px rgba(255,255,255,.25);}
+  .fa-wheel-ring::before{content:'';position:absolute;inset:6px;border-radius:50%;background:repeating-conic-gradient(#fff9e8 0deg 4deg, transparent 4deg 12deg);opacity:.35;}
+  .fa-bulb{position:absolute;width:8px;height:8px;border-radius:50%;background:#fff8d6;box-shadow:0 0 6px 2px rgba(255,220,120,.9);}
+  .fa-wheel-canvas-holder{position:absolute;inset:14px;border-radius:50%;overflow:hidden;box-shadow:0 0 0 4px rgba(0,0,0,.15) inset;}
+  .fa-go-btn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:64px;height:64px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ff8a8a,#c81d1d);border:3px solid #ffe08a;color:#fff;font-weight:800;font-size:16px;cursor:pointer;z-index:5;box-shadow:0 4px 12px rgba(0,0,0,.5);}
+  .fa-go-btn:disabled{opacity:.5;cursor:default;}
+  .fa-pointer{position:absolute;top:-10px;left:50%;transform:translateX(-50%);z-index:10;font-size:34px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5));}
+</style>
 <div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto;text-align:center;">
   <%- include('../partials/flash') %>
 
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-    <a href="/profile" style="color:#fff;text-decoration:none;font-size:20px;">←</a>
-    <h1 style="color:#fff;font-size:18px;font-weight:bold;">🎡 লাকি হুইল</h1>
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+    <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
   </div>
 
-  <div style="color:#94a3b8;font-size:13px;margin-bottom:6px;">দিনে একবার ঘুরিয়ে কয়েন জিতুন!</div>
+  <div class="fa-crown-banner">
+    <div class="crown">👑</div>
+    <div class="ribbon">লাকি হুইল</div>
+  </div>
+
+  <div style="color:var(--text-muted);font-size:13px;margin-bottom:6px;">দিনে একবার ঘুরিয়ে কয়েন জিতুন!</div>
   <div style="color:#f59e0b;font-size:13px;font-weight:bold;margin-bottom:20px;">
     আজকের রিমেইনিং স্পিন: <%= remainingToday || 0 %> / ১
   </div>
 
   <!-- হুইল -->
-  <div style="position:relative;width:280px;height:280px;margin:0 auto 20px;">
-    <!-- পয়েন্টার -->
-    <div style="position:absolute;top:-6px;left:50%;transform:translateX(-50%);z-index:10;font-size:30px;">🔻</div>
-    <canvas id="wheelCanvas" width="280" height="280" style="border-radius:50%;box-shadow:0 0 30px rgba(245,158,11,0.4);"></canvas>
+  <div class="fa-wheel-wrap">
+    <div class="fa-pointer">🔻</div>
+    <div class="fa-wheel-ring" id="wheelBulbs"></div>
+    <div class="fa-wheel-canvas-holder">
+      <canvas id="wheelCanvas" width="272" height="272"></canvas>
+    </div>
+    <button id="spinBtn" class="fa-go-btn" <%= (status && status.canSpin) ? '' : 'disabled' %>>GO</button>
   </div>
 
-  <% if (status && status.canSpin) { %>
-    <button id="spinBtn" class="btn btn-primary" style="padding:14px 50px;font-size:16px;font-weight:bold;border-radius:30px;">
-      🎯 স্পিন করুন
-    </button>
-  <% } else { %>
-    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:16px;color:#94a3b8;font-size:14px;">
+  <% if (status && status.locked) { %>
+    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:16px;color: var(--text-muted);font-size:14px;">
+      🔒 হুইল লক করা আছে।<br>
+      আজ ডিপোজিট করুন — তাহলেই স্পিন আনলক হবে।
+    </div>
+  <% } else if (!(status && status.canSpin)) { %>
+    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:16px;color: var(--text-muted);font-size:14px;">
       ✅ আজ স্পিন করা হয়ে গেছে<% if (status && status.prize) { %> — পেয়েছেন <strong style="color:#f59e0b;"><%= status.prize %> কয়েন</strong><% } %>।<br>
       আগামীকাল আবার আসুন।
     </div>
@@ -35,33 +56,52 @@
 
   <!-- স্পিন হিস্ট্রি / প্রাইজ লগ -->
   <div style="margin-top:30px;text-align:left;">
-    <div style="color:#fff;font-size:15px;font-weight:bold;margin-bottom:10px;">🧾 স্পিন হিস্ট্রি</div>
+    <div style="color:var(--text-main);font-size:15px;font-weight:bold;margin-bottom:10px;">🧾 স্পিন হিস্ট্রি</div>
     <% if (history && history.length) { %>
       <% history.forEach(function(h) { %>
         <div style="display:flex;justify-content:space-between;background:rgba(255,255,255,0.05);border-radius:10px;padding:10px 14px;margin-bottom:8px;">
-          <span style="color:#94a3b8;font-size:13px;"><%= h.spin_date %></span>
+          <span style="color:var(--text-muted);font-size:13px;"><%= h.spin_date %></span>
           <span style="color:#f59e0b;font-size:13px;font-weight:bold;">+<%= h.prize %> কয়েন</span>
         </div>
       <% }); %>
     <% } else { %>
-      <div style="color:#64748b;font-size:13px;text-align:center;padding:16px;">এখনো কোনো স্পিন করা হয়নি।</div>
+      <div style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px;">এখনো কোনো স্পিন করা হয়নি।</div>
     <% } %>
   </div>
 
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.9.3/confetti.browser.min.js"></script>
 <script>
-const segments = <%- JSON.stringify(segments || []) %>;
-const colors = ['#ef4444','#f59e0b','#10b981','#0ea5e9','#8b5cf6','#ec4899','#14b8a6','#f97316'];
+const segments = <%- jsonScriptSafe(segments || []) %>;
+const colors = ['#fff6e0', '#ffe9b8'];
 const canvas = document.getElementById('wheelCanvas');
 const ctx = canvas.getContext('2d');
-const cx = 140, cy = 140, radius = 140;
+const cx = 136, cy = 136, radius = 136;
 const n = segments.length;
 const arc = (2 * Math.PI) / n;
 let currentRotation = 0;
 
+// আলোর বাতি (bulb) রিং তৈরি
+(function renderBulbs(){
+  const holder = document.getElementById('wheelBulbs');
+  if (!holder) return;
+  const count = 24;
+  const r = 148;
+  for (let i = 0; i < count; i++) {
+    const ang = (2 * Math.PI * i) / count;
+    const x = 150 + r * Math.cos(ang) - 4;
+    const y = 150 + r * Math.sin(ang) - 4;
+    const b = document.createElement('div');
+    b.className = 'fa-bulb';
+    b.style.left = x + 'px';
+    b.style.top = y + 'px';
+    holder.appendChild(b);
+  }
+})();
+
 function drawWheel() {
-  ctx.clearRect(0, 0, 280, 280);
+  ctx.clearRect(0, 0, 272, 272);
   for (let i = 0; i < n; i++) {
     const start = currentRotation + i * arc;
     ctx.beginPath();
@@ -70,22 +110,50 @@ function drawWheel() {
     ctx.closePath();
     ctx.fillStyle = colors[i % colors.length];
     ctx.fill();
+    ctx.strokeStyle = 'rgba(180,120,20,0.4)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
     // লেখা
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(start + arc / 2);
     ctx.textAlign = 'right';
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 15px sans-serif';
-    ctx.fillText(segments[i], radius - 15, 5);
+    ctx.fillStyle = '#7a3e00';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillText(segments[i] > 0 ? (segments[i] + ' কয়েন') : 'আবার', radius - 14, 5);
     ctx.restore();
   }
 }
 drawWheel();
 
+// স্পিনের ফলাফল সার্ভার থেকে এনে দেখানো। ফ্রন্টএন্ড নিজে কোনো পুরস্কার হিসাব করে না —
+// spin() ইতিমধ্যে যা wheel_spins-এ লিখেছে, সেটাই পড়া হয়।
+async function revealResult() {
+  const el = document.getElementById('result');
+  try {
+    const res = await fetch('/profile/wheel/result', { headers: { 'Accept': 'application/json' } });
+    const data = await res.json();
+    if (!data.success) {
+      el.style.color = '#94a3b8';
+      el.innerText = data.message || 'ফলাফল আনা যায়নি।';
+      return;
+    }
+    el.style.color = '#10b981';
+    el.innerText = '🎉 ' + data.message;
+    if (data.prize > 0 && window.confetti) {
+      confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
+    }
+    setTimeout(() => location.reload(), 2500);
+  } catch (err) {
+    el.style.color = '#94a3b8';
+    el.innerText = 'ফলাফল আনা যায়নি। পেজ রিফ্রেশ করুন।';
+  }
+}
+
 const spinBtn = document.getElementById('spinBtn');
 if (spinBtn) {
   spinBtn.addEventListener('click', async () => {
+    if (spinBtn.disabled) return;
     spinBtn.disabled = true;
     document.getElementById('result').innerText = '';
 
@@ -125,9 +193,9 @@ if (spinBtn) {
         if (t < 1) {
           requestAnimationFrame(animate);
         } else {
-          document.getElementById('result').style.color = '#10b981';
-          document.getElementById('result').innerText = '🎉 ' + data.message;
-          setTimeout(() => location.reload(), 2500);
+          // অ্যানিমেশন শেষ — এখন সার্ভার-নিশ্চিত ফলাফল আনা হয়। স্পিন রেসপন্সে পুরস্কার
+          // বা জয়ের বার্তা আসে না, তাই হুইল থামার আগে ফলাফল জানার উপায় নেই।
+          revealResult();
         }
       }
       requestAnimationFrame(animate);

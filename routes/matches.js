@@ -1,4 +1,5 @@
 const express = require('express');
+const { requireIntParam } = require('../middleware/validate');
 const router = express.Router();
 const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
@@ -10,6 +11,10 @@ const { addVipTurnover } = require('../services/vip');
 const { updateMissionProgress } = require('../services/missions');
 const { addPoints } = require('../services/loyalty');
 const { checkBadges } = require('../services/badges');
+const { getSetting } = require('../services/settings');
+const { resolveOdd } = require('../services/oddsResolver');
+const { broadcastDemoStats } = require('../services/socket');
+const cache = require('../services/cache');
 
 function formatMatch(row) {
   return {
@@ -32,7 +37,7 @@ router.get('/', (req, res) => {
   res.render('matches', {
     currentPage: 'matches',
     sport: 'all',
-    title: 'আসন্ন ম্যাচসমূহ',
+    title: req.t('matches_upcoming_title'),
     user: req.session ? req.session.user : null
   });
 });
@@ -66,8 +71,21 @@ router.get('/football', (req, res) => {
 
 router.get('/api/live', async (req, res) => {
   try {
+    const CACHE_KEY = 'matches:live';
+    const cached = await cache.get(CACHE_KEY);
+    if (cached) return res.json(cached);
+
+    // দ্রষ্টব্য: এখানে আগে `result, home_odds, draw_odds, away_odds` কলামগুলোও SELECT করা
+    // হতো, কিন্তু matches টেবিলে ওই কলামগুলো কখনো তৈরিই হয়নি। ফলে কোয়েরিটা প্রতিবার
+    // "column \"result\" does not exist" এরর দিত, নিচের catch ব্লক সেটা গিলে ফেলে
+    // `{ success: true, cricket: [], football: [] }` ফেরত দিত — অর্থাৎ ম্যাচ পেজে
+    // কখনোই কোনো ম্যাচ দেখাত না, অথচ HTTP 200 আসায় সমস্যাটা ধরা পড়ত না।
+    // formatMatch() ওই চারটা কলামের একটাও ব্যবহার করে না, তাই SELECT থেকে বাদ দেওয়াই
+    // সবচেয়ে ছোট নিরাপদ ফিক্স — কোনো আউটপুট ফিল্ড হারায় না।
     const result = await pool.query(
-      `SELECT * FROM matches ORDER BY
+      `SELECT id, title, team_a, team_b, sport, league, status, start_time,
+              score_a, score_b, overs
+       FROM matches ORDER BY
          CASE WHEN status = 'live' THEN 0 ELSE 1 END,
          start_time ASC NULLS LAST,
          id DESC
@@ -83,14 +101,20 @@ router.get('/api/live', async (req, res) => {
       else cricket.push(m);
     }
 
-    res.json({ success: true, cricket, football });
+    const payload = { success: true, cricket, football };
+    cache.set(CACHE_KEY, payload, 10).catch(() => {}); // 10s TTL — live data stays fresh
+    res.json(payload);
   } catch (err) {
     console.error('matches/api/live error:', err.message);
     res.json({ success: true, cricket: [], football: [] });
   }
 });
 
-router.get('/:id', async (req, res) => {
+// ত্রুটিপূর্ণ id (abc, 1e309, ইত্যাদি) আগে সরাসরি PostgreSQL-এ পৌঁছে 22P02/22003 এরর
+// ঘটাত, তারপর catch ব্লক ধরে রিডাইরেক্ট করত। ইউজার নিরাপদ উত্তরই পেত, কিন্তু প্রতিটা
+// এমন রিকোয়েস্টে অপ্রয়োজনীয় DB রাউন্ড-ট্রিপ হতো। এখন রুটে ঢোকার আগেই যাচাই হয়;
+// গন্তব্য আগের catch ব্লকের মতোই।
+router.get('/:id', requireIntParam('id', '/matches'), async (req, res) => {
   try {
     const matchRes = await pool.query(`SELECT * FROM matches WHERE id = $1`, [req.params.id]);
     const row = matchRes.rows[0];
@@ -133,18 +157,20 @@ router.get('/:id', async (req, res) => {
 router.post('/:id/bet', isAuth, async (req, res) => {
   const userId = req.session.user.id;
   const matchId = req.params.id;
-  const { market_id, runner, odd } = req.body;
+  const { market_id, runner, demo } = req.body;
   const stake = parseInt(req.body.stake);
-  const oddNum = parseFloat(odd);
+  const isDemo = !!demo;
 
-  if (isNaN(stake) || stake < 10) {
-    return res.status(400).json({ success: false, message: 'মিনিমাম ১০ কয়েন বেট করতে হবে' });
+  const minBet = Number(await getSetting('min_bet'));
+  const maxBet = Number(await getSetting('max_bet'));
+  if (isNaN(stake) || stake < minBet) {
+    return res.status(400).json({ success: false, message: req.t('bet_min_amount').replace('{value}', minBet) });
   }
-  if (isNaN(oddNum) || oddNum <= 1) {
-    return res.status(400).json({ success: false, message: 'অকার্যকর ওডস' });
+  if (stake > maxBet) {
+    return res.status(400).json({ success: false, message: req.t('bet_max_amount').replace('{value}', maxBet) });
   }
   if (!market_id) {
-    return res.status(400).json({ success: false, message: 'মার্কেট পাওয়া যায়নি' });
+    return res.status(400).json({ success: false, message: req.t('matches_market_not_found') });
   }
 
   const client = await pool.connect();
@@ -154,23 +180,47 @@ router.post('/:id/bet', isAuth, async (req, res) => {
     const m = await client.query(`SELECT * FROM markets WHERE id = $1`, [market_id]);
     if (!m.rows[0] || m.rows[0].status !== 'open') {
       await client.query('ROLLBACK');
-      return res.status(400).json({ success: false, message: 'এই মার্কেটে এখন বেট করা যাবে না' });
+      return res.status(400).json({ success: false, message: req.t('matches_market_closed') });
     }
 
+    // অডস সার্ভার থেকেই নির্ধারিত। আগে req.body.odd সরাসরি bets.odd-এ যেত, আর
+    // সেটেলমেন্ট পেআউট হিসাব করে stake * bets.odd দিয়ে — ফলে বড় odd পাঠিয়ে
+    // যেকোনো পরিমাণ কয়েন তোলা যেত। ক্লায়েন্টের পাঠানো odd এখন উপেক্ষিত।
+    const oddNum = resolveOdd(m.rows[0], runner);
+    if (oddNum === null) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ success: false, message: req.t('matches_invalid_odds') });
+    }
+
+    const balanceCol = isDemo ? 'demo_balance' : 'coins';
     const upd = await client.query(
-      `UPDATE users SET coins = coins - $1 WHERE id = $2 AND coins >= $1 RETURNING coins`,
+      `UPDATE users SET ${balanceCol} = ${balanceCol} - $1 WHERE id = $2 AND ${balanceCol} >= $1 RETURNING ${balanceCol}`,
       [stake, userId]
     );
     if (upd.rowCount === 0) {
       await client.query('ROLLBACK');
-      return res.status(400).json({ success: false, message: 'পর্যাপ্ত কয়েন নেই' });
+      return res.status(400).json({ success: false, message: isDemo ? req.t('balance_insufficient_demo') : req.t('payment_insufficient_coins') });
     }
 
     await client.query(
-      `INSERT INTO bets (user_id, match_id, market_id, market_type, runner, odd, stake, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')`,
-      [userId, matchId, market_id, m.rows[0].type, runner || null, oddNum, stake]
+      `INSERT INTO bets (user_id, match_id, market_id, market_type, runner, odd, stake, status, is_demo)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8)`,
+      [userId, matchId, market_id, m.rows[0].type, runner || null, oddNum, stake, isDemo]
     );
+
+    if (isDemo) {
+      await client.query(
+        `INSERT INTO demo_transactions (user_id, category, type, amount, description)
+         VALUES ($1, 'sports', 'bet', $2, $3)`,
+        [userId, stake, `বেট: ${m.rows[0].name} (ডেমো)`]
+      );
+      await client.query('COMMIT');
+
+      req.session.user.demo_balance = upd.rows[0].demo_balance;
+      broadcastDemoStats().catch(e => console.error('demo stats:', e.message));
+
+      return res.json({ success: true, message: req.t('matches_demo_bet_placed'), demo: true, newBalance: upd.rows[0].demo_balance });
+    }
 
     await client.query(
       `INSERT INTO coin_transactions (user_id, amount, type, description)
@@ -181,6 +231,7 @@ router.post('/:id/bet', isAuth, async (req, res) => {
     await client.query('COMMIT');
 
     if (req.session.user) req.session.user.coins = upd.rows[0].coins;
+    broadcastDemoStats().catch(e => console.error('demo stats:', e.message));
 
     addTurnover(userId, 'sports', stake).catch(e => console.error('turnover:', e.message));
     updateDailyTurnover(userId, stake).catch(e => console.error('dailyReward:', e.message));
@@ -191,11 +242,11 @@ router.post('/:id/bet', isAuth, async (req, res) => {
     addPoints(userId, stake).catch(e => console.error('loyalty:', e.message));
     checkBadges(userId).catch(e => console.error('badges:', e.message));
 
-    res.json({ success: true, message: 'বেট সফল হয়েছে!', newBalance: upd.rows[0].coins });
+    res.json({ success: true, message: req.t('matches_bet_placed'), newBalance: upd.rows[0].coins });
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('bet error:', err.message);
-    res.status(500).json({ success: false, message: 'সার্ভার ত্রুটি' });
+    res.status(500).json({ success: false, message: req.t('common_server_error_short') });
   } finally {
     client.release();
   }

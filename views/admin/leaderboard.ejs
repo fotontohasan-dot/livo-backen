@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>লিডারবোর্ড ম্যানেজমেন্ট • Livo Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
+    .lb-rank { font-weight: 800; }
+    .lb-rank-1 { color: #f59e0b; }
+    .lb-rank-2 { color: #cbd5e1; }
+    .lb-rank-3 { color: #d97706; }
+  </style>
+  <%- include('./partials/pwa-head') %>
+</head>
+<body>
+  <div class="admin-wrap">
+    <%- include('./partials/sidebar', { active: 'leaderboard' }) %>
+    <div class="admin-content">
+      <%- include('./partials/load-error') %>
+      <%- include('./partials/header', { pageTitle: 'লিডারবোর্ড ম্যানেজমেন্ট', pageSubtitle: 'পয়েন্ট র‍্যাঙ্কিং, রেফারেল কনটেস্ট প্রাইজ ও মডারেশন — এক জায়গায়' }) %>
+
+      <% if (saved) { %>
+        <div class="admin-card" style="padding:12px 16px;margin-bottom:14px;background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.3);color:#10b981;font-weight:700;font-size:13px;">
+          <i class="fas fa-check-circle"></i> সফলভাবে আপডেট হয়েছে
+        </div>
+      <% } %>
+      <% if (saveError) { %>
+        <div class="admin-card" style="padding:12px 16px;margin-bottom:14px;background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.3);color:#ef4444;font-weight:700;font-size:13px;">
+          <i class="fas fa-circle-exclamation"></i> <%= saveError %>
+        </div>
+      <% } %>
+
+      <div class="grid grid-4" style="margin-bottom:14px;">
+        <div class="stat-card"><div class="stat-label">মোট ইউজার (রোল: user)</div><div class="stat-number"><%= total %></div></div>
+        <div class="stat-card"><div class="stat-label">এই পেজে</div><div class="stat-number"><%= entries.length %></div></div>
+        <div class="stat-card"><div class="stat-label">পাবলিক Top 50 (৬০ সেকেন্ড ক্যাশ)</div><div class="stat-number" style="color:#f59e0b;">50</div></div>
+        <div class="stat-card"><div class="stat-label">চলতি মাসের রেফারেল কনটেস্ট</div><div class="stat-number" style="color:#10b981;"><%= contest.monthName || '—' %></div></div>
+      </div>
+
+      <!-- ==================== পয়েন্ট লিডারবোর্ড: সার্চ/ফিল্টার ==================== -->
+      <div class="admin-card" style="padding:14px;margin-bottom:14px;">
+        <form method="GET" action="/admin/leaderboard" style="display:flex;gap:10px;flex-wrap:wrap;">
+          <input class="input" style="flex:1;min-width:220px;" type="text" name="search" value="<%= search || '' %>" placeholder="ইউজারনেম, ইমেইল বা ফোন দিয়ে খুঁজুন...">
+          <select class="select" style="max-width:200px;" name="status">
+            <option value="">সব স্ট্যাটাস</option>
+            <option value="active" <%= status === 'active' ? 'selected' : '' %>>সক্রিয় (র‍্যাঙ্কড)</option>
+            <option value="banned" <%= status === 'banned' ? 'selected' : '' %>>ব্যান করা</option>
+          </select>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> খুঁজুন</button>
+          <% if (search || status) { %>
+            <a class="btn" href="/admin/leaderboard">রিসেট</a>
+          <% } %>
+        </form>
+      </div>
+
+      <!-- ==================== পয়েন্ট লিডারবোর্ড: টেবিল ==================== -->
+      <div class="admin-card" style="margin-bottom:20px;">
+        <div class="admin-card-header">পয়েন্ট র‍্যাঙ্কিং (মোট <%= total %> জন ইউজার)</div>
+        <div style="overflow-x:auto;">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>র‍্যাঙ্ক</th>
+                <th>ইউজার</th>
+                <th>পয়েন্ট</th>
+                <th>কয়েন</th>
+                <th>জয়/মোট বেট</th>
+                <th>স্ট্যাটাস</th>
+                <th style="text-align:right;">অ্যাকশন</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (entries && entries.length > 0) { %>
+                <% entries.forEach(u => { %>
+                  <tr>
+                    <td>
+                      <% if (u.rank) { %>
+                        <span class="lb-rank <%= u.rank == 1 ? 'lb-rank-1' : (u.rank == 2 ? 'lb-rank-2' : (u.rank == 3 ? 'lb-rank-3' : '')) %>">#<%= u.rank %></span>
+                        <% if (u.rank <= 50) { %>
+                          <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">পাবলিক Top 50-এ</div>
+                        <% } %>
+                      <% } else { %>
+                        <span style="color:var(--text-muted);">—</span>
+                      <% } %>
+                    </td>
+                    <td>
+                      <div style="font-weight:700;">@<%= u.username %></div>
+                      <div style="font-size:11px;color:var(--text-muted);">#<%= u.id %><% if (u.email) { %> · <%= u.email %><% } %></div>
+                    </td>
+                    <td style="font-weight:700;color:#f59e0b;"><%= Number(u.total_points || 0).toLocaleString('en-US') %></td>
+                    <td><%= Number(u.coins || 0).toLocaleString('en-US') %></td>
+                    <td><%= u.wins %> / <%= u.total_bets %></td>
+                    <td>
+                      <% if (u.is_banned) { %>
+                        <span class="badge badge-red">ব্যান করা</span>
+                      <% } else { %>
+                        <span class="badge badge-green">সক্রিয়</span>
+                      <% } %>
+                    </td>
+                    <td style="text-align:right;white-space:nowrap;">
+                      <a class="btn btn-sm" href="/admin/users/<%= u.id %>">প্রোফাইল</a>
+                      <form method="POST" action="/admin/leaderboard/<%= u.id %>/toggle-ban" style="display:inline" onsubmit="return confirm('<%= u.is_banned ? 'আনব্যান' : 'ব্যান' %> করবেন? এটা পাবলিক লিডারবোর্ডের র‍্যাঙ্কিংও বদলে দেবে।')">
+                        <input type="hidden" name="page" value="<%= page %>">
+                        <input type="hidden" name="search" value="<%= search || '' %>">
+                        <input type="hidden" name="status" value="<%= status || '' %>">
+                        <button type="submit" class="btn btn-sm <%= u.is_banned ? 'btn-green' : 'btn-red' %>"><%= u.is_banned ? 'আনব্যান' : 'ব্যান' %></button>
+                      </form>
+                    </td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="7"><div class="empty-state">কোনো ইউজার পাওয়া যায়নি</div></td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:center;gap:10px;margin-bottom:24px;">
+        <% if (page > 1) { %>
+          <a class="btn" href="/admin/leaderboard?page=<%= page - 1 %>&search=<%= encodeURIComponent(search || '') %>&status=<%= status || '' %>">← আগের পেজ</a>
+        <% } %>
+        <span style="padding:9px 12px;color:var(--text-muted);font-size:12px;">পেজ <%= page %> / <%= totalPages %></span>
+        <% if (page < totalPages) { %>
+          <a class="btn" href="/admin/leaderboard?page=<%= page + 1 %>&search=<%= encodeURIComponent(search || '') %>&status=<%= status || '' %>">পরের পেজ →</a>
+        <% } %>
+      </div>
+
+      <!-- ==================== রেফারেল কনটেস্ট (প্রাইজ/রিওয়ার্ড) ==================== -->
+      <div class="admin-card" style="margin-bottom:20px;">
+        <div class="admin-card-header">
+          চলতি মাসের রেফারেল কনটেস্ট<% if (contest.monthName) { %> — <%= contest.monthName %><% } %>
+          <a href="/admin/leaderboard/contest/payouts" class="btn btn-sm" style="float:right;margin-left:8px;"><i class="fas fa-money-check-dollar"></i> পেআউট ট্র্যাকিং</a>
+          <button type="button" class="btn btn-sm" style="float:right;" onclick="loadContestHistory()"><i class="fas fa-clock-rotate-left"></i> আগের মাসগুলো</button>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="admin-table">
+            <thead>
+              <tr><th>র‍্যাঙ্ক</th><th>ইউজার</th><th>রেফারেল</th><th>প্রাইজ</th></tr>
+            </thead>
+            <tbody>
+              <% if (contest.leaders && contest.leaders.length > 0) { %>
+                <% contest.leaders.forEach(l => { %>
+                  <tr>
+                    <td class="lb-rank <%= l.rank == 1 ? 'lb-rank-1' : (l.rank == 2 ? 'lb-rank-2' : (l.rank == 3 ? 'lb-rank-3' : '')) %>">#<%= l.rank %></td>
+                    <td>@<%= l.username %></td>
+                    <td><%= l.referrals %></td>
+                    <td><%= l.prize || '—' %></td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="4"><div class="empty-state">এই মাসে এখনো কোনো রেফারেল হয়নি</div></td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+        <div id="contestHistory" style="padding:0 14px 14px;"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    async function loadContestHistory() {
+      const box = document.getElementById('contestHistory');
+      box.innerHTML = '<p style="color:var(--text-muted);font-size:12px;">লোড হচ্ছে...</p>';
+      try {
+        const res = await fetch('/admin/leaderboard/contest/history?months=3');
+        const data = await res.json();
+        if (!data.success || !data.past || !data.past.length) {
+          box.innerHTML = '<p style="color:var(--text-muted);font-size:12px;">আগের কোনো মাসের কনটেস্ট রেজাল্ট নেই।</p>';
+          return;
+        }
+        box.innerHTML = data.past.map(function (m) {
+          const rows = m.leaders.map(function (l) {
+            return '<tr><td class="lb-rank">#' + l.rank + '</td><td>@' + l.username + '</td><td>' + l.referrals + '</td><td>' + (l.prize || '—') + '</td></tr>';
+          }).join('');
+          return '<div style="margin-top:14px;"><div style="font-weight:700;color:var(--text-muted);font-size:13px;margin-bottom:6px;">' + m.monthName + '</div>' +
+            '<table class="admin-table"><thead><tr><th>র‍্যাঙ্ক</th><th>ইউজার</th><th>রেফারেল</th><th>প্রাইজ</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+        }).join('');
+      } catch (e) {
+        box.innerHTML = '<p style="color:#ef4444;font-size:12px;">লোড করা যায়নি: ' + e.message + '</p>';
+      }
+    }
+  </script>
+</body>
+</html>

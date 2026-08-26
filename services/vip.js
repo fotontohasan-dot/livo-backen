@@ -33,15 +33,36 @@ async function addVipTurnover(userId, amount) {
       const bonus = lvlRes.rows[0].upgrade_bonus || 0;
       const name = lvlRes.rows[0].name;
 
-      await pool.query(`UPDATE users SET vip_level = $1 WHERE id = $2`, [newLevel, userId]);
+      // লেভেল আপগ্রেডটা atomic ভাবে করা হয় (`vip_level < $1` গার্ড সহ)। আগে শর্তহীন UPDATE ছিল,
+      // আর উপরের currentLevel পড়া হয়েছিল আলাদা কোয়েরিতে — একই ইউজারের দুইটা বাজি একসাথে এলে
+      // দুটোই একই পুরনো currentLevel দেখত, দুটোই newLevel > currentLevel পেত এবং দুটোই
+      // upgrade_bonus ক্রেডিট করত (একই আপগ্রেডের বোনাস দুইবার)। এখন কেবল যে কোয়েরিটা আসলে
+      // লেভেল বাড়িয়েছে (rowCount === 1) সেটাই বোনাস দেয়; হেরে যাওয়া কলটা কিছুই করে না।
+      const levelUp = await pool.query(
+        `UPDATE users SET vip_level = $1 WHERE id = $2 AND COALESCE(vip_level, 0) < $1 RETURNING id`,
+        [newLevel, userId]
+      );
+      if (levelUp.rowCount === 0) return;
 
       if (bonus > 0) {
-        await pool.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [bonus, userId]);
-        await pool.query(
-          `INSERT INTO coin_transactions (user_id, amount, type, description)
-           VALUES ($1, $2, 'vip_upgrade', $3)`,
-          [userId, bonus, `VIP ${name} আপগ্রেড বোনাস`]
-        );
+        // ব্যালেন্স UPDATE ও coin_transactions INSERT আগে আলাদা, কোনো ট্রানজেকশন ছাড়া
+        // pool.query() কল ছিল — মাঝপথে ব্যর্থ হলে ব্যালেন্স-লেজার গরমিল স্থায়ী থেকে যেত।
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [bonus, userId]);
+          await client.query(
+            `INSERT INTO coin_transactions (user_id, amount, type, description)
+             VALUES ($1, $2, 'vip_upgrade', $3)`,
+            [userId, bonus, `VIP ${name} আপগ্রেড বোনাস`]
+          );
+          await client.query('COMMIT');
+        } catch (e) {
+          await client.query('ROLLBACK');
+          throw e;
+        } finally {
+          client.release();
+        }
       }
       await pool.query(
         `INSERT INTO notifications (user_id, title, message, type)

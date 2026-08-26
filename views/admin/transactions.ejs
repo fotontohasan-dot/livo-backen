@@ -1,0 +1,55 @@
+<%
+function fmtDate(d) {
+  const dt = new Date(d);
+  return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function txnRow(t) {
+  const typeLabel = t.type === 'deposit' ? 'Deposit' : 'Withdrawal';
+  const typeColor = t.type === 'deposit' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700';
+  const amountSign = t.type === 'deposit' ? '+' : '-';
+  const statusLabel = t.status === 'approved' ? 'Success' : t.status === 'rejected' ? 'Rejected' : 'Pending';
+  const statusColor = t.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : t.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700';
+  return '<tr>' +
+    '<td class="px-6 py-4 font-mono">#TXN' + t.id + '</td>' +
+    '<td class="px-6 py-4">' + t.username + '</td>' +
+    '<td class="px-6 py-4"><span class="' + typeColor + ' px-2 py-0.5 rounded text-xs">' + typeLabel + '</span></td>' +
+    '<td class="px-6 py-4 text-right font-semibold">' + amountSign + '৳' + Number(t.amount).toLocaleString('en-US') + '</td>' +
+    '<td class="px-6 py-4 text-center"><span class="' + statusColor + ' px-3 py-1 rounded-full text-xs font-bold">' + statusLabel + '</span></td>' +
+    '<td class="px-6 py-4 text-sm">' + fmtDate(t.created_at) + '</td>' +
+  '</tr>';
+}
+const rows = (transactions || []).map(txnRow).join('') || '<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400">কোনো ট্রানজেকশন নেই</td></tr>';
+%>
+<%- include('partials/admin-layout', { 
+    title: 'Transactions Log', 
+    active: 'transactions',
+    body: `
+<div class="max-w-7xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-semibold">All Transactions</h2>
+        <p class="text-sm text-slate-500">মোট ${total || 0} টি • পেজ ${page || 1} / ${totalPages || 1}</p>
+    </div>
+    
+    <div class="bg-white rounded-3xl border p-1 overflow-x-auto modern-table">
+        <table class="w-full text-sm">
+            <thead class="bg-slate-50">
+                <tr>
+                    <th class="px-6 py-4 text-left">TXN ID</th>
+                    <th class="px-6 py-4 text-left">User</th>
+                    <th class="px-6 py-4 text-left">Type</th>
+                    <th class="px-6 py-4 text-right">Amount</th>
+                    <th class="px-6 py-4 text-center">Status</th>
+                    <th class="px-6 py-4 text-left">Date</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y">${rows}</tbody>
+        </table>
+    </div>
+
+    <div class="flex justify-center gap-3 mt-6">
+        ${page > 1 ? '<a href="/admin/transactions?page=' + (page - 1) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">← আগের পেজ</a>' : ''}
+        ${page < totalPages ? '<a href="/admin/transactions?page=' + (page + 1) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">পরের পেজ →</a>' : ''}
+    </div>
+</div>
+` 
+}) %>

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login • Livo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* ==================== ফলব্যাক স্টাইল (CDN-নির্ভরতাহীন) ====================
+           উপরের cdn.tailwindcss.com স্ক্রিপ্টের উপর পুরো পেজটা নির্ভরশীল ছিল — সেই CDN কোনো
+           কারণে না লোড হলে (ধীর/ব্লকড নেটওয়ার্ক, অ্যাডব্লকার, CDN ডাউন) পুরো পেজ স্টাইলবিহীন
+           প্লেইন টেক্সটের স্তূপ হয়ে যেত — একদম আনপ্রফেশনাল দেখাত। নিচের CSS সাধারণ
+           element/id সিলেক্টর দিয়ে (কোনো Tailwind ক্লাসের উপর নির্ভর না করে) একই ডিজাইন
+           পুনরায় তৈরি করে, যাতে Tailwind লোড না হলেও পেজটা পুরোপুরি প্রফেশনাল দেখায়।
+           Tailwind সফলভাবে লোড হলে তার ইউটিলিটি ক্লাসগুলো (বেশি স্পেসিফিসিটি + পরে ডিক্লেয়ার্ড
+           না হলেও ইনলাইন ইউটিলিটি হওয়ায়) স্বাভাবিকভাবেই এর উপর প্রাধান্য পায়, তাই দুটো
+           একসাথে কনফ্লিক্ট করে না। */
+        * { box-sizing: border-box; }
+        html, body {
+            margin: 0; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            display: flex; align-items: center; justify-content: center; padding: 16px;
+        }
+        body > div { width: 100%; max-width: 28rem; }
+        body > div > div:first-child { text-align: center; margin-bottom: 2rem; }
+        body > div > div:first-child > div {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 4rem; height: 4rem; background: #2563eb; border-radius: 1rem; margin-bottom: 1rem;
+        }
+        body > div > div:first-child i { color: #fff; font-size: 1.875rem; }
+        body > div > div:first-child h1 { color: #fff; font-size: 1.875rem; font-weight: 700; margin: 0; }
+        body > div > div:first-child p { color: #94a3b8; margin: 0.5rem 0 0; }
+        .admin-card {
+            background: #1e293b; border: 1px solid #334155; border-radius: 1.5rem; padding: 2rem;
+        }
+        .admin-card h2 { color: #fff; font-size: 1.5rem; font-weight: 600; margin: 0; }
+        .admin-card > div:first-of-type p { color: #94a3b8; font-size: 0.875rem; margin: 0.25rem 0 0; }
+        form label { display: block; color: #cbd5e1; font-size: 0.875rem; font-weight: 500; margin: 1.25rem 0 0.5rem; }
+        form > div:first-of-type label { margin-top: 0; }
+        form input[type="text"], form input[type="password"] {
+            width: 100%; background: #0f172a; border: 1px solid #334155; color: #fff;
+            padding: 0.875rem 1rem 0.875rem 2.75rem; border-radius: 1rem; font-size: 1rem;
+        }
+        form input[type="text"]:focus, form input[type="password"]:focus {
+            outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+        }
+        form input::placeholder { color: #94a3b8; }
+        form .relative { position: relative; }
+        form .relative > div:first-child {
+            position: absolute; top: 0; bottom: 0; left: 0; padding-left: 1rem;
+            display: flex; align-items: center; pointer-events: none; color: #94a3b8;
+        }
+        form .relative > button {
+            position: absolute; top: 0; bottom: 0; right: 0; padding-right: 1rem;
+            display: flex; align-items: center; background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 1rem;
+        }
+        form > div[class*="justify-between"] {
+            display: flex; align-items: center; justify-content: space-between; font-size: 0.875rem; margin-top: 1.25rem;
+        }
+        form > div[class*="justify-between"] label { display: flex; align-items: center; gap: 0.5rem; margin: 0; color: #cbd5e1; cursor: pointer; }
+        form button[type="submit"] {
+            width: 100%; background: #2563eb; color: #fff; font-weight: 600; font-size: 1rem;
+            padding: 0.875rem; border: none; border-radius: 1rem; margin-top: 1.25rem; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+        }
+        form button[type="submit"]:hover { background: #1d4ed8; }
+        form a { color: #60a5fa; font-size: 0.875rem; text-decoration: none; }
+        form a:hover { text-decoration: underline; }
+        body > div > p:last-child { text-align: center; color: #94a3b8; font-size: 0.75rem; margin-top: 2rem; }
+        [class*="bg-red-500"] {
+            background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #f87171;
+            padding: 0.75rem 1rem; border-radius: 1rem; font-size: 0.875rem; margin-bottom: 1.5rem;
+            display: flex; align-items: center; gap: 0.75rem;
+        }
+        .admin-card {
+            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.4);
+        }
+        .input-focus {
+            transition: all 0.2s ease;
+        }
+        .input-focus:focus {
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+    </style>
+
+<!-- ==================== CSRF টোকেন ==================== -->
+<meta name="csrf-token" content="<%= locals.csrfToken || '' %>">
+<script>
+(function() {
+  var CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+  if (!CSRF_TOKEN) return;
+  function injectIntoForms() {
+    document.querySelectorAll('form').forEach(function(form) {
+      if ((form.getAttribute('method') || 'get').toLowerCase() !== 'post') return;
+      if (form.querySelector('input[name="_csrf"]')) return;
+      var input = document.createElement('input');
+      input.type = 'hidden'; input.name = '_csrf'; input.value = CSRF_TOKEN;
+      form.appendChild(input);
+    });
+  }
+  document.addEventListener('DOMContentLoaded', injectIntoForms);
+  new MutationObserver(injectIntoForms).observe(document.documentElement, { childList: true, subtree: true });
+  var origFetch = window.fetch;
+  window.fetch = function(input, init) {
+    init = init || {};
+    var method = (init.method || (typeof input === 'object' && input.method) || 'GET').toUpperCase();
+    if (['POST','PUT','PATCH','DELETE'].includes(method)) {
+      init.headers = new Headers(init.headers || {});
+      if (!init.headers.has('X-CSRF-Token')) init.headers.set('X-CSRF-Token', CSRF_TOKEN);
+    }
+    return origFetch.call(this, input, init);
+  };
+  var origOpen = XMLHttpRequest.prototype.open;
+  var origSend = XMLHttpRequest.prototype.send;
+  XMLHttpRequest.prototype.open = function(method) {
+    this._csrfMethod = (method || 'GET').toUpperCase();
+    return origOpen.apply(this, arguments);
+  };
+  XMLHttpRequest.prototype.send = function(body) {
+    if (['POST','PUT','PATCH','DELETE'].includes(this._csrfMethod)) {
+      try { this.setRequestHeader('X-CSRF-Token', CSRF_TOKEN); } catch (e) {}
+    }
+    return origSend.call(this, body);
+  };
+})();
+</script>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md">
+        <!-- Logo + Title -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4">
+                <i class="fas fa-shield-alt text-white text-3xl"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-white">Livo Admin</h1>
+            <p class="text-slate-400 mt-2">Secure Admin Panel</p>
+        </div>
+
+        <!-- Login Card -->
+        <div class="bg-slate-800 border border-slate-700 rounded-3xl p-8 admin-card">
+            <div class="mb-6">
+                <h2 class="text-2xl font-semibold text-white">Welcome back</h2>
+                <p class="text-slate-400 text-sm mt-1">Sign in to your admin account</p>
+            </div>
+
+            <!-- Error Message -->
+            <% if (typeof error !== 'undefined' && error) { %>
+                <div class="mb-6 bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-2xl text-sm flex items-center gap-3">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span><%= error %></span>
+                </div>
+            <% } %>
+
+            <form action="/admin/login" method="POST" class="space-y-5">
+                <!-- Username / Email -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Username or Email</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <i class="fas fa-user text-slate-500"></i>
+                        </div>
+                        <input 
+                            type="text" 
+                            name="username" 
+                            required 
+                            class="input-focus w-full bg-slate-900 border border-slate-700 text-white pl-11 pr-4 py-3.5 rounded-2xl focus:outline-none focus:border-blue-500 placeholder:text-slate-500"
+                            placeholder="Enter your username or email"
+                            value="<%= typeof username !== 'undefined' ? username : '' %>"
+                        >
+                    </div>
+                </div>
+
+                <!-- Password -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Password</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <i class="fas fa-lock text-slate-500"></i>
+                        </div>
+                        <input 
+                            type="password" 
+                            name="password" 
+                            id="password"
+                            required 
+                            class="input-focus w-full bg-slate-900 border border-slate-700 text-white pl-11 pr-12 py-3.5 rounded-2xl focus:outline-none focus:border-blue-500 placeholder:text-slate-500"
+                            placeholder="Enter your password"
+                        >
+                        <button 
+                            type="button" 
+                            onclick="togglePassword()"
+                            class="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-500 hover:text-slate-300 transition-colors"
+                        >
+                            <i class="fas fa-eye" id="toggleIcon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Remember Me + Forgot -->
+                <div class="flex items-center justify-between text-sm">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="remember" class="w-4 h-4 accent-blue-600 bg-slate-900 border-slate-700 rounded">
+                        <span class="text-slate-300">Remember me</span>
+                    </label>
+                    <span class="text-slate-500" title="Contact a system administrator to reset your password">Forgot password? Contact system admin</span>
+                </div>
+
+                <!-- Login Button -->
+                <button 
+                    type="submit"
+                    class="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 transition-all text-white font-semibold py-3.5 rounded-2xl flex items-center justify-center gap-2 text-base shadow-lg shadow-blue-600/30"
+                >
+                    <i class="fas fa-sign-in-alt"></i>
+                    <span>Sign In</span>
+                </button>
+            </form>
+        </div>
+
+        <p class="text-center text-slate-500 text-xs mt-8">
+            © <%= new Date().getFullYear() %> Livo. All rights reserved.
+        </p>
+    </div>
+
+    <script>
+        function togglePassword() {
+            const password = document.getElementById('password');
+            const icon = document.getElementById('toggleIcon');
+            
+            if (password.type === 'password') {
+                password.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                password.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
+        // Auto focus on username field
+        window.onload = function() {
+            const usernameField = document.querySelector('input[name="username"]');
+            if (usernameField) usernameField.focus();
+        }
+    </script>
+</body>
+</html>

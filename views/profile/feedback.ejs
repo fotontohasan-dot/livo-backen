@@ -1,23 +1,38 @@
 <%- include('../partials/head') %>
 <div class="container" style="padding:16px;padding-bottom:100px">
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-    <a href="/profile" style="color:#fff;text-decoration:none;font-size:20px">←</a>
-    <h1 style="color:#fff;font-size:18px;font-weight:bold">💬 পরামর্শ ও প্রতিক্রিয়া</h1>
+    <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px">←</a>
+    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold">💬 পরামর্শ ও প্রতিক্রিয়া</h1>
   </div>
 
   <%- include('../partials/flash') %>
 
   <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;border:1px solid rgba(255,255,255,0.1)">
-    <form action="/profile/feedback" method="POST" style="display:flex;flex-direction:column;gap:12px">
+    <form action="/profile/feedback" method="POST" style="display:flex;flex-direction:column;gap:12px" id="feedback-form">
       <div>
-        <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:6px">আপনার মতামত লিখুন</label>
-        <textarea name="message" required rows="6" placeholder="২০ থেকে ২০০ শব্দের মধ্যে লিখুন..."
-          style="width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:12px;color:#fff;font-size:14px;outline:none;resize:none"></textarea>
+        <label style="color:var(--text-muted);font-size:13px;display:block;margin-bottom:6px">আপনার মতামত লিখুন</label>
+        <textarea name="message" id="feedback-message" required rows="6" placeholder="২০ থেকে ২০০ শব্দের মধ্যে লিখুন..."
+          style="width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:12px;color:var(--text-main);font-size:14px;outline:none;resize:none"></textarea>
       </div>
-      <button type="submit" style="background:linear-gradient(90deg,#f59e0b,#fbbf24);color:#000;border:none;border-radius:8px;padding:12px;font-size:16px;font-weight:bold;cursor:pointer">
+      <button type="submit" id="feedback-submit" style="background:linear-gradient(90deg,#f59e0b,#fbbf24);color:#000;border:none;border-radius:8px;padding:12px;font-size:16px;font-weight:bold;cursor:pointer">
         জমা দিন
       </button>
     </form>
   </div>
 </div>
 <%- include('../partials/navbar') %>
+
+<script src="/js/content-filter.js"></script>
+<script>
+  // ==== রিয়েল-টাইম কনটেন্ট ওয়ার্নিং — টাইপ করার সময় লাল বর্ডার + সাবমিট বাটন ডিসেবল ====
+  attachContentFilter('#feedback-message', { submitButton: document.getElementById('feedback-submit') });
+
+  // ==== সাবমিটের সময় শেষবার চেক (ব্যাকএন্ডও যাচাই করবে, এটা শুধু দ্রুত UX ফিডব্যাক) ====
+  document.getElementById('feedback-form').addEventListener('submit', function (e) {
+    const text = document.getElementById('feedback-message').value;
+    if (window.contentFilterIsBad(text)) {
+      e.preventDefault();
+      alert('⚠️ আপনার লেখায় অনুপযুক্ত/অশ্লীল কনটেন্ট আছে। অনুগ্রহ করে ঠিক করে আবার চেষ্টা করুন।');
+    }
+  });
+</script>

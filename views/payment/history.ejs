@@ -1,68 +1,72 @@
 <%- include('../partials/head') %>
-<%- include('../partials/navbar') %>
-<div class="container page" style="padding: 16px; padding-bottom: 100px;">
-  <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px">
-    <a href="/profile" style="color:var(--text-main); text-decoration:none; font-size:20px">←</a>
-    <h1 style="color:var(--text-main); font-size:18px; font-weight:bold; margin:0;">লেনদেনের ইতিহাস</h1>
+
+<div class="container" style="padding: 15px; padding-bottom: 100px;">
+  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+    <a href="/profile" style="color:var(--text-main); text-decoration: none; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+      <i class="fas fa-chevron-left"></i>
+    </a>
+    <h1 style="color:var(--text-main); font-size: 20px; font-weight: 800;">
+      <%= filter.type === 'deposit' ? 'ডিপোজিট রেকর্ড' : filter.type === 'withdraw' ? 'উইথড্র রেকর্ড' : 'ট্রানজেকশন রেকর্ড' %>
+    </h1>
   </div>
 
-  <!-- Date Filter -->
-  <div class="card glass mb-4" style="padding: 15px; border-radius: 15px;">
-    <form action="/payment/history" method="GET" style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
-      <div style="flex: 1; min-width: 120px;">
-        <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 5px;">শুরুর তারিখ</label>
-        <input type="date" name="start" class="form-control" style="background: rgba(255,255,255,0.05); color: #fff; border: 1px solid var(--border-glass); border-radius: 8px; font-size: 12px; width: 100%;">
-      </div>
-      <div style="flex: 1; min-width: 120px;">
-        <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 5px;">শেষ তারিখ</label>
-        <input type="date" name="end" class="form-control" style="background: rgba(255,255,255,0.05); color: #fff; border: 1px solid var(--border-glass); border-radius: 8px; font-size: 12px; width: 100%;">
-      </div>
-      <button type="submit" class="btn btn-primary" style="padding: 8px 20px; border-radius: 8px; font-size: 13px; height: 38px;">ফিল্টার</button>
-    </form>
-    <div style="display: flex; gap: 8px; margin-top: 12px;">
-        <a href="?range=today" class="badge glass" style="padding: 6px 12px; text-decoration: none; color: #fff; border: 1px solid var(--border-glass);">আজ</a>
-        <a href="?range=yesterday" class="badge glass" style="padding: 6px 12px; text-decoration: none; color: #fff; border: 1px solid var(--border-glass);">গতকাল</a>
-        <a href="?range=7days" class="badge glass" style="padding: 6px 12px; text-decoration: none; color: #fff; border: 1px solid var(--border-glass);">গত ৭ দিন</a>
-    </div>
-  </div>
+  <%- include('../partials/flash') %>
 
-  <div class="card glass" style="border-radius: 20px; overflow: hidden; border: 1px solid var(--border-glass);">
-    <div class="table-responsive">
-        <table class="table" style="margin: 0; color: #fff;">
-          <thead style="background: rgba(255,255,255,0.05);">
-            <tr>
-                <th style="font-size: 12px; border: none; padding: 15px;">তারিখ</th>
-                <th style="font-size: 12px; border: none; padding: 15px;">ধরন</th>
-                <th style="font-size: 12px; border: none; padding: 15px;">পরিমাণ</th>
-                <th style="font-size: 12px; border: none; padding: 15px;">অবস্থা</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% if(locals.transactions && transactions.length > 0) { %>
-                <% transactions.forEach(tx => { %>
-                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                        <td style="padding: 15px; border: none;">
-                            <div style="font-size: 13px;"><%= tx.created_at.toLocaleDateString('bn-BD') %></div>
-                            <div style="font-size: 10px; color: var(--text-muted);"><%= tx.method %></div>
-                        </td>
-                        <td style="padding: 15px; border: none; font-size: 13px;"><%= tx.type === 'deposit' ? 'ডিপোজিট' : 'উইথড্র' %></td>
-                        <td style="padding: 15px; border: none; font-weight: 700; color: var(--gold);">৳ <%= tx.amount %></td>
-                        <td style="padding: 15px; border: none;">
-                            <span class="badge" style="background: <%= tx.status === 'completed' || tx.status === 'approved' ? '#10b981' : tx.status === 'rejected' || tx.status === 'cancelled' ? '#ef4444' : '#f59e0b' %>; padding: 4px 8px; border-radius: 4px; font-size: 11px;">
-                                <%= tx.status === 'completed' || tx.status === 'approved' ? 'সফল' : tx.status === 'rejected' ? 'বাতিল' : 'অপেক্ষমান' %>
-                            </span>
-                        </td>
-                    </tr>
-                <% }) %>
-            <% } else { %>
-                <tr>
-                    <td colspan="4" style="text-align: center; padding: 40px; color: var(--text-muted);">কোনো রেকর্ড পাওয়া যায়নি</td>
-                </tr>
-            <% } %>
-          </tbody>
-        </table>
+  <!-- কুইক ডেট ফিল্টার -->
+  <form method="GET" action="/payment/history" style="margin-bottom: 16px;">
+    <% if (filter.type) { %><input type="hidden" name="type" value="<%= filter.type %>"><% } %>
+    <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 10px;">
+      <button type="submit" name="quick" value="today" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.quick === 'today' ? 'var(--grad-gold)' : 'var(--bg-card)' %>; color: <%= filter.quick === 'today' ? '#000' : 'var(--text-main)' %>;">আজ</button>
+      <button type="submit" name="quick" value="yesterday" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.quick === 'yesterday' ? 'var(--grad-gold)' : 'var(--bg-card)' %>; color: <%= filter.quick === 'yesterday' ? '#000' : 'var(--text-main)' %>;">গতকাল</button>
+      <button type="submit" name="quick" value="7days" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.quick === '7days' ? 'var(--grad-gold)' : 'var(--bg-card)' %>; color: <%= filter.quick === '7days' ? '#000' : 'var(--text-main)' %>;">গত ৭ দিন</button>
+      <a href="/payment/history<%= filter.type ? '?type=' + filter.type : '' %>" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: var(--bg-card); color: var(--text-main); text-decoration:none;">সব</a>
     </div>
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <input type="date" name="from" value="<%= filter.from %>" style="flex:1; background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 10px; padding: 8px 10px; color: var(--text-main); font-size: 12px;">
+      <span style="color: var(--text-muted); font-size: 12px;">থেকে</span>
+      <input type="date" name="to" value="<%= filter.to %>" style="flex:1; background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 10px; padding: 8px 10px; color: var(--text-main); font-size: 12px;">
+      <button type="submit" style="background: var(--grad-gold); border: none; color: #000; padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 800;">ফিল্টার</button>
+    </div>
+  </form>
+
+  <!-- রেকর্ড লিস্ট -->
+  <div style="display: flex; flex-direction: column; gap: 10px;">
+    <% if (requests && requests.length) { %>
+      <% requests.forEach(function (tx) { %>
+        <% var statusColor = tx.status === 'approved' ? '#10b981' : tx.status === 'rejected' ? '#ef4444' : '#f59e0b'; %>
+        <% var statusText = tx.status === 'approved' ? 'সফল' : tx.status === 'rejected' ? 'বাতিল' : 'পেন্ডিং'; %>
+        <% if (tx.status === 'cancelled') { statusColor = '#ef4444'; statusText = 'বাতিলকৃত'; } %>
+        <div style="background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 14px; padding: 14px 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="color:var(--text-main); font-size: 14px; font-weight: 700;">
+                <%= tx.type === 'deposit' ? '⬇️ ডিপোজিট' : '⬆️ উইথড্র' %>
+                <% if (tx.gateway === 'sslcommerz') { %><span style="font-size: 10px; color: var(--text-accent); font-weight: 600;"> (অটো)</span><% } %>
+              </div>
+              <div style="color: var(--text-muted); font-size: 11px; margin-top: 3px;"><%= tx.method || '-' %> · <%= new Date(tx.created_at).toLocaleString('bn-BD') %></div>
+              <% if (tx.transaction_id) { %><div style="color: var(--text-muted); font-size: 11px; margin-top: 2px;">TrxID: <%= tx.transaction_id %></div><% } %>
+            </div>
+            <div style="text-align: right;">
+              <div style="color: var(--text-accent); font-size: 15px; font-weight: 800;">৳<%= Number(tx.amount).toLocaleString('bn-BD') %></div>
+              <div style="color: <%= statusColor %>; font-size: 11px; font-weight: 700; margin-top: 3px;"><%= statusText %></div>
+            </div>
+          </div>
+          <% if (tx.type === 'deposit' && tx.status === 'pending') { %>
+            <div style="display: flex; gap: 8px; margin-top: 10px; border-top: 1px solid var(--border-glass); padding-top: 10px;">
+              <a href="/payment/deposit/<%= tx.id %>/edit" style="flex:1; text-align:center; padding: 7px 0; border-radius: 8px; font-size: 12px; font-weight: 700; background: var(--bg-glass); color: var(--text-main); text-decoration:none; border: 1px solid var(--border-glass);">✏️ এডিট</a>
+              <form method="POST" action="/payment/deposit/<%= tx.id %>/cancel" style="flex:1;" onsubmit="return confirm('আপনি কি নিশ্চিত এই ডিপোজিট রিকোয়েস্ট বাতিল করতে চান?');">
+                <button type="submit" style="width:100%; padding: 7px 0; border-radius: 8px; font-size: 12px; font-weight: 700; background: rgba(239,68,68,0.12); color: #ef4444; border: 1px solid rgba(239,68,68,0.3);">✖ ক্যান্সেল</button>
+              </form>
+            </div>
+          <% } %>
+        </div>
+      <% }) %>
+    <% } else { %>
+      <div style="text-align:center; padding: 40px 0; color: var(--text-muted); font-size: 13px;">এই সময়ে কোনো রেকর্ড নেই</div>
+    <% } %>
   </div>
 </div>
+
+<%- include('../partials/navbar') %>
 <%- include('../partials/bottom-nav') %>
 </body></html>

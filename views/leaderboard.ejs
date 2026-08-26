@@ -20,7 +20,7 @@
     color: var(--text-muted);
   }
   .rank-1 { color: #facc15; font-size: 1.8rem; }
-  .rank-2 { color: #94a3b8; font-size: 1.6rem; }
+  .rank-2 { color: var(--text-muted); font-size: 1.6rem; }
   .rank-3 { color: #92400e; font-size: 1.5rem; }
 
   .avatar {
@@ -31,7 +31,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #fff;
+    color:var(--text-main);
     font-weight: 700;
     font-size: 1.1rem;
     box-shadow: 0 0 10px rgba(245,158,11,0.2);
@@ -40,7 +40,7 @@
     font-family: 'Teko', sans-serif;
     font-size: 1.3rem;
     font-weight: 700;
-    color: var(--gold);
+    color: var(--text-accent);
     margin-left: auto;
   }
 </style>
@@ -61,30 +61,6 @@
         <div style="font-size:11px; color:var(--text-muted);">
           <%= t.wins %>: <%= u.wins %> / <%= t.bets_label %>: <%= u.total_bets %>
         </div>
-
-        <% if (market.type === 'bookmaker') { %>
-          <!-- বুকমেকার -->
-          <div class="market-row">
-            <div class="market-team"><%= match.teams ? match.teams[0] : 'Team A' %></div>
-            <div class="odds back" data-market-id="<%= market.id %>" data-runner="0" data-odd="<%= market.odds['0'] || 1.85 %>">
-              <%= market.odds['0'] || 1.85 %>
-            </div>
-          </div>
-          <div class="market-row">
-            <div class="market-team"><%= match.teams ? match.teams[1] : 'Team B' %></div>
-            <div class="odds back" data-market-id="<%= market.id %>" data-runner="1" data-odd="<%= market.odds['1'] || 2.10 %>">
-              <%= market.odds['1'] || 2.10 %>
-            </div>
-          </div>
-        <% } else { %>
-          <!-- ফ্যান্সি -->
-          <div class="market-row">
-            <div class="market-team">Yes</div>
-            <div class="odds back" data-market-id="<%= market.id %>" data-runner="yes" data-odd="<%= market.odds['yes'] || 1.75 %>">
-              <%= market.odds['yes'] || 1.75 %>
-            </div>
-          </div>
-        <% } %>
       </div>
       <div class="pts">
         <%= u.total_points %> <span style="font-size:0.7rem; color:var(--text-muted);">PTS</span>

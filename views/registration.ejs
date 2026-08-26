@@ -1,75 +1,314 @@
 <%- include('partials/head') %>
-<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg-dark);">
-  <div style="width:100%;max-width:400px;padding:1rem;">
-    <div class="card glass">
-      <div class="card-header" style="justify-content:center;font-size:1.2rem;">📝 <%= t.registration_title %></div>
-      <div class="card-body">
-        <%- include('partials/flash') %>
-        <form id="registerForm" action="/register" method="POST">
-          <div class="form-group">
-            <label class="form-label"><%= t.username %></label>
-            <input type="text" name="username" class="form-input" placeholder="<%= t.username_placeholder %>" required>
-          </div>
+<div class="auth-page">
+  <div class="auth-shell">
 
-          <div class="form-group">
-            <label class="form-label"><%= t.email_optional %></label>
-            <input type="email" name="email" class="form-input" placeholder="example@email.com">
-          </div>
-
-          <div class="form-group">
-            <label class="form-label"><%= t.phone_optional %></label>
-            <input type="text" name="phone" class="form-input" placeholder="01XXXXXXXXX">
-          </div>
-          <p style="color:var(--text-muted);font-size:.8rem;margin-top:-8px;margin-bottom:12px;">
-            <%= t.at_least_one_msg %>
-          </p>
-
-          <div class="form-group">
-            <label class="form-label"><%= t.password %></label>
-            <input type="password" name="password" id="password" class="form-input" placeholder="••••••••" required>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label"><%= t.confirm_password %></label>
-            <input type="password" name="confirmPassword" id="confirmPassword" class="form-input" placeholder="••••••••" required>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label"><%= t.referral_code %></label>
-            <input type="text" name="referralCode" class="form-input" placeholder="<%= t.referral_code_placeholder %>" value="<%= ref || '' %>">
-          </div>
-
-          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;">✅ <%= t.register %></button>
-        </form>
-        <p style="text-align:center;margin-top:1rem;color:var(--text-muted);font-size:.9rem;">
-          <%= t.already_have_account %> <a href="/login" style="color:var(--secondary)"><%= t.login_now %></a>
-        </p>
-      </div>
+    <div class="auth-brand">
+      <div class="auth-brand__logo" aria-hidden="true">📝</div>
     </div>
+
+    <div class="auth-card">
+      <h1 class="auth-title"><%= t.registration_title %></h1>
+      <p class="auth-subtitle"><%= t.registration_subtitle %></p>
+
+      <%- include('partials/flash') %>
+
+      <form id="registerForm" action="/register" method="POST" novalidate>
+        <input type="hidden" name="form_rendered_at" value="<%= formRenderedAt %>">
+
+        <!-- হানিপট — বট ডিটেকশন (ব্যাকএন্ড এই ফিল্ড চেক করে), পরিবর্তন করা হয়নি -->
+        <div class="auth-honeypot" aria-hidden="true">
+          <label for="website">Website</label>
+          <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+        </div>
+
+        <div class="auth-field">
+          <label class="auth-label" for="username"><%= t.username %></label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            class="auth-input"
+            placeholder="<%= t.username_placeholder %>"
+            autocomplete="username"
+            autocapitalize="none"
+            spellcheck="false"
+            aria-describedby="usernameError"
+            required>
+          <span class="auth-error" id="usernameError" role="alert"></span>
+        </div>
+
+        <div class="auth-field">
+          <label class="auth-label" for="email">
+            <%= t.email_optional %> <span class="auth-label__optional"><%= t.optional_label %></span>
+          </label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            class="auth-input"
+            placeholder="example@email.com"
+            autocomplete="email"
+            autocapitalize="none"
+            spellcheck="false"
+            aria-describedby="emailError"
+            inputmode="email">
+          <span class="auth-error" id="emailError" role="alert"></span>
+        </div>
+
+        <div class="auth-field">
+          <label class="auth-label" for="phone">
+            <%= t.phone_optional %> <span class="auth-label__optional"><%= t.optional_label %></span>
+          </label>
+          <input
+            type="tel"
+            id="phone"
+            name="phone"
+            class="auth-input"
+            placeholder="01XXXXXXXXX"
+            autocomplete="tel"
+            inputmode="numeric"
+            aria-describedby="phoneError">
+          <span class="auth-error" id="phoneError" role="alert"></span>
+        </div>
+
+        <p class="auth-note" id="identityNote">ℹ️ <%= t.at_least_one_msg %></p>
+
+        <div class="auth-field">
+          <label class="auth-label" for="password"><%= t.password %></label>
+          <div class="auth-input-wrap">
+            <input
+              type="password"
+              id="password"
+              name="password"
+              class="auth-input auth-input--password"
+              placeholder="<%= t.password_placeholder %>"
+              autocomplete="new-password"
+              aria-describedby="passwordHint passwordError"
+              required>
+            <button
+              type="button"
+              class="auth-eye"
+              data-toggle-password="password"
+              aria-label="<%= t.show_password %>"
+              data-label-show="<%= t.show_password %>"
+              data-label-hide="<%= t.hide_password %>">
+              <span aria-hidden="true">👁️</span>
+            </button>
+          </div>
+          <span class="auth-hint" id="passwordHint"><%= t.password_hint %></span>
+          <span class="auth-error" id="passwordError" role="alert"></span>
+        </div>
+
+        <div class="auth-field">
+          <label class="auth-label" for="confirmPassword"><%= t.confirm_password %></label>
+          <div class="auth-input-wrap">
+            <input
+              type="password"
+              id="confirmPassword"
+              name="confirmPassword"
+              class="auth-input auth-input--password"
+              placeholder="<%= t.password_placeholder %>"
+              autocomplete="new-password"
+              aria-describedby="confirmError confirmOk"
+              required>
+            <button
+              type="button"
+              class="auth-eye"
+              data-toggle-password="confirmPassword"
+              aria-label="<%= t.show_password %>"
+              data-label-show="<%= t.show_password %>"
+              data-label-hide="<%= t.hide_password %>">
+              <span aria-hidden="true">👁️</span>
+            </button>
+          </div>
+          <span class="auth-ok" id="confirmOk">✓ <%= t.password_match_ok %></span>
+          <span class="auth-error" id="confirmError" role="alert"></span>
+        </div>
+
+        <div class="auth-field">
+          <label class="auth-label" for="referralCode">
+            <%= t.referral_code %> <span class="auth-label__optional"><%= t.optional_label %></span>
+          </label>
+          <input
+            type="text"
+            id="referralCode"
+            name="referralCode"
+            class="auth-input"
+            placeholder="<%= t.referral_code_placeholder %>"
+            autocapitalize="characters"
+            spellcheck="false"
+            value="<%= ref || '' %>">
+        </div>
+
+        <% if (captcha) { %>
+        <div class="auth-field">
+          <label class="auth-label" for="captcha_answer"><%= t.captcha_verify %> <%= captcha.question %></label>
+          <input
+            type="text"
+            id="captcha_answer"
+            name="captcha_answer"
+            class="auth-input"
+            placeholder="<%= t.captcha_answer_placeholder %>"
+            inputmode="numeric"
+            autocomplete="off"
+            required>
+        </div>
+        <% } %>
+
+        <button type="submit" id="registerSubmitBtn" class="auth-submit"><%= t.register %></button>
+
+        <p class="auth-terms">
+          <%= t.terms_agree_prefix %>
+          <a href="/terms"><%= t.terms_link %></a>
+          <%= t.terms_and %>
+          <a href="/privacy"><%= t.privacy_link %></a><%= t.terms_agree_suffix %>
+        </p>
+
+        <div class="auth-divider"><%= t.or_divider %></div>
+
+        <a href="/auth/google" class="auth-google-btn">
+          <svg viewBox="0 0 48 48" aria-hidden="true">
+            <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12s5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
+            <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
+            <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/>
+            <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/>
+          </svg>
+          <%= t.continue_with_google %>
+        </a>
+      </form>
+
+      <p class="auth-alt">
+        <%= t.already_have_account %> <a href="/login"><%= t.login_now %></a>
+      </p>
+    </div>
+
+    <p class="auth-back">
+      <a href="/"><%= t.back_to_home %></a>
+    </p>
+
   </div>
 </div>
 
 <script>
-document.getElementById('registerForm').addEventListener('submit', function (e) {
-  const email = this.email.value.trim();
-  const phone = this.phone.value.trim();
-  const password = this.password.value;
-  const confirmPassword = this.confirmPassword.value;
+(function () {
+  var MSG = {
+    usernameRequired: <%- jsonScriptSafe(t.error_username_required) %>,
+    usernameFormat: <%- jsonScriptSafe(t.error_username_format) %>,
+    atLeastOne: <%- jsonScriptSafe(t.error_at_least_one) %>,
+    emailInvalid: <%- jsonScriptSafe(t.error_email_invalid) %>,
+    phoneInvalid: <%- jsonScriptSafe(t.error_phone_invalid) %>,
+    passwordLength: <%- jsonScriptSafe(t.error_password_length) %>,
+    passwordMismatch: <%- jsonScriptSafe(t.error_password_mismatch) %>,
+    creating: <%- jsonScriptSafe(t.creating_account) %>
+  };
 
-  if (!email && !phone) {
-    alert('<%= t.error_at_least_one %>');
-    e.preventDefault();
-    return;
+  // ==================== পাসওয়ার্ড Show/Hide ====================
+  document.querySelectorAll('[data-toggle-password]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var input = document.getElementById(btn.getAttribute('data-toggle-password'));
+      if (!input) return;
+      var willShow = input.type === 'password';
+      input.type = willShow ? 'text' : 'password';
+      btn.setAttribute('aria-label', willShow ? btn.dataset.labelHide : btn.dataset.labelShow);
+      btn.querySelector('span').textContent = willShow ? '🙈' : '👁️';
+    });
+  });
+
+  var form = document.getElementById('registerForm');
+  var submitBtn = document.getElementById('registerSubmitBtn');
+  var submitted = false;
+
+  var username = document.getElementById('username');
+  var email = document.getElementById('email');
+  var phone = document.getElementById('phone');
+  var password = document.getElementById('password');
+  var confirmPassword = document.getElementById('confirmPassword');
+
+  var usernameError = document.getElementById('usernameError');
+  var emailError = document.getElementById('emailError');
+  var phoneError = document.getElementById('phoneError');
+  var passwordError = document.getElementById('passwordError');
+  var confirmError = document.getElementById('confirmError');
+  var confirmOk = document.getElementById('confirmOk');
+
+  function showError(input, errEl, message) {
+    input.classList.add('has-error');
+    input.setAttribute('aria-invalid', 'true');
+    errEl.textContent = '⚠ ' + message;
+    errEl.classList.add('is-visible');
   }
-  if (password.length < 8) {
-    alert('<%= t.error_password_length %>');
-    e.preventDefault();
-    return;
+  function clearError(input, errEl) {
+    input.classList.remove('has-error');
+    input.removeAttribute('aria-invalid');
+    errEl.textContent = '';
+    errEl.classList.remove('is-visible');
   }
-  if (password !== confirmPassword) {
-    alert('<%= t.error_password_mismatch %>');
-    e.preventDefault();
-    return;
+
+  // ইউজার ঠিক করা শুরু করলেই সংশ্লিষ্ট এরর সরে যাবে
+  [[username, usernameError], [email, emailError], [phone, phoneError], [password, passwordError]]
+    .forEach(function (pair) {
+      pair[0].addEventListener('input', function () { clearError(pair[0], pair[1]); });
+    });
+
+  // কনফার্ম পাসওয়ার্ড লাইভ ম্যাচ ইন্ডিকেটর
+  function checkMatch() {
+    clearError(confirmPassword, confirmError);
+    confirmOk.classList.remove('is-visible');
+    if (!confirmPassword.value) return;
+    if (password.value === confirmPassword.value) {
+      confirmOk.classList.add('is-visible');
+    } else {
+      showError(confirmPassword, confirmError, MSG.passwordMismatch);
+    }
   }
-});
+  confirmPassword.addEventListener('input', checkMatch);
+  password.addEventListener('input', function () { if (confirmPassword.value) checkMatch(); });
+
+  form.addEventListener('submit', function (e) {
+    // ডাবল সাবমিশন প্রতিরোধ
+    if (submitted) { e.preventDefault(); return; }
+
+    var valid = true;
+    var emailVal = email.value.trim();
+    var phoneVal = phone.value.trim();
+
+    // ব্যাকএন্ডের নিয়মের সাথে হুবহু মিল রাখা হয়েছে (routes/auth.js):
+    // username আবশ্যক ও ৩-২০ ক্যারেক্টার, email অথবা phone অন্তত একটি, password ≥ ৮
+    if (!username.value.trim()) {
+      showError(username, usernameError, MSG.usernameRequired); valid = false;
+    } else if (!/^[a-zA-Z0-9_.]{3,20}$/.test(username.value.trim())) {
+      showError(username, usernameError, MSG.usernameFormat); valid = false;
+    }
+
+    if (!emailVal && !phoneVal) {
+      showError(email, emailError, MSG.atLeastOne);
+      showError(phone, phoneError, MSG.atLeastOne);
+      valid = false;
+    } else {
+      if (emailVal && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+        showError(email, emailError, MSG.emailInvalid); valid = false;
+      }
+      if (phoneVal && !/^01\d{9}$/.test(phoneVal)) {
+        showError(phone, phoneError, MSG.phoneInvalid); valid = false;
+      }
+    }
+
+    if (password.value.length < 8) {
+      showError(password, passwordError, MSG.passwordLength); valid = false;
+    }
+    if (password.value !== confirmPassword.value) {
+      showError(confirmPassword, confirmError, MSG.passwordMismatch); valid = false;
+    }
+
+    if (!valid) {
+      e.preventDefault();
+      var firstBad = form.querySelector('.has-error');
+      if (firstBad) firstBad.focus();
+      return;
+    }
+
+    submitted = true;
+    LivoToast.setLoading(submitBtn, true, MSG.creating);
+  });
+})();
 </script>

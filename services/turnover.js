@@ -3,10 +3,12 @@
 // অন্য ফাইল থেকে শুধু এই ফাংশনগুলো ডাকলেই হবে।
 
 const { pool } = require('../db');
+const { getSetting } = require('./settings');
 
 // ==================== বোনাসের গুণ (multiplier) নিয়ম ====================
+// deposit.sports এখন অ্যাডমিন প্যানেলের 'turnover_multiplier' সেটিং থেকে আসে (ডিফল্ট ৫x)
 const RULES = {
-  deposit: { sports: 5, casino: 35 },  // ডিপোজিট বোনাস: স্পোর্টস ৫x, ক্যাসিনো ৩৫x
+  deposit: { sports: 5, casino: 35 },  // ডিপোজিট বোনাস: স্পোর্টস ৫x (ডিফল্ট), ক্যাসিনো ৩৫x
   daily:   { sports: 3, casino: 0 }    // দৈনিক রিওয়ার্ড: স্পোর্টস ৩x, ক্যাসিনো প্রযোজ্য নয়
 };
 
@@ -14,8 +16,12 @@ const RULES = {
 // ডিপোজিট বোনাস বা দৈনিক রিওয়ার্ড দেওয়ার সময় এটা ডাকা হবে।
 // type = 'deposit' বা 'daily'
 async function createBonus(client, userId, type, bonusAmount) {
-  const rule = RULES[type];
+  const rule = { ...RULES[type] };
   if (!rule || bonusAmount <= 0) return;
+
+  if (type === 'deposit') {
+    rule.sports = Number(await getSetting('turnover_multiplier')) || rule.sports;
+  }
 
   const sportsReq = bonusAmount * rule.sports;
   const casinoReq = bonusAmount * rule.casino;
@@ -45,15 +51,22 @@ async function addTurnover(userId, category, stake) {
     );
 
     for (const b of res.rows) {
+      // অ্যাটমিক ইনক্রিমেন্ট — আগে done মানটা আগে SELECT করে, JS-এ যোগ করে, তারপর
+      // সেই ফলাফল লেখা হতো। একই ইউজারের দুটো বাজি প্রায় একসাথে সেটেল হলে দুটোই
+      // একই পুরোনো মান পড়ত এবং একটার হিসাব হারিয়ে যেত (lost update), ফলে
+      // টার্নওভার প্রগ্রেস বাস্তবের চেয়ে কম দেখাত। column = column + $1 করলে
+      // যোগটা DB-তেই হয়, তাই সমান্তরাল আপডেটেও কোনো স্টেক হারায় না।
       if (category === 'sports') {
-        const newDone = Number(b.sports_done) + Number(stake);
-        await pool.query(`UPDATE bonuses SET sports_done = $1, updated_at = NOW() WHERE id = $2`, [newDone, b.id]);
-      } else {
+        await pool.query(
+          `UPDATE bonuses SET sports_done = sports_done + $1, updated_at = NOW() WHERE id = $2 AND status = 'active'`,
+          [Number(stake), b.id]
+        );
+      } else if (Number(b.casino_required) > 0) {
         // casino_required 0 হলে (daily reward) ক্যাসিনো গণনা হবে না
-        if (Number(b.casino_required) > 0) {
-          const newDone = Number(b.casino_done) + Number(stake);
-          await pool.query(`UPDATE bonuses SET casino_done = $1, updated_at = NOW() WHERE id = $2`, [newDone, b.id]);
-        }
+        await pool.query(
+          `UPDATE bonuses SET casino_done = casino_done + $1, updated_at = NOW() WHERE id = $2 AND status = 'active'`,
+          [Number(stake), b.id]
+        );
       }
 
       // শর্ত পূরণ হয়েছে কিনা চেক করে completed করা

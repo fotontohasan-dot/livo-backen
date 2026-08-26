@@ -98,31 +98,23 @@
         mainBtn.style.background = '#10b981';
         statusEl.innerText = 'গেম চলছে...';
 
-        gameInterval = setInterval(async () => {
-            try {
-                const response = await fetch('/games/status');
-                const data = await response.json();
+        // মাল্টিপ্লায়ার ক্লায়েন্ট-সাইডে লোকালি অ্যানিমেট করা হয় (ভিজ্যুয়াল ফিডব্যাক)।
+        // আসল ক্র্যাশ পয়েন্ট সার্ভার সেশনে গোপনে রাখা থাকে (routes/games.js) — ব্যাকএন্ডে
+        // এমন কোনো পাবলিক স্ট্যাটাস এন্ডপয়েন্ট নেই যেটা পোল করা যায় (আগের /games/status কল
+        // সবসময় 404 দিত, ফলে গেম কখনো ক্র্যাশ করত না)। ক্যাশ আউট করার সময় /games/cashout
+        // সার্ভার-সাইডে ক্লেইম করা মাল্টিপ্লায়ারকে আসল ক্র্যাশ পয়েন্টের সাথে মিলিয়ে জিত/হার
+        // নির্ধারণ করে (নিচের cashOut() দেখুন) — সেটাই একমাত্র সোর্স অফ ট্রুথ।
+        const startTime = Date.now();
+        gameInterval = setInterval(() => {
+            const elapsed = (Date.now() - startTime) / 1000;
+            multiplier = 1 + Math.pow(elapsed, 1.5) * 0.18;
+            multiplierEl.innerText = multiplier.toFixed(2) + 'x';
 
-                if (!data.active && data.crashed) {
-                    multiplier = data.crashPoint;
-                    multiplierEl.innerText = multiplier.toFixed(2) + 'x';
-                    crash();
-                    return;
-                }
-
-                if (data.active) {
-                    multiplier = data.multiplier;
-                    multiplierEl.innerText = multiplier.toFixed(2) + 'x';
-
-                    // Move plane
-                    const progress = (multiplier - 1) / 5;
-                    planeEl.style.left = (10 + progress * 70) + '%';
-                    planeEl.style.bottom = (20 + progress * 50) + '%';
-                }
-            } catch (err) {
-                console.error('Status check error:', err);
-            }
-        }, 500); // Poll every 500ms
+            // Move plane
+            const progress = Math.min(1, (multiplier - 1) / 5);
+            planeEl.style.left = (10 + progress * 70) + '%';
+            planeEl.style.bottom = (20 + progress * 50) + '%';
+        }, 100);
     }
 
     async function cashOut() {
@@ -131,17 +123,24 @@
         isPlaying = false;
         clearInterval(gameInterval);
 
-        const data = await recordWin(multiplier);
-        if (data && data.success) {
+        const claimedMultiplier = multiplier;
+        const data = await recordWin(claimedMultiplier);
+
+        if (data && data.success && !data.crashed) {
             statusEl.innerText = `আপনি জিতেছেন! (+${data.winAmount})`;
             multiplierEl.style.color = '#10b981';
+            mainBtn.disabled = true;
+            setTimeout(resetGame, 3000);
+        } else if (data && data.crashed) {
+            // ব্যাকএন্ড জানিয়েছে ক্লেইম করা মাল্টিপ্লায়ারে পৌঁছানোর আগেই আসল ক্র্যাশ পয়েন্ট
+            // পার হয়ে গিয়েছিল (দেরিতে ক্যাশ আউট) — জেতার বদলে ক্র্যাশ UI দেখানো হচ্ছে।
+            crash();
         } else {
-            statusEl.innerText = 'ক্যাশ আউট ব্যর্থ হয়েছে!';
+            statusEl.innerText = 'ক্যাশ আউট ব্যর্থ হয়েছে!';
             multiplierEl.style.color = '#ef4444';
+            mainBtn.disabled = true;
+            setTimeout(resetGame, 3000);
         }
-
-        mainBtn.disabled = true;
-        setTimeout(resetGame, 3000);
     }
 
     function crash() {

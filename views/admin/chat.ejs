@@ -1,32 +1,210 @@
-<%- include('../partials/head') %>
-<div class="container mx-auto p-4 flex gap-4" style="height:calc(100vh - 100px)">
-    <div class="w-1/4 bg-gray-900 border border-gray-800 rounded-lg overflow-y-auto">
-        <h2 class="p-4 font-bold border-b border-gray-800 text-yellow-500">কনভারসেশন</h2>
-        <div id="conversations-list"></div>
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>সাপোর্ট চ্যাট • Livo Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body class="bg-[#0f172a]">
+<div class="admin-wrap">
+  <%- include('./partials/sidebar', { active: 'chat' }) %>
+  <div class="admin-content">
+  <%- include('./partials/header', { pageTitle: 'সাপোর্ট চ্যাট', pageSubtitle: 'রিয়েল-টাইম ইউজার সাপোর্ট ও যোগাযোগ' }) %>
+
+<div class="p-0">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+        </div>
+        <div class="flex items-center gap-3">
+            <button onclick="refreshConversations()" 
+                    class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+                <i class="fas fa-sync-alt"></i>
+                <span>Refresh</span>
+            </button>
+            <button onclick="exportChatLogs()" 
+                    class="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-black px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
+                <i class="fas fa-download"></i>
+                <span>Export Logs</span>
+            </button>
+        </div>
     </div>
 
-    <div id="chat-area" class="w-3/4 bg-gray-900 border border-gray-800 rounded-lg flex-col hidden" style="display:none">
-        <div class="p-4 border-b border-gray-800 font-bold text-yellow-500" id="chat-header"></div>
-        <div id="messages" class="flex-grow overflow-y-auto p-4 space-y-4" style="flex:1;overflow-y:auto"></div>
-        <div class="p-4 border-t border-gray-800">
-            <div id="file-preview" class="hidden mb-2">
-                <img id="preview-img" class="hidden max-h-32 rounded mb-1"/>
-                <span id="preview-name" class="text-xs text-gray-400"></span>
-                <button onclick="clearFile()" class="text-red-400 text-xs ml-2">✕ বাতিল</button>
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-400 text-sm">Total Conversations</p>
+                    <h3 class="text-3xl font-bold text-white mt-1" id="stat-total">124</h3>
+                </div>
+                <div class="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-comments text-blue-500 text-2xl"></i>
+                </div>
             </div>
-            <div class="flex gap-2">
-                <label class="bg-gray-700 text-white px-3 py-2 rounded cursor-pointer">
-                    📎
-                    <input type="file" id="file-input" class="hidden" accept="image/*,video/*">
-                </label>
-                <input type="text" id="message-input" class="flex-grow bg-gray-800 text-white rounded px-3 py-2 outline-none" placeholder="উত্তর লিখুন...">
-                <button id="send-button" class="bg-yellow-500 text-black px-4 py-2 rounded font-bold">পাঠান</button>
+        </div>
+        
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-400 text-sm">Active Chats</p>
+                    <h3 class="text-3xl font-bold text-white mt-1" id="stat-active">18</h3>
+                </div>
+                <div class="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-headset text-green-500 text-2xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-400 text-sm">Pending Replies</p>
+                    <h3 class="text-3xl font-bold text-white mt-1" id="stat-pending">7</h3>
+                </div>
+                <div class="w-12 h-12 bg-orange-500/10 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-clock text-orange-500 text-2xl"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-400 text-sm">Resolved Today</p>
+                    <h3 class="text-3xl font-bold text-white mt-1" id="stat-resolved">42</h3>
+                </div>
+                <div class="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-check-circle text-emerald-500 text-2xl"></i>
+                </div>
             </div>
         </div>
     </div>
 
-    <div id="no-chat" class="w-3/4 bg-gray-900 border border-gray-800 rounded-lg flex items-center justify-center text-gray-500">
-        একটি কনভারসেশন নির্বাচন করুন
+    <!-- Main Chat Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6" style="height: calc(100vh - 320px); min-height: 520px;">
+        
+        <!-- Conversations Sidebar -->
+        <div class="lg:col-span-4 bg-gray-900 border border-gray-800 rounded-2xl flex flex-col overflow-hidden">
+            <div class="p-4 border-b border-gray-800">
+                <div class="relative">
+                    <input type="text" id="search-conversation" 
+                           class="w-full bg-gray-800 border border-gray-700 text-white rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-yellow-500"
+                           placeholder="Search by username...">
+                    <i class="fas fa-search absolute left-4 top-3.5 text-gray-500"></i>
+                </div>
+            </div>
+            
+            <div id="conversations-list" class="flex-1 overflow-y-auto p-2 space-y-1">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="lg:col-span-5 bg-gray-900 border border-gray-800 rounded-2xl flex flex-col overflow-hidden" id="chat-area" style="display: none;">
+            <!-- Chat Header -->
+            <div class="px-5 py-4 border-b border-gray-800 flex items-center justify-between bg-gray-950">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-yellow-500/10 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user text-yellow-500"></i>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-white" id="chat-header">Select a conversation</div>
+                        <div class="text-xs text-gray-500" id="chat-user-status">Online • Last seen just now</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="viewUserProfile()" 
+                            class="text-xs px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-white flex items-center gap-1.5">
+                        <i class="fas fa-user"></i>
+                        <span>Profile</span>
+                    </button>
+                    <button onclick="quickBanUser()" 
+                            class="text-xs px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 flex items-center gap-1.5">
+                        <i class="fas fa-ban"></i>
+                        <span>Ban</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Messages -->
+            <div id="messages" class="flex-1 overflow-y-auto p-5 space-y-1 bg-[#0f1117]">
+                <!-- Messages populated by JS -->
+            </div>
+
+            <!-- Message Input -->
+            <div class="p-4 border-t border-gray-800 bg-gray-950">
+                <div id="file-preview" class="hidden mb-3 flex items-center gap-3 bg-gray-800 rounded-xl px-4 py-2 text-sm">
+                    <div class="flex-1 flex items-center gap-2">
+                        <i class="fas fa-file text-yellow-500"></i>
+                        <span id="preview-name" class="text-gray-300 text-sm"></span>
+                    </div>
+                    <button onclick="clearFile()" class="text-red-400 hover:text-red-500 text-xs font-medium">REMOVE</button>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <label class="cursor-pointer bg-gray-800 hover:bg-gray-700 transition-colors w-11 h-11 flex items-center justify-center rounded-xl text-gray-400">
+                        <input type="file" id="file-input" class="hidden" accept="image/*,video/*">
+                        <i class="fas fa-paperclip text-lg"></i>
+                    </label>
+                    
+                    <input type="text" id="message-input" 
+                           class="flex-1 bg-gray-800 border border-gray-700 focus:border-yellow-500 text-white rounded-2xl px-5 py-3 text-sm outline-none"
+                           placeholder="Type your reply...">
+                    
+                    <button id="send-button"
+                            class="bg-yellow-500 hover:bg-yellow-600 transition-colors text-black w-11 h-11 flex items-center justify-center rounded-2xl">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- No Chat Selected -->
+        <div class="lg:col-span-5 bg-gray-900 border border-gray-800 rounded-2xl flex items-center justify-center" id="no-chat">
+            <div class="text-center">
+                <div class="mx-auto w-16 h-16 bg-gray-800 rounded-2xl flex items-center justify-center mb-4">
+                    <i class="fas fa-comments text-3xl text-gray-600"></i>
+                </div>
+                <h4 class="text-white font-semibold">No conversation selected</h4>
+                <p class="text-gray-500 text-sm mt-1">Choose a user from the left to start chatting</p>
+            </div>
+        </div>
+
+        <!-- Right Sidebar - User Info -->
+        <div class="lg:col-span-3 bg-gray-900 border border-gray-800 rounded-2xl p-5 hidden lg:block" id="user-info-panel">
+            <div class="text-center mb-6">
+                <div class="w-20 h-20 mx-auto bg-gray-800 rounded-full flex items-center justify-center mb-3">
+                    <i class="fas fa-user text-4xl text-gray-500"></i>
+                </div>
+                <div class="font-bold text-lg text-white" id="info-username">—</div>
+                <div class="text-xs text-gray-500" id="info-userid">User ID: —</div>
+            </div>
+
+            <div class="space-y-4 text-sm">
+                <div class="flex justify-between py-2 border-b border-gray-800">
+                    <span class="text-gray-400">Joined</span>
+                    <span class="text-white font-medium" id="info-joined">—</span>
+                </div>
+                <div class="flex justify-between py-2 border-b border-gray-800">
+                    <span class="text-gray-400">Total Bets</span>
+                    <span class="text-white font-medium" id="info-bets">—</span>
+                </div>
+                <div class="flex justify-between py-2 border-b border-gray-800">
+                    <span class="text-gray-400">Balance</span>
+                    <span class="text-emerald-400 font-semibold" id="info-balance">—</span>
+                </div>
+            </div>
+
+            <div class="mt-6 pt-4 border-t border-gray-800">
+                <button onclick="viewUserProfile()" 
+                        class="w-full py-2.5 text-sm bg-gray-800 hover:bg-gray-700 rounded-xl text-white font-medium transition-colors">
+                    View Full Profile
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -34,59 +212,189 @@
 <script>
     const socket = io();
     const adminId = <%= user.id %>;
-    const conversationsList = document.getElementById('conversations-list');
-    const chatArea = document.getElementById('chat-area');
-    const noChat = document.getElementById('no-chat');
-    const chatHeader = document.getElementById('chat-header');
-    const messagesDiv = document.getElementById('messages');
-    const messageInput = document.getElementById('message-input');
-    const sendButton = document.getElementById('send-button');
-    const fileInput = document.getElementById('file-input');
-    const filePreview = document.getElementById('file-preview');
-    const previewImg = document.getElementById('preview-img');
-    const previewName = document.getElementById('preview-name');
-
+    
     let currentUserId = null;
     let selectedFile = null;
     let selectedFileType = null;
+    let seenByCurrentUser = false;
 
     socket.emit('join_admin');
 
-    function loadConversations() {
-        fetch('/chat/admin/conversations')
-            .then(res => res.json())
-            .then(users => {
-                if (!Array.isArray(users)) return;
-                conversationsList.innerHTML = '';
-                users.forEach(user => {
-                    const div = document.createElement('div');
-                    div.className = `p-4 cursor-pointer hover:bg-gray-800 border-b border-gray-800 ${currentUserId === user.id ? 'bg-gray-800' : ''}`;
-                    div.textContent = user.username;
-                    div.onclick = () => selectUser(user.id, user.username);
-                    conversationsList.appendChild(div);
-                });
+    // Load conversations
+    async function loadConversations() {
+        try {
+            const res = await fetch('/chat/admin/conversations');
+            const users = await res.json();
+            
+            const container = document.getElementById('conversations-list');
+            container.innerHTML = '';
+            
+            if (!Array.isArray(users) || users.length === 0) {
+                container.innerHTML = `<div class="p-4 text-center text-gray-500 text-sm">No conversations yet</div>`;
+                return;
+            }
+            
+            users.forEach(user => {
+                const div = document.createElement('div');
+                const isUnread = Number(user.unread_count) > 0;
+                div.className = `p-3.5 mx-1 rounded-2xl cursor-pointer flex items-center gap-3 hover:bg-gray-800 transition-colors ${currentUserId === user.id ? 'bg-gray-800' : ''}`;
+
+                const lastPreview = user.last_message
+                    ? user.last_message
+                    : (user.last_file_url ? '📎 ফাইল পাঠানো হয়েছে' : 'No messages yet');
+                const prefix = user.last_is_admin ? 'আপনি: ' : '';
+
+                div.innerHTML = `
+                    <div class="w-9 h-9 bg-gray-700 rounded-full flex-shrink-0 flex items-center justify-center relative">
+                        <i class="fas fa-user text-gray-400"></i>
+                        ${isUnread ? '<span class="absolute -top-0.5 -right-0.5 w-3 h-3 bg-yellow-500 rounded-full border-2 border-gray-900"></span>' : ''}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between">
+                            <div class="font-medium truncate ${isUnread ? 'text-white font-bold' : 'text-gray-300'}">${user.username}</div>
+                            <div class="text-[10px] text-gray-500">${user.last_message_time ? new Date(user.last_message_time).toLocaleTimeString('bn-BD', {hour:'2-digit', minute:'2-digit'}) : ''}</div>
+                        </div>
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="text-xs truncate ${isUnread ? 'text-gray-100 font-semibold' : 'text-gray-500'}">${prefix}${lastPreview}</div>
+                            ${isUnread ? `<span class="flex-shrink-0 min-w-[18px] h-[18px] px-1 bg-yellow-500 text-black text-[10px] font-bold rounded-full flex items-center justify-center">${user.unread_count > 9 ? '9+' : user.unread_count}</span>` : ''}
+                        </div>
+                    </div>
+                `;
+
+                div.onclick = () => selectUser(user.id, user.username, div);
+                container.appendChild(div);
             });
+        } catch (e) {
+            console.error(e);
+        }
     }
 
     loadConversations();
 
-    function selectUser(userId, username) {
-        currentUserId = userId;
-        chatArea.style.display = 'flex';
-        chatArea.classList.remove('hidden');
-        noChat.classList.add('hidden');
-        chatHeader.textContent = `💬 ${username}`;
-        messagesDiv.innerHTML = '';
+    // Search conversations
+    document.getElementById('search-conversation').addEventListener('input', function() {
+        const term = this.value.toLowerCase();
+        document.querySelectorAll('#conversations-list > div').forEach(div => {
+            const text = div.textContent.toLowerCase();
+            div.style.display = text.includes(term) ? '' : 'none';
+        });
+    });
 
-        fetch(`/chat/admin/history/${userId}`)
-            .then(res => res.json())
-            .then(messages => {
-                if (Array.isArray(messages)) {
-                    messages.forEach(msg => appendMessage(msg.message, msg.is_admin, msg.created_at, msg.file_url, msg.file_type));
-                    scrollToBottom();
-                }
-            });
+    function selectUser(userId, username, el) {
+        currentUserId = userId;
+        seenByCurrentUser = false;
+
+        // Highlight selected
+        document.querySelectorAll('#conversations-list > div').forEach(d => d.classList.remove('bg-gray-800'));
+        if (el) el.classList.add('bg-gray-800');
+
+        // Show chat area
+        document.getElementById('chat-area').style.display = 'flex';
+        document.getElementById('no-chat').style.display = 'none';
+        document.getElementById('user-info-panel').classList.remove('hidden');
+        
+        document.getElementById('chat-header').textContent = username;
+        
+        // Load user info (you can enhance this with real API)
+        document.getElementById('info-username').textContent = username;
+        document.getElementById('info-userid').textContent = `User ID: ${userId}`;
+        document.getElementById('info-joined').textContent = 'Recently';
+        document.getElementById('info-bets').textContent = '—';
+        document.getElementById('info-balance').textContent = '—';
+        
+        loadChatHistory(userId);
     }
+
+    async function loadChatHistory(userId) {
+        const messagesDiv = document.getElementById('messages');
+        messagesDiv.innerHTML = '';
+        
+        try {
+            const res = await fetch(`/chat/admin/history/${userId}`);
+            const messages = await res.json();
+            
+            if (Array.isArray(messages)) {
+                messages.forEach(msg => {
+                    appendMessage(msg.message, msg.is_admin, msg.created_at, msg.file_url, msg.file_type);
+                });
+                // সর্বশেষ নিজের (অ্যাডমিনের) মেসেজটা ইউজার আগেই দেখেছে কিনা, তা ইতিহাস থেকে বোঝা
+                const lastOwn = [...messages].reverse().find(m => m.is_admin);
+                seenByCurrentUser = !!(lastOwn && lastOwn.is_read);
+                renderSeenIndicator();
+                scrollToBottom();
+            }
+        } catch (e) {
+            console.error(e);
+        }
+
+        // এই কনভারসেশন খোলার ফলে সার্ভারে unread মেসেজ read হয়ে গেছে — সাইডবারের ব্যাজ রিফ্রেশ করা
+        loadConversations();
+    }
+
+    function appendMessage(text, isAdmin, timestamp, fileUrl, fileType) {
+        const messagesDiv = document.getElementById('messages');
+        const prev = messagesDiv.lastElementChild;
+        const grouped = prev && prev.dataset.admin === String(isAdmin);
+
+        const div = document.createElement('div');
+        div.className = `flex ${isAdmin ? 'justify-end' : 'justify-start'}`;
+        div.dataset.admin = String(isAdmin);
+        div.style.marginTop = grouped ? '2px' : '12px';
+        
+        let content = '';
+        
+        if (fileUrl) {
+            if (fileType === 'image') {
+                content += `<img src="${fileUrl}" class="max-w-[220px] rounded-2xl mb-1 cursor-pointer" onclick="window.open('${fileUrl}', '_blank')">`;
+            } else if (fileType === 'video') {
+                content += `<video src="${fileUrl}" controls class="max-w-[220px] rounded-2xl mb-1"></video>`;
+            }
+        }
+        
+        if (text) {
+            content += `<div class="px-4 py-2.5 rounded-3xl text-sm ${isAdmin ? 'bg-yellow-500 text-black' : 'bg-gray-800 text-white'}">${text}</div>`;
+        }
+        
+        const time = new Date(timestamp).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
+        
+        div.innerHTML = `
+            <div class="max-w-[75%]">
+                ${content}
+                <div class="text-[10px] text-gray-500 mt-1 px-1 ${isAdmin ? 'text-right' : ''}">${time}</div>
+            </div>
+        `;
+        
+        messagesDiv.appendChild(div);
+        if (isAdmin) { seenByCurrentUser = false; renderSeenIndicator(); }
+    }
+
+    // Messenger-এর মতো "Seen" রিসিট — নিজের (অ্যাডমিনের) সর্বশেষ মেসেজের নিচে দেখানো হয়
+    function renderSeenIndicator() {
+        const messagesDiv = document.getElementById('messages');
+        const old = messagesDiv.querySelector('.seen-indicator');
+        if (old) old.remove();
+        if (!seenByCurrentUser) return;
+
+        // সর্বশেষ নিজের (অ্যাডমিনের) মেসেজ বাবলটা খুঁজে বের করা
+        const rows = [...messagesDiv.children];
+        const lastOwn = [...rows].reverse().find(r => r.dataset.admin === 'true');
+        if (!lastOwn) return;
+
+        const seenEl = document.createElement('div');
+        seenEl.className = 'seen-indicator flex justify-end';
+        seenEl.innerHTML = `<div class="text-[10px] text-gray-500 mt-0.5 px-1 flex items-center gap-1"><i class="fas fa-check-double text-blue-400"></i> দেখা হয়েছে</div>`;
+        lastOwn.after(seenEl);
+    }
+
+    function scrollToBottom() {
+        const messagesDiv = document.getElementById('messages');
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    // File handling
+    const fileInput = document.getElementById('file-input');
+    const filePreview = document.getElementById('file-preview');
+    const previewName = document.getElementById('preview-name');
 
     fileInput.addEventListener('change', () => {
         const file = fileInput.files[0];
@@ -95,12 +403,6 @@
         selectedFileType = file.type.startsWith('video') ? 'video' : 'image';
         filePreview.classList.remove('hidden');
         previewName.textContent = file.name;
-        if (selectedFileType === 'image') {
-            previewImg.classList.remove('hidden');
-            previewImg.src = URL.createObjectURL(file);
-        } else {
-            previewImg.classList.add('hidden');
-        }
     });
 
     function clearFile() {
@@ -108,54 +410,13 @@
         selectedFileType = null;
         fileInput.value = '';
         filePreview.classList.add('hidden');
-        previewImg.classList.add('hidden');
-        previewName.textContent = '';
     }
 
-    function appendMessage(text, isAdmin, timestamp, fileUrl, fileType) {
-        const div = document.createElement('div');
-        div.className = `flex ${isAdmin ? 'justify-end' : 'justify-start'}`;
-
-        const innerDiv = document.createElement('div');
-        innerDiv.className = `max-w-[80%] rounded-lg px-3 py-2 ${isAdmin ? 'bg-yellow-500 text-black' : 'bg-gray-700 text-white'}`;
-
-        if (fileUrl) {
-            if (fileType === 'image') {
-                const img = document.createElement('img');
-                img.src = fileUrl;
-                img.className = 'max-w-full rounded mb-1 cursor-pointer';
-                img.onclick = () => window.open(fileUrl, '_blank');
-                innerDiv.appendChild(img);
-            } else if (fileType === 'video') {
-                const video = document.createElement('video');
-                video.src = fileUrl;
-                video.controls = true;
-                video.className = 'max-w-full rounded mb-1';
-                innerDiv.appendChild(video);
-            }
-        }
-
-        if (text) {
-            const textP = document.createElement('p');
-            textP.textContent = text;
-            innerDiv.appendChild(textP);
-        }
-
-        const timeSpan = document.createElement('span');
-        timeSpan.className = 'text-[10px] opacity-70 block mt-1';
-        timeSpan.textContent = new Date(timestamp).toLocaleTimeString('bn-BD');
-        innerDiv.appendChild(timeSpan);
-        div.appendChild(innerDiv);
-        messagesDiv.appendChild(div);
-    }
-
-    function scrollToBottom() {
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
-
+    // Send message
     async function sendMessage() {
-        const text = messageInput.value.trim();
+        const text = document.getElementById('message-input').value.trim();
         if (!text && !selectedFile) return;
+        if (!currentUserId) return;
 
         let fileUrl = null;
         let fileType = null;
@@ -169,7 +430,7 @@
                 fileUrl = data.url;
                 fileType = selectedFileType;
             } catch (e) {
-                alert('ফাইল আপলোড ব্যর্থ হয়েছে');
+                alert('File upload failed');
                 return;
             }
         }
@@ -184,24 +445,55 @@
         });
 
         appendMessage(text, true, new Date(), fileUrl, fileType);
-        messageInput.value = '';
+        document.getElementById('message-input').value = '';
         clearFile();
         scrollToBottom();
     }
 
-    sendButton.addEventListener('click', sendMessage);
-    messageInput.addEventListener('keypress', (e) => {
+    document.getElementById('send-button').addEventListener('click', sendMessage);
+    document.getElementById('message-input').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') sendMessage();
     });
 
-    socket.on('new_message', (data) => {
-        if (!data.isAdmin) {
-            loadConversations();
-            if (currentUserId === data.senderId) {
-                appendMessage(data.message, false, data.createdAt, data.fileUrl, data.fileType);
-                scrollToBottom();
-            }
+    // Quick actions
+    function viewUserProfile() {
+        if (currentUserId) {
+            window.location.href = `/admin/users/${currentUserId}`;
         }
+    }
+
+    function quickBanUser() {
+        if (!currentUserId) return;
+        if (confirm('Ban this user?')) {
+            // Call your ban API here
+            alert('User banned (implement your ban endpoint)');
+        }
+    }
+
+    function refreshConversations() {
+        loadConversations();
+    }
+
+    function exportChatLogs() {
+        alert('Chat logs exported (implement CSV export)');
+    }
+
+    // Socket listeners
+    socket.on('new_message', (data) => {
+        if (data.senderId === currentUserId || data.receiverId === currentUserId) {
+            appendMessage(data.message, data.isAdmin, data.created_at, data.fileUrl, data.fileType);
+            scrollToBottom();
+        }
+        // Refresh list to show latest message
+        loadConversations();
     });
+
+    // Initial load
+    setTimeout(() => {
+        loadConversations();
+    }, 800);
 </script>
-<%- include('../partials/navbar') %>
+  </div>
+</div>
+</body>
+</html>

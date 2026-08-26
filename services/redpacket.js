@@ -2,6 +2,8 @@
 // লাল প্যাকেট + সোনার ডিম দৈনিক রিওয়ার্ড
 const { pool } = require('../db');
 const { createBonus } = require('./turnover');
+const { t } = require('../utils/i18n');
+const secureRandom = require('../utils/secureRandom');
 
 function todayStr() {
   const d = new Date();
@@ -17,22 +19,41 @@ async function hasClaimedToday(userId, type) {
   return r.rows.length > 0;
 }
 
+// আজ ডিপোজিট করেছে কিনা — শুধু ডিপোজিট করলেই সোনার ডিম আনলক হবে
+async function hasQualifyingActivityToday(userId) {
+  const d = todayStr();
+
+  const dep = await pool.query(
+    `SELECT 1 FROM payment_requests
+     WHERE user_id=$1 AND type='deposit' AND status='approved'
+       AND (updated_at + interval '6 hours')::date = $2
+     LIMIT 1`,
+    [userId, d]
+  );
+  return !!dep.rows[0];
+}
+
 async function getRewardStatus(userId) {
   const redDone = await hasClaimedToday(userId, 'red_packet');
   const eggDone = await hasClaimedToday(userId, 'golden_egg');
+  const qualifies = await hasQualifyingActivityToday(userId);
   return {
-    redPacket: { claimed: redDone },
-    goldenEgg: { claimed: eggDone }
+    redPacket: { claimed: redDone, locked: !redDone && !qualifies },
+    goldenEgg: { claimed: eggDone, locked: !eggDone && !qualifies }
   };
 }
 
 function randInt(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+  // পুরস্কারের পরিমাণ — CSPRNG, কারণ এটা সরাসরি ব্যালেন্সে যোগ হয়।
+  return secureRandom.randomIntInclusive(min, max);
 }
 
-async function claimRedPacket(userId) {
+async function claimRedPacket(userId, lang = 'bn') {
   if (await hasClaimedToday(userId, 'red_packet')) {
-    return { ok: false, message: 'আজকের লাল প্যাকেট ইতিমধ্যে নেওয়া হয়েছে' };
+    return { ok: false, message: t(lang, 'redpacket_already_claimed') };
+  }
+  if (!(await hasQualifyingActivityToday(userId))) {
+    return { ok: false, message: t(lang, 'redpacket_locked_deposit_required') };
   }
   const amount = randInt(10, 50);
   const client = await pool.connect();
@@ -44,20 +65,32 @@ async function claimRedPacket(userId) {
       [userId, amount, todayStr()]
     );
     await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [amount, userId]);
+    // ব্যালেন্স বাড়ানোর পাশাপাশি coin_transactions লেজারেও লিখতে হয়। আগে শুধু
+    // daily_rewards ও bonuses টেবিলে লেখা হতো, coin_transactions-এ কিছুই যেত না —
+    // ফলে ইউজারের ব্যালেন্স আর লেনদেন-ইতিহাসের যোগফল স্থায়ীভাবে আলাদা হয়ে যেত এবং
+    // /profile/transactions-এ এই কয়েনগুলো কোথা থেকে এল তা দেখাই যেত না।
+    await client.query(
+      `INSERT INTO coin_transactions (user_id, amount, type, description)
+       VALUES ($1, $2, 'red_packet', 'লাল খামের দৈনিক পুরস্কার')`,
+      [userId, amount]
+    );
     await createBonus(client, userId, 'daily', amount);
     await client.query('COMMIT');
     return { ok: true, amount };
   } catch (e) {
     await client.query('ROLLBACK');
-    return { ok: false, message: 'সমস্যা হয়েছে, আবার চেষ্টা করুন' };
+    return { ok: false, message: t(lang, 'common_retry_error_plain') };
   } finally {
     client.release();
   }
 }
 
-async function claimGoldenEgg(userId, pickedIndex) {
+async function claimGoldenEgg(userId, pickedIndex, lang = 'bn') {
   if (await hasClaimedToday(userId, 'golden_egg')) {
-    return { ok: false, message: 'আজকের সোনার ডিম ইতিমধ্যে নেওয়া হয়েছে' };
+    return { ok: false, message: t(lang, 'goldenegg_already_claimed') };
+  }
+  if (!(await hasQualifyingActivityToday(userId))) {
+    return { ok: false, message: t(lang, 'goldenegg_locked_deposit_required') };
   }
   const wonAmount = randInt(10, 30);
   const reveal = [];
@@ -74,12 +107,18 @@ async function claimGoldenEgg(userId, pickedIndex) {
       [userId, wonAmount, todayStr()]
     );
     await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [wonAmount, userId]);
+    // উপরের মতোই — লেজার এন্ট্রি ছাড়া ব্যালেন্স বাড়ানো হয় না
+    await client.query(
+      `INSERT INTO coin_transactions (user_id, amount, type, description)
+       VALUES ($1, $2, 'golden_egg', 'গোল্ডেন এগের দৈনিক পুরস্কার')`,
+      [userId, wonAmount]
+    );
     await createBonus(client, userId, 'daily', wonAmount);
     await client.query('COMMIT');
     return { ok: true, amount: wonAmount, reveal, pickedIndex };
   } catch (e) {
     await client.query('ROLLBACK');
-    return { ok: false, message: 'সমস্যা হয়েছে, আবার চেষ্টা করুন' };
+    return { ok: false, message: t(lang, 'common_retry_error_plain') };
   } finally {
     client.release();
   }

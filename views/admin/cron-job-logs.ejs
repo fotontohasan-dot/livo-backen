@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= job.label %> — হিস্ট্রি • Livo Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
+  </style>
+  <%- include('./partials/pwa-head') %>
+</head>
+<body>
+  <div class="admin-wrap">
+    <%- include('./partials/sidebar', { active: 'cron-jobs' }) %>
+    <div class="admin-content">
+      <%- include('./partials/load-error') %>
+      <%- include('./partials/header', { pageTitle: job.label + ' — Execution History', pageSubtitle: job.description }) %>
+
+      <a href="/admin/cron-jobs" style="color:#f59e0b;font-size:12px;text-decoration:none;display:inline-block;margin-bottom:12px;"><i class="fas fa-arrow-left"></i> Cron Jobs Monitor-এ ফিরে যান</a>
+
+      <div class="admin-card">
+        <div class="admin-card-header">সব রান (মোট <%= logs.length %>টি সাম্প্রতিক)</div>
+        <div style="overflow-x:auto;">
+          <table class="admin-table">
+            <thead><tr><th>Status</th><th>Attempts</th><th>Duration</th><th>Triggered By</th><th>Message</th><th>শুরু</th><th>শেষ</th></tr></thead>
+            <tbody>
+              <% if (logs && logs.length > 0) { %>
+                <% logs.forEach(l => { %>
+                  <tr>
+                    <td><span class="badge <%= l.status === 'success' ? 'badge-green' : 'badge-red' %>"><%= l.status %></span></td>
+                    <td><%= l.attempts %></td>
+                    <td><%= l.duration_ms %>ms</td>
+                    <td style="font-size:11px;"><%= l.triggered_by %></td>
+                    <td style="font-size:11px;color:var(--text-muted);max-width:320px;white-space:normal;"><%= l.message %></td>
+                    <td style="font-size:11px;"><%= new Date(l.started_at).toLocaleString('bn-BD') %></td>
+                    <td style="font-size:11px;"><%= l.finished_at ? new Date(l.finished_at).toLocaleString('bn-BD') : '—' %></td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;">এই Job-এর জন্য এখনো কোনো লগ নেই</td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>

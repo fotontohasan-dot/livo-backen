@@ -1,0 +1,106 @@
+<%
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function fmtDate(d) { return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); }
+
+function actionBadge(type) {
+  const map = {
+    PASSWORD_CHANGED: 'bg-blue-100 text-blue-700',
+    WITHDRAW_PIN_CREATED: 'bg-emerald-100 text-emerald-700',
+    WITHDRAW_PIN_CHANGED: 'bg-amber-100 text-amber-700',
+    WITHDRAW_PIN_RESET: 'bg-red-100 text-red-700',
+    NEW_DEVICE_LOGIN: 'bg-amber-100 text-amber-700',
+    DEVICE_SESSION_REVOKED: 'bg-slate-100 text-slate-600',
+    ALL_OTHER_SESSIONS_REVOKED: 'bg-slate-100 text-slate-600',
+    EMAIL_VERIFIED: 'bg-emerald-100 text-emerald-700',
+    EMAIL_VERIFICATION_RESEND: 'bg-blue-100 text-blue-700',
+    EMAIL_VERIFICATION_SENT: 'bg-blue-100 text-blue-700',
+    '2FA_ENABLED': 'bg-emerald-100 text-emerald-700',
+    '2FA_DISABLED': 'bg-red-100 text-red-700'
+  };
+  return '<span class="px-2.5 py-1 text-xs font-bold rounded-full ' + (map[type] || 'bg-slate-100 text-slate-600') + '">' + escapeHtml(type) + '</span>';
+}
+
+function logRow(l) {
+  const userLabel = l.admin_username ? '@' + escapeHtml(l.admin_username) : 'system';
+  return '<tr class="hover:bg-slate-50 align-top">' +
+    '<td class="px-6 py-4 text-sm font-semibold text-slate-700">' + userLabel + (l.admin_id ? ' <span class="text-slate-400">(#' + l.admin_id + ')</span>' : '') + '</td>' +
+    '<td class="px-6 py-4">' + actionBadge(l.action_type) + '</td>' +
+    '<td class="px-6 py-4 text-sm text-slate-600 max-w-md">' + escapeHtml(l.details || '') + '</td>' +
+    '<td class="px-6 py-4 text-sm font-mono text-slate-500">' + escapeHtml(l.ip_address || '-') + '</td>' +
+    '<td class="px-6 py-4 text-xs text-slate-400">' + fmtDate(l.created_at) + '</td>' +
+  '</tr>';
+}
+
+const s = stats || {};
+const emailNotVerified = Math.max(0, (s.emailUsers || 0) - (s.emailVerified || 0));
+const pinNotConfigured = Math.max(0, (s.totalUsers || 0) - (s.pinConfigured || 0));
+const rows = (recentLogs || []).map(logRow).join('') || '<tr><td colspan="5" class="px-6 py-10 text-center text-slate-400">এখনো কোনো নিরাপত্তা-সম্পর্কিত কার্যকলাপ নেই</td></tr>';
+
+function statCard(icon, label, value, sub, tone) {
+  const toneMap = {
+    blue: 'text-blue-600 bg-blue-50',
+    emerald: 'text-emerald-600 bg-emerald-50',
+    amber: 'text-amber-600 bg-amber-50',
+    red: 'text-red-600 bg-red-50'
+  };
+  return '<div class="stat-card bg-white rounded-3xl border border-slate-100 shadow-sm p-5">' +
+    '<div class="flex items-center justify-between mb-3">' +
+      '<div class="w-10 h-10 rounded-2xl flex items-center justify-center ' + (toneMap[tone] || toneMap.blue) + '"><i class="fas ' + icon + '"></i></div>' +
+    '</div>' +
+    '<p class="text-xs text-slate-500">' + label + '</p>' +
+    '<p class="text-2xl font-bold text-slate-900 mt-1">' + value + '</p>' +
+    (sub ? '<p class="text-xs text-slate-400 mt-1">' + sub + '</p>' : '') +
+  '</div>';
+}
+%>
+<%- include('partials/admin-layout', {
+    title: 'Security Overview',
+    active: 'security-overview',
+    body: `
+<div class="max-w-7xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-semibold text-slate-900">Security Overview</h1>
+            <p class="text-slate-500 mt-1 text-sm">প্ল্যাটফর্মজুড়ে ইউজার নিরাপত্তা স্ট্যাটাসের সারসংক্ষেপ ও সাম্প্রতিক নিরাপত্তা কার্যকলাপ</p>
+        </div>
+        <a href="/admin/activity" class="px-5 py-2.5 bg-slate-100 text-slate-700 rounded-2xl text-sm font-semibold hover:bg-slate-200">
+            <i class="fas fa-list mr-1"></i> ফুল অ্যাক্টিভিটি লগ
+        </a>
+    </div>
+
+    <!-- Overview Stat Cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        ${statCard('fa-users', 'Total Users', (s.totalUsers || 0).toLocaleString('en-US'), '', 'blue')}
+        ${statCard('fa-envelope-circle-check', 'Email Verified', (s.emailVerified || 0).toLocaleString('en-US'), emailNotVerified + ' not verified', emailNotVerified > 0 ? 'amber' : 'emerald')}
+        ${statCard('fa-shield-halved', 'Withdraw PIN Configured', (s.pinConfigured || 0).toLocaleString('en-US'), pinNotConfigured + ' not configured' + (s.pinLocked ? ' · ' + s.pinLocked + ' locked' : ''), s.pinLocked > 0 ? 'red' : 'blue')}
+        ${statCard('fa-mobile-screen-button', 'Active Sessions', (s.activeSessions || 0).toLocaleString('en-US'), (s.newDeviceLogins7d || 0) + ' new devices (7d)', 'blue')}
+    </div>
+
+    <!-- Recent Security Activity -->
+    <div class="bg-white rounded-3xl border border-slate-100 overflow-x-auto modern-table">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h3 class="font-semibold text-slate-800">সাম্প্রতিক নিরাপত্তা কার্যকলাপ</h3>
+            <span class="text-xs text-slate-400">সর্বশেষ ২৫টি এন্ট্রি — সব পরিবর্তন Activity Log-এ সংরক্ষিত হয়</span>
+        </div>
+        <table class="w-full text-sm">
+            <thead class="bg-slate-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500">User</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500">Action</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500">Details</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500">IP</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500">Time</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-50">
+                ${rows}
+            </tbody>
+        </table>
+    </div>
+</div>
+`
+}) %>

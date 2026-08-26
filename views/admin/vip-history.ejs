@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VIP হিস্ট্রি • Livo Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
+  </style>
+  <%- include('./partials/pwa-head') %>
+</head>
+<body>
+  <div class="admin-wrap">
+    <%- include('./partials/sidebar', { active: 'vip' }) %>
+    <div class="admin-content">
+      <%- include('./partials/load-error') %>
+      <%- include('./partials/header', { pageTitle: 'VIP রিওয়ার্ড ও আপগ্রেড হিস্ট্রি', pageSubtitle: 'সব ইউজারের VIP ক্লেইম ও লেভেল পরিবর্তনের সম্পূর্ণ লগ' }) %>
+
+      <a href="/admin/vip" style="color:#f59e0b;font-size:12px;text-decoration:none;display:inline-block;margin-bottom:12px;"><i class="fas fa-arrow-left"></i> VIP ম্যানেজমেন্টে ফিরে যান</a>
+
+      <div class="admin-card" style="margin-bottom:16px;">
+        <div class="admin-card-header">রিওয়ার্ড / ক্লেইম হিস্ট্রি (মোট <%= rewardHistory.total %>)</div>
+        <div style="overflow-x:auto;">
+          <table class="admin-table">
+            <thead><tr><th>ইউজার</th><th>VIP লেভেল</th><th>ধরন</th><th>পরিমাণ</th><th>বিবরণ</th><th>তারিখ</th></tr></thead>
+            <tbody>
+              <% if (rewardHistory.rows && rewardHistory.rows.length > 0) { %>
+                <% rewardHistory.rows.forEach(r => { %>
+                  <tr>
+                    <td style="font-weight:700;">@<%= r.username || 'N/A' %></td>
+                    <td><%= r.vip_level %></td>
+                    <td><span class="badge badge-amber"><%= r.reward_type %></span></td>
+                    <td style="color:#10b981;font-weight:700;">+<%= Number(r.amount).toLocaleString('bn-BD') %></td>
+                    <td style="font-size:11px;color:var(--text-muted);"><%= r.description %></td>
+                    <td style="font-size:11px;"><%= new Date(r.created_at).toLocaleString('bn-BD') %></td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">কোনো রেকর্ড নেই</td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+        <% if (rewardHistory.totalPages > 1) { %>
+          <div style="display:flex;gap:8px;justify-content:center;padding:12px;">
+            <% for (let p = 1; p <= rewardHistory.totalPages; p++) { %>
+              <a href="/admin/vip/history?page=<%= p %>" style="padding:4px 10px;border-radius:6px;font-size:12px;text-decoration:none;background:<%= p === page ? '#f59e0b' : 'rgba(255,255,255,0.05)' %>;color:<%= p === page ? '#000' : 'var(--text-muted)' %>;"><%= p %></a>
+            <% } %>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="admin-card">
+        <div class="admin-card-header">VIP আপগ্রেড হিস্ট্রি (মোট <%= upgradeHistory.total %>)</div>
+        <div style="overflow-x:auto;">
+          <table class="admin-table">
+            <thead><tr><th>ইউজার</th><th>আগের লেভেল</th><th>নতুন লেভেল</th><th>বোনাস</th><th>টার্নওভার (আপগ্রেডের সময়)</th><th>তারিখ</th></tr></thead>
+            <tbody>
+              <% if (upgradeHistory.rows && upgradeHistory.rows.length > 0) { %>
+                <% upgradeHistory.rows.forEach(u => { %>
+                  <tr>
+                    <td style="font-weight:700;">@<%= u.username || 'N/A' %></td>
+                    <td><%= u.from_level %></td>
+                    <td><span class="badge badge-green"><%= u.to_level %></span></td>
+                    <td style="color:#10b981;font-weight:700;">+<%= Number(u.bonus).toLocaleString('bn-BD') %></td>
+                    <td><%= Number(u.total_turnover_at_upgrade).toLocaleString('bn-BD') %></td>
+                    <td style="font-size:11px;"><%= new Date(u.created_at).toLocaleString('bn-BD') %></td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">কোনো রেকর্ড নেই</td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>

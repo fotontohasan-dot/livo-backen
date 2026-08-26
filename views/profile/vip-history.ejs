@@ -1,0 +1,60 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+<div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto;">
+  <%- include('../partials/flash') %>
+
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+    <a href="/profile/vip" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
+    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">📜 VIP হিস্ট্রি</h1>
+  </div>
+
+  <div style="display:flex;gap:8px;margin-bottom:16px;">
+    <div style="flex:1;background:rgba(255,255,255,0.05);border-radius:12px;padding:12px;text-align:center;">
+      <div style="color:var(--text-muted);font-size:11px;">মোট ক্লেইম</div>
+      <div style="color:#10b981;font-weight:900;font-size:18px;"><%= rewardHistory.total %></div>
+    </div>
+    <div style="flex:1;background:rgba(255,255,255,0.05);border-radius:12px;padding:12px;text-align:center;">
+      <div style="color:var(--text-muted);font-size:11px;">মোট আপগ্রেড</div>
+      <div style="color:#f59e0b;font-weight:900;font-size:18px;"><%= upgradeHistory.total %></div>
+    </div>
+  </div>
+
+  <div style="color:var(--text-main);font-weight:bold;margin-bottom:10px;">🎁 রিওয়ার্ড / ক্লেইম হিস্ট্রি</div>
+  <% if (rewardHistory.rows && rewardHistory.rows.length > 0) { %>
+    <% rewardHistory.rows.forEach(r => { %>
+      <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="color:var(--text-main);font-size:13px;font-weight:600;"><%= r.description %></div>
+          <div style="color:var(--text-muted);font-size:11px;margin-top:2px;"><%= new Date(r.created_at).toLocaleString('bn-BD') %></div>
+        </div>
+        <div style="color:#10b981;font-weight:800;font-size:14px;white-space:nowrap;">+<%= Number(r.amount).toLocaleString('bn-BD') %></div>
+      </div>
+    <% }) %>
+    <% if (rewardHistory.totalPages > 1) { %>
+      <div style="display:flex;gap:8px;justify-content:center;margin:12px 0;">
+        <% for (let p = 1; p <= rewardHistory.totalPages; p++) { %>
+          <a href="/profile/vip/history?page=<%= p %>" style="padding:4px 10px;border-radius:6px;font-size:12px;text-decoration:none;background:<%= p === page ? '#f59e0b' : 'rgba(255,255,255,0.05)' %>;color:<%= p === page ? '#000' : 'var(--text-muted)' %>;"><%= p %></a>
+        <% } %>
+      </div>
+    <% } %>
+  <% } else { %>
+    <div style="text-align:center;color:var(--text-muted);padding:24px;font-size:13px;">এখনো কোনো VIP রিওয়ার্ড ক্লেইম করা হয়নি।</div>
+  <% } %>
+
+  <div style="color:var(--text-main);font-weight:bold;margin:20px 0 10px;">⬆️ VIP আপগ্রেড হিস্ট্রি</div>
+  <% if (upgradeHistory.rows && upgradeHistory.rows.length > 0) { %>
+    <% upgradeHistory.rows.forEach(u => { %>
+      <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="color:var(--text-main);font-size:13px;font-weight:600;">লেভেল <%= u.from_level %> → লেভেল <%= u.to_level %></div>
+          <div style="color:var(--text-muted);font-size:11px;margin-top:2px;"><%= new Date(u.created_at).toLocaleString('bn-BD') %></div>
+        </div>
+        <div style="color:#f59e0b;font-weight:800;font-size:14px;white-space:nowrap;">+<%= Number(u.bonus).toLocaleString('bn-BD') %></div>
+      </div>
+    <% }) %>
+  <% } else { %>
+    <div style="text-align:center;color:var(--text-muted);padding:24px;font-size:13px;">এখনো কোনো VIP আপগ্রেড হয়নি।</div>
+  <% } %>
+</div>
+<%- include('../partials/bottom-nav') %>
+</body></html>

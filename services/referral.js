@@ -16,9 +16,29 @@
 //    Tier 3           → ০.৮%
 
 const { pool } = require('../db');
+const { getSetting } = require('./settings');
 
 const MIN_DEPOSIT_FOR_BONUS = 500;          // বোনাস পেতে রেফারের ন্যূনতম ডিপোজিট
-const COMMISSION_RATES = [0.025, 0.015, 0.008]; // Tier 1,2,3
+// ডিফল্ট রেট (Tier 1,2,3) — অ্যাডমিন প্যানেল থেকে (/admin/settings) পরিবর্তন করা না থাকলে এই মানই ব্যবহার হয়।
+// আসল মান services/settings.js-এর DEFAULTS-এও (referral_commission_tierN_percent) সিঙ্কে রাখা আছে।
+const DEFAULT_COMMISSION_RATES = [0.025, 0.015, 0.008]; // Tier 1,2,3
+
+// অ্যাডমিন-কনফিগারড কমিশন রেট (fraction, যেমন 0.025 = 2.5%) — site_settings থেকে,
+// ৩০ সেকেন্ড ক্যাশড getSetting() দিয়ে, তাই প্রতি বাজিতে আলাদা DB কল লাগে না।
+async function getCommissionRates() {
+  const keys = [
+    'referral_commission_tier1_percent',
+    'referral_commission_tier2_percent',
+    'referral_commission_tier3_percent'
+  ];
+  const rates = [];
+  for (let i = 0; i < keys.length; i++) {
+    const raw = await getSetting(keys[i]);
+    const n = parseFloat(raw);
+    rates.push(Number.isFinite(n) && n >= 0 && n <= 100 ? n / 100 : DEFAULT_COMMISSION_RATES[i]);
+  }
+  return rates;
+}
 
 // সফল রেফার সংখ্যা অনুযায়ী প্রথম-ডিপোজিট বোনাস
 function signupBonusFor(successfulCount) {
@@ -52,23 +72,29 @@ async function createReferral(client, referrerId, referredId) {
 // রেফার করা ইউজার প্রথমবার (৫০০+) ডিপোজিট করলে — রেফারারকে প্রোগ্রেসিভ বোনাস।
 async function processReferralDeposit(client, referredUserId, depositAmount) {
   try {
-    // এই ইউজার কারো রেফার কিনা, আর বোনাস আগে দেওয়া হয়েছে কিনা
-    const refRes = await client.query(
-      `SELECT * FROM referrals WHERE referred_id = $1`,
-      [referredUserId]
-    );
-    const ref = refRes.rows[0];
-    if (!ref) return;                         // কেউ রেফার করেনি
-    if (ref.signup_bonus_paid) return;        // আগেই বোনাস দেওয়া হয়েছে
     if (depositAmount < MIN_DEPOSIT_FOR_BONUS) return; // ৫০০-র কম, বোনাস নেই
 
-    // রেফারার এ পর্যন্ত কতজনকে সফল রেফার করেছে (বোনাস পাওয়া) — তার পরের জন এইটি
+    // আগে এখানে SELECT দিয়ে signup_bonus_paid যাচাই করে, পরে আলাদা UPDATE দিয়ে flag সেট করা হতো —
+    // দুটো ধাপের মাঝে কোনো লক ছিল না, তাই একই রেফার্ড ইউজারের দুইটা ডিপোজিট কাছাকাছি সময়ে
+    // approve হলে (দুই admin ট্যাব, বা success-redirect ও IPN-এর race) দুটোই signup_bonus_paid=false
+    // পড়ত আর দুইবার বোনাস দিত। এখন একটা atomic conditional UPDATE দিয়ে flag claim করা হয় —
+    // WHERE signup_bonus_paid=false শর্তসহ, যেটা single-statement হওয়ায় সবসময় exactly-once গ্যারান্টি দেয়,
+    // client কোনো transaction-এ থাকুক বা না থাকুক। rowCount 0 মানে অন্য কোনো concurrent কল আগেই claim করেছে।
+    const claimRes = await client.query(
+      `UPDATE referrals SET first_deposit_done = true, signup_bonus_paid = true
+       WHERE referred_id = $1 AND signup_bonus_paid = false
+       RETURNING id, referrer_id`,
+      [referredUserId]
+    );
+    const ref = claimRes.rows[0];
+    if (!ref) return; // কেউ রেফার করেনি, অথবা বোনাস আগেই claim হয়ে গেছে (রেস জেতেনি)
+
+    // রেফারার এ পর্যন্ত কতজনকে সফল রেফার করেছে (বোনাস পাওয়া, এই রেফারটিসহ) — সেটাই এর অবস্থান
     const cntRes = await client.query(
       `SELECT COUNT(*) FROM referrals WHERE referrer_id = $1 AND signup_bonus_paid = true`,
       [ref.referrer_id]
     );
-    const alreadyPaid = parseInt(cntRes.rows[0].count);
-    const thisIsNumber = alreadyPaid + 1;     // এই রেফারটি ধরে কতজন হলো
+    const thisIsNumber = parseInt(cntRes.rows[0].count); // এই রেফারটি ধরে কতজন হলো
 
     const bonus = signupBonusFor(thisIsNumber);
 
@@ -76,11 +102,6 @@ async function processReferralDeposit(client, referredUserId, depositAmount) {
     await client.query(
       `UPDATE users SET coins = coins + $1 WHERE id = $2`,
       [bonus, ref.referrer_id]
-    );
-    // রেফারেল রেকর্ড আপডেট
-    await client.query(
-      `UPDATE referrals SET first_deposit_done = true, signup_bonus_paid = true WHERE id = $1`,
-      [ref.id]
     );
     // কমিশন হিস্ট্রি (অডিট)
     await client.query(
@@ -111,6 +132,7 @@ async function processReferralDeposit(client, referredUserId, depositAmount) {
 async function distributeCommission(bettorId, stake) {
   if (!stake || stake <= 0) return;
 
+  const rates = await getCommissionRates();
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -127,7 +149,7 @@ async function distributeCommission(bettorId, stake) {
       const referrerId = r.rows[0] ? r.rows[0].referrer_id : null;
       if (!referrerId) break; // আর উপরে কেউ নেই
 
-      const rate = COMMISSION_RATES[level - 1];
+      const rate = rates[level - 1];
       const commission = Math.floor(stake * rate);
 
       if (commission > 0) {
@@ -215,6 +237,7 @@ module.exports = {
   distributeCommission,
   getReferralStats,
   signupBonusFor,
-  COMMISSION_RATES,
+  getCommissionRates,
+  DEFAULT_COMMISSION_RATES,
   MIN_DEPOSIT_FOR_BONUS
 };

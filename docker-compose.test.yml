@@ -1,0 +1,34 @@
+# docker-compose.test.yml
+# ---------------------------------------------------------------------------
+# টেস্টের জন্য সম্পূর্ণ আলাদা, ডিসপোজেবল PostgreSQL ইনস্ট্যান্স — ডেভেলপমেন্ট বা
+# প্রোডাকশন ডাটাবেজের সাথে কোনো সংযোগ নেই। ভিন্ন পোর্টে (5433) চলে যাতে
+# docker-compose.yml-এর সাথে একসাথেও চালানো যায়।
+#
+# ব্যবহার:
+#   docker compose -f docker-compose.test.yml up -d
+#   npm test
+#   docker compose -f docker-compose.test.yml down -v   # শেষে পরিষ্কার করতে
+# ---------------------------------------------------------------------------
+version: '3.8'
+
+services:
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: livo-postgres-test
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: livo_test
+      POSTGRES_PASSWORD: livo_test
+      POSTGRES_DB: livo_test
+    ports:
+      - '5433:5432'
+    volumes:
+      - livo_test_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U livo_test -d livo_test']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  livo_test_pgdata:

@@ -1,0 +1,124 @@
+<%
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+function fmtDate(d) {
+  const dt = new Date(d);
+  return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' ' + dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+function depRow(d, isPending) {
+  const statusColor = d.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : d.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700';
+  const statusLabel = d.status === 'approved' ? 'Approved' : d.status === 'rejected' ? 'Rejected' : 'Pending';
+  const safeUsername = escapeHtml(d.username);
+  const safeMethod = escapeHtml(d.method || '-');
+  const safeTrxId = escapeHtml(d.transaction_id);
+  const actions = isPending
+    ? '<div class="flex justify-center gap-2">' +
+        '<button onclick="approveDeposit(' + d.id + ')" class="px-4 py-1.5 text-xs font-bold bg-emerald-600 text-white rounded-xl">Approve</button>' +
+        '<button onclick="rejectDeposit(' + d.id + ')" class="px-4 py-1.5 text-xs font-bold bg-red-600 text-white rounded-xl">Reject</button>' +
+      '</div>'
+    : '<span class="text-xs text-slate-500 font-medium">' + statusLabel + '</span>';
+  return '<tr id="dep-row-' + d.id + '">' +
+    '<td class="px-6 py-4"><div class="font-semibold">' + safeUsername + '</div><div class="text-xs text-slate-500">#' + d.user_id + ' • DEP' + d.id + '</div></td>' +
+    '<td class="px-6 py-4 font-mono font-semibold text-emerald-600">৳ ' + Number(d.amount).toLocaleString('en-US') + '</td>' +
+    '<td class="px-6 py-4">' + safeMethod + (d.transaction_id ? '<div class="text-xs text-slate-400">' + safeTrxId + '</div>' : '') + '</td>' +
+    '<td class="px-6 py-4 text-sm">' + fmtDate(d.created_at) + '</td>' +
+    '<td class="px-6 py-4 text-center"><span class="px-3 py-1 text-xs font-bold rounded-full ' + statusColor + '">' + statusLabel + '</span></td>' +
+    '<td class="px-6 py-4">' + actions + '</td>' +
+  '</tr>';
+}
+const pendingRows = (pendingDeposits || []).map(d => depRow(d, true)).join('') || '<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400">কোনো পেন্ডিং ডিপোজিট নেই</td></tr>';
+const recentRows = (recentDeposits || []).map(d => depRow(d, false)).join('');
+%>
+<%- include('partials/admin-layout', { 
+    title: 'Deposits Management', 
+    active: 'deposits',
+    body: `
+<div class="max-w-7xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h2 class="text-2xl font-semibold">Deposits Management</h2>
+            <p class="text-sm text-slate-600">${pendingCount || 0} pending deposits • Total pending: ৳ ${Number(pendingTotal || 0).toLocaleString('en-US')}</p>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-3xl border border-slate-100 overflow-x-auto modern-table mb-8">
+        <div class="px-6 py-4 border-b border-slate-100 font-semibold text-slate-700">পেন্ডিং (${pendingCount || 0})</div>
+        <table class="w-full text-sm">
+            <thead class="bg-slate-50">
+                <tr>
+                    <th class="px-6 py-4 text-left font-medium">User / TXN ID</th>
+                    <th class="px-6 py-4 text-left font-medium">Amount</th>
+                    <th class="px-6 py-4 text-left font-medium">Method</th>
+                    <th class="px-6 py-4 text-left font-medium">Date</th>
+                    <th class="px-6 py-4 text-center font-medium">Status</th>
+                    <th class="px-6 py-4 text-center font-medium w-48">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y text-slate-700">${pendingRows}</tbody>
+        </table>
+    </div>
+
+    <div class="bg-white rounded-3xl border border-slate-100 p-5 mb-6">
+        <form method="GET" action="/admin/deposits" class="flex flex-wrap items-end gap-3">
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">শুরুর তারিখ</label>
+                <input type="date" name="from" value="${escapeHtml(filterFrom || '')}" class="border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">শেষ তারিখ</label>
+                <input type="date" name="to" value="${escapeHtml(filterTo || '')}" class="border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            </div>
+            <button type="submit" class="px-5 py-2 bg-emerald-600 text-white text-sm font-bold rounded-xl">🔍 ফিল্টার করুন</button>
+            ${(filterFrom || filterTo) ? '<a href="/admin/deposits" class="px-5 py-2 bg-slate-100 text-slate-600 text-sm font-bold rounded-xl">✕ ক্লিয়ার</a>' : ''}
+        </form>
+    </div>
+
+    <div class="bg-white rounded-3xl border border-slate-100 overflow-x-auto modern-table">
+        <div class="px-6 py-4 border-b border-slate-100 font-semibold text-slate-700">${(filterFrom || filterTo) ? 'ফিল্টারকৃত ফলাফল' : 'সাম্প্রতিক (শেষ ৩০টি)'}</div>
+        <table class="w-full text-sm">
+            <thead class="bg-slate-50">
+                <tr>
+                    <th class="px-6 py-4 text-left font-medium">User / TXN ID</th>
+                    <th class="px-6 py-4 text-left font-medium">Amount</th>
+                    <th class="px-6 py-4 text-left font-medium">Method</th>
+                    <th class="px-6 py-4 text-left font-medium">Date</th>
+                    <th class="px-6 py-4 text-center font-medium">Status</th>
+                    <th class="px-6 py-4 text-center font-medium w-48">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y text-slate-700">${recentRows}</tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+async function approveDeposit(id) {
+    if (!confirm('এই ডিপোজিট Approve করবেন?')) return;
+    try {
+        const res = await fetch('/admin/api/deposits/' + id + '/approve', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) { alert('✅ ডিপোজিট Approve হয়েছে, ইউজারের কয়েন যোগ হয়ে গেছে।'); location.reload(); }
+        else alert('❌ ' + (data.error || 'সমস্যা হয়েছে'));
+    } catch (e) { alert('❌ সার্ভার এরর'); }
+}
+async function rejectDeposit(id) {
+    const reason = prompt('বাতিলের কারণ লিখুন (ঐচ্ছিক):', '');
+    if (reason === null) return;
+    try {
+        const res = await fetch('/admin/api/deposits/' + id + '/reject', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason })
+        });
+        const data = await res.json();
+        if (data.success) { alert('✅ ডিপোজিট বাতিল হয়েছে।'); location.reload(); }
+        else alert('❌ ' + (data.error || 'সমস্যা হয়েছে'));
+    } catch (e) { alert('❌ সার্ভার এরর'); }
+}
+</script>
+` 
+}) %>

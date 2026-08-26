@@ -1,0 +1,38 @@
+{
+  "name": "Livo - স্পোর্টস প্রেডিকশন প্ল্যাটফর্ম",
+  "short_name": "Livo",
+  "description": "বাংলাদেশের সেরা স্পোর্টস প্রেডিকশন প্ল্যাটফর্ম। ম্যাচ প্রেডিকশন করুন, কয়েন জিতুন।",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#006519",
+  "lang": "bn",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

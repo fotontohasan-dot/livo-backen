@@ -1,0 +1,88 @@
+<%
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function fmtDate(d) { return d ? new Date(d).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '-'; }
+function keyRow(k) {
+  const isExpired = k.expires_at && new Date(k.expires_at) < new Date();
+  const statusBadge = !k.enabled
+    ? '<span class="px-2.5 py-1 text-xs font-bold rounded-full bg-slate-100 text-slate-500">REVOKED</span>'
+    : isExpired
+      ? '<span class="px-2.5 py-1 text-xs font-bold rounded-full bg-amber-100 text-amber-700">EXPIRED</span>'
+      : '<span class="px-2.5 py-1 text-xs font-bold rounded-full bg-emerald-100 text-emerald-700">ACTIVE</span>';
+  const scopesHtml = (k.scopes || []).map(s => '<span class="px-2 py-0.5 text-[11px] font-semibold rounded bg-indigo-50 text-indigo-600 border border-indigo-200 mr-1">' + escapeHtml(s) + '</span>').join('');
+  return '<tr class="hover:bg-slate-50 align-top">' +
+    '<td class="px-6 py-4"><div class="font-semibold text-slate-800 text-sm">' + escapeHtml(k.name) + '</div><div class="text-xs text-slate-400 mt-1">' + escapeHtml(k.description || '') + '</div></td>' +
+    '<td class="px-6 py-4">' + scopesHtml + '</td>' +
+    '<td class="px-6 py-4">' + statusBadge + '</td>' +
+    '<td class="px-6 py-4 text-xs text-slate-400">' + (k.last_used ? fmtDate(k.last_used) : 'কখনো ব্যবহার হয়নি') + '</td>' +
+    '<td class="px-6 py-4 text-xs text-slate-400">' + (k.expires_at ? fmtDate(k.expires_at) : 'মেয়াদহীন') + '</td>' +
+    '<td class="px-6 py-4 text-xs text-slate-400">' + escapeHtml(k.created_by_username || 'System') + ' &middot; ' + fmtDate(k.created_at) + '</td>' +
+    '<td class="px-6 py-4 text-center">' +
+      '<div class="flex gap-1.5 justify-center">' +
+        '<form method="POST" action="/admin/api-keys/' + k.id + '/toggle" style="display:inline"><button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl ' + (k.enabled ? 'bg-slate-400 hover:bg-slate-500' : 'bg-emerald-500 hover:bg-emerald-600') + ' text-white">' + (k.enabled ? 'Disable' : 'Enable') + '</button></form>' +
+        (k.enabled ? '<form method="POST" action="/admin/api-keys/' + k.id + '/revoke" onsubmit="return confirm(&quot;এই key স্থায়ীভাবে revoke করতে চান?&quot;)" style="display:inline"><button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-red-500 hover:bg-red-600 text-white">Revoke</button></form>' : '') +
+      '</div>' +
+    '</td>' +
+  '</tr>';
+}
+const rows = (keys || []).map(keyRow).join('') || '<tr><td colspan="7" class="px-6 py-10 text-center text-slate-400">কোনো API key তৈরি হয়নি</td></tr>';
+%>
+<%- include('partials/admin-layout', {
+    title: 'API Key Management',
+    active: 'api-keys',
+    body: `
+<div class="max-w-7xl mx-auto space-y-6">
+    <div>
+        <h1 class="text-2xl font-semibold text-slate-900">API Key Management</h1>
+        <p class="text-slate-500 mt-1 text-sm">পাবলিক API অ্যাক্সেসের জন্য key তৈরি, নিষ্ক্রিয় বা revoke করুন</p>
+    </div>
+
+    ${newKey ? `
+    <div class="bg-emerald-50 border border-emerald-200 rounded-3xl p-6">
+        <h3 class="font-semibold text-emerald-800 mb-2"><i class="fas fa-circle-check mr-2"></i>নতুন API Key তৈরি হয়েছে</h3>
+        <p class="text-sm text-emerald-700 mb-3">⚠️ এই key শুধু একবারই দেখানো হবে — এখনই কপি করে নিরাপদে রাখুন। আবার দেখা যাবে না।</p>
+        <div class="bg-white border border-emerald-300 rounded-2xl px-4 py-3 font-mono text-sm text-slate-800 break-all select-all">${newKey}</div>
+    </div>` : ''}
+
+    <div class="bg-white rounded-3xl border border-slate-100 p-6">
+        <h3 class="font-semibold text-slate-800 mb-4"><i class="fas fa-plus text-blue-500 mr-2"></i>নতুন API Key তৈরি করুন</h3>
+        <form method="POST" action="/admin/api-keys/create" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input type="text" name="name" required placeholder="Key-এর নাম (যেমন: Mobile App v2)" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+                <input type="number" name="expires_in_days" placeholder="মেয়াদ (দিন, খালি রাখলে মেয়াদহীন)" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+            </div>
+            <textarea name="description" placeholder="বিবরণ (ঐচ্ছিক)" class="w-full border border-slate-200 px-4 py-2.5 rounded-2xl text-sm" rows="2"></textarea>
+            <div>
+                <label class="text-xs font-medium text-slate-500 uppercase block mb-2">Scopes (কমপক্ষে একটি নির্বাচন করুন)</label>
+                <div class="flex flex-wrap gap-4">
+                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="scopes" value="read:matches"> read:matches</label>
+                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="scopes" value="read:leaderboard"> read:leaderboard</label>
+                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="scopes" value="read:tournaments"> read:tournaments</label>
+                </div>
+            </div>
+            <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">Key তৈরি করুন</button>
+        </form>
+    </div>
+
+    <div class="bg-white rounded-3xl border border-slate-100 overflow-x-auto modern-table">
+        <table class="w-full text-sm">
+            <thead class="bg-slate-50">
+                <tr>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Name</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Scopes</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Status</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Last Used</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Expires</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Created</th>
+                    <th class="px-6 py-4 text-center font-medium text-slate-500 uppercase text-xs">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">${rows}</tbody>
+        </table>
+    </div>
+</div>
+`
+}) %>

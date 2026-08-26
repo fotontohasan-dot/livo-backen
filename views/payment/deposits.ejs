@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ডিপোজিট ট্রানজেকশন • Livo Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
+    .dep-tabs { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+    .dep-tab {
+      background: #171a21; border: 1px solid rgba(255,255,255,0.08); color: #94a3b8;
+      font-size: 13px; font-weight: 700; padding: 10px 18px; border-radius: 12px;
+      text-decoration: none; display: flex; align-items: center; gap: 8px;
+    }
+    .dep-tab.active { color: #0f1115; background: #f59e0b; border-color: #f59e0b; }
+    .dep-tab .cnt { background: rgba(255,255,255,0.15); padding: 1px 7px; border-radius: 999px; font-size: 11px; }
+    .dep-tab.active .cnt { background: rgba(0,0,0,0.15); }
+
+    .dep-totals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; }
+    .dep-total-card { background: #171a21; border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 14px 16px; }
+    .dep-total-card.active { border-color: #f59e0b; background: rgba(245,158,11,0.06); }
+    .dep-total-card .label { color: #94a3b8; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    .dep-total-card .value { color: #fff; font-size: 20px; font-weight: 800; margin-top: 4px; }
+    .dep-total-card .sub { color: #94a3b8; font-size: 11px; margin-top: 2px; }
+
+    .dep-filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 18px; background: #171a21; border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 12px; }
+    .dep-preset { background: #0f1115; border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1; font-size: 12px; font-weight: 600; padding: 7px 12px; border-radius: 9px; text-decoration: none; }
+    .dep-preset.active { background: #f59e0b; color: #0f1115; border-color: #f59e0b; }
+    .dep-filters input[type=date] { background: #0f1115; border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1; padding: 6px 10px; border-radius: 9px; font-size: 12px; }
+    .dep-filters button { background: #2563eb; color: #fff; border: none; padding: 7px 14px; border-radius: 9px; font-size: 12px; font-weight: 700; cursor: pointer; }
+
+    table.dep-table { width: 100%; border-collapse: collapse; background: #171a21; border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; overflow: hidden; }
+    .dep-table th { text-align: left; font-size: 11px; color: #94a3b8; text-transform: uppercase; padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .dep-table td { padding: 12px; font-size: 13px; color: #e2e8f0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .dep-status { padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+    .dep-status.pending { background: rgba(245,158,11,0.15); color: #f59e0b; }
+    .dep-status.approved { background: rgba(16,185,129,0.15); color: #10b981; }
+    .dep-status.rejected { background: rgba(239,68,68,0.15); color: #ef4444; }
+    .dep-actions form { display: inline-block; margin-right: 6px; }
+    .dep-actions button { border: none; padding: 6px 10px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .dep-btn-approve { background: rgba(16,185,129,0.15); color: #10b981; }
+    .dep-btn-reject { background: rgba(239,68,68,0.15); color: #ef4444; }
+    .dep-empty { text-align: center; color: #94a3b8; padding: 40px; }
+  </style>
+
+<!-- ==================== CSRF টোকেন ==================== -->
+<meta name="csrf-token" content="<%= locals.csrfToken || '' %>">
+<script>
+(function() {
+  var CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+  if (!CSRF_TOKEN) return;
+  function injectIntoForms() {
+    document.querySelectorAll('form').forEach(function(form) {
+      if ((form.getAttribute('method') || 'get').toLowerCase() !== 'post') return;
+      if (form.querySelector('input[name="_csrf"]')) return;
+      var input = document.createElement('input');
+      input.type = 'hidden'; input.name = '_csrf'; input.value = CSRF_TOKEN;
+      form.appendChild(input);
+    });
+  }
+  document.addEventListener('DOMContentLoaded', injectIntoForms);
+  new MutationObserver(injectIntoForms).observe(document.documentElement, { childList: true, subtree: true });
+  var origFetch = window.fetch;
+  window.fetch = function(input, init) {
+    init = init || {};
+    var method = (init.method || (typeof input === 'object' && input.method) || 'GET').toUpperCase();
+    if (['POST','PUT','PATCH','DELETE'].includes(method)) {
+      init.headers = new Headers(init.headers || {});
+      if (!init.headers.has('X-CSRF-Token')) init.headers.set('X-CSRF-Token', CSRF_TOKEN);
+    }
+    return origFetch.call(this, input, init);
+  };
+  var origOpen = XMLHttpRequest.prototype.open;
+  var origSend = XMLHttpRequest.prototype.send;
+  XMLHttpRequest.prototype.open = function(method) {
+    this._csrfMethod = (method || 'GET').toUpperCase();
+    return origOpen.apply(this, arguments);
+  };
+  XMLHttpRequest.prototype.send = function(body) {
+    if (['POST','PUT','PATCH','DELETE'].includes(this._csrfMethod)) {
+      try { this.setRequestHeader('X-CSRF-Token', CSRF_TOKEN); } catch (e) {}
+    }
+    return origSend.call(this, body);
+  };
+})();
+</script>
+</head>
+<body>
+  <div class="admin-wrap">
+    <%- include('../admin/partials/sidebar', { active: 'deposits' }) %>
+    <div class="admin-content">
+      <%- include('../admin/partials/header', { pageTitle: 'ডিপোজিট রিপোর্ট', pageSubtitle: 'মেথড-ভিত্তিক অনুমোদিত ডিপোজিটের আয় রিপোর্ট (বিকাশ/নগদ/রকেট) — অনুমোদনের জন্য পেমেন্ট অনুমোদন পেজে যান' }) %>
+      <%- include('../admin/partials/load-error') %>
+
+      <!-- মেথড ট্যাব -->
+      <div class="dep-tabs">
+        <a href="/payment/admin/deposits?method=bkash&quick=<%= quick %>&from=<%= from %>&to=<%= to %>" class="dep-tab <%= method === 'bkash' ? 'active' : '' %>">
+          <i class="fas fa-mobile-screen"></i> বিকাশ <span class="cnt"><%= totals.bkash.cnt %></span>
+        </a>
+        <a href="/payment/admin/deposits?method=nagad&quick=<%= quick %>&from=<%= from %>&to=<%= to %>" class="dep-tab <%= method === 'nagad' ? 'active' : '' %>">
+          <i class="fas fa-mobile-screen"></i> নগদ <span class="cnt"><%= totals.nagad.cnt %></span>
+        </a>
+        <a href="/payment/admin/deposits?method=rocket&quick=<%= quick %>&from=<%= from %>&to=<%= to %>" class="dep-tab <%= method === 'rocket' ? 'active' : '' %>">
+          <i class="fas fa-mobile-screen"></i> রকেট <span class="cnt"><%= totals.rocket.cnt %></span>
+        </a>
+      </div>
+
+      <!-- প্রতিটা মেথডের টোটাল (একসাথে) -->
+      <div class="dep-totals">
+        <div class="dep-total-card <%= method === 'bkash' ? 'active' : '' %>">
+          <div class="label">বিকাশ — Total Deposit</div>
+          <div class="value">৳<%= Number(totals.bkash.total).toLocaleString('en-US') %></div>
+          <div class="sub"><%= totals.bkash.cnt %>টা approved লেনদেন</div>
+        </div>
+        <div class="dep-total-card <%= method === 'nagad' ? 'active' : '' %>">
+          <div class="label">নগদ — Total Deposit</div>
+          <div class="value">৳<%= Number(totals.nagad.total).toLocaleString('en-US') %></div>
+          <div class="sub"><%= totals.nagad.cnt %>টা approved লেনদেন</div>
+        </div>
+        <div class="dep-total-card <%= method === 'rocket' ? 'active' : '' %>">
+          <div class="label">রকেট — Total Deposit</div>
+          <div class="value">৳<%= Number(totals.rocket.total).toLocaleString('en-US') %></div>
+          <div class="sub"><%= totals.rocket.cnt %>টা approved লেনদেন</div>
+        </div>
+      </div>
+
+      <!-- ডেট ফিল্টার -->
+      <form class="dep-filters" method="GET" action="/payment/admin/deposits">
+        <input type="hidden" name="method" value="<%= method %>">
+        <a class="dep-preset <%= quick === 'today' ? 'active' : '' %>" href="/payment/admin/deposits?method=<%= method %>&quick=today">আজ</a>
+        <a class="dep-preset <%= quick === '7d' ? 'active' : '' %>" href="/payment/admin/deposits?method=<%= method %>&quick=7d">৭ দিন</a>
+        <a class="dep-preset <%= quick === '30d' ? 'active' : '' %>" href="/payment/admin/deposits?method=<%= method %>&quick=30d">৩০ দিন</a>
+        <a class="dep-preset <%= quick === '90d' ? 'active' : '' %>" href="/payment/admin/deposits?method=<%= method %>&quick=90d">৯০ দিন</a>
+        <a class="dep-preset <%= quick === 'year' ? 'active' : '' %>" href="/payment/admin/deposits?method=<%= method %>&quick=year">এই বছর</a>
+        <span style="width:1px;height:20px;background:rgba(255,255,255,0.1);"></span>
+        <input type="date" name="from" value="<%= from %>">
+        <input type="date" name="to" value="<%= to %>">
+        <input type="hidden" name="quick" value="custom">
+        <button type="submit">কাস্টম রেঞ্জ প্রয়োগ করুন</button>
+      </form>
+
+      <!-- ট্রানজেকশন লিস্ট -->
+      <table class="dep-table">
+        <thead>
+          <tr>
+            <th>ইউজার</th>
+            <th>পরিমাণ</th>
+            <th>ট্রানজেকশন আইডি</th>
+            <th>অ্যাকাউন্ট নম্বর</th>
+            <th>স্ট্যাটাস</th>
+            <th>সময়</th>
+            <th>অ্যাকশন</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (requests.length === 0) { %>
+            <tr><td colspan="7" class="dep-empty">এই রেঞ্জে <%= method %> দিয়ে কোনো ডিপোজিট নেই</td></tr>
+          <% } %>
+          <% requests.forEach(r => { %>
+            <tr>
+              <td><%= r.username %></td>
+              <td>৳<%= Number(r.amount).toLocaleString('en-US') %></td>
+              <td><%= r.transaction_id || '-' %></td>
+              <td><%= r.account_number || '-' %></td>
+              <td><span class="dep-status <%= r.status %>"><%= r.status %></span></td>
+              <td><%= new Date(r.created_at).toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }) %></td>
+              <td class="dep-actions">
+                <% if (r.status === 'pending') { %>
+                  <form action="/payment/admin/approve/<%= r.id %>" method="POST">
+                    <button type="submit" class="dep-btn-approve"><i class="fas fa-check"></i> অনুমোদন</button>
+                  </form>
+                  <form action="/payment/admin/reject/<%= r.id %>" method="POST" onsubmit="return confirm('বাতিল করবেন?')">
+                    <button type="submit" class="dep-btn-reject"><i class="fas fa-xmark"></i> বাতিল</button>
+                  </form>
+                <% } else { %>
+                  —
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

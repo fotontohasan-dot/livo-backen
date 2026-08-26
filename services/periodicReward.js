@@ -4,6 +4,7 @@
 // মাসিক: গত ক্যালেন্ডার মাসের sports turnover টয়ার বোনাস, মাসে একবার।
 
 const { pool } = require('../db');
+const { t } = require('../utils/i18n');
 
 const WEEKLY_RATE = 0.10;
 const WEEKLY_MAX = 50000;
@@ -61,10 +62,10 @@ async function getWeeklyStatus(userId) {
   };
 }
 
-async function claimWeekly(userId) {
+async function claimWeekly(userId, lang = 'bn') {
   const status = await getWeeklyStatus(userId);
-  if (status.claimed) return { success: false, message: 'এই সপ্তাহের ক্যাশব্যাক আগেই নেওয়া হয়েছে।' };
-  if (!status.available) return { success: false, message: `সাপ্তাহিক ক্যাশব্যাকর জন্য নিট লস কম (সর্বনিম্ন ${WEEKLY_MIN} কয়েন ক্যাশব্যাক লাগবে)।` };
+  if (status.claimed) return { success: false, message: t(lang, 'weekly_cashback_already_claimed') };
+  if (!status.available) return { success: false, message: t(lang, 'weekly_cashback_below_min').replace('{value}', WEEKLY_MIN) };
 
   const client = await pool.connect();
   try {
@@ -76,7 +77,7 @@ async function claimWeekly(userId) {
     );
     if (dup.rows.length > 0) {
       await client.query('ROLLBACK');
-      return { success: false, message: 'এই সপ্তাহের ক্যাশব্যাক আগেই নেওয়া হয়েছে।' };
+      return { success: false, message: t(lang, 'weekly_cashback_already_claimed') };
     }
 
     await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [status.amount, userId]);
@@ -93,11 +94,11 @@ async function claimWeekly(userId) {
       [userId, `আপনি ${status.amount} কয়েন সপ্তাহিক ক্যাশব্যাক পেয়েছেন!`]
     );
     await client.query('COMMIT');
-    return { success: true, amount: status.amount, message: `${status.amount} কয়েন পেয়েছেন!` };
+    return { success: true, amount: status.amount, message: t(lang, 'reward_coins_received_status_amount').replace('{value}', status.amount) };
   } catch (e) {
     await client.query('ROLLBACK');
     console.error('claimWeekly error:', e.message);
-    return { success: false, message: 'সার্ভার ত্রুটি।' };
+    return { success: false, message: t(lang, 'common_server_error') };
   } finally {
     client.release();
   }
@@ -137,10 +138,10 @@ async function getMonthlyStatus(userId) {
   };
 }
 
-async function claimMonthly(userId) {
+async function claimMonthly(userId, lang = 'bn') {
   const status = await getMonthlyStatus(userId);
-  if (status.claimed) return { success: false, message: 'গত মাসের রিওয়ার্ আগেই নেওয়া হয়েছে।' };
-  if (!status.available) return { success: false, message: 'গত মাসে রিওয়ার্ড পাওয়র মতো যথেষ্ট টার্নওভার হয়নি।' };
+  if (status.claimed) return { success: false, message: t(lang, 'monthly_reward_already_claimed_alt') };
+  if (!status.available) return { success: false, message: t(lang, 'monthly_reward_turnover_insufficient') };
 
   const client = await pool.connect();
   try {
@@ -151,7 +152,7 @@ async function claimMonthly(userId) {
     );
     if (dup.rows.length > 0) {
       await client.query('ROLLBACK');
-      return { success: false, message: 'গত মাসের রিওয়ার্ড আগেই নেওয়া হয়েছে।' };
+      return { success: false, message: t(lang, 'monthly_reward_already_claimed') };
     }
 
     await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [status.bonus, userId]);
@@ -168,11 +169,11 @@ async function claimMonthly(userId) {
       [userId, `আপনি ${status.bonus} কয়েন মাসিক রিওয়ার্ড পেয়েছেন!`]
     );
     await client.query('COMMIT');
-    return { success: true, amount: status.bonus, message: `${status.bonus} কয়েন পেয়েছেন!` };
+    return { success: true, amount: status.bonus, message: t(lang, 'reward_coins_received_status_bonus').replace('{value}', status.bonus) };
   } catch (e) {
     await client.query('ROLLBACK');
     console.error('claimMonthly error:', e.message);
-    return { success: false, message: 'সার্ভার ত্রুটি।' };
+    return { success: false, message: t(lang, 'common_server_error') };
   } finally {
     client.release();
   }

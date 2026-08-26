@@ -1,128 +1,162 @@
-<%- include('../partials/head') %>
-<%- include('../partials/navbar') %>
-<div class="admin-layout">
-  <div class="admin-sidebar">
-    <div style="padding:0 1.5rem 1rem;font-size:.75rem;color:var(--muted);text-transform:uppercase;">অ্যাডমিন প্যনেল</div>
-    <a href="/admin" class="admin-nav-link">📊 ড্যাশবোর্ড</a>
-    <a href="/admin/users" class="admin-nav-link active">👥 ব্যবহারকারী</a>
-    <a href="/admin/matches" class="admin-nav-link">⚽ ম্যাচসমূহ</a>
-    <a href="/admin/tournaments" class="admin-nav-link">🏆 টুর্নামেন্ট</a>
-    <a href="/admin/news" class="admin-nav-link">📰 নিউজ</a>
-    <a href="/chat/admin" class="admin-nav-link">💬 সপোর্ট চ্যাট</a>
-    <a href="/" class="admin-nav-link">🏠 সাইটে ফির যান</a>
-  </div>
-  <div class="admin-content">
-    <%- include('../partials/flash') %>
-    <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:1.5rem;">👥 ইউজার ম্যানেজমেন্ট</h1>
-    <div class="card">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>ইউজার</th>
-            <th>ইমেইল</th>
-            <th>কয়েন</th>
-            <th>পয়েন্ট</th>
-            <th>স্ট্যাটাস</th>
-            <th>অ্যাকশন</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% users.forEach(u => { %>
-            <tr>
-              <td style="font-weight:600"><%= u.username %></td>
-              <td style="font-size:.8rem;color:var(--muted)"><%= u.email %></td>
-              <td style="color:var(--gold)"><%= u.coins %></td>
-              <td style="color:var(--primary)"><%= u.total_points %></td>
-              <td>
-                <span style="color:<%= u.is_banned ? 'var(--red)' : 'var(--green)' %>;font-size:.85rem">
-                  <%= u.is_banned ? '🚫 নিষিদ্ধ' : '✅ সচল' %>
-                </span>
-              </td>
-              <td style="display:flex;gap:.4rem;flex-wrap:wrap;">
-                <a href="/admin/users/<%= u.id %>" class="btn btn-sm btn-primary">👁️ বিস্তারিত</a>
-                <button onclick="banUser(<%= u.id %>)" class="btn btn-sm <%= u.is_banned ? 'btn-outline' : 'btn-danger' %>">
-                  <%= u.is_banned ? 'আনব্যান' : 'ব্যান' %>
-                </button>
-                <button onclick="showAddCoins(<%= u.id %>)" class="btn btn-sm btn-gold">+ কয়েন</button>
-                <button onclick="showRemoveCoins(<%= u.id %>)" class="btn btn-sm btn-danger">- কয়েন</button>
-              </td>
-            </tr>
-          <% }) %>
-        </tbody>
-      </table>
-    </div>
-
-    <div id="addCoinModal" style="display:none;position:fixed;inset:0;background:#000000aa;z-index:9999;align-items:center;justify-content:center;">
-      <div class="card" style="width:90%;max-width:350px;padding:20px;">
-        <h3 style="color:var(--gold);margin-bottom:12px;">💰 কয়েন যোগ করুন</h3>
-        <input type="number" class="form-input" id="addCoinAmount" min="1" placeholder="যত কয়েন দিতে চান" style="margin-bottom:12px;width:100%;">
-        <div style="display:flex;gap:.5rem;">
-          <button onclick="submitAddCoins()" class="btn btn-primary">✅ যোগ করুন</button>
-          <button onclick="closeModals()" class="btn btn-outline">বাতিল</button>
+<%
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+function fmtDate(d) {
+  return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+function userRow(u) {
+  const statusBadge = u.is_banned
+    ? '<span class="px-3 py-1 text-xs font-bold rounded-full bg-red-100 text-red-700">Banned</span>'
+    : '<span class="px-3 py-1 text-xs font-bold rounded-full bg-emerald-100 text-emerald-700">Active</span>';
+  const verifyBadge = !u.email
+    ? '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 text-slate-400">No Email</span>'
+    : (u.email_verified
+      ? '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-100 text-blue-700"><i class="fas fa-circle-check"></i> Verified</span>'
+      : '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-700"><i class="fas fa-triangle-exclamation"></i> Unverified</span>');
+  const banLabel = u.is_banned ? 'Unban' : 'Ban';
+  const banColor = u.is_banned ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-red-500 hover:bg-red-600';
+  const safeUsername = escapeHtml(u.username);
+  const safeContact = escapeHtml(u.email || u.phone || '-');
+  return '<tr class="hover:bg-slate-50">' +
+    '<td class="px-4 py-4">' +
+      (u.is_banned ? '' : '<input type="checkbox" class="user-row-check w-4 h-4 rounded" data-id="' + u.id + '" onchange="updateBulkBar()">') +
+    '</td>' +
+    '<td class="px-6 py-4">' +
+      '<div class="font-semibold text-slate-800">' + safeUsername + '</div>' +
+      '<div class="text-xs text-slate-500">#' + u.id + ' • ' + safeContact + '</div>' +
+    '</td>' +
+    '<td class="px-6 py-4 font-mono font-semibold">৳ ' + Number(u.coins || 0).toLocaleString('en-US') + '</td>' +
+    '<td class="px-6 py-4 text-sm">' + Number(u.total_points || 0).toLocaleString('en-US') + '</td>' +
+    '<td class="px-6 py-4"><div class="flex flex-col gap-1 items-start">' + statusBadge + verifyBadge + '</div></td>' +
+    '<td class="px-6 py-4 text-sm text-slate-500">' + fmtDate(u.created_at) + '</td>' +
+    '<td class="px-6 py-4">' +
+      '<div class="flex items-center justify-center gap-x-1.5 flex-wrap">' +
+        '<a href="/admin/users/' + u.id + '" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-blue-500 hover:bg-blue-600 text-white transition-colors">View</a>' +
+        '<form method="POST" action="/admin/users/' + u.id + '/ban" style="display:inline" onsubmit="return confirm(\'স্ট্যাটাস পরিবর্তন করবেন?\')">' +
+          '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl ' + banColor + ' text-white transition-colors">' + banLabel + '</button>' +
+        '</form>' +
+      '</div>' +
+    '</td>' +
+  '</tr>';
+}
+const rows = (users || []).map(userRow).join('') || '<tr><td colspan="7" class="px-6 py-10 text-center text-slate-400">কোনো ইউজার পাওয়া যায়নি</td></tr>';
+%>
+<%- include('partials/admin-layout', {
+    title: 'User Management',
+    active: 'users',
+    body: `
+<div class="max-w-7xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-semibold text-slate-900">User Management</h1>
+            <p class="text-slate-500 mt-1 text-sm">মোট ${total || 0} জন ইউজার</p>
         </div>
-      </div>
     </div>
 
-    <div id="removeCoinModal" style="display:none;position:fixed;inset:0;background:#000000aa;z-index:9999;align-items:center;justify-content:center;">
-      <div class="card" style="width:90%;max-width:350px;padding:20px;">
-        <h3 style="color:var(--red);margin-bottom:12px;">🔻 কয়েন কমান</h3>
-        <input type="number" class="form-input" id="removeCoinAmount" min="1" placeholder="যত কয়েন কমাতে চান" style="margin-bottom:12px;width:100%;">
-        <div style="display:flex;gap:.5rem;">
-          <button onclick="submitRemoveCoins()" class="btn btn-danger">🔻 কমান</button>
-          <button onclick="closeModals()" class="btn btn-outline">বাতিল</button>
-        </div>
-      </div>
+    <form method="GET" action="/admin/users" class="flex flex-wrap gap-3 mb-6">
+        <input type="text" name="search" value="${escapeHtml(search || '')}" placeholder="নাম, ইমেইল বা ফোন দিয়ে খুঁজুন..."
+               class="flex-1 min-w-[220px] border border-slate-200 px-4 py-2.5 rounded-2xl text-sm outline-none focus:border-blue-300">
+        <select name="status" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+            <option value="">সব স্ট্যাটাস</option>
+            <option value="active" ${status === 'active' ? 'selected' : ''}>Active</option>
+            <option value="banned" ${status === 'banned' ? 'selected' : ''}>Banned</option>
+            <option value="email_verified" ${status === 'email_verified' ? 'selected' : ''}>Email Verified</option>
+            <option value="email_unverified" ${status === 'email_unverified' ? 'selected' : ''}>Email Unverified</option>
+        </select>
+        <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">খুঁজুন</button>
+        ${(search || status) ? '<a href="/admin/users" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">রিসেট</a>' : ''}
+    </form>
+
+    <div id="bulkActionBar" class="hidden items-center gap-3 mb-4 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
+        <span class="text-sm font-semibold text-red-700"><span id="bulkSelectedCount">0</span>টা ইউজার নির্বাচিত</span>
+        <button type="button" onclick="bulkBanSelected()" class="ml-auto px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold">
+            <i class="fas fa-ban"></i> নির্বাচিতদের ব্যান করুন
+        </button>
+        <button type="button" onclick="clearBulkSelection()" class="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-medium">বাতিল</button>
     </div>
 
-  </div>
+    <div class="bg-white rounded-3xl border border-slate-100 overflow-x-auto modern-table">
+        <table class="w-full text-sm">
+            <thead class="bg-slate-50">
+                <tr>
+                    <th class="px-4 py-4"><input type="checkbox" id="selectAllUsers" class="w-4 h-4 rounded" onchange="toggleSelectAllUsers(this)"></th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">User</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Coins</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Points</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Status</th>
+                    <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Joined</th>
+                    <th class="px-6 py-4 text-center font-medium text-slate-500 uppercase text-xs">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">${rows}</tbody>
+        </table>
+    </div>
+
+    <div class="flex justify-center gap-3 mt-6">
+        ${page > 1 ? '<a href="/admin/users?page=' + (page - 1) + '&search=' + encodeURIComponent(search || '') + '&status=' + (status || '') + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">← আগের পেজ</a>' : ''}
+        <span class="px-4 py-2 text-sm text-slate-500">পেজ ${page} / ${totalPages}</span>
+        ${page < totalPages ? '<a href="/admin/users?page=' + (page + 1) + '&search=' + encodeURIComponent(search || '') + '&status=' + (status || '') + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">পরের পেজ →</a>' : ''}
+    </div>
 </div>
+
 <script>
-let currentUserId;
-
-function closeModals() {
-  document.getElementById('addCoinModal').style.display = 'none';
-  document.getElementById('removeCoinModal').style.display = 'none';
+function getSelectedUserIds() {
+  return Array.from(document.querySelectorAll('.user-row-check:checked')).map(function (el) { return el.getAttribute('data-id'); });
 }
-
-function postForm(action, fields) {
-  const f = document.createElement('form');
-  f.method = 'POST'; f.action = action;
-  for (const k in fields) {
-    const i = document.createElement('input');
-    i.type = 'hidden'; i.name = k; i.value = fields[k];
-    f.appendChild(i);
-  }
-  document.body.appendChild(f);
-  f.submit();
+function updateBulkBar() {
+  var ids = getSelectedUserIds();
+  var bar = document.getElementById('bulkActionBar');
+  var countEl = document.getElementById('bulkSelectedCount');
+  countEl.textContent = ids.length;
+  bar.classList.toggle('hidden', ids.length === 0);
+  bar.classList.toggle('flex', ids.length > 0);
+  var allChecks = document.querySelectorAll('.user-row-check');
+  var selectAll = document.getElementById('selectAllUsers');
+  selectAll.checked = allChecks.length > 0 && ids.length === allChecks.length;
 }
-
-function banUser(id) {
-  if (!confirm('স্ট্যাটাস পরিবর্তন করবেন?')) return;
-  postForm(`/admin/users/${id}/ban`, {});
+function toggleSelectAllUsers(checkbox) {
+  document.querySelectorAll('.user-row-check').forEach(function (el) { el.checked = checkbox.checked; });
+  updateBulkBar();
 }
-
-function showAddCoins(id) {
-  currentUserId = id;
-  document.getElementById('addCoinAmount').value = '';
-  document.getElementById('addCoinModal').style.display = 'flex';
+function clearBulkSelection() {
+  document.querySelectorAll('.user-row-check').forEach(function (el) { el.checked = false; });
+  document.getElementById('selectAllUsers').checked = false;
+  updateBulkBar();
 }
-
-function showRemoveCoins(id) {
-  currentUserId = id;
-  document.getElementById('removeCoinAmount').value = '';
-  document.getElementById('removeCoinModal').style.display = 'flex';
-}
-
-function submitAddCoins() {
-  const amount = document.getElementById('addCoinAmount').value;
-  if (!amount || amount <= 0) { alert('সঠিক পরিমাণ দিন!'); return; }
-  postForm(`/admin/users/${currentUserId}/coins/add`, { amount });
-}
-
-function submitRemoveCoins() {
-  const amount = document.getElementById('removeCoinAmount').value;
-  if (!amount || amount <= 0) { alert('সঠিক পরিমাণ দিন!'); return; }
-  postForm(`/admin/users/${currentUserId}/coins/remove`, { amount });
+function bulkBanSelected() {
+  var ids = getSelectedUserIds();
+  if (ids.length === 0) return;
+  if (!confirm(ids.length + 'টা ইউজারকে ব্যান করবেন? এই অ্যাকশন একসাথে সবার উপর প্রয়োগ হবে।')) return;
+  fetch('/admin/users/bulk-ban', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids: ids })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.success) {
+        if (typeof LivoToast !== 'undefined') {
+          LivoToast.show(data.succeeded + 'টা সফল, ' + data.failed + 'টা ব্যর্থ', data.failed > 0 ? 'info' : 'success');
+        } else {
+          alert(data.succeeded + 'টা সফল, ' + data.failed + 'টা ব্যর্থ');
+        }
+        setTimeout(function () { window.location.reload(); }, 900);
+      } else {
+        if (typeof LivoToast !== 'undefined') LivoToast.show(data.error || 'সমস্যা হয়েছে', 'error');
+        else alert(data.error || 'সমস্যা হয়েছে');
+      }
+    })
+    .catch(function () {
+      if (typeof LivoToast !== 'undefined') LivoToast.show('নেটওয়ার্ক সমস্যা হয়েছে', 'error');
+      else alert('নেটওয়ার্ক সমস্যা হয়েছে');
+    });
 }
 </script>
-</body></html>
+`
+}) %>

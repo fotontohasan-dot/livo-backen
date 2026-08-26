@@ -1,0 +1,259 @@
+// services/deviceTracking.js
+// প্রতিটি লগইনে ডিভাইস/ব্রাউজার/OS রেকর্ড করে, নতুন ডিভাইস শনাক্ত করে, এবং সেশন-লিংকড
+// "Active Devices" ট্র্যাক করে যাতে ইউজার নির্দিষ্ট ডিভাইস বা সব ডিভাইস থেকে লগআউট করতে পারে।
+
+const crypto = require('crypto');
+const geoip = require('geoip-lite');
+const { pool } = require('../db');
+const { logAdminAction } = require('./fraudDetection');
+const { sendQueuedEmail } = require('./email');
+
+const ACTIVITY_TOUCH_INTERVAL_MS = 5 * 60 * 1000; // বারবার DB আপডেট না করে ৫ মিনিট পরপর last_activity রিফ্রেশ
+
+// ==================== আনুমানিক লোকেশন (geoip-lite — অফলাইন DB, কোনো API key/নেটওয়ার্ক কল লাগে না) ====================
+function lookupLocation(ip) {
+  try {
+    if (!ip || ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168.') || ip.startsWith('10.')) {
+      return 'Local/Unknown';
+    }
+    const geo = geoip.lookup(ip);
+    if (!geo) return 'Unknown';
+    return [geo.city, geo.region, geo.country].filter(Boolean).join(', ') || 'Unknown';
+  } catch (e) {
+    return 'Unknown';
+  }
+}
+
+// ==================== User-Agent পার্সিং (কোনো বাড়তি npm প্যাকেজ ছাড়াই, হালকা regex-ভিত্তিক) ====================
+function parseUserAgent(ua) {
+  ua = ua || '';
+  let os = 'Unknown OS';
+  if (/windows nt 10/i.test(ua)) os = 'Windows 10/11';
+  else if (/windows nt/i.test(ua)) os = 'Windows';
+  else if (/mac os x/i.test(ua) && /iphone|ipad/i.test(ua) === false) os = 'macOS';
+  else if (/iphone/i.test(ua)) os = 'iOS';
+  else if (/ipad/i.test(ua)) os = 'iPadOS';
+  else if (/android/i.test(ua)) os = 'Android';
+  else if (/linux/i.test(ua)) os = 'Linux';
+
+  let browser = 'Unknown Browser';
+  if (/edg\//i.test(ua)) browser = 'Edge';
+  else if (/opr\/|opera/i.test(ua)) browser = 'Opera';
+  else if (/samsungbrowser/i.test(ua)) browser = 'Samsung Internet';
+  else if (/chrome\//i.test(ua) && !/edg\//i.test(ua)) browser = 'Chrome';
+  else if (/crios\//i.test(ua)) browser = 'Chrome (iOS)';
+  else if (/fxios\//i.test(ua)) browser = 'Firefox (iOS)';
+  else if (/firefox\//i.test(ua)) browser = 'Firefox';
+  else if (/safari\//i.test(ua) && /version\//i.test(ua)) browser = 'Safari';
+
+  let deviceType = 'Desktop';
+  if (/ipad|tablet/i.test(ua)) deviceType = 'Tablet';
+  else if (/mobile|iphone|android/i.test(ua)) deviceType = 'Mobile';
+
+  return { os, browser, deviceType };
+}
+
+function buildDeviceName({ browser, os, deviceType }) {
+  return `${browser} · ${os}${deviceType && deviceType !== 'Desktop' ? ' (' + deviceType + ')' : ''}`;
+}
+
+function computeSignature(fingerprint, ua) {
+  const base = fingerprint || ua || 'unknown';
+  return crypto.createHash('sha256').update(base).digest('hex').slice(0, 32);
+}
+
+function extractIp(req) {
+  return (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
+}
+
+/**
+ * সফল লগইন/রেজিস্ট্রেশনের পর কল হয়। login_logs-এ ইতিমধ্যে রো ইনসার্ট করা থাকলে
+ * (routes/auth.js-এর recordLogin ফাংশন করে), এটি সেই রো-এর signature/is_new_device
+ * আপডেট করে এবং সেশন-লিংকড device_sessions রো তৈরি/আপডেট করে।
+ * কখনো লগইন/রেজিস্ট্রেশন ফ্লো ব্লক করে না — ব্যর্থ হলে silently skip করে।
+ */
+async function recordDeviceLogin(req, userId, loginLogId) {
+  try {
+    const ip = extractIp(req);
+    const ua = req.get('user-agent') || '';
+    const fingerprint = req.headers['x-device-fingerprint'] || req.body?.device_fingerprint || null;
+    const signature = computeSignature(fingerprint, ua);
+    const parsed = parseUserAgent(ua);
+    const deviceName = buildDeviceName(parsed);
+    const location = lookupLocation(ip);
+    const sid = req.sessionID;
+
+    const seenBefore = await pool.query(
+      `SELECT 1 FROM login_logs WHERE user_id = $1 AND device_signature = $2 AND id != $3 LIMIT 1`,
+      [userId, signature, loginLogId || 0]
+    );
+    const isNewDevice = seenBefore.rows.length === 0;
+
+    if (loginLogId) {
+      await pool.query(
+        `UPDATE login_logs SET device_signature = $1, is_new_device = $2, location = $3 WHERE id = $4`,
+        [signature, isNewDevice, location, loginLogId]
+      );
+    }
+
+    if (sid) {
+      await pool.query(
+        `INSERT INTO device_sessions (user_id, sid, device_signature, device_name, browser, os, device_type, ip, user_agent, is_new_device, location, created_at, last_activity)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NOW(),NOW())
+         ON CONFLICT (sid) DO UPDATE SET
+           user_id = EXCLUDED.user_id, device_signature = EXCLUDED.device_signature,
+           device_name = EXCLUDED.device_name, browser = EXCLUDED.browser, os = EXCLUDED.os,
+           device_type = EXCLUDED.device_type, ip = EXCLUDED.ip, user_agent = EXCLUDED.user_agent,
+           location = EXCLUDED.location, last_activity = NOW(), revoked_at = NULL`,
+        [userId, sid, signature, deviceName, parsed.browser, parsed.os, parsed.deviceType, ip, ua, isNewDevice, location]
+      );
+    }
+
+    if (isNewDevice) {
+      await logAdminAction(
+        null, 'SYSTEM', 'NEW_DEVICE_LOGIN',
+        `ইউজার #${userId} — নতুন ডিভাইস থেকে লগইন: ${deviceName} — IP ${ip} — ${location}`, null
+      );
+
+      // নতুন ডিভাইস থেকে লগইন হলে ইউজারকে ইমেইল সতর্কতা।
+      // আগে এখানে sendNewDeviceAlert()-কে সরাসরি await করা হতো। try/catch শুধু এররটাই আটকাত,
+      // অপেক্ষাটা নয় — আর recordDeviceLogin() নিজেই routes/auth.js-এর register (২৮৮ লাইন) ও
+      // login (৩৬০ লাইন) দুই জায়গাতেই await করা হয়। ফলে আউটবাউন্ড SMTP ব্লকড/ধীর হলে
+      // (Render-এ যেটা স্বাভাবিক — services/email.js-এর কমেন্টেই লেখা আছে) প্রতিটা নতুন-ডিভাইস
+      // লগইন ও রেজিস্ট্রেশন পুরো connectionTimeout (১০ সেকেন্ড) ধরে ঝুলে থাকত।
+      // এখন এই ফাইলের বাকি ইমেইলগুলোর মতোই queue-তে পাঠানো হয় (services/queueHandlers.js-এর
+      // 'email' হ্যান্ডলারে kind='new_device'), তাই SMTP-এর জন্য কোনো HTTP রিকোয়েস্ট অপেক্ষা করে না
+      // এবং ব্যর্থ হলে ব্যাকগ্রাউন্ড ওয়ার্কারে রিট্রাই/ব্যাকঅফ পাওয়া যায়।
+      try {
+        const userRes = await pool.query('SELECT email, username FROM users WHERE id = $1', [userId]);
+        const u = userRes.rows[0];
+        if (u && u.email) {
+          sendQueuedEmail('new_device', u.email, {
+            username: u.username, deviceName, ip, location, time: new Date()
+          }).catch(e => console.error('sendNewDeviceAlert enqueue error (non-blocking):', e.message));
+        }
+      } catch (mailErr) {
+        console.error('sendNewDeviceAlert error (non-blocking):', mailErr.message);
+      }
+    }
+
+    return { isNewDevice, deviceName, signature, location };
+  } catch (err) {
+    console.error('recordDeviceLogin error (non-blocking):', err.message);
+    return null;
+  }
+}
+
+/**
+ * প্রতিটি রিকোয়েস্টে কল হয় (থ্রটলড) — ৫ মিনিট পরপর last_activity রিফ্রেশ করে।
+ * ব্যর্থ হলে silently skip করে, কখনো রিকোয়েস্ট আটকায় না।
+ */
+const lastTouchCache = new Map(); // sid -> timestamp, মেমরিতে রাখা হয়েছে যাতে প্রতি রিকোয়েস্টে DB read লাগে না
+async function touchDeviceActivity(req) {
+  try {
+    const sid = req.sessionID;
+    if (!sid) return;
+    const now = Date.now();
+    const last = lastTouchCache.get(sid) || 0;
+    if (now - last < ACTIVITY_TOUCH_INTERVAL_MS) return;
+    lastTouchCache.set(sid, now);
+    if (lastTouchCache.size > 5000) lastTouchCache.clear(); // মেমরি লিক প্রতিরোধ
+    await pool.query(`UPDATE device_sessions SET last_activity = NOW() WHERE sid = $1 AND revoked_at IS NULL`, [sid]);
+  } catch (err) {
+    console.error('touchDeviceActivity error (non-blocking):', err.message);
+  }
+}
+
+async function listActiveSessions(userId, currentSid) {
+  const r = await pool.query(
+    `SELECT * FROM device_sessions WHERE user_id = $1 AND revoked_at IS NULL ORDER BY last_activity DESC`,
+    [userId]
+  );
+  return r.rows.map(row => ({ ...row, is_current: row.sid === currentSid }));
+}
+
+async function listLoginHistory(userId, limit = 50, offset = 0) {
+  const r = await pool.query(
+    `SELECT * FROM login_logs WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
+    [userId, limit, offset]
+  );
+  return r.rows.map(row => ({ ...row, ...parseUserAgent(row.user_agent) }));
+}
+
+async function revokeDeviceSession(userId, deviceSessionId, actorLabel) {
+  const found = await pool.query(
+    `SELECT sid, device_name FROM device_sessions WHERE id = $1 AND user_id = $2 AND revoked_at IS NULL`,
+    [deviceSessionId, userId]
+  );
+  if (!found.rows[0]) return false;
+  const { sid, device_name } = found.rows[0];
+
+  await pool.query(`UPDATE device_sessions SET revoked_at = NOW() WHERE id = $1`, [deviceSessionId]);
+  try {
+    await pool.query(`DELETE FROM user_sessions WHERE sid = $1`, [sid]); // এই মুহূর্তে সার্ভার-সাইড সেশন invalid হয়ে যায়
+  } catch (e) {
+    console.error('user_sessions delete error:', e.message);
+  }
+
+  await logAdminAction(null, actorLabel || 'SYSTEM', 'DEVICE_SESSION_REVOKED',
+    `ইউজার #${userId} — ডিভাইস লগআউট করা হয়েছে: ${device_name || sid}`, null);
+
+  return true;
+}
+
+async function revokeAllOtherSessions(userId, currentSid, actorLabel) {
+  const rows = await pool.query(
+    `SELECT id, sid FROM device_sessions WHERE user_id = $1 AND revoked_at IS NULL AND sid != $2`,
+    [userId, currentSid]
+  );
+  for (const row of rows.rows) {
+    await pool.query(`UPDATE device_sessions SET revoked_at = NOW() WHERE id = $1`, [row.id]);
+    try { await pool.query(`DELETE FROM user_sessions WHERE sid = $1`, [row.sid]); } catch (e) {}
+  }
+  if (rows.rows.length) {
+    await logAdminAction(null, actorLabel || 'SYSTEM', 'ALL_OTHER_SESSIONS_REVOKED',
+      `ইউজার #${userId} — ${rows.rows.length}টি অন্য ডিভাইস থেকে লগআউট করা হয়েছে`, null);
+  }
+  return rows.rows.length;
+}
+
+/** অ্যাডমিন ইউজার ডিটেইল পেজের জন্য — সাম্প্রতিক লগইন + সক্রিয় ডিভাইস */
+async function getUserDeviceOverview(userId, limit = 10) {
+  const [recentLogins, activeSessions] = await Promise.all([
+    listLoginHistory(userId, limit, 0),
+    listActiveSessions(userId, null)
+  ]);
+  return { recentLogins, activeSessions };
+}
+
+/**
+ * routes/payment.js-এর মতো caller-রা withdraw/deposit-এর সময় ফ্রড স্ক্যানে "এই সেশনের ডিভাইসটা
+ * কি নতুন?" জানতে চায় — recordDeviceLogin() লগইনের সময় device_sessions-এ is_new_device সেভ করে
+ * রাখে, এই ফাংশন সেটা পরে যেকোনো সময় sessionID দিয়ে লুকআপ করে।
+ */
+async function isSessionNewDevice(sessionId) {
+  if (!sessionId) return false;
+  try {
+    const res = await pool.query('SELECT is_new_device FROM device_sessions WHERE sid = $1 LIMIT 1', [sessionId]);
+    return res.rows[0] ? !!res.rows[0].is_new_device : false;
+  } catch (err) {
+    console.error('isSessionNewDevice error (non-blocking):', err.message);
+    return false;
+  }
+}
+
+module.exports = {
+  parseUserAgent,
+  buildDeviceName,
+  computeSignature,
+  extractIp,
+  recordDeviceLogin,
+  touchDeviceActivity,
+  listActiveSessions,
+  listLoginHistory,
+  revokeDeviceSession,
+  revokeAllOtherSessions,
+  getUserDeviceOverview,
+  isSessionNewDevice,
+  lookupLocation
+};

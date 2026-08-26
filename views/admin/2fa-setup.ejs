@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2FA সেটআপ • Livo Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
+        .admin-card { box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.4); }
+        .otp-input { letter-spacing: 8px; font-size: 22px; text-align: center; }
+    </style>
+
+<!-- ==================== CSRF টোকেন ==================== -->
+<meta name="csrf-token" content="<%= locals.csrfToken || '' %>">
+<script>
+(function() {
+  var CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+  if (!CSRF_TOKEN) return;
+  function injectIntoForms() {
+    document.querySelectorAll('form').forEach(function(form) {
+      if ((form.getAttribute('method') || 'get').toLowerCase() !== 'post') return;
+      if (form.querySelector('input[name="_csrf"]')) return;
+      var input = document.createElement('input');
+      input.type = 'hidden'; input.name = '_csrf'; input.value = CSRF_TOKEN;
+      form.appendChild(input);
+    });
+  }
+  document.addEventListener('DOMContentLoaded', injectIntoForms);
+  new MutationObserver(injectIntoForms).observe(document.documentElement, { childList: true, subtree: true });
+  var origFetch = window.fetch;
+  window.fetch = function(input, init) {
+    init = init || {};
+    var method = (init.method || (typeof input === 'object' && input.method) || 'GET').toUpperCase();
+    if (['POST','PUT','PATCH','DELETE'].includes(method)) {
+      init.headers = new Headers(init.headers || {});
+      if (!init.headers.has('X-CSRF-Token')) init.headers.set('X-CSRF-Token', CSRF_TOKEN);
+    }
+    return origFetch.call(this, input, init);
+  };
+  var origOpen = XMLHttpRequest.prototype.open;
+  var origSend = XMLHttpRequest.prototype.send;
+  XMLHttpRequest.prototype.open = function(method) {
+    this._csrfMethod = (method || 'GET').toUpperCase();
+    return origOpen.apply(this, arguments);
+  };
+  XMLHttpRequest.prototype.send = function(body) {
+    if (['POST','PUT','PATCH','DELETE'].includes(this._csrfMethod)) {
+      try { this.setRequestHeader('X-CSRF-Token', CSRF_TOKEN); } catch (e) {}
+    }
+    return origSend.call(this, body);
+  };
+})();
+</script>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md">
+        <div class="text-center mb-6">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4">
+                <i class="fas fa-qrcode text-white text-3xl"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-white">অ্যাডমিন 2FA</h1>
+            <p class="text-slate-400 mt-2 text-sm">Google Authenticator / Authy দিয়ে অ্যাকাউন্ট সুরক্ষিত করুন</p>
+        </div>
+
+        <div class="bg-slate-800 border border-slate-700 rounded-3xl p-8 admin-card space-y-6">
+
+            <% if (typeof error !== 'undefined' && error) { %>
+                <div class="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-2xl text-sm flex items-center gap-3">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span><%= error %></span>
+                </div>
+            <% } %>
+
+            <% if (typeof mandatory !== 'undefined' && mandatory) { %>
+                <div class="bg-amber-500/10 border border-amber-500/30 text-amber-400 px-4 py-3 rounded-2xl text-sm flex items-center gap-3">
+                    <i class="fas fa-shield-halved"></i>
+                    <span>নিরাপত্তার জন্য সব admin অ্যাকাউন্টে 2FA বাধ্যতামূলক — লগইন সম্পন্ন করতে নিচের ধাপগুলো শেষ করুন।</span>
+                </div>
+            <% } %>
+
+            <% if (alreadyEnabled) { %>
+                <!-- ==================== ইতিমধ্যে চালু আছে — বন্ধ করার অপশন ==================== -->
+                <div class="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-4 py-3 rounded-2xl text-sm flex items-center gap-3">
+                    <i class="fas fa-user-shield"></i>
+                    <span>2FA বর্তমানে চালু আছে</span>
+                </div>
+
+                <form action="/admin/2fa/disable" method="POST" class="space-y-4">
+                    <p class="text-slate-400 text-sm">2FA বন্ধ করতে আপনার পাসওয়ার্ড এবং একটা বর্তমান 2FA কোড অথবা একটা ব্যাকআপ কোড দিন:</p>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">পাসওয়ার্ড</label>
+                        <input type="password" name="password" required
+                            class="w-full bg-slate-900 border border-slate-700 text-white px-4 py-3 rounded-2xl focus:outline-none focus:border-red-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">2FA কোড অথবা ব্যাকআপ কোড</label>
+                        <input type="text" name="token" maxlength="20" required
+                            class="otp-input w-full bg-slate-900 border border-slate-700 text-white py-3 rounded-2xl focus:outline-none focus:border-red-500" placeholder="------ বা XXXXX-XXXXX">
+                    </div>
+                    <button type="submit" onclick="return confirm('আপনি কি নিশ্চিত 2FA বন্ধ করতে চান? এতে অ্যাকাউন্টের নিরাপত্তা কমে যাবে।')"
+                        class="w-full bg-red-600 hover:bg-red-700 transition-all text-white font-semibold py-3 rounded-2xl text-sm">
+                        <i class="fas fa-lock-open"></i> 2FA বন্ধ করুন
+                    </button>
+                </form>
+            <% } else { %>
+                <!-- ==================== নতুন সেটআপ — QR স্ক্যান করান ==================== -->
+                <div class="text-center">
+                    <p class="text-slate-300 text-sm mb-4">
+                        ১) Google Authenticator বা Authy অ্যাপ দিয়ে নিচের QR কোডটা স্ক্যান করুন
+                    </p>
+                    <% if (qrDataUrl) { %>
+                        <div class="bg-white p-4 rounded-2xl inline-block">
+                            <img src="<%= qrDataUrl %>" alt="2FA QR Code" class="w-48 h-48">
+                        </div>
+                    <% } %>
+                </div>
+
+                <% if (base32) { %>
+                <div class="bg-slate-900 border border-slate-700 rounded-2xl p-4 text-center">
+                    <p class="text-xs text-slate-500 mb-1">QR স্ক্যান করতে না পারলে ম্যানুয়ালি এই কি (key) দিন:</p>
+                    <p class="font-mono text-blue-400 text-sm break-all select-all"><%= base32 %></p>
+                </div>
+                <% } %>
+
+                <form action="<%= locals.formAction || '/admin/2fa/setup/verify' %>" method="POST" class="space-y-4">
+                    <p class="text-slate-300 text-sm">২) অ্যাপে দেখানো ৬-ডিজিট কোডটা দিয়ে নিশ্চিত করুন:</p>
+                    <input type="text" name="token" maxlength="6" inputmode="numeric" pattern="[0-9]*" required autofocus
+                        class="otp-input w-full bg-slate-900 border border-slate-700 text-white py-4 rounded-2xl focus:outline-none focus:border-blue-500 placeholder:text-slate-600"
+                        placeholder="------">
+                    <button type="submit"
+                        class="w-full bg-blue-600 hover:bg-blue-700 transition-all text-white font-semibold py-3.5 rounded-2xl text-base shadow-lg shadow-blue-600/30">
+                        <i class="fas fa-check"></i> 2FA চালু করুন
+                    </button>
+                </form>
+            <% } %>
+
+            <a href="/admin/settings" class="block text-center text-slate-500 hover:text-slate-400 text-xs">
+                ← সেটিংসে ফিরে যান
+            </a>
+        </div>
+    </div>
+</body>
+</html>

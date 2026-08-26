@@ -62,21 +62,52 @@ async function checkBadges(userId) {
     for (const b of BADGES) {
       if (earned.includes(b.code)) continue;
       if (b.check(stats)) {
-        await pool.query(
-          `INSERT INTO user_badges (user_id, badge_code) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-          [userId, b.code]
-        );
-        if (b.reward > 0) {
-          await pool.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [b.reward, userId]);
-          await pool.query(
-            `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, 'badge', $3)`,
-            [userId, b.reward, `ব্যাজ: ${b.name}`]
+        // গুরুত্বপূর্ণ: ON CONFLICT DO NOTHING কনফ্লিক্টটা "গিলে ফেলে" — কোনো এরর থ্রো হয় না।
+        // আগে রিটার্ন ভ্যালু দেখা হতো না, ফলে দুইটা concurrent checkBadges() (routes/games.js ও
+        // routes/matches.js প্রতিটা বাজিতে await ছাড়া এটা ডাকে, অর্থাৎ একই ইউজারের একাধিক কল
+        // সহজেই ওভারল্যাপ করে) দুটোই earned-লিস্ট ফাঁকা দেখত, একজনের INSERT সফল হতো আর
+        // অন্যজনেরটা নীরবে skip হতো — কিন্তু দুজনেই coins ক্রেডিট করত। একই ব্যাজের রিওয়ার্ড
+        // বারবার ইস্যু করা সম্ভব ছিল (unlimited coin duplication)।
+        // RETURNING id দিয়ে এখন শুধু যে কলটা আসলেই রো ইনসার্ট করেছে সেটাই রিওয়ার্ড দেয়।
+        //
+        // ব্যাজ-ইনসার্ট, ব্যালেন্স UPDATE ও coin_transactions INSERT — তিনটাই এখন একই
+        // ট্রানজেকশনে। আগে ব্যাজ-ইনসার্ট আলাদা autocommit কোয়েরি ছিল আর reward-ক্রেডিট আরেকটা
+        // ট্রানজেকশনে; reward-অংশ ব্যর্থ হলে ব্যাজ রো টিকে থাকত (earned হিসেবে গণ্য) কিন্তু
+        // reward কখনো ক্রেডিট হতো না, এবং পরের checkBadges() কলে earned তালিকায় থাকায়
+        // পুনরায় চেষ্টাও হতো না — reward স্থায়ীভাবে হারিয়ে যেত।
+        const client = await pool.connect();
+        let inserted = false;
+        try {
+          await client.query('BEGIN');
+          const insertedBadge = await client.query(
+            `INSERT INTO user_badges (user_id, badge_code) VALUES ($1, $2)
+             ON CONFLICT (user_id, badge_code) DO NOTHING RETURNING id`,
+            [userId, b.code]
           );
+          if (insertedBadge.rowCount === 0) {
+            await client.query('ROLLBACK'); // অন্য একটা concurrent কল ইতিমধ্যে এই ব্যাজ দিয়ে দিয়েছে
+          } else {
+            inserted = true;
+            if (b.reward > 0) {
+              await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [b.reward, userId]);
+              await client.query(
+                `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, 'badge', $3)`,
+                [userId, b.reward, `ব্যাজ: ${b.name}`]
+              );
+            }
+            await client.query(
+              `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, 'নতুন ব্যাজ!', $2, 'success')`,
+              [userId, `${b.icon} "${b.name}" ব্যাজ অর্জন করেছেন! +${b.reward} কয়েন`]
+            );
+            await client.query('COMMIT');
+          }
+        } catch (e) {
+          await client.query('ROLLBACK');
+          throw e;
+        } finally {
+          client.release();
         }
-        await pool.query(
-          `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, 'নতুন ব্যাজ!', $2, 'success')`,
-          [userId, `${b.icon} "${b.name}" ব্যাজ অর্জন করেছেন! +${b.reward} কয়েন`]
-        );
+        if (!inserted) continue;
         newly.push(b);
       }
     }

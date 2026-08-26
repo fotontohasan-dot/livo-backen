@@ -1,77 +1,90 @@
-<%- include('../partials/head') %>
-<%- include('../partials/navbar') %>
-<div class="admin-layout">
-  <div class="admin-sidebar">
-    <div style="padding:0 1.5rem 1rem;font-size:.75rem;color:var(--muted);text-transform:uppercase;">অ্যাডমিন প্যানেল</div>
-    <a href="/admin" class="admin-nav-link">📊 ড্যাশবোর্ড</a>
-    <a href="/admin/users" class="admin-nav-link">👥 ব্যবহারকারী</a>
-    <a href="/admin/matches" class="admin-nav-link">⚽ ম্যাচসমূহ</a>
-    <a href="/admin/tournaments" class="admin-nav-link active">🏆 টুর্নামেন্ট</a>
-    <a href="/admin/news" class="admin-nav-link">📰 নিউজ</a>
-    <a href="/chat/admin" class="admin-nav-link">💬 সাপোর্ট চ্যাট</a>
-    <a href="/" class="admin-nav-link">🏠 সাইটে ফিরে যান</a>
-  </div>
-  <div class="admin-content">
-    <%- include('../partials/flash') %>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
-      <h1 style="font-size:1.5rem;font-weight:800;">🏆 টুর্নামেন্ট ম্যানেজমেন্ট</h1>
-      <button onclick="document.getElementById('addModal').style.display='flex'" class="btn btn-primary">+ টুর্নামেন্ট তৈরি করুন</button>
-    </div>
-    <div class="card" style="margin-bottom:1.5rem;">
-      <table class="table">
-        <thead>
-          <tr><th>নাম</th><th>স্পোর্টস</th><th>এন্ট্রি</th><th>পুরস্কার</th><th>স্ট্যাটাস</th><th>তারিখ</th></tr>
-        </thead>
-        <tbody>
-          <% tournaments.forEach(t => { %>
-            <tr>
-              <td style="font-weight:600"><%= t.name %></td>
-              <td><%= t.sport %></td>
-              <td style="color:var(--gold)"><%= t.entry_fee || 'ফ্রি' %></td>
-              <td style="color:var(--green)"><%= t.prize_pool %></td>
-              <td><span class="status-badge status-<%= t.status %>"><%= t.status === 'upcoming' ? 'আসন্ন' : 'চলমান' %></span></td>
-              <td style="font-size:.8rem;color:var(--muted)">
-                <%= new Date(t.start_date).toLocaleDateString() %> - <%= new Date(t.end_date).toLocaleDateString() %>
-              </td>
-            </tr>
-          <% }) %>
-        </tbody>
-      </table>
-    </div>
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>টুর্নামেন্ট • Livo Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
+  </style>
+  <%- include('./partials/pwa-head') %>
+</head>
+<body>
+  <div class="admin-wrap">
+    <%- include('./partials/sidebar', { active: 'tournaments' }) %>
+    <div class="admin-content">
+      <%- include('./partials/load-error') %>
+      <%- include('./partials/header', { pageTitle: 'টুর্নামেন্ট', pageSubtitle: 'টুর্নামেন্ট তৈরি ও পরিচালনা করুন' }) %>
 
-    <div id="addModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#00000080;z-index:999;align-items:center;justify-content:center;">
-      <div class="card" style="width:500px;max-width:95vw;max-height:90vh;overflow-y:auto;">
-        <div class="card-header">
-          + টুর্নামেন্ট তৈরি করুন
-          <button onclick="document.getElementById('addModal').style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.2rem;">✕</button>
-        </div>
-        <div class="card-body">
-          <div class="form-group"><label class="form-label">নাম</label><input type="text" class="form-input" id="tName"></div>
-          <div class="form-group"><label class="form-label">স্পোর্টস</label><select class="form-input" id="tSport"><option value="football">ফুটবল</option><option value="cricket">ক্রিকেট</option></select></div>
-          <div class="form-group"><label class="form-label">বিবরণ</label><textarea class="form-input" id="tDesc"></textarea></div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-            <div class="form-group"><label class="form-label">এন্ট্রি ফি</label><input type="number" class="form-input" id="tEntry" value="0"></div>
-            <div class="form-group"><label class="form-label">পুরস্কার</label><input type="number" class="form-input" id="tPrize" value="0"></div>
-          </div>
-          <div class="form-group"><label class="form-label">সর্বোচ্চ অংশগ্রহণকারী</label><input type="number" class="form-input" id="tMax" value="100"></div>
-          <div class="form-group"><label class="form-label">শুরুর তারিখ</label><input type="datetime-local" class="form-input" id="tStart"></div>
-          <div class="form-group"><label class="form-label">শেষের তারিখ</label><input type="datetime-local" class="form-input" id="tEnd"></div>
-          <button onclick="submitTournament()" class="btn btn-primary">টুর্নামেন্ট তৈরি করুন</button>
+      <div class="grid grid-4" style="margin-bottom:14px;">
+        <div class="stat-card"><div class="stat-label">মোট</div><div class="stat-number"><%= stats.total || 0 %></div></div>
+        <div class="stat-card"><div class="stat-label">লাইভ</div><div class="stat-number" style="color:#10b981;"><%= stats.live || 0 %></div></div>
+        <div class="stat-card"><div class="stat-label">আসন্ন</div><div class="stat-number" style="color:#f59e0b;"><%= stats.upcoming || 0 %></div></div>
+        <div class="stat-card"><div class="stat-label">সম্পন্ন</div><div class="stat-number" style="color:var(--text-muted);"><%= stats.completed || 0 %></div></div>
+      </div>
+
+      <div class="admin-card" style="padding:16px;margin-bottom:16px;">
+        <div style="font-weight:800;color:var(--text-main);font-size:13px;margin-bottom:12px;"><i class="fas fa-trophy" style="color:#f59e0b;"></i> নতুন টুর্নামেন্ট তৈরি করুন</div>
+        <form method="POST" action="/admin/tournaments/add" style="display:grid;grid-template-columns:1fr;gap:10px;">
+          <input class="input" type="text" name="name" placeholder="টুর্নামেন্টের নাম" required>
+          <input class="input" type="text" name="sport" placeholder="স্পোর্ট (যেমন: cricket, football)">
+          <textarea class="input" name="description" rows="2" placeholder="বিবরণ (ঐচ্ছিক)"></textarea>
+          <input class="input" type="number" name="entry_fee" placeholder="এন্ট্রি ফি">
+          <input class="input" type="number" name="prize_pool" placeholder="প্রাইজ পুল">
+          <input class="input" type="number" name="max_participants" placeholder="সর্বোচ্চ অংশগ্রহণকারী" value="100">
+          <label style="font-size:11px;color:var(--text-muted);">শুরুর সময়</label>
+          <input class="input" type="datetime-local" name="start_date">
+          <label style="font-size:11px;color:var(--text-muted);">শেষের সময়</label>
+          <input class="input" type="datetime-local" name="end_date">
+          <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> তৈরি করুন</button>
+        </form>
+      </div>
+
+      <div class="admin-card">
+        <div class="admin-card-header">সকল টুর্নামেন্ট</div>
+        <div style="overflow-x:auto;">
+          <table class="admin-table">
+            <thead><tr><th>নাম</th><th>স্পোর্ট</th><th>এন্ট্রি ফি</th><th>প্রাইজ পুল</th><th>অংশগ্রহণকারী</th><th>স্ট্যাটাস</th><th style="text-align:right;">অ্যাকশন</th></tr></thead>
+            <tbody>
+              <% if (tournaments && tournaments.length > 0) { %>
+                <% tournaments.forEach(t => { %>
+                  <tr>
+                    <td style="font-weight:700;"><%= t.name %></td>
+                    <td><%= t.sport || '—' %></td>
+                    <td><%= t.entry_fee %></td>
+                    <td><%= t.prize_pool %></td>
+                    <td><%= t.participant_count %>/<%= t.max_participants %></td>
+                    <td>
+                      <% if (t.status === 'live') { %><span class="badge badge-green">লাইভ</span>
+                      <% } else if (t.status === 'upcoming') { %><span class="badge badge-amber">আসন্ন</span>
+                      <% } else if (t.status === 'completed') { %><span class="badge">সম্পন্ন</span>
+                      <% } else { %><span class="badge badge-red">বাতিল</span><% } %>
+                    </td>
+                    <td style="text-align:right;">
+                      <form method="POST" action="/admin/tournaments/<%= t.id %>/status" style="display:inline-block;">
+                        <select name="status" class="select" style="width:auto;padding:5px 8px;font-size:11px;" onchange="this.form.submit()">
+                          <option value="upcoming" <%= t.status === 'upcoming' ? 'selected' : '' %>>আসন্ন</option>
+                          <option value="live" <%= t.status === 'live' ? 'selected' : '' %>>লাইভ</option>
+                          <option value="completed" <%= t.status === 'completed' ? 'selected' : '' %>>সম্পন্ন</option>
+                          <option value="cancelled" <%= t.status === 'cancelled' ? 'selected' : '' %>>বাতিল</option>
+                        </select>
+                      </form>
+                      <form method="POST" action="/admin/tournaments/<%= t.id %>/delete" style="display:inline-block;" onsubmit="return confirm('মুছে ফেলবেন?')">
+                        <button class="btn btn-sm btn-red" type="submit"><i class="fas fa-trash"></i></button>
+                      </form>
+                    </td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="7"><div class="empty-state">কোনো টুর্নামেন্ট পাওয়া যায়নি</div></td></tr>
+              <% } %>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
   </div>
-</div>
-<script>
-function submitTournament() {
-  const form = document.createElement('form');
-  form.method = 'POST'; form.action = '/admin/tournaments';
-  [['name','tName'],['sport','tSport'],['description','tDesc'],['entry_fee','tEntry'],['prize_pool','tPrize'],['max_participants','tMax'],['start_date','tStart'],['end_date','tEnd']].forEach(([n,id]) => {
-    const i = document.createElement('input');
-    i.name = n; i.value = document.getElementById(id).value;
-    form.appendChild(i);
-  });
-  document.body.appendChild(form); form.submit();
-}
-</script>
-</body></html>
+</body>
+</html>
