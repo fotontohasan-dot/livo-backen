@@ -1067,3 +1067,35 @@ body.menu-open {
     .auth-card { padding: var(--space-5) var(--space-4) var(--space-4); }
     .auth-title { font-size: 20px; }
 }
+
+/* ==================================================================
+   FORCED TEXT CONTRAST — A to Z
+   ডার্ক মোডে সাইটের সব লেখা সাদা, হোয়াইট মোডে সব লেখা কালো।
+   ইনলাইন style-এ হার্ডকোড করা রঙও এতে ওভাররাইড হয় (!important)।
+   ================================================================== */
+
+/* --- ডার্ক মোড: সব লেখা সাদা --- */
+body:not(.light-mode),
+body:not(.light-mode) *:not(.keep-color):not(.keep-color *) {
+  color: #FFFFFF !important;
+}
+
+/* --- হোয়াইট মোড: সব লেখা কালো --- */
+body.light-mode,
+body.light-mode *:not(.keep-color):not(.keep-color *) {
+  color: #000000 !important;
+}
+
+/* --- প্লেসহোল্ডারও একই নিয়মে --- */
+body:not(.light-mode) ::placeholder { color: #FFFFFF !important; opacity: .6; }
+body.light-mode ::placeholder      { color: #000000 !important; opacity: .55; }
+
+/* --- একমাত্র ব্যতিক্রম: যেসব কনটেইনার দুই মোডেই কালো থাকে ---
+   (গেম ক্যানভাস `background:#000`) — এখানে কালো লেখা হলে কিছুই দেখা যেত না,
+   তাই ভেতরের লেখা সবসময় সাদা। */
+body.light-mode .game-canvas-area,
+body.light-mode .game-canvas-area *,
+body.light-mode #gameUI,
+body.light-mode #gameUI * {
+  color: #FFFFFF !important;
+}
