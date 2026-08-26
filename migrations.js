@@ -813,26 +813,6 @@ async function runMigrations() {
 
     await pool.query(`ALTER TABLE kyc_requests ADD COLUMN IF NOT EXISTS reject_reason TEXT`);
 
-    // job_queue.worker_id — কোন ওয়ার্কার প্রক্রিয়া জবটা ধরে আছে।
-    // stalled recovery আগে শুধু সময় দেখে সিদ্ধান্ত নিত, তাই ধীর কিন্তু জীবিত
-    // জবও দ্বিতীয়বার শুরু হয়ে যেতে পারত (ইমেইল দুবার যাওয়া ইত্যাদি)।
-    await pool.query(`ALTER TABLE job_queue ADD COLUMN IF NOT EXISTS worker_id TEXT`)
-      .catch(e => console.error('job_queue worker_id column:', e.message));
-
-    // একই কারণে একজন ইউজারকে একটাই ফ্রি বেট।
-    //
-    // services/freebet.js-এ hasFreeBetReason() দিয়ে কলার আগে দেখে নিত, কিন্তু
-    // সেটা check-then-insert — দুটো সমান্তরাল কল দুটোই খালি দেখে দুটোই
-    // ঢুকিয়ে দিত। মিশন সম্পন্ন হওয়ার মতো ইভেন্ট একসাথে দুবার ফায়ার হলে
-    // ইউজার দুটো ফ্রি বেট পেত।
-    //
-    // 'reward' হলো সাধারণ/পুনরাবৃত্তিযোগ্য কারণ — সেটা এই নিয়মের বাইরে,
-    // কারণ ওটা বারবার দেওয়াই উদ্দেশ্য।
-    await pool.query(`
-      CREATE UNIQUE INDEX IF NOT EXISTS uniq_free_bet_user_reason
-      ON free_bets (user_id, reason) WHERE reason <> 'reward'
-    `).catch(e => console.error('free_bets unique index:', e.message));
-
     // একজন ইউজারের একসাথে একটাই pending KYC রিকোয়েস্ট থাকতে পারে।
     //
     // routes/extra.js-এ আগে শুধু SELECT করে দেখা হতো pending আছে কি না, তারপর
