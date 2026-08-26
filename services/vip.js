@@ -38,31 +38,41 @@ async function addVipTurnover(userId, amount) {
       // দুটোই একই পুরনো currentLevel দেখত, দুটোই newLevel > currentLevel পেত এবং দুটোই
       // upgrade_bonus ক্রেডিট করত (একই আপগ্রেডের বোনাস দুইবার)। এখন কেবল যে কোয়েরিটা আসলে
       // লেভেল বাড়িয়েছে (rowCount === 1) সেটাই বোনাস দেয়; হেরে যাওয়া কলটা কিছুই করে না।
-      const levelUp = await pool.query(
-        `UPDATE users SET vip_level = $1 WHERE id = $2 AND COALESCE(vip_level, 0) < $1 RETURNING id`,
-        [newLevel, userId]
-      );
-      if (levelUp.rowCount === 0) return;
+      // লেভেল আপগ্রেড ও আপগ্রেড বোনাস — একই ট্রানজেকশনে।
+      //
+      // আগে লেভেল আলাদা কোয়েরিতে কমিট হয়ে যেত, তারপর বোনাস আলাদা ট্রানজেকশনে।
+      // বোনাস ব্যর্থ হলে ইউজার লেভেল পেয়ে যেত কিন্তু বোনাস হারাত — আর
+      // `vip_level < $1` গার্ডের কারণে পরের বাজিতেও আর কখনো বোনাসটা পেত না,
+      // কারণ লেভেল ইতিমধ্যে বেড়ে গেছে। টাকাটা নিঃশব্দে হারিয়ে যেত।
+      //
+      // গার্ডটা রাখা হয়েছে — সমান্তরাল দুটো বাজি একই আপগ্রেডের বোনাস দুবার
+      // দিতে পারবে না; শুধু যে ট্রানজেকশন আসলে লেভেল বাড়িয়েছে সেটাই বোনাস দেয়।
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const levelUp = await client.query(
+          `UPDATE users SET vip_level = $1 WHERE id = $2 AND COALESCE(vip_level, 0) < $1 RETURNING id`,
+          [newLevel, userId]
+        );
+        if (levelUp.rowCount === 0) {
+          await client.query('ROLLBACK');
+          return;
+        }
 
-      if (bonus > 0) {
-        // ব্যালেন্স UPDATE ও coin_transactions INSERT আগে আলাদা, কোনো ট্রানজেকশন ছাড়া
-        // pool.query() কল ছিল — মাঝপথে ব্যর্থ হলে ব্যালেন্স-লেজার গরমিল স্থায়ী থেকে যেত।
-        const client = await pool.connect();
-        try {
-          await client.query('BEGIN');
+        if (bonus > 0) {
           await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [bonus, userId]);
           await client.query(
             `INSERT INTO coin_transactions (user_id, amount, type, description)
              VALUES ($1, $2, 'vip_upgrade', $3)`,
             [userId, bonus, `VIP ${name} আপগ্রেড বোনাস`]
           );
-          await client.query('COMMIT');
-        } catch (e) {
-          await client.query('ROLLBACK');
-          throw e;
-        } finally {
-          client.release();
         }
+        await client.query('COMMIT');
+      } catch (e) {
+        await client.query('ROLLBACK').catch(() => {});
+        throw e;
+      } finally {
+        client.release();
       }
       await pool.query(
         `INSERT INTO notifications (user_id, title, message, type)

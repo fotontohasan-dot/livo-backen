@@ -79,5 +79,64 @@ jobs:
         echo "::error::npm test ব্যর্থ — jest-output artifact দেখো।"
         exit 1
 
-    - name: Build
-      run: npm run build
+    # আসল প্রোডাকশন রানটাইম Express/EJS (`node app.js`), Next.js নয়।
+    # `next build` একটা আলাদা src/ ট্রি বিল্ড করে যা ডিপ্লয় হয় না — অর্থাৎ
+    # আগের বিল্ড-গেট আসল অ্যাপ্লিকেশনটাই যাচাই করত না।
+    #
+    # এখন যা যাচাই হয়: সব EJS টেমপ্লেট কম্পাইল হয় কি না, প্রতিটা JS ফাইলের
+    # সিনট্যাক্স ঠিক আছে কি না, আর অ্যাপ সত্যিই বুট হয়ে HTTP সাড়া দেয় কি না।
+    - name: Verify production app (Express/EJS)
+      run: |
+        set -e
+        node -e "
+          const fs=require('fs'),path=require('path'),ejs=require('ejs');
+          function walk(d){let r=[];for(const f of fs.readdirSync(d)){const p=path.join(d,f);
+            if(fs.statSync(p).isDirectory())r=r.concat(walk(p));else if(f.endsWith('.ejs'))r.push(p);}return r;}
+          let bad=0;
+          for(const f of walk('views')){
+            try{ejs.compile(fs.readFileSync(f,'utf8'),{filename:f});}
+            catch(e){bad++;console.error('EJS FAIL',f,String(e).split('\n')[0]);}
+          }
+          if(bad){console.error(bad+' টেমপ্লেট কম্পাইল হয়নি');process.exit(1);}
+          console.log('সব EJS টেমপ্লেট কম্পাইল হয়েছে');
+        "
+        for f in app.js db.js migrations.js routes/*.js services/*.js middleware/*.js utils/*.js; do
+          node --check "$f" || exit 1
+        done
+        echo "সব JS ফাইলের সিনট্যাক্স ঠিক আছে"
+
+    - name: Boot smoke test
+      env:
+        PUBLIC_APP_URL: http://localhost:3000
+        PORT: 3000
+      run: |
+        node app.js & APP_PID=$!
+        for i in $(seq 1 30); do
+          if curl -sf http://localhost:3000/health > /dev/null; then
+            echo "অ্যাপ বুট হয়েছে ও সাড়া দিচ্ছে"; kill $APP_PID; exit 0
+          fi
+          sleep 2
+        done
+        echo "::error::অ্যাপ ৬০ সেকেন্ডেও সাড়া দেয়নি"; kill $APP_PID 2>/dev/null; exit 1
+
+    # Playwright E2E এখন merge gate। আগে স্পেক ফাইলটা রিপোতে থাকলেও CI-তে
+    # কখনো চলত না, তাই ব্রাউজার-স্তরের রিগ্রেশন ধরা পড়ত না।
+    - name: Install Playwright browser
+      run: npx playwright install --with-deps chromium
+
+    - name: Run E2E tests
+      id: e2e
+      env:
+        NODE_ENV: development
+        PUBLIC_APP_URL: http://localhost:3000
+        E2E_BASE_URL: http://localhost:3000
+      run: npx playwright test
+
+    - name: Upload E2E report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: playwright-report-${{ github.run_number }}
+        path: playwright-report/
+        retention-days: 14
+        if-no-files-found: warn

@@ -1,5 +1,6 @@
 const express = require('express');
 const { buildUrl, getBaseUrl } = require('../utils/publicUrl');
+const { issueToken, hashToken } = require('../utils/tokens');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
@@ -67,11 +68,12 @@ async function logSystemEvent(userId, username, actionType, details, ip = null) 
 }
 
 async function issueVerificationToken(userId) {
-  const token = crypto.randomBytes(32).toString('hex');
+  // ডাটাবেসে যায় শুধু হ্যাশ, ইমেইলে যায় আসল টোকেন — utils/tokens.js দেখুন।
+  const { token, tokenHash } = issueToken();
   const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // ২৪ ঘণ্টা
   await pool.query(
     'UPDATE users SET verification_token = $1, verification_token_expiry = $2, last_verification_sent_at = NOW() WHERE id = $3',
-    [token, expiry, userId]
+    [tokenHash, expiry, userId]
   );
   return token;
 }
@@ -320,7 +322,10 @@ router.post('/register', async (req, res) => {
         const verifyUrl = buildUrl(req, `/verify-email/${token}`);
         sendQueuedEmail('verification', email, { verifyUrl })
           .catch(e => console.error('registration verification email error:', e.message));
-        req.session.user.verification_token = token; // sanitizeUser ইতিমধ্যে কপি করে ফেলেছে বলে সেশনেও আপডেট
+        // সেশনে আসল টোকেন রাখা হয় না — সেশন স্টোরও একটা ডেটাস্টোর, আর টোকেনটা
+        // ইমেইলেই পাঠানো হয়ে গেছে। শুধু "পাঠানো হয়েছে" ফ্ল্যাগ রাখা হয়, যাতে
+        // UI ভেরিফিকেশন-বার্তা দেখাতে পারে।
+        req.session.user.verification_pending = true;
         await logSystemEvent(newUserId, username, 'EMAIL_VERIFICATION_SENT', `রেজিস্ট্রেশনের সময় ভেরিফিকেশন ইমেইল পাঠানো হয়েছে: ${email}`, req.ip);
       } catch (mailErr) {
         console.error('registration verification email error:', mailErr.message);
@@ -687,7 +692,7 @@ router.get('/verify-email/:token', async (req, res) => {
   try {
     const result = await pool.query(
       'SELECT id, username, email FROM users WHERE verification_token = $1 AND verification_token_expiry > NOW()',
-      [req.params.token]
+      [hashToken(req.params.token)]
     );
     const user = result.rows[0];
 
@@ -816,15 +821,15 @@ router.post('/forgot-password', resetLimiter, async (req, res) => {
 
     // ইউজার থাকুক বা না থাকুক একই সাফল্যের মেসেজ দেখানো হয় (ইমেইল enumeration ঠেকাতে)
     if (user) {
-      const token = crypto.randomBytes(32).toString('hex');
+      const { token, tokenHash } = issueToken();
       const expiry = new Date(Date.now() + 60 * 60 * 1000); // ১ ঘণ্টা
       await pool.query(
         'UPDATE users SET reset_token = $1, reset_token_expiry = $2 WHERE id = $3',
-        [token, expiry, user.id]
+        [tokenHash, expiry, user.id]
       );
       // Redis-এ token → userId ক্যাশ করা হচ্ছে (TTL = DB expiry-এর সমান), যাতে verify-এর সময়
       // বেশিরভাগ ক্ষেত্রে DB না ছুঁয়েই কাজ চলে। ব্যর্থ হলেও সমস্যা নেই — DB fallback তো থাকছেই।
-      cache.set(`reset_token:${token}`, user.id, 60 * 60).catch(() => {});
+      cache.set(`reset_token:${tokenHash}`, user.id, 60 * 60).catch(() => {});
 
       const resetUrl = buildUrl(req, `/reset-password/${token}`);
       sendQueuedEmail('password_reset', user.email, { resetUrl })
@@ -843,13 +848,13 @@ router.get('/reset-password/:token', async (req, res) => {
   try {
     const token = req.params.token;
     // আগে Redis-এ চেক করা হচ্ছে (দ্রুত, DB-তে না গিয়েই) — ক্যাশ মিস/Redis ডাউন হলে স্বাভাবিকভাবে DB fallback হবে
-    const cachedUserId = await cache.get(`reset_token:${token}`);
+    const cachedUserId = await cache.get(`reset_token:${hashToken(token)}`);
     if (cachedUserId) {
       return res.render('reset-password', { token });
     }
     const result = await pool.query(
       'SELECT id FROM users WHERE reset_token = $1 AND reset_token_expiry > NOW()',
-      [token]
+      [hashToken(token)]
     );
     if (result.rows.length === 0) {
       req.flash('error', req.t('auth_link_invalid_retry'));
@@ -886,13 +891,13 @@ router.post('/reset-password/:token', resetLimiter, async (req, res) => {
       `UPDATE users SET password = $1, reset_token = NULL, reset_token_expiry = NULL
        WHERE reset_token = $2 AND reset_token_expiry > NOW()
        RETURNING id, username`,
-      [hashed, token]
+      [hashed, hashToken(token)]
     );
     if (updated.rowCount === 0) {
       req.flash('error', req.t('auth_link_invalid_retry'));
       return res.redirect('/forgot-password');
     }
-    cache.del(`reset_token:${token}`).catch(() => {});
+    cache.del(`reset_token:${hashToken(token)}`).catch(() => {});
 
     // পাসওয়ার্ড রিসেটের পর ওই অ্যাকাউন্টের সব পুরনো সেশন বাতিল করা হয়।
     // এটা না থাকলে অ্যাকাউন্ট টেকওভারের পর ভিকটিম পাসওয়ার্ড রিসেট করলেও আক্রমণকারীর
