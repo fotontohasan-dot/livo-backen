@@ -89,7 +89,10 @@
   function showToast(text) {
     var t = document.getElementById('adminBnToast');
     if (!t) return;
-    t.innerHTML = '🔔 ' + text;
+    // `text` আসে admin_alert ইভেন্ট থেকে, যার message ফিল্ডে ইউজারের পাঠানো চ্যাট-বার্তা
+    // থাকে — অর্থাৎ সম্পূর্ণ অবিশ্বস্ত। innerHTML দিলে সেটা অ্যাডমিনের পেজে HTML হিসেবে
+    // পার্স হতো; textContent-এ কখনোই হয় না।
+    t.textContent = '🔔 ' + String(text == null ? '' : text);
     t.classList.add('show');
     clearTimeout(t._hideTimer);
     t._hideTimer = setTimeout(function () { t.classList.remove('show'); }, 3200);

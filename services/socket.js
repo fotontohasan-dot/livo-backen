@@ -3,6 +3,7 @@ const { pool } = require('../db');
 const { getBotReply } = require('./chatbot');
 const { notifyTelegram } = require('./telegramNotify');
 const cache = require('./cache');
+const { isAllowedOrigin } = require('../utils/allowedOrigins');
 
 // ===== চ্যাট মেসেজ রেট-লিমিট =====
 // HTTP রুটগুলো সবই কোনো না কোনো rate limiter-এর পেছনে, কিন্তু Socket.IO ইভেন্ট একটা আলাদা চ্যানেল
@@ -63,9 +64,23 @@ const emitAdminAlert = (type, data = {}) => {
 };
 
 const initSocket = (server, sessionMiddleware) => {
+  // ===== নিরাপত্তা: Socket.IO-র origin পলিসি এখন মূল অ্যাপের সাথে অভিন্ন =====
+  // আগে এখানে `origin: "*"` ছিল। handshake-এ সেশন কুকি যুক্ত থাকায় (নিচে io.engine.use)
+  // যেকোনো তৃতীয়-পক্ষের ওয়েবসাইট ভিকটিমের ব্রাউজার থেকে credentialed handshake করে
+  // `user:<id>` রুমের প্রাইভেট ইভেন্ট পড়তে পারত। এখন utils/allowedOrigins.js-এর একই
+  // allow-list দুই লেয়ারেই প্রযোজ্য, আর fail-closed — তালিকায় না থাকলে সংযোগ প্রত্যাখ্যাত।
   io = new Server(server, {
+    // মেসেজ সাইজ লিমিট: ডিফল্ট 1MB-ও একটা সকেট থেকে বড় পে-লোড স্প্যাম করার সুযোগ দেয়;
+    // চ্যাট মেসেজ/ইভেন্ট পে-লোডের জন্য 64KB যথেষ্ট (ফাইল আপলোড আলাদা HTTP রুটে হয়)।
+    maxHttpBufferSize: 64 * 1024,
     cors: {
-      origin: "*",
+      origin(origin, callback) {
+        // ব্রাউজার WebSocket/polling handshake-এ সবসময় Origin পাঠায়। Origin না থাকা মানে
+        // নন-ব্রাউজার ক্লায়েন্ট (নেটিভ অ্যাপ/সার্ভার-টু-সার্ভার) — HTTP লেয়ারের মতোই অনুমোদিত,
+        // কারণ সেখানে ব্রাউজারের অ্যাম্বিয়েন্ট কুকি স্বয়ংক্রিয়ভাবে যুক্ত হয় না।
+        callback(null, isAllowedOrigin(origin, { allowMissing: true }));
+      },
+      credentials: true,
       methods: ["GET", "POST"]
     }
   });
@@ -129,6 +144,11 @@ const initSocket = (server, sessionMiddleware) => {
 
         if (!message && !fileUrl) return;
 
+        // সার্ভার-সাইড দৈর্ঘ্য সীমা — ক্লায়েন্টের textarea-র maxlength বিশ্বাসযোগ্য নয়;
+        // সীমা ছাড়া একটামাত্র মেসেজেই DB row/broadcast/Telegram পে-লোড ফুলিয়ে দেওয়া যেত।
+        const MAX_MESSAGE_LEN = 4000;
+        if (message && String(message).length > MAX_MESSAGE_LEN) return;
+
         const createdAt = new Date();
 
         // ডেটাবেসে সেভ
@@ -158,7 +178,11 @@ const initSocket = (server, sessionMiddleware) => {
             title: 'নতুন সাপোর্ট মেসেজ',
             message: message || 'একটি ফাইল পাঠানো হয়েছে'
           });
-          notifyTelegram(`💬 <b>নতুন সাপোর্ট মেসেজ</b>\n${u.username || 'ইউজার'}: ${message || '(ফাইল পাঠানো হয়েছে)'}`, { category: 'support' });
+          // Telegram বার্তাটা parse_mode=HTML দিয়ে পাঠানো হয়, তাই ইউজারের username/message
+          // সরাসরি বসালে সেটা Telegram-এর HTML হিসেবে ব্যাখ্যা হতো (মার্কআপ ইনজেকশন / বার্তা
+          // বিকৃতি)। এন্টিটিগুলো এস্কেপ করে দেওয়া হচ্ছে।
+          const tgEscape = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          notifyTelegram(`💬 <b>নতুন সাপোর্ট মেসেজ</b>\n${tgEscape(u.username || 'ইউজার')}: ${message ? tgEscape(message) : '(ফাইল পাঠানো হয়েছে)'}`, { category: 'support' });
 
           // ===== বট মোড হলে অটো-রিপ্লাই =====
           if (data && data.botMode && message) {

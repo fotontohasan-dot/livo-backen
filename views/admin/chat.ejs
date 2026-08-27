@@ -218,6 +218,34 @@
     let selectedFileType = null;
     let seenByCurrentUser = false;
 
+    // ===== নিরাপত্তা: স্টোরড XSS প্রতিরোধ =====
+    // চ্যাটের message, username এবং file_url — তিনটাই সম্পূর্ণ ইউজার-নিয়ন্ত্রিত মান,
+    // অথচ আগে এগুলো সরাসরি innerHTML টেমপ্লেটে বসানো হতো। ফলে একজন সাধারণ ইউজার
+    // `<img src=x onerror=...>` জাতীয় মেসেজ পাঠিয়ে অ্যাডমিন যখন চ্যাট খুলত তখনই
+    // অ্যাডমিনের সেশনে JavaScript চালাতে পারত (সেশন হাইজ্যাক)। অন্য অ্যাডমিন ভিউগুলোর
+    // (audit-logs, withdrawals ইত্যাদি) মতো একই escapeHtml কনভেনশন এখানেও ব্যবহার হচ্ছে।
+    function escapeHtml(str) {
+      return String(str == null ? '' : str)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    // file_url-ও ইউজার-নিয়ন্ত্রিত হতে পারে — `javascript:` / `data:` স্কিম দিয়ে
+    // src ও window.open() দুটোতেই কোড এক্সিকিউশন সম্ভব ছিল। শুধু সেই URL-ই গ্রহণ করা
+    // হচ্ছে যেটা একই origin-এর relative path অথবা স্পষ্টভাবে http(s)। অন্য কিছু হলে null
+    // (fail-closed — মিডিয়াটা রেন্ডারই হবে না)।
+    function safeMediaUrl(url) {
+      if (!url) return null;
+      const raw = String(url).trim();
+      if (/^\/[^/\\]/.test(raw)) return raw; // "/uploads/..." — protocol-relative "//" নয়
+      try {
+        const parsed = new URL(raw, window.location.origin);
+        return (parsed.protocol === 'http:' || parsed.protocol === 'https:') ? parsed.href : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
     socket.emit('join_admin');
 
     // Load conversations
@@ -251,12 +279,12 @@
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center justify-between">
-                            <div class="font-medium truncate ${isUnread ? 'text-white font-bold' : 'text-gray-300'}">${user.username}</div>
+                            <div class="font-medium truncate ${isUnread ? 'text-white font-bold' : 'text-gray-300'}">${escapeHtml(user.username)}</div>
                             <div class="text-[10px] text-gray-500">${user.last_message_time ? new Date(user.last_message_time).toLocaleTimeString('bn-BD', {hour:'2-digit', minute:'2-digit'}) : ''}</div>
                         </div>
                         <div class="flex items-center justify-between gap-2">
-                            <div class="text-xs truncate ${isUnread ? 'text-gray-100 font-semibold' : 'text-gray-500'}">${prefix}${lastPreview}</div>
-                            ${isUnread ? `<span class="flex-shrink-0 min-w-[18px] h-[18px] px-1 bg-yellow-500 text-black text-[10px] font-bold rounded-full flex items-center justify-center">${user.unread_count > 9 ? '9+' : user.unread_count}</span>` : ''}
+                            <div class="text-xs truncate ${isUnread ? 'text-gray-100 font-semibold' : 'text-gray-500'}">${prefix}${escapeHtml(lastPreview)}</div>
+                            ${isUnread ? `<span class="flex-shrink-0 min-w-[18px] h-[18px] px-1 bg-yellow-500 text-black text-[10px] font-bold rounded-full flex items-center justify-center">${Number(user.unread_count) > 9 ? '9+' : Number(user.unread_count) || 0}</span>` : ''}
                         </div>
                     </div>
                 `;
@@ -341,29 +369,44 @@
         div.dataset.admin = String(isAdmin);
         div.style.marginTop = grouped ? '2px' : '12px';
         
-        let content = '';
-        
-        if (fileUrl) {
+        // মেসেজের বডি ও মিডিয়া — দুটোই ইউজার-নিয়ন্ত্রিত, তাই innerHTML স্ট্রিং-কনক্যাটের
+        // বদলে DOM API দিয়ে বানানো হচ্ছে: টেক্সট যায় textContent-এ (কখনোই HTML হিসেবে
+        // পার্স হয় না), আর src সেট হয় প্রপার্টি হিসেবে যাচাই করা URL দিয়ে।
+        const wrap = document.createElement('div');
+        wrap.className = 'max-w-[75%]';
+
+        const mediaUrl = safeMediaUrl(fileUrl);
+        if (mediaUrl) {
             if (fileType === 'image') {
-                content += `<img src="${fileUrl}" class="max-w-[220px] rounded-2xl mb-1 cursor-pointer" onclick="window.open('${fileUrl}', '_blank')">`;
+                const img = document.createElement('img');
+                img.src = mediaUrl;
+                img.className = 'max-w-[220px] rounded-2xl mb-1 cursor-pointer';
+                // inline onclick হ্যান্ডলারে URL বসালে সেটা আবার JS কনটেক্সটে ইনজেকশনের পথ
+                // খুলে দিত — তাই addEventListener + noopener দিয়ে খোলা হচ্ছে।
+                img.addEventListener('click', () => window.open(mediaUrl, '_blank', 'noopener'));
+                wrap.appendChild(img);
             } else if (fileType === 'video') {
-                content += `<video src="${fileUrl}" controls class="max-w-[220px] rounded-2xl mb-1"></video>`;
+                const video = document.createElement('video');
+                video.src = mediaUrl;
+                video.controls = true;
+                video.className = 'max-w-[220px] rounded-2xl mb-1';
+                wrap.appendChild(video);
             }
         }
-        
+
         if (text) {
-            content += `<div class="px-4 py-2.5 rounded-3xl text-sm ${isAdmin ? 'bg-yellow-500 text-black' : 'bg-gray-800 text-white'}">${text}</div>`;
+            const bubble = document.createElement('div');
+            bubble.className = `px-4 py-2.5 rounded-3xl text-sm ${isAdmin ? 'bg-yellow-500 text-black' : 'bg-gray-800 text-white'}`;
+            bubble.textContent = text;
+            wrap.appendChild(bubble);
         }
-        
-        const time = new Date(timestamp).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
-        
-        div.innerHTML = `
-            <div class="max-w-[75%]">
-                ${content}
-                <div class="text-[10px] text-gray-500 mt-1 px-1 ${isAdmin ? 'text-right' : ''}">${time}</div>
-            </div>
-        `;
-        
+
+        const timeEl = document.createElement('div');
+        timeEl.className = `text-[10px] text-gray-500 mt-1 px-1 ${isAdmin ? 'text-right' : ''}`;
+        timeEl.textContent = new Date(timestamp).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
+        wrap.appendChild(timeEl);
+
+        div.appendChild(wrap);
         messagesDiv.appendChild(div);
         if (isAdmin) { seenByCurrentUser = false; renderSeenIndicator(); }
     }

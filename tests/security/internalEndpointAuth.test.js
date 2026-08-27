@@ -92,11 +92,22 @@ describe('ইন্টারনাল/অ্যাডমিন এন্ডপ�
 });
 
 // ---------------------------------------------------------------------------
-// /internal/reset-admin/status — রুটটা শুধু ADMIN_RESET_TOKEN সেট থাকলেই রেজিস্টার হয়,
-// আর সেটা app.js লোড হওয়ার সময় একবারই পড়া হয়। তাই আলাদা module registry-তে env সেট
-// করে অ্যাপটা নতুন করে লোড করা হয় — চলমান টেস্ট অ্যাপের কনফিগ অপরিবর্তিত থাকে।
+// /internal/reset-admin — ব্রেক-গ্লাস admin রিকভারি।
+//
+// রুটটা শুধু ADMIN_RESET_TOKEN সেট থাকলেই রেজিস্টার হয়, আর সেটা app.js লোড হওয়ার সময়
+// একবারই পড়া হয়। তাই আলাদা module registry-তে env সেট করে অ্যাপটা নতুন করে লোড করা হয় —
+// চলমান টেস্ট অ্যাপের কনফিগ অপরিবর্তিত থাকে।
+//
+// এই ব্লকের রিগ্রেশনগুলো তিনটা আসল দুর্বলতা আটকে রাখে:
+//   ১) GET রিকোয়েস্টই admin অ্যাকাউন্ট বদলে দিত (state-changing GET)।
+//   ২) /internal/reset-admin/status টোকেনধারীকে NEW_ADMIN_EMAIL, পাসওয়ার্ডের দৈর্ঘ্য,
+//      DB role এবং একটা কার্যকর bcrypt-compare অরাকল দিয়ে দিত।
+//   ৩) মিউটেশন প্রথমেই সব বিদ্যমান admin-কে ডিমোট করত, তারপর নতুন admin বসাতে যেত —
+//      দ্বিতীয় ধাপ ব্যর্থ হলে সিস্টেমে একজনও admin থাকত না।
 // ---------------------------------------------------------------------------
-describe('/internal/reset-admin/status টোকেন গেট', () => {
+describe('/internal/reset-admin ব্রেক-গ্লাস রিকভারি', () => {
+  // বাস্তব প্রোডাকশন টোকেনের মতোই যথেষ্ট দীর্ঘ (>= 32 ক্যারেক্টার) — নাহলে প্রোডাকশনে
+  // রুটটা fail-closed হয়ে নিষ্ক্রিয় থাকত।
   const TOKEN = 'reset-token-for-regression-test-only';
   let isolatedApp;      // আলাদা env নিয়ে বুট করা স্বতন্ত্র অ্যাপ ইনস্ট্যান্স
   let isolatedServer;   // তার নিজস্ব দীর্ঘস্থায়ী listening সার্ভার
@@ -130,23 +141,60 @@ describe('/internal/reset-admin/status টোকেন গেট', () => {
     jest.resetModules();
   });
 
-  test('টোকেন ছাড়া status এন্ডপয়েন্ট 404 দেয় এবং কিছুই ফাঁস করে না', async () => {
-    const res = await request(isolatedServer).get('/internal/reset-admin/status');
+  test('status ডায়াগনস্টিক রুটটা আর নেই — পাসওয়ার্ড অরাকল সরানো হয়েছে', async () => {
+    // সঠিক টোকেন দিয়েও রুটটা আর থাকা উচিত না। আগে এটাই ইমেইল/দৈর্ঘ্য/role এবং
+    // "পাসওয়ার্ড DB-র হ্যাশের সাথে মেলে কিনা" — সব ফাঁস করত।
+    const res = await request(isolatedServer)
+      .get('/internal/reset-admin/status')
+      .set('x-admin-reset-token', TOKEN);
     expect(res.status).toBe(404);
     expect(res.text).not.toContain('secret-admin@internal.example');
-    expect(res.text).not.toContain('সেট করা আছে');
     expect(res.text).not.toContain('মিলছে');
   });
 
-  test('ভুল টোকেনেও 404 — রুটের অস্তিত্ব ফাঁস হয় না', async () => {
-    const res = await request(isolatedServer).get('/internal/reset-admin/status?token=wrong-token');
+  test('GET কোনো state বদলায় না — শুধু নিশ্চিতকরণ ফর্ম দেখায়', async () => {
+    const res = await request(isolatedServer).get('/internal/reset-admin');
+    expect(res.status).toBe(200);
+    // ফর্মটা POST-এ সাবমিট হয় — অর্থাৎ GET নিজে কিছু করে না।
+    expect(res.text).toContain('method="POST"');
+    // ফর্মে কোনো গোপন কনফিগ মান থাকে না।
+    expect(res.text).not.toContain(TOKEN);
+    expect(res.text).not.toContain('secret-admin@internal.example');
+    expect(res.text).not.toContain('SuperSecretAdminPassword123');
+  });
+
+  test('টোকেন ছাড়া POST 404 — রুটের অস্তিত্বই ফাঁস হয় না', async () => {
+    const res = await request(isolatedServer)
+      .post('/internal/reset-admin')
+      .type('form')
+      .send({ confirm: 'yes' });
     expect(res.status).toBe(404);
     expect(res.text).not.toContain('secret-admin@internal.example');
   });
 
-  test('সঠিক টোকেনে ডায়াগনস্টিক আগের মতোই কাজ করে (আচরণ অপরিবর্তিত)', async () => {
-    const res = await request(isolatedServer).get(`/internal/reset-admin/status?token=${encodeURIComponent(TOKEN)}`);
-    expect(res.status).toBe(200);
-    expect(res.text).toContain('ADMIN_RESET_TOKEN');
+  test('ভুল টোকেনেও POST 404', async () => {
+    const res = await request(isolatedServer)
+      .post('/internal/reset-admin')
+      .set('x-admin-reset-token', 'wrong-token-wrong-token-wrong-tok')
+      .type('form')
+      .send({ confirm: 'yes' });
+    expect(res.status).toBe(404);
+  });
+
+  test('query string-এ টোকেন দিলে কাজ করে না — URL প্রক্সি লগ/Referer-এ ফাঁস হয়', async () => {
+    const res = await request(isolatedServer)
+      .post(`/internal/reset-admin?token=${encodeURIComponent(TOKEN)}`)
+      .type('form')
+      .send({ confirm: 'yes' });
+    expect(res.status).toBe(404);
+  });
+
+  test('সঠিক টোকেন কিন্তু নিশ্চিতকরণ ছাড়া হলে কোনো পরিবর্তন হয় না', async () => {
+    const res = await request(isolatedServer)
+      .post('/internal/reset-admin')
+      .set('x-admin-reset-token', TOKEN)
+      .type('form')
+      .send({});
+    expect(res.status).toBe(400);
   });
 });
