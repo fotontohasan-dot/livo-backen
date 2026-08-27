@@ -570,7 +570,13 @@ router.post('/login', async (req, res) => {
     // LOWER(email) — পুরোনো রেকর্ড মিশ্র-কেসে জমা থাকতে পারে, সেগুলোতেও লগইন কাজ করবে।
     const loginIdentifier = normalizeIdentifier(identifier);
     const result = await pool.query(
-      'SELECT id, username, email, phone, password, role FROM users WHERE LOWER(email) = $1 OR phone = $1',
+      // নিরাপত্তা: is_banned / self_exclude_until / email_verified কলামগুলো আগে SELECT-এ ছিল না,
+      // ফলে নিচের `user.is_banned` ও `user.self_exclude_until` সবসময় undefined হতো — অর্থাৎ
+      // ব্যান করা ও সেল্ফ-এক্সক্লুড করা অ্যাকাউন্টও পাসওয়ার্ড লগইন দিয়ে ঢুকে যেতে পারত, আর
+      // step-up ভেরিফিকেশনও কখনো ট্রিগার হতো না। কলামগুলো এখন স্পষ্টভাবে লোড করা হচ্ছে।
+      `SELECT id, username, email, phone, password, role,
+              is_banned, self_exclude_until, email_verified
+         FROM users WHERE LOWER(email) = $1 OR phone = $1`,
       [loginIdentifier]
     );
     const user = result.rows[0];
