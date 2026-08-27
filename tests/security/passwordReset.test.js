@@ -3,7 +3,10 @@
 //   নতুন পাসওয়ার্ডে লগইন → পুরনো পাসওয়ার্ড অকার্যকর।
 const request = require('supertest');
 const { hashToken } = require('../../utils/tokens');
-const app = require('../../app.js');
+// supertest-কে সরাসরি express অ্যাপ না দিয়ে helpers/app.js-এর শেয়ার্ড listening
+// সার্ভার দেওয়া হচ্ছে — নাহলে supertest প্রতি রিকোয়েস্টে নিজে listen/close করে,
+// যা সমান্তরাল রিকোয়েস্টে ECONNRESET তৈরি করত (helpers/app.js-এর ব্যাখ্যা দেখো)।
+const { app } = require('../helpers/app');
 const { pool } = require('../../db');
 const {
   extractCsrfToken, getCsrfAgent, uniqueUsername, uniquePhone,
