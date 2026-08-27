@@ -7,9 +7,10 @@ jest.mock('../services/googleAuth');
 
 const googleAuth = require('../services/googleAuth');
 const { pool } = require('../db');
-const { getCsrfAgent, freshRequest, uniqueUsername, uniquePhone, REALISTIC_UA } = require('./helpers/app');
+// `app` এখানে helpers/app.js-এর শেয়ার্ড listening সার্ভার — supertest-কে non-listening
+// express অ্যাপ দিলে সে প্রতি রিকোয়েস্টে নিজে listen/close করে (ECONNRESET-এর উৎস)।
+const { app, getCsrfAgent, freshRequest, uniqueUsername, uniquePhone, REALISTIC_UA } = require('./helpers/app');
 const supertest = require('supertest');
-const app = require('../app.js');
 const bcrypt = require('bcryptjs');
 
 function mockConfigured(exchangeImpl) {

@@ -98,10 +98,11 @@ describe('ইন্টারনাল/অ্যাডমিন এন্ডপ�
 // ---------------------------------------------------------------------------
 describe('/internal/reset-admin/status টোকেন গেট', () => {
   const TOKEN = 'reset-token-for-regression-test-only';
-  let isolatedApp;
+  let isolatedApp;      // আলাদা env নিয়ে বুট করা স্বতন্ত্র অ্যাপ ইনস্ট্যান্স
+  let isolatedServer;   // তার নিজস্ব দীর্ঘস্থায়ী listening সার্ভার
   let request;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     request = require('supertest');
     jest.resetModules();
     process.env.ADMIN_RESET_TOKEN = TOKEN;
@@ -110,9 +111,19 @@ describe('/internal/reset-admin/status টোকেন গেট', () => {
     jest.isolateModules(() => {
       isolatedApp = require('../../app.js');
     });
+    // supertest-কে non-listening express অ্যাপ দিলে সে প্রতি রিকোয়েস্টে নিজে
+    // listen/close করে — সমান্তরাল রিকোয়েস্টে সেটাই ECONNRESET তৈরি করত
+    // (tests/testHarnessIntegrity.test.js-এর ব্যাখ্যা দেখো)। তাই এই স্বতন্ত্র
+    // ইনস্ট্যান্সের জন্যও একটাই দীর্ঘস্থায়ী সার্ভার রাখা হচ্ছে।
+    isolatedServer = require('http').createServer(isolatedApp);
+    await new Promise((resolve) => isolatedServer.listen(0, resolve));
   });
 
-  afterAll(() => {
+  afterAll(async () => {
+    if (isolatedServer && isolatedServer.listening) {
+      if (typeof isolatedServer.closeAllConnections === 'function') isolatedServer.closeAllConnections();
+      await new Promise((resolve) => isolatedServer.close(() => resolve()));
+    }
     delete process.env.ADMIN_RESET_TOKEN;
     delete process.env.NEW_ADMIN_EMAIL;
     delete process.env.NEW_ADMIN_PASSWORD;
@@ -120,7 +131,7 @@ describe('/internal/reset-admin/status টোকেন গেট', () => {
   });
 
   test('টোকেন ছাড়া status এন্ডপয়েন্ট 404 দেয় এবং কিছুই ফাঁস করে না', async () => {
-    const res = await request(isolatedApp).get('/internal/reset-admin/status');
+    const res = await request(isolatedServer).get('/internal/reset-admin/status');
     expect(res.status).toBe(404);
     expect(res.text).not.toContain('secret-admin@internal.example');
     expect(res.text).not.toContain('সেট করা আছে');
@@ -128,13 +139,13 @@ describe('/internal/reset-admin/status টোকেন গেট', () => {
   });
 
   test('ভুল টোকেনেও 404 — রুটের অস্তিত্ব ফাঁস হয় না', async () => {
-    const res = await request(isolatedApp).get('/internal/reset-admin/status?token=wrong-token');
+    const res = await request(isolatedServer).get('/internal/reset-admin/status?token=wrong-token');
     expect(res.status).toBe(404);
     expect(res.text).not.toContain('secret-admin@internal.example');
   });
 
   test('সঠিক টোকেনে ডায়াগনস্টিক আগের মতোই কাজ করে (আচরণ অপরিবর্তিত)', async () => {
-    const res = await request(isolatedApp).get(`/internal/reset-admin/status?token=${encodeURIComponent(TOKEN)}`);
+    const res = await request(isolatedServer).get(`/internal/reset-admin/status?token=${encodeURIComponent(TOKEN)}`);
     expect(res.status).toBe(200);
     expect(res.text).toContain('ADMIN_RESET_TOKEN');
   });

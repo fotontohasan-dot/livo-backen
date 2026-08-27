@@ -14,6 +14,13 @@
 
 const { pool } = require('../../db');
 const { upsertMatch, syncOnce, findLegacyDuplicateMatches } = require('../../services/matchUpdater');
+const request = require('supertest');
+// supertest-কে সরাসরি express অ্যাপ না দিয়ে helpers/app.js-এর শেয়ার্ড listening
+// সার্ভার দেওয়া হচ্ছে — নাহলে supertest প্রতি রিকোয়েস্টে নিজে listen/close করে,
+// যা সমান্তরাল রিকোয়েস্টে ECONNRESET তৈরি করত (helpers/app.js-এর ব্যাখ্যা দেখো)।
+// মডিউল-স্কোপে require করা আবশ্যক: হেল্পার beforeAll/afterAll রেজিস্টার করে,
+// আর Jest টেস্টের ভেতরে হুক ডিফাইন করতে দেয় না।
+const { app } = require('../helpers/app');
 
 const TEST_PROVIDER = 'test-provider';
 
@@ -184,9 +191,6 @@ describe('সিঙ্ক রানার ও legacy ডুপ্লিকেট
 
 describe('বিদ্যমান ফ্রন্টএন্ড কনট্র্যাক্ট', () => {
   test('/matches/api/live সত্যিই ম্যাচ ফেরত দেয় (নীরব খালি ফল নয়)', async () => {
-    const request = require('supertest');
-    const app = require('../../app');
-
     await upsertMatch(makeMatch({ externalId: 'ext-live-cricket', status: 'live', scoreA: '120/3' }));
     await upsertMatch(makeMatch({
       externalId: 'ext-live-football', sport: 'football',
