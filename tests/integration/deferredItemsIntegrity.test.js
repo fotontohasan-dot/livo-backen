@@ -247,7 +247,8 @@ describe('scheduler স্টার্টআপ ব্যর্থতার অ�
 });
 
 describe('গ্রেসফুল শাটডাউন', () => {
-  const src = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
+  // app.js এখন শুধু Express অ্যাপ; প্রসেস-লেভেল গার্ড ও শাটডাউন server.js-এ।
+  const src = fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8');
 
   test('SIGINT ও SIGTERM দুটোই হ্যান্ডেল করা হয়', () => {
     expect(src).toMatch(/process\.on\('SIGTERM'/);

@@ -184,7 +184,9 @@ describe('অন্যান্য শিডিউলারের গার্�
   test('শাটডাউন পাথ worker, queue ও scheduler থামায়', () => {
     const fs = require('fs');
     const path = require('path');
-    const src = fs.readFileSync(path.join(__dirname, '..', '..', 'app.js'), 'utf8');
+    // শাটডাউন/স্টার্টআপ লজিক app.js থেকে server.js-এ সরানো হয়েছে (অ্যাপ অবজেক্ট ও
+    // সার্ভার লাইফসাইকেল আলাদা করার রিফ্যাক্টর) — গার্ডটাও সেখানেই দেখছে।
+    const src = fs.readFileSync(path.join(__dirname, '..', '..', 'server.js'), 'utf8');
     const block = src.slice(src.indexOf('async function gracefulShutdown'), src.indexOf("process.on('SIGTERM'"));
     expect(block).toMatch(/stopWorker/);
     expect(block).toMatch(/shutdownQueueSystem/);

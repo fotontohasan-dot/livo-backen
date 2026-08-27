@@ -56,10 +56,11 @@ jobs:
       run: npm ci --legacy-peer-deps
 
     - name: Run tests
-      # টেস্ট ফেল করলেও পরের ধাপগুলো চলবে, যাতে লগ artifact আপলোড হয় এবং
-      # ব্যর্থতার কারণ পরে দেখা যায়। জবের চূড়ান্ত ফল শেষ ধাপে ঠিক করা হয়।
+      # continue-on-error ইচ্ছাকৃতভাবে সরানো হয়েছে: ওটা থাকলে ধাপটা ব্যর্থ হলেও
+      # "সবুজ" দেখাত এবং লাল CI নিয়ে PR merge হয়ে যেত। এখন টেস্ট ফেল করলে ধাপ
+      # (এবং জব) সাথে সাথেই ফেল করে; লগ/annotation নিচের `if: always()` ও
+      # `if: failure()` ধাপগুলো থেকেই পাওয়া যায়।
       id: tests
-      continue-on-error: true
       run: |
         set -o pipefail
         npm test 2>&1 | tee jest-output.log
@@ -78,8 +79,10 @@ jobs:
         retention-days: 14
         if-no-files-found: warn
 
-    - name: Fail job if tests failed
-      if: steps.tests.outcome == 'failure'
+    - name: Annotate test failures
+      # শুধু ব্যর্থতার কারণ PR-এর Checks ট্যাবে দৃশ্যমান করার জন্য — জবের ফল
+      # ইতিমধ্যেই উপরের ধাপে নির্ধারিত হয়ে গেছে।
+      if: failure() && steps.tests.outcome == 'failure'
       run: |
         # Actions-এর লগ blob storage অনেক নেটওয়ার্ক থেকে পড়া যায় না এবং
         # artifact ডাউনলোডও সবসময় সম্ভব হয় না। তাই ব্যর্থ সুইট/টেস্টের নাম ও
@@ -96,9 +99,8 @@ jobs:
           echo "::error::$line"
         done || true
         echo "::error::npm test ব্যর্থ — jest-output artifact দেখো।"
-        exit 1
 
-    # আসল প্রোডাকশন রানটাইম Express/EJS (`node app.js`), Next.js নয়।
+    # আসল প্রোডাকশন রানটাইম Express/EJS (`node server.js`), Next.js নয়।
     # `next build` একটা আলাদা src/ ট্রি বিল্ড করে যা ডিপ্লয় হয় না — অর্থাৎ
     # আগের বিল্ড-গেট আসল অ্যাপ্লিকেশনটাই যাচাই করত না।
     #
@@ -126,18 +128,15 @@ jobs:
 
     - name: Boot smoke test
       env:
-        # জব-লেভেলে NODE_ENV=test সেট করা আছে (Jest-এর জন্য), কিন্তু app.js
-        # test মোডে ইচ্ছাকৃতভাবে `server.listen()` বাদ দেয় ("🧪 test mode —
-        # server listen ও ব্যাকগ্রাউন্ড ওয়ার্কার বাদ দেওয়া হলো")। ফলে বুট
-        # স্মোক টেস্টে অ্যাপ কোনো পোর্টেই শোনে না এবং /health-এ curl কখনো
-        # সাড়া পায় না — ধাপটা সবসময় ৬০ সেকেন্ড পরে ব্যর্থ হতো।
-        # নিচের E2E ধাপের মতোই এখানে NODE_ENV=development ব্যবহার করা হলো,
-        # যাতে আসল রানটাইম পথটাই (listen + ব্যাকগ্রাউন্ড ওয়ার্কার) যাচাই হয়।
+        # server.js-ই আসল প্রোডাকশন এন্ট্রিপয়েন্ট: connectDB → migrations →
+        # listen → ব্যাকগ্রাউন্ড কাজ। NODE_ENV নির্বিশেষে এটা listen করে
+        # (আগের "test মোডে listen বাদ" শর্ট-সার্কিট সরানো হয়েছে), তবে এখানে
+        # development রাখা হলো যাতে প্রোডাকশন-সদৃশ পথটাই যাচাই হয়।
         NODE_ENV: development
         PUBLIC_APP_URL: http://localhost:3000
         PORT: 3000
       run: |
-        node app.js & APP_PID=$!
+        node server.js & APP_PID=$!
         for i in $(seq 1 30); do
           if curl -sf http://localhost:3000/health > /dev/null; then
             echo "অ্যাপ বুট হয়েছে ও সাড়া দিচ্ছে"; kill $APP_PID; exit 0
@@ -153,8 +152,11 @@ jobs:
 
     - name: Run E2E tests
       id: e2e
+      # E2E সার্ভারের এনভায়রনমেন্ট playwright.config.js-এ এক জায়গায় তৈরি হয়
+      # (.env.test = ডিফল্ট, job env/secrets = ওভাররাইড, NODE_ENV=test জোরালো)।
+      # আগে webServer `NODE_ENV=development` দিয়ে চলত এবং `.env.test` কখনো পড়ত না,
+      # ফলে KYC-র Cloudinary যাচাই fail-closed হয়ে pending সারি তৈরি হতো না।
       env:
-        NODE_ENV: development
         PUBLIC_APP_URL: http://localhost:3000
         E2E_BASE_URL: http://localhost:3000
       run: npx playwright test

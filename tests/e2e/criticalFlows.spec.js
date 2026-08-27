@@ -29,6 +29,25 @@ function uniquePhone() {
   return '017' + String(Math.floor(Math.random() * 1e8)).padStart(8, '0');
 }
 
+// ---------------------------------------------------------------------------
+// রেট-লিমিট আইসোলেশন (রেজিস্ট্রেশন E2E-এর 429 ব্যর্থতার মূল কারণের ফিক্স)।
+//
+// প্রোডাকশনের রেট-লিমিটার IP-ভিত্তিক (app.js: generalLimiter ৩০০ req/১৫ মিনিট,
+// loginLimiter ১০ POST/১৫ মিনিট — /login, /register ও /admin/login একই কী শেয়ার করে)।
+// পুরো E2E রান একটাই loopback IP থেকে আসত, তাই আগের টেস্টগুলোর (এবং CI-এর retry
+// রানের) খরচ করা কোটা পরের টেস্টে লিক করত এবং POST /register 429 পেত। তখন
+// `page.fill('#username')` টাইমআউট হতো — ব্যর্থতাটা দেখতে "selector সমস্যা"র মতো
+// লাগলেও আসল কারণ ছিল HTTP 429।
+//
+// সমাধান (tests/helpers/app.js-এ Jest যেভাবে করে, ঠিক সেভাবেই): অ্যাপে
+// `trust proxy` সেট করা আছে, তাই প্রতিটা টেস্ট নিজের র‍্যান্ডম X-Forwarded-For
+// দিয়ে নিজস্ব লিমিটার বাকেট পায় — প্রোডাকশন লিমিট অপরিবর্তিত, কোনো টেস্ট-only
+// bypass কোড অ্যাপে ঢোকেনি, এবং লিমিটারটা নিচের ডেডিকেটেড টেস্টে সত্যিই যাচাই হয়।
+function fakeIp() {
+  const octet = () => Math.floor(Math.random() * 254) + 1;
+  return `10.${octet()}.${octet()}.${octet()}`;
+}
+
 // এই sandbox-এর আউটবাউন্ড নেটওয়ার্ক প্রক্সি থার্ড-পার্টি CDN রিকোয়েস্ট (cdnjs.cloudflare.com,
 // fonts.googleapis.com ইত্যাদি) মাঝেমধ্যে ব্লক করে HTTP 200-সহ একটা HTML পেজ ফেরত দেয় (আসল
 // JS/CSS-এর বদলে) — ব্রাউজার সেই HTML-কে script হিসেবে execute করতে গিয়ে ঠিক এই সিগনেচারের
@@ -105,6 +124,8 @@ const THIRD_PARTY_ORIGINS_TO_BLOCK = [
 ];
 
 test.beforeEach(async ({ context }) => {
+  // প্রতিটা টেস্ট নিজস্ব ক্লায়েন্ট IP পায় → নিজস্ব রেট-লিমিট বাকেট (উপরের ব্যাখ্যা দেখো)
+  await context.setExtraHTTPHeaders({ 'X-Forwarded-For': fakeIp() });
   await context.addCookies([{
     name: 'livo_age_verified', value: '1', domain: 'localhost', path: '/'
   }]);
@@ -155,7 +176,13 @@ test.describe('গুরুত্বপূর্ণ ইউজার ফ্লো
     await page.fill('#password', password);
     await page.fill('#confirmPassword', password);
     await solveCaptchaIfPresent(page);
-    await page.click('#registerSubmitBtn');
+    // ডাউনস্ট্রিম assertion-এর আগে আসল HTTP ফল যাচাই: 429/400/500 হলে সেটা যেন
+    // পরে "selector timeout"/"url mismatch" হয়ে ছদ্মবেশে না আসে।
+    const [registerResponse] = await Promise.all([
+      page.waitForResponse((r) => r.url().includes('/register') && r.request().method() === 'POST'),
+      page.click('#registerSubmitBtn')
+    ]);
+    expect(registerResponse.status(), 'POST /register রিকোয়েস্ট সফল হওয়া উচিত (429 = রেট-লিমিট লিক)').toBeLessThan(400);
     await page.waitForLoadState('domcontentloaded');
     // সফল রেজিস্ট্রেশনের পর হোমপেজে/ড্যাশবোর্ডে সেশন-স্থাপিত অবস্থায় ল্যান্ড করা উচিত, /register-এ নয়
     expect(page.url()).not.toContain('/register');
@@ -274,7 +301,7 @@ test.describe('গুরুত্বপূর্ণ ইউজার ফ্লো
     // form.submit() একটা ন্যাটিভ নেভিগেশন শুরু করে — evaluate()-এর ভেতর থেকে ট্রিগার করা এই
     // নেভিগেশনের সাথে waitForLoadState()-এর টাইমিং রেস হতে পারে (POST-এর আসল রেসপন্স আসার
     // আগেই resolve হয়ে যাওয়া), তাই নির্দিষ্টভাবে POST /extra/kyc রেসপন্সের জন্য অপেক্ষা করা হচ্ছে।
-    await Promise.all([
+    const [kycResponse] = await Promise.all([
       page.waitForResponse((r) => r.url().includes('/extra/kyc') && r.request().method() === 'POST'),
       page.evaluate((cloudName) => {
         document.getElementById('documentUrl').value =
@@ -282,6 +309,9 @@ test.describe('গুরুত্বপূর্ণ ইউজার ফ্লো
         document.getElementById('kycForm').submit();
       }, process.env.CLOUDINARY_CLOUD_NAME || 'livo_test_cloud')
     ]);
+    // DB assertion-এর আগে HTTP ফল যাচাই — আপলোড URL বাতিল/রেট-লিমিট/সার্ভার এরর হলে
+    // ব্যর্থতাটা এখানেই সঠিক কারণসহ ধরা পড়বে, "সারি পাওয়া যায়নি" হয়ে নয়।
+    expect(kycResponse.status(), 'POST /extra/kyc গ্রহণ করা উচিত').toBeLessThan(400);
     assertClean(issues);
 
     const kyc = await pool.query(

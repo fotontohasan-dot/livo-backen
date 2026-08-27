@@ -21,7 +21,7 @@ USER nodejs
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD curl -fs http://localhost:${PORT:-3000}/health || exit 1
-CMD ["node", "app.js"]
+CMD ["node", "server.js"]
 
 FROM base AS development
 ENV NODE_ENV=development
@@ -29,4 +29,4 @@ COPY package*.json ./
 RUN npm install --legacy-peer-deps
 COPY . .
 EXPOSE 3000
-CMD ["npx", "nodemon", "app.js"]
+CMD ["npx", "nodemon", "server.js"]

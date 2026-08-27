@@ -137,14 +137,38 @@ describe('POST /games/cashout — সমান্তরাল রিকোয়
       )
     );
 
+    // HTTP-লেভেল ফলাফল
+    results.forEach((r) => {
+      // ECONNRESET/সকেট ভাঙা মানে রিকোয়েস্ট আদৌ সম্পূর্ণ হয়নি — সেটা "নিরাপদ ব্যর্থতা" নয়।
+      // প্রতিটা সমান্তরাল রিকোয়েস্টকে অবশ্যই একটা সুনির্দিষ্ট HTTP স্ট্যাটাস ফেরত দিতে হবে।
+      expect([200, 400]).toContain(r.status);
+    });
     const successfulPayouts = results.filter((r) => r.body && r.body.success && !r.body.crashed).length;
     expect(successfulPayouts).toBeLessThanOrEqual(1);
 
+    // ---- DB স্টেট যাচাই (শুধু HTTP রেসপন্স নয়) ----
+    // রাউন্ড ঠিক একবারই নিষ্পত্তি হয়েছে
+    const rounds = await pool.query(
+      `SELECT id, settled_at FROM game_rounds WHERE user_id = $1`, [U.userId]
+    );
+    expect(rounds.rowCount).toBe(1);
+    expect(rounds.rows[0].settled_at).not.toBeNull();
+
+    // লেজারে ঠিক ততগুলোই জয়-এন্ট্রি, যতগুলো সফল পেআউট — কখনো ডুপ্লিকেট নয়
+    const wins = await pool.query(
+      `SELECT COALESCE(COUNT(*), 0)::int AS n, COALESCE(SUM(amount), 0)::int AS total
+         FROM coin_transactions WHERE user_id = $1 AND type = 'game_win'`,
+      [U.userId]
+    );
+    expect(wins.rows[0].n).toBe(successfulPayouts);
+
     const after = await balanceExcludingBadges(U.userId);
     if (successfulPayouts === 1) {
+      expect(wins.rows[0].total).toBe(Math.floor(100 * 1.01));
       expect(after).toBe(before - 100 + Math.floor(100 * 1.01));
     } else {
       // সবগুলোই ব্যর্থ হলে (রেসে কেউ জিততে পারল না, crashPoint<1.01 এর সম্ভাবনা খুবই কম কিন্তু শূন্য নয়)
+      expect(wins.rows[0].total).toBe(0);
       expect(after).toBe(before - 100);
     }
   });

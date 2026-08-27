@@ -13,66 +13,6 @@ require('./services/envValidator').runStartupValidation();
 const sentryService = require('./services/sentry');
 sentryService.init();
 
-// ==================== প্রসেস-লেভেল ক্র্যাশ গার্ড ====================
-// কোনো একটা জায়গায় unhandled promise rejection হলে Node.js (v15+) ডিফল্টভাবে
-// পুরো প্রসেস বন্ধ করে দেয় — তখন Render/হোস্টিং প্ল্যাটফর্মের জেনেরিক
-// "Internal Server Error" পেজ দেখা যায় যতক্ষণ না প্রসেস আবার রিস্টার্ট হয়।
-// এখানে সেটা আটকে শুধু লগ করে সার্ভার চালু রাখা হচ্ছে — এখন Sentry-তেও রিপোর্ট হয়।
-process.on('unhandledRejection', (reason) => {
-  console.error('⚠️ Unhandled Rejection:', reason && reason.stack ? reason.stack : reason);
-  sentryService.captureException(reason instanceof Error ? reason : new Error(String(reason)), { source: 'unhandledRejection' });
-});
-process.on('uncaughtException', (err) => {
-  console.error('⚠️ Uncaught Exception:', err && err.stack ? err.stack : err);
-  sentryService.captureException(err, { source: 'uncaughtException' });
-});
-// গ্রেসফুল শাটডাউন। আগে শুধু SIGTERM হ্যান্ডেল হতো (SIGINT নয়, অর্থাৎ Ctrl+C-তে
-// ব্যাকগ্রাউন্ড কাজ ও কানেকশন গুছিয়ে বন্ধ হতো না), আর হ্যান্ডলারটা সরাসরি
-// process.exit(0) ডাকত — চলমান কাজ শেষ হওয়ার সুযোগ বা PG/Redis কানেকশন বন্ধ করার
-// ধাপ ছাড়াই। এখন দুটো সিগন্যালই এক পথে যায়, একবারের বেশি চলে না, এবং সময়সীমার
-// মধ্যে গুছিয়ে বেরোয়। সময়সীমা পেরোলে জোর করে বেরিয়ে যায় যাতে কখনো ঝুলে না থাকে।
-let shuttingDown = false;
-const SHUTDOWN_TIMEOUT_MS = 10000;
-
-async function gracefulShutdown(signal) {
-  if (shuttingDown) return; // ডুপ্লিকেট সিগন্যালে দুবার চলবে না
-  shuttingDown = true;
-  console.log(`↩️ ${signal} পাওয়া গেছে — গ্রেসফুল শাটডাউন শুরু`);
-
-  // যত সময়ই লাগুক, প্রসেস যেন চিরকাল ঝুলে না থাকে
-  const forceExit = setTimeout(() => {
-    console.error('⚠️ শাটডাউন সময়সীমা পেরিয়েছে — জোর করে বন্ধ করা হচ্ছে');
-    process.exit(1);
-  }, SHUTDOWN_TIMEOUT_MS);
-  if (forceExit.unref) forceExit.unref();
-
-  // ১. নতুন কাজ নেওয়া বন্ধ (worker + scheduler টাইমার)
-  try { require('./services/scheduler').stop(); } catch (e) {}
-  try { require('./services/queue').stopWorker(); } catch (e) {}
-  // ২. চলমান কিউ কাজ গুছিয়ে শেষ করা
-  try { await require('./queues').shutdownQueueSystem(); } catch (e) {}
-  // ৩. HTTP সার্ভার নতুন কানেকশন নেওয়া বন্ধ করে চলমানগুলো শেষ করুক
-  try {
-    if (global.__livoServer) {
-      await new Promise((resolve) => global.__livoServer.close(resolve));
-    }
-  } catch (e) {}
-  // ৪. ডাটাবেজ/ক্যাশ কানেকশন বন্ধ (lazy require — হ্যান্ডলারটা ইম্পোর্টের আগেই সংজ্ঞায়িত)
-  try {
-    const cache = require('./services/cache');
-    const client = cache.getRawClient && cache.getRawClient();
-    if (client && typeof client.quit === 'function') await client.quit();
-  } catch (e) {}
-  try { await require('./db').pool.end(); } catch (e) {}
-
-  clearTimeout(forceExit);
-  console.log('✅ গ্রেসফুল শাটডাউন সম্পন্ন');
-  process.exit(0);
-}
-
-process.on('SIGTERM', () => { gracefulShutdown('SIGTERM'); });
-process.on('SIGINT', () => { gracefulShutdown('SIGINT'); });
-
 const express = require('express');
 const http = require('http');
 const { initSocket } = require('./services/socket');
@@ -84,17 +24,12 @@ const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const cors = require('cors');
 const compression = require('compression');
-const { connectDB, pool } = require('./db');
-const { syncMatches } = require('./services/matchUpdater');
-const runMigrations = require('./migrations');
+const { pool } = require('./db');
 const { apiGateway, responseHelpers } = require('./middleware/gateway');
 const { tr } = require('./utils/i18n');
-const { scheduleDailyBackup } = require('./services/backup');
-const { scheduleAutoBackup } = require('./services/backupManager');
 const { touchDeviceActivity } = require('./services/deviceTracking');
 const cookieParser = require('cookie-parser');
 require('./services/cache'); // অ্যাপ বুট হওয়ার সাথে সাথেই Redis কানেকশন অ্যাটেম্পট শুরু হয় (কানেক্ট না হলেও অ্যাপ চলতে থাকে)
-const queueService = require('./services/queue');
 const appMetrics = require('./services/metrics');
 const { requireMetricsAccess } = require('./middleware/metricsAuth');
 
@@ -760,65 +695,21 @@ app.use((req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 3000;
-
-async function startServer() {
-  try {
-    await connectDB();
-    console.log("✅ PostgreSQL connected successfully");
-
-    await runMigrations();
-    console.log("✅ DB migration done");
-
-    try {
-      const { ensureCriticalTables } = require('./services/ensureCriticalTables');
-      await ensureCriticalTables();
-    } catch (e) {
-      console.error('ensureCriticalTables:', e.message);
-    }
-
-    // টেস্ট মোডে (NODE_ENV=test) সার্ভার listen করে না এবং কোনো ব্যাকগ্রাউন্ড
-    // ওয়ার্কার/টাইমার (match sync, queue worker, backup ও scheduler) চালু করে না।
-    // supertest নিজেই ephemeral সার্ভার তৈরি করে, তাই listen অপ্রয়োজনীয়; আর ওই
-    // ব্যাকগ্রাউন্ড কাজগুলো টেস্ট চলাকালীন শেয়ার্ড DB পরিবর্তন করত ও টেস্ট শেষ হওয়ার
-    // পরেও লগ/কোয়েরি চালিয়ে যেত — অর্থাৎ এক টেস্ট ফাইলের প্রভাব আরেকটায় লিক করত।
-    // প্রোডাকশন/ডেভেলপমেন্টে আচরণ হুবহু আগের মতোই থাকে।
-    if (process.env.NODE_ENV === 'test') {
-      console.log('🧪 test mode — server listen ও ব্যাকগ্রাউন্ড ওয়ার্কার বাদ দেওয়া হলো');
-      return;
-    }
-
-    server.listen(PORT, () => {
-      console.log(`✅ Server running on port ${PORT}`);
-      setTimeout(() => {
-        syncMatches().catch(err => console.error('Initial match sync failed:', err));
-        try { require('./services/queueHandlers'); queueService.startWorker(); } catch (e) { console.error('queue worker start error:', e.message); }
-        // queues/index.js (BullMQ, activity-log/fraud-scan/admin queue dashboard) — এটার নিজস্ব
-        // comment-এই বলা ছিল app.js থেকে initQueueSystem() কল করা দরকার, কিন্তু কোথাও কল হতো না।
-        // ফলে REDIS_URL সেট থাকলেও Redis connection/worker কখনো চালু হতো না — producers.js এর
-        // ইনলাইন fallback-এর কারণে জব হারাতো না, কিন্তু queue.enqueue* কখনো আসলে queue হতো না
-        // এবং /admin/queues ড্যাশবোর্ড সবসময় "বন্ধ" দেখাতো। REDIS_URL না থাকলে এটা নিরাপদে
-        // false রিটার্ন করে স্কিপ করে (connection.js দেখুন) — কোনো নতুন hard dependency যোগ হয়নি।
-        require('./queues').initQueueSystem().catch(err => console.error('queues initQueueSystem error:', err.message));
-      }, 3000);
-      // পাবলিক URL কনফিগার যাচাই — ভুল/অনুপস্থিত কনফিগ প্রথম রিসেট ইমেইলের
-      // সময় নয়, ডিপ্লয়ের সময়ই ধরা পড়ুক।
-      try {
-        require('./utils/publicUrl').assertConfigured();
-      } catch (err) {
-        console.error('❌ কনফিগারেশন সমস্যা:', err.message);
-        process.exit(1);
-      }
-      scheduleDailyBackup();
-      scheduleAutoBackup();
-      require('./services/scheduler').start()
-        .catch(err => console.error('⚠️ Scheduler চালু করতে সমস্যা হয়েছে (সার্ভার চলতে থাকবে):', err.message));
-    });
-  } catch (err) {
-    console.error('❌ Server startup failed:', err);
-    process.exit(1);
-  }
-}
-
-startServer();
+// ==================== এক্সপোর্ট ====================
+// এই ফাইল শুধু Express অ্যাপ্লিকেশন *অবজেক্ট* তৈরি করে — কোনো I/O শুরু করে না।
+// DB কানেকশন, মাইগ্রেশন, ব্যাকগ্রাউন্ড ওয়ার্কার/শিডিউলার ও `listen()` সব
+// server.js-এ সরানো হয়েছে।
+//
+// কেন: আগে app.js-এর একদম নিচে `startServer()` কল করা ছিল, তাই শুধু
+// `require('../../app.js')` করলেই (যেমন প্রতিটা Jest টেস্ট হেল্পার করে)
+// DB কানেকশন + মাইগ্রেশন + startup টাস্ক চালু হয়ে যেত। এর ফলে Jest teardown-এর
+// পরেও async কাজ চলত ("Cannot log after tests are done" / "Jest environment has
+// been torn down"), মাইগ্রেশন রেস হতো এবং সমান্তরাল টেস্টে কানেকশন contention
+// থেকে ECONNRESET পর্যন্ত হতে পারত।
+//
+// এখন: `require('./app')` = শুধু একটা middleware/route যুক্ত Express অ্যাপ।
+// প্রোডাকশন বুট = `node server.js`।
+const httpServer = server;
+app.set('httpServer', httpServer);
 module.exports = app;
+module.exports.httpServer = httpServer;
