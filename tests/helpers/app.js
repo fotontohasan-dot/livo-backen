@@ -1,5 +1,55 @@
+const http = require('http');
 const request = require('supertest');
-const app = require('../../app.js');
+const expressApp = require('../../app.js');
+
+// ---------------------------------------------------------------------------
+// একটাই দীর্ঘস্থায়ী HTTP সার্ভার — পুরো টেস্ট ফাইলের জন্য।
+//
+// আগে টেস্টগুলো সরাসরি `request(expressApp)` ব্যবহার করত। supertest তখন প্রতিটা
+// রিকোয়েস্টের জন্য নিজে সার্ভার ম্যানেজ করে (lib/test.js → serverAddress):
+//     if (!app.address()) this._server = app.listen(0);
+// এবং রেসপন্স শেষে `this._server.close()` ডাকে।
+//
+// সমান্তরাল রিকোয়েস্টে (যেমন games-cashout-timing.test.js-এর ১০টা একসাথে পাঠানো
+// cashout) এটা রেস তৈরি করত: `listen()` অ্যাসিনক্রোনাস, তাই একাধিক রিকোয়েস্ট
+// একই সময়ে `app.address()` কে null দেখে প্রত্যেকে নিজের `_server` রেফারেন্স ধরে
+// রাখত; এরপর যেটা প্রথমে শেষ হতো সেটা `server.close()` ডেকে বাকিদের চলমান
+// সকেট ভেঙে দিত → ক্লায়েন্ট পেত `read ECONNRESET`।
+//
+// লোকালি এটা কদাচিৎ ধরা পড়ত (৩০ রাউন্ডে ~১ বার), কিন্তু CI-এর ধীর/লোডেড
+// রানারে টাইমিং উইন্ডো বড় হওয়ায় নিয়মিত ব্যর্থ হতো। এটা অ্যাপ্লিকেশনের বাগ নয় —
+// cashout-এর DB-স্তরের atomic claim সবসময়ই ঠিক কাজ করেছে (টেস্টের DB assertion
+// সেটাই প্রমাণ করে); এটা ছিল টেস্ট ইনফ্রাস্ট্রাকচারের লাইফসাইকেল রেস।
+//
+// ফিক্স: সার্ভার একবারই তৈরি ও listen করা হয় (beforeAll) এবং ফাইল শেষে বন্ধ হয়
+// (afterAll)। যেহেতু supertest ইতিমধ্যে listening সার্ভার পায়, সে নিজে আর
+// listen/close করে না — কোনো রিকোয়েস্ট আরেকটার সকেট ভাঙতে পারে না।
+// ---------------------------------------------------------------------------
+const server = http.createServer(expressApp);
+
+// Jest-এর বাইরে (যেমন কোনো স্ক্রিপ্ট) require করা হলে হুকগুলো থাকবে না — তখন
+// প্রথম ব্যবহারের সময় lazily listen করা হয়।
+function ensureListening() {
+  if (server.listening) return Promise.resolve(server);
+  return new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, () => resolve(server));
+  });
+}
+
+if (typeof beforeAll === 'function' && typeof afterAll === 'function') {
+  beforeAll(async () => { await ensureListening(); });
+  afterAll(async () => {
+    if (!server.listening) return;
+    // keep-alive সকেট ঝুলে থাকলে close() কখনো কলব্যাক দেয় না — জোর করে বন্ধ করা হয়
+    if (typeof server.closeAllConnections === 'function') server.closeAllConnections();
+    await new Promise((resolve) => server.close(() => resolve()));
+  });
+}
+
+// টেস্টগুলো `app` নামেই ব্যবহার করে; এখন সেটা listening http.Server —
+// supertest দুটোই গ্রহণ করে, কিন্তু Server দিলে সে নিজে listen/close করে না।
+const app = server;
 
 const REALISTIC_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
@@ -37,6 +87,10 @@ function freshRequest(ip) {
 }
 
 async function getCsrfAgent(path = '/login') {
+  // Jest-এ beforeAll হুকই সার্ভার চালু করে দেয়; এই await শুধু নিরাপত্তা-জাল
+  // (হুকবিহীন কোনো স্ক্রিপ্ট থেকে ব্যবহার করলেও সার্ভার listening থাকবে,
+  // ফলে supertest কখনোই নিজে listen/close করার সুযোগ পাবে না)।
+  await ensureListening();
   const ip = fakeIp();
   const rawAgent = request.agent(app);
   const agent = wrapAgentWithIp(rawAgent, ip);
@@ -69,4 +123,4 @@ function uniquePhone() {
   return `01${base}${seq}`;
 }
 
-module.exports = { app, extractCsrfToken, getCsrfAgent, uniqueUsername, uniquePhone, REALISTIC_UA, fakeIp, wrapAgentWithIp, freshRequest };
+module.exports = { app, server, expressApp, ensureListening, extractCsrfToken, getCsrfAgent, uniqueUsername, uniquePhone, REALISTIC_UA, fakeIp, wrapAgentWithIp, freshRequest };

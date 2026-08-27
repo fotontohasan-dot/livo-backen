@@ -21,7 +21,7 @@
 |------|------------|-----|------|--------|
 | অ্যাপ ইম্পোর্টেই startup | `app.js`-এর শেষ লাইনে `startServer();` — require করলেই `connectDB()` + `runMigrations()` + startup টাস্ক চলত; teardown-এর পরেও async কাজ, মাইগ্রেশন রেস, কানেকশন contention | `app.js` = শুধু Express অ্যাপ (কোনো I/O নয়); নতুন `server.js` = প্রসেস গার্ড + DB + মাইগ্রেশন + `listen()` + ব্যাকগ্রাউন্ড কাজ, শুধু `require.main === module` হলে চালু | `tests/appLifecycle.test.js` (৭টি) | ✅ FIXED |
 | টেস্টে কৃত্রিম বিলম্ব | `tests/afterEnv.js`-এ প্রতি ফাইলে `setTimeout(1500)` — উপরের বাগ ঢাকার জন্য | টাইমার সম্পূর্ণ সরানো (স্কিমা একবারই `globalSetup`-এ তৈরি হয়) | পুরো Jest সুইট | ✅ FIXED |
-| Cashout `ECONNRESET` | বেসলাইনে একক রানে পুনরুৎপাদন হয়নি (৩ বার — ০ ব্যর্থতা)। উপসর্গটি ছিল টেস্ট/অ্যাপ লাইফসাইকেল contention-এর, cashout SQL-এর নয় — DB-স্তরের atomic claim ঠিকই কাজ করছিল | cashout বিজনেস লজিক **অপরিবর্তিত**; টেস্ট এখন প্রতিটা সমান্তরাল রিকোয়েস্টের সুনির্দিষ্ট HTTP স্ট্যাটাস দাবি করে (সকেট ভাঙলে ফেল) এবং DB স্টেট যাচাই করে | `tests/games-cashout-timing.test.js` | ✅ FIXED (গার্ডসহ) |
+| Cashout `ECONNRESET` | **supertest-এর সার্ভার লাইফসাইকেল** (অ্যাপ্লিকেশন বাগ নয়)। non-listening express অ্যাপ পেলে supertest প্রতি রিকোয়েস্টে নিজে পোর্ট খোলে ও রেসপন্স শেষে বন্ধ করে (`lib/test.js`: `if (!app.address()) this._server = app.listen(0)` … `end()` → `server.close()`)। একই রাউন্ডে ১০টা সমান্তরাল cashout-এর মধ্যে যেটা আগে শেষ হয় সেটা পোর্ট unbind করে দিত, বাকিগুলোর SYN RST খেত → `read ECONNRESET`। CI-এর ধীর রানারে উইন্ডো বড় বলে সেখানে নিয়মিত ব্যর্থ হতো | `tests/helpers/app.js` এখন পুরো ফাইলের জন্য একটাই দীর্ঘস্থায়ী listening সার্ভার রাখে (`beforeAll` listen / `afterAll` close); supertest listening Server পেলে নিজে আর listen/close করে না। cashout বিজনেস লজিক **অপরিবর্তিত** | `tests/testHarnessIntegrity.test.js` + `tests/games-cashout-timing.test.js` | ✅ FIXED |
 | ডাবল-পেআউট প্রমাণ দুর্বল | টেস্ট শুধু HTTP রেসপন্স ও ব্যালেন্স দেখত | ঠিক একটি `game_rounds` সারি ও non-null `settled_at`; `coin_transactions type='game_win'`-এর **সংখ্যা ও যোগফল** সফল পেআউটের সমান | একই ফাইল | ✅ FIXED |
 | রেজিস্ট্রেশন E2E 429 | পুরো E2E রান একটাই loopback IP থেকে আসত; প্রোডাকশন `generalLimiter` (৩০০ req/১৫ মি.) ও `loginLimiter` (১০ POST/১৫ মি., `/login`+`/register`+`/admin/login` একই কী) কোটা শেষ করত, CI retry আরও বাড়াত | প্রতিটা টেস্ট নিজস্ব `X-Forwarded-For` পায় (অ্যাপে `trust proxy` আগে থেকেই আছে; Jest হেল্পার একই কৌশল ব্যবহার করে) — লিমিটার/লিমিট **অপরিবর্তিত**, অ্যাপে কোনো test-only bypass নেই | `tests/e2e/registrationRateLimit.spec.js` (Test A/B/C) | ✅ FIXED |
 | KYC E2E-তে pending সারি নেই | Playwright `webServer` চালাত `node app.js` + `env: { NODE_ENV: 'development' }` — E2E প্রসেস কখনো `.env.test` পড়ত না; `isSafeCloudinaryUrl()` fail-closed হওয়ায় `CLOUDINARY_CLOUD_NAME` ছাড়া document_url বাতিল হতো। CI-তে কাজ করত শুধু কাকতালীয়ভাবে (job-level env), লোকালি কখনো না | `playwright.config.js`-এ একটাই অথরিটেটিভ env: `.env.test` = ডিফল্ট, process.env (CI env/secrets) = ওভাররাইড, `NODE_ENV=test` জোরালো, `node server.js`, আবশ্যক ভ্যারিয়েবল না থাকলে fail-fast | `criticalFlows.spec.js` (KYC) + HTTP-স্তরের যাচাই | ✅ FIXED |
@@ -41,6 +41,9 @@
 **টেস্ট/টুলিং**
 - `tests/afterEnv.js` — ১৫০০ms sleep সরানো।
 - `tests/appLifecycle.test.js` — **নতুন** রিগ্রেশন গার্ড।
+- `tests/helpers/app.js` — ফাইল-প্রতি একটাই দীর্ঘস্থায়ী listening HTTP সার্ভার; `app` এখন সেই Server (express অ্যাপ `expressApp` নামে আলাদা এক্সপোর্ট)।
+- `tests/testHarnessIntegrity.test.js` — **নতুন**: helpers-এর `app` listening Server কিনা, কোনো টেস্ট ফাইল supertest-কে raw express অ্যাপ দেয় কিনা (সোর্স গার্ড), এবং ১০টা সমান্তরাল রিকোয়েস্টে ০ কানেকশন-রিসেট।
+- `tests/{auth-google,stepUpOtpBruteForce}.test.js`, `tests/render/{homepageStructure,seoMetadata,sportsCategoryUx}.test.js`, `tests/integration/{routeIntegrity,matchIdempotency}.test.js`, `tests/security/{passwordReset,internalEndpointAuth}.test.js` — শেয়ার্ড listening সার্ভার ব্যবহার করে।
 - `tests/games-cashout-timing.test.js` — DB-স্টেট ও HTTP-স্ট্যাটাস assertion।
 - `tests/e2e/registrationRateLimit.spec.js` — **নতুন** (Test A/B/C)।
 - `tests/e2e/criticalFlows.spec.js` — per-test IP আইসোলেশন, register/KYC-তে response-status assertion।
@@ -62,10 +65,18 @@
 | `tests/render` | 14 | 283 | PASS |
 | `tests/security` (+ root security) | 28 | 342 | PASS |
 | `tests/integration` | 19 | 291 | PASS |
-| root-level বাকি | 21 | 239 | PASS |
-| **মোট** | **94** | **1276** | **PASS** |
+| root-level বাকি | 22 | 242 | PASS |
+| **মোট** | **95** | **1279** | **PASS** |
 
-- বেসলাইনে `games-cashout-timing.test.js` একক রানে ৩ বার চালিয়ে ০ ব্যর্থতা ও ০ ECONNRESET; ফিক্সের পরেও ৫/৫ পাস, কিন্তু ফাইলের রানটাইম **~১৭.৪s → ~৪s** (কৃত্রিম sleep সরানোর ফল)।
+- **ECONNRESET পুনরুৎপাদন ও প্রমাণ** (৮০ রাউন্ড × ১০ সমান্তরাল cashout, স্ট্রেস স্ক্রিপ্ট):
+
+| অবস্থা | ব্যর্থ রাউন্ড |
+|--------|---------------|
+| supertest নিজে সার্ভার ম্যানেজ করলে (ফিক্সের আগে) | ৪–১৪ / ৮০ |
+| শেয়ার্ড listening সার্ভার (ফিক্সের পরে) | **০ / ৮০** |
+
+  সার্ভার-সাইড ইনস্ট্রুমেন্টেশনে দেখা গেছে ব্যর্থ রিকোয়েস্টগুলো সার্ভারে **পৌঁছাতই না** (`conns opened = requests seen = 10 − ব্যর্থ`), এবং ওই মুহূর্তে `server.listening === false` — অর্থাৎ supertest পোর্ট বন্ধ করে দিয়েছিল। একটা bare `http.createServer` দিয়ে একই কনকারেন্সি চালিয়ে ২০০ রাউন্ডে ০ ব্যর্থতা — কন্ট্রোল পরিষ্কার।
+- `games-cashout-timing.test.js` পরপর ৫ বার চালিয়ে ৫/৫ পাস, ০ ECONNRESET; ফাইলের রানটাইম **~১৭.৪s → ~৪s** (কৃত্রিম sleep সরানোর ফল)।
 - `tests/integration/gracefulShutdownProcess.test.js` এখন সত্যিকারের `node server.js` child process বুট করে SIGTERM/SIGINT যাচাই করে — পাস।
 
 **কভারেজ থ্রেশহোল্ড** (`npm test` কভারেজসহ চালায়; চারটি চাঙ্কের `coverage-final.json` istanbul দিয়ে merge করে যাচাই — জেস্ট untested ফাইলগুলোকেও ০% হিসেবে ধরে, তাই merge করা ফল পূর্ণ রানের সমান):
@@ -131,9 +142,9 @@ CI-তে `Install Playwright browser` ধাপ আগে থেকেই আ�
 ## ৭. চূড়ান্ত অবস্থা
 
 ```
-JEST:                  PASS   (94 suites / 1276 tests, chunk-wise runInBand)
+JEST:                  PASS   (95 suites / 1279 tests, chunk-wise runInBand)
 COVERAGE THRESHOLDS:   PASS   (global 52.57/42.94/51.35/54.64 — সব গেট পার)
-CASHOUT CONCURRENCY:   PASS   (0 ECONNRESET, 0 ডুপ্লিকেট পেআউট, DB-স্টেট যাচাইকৃত)
+CASHOUT CONCURRENCY:   PASS   (৫/৫ রান, 0 ECONNRESET, 0 ডুপ্লিকেট পেআউট, DB-স্টেট যাচাইকৃত)
 REGISTRATION E2E:      PASS   (HTTP-স্তরে যাচাইকৃত; ব্রাউজার রান CI-তে)
 KYC E2E:               PASS   (pending সারি তৈরি হয়; ব্রাউজার রান CI-তে)
 FULL E2E:              NOT VERIFIED LOCALLY (Chromium ডাউনলোড ব্লকড — §৫)
