@@ -1,7 +1,7 @@
 // tests/integration/gracefulShutdownProcess.test.js
 // ---------------------------------------------------------------------------
 // PHASE 12 — গ্রেসফুল শাটডাউন বাস্তব প্রসেসে যাচাই (Docker daemon এই এনভায়রনমেন্টে
-// উপলব্ধ নয়, তাই সরাসরি `node app.js`-কে একটা real child process হিসেবে বুট করে,
+// উপলব্ধ নয়, তাই সরাসরি `node server.js`-কে একটা real child process হিসেবে বুট করে,
 // আসল PostgreSQL-এর বিপরীতে, তারপর সত্যিকার SIGTERM/SIGINT পাঠিয়ে exit code ও
 // সময়সীমা যাচাই করা হয়। এটা tests/integration/deferredItemsIntegrity.test.js-এর
 // সোর্স-লেভেল assertion-গুলোর চেয়ে শক্তিশালী — কারণ এখানে সত্যিই server.listen(),
@@ -34,7 +34,7 @@ function waitForHealth(port, timeoutMs = 20000) {
 }
 
 function bootApp(port) {
-  const child = spawn(process.execPath, [path.join(ROOT, 'app.js')], {
+  const child = spawn(process.execPath, [path.join(ROOT, 'server.js')], {
     cwd: ROOT,
     env: {
       ...process.env,
