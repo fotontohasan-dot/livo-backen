@@ -6,6 +6,14 @@ on:
   pull_request:
     branches: [ "main" ]
 
+# PHASE 11: আগে কোনো permissions block ছিল না, ফলে GITHUB_TOKEN repository-র
+# default permission (প্রায়ই read/write) পেত। এই workflow শুধু কোড checkout
+# করে ও artifact upload করে — কোনো লেখার প্রয়োজন নেই, তাই least privilege।
+# Artifact upload actions/upload-artifact@v4-এর নিজস্ব scope ব্যবহার করে,
+# তাই কোনো write scope লাগে না।
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
