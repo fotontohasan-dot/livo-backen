@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="<%= locals.lang || 'bn' %>">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="<%= locals.csrfToken || '' %>">
+  <title><%= typeof t === 'function' ? t('admin_logout_confirm_title') : 'Logout' %></title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-[#0f172a] text-slate-200 min-h-screen flex items-center justify-center p-6">
+  <div class="w-full max-w-sm bg-[#1e293b] border border-[#334155] rounded-xl p-6 text-center">
+    <h1 class="text-lg font-semibold mb-2">
+      <%= typeof t === 'function' ? t('admin_logout_confirm_title') : 'Logout' %>
+    </h1>
+    <p class="text-sm text-slate-400 mb-5">
+      <%= typeof t === 'function' ? t('admin_logout_confirm_body') : 'Are you sure you want to log out?' %>
+    </p>
+    <form method="POST" action="/admin/logout">
+      <input type="hidden" name="_csrf" value="<%= locals.csrfToken || '' %>">
+      <button type="submit"
+        class="w-full px-4 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-medium">
+        <%= typeof t === 'function' ? t('admin_logout_confirm_button') : 'Log out' %>
+      </button>
+    </form>
+    <a href="/admin" class="inline-block mt-3 text-sm text-slate-400 hover:text-slate-200">
+      <%= typeof t === 'function' ? t('common_cancel') : 'Cancel' %>
+    </a>
+  </div>
+</body>
+</html>

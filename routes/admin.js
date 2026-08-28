@@ -85,6 +85,7 @@ const { getDemoStats } = require('../services/socket');
 const {
   generateTotpSetup,
   verifyTotpToken,
+  verifyTotpTokenWithStep,
   generateBackupCodes,
   hashBackupCodes,
   verifyAndConsumeBackupCode,
@@ -226,6 +227,24 @@ router.post('/login', adminLoginLimiter, async (req, res) => {
     const isMatch = await bcrypt.compare(password, admin ? admin.password : DUMMY_BCRYPT_HASH);
 
     if (!admin || !isMatch) {
+      // MEDIUM-2: ব্যর্থ admin login অবশ্যই audit করতে হবে (কোনো password/secret log নয়)
+      await logAuditEvent({
+        req, actorType: 'admin', actorId: admin ? admin.id : null,
+        actorUsername: admin ? admin.username : String(username || '').slice(0, 64),
+        action: 'ADMIN_LOGIN_FAILED', category: 'auth', status: 'failure', riskLevel: 'high',
+        details: { reason: 'invalid_credentials' }
+      });
+      return res.render('admin/login', { error: req.t('admin_login_invalid_credentials') });
+    }
+
+    // HIGH-1: banned/disabled admin কখনো login করতে পারবে না।
+    // Generic error ব্যবহার করা হয়েছে যাতে account enumeration না হয়।
+    if (admin.is_banned || admin.deleted_at) {
+      await logAuditEvent({
+        req, actorType: 'admin', actorId: admin.id, actorUsername: admin.username,
+        action: 'ADMIN_LOGIN_DENIED', category: 'security', status: 'failure', riskLevel: 'critical',
+        details: { reason: admin.is_banned ? 'account_banned' : 'account_deleted' }
+      });
       return res.render('admin/login', { error: req.t('admin_login_invalid_credentials') });
     }
 
@@ -273,20 +292,56 @@ router.post('/login/2fa', strict2FALimiter, async (req, res) => {
       return res.redirect('/admin/login');
     }
 
+    // HIGH-1: 2FA ধাপেও ban state পুনরায় যাচাই (login-এর পরে ban হলে যেন session না পায়)
+    if (admin.is_banned || admin.deleted_at) {
+      req.session.pending2FA = null;
+      await logAuditEvent({
+        req, actorType: 'admin', actorId: admin.id, actorUsername: admin.username,
+        action: 'ADMIN_LOGIN_DENIED', category: 'security', status: 'failure', riskLevel: 'critical',
+        details: { reason: admin.is_banned ? 'account_banned' : 'account_deleted', stage: '2fa' }
+      });
+      return res.render('admin/login', { error: req.t('admin_login_invalid_credentials') });
+    }
+
     let ok = false;
+    let failReason = 'invalid_code';
 
     if (backupCode && backupCode.trim()) {
       const check = await verifyAndConsumeBackupCode(admin.totp_backup_codes, backupCode);
       if (check.valid) {
         ok = true;
         await pool.query('UPDATE users SET totp_backup_codes = $1 WHERE id = $2', [check.remainingJson, admin.id]);
+      } else {
+        failReason = 'invalid_backup_code';
       }
     } else if (token && token.trim()) {
-      ok = verifyTotpToken(secretBox.decrypt(admin.totp_secret), token);
+      // MEDIUM-1: TOTP replay prevention — প্রতিটি time-step সর্বোচ্চ একবার ব্যবহারযোগ্য।
+      // Atomic conditional UPDATE ব্যবহার করা হয়েছে যাতে concurrent race-এও
+      // একটির বেশি request একই step consume করতে না পারে।
+      const verdict = verifyTotpTokenWithStep(secretBox.decrypt(admin.totp_secret), token);
+      if (verdict.valid) {
+        const claim = await pool.query(
+          `UPDATE users SET totp_last_used_step = $1
+             WHERE id = $2 AND (totp_last_used_step IS NULL OR totp_last_used_step < $1)`,
+          [verdict.step, admin.id]
+        );
+        if (claim.rowCount === 1) {
+          ok = true;
+        } else {
+          failReason = 'totp_replay';
+        }
+      }
     }
 
     if (!ok) {
       req.session.twoFAAttempts = (req.session.twoFAAttempts || 0) + 1;
+      // MEDIUM-2: 2FA ব্যর্থতা audit (কোনো code/secret log করা হয় না)
+      await logAuditEvent({
+        req, actorType: 'admin', actorId: admin.id, actorUsername: admin.username,
+        action: 'ADMIN_2FA_FAILED', category: 'auth', status: 'failure',
+        riskLevel: failReason === 'totp_replay' ? 'critical' : 'high',
+        details: { reason: failReason, attempt: req.session.twoFAAttempts }
+      });
       if (req.session.twoFAAttempts >= 5) {
         req.session.pending2FA = null;
         return res.render('admin/login', { error: req.t('admin_2fa_too_many_wrong_codes') });
@@ -321,7 +376,13 @@ router.get('/2fa/mandatory-setup', async (req, res) => {
   const pending = req.session.pendingEnrollment;
   if (!pending) return res.redirect('/admin/login');
   try {
-    const fresh = await pool.query('SELECT totp_enabled FROM users WHERE id = $1', [pending.id]);
+    const fresh = await pool.query('SELECT totp_enabled, is_banned, deleted_at FROM users WHERE id = $1', [pending.id]);
+    // HIGH-1: enrollment path দিয়েও banned admin session পেতে পারবে না
+    if (!fresh.rows[0] || fresh.rows[0].is_banned || fresh.rows[0].deleted_at) {
+      req.session.pendingEnrollment = null;
+      req.session.pendingEnrollmentSecret = null;
+      return res.redirect('/admin/login');
+    }
     if (fresh.rows[0]?.totp_enabled) {
       // অন্য কোনো ট্যাব/সেশনে ইতিমধ্যে এনাবল হয়ে থাকলে — আবার এনরোল করানোর দরকার নেই, লগইন-2FA ফ্লোতে পাঠানো হচ্ছে
       req.session.pending2FA = pending;
@@ -365,6 +426,15 @@ router.post('/2fa/mandatory-setup/verify', strict2FALimiter, async (req, res) =>
       });
     }
 
+    // HIGH-1: session তৈরির ঠিক আগে ban state পুনরায় যাচাই
+    const stateRes = await pool.query('SELECT is_banned, deleted_at FROM users WHERE id = $1', [pending.id]);
+    const state = stateRes.rows[0];
+    if (!state || state.is_banned || state.deleted_at) {
+      req.session.pendingEnrollment = null;
+      req.session.pendingEnrollmentSecret = null;
+      return res.redirect('/admin/login');
+    }
+
     const backupCodes = generateBackupCodes(8);
     const backupCodesJson = await hashBackupCodes(backupCodes);
     await pool.query(
@@ -394,10 +464,20 @@ router.post('/2fa/mandatory-setup/verify', strict2FALimiter, async (req, res) =>
 });
 
 // ==================== ADMIN LOGOUT ====================
-router.get('/logout', (req, res) => {
+// LOW-1 fix: logout একটি state-changing action, তাই এটি POST + CSRF-protected।
+// পুরনো GET /admin/logout link গুলো ভাঙে না — সেগুলো একটি confirm page-এ যায়
+// যেখান থেকে auto-submit POST form logout সম্পন্ন করে (zero-regression)।
+const doAdminLogout = (req, res) => {
   req.session.destroy(() => {
     res.redirect('/admin/login');
   });
+};
+
+router.post('/logout', doAdminLogout);
+
+router.get('/logout', (req, res) => {
+  if (!req.session || !req.session.user) return res.redirect('/admin/login');
+  return res.render('admin/logout-confirm');
 });
 
 // ==================== সব রাউট প্রোটেক্টেড ====================

@@ -799,6 +799,7 @@ async function runMigrations() {
       ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN DEFAULT false,
       ADD COLUMN IF NOT EXISTS totp_backup_codes TEXT,
       ADD COLUMN IF NOT EXISTS backup_codes_viewed BOOLEAN DEFAULT false,
+      ADD COLUMN IF NOT EXISTS totp_last_used_step BIGINT,
       ADD COLUMN IF NOT EXISTS permissions JSONB DEFAULT '{}'::jsonb;
     `);
 

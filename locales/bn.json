@@ -1110,5 +1110,9 @@
   "admin_kyc_document_not_found": "ডকুমেন্ট পাওয়া যায়নি",
   "admin_kyc_document_invalid_url": "অবৈধ ডকুমেন্ট URL",
   "admin_kyc_document_fetch_failed": "ডকুমেন্ট আনা যায়নি",
-  "admin_kyc_document_bad_format": "অসমর্থিত ডকুমেন্ট ফরম্যাট"
+  "admin_kyc_document_bad_format": "অসমর্থিত ডকুমেন্ট ফরম্যাট",
+  "admin_logout_confirm_title": "লগ আউট নিশ্চিত করুন",
+  "admin_logout_confirm_body": "আপনি কি অ্যাডমিন প্যানেল থেকে লগ আউট করতে চান?",
+  "admin_logout_confirm_button": "লগ আউট",
+  "common_cancel": "বাতিল"
 }
