@@ -31,6 +31,55 @@ function verifyWebhookSecret(headerValue) {
   return crypto.timingSafeEqual(a, b);
 }
 
+// ==================== নিরাপত্তা: প্রেরকের পরিচয় (chat নয়, user) ====================
+// আগে অনুমোদন হতো শুধু chat id দেখে। ADMIN_CHAT_ID যদি কোনো গ্রুপ হয় (বা ভবিষ্যতে
+// গ্রুপে বসানো হয়), তাহলে সেই গ্রুপের যেকোনো সদস্য GitHub-এ লেখার ক্ষমতা পেয়ে যেত।
+// তাই এখন chat id + অপরিবর্তনীয় Telegram user id — দুটোই মিলতে হবে।
+// TELEGRAM_ADMIN_USER_IDS সেট না থাকলে বট fail-closed (কোনো কমান্ড চলবে না)।
+const ADMIN_USER_IDS = new Set(
+  String(process.env.TELEGRAM_ADMIN_USER_IDS || '')
+    .split(',')
+    .map((v) => v.trim())
+    .filter(Boolean)
+);
+if (ADMIN_USER_IDS.size === 0) {
+  console.warn('⚠️ TELEGRAM_ADMIN_USER_IDS সেট করা নেই — বট fail-closed, কোনো DevOps কমান্ড চলবে না। .env-এ আপনার Telegram numeric user id দিন (কমা দিয়ে একাধিক)।');
+}
+
+/**
+ * প্রেরক অনুমোদিত কিনা — username/display name/মেসেজের টেক্সট কিছুই বিশ্বাস করা হয় না,
+ * শুধু অপরিবর্তনীয় numeric id দেখা হয়। যেকোনো একটা শর্ত না মিললে false (fail closed)।
+ */
+function isAuthorizedSender(msg) {
+  const chatId = msg && msg.chat ? msg.chat.id : null;
+  const fromId = msg && msg.from ? msg.from.id : null;
+  if (chatId === null || chatId === undefined) return false;
+  if (fromId === null || fromId === undefined) return false;
+  if (msg.from && msg.from.is_bot) return false;
+  if (!ADMIN_CHAT_ID || String(chatId) !== String(ADMIN_CHAT_ID)) return false;
+  if (ADMIN_USER_IDS.size === 0) return false;
+  return ADMIN_USER_IDS.has(String(fromId));
+}
+
+// ==================== নিরাপত্তা: রিপ্লে সুরক্ষা ====================
+// Telegram ডেলিভারি নিশ্চিত করতে একই update বারবার পাঠাতে পারে (আমাদের রেসপন্স দেরি
+// হলে বা 5xx হলে)। ডিডুপ ছাড়া একই কনফার্মেশন দুবার প্রসেস হয়ে ডুপ্লিকেট কমিট/ব্রাঞ্চ
+// তৈরি হতে পারত। update_id একবারই গ্রহণযোগ্য।
+const SEEN_UPDATE_LIMIT = 1000;
+const seenUpdateIds = new Set();
+
+function isDuplicateUpdate(updateId) {
+  if (updateId === null || updateId === undefined) return false;
+  const key = String(updateId);
+  if (seenUpdateIds.has(key)) return true;
+  seenUpdateIds.add(key);
+  if (seenUpdateIds.size > SEEN_UPDATE_LIMIT) {
+    // সবচেয়ে পুরোনোটা বাদ (Set ইনসারশন-অর্ডার ধরে রাখে)
+    seenUpdateIds.delete(seenUpdateIds.values().next().value);
+  }
+  return false;
+}
+
 const GITHUB_OWNER = 'fotontohasan-dot';
 const GITHUB_REPO = 'livo-backen';
 
@@ -48,6 +97,58 @@ function sanitizeRepoPath(rawPath) {
   if (!SAFE_PATH_RE.test(filePath)) return null;
   if (filePath.split('/').some((segment) => segment === '.' || segment === '..')) return null;
   return filePath;
+}
+
+// ==================== নিরাপত্তা: যেসব ফাইল বট কখনো বদলাতে পারবে না ====================
+// পাথ বৈধ হলেই সেটা লেখার যোগ্য নয়। CI ওয়ার্কফ্লো বদলাতে পারা মানে কার্যত
+// arbitrary CI execution ও secret exfiltration — বট-ব্রাঞ্চ থেকেও PR টেমপ্লেট/অ্যাকশন
+// দিয়ে সেটা করা সম্ভব। একইভাবে প্রমাণীকরণ/2FA/RBAC/CSRF-এর কোড বদলানো মানে
+// নিজের নিরাপত্তা-নিয়ন্ত্রণ নিজেই খুলে ফেলার পথ তৈরি করা। তাই এগুলো fail-closed:
+// পরিবর্তন করতে হলে মানুষকে সরাসরি PR দিতে হবে, Telegram/AI দিয়ে নয়।
+const FORBIDDEN_WRITE_PREFIXES = [
+  '.github/',
+  'docker/',
+  'scripts/',
+  'middleware/',
+  'queues/'
+];
+const FORBIDDEN_WRITE_FILES = new Set([
+  'services/rbac.js',
+  'services/twofactor.js',
+  'services/auditLog.js',
+  'services/envValidator.js',
+  'services/secretBox.js',
+  'utils/secretBox.js',
+  'utils/tokens.js',
+  'routes/auth.js',
+  'routes/admin.js',
+  'routes/adminTelegram.js',
+  'telegram-bot.js',
+  'reset-admin.js',
+  'server.js',
+  'db.js',
+  'Dockerfile',
+  'docker-compose.yml',
+  'docker-compose.override.yml',
+  'docker-compose.test.yml',
+  'package.json',
+  'package-lock.json'
+]);
+
+/**
+ * লেখার অনুমতি আছে কিনা। sanitizeRepoPath() পাস করা পাথই এখানে আসা উচিত।
+ * অজানা/সন্দেহজনক কিছু হলে false — fail closed।
+ */
+function isWritableRepoPath(safePath) {
+  if (typeof safePath !== 'string' || !safePath) return false;
+  const lower = safePath.toLowerCase();
+  if (FORBIDDEN_WRITE_FILES.has(safePath)) return false;
+  if (FORBIDDEN_WRITE_PREFIXES.some((p) => lower.startsWith(p))) return false;
+  // .env, .env.example, যেকোনো শেল স্ক্রিপ্ট বা workflow ফাইল
+  if (lower === '.env' || lower.startsWith('.env.')) return false;
+  if (lower.endsWith('.sh')) return false;
+  if (lower.endsWith('.yml') || lower.endsWith('.yaml')) return false;
+  return true;
 }
 
 // Anthropic response-এ text ছাড়া অন্য block-ও থাকতে পারে; content[0].text ধরে
@@ -69,6 +170,25 @@ const conversations = {};
 // deploy হয়ে যাওয়া ঠেকাতে। chatId ধরে pending action রাখা হয়, ৫ মিনিট পর মেয়াদ শেষ।
 const pendingActions = {};
 const CONFIRM_TIMEOUT_MS = 5 * 60 * 1000;
+const MAX_CONFIRM_ATTEMPTS = 3;
+
+// ==================== নিরাপত্তা: অডিট ট্রেইল ====================
+// প্রতিটা privileged অপারেশন — অনুমোদিত হোক বা প্রত্যাখ্যাত — audit_logs-এ যায়।
+// কখনো টোকেন/সিক্রেট/ফাইলের কনটেন্ট লেখা হয় না; শুধু পরিচয়, কমান্ড ও ফলাফল।
+// লগিং ব্যর্থ হলেও বটের ফ্লো কখনো ব্লক হয় না (auditLog নিজেই throw করে না)।
+function auditTelegram({ action, status = 'success', riskLevel = 'medium', details = {} }) {
+  try {
+    require('./services/auditLog').logEvent({
+      actorType: 'system',
+      actorUsername: 'TELEGRAM_BOT',
+      action,
+      category: 'security',
+      status,
+      riskLevel,
+      details
+    });
+  } catch (e) { /* non-fatal */ }
+}
 
 const SYSTEM_PROMPT = `তুমি Livo-র AI Assistant। Livo একটি অনলাইন গেমিং প্ল্যাটফর্ম Node.js/Express দিয়ে তৈরি।
 তুমি বাংলায় কথা বলবে এবং Livo-র admin Mahmud-কে সাহায্য করবে।
@@ -167,6 +287,9 @@ async function ensureBotBranch() {
 async function githubEditFile(filePath, newContent, commitMessage) {
   const safePath = sanitizeRepoPath(filePath);
   if (!safePath) return { success: false, error: 'অবৈধ ফাইলপাথ' };
+  if (!isWritableRepoPath(safePath)) {
+    return { success: false, error: 'এই ফাইলটি Telegram/AI দিয়ে পরিবর্তন করা যায় না (CI/নিরাপত্তা-সংবেদনশীল)।' };
+  }
 
   // দ্বিগুণ সুরক্ষা: কনফিগে ভুল করে সুরক্ষিত ব্রাঞ্চ বসিয়ে দিলেও লেখা হবে না।
   if (PROTECTED_BRANCHES.includes(BOT_BRANCH)) {
@@ -202,7 +325,12 @@ async function githubEditFile(filePath, newContent, commitMessage) {
     })
   });
   const result = await response.json();
-  if (!result.commit) return { success: false, error: JSON.stringify(result) };
+  if (!result.commit) {
+    // GitHub-এর কাঁচা রেসপন্স Telegram-এ পাঠানো হয় না — তাতে ইন্টারনাল URL,
+    // rate-limit হেডার, টোকেন-স্কোপের ইঙ্গিত ফাঁস হতে পারে। বিস্তারিত শুধু সার্ভার লগে।
+    console.error('[telegram-bot] GitHub commit ব্যর্থ:', response.status, result && result.message);
+    return { success: false, error: 'GitHub-এ কমিট করা যায়নি — কোনো পরিবর্তন হয়নি।' };
+  }
 
   return {
     success: true,
@@ -212,7 +340,7 @@ async function githubEditFile(filePath, newContent, commitMessage) {
 }
 
 // GitHub action process করা
-async function processGithubAction(responseText, chatId) {
+async function processGithubAction(responseText, chatId, fromId) {
   if (responseText.includes('GITHUB_ACTION: read_file')) {
     const fileMatch = responseText.match(/FILE: (.+)/);
     if (fileMatch) {
@@ -251,13 +379,36 @@ async function processGithubAction(responseText, chatId) {
         await telegramAPI('sendMessage', { chat_id: chatId, text: '❌ অবৈধ ফাইলপাথ — কোনো পরিবর্তন করা হয়নি।' });
         return;
       }
+      if (!isWritableRepoPath(filePath)) {
+        auditTelegram({
+          action: 'TELEGRAM_DEVOPS_EDIT_DENIED',
+          status: 'failure',
+          riskLevel: 'high',
+          details: { chatId: String(chatId), fromId: fromId === null ? null : String(fromId), path: filePath, reason: 'protected_path' }
+        });
+        await telegramAPI('sendMessage', {
+          chat_id: chatId,
+          text: '🚫 এই ফাইলটি Telegram/AI দিয়ে বদলানো যায় না (CI/নিরাপত্তা-সংবেদনশীল)। মানুষকে সরাসরি PR দিতে হবে।'
+        });
+        return;
+      }
 
       // সরাসরি commit না করে, আগে admin-কে দেখিয়ে "হ্যাঁ" চাওয়া হচ্ছে।
+      // কনফার্মেশন নির্দিষ্ট প্রেরক + নির্দিষ্ট অপারেশনের সাথে বাঁধা, একবারই ব্যবহারযোগ্য।
       pendingActions[chatId] = {
+        operationId: crypto.randomBytes(12).toString('hex'),
+        fromId: fromId === null ? null : String(fromId),
         filePath,
         newContent,
+        attempts: 0,
         expiresAt: Date.now() + CONFIRM_TIMEOUT_MS
       };
+
+      auditTelegram({
+        action: 'TELEGRAM_DEVOPS_EDIT_REQUESTED',
+        riskLevel: 'high',
+        details: { chatId: String(chatId), fromId: fromId === null ? null : String(fromId), path: filePath, operationId: pendingActions[chatId].operationId }
+      });
 
       const preview = newContent.length > 800 ? newContent.slice(0, 800) + '\n...(আরও আছে)' : newContent;
       await telegramAPI('sendMessage', {
@@ -296,16 +447,23 @@ async function setWebhook() {
 
 // Message handle করা
 async function handleMessage(msg) {
-  const chatId = msg.chat.id;
-  const userMessage = msg.text;
+  const chatId = msg && msg.chat ? msg.chat.id : null;
+  const fromId = msg && msg.from ? msg.from.id : null;
+  const userMessage = msg && typeof msg.text === 'string' ? msg.text : null;
 
   if (!userMessage) return;
 
-  // নিরাপত্তা: শুধু admin-এর chat থেকে আসা মেসেজ প্রসেস হবে।
-  // এই বট GitHub repo-তে সরাসরি write করতে পারে, তাই অন্য কারো মেসেজে সাড়া
-  // দেওয়া মানেই যে কেউ (বট খুঁজে পেলে) কোড এডিট করার সুযোগ পাওয়া।
-  if (!ADMIN_CHAT_ID || String(chatId) !== String(ADMIN_CHAT_ID)) {
-    console.warn(`⚠️ অননুমোদিত Telegram chat (${chatId}) থেকে মেসেজ এলো — উপেক্ষা করা হলো।`);
+  // নিরাপত্তা: chat id **এবং** অপরিবর্তনীয় user id — দুটোই allowlist-এ থাকতে হবে।
+  // এই বট GitHub repo-তে write করতে পারে, তাই অননুমোদিত কেউ কোনো privileged
+  // রেসপন্স পায় না — কোনো উত্তরও যায় না (probing-এ তথ্য ফাঁস হয় না)।
+  if (!isAuthorizedSender(msg)) {
+    console.warn(`⚠️ অননুমোদিত Telegram প্রেরক (chat=${chatId}, user=${fromId}) — উপেক্ষা করা হলো।`);
+    auditTelegram({
+      action: 'TELEGRAM_DEVOPS_UNAUTHORIZED',
+      status: 'failure',
+      riskLevel: 'high',
+      details: { chatId: chatId === null ? null : String(chatId), fromId: fromId === null ? null : String(fromId) }
+    });
     return;
   }
 
@@ -330,6 +488,15 @@ async function handleMessage(msg) {
   if (pending) {
     if (Date.now() > pending.expiresAt) {
       delete pendingActions[chatId];
+    } else if (pending.fromId !== null && String(fromId) !== String(pending.fromId)) {
+      // অন্য কেউ (একই অনুমোদিত chat-এ থাকলেও) অন্যের অনুরোধ নিশ্চিত করতে পারবে না
+      auditTelegram({
+        action: 'TELEGRAM_DEVOPS_CONFIRM_DENIED',
+        status: 'failure',
+        riskLevel: 'high',
+        details: { chatId: String(chatId), fromId: String(fromId), operationId: pending.operationId, reason: 'sender_mismatch' }
+      });
+      return;
     } else {
       const normalized = userMessage.trim().toLowerCase();
       const isYes = ['হ্যাঁ', 'হা', 'yes', 'y', 'confirm'].includes(normalized);
@@ -343,6 +510,20 @@ async function handleMessage(msg) {
           parse_mode: 'Markdown'
         });
         const result = await githubEditFile(pending.filePath, pending.newContent, `🤖 Bot: ${pending.filePath} updated via Telegram (admin confirmed)`);
+        auditTelegram({
+          action: 'TELEGRAM_DEVOPS_EDIT_COMMITTED',
+          status: result.success ? 'success' : 'failure',
+          riskLevel: 'critical',
+          details: {
+            chatId: String(chatId),
+            fromId: fromId === null ? null : String(fromId),
+            operationId: pending.operationId,
+            repository: `${GITHUB_OWNER}/${GITHUB_REPO}`,
+            branch: result.branch || BOT_BRANCH,
+            path: pending.filePath,
+            reason: result.success ? null : result.error
+          }
+        });
         if (result.success) {
           // বার্তাটা আগে বলত "Render এ deploy হচ্ছে..." — সেটা এখন মিথ্যা হতো,
           // কারণ পরিবর্তন বট-ব্রাঞ্চে যায়, প্রোডাকশনে নয়। ভুল আশ্বাস দিলে
@@ -363,7 +544,23 @@ async function handleMessage(msg) {
         await telegramAPI('sendMessage', { chat_id: chatId, text: '🚫 বাতিল করা হলো, কোনো পরিবর্তন হয়নি।' });
         return;
       }
-      // অস্পষ্ট জবাব — pending অনুরোধটা মনে করিয়ে দেওয়া হচ্ছে, AI-কে ডাকা হচ্ছে না
+      // অস্পষ্ট জবাব — pending অনুরোধটা মনে করিয়ে দেওয়া হচ্ছে, AI-কে ডাকা হচ্ছে না।
+      // বারবার অস্পষ্ট জবাব দিয়ে একটা critical অনুরোধ অনির্দিষ্টকাল ঝুলিয়ে রাখা যাবে না।
+      pending.attempts = (pending.attempts || 0) + 1;
+      if (pending.attempts >= MAX_CONFIRM_ATTEMPTS) {
+        delete pendingActions[chatId];
+        auditTelegram({
+          action: 'TELEGRAM_DEVOPS_CONFIRM_ABANDONED',
+          status: 'failure',
+          riskLevel: 'medium',
+          details: { chatId: String(chatId), fromId: fromId === null ? null : String(fromId), operationId: pending.operationId, path: pending.filePath }
+        });
+        await telegramAPI('sendMessage', {
+          chat_id: chatId,
+          text: '🚫 বারবার অস্পষ্ট জবাব — অনুরোধটি বাতিল করা হলো, কোনো পরিবর্তন হয়নি।'
+        });
+        return;
+      }
       await telegramAPI('sendMessage', {
         chat_id: chatId,
         text: `⏳ *${pending.filePath}*-এর পরিবর্তন এখনো নিশ্চিত হয়নি। "হ্যাঁ" বা "না" লেখো।`,
@@ -399,7 +596,7 @@ async function handleMessage(msg) {
     }
     conversations[chatId].push({ role: 'assistant', content: assistantMessage });
 
-    await processGithubAction(assistantMessage, chatId);
+    await processGithubAction(assistantMessage, chatId, fromId);
 
   } catch (error) {
     console.error('Error:', error);
@@ -410,5 +607,15 @@ async function handleMessage(msg) {
   }
 }
 
-setWebhook();
-module.exports = { handleMessage, verifyWebhookSecret, sanitizeRepoPath, extractText };
+// টেস্টে বা webhook secret ছাড়া বুট করলে Telegram-এ কোনো নেটওয়ার্ক কল যাবে না।
+if (process.env.NODE_ENV !== 'test') setWebhook();
+
+module.exports = {
+  handleMessage,
+  verifyWebhookSecret,
+  sanitizeRepoPath,
+  isWritableRepoPath,
+  isAuthorizedSender,
+  isDuplicateUpdate,
+  extractText
+};
