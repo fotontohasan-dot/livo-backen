@@ -21,6 +21,7 @@ const pgSession = require('connect-pg-simple')(session);
 const flash = require('connect-flash');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
+const { createLimiter } = require('./middleware/rateLimitFactory');
 const helmet = require('helmet');
 const cors = require('cors');
 const compression = require('compression');
@@ -637,8 +638,18 @@ app.use('/extra', require('./routes/extra'));
 app.get('/app/update', (req, res) => res.render('app/update'));
 
 // Telegram Bot Webhook
-const { handleMessage, verifyWebhookSecret } = require('./telegram-bot');
-app.post('/telegram-webhook', express.json(), async (req, res) => {
+const { handleMessage, verifyWebhookSecret, isDuplicateUpdate } = require('./telegram-bot');
+
+// নিরাপত্তা: এই এন্ডপয়েন্ট পাবলিক এবং GitHub-এ লেখার ক্ষমতাসম্পন্ন কোড ট্রিগার করে।
+// secret যাচাইয়ের আগেই যাতে কেউ অসীম রিকোয়েস্ট পাঠিয়ে CPU/লগ ভাসিয়ে দিতে না পারে,
+// তাই আলাদা রেট-লিমিট। Telegram-এর স্বাভাবিক ট্রাফিকের চেয়ে সীমা অনেক উদার।
+const telegramWebhookLimiter = createLimiter('telegram-webhook', {
+  windowMs: 60 * 1000,
+  max: 60,
+  message: 'Too many requests'
+});
+
+app.post('/telegram-webhook', telegramWebhookLimiter, express.json({ limit: '256kb' }), async (req, res) => {
   try {
     // নিরাপত্তা: Telegram থেকে সত্যিই এসেছে কিনা যাচাই করা হচ্ছে।
     // এই header Telegram নিজে পাঠায় যদি setWebhook-এ secret_token দেওয়া থাকে।
@@ -650,7 +661,16 @@ app.post('/telegram-webhook', express.json(), async (req, res) => {
       return res.sendStatus(401);
     }
 
-    const { message } = req.body;
+    // নিরাপত্তা: রিপ্লে সুরক্ষা। Telegram ডেলিভারি নিশ্চিত করতে একই update বারবার
+    // পাঠাতে পারে; ডিডুপ ছাড়া একই কনফার্মেশন দুবার চললে ডুপ্লিকেট কমিট/ব্রাঞ্চ হতে পারত।
+    // 200 ফেরত যায় যাতে Telegram রিট্রাই বন্ধ করে, কিন্তু কিছুই প্রসেস হয় না।
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    if (isDuplicateUpdate(body.update_id)) {
+      console.warn('⚠️ /telegram-webhook: পুনরাবৃত্ত update_id — উপেক্ষা করা হলো।');
+      return res.sendStatus(200);
+    }
+
+    const { message } = body;
     if (message) await handleMessage(message);
     res.sendStatus(200);
   } catch (err) {
