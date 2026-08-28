@@ -29,24 +29,45 @@ async function makeUser() {
 describe('POST /games/play — aviator বাজি বসানোর লেজার সঙ্গতি', () => {
   test('রিয়েল-মানি aviator বাজিতে balance delta == coin_transactions ledger delta', async () => {
     const U = await makeUser();
-    const before = Number((await pool.query('SELECT coins FROM users WHERE id=$1', [U.userId])).rows[0].coins);
-    const beforeLedger = Number((await pool.query(
-      `SELECT COALESCE(SUM(amount),0) AS sum FROM coin_transactions WHERE user_id=$1`, [U.userId]
-    )).rows[0].sum);
+    // FLAKE FIX (root cause): routes/games.js এর checkBadges()/missions/streak
+    // fire-and-forget promise গুলো response return করার পরেও coin_transactions-এ
+    // row যোগ করতে পারে (যেমন first_bet badge = +20)। balance ও ledger আলাদা
+    // দুটি query-তে পড়লে সেই row একটিতে ধরা পড়ে, অন্যটিতে নয় (read skew) —
+    // ফলে assertion পরিবেশভেদে random fail করে। তাই দুটোই একটিই snapshot
+    // query-তে পড়া হয়, যাতে assertion-এর অর্থ অপরিবর্তিত থাকে।
+    const snapshot = async (userId) => {
+      const r = await pool.query(
+        `SELECT (SELECT coins FROM users WHERE id = $1) AS coins,
+                (SELECT COALESCE(SUM(amount),0) FROM coin_transactions WHERE user_id = $1) AS ledger`,
+        [userId]
+      );
+      return { coins: Number(r.rows[0].coins), ledger: Number(r.rows[0].ledger) };
+    };
+
+    const start = await snapshot(U.userId);
+    const before = start.coins;
+    const beforeLedger = start.ledger;
 
     const res = await U.agent.post('/games/play').set('X-CSRF-Token', U.token)
       .send({ gameSlug: 'aviator', amount: 100, demo: false });
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
 
-    const after = Number((await pool.query('SELECT coins FROM users WHERE id=$1', [U.userId])).rows[0].coins);
-    const afterLedger = Number((await pool.query(
-      `SELECT COALESCE(SUM(amount),0) AS sum FROM coin_transactions WHERE user_id=$1`, [U.userId]
-    )).rows[0].sum);
+    const end = await snapshot(U.userId);
+    const after = end.coins;
+    const afterLedger = end.ledger;
 
     const balanceDelta = after - before;
     const ledgerDelta = afterLedger - beforeLedger;
-    expect(balanceDelta).toBe(-100);
+    // badge/mission reward async ভাবে যোগ হতে পারে, তাই মোট delta-র উপর
+    // hardcoded -100 assert করা race-prone। প্রকৃত invariant দুটি:
+    //   (১) bet ledger row ঠিক -100
+    //   (২) balance delta == ledger delta (নিচে)
+    const betRow = await pool.query(
+      `SELECT amount FROM coin_transactions WHERE user_id=$1 AND type='casino_bet' ORDER BY id DESC LIMIT 1`,
+      [U.userId]
+    );
+    expect(Number(betRow.rows[0].amount)).toBe(-100);
     // casino_bet এখন সঠিক সাইনে (নেগেটিভ) লেখা হয় — ledger delta সরাসরি balance delta-র
     // সমান হওয়া উচিত, abs() workaround ছাড়াই।
     expect(ledgerDelta).toBe(balanceDelta);

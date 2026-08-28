@@ -1894,8 +1894,15 @@ async function runMigrations() {
     console.log(`✅ Phase 08 casino_bet ledger sign backfill: ${casinoBetBackfill.rowCount} সারি ঠিক করা হলো`);
 
   } catch (err) {
+    // PHASE 2 fix: আগে error গিলে ফেলা হত, ফলে caller (server.js) migration
+    // ব্যর্থ হওয়ার পরেও "migration done" ছাপত এবং broken schema নিয়ে listen করত।
+    // এখন state রেকর্ড করে error rethrow করা হয় — fail-closed।
     console.error("❌ Migration error:", err.message);
+    try { require('./services/startupState').markMigrationsFailed(err); } catch (e) { /* non-blocking */ }
+    throw err;
   }
+
+  try { require('./services/startupState').markMigrationsCompleted(); } catch (e) { /* non-blocking */ }
 }
 
 module.exports = runMigrations;
