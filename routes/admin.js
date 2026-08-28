@@ -92,6 +92,10 @@ const {
   qrFromSecret
 } = require('../services/twofactor');
 const { getPinStatus, adminResetPin } = require('../services/withdrawPin');
+// PHASE 4: /admin/diagnostics ও /admin/diagnostics/json এই function টি ব্যবহার
+// করত কিন্তু কোথাও import করা ছিল না — ফলে দুটি route-ই সবসময় ReferenceError
+// দিয়ে ব্যর্থ হত (পেজে loadError, API-তে 500)। Import যোগ করে ঠিক করা হল।
+const { runAllChecks } = require('../services/healthCheck');
 const { getUserFraudStatus, getFraudDashboardStats } = require('../services/fraudDetection');
 const { logEvent: logAuditEvent, listAuditLogs, getAuditLogById, exportAuditLogs, getCategoryCounts, getRiskCounts, VALID_CATEGORIES, VALID_RISK_LEVELS } = require('../services/auditLog');
 const { listDuplicateFlags, reviewDuplicateFlag, scanAllUsers } = require('../services/duplicateDetection');
@@ -3521,7 +3525,7 @@ router.get('/activity', rbac.requirePermission('activity_log_view'), async (req,
 // অর্থাৎ dead code। সেটা সরানো হয়েছে যাতে ভবিষ্যতে কেউ ভুল কপিটা সম্পাদনা না করে।
 
 // ==================== Sentry মনিটরিং স্ট্যাটাস ও কনফিগারেশন ====================
-router.get('/sentry-status', async (req, res) => {
+router.get('/sentry-status', rbac.requirePermission('system_diagnostics_view'), async (req, res) => {
   try {
     const sentryService = require('../services/sentry');
     res.render('admin/sentry-status', { status: sentryService.getStatus(), error: null, testSent: req.query.test === '1' });
@@ -3531,7 +3535,7 @@ router.get('/sentry-status', async (req, res) => {
   }
 });
 
-router.post('/sentry-status/test-error', async (req, res) => {
+router.post('/sentry-status/test-error', rbac.requirePermission('system_diagnostics_view'), async (req, res) => {
   try {
     const sentryService = require('../services/sentry');
     if (!sentryService.isEnabled()) {
@@ -4287,7 +4291,7 @@ router.get('/api-logs/export.csv', rbac.requirePermission('reports_view'), async
 });
 
 // ==================== REDIS CACHE MANAGEMENT ====================
-router.get('/cache', async (req, res) => {
+router.get('/cache', rbac.requirePermission('system_diagnostics_view'), async (req, res) => {
   try {
     const cacheStats = await cache.getDetailedStats();
     res.render('admin/cache', { cacheStats, cleared: req.query.cleared || '' });
@@ -4850,7 +4854,7 @@ router.post('/announcements/:id/delete', rbac.requirePermission('settings_edit')
   }
 });
 
-router.get('/diagnostics', async (req, res) => {
+router.get('/diagnostics', rbac.requirePermission('system_diagnostics_view'), async (req, res) => {
   try {
     const report = await runAllChecks();
     res.render('admin/diagnostics', { report, active: 'diagnostics' });
@@ -4864,7 +4868,7 @@ router.get('/diagnostics', async (req, res) => {
 });
 
 // Diagnostics JSON API (polling)
-router.get('/diagnostics/json', async (req, res) => {
+router.get('/diagnostics/json', rbac.requirePermission('system_diagnostics_view'), async (req, res) => {
   try {
     const report = await runAllChecks();
     res.json(report);
