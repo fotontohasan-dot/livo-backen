@@ -1117,5 +1117,7 @@
   "common_cancel": "বাতিল",
   "auth_logout_confirm_title": "লগ আউট নিশ্চিত করুন",
   "auth_logout_confirm_body": "আপনি কি লগ আউট করতে চান?",
-  "auth_logout_confirm_button": "লগ আউট"
+  "auth_logout_confirm_button": "লগ আউট",
+  "admin_provider_invalid_characters": "প্রোভাইডারের নামে < > \" ' & অক্ষর ব্যবহার করা যাবে না",
+  "admin_game_name_invalid_characters": "গেমের নামে < > \" ' & অক্ষর ব্যবহার করা যাবে না"
 }

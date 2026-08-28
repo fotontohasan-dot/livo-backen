@@ -1117,5 +1117,7 @@
   "common_cancel": "Cancel",
   "auth_logout_confirm_title": "Confirm logout",
   "auth_logout_confirm_body": "Are you sure you want to log out?",
-  "auth_logout_confirm_button": "Log out"
+  "auth_logout_confirm_button": "Log out",
+  "admin_provider_invalid_characters": "Provider name cannot contain < > \" ' & characters",
+  "admin_game_name_invalid_characters": "Game name cannot contain < > \" ' & characters"
 }
