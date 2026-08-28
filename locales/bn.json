@@ -1114,5 +1114,8 @@
   "admin_logout_confirm_title": "লগ আউট নিশ্চিত করুন",
   "admin_logout_confirm_body": "আপনি কি অ্যাডমিন প্যানেল থেকে লগ আউট করতে চান?",
   "admin_logout_confirm_button": "লগ আউট",
-  "common_cancel": "বাতিল"
+  "common_cancel": "বাতিল",
+  "auth_logout_confirm_title": "লগ আউট নিশ্চিত করুন",
+  "auth_logout_confirm_body": "আপনি কি লগ আউট করতে চান?",
+  "auth_logout_confirm_button": "লগ আউট"
 }

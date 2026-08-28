@@ -1114,5 +1114,8 @@
   "admin_logout_confirm_title": "Confirm logout",
   "admin_logout_confirm_body": "Are you sure you want to log out of the admin panel?",
   "admin_logout_confirm_button": "Log out",
-  "common_cancel": "Cancel"
+  "common_cancel": "Cancel",
+  "auth_logout_confirm_title": "Confirm logout",
+  "auth_logout_confirm_body": "Are you sure you want to log out?",
+  "auth_logout_confirm_button": "Log out"
 }

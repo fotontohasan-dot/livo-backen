@@ -12,6 +12,7 @@ const { normalizeEmail, normalizeUsername, normalizePhone, normalizeIdentifier }
 // প্রায় সমান থাকে।
 const DUMMY_BCRYPT_HASH = bcrypt.hashSync('dummy-password-for-constant-time-compare', 10);
 const rateLimit = require('express-rate-limit');
+const { logEvent: logAuditEvent } = require('../services/auditLog');
 const { pool } = require('../db');
 const { createReferral } = require('../services/referral');
 const { sendQueuedEmail } = require('../services/email');
@@ -914,6 +915,14 @@ router.post('/reset-password/:token', resetLimiter, async (req, res) => {
     }
     cache.del(`reset_token:${hashToken(token)}`).catch(() => {});
 
+    // PHASE 5/14 fix: password reset একটি security-sensitive account event,
+    // কিন্তু এর কোনো audit trail ছিল না। token বা password কখনো log করা হয় না।
+    logAuditEvent({
+      req, actorType: 'user', actorId: updated.rows[0].id, actorUsername: updated.rows[0].username,
+      action: 'PASSWORD_RESET_COMPLETED', category: 'auth', status: 'success', riskLevel: 'high',
+      details: { sessionsRevoked: true, via: 'reset_link' }
+    }).catch((e) => console.error('logAuditEvent (PASSWORD_RESET_COMPLETED) error:', e.message));
+
     // পাসওয়ার্ড রিসেটের পর ওই অ্যাকাউন্টের সব পুরনো সেশন বাতিল করা হয়।
     // এটা না থাকলে অ্যাকাউন্ট টেকওভারের পর ভিকটিম পাসওয়ার্ড রিসেট করলেও আক্রমণকারীর
     // আগের লগইন সেশনটা বহাল থাকত — রিসেট করেও অ্যাকাউন্ট ফেরত পাওয়া যেত না।
@@ -935,7 +944,10 @@ router.post('/reset-password/:token', resetLimiter, async (req, res) => {
   }
 });
 
-router.get('/logout', async (req, res) => {
+// LOW-2 fix: logout একটি state-changing action, তাই এটি POST + CSRF-protected।
+// পুরনো GET /logout link গুলো ভাঙে না — সেগুলো একটি confirm page দেখায়
+// যেখান থেকে CSRF token সহ POST করা হয়।
+async function doUserLogout(req, res) {
   try {
     if (req.sessionID) {
       await pool.query(`UPDATE device_sessions SET revoked_at = NOW() WHERE sid = $1`, [req.sessionID]);
@@ -944,6 +956,43 @@ router.get('/logout', async (req, res) => {
     console.error('logout device_sessions cleanup error:', e.message);
   }
   req.session.destroy(() => res.redirect('/login'));
+}
+
+router.post('/logout', doUserLogout);
+
+// GET /logout সাইটজুড়ে অসংখ্য <a href="/logout"> link-এ ব্যবহৃত হয়, তাই সেটি
+// কাজ করতেই থাকে। শুধু cross-site থেকে আসা GET (অর্থাৎ প্রকৃত CSRF চেষ্টা)
+// সরাসরি logout করে না — সেক্ষেত্রে confirm page দেখানো হয়, যেখান থেকে
+// CSRF token সহ POST করতে হয়।
+function isCrossSiteNavigation(req) {
+  const fetchSite = req.get('sec-fetch-site');
+  if (fetchSite && fetchSite !== 'same-origin' && fetchSite !== 'none') return true;
+
+  // Host header সরাসরি ব্যবহার করা হয় না (host poisoning প্রতিরোধ) —
+  // trusted base URL থেকে expected host নেওয়া হয়।
+  const origin = req.get('origin');
+  if (origin) {
+    let expectedHost;
+    try {
+      expectedHost = new URL(getBaseUrl(req)).host;
+    } catch (e) {
+      return true; // base URL নির্ধারণ করা না গেলে fail-closed
+    }
+    try {
+      if (new URL(origin).host !== expectedHost) return true;
+    } catch (e) {
+      return true; // malformed Origin = সন্দেহজনক
+    }
+  }
+  return false;
+}
+
+router.get('/logout', async (req, res) => {
+  if (!req.session || !req.session.user) return res.redirect('/login');
+  if (isCrossSiteNavigation(req)) {
+    return res.render('logout-confirm');
+  }
+  return doUserLogout(req, res);
 });
 
 module.exports = router;
