@@ -96,6 +96,9 @@ const { getPinStatus, adminResetPin } = require('../services/withdrawPin');
 // করত কিন্তু কোথাও import করা ছিল না — ফলে দুটি route-ই সবসময় ReferenceError
 // দিয়ে ব্যর্থ হত (পেজে loadError, API-তে 500)। Import যোগ করে ঠিক করা হল।
 const { runAllChecks } = require('../services/healthCheck');
+// HIGH-3: ban/demote হলে socket layer-এর auth cache সঙ্গে সঙ্গে invalidate করতে হয়,
+// নাহলে খোলা socket connection সর্বোচ্চ TTL সময় পর্যন্ত পুরনো privilege ধরে রাখত।
+const { invalidateSocketAuth } = require('../services/socket');
 const { getUserFraudStatus, getFraudDashboardStats } = require('../services/fraudDetection');
 const { logEvent: logAuditEvent, listAuditLogs, getAuditLogById, exportAuditLogs, getCategoryCounts, getRiskCounts, VALID_CATEGORIES, VALID_RISK_LEVELS } = require('../services/auditLog');
 const { listDuplicateFlags, reviewDuplicateFlag, scanAllUsers } = require('../services/duplicateDetection');
@@ -1085,6 +1088,7 @@ router.post('/settings/admins/promote', rbac.requireSuperAdmin(), async (req, re
   try {
     const { username } = req.body;
     const r = await pool.query("UPDATE users SET role = 'admin' WHERE username = $1 RETURNING id", [username]);
+    if (r.rows[0]) invalidateSocketAuth(r.rows[0].id);
     if (r.rows[0]) {
       await logAdminAction(req.session.user.id, req.session.user.username, 'ADMIN_PROMOTE', `${username} কে অ্যাডমিন করা হয়েছে`, req.ip);
       logAuditEvent({
@@ -1110,6 +1114,7 @@ router.post('/settings/admins/:id/demote', rbac.requireSuperAdmin(), async (req,
       return res.redirect('/admin/settings');
     }
     await pool.query("UPDATE users SET role = 'user' WHERE id = $1", [id]);
+    invalidateSocketAuth(id);
     await logAdminAction(req.session.user.id, req.session.user.username, 'ADMIN_DEMOTE', `অ্যাডমিন আইডি #${id} থেকে অ্যাডমিন অ্যাক্সেস সরানো হয়েছে`, req.ip);
     logAuditEvent({
       req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
@@ -2311,6 +2316,7 @@ router.post('/users/:id/edit-profile', rbac.requirePermission('users_edit'), adm
 router.post('/users/:id/ban', rbac.requirePermission('users_ban'), requireIntParam('id'), async (req, res) => {
   try {
     const r = await pool.query('UPDATE users SET is_banned = NOT is_banned WHERE id = $1 RETURNING is_banned, username', [req.params.id]);
+    invalidateSocketAuth(req.params.id);
     if (r.rows[0]) {
       // isAuth মিডলওয়্যার active/banned স্ট্যাটাস ৩০ সেকেন্ডের জন্য ক্যাশ করে (middleware/auth.js)।
       // ব্যান/আনব্যান সাথে সাথেই effective করতে হলে ওই ক্যাশ এখানেই invalidate করা দরকার,
