@@ -79,17 +79,49 @@ substitute for rotation, because the values are already public.
 ### Step 3 — Decide about history
 
 Once rotated, the exposed values are worthless and rewriting becomes
-optional. If you still want them gone:
+optional.
+
+**Do not delete paths.** The credentials are not only in `.env` — they were
+also committed into `db.js`, `routes/payment.js` and `dist/bundle.js`. Those
+are real source files with legitimate history, so `--path .env
+--invert-paths` would both miss the leak and, if extended to those paths,
+destroy history you want to keep.
+
+The correct approach replaces the secret *strings* while leaving every file
+and commit in place:
 
 ```bash
-# with git-filter-repo (preferred over filter-branch)
-git filter-repo --path .env --invert-paths
+# 1. Write the replacement rules to a file OUTSIDE the repo, so it is never
+#    committed. One line per leaked value:
+#       <literal-secret>==>***REMOVED***
+#    Take the values from your Neon and Render dashboards, or from
+#    `git show 8fb3db6` and `git show b30e398` locally. Never commit this file.
+cat > ~/livo-replacements.txt <<'EOF'
+<neon-connection-string>==>***REMOVED***
+<render-connection-string>==>***REMOVED***
+<old-session-secret>==>***REMOVED***
+EOF
+
+# 2. Work on a fresh mirror clone, never on your working repo
+git clone --mirror https://github.com/fotontohasan-dot/livo-backen.git livo-mirror
+cd livo-mirror
+
+# 3. Rewrite
+git filter-repo --replace-text ~/livo-replacements.txt
+
+# 4. Verify before publishing anything
+git log --all -p | grep -c 'neondb_owner:npg_'   # expect 0
+git log --all -p | grep -c 'livo_db_opct_user:O' # expect 0
+
+# 5. Only then publish, and delete the replacements file
+rm ~/livo-replacements.txt
 ```
 
-This rewrites every commit hash, so all collaborators must re-clone, and open
-pull requests will need to be recreated. Given the values will already be
-rotated, weigh that disruption carefully. Rewriting also does not reach forks
-or third-party mirrors.
+Publishing the rewrite requires a force push, which this audit deliberately
+did not perform. It rewrites every commit hash, so all collaborators must
+re-clone and open pull requests must be recreated. It also does not reach
+forks, existing clones or third-party mirrors — which is exactly why rotation
+is step 1 and this is step 3.
 
 ### Step 4 — Prevent recurrence
 
