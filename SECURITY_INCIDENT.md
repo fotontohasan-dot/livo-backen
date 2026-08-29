@@ -1,6 +1,12 @@
 # SECURITY INCIDENT — Credentials exposed in git history
 
-**Status:** OPEN — requires action by the repository owner
+**Status:** ROTATED — the exposed values are dead. Remaining items are
+follow-up, not exposure.
+
+**Rotation completed 2026-08-29**, reported by the repository owner: the Neon
+password, the Render credential and `SESSION_SECRET` have all been rotated.
+The values still present in git history therefore no longer grant access.
+This was the one item that could not be fixed by a code change.
 **Severity:** CRITICAL
 **Found:** during the A–Z security hardening pass, Phase 10 (secrets), after
 `git fetch --unshallow` made the full history readable. A shallow clone hides
@@ -52,7 +58,7 @@ anyone who clones, and remain in every existing fork, clone and CI cache.
 Rotation comes first. History rewriting is secondary and does **not**
 substitute for rotation, because the values are already public.
 
-### Step 1 — Rotate now (do not wait for anything else)
+### Step 1 — Rotate now (do not wait for anything else) — DONE 2026-08-29
 
 1. **Neon database** — reset the `neondb_owner` password in the Neon console,
    or delete the role and create a new one. Update `DATABASE_URL` in the
@@ -66,7 +72,12 @@ substitute for rotation, because the values are already public.
    normally. Schedule it, but do not skip it: with the old secret a third
    party can forge session cookies.
 
-### Step 2 — Check for prior abuse
+> Confirm the deployment environment now carries the new `DATABASE_URL` and
+> `SESSION_SECRET`, and that the app came back up after the change. Rotating
+> `SESSION_SECRET` logs everyone out; admin accounts, passwords, TOTP secrets
+> and backup codes are untouched, so admins log back in normally.
+
+### Step 2 — Check for prior abuse (still worth doing)
 
 - Neon and Render both expose connection logs. Review connections from
   unrecognised IPs since `2026-06-04`.
@@ -76,7 +87,12 @@ substitute for rotation, because the values are already public.
   window. The audit found no evidence of abuse, but no evidence is not
   evidence of absence, and only the account owner can see the provider logs.
 
-### Step 3 — Decide about history
+### Step 3 — Decide about history (now optional)
+
+With the credentials rotated, the strings in history are worthless. Rewriting
+is now a tidiness decision rather than a security one, and it carries real
+cost (every commit hash changes, collaborators re-clone, open PRs recreated).
+Leaving history as-is is a defensible choice.
 
 Once rotated, the exposed values are worthless and rewriting becomes
 optional.

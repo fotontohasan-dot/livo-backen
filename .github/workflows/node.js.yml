@@ -67,6 +67,13 @@ jobs:
     - name: Install dependencies
       run: npm ci --legacy-peer-deps
 
+    # Working tree-তে কোনো credential commit হয়ে গেলে সেটি এখানেই ধরা পড়বে।
+    # History scan ইচ্ছাকৃতভাবে এখানে নেই: history-তে থাকা পুরনো (এখন rotate
+    # করা, অর্থাৎ মৃত) credential প্রতিটি run লাল করে দিত। History পরীক্ষা
+    # করতে হলে ম্যানুয়ালি: npm run scan:secrets:history
+    - name: Scan for committed credentials
+      run: npm run scan:secrets
+
     - name: Run tests
       # continue-on-error ইচ্ছাকৃতভাবে সরানো হয়েছে: ওটা থাকলে ধাপটা ব্যর্থ হলেও
       # "সবুজ" দেখাত এবং লাল CI নিয়ে PR merge হয়ে যেত। এখন টেস্ট ফেল করলে ধাপ
