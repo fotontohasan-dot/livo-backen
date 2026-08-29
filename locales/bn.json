@@ -1119,5 +1119,7 @@
   "auth_logout_confirm_body": "আপনি কি লগ আউট করতে চান?",
   "auth_logout_confirm_button": "লগ আউট",
   "admin_provider_invalid_characters": "প্রোভাইডারের নামে < > \" ' & অক্ষর ব্যবহার করা যাবে না",
-  "admin_game_name_invalid_characters": "গেমের নামে < > \" ' & অক্ষর ব্যবহার করা যাবে না"
+  "admin_game_name_invalid_characters": "গেমের নামে < > \" ' & অক্ষর ব্যবহার করা যাবে না",
+  "help_center_rate_limited": "অনুগ্রহ করে একটু ধীরে চেষ্টা করুন — কিছুক্ষণ পর আবার বার্তা পাঠান",
+  "help_center_message_too_long": "বার্তাটি অনেক বড়। ১০০০ অক্ষরের মধ্যে লিখুন"
 }
