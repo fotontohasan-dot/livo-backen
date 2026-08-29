@@ -43,9 +43,17 @@ describe('Secrets, CI/CD, dependencies and resource abuse (PHASE 10-13)', () => 
       return out;
     };
 
+    // এই ফাইলগুলো নিজেরাই pattern নিয়ে আলোচনা করে, প্রকৃত secret ধারণ করে না।
+    // scripts/scanSecrets.js-এর DOC_ALLOWLIST-এর সাথে মিলিয়ে রাখা হয়েছে।
+    const DOC_ALLOWLIST = new Set([
+      'SECURITY_INCIDENT.md',
+      path.join('scripts', 'scanSecrets.js'),
+    ]);
+
     test('কোনো tracked ফাইলে live credential নেই', () => {
       const offenders = [];
       for (const file of collectSourceFiles()) {
+        if (DOC_ALLOWLIST.has(path.relative(ROOT, file))) continue;
         let text;
         try { text = fs.readFileSync(file, 'utf8'); } catch (e) { continue; }
         for (const { name, re } of SECRET_PATTERNS) {
