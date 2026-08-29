@@ -16,6 +16,15 @@ const CHAT_RATE_WINDOW_SEC = 10; // ১০ সেকেন্ড উইন্ড
 // deployment-এ perfectly synchronized না হলেও single-instance/dev/test-এ কার্যকর সুরক্ষা দেয়,
 // আর Redis চালু থাকলে সেটাই আসল উৎস (সব instance জুড়ে সমন্বিত)।
 const inMemoryChatRate = new Map();
+const CHAT_RATE_MAX_ENTRIES = 10000;
+
+// মেয়াদ পেরোনো window গুলো সরায় (Redis fallback path-এ ব্যবহৃত)
+function pruneChatRate(now) {
+  const windowMs = CHAT_RATE_WINDOW_SEC * 1000;
+  for (const [key, entry] of inMemoryChatRate) {
+    if (now - entry.start > windowMs) inMemoryChatRate.delete(key);
+  }
+}
 async function allowChatMessage(userId) {
   const key = `chat:msg:${userId}`;
   const result = await cache.incrWithExpiry(key, CHAT_RATE_WINDOW_SEC);
@@ -25,6 +34,7 @@ async function allowChatMessage(userId) {
   const windowMs = CHAT_RATE_WINDOW_SEC * 1000;
   const entry = inMemoryChatRate.get(userId);
   if (!entry || now - entry.start > windowMs) {
+    if (inMemoryChatRate.size >= CHAT_RATE_MAX_ENTRIES) pruneChatRate(now);
     inMemoryChatRate.set(userId, { start: now, count: 1 });
     return true;
   }
@@ -70,7 +80,27 @@ const emitAdminAlert = (type, data = {}) => {
 // ধরে রাখত — HTTP layer প্রতিটি request-এ DB re-check করলেও socket layer করত না।
 // এখন প্রতিটি privileged সিদ্ধান্ত DB state থেকে নেওয়া হয়।
 const AUTH_CACHE_TTL_MS = 10 * 1000;
+// PHASE 8: এই দুটি Map user-নিয়ন্ত্রিত key নিয়ে বাড়ে। সীমা না থাকলে দীর্ঘ
+// uptime-এ distinct user সংখ্যার সমান হয়ে memory খেয়ে ফেলবে। তাই সীমা +
+// মেয়াদোত্তীর্ণ entry ছাঁটাই।
+const AUTH_CACHE_MAX_ENTRIES = 5000;
 const socketAuthCache = new Map();
+
+// মেয়াদ শেষ হওয়া entry সরায়; তাতেও জায়গা না হলে সবচেয়ে পুরনো গুলো বাদ দেয়
+function pruneAuthCache() {
+  const now = Date.now();
+  for (const [key, entry] of socketAuthCache) {
+    if (now - entry.at >= AUTH_CACHE_TTL_MS) socketAuthCache.delete(key);
+  }
+  if (socketAuthCache.size <= AUTH_CACHE_MAX_ENTRIES) return;
+  // Map insertion order অনুসরণ করে, তাই প্রথম key গুলোই সবচেয়ে পুরনো
+  const excess = socketAuthCache.size - AUTH_CACHE_MAX_ENTRIES;
+  let removed = 0;
+  for (const key of socketAuthCache.keys()) {
+    socketAuthCache.delete(key);
+    if (++removed >= excess) break;
+  }
+}
 
 async function verifyUserState(userId) {
   const cached = socketAuthCache.get(Number(userId));
@@ -91,6 +121,7 @@ async function verifyUserState(userId) {
     return null; // fail-closed
   }
 
+  if (socketAuthCache.size >= AUTH_CACHE_MAX_ENTRIES) pruneAuthCache();
   socketAuthCache.set(Number(userId), { at: Date.now(), value });
   return value;
 }
