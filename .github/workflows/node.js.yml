@@ -53,6 +53,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v5
+      with:
+        # secret scan-এর জন্য পূর্ণ history দরকার; shallow clone-এ history-তে
+        # থাকা credential ধরাই পড়ে না (SECURITY_INCIDENT.md দ্রষ্টব্য)
+        fetch-depth: 0
 
     - name: Use Node.js 22.x
       uses: actions/setup-node@v5

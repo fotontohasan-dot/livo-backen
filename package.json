@@ -11,7 +11,9 @@
     "test:watch": "cross-env NODE_ENV=test jest --runInBand --watch",
     "test:coverage": "cross-env NODE_ENV=test jest --runInBand --coverage",
     "build": "next build",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "scan:secrets": "node scripts/scanSecrets.js",
+    "scan:secrets:history": "node scripts/scanSecrets.js --history"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.24.0",
