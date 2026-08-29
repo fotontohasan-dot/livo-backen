@@ -30,8 +30,14 @@ async function requireMetricsAccess(req, res, next) {
 
     // ২) লগইন করা অ্যাডমিন সেশন (ব্রাউজার থেকে সরাসরি /metrics দেখার জন্য)
     if (req.session && req.session.user) {
-      const result = await pool.query('SELECT role FROM users WHERE id = $1', [req.session.user.id]);
-      if (result.rows[0] && result.rows[0].role === 'admin') {
+      // HIGH-4: এটি একই ban-bypass-এর চতুর্থ কপি ছিল — শুধু role দেখা হত,
+      // ban/deleted state নয়। ফলে ban করা admin-ও /metrics পড়তে পারত।
+      const result = await pool.query(
+        'SELECT role, is_banned, deleted_at FROM users WHERE id = $1',
+        [req.session.user.id]
+      );
+      const row = result.rows[0];
+      if (row && row.role === 'admin' && !row.is_banned && !row.deleted_at) {
         return next();
       }
     }
