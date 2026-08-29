@@ -13,7 +13,10 @@
 const fs = require('fs');
 const path = require('path');
 const request = require('supertest');
-const app = require('../../app');
+// tests/testHarnessIntegrity.test.js অনুযায়ী সব suite helpers/app.js-এর
+// listening server ব্যবহার করবে, সরাসরি express app নয় (supertest-এর
+// ephemeral port সমস্যা এড়াতে)।
+const { app } = require('../helpers/app');
 const { REALISTIC_UA } = require('../helpers/app');
 
 const ROOT = path.join(__dirname, '..', '..');

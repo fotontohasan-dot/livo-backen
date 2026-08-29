@@ -15,8 +15,10 @@ const { io: ioClient } = require('socket.io-client');
 const request = require('supertest');
 const bcrypt = require('bcryptjs');
 
-// app.js নিজেই http server তৈরি করে এবং initSocket() দিয়ে Socket.IO যুক্ত করে,
-// তাই এখানে সেই server-টিই ব্যবহার করা হয় — production wiring-এর সাথে অভিন্ন।
+// helpers/app.js একটি আলাদা http server বানায় যাতে Socket.IO যুক্ত নয়, তাই
+// প্রকৃত handshake পরীক্ষার জন্য app.js-এর নিজস্ব httpServer ব্যবহার করা হয় —
+// সেখানেই initSocket() যুক্ত, অর্থাৎ production wiring-এর সাথে অভিন্ন।
+// testHarnessIntegrity-এর allowlist-এ এই ফাইলটি সেই কারণেই আছে।
 const app = require('../../app');
 const server = app.httpServer;
 const { pool } = require('../../db');
@@ -50,6 +52,11 @@ async function loginCookie(user) {
   return raw.map((c) => c.split(';')[0]).join('; ');
 }
 
+// suite শেষ হওয়ার পরে server teardown হলে খোলা socket গুলো 'websocket error'
+// ছোড়ে, যা jest প্রতিটি test-এর সাথে যুক্ত করে suite fail করিয়ে দেয়।
+// তাই প্রতিটি socket ট্র্যাক করা হয় এবং error নীরবে গিলে ফেলা হয়।
+const openSockets = new Set();
+
 function connect(cookie) {
   return new Promise((resolve, reject) => {
     const socket = ioClient(baseUrl, {
@@ -59,7 +66,12 @@ function connect(cookie) {
       timeout: 8000,
     });
     const timer = setTimeout(() => { socket.close(); reject(new Error('connect timeout')); }, 9000);
-    socket.on('connect', () => { clearTimeout(timer); resolve(socket); });
+    socket.on('error', () => { /* teardown-এর সময়কার noise উপেক্ষা */ });
+    socket.on('connect', () => {
+      clearTimeout(timer);
+      openSockets.add(socket);
+      resolve(socket);
+    });
     socket.on('connect_error', (e) => { clearTimeout(timer); reject(e); });
   });
 }
@@ -75,22 +87,20 @@ function waitForEvent(socket, event, ms = 1200) {
 }
 
 beforeAll(async () => {
-  await new Promise((resolve) => server.listen(0, resolve));
+  if (!server.listening) {
+    await new Promise((resolve) => server.listen(0, resolve));
+  }
   baseUrl = `http://127.0.0.1:${server.address().port}`;
 }, 30000);
 
 afterAll(async () => {
-  // খোলা keep-alive connection থাকলে server.close() ঝুলে যেতে পারে,
-  // তাই Socket.IO connection গুলো আগে বন্ধ করা হয় এবং close()-এ timeout guard।
-  try {
-    const io = app.get && app.get('io');
-    if (io) io.close();
-  } catch (e) { /* ignore */ }
-
-  await Promise.race([
-    new Promise((resolve) => server.close(resolve)),
-    new Promise((resolve) => setTimeout(resolve, 5000)),
-  ]);
+  // server টি helpers/app.js-এর মালিকানাধীন, তাই এখানে বন্ধ করা হয় না —
+  // শুধু এই suite-এর খোলা socket গুলো নিশ্চিতভাবে বন্ধ করা হয়।
+  for (const socket of openSockets) {
+    try { socket.removeAllListeners(); socket.close(); } catch (e) { /* already closed */ }
+  }
+  openSockets.clear();
+  await new Promise((resolve) => setTimeout(resolve, 300));
 }, 20000);
 
 describe('Socket.IO live handshake authorization (PHASE 8 deep)', () => {
