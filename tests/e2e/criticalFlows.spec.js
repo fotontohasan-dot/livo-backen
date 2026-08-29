@@ -107,6 +107,18 @@ async function solveCaptchaIfPresent(page) {
 
 test.describe.configure({ mode: 'serial' });
 
+// loginLimiter (app.js) একই IP-তে /login, /register ও /admin/login মিলিয়ে
+// ১৫ মিনিটে ১০টি POST অনুমতি দেয়। এই spec-এ অনেকগুলো registration ও login
+// আছে, ফলে admin login ধাপে পৌঁছানোর আগেই বাজেট শেষ হয়ে যেত এবং
+// /admin/login/2fa-তে না গিয়ে login পেজে ফিরে আসত।
+//
+// registrationRateLimit.spec.js যেভাবে নিজেকে আলাদা করে, এখানেও একই কৌশল:
+// একটি unique X-Forwarded-For দিয়ে এই spec নিজের rate-limit bucket পায়।
+// এতে production-এর সীমা অপরিবর্তিত থাকে এবং limiter-এর নিজস্ব test-ও
+// অক্ষত থাকে — শুধু এই spec অন্য spec-এর বাজেট খায় না।
+const SPEC_IP = `10.${(process.pid % 250) + 1}.${Math.floor(Math.random() * 250) + 1}.7`;
+test.use({ extraHTTPHeaders: { 'X-Forwarded-For': SPEC_IP } });
+
 // পাবলিক লেয়াউটের প্রতিটা পেজে একটা ১৮+ বয়স-নিশ্চিতকরণ ওভারলে (public/js/age-gate.js) প্রথম
 // ভিজিটে সম্পূর্ণ পেজ ঢেকে রাখে (z-index 999999) — real ইউজার একবার "হ্যাঁ" চাপলে ৩৬৫ দিনের
 // জন্য কুকিতে মনে থাকে। রিয়েল ইউজারের "ইতিমধ্যে কনফার্ম করা" অবস্থা সিমুলেট করতে প্রতিটা
