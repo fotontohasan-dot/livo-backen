@@ -55,7 +55,21 @@ async function requestReset(email) {
 }
 
 /** কিউ করা password_reset ইমেইলের payload থেকে টোকেন বের করে। */
-async function latestResetTokenFromEmail(email) {
+async function latestResetTokenFromEmail(email, { attempts = 40, delayMs = 50 } = {}) {
+  // routes/auth.js-এ sendQueuedEmail() fire-and-forget (.catch() দিয়ে ছেড়ে
+  // দেওয়া), তাই response ফেরার সময় job_queue row এখনো না-ও থাকতে পারে।
+  // একবার পড়লে batch run-এ (যেখানে event loop ব্যস্ত) সেটি null আসত, অথচ
+  // একা চালালে পাস করত। তাই সীমিত সময়ের জন্য poll করা হয় — blind retry নয়,
+  // বরং একটি asynchronous write-এর জন্য নির্ধারিত অপেক্ষা।
+  for (let i = 0; i < attempts; i++) {
+    const found = await readResetTokenOnce(email);
+    if (found) return found;
+    await new Promise((r) => setTimeout(r, delayMs));
+  }
+  return null;
+}
+
+async function readResetTokenOnce(email) {
   const jobs = await pool.query(
     `SELECT payload FROM job_queue
       WHERE type = 'email' AND payload->>'kind' = 'password_reset' AND payload->>'to' = $1
