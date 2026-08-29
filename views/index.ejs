@@ -839,6 +839,19 @@ body.light-mode .promo-banner {
 // টেবিল খালি থাকলে (মাইগ্রেশন এখনো না চললে) নিচের হার্ডকোড করা তালিকা ফলব্যাক হিসেবে কাজ করবে
 const SERVER_GAMES = <%- JSON.stringify((typeof dbGames !== 'undefined' && dbGames) ? dbGames : []).replace(/</g, '\\u003C') %>;
 
+// PHASE 9 (XSS): games তথ্য admin-নিয়ন্ত্রিত এবং নিচে innerHTML-এ বসানো হয়।
+// JSON.stringify()-এর \u003C escaping শুধু <script> block থেকে বেরোনো ঠেকায়,
+// DOM-এ বসানোর সময় HTML হিসেবে ব্যাখ্যা হওয়া ঠেকায় না। তাই প্রতিটি
+// dynamic মান এখানে escape করা হয়।
+function escHtml(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // সার্ভারে যেসব গেমের আসল লজিক আছে — শুধু এগুলোই খেলা যায়। বাকিগুলো কার্ডে
 // দেখা যাবে কিন্তু "শীঘ্রই" অবস্থায়, ক্লিক করলে কিছু হবে না। তালিকাটা
 // services/gameRegistry.js থেকে আসে, লবি নিজে অনুমান করে না।
@@ -982,9 +995,9 @@ function renderCatalogProviderList() {
     const item = document.createElement('div');
     item.className = 'catalog-provider-item' + (selectedProvider === p ? ' active' : '');
     const logoHTML = meta.logo
-      ? `<img src="${meta.logo}" alt="${p}">`
-      : `<div class="fallback" style="background:${meta.color}">${meta.mono}</div>`;
-    item.innerHTML = `${logoHTML}<div class="name">${p}</div>`;
+      ? `<img src="${escHtml(meta.logo)}" alt="${escHtml(p)}">`
+      : `<div class="fallback" style="background:${escHtml(meta.color)}">${escHtml(meta.mono)}</div>`;
+    item.innerHTML = `${logoHTML}<div class="name">${escHtml(p)}</div>`;
     item.addEventListener('click', () => {
       selectedProvider = (selectedProvider === p) ? 'all' : p;
       renderCatalogProviderList();
@@ -1055,7 +1068,7 @@ function renderGames() {
     const playable = PLAYABLE_SLUGS.size === 0 || PLAYABLE_SLUGS.has(g.slug);
     const badgeHTML = !playable
       ? `<div class="game-badge-premium badge-soon">শীঘ্রই</div>`
-      : (g.badge ? `<div class="game-badge-premium badge-${g.badge}">${g.badge}</div>` : '');
+      : (g.badge ? `<div class="game-badge-premium badge-${escHtml(g.badge)}">${escHtml(g.badge)}</div>` : '');
     const isFav = favs.includes(g.slug);
     const card = document.createElement('a');
     card.href = playable ? '/games/' + g.slug : 'javascript:void(0)';
@@ -1063,13 +1076,13 @@ function renderGames() {
     if (!playable) card.setAttribute('aria-disabled', 'true');
     card.innerHTML = `
       <div class="game-thumb-wrapper">
-        <i class="fa-star fav-star ${isFav ? 'fas active' : 'far'}" data-slug="${g.slug}"></i>
-        <span class="game-emoji">${g.emoji}</span>
+        <i class="fa-star fav-star ${isFav ? 'fas active' : 'far'}" data-slug="${escHtml(g.slug)}"></i>
+        <span class="game-emoji">${escHtml(g.emoji)}</span>
         ${badgeHTML}
       </div>
       <div class="game-info-premium">
-        <div class="game-title-premium">${g.name}</div>
-        <div class="game-provider-premium">${g.provider}</div>
+        <div class="game-title-premium">${escHtml(g.name)}</div>
+        <div class="game-provider-premium">${escHtml(g.provider)}</div>
       </div>`;
     card.addEventListener('click', (e) => {
       if (!playable) { e.preventDefault(); return; }

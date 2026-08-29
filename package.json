@@ -11,7 +11,9 @@
     "test:watch": "cross-env NODE_ENV=test jest --runInBand --watch",
     "test:coverage": "cross-env NODE_ENV=test jest --runInBand --coverage",
     "build": "next build",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "scan:secrets": "node scripts/scanSecrets.js",
+    "scan:secrets:history": "node scripts/scanSecrets.js --history"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.24.0",
@@ -69,6 +71,7 @@
     "postcss": "^8.5.19",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "socket.io-client": "^4.8.3",
     "supertest": "^7.0.0",
     "tailwindcss": "^4.3.2",
     "typescript": "^6.0.3"

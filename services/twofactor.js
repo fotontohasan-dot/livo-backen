@@ -32,6 +32,26 @@ function verifyTotpToken(base32Secret, token) {
 }
 
 // ==================== ব্যাকআপ কোড তৈরি (একবারই দেখানো হবে) ====================
+// ==================== TOTP replay prevention helper (MEDIUM-1) ====================
+// valid/invalid ছাড়াও কোন time-step-এ code টি valid হয়েছে সেটি জানা দরকার,
+// যাতে একই step-এর code দ্বিতীয়বার ব্যবহার করা না যায়।
+// verifyTotpToken()-এর আচরণ অপরিবর্তিত (zero-regression)।
+const TOTP_STEP_SECONDS = 30;
+
+function verifyTotpTokenWithStep(base32Secret, token) {
+  if (!base32Secret || !token) return { valid: false, step: null };
+  const cleaned = String(token).replace(/\s+/g, '');
+  const delta = speakeasy.totp.verifyDelta({
+    secret: base32Secret,
+    encoding: 'base32',
+    token: cleaned,
+    window: 1
+  });
+  if (!delta || typeof delta.delta !== 'number') return { valid: false, step: null };
+  const currentStep = Math.floor(Date.now() / 1000 / TOTP_STEP_SECONDS);
+  return { valid: true, step: currentStep + delta.delta };
+}
+
 function generateBackupCodes(count = 8) {
   const codes = [];
   for (let i = 0; i < count; i++) {
@@ -81,6 +101,7 @@ async function qrFromSecret(base32Secret, username) {
 module.exports = {
   generateTotpSetup,
   verifyTotpToken,
+  verifyTotpTokenWithStep,
   generateBackupCodes,
   hashBackupCodes,
   verifyAndConsumeBackupCode,

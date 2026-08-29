@@ -4,15 +4,20 @@
 
 const { pool } = require('../db');
 
-async function ensure(sql, label) {
+// PHASE 2 fix: আগে প্রতিটি ব্যর্থতা শুধু console-এ লেখা হত এবং function টি
+// সফল হিসেবে return করত — অর্থাৎ critical table না থাকা সত্ত্বেও application
+// listen করত। এখন ব্যর্থতাগুলো সংগ্রহ করে শেষে aggregate error throw করা হয়।
+async function ensure(sql, label, failures) {
   try {
     await pool.query(sql);
   } catch (err) {
     console.error('[ensureCriticalTables]', label + ':', err.message);
+    if (failures) failures.push(`${label}: ${err.message}`);
   }
 }
 
 async function ensureCriticalTables() {
+  const failures = [];
   await ensure(`
     CREATE TABLE IF NOT EXISTS ip_rules (
       id SERIAL PRIMARY KEY,
@@ -22,8 +27,8 @@ async function ensureCriticalTables() {
       created_by TEXT,
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
-  `, 'ip_rules');
-  await ensure(`CREATE INDEX IF NOT EXISTS idx_ip_rules_ip ON ip_rules(ip)`, 'ip_rules index');
+  `, 'ip_rules', failures);
+  await ensure(`CREATE INDEX IF NOT EXISTS idx_ip_rules_ip ON ip_rules(ip)`, 'ip_rules index', failures);
 
   await ensure(`
     CREATE TABLE IF NOT EXISTS announcements (
@@ -42,7 +47,7 @@ async function ensureCriticalTables() {
       created_at TIMESTAMP DEFAULT NOW(),
       updated_at TIMESTAMP DEFAULT NOW()
     )
-  `, 'announcements');
+  `, 'announcements', failures);
 
   await ensure(`
     CREATE TABLE IF NOT EXISTS announcement_dismissals (
@@ -52,7 +57,7 @@ async function ensureCriticalTables() {
       dismissed_at TIMESTAMP DEFAULT NOW(),
       UNIQUE(announcement_id, user_id)
     )
-  `, 'announcement_dismissals');
+  `, 'announcement_dismissals', failures);
 
   await ensure(`
     CREATE TABLE IF NOT EXISTS step_up_verifications (
@@ -66,7 +71,7 @@ async function ensureCriticalTables() {
       expires_at TIMESTAMP NOT NULL,
       created_at TIMESTAMP DEFAULT NOW()
     )
-  `, 'step_up_verifications');
+  `, 'step_up_verifications', failures);
 
   await ensure(`
     CREATE TABLE IF NOT EXISTS notification_templates (
@@ -87,7 +92,11 @@ async function ensureCriticalTables() {
       updated_at TIMESTAMPTZ DEFAULT NOW(),
       UNIQUE(template_key, channel, lang)
     )
-  `, 'notification_templates');
+  `, 'notification_templates', failures);
+
+  if (failures.length > 0) {
+    throw new Error('Critical table verification failed: ' + failures.join('; '));
+  }
 
   console.log('✅ Critical tables ensured (ip_rules, announcements, step_up_verifications, notification_templates)');
 }

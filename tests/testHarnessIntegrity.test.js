@@ -36,7 +36,11 @@ const ALLOWED_DIRECT_APP_REQUIRE = new Set([
   // এই ফাইলটাই নিয়মটার ব্যাখ্যা ধারণ করে
   path.join(TESTS_DIR, 'testHarnessIntegrity.test.js'),
   // মন্তব্যে পুরনো প্যাটার্নটা উদাহরণ হিসেবে লেখা আছে
-  path.join(TESTS_DIR, 'afterEnv.js')
+  path.join(TESTS_DIR, 'afterEnv.js'),
+  // live Socket.IO harness: helpers/app.js নিজের http server বানায়, তাতে
+  // Socket.IO যুক্ত নয়। প্রকৃত handshake পরীক্ষা করতে app.js-এর নিজস্ব
+  // httpServer লাগে, যেখানে initSocket() যুক্ত হয়েছে।
+  path.join(TESTS_DIR, 'security', 'socketHandshakeLive.test.js')
 ]);
 
 function walk(dir) {

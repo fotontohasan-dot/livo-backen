@@ -187,6 +187,14 @@ async function liveness() {
 }
 
 async function readiness() {
+  // PHASE 2 fix: শুধু DB ping যথেষ্ট নয় — migration ব্যর্থ হলে schema ভাঙা থাকে,
+  // সেই অবস্থায় /ready কখনো healthy দেখাবে না (no fake success)।
+  const startupState = require('./startupState');
+  if (!startupState.isSchemaReady()) {
+    const { migrationError } = startupState.getState();
+    throw new Error('Schema not ready: migrations did not complete' + (migrationError ? ` (${migrationError})` : ''));
+  }
+
   // DB connect হলেই ready
   try {
     const { pool } = require('../db');

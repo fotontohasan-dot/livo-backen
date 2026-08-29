@@ -1110,5 +1110,16 @@
   "admin_kyc_document_not_found": "Document not found",
   "admin_kyc_document_invalid_url": "Invalid document URL",
   "admin_kyc_document_fetch_failed": "Could not fetch the document",
-  "admin_kyc_document_bad_format": "Unsupported document format"
+  "admin_kyc_document_bad_format": "Unsupported document format",
+  "admin_logout_confirm_title": "Confirm logout",
+  "admin_logout_confirm_body": "Are you sure you want to log out of the admin panel?",
+  "admin_logout_confirm_button": "Log out",
+  "common_cancel": "Cancel",
+  "auth_logout_confirm_title": "Confirm logout",
+  "auth_logout_confirm_body": "Are you sure you want to log out?",
+  "auth_logout_confirm_button": "Log out",
+  "admin_provider_invalid_characters": "Provider name cannot contain < > \" ' & characters",
+  "admin_game_name_invalid_characters": "Game name cannot contain < > \" ' & characters",
+  "help_center_rate_limited": "Please slow down — try sending another message in a moment",
+  "help_center_message_too_long": "That message is too long. Please keep it under 1000 characters"
 }

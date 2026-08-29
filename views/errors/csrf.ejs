@@ -52,7 +52,23 @@
    <p>আপনার সেশনের মেয়াদ শেষ হয়ে গেছে অথবা ফর্মটি অনেকক্ষণ আগে খোলা হয়েছিল। পেজটি রিফ্রেশ করে আবার চেষ্টা করুন।</p>
    <a href="/" class="btn-home">🏠 হোমপেজে যান</a>
    <br>
-   <a href="javascript:history.back()" class="btn-back">← ফিরে যান</a>
+   <a href="/" data-history-back="1" class="btn-back">← ফিরে যান</a>
  </div>
+<script>
+  // PHASE 9: আগে এই লিংকটি একটি inline script URL scheme ব্যবহার করত। strict
+  // CSP (script-src থেকে unsafe-inline বাদ) চালু হলে সেই scheme চলে না, তাই
+  // লিংকটি নীরবে অকেজো হয়ে যেত। এখন সাধারণ href fallback + progressive
+  // enhancement ব্যবহার করা হয়।
+  (function historyBackInit() {
+    document.querySelectorAll('[data-history-back]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        if (window.history.length > 1) {
+          e.preventDefault();
+          window.history.back();
+        }
+      });
+    });
+  })();
+</script>
 </body>
 </html>
