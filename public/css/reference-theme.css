@@ -433,3 +433,174 @@ body .game-thumb-wrapper .game-badge-premium { z-index: 2; }
 body .main-cat-art { width: 26px; height: 26px; display: block; }
 body .team-crest { display: inline-flex; align-items: center; line-height: 0; flex: 0 0 auto; }
 body .team-crest svg { display: block; }
+
+/* ==========================================================================
+   23. PROFILE (স্পেক ১৭–১৮) — রেফারেন্স স্ক্রিনশট ৫
+   ========================================================================== */
+body .pf-header {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glass);
+  border-radius: 16px;
+}
+body .pf-header-glow { background: radial-gradient(circle at 20% 0%, rgba(0, 143, 90, .22), transparent 60%); }
+body .pf-avatar {
+  background-color: var(--secondary);
+  border: 2px solid var(--border-glass);
+}
+body .pf-online-dot { background: var(--secondary); }
+body .pf-username { font-size: 16px; font-weight: 700; }
+body .pf-uid-row { font-size: 11.5px; color: var(--text-muted) !important; -webkit-text-fill-color: var(--text-muted) !important; }
+body .pf-vip-badge-sm {
+  background: var(--gold-soft);
+  border: 1px solid var(--gold);
+  color: var(--gold) !important;
+  -webkit-text-fill-color: var(--gold) !important;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 800;
+  text-decoration: none;
+}
+body .pf-copy-btn { color: var(--text-muted) !important; background: none; border: none; cursor: pointer; }
+body .pf-notif-icon { position: relative; color: var(--text-main) !important; }
+body .pf-notif-dot { background: var(--red); }
+
+body .pf-header-balance-label { font-size: 11.5px; color: var(--text-muted) !important; -webkit-text-fill-color: var(--text-muted) !important; }
+body .pf-header-balance-value {
+  font-size: 27px; font-weight: 800; line-height: 1.1;
+  color: #fff !important; -webkit-text-fill-color: #fff !important;
+}
+body .pf-wallet-updated { font-size: 10.5px; color: var(--text-muted) !important; -webkit-text-fill-color: var(--text-muted) !important; }
+body .pf-icon-btn {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--bg-surface-elevated); border: 1px solid var(--border-glass);
+  color: var(--text-main) !important; cursor: pointer;
+}
+
+body .pf-quick-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+body .pf-quick-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 11px 6px; border-radius: 10px;
+  font-size: 12.5px; font-weight: 700; text-decoration: none;
+  border: 1px solid var(--border-glass); background: var(--bg-surface-elevated);
+  color: var(--text-main) !important; -webkit-text-fill-color: var(--text-main) !important;
+}
+body .pf-quick-btn.deposit {
+  background: var(--secondary) !important; border-color: var(--secondary) !important;
+  color: #fff !important; -webkit-text-fill-color: #fff !important;
+}
+body .pf-quick-btn.withdraw {
+  background: var(--red) !important; border-color: var(--red) !important;
+  color: #fff !important; -webkit-text-fill-color: #fff !important;
+}
+
+/* ইউজার প্রোফাইল URL সারি */
+body .pf-url-row {
+  display: flex; align-items: center; gap: 8px;
+  margin: 12px 0 4px; padding: 9px 10px;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-glass);
+  border-radius: 10px;
+}
+body .pf-url-icon { color: var(--secondary) !important; font-size: 12px; flex: 0 0 auto; }
+body .pf-url-text {
+  flex: 1; min-width: 0;
+  font-size: 11.5px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--text-muted) !important; -webkit-text-fill-color: var(--text-muted) !important;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+body .pf-url-btn {
+  flex: 0 0 auto; width: 28px; height: 28px; border-radius: 8px;
+  background: rgba(0, 143, 90, .14); border: 1px solid var(--secondary);
+  color: var(--secondary) !important; -webkit-text-fill-color: var(--secondary) !important;
+  font-size: 11px; cursor: pointer;
+}
+body .pf-url-btn.is-share {
+  background: var(--secondary); border-color: var(--secondary);
+  color: #fff !important; -webkit-text-fill-color: #fff !important;
+}
+
+body .pf-completion-track { background: var(--bg-surface-elevated); border-radius: 999px; height: 6px; }
+body .pf-completion-fill { background: var(--grad-primary); border-radius: 999px; height: 100%; }
+
+/* মেম্বার সেন্টার — রেফারেন্সের মতো সারি-তালিকা (chevron সহ) */
+body .mc-grid-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glass);
+  border-radius: 16px;
+}
+body .mc-section-label {
+  font-size: 11px; font-weight: 700; letter-spacing: .3px;
+  color: var(--text-muted) !important; -webkit-text-fill-color: var(--text-muted) !important;
+}
+body .mc-flat-grid { display: flex; flex-direction: column; gap: 0; }
+body .mc-tile {
+  position: relative;
+  display: flex; align-items: center; gap: 12px;
+  flex-direction: row; text-align: left;
+  padding: 13px 10px; border-radius: 0;
+  border: none; border-bottom: 1px solid var(--border-glass);
+  background: transparent; text-decoration: none;
+}
+body .mc-flat-grid .mc-tile:last-child { border-bottom: none; }
+body .mc-tile::after {
+  content: "\f054"; font-family: "Font Awesome 6 Free"; font-weight: 900;
+  margin-left: auto; font-size: 11px;
+  color: var(--text-muted); opacity: .7;
+}
+body .mc-tile-icon {
+  width: 30px; height: 30px; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 8px; font-size: 13px;
+}
+body .mc-tile-label { font-size: 13px; font-weight: 600; color: var(--text-main) !important; -webkit-text-fill-color: var(--text-main) !important; }
+body .mc-tile-badge {
+  position: static; margin-left: 6px;
+  background: var(--red); color: #fff !important; -webkit-text-fill-color: #fff !important;
+  border-radius: 999px; padding: 1px 7px; font-size: 10px; font-weight: 800;
+}
+body .pf-verify-banner {
+  background: rgba(214, 40, 40, .10);
+  border: 1px solid rgba(214, 40, 40, .35);
+  border-radius: 12px;
+}
+body .pf-verify-btn {
+  background: var(--red); color: #fff !important; -webkit-text-fill-color: #fff !important;
+  border: none; border-radius: 8px; padding: 6px 12px; font-size: 11.5px; font-weight: 700; cursor: pointer;
+}
+
+/* ==========================================================================
+   24. FOOTER (স্পেক ১৪)
+   ========================================================================== */
+body footer, body .site-footer, body .footer {
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-glass);
+}
+body .footer-18plus, body .age-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 2px solid var(--red);
+  color: var(--red-text) !important; -webkit-text-fill-color: var(--red-text) !important;
+  font-size: 12px; font-weight: 800;
+}
+body .footer-cert-card, body .footer-license {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-glass);
+  border-radius: 10px;
+}
+
+/* ---------- Header balance pill (রেফারেন্স হেডার) ------------------------- */
+body .nav-balance-currency { font-size: 13px; font-weight: 800; opacity: .95; }
+body .nav-balance-add {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(255, 255, 255, .20);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff !important; -webkit-text-fill-color: #fff !important;
+  font-size: 10px; text-decoration: none; flex: 0 0 auto;
+}
+body .navbar .nav-refresh-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: transparent; border: none;
+  color: var(--text-main) !important; font-size: 15px; cursor: pointer;
+}
+body .nav-refresh-btn.spinning i { animation: livoSpin .7s linear infinite; }

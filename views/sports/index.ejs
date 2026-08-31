@@ -1,74 +1,275 @@
-<!DOCTYPE html>
-<html lang="bn">
-<head>
-  <%- include('../partials/head') %>
-  <title>Sports Hub | <%= siteName %></title>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-zinc-950 text-white min-h-screen pb-20">
+<%- include('../partials/head') %>
 
-  <%- include('../partials/navbar') %>
+<!-- ==========================================================================
+     Sports Hub — রেফারেন্স স্ক্রিনশট (স্ক্রিন ৩) অনুযায়ী।
+     ডেটা আসে বিদ্যমান /matches/api/live এন্ডপয়েন্ট থেকে — কোনো বানানো ম্যাচ,
+     স্কোর বা odds দেখানো হয় না। matches টেবিলে odds কলাম নেই, তাই odds সারি
+     শুধু তখনই রেন্ডার হয় যখন API সত্যিই odds পাঠায়; নইলে "বিস্তারিত" লিংক।
+     ========================================================================== -->
+<style>
+  .sp-topbar {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center; gap: 10px;
+    height: 52px; padding: 0 12px;
+    background: var(--bg-dark); border-bottom: 1px solid var(--border-glass);
+  }
+  .sp-topbar__back, .sp-topbar__act {
+    width: 34px; height: 34px; flex: 0 0 auto;
+    display: flex; align-items: center; justify-content: center;
+    background: none; border: none; cursor: pointer;
+    color: var(--text-main); font-size: 17px; text-decoration: none;
+  }
+  .sp-topbar__title {
+    flex: 1; text-align: center; font-size: 16px; font-weight: 700;
+    color: var(--text-main); margin: 0;
+  }
 
-  <!-- Top Bar -->
-  <div class="bg-yellow-500 p-4 flex items-center justify-between sticky top-0 z-50">
-    <div class="bg-black text-yellow-500 px-5 py-2 rounded font-bold flex items-center gap-2">
-      💰 <%= t.bets %>
-    </div>
-    <div class="text-sm font-medium">
-      Main 🪙 <%= locals.user ? user.total_points : '0.00' %><br>
-      <span class="text-xs"><%= t.exposure %> 0.00</span>
-    </div>
-    <div class="flex gap-3">
-      <button class="p-3 bg-zinc-900 rounded-xl" onclick="location.reload()">🔄</button>
-      <button class="p-3 bg-zinc-900 rounded-xl">⚙️</button>
-    </div>
-  </div>
+  .sp-tabs {
+    display: flex; gap: 8px; overflow-x: auto;
+    padding: 10px 12px; scrollbar-width: none;
+    border-bottom: 1px solid var(--border-glass);
+  }
+  .sp-tabs::-webkit-scrollbar { display: none; }
+  .sp-tab {
+    flex: 0 0 auto; padding: 7px 15px; border-radius: 999px;
+    background: var(--bg-surface); border: 1px solid var(--border-glass);
+    color: var(--text-muted); font-size: 12.5px; font-weight: 600;
+    text-decoration: none; white-space: nowrap; cursor: pointer;
+  }
+  .sp-tab.active {
+    background: var(--red); border-color: var(--red);
+    color: #fff !important; -webkit-text-fill-color: #fff !important;
+  }
 
-  <div class="p-4">
-    <h1 class="text-3xl font-bold mb-6 text-yellow-400"><%= t.sports_hub %></h1>
+  .sp-section-head { display: flex; align-items: center; gap: 10px; padding: 14px 12px 8px; }
+  .sp-live-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    color: var(--red-text) !important; -webkit-text-fill-color: var(--red-text) !important;
+    font-size: 12px; font-weight: 800; letter-spacing: .6px;
+  }
+  .sp-live-chip::before {
+    content: ''; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--red); animation: livedot 1.4s ease-in-out infinite;
+  }
+  @keyframes livedot { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .3; transform: scale(1.4); } }
+  .sp-section-title { font-size: 13px; font-weight: 700; color: var(--text-main); margin: 0; }
+  .sp-section-head .sp-divider { width: 1px; height: 13px; background: var(--border-glass); }
 
-    <!-- Sports Tabs -->
-    <div class="flex gap-2 mb-6 border-b border-gray-700">
-      <a href="/sports/cricket" class="px-6 py-3 border-b-4 border-yellow-400 font-bold">🏏 <%= t.cricket %></a>
-      <a href="/sports/football" class="px-6 py-3 text-gray-400 hover:text-white">⚽ <%= t.football %></a>
-      <a href="/sports/tennis" class="px-6 py-3 text-gray-400 hover:text-white">🎾 <%= t.tennis %></a>
-    </div>
+  .sp-list { display: flex; flex-direction: column; gap: 10px; padding: 0 12px 8px; }
 
-    <!-- Live Matches -->
-    <div class="mb-8">
-      <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
-        <span class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
-        <%= t.live_matches %>
-      </h2>
-      <a href="/matches" class="block bg-zinc-900 p-4 rounded-2xl mb-4">
-        <div class="flex justify-between">
-          <div>
-            <div class="text-emerald-400 text-sm"><%= t.in_play %></div>
-            <div class="font-semibold">Sri Lanka Emerging vs West Indies</div>
-          </div>
-          <div class="text-right">
-            <div class="text-yellow-400 font-bold">360/10</div>
-            <div class="text-gray-400">122/4</div>
-          </div>
-        </div>
-      </a>
-    </div>
+  .sp-match {
+    display: block; text-decoration: none;
+    background: var(--bg-surface); border: 1px solid var(--border-glass);
+    border-radius: 12px; overflow: hidden;
+  }
+  .sp-match__head { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px 8px; }
+  .sp-match__league { font-size: 11.5px; font-weight: 700; color: var(--text-main); }
+  .sp-match__state { font-size: 11px; font-weight: 800; color: var(--red-text) !important; -webkit-text-fill-color: var(--red-text) !important; }
+  .sp-match__state.is-upcoming { color: var(--text-muted) !important; -webkit-text-fill-color: var(--text-muted) !important; font-weight: 600; }
 
-    <!-- All Sports -->
-    <div class="grid grid-cols-2 gap-4">
-      <div class="bg-zinc-900 p-5 rounded-3xl" onclick="location.href='/matches/cricket'">
-        <div class="text-5xl mb-3">🏏</div>
-        <h3 class="font-bold text-lg"><%= t.cricket %></h3>
-        <p class="text-gray-400 text-sm">LIVE</p>
-      </div>
-      <div class="bg-zinc-900 p-5 rounded-3xl" onclick="location.href='/matches/football'">
-        <div class="text-5xl mb-3">⚽</div>
-        <h3 class="font-bold text-lg"><%= t.football %></h3>
-        <p class="text-gray-400 text-sm"><%= t.coming_soon %></p>
-      </div>
-    </div>
-  </div>
+  .sp-match__teams { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; padding: 0 12px 10px; }
+  .sp-team { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .sp-team.away { justify-content: flex-end; }
+  .sp-team__name { font-size: 12.5px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sp-score { font-size: 15px; font-weight: 800; color: var(--text-main); white-space: nowrap; padding: 0 6px; }
+  .sp-score.is-time { font-size: 11.5px; font-weight: 600; color: var(--text-muted) !important; -webkit-text-fill-color: var(--text-muted) !important; }
 
-  <%- include('../partials/footer') %>
-</body>
-</html>
+  .sp-odds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 0 10px 10px; }
+  .sp-odd {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 10px; border-radius: 8px;
+    background: var(--bg-surface-elevated); border: 1px solid var(--border-glass);
+    font-size: 12px; font-weight: 700; color: var(--text-main);
+  }
+  .sp-odd span:first-child { color: var(--text-muted) !important; -webkit-text-fill-color: var(--text-muted) !important; font-weight: 600; }
+
+  .sp-cta {
+    display: block; margin: 0 10px 10px; padding: 9px;
+    text-align: center; border-radius: 8px;
+    background: rgba(0, 143, 90, .14); border: 1px solid var(--secondary);
+    color: var(--secondary) !important; -webkit-text-fill-color: var(--secondary) !important;
+    font-size: 12px; font-weight: 700; text-decoration: none;
+  }
+
+  .sp-empty { padding: 28px 16px; text-align: center; color: var(--text-muted) !important; -webkit-text-fill-color: var(--text-muted) !important; font-size: 12.5px; }
+  .sp-skeleton { height: 92px; border-radius: 12px; background: var(--bg-surface); opacity: .55; }
+
+  .sp-cats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 8px 12px 24px; }
+  .sp-cat {
+    display: flex; align-items: center; gap: 10px; text-decoration: none;
+    background: var(--bg-surface); border: 1px solid var(--border-glass);
+    border-radius: 12px; padding: 14px 12px;
+  }
+  .sp-cat img { width: 34px; height: 34px; }
+  .sp-cat b { display: block; font-size: 13px; color: var(--text-main); }
+  .sp-cat small { font-size: 10.5px; color: var(--text-muted) !important; -webkit-text-fill-color: var(--text-muted) !important; }
+</style>
+
+<div class="sp-topbar">
+  <a href="/" class="sp-topbar__back" aria-label="<%= t.nav_home %>"><i class="fas fa-arrow-left"></i></a>
+  <h1 class="sp-topbar__title"><%= t.nav_sports %></h1>
+  <button type="button" class="sp-topbar__act" id="spFilterBtn" aria-label="<%= t.all %>"><i class="fas fa-filter"></i></button>
+  <a href="/matches" class="sp-topbar__act" aria-label="<%= t.view_all %>"><i class="fas fa-search"></i></a>
+</div>
+
+<div class="sp-tabs" id="spTabs" role="tablist">
+  <button type="button" class="sp-tab active" data-filter="all"><%= t.all %></button>
+  <button type="button" class="sp-tab" data-filter="live"><%= t.cat_live %></button>
+  <button type="button" class="sp-tab" data-filter="football"><%= t.cat_football %></button>
+  <button type="button" class="sp-tab" data-filter="cricket"><%= t.cat_cricket %></button>
+</div>
+
+<div class="sp-section-head">
+  <span class="sp-live-chip">LIVE</span>
+  <span class="sp-divider"></span>
+  <h2 class="sp-section-title"><%= t.live_matches %></h2>
+</div>
+<div class="sp-list" id="spLive">
+  <div class="sp-skeleton"></div>
+  <div class="sp-skeleton"></div>
+</div>
+
+<div class="sp-section-head">
+  <h2 class="sp-section-title"><%= t.matches_upcoming_title %></h2>
+</div>
+<div class="sp-list" id="spUpcoming">
+  <div class="sp-skeleton"></div>
+</div>
+
+<div class="sp-cats">
+  <a href="/matches/football" class="sp-cat">
+    <img src="/images/sports/football.svg" alt="" aria-hidden="true" loading="lazy" width="96" height="96">
+    <span><b><%= t.cat_football %></b><small><%= t.live_matches %></small></span>
+  </a>
+  <a href="/matches/cricket" class="sp-cat">
+    <img src="/images/sports/cricket.svg" alt="" aria-hidden="true" loading="lazy" width="96" height="96">
+    <span><b><%= t.cat_cricket %></b><small><%= t.live_matches %></small></span>
+  </a>
+  <a href="/tournaments" class="sp-cat">
+    <img src="/images/sports/tournament.svg" alt="" aria-hidden="true" loading="lazy" width="96" height="96">
+    <span><b><%= t.cat_tournaments %></b><small><%= t.cat_leaderboard %></small></span>
+  </a>
+  <a href="/matches" class="sp-cat">
+    <img src="/images/sports/live.svg" alt="" aria-hidden="true" loading="lazy" width="96" height="96">
+    <span><b><%= t.cat_live_matches %></b><small><%= t.all %></small></span>
+  </a>
+</div>
+
+<script>
+(function () {
+  var LIVE = document.getElementById('spLive');
+  var UP = document.getElementById('spUpcoming');
+  var TABS = document.getElementById('spTabs');
+  var filter = <%- jsonScriptSafe(['football','cricket'].includes(locals.currentPage) ? locals.currentPage : 'all') %>;
+  var data = { cricket: [], football: [] };
+  var T = {
+    empty: <%- jsonScriptSafe(t.no_matches_found) %>,
+    view: <%- jsonScriptSafe(t.view_all) %>
+  };
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function timeLabel(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    try {
+      return d.toLocaleString(document.documentElement.lang === 'en' ? 'en-GB' : 'bn-BD',
+        { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    } catch (e) { return d.toISOString().slice(0, 16).replace('T', ' '); }
+  }
+
+  function oddsRow(m) {
+    var o = m.odds;
+    if (!o || o.home == null || o.away == null) {
+      return '<span class="sp-cta">' + esc(T.view) + '</span>';
+    }
+    var cells = [['1', o.home], ['X', o.draw], ['2', o.away]]
+      .filter(function (c) { return c[1] != null; })
+      .map(function (c) { return '<div class="sp-odd"><span>' + c[0] + '</span><span>' + esc(c[1]) + '</span></div>'; });
+    return '<div class="sp-odds">' + cells.join('') + '</div>';
+  }
+
+  function card(m) {
+    var isLive = m.status === 'live';
+    var score = (isLive || m.homeScore != null)
+      ? '<div class="sp-score">' + esc(m.homeScore == null ? '-' : m.homeScore) + ' - ' + esc(m.awayScore == null ? '-' : m.awayScore) + '</div>'
+      : '<div class="sp-score is-time">' + esc(timeLabel(m.date)) + '</div>';
+    return '<a class="sp-match" href="/matches/' + esc(m.id) + '">' +
+      '<div class="sp-match__head">' +
+        '<span class="sp-match__league">' + esc(m.league || m.name || '') + '</span>' +
+        '<span class="sp-match__state' + (isLive ? '' : ' is-upcoming') + '">' +
+          (isLive ? 'LIVE' + (m.overs ? ' ' + esc(m.overs) : '') : esc(timeLabel(m.date))) +
+        '</span>' +
+      '</div>' +
+      '<div class="sp-match__teams">' +
+        '<span class="sp-team"><span class="team-crest" data-team="' + esc(m.homeTeam) + '" data-size="22"></span>' +
+          '<span class="sp-team__name">' + esc(m.homeTeam) + '</span></span>' +
+        score +
+        '<span class="sp-team away"><span class="sp-team__name">' + esc(m.awayTeam) + '</span>' +
+          '<span class="team-crest" data-team="' + esc(m.awayTeam) + '" data-size="22"></span></span>' +
+      '</div>' +
+      oddsRow(m) +
+    '</a>';
+  }
+
+  function pick() {
+    var all;
+    if (filter === 'football') all = data.football;
+    else if (filter === 'cricket') all = data.cricket;
+    else all = data.football.concat(data.cricket);
+    if (filter === 'live') all = all.filter(function (m) { return m.status === 'live'; });
+    return all;
+  }
+
+  function paint() {
+    var all = pick();
+    var live = all.filter(function (m) { return m.status === 'live'; });
+    var up = all.filter(function (m) { return m.status !== 'live'; }).slice(0, 12);
+    LIVE.innerHTML = live.length ? live.map(card).join('') : '<div class="sp-empty">' + esc(T.empty) + '</div>';
+    UP.innerHTML = up.length ? up.map(card).join('') : '<div class="sp-empty">' + esc(T.empty) + '</div>';
+    if (window.LivoCrest) window.LivoCrest.render();
+  }
+
+  TABS.addEventListener('click', function (e) {
+    var btn = e.target.closest('.sp-tab');
+    if (!btn) return;
+    TABS.querySelectorAll('.sp-tab').forEach(function (b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    filter = btn.getAttribute('data-filter');
+    paint();
+  });
+
+  document.getElementById('spFilterBtn').addEventListener('click', function () {
+    TABS.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  function load() {
+    fetch('/matches/api/live', { headers: { Accept: 'application/json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        data.cricket = (d && d.cricket) || [];
+        data.football = (d && d.football) || [];
+        paint();
+      })
+      .catch(function () { paint(); });
+  }
+
+  var pre = TABS.querySelector('.sp-tab[data-filter="' + filter + '"]');
+  if (pre) {
+    TABS.querySelectorAll('.sp-tab').forEach(function (b) { b.classList.remove('active'); });
+    pre.classList.add('active');
+  }
+
+  load();
+  setInterval(load, 30000);
+})();
+</script>
+
+<%- include('../partials/footer') %>
+<%- include('../partials/bottom-nav') %>
+</body></html>

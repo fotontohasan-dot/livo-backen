@@ -62,13 +62,15 @@
 
     <% if(locals.user) { %>
       <!-- User Elements -->
+      <!-- ব্যালেন্স পিল — রেফারেন্স: ৳ <amount> + (ডিপোজিট শর্টকাট), রিফ্রেশ আলাদা আইকন -->
       <div class="nav-balance-box">
-        <span style="font-size: 0.9rem;">💰</span>
-        <span class="js-balance"><%= user.coins %></span>
-        <button onclick="refreshBalance()" class="nav-refresh-btn" id="refreshBtn">
-          <i class="fas fa-sync-alt"></i>
-        </button>
+        <span class="nav-balance-currency">৳</span>
+        <span class="js-balance"><%= Number(user.coins).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span>
+        <a href="/payment/deposit" class="nav-balance-add" aria-label="<%= t.deposit %>"><i class="fas fa-plus"></i></a>
       </div>
+      <button onclick="refreshBalance()" class="nav-refresh-btn" id="refreshBtn" aria-label="<%= t.refresh %>">
+        <i class="fas fa-sync-alt"></i>
+      </button>
 
       <div style="display:flex; gap: 4px;">
         <a href="/notifications" class="nav-icon-link">
@@ -163,8 +165,12 @@ function refreshBalance() {
     .then(function (r) { return r.json(); })
     .then(function (d) {
       if (d && d.success && d.coins != null) {
+        // হেডারে সার্ভার-রেন্ডার করা ফরম্যাটের সাথে মিল রাখতে locale ফরম্যাটিং
+        var locale = document.documentElement.lang === 'en' ? 'en-US' : 'bn-BD';
+        var shown;
+        try { shown = Number(d.coins).toLocaleString(locale); } catch (e) { shown = String(d.coins); }
         document.querySelectorAll('.js-balance').forEach(function (el) {
-          el.textContent = d.coins;
+          el.textContent = shown;
         });
       }
     })
