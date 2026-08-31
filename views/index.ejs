@@ -349,9 +349,8 @@ body.light-mode .promo-banner {
       </a>
     </div>
   </div>
-  <div style="position: absolute; right: 12px; bottom: 8px; font-size: 80px; opacity: 0.12; pointer-events: none; color: var(--text-main);">
-    🎰
-  </div>
+  <img class="promo-banner-art" src="/images/hero/welcome-bonus.svg"
+       alt="" aria-hidden="true" loading="eager" decoding="async" width="420" height="260">
 </div>
 
 <!-- ===== Deposit, Withdrawal, Reward, Rebate Highlighted Shortcuts ===== -->
@@ -416,12 +415,12 @@ body.light-mode .promo-banner {
   }
 </style>
 <nav class="main-cat-nav" aria-label="<%= t.main_categories %>">
-  <a href="/sports" class="main-cat-item is-primary"><i class="fas fa-futbol"></i><span><%= t.cat_sports %></span></a>
-  <a href="/matches/football" class="main-cat-item"><i class="fas fa-futbol"></i><span><%= t.cat_football %></span></a>
-  <a href="/matches/cricket" class="main-cat-item"><i class="fas fa-baseball"></i><span><%= t.cat_cricket %></span></a>
-  <a href="/matches" class="main-cat-item"><i class="fas fa-tower-broadcast"></i><span><%= t.cat_live_matches %></span></a>
+  <a href="/sports" class="main-cat-item is-primary"><img class="main-cat-art" src="/images/sports/football.svg" alt="" aria-hidden="true" loading="lazy" width="96" height="96"><span><%= t.cat_sports %></span></a>
+  <a href="/matches/football" class="main-cat-item"><img class="main-cat-art" src="/images/sports/football.svg" alt="" aria-hidden="true" loading="lazy" width="96" height="96"><span><%= t.cat_football %></span></a>
+  <a href="/matches/cricket" class="main-cat-item"><img class="main-cat-art" src="/images/sports/cricket.svg" alt="" aria-hidden="true" loading="lazy" width="96" height="96"><span><%= t.cat_cricket %></span></a>
+  <a href="/matches" class="main-cat-item"><img class="main-cat-art" src="/images/sports/live.svg" alt="" aria-hidden="true" loading="lazy" width="96" height="96"><span><%= t.cat_live_matches %></span></a>
   <a href="#mainGridWrap" class="main-cat-item"><i class="fas fa-dice"></i><span><%= t.cat_casino %></span></a>
-  <a href="/tournaments" class="main-cat-item"><i class="fas fa-trophy"></i><span><%= t.cat_tournaments %></span></a>
+  <a href="/tournaments" class="main-cat-item"><img class="main-cat-art" src="/images/sports/tournament.svg" alt="" aria-hidden="true" loading="lazy" width="96" height="96"><span><%= t.cat_tournaments %></span></a>
   <a href="/leaderboard" class="main-cat-item"><i class="fas fa-ranking-star"></i><span><%= t.cat_leaderboard %></span></a>
   <a href="/promotions" class="main-cat-item"><i class="fas fa-gift"></i><span><%= t.cat_promotions %></span></a>
 </nav>
@@ -664,7 +663,7 @@ body.light-mode .promo-banner {
       <div class="jackpot-tagline"><%= t.jackpot_tagline %></div>
     </div>
     <div class="jackpot-girl">
-      <video src="/videos/jackpot-girl.mp4" poster="/images/jackpot-girl-poster.jpg" style="width:130px; border-radius:8px; display:block;" autoplay loop muted playsinline></video>
+      <video src="/videos/jackpot-girl.mp4" poster="/images/hero/mega-jackpot.svg" style="width:130px; border-radius:8px; display:block;" autoplay loop muted playsinline></video>
     </div>
   </div>
 </div>
@@ -1077,6 +1076,9 @@ function renderGames() {
     card.innerHTML = `
       <div class="game-thumb-wrapper">
         <i class="fa-star fav-star ${isFav ? 'fas active' : 'far'}" data-slug="${escHtml(g.slug)}"></i>
+        <img class="game-thumb-img" src="/images/games/${escHtml(g.slug)}.svg" alt="" aria-hidden="true"
+             loading="lazy" decoding="async" width="300" height="300"
+             onerror="this.remove()">
         <span class="game-emoji">${escHtml(g.emoji)}</span>
         ${badgeHTML}
       </div>

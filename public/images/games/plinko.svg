@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300" role="img">
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#123526"/><stop offset="1" stop-color="#07130D"/>
+  </linearGradient>
+  <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#D4A72C"/><stop offset="1" stop-color="#E9C25A"/>
+  </linearGradient>
+  <linearGradient id="gr" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#006A4E"/><stop offset="1" stop-color="#008F5A"/>
+  </linearGradient></defs>
+
+  <rect width="300" height="300" rx="18" fill="url(#bg)"/>
+  <g opacity=".30">
+    <circle cx="68" cy="153" r="118" fill="#5B2E8F" opacity=".38"/>
+    <path d="M0 198 q75 -58 150 0 t150 0 V300 H0 Z" fill="#5B2E8F" opacity=".22"/>
+  </g>
+  <g transform="rotate(-2 150 150)">
+    <circle cx="106" cy="96" r="6" fill="url(#g)" opacity=".9"/><circle cx="150" cy="96" r="6" fill="url(#g)" opacity=".9"/><circle cx="194" cy="96" r="6" fill="url(#g)" opacity=".9"/><circle cx="84" cy="136" r="6" fill="url(#g)" opacity=".9"/><circle cx="128" cy="136" r="6" fill="url(#g)" opacity=".9"/><circle cx="172" cy="136" r="6" fill="url(#g)" opacity=".9"/><circle cx="216" cy="136" r="6" fill="url(#g)" opacity=".9"/><circle cx="62" cy="176" r="6" fill="url(#g)" opacity=".9"/><circle cx="106" cy="176" r="6" fill="url(#g)" opacity=".9"/><circle cx="150" cy="176" r="6" fill="url(#g)" opacity=".9"/><circle cx="194" cy="176" r="6" fill="url(#g)" opacity=".9"/><circle cx="238" cy="176" r="6" fill="url(#g)" opacity=".9"/><circle cx="40" cy="216" r="6" fill="url(#g)" opacity=".9"/><circle cx="84" cy="216" r="6" fill="url(#g)" opacity=".9"/><circle cx="128" cy="216" r="6" fill="url(#g)" opacity=".9"/><circle cx="172" cy="216" r="6" fill="url(#g)" opacity=".9"/><circle cx="216" cy="216" r="6" fill="url(#g)" opacity=".9"/><circle cx="260" cy="216" r="6" fill="url(#g)" opacity=".9"/>
+    <circle cx="128" cy="72" r="12" fill="#D62828"/>
+    <path d="M128 84 q-16 40 6 76 q16 26 -4 58" stroke="#D62828" stroke-width="2.5" fill="none" opacity=".55" stroke-dasharray="5 5"/></g>
+  <rect x="1" y="1" width="298" height="298" rx="17" fill="none" stroke="#1E4633"/>
+</svg>

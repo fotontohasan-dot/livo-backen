@@ -399,3 +399,37 @@ body.light-mode .nav-tab-item {
 }
 body.light-mode .pub-bottom-nav { background: #FFFFFF; }
 body.light-mode .nav-balance-box { background: var(--secondary); color: #fff; }
+
+/* ---------- 22. Generated artwork ---------------------------------------- */
+body .promo-banner-art {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  height: 100%;
+  width: auto;
+  max-width: 62%;
+  object-fit: contain;
+  object-position: right bottom;
+  opacity: .95;
+  pointer-events: none;
+  z-index: 1;
+}
+@media (max-width: 359px) { body .promo-banner-art { max-width: 52%; opacity: .8; } }
+
+body .game-thumb-wrapper { position: relative; overflow: hidden; }
+body .game-thumb-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  z-index: 1;
+}
+body .game-thumb-wrapper .game-emoji { z-index: 0; }
+body .game-thumb-wrapper .fav-star,
+body .game-thumb-wrapper .game-badge-premium { z-index: 2; }
+
+body .main-cat-art { width: 26px; height: 26px; display: block; }
+body .team-crest { display: inline-flex; align-items: center; line-height: 0; flex: 0 0 auto; }
+body .team-crest svg { display: block; }
