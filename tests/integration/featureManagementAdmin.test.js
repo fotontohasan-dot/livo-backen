@@ -13,6 +13,12 @@
 const { getCsrfAgent, uniqueUsername, uniquePhone, freshRequest, REALISTIC_UA } = require('../helpers/app');
 const { pool } = require('../../db');
 const featureFlags = require('../../services/featureFlags');
+const { cleanupUsers } = require('../helpers/cleanup');
+
+// তৈরি করা অ্যাডমিন ইউজার রেখে গেলে পরে চলা অ্যাডমিন-গণনা নির্ভর suite
+// ভুল সংখ্যা দেখে ফেল করত (CI-এর একটানা ১০৮-suite রানে)।
+const createdUserIds = [];
+afterAll(async () => { await cleanupUsers(createdUserIds); });
 
 // tests/admin.test.js-এর প্রতিষ্ঠিত প্যাটার্ন: সাধারণ ইউজার হিসেবে রেজিস্টার করে
 // সেশন প্রতিষ্ঠা করা হয়, তারপর DB-তে role='admin' করা হয়। এতে অ্যাডমিন লগইনের
@@ -25,6 +31,8 @@ async function makeAdminAgent() {
     .send({ username, phone: uniquePhone(), password: 'SecurePass123',
             confirmPassword: 'SecurePass123', _csrf: token });
   await pool.query('UPDATE users SET role=$1 WHERE username=$2', ['admin', username]);
+  const r = await pool.query('SELECT id FROM users WHERE username=$1', [username]);
+  if (r.rows[0]) createdUserIds.push(r.rows[0].id);
   return { agent, token, username };
 }
 

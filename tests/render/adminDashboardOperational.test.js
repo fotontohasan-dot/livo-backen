@@ -15,6 +15,14 @@
 
 const { getCsrfAgent, uniqueUsername, uniquePhone, REALISTIC_UA } = require('../helpers/app');
 const { pool } = require('../../db');
+const { cleanupUsers } = require('../helpers/cleanup');
+
+const createdUserIds = [];
+
+// এই suite ইচ্ছাকৃতভাবে pending KYC ও পেমেন্ট সারি তৈরি করে (ড্যাশবোর্ডের
+// সংখ্যা যাচাই করতে)। সেগুলো রেখে গেলে পরে চলা গণনা-নির্ভর suite ভুল সংখ্যা
+// দেখত, তাই শেষে পরিষ্কার করা হয়।
+afterAll(async () => { await cleanupUsers(createdUserIds); });
 
 async function makeAdminAgent() {
   const { agent, token } = await getCsrfAgent('/register');
@@ -24,6 +32,7 @@ async function makeAdminAgent() {
             confirmPassword: 'SecurePass123', _csrf: token });
   const row = (await pool.query(
     "UPDATE users SET role='admin' WHERE username=$1 RETURNING id", [username])).rows[0];
+  createdUserIds.push(row.id);
   return { agent, username, userId: row.id };
 }
 
