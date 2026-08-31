@@ -51,6 +51,39 @@ async function logAdminAction(adminId, adminUsername, actionType, details, ip = 
  * @param {'low'|'medium'|'high'|'critical'} [opts.riskLevel='low']
  * @param {Object} [opts.details={}] - অতিরিক্ত প্রসঙ্গ (JSON)
  */
+// ==================== PHASE 14: details redaction ====================
+// audit_logs স্থায়ী রেকর্ড, তাই এতে কখনো password, TOTP secret, session cookie,
+// API/bot token বা payment secret যাওয়া চলবে না। বর্তমান caller গুলো সতর্ক,
+// কিন্তু কোনো নতুন caller ভুল করে req.body পাঠিয়ে দিলে সেই গোপন তথ্য চিরকাল
+// সংরক্ষিত থেকে যাবে। তাই লেখার ঠিক আগে একটি redaction পাস।
+const SENSITIVE_KEY_RE = /(pass(word|wd)?|secret|token|otp|totp|cookie|authorization|api[_-]?key|private[_-]?key|cvv|pin|backup[_-]?code)/i;
+
+// token-সদৃশ দীর্ঘ মান (bot token, JWT, PAT) মান দেখেও ধরা হয়
+const TOKEN_VALUE_RE = /(\b\d{8,10}:AA[A-Za-z0-9_-]{30,}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.|gh[pousr]_[A-Za-z0-9]{30,}|sk-[A-Za-z0-9-]{20,})/;
+
+const REDACTED = '[REDACTED]';
+const MAX_REDACT_DEPTH = 6;
+
+function redactDetails(value, depth = 0) {
+  if (depth > MAX_REDACT_DEPTH) return REDACTED;
+  if (value === null || value === undefined) return value;
+
+  if (typeof value === 'string') {
+    return TOKEN_VALUE_RE.test(value) ? REDACTED : value;
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') return value;
+  if (Array.isArray(value)) return value.map((v) => redactDetails(v, depth + 1));
+
+  if (typeof value === 'object') {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) {
+      out[k] = SENSITIVE_KEY_RE.test(k) ? REDACTED : redactDetails(v, depth + 1);
+    }
+    return out;
+  }
+  return REDACTED; // function/symbol কখনো সংরক্ষণ করা হয় না
+}
+
 async function logEvent(opts) {
   try {
     const {
@@ -89,7 +122,7 @@ async function logEvent(opts) {
         (actor_type, actor_id, actor_username, action, category, status, risk_level, details, ip_address, device_name, browser, os, location, request_id)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
        RETURNING id`,
-      [actorType, actorId, actorUsername, action, safeCategory, safeStatus, safeRisk, JSON.stringify(details || {}), ip, deviceName, browser, os, location, requestId]
+      [actorType, actorId, actorUsername, action, safeCategory, safeStatus, safeRisk, JSON.stringify(redactDetails(details || {})), ip, deviceName, browser, os, location, requestId]
     );
     return result.rows[0]?.id || null;
   } catch (err) {
@@ -162,6 +195,7 @@ async function getRiskCounts() {
 
 module.exports = {
   logEvent,
+  redactDetails,
   logAdminAction,
   listAuditLogs,
   getAuditLogById,

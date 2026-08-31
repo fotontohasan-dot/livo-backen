@@ -1,9 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const { isAdmin } = require('../middleware/auth');
+const rbac = require('../services/rbac');
+
+// PHASE 4 fix: এই route গুলো infrastructure diagnostics (DB/Redis/queue/email/
+// disk/memory) প্রকাশ করে। আগে শুধু isAdmin ছিল, ফলে সীমিত permission-এর
+// admin-ও পুরো system state দেখতে পেত। super_admin অপরিবর্তিতভাবে access পায়।
 
 // এই রুট app.js-এ admin.js-এর আগে মাউন্ট হয় — পুরনো duplicate/broken হ্যান্ডলার এড়ানো যায়
-router.get('/system-diagnostics', isAdmin, async (req, res) => {
+router.get('/system-diagnostics', isAdmin, rbac.requirePermission('system_diagnostics_view'), async (req, res) => {
   try {
     const healthCheck = require('../services/healthCheck');
     const result = await healthCheck.runAllChecks();
@@ -27,7 +32,7 @@ router.get('/system-diagnostics', isAdmin, async (req, res) => {
   }
 });
 
-router.get('/api/system-diagnostics', isAdmin, async (req, res) => {
+router.get('/api/system-diagnostics', isAdmin, rbac.requirePermission('system_diagnostics_view'), async (req, res) => {
   try {
     const healthCheck = require('../services/healthCheck');
     const result = await healthCheck.runAllChecks();

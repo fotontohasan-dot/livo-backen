@@ -22,13 +22,30 @@ const isAuth = (req, res, next) => {
 // (স্টেল) সেশন দিয়েও অ্যাক্সেস করা যেত। এখন প্রতিটা রিকোয়েস্টে DB থেকে বর্তমান role
 // যাচাই করা হয় (middleware/auth.js-এর isAdmin-এর একই প্যাটার্ন), এই রাউটারের সব
 // admin এন্ডপয়েন্ট AJAX/JSON হওয়ায় আগের মতোই JSON 403 রেসপন্স রাখা হয়েছে।
+const rbac = require('../services/rbac');
+
+// MEDIUM-6: chat admin route গুলো প্রতিটি user-এর private conversation প্রকাশ
+// করে, তাই এগুলো support_view permission-এর অধীনে আনা হয়েছে।
+// super_admin অপরিবর্তিতভাবে access পায়।
+const requireSupportView = rbac.requirePermission('support_view');
+
 const isAdmin = async (req, res, next) => {
   if (!req.session || !req.session.user) {
     return res.status(403).send('Access denied');
   }
   try {
-    const result = await pool.query('SELECT role FROM users WHERE id = $1', [req.session.user.id]);
-    const currentRole = result.rows[0] && result.rows[0].role;
+    const result = await pool.query(
+      'SELECT role, is_banned, deleted_at FROM users WHERE id = $1', [req.session.user.id]
+    );
+    const row = result.rows[0];
+    const currentRole = row && row.role;
+    // HIGH-2 fix: এই local isAdmin, middleware/auth.js-এর কপি হলেও ban/deleted
+    // state যাচাই করত না — ফলে ban করা admin-ও প্রতিটি user-এর ব্যক্তিগত chat
+    // history পড়তে পারত।
+    if (row && (row.is_banned || row.deleted_at)) {
+      req.session.destroy(() => {});
+      return res.status(403).send('Access denied');
+    }
     if (currentRole !== 'admin') {
       req.session.destroy(() => {});
       return res.status(403).send('Access denied');
@@ -121,7 +138,7 @@ router.get('/', isAuth, requireFeature('live_chat'), (req, res) => {
   res.render('profile/chat', { user: req.session.user });
 });
 
-router.get('/admin', isAdmin, (req, res) => {
+router.get('/admin', isAdmin, requireSupportView, (req, res) => {
   res.render('admin/chat', { user: req.session.user });
 });
 
@@ -183,7 +200,7 @@ router.get('/history', isAuth, requireFeature('live_chat'), async (req, res) => 
   }
 });
 
-router.get('/admin/conversations', isAdmin, async (req, res) => {
+router.get('/admin/conversations', isAdmin, requireSupportView, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT u.id, u.username,
@@ -215,9 +232,21 @@ router.get('/admin/conversations', isAdmin, async (req, res) => {
   }
 });
 
-router.get('/admin/history/:userId', isAdmin, async (req, res) => {
+router.get('/admin/history/:userId', isAdmin, requireSupportView, async (req, res) => {
   try {
     // উপরের /history-এর মতোই বাউন্ড
+    // :userId অবশ্যই positive integer হতে হবে
+    // :userId অবশ্যই পুরোপুরি একটি positive integer হতে হবে।
+    // parseInt() একা যথেষ্ট নয় — সেটি '1;DROP'-কে 1 বানিয়ে ফেলে, অর্থাৎ
+    // আবর্জনাযুক্ত input চুপচাপ গ্রহণ করা হত। তাই আগে strict regex।
+    const rawUserId = String(req.params.userId || '');
+    if (!/^[0-9]+$/.test(rawUserId)) {
+      return res.status(400).json({ error: 'invalid user id' });
+    }
+    const targetUserId = parseInt(rawUserId, 10);
+    if (!Number.isSafeInteger(targetUserId) || targetUserId <= 0) {
+      return res.status(400).json({ error: 'invalid user id' });
+    }
     const result = await pool.query(
       `SELECT * FROM (
          SELECT * FROM chat_messages
@@ -225,13 +254,13 @@ router.get('/admin/history/:userId', isAdmin, async (req, res) => {
           ORDER BY created_at DESC
           LIMIT $2
        ) t ORDER BY created_at ASC`,
-      [req.params.userId, MAX_HISTORY_MESSAGES]
+      [targetUserId, MAX_HISTORY_MESSAGES]
     );
     const upd = await pool.query(
       `UPDATE chat_messages SET is_read = true WHERE sender_id = $1 AND is_admin = false AND is_read = false`,
-      [req.params.userId]
+      [targetUserId]
     );
-    if (upd.rowCount > 0) notifyUserSeen(req.params.userId);
+    if (upd.rowCount > 0) notifyUserSeen(targetUserId);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: req.t('common_server_error_short') });

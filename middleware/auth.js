@@ -97,8 +97,16 @@ const isAdmin = async (req, res, next) => {
   if (!req.session || !req.session.user) return denyResponse();
 
   try {
-    const result = await pool.query('SELECT role FROM users WHERE id = $1', [req.session.user.id]);
-    const currentRole = result.rows[0] && result.rows[0].role;
+    const result = await pool.query('SELECT role, is_banned, deleted_at FROM users WHERE id = $1', [req.session.user.id]);
+    const row = result.rows[0];
+    const currentRole = row && row.role;
+
+    // HIGH-1: role ছাড়াও ban/deleted state প্রতিটি privileged request-এ যাচাই করতে হবে,
+    // নাহলে ban করা admin-এর existing session দিয়ে /admin/* ব্যবহার করা যায়।
+    if (row && (row.is_banned || row.deleted_at)) {
+      req.session.destroy(() => {});
+      return denyResponse();
+    }
 
     if (currentRole !== 'admin') {
       req.session.destroy(() => {});

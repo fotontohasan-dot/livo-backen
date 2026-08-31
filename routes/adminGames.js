@@ -23,6 +23,9 @@ function makeSlug(name) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80);
 }
 
+// HTML-এ অর্থবহ অক্ষর (<, >, ", ', &) কোনো game field-এ গ্রহণ করা হয় না
+const HTML_UNSAFE_RE = /[<>"'&]/;
+
 function validateGame(body, lang = 'bn') {
   const errors = [];
   const name     = (body.name     || '').trim();
@@ -38,6 +41,13 @@ function validateGame(body, lang = 'bn') {
   if (!VALID_CATEGORIES.includes(category)) errors.push(t(lang, 'admin_invalid_category_prefix') + category);
   if (!provider)                      errors.push(t(lang, 'admin_provider_required'));
   if (provider.length > 80)           errors.push(t(lang, 'admin_provider_name_too_long'));
+  // PHASE 9 (XSS, defence in depth): name/provider হোমপেজে render হয়, তাই
+  // HTML-অর্থবহ অক্ষর একেবারেই সংরক্ষণ করা হয় না। রেন্ডার-সময় escaping মূল
+  // প্রতিরক্ষা; এটি দ্বিতীয় স্তর, যাতে ভবিষ্যতের কোনো নতুন render path
+  // পুরনো তথ্য নিয়ে ঝুঁকিতে না পড়ে।
+  if (HTML_UNSAFE_RE.test(provider)) errors.push(t(lang, 'admin_provider_invalid_characters'));
+  if (HTML_UNSAFE_RE.test(name))     errors.push(t(lang, 'admin_game_name_invalid_characters'));
+  if (emoji && HTML_UNSAFE_RE.test(emoji)) errors.push(t(lang, 'admin_game_name_invalid_characters'));
   if (!VALID_BADGES.includes(badge))  errors.push(t(lang, 'admin_invalid_badge_prefix') + badge);
 
   return { errors, data: { name, slug, category, provider, emoji: emoji.slice(0,4)||'🎮', badge: badge||null } };

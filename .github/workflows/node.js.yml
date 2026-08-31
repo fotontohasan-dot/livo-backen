@@ -6,6 +6,14 @@ on:
   pull_request:
     branches: [ "main" ]
 
+# PHASE 11: আগে কোনো permissions block ছিল না, ফলে GITHUB_TOKEN repository-র
+# default permission (প্রায়ই read/write) পেত। এই workflow শুধু কোড checkout
+# করে ও artifact upload করে — কোনো লেখার প্রয়োজন নেই, তাই least privilege।
+# Artifact upload actions/upload-artifact@v4-এর নিজস্ব scope ব্যবহার করে,
+# তাই কোনো write scope লাগে না।
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -45,6 +53,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v5
+      with:
+        # secret scan-এর জন্য পূর্ণ history দরকার; shallow clone-এ history-তে
+        # থাকা credential ধরাই পড়ে না (SECURITY_INCIDENT.md দ্রষ্টব্য)
+        fetch-depth: 0
 
     - name: Use Node.js 22.x
       uses: actions/setup-node@v5
@@ -54,6 +66,13 @@ jobs:
 
     - name: Install dependencies
       run: npm ci --legacy-peer-deps
+
+    # Working tree-তে কোনো credential commit হয়ে গেলে সেটি এখানেই ধরা পড়বে।
+    # History scan ইচ্ছাকৃতভাবে এখানে নেই: history-তে থাকা পুরনো (এখন rotate
+    # করা, অর্থাৎ মৃত) credential প্রতিটি run লাল করে দিত। History পরীক্ষা
+    # করতে হলে ম্যানুয়ালি: npm run scan:secrets:history
+    - name: Scan for committed credentials
+      run: npm run scan:secrets
 
     - name: Run tests
       # continue-on-error ইচ্ছাকৃতভাবে সরানো হয়েছে: ওটা থাকলে ধাপটা ব্যর্থ হলেও

@@ -53,7 +53,19 @@ async function badgeCreditsOf(userId) {
 
 /** ব্যাজ রিওয়ার্ড বাদ দিয়ে ব্যালেন্স — গেমিং কার্যকলাপের প্রকৃত ফল। */
 async function balanceExcludingBadges(userId) {
-  return (await balanceOf(userId)) - (await badgeCreditsOf(userId));
+  // FLAKE FIX: আগে users.coins ও badge credits দুটি আলাদা query-তে পড়া হত।
+  // routes/games.js এর checkBadges() fire-and-forget, তাই response ফেরার পরেও
+  // badge credit প্রয়োগ হতে পারে। দুটি read-এর মাঝখানে সেটি ল্যান্ড করলে একটিতে
+  // ধরা পড়ে অন্যটিতে নয় (read skew) — ফলে assertion পরিবেশভেদে random fail
+  // করত (যেমন 99900-এর বদলে 99880)। এখন দুটোই একটিই snapshot query-তে পড়া হয়,
+  // assertion-এর অর্থ অপরিবর্তিত রেখে।
+  const r = await pool.query(
+    `SELECT (SELECT coins FROM users WHERE id = $1) AS coins,
+            (SELECT COALESCE(SUM(amount),0) FROM coin_transactions
+              WHERE user_id = $1 AND type='badge') AS badge`,
+    [userId]
+  );
+  return Number(r.rows[0].coins) - Number(r.rows[0].badge);
 }
 
 describe('POST /games/cashout — টাইমিং যাচাই (BUG-001)', () => {

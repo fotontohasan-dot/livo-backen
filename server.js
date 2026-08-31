@@ -118,12 +118,11 @@ async function startServer() {
     await runMigrations();
     console.log("✅ DB migration done");
 
-    try {
-      const { ensureCriticalTables } = require('./services/ensureCriticalTables');
-      await ensureCriticalTables();
-    } catch (e) {
-      console.error('ensureCriticalTables:', e.message);
-    }
+    // PHASE 2 fix: critical table verification ব্যর্থ হলে আগে শুধু log করে
+    // listen করা হত। এখন এটি fail-closed — ভাঙা schema নিয়ে payment/admin
+    // operation চালু করা হবে না।
+    const { ensureCriticalTables } = require('./services/ensureCriticalTables');
+    await ensureCriticalTables();
 
     await new Promise((resolve, reject) => {
       server.once('error', reject);
