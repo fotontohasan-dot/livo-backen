@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { isAuth } = require('../middleware/auth');
+const { requireFeature } = require('../middleware/featureGate');
 const { pool } = require('../db');
 const { createLimiter } = require('../middleware/rateLimitFactory');
 
@@ -41,7 +42,7 @@ function isSafeCloudinaryUrl(url) {
 }
 
 
-router.get('/invitation', isAuth, async (req, res) => {
+router.get('/invitation', isAuth, requireFeature('referral'), async (req, res) => {
     try {
         const userResult = await pool.query('SELECT id, referral_code FROM users WHERE id = $1', [req.session.user.id]);
         const { id, referral_code } = userResult.rows[0] || {};
@@ -54,7 +55,7 @@ router.get('/invitation', isAuth, async (req, res) => {
     }
 });
 
-router.get('/promotion', isAuth, (req, res) => {
+router.get('/promotion', isAuth, requireFeature('promotions'), (req, res) => {
     res.render('extra/promotion');
 });
 

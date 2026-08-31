@@ -12,7 +12,7 @@ function fmtDate(d) {
   return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' ' + dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
 function wRow(w, isPending) {
-  const statusColor = w.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : w.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700';
+  const statusColor = w.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : w.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700';
   const statusLabel = w.status === 'approved' ? 'Paid' : w.status === 'rejected' ? 'Rejected' : 'Pending';
   const safeUsername = escapeHtml(w.username);
   const safeMethod = escapeHtml(w.method || '-');

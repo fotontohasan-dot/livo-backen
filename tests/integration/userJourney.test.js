@@ -218,6 +218,15 @@ describe('A-Z User Journey', () => {
   });
 
   test('13. Withdraw', async () => {
+    // আগে এখানে `coins < 1000` নামে একটা ধ্রুব থ্রেশহোল্ড যাচাই করা হতো। কিন্তু
+    // এই জার্নির ৭b (লাকি হুইল স্পিন) ও ১২b (স্লট গেম) ধাপ দুটোর ফলাফল এলোমেলো —
+    // ভালো স্পিন/জিত হলে ব্যালেন্স ৫০০ কাটার পরেও ১০০০ ছাড়িয়ে যেত, ফলে টেস্টটা
+    // একই কোডে কখনো পাস কখনো ফেল করত (flaky)।
+    //
+    // আসল যাচাইয়ের বিষয় থ্রেশহোল্ড নয় — উইথড্র রিকোয়েস্টে ব্যালেন্স থেকে ঠিক
+    // ততটাই কাটা হয়েছে কিনা। তাই before/after তুলনা করা হচ্ছে, যেটা এলোমেলো
+    // ফলাফল থেকে স্বাধীন এবং আগের চেয়ে কড়া (সঠিক অঙ্কও যাচাই করে)।
+    const before = Number((await pool.query('SELECT coins FROM users WHERE id=$1', [userId])).rows[0].coins);
     const csrf = await csrfFor(agent, '/payment/withdraw');
     const res = await agent.post('/payment/withdraw').type('form').send({
       method: 'bkash', account_number: '01700000000', amount: '500', withdraw_pin: '135790', _csrf: csrf
@@ -225,8 +234,9 @@ describe('A-Z User Journey', () => {
     expect(res.status).toBe(302);
     const w = await pool.query(`SELECT * FROM payment_requests WHERE user_id=$1 AND type='withdraw' ORDER BY id DESC LIMIT 1`, [userId]);
     expect(w.rows.length).toBe(1);
-    const coinsRow = await pool.query('SELECT coins FROM users WHERE id=$1', [userId]);
-    expect(Number(coinsRow.rows[0].coins)).toBeLessThan(1000);
+    expect(Number(w.rows[0].amount)).toBe(500);
+    const after = Number((await pool.query('SELECT coins FROM users WHERE id=$1', [userId])).rows[0].coins);
+    expect(after).toBe(before - 500);
   });
 
   test('14. Support', async () => {

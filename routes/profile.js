@@ -4,6 +4,7 @@ const router = express.Router();
 const { pool } = require('../db');
 const { redirectBack } = require('../utils/redirectBack');
 const { isAuth } = require('../middleware/auth');
+const { requireFeature } = require('../middleware/featureGate');
 const bcrypt = require('bcryptjs');
 const { getTodayReward, claimDailyReward } = require('../services/dailyReward');
 const { getReferralStats } = require('../services/referral');
@@ -774,7 +775,7 @@ router.post('/responsible/self-exclude', isAuth, async (req, res) => {
 });
 
 // ==================== লাকি হুইল ====================
-router.get('/wheel', isAuth, async (req, res) => {
+router.get('/wheel', isAuth, requireFeature('lucky_wheel'), async (req, res) => {
   try {
     const segments = getSegments();
     const status = await canSpin(req.session.user.id);
@@ -796,7 +797,7 @@ const claimLimiter = createLimiter('claim', {
   }
 });
 
-router.post('/wheel/spin', isAuth, claimLimiter, async (req, res) => {
+router.post('/wheel/spin', isAuth, requireFeature('lucky_wheel'), claimLimiter, async (req, res) => {
   try {
     // spin() অপরিবর্তিত — এটাই যোগ্যতা যাচাই, ডুপ্লিকেট প্রতিরোধ, পুরস্কার নির্বাচন,
     // ওয়ালেট ক্রেডিট ও নোটিফিকেশন — সবই ট্রানজেকশনের ভেতরে করে।
@@ -817,7 +818,7 @@ router.post('/wheel/spin', isAuth, claimLimiter, async (req, res) => {
 
 // অ্যানিমেশন শেষ হওয়ার পর সার্ভার-নিশ্চিত ফলাফল। রিড-অনলি — কোনো পুরস্কার হিসাব করে না,
 // spin() যা ইতিমধ্যে wheel_spins-এ লিখেছে শুধু সেটাই ফেরত দেয়।
-router.get('/wheel/result', isAuth, async (req, res) => {
+router.get('/wheel/result', isAuth, requireFeature('lucky_wheel'), async (req, res) => {
   try {
     const result = await getWheelTodayResult(req.session.user.id, req.lang);
     if (!result) return res.json({ success: false, message: req.t('wheel_no_spin_today') });
@@ -829,7 +830,7 @@ router.get('/wheel/result', isAuth, async (req, res) => {
 });
 
 // ==================== ডেইলি মিশন ====================
-router.get('/missions', isAuth, async (req, res) => {
+router.get('/missions', isAuth, requireFeature('missions'), async (req, res) => {
   try {
     const missions = await getMissions(req.session.user.id);
     res.render('profile/missions', { user: req.session.user, missions });
@@ -839,7 +840,7 @@ router.get('/missions', isAuth, async (req, res) => {
   }
 });
 
-router.post('/missions/claim/:id', isAuth, async (req, res) => {
+router.post('/missions/claim/:id', isAuth, requireFeature('missions'), async (req, res) => {
   try {
     const result = await claimMission(req.session.user.id, parseInt(req.params.id), req.lang);
     req.flash(result.success ? 'success' : 'error', result.message);
@@ -851,7 +852,7 @@ router.post('/missions/claim/:id', isAuth, async (req, res) => {
 });
 
 // ==================== দৈনিক রিওয়ার্ড ====================
-router.get('/rewards', isAuth, async (req, res) => {
+router.get('/rewards', isAuth, requireFeature('daily_rewards'), async (req, res) => {
   try {
     const reward = await getTodayReward(req.session.user.id);
     let badgesPreview = { earned: [], earnedCount: 0, totalCount: 0 };
@@ -871,7 +872,7 @@ router.get('/rewards', isAuth, async (req, res) => {
   }
 });
 
-router.post('/rewards/claim', isAuth, async (req, res) => {
+router.post('/rewards/claim', isAuth, requireFeature('daily_rewards'), async (req, res) => {
   try {
     const result = await claimDailyReward(req.session.user.id, req.lang);
     req.flash(result.success ? 'success' : 'error', result.message);
@@ -883,7 +884,7 @@ router.post('/rewards/claim', isAuth, async (req, res) => {
 });
 
 // ==================== লাল প্যাকট + সোনার ডিম (JSON API) ====================
-router.get('/daily-rewards/status', isAuth, async (req, res) => {
+router.get('/daily-rewards/status', isAuth, requireFeature('daily_rewards'), async (req, res) => {
   try {
     const status = await getRewardStatus(req.session.user.id);
     res.json({ ok: true, status });
@@ -893,7 +894,7 @@ router.get('/daily-rewards/status', isAuth, async (req, res) => {
   }
 });
 
-router.post('/daily-rewards/red-packet/claim', isAuth, claimLimiter, async (req, res) => {
+router.post('/daily-rewards/red-packet/claim', isAuth, requireFeature('daily_rewards'), claimLimiter, async (req, res) => {
   try {
     const result = await claimRedPacket(req.session.user.id, req.lang);
     if (result.ok) {
@@ -907,7 +908,7 @@ router.post('/daily-rewards/red-packet/claim', isAuth, claimLimiter, async (req,
   }
 });
 
-router.post('/daily-rewards/golden-egg/claim', isAuth, claimLimiter, async (req, res) => {
+router.post('/daily-rewards/golden-egg/claim', isAuth, requireFeature('daily_rewards'), claimLimiter, async (req, res) => {
   try {
     let idx = parseInt(req.body.pickedIndex, 10);
     if (isNaN(idx) || idx < 0 || idx > 7) idx = 0;
@@ -925,7 +926,7 @@ router.post('/daily-rewards/golden-egg/claim', isAuth, claimLimiter, async (req,
 
 
 // ==================== ক্যাশবক ====================
-router.get('/cashback', isAuth, async (req, res) => {
+router.get('/cashback', isAuth, requireFeature('cashback'), async (req, res) => {
   try {
     const cashback = await getCashbackStatus(req.session.user.id);
     res.render('profile/cashback', { user: req.session.user, cashback });
@@ -935,7 +936,7 @@ router.get('/cashback', isAuth, async (req, res) => {
   }
 });
 
-router.post('/cashback/claim', isAuth, async (req, res) => {
+router.post('/cashback/claim', isAuth, requireFeature('cashback'), async (req, res) => {
   try {
     const result = await claimCashback(req.session.user.id, req.body.category, req.lang);
     req.flash(result.success ? 'success' : 'error', result.message);
@@ -947,7 +948,7 @@ router.post('/cashback/claim', isAuth, async (req, res) => {
 });
 
 // ==================== VIP ====================
-router.get('/vip', isAuth, async (req, res) => {
+router.get('/vip', isAuth, requireFeature('vip'), async (req, res) => {
   try {
     const vip = await getVipStatus(req.session.user.id);
     res.render('profile/vip', { user: req.session.user, vip });
@@ -958,7 +959,7 @@ router.get('/vip', isAuth, async (req, res) => {
 });
 
 // VIP প্রোগ্রেস — লাইভ AJAX আপডেটের জন্য (০ থেকে ১০০০ স্কেল)
-router.get('/api/vip-progress', isAuth, async (req, res) => {
+router.get('/api/vip-progress', isAuth, requireFeature('vip'), async (req, res) => {
   try {
     const vip = await getVipStatus(req.session.user.id);
     res.json({
@@ -978,7 +979,7 @@ router.get('/api/vip-progress', isAuth, async (req, res) => {
 });
 
 // ==================== রেফারেল ====================
-router.get('/referral', isAuth, async (req, res) => {
+router.get('/referral', isAuth, requireFeature('referral'), async (req, res) => {
   try {
     const stats = await getReferralStats(req.session.user.id);
     const baseUrl = getBaseUrl(req);
@@ -1149,7 +1150,7 @@ router.get('/badges', isAuth, async (req, res) => {
 });
 
 // ==================== ফ্রি বেট ====================
-router.get('/freebet', isAuth, async (req, res) => {
+router.get('/freebet', isAuth, requireFeature('free_bet'), async (req, res) => {
   try {
     const freebets = await getAllFreeBets(req.session.user.id);
     res.render('profile/freebet', { user: req.session.user, freebets });
@@ -1159,7 +1160,7 @@ router.get('/freebet', isAuth, async (req, res) => {
   }
 });
 
-router.post('/freebet/claim/:id', isAuth, async (req, res) => {
+router.post('/freebet/claim/:id', isAuth, requireFeature('free_bet'), async (req, res) => {
   try {
     const result = await claimFreeBet(req.session.user.id, parseInt(req.params.id), req.lang);
     req.flash(result.success ? 'success' : 'error', result.message);

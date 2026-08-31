@@ -131,7 +131,7 @@
     <div class="modal-box">
       <div class="modal-header">
         <h3>KYC বিস্তারিত</h3>
-        <button class="modal-close" onclick="closeModal('viewModal')"><i class="fas fa-times"></i></button>
+        <button class="modal-close" onclick="closeModal('viewModal')" aria-label="<%= t('admin_ui_close') %>"><i class="fas fa-times"></i></button>
       </div>
       <div class="modal-body" id="viewModalBody"></div>
     </div>
@@ -142,7 +142,7 @@
     <div class="modal-box">
       <div class="modal-header">
         <h3>বাতিলের কারণ</h3>
-        <button class="modal-close" onclick="closeModal('rejectModal')"><i class="fas fa-times"></i></button>
+        <button class="modal-close" onclick="closeModal('rejectModal')" aria-label="<%= t('admin_ui_close') %>"><i class="fas fa-times"></i></button>
       </div>
       <div class="modal-body">
         <textarea class="input" id="rejectReason" rows="3" placeholder="কারণ লিখুন (ইউজারকে দেখানো হবে)"></textarea>
@@ -159,7 +159,7 @@
     <div class="modal-box">
       <div class="modal-header">
         <h3>বাল্ক বাতিলের কারণ</h3>
-        <button class="modal-close" onclick="closeModal('bulkRejectModal')"><i class="fas fa-times"></i></button>
+        <button class="modal-close" onclick="closeModal('bulkRejectModal')" aria-label="<%= t('admin_ui_close') %>"><i class="fas fa-times"></i></button>
       </div>
       <div class="modal-body">
         <p style="font-size:12px;color:var(--text-muted);margin-top:0;"><span id="bulkRejectCount">0</span>টি আবেদন বাতিল করা হবে। এই কারণ সবগুলোর জন্য প্রযোজ্য হবে।</p>
@@ -173,6 +173,10 @@
   </div>
 
   <script>
+    // সার্ভার-সাইডে অনুবাদ করা স্ট্রিং ক্লায়েন্ট স্ক্রিপ্টে পাঠানো হয় —
+    // এখানে EJS ট্যাগ চলে না বলে ধ্রুবক হিসেবে বসানো। JSON.stringify()
+    // উদ্ধৃতি/বিশেষ ক্যারেক্টার নিরাপদে escape করে।
+    var KYC_DOC_ALT = ${JSON.stringify(t('admin_ui_kyc_document'))};
     var pendingRejectId = null;
 
     function escapeHtml(str) {
@@ -209,7 +213,7 @@
       html += '<div class="kv-row"><span>জমার তারিখ</span><span>' + (k.created_at ? new Date(k.created_at).toLocaleString('bn-BD') : '—') + '</span></div>';
       var docUrl = docProxyUrl(k);
       if (docUrl) {
-        html += '<a href="' + escapeHtml(docUrl) + '" target="_blank" rel="noopener noreferrer"><img class="doc-preview" src="' + escapeHtml(docUrl) + '" onerror="this.style.display=\'none\'"></a>';
+        html += '<a href="' + escapeHtml(docUrl) + '" target="_blank" rel="noopener noreferrer"><img alt="' + KYC_DOC_ALT + '" class="doc-preview" src="' + escapeHtml(docUrl) + '" onerror="this.style.display=\'none\'"></a>';
         html += '<a class="btn btn-sm" style="margin-top:8px;" href="' + escapeHtml(docUrl) + '" target="_blank" rel="noopener noreferrer"><i class="fas fa-external-link-alt"></i> মূল ডকুমেন্ট দেখুন</a>';
       } else if (k.document_url) {
         html += '<p style="color:#dc2626;font-size:12px;">⚠️ অবৈধ ডকুমেন্ট URL — দেখানো যাচ্ছে না</p>';

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const { pool } = require('../db');
+const { requireFeature } = require('../middleware/featureGate');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const { notifyUserSeen, notifyAdminsSeen } = require('../services/socket');
@@ -116,7 +117,7 @@ const upload = multer({
   }
 });
 
-router.get('/', isAuth, (req, res) => {
+router.get('/', isAuth, requireFeature('live_chat'), (req, res) => {
   res.render('profile/chat', { user: req.session.user });
 });
 
@@ -124,7 +125,7 @@ router.get('/admin', isAdmin, (req, res) => {
   res.render('admin/chat', { user: req.session.user });
 });
 
-router.post('/upload', isAuth, upload.single('file'), async (req, res) => {
+router.post('/upload', isAuth, requireFeature('live_chat'), upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: req.t('chat_file_not_found') });
   try {
     const ext = path.extname(req.file.originalname || '').toLowerCase();
@@ -155,7 +156,7 @@ router.post('/upload', isAuth, upload.single('file'), async (req, res) => {
   }
 });
 
-router.get('/history', isAuth, async (req, res) => {
+router.get('/history', isAuth, requireFeature('live_chat'), async (req, res) => {
   try {
     const userId = req.session.user.id;
     // সার্ভার-সাইড বাউন্ড: আগে পুরো কথোপকথন LIMIT ছাড়াই ফেরত যেত, তাই দীর্ঘদিনের

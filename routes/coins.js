@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
+const { requireFeature } = require('../middleware/featureGate');
 
 router.get('/', isAuth, async (req, res) => {
   try {
@@ -40,7 +41,7 @@ router.get('/balance', isAuth, async (req, res) => {
   }
 });
 
-router.post('/daily-bonus', isAuth, async (req, res) => {
+router.post('/daily-bonus', isAuth, requireFeature('daily_rewards'), async (req, res) => {
   const userId = req.session.user.id;
   const bonusAmount = 100;
   const client = await pool.connect();

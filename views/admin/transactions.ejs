@@ -8,7 +8,7 @@ function txnRow(t) {
   const typeColor = t.type === 'deposit' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700';
   const amountSign = t.type === 'deposit' ? '+' : '-';
   const statusLabel = t.status === 'approved' ? 'Success' : t.status === 'rejected' ? 'Rejected' : 'Pending';
-  const statusColor = t.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : t.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700';
+  const statusColor = t.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : t.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700';
   return '<tr>' +
     '<td class="px-6 py-4 font-mono">#TXN' + t.id + '</td>' +
     '<td class="px-6 py-4">' + t.username + '</td>' +

@@ -4,6 +4,15 @@ const businessTime = require('../utils/businessTime');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const { pool } = require('../db');
+const { requireFeature } = require('../middleware/featureGate');
+// দ্রষ্টব্য — গেট শুধু *ইনিশিয়েশনে* বসানো হয়েছে (/deposit, /withdraw,
+// /sslcommerz/init)। গেটওয়ে কলব্যাক (/sslcommerz/success|fail|cancel|ipn) ও
+// অ্যাডমিন approve/reject ইচ্ছাকৃতভাবে গেটমুক্ত:
+//   • ডিপোজিট বন্ধ করার মুহূর্তে যে টাকা ইতিমধ্যে গেটওয়েতে চলে গেছে, সেই
+//     কলব্যাক ব্লক করলে ইউজারের টাকা কেটে গিয়ে কয়েন ক্রেডিট হতো না।
+//   • উইথড্র বন্ধ করার পরেও অ্যাডমিনকে পুরনো pending রিকোয়েস্ট নিষ্পত্তি
+//     করতে দিতে হবে, নাহলে ইউজারের টাকা আটকে থাকে।
+// অর্থাৎ ফিচার বন্ধ = নতুন রিকোয়েস্ট নেওয়া বন্ধ, চলমান টাকা আটকে ফেলা নয়।
 const { createBonus, canWithdraw } = require('../services/turnover');
 const { processReferralDeposit } = require('../services/referral');
 const crypto = require('crypto');
@@ -230,13 +239,13 @@ router.get('/wallet', isAuth, async (req, res) => {
   }
 });
 
-router.get('/deposit', isAuth, (req, res) => {
+router.get('/deposit', isAuth, requireFeature('deposit'), (req, res) => {
   const current = DEPOSIT_NUMBERS[depositRotation % DEPOSIT_NUMBERS.length];
   depositRotation = (depositRotation + 1) % DEPOSIT_NUMBERS.length;
   res.render('payment/deposit', { user: req.session.user, payNumber: current });
 });
 
-router.post('/deposit', isAuth, paymentLimiter, async (req, res) => {
+router.post('/deposit', isAuth, requireFeature('deposit'), paymentLimiter, async (req, res) => {
   const { method, account_number } = req.body;
   const transaction_id = (req.body.transaction_id || '').trim();
   const wantBonus = req.body.want_bonus === 'yes';
@@ -377,7 +386,7 @@ router.post('/deposit', isAuth, paymentLimiter, async (req, res) => {
   }
 });
 
-router.get('/withdraw', isAuth, async (req, res) => {
+router.get('/withdraw', isAuth, requireFeature('withdrawal'), async (req, res) => {
   try {
     const result = await pool.query('SELECT coins FROM users WHERE id=$1', [req.session.user.id]);
     // pg ড্রাইভার NUMERIC(14,2) কলাম স্ট্রিং হিসেবে ফেরত দেয় (যেমন "1499.00"), সংখ্যা হিসেবে না —
@@ -400,7 +409,7 @@ router.get('/withdraw', isAuth, async (req, res) => {
 });
 
 
-router.post('/withdraw', isAuth, requireVerifiedEmail, paymentLimiter, async (req, res) => {
+router.post('/withdraw', isAuth, requireFeature('withdrawal'), requireVerifiedEmail, paymentLimiter, async (req, res) => {
   const { method, account_number, withdraw_pin } = req.body;
   const amount = parseAmount(req.body.amount);
   const userId = req.session.user.id;
@@ -921,7 +930,7 @@ function isVerificationForRequest(verification, request) {
   return String(returnedTran) === String(request.gateway_tran_id);
 }
 
-router.post('/sslcommerz/init', isAuth, paymentLimiter, async (req, res) => {
+router.post('/sslcommerz/init', isAuth, requireFeature('deposit'), paymentLimiter, async (req, res) => {
   const wantBonus = req.body.want_bonus === 'yes';
   const amount = parseAmount(req.body.amount);
   const userId = req.session.user.id;

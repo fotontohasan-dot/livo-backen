@@ -1,4 +1,6 @@
 <%
+// loadError শুধু ব্যর্থ রেন্ডারে পাস হয়, সফল ক্ষেত্রে অনুপস্থিত — তাই গার্ড।
+const loadErrorFlag = (typeof loadError !== 'undefined' && loadError) ? true : false;
 function escapeHtml(str) {
   return String(str == null ? '' : str)
     .replace(/&/g, '&amp;')
@@ -357,6 +359,73 @@ function escapeHtml(str) {
         </a>
     </div>
 
+    <!-- ==================== প্রায়োরিটি কিউ (Phase 6) ==================== -->
+    <!--
+      অ্যাডমিনের সবচেয়ে ঘন ঘন প্রশ্ন: "এখন আমার কী দেখা দরকার?" আগে সেটার
+      উত্তর পেতে একাধিক পেজে ঘুরতে হতো। এখানে পাঁচটা অ্যাকশনেবল কিউ একসাথে,
+      প্রতিটাই সরাসরি সেই কিউয়ের পেজে নিয়ে যায়।
+      শূন্য হলে কার্ড ধূসর থাকে; সংখ্যা থাকলে রঙ ও একটা ডট দিয়ে চোখে পড়ে
+      (শুধু রঙের উপর নির্ভর করা হয়নি — সংখ্যাটাও লেখা থাকে)।
+    -->
+    <section aria-labelledby="priority-heading" class="mb-8">
+        <h2 id="priority-heading" class="text-sm font-bold uppercase tracking-wider text-slate-500 mb-3">
+            <i class="fas fa-triangle-exclamation mr-1"></i>${escapeHtml(t('admin_dash_needs_attention'))}
+        </h2>
+        <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
+            ${[
+              { href: '/payment/admin/payments', label: t('admin_dash_pending_deposits'), n: stats.pending_deposits || 0, icon: 'fa-arrow-down',    box: 'bg-emerald-50 border-emerald-200', ic: 'text-emerald-600', dot: 'bg-emerald-500', num: 'text-emerald-700' },
+              { href: '/admin/withdrawals',      label: t('admin_dash_pending_withdrawals'),  n: stats.pending_withdrawals || 0, icon: 'fa-arrow-up', box: 'bg-red-50 border-red-200',         ic: 'text-red-600',     dot: 'bg-red-500',     num: 'text-red-700' },
+              { href: '/admin/kyc',              label: t('admin_dash_pending_kyc'),     n: stats.pending_kyc || 0, icon: 'fa-id-card',           box: 'bg-indigo-50 border-indigo-200',   ic: 'text-indigo-600',  dot: 'bg-indigo-500',  num: 'text-indigo-700' },
+              { href: '/chat/admin',             label: t('admin_dash_unread_support'),   n: stats.pending_support || 0, icon: 'fa-headset',       box: 'bg-purple-50 border-purple-200',   ic: 'text-purple-600',  dot: 'bg-purple-500',  num: 'text-purple-700' },
+              { href: '/admin/fraud-monitoring', label: t('admin_dash_fraud_alerts'),   n: stats.fraud_alerts || 0, icon: 'fa-shield-halved',    box: 'bg-amber-50 border-amber-200',     ic: 'text-amber-600',   dot: 'bg-amber-500',   num: 'text-amber-700' }
+            ].map(q => `
+            <a href="${q.href}"
+               class="block p-4 rounded-2xl border transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${q.n > 0 ? q.box : 'bg-white border-slate-100'}">
+                <div class="flex items-center justify-between">
+                    <i class="fas ${q.icon} ${q.n > 0 ? q.ic : 'text-slate-300'}"></i>
+                    ${q.n > 0 ? `<span class="w-2 h-2 rounded-full ${q.dot}" aria-hidden="true"></span>` : ''}
+                </div>
+                <p class="text-2xl font-bold mt-2 ${q.n > 0 ? q.num : 'text-slate-400'}">${q.n}</p>
+                <p class="text-xs font-medium text-slate-600 mt-0.5">${q.label}</p>
+            </a>`).join('')}
+        </div>
+    </section>
+
+    <!-- ==================== সিস্টেম হেলথ (Phase 6) ==================== -->
+    <!--
+      ডেটাবেস/Redis/Queue/Cron/Backup-এর অবস্থা আগে ড্যাশবোর্ডের বিভিন্ন কোণে
+      ছড়ানো ছিল (Redis উপরে হেডারে, ব্যাকআপ আলাদা কার্ডে, queue আরেক জায়গায়)।
+      একটাই সারিতে আনা হলো, যাতে এক নজরে বোঝা যায় কোথাও সমস্যা আছে কিনা।
+      প্রতিটা অবস্থা টেক্সটেও লেখা — শুধু রঙ দিয়ে বোঝানো হয়নি (a11y)।
+    -->
+    <section aria-labelledby="health-heading" class="mb-8">
+        <h2 id="health-heading" class="text-sm font-bold uppercase tracking-wider text-slate-500 mb-3">
+            <i class="fas fa-heart-pulse mr-1"></i>${escapeHtml(t('admin_dash_system_health'))}
+        </h2>
+        <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-4">
+          <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
+            ${[
+              { label: t('admin_dash_hc_database'), ok: !loadErrorFlag, txt: !loadErrorFlag ? t('admin_dash_st_connected') : t('admin_dash_st_error'), icon: 'fa-database', href: '/admin/system-diagnostics' },
+              { label: t('admin_dash_hc_redis'), ok: !!redisStatus.connected, txt: redisStatus.connected ? t('admin_dash_st_connected') : (redisStatus.enabled ? t('admin_dash_st_disconnected') : t('admin_dash_st_inactive')), icon: 'fa-bolt', href: '/admin/cache' },
+              { label: t('admin_dash_hc_queue'), ok: (queueHealth.level === 'healthy'), txt: queueStatus.running ? (queueStatus.failed > 0 ? t('admin_dash_st_failed_jobs').replace('{value}', queueStatus.failed) : t('admin_dash_st_running')) : t('admin_dash_st_stopped'), icon: 'fa-layer-group', href: '/admin/queues' },
+              { label: t('admin_dash_hc_cron'), ok: true, txt: t('admin_dash_st_view_schedule'), icon: 'fa-clock', href: '/admin/cron-jobs' },
+              { label: t('admin_dash_hc_backup'), ok: (backupHealth.level === 'healthy'), txt: backupHealth.lastSuccessAt ? new Date(backupHealth.lastSuccessAt).toLocaleDateString('en-GB') : t('admin_dash_st_no_record'), icon: 'fa-shield', href: '/admin/backups' }
+            ].map(h => `
+            <a href="${h.href}" class="flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${h.ok ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}">
+                    <i class="fas ${h.icon}"></i>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-xs font-semibold text-slate-700">${h.label}</p>
+                    <p class="text-[11px] ${h.ok ? 'text-emerald-600' : 'text-amber-600'} truncate">
+                        ${h.ok ? '●' : '▲'} ${h.txt}
+                    </p>
+                </div>
+            </a>`).join('')}
+          </div>
+        </div>
+    </section>
+
     <!-- Quick Actions + Recent Activity -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Quick Actions -->
@@ -393,6 +462,13 @@ function escapeHtml(str) {
                         <span class="font-medium text-sm">Live Support Chat</span>
                     </div>
                     <i class="fas fa-chevron-right text-slate-300 group-hover:text-purple-500 transition-colors"></i>
+                </a>
+                <a href="/admin/features" class="flex items-center justify-between p-3 hover:bg-slate-50 rounded-2xl transition-colors group">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-toggle-on text-amber-500 w-5"></i>
+                        <span class="font-medium text-sm">${escapeHtml(t('admin_ff_title'))}</span>
+                    </div>
+                    <i class="fas fa-chevron-right text-slate-300 group-hover:text-amber-500 transition-colors"></i>
                 </a>
             </div>
         </div>

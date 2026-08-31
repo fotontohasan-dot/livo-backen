@@ -10,6 +10,7 @@ const express = require('express');
 const router = express.Router();
 const { filterMiddleware } = require('../middleware/filterMiddleware');
 const { getBotReply } = require('../services/chatbot');
+const { requireFeature } = require('../middleware/featureGate');
 
 // হেল্প সেন্টার পেজ রেন্ডার করবে
 router.get('/', (req, res) => {
@@ -22,7 +23,7 @@ router.get('/', (req, res) => {
 // চ্যাটবট এপিআই এন্ডপয়েন্ট
 // filterMiddleware() → req.body.message-এ গালাগালি/অশ্লীল/১৮+ কনটেন্ট থাকলে
 // এখানেই 400 রিটার্ন করে দেয়, নিচের কোড আর চলে না।
-router.post('/api/chat', filterMiddleware(), async (req, res) => {
+router.post('/api/chat', requireFeature('ai_chatbot'), filterMiddleware(), async (req, res) => {
   const userMessage = (req.body && req.body.message) || '';
 
   if (!userMessage.trim()) {

@@ -1,5 +1,12 @@
 const express = require('express');
 const router = express.Router();
+const { requireFeature } = require('../middleware/featureGate');
+
+// পুরো রাউটারে ফিচার গেট — নির্দিষ্ট রুট নয়, রাউটার-লেভেলে বসানো হয়েছে
+// যাতে ভবিষ্যতে যোগ হওয়া সাব-রুটও আপনাআপনি সুরক্ষিত থাকে, আর সরাসরি
+// URL দিয়ে কোনো পথ বাদ পড়ে না যায়।
+router.use(requireFeature('sports'));
+
 
 // Sports Hub Main Page
 router.get('/', (req, res) => {
