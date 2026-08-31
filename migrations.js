@@ -1952,6 +1952,18 @@ async function runMigrations() {
     // থাকলে বড় টুর্নামেন্টে লক নেওয়ার সময় পুরো টেবিল স্ক্যান হতো।
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_tournament_participants_tid ON tournament_participants(tournament_id)`);
 
+    // ==================== গেটওয়ে ডিপোজিট রিকনসিলিয়েশন ====================
+    // last_reconciled_at — services/gatewayReconcile.js প্রতিটা পরীক্ষিত রোতে এটা
+    // বসায়, যাতে কখনো-নিষ্পত্তি-না-হওয়া রো (যেমন amount mismatch) প্রতি রানে
+    // ব্যাচের শুরুটা দখল করে নতুন আটকে থাকা ডিপোজিটকে starve না করে।
+    await pool.query(`ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS last_reconciled_at TIMESTAMP`);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_payment_requests_gateway_pending
+      ON payment_requests (last_reconciled_at NULLS FIRST, created_at)
+      WHERE type = 'deposit' AND status = 'pending' AND gateway = 'sslcommerz'
+    `);
+    console.log('✅ gateway deposit reconcile কলাম ও ইনডেক্স ready');
+
   } catch (err) {
     // PHASE 2 fix: আগে error গিলে ফেলা হত, ফলে caller (server.js) migration
     // ব্যর্থ হওয়ার পরেও "migration done" ছাপত এবং broken schema নিয়ে listen করত।

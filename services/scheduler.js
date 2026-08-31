@@ -47,6 +47,20 @@ function buildJobDefinitions() {
       }
     },
 
+    gateway_deposit_reconcile: {
+      label: 'Gateway Deposit Reconcile',
+      description: 'আটকে থাকা pending গেটওয়ে (SSLCommerz) ডিপোজিট গেটওয়েতে যাচাই করে ক্রেডিট/reject করে',
+      defaultIntervalMs: 15 * MIN,
+      defaultEnabled: true,
+      maxRetries: 1,
+      handler: async () => {
+        const { reconcileStuckDeposits } = require('./gatewayReconcile');
+        const s = await reconcileStuckDeposits();
+        if (s.skipped) return 'SSLCommerz ক্রেডেনশিয়াল সেট নেই — কিছু করা হয়নি (fail-closed)';
+        return `${s.scanned}টা আটকে থাকা রিকোয়েস্ট দেখা হলো — ${s.credited} ক্রেডিট, ${s.rejected} reject, ${s.unchanged} অপরিবর্তিত, ${s.errors} এরর`;
+      }
+    },
+
     expired_token_cleanup: {
       label: 'Expired Token Cleanup',
       description: 'মেয়াদ শেষ হওয়া পাসওয়ার্ড-রিসেট ও ইমেইল-ভেরিফিকেশন টোকেন সাফ করে',
