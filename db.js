@@ -56,22 +56,24 @@ const pool = new Pool({
 });
 
 const connectDB = async () => {
+  // PHASE 2 fix: DATABASE_URL না থাকলে বা DB unreachable হলে আগে function টি
+  // স্বাভাবিকভাবে return করত, ফলে server.js "PostgreSQL connected successfully"
+  // ছাপত এবং DB ছাড়াই route চালু করে দিত (fake success)। এখন fail-closed।
   if (!process.env.DATABASE_URL) {
-    console.warn('⚠️ DATABASE_URL not set. Skipping DB connection.');
-    return;
+    throw new Error('DATABASE_URL is not set — refusing to start without a database');
   }
   let retries = 5;
   while (retries > 0) {
     try {
       await pool.query('SELECT 1');
       console.log('✅ PostgreSQL connected successfully');
+      try { require('./services/startupState').markDbConnected(); } catch (e) { /* non-blocking */ }
       return;
     } catch (error) {
       retries--;
       console.error(`❌ PostgreSQL connection error (${5 - retries}/5):`, error.message);
       if (retries === 0) {
-        console.warn('⚠️ Could not connect to database. Continuing without DB.');
-        return;
+        throw new Error('PostgreSQL connection failed after 5 attempts: ' + error.message);
       }
       console.log(`⏳ Retrying in 5 seconds...`);
       await new Promise(res => setTimeout(res, 5000));

@@ -23,11 +23,19 @@ router.get('/', (req, res) => {
 // চ্যাটবট এপিআই এন্ডপয়েন্ট
 // filterMiddleware() → req.body.message-এ গালাগালি/অশ্লীল/১৮+ কনটেন্ট থাকলে
 // এখানেই 400 রিটার্ন করে দেয়, নিচের কোড আর চলে না।
-router.post('/api/chat', requireFeature('ai_chatbot'), filterMiddleware(), async (req, res) => {
-  const userMessage = (req.body && req.body.message) || '';
+router.post('/api/chat', helpChatLimiter, filterMiddleware(), async (req, res) => {
+  const userMessage = (req.body && typeof req.body.message === 'string') ? req.body.message : '';
 
   if (!userMessage.trim()) {
     return res.status(400).json({ success: false, error: req.t('common_message_empty') });
+  }
+
+  // দৈর্ঘ্যসীমা: upstream token খরচ সীমিত রাখে
+  if (userMessage.length > MAX_CHAT_MESSAGE_LEN) {
+    return res.status(400).json({
+      success: false,
+      error: req.t('help_center_message_too_long')
+    });
   }
 
   try {

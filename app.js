@@ -118,12 +118,30 @@ app.use(helmet.contentSecurityPolicy({
 // লঙ্ঘন রিপোর্ট গ্রহণ। ব্রাউজার এখানে POST করে; শুধু গোনা ও লগ করা হয়,
 // কোনো ব্যবহারকারী-ডেটা সংরক্ষণ করা হয় না।
 const cspViolationCounts = new Map();
-app.post('/csp-report', express.json({ type: ['application/csp-report', 'application/json'] }), (req, res) => {
+// PHASE 13 fix: এই endpoint টি unauthenticated এবং global rate limiter-এর
+// আগে mount করা, আর প্রতিটি unique key একটি unbounded Map-এ জমা হত। যেকোনো
+// ব্যক্তি ভিন্ন ভিন্ন directive/source পাঠিয়ে Map টি অসীম বড় করে process-এর
+// memory শেষ করে দিতে পারত। তাই (১) নিজস্ব rate limiter, (২) ছোট body limit,
+// (৩) Map-এর সর্বোচ্চ আকার নির্ধারণ।
+const CSP_REPORT_MAX_KEYS = 500;
+const cspReportLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: false,
+  legacyHeaders: false,
+  // report endpoint নীরব থাকে — সীমা ছাড়ালেও 204 ফেরত যায়
+  handler: (req, res) => res.status(204).end()
+});
+app.post('/csp-report', cspReportLimiter, express.json({ type: ['application/csp-report', 'application/json'], limit: '16kb' }), (req, res) => {
   try {
     const report = (req.body && (req.body['csp-report'] || req.body)) || {};
     const directive = String(report['violated-directive'] || report.violatedDirective || 'unknown').slice(0, 80);
     const source = String(report['source-file'] || report.sourceFile || '').slice(0, 200);
     const key = `${directive} | ${source}`;
+    // নতুন key তখনই যোগ হয় যখন Map সীমার নিচে; বিদ্যমান key সবসময় গোনা হয়
+    if (!cspViolationCounts.has(key) && cspViolationCounts.size >= CSP_REPORT_MAX_KEYS) {
+      return res.status(204).end();
+    }
     const count = (cspViolationCounts.get(key) || 0) + 1;
     cspViolationCounts.set(key, count);
     // প্রতিটা রিপোর্ট লগ করলে লগ ভেসে যাবে — প্রথমবার আর তারপর প্রতি ১০০তমবার।

@@ -829,8 +829,24 @@ async function rejectPaymentRequestById(id, t = (k) => k) {
 }
 
 router.post('/admin/approve/:id', requireAdmin, requirePermission('payments_approve'), async (req, res) => {
-  const { id } = req.params;
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id) || id <= 0) {
+    req.flash('error', req.t('payment_request_not_found_or_processed'));
+    return res.redirect('/payment/admin/payments');
+  }
   const result = await approvePaymentRequestById(id, req.t);
+  // PHASE 3/14 fix: bulk approve audit করা হত, কিন্তু single approve করা হত না।
+  // Payment approval একটি financial privileged action — সফল বা ব্যর্থ, দুটোই
+  // audit trail-এ থাকতে হবে।
+  logAuditEvent({
+    req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+    action: 'PAYMENT_APPROVED', category: 'financial',
+    status: result.success ? 'success' : 'failure', riskLevel: 'medium',
+    details: result.success
+      ? { paymentRequestId: id, targetUserId: result.userId, type: result.type, amount: result.amount, via: 'single' }
+      : { paymentRequestId: id, via: 'single', outcome: 'not_applied' }
+  }).catch((e) => console.error('logAuditEvent (PAYMENT_APPROVED) error:', e.message));
+
   if (result.success) {
     req.flash('success', req.t('payment_approved'));
   } else {
@@ -840,8 +856,21 @@ router.post('/admin/approve/:id', requireAdmin, requirePermission('payments_appr
 });
 
 router.post('/admin/reject/:id', requireAdmin, requirePermission('payments_approve'), async (req, res) => {
-  const { id } = req.params;
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id) || id <= 0) {
+    req.flash('error', req.t('payment_request_not_found_or_processed'));
+    return res.redirect('/payment/admin/payments');
+  }
   const result = await rejectPaymentRequestById(id, req.t);
+  logAuditEvent({
+    req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+    action: 'PAYMENT_REJECTED', category: 'financial',
+    status: result.success ? 'success' : 'failure', riskLevel: 'medium',
+    details: result.success
+      ? { paymentRequestId: id, targetUserId: result.userId, type: result.type, amount: result.amount, via: 'single' }
+      : { paymentRequestId: id, via: 'single', outcome: 'not_applied' }
+  }).catch((e) => console.error('logAuditEvent (PAYMENT_REJECTED) error:', e.message));
+
   if (result.success) {
     req.flash('error', req.t('payment_rejected'));
   } else {
@@ -1150,3 +1179,7 @@ router.post('/sslcommerz/ipn', async (req, res) => {
 
 module.exports = router;
 module.exports.creditApprovedDeposit = creditApprovedDeposit;
+// PHASE 3: concurrency/state-machine regression test-এর জন্য export
+// (route mounting-এ কোনো পরিবর্তন নেই — শুধু internal helper গুলো প্রকাশ করা হল)
+module.exports.approvePaymentRequestById = approvePaymentRequestById;
+module.exports.rejectPaymentRequestById = rejectPaymentRequestById;

@@ -16,6 +16,15 @@ const CHAT_RATE_WINDOW_SEC = 10; // ১০ সেকেন্ড উইন্ড
 // deployment-এ perfectly synchronized না হলেও single-instance/dev/test-এ কার্যকর সুরক্ষা দেয়,
 // আর Redis চালু থাকলে সেটাই আসল উৎস (সব instance জুড়ে সমন্বিত)।
 const inMemoryChatRate = new Map();
+const CHAT_RATE_MAX_ENTRIES = 10000;
+
+// মেয়াদ পেরোনো window গুলো সরায় (Redis fallback path-এ ব্যবহৃত)
+function pruneChatRate(now) {
+  const windowMs = CHAT_RATE_WINDOW_SEC * 1000;
+  for (const [key, entry] of inMemoryChatRate) {
+    if (now - entry.start > windowMs) inMemoryChatRate.delete(key);
+  }
+}
 async function allowChatMessage(userId) {
   const key = `chat:msg:${userId}`;
   const result = await cache.incrWithExpiry(key, CHAT_RATE_WINDOW_SEC);
@@ -25,6 +34,7 @@ async function allowChatMessage(userId) {
   const windowMs = CHAT_RATE_WINDOW_SEC * 1000;
   const entry = inMemoryChatRate.get(userId);
   if (!entry || now - entry.start > windowMs) {
+    if (inMemoryChatRate.size >= CHAT_RATE_MAX_ENTRIES) pruneChatRate(now);
     inMemoryChatRate.set(userId, { start: now, count: 1 });
     return true;
   }
@@ -62,6 +72,64 @@ const emitAdminAlert = (type, data = {}) => {
     console.error('emitAdminAlert error:', err.message);
   }
 };
+
+// ===== HIGH-3 fix: socket-এ session snapshot বিশ্বাস করা যায় না =====
+// আগে socket.request.session.user.role দেখে 'admins' room-এ join করানো হত এবং
+// message গুলো isAdmin হিসেবে সংরক্ষণ/broadcast করা হত। session snapshot login-এর
+// সময়কার, তাই ban/demote হওয়ার পরেও পুরনো socket session আজীবন admin privilege
+// ধরে রাখত — HTTP layer প্রতিটি request-এ DB re-check করলেও socket layer করত না।
+// এখন প্রতিটি privileged সিদ্ধান্ত DB state থেকে নেওয়া হয়।
+const AUTH_CACHE_TTL_MS = 10 * 1000;
+// PHASE 8: এই দুটি Map user-নিয়ন্ত্রিত key নিয়ে বাড়ে। সীমা না থাকলে দীর্ঘ
+// uptime-এ distinct user সংখ্যার সমান হয়ে memory খেয়ে ফেলবে। তাই সীমা +
+// মেয়াদোত্তীর্ণ entry ছাঁটাই।
+const AUTH_CACHE_MAX_ENTRIES = 5000;
+const socketAuthCache = new Map();
+
+// মেয়াদ শেষ হওয়া entry সরায়; তাতেও জায়গা না হলে সবচেয়ে পুরনো গুলো বাদ দেয়
+function pruneAuthCache() {
+  const now = Date.now();
+  for (const [key, entry] of socketAuthCache) {
+    if (now - entry.at >= AUTH_CACHE_TTL_MS) socketAuthCache.delete(key);
+  }
+  if (socketAuthCache.size <= AUTH_CACHE_MAX_ENTRIES) return;
+  // Map insertion order অনুসরণ করে, তাই প্রথম key গুলোই সবচেয়ে পুরনো
+  const excess = socketAuthCache.size - AUTH_CACHE_MAX_ENTRIES;
+  let removed = 0;
+  for (const key of socketAuthCache.keys()) {
+    socketAuthCache.delete(key);
+    if (++removed >= excess) break;
+  }
+}
+
+async function verifyUserState(userId) {
+  const cached = socketAuthCache.get(Number(userId));
+  if (cached && Date.now() - cached.at < AUTH_CACHE_TTL_MS) return cached.value;
+
+  let value = null;
+  try {
+    const r = await pool.query(
+      'SELECT id, username, role, is_banned, deleted_at FROM users WHERE id = $1',
+      [userId]
+    );
+    const row = r.rows[0];
+    if (row && !row.is_banned && !row.deleted_at) {
+      value = { id: row.id, username: row.username, role: row.role, isAdmin: row.role === 'admin' };
+    }
+  } catch (err) {
+    console.error('socket verifyUserState error:', err.message);
+    return null; // fail-closed
+  }
+
+  if (socketAuthCache.size >= AUTH_CACHE_MAX_ENTRIES) pruneAuthCache();
+  socketAuthCache.set(Number(userId), { at: Date.now(), value });
+  return value;
+}
+
+// ban/demote সঙ্গে সঙ্গে কার্যকর করতে cache invalidate করার হুক
+function invalidateSocketAuth(userId) {
+  socketAuthCache.delete(Number(userId));
+}
 
 const initSocket = (server, sessionMiddleware) => {
   // ===== নিরাপত্তা: Socket.IO-র origin পলিসি এখন মূল অ্যাপের সাথে অভিন্ন =====
@@ -101,29 +169,47 @@ const initSocket = (server, sessionMiddleware) => {
     };
 
     // লগইন করা থাকলে সাথে সাথে নিজের চ্যাট রুমে ও (অ্যাডমিন হলে) admins রুমে জয়েন করানো
-    const authUser = getSessionUser();
-    if (authUser) {
-      socket.join(`user:${authUser.id}`);
-      if (authUser.role === 'admin') socket.join('admins');
+    // connection-এ room join করার আগে DB থেকে প্রকৃত state যাচাই করা হয়
+    const sessionUser = getSessionUser();
+    if (sessionUser) {
+      verifyUserState(sessionUser.id).then((verified) => {
+        if (!verified) {
+          // ban/deleted অ্যাকাউন্ট কোনো room পাবে না
+          try { socket.disconnect(true); } catch (e) { /* already gone */ }
+          return;
+        }
+        socket.join(`user:${verified.id}`);
+        if (verified.isAdmin) socket.join('admins');
+      }).catch((err) => console.error('socket connection verify error:', err.message));
     }
 
     // ===== ম্যাচ রুম (লাইভ স্কোর) — পাবলিক তথ্য, লগইন লাগবে না =====
     socket.on("joinMatch", (matchId) => {
-      socket.join(`match:${matchId}`);
+      // room name-এ যা খুশি ঢোকানো যেত; শুধু positive integer গ্রহণ করা হয়
+      const id = Number(matchId);
+      if (!Number.isSafeInteger(id) || id <= 0) return;
+      socket.join(`match:${id}`);
     });
     socket.on("join_matches", () => socket.join("matches"));
     socket.on("leave_matches", () => socket.leave("matches"));
 
     // ===== ইউজার নিজের চ্যাট রুমে জয়েন — শুধু নিজের রুমে, session দিয়ে যাচাই করে =====
-    socket.on("join", () => {
+    socket.on("join", async () => {
       const u = getSessionUser();
-      if (u) socket.join(`user:${u.id}`);
+      if (!u) return;
+      const verified = await verifyUserState(u.id);
+      if (!verified) return;
+      socket.join(`user:${verified.id}`);
     });
 
     // ===== অ্যাডমিন চ্যাট রুম — শুধু আসল admin session হলেই =====
-    socket.on("join_admin", () => {
+    socket.on("join_admin", async () => {
       const u = getSessionUser();
-      if (u && u.role === 'admin') socket.join("admins");
+      if (!u) return;
+      // session-এর role নয়, DB-র বর্তমান role দেখে সিদ্ধান্ত
+      const verified = await verifyUserState(u.id);
+      if (!verified || !verified.isAdmin) return;
+      socket.join("admins");
     });
 
     // ===== চ্যাট মেসেজ পাঠানো/গ্রহণ =====
@@ -132,12 +218,26 @@ const initSocket = (server, sessionMiddleware) => {
         const u = getSessionUser();
         if (!u) return; // লগইন ছাড়া মেসেজ পাঠানো যাবে না
 
-        const senderId = u.id; // ক্লায়েন্টের senderId উপেক্ষা করা হচ্ছে, session-ই একমাত্র সত্য উৎস
+        // HIGH-3: sender-এর প্রকৃত অবস্থা DB থেকে যাচাই — ban/demote হওয়ার পরে
+        // পুরনো socket দিয়ে admin হিসেবে বার্তা পাঠানো যাবে না
+        const verified = await verifyUserState(u.id);
+        if (!verified) return;
 
-        if (!(await allowChatMessage(senderId))) return; // রেট-লিমিট ছাড়িয়ে গেলে নীরবে ড্রপ
+        const senderId = verified.id; // senderId কখনো client থেকে নেওয়া হয় না
 
-        const isAdmin = u.role === 'admin';
-        const receiverId = (data && data.receiverId) || null;
+        if (!(await allowChatMessage(senderId))) return; // রেট-লিমিট
+
+        const isAdmin = verified.isAdmin;
+        // MEDIUM-7: আগে যেকোনো non-admin ইচ্ছেমতো receiverId পাঠাতে পারত এবং সেটি
+        // DB-তে সংরক্ষিত হত। /chat/history যেহেতু receiver_id দিয়েও খোঁজে, তাই একজন
+        // user অন্য user-এর conversation-এ বার্তা ঢুকিয়ে দিতে পারত। সাধারণ user-এর
+        // বার্তা সবসময় support-এর উদ্দেশ্যে, তাই receiver null রাখা হয়।
+        let receiverId = null;
+        if (isAdmin) {
+          const parsedReceiver = Number(data && data.receiverId);
+          if (!Number.isSafeInteger(parsedReceiver) || parsedReceiver <= 0) return;
+          receiverId = parsedReceiver;
+        }
         const message = (data && data.message) || null;
         const fileUrl = (data && data.fileUrl) || null;
         const fileType = (data && data.fileType) || null;
@@ -278,4 +378,4 @@ const broadcastDemoStats = async () => {
   }
 };
 
-module.exports = { initSocket, updateLiveScore, getDemoStats, broadcastDemoStats, emitAdminAlert, notifyUserSeen, notifyAdminsSeen, allowChatMessage, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_SEC };
+module.exports = { initSocket, invalidateSocketAuth, updateLiveScore, getDemoStats, broadcastDemoStats, emitAdminAlert, notifyUserSeen, notifyAdminsSeen, allowChatMessage, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_SEC };
