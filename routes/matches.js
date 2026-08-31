@@ -1,8 +1,14 @@
 const express = require('express');
 const { requireIntParam } = require('../middleware/validate');
 const router = express.Router();
+
 const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
+const { requireFeature } = require('../middleware/featureGate');
+// পুরো রাউটারে `sports` গেট — ম্যাচ ব্রাউজিং স্পোর্টস সেকশনেরই অংশ।
+// বেটিং আলাদাভাবে `sports_betting` দিয়ে গেটেড (নিচে POST /:id/bet), যাতে
+// "ম্যাচ দেখা যাবে কিন্তু বাজি ধরা যাবে না" অবস্থাটাও সম্ভব হয়।
+router.use(requireFeature('sports'));
 const { addTurnover } = require('../services/turnover');
 const { updateDailyTurnover } = require('../services/dailyReward');
 const { distributeCommission } = require('../services/referral');
@@ -154,7 +160,7 @@ router.get('/:id', requireIntParam('id', '/matches'), async (req, res) => {
   }
 });
 
-router.post('/:id/bet', isAuth, async (req, res) => {
+router.post('/:id/bet', isAuth, requireFeature('sports_betting'), async (req, res) => {
   const userId = req.session.user.id;
   const matchId = req.params.id;
   const { market_id, runner, demo } = req.body;

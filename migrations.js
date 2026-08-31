@@ -1429,6 +1429,19 @@ async function runMigrations() {
       );
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_feature_flags_category ON feature_flags(category);`);
+
+    // মূল টেবিলের CHECK কনস্ট্রেইন্ট শুধু feature/maintenance/beta/security/api
+    // অনুমোদন করত। কেন্দ্রীয় Feature Management-এর জন্য বাস্তব প্রোডাক্ট গ্রুপ
+    // (gaming/sports/wallet/rewards/communication) দরকার, তাই কনস্ট্রেইন্টটা
+    // প্রসারিত করা হচ্ছে। পুরনো পাঁচটা মান রাখা হয়েছে — ইতিমধ্যে DB-তে থাকা
+    // ফ্ল্যাগগুলো (beta_new_dashboard ইত্যাদি) যেন অবৈধ হয়ে না যায়।
+    await pool.query(`ALTER TABLE feature_flags DROP CONSTRAINT IF EXISTS feature_flags_category_check;`);
+    await pool.query(`
+      ALTER TABLE feature_flags ADD CONSTRAINT feature_flags_category_check
+      CHECK (category IN ('feature','maintenance','beta','security','api',
+                          'gaming','sports','wallet','rewards','communication'));
+    `);
+
     await pool.query(`
       INSERT INTO feature_flags (key, label, category, enabled, description) VALUES
       ('beta_new_dashboard', 'New Dashboard UI', 'beta', false, 'নতুন ড্যাশবোর্ড ডিজাইন (টেস্টিং)'),
@@ -1436,6 +1449,24 @@ async function runMigrations() {
       ('api_public_stats', 'Public Stats API', 'api', true, 'পাবলিক /api/stats এন্ডপয়েন্ট চালু/বন্ধ')
       ON CONFLICT (key) DO NOTHING;
     `);
+
+    // ==================== ইউজার-ফেসিং ফিচার ফ্ল্যাগ (কেন্দ্রীয় রেজিস্ট্রি) ====================
+    // services/featureRegistry.js-ই একমাত্র সত্যের উৎস — এখানে হাতে করে key
+    // লেখা হয় না, রেজিস্ট্রি থেকেই seed হয়। ফলে রেজিস্ট্রিতে নতুন ফিচার যোগ
+    // করলে পরের ডিপ্লয়ে সেটা আপনাআপনি seed হবে।
+    //
+    // ON CONFLICT DO NOTHING — অ্যাডমিন যে ফিচার ইতিমধ্যে বন্ধ করেছেন,
+    // মাইগ্রেশন সেটা আবার চালু করে দেবে না।
+    {
+      const featureRegistry = require('./services/featureRegistry');
+      for (const f of featureRegistry.FEATURES) {
+        await pool.query(
+          `INSERT INTO feature_flags (key, label, category, enabled, description)
+           VALUES ($1,$2,$3,$4,$5) ON CONFLICT (key) DO NOTHING`,
+          [f.key, f.label, f.category, f.defaultEnabled !== false, f.description || null]
+        );
+      }
+    }
     console.log("✅ Feature Flags table ready");
 
     // ==================== Notification Template Management ====================

@@ -491,23 +491,38 @@ router.get('/logout', (req, res) => {
 router.use(isAdmin);
 router.use(adminActionLimiter);
 
+// ==================== অ্যাডমিন নেভিগেশন (res.locals.adminNav) ====================
+// নেভিগেশনের কাঠামো utils/adminNav.js-এ ডেটা হিসেবে থাকে (আগে ~৩১৫ লাইন
+// হার্ডকোড করা HTML ছিল admin-layout.ejs-এর ভেতরে)। এখানে সেটা অ্যাডমিনের
+// permission অনুযায়ী ফিল্টার করে টেমপ্লেটে পাঠানো হয়।
+//
+// এটা নিছক UI পরিচ্ছন্নতা — যে লিংক দেখানো হচ্ছে না সেটার রুটে গেলেও
+// requirePermission() মিডলওয়্যারই আসল সিদ্ধান্ত নেয়। তাই এখানে ব্যর্থ হলে
+// fail-safe: পূর্ণ নেভ দেখানো হয়, কারণ লিংক দেখানো নিজে কোনো অনুমতি দেয় না।
+router.use(require('../middleware/adminNavLocals').adminNavLocals);
+
 // ==================== নোটিফিকেশন ব্যাজ কাউন্ট (বটম-নেভ) ====================
 router.get('/api/notification-counts', async (req, res) => {
   try {
-    const [deposits, withdrawals, chats] = await Promise.all([
+    // kyc যোগ করা হলো: বটম নেভে KYC আর সরাসরি লিংক নয় (Phase 7-এ "More" দিয়ে
+    // বদলানো হয়েছে), তাই পেন্ডিং KYC সংখ্যা "More" ব্যাজে দেখাতে হয় — নাহলে
+    // মোবাইলে কিউটা সম্পূর্ণ চোখের আড়ালে চলে যেত।
+    const [deposits, withdrawals, chats, kyc] = await Promise.all([
       pool.query(`SELECT COUNT(*)::int AS c FROM payment_requests WHERE type='deposit' AND status='pending'`),
       pool.query(`SELECT COUNT(*)::int AS c FROM payment_requests WHERE type='withdraw' AND status='pending'`),
-      pool.query(`SELECT COUNT(*)::int AS c FROM chat_messages WHERE is_admin=false AND is_read=false`)
+      pool.query(`SELECT COUNT(*)::int AS c FROM chat_messages WHERE is_admin=false AND is_read=false`),
+      pool.query(`SELECT COUNT(*)::int AS c FROM kyc_requests WHERE status='pending'`)
     ]);
     res.json({
       success: true,
       deposits: deposits.rows[0].c,
       withdrawals: withdrawals.rows[0].c,
-      chats: chats.rows[0].c
+      chats: chats.rows[0].c,
+      kyc: kyc.rows[0].c
     });
   } catch (err) {
     console.error('notification-counts error:', err.message);
-    res.json({ success: false, deposits: 0, withdrawals: 0, chats: 0 });
+    res.json({ success: false, deposits: 0, withdrawals: 0, chats: 0, kyc: 0 });
   }
 });
 
@@ -1257,6 +1272,13 @@ router.get('/', rbac.requirePermission('dashboard_view'), async (req, res) => {
     const pendingSupport = await pool.query(
       `SELECT COUNT(DISTINCT sender_id) AS cnt FROM chat_messages WHERE is_admin=false AND is_read=false`
     );
+    // pending KYC — ভিউ (views/admin/dashboard.ejs) `stats.pending_kyc` ও
+    // `stats.pending_total` পড়ত, কিন্তু রুট সেগুলো কখনো পাঠাত না। ফলে
+    // "Review Pending KYC (0)" সবসময় 0 দেখাত এমনকি সারি pending থাকলেও —
+    // অর্থাৎ অ্যাডমিন কিউটা আছে বলেই বুঝতে পারতেন না।
+    const pendingKyc = await pool.query(
+      `SELECT COUNT(*) AS cnt FROM kyc_requests WHERE status='pending'`
+    );
 
     const revenueTrend = await pool.query(`
       SELECT d::date AS day,
@@ -1478,7 +1500,18 @@ router.get('/', rbac.requirePermission('dashboard_view'), async (req, res) => {
         active_users_now: parseInt(activeUsersNow.rows[0].cnt),
         pending_deposits: parseInt(pendingDeposits.rows[0].cnt),
         pending_withdrawals: parseInt(pendingWithdrawals.rows[0].cnt),
-        pending_support: parseInt(pendingSupport.rows[0].cnt)
+        pending_support: parseInt(pendingSupport.rows[0].cnt),
+        pending_kyc: parseInt(pendingKyc.rows[0].cnt),
+        pending_total: parseInt(pendingDeposits.rows[0].cnt)
+                     + parseInt(pendingWithdrawals.rows[0].cnt)
+                     + parseInt(pendingKyc.rows[0].cnt),
+        // ভিউ এই দুটো নামেই পড়ে; রুট এতদিন total_deposit_all / total_withdraw_all
+        // নামে পাঠাত, তাই লাইফটাইম কার্ড দুটো সবসময় ৳0 দেখাত। দুটো নামই রাখা
+        // হলো — পুরনো নাম অন্য কোথাও ব্যবহৃত হলে ভাঙবে না।
+        total_deposits_all_time: Number(totalDepositAll.rows[0].total),
+        total_withdrawals_all_time: Number(totalWithdrawAll.rows[0].total),
+        fraud_alerts: (fraudAlerts && typeof fraudAlerts === "object")
+          ? ((fraudAlerts.high || 0) + (fraudAlerts.medium || 0)) : 0
       },
       revenueTrend: revenueTrend.rows.map(r => ({
         day: r.day, deposit: Number(r.deposit), withdraw: Number(r.withdraw)
@@ -4525,7 +4558,8 @@ const ADMIN_ERROR_MESSAGES = {
   restore_failed: 'রিস্টোর ব্যর্থ হয়েছে — বিস্তারিত সার্ভার লগ ও অডিট লগে আছে।',
   restore_partial: 'রিস্টোর আংশিকভাবে সম্পন্ন হয়েছে — কিছু সারি ঢোকানো যায়নি। এটি সম্পূর্ণ সফল রিস্টোর নয়; বিস্তারিত সার্ভার লগ ও অডিট লগে আছে।',
   create_failed: 'তৈরি করা যায়নি — বিস্তারিত সার্ভার লগে আছে।',
-  delete_failed: 'মুছে ফেলা যায়নি — বিস্তারিত সার্ভার লগে আছে।'
+  delete_failed: 'মুছে ফেলা যায়নি — বিস্তারিত সার্ভার লগে আছে।',
+  feature_protected: 'সিস্টেম ফিচার ডিলিট করা যায় না — বন্ধ করতে ON/OFF টগল ব্যবহার করুন।'
 };
 function adminErrorMessage(code) {
   if (!code) return '';
@@ -4535,31 +4569,47 @@ function adminErrorMessage(code) {
 // ==================== FEATURE FLAGS & CONFIGURATION MANAGEMENT ====================
 const featureFlags = require('../services/featureFlags');
 
-router.get('/feature-flags', rbac.requirePermission('settings_edit'), async (req, res) => {
+// Feature Management — কেন্দ্রীয় ON/OFF কনসোল।
+// /admin/features হলো প্রাথমিক পাথ; /admin/feature-flags পুরনো বুকমার্ক/লিংকের
+// জন্য ব্যাকওয়ার্ড-কম্প্যাটিবল অ্যালিয়াস হিসেবে রাখা হয়েছে।
+async function renderFeatureManagement(req, res) {
   try {
-    const flags = await featureFlags.loadAllFlags();
-    res.render('admin/feature-flags', { flags: flags || [], created: req.query.created || '', error: adminErrorMessage(req.query.error) });
+    const { groups, flags } = await featureFlags.getManagementView();
+    res.render('admin/feature-flags', {
+      groups, flags,
+      created: req.query.created || '',
+      toggled: req.query.toggled || '',
+      error: adminErrorMessage(req.query.error)
+    });
   } catch (err) {
     console.error('Feature flags page error:', err && err.stack ? err.stack : err);
-    res.render('admin/feature-flags', { loadError: true, flags: [], created: '', error: adminErrorMessage('load_failed') });
+    res.render('admin/feature-flags', {
+      loadError: true, groups: [], flags: [], created: '', toggled: '',
+      error: adminErrorMessage('load_failed')
+    });
   }
-});
+}
+
+router.get('/features', rbac.requirePermission('settings_edit'), renderFeatureManagement);
+router.get('/feature-flags', rbac.requirePermission('settings_edit'), renderFeatureManagement);
 
 router.post('/feature-flags/:id/toggle', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
     const r = await pool.query('SELECT * FROM feature_flags WHERE id = $1', [req.params.id]);
     const flag = r.rows[0];
-    if (!flag) return res.redirect('/admin/feature-flags?error=not_found');
+    if (!flag) return res.redirect('/admin/features?error=not_found');
     const newState = !flag.enabled;
     await featureFlags.setFlag(flag.key, newState, req.session.user.id, req.session.user.username);
+    // অডিট রেকর্ডে আগের ও নতুন অবস্থা দুটোই রাখা হয় — শুধু "বন্ধ করা হয়েছে"
+    // লিখলে পরে জানা যেত না আগে কী ছিল (একই টগল দুইবার চাপলে আলাদা করা যেত না)।
     await logAdminAction(
       req.session.user.id, req.session.user.username, 'FEATURE_FLAG_TOGGLED',
-      `"${flag.label}" (${flag.key}) ${newState ? 'চালু' : 'বন্ধ'} করা হয়েছে`, req.ip
+      `"${flag.label}" (${flag.key}): ${flag.enabled ? 'ON' : 'OFF'} → ${newState ? 'ON' : 'OFF'}`, req.ip
     );
-    res.redirect('/admin/feature-flags');
+    res.redirect('/admin/features?toggled=' + encodeURIComponent(flag.key));
   } catch (err) {
     console.error('Feature flag toggle error:', err && err.stack ? err.stack : err);
-    res.redirect('/admin/feature-flags?error=toggle_failed');
+    res.redirect('/admin/features?error=toggle_failed');
   }
 });
 
@@ -4571,11 +4621,11 @@ router.post('/feature-flags/create', rbac.requirePermission('settings_edit'), as
       enabled: false, adminId: req.session.user.id, adminUsername: req.session.user.username
     });
     await logAdminAction(req.session.user.id, req.session.user.username, 'FEATURE_FLAG_CREATED', `নতুন ফ্ল্যাগ তৈরি হয়েছে: "${created.label}" (${created.key}, ${created.category})`, req.ip);
-    res.redirect('/admin/feature-flags?created=1');
+    res.redirect('/admin/features?created=1');
   } catch (err) {
     console.error('Feature flag create error:', err && err.stack ? err.stack : err);
     // উপরের backups রিস্টোরের মতোই — কাঁচা DB এরর URL-এ যায় না।
-    res.redirect('/admin/feature-flags?error=create_failed');
+    res.redirect('/admin/features?error=create_failed');
   }
 });
 
@@ -4585,10 +4635,16 @@ router.post('/feature-flags/:id/delete', rbac.requirePermission('settings_edit')
     const flag = r.rows[0];
     await featureFlags.deleteFlag(req.params.id);
     if (flag) await logAdminAction(req.session.user.id, req.session.user.username, 'FEATURE_FLAG_DELETED', `"${flag.label}" (${flag.key}) ডিলিট করা হয়েছে`, req.ip);
-    res.redirect('/admin/feature-flags');
+    res.redirect('/admin/features');
   } catch (err) {
     console.error('Feature flag delete error:', err && err.stack ? err.stack : err);
-    res.redirect('/admin/feature-flags?error=delete_failed');
+    // রেজিস্ট্রি-ম্যানেজড ফিচার ডিলিটের চেষ্টা একটা ইচ্ছাকৃত (PublicError)
+    // ভ্যালিডেশন — অ্যাডমিনকে কারণটা জানানো দরকার। তবে বার্তাটা সরাসরি URL-এ
+    // না বসিয়ে একটা কোডে ম্যাপ করা হয়: adminErrorMessage() শুধু কোড চেনে, আর
+    // কাঁচা টেক্সট query string-এ রিফ্লেক্ট করা ঠিক সেই প্যাটার্ন যেটা
+    // tests/security/adminReflectedOutput.test.js আটকায়।
+    if (err && err.expose === true) return res.redirect('/admin/features?error=feature_protected');
+    res.redirect('/admin/features?error=delete_failed');
   }
 });
 

@@ -385,6 +385,19 @@ app.use((req, res, next) => {
   next();
 });
 
+// ফিচার ফ্ল্যাগ → res.locals.features, যাতে নেভিগেশন/বাটন বন্ধ ফিচারের জন্য
+// লুকানো যায়। এটা শুধু UI স্তর; আসল প্রয়োগ requireFeature() মিডলওয়্যারে
+// (middleware/featureGate.js) — শুধু বাটন লুকিয়ে কিছু বন্ধ করা হয় না।
+// অ্যাডমিন প্যানেল বাদ: অ্যাডমিনকে বন্ধ ফিচারও ম্যানেজ করতে দিতে হবে।
+app.use((req, res, next) => {
+  if (req.path.startsWith('/admin')) return next();
+  return require('./middleware/featureGate').attachFeatureLocals(req, res, next);
+});
+
+// /payment/admin/* ও /chat/admin ও admin-layout.ejs রেন্ডার করে, তাই সেগুলোরও
+// সাইডবার ডেটা দরকার (নাহলে ওই পেজে নেভিগেশন খালি আসত)।
+app.use(['/payment/admin', '/chat/admin'], require('./middleware/adminNavLocals').adminNavLocals);
+
 app.get('/health', async (req, res) => {
   try {
     const { liveness } = require('./services/healthCheck');

@@ -1,76 +1,242 @@
 <%
-function escapeHtml(str) {
+// views/admin/feature-flags.ejs — কেন্দ্রীয় Feature Management কনসোল।
+//
+// আগে এটা একটা ফ্ল্যাট টেবিল ছিল: ক্যাটাগরি কলাম থাকলেও গ্রুপিং ছিল না, সার্চ
+// ছিল না, আর ON/OFF বাটনে কোনো নিশ্চিতকরণ ছিল না — অর্থাৎ ভুল করে একটা ক্লিকেই
+// deposit/withdrawal বন্ধ হয়ে যেতে পারত।
+//
+// রেন্ডারিং সার্ভার-সাইড; সার্চ ও ফিল্টার ক্লায়েন্ট-সাইডে (কোনো নতুন
+// ডিপেন্ডেন্সি ছাড়াই, শুধু data-অ্যাট্রিবিউট + vanilla JS)।
+// tk(): i18n key থাকলে অনুবাদ, নাহলে fallback (অ্যাডমিনের হাতে তৈরি কাস্টম
+// ফ্ল্যাগের কোনো key নেই — সেগুলোর জন্য DB-র label/description দেখানো হয়)।
+function tk(key, fallback) {
+  return key ? t(key) : (fallback == null ? '' : fallback);
+}
+function esc(str) {
   return String(str == null ? '' : str)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
-function catLabel(c) {
-  const map = { feature: 'Feature', maintenance: 'Maintenance', beta: 'Beta', security: 'Security', api: 'API' };
-  const color = { feature: 'bg-blue-100 text-blue-700', maintenance: 'bg-amber-100 text-amber-700', beta: 'bg-purple-100 text-purple-700', security: 'bg-red-100 text-red-700', api: 'bg-emerald-100 text-emerald-700' };
-  return '<span class="px-2.5 py-1 text-xs font-bold rounded-full ' + (color[c] || 'bg-slate-100 text-slate-600') + '">' + (map[c] || c) + '</span>';
+
+// আর্থিক ও অ্যাক্সেস-সমালোচনামূলক ফিচার — বন্ধ করার আগে অতিরিক্ত নিশ্চিতকরণ।
+const CRITICAL = ['deposit', 'withdrawal', 'sports_betting', 'games', 'live_chat'];
+
+function toggleCell(f) {
+  const on = !!f.enabled;
+  const critical = CRITICAL.indexOf(f.key) !== -1;
+  // নিশ্চিতকরণ শুধু চালু→বন্ধ দিকেই; ফিচার আবার চালু করা ঝুঁকিপূর্ণ নয়।
+  const confirmMsg = (on && critical)
+    ? t('admin_ff_confirm_critical').replace('{value}', String(tk(f.labelKey, f.label)).replace(/"/g, ''))
+    : (on ? t('admin_ff_confirm_disable').replace('{value}', String(tk(f.labelKey, f.label)).replace(/"/g, '')) : '');
+  const onsubmit = confirmMsg ? ' onsubmit="return confirm(\'' + esc(confirmMsg) + '\')"' : '';
+  return '<form method="POST" action="/admin/feature-flags/' + f.id + '/toggle" style="display:inline"' + onsubmit + '>' +
+    '<button type="submit" aria-pressed="' + (on ? 'true' : 'false') +
+      '" title="' + esc(on ? t('admin_ff_click_to_disable') : t('admin_ff_click_to_enable')) + '"' +
+      ' class="ff-toggle ' + (on ? 'ff-on' : 'ff-off') + '">' +
+      '<span class="ff-dot"></span><span class="ff-toggle-text">' + (on ? 'ON' : 'OFF') + '</span>' +
+    '</button></form>';
 }
-function flagRow(f) {
-  return '<tr class="border-b border-slate-100 align-top">' +
-    '<td class="px-6 py-4">' + catLabel(f.category) + '</td>' +
-    '<td class="px-6 py-4"><div class="font-semibold text-slate-900 text-sm">' + escapeHtml(f.label) + '</div><div class="text-xs text-slate-400 font-mono">' + escapeHtml(f.key) + '</div>' +
-      (f.description ? '<div class="text-xs text-slate-500 mt-1">' + escapeHtml(f.description) + '</div>' : '') + '</td>' +
-    '<td class="px-6 py-4">' +
-      '<form method="POST" action="/admin/feature-flags/' + f.id + '/toggle" style="display:inline">' +
-        '<button type="submit" class="px-4 py-1.5 text-xs font-bold rounded-full ' + (f.enabled ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600') + '">' + (f.enabled ? 'ON' : 'OFF') + '</button>' +
-      '</form>' +
-    '</td>' +
-    '<td class="px-6 py-4 text-xs text-slate-400">' + (f.updated_by_username ? escapeHtml(f.updated_by_username) : '-') + '<br>' + (f.updated_at ? new Date(f.updated_at).toLocaleString('en-US') : '') + '</td>' +
-    '<td class="px-6 py-4 text-right">' +
-      '<form method="POST" action="/admin/feature-flags/' + f.id + '/delete" onsubmit="return confirm(\'ডিলিট করবেন?\')" style="display:inline">' +
-        '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-red-50 text-red-600 hover:bg-red-100">Delete</button>' +
-      '</form>' +
-    '</td>' +
-  '</tr>';
+
+function flagCard(f) {
+  const on = !!f.enabled;
+  const updated = f.updated_at ? new Date(f.updated_at).toLocaleString('en-GB') : '';
+  const by = f.updated_by_username ? esc(f.updated_by_username) : '';
+  // managed=false → অ্যাডমিনের হাতে তৈরি কাস্টম ফ্ল্যাগ; শুধু এগুলোই ডিলিট করা যায়।
+  const del = f.managed ? '' :
+    '<form method="POST" action="/admin/feature-flags/' + f.id + '/delete" style="display:inline"' +
+    ' onsubmit="return confirm(\'' + esc(t('admin_ff_confirm_delete')) + '\')">' +
+    '<button type="submit" class="ff-del" aria-label="' + esc(t('admin_ui_delete')) + '" title="' + esc(t('admin_ui_delete')) + '">&times;</button></form>';
+
+  return '<div class="ff-card" data-key="' + esc(f.key) + '" data-state="' + (on ? 'on' : 'off') + '"' +
+      ' data-search="' + esc((f.key + ' ' + tk(f.labelKey, f.label) + ' ' + tk(f.descriptionKey, f.description || '')).toLowerCase()) + '">' +
+    '<div class="ff-card-main">' +
+      '<div class="ff-icon"><i class="fas ' + esc(f.icon || 'fa-flag') + '"></i></div>' +
+      '<div class="ff-meta">' +
+        '<div class="ff-label">' + esc(tk(f.labelKey, f.label)) +
+          (f.managed ? '' : '<span class="ff-custom">' + esc(t('admin_ff_custom')) + '</span>') + '</div>' +
+        '<div class="ff-key">' + esc(f.key) + '</div>' +
+        ((f.descriptionKey || f.description) ? '<div class="ff-desc">' + esc(tk(f.descriptionKey, f.description)) + '</div>' : '') +
+        (updated ? '<div class="ff-updated">' + esc(t('admin_ff_last_modified')) + ': ' + esc(updated) + (by ? ' — ' + by : '') + '</div>' : '') +
+      '</div>' +
+    '</div>' +
+    '<div class="ff-actions">' + toggleCell(f) + del + '</div>' +
+  '</div>';
 }
-const rows = (flags || []).map(flagRow).join('') || '<tr><td colspan="5" class="px-6 py-10 text-center text-slate-400">কোনো ফ্ল্যাগ নেই</td></tr>';
+
+const allFlags = (typeof flags !== 'undefined' && flags) ? flags : [];
+const allGroups = (typeof groups !== 'undefined' && groups) ? groups : [];
+const totalOn = allFlags.filter(f => f.enabled).length;
+const totalOff = allFlags.length - totalOn;
+
+const groupHtml = allGroups.map(function (g) {
+  const onCount = g.flags.filter(f => f.enabled).length;
+  return '<section class="ff-group" data-group="' + esc(g.category) + '">' +
+    '<h2 class="ff-group-title">' + esc(tk(g.labelKey, g.label)) +
+      '<span class="ff-group-count">' + onCount + '/' + g.flags.length + ' ' + esc(t('admin_ff_filter_on')) + '</span></h2>' +
+    '<div class="ff-grid">' + g.flags.map(flagCard).join('') + '</div>' +
+  '</section>';
+}).join('') || '<div class="ff-empty">' + esc(t('admin_ff_none')) + '</div>';
 %>
 <%- include('partials/admin-layout', {
-    title: 'Feature Flags',
-    active: 'feature-flags',
+    title: 'Feature Management',
+    active: 'features',
     body: `
-<div class="max-w-6xl mx-auto">
-    <h1 class="text-2xl font-semibold text-slate-900 mb-1">Feature Flags &amp; Configuration Management</h1>
-    <p class="text-slate-500 text-sm mb-6">Feature / Maintenance / Beta / Security / API — প্রতিটা আলাদাভাবে চালু-বন্ধ করুন (Redis-cached, তাৎক্ষণিক প্রভাব)</p>
-
-    ${created ? '<div class="mb-4 px-4 py-3 bg-emerald-50 text-emerald-700 rounded-2xl text-sm font-medium">✅ ফ্ল্যাগ তৈরি হয়েছে</div>' : ''}
-    ${error ? '<div class="mb-4 px-4 py-3 bg-red-50 text-red-700 rounded-2xl text-sm font-medium">❌ ' + escapeHtml(error) + '</div>' : ''}
-
-    <div class="bg-white rounded-3xl border border-slate-100 p-5 mb-6">
-        <h2 class="font-semibold text-slate-900 mb-3 text-sm">নতুন ফ্ল্যাগ যোগ করুন</h2>
-        <form method="POST" action="/admin/feature-flags/create" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            <input type="text" name="key" placeholder="key (e.g. beta_x)" pattern="[a-z0-9_]{3,60}" required class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
-            <input type="text" name="label" placeholder="লেবেল" required class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
-            <select name="category" required class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
-                <option value="feature">Feature</option>
-                <option value="maintenance">Maintenance</option>
-                <option value="beta">Beta</option>
-                <option value="security">Security</option>
-                <option value="api">API</option>
-            </select>
-            <input type="text" name="description" placeholder="বর্ণনা (ঐচ্ছিক)" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
-            <button type="submit" class="px-4 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">যোগ করুন</button>
-        </form>
+<div class="ff-wrap">
+  <div class="ff-head">
+    <div>
+      <h1 class="ff-h1">${esc(t('admin_ff_title'))}</h1>
+      <p class="ff-sub">${esc(t('admin_ff_subtitle'))}</p>
     </div>
-
-    <div class="bg-white rounded-3xl border border-slate-100 overflow-x-auto">
-        <table class="w-full text-sm min-w-[800px]">
-            <thead class="bg-slate-50">
-                <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Category</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Flag</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Last Updated</th>
-                    <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase">Actions</th>
-                </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-        </table>
+    <div class="ff-stats">
+      <span class="ff-stat ff-stat-on"><span class="ff-dot"></span>${esc(t('admin_ff_enabled_count').replace('{value}', totalOn))}</span>
+      <span class="ff-stat ff-stat-off"><span class="ff-dot"></span>${esc(t('admin_ff_disabled_count').replace('{value}', totalOff))}</span>
     </div>
+  </div>
+
+  ${created ? '<div class="ff-alert ff-alert-ok">✅ ' + esc(t('admin_ff_created')) + '</div>' : ''}
+  ${toggled ? '<div class="ff-alert ff-alert-ok">✅ ' + esc(t('admin_ff_saved')) + '</div>' : ''}
+  ${error ? '<div class="ff-alert ff-alert-err">⚠️ ' + esc(error) + '</div>' : ''}
+
+  <div class="ff-controls">
+    <div class="ff-search-wrap">
+      <i class="fas fa-search"></i>
+      <input type="search" id="ffSearch" placeholder="${esc(t('admin_ff_search_placeholder'))}" aria-label="${esc(t('admin_ff_search_label'))}">
+    </div>
+    <div class="ff-filters" role="group" aria-label="${esc(t('admin_ff_filter_group'))}">
+      <button type="button" class="ff-filter active" data-filter="all">${esc(t('admin_ff_filter_all'))}</button>
+      <button type="button" class="ff-filter" data-filter="on">${esc(t('admin_ff_filter_on'))}</button>
+      <button type="button" class="ff-filter" data-filter="off">${esc(t('admin_ff_filter_off'))}</button>
+    </div>
+  </div>
+
+  <div id="ffNoResult" class="ff-empty" style="display:none">${esc(t('admin_ff_no_result'))}</div>
+
+  ${groupHtml}
+
+  <details class="ff-advanced">
+    <summary>${esc(t('admin_ff_advanced'))}</summary>
+    <p class="ff-advanced-note">${esc(t('admin_ff_advanced_note'))}</p>
+    <form method="POST" action="/admin/feature-flags/create" class="ff-create">
+      <input type="text" name="key" placeholder="${esc(t('admin_ff_key_placeholder'))}" pattern="[a-z0-9_]{3,60}" required aria-label="key">
+      <input type="text" name="label" placeholder="${esc(t('admin_ff_label'))}" required aria-label="${esc(t('admin_ff_label'))}">
+      <select name="category" required aria-label="${esc(t('admin_ff_category'))}">
+        <option value="gaming">${esc(t('admin_ff_cat_gaming'))}</option>
+        <option value="sports">${esc(t('admin_ff_cat_sports'))}</option>
+        <option value="wallet">${esc(t('admin_ff_cat_wallet'))}</option>
+        <option value="rewards">${esc(t('admin_ff_cat_rewards'))}</option>
+        <option value="communication">${esc(t('admin_ff_cat_communication'))}</option>
+        <option value="feature">${esc(t('admin_ff_cat_feature'))}</option>
+        <option value="maintenance">${esc(t('admin_ff_cat_maintenance'))}</option>
+        <option value="beta">${esc(t('admin_ff_cat_beta'))}</option>
+        <option value="security">${esc(t('admin_ff_cat_security'))}</option>
+        <option value="api">${esc(t('admin_ff_cat_api'))}</option>
+      </select>
+      <input type="text" name="description" placeholder="${esc(t('admin_ff_description_optional'))}" aria-label="${esc(t('admin_ff_description'))}">
+      <button type="submit" class="ff-create-btn">${esc(t('admin_ff_add'))}</button>
+    </form>
+  </details>
 </div>
+
+<style>
+  .ff-wrap { max-width: 1100px; margin: 0 auto; }
+  .ff-head { display:flex; flex-wrap:wrap; gap:12px; justify-content:space-between; align-items:flex-start; margin-bottom:18px; }
+  .ff-h1 { font-size:1.5rem; font-weight:600; color:#0f172a; margin:0 0 4px; }
+  .ff-sub { color:#64748b; font-size:13px; margin:0; max-width:60ch; }
+  .ff-stats { display:flex; gap:8px; }
+  .ff-stat { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:700; padding:6px 12px; border-radius:999px; }
+  .ff-stat-on { background:#ecfdf5; color:#047857; } .ff-stat-on .ff-dot { background:#10b981; }
+  .ff-stat-off { background:#fef2f2; color:#b91c1c; } .ff-stat-off .ff-dot { background:#ef4444; }
+  .ff-dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
+
+  .ff-alert { padding:12px 16px; border-radius:14px; font-size:13px; font-weight:600; margin-bottom:14px; }
+  .ff-alert-ok { background:#ecfdf5; color:#047857; }
+  .ff-alert-err { background:#fef2f2; color:#b91c1c; }
+
+  .ff-controls { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px; }
+  .ff-search-wrap { position:relative; flex:1 1 240px; }
+  .ff-search-wrap i { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:13px; }
+  #ffSearch { width:100%; padding:11px 14px 11px 38px; border:1px solid #e2e8f0; border-radius:14px; font-size:14px; }
+  #ffSearch:focus { outline:2px solid #3b82f6; outline-offset:1px; border-color:#3b82f6; }
+  .ff-filters { display:flex; gap:6px; }
+  .ff-filter { padding:11px 18px; border:1px solid #e2e8f0; background:#fff; border-radius:14px; font-size:13px; font-weight:600; color:#475569; cursor:pointer; min-height:44px; }
+  .ff-filter.active { background:#3b82f6; border-color:#3b82f6; color:#fff; }
+  .ff-filter:focus-visible { outline:2px solid #1d4ed8; outline-offset:2px; }
+
+  .ff-group { margin-bottom:26px; }
+  .ff-group-title { font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; color:#64748b; margin:0 0 10px; display:flex; align-items:center; gap:10px; }
+  .ff-group-count { font-size:11px; font-weight:600; color:#94a3b8; text-transform:none; letter-spacing:0; }
+  .ff-grid { display:grid; grid-template-columns:1fr; gap:10px; }
+  @media (min-width:760px) { .ff-grid { grid-template-columns:1fr 1fr; } }
+
+  .ff-card { display:flex; align-items:center; justify-content:space-between; gap:12px; background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:14px 16px; }
+  .ff-card[data-state="off"] { background:#fffbfb; border-color:#fecaca; }
+  .ff-card-main { display:flex; gap:12px; min-width:0; }
+  .ff-icon { width:38px; height:38px; flex-shrink:0; border-radius:11px; background:#f1f5f9; color:#475569; display:flex; align-items:center; justify-content:center; }
+  .ff-card[data-state="off"] .ff-icon { background:#fee2e2; color:#b91c1c; }
+  .ff-meta { min-width:0; }
+  .ff-label { font-weight:700; font-size:14px; color:#0f172a; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .ff-custom { font-size:9px; font-weight:700; text-transform:uppercase; background:#ede9fe; color:#6d28d9; padding:2px 6px; border-radius:6px; }
+  .ff-key { font-family:ui-monospace,monospace; font-size:11px; color:#94a3b8; }
+  .ff-desc { font-size:12px; color:#64748b; margin-top:4px; overflow-wrap:anywhere; }
+  .ff-updated { font-size:11px; color:#a1a1aa; margin-top:5px; }
+
+  .ff-actions { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+  .ff-toggle { display:inline-flex; align-items:center; gap:7px; min-height:44px; padding:0 16px; border:none; border-radius:999px; font-size:12px; font-weight:800; cursor:pointer; }
+  .ff-on { background:#10b981; color:#fff; } .ff-on .ff-dot { background:#fff; }
+  .ff-off { background:#e2e8f0; color:#475569; } .ff-off .ff-dot { background:#94a3b8; }
+  .ff-toggle:focus-visible { outline:2px solid #1d4ed8; outline-offset:2px; }
+  .ff-del { min-height:44px; min-width:38px; border:none; background:transparent; color:#cbd5e1; font-size:20px; cursor:pointer; border-radius:10px; }
+  .ff-del:hover { color:#dc2626; background:#fef2f2; }
+
+  .ff-empty { padding:36px; text-align:center; color:#94a3b8; font-size:14px; background:#fff; border:1px dashed #e2e8f0; border-radius:16px; }
+  .ff-advanced { margin-top:28px; background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:16px 18px; }
+  .ff-advanced summary { cursor:pointer; font-weight:700; font-size:13px; color:#334155; }
+  .ff-advanced-note { font-size:12px; color:#64748b; margin:10px 0 12px; max-width:70ch; }
+  .ff-create { display:grid; grid-template-columns:1fr; gap:10px; }
+  @media (min-width:760px) { .ff-create { grid-template-columns:repeat(5,1fr); } }
+  .ff-create input, .ff-create select { border:1px solid #e2e8f0; padding:10px 14px; border-radius:12px; font-size:13px; min-height:44px; }
+  .ff-create-btn { background:#3b82f6; color:#fff; border:none; border-radius:12px; font-size:13px; font-weight:700; min-height:44px; cursor:pointer; }
+</style>
+
+<script>
+(function () {
+  var search = document.getElementById('ffSearch');
+  var noResult = document.getElementById('ffNoResult');
+  var filters = Array.prototype.slice.call(document.querySelectorAll('.ff-filter'));
+  var cards = Array.prototype.slice.call(document.querySelectorAll('.ff-card'));
+  var groups = Array.prototype.slice.call(document.querySelectorAll('.ff-group'));
+  var state = 'all';
+
+  function apply() {
+    var q = (search.value || '').trim().toLowerCase();
+    var shown = 0;
+    cards.forEach(function (card) {
+      var matchText = !q || card.getAttribute('data-search').indexOf(q) !== -1;
+      var matchState = state === 'all' || card.getAttribute('data-state') === state;
+      var show = matchText && matchState;
+      card.style.display = show ? '' : 'none';
+      if (show) shown++;
+    });
+    // যে গ্রুপের সব কার্ড লুকানো, সেই গ্রুপের হেডিংও লুকানো হয় —
+    // নাহলে খালি শিরোনামের সারি পড়ে থাকত।
+    groups.forEach(function (g) {
+      var any = Array.prototype.slice.call(g.querySelectorAll('.ff-card'))
+        .some(function (c) { return c.style.display !== 'none'; });
+      g.style.display = any ? '' : 'none';
+    });
+    noResult.style.display = shown === 0 ? '' : 'none';
+  }
+
+  search.addEventListener('input', apply);
+  filters.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      filters.forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      state = btn.getAttribute('data-filter');
+      apply();
+    });
+  });
+})();
+</script>
 `
 }) %>

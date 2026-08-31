@@ -42,6 +42,55 @@
             box-shadow: 0 10px 15px -3px rgb(59 130 246 / 0.3);
         }
 
+        /* ==================== ভাগ করা UI উপাদান (Phase 8) ====================
+           ২৪টা অ্যাডমিন ভিউ নিজের নিজের <style> ব্লকে বাটন/কার্ড/টেবিল আলাদাভাবে
+           সংজ্ঞায়িত করত, ফলে পেজে পেজে চেহারা আলাদা হতো। এখানে একটা সাধারণ ভিত্তি
+           দেওয়া হলো। বিদ্যমান ভিউ ভাঙার ঝুঁকি এড়াতে ক্লাসগুলো `ui-` প্রিফিক্সে
+           রাখা হয়েছে — পুরনো মার্কআপ অপরিবর্তিত কাজ করে, নতুন/আপডেট করা পেজ
+           এগুলো ব্যবহার করে। */
+        .ui-card { background:#fff; border:1px solid #e2e8f0; border-radius:1rem; box-shadow:0 1px 2px rgba(15,23,42,.04); }
+        .ui-btn { display:inline-flex; align-items:center; justify-content:center; gap:.5rem;
+                  min-height:44px; padding:0 1rem; border-radius:.75rem; border:1px solid transparent;
+                  font-size:.8125rem; font-weight:600; cursor:pointer; transition:background-color .15s, opacity .15s; }
+        .ui-btn:focus-visible, .ui-card a:focus-visible, .nav-link:focus-visible {
+                  outline:2px solid #2563eb; outline-offset:2px; }
+        .ui-btn-primary { background:#2563eb; color:#fff; }
+        .ui-btn-primary:hover { background:#1d4ed8; }
+        .ui-btn-danger  { background:#dc2626; color:#fff; }
+        .ui-btn-danger:hover { background:#b91c1c; }
+        .ui-btn-ghost   { background:#fff; color:#334155; border-color:#e2e8f0; }
+        .ui-btn-ghost:hover { background:#f8fafc; }
+        .ui-btn[disabled] { opacity:.5; cursor:not-allowed; }
+        .ui-badge { display:inline-flex; align-items:center; gap:.25rem; padding:.25rem .625rem;
+                    border-radius:9999px; font-size:.75rem; font-weight:600; }
+        .ui-table { width:100%; border-collapse:collapse; font-size:.8125rem; }
+        .ui-table th { text-align:left; font-size:.6875rem; text-transform:uppercase; letter-spacing:.06em;
+                       color:#64748b; padding:.75rem 1rem; border-bottom:1px solid #e2e8f0; }
+        .ui-table td { padding:.75rem 1rem; border-bottom:1px solid #f1f5f9; color:#334155; }
+        .ui-table tbody tr:hover { background:#f8fafc; }
+        /* ছোট স্ক্রিনে টেবিল অনুভূমিকভাবে স্ক্রল করে, ভেঙে যায় না */
+        .ui-table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+        .ui-empty { padding:3rem 1rem; text-align:center; color:#94a3b8; font-size:.875rem; }
+        .ui-spinner { display:inline-block; width:1rem; height:1rem; border:2px solid #cbd5e1;
+                      border-top-color:#2563eb; border-radius:50%; animation:ui-spin .6s linear infinite; }
+        @keyframes ui-spin { to { transform:rotate(360deg); } }
+        /* স্ক্রিন-রিডার-অনলি টেক্সট — আইকনের অর্থ জানাতে */
+        .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+                   overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+        /* টাচ টার্গেট: মোবাইলে অ্যাকশন বাটন অন্তত 44px (Phase 9) */
+        @media (max-width: 1023px) {
+          .ui-btn, .nav-link, .sidebar-item { min-height:44px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          * { animation-duration:.01ms !important; transition-duration:.01ms !important; }
+        }
+
+        /* বটম নেভ fixed — মোবাইলে কনটেন্টের শেষ অংশ তার নিচে ঢাকা পড়ত।
+           safe-area-inset সহ জায়গা রাখা হলো। lg-তে বটম নেভ লুকানো, তাই
+           সেখানে বাড়তি প্যাডিং দেওয়া হয়নি। */
+        .admin-content-scroll { padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+        @media (min-width: 1024px) { .admin-content-scroll { padding-bottom: 1.5rem; } }
+
         .stat-card {
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
@@ -211,7 +260,23 @@
     </script>
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
-        <div class="w-72 admin-sidebar text-white flex-shrink-0 hidden lg:flex flex-col">
+        <!--
+          নেভিগেশন এখন ডেটা-চালিত (utils/adminNav.js → res.locals.adminNav)।
+          আগে এখানে ৫১টা লিংকের একটা সমতল, হার্ডকোড করা তালিকা ছিল (~৩১৫ লাইন)
+          — কোনো গ্রুপিং, কোলাপস বা সার্চ ছাড়াই।
+
+          মোবাইল: আগে toggleMobileSidebar() শুধু `hidden` ক্লাস টগল করত। সাইডবারটা
+          একটা flex-row-এর ভেতরে w-72 কলাম, তাই ফোনে `hidden` সরালে সেটা মূল
+          কনটেন্টকে স্ক্রিনের বাইরে ঠেলে দিত। এখন এটা একটা সত্যিকারের ড্রয়ার:
+          মোবাইলে fixed + translate-x, সাথে ব্যাকড্রপ; lg-তে আগের মতোই স্থির কলাম।
+        -->
+        <div id="adminSidebarBackdrop" onclick="closeMobileSidebar()"
+             class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden"></div>
+
+        <div id="adminSidebar"
+             class="admin-sidebar text-white flex-shrink-0 flex flex-col w-72
+                    fixed inset-y-0 left-0 z-50 -translate-x-full transition-transform duration-200
+                    lg:static lg:translate-x-0 lg:z-auto">
             <!-- Logo -->
             <div class="px-6 py-6 flex items-center gap-x-3 border-b border-slate-700">
                 <div class="w-11 h-11 bg-blue-600 rounded-2xl flex items-center justify-center shadow-inner">
@@ -221,293 +286,78 @@
                     <span class="logo-font text-3xl font-semibold tracking-tighter">Livo</span>
                     <span class="text-blue-400 text-xl font-semibold">Admin</span>
                 </div>
+                <button onclick="closeMobileSidebar()" aria-label="<%= t('admin_ui_close_menu') %>"
+                        class="lg:hidden ml-auto text-slate-400 hover:text-white p-2 -mr-2">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- নেভিগেশন ফিল্টার -->
+            <div class="px-4 pt-4 pb-2">
+                <label for="adminNavSearch" class="sr-only"><%= t('admin_ui_nav_search_label') %></label>
+                <div class="relative">
+                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                    <input id="adminNavSearch" type="search" placeholder="<%= t('admin_ui_search_menu') %>"
+                           class="w-full bg-slate-800/70 border border-slate-700 rounded-xl py-2 pl-9 pr-3 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
             </div>
 
             <!-- Navigation -->
-            <div class="flex-1 px-3 py-6 overflow-y-auto">
-                <div class="px-3 mb-2">
-                    <p class="text-xs font-semibold tracking-widest text-slate-400 px-3">MAIN</p>
+            <nav class="flex-1 px-3 pb-6 overflow-y-auto" id="adminNavRoot">
+            <% const navGroups = (typeof adminNav !== 'undefined' && adminNav) ? adminNav : []; %>
+            <% navGroups.forEach(function (group) { %>
+              <%
+                 // যে গ্রুপে বর্তমান পেজ আছে সেটা ডিফল্টে খোলা থাকে; বাকিগুলোর
+                 // অবস্থা localStorage থেকে পুনরুদ্ধার হয় (নিচের স্ক্রিপ্ট)।
+                 const hasActive = group.items.some(function (i) { return i.active === active; });
+                 const single = group.items.length === 1;
+              %>
+              <% if (single) { %>
+                <a href="<%= group.items[0].href %>"
+                   data-nav-item
+                   data-nav-text="<%= (group.label + ' ' + group.items[0].label + ' ' + t(group.labelKey) + ' ' + (group.items[0].labelKey ? t(group.items[0].labelKey) : '')).toLowerCase() %>"
+                   class="sidebar-item flex items-center gap-x-3 px-4 py-3 mb-1 text-sm font-medium nav-link <%= group.items[0].active === active ? 'active' : 'text-slate-300 hover:text-white' %>">
+                    <i class="fas <%= group.items[0].icon %> w-5"></i>
+                    <span><%= group.items[0].labelKey ? t(group.items[0].labelKey) : group.items[0].label %></span>
+                </a>
+              <% } else { %>
+                <div class="nav-group mb-1" data-nav-group="<%= group.id %>">
+                  <button type="button"
+                          class="nav-group-toggle w-full flex items-center gap-x-3 px-4 py-3 text-sm font-semibold rounded-2xl text-slate-300 hover:text-white hover:bg-slate-700/50"
+                          aria-expanded="<%= hasActive ? 'true' : 'false' %>"
+                          aria-controls="navgrp-<%= group.id %>">
+                      <i class="fas <%= group.icon %> w-5"></i>
+                      <span class="flex-1 text-left"><%= group.labelKey ? t(group.labelKey) : group.label %></span>
+                      <%
+                         // ব্যাজ: গ্রুপে kyc/payments ব্যাজওয়ালা আইটেম থাকলে
+                         // গ্রুপ কোলাপস অবস্থাতেও সংখ্যাটা দেখা যায়।
+                         const groupBadges = group.items.filter(function (i) { return i.badge; });
+                      %>
+                      <% groupBadges.forEach(function (i) { %>
+                        <span class="nav-badge nav-badge-<%= i.badge %> hidden text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500 text-white">0</span>
+                      <% }); %>
+                      <i class="fas fa-chevron-down nav-chevron text-xs transition-transform <%= hasActive ? 'rotate-180' : '' %>"></i>
+                  </button>
+                  <div id="navgrp-<%= group.id %>" class="nav-group-items pl-3 <%= hasActive ? '' : 'hidden' %>">
+                    <% group.items.forEach(function (item) { %>
+                      <a href="<%= item.href %>"
+                         data-nav-item
+                         data-nav-text="<%= (group.label + ' ' + item.label + ' ' + item.href + ' ' + t(group.labelKey) + ' ' + (item.labelKey ? t(item.labelKey) : '')).toLowerCase() %>"
+                         class="sidebar-item flex items-center gap-x-3 px-4 py-2.5 text-sm font-medium nav-link <%= item.active === active ? 'active' : 'text-slate-400 hover:text-white' %>">
+                          <i class="fas <%= item.icon %> w-5 text-xs"></i>
+                          <span class="flex-1"><%= item.labelKey ? t(item.labelKey) : item.label %></span>
+                          <% if (item.badge) { %>
+                            <span class="nav-badge nav-badge-<%= item.badge %> hidden text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500 text-white">0</span>
+                          <% } %>
+                      </a>
+                    <% }); %>
+                  </div>
                 </div>
-                
-                <a href="/admin" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'dashboard' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-home w-5"></i>
-                    <span>Dashboard</span>
-                </a>
+              <% } %>
+            <% }); %>
+            <p id="adminNavNoResult" class="hidden px-4 py-6 text-center text-xs text-slate-500"><%= t('admin_ui_no_menu_match') %></p>
+            </nav>
 
-                <div class="px-3 mt-6 mb-2">
-                    <p class="text-xs font-semibold tracking-widest text-slate-400 px-3">MANAGEMENT</p>
-                </div>
-
-                <a href="/admin/users" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'users' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-users w-5"></i>
-                    <span>User Management</span>
-                </a>
-
-                <a href="/admin/kyc" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'kyc' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-id-card w-5"></i>
-                    <span>KYC</span>
-                </a>
-
-                <a href="/admin/vip" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'vip' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-crown w-5"></i>
-                    <span>VIP Management</span>
-                </a>
-
-                <a href="/admin/vip/history" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'vip-history' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-history w-5"></i>
-                    <span>VIP History</span>
-                </a>
-
-                <a href="/admin/bonuses" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'bonuses' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-gift w-5"></i>
-                    <span>Bonus Management</span>
-                </a>
-
-                <a href="/admin/referrals" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'referrals' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-user-group w-5"></i>
-                    <span>Referral Management</span>
-                </a>
-
-                <a href="/admin/leaderboard" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'leaderboard' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-ranking-star w-5"></i>
-                    <span>Leaderboard Management</span>
-                </a>
-
-                <a href="/admin/promotions" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'promotions' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-bullhorn w-5"></i>
-                    <span>Promotion Banners</span>
-                </a>
-
-                <a href="/admin/announcements" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'announcements' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-bell w-5"></i>
-                    <span>Announcements</span>
-                </a>
-
-                <a href="/admin/news" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'news' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-newspaper w-5"></i>
-                    <span>News</span>
-                </a>
-
-                <a href="/admin/matches" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'matches' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-futbol w-5"></i>
-                    <span>Matches</span>
-                </a>
-
-                <a href="/admin/tournaments" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'tournaments' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-trophy w-5"></i>
-                    <span>Tournaments</span>
-                </a>
-
-                <a href="/admin/bets" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'bets' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-dice w-5"></i>
-                    <span>Bets Management</span>
-                </a>
-
-                <a href="/admin/games" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'games' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-gamepad w-5"></i>
-                    <span>Games Management</span>
-                </a>
-
-                <a href="/admin/notifications" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'notifications' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-paper-plane w-5"></i>
-                    <span>Send Notification</span>
-                </a>
-
-                <a href="/admin/notification-templates" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'notification-templates' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-envelope-open-text w-5"></i>
-                    <span>Notification Templates</span>
-                </a>
-
-                <div class="px-3 mt-6 mb-2">
-                    <p class="text-xs font-semibold tracking-widest text-slate-400 px-3">PAYMENTS</p>
-                </div>
-
-                <a href="/payment/admin/payments" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'payments' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-money-bill-wave w-5"></i>
-                    <span>Payment Approvals</span>
-                </a>
-
-                <a href="/payment/admin/deposits" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'deposits' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-chart-column w-5"></i>
-                    <span>Deposit Report</span>
-                </a>
-
-                <a href="/payment/admin/summary" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'summary' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-chart-pie w-5"></i>
-                    <span>Daily Summary</span>
-                </a>
-
-                <a href="/admin/transactions" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'transactions' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-receipt w-5"></i>
-                    <span>Transaction History</span>
-                </a>
-
-                <div class="px-3 mt-6 mb-2">
-                    <p class="text-xs font-semibold tracking-widest text-slate-400 px-3">SECURITY</p>
-                </div>
-
-                <a href="/admin/roles" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'roles' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-user-shield w-5"></i>
-                    <span>Roles &amp; Permissions</span>
-                </a>
-
-                <a href="/admin/roles/matrix" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'roles-matrix' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-table-cells w-5"></i>
-                    <span>Permission Matrix</span>
-                </a>
-
-                <a href="/admin/user-roles" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'user-roles' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-user-tag w-5"></i>
-                    <span>User Roles</span>
-                </a>
-
-                <a href="/admin/login-history" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'login-history' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-clock-rotate-left w-5"></i>
-                    <span>Login History</span>
-                </a>
-
-                <a href="/admin/security-overview" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'security-overview' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-shield-halved w-5"></i>
-                    <span>Security Overview</span>
-                </a>
-
-                <a href="/admin/fraud-monitoring" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'fraud-monitoring' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-radar w-5"></i>
-                    <span>Fraud Monitoring</span>
-                </a>
-
-                <a href="/admin/fraud-logs" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'fraud-logs' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-file-shield w-5"></i>
-                    <span>Fraud Log</span>
-                </a>
-
-                <a href="/admin/duplicate-accounts" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'duplicate-accounts' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-clone w-5"></i>
-                    <span>Duplicate Accounts</span>
-                </a>
-
-                <a href="/admin/bot-monitoring" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'bot-monitoring' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-robot w-5"></i>
-                    <span>Bot Monitoring</span>
-                </a>
-
-                <a href="/admin/bot-monitoring/ip-rules" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'ip-rules' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-network-wired w-5"></i>
-                    <span>IP Rules</span>
-                </a>
-
-                <a href="/admin/bot-logs" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'bot-logs' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-list-ul w-5"></i>
-                    <span>Bot Logs</span>
-                </a>
-
-                <a href="/admin/audit-logs" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'audit-logs' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-file-contract w-5"></i>
-                    <span>Audit Logs</span>
-                </a>
-
-                <div class="px-3 mt-6 mb-2">
-                    <p class="text-xs font-semibold tracking-widest text-slate-400 px-3">REPORTS</p>
-                </div>
-
-                <a href="/admin/reports" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'reports' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-chart-bar w-5"></i>
-                    <span>Reports &amp; Analytics</span>
-                </a>
-
-                <a href="/admin/activity" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'logs' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-list-check w-5"></i>
-                    <span>Unified Log Viewer</span>
-                </a>
-
-                <a href="/admin/api-logs" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'api-logs' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-list-alt w-5"></i>
-                    <span>API Logs</span>
-                </a>
-
-                <div class="px-3 mt-6 mb-2">
-                    <p class="text-xs font-semibold tracking-widest text-slate-400 px-3">SYSTEM</p>
-                </div>
-
-                <a href="/admin/settings" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'settings' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-cog w-5"></i>
-                    <span>Settings</span>
-                </a>
-
-                <a href="/admin/system-settings" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'system-settings' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-sliders w-5"></i>
-                    <span>System Settings</span>
-                </a>
-
-                <a href="/admin/cron-jobs" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'cron-jobs' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-clock w-5"></i>
-                    <span>Cron Jobs</span>
-                </a>
-
-                <a href="/admin/queues" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'queues' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-layer-group w-5"></i>
-                    <span>Queue Monitoring</span>
-                </a>
-
-                <a href="/admin/cache" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'cache' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-bolt w-5"></i>
-                    <span>Cache Management</span>
-                </a>
-
-                <a href="/admin/backups" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'backups' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-database w-5"></i>
-                    <span>Backup &amp; Restore</span>
-                </a>
-
-                <a href="/admin/feature-flags" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'feature-flags' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-flag w-5"></i>
-                    <span>Feature Flags</span>
-                </a>
-
-                <a href="/admin/localization" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'localization' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-language w-5"></i>
-                    <span>Localization</span>
-                </a>
-
-                <a href="/admin/telegram" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'telegram' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fab fa-telegram w-5"></i>
-                    <span>Telegram Integration</span>
-                </a>
-
-                <a href="/admin/system-diagnostics" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'system-diagnostics' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-heart-pulse w-5"></i>
-                    <span>System Diagnostics</span>
-                </a>
-
-                <a href="/admin/diagnostics" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'diagnostics' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-stethoscope w-5"></i>
-                    <span>Diagnostics</span>
-                </a>
-
-                <a href="/admin/sentry-status" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'sentry-status' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-bug w-5"></i>
-                    <span>Sentry Status</span>
-                </a>
-
-                <div class="px-3 mt-6 mb-2">
-                    <p class="text-xs font-semibold tracking-widest text-slate-400 px-3">INTEGRATIONS</p>
-                </div>
-
-                <a href="/admin/api-keys" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'api-keys' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-key w-5"></i>
-                    <span>API Keys</span>
-                </a>
-
-                <a href="/admin/support" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'support' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-headset w-5"></i>
-                    <span>Support Tickets</span>
-                </a>
-
-                <a href="/chat/admin" class="sidebar-item flex items-center gap-x-3 px-4 py-3 text-sm font-medium nav-link <%= active === 'chat' ? 'active' : 'text-slate-300 hover:text-white' %>">
-                    <i class="fas fa-comments w-5"></i>
-                    <span>Live Chat</span>
-                </a>
-            </div>
 
             <!-- Admin Profile -->
             <div class="px-4 py-4 border-t border-slate-700 bg-slate-900/50">
@@ -517,9 +367,9 @@
                     </div>
                     <div class="flex-1 min-w-0">
                         <p class="text-sm font-semibold text-white truncate"><%= (user && user.username) || 'Admin' %></p>
-                        <p class="text-xs text-slate-400">Super Admin</p>
+                        <p class="text-xs text-slate-400"><%= (typeof adminIsSuperAdmin !== 'undefined' && adminIsSuperAdmin) ? t('admin_ui_role_super_admin') : t('admin_ui_role_admin') %></p>
                     </div>
-                    <button onclick="logout()" class="text-slate-400 hover:text-red-400 transition-colors">
+                    <button onclick="logout()" aria-label="<%= t('admin_ui_logout') %>" title="<%= t('admin_ui_logout') %>" class="text-slate-400 hover:text-red-400 transition-colors">
                         <i class="fas fa-sign-out-alt"></i>
                     </button>
                 </div>
@@ -532,7 +382,7 @@
             <div class="admin-header h-16 flex items-center justify-between px-6 flex-shrink-0">
                 <div class="flex items-center gap-x-4">
                     <!-- Mobile Menu -->
-                    <button class="lg:hidden text-slate-600 hover:text-slate-900" onclick="toggleMobileSidebar()">
+                    <button class="lg:hidden text-slate-600 hover:text-slate-900" onclick="toggleMobileSidebar()" aria-label="<%= t('admin_ui_open_menu') %>" aria-controls="adminSidebar" aria-expanded="false">
                         <i class="fas fa-bars text-xl"></i>
                     </button>
                     
@@ -547,7 +397,7 @@
                     <div class="flex items-center gap-x-2 pl-3 border-l border-slate-200">
                         <div class="text-right hidden md:block">
                             <p class="text-sm font-semibold text-slate-700"><%= (user && user.username) || 'Admin' %></p>
-                            <p class="text-xs text-slate-500">Super Admin</p>
+                            <p class="text-xs text-slate-500"><%= (typeof adminIsSuperAdmin !== 'undefined' && adminIsSuperAdmin) ? t('admin_ui_role_super_admin') : t('admin_ui_role_admin') %></p>
                         </div>
                         <div class="w-9 h-9 rounded-2xl ring-2 ring-blue-100 bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
                             <%= (user && user.username) ? user.username.charAt(0).toUpperCase() : 'A' %>
@@ -557,7 +407,7 @@
             </div>
 
             <!-- Page Content -->
-            <div class="flex-1 overflow-auto p-6 bg-slate-50">
+            <div class="flex-1 overflow-auto p-6 bg-slate-50 admin-content-scroll">
                 <%- include('load-error') %>
                 <%- body %>
             </div>
@@ -565,10 +415,109 @@
     </div>
 
     <script>
-        function toggleMobileSidebar() {
-            const sidebar = document.querySelector('.admin-sidebar');
-            if (sidebar) sidebar.classList.toggle('hidden');
+        function openMobileSidebar() {
+            const sb = document.getElementById('adminSidebar');
+            const bd = document.getElementById('adminSidebarBackdrop');
+            if (sb) sb.classList.remove('-translate-x-full');
+            if (bd) bd.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
         }
+        function closeMobileSidebar() {
+            const sb = document.getElementById('adminSidebar');
+            const bd = document.getElementById('adminSidebarBackdrop');
+            if (sb) sb.classList.add('-translate-x-full');
+            if (bd) bd.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+        function toggleMobileSidebar() {
+            const sb = document.getElementById('adminSidebar');
+            if (!sb) return;
+            if (sb.classList.contains('-translate-x-full')) openMobileSidebar();
+            else closeMobileSidebar();
+        }
+        // Esc দিয়ে ড্রয়ার বন্ধ — কীবোর্ড ব্যবহারকারীর জন্য ফাঁদ তৈরি হয় না।
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeMobileSidebar();
+        });
+
+        // ---- নেভিগেশন গ্রুপ কোলাপস + মনে রাখা ----
+        (function () {
+            var KEY = 'livoAdminNavOpen';
+            function saved() {
+                try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { return {}; }
+            }
+            function store(state) {
+                try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* private mode */ }
+            }
+            var state = saved();
+            document.querySelectorAll('[data-nav-group]').forEach(function (group) {
+                var id = group.getAttribute('data-nav-group');
+                var btn = group.querySelector('.nav-group-toggle');
+                var body = group.querySelector('.nav-group-items');
+                var chev = group.querySelector('.nav-chevron');
+                // বর্তমান পেজ যে গ্রুপে, সেটা সবসময় খোলা — সংরক্ষিত অবস্থা তার উপরে যায় না।
+                if (btn.getAttribute('aria-expanded') !== 'true' && state[id] === true) {
+                    body.classList.remove('hidden');
+                    btn.setAttribute('aria-expanded', 'true');
+                    if (chev) chev.classList.add('rotate-180');
+                }
+                btn.addEventListener('click', function () {
+                    var open = body.classList.toggle('hidden') === false;
+                    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+                    if (chev) chev.classList.toggle('rotate-180', open);
+                    state[id] = open;
+                    store(state);
+                });
+            });
+
+            // ---- নেভিগেশন ফিল্টার ----
+            var search = document.getElementById('adminNavSearch');
+            var noResult = document.getElementById('adminNavNoResult');
+            if (search) search.addEventListener('input', function () {
+                var q = (search.value || '').trim().toLowerCase();
+                var shown = 0;
+                document.querySelectorAll('[data-nav-item]').forEach(function (a) {
+                    var hit = !q || a.getAttribute('data-nav-text').indexOf(q) !== -1;
+                    a.style.display = hit ? '' : 'none';
+                    if (hit) shown++;
+                });
+                document.querySelectorAll('[data-nav-group]').forEach(function (g) {
+                    var body = g.querySelector('.nav-group-items');
+                    var any = Array.prototype.slice.call(g.querySelectorAll('[data-nav-item]'))
+                        .some(function (a) { return a.style.display !== 'none'; });
+                    g.style.display = any ? '' : 'none';
+                    // সার্চ চলাকালীন মিলে যাওয়া গ্রুপ জোর করে খোলা হয়, নাহলে
+                    // ফলাফল কোলাপস করা গ্রুপের ভেতরে লুকিয়ে থাকত।
+                    if (q && any) body.classList.remove('hidden');
+                });
+                if (noResult) noResult.classList.toggle('hidden', shown !== 0);
+            });
+        })();
+
+        // ---- সাইডবার ব্যাজ (pending queue counts) ----
+        // /admin/pending-counts আগেই ছিল কিন্তু সাইডবারে কোনো ব্যাজ ছিল না —
+        // অ্যাডমিনকে জানতে হলে পেজে ঢুকতে হতো। এখন KYC ও পেমেন্ট কিউয়ের
+        // সংখ্যা নেভিগেশনেই দেখা যায়। শূন্য হলে ব্যাজ লুকানো থাকে।
+        (function () {
+            function paint(cls, n) {
+                document.querySelectorAll('.nav-badge-' + cls).forEach(function (el) {
+                    if (n > 0) { el.textContent = n > 99 ? '99+' : n; el.classList.remove('hidden'); }
+                    else { el.classList.add('hidden'); }
+                });
+            }
+            function refresh() {
+                fetch('/admin/pending-counts', { credentials: 'same-origin' })
+                    .then(function (r) { return r.ok ? r.json() : null; })
+                    .then(function (d) {
+                        if (!d || !d.success) return;
+                        paint('kyc', d.kyc || 0);
+                        paint('payments', (d.deposits || 0) + (d.withdrawals || 0));
+                    })
+                    .catch(function () { /* ব্যাজ ব্যর্থ হলে নেভিগেশন আগের মতোই কাজ করে */ });
+            }
+            refresh();
+            setInterval(refresh, 60000);
+        })();
         
         function logout() {
             if (confirm('Are you sure you want to logout?')) {

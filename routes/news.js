@@ -1,6 +1,13 @@
 const express = require('express');
 const { requireIntParam } = require('../middleware/validate');
 const router = express.Router();
+const { requireFeature } = require('../middleware/featureGate');
+
+// পুরো রাউটারে ফিচার গেট — নির্দিষ্ট রুট নয়, রাউটার-লেভেলে বসানো হয়েছে
+// যাতে ভবিষ্যতে যোগ হওয়া সাব-রুটও আপনাআপনি সুরক্ষিত থাকে, আর সরাসরি
+// URL দিয়ে কোনো পথ বাদ পড়ে না যায়।
+router.use(requireFeature('news'));
+
 const { pool } = require('../db');
 
 router.get('/', async (req, res) => {
