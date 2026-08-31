@@ -175,7 +175,21 @@ describe('auth-state বদলের পর পুরনো সেশন', () =>
     await cache.del(cacheKeys.userActiveStatus(U.userId)).catch(() => {});
 
     expect((await U.agent.get('/profile')).status).toBe(302);
-    expect((await U.agent.get('/profile/api/balance')).status).toBe(302);
+
+    // API পাথের জন্য 302 নয়, 401 আশা করা হচ্ছিল — কিন্তু আসল মানটা একটা
+    // রেসের উপর নির্ভরশীল ছিল। isAuth() ব্যান ধরা পড়লে req.session.destroy()
+    // ডাকে (কলব্যাক ছাড়া) এবং `/api/` পাথে 401 JSON দেয়, নাহলে /login-এ
+    // রিডাইরেক্ট। উপরের /profile কলটা destroy শুরু করে; সেটা সেশন স্টোরে
+    // লেখা শেষ হওয়ার আগেই পরের রিকোয়েস্ট এলে সেশন এখনো বৈধ → ব্যান শাখা →
+    // 401; শেষ হয়ে গেলে সেশনই নেই → 302।
+    //
+    // পূর্ণ suite চালানোর সময় (বিশেষত --coverage-এর অতিরিক্ত ধীরগতিতে) destroy
+    // পিছিয়ে যায় এবং টেস্টটা 401 পেয়ে ফেল করত — অথচ দুটো ফলাফলই "প্রবেশ
+    // অস্বীকৃত"। নিরাপত্তার শর্তটাই যাচাই করা হচ্ছে, রেসের নির্দিষ্ট ফলাফল নয়।
+    const apiRes = await U.agent.get('/profile/api/balance');
+    expect([302, 401]).toContain(apiRes.status);
+    expect(apiRes.status).not.toBe(200);
+    expect(apiRes.body && apiRes.body.balance).toBeUndefined();
 
     await dropUser(U.userId);
   });

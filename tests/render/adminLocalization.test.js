@@ -11,6 +11,12 @@ const fs = require('fs');
 const path = require('path');
 const { getCsrfAgent, uniqueUsername, uniquePhone, REALISTIC_UA } = require('../helpers/app');
 const { pool } = require('../../db');
+const { cleanupUsers } = require('../helpers/cleanup');
+
+// তৈরি করা অ্যাডমিন ইউজার রেখে গেলে পরে চলা অ্যাডমিন-গণনা নির্ভর suite
+// (admin, rbac) ভুল সংখ্যা দেখে ফেল করত — CI-এর একটানা রানে।
+const createdUserIds = [];
+afterAll(async () => { await cleanupUsers(createdUserIds); });
 
 const ROOT = path.join(__dirname, '..', '..');
 const bn = require('../../locales/bn.json');
@@ -24,6 +30,8 @@ async function makeAdminAgent(lang) {
             confirmPassword: 'SecurePass123', _csrf: token });
   await pool.query("UPDATE users SET role='admin' WHERE username=$1", [username]);
   if (lang) await agent.get('/lang/' + lang);
+  const r = await pool.query('SELECT id FROM users WHERE username=$1', [username]);
+  if (r.rows[0]) createdUserIds.push(r.rows[0].id);
   return agent;
 }
 
