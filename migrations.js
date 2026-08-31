@@ -1924,6 +1924,34 @@ async function runMigrations() {
     );
     console.log(`✅ Phase 08 casino_bet ledger sign backfill: ${casinoBetBackfill.rowCount} সারি ঠিক করা হলো`);
 
+    // ==================== টুর্নামেন্ট সেটেলমেন্ট ====================
+    // এতদিন tournaments টেবিলে শুধু join পর্যন্ত অবস্থা রাখা হতো — কে জিতল, কত
+    // পুরস্কার পেল, আদৌ settle হয়েছে কি না, কিছুই রেকর্ড হতো না। ফলে একই
+    // টুর্নামেন্টে অ্যাডমিন বারবার 'completed' দিলে পুরস্কার বারবার বিলি হওয়া
+    // ঠেকানোর কোনো উপায় ছিল না (idempotency-র জন্য settled_at দরকার), আর
+    // 'cancelled' করলে entry fee ফেরত দেওয়ার কোনো হিসাবই ছিল না।
+    await pool.query(`ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS settled_at TIMESTAMP`);
+    await pool.query(`ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS refunded_at TIMESTAMP`);
+    await pool.query(`ALTER TABLE tournament_participants ADD COLUMN IF NOT EXISTS final_rank INTEGER`);
+    await pool.query(`ALTER TABLE tournament_participants ADD COLUMN IF NOT EXISTS prize_awarded NUMERIC(14,2) DEFAULT 0`);
+    await pool.query(`ALTER TABLE tournament_participants ADD COLUMN IF NOT EXISTS refunded_amount NUMERIC(14,2) DEFAULT 0`);
+
+    // entry_fee_paid — জয়েন করার সময় *আসলে* যত কাটা হয়েছিল। tournaments.entry_fee
+    // অ্যাডমিন পরে বদলাতে পারে; বাতিল হলে ফেরত অবশ্যই পুরনো, প্রকৃত অঙ্কেই দিতে হবে,
+    // নাহলে ফি বাড়িয়ে দিয়ে বাতিল করলেই ইউজাররা যা দেয়নি তা ফেরত পেয়ে যেত।
+    await pool.query(`ALTER TABLE tournament_participants ADD COLUMN IF NOT EXISTS entry_fee_paid NUMERIC(14,2)`);
+    const feeBackfill = await pool.query(`
+      UPDATE tournament_participants tp
+      SET entry_fee_paid = COALESCE(t.entry_fee, 0)
+      FROM tournaments t
+      WHERE t.id = tp.tournament_id AND tp.entry_fee_paid IS NULL
+    `);
+    console.log(`✅ tournament settlement কলাম ready (entry_fee_paid backfill: ${feeBackfill.rowCount} সারি)`);
+
+    // settle/refund দুটোই participant সারি ধরে চলে — tournament_id-তে ইনডেক্স না
+    // থাকলে বড় টুর্নামেন্টে লক নেওয়ার সময় পুরো টেবিল স্ক্যান হতো।
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_tournament_participants_tid ON tournament_participants(tournament_id)`);
+
   } catch (err) {
     // PHASE 2 fix: আগে error গিলে ফেলা হত, ফলে caller (server.js) migration
     // ব্যর্থ হওয়ার পরেও "migration done" ছাপত এবং broken schema নিয়ে listen করত।

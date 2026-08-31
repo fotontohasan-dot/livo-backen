@@ -1304,5 +1304,15 @@
   "admin_bn_deposit": "Deposit",
   "admin_bn_withdraw": "Withdraw",
   "admin_bn_chat": "Chat",
-  "admin_bn_more": "More"
+  "admin_bn_more": "More",
+  "tournaments_invalid_status": "Invalid tournament status.",
+  "tournaments_settled": "Tournament settled — {value} coins distributed in prizes.",
+  "tournaments_settle_failed": "Could not settle the tournament.",
+  "tournaments_already_settled": "This tournament has already been settled — prizes were not paid again.",
+  "tournaments_cancelled_refunded": "Tournament cancelled — {value} coins refunded in entry fees.",
+  "tournaments_cancel_failed": "Could not cancel the tournament.",
+  "tournaments_already_cancelled": "This tournament has already been cancelled and refunded.",
+  "tournaments_cancel_after_settle": "A settled tournament cannot be cancelled — the prizes have already been paid out.",
+  "tournaments_status_locked": "This tournament is settled or cancelled; its status can no longer be changed.",
+  "tournaments_delete_blocked": "This tournament has participants. Settle or cancel it first so entry fees are handled, then delete."
 }

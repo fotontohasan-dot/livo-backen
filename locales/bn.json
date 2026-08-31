@@ -1304,5 +1304,15 @@
   "admin_bn_deposit": "ডিপোজিট",
   "admin_bn_withdraw": "উইথড্র",
   "admin_bn_chat": "চ্যাট",
-  "admin_bn_more": "আরও"
+  "admin_bn_more": "আরও",
+  "tournaments_invalid_status": "টুর্নামেন্টের স্ট্যাটাসটি বৈধ নয়।",
+  "tournaments_settled": "টুর্নামেন্ট সম্পন্ন — {value} কয়েন পুরস্কার বিতরণ করা হয়েছে।",
+  "tournaments_settle_failed": "টুর্নামেন্ট সেটেল করা যায়নি।",
+  "tournaments_already_settled": "এই টুর্নামেন্ট আগেই সেটেল হয়েছে — পুরস্কার দ্বিতীয়বার দেওয়া হয়নি।",
+  "tournaments_cancelled_refunded": "টুর্নামেন্ট বাতিল — {value} কয়েন এন্ট্রি ফি ফেরত দেওয়া হয়েছে।",
+  "tournaments_cancel_failed": "টুর্নামেন্ট বাতিল করা যায়নি।",
+  "tournaments_already_cancelled": "এই টুর্নামেন্ট আগেই বাতিল ও ফেরত হয়েছে।",
+  "tournaments_cancel_after_settle": "সেটেল হয়ে যাওয়া টুর্নামেন্ট বাতিল করা যাবে না — পুরস্কার ইতিমধ্যে বিলি হয়ে গেছে।",
+  "tournaments_status_locked": "এই টুর্নামেন্ট সেটেল বা বাতিল হয়ে গেছে; স্ট্যাটাস আর বদলানো যাবে না।",
+  "tournaments_delete_blocked": "এই টুর্নামেন্টে অংশগ্রহণকারী আছে। আগে সেটেল বা বাতিল করে এন্ট্রি ফি নিষ্পত্তি করুন, তারপর মুছুন।"
 }

@@ -74,6 +74,7 @@ const rateLimit = require('express-rate-limit');
 const { pool } = require('../db');
 const { settleSelectionsForMarket } = require('../services/accumulator');
 const { grantFreeBet } = require('../services/freebet');
+const { settleTournament, cancelTournament } = require('../services/tournamentSettlement');
 const { loadSettings, invalidateSettingsCache } = require('../services/settings');
 const { creditApprovedDeposit } = require('./payment');
 const { emitToUser, broadcastToAllUsers } = require('../services/notify');
@@ -3163,11 +3164,73 @@ router.post('/tournaments/add', rbac.requirePermission('matches_manage'), async 
   }
 });
 
+// টুর্নামেন্টের বৈধ status — views/admin/tournaments.ejs-এর ড্রপডাউন ও
+// routes/tournaments.js-এর join-গেট দুটোই এই চারটাই চেনে। আগে কোনো whitelist ছিল না,
+// তাই যেকোনো স্ট্রিং (টাইপো সহ) বসে যেত এবং join-গেটের 'completed'/'cancelled' চেক
+// নীরবে এড়ানো যেত।
+const TOURNAMENT_STATUSES = ['upcoming', 'live', 'completed', 'cancelled'];
+
 router.post('/tournaments/:id/status', rbac.requirePermission('matches_manage'), async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = parseInt(req.params.id, 10);
     const { status } = req.body;
-    await pool.query('UPDATE tournaments SET status = $1 WHERE id = $2', [status, id]);
+    if (!Number.isInteger(id) || id <= 0 || !TOURNAMENT_STATUSES.includes(status)) {
+      req.flash('error', req.t('tournaments_invalid_status'));
+      return res.redirect('/admin/tournaments');
+    }
+
+    // 'completed' ও 'cancelled' নিছক status পরিবর্তন নয় — দুটোই আর্থিক ঘটনা।
+    // আগে দুটোই সরাসরি UPDATE ছিল: 'completed' দিলে prize_pool কেউ পেত না, আর
+    // 'cancelled' দিলে কাটা entry fee চিরতরে হারিয়ে যেত।
+    if (status === 'completed') {
+      const result = await settleTournament(id);
+      await logAdminAction(req.session.user.id, req.session.user.username, 'TOURNAMENT_SETTLE',
+        `টুর্নামেন্ট #${id} settle: ${result.success ? (result.alreadySettled ? 'আগেই settled' : `${result.distributed} কয়েন, ${result.awards.filter(a => a.amount > 0).length} জন বিজয়ী`) : 'ব্যর্থ — ' + result.reason}`, req.ip);
+      logAuditEvent({
+        req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+        action: 'TOURNAMENT_SETTLED', category: 'financial',
+        status: result.success ? 'success' : 'failure', riskLevel: 'high',
+        details: { tournamentId: id, alreadySettled: !!result.alreadySettled, distributed: result.distributed || 0, reason: result.reason }
+      }).catch((e) => console.error('logAuditEvent (TOURNAMENT_SETTLED) error:', e.message));
+      if (!result.success) req.flash('error', req.t('tournaments_settle_failed'));
+      else if (result.alreadySettled) req.flash('error', req.t('tournaments_already_settled'));
+      else req.flash('success', req.t('tournaments_settled').replace('{value}', result.distributed));
+      return res.redirect('/admin/tournaments');
+    }
+
+    if (status === 'cancelled') {
+      const result = await cancelTournament(id);
+      await logAdminAction(req.session.user.id, req.session.user.username, 'TOURNAMENT_CANCEL',
+        `টুর্নামেন্ট #${id} বাতিল: ${result.success ? (result.alreadyRefunded ? 'আগেই ফেরত হয়েছে' : `${result.refunded} কয়েন ${result.refundCount} জনকে ফেরত`) : 'ব্যর্থ — ' + result.reason}`, req.ip);
+      logAuditEvent({
+        req, actorType: 'admin', actorId: req.session.user.id, actorUsername: req.session.user.username,
+        action: 'TOURNAMENT_CANCELLED', category: 'financial',
+        status: result.success ? 'success' : 'failure', riskLevel: 'high',
+        details: { tournamentId: id, alreadyRefunded: !!result.alreadyRefunded, refunded: result.refunded || 0, reason: result.reason }
+      }).catch((e) => console.error('logAuditEvent (TOURNAMENT_CANCELLED) error:', e.message));
+      if (!result.success) {
+        req.flash('error', result.reason === 'already_settled'
+          ? req.t('tournaments_cancel_after_settle')
+          : req.t('tournaments_cancel_failed'));
+      } else if (result.alreadyRefunded) {
+        req.flash('error', req.t('tournaments_already_cancelled'));
+      } else {
+        req.flash('success', req.t('tournaments_cancelled_refunded').replace('{value}', result.refunded));
+      }
+      return res.redirect('/admin/tournaments');
+    }
+
+    // settle/refund হয়ে যাওয়া টুর্নামেন্টকে আবার 'upcoming'/'live' করা যাবে না —
+    // করা গেলে বন্ধ হয়ে যাওয়া টুর্নামেন্ট আবার খুলে যেত এবং settle গার্ডগুলো
+    // অর্থহীন হয়ে পড়ত।
+    const upd = await pool.query(
+      `UPDATE tournaments SET status = $1 WHERE id = $2 AND settled_at IS NULL AND refunded_at IS NULL`,
+      [status, id]
+    );
+    if (upd.rowCount === 0) {
+      req.flash('error', req.t('tournaments_status_locked'));
+      return res.redirect('/admin/tournaments');
+    }
     await logAdminAction(req.session.user.id, req.session.user.username, 'TOURNAMENT_STATUS', `টুর্নামেন্ট #${id} স্ট্যাটাস ${status} করা হয়েছে`, req.ip);
     res.redirect('/admin/tournaments');
   } catch (err) {
@@ -3178,7 +3241,25 @@ router.post('/tournaments/:id/status', rbac.requirePermission('matches_manage'),
 
 router.post('/tournaments/:id/delete', rbac.requirePermission('matches_manage'), async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id) || id <= 0) return res.redirect('/admin/tournaments');
+
+    // tournament_participants-এ ON DELETE CASCADE আছে, তাই DELETE করলে
+    // অংশগ্রহণকারীর সারিগুলো নিঃশব্দে মুছে যেত — entry fee ইতিমধ্যে কাটা,
+    // অথচ ফেরতের কোনো রেকর্ডই আর অবশিষ্ট থাকত না। এখন settle বা cancel
+    // (অর্থাৎ পুরস্কার বিলি বা ফেরত) না হওয়া পর্যন্ত ডিলিট আটকে থাকে।
+    const guard = await pool.query(
+      `SELECT t.settled_at, t.refunded_at,
+              (SELECT COUNT(*)::int FROM tournament_participants WHERE tournament_id = t.id) AS participants
+       FROM tournaments t WHERE t.id = $1`, [id]
+    );
+    const row = guard.rows[0];
+    if (!row) return res.redirect('/admin/tournaments');
+    if (row.participants > 0 && !row.settled_at && !row.refunded_at) {
+      req.flash('error', req.t('tournaments_delete_blocked'));
+      return res.redirect('/admin/tournaments');
+    }
+
     await pool.query('DELETE FROM tournaments WHERE id = $1', [id]);
     await logAdminAction(req.session.user.id, req.session.user.username, 'TOURNAMENT_DELETE', `টুর্নামেন্ট #${id} মুছে ফেলা হয়েছে`, req.ip);
     res.redirect('/admin/tournaments');

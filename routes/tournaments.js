@@ -161,10 +161,13 @@ router.post('/:id/join', isAuth, async (req, res) => {
       if (req.session.user) req.session.user.coins = upd.rows[0].coins;
     }
 
+    // entry_fee_paid — টুর্নামেন্ট বাতিল হলে ঠিক এই অঙ্কই ফেরত যাবে।
+    // tournaments.entry_fee অ্যাডমিন পরে বদলাতে পারে, তাই ফেরতের সময় ওই কলামটা
+    // দেখা যাবে না; যা কাটা হয়েছে তা এখানেই লিখে রাখা হচ্ছে।
     await client.query(
-      `INSERT INTO tournament_participants (tournament_id, user_id, points, joined_at)
-       VALUES ($1, $2, 0, NOW())`,
-      [tId, userId]
+      `INSERT INTO tournament_participants (tournament_id, user_id, points, entry_fee_paid, joined_at)
+       VALUES ($1, $2, 0, $3, NOW())`,
+      [tId, userId, entryFee]
     );
 
     await client.query('COMMIT');

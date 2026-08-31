@@ -611,9 +611,37 @@ function addDaysStr(dateStr, days) {
 function dhakaStartOf(dateStr) { return new Date(dateStr + 'T00:00:00+06:00'); }
 function dhakaEndOf(dateStr) { return new Date(dateStr + 'T23:59:59.999+06:00'); }
 
+// ডিপোজিট ড্যাশবোর্ডের ট্যাব — VALID_METHODS থেকেই আসে, আলাদা হার্ডকোড তালিকা নয়।
+// আগে এখানে শুধু ['bkash','nagad','rocket'] লেখা ছিল, অথচ ডিপোজিট ফর্ম upay, bank ও
+// crypto-ও গ্রহণ করে (VALID_METHODS দেখুন)। ফলে ওই তিন মেথডে করা ডিপোজিট এই পেজে
+// কখনোই দেখা যেত না — না ট্যাবে, না টোটালে, না তালিকায়। টাকা হারাত না (সাধারণ
+// /payment/admin/payments তালিকায় থাকত), কিন্তু মেথড-ভিত্তিক আয়ের হিসাব নীরবে
+// অসম্পূর্ণ থাকত এবং অ্যাডমিন ওই রিকোয়েস্টগুলো এই পথে অনুমোদনও করতে পারত না।
+// নতুন মেথড VALID_METHODS-এ যোগ করলে এখানে আর কিছু বদলাতে হবে না।
+const DEPOSIT_METHOD_LABELS = {
+  bkash: 'বিকাশ', nagad: 'নগদ', rocket: 'রকেট',
+  upay: 'উপায়', bank: 'ব্যাংক', crypto: 'ক্রিপ্টো'
+};
+const DEPOSIT_METHOD_ICONS = {
+  bkash: 'fa-mobile-screen', nagad: 'fa-mobile-screen', rocket: 'fa-mobile-screen',
+  upay: 'fa-mobile-screen', bank: 'fa-building-columns', crypto: 'fa-bitcoin-sign'
+};
+function emptyDepositTotals() {
+  const out = {};
+  VALID_METHODS.forEach(m => { out[m] = { total: 0, cnt: 0 }; });
+  return out;
+}
+function depositMethodTabs() {
+  return VALID_METHODS.map(m => ({
+    key: m,
+    label: DEPOSIT_METHOD_LABELS[m] || m,
+    icon: DEPOSIT_METHOD_ICONS[m] || 'fa-wallet'
+  }));
+}
+
 router.get('/admin/deposits', requireAdmin, requirePermission('payments_view'), async (req, res) => {
   try {
-    const method = ['bkash', 'nagad', 'rocket'].includes(req.query.method) ? req.query.method : 'bkash';
+    const method = VALID_METHODS.includes(req.query.method) ? req.query.method : 'bkash';
     const quick = req.query.quick || 'today';
     const today = dhakaTodayStr();
     let fromStr, toStr;
@@ -628,16 +656,19 @@ router.get('/admin/deposits', requireAdmin, requirePermission('payments_view'), 
     const fromTs = dhakaStartOf(fromStr);
     const toTs = dhakaEndOf(toStr);
 
-    // তিনটা মেথডেরই টোটাল (বর্তমান ডেট রেঞ্জে) — ট্যাব হেডারে দেখানোর জন্য, শুধু approved হিসাব করা হচ্ছে
+    // প্রতিটা মেথডের টোটাল (বর্তমান ডেট রেঞ্জে) — ট্যাব হেডারে দেখানোর জন্য, শুধু approved হিসাব করা হচ্ছে
     const totalsResult = await pool.query(
       `SELECT method, COALESCE(SUM(amount),0) AS total, COUNT(*) AS cnt
        FROM payment_requests
        WHERE type='deposit' AND status='approved' AND method = ANY($1) AND created_at BETWEEN $2 AND $3
        GROUP BY method`,
-      [['bkash', 'nagad', 'rocket'], fromTs, toTs]
+      [VALID_METHODS, fromTs, toTs]
     );
-    const totals = { bkash: { total: 0, cnt: 0 }, nagad: { total: 0, cnt: 0 }, rocket: { total: 0, cnt: 0 } };
-    totalsResult.rows.forEach(r => { totals[r.method] = { total: Number(r.total), cnt: parseInt(r.cnt) }; });
+    const totals = emptyDepositTotals();
+    totalsResult.rows.forEach(r => {
+      // অজানা/পুরনো মেথড ডেটাবেসে থাকলে সেটা যেন ভিউয়ের লুপে undefined হয়ে না ঢোকে
+      if (totals[r.method]) totals[r.method] = { total: Number(r.total), cnt: parseInt(r.cnt) };
+    });
 
     // সিলেক্টেড ট্যাবের সব ট্রানজেকশন (pending/approved/rejected সবই — অ্যাডমিন অ্যাকশন নেওয়ার জন্য)
     const listResult = await pool.query(
@@ -651,6 +682,7 @@ router.get('/admin/deposits', requireAdmin, requirePermission('payments_view'), 
     res.render('payment/deposits', {
       user: req.session.user,
       method,
+      methods: depositMethodTabs(),
       quick,
       from: fromStr,
       to: toStr,
@@ -662,10 +694,11 @@ router.get('/admin/deposits', requireAdmin, requirePermission('payments_view'), 
     res.render('payment/deposits', {
       user: req.session.user,
       method: 'bkash',
+      methods: depositMethodTabs(),
       quick: 'today',
       from: dhakaTodayStr(),
       to: dhakaTodayStr(),
-      totals: { bkash: { total: 0, cnt: 0 }, nagad: { total: 0, cnt: 0 }, rocket: { total: 0, cnt: 0 } },
+      totals: emptyDepositTotals(),
       requests: [],
       loadError: true
     });

@@ -18,7 +18,7 @@
     .dep-tab .cnt { background: rgba(255,255,255,0.15); padding: 1px 7px; border-radius: 999px; font-size: 11px; }
     .dep-tab.active .cnt { background: rgba(0,0,0,0.15); }
 
-    .dep-totals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; }
+    .dep-totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-bottom: 18px; }
     .dep-total-card { background: #171a21; border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 14px 16px; }
     .dep-total-card.active { border-color: #f59e0b; background: rgba(245,158,11,0.06); }
     .dep-total-card .label { color: #94a3b8; font-size: 11px; font-weight: 700; text-transform: uppercase; }
@@ -91,39 +91,27 @@
   <div class="admin-wrap">
     <%- include('../admin/partials/sidebar', { active: 'deposits' }) %>
     <div class="admin-content">
-      <%- include('../admin/partials/header', { pageTitle: 'ডিপোজিট রিপোর্ট', pageSubtitle: 'মেথড-ভিত্তিক অনুমোদিত ডিপোজিটের আয় রিপোর্ট (বিকাশ/নগদ/রকেট) — অনুমোদনের জন্য পেমেন্ট অনুমোদন পেজে যান' }) %>
+      <%- include('../admin/partials/header', { pageTitle: 'ডিপোজিট রিপোর্ট', pageSubtitle: 'মেথড-ভিত্তিক অনুমোদিত ডিপোজিটের আয় রিপোর্ট — অনুমোদনের জন্য পেমেন্ট অনুমোদন পেজে যান' }) %>
       <%- include('../admin/partials/load-error') %>
 
-      <!-- মেথড ট্যাব -->
+      <!-- মেথড ট্যাব — routes/payment.js-এর VALID_METHODS থেকে আসে, এখানে আর হার্ডকোড নেই -->
       <div class="dep-tabs">
-        <a href="/payment/admin/deposits?method=bkash&quick=<%= quick %>&from=<%= from %>&to=<%= to %>" class="dep-tab <%= method === 'bkash' ? 'active' : '' %>">
-          <i class="fas fa-mobile-screen"></i> বিকাশ <span class="cnt"><%= totals.bkash.cnt %></span>
+        <% (locals.methods || []).forEach(function (m) { %>
+        <a href="/payment/admin/deposits?method=<%= m.key %>&quick=<%= quick %>&from=<%= from %>&to=<%= to %>" class="dep-tab <%= method === m.key ? 'active' : '' %>">
+          <i class="fas <%= m.icon %>"></i> <%= m.label %> <span class="cnt"><%= (totals[m.key] || { cnt: 0 }).cnt %></span>
         </a>
-        <a href="/payment/admin/deposits?method=nagad&quick=<%= quick %>&from=<%= from %>&to=<%= to %>" class="dep-tab <%= method === 'nagad' ? 'active' : '' %>">
-          <i class="fas fa-mobile-screen"></i> নগদ <span class="cnt"><%= totals.nagad.cnt %></span>
-        </a>
-        <a href="/payment/admin/deposits?method=rocket&quick=<%= quick %>&from=<%= from %>&to=<%= to %>" class="dep-tab <%= method === 'rocket' ? 'active' : '' %>">
-          <i class="fas fa-mobile-screen"></i> রকেট <span class="cnt"><%= totals.rocket.cnt %></span>
-        </a>
+        <% }); %>
       </div>
 
       <!-- প্রতিটা মেথডের টোটাল (একসাথে) -->
       <div class="dep-totals">
-        <div class="dep-total-card <%= method === 'bkash' ? 'active' : '' %>">
-          <div class="label">বিকাশ — Total Deposit</div>
-          <div class="value">৳<%= Number(totals.bkash.total).toLocaleString('en-US') %></div>
-          <div class="sub"><%= totals.bkash.cnt %>টা approved লেনদেন</div>
+        <% (locals.methods || []).forEach(function (m) { var tt = totals[m.key] || { total: 0, cnt: 0 }; %>
+        <div class="dep-total-card <%= method === m.key ? 'active' : '' %>">
+          <div class="label"><%= m.label %> — Total Deposit</div>
+          <div class="value">৳<%= Number(tt.total).toLocaleString('en-US') %></div>
+          <div class="sub"><%= tt.cnt %>টা approved লেনদেন</div>
         </div>
-        <div class="dep-total-card <%= method === 'nagad' ? 'active' : '' %>">
-          <div class="label">নগদ — Total Deposit</div>
-          <div class="value">৳<%= Number(totals.nagad.total).toLocaleString('en-US') %></div>
-          <div class="sub"><%= totals.nagad.cnt %>টা approved লেনদেন</div>
-        </div>
-        <div class="dep-total-card <%= method === 'rocket' ? 'active' : '' %>">
-          <div class="label">রকেট — Total Deposit</div>
-          <div class="value">৳<%= Number(totals.rocket.total).toLocaleString('en-US') %></div>
-          <div class="sub"><%= totals.rocket.cnt %>টা approved লেনদেন</div>
-        </div>
+        <% }); %>
       </div>
 
       <!-- ডেট ফিল্টার -->
