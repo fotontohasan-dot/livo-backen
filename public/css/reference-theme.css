@@ -1,0 +1,401 @@
+/* ==========================================================================
+   Livo — Reference Theme Overrides
+   সাপ্লাই করা হোমপেজ/স্পোর্টস/গেমস/প্রোফাইল স্ক্রিনশট অনুযায়ী visual layer।
+   শুধু presentation — কোনো markup/logic/endpoint পরিবর্তন করে না।
+   সব সিলেক্টর `body`-প্রিফিক্সড যাতে ভিউ-ইনলাইন <style> ব্লকের ওপরে জেতে।
+   ========================================================================== */
+
+/* ---------- 1. Brand color escape hatch --------------------------------
+   style.css-এর গ্লোবাল `body:not(.light-mode) * { color:#fff !important }`
+   রেফারেন্সের গোল্ড/গ্রিন/রেড টেক্সট মুছে দিত। ব্র্যান্ড এলিমেন্টগুলো ফেরত আনা হলো। */
+body:not(.light-mode) .nav-brand,
+body:not(.light-mode) .promo-banner-title,
+body:not(.light-mode) .jackpot-title,
+body:not(.light-mode) #jp-num,
+body:not(.light-mode) .marquee-label-premium,
+body:not(.light-mode) .why-us-heading .accent,
+body:not(.light-mode) .vip-badge,
+body:not(.light-mode) .live-pill {
+  color: var(--text-accent) !important;
+  -webkit-text-fill-color: var(--text-accent) !important;
+}
+body:not(.light-mode) .game-provider-premium,
+body:not(.light-mode) .shortcut-label,
+body:not(.light-mode) .trust-badge-item .sub,
+body:not(.light-mode) .why-us-card p,
+body:not(.light-mode) .pub-nav-item:not(.active) {
+  color: var(--text-muted) !important;
+  -webkit-text-fill-color: var(--text-muted) !important;
+}
+body:not(.light-mode) .game-badge-premium.badge-hot,
+body:not(.light-mode) .live-pill,
+body:not(.light-mode) .promo-banner-badge {
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+}
+
+/* ---------- 2. Header ---------------------------------------------------- */
+body .navbar {
+  height: 56px;
+  padding: 0 12px 0 0;
+  background: var(--bg-dark);
+  border-bottom: 1px solid var(--border-glass);
+}
+body .navbar .nav-brand {
+  font-size: 26px;
+  line-height: 1;
+  letter-spacing: .5px;
+}
+body .nav-balance-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 6px 0 12px;
+  border-radius: 999px;
+  background: var(--secondary);
+  border: 1px solid rgba(255, 255, 255, .10);
+  font-size: 13px;
+  font-weight: 700;
+}
+body .nav-refresh-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .16);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  cursor: pointer;
+}
+body .nav-icon-link {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+}
+body .nav-icon-link .badge-dot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--red);
+  border: 1.5px solid var(--bg-dark);
+}
+
+/* ---------- 3. Announcement bar ------------------------------------------ */
+body .marquee-container-premium {
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border-glass) !important;
+  border-radius: 10px;
+  margin: 10px 12px;
+  padding: 9px 12px;
+}
+body .marquee-label-premium {
+  color: var(--red-text) !important;
+  -webkit-text-fill-color: var(--red-text) !important;
+  font-size: 11px;
+}
+body .marquee-label-premium i { color: var(--red-text) !important; }
+
+/* ---------- 4. Hero / welcome-bonus banner -------------------------------- */
+body .promo-banner {
+  background:
+    radial-gradient(circle at 12% 18%, rgba(0, 143, 90, .22) 0%, transparent 48%),
+    radial-gradient(circle at 88% 82%, rgba(212, 167, 44, .12) 0%, transparent 52%),
+    linear-gradient(135deg, #0E241A 0%, #071009 100%) !important;
+  border: 1px solid rgba(212, 167, 44, .28) !important;
+  border-left: none !important;
+  border-right: none !important;
+  box-shadow: 0 4px 22px rgba(0, 0, 0, .5) !important;
+}
+body .promo-banner-badge {
+  background: var(--red) !important;
+  color: #fff !important;
+  border-radius: 6px;
+  letter-spacing: .4px;
+  box-shadow: 0 2px 10px rgba(214, 40, 40, .45) !important;
+}
+body .promo-banner-title {
+  color: var(--gold-hover) !important;
+  -webkit-text-fill-color: var(--gold-hover) !important;
+}
+body .promo-banner .btn {
+  background: var(--red) !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  box-shadow: 0 4px 14px rgba(214, 40, 40, .40);
+}
+
+/* ---------- 5. Quick actions --------------------------------------------- */
+body .shortcut-bar {
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-glass);
+  border-bottom: 1px solid var(--border-glass);
+  padding: 10px 0;
+}
+body .shortcut-icon-wrapper { font-size: 20px; margin-bottom: 5px; }
+body .shortcut-item:nth-child(1) .shortcut-icon-wrapper { color: var(--secondary) !important; }
+body .shortcut-item:nth-child(2) .shortcut-icon-wrapper { color: var(--red) !important; }
+body .shortcut-item:nth-child(3) .shortcut-icon-wrapper { color: var(--gold) !important; }
+body .shortcut-item:nth-child(4) .shortcut-icon-wrapper { color: var(--secondary) !important; }
+body .shortcut-label { font-size: 10.5px; font-weight: 600; }
+
+/* ---------- 6. Category row (Sports / Football / Cricket ...) -------------- */
+body .main-cat-nav {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 12px 14px;
+  scrollbar-width: none;
+}
+body .main-cat-nav::-webkit-scrollbar { display: none; }
+body .main-cat-item {
+  flex: 0 0 auto;
+  min-width: 68px;
+  padding: 10px 8px;
+  border-radius: 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glass);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+body .main-cat-item i { font-size: 20px; }
+body .main-cat-item.is-primary,
+body .main-cat-item.active {
+  border-color: var(--red);
+  background: var(--bg-surface-elevated);
+  box-shadow: 0 0 0 1px rgba(214, 40, 40, .25);
+}
+
+/* ---------- 7. Filter pills ---------------------------------------------- */
+body .nav-tab-item {
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glass);
+}
+body .nav-tab-item.active {
+  background: var(--secondary) !important;
+  border-color: var(--secondary) !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  box-shadow: 0 4px 14px rgba(0, 143, 90, .35) !important;
+}
+body .nav-tab-item.active i { color: #fff !important; }
+body .secondary-tab-item.active {
+  background: var(--secondary) !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+}
+
+/* ---------- 8. Layout switcher + search ----------------------------------- */
+body .layout-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glass);
+  color: var(--text-muted);
+}
+body .layout-btn.active {
+  background: var(--secondary);
+  border-color: var(--secondary);
+  color: #fff !important;
+}
+body #gameSearch {
+  height: 42px;
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border-glass) !important;
+  border-radius: 12px !important;
+  font-size: 13px;
+}
+body #gameSearch:focus {
+  border-color: var(--secondary) !important;
+  box-shadow: 0 0 0 3px rgba(0, 143, 90, .18);
+}
+
+/* ---------- 9. Game cards ------------------------------------------------- */
+body .game-card-premium {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glass);
+  border-radius: 14px;
+}
+body .game-card-premium:hover { border-color: var(--secondary); }
+body .game-thumb-wrapper { aspect-ratio: 1 / 1; }
+body .game-title-premium { font-size: 12.5px; font-weight: 700; }
+body .game-provider-premium { font-size: 9px; letter-spacing: .4px; }
+body .game-badge-premium {
+  top: 6px;
+  left: 6px;
+  right: auto;
+  border-radius: 5px;
+  background: var(--red) !important;
+  box-shadow: 0 2px 8px rgba(214, 40, 40, .45) !important;
+}
+body .game-badge-premium.badge-new { background: var(--grad-primary) !important; color: #fff !important; }
+body .fav-star.active { color: var(--gold) !important; -webkit-text-fill-color: var(--gold) !important; }
+
+/* ---------- 10. Mega Jackpot --------------------------------------------- */
+body .jackpot-board,
+body .mega-jackpot .jackpot-container {
+  background:
+    radial-gradient(circle at center, rgba(212, 167, 44, .10) 0%, transparent 60%),
+    linear-gradient(135deg, #4A0F0F 0%, #180707 100%) !important;
+  border: 1px solid rgba(212, 167, 44, .35);
+  border-radius: 14px;
+}
+body .jackpot-title,
+body #jp-num { color: var(--gold-hover) !important; -webkit-text-fill-color: var(--gold-hover) !important; }
+body .jackpot-tagline { color: rgba(255, 255, 255, .78) !important; -webkit-text-fill-color: rgba(255,255,255,.78) !important; }
+
+/* ---------- 11-13. Why Livo / trust cards --------------------------------- */
+body .why-us-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+body .why-us-card,
+body .trust-badge-item {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glass);
+  border-radius: 14px;
+  padding: 16px 12px;
+}
+body .why-us-icon {
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 10px;
+  border-radius: 50%;
+  background: rgba(0, 143, 90, .16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: var(--secondary) !important;
+}
+body .why-us-icon i { color: var(--secondary) !important; }
+body .trust-badge-item > i { color: var(--secondary) !important; font-size: 18px; }
+body .win-empty { color: var(--text-muted) !important; -webkit-text-fill-color: var(--text-muted) !important; }
+
+/* ---------- 15. Floating promo button ------------------------------------ */
+body .floating-promo,
+body #floatingPromo,
+body .floating-promo-btn {
+  background: var(--red) !important;
+  box-shadow: 0 0 0 4px rgba(214, 40, 40, .18), 0 6px 18px rgba(214, 40, 40, .45) !important;
+}
+body .floating-promo i,
+body .floating-promo-btn i { color: #fff !important; }
+
+/* ---------- 16. Bottom navigation ---------------------------------------- */
+body .pub-bottom-nav {
+  background: var(--bg-dark);
+  border-top: 1px solid var(--border-glass);
+}
+body .pub-nav-item.active { color: #fff !important; -webkit-text-fill-color: #fff !important; }
+body .pub-nav-item.active i { color: #fff !important; filter: none; }
+body .pub-nav-item.active:not(.pub-nav-promo)::before {
+  background: var(--secondary);
+  border-radius: 12px;
+}
+body .pub-nav-item.active:not(.pub-nav-promo) .pub-active-bar { display: none; }
+body .pub-promo-circle {
+  background: var(--red) !important;
+  box-shadow: 0 0 0 3px var(--bg-dark), 0 0 16px rgba(214, 40, 40, .5), 0 4px 10px rgba(0, 0, 0, .35) !important;
+}
+body .pub-promo-circle i { color: #fff !important; }
+body .pub-nav-dot { background: var(--gold) !important; }
+
+/* ---------- 17-18. Profile ----------------------------------------------- */
+body .profile-card,
+body .profile-row,
+body .profile-section {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glass);
+  border-radius: 14px;
+}
+body .profile-balance-amount {
+  font-size: 26px;
+  font-weight: 800;
+  color: #fff !important;
+}
+body .profile-deposit-btn,
+body .btn-deposit {
+  background: var(--secondary) !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  border: none;
+  border-radius: 10px;
+}
+body .profile-withdraw-btn,
+body .btn-withdraw {
+  background: var(--red) !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  border: none;
+  border-radius: 10px;
+}
+body .vip-badge {
+  background: var(--gold-soft);
+  border: 1px solid var(--gold);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 800;
+}
+body .profile-url-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-glass);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 12px;
+  word-break: break-all;
+}
+body .profile-url-box button {
+  background: rgba(0, 143, 90, .16);
+  border: 1px solid var(--secondary);
+  color: var(--secondary) !important;
+  border-radius: 8px;
+  padding: 5px 9px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+/* ---------- 21. Responsive guards ---------------------------------------- */
+body { overflow-x: hidden; }
+@media (max-width: 359px) {
+  body .navbar .nav-brand { font-size: 22px; }
+  body .nav-balance-box { padding: 0 4px 0 8px; font-size: 12px; }
+  body .game-grid-premium { gap: 8px; }
+}
+@media (min-width: 768px) {
+  body .why-us-grid { grid-template-columns: repeat(4, 1fr); }
+  body .game-grid-premium { grid-template-columns: repeat(5, 1fr); }
+}
+
+/* ---------- Light mode parity -------------------------------------------- */
+body.light-mode .marquee-container-premium,
+body.light-mode .shortcut-bar,
+body.light-mode .game-card-premium,
+body.light-mode .why-us-card,
+body.light-mode .trust-badge-item,
+body.light-mode .main-cat-item,
+body.light-mode .nav-tab-item {
+  background: #FFFFFF;
+  border-color: var(--border-glass);
+}
+body.light-mode .pub-bottom-nav { background: #FFFFFF; }
+body.light-mode .nav-balance-box { background: var(--secondary); color: #fff; }
