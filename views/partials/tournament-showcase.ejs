@@ -1,0 +1,153 @@
+<%
+/* ==========================================================================
+   টুর্নামেন্ট শোকেস — সাজসজ্জার সেকশন।
+
+   ইচ্ছাকৃতভাবে সম্পূর্ণ স্থির: কোনো DB কোয়েরি নেই, কোনো রুট নেই, কোনো ফর্ম বা
+   বোতাম নেই যা কিছু জমা দেয়। নিচের অ্যারেগুলোই এর একমাত্র ডেটা উৎস, তাই
+   সেকশনটি কখনো ব্যর্থ হতে পারে না এবং কোনো ইউজারের ব্যালেন্স বা টুর্নামেন্টের
+   অবস্থার সাথে এর সম্পর্ক নেই।
+
+   ⚠️ সংখ্যা ও নামগুলো নমুনা। উপরের প্রিভিউ চিহ্নটি সরাবেন না যতক্ষণ না এখানে
+   আসল ডেটা যুক্ত হয় — নাহলে ব্যবহারকারী নমুনা বিজয়ীদের আসল বিজয়ী ভেবে বসবেন।
+   ========================================================================== */
+const tshowLeaders = [
+  { initial: 'র', nick: 'rakib_h',    bets: 48, points: '৩,৮২০', prize: '২৫,০০০' },
+  { initial: 'স', nick: 'sumaiya_a',  bets: 39, points: '৩,১৫০', prize: '১৫,০০০' },
+  { initial: 'ত', nick: 'tanvir_i',   bets: 52, points: '২,৯৪০', prize: '১০,০০০' },
+  { initial: 'ন', nick: 'nadia_r',    bets: 31, points: '২,১১০', prize: null },
+  { initial: 'ফ', nick: 'fahim_c',    bets: 27, points: '১,৮৭০', prize: null }
+];
+const tshowMe = { initial: 'আ', bets: 22, points: '১,২৪০', rank: '৭' };
+const tshowWinners = [
+  { initial: 'শ', nick: 'shakil_a', tour: t.tshow_sample_tour_football, prize: '১৮,০০০' },
+  { initial: 'ম', nick: 'mitu_b',   tour: t.tshow_sample_tour_t20,      prize: '১২,৫০০' },
+  { initial: 'আ', nick: 'ariful_h', tour: t.tshow_sample_tour_cricket,  prize: '৯,০০০' },
+  { initial: 'স', nick: 'sadia_n',  tour: t.tshow_sample_tour_football, prize: '৭,২০০' }
+];
+%>
+
+<section class="tshow" aria-label="<%= t.tshow_aria %>">
+
+  <span class="tshow-ribbon"><i class="fas fa-eye"></i> <%= t.tshow_preview_badge %></span>
+
+  <div class="tshow-grid">
+
+    <div>
+      <!-- হেডার: সময়ের রেল + নিজের অবস্থান -->
+      <div class="tshow-hero">
+        <div class="tshow-rail">
+          <div class="tshow-rail-track"><div class="tshow-rail-fill" style="width:62%"></div></div>
+          <div class="tshow-rail-text"><%= t.tshow_ends_in %> <b><%= t.tshow_sample_remaining %></b></div>
+        </div>
+
+        <div class="tshow-eyebrow"><%= t.tshow_running %></div>
+        <div class="tshow-name"><%= t.tshow_sample_tour_cricket %></div>
+
+        <div class="tshow-standing">
+          <div class="tshow-pos">
+            <span class="big"><%= tshowMe.rank %></span><span class="of">/১৪২</span>
+          </div>
+          <div class="tshow-standing-meta">
+            <span class="tshow-delta"><i class="fas fa-arrow-up"></i> <%= t.tshow_moved_up %></span>
+            <div class="tshow-mypoints"><%= t.tshow_your_points %> <b><%= tshowMe.points %></b></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- প্রাইজ পুল ও তার ভাগ -->
+      <div class="tshow-pool">
+        <div class="tshow-pool-top">
+          <span class="tshow-pool-cur">৳</span>
+          <span class="tshow-pool-amount">৫০,০০০</span>
+          <span class="tshow-pool-side">১৪২ <%= t.tshow_participants %></span>
+        </div>
+
+        <div class="tshow-split">
+          <i class="p1" style="width:50%"></i><i class="p2" style="width:30%"></i><i class="p3" style="width:20%"></i>
+        </div>
+
+        <div class="tshow-key">
+          <div><span class="amt">৳২৫,০০০</span><span class="sw" style="background:var(--gold)"></span><%= t.tshow_first %></div>
+          <div><span class="amt">৳১৫,০০০</span><span class="sw" style="background:var(--primary)"></span><%= t.tshow_second %></div>
+          <div><span class="amt">৳১০,০০০</span><span class="sw" style="background:var(--secondary)"></span><%= t.tshow_third %></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- লিডারবোর্ড -->
+    <div class="tshow-board">
+      <% tshowLeaders.forEach(function (row, i) { %>
+        <% if (i === 3) { %>
+          <div class="tshow-cut"><span><%= t.tshow_payout_line %></span><i></i></div>
+        <% } %>
+        <div class="tshow-row <%= row.prize ? 'is-paid' : '' %>">
+          <div class="tshow-rank"><%= i + 1 %></div>
+          <div class="tshow-who">
+            <div class="tshow-av"><%= row.initial %></div>
+            <div>
+              <div class="tshow-nick"><%= row.nick %></div>
+              <div class="tshow-sub"><%= row.bets %> <%= t.tshow_bets %></div>
+            </div>
+          </div>
+          <div class="tshow-score">
+            <div class="pts"><%= row.points %></div>
+            <% if (row.prize) { %>
+              <div class="prize">৳<%= row.prize %></div>
+            <% } else { %>
+              <div class="prize blank">—</div>
+            <% } %>
+          </div>
+        </div>
+      <% }); %>
+
+      <div class="tshow-row is-me">
+        <div class="tshow-rank"><%= tshowMe.rank %></div>
+        <div class="tshow-who">
+          <div class="tshow-av"><%= tshowMe.initial %></div>
+          <div>
+            <div class="tshow-nick"><%= t.tshow_you %></div>
+            <div class="tshow-sub"><%= tshowMe.bets %> <%= t.tshow_bets %></div>
+          </div>
+        </div>
+        <div class="tshow-score">
+          <div class="pts"><%= tshowMe.points %></div>
+          <div class="prize blank">—</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- সাম্প্রতিক বিজয়ী -->
+  <div class="tshow-winners">
+    <% tshowWinners.forEach(function (w) { %>
+      <div class="tshow-winner">
+        <div class="tshow-av"><%= w.initial %></div>
+        <div class="tshow-winner-name"><%= w.nick %></div>
+        <div class="tshow-winner-tour"><%= w.tour %></div>
+        <div class="tshow-winner-prize"><span class="cur">৳</span><%= w.prize %></div>
+      </div>
+    <% }); %>
+  </div>
+
+  <!-- নিয়ম -->
+  <div class="tshow-rules">
+    <details class="tshow-rule" open>
+      <summary><%= t.tshow_rule_points_q %></summary>
+      <p><%= t.tshow_rule_points_a %></p>
+    </details>
+    <details class="tshow-rule">
+      <summary><%= t.tshow_rule_payout_q %></summary>
+      <p><%= t.tshow_rule_payout_a %></p>
+    </details>
+    <details class="tshow-rule">
+      <summary><%= t.tshow_rule_tie_q %></summary>
+      <p><%= t.tshow_rule_tie_a %></p>
+    </details>
+    <details class="tshow-rule">
+      <summary><%= t.tshow_rule_cancel_q %></summary>
+      <p><%= t.tshow_rule_cancel_a %></p>
+    </details>
+  </div>
+
+</section>

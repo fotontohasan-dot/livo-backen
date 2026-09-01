@@ -5,6 +5,8 @@
     <h1 class="section-title" style="font-size:1.8rem;"><i class="fas fa-trophy"></i> <%= t.menu_tournament %></h1>
   </div>
 
+  <%- include('partials/tournament-showcase') %>
+
   <div style="display:flex; flex-direction:column; gap:15px;">
     <% if(tournaments.length === 0) { %>
       <div class="card glass" style="text-align:center; padding:3rem; color:var(--text-muted);">

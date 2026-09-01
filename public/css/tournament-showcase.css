@@ -1,0 +1,183 @@
+/* ==========================================================================
+   Livo — টুর্নামেন্ট শোকেস (সাজসজ্জার সেকশন)
+
+   এটি সম্পূর্ণভাবে প্রদর্শনমূলক: কোনো রুট, কোয়েরি বা ফর্ম নেই। সব মান
+   views/partials/tournament-showcase.ejs-এ স্থির করে লেখা।
+
+   টোকেন সবই public/css/style.css থেকে — আলাদা রঙ ডিফাইন করা হয়নি, তাই
+   ডার্ক/লাইট দুই মোডেই ও ভবিষ্যতের থিম পরিবর্তনেও নিজে থেকে মিলে যাবে।
+   ========================================================================== */
+
+.tshow { margin: var(--space-6) 0; }
+
+/* ---------- প্রিভিউ রিবন ----------
+   সেকশনটা সাজসজ্জার, তাই ভেতরের সংখ্যাগুলো বাস্তব নয়। ব্যবহারকারী যাতে
+   নমুনাকে আসল ফলাফল ভেবে না বসেন, সেজন্য উপরে স্পষ্ট চিহ্ন। */
+.tshow-ribbon {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 11px; margin-bottom: var(--space-3);
+  border: 1px dashed var(--gold); border-radius: var(--radius-full);
+  font-size: var(--font-xs); color: var(--gold);
+}
+
+/* ---------- হেডার: নিজের অবস্থান + সময়ের রেল ---------- */
+.tshow-hero {
+  position: relative; overflow: hidden;
+  padding: var(--space-6) var(--space-5);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background:
+    radial-gradient(120% 90% at 78% 0%, rgba(212, 167, 44, .14), transparent 62%),
+    var(--grad-dark);
+}
+.tshow-hero::after {           /* একটিমাত্র সোনালি ঝিলিক — ট্রফির ধাতব ইঙ্গিত */
+  content: ''; position: absolute; top: -40%; right: -18%;
+  width: 2px; height: 180%; opacity: .3;
+  background: linear-gradient(transparent, var(--gold), transparent);
+  transform: rotate(18deg);
+}
+
+.tshow-rail { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-5); }
+.tshow-rail-track { flex: 1; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, .08); overflow: hidden; }
+.tshow-rail-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--gold)); }
+.tshow-rail-text { font-size: var(--font-xs); color: var(--text-muted); white-space: nowrap; }
+.tshow-rail-text b { color: var(--gold-hover); font-weight: 600; }
+
+.tshow-eyebrow { font-size: var(--font-sm); color: var(--text-muted); }
+.tshow-name { font-size: var(--font-lg); font-weight: 700; line-height: 1.3; margin: 2px 0 var(--space-5); }
+
+.tshow-standing { display: flex; align-items: flex-end; gap: var(--space-4); flex-wrap: wrap; }
+.tshow-pos { display: flex; align-items: baseline; gap: 3px; color: var(--gold); }
+.tshow-pos .big { font-size: 52px; font-weight: 700; line-height: .9; font-variant-numeric: tabular-nums; }
+.tshow-pos .of { font-size: var(--font-lg); opacity: .65; }
+.tshow-standing-meta { padding-bottom: 6px; }
+.tshow-delta {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 9px; border-radius: var(--radius-full);
+  font-size: var(--font-xs); font-weight: 600;
+  color: var(--green); background: rgba(16, 185, 129, .12);
+}
+.tshow-mypoints { font-size: var(--font-sm); color: var(--text-muted); margin-top: var(--space-2); }
+.tshow-mypoints b { color: var(--text-main); font-weight: 600; }
+
+/* ---------- প্রাইজ পুল: শুধু সংখ্যা নয়, ভাগটাও ---------- */
+.tshow-pool {
+  padding: var(--space-5);
+  border: 1px solid var(--border-glass); border-top: 0;
+  background: var(--bg-surface);
+}
+.tshow-pool-top { display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-4); }
+.tshow-pool-amount { font-size: var(--font-display); font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.tshow-pool-cur { font-size: var(--font-lg); color: var(--gold); }
+.tshow-pool-side { margin-left: auto; font-size: var(--font-sm); color: var(--text-muted); }
+
+.tshow-split { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: var(--space-3); }
+.tshow-split i { display: block; height: 100%; }
+.tshow-split .p1 { background: var(--gold); }
+.tshow-split .p2 { background: var(--primary); }
+.tshow-split .p3 { background: var(--secondary); }
+
+.tshow-key { display: flex; gap: var(--space-5); flex-wrap: wrap; }
+.tshow-key div { font-size: var(--font-xs); color: var(--text-muted); }
+.tshow-key .amt { display: block; font-size: var(--font-md); font-weight: 700; color: var(--text-main); font-variant-numeric: tabular-nums; }
+.tshow-key .sw { display: inline-block; width: 7px; height: 7px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+
+/* ---------- লিডারবোর্ড: টেবিল নয়, মই ---------- */
+.tshow-board { border: 1px solid var(--border-glass); border-top: 0; border-radius: 0 0 var(--radius-lg) var(--radius-lg); overflow: hidden; }
+
+.tshow-row {
+  display: grid; grid-template-columns: 42px 1fr auto;
+  align-items: center; gap: var(--space-3);
+  padding: var(--space-3) var(--space-4) var(--space-3) 0;
+  background: var(--bg-surface);
+  border-bottom: 1px solid rgba(255, 255, 255, .04);
+}
+.tshow-row:last-child { border-bottom: 0; }
+
+.tshow-rank { text-align: center; font-size: var(--font-lg); font-weight: 700; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.tshow-row.is-paid .tshow-rank { color: var(--gold); }
+
+.tshow-who { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
+.tshow-av {
+  flex: none; width: 34px; height: 34px; border-radius: var(--radius-full);
+  display: grid; place-items: center; font-size: var(--font-sm); font-weight: 700;
+  background: var(--grad-primary); color: var(--text-white);
+}
+.tshow-row.is-paid .tshow-av { background: var(--grad-gold); color: var(--text-inverse); }
+.tshow-nick { font-size: var(--font-sm); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tshow-sub { font-size: var(--font-xs); color: var(--text-muted); }
+
+.tshow-score { text-align: right; }
+.tshow-score .pts { font-size: var(--font-lg); font-weight: 700; font-variant-numeric: tabular-nums; }
+.tshow-score .prize { font-size: var(--font-xs); color: var(--gold-hover); }
+.tshow-score .prize.blank { color: var(--text-muted); opacity: .55; }
+
+/* নিজের সারি — চিহ্নিত, কিন্তু চেঁচামেচি ছাড়া */
+.tshow-row.is-me { background: var(--bg-surface-elevated); box-shadow: inset 3px 0 0 var(--gold); }
+
+/* পেআউট সীমা — সেকশনের একমাত্র সাহসী উপাদান */
+.tshow-cut {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: var(--bg-dark);
+  border-top: 1px dashed rgba(212, 167, 44, .35);
+  border-bottom: 1px dashed rgba(212, 167, 44, .35);
+}
+.tshow-cut span { font-size: var(--font-xs); color: var(--gold-hover); white-space: nowrap; }
+.tshow-cut i { flex: 1; height: 1px; background: rgba(212, 167, 44, .2); }
+
+/* ---------- সাম্প্রতিক বিজয়ী: অনুভূমিক স্ক্রল ---------- */
+.tshow-winners {
+  display: flex; gap: var(--space-3); overflow-x: auto;
+  padding-bottom: var(--space-2); margin-top: var(--space-5);
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.tshow-winners::-webkit-scrollbar { display: none; }
+.tshow-winner {
+  flex: none; width: 146px; padding: var(--space-4);
+  background: var(--bg-surface); border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+}
+.tshow-winner .tshow-av { width: 38px; height: 38px; margin-bottom: var(--space-3); }
+.tshow-winner-name { font-size: var(--font-sm); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tshow-winner-tour { font-size: var(--font-xs); color: var(--text-muted); margin: 2px 0 var(--space-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tshow-winner-prize { font-size: var(--font-lg); font-weight: 700; color: var(--gold); font-variant-numeric: tabular-nums; }
+.tshow-winner-prize .cur { font-size: var(--font-sm); }
+
+/* ---------- নিয়ম ---------- */
+.tshow-rules { margin-top: var(--space-5); border: 1px solid var(--border-glass); border-radius: var(--radius-lg); overflow: hidden; }
+.tshow-rule { border-bottom: 1px solid rgba(255, 255, 255, .04); }
+.tshow-rule:last-child { border-bottom: 0; }
+.tshow-rule > summary {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  padding: var(--space-4); background: var(--bg-surface); cursor: pointer;
+  font-size: var(--font-sm); font-weight: 600; list-style: none;
+}
+.tshow-rule > summary::-webkit-details-marker { display: none; }
+.tshow-rule > summary::after { content: '+'; font-size: var(--font-lg); font-weight: 400; color: var(--text-muted); }
+.tshow-rule[open] > summary::after { content: '\2212'; color: var(--gold); }
+.tshow-rule p { padding: 0 var(--space-4) var(--space-4); background: var(--bg-surface); font-size: var(--font-sm); color: var(--text-muted); }
+
+/* ---------- ছোট স্ক্রিন ---------- */
+@media (max-width: 420px) {
+  .tshow-hero, .tshow-pool { padding: var(--space-4); }
+  .tshow-pos .big { font-size: 42px; }
+  .tshow-pool-amount { font-size: 26px; }
+  .tshow-pool-side { margin-left: 0; width: 100%; }
+  .tshow-key { gap: var(--space-4); }
+  .tshow-row { grid-template-columns: 34px 1fr auto; padding-right: var(--space-3); }
+}
+
+/* ---------- বড় স্ক্রিন: পুল ও লিডারবোর্ড পাশাপাশি ---------- */
+@media (min-width: 880px) {
+  .tshow-grid { display: grid; grid-template-columns: 320px 1fr; align-items: start; gap: var(--space-5); }
+  .tshow-pool { border-radius: 0 0 var(--radius-lg) var(--radius-lg); border-top: 0; }
+  .tshow-board { border-radius: var(--radius-lg); border-top: 1px solid var(--border-glass); }
+}
+
+/* কীবোর্ড ফোকাস দৃশ্যমান রাখা */
+.tshow-rule > summary:focus-visible { outline: 2px solid var(--gold-hover); outline-offset: -2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tshow *, .tshow *::after { animation: none !important; transition: none !important; }
+}
