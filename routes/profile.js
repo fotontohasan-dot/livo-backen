@@ -777,13 +777,16 @@ router.post('/responsible/self-exclude', isAuth, async (req, res) => {
 // ==================== লাকি হুইল ====================
 router.get('/wheel', isAuth, requireFeature('lucky_wheel'), async (req, res) => {
   try {
-    const segments = getSegments();
+    // হুইল আঁকতে ক্লায়েন্টের শুধু ঘরের সংখ্যাটা দরকার — পুরস্কারের মানগুলো নয়।
+    // আগে পুরো prize তালিকা ভিউতে পাঠানো হতো, ফলে স্পিনের আগেই DOM/JS থেকে কোন ঘরে
+    // কত পুরস্কার তা জানা যেত। মান নির্বাচন ও যাচাই আগের মতোই সার্ভারেই থাকছে।
+    const segmentCount = getSegments().length;
     const status = await canSpin(req.session.user.id);
     const history = await getWheelHistory(req.session.user.id);
-    res.render('profile/wheel', { user: req.session.user, segments, status, history, remainingToday: status.canSpin ? 1 : 0 });
+    res.render('profile/wheel', { user: req.session.user, segmentCount, status, history, remainingToday: status.canSpin ? 1 : 0 });
   } catch (err) {
     console.error('wheel page error:', err.message);
-    res.render('profile/wheel', { user: req.session.user, segments: [], status: { canSpin: false }, history: [], remainingToday: 0 });
+    res.render('profile/wheel', { user: req.session.user, segmentCount: 0, status: { canSpin: false }, history: [], remainingToday: 0 });
   }
 });
 

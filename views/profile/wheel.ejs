@@ -73,7 +73,8 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.9.3/confetti.browser.min.js"></script>
 <script>
-const segments = <%- jsonScriptSafe(segments || []) %>;
+<%# হুইলে শুধু ঘরের সংখ্যা আসে — কোনো পুরস্কারের মান ক্লায়েন্টে পাঠানো হয় না। %>
+const segments = new Array(<%= Number(locals.segmentCount) || 12 %>).fill(null);
 const colors = ['#fff6e0', '#ffe9b8'];
 const canvas = document.getElementById('wheelCanvas');
 const ctx = canvas.getContext('2d');
@@ -120,7 +121,8 @@ function drawWheel() {
     ctx.textAlign = 'right';
     ctx.fillStyle = '#7a3e00';
     ctx.font = 'bold 14px sans-serif';
-    ctx.fillText(segments[i] > 0 ? (segments[i] + ' কয়েন') : 'আবার', radius - 14, 5);
+    // স্পিনের আগে কোনো পুরস্কার দেখানো হয় না — প্রতিটা ঘরে একই নিরপেক্ষ চিহ্ন।
+    ctx.fillText('?', radius - 22, 5);
     ctx.restore();
   }
 }
