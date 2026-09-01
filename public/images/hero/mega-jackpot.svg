@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 200" width="360" height="200" role="img">
+<defs>
+  <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#D4A72C"/><stop offset="1" stop-color="#E9C25A"/>
+  </linearGradient>
+  <linearGradient id="jb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4A0F0F"/><stop offset="1" stop-color="#180707"/></linearGradient>
+  <radialGradient id="jglow"><stop offset="0" stop-color="#D4A72C" stop-opacity=".22"/><stop offset="1" stop-color="#D4A72C" stop-opacity="0"/></radialGradient>
+  </defs>
+
+  <rect width="360" height="200" rx="14" fill="url(#jb)"/>
+  <ellipse cx="180" cy="100" rx="150" ry="86" fill="url(#jglow)"/>
+  <rect x="86" y="46" width="188" height="108" rx="14" fill="#0B0605" stroke="url(#g)" stroke-width="4"/>
+  <rect x="104" y="62" width="44" height="76" rx="7" fill="#1B0C0A"/>
+    <text x="126" y="116" text-anchor="middle" font-family="Teko, Arial, sans-serif" font-size="42" font-weight="700" fill="url(#g)">7</text><rect x="160" y="62" width="44" height="76" rx="7" fill="#1B0C0A"/>
+    <text x="182" y="116" text-anchor="middle" font-family="Teko, Arial, sans-serif" font-size="42" font-weight="700" fill="url(#g)">7</text><rect x="216" y="62" width="44" height="76" rx="7" fill="#1B0C0A"/>
+    <text x="238" y="116" text-anchor="middle" font-family="Teko, Arial, sans-serif" font-size="42" font-weight="700" fill="url(#g)">7</text>
+  <rect x="86" y="160" width="188" height="10" rx="5" fill="url(#g)"/>
+  <circle cx="288" cy="96" r="14" fill="#D62828" stroke="url(#g)" stroke-width="3"/>
+  <rect x="284" y="52" width="8" height="44" rx="4" fill="url(#g)"/>
+  <circle cx="44" cy="40" r="3" fill="#E9C25A" opacity=".8"/><circle cx="312" cy="44" r="4" fill="#E9C25A" opacity=".8"/><circle cx="56" cy="158" r="5" fill="#E9C25A" opacity=".8"/><circle cx="320" cy="152" r="3" fill="#E9C25A" opacity=".8"/><circle cx="180" cy="24" r="4" fill="#E9C25A" opacity=".8"/>
+  
+</svg>

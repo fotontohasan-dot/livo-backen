@@ -12,21 +12,21 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  color: #FFEFA6;
-  background: linear-gradient(145deg, rgba(212,175,55,0.14) 0%, rgba(0,0,0,0.25) 100%);
-  border: 1px solid rgba(212,175,55,0.35);
-  box-shadow: 0 2px 10px rgba(212,175,55,0.12);
+  color: var(--text-main);
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-glass);
+  box-shadow: none;
   transition: transform 0.2s, box-shadow 0.2s;
 }
 .footer-badge:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 14px rgba(212,175,55,0.25);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.25); border-color: var(--secondary);
 }
-.footer-badge i { font-size: 13px; color: #D4AF37; }
-.footer-badge-security { color: #cfe8ff; }
-.footer-badge-security i { color: #7fc4ff; }
-.footer-badge-responsible { color: #d8f5e3; }
-.footer-badge-responsible i { color: #3ddc84; }
+.footer-badge i { font-size: 13px; color: var(--gold); }
+.footer-badge-security { color: var(--text-main); }
+.footer-badge-security i { color: #6FB6E8; }
+.footer-badge-responsible { color: var(--text-main); }
+.footer-badge-responsible i { color: var(--secondary); }
 
 .footer-link {
   color: var(--text-muted);
@@ -38,7 +38,7 @@
   transition: color 0.2s;
 }
 .footer-link:hover, .footer-link:focus {
-  color: var(--gold, #D4AF37);
+  color: var(--secondary);
 }
 .footer-link:not(:last-child)::after {
   content: "";
@@ -57,16 +57,16 @@
 }
 
 body.light-mode .footer-badge {
-  background: linear-gradient(145deg, rgba(212,175,55,0.16) 0%, rgba(255,255,255,0.65) 100%);
-  border: 1px solid rgba(184,134,11,0.4);
-  color: #7A5A00;
-  box-shadow: 0 2px 10px rgba(212,175,55,0.2);
+  background: #FFFFFF;
+  border: 1px solid var(--border-glass);
+  color: var(--text-main);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
-body.light-mode .footer-badge i { color: #AA7C11; }
-body.light-mode .footer-badge-security { color: #0c4a86; }
+body.light-mode .footer-badge i { color: var(--gold); }
+body.light-mode .footer-badge-security { color: var(--text-main); }
 body.light-mode .footer-badge-security i { color: #1e78c9; }
-body.light-mode .footer-badge-responsible { color: #0f6b3a; }
-body.light-mode .footer-badge-responsible i { color: #17a05a; }
+body.light-mode .footer-badge-responsible { color: var(--text-main); }
+body.light-mode .footer-badge-responsible i { color: var(--secondary); }
 body.light-mode .footer-link:hover, body.light-mode .footer-link:focus { color: var(--text-accent); }
 </style>
 
@@ -83,8 +83,8 @@ body.light-mode .footer-link:hover, body.light-mode .footer-link:focus { color: 
         <a href="/kyc" class="footer-link"><%= t.kyc %></a>
       </div>
       <div style="display:flex;gap:8px;justify-content:center;margin-bottom:16px;">
-        <div class="glass" style="padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;color: var(--text-accent);">🔞 18+</div>
-        <div class="glass text-muted" style="padding:4px 10px;border-radius:6px;font-size:11px;">Curacao Licensed</div>
+        <div class="footer-18plus" title="18+">18+</div>
+        <div class="footer-license" style="padding:6px 12px;font-size:11px;font-weight:600;">Curacao Licensed</div>
       </div>
     </div>
 

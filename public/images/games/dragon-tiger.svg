@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300" role="img">
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#123526"/><stop offset="1" stop-color="#07130D"/>
+  </linearGradient>
+  <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#D4A72C"/><stop offset="1" stop-color="#E9C25A"/>
+  </linearGradient>
+  <linearGradient id="gr" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#006A4E"/><stop offset="1" stop-color="#008F5A"/>
+  </linearGradient></defs>
+
+  <rect width="300" height="300" rx="18" fill="url(#bg)"/>
+  <g opacity=".30">
+    <circle cx="220" cy="117" r="110" fill="#5B2E8F" opacity=".38"/>
+    <path d="M0 190 q75 -50 150 0 t150 0 V300 H0 Z" fill="#5B2E8F" opacity=".22"/>
+  </g>
+  <g transform="rotate(2 150 150)">
+    <circle cx="150" cy="150" r="94" fill="#08170F" stroke="url(#g)" stroke-width="4"/>
+    <path d="M150 150 L150.0 60.0 A90 90 0 0 1 180.8 65.4 Z" fill="#111A15"/><path d="M150 150 L180.8 65.4 A90 90 0 0 1 207.9 81.1 Z" fill="#D62828"/><path d="M150 150 L207.9 81.1 A90 90 0 0 1 227.9 105.0 Z" fill="#111A15"/><path d="M150 150 L227.9 105.0 A90 90 0 0 1 238.6 134.4 Z" fill="#D62828"/><path d="M150 150 L238.6 134.4 A90 90 0 0 1 238.6 165.6 Z" fill="#111A15"/><path d="M150 150 L238.6 165.6 A90 90 0 0 1 227.9 195.0 Z" fill="#D62828"/><path d="M150 150 L227.9 195.0 A90 90 0 0 1 207.9 218.9 Z" fill="#111A15"/><path d="M150 150 L207.9 218.9 A90 90 0 0 1 180.8 234.6 Z" fill="#D62828"/><path d="M150 150 L180.8 234.6 A90 90 0 0 1 150.0 240.0 Z" fill="#111A15"/><path d="M150 150 L150.0 240.0 A90 90 0 0 1 119.2 234.6 Z" fill="#D62828"/><path d="M150 150 L119.2 234.6 A90 90 0 0 1 92.1 218.9 Z" fill="#111A15"/><path d="M150 150 L92.1 218.9 A90 90 0 0 1 72.1 195.0 Z" fill="#D62828"/><path d="M150 150 L72.1 195.0 A90 90 0 0 1 61.4 165.6 Z" fill="#111A15"/><path d="M150 150 L61.4 165.6 A90 90 0 0 1 61.4 134.4 Z" fill="#D62828"/><path d="M150 150 L61.4 134.4 A90 90 0 0 1 72.1 105.0 Z" fill="#111A15"/><path d="M150 150 L72.1 105.0 A90 90 0 0 1 92.1 81.1 Z" fill="#D62828"/><path d="M150 150 L92.1 81.1 A90 90 0 0 1 119.2 65.4 Z" fill="#111A15"/><path d="M150 150 L119.2 65.4 A90 90 0 0 1 150.0 60.0 Z" fill="#D62828"/>
+    <circle cx="150" cy="150" r="46" fill="#0C2318" stroke="url(#g)" stroke-width="2"/>
+    <circle cx="150" cy="150" r="16" fill="url(#g)"/>
+    <circle cx="206" cy="104" r="9" fill="#F2F5F3"/></g>
+  <rect x="1" y="1" width="298" height="298" rx="17" fill="none" stroke="#1E4633"/>
+</svg>

@@ -241,6 +241,19 @@ body.light-mode .mc-grid-card{background:rgba(0,0,0,.04);border-color:rgba(0,0,0
       </a>
     </div>
 
+
+    <!-- ==================== USER PROFILE URL (স্পেক ১৮) ====================
+         ইউজারের নিজস্ব শেয়ারযোগ্য লিংক। বিদ্যমান referral_code ব্যবহার করে —
+         নতুন কোনো এন্ডপয়েন্ট বা ডেটা লাগে না। -->
+    <% if (user.referral_code) { %>
+    <div class="pf-url-row">
+      <i class="fas fa-link pf-url-icon"></i>
+      <span class="pf-url-text" id="profileUrlText"><%= (locals.baseUrl || '') %>/register?ref=<%= user.referral_code %></span>
+      <button type="button" class="pf-url-btn" onclick="copyProfileUrl()" title="<%= t.copy %>"><i class="fas fa-copy"></i></button>
+      <button type="button" class="pf-url-btn is-share" onclick="shareProfileUrl()" title="<%= t.share %>"><i class="fas fa-share-nodes"></i></button>
+    </div>
+    <% } %>
+
     <!-- Total Balance (Wallet Card বিলুপ্ত, এখানেই একীভূত) -->
     <div class="pf-header-balance-row">
       <div>
@@ -445,6 +458,22 @@ function copyUsername() {
 
 function copyUid() {
   copyText('<%= 100000 + user.id %>');
+}
+
+function copyProfileUrl() {
+  var el = document.getElementById('profileUrlText');
+  if (el) copyText(el.textContent.trim());
+}
+
+function shareProfileUrl() {
+  var el = document.getElementById('profileUrlText');
+  if (!el) return;
+  var url = el.textContent.trim();
+  if (navigator.share) {
+    navigator.share({ title: <%- jsonScriptSafe(siteName) %>, url: url }).catch(function () {});
+  } else {
+    copyText(url);
+  }
 }
 
 function copyText(val) {

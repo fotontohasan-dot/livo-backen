@@ -10,10 +10,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Teko:wght@400;600;700&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/css/style.css?v=<%= Date.now() %>">
+  <!-- রেফারেন্স স্ক্রিনশট-ম্যাচিং ভিজ্যুয়াল লেয়ার (style.css-এর পরে লোড হয়) -->
+  <link rel="stylesheet" href="/css/reference-theme.css?v=<%= Date.now() %>">
 
   <meta name="description" content="<%= locals.description || 'Livo-তে খেলুন বাংলাদেশের সেরা স্পোর্টস প্রেডিকশন ও ক্যাসিনো গেম, জিতুন রিয়েল রিওয়ার্ড, নিরাপদ ও দ্রুত ডিপোজিট-উইথড্র সুবিধাসহ।' %>">
   <meta name="keywords" content="<%= locals.keywords || 'Livo, স্পোর্টস প্রেডিকশন, অনলাইন ক্যাসিনো, বাংলাদেশ বেটিং, ক্রিকেট প্রেডিকশন, লাইভ ক্যাসিনো, অনলাইন গেমিং বাংলাদেশ' %>">
-  <meta name="theme-color" content="#080D0B">
+  <meta name="theme-color" content="#0A1C14">
 
   <!-- Canonical — query-string/ট্র্যাকিং প্যারামিটারসহ URL যেন আলাদা পেজ হিসেবে ইনডেক্স না হয় -->
   <link rel="canonical" href="<%= (locals.baseUrl || '') + (locals.canonicalPath || '') %>">
@@ -47,6 +49,7 @@
   <meta name="apple-mobile-web-app-title" content="Livo">
   <script src="/pwa.js" defer></script>
   <script src="/js/age-gate.js" defer></script>
+  <script src="/js/team-crest.js" defer></script>
   <style>
     /* ==================== Livo Toast / Loading System ==================== */
     #livo-toast-root { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 99999; display: flex; flex-direction: column; gap: 10px; align-items: center; width: 100%; max-width: 440px; padding: 0 16px; pointer-events: none; }

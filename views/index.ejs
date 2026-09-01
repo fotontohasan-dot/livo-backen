@@ -349,9 +349,8 @@ body.light-mode .promo-banner {
       </a>
     </div>
   </div>
-  <div style="position: absolute; right: 12px; bottom: 8px; font-size: 80px; opacity: 0.12; pointer-events: none; color: var(--text-main);">
-    🎰
-  </div>
+  <img class="promo-banner-art" src="/images/hero/welcome-bonus.svg"
+       alt="" aria-hidden="true" loading="eager" decoding="async" width="420" height="260">
 </div>
 
 <!-- ===== Deposit, Withdrawal, Reward, Rebate Highlighted Shortcuts ===== -->
@@ -368,13 +367,13 @@ body.light-mode .promo-banner {
     </div>
     <div class="shortcut-label"><%= t.withdrawal %></div>
   </a>
-  <a href="/extra/missions" class="shortcut-item">
+  <a href="/profile/rewards" class="shortcut-item">
     <div class="shortcut-icon-wrapper">
       <i class="fas fa-trophy"></i>
     </div>
     <div class="shortcut-label"><%= t.reward %></div>
   </a>
-  <a href="/profile" class="shortcut-item">
+  <a href="/profile/cashback" class="shortcut-item">
     <div class="shortcut-icon-wrapper">
       <i class="fas fa-coins"></i>
     </div>
@@ -664,7 +663,7 @@ body.light-mode .promo-banner {
       <div class="jackpot-tagline"><%= t.jackpot_tagline %></div>
     </div>
     <div class="jackpot-girl">
-      <video src="/videos/jackpot-girl.mp4" poster="/images/jackpot-girl-poster.jpg" style="width:130px; border-radius:8px; display:block;" autoplay loop muted playsinline></video>
+      <video src="/videos/jackpot-girl.mp4" poster="/images/hero/mega-jackpot.svg" style="width:130px; border-radius:8px; display:block;" autoplay loop muted playsinline></video>
     </div>
   </div>
 </div>
@@ -1077,6 +1076,9 @@ function renderGames() {
     card.innerHTML = `
       <div class="game-thumb-wrapper">
         <i class="fa-star fav-star ${isFav ? 'fas active' : 'far'}" data-slug="${escHtml(g.slug)}"></i>
+        <img class="game-thumb-img" src="/images/games/${escHtml(g.slug)}.svg" alt="" aria-hidden="true"
+             loading="lazy" decoding="async" width="300" height="300"
+             onerror="this.remove()">
         <span class="game-emoji">${escHtml(g.emoji)}</span>
         ${badgeHTML}
       </div>
