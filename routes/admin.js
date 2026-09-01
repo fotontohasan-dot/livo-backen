@@ -315,12 +315,42 @@ router.post('/login/2fa', strict2FALimiter, async (req, res) => {
     let failReason = 'invalid_code';
 
     if (backupCode && backupCode.trim()) {
-      const check = await verifyAndConsumeBackupCode(admin.totp_backup_codes, backupCode);
-      if (check.valid) {
-        ok = true;
-        await pool.query('UPDATE users SET totp_backup_codes = $1 WHERE id = $2', [check.remainingJson, admin.id]);
-      } else {
+      // AUDIT FINDING: এটা আগে lock ছাড়া read-modify-write ছিল —
+      // verifyAndConsumeBackupCode() `admin.totp_backup_codes` (রুটের শুরুতে পড়া
+      // স্ন্যাপশট) থেকে বাকি কোডের তালিকা বানাত, তারপর সেটা সরাসরি UPDATE করে
+      // বসাত। ফলে দুটো সমস্যা ছিল:
+      //   (ক) একই ব্যাকআপ কোড নিয়ে সমান্তরাল দুটো রিকোয়েস্ট এলে দুটোই একই
+      //       স্ন্যাপশট পড়ে দুটোই valid হতো — অর্থাৎ single-use কোড একাধিকবার
+      //       ব্যবহার করা যেত।
+      //   (খ) দুটো ভিন্ন কোড সমান্তরালে ব্যবহার করলে পরের UPDATE আগেরটাকে
+      //       ওভাররাইট করত, ফলে ইতিমধ্যে খরচ হয়ে যাওয়া কোড তালিকায় ফিরে আসত।
+      // একই হ্যান্ডলারের TOTP শাখা atomic conditional UPDATE ব্যবহার করে, অর্থাৎ
+      // এটা নকশা নয়, নজর এড়িয়ে যাওয়া। এখন সারি লক করে, লক নেওয়ার পর তালিকা
+      // আবার পড়ে, তারপরই consume করা হয়।
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const locked = await client.query(
+          'SELECT totp_backup_codes FROM users WHERE id = $1 FOR UPDATE', [admin.id]
+        );
+        const check = await verifyAndConsumeBackupCode(
+          locked.rows[0] ? locked.rows[0].totp_backup_codes : null, backupCode
+        );
+        if (check.valid) {
+          await client.query('UPDATE users SET totp_backup_codes = $1 WHERE id = $2',
+            [check.remainingJson, admin.id]);
+          await client.query('COMMIT');
+          ok = true;
+        } else {
+          await client.query('ROLLBACK');
+          failReason = 'invalid_backup_code';
+        }
+      } catch (e) {
+        await client.query('ROLLBACK').catch(() => {});
+        console.error('backup code consume error:', e.message);
         failReason = 'invalid_backup_code';
+      } finally {
+        client.release();
       }
     } else if (token && token.trim()) {
       // MEDIUM-1: TOTP replay prevention — প্রতিটি time-step সর্বোচ্চ একবার ব্যবহারযোগ্য।
@@ -625,11 +655,55 @@ router.post('/2fa/disable', strict2FALimiter, async (req, res) => {
     const admin = result.rows[0];
 
     const passOk = admin && await bcrypt.compare(password || '', admin.password);
-    // TOTP কোড অথবা ব্যাকআপ কোড — যেকোনো একটা দিয়ে যাচাই করা যাবে
-    let codeOk = admin && verifyTotpToken(secretBox.decrypt(admin.totp_secret), token);
-    if (!codeOk && admin && admin.totp_backup_codes) {
-      const backupCheck = await verifyAndConsumeBackupCode(admin.totp_backup_codes, token);
-      if (backupCheck.valid) codeOk = true;
+
+    // AUDIT FINDING: এখানে verifyTotpToken() ব্যবহার হতো, অর্থাৎ কোনো replay
+    // protection ছিল না — অথচ /admin/login/2fa একই কোডবেসে
+    // verifyTotpTokenWithStep() + atomic step claim দিয়ে প্রতিটা time-step
+    // একবারের বেশি ব্যবহার হওয়া আটকায়। ফলে ৩০ সেকেন্ডের উইন্ডোর মধ্যে একবার
+    // দেখা/ধরা পড়া TOTP কোড দিয়ে এই রুটে দ্বিতীয় ফ্যাক্টর একেবারে বন্ধ করে
+    // দেওয়া যেত — লগইনের চেয়ে দুর্বল সুরক্ষা, অথচ পরিণতি বেশি গুরুতর।
+    //
+    // পাসওয়ার্ড আগে যাচাই করা হচ্ছে যাতে নিছক পাসওয়ার্ড টাইপো ইউজারের বৈধ
+    // TOTP step অকারণে খরচ করে না ফেলে।
+    let codeOk = false;
+    if (passOk && admin) {
+      const verdict = verifyTotpTokenWithStep(secretBox.decrypt(admin.totp_secret), token);
+      if (verdict.valid) {
+        const claim = await pool.query(
+          `UPDATE users SET totp_last_used_step = $1
+             WHERE id = $2 AND (totp_last_used_step IS NULL OR totp_last_used_step < $1)`,
+          [verdict.step, admin.id]
+        );
+        codeOk = claim.rowCount === 1;
+      }
+      if (!codeOk && admin.totp_backup_codes) {
+        // ব্যাকআপ কোড এখানে সারি-লক নিয়ে consume করা হয় (লগইন রুটের মতোই)।
+        // সফল হলে নিচে সব কোড NULL হয়ে যাচ্ছে, কিন্তু consume না করলে
+        // ব্যর্থ পথে একই কোড বারবার পরীক্ষা করা যেত।
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          const locked = await client.query(
+            'SELECT totp_backup_codes FROM users WHERE id = $1 FOR UPDATE', [admin.id]
+          );
+          const backupCheck = await verifyAndConsumeBackupCode(
+            locked.rows[0] ? locked.rows[0].totp_backup_codes : null, token
+          );
+          if (backupCheck.valid) {
+            await client.query('UPDATE users SET totp_backup_codes = $1 WHERE id = $2',
+              [backupCheck.remainingJson, admin.id]);
+            await client.query('COMMIT');
+            codeOk = true;
+          } else {
+            await client.query('ROLLBACK');
+          }
+        } catch (e) {
+          await client.query('ROLLBACK').catch(() => {});
+          console.error('2fa/disable backup code error:', e.message);
+        } finally {
+          client.release();
+        }
+      }
     }
 
     if (!passOk || !codeOk) {

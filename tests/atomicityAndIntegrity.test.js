@@ -78,8 +78,15 @@ describe('#24 TOTP সিক্রেট at-rest এনক্রিপ্টে�
 
   test('সিক্রেট এনক্রিপ্ট করে সেভ ও ডিক্রিপ্ট করে যাচাই হয়', () => {
     expect(admin).toMatch(/secretBox\.encrypt\(pendingSecret\)/);
-    expect(admin).toMatch(/verifyTotpToken\(secretBox\.decrypt\(admin\.totp_secret\)/);
-    expect(admin).not.toMatch(/verifyTotpToken\(admin\.totp_secret,/);
+    // যে ইনভেরিয়েন্টটা এই টেস্ট রক্ষা করে তা হলো: TOTP সিক্রেট এনক্রিপ্ট অবস্থায়
+    // থাকে এবং যাচাইয়ের মুহূর্তে secretBox.decrypt() দিয়ে খোলা হয় — কোন যাচাই-
+    // ফাংশন ব্যবহার হচ্ছে সেটা নয়। আগে প্যাটার্নে শুধু verifyTotpToken( ধরা হতো,
+    // তাই /admin/2fa/disable-এ replay protection যোগ করতে গিয়ে সেটাকে
+    // verifyTotpTokenWithStep( করার সাথে সাথেই এই টেস্ট ভেঙে যেত — অথচ
+    // সিক্রেট-হ্যান্ডলিং একটুও দুর্বল হয়নি। প্যাটার্ন এখন দুটো ভ্যারিয়েন্টই চেনে;
+    // কাঁচা (আন-ডিক্রিপ্টেড) সিক্রেট পাস করা এখনো নিষিদ্ধ।
+    expect(admin).toMatch(/verifyTotpToken(WithStep)?\(secretBox\.decrypt\(admin\.totp_secret\)/);
+    expect(admin).not.toMatch(/verifyTotpToken(WithStep)?\(admin\.totp_secret,/);
   });
 });
 
