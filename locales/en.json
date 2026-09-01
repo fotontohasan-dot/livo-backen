@@ -1314,5 +1314,9 @@
   "tournaments_already_cancelled": "This tournament has already been cancelled and refunded.",
   "tournaments_cancel_after_settle": "A settled tournament cannot be cancelled — the prizes have already been paid out.",
   "tournaments_status_locked": "This tournament is settled or cancelled; its status can no longer be changed.",
-  "tournaments_delete_blocked": "This tournament has participants. Settle or cancel it first so entry fees are handled, then delete."
+  "tournaments_delete_blocked": "This tournament has participants. Settle or cancel it first so entry fees are handled, then delete.",
+  "admin_market_not_found": "Market not found.",
+  "admin_market_invalid_status": "Invalid market status.",
+  "admin_market_settled_or_missing": "This market is already settled or does not exist — its status can no longer be changed.",
+  "admin_market_already_settled": "This market has already been settled."
 }

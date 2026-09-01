@@ -2713,12 +2713,55 @@ router.post('/markets/update', rbac.requirePermission('matches_manage'), async (
   } catch (err) { req.flash('error', req.t('admin_something_went_wrong_x')); res.redirect('/admin/matches'); }
 });
 
+// মার্কেট toggle-এ যেসব status বসানো যায়। 'settled' ইচ্ছাকৃতভাবে বাদ — সেটেলমেন্ট
+// একটা আর্থিক ঘটনা, /markets/:id/settle ছাড়া অন্য কোনো পথে বসানো যাবে না।
+const MARKET_TOGGLE_STATUSES = ['open', 'suspended'];
+
 router.post('/markets/:marketId/toggle', rbac.requirePermission('matches_manage'), async (req, res) => {
+  // AUDIT FINDING: views/admin/markets.ejs-এর Suspend/Open ফর্মে কোনো status ইনপুটই
+  // নেই — শুধু একটা submit বাটন। তাই req.body.status সবসময় undefined আসত এবং
+  // `UPDATE markets SET status = $1` মার্কেটের status NULL করে দিত। NULL কখনোই
+  // 'open'-এর সমান নয়, ফলে ওই মার্কেটে আর কোনো বাজি ধরা যেত না
+  // (routes/matches.js status='open' খোঁজে), আর বাটনটা আবার চাপলেও প্রতিবার
+  // NULL-ই বসত — অর্থাৎ মার্কেট চিরতরে অচল হয়ে যেত, ফেরানোর কোনো UI পথ ছিল না।
+  //
+  // status এখন সার্ভারেই ঠিক হয় (open ⇄ suspended)। বডিতে স্পষ্ট মান এলে সেটাও
+  // মানা হয়, তবে whitelist-এ থাকলে তবেই — আগে যেকোনো স্ট্রিং সরাসরি DB-তে যেত।
+  const marketId = parseInt(req.params.marketId, 10);
+  if (!Number.isInteger(marketId) || marketId <= 0) {
+    req.flash('error', req.t('admin_market_not_found'));
+    return redirectBack(req, res, '/admin');
+  }
+
+  const requested = req.body.status;
+  if (requested !== undefined && !MARKET_TOGGLE_STATUSES.includes(requested)) {
+    req.flash('error', req.t('admin_market_invalid_status'));
+    return redirectBack(req, res, '/admin');
+  }
+
   try {
-    const mRes = await pool.query('UPDATE markets SET status = $1 WHERE id = $2 RETURNING match_id', [req.body.status, req.params.marketId]);
-    if (mRes.rows[0]) await cache.del(cacheKeys.matchDetail(mRes.rows[0].match_id)).catch(() => {});
+    // সেটেল হয়ে যাওয়া মার্কেট আবার 'open' করা যাবে না — ফলাফল প্রকাশের পর
+    // মার্কেট খুলে দিলে ইউজাররা জানা ফলাফলের ওপর বাজি ধরতে পারত।
+    const upd = await pool.query(
+      `UPDATE markets
+       SET status = COALESCE($2, CASE WHEN status = 'open' THEN 'suspended' ELSE 'open' END),
+           updated_at = NOW()
+       WHERE id = $1 AND status IS DISTINCT FROM 'settled'
+       RETURNING match_id, status`,
+      [marketId, requested || null]
+    );
+    if (upd.rowCount === 0) {
+      req.flash('error', req.t('admin_market_settled_or_missing'));
+      return redirectBack(req, res, '/admin');
+    }
+    await cache.del(cacheKeys.matchDetail(upd.rows[0].match_id)).catch(() => {});
+    await logAdminAction(req.session.user.id, req.session.user.username, 'MARKET_STATUS',
+      `Market #${marketId} status=${upd.rows[0].status}`, req.ip);
     req.flash('success', req.t('admin_market_updated'));
-  } catch (err) { req.flash('error', req.t('admin_something_went_wrong_x')); }
+  } catch (err) {
+    console.error('market toggle error:', err.message);
+    req.flash('error', req.t('admin_something_went_wrong_x'));
+  }
   redirectBack(req, res, '/admin');
 });
 
@@ -2729,6 +2772,24 @@ router.post('/markets/:marketId/settle', rbac.requirePermission('matches_manage'
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    // ইতিমধ্যে সেটেল হওয়া মার্কেট আবার সেটেল করা যাবে না। বিদ্যমান বাজিগুলো
+    // status='pending' ফিল্টারের কারণে দ্বিতীয়বার পেআউট পেত না, কিন্তু গার্ড
+    // ছাড়া অ্যাডমিন ভিন্ন winning_runner দিয়ে আবার সেটেল করে markets সারি ও
+    // অডিট লগ বিভ্রান্ত করতে পারত, আর সেটেলমেন্টের পর বসা যেকোনো নতুন বাজি
+    // (উদাহরণ: মার্কেট আবার open করা হলে) জানা ফলাফলে পেআউট পেয়ে যেত।
+    const marketRow = await client.query(
+      `SELECT status FROM markets WHERE id = $1 FOR UPDATE`, [marketId]
+    );
+    if (!marketRow.rows[0]) {
+      await client.query('ROLLBACK');
+      req.flash('error', req.t('admin_market_not_found'));
+      return redirectBack(req, res, '/admin');
+    }
+    if (marketRow.rows[0].status === 'settled') {
+      await client.query('ROLLBACK');
+      req.flash('error', req.t('admin_market_already_settled'));
+      return redirectBack(req, res, '/admin');
+    }
     const bets = await client.query(`SELECT * FROM bets WHERE market_id = $1 AND status = 'pending' FOR UPDATE`, [marketId]);
     let winnersCount = 0;
     const notifsToEmit = [];
