@@ -62,7 +62,7 @@
 
     <% if(locals.user) { %>
       <!-- User Elements -->
-      <!-- ব্যালেন্স পিল — রেফারেন্স: ৳ <amount> + (ডিপোজিট শর্টকাট), রিফ্রেশ আলাদা আইকন -->
+      <%# ব্যালেন্স পিল — রেফারেন্স: ৳ <amount> + (ডিপোজিট শর্টকাট), রিফ্রেশ আলাদা আইকন %>
       <div class="nav-balance-box">
         <span class="nav-balance-currency">৳</span>
         <span class="js-balance"><%= Number(user.coins).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span>

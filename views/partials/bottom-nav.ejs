@@ -92,9 +92,9 @@
     <span><%= t.nav_sports %></span>
     <span class="pub-active-bar"></span>
   </a>
-  <a href="/#mainGridWrap" class="pub-nav-item <%= ['games','casino','slots'].includes(locals.currentPage) ? 'active' : '' %>">
-    <i class="fas fa-gamepad"></i>
-    <span><%= t.nav_games %></span>
+  <a href="/extra/invitation" class="pub-nav-item <%= locals.currentPage === 'invitation' ? 'active' : '' %>">
+    <i class="fas fa-handshake"></i>
+    <span><%= t.nav_invite %></span>
     <span class="pub-active-bar"></span>
   </a>
   <a href="/promotions" class="pub-nav-item pub-nav-promo <%= locals.currentPage === 'promotion' ? 'active' : '' %>">
