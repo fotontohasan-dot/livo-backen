@@ -656,33 +656,58 @@ router.post('/verify-access', async (req, res) => {
     if (!pendingUserId) return res.redirect('/login');
 
     const { code } = req.body;
-    const rowRes = await pool.query(
-      `SELECT id, user_id, purpose, code, expires_at, verified_at, created_at, attempts FROM step_up_verifications
-       WHERE user_id = $1 AND purpose = 'vpn_login' AND verified_at IS NULL
-       ORDER BY created_at DESC LIMIT 1`,
-      [pendingUserId]
-    );
-    const row = rowRes.rows[0];
 
-    if (!row || new Date(row.expires_at) < new Date()) {
-      req.flash('error', req.t('auth_code_expired_relogin'));
+    // AUDIT FINDING: আগে এটা check-then-act ছিল — প্রথমে SELECT করে attempts পড়া
+    // হতো, তারপর আলাদা কোয়েরিতে attempts + 1 করা হতো। দুটোর মাঝে কোনো লক ছিল না,
+    // আর এই রুটে কোনো rate limiter-ও নেই। ফলে বহু রিকোয়েস্ট একসাথে পাঠালে সবাই
+    // একই attempts মান (যেমন 0) পড়ত এবং প্রত্যেকে একটি করে ভিন্ন কোড পরীক্ষা করতে
+    // পারত — অর্থাৎ ৫ চেষ্টার সীমাটাই কার্যত অর্থহীন হয়ে যেত এবং ৬-অঙ্কের কোড
+    // সমান্তরালে ব্রুট-ফোর্স করা যেত।
+    //
+    // এখন একটাই atomic UPDATE — attempts বাড়ানো ও কোড মেলানো একসাথে, একই সারি-লকের
+    // নিচে। PostgreSQL-এর READ COMMITTED-এ সমান্তরাল UPDATE দ্বিতীয়টি ব্লক হয়ে
+    // হালনাগাদ সারির বিপরীতে WHERE আবার যাচাই করে, তাই `attempts < 5` সত্যিই
+    // ক্রমিকভাবে প্রয়োগ হয়।
+    const claim = await pool.query(
+      `UPDATE step_up_verifications
+          SET attempts = attempts + 1,
+              verified_at = CASE WHEN code = $2 THEN NOW() ELSE NULL END
+        WHERE id = (
+                SELECT id FROM step_up_verifications
+                 WHERE user_id = $1 AND purpose = 'vpn_login' AND verified_at IS NULL
+                 ORDER BY created_at DESC LIMIT 1
+              )
+          AND attempts < 5
+          AND verified_at IS NULL
+          AND expires_at > NOW()
+        RETURNING id, verified_at`,
+      [pendingUserId, String(code || '')]
+    );
+
+    if (claim.rowCount === 0) {
+      // কোনো সারি নেই, মেয়াদ শেষ, অথবা ৫ চেষ্টা ফুরিয়েছে — তিনটেই লগইন থেকে
+      // আবার শুরু করতে বলে। বার্তা আলাদা করার জন্য শুধু messaging-এর কারণে
+      // একটা হালকা SELECT (নিরাপত্তা-সিদ্ধান্ত এর ওপর নির্ভর করে না)।
+      const why = await pool.query(
+        `SELECT attempts FROM step_up_verifications
+          WHERE user_id = $1 AND purpose = 'vpn_login' AND verified_at IS NULL
+          ORDER BY created_at DESC LIMIT 1`,
+        [pendingUserId]
+      );
+      const exhausted = why.rows[0] && why.rows[0].attempts >= 5;
+      req.flash('error', exhausted
+        ? req.t('auth_too_many_attempts_relogin')
+        : req.t('auth_code_expired_relogin'));
       req.session.pendingLoginUserId = null;
       req.session.pendingLoginVpnInfo = null;
       return res.redirect('/login');
     }
-    if (row.attempts >= 5) {
-      req.flash('error', req.t('auth_too_many_attempts_relogin'));
-      req.session.pendingLoginUserId = null;
-      req.session.pendingLoginVpnInfo = null;
-      return res.redirect('/login');
-    }
-    if (!code || code !== row.code) {
-      await pool.query(`UPDATE step_up_verifications SET attempts = attempts + 1 WHERE id = $1`, [row.id]);
+
+    if (!claim.rows[0].verified_at) {
+      // চেষ্টা গোনা হয়ে গেছে (উপরের UPDATE-এই), কোড মেলেনি
       req.flash('error', req.t('auth_code_incorrect'));
       return res.redirect('/verify-access');
     }
-
-    await pool.query(`UPDATE step_up_verifications SET verified_at = NOW() WHERE id = $1`, [row.id]);
 
     const userRes = await pool.query('SELECT id, username, email, phone, coins, demo_balance, role, avatar, kyc_status FROM users WHERE id = $1', [pendingUserId]);
     const user = userRes.rows[0];
