@@ -1,11 +1,15 @@
 # syntax=docker/dockerfile:1
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 WORKDIR /app
 RUN apk add --no-cache curl tar gzip
 
 FROM base AS deps
 COPY package*.json ./
-RUN npm ci --omit=dev --legacy-peer-deps || npm install --omit=dev --legacy-peer-deps
+# `|| npm install` ফলব্যাক সরানো হয়েছে: npm ci ব্যর্থ হলে (লকফাইল অসামঞ্জস্য)
+# আগে নীরবে non-deterministic install চলত, ফলে প্রোডাকশন ইমেজে এমন ভার্সন
+# ঢুকতে পারত যা কেউ রিভিউ করেনি এবং বিল্ড লগে ব্যর্থতা দেখাই যেত না।
+# লকফাইল অবৈধ হলে বিল্ড এখন জোরে ব্যর্থ হবে।
+RUN npm ci --omit=dev --legacy-peer-deps
 
 FROM base AS production
 ENV NODE_ENV=production

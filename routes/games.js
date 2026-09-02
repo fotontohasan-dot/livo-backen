@@ -73,7 +73,7 @@ router.get('/api/recent-wins', async (req, res) => {
   }
 });
 
-router.get('/play', isAuth, (req, res) => {
+router.get('/play', isAuth, async (req, res) => {
   const gameSlug = req.query.game || 'slots';
   if (!gameRegistry.isKnown(gameSlug)) {
     req.flash('error', req.t('games_not_found'));
@@ -83,15 +83,20 @@ router.get('/play', isAuth, (req, res) => {
     req.flash('error', req.t('games_not_available'));
     return res.redirect('/');
   }
+  // LIVO-05: বাজির ইনপুটের ডিফল্ট/সীমা হার্ডকোড করা ছিল (value="1" min="1"),
+  // অথচ সার্ভারের min_bet ১০ — ডিফল্ট মেনে বাজি ধরলেই ৪০০ ফিরত। এখন সীমাগুলো
+  // সেটিংস থেকেই ভিউতে যায়, তাই ফ্রন্টএন্ড আর সার্ভারের সঙ্গে বেমানান হতে পারে না।
   res.render('games/play', {
     gameSlug: gameSlug,
     gameDisplayName: supportedGames[gameSlug],
     coins: req.session.user.coins,
-    demoBalance: req.session.user.demo_balance
+    demoBalance: req.session.user.demo_balance,
+    minBet: Number(await getSetting('min_bet')),
+    maxBet: Number(await getSetting('max_bet'))
   });
 });
 
-router.get('/:slug', isAuth, (req, res) => {
+router.get('/:slug', isAuth, async (req, res) => {
   const gameSlug = req.params.slug;
   if (!gameRegistry.isKnown(gameSlug)) {
     req.flash('error', req.t('games_not_found'));
@@ -101,13 +106,51 @@ router.get('/:slug', isAuth, (req, res) => {
     req.flash('error', req.t('games_not_available'));
     return res.redirect('/');
   }
+  // LIVO-05: বাজির ইনপুটের ডিফল্ট/সীমা হার্ডকোড করা ছিল (value="1" min="1"),
+  // অথচ সার্ভারের min_bet ১০ — ডিফল্ট মেনে বাজি ধরলেই ৪০০ ফিরত। এখন সীমাগুলো
+  // সেটিংস থেকেই ভিউতে যায়, তাই ফ্রন্টএন্ড আর সার্ভারের সঙ্গে বেমানান হতে পারে না।
   res.render('games/play', {
     gameSlug: gameSlug,
     gameDisplayName: supportedGames[gameSlug],
     coins: req.session.user.coins,
-    demoBalance: req.session.user.demo_balance
+    demoBalance: req.session.user.demo_balance,
+    minBet: Number(await getSetting('min_bet')),
+    maxBet: Number(await getSetting('max_bet'))
   });
 });
+
+// ==================== ক্র্যাশ পয়েন্ট (হাউস এজ সহ) ====================
+// LIVO-01: আগে crash point ছিল `1 + secureRandom.randomFloat() * 9` — অর্থাৎ
+// uniform [1, 10)। uniform বণ্টনে কোনো হাউস এজ থাকে না। m গুণিতকে ক্যাশআউট
+// করলে P(win) = (10 − m)/9, তাই RTP = m(10 − m)/9 — যা m ≈ ১.১৫ থেকে ৮.৮
+// পর্যন্ত পুরো রেঞ্জেই ১-এর বেশি, সর্বোচ্চ ৫x-এ প্রায় ২.৭৮ (প্লেয়ারের পক্ষে
+// +১৭৮%)। লাইভ HTTP রাউন্ড দিয়ে মাপা হয়েছে: ১.৫x-এ RTP ১.৪৩, ৫x-এ ২.৭৩।
+// অর্থাৎ যেকোনো বট শুধু ৫x-এ ক্যাশআউট করেই প্রতি রাউন্ডে গড়ে স্টেকের ১.৭৮
+// গুণ তুলে নিতে পারত।
+//
+// এখন ইন্ডাস্ট্রি-স্ট্যান্ডার্ড ক্র্যাশ বণ্টন: crash = (1 − edge) / (1 − u)।
+// এতে যেকোনো m > 1-এর জন্য P(crash ≥ m) = (1 − edge)/m, তাই
+// RTP = m × (1 − edge)/m = (1 − edge) — ধ্রুবক, কোন গুণিতকে ক্যাশআউট করা হলো
+// তার উপর নির্ভরশীল নয়। কোনো ক্যাশআউট-কৌশল আর প্লেয়ারের পক্ষে যায় না।
+//
+// শুধু বণ্টনটাই বদলেছে। রাউন্ড রেকর্ডিং, atomic claim, elapsed-time যাচাই,
+// পেআউট হিসাব, ওয়ালেট ও লেজার — সবকিছু আগের মতোই আছে।
+const CRASH_HOUSE_EDGE = 0.01;
+
+// game_rounds.crash_point কলামটা NUMERIC(6,2) — সর্বোচ্চ 9999.99 ধরতে পারে।
+// এই বণ্টনের লেজ তাত্ত্বিকভাবে অসীম, তাই ক্যাপ ছাড়া বিরল রাউন্ডে numeric
+// overflow হয়ে INSERT-ই ব্যর্থ হতো। ক্যাপ RTP-তে কোনো প্রভাব ফেলে না
+// (m ≤ 1000-এর জন্য P(crash ≥ m) অপরিবর্তিত) এবং সর্বোচ্চ দায় সীমিত রাখে।
+const CRASH_MAX_MULTIPLIER = 1000;
+
+function generateCrashPoint() {
+  const u = secureRandom.randomFloat(); // [0, 1)
+  const raw = (1 - CRASH_HOUSE_EDGE) / (1 - u);
+  // ২ দশমিকে floor — নিচের দিকে কাটা হয়, তাই কখনো প্লেয়ারের পক্ষে যায় না।
+  const truncated = Math.floor(raw * 100) / 100;
+  // u < edge হলে raw < 1 — তাৎক্ষণিক ক্র্যাশ, অর্থাৎ crash point ১.০০।
+  return Math.min(CRASH_MAX_MULTIPLIER, Math.max(1, truncated));
+}
 
 router.post('/play', isAuth, async (req, res) => {
   const { gameSlug, amount, selection, demo } = req.body;
@@ -124,6 +167,16 @@ router.post('/play', isAuth, async (req, res) => {
   }
   if (!gameRegistry.isPlayable(gameSlug)) {
     return res.status(400).json({ success: false, message: req.t('games_not_available') });
+  }
+
+  // LIVO-04: এই গেমে বাজি বাছাই বাধ্যতামূলক হলে মানটা সার্ভারেই যাচাই করা হয় —
+  // ব্যালেন্স স্পর্শ করার আগে, তাই অবৈধ রিকোয়েস্টে কোনো ডেবিট বা লেজার সারি হয় না।
+  // আগে অচেনা selection নীরবে গ্রহণ করা হতো: টাকা কাটা যেত অথচ `outcome === selection`
+  // কখনো মিলত না, অর্থাৎ নিশ্চিত পরাজয়। ক্লায়েন্ট শুধু পক্ষটাই পাঠায় — পেআউট,
+  // গুণিতক বা ফলাফল কিছুই নয়, সেগুলো সার্ভারই ঠিক করে।
+  const allowedSelections = gameRegistry.getSelections(gameSlug);
+  if (allowedSelections && !allowedSelections.includes(selection)) {
+    return res.status(400).json({ success: false, message: req.t('games_invalid_selection') });
   }
 
   const minBet = Number(await getSetting('min_bet'));
@@ -145,7 +198,7 @@ router.post('/play', isAuth, async (req, res) => {
     let gameResult = {};
 
     if (['aviator', 'crash-game'].includes(gameSlug)) {
-      const crashPoint = (1 + secureRandom.randomFloat() * 9).toFixed(2);
+      const crashPoint = generateCrashPoint().toFixed(2);
       const roundToken = crypto.randomUUID();
       // রাউন্ড এখন DB-তে (game_rounds) রেকর্ড হয় — crash_point/bet_amount/started_at
       // সার্ভার-সাইড অথরিটি, session শুধু কোন রাউন্ড claim করতে হবে তার token রাখে।
@@ -410,3 +463,11 @@ router.post('/cashout', isAuth, async (req, res) => {
 });
 
 module.exports = router;
+
+// রাউটারের পাশাপাশি ক্র্যাশ-পয়েন্ট জেনারেটরটা এক্সপোর্ট করা হচ্ছে যাতে
+// tests/security/crashHouseEdge.test.js বড় নমুনায় (২ লাখ ড্র) বণ্টনের
+// RTP ইনভেরিয়েন্ট সরাসরি যাচাই করতে পারে — HTTP দিয়ে অত রাউন্ড চালানো
+// অবাস্তব, আর কম নমুনায় পরিমাপের নয়েজ ১%-এর এজ ধরতে পারে না।
+// routes/payment.js-এর creditApprovedDeposit এক্সপোর্টের মতোই প্যাটার্ন;
+// কোনো রুট বা API কনট্র্যাক্ট এতে বদলায় না।
+module.exports.generateCrashPoint = generateCrashPoint;

@@ -176,9 +176,28 @@ const HANDLERS = {
     const winAmount = secureRandom.chance(0.35) ? betAmount * 2.5 : 0;
     return { winAmount, gameResult: {} };
   },
+  // LIVO-02: ফলাফল আগে `secureRandom.pick(resultOptions)` দিয়ে বাছা হতো —
+  // অর্থাৎ Player/Banker/Tie তিনটাই সমান ⅓ সম্ভাবনা পেত। কিন্তু নিচের
+  // পেআউটগুলো আসল ব্যাকারাটের কম্পাঙ্ক ধরে দাম করা: Tie-তে 8-for-1 এবং
+  // Player/Banker-এ 1.95× (ব্যাংকারের ৫% কমিশনসহ মোট ফেরত)। আসল ব্যাকারাটে
+  // Tie হয় ~৯.৫% সময়ে, ⅓ সময়ে নয়। ফলে Tie বাজির RTP দাঁড়াত
+  // (1/3) × 8 = ২.৬৭ — অর্থাৎ প্লেয়ারের পক্ষে +১৬৭%। লাইভ HTTP রাউন্ডে
+  // মাপা হয়েছে: Tie RTP ২.৭২, আর Player/Banker ০.৬৭/০.৬৯। অর্থাৎ Tie-ই
+  // একমাত্র যুক্তিসঙ্গত বাজি ছিল, আর সেটা ঘর খালি করে দিত।
+  //
+  // এখন কম্পাঙ্ক আসল (৮-ডেক) ব্যাকারাটের: Banker ৪৫.৮৬%, Player ৪৪.৬২%,
+  // Tie ৯.৫২%। পেআউট অপরিবর্তিত — যে মডেলের জন্য সেগুলো দাম করা, সেই
+  // মডেলটাই এখন বাস্তবায়িত হলো। ফলে তিনটা বাজিরই RTP ১-এর নিচে:
+  //   Player 0.4462 × 1.95 = 0.870
+  //   Banker 0.4586 × 1.95 = 0.894
+  //   Tie    0.0952 × 8    = 0.761
+  //
+  // weightedIndex() ইতিমধ্যেই utils/secureRandom.js-এ আছে (একই CSPRNG),
+  // তাই নতুন কোনো র‍্যান্ডম প্রিমিটিভ যোগ করা হয়নি।
   baccarat: (betAmount, selection) => {
     const resultOptions = ['Player', 'Banker', 'Tie'];
-    const outcome = secureRandom.pick(resultOptions);
+    const OUTCOME_WEIGHTS = [0.446247, 0.458597, 0.095156];
+    const outcome = resultOptions[secureRandom.weightedIndex(OUTCOME_WEIGHTS)];
     let winAmount = 0;
     if (outcome === selection) {
       if (outcome === 'Tie') winAmount = betAmount * 8;
@@ -188,6 +207,24 @@ const HANDLERS = {
   }
 };
 
+
+// ==================== বাজি নির্বাচনের বৈধ মান ====================
+// LIVO-04: কিছু গেমে ইউজারকে আগে একটা পক্ষ বাছতে হয়, আর সেই বাছাই request body
+// থেকে আসে। আগে কোনো সার্ভার-সাইড যাচাই ছিল না — অচেনা মান পাঠালে বাজি বসত,
+// টাকা কাটা যেত, কিন্তু `outcome === selection` কখনো সত্য হতো না, অর্থাৎ নিশ্চিত
+// পরাজয়। টাইপো বা ভাঙা ক্লায়েন্টের জন্য এটা নীরব লোকসান।
+//
+// এখানে শুধু সেইসব স্লাগ তালিকাভুক্ত যেগুলোর জন্য যাচাইটা এই কাজের আওতায় প্রমাণিত।
+// তালিকায় না থাকা গেমের আচরণ সম্পূর্ণ অপরিবর্তিত (getSelections → null), তাই
+// roulette/andar-bahar-এর মতো গেম এই পরিবর্তনে স্পর্শ পায় না।
+const SELECTIONS = {
+  baccarat: ['Player', 'Banker', 'Tie']
+};
+
+/** এই গেমে বাজি বাছাই বাধ্যতামূলক হলে বৈধ মানের তালিকা, নাহলে null। */
+function getSelections(slug) {
+  return Object.prototype.hasOwnProperty.call(SELECTIONS, slug) ? SELECTIONS[slug] : null;
+}
 
 // ==================== পাবলিক API ====================
 
@@ -252,6 +289,7 @@ module.exports = {
   isCrashGame,
   displayName,
   getHandler,
+  getSelections,
   playableSlugs,
   comingSoonSlugs,
   registerGame
