@@ -104,23 +104,11 @@ function uniqueUsername(prefix = 'tu') {
   return `${prefix}${Date.now().toString(36).slice(-6)}${rand}`.slice(0, 20);
 }
 
-// পুরো টেস্ট ফাইলে (একই process-এ, maxWorkers:1) নিশ্চিতভাবে ইউনিক ফোন নাম্বার দরকার —
-// আগে প্রতিটা টেস্ট ফাইলে আলাদাভাবে `'01' + String(Date.now()).slice(-9)` লেখা হতো, যা
-// একই মিলিসেকেন্ডে দুইবার কল হলে (যেমন দুইটা registerUser() পরপর) হুবহু একই ফোন নাম্বার
-// তৈরি করত এবং DB-এর UNIQUE constraint-এ ভেঙে টেস্ট ফ্লেকি করে দিত (একটা টেস্ট ফাইলে এমনকি
-// randomness যোগ করার চেষ্টা হয়েছিল কিন্তু .slice(0, 11) সেই র‍্যান্ডম অংশটাই কেটে ফেলত)।
-// একটা module-level monotonic counter ব্যবহার করে এই ফাংশন প্রতিটা কলে সম্পূর্ণ ইউনিক
-// (কখনো কলিশন না হওয়া) ১১-ডিজিট ফোন নাম্বার দেয়।
-// গুরুত্বপূর্ণ: কাউন্টারটা globalThis-এ রাখা হয়েছে, module-scope ভ্যারিয়েবলে নয়। Jest প্রতিটা
-// টেস্ট ফাইলের জন্য আলাদা module registry তৈরি করে, তাই module-level কাউন্টার প্রতি ফাইলে
-// ০ থেকে শুরু হতো — ফলে দুইটা ভিন্ন ফাইল একই মিলিসেকেন্ডে কল করলে হুবহু একই ফোন নাম্বার
-// তৈরি হতে পারত, দ্বিতীয় রেজিস্ট্রেশন UNIQUE constraint-এ ব্যর্থ হতো এবং টেস্ট অর্ডার-নির্ভরভাবে
-// ফেল করত। globalThis পুরো Jest প্রসেসে শেয়ার্ড, তাই কাউন্টার সব ফাইল জুড়ে monotonic থাকে।
-function uniquePhone() {
-  globalThis.__livoPhoneSeq = (globalThis.__livoPhoneSeq || 0) + 1;
-  const base = String(Date.now() % 1e6).padStart(6, '0'); // সময়ভিত্তিক ৬ ডিজিট
-  const seq = String(globalThis.__livoPhoneSeq % 1000).padStart(3, '0'); // প্রতি কলে বাড়ে — সব ফাইল জুড়ে কলিশন-প্রুফ
-  return `01${base}${seq}`;
-}
+// ফোন-নাম্বার অ্যালোকেটর আলাদা মডিউলে (tests/helpers/uniquePhone.js) — কারণ ওটার
+// রিগ্রেশন টেস্টকে একাধিক আলাদা প্রসেস থেকে কল করতে হয়, আর তখন পুরো express app
+// লোড করার দরকার নেই। এই ফাইলের পাবলিক API আগের মতোই আছে।
+const { uniquePhone, PHONE_SEQ_DIR, PHONE_SEQ_FILE, PHONE_SEQ_LOCK } = require('./uniquePhone');
 
 module.exports = { app, server, expressApp, ensureListening, extractCsrfToken, getCsrfAgent, uniqueUsername, uniquePhone, REALISTIC_UA, fakeIp, wrapAgentWithIp, freshRequest };
+// রিগ্রেশন টেস্টের জন্য — helper-এর পাবলিক API অপরিবর্তিত, শুধু অতিরিক্ত এক্সপোর্ট।
+module.exports.__phoneSeqPaths = { dir: PHONE_SEQ_DIR, file: PHONE_SEQ_FILE, lock: PHONE_SEQ_LOCK };

@@ -143,6 +143,10 @@ const CRASH_PLACEHOLDER = () => {
   throw new Error('crash গেম getHandler() দিয়ে সেটেল হয় না — রাউন্ড ফ্লো ব্যবহার করুন');
 };
 
+// আসল ৮-ডেক ব্যাকারাটের আউটকাম সম্ভাবনা (Player, Banker, Tie) — নিচের
+// baccarat হ্যান্ডলারের কমেন্টে বিস্তারিত ব্যাখ্যা আছে।
+const BACCARAT_WEIGHTS = [0.4462, 0.4586, 0.0952];
+
 const HANDLERS = {
   slots: (betAmount) => {
     const symbols = ["🍒", "🍋", "🍊", "🍇", "🔔", "💎", "7️⃣", "⭐", "🌟", "👑"];
@@ -176,9 +180,32 @@ const HANDLERS = {
     const winAmount = secureRandom.chance(0.35) ? betAmount * 2.5 : 0;
     return { winAmount, gameResult: {} };
   },
+  // ---------------------------------------------------------------------
+  // Baccarat — আউটকাম বণ্টন (LIVO-02)
+  //
+  // আগে: secureRandom.pick(['Player','Banker','Tie']) — অর্থাৎ তিনটাই সমান
+  // ১/৩ সম্ভাবনা। Tie ৮× ফেরত দেয় (winAmount হলো gross return, দেখুন
+  // routes/games.js:217 → netChange = winAmount - betAmount), তাই Tie বাজির
+  // প্রত্যাশিত ফেরত ছিল (1/3) × 8 = 2.667× — অর্থাৎ RTP ২৬৬.৭%, প্রতি বাজিতে
+  // খেলোয়াড়ের গড় লাভ +১৬৬.৭%। একজন খেলোয়াড় শুধু Tie-তে বাজি ধরে অসীম
+  // পরিমাণ টাকা তুলে নিতে পারত। এটাই এই পাসের একমাত্র P0 আর্থিক ত্রুটি ছিল।
+  //
+  // এখন: আসল ব্যাকারাটের (৮-ডেক, স্ট্যান্ডার্ড drawing rules) প্রতিষ্ঠিত
+  // সম্ভাবনা ব্যবহার করা হয় —
+  //     Player 44.62%, Banker 45.86%, Tie 9.52%
+  // পেআউট টেবিল অপরিবর্তিত (Player/Banker 1.95×, Tie 8×), ফলে RTP দাঁড়ায়:
+  //     Player 0.4462 × 1.95 = 87.0%
+  //     Banker 0.4586 × 1.95 = 89.4%
+  //     Tie    0.0952 × 8.00 = 76.2%
+  // তিনটাতেই হাউস এজ ধনাত্মক — কোনো বাজিতেই খেলোয়াড় প্রত্যাশিতভাবে জেতে না।
+  //
+  // Blast radius: gameResult-এর আকৃতি ({ outcome }) ও winAmount-এর অর্থ
+  // অপরিবর্তিত, তাই routes/games.js, ledger, wallet ও ফ্রন্টএন্ড কনট্র্যাক্টে
+  // কোনো পরিবর্তন লাগে না — শুধু কোন আউটকাম কত ঘন ঘন আসে সেটা বদলেছে।
+  // ---------------------------------------------------------------------
   baccarat: (betAmount, selection) => {
     const resultOptions = ['Player', 'Banker', 'Tie'];
-    const outcome = secureRandom.pick(resultOptions);
+    const outcome = resultOptions[secureRandom.weightedIndex(BACCARAT_WEIGHTS)];
     let winAmount = 0;
     if (outcome === selection) {
       if (outcome === 'Tie') winAmount = betAmount * 8;
