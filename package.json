@@ -1,6 +1,9 @@
 {
   "name": "livo-backen",
   "version": "1.0.0",
+  "engines": {
+    "node": ">=22.0.0 <23"
+  },
   "description": "Sports Match Prediction Platform",
   "main": "app.js",
   "scripts": {
@@ -36,7 +39,7 @@
     "google-auth-library": "^9.15.1",
     "helmet": "^8.3.0",
     "ioredis": "^5.4.1",
-    "multer": "^1.4.5-lts.1",
+    "multer": "^2.3.0",
     "nodemailer": "^9.0.3",
     "pg": "^8.22.0",
     "prom-client": "^15.1.0",
@@ -50,7 +53,8 @@
   "overrides": {
     "postcss": "^8.5.19",
     "ip-address": "^10.4.0",
-    "uuid": "^11.1.1"
+    "uuid": "^11.1.1",
+    "qs": "^6.16.0"
   },
   "devDependencies": {
     "@playwright/test": "1.61.1",

@@ -56,7 +56,7 @@
         </div>
         <div class="bet-input-group">
             <label>বাজি:</label>
-            <input type="number" id="betAmount" value="1" min="1" step="1">
+            <input type="number" id="betAmount" value="<%= minBet %>" min="<%= minBet %>" max="<%= maxBet %>" step="1">
         </div>
         <button id="mainGameBtn" class="bet-btn">খেলুন</button>
     </div>
@@ -85,30 +85,77 @@
         if (inp) inp.value = amount;
     }
 
-    async function placeBet(amount, selection=null) {
+    // ==================== শেয়ার্ড বাজি ইঞ্জিন ====================
+    // LIVO-05: প্রায় ১২০টা গেম ভিউ এই দুটো হেল্পার ব্যবহার করে, তাই এদের ত্রুটি
+    // একশোর বেশি গেমে একসাথে দেখা দিত। আগে `response.json()` সরাসরি ডাকা হতো —
+    // ৪২৯-এ express-rate-limit v7 প্লেইন টেক্সট পাঠায় আর ৫০০-তে HTML এরর পেজ
+    // আসতে পারে; দুটোতেই json() throw করত, catch নীরবে false ফেরত দিত এবং
+    // ইউজার কোনো বার্তাই দেখত না। আর `{ error: ... }` আকারের বডিতে
+    // `alert(data.message)` আক্ষরিক "undefined" দেখাত।
+    //
+    // রিটার্ন কনট্রাক্ট ইচ্ছাকৃতভাবে অপরিবর্তিত — সফলে ডেটা, ব্যর্থতায় false —
+    // কারণ কলাররা `if (!data) return;` করে। ব্যর্থতার বিস্তারিত জানতে চাইলে
+    // window.lastBetError { status, message } পড়া যায় (স্ট্যাটাস ০ = নেটওয়ার্ক)।
+    const BET_ERRORS = {
+        generic:   <%- jsonScriptSafe(t('bet_error_generic')) %>,
+        limited:   <%- jsonScriptSafe(t('bet_error_rate_limited')) %>,
+        expired:   <%- jsonScriptSafe(t('bet_error_session_expired')) %>,
+        network:   <%- jsonScriptSafe(t('bet_error_network')) %>,
+        server:    <%- jsonScriptSafe(t('bet_error_server')) %>
+    };
+
+    // স্ট্যাটাস অনুযায়ী ফলব্যাক বার্তা। সার্ভার নিজে বোধগম্য বার্তা দিলে সেটাই
+    // অগ্রাধিকার পায়; নইলে এখান থেকে লোকালাইজড বার্তা যায়।
+    function betErrorMessage(status, body) {
+        var fromServer = body && typeof body === 'object'
+            ? (typeof body.message === 'string' ? body.message
+              : (typeof body.error === 'string' ? body.error : null))
+            : null;
+        if (status === 0) return BET_ERRORS.network;
+        if (status === 429) return BET_ERRORS.limited;
+        if (status === 401 || status === 403) return fromServer || BET_ERRORS.expired;
+        if (status >= 500) return BET_ERRORS.server;
+        return fromServer || BET_ERRORS.generic;
+    }
+
+    // json() কখনো throw করতে পারে (প্লেইন টেক্সট, HTML, খালি বডি) — তাই সবসময় মুড়ে রাখা
+    async function safeJson(response) {
+        try { return await response.json(); } catch (e) { return null; }
+    }
+
+    async function betRequest(url, payload) {
+        var response;
         try {
-            const response = await fetch('/games/play', {
+            response = await fetch(url, {
                 method:'POST',
                 headers:{'Content-Type':'application/json'},
-                body:JSON.stringify({ gameSlug, amount, selection, demo: isDemoMode })
+                body:JSON.stringify(payload)
             });
-            const data = await response.json();
-            if (data.success) { updateBalance(data.newBalance); return data; }
-            else { alert(data.message); return false; }
-        } catch(err) { console.error('Play error:',err); return false; }
+        } catch (err) {
+            window.lastBetError = { status: 0, message: BET_ERRORS.network };
+            alert(BET_ERRORS.network);
+            return false;
+        }
+
+        var data = await safeJson(response);
+        if (response.ok && data && data.success) {
+            window.lastBetError = null;
+            updateBalance(data.newBalance);
+            return data;
+        }
+
+        var message = betErrorMessage(response.status, data);
+        window.lastBetError = { status: response.status, message: message };
+        alert(message);
+        return false;
+    }
+
+    async function placeBet(amount, selection=null) {
+        return betRequest('/games/play', { gameSlug, amount, selection, demo: isDemoMode });
     }
 
     async function recordWin(multiplier) {
-        try {
-            const response = await fetch('/games/cashout', {
-                method:'POST',
-                headers:{'Content-Type':'application/json'},
-                body:JSON.stringify({ gameSlug, multiplier })
-            });
-            const data = await response.json();
-            if (data.success) { updateBalance(data.newBalance); return data; }
-            else { alert(data.message); return false; }
-        } catch(err) { console.error('Win error:',err); return false; }
+        return betRequest('/games/cashout', { gameSlug, multiplier });
     }
 
     function updateBalance(newBalance) {
@@ -117,7 +164,7 @@
         document.getElementById('userBalance').innerText = newBalance;
     }
 </script>
-<% if (gameSlug === 'aviator' || gameSlug === 'crash') { %>
+<% if (gameSlug === 'aviator' || gameSlug === 'crash-game') { %>
     <%- include('aviator') %>
 <% } else if (gameSlug === 'slots') { %>
     <%- include('slots') %>

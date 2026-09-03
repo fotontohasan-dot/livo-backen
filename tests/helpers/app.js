@@ -1,4 +1,7 @@
 const http = require('http');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 const request = require('supertest');
 const expressApp = require('../../app.js');
 
@@ -104,23 +107,35 @@ function uniqueUsername(prefix = 'tu') {
   return `${prefix}${Date.now().toString(36).slice(-6)}${rand}`.slice(0, 20);
 }
 
-// পুরো টেস্ট ফাইলে (একই process-এ, maxWorkers:1) নিশ্চিতভাবে ইউনিক ফোন নাম্বার দরকার —
-// আগে প্রতিটা টেস্ট ফাইলে আলাদাভাবে `'01' + String(Date.now()).slice(-9)` লেখা হতো, যা
-// একই মিলিসেকেন্ডে দুইবার কল হলে (যেমন দুইটা registerUser() পরপর) হুবহু একই ফোন নাম্বার
-// তৈরি করত এবং DB-এর UNIQUE constraint-এ ভেঙে টেস্ট ফ্লেকি করে দিত (একটা টেস্ট ফাইলে এমনকি
-// randomness যোগ করার চেষ্টা হয়েছিল কিন্তু .slice(0, 11) সেই র‍্যান্ডম অংশটাই কেটে ফেলত)।
-// একটা module-level monotonic counter ব্যবহার করে এই ফাংশন প্রতিটা কলে সম্পূর্ণ ইউনিক
-// (কখনো কলিশন না হওয়া) ১১-ডিজিট ফোন নাম্বার দেয়।
-// গুরুত্বপূর্ণ: কাউন্টারটা globalThis-এ রাখা হয়েছে, module-scope ভ্যারিয়েবলে নয়। Jest প্রতিটা
-// টেস্ট ফাইলের জন্য আলাদা module registry তৈরি করে, তাই module-level কাউন্টার প্রতি ফাইলে
-// ০ থেকে শুরু হতো — ফলে দুইটা ভিন্ন ফাইল একই মিলিসেকেন্ডে কল করলে হুবহু একই ফোন নাম্বার
-// তৈরি হতে পারত, দ্বিতীয় রেজিস্ট্রেশন UNIQUE constraint-এ ব্যর্থ হতো এবং টেস্ট অর্ডার-নির্ভরভাবে
-// ফেল করত। globalThis পুরো Jest প্রসেসে শেয়ার্ড, তাই কাউন্টার সব ফাইল জুড়ে monotonic থাকে।
+// ইউনিক ফোন নাম্বার — টেস্ট ফাইল ও প্যারালাল ওয়ার্কার, সবকিছুর মধ্যে।
+//
+// আগের বাস্তবায়ন কাউন্টারটা globalThis-এ রাখত, এই ধারণায় যে "globalThis পুরো Jest
+// প্রসেসে শেয়ার্ড"। সেটা ভুল — Jest প্রতিটা টেস্ট *ফাইলের* জন্য আলাদা sandbox global
+// দেয়। পরীক্ষা করে দেখা গেছে: দুটো ফাইল একই প্রসেসে (pid অভিন্ন) চললেও দুজনেই
+// কাউন্টার ১ পড়ে, ২ নয়। process.env-ও একইভাবে স্যান্ডবক্সড। ফলে দুটো ফাইল একই
+// মিলিসেকেন্ডে কল করলে হুবহু একই নাম্বার তৈরি হতো, `phone TEXT UNIQUE`-এ রেজিস্ট্রেশন
+// নীরবে ব্যর্থ হতো, আর টেস্ট ভাঙত এই চেহারায়:
+//     TypeError: Cannot read properties of undefined (reading 'id')
+//
+// মেমরিতে থাকা কোনো কিছুই ফাইলগুলোর মধ্যে শেয়ার্ড নয়, তাই কাউন্টারটা ফাইল-সিস্টেমে।
+// POSIX-এ O_APPEND-এ ছোট লেখা অ্যাটমিক, তাই ফাইলের আকারই একটা রেস-মুক্ত monotonic
+// কাউন্টার — সব টেস্ট ফাইল ও সব প্যারালাল ওয়ার্কার মিলে ভাগ করে নেওয়া।
+//
+// ফরম্যাট আগের মতোই: '01' + ৯ ডিজিট (মোট ১১)। ৪ ডিজিট epoch-সেকেন্ড রান আলাদা করে
+// (তাই কেউ tmp ফাইল মুছে ফেললেও পুরনো রানের নাম্বারের সাথে ধাক্কা লাগে না), আর
+// ৫ ডিজিট ক্রম এক রানের ভেতরে অনন্যতা দেয় (১,০০,০০০ কল পর্যন্ত — পুরো সুইট এর
+// ধারেকাছেও যায় না)।
+const PHONE_SEQ_FILE = path.join(os.tmpdir(), 'livo-test-phone-seq');
+
+function nextPhoneSeq() {
+  fs.appendFileSync(PHONE_SEQ_FILE, '\0');
+  return fs.statSync(PHONE_SEQ_FILE).size;
+}
+
 function uniquePhone() {
-  globalThis.__livoPhoneSeq = (globalThis.__livoPhoneSeq || 0) + 1;
-  const base = String(Date.now() % 1e6).padStart(6, '0'); // সময়ভিত্তিক ৬ ডিজিট
-  const seq = String(globalThis.__livoPhoneSeq % 1000).padStart(3, '0'); // প্রতি কলে বাড়ে — সব ফাইল জুড়ে কলিশন-প্রুফ
-  return `01${base}${seq}`;
+  const epoch = Math.floor(Date.now() / 1000) % 10000;
+  const seq = nextPhoneSeq() % 100000;
+  return `01${String(epoch).padStart(4, '0')}${String(seq).padStart(5, '0')}`;
 }
 
 module.exports = { app, server, expressApp, ensureListening, extractCsrfToken, getCsrfAgent, uniqueUsername, uniquePhone, REALISTIC_UA, fakeIp, wrapAgentWithIp, freshRequest };

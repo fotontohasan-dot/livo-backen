@@ -60,13 +60,29 @@ describe('টেস্ট হারনেস — supertest সবসময় li
   });
 
   test('কোনো টেস্ট ফাইল supertest-কে সরাসরি express অ্যাপ দেয় না', () => {
+    // গার্ডটা আগে require() পাথের উপর regex চালাত:
+    //     /require\(['"]\.{1,2}(\/\.\.)*\/app(\.js)?['"]\)/
+    // কিন্তু `\.{1,2}` একটামাত্র বিন্দুতেও মেলে, তাই `require('./app')`-ও ধরা
+    // পড়ত। tests/helpers/-এর ভেতর থেকে `./app` মানে tests/helpers/app.js —
+    // অর্থাৎ ঠিক সেই শেয়ার্ড হারনেসটাই যেটা এই নিয়ম ব্যবহার করতে বলছে। ফলে
+    // helpers/-এ নতুন টেস্ট ফাইল যোগ করলেই গার্ড মিথ্যা অভিযোগে CI লাল করে দিত
+    // (tests/helpers/uniquePhoneIsolation.test.js ঠিক এভাবেই ধরা পড়েছিল)।
+    //
+    // এখন পাথটা ফাইলের নিজের ডিরেক্টরির সাপেক্ষে resolve করে দেখা হয়, সেটা
+    // সত্যিই রুটের app.js কি না। এতে নিয়মটা আগের মতোই কড়া থাকে — `../app`,
+    // `../../app`, `../app.js` সবই ধরা পড়ে — কিন্তু helpers/app.js-এর মতো
+    // বৈধ রেফারেন্স আর মিথ্যা অভিযোগে পড়ে না।
+    const ROOT_APP = path.resolve(TESTS_DIR, '..', 'app.js');
     const offenders = [];
     for (const file of walk(TESTS_DIR)) {
       if (ALLOWED_DIRECT_APP_REQUIRE.has(file)) continue;
       const src = fs.readFileSync(file, 'utf8');
-      if (/require\(['"]\.{1,2}(\/\.\.)*\/app(\.js)?['"]\)/.test(src)) {
-        offenders.push(path.relative(TESTS_DIR, file));
-      }
+      const requirePaths = [...src.matchAll(/require\(\s*['"](\.[^'"]*)['"]\s*\)/g)].map((m) => m[1]);
+      const requiresRootApp = requirePaths.some((spec) => {
+        const resolved = path.resolve(path.dirname(file), spec);
+        return resolved === ROOT_APP || `${resolved}.js` === ROOT_APP;
+      });
+      if (requiresRootApp) offenders.push(path.relative(TESTS_DIR, file));
     }
     // এই ফাইলগুলোকে helpers/app.js-এর শেয়ার্ড listening সার্ভার ব্যবহার করতে হবে
     expect(offenders).toEqual([]);
