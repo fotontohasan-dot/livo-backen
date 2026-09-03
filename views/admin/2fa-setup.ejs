@@ -88,6 +88,8 @@
                 </div>
 
                 <form action="/admin/2fa/disable" method="POST" class="space-y-4">
+                    <!-- CSP ইনলাইন স্ক্রিপ্ট ব্লক করলেও টোকেন যেন থাকে — সার্ভার-সাইডেই বসানো। -->
+                    <input type="hidden" name="_csrf" value="<%= locals.csrfToken || '' %>">
                     <p class="text-slate-400 text-sm">2FA বন্ধ করতে আপনার পাসওয়ার্ড এবং একটা বর্তমান 2FA কোড অথবা একটা ব্যাকআপ কোড দিন:</p>
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2">পাসওয়ার্ড</label>
@@ -125,6 +127,8 @@
                 <% } %>
 
                 <form action="<%= locals.formAction || '/admin/2fa/setup/verify' %>" method="POST" class="space-y-4">
+                    <!-- CSP ইনলাইন স্ক্রিপ্ট ব্লক করলেও টোকেন যেন থাকে — সার্ভার-সাইডেই বসানো। -->
+                    <input type="hidden" name="_csrf" value="<%= locals.csrfToken || '' %>">
                     <p class="text-slate-300 text-sm">২) অ্যাপে দেখানো ৬-ডিজিট কোডটা দিয়ে নিশ্চিত করুন:</p>
                     <input type="text" name="token" maxlength="6" inputmode="numeric" pattern="[0-9]*" required autofocus
                         class="otp-input w-full bg-slate-900 border border-slate-700 text-white py-4 rounded-2xl focus:outline-none focus:border-blue-500 placeholder:text-slate-600"

@@ -428,12 +428,25 @@ router.get('/2fa/mandatory-setup', async (req, res) => {
       req.session.twoFAAttempts = 0;
       return res.redirect('/admin/login/2fa');
     }
-    const setup = await generateTotpSetup(pending.username);
-    req.session.pendingEnrollmentSecret = setup.base32;
+    // আগে প্রতিবার পেজ লোডেই নতুন সিক্রেট তৈরি হতো। ফলে একবার ভুল কোড দিলে
+    // (বা রিফ্রেশ/ব্যাক করলে) সার্ভারের সিক্রেট বদলে যেত, অথচ Authenticator
+    // অ্যাপে পুরোনোটাই থেকে যেত — এরপর কোনো কোডই আর মিলত না, অ্যাডমিন
+    // স্থায়ীভাবে আটকে যেতেন। এখন এই এনরোলমেন্ট সেশনের সিক্রেট একবারই তৈরি
+    // হয় এবং QR প্রতিবার সেটা থেকেই আঁকা হয়।
+    let secret = req.session.pendingEnrollmentSecret;
+    let qrDataUrl;
+    if (secret) {
+      qrDataUrl = await qrFromSecret(secret, pending.username);
+    } else {
+      const setup = await generateTotpSetup(pending.username);
+      secret = setup.base32;
+      qrDataUrl = setup.qrDataUrl;
+      req.session.pendingEnrollmentSecret = secret;
+    }
     res.render('admin/2fa-setup', {
       alreadyEnabled: false,
-      qrDataUrl: setup.qrDataUrl,
-      base32: setup.base32,
+      qrDataUrl,
+      base32: secret,
       error: null,
       formAction: '/admin/2fa/mandatory-setup/verify',
       mandatory: true
