@@ -128,7 +128,16 @@ describe('POST /games/cashout — টাইমিং যাচাই (BUG-001)',
     if (!coRes.body.crashed) {
       expect(await balanceExcludingBadges(U.userId)).toBe(before - 100 + Math.floor(100 * 1.05));
     } else {
-      expect(await balanceOf(U.userId)).toBe(before - 100);
+      // FLAKE FIX: এই শাখাটা balanceOf() ব্যবহার করত, অথচ win শাখা (উপরে)
+      // balanceExcludingBadges()। 'প্রথম বাজি' ব্যাজ (+২০ কয়েন) checkBadges()
+      // থেকে fire-and-forget হিসেবে ক্রেডিট হয়, তাই রেসপন্স ফেরার পরেও ল্যান্ড
+      // করতে পারে — তখন এই assertion 99900-এর বদলে 99920 পেত। রাউন্ড ক্র্যাশ
+      // করলেই কেবল এই শাখা চলে (crashPoint র‍্যান্ডম), আর ব্যাজ-ক্রেডিট সময়মতো
+      // ল্যান্ড করলেই ফেল — তাই CI-তে থেমে থেমে ফেল করত, লোকালি প্রায় কখনোই নয়।
+      // coverage instrumentation চালু থাকলে (npm test, অর্থাৎ CI-এর কমান্ড)
+      // যথেষ্ট ধীর হয় বলে প্রতিবারই ফেল করে — এভাবেই পুনরুৎপাদন করা হয়েছে।
+      // assertion-এর অর্থ অপরিবর্তিত: ক্যাশআউট থেকে কোনো পেআউট হয়নি।
+      expect(await balanceExcludingBadges(U.userId)).toBe(before - 100);
     }
   });
 });
@@ -195,7 +204,10 @@ describe('POST /games/cashout — সমান্তরাল রিকোয়
     const first = await U.agent.post('/games/cashout').set('X-CSRF-Token', U.token)
       .send({ gameSlug: 'aviator', multiplier: 1.05 });
     expect(first.status).toBe(200);
-    const afterFirst = await balanceOf(U.userId);
+    // একই কারণে এখানেও ব্যাজ-ক্রেডিট বাদ দিয়ে পড়া হয়: afterFirst ও নিচের
+    // চূড়ান্ত পাঠের মাঝখানে ব্যাজ ল্যান্ড করলে "ব্যালেন্স অপরিবর্তিত" assertion
+    // মিথ্যা ফেল করত, যদিও কোনো দ্বিতীয় পেআউট হয়নি।
+    const afterFirst = await balanceExcludingBadges(U.userId);
 
     // session gameState ইতিমধ্যেই null (server nulls it after claim attempt), তাই
     // দ্বিতীয় রিকোয়েস্ট normally "কোনো চলমান গেম নেই" পাবে — game_rounds-এ সরাসরি রাউন্ড
@@ -209,6 +221,6 @@ describe('POST /games/cashout — সমান্তরাল রিকোয়
     );
     expect(retryClaim.rowCount).toBe(0); // দ্বিতীয়বার claim করা যায়নি
 
-    expect(await balanceOf(U.userId)).toBe(afterFirst); // ব্যালেন্স অপরিবর্তিত
+    expect(await balanceExcludingBadges(U.userId)).toBe(afterFirst); // ব্যালেন্স অপরিবর্তিত
   });
 });
