@@ -29,6 +29,7 @@ const PERMISSIONS = {
   payments_view: { label: 'পেমেন্ট রিকোয়েস্ট দেখা', group: 'Payments' },
   payments_approve: { label: 'ডিপোজিট/উইথড্র অনুমোদন', group: 'Payments' },
   payments_reject: { label: 'ডিপোজিট/উইথড্র বাতিল', group: 'Payments' },
+  payment_methods_manage: { label: 'ডিপোজিট অ্যাকাউন্ট/পেমেন্ট মেথড ম্যানেজমেন্ট', group: 'Payments' },
   kyc_view: { label: 'KYC রিকোয়েস্ট দেখা', group: 'KYC' },
   kyc_approve: { label: 'KYC অনুমোদন', group: 'KYC' },
   kyc_reject: { label: 'KYC বাতিল', group: 'KYC' },

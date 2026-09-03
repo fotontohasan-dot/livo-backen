@@ -368,6 +368,20 @@ const getDemoStats = async () => {
   };
 };
 
+// ===== পেমেন্ট মেথড পরিবর্তনের রিয়েল-টাইম সংকেত =====
+// পে-লোডে ইচ্ছাকৃতভাবে কোনো অ্যাকাউন্ট নম্বর/অ্যাডমিন তথ্য নেই — এটা শুধু
+// "কিছু বদলেছে" সংকেত। ক্লায়েন্ট এরপর সার্ভারের API থেকে অনুমোদিত, sanitized
+// তালিকা নিজে fetch করে। অর্থাৎ socket পে-লোড কখনো সত্যের উৎস নয়, ডেটাবেসই।
+// updatedAt ক্লায়েন্টকে স্টেল ইভেন্ট (পুরনো ইভেন্ট দেরিতে পৌঁছানো) উপেক্ষা করতে দেয়।
+const emitPaymentMethodsUpdated = () => {
+  if (!io) return;
+  try {
+    io.emit('payment-methods:updated', { updatedAt: Date.now() });
+  } catch (err) {
+    console.error('emitPaymentMethodsUpdated error:', err.message);
+  }
+};
+
 const broadcastDemoStats = async () => {
   if (!io) return;
   try {
@@ -378,4 +392,4 @@ const broadcastDemoStats = async () => {
   }
 };
 
-module.exports = { initSocket, invalidateSocketAuth, updateLiveScore, getDemoStats, broadcastDemoStats, emitAdminAlert, notifyUserSeen, notifyAdminsSeen, allowChatMessage, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_SEC };
+module.exports = { initSocket, invalidateSocketAuth, emitPaymentMethodsUpdated, updateLiveScore, getDemoStats, broadcastDemoStats, emitAdminAlert, notifyUserSeen, notifyAdminsSeen, allowChatMessage, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_SEC };

@@ -1964,6 +1964,77 @@ async function runMigrations() {
     `);
     console.log('✅ gateway deposit reconcile কলাম ও ইনডেক্স ready');
 
+    // ==================== অ্যাডমিন-নিয়ন্ত্রিত ডিপোজিট অ্যাকাউন্ট ====================
+    // আগে ডিপোজিট পেজের নম্বরগুলো routes/payment.js-এ হার্ডকোড ছিল
+    // (DEPOSIT_NUMBERS) — নম্বর বদলাতে কোড ডিপ্লয় লাগত। এখন সেগুলো ডেটাবেসে,
+    // অ্যাডমিন প্যানেল থেকে পরিচালনাযোগ্য।
+    //
+    // এই টেবিল শুধু *প্রদর্শনের* উৎস। payment_requests এখনো নিজের সারিতেই
+    // method ও account_number ধরে রাখে, তাই এখানে কিছু বদলালে বা মুছলে কোনো
+    // ঐতিহাসিক ডিপোজিট/ওয়ালেট/লেজার রেকর্ড প্রভাবিত হয় না (ইচ্ছাকৃতভাবে
+    // কোনো FK যোগ করা হয়নি)।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS payment_methods (
+        id SERIAL PRIMARY KEY,
+        method VARCHAR(20) NOT NULL,
+        account_number VARCHAR(64) NOT NULL,
+        account_name VARCHAR(60),
+        status VARCHAR(10) NOT NULL DEFAULT 'active',
+        created_by INTEGER REFERENCES users(id),
+        updated_by INTEGER REFERENCES users(id),
+        deleted_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    // পুরনো ইনস্টলেশনে টেবিল থাকলেও কলামগুলো না-ও থাকতে পারে — idempotent যোগ
+    await pool.query(`ALTER TABLE payment_methods ADD COLUMN IF NOT EXISTS account_name VARCHAR(60)`);
+    await pool.query(`ALTER TABLE payment_methods ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP`);
+    await pool.query(`ALTER TABLE payment_methods ADD COLUMN IF NOT EXISTS created_by INTEGER`);
+    await pool.query(`ALTER TABLE payment_methods ADD COLUMN IF NOT EXISTS updated_by INTEGER`);
+
+    await pool.query(`
+      ALTER TABLE payment_methods DROP CONSTRAINT IF EXISTS payment_methods_status_check
+    `);
+    await pool.query(`
+      ALTER TABLE payment_methods
+      ADD CONSTRAINT payment_methods_status_check CHECK (status IN ('active','inactive'))
+    `);
+
+    // একই মেথডে একই নম্বর দুইবার থাকা যাবে না। soft-deleted সারি বাদ, নাহলে
+    // মুছে ফেলা নম্বর আর কখনো ফিরিয়ে আনা যেত না — তাই partial unique index।
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS uniq_payment_methods_method_account
+      ON payment_methods (method, account_number) WHERE deleted_at IS NULL
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_payment_methods_method ON payment_methods(method)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_payment_methods_status ON payment_methods(status)`);
+    // ইউজার ডিপোজিট পেজের একমাত্র query — covering partial index, প্রতি
+    // রিকোয়েস্টে full scan এড়ায়।
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_payment_methods_active_lookup
+      ON payment_methods (method, id) WHERE status = 'active' AND deleted_at IS NULL
+    `);
+
+    // ---- এককালীন সিড ----
+    // টেবিল সম্পূর্ণ খালি থাকলেই (অর্থাৎ প্রথমবার) আগের হার্ডকোড করা নম্বরগুলো
+    // ঢোকানো হয়, যাতে ডিপ্লয়ের মুহূর্তে ডিপোজিট পেজ হঠাৎ খালি হয়ে গিয়ে
+    // চলমান ডিপোজিট বন্ধ না হয়। অ্যাডমিন এরপর যা খুশি বদলাতে পারবেন — এই
+    // ব্লক আর কখনো চলবে না (idempotent)।
+    const seedCheck = await pool.query('SELECT 1 FROM payment_methods LIMIT 1');
+    if (seedCheck.rows.length === 0) {
+      const LEGACY_NUMBERS = ['01781732144', '01714275156', '01840199199', '01620992072'];
+      for (const num of LEGACY_NUMBERS) {
+        await pool.query(
+          `INSERT INTO payment_methods (method, account_number, status)
+           VALUES ('bkash', $1, 'active') ON CONFLICT DO NOTHING`,
+          [num]
+        );
+      }
+      console.log(`✅ payment_methods সিড হলো (${LEGACY_NUMBERS.length}টি লিগ্যাসি bKash নম্বর)`);
+    }
+    console.log('✅ payment_methods টেবিল, constraint ও ইনডেক্স ready');
+
   } catch (err) {
     // PHASE 2 fix: আগে error গিলে ফেলা হত, ফলে caller (server.js) migration
     // ব্যর্থ হওয়ার পরেও "migration done" ছাপত এবং broken schema নিয়ে listen করত।
