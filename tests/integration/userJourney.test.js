@@ -226,6 +226,15 @@ describe('A-Z User Journey', () => {
     // আসল যাচাইয়ের বিষয় থ্রেশহোল্ড নয় — উইথড্র রিকোয়েস্টে ব্যালেন্স থেকে ঠিক
     // ততটাই কাটা হয়েছে কিনা। তাই before/after তুলনা করা হচ্ছে, যেটা এলোমেলো
     // ফলাফল থেকে স্বাধীন এবং আগের চেয়ে কড়া (সঠিক অঙ্কও যাচাই করে)।
+    // উইথড্র সময়সূচি (services/withdrawalWindow.js) রাত ১১টা–সকাল ৭টা উইথড্র
+    // বন্ধ রাখে। সেটা ছেড়ে দিলে এই টেস্ট দিনের কোন সময়ে চলছে তার উপর নির্ভর
+    // করত — রাতে CI চালালে ফেল, দিনে পাস। তাই এখানে জানালাটা স্পষ্টভাবে খোলা
+    // ধরা হচ্ছে; সময়সূচির নিজস্ব আচরণ tests/withdrawalWindow.test.js-এ যাচাই হয়।
+    await pool.query(
+      `INSERT INTO site_settings (key, value) VALUES ('withdrawal_window_mode', 'open')
+       ON CONFLICT (key) DO UPDATE SET value = 'open'`
+    );
+
     const before = Number((await pool.query('SELECT coins FROM users WHERE id=$1', [userId])).rows[0].coins);
     const csrf = await csrfFor(agent, '/payment/withdraw');
     const res = await agent.post('/payment/withdraw').type('form').send({
@@ -237,6 +246,9 @@ describe('A-Z User Journey', () => {
     expect(Number(w.rows[0].amount)).toBe(500);
     const after = Number((await pool.query('SELECT coins FROM users WHERE id=$1', [userId])).rows[0].coins);
     expect(after).toBe(before - 500);
+
+    // ওভাররাইডটা এই টেস্টের বাইরে যেন না ছড়ায়
+    await pool.query("DELETE FROM site_settings WHERE key = 'withdrawal_window_mode'");
   });
 
   test('14. Support', async () => {

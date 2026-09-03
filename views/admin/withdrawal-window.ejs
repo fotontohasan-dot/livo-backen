@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= t.admin_withdrawal_window_title %> • Livo Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
+    .ww-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    @media (min-width: 720px) { .ww-grid { grid-template-columns: 1fr 1fr; } }
+    .ww-field label { display: block; font-size: 11px; color: #94a3b8; font-weight: 700; margin-bottom: 5px; }
+    .ww-input {
+      width: 100%; min-height: 44px; padding: 10px 12px; border-radius: 10px;
+      background: #0f1115; border: 1px solid rgba(255,255,255,0.10); color: #e2e8f0; font-size: 13px;
+    }
+    .ww-input:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
+    .ww-status { border-radius: 14px; padding: 16px; margin-bottom: 16px; border: 1px solid; }
+    .ww-open { background: rgba(4,120,87,0.12); border-color: rgba(4,120,87,0.5); color: #6ee7b7; }
+    .ww-closed { background: rgba(180,83,9,0.12); border-color: rgba(180,83,9,0.5); color: #fcd34d; }
+    .ww-status b { display: block; font-size: 15px; margin-bottom: 4px; }
+    .ww-modes { display: grid; grid-template-columns: 1fr; gap: 8px; }
+    @media (min-width: 560px) { .ww-modes { grid-template-columns: repeat(3, 1fr); } }
+    .ww-mode {
+      display: flex; gap: 10px; align-items: flex-start; padding: 12px;
+      border: 1px solid rgba(255,255,255,0.10); border-radius: 12px; cursor: pointer; background: #14171d;
+    }
+    .ww-mode input { margin-top: 3px; }
+    .ww-mode span { font-size: 12px; color: #e2e8f0; font-weight: 700; }
+    .ww-mode small { display: block; color: #94a3b8; font-weight: 400; margin-top: 3px; line-height: 1.5; }
+    .ww-mode:focus-within { outline: 2px solid #2563eb; outline-offset: 1px; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      min-height: 44px; padding: 0 18px; border-radius: 10px; border: none;
+      font-size: 13px; font-weight: 700; cursor: pointer; color: #fff; background: #2563eb;
+    }
+    .btn:focus-visible { outline: 2px solid #93c5fd; outline-offset: 2px; }
+    .ww-note { font-size: 11px; color: #94a3b8; line-height: 1.8; margin-top: 12px; }
+  </style>
+  <%- include('./partials/pwa-head') %>
+</head>
+<body>
+  <div class="admin-wrap">
+    <%- include('./partials/sidebar', { active: 'withdrawal-window' }) %>
+    <div class="admin-content">
+      <%- include('./partials/load-error') %>
+      <%- include('./partials/header', { pageTitle: t.admin_withdrawal_window_title, pageSubtitle: t.admin_withdrawal_window_subtitle }) %>
+
+      <% if (state) { %>
+        <div class="ww-status <%= state.open ? 'ww-open' : 'ww-closed' %>" role="status">
+          <b>
+            <i class="fas <%= state.open ? 'fa-lock-open' : 'fa-lock' %>"></i>
+            <%= state.open ? t.withdraw_window_status_open : t.withdraw_window_status_closed %>
+          </b>
+          <%= t.withdraw_window_current_time %>: <%= state.nowText || '—' %> (<%= state.timezone %>)
+          <% if (!state.open && state.reopensAtText) { %>
+            — <%= t.withdraw_window_reopens_at %> <%= state.reopensAtText %>
+          <% } %>
+        </div>
+      <% } %>
+
+      <div class="admin-card" style="padding:16px;">
+        <form method="POST" action="/payment/admin/withdrawal-window">
+          <input type="hidden" name="_csrf" value="<%= locals.csrfToken || '' %>">
+
+          <div style="font-weight:800;color:#fff;font-size:13px;margin-bottom:10px;">
+            <i class="fas fa-toggle-on" style="color:#f59e0b;"></i> <%= t.withdraw_window_mode_label %>
+          </div>
+          <div class="ww-modes" style="margin-bottom:20px;">
+            <label class="ww-mode">
+              <input type="radio" name="mode" value="auto" <%= !config || config.mode === 'auto' ? 'checked' : '' %>>
+              <span><%= t.withdraw_window_mode_auto %>
+                <small><%= t.withdraw_window_mode_auto_hint %></small>
+              </span>
+            </label>
+            <label class="ww-mode">
+              <input type="radio" name="mode" value="open" <%= config && config.mode === 'open' ? 'checked' : '' %>>
+              <span><%= t.withdraw_window_mode_open %>
+                <small><%= t.withdraw_window_mode_open_hint %></small>
+              </span>
+            </label>
+            <label class="ww-mode">
+              <input type="radio" name="mode" value="closed" <%= config && config.mode === 'closed' ? 'checked' : '' %>>
+              <span><%= t.withdraw_window_mode_closed %>
+                <small><%= t.withdraw_window_mode_closed_hint %></small>
+              </span>
+            </label>
+          </div>
+
+          <div class="ww-grid">
+            <div class="ww-field">
+              <label for="wwStart"><%= t.withdraw_window_start_label %></label>
+              <input class="ww-input" id="wwStart" type="time" name="start"
+                     value="<%= config ? config.start.text : '23:00' %>" required>
+            </div>
+            <div class="ww-field">
+              <label for="wwEnd"><%= t.withdraw_window_end_label %></label>
+              <input class="ww-input" id="wwEnd" type="time" name="end"
+                     value="<%= config ? config.end.text : '07:00' %>" required>
+            </div>
+            <div class="ww-field">
+              <label for="wwTz"><%= t.withdraw_window_timezone_label %></label>
+              <input class="ww-input" id="wwTz" type="text" name="timezone"
+                     value="<%= config ? config.timezone : 'Asia/Dhaka' %>" required>
+            </div>
+          </div>
+
+          <div style="margin-top:18px;">
+            <button class="btn" type="submit"><i class="fas fa-save"></i> <%= t.save %></button>
+          </div>
+
+          <p class="ww-note"><%= t.withdraw_window_note %></p>
+        </form>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

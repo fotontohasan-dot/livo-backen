@@ -21,6 +21,8 @@ const sslcommerz = require('../services/sslcommerz');
 const paymentVerification = require('../services/paymentVerification');
 const { broadcastDemoStats, emitAdminAlert, emitPaymentMethodsUpdated } = require('../services/socket');
 const paymentMethods = require('../services/paymentMethods');
+const withdrawalWindowService = require('../services/withdrawalWindow');
+const { requireWithdrawalWindow, attachWithdrawalWindow } = require('../middleware/withdrawalWindow');
 const { publicMessage } = require('../utils/safeError');
 const { notifyTelegram } = require('../services/telegramNotify');
 const { verifyPin, getPinStatus } = require('../services/withdrawPin');
@@ -410,7 +412,7 @@ router.post('/deposit', isAuth, requireFeature('deposit'), paymentLimiter, async
   }
 });
 
-router.get('/withdraw', isAuth, requireFeature('withdrawal'), async (req, res) => {
+router.get('/withdraw', isAuth, requireFeature('withdrawal'), attachWithdrawalWindow(), async (req, res) => {
   try {
     const result = await pool.query('SELECT coins FROM users WHERE id=$1', [req.session.user.id]);
     // pg ড্রাইভার NUMERIC(14,2) কলাম স্ট্রিং হিসেবে ফেরত দেয় (যেমন "1499.00"), সংখ্যা হিসেবে না —
@@ -433,7 +435,7 @@ router.get('/withdraw', isAuth, requireFeature('withdrawal'), async (req, res) =
 });
 
 
-router.post('/withdraw', isAuth, requireFeature('withdrawal'), requireVerifiedEmail, paymentLimiter, async (req, res) => {
+router.post('/withdraw', isAuth, requireFeature('withdrawal'), requireWithdrawalWindow(), requireVerifiedEmail, paymentLimiter, async (req, res) => {
   const { method, account_number, withdraw_pin } = req.body;
   const amount = parseAmount(req.body.amount);
   const userId = req.session.user.id;
@@ -876,6 +878,62 @@ router.post('/admin/payment-methods/:id/delete', requireAdmin, requirePermission
     req.flash('error', publicMessage(err, req.t('payment_generic_error')));
   }
   res.redirect('/payment/admin/payment-methods');
+});
+
+// ==================== অ্যাডমিন: উইথড্র সময়সূচি ====================
+// প্রতিদিন নির্দিষ্ট সময়ে উইথড্র নিজে থেকেই বন্ধ/চালু হয় — কোনো cron নেই,
+// প্রতিটা রিকোয়েস্টে সময় দেখে সিদ্ধান্ত হয়। দরকারে অ্যাডমিন সময়সূচি
+// উপেক্ষা করে জোর করে খোলা বা বন্ধ রাখতে পারেন।
+router.get('/admin/withdrawal-window', requireAdmin, requirePermission('settings_view'), async (req, res) => {
+  try {
+    const [config, state] = await Promise.all([
+      withdrawalWindowService.readConfig(),
+      withdrawalWindowService.getState()
+    ]);
+    res.render('admin/withdrawal-window', { user: req.session.user, config, state, modes: withdrawalWindowService.MODES });
+  } catch (err) {
+    console.error('withdrawal window admin load error:', err.message);
+    res.render('admin/withdrawal-window', {
+      user: req.session.user, config: null, state: null,
+      modes: withdrawalWindowService.MODES, loadError: true
+    });
+  }
+});
+
+router.post('/admin/withdrawal-window', requireAdmin, requirePermission('settings_edit'), paymentMethodAdminLimiter, async (req, res) => {
+  try {
+    const before = await withdrawalWindowService.readConfig();
+    const result = await withdrawalWindowService.saveConfig({
+      mode: req.body.mode,
+      start: req.body.start,
+      end: req.body.end,
+      timezone: req.body.timezone
+    });
+
+    if (!result.ok) {
+      req.flash('error', req.t('withdraw_window_invalid_input'));
+      return res.redirect('/payment/admin/withdrawal-window');
+    }
+
+    const after = await withdrawalWindowService.readConfig();
+    const admin = req.session.user;
+    await logAuditEvent({
+      req, actorType: 'admin', actorId: admin.id, actorUsername: admin.username,
+      action: 'WITHDRAWAL_WINDOW_UPDATED', category: 'financial', riskLevel: 'high',
+      details: {
+        before: { mode: before.mode, start: before.start.text, end: before.end.text, timezone: before.timezone },
+        after: { mode: after.mode, start: after.start.text, end: after.end.text, timezone: after.timezone }
+      }
+    }).catch(() => {});
+    await logAdminAction(admin.id, admin.username, 'WITHDRAWAL_WINDOW_UPDATED',
+      `mode=${after.mode} window=${after.start.text}-${after.end.text} tz=${after.timezone}`, req.ip).catch(() => {});
+
+    req.flash('success', req.t('withdraw_window_saved'));
+  } catch (err) {
+    console.error('withdrawal window save error:', err.message);
+    req.flash('error', req.t('payment_generic_error'));
+  }
+  res.redirect('/payment/admin/withdrawal-window');
 });
 
 router.get('/admin/summary', requireAdmin, requirePermission('payments_view'), async (req, res) => {

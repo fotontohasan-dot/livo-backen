@@ -49,6 +49,7 @@ const NAV = [
       { href: '/payment/admin/payments', label: 'Payment Approval', labelKey: 'admin_nav_item_payment_approval',  icon: 'fa-money-bill-wave', active: 'payments',     permission: 'payments_view', badge: 'payments' },
       { href: '/payment/admin/deposits', label: 'Deposit Reports', labelKey: 'admin_nav_item_deposit_reports',   icon: 'fa-chart-column',    active: 'deposits',     permission: 'reports_view' },
       { href: '/payment/admin/payment-methods', label: 'Payment Methods', labelKey: 'admin_nav_item_payment_methods', icon: 'fa-money-check-dollar', active: 'payment-methods', permission: 'payment_methods_manage' },
+      { href: '/payment/admin/withdrawal-window', label: 'Withdrawal Schedule', labelKey: 'admin_nav_item_withdrawal_window', icon: 'fa-clock', active: 'withdrawal-window', permission: 'settings_view' },
       { href: '/payment/admin/summary',  label: 'Daily Summary', labelKey: 'admin_nav_item_daily_summary',     icon: 'fa-chart-pie',       active: 'summary',      permission: 'reports_view' },
       { href: '/admin/transactions',     label: 'Transactions', labelKey: 'admin_nav_item_transactions',      icon: 'fa-receipt',         active: 'transactions', permission: 'payments_view' },
       { href: '/admin/bets',             label: 'Bets', labelKey: 'admin_nav_item_bets',              icon: 'fa-dice',            active: 'bets',         permission: 'games_manage' }
