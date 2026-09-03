@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= t.admin_payment_methods_title %> • Livo Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
+    .pm-form { display: grid; grid-template-columns: 1fr; gap: 10px; }
+    @media (min-width: 760px) { .pm-form { grid-template-columns: 1fr 1.4fr 1fr auto; align-items: end; } }
+    .pm-field label { display: block; font-size: 11px; color: #94a3b8; font-weight: 700; margin-bottom: 5px; }
+    .pm-input {
+      width: 100%; min-height: 44px; padding: 10px 12px; border-radius: 10px;
+      background: #0f1115; border: 1px solid rgba(255,255,255,0.10); color: #e2e8f0; font-size: 13px;
+    }
+    .pm-input:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
+    .pm-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .pm-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      min-height: 38px; padding: 0 12px; border-radius: 9px; border: 1px solid transparent;
+      font-size: 12px; font-weight: 700; cursor: pointer; color: #fff; text-decoration: none;
+    }
+    .btn:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+    .btn-blue { background: #2563eb; }
+    .btn-amber { background: #b45309; }
+    .btn-green { background: #047857; }
+    .btn-red { background: #b91c1c; }
+    .btn-ghost { background: #1c2028; border-color: rgba(255,255,255,0.10); }
+    .pm-account { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.5px; }
+    .pm-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+    .pm-note { font-size: 11px; color: #94a3b8; line-height: 1.7; margin-top: 10px; }
+    .pm-edit-row { display: none; }
+    .pm-edit-row.open { display: table-row; }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  </style>
+  <%- include('./partials/pwa-head') %>
+</head>
+<body>
+  <div class="admin-wrap">
+    <%- include('./partials/sidebar', { active: 'payment-methods' }) %>
+    <div class="admin-content">
+      <%- include('./partials/load-error') %>
+      <%- include('./partials/header', { pageTitle: t.admin_payment_methods_title, pageSubtitle: t.admin_payment_methods_subtitle }) %>
+
+      <!-- নতুন অ্যাকাউন্ট যোগ -->
+      <div class="admin-card" style="padding:16px;margin-bottom:16px;">
+        <div style="font-weight:800;color:#fff;font-size:13px;margin-bottom:12px;">
+          <i class="fas fa-plus-circle" style="color:#f59e0b;"></i> <%= t.add_payment_method %>
+        </div>
+        <form method="POST" action="/payment/admin/payment-methods" class="pm-form" data-pm-form>
+          <div class="pm-field">
+            <label for="pmMethod"><%= t.payment_method_label %></label>
+            <select class="pm-input" id="pmMethod" name="method" required>
+              <% methodKeys.forEach(function (m) { %>
+                <option value="<%= m %>"><%= m %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="pm-field">
+            <label for="pmAccount"><%= t.account_number_label %></label>
+            <input class="pm-input pm-account" id="pmAccount" type="text" name="account_number"
+                   inputmode="numeric" autocomplete="off" placeholder="01XXXXXXXXX" required>
+          </div>
+          <div class="pm-field">
+            <label for="pmStatus"><%= t.status_label %></label>
+            <select class="pm-input" id="pmStatus" name="status">
+              <option value="active"><%= t.status_active %></option>
+              <option value="inactive"><%= t.status_inactive %></option>
+            </select>
+          </div>
+          <div class="pm-field">
+            <button class="btn btn-blue" type="submit" style="width:100%;"><i class="fas fa-save"></i> <%= t.save %></button>
+          </div>
+        </form>
+        <p class="pm-note"><%= t.payment_methods_display_only_note %></p>
+      </div>
+
+      <!-- ফিল্টার -->
+      <div class="admin-card" style="padding:14px;margin-bottom:16px;">
+        <form method="GET" action="/payment/admin/payment-methods" class="pm-filters">
+          <div class="pm-field">
+            <label for="fMethod"><%= t.payment_method_label %></label>
+            <select class="pm-input" id="fMethod" name="method">
+              <option value=""><%= t.all_label %></option>
+              <% methodKeys.forEach(function (m) { %>
+                <option value="<%= m %>" <%= filterMethod === m ? 'selected' : '' %>><%= m %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="pm-field">
+            <label for="fStatus"><%= t.status_label %></label>
+            <select class="pm-input" id="fStatus" name="status">
+              <option value=""><%= t.all_label %></option>
+              <option value="active" <%= filterStatus === 'active' ? 'selected' : '' %>><%= t.status_active %></option>
+              <option value="inactive" <%= filterStatus === 'inactive' ? 'selected' : '' %>><%= t.status_inactive %></option>
+            </select>
+          </div>
+          <button class="btn btn-ghost" type="submit"><i class="fas fa-filter"></i> <%= t.filter_label %></button>
+        </form>
+      </div>
+
+      <!-- তালিকা -->
+      <div class="admin-card">
+        <div class="admin-card-header"><i class="fas fa-money-check-dollar"></i> <%= t.admin_payment_methods_title %></div>
+        <% if (!methods || methods.length === 0) { %>
+          <div class="empty-state" style="padding:24px;text-align:center;color:#94a3b8;font-size:13px;">
+            <%= t.no_payment_methods %>
+          </div>
+        <% } else { %>
+          <div class="pm-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th><%= t.payment_method_label %></th>
+                  <th><%= t.account_number_label %></th>
+                  <th><%= t.status_label %></th>
+                  <th><%= t.updated_label %></th>
+                  <th><%= t.actions_label %></th>
+                </tr>
+              </thead>
+              <tbody>
+                <% methods.forEach(function (m) { %>
+                  <tr>
+                    <td><%= m.method %></td>
+                    <td class="pm-account"><%= m.account_number %></td>
+                    <td>
+                      <% if (m.status === 'active') { %>
+                        <span class="badge badge-green"><%= t.status_active %></span>
+                      <% } else { %>
+                        <span class="badge badge-amber"><%= t.status_inactive %></span>
+                      <% } %>
+                    </td>
+                    <td><%= m.updated_at ? new Date(m.updated_at).toISOString().slice(0, 16).replace('T', ' ') : '-' %></td>
+                    <td>
+                      <div class="pm-actions">
+                        <button type="button" class="btn btn-ghost" data-pm-edit="<%= m.id %>"
+                                aria-expanded="false" aria-controls="pm-edit-<%= m.id %>">
+                          <i class="fas fa-pen"></i> <%= t.edit_label %>
+                        </button>
+                        <form method="POST" action="/payment/admin/payment-methods/<%= m.id %>/status" data-pm-form>
+                          <input type="hidden" name="status" value="<%= m.status === 'active' ? 'inactive' : 'active' %>">
+                          <% if (m.status === 'active') { %>
+                            <button class="btn btn-amber" type="submit"><i class="fas fa-pause"></i> <%= t.disable_label %></button>
+                          <% } else { %>
+                            <button class="btn btn-green" type="submit"><i class="fas fa-play"></i> <%= t.enable_label %></button>
+                          <% } %>
+                        </form>
+                        <form method="POST" action="/payment/admin/payment-methods/<%= m.id %>/delete"
+                              data-pm-form data-pm-confirm="<%= t.confirm_delete_payment_method %>">
+                          <button class="btn btn-red" type="submit"><i class="fas fa-trash"></i> <%= t.delete_label %></button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr class="pm-edit-row" id="pm-edit-<%= m.id %>">
+                    <td colspan="5">
+                      <form method="POST" action="/payment/admin/payment-methods/<%= m.id %>/update" class="pm-form" data-pm-form>
+                        <div class="pm-field">
+                          <label for="editMethod<%= m.id %>"><%= t.payment_method_label %></label>
+                          <select class="pm-input" id="editMethod<%= m.id %>" name="method">
+                            <% methodKeys.forEach(function (k) { %>
+                              <option value="<%= k %>" <%= m.method === k ? 'selected' : '' %>><%= k %></option>
+                            <% }) %>
+                          </select>
+                        </div>
+                        <div class="pm-field">
+                          <label for="editAccount<%= m.id %>"><%= t.account_number_label %></label>
+                          <input class="pm-input pm-account" id="editAccount<%= m.id %>" type="text"
+                                 name="account_number" value="<%= m.account_number %>" autocomplete="off" required>
+                        </div>
+                        <div class="pm-field">
+                          <label for="editStatus<%= m.id %>"><%= t.status_label %></label>
+                          <select class="pm-input" id="editStatus<%= m.id %>" name="status">
+                            <option value="active" <%= m.status === 'active' ? 'selected' : '' %>><%= t.status_active %></option>
+                            <option value="inactive" <%= m.status === 'inactive' ? 'selected' : '' %>><%= t.status_inactive %></option>
+                          </select>
+                        </div>
+                        <div class="pm-field pm-actions">
+                          <button class="btn btn-blue" type="submit"><i class="fas fa-check"></i> <%= t.update_label %></button>
+                          <button class="btn btn-ghost" type="button" data-pm-cancel="<%= m.id %>"><%= t.cancel_label %></button>
+                        </div>
+                      </form>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      // এডিট সারি খোলা/বন্ধ
+      document.querySelectorAll('[data-pm-edit]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var row = document.getElementById('pm-edit-' + btn.getAttribute('data-pm-edit'));
+          if (!row) return;
+          var open = row.classList.toggle('open');
+          btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+      });
+      document.querySelectorAll('[data-pm-cancel]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var id = btn.getAttribute('data-pm-cancel');
+          var row = document.getElementById('pm-edit-' + id);
+          if (row) row.classList.remove('open');
+          var toggle = document.querySelector('[data-pm-edit="' + id + '"]');
+          if (toggle) toggle.setAttribute('aria-expanded', 'false');
+        });
+      });
+
+      // ডিলিটের আগে নিশ্চিতকরণ + ডাবল-সাবমিট প্রতিরোধ।
+      // একটা ফর্ম দুইবার সাবমিট হলে সার্ভার duplicate/no-op হিসেবেই সামলায়,
+      // কিন্তু অ্যাডমিন দুইটা পরস্পরবিরোধী টোস্ট দেখতেন — তাই ক্লায়েন্টেও আটকানো।
+      document.querySelectorAll('form[data-pm-form]').forEach(function (form) {
+        form.addEventListener('submit', function (e) {
+          var confirmMsg = form.getAttribute('data-pm-confirm');
+          if (confirmMsg && !window.confirm(confirmMsg)) { e.preventDefault(); return; }
+          if (form.dataset.pmSubmitting === '1') { e.preventDefault(); return; }
+          form.dataset.pmSubmitting = '1';
+          var btn = form.querySelector('button[type="submit"]');
+          if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

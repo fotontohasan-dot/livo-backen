@@ -19,7 +19,9 @@ const crypto = require('crypto');
 const sslcommerz = require('../services/sslcommerz');
 // যাচাইয়ের বিশুদ্ধ যুক্তি — গেটওয়ে মডিউল mock করা হলেও এটা চলতেই থাকে
 const paymentVerification = require('../services/paymentVerification');
-const { broadcastDemoStats, emitAdminAlert } = require('../services/socket');
+const { broadcastDemoStats, emitAdminAlert, emitPaymentMethodsUpdated } = require('../services/socket');
+const paymentMethods = require('../services/paymentMethods');
+const { publicMessage } = require('../utils/safeError');
 const { notifyTelegram } = require('../services/telegramNotify');
 const { verifyPin, getPinStatus } = require('../services/withdrawPin');
 const { scanTransaction } = require('../services/fraudDetection');
@@ -169,15 +171,16 @@ async function creditApprovedDeposit(client, request) {
   return bonusGiven;
 }
 
+// তালিকাটা ইচ্ছাকৃতভাবে এখানে literal হিসেবেই রাখা — বিদ্যমান
+// tests/integration/adminDepositMethodCoverage.test.js এই ফাইলের সোর্স পার্স
+// করে যাচাই করে যে অ্যাডমিন ডিপোজিট পেজ প্রতিটা মেথড কভার করে।
+// services/paymentMethods.js-এর METHOD_KEYS হুবহু এই তালিকাই; দুটো আলাদা হয়ে
+// গেলে tests/paymentMethods.test.js সেটা ধরে ফেলে।
 const VALID_METHODS = ['bkash', 'nagad', 'rocket', 'upay', 'bank', 'crypto'];
 
-const DEPOSIT_NUMBERS = [
-  '01781732144',
-  '01714275156',
-  '01840199199',
-  '01620992072'
-];
-let depositRotation = 0;
+// আগে এখানে চারটা নম্বর হার্ডকোড করা ছিল (DEPOSIT_NUMBERS) এবং প্রতি রিকোয়েস্টে
+// রোটেট হতো — নম্বর বদলাতে কোড ডিপ্লয় লাগত। এখন সেগুলো payment_methods টেবিলে,
+// অ্যাডমিন প্যানেল থেকে পরিচালনাযোগ্য (migrations.js একবার সিড করে দিয়েছে)।
 
 // ==================== WALLET HUB — একটাই পেজে ডিপোজিট/উইথড্র/কার্ড/হিস্টরির প্রিমিয়াম ওভারভিউ ====================
 // বিদ্যমান /deposit, /withdraw, /profile/cards, /history পেজগুলোই এখানে quick-action হিসেবে লিংক করা,
@@ -239,10 +242,31 @@ router.get('/wallet', isAuth, async (req, res) => {
   }
 });
 
-router.get('/deposit', isAuth, requireFeature('deposit'), (req, res) => {
-  const current = DEPOSIT_NUMBERS[depositRotation % DEPOSIT_NUMBERS.length];
-  depositRotation = (depositRotation + 1) % DEPOSIT_NUMBERS.length;
-  res.render('payment/deposit', { user: req.session.user, payNumber: current });
+// ডিপোজিট পেজ — নম্বরগুলো ডেটাবেসের active সারি থেকেই আসে। কোনো active
+// অ্যাকাউন্ট না থাকলে ইউজারকে কোনো নম্বরই দেখানো হয় না (empty state) —
+// পুরনো/ভুল নম্বরে টাকা পাঠিয়ে ফেলার চেয়ে "এখন উপলব্ধ নেই" দেখানো নিরাপদ।
+router.get('/deposit', isAuth, requireFeature('deposit'), async (req, res) => {
+  let methods = [];
+  let loadError = false;
+  try {
+    methods = await paymentMethods.listActivePublic();
+  } catch (err) {
+    console.error('deposit page payment methods error:', err.message);
+    loadError = true;
+  }
+  res.render('payment/deposit', { user: req.session.user, activeMethods: methods, loadError });
+});
+
+// ইউজার ক্লায়েন্ট socket ইভেন্ট পেলে এখান থেকেই বর্তমান অবস্থা নেয় —
+// socket পে-লোড নয়, ডেটাবেসই সত্যের উৎস।
+router.get('/deposit/methods', isAuth, requireFeature('deposit'), async (req, res) => {
+  try {
+    const methods = await paymentMethods.listActivePublic();
+    res.json({ success: true, methods });
+  } catch (err) {
+    console.error('deposit methods api error:', err.message);
+    res.status(500).json({ success: false, error: req.t('payment_generic_error') });
+  }
 });
 
 router.post('/deposit', isAuth, requireFeature('deposit'), paymentLimiter, async (req, res) => {
@@ -703,6 +727,155 @@ router.get('/admin/deposits', requireAdmin, requirePermission('payments_view'), 
       loadError: true
     });
   }
+});
+
+// ==================== অ্যাডমিন: ডিপোজিট অ্যাকাউন্ট (পেমেন্ট মেথড) ম্যানেজমেন্ট ====================
+// এই রুটগুলো শুধু নির্ধারণ করে **ইউজারের ডিপোজিট পেজে কোন নম্বর দেখানো হবে**।
+// এখান থেকে কোনো ওয়ালেট ব্যালেন্স, লেজার এন্ট্রি বা ডিপোজিট রিকোয়েস্টের
+// অবস্থা পরিবর্তন হয় না — সেই যুক্তি approve/reject রুটেই আছে, অপরিবর্তিত।
+//
+// সুরক্ষা স্তর: requireAdmin (প্রতি রিকোয়েস্টে DB থেকে role যাচাই) →
+// requirePermission (RBAC) → CSRF (app-wide middleware) → mutation rate limit →
+// explicit field allowlist (req.body কখনো সরাসরি পাস করা হয় না) → audit log।
+
+const paymentMethodAdminLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 60,
+  message: (req) => req.t('common_rate_limited'),
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new RedisRateLimitStore('rl:paymethod:')
+});
+
+// অডিটে পুরো অ্যাকাউন্ট নম্বর রাখা হয় না — masked ফর্ম যথেষ্ট, কারণ record ID
+// দিয়ে বর্তমান মান সবসময় দেখা যায়।
+async function auditPaymentMethod(req, action, row, extra = {}) {
+  const admin = req.session.user;
+  await logAuditEvent({
+    req,
+    actorType: 'admin',
+    actorId: admin.id,
+    actorUsername: admin.username,
+    action,
+    category: 'financial',
+    riskLevel: 'high',
+    details: {
+      recordId: row ? row.id : null,
+      method: row ? row.method : null,
+      accountNumberMasked: row ? paymentMethods.maskAccountNumber(row.account_number) : null,
+      status: row ? row.status : null,
+      ...extra
+    }
+  }).catch(() => {});
+  await logAdminAction(admin.id, admin.username, action,
+    `${action} — method=${row ? row.method : '?'} id=${row ? row.id : '?'} account=${row ? paymentMethods.maskAccountNumber(row.account_number) : '?'}`,
+    req.ip).catch(() => {});
+}
+
+// mutation-এর পরে: ক্যাশ ইতিমধ্যে সার্ভিস স্তরে invalidate হয়েছে, এখন
+// সংযুক্ত ক্লায়েন্টদের শুধু "রিফ্রেশ করো" সংকেত পাঠানো হয়।
+function afterPaymentMethodMutation() {
+  try { emitPaymentMethodsUpdated(); } catch (e) { console.error('payment-methods emit error:', e.message); }
+}
+
+router.get('/admin/payment-methods', requireAdmin, requirePermission('payment_methods_manage'), async (req, res) => {
+  try {
+    const filterMethod = VALID_METHODS.includes(req.query.method) ? req.query.method : null;
+    const filterStatus = ['active', 'inactive'].includes(req.query.status) ? req.query.status : null;
+    const rows = await paymentMethods.listForAdmin({ method: filterMethod, status: filterStatus });
+    res.render('admin/payment-methods', {
+      user: req.session.user,
+      methods: rows,
+      methodKeys: VALID_METHODS,
+      filterMethod,
+      filterStatus
+    });
+  } catch (err) {
+    console.error('admin payment-methods list error:', err.message);
+    res.render('admin/payment-methods', {
+      user: req.session.user,
+      methods: [],
+      methodKeys: VALID_METHODS,
+      filterMethod: null,
+      filterStatus: null,
+      loadError: true
+    });
+  }
+});
+
+router.post('/admin/payment-methods', requireAdmin, requirePermission('payment_methods_manage'), paymentMethodAdminLimiter, async (req, res) => {
+  try {
+    const row = await paymentMethods.create({
+      method: req.body.method,
+      accountNumber: req.body.account_number,
+      accountName: req.body.account_name,
+      status: req.body.status
+    }, req.session.user.id);
+    await auditPaymentMethod(req, 'PAYMENT_METHOD_CREATED', row);
+    afterPaymentMethodMutation();
+    req.flash('success', req.t('payment_method_added_success'));
+  } catch (err) {
+    console.error('payment method create error:', err.message);
+    req.flash('error', publicMessage(err, req.t('payment_generic_error')));
+  }
+  res.redirect('/payment/admin/payment-methods');
+});
+
+router.post('/admin/payment-methods/:id/update', requireAdmin, requirePermission('payment_methods_manage'), paymentMethodAdminLimiter, async (req, res) => {
+  try {
+    // :id ছাড়া অন্য কোনো শনাক্তকারী ক্লায়েন্ট থেকে নেওয়া হয় না, আর সার্ভিস
+    // getById() দিয়ে সারিটার অস্তিত্ব যাচাই করে — অজানা/মুছে ফেলা ID তে
+    // নীরবে কিছু বদলায় না।
+    const { before, after } = await paymentMethods.update(req.params.id, {
+      method: req.body.method,
+      accountNumber: req.body.account_number,
+      accountName: req.body.account_name,
+      status: req.body.status
+    }, req.session.user.id);
+    await auditPaymentMethod(req, 'PAYMENT_METHOD_UPDATED', after, {
+      previous: {
+        method: before.method,
+        accountNumberMasked: paymentMethods.maskAccountNumber(before.account_number),
+        status: before.status
+      }
+    });
+    afterPaymentMethodMutation();
+    req.flash('success', req.t('payment_method_updated_success'));
+  } catch (err) {
+    console.error('payment method update error:', err.message);
+    req.flash('error', publicMessage(err, req.t('payment_generic_error')));
+  }
+  res.redirect('/payment/admin/payment-methods');
+});
+
+router.post('/admin/payment-methods/:id/status', requireAdmin, requirePermission('payment_methods_manage'), paymentMethodAdminLimiter, async (req, res) => {
+  try {
+    const status = req.body.status === 'active' ? 'active' : 'inactive';
+    const { after } = await paymentMethods.setStatus(req.params.id, status, req.session.user.id);
+    await auditPaymentMethod(req,
+      status === 'active' ? 'PAYMENT_METHOD_ACTIVATED' : 'PAYMENT_METHOD_DEACTIVATED', after);
+    afterPaymentMethodMutation();
+    req.flash('success', status === 'active'
+      ? req.t('payment_method_activated_success')
+      : req.t('payment_method_deactivated_success'));
+  } catch (err) {
+    console.error('payment method status error:', err.message);
+    req.flash('error', publicMessage(err, req.t('payment_generic_error')));
+  }
+  res.redirect('/payment/admin/payment-methods');
+});
+
+router.post('/admin/payment-methods/:id/delete', requireAdmin, requirePermission('payment_methods_manage'), paymentMethodAdminLimiter, async (req, res) => {
+  try {
+    const row = await paymentMethods.remove(req.params.id, req.session.user.id);
+    await auditPaymentMethod(req, 'PAYMENT_METHOD_DELETED', row);
+    afterPaymentMethodMutation();
+    req.flash('success', req.t('payment_method_deleted_success'));
+  } catch (err) {
+    console.error('payment method delete error:', err.message);
+    req.flash('error', publicMessage(err, req.t('payment_generic_error')));
+  }
+  res.redirect('/payment/admin/payment-methods');
 });
 
 router.get('/admin/summary', requireAdmin, requirePermission('payments_view'), async (req, res) => {
