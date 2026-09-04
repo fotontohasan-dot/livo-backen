@@ -355,13 +355,43 @@ test.describe('গুরুত্বপূর্ণ ইউজার ফ্লো
   });
 
   test('উইথড্র পেজ — লোড হয়, কার্ড না থাকলে/থাকলে ফর্ম প্রত্যাশিতভাবে আচরণ করে', async ({ page }) => {
-    await restoreSession(page, sessionCookies);
-    const issues = attachErrorTracking(page);
-    const res = await page.goto('/payment/withdraw', { waitUntil: 'domcontentloaded' });
-    expect(res.status()).toBeLessThan(500);
-    // আগের টেস্টে একটা ব্যাংক কার্ড যোগ করা হয়েছে, তাই সাবমিট বাটন এখন সক্রিয় থাকা উচিত
-    await expect(page.locator('#withdrawSubmitBtn')).toBeEnabled();
-    assertClean(issues);
+    // উইথড্র সময়সূচি (services/withdrawalWindow.js) রাত ১১টা–সকাল ৭টা ফর্মটা
+    // নিষ্ক্রিয় রাখে। সেটা ছেড়ে দিলে এই টেস্ট CI কোন সময়ে চলছে তার উপর নির্ভর
+    // করত। তাই জানালাটা স্পষ্টভাবে খোলা ধরা হচ্ছে — এখানে যাচাইয়ের বিষয়
+    // কার্ড থাকা অবস্থায় ফর্মের আচরণ, সময়সূচি নয়। সময়সূচির নিজস্ব আচরণ
+    // tests/withdrawalWindow.test.js-এ যাচাই হয়।
+    await pool.query(
+      `INSERT INTO site_settings (key, value) VALUES ('withdrawal_window_mode', 'open')
+       ON CONFLICT (key) DO UPDATE SET value = 'open'`
+    );
+    try {
+      await restoreSession(page, sessionCookies);
+      const issues = attachErrorTracking(page);
+      const res = await page.goto('/payment/withdraw', { waitUntil: 'domcontentloaded' });
+      expect(res.status()).toBeLessThan(500);
+      // আগের টেস্টে একটা ব্যাংক কার্ড যোগ করা হয়েছে, তাই সাবমিট বাটন এখন সক্রিয় থাকা উচিত
+      await expect(page.locator('#withdrawSubmitBtn')).toBeEnabled();
+      assertClean(issues);
+    } finally {
+      // অ্যাসারশন ফেল করলেও ওভাররাইডটা যেন পরের টেস্টে ছড়িয়ে না পড়ে
+      await pool.query("DELETE FROM site_settings WHERE key = 'withdrawal_window_mode'");
+    }
+  });
+
+  test('উইথড্র পেজ — সময়সূচি অনুযায়ী বন্ধ থাকলে ফর্ম নিষ্ক্রিয় ও কারণ দেখানো হয়', async ({ page }) => {
+    await pool.query(
+      `INSERT INTO site_settings (key, value) VALUES ('withdrawal_window_mode', 'closed')
+       ON CONFLICT (key) DO UPDATE SET value = 'closed'`
+    );
+    try {
+      await restoreSession(page, sessionCookies);
+      const res = await page.goto('/payment/withdraw', { waitUntil: 'domcontentloaded' });
+      // পেজটা খোলা থাকে যাতে ইউজার কারণ জানতে পারেন, শুধু ফর্মটাই বন্ধ
+      expect(res.status()).toBeLessThan(500);
+      await expect(page.locator('#withdrawSubmitBtn')).toBeDisabled();
+    } finally {
+      await pool.query("DELETE FROM site_settings WHERE key = 'withdrawal_window_mode'");
+    }
   });
 
   test('নোটিফিকেশন/গেমস/স্পোর্টস নেভিগেশন — কোনো পেজ ব্রেক করে না', async ({ page }) => {

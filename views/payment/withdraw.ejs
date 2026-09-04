@@ -182,9 +182,29 @@
       </div>
     <% } %>
 
+    <%
+      // সময়সূচি অনুযায়ী উইথড্র বন্ধ থাকলে ফর্ম নিষ্ক্রিয় করা হয়। এটা নিছক
+      // সুবিধা — আসল যাচাই সার্ভারে (middleware/withdrawalWindow.js), তাই
+      // কেউ ফর্ম চালু করে পাঠালেও রিকোয়েস্ট গৃহীত হবে না।
+      var ww = locals.withdrawalWindow || { open: true };
+      var windowClosed = ww.open === false;
+    %>
+    <% if (windowClosed) { %>
+      <div class="mx-4 mb-4 rounded-2xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-200" role="status">
+        <div class="font-bold mb-1">
+          <i class="fas fa-clock"></i> <%= t.withdraw_window_status_closed %>
+        </div>
+        <% if (ww.reason === 'scheduled_closed') { %>
+          <%= t.withdraw_window_closed_scheduled.replace('{start}', ww.start).replace('{end}', ww.end) %>
+        <% } else { %>
+          <%= t.withdraw_window_closed_manual %>
+        <% } %>
+      </div>
+    <% } %>
+
     <form action="/payment/withdraw" method="POST" id="withdrawForm" onsubmit="LivoToast.setLoading(document.getElementById('withdrawSubmitBtn'), true, 'উইথড্র অনুরোধ পাঠানো হচ্ছে...')">
       <!-- Withdrawal Form -->
-      <% var formGated = locked || pinNotConfigured || pinLocked; %>
+      <% var formGated = locked || pinNotConfigured || pinLocked || windowClosed; %>
       <fieldset <%= formGated ? 'disabled' : '' %> class="space-y-5 <%= formGated ? 'opacity-50' : '' %>">
 
         <% if (!cards || cards.length === 0) { %>
