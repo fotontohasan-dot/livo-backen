@@ -53,6 +53,20 @@ module.exports = {
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'text-summary', 'lcov', 'html'],
   maxWorkers: 1,
+  // প্রতিটা টেস্ট ফাইল Jest-এর নিজস্ব module sandbox-এ চলে, তাই
+  // tests/helpers/app ইমপোর্ট করা ~98টা ফাইলের প্রত্যেকে নতুন Express app,
+  // নতুন pg Pool, নতুন Socket.io সার্ভার ও BullMQ অবজেক্ট বানায়। ফাইল শেষ
+  // হলেও ওগুলো ছাড়া পায় না — মাপা: ৩০ সুইটে RSS ৩.৭০ GB (heap মাত্র ৫৫৬ MB,
+  // অর্থাৎ বাকিটা non-heap), এরপর ৪ GB বক্সে OOM kill।
+  //
+  // অ্যাপে লিক নেই — একটাই app instance-এ ৩,০০০ রিকোয়েস্টে RSS ২৯২→৩০০ MB-তে
+  // সমতল থাকে। সমস্যাটা পুরোপুরি হার্নেসের।
+  //
+  // --runInBand main process-এ চালায়, তাই সেখানে কিছুই রিসাইকল করা যায় না।
+  // worker process-এ চালালে Jest ফাইলের মাঝে idle worker-টা রিস্টার্ট করতে
+  // পারে। মাপা: --runInBand-এ tests/security ২৬ সুইটে SIGKILL; এই সেটিংয়ে
+  // পুরো সুইট ১৪০ suites / ২০১০ tests সবুজ, RSS ~১.৭ GB-তে স্থির।
+  workerIdleMemoryLimit: '400MB',
   forceExit: true,
   verbose: true
 };
