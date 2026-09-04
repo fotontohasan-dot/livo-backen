@@ -155,10 +155,16 @@ function generateCrashPoint() {
 router.post('/play', isAuth, async (req, res) => {
   const { gameSlug, amount, selection, demo } = req.body;
   const userId = req.session.user.id;
-  const betAmount = parseInt(amount);
+  // parseInt() একটা numeric prefix পেলেই বাকি আবর্জনা ফেলে দিত — তাই
+  // "10; DROP TABLE users" বা "50abc" বৈধ বাজি হিসেবে গৃহীত হতো। এখন পুরো
+  // ইনপুটটাই একটা পরিষ্কার সংখ্যা হতে হবে, নইলে সরাসরি প্রত্যাখ্যান।
+  const isCleanNumber =
+    (typeof amount === 'number' && Number.isFinite(amount)) ||
+    (typeof amount === 'string' && /^\s*\d+(\.\d+)?\s*$/.test(amount));
+  const betAmount = isCleanNumber ? Math.floor(Number(amount)) : NaN;
   const isDemo = !!demo;
 
-  if (isNaN(betAmount) || betAmount <= 0) return res.status(400).json({ success: false, message: req.t('common_enter_valid_amount') });
+  if (!Number.isFinite(betAmount) || betAmount <= 0) return res.status(400).json({ success: false, message: req.t('common_enter_valid_amount') });
 
   // ক্যাটালগে নাম থাকা আর গেম খেলা যাওয়া এক নয় — লজিক না থাকলে এখানেই থামা,
   // ব্যালেন্স স্পর্শ করার আগে।
@@ -268,7 +274,16 @@ router.post('/play', isAuth, async (req, res) => {
     gameResult = result.gameResult;
 
     const netChange = winAmount - betAmount;
-    await client.query(`UPDATE users SET ${balanceCol} = ${balanceCol} + $1 WHERE id = $2`, [netChange, userId]);
+    // RETURNING দিয়ে DB-র প্রকৃত ব্যালেন্স নেওয়া হচ্ছে। আগে session-এ
+    // `coins += netChange` করা হতো, যেটা একটা মিরর মাত্র — অ্যাডমিন ক্রেডিট,
+    // ডিপোজিট অনুমোদন, cashback/commission-এর async রাইট বা অন্য ট্যাব থেকে
+    // ব্যালেন্স বদলালে ওই মিরর সরে যেত আর UI ভুল newBalance দেখাত।
+    // এই ফাইলের cashout পথ (নিচে) ও বাকি সব financial route ইতিমধ্যেই
+    // RETURNING-এর মান ব্যবহার করে; /play এখন সেই একই নিয়মে এলো।
+    const balUpd = await client.query(
+      `UPDATE users SET ${balanceCol} = ${balanceCol} + $1 WHERE id = $2 RETURNING ${balanceCol} AS balance`,
+      [netChange, userId]
+    );
 
     if (isDemo) {
       await client.query('INSERT INTO demo_transactions (user_id, category, type, amount, description) VALUES ($1, $2, $3, $4, $5)',
@@ -278,7 +293,7 @@ router.post('/play', isAuth, async (req, res) => {
           [userId, 'casino', 'win', winAmount, `${supportedGames[gameSlug] || gameSlug} জয় (ডেমো)`]);
       }
       await client.query('COMMIT');
-      req.session.user.demo_balance = Number(req.session.user.demo_balance || 0) + netChange;
+      req.session.user.demo_balance = Number(balUpd.rows[0].balance);
       broadcastDemoStats().catch(e => console.error('demo stats:', e.message));
       return res.json({ success: true, demo: true, newBalance: req.session.user.demo_balance, winAmount, gameResult });
     }
@@ -304,7 +319,7 @@ router.post('/play', isAuth, async (req, res) => {
                          [userId, winAmount, 'game_play', `${supportedGames[gameSlug] || gameSlug} জয়`]);
     }
     await client.query('COMMIT');
-    req.session.user.coins += netChange;
+    req.session.user.coins = Number(balUpd.rows[0].balance);
     broadcastDemoStats().catch(e => console.error('demo stats:', e.message));
 
     addTurnover(userId, 'casino', betAmount).catch(e => console.error('turnover:', e.message));
