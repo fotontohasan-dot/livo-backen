@@ -299,7 +299,18 @@ app.set('refreshTranslationsCache', refreshTranslationsCache);
 app.set('getTranslations', () => translations);
 
 app.get('/lang/:code', (req, res) => {
-  req.session.lang = req.params.code === 'en' ? 'en' : 'bn';
+  const chosen = req.params.code === 'en' ? 'en' : 'bn';
+  req.session.lang = chosen;
+  // লগইন করা থাকলে পছন্দটা users.preferred_language-এ লেখা হয়, যাতে সেশন শেষ
+  // হলে বা অন্য ডিভাইস থেকে লগইন করলেও ভাষা মনে থাকে (আগে শুধু সেশনে থাকত,
+  // তাই প্রতিবার লগইনে ডিফল্টে ফিরে যেত)। লেখাটা fire-and-forget —
+  // ডেটাবেস সাময়িকভাবে না পেলেও ভাষা বদলানো ব্যর্থ হবে না, শুধু persist হবে না।
+  // `chosen` উপরের লাইনেই দুটো আক্ষরিক মানে সীমাবদ্ধ, তাই ক্লায়েন্টের কাঁচা
+  // ইনপুট কখনো কলামে পৌঁছায় না (কলামে CHECK constraint-ও আছে)।
+  if (req.session.user && req.session.user.id) {
+    pool.query('UPDATE users SET preferred_language = $1 WHERE id = $2', [chosen, req.session.user.id])
+      .catch((e) => console.error('preferred_language save failed:', e.message));
+  }
   // Referer সম্পূর্ণভাবে ক্লায়েন্ট-নিয়ন্ত্রিত। আগে এটা সরাসরি res.redirect()-এ বসানো হতো,
   // ফলে `/lang/en` একটা open redirect ছিল — Referer হিসেবে https://evil.example.com,
   // //evil.example.com বা javascript: স্কিম পাঠালে ব্রাউজার সেখানেই চলে যেত (যাচাই করা হয়েছে)।
@@ -307,6 +318,34 @@ app.get('/lang/:code', (req, res) => {
   // (same-host যাচাই, protocol-relative ও non-http স্কিম প্রত্যাখ্যান), তাই নতুন কিছু
   // না বানিয়ে সেটাই পুনর্ব্যবহার করা হলো। বৈধ সাইট-অভ্যন্তরীণ Referer আগের মতোই কাজ করে।
   res.redirect(backUrl(req, '/'));
+});
+
+// লগইনের পরে সেভ করা ভাষা পছন্দ ফিরিয়ে আনা।
+//
+// প্রতিটি লগইন পথে (সাধারণ লগইন, রেজিস্ট্রেশন, Google OAuth, অ্যাডমিন লগইন,
+// অ্যাডমিন 2FA) আলাদা করে কোড বসানোর বদলে এখানে একটাই মিডলওয়্যার — কারণ
+// regenerateSession() লগইনের সময় সেশন খালি করে দেয়, ফলে নিচের ফ্ল্যাগটাও মুছে
+// যায় এবং পছন্দটা ঠিক একবার আবার পড়া হয়।
+//
+// সেশনে প্রতি লগইনে একবারই query চলে (langRestored ফ্ল্যাগ), তাই এটা প্রতি
+// রিকোয়েস্টে ডেটাবেস চাপ বাড়ায় না। ব্যর্থ হলে চুপচাপ এগিয়ে যায় — ভাষা পছন্দ
+// পড়তে না পারা কখনো পেজ লোড আটকাবে না।
+//
+// অগ্রাধিকার: সেশনে ইতিমধ্যে ভাষা থাকলে (এই সেশনেই ব্যবহারকারী সুইচ করেছেন)
+// সেটাই জেতে; নাহলে ডেটাবেসের পছন্দ; কোনোটাই না থাকলে সাইটের ডিফল্ট।
+app.use(async (req, res, next) => {
+  if (!req.session || !req.session.user || !req.session.user.id) return next();
+  if (req.session.langRestored) return next();
+  req.session.langRestored = true;
+  if (req.session.lang) return next();
+  try {
+    const r = await pool.query('SELECT preferred_language FROM users WHERE id = $1', [req.session.user.id]);
+    const pref = r.rows[0] && r.rows[0].preferred_language;
+    if (pref === 'bn' || pref === 'en') req.session.lang = pref;
+  } catch (e) {
+    console.error('preferred_language load failed:', e.message);
+  }
+  next();
 });
 
 app.post('/announcements/:id/dismiss', async (req, res) => {

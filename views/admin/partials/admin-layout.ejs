@@ -284,7 +284,7 @@
                 </div>
                 <div>
                     <span class="logo-font text-3xl font-semibold tracking-tighter">Livo</span>
-                    <span class="text-blue-400 text-xl font-semibold">Admin</span>
+                    <span class="text-blue-400 text-xl font-semibold"><%= t('admin_col_admin') %></span>
                 </div>
                 <button onclick="closeMobileSidebar()" aria-label="<%= t('admin_ui_close_menu') %>"
                         class="lg:hidden ml-auto text-slate-400 hover:text-white p-2 -mr-2">
@@ -358,6 +358,8 @@
             <p id="adminNavNoResult" class="hidden px-4 py-6 text-center text-xs text-slate-500"><%= t('admin_ui_no_menu_match') %></p>
             </nav>
 
+            <!-- ভাষা নির্বাচক — দুই লেআউটেই একই পার্শিয়াল ব্যবহার হয় -->
+            <%- include('./lang-switch') %>
 
             <!-- Admin Profile -->
             <div class="px-4 py-4 border-t border-slate-700 bg-slate-900/50">

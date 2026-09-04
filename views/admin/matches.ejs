@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ম্যাচসমূহ • Livo Admin</title>
+  <title><%= t('admin_title_matches') %></title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <%- include('./partials/pwa-head') %>
@@ -23,12 +23,12 @@
         <button onclick="exportMatchesCSV()" 
                 class="px-4 py-2.5 bg-[#334155] hover:bg-[#475569] text-white text-sm font-medium rounded-2xl flex items-center gap-2 transition-all">
           <i class="fas fa-download"></i>
-          <span>Export CSV</span>
+          <span><%= t('admin_btn_export_csv') %></span>
         </button>
         <button onclick="document.getElementById('add-match-modal').classList.remove('hidden')" 
                 class="px-5 py-2.5 bg-[#f59e0b] hover:bg-[#d97706] text-black font-bold rounded-2xl flex items-center gap-2 text-sm shadow-lg transition-all active:scale-[0.985]">
           <i class="fas fa-plus"></i>
-          <span>নতুন ম্যাচ</span>
+          <span><%= t('admin_btn_new_match') %></span>
         </button>
       </div>
     </div>
@@ -38,7 +38,7 @@
       <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-5">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-gray-400 text-sm">Total Matches</p>
+            <p class="text-gray-400 text-sm"><%= t('admin_stat_total_matches') %></p>
             <p class="text-3xl font-bold text-white mt-1"><%= matches ? matches.length : 0 %></p>
           </div>
           <div class="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center">
@@ -49,7 +49,7 @@
       <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-5">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-gray-400 text-sm">Live Now</p>
+            <p class="text-gray-400 text-sm"><%= t('admin_stat_live_now') %></p>
             <p class="text-3xl font-bold text-red-400 mt-1"><%= matches ? matches.filter(m => m.status === 'live').length : 0 %></p>
           </div>
           <div class="w-12 h-12 bg-red-500/10 rounded-2xl flex items-center justify-center">
@@ -60,7 +60,7 @@
       <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-5">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-gray-400 text-sm">Upcoming</p>
+            <p class="text-gray-400 text-sm"><%= t('admin_status_upcoming') %></p>
             <p class="text-3xl font-bold text-yellow-400 mt-1"><%= matches ? matches.filter(m => m.status === 'upcoming').length : 0 %></p>
           </div>
           <div class="w-12 h-12 bg-yellow-500/10 rounded-2xl flex items-center justify-center">
@@ -71,7 +71,7 @@
       <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-5">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-gray-400 text-sm">Completed</p>
+            <p class="text-gray-400 text-sm"><%= t('admin_status_completed') %></p>
             <p class="text-3xl font-bold text-emerald-400 mt-1"><%= matches ? matches.filter(m => m.status === 'completed').length : 0 %></p>
           </div>
           <div class="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center">
@@ -87,7 +87,7 @@
         <div class="flex-1">
           <div class="relative">
             <i class="fas fa-search absolute left-4 top-3.5 text-gray-500"></i>
-            <input type="text" id="searchInput" placeholder="Search by team name..." 
+            <input type="text" id="searchInput" placeholder="<%= t('admin_ph_search_team') %>" 
                    class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl pl-11 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f59e0b]"
                    onkeyup="filterMatches()">
           </div>
@@ -95,20 +95,20 @@
         <div class="w-full md:w-48">
           <select id="statusFilter" onchange="filterMatches()" 
                   class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b]">
-            <option value="">All Status</option>
-            <option value="live">Live</option>
-            <option value="upcoming">Upcoming</option>
-            <option value="completed">Completed</option>
+            <option value=""><%= t('admin_filter_all_status') %></option>
+            <option value="live"><%= t('admin_status_live') %></option>
+            <option value="upcoming"><%= t('admin_status_upcoming') %></option>
+            <option value="completed"><%= t('admin_status_completed') %></option>
           </select>
         </div>
         <div class="w-full md:w-48">
           <select id="sportFilter" onchange="filterMatches()" 
                   class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b]">
-            <option value="">All Sports</option>
-            <option value="cricket">Cricket</option>
-            <option value="football">Football</option>
-            <option value="basketball">Basketball</option>
-            <option value="tennis">Tennis</option>
+            <option value=""><%= t('admin_filter_all_sports') %></option>
+            <option value="cricket"><%= t('admin_sport_cricket') %></option>
+            <option value="football"><%= t('admin_sport_football') %></option>
+            <option value="basketball"><%= t('admin_sport_basketball') %></option>
+            <option value="tennis"><%= t('admin_sport_tennis') %></option>
           </select>
         </div>
       </div>
@@ -119,12 +119,12 @@
       <table class="w-full text-sm" id="matchesTable">
         <thead class="bg-[#0f172a]">
           <tr class="text-gray-400">
-            <th class="text-left px-6 py-4 font-normal">Match</th>
-            <th class="text-center px-4 py-4 font-normal">Sport</th>
-            <th class="text-center px-4 py-4 font-normal">Start Time</th>
-            <th class="text-center px-4 py-4 font-normal">Status</th>
-            <th class="text-center px-4 py-4 font-normal">Markets</th>
-            <th class="text-center px-6 py-4 font-normal">Actions</th>
+            <th class="text-left px-6 py-4 font-normal"><%= t('admin_col_match') %></th>
+            <th class="text-center px-4 py-4 font-normal"><%= t('admin_col_sport') %></th>
+            <th class="text-center px-4 py-4 font-normal"><%= t('admin_col_start_time') %></th>
+            <th class="text-center px-4 py-4 font-normal"><%= t('admin_col_status') %></th>
+            <th class="text-center px-4 py-4 font-normal"><%= t('admin_col_markets') %></th>
+            <th class="text-center px-6 py-4 font-normal"><%= t('admin_col_actions') %></th>
           </tr>
         </thead>
         <tbody class="divide-y divide-[#334155] text-gray-300">
@@ -146,18 +146,18 @@
               </td>
               <td class="px-4 py-4 text-center">
                 <% if(m.status === 'live') { %>
-                  <span class="px-3 py-1 text-xs rounded-full bg-red-500/20 text-red-400 font-medium">● Live</span>
+                  <span class="px-3 py-1 text-xs rounded-full bg-red-500/20 text-red-400 font-medium"><%= t('admin_badge_live') %></span>
                 <% } else if(m.status === 'upcoming') { %>
-                  <span class="px-3 py-1 text-xs rounded-full bg-yellow-500/20 text-yellow-400 font-medium">Upcoming</span>
+                  <span class="px-3 py-1 text-xs rounded-full bg-yellow-500/20 text-yellow-400 font-medium"><%= t('admin_status_upcoming') %></span>
                 <% } else { %>
-                  <span class="px-3 py-1 text-xs rounded-full bg-emerald-500/20 text-emerald-400 font-medium">Completed</span>
+                  <span class="px-3 py-1 text-xs rounded-full bg-emerald-500/20 text-emerald-400 font-medium"><%= t('admin_status_completed') %></span>
                 <% } %>
               </td>
               <td class="px-4 py-4 text-center">
                 <a href="/admin/markets/<%= m.id %>" 
                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#334155] hover:bg-[#475569] rounded-xl text-xs transition-all">
                   <i class="fas fa-chart-line"></i>
-                  <span>View Markets</span>
+                  <span><%= t('admin_btn_view_markets') %></span>
                 </a>
               </td>
               <td class="px-6 py-4">
@@ -176,7 +176,7 @@
             <tr>
               <td colspan="6" class="px-6 py-12 text-center text-gray-500">
                 <i class="fas fa-inbox text-4xl mb-3 block"></i>
-                No matches found. Add your first match to get started.
+                <%= t('admin_empty_matches') %>
               </td>
             </tr>
           <% } %>
@@ -189,33 +189,33 @@
       <div class="bg-[#1e2937] rounded-3xl p-8 w-full max-w-md border border-[#334155]">
         <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
           <i class="fas fa-plus-circle text-[#f59e0b]"></i> 
-          Add New Match
+          <%= t('admin_add_new_match_heading') %>
         </h3>
         
         <form action="/admin/matches/add" method="POST">
           <div class="space-y-4">
             <div>
-              <label class="text-sm text-gray-400 block mb-1.5">Team A</label>
-              <input type="text" name="team_a" required placeholder="e.g. Bangladesh" 
+              <label class="text-sm text-gray-400 block mb-1.5"><%= t('admin_field_team_a') %></label>
+              <input type="text" name="team_a" required placeholder="<%= t('admin_ph_eg_bangladesh') %>" 
                      class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white placeholder-gray-500 focus:border-[#f59e0b]">
             </div>
             <div>
-              <label class="text-sm text-gray-400 block mb-1.5">Team B</label>
-              <input type="text" name="team_b" required placeholder="e.g. India" 
+              <label class="text-sm text-gray-400 block mb-1.5"><%= t('admin_field_team_b') %></label>
+              <input type="text" name="team_b" required placeholder="<%= t('admin_ph_eg_india') %>" 
                      class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white placeholder-gray-500 focus:border-[#f59e0b]">
             </div>
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="text-sm text-gray-400 block mb-1.5">Sport</label>
+                <label class="text-sm text-gray-400 block mb-1.5"><%= t('admin_col_sport') %></label>
                 <select name="sport" class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white">
-                  <option value="cricket">Cricket</option>
-                  <option value="football">Football</option>
-                  <option value="basketball">Basketball</option>
-                  <option value="tennis">Tennis</option>
+                  <option value="cricket"><%= t('admin_sport_cricket') %></option>
+                  <option value="football"><%= t('admin_sport_football') %></option>
+                  <option value="basketball"><%= t('admin_sport_basketball') %></option>
+                  <option value="tennis"><%= t('admin_sport_tennis') %></option>
                 </select>
               </div>
               <div>
-                <label class="text-sm text-gray-400 block mb-1.5">Start Time</label>
+                <label class="text-sm text-gray-400 block mb-1.5"><%= t('admin_col_start_time') %></label>
                 <input type="datetime-local" name="start_time" 
                        class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white">
               </div>
@@ -224,9 +224,9 @@
 
           <div class="flex gap-3 mt-8">
             <button type="button" onclick="document.getElementById('add-match-modal').classList.add('hidden')"
-                    class="flex-1 py-3 bg-[#334155] hover:bg-[#475569] rounded-2xl text-sm font-medium transition-all">Cancel</button>
+                    class="flex-1 py-3 bg-[#334155] hover:bg-[#475569] rounded-2xl text-sm font-medium transition-all"><%= t('admin_btn_cancel') %></button>
             <button type="submit" 
-                    class="flex-1 py-3 bg-[#f59e0b] hover:bg-[#d97706] text-black font-bold rounded-2xl transition-all active:scale-[0.985]">Add Match</button>
+                    class="flex-1 py-3 bg-[#f59e0b] hover:bg-[#d97706] text-black font-bold rounded-2xl transition-all active:scale-[0.985]"><%= t('admin_btn_add_match') %></button>
           </div>
         </form>
       </div>

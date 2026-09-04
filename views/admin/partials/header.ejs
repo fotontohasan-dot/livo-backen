@@ -62,11 +62,11 @@
 
 <script>
   function showAdminToast(msg) {
-    var t = document.getElementById('adminToast');
-    if (!t) return;
-    t.textContent = msg;
-    t.classList.add('show');
-    setTimeout(function () { t.classList.remove('show'); }, 2600);
+    var toastEl = document.getElementById('adminToast');
+    if (!toastEl) return;
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    setTimeout(function () { toastEl.classList.remove('show'); }, 2600);
   }
 </script>
 

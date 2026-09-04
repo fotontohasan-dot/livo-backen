@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>সাপোর্ট চ্যাট • Livo Admin</title>
+  <title><%= t('admin_title_support_chat') %></title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
@@ -22,12 +22,12 @@
             <button onclick="refreshConversations()" 
                     class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm transition-colors">
                 <i class="fas fa-sync-alt"></i>
-                <span>Refresh</span>
+                <span><%= t('admin_btn_refresh') %></span>
             </button>
             <button onclick="exportChatLogs()" 
                     class="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-black px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
                 <i class="fas fa-download"></i>
-                <span>Export Logs</span>
+                <span><%= t('admin_btn_export_logs') %></span>
             </button>
         </div>
     </div>
@@ -37,7 +37,7 @@
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-gray-400 text-sm">Total Conversations</p>
+                    <p class="text-gray-400 text-sm"><%= t('admin_stat_total_conversations') %></p>
                     <h3 class="text-3xl font-bold text-white mt-1" id="stat-total">124</h3>
                 </div>
                 <div class="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center">
@@ -49,7 +49,7 @@
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-gray-400 text-sm">Active Chats</p>
+                    <p class="text-gray-400 text-sm"><%= t('admin_stat_active_chats') %></p>
                     <h3 class="text-3xl font-bold text-white mt-1" id="stat-active">18</h3>
                 </div>
                 <div class="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center">
@@ -61,7 +61,7 @@
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-gray-400 text-sm">Pending Replies</p>
+                    <p class="text-gray-400 text-sm"><%= t('admin_stat_pending_replies') %></p>
                     <h3 class="text-3xl font-bold text-white mt-1" id="stat-pending">7</h3>
                 </div>
                 <div class="w-12 h-12 bg-orange-500/10 rounded-xl flex items-center justify-center">
@@ -73,7 +73,7 @@
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-gray-400 text-sm">Resolved Today</p>
+                    <p class="text-gray-400 text-sm"><%= t('admin_stat_resolved_today') %></p>
                     <h3 class="text-3xl font-bold text-white mt-1" id="stat-resolved">42</h3>
                 </div>
                 <div class="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center">
@@ -92,7 +92,7 @@
                 <div class="relative">
                     <input type="text" id="search-conversation" 
                            class="w-full bg-gray-800 border border-gray-700 text-white rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-yellow-500"
-                           placeholder="Search by username...">
+                           placeholder="<%= t('admin_ph_search_username') %>">
                     <i class="fas fa-search absolute left-4 top-3.5 text-gray-500"></i>
                 </div>
             </div>
@@ -111,20 +111,20 @@
                         <i class="fas fa-user text-yellow-500"></i>
                     </div>
                     <div>
-                        <div class="font-semibold text-white" id="chat-header">Select a conversation</div>
-                        <div class="text-xs text-gray-500" id="chat-user-status">Online • Last seen just now</div>
+                        <div class="font-semibold text-white" id="chat-header"><%= t('admin_chat_select_conversation') %></div>
+                        <div class="text-xs text-gray-500" id="chat-user-status"><%= t('admin_chat_online_now') %></div>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
                     <button onclick="viewUserProfile()" 
                             class="text-xs px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-white flex items-center gap-1.5">
                         <i class="fas fa-user"></i>
-                        <span>Profile</span>
+                        <span><%= t('admin_col_profile') %></span>
                     </button>
                     <button onclick="quickBanUser()" 
                             class="text-xs px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 flex items-center gap-1.5">
                         <i class="fas fa-ban"></i>
-                        <span>Ban</span>
+                        <span><%= t('admin_btn_ban') %></span>
                     </button>
                 </div>
             </div>
@@ -141,7 +141,7 @@
                         <i class="fas fa-file text-yellow-500"></i>
                         <span id="preview-name" class="text-gray-300 text-sm"></span>
                     </div>
-                    <button onclick="clearFile()" class="text-red-400 hover:text-red-500 text-xs font-medium">REMOVE</button>
+                    <button onclick="clearFile()" class="text-red-400 hover:text-red-500 text-xs font-medium"><%= t('admin_btn_remove') %></button>
                 </div>
                 
                 <div class="flex items-center gap-2">
@@ -152,7 +152,7 @@
                     
                     <input type="text" id="message-input" 
                            class="flex-1 bg-gray-800 border border-gray-700 focus:border-yellow-500 text-white rounded-2xl px-5 py-3 text-sm outline-none"
-                           placeholder="Type your reply...">
+                           placeholder="<%= t('admin_ph_type_reply') %>">
                     
                     <button id="send-button" aria-label="<%= t('admin_ui_send_message') %>"
                             class="bg-yellow-500 hover:bg-yellow-600 transition-colors text-black w-11 h-11 flex items-center justify-center rounded-2xl">
@@ -168,8 +168,8 @@
                 <div class="mx-auto w-16 h-16 bg-gray-800 rounded-2xl flex items-center justify-center mb-4">
                     <i class="fas fa-comments text-3xl text-gray-600"></i>
                 </div>
-                <h4 class="text-white font-semibold">No conversation selected</h4>
-                <p class="text-gray-500 text-sm mt-1">Choose a user from the left to start chatting</p>
+                <h4 class="text-white font-semibold"><%= t('admin_chat_none_selected') %></h4>
+                <p class="text-gray-500 text-sm mt-1"><%= t('admin_chat_pick_user') %></p>
             </div>
         </div>
 
@@ -180,20 +180,20 @@
                     <i class="fas fa-user text-4xl text-gray-500"></i>
                 </div>
                 <div class="font-bold text-lg text-white" id="info-username">—</div>
-                <div class="text-xs text-gray-500" id="info-userid">User ID: —</div>
+                <div class="text-xs text-gray-500" id="info-userid"><%= t('admin_chat_user_id') %>: —</div>
             </div>
 
             <div class="space-y-4 text-sm">
                 <div class="flex justify-between py-2 border-b border-gray-800">
-                    <span class="text-gray-400">Joined</span>
+                    <span class="text-gray-400"><%= t('admin_col_joined') %></span>
                     <span class="text-white font-medium" id="info-joined">—</span>
                 </div>
                 <div class="flex justify-between py-2 border-b border-gray-800">
-                    <span class="text-gray-400">Total Bets</span>
+                    <span class="text-gray-400"><%= t('admin_stat_total_bets') %></span>
                     <span class="text-white font-medium" id="info-bets">—</span>
                 </div>
                 <div class="flex justify-between py-2 border-b border-gray-800">
-                    <span class="text-gray-400">Balance</span>
+                    <span class="text-gray-400"><%= t('admin_col_balance') %></span>
                     <span class="text-emerald-400 font-semibold" id="info-balance">—</span>
                 </div>
             </div>
@@ -201,7 +201,7 @@
             <div class="mt-6 pt-4 border-t border-gray-800">
                 <button onclick="viewUserProfile()" 
                         class="w-full py-2.5 text-sm bg-gray-800 hover:bg-gray-700 rounded-xl text-white font-medium transition-colors">
-                    View Full Profile
+                    <%= t('admin_btn_view_full_profile') %>
                 </button>
             </div>
         </div>

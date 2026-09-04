@@ -28,7 +28,7 @@
       <button onclick="exportMarketsCSV()" 
               class="px-4 py-2.5 bg-[#334155] hover:bg-[#475569] text-white text-sm font-medium rounded-2xl flex items-center gap-2 transition-all">
         <i class="fas fa-download"></i>
-        <span>Export</span>
+        <span><%= t('admin_btn_export') %></span>
       </button>
     </div>
 
@@ -37,7 +37,7 @@
       <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-5">
         <div class="flex justify-between items-start">
           <div>
-            <p class="text-gray-400 text-sm">Total Markets</p>
+            <p class="text-gray-400 text-sm"><%= t('admin_stat_total_markets') %></p>
             <p class="text-3xl font-bold text-white mt-1"><%= markets ? markets.length : 0 %></p>
           </div>
           <i class="fas fa-chart-line text-[#f59e0b] text-3xl mt-1"></i>
@@ -46,7 +46,7 @@
       <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-5">
         <div class="flex justify-between items-start">
           <div>
-            <p class="text-gray-400 text-sm">Open Markets</p>
+            <p class="text-gray-400 text-sm"><%= t('admin_stat_open_markets') %></p>
             <p class="text-3xl font-bold text-emerald-400 mt-1"><%= markets ? markets.filter(m => m.status === 'open').length : 0 %></p>
           </div>
           <i class="fas fa-unlock text-emerald-400 text-3xl mt-1"></i>
@@ -55,7 +55,7 @@
       <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-5">
         <div class="flex justify-between items-start">
           <div>
-            <p class="text-gray-400 text-sm">Settled</p>
+            <p class="text-gray-400 text-sm"><%= t('admin_status_settled') %></p>
             <p class="text-3xl font-bold text-gray-400 mt-1"><%= markets ? markets.filter(m => m.status === 'settled').length : 0 %></p>
           </div>
           <i class="fas fa-check-double text-gray-400 text-3xl mt-1"></i>
@@ -64,7 +64,7 @@
       <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-5">
         <div class="flex justify-between items-start">
           <div>
-            <p class="text-gray-400 text-sm">Suspended</p>
+            <p class="text-gray-400 text-sm"><%= t('admin_status_suspended') %></p>
             <p class="text-3xl font-bold text-orange-400 mt-1"><%= markets ? markets.filter(m => m.status === 'suspended').length : 0 %></p>
           </div>
           <i class="fas fa-pause-circle text-orange-400 text-3xl mt-1"></i>
@@ -75,31 +75,31 @@
     <!-- Add / Update Market Form -->
     <div class="bg-[#1e2937] border border-[#334155] rounded-3xl p-6 mb-6">
       <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-        <i class="fas fa-plus-circle text-[#f59e0b]"></i> Create or Update Market
+        <i class="fas fa-plus-circle text-[#f59e0b]"></i> <%= t('admin_market_create_update') %>
       </h3>
       
       <form action="/admin/markets/update" method="POST" class="grid grid-cols-1 md:grid-cols-5 gap-4">
         <input type="hidden" name="match_id" value="<%= match ? match.id : '' %>">
         
         <div class="md:col-span-1">
-          <label class="text-xs text-gray-400 block mb-1.5">Market Type</label>
+          <label class="text-xs text-gray-400 block mb-1.5"><%= t('admin_col_market_type') %></label>
           <input type="text" name="type" placeholder="match_winner" required 
                  class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-sm text-white">
         </div>
         <div class="md:col-span-2">
-          <label class="text-xs text-gray-400 block mb-1.5">Market Name / Runner</label>
-          <input type="text" name="name" placeholder="Team A Win" required 
+          <label class="text-xs text-gray-400 block mb-1.5"><%= t('admin_field_market_name_runner') %></label>
+          <input type="text" name="name" placeholder="<%= t('admin_ph_team_a_win') %>" required 
                  class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-sm text-white">
         </div>
         <div>
-          <label class="text-xs text-gray-400 block mb-1.5">Odds</label>
+          <label class="text-xs text-gray-400 block mb-1.5"><%= t('admin_col_odds') %></label>
           <input type="number" step="0.01" name="odds" placeholder="1.85" required 
                  class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-sm text-white">
         </div>
         <div class="flex items-end">
           <button type="submit" 
                   class="w-full py-3 bg-[#f59e0b] hover:bg-[#d97706] text-black font-bold rounded-2xl text-sm transition-all active:scale-[0.985]">
-            Save Market
+            <%= t('admin_btn_save_market') %>
           </button>
         </div>
       </form>
@@ -108,18 +108,18 @@
     <!-- Markets Table -->
     <div class="bg-[#1e2937] rounded-3xl border border-[#334155] overflow-x-auto">
       <div class="px-6 py-4 border-b border-[#334155] flex items-center justify-between">
-        <h3 class="font-semibold text-white">Active Markets</h3>
+        <h3 class="font-semibold text-white"><%= t('admin_active_markets') %></h3>
         <span class="text-xs px-3 py-1 bg-[#334155] rounded-full text-gray-400"><%= markets ? markets.length : 0 %> total</span>
       </div>
       
       <table class="w-full text-sm" id="marketsTable">
         <thead class="bg-[#0f172a]">
           <tr class="text-gray-400">
-            <th class="text-left px-6 py-4 font-normal">Market / Runner</th>
-            <th class="text-center px-4 py-4 font-normal">Type</th>
-            <th class="text-center px-4 py-4 font-normal">Odds</th>
-            <th class="text-center px-4 py-4 font-normal">Status</th>
-            <th class="text-center px-6 py-4 font-normal">Actions</th>
+            <th class="text-left px-6 py-4 font-normal"><%= t('admin_col_market_runner') %></th>
+            <th class="text-center px-4 py-4 font-normal"><%= t('admin_col_type') %></th>
+            <th class="text-center px-4 py-4 font-normal"><%= t('admin_col_odds') %></th>
+            <th class="text-center px-4 py-4 font-normal"><%= t('admin_col_status') %></th>
+            <th class="text-center px-6 py-4 font-normal"><%= t('admin_col_actions') %></th>
           </tr>
         </thead>
         <tbody class="divide-y divide-[#334155] text-gray-300">
@@ -137,11 +137,11 @@
               </td>
               <td class="px-4 py-4 text-center">
                 <% if(m.status === 'open') { %>
-                  <span class="px-3 py-1 text-xs rounded-full bg-emerald-500/20 text-emerald-400 font-medium">Open</span>
+                  <span class="px-3 py-1 text-xs rounded-full bg-emerald-500/20 text-emerald-400 font-medium"><%= t('admin_status_open') %></span>
                 <% } else if(m.status === 'settled') { %>
-                  <span class="px-3 py-1 text-xs rounded-full bg-gray-500/20 text-gray-400 font-medium">Settled</span>
+                  <span class="px-3 py-1 text-xs rounded-full bg-gray-500/20 text-gray-400 font-medium"><%= t('admin_status_settled') %></span>
                 <% } else { %>
-                  <span class="px-3 py-1 text-xs rounded-full bg-orange-500/20 text-orange-400 font-medium">Suspended</span>
+                  <span class="px-3 py-1 text-xs rounded-full bg-orange-500/20 text-orange-400 font-medium"><%= t('admin_status_suspended') %></span>
                 <% } %>
               </td>
               <td class="px-6 py-4">
@@ -156,7 +156,7 @@
                   <button onclick="showSettleModal('<%= m.id %>', '<%= m.name %>')" 
                           class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 rounded-xl text-xs text-white transition-all flex items-center gap-1">
                     <i class="fas fa-check"></i>
-                    <span>Settle</span>
+                    <span><%= t('admin_btn_settle') %></span>
                   </button>
                   <% } %>
                 </div>
@@ -167,7 +167,7 @@
             <tr>
               <td colspan="5" class="px-6 py-12 text-center text-gray-500">
                 <i class="fas fa-inbox text-4xl mb-3 block"></i>
-                No markets created yet for this match.
+                <%= t('admin_empty_markets') %>
               </td>
             </tr>
           <% } %>
@@ -178,21 +178,21 @@
     <!-- Settle Market Modal -->
     <div id="settle-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
       <div class="bg-[#1e2937] rounded-3xl p-8 w-full max-w-md border border-[#334155]">
-        <h3 class="text-xl font-bold text-white mb-2">Settle Market</h3>
+        <h3 class="text-xl font-bold text-white mb-2"><%= t('admin_settle_market_heading') %></h3>
         <p id="settle-market-name" class="text-gray-400 mb-6 text-sm"></p>
         
         <form id="settle-form" method="POST">
           <div class="mb-5">
-            <label class="text-sm text-gray-400 block mb-1.5">Winning Runner / Result</label>
-            <input type="text" name="result" required placeholder="e.g. Team A" 
+            <label class="text-sm text-gray-400 block mb-1.5"><%= t('admin_field_winning_runner') %></label>
+            <input type="text" name="result" required placeholder="<%= t('admin_ph_eg_team_a') %>" 
                    class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white">
           </div>
           
           <div class="flex gap-3">
             <button type="button" onclick="hideSettleModal()" 
-                    class="flex-1 py-3 bg-[#334155] hover:bg-[#475569] rounded-2xl text-sm font-medium transition-all">Cancel</button>
+                    class="flex-1 py-3 bg-[#334155] hover:bg-[#475569] rounded-2xl text-sm font-medium transition-all"><%= t('admin_btn_cancel') %></button>
             <button type="submit" 
-                    class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl transition-all">Settle &amp; Payout</button>
+                    class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl transition-all"><%= t('admin_btn_settle_payout') %></button>
           </div>
         </form>
       </div>

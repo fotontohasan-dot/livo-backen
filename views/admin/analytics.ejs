@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Analytics Dashboard • Livo Admin</title>
+  <title><%= t('admin_title_analytics') %></title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
@@ -41,36 +41,36 @@
         <form method="GET" action="/admin/analytics" style="display:flex;gap:8px;">
           <input type="date" name="from" value="<%= query.from || '' %>">
           <input type="date" name="to" value="<%= query.to || '' %>">
-          <button class="btn-xs" style="background:var(--gold,#EAB308);color:#1a1a1a;">Filter</button>
+          <button class="btn-xs" style="background:var(--gold,#EAB308);color:#1a1a1a;"><%= t('admin_btn_filter') %></button>
         </form>
-        <a href="/admin/analytics/export<%= query.from ? ('?from='+query.from+'&to='+(query.to||'')) : '' %>" class="btn-xs" style="background:#1e293b;color:#fff;text-decoration:none;"><i class="fas fa-download"></i> Export CSV</a>
+        <a href="/admin/analytics/export<%= query.from ? ('?from='+query.from+'&to='+(query.to||'')) : '' %>" class="btn-xs" style="background:#1e293b;color:#fff;text-decoration:none;"><i class="fas fa-download"></i> <%= t('admin_btn_export_csv') %></a>
         <label style="color:#94a3b8;font-size:12px;display:flex;align-items:center;gap:5px;">
-          <input type="checkbox" id="autoRefreshToggle" checked> Auto Refresh (30s)
+          <input type="checkbox" id="autoRefreshToggle" checked> <%= t('admin_auto_refresh_30s') %>
         </label>
         <span id="lastUpdated" style="color:#94a3b8;font-size:11px;"></span>
       </div>
 
       <% if (!data) { %>
-        <div style="color:#f87171;">Analytics লোড করতে সমস্যা হয়েছে।</div>
+        <div style="color:#f87171;"><%= t('admin_analytics_load_failed') %></div>
       <% } else { %>
 
       <div class="grid" id="realtimeGrid">
-        <div class="card"><div class="label">Active Users (15m)</div><div class="val"><%= data.realtime.active_now %></div></div>
-        <div class="card"><div class="label">Total Users</div><div class="val"><%= data.realtime.total_users %></div></div>
-        <div class="card"><div class="label">Bets (Last Hour)</div><div class="val"><%= data.realtime.bets_last_hour %></div></div>
-        <div class="card"><div class="label">Deposit (Last Hour)</div><div class="val">৳<%= Number(data.realtime.deposit_last_hour).toLocaleString() %></div></div>
+        <div class="card"><div class="label"><%= t('admin_stat_active_users_15m') %></div><div class="val"><%= data.realtime.active_now %></div></div>
+        <div class="card"><div class="label"><%= t('admin_stat_total_users') %></div><div class="val"><%= data.realtime.total_users %></div></div>
+        <div class="card"><div class="label"><%= t('admin_stat_bets_last_hour') %></div><div class="val"><%= data.realtime.bets_last_hour %></div></div>
+        <div class="card"><div class="label"><%= t('admin_stat_deposit_last_hour') %></div><div class="val">৳<%= Number(data.realtime.deposit_last_hour).toLocaleString() %></div></div>
       </div>
 
       <div class="grid">
-        <div class="card"><div class="label">Total Deposit</div><div class="val">৳<%= Number(data.depositWithdraw.total_deposit).toLocaleString() %></div><div class="sub"><%= data.depositWithdraw.deposit_count %>টি লেনদেন</div></div>
-        <div class="card"><div class="label">Total Withdraw</div><div class="val">৳<%= Number(data.depositWithdraw.total_withdraw).toLocaleString() %></div><div class="sub"><%= data.depositWithdraw.withdraw_count %>টি লেনদেন</div></div>
-        <div class="card"><div class="label">Pending Payments</div><div class="val"><%= data.depositWithdraw.pending_count %></div></div>
-        <div class="card"><div class="label">Total Bets Staked</div><div class="val">৳<%= Number(data.betStats.total_staked).toLocaleString() %></div><div class="sub"><%= data.betStats.total_bets %>টি বেট</div></div>
+        <div class="card"><div class="label"><%= t('admin_stat_total_deposit') %></div><div class="val">৳<%= Number(data.depositWithdraw.total_deposit).toLocaleString() %></div><div class="sub"><%= data.depositWithdraw.deposit_count %>টি লেনদেন</div></div>
+        <div class="card"><div class="label"><%= t('admin_stat_total_withdraw') %></div><div class="val">৳<%= Number(data.depositWithdraw.total_withdraw).toLocaleString() %></div><div class="sub"><%= data.depositWithdraw.withdraw_count %>টি লেনদেন</div></div>
+        <div class="card"><div class="label"><%= t('admin_stat_pending_payments') %></div><div class="val"><%= data.depositWithdraw.pending_count %></div></div>
+        <div class="card"><div class="label"><%= t('admin_stat_total_staked') %></div><div class="val">৳<%= Number(data.betStats.total_staked).toLocaleString() %></div><div class="sub"><%= data.betStats.total_bets %>টি বেট</div></div>
       </div>
 
       <div class="grid">
         <div class="card">
-          <div class="label">Queue</div>
+          <div class="label"><%= t('admin_col_queue') %></div>
           <span class="status-pill status-<%= data.health ? data.health.checks.queue.status : 'warning' %>"><i class="fas fa-circle" style="font-size:6px;"></i> <%= data.health ? data.health.checks.queue.status : 'unknown' %></span>
         </div>
         <div class="card">
@@ -82,32 +82,32 @@
           <span class="status-pill status-<%= data.health ? data.health.checks.database.status : 'error' %>"><i class="fas fa-circle" style="font-size:6px;"></i> <%= data.health ? data.health.checks.database.status : 'unknown' %></span>
         </div>
         <div class="card">
-          <div class="label">Server Uptime</div>
+          <div class="label"><%= t('admin_stat_server_uptime') %></div>
           <div class="val" style="font-size:15px;"><%= data.health ? data.health.checks.uptime.message : '-' %></div>
         </div>
       </div>
 
       <div class="grid">
-        <div class="card"><div class="label">API Requests</div><div class="val"><%= data.apiUsage.total_requests %></div><div class="sub"><%= data.apiUsage.error_requests %>টি error</div></div>
-        <div class="card"><div class="label">Avg Response Time</div><div class="val"><%= Math.round(data.apiUsage.avg_response_ms) %>ms</div></div>
+        <div class="card"><div class="label"><%= t('admin_stat_api_requests') %></div><div class="val"><%= data.apiUsage.total_requests %></div><div class="sub"><%= data.apiUsage.error_requests %>টি error</div></div>
+        <div class="card"><div class="label"><%= t('admin_stat_avg_response') %></div><div class="val"><%= Math.round(data.apiUsage.avg_response_ms) %>ms</div></div>
         <div class="card">
-          <div class="label">Fraud Alerts (Open)</div>
+          <div class="label"><%= t('admin_stat_fraud_open') %></div>
           <div class="val" style="color:<%= data.fraudStats && data.fraudStats.riskByLevel.high > 0 ? '#f87171' : 'var(--text-main)' %>">
             <%= data.fraudStats ? (data.fraudStats.riskByLevel.high + data.fraudStats.riskByLevel.medium + data.fraudStats.riskByLevel.low) : 0 %>
           </div>
           <div class="sub"><%= data.fraudStats ? data.fraudStats.riskByLevel.high : 0 %> high-risk</div>
         </div>
-        <div class="card"><div class="label">Avg Risk Score</div><div class="val"><%= data.fraudStats ? data.fraudStats.avgOpenRiskScore : 0 %></div></div>
+        <div class="card"><div class="label"><%= t('admin_stat_avg_risk') %></div><div class="val"><%= data.fraudStats ? data.fraudStats.avgOpenRiskScore : 0 %></div></div>
       </div>
 
       <div class="chart-card"><canvas id="revenueChart"></canvas></div>
       <div class="chart-card"><canvas id="growthChart"></canvas></div>
 
       <div class="chart-card">
-        <b style="color:var(--text-main);font-size:13px;">Recent Activity</b>
+        <b style="color:var(--text-main);font-size:13px;"><%= t('admin_recent_activity') %></b>
         <div class="table-scroll">
           <table class="mini" style="margin-top:10px;">
-            <thead><tr><th>Admin</th><th>Action</th><th>Details</th><th>Time</th></tr></thead>
+            <thead><tr><th><%= t('admin_col_admin') %></th><th><%= t('admin_col_action') %></th><th><%= t('admin_col_details') %></th><th><%= t('admin_col_time') %></th></tr></thead>
             <tbody>
               <% data.recentActivity.forEach(function(a) { %>
                 <tr><td><%= a.admin_username %></td><td><%= a.action_type %></td><td><%= (a.details||'').slice(0,60) %></td><td><%= new Date(a.created_at).toLocaleString('bn-BD') %></td></tr>

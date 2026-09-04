@@ -11,7 +11,7 @@
 -%>
 <% if (locals.loadError) { %>
   <div role="alert" style="margin:16px 0;padding:14px 16px;border-radius:12px;background:#7f1d1d;border:1px solid #ef4444;color:#fee2e2;font-weight:600;">
-    ⚠️ ডেটা লোড করা যায়নি — নিচের তালিকা অসম্পূর্ণ বা খালি দেখাচ্ছে সার্ভার/ডেটাবেস ত্রুটির কারণে,
-    <u>এর মানে এই নয় যে কোনো রেকর্ড নেই</u>। পেজটি রিফ্রেশ করুন; সমস্যা থাকলে সার্ভার লগ দেখুন।
+    <%= t('admin_load_error_part1') %>
+    <u><%= t('admin_load_error_part2') %></u><%= t('admin_load_error_part3') %>
   </div>
 <% } %>

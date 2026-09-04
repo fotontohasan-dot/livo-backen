@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VIP হিস্ট্রি • Livo Admin</title>
+  <title><%= t('admin_title_vip_history') %></title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     * { box-sizing: border-box; }
@@ -18,13 +18,13 @@
       <%- include('./partials/load-error') %>
       <%- include('./partials/header', { pageTitle: 'VIP রিওয়ার্ড ও আপগ্রেড হিস্ট্রি', pageSubtitle: 'সব ইউজারের VIP ক্লেইম ও লেভেল পরিবর্তনের সম্পূর্ণ লগ' }) %>
 
-      <a href="/admin/vip" style="color:#f59e0b;font-size:12px;text-decoration:none;display:inline-block;margin-bottom:12px;"><i class="fas fa-arrow-left"></i> VIP ম্যানেজমেন্টে ফিরে যান</a>
+      <a href="/admin/vip" style="color:#f59e0b;font-size:12px;text-decoration:none;display:inline-block;margin-bottom:12px;"><i class="fas fa-arrow-left"></i> <%= t('admin_back_to_vip') %></a>
 
       <div class="admin-card" style="margin-bottom:16px;">
         <div class="admin-card-header">রিওয়ার্ড / ক্লেইম হিস্ট্রি (মোট <%= rewardHistory.total %>)</div>
         <div style="overflow-x:auto;">
           <table class="admin-table">
-            <thead><tr><th>ইউজার</th><th>VIP লেভেল</th><th>ধরন</th><th>পরিমাণ</th><th>বিবরণ</th><th>তারিখ</th></tr></thead>
+            <thead><tr><th><%= t('admin_col_user') %></th><th><%= t('admin_col_vip_level') %></th><th><%= t('admin_col_type') %></th><th><%= t('admin_col_amount') %></th><th><%= t('admin_col_description') %></th><th><%= t('admin_col_date') %></th></tr></thead>
             <tbody>
               <% if (rewardHistory.rows && rewardHistory.rows.length > 0) { %>
                 <% rewardHistory.rows.forEach(r => { %>
@@ -38,7 +38,7 @@
                   </tr>
                 <% }) %>
               <% } else { %>
-                <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">কোনো রেকর্ড নেই</td></tr>
+                <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;"><%= t('admin_empty_records') %></td></tr>
               <% } %>
             </tbody>
           </table>
@@ -56,7 +56,7 @@
         <div class="admin-card-header">VIP আপগ্রেড হিস্ট্রি (মোট <%= upgradeHistory.total %>)</div>
         <div style="overflow-x:auto;">
           <table class="admin-table">
-            <thead><tr><th>ইউজার</th><th>আগের লেভেল</th><th>নতুন লেভেল</th><th>বোনাস</th><th>টার্নওভার (আপগ্রেডের সময়)</th><th>তারিখ</th></tr></thead>
+            <thead><tr><th><%= t('admin_col_user') %></th><th><%= t('admin_col_old_level') %></th><th><%= t('admin_col_new_level') %></th><th><%= t('admin_col_bonus') %></th><th><%= t('admin_col_turnover_at_upgrade') %></th><th><%= t('admin_col_date') %></th></tr></thead>
             <tbody>
               <% if (upgradeHistory.rows && upgradeHistory.rows.length > 0) { %>
                 <% upgradeHistory.rows.forEach(u => { %>
@@ -70,7 +70,7 @@
                   </tr>
                 <% }) %>
               <% } else { %>
-                <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">কোনো রেকর্ড নেই</td></tr>
+                <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;"><%= t('admin_empty_records') %></td></tr>
               <% } %>
             </tbody>
           </table>

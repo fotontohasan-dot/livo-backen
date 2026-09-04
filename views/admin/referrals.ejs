@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>রেফারেল ম্যানেজমেন্ট • Livo Admin</title>
+  <title><%= t('admin_title_referrals') %></title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     * { box-sizing: border-box; }
@@ -19,23 +19,23 @@
       <%- include('./partials/header', { pageTitle: 'রেফারেল ম্যানেজমেন্ট', pageSubtitle: 'রেফারার/রেফার্ড ইউজার, বোনাস ও কমিশন স্ট্যাটাস' }) %>
 
       <div class="grid grid-4" style="margin-bottom:14px;">
-        <div class="stat-card"><div class="stat-label">মোট রেফারেল</div><div class="stat-number"><%= summary.totalReferrals %></div></div>
-        <div class="stat-card"><div class="stat-label">বোনাস প্রদত্ত</div><div class="stat-number" style="color:#10b981;"><%= summary.bonusPaidCount %></div></div>
-        <div class="stat-card"><div class="stat-label">পেন্ডিং</div><div class="stat-number" style="color:#f59e0b;"><%= summary.totalReferrals - summary.bonusPaidCount %></div></div>
-        <div class="stat-card"><div class="stat-label">মোট কমিশন পরিশোধিত</div><div class="stat-number">৳ <%= Number(summary.totalCommissionPaid).toLocaleString('en-US') %></div></div>
+        <div class="stat-card"><div class="stat-label"><%= t('admin_stat_total_referrals') %></div><div class="stat-number"><%= summary.totalReferrals %></div></div>
+        <div class="stat-card"><div class="stat-label"><%= t('admin_stat_bonus_paid') %></div><div class="stat-number" style="color:#10b981;"><%= summary.bonusPaidCount %></div></div>
+        <div class="stat-card"><div class="stat-label"><%= t('admin_status_pending') %></div><div class="stat-number" style="color:#f59e0b;"><%= summary.totalReferrals - summary.bonusPaidCount %></div></div>
+        <div class="stat-card"><div class="stat-label"><%= t('admin_stat_total_commission_paid') %></div><div class="stat-number">৳ <%= Number(summary.totalCommissionPaid).toLocaleString('en-US') %></div></div>
       </div>
 
       <div class="admin-card" style="padding:14px;margin-bottom:14px;">
         <form method="GET" action="/admin/referrals" style="display:flex;gap:10px;flex-wrap:wrap;">
-          <input class="input" style="flex:1;min-width:220px;" type="text" name="search" value="<%= search || '' %>" placeholder="রেফারার বা রেফার্ড ইউজারনেম দিয়ে খুঁজুন...">
+          <input class="input" style="flex:1;min-width:220px;" type="text" name="search" value="<%= search || '' %>" placeholder="<%= t('admin_ph_search_referrer') %>">
           <select class="select" style="max-width:200px;" name="status">
-            <option value="">সব স্ট্যাটাস</option>
-            <option value="bonus_paid" <%= status === 'bonus_paid' ? 'selected' : '' %>>বোনাস প্রদত্ত</option>
-            <option value="pending" <%= status === 'pending' ? 'selected' : '' %>>পেন্ডিং</option>
+            <option value=""><%= t('admin_filter_all_status') %></option>
+            <option value="bonus_paid" <%= status === 'bonus_paid' ? 'selected' : '' %>><%= t('admin_stat_bonus_paid') %></option>
+            <option value="pending" <%= status === 'pending' ? 'selected' : '' %>><%= t('admin_status_pending') %></option>
           </select>
-          <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> খুঁজুন</button>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> <%= t('admin_btn_search') %></button>
           <% if (search || status) { %>
-            <a class="btn" href="/admin/referrals">রিসেট</a>
+            <a class="btn" href="/admin/referrals"><%= t('admin_btn_reset') %></a>
           <% } %>
         </form>
       </div>
@@ -46,12 +46,12 @@
           <table class="admin-table">
             <thead>
               <tr>
-                <th>রেফারার</th>
-                <th>রেফার্ড ইউজার</th>
-                <th>স্ট্যাটাস</th>
-                <th>মোট কমিশন</th>
-                <th>রেফারেল তারিখ</th>
-                <th style="text-align:right;">অ্যাকশন</th>
+                <th><%= t('admin_col_referrer') %></th>
+                <th><%= t('admin_col_referred_user') %></th>
+                <th><%= t('admin_col_status') %></th>
+                <th><%= t('admin_col_total_commission') %></th>
+                <th><%= t('admin_col_referral_date') %></th>
+                <th style="text-align:right;"><%= t('admin_col_action') %></th>
               </tr>
             </thead>
             <tbody>
@@ -68,9 +68,9 @@
                     </td>
                     <td>
                       <% if (r.signup_bonus_paid) { %>
-                        <span class="badge badge-green">বোনাস প্রদত্ত</span>
+                        <span class="badge badge-green"><%= t('admin_stat_bonus_paid') %></span>
                       <% } else { %>
-                        <span class="badge badge-amber">পেন্ডিং</span>
+                        <span class="badge badge-amber"><%= t('admin_status_pending') %></span>
                       <% } %>
                       <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">
                         <%= r.first_deposit_done ? 'ডিপোজিট সম্পন্ন' : 'ডিপোজিট বাকি' %>
@@ -79,13 +79,13 @@
                     <td style="font-weight:700;">৳ <%= Number(r.commission_earned || 0).toLocaleString('en-US') %></td>
                     <td><%= r.created_at ? new Date(r.created_at).toLocaleDateString('bn-BD') : '—' %></td>
                     <td style="text-align:right;white-space:nowrap;">
-                      <a class="btn btn-sm" href="/admin/users/<%= r.referrer_id %>">রেফারার</a>
-                      <a class="btn btn-sm" href="/admin/users/<%= r.referred_id %>">রেফার্ড</a>
+                      <a class="btn btn-sm" href="/admin/users/<%= r.referrer_id %>"><%= t('admin_col_referrer') %></a>
+                      <a class="btn btn-sm" href="/admin/users/<%= r.referred_id %>"><%= t('admin_label_referred') %></a>
                     </td>
                   </tr>
                 <% }) %>
               <% } else { %>
-                <tr><td colspan="6"><div class="empty-state">কোনো রেফারেল পাওয়া যায়নি</div></td></tr>
+                <tr><td colspan="6"><div class="empty-state"><%= t('admin_empty_referrals') %></div></td></tr>
               <% } %>
             </tbody>
           </table>
@@ -94,11 +94,11 @@
 
       <div style="display:flex;justify-content:center;gap:10px;margin-top:16px;">
         <% if (page > 1) { %>
-          <a class="btn" href="/admin/referrals?page=<%= page - 1 %>&search=<%= encodeURIComponent(search || '') %>&status=<%= status || '' %>">← আগের পেজ</a>
+          <a class="btn" href="/admin/referrals?page=<%= page - 1 %>&search=<%= encodeURIComponent(search || '') %>&status=<%= status || '' %>">&larr; <%= t('admin_pagination_prev') %></a>
         <% } %>
         <span style="padding:9px 12px;color:var(--text-muted);font-size:12px;">পেজ <%= page %> / <%= totalPages %></span>
         <% if (page < totalPages) { %>
-          <a class="btn" href="/admin/referrals?page=<%= page + 1 %>&search=<%= encodeURIComponent(search || '') %>&status=<%= status || '' %>">পরের পেজ →</a>
+          <a class="btn" href="/admin/referrals?page=<%= page + 1 %>&search=<%= encodeURIComponent(search || '') %>&status=<%= status || '' %>"><%= t('admin_pagination_next') %> &rarr;</a>
         <% } %>
       </div>
     </div>

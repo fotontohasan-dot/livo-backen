@@ -2035,6 +2035,27 @@ async function runMigrations() {
     }
     console.log('✅ payment_methods টেবিল, constraint ও ইনডেক্স ready');
 
+    // ---- ভাষা পছন্দ (bn/en) persist করা ----
+    // আগে নির্বাচিত ভাষা শুধু express-session-এ থাকত। সেশন মেয়াদ শেষ হলে বা
+    // অন্য ডিভাইস থেকে লগইন করলে ভাষা ডিফল্টে ফিরে যেত — অ্যাডমিনকে প্রতিবার
+    // আবার English বেছে নিতে হতো। কলামটা nullable এবং ডিফল্ট NULL, তাই বিদ্যমান
+    // কোনো row বদলায় না; NULL মানে "কোনো পছন্দ সেভ করা নেই", তখন আগের মতোই
+    // সাইটের ডিফল্ট ভাষা ব্যবহার হয়। CHECK constraint দুটো বৈধ মানেই সীমাবদ্ধ
+    // রাখে যাতে সেশন/ক্লায়েন্ট থেকে আসা অন্য কিছু কখনো লেখা না যায়।
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_language VARCHAR(2);`);
+    await pool.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'users_preferred_language_check'
+        ) THEN
+          ALTER TABLE users ADD CONSTRAINT users_preferred_language_check
+            CHECK (preferred_language IS NULL OR preferred_language IN ('bn','en'));
+        END IF;
+      END $$;
+    `);
+    console.log('✅ users.preferred_language কলাম ready');
+
   } catch (err) {
     // PHASE 2 fix: আগে error গিলে ফেলা হত, ফলে caller (server.js) migration
     // ব্যর্থ হওয়ার পরেও "migration done" ছাপত এবং broken schema নিয়ে listen করত।

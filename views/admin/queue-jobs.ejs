@@ -42,17 +42,17 @@ const healthMap = {
   error: { cls: 'bg-red-100 text-red-700', icon: 'fa-circle-xmark', label: 'Error' }
 };
 const hb = healthMap[h.level] || healthMap.warning;
-const typeRows = (statsByType || []).map(t => (
+const typeRows = (statsByType || []).map(row => (
   '<tr class="hover:bg-slate-50">' +
-  '<td class="px-6 py-3 text-xs font-semibold text-indigo-600">' + escapeHtml(t.type) + '</td>' +
-  '<td class="px-6 py-3 text-xs text-slate-500">' + t.pending + '</td>' +
-  '<td class="px-6 py-3 text-xs text-blue-600">' + t.processing + '</td>' +
-  '<td class="px-6 py-3 text-xs text-emerald-600">' + t.completed + '</td>' +
-  '<td class="px-6 py-3 text-xs text-red-600">' + t.failed + '</td>' +
-  '<td class="px-6 py-3 text-xs text-slate-400">' + (t.avgDurationMs ? t.avgDurationMs + ' ms' : '-') + '</td>' +
+  '<td class="px-6 py-3 text-xs font-semibold text-indigo-600">' + escapeHtml(row.type) + '</td>' +
+  '<td class="px-6 py-3 text-xs text-slate-500">' + row.pending + '</td>' +
+  '<td class="px-6 py-3 text-xs text-blue-600">' + row.processing + '</td>' +
+  '<td class="px-6 py-3 text-xs text-emerald-600">' + row.completed + '</td>' +
+  '<td class="px-6 py-3 text-xs text-red-600">' + row.failed + '</td>' +
+  '<td class="px-6 py-3 text-xs text-slate-400">' + (row.avgDurationMs ? row.avgDurationMs + ' ms' : '-') + '</td>' +
   '</tr>'
 )).join('') || '<tr><td colspan="6" class="px-6 py-6 text-center text-slate-400 text-xs">কোনো ডেটা নেই</td></tr>';
-const throughputTotal24h = (throughput || []).reduce((sum, t) => sum + t.completed + t.failed, 0);
+const throughputTotal24h = (throughput || []).reduce((sum, bucket) => sum + bucket.completed + bucket.failed, 0);
 %>
 <%- include('partials/admin-layout', {
     title: 'Job Queue',
@@ -121,7 +121,7 @@ const throughputTotal24h = (throughput || []).reduce((sum, t) => sum + t.complet
         </select>
         <select name="type" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
             <option value="">সব টাইপ</option>
-            ${(types || []).map(t => '<option value="' + t + '" ' + (f.type === t ? 'selected' : '') + '>' + t + '</option>').join('')}
+            ${(types || []).map(type => '<option value="' + type + '" ' + (f.type === type ? 'selected' : '') + '>' + type + '</option>').join('')}
         </select>
         <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">ফিল্টার</button>
         ${(f.status || f.type) ? '<a href="/admin/queue-jobs" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">রিসেট</a>' : ''}

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Announcements • Livo Admin</title>
+  <title><%= t('admin_title_announcements') %></title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     * { box-sizing: border-box; }
@@ -35,60 +35,60 @@
       <%- include('./partials/header', { pageTitle: 'Announcements & Broadcast', pageSubtitle: 'Banner / Popup / Scrolling Notice / In-App Message' }) %>
 
       <% if (error) { %><div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;color:#f87171;padding:10px 14px;border-radius:10px;margin-bottom:12px;font-size:13px;"><%= error %></div><% } %>
-      <% if (created) { %><div style="background:rgba(16,185,129,0.1);border:1px solid #10b981;color:#10b981;padding:10px 14px;border-radius:10px;margin-bottom:12px;font-size:13px;">✅ সংরক্ষণ হয়েছে।</div><% } %>
+      <% if (created) { %><div style="background:rgba(16,185,129,0.1);border:1px solid #10b981;color:#10b981;padding:10px 14px;border-radius:10px;margin-bottom:12px;font-size:13px;"><%= t('admin_msg_saved') %></div><% } %>
 
       <div class="ann-form-box">
-        <b style="color:#fff;font-size:14px;">নতুন Announcement তৈরি করুন</b>
+        <b style="color:#fff;font-size:14px;"><%= t('admin_ann_create_heading') %></b>
         <form method="POST" action="/admin/announcements/create" style="margin-top:12px;">
           <div class="ann-grid">
             <div>
-              <label class="ann-label">Type</label>
+              <label class="ann-label"><%= t('admin_col_type') %></label>
               <select name="type" required>
-                <option value="banner">Banner</option>
-                <option value="popup">Popup</option>
-                <option value="scrolling">Scrolling Notice</option>
-                <option value="inapp">In-App Broadcast</option>
+                <option value="banner"><%= t('admin_ann_type_banner') %></option>
+                <option value="popup"><%= t('admin_ann_type_popup') %></option>
+                <option value="scrolling"><%= t('admin_ann_type_scrolling') %></option>
+                <option value="inapp"><%= t('admin_ann_type_broadcast') %></option>
               </select>
             </div>
             <div>
-              <label class="ann-label">Target</label>
+              <label class="ann-label"><%= t('admin_ann_target') %></label>
               <select name="target_type" id="targetType" onchange="toggleTargetFields()" required>
-                <option value="all">সকল User</option>
-                <option value="role">নির্দিষ্ট Role</option>
-                <option value="user">নির্দিষ্ট User (ID)</option>
+                <option value="all"><%= t('admin_ann_target_all') %></option>
+                <option value="role"><%= t('admin_ann_target_role') %></option>
+                <option value="user"><%= t('admin_ann_target_user') %></option>
               </select>
             </div>
           </div>
           <div class="ann-grid" id="roleField" style="display:none;">
             <div>
-              <label class="ann-label">Role</label>
-              <select name="target_role"><option value="user">user</option><option value="admin">admin</option></select>
+              <label class="ann-label"><%= t('admin_col_role') %></label>
+              <select name="target_role"><option value="user"><%= t('admin_role_user') %></option><option value="admin"><%= t('admin_role_admin') %></option></select>
             </div>
             <div></div>
           </div>
           <div class="ann-grid" id="userField" style="display:none;">
-            <div><label class="ann-label">Target User ID</label><input type="number" name="target_user_id" placeholder="যেমন: 1024"></div>
+            <div><label class="ann-label"><%= t('admin_ann_target_user_id') %></label><input type="number" name="target_user_id" placeholder="<%= t('admin_ph_example_1024') %>"></div>
             <div></div>
           </div>
           <div class="ann-grid">
-            <div><label class="ann-label">Title (বাংলা)</label><input type="text" name="title_bn" placeholder="শিরোনাম (ঐচ্ছিক)"></div>
-            <div><label class="ann-label">Title (English)</label><input type="text" name="title_en" placeholder="Title (optional)"></div>
+            <div><label class="ann-label"><%= t('admin_field_title_bn') %></label><input type="text" name="title_bn" placeholder="<%= t('admin_field_title_optional') %>"></div>
+            <div><label class="ann-label"><%= t('admin_field_title_en') %></label><input type="text" name="title_en" placeholder="<%= t('admin_field_title_optional') %>"></div>
           </div>
           <div class="ann-grid">
-            <div><label class="ann-label">Message (বাংলা) *</label><textarea name="message_bn" rows="2" required></textarea></div>
-            <div><label class="ann-label">Message (English)</label><textarea name="message_en" rows="2"></textarea></div>
+            <div><label class="ann-label"><%= t('admin_field_message_bn_req') %></label><textarea name="message_bn" rows="2" required></textarea></div>
+            <div><label class="ann-label"><%= t('admin_field_message_en') %></label><textarea name="message_en" rows="2"></textarea></div>
           </div>
           <div class="ann-grid">
-            <div><label class="ann-label">Schedule শুরু (ঐচ্ছিক)</label><input type="datetime-local" name="starts_at"></div>
-            <div><label class="ann-label">Expire (ঐচ্ছিক)</label><input type="datetime-local" name="expires_at"></div>
+            <div><label class="ann-label"><%= t('admin_field_schedule_start') %></label><input type="datetime-local" name="starts_at"></div>
+            <div><label class="ann-label"><%= t('admin_field_expire_optional') %></label><input type="datetime-local" name="expires_at"></div>
           </div>
-          <button type="submit" class="btn-xs" style="background:var(--gold,#EAB308);color:#1a1a1a;padding:9px 18px;font-size:13px;" onclick="LivoToast && LivoToast.setLoading(this, true, 'তৈরি হচ্ছে...')">Create Announcement</button>
+          <button type="submit" class="btn-xs" style="background:var(--gold,#EAB308);color:#1a1a1a;padding:9px 18px;font-size:13px;" onclick="LivoToast && LivoToast.setLoading(this, true, 'তৈরি হচ্ছে...')"><%= t('admin_ann_create_btn') %></button>
         </form>
       </div>
 
       <div class="ann-table-wrap">
         <table class="ann-table">
-          <thead><tr><th>#</th><th>Type</th><th>Message (bn)</th><th>Target</th><th>Schedule</th><th>Status</th><th>Action</th></tr></thead>
+          <thead><tr><th>#</th><th><%= t('admin_col_type') %></th><th><%= t('admin_field_message_bn') %></th><th><%= t('admin_ann_target') %></th><th><%= t('admin_col_schedule') %></th><th><%= t('admin_col_status') %></th><th><%= t('admin_col_action') %></th></tr></thead>
           <tbody>
             <% list.forEach(function(a) { %>
             <tr>
@@ -102,19 +102,19 @@
               </td>
               <td>
                 <% const expired = a.expires_at && new Date(a.expires_at) < new Date(); %>
-                <% if (expired) { %><span style="color:#f87171;font-weight:700;">Expired</span>
-                <% } else if (a.active) { %><span class="status-active">Active</span>
-                <% } else { %><span class="status-inactive">Inactive</span><% } %>
+                <% if (expired) { %><span style="color:#f87171;font-weight:700;"><%= t('admin_status_expired') %></span>
+                <% } else if (a.active) { %><span class="status-active"><%= t('admin_status_active') %></span>
+                <% } else { %><span class="status-inactive"><%= t('admin_status_inactive') %></span><% } %>
               </td>
               <td style="white-space:nowrap;">
                 <form method="POST" action="/admin/announcements/<%= a.id %>/toggle" style="display:inline;">
                   <button class="btn-xs" style="background:#334155;color:#fff;"><%= a.active ? 'Disable' : 'Enable' %></button>
                 </form>
                 <form method="POST" action="/admin/announcements/<%= a.id %>/expire-now" style="display:inline;">
-                  <button class="btn-xs" style="background:#f59e0b;color:#1a1a1a;">Expire Now</button>
+                  <button class="btn-xs" style="background:#f59e0b;color:#1a1a1a;"><%= t('admin_ann_expire_now') %></button>
                 </form>
                 <form method="POST" action="/admin/announcements/<%= a.id %>/delete" style="display:inline;" onsubmit="return confirm('ডিলিট করবেন?')">
-                  <button class="btn-xs" style="background:#ef4444;color:#fff;">Delete</button>
+                  <button class="btn-xs" style="background:#ef4444;color:#fff;"><%= t('admin_btn_delete') %></button>
                 </form>
               </td>
             </tr>

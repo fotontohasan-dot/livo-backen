@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>প্রমোশন ব্যানার • Livo Admin</title>
+  <title><%= t('admin_title_promotions') %></title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     * { box-sizing: border-box; }
@@ -25,13 +25,13 @@
       <%- include('./partials/header', { pageTitle: 'প্রমোশন ব্যানার', pageSubtitle: 'হোমপেজের প্রমোশনাল ব্যানার পরিচালনা করুন' }) %>
 
       <div class="admin-card" style="padding:16px;margin-bottom:16px;">
-        <div style="font-weight:800;color:var(--text-main);font-size:13px;margin-bottom:12px;"><i class="fas fa-plus-circle" style="color:#f59e0b;"></i> নতুন ব্যানার যোগ করুন</div>
+        <div style="font-weight:800;color:var(--text-main);font-size:13px;margin-bottom:12px;"><i class="fas fa-plus-circle" style="color:#f59e0b;"></i> <%= t('admin_promo_add_heading') %></div>
         <form method="POST" action="/admin/promotions/add" style="display:grid;grid-template-columns:1fr;gap:10px;">
-          <input class="input" type="text" name="title" placeholder="ব্যানারের শিরোনাম (ঐচ্ছিক)">
-          <input class="input" type="text" name="image_url" placeholder="ইমেজ URL" required>
-          <input class="input" type="text" name="link_url" placeholder="ক্লিক করলে যে লিংকে যাবে (ঐচ্ছিক)">
-          <input class="input" type="number" name="position" placeholder="ক্রম নম্বর (position)" value="0">
-          <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> যোগ করুন</button>
+          <input class="input" type="text" name="title" placeholder="<%= t('admin_field_banner_title_optional') %>">
+          <input class="input" type="text" name="image_url" placeholder="<%= t('admin_field_image_url') %>" required>
+          <input class="input" type="text" name="link_url" placeholder="<%= t('admin_field_click_link_optional') %>">
+          <input class="input" type="number" name="position" placeholder="<%= t('admin_field_position_number') %>" value="0">
+          <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> <%= t('admin_btn_add') %></button>
         </form>
       </div>
 
@@ -55,7 +55,7 @@
             </div>
           <% }) %>
         <% } else { %>
-          <div class="empty-state" style="grid-column:1/-1;">কোনো প্রমোশন ব্যানার পাওয়া যায়নি</div>
+          <div class="empty-state" style="grid-column:1/-1;"><%= t('admin_empty_promotions') %></div>
         <% } %>
       </div>
     </div>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KYC ভেরিফিকেশন • Livo Admin</title>
+  <title><%= t('admin_title_kyc') %></title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     * { box-sizing: border-box; }
@@ -31,19 +31,19 @@
 
       <div class="grid grid-4" style="margin-bottom:14px;">
         <div class="stat-card">
-          <div class="stat-label">মোট আবেদন</div>
+          <div class="stat-label"><%= t('admin_stat_total_applications') %></div>
           <div class="stat-number"><%= stats.total || 0 %></div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">পেন্ডিং</div>
+          <div class="stat-label"><%= t('admin_status_pending') %></div>
           <div class="stat-number" style="color:#f59e0b;"><%= stats.pending || 0 %></div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">অনুমোদিত</div>
+          <div class="stat-label"><%= t('admin_status_approved') %></div>
           <div class="stat-number" style="color:#10b981;"><%= stats.approved || 0 %></div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">বাতিল</div>
+          <div class="stat-label"><%= t('admin_btn_cancel') %></div>
           <div class="stat-number" style="color:#ef4444;"><%= stats.rejected || 0 %></div>
         </div>
       </div>
@@ -51,36 +51,36 @@
       <form class="kyc-filters" method="GET" action="/admin/kyc">
         <div class="input-icon-wrap">
           <i class="fas fa-search"></i>
-          <input class="input" type="text" name="q" placeholder="নাম, ইউজারনেম বা ফোন দিয়ে খুঁজুন..." value="<%= filters.q || '' %>">
+          <input class="input" type="text" name="q" placeholder="<%= t('admin_ph_search_name_user_phone') %>" value="<%= filters.q || '' %>">
         </div>
         <select class="select" name="status" onchange="this.form.submit()">
-          <option value="">সব স্ট্যাটাস</option>
-          <option value="pending" <%= filters.status === 'pending' ? 'selected' : '' %>>পেন্ডিং</option>
-          <option value="approved" <%= filters.status === 'approved' ? 'selected' : '' %>>অনুমোদিত</option>
-          <option value="rejected" <%= filters.status === 'rejected' ? 'selected' : '' %>>বাতিল</option>
+          <option value=""><%= t('admin_filter_all_status') %></option>
+          <option value="pending" <%= filters.status === 'pending' ? 'selected' : '' %>><%= t('admin_status_pending') %></option>
+          <option value="approved" <%= filters.status === 'approved' ? 'selected' : '' %>><%= t('admin_status_approved') %></option>
+          <option value="rejected" <%= filters.status === 'rejected' ? 'selected' : '' %>><%= t('admin_btn_cancel') %></option>
         </select>
-        <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> ফিল্টার</button>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> <%= t('admin_btn_filter') %></button>
       </form>
 
       <div class="admin-card" id="kycBulkBar" style="display:none;padding:10px 14px;margin-bottom:14px;background:rgba(245,158,11,0.08);border-color:rgba(245,158,11,0.25);">
-        <span style="font-size:12px;color:var(--text-muted);font-weight:600;"><span id="kycSelectedCount">0</span>টি নির্বাচিত</span>
-        <button type="button" class="btn btn-sm btn-green" style="margin-left:10px;" onclick="bulkApproveKyc()"><i class="fas fa-check"></i> বাল্ক অনুমোদন</button>
-        <button type="button" class="btn btn-sm btn-red" onclick="bulkRejectKyc()"><i class="fas fa-times"></i> বাল্ক বাতিল</button>
-        <button type="button" class="btn btn-sm" onclick="clearKycSelection()">নির্বাচন মুছুন</button>
+        <span style="font-size:12px;color:var(--text-muted);font-weight:600;"><span id="kycSelectedCount">0</span> <%= t('admin_kyc_selected_suffix') %></span>
+        <button type="button" class="btn btn-sm btn-green" style="margin-left:10px;" onclick="bulkApproveKyc()"><i class="fas fa-check"></i> <%= t('admin_btn_bulk_approve') %></button>
+        <button type="button" class="btn btn-sm btn-red" onclick="bulkRejectKyc()"><i class="fas fa-times"></i> <%= t('admin_btn_bulk_reject') %></button>
+        <button type="button" class="btn btn-sm" onclick="clearKycSelection()"><%= t('admin_btn_clear_selection') %></button>
       </div>
 
       <div class="admin-card">
-        <div class="admin-card-header">KYC আবেদনসমূহ</div>
+        <div class="admin-card-header"><%= t('admin_kyc_applications') %></div>
         <div style="overflow-x:auto;">
           <table class="admin-table">
             <thead>
               <tr>
                 <th style="width:34px;"><input type="checkbox" id="kycSelectAll" onchange="toggleKycSelectAll(this)"></th>
-                <th>ইউজার</th>
-                <th>ডকুমেন্ট</th>
-                <th>জমার তারিখ</th>
-                <th>স্ট্যাটাস</th>
-                <th style="text-align:right;">অ্যাকশন</th>
+                <th><%= t('admin_col_user') %></th>
+                <th><%= t('admin_col_document') %></th>
+                <th><%= t('admin_col_submitted_at') %></th>
+                <th><%= t('admin_col_status') %></th>
+                <th style="text-align:right;"><%= t('admin_col_action') %></th>
               </tr>
             </thead>
             <tbody>
@@ -100,24 +100,24 @@
                     <td><%= k.created_at ? new Date(k.created_at).toLocaleDateString('bn-BD') : '—' %></td>
                     <td>
                       <% if (k.status === 'approved') { %>
-                        <span class="badge badge-green">অনুমোদিত</span>
+                        <span class="badge badge-green"><%= t('admin_status_approved') %></span>
                       <% } else if (k.status === 'rejected') { %>
-                        <span class="badge badge-red">বাতিল</span>
+                        <span class="badge badge-red"><%= t('admin_btn_cancel') %></span>
                       <% } else { %>
-                        <span class="badge badge-amber">পেন্ডিং</span>
+                        <span class="badge badge-amber"><%= t('admin_status_pending') %></span>
                       <% } %>
                     </td>
                     <td style="text-align:right;">
-                      <button class="btn btn-sm" onclick='viewKyc(<%- jsonScriptSafe(k) %>)'>বিস্তারিত</button>
+                      <button class="btn btn-sm" onclick='viewKyc(<%- jsonScriptSafe(k) %>)'><%= t('admin_col_details') %></button>
                       <% if (k.status === 'pending') { %>
-                        <button class="btn btn-sm btn-green" onclick="approveKyc(<%= k.id %>)">অনুমোদন</button>
-                        <button class="btn btn-sm btn-red" onclick="rejectKyc(<%= k.id %>)">বাতিল</button>
+                        <button class="btn btn-sm btn-green" onclick="approveKyc(<%= k.id %>)"><%= t('admin_btn_approve') %></button>
+                        <button class="btn btn-sm btn-red" onclick="rejectKyc(<%= k.id %>)"><%= t('admin_btn_cancel') %></button>
                       <% } %>
                     </td>
                   </tr>
                 <% }) %>
               <% } else { %>
-                <tr><td colspan="5"><div class="empty-state"><i class="fas fa-id-card" style="font-size:22px;margin-bottom:8px;display:block;"></i>কোনো KYC আবেদন পাওয়া যায়নি</div></td></tr>
+                <tr><td colspan="5"><div class="empty-state"><i class="fas fa-id-card" style="font-size:22px;margin-bottom:8px;display:block;"></i><%= t('admin_empty_kyc') %></div></td></tr>
               <% } %>
             </tbody>
           </table>
@@ -130,7 +130,7 @@
   <div class="modal-overlay" id="viewModal">
     <div class="modal-box">
       <div class="modal-header">
-        <h3>KYC বিস্তারিত</h3>
+        <h3><%= t('admin_kyc_detail_heading') %></h3>
         <button class="modal-close" onclick="closeModal('viewModal')" aria-label="<%= t('admin_ui_close') %>"><i class="fas fa-times"></i></button>
       </div>
       <div class="modal-body" id="viewModalBody"></div>
@@ -141,15 +141,15 @@
   <div class="modal-overlay" id="rejectModal">
     <div class="modal-box">
       <div class="modal-header">
-        <h3>বাতিলের কারণ</h3>
+        <h3><%= t('admin_field_reject_reason') %></h3>
         <button class="modal-close" onclick="closeModal('rejectModal')" aria-label="<%= t('admin_ui_close') %>"><i class="fas fa-times"></i></button>
       </div>
       <div class="modal-body">
-        <textarea class="input" id="rejectReason" rows="3" placeholder="কারণ লিখুন (ইউজারকে দেখানো হবে)"></textarea>
+        <textarea class="input" id="rejectReason" rows="3" placeholder="<%= t('admin_ph_reason_shown_to_user') %>"></textarea>
       </div>
       <div class="modal-footer">
-        <button class="btn" onclick="closeModal('rejectModal')">বাতিল করুন</button>
-        <button class="btn btn-red" id="confirmRejectBtn">বাতিল নিশ্চিত করুন</button>
+        <button class="btn" onclick="closeModal('rejectModal')"><%= t('admin_btn_reject') %></button>
+        <button class="btn btn-red" id="confirmRejectBtn"><%= t('admin_confirm_reject') %></button>
       </div>
     </div>
   </div>
@@ -158,16 +158,16 @@
   <div class="modal-overlay" id="bulkRejectModal">
     <div class="modal-box">
       <div class="modal-header">
-        <h3>বাল্ক বাতিলের কারণ</h3>
+        <h3><%= t('admin_field_bulk_reject_reason') %></h3>
         <button class="modal-close" onclick="closeModal('bulkRejectModal')" aria-label="<%= t('admin_ui_close') %>"><i class="fas fa-times"></i></button>
       </div>
       <div class="modal-body">
-        <p style="font-size:12px;color:var(--text-muted);margin-top:0;"><span id="bulkRejectCount">0</span>টি আবেদন বাতিল করা হবে। এই কারণ সবগুলোর জন্য প্রযোজ্য হবে।</p>
-        <textarea class="input" id="bulkRejectReason" rows="3" placeholder="কারণ লিখুন (ইউজারকে দেখানো হবে)"></textarea>
+        <p style="font-size:12px;color:var(--text-muted);margin-top:0;"><span id="bulkRejectCount">0</span> <%= t('admin_kyc_bulk_reject_note') %></p>
+        <textarea class="input" id="bulkRejectReason" rows="3" placeholder="<%= t('admin_ph_reason_shown_to_user') %>"></textarea>
       </div>
       <div class="modal-footer">
-        <button class="btn" onclick="closeModal('bulkRejectModal')">বাতিল করুন</button>
-        <button class="btn btn-red" id="confirmBulkRejectBtn">বাতিল নিশ্চিত করুন</button>
+        <button class="btn" onclick="closeModal('bulkRejectModal')"><%= t('admin_btn_reject') %></button>
+        <button class="btn btn-red" id="confirmBulkRejectBtn"><%= t('admin_confirm_reject') %></button>
       </div>
     </div>
   </div>

@@ -20,7 +20,7 @@ function statusBadge(status) {
 }
 function matchTypesLabel(types) {
   const labels = { shared_device: 'ডিভাইস', shared_ip: 'IP', shared_browser: 'ব্রাউজার', shared_payment_account: 'পেমেন্ট' };
-  return (types || []).map(t => labels[t] || t).join(', ');
+  return (types || []).map(type => labels[type] || type).join(', ');
 }
 function matchedLinks(ids) {
   return (ids || []).map(id => '<a href="/admin/users/' + id + '" class="text-blue-600 hover:underline">#' + id + '</a>').join(', ');

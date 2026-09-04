@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>বোনাস ম্যানেজমেন্ট • Livo Admin</title>
+  <title><%= t('admin_title_bonuses') %></title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     * { box-sizing: border-box; }
@@ -19,34 +19,34 @@
       <%- include('./partials/header', { pageTitle: 'বোনাস ম্যানেজমেন্ট', pageSubtitle: 'ইউজারদের ম্যানুয়াল বোনাস দিন ও পরিচালনা করুন' }) %>
 
       <div class="grid grid-4" style="margin-bottom:14px;">
-        <div class="stat-card"><div class="stat-label">সক্রিয়</div><div class="stat-number" style="color:#f59e0b;"><%= stats.active || 0 %></div></div>
-        <div class="stat-card"><div class="stat-label">সম্পন্ন</div><div class="stat-number" style="color:#10b981;"><%= stats.completed || 0 %></div></div>
-        <div class="stat-card"><div class="stat-label">বাতিল</div><div class="stat-number" style="color:#ef4444;"><%= stats.cancelled || 0 %></div></div>
-        <div class="stat-card"><div class="stat-label">সক্রিয় বোনাস পরিমাণ</div><div class="stat-number"><%= stats.total_active_amount || 0 %></div></div>
+        <div class="stat-card"><div class="stat-label"><%= t('admin_status_active') %></div><div class="stat-number" style="color:#f59e0b;"><%= stats.active || 0 %></div></div>
+        <div class="stat-card"><div class="stat-label"><%= t('admin_status_completed') %></div><div class="stat-number" style="color:#10b981;"><%= stats.completed || 0 %></div></div>
+        <div class="stat-card"><div class="stat-label"><%= t('admin_btn_cancel') %></div><div class="stat-number" style="color:#ef4444;"><%= stats.cancelled || 0 %></div></div>
+        <div class="stat-card"><div class="stat-label"><%= t('admin_stat_active_bonus_amount') %></div><div class="stat-number"><%= stats.total_active_amount || 0 %></div></div>
       </div>
 
       <div class="admin-card" style="padding:16px;margin-bottom:16px;">
-        <div style="font-weight:800;color:var(--text-main);font-size:13px;margin-bottom:12px;"><i class="fas fa-gift" style="color:#f59e0b;"></i> নতুন বোনাস দিন</div>
+        <div style="font-weight:800;color:var(--text-main);font-size:13px;margin-bottom:12px;"><i class="fas fa-gift" style="color:#f59e0b;"></i> <%= t('admin_bonus_grant_heading') %></div>
         <form method="POST" action="/admin/bonuses/add" style="display:grid;grid-template-columns:1fr;gap:10px;">
-          <input class="input" type="text" name="username" placeholder="ইউজারনেম" required>
+          <input class="input" type="text" name="username" placeholder="<%= t('admin_col_username') %>" required>
           <select class="select" name="bonus_type" required>
-            <option value="deposit">ডিপোজিট বোনাস</option>
-            <option value="signup">সাইনআপ বোনাস</option>
-            <option value="referral">রেফারেল বোনাস</option>
-            <option value="special">বিশেষ বোনাস</option>
+            <option value="deposit"><%= t('admin_bonus_type_deposit') %></option>
+            <option value="signup"><%= t('admin_bonus_type_signup') %></option>
+            <option value="referral"><%= t('admin_bonus_type_referral') %></option>
+            <option value="special"><%= t('admin_bonus_type_special') %></option>
           </select>
-          <input class="input" type="number" name="bonus_amount" placeholder="বোনাস পরিমাণ (কয়েন)" required>
-          <input class="input" type="number" name="sports_required" placeholder="স্পোর্টস টার্নওভার শর্ত (ঐচ্ছিক)">
-          <input class="input" type="number" name="casino_required" placeholder="ক্যাসিনো টার্নওভার শর্ত (ঐচ্ছিক)">
-          <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> বোনাস দিন</button>
+          <input class="input" type="number" name="bonus_amount" placeholder="<%= t('admin_field_bonus_amount_coins') %>" required>
+          <input class="input" type="number" name="sports_required" placeholder="<%= t('admin_field_sports_turnover_req') %>">
+          <input class="input" type="number" name="casino_required" placeholder="<%= t('admin_field_casino_turnover_req') %>">
+          <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> <%= t('admin_bonus_grant_btn') %></button>
         </form>
       </div>
 
       <div class="admin-card">
-        <div class="admin-card-header">সকল বোনাস</div>
+        <div class="admin-card-header"><%= t('admin_bonus_all') %></div>
         <div style="overflow-x:auto;">
           <table class="admin-table">
-            <thead><tr><th>ইউজার</th><th>টাইপ</th><th>পরিমাণ</th><th>টার্নওভার (স্পোর্টস/ক্যাসিনো)</th><th>স্ট্যাটাস</th><th>তারিখ</th><th style="text-align:right;">অ্যাকশন</th></tr></thead>
+            <thead><tr><th><%= t('admin_col_user') %></th><th><%= t('admin_col_type') %></th><th><%= t('admin_col_amount') %></th><th><%= t('admin_col_turnover_sports_casino') %></th><th><%= t('admin_col_status') %></th><th><%= t('admin_col_date') %></th><th style="text-align:right;"><%= t('admin_col_action') %></th></tr></thead>
             <tbody>
               <% if (bonuses && bonuses.length > 0) { %>
                 <% bonuses.forEach(b => { %>
@@ -56,22 +56,22 @@
                     <td><%= b.bonus_amount %></td>
                     <td><%= b.sports_done || 0 %>/<%= b.sports_required || 0 %> · <%= b.casino_done || 0 %>/<%= b.casino_required || 0 %></td>
                     <td>
-                      <% if (b.status === 'active') { %><span class="badge badge-amber">সক্রিয়</span>
-                      <% } else if (b.status === 'completed') { %><span class="badge badge-green">সম্পন্ন</span>
-                      <% } else { %><span class="badge badge-red">বাতিল</span><% } %>
+                      <% if (b.status === 'active') { %><span class="badge badge-amber"><%= t('admin_status_active') %></span>
+                      <% } else if (b.status === 'completed') { %><span class="badge badge-green"><%= t('admin_status_completed') %></span>
+                      <% } else { %><span class="badge badge-red"><%= t('admin_btn_cancel') %></span><% } %>
                     </td>
                     <td><%= b.created_at ? new Date(b.created_at).toLocaleDateString('bn-BD') : '—' %></td>
                     <td style="text-align:right;">
                       <% if (b.status === 'active') { %>
                         <form method="POST" action="/admin/bonuses/<%= b.id %>/cancel" onsubmit="return confirm('বাতিল করবেন?')">
-                          <button class="btn btn-sm btn-red" type="submit">বাতিল</button>
+                          <button class="btn btn-sm btn-red" type="submit"><%= t('admin_btn_cancel') %></button>
                         </form>
                       <% } %>
                     </td>
                   </tr>
                 <% }) %>
               <% } else { %>
-                <tr><td colspan="7"><div class="empty-state">কোনো বোনাস পাওয়া যায়নি</div></td></tr>
+                <tr><td colspan="7"><div class="empty-state"><%= t('admin_empty_bonuses') %></div></td></tr>
               <% } %>
             </tbody>
           </table>
