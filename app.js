@@ -699,7 +699,30 @@ app.use('/api', require('./routes/api'));
 const swaggerUi = require('swagger-ui-express');
 const { swaggerSpec } = require('./services/swagger');
 app.get('/api/docs.json', (req, res) => res.json(swaggerSpec));
-app.use('/api/docs', (req, res, next) => { res.removeHeader('Content-Security-Policy'); next(); }, swaggerUi.serve, swaggerUi.setup(swaggerSpec, { customSiteTitle: 'Livo API Docs' }));
+// PHASE 1 fix: আগে এখানে `res.removeHeader('Content-Security-Policy')` করা হতো,
+// অর্থাৎ Swagger UI-এর পাতাগুলো **কোনো** CSP ছাড়াই সার্ভ হতো। Swagger UI-এর
+// নিজস্ব ইনলাইন bootstrap script আছে বলে সাইটের সাধারণ নীতিতে সেটা চলত না —
+// কিন্তু সমাধান হিসেবে পুরো হেডার মুছে ফেলা মানে ওই পাথে objectSrc, baseUri,
+// frameAncestors, formAction — সবই খুলে যাওয়া।
+//
+// এখন হেডার মোছা হয় না; বদলে এই পাথের জন্য একটি আলাদা, সংকীর্ণ নীতি বসানো হয়।
+// Swagger UI যা সত্যিই দরকার (নিজের ইনলাইন script ও style) ততটুকুই ছাড় পায়,
+// বাকি directive গুলো সাইটের মূল নীতির মতোই কড়া থাকে।
+const swaggerCsp = helmet.contentSecurityPolicy({
+  directives: {
+    defaultSrc: ["'self'"],
+    scriptSrc: ["'self'", "'unsafe-inline'"],
+    styleSrc: ["'self'", "'unsafe-inline'"],
+    imgSrc: ["'self'", 'data:'],
+    fontSrc: ["'self'", 'data:'],
+    connectSrc: ["'self'"],
+    objectSrc: ["'none'"],
+    frameAncestors: ["'self'"],
+    baseUri: ["'self'"],
+    formAction: ["'self'"]
+  }
+});
+app.use('/api/docs', swaggerCsp, swaggerUi.serve, swaggerUi.setup(swaggerSpec, { customSiteTitle: 'Livo API Docs' }));
 app.use('/accumulator', require('./routes/accumulator'));
 app.use('/chat', require('./routes/chat'));
 app.use('/extra', require('./routes/extra'));
