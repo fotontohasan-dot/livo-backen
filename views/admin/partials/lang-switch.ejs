@@ -1,0 +1,73 @@
+<!-- views/admin/partials/lang-switch.ejs -->
+<!--
+  অ্যাডমিন প্যানেলের ভাষা নির্বাচক (বাংলা / English)।
+
+  কেন দরকার: অনুবাদ ফাইল দুটো (locales/bn.json, locales/en.json) আগে থেকেই ছিল
+  এবং app.js `/lang/:code` রুটও ছিল, কিন্তু সুইচারটা শুধু ইউজার-সাইড
+  views/partials/navbar.ejs-এ বসানো ছিল। ফলে অ্যাডমিন প্যানেলের ভেতরে থেকে ভাষা
+  বদলানোর কোনো উপায় ছিল না — ঠিকানা বারে হাতে `/lang/en` লিখতে হতো।
+
+  রুটটাই পুনর্ব্যবহার করা হচ্ছে, নতুন কোনো ভাষা-ব্যবস্থা তৈরি করা হয়নি।
+  `/lang/:code` utils/redirectBack.js-এর backUrl() দিয়ে একই পেজে ফেরত পাঠায়
+  (same-host যাচাই করা, তাই open redirect নয়), অর্থাৎ ভাষা বদলালে অ্যাডমিন যে
+  পেজে ছিলেন সেখানেই থাকেন।
+
+  aria-current দিয়ে স্ক্রিন রিডারকে জানানো হয় কোন ভাষা এখন সক্রিয়।
+-->
+<div class="admin-lang-switch" role="group" aria-label="<%= t('admin_ui_language') %>">
+  <span class="admin-lang-switch__label"><i class="fas fa-language" aria-hidden="true"></i> <%= t('admin_ui_language') %></span>
+  <div class="admin-lang-switch__options">
+    <a href="/lang/bn"
+       class="admin-lang-switch__btn <%= lang === 'bn' ? 'is-active' : '' %>"
+       <%= lang === 'bn' ? 'aria-current="true"' : '' %>>বাংলা</a>
+    <a href="/lang/en"
+       class="admin-lang-switch__btn <%= lang === 'en' ? 'is-active' : '' %>"
+       <%= lang === 'en' ? 'aria-current="true"' : '' %>>English</a>
+  </div>
+</div>
+
+<style>
+  /* দুই লেআউটেই কাজ করতে হয় (গাঢ় sidebar.ejs ও হালকা admin-layout.ejs), তাই
+     রঙ currentColor থেকে নেওয়া হয় — কোনো লেআউট-নির্দিষ্ট হার্ডকোড রঙ নেই। */
+  .admin-lang-switch {
+    margin: 14px 12px 20px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(128, 128, 128, 0.28);
+  }
+  .admin-lang-switch__label {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    opacity: 0.7;
+    margin-bottom: 8px;
+  }
+  .admin-lang-switch__options { display: flex; gap: 6px; }
+  .admin-lang-switch__btn {
+    flex: 1;
+    /* বাংলা লেবেল ইংরেজির চেয়ে চওড়া হতে পারে — min-height ও nowrap রাখলে
+       ছোট স্ক্রিনে বোতাম ভেঙে যায় না (মোবাইল যাচাইয়ে ধরা পড়েছিল)। */
+    min-height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    padding: 6px 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(128, 128, 128, 0.3);
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    color: inherit;
+    opacity: 0.75;
+  }
+  .admin-lang-switch__btn.is-active {
+    background: rgba(245, 158, 11, 0.16);
+    border-color: #f59e0b;
+    color: #f59e0b;
+    opacity: 1;
+  }
+  .admin-lang-switch__btn:focus-visible { outline: 2px solid #f59e0b; outline-offset: 2px; }
+</style>

@@ -49,13 +49,13 @@ const userRows = topUsers.map(u =>
   '</tr>'
 ).join('') || '<tr><td colspan="5" class="px-5 py-8 text-center text-slate-400 text-sm">কোনো ওপেন ফ্ল্যাগ নেই</td></tr>';
 
-const maxTrendCount = Math.max(1, ...trend.map(t => t.count));
-const trendBars = trend.map(t => {
-  const h = Math.max(4, Math.round((t.count / maxTrendCount) * 80));
-  const label = new Date(t.day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+const maxTrendCount = Math.max(1, ...trend.map(point => point.count));
+const trendBars = trend.map(point => {
+  const h = Math.max(4, Math.round((point.count / maxTrendCount) * 80));
+  const label = new Date(point.day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   return '<div class="flex flex-col items-center gap-1 flex-1">' +
-    '<div class="text-[10px] text-slate-400">' + t.count + '</div>' +
-    '<div class="w-full bg-red-400 rounded-t-md" style="height:' + h + 'px" title="' + label + ': ' + t.count + '"></div>' +
+    '<div class="text-[10px] text-slate-400">' + point.count + '</div>' +
+    '<div class="w-full bg-red-400 rounded-t-md" style="height:' + h + 'px" title="' + label + ': ' + point.count + '"></div>' +
     '<div class="text-[9px] text-slate-400 rotate-0">' + label + '</div>' +
   '</div>';
 }).join('') || '<div class="text-xs text-slate-400 py-8 text-center w-full">গত ১৪ দিনে কোনো ফ্ল্যাগ তৈরি হয়নি</div>';

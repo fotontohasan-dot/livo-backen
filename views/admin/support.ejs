@@ -17,7 +17,7 @@ function ticketListItem(t) {
 const ticketsHtml = (tickets || []).map(ticketListItem).join('') || '<div class="text-center text-slate-400 py-10 text-sm">কোনো সাপোর্ট মেসেজ নেই</div>';
 // টিকেট লিস্টে এখন আর প্রতিটার পূর্ণ মেসেজ থ্রেড এমবেড করা হয় না (মেমোরি/পেজ-লোড খরচ কমাতে) —
 // শুধু userId/username/lastMessage/status; আসল মেসেজ থ্রেড ক্লিক করলে on-demand fetch হয়।
-const ticketsData = JSON.stringify((tickets || []).map(t => ({ userId: t.userId, username: t.username, status: t.status }))).replace(/</g, '\\u003c');
+const ticketsData = JSON.stringify((tickets || []).map(ticket => ({ userId: ticket.userId, username: ticket.username, status: ticket.status }))).replace(/</g, '\\u003c');
 const curPage = typeof page !== 'undefined' ? page : 1;
 const curTotalPages = typeof totalPages !== 'undefined' ? totalPages : 1;
 const curSearch = typeof search !== 'undefined' ? search : '';

@@ -108,10 +108,17 @@ describe('অন্যান্য অ্যাডমিন ভিউতে ই�
   test('বটম-নেভ টোস্ট innerHTML নয়, textContent ব্যবহার করে', () => {
     // টোস্টের টেক্সট আসে admin_alert ইভেন্ট থেকে, যার message ফিল্ডে ইউজারের
     // পাঠানো চ্যাট-বার্তা বসে — অর্থাৎ সম্পূর্ণ অবিশ্বস্ত।
+    //
+    // আগে এই অ্যাসারশন এলিমেন্ট ভ্যারিয়েবলের নাম (`t`) ধরে লেখা ছিল। নামটা
+    // res.locals.t অনুবাদককে shadow করত, তাই সেটা `toastEl` করা হয়েছে —
+    // নিরাপত্তার বৈশিষ্ট্য বদলায়নি। এখন অ্যাসারশন নাম-নিরপেক্ষ: showToast()
+    // ফাংশনের ভেতরে textContent ব্যবহার হয় এবং innerHTML কোথাও নেই।
     const nav = fs.readFileSync(
       path.join(__dirname, '..', '..', 'views', 'admin', 'partials', 'bottom-nav.ejs'), 'utf8'
     );
-    expect(nav).toMatch(/t\.textContent = '🔔 '/);
-    expect(nav).not.toMatch(/t\.innerHTML = '🔔 '/);
+    const fn = nav.slice(nav.indexOf('function showToast('));
+    const body = fn.slice(0, fn.indexOf('\n  }') + 4);
+    expect(body).toMatch(/\.textContent\s*=\s*'🔔 '/);
+    expect(body).not.toMatch(/\.innerHTML/);
   });
 });

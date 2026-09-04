@@ -18,13 +18,13 @@
       <%- include('./partials/load-error') %>
       <%- include('./partials/header', { pageTitle: job.label + ' — Execution History', pageSubtitle: job.description }) %>
 
-      <a href="/admin/cron-jobs" style="color:#f59e0b;font-size:12px;text-decoration:none;display:inline-block;margin-bottom:12px;"><i class="fas fa-arrow-left"></i> Cron Jobs Monitor-এ ফিরে যান</a>
+      <a href="/admin/cron-jobs" style="color:#f59e0b;font-size:12px;text-decoration:none;display:inline-block;margin-bottom:12px;"><i class="fas fa-arrow-left"></i> <%= t('admin_back_to_cron_monitor') %></a>
 
       <div class="admin-card">
         <div class="admin-card-header">সব রান (মোট <%= logs.length %>টি সাম্প্রতিক)</div>
         <div style="overflow-x:auto;">
           <table class="admin-table">
-            <thead><tr><th>Status</th><th>Attempts</th><th>Duration</th><th>Triggered By</th><th>Message</th><th>শুরু</th><th>শেষ</th></tr></thead>
+            <thead><tr><th><%= t('admin_col_status') %></th><th><%= t('admin_col_attempts') %></th><th><%= t('admin_col_duration') %></th><th><%= t('admin_col_triggered_by') %></th><th><%= t('admin_col_message') %></th><th><%= t('admin_col_started') %></th><th><%= t('admin_col_finished') %></th></tr></thead>
             <tbody>
               <% if (logs && logs.length > 0) { %>
                 <% logs.forEach(l => { %>
@@ -39,7 +39,7 @@
                   </tr>
                 <% }) %>
               <% } else { %>
-                <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;">এই Job-এর জন্য এখনো কোনো লগ নেই</td></tr>
+                <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;"><%= t('admin_empty_job_logs') %></td></tr>
               <% } %>
             </tbody>
           </table>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>রেফারেল কনটেস্ট পেআউট • Livo Admin</title>
+  <title><%= t('admin_title_contest_payouts') %></title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     * { box-sizing: border-box; }
@@ -20,7 +20,7 @@
 
       <% if (saved) { %>
         <div class="admin-card" style="padding:12px 16px;margin-bottom:14px;background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.3);color:#10b981;font-weight:700;font-size:13px;">
-          <i class="fas fa-check-circle"></i> সফলভাবে আপডেট হয়েছে
+          <i class="fas fa-check-circle"></i> <%= t('admin_msg_updated_successfully') %>
         </div>
       <% } %>
       <% if (saveError) { %>
@@ -31,14 +31,14 @@
 
       <div class="admin-card" style="padding:14px;margin-bottom:14px;">
         <form method="GET" action="/admin/leaderboard/contest/payouts" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-          <label style="font-size:12px;color:var(--text-muted);">কত মাস আগে:</label>
+          <label style="font-size:12px;color:var(--text-muted);"><%= t('admin_label_months_ago') %></label>
           <select class="select" style="max-width:160px;" name="months" onchange="this.form.submit()">
             <% for (let i = 1; i <= 12; i++) { %>
               <option value="<%= i %>" <%= monthsBack === i ? 'selected' : '' %>><%= i %> মাস আগে</option>
             <% } %>
           </select>
           <span style="font-size:13px;color:var(--text-muted);font-weight:600;"><%= monthName || '—' %></span>
-          <a class="btn btn-sm" href="/admin/leaderboard" style="margin-left:auto;"><i class="fas fa-arrow-left"></i> লিডারবোর্ডে ফিরুন</a>
+          <a class="btn btn-sm" href="/admin/leaderboard" style="margin-left:auto;"><i class="fas fa-arrow-left"></i> <%= t('admin_back_to_leaderboard') %></a>
         </form>
       </div>
 
@@ -48,13 +48,13 @@
           <table class="admin-table">
             <thead>
               <tr>
-                <th>র‍্যাঙ্ক</th>
-                <th>ইউজার</th>
-                <th>রেফারেল</th>
-                <th>প্রাইজ</th>
-                <th>স্ট্যাটাস</th>
-                <th>পরিশোধের বিবরণ</th>
-                <th style="text-align:right;">অ্যাকশন</th>
+                <th><%= t('admin_col_rank') %></th>
+                <th><%= t('admin_col_user') %></th>
+                <th><%= t('admin_col_referrals') %></th>
+                <th><%= t('admin_col_prize') %></th>
+                <th><%= t('admin_col_status') %></th>
+                <th><%= t('admin_payout_details') %></th>
+                <th style="text-align:right;"><%= t('admin_col_action') %></th>
               </tr>
             </thead>
             <tbody>
@@ -67,9 +67,9 @@
                     <td><%= p.prize_label || '—' %></td>
                     <td>
                       <% if (p.status === 'paid') { %>
-                        <span class="badge badge-green">পরিশোধিত</span>
+                        <span class="badge badge-green"><%= t('admin_status_paid') %></span>
                       <% } else { %>
-                        <span class="badge badge-amber">বাকি</span>
+                        <span class="badge badge-amber"><%= t('admin_status_unpaid') %></span>
                       <% } %>
                     </td>
                     <td style="font-size:11px;color:var(--text-muted);">
@@ -81,15 +81,15 @@
                     </td>
                     <td style="text-align:right;white-space:nowrap;">
                       <% if (p.status === 'pending') { %>
-                        <button type="button" class="btn btn-sm btn-green" onclick="openMarkPaid(<%= p.id %>, '<%= (p.username || '').replace(/'/g, "\\'") %>')"><i class="fas fa-check"></i> Paid হিসেবে মার্ক করুন</button>
+                        <button type="button" class="btn btn-sm btn-green" onclick="openMarkPaid(<%= p.id %>, '<%= (p.username || '').replace(/'/g, "\\'") %>')"><i class="fas fa-check"></i> <%= t('admin_btn_mark_paid') %></button>
                       <% } else { %>
-                        <span style="color:var(--text-muted);font-size:11px;">চূড়ান্ত</span>
+                        <span style="color:var(--text-muted);font-size:11px;"><%= t('admin_label_final') %></span>
                       <% } %>
                     </td>
                   </tr>
                 <% }) %>
               <% } else { %>
-                <tr><td colspan="7"><div class="empty-state">এই মাসে কোনো বিজয়ী নেই (কোনো রেফারেল হয়নি)</div></td></tr>
+                <tr><td colspan="7"><div class="empty-state"><%= t('admin_empty_month_winners') %></div></td></tr>
               <% } %>
             </tbody>
           </table>
@@ -97,11 +97,11 @@
       </div>
 
       <div class="admin-card">
-        <div class="admin-card-header">পেআউট হিস্ট্রি (সর্বশেষ ৫০টি, সব মাস)</div>
+        <div class="admin-card-header"><%= t('admin_payout_history_heading') %></div>
         <div style="overflow-x:auto;">
           <table class="admin-table">
             <thead>
-              <tr><th>মাস</th><th>র‍্যাঙ্ক</th><th>ইউজার</th><th>প্রাইজ</th><th>পরিশোধের তারিখ</th><th>অ্যাডমিন</th></tr>
+              <tr><th><%= t('admin_col_month') %></th><th><%= t('admin_col_rank') %></th><th><%= t('admin_col_user') %></th><th><%= t('admin_col_prize') %></th><th><%= t('admin_col_payout_date') %></th><th><%= t('admin_col_admin') %></th></tr>
             </thead>
             <tbody>
               <% if (history && history.length > 0) { %>
@@ -116,7 +116,7 @@
                   </tr>
                 <% }) %>
               <% } else { %>
-                <tr><td colspan="6"><div class="empty-state">এখনো কোনো পেআউট মার্ক করা হয়নি</div></td></tr>
+                <tr><td colspan="6"><div class="empty-state"><%= t('admin_empty_payouts') %></div></td></tr>
               <% } %>
             </tbody>
           </table>
@@ -130,18 +130,18 @@
   <div class="modal-overlay" id="markPaidModal">
     <div class="modal-box">
       <div class="modal-header">
-        <h3>প্রাইজ প্রদান নিশ্চিত করুন</h3>
+        <h3><%= t('admin_confirm_prize_heading') %></h3>
         <button class="modal-close" onclick="document.getElementById('markPaidModal').classList.remove('show')"><i class="fas fa-times"></i></button>
       </div>
       <form method="POST" id="markPaidForm">
         <div class="modal-body">
-          <p style="font-size:13px;color:var(--text-muted);margin-top:0;"><span id="markPaidUsername"></span>-কে প্রাইজ প্রদান করা হয়েছে বলে নিশ্চিত করবেন? এই অ্যাকশন আনডু করা যাবে না।</p>
-          <textarea class="input" name="notes" rows="2" placeholder="নোট (ঐচ্ছিক, যেমন: bKash TrxID)"></textarea>
+          <p style="font-size:13px;color:var(--text-muted);margin-top:0;"><span id="markPaidUsername"></span> <%= t('admin_confirm_prize_note') %></p>
+          <textarea class="input" name="notes" rows="2" placeholder="<%= t('admin_field_note_optional_trx') %>"></textarea>
           <input type="hidden" name="months" value="<%= monthsBack %>">
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn" onclick="document.getElementById('markPaidModal').classList.remove('show')">বাতিল</button>
-          <button type="submit" class="btn btn-green"><i class="fas fa-check"></i> নিশ্চিত করুন</button>
+          <button type="button" class="btn" onclick="document.getElementById('markPaidModal').classList.remove('show')"><%= t('admin_btn_cancel') %></button>
+          <button type="submit" class="btn btn-green"><i class="fas fa-check"></i> <%= t('admin_btn_confirm') %></button>
         </div>
       </form>
     </div>

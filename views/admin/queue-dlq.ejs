@@ -50,7 +50,7 @@ const f = filters || {};
     <form method="GET" action="/admin/queue-dlq" class="flex flex-wrap gap-3">
         <select name="type" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
             <option value="">সব টাইপ</option>
-            ${(types || []).map(t => '<option value="' + t + '" ' + (f.type === t ? 'selected' : '') + '>' + t + '</option>').join('')}
+            ${(types || []).map(type => '<option value="' + type + '" ' + (f.type === type ? 'selected' : '') + '>' + type + '</option>').join('')}
         </select>
         <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">ফিল্টার</button>
         ${f.type ? '<a href="/admin/queue-dlq" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">রিসেট</a>' : ''}

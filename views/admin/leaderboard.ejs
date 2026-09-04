@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>লিডারবোর্ড ম্যানেজমেন্ট • Livo Admin</title>
+  <title><%= t('admin_title_leaderboard') %></title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     * { box-sizing: border-box; }
@@ -24,7 +24,7 @@
 
       <% if (saved) { %>
         <div class="admin-card" style="padding:12px 16px;margin-bottom:14px;background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.3);color:#10b981;font-weight:700;font-size:13px;">
-          <i class="fas fa-check-circle"></i> সফলভাবে আপডেট হয়েছে
+          <i class="fas fa-check-circle"></i> <%= t('admin_msg_updated_successfully') %>
         </div>
       <% } %>
       <% if (saveError) { %>
@@ -34,24 +34,24 @@
       <% } %>
 
       <div class="grid grid-4" style="margin-bottom:14px;">
-        <div class="stat-card"><div class="stat-label">মোট ইউজার (রোল: user)</div><div class="stat-number"><%= total %></div></div>
-        <div class="stat-card"><div class="stat-label">এই পেজে</div><div class="stat-number"><%= entries.length %></div></div>
-        <div class="stat-card"><div class="stat-label">পাবলিক Top 50 (৬০ সেকেন্ড ক্যাশ)</div><div class="stat-number" style="color:#f59e0b;">50</div></div>
-        <div class="stat-card"><div class="stat-label">চলতি মাসের রেফারেল কনটেস্ট</div><div class="stat-number" style="color:#10b981;"><%= contest.monthName || '—' %></div></div>
+        <div class="stat-card"><div class="stat-label"><%= t('admin_stat_total_users_role_user') %></div><div class="stat-number"><%= total %></div></div>
+        <div class="stat-card"><div class="stat-label"><%= t('admin_label_on_this_page') %></div><div class="stat-number"><%= entries.length %></div></div>
+        <div class="stat-card"><div class="stat-label"><%= t('admin_public_top50') %></div><div class="stat-number" style="color:#f59e0b;">50</div></div>
+        <div class="stat-card"><div class="stat-label"><%= t('admin_current_month_contest') %></div><div class="stat-number" style="color:#10b981;"><%= contest.monthName || '—' %></div></div>
       </div>
 
       <!-- ==================== পয়েন্ট লিডারবোর্ড: সার্চ/ফিল্টার ==================== -->
       <div class="admin-card" style="padding:14px;margin-bottom:14px;">
         <form method="GET" action="/admin/leaderboard" style="display:flex;gap:10px;flex-wrap:wrap;">
-          <input class="input" style="flex:1;min-width:220px;" type="text" name="search" value="<%= search || '' %>" placeholder="ইউজারনেম, ইমেইল বা ফোন দিয়ে খুঁজুন...">
+          <input class="input" style="flex:1;min-width:220px;" type="text" name="search" value="<%= search || '' %>" placeholder="<%= t('admin_ph_search_user_email_phone') %>">
           <select class="select" style="max-width:200px;" name="status">
-            <option value="">সব স্ট্যাটাস</option>
-            <option value="active" <%= status === 'active' ? 'selected' : '' %>>সক্রিয় (র‍্যাঙ্কড)</option>
-            <option value="banned" <%= status === 'banned' ? 'selected' : '' %>>ব্যান করা</option>
+            <option value=""><%= t('admin_filter_all_status') %></option>
+            <option value="active" <%= status === 'active' ? 'selected' : '' %>><%= t('admin_status_active_ranked') %></option>
+            <option value="banned" <%= status === 'banned' ? 'selected' : '' %>><%= t('admin_status_banned') %></option>
           </select>
-          <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> খুঁজুন</button>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> <%= t('admin_btn_search') %></button>
           <% if (search || status) { %>
-            <a class="btn" href="/admin/leaderboard">রিসেট</a>
+            <a class="btn" href="/admin/leaderboard"><%= t('admin_btn_reset') %></a>
           <% } %>
         </form>
       </div>
@@ -63,13 +63,13 @@
           <table class="admin-table">
             <thead>
               <tr>
-                <th>র‍্যাঙ্ক</th>
-                <th>ইউজার</th>
-                <th>পয়েন্ট</th>
-                <th>কয়েন</th>
-                <th>জয়/মোট বেট</th>
-                <th>স্ট্যাটাস</th>
-                <th style="text-align:right;">অ্যাকশন</th>
+                <th><%= t('admin_col_rank') %></th>
+                <th><%= t('admin_col_user') %></th>
+                <th><%= t('admin_col_points') %></th>
+                <th><%= t('admin_col_coins') %></th>
+                <th><%= t('admin_col_wins_total_bets') %></th>
+                <th><%= t('admin_col_status') %></th>
+                <th style="text-align:right;"><%= t('admin_col_action') %></th>
               </tr>
             </thead>
             <tbody>
@@ -80,7 +80,7 @@
                       <% if (u.rank) { %>
                         <span class="lb-rank <%= u.rank == 1 ? 'lb-rank-1' : (u.rank == 2 ? 'lb-rank-2' : (u.rank == 3 ? 'lb-rank-3' : '')) %>">#<%= u.rank %></span>
                         <% if (u.rank <= 50) { %>
-                          <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">পাবলিক Top 50-এ</div>
+                          <div style="font-size:10px;color:var(--text-muted);margin-top:2px;"><%= t('admin_in_public_top50') %></div>
                         <% } %>
                       <% } else { %>
                         <span style="color:var(--text-muted);">—</span>
@@ -95,13 +95,13 @@
                     <td><%= u.wins %> / <%= u.total_bets %></td>
                     <td>
                       <% if (u.is_banned) { %>
-                        <span class="badge badge-red">ব্যান করা</span>
+                        <span class="badge badge-red"><%= t('admin_status_banned') %></span>
                       <% } else { %>
-                        <span class="badge badge-green">সক্রিয়</span>
+                        <span class="badge badge-green"><%= t('admin_status_active') %></span>
                       <% } %>
                     </td>
                     <td style="text-align:right;white-space:nowrap;">
-                      <a class="btn btn-sm" href="/admin/users/<%= u.id %>">প্রোফাইল</a>
+                      <a class="btn btn-sm" href="/admin/users/<%= u.id %>"><%= t('admin_col_profile') %></a>
                       <form method="POST" action="/admin/leaderboard/<%= u.id %>/toggle-ban" style="display:inline" onsubmit="return confirm('<%= u.is_banned ? 'আনব্যান' : 'ব্যান' %> করবেন? এটা পাবলিক লিডারবোর্ডের র‍্যাঙ্কিংও বদলে দেবে।')">
                         <input type="hidden" name="page" value="<%= page %>">
                         <input type="hidden" name="search" value="<%= search || '' %>">
@@ -112,7 +112,7 @@
                   </tr>
                 <% }) %>
               <% } else { %>
-                <tr><td colspan="7"><div class="empty-state">কোনো ইউজার পাওয়া যায়নি</div></td></tr>
+                <tr><td colspan="7"><div class="empty-state"><%= t('admin_empty_users') %></div></td></tr>
               <% } %>
             </tbody>
           </table>
@@ -121,11 +121,11 @@
 
       <div style="display:flex;justify-content:center;gap:10px;margin-bottom:24px;">
         <% if (page > 1) { %>
-          <a class="btn" href="/admin/leaderboard?page=<%= page - 1 %>&search=<%= encodeURIComponent(search || '') %>&status=<%= status || '' %>">← আগের পেজ</a>
+          <a class="btn" href="/admin/leaderboard?page=<%= page - 1 %>&search=<%= encodeURIComponent(search || '') %>&status=<%= status || '' %>">&larr; <%= t('admin_pagination_prev') %></a>
         <% } %>
         <span style="padding:9px 12px;color:var(--text-muted);font-size:12px;">পেজ <%= page %> / <%= totalPages %></span>
         <% if (page < totalPages) { %>
-          <a class="btn" href="/admin/leaderboard?page=<%= page + 1 %>&search=<%= encodeURIComponent(search || '') %>&status=<%= status || '' %>">পরের পেজ →</a>
+          <a class="btn" href="/admin/leaderboard?page=<%= page + 1 %>&search=<%= encodeURIComponent(search || '') %>&status=<%= status || '' %>"><%= t('admin_pagination_next') %> &rarr;</a>
         <% } %>
       </div>
 
@@ -133,13 +133,13 @@
       <div class="admin-card" style="margin-bottom:20px;">
         <div class="admin-card-header">
           চলতি মাসের রেফারেল কনটেস্ট<% if (contest.monthName) { %> — <%= contest.monthName %><% } %>
-          <a href="/admin/leaderboard/contest/payouts" class="btn btn-sm" style="float:right;margin-left:8px;"><i class="fas fa-money-check-dollar"></i> পেআউট ট্র্যাকিং</a>
-          <button type="button" class="btn btn-sm" style="float:right;" onclick="loadContestHistory()"><i class="fas fa-clock-rotate-left"></i> আগের মাসগুলো</button>
+          <a href="/admin/leaderboard/contest/payouts" class="btn btn-sm" style="float:right;margin-left:8px;"><i class="fas fa-money-check-dollar"></i> <%= t('admin_payout_tracking') %></a>
+          <button type="button" class="btn btn-sm" style="float:right;" onclick="loadContestHistory()"><i class="fas fa-clock-rotate-left"></i> <%= t('admin_previous_months') %></button>
         </div>
         <div style="overflow-x:auto;">
           <table class="admin-table">
             <thead>
-              <tr><th>র‍্যাঙ্ক</th><th>ইউজার</th><th>রেফারেল</th><th>প্রাইজ</th></tr>
+              <tr><th><%= t('admin_col_rank') %></th><th><%= t('admin_col_user') %></th><th><%= t('admin_col_referrals') %></th><th><%= t('admin_col_prize') %></th></tr>
             </thead>
             <tbody>
               <% if (contest.leaders && contest.leaders.length > 0) { %>
@@ -152,7 +152,7 @@
                   </tr>
                 <% }) %>
               <% } else { %>
-                <tr><td colspan="4"><div class="empty-state">এই মাসে এখনো কোনো রেফারেল হয়নি</div></td></tr>
+                <tr><td colspan="4"><div class="empty-state"><%= t('admin_empty_month_referrals') %></div></td></tr>
               <% } %>
             </tbody>
           </table>

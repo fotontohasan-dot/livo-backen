@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>নিউজ • Livo Admin</title>
+  <title><%= t('admin_title_news') %></title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     * { box-sizing: border-box; }
@@ -22,18 +22,18 @@
       <%- include('./partials/header', { pageTitle: 'নিউজ', pageSubtitle: 'স্পোর্টস নিউজ পোস্ট ও পরিচালনা করুন' }) %>
 
       <div class="admin-card" style="padding:16px;margin-bottom:16px;">
-        <div style="font-weight:800;color:var(--text-main);font-size:13px;margin-bottom:12px;"><i class="fas fa-newspaper" style="color:#f59e0b;"></i> নতুন নিউজ যোগ করুন</div>
+        <div style="font-weight:800;color:var(--text-main);font-size:13px;margin-bottom:12px;"><i class="fas fa-newspaper" style="color:#f59e0b;"></i> <%= t('admin_news_add_heading') %></div>
         <form method="POST" action="/admin/news/add" style="display:grid;grid-template-columns:1fr;gap:10px;">
-          <input class="input" type="text" name="title" placeholder="শিরোনাম" required>
-          <textarea class="input" name="content" rows="4" placeholder="বিস্তারিত"></textarea>
-          <input class="input" type="text" name="image_url" placeholder="ইমেজ URL (ঐচ্ছিক)">
-          <input class="input" type="text" name="sport" placeholder="স্পোর্ট (ঐচ্ছিক)">
-          <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> পোস্ট করুন</button>
+          <input class="input" type="text" name="title" placeholder="<%= t('admin_col_title') %>" required>
+          <textarea class="input" name="content" rows="4" placeholder="<%= t('admin_col_details') %>"></textarea>
+          <input class="input" type="text" name="image_url" placeholder="<%= t('admin_field_image_url_optional') %>">
+          <input class="input" type="text" name="sport" placeholder="<%= t('admin_field_sport_optional') %>">
+          <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> <%= t('admin_btn_post') %></button>
         </form>
       </div>
 
       <div class="admin-card">
-        <div class="admin-card-header">সকল নিউজ</div>
+        <div class="admin-card-header"><%= t('admin_news_all') %></div>
         <% if (newsList && newsList.length > 0) { %>
           <% newsList.forEach(n => { %>
             <div class="news-row">
@@ -53,7 +53,7 @@
             </div>
           <% }) %>
         <% } else { %>
-          <div class="empty-state">কোনো নিউজ পাওয়া যায়নি</div>
+          <div class="empty-state"><%= t('admin_empty_news') %></div>
         <% } %>
       </div>
     </div>

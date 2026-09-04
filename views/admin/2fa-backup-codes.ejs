@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ব্যাকআপ কোড • Livo Admin</title>
+    <title><%= t('admin_title_backup_codes') %></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -59,14 +59,14 @@
             <div class="inline-flex items-center justify-center w-16 h-16 bg-emerald-600 rounded-2xl mb-4">
                 <i class="fas fa-check text-white text-3xl"></i>
             </div>
-            <h1 class="text-2xl font-bold text-white">2FA চালু হয়ে গেছে ✅</h1>
-            <p class="text-slate-400 mt-2 text-sm">এই ব্যাকআপ কোডগুলো সংরক্ষণ করুন — অথেনটিকেটর অ্যাপ হারিয়ে গেলে এগুলো দিয়ে লগইন করতে পারবেন</p>
+            <h1 class="text-2xl font-bold text-white"><%= t('admin_2fa_enabled_heading') %></h1>
+            <p class="text-slate-400 mt-2 text-sm"><%= t('admin_2fa_backup_intro') %></p>
         </div>
 
         <div class="bg-slate-800 border border-slate-700 rounded-3xl p-8 admin-card space-y-6">
             <div class="bg-amber-500/10 border border-amber-500/30 text-amber-400 px-4 py-3 rounded-2xl text-sm flex items-start gap-3">
                 <i class="fas fa-triangle-exclamation mt-0.5"></i>
-                <span>প্রতিটা কোড <b>একবারই</b> ব্যবহার করা যাবে। এই পেজ বন্ধ করলে এগুলো আর দেখা যাবে না — এখনই সংরক্ষণ করুন।</span>
+                <span><%= t('admin_2fa_each_code') %> <b><%= t('admin_2fa_only_once') %></b> <%= t('admin_2fa_codes_warning') %></span>
             </div>
 
             <div class="grid grid-cols-2 gap-3 font-mono text-sm">
@@ -77,13 +77,13 @@
 
             <button onclick="copyAll()" id="copyBtn"
                 class="w-full bg-slate-700 hover:bg-slate-600 transition-all text-white font-semibold py-3 rounded-2xl text-sm flex items-center justify-center gap-2">
-                <i class="fas fa-copy"></i> সব কোড কপি করুন
+                <i class="fas fa-copy"></i> <%= t('admin_2fa_copy_all') %>
             </button>
 
             <form method="POST" action="/admin/2fa/backup-codes/acknowledge">
                 <button type="submit"
                     class="block text-center w-full bg-blue-600 hover:bg-blue-700 transition-all text-white font-semibold py-3.5 rounded-2xl text-base shadow-lg shadow-blue-600/30">
-                    বুঝেছি, সংরক্ষণ করেছি
+                    <%= t('admin_2fa_saved_ack') %>
                 </button>
             </form>
         </div>

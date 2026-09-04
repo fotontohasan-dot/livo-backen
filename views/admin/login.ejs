@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Login • Livo</title>
+    <title><%= t('admin_title_login') %></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -134,14 +134,14 @@
                 <i class="fas fa-shield-alt text-white text-3xl"></i>
             </div>
             <h1 class="text-3xl font-bold text-white">Livo Admin</h1>
-            <p class="text-slate-400 mt-2">Secure Admin Panel</p>
+            <p class="text-slate-400 mt-2"><%= t('admin_login_secure_panel') %></p>
         </div>
 
         <!-- Login Card -->
         <div class="bg-slate-800 border border-slate-700 rounded-3xl p-8 admin-card">
             <div class="mb-6">
-                <h2 class="text-2xl font-semibold text-white">Welcome back</h2>
-                <p class="text-slate-400 text-sm mt-1">Sign in to your admin account</p>
+                <h2 class="text-2xl font-semibold text-white"><%= t('admin_login_welcome') %></h2>
+                <p class="text-slate-400 text-sm mt-1"><%= t('admin_login_subtitle') %></p>
             </div>
 
             <!-- Error Message -->
@@ -155,7 +155,7 @@
             <form action="/admin/login" method="POST" class="space-y-5">
                 <!-- Username / Email -->
                 <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-2">Username or Email</label>
+                    <label class="block text-sm font-medium text-slate-300 mb-2"><%= t('admin_login_user_or_email') %></label>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                             <i class="fas fa-user text-slate-500"></i>
@@ -165,7 +165,7 @@
                             name="username" 
                             required 
                             class="input-focus w-full bg-slate-900 border border-slate-700 text-white pl-11 pr-4 py-3.5 rounded-2xl focus:outline-none focus:border-blue-500 placeholder:text-slate-500"
-                            placeholder="Enter your username or email"
+                            placeholder="<%= t('admin_ph_enter_user_or_email') %>"
                             value="<%= typeof username !== 'undefined' ? username : '' %>"
                         >
                     </div>
@@ -173,7 +173,7 @@
 
                 <!-- Password -->
                 <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-2">Password</label>
+                    <label class="block text-sm font-medium text-slate-300 mb-2"><%= t('admin_col_password') %></label>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                             <i class="fas fa-lock text-slate-500"></i>
@@ -184,7 +184,7 @@
                             id="password"
                             required 
                             class="input-focus w-full bg-slate-900 border border-slate-700 text-white pl-11 pr-12 py-3.5 rounded-2xl focus:outline-none focus:border-blue-500 placeholder:text-slate-500"
-                            placeholder="Enter your password"
+                            placeholder="<%= t('admin_ph_enter_password') %>"
                         >
                         <button 
                             type="button" 
@@ -200,9 +200,9 @@
                 <div class="flex items-center justify-between text-sm">
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" name="remember" class="w-4 h-4 accent-blue-600 bg-slate-900 border-slate-700 rounded">
-                        <span class="text-slate-300">Remember me</span>
+                        <span class="text-slate-300"><%= t('admin_login_remember') %></span>
                     </label>
-                    <span class="text-slate-500" title="Contact a system administrator to reset your password">Forgot password? Contact system admin</span>
+                    <span class="text-slate-500" title="<%= t('admin_login_reset_hint') %>"><%= t('admin_login_forgot') %></span>
                 </div>
 
                 <!-- Login Button -->
@@ -211,7 +211,7 @@
                     class="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 transition-all text-white font-semibold py-3.5 rounded-2xl flex items-center justify-center gap-2 text-base shadow-lg shadow-blue-600/30"
                 >
                     <i class="fas fa-sign-in-alt"></i>
-                    <span>Sign In</span>
+                    <span><%= t('admin_login_submit') %></span>
                 </button>
             </form>
         </div>

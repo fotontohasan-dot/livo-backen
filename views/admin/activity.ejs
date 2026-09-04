@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>অ্যাক্টিভিটি লগ • Livo Admin</title>
+  <title><%= t('admin_title_activity_log') %></title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     * { box-sizing: border-box; }
@@ -25,22 +25,22 @@
       <form class="activity-filters" method="GET" action="/admin/activity">
         <div class="input-icon-wrap">
           <i class="fas fa-search"></i>
-          <input class="input" type="text" name="q" placeholder="অ্যাডমিন বা বিবরণ দিয়ে খুঁজুন..." value="<%= filters.q || '' %>">
+          <input class="input" type="text" name="q" placeholder="<%= t('admin_search_admin_or_details') %>" value="<%= filters.q || '' %>">
         </div>
         <select class="select" name="action_type" onchange="this.form.submit()" style="width:auto;min-width:160px;">
-          <option value="">সব ধরনের অ্যাকশন</option>
-          <% actionTypes.forEach(t => { %>
-            <option value="<%= t %>" <%= filters.action_type === t ? 'selected' : '' %>><%= t %></option>
+          <option value=""><%= t('admin_filter_all_action_types') %></option>
+          <% actionTypes.forEach(actionType => { %>
+            <option value="<%= actionType %>" <%= filters.action_type === actionType ? 'selected' : '' %>><%= actionType %></option>
           <% }) %>
         </select>
-        <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> ফিল্টার</button>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> <%= t('admin_btn_filter') %></button>
         <a class="btn btn-secondary" href="/admin/activity/export.csv?q=<%= encodeURIComponent(filters.q || '') %>&action_type=<%= encodeURIComponent(filters.action_type || '') %>">
-          <i class="fas fa-download"></i> CSV এক্সপোর্ট
+          <i class="fas fa-download"></i> <%= t('admin_btn_export_csv') %>
         </a>
       </form>
 
       <div class="admin-card">
-        <div class="admin-card-header">সাম্প্রতিক কার্যকলাপ</div>
+        <div class="admin-card-header"><%= t('admin_recent_activity') %></div>
         <% if (logs && logs.length > 0) { %>
           <% logs.forEach(l => { %>
             <div class="log-row">
@@ -58,7 +58,7 @@
             </div>
           <% }) %>
         <% } else { %>
-          <div class="empty-state">কোনো অ্যাক্টিভিটি পাওয়া যায়নি</div>
+          <div class="empty-state"><%= t('admin_empty_activity') %></div>
         <% } %>
       </div>
     </div>
