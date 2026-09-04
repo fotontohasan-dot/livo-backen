@@ -33,6 +33,9 @@ const ALLOWED_DIRECT_APP_REQUIRE = new Set([
   // নিজের env নিয়ে স্বতন্ত্র অ্যাপ ইনস্ট্যান্স বুট করে, কিন্তু supertest-কে তার
   // নিজস্ব দীর্ঘস্থায়ী listening সার্ভারই দেয় (ফাইলের ভেতরের মন্তব্য দেখো)।
   path.join(TESTS_DIR, 'security', 'internalEndpointAuth.test.js'),
+  // একই কারণে: API_DOCS_ACCESS-এর প্রতিটা মোড আলাদা module registry-তে বুট
+  // করতে হয়, কিন্তু supertest নিজের listening http.Server-ই পায়।
+  path.join(TESTS_DIR, 'security', 'swaggerDocsAccess.test.js'),
   // এই ফাইলটাই নিয়মটার ব্যাখ্যা ধারণ করে
   path.join(TESTS_DIR, 'testHarnessIntegrity.test.js'),
   // মন্তব্যে পুরনো প্যাটার্নটা উদাহরণ হিসেবে লেখা আছে
