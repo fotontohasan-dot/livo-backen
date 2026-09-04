@@ -199,6 +199,26 @@ describe('উইথড্র রুট', () => {
     expect(res.status).toBe(200);
   });
 
+  test('বন্ধ থাকলে পেজে কারণ দেখায় এবং সাবমিট বাটন নিষ্ক্রিয় থাকে', async () => {
+    // E2E (tests/e2e/criticalFlows.spec.js) একই জিনিস ব্রাউজারে যাচাই করে;
+    // এখানে রেন্ডার করা HTML দেখে নেওয়া হচ্ছে যাতে ব্রাউজার ছাড়াও প্রমাণ থাকে।
+    await setConfig({ mode: 'closed' });
+    const user = await makeUser('wwui');
+    const res = await user.agent.get('/payment/withdraw');
+    expect(res.status).toBe(200);
+    expect(res.text).toContain('withdrawSubmitBtn');
+    const btn = res.text.match(/<button[^>]*id="withdrawSubmitBtn"[^>]*>/)[0];
+    expect(btn).toContain('disabled');
+  });
+
+  test('খোলা থাকলে বন্ধের নোটিশ দেখানো হয় না', async () => {
+    await setConfig({ mode: 'open' });
+    const user = await makeUser('wwuiopen');
+    const res = await user.agent.get('/payment/withdraw');
+    expect(res.status).toBe(200);
+    expect(res.text).not.toContain('উইথড্র সাময়িকভাবে বন্ধ');
+  });
+
   test('উইথড্র বন্ধ থাকলেও ডিপোজিট পেজ স্বাভাবিক থাকে', async () => {
     await setConfig({ mode: 'closed' });
     const user = await makeUser('wwdep');
