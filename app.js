@@ -698,8 +698,73 @@ app.use('/api', require('./routes/api'));
 // ==================== OpenAPI / Swagger UI ====================
 const swaggerUi = require('swagger-ui-express');
 const { swaggerSpec } = require('./services/swagger');
-app.get('/api/docs.json', (req, res) => res.json(swaggerSpec));
-app.use('/api/docs', (req, res, next) => { res.removeHeader('Content-Security-Policy'); next(); }, swaggerUi.serve, swaggerUi.setup(swaggerSpec, { customSiteTitle: 'Livo API Docs' }));
+// PHASE 1 fix: /api/docs ও /api/docs.json কোনো প্রমাণীকরণ ছাড়াই মাউন্ট করা ছিল,
+// অর্থাৎ যে কেউ প্ল্যাটফর্মের সম্পূর্ণ API surface — প্রতিটি রুট, প্যারামিটার ও
+// স্কিমা — পড়ে নিতে পারত। এটা নিজে দুর্বলতা নয়, কিন্তু আক্রমণকারীর কাজের
+// প্রথম ধাপটা (reconnaissance) আমরাই সাজিয়ে দিয়ে রাখছিলাম।
+//
+// আচরণ পরিবর্তন যতটা সম্ভব ছোট রাখা হয়েছে (Rule 3):
+//   - production-এ docs শুধু লগ-ইন করা admin দেখতে পাবে
+//   - অন্য সবার জন্য 404 — 403 নয়, কারণ 403 বলে দেয় "এখানে কিছু একটা আছে"
+//   - production-এর বাইরে (dev/test) আচরণ আগের মতোই খোলা
+//
+// API_DOCS_ACCESS দিয়ে ওভাররাইড করা যায়: 'admin' | 'public' | 'off'
+const docsAccess = process.env.API_DOCS_ACCESS
+  || (process.env.NODE_ENV === 'production' ? 'admin' : 'public');
+
+const requireDocsAccess = async (req, res, next) => {
+  if (docsAccess === 'public') return next();
+  if (docsAccess === 'off') return res.status(404).send('Not found');
+
+  // 'admin' — সেশনের role-কে বিশ্বাস না করে DB থেকে বর্তমান role পড়া হয়,
+  // middleware/auth.js-এর isAdmin যে কারণে তা করে সেই একই কারণে (ডিমোট/ব্যান
+  // করা অ্যাকাউন্টের পুরনো সেশন যেন কাজ না করে)।
+  //
+  // isAdmin সরাসরি ব্যবহার করা হয়নি: সেটি ব্যর্থ হলে সেশন ধ্বংস করে ও
+  // /admin/login-এ রিডাইরেক্ট করে। একজন সাধারণ ব্যবহারকারী কৌতূহলবশত
+  // /api/docs খুললে তার লগইন উড়ে যাওয়া উচিত নয়।
+  if (!req.session || !req.session.user) return res.status(404).send('Not found');
+  try {
+    const r = await pool.query(
+      'SELECT role, is_banned, deleted_at FROM users WHERE id = $1',
+      [req.session.user.id]
+    );
+    const row = r.rows[0];
+    if (!row || row.is_banned || row.deleted_at || row.role !== 'admin') {
+      return res.status(404).send('Not found');
+    }
+    return next();
+  } catch (err) {
+    console.error('api-docs access check error:', err.message);
+    return res.status(404).send('Not found');
+  }
+};
+
+app.get('/api/docs.json', requireDocsAccess, (req, res) => res.json(swaggerSpec));
+// PHASE 1 fix: আগে এখানে `res.removeHeader('Content-Security-Policy')` করা হতো,
+// অর্থাৎ Swagger UI-এর পাতাগুলো **কোনো** CSP ছাড়াই সার্ভ হতো। Swagger UI-এর
+// নিজস্ব ইনলাইন bootstrap script আছে বলে সাইটের সাধারণ নীতিতে সেটা চলত না —
+// কিন্তু সমাধান হিসেবে পুরো হেডার মুছে ফেলা মানে ওই পাথে objectSrc, baseUri,
+// frameAncestors, formAction — সবই খুলে যাওয়া।
+//
+// এখন হেডার মোছা হয় না; বদলে এই পাথের জন্য একটি আলাদা, সংকীর্ণ নীতি বসানো হয়।
+// Swagger UI যা সত্যিই দরকার (নিজের ইনলাইন script ও style) ততটুকুই ছাড় পায়,
+// বাকি directive গুলো সাইটের মূল নীতির মতোই কড়া থাকে।
+const swaggerCsp = helmet.contentSecurityPolicy({
+  directives: {
+    defaultSrc: ["'self'"],
+    scriptSrc: ["'self'", "'unsafe-inline'"],
+    styleSrc: ["'self'", "'unsafe-inline'"],
+    imgSrc: ["'self'", 'data:'],
+    fontSrc: ["'self'", 'data:'],
+    connectSrc: ["'self'"],
+    objectSrc: ["'none'"],
+    frameAncestors: ["'self'"],
+    baseUri: ["'self'"],
+    formAction: ["'self'"]
+  }
+});
+app.use('/api/docs', requireDocsAccess, swaggerCsp, swaggerUi.serve, swaggerUi.setup(swaggerSpec, { customSiteTitle: 'Livo API Docs' }));
 app.use('/accumulator', require('./routes/accumulator'));
 app.use('/chat', require('./routes/chat'));
 app.use('/extra', require('./routes/extra'));
