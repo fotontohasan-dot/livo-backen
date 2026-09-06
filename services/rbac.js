@@ -269,9 +269,34 @@ async function importRoles(data) {
   return { created, updated, skipped };
 }
 
+
+// ==================== privilege escalation গার্ড ====================
+//
+// roles_manage permission থাকা একজন অ্যাডমিন role সম্পাদনা করতে পারে।
+// কোনো সীমা না থাকলে সে নিজের role-এ *সব* permission true করে দিতে
+// পারত — অর্থাৎ একটা Finance বা Support অ্যাডমিন নিজেকে কার্যত
+// super admin বানিয়ে ফেলতে পারত। isSuperAdmin ফ্ল্যাগ না পেলেও সব
+// permission পাওয়া কার্যত সমতুল্য।
+//
+// নিয়ম: super_admin ছাড়া কেউ এমন permission দিতে পারবে না যা তার
+// নিজের নেই। এটাই standard "no privilege escalation" নীতি — একজন
+// কেবল নিজের ক্ষমতার একটা উপসেট বিতরণ করতে পারে।
+//
+// @returns {string[]} যেসব permission caller দিতে পারত না
+function permissionsBeyondCaller(callerPermissions, requestedPermissions) {
+  const granted = [];
+  for (const key of Object.keys(requestedPermissions || {})) {
+    if (requestedPermissions[key] === true && callerPermissions[key] !== true) {
+      granted.push(key);
+    }
+  }
+  return granted;
+}
+
 module.exports = {
   PERMISSIONS, permissionGroups,
   getUserPermissions, hasPermission, requirePermission, requireSuperAdmin,
   listRoles, getRole, createRole, updateRole, deleteRole, cloneRole,
-  bulkUpdatePermission, assignUserRole, exportRoles, importRoles
+  bulkUpdatePermission, assignUserRole, exportRoles, importRoles,
+  permissionsBeyondCaller
 };

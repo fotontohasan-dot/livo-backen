@@ -20,6 +20,19 @@
   <meta name="theme-color" content="#0A1C14">
 
   <!-- Canonical — query-string/ট্র্যাকিং প্যারামিটারসহ URL যেন আলাদা পেজ হিসেবে ইনডেক্স না হয় -->
+  <%# ==================== ইনডেক্সিং নিয়ন্ত্রণ ====================
+      robots.txt শুধু ভদ্র ক্রলারই মানে, আর সেটা নিজেই সংবেদনশীল পথের
+      একটা তালিকা প্রকাশ করে দেয়। তাই ব্যক্তিগত ও আর্থিক পেজে সরাসরি
+      noindex মেটা বসানো হয় — এটা পেজ-প্রতি, তাই তালিকা ফাঁস হয় না।
+
+      locals.noindex স্পষ্টভাবে দেওয়া থাকলে সেটাই মানা হয়; নইলে পাথ দেখে
+      সিদ্ধান্ত। ডিফল্ট ইনডেক্সযোগ্য, কারণ পাবলিক পেজই বেশি। %>
+  <% const __path = (locals.currentPath || (typeof originalUrl !== 'undefined' ? originalUrl : '') || '');
+     const __private = /^\/(admin|profile|payment|kyc|extra|settings|wallet|transactions)/.test(__path);
+     const __noindex = (typeof locals.noindex !== 'undefined') ? locals.noindex : __private; %>
+  <% if (__noindex) { %>
+  <meta name="robots" content="noindex, nofollow">
+  <% } %>
   <link rel="canonical" href="<%= (locals.baseUrl || '') + (locals.canonicalPath || '') %>">
 
   <!-- Open Graph / ফেসবুক-হোয়াটসঅ্যাপে শেয়ার করলে যেভাবে দেখাবে -->

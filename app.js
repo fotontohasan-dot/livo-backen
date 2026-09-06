@@ -449,6 +449,10 @@ app.use((req, res, next) => {
   req.lang = lang;
   res.locals.lang = lang;
   res.locals.siteName = 'Livo';
+  // views/partials/head.ejs এটা দেখে সিদ্ধান্ত নেয় পেজটা noindex হবে কি না।
+  // req.path ব্যবহার করা হয় (query string ছাড়া), কারণ সিদ্ধান্তটা রুট
+  // নিয়ে, প্যারামিটার নিয়ে নয়।
+  res.locals.currentPath = req.path || '';
   // canonical/og:url-এর জন্য query-string ছাড়া পাথ। হোমপেজে '/' নয়, খালি স্ট্রিং —
   // তাতে baseUrl-এর সাথে জোড়া লাগলে "https://host/" হয়, ডাবল স্ল্যাশ হয় না।
   res.locals.canonicalPath = req.path === '/' ? '/' : req.path.replace(/\/+$/, '');

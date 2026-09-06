@@ -3554,6 +3554,22 @@ router.post('/roles', rbac.requirePermission('roles_manage'), async (req, res) =
   try {
     const permissions = {};
     Object.keys(rbac.PERMISSIONS).forEach(key => { permissions[key] = req.body[`perm_${key}`] === 'on'; });
+
+    // নতুন role তৈরিতেও একই গার্ড। নাহলে সম্পাদনার পথ বন্ধ করেও কেউ
+    // একটা সর্ব-permission role বানিয়ে নিজেকে assign করে নিতে পারত।
+    const creator = await rbac.getUserPermissions(req.session.user.id);
+    if (!creator.isSuperAdmin) {
+      const beyond = rbac.permissionsBeyondCaller(creator.permissions, permissions);
+      if (beyond.length > 0) {
+        await logAdminAction(
+          req.session.user.id, req.session.user.username, 'PERMISSION_ESCALATION_BLOCKED',
+          `নতুন role-এ নিজের ক্ষমতার বাইরের permission দেওয়ার চেষ্টা: ${beyond.join(', ')}`,
+          req.ip
+        );
+        req.flash('error', req.t('admin_permission_escalation_blocked'));
+        return res.redirect('/admin/roles');
+      }
+    }
     const role = await rbac.createRole({ name: req.body.name, description: sanitizeText(req.body.description || ''), permissions });
     await logAdminAction(req.session.user.id, req.session.user.username, 'ROLE_CREATED', `নতুন Role: ${role.name} (${role.key})`, req.ip);
     req.flash('success', req.t('admin_role_created').replace('{value}', role.name));
@@ -3586,6 +3602,28 @@ router.post('/roles/:id', rbac.requirePermission('roles_manage'), async (req, re
       // Super Admin Role-এর permission UI থেকে বদলানো যাবে না — সবসময় সব true (override)
       permissions[key] = existing.key === 'super_admin' ? true : req.body[`perm_${key}`] === 'on';
     });
+
+    // ==================== privilege escalation গার্ড ====================
+    // roles_manage থাকা একজন অ্যাডমিন এতদিন যেকোনো role-এ *সব* permission
+    // true করে দিতে পারত — নিজের role সহ। অর্থাৎ একটা Finance বা Support
+    // অ্যাডমিন নিজেকে কার্যত super admin বানিয়ে ফেলতে পারত। isSuperAdmin
+    // ফ্ল্যাগ না পেলেও সব permission পাওয়া কার্যত সমতুল্য।
+    //
+    // এখন super_admin ছাড়া কেউ এমন permission দিতে পারবে না যা তার নিজের
+    // নেই — একজন কেবল নিজের ক্ষমতার উপসেট বিতরণ করতে পারে।
+    const caller = await rbac.getUserPermissions(req.session.user.id);
+    if (!caller.isSuperAdmin) {
+      const beyond = rbac.permissionsBeyondCaller(caller.permissions, permissions);
+      if (beyond.length > 0) {
+        await logAdminAction(
+          req.session.user.id, req.session.user.username, 'PERMISSION_ESCALATION_BLOCKED',
+          `Role #${req.params.id}-এ নিজের ক্ষমতার বাইরের permission দেওয়ার চেষ্টা: ${beyond.join(', ')}`,
+          req.ip
+        );
+        req.flash('error', req.t('admin_permission_escalation_blocked'));
+        return res.redirect('/admin/roles');
+      }
+    }
     const role = await rbac.updateRole(req.params.id, { name: existing.is_system ? existing.name : req.body.name, description: sanitizeText(req.body.description || ''), permissions });
     await logAdminAction(req.session.user.id, req.session.user.username, 'PERMISSION_CHANGED', `Role "${role.name}"-এর permission আপডেট করা হয়েছে`, req.ip);
     req.flash('success', req.t('admin_role_updated').replace('{value}', role.name));

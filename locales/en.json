@@ -1839,5 +1839,6 @@
   "admin_loc_import_en": "Import into en.json",
   "admin_col_key": "Key",
   "admin_status_ok": "OK",
-  "admin_actor_system": "System"
+  "admin_actor_system": "System",
+  "admin_permission_escalation_blocked": "You cannot grant permissions you do not have yourself."
 }

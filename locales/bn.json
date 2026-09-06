@@ -1839,5 +1839,6 @@
   "admin_loc_import_en": "en.json-এ ইমপোর্ট",
   "admin_col_key": "কী (key)",
   "admin_status_ok": "ঠিক আছে",
-  "admin_actor_system": "সিস্টেম"
+  "admin_actor_system": "সিস্টেম",
+  "admin_permission_escalation_blocked": "নিজের ক্ষমতার বাইরের permission দেওয়া যাবে না।"
 }
