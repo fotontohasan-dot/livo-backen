@@ -141,7 +141,7 @@ async function claimCashback(userId, category = 'sports', lang = 'bn') {
     }
 
     await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [amount, userId]);
-    await client.query(`UPDATE daily_losses SET cashback_claimed = true WHERE id = $1`, [row.id]);
+    await client.query(`UPDATE daily_losses SET cashback_claimed = true WHERE id = $1 AND cashback_claimed = false`, [row.id]);
     await client.query(
       `INSERT INTO coin_transactions (user_id, amount, type, description)
        VALUES ($1, $2, 'cashback', $3)`,

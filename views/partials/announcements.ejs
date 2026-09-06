@@ -8,7 +8,7 @@
   <% banners.forEach(function(a) { %>
     <div class="livo-announce-banner" data-ann-id="<%= a.id %>" style="background:linear-gradient(90deg,#1a1a1a,#2a2205);border-bottom:1px solid rgba(234,179,8,0.35);color:#fff;padding:10px 16px;font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
       <span><i class="fas fa-bullhorn" style="color:var(--gold,#EAB308);margin-right:6px;"></i><%= annLang === 'en' && a.title_en ? a.title_en : (a.title_bn || '') %> — <%= annLang === 'en' && a.message_en ? a.message_en : a.message_bn %></span>
-      <button onclick="livoDismissAnnouncement(<%= a.id %>, this.closest('.livo-announce-banner'))" style="background:none;border:none;color: var(--text-muted);cursor:pointer;font-size:15px;">&times;</button>
+      <button data-dismiss-announcement="<%= a.id %>" data-dismiss-target=".livo-announce-banner" style="background:none;border:none;color: var(--text-muted);cursor:pointer;font-size:15px;">&times;</button>
     </div>
   <% }) %>
 
@@ -37,15 +37,10 @@
         <i class="fas fa-bullhorn" style="color:var(--gold,#EAB308);font-size:30px;margin-bottom:12px;"></i>
         <h3 style="color:#fff;font-size:17px;font-weight:800;margin:0 0 8px;"><%= annLang === 'en' && p.title_en ? p.title_en : (p.title_bn || '') %></h3>
         <p style="color:#cbd5e1;font-size:13.5px;margin:0 0 18px;line-height:1.6;"><%= annLang === 'en' && p.message_en ? p.message_en : p.message_bn %></p>
-        <button onclick="livoDismissAnnouncement(<%= p.id %>, document.getElementById('livoAnnouncePopupOverlay'))" class="btn btn-gold" style="width:100%;padding:12px;border-radius:12px;"><%= annLang === 'en' ? 'Close' : 'বন্ধ করুন' %></button>
+        <button data-dismiss-announcement="<%= p.id %>" data-dismiss-id="livoAnnouncePopupOverlay" class="btn btn-gold" style="width:100%;padding:12px;border-radius:12px;"><%= annLang === 'en' ? 'Close' : 'বন্ধ করুন' %></button>
       </div>
     </div>
   <% } %>
 
-  <script>
-    function livoDismissAnnouncement(id, el) {
-      fetch('/announcements/' + id + '/dismiss', { method: 'POST' }).catch(()=>{});
-      if (el) el.remove();
-    }
-  </script>
+  <script src="/js/views/partials-announcements.js"></script>
 <% } %>

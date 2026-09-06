@@ -53,7 +53,7 @@
           <i class="fas fa-search"></i>
           <input class="input" type="text" name="q" placeholder="<%= t('admin_ph_search_name_user_phone') %>" value="<%= filters.q || '' %>">
         </div>
-        <select class="select" name="status" onchange="this.form.submit()">
+        <select class="select" name="status" data-auto-submit>
           <option value=""><%= t('admin_filter_all_status') %></option>
           <option value="pending" <%= filters.status === 'pending' ? 'selected' : '' %>><%= t('admin_status_pending') %></option>
           <option value="approved" <%= filters.status === 'approved' ? 'selected' : '' %>><%= t('admin_status_approved') %></option>
@@ -64,9 +64,9 @@
 
       <div class="admin-card" id="kycBulkBar" style="display:none;padding:10px 14px;margin-bottom:14px;background:rgba(245,158,11,0.08);border-color:rgba(245,158,11,0.25);">
         <span style="font-size:12px;color:var(--text-muted);font-weight:600;"><span id="kycSelectedCount">0</span> <%= t('admin_kyc_selected_suffix') %></span>
-        <button type="button" class="btn btn-sm btn-green" style="margin-left:10px;" onclick="bulkApproveKyc()"><i class="fas fa-check"></i> <%= t('admin_btn_bulk_approve') %></button>
-        <button type="button" class="btn btn-sm btn-red" onclick="bulkRejectKyc()"><i class="fas fa-times"></i> <%= t('admin_btn_bulk_reject') %></button>
-        <button type="button" class="btn btn-sm" onclick="clearKycSelection()"><%= t('admin_btn_clear_selection') %></button>
+        <button type="button" class="btn btn-sm btn-green" style="margin-left:10px;" data-kyc-bulk-approve><i class="fas fa-check"></i> <%= t('admin_btn_bulk_approve') %></button>
+        <button type="button" class="btn btn-sm btn-red" data-kyc-bulk-reject><i class="fas fa-times"></i> <%= t('admin_btn_bulk_reject') %></button>
+        <button type="button" class="btn btn-sm" data-kyc-clear-selection><%= t('admin_btn_clear_selection') %></button>
       </div>
 
       <div class="admin-card">
@@ -75,7 +75,7 @@
           <table class="admin-table">
             <thead>
               <tr>
-                <th style="width:34px;"><input type="checkbox" id="kycSelectAll" onchange="toggleKycSelectAll(this)"></th>
+                <th style="width:34px;"><input type="checkbox" id="kycSelectAll"></th>
                 <th><%= t('admin_col_user') %></th>
                 <th><%= t('admin_col_document') %></th>
                 <th><%= t('admin_col_submitted_at') %></th>
@@ -89,7 +89,7 @@
                   <tr>
                     <td>
                       <% if (k.status === 'pending') { %>
-                        <input type="checkbox" class="kyc-row-check" value="<%= k.id %>" onchange="updateKycBulkBar()">
+                        <input type="checkbox" class="kyc-row-check" value="<%= k.id %>">
                       <% } %>
                     </td>
                     <td>
@@ -108,10 +108,10 @@
                       <% } %>
                     </td>
                     <td style="text-align:right;">
-                      <button class="btn btn-sm" onclick='viewKyc(<%- jsonScriptSafe(k) %>)'><%= t('admin_col_details') %></button>
+                      <button class="btn btn-sm" data-kyc-view="<%= k.id %>"><%= t('admin_col_details') %></button>
                       <% if (k.status === 'pending') { %>
-                        <button class="btn btn-sm btn-green" onclick="approveKyc(<%= k.id %>)"><%= t('admin_btn_approve') %></button>
-                        <button class="btn btn-sm btn-red" onclick="rejectKyc(<%= k.id %>)"><%= t('admin_btn_cancel') %></button>
+                        <button class="btn btn-sm btn-green" data-kyc-approve="<%= k.id %>"><%= t('admin_btn_approve') %></button>
+                        <button class="btn btn-sm btn-red" data-kyc-reject="<%= k.id %>"><%= t('admin_btn_cancel') %></button>
                       <% } %>
                     </td>
                   </tr>
@@ -131,7 +131,7 @@
     <div class="modal-box">
       <div class="modal-header">
         <h3><%= t('admin_kyc_detail_heading') %></h3>
-        <button class="modal-close" onclick="closeModal('viewModal')" aria-label="<%= t('admin_ui_close') %>"><i class="fas fa-times"></i></button>
+        <button class="modal-close" data-modal-close="viewModal" aria-label="<%= t('admin_ui_close') %>"><i class="fas fa-times"></i></button>
       </div>
       <div class="modal-body" id="viewModalBody"></div>
     </div>
@@ -142,13 +142,13 @@
     <div class="modal-box">
       <div class="modal-header">
         <h3><%= t('admin_field_reject_reason') %></h3>
-        <button class="modal-close" onclick="closeModal('rejectModal')" aria-label="<%= t('admin_ui_close') %>"><i class="fas fa-times"></i></button>
+        <button class="modal-close" data-modal-close="rejectModal" aria-label="<%= t('admin_ui_close') %>"><i class="fas fa-times"></i></button>
       </div>
       <div class="modal-body">
         <textarea class="input" id="rejectReason" rows="3" placeholder="<%= t('admin_ph_reason_shown_to_user') %>"></textarea>
       </div>
       <div class="modal-footer">
-        <button class="btn" onclick="closeModal('rejectModal')"><%= t('admin_btn_reject') %></button>
+        <button class="btn" data-modal-close="rejectModal"><%= t('admin_btn_reject') %></button>
         <button class="btn btn-red" id="confirmRejectBtn"><%= t('admin_confirm_reject') %></button>
       </div>
     </div>
@@ -159,197 +159,36 @@
     <div class="modal-box">
       <div class="modal-header">
         <h3><%= t('admin_field_bulk_reject_reason') %></h3>
-        <button class="modal-close" onclick="closeModal('bulkRejectModal')" aria-label="<%= t('admin_ui_close') %>"><i class="fas fa-times"></i></button>
+        <button class="modal-close" data-modal-close="bulkRejectModal" aria-label="<%= t('admin_ui_close') %>"><i class="fas fa-times"></i></button>
       </div>
       <div class="modal-body">
         <p style="font-size:12px;color:var(--text-muted);margin-top:0;"><span id="bulkRejectCount">0</span> <%= t('admin_kyc_bulk_reject_note') %></p>
         <textarea class="input" id="bulkRejectReason" rows="3" placeholder="<%= t('admin_ph_reason_shown_to_user') %>"></textarea>
       </div>
       <div class="modal-footer">
-        <button class="btn" onclick="closeModal('bulkRejectModal')"><%= t('admin_btn_reject') %></button>
+        <button class="btn" data-modal-close="bulkRejectModal"><%= t('admin_btn_reject') %></button>
         <button class="btn btn-red" id="confirmBulkRejectBtn"><%= t('admin_confirm_reject') %></button>
       </div>
     </div>
   </div>
 
-  <script>
-    // সার্ভার-সাইডে অনুবাদ করা স্ট্রিং ক্লায়েন্ট স্ক্রিপ্টে পাঠানো হয়।
-    //
-    // এখানে আগে টেমপ্লেট-লিটারেল ইন্টারপোলেশন ব্যবহার করা হয়েছিল, ধরে নিয়ে
-    // যে ফাইলটা admin-layout-এর body ব্যাকটিকের ভেতরে আছে। কিন্তু kyc.ejs ওই
-    // প্যাটার্ন ব্যবহার করে না — এটা সাধারণ EJS। ফলে ইন্টারপোলেশনটা হুবহু
-    // ব্রাউজারে চলে যেত এবং পুরো স্ক্রিপ্ট ব্লকটা সিনট্যাক্স এররে ভেঙে পড়ত,
-    // যা KYC পেজের সব JS (মডাল, বাল্ক অ্যাকশন, ডকুমেন্ট প্রিভিউ) অকেজো করত।
-    // E2E-তে এটাই ধরা পড়েছিল; Jest রেন্ডার টেস্ট HTML দেখে, ব্রাউজারে JS
-    // পার্স হয় কিনা দেখত না।
-    // <%- %> ব্যবহার করা হচ্ছে কারণ JSON.stringify() নিজেই উদ্ধৃতিসহ একটা
-    // বৈধ JS লিটারেল তৈরি করে; <%= %> সেই উদ্ধৃতিগুলোকে HTML-escape করে ফেলত।
-    var KYC_DOC_ALT = <%- JSON.stringify(t('admin_ui_kyc_document')) %>;
-    var pendingRejectId = null;
-
-    function escapeHtml(str) {
-      return String(str == null ? '' : str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
-
-    // ডকুমেন্ট URL শুধুমাত্র আমাদের Cloudinary আপলোড থেকেই আসা উচিত
-    /* ডকুমেন্ট এখন সার্ভার-প্রক্সি হয়ে আসে, Cloudinary URL সরাসরি নয়।
-       আগে আসল URL পেইজের HTML-এ বসত — জাতীয় পরিচয়পত্রের ঠিকানা ব্রাউজার
-       ইতিহাস, রেফারার হেডার ও এক্সটেনশনে ছড়িয়ে পড়ত, আর URL জানা থাকলে
-       যে কেউ প্রমাণীকরণ ছাড়াই দেখতে পারত। প্রক্সি রুটে অনুমতি যাচাই হয়
-       এবং প্রতিটা দেখা অডিট লগে যায়। */
-    function docProxyUrl(k) {
-      if (!k || !k.id || !k.document_url) return null;
-      return '/admin/kyc/' + encodeURIComponent(k.id) + '/document';
-    }
-
-    function closeModal(id) {
-      document.getElementById(id).classList.remove('show');
-    }
-
-    function viewKyc(k) {
-      var html = '';
-      html += '<div class="kv-row"><span>নাম</span><span>' + escapeHtml(k.full_name || '—') + '</span></div>';
-      html += '<div class="kv-row"><span>ইউজারনেম</span><span>@' + escapeHtml(k.username || '—') + '</span></div>';
-      html += '<div class="kv-row"><span>ফোন</span><span>' + escapeHtml(k.phone || '—') + '</span></div>';
-      html += '<div class="kv-row"><span>ডকুমেন্ট টাইপ</span><span>' + escapeHtml(k.document_type || '—') + '</span></div>';
-      html += '<div class="kv-row"><span>ডকুমেন্ট নম্বর</span><span>' + escapeHtml(k.document_number || '—') + '</span></div>';
-      html += '<div class="kv-row"><span>জমার তারিখ</span><span>' + (k.created_at ? new Date(k.created_at).toLocaleString('bn-BD') : '—') + '</span></div>';
-      var docUrl = docProxyUrl(k);
-      if (docUrl) {
-        html += '<a href="' + escapeHtml(docUrl) + '" target="_blank" rel="noopener noreferrer"><img alt="' + KYC_DOC_ALT + '" class="doc-preview" src="' + escapeHtml(docUrl) + '" onerror="this.style.display=\'none\'"></a>';
-        html += '<a class="btn btn-sm" style="margin-top:8px;" href="' + escapeHtml(docUrl) + '" target="_blank" rel="noopener noreferrer"><i class="fas fa-external-link-alt"></i> মূল ডকুমেন্ট দেখুন</a>';
-      } else if (k.document_url) {
-        html += '<p style="color:#dc2626;font-size:12px;">⚠️ অবৈধ ডকুমেন্ট URL — দেখানো যাচ্ছে না</p>';
-      }
-      document.getElementById('viewModalBody').innerHTML = html;
-      document.getElementById('viewModal').classList.add('show');
-    }
-
-    function approveKyc(id) {
-      if (!confirm('এই KYC আবেদনটি অনুমোদন করবেন?')) return;
-      fetch('/admin/kyc/' + id + '/approve', { method: 'POST' })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          if (data.success) { showAdminToast('অনুমোদন সম্পন্ন হয়েছে'); setTimeout(function(){ location.reload(); }, 700); }
-          else { alert(data.message || 'সমস্যা হয়েছে'); }
-        })
-        .catch(function () { alert('সার্ভার এরর'); });
-    }
-
-    function rejectKyc(id) {
-      pendingRejectId = id;
-      document.getElementById('rejectReason').value = '';
-      document.getElementById('rejectModal').classList.add('show');
-    }
-
-    document.getElementById('confirmRejectBtn').addEventListener('click', function () {
-      var reason = document.getElementById('rejectReason').value.trim();
-      if (!pendingRejectId) return;
-      fetch('/admin/kyc/' + pendingRejectId + '/reject', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: reason })
-      })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          closeModal('rejectModal');
-          if (data.success) { showAdminToast('আবেদন বাতিল করা হয়েছে'); setTimeout(function(){ location.reload(); }, 700); }
-          else { alert(data.message || 'সমস্যা হয়েছে'); }
-        })
-        .catch(function () { alert('সার্ভার এরর'); });
-    });
-
-    // ==================== বাল্ক নির্বাচন ও অ্যাকশন ====================
-    function getKycSelectedIds() {
-      return Array.from(document.querySelectorAll('.kyc-row-check:checked')).map(function (el) { return el.value; });
-    }
-
-    function updateKycBulkBar() {
-      var count = getKycSelectedIds().length;
-      var bar = document.getElementById('kycBulkBar');
-      document.getElementById('kycSelectedCount').textContent = count;
-      bar.style.display = count > 0 ? 'block' : 'none';
-      var selectAll = document.getElementById('kycSelectAll');
-      var rowChecks = document.querySelectorAll('.kyc-row-check');
-      selectAll.checked = rowChecks.length > 0 && count === rowChecks.length;
-    }
-
-    function toggleKycSelectAll(el) {
-      document.querySelectorAll('.kyc-row-check').forEach(function (cb) { cb.checked = el.checked; });
-      updateKycBulkBar();
-    }
-
-    function clearKycSelection() {
-      document.querySelectorAll('.kyc-row-check').forEach(function (cb) { cb.checked = false; });
-      document.getElementById('kycSelectAll').checked = false;
-      updateKycBulkBar();
-    }
-
-    function bulkResultSummary(data) {
-      var msg = data.succeeded + ' টি সফল';
-      if (data.failed > 0) {
-        var failedReasons = (data.results || []).filter(function (r) { return !r.success; })
-          .map(function (r) { return '#' + r.id + ': ' + (r.error || 'ব্যর্থ'); }).join('\n');
-        msg += ', ' + data.failed + ' টি ব্যর্থ\n\n' + failedReasons;
-      }
-      return msg;
-    }
-
-    function bulkApproveKyc() {
-      var ids = getKycSelectedIds();
-      if (!ids.length) return;
-      if (!confirm(ids.length + ' টি KYC আবেদন অনুমোদন করবেন?')) return;
-      fetch('/admin/kyc/bulk-approve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: ids })
-      })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          if (data.success) {
-            showAdminToast(bulkResultSummary(data));
-            setTimeout(function () { location.reload(); }, data.failed > 0 ? 1500 : 700);
-          } else {
-            alert(data.error || 'সমস্যা হয়েছে');
-          }
-        })
-        .catch(function () { alert('সার্ভার এরর'); });
-    }
-
-    function bulkRejectKyc() {
-      var ids = getKycSelectedIds();
-      if (!ids.length) return;
-      document.getElementById('bulkRejectCount').textContent = ids.length;
-      document.getElementById('bulkRejectReason').value = '';
-      document.getElementById('bulkRejectModal').classList.add('show');
-    }
-
-    document.getElementById('confirmBulkRejectBtn').addEventListener('click', function () {
-      var ids = getKycSelectedIds();
-      if (!ids.length) { closeModal('bulkRejectModal'); return; }
-      var reason = document.getElementById('bulkRejectReason').value.trim();
-      fetch('/admin/kyc/bulk-reject', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: ids, reason: reason })
-      })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          closeModal('bulkRejectModal');
-          if (data.success) {
-            showAdminToast(bulkResultSummary(data));
-            setTimeout(function () { location.reload(); }, data.failed > 0 ? 1500 : 700);
-          } else {
-            alert(data.error || 'সমস্যা হয়েছে');
-          }
-        })
-        .catch(function () { alert('সার্ভার এরর'); });
-    });
-  </script>
+  <%# KYC ডেটা executable স্ক্রিপ্ট নয় — type="application/json" ব্লক, তাই CSP-র
+     script-src এতে বাধা দেয় না এবং কোনো nonce লাগে না। %>
+  <script type="application/json" id="kycConfig"><%- jsonScriptSafe({ docAlt: t('admin_ui_kyc_document') }) %></script>
+  <%# শুধু মডালে দরকারি ফিল্ডগুলো পাঠানো হয়। আসল document_url (Cloudinary
+     ঠিকানা) ইচ্ছাকৃতভাবে বাদ — ওটা পেইজের HTML-এ থাকলে ব্রাউজার ইতিহাস,
+     রেফারার হেডার ও এক্সটেনশনে ছড়িয়ে পড়ত। ক্লায়েন্টের শুধু জানা দরকার
+     ডকুমেন্ট আছে কি না; দেখার সময় প্রমাণীকৃত প্রক্সি রুট ব্যবহার হয়। %>
+  <script type="application/json" id="kycData"><%- jsonScriptSafe((kycList || []).map(k => ({
+    id: k.id,
+    full_name: k.full_name,
+    username: k.username,
+    phone: k.phone,
+    document_type: k.document_type,
+    document_number: k.document_number,
+    created_at: k.created_at,
+    has_document: !!k.document_url
+  }))) %></script>
+  <script src="/js/admin-kyc.js"></script>
 </body>
 </html>

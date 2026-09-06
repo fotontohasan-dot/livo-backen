@@ -102,7 +102,7 @@
                     </td>
                     <td style="text-align:right;white-space:nowrap;">
                       <a class="btn btn-sm" href="/admin/users/<%= u.id %>"><%= t('admin_col_profile') %></a>
-                      <form method="POST" action="/admin/leaderboard/<%= u.id %>/toggle-ban" style="display:inline" onsubmit="return confirm('<%= u.is_banned ? 'আনব্যান' : 'ব্যান' %> করবেন? এটা পাবলিক লিডারবোর্ডের র‍্যাঙ্কিংও বদলে দেবে।')">
+                      <form method="POST" action="/admin/leaderboard/<%= u.id %>/toggle-ban" style="display:inline" data-confirm="<%= u.is_banned ? 'আনব্যান' : 'ব্যান' %> করবেন? এটা পাবলিক লিডারবোর্ডের র‍্যাঙ্কিংও বদলে দেবে।">
                         <input type="hidden" name="page" value="<%= page %>">
                         <input type="hidden" name="search" value="<%= search || '' %>">
                         <input type="hidden" name="status" value="<%= status || '' %>">
@@ -134,7 +134,7 @@
         <div class="admin-card-header">
           চলতি মাসের রেফারেল কনটেস্ট<% if (contest.monthName) { %> — <%= contest.monthName %><% } %>
           <a href="/admin/leaderboard/contest/payouts" class="btn btn-sm" style="float:right;margin-left:8px;"><i class="fas fa-money-check-dollar"></i> <%= t('admin_payout_tracking') %></a>
-          <button type="button" class="btn btn-sm" style="float:right;" onclick="loadContestHistory()"><i class="fas fa-clock-rotate-left"></i> <%= t('admin_previous_months') %></button>
+          <button type="button" class="btn btn-sm" style="float:right;" data-load-history><i class="fas fa-clock-rotate-left"></i> <%= t('admin_previous_months') %></button>
         </div>
         <div style="overflow-x:auto;">
           <table class="admin-table">
@@ -163,36 +163,6 @@
     </div>
   </div>
 
-  <script>
-    // username ইউজার-নিয়ন্ত্রিত — আগে সরাসরি innerHTML স্ট্রিং-এ বসানো হতো, ফলে
-    // একজন ইউজার নিজের নামে HTML রেখে অ্যাডমিনের লিডারবোর্ড পেজে স্ক্রিপ্ট চালাতে পারত।
-    function esc(str) {
-      return String(str == null ? '' : str)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-    }
-
-    async function loadContestHistory() {
-      const box = document.getElementById('contestHistory');
-      box.innerHTML = '<p style="color:var(--text-muted);font-size:12px;">লোড হচ্ছে...</p>';
-      try {
-        const res = await fetch('/admin/leaderboard/contest/history?months=3');
-        const data = await res.json();
-        if (!data.success || !data.past || !data.past.length) {
-          box.innerHTML = '<p style="color:var(--text-muted);font-size:12px;">আগের কোনো মাসের কনটেস্ট রেজাল্ট নেই।</p>';
-          return;
-        }
-        box.innerHTML = data.past.map(function (m) {
-          const rows = m.leaders.map(function (l) {
-            return '<tr><td class="lb-rank">#' + esc(l.rank) + '</td><td>@' + esc(l.username) + '</td><td>' + esc(l.referrals) + '</td><td>' + esc(l.prize || '—') + '</td></tr>';
-          }).join('');
-          return '<div style="margin-top:14px;"><div style="font-weight:700;color:var(--text-muted);font-size:13px;margin-bottom:6px;">' + esc(m.monthName) + '</div>' +
-            '<table class="admin-table"><thead><tr><th>র‍্যাঙ্ক</th><th>ইউজার</th><th>রেফারেল</th><th>প্রাইজ</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
-        }).join('');
-      } catch (e) {
-        box.innerHTML = '<p style="color:#ef4444;font-size:12px;">লোড করা যায়নি: ' + esc(e.message) + '</p>';
-      }
-    }
-  </script>
+  <script src="/js/views/admin-leaderboard.js"></script>
 </body>
 </html>

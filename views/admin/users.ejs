@@ -25,7 +25,7 @@ function userRow(u) {
   const safeContact = escapeHtml(u.email || u.phone || '-');
   return '<tr class="hover:bg-slate-50">' +
     '<td class="px-4 py-4">' +
-      (u.is_banned ? '' : '<input type="checkbox" class="user-row-check w-4 h-4 rounded" data-id="' + u.id + '" onchange="updateBulkBar()">') +
+      (u.is_banned ? '' : '<input type="checkbox" class="user-row-check w-4 h-4 rounded" data-id="' + u.id + '" data-users-check>') +
     '</td>' +
     '<td class="px-6 py-4">' +
       '<div class="font-semibold text-slate-800">' + safeUsername + '</div>' +
@@ -38,7 +38,7 @@ function userRow(u) {
     '<td class="px-6 py-4">' +
       '<div class="flex items-center justify-center gap-x-1.5 flex-wrap">' +
         '<a href="/admin/users/' + u.id + '" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-blue-500 hover:bg-blue-600 text-white transition-colors">View</a>' +
-        '<form method="POST" action="/admin/users/' + u.id + '/ban" style="display:inline" onsubmit="return confirm(\'স্ট্যাটাস পরিবর্তন করবেন?\')">' +
+        '<form method="POST" action="/admin/users/' + u.id + '/ban" style="display:inline" data-confirm="স্ট্যাটাস পরিবর্তন করবেন?">' +
           '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl ' + banColor + ' text-white transition-colors">' + banLabel + '</button>' +
         '</form>' +
       '</div>' +
@@ -75,17 +75,17 @@ const rows = (users || []).map(userRow).join('') || '<tr><td colspan="7" class="
 
     <div id="bulkActionBar" class="hidden items-center gap-3 mb-4 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
         <span class="text-sm font-semibold text-red-700"><span id="bulkSelectedCount">0</span>টা ইউজার নির্বাচিত</span>
-        <button type="button" onclick="bulkBanSelected()" class="ml-auto px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold">
+        <button type="button" data-users-action="bulk-ban" class="ml-auto px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold">
             <i class="fas fa-ban"></i> নির্বাচিতদের ব্যান করুন
         </button>
-        <button type="button" onclick="clearBulkSelection()" class="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-medium">বাতিল</button>
+        <button type="button" data-users-action="clear" class="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-medium">বাতিল</button>
     </div>
 
     <div class="bg-white rounded-3xl border border-slate-100 overflow-x-auto modern-table">
         <table class="w-full text-sm">
             <thead class="bg-slate-50">
                 <tr>
-                    <th class="px-4 py-4"><input type="checkbox" id="selectAllUsers" class="w-4 h-4 rounded" onchange="toggleSelectAllUsers(this)"></th>
+                    <th class="px-4 py-4"><input type="checkbox" id="selectAllUsers" class="w-4 h-4 rounded" data-users-select-all></th>
                     <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">User</th>
                     <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Coins</th>
                     <th class="px-6 py-4 text-left font-medium text-slate-500 uppercase text-xs">Points</th>
@@ -105,58 +105,6 @@ const rows = (users || []).map(userRow).join('') || '<tr><td colspan="7" class="
     </div>
 </div>
 
-<script>
-function getSelectedUserIds() {
-  return Array.from(document.querySelectorAll('.user-row-check:checked')).map(function (el) { return el.getAttribute('data-id'); });
-}
-function updateBulkBar() {
-  var ids = getSelectedUserIds();
-  var bar = document.getElementById('bulkActionBar');
-  var countEl = document.getElementById('bulkSelectedCount');
-  countEl.textContent = ids.length;
-  bar.classList.toggle('hidden', ids.length === 0);
-  bar.classList.toggle('flex', ids.length > 0);
-  var allChecks = document.querySelectorAll('.user-row-check');
-  var selectAll = document.getElementById('selectAllUsers');
-  selectAll.checked = allChecks.length > 0 && ids.length === allChecks.length;
-}
-function toggleSelectAllUsers(checkbox) {
-  document.querySelectorAll('.user-row-check').forEach(function (el) { el.checked = checkbox.checked; });
-  updateBulkBar();
-}
-function clearBulkSelection() {
-  document.querySelectorAll('.user-row-check').forEach(function (el) { el.checked = false; });
-  document.getElementById('selectAllUsers').checked = false;
-  updateBulkBar();
-}
-function bulkBanSelected() {
-  var ids = getSelectedUserIds();
-  if (ids.length === 0) return;
-  if (!confirm(ids.length + 'টা ইউজারকে ব্যান করবেন? এই অ্যাকশন একসাথে সবার উপর প্রয়োগ হবে।')) return;
-  fetch('/admin/users/bulk-ban', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ids: ids })
-  })
-    .then(function (r) { return r.json(); })
-    .then(function (data) {
-      if (data.success) {
-        if (typeof LivoToast !== 'undefined') {
-          LivoToast.show(data.succeeded + 'টা সফল, ' + data.failed + 'টা ব্যর্থ', data.failed > 0 ? 'info' : 'success');
-        } else {
-          alert(data.succeeded + 'টা সফল, ' + data.failed + 'টা ব্যর্থ');
-        }
-        setTimeout(function () { window.location.reload(); }, 900);
-      } else {
-        if (typeof LivoToast !== 'undefined') LivoToast.show(data.error || 'সমস্যা হয়েছে', 'error');
-        else alert(data.error || 'সমস্যা হয়েছে');
-      }
-    })
-    .catch(function () {
-      if (typeof LivoToast !== 'undefined') LivoToast.show('নেটওয়ার্ক সমস্যা হয়েছে', 'error');
-      else alert('নেটওয়ার্ক সমস্যা হয়েছে');
-    });
-}
-</script>
+<script src="/js/views/admin-users.js"></script>
 `
 }) %>

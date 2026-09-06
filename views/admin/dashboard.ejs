@@ -510,27 +510,6 @@ function escapeHtml(str) {
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script>
-    // Update time
-    function updateTime() {
-        const el = document.getElementById('current-time');
-        if (el) el.textContent = new Date().toLocaleString('en-BD', { hour: 'numeric', minute: '2-digit', hour12: true });
-    }
-    setInterval(updateTime, 30000);
-    updateTime();
-
-    // ডেমো কারেন্সি উইজেট — রিয়েল-টাইম আপডেট
-    (function() {
-        const socket = io();
-        socket.emit('join_admin');
-        socket.on('demo_stats_update', function(stats) {
-            const map = { 'demo-total': stats.totalDemo, 'demo-held': stats.userHeldDemo, 'demo-casino': stats.casinoDemoWagered, 'demo-sports': stats.sportsDemoWagered };
-            Object.keys(map).forEach(function(id) {
-                const el = document.getElementById(id);
-                if (el) el.textContent = Number(map[id] || 0).toLocaleString('en-US');
-            });
-        });
-    })();
-</script>
+<script src="/js/views/admin-dashboard.js"></script>
 ` 
 }) %>

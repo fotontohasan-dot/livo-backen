@@ -79,7 +79,7 @@ async function redeemPoints(userId, redeemPoints, lang = 'bn') {
       return { success: false, message: t(lang, 'loyalty_amount_too_small') };
     }
 
-    await client.query(`UPDATE users SET loyalty_points = loyalty_points - $1, coins = coins + $2 WHERE id = $3`, [pts, coins, userId]);
+    await client.query(`UPDATE users SET loyalty_points = loyalty_points - $1, coins = coins + $2 WHERE id = $3 AND loyalty_points >= $1`, [pts, coins, userId]);
     await client.query(
       `INSERT INTO loyalty_ledger (user_id, points, reason) VALUES ($1, $2, 'redeem')`,
       [userId, -pts]

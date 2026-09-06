@@ -58,8 +58,8 @@
         </div>
       </div>
       <div style="display:flex; gap:10px;">
-        <button onclick="copyRef()" class="btn glass" style="font-size:.8rem; padding:8px 16px; color: var(--text-main); border: 1px solid var(--border-glass); border-radius: 10px;">কপি</button>
-        <button onclick="shareRef()" class="btn btn-primary" style="font-size:.8rem; padding:8px 16px; border-radius: 10px;">শেয়ার</button>
+        <button data-ref-action="copy" class="btn glass" style="font-size:.8rem; padding:8px 16px; color: var(--text-main); border: 1px solid var(--border-glass); border-radius: 10px;">কপি</button>
+        <button data-ref-action="share" class="btn btn-primary" style="font-size:.8rem; padding:8px 16px; border-radius: 10px;">শেয়ার</button>
       </div>
     </div>
   </div>
@@ -106,22 +106,8 @@
   </div>
 </div>
 
-<script>
-function copyRef() {
-  navigator.clipboard.writeText('<%= profileUser.referral_code %>');
-  alert('কোড কপি হয়েছে! ✅');
-}
-function shareRef() {
-  if (navigator.share) {
-    navigator.share({
-      title: '<%= siteName %> তে যোগ দিন!',
-      text: 'আমার রেফারেল কোড দিয়ে রেজিস্ট্রেশন করুন: <%= profileUser.referral_code %> — ১০০ এক্সট্রা কয়েন পাবেন!',
-      url: window.location.origin + '/register?ref=<%= profileUser.referral_code %>'
-    });
-  }
-}
-
-</script>
+<script type="application/json" id="profileConfig"><%- jsonScriptSafe({ referralCode: profileUser.referral_code, siteName: siteName }) %></script>
+<script src="/js/views/profile.js"></script>
 
 <%- include('partials/footer') %>
 <%- include('partials/bottom-nav') %>

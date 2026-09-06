@@ -55,7 +55,7 @@
       </ul>
     </div>
 
-    <form id="kycForm" action="/extra/kyc" method="POST" class="glass-card" style="padding:22px 18px;border-radius:20px;border:1px solid rgba(255,255,255,0.08)" onsubmit="return handleKycSubmit(event)">
+    <form id="kycForm" action="/extra/kyc" method="POST" class="glass-card" style="padding:22px 18px;border-radius:20px;border:1px solid rgba(255,255,255,0.08)" data-kyc-form>
 
       <!-- ধাপ ১ -->
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
@@ -94,7 +94,7 @@
         <span id="uploadText" style="color:var(--text-muted);font-size:13px"><%= t.tap_to_upload %></span>
         <img id="previewImg" style="display:none;max-width:140px;max-height:140px;border-radius:10px;margin-top:6px" />
       </label>
-      <input type="file" id="documentFile" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" style="display:none" onchange="handleFileSelect(event)">
+      <input type="file" id="documentFile" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" style="display:none" data-kyc-file>
       <div id="uploadError" style="color:#f87171;font-size:12px;margin-bottom:16px;display:none"></div>
       <div style="margin-bottom:20px"></div>
 
@@ -111,93 +111,7 @@
   <% } %>
 </div>
 
-<script>
-let uploadedOk = false;
-
-function setSubmitState(enabled, text) {
-  const btn = document.getElementById('submitBtn');
-  if (!btn) return;
-  btn.disabled = !enabled;
-  document.getElementById('submitBtnText').textContent = text;
-}
-
-async function handleFileSelect(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const errBox = document.getElementById('uploadError');
-  errBox.style.display = 'none';
-  uploadedOk = false;
-  setSubmitState(false, 'আপলোড হচ্ছে...');
-
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-  if (!allowedTypes.includes(file.type)) {
-    errBox.textContent = 'শুধু JPG, PNG বা WEBP ছবি আপলোড করা যাবে।';
-    errBox.style.display = 'block';
-    LivoToast.show(errBox.textContent, 'error');
-    setSubmitState(false, 'প্রথমে ছবি আপলোড করুন');
-    return;
-  }
-  if (file.size > 20 * 1024 * 1024) {
-    errBox.textContent = 'ফাইলের সাইজ ২০MB-এর বেশি হতে পারবে না।';
-    errBox.style.display = 'block';
-    LivoToast.show(errBox.textContent, 'error');
-    setSubmitState(false, 'প্রথমে ছবি আপলোড করুন');
-    return;
-  }
-
-  document.getElementById('uploadIcon').className = 'fas fa-spinner fa-spin';
-  document.getElementById('uploadText').textContent = 'আপলোড হচ্ছে...';
-
-  const reader = new FileReader();
-  reader.onload = () => {
-    const img = document.getElementById('previewImg');
-    img.src = reader.result;
-    img.style.display = 'block';
-  };
-  reader.readAsDataURL(file);
-
-  try {
-    const formData = new FormData();
-    formData.append('file', file);
-    const res = await fetch('/chat/upload', { method: 'POST', body: formData });
-    const data = await res.json();
-
-    if (!res.ok || !data.url) {
-      throw new Error(data.error || 'আপলোড ব্যর্থ হয়েছে');
-    }
-
-    document.getElementById('documentUrl').value = data.url;
-    document.getElementById('uploadIcon').className = 'fas fa-circle-check';
-    document.getElementById('uploadIcon').style.color = '#10b981';
-    document.getElementById('uploadText').textContent = 'ছবি আপলোড সম্পন্ন ✓';
-    uploadedOk = true;
-    LivoToast.show('ছবি আপলোড সম্পন্ন হয়েছে', 'success');
-    setSubmitState(true, 'KYC জমা দিন');
-  } catch (err) {
-    errBox.textContent = err.message || 'আপলোড ব্যর্থ হয়েছে, আবার চেষ্টা করুন।';
-    errBox.style.display = 'block';
-    LivoToast.show(errBox.textContent, 'error');
-    document.getElementById('uploadIcon').className = 'fas fa-cloud-arrow-up';
-    document.getElementById('uploadIcon').style.color = 'var(--gold)';
-    document.getElementById('uploadText').textContent = 'ছবি আপলোড করতে এখানে ট্যাপ করুন';
-    setSubmitState(false, 'প্রথমে ছবি আপলোড করুন');
-  }
-}
-
-function handleKycSubmit(e) {
-  if (!uploadedOk || !document.getElementById('documentUrl').value) {
-    e.preventDefault();
-    const errBox = document.getElementById('uploadError');
-    errBox.textContent = 'জমা দেওয়ার আগে ডকুমেন্টের ছবি আপলোড করুন।';
-    errBox.style.display = 'block';
-    LivoToast.show(errBox.textContent, 'error');
-    return false;
-  }
-  setSubmitState(false, 'জমা হচ্ছে...');
-  return true;
-}
-</script>
+<script src="/js/views/kyc.js"></script>
 
 <%- include('partials/bottom-nav') %>
 </body>

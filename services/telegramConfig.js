@@ -14,6 +14,7 @@
 //     shouldNotify) DB ছাড়াই ইউনিট-টেস্ট করা যায়।
 // ---------------------------------------------------------------------------
 
+const { fetchWithTimeout } = require('../utils/httpClient');
 const crypto = require('crypto');
 
 const CATEGORIES = ['deposit', 'withdraw', 'support', 'security', 'system'];
@@ -288,7 +289,7 @@ async function recordTestResult({ status, error = null, botUsername = null }) {
 
 // ==================== Telegram API কল ====================
 async function callTelegram(method, botToken, body) {
-  const res = await fetch(`https://api.telegram.org/bot${botToken}/${method}`, {
+  const res = await fetchWithTimeout(`https://api.telegram.org/bot${botToken}/${method}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body || {})

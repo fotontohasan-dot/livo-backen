@@ -19,8 +19,8 @@ function wRow(w, isPending) {
   const safeAccountNumber = escapeHtml(w.account_number || '-');
   const actions = isPending
     ? '<div class="flex justify-center gap-2">' +
-        '<button onclick="approveWithdrawal(' + w.id + ')" class="px-3.5 py-1.5 text-xs bg-emerald-600 text-white rounded-xl font-bold">Approve + TXN</button>' +
-        '<button onclick="rejectWithdrawal(' + w.id + ')" class="px-3.5 py-1.5 text-xs bg-red-600 text-white rounded-xl font-bold">Reject</button>' +
+        '<button data-withdrawal-approve="' + Number(w.id) + '" class="px-3.5 py-1.5 text-xs bg-emerald-600 text-white rounded-xl font-bold">Approve + TXN</button>' +
+        '<button data-withdrawal-reject="' + Number(w.id) + '" class="px-3.5 py-1.5 text-xs bg-red-600 text-white rounded-xl font-bold">Reject</button>' +
       '</div>'
     : '<span class="text-xs text-slate-500 font-medium">' + statusLabel + '</span>';
   return '<tr id="wd-row-' + w.id + '">' +
@@ -97,31 +97,6 @@ const recentRows = (recentWithdrawals || []).map(w => wRow(w, false)).join('');
     </div>
 </div>
 
-<script>
-async function approveWithdrawal(id) {
-    const txn = prompt('Transaction ID / Reference দিন:', 'TXN' + Date.now().toString().slice(-8));
-    if (txn === null) return;
-    try {
-        const res = await fetch('/admin/api/withdrawals/' + id + '/approve', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ txn })
-        });
-        const data = await res.json();
-        if (data.success) { alert('✅ উইথড্র Approve হয়েছে!'); location.reload(); }
-        else alert('❌ ' + (data.error || 'সমস্যা হয়েছে'));
-    } catch (e) { alert('❌ সার্ভার এরর'); }
-}
-async function rejectWithdrawal(id) {
-    const reason = prompt('বাতিলের কারণ লিখুন:', '');
-    if (reason === null) return;
-    try {
-        const res = await fetch('/admin/api/withdrawals/' + id + '/reject', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason })
-        });
-        const data = await res.json();
-        if (data.success) { alert('✅ উইথড্র বাতিল হয়েছে, কয়েন ফেরত দেওয়া হয়েছে।'); location.reload(); }
-        else alert('❌ ' + (data.error || 'সমস্যা হয়েছে'));
-    } catch (e) { alert('❌ সার্ভার এরর'); }
-}
-</script>
+<script src="/js/views/admin-withdrawals.js"></script>
 ` 
 }) %>

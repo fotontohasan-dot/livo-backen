@@ -190,15 +190,38 @@ describe('#43 service worker ব্যক্তিগত পেইজ ক্য�
 });
 
 describe('#44 CSRF টোকেন শুধু same-origin', () => {
-  const head = read('views', 'partials', 'head.ejs');
+  // কোডটা এখন public/js/csrf-inject.js-এ — আগে ১০টা টেমপ্লেটে কপি করা ছিল
+  // এবং কপিগুলো এক ছিল না: শুধু head.ejs-এ এই same-origin যাচাইটা ছিল।
+  const injector = read('public', 'js', 'csrf-inject.js');
 
   test('অরিজিন যাচাই আছে', () => {
-    expect(head).toMatch(/function isSameOrigin/);
-    expect(head).toMatch(/isSameOrigin\(url\)/);
+    expect(injector).toMatch(/function isSameOrigin/);
+    expect(injector).toMatch(/isSameOrigin\(url\)/);
   });
 
   test('XHR-এও একই যাচাই', () => {
-    expect(head).toMatch(/_csrfSameOrigin/);
+    expect(injector).toMatch(/_csrfSameOrigin/);
+  });
+
+  test('পার্স করা না গেলে টোকেন পাঠানো হয় না (fail-closed)', () => {
+    expect(injector).toMatch(/return false;/);
+  });
+
+  test('সব পেজ একই সংস্করণ পায় — টেমপ্লেটে কোনো কপি নেই', () => {
+    const fs2 = require('fs');
+    const path2 = require('path');
+    const root = path2.join(__dirname, '..');
+    const walk = (dir, out = []) => {
+      for (const e of fs2.readdirSync(dir, { withFileTypes: true })) {
+        const full = path2.join(dir, e.name);
+        if (e.isDirectory()) walk(full, out);
+        else if (e.name.endsWith('.ejs')) out.push(full);
+      }
+      return out;
+    };
+    const copies = walk(path2.join(root, 'views'))
+      .filter((f) => /injectIntoForms/.test(fs2.readFileSync(f, 'utf8')));
+    expect(copies).toEqual([]);
   });
 });
 

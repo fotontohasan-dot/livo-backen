@@ -166,7 +166,8 @@ async function claimMission(userId, missionId, lang = 'bn') {
       finalReward = Math.min(d.reward, remainingCap);
 
       await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [finalReward, userId]);
-      await client.query(`UPDATE user_missions SET claimed_ids = array_append(claimed_ids, $1) WHERE id = $2`, [missionId, row.id]);
+      await client.query(`UPDATE user_missions SET claimed_ids = array_append(claimed_ids, $1)
+         WHERE id = $2 AND NOT ($1 = ANY(COALESCE(claimed_ids, ARRAY[]::int[])))`, [missionId, row.id]);
     } else {
       // উইকলি / স্পেশাল — mission_claims দিয়ে ট্র্যাক
       const periodKey = d.period === 'weekly' ? weekStart() : String(d.start_date);

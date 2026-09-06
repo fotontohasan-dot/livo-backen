@@ -159,105 +159,15 @@
          অ্যাকশন (যেমন KYC approve/reject, Cache Clear, Role save ইত্যাদি) 403 Invalid CSRF Token-এ
          আটকে যেত। নিচের স্ক্রিপ্ট head.ejs-এর মতোই ফর্ম/fetch/XHR-এ স্বয়ংক্রিয়ভাবে টোকেন বসায়। -->
     <meta name="csrf-token" content="<%= locals.csrfToken || '' %>">
-    <script>
-    (function() {
-      var CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-      if (!CSRF_TOKEN) return;
-
-      function injectIntoForms() {
-        document.querySelectorAll('form').forEach(function(form) {
-          var method = (form.getAttribute('method') || 'get').toLowerCase();
-          if (method !== 'post') return;
-          if (form.querySelector('input[name="_csrf"]')) return;
-          var input = document.createElement('input');
-          input.type = 'hidden';
-          input.name = '_csrf';
-          input.value = CSRF_TOKEN;
-          form.appendChild(input);
-        });
-      }
-      document.addEventListener('DOMContentLoaded', injectIntoForms);
-      new MutationObserver(injectIntoForms).observe(document.documentElement, { childList: true, subtree: true });
-
-      var origFetch = window.fetch;
-      window.fetch = function(input, init) {
-        init = init || {};
-        var method = (init.method || (typeof input === 'object' && input.method) || 'GET').toUpperCase();
-        if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
-          init.headers = new Headers(init.headers || {});
-          if (!init.headers.has('X-CSRF-Token')) init.headers.set('X-CSRF-Token', CSRF_TOKEN);
-        }
-        return origFetch.call(this, input, init);
-      };
-
-      var origOpen = XMLHttpRequest.prototype.open;
-      var origSend = XMLHttpRequest.prototype.send;
-      XMLHttpRequest.prototype.open = function(method) {
-        this._csrfMethod = (method || 'GET').toUpperCase();
-        return origOpen.apply(this, arguments);
-      };
-      XMLHttpRequest.prototype.send = function(body) {
-        if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(this._csrfMethod)) {
-          try { this.setRequestHeader('X-CSRF-Token', CSRF_TOKEN); } catch (e) {}
-        }
-        return origSend.call(this, body);
-      };
-    })();
-    </script>
+    <script src="/js/csrf-inject.js"></script>
 </head>
 <body class="bg-slate-50">
     <div id="livo-toast-root"></div>
-    <script>
-      window.LivoToast = (function () {
-        function ensureRoot() { return document.getElementById('livo-toast-root'); }
-        function show(message, type, duration) {
-          type = type || 'info'; duration = duration || 4000;
-          const root = ensureRoot();
-          if (!root || !message) return;
-          const el = document.createElement('div');
-          el.className = 'livo-toast ' + type;
-          const icon = type === 'success' ? 'fa-circle-check' : (type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-info');
-          el.innerHTML = '<i class="fas ' + icon + '"></i><span></span>';
-          el.querySelector('span').textContent = message;
-          const dismiss = () => { el.classList.add('leaving'); setTimeout(() => el.remove(), 250); };
-          el.addEventListener('click', dismiss);
-          root.appendChild(el);
-          setTimeout(dismiss, duration);
-        }
-        function setLoading(btn, loading, loadingText) {
-          if (!btn) return;
-          if (loading) {
-            if (!btn.dataset.livoOriginalHtml) btn.dataset.livoOriginalHtml = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<span class="livo-spinner"></span>' + (loadingText || 'অপেক্ষা করুন...');
-          } else {
-            btn.disabled = false;
-            if (btn.dataset.livoOriginalHtml) btn.innerHTML = btn.dataset.livoOriginalHtml;
-          }
-        }
-        return { show: show, setLoading: setLoading };
-      })();
-      document.addEventListener('DOMContentLoaded', function () {
-        <%#
-          success/error এখানে connect-flash-এর অ্যারে (res.locals) ধরে নেওয়া হতো। কিন্তু কিছু
-          অ্যাডমিন পেজ (backups, feature-flags, roles, sentry-status, notification-templates)
-          render locals-এ `error` নামে একটা *স্ট্রিং* পাঠায় পেজের ভেতরে দেখানোর জন্য — সেটা
-          ফ্ল্যাশ অ্যারেটাকে shadow করত। স্ট্রিং-এরও .length আছে, তাই শর্তটা true হয়ে
-          error.forEach() চালাত → TypeError → পুরো পেজ 500।
-
-          ফলাফল ছিল উল্টো: রিস্টোর ব্যর্থ হলে অ্যাডমিনকে /admin/backups?error=... এ পাঠানো
-          হতো আর সেই পেজটাই 500 দিত, অর্থাৎ এরর বার্তাটা কখনো দেখাই যেত না। Array.isArray()
-          দিয়ে শুধু আসল ফ্ল্যাশ অ্যারের ক্ষেত্রেই টোস্ট দেখানো হয়; স্ট্রিং `error` পেজের
-          নিজের বডিতে আগের মতোই রেন্ডার হয়।
-        -%>
-        <% if (typeof success !== 'undefined' && Array.isArray(success) && success.length) { %>
-          <% success.forEach(function (m) { %> LivoToast.show(<%- jsonScriptSafe(m) %>, 'success'); <% }) %>
-        <% } %>
-        <% if (typeof error !== 'undefined' && Array.isArray(error) && error.length) { %>
-          <% error.forEach(function (m) { %> LivoToast.show(<%- jsonScriptSafe(m) %>, 'error'); <% }) %>
-        <% } %>
-      });
-    </script>
+    <script type="application/json" id="admin-partials-flashConfig"><%- jsonScriptSafe({
+  success: (typeof success !== 'undefined' && Array.isArray(success)) ? success : [],
+  error: (typeof error !== 'undefined' && Array.isArray(error)) ? error : []
+}) %></script>
+<script src="/js/views/admin-partials-flash.js"></script>
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
         <!--
@@ -270,7 +180,7 @@
           কনটেন্টকে স্ক্রিনের বাইরে ঠেলে দিত। এখন এটা একটা সত্যিকারের ড্রয়ার:
           মোবাইলে fixed + translate-x, সাথে ব্যাকড্রপ; lg-তে আগের মতোই স্থির কলাম।
         -->
-        <div id="adminSidebarBackdrop" onclick="closeMobileSidebar()"
+        <div id="adminSidebarBackdrop" data-admin-nav="close-sidebar"
              class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden"></div>
 
         <div id="adminSidebar"
@@ -286,7 +196,7 @@
                     <span class="logo-font text-3xl font-semibold tracking-tighter">Livo</span>
                     <span class="text-blue-400 text-xl font-semibold"><%= t('admin_col_admin') %></span>
                 </div>
-                <button onclick="closeMobileSidebar()" aria-label="<%= t('admin_ui_close_menu') %>"
+                <button data-admin-nav="close-sidebar" aria-label="<%= t('admin_ui_close_menu') %>"
                         class="lg:hidden ml-auto text-slate-400 hover:text-white p-2 -mr-2">
                     <i class="fas fa-times"></i>
                 </button>
@@ -371,7 +281,7 @@
                         <p class="text-sm font-semibold text-white truncate"><%= (user && user.username) || 'Admin' %></p>
                         <p class="text-xs text-slate-400"><%= (typeof adminIsSuperAdmin !== 'undefined' && adminIsSuperAdmin) ? t('admin_ui_role_super_admin') : t('admin_ui_role_admin') %></p>
                     </div>
-                    <button onclick="logout()" aria-label="<%= t('admin_ui_logout') %>" title="<%= t('admin_ui_logout') %>" class="text-slate-400 hover:text-red-400 transition-colors">
+                    <button data-admin-nav="logout" aria-label="<%= t('admin_ui_logout') %>" title="<%= t('admin_ui_logout') %>" class="text-slate-400 hover:text-red-400 transition-colors">
                         <i class="fas fa-sign-out-alt"></i>
                     </button>
                 </div>
@@ -384,7 +294,7 @@
             <div class="admin-header h-16 flex items-center justify-between px-6 flex-shrink-0">
                 <div class="flex items-center gap-x-4">
                     <!-- Mobile Menu -->
-                    <button class="lg:hidden text-slate-600 hover:text-slate-900" onclick="toggleMobileSidebar()" aria-label="<%= t('admin_ui_open_menu') %>" aria-controls="adminSidebar" aria-expanded="false">
+                    <button class="lg:hidden text-slate-600 hover:text-slate-900" data-admin-nav="toggle-sidebar" aria-label="<%= t('admin_ui_open_menu') %>" aria-controls="adminSidebar" aria-expanded="false">
                         <i class="fas fa-bars text-xl"></i>
                     </button>
                     
@@ -416,127 +326,9 @@
         </div>
     </div>
 
-    <script>
-        function openMobileSidebar() {
-            const sb = document.getElementById('adminSidebar');
-            const bd = document.getElementById('adminSidebarBackdrop');
-            if (sb) sb.classList.remove('-translate-x-full');
-            if (bd) bd.classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
-        }
-        function closeMobileSidebar() {
-            const sb = document.getElementById('adminSidebar');
-            const bd = document.getElementById('adminSidebarBackdrop');
-            if (sb) sb.classList.add('-translate-x-full');
-            if (bd) bd.classList.add('hidden');
-            document.body.style.overflow = '';
-        }
-        function toggleMobileSidebar() {
-            const sb = document.getElementById('adminSidebar');
-            if (!sb) return;
-            if (sb.classList.contains('-translate-x-full')) openMobileSidebar();
-            else closeMobileSidebar();
-        }
-        // Esc দিয়ে ড্রয়ার বন্ধ — কীবোর্ড ব্যবহারকারীর জন্য ফাঁদ তৈরি হয় না।
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') closeMobileSidebar();
-        });
-
-        // ---- নেভিগেশন গ্রুপ কোলাপস + মনে রাখা ----
-        (function () {
-            var KEY = 'livoAdminNavOpen';
-            function saved() {
-                try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { return {}; }
-            }
-            function store(state) {
-                try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* private mode */ }
-            }
-            var state = saved();
-            document.querySelectorAll('[data-nav-group]').forEach(function (group) {
-                var id = group.getAttribute('data-nav-group');
-                var btn = group.querySelector('.nav-group-toggle');
-                var body = group.querySelector('.nav-group-items');
-                var chev = group.querySelector('.nav-chevron');
-                // বর্তমান পেজ যে গ্রুপে, সেটা সবসময় খোলা — সংরক্ষিত অবস্থা তার উপরে যায় না।
-                if (btn.getAttribute('aria-expanded') !== 'true' && state[id] === true) {
-                    body.classList.remove('hidden');
-                    btn.setAttribute('aria-expanded', 'true');
-                    if (chev) chev.classList.add('rotate-180');
-                }
-                btn.addEventListener('click', function () {
-                    var open = body.classList.toggle('hidden') === false;
-                    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-                    if (chev) chev.classList.toggle('rotate-180', open);
-                    state[id] = open;
-                    store(state);
-                });
-            });
-
-            // ---- নেভিগেশন ফিল্টার ----
-            var search = document.getElementById('adminNavSearch');
-            var noResult = document.getElementById('adminNavNoResult');
-            if (search) search.addEventListener('input', function () {
-                var q = (search.value || '').trim().toLowerCase();
-                var shown = 0;
-                document.querySelectorAll('[data-nav-item]').forEach(function (a) {
-                    var hit = !q || a.getAttribute('data-nav-text').indexOf(q) !== -1;
-                    a.style.display = hit ? '' : 'none';
-                    if (hit) shown++;
-                });
-                document.querySelectorAll('[data-nav-group]').forEach(function (g) {
-                    var body = g.querySelector('.nav-group-items');
-                    var any = Array.prototype.slice.call(g.querySelectorAll('[data-nav-item]'))
-                        .some(function (a) { return a.style.display !== 'none'; });
-                    g.style.display = any ? '' : 'none';
-                    // সার্চ চলাকালীন মিলে যাওয়া গ্রুপ জোর করে খোলা হয়, নাহলে
-                    // ফলাফল কোলাপস করা গ্রুপের ভেতরে লুকিয়ে থাকত।
-                    if (q && any) body.classList.remove('hidden');
-                });
-                if (noResult) noResult.classList.toggle('hidden', shown !== 0);
-            });
-        })();
-
-        // ---- সাইডবার ব্যাজ (pending queue counts) ----
-        // /admin/pending-counts আগেই ছিল কিন্তু সাইডবারে কোনো ব্যাজ ছিল না —
-        // অ্যাডমিনকে জানতে হলে পেজে ঢুকতে হতো। এখন KYC ও পেমেন্ট কিউয়ের
-        // সংখ্যা নেভিগেশনেই দেখা যায়। শূন্য হলে ব্যাজ লুকানো থাকে।
-        (function () {
-            function paint(cls, n) {
-                document.querySelectorAll('.nav-badge-' + cls).forEach(function (el) {
-                    if (n > 0) { el.textContent = n > 99 ? '99+' : n; el.classList.remove('hidden'); }
-                    else { el.classList.add('hidden'); }
-                });
-            }
-            function refresh() {
-                fetch('/admin/pending-counts', { credentials: 'same-origin' })
-                    .then(function (r) { return r.ok ? r.json() : null; })
-                    .then(function (d) {
-                        if (!d || !d.success) return;
-                        paint('kyc', d.kyc || 0);
-                        paint('payments', (d.deposits || 0) + (d.withdrawals || 0));
-                    })
-                    .catch(function () { /* ব্যাজ ব্যর্থ হলে নেভিগেশন আগের মতোই কাজ করে */ });
-            }
-            refresh();
-            setInterval(refresh, 60000);
-        })();
-        
-        function logout() {
-            if (confirm('Are you sure you want to logout?')) {
-                window.location.href = '/admin/logout';
-            }
-        }
-        
-        // Tailwind script
-        function initTailwind() {
-            document.documentElement.style.setProperty('--accent', '#3b82f6');
-        }
-        
-        window.onload = function() {
-            initTailwind();
-        }
-    </script>
+    <script src="/js/views/admin-partials-admin-layout.js"></script>
 
     <%- include('./bottom-nav') %>
+    <script src="/js/ui-hooks.js"></script>
 </body>
 </html>

@@ -204,7 +204,10 @@ describe('লাকি হুইল — ফলাফল স্পিন শে�
 });
 
 describe('লাকি হুইল — ফ্রন্টএন্ড ও ডিজাইন', () => {
-  const view = fs.readFileSync(path.join(ROOT, 'views', 'profile', 'wheel.ejs'), 'utf8');
+  // docs/CSP.md ধাপ ৩-এ হুইলের কোড public/js/views/profile-wheel.js-এ সরানো
+  // হয়েছে; টেমপ্লেট + তার স্ক্রিপ্ট একসাথে দেখা হয়।
+  const { readViewWithScripts } = require('../helpers/viewScripts');
+  const view = readViewWithScripts('views', 'profile', 'wheel.ejs');
 
   test('ফলাফল অ্যানিমেশন শেষ হওয়ার পরেই দেখানো হয়', () => {
     expect(view).toContain('revealResult()');

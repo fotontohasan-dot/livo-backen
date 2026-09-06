@@ -26,7 +26,7 @@
           </div>
           <p style="color:var(--muted);margin-bottom:1.5rem"><%= tournament.description %></p>
           <% if(locals.user && !joined && tournament.status !== 'completed') { %>
-            <button onclick="joinTournament()" class="btn btn-primary">🏆 Join Tournament</button>
+            <button data-join-tournament class="btn btn-primary">🏆 Join Tournament</button>
           <% } else if(joined) { %>
             <div class="alert alert-success">✅ You are in this tournament!</div>
           <% } %>
@@ -80,13 +80,6 @@
     </div>
   </div>
 </div>
-<script>
-function joinTournament() {
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = '/tournaments/<%= tournament.id %>/join';
-  document.body.appendChild(form);
-  form.submit();
-}
-</script>
+<script type="application/json" id="tournament-detailConfig"><%- jsonScriptSafe({ tournamentId: tournament.id }) %></script>
+<script src="/js/views/tournament-detail.js"></script>
 </body></html>

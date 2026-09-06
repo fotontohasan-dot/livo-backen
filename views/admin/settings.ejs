@@ -21,7 +21,7 @@ function adminRow(a, currentAdminId) {
     '<td class="px-4 py-3 text-xs text-slate-400">' + new Date(a.created_at).toLocaleDateString('en-US') + '</td>' +
     '<td class="px-4 py-3 text-center">' + (isSelf
       ? '<span class="text-xs text-slate-400">আপনি</span>'
-      : '<form method="POST" action="/admin/settings/admins/' + a.id + '/demote" onsubmit="return confirm(\'অ্যাডমিন অ্যাক্সেস সরাবেন?\')">' +
+      : '<form method="POST" action="/admin/settings/admins/' + a.id + '/demote" data-confirm="অ্যাডমিন অ্যাক্সেস সরাবেন?">' +
           '<button type="submit" class="px-3 py-1.5 text-xs bg-red-100 text-red-600 rounded-xl font-semibold">Remove Admin</button></form>') +
     '</td></tr>';
 }
@@ -33,7 +33,7 @@ function adminRow(a, currentAdminId) {
 <div class="max-w-4xl mx-auto space-y-6">
     <h2 class="text-2xl font-semibold text-slate-900">Platform Settings</h2>
 
-    <form method="POST" action="/admin/settings/update" class="bg-white rounded-3xl border border-slate-100 p-6 space-y-5" onsubmit="LivoToast.setLoading(document.getElementById('settingsSaveBtn'), true, 'Saving...')">
+    <form method="POST" action="/admin/settings/update" class="bg-white rounded-3xl border border-slate-100 p-6 space-y-5" data-loading-target="settingsSaveBtn" data-loading-label="Saving...">
         <h3 class="font-semibold text-slate-800 border-b pb-3">সাধারণ সেটিংস</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             ${field('site_name', 'সাইটের নাম', 'text', s.site_name || 'Livo Betting')}

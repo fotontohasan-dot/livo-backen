@@ -58,7 +58,7 @@ function escapeHtml(str) {
             <button type="submit" class="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-xs font-semibold"><i class="fas fa-copy"></i> Clone</button>
           </form>
           ${!role.is_system ? `
-          <form method="POST" action="/admin/roles/${role.id}/delete" onsubmit="return confirm('Role \\'${escapeHtml(role.name)}\\' ডিলিট করবেন?')" class="inline-flex">
+          <form method="POST" action="/admin/roles/${role.id}/delete" data-confirm="Role '${escapeHtml(role.name)}' ডিলিট করবেন?" class="inline-flex">
             <button type="submit" class="px-3 py-1.5 bg-red-100 text-red-600 rounded-lg text-xs font-semibold"><i class="fas fa-trash"></i> Delete</button>
           </form>` : ''}
         </div>

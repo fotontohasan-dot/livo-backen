@@ -43,58 +43,7 @@
     }
 </style>
 
-<script>
-    document.getElementById('gameUI').innerHTML = `
-        <div id="ludoGame">
-            <div id="ludoStatus" style="font-weight: bold;">ডাইস রোল করুন!</div>
-            <div class="dice-container">
-                <div class="dice-box">
-                    <div id="dealerDice" class="dice">?</div>
-                    <span>ডিলার</span>
-                </div>
-                <div class="dice-box">
-                    <div id="playerDice" class="dice">?</div>
-                    <span>আপনি</span>
-                </div>
-            </div>
-        </div>
-    `;
-</script>
+<script src="/js/games/ludo.js"></script>
 
-<script>
-    const ludoStatus = document.getElementById('ludoStatus');
-    const ludoPlayBtn = document.getElementById('mainGameBtn');
-    const pDice = document.getElementById('playerDice');
-    const dDice = document.getElementById('dealerDice');
 
-    async function playLudo() {
-        const amount = parseInt(document.getElementById('betAmount').value);
-        const data = await placeBet(amount);
-        if (!data || !data.success) return;
 
-        ludoPlayBtn.disabled = true;
-        ludoStatus.innerText = 'রোল হচ্ছে...';
-        pDice.classList.add('rolling');
-        dDice.classList.add('rolling');
-
-        setTimeout(() => {
-            pDice.classList.remove('rolling');
-            dDice.classList.remove('rolling');
-
-            pDice.innerText = data.gameResult.playerRoll;
-            dDice.innerText = data.gameResult.dealerRoll;
-
-            if (data.winAmount > 0) {
-                ludoStatus.innerText = `আপনি জিতেছেন! +${data.winAmount}`;
-                ludoStatus.style.color = '#10b981';
-            } else {
-                ludoStatus.innerText = 'আপনি হেরেছেন!';
-                ludoStatus.style.color = '#ef4444';
-            }
-            ludoPlayBtn.disabled = false;
-        }, 1500);
-    }
-
-    ludoPlayBtn.innerText = 'রোল';
-    ludoPlayBtn.onclick = playLudo;
-</script>

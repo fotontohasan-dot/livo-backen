@@ -14,6 +14,7 @@
 // সবচেয়ে গুরুত্বপূর্ণ অ্যাসারশন: ন্যাভিগেশনের প্রতিটা লিংক সত্যিই কাজ করে (ডেড লিংক নেই)।
 // ---------------------------------------------------------------------------
 
+const { withScripts } = require('../helpers/viewScripts');
 const request = require('supertest');
 // supertest-কে সরাসরি express অ্যাপ না দিয়ে helpers/app.js-এর শেয়ার্ড listening
 // সার্ভার দেওয়া হচ্ছে — নাহলে supertest প্রতি রিকোয়েস্টে নিজে listen/close করে,
@@ -93,8 +94,12 @@ describe('হোমপেজ — বানানো আর্থিক ডেট
 
   test('Recent Big Wins এখন আসল এন্ডপয়েন্ট থেকে আসে, খালি অবস্থাও আছে', async () => {
     const res = await request(app).get('/');
-    expect(res.text).toContain("fetch('/games/api/recent-wins'");
-    expect(res.text).toContain('এখনো কোনো বড় জয় নেই');
+    // docs/CSP.md ধাপ ৩-এ হোমপেজের কোড public/js/views/index.js-এ সরানো
+    // হয়েছে, তাই fetch কলটা রেসপন্স + লোড করা স্ক্রিপ্ট একসাথে দেখে যাচাই।
+    const page = withScripts(res.text);
+    expect(page).toContain("fetch('/games/api/recent-wins'");
+    // খালি অবস্থার বার্তাটাও এখন ওই স্ক্রিপ্টেই তৈরি হয়
+    expect(page).toContain('এখনো কোনো বড় জয় নেই');
   });
 
   test('/games/api/recent-wins বৈধ আকারে সাড়া দেয় এবং ইউজারনেম মাস্ক করে', async () => {

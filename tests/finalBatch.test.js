@@ -95,8 +95,25 @@ describe('#3 KYC ডকুমেন্ট প্রমাণীকৃত প্�
 
   test('অ্যাডমিন ভিউ আসল Cloudinary URL বসায় না', () => {
     const view = read('views', 'admin', 'kyc.ejs');
-    expect(view).toMatch(/docProxyUrl/);
+    // CSP মাইগ্রেশনে স্ক্রিপ্টটা public/js/admin-kyc.js-এ সরানো হয়েছে,
+    // তাই docProxyUrl এখন ওখানে। সম্পত্তিটা একই: ডকুমেন্ট প্রমাণীকৃত
+    // প্রক্সি রুট দিয়েই আসে।
+    const js = read('public', 'js', 'admin-kyc.js');
+    expect(js).toMatch(/docProxyUrl/);
+    expect(js).toMatch(/'\/admin\/kyc\/' \+ encodeURIComponent\(k\.id\) \+ '\/document'/);
     expect(view).not.toMatch(/hostname !== 'res\.cloudinary\.com'/);
+  });
+
+  test('আসল document_url ব্রাউজারে পাঠানোই হয় না', () => {
+    const view = read('views', 'admin', 'kyc.ejs');
+    // আগে `onclick='viewKyc(<%- jsonScriptSafe(k) %>)'` গোটা সারিটা পাঠাত —
+    // SELECT k.* মানে document_url সহ, অর্থাৎ Cloudinary ঠিকানা প্রতিটা
+    // অ্যাডমিন পেজলোডে HTML-এ বসত। এখন শুধু has_document boolean যায়।
+    expect(view).toMatch(/has_document: !!k\.document_url/);
+    expect(view).not.toMatch(/jsonScriptSafe\(kycList/);
+    const js = read('public', 'js', 'admin-kyc.js');
+    expect(js).toMatch(/k\.has_document/);
+    expect(js).not.toMatch(/k\.document_url/);
   });
 
   test('অবশিষ্ট ঝুঁকি ডকুমেন্টেড', () => {

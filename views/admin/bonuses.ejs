@@ -63,7 +63,7 @@
                     <td><%= b.created_at ? new Date(b.created_at).toLocaleDateString('bn-BD') : '—' %></td>
                     <td style="text-align:right;">
                       <% if (b.status === 'active') { %>
-                        <form method="POST" action="/admin/bonuses/<%= b.id %>/cancel" onsubmit="return confirm('বাতিল করবেন?')">
+                        <form method="POST" action="/admin/bonuses/<%= b.id %>/cancel" data-confirm="বাতিল করবেন?">
                           <button class="btn btn-sm btn-red" type="submit"><%= t('admin_btn_cancel') %></button>
                         </form>
                       <% } %>

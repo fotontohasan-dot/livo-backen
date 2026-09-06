@@ -9,13 +9,13 @@
     <div style="color:#fff;font-weight:800;font-size:18px;margin-bottom:12px">দ্রুত সাহায্য</div>
     <div style="color:rgba(255,255,255,0.85);font-size:12px;font-weight:700;margin-bottom:8px;letter-spacing:.3px">ক্যাটাগরি</div>
     <div id="quick-category-row" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch">
-      <button onclick="sendQuickMessage('ডিপোজিট সমস্যা')" class="qc-chip">💳 ডিপোজিট সমস্যা</button>
-      <button onclick="sendQuickMessage('উইথড্র সমস্যা')" class="qc-chip">💵 উইথড্র সমস্যা</button>
-      <button onclick="sendQuickMessage('বোনাস সমস্যা')" class="qc-chip">🎁 বোনাস সমস্যা</button>
-      <button onclick="sendQuickMessage('লগইন সমস্যা')" class="qc-chip">🔑 লগইন সমস্যা</button>
-      <button onclick="sendQuickMessage('অ্যাকাউন্ট ভেরিফিকেশন')" class="qc-chip">🪪 KYC ভেরিফিকেশন</button>
-      <button onclick="sendQuickMessage('টিকেট ইস্যু')" class="qc-chip">🎫 টিকেট ইস্যু</button>
-      <button onclick="sendQuickMessage('ফুটবল ইস্যু')" class="qc-chip">⚽ ফুটবল ইস্যু</button>
+      <button data-quick-msg="ডিপোজিট সমস্যা" class="qc-chip">💳 ডিপোজিট সমস্যা</button>
+      <button data-quick-msg="উইথড্র সমস্যা" class="qc-chip">💵 উইথড্র সমস্যা</button>
+      <button data-quick-msg="বোনাস সমস্যা" class="qc-chip">🎁 বোনাস সমস্যা</button>
+      <button data-quick-msg="লগইন সমস্যা" class="qc-chip">🔑 লগইন সমস্যা</button>
+      <button data-quick-msg="অ্যাকাউন্ট ভেরিফিকেশন" class="qc-chip">🪪 KYC ভেরিফিকেশন</button>
+      <button data-quick-msg="টিকেট ইস্যু" class="qc-chip">🎫 টিকেট ইস্যু</button>
+      <button data-quick-msg="ফুটবল ইস্যু" class="qc-chip">⚽ ফুটবল ইস্যু</button>
     </div>
   </div>
   <style>
@@ -28,8 +28,8 @@
   </style>
 
   <div style="display:flex;gap:8px;margin-bottom:12px">
-    <button id="mode-bot" onclick="setMode(true)" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border-glass);background:var(--grad-gold);color:#000;font-weight:bold;cursor:pointer;font-size:13px">🤖 বট সহায়তা</button>
-    <button id="mode-agent" onclick="setMode(false)" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border-glass);background:rgba(255,255,255,0.08);color:var(--text-main);font-weight:bold;cursor:pointer;font-size:13px">👤 লাইভ এজেন্ট</button>
+    <button id="mode-bot" data-chat-mode="bot" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border-glass);background:var(--grad-gold);color:#000;font-weight:bold;cursor:pointer;font-size:13px">🤖 বট সহায়তা</button>
+    <button id="mode-agent" data-chat-mode="agent" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border-glass);background:rgba(255,255,255,0.08);color:var(--text-main);font-weight:bold;cursor:pointer;font-size:13px">👤 লাইভ এজেন্ট</button>
   </div>
 
   <div id="chat-container" style="background:rgba(255,255,255,0.03);border:1px solid var(--border-glass);border-radius:16px;display:flex;flex-direction:column;height:70vh">
@@ -39,7 +39,7 @@
       <div id="file-preview" style="display:none;margin-bottom:8px">
         <img id="preview-img" style="display:none;max-height:100px;border-radius:8px;margin-bottom:4px"/>
         <span id="preview-name" style="font-size:12px;color:var(--text-muted)"></span>
-        <button onclick="clearFile()" style="color:#ef4444;font-size:12px;margin-left:8px;background:none;border:none;cursor:pointer">✕ <%= t.cancel %></button>
+        <button data-clear-file style="color:#ef4444;font-size:12px;margin-left:8px;background:none;border:none;cursor:pointer">✕ <%= t.cancel %></button>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
         <label style="background:rgba(255,255,255,0.08);color:var(--text-main);padding:10px 12px;border-radius:8px;cursor:pointer;font-size:18px">
@@ -60,204 +60,23 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="/js/content-filter.js"></script>
-<script>
-  const socket = io();
-  const userId = <%= user.id %>;
-  const messagesDiv = document.getElementById('messages');
-  const messageInput = document.getElementById('message-input');
-  const sendButton = document.getElementById('send-button');
-  const fileInput = document.getElementById('file-input');
-  const filePreview = document.getElementById('file-preview');
-  const previewImg = document.getElementById('preview-img');
-  const previewName = document.getElementById('preview-name');
-
-  let selectedFile = null;
-  let selectedFileType = null;
-  let botMode = true;
-
-  function setMode(isBot) {
-    botMode = isBot;
-    document.getElementById('mode-bot').style.background = isBot ? 'var(--grad-gold)' : 'rgba(255,255,255,0.08)';
-    document.getElementById('mode-bot').style.color = isBot ? '#000' : '#fff';
-    document.getElementById('mode-agent').style.background = !isBot ? 'var(--grad-gold)' : 'rgba(255,255,255,0.08)';
-    document.getElementById('mode-agent').style.color = !isBot ? '#000' : '#fff';
+<%# সার্ভার-সাইড মান executable স্ক্রিপ্টে নয়, একটা JSON ডেটা ব্লকে যায় —
+    ওটা ব্রাউজার চালায় না, তাই CSP-তে ইনলাইন স্ক্রিপ্টের ছাড় লাগে না। %>
+<script type="application/json" id="chatConfig"><%- jsonScriptSafe({
+  userId: user.id,
+  siteName: siteName,
+  t: {
+    support_service: t.support_service,
+    welcome_support: t.welcome_support,
+    q_deposit: t.q_deposit,
+    q_withdraw: t.q_withdraw,
+    q_account: t.q_account,
+    q_about: t.q_about,
+    q_event: t.q_event,
+    upload_fail: t.upload_fail
   }
-
-  socket.emit('join', userId);
-
-  window.sendQuickMessage = async function(text) {
-    messageInput.value = text;
-    await sendMessage();
-  };
-
-  function showWelcome() {
-    const welcomeDiv = document.createElement('div');
-    welcomeDiv.innerHTML = `
-      <div style="background:#fff;color:#000;border-radius:16px;overflow:hidden;border:1px solid #e5e7eb;margin-bottom:8px">
-        <div style="padding:14px;background:#f9fafb;display:flex;align-items:center;gap:12px;border-bottom:1px solid #e5e7eb">
-          <div style="width:40px;height:40px;border-radius:50%;background:var(--grad-gold);display:flex;align-items:center;justify-content:center;color:#000;font-weight:800;font-size:18px">L</div>
-          <div>
-            <div style="font-weight:800;color:#111"><%= siteName %> Support</div>
-            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px"><%= t.support_service %></div>
-          </div>
-        </div>
-        <div style="padding:16px">
-          <p style="font-size:13px;color:#374151;line-height:1.6;margin-bottom:16px">
-            <%= t.welcome_support %>
-          </p>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <button onclick="sendQuickMessage('<%= t.q_deposit %>')" style="width:100%;padding:12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-weight:600;color:#374151;cursor:pointer;text-align:center"><%= t.q_deposit %></button>
-            <button onclick="sendQuickMessage('<%= t.q_withdraw %>')" style="width:100%;padding:12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-weight:600;color:#374151;cursor:pointer;text-align:center"><%= t.q_withdraw %></button>
-            <button onclick="sendQuickMessage('<%= t.q_account %>')" style="width:100%;padding:12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-weight:600;color:#374151;cursor:pointer;text-align:center"><%= t.q_account %></button>
-            <button onclick="sendQuickMessage('<%= t.q_about %>')" style="width:100%;padding:12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-weight:600;color:#374151;cursor:pointer;text-align:center"><%= t.q_about %></button>
-            <button onclick="sendQuickMessage('<%= t.q_event %>')" style="width:100%;padding:12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-weight:600;color:#374151;cursor:pointer;text-align:center"><%= t.q_event %></button>
-          </div>
-        </div>
-      </div>
-    `;
-    messagesDiv.appendChild(welcomeDiv);
-  }
-
-  fetch('/chat/history')
-    .then(res => res.json())
-    .then(messages => {
-      showWelcome();
-      if (Array.isArray(messages)) {
-        messages.forEach(msg => appendMessage(msg.message, msg.is_admin, msg.created_at, msg.file_url, msg.file_type));
-        scrollToBottom();
-      }
-    });
-
-  fileInput.addEventListener('change', () => {
-    const file = fileInput.files[0];
-    if (!file) return;
-    selectedFile = file;
-    selectedFileType = file.type.startsWith('video') ? 'video' : 'image';
-    filePreview.style.display = 'block';
-    previewName.textContent = file.name;
-    if (selectedFileType === 'image') {
-      previewImg.style.display = 'block';
-      previewImg.src = URL.createObjectURL(file);
-    } else {
-      previewImg.style.display = 'none';
-    }
-  });
-
-  function clearFile() {
-    selectedFile = null;
-    selectedFileType = null;
-    fileInput.value = '';
-    filePreview.style.display = 'none';
-    previewImg.style.display = 'none';
-    previewName.textContent = '';
-  }
-
-  function appendMessage(text, isAdmin, timestamp, fileUrl, fileType) {
-    const div = document.createElement('div');
-    div.style.cssText = `display:flex;justify-content:${isAdmin ? 'flex-start' : 'flex-end'}`;
-
-    const inner = document.createElement('div');
-    inner.style.cssText = `max-width:80%;border-radius:12px;padding:10px 14px;${isAdmin ? 'background:rgba(255,255,255,0.1);color:var(--text-main)' : 'background:var(--grad-gold);color:#000'}`;
-
-    if (fileUrl) {
-      if (fileType === 'image') {
-        const img = document.createElement('img');
-        img.src = fileUrl;
-        img.style.cssText = 'max-width:100%;border-radius:8px;margin-bottom:4px;cursor:pointer';
-        img.onclick = () => window.open(fileUrl, '_blank');
-        inner.appendChild(img);
-      } else if (fileType === 'video') {
-        const video = document.createElement('video');
-        video.src = fileUrl;
-        video.controls = true;
-        video.style.cssText = 'max-width:100%;border-radius:8px;margin-bottom:4px';
-        inner.appendChild(video);
-      }
-    }
-
-    if (text) {
-      const p = document.createElement('p');
-      p.style.cssText = 'font-size:14px;margin:0';
-      p.textContent = text;
-      inner.appendChild(p);
-    }
-
-    const time = document.createElement('span');
-    time.style.cssText = 'font-size:10px;opacity:0.6;display:block;margin-top:4px';
-    time.textContent = new Date(timestamp).toLocaleTimeString('bn-BD');
-    inner.appendChild(time);
-
-    div.appendChild(inner);
-    messagesDiv.appendChild(div);
-  }
-
-  function scrollToBottom() {
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-  }
-
-  async function sendMessage() {
-    const text = messageInput.value.trim();
-    if (!text && !selectedFile) return;
-
-    // ==== রিয়েল-টাইম ফ্রন্টএন্ড ফিল্টার — পাঠানোর আগে শেষবার চেক ====
-    if (text && window.contentFilterIsBad(text)) {
-      alert('⚠️ আপনার লেখায় অনুপযুক্ত/অশ্লীল কনটেন্ট আছে। অনুগ্রহ করে ঠিক করে আবার পাঠান।');
-      return;
-    }
-
-    let fileUrl = null;
-    let fileType = null;
-
-    if (selectedFile) {
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-      try {
-        const res = await fetch('/chat/upload', { method: 'POST', body: formData });
-        const data = await res.json();
-        fileUrl = data.url;
-        fileType = selectedFileType;
-      } catch (e) {
-        alert('<%= t.upload_fail %>');
-        return;
-      }
-    }
-
-    socket.emit('send_message', {
-      senderId: userId,
-      receiverId: null,
-      message: text,
-      isAdmin: false,
-      fileUrl,
-      fileType,
-      botMode
-    });
-
-    appendMessage(text, false, new Date(), fileUrl, fileType);
-    messageInput.value = '';
-    clearFile();
-    scrollToBottom();
-  }
-
-  sendButton.addEventListener('click', sendMessage);
-  messageInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') sendMessage();
-  });
-
-  // ==== টাইপ করার সময় রিয়েল-টাইম ভিজুয়াল ওয়ার্নিং (লাল বর্ডার + মেসেজ) ====
-  attachContentFilter('#message-input', { submitButton: sendButton });
-
-  // ==== ব্যাকএন্ড (socket.js) থেকে ব্লক হলে ইউজারকে জানানো ====
-  socket.on('message_blocked', (data) => {
-    alert('⚠️ ' + (data && data.text ? data.text : 'মেসেজটি পাঠানো যায়নি।'));
-  });
-
-  socket.on('new_message', (data) => {
-    if (data.isAdmin) {
-      appendMessage(data.message, true, data.createdAt, data.fileUrl, data.fileType);
-      scrollToBottom();
-    }
-  });
-</script>
+}) %></script>
+<script src="/js/profile-chat.js"></script>
 
 <%- include('../partials/navbar') %>
 <%- include('../partials/bottom-nav') %>

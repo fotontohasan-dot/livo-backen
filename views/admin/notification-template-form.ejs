@@ -92,62 +92,10 @@ const action = isEdit ? '/admin/notification-templates/' + tpl.id : '/admin/noti
         <div id="testResult" class="text-xs mt-3"></div>
     </div>
 
-    <script>
-    (function() {
-      const tmplId = ${tpl.id};
-      const previewBtn = document.getElementById('previewBtn');
-      const previewPanel = document.getElementById('previewPanel');
-      const previewSubject = document.getElementById('previewSubject');
-      const previewBody = document.getElementById('previewBody');
-
-      previewBtn.addEventListener('click', async () => {
-        previewBtn.disabled = true;
-        try {
-          const res = await fetch('/admin/notification-templates/' + tmplId + '/preview', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({}) });
-          const data = await res.json();
-          if (!data.success) throw new Error(data.error || 'প্রিভিউ ব্যর্থ');
-          previewSubject.textContent = data.subject || '';
-          previewBody.innerHTML = data.body || '';
-          previewPanel.classList.remove('hidden');
-        } catch (e) {
-          alert('প্রিভিউ ব্যর্থ: ' + e.message);
-        } finally {
-          previewBtn.disabled = false;
-        }
-      });
-
-      const testSendBtn = document.getElementById('testSendBtn');
-      const testResult = document.getElementById('testResult');
-      testSendBtn.addEventListener('click', async () => {
-        const target = document.getElementById('testTarget').value.trim();
-        if (!target) { testResult.innerHTML = '<span class="text-red-500">টার্গেট দিন</span>'; return; }
-        testSendBtn.disabled = true;
-        testResult.innerHTML = '<span class="text-slate-400">পাঠানো হচ্ছে...</span>';
-        try {
-          const res = await fetch('/admin/notification-templates/' + tmplId + '/test-send', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ target }) });
-          const data = await res.json();
-          if (!data.success) throw new Error(data.error || 'টেস্ট-সেন্ড ব্যর্থ');
-          testResult.innerHTML = '<span class="text-emerald-600 font-medium">✅ ' + (data.message || 'পাঠানো হয়েছে') + (data.simulated ? ' <span class=\\'text-amber-500\\'>(সিমুলেটেড)</span>' : '') + '</span>';
-        } catch (e) {
-          testResult.innerHTML = '<span class="text-red-500">❌ ' + e.message + '</span>';
-        } finally {
-          testSendBtn.disabled = false;
-        }
-      });
-    })();
-    </script>
+    <script type="application/json" id="admin-notification-template-formConfig">${JSON.stringify({ templateId: tpl.id }).replace(/</g, "\\u003c")}</script>
+<script src="/js/views/admin-notification-template-form.js"></script>
     ` : `
-    <script>
-    (function() {
-      const channelSelect = document.getElementById('channelSelect');
-      const subjectField = document.getElementById('subjectField');
-      function toggleSubject() {
-        subjectField.style.display = channelSelect.value === 'email' ? '' : 'none';
-      }
-      channelSelect.addEventListener('change', toggleSubject);
-      toggleSubject();
-    })();
-    </script>
+    
     `}
 </div>
 `

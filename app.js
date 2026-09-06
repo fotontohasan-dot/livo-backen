@@ -72,8 +72,31 @@ app.use(express.static(path.join(__dirname, 'public'), {
 
 const cspDirectives = {
   defaultSrc: ["'self'"],
-  scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
-  scriptSrcAttr: ["'unsafe-inline'"],
+  // ইনলাইন স্ক্রিপ্ট সম্পূর্ণ নিষিদ্ধ — docs/CSP.md ধাপ ৩ শেষ।
+  //
+  // টেমপ্লেটে থাকা ২৭৩টা ইনলাইন <script> ব্লক public/js/-এ সরানো হয়েছে;
+  // সার্ভার-সাইড মান যায় <script type="application/json"> ব্লকে, যা
+  // executable নয়। বর্তমান সংখ্যা ০, আর
+  // tests/security/cspInlineRatchet.test.js সেটাকে ০-তেই আটকে রাখে।
+  //
+  // ধাপ ২-এ scriptSrcAttr আগেই 'none' হয়েছিল। দুটো মিলে এখন reflected বা
+  // stored XSS দিয়ে স্ক্রিপ্ট চালানোর পথ ব্রাউজারই বন্ধ করে — আমাদের
+  // এস্কেপিং প্রতিটা পথে নিখুঁত ছিল কি না তার উপর আর নির্ভর করতে হয় না।
+  scriptSrc: ["'self'", "https://cdn.tailwindcss.com", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
+  // ইনলাইন ইভেন্ট হ্যান্ডলার সম্পূর্ণ নিষিদ্ধ — এখন প্রয়োগ করা নীতিতেই।
+  //
+  // docs/CSP.md ধাপ ২ শেষ: টেমপ্লেটে থাকা ২৫০টা onclick/onchange/onsubmit
+  // এবং রানটাইমে innerHTML দিয়ে তৈরি হওয়া হ্যান্ডলারগুলো — সবই data-*
+  // অ্যাট্রিবিউট আর addEventListener-এ সরানো হয়েছে। বর্তমান সংখ্যা ০, আর
+  // tests/security/cspInlineRatchet.test.js সেটাকে ০-তেই আটকে রাখে।
+  //
+  // এর ফলে reflected/stored XSS দিয়ে `onerror=`/`onclick=` ইনজেক্ট করে
+  // কোড চালানোর পথটা ব্রাউজার নিজেই বন্ধ করে — আমাদের এস্কেপিং ঠিক ছিল
+  // কি না তার উপর আর নির্ভর করতে হয় না।
+  //
+  // scriptSrc-এ এখনো 'unsafe-inline' আছে, কারণ ২৫৪টা ইনলাইন <script> ব্লক
+  // বাকি (ধাপ ৩)। দুটো ডিরেক্টিভ আলাদা, তাই একটা আগে শক্ত করা যায়।
+  scriptSrcAttr: ["'none'"],
   styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
   fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "data:"],
   imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://i.pravatar.cc", "https://img.icons8.com", "https://i.postimg.cc"],
@@ -99,9 +122,34 @@ if (process.env.NODE_ENV === 'production') {
 // প্রয়োগে তোলা যাবে।
 //
 // অগ্রগতি ও ধাপগুলো: docs/CSP.md
+// ==================== ধাপ ৩: nonce অবকাঠামো ====================
+// docs/CSP.md-এর ধাপ ৩ — প্রতি রিকোয়েস্টে একটা nonce তৈরি করে
+// `res.locals.cspNonce`-এ রাখা হয়, যাতে টেমপ্লেটগুলো ধাপে ধাপে
+// `<script nonce="<%= cspNonce %>">` ব্যবহার শুরু করতে পারে।
+//
+// গুরুত্বপূর্ণ: nonce টা **শুধু Report-Only নীতিতে** যোগ করা হয়, প্রয়োগ করা
+// নীতিতে নয়। কারণ স্পেক অনুযায়ী script-src-এ nonce থাকলে আধুনিক ব্রাউজার
+// `'unsafe-inline'` উপেক্ষা করে। প্রয়োগ করা নীতিতে এখনই nonce বসালে
+// ২৭৩টা ইনলাইন `<script>` ব্লক আর ২৫০টা ইনলাইন হ্যান্ডলার একসাথে বন্ধ
+// হয়ে যেত — অর্থাৎ পুরো অ্যাডমিন প্যানেল ও গেম UI মুহূর্তে ভেঙে পড়ত।
+//
+// তাই ক্রমটা: nonce পাওয়া যায় → টেমপ্লেট একে একে migrate হয় →
+// Report-Only রিপোর্ট শূন্যে নামে → তখন nonce প্রয়োগ নীতিতে ওঠে এবং
+// `'unsafe-inline'` সরে।
+const crypto = require('crypto');
+app.use((req, res, next) => {
+  res.locals.cspNonce = crypto.randomBytes(16).toString('base64');
+  next();
+});
+
 const reportOnlyDirectives = {
   ...cspDirectives,
-  scriptSrc: cspDirectives.scriptSrc.filter((v) => v !== "'unsafe-inline'"),
+  // nonce টা ফাংশন হিসেবে দেওয়া হয় — helmet প্রতি রিকোয়েস্টে এটা ডাকে,
+  // ফলে প্রতিটা response নিজের nonce পায় (একটা স্থির nonce মানে nonce না)।
+  scriptSrc: [
+    ...cspDirectives.scriptSrc.filter((v) => v !== "'unsafe-inline'"),
+    (req, res) => `'nonce-${res.locals.cspNonce}'`
+  ],
   scriptSrcAttr: ["'none'"],
   styleSrc: cspDirectives.styleSrc.filter((v) => v !== "'unsafe-inline'"),
   reportUri: ['/csp-report']
@@ -698,73 +746,57 @@ app.use('/api', require('./routes/api'));
 // ==================== OpenAPI / Swagger UI ====================
 const swaggerUi = require('swagger-ui-express');
 const { swaggerSpec } = require('./services/swagger');
-// PHASE 1 fix: /api/docs ও /api/docs.json কোনো প্রমাণীকরণ ছাড়াই মাউন্ট করা ছিল,
-// অর্থাৎ যে কেউ প্ল্যাটফর্মের সম্পূর্ণ API surface — প্রতিটি রুট, প্যারামিটার ও
-// স্কিমা — পড়ে নিতে পারত। এটা নিজে দুর্বলতা নয়, কিন্তু আক্রমণকারীর কাজের
-// প্রথম ধাপটা (reconnaissance) আমরাই সাজিয়ে দিয়ে রাখছিলাম।
+// PHASE 1 fix: আগে `/api/docs` ও `/api/docs.json` দুটোই সম্পূর্ণ unauthenticated
+// ছিল — যেকোনো anonymous ব্যক্তি পুরো API surface (প্রতিটি route, parameter,
+// auth scheme) পড়ে নিতে পারত, যা attacker-এর reconnaissance কাজ সহজ করে দেয়।
 //
-// আচরণ পরিবর্তন যতটা সম্ভব ছোট রাখা হয়েছে (Rule 3):
-//   - production-এ docs শুধু লগ-ইন করা admin দেখতে পাবে
-//   - অন্য সবার জন্য 404 — 403 নয়, কারণ 403 বলে দেয় "এখানে কিছু একটা আছে"
-//   - production-এর বাইরে (dev/test) আচরণ আগের মতোই খোলা
+// তার চেয়েও গুরুতর: `/api/docs`-এ enforced CSP হেডারটি response থেকে মুছে
+// ফেলা হত। উদ্দেশ্য ছিল Swagger UI-এর inline script/style চালানো, কিন্তু ফল
+// দাঁড়াত — ওই path-এ enforced CSP সম্পূর্ণ অনুপস্থিত। spec-এর কোনো field বা
+// Swagger bundle দিয়ে XSS হলে সেটা শূন্য CSP-র নিচে চলত।
 //
-// API_DOCS_ACCESS দিয়ে ওভাররাইড করা যায়: 'admin' | 'public' | 'off'
-const docsAccess = process.env.API_DOCS_ACCESS
-  || (process.env.NODE_ENV === 'production' ? 'admin' : 'public');
+// এখন দুই স্তর:
+//   ১. Availability — production-এ default বন্ধ। ব্যবসায়িক প্রয়োজন থাকলে
+//      ENABLE_API_DOCS=true দিয়ে ইচ্ছাকৃতভাবে খুলতে হয়। বন্ধ থাকলে 404 —
+//      403 নয়, কারণ 403 বলে দেয় জিনিসটার অস্তিত্ব আছে।
+//   ২. Authorization — খোলা থাকলেও isAdmin। middleware/auth.js-এর isAdmin
+//      প্রতি রিকোয়েস্টে DB থেকে role + ban + deleted যাচাই করে, তাই ডিমোট বা
+//      ব্যান করা admin-এর পুরনো session কাজ করে না।
+//
+// CSP আর মুছে ফেলা হয় না। বদলে এই path-এর জন্য একটা scoped policy বসানো হয়:
+// Swagger UI-এর যতটুকু inline দরকার ততটুকুই, আর object-src/frame-ancestors
+// শক্ত করে বাঁধা। global policy-র চেয়ে এটা সংকীর্ণ, অনুপস্থিত নয়।
+const apiDocsEnabled = () => process.env.NODE_ENV !== 'production' || process.env.ENABLE_API_DOCS === 'true';
 
-const requireDocsAccess = async (req, res, next) => {
-  if (docsAccess === 'public') return next();
-  if (docsAccess === 'off') return res.status(404).send('Not found');
-
-  // 'admin' — সেশনের role-কে বিশ্বাস না করে DB থেকে বর্তমান role পড়া হয়,
-  // middleware/auth.js-এর isAdmin যে কারণে তা করে সেই একই কারণে (ডিমোট/ব্যান
-  // করা অ্যাকাউন্টের পুরনো সেশন যেন কাজ না করে)।
-  //
-  // isAdmin সরাসরি ব্যবহার করা হয়নি: সেটি ব্যর্থ হলে সেশন ধ্বংস করে ও
-  // /admin/login-এ রিডাইরেক্ট করে। একজন সাধারণ ব্যবহারকারী কৌতূহলবশত
-  // /api/docs খুললে তার লগইন উড়ে যাওয়া উচিত নয়।
-  if (!req.session || !req.session.user) return res.status(404).send('Not found');
-  try {
-    const r = await pool.query(
-      'SELECT role, is_banned, deleted_at FROM users WHERE id = $1',
-      [req.session.user.id]
-    );
-    const row = r.rows[0];
-    if (!row || row.is_banned || row.deleted_at || row.role !== 'admin') {
-      return res.status(404).send('Not found');
-    }
-    return next();
-  } catch (err) {
-    console.error('api-docs access check error:', err.message);
-    return res.status(404).send('Not found');
-  }
+const apiDocsGate = (req, res, next) => {
+  if (!apiDocsEnabled()) return res.status(404).json({ success: false, error: 'Not found' });
+  return next();
 };
 
-app.get('/api/docs.json', requireDocsAccess, (req, res) => res.json(swaggerSpec));
-// PHASE 1 fix: আগে এখানে `res.removeHeader('Content-Security-Policy')` করা হতো,
-// অর্থাৎ Swagger UI-এর পাতাগুলো **কোনো** CSP ছাড়াই সার্ভ হতো। Swagger UI-এর
-// নিজস্ব ইনলাইন bootstrap script আছে বলে সাইটের সাধারণ নীতিতে সেটা চলত না —
-// কিন্তু সমাধান হিসেবে পুরো হেডার মুছে ফেলা মানে ওই পাথে objectSrc, baseUri,
-// frameAncestors, formAction — সবই খুলে যাওয়া।
-//
-// এখন হেডার মোছা হয় না; বদলে এই পাথের জন্য একটি আলাদা, সংকীর্ণ নীতি বসানো হয়।
-// Swagger UI যা সত্যিই দরকার (নিজের ইনলাইন script ও style) ততটুকুই ছাড় পায়,
-// বাকি directive গুলো সাইটের মূল নীতির মতোই কড়া থাকে।
-const swaggerCsp = helmet.contentSecurityPolicy({
-  directives: {
-    defaultSrc: ["'self'"],
-    scriptSrc: ["'self'", "'unsafe-inline'"],
-    styleSrc: ["'self'", "'unsafe-inline'"],
-    imgSrc: ["'self'", 'data:'],
-    fontSrc: ["'self'", 'data:'],
-    connectSrc: ["'self'"],
-    objectSrc: ["'none'"],
-    frameAncestors: ["'self'"],
-    baseUri: ["'self'"],
-    formAction: ["'self'"]
-  }
-});
-app.use('/api/docs', requireDocsAccess, swaggerCsp, swaggerUi.serve, swaggerUi.setup(swaggerSpec, { customSiteTitle: 'Livo API Docs' }));
+const SWAGGER_CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com data:",
+  "img-src 'self' data:",
+  "connect-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'"
+].join('; ');
+
+const swaggerCspHeader = (req, res, next) => {
+  res.setHeader('Content-Security-Policy', SWAGGER_CSP);
+  // Report-Only নীতিটাও এই path-এ প্রযোজ্য নয় (সেটা কড়া variant, Swagger-এর
+  // inline নিয়ে অনর্থক রিপোর্টের বন্যা বইয়ে দিত) — তাই সরানো হয়, enforced
+  // নীতিটা উপরে বসানোর *পরে*।
+  res.removeHeader('Content-Security-Policy-Report-Only');
+  return next();
+};
+
+app.get('/api/docs.json', apiDocsGate, require('./middleware/auth').isAdmin, (req, res) => res.json(swaggerSpec));
+app.use('/api/docs', apiDocsGate, require('./middleware/auth').isAdmin, swaggerCspHeader, swaggerUi.serve, swaggerUi.setup(swaggerSpec, { customSiteTitle: 'Livo API Docs' }));
 app.use('/accumulator', require('./routes/accumulator'));
 app.use('/chat', require('./routes/chat'));
 app.use('/extra', require('./routes/extra'));

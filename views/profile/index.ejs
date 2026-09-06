@@ -214,24 +214,24 @@ body.light-mode .mc-grid-card{background:rgba(0,0,0,.04);border-color:rgba(0,0,0
     <div class="pf-header-glow"></div>
     <div class="pf-header-top">
       <div class="pf-avatar-wrap">
-        <div id="avatarCircle" onclick="openAvatarPicker()" class="pf-avatar" style="background-image: <%= user.avatar ? `url('${user.avatar}')` : 'none' %>;">
+        <div id="avatarCircle" data-profile-action="avatar-open" class="pf-avatar" style="background-image: <%= user.avatar ? `url('${user.avatar}')` : 'none' %>;">
           <% if (!user.avatar) { %><%= user.username.charAt(0).toUpperCase() %><% } %>
         </div>
         <span class="pf-online-dot" title="<%= t.online %>"></span>
-        <div onclick="openAvatarPicker()" class="pf-avatar-edit">✏️</div>
+        <div data-profile-action="avatar-open" class="pf-avatar-edit">✏️</div>
       </div>
 
       <div class="pf-id-block">
         <div class="pf-username-row">
           <span id="usernameText" class="pf-username"><%= user.username %></span>
-          <button onclick="copyUsername()" title="<%= t.copy %>" class="pf-copy-btn"><i class="fas fa-copy"></i></button>
+          <button data-profile-action="copy-username" title="<%= t.copy %>" class="pf-copy-btn"><i class="fas fa-copy"></i></button>
           <a href="/profile/vip" class="pf-vip-badge-sm">
             <i class="fas fa-crown"></i><%= (vipStatus && vipStatus.current) ? vipStatus.current.name : 'VIP' %>
           </a>
         </div>
         <div class="pf-uid-row">
           <span>ID: <%= 100000 + user.id %></span>
-          <button onclick="copyUid()" title="<%= t.copy %>" class="pf-copy-btn pf-copy-uid"><i class="fas fa-copy"></i></button>
+          <button data-profile-action="copy-uid" title="<%= t.copy %>" class="pf-copy-btn pf-copy-uid"><i class="fas fa-copy"></i></button>
         </div>
       </div>
 
@@ -249,8 +249,8 @@ body.light-mode .mc-grid-card{background:rgba(0,0,0,.04);border-color:rgba(0,0,0
     <div class="pf-url-row">
       <i class="fas fa-link pf-url-icon"></i>
       <span class="pf-url-text" id="profileUrlText"><%= (locals.baseUrl || '') %>/register?ref=<%= user.referral_code %></span>
-      <button type="button" class="pf-url-btn" onclick="copyProfileUrl()" title="<%= t.copy %>"><i class="fas fa-copy"></i></button>
-      <button type="button" class="pf-url-btn is-share" onclick="shareProfileUrl()" title="<%= t.share %>"><i class="fas fa-share-nodes"></i></button>
+      <button type="button" class="pf-url-btn" data-profile-action="copy-profile-url" title="<%= t.copy %>"><i class="fas fa-copy"></i></button>
+      <button type="button" class="pf-url-btn is-share" data-profile-action="share-profile-url" title="<%= t.share %>"><i class="fas fa-share-nodes"></i></button>
     </div>
     <% } %>
 
@@ -261,7 +261,7 @@ body.light-mode .mc-grid-card{background:rgba(0,0,0,.04);border-color:rgba(0,0,0
         <div id="balanceText" class="pf-header-balance-value">৳ <%= Number(user.coins).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></div>
         <div class="pf-wallet-updated"><%= t.last_updated %> <span id="lastUpdatedText"><%= t.just_now %></span></div>
       </div>
-      <button onclick="refreshBalance()" id="refreshBtn" title="<%= t.refresh %>" class="pf-icon-btn pf-header-refresh"><i class="fas fa-sync-alt" id="refreshIcon"></i></button>
+      <button data-profile-action="refresh-balance" id="refreshBtn" title="<%= t.refresh %>" class="pf-icon-btn pf-header-refresh"><i class="fas fa-sync-alt" id="refreshIcon"></i></button>
     </div>
 
     <!-- Deposit / Withdraw / My Cards — হেডার কার্ডেই, আলাদা Wallet Card নেই -->
@@ -439,136 +439,12 @@ body.light-mode .mc-grid-card{background:rgba(0,0,0,.04);border-color:rgba(0,0,0
 <!-- Custom Copy Alert -->
 <div id="copyToast" style="display:none; position:fixed; bottom:100px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.8); color:#fff; padding:10px 20px; border-radius:30px; font-size:14px; z-index:9999; font-weight:bold;">কপি হয়েছে! ✅</div>
 
-<script>
-function showToast(msg) {
-  var el = document.getElementById('copyToast');
-  el.textContent = msg;
-  el.style.opacity = '1';
-  el.style.transform = 'translateX(-50%) translateY(0)';
-  setTimeout(function () {
-    el.style.opacity = '0';
-    el.style.transform = 'translateX(-50%) translateY(20px)';
-  }, 1800);
-}
-
-function copyUsername() {
-  var name = document.getElementById('usernameText').textContent.trim();
-  copyText(name);
-}
-
-function copyUid() {
-  copyText('<%= 100000 + user.id %>');
-}
-
-function copyProfileUrl() {
-  var el = document.getElementById('profileUrlText');
-  if (el) copyText(el.textContent.trim());
-}
-
-function shareProfileUrl() {
-  var el = document.getElementById('profileUrlText');
-  if (!el) return;
-  var url = el.textContent.trim();
-  if (navigator.share) {
-    navigator.share({ title: <%- jsonScriptSafe(siteName) %>, url: url }).catch(function () {});
-  } else {
-    copyText(url);
-  }
-}
-
-function copyText(val) {
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(val).then(function () { showToast('✅ কপি হয়েছে!'); });
-  } else {
-    var ta = document.createElement('textarea');
-    ta.value = val;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-    showToast('✅ কপি হয়েছে!');
-  }
-}
-
-var AVATAR_OPTIONS = [
-  'https://i.pravatar.cc/300?img=12',
-  'https://i.pravatar.cc/300?img=33',
-  'https://i.pravatar.cc/300?img=5',
-  'https://i.pravatar.cc/300?img=47',
-  'https://i.pravatar.cc/300?img=8',
-  'https://i.pravatar.cc/300?img=25',
-  'https://i.pravatar.cc/300?img=15',
-  'https://i.pravatar.cc/300?img=44',
-  'https://i.pravatar.cc/300?img=68',
-  'https://i.pravatar.cc/300?img=32',
-  'https://i.pravatar.cc/300?img=60',
-  'https://i.pravatar.cc/300?img=51',
-  'https://i.pravatar.cc/300?img=20',
-  'https://i.pravatar.cc/300?img=49',
-  'https://i.pravatar.cc/300?img=65',
-  'https://i.pravatar.cc/300?img=57'
-];
-
-function openAvatarPicker() {
-  var grid = document.getElementById('avatarGrid');
-  grid.innerHTML = '';
-  AVATAR_OPTIONS.forEach(function (url) {
-    var img = document.createElement('img');
-    img.src = url;
-    img.loading = 'lazy';
-    img.style.cssText = 'width:100%; aspect-ratio:1/1; border-radius:14px; background:rgba(255,255,255,0.06); border:2px solid rgba(255,255,255,0.08); cursor:pointer; padding:6px;';
-    img.onclick = function () { selectAvatar(url); };
-    grid.appendChild(img);
-  });
-  document.getElementById('avatarModal').style.display = 'flex';
-}
-
-function closeAvatarPicker() {
-  document.getElementById('avatarModal').style.display = 'none';
-}
-
-function selectAvatar(url) {
-  fetch('/profile/update-avatar', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ avatar: url })
-  })
-    .then(function (r) { return r.json(); })
-    .then(function (data) {
-      if (data.success) {
-        var circle = document.getElementById('avatarCircle');
-        circle.style.backgroundImage = "url('" + url + "')";
-        circle.textContent = '';
-        closeAvatarPicker();
-        showToast('✅ প্রোফাইল ছবি পরিবর্তন হয়েছে!');
-      } else {
-        showToast('❌ আপডেট ব্যর্থ হয়েছে');
-      }
-    })
-    .catch(function () { showToast('❌ সমস্যা হয়েছে'); });
-}
-
-function refreshBalance() {
-  var icon = document.getElementById('refreshIcon');
-  icon.classList.add('spinning');
-  fetch('/profile/api/balance')
-    .then(function (r) { return r.json(); })
-    .then(function (data) {
-      if (data.success) {
-        document.getElementById('balanceText').textContent = '৳ ' + Number(data.coins).toLocaleString('<%= lang === "bn" ? "bn-BD" : "en-US" %>');
-        var lu = document.getElementById('lastUpdatedText');
-        if (lu) lu.textContent = 'এখনই';
-        showToast('✅ ব্যালেন্স আপডেট হয়েছে');
-      } else {
-        showToast('❌ আপডেট ব্যর্থ হয়েছে');
-      }
-    })
-    .catch(function () { showToast('❌ সমস্যা হয়েছে'); })
-    .finally(function () {
-      setTimeout(function () { icon.classList.remove('spinning'); }, 400);
-    });
-}
-</script>
+<script type="application/json" id="profileConfig"><%- jsonScriptSafe({
+  uid: 100000 + user.id,
+  siteName: siteName,
+  locale: lang === "bn" ? "bn-BD" : "en-US"
+}) %></script>
+<script src="/js/profile-index.js"></script>
 
 <a href="/payment/deposit" class="pf-sticky-deposit" title="<%= t.quick_deposit %>"><i class="fas fa-plus"></i></a>
 
@@ -578,7 +454,7 @@ function refreshBalance() {
   <div style="background:#12121f;border-radius:20px;padding:20px;max-width:420px;width:100%;max-height:80vh;overflow-y:auto;border:1px solid rgba(255,255,255,.08)">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
       <span style="color:#fff;font-weight:800;font-size:15px"><%= t.choose_avatar %></span>
-      <button type="button" onclick="closeAvatarPicker()" style="background:none;border:none;color:rgba(255,255,255,.6);font-size:18px;cursor:pointer">✕</button>
+      <button type="button" data-profile-action="avatar-close" style="background:none;border:none;color:rgba(255,255,255,.6);font-size:18px;cursor:pointer">✕</button>
     </div>
     <div id="avatarGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px"></div>
   </div>

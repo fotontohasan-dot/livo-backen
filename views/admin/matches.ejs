@@ -20,12 +20,12 @@
     <!-- Actions -->
     <div class="flex items-center justify-end gap-3 mb-6">
       <div class="flex items-center gap-3">
-        <button onclick="exportMatchesCSV()" 
+        <button data-export-matches 
                 class="px-4 py-2.5 bg-[#334155] hover:bg-[#475569] text-white text-sm font-medium rounded-2xl flex items-center gap-2 transition-all">
           <i class="fas fa-download"></i>
           <span><%= t('admin_btn_export_csv') %></span>
         </button>
-        <button onclick="document.getElementById('add-match-modal').classList.remove('hidden')" 
+        <button data-modal-open="add-match-modal" 
                 class="px-5 py-2.5 bg-[#f59e0b] hover:bg-[#d97706] text-black font-bold rounded-2xl flex items-center gap-2 text-sm shadow-lg transition-all active:scale-[0.985]">
           <i class="fas fa-plus"></i>
           <span><%= t('admin_btn_new_match') %></span>
@@ -89,11 +89,11 @@
             <i class="fas fa-search absolute left-4 top-3.5 text-gray-500"></i>
             <input type="text" id="searchInput" placeholder="<%= t('admin_ph_search_team') %>" 
                    class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl pl-11 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f59e0b]"
-                   onkeyup="filterMatches()">
+                   data-match-filter>
           </div>
         </div>
         <div class="w-full md:w-48">
-          <select id="statusFilter" onchange="filterMatches()" 
+          <select id="statusFilter" data-match-filter 
                   class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b]">
             <option value=""><%= t('admin_filter_all_status') %></option>
             <option value="live"><%= t('admin_status_live') %></option>
@@ -102,7 +102,7 @@
           </select>
         </div>
         <div class="w-full md:w-48">
-          <select id="sportFilter" onchange="filterMatches()" 
+          <select id="sportFilter" data-match-filter 
                   class="w-full bg-[#0f172a] border border-[#475569] rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b]">
             <option value=""><%= t('admin_filter_all_sports') %></option>
             <option value="cricket"><%= t('admin_sport_cricket') %></option>
@@ -162,7 +162,7 @@
               </td>
               <td class="px-6 py-4">
                 <div class="flex justify-center gap-2">
-                  <form action="/admin/matches/<%= m.id %>/delete" method="POST" onsubmit="return confirm('Delete this match permanently?')">
+                  <form action="/admin/matches/<%= m.id %>/delete" method="POST" data-confirm="Delete this match permanently?">
                     <button type="submit" aria-label="<%= t('admin_ui_delete_match') %>" title="<%= t('admin_ui_delete_match') %>"
                             class="px-3 py-1.5 bg-red-600/90 hover:bg-red-700 rounded-xl text-xs text-white flex items-center gap-1 transition-all">
                       <i class="fas fa-trash"></i>
@@ -223,7 +223,7 @@
           </div>
 
           <div class="flex gap-3 mt-8">
-            <button type="button" onclick="document.getElementById('add-match-modal').classList.add('hidden')"
+            <button type="button" data-modal-close="add-match-modal"
                     class="flex-1 py-3 bg-[#334155] hover:bg-[#475569] rounded-2xl text-sm font-medium transition-all"><%= t('admin_btn_cancel') %></button>
             <button type="submit" 
                     class="flex-1 py-3 bg-[#f59e0b] hover:bg-[#d97706] text-black font-bold rounded-2xl transition-all active:scale-[0.985]"><%= t('admin_btn_add_match') %></button>
@@ -232,49 +232,7 @@
       </div>
     </div>
 
-<script>
-function filterMatches() {
-  const search = document.getElementById('searchInput').value.toLowerCase();
-  const status = document.getElementById('statusFilter').value;
-  const sport = document.getElementById('sportFilter').value.toLowerCase();
-  const rows = document.querySelectorAll('#matchesTable tbody tr.match-row');
-
-  rows.forEach(row => {
-    const team = row.dataset.team || '';
-    const rowStatus = row.dataset.status || '';
-    const rowSport = row.dataset.sport || '';
-
-    const matchSearch = team.includes(search);
-    const matchStatus = !status || rowStatus === status;
-    const matchSport = !sport || rowSport === sport;
-
-    row.style.display = (matchSearch && matchStatus && matchSport) ? '' : 'none';
-  });
-}
-
-function exportMatchesCSV() {
-  const table = document.getElementById('matchesTable');
-  let csv = [];
-  const rows = table.querySelectorAll('tr');
-  
-  rows.forEach(row => {
-    if (row.style.display === 'none') return;
-    const cols = row.querySelectorAll('td, th');
-    let rowData = [];
-    cols.forEach(col => {
-      rowData.push('"' + col.innerText.replace(/"/g, '""') + '"');
-    });
-    csv.push(rowData.join(','));
-  });
-
-  const csvContent = csv.join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = 'matches_export.csv';
-  link.click();
-}
-</script>
+<script src="/js/admin-matches.js"></script>
   </main>
   </div>
 </div>

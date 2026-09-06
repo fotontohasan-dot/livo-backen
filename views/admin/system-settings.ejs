@@ -40,7 +40,7 @@ const tabs = [
   { id: 'localization', label: 'Localization', icon: 'fa-language' }
 ];
 const tabButtons = tabs.map((t, i) =>
-  '<button type="button" onclick="showTab(\'' + t.id + '\')" data-tab="' + t.id + '" class="tab-btn px-4 py-2.5 rounded-2xl text-sm font-medium whitespace-nowrap ' + (i === 0 ? 'bg-slate-900 text-white' : 'bg-white border text-slate-600') + '"><i class="fas ' + t.icon + '"></i> ' + t.label + '</button>'
+  '<button type="button" data-show-tab="' + escapeHtml(t.id) + '" data-tab="' + t.id + '" class="tab-btn px-4 py-2.5 rounded-2xl text-sm font-medium whitespace-nowrap ' + (i === 0 ? 'bg-slate-900 text-white' : 'bg-white border text-slate-600') + '"><i class="fas ' + t.icon + '"></i> ' + t.label + '</button>'
 ).join('');
 %>
 <%- include('partials/admin-layout', {
@@ -142,19 +142,6 @@ const tabButtons = tabs.map((t, i) =>
     </form>
 </div>
 
-<script>
-function showTab(id) {
-  document.querySelectorAll('.settings-tab').forEach(el => el.classList.add('hidden'));
-  document.querySelectorAll('.tab-btn').forEach(el => {
-    el.classList.remove('bg-slate-900', 'text-white');
-    el.classList.add('bg-white', 'border', 'text-slate-600');
-  });
-  const panel = document.getElementById('tab-' + id);
-  if (panel) panel.classList.remove('hidden');
-  const btn = document.querySelector('[data-tab="' + id + '"]');
-  if (btn) { btn.classList.add('bg-slate-900', 'text-white'); btn.classList.remove('bg-white', 'border', 'text-slate-600'); }
-}
-showTab('general');
-</script>
+<script src="/js/views/admin-system-settings.js"></script>
 `
 }) %>

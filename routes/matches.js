@@ -89,13 +89,29 @@ router.get('/api/live', async (req, res) => {
     // formatMatch() ওই চারটা কলামের একটাও ব্যবহার করে না, তাই SELECT থেকে বাদ দেওয়াই
     // সবচেয়ে ছোট নিরাপদ ফিক্স — কোনো আউটপুট ফিল্ড হারায় না।
     const result = await pool.query(
+      // প্রতি স্পোর্টের জন্য আলাদা সীমা।
+      //
+      // আগে একটাই `LIMIT 100` ছিল গোটা তালিকায়। ফলে এক স্পোর্টে ১০০-র বেশি
+      // ম্যাচ থাকলে অন্য স্পোর্টটা রেসপন্স থেকে সম্পূর্ণ বাদ পড়ে যেত —
+      // ফুটবলের ভরা দিনে ক্রিকেট ট্যাব খালি দেখাত। row_number() দিয়ে
+      // প্রতিটা স্পোর্ট নিজের কোটা পায়, তাই একটা অন্যটাকে চাপা দিতে পারে না।
       `SELECT id, title, team_a, team_b, sport, league, status, start_time,
               score_a, score_b, overs
-       FROM matches ORDER BY
+       FROM (
+         SELECT *, row_number() OVER (
+           PARTITION BY sport
+           ORDER BY
+             CASE WHEN status = 'live' THEN 0 ELSE 1 END,
+             start_time ASC NULLS LAST,
+             id DESC
+         ) AS rn
+         FROM matches
+       ) ranked
+       WHERE rn <= 100
+       ORDER BY
          CASE WHEN status = 'live' THEN 0 ELSE 1 END,
          start_time ASC NULLS LAST,
-         id DESC
-       LIMIT 100`
+         id DESC`
     );
 
     const cricket = [];

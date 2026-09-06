@@ -3,6 +3,26 @@ const CRICKET_API_KEY = process.env.CRICKET_API_KEY || '';
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY || '';
 const FOOTBALL_HOST = 'today-football-prediction.p.rapidapi.com';
 
+// ==================== টাইমআউটসহ fetch ====================
+// External sports API (cricapi, RapidAPI) ঝুলে গেলে fetch() নিজে থেকে
+// কখনো ফেরে না — Node-এর fetch-এ ডিফল্ট টাইমআউট নেই। ফলে একটা ধীর
+// upstream পুরো রিকোয়েস্ট আটকে রাখত, আর scheduler থেকে ডাকা হলে কাজগুলো
+// জমতে থাকত। roadmap Phase 9: "API timeout" — সেটারই বাস্তবায়ন।
+//
+// টাইমআউট হলে AbortError ছোঁড়ে, যা প্রতিটা কলারের বিদ্যমান catch ধরে
+// এবং নিরাপদ ফলব্যাক (খালি অ্যারে / null / cache) ফেরত দেয়।
+const API_TIMEOUT_MS = Number(process.env.SPORTS_API_TIMEOUT_MS) || 10000;
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = API_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 const cache = new Map();
 const CACHE_TTL = 5 * 60 * 1000;
 
@@ -31,7 +51,7 @@ async function getCricketCurrentMatches() {
       return [];
     }
     const url = `https://api.cricapi.com/v1/currentMatches?apikey=${CRICKET_API_KEY}&offset=0`;
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url);
     const json = await res.json();
 
     // ডিবাগ: API কী বলছে লগে দেখাও
@@ -68,7 +88,7 @@ async function getCricketUpcoming() {
   try {
     if (!CRICKET_API_KEY) return [];
     const url = `https://api.cricapi.com/v1/matches?apikey=${CRICKET_API_KEY}&offset=0`;
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url);
     const json = await res.json();
     const matches = (json.data || []).map(m => ({
       id: m.id,
@@ -92,7 +112,7 @@ async function getCricketMatchInfo(matchId) {
   if (cached) return cached;
   try {
     const url = `https://api.cricapi.com/v1/match_info?apikey=${CRICKET_API_KEY}&id=${matchId}`;
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url);
     const json = await res.json();
     setCache(`cricket:match:${matchId}`, json.data);
     return json.data;
@@ -119,7 +139,7 @@ async function getFootballLiveScores() {
 
   try {
     const url = `https://${FOOTBALL_HOST}/predictions/list?iso_date=${todayISO()}&federation=UEFA&market=classic_1x2`;
-    const res = await fetch(url, {
+    const res = await fetchWithTimeout(url, {
       headers: {
         'x-rapidapi-host': FOOTBALL_HOST,
         'x-rapidapi-key': RAPIDAPI_KEY,

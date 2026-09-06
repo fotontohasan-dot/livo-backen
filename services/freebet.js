@@ -69,7 +69,7 @@ async function claimFreeBet(userId, freeBetId, lang = 'bn') {
     await createBonus(client, userId, 'deposit', fb.amount);
 
     await client.query(
-      `UPDATE free_bets SET status = 'used', used_at = NOW() WHERE id = $1`,
+      `UPDATE free_bets SET status = 'used', used_at = NOW() WHERE id = $1 AND status = 'active'`,
       [freeBetId]
     );
     await client.query(

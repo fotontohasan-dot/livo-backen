@@ -24,7 +24,7 @@ function fieldRow(id, label, tag, opts) {
       <h1 class="text-2xl font-semibold text-slate-900">Games Management</h1>
       <p class="text-slate-500 text-sm mt-0.5">মোট ${totalGames} গেম &bull; ${activeGames} সক্রিয় &bull; ${totalGames-activeGames} নিষ্ক্রিয়</p>
     </div>
-    <button onclick="document.getElementById('addModal').classList.remove('hidden')"
+    <button data-modal-open="addModal"
       class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-semibold flex items-center gap-2">
       <i class="fas fa-plus"></i> নতুন গেম যোগ
     </button>
@@ -63,13 +63,13 @@ function fieldRow(id, label, tag, opts) {
       <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-slate-50">
         <span class="text-sm text-slate-500">মোট <strong>${total}</strong> ফলাফল &bull; পেজ ${page}/${totalPages}</span>
         <div class="flex gap-2">
-          <button type="button" onclick="setBulk('activate')" class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-semibold">✅ সক্রিয়</button>
-          <button type="button" onclick="setBulk('deactivate')" class="px-3 py-1.5 bg-red-400 hover:bg-red-500 text-white rounded-xl text-xs font-semibold">❌ নিষ্ক্রিয়</button>
+          <button type="button" data-bulk-action="activate" class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-semibold">✅ সক্রিয়</button>
+          <button type="button" data-bulk-action="deactivate" class="px-3 py-1.5 bg-red-400 hover:bg-red-500 text-white rounded-xl text-xs font-semibold">❌ নিষ্ক্রিয়</button>
         </div>
       </div>
       <table class="w-full text-sm">
         <thead><tr class="bg-slate-50 text-left">
-          <th class="px-4 py-3"><input type="checkbox" id="selectAll" onchange="toggleAll(this)"></th>
+          <th class="px-4 py-3"><input type="checkbox" id="selectAll" data-toggle-all></th>
           <th class="px-4 py-3 text-slate-500 font-medium text-xs uppercase">আইকন</th>
           <th class="px-4 py-3 text-slate-500 font-medium text-xs uppercase">নাম / স্লাগ</th>
           <th class="px-4 py-3 text-slate-500 font-medium text-xs uppercase">ক্যাটাগরি</th>
@@ -81,7 +81,6 @@ function fieldRow(id, label, tag, opts) {
         <tbody class="divide-y divide-slate-100">
           ${(() => { const L_EDIT = esc(t('admin_ui_edit')); const L_DELETE = esc(t('admin_ui_delete')); return games.length ? games.map(g => {
             const bc = g.badge==='hot'?'bg-red-100 text-red-700':g.badge==='pop'?'bg-amber-100 text-amber-700':g.badge==='new'?'bg-blue-100 text-blue-700':'bg-slate-100 text-slate-500';
-            const safeEdit = [g.id, esc(g.name), esc(g.slug), esc(g.emoji||'🎮'), esc(g.category), esc(g.provider||''), esc(g.badge||'')].join("','");
             return '<tr class="hover:bg-slate-50">'+
               '<td class="px-4 py-3"><input type="checkbox" name="ids" value="'+g.id+'" class="row-check"></td>'+
               '<td class="px-4 py-3 text-xl">'+esc(g.emoji||'🎮')+'</td>'+
@@ -89,10 +88,10 @@ function fieldRow(id, label, tag, opts) {
               '<td class="px-4 py-3 text-slate-600">'+esc(g.category)+'</td>'+
               '<td class="px-4 py-3 text-slate-600">'+esc(g.provider||'-')+'</td>'+
               '<td class="px-4 py-3">'+(g.badge?'<span class="px-2.5 py-1 text-xs font-bold rounded-full '+bc+'">'+g.badge+'</span>':'<span class="text-slate-300">-</span>')+'</td>'+
-              '<td class="px-4 py-3"><form method="POST" action="/admin/games/'+g.id+'/toggle"><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" onchange="this.form.submit()" '+(g.is_active?'checked':'')+' class="sr-only peer"><div class="w-9 h-5 bg-slate-200 peer-checked:bg-emerald-500 rounded-full peer peer-checked:after:translate-x-4 after:content-[\'\'] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all"></div></label></form></td>'+
+              '<td class="px-4 py-3"><form method="POST" action="/admin/games/'+g.id+'/toggle"><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" data-auto-submit '+(g.is_active?'checked':'')+' class="sr-only peer"><div class="w-9 h-5 bg-slate-200 peer-checked:bg-emerald-500 rounded-full peer peer-checked:after:translate-x-4 after:content-[\'\'] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all"></div></label></form></td>'+
               '<td class="px-4 py-3"><div class="flex items-center justify-center gap-1.5">'+
-                '<button type="button" onclick="openEdit(\''+safeEdit+'\')" aria-label="'+L_EDIT+'" title="'+L_EDIT+'" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold"><i class="fas fa-pen"></i></button>'+
-                '<form method="POST" action="/admin/games/'+g.id+'/delete" onsubmit="return confirm(\'গেমটি মুছে ফেলবেন?\')"><button type="submit" class="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-semibold" aria-label="'+L_DELETE+'" title="'+L_DELETE+'"><i class="fas fa-trash"></i></button></form>'+
+                '<button type="button" data-edit-game="'+g.id+'" aria-label="'+L_EDIT+'" title="'+L_EDIT+'" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold"><i class="fas fa-pen"></i></button>'+
+                '<form method="POST" action="/admin/games/'+g.id+'/delete" data-confirm="গেমটি মুছে ফেলবেন?"><button type="submit" class="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-semibold" aria-label="'+L_DELETE+'" title="'+L_DELETE+'"><i class="fas fa-trash"></i></button></form>'+
               '</div></td>'+
             '</tr>';
           }).join('') : '<tr><td colspan="8" class="px-6 py-10 text-center text-slate-400">কোনো গেম পাওয়া যায়নি</td></tr>'; })()}
@@ -113,7 +112,7 @@ function fieldRow(id, label, tag, opts) {
   <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-screen overflow-y-auto">
     <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
       <h3 class="font-semibold text-slate-800">নতুন গেম যোগ করুন</h3>
-      <button onclick="document.getElementById('addModal').classList.add('hidden')" aria-label="বন্ধ করুন" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+      <button data-modal-close="addModal" aria-label="বন্ধ করুন" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
     </div>
     <form method="POST" action="/admin/games/add" class="p-6 space-y-4">
       <div class="grid grid-cols-2 gap-4">
@@ -125,7 +124,7 @@ function fieldRow(id, label, tag, opts) {
         <div><label class="block text-xs font-semibold text-slate-500 mb-1">প্রোভাইডার *</label><input name="provider" required class="w-full border border-slate-200 px-4 py-2.5 rounded-2xl text-sm outline-none focus:border-indigo-300" placeholder="Jili"></div>
       </div>
       <div class="flex gap-3 justify-end pt-2">
-        <button type="button" onclick="document.getElementById('addModal').classList.add('hidden')" class="px-5 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-semibold">বাতিল</button>
+        <button type="button" data-modal-close="addModal" class="px-5 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-semibold">বাতিল</button>
         <button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-semibold">যোগ করুন</button>
       </div>
     </form>
@@ -137,7 +136,7 @@ function fieldRow(id, label, tag, opts) {
   <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-screen overflow-y-auto">
     <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
       <h3 class="font-semibold text-slate-800" id="editTitle">গেম এডিট করুন</h3>
-      <button onclick="document.getElementById('editModal').classList.add('hidden')" aria-label="বন্ধ করুন" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+      <button data-modal-close="editModal" aria-label="বন্ধ করুন" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
     </div>
     <form method="POST" id="editForm" action="#" class="p-6 space-y-4">
       <div class="grid grid-cols-2 gap-4">
@@ -149,34 +148,18 @@ function fieldRow(id, label, tag, opts) {
         <div><label class="block text-xs font-semibold text-slate-500 mb-1">প্রোভাইডার *</label><input id="e_provider" name="provider" required class="w-full border border-slate-200 px-4 py-2.5 rounded-2xl text-sm outline-none focus:border-indigo-300"></div>
       </div>
       <div class="flex gap-3 justify-end pt-2">
-        <button type="button" onclick="document.getElementById('editModal').classList.add('hidden')" class="px-5 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-semibold">বাতিল</button>
+        <button type="button" data-modal-close="editModal" class="px-5 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-semibold">বাতিল</button>
         <button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-semibold">সেভ</button>
       </div>
     </form>
   </div>
 </div>
 
-<script>
-function openEdit(id, name, slug, emoji, category, provider, badge) {
-  document.getElementById('editTitle').textContent = 'গেম এডিট: ' + name;
-  document.getElementById('editForm').action = '/admin/games/' + id + '/edit';
-  document.getElementById('e_name').value = name;
-  document.getElementById('e_slug').value = slug;
-  document.getElementById('e_emoji').value = emoji;
-  document.getElementById('e_category').value = category;
-  document.getElementById('e_provider').value = provider;
-  document.getElementById('e_badge').value = badge || '';
-  document.getElementById('editModal').classList.remove('hidden');
-}
-function toggleAll(cb) { document.querySelectorAll('.row-check').forEach(c => c.checked = cb.checked); }
-function setBulk(action) {
-  const checked = [...document.querySelectorAll('.row-check:checked')];
-  if (!checked.length) { alert('কোনো গেম নির্বাচিত হয়নি'); return; }
-  if (!confirm(checked.length + 'টি গেম ' + (action==='activate'?'সক্রিয়':'নিষ্ক্রিয়') + ' করবেন?')) return;
-  document.getElementById('bulkAction').value = action;
-  document.getElementById('bulkForm').submit();
-}
-</script>
+<script type="application/json" id="gamesData">${jsonScriptSafe(games.map(g => ({
+  id: g.id, name: g.name, slug: g.slug, emoji: g.emoji || '🎮',
+  category: g.category, provider: g.provider || '', badge: g.badge || ''
+})))}</script>
+<script src="/js/admin-games.js"></script>
 
 `
 }) %>

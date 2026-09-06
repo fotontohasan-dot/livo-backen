@@ -64,14 +64,14 @@
                     </td>
                     <td style="text-align:right;">
                       <form method="POST" action="/admin/tournaments/<%= tour.id %>/status" style="display:inline-block;">
-                        <select name="status" class="select" style="width:auto;padding:5px 8px;font-size:11px;" onchange="this.form.submit()">
+                        <select name="status" class="select" style="width:auto;padding:5px 8px;font-size:11px;" data-auto-submit>
                           <option value="upcoming" <%= tour.status === 'upcoming' ? 'selected' : '' %>><%= t('admin_status_upcoming') %></option>
                           <option value="live" <%= tour.status === 'live' ? 'selected' : '' %>><%= t('admin_status_live') %></option>
                           <option value="completed" <%= tour.status === 'completed' ? 'selected' : '' %>><%= t('admin_status_completed') %></option>
                           <option value="cancelled" <%= tour.status === 'cancelled' ? 'selected' : '' %>><%= t('admin_btn_cancel') %></option>
                         </select>
                       </form>
-                      <form method="POST" action="/admin/tournaments/<%= tour.id %>/delete" style="display:inline-block;" onsubmit="return confirm('মুছে ফেলবেন?')">
+                      <form method="POST" action="/admin/tournaments/<%= tour.id %>/delete" style="display:inline-block;" data-confirm="মুছে ফেলবেন?">
                         <button class="btn btn-sm btn-red" type="submit"><i class="fas fa-trash"></i></button>
                       </form>
                     </td>

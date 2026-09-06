@@ -86,45 +86,8 @@
 
 <!-- ==================== CSRF টোকেন ==================== -->
 <meta name="csrf-token" content="<%= locals.csrfToken || '' %>">
-<script>
-(function() {
-  var CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-  if (!CSRF_TOKEN) return;
-  function injectIntoForms() {
-    document.querySelectorAll('form').forEach(function(form) {
-      if ((form.getAttribute('method') || 'get').toLowerCase() !== 'post') return;
-      if (form.querySelector('input[name="_csrf"]')) return;
-      var input = document.createElement('input');
-      input.type = 'hidden'; input.name = '_csrf'; input.value = CSRF_TOKEN;
-      form.appendChild(input);
-    });
-  }
-  document.addEventListener('DOMContentLoaded', injectIntoForms);
-  new MutationObserver(injectIntoForms).observe(document.documentElement, { childList: true, subtree: true });
-  var origFetch = window.fetch;
-  window.fetch = function(input, init) {
-    init = init || {};
-    var method = (init.method || (typeof input === 'object' && input.method) || 'GET').toUpperCase();
-    if (['POST','PUT','PATCH','DELETE'].includes(method)) {
-      init.headers = new Headers(init.headers || {});
-      if (!init.headers.has('X-CSRF-Token')) init.headers.set('X-CSRF-Token', CSRF_TOKEN);
-    }
-    return origFetch.call(this, input, init);
-  };
-  var origOpen = XMLHttpRequest.prototype.open;
-  var origSend = XMLHttpRequest.prototype.send;
-  XMLHttpRequest.prototype.open = function(method) {
-    this._csrfMethod = (method || 'GET').toUpperCase();
-    return origOpen.apply(this, arguments);
-  };
-  XMLHttpRequest.prototype.send = function(body) {
-    if (['POST','PUT','PATCH','DELETE'].includes(this._csrfMethod)) {
-      try { this.setRequestHeader('X-CSRF-Token', CSRF_TOKEN); } catch (e) {}
-    }
-    return origSend.call(this, body);
-  };
-})();
-</script>
+<script src="/js/csrf-inject.js"></script>
+  <script src="/js/ui-hooks.js" defer></script>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
     <div class="w-full max-w-md">
@@ -188,7 +151,7 @@
                         >
                         <button 
                             type="button" 
-                            onclick="togglePassword()"
+                            data-toggle-password
                             class="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-500 hover:text-slate-300 transition-colors"
                         >
                             <i class="fas fa-eye" id="toggleIcon"></i>
@@ -221,27 +184,6 @@
         </p>
     </div>
 
-    <script>
-        function togglePassword() {
-            const password = document.getElementById('password');
-            const icon = document.getElementById('toggleIcon');
-            
-            if (password.type === 'password') {
-                password.type = 'text';
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
-            } else {
-                password.type = 'password';
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
-            }
-        }
-
-        // Auto focus on username field
-        window.onload = function() {
-            const usernameField = document.querySelector('input[name="username"]');
-            if (usernameField) usernameField.focus();
-        }
-    </script>
+    <script src="/js/views/admin-login.js"></script>
 </body>
 </html>

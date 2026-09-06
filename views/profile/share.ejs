@@ -34,7 +34,7 @@
          style="background:#007DBC;color:#fff;text-decoration:none;text-align:center;padding:12px;border-radius:10px;font-weight:bold;font-size:13px;">
         Telegram
       </a>
-      <button onclick="copyLink()"
+      <button data-copy-link
          style="background:#475569;color:#fff;border:none;text-align:center;padding:12px;border-radius:10px;font-weight:bold;font-size:13px;cursor:pointer;">
         লিংক কপি
       </button>
@@ -64,18 +64,6 @@
 
 </div>
 
-<script>
-function copyLink() {
-  const el = document.getElementById('shareLink');
-  el.select();
-  el.setSelectionRange(0, 99999);
-  try {
-    document.execCommand('copy');
-    alert('লিংক কপি হয়েছে!');
-  } catch (e) {
-    alert('কপি করা যায়নি, ম্যানুয়ালি কপি করুন।');
-  }
-}
-</script>
+<script src="/js/views/profile-share.js"></script>
 <%- include('../partials/bottom-nav') %>
 </body></html>

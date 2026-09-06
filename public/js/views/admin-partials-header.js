@@ -1,0 +1,12 @@
+// views/admin/partials/header.ejs-এর ক্লায়েন্ট কোড।
+// আগে টেমপ্লেটের ভেতরে ইনলাইন ব্লক ছিল; docs/CSP.md ধাপ ৩ অনুযায়ী বাইরে
+// আনা হয়েছে যাতে CSP-র script-src থেকে unsafe-inline সরানো যায়।
+// এই ব্লকে কোনো সার্ভার-সাইড মান ছিল না, তাই ফাইলটা স্ট্যাটিক।
+
+function showAdminToast(msg) {
+    var toastEl = document.getElementById('adminToast');
+    if (!toastEl) return;
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    setTimeout(function () { toastEl.classList.remove('show'); }, 2600);
+  }

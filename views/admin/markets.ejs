@@ -25,7 +25,7 @@
          class="flex items-center justify-center w-10 h-10 bg-[#1e2937] hover:bg-[#334155] border border-[#475569] rounded-2xl text-gray-400 hover:text-white transition-all">
         <i class="fas fa-arrow-left"></i>
       </a>
-      <button onclick="exportMarketsCSV()" 
+      <button data-markets-export 
               class="px-4 py-2.5 bg-[#334155] hover:bg-[#475569] text-white text-sm font-medium rounded-2xl flex items-center gap-2 transition-all">
         <i class="fas fa-download"></i>
         <span><%= t('admin_btn_export') %></span>
@@ -153,7 +153,7 @@
                   </form>
                   
                   <% if(m.status === 'open') { %>
-                  <button onclick="showSettleModal('<%= m.id %>', '<%= m.name %>')" 
+                  <button data-settle-id="<%= m.id %>" data-settle-name="<%= m.name %>" 
                           class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 rounded-xl text-xs text-white transition-all flex items-center gap-1">
                     <i class="fas fa-check"></i>
                     <span><%= t('admin_btn_settle') %></span>
@@ -189,7 +189,7 @@
           </div>
           
           <div class="flex gap-3">
-            <button type="button" onclick="hideSettleModal()" 
+            <button type="button" data-settle-cancel 
                     class="flex-1 py-3 bg-[#334155] hover:bg-[#475569] rounded-2xl text-sm font-medium transition-all"><%= t('admin_btn_cancel') %></button>
             <button type="submit" 
                     class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl transition-all"><%= t('admin_btn_settle_payout') %></button>
@@ -198,39 +198,7 @@
       </div>
     </div>
 
-<script>
-function showSettleModal(marketId, marketName) {
-  document.getElementById('settle-modal').classList.remove('hidden');
-  document.getElementById('settle-market-name').innerText = marketName;
-  const form = document.getElementById('settle-form');
-  form.action = `/admin/markets/${marketId}/settle`;
-}
-
-function hideSettleModal() {
-  document.getElementById('settle-modal').classList.add('hidden');
-}
-
-function exportMarketsCSV() {
-  const table = document.getElementById('marketsTable');
-  let csv = [];
-  const rows = table.querySelectorAll('tr');
-  
-  rows.forEach((row, index) => {
-    if (index === 0 || row.style.display === 'none') return; // skip header if needed
-    const cols = row.querySelectorAll('td, th');
-    let rowData = [];
-    cols.forEach(col => rowData.push('"' + col.innerText.replace(/"/g, '""') + '"'));
-    csv.push(rowData.join(','));
-  });
-
-  const csvContent = csv.join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = 'markets_export.csv';
-  link.click();
-}
-</script>
+<script type="application/json" id="admin-marketsConfig">${JSON.stringify({ marketId: marketId }).replace(/</g, "\\u003c")}</script>\n<script src="/js/views/admin-markets.js"></script>
   </main>
   </div>
 </div>

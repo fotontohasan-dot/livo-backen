@@ -44,24 +44,24 @@
         <a href="/admin/localization/export/bn" class="btn-xs" style="background:#1e293b;color:#fff;text-decoration:none;"><i class="fas fa-download"></i> <%= t('admin_loc_export_bn') %></a>
         <a href="/admin/localization/export/en" class="btn-xs" style="background:#1e293b;color:#fff;text-decoration:none;"><i class="fas fa-download"></i> <%= t('admin_loc_export_en') %></a>
         <form method="POST" action="/admin/localization/refresh-cache" style="display:inline;">
-          <button class="btn-xs" style="background:#10b981;color:#fff;" onclick="LivoToast && LivoToast.setLoading(this, true, 'Refreshing...')"><i class="fas fa-rotate"></i> <%= t('admin_btn_cache_refresh') %></button>
+          <button class="btn-xs" style="background:#10b981;color:#fff;" data-loading-label="Refreshing..."><i class="fas fa-rotate"></i> <%= t('admin_btn_cache_refresh') %></button>
         </form>
       </div>
 
       <div class="import-box">
         <b style="color:#fff;font-size:13px;"><%= t('admin_btn_import_json') %></b>
-        <form method="POST" action="/admin/localization/import/bn" onsubmit="return prepImport('bn')">
+        <form method="POST" action="/admin/localization/import/bn" data-prep-import="bn">
           <input type="hidden" name="json" id="importJsonBn">
         </form>
-        <form method="POST" action="/admin/localization/import/en" onsubmit="return prepImport('en')">
+        <form method="POST" action="/admin/localization/import/en" data-prep-import="en">
           <input type="hidden" name="json" id="importJsonEn">
         </form>
         <textarea id="importTextarea" placeholder='{"key_name": "মান"}'></textarea>
         <div style="display:flex;gap:8px;margin-top:8px;">
-          <button type="button" class="btn-xs" style="background:var(--gold,#EAB308);color:#1a1a1a;" onclick="submitImport('bn')"><%= t('admin_loc_import_bn') %></button>
-          <button type="button" class="btn-xs" style="background:#334155;color:#fff;" onclick="submitImport('en')"><%= t('admin_loc_import_en') %></button>
+          <button type="button" class="btn-xs" style="background:var(--gold,#EAB308);color:#1a1a1a;" data-submit-import="bn"><%= t('admin_loc_import_bn') %></button>
+          <button type="button" class="btn-xs" style="background:#334155;color:#fff;" data-submit-import="en"><%= t('admin_loc_import_en') %></button>
           <label class="btn-xs" style="background:#1e293b;color:#fff;cursor:pointer;">
-            <%= t('admin_btn_load_from_file') %> <input type="file" accept=".json" style="display:none" onchange="loadFile(event)">
+            <%= t('admin_btn_load_from_file') %> <input type="file" accept=".json" style="display:none" data-load-file>
           </label>
         </div>
       </div>
@@ -100,7 +100,7 @@
               <td>
                   <button type="submit" class="btn-xs" style="background:#10b981;color:#fff;"><%= t('admin_btn_save') %></button>
                 </form>
-                <form method="POST" action="/admin/localization/delete" style="display:inline;" onsubmit="return confirm('এই Key ডিলিট করবেন?')">
+                <form method="POST" action="/admin/localization/delete" style="display:inline;" data-confirm="এই Key ডিলিট করবেন?">
                   <input type="hidden" name="key" value="<%= r.key %>">
                   <button class="btn-xs" style="background:#ef4444;color:#fff;"><%= t('admin_btn_delete') %></button>
                 </form>
@@ -114,23 +114,6 @@
     </div>
   </div>
 
-  <script>
-    function prepImport(lang) {
-      const val = document.getElementById('importTextarea').value;
-      document.getElementById(lang === 'bn' ? 'importJsonBn' : 'importJsonEn').value = val;
-      return true;
-    }
-    function submitImport(lang) {
-      prepImport(lang);
-      document.querySelector('form[action="/admin/localization/import/' + lang + '"]').submit();
-    }
-    function loadFile(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => { document.getElementById('importTextarea').value = reader.result; };
-      reader.readAsText(file);
-    }
-  </script>
+  <script src="/js/admin-localization.js"></script>
 </body>
 </html>

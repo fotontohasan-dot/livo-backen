@@ -23,7 +23,7 @@ function keyRow(k) {
     '<td class="px-6 py-4 text-center">' +
       '<div class="flex gap-1.5 justify-center">' +
         '<form method="POST" action="/admin/api-keys/' + k.id + '/toggle" style="display:inline"><button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl ' + (k.enabled ? 'bg-slate-400 hover:bg-slate-500' : 'bg-emerald-500 hover:bg-emerald-600') + ' text-white">' + (k.enabled ? 'Disable' : 'Enable') + '</button></form>' +
-        (k.enabled ? '<form method="POST" action="/admin/api-keys/' + k.id + '/revoke" onsubmit="return confirm(&quot;এই key স্থায়ীভাবে revoke করতে চান?&quot;)" style="display:inline"><button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-red-500 hover:bg-red-600 text-white">Revoke</button></form>' : '') +
+        (k.enabled ? '<form method="POST" action="/admin/api-keys/' + k.id + '/revoke" data-confirm="এই key স্থায়ীভাবে revoke করতে চান?" style="display:inline"><button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-red-500 hover:bg-red-600 text-white">Revoke</button></form>' : '') +
       '</div>' +
     '</td>' +
   '</tr>';

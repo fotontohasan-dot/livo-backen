@@ -52,7 +52,7 @@
             </div>
             <div>
               <label class="ann-label"><%= t('admin_ann_target') %></label>
-              <select name="target_type" id="targetType" onchange="toggleTargetFields()" required>
+              <select name="target_type" id="targetType" data-toggle-target-fields required>
                 <option value="all"><%= t('admin_ann_target_all') %></option>
                 <option value="role"><%= t('admin_ann_target_role') %></option>
                 <option value="user"><%= t('admin_ann_target_user') %></option>
@@ -82,7 +82,7 @@
             <div><label class="ann-label"><%= t('admin_field_schedule_start') %></label><input type="datetime-local" name="starts_at"></div>
             <div><label class="ann-label"><%= t('admin_field_expire_optional') %></label><input type="datetime-local" name="expires_at"></div>
           </div>
-          <button type="submit" class="btn-xs" style="background:var(--gold,#EAB308);color:#1a1a1a;padding:9px 18px;font-size:13px;" onclick="LivoToast && LivoToast.setLoading(this, true, 'তৈরি হচ্ছে...')"><%= t('admin_ann_create_btn') %></button>
+          <button type="submit" class="btn-xs" style="background:var(--gold,#EAB308);color:#1a1a1a;padding:9px 18px;font-size:13px;" data-loading-label="তৈরি হচ্ছে..."><%= t('admin_ann_create_btn') %></button>
         </form>
       </div>
 
@@ -113,7 +113,7 @@
                 <form method="POST" action="/admin/announcements/<%= a.id %>/expire-now" style="display:inline;">
                   <button class="btn-xs" style="background:#f59e0b;color:#1a1a1a;"><%= t('admin_ann_expire_now') %></button>
                 </form>
-                <form method="POST" action="/admin/announcements/<%= a.id %>/delete" style="display:inline;" onsubmit="return confirm('ডিলিট করবেন?')">
+                <form method="POST" action="/admin/announcements/<%= a.id %>/delete" style="display:inline;" data-confirm="ডিলিট করবেন?">
                   <button class="btn-xs" style="background:#ef4444;color:#fff;"><%= t('admin_btn_delete') %></button>
                 </form>
               </td>
@@ -125,12 +125,6 @@
 
     </div>
   </div>
-  <script>
-    function toggleTargetFields() {
-      const v = document.getElementById('targetType').value;
-      document.getElementById('roleField').style.display = v === 'role' ? 'grid' : 'none';
-      document.getElementById('userField').style.display = v === 'user' ? 'grid' : 'none';
-    }
-  </script>
+  <script src="/js/views/admin-announcements.js"></script>
 </body>
 </html>

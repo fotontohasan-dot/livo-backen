@@ -18,7 +18,7 @@
 
   <% if (devices && devices.filter(d => !d.is_current).length > 0) { %>
     <form method="POST" action="/profile/trusted-devices/remove-all-others"
-      onsubmit="return confirm('<%= t.remove_all_other_confirm %>')" style="margin-bottom:16px;">
+      data-confirm="<%= t.remove_all_other_confirm %>" style="margin-bottom:16px;">
       <button type="submit" style="width:100%; background: rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; padding:12px; border-radius:12px; font-size:13px; font-weight:800; cursor:pointer;">
         <i class="fas fa-right-from-bracket"></i> <%= t.remove_all_other_devices %>
       </button>
@@ -54,7 +54,7 @@
         </div>
 
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button type="button" onclick="renameDevicePrompt(<%= d.id %>, '<%= (d.display_name || '').replace(/'/g, "\\'") %>')"
+          <button type="button" data-rename-device="<%= d.id %>" data-rename-name="<%= d.display_name || '' %>"
             style="background: rgba(255,255,255,0.06); border:none; color:var(--text-main); padding:8px 12px; border-radius:10px; font-size:11px; font-weight:700; cursor:pointer;">
             <i class="fas fa-pen"></i> <%= t.rename_device %>
           </button>
@@ -67,7 +67,7 @@
           </form>
 
           <% if (!d.is_current) { %>
-            <form method="POST" action="/profile/trusted-devices/<%= d.id %>/remove" onsubmit="return confirm('<%= t.remove_device_confirm %>')" style="display:inline; margin-left:auto;">
+            <form method="POST" action="/profile/trusted-devices/<%= d.id %>/remove" data-confirm="<%= t.remove_device_confirm %>" style="display:inline; margin-left:auto;">
               <button type="submit" style="background: rgba(239,68,68,0.1); border:none; color:#ef4444; padding:8px 12px; border-radius:10px; font-size:11px; font-weight:700; cursor:pointer;">
                 <i class="fas fa-trash"></i> <%= t.remove_device %>
               </button>
@@ -91,22 +91,8 @@
   <% } %>
 </div>
 
-<script>
-  function renameDevicePrompt(id, currentName) {
-    if (typeof window.prompt === 'function') {
-      var newName = window.prompt('<%= t.rename_device_prompt %>', currentName || '');
-      if (newName && newName.trim()) {
-        var form = document.getElementById('rename-form-' + id);
-        form.querySelector('input[name="label"]').value = newName.trim();
-        form.submit();
-      }
-      return;
-    }
-    var form = document.getElementById('rename-form-' + id);
-    form.style.display = 'flex';
-    form.querySelector('input[name="label"]').focus();
-  }
-</script>
+<script type="application/json" id="profile-trusted-devicesConfig"><%- jsonScriptSafe({ renamePrompt: t.rename_device_prompt }) %></script>
+<script src="/js/views/profile-trusted-devices.js"></script>
 
 <%- include('../partials/navbar') %>
 <%- include('../partials/bottom-nav') %>

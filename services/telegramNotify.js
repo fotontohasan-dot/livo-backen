@@ -10,6 +10,7 @@
 // বিদ্যমান ডিপ্লয়মেন্টে আচরণ অপরিবর্তিত থাকে।
 // ---------------------------------------------------------------------------
 
+const { fetchWithTimeout } = require('../utils/httpClient');
 const telegramConfig = require('./telegramConfig');
 
 /**
@@ -37,7 +38,7 @@ async function notifyTelegram(text, opts = {}) {
 
   try {
     const url = `https://api.telegram.org/bot${config.botToken}/sendMessage`;
-    const res = await fetch(url, {
+    const res = await fetchWithTimeout(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ chat_id: config.chatId, text, parse_mode: 'HTML' })

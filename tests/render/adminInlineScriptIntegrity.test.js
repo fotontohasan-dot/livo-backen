@@ -22,7 +22,13 @@ const PAGES = [
   '/admin', '/admin/users', '/admin/kyc', '/admin/features', '/admin/settings',
   '/admin/reports', '/admin/security-overview', '/admin/audit-logs',
   '/admin/matches', '/admin/games', '/admin/news', '/admin/announcements',
-  '/payment/admin/payments', '/payment/admin/deposits'
+  '/payment/admin/payments', '/payment/admin/deposits',
+  // docs/CSP.md ধাপ ৩-এ এই পেজগুলোর কোড JSON ডেটা ব্লক + বাইরের স্ক্রিপ্টে
+  // ভাগ করা হয়েছে। এদের body একটা JS template literal, তাই JSON-টা
+  // ${...} দিয়ে বসানো হয় — একটা ভুল escape করলেই ব্লকটা অবৈধ JSON হয়ে
+  // যেত এবং পেজের সব আচরণ নীরবে বন্ধ হত। তাই এরা তালিকায়।
+  // '/admin/markets' বাদ — ওই পাথে কোনো রুট নেই (404)।
+  '/admin/bets', '/admin/support'
 ];
 
 const createdUserIds = [];
@@ -46,10 +52,24 @@ function stripComments(js) {
   return js.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
 }
 
+// `<script type="application/json">` ব্লক executable নয় — ব্রাউজার ওটা
+// পার্সও করে না, শুধু ডেটা হিসেবে ধরে রাখে (CSP মাইগ্রেশনে ইনলাইন কোডের
+// বদলে এই ব্লক ব্যবহার করা হয়)। ওগুলো JS হিসেবে পার্স করতে গেলে JSON
+// অবজেক্টের `{` ব্লক-স্টেটমেন্ট হিসেবে পড়ে `Unexpected token ':'` দেয়।
+// তাই এখানে দুই ভাগ: executable ব্লক JS হিসেবে যাচাই, ডেটা ব্লক JSON হিসেবে।
+const EXECUTABLE_TYPE = /\btype\s*=\s*["']?(?!text\/javascript|module|application\/javascript)[^"'\s>]+/i;
+
 function inlineScripts(html) {
-  return [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)]
-    .map(m => m[1])
+  return [...html.matchAll(/<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/g)]
+    .filter(m => !EXECUTABLE_TYPE.test(m[1]))
+    .map(m => m[2])
     .filter(js => js.trim().length > 0);
+}
+
+function jsonScripts(html) {
+  return [...html.matchAll(/<script[^>]*\btype\s*=\s*["']application\/json["'][^>]*>([\s\S]*?)<\/script>/g)]
+    .map(m => m[1])
+    .filter(text => text.trim().length > 0);
 }
 
 describe('অ্যাডমিন পেজের ইনলাইন স্ক্রিপ্ট বৈধ JavaScript', () => {
@@ -62,6 +82,15 @@ describe('অ্যাডমিন পেজের ইনলাইন স্ক�
     for (const js of scripts) {
       // new Function() শুধু পার্স করে, চালায় না — সিনট্যাক্স যাচাইয়ের নিরাপদ উপায়।
       expect(() => new Function(js)).not.toThrow();
+    }
+  });
+
+  test.each(PAGES)('%s — প্রতিটা application/json ব্লক বৈধ JSON', async (path) => {
+    const res = await agent.get(path);
+    if (res.status !== 200) return;
+
+    for (const text of jsonScripts(res.text)) {
+      expect(() => JSON.parse(text)).not.toThrow();
     }
   });
 

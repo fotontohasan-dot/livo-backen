@@ -19,12 +19,12 @@
         <div>
         </div>
         <div class="flex items-center gap-3">
-            <button onclick="refreshConversations()" 
+            <button data-chat-action="refresh" 
                     class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm transition-colors">
                 <i class="fas fa-sync-alt"></i>
                 <span><%= t('admin_btn_refresh') %></span>
             </button>
-            <button onclick="exportChatLogs()" 
+            <button data-chat-action="export" 
                     class="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-black px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
                 <i class="fas fa-download"></i>
                 <span><%= t('admin_btn_export_logs') %></span>
@@ -116,12 +116,12 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button onclick="viewUserProfile()" 
+                    <button data-chat-action="view-profile" 
                             class="text-xs px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-white flex items-center gap-1.5">
                         <i class="fas fa-user"></i>
                         <span><%= t('admin_col_profile') %></span>
                     </button>
-                    <button onclick="quickBanUser()" 
+                    <button data-chat-action="quick-ban" 
                             class="text-xs px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 flex items-center gap-1.5">
                         <i class="fas fa-ban"></i>
                         <span><%= t('admin_btn_ban') %></span>
@@ -141,7 +141,7 @@
                         <i class="fas fa-file text-yellow-500"></i>
                         <span id="preview-name" class="text-gray-300 text-sm"></span>
                     </div>
-                    <button onclick="clearFile()" class="text-red-400 hover:text-red-500 text-xs font-medium"><%= t('admin_btn_remove') %></button>
+                    <button data-chat-action="clear-file" class="text-red-400 hover:text-red-500 text-xs font-medium"><%= t('admin_btn_remove') %></button>
                 </div>
                 
                 <div class="flex items-center gap-2">
@@ -199,7 +199,7 @@
             </div>
 
             <div class="mt-6 pt-4 border-t border-gray-800">
-                <button onclick="viewUserProfile()" 
+                <button data-chat-action="view-profile" 
                         class="w-full py-2.5 text-sm bg-gray-800 hover:bg-gray-700 rounded-xl text-white font-medium transition-colors">
                     <%= t('admin_btn_view_full_profile') %>
                 </button>
@@ -209,333 +209,8 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script>
-    const socket = io();
-    const adminId = <%= user.id %>;
-    
-    let currentUserId = null;
-    let selectedFile = null;
-    let selectedFileType = null;
-    let seenByCurrentUser = false;
-
-    // ===== নিরাপত্তা: স্টোরড XSS প্রতিরোধ =====
-    // চ্যাটের message, username এবং file_url — তিনটাই সম্পূর্ণ ইউজার-নিয়ন্ত্রিত মান,
-    // অথচ আগে এগুলো সরাসরি innerHTML টেমপ্লেটে বসানো হতো। ফলে একজন সাধারণ ইউজার
-    // `<img src=x onerror=...>` জাতীয় মেসেজ পাঠিয়ে অ্যাডমিন যখন চ্যাট খুলত তখনই
-    // অ্যাডমিনের সেশনে JavaScript চালাতে পারত (সেশন হাইজ্যাক)। অন্য অ্যাডমিন ভিউগুলোর
-    // (audit-logs, withdrawals ইত্যাদি) মতো একই escapeHtml কনভেনশন এখানেও ব্যবহার হচ্ছে।
-    function escapeHtml(str) {
-      return String(str == null ? '' : str)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-    }
-
-    // file_url-ও ইউজার-নিয়ন্ত্রিত হতে পারে — `javascript:` / `data:` স্কিম দিয়ে
-    // src ও window.open() দুটোতেই কোড এক্সিকিউশন সম্ভব ছিল। শুধু সেই URL-ই গ্রহণ করা
-    // হচ্ছে যেটা একই origin-এর relative path অথবা স্পষ্টভাবে http(s)। অন্য কিছু হলে null
-    // (fail-closed — মিডিয়াটা রেন্ডারই হবে না)।
-    function safeMediaUrl(url) {
-      if (!url) return null;
-      const raw = String(url).trim();
-      if (/^\/[^/\\]/.test(raw)) return raw; // "/uploads/..." — protocol-relative "//" নয়
-      try {
-        const parsed = new URL(raw, window.location.origin);
-        return (parsed.protocol === 'http:' || parsed.protocol === 'https:') ? parsed.href : null;
-      } catch (e) {
-        return null;
-      }
-    }
-
-    socket.emit('join_admin');
-
-    // Load conversations
-    async function loadConversations() {
-        try {
-            const res = await fetch('/chat/admin/conversations');
-            const users = await res.json();
-            
-            const container = document.getElementById('conversations-list');
-            container.innerHTML = '';
-            
-            if (!Array.isArray(users) || users.length === 0) {
-                container.innerHTML = `<div class="p-4 text-center text-gray-500 text-sm">No conversations yet</div>`;
-                return;
-            }
-            
-            users.forEach(user => {
-                const div = document.createElement('div');
-                const isUnread = Number(user.unread_count) > 0;
-                div.className = `p-3.5 mx-1 rounded-2xl cursor-pointer flex items-center gap-3 hover:bg-gray-800 transition-colors ${currentUserId === user.id ? 'bg-gray-800' : ''}`;
-
-                const lastPreview = user.last_message
-                    ? user.last_message
-                    : (user.last_file_url ? '📎 ফাইল পাঠানো হয়েছে' : 'No messages yet');
-                const prefix = user.last_is_admin ? 'আপনি: ' : '';
-
-                div.innerHTML = `
-                    <div class="w-9 h-9 bg-gray-700 rounded-full flex-shrink-0 flex items-center justify-center relative">
-                        <i class="fas fa-user text-gray-400"></i>
-                        ${isUnread ? '<span class="absolute -top-0.5 -right-0.5 w-3 h-3 bg-yellow-500 rounded-full border-2 border-gray-900"></span>' : ''}
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center justify-between">
-                            <div class="font-medium truncate ${isUnread ? 'text-white font-bold' : 'text-gray-300'}">${escapeHtml(user.username)}</div>
-                            <div class="text-[10px] text-gray-500">${user.last_message_time ? new Date(user.last_message_time).toLocaleTimeString('bn-BD', {hour:'2-digit', minute:'2-digit'}) : ''}</div>
-                        </div>
-                        <div class="flex items-center justify-between gap-2">
-                            <div class="text-xs truncate ${isUnread ? 'text-gray-100 font-semibold' : 'text-gray-500'}">${prefix}${escapeHtml(lastPreview)}</div>
-                            ${isUnread ? `<span class="flex-shrink-0 min-w-[18px] h-[18px] px-1 bg-yellow-500 text-black text-[10px] font-bold rounded-full flex items-center justify-center">${Number(user.unread_count) > 9 ? '9+' : Number(user.unread_count) || 0}</span>` : ''}
-                        </div>
-                    </div>
-                `;
-
-                div.onclick = () => selectUser(user.id, user.username, div);
-                container.appendChild(div);
-            });
-        } catch (e) {
-            console.error(e);
-        }
-    }
-
-    loadConversations();
-
-    // Search conversations
-    document.getElementById('search-conversation').addEventListener('input', function() {
-        const term = this.value.toLowerCase();
-        document.querySelectorAll('#conversations-list > div').forEach(div => {
-            const text = div.textContent.toLowerCase();
-            div.style.display = text.includes(term) ? '' : 'none';
-        });
-    });
-
-    function selectUser(userId, username, el) {
-        currentUserId = userId;
-        seenByCurrentUser = false;
-
-        // Highlight selected
-        document.querySelectorAll('#conversations-list > div').forEach(d => d.classList.remove('bg-gray-800'));
-        if (el) el.classList.add('bg-gray-800');
-
-        // Show chat area
-        document.getElementById('chat-area').style.display = 'flex';
-        document.getElementById('no-chat').style.display = 'none';
-        document.getElementById('user-info-panel').classList.remove('hidden');
-        
-        document.getElementById('chat-header').textContent = username;
-        
-        // Load user info (you can enhance this with real API)
-        document.getElementById('info-username').textContent = username;
-        document.getElementById('info-userid').textContent = `User ID: ${userId}`;
-        document.getElementById('info-joined').textContent = 'Recently';
-        document.getElementById('info-bets').textContent = '—';
-        document.getElementById('info-balance').textContent = '—';
-        
-        loadChatHistory(userId);
-    }
-
-    async function loadChatHistory(userId) {
-        const messagesDiv = document.getElementById('messages');
-        messagesDiv.innerHTML = '';
-        
-        try {
-            const res = await fetch(`/chat/admin/history/${userId}`);
-            const messages = await res.json();
-            
-            if (Array.isArray(messages)) {
-                messages.forEach(msg => {
-                    appendMessage(msg.message, msg.is_admin, msg.created_at, msg.file_url, msg.file_type);
-                });
-                // সর্বশেষ নিজের (অ্যাডমিনের) মেসেজটা ইউজার আগেই দেখেছে কিনা, তা ইতিহাস থেকে বোঝা
-                const lastOwn = [...messages].reverse().find(m => m.is_admin);
-                seenByCurrentUser = !!(lastOwn && lastOwn.is_read);
-                renderSeenIndicator();
-                scrollToBottom();
-            }
-        } catch (e) {
-            console.error(e);
-        }
-
-        // এই কনভারসেশন খোলার ফলে সার্ভারে unread মেসেজ read হয়ে গেছে — সাইডবারের ব্যাজ রিফ্রেশ করা
-        loadConversations();
-    }
-
-    function appendMessage(text, isAdmin, timestamp, fileUrl, fileType) {
-        const messagesDiv = document.getElementById('messages');
-        const prev = messagesDiv.lastElementChild;
-        const grouped = prev && prev.dataset.admin === String(isAdmin);
-
-        const div = document.createElement('div');
-        div.className = `flex ${isAdmin ? 'justify-end' : 'justify-start'}`;
-        div.dataset.admin = String(isAdmin);
-        div.style.marginTop = grouped ? '2px' : '12px';
-        
-        // মেসেজের বডি ও মিডিয়া — দুটোই ইউজার-নিয়ন্ত্রিত, তাই innerHTML স্ট্রিং-কনক্যাটের
-        // বদলে DOM API দিয়ে বানানো হচ্ছে: টেক্সট যায় textContent-এ (কখনোই HTML হিসেবে
-        // পার্স হয় না), আর src সেট হয় প্রপার্টি হিসেবে যাচাই করা URL দিয়ে।
-        const wrap = document.createElement('div');
-        wrap.className = 'max-w-[75%]';
-
-        const mediaUrl = safeMediaUrl(fileUrl);
-        if (mediaUrl) {
-            if (fileType === 'image') {
-                const img = document.createElement('img');
-                img.src = mediaUrl;
-                img.className = 'max-w-[220px] rounded-2xl mb-1 cursor-pointer';
-                // inline onclick হ্যান্ডলারে URL বসালে সেটা আবার JS কনটেক্সটে ইনজেকশনের পথ
-                // খুলে দিত — তাই addEventListener + noopener দিয়ে খোলা হচ্ছে।
-                img.addEventListener('click', () => window.open(mediaUrl, '_blank', 'noopener'));
-                wrap.appendChild(img);
-            } else if (fileType === 'video') {
-                const video = document.createElement('video');
-                video.src = mediaUrl;
-                video.controls = true;
-                video.className = 'max-w-[220px] rounded-2xl mb-1';
-                wrap.appendChild(video);
-            }
-        }
-
-        if (text) {
-            const bubble = document.createElement('div');
-            bubble.className = `px-4 py-2.5 rounded-3xl text-sm ${isAdmin ? 'bg-yellow-500 text-black' : 'bg-gray-800 text-white'}`;
-            bubble.textContent = text;
-            wrap.appendChild(bubble);
-        }
-
-        const timeEl = document.createElement('div');
-        timeEl.className = `text-[10px] text-gray-500 mt-1 px-1 ${isAdmin ? 'text-right' : ''}`;
-        timeEl.textContent = new Date(timestamp).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
-        wrap.appendChild(timeEl);
-
-        div.appendChild(wrap);
-        messagesDiv.appendChild(div);
-        if (isAdmin) { seenByCurrentUser = false; renderSeenIndicator(); }
-    }
-
-    // Messenger-এর মতো "Seen" রিসিট — নিজের (অ্যাডমিনের) সর্বশেষ মেসেজের নিচে দেখানো হয়
-    function renderSeenIndicator() {
-        const messagesDiv = document.getElementById('messages');
-        const old = messagesDiv.querySelector('.seen-indicator');
-        if (old) old.remove();
-        if (!seenByCurrentUser) return;
-
-        // সর্বশেষ নিজের (অ্যাডমিনের) মেসেজ বাবলটা খুঁজে বের করা
-        const rows = [...messagesDiv.children];
-        const lastOwn = [...rows].reverse().find(r => r.dataset.admin === 'true');
-        if (!lastOwn) return;
-
-        const seenEl = document.createElement('div');
-        seenEl.className = 'seen-indicator flex justify-end';
-        seenEl.innerHTML = `<div class="text-[10px] text-gray-500 mt-0.5 px-1 flex items-center gap-1"><i class="fas fa-check-double text-blue-400"></i> দেখা হয়েছে</div>`;
-        lastOwn.after(seenEl);
-    }
-
-    function scrollToBottom() {
-        const messagesDiv = document.getElementById('messages');
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
-
-    // File handling
-    const fileInput = document.getElementById('file-input');
-    const filePreview = document.getElementById('file-preview');
-    const previewName = document.getElementById('preview-name');
-
-    fileInput.addEventListener('change', () => {
-        const file = fileInput.files[0];
-        if (!file) return;
-        selectedFile = file;
-        selectedFileType = file.type.startsWith('video') ? 'video' : 'image';
-        filePreview.classList.remove('hidden');
-        previewName.textContent = file.name;
-    });
-
-    function clearFile() {
-        selectedFile = null;
-        selectedFileType = null;
-        fileInput.value = '';
-        filePreview.classList.add('hidden');
-    }
-
-    // Send message
-    async function sendMessage() {
-        const text = document.getElementById('message-input').value.trim();
-        if (!text && !selectedFile) return;
-        if (!currentUserId) return;
-
-        let fileUrl = null;
-        let fileType = null;
-
-        if (selectedFile) {
-            const formData = new FormData();
-            formData.append('file', selectedFile);
-            try {
-                const res = await fetch('/chat/upload', { method: 'POST', body: formData });
-                const data = await res.json();
-                fileUrl = data.url;
-                fileType = selectedFileType;
-            } catch (e) {
-                alert('File upload failed');
-                return;
-            }
-        }
-
-        socket.emit('send_message', {
-            senderId: adminId,
-            receiverId: currentUserId,
-            message: text,
-            isAdmin: true,
-            fileUrl,
-            fileType
-        });
-
-        appendMessage(text, true, new Date(), fileUrl, fileType);
-        document.getElementById('message-input').value = '';
-        clearFile();
-        scrollToBottom();
-    }
-
-    document.getElementById('send-button').addEventListener('click', sendMessage);
-    document.getElementById('message-input').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') sendMessage();
-    });
-
-    // Quick actions
-    function viewUserProfile() {
-        if (currentUserId) {
-            window.location.href = `/admin/users/${currentUserId}`;
-        }
-    }
-
-    function quickBanUser() {
-        if (!currentUserId) return;
-        if (confirm('Ban this user?')) {
-            // Call your ban API here
-            alert('User banned (implement your ban endpoint)');
-        }
-    }
-
-    function refreshConversations() {
-        loadConversations();
-    }
-
-    function exportChatLogs() {
-        alert('Chat logs exported (implement CSV export)');
-    }
-
-    // Socket listeners
-    socket.on('new_message', (data) => {
-        if (data.senderId === currentUserId || data.receiverId === currentUserId) {
-            appendMessage(data.message, data.isAdmin, data.created_at, data.fileUrl, data.fileType);
-            scrollToBottom();
-        }
-        // Refresh list to show latest message
-        loadConversations();
-    });
-
-    // Initial load
-    setTimeout(() => {
-        loadConversations();
-    }, 800);
-</script>
+<script type="application/json" id="adminChatConfig"><%- jsonScriptSafe({ adminId: user.id }) %></script>
+<script src="/js/admin-chat.js"></script>
   </div>
 </div>
 </body>

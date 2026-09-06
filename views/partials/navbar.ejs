@@ -54,7 +54,7 @@
 <% if (locals.currentPage === 'home') { %>
 <nav class="navbar" style="position:relative; z-index:1000;">
   <div style="display:flex;align-items:center;gap:12px;">
-    <button onclick="toggleMenu()" style="background:none;border:none;color:var(--text-main);font-size:24px;cursor:pointer;padding:0 12px;"><i class="fas fa-bars"></i></button>
+    <button data-navbar-action="toggle-menu" style="background:none;border:none;color:var(--text-main);font-size:24px;cursor:pointer;padding:0 12px;"><i class="fas fa-bars"></i></button>
     <div class="nav-brand" style="color: var(--text-accent); font-family: 'Teko', sans-serif; font-size: 1.8rem; letter-spacing: 1px;"><%= siteName %></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
@@ -68,7 +68,7 @@
         <span class="js-balance"><%= Number(user.coins).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span>
         <a href="/payment/deposit" class="nav-balance-add" aria-label="<%= t.deposit %>"><i class="fas fa-plus"></i></a>
       </div>
-      <button onclick="refreshBalance()" class="nav-refresh-btn" id="refreshBtn" aria-label="<%= t.refresh %>">
+      <button data-navbar-action="refresh-balance" class="nav-refresh-btn" id="refreshBtn" aria-label="<%= t.refresh %>">
         <i class="fas fa-sync-alt"></i>
       </button>
 
@@ -92,104 +92,4 @@
 </nav>
 <% } %>
 
-<script>
-window.addEventListener('error', function(ev){
-  var bar = document.getElementById('navErrBar');
-  if(!bar){ bar = document.createElement('div'); bar.id='navErrBar'; bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:999999;background:#dc2626;color:#fff;font-size:13px;padding:10px;text-align:center;'; document.body.appendChild(bar); }
-  bar.textContent = 'ERROR: ' + ev.message + ' @ line ' + ev.lineno + ' (' + (ev.filename||'').split('/').pop() + ')';
-});
-
-var lvScrollY = 0;
-function toggleMenu() {
-  var menu = document.getElementById('sideMenu');
-  var overlay = document.getElementById('menuOverlay');
-  if (!menu) return;
-  var willOpen = !menu.classList.contains('open');
-  menu.classList.toggle('open', willOpen);
-  if (overlay) overlay.classList.toggle('show', willOpen);
-
-  if (willOpen) {
-    lvScrollY = window.scrollY || window.pageYOffset || 0;
-    document.body.style.top = (-lvScrollY) + 'px';
-    document.body.classList.add('menu-open');
-  } else {
-    document.body.classList.remove('menu-open');
-    document.body.style.top = '';
-    window.scrollTo(0, lvScrollY);
-  }
-}
-window.toggleMenu = toggleMenu;
-var lvHam = document.getElementById('lvHamburger'); if (lvHam) lvHam.addEventListener('click', toggleMenu);
-
-var lvClose = document.getElementById('lvClose'); if (lvClose) lvClose.addEventListener('click', toggleMenu);
-var lvOv = document.getElementById('menuOverlay'); if (lvOv) lvOv.addEventListener('click', toggleMenu);
-
-
-var lvOv = document.getElementById('menuOverlay'); if (lvOv) lvOv.addEventListener('click', toggleMenu);
-
-
-document.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape') {
-    var menu = document.getElementById('sideMenu');
-    if (menu && menu.classList.contains('open')) toggleMenu();
-  }
-});
-
-(function () {
-  var btnNav = document.getElementById('theme-toggle-nav');
-  var btnSide = document.getElementById('theme-toggle-side');
-  function applyTheme(theme) {
-    var light = theme === 'light';
-    document.body.classList.toggle('light-mode', light);
-    document.querySelectorAll('.nav-theme-icon').forEach(function (icon) {
-      icon.className = 'fas ' + (light ? 'fa-sun' : 'fa-moon') + ' nav-theme-icon';
-    });
-  }
-  applyTheme(localStorage.getItem('livo-theme') || 'dark');
-  function handleToggle() {
-    var next = document.body.classList.contains('light-mode') ? 'dark' : 'light';
-    localStorage.setItem('livo-theme', next);
-    applyTheme(next);
-  }
-  if (btnNav) btnNav.addEventListener('click', handleToggle);
-  if (btnSide) btnSide.addEventListener('click', handleToggle);
-})();
-
-
-// ===== রিয়েল-টাইম ব্যালেন্স আপডেট =====
-function refreshBalance() {
-  var btn = document.getElementById('refreshBtn');
-  if (btn) btn.classList.add('spinning');
-
-  fetch('/coins/balance', { headers: { 'Accept': 'application/json' } })
-    .then(function (r) { return r.json(); })
-    .then(function (d) {
-      if (d && d.success && d.coins != null) {
-        // হেডারে সার্ভার-রেন্ডার করা ফরম্যাটের সাথে মিল রাখতে locale ফরম্যাটিং
-        var locale = document.documentElement.lang === 'en' ? 'en-US' : 'bn-BD';
-        var shown;
-        try { shown = Number(d.coins).toLocaleString(locale); } catch (e) { shown = String(d.coins); }
-        document.querySelectorAll('.js-balance').forEach(function (el) {
-          el.textContent = shown;
-        });
-      }
-    })
-    .catch(function () {})
-    .finally(function() {
-      setTimeout(function() {
-        if (btn) btn.classList.remove('spinning');
-      }, 500);
-    });
-}
-window.refreshBalance = refreshBalance;
-
-(function () {
-  // অ্যাপে ফিরলে বা ট্যাব আবার দেখলে ব্যালেন্স রিফ্রেশ
-  window.addEventListener('focus', refreshBalance);
-  document.addEventListener('visibilitychange', function () {
-    if (!document.hidden) refreshBalance();
-  });
-  // প্রতি ৩০ সেকেন্ডে একবার
-  setInterval(refreshBalance, 30000);
-})();
-</script>
+<script src="/js/views/partials-navbar.js"></script>

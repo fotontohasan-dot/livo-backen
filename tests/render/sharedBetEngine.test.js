@@ -39,15 +39,21 @@ async function renderGamePage(slug = 'slots') {
 }
 
 // রেন্ডার করা HTML থেকে যে <script> ব্লকে placeBet সংজ্ঞায়িত, সেটাই বের করি
+// docs/CSP.md ধাপ ৩-এ বাজি ইঞ্জিনটা public/js/views/games-play.js-এ সরানো
+// হয়েছে। তাই ইনলাইন ব্লকের পাশাপাশি পেজের লোড করা স্ক্রিপ্ট ফাইলগুলোও
+// দেখা হয় — প্রশ্নটা একই: "পেজে কোন ইঞ্জিন কোড যাচ্ছে"।
+const { scriptOrder, readScript } = require('../helpers/viewScripts');
+
 function extractEngine(html) {
-  const blocks = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
-  const src = blocks.find((b) => /function placeBet/.test(b));
+  const candidates = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1])
+    .concat(scriptOrder(html).map(readScript));
+  const src = candidates.find((b) => /function placeBet/.test(b));
   if (!src) throw new Error('placeBet স্ক্রিপ্ট রেন্ডার করা পেজে পাওয়া যায়নি');
   return src;
 }
 
 // vm-এ চালানোর জন্য ন্যূনতম ব্রাউজার পরিবেশ
-function makeSandbox(fetchImpl) {
+function makeSandbox(fetchImpl, configJson) {
   const alerts = [];
   const el = () => ({
     innerText: '', value: '10', disabled: false,
@@ -58,7 +64,20 @@ function makeSandbox(fetchImpl) {
     fetch: fetchImpl,
     alert: (m) => alerts.push(m),
     console: { error() {}, log() {} },
-    document: { getElementById: el, querySelectorAll: () => [] },
+    // স্ট্যাব-টা একটা ব্রাউজার document নকল করে। addEventListener যোগ করা
+    // হয়েছে কারণ play.ejs-এর স্ক্রিপ্ট এখন DOMContentLoaded-এ বাজির প্রিসেট
+    // ও ডেমো টগল বাঁধে (CSP মাইগ্রেশনে ইনলাইন onclick সরানোর পরে)।
+    // কলব্যাকটা এখানে চালানো হয় না — এই টেস্টের বিষয় placeBet/recordWin-এর
+    // HTTP আচরণ, DOM ওয়্যারিং নয়।
+    // getElementById স্বাভাবিক এলিমেন্ট স্ট্যাব দেয়, কিন্তু JSON কনফিগ
+    // ব্লকটার জন্য আসল রেন্ডার করা textContent — নাহলে cfg খালি থাকত এবং
+    // এরর বার্তাগুলো undefined হয়ে যেত, অর্থাৎ টেস্ট ভুল কারণে পাস/ফেল করত।
+    document: {
+      getElementById: (id) =>
+        (id === 'games-playConfig' ? { textContent: configJson || '{}' } : el()),
+      querySelectorAll: () => [],
+      addEventListener() {}
+    },
     setTimeout,
     window: {}
   };
@@ -84,10 +103,18 @@ describe('LIVO-05 — শেয়ার্ড বাজি ইঞ্জিন�
   jest.setTimeout(60000);
   let engineSrc;
 
-  beforeAll(async () => { engineSrc = extractEngine(await renderGamePage('slots')); });
+  let engineConfig;
+
+  beforeAll(async () => {
+    const html = await renderGamePage('slots');
+    engineSrc = extractEngine(html);
+    const m = /<script type="application\/json" id="games-playConfig">([\s\S]*?)<\/script>/.exec(html);
+    if (!m) throw new Error('games-playConfig ব্লক রেন্ডার করা পেজে পাওয়া যায়নি');
+    engineConfig = m[1];
+  });
 
   async function run(fetchImpl, fn) {
-    const { ctx, alerts } = makeSandbox(fetchImpl);
+    const { ctx, alerts } = makeSandbox(fetchImpl, engineConfig);
     vm.runInContext(engineSrc, ctx);
     const result = await fn(ctx);
     return { result, alerts, ctx };

@@ -28,8 +28,16 @@ async function makeUser() {
 
 // হুইলের নিজের ইনলাইন স্ক্রিপ্ট — ক্লায়েন্টে সত্যিই কী পাঠানো হচ্ছে।
 // (পেজের শেয়ার্ড স্ক্রিপ্টে অসম্পর্কিত সংখ্যা থাকে, তাই শুধু এই ব্লকটাই দেখা হয়।)
+// docs/CSP.md ধাপ ৩-এ হুইলের কোড public/js/views/profile-wheel.js-এ সরানো
+// হয়েছে। তাই ইনলাইন ব্লকের পাশাপাশি লোড করা স্ক্রিপ্ট ফাইলগুলোও দেখা হয় —
+// প্রশ্নটা একই: "ক্লায়েন্টে কোন কোড যাচ্ছে"।
+const { scriptOrder, readScript } = require('../helpers/viewScripts');
+
 function scripts(html) {
-  const blocks = html.match(/<script\b[^>]*>[\s\S]*?<\/script>/gi) || [];
+  // ইনলাইন ব্লক + লোড করা বাইরের স্ক্রিপ্ট, প্রতিটা আলাদা আইটেম হিসেবে —
+  // পুরো ডকুমেন্ট জুড়ে দিলে অপ্রাসঙ্গিক HTML ফিল্টারে ঢুকে পড়ত।
+  const blocks = (html.match(/<script\b[^>]*>[\s\S]*?<\/script>/gi) || [])
+    .concat(scriptOrder(html).map(readScript));
   return blocks
     .filter((b) => b.includes('const segments =') || b.includes('drawWheel'))
     .join('\n')
@@ -72,7 +80,11 @@ describe('লাকি হুইল — স্পিনের আগে পু�
   });
 
   test('ঘরের সংখ্যা অপরিবর্তিত — ডিজাইন ভাঙেনি', () => {
-    expect(scripts(html)).toContain(`new Array(${getSegments().length})`);
+    // ঘরের সংখ্যা এখন JSON কনফিগে যায়, স্ক্রিপ্টে হার্ডকোড হয় না।
+    expect(scripts(html)).toMatch(/new Array\(cfg\.segmentCount \|\| 12\)/);
+    const cfg = /<script type="application\/json" id="profile-wheelConfig">([\s\S]*?)<\/script>/.exec(html);
+    expect(cfg).not.toBeNull();
+    expect(JSON.parse(cfg[1]).segmentCount).toBe(getSegments().length);
   });
 
   test('ক্যানভাসে পুরস্কারের বদলে নিরপেক্ষ চিহ্ন আঁকা হয়', () => {

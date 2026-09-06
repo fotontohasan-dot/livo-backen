@@ -1,3 +1,4 @@
+const { fetchWithTimeout } = require('./utils/httpClient');
 const Anthropic = require('@anthropic-ai/sdk');
 const crypto = require('crypto');
 
@@ -213,7 +214,7 @@ FILE: ফাইলের নাম
 // Telegram API helper
 async function telegramAPI(method, data) {
   const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/${method}`;
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
@@ -227,7 +228,7 @@ async function githubReadFile(filePath) {
   if (!safePath) return null;
   const encodedPath = safePath.split('/').map(encodeURIComponent).join('/');
   const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${encodedPath}`;
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     headers: {
       'Authorization': `token ${GITHUB_TOKEN}`,
       'Accept': 'application/vnd.github.v3+json'
@@ -264,18 +265,18 @@ async function ensureBotBranch() {
     'Accept': 'application/vnd.github.v3+json'
   };
 
-  const existing = await fetch(`${base}/git/ref/heads/${encodeURIComponent(BOT_BRANCH)}`, { headers });
+  const existing = await fetchWithTimeout(`${base}/git/ref/heads/${encodeURIComponent(BOT_BRANCH)}`, { headers });
   if (existing.ok) return true;
 
-  const repo = await fetch(base, { headers });
+  const repo = await fetchWithTimeout(base, { headers });
   if (!repo.ok) return false;
   const defaultBranch = (await repo.json()).default_branch;
 
-  const head = await fetch(`${base}/git/ref/heads/${encodeURIComponent(defaultBranch)}`, { headers });
+  const head = await fetchWithTimeout(`${base}/git/ref/heads/${encodeURIComponent(defaultBranch)}`, { headers });
   if (!head.ok) return false;
   const sha = (await head.json()).object.sha;
 
-  const created = await fetch(`${base}/git/refs`, {
+  const created = await fetchWithTimeout(`${base}/git/refs`, {
     method: 'POST',
     headers: { ...headers, 'Content-Type': 'application/json' },
     body: JSON.stringify({ ref: `refs/heads/${BOT_BRANCH}`, sha })
@@ -309,12 +310,12 @@ async function githubEditFile(filePath, newContent, commitMessage) {
   };
 
   let sha;
-  const existing = await fetch(`${url}?ref=${encodeURIComponent(BOT_BRANCH)}`, { headers });
+  const existing = await fetchWithTimeout(`${url}?ref=${encodeURIComponent(BOT_BRANCH)}`, { headers });
   if (existing.ok) {
     sha = (await existing.json()).sha;
   }
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: 'PUT',
     headers,
     body: JSON.stringify({

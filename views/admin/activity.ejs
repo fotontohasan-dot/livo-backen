@@ -27,7 +27,7 @@
           <i class="fas fa-search"></i>
           <input class="input" type="text" name="q" placeholder="<%= t('admin_search_admin_or_details') %>" value="<%= filters.q || '' %>">
         </div>
-        <select class="select" name="action_type" onchange="this.form.submit()" style="width:auto;min-width:160px;">
+        <select class="select" name="action_type" data-auto-submit style="width:auto;min-width:160px;">
           <option value=""><%= t('admin_filter_all_action_types') %></option>
           <% actionTypes.forEach(actionType => { %>
             <option value="<%= actionType %>" <%= filters.action_type === actionType ? 'selected' : '' %>><%= actionType %></option>

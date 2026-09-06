@@ -13,6 +13,7 @@
 // এবং প্রতি রিকোয়েস্টে ঠিক একটা বাজি ও সর্বোচ্চ একটা পেআউট লেজারে বসে।
 // ---------------------------------------------------------------------------
 
+const { readScript } = require('../helpers/viewScripts');
 const { getCsrfAgent, uniqueUsername, uniquePhone } = require('../helpers/app');
 const { pool } = require('../../db');
 
@@ -69,7 +70,9 @@ describe('LIVO-04 — ব্যাকারাট UI-তে বাজি নি�
   });
 
   test('selection ছাড়া placeBet() আর ডাকা হয় না', () => {
-    const script = html.slice(html.indexOf('baccaratGame'));
+    // docs/CSP.md ধাপ ৩-এ ব্যাকারাটের কোড
+    // public/js/views/games-baccarat.js-এ সরানো হয়েছে।
+    const script = readScript('/js/views/games-baccarat.js');
     // পুরনো ত্রুটি: placeBet(amount) — একটাই আর্গুমেন্ট
     expect(script).not.toMatch(/placeBet\(\s*amount\s*\)/);
     // এখন selection সবসময় সঙ্গে যায়
@@ -85,8 +88,11 @@ describe('LIVO-04 — ব্যাকারাট UI-তে বাজি নি�
   });
 
   test('ফলাফল ও লোডিং স্টেট দেখানোর জায়গা আছে', () => {
-    expect(html).toContain('id="bcStatus"');
-    expect(html).toContain('id="bcResult"');
+    // এই এলিমেন্টগুলো ব্যাকারাটের স্ক্রিপ্ট innerHTML দিয়ে বানায়, তাই
+    // সার্ভার HTML-এ নেই — কোডটা এখন বাইরের ফাইলে (ধাপ ৩)।
+    const js = readScript('/js/views/games-baccarat.js');
+    expect(js).toContain('id="bcStatus"');
+    expect(js).toContain('id="bcResult"');
   });
 });
 

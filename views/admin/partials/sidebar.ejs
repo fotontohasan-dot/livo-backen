@@ -66,7 +66,7 @@
   .badge-amber { background: rgba(245,158,11,0.15); color: #f59e0b; }
 </style>
 
-<div class="admin-overlay" id="adminOverlay" onclick="toggleAdminSidebar(false)"></div>
+<div class="admin-overlay" id="adminOverlay" data-admin-sidebar="close"></div>
 <div class="admin-sidebar" id="adminSidebar">
   <div class="admin-sidebar-brand"><i class="fas fa-shield-alt"></i> Livo Admin</div>
 
@@ -99,30 +99,4 @@
   <%- include('./lang-switch') %>
 </div>
 
-<script>
-function toggleAdminSidebar(force) {
-  var sb = document.getElementById('adminSidebar');
-  var ov = document.getElementById('adminOverlay');
-  var show = force !== undefined ? force : !sb.classList.contains('open');
-  sb.classList.toggle('open', show);
-  ov.classList.toggle('show', show);
-}
-
-function updateAdminNavBadges() {
-  fetch('/admin/pending-counts').then(function(r){ return r.json(); }).then(function(data){
-    var payBadge = document.getElementById('navBadgePayments');
-    var kycBadge = document.getElementById('navBadgeKyc');
-    var payTotal = (data.deposits || 0) + (data.withdrawals || 0);
-    if (payBadge) {
-      if (payTotal > 0) { payBadge.textContent = payTotal; payBadge.style.display = 'inline-block'; }
-      else { payBadge.style.display = 'none'; }
-    }
-    if (kycBadge) {
-      if (data.kyc > 0) { kycBadge.textContent = data.kyc; kycBadge.style.display = 'inline-block'; }
-      else { kycBadge.style.display = 'none'; }
-    }
-  }).catch(function(){});
-}
-updateAdminNavBadges();
-setInterval(updateAdminNavBadges, 20000);
-</script>
+<script src="/js/views/admin-partials-sidebar.js"></script>

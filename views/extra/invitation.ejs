@@ -12,7 +12,7 @@
             <div style="font-family: 'Teko', sans-serif; font-size: 36px; color: var(--text-accent); font-weight: 700; letter-spacing: 4px;">
                 <%= referralCode %>
             </div>
-            <button onclick="copyRef()" class="btn btn-primary" style="margin-top: 15px; border-radius: 20px; padding: 8px 30px;"><%= t.copy %></button>
+            <button data-copy-ref class="btn btn-primary" style="margin-top: 15px; border-radius: 20px; padding: 8px 30px;"><%= t.copy %></button>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 30px;">
@@ -28,12 +28,8 @@
     </div>
 </div>
 
-<script>
-function copyRef() {
-    navigator.clipboard.writeText('<%= referralCode %>');
-    alert('<%= t.referral_code_copied %>');
-}
-</script>
+<script type="application/json" id="extra-invitationConfig"><%- jsonScriptSafe({ referralCode: referralCode, copied: t.referral_code_copied }) %></script>
+<script src="/js/views/extra-invitation.js"></script>
 
 <%- include('../partials/bottom-nav') %>
 </body></html>

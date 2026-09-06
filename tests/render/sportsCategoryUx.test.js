@@ -14,6 +14,14 @@
 //   • Popular Games ও বড় প্রোমোশনাল হিরো ব্যানার হোমপেজে নেই।
 // ---------------------------------------------------------------------------
 
+const { withScripts } = require('../helpers/viewScripts');
+
+// matches.ejs-এর JSON কনফিগ ব্লক থেকে মান পড়া
+function matchesConfig(html) {
+  const m = /<script type="application\/json" id="matchesConfig">([\s\S]*?)<\/script>/.exec(html);
+  if (!m) throw new Error('matchesConfig ব্লক পাওয়া যায়নি');
+  return JSON.parse(m[1]);
+}
 const fs = require('fs');
 const path = require('path');
 const request = require('supertest');
@@ -24,9 +32,10 @@ const { app } = require('../helpers/app');
 const { pool } = require('../../db');
 const { upsertMatch } = require('../../services/matchUpdater');
 
-const matchesView = fs.readFileSync(
-  path.join(__dirname, '..', '..', 'views', 'matches.ejs'), 'utf8'
-);
+// docs/CSP.md ধাপ ৩: matches.ejs-এর কোড public/js/views/matches.js-এ
+// সরানো হয়েছে, তাই টেমপ্লেট + তার স্ক্রিপ্ট একসাথে পড়া হয়।
+const matchesView = require('../helpers/viewScripts')
+  .readViewWithScripts('views', 'matches.ejs');
 
 describe('হোমপেজ — ম্যাচ আর সরাসরি দেখানো হয় না', () => {
   let html;
@@ -92,22 +101,23 @@ describe('Football ও Cricket পেজ', () => {
   test('Football পেজ শুধু football ফিল্টার করে', async () => {
     const res = await request(app).get('/matches/football');
     expect(res.status).toBe(200);
-    expect(res.text).toContain("const CURRENT_SPORT = 'football'");
+    // docs/CSP.md ধাপ ৩: স্পোর্ট মানটা এখন JSON কনফিগে যায়, স্ক্রিপ্টে নয়।
+    expect(matchesConfig(res.text).sport).toBe('football');
     // ক্লায়েন্ট-সাইড ফিল্টার: football হলে শুধু data.football নেওয়া হয়
-    expect(res.text).toMatch(/CURRENT_SPORT === 'football'\) all = all\.concat\(data\.football/);
+    expect(withScripts(res.text)).toMatch(/CURRENT_SPORT === 'football'\) all = all\.concat\(data\.football/);
   });
 
   test('Cricket পেজ শুধু cricket ফিল্টার করে', async () => {
     const res = await request(app).get('/matches/cricket');
     expect(res.status).toBe(200);
-    expect(res.text).toContain("const CURRENT_SPORT = 'cricket'");
-    expect(res.text).toMatch(/CURRENT_SPORT === 'cricket'\) all = all\.concat\(data\.cricket/);
+    expect(matchesConfig(res.text).sport).toBe('cricket');
+    expect(withScripts(res.text)).toMatch(/CURRENT_SPORT === 'cricket'\) all = all\.concat\(data\.cricket/);
   });
 
   test('/sports/cricket-ও একই ফিল্টার নিয়ে রেন্ডার হয়', async () => {
     const res = await request(app).get('/sports/cricket');
     expect(res.status).toBe(200);
-    expect(res.text).toContain("const CURRENT_SPORT = 'cricket'");
+    expect(matchesConfig(res.text).sport).toBe('cricket');
   });
 
   test('দুই পেজেই Live ও Upcoming আলাদা সেকশন আছে', async () => {
@@ -127,7 +137,7 @@ describe('Football ও Cricket পেজ', () => {
 
   test('ম্যাচ কার্ড থেকে বিদ্যমান ম্যাচ পেজে যাওয়া যায়', async () => {
     const res = await request(app).get('/matches/cricket');
-    expect(res.text).toContain('/matches/${m.id}');
+    expect(withScripts(res.text)).toContain('/matches/${m.id}');
   });
 });
 

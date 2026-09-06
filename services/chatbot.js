@@ -1,4 +1,5 @@
 // FAQ কীওয়ার্ড রিপ্লাই + SambaNova AI ফলব্যাক
+const { fetchWithTimeout } = require('../utils/httpClient');
 const FAQ = [
   { keywords: ['deposit', 'ডিপোজিট', 'টাকা জমা'], reply: 'ডিপোজিট করতে প্রোফাইল > Deposit পেজে যান। সমস্যা হলে সাপোর্টে জানান।' },
   { keywords: ['withdraw', 'উত্তোলন', 'টাকা তোলা'], reply: 'উত্তোলনের জন্য প্রোফাইল > Withdraw পেজে যান। KYC সম্পন্ন থাকা লাগবে।' },
@@ -18,7 +19,7 @@ function findFaqReply(message) {
 
 async function getAiReply(message) {
   try {
-    const res = await fetch('https://api.sambanova.ai/v1/chat/completions', {
+    const res = await fetchWithTimeout('https://api.sambanova.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.SAMBANOVA_API_KEY}`,

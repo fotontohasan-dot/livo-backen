@@ -12,6 +12,7 @@
 //   ৪. সম্পূর্ণ নেভিগেশনে কোনো পথ ছিল না ("More/Menu")।
 // ---------------------------------------------------------------------------
 
+const { readScript } = require('../helpers/viewScripts');
 const fs = require('fs');
 const path = require('path');
 const { getCsrfAgent, uniqueUsername, uniquePhone, REALISTIC_UA } = require('../helpers/app');
@@ -53,18 +54,26 @@ describe('বটম নেভ — সাইডবার ড্রয়ারে
     expect(BN_SRC).toMatch(/@media\s*\(min-width:\s*1024px\)[\s\S]*?\.admin-bottom-nav[\s\S]*?display:\s*none/);
   });
 
+  // docs/CSP.md ধাপ ৩-এ লেআউট ও বটম-নেভের কোড
+  // public/js/views/-এ সরানো হয়েছে, তাই সংজ্ঞা ও ক্রম এখন ওখানে যাচাই হয়।
+  const LAYOUT_JS = readScript('/js/views/admin-partials-admin-layout.js');
+
   test('openMobileSidebar() গ্লোবাল স্কোপে সংজ্ঞায়িত, তাই বটম নেভ থেকে ডাকা যায়', () => {
     // টপ-লেভেল function declaration — ব্রাউজারে window-এর প্রপার্টি হয়।
     // কোনো IIFE/ব্লকের ভেতরে ঢুকে গেলে "More" নিঃশব্দে কাজ করা বন্ধ করত।
-    expect(LAYOUT).toMatch(/^\s{8}function openMobileSidebar\(\)/m);
+    expect(LAYOUT_JS).toMatch(/^function openMobileSidebar\(\)/m);
   });
 
   test('openMobileSidebar()-এর সংজ্ঞা বটম-নেভ include-এর আগে আসে', () => {
-    const defIdx = LAYOUT.indexOf('function openMobileSidebar()');
+    // আগে দুটোই একই ফাইলে ছিল, তাই সূচক তুলনা করলেই হত। এখন সংজ্ঞাটা
+    // লেআউটের স্ক্রিপ্ট ফাইলে আর ব্যবহার বটম-নেভের ফাইলে — তাই যাচাই হয়
+    // লেআউটের <script src> ট্যাগটা include-এর আগে বসেছে কি না।
+    const scriptIdx = LAYOUT.indexOf('/js/views/admin-partials-admin-layout.js');
     const incIdx = LAYOUT.indexOf("include('./bottom-nav')");
-    expect(defIdx).toBeGreaterThan(-1);
+    expect(scriptIdx).toBeGreaterThan(-1);
     expect(incIdx).toBeGreaterThan(-1);
-    expect(defIdx).toBeLessThan(incIdx);
+    expect(scriptIdx).toBeLessThan(incIdx);
+    expect(LAYOUT_JS).toContain('function openMobileSidebar()');
   });
 
   test('কনটেন্ট এলাকায় বটম নেভের জন্য জায়গা রাখা আছে (কনটেন্ট ঢাকা পড়ে না)', () => {
@@ -82,7 +91,9 @@ describe('বটম নেভের গঠন', () => {
 
   test('সম্পূর্ণ নেভিগেশনে পৌঁছানোর "More" পথ আছে', () => {
     expect(BN_SRC).toContain('adminBnMore');
-    expect(BN_SRC).toMatch(/openMobileSidebar/);
+    // বটম-নেভের কোডও এখন বাইরের ফাইলে
+    expect(BN_SRC + readScript('/js/views/admin-partials-bottom-nav.js'))
+      .toMatch(/openMobileSidebar/);
     expect(BN_SRC).toMatch(/aria-controls="adminSidebar"/);
   });
 

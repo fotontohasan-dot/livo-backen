@@ -28,7 +28,7 @@
 
 <div class="game-container">
     <div class="demo-toggle-wrap">
-        <div id="demoSwitch" class="demo-switch" onclick="toggleDemoMode()"></div>
+        <div id="demoSwitch" class="demo-switch" data-toggle-demo></div>
         <span id="demoLabel" class="demo-label">🎮 ডেমো মোড (প্র্যাকটিস, রিয়েল টাকা লাগবে না)</span>
     </div>
 
@@ -48,11 +48,11 @@
 
     <div class="bet-controls">
         <div class="quick-bet">
-            <button type="button" class="quick-btn" onclick="setBet(10)">১০</button>
-            <button type="button" class="quick-btn" onclick="setBet(50)">৫০</button>
-            <button type="button" class="quick-btn" onclick="setBet(100)">১০০</button>
-            <button type="button" class="quick-btn" onclick="setBet(500)">৫০০</button>
-            <button type="button" class="quick-btn" onclick="setBet(1000)">১০০০</button>
+            <button type="button" class="quick-btn" data-set-bet="10">১০</button>
+            <button type="button" class="quick-btn" data-set-bet="50">৫০</button>
+            <button type="button" class="quick-btn" data-set-bet="100">১০০</button>
+            <button type="button" class="quick-btn" data-set-bet="500">৫০০</button>
+            <button type="button" class="quick-btn" data-set-bet="1000">১০০০</button>
         </div>
         <div class="bet-input-group">
             <label>বাজি:</label>
@@ -64,106 +64,16 @@
 
 <%- include('../partials/bottom-nav', { activePage: 'home' }) %>
 
-<script>
-    const gameSlug = '<%= gameSlug %>';
-    let currentBalance = <%= coins %>;
-    let currentDemoBalance = <%= demoBalance || 0 %>;
-    let isDemoMode = false;
-
-    function toggleDemoMode() {
-        isDemoMode = !isDemoMode;
-        const sw = document.getElementById('demoSwitch');
-        const label = document.getElementById('demoLabel');
-        sw.classList.toggle('active', isDemoMode);
-        label.classList.toggle('active', isDemoMode);
-        label.innerText = isDemoMode ? '🎮 ডেমো মোড চালু (কোনো রিয়েল টাকা ব্যবহার হচ্ছে না)' : '🎮 ডেমো মোড (প্র্যাকটিস, রিয়েল টাকা লাগবে না)';
-        document.getElementById('userBalance').innerText = isDemoMode ? currentDemoBalance : currentBalance;
-    }
-
-    function setBet(amount) {
-        var inp = document.getElementById('betAmount');
-        if (inp) inp.value = amount;
-    }
-
-    // ==================== শেয়ার্ড বাজি ইঞ্জিন ====================
-    // LIVO-05: প্রায় ১২০টা গেম ভিউ এই দুটো হেল্পার ব্যবহার করে, তাই এদের ত্রুটি
-    // একশোর বেশি গেমে একসাথে দেখা দিত। আগে `response.json()` সরাসরি ডাকা হতো —
-    // ৪২৯-এ express-rate-limit v7 প্লেইন টেক্সট পাঠায় আর ৫০০-তে HTML এরর পেজ
-    // আসতে পারে; দুটোতেই json() throw করত, catch নীরবে false ফেরত দিত এবং
-    // ইউজার কোনো বার্তাই দেখত না। আর `{ error: ... }` আকারের বডিতে
-    // `alert(data.message)` আক্ষরিক "undefined" দেখাত।
-    //
-    // রিটার্ন কনট্রাক্ট ইচ্ছাকৃতভাবে অপরিবর্তিত — সফলে ডেটা, ব্যর্থতায় false —
-    // কারণ কলাররা `if (!data) return;` করে। ব্যর্থতার বিস্তারিত জানতে চাইলে
-    // window.lastBetError { status, message } পড়া যায় (স্ট্যাটাস ০ = নেটওয়ার্ক)।
-    const BET_ERRORS = {
-        generic:   <%- jsonScriptSafe(t('bet_error_generic')) %>,
-        limited:   <%- jsonScriptSafe(t('bet_error_rate_limited')) %>,
-        expired:   <%- jsonScriptSafe(t('bet_error_session_expired')) %>,
-        network:   <%- jsonScriptSafe(t('bet_error_network')) %>,
-        server:    <%- jsonScriptSafe(t('bet_error_server')) %>
-    };
-
-    // স্ট্যাটাস অনুযায়ী ফলব্যাক বার্তা। সার্ভার নিজে বোধগম্য বার্তা দিলে সেটাই
-    // অগ্রাধিকার পায়; নইলে এখান থেকে লোকালাইজড বার্তা যায়।
-    function betErrorMessage(status, body) {
-        var fromServer = body && typeof body === 'object'
-            ? (typeof body.message === 'string' ? body.message
-              : (typeof body.error === 'string' ? body.error : null))
-            : null;
-        if (status === 0) return BET_ERRORS.network;
-        if (status === 429) return BET_ERRORS.limited;
-        if (status === 401 || status === 403) return fromServer || BET_ERRORS.expired;
-        if (status >= 500) return BET_ERRORS.server;
-        return fromServer || BET_ERRORS.generic;
-    }
-
-    // json() কখনো throw করতে পারে (প্লেইন টেক্সট, HTML, খালি বডি) — তাই সবসময় মুড়ে রাখা
-    async function safeJson(response) {
-        try { return await response.json(); } catch (e) { return null; }
-    }
-
-    async function betRequest(url, payload) {
-        var response;
-        try {
-            response = await fetch(url, {
-                method:'POST',
-                headers:{'Content-Type':'application/json'},
-                body:JSON.stringify(payload)
-            });
-        } catch (err) {
-            window.lastBetError = { status: 0, message: BET_ERRORS.network };
-            alert(BET_ERRORS.network);
-            return false;
-        }
-
-        var data = await safeJson(response);
-        if (response.ok && data && data.success) {
-            window.lastBetError = null;
-            updateBalance(data.newBalance);
-            return data;
-        }
-
-        var message = betErrorMessage(response.status, data);
-        window.lastBetError = { status: response.status, message: message };
-        alert(message);
-        return false;
-    }
-
-    async function placeBet(amount, selection=null) {
-        return betRequest('/games/play', { gameSlug, amount, selection, demo: isDemoMode });
-    }
-
-    async function recordWin(multiplier) {
-        return betRequest('/games/cashout', { gameSlug, multiplier });
-    }
-
-    function updateBalance(newBalance) {
-        if (isDemoMode) { currentDemoBalance = newBalance; }
-        else { currentBalance = newBalance; }
-        document.getElementById('userBalance').innerText = newBalance;
-    }
-</script>
+<script type="application/json" id="games-playConfig"><%- jsonScriptSafe({
+  gameSlug: gameSlug, coins: coins, demoBalance: demoBalance || 0,
+  gameDisplayName: gameDisplayName,
+  betErrors: {
+    generic: t('bet_error_generic'), limited: t('bet_error_rate_limited'),
+    expired: t('bet_error_session_expired'), network: t('bet_error_network'),
+    server: t('bet_error_server')
+  }
+}) %></script>
+<script src="/js/views/games-play.js"></script>
 <% if (gameSlug === 'aviator' || gameSlug === 'crash-game') { %>
     <%- include('aviator') %>
 <% } else if (gameSlug === 'slots') { %>
@@ -202,51 +112,5 @@
     <%- include('card-war') %>
 <% } else { %>
     <!-- জেনেরিক গেম টেমপ্লেট: বাকি সব গেমের জন্য -->
-    <script>
-    (function(){
-        var ui = document.getElementById('gameUI');
-        ui.innerHTML =
-            '<div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:linear-gradient(180deg,#0a0a0a,#1a0000);padding:15px;">' +
-                '<div style="font-size:50px;">🎰</div>' +
-                '<div id="g_status" style="color:#ffd700;font-weight:700;font-size:15px;">' + '<%= gameDisplayName %>' + ' - বাজি ধরুন!</div>' +
-                '<div id="g_result" style="font-size:34px;font-weight:900;color:#fff;min-height:44px;"></div>' +
-            '</div>';
-
-        var btn = document.getElementById('mainGameBtn');
-        var statusEl = document.getElementById('g_status');
-        var resultEl = document.getElementById('g_result');
-        var defaultStatus = '<%= gameDisplayName %>' + ' - বাজি ধরুন!';
-
-        btn.addEventListener('click', async function(){
-            var amount = parseInt(document.getElementById('betAmount').value);
-            if (isNaN(amount) || amount < 1) { alert('সর্বনিম্ন ১ কয়েন বাজি ধরুন'); return; }
-
-            btn.disabled = true;
-            resultEl.innerText = '⏳';
-            statusEl.innerText = 'খেলা চলছে...';
-            statusEl.style.color = '#ffd700';
-
-            var data = await placeBet(amount);
-            if (!data) { btn.disabled = false; statusEl.innerText = defaultStatus; resultEl.innerText = ''; return; }
-
-            setTimeout(function(){
-                if (data.winAmount > 0) {
-                    statusEl.innerText = '🎉 জিতেছেন! +' + data.winAmount + ' কয়েন';
-                    statusEl.style.color = '#10b981';
-                    resultEl.innerText = '✅';
-                } else {
-                    statusEl.innerText = '😢 হেরেছেন! -' + amount + ' কয়েন';
-                    statusEl.style.color = '#e60000';
-                    resultEl.innerText = '❌';
-                }
-                setTimeout(function(){
-                    statusEl.innerText = defaultStatus;
-                    statusEl.style.color = '#ffd700';
-                    resultEl.innerText = '';
-                    btn.disabled = false;
-                }, 2500);
-            }, 1200);
-        });
-    })();
-    </script>
+    <script src="/js/views/games-play-generic.js"></script>
 <% } %>

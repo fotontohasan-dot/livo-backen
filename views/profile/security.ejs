@@ -65,7 +65,7 @@
     </h3>
     <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px;">
       <% scItems.forEach(function(it) { %>
-        <div onclick="switchTab('<%= it.tab %>')" style="cursor:pointer; background: rgba(255,255,255,0.03); border-radius: 14px; padding: 12px; border: 1px solid <%= it.ok ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.3)' %>; display:flex; gap:10px; align-items:flex-start;">
+        <div data-switch-tab="<%= it.tab %>" style="cursor:pointer; background: rgba(255,255,255,0.03); border-radius: 14px; padding: 12px; border: 1px solid <%= it.ok ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.3)' %>; display:flex; gap:10px; align-items:flex-start;">
           <i class="fas <%= it.icon %>" style="font-size:16px; margin-top:2px; color: <%= it.ok ? '#10b981' : '#ef4444' %>;"></i>
           <div style="min-width:0;">
             <div style="color:var(--text-main); font-size:12px; font-weight:700; display:flex; align-items:center; gap:6px;">
@@ -81,10 +81,10 @@
 
   <!-- Tab Buttons -->
   <div style="display: flex; gap: 10px; margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 5px; border-radius: 12px; border: 1px solid var(--border-glass);">
-    <button onclick="switchTab('personal')" id="btn-personal" class="sec-tab active" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;"><%= t.personal_info %></button>
-    <button onclick="switchTab('bank')" id="btn-bank" class="sec-tab" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;"><%= t.menu_withdraw %></button>
-    <button onclick="switchTab('security')" id="btn-security" class="sec-tab" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;"><%= t.security %></button>
-    <button onclick="switchTab('devices')" id="btn-devices" class="sec-tab" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;"><%= t.devices_tab %></button>
+    <button data-switch-tab="personal" id="btn-personal" class="sec-tab active" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;"><%= t.personal_info %></button>
+    <button data-switch-tab="bank" id="btn-bank" class="sec-tab" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;"><%= t.menu_withdraw %></button>
+    <button data-switch-tab="security" id="btn-security" class="sec-tab" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;"><%= t.security %></button>
+    <button data-switch-tab="devices" id="btn-devices" class="sec-tab" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;"><%= t.devices_tab %></button>
   </div>
 
   <!-- Personal Information Tab -->
@@ -128,7 +128,7 @@
               <div style="color:var(--text-main); font-size: 14px; font-weight: 600;"><%= card.bank_name %></div>
               <div style="color: var(--text-muted); font-size: 12px;"><%= card.account_number %></div>
             </div>
-            <form action="/profile/delete-bank-card/<%= card.id %>" method="POST" onsubmit="return confirm('<%= t.delete_card_confirm %>')">
+            <form action="/profile/delete-bank-card/<%= card.id %>" method="POST" data-confirm="<%= t.delete_card_confirm %>">
               <button type="submit" style="background: rgba(239, 68, 68, 0.1); border: none; width: 32px; height: 32px; border-radius: 8px; color: #ef4444; cursor: pointer;">
                 <i class="fas fa-trash-alt"></i>
               </button>
@@ -243,17 +243,17 @@
       <!-- Action Buttons -->
       <div style="display:flex; gap:10px; margin-bottom: 20px; flex-wrap:wrap;">
         <% if (!(pinStatus && pinStatus.configured)) { %>
-          <button type="button" onclick="showPinForm('create')" id="pinToggleBtn-create" class="btn btn-primary" style="flex:1; min-width:130px; border-radius:12px; padding:12px; font-weight:800;"><%= t.create_pin_btn %></button>
+          <button type="button" data-pin-form="create" id="pinToggleBtn-create" class="btn btn-primary" style="flex:1; min-width:130px; border-radius:12px; padding:12px; font-weight:800;"><%= t.create_pin_btn %></button>
         <% } else { %>
-          <button type="button" onclick="showPinForm('change')" id="pinToggleBtn-change" class="btn btn-primary" style="flex:1; min-width:130px; border-radius:12px; padding:12px; font-weight:800;"><%= t.change_pin_btn %></button>
-          <button type="button" onclick="showPinForm('reset')" id="pinToggleBtn-reset" class="btn btn-secondary" style="flex:1; min-width:130px; border-radius:12px; padding:12px; font-weight:800; background: var(--grad-gold); color:#000;"><%= t.reset_pin_btn %></button>
+          <button type="button" data-pin-form="change" id="pinToggleBtn-change" class="btn btn-primary" style="flex:1; min-width:130px; border-radius:12px; padding:12px; font-weight:800;"><%= t.change_pin_btn %></button>
+          <button type="button" data-pin-form="reset" id="pinToggleBtn-reset" class="btn btn-secondary" style="flex:1; min-width:130px; border-radius:12px; padding:12px; font-weight:800; background: var(--grad-gold); color:#000;"><%= t.reset_pin_btn %></button>
         <% } %>
       </div>
 
       <p style="color: var(--text-muted); font-size: 11px; margin-bottom: 15px;"><i class="fas fa-circle-info"></i> <%= t.pin_rules_hint %></p>
 
       <!-- Create PIN Form -->
-      <form id="pinFormcreate" action="/profile/withdraw-pin/create" method="POST" style="display:none; flex-direction: column; gap: 15px;" onsubmit="return handlePinSubmit(this)">
+      <form id="pinFormcreate" action="/profile/withdraw-pin/create" method="POST" style="display:none; flex-direction: column; gap: 15px;" data-pin-submit>
         <div>
           <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.new_pin %></label>
           <input type="password" name="pin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 16px; outline: none; letter-spacing:6px; text-align:center;">
@@ -264,12 +264,12 @@
         </div>
         <div style="display:flex; gap:10px;">
           <button type="submit" class="btn btn-primary pin-submit-btn" style="flex:1; border-radius: 12px; padding: 14px; font-weight: 800;"><%= t.create_pin_btn %></button>
-          <button type="button" onclick="hidePinForms()" style="flex:0 0 auto; padding: 14px 18px; border-radius: 12px; font-weight: 700; background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid var(--border-glass); cursor:pointer;"><%= t.cancel_btn %></button>
+          <button type="button" data-pin-cancel style="flex:0 0 auto; padding: 14px 18px; border-radius: 12px; font-weight: 700; background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid var(--border-glass); cursor:pointer;"><%= t.cancel_btn %></button>
         </div>
       </form>
 
       <!-- Change PIN Form -->
-      <form id="pinFormchange" action="/profile/withdraw-pin/change" method="POST" style="display:none; flex-direction: column; gap: 15px;" onsubmit="return handlePinSubmit(this)">
+      <form id="pinFormchange" action="/profile/withdraw-pin/change" method="POST" style="display:none; flex-direction: column; gap: 15px;" data-pin-submit>
         <div>
           <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.current_pin %></label>
           <input type="password" name="currentPin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 16px; outline: none; letter-spacing:6px; text-align:center;">
@@ -284,12 +284,12 @@
         </div>
         <div style="display:flex; gap:10px;">
           <button type="submit" class="btn btn-primary pin-submit-btn" style="flex:1; border-radius: 12px; padding: 14px; font-weight: 800;"><%= t.change_pin_btn %></button>
-          <button type="button" onclick="hidePinForms()" style="flex:0 0 auto; padding: 14px 18px; border-radius: 12px; font-weight: 700; background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid var(--border-glass); cursor:pointer;"><%= t.cancel_btn %></button>
+          <button type="button" data-pin-cancel style="flex:0 0 auto; padding: 14px 18px; border-radius: 12px; font-weight: 700; background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid var(--border-glass); cursor:pointer;"><%= t.cancel_btn %></button>
         </div>
       </form>
 
       <!-- Reset PIN Form (PIN ভুলে গেলে — অ্যাকাউন্ট পাসওয়ার্ড দিয়ে যাচাই) -->
-      <form id="pinFormreset" action="/profile/withdraw-pin/reset" method="POST" style="display:none; flex-direction: column; gap: 15px;" onsubmit="return handlePinSubmit(this)">
+      <form id="pinFormreset" action="/profile/withdraw-pin/reset" method="POST" style="display:none; flex-direction: column; gap: 15px;" data-pin-submit>
         <div>
           <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.account_password %></label>
           <input type="password" name="accountPassword" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 14px; outline: none;">
@@ -304,7 +304,7 @@
         </div>
         <div style="display:flex; gap:10px;">
           <button type="submit" class="btn btn-primary pin-submit-btn" style="flex:1; border-radius: 12px; padding: 14px; font-weight: 800; background: var(--grad-gold); color:#000;"><%= t.reset_pin_btn %></button>
-          <button type="button" onclick="hidePinForms()" style="flex:0 0 auto; padding: 14px 18px; border-radius: 12px; font-weight: 700; background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid var(--border-glass); cursor:pointer;"><%= t.cancel_btn %></button>
+          <button type="button" data-pin-cancel style="flex:0 0 auto; padding: 14px 18px; border-radius: 12px; font-weight: 700; background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid var(--border-glass); cursor:pointer;"><%= t.cancel_btn %></button>
         </div>
       </form>
     </div>
@@ -332,7 +332,7 @@
                 <div style="color:var(--text-muted); font-size:11px; margin-top:2px;"><%= t.device_last_active %>: <%= new Date(d.last_activity).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></div>
               </div>
               <% if (!d.is_current) { %>
-                <form method="POST" action="/profile/devices/<%= d.id %>/logout" onsubmit="return confirm('<%= t.logout_device_confirm %>')">
+                <form method="POST" action="/profile/devices/<%= d.id %>/logout" data-confirm="<%= t.logout_device_confirm %>">
                   <button type="submit" style="background: rgba(239,68,68,0.1); border:none; color:#ef4444; padding:8px 12px; border-radius:10px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap;"><%= t.logout_this_device %></button>
                 </form>
               <% } %>
@@ -344,7 +344,7 @@
       <% } %>
 
       <% if (activeSessions && activeSessions.filter(function(d){return !d.is_current}).length > 0) { %>
-        <form method="POST" action="/profile/devices/logout-all-others" onsubmit="return confirm('<%= t.logout_all_confirm %>')" style="margin-top:10px;">
+        <form method="POST" action="/profile/devices/logout-all-others" data-confirm="<%= t.logout_all_confirm %>" style="margin-top:10px;">
           <button type="submit" style="width:100%; background: rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; padding:12px; border-radius:12px; font-size:13px; font-weight:800; cursor:pointer;"><i class="fas fa-right-from-bracket"></i> <%= t.logout_all_other_devices %></button>
         </form>
       <% } %>
@@ -410,31 +410,6 @@
 }
 </style>
 
-<script>
-function switchTab(tab) {
-  document.querySelectorAll('.sec-content').forEach(c => c.style.display = 'none');
-  document.querySelectorAll('.sec-tab').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + tab).style.display = 'block';
-  document.getElementById('btn-' + tab).classList.add('active');
-}
-
-// ==================== Withdraw PIN ফর্ম টগল ====================
-function hidePinForms() {
-  ['create', 'change', 'reset'].forEach(function (t) {
-    var f = document.getElementById('pinForm' + t);
-    if (f) f.style.display = 'none';
-  });
-}
-function showPinForm(type) {
-  hidePinForms();
-  var f = document.getElementById('pinForm' + type);
-  if (f) f.style.display = 'flex';
-}
-function handlePinSubmit(form) {
-  var btn = form.querySelector('.pin-submit-btn');
-  if (window.LivoToast) LivoToast.setLoading(btn, true);
-  return true;
-}
-</script>
+<script src="/js/profile-security.js"></script>
 
 <%- include('../partials/navbar') %>

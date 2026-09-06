@@ -10,7 +10,7 @@ const categoryRows = (s.categories || []).map(c =>
     '<td class="px-6 py-3 text-sm text-slate-700">' + escapeHtml(c.label) + '<div class="text-xs text-slate-400 font-mono">' + escapeHtml(c.pattern) + '</div></td>' +
     '<td class="px-6 py-3 text-sm font-semibold text-slate-900">' + c.count + '</td>' +
     '<td class="px-6 py-3 text-right">' +
-      '<form method="POST" action="/admin/cache/clear" onsubmit="return confirm(\'এই ক্যাটাগরির ক্যাশ পরিষ্কার করবেন?\')" style="display:inline">' +
+      '<form method="POST" action="/admin/cache/clear" data-confirm="এই ক্যাটাগরির ক্যাশ পরিষ্কার করবেন?" style="display:inline">' +
         '<input type="hidden" name="pattern" value="' + escapeHtml(c.pattern) + '">' +
         '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-red-50 text-red-600 hover:bg-red-100">Clear</button>' +
       '</form>' +
@@ -59,7 +59,7 @@ const categoryRows = (s.categories || []).map(c =>
     <div class="bg-white rounded-3xl border border-slate-100 overflow-x-auto mb-6">
         <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
             <h2 class="font-semibold text-slate-900">Cache Categories</h2>
-            <form method="POST" action="/admin/cache/clear" onsubmit="return confirm('সমস্ত ক্যাশ (এই অ্যাপের) পরিষ্কার করবেন? এতে সাময়িকভাবে ডাটাবেজে লোড বাড়তে পারে।')">
+            <form method="POST" action="/admin/cache/clear" data-confirm="সমস্ত ক্যাশ (এই অ্যাপের) পরিষ্কার করবেন? এতে সাময়িকভাবে ডাটাবেজে লোড বাড়তে পারে।">
                 <input type="hidden" name="pattern" value="*">
                 <button type="submit" class="px-4 py-2 text-sm font-semibold rounded-2xl bg-red-600 text-white hover:bg-red-700"><i class="fas fa-trash"></i> Clear All Cache</button>
             </form>

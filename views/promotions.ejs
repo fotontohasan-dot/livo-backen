@@ -24,7 +24,7 @@
           <div style="font-size: 13px; color: var(--text-muted); line-height: 1.5;"><%= t.promo_1_desc_long %></div>
           <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
             <div style="font-size: 11px; color: var(--text-accent); font-weight: bold;"><i class="fas fa-clock"></i> <%= t.valid_until %>: 31 Dec 2024</div>
-            <button onclick="location.href='/payment/deposit'" style="background: var(--grad-gold); color: #000; border: none; padding: 8px 20px; border-radius: 20px; font-size: 12px; font-weight: bold;"><%= t.deposit_now %></button>
+            <button data-href="/payment/deposit" style="background: var(--grad-gold); color: #000; border: none; padding: 8px 20px; border-radius: 20px; font-size: 12px; font-weight: bold;"><%= t.deposit_now %></button>
           </div>
         </div>
       </div>
@@ -42,7 +42,7 @@
           <div style="font-size: 13px; color: var(--text-muted); line-height: 1.5;"><%= t.promo_2_desc_long %></div>
           <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
             <div style="font-size: 11px; color: #60a5fa; font-weight: bold;"><i class="fas fa-sync"></i> <%= t.once_daily %></div>
-            <button onclick="location.href='/payment/deposit'" style="background: #3473DA; color: #fff; border: none; padding: 8px 20px; border-radius: 20px; font-size: 12px; font-weight: bold;"><%= t.get_bonus %></button>
+            <button data-href="/payment/deposit" style="background: #3473DA; color: #fff; border: none; padding: 8px 20px; border-radius: 20px; font-size: 12px; font-weight: bold;"><%= t.get_bonus %></button>
           </div>
         </div>
       </div>

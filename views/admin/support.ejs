@@ -8,7 +8,7 @@ function esc(s) {
     .replace(/'/g, '&#39;');
 }
 function ticketListItem(t) {
-  return '<div class="px-4 py-3.5 mx-1 mb-1 rounded-2xl cursor-pointer border border-transparent hover:bg-slate-50" onclick="openTicket(' + Number(t.userId) + ')" id="ticket-item-' + Number(t.userId) + '">' +
+  return '<div class="px-4 py-3.5 mx-1 mb-1 rounded-2xl cursor-pointer border border-transparent hover:bg-slate-50" data-ticket-id="' + Number(t.userId) + '" id="ticket-item-' + Number(t.userId) + '">' +
     '<div class="flex justify-between"><div class="font-semibold text-sm">' + esc(t.username) + '</div>' +
     '<div class="text-[10px] px-2 py-0.5 rounded ' + (t.status === 'Open' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700') + '">' + esc(t.status) + '</div></div>' +
     '<div class="text-xs text-slate-400 mt-1 line-clamp-1">' + esc(String(t.lastMessage || '').slice(0, 60)) + '</div>' +
@@ -37,7 +37,7 @@ const curSearch = typeof search !== 'undefined' ? search : '';
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
         <div class="lg:col-span-5 bg-white rounded-3xl border border-slate-100 p-1">
             <form method="GET" action="/admin/support" class="p-4">
-                <input type="text" name="search" value="${esc(curSearch)}" placeholder="ইউজারনেম দিয়ে খুঁজুন..." class="w-full border px-4 py-2.5 rounded-2xl text-sm mb-4" onkeyup="filterTickets(this.value)">
+                <input type="text" name="search" value="${esc(curSearch)}" placeholder="ইউজারনেম দিয়ে খুঁজুন..." class="w-full border px-4 py-2.5 rounded-2xl text-sm mb-4" data-filter-tickets>
             </form>
             <div id="ticketsList" class="max-h-[520px] overflow-auto px-2">${ticketsHtml}</div>
             <div class="flex items-center justify-center gap-2 py-3 border-t border-slate-100 text-xs">
@@ -56,98 +56,17 @@ const curSearch = typeof search !== 'undefined' ? search : '';
                         <div id="chatUserId" class="text-xs text-slate-500"></div>
                     </div>
                 </div>
-                <button onclick="resolveTicket()" class="text-xs px-4 py-1.5 bg-emerald-100 text-emerald-700 rounded-2xl font-bold">Mark as Resolved</button>
+                <button data-support-action="resolve" class="text-xs px-4 py-1.5 bg-emerald-100 text-emerald-700 rounded-2xl font-bold">Mark as Resolved</button>
             </div>
             <div id="chatMessages" class="flex-1 p-6 overflow-auto space-y-4 text-sm bg-slate-50"></div>
             <div class="p-4 border-t flex gap-2">
                 <input id="replyInput" type="text" placeholder="Type your reply..." class="flex-1 border rounded-2xl px-5 py-3 text-sm">
-                <button onclick="sendReply()" class="px-6 bg-blue-600 text-white rounded-2xl font-semibold">Send</button>
+                <button data-support-action="reply" class="px-6 bg-blue-600 text-white rounded-2xl font-semibold">Send</button>
             </div>
         </div>
     </div>
 </div>
 
-<script>
-let tickets = ${ticketsData};
-let currentUserId = null;
-
-function filterTickets(term) {
-    term = term.toLowerCase();
-    document.querySelectorAll('#ticketsList > div').forEach(el => {
-        el.style.display = el.textContent.toLowerCase().includes(term) ? '' : 'none';
-    });
-}
-
-function renderMessages(messages) {
-    const chatBox = document.getElementById('chatMessages');
-    chatBox.innerHTML = '';
-    (messages || []).forEach(m => {
-        const msgDiv = document.createElement('div');
-        msgDiv.className = m.from === 'admin' ? 'flex justify-end' : '';
-        const bubble = document.createElement('div');
-        bubble.className = (m.from === 'admin' ? 'bg-blue-600 text-white' : 'bg-white border') + ' max-w-[75%] px-4 py-2 rounded-2xl text-sm';
-        bubble.textContent = m.text;
-        msgDiv.appendChild(bubble);
-        chatBox.appendChild(msgDiv);
-    });
-    chatBox.scrollTop = chatBox.scrollHeight;
-}
-
-async function openTicket(userId) {
-    currentUserId = userId;
-    const ticket = tickets.find(t => t.userId === userId);
-    if (!ticket) return;
-
-    document.getElementById('chatUserName').textContent = ticket.username;
-    document.getElementById('chatUserId').textContent = '#' + ticket.userId;
-
-    document.querySelectorAll('#ticketsList > div').forEach(el => el.classList.remove('border-blue-300', 'bg-blue-50'));
-    const activeEl = document.getElementById('ticket-item-' + userId);
-    if (activeEl) activeEl.classList.add('border-blue-300', 'bg-blue-50');
-
-    const chatBox = document.getElementById('chatMessages');
-    chatBox.innerHTML = '<div class="text-center text-slate-400 text-xs py-6">লোড হচ্ছে...</div>';
-    try {
-        const res = await fetch('/admin/api/support/' + userId + '/messages');
-        const data = await res.json();
-        if (data.success) renderMessages(data.messages);
-        else chatBox.innerHTML = '<div class="text-center text-red-400 text-xs py-6">মেসেজ লোড করা যায়নি</div>';
-    } catch (e) {
-        chatBox.innerHTML = '<div class="text-center text-red-400 text-xs py-6">সার্ভার এরর</div>';
-    }
-}
-
-async function sendReply() {
-    const input = document.getElementById('replyInput');
-    const message = input.value.trim();
-    if (!message || !currentUserId) return;
-    try {
-        const res = await fetch('/admin/api/support/' + currentUserId + '/reply', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message })
-        });
-        const data = await res.json();
-        if (data.success) {
-            const ticket = tickets.find(t => t.userId === currentUserId);
-            if (ticket) ticket.status = 'Resolved';
-            input.value = '';
-            openTicket(currentUserId);
-        } else {
-            alert('❌ ' + (data.error || 'সমস্যা হয়েছে'));
-        }
-    } catch (e) { alert('❌ সার্ভার এরর'); }
-}
-
-async function resolveTicket() {
-    if (!currentUserId) return;
-    try {
-        const res = await fetch('/admin/api/support/' + currentUserId + '/resolve', { method: 'POST' });
-        const data = await res.json();
-        if (data.success) {
-            alert('✅ টিকেট Resolved হিসেবে মার্ক করা হয়েছে');
-            location.reload();
-        }
-    } catch (e) { alert('❌ সার্ভার এরর'); }
-}
-</script>
+<script type="application/json" id="admin-supportConfig">${JSON.stringify({ tickets: JSON.parse(ticketsData) }).replace(/</g, "\\u003c")}</script>\n<script src="/js/views/admin-support.js"></script>
 ` 
 }) %>

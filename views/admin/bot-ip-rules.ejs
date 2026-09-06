@@ -42,7 +42,7 @@ function escapeHtml(str) {
             <td class="p-3 text-slate-500">${escapeHtml(r.created_by || '-')}</td>
             <td class="p-3 text-slate-500 whitespace-nowrap">${new Date(r.created_at).toLocaleString('en-US', { timeZone: 'Asia/Dhaka' })}</td>
             <td class="p-3">
-              <form method="POST" action="/admin/bot-monitoring/ip-rules/${encodeURIComponent(r.ip)}/remove" onsubmit="return confirm('${escapeHtml(r.ip)}-এর রুল সরাবেন?')">
+              <form method="POST" action="/admin/bot-monitoring/ip-rules/${encodeURIComponent(r.ip)}/remove" data-confirm="${escapeHtml(r.ip)}-এর রুল সরাবেন?">
                 <button type="submit" class="text-slate-400 hover:text-red-500 text-xs font-bold"><i class="fas fa-trash"></i> সরান</button>
               </form>
             </td>

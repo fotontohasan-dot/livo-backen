@@ -1,0 +1,129 @@
+// views/games/aviator.ejs-এর গেম লজিক।
+// আগে টেমপ্লেটের ভেতরে ইনলাইন ব্লক ছিল; docs/CSP.md ধাপ ৩ অনুযায়ী বাইরে আনা হয়েছে,
+// যাতে CSP-র script-src থেকে ভবিষ্যতে unsafe-inline সরানো যায়।
+// কোনো সার্ভার-সাইড মান লাগে না, তাই ফাইলটা স্ট্যাটিকভাবে পরিবেশিত হয়।
+
+document.getElementById('gameUI').innerHTML = `
+        <div id="aviatorGame">
+            <div id="gameStatus">অপেক্ষা করুন...</div>
+            <div id="multiplier">1.00x</div>
+            <div id="plane">✈️</div>
+            <div id="flewAway" class="flew-away">চলে গেছে!</div>
+        </div>
+    `;
+
+let isPlaying = false;
+    let multiplier = 1.0;
+    let crashPoint = 0;
+    let gameInterval;
+    let currentBet = 0;
+
+    const multiplierEl = document.getElementById('multiplier');
+    const planeEl = document.getElementById('plane');
+    const flewAwayEl = document.getElementById('flewAway');
+    const statusEl = document.getElementById('gameStatus');
+    const mainBtn = document.getElementById('mainGameBtn');
+    const betInput = document.getElementById('betAmount');
+
+    function resetGame() {
+        multiplier = 1.0;
+        multiplierEl.innerText = '1.00x';
+        multiplierEl.style.color = '#fff';
+        planeEl.style.transform = 'translate(0, 0)';
+        planeEl.style.left = '10%';
+        planeEl.style.bottom = '20%';
+        flewAwayEl.style.display = 'none';
+        statusEl.innerText = 'বাজি ধরুন!';
+        mainBtn.disabled = false;
+        mainBtn.innerText = 'বাজি ধরুন';
+        mainBtn.style.background = 'var(--primary-gradient)';
+    }
+
+    async function startGame() {
+        const amount = parseInt(betInput.value);
+        if (isNaN(amount) || amount < 10) {
+            alert('ন্যূনতম বাজি ১০ কয়েন');
+            return;
+        }
+
+        const success = await placeBet(amount);
+        if (!success) return;
+
+        currentBet = amount;
+        isPlaying = true;
+        mainBtn.innerText = 'ক্যাশ আউট';
+        mainBtn.style.background = '#10b981';
+        statusEl.innerText = 'গেম চলছে...';
+
+        // মাল্টিপ্লায়ার ক্লায়েন্ট-সাইডে লোকালি অ্যানিমেট করা হয় (ভিজ্যুয়াল ফিডব্যাক)।
+        // আসল ক্র্যাশ পয়েন্ট সার্ভার সেশনে গোপনে রাখা থাকে (routes/games.js) — ব্যাকএন্ডে
+        // এমন কোনো পাবলিক স্ট্যাটাস এন্ডপয়েন্ট নেই যেটা পোল করা যায় (আগের /games/status কল
+        // সবসময় 404 দিত, ফলে গেম কখনো ক্র্যাশ করত না)। ক্যাশ আউট করার সময় /games/cashout
+        // সার্ভার-সাইডে ক্লেইম করা মাল্টিপ্লায়ারকে আসল ক্র্যাশ পয়েন্টের সাথে মিলিয়ে জিত/হার
+        // নির্ধারণ করে (নিচের cashOut() দেখুন) — সেটাই একমাত্র সোর্স অফ ট্রুথ।
+        const startTime = Date.now();
+        gameInterval = setInterval(() => {
+            const elapsed = (Date.now() - startTime) / 1000;
+            multiplier = 1 + Math.pow(elapsed, 1.5) * 0.18;
+            multiplierEl.innerText = multiplier.toFixed(2) + 'x';
+
+            // Move plane
+            const progress = Math.min(1, (multiplier - 1) / 5);
+            planeEl.style.left = (10 + progress * 70) + '%';
+            planeEl.style.bottom = (20 + progress * 50) + '%';
+        }, 100);
+    }
+
+    async function cashOut() {
+        if (!isPlaying) return;
+
+        isPlaying = false;
+        clearInterval(gameInterval);
+
+        const claimedMultiplier = multiplier;
+        const data = await recordWin(claimedMultiplier);
+
+        if (data && data.success && !data.crashed) {
+            statusEl.innerText = `আপনি জিতেছেন! (+${data.winAmount})`;
+            multiplierEl.style.color = '#10b981';
+            mainBtn.disabled = true;
+            setTimeout(resetGame, 3000);
+        } else if (data && data.crashed) {
+            // ব্যাকএন্ড জানিয়েছে ক্লেইম করা মাল্টিপ্লায়ারে পৌঁছানোর আগেই আসল ক্র্যাশ পয়েন্ট
+            // পার হয়ে গিয়েছিল (দেরিতে ক্যাশ আউট) — জেতার বদলে ক্র্যাশ UI দেখানো হচ্ছে।
+            crash();
+        } else {
+            statusEl.innerText = 'ক্যাশ আউট ব্যর্থ হয়েছে!';
+            multiplierEl.style.color = '#ef4444';
+            mainBtn.disabled = true;
+            setTimeout(resetGame, 3000);
+        }
+    }
+
+    function crash() {
+        isPlaying = false;
+        clearInterval(gameInterval);
+
+        flewAwayEl.style.display = 'block';
+        multiplierEl.style.color = '#ef4444';
+        statusEl.innerText = 'আপনি হেরেছেন!';
+        mainBtn.disabled = true;
+
+        planeEl.style.transform = 'translate(100px, -100px) rotate(-45deg)';
+        planeEl.style.opacity = '0';
+
+        setTimeout(() => {
+            planeEl.style.opacity = '1';
+            resetGame();
+        }, 3000);
+    }
+
+    mainBtn.addEventListener('click', () => {
+        if (!isPlaying) {
+            startGame();
+        } else {
+            cashOut();
+        }
+    });
+
+    resetGame();

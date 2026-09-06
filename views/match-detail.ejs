@@ -110,45 +110,15 @@
 
 </div>
 
-<script>
-  document.querySelectorAll('.odds').forEach(btn => {
-    btn.addEventListener('click', function() {
-      if (!<%= locals.user ? 'true' : 'false' %>) {
-        alert("<%= t.login_to_bet %>");
-        return;
-      }
-
-      const oddText = this.textContent.trim();
-      const stake = prompt("<%= t.min_bet_msg %>", "50");
-      const stakeAmount = parseInt(stake);
-
-      if (!stakeAmount || stakeAmount < 10) {
-        alert("<%= t.min_bet_msg %>");
-        return;
-      }
-
-      const confirmMsg = "<%= t.bet_confirm_msg %>".replace('{odd}', oddText).replace('{stake}', stakeAmount);
-      if (!confirm(confirmMsg)) return;
-
-      fetch(`/matches/<%= match.id %>/bet`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          market_id: this.dataset.marketId,
-          runner: this.dataset.runner,
-          odd: parseFloat(this.dataset.odd),
-          stake: stakeAmount
-        })
-      })
-      .then(r => r.json())
-      .then(data => {
-        alert(data.message || data.error);
-        if (data.success) location.reload();
-      })
-      .catch(() => alert("<%= t.network_error %>"));
-    });
-  });
-</script>
+<script type="application/json" id="match-detailConfig"><%- jsonScriptSafe({
+  loggedIn: !!locals.user,
+  matchId: match.id,
+  loginToBet: t.login_to_bet,
+  minBetMsg: t.min_bet_msg,
+  betConfirmMsg: t.bet_confirm_msg,
+  networkError: t.network_error
+}) %></script>
+<script src="/js/views/match-detail.js"></script>
 
 <%- include('partials/bottom-nav') %>
 </body>

@@ -13,45 +13,8 @@
 
 <!-- ==================== CSRF টোকেন ==================== -->
 <meta name="csrf-token" content="<%= locals.csrfToken || '' %>">
-<script>
-(function() {
-  var CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-  if (!CSRF_TOKEN) return;
-  function injectIntoForms() {
-    document.querySelectorAll('form').forEach(function(form) {
-      if ((form.getAttribute('method') || 'get').toLowerCase() !== 'post') return;
-      if (form.querySelector('input[name="_csrf"]')) return;
-      var input = document.createElement('input');
-      input.type = 'hidden'; input.name = '_csrf'; input.value = CSRF_TOKEN;
-      form.appendChild(input);
-    });
-  }
-  document.addEventListener('DOMContentLoaded', injectIntoForms);
-  new MutationObserver(injectIntoForms).observe(document.documentElement, { childList: true, subtree: true });
-  var origFetch = window.fetch;
-  window.fetch = function(input, init) {
-    init = init || {};
-    var method = (init.method || (typeof input === 'object' && input.method) || 'GET').toUpperCase();
-    if (['POST','PUT','PATCH','DELETE'].includes(method)) {
-      init.headers = new Headers(init.headers || {});
-      if (!init.headers.has('X-CSRF-Token')) init.headers.set('X-CSRF-Token', CSRF_TOKEN);
-    }
-    return origFetch.call(this, input, init);
-  };
-  var origOpen = XMLHttpRequest.prototype.open;
-  var origSend = XMLHttpRequest.prototype.send;
-  XMLHttpRequest.prototype.open = function(method) {
-    this._csrfMethod = (method || 'GET').toUpperCase();
-    return origOpen.apply(this, arguments);
-  };
-  XMLHttpRequest.prototype.send = function(body) {
-    if (['POST','PUT','PATCH','DELETE'].includes(this._csrfMethod)) {
-      try { this.setRequestHeader('X-CSRF-Token', CSRF_TOKEN); } catch (e) {}
-    }
-    return origSend.call(this, body);
-  };
-})();
-</script>
+<script src="/js/csrf-inject.js"></script>
+  <script src="/js/ui-hooks.js" defer></script>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
     <div class="w-full max-w-md">
@@ -75,7 +38,7 @@
                 <% }) %>
             </div>
 
-            <button onclick="copyAll()" id="copyBtn"
+            <button data-copy-all id="copyBtn"
                 class="w-full bg-slate-700 hover:bg-slate-600 transition-all text-white font-semibold py-3 rounded-2xl text-sm flex items-center justify-center gap-2">
                 <i class="fas fa-copy"></i> <%= t('admin_2fa_copy_all') %>
             </button>
@@ -89,15 +52,7 @@
         </div>
     </div>
 
-    <script>
-        function copyAll() {
-            const codes = [<% codes.forEach((c,i) => { %>"<%= c %>"<%= i < codes.length - 1 ? ',' : '' %><% }) %>];
-            navigator.clipboard.writeText(codes.join('\n')).then(() => {
-                const btn = document.getElementById('copyBtn');
-                btn.innerHTML = '<i class="fas fa-check"></i> কপি হয়েছে!';
-                setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy"></i> সব কোড কপি করুন'; }, 2000);
-            });
-        }
-    </script>
+    <script type="application/json" id="admin-2fa-backup-codesConfig"><%- jsonScriptSafe({ codes: codes }) %></script>
+<script src="/js/views/admin-2fa-backup-codes.js"></script>
 </body>
 </html>

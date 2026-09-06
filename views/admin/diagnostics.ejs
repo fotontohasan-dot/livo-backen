@@ -111,7 +111,7 @@ const ts = r.timestamp ? new Date(r.timestamp).toLocaleString('bn-BD') : '';
       <span id="overall-badge" class="px-4 py-1.5 text-sm font-bold rounded-full ${overallColor.badge}">
         ${statusLabel(r.overall)}
       </span>
-      <button onclick="refreshDiagnostics()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-semibold flex items-center gap-2">
+      <button data-diagnostics-refresh class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-semibold flex items-center gap-2">
         <i class="fas fa-rotate-right" id="refresh-icon"></i> রিফ্রেশ
       </button>
     </div>
@@ -139,25 +139,6 @@ const ts = r.timestamp ? new Date(r.timestamp).toLocaleString('bn-BD') : '';
   </div>
 </div>
 
-<script>
-async function refreshDiagnostics() {
-  const icon = document.getElementById('refresh-icon');
-  const ts   = document.getElementById('ts');
-  icon.classList.add('fa-spin');
-  try {
-    const res  = await fetch('/admin/diagnostics/json');
-    const data = await res.json();
-    const statusLabel = (s) => s === 'healthy' ? 'Healthy' : s === 'warning' ? 'Warning' : 'Error';
-    const badgeClass  = (s) => s === 'healthy' ? 'bg-emerald-100 text-emerald-700' : s === 'warning' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700';
-    const ob = document.getElementById('overall-badge');
-    ob.textContent  = statusLabel(data.overall);
-    ob.className    = 'px-4 py-1.5 text-sm font-bold rounded-full ' + badgeClass(data.overall);
-    ts.textContent  = new Date(data.timestamp).toLocaleString('bn-BD');
-  } catch(e) {}
-  finally { icon.classList.remove('fa-spin'); }
-}
-// 30 সেকেন্ড পর পর অটো-রিফ্রেশ
-setInterval(refreshDiagnostics, 30000);
-</script>
+<script src="/js/views/admin-diagnostics.js"></script>
 `
 }) %>

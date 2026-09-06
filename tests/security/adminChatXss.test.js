@@ -23,8 +23,14 @@
 const fs = require('fs');
 const path = require('path');
 
+// CSP মাইগ্রেশনে (docs/CSP.md ধাপ ২) রেন্ডারিং কোডটা ইনলাইন <script> ব্লক
+// থেকে public/js/admin-chat.js-এ সরানো হয়েছে। প্রতিরক্ষাগুলো একই — তাই
+// টেস্টও সেখানেই দেখে। টেমপ্লেটটাও পড়া হয়, কারণ ওখানে কোনো ইউজার-নিয়ন্ত্রিত
+// মান বা ইনলাইন হ্যান্ডলার ফিরে আসেনি সেটাও নিশ্চিত করতে হয়।
 const CHAT_VIEW = path.join(__dirname, '..', '..', 'views', 'admin', 'chat.ejs');
-const source = fs.readFileSync(CHAT_VIEW, 'utf8');
+const CHAT_SCRIPT = path.join(__dirname, '..', '..', 'public', 'js', 'admin-chat.js');
+const view = fs.readFileSync(CHAT_VIEW, 'utf8');
+const source = fs.readFileSync(CHAT_SCRIPT, 'utf8');
 
 // টাস্কে চাওয়া ন্যূনতম পে-লোড সেট।
 const PAYLOADS = [
@@ -33,6 +39,27 @@ const PAYLOADS = [
   '<svg onload=alert(1)>',
   '"><script>alert(1)</script>'
 ];
+
+describe('অ্যাডমিন চ্যাট টেমপ্লেট — ইনলাইন কোড ফিরে আসেনি', () => {
+  test('টেমপ্লেটে কোনো ইনলাইন হ্যান্ডলার বা <script> ব্লক নেই', () => {
+    expect(view).not.toMatch(/\son(?:click|change|submit|input|load|error|focus|blur)=/);
+    expect(view).not.toMatch(/<script>/);
+  });
+
+  test('রেন্ডারিং কোড বাইরের ফাইলে, ডেটা JSON ব্লকে', () => {
+    expect(view).toMatch(/<script src="\/js\/admin-chat\.js"><\/script>/);
+    expect(view).toMatch(/<script type="application\/json" id="adminChatConfig">/);
+    expect(source).not.toMatch(/<%[=-]/);
+  });
+
+  test('ছয়টা অ্যাকশন বাটনই data-chat-action দিয়ে যুক্ত', () => {
+    expect((view.match(/data-chat-action=/g) || []).length).toBe(6);
+    ['refresh', 'export', 'view-profile', 'quick-ban', 'clear-file'].forEach((a) => {
+      expect(view).toContain('data-chat-action="' + a + '"');
+      expect(source).toContain("'" + a + "'");
+    });
+  });
+});
 
 describe('অ্যাডমিন চ্যাট — স্টোরড XSS প্রতিরোধ', () => {
   test('মেসেজের বডি innerHTML-এ নয়, textContent দিয়ে বসানো হয়', () => {
@@ -43,10 +70,13 @@ describe('অ্যাডমিন চ্যাট — স্টোরড XSS �
   });
 
   test('appendMessage আর কোনো innerHTML টেমপ্লেট ব্যবহার করে না', () => {
-    const fn = /function appendMessage\([^)]*\)\s*\{([\s\S]*?)\n    \}/.exec(source);
+    // ফাংশন বডির শেষ ইন্ডেন্ট-নিরপেক্ষভাবে বের করা হয় — আগে হার্ডকোড করা
+    // ৪-স্পেস `\n    }` ধরা হত, ফলে ফাইলের ইন্ডেন্ট বদলালে regex ফাংশনের
+    // সীমা পেরিয়ে পরের কোডও গিলে ফেলত এবং টেস্টটা ভুল কারণে ফেল করত।
+    const fn = /^([ \t]*)function appendMessage\([^)]*\)\s*\{\n([\s\S]*?)\n\1\}/m.exec(source);
     expect(fn).not.toBeNull();
     // কমেন্টে শব্দটা ব্যাখ্যা হিসেবে থাকতে পারে — আসল কোডে আছে কিনা সেটাই প্রশ্ন।
-    const code = fn[1].replace(/\/\/[^\n]*/g, '');
+    const code = fn[2].replace(/\/\/[^\n]*/g, '');
     expect(code).not.toMatch(/innerHTML/);
   });
 
@@ -75,7 +105,7 @@ describe('অ্যাডমিন চ্যাট — স্টোরড XSS �
 
   test('escapeHtml সব বিপজ্জনক ক্যারেক্টার সরায়', () => {
     // টেমপ্লেটের ভেতরের হেল্পারটা বের করে এনে আসল পে-লোড দিয়ে যাচাই।
-    const helper = /function escapeHtml\(str\) \{[\s\S]*?\n    \}/.exec(source);
+    const helper = /^([ \t]*)function escapeHtml\(str\) \{\n[\s\S]*?\n\1\}/m.exec(source);
     expect(helper).not.toBeNull();
     // eslint-disable-next-line no-new-func
     const escapeHtml = new Function(`${helper[0]}; return escapeHtml;`)();
@@ -98,8 +128,10 @@ describe('অ্যাডমিন চ্যাট — স্টোরড XSS �
 
 describe('অন্যান্য অ্যাডমিন ভিউতে ইউজার-নিয়ন্ত্রিত মান', () => {
   test('লিডারবোর্ডে username এস্কেপ করা হয়', () => {
+    // docs/CSP.md ধাপ ৩-এ কোডটা public/js/views/admin-leaderboard.js-এ
+    // সরানো হয়েছে; এস্কেপিং অপরিবর্তিত, তাই যাচাইও সেখানেই।
     const lb = fs.readFileSync(
-      path.join(__dirname, '..', '..', 'views', 'admin', 'leaderboard.ejs'), 'utf8'
+      path.join(__dirname, '..', '..', 'public', 'js', 'views', 'admin-leaderboard.js'), 'utf8'
     );
     expect(lb).toMatch(/esc\(l\.username\)/);
     expect(lb).not.toMatch(/'<\/td><td>@' \+ l\.username/);
@@ -113,11 +145,17 @@ describe('অন্যান্য অ্যাডমিন ভিউতে ই�
     // res.locals.t অনুবাদককে shadow করত, তাই সেটা `toastEl` করা হয়েছে —
     // নিরাপত্তার বৈশিষ্ট্য বদলায়নি। এখন অ্যাসারশন নাম-নিরপেক্ষ: showToast()
     // ফাংশনের ভেতরে textContent ব্যবহার হয় এবং innerHTML কোথাও নেই।
+    // কোডটা এখন public/js/views/admin-partials-bottom-nav.js-এ (ধাপ ৩)।
     const nav = fs.readFileSync(
-      path.join(__dirname, '..', '..', 'views', 'admin', 'partials', 'bottom-nav.ejs'), 'utf8'
+      path.join(__dirname, '..', '..', 'public', 'js', 'views', 'admin-partials-bottom-nav.js'),
+      'utf8'
     );
-    const fn = nav.slice(nav.indexOf('function showToast('));
-    const body = fn.slice(0, fn.indexOf('\n  }') + 4);
+    // ফাংশন বডির শেষ ইন্ডেন্ট-নিরপেক্ষভাবে বের করা হয় — আগে হার্ডকোড করা
+    // `\n  }` ধরা হত, ফলে ফাইলের ইন্ডেন্ট বদলালে বডি ভুল জায়গায় কাটত।
+    const m = /^([ \t]*)function showToast\([^)]*\)\s*\{\n([\s\S]*?)\n\1\}/m.exec(nav);
+    expect(m).not.toBeNull();
+    // কমেন্ট বাদ — শব্দটা ব্যাখ্যায় থাকতে পারে, আসল কোডে নয়।
+    const body = m[2].replace(/\/\/[^\n]*/g, '');
     expect(body).toMatch(/\.textContent\s*=\s*'🔔 '/);
     expect(body).not.toMatch(/\.innerHTML/);
   });

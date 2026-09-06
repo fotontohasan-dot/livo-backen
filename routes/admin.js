@@ -1,3 +1,4 @@
+const { fetchWithTimeout } = require('../utils/httpClient');
 const express = require('express');
 const secretBox = require('../utils/secretBox');
 const router = express.Router();
@@ -825,7 +826,7 @@ router.get('/kyc/:id/document', rbac.requirePermission('kyc_view'), requireIntPa
       `KYC #${req.params.id} (ইউজার #${row.user_id}) এর ডকুমেন্ট দেখা হয়েছে`, req.ip
     );
 
-    const upstream = await fetch(target.href);
+    const upstream = await fetchWithTimeout(target.href);
     if (!upstream.ok) return res.status(502).send(req.t('admin_kyc_document_fetch_failed'));
 
     const contentType = upstream.headers.get('content-type') || 'application/octet-stream';

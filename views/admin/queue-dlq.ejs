@@ -21,7 +21,7 @@ function dlqRow(j) {
         '<form method="POST" action="/admin/queue-dlq/' + j.id + '/requeue" style="display:inline">' +
           '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-blue-500 hover:bg-blue-600 text-white">Requeue</button>' +
         '</form>' +
-        '<form method="POST" action="/admin/queue-dlq/' + j.id + '/purge" style="display:inline" onsubmit="return confirm(\'স্থায়ীভাবে মুছে ফেলবেন?\')">' +
+        '<form method="POST" action="/admin/queue-dlq/' + j.id + '/purge" style="display:inline" data-confirm="স্থায়ীভাবে মুছে ফেলবেন?">' +
           '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-red-500 hover:bg-red-600 text-white">Purge</button>' +
         '</form>' +
       '</div>' +
@@ -55,7 +55,7 @@ const f = filters || {};
         <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">ফিল্টার</button>
         ${f.type ? '<a href="/admin/queue-dlq" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">রিসেট</a>' : ''}
         ${(jobs && jobs.length) ? `
-        <form method="POST" action="/admin/queue-dlq/purge-all" onsubmit="return confirm('সব DLQ জব স্থায়ীভাবে মুছে ফেলতে চান? এই অ্যাকশন ফেরানো যাবে না।')" style="margin-left:auto" class="flex items-center gap-2">
+        <form method="POST" action="/admin/queue-dlq/purge-all" data-confirm="সব DLQ জব স্থায়ীভাবে মুছে ফেলতে চান? এই অ্যাকশন ফেরানো যাবে না।" style="margin-left:auto" class="flex items-center gap-2">
             <select name="olderThanDays" class="border border-slate-200 px-3 py-2.5 rounded-2xl text-xs">
                 <option value="">সব</option>
                 <option value="7">৭ দিনের পুরনো</option>

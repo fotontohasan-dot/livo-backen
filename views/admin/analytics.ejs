@@ -117,37 +117,8 @@
         </div>
       </div>
 
-      <script>
-        const revenueLabels = <%- jsonScriptSafe(data.revenueTrend.map(r => r.day)) %>;
-        const revenueDeposit = <%- jsonScriptSafe(data.revenueTrend.map(r => Number(r.deposit))) %>;
-        const revenueWithdraw = <%- jsonScriptSafe(data.revenueTrend.map(r => Number(r.withdraw))) %>;
-        new Chart(document.getElementById('revenueChart'), {
-          type: 'line',
-          data: { labels: revenueLabels, datasets: [
-            { label: 'Deposit', data: revenueDeposit, borderColor: '#10b981', tension: 0.3 },
-            { label: 'Withdraw', data: revenueWithdraw, borderColor: '#ef4444', tension: 0.3 }
-          ]},
-          options: { plugins: { legend: { labels: { color: '#cbd5e1' } } }, scales: { x: { ticks: { color: '#94a3b8' } }, y: { ticks: { color: '#94a3b8' } } } }
-        });
-
-        const growthLabels = <%- jsonScriptSafe(data.userGrowth.map(r => r.day)) %>;
-        const growthVals = <%- jsonScriptSafe(data.userGrowth.map(r => Number(r.new_users))) %>;
-        new Chart(document.getElementById('growthChart'), {
-          type: 'bar',
-          data: { labels: growthLabels, datasets: [{ label: 'New Users', data: growthVals, backgroundColor: '#EAB308' }] },
-          options: { plugins: { legend: { labels: { color: '#cbd5e1' } } }, scales: { x: { ticks: { color: '#94a3b8' } }, y: { ticks: { color: '#94a3b8' } } } }
-        });
-
-        let autoRefreshTimer = null;
-        function startAutoRefresh() {
-          autoRefreshTimer = setInterval(() => { window.location.reload(); }, 30000);
-        }
-        document.getElementById('autoRefreshToggle').addEventListener('change', function () {
-          if (this.checked) startAutoRefresh(); else clearInterval(autoRefreshTimer);
-        });
-        startAutoRefresh();
-        document.getElementById('lastUpdated').textContent = 'Last updated: ' + new Date().toLocaleTimeString('bn-BD');
-      </script>
+      <script type="application/json" id="admin-analyticsConfig"><%- jsonScriptSafe({ revenueLabels: data.revenueTrend.map(r => r.day), revenueDeposit: data.revenueTrend.map(r => Number(r.deposit)), revenueWithdraw: data.revenueTrend.map(r => Number(r.withdraw)), growthLabels: data.userGrowth.map(r => r.day), growthVals: data.userGrowth.map(r => Number(r.new_users)) }) %></script>
+<script src="/js/views/admin-analytics.js"></script>
       <% } %>
 
     </div>

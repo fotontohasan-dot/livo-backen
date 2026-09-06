@@ -109,7 +109,7 @@
                                 <span class="text-gray-400 text-[11px] font-bold uppercase tracking-tighter"><%= c.holder_name %></span>
                             </div>
                         </div>
-                        <form action="/profile/cards/delete/<%= c.id %>" method="POST" onsubmit="return confirm('আপনি কি নিশ্চিত?')">
+                        <form action="/profile/cards/delete/<%= c.id %>" method="POST" data-confirm="আপনি কি নিশ্চিত?">
                             <button type="submit" class="delete-btn">
                                 <i class="far fa-times-circle"></i>
                             </button>
@@ -138,13 +138,13 @@
 
 <!-- Floating Plus Button -->
 <div class="fab-container">
-    <button onclick="toggleModal(true)" class="fab-btn">
+    <button class="fab-btn">
         <i class="fas fa-plus"></i>
     </button>
 </div>
 
 <!-- Bottom Sheet Modal -->
-<div id="modalOverlay" class="overlay fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[100]" onclick="toggleModal(false)"></div>
+<div id="modalOverlay" class="overlay fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[100]"></div>
 <div id="bottomSheet" class="bottom-sheet fixed bottom-0 left-0 right-0 max-w-[480px] mx-auto bg-white rounded-t-[40px] z-[101] shadow-2xl border-t border-gray-50">
     <div class="p-8 pb-12">
         <!-- Handle -->
@@ -155,7 +155,7 @@
                 <h2 class="text-2xl font-black text-gray-800 tracking-tight">নতুন যোগ করুন</h2>
                 <p class="text-gray-400 text-xs font-bold mt-1 uppercase tracking-widest">Add New E-Wallet</p>
             </div>
-            <button onclick="toggleModal(false)" class="w-12 h-12 flex items-center justify-center bg-gray-50 rounded-full text-gray-400 hover:text-red-500 transition-colors">
+            <button data-cards-close class="w-12 h-12 flex items-center justify-center bg-gray-50 rounded-full text-gray-400 hover:text-red-500 transition-colors">
                 <i class="fas fa-times text-xl"></i>
             </button>
         </div>
@@ -198,29 +198,7 @@
     </div>
 </div>
 
-<script>
-        function toggleModal(show) {
-        const modal = document.getElementById('bottomSheet');
-        const overlay = document.getElementById('modalOverlay');
-        if (!modal || !overlay) return;
-        if (show) {
-            modal.classList.add('active');
-            overlay.classList.add('active');
-            document.body.style.overflow = 'hidden';
-        } else {
-            modal.classList.remove('active');
-            overlay.classList.remove('active');
-            document.body.style.overflow = '';
-        }
-    }
-    window.toggleModal = toggleModal;
-    document.addEventListener('DOMContentLoaded', function(){
-        var fab = document.querySelector('.fab-btn');
-        if (fab) fab.addEventListener('click', function(){ toggleModal(true); });
-        var ov = document.getElementById('modalOverlay');
-        if (ov) ov.addEventListener('click', function(){ toggleModal(false); });
-    });
-</script>
+<script src="/js/views/profile-cards.js"></script>
 
 
 <%- include('../partials/bottom-nav') %>

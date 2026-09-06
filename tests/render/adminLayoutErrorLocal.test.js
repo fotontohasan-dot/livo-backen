@@ -12,6 +12,7 @@
 // এই টেস্ট সেই রিগ্রেশনটা লক করে: ?error= সেট থাকা অবস্থায়ও পেজগুলো 200 রেন্ডার করে।
 // ---------------------------------------------------------------------------
 
+const { withScripts } = require('../helpers/viewScripts');
 const { getCsrfAgent, uniqueUsername, uniquePhone, REALISTIC_UA } = require('../helpers/app');
 const { pool } = require('../../db');
 
@@ -59,6 +60,10 @@ describe('admin-layout: স্ট্রিং error লোকাল থাকল
     // সেই অ্যারে-ফ্ল্যাশটা LivoToast.show(...) হিসেবে রেন্ডার হওয়ার কথা।
     const res = await admin.agent.get('/admin');
     expect(res.status).toBe(200);
-    expect(res.text).toContain('LivoToast');
+    // docs/CSP.md ধাপ ৩-এ টোস্ট কোডটা public/js/views/-এ সরানো হয়েছে;
+    // পেজ + তার লোড করা স্ক্রিপ্ট একসাথে দেখা হয়।
+    expect(withScripts(res.text)).toContain('LivoToast');
+    // ফ্ল্যাশ বার্তাগুলো এখন JSON ডেটা ব্লকে যায়
+    expect(res.text).toMatch(/id="admin-partials-flashConfig"/);
   });
 });

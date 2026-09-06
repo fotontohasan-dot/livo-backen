@@ -74,123 +74,16 @@
        fetch/XHR দিয়ে পাঠানো POST/PUT/PATCH/DELETE-এ X-CSRF-Token হেডার যোগ করে — কোনো
        আলাদা ফর্ম বা JS ফাইল ম্যানুয়ালি এডিট না করেই পুরো সাইটে CSRF টোকেন কভারেজ পাওয়া যায়। -->
   <meta name="csrf-token" content="<%= locals.csrfToken || '' %>">
-  <script>
-  (function() {
-    var CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-    if (!CSRF_TOKEN) return;
-
-    function injectIntoForms() {
-      document.querySelectorAll('form').forEach(function(form) {
-        var method = (form.getAttribute('method') || 'get').toLowerCase();
-        if (method !== 'post') return;
-        if (form.querySelector('input[name="_csrf"]')) return;
-        var input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = '_csrf';
-        input.value = CSRF_TOKEN;
-        form.appendChild(input);
-      });
-    }
-    document.addEventListener('DOMContentLoaded', injectIntoForms);
-    // ডাইনামিকভাবে JS দিয়ে যোগ হওয়া ফর্মও কভার করার জন্য
-    new MutationObserver(injectIntoForms).observe(document.documentElement, { childList: true, subtree: true });
-
-    // fetch() প্যাচ — সেইম-অরিজিন state-changing রিকোয়েস্টে অটো হেডার যোগ করে
-    var origFetch = window.fetch;
-    /* CSRF টোকেন শুধু নিজেদের অরিজিনে যাবে।
-       আগে অরিজিন যাচাই ছাড়াই সব POST/PUT/PATCH/DELETE-এ হেডার বসত — অর্থাৎ
-       পেইজের কোনো স্ক্রিপ্ট (তৃতীয় পক্ষের উইজেট, ব্রাউজার এক্সটেনশন, ভবিষ্যতে
-       যোগ হওয়া কোনো ইন্টিগ্রেশন) বাইরের সার্ভারে রিকোয়েস্ট করলে আমাদের বৈধ
-       CSRF টোকেনও সেখানে চলে যেত। */
-    function isSameOrigin(url) {
-      try {
-        return new URL(url, window.location.href).origin === window.location.origin;
-      } catch (e) {
-        return false; // পার্স করা না গেলে নিরাপদ দিক — টোকেন পাঠাব না
-      }
-    }
-
-    window.fetch = function(input, init) {
-      init = init || {};
-      var method = (init.method || (typeof input === 'object' && input.method) || 'GET').toUpperCase();
-      var url = (typeof input === 'string') ? input : (input && input.url) || '';
-      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) && isSameOrigin(url)) {
-        init.headers = new Headers(init.headers || {});
-        if (!init.headers.has('X-CSRF-Token')) init.headers.set('X-CSRF-Token', CSRF_TOKEN);
-      }
-      return origFetch.call(this, input, init);
-    };
-
-    // XMLHttpRequest প্যাচ — legacy AJAX কভার করার জন্য
-    var origOpen = XMLHttpRequest.prototype.open;
-    var origSend = XMLHttpRequest.prototype.send;
-    XMLHttpRequest.prototype.open = function(method, url) {
-      this._csrfMethod = (method || 'GET').toUpperCase();
-      this._csrfSameOrigin = isSameOrigin(url);
-      return origOpen.apply(this, arguments);
-    };
-    XMLHttpRequest.prototype.send = function(body) {
-      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(this._csrfMethod) && this._csrfSameOrigin) {
-        try { this.setRequestHeader('X-CSRF-Token', CSRF_TOKEN); } catch (e) {}
-      }
-      return origSend.call(this, body);
-    };
-  })();
-  </script>
+  <script src="/js/csrf-inject.js"></script>
+  <script src="/js/ui-hooks.js" defer></script>
 </head>
 <body>
-<script>
-  /* থিম প্রথম পেইন্টের আগেই বসিয়ে দেয় — Light Mode ইউজার যেন রিফ্রেশে এক মুহূর্তের
-     জন্যও Dark Mode ফ্ল্যাশ না দেখে। navbar.ejs-এর টগল স্ক্রিপ্টের সাথে একই
-     localStorage key ('livo-theme') ও class ('light-mode') ব্যবহার করে। */
-  (function () {
-    try {
-      if (localStorage.getItem('livo-theme') === 'light') {
-        document.body.classList.add('light-mode');
-      }
-    } catch (e) {}
-  })();
-</script>
+<script src="/js/views/partials-head.js"></script>
 
 <div id="livo-toast-root"></div>
-<script>
-  window.LivoToast = (function () {
-    function ensureRoot() { return document.getElementById('livo-toast-root'); }
-    function show(message, type, duration) {
-      type = type || 'info'; duration = duration || 4000;
-      const root = ensureRoot();
-      if (!root || !message) return;
-      const el = document.createElement('div');
-      el.className = 'livo-toast ' + type;
-      const icon = type === 'success' ? 'fa-circle-check' : (type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-info');
-      el.innerHTML = '<i class="fas ' + icon + '"></i><span></span>';
-      el.querySelector('span').textContent = message;
-      const dismiss = () => { el.classList.add('leaving'); setTimeout(() => el.remove(), 250); };
-      el.addEventListener('click', dismiss);
-      root.appendChild(el);
-      setTimeout(dismiss, duration);
-    }
-    function setLoading(btn, loading, loadingText) {
-      if (!btn) return;
-      if (loading) {
-        if (!btn.dataset.livoOriginalHtml) btn.dataset.livoOriginalHtml = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = '<span class="livo-spinner"></span>' + (loadingText || 'অপেক্ষা করুন...');
-      } else {
-        btn.disabled = false;
-        if (btn.dataset.livoOriginalHtml) btn.innerHTML = btn.dataset.livoOriginalHtml;
-      }
-    }
-    return { show: show, setLoading: setLoading };
-  })();
+<script type="application/json" id="partials-headConfig"><%- jsonScriptSafe({
+  success: (typeof success !== 'undefined' && success) ? success : [],
+  error: (typeof error !== 'undefined' && error) ? error : []
+}) %></script>
 
-  document.addEventListener('DOMContentLoaded', function () {
-    <% if (typeof success !== 'undefined' && success && success.length) { %>
-      <% success.forEach(function (m) { %> LivoToast.show(<%- jsonScriptSafe(m) %>, 'success'); <% }) %>
-    <% } %>
-    <% if (typeof error !== 'undefined' && error && error.length) { %>
-      <% error.forEach(function (m) { %> LivoToast.show(<%- jsonScriptSafe(m) %>, 'error'); <% }) %>
-    <% } %>
-  });
-</script>
 

@@ -112,7 +112,7 @@ async function claimDailyReward(userId, lang = 'bn') {
     await client.query(
       `UPDATE user_daily_rewards
          SET claimed = true, claimed_amount = $1, claimed_at = NOW()
-       WHERE id = $2`,
+       WHERE id = $2 AND claimed = false`,
       [bonusAmount, row.id]
     );
 

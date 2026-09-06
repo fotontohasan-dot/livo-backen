@@ -13,7 +13,7 @@
   <div class="wh-card wh-summary-card">
     <div class="wh-card-title-row">
       <div class="wh-card-title"><i class="fas fa-wallet" style="color: var(--text-accent);"></i> <%= t.wallet_summary %></div>
-      <button onclick="refreshWalletBalance()" id="whRefreshBtn" title="<%= t.refresh %>" class="wh-icon-btn"><i class="fas fa-sync-alt" id="whRefreshIcon"></i></button>
+      <button data-refresh-wallet id="whRefreshBtn" title="<%= t.refresh %>" class="wh-icon-btn"><i class="fas fa-sync-alt" id="whRefreshIcon"></i></button>
     </div>
     <div id="whBalanceText" class="wh-total-balance">৳ <%= Number(coins).toLocaleString('bn-BD') %></div>
 
@@ -192,27 +192,7 @@ body.light-mode .wh-link-item, body.light-mode .wh-tx-type, body.light-mode .wh-
 }
 </style>
 
-<script>
-function refreshWalletBalance() {
-  var icon = document.getElementById('whRefreshIcon');
-  icon.classList.add('spinning');
-  fetch('/profile/api/balance')
-    .then(function (r) { return r.json(); })
-    .then(function (data) {
-      if (data.success) {
-        var formatted = '৳ ' + Number(data.coins).toLocaleString('bn-BD');
-        document.getElementById('whBalanceText').textContent = formatted;
-        document.querySelectorAll('.wh-summary-card .wh-mini-value')[0].textContent = formatted;
-        document.querySelectorAll('.wh-summary-card .wh-mini-value')[3].textContent = formatted;
-        document.getElementById('whUpdatedText').textContent = 'এখনই';
-      }
-    })
-    .catch(function () {})
-    .finally(function () {
-      setTimeout(function () { icon.classList.remove('spinning'); }, 400);
-    });
-}
-</script>
+<script src="/js/views/payment-wallet.js"></script>
 
 <%- include('../partials/navbar') %>
 <%- include('../partials/bottom-nav') %>

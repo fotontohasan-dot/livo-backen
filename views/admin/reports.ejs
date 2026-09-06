@@ -48,37 +48,6 @@ const userData = JSON.stringify((userTrend || []).map(r => r.count));
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-const ctx1 = document.getElementById('ggrChart');
-new Chart(ctx1, {
-    type: 'line',
-    data: {
-        labels: ${ggrLabels},
-        datasets: [{
-            label: 'GGR (৳)',
-            data: ${ggrData},
-            borderColor: '#3b82f6',
-            tension: 0.4,
-            fill: true,
-            backgroundColor: 'rgba(59, 130, 246, 0.1)'
-        }]
-    },
-    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
-});
-
-const ctx2 = document.getElementById('userChart');
-new Chart(ctx2, {
-    type: 'bar',
-    data: {
-        labels: ${userLabels},
-        datasets: [{
-            label: 'New Users',
-            data: ${userData},
-            backgroundColor: '#10b981'
-        }]
-    },
-    options: { plugins: { legend: { display: false } } }
-});
-</script>
+<script type="application/json" id="admin-reportsConfig">${JSON.stringify({ ggrLabels: JSON.parse(ggrLabels), ggrData: JSON.parse(ggrData), userLabels: JSON.parse(userLabels), userData: JSON.parse(userData) }).replace(/</g, "\\u003c")}</script>\n<script src="/js/views/admin-reports.js"></script>
 ` 
 }) %>

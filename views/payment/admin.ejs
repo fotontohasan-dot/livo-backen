@@ -21,45 +21,7 @@
 
 <!-- ==================== CSRF টোকেন ==================== -->
 <meta name="csrf-token" content="<%= locals.csrfToken || '' %>">
-<script>
-(function() {
-  var CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-  if (!CSRF_TOKEN) return;
-  function injectIntoForms() {
-    document.querySelectorAll('form').forEach(function(form) {
-      if ((form.getAttribute('method') || 'get').toLowerCase() !== 'post') return;
-      if (form.querySelector('input[name="_csrf"]')) return;
-      var input = document.createElement('input');
-      input.type = 'hidden'; input.name = '_csrf'; input.value = CSRF_TOKEN;
-      form.appendChild(input);
-    });
-  }
-  document.addEventListener('DOMContentLoaded', injectIntoForms);
-  new MutationObserver(injectIntoForms).observe(document.documentElement, { childList: true, subtree: true });
-  var origFetch = window.fetch;
-  window.fetch = function(input, init) {
-    init = init || {};
-    var method = (init.method || (typeof input === 'object' && input.method) || 'GET').toUpperCase();
-    if (['POST','PUT','PATCH','DELETE'].includes(method)) {
-      init.headers = new Headers(init.headers || {});
-      if (!init.headers.has('X-CSRF-Token')) init.headers.set('X-CSRF-Token', CSRF_TOKEN);
-    }
-    return origFetch.call(this, input, init);
-  };
-  var origOpen = XMLHttpRequest.prototype.open;
-  var origSend = XMLHttpRequest.prototype.send;
-  XMLHttpRequest.prototype.open = function(method) {
-    this._csrfMethod = (method || 'GET').toUpperCase();
-    return origOpen.apply(this, arguments);
-  };
-  XMLHttpRequest.prototype.send = function(body) {
-    if (['POST','PUT','PATCH','DELETE'].includes(this._csrfMethod)) {
-      try { this.setRequestHeader('X-CSRF-Token', CSRF_TOKEN); } catch (e) {}
-    }
-    return origSend.call(this, body);
-  };
-})();
-</script>
+<script src="/js/csrf-inject.js"></script>
 </head>
 <body>
   <div class="admin-wrap">
@@ -74,14 +36,14 @@
 
       <div id="paymentBulkBar" class="hidden" style="align-items:center;gap:10px;margin-bottom:14px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:12px;padding:10px 14px;">
         <span style="font-size:12px;font-weight:700;color:#f59e0b;"><span id="paymentBulkCount">0</span>টা রিকোয়েস্ট নির্বাচিত</span>
-        <button type="button" onclick="bulkPaymentAction('approve')" class="btn btn-sm btn-green" style="margin-left:auto;"><i class="fas fa-check"></i> নির্বাচিতগুলো অনুমোদন করুন</button>
-        <button type="button" onclick="bulkPaymentAction('reject')" class="btn btn-sm btn-red"><i class="fas fa-xmark"></i> নির্বাচিতগুলো বাতিল করুন</button>
-        <button type="button" onclick="clearPaymentBulkSelection()" class="btn btn-sm">বাতিল</button>
+        <button type="button" data-pay-bulk="approve" class="btn btn-sm btn-green" style="margin-left:auto;"><i class="fas fa-check"></i> নির্বাচিতগুলো অনুমোদন করুন</button>
+        <button type="button" data-pay-bulk="reject" class="btn btn-sm btn-red"><i class="fas fa-xmark"></i> নির্বাচিতগুলো বাতিল করুন</button>
+        <button type="button" data-pay-clear class="btn btn-sm">বাতিল</button>
       </div>
 
       <div class="pay-tabs">
-        <button class="pay-tab-btn active" onclick="showPayTab(0)"><i class="fas fa-arrow-down"></i> ডিপোজিট <span id="depositCount" class="badge badge-amber"></span></button>
-        <button class="pay-tab-btn" onclick="showPayTab(1)"><i class="fas fa-arrow-up"></i> উইথড্র <span id="withdrawCount" class="badge badge-amber"></span></button>
+        <button class="pay-tab-btn active" data-pay-tab="0"><i class="fas fa-arrow-down"></i> ডিপোজিট <span id="depositCount" class="badge badge-amber"></span></button>
+        <button class="pay-tab-btn" data-pay-tab="1"><i class="fas fa-arrow-up"></i> উইথড্র <span id="withdrawCount" class="badge badge-amber"></span></button>
       </div>
 
       <!-- Deposits -->
@@ -91,7 +53,7 @@
           <div class="admin-card-header">ডিপোজিট রিকোয়েস্ট</div>
           <div style="overflow-x:auto;">
             <table class="admin-table" id="depositTable">
-              <thead><tr><th><input type="checkbox" class="pay-select-all" data-table="depositTable" onchange="togglePaySelectAll(this)"></th><th>ইউজার</th><th>মেথড</th><th>পরিমাণ</th><th>TrxID</th><th>নম্বর</th><th>তারিখ</th><th>স্ট্যাটাস</th><th style="text-align:right;">অ্যাকশন</th></tr></thead>
+              <thead><tr><th><input type="checkbox" class="pay-select-all" data-table="depositTable" ></th><th>ইউজার</th><th>মেথড</th><th>পরিমাণ</th><th>TrxID</th><th>নম্বর</th><th>তারিখ</th><th>স্ট্যাটাস</th><th style="text-align:right;">অ্যাকশন</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
@@ -105,7 +67,7 @@
           <div class="admin-card-header">উইথড্র রিকোয়েস্ট</div>
           <div style="overflow-x:auto;">
             <table class="admin-table" id="withdrawTable">
-              <thead><tr><th><input type="checkbox" class="pay-select-all" data-table="withdrawTable" onchange="togglePaySelectAll(this)"></th><th>ইউজার</th><th>মেথড</th><th>পরিমাণ</th><th>TrxID</th><th>নম্বর</th><th>তারিখ</th><th>স্ট্যাটাস</th><th style="text-align:right;">অ্যাকশন</th></tr></thead>
+              <thead><tr><th><input type="checkbox" class="pay-select-all" data-table="withdrawTable" ></th><th>ইউজার</th><th>মেথড</th><th>পরিমাণ</th><th>TrxID</th><th>নম্বর</th><th>তারিখ</th><th>স্ট্যাটাস</th><th style="text-align:right;">অ্যাকশন</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
@@ -114,130 +76,7 @@
     </div>
   </div>
 
-  <script>
-    const allRequests = <%- jsonScriptSafe(requests || []) %>;
-
-    function escHtml(s) {
-      return String(s == null ? '' : s)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
-
-    function statusBadge(status) {
-      if (status === 'pending') return '<span class="badge badge-amber">পেন্ডিং</span>';
-      if (status === 'approved') return '<span class="badge badge-green">অনুমোদিত</span>';
-      return '<span class="badge badge-red">বাতিল</span>';
-    }
-
-    function renderRows(type, tableId, stripId, countId) {
-      const rows = allRequests.filter(r => r.type === type);
-      const pending = rows.filter(r => r.status === 'pending');
-      document.getElementById(countId).textContent = pending.length;
-
-      document.getElementById(stripId).innerHTML = pending.length > 0
-        ? '<div class="pending-strip"><i class="fas fa-bell"></i> ' + pending.length + 'টি নতুন পেন্ডিং রিকোয়েস্ট অপেক্ষমাণ</div>'
-        : '';
-
-      const tbody = document.querySelector('#' + tableId + ' tbody');
-      if (rows.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state">কোনো রিকোয়েস্ট নেই</div></td></tr>';
-        return;
-      }
-      tbody.innerHTML = rows.map(r => `
-        <tr>
-          <td>${r.status === 'pending' ? `<input type="checkbox" class="pay-row-check" data-id="${r.id}" onchange="updatePaymentBulkBar()">` : ''}</td>
-          <td style="font-weight:700;">${escHtml(r.username)}</td>
-          <td style="text-transform:capitalize;">${escHtml(r.method || '—')}</td>
-          <td style="color:#f59e0b;font-weight:700;">৳ ${Number(r.amount).toLocaleString('en-US')}</td>
-          <td style="color:var(--text-muted);">${escHtml(r.transaction_id || '—')}</td>
-          <td>${escHtml(r.account_number || '—')}</td>
-          <td>${r.created_at ? new Date(r.created_at).toLocaleString('bn-BD') : '—'}</td>
-          <td>${statusBadge(r.status)}</td>
-          <td style="text-align:right;">
-            ${r.status === 'pending' ? `
-              <form action="/payment/admin/approve/${r.id}" method="POST" style="display:inline;">
-                <button class="btn btn-sm btn-green" type="submit">অনুমোদন</button>
-              </form>
-              <form action="/payment/admin/reject/${r.id}" method="POST" style="display:inline;" onsubmit="return confirm('বাতিল করবেন?')">
-                <button class="btn btn-sm btn-red" type="submit">বাতিল</button>
-              </form>
-            ` : ''}
-          </td>
-        </tr>
-      `).join('');
-    }
-
-    function renderAll() {
-      renderRows('deposit', 'depositTable', 'depositPendingStrip', 'depositCount');
-      renderRows('withdraw', 'withdrawTable', 'withdrawPendingStrip', 'withdrawCount');
-    }
-    renderAll();
-
-    // বটম-নেভ থেকে সরাসরি ?tab=withdraw বা ?tab=deposit দিয়ে আসলে সেই ট্যাব খুলে দেখানো
-    const urlTab = new URLSearchParams(window.location.search).get('tab');
-    if (urlTab === 'withdraw') showPayTab(1);
-
-    function showPayTab(i) {
-      document.querySelectorAll('.pay-panel').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.pay-tab-btn').forEach(el => el.classList.remove('active'));
-      document.getElementById('pay-tab-' + i).classList.add('active');
-      document.querySelectorAll('.pay-tab-btn')[i].classList.add('active');
-    }
-
-    function getSelectedPaymentIds() {
-      return Array.from(document.querySelectorAll('.pay-row-check:checked')).map(el => el.getAttribute('data-id'));
-    }
-    function updatePaymentBulkBar() {
-      const ids = getSelectedPaymentIds();
-      const bar = document.getElementById('paymentBulkBar');
-      document.getElementById('paymentBulkCount').textContent = ids.length;
-      bar.classList.toggle('hidden', ids.length === 0);
-      bar.style.display = ids.length > 0 ? 'flex' : 'none';
-      document.querySelectorAll('.pay-select-all').forEach(sa => {
-        const table = document.getElementById(sa.getAttribute('data-table'));
-        const rowChecks = table.querySelectorAll('.pay-row-check');
-        const checkedInTable = table.querySelectorAll('.pay-row-check:checked');
-        sa.checked = rowChecks.length > 0 && checkedInTable.length === rowChecks.length;
-      });
-    }
-    function togglePaySelectAll(checkbox) {
-      const table = document.getElementById(checkbox.getAttribute('data-table'));
-      table.querySelectorAll('.pay-row-check').forEach(el => { el.checked = checkbox.checked; });
-      updatePaymentBulkBar();
-    }
-    function clearPaymentBulkSelection() {
-      document.querySelectorAll('.pay-row-check').forEach(el => { el.checked = false; });
-      document.querySelectorAll('.pay-select-all').forEach(el => { el.checked = false; });
-      updatePaymentBulkBar();
-    }
-    function bulkPaymentAction(action) {
-      const ids = getSelectedPaymentIds();
-      if (ids.length === 0) return;
-      const label = action === 'approve' ? 'অনুমোদন' : 'বাতিল';
-      if (!confirm(ids.length + 'টা রিকোয়েস্ট ' + label + ' করবেন?')) return;
-      fetch('/payment/admin/payments/bulk-' + action, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids })
-      })
-        .then(r => r.json())
-        .then(data => {
-          if (data.success) {
-            const msg = data.succeeded + 'টা সফল, ' + data.failed + 'টা ব্যর্থ';
-            if (typeof showAdminToast === 'function') showAdminToast(msg); else alert(msg);
-            setTimeout(() => window.location.reload(), 900);
-          } else {
-            const msg = data.error || 'সমস্যা হয়েছে';
-            if (typeof showAdminToast === 'function') showAdminToast(msg); else alert(msg);
-          }
-        })
-        .catch(() => {
-          if (typeof showAdminToast === 'function') showAdminToast('নেটওয়ার্ক সমস্যা হয়েছে'); else alert('নেটওয়ার্ক সমস্যা হয়েছে');
-        });
-    }
-  </script>
+  <script type="application/json" id="paymentRequests"><%- jsonScriptSafe(requests || []) %></script>
+  <script src="/js/payment-admin.js"></script>
 </body>
 </html>

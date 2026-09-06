@@ -18,7 +18,11 @@ const { pool } = require('../../db');
 const { uniqueUsername } = require('../helpers/app');
 
 const ROOT = path.join(__dirname, '..', '..');
-const INDEX_EJS = fs.readFileSync(path.join(ROOT, 'views', 'index.ejs'), 'utf8');
+// docs/CSP.md ধাপ ৩: হোমপেজের রেন্ডারিং কোড public/js/views/index.js-এ
+// সরানো হয়েছে। escHtml() ও তার সব ব্যবহার সেখানেই, তাই টেমপ্লেট +
+// স্ক্রিপ্ট একসাথে দেখা হয় — যাচাইয়ের বিষয়বস্তু অপরিবর্তিত।
+const INDEX_EJS = require('../helpers/viewScripts')
+  .readViewWithScripts('views', 'index.ejs');
 
 const PAYLOADS = [
   '<img src=x onerror=alert(1)>',
@@ -98,8 +102,13 @@ describe('Stored XSS sweep (PHASE 9)', () => {
 
   describe('অন্যান্য dynamic sink গুলো নিরাপদ থাকে', () => {
     test('admin leaderboard error message escape করে', () => {
-      const src = fs.readFileSync(path.join(ROOT, 'views', 'admin', 'leaderboard.ejs'), 'utf8');
+      // docs/CSP.md ধাপ ৩-এ কোডটা public/js/views/admin-leaderboard.js-এ
+      // সরানো হয়েছে; এস্কেপিং অপরিবর্তিত, তাই যাচাইও সেখানেই।
+      const src = fs.readFileSync(
+        path.join(ROOT, 'public', 'js', 'views', 'admin-leaderboard.js'), 'utf8'
+      );
       const idx = src.indexOf('innerHTML');
+      expect(idx).toBeGreaterThan(-1);
       expect(src.slice(idx, idx + 200)).toMatch(/esc\(/);
     });
 

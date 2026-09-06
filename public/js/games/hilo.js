@@ -1,0 +1,86 @@
+// views/games/hilo.ejs-এর গেম লজিক।
+// আগে টেমপ্লেটের ভেতরে ইনলাইন ব্লক ছিল; docs/CSP.md ধাপ ৩ অনুযায়ী বাইরে আনা হয়েছে,
+// যাতে CSP-র script-src থেকে ভবিষ্যতে unsafe-inline সরানো যায়।
+// কোনো সার্ভার-সাইড মান লাগে না, তাই ফাইলটা স্ট্যাটিকভাবে পরিবেশিত হয়।
+
+document.getElementById('gameUI').innerHTML = `
+  <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px;background:linear-gradient(180deg,#0a0a0a,#001a0a);padding:15px;">
+    <div id="hiloStatus" style="color:#ffd700;font-weight:700;font-size:15px;">পরের কার্ড বেশি না কম?</div>
+    <div style="display:flex;gap:20px;align-items:center;">
+      <div style="text-align:center;">
+        <div id="currentCard" style="width:80px;height:110px;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#000;">?</div>
+        <div style="color:#888;font-size:12px;margin-top:5px;">বর্তমান</div>
+      </div>
+      <div style="font-size:30px;">→</div>
+      <div style="text-align:center;">
+        <div id="nextCard" style="width:80px;height:110px;background:#1e1e1e;border:2px solid #333;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:30px;">🂠</div>
+        <div style="color:#888;font-size:12px;margin-top:5px;">পরেরটা?</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:15px;">
+      <button data-game-select="high" id="btnHigh" style="padding:12px 25px;background:#1e1e1e;color:#10b981;border:2px solid #10b981;border-radius:8px;cursor:pointer;font-weight:700;font-size:16px;">⬆️ বেশি (2x)</button>
+      <button data-game-select="low" id="btnLow" style="padding:12px 25px;background:#1e1e1e;color:#e60000;border:2px solid #e60000;border-radius:8px;cursor:pointer;font-weight:700;font-size:16px;">⬇️ কম (2x)</button>
+    </div>
+  </div>
+`;
+
+const cardValues = [2,3,4,5,6,7,8,9,10,11,12,13,14];
+const cardNames = {2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',8:'8',9:'9',10:'10',11:'J',12:'Q',13:'K',14:'A'};
+let currentValue = cardValues[Math.floor(Math.random()*cardValues.length)];
+let hlSelected = null;
+
+document.getElementById('currentCard').innerText = cardNames[currentValue];
+
+function selectHL(side, el) {
+  hlSelected = side;
+  document.getElementById('btnHigh').style.opacity = side === 'high' ? '1' : '0.5';
+  document.getElementById('btnLow').style.opacity = side === 'low' ? '1' : '0.5';
+}
+
+document.getElementById('mainGameBtn').addEventListener('click', async () => {
+  if (!hlSelected) { alert('বেশি বা কম বেছে নিন!'); return; }
+  const amount = parseInt(document.getElementById('betAmount').value);
+  if (isNaN(amount) || amount < 10) { alert('ন্যূনতম বাজি ১০ কয়েন'); return; }
+
+  document.getElementById('mainGameBtn').disabled = true;
+  document.getElementById('nextCard').innerText = '🂠';
+  document.getElementById('hiloStatus').innerText = 'কার্ড উল্টানো হচ্ছে...';
+
+  const data = await placeBet(amount, hlSelected);
+  if (!data) { document.getElementById('mainGameBtn').disabled = false; return; }
+
+  setTimeout(() => {
+    const nextValue = cardValues[Math.floor(Math.random()*cardValues.length)];
+    document.getElementById('nextCard').innerText = cardNames[nextValue];
+    document.getElementById('nextCard').style.background = '#fff';
+    document.getElementById('nextCard').style.color = '#000';
+
+    const actualResult = nextValue > currentValue ? 'high' : nextValue < currentValue ? 'low' : 'equal';
+
+    if (data.winAmount > 0) {
+      document.getElementById('hiloStatus').innerText = `🎉 জিতেছেন! +${data.winAmount} কয়েন`;
+      document.getElementById('hiloStatus').style.color = '#10b981';
+    } else {
+      document.getElementById('hiloStatus').innerText = `😢 হেরেছেন! কার্ড ছিল ${cardNames[nextValue]}`;
+      document.getElementById('hiloStatus').style.color = '#e60000';
+    }
+
+    currentValue = nextValue;
+    hlSelected = null;
+    document.getElementById('btnHigh').style.opacity = '1';
+    document.getElementById('btnLow').style.opacity = '1';
+
+    setTimeout(() => {
+      document.getElementById('currentCard').innerText = cardNames[currentValue];
+      document.getElementById('nextCard').innerText = '🂠';
+      document.getElementById('nextCard').style.background = '#1e1e1e';
+      document.getElementById('nextCard').style.color = '#fff';
+      document.getElementById('hiloStatus').innerText = 'পরের কার্ড বেশি না কম?';
+      document.getElementById('hiloStatus').style.color = '#ffd700';
+      document.getElementById('mainGameBtn').disabled = false;
+    }, 2500);
+  }, 1500);
+});
+
+// ডেলিগেটেড [data-game-select] hook (public/js/ui-hooks.js) এই ফাংশনটা ডাকে।
+window.LivoGameSelect = selectHL;

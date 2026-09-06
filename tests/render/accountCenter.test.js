@@ -94,14 +94,24 @@ describe('অ্যাকাউন্ট সেন্টার — প্রো�
   });
 
   test('ইউজার আইডি ও কপি বাটন আছে', () => {
+    // CSP মাইগ্রেশনে (docs/CSP.md ধাপ ২) ইনলাইন onclick সরিয়ে
+    // data-profile-action hook করা হয়েছে; আচরণ public/js/profile-index.js-এ।
     expect(html).toMatch(/ID:\s*\d+/);
-    expect(html).toContain('copyUid()');
-    expect(html).toContain('copyUsername()');
+    expect(html).toContain('data-profile-action="copy-uid"');
+    expect(html).toContain('data-profile-action="copy-username"');
+
+    const js = require('fs').readFileSync(
+      require('path').join(__dirname, '..', '..', 'public', 'js', 'profile-index.js'), 'utf8');
+    expect(js).toMatch(/'copy-uid': copyUid/);
+    expect(js).toMatch(/'copy-username': copyUsername/);
   });
 
   test('ব্যালেন্স ও রিফ্রেশ বাটন আছে', () => {
     expect(html).toContain('id="balanceText"');
-    expect(html).toContain('refreshBalance()');
+    expect(html).toContain('data-profile-action="refresh-balance"');
+    const js = require('fs').readFileSync(
+      require('path').join(__dirname, '..', '..', 'public', 'js', 'profile-index.js'), 'utf8');
+    expect(js).toMatch(/'refresh-balance': refreshBalance/);
   });
 
   test('মেম্বারশিপ (VIP) স্ট্যাটাস দেখায়', () => {

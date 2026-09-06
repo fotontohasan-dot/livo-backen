@@ -26,8 +26,27 @@
 const { getCsrfAgent, uniqueUsername, uniquePhone } = require('../helpers/app');
 const gameRegistry = require('../../services/gameRegistry');
 
-// ক্র্যাশ (aviator) UI-এর স্বতন্ত্র চিহ্ন — views/games/aviator.ejs
+// ক্র্যাশ (aviator) UI-এর স্বতন্ত্র চিহ্ন।
+//
+// docs/CSP.md ধাপ ৩-এ গেমের কোড ইনলাইন <script> থেকে
+// public/js/games/<slug>.js-এ সরানো হয়েছে। আগে এই মার্কারগুলো HTML
+// রেসপন্সেই পাওয়া যেত, কারণ স্ক্রিপ্টের সোর্স নিজেই পেইজের অংশ ছিল —
+// অর্থাৎ টেস্টটা আসলে "UI এসেছে" নয়, "স্ক্রিপ্টের সোর্সে স্ট্রিংটা আছে"
+// যাচাই করত। এখন রাউটিং যাচাই হয় পেইজ কোন স্ক্রিপ্ট ফাইল লোড করছে তা
+// দেখে, আর মার্কারগুলো ওই ফাইলে খোঁজা হয়। সম্পত্তি একই, জায়গাটা সঠিক।
 const CRASH_UI_MARKERS = ['id="aviatorGame"', 'id="multiplier"', 'function cashOut('];
+const CRASH_SCRIPT = '/js/games/aviator.js';
+
+const { withScripts } = require('../helpers/viewScripts');
+const fs = require('fs');
+const path = require('path');
+function loadedGameScript(html) {
+  const m = /<script src="(\/js\/games\/[^"]+)"><\/script>/.exec(html);
+  return m ? m[1] : null;
+}
+function gameScriptSource(url) {
+  return fs.readFileSync(path.join(__dirname, '..', '..', 'public', url), 'utf8');
+}
 
 // জেনেরিক ফলব্যাক টেমপ্লেটের স্বতন্ত্র চিহ্ন — views/games/play.ejs-এর শেষ else শাখা
 const GENERIC_UI_MARKERS = ['g_status', 'g_result'];
@@ -64,8 +83,11 @@ describe('LIVO-03 — ক্র্যাশ গেমের UI রাউটি�
     const res = await agent.get('/games/crash-game');
     expect(res.status).toBe(200);
 
+    // পেইজটা ক্র্যাশ গেমের স্ক্রিপ্টই লোড করছে — এটাই রাউটিংয়ের প্রমাণ
+    expect(loadedGameScript(res.text)).toBe(CRASH_SCRIPT);
+    const gameJs = gameScriptSource(CRASH_SCRIPT);
     CRASH_UI_MARKERS.forEach((marker) => {
-      expect(res.text).toContain(marker);
+      expect(gameJs).toContain(marker);
     });
 
     // ক্যাশআউট সত্যিই সার্ভারের /games/cashout-এ পৌঁছায় (play.ejs-এর recordWin
@@ -73,26 +95,33 @@ describe('LIVO-03 — ক্র্যাশ গেমের UI রাউটি�
     // থেকে ডাকা হচ্ছে সেটা বাস্তবায়নের বিস্তারিত — LIVO-05-এ fetch() সরাসরি না
     // ডেকে শেয়ার্ড betRequest() ব্যবহার শুরু হয়েছে — তাই এখানে এন্ডপয়েন্ট ও
     // কল-সাইট দুটোই দেখা হয়, নির্দিষ্ট কোনো কল-সাইট নয়।
-    expect(res.text).toContain('recordWin(');
-    expect(res.text).toMatch(/async function recordWin\s*\(/);
-    expect(res.text).toContain("'/games/cashout'");
+    // recordWin() এখন public/js/views/games-play.js-এ (ধাপ ৩), তাই
+    // পেজ + তার লোড করা স্ক্রিপ্ট একসাথে দেখা হয়।
+    expect(withScripts(res.text)).toContain('recordWin(');
+    expect(withScripts(res.text)).toMatch(/async function recordWin\s*\(/);
+    expect(withScripts(res.text)).toContain("'/games/cashout'");
   });
 
   test('৪) crash-game কখনো জেনেরিক শাখায় পড়বে না', async () => {
     const res = await agent.get('/games/crash-game');
+    const gameJs = gameScriptSource(loadedGameScript(res.text));
     GENERIC_UI_MARKERS.forEach((marker) => {
       expect(res.text).not.toContain(marker);
+      expect(gameJs).not.toContain(marker);
     });
   });
 
   test('৫) aviator-এর আগের আচরণ অপরিবর্তিত', async () => {
     const res = await agent.get('/games/aviator');
     expect(res.status).toBe(200);
+    expect(loadedGameScript(res.text)).toBe(CRASH_SCRIPT);
+    const gameJs = gameScriptSource(CRASH_SCRIPT);
     CRASH_UI_MARKERS.forEach((marker) => {
-      expect(res.text).toContain(marker);
+      expect(gameJs).toContain(marker);
     });
     GENERIC_UI_MARKERS.forEach((marker) => {
       expect(res.text).not.toContain(marker);
+      expect(gameJs).not.toContain(marker);
     });
   });
 });

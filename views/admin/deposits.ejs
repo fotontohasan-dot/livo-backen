@@ -19,8 +19,8 @@ function depRow(d, isPending) {
   const safeTrxId = escapeHtml(d.transaction_id);
   const actions = isPending
     ? '<div class="flex justify-center gap-2">' +
-        '<button onclick="approveDeposit(' + d.id + ')" class="px-4 py-1.5 text-xs font-bold bg-emerald-600 text-white rounded-xl">Approve</button>' +
-        '<button onclick="rejectDeposit(' + d.id + ')" class="px-4 py-1.5 text-xs font-bold bg-red-600 text-white rounded-xl">Reject</button>' +
+        '<button data-deposit-approve="' + Number(d.id) + '" class="px-4 py-1.5 text-xs font-bold bg-emerald-600 text-white rounded-xl">Approve</button>' +
+        '<button data-deposit-reject="' + Number(d.id) + '" class="px-4 py-1.5 text-xs font-bold bg-red-600 text-white rounded-xl">Reject</button>' +
       '</div>'
     : '<span class="text-xs text-slate-500 font-medium">' + statusLabel + '</span>';
   return '<tr id="dep-row-' + d.id + '">' +
@@ -97,28 +97,6 @@ const recentRows = (recentDeposits || []).map(d => depRow(d, false)).join('');
     </div>
 </div>
 
-<script>
-async function approveDeposit(id) {
-    if (!confirm('এই ডিপোজিট Approve করবেন?')) return;
-    try {
-        const res = await fetch('/admin/api/deposits/' + id + '/approve', { method: 'POST' });
-        const data = await res.json();
-        if (data.success) { alert('✅ ডিপোজিট Approve হয়েছে, ইউজারের কয়েন যোগ হয়ে গেছে।'); location.reload(); }
-        else alert('❌ ' + (data.error || 'সমস্যা হয়েছে'));
-    } catch (e) { alert('❌ সার্ভার এরর'); }
-}
-async function rejectDeposit(id) {
-    const reason = prompt('বাতিলের কারণ লিখুন (ঐচ্ছিক):', '');
-    if (reason === null) return;
-    try {
-        const res = await fetch('/admin/api/deposits/' + id + '/reject', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason })
-        });
-        const data = await res.json();
-        if (data.success) { alert('✅ ডিপোজিট বাতিল হয়েছে।'); location.reload(); }
-        else alert('❌ ' + (data.error || 'সমস্যা হয়েছে'));
-    } catch (e) { alert('❌ সার্ভার এরর'); }
-}
-</script>
+<script src="/js/views/admin-deposits.js"></script>
 ` 
 }) %>

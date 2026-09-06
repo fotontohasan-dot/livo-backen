@@ -44,7 +44,7 @@
         অ্যাকাউন্ট বন্ধ আছে <%= new Date(rg.self_exclude_until).toLocaleDateString('bn-BD') %> পর্যন্ত।
       </div>
     <% } else { %>
-      <form action="/profile/responsible/self-exclude" method="POST" onsubmit="return confirm('আপনি কি নিশ্চিত? এই সময়ে লগইন করা যাবে না।');">
+      <form action="/profile/responsible/self-exclude" method="POST" data-confirm="আপনি কি নিশ্চিত? এই সময়ে লগইন করা যাবে না।">
         <select name="days" style="width:100%;background:#1e1e1e;border:1px solid #333;color:#fff;padding:12px;border-radius:8px;margin-bottom:10px;">
           <option value="1">১ দিন</option>
           <option value="7">৭ দিন</option>

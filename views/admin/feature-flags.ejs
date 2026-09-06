@@ -28,7 +28,7 @@ function toggleCell(f) {
   const confirmMsg = (on && critical)
     ? t('admin_ff_confirm_critical').replace('{value}', String(tk(f.labelKey, f.label)).replace(/"/g, ''))
     : (on ? t('admin_ff_confirm_disable').replace('{value}', String(tk(f.labelKey, f.label)).replace(/"/g, '')) : '');
-  const onsubmit = confirmMsg ? ' onsubmit="return confirm(\'' + esc(confirmMsg) + '\')"' : '';
+  const onsubmit = confirmMsg ? ' data-confirm="' + esc(confirmMsg) + '"' : '';
   return '<form method="POST" action="/admin/feature-flags/' + f.id + '/toggle" style="display:inline"' + onsubmit + '>' +
     '<button type="submit" aria-pressed="' + (on ? 'true' : 'false') +
       '" title="' + esc(on ? t('admin_ff_click_to_disable') : t('admin_ff_click_to_enable')) + '"' +
@@ -44,7 +44,7 @@ function flagCard(f) {
   // managed=false → অ্যাডমিনের হাতে তৈরি কাস্টম ফ্ল্যাগ; শুধু এগুলোই ডিলিট করা যায়।
   const del = f.managed ? '' :
     '<form method="POST" action="/admin/feature-flags/' + f.id + '/delete" style="display:inline"' +
-    ' onsubmit="return confirm(\'' + esc(t('admin_ff_confirm_delete')) + '\')">' +
+    ' data-confirm="' + esc(t('admin_ff_confirm_delete')) + '">' +
     '<button type="submit" class="ff-del" aria-label="' + esc(t('admin_ui_delete')) + '" title="' + esc(t('admin_ui_delete')) + '">&times;</button></form>';
 
   return '<div class="ff-card" data-key="' + esc(f.key) + '" data-state="' + (on ? 'on' : 'off') + '"' +
@@ -198,45 +198,6 @@ const groupHtml = allGroups.map(function (g) {
   .ff-create-btn { background:#3b82f6; color:#fff; border:none; border-radius:12px; font-size:13px; font-weight:700; min-height:44px; cursor:pointer; }
 </style>
 
-<script>
-(function () {
-  var search = document.getElementById('ffSearch');
-  var noResult = document.getElementById('ffNoResult');
-  var filters = Array.prototype.slice.call(document.querySelectorAll('.ff-filter'));
-  var cards = Array.prototype.slice.call(document.querySelectorAll('.ff-card'));
-  var groups = Array.prototype.slice.call(document.querySelectorAll('.ff-group'));
-  var state = 'all';
-
-  function apply() {
-    var q = (search.value || '').trim().toLowerCase();
-    var shown = 0;
-    cards.forEach(function (card) {
-      var matchText = !q || card.getAttribute('data-search').indexOf(q) !== -1;
-      var matchState = state === 'all' || card.getAttribute('data-state') === state;
-      var show = matchText && matchState;
-      card.style.display = show ? '' : 'none';
-      if (show) shown++;
-    });
-    // যে গ্রুপের সব কার্ড লুকানো, সেই গ্রুপের হেডিংও লুকানো হয় —
-    // নাহলে খালি শিরোনামের সারি পড়ে থাকত।
-    groups.forEach(function (g) {
-      var any = Array.prototype.slice.call(g.querySelectorAll('.ff-card'))
-        .some(function (c) { return c.style.display !== 'none'; });
-      g.style.display = any ? '' : 'none';
-    });
-    noResult.style.display = shown === 0 ? '' : 'none';
-  }
-
-  search.addEventListener('input', apply);
-  filters.forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      filters.forEach(function (b) { b.classList.remove('active'); });
-      btn.classList.add('active');
-      state = btn.getAttribute('data-filter');
-      apply();
-    });
-  });
-})();
-</script>
+<script src="/js/views/admin-feature-flags.js"></script>
 `
 }) %>

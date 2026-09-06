@@ -37,21 +37,13 @@
           <div style="font-size:3rem;margin-bottom:.5rem;">🎁</div>
           <h3 style="margin-bottom:.5rem;"><%= t.daily_bonus %></h3>
           <p style="color:var(--muted);font-size:.85rem;margin-bottom:1rem;"><%= t.daily_bonus_desc %></p>
-          <button onclick="claimBonus()" class="btn btn-gold" style="width:100%;justify-content:center;"><%= t.claim_bonus_btn %></button>
+          <button data-claim-bonus class="btn btn-gold" style="width:100%;justify-content:center;"><%= t.claim_bonus_btn %></button>
         </div>
       </div>
     </div>
   </div>
 </div>
-<script>
-function claimBonus() {
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = '/coins/daily-bonus';
-  document.body.appendChild(form);
-  form.submit();
-}
-</script>
+<script src="/js/views/coins.js"></script>
 <%- include('partials/footer') %>
 <%- include('partials/bottom-nav', { activePage: 'profile' }) %>
 </body></html>

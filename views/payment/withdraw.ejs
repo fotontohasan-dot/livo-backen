@@ -107,7 +107,7 @@
                                 <p class="text-xs text-muted"><%= c.account_number %></p>
                             </div>
                         </div>
-                        <form action="/profile/cards/delete/<%= c.id %>" method="POST" onsubmit="return confirm('আপনি কি নিশ্চিত?')">
+                        <form action="/profile/cards/delete/<%= c.id %>" method="POST" data-confirm="আপনি কি নিশ্চিত?">
                             <button type="submit" class="delete-btn">
                                 <i class="far fa-times-circle"></i>
                             </button>
@@ -136,7 +136,7 @@
             <p><%= t.available_amount_label %> ৳ <%= (coins || 0).toFixed(2) %></p>
         </div>
 
-        <button onclick="location.reload()" class="w-full mt-4 py-2.5 bg-blue-100 text-blue-600 rounded-full font-bold flex items-center justify-center gap-2 text-sm">
+        <button data-reload class="w-full mt-4 py-2.5 bg-blue-100 text-blue-600 rounded-full font-bold flex items-center justify-center gap-2 text-sm">
             <i class="fas fa-sync-alt"></i> <%= t.refresh_your_balance %>
         </button>
     </div>
@@ -202,7 +202,7 @@
       </div>
     <% } %>
 
-    <form action="/payment/withdraw" method="POST" id="withdrawForm" onsubmit="LivoToast.setLoading(document.getElementById('withdrawSubmitBtn'), true, 'উইথড্র অনুরোধ পাঠানো হচ্ছে...')">
+    <form action="/payment/withdraw" method="POST" id="withdrawForm" data-loading-target="withdrawSubmitBtn" data-loading-label="উইথড্র অনুরোধ পাঠানো হচ্ছে...">
       <!-- Withdrawal Form -->
       <% var formGated = locked || pinNotConfigured || pinLocked || windowClosed; %>
       <fieldset <%= formGated ? 'disabled' : '' %> class="space-y-5 <%= formGated ? 'opacity-50' : '' %>">
@@ -217,7 +217,7 @@
         <% } else { %>
           <div>
             <label class="block text-main font-bold mb-2"><%= t.select_ewallet %></label>
-            <select id="walletSelect" class="w-full p-4 border-2 border-glass rounded-xl focus:outline-none bg-surface text-main font-bold" required onchange="syncWallet()">
+            <select id="walletSelect" class="w-full p-4 border-2 border-glass rounded-xl focus:outline-none bg-surface text-main font-bold" required data-sync-wallet>
               <option value="" disabled selected><%= t.choose_linked_wallet %></option>
               <% cards.forEach(c => {
                    const bn = (c.bank_name || '').toLowerCase();
@@ -253,7 +253,7 @@
         <div class="relative">
             <span class="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-main"><%= t.password %></span>
             <input type="password" id="secPassword" name="password" placeholder="<%= t.password %>" class="input-field pl-24 text-right" required>
-            <button type="button" onclick="togglePassword()" class="absolute right-4 top-1/2 -translate-y-1/2 text-muted">
+            <button type="button" data-reveal-field="secPassword" data-reveal-icon="eyeIcon" class="absolute right-4 top-1/2 -translate-y-1/2 text-muted">
                 <i class="fas fa-eye-slash" id="eyeIcon"></i>
             </button>
         </div>
@@ -262,7 +262,7 @@
           <label class="block text-main font-bold mb-2"><i class="fas fa-shield-alt red-theme-text"></i> Withdraw PIN</label>
           <div class="relative">
               <input type="password" id="withdrawPinField" name="withdraw_pin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" autocomplete="off" placeholder="<%= t.enter_6_digit_pin %>" class="input-field pr-12 text-right" style="letter-spacing:4px;" required>
-              <button type="button" onclick="toggleWithdrawPin()" class="absolute right-4 top-1/2 -translate-y-1/2 text-muted">
+              <button type="button" data-reveal-field="withdrawPinField" data-reveal-icon="withdrawPinEye" class="absolute right-4 top-1/2 -translate-y-1/2 text-muted">
                   <i class="fas fa-eye-slash" id="withdrawPinEye"></i>
               </button>
           </div>
@@ -277,43 +277,7 @@
   </div>
 </div>
 
-<script>
-  function syncWallet() {
-    const sel = document.getElementById('walletSelect');
-    const opt = sel.options[sel.selectedIndex];
-    document.getElementById('methodField').value = opt.dataset.method || '';
-    document.getElementById('accountNumberField').value = opt.dataset.number || '';
-  }
-
-  function togglePassword() {
-    const pwd = document.getElementById('secPassword');
-    const eye = document.getElementById('eyeIcon');
-    if (pwd.type === 'password') {
-      pwd.type = 'text';
-      eye.classList.remove('fa-eye-slash');
-      eye.classList.add('fa-eye');
-    } else {
-      pwd.type = 'password';
-      eye.classList.remove('fa-eye');
-      eye.classList.add('fa-eye-slash');
-    }
-  }
-
-  function toggleWithdrawPin() {
-    const pin = document.getElementById('withdrawPinField');
-    const eye = document.getElementById('withdrawPinEye');
-    if (!pin || !eye) return;
-    if (pin.type === 'password') {
-      pin.type = 'text';
-      eye.classList.remove('fa-eye-slash');
-      eye.classList.add('fa-eye');
-    } else {
-      pin.type = 'password';
-      eye.classList.remove('fa-eye');
-      eye.classList.add('fa-eye-slash');
-    }
-  }
-</script>
+<script src="/js/payment-withdraw.js"></script>
 
 <%- include('../partials/bottom-nav') %>
 </body></html>

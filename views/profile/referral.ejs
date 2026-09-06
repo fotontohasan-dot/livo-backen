@@ -47,7 +47,7 @@
       <div id="ref-code" style="flex:1;background:rgba(255,255,255,0.1);border-radius:8px;padding:12px;color:#f59e0b;font-size:18px;font-weight:bold;letter-spacing:2px;text-align:center;">
         <%= user.referral_code || 'N/A' %>
       </div>
-      <button onclick="copyCode()" style="background:#8b5cf6;color:#fff;border:none;border-radius:8px;padding:12px 16px;cursor:pointer;"><%= t.copy_short %></button>
+      <button data-referral-action="copy" style="background:#8b5cf6;color:#fff;border:none;border-radius:8px;padding:12px 16px;cursor:pointer;"><%= t.copy_short %></button>
     </div>
   </div>
 
@@ -58,7 +58,7 @@
       <div style="flex:1;background:rgba(255,255,255,0.1);border-radius:8px;padding:10px;color:var(--text-main);font-size:12px;word-break:break-all;" id="ref-link">
         <%= baseUrl %>/register?ref=<%= user.referral_code %>
       </div>
-      <button onclick="shareLink()" style="background:#10b981;color:#fff;border:none;border-radius:8px;padding:12px 16px;cursor:pointer;"><%= t.share %></button>
+      <button data-referral-action="share" style="background:#10b981;color:#fff;border:none;border-radius:8px;padding:12px 16px;cursor:pointer;"><%= t.share %></button>
     </div>
   </div>
 
@@ -111,18 +111,6 @@
   </div>
 </div>
 
-<script>
-function copyCode() {
-  const code = '<%= user.referral_code %>';
-  navigator.clipboard.writeText(code).then(() => alert('কোড কপি হয়েছে!'));
-}
-function shareLink() {
-  const link = '<%= baseUrl %>/register?ref=<%= user.referral_code %>';
-  if (navigator.share) {
-    navigator.share({ title: 'LIVO ত যোগ দিন', text: 'আমার রেফারেল লিংক দিয়ে রেজিস্টার করুন!', url: link });
-  } else {
-    navigator.clipboard.writeText(link).then(() => alert('লিংক কপি হয়েছে!'));
-  }
-}
-</script>
+<script type="application/json" id="profile-referralConfig"><%- jsonScriptSafe({ referralCode: user.referral_code, baseUrl: baseUrl }) %></script>
+<script src="/js/views/profile-referral.js"></script>
 </body></html>

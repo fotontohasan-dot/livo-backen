@@ -32,7 +32,7 @@
       <div class="admin-card" style="padding:14px;margin-bottom:14px;">
         <form method="GET" action="/admin/leaderboard/contest/payouts" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
           <label style="font-size:12px;color:var(--text-muted);"><%= t('admin_label_months_ago') %></label>
-          <select class="select" style="max-width:160px;" name="months" onchange="this.form.submit()">
+          <select class="select" style="max-width:160px;" name="months" data-auto-submit>
             <% for (let i = 1; i <= 12; i++) { %>
               <option value="<%= i %>" <%= monthsBack === i ? 'selected' : '' %>><%= i %> মাস আগে</option>
             <% } %>
@@ -81,7 +81,7 @@
                     </td>
                     <td style="text-align:right;white-space:nowrap;">
                       <% if (p.status === 'pending') { %>
-                        <button type="button" class="btn btn-sm btn-green" onclick="openMarkPaid(<%= p.id %>, '<%= (p.username || '').replace(/'/g, "\\'") %>')"><i class="fas fa-check"></i> <%= t('admin_btn_mark_paid') %></button>
+                        <button type="button" class="btn btn-sm btn-green" data-markpaid-id="<%= p.id %>" data-markpaid-name="<%= p.username || '' %>"><i class="fas fa-check"></i> <%= t('admin_btn_mark_paid') %></button>
                       <% } else { %>
                         <span style="color:var(--text-muted);font-size:11px;"><%= t('admin_label_final') %></span>
                       <% } %>
@@ -131,7 +131,7 @@
     <div class="modal-box">
       <div class="modal-header">
         <h3><%= t('admin_confirm_prize_heading') %></h3>
-        <button class="modal-close" onclick="document.getElementById('markPaidModal').classList.remove('show')"><i class="fas fa-times"></i></button>
+        <button class="modal-close" data-modal-close="markPaidModal"><i class="fas fa-times"></i></button>
       </div>
       <form method="POST" id="markPaidForm">
         <div class="modal-body">
@@ -140,19 +140,13 @@
           <input type="hidden" name="months" value="<%= monthsBack %>">
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn" onclick="document.getElementById('markPaidModal').classList.remove('show')"><%= t('admin_btn_cancel') %></button>
+          <button type="button" class="btn" data-modal-close="markPaidModal"><%= t('admin_btn_cancel') %></button>
           <button type="submit" class="btn btn-green"><i class="fas fa-check"></i> <%= t('admin_btn_confirm') %></button>
         </div>
       </form>
     </div>
   </div>
 
-  <script>
-    function openMarkPaid(id, username) {
-      document.getElementById('markPaidUsername').textContent = '@' + username;
-      document.getElementById('markPaidForm').action = '/admin/leaderboard/contest/payouts/' + id + '/mark-paid';
-      document.getElementById('markPaidModal').classList.add('show');
-    }
-  </script>
+  <script src="/js/views/admin-contest-payouts.js"></script>
 </body>
 </html>
