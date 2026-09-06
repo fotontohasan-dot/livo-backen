@@ -770,11 +770,46 @@ const { swaggerSpec } = require('./services/swagger');
 // CSP আর মুছে ফেলা হয় না। বদলে এই path-এর জন্য একটা scoped policy বসানো হয়:
 // Swagger UI-এর যতটুকু inline দরকার ততটুকুই, আর object-src/frame-ancestors
 // শক্ত করে বাঁধা। global policy-র চেয়ে এটা সংকীর্ণ, অনুপস্থিত নয়।
-const apiDocsEnabled = () => process.env.NODE_ENV !== 'production' || process.env.ENABLE_API_DOCS === 'true';
+// API_DOCS_ACCESS তিনটা মোড নেয়: 'off' (সম্পূর্ণ বন্ধ), 'admin' (শুধু admin,
+// ব্যর্থ হলে 404 — 403/401 নয়, কারণ সেগুলো endpoint-এর অস্তিত্ব জানিয়ে দেয়),
+// 'public' (কোনো auth ছাড়াই খোলা)। স্পষ্ট মান না থাকলে production-এ 'admin',
+// অন্য সব পরিবেশে (dev/test) 'public' — পুরনো ENABLE_API_DOCS আচরণের সাথে সামঞ্জস্যপূর্ণ ডিফল্ট।
+//
+// মোডটা module-লোডের সময় একবারই পড়া হয় (রিকোয়েস্ট-টাইমে নয়): টেস্টে
+// jest.isolateModules দিয়ে প্রতিটা মোডের জন্য আলাদা app.js instance বুট করা
+// হয়, আর env var require()-এর পরপরই restore হয়ে যায় — তাই request-time-এ
+// পড়লে সবসময় ডিফল্ট মোড পাওয়া যেত।
+const API_DOCS_ACCESS_MODE = (() => {
+  const mode = process.env.API_DOCS_ACCESS;
+  if (mode === 'off' || mode === 'admin' || mode === 'public') return mode;
+  return process.env.NODE_ENV === 'production' ? 'admin' : 'public';
+})();
 
-const apiDocsGate = (req, res, next) => {
-  if (!apiDocsEnabled()) return res.status(404).json({ success: false, error: 'Not found' });
-  return next();
+const apiDocsGate = async (req, res, next) => {
+  const mode = API_DOCS_ACCESS_MODE;
+
+  if (mode === 'off') {
+    return res.status(404).json({ success: false, error: 'Not found' });
+  }
+
+  if (mode === 'public') {
+    return next();
+  }
+
+  // mode === 'admin' — নিজস্ব চেক, কারণ isAdmin ব্যর্থতায় redirect/403 দেয়,
+  // যা docs endpoint-এর অস্তিত্ব ফাঁস করে। এখানে সবসময় 404।
+  const deny = () => res.status(404).json({ success: false, error: 'Not found' });
+  if (!req.session || !req.session.user) return deny();
+
+  try {
+    const result = await pool.query('SELECT role, is_banned, deleted_at FROM users WHERE id = $1', [req.session.user.id]);
+    const row = result.rows[0];
+    if (!row || row.is_banned || row.deleted_at || row.role !== 'admin') return deny();
+    return next();
+  } catch (err) {
+    console.error('apiDocsGate role check error:', err.message);
+    return deny();
+  }
 };
 
 const SWAGGER_CSP = [
@@ -787,7 +822,7 @@ const SWAGGER_CSP = [
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
-  "frame-ancestors 'none'"
+  "frame-ancestors 'self'"
 ].join('; ');
 
 const swaggerCspHeader = (req, res, next) => {
@@ -799,8 +834,8 @@ const swaggerCspHeader = (req, res, next) => {
   return next();
 };
 
-app.get('/api/docs.json', apiDocsGate, require('./middleware/auth').isAdmin, (req, res) => res.json(swaggerSpec));
-app.use('/api/docs', apiDocsGate, require('./middleware/auth').isAdmin, swaggerCspHeader, swaggerUi.serve, swaggerUi.setup(swaggerSpec, { customSiteTitle: 'Livo API Docs' }));
+app.get('/api/docs.json', apiDocsGate, (req, res) => res.json(swaggerSpec));
+app.use('/api/docs', apiDocsGate, swaggerCspHeader, swaggerUi.serve, swaggerUi.setup(swaggerSpec, { customSiteTitle: 'Livo API Docs' }));
 app.use('/accumulator', require('./routes/accumulator'));
 app.use('/chat', require('./routes/chat'));
 app.use('/extra', require('./routes/extra'));
