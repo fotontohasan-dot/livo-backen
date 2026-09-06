@@ -1840,5 +1840,8 @@
   "admin_col_key": "Key",
   "admin_status_ok": "OK",
   "admin_actor_system": "System",
-  "admin_permission_escalation_blocked": "You cannot grant permissions you do not have yourself."
+  "admin_permission_escalation_blocked": "You cannot grant permissions you do not have yourself.",
+  "kyc_status_load_error": "Your KYC status could not be loaded because of a server problem. If you have already submitted, refresh this page before submitting again.",
+  "payment_withdraw_load_error": "The withdraw page could not be loaded. Please try again later.",
+  "cards_load_error": "Your saved wallets could not be loaded. Your cards have not been removed — please refresh the page."
 }

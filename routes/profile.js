@@ -1010,9 +1010,13 @@ router.get('/transactions', isAuth, async (req, res) => {
       'SELECT id, user_id, amount, type, description, created_at FROM coin_transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50',
       [req.session.user.id]
     );
-    res.render('profile/transactions', { user: req.session.user, transactions: result.rows });
+    res.render('profile/transactions', { user: req.session.user, transactions: result.rows, loadError: false });
   } catch (err) {
-    res.render('profile/transactions', { user: req.session.user, transactions: [] });
+    // আগে এখানে শুধু খালি অ্যারে যেত — ইউজার "কোনো লেনদেন নেই" দেখত,
+    // অথচ আসলে ডেটাবেস পড়া যায়নি। কয়েন লেজারের পেজে ওই দুটো গুলিয়ে
+    // ফেলা মানে ইউজার ভাবে তার লেনদেনের রেকর্ড হারিয়ে গেছে।
+    console.error('transactions page error:', err.message);
+    res.render('profile/transactions', { user: req.session.user, transactions: [], loadError: true });
   }
 });
 
@@ -1022,9 +1026,13 @@ router.get('/account-record', isAuth, async (req, res) => {
       'SELECT id, user_id, amount, type, description, created_at FROM coin_transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 100',
       [req.session.user.id]
     );
-    res.render('profile/transactions', { user: req.session.user, transactions: result.rows });
+    res.render('profile/transactions', { user: req.session.user, transactions: result.rows, loadError: false });
   } catch (err) {
-    res.render('profile/transactions', { user: req.session.user, transactions: [] });
+    // আগে এখানে শুধু খালি অ্যারে যেত — ইউজার "কোনো লেনদেন নেই" দেখত,
+    // অথচ আসলে ডেটাবেস পড়া যায়নি। কয়েন লেজারের পেজে ওই দুটো গুলিয়ে
+    // ফেলা মানে ইউজার ভাবে তার লেনদেনের রেকর্ড হারিয়ে গেছে।
+    console.error('transactions page error:', err.message);
+    res.render('profile/transactions', { user: req.session.user, transactions: [], loadError: true });
   }
 });
 
@@ -1034,9 +1042,14 @@ router.get('/cards', isAuth, async (req, res) => {
       'SELECT id, user_id, bank_name, account_number, holder_name, created_at FROM bank_cards WHERE user_id = $1 ORDER BY created_at DESC',
       [req.session.user.id]
     );
-    res.render('profile/cards', { user: req.session.user, cards: result.rows });
+    res.render('profile/cards', { user: req.session.user, cards: result.rows, loadError: false });
   } catch (err) {
-    res.render('profile/cards', { user: req.session.user, cards: [] });
+    // সবচেয়ে গুরুত্বপূর্ণ কেস: খালি তালিকা দেখলে ইউজার ভাবে তার সংরক্ষিত
+    // ব্যাংক কার্ড মুছে গেছে, আর নতুন করে যোগ করতে যায় — অথচ কার্ডগুলো
+    // ঠিকই আছে, শুধু পড়া যায়নি। এটাই টাকা তোলার গন্তব্য, তাই এখানে
+    // "খালি" আর "জানা যায়নি" আলাদা হতেই হবে।
+    console.error('cards page error:', err.message);
+    res.render('profile/cards', { user: req.session.user, cards: [], loadError: true });
   }
 });
 

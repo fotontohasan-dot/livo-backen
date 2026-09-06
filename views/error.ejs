@@ -13,7 +13,7 @@ const _t = (typeof t !== 'undefined' && t) ? t : {
  <meta name="viewport" content="width=device-width, initial-scale=1.0">
  <title><%= _t.error_title %> - <%= siteName %></title>
  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&display=swap" rel="stylesheet">
- <style>
+ <style nonce="<%= cspNonce %>">
    * { margin:0; padding:0; box-sizing:border-box; }
    body {
      background:#0a0a14;

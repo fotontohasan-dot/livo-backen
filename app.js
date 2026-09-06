@@ -97,7 +97,36 @@ const cspDirectives = {
   // scriptSrc-এ এখনো 'unsafe-inline' আছে, কারণ ২৫৪টা ইনলাইন <script> ব্লক
   // বাকি (ধাপ ৩)। দুটো ডিরেক্টিভ আলাদা, তাই একটা আগে শক্ত করা যায়।
   scriptSrcAttr: ["'none'"],
+  // styleSrc দুটো ডিরেক্টিভে ভাগ করা হয়েছে, ঠিক যেভাবে scriptSrc/
+  // scriptSrcAttr ভাগ করা হয়েছিল। কারণ দুটো surface-এর অগ্রগতি আলাদা:
+  //
+  //   style-src-elem — `<style>` ব্লক ও বাইরের stylesheet। টেমপ্লেটের
+  //     ৭৬টা `<style>` ব্লকেই এখন nonce বসেছে, আর offline.html-এর ব্লকটা
+  //     (EJS দিয়ে রেন্ডার হয় না, তাই nonce দেওয়া যায় না) বাইরের ফাইলে
+  //     সরানো হয়েছে। তাই এখানে 'unsafe-inline' আর দরকার নেই — stored XSS
+  //     দিয়ে `<style>` ইনজেক্ট করে CSS চালানোর পথটা ব্রাউজারই বন্ধ করে।
+  //
+  //   style-src-attr — ইনলাইন `style="..."` অ্যাট্রিবিউট। এখনো ১৮৩২টা
+  //     বাকি, তাই এখানে 'unsafe-inline' বহাল। সংখ্যাটা
+  //     tests/security/cspInlineStyleRatchet.test.js একমুখী রাখে; ০-তে
+  //     নামলে এই ডিরেক্টিভটাও 'none' হবে।
+  //
+  // মনে রাখতে হবে: nonce থাকলে ব্রাউজার style-src-elem-এ 'unsafe-inline'
+  // উপেক্ষা করে। তাই দুটো একসাথে দেওয়ার কোনো মানে নেই — nonce-ই নীতি।
+  // style-src নিজে fallback — যে ব্রাউজার style-src-elem/attr বোঝে না
+  // সেখানে এটাই প্রযোজ্য, তাই এখানে 'unsafe-inline' রাখতেই হবে (নইলে
+  // পুরনো ব্রাউজারে ইনলাইন style ভেঙে যেত)। স্পষ্ট করে লেখা হচ্ছে কারণ
+  // key-টা বাদ দিলে helmet তার নিজের ডিফল্ট বসায়, যেখানে `https:`
+  // থাকে — অর্থাৎ যেকোনো HTTPS origin থেকে stylesheet, আমাদের তালিকার
+  // চেয়ে অনেক আলগা।
   styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
+  styleSrcElem: [
+    "'self'",
+    "https://fonts.googleapis.com",
+    "https://cdnjs.cloudflare.com",
+    (req, res) => `'nonce-${res.locals.cspNonce}'`
+  ],
+  styleSrcAttr: ["'unsafe-inline'"],
   fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "data:"],
   imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://i.pravatar.cc", "https://img.icons8.com", "https://i.postimg.cc"],
   mediaSrc: ["'self'", "https://res.cloudinary.com"],
@@ -151,7 +180,11 @@ const reportOnlyDirectives = {
     (req, res) => `'nonce-${res.locals.cspNonce}'`
   ],
   scriptSrcAttr: ["'none'"],
-  styleSrc: cspDirectives.styleSrc.filter((v) => v !== "'unsafe-inline'"),
+  // style-src-elem প্রয়োগ নীতিতেই কড়া, তাই report-only-তে আলাদা কিছু
+  // করার নেই। যেটা এখনো শিথিল সেটা style-src-attr — এখানে সেটাকে 'none'
+  // করা হয়, ফলে বাকি ১৮৩২টা ইনলাইন style ব্লক না হয়েই /csp-report-এ
+  // জমা হয়। মাইগ্রেশনের অগ্রগতি মাপার এটাই উপায়।
+  styleSrcAttr: ["'none'"],
   reportUri: ['/csp-report']
 };
 
@@ -770,47 +803,36 @@ const { swaggerSpec } = require('./services/swagger');
 // CSP আর মুছে ফেলা হয় না। বদলে এই path-এর জন্য একটা scoped policy বসানো হয়:
 // Swagger UI-এর যতটুকু inline দরকার ততটুকুই, আর object-src/frame-ancestors
 // শক্ত করে বাঁধা। global policy-র চেয়ে এটা সংকীর্ণ, অনুপস্থিত নয়।
-// API_DOCS_ACCESS তিনটা মোড নেয়: 'off' (সম্পূর্ণ বন্ধ), 'admin' (শুধু admin,
-// ব্যর্থ হলে 404 — 403/401 নয়, কারণ সেগুলো endpoint-এর অস্তিত্ব জানিয়ে দেয়),
-// 'public' (কোনো auth ছাড়াই খোলা)। স্পষ্ট মান না থাকলে production-এ 'admin',
-// অন্য সব পরিবেশে (dev/test) 'public' — পুরনো ENABLE_API_DOCS আচরণের সাথে সামঞ্জস্যপূর্ণ ডিফল্ট।
+// নীতিটা এখন তিন-মোডের, boolean নয়:
+//   off    — রুট দুটো নেই-ই (404)
+//   admin  — মাউন্ট করা, কিন্তু শুধু যাচাইকৃত admin; বাকিদের জন্য 404
+//   public — সম্পূর্ণ খোলা (শুধু dev-এ ইচ্ছাকৃতভাবে চালু করার জন্য)
 //
-// মোডটা module-লোডের সময় একবারই পড়া হয় (রিকোয়েস্ট-টাইমে নয়): টেস্টে
-// jest.isolateModules দিয়ে প্রতিটা মোডের জন্য আলাদা app.js instance বুট করা
-// হয়, আর env var require()-এর পরপরই restore হয়ে যায় — তাই request-time-এ
-// পড়লে সবসময় ডিফল্ট মোড পাওয়া যেত।
-const API_DOCS_ACCESS_MODE = (() => {
-  const mode = process.env.API_DOCS_ACCESS;
-  if (mode === 'off' || mode === 'admin' || mode === 'public') return mode;
-  return process.env.NODE_ENV === 'production' ? 'admin' : 'public';
+// ডিফল্ট: production → off; অন্যত্র → admin। অর্থাৎ কোনো পরিবেশেই
+// anonymous ব্যক্তি spec পড়তে পারে না যদি না কেউ স্পষ্ট করে public লেখে।
+// পুরনো ENABLE_API_DOCS=true এখনো কাজ করে (production-এ → admin), যাতে
+// চালু deployment ভেঙে না যায়।
+//
+// মান একবারই পড়া হয় — module load-এ। রানটাইমে env বদলে নীতি শিথিল করা
+// যায় না, আর প্রতিটা মোড আলাদা module registry-তে টেস্ট করতে হয়।
+const API_DOCS_ACCESS = (() => {
+  const raw = String(process.env.API_DOCS_ACCESS || '').trim().toLowerCase();
+  if (raw === 'off' || raw === 'admin' || raw === 'public') return raw;
+  if (process.env.NODE_ENV === 'production') {
+    return process.env.ENABLE_API_DOCS === 'true' ? 'admin' : 'off';
+  }
+  return 'admin';
 })();
 
-const apiDocsGate = async (req, res, next) => {
-  const mode = API_DOCS_ACCESS_MODE;
-
-  if (mode === 'off') {
-    return res.status(404).json({ success: false, error: 'Not found' });
-  }
-
-  if (mode === 'public') {
-    return next();
-  }
-
-  // mode === 'admin' — নিজস্ব চেক, কারণ isAdmin ব্যর্থতায় redirect/403 দেয়,
-  // যা docs endpoint-এর অস্তিত্ব ফাঁস করে। এখানে সবসময় 404।
-  const deny = () => res.status(404).json({ success: false, error: 'Not found' });
-  if (!req.session || !req.session.user) return deny();
-
-  try {
-    const result = await pool.query('SELECT role, is_banned, deleted_at FROM users WHERE id = $1', [req.session.user.id]);
-    const row = result.rows[0];
-    if (!row || row.is_banned || row.deleted_at || row.role !== 'admin') return deny();
-    return next();
-  } catch (err) {
-    console.error('apiDocsGate role check error:', err.message);
-    return deny();
-  }
+const apiDocsGate = (req, res, next) => {
+  if (API_DOCS_ACCESS === 'off') return res.status(404).json({ success: false, error: 'Not found' });
+  return next();
 };
+
+// public মোডে auth ধাপটা no-op, কিন্তু গার্ডের শৃঙ্খলটা একই থাকে।
+const apiDocsAuth = API_DOCS_ACCESS === 'public'
+  ? (req, res, next) => next()
+  : require('./middleware/auth').isAdminOrNotFound;
 
 const SWAGGER_CSP = [
   "default-src 'self'",
@@ -822,7 +844,7 @@ const SWAGGER_CSP = [
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
-  "frame-ancestors 'self'"
+  "frame-ancestors 'none'"
 ].join('; ');
 
 const swaggerCspHeader = (req, res, next) => {
@@ -834,8 +856,8 @@ const swaggerCspHeader = (req, res, next) => {
   return next();
 };
 
-app.get('/api/docs.json', apiDocsGate, (req, res) => res.json(swaggerSpec));
-app.use('/api/docs', apiDocsGate, swaggerCspHeader, swaggerUi.serve, swaggerUi.setup(swaggerSpec, { customSiteTitle: 'Livo API Docs' }));
+app.get('/api/docs.json', apiDocsGate, apiDocsAuth, (req, res) => res.json(swaggerSpec));
+app.use('/api/docs', apiDocsGate, apiDocsAuth, swaggerCspHeader, swaggerUi.serve, swaggerUi.setup(swaggerSpec, { customSiteTitle: 'Livo API Docs' }));
 app.use('/accumulator', require('./routes/accumulator'));
 app.use('/chat', require('./routes/chat'));
 app.use('/extra', require('./routes/extra'));

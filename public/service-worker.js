@@ -1,6 +1,10 @@
 // public/service-worker.js
 const CACHE_NAME = 'livo-cache-v1';
 const OFFLINE_URL = '/offline.html';
+// offline.html-এর CSS আলাদা ফাইলে সরানো হয়েছে (CSP style-src-elem কড়া
+// করার জন্য)। এটাও precache না করলে অফলাইন পেজটা স্টাইল ছাড়া দেখাত —
+// অর্থাৎ ঠিক যখন দরকার তখনই ভাঙা দেখাত।
+const OFFLINE_CSS = '/css/offline.css';
 
 const PRECACHE_ASSETS = [
   '/',
@@ -8,7 +12,8 @@ const PRECACHE_ASSETS = [
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png',
-  OFFLINE_URL
+  OFFLINE_URL,
+  OFFLINE_CSS
 ];
 
 self.addEventListener('install', (event) => {

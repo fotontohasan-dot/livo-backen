@@ -164,10 +164,17 @@ describe('CSP — ইনলাইন হ্যান্ডলার প্রয
     expect(enforced[0]).not.toMatch(/scriptSrcAttr: \["'unsafe-inline'"\]/);
   });
 
-  test("styleSrc-এ 'unsafe-inline' এখনো আছে — ইনলাইন style অ্যাট্রিবিউট বাকি", () => {
-    // এটা ব্যর্থতা নয়, সৎ অবস্থা: টেমপ্লেটে এখনো বহু style="..." আছে।
-    // সেটা আলাদা কাজ, docs/CSP.md-এর ধাপ ৩-এর বাইরে।
+  test("style surface দুটো ডিরেক্টিভে ভাগ — elem কড়া, attr এখনো শিথিল", () => {
+    // styleSrc আর একটা ডিরেক্টিভ নয়। `<style>` ব্লকগুলোতে nonce বসানোর
+    // পর style-src-elem কড়া করা গেছে; কিন্তু ইনলাইন style="..." এখনো
+    // ১৮০০-র বেশি, তাই style-src-attr শিথিল। এটা ব্যর্থতা নয়, সৎ অবস্থা।
+    // বিস্তারিত ও সীমা: tests/security/cspInlineStyleRatchet.test.js
     const enforced = /const cspDirectives = \{[\s\S]*?\n\};/.exec(appSource);
-    expect(enforced[0]).toMatch(/styleSrc: \[[^\]]*'unsafe-inline'/);
+    expect(enforced[0]).toMatch(/styleSrcElem: \[/);
+    expect(enforced[0]).toMatch(/styleSrcAttr: \["'unsafe-inline'"\]/);
+    // elem-এ 'unsafe-inline' থাকলে nonce-টাই অর্থহীন হয়ে যেত
+    const elem = /styleSrcElem: \[[\s\S]*?\]/.exec(enforced[0]);
+    expect(elem[0]).not.toContain("'unsafe-inline'");
+    expect(elem[0]).toContain('cspNonce');
   });
 });

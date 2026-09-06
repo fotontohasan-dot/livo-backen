@@ -86,13 +86,12 @@ const isAuth = async (req, res, next) => {
 // অ্যাডমিন রুটে ঢোকার প্রতিটা রিকোয়েস্টে সেশনের পুরনো role না মেনে,
 // সরাসরি ডাটাবেজ থেকে বর্তমান role যাচাই করা হয় — কাউকে ডিমোট করলে
 // তার আগের সেশন দিয়ে আর অ্যাক্সেস করা যাবে না (লগআউট করা লাগবে না, সাথে সাথেই কার্যকর হবে)
-const isAdmin = async (req, res, next) => {
-  const denyResponse = () => {
-    if (req.path.includes('/api/')) {
-      return res.status(403).json({ success: false, error: tr(req, 'auth_admin_required') });
-    }
-    return res.redirect('/admin/login');
-  };
+// isAdmin-এর *একমাত্র* পার্থক্য কিছু route-এ হলো deny হলে কী ফেরত যাবে।
+// যাচাইয়ের যুক্তিটা (session → DB role → ban/deleted) কখনোই ডুপ্লিকেট করা
+// যাবে না, নইলে একটা কপি আপডেট হয়ে অন্যটা পিছিয়ে থাকবে। তাই factory:
+// যুক্তি এক জায়গায়, শুধু denyResponse ইনজেক্ট করা হয়।
+const makeIsAdmin = (denyResponseFor) => async (req, res, next) => {
+  const denyResponse = () => denyResponseFor(req, res);
 
   if (!req.session || !req.session.user) return denyResponse();
 
@@ -121,6 +120,20 @@ const isAdmin = async (req, res, next) => {
     return denyResponse();
   }
 };
+
+const isAdmin = makeIsAdmin((req, res) => {
+  if (req.path.includes('/api/')) {
+    return res.status(403).json({ success: false, error: tr(req, 'auth_admin_required') });
+  }
+  return res.redirect('/admin/login');
+});
+
+// /api/docs-এর জন্য: deny হলে 403/302 নয়, 404। 403 বলে দেয় "জিনিসটা আছে,
+// তুমি পারো না" — reconnaissance-এ ওটাই যথেষ্ট সংকেত। 404-এ endpoint-এর
+// অস্তিত্বই প্রকাশ পায় না। যাচাইয়ের কড়াকড়ি isAdmin-এর সমান।
+const isAdminOrNotFound = makeIsAdmin((req, res) =>
+  res.status(404).json({ success: false, error: 'Not found' })
+);
 
 const requireAuth = isAuth;
 const requireAdmin = isAdmin;
@@ -151,4 +164,4 @@ const requireVerifiedEmail = async (req, res, next) => {
   }
 };
 
-module.exports = { isAuth, isAdmin, requireAuth, requireAdmin, requireVerifiedEmail };
+module.exports = { isAuth, isAdmin, isAdminOrNotFound, requireAuth, requireAdmin, requireVerifiedEmail };

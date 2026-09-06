@@ -1,0 +1,10 @@
+/* public/offline.html-এর ইনলাইন <style> ব্লক থেকে সরানো।
+   ওই ফাইলটা EJS দিয়ে রেন্ডার হয় না, তাই তাকে nonce দেওয়া যায় না —
+   আর nonce ছাড়া style-src-elem কড়া করলে ব্লকটা ব্লক হয়ে যেত। */
+body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+  background:#0f172a; color:#e2e8f0; font-family:'Segoe UI','Hind Siliguri',sans-serif; text-align:center; padding:24px; box-sizing:border-box; }
+.box { max-width:320px; }
+.icon { font-size:48px; margin-bottom:12px; }
+h1 { font-size:18px; margin:0 0 8px; }
+p { font-size:13px; color:#94a3b8; margin:0 0 20px; }
+button { background:#f59e0b; color:#111; border:none; padding:12px 24px; border-radius:12px; font-weight:700; font-size:13px; }

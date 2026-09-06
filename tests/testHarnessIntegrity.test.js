@@ -36,6 +36,10 @@ const ALLOWED_DIRECT_APP_REQUIRE = new Set([
   // একই কারণে: API_DOCS_ACCESS-এর প্রতিটা মোড আলাদা module registry-তে বুট
   // করতে হয়, কিন্তু supertest নিজের listening http.Server-ই পায়।
   path.join(TESTS_DIR, 'security', 'swaggerDocsAccess.test.js'),
+  // একই কারণে: scoped Swagger CSP দেখতে হলে docs পেজটা আসলে সার্ভ হতে হবে,
+  // তাই API_DOCS_ACCESS=public নিয়ে নিজের ইনস্ট্যান্স বুট করে — supertest
+  // নিজের listening http.Server-ই পায়।
+  path.join(TESTS_DIR, 'security', 'swaggerDocsCsp.test.js'),
   // এই ফাইলটাই নিয়মটার ব্যাখ্যা ধারণ করে
   path.join(TESTS_DIR, 'testHarnessIntegrity.test.js'),
   // মন্তব্যে পুরনো প্যাটার্নটা উদাহরণ হিসেবে লেখা আছে

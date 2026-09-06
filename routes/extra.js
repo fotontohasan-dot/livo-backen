@@ -70,10 +70,14 @@ router.get('/kyc', isAuth, async (req, res) => {
             'SELECT * FROM kyc_requests WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1',
             [req.session.user.id]
         );
-        res.render('kyc', { kyc: r.rows[0] || null });
+        res.render('kyc', { kyc: r.rows[0] || null, loadError: false });
     } catch (err) {
         console.error('kyc page error:', err.message);
-        res.render('kyc', { kyc: null });
+        // আগে এখানে `{ kyc: null }` রেন্ডার হত — অর্থাৎ ডেটাবেস ব্যর্থ হলে
+        // পেজটা হুবহু "আপনি এখনো KYC জমা দেননি" অবস্থার মতো দেখাত। ইউজার
+        // তখন আবার জমা দিতে যেত, অথচ তার আগের অনুরোধ হয়তো approved। তাই
+        // দুটো অবস্থা এখন আলাদা: loadError=true মানে "জানা যায়নি"।
+        res.render('kyc', { kyc: null, loadError: true });
     }
 });
 

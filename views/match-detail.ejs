@@ -1,7 +1,7 @@
 <%- include('partials/head') %>
 <%- include('partials/navbar') %>
 
-<style>
+<style nonce="<%= cspNonce %>">
   .pulse-live { animation: pulselive 1.5s ease-in-out infinite; }
   @keyframes pulselive { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 

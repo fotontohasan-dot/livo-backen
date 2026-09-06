@@ -1,6 +1,6 @@
 <%- include('../partials/head') %>
 <script src="https://cdn.tailwindcss.com"></script>
-<style>
+<style nonce="<%= cspNonce %>">
   @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap');
 
   body {
@@ -90,10 +90,16 @@
     <div class="mb-6">
         <div class="flex items-center justify-between mb-6">
             <h2 class="text-gray-400 text-sm font-bold uppercase tracking-wider">সংরক্ষিত ওয়ালেট</h2>
-            <p class="text-[13px] font-bold">ই-ওয়ালেট যোগ করা হয়েছে: <span class="red-theme-text font-black"><%= cards ? cards.length : 0 %></span></p>
+            <p class="text-[13px] font-bold">ই-ওয়ালেট যোগ করা হয়েছে: <span class="red-theme-text font-black"><%= (typeof loadError !== 'undefined' && loadError) ? '—' : (cards ? cards.length : 0) %></span></p>
         </div>
 
-        <% if (cards && cards.length > 0) { %>
+        <% if (typeof loadError !== 'undefined' && loadError) { %>
+            <!-- লোড ব্যর্থ। খালি-অবস্থার চিত্রটা দেখানো যাবে না: ইউজার
+                 ভাববে তার কার্ড মুছে গেছে আর নতুন করে যোগ করতে যাবে। -->
+            <div id="cardsLoadError" role="alert" class="rounded-2xl border border-red-500/40 bg-red-500/10 p-5 text-center text-sm text-red-400 font-bold">
+                <i class="fas fa-triangle-exclamation"></i> <%= t.cards_load_error %>
+            </div>
+        <% } else if (cards && cards.length > 0) { %>
             <div class="grid gap-4">
                 <% cards.forEach(c => { %>
                     <div class="card-item bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex items-center gap-5 relative overflow-hidden">

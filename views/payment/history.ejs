@@ -29,6 +29,15 @@
     </div>
   </form>
 
+  <!-- লোড ব্যর্থ হলে: রুট এখানে খালি তালিকা পাঠায়, তাই এই ব্যানারটা না
+       থাকলে "ডেটাবেস ডাউন" আর "এই সময়ে সত্যিই কোনো লেনদেন নেই" ইউজারের
+       কাছে হুবহু একরকম দেখাত। টাকার পেজে ওই দুটো গুলিয়ে ফেলা বিপজ্জনক। -->
+  <% if (typeof loadError !== 'undefined' && loadError) { %>
+    <div id="historyLoadError" role="alert" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.35);border-radius:14px;padding:14px;margin-bottom:12px;color:#f87171;font-size:13px;font-weight:600;text-align:center">
+      <i class="fas fa-triangle-exclamation"></i> <%= t.common_history_load_failed %>
+    </div>
+  <% } %>
+
   <!-- রেকর্ড লিস্ট -->
   <div style="display: flex; flex-direction: column; gap: 10px;">
     <% if (requests && requests.length) { %>
@@ -61,7 +70,7 @@
           <% } %>
         </div>
       <% }) %>
-    <% } else { %>
+    <% } else if (!(typeof loadError !== 'undefined' && loadError)) { %>
       <div style="text-align:center; padding: 40px 0; color: var(--text-muted); font-size: 13px;">এই সময়ে কোনো রেকর্ড নেই</div>
     <% } %>
   </div>

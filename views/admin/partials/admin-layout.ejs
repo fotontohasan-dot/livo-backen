@@ -6,7 +6,7 @@
     <title>Livo Admin - <%= title || 'Panel' %></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <style>
+    <style nonce="<%= cspNonce %>">
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&amp;family=Poppins:wght@500;600&amp;display=swap');
         
         :root {
@@ -43,7 +43,7 @@
         }
 
         /* ==================== ভাগ করা UI উপাদান (Phase 8) ====================
-           ২৪টা অ্যাডমিন ভিউ নিজের নিজের <style> ব্লকে বাটন/কার্ড/টেবিল আলাদাভাবে
+           ২৪টা অ্যাডমিন ভিউ নিজের নিজের <style nonce="<%= cspNonce %>"> ব্লকে বাটন/কার্ড/টেবিল আলাদাভাবে
            সংজ্ঞায়িত করত, ফলে পেজে পেজে চেহারা আলাদা হতো। এখানে একটা সাধারণ ভিত্তি
            দেওয়া হলো। বিদ্যমান ভিউ ভাঙার ঝুঁকি এড়াতে ক্লাসগুলো `ui-` প্রিফিক্সে
            রাখা হয়েছে — পুরনো মার্কআপ অপরিবর্তিত কাজ করে, নতুন/আপডেট করা পেজ

@@ -1,7 +1,7 @@
 <%- include('partials/head') %>
 <%- include('partials/navbar') %>
 
-<style>
+<style nonce="<%= cspNonce %>">
 @keyframes livedot {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.3; transform: scale(1.4); }
@@ -389,7 +389,7 @@ body.light-mode .promo-banner {
   এখানে প্রতিটা লিংক বাস্তবে বিদ্যমান রুটে যায় (সবগুলো যাচাই করা হয়েছে); কোনো ডেড
   বাটন নেই এবং আইকনের পাশাপাশি টেক্সট লেবেলও আছে।
 -->
-<style>
+<style nonce="<%= cspNonce %>">
   .main-cat-nav {
     display: flex; gap: 8px; padding: 4px 12px 14px;
     overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
@@ -470,7 +470,7 @@ body.light-mode .promo-banner {
   <button type="button" class="layout-btn" data-layout="list" title="<%= t.layout_list %>"><i class="fas fa-list"></i></button>
 </div>
 
-<style>
+<style nonce="<%= cspNonce %>">
   .layout-btn {
     width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border-glass);
     background: var(--bg-surface); color: var(--text-muted); cursor: pointer; font-size: 13px;
@@ -569,7 +569,7 @@ body.light-mode .promo-banner {
 </div>
 
 <!-- ===== Mega Jackpot + Recent Big Wins ===== -->
-<style>
+<style nonce="<%= cspNonce %>">
 /* Mega Jackpot */
 .mega-jackpot {
   margin: 20px 0 15px;
@@ -677,7 +677,7 @@ body.light-mode .promo-banner {
 <script src="/js/views/index.js"></script>
 
 <!-- ===== Why Choose Us / Benefits ===== -->
-<style>
+<style nonce="<%= cspNonce %>">
 .why-us-section { padding: 34px 14px 12px; }
 .why-us-heading { text-align: center; margin-bottom: 24px; }
 .why-us-heading h2 {
@@ -752,7 +752,7 @@ body.light-mode .promo-banner {
 </div>
 
 <!-- ===== Trust Badges ===== -->
-<style>
+<style nonce="<%= cspNonce %>">
 .trust-badges-section { padding: 30px 14px 14px; }
 .trust-badges-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 .trust-badge-item {

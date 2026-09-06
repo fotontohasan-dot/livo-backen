@@ -1840,5 +1840,8 @@
   "admin_col_key": "কী (key)",
   "admin_status_ok": "ঠিক আছে",
   "admin_actor_system": "সিস্টেম",
-  "admin_permission_escalation_blocked": "নিজের ক্ষমতার বাইরের permission দেওয়া যাবে না।"
+  "admin_permission_escalation_blocked": "নিজের ক্ষমতার বাইরের permission দেওয়া যাবে না।",
+  "kyc_status_load_error": "KYC অবস্থা এখন লোড করা যায়নি — সার্ভার সমস্যার কারণে। আগে জমা দিয়ে থাকলে আবার জমা দেওয়ার আগে পেজটি রিফ্রেশ করুন।",
+  "payment_withdraw_load_error": "উইথড্র পেজ লোড করা যায়নি। পরে আবার চেষ্টা করুন।",
+  "cards_load_error": "সংরক্ষিত ওয়ালেটের তালিকা লোড করা যায়নি। আপনার কার্ড মুছে যায়নি — পেজটি রিফ্রেশ করুন।"
 }

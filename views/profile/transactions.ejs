@@ -24,6 +24,16 @@
         </div>
       <% }) %>
     </div>
+  <% } else if (typeof loadError !== 'undefined' && loadError) { %>
+    <%# loadError হলে খালি-অবস্থার বার্তা দেখানো যাবে না, কারণ সেটা জানা নেই। EJS মন্তব্য ব্যবহার করা হচ্ছে ইচ্ছাকৃতভাবে; HTML মন্তব্য আউটপুটে থেকে যেত আর ওই বার্তাটাই পেজে ফিরে আসত। %>
+    <style nonce="<%= cspNonce %>">
+      .tx-load-error { text-align:center; padding:40px; color:#f87171; }
+      .tx-load-error-icon { font-size:48px; margin-bottom:12px; }
+    </style>
+    <div id="txLoadError" role="alert" class="tx-load-error">
+      <div class="tx-load-error-icon">⚠️</div>
+      <div><%= t.common_history_load_failed %></div>
+    </div>
   <% } else { %>
     <div style="text-align:center;padding:40px;color:var(--text-muted)">
       <div style="font-size:48px;margin-bottom:12px">📭</div>

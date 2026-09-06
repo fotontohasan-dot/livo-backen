@@ -430,7 +430,11 @@ router.get('/withdraw', isAuth, requireFeature('withdrawal'), attachWithdrawalWi
     res.render('payment/withdraw', { user: req.session.user, coins, cards, pinStatus });
   } catch (err) {
     console.error('withdraw GET error:', err.message);
-    res.redirect('/');
+    // আগে এখানে শুধু res.redirect('/') ছিল — কোনো বার্তা ছাড়া। ইউজার
+    // Withdraw-এ ক্লিক করে নীরবে হোমপেজে পৌঁছাত আর ভাবত লিংকটাই নষ্ট।
+    // টাকা তোলার পথে নীরব ব্যর্থতা সবচেয়ে খারাপ ধরনের ব্যর্থতা।
+    req.flash('error', req.t('payment_withdraw_load_error'));
+    res.redirect('/profile');
   }
 });
 

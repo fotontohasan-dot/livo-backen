@@ -9,7 +9,7 @@
 // বাছাই শুধুই UX — সার্ভার নিজেই ফলাফল, পেআউট ও ব্যালেন্স নির্ধারণ করে; এই
 // স্ক্রিপ্ট কোনো আর্থিক মান পাঠায় না।
 %>
-<style>
+<style nonce="<%= cspNonce %>">
     #baccaratGame {
         width: 100%; height: 100%;
         display: flex; flex-direction: column;

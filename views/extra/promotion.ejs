@@ -11,7 +11,7 @@
 
     <!-- Category Filter -->
     <div style="display: flex; gap: 10px; margin-bottom: 25px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none;">
-        <style>div::-webkit-scrollbar { display: none; }</style>
+        <style nonce="<%= cspNonce %>">div::-webkit-scrollbar { display: none; }</style>
         <div class="promo-cat active" style="flex: 0 0 auto; padding: 10px 20px; background: var(--grad-gold); color: #000; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer;"><%= t.all %></div>
         <div class="promo-cat" style="flex: 0 0 auto; padding: 10px 20px; background: rgba(255,255,255,0.05); color:var(--text-main); border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; border: 1px solid var(--border-glass);"><%= t.deposit %></div>
         <div class="promo-cat" style="flex: 0 0 auto; padding: 10px 20px; background: rgba(255,255,255,0.05); color:var(--text-main); border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; border: 1px solid var(--border-glass);"><%= t.football %></div>

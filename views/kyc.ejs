@@ -5,6 +5,16 @@
   <h1 style="color: var(--text-accent);font-size:24px;font-weight:800;margin-bottom:6px"><%= t.kyc_verification_title %></h1>
   <p style="color:var(--text-muted);font-size:13px;margin-bottom:20px"><%= t.kyc_intro %></p>
 
+  <% if (typeof loadError !== 'undefined' && loadError) { %>
+    <!-- ===== লোড ব্যর্থ =====
+         ডেটাবেস পড়া যায়নি, তাই বর্তমান KYC অবস্থা অজানা। নিচে ফর্মটা দেখানো
+         হয় ঠিকই, কিন্তু এই ব্যানার ছাড়া সেটা "আপনি জমা দেননি"-র মতোই দেখাত —
+         আর ইউজার ইতিমধ্যে approved থাকলেও আবার জমা দিয়ে বসত। -->
+    <div id="kycLoadError" role="alert" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.35);border-radius:16px;padding:16px;margin-bottom:20px;color:#f87171;font-size:13px;font-weight:600">
+      <i class="fas fa-triangle-exclamation"></i> <%= t.kyc_status_load_error %>
+    </div>
+  <% } %>
+
   <% if (kyc && kyc.status === 'approved') { %>
     <!-- ===== অনুমোদিত ===== -->
     <div class="glass-card" style="padding:28px 20px;text-align:center;border:1px solid rgba(16,185,129,0.35);border-radius:20px;background:rgba(16,185,129,0.06)">

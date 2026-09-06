@@ -5,7 +5,7 @@
   var popupImg3 = "https://i.postimg.cc/Z91XYvKX/AB50B448-06EF-4A03-9154-DB527E8EE698.png";
 %>
 
-<style>
+<style nonce="<%= cspNonce %>">
   #lpPromo { position: fixed; right: 12px; bottom: 100px; z-index: 9990; width: 60px; height: 60px; cursor: pointer; animation: lpFloat 3s ease-in-out infinite; }
   #lpPromo.hide { display: none !important; }
   @keyframes lpFloat { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-9px);} }

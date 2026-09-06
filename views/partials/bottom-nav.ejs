@@ -1,7 +1,7 @@
 <!-- views/partials/bottom-nav.ejs -->
 <!-- সাধারণ ইউজারদের জন্য ফিক্সড বটম নেভিগেশন বার — active/inactive-এ শুধু গোল্ড অ্যাকসেন্ট,
      পুরো বার আর গোল্ড দিয়ে ভরাট করা হয় না (থিম টোকেন অনুসরণ করে, dark/light দুটোতেই)। -->
-<style>
+<style nonce="<%= cspNonce %>">
   .pub-bottom-nav {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 900;
     max-width: 480px; margin: 0 auto;

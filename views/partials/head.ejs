@@ -65,7 +65,7 @@
   <script src="/pwa.js" defer></script>
   <script src="/js/age-gate.js" defer></script>
   <script src="/js/team-crest.js" defer></script>
-  <style>
+  <style nonce="<%= cspNonce %>">
     /* ==================== Livo Toast / Loading System ==================== */
     #livo-toast-root { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 99999; display: flex; flex-direction: column; gap: 10px; align-items: center; width: 100%; max-width: 440px; padding: 0 16px; pointer-events: none; }
     .livo-toast { pointer-events: auto; display: flex; align-items: center; gap: 10px; background: #131a17; border: 1px solid rgba(201,162,39,0.35); color: #fff; padding: 13px 16px; border-radius: 14px; font-size: 13.5px; font-weight: 600; box-shadow: 0 10px 28px rgba(0,0,0,0.4); width: 100%; cursor: pointer; animation: livoToastIn .3s ease forwards; }
