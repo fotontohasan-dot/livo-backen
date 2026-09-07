@@ -2030,5 +2030,18 @@
   "faq_a_security": "Your password is stored encrypted. Never share your password or OTP with anyone.",
   "faq_q_more_help": "Need more help?",
   "faq_a_more_help": "Contact our support team on live chat. We are ready to help.",
-  "faq_live_chat": "Live chat"
+  "faq_live_chat": "Live chat",
+  "st_title": "Profit and Loss",
+  "st_today": "Today",
+  "st_yesterday": "Yesterday",
+  "st_7days": "Last 7 days",
+  "st_all": "All",
+  "st_from": "From",
+  "st_filter": "Filter",
+  "st_total_bets": "Total bets",
+  "st_win_loss": "Wins / losses",
+  "st_net": "Net profit/loss (from settled bets)",
+  "st_total_staked": "Total staked",
+  "st_total_won": "Total won",
+  "st_win_rate": "Win rate"
 }
