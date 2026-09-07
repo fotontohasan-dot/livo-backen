@@ -175,7 +175,11 @@ describe('Audit, backup and production config (PHASE 14-16)', () => {
     });
 
     test('trust proxy সেট এবং x-powered-by বন্ধ', () => {
-      expect(appSrc).toMatch(/app\.set\('trust proxy', 1\)/);
+      // আগে হার্ডকোড ছিল `app.set('trust proxy', 1)`। প্রক্সি লেয়ার বদলালে
+      // (যেমন Cloudflare + Render = ২ hop) ওই 1 ভুল হয়ে যেত, `secure` কুকি
+      // কখনো সেট হতো না এবং ব্যবহারকারী প্রতিবার লগআউট দেখত। এখন মানটা
+      // env থেকে আসে, ডিফল্ট ১ — অর্থাৎ আচরণ অপরিবর্তিত, কিন্তু কনফিগারযোগ্য।
+      expect(appSrc).toMatch(/app\.set\('trust proxy',\s*Number\(process\.env\.TRUST_PROXY_HOPS\s*\|\|\s*1\)\)/);
       expect(appSrc).toMatch(/app\.disable\('x-powered-by'\)/);
     });
 

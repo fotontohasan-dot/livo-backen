@@ -15,9 +15,23 @@ const { tr } = require('../utils/i18n');
 const ACTIVE_STATUS_TTL_SECONDS = 30;
 
 function rowToStatus(row) {
+  // তিনটা ফিল্ডই সবসময় স্পষ্ট boolean — undefined কখনো ফেরত যাবে না, কারণ
+  // isAuth-এ `!status.exists` দিয়ে সেশন ধ্বংস হয়; ভাঙা/আংশিক অবজেক্ট এলে
+  // নিরপরাধ ব্যবহারকারী লগআউট হয়ে যেত।
   if (!row) return { exists: false, banned: false, selfExcluded: false };
   const selfExcluded = !!(row.self_exclude_until && new Date(row.self_exclude_until) > new Date());
-  return { exists: true, banned: !!row.is_banned, selfExcluded };
+  return { exists: true, banned: !!row.is_banned, selfExcluded: !!selfExcluded };
+}
+
+// ক্যাশ থেকে আসা অবজেক্ট আসলেই একটা সম্পূর্ণ স্ট্যাটাস কিনা। serialization ভাঙা,
+// খালি অবজেক্ট, বা অন্য কী-এর সাথে সংঘর্ষ হলে এটা false — তখন "ইউজার নেই" ধরে
+// নেওয়া যাবে না।
+function isDefinitiveStatus(status) {
+  return !!status
+    && typeof status.exists === 'boolean'
+    && typeof status.banned === 'boolean'
+    && typeof status.selfExcluded === 'boolean'
+    && !status.checkFailed;
 }
 
 async function isUserActive(userId) {
@@ -27,9 +41,12 @@ async function isUserActive(userId) {
       const result = await pool.query('SELECT is_banned, self_exclude_until FROM users WHERE id = $1', [userId]);
       return rowToStatus(result.rows[0]);
     });
-    if (!cached) {
-      // ক্যাশ লেয়ার সম্পূর্ণ ব্যর্থ হলে (Redis-ও নেই, getOrSet-ও fetchFn চালাতে পারেনি) —
-      // fail-open না করে সরাসরি একবার DB চেষ্টা করা হয়, যাতে ব্যানড ইউজার ভুলবশত ঢুকতে না পারে।
+    if (!isDefinitiveStatus(cached)) {
+      // ক্যাশ লেয়ার ব্যর্থ, অথবা ক্যাশ থেকে অসম্পূর্ণ/ভাঙা অবজেক্ট এসেছে —
+      // fail-open না করে বিষাক্ত এন্ট্রি মুছে সরাসরি একবার DB চেষ্টা করা হয়,
+      // যাতে ব্যানড ইউজার ভুলবশত ঢুকতে না পারে এবং সুস্থ ইউজার ভুলবশত
+      // "অস্তিত্বহীন" গণ্য হয়ে লগআউট না হয়।
+      if (cached) await cache.del(key).catch(() => {});
       const result = await pool.query('SELECT is_banned, self_exclude_until FROM users WHERE id = $1', [userId]);
       return rowToStatus(result.rows[0]);
     }
@@ -72,7 +89,28 @@ const isAuth = async (req, res, next) => {
     });
   }
 
+  // exists === false তখনই বিশ্বাস করা হয় যখন সেটা নিশ্চিতভাবে DB/সঠিক ক্যাশ থেকে
+  // এসেছে। অস্পষ্ট অবস্থায় সেশন ধ্বংস করা মানে নিরপরাধ ব্যবহারকারীকে লগআউট করা।
+  const definitive = isDefinitiveStatus(status);
+  if (!definitive) {
+    await cache.del(cacheKeys.userActiveStatus(req.session.user.id)).catch(() => {});
+    if (req.path.includes('/api/')) {
+      return res.status(503).json({ success: false, error: tr(req, 'auth_status_unavailable') });
+    }
+    return res.status(503).render('error', {
+      user: req.session.user || null,
+      message: tr(req, 'auth_status_unavailable')
+    });
+  }
+
   if (!status.exists || status.banned || status.selfExcluded) {
+    console.warn('[session-destroy]', {
+      where: 'isAuth',
+      userId: req.session?.user?.id,
+      sid: req.sessionID,
+      path: req.originalUrl,
+      reason: { exists: status.exists, banned: status.banned, selfExcluded: status.selfExcluded }
+    });
     req.session.destroy(() => {});
     if (req.path.includes('/api/')) {
       return res.status(401).json({ success: false, error: tr(req, 'auth_session_invalid') });
@@ -103,11 +141,25 @@ const makeIsAdmin = (denyResponseFor) => async (req, res, next) => {
     // HIGH-1: role ছাড়াও ban/deleted state প্রতিটি privileged request-এ যাচাই করতে হবে,
     // নাহলে ban করা admin-এর existing session দিয়ে /admin/* ব্যবহার করা যায়।
     if (row && (row.is_banned || row.deleted_at)) {
+      console.warn('[session-destroy]', {
+        where: 'isAdmin',
+        userId: req.session?.user?.id,
+        sid: req.sessionID,
+        path: req.originalUrl,
+        reason: { is_banned: row.is_banned, deleted_at: row.deleted_at, role: row.role }
+      });
       req.session.destroy(() => {});
       return denyResponse();
     }
 
     if (currentRole !== 'admin') {
+      console.warn('[session-destroy]', {
+        where: 'isAdmin',
+        userId: req.session?.user?.id,
+        sid: req.sessionID,
+        path: req.originalUrl,
+        reason: { is_banned: row && row.is_banned, deleted_at: row && row.deleted_at, role: currentRole }
+      });
       req.session.destroy(() => {});
       return denyResponse();
     }
@@ -116,8 +168,17 @@ const makeIsAdmin = (denyResponseFor) => async (req, res, next) => {
     req.session.user.role = currentRole;
     return next();
   } catch (err) {
+    // DB সাময়িক অস্থির হওয়া = অজানা অবস্থা, ডিমোশন নয়। এখানে সেশন ধ্বংস করলে
+    // প্রতিটা DB hiccup-এ অ্যাডমিন লগআউট হয়ে যেত। fail-closed থাকা হয় (ভেতরে
+    // ঢুকতে দেওয়া হয় না), কিন্তু সেশন অক্ষত — DB ফিরলে রিফ্রেশেই কাজ চলবে।
     console.error('isAdmin role check error:', err.message);
-    return denyResponse();
+    if (req.path.includes('/api/')) {
+      return res.status(503).json({ success: false, error: tr(req, 'auth_status_unavailable') });
+    }
+    return res.status(503).render('error', {
+      user: (req.session && req.session.user) || null,
+      message: tr(req, 'auth_status_unavailable')
+    });
   }
 };
 
@@ -164,4 +225,36 @@ const requireVerifiedEmail = async (req, res, next) => {
   }
 };
 
-module.exports = { isAuth, isAdmin, isAdminOrNotFound, requireAuth, requireAdmin, requireVerifiedEmail };
+// ==================== KYC গেট ====================
+// উইথড্র পাথে আগে কোনো KYC যাচাই ছিলই না — ইমেইল ভেরিফাই আর PIN-ই ছিল
+// একমাত্র পরিচয় গেট, অর্থাৎ কে টাকা তুলছে তা কখনো যাচাই হতো না।
+// requireVerifiedEmail-এর মতোই fail-closed: যাচাই করা না গেলে পাস দেওয়া হয় না।
+const requireApprovedKyc = async (req, res, next) => {
+  if (!(req.session && req.session.user)) return res.redirect('/login');
+
+  try {
+    const r = await pool.query(
+      `SELECT status FROM kyc_requests WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [req.session.user.id]
+    );
+    const status = r.rows[0] && r.rows[0].status;
+
+    if (status === 'approved') return next();
+
+    const key = status === 'pending' ? 'auth_kyc_pending' : 'auth_kyc_required';
+    if (req.path.includes('/api/')) {
+      return res.status(403).json({ success: false, error: tr(req, key) });
+    }
+    req.flash && req.flash('error', tr(req, key));
+    return res.redirect('/extra/kyc');
+  } catch (err) {
+    console.error('requireApprovedKyc error:', err.message);
+    if (req.path.includes('/api/')) {
+      return res.status(503).json({ success: false, error: tr(req, 'auth_status_unavailable') });
+    }
+    req.flash && req.flash('error', tr(req, 'auth_status_unavailable'));
+    return res.redirect('/profile');
+  }
+};
+
+module.exports = { isAuth, isAdmin, isAdminOrNotFound, requireAuth, requireAdmin, requireVerifiedEmail, requireApprovedKyc };

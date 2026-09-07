@@ -40,7 +40,9 @@ app.use(compression());
 const server = http.createServer(app);
 global.__livoServer = server; // গ্রেসফুল শাটডাউনে চলমান রিকোয়েস্ট শেষ করার জন্য
 
-app.set('trust proxy', 1);
+// প্রক্সি লেয়ার বদলালে (Cloudflare + Render = ২ hop) হার্ডকোডেড 1 ভুল হয়ে যায়,
+// তখন `secure` কুকি কখনো সেট হয় না এবং ব্যবহারকারী প্রতিবার লগআউট দেখে।
+app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS || 1));
 
 // services/envValidator.js (এই ফাইলের একদম শুরুতে, কোনো require-এর আগেই কল করা হয়) প্রোডাকশনে
 // SESSION_SECRET অনুপস্থিত/দুর্বল থাকলে ইতিমধ্যেই process.exit(1) করে বুট আটকে দেয় — অর্থাৎ
@@ -293,6 +295,21 @@ const sessionStore = process.env.DATABASE_URL ? new pgSession({
 }) : undefined;
 
 const isProd = process.env.NODE_ENV === 'production';
+
+// store না থাকলে express-session নীরবে MemoryStore ব্যবহার করে — একাধিক ইনস্ট্যান্স
+// বা রিস্টার্টে সব সেশন হারায়, অর্থাৎ ব্যবহারকারী "কিছুক্ষণ পরপর" লগআউট হয়।
+// প্রোডাকশনে এটা নীরবে চলতে দেওয়া যাবে না।
+if (isProd && !sessionStore) {
+  console.error('❌ প্রোডাকশনে session store নেই — MemoryStore-এ সেশন টিকবে না। DATABASE_URL সেট করুন।');
+  process.exit(1);
+}
+
+// rolling: true — প্রতি রিকোয়েস্টে মেয়াদ বাড়ে, তাই সক্রিয় ব্যবহারকারী কখনো কাটা
+// পড়ে না; কেবল টানা ৩০ দিন নিষ্ক্রিয় থাকলেই সেশন শেষ হয়। অ্যাডমিন সেশনও একই
+// নিয়মে চলে — "চিরকাল" নয়, কারণ ল্যাপটপ/কুকি চুরি হলে অসীম সেশন মানে অনির্দিষ্টকাল
+// অ্যাক্সেস (সিদ্ধান্ত: মালিকের "লগআউট না চাপলে লগইন থাকবে" চাহিদা পূরণ হয়,
+// শুধু নিষ্ক্রিয়তার একটা সীমা থাকে)।
+const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const sessionMiddleware = session({
   store: sessionStore,
   secret: SESSION_SECRET,
@@ -300,7 +317,7 @@ const sessionMiddleware = session({
   saveUninitialized: false,
   rolling: true,
   cookie: {
-    maxAge: 7 * 24 * 60 * 60 * 1000,
+    maxAge: SESSION_MAX_AGE_MS,
     httpOnly: true,
     secure: isProd,
     sameSite: 'lax'
