@@ -2,6 +2,18 @@
 <%- include('partials/navbar') %>
 
 <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz83-1 { padding-top: 14px; padding-bottom: 90px; }
+  .dz83-2 { padding: 16px; margin: 20px 0; }
+  .dz83-3 { color: var(--text-accent); }
+  .dz83-4 { padding: 50px 20px; }
+  .dz83-5 { font-size: 40px; margin-bottom: 12px; }
+  .dz83-6 { font-size: 16px; font-weight: 600; }
+  .dz83-7 { color: var(--text-muted); }
+  .dz83-8 { margin-top: 20px; padding-top: 16px; border-top: 1px dashed #334155; }
+  .dz83-9 { border-radius: 8px; padding: 10px 20px; }
   .pulse-live { animation: pulselive 1.5s ease-in-out infinite; }
   @keyframes pulselive { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
@@ -42,14 +54,14 @@
   .lay { background: #ef4444; color: #fff; }
 </style>
 
-<div class="container" style="padding-top: 14px; padding-bottom: 90px;">
+<div class="container dz83-1">
 
   <a href="/matches"><%= t.back_to_all_matches %></a>
 
   <!-- Match Header -->
-  <div class="card" style="padding:16px; margin:20px 0;">
+  <div class="card dz83-2">
     <h4><%= match.teams ? match.teams[0] + " " + t.vs + " " + match.teams[1] : match.title %></h4>
-    <p style="color: var(--text-accent);"><%= match.status || t.upcoming_matches %></p>
+    <p class="dz83-3"><%= match.status || t.upcoming_matches %></p>
   </div>
 
   <!-- Dynamic Markets -->
@@ -93,14 +105,14 @@
       </div>
     <% }) %>
   <% } else { %>
-    <div class="card text-center" style="padding:50px 20px;">
-      <div style="font-size:40px; margin-bottom:12px;">⏳</div>
-      <p style="font-size:16px; font-weight:600;"><%= t.betting_options_soon %></p>
-      <small style="color: var(--text-muted);"><%= t.check_back_later_short %></small>
+    <div class="card text-center dz83-4">
+      <div class="dz83-5">⏳</div>
+      <p class="dz83-6"><%= t.betting_options_soon %></p>
+      <small class="dz83-7"><%= t.check_back_later_short %></small>
 
       <% if (locals.user && user.role === 'admin') { %>
-        <div style="margin-top:20px; padding-top:16px; border-top:1px dashed #334155;">
-          <a href="/admin/markets/<%= match.id %>" class="btn btn-primary" style="border-radius:8px; padding:10px 20px;">
+        <div class="dz83-8">
+          <a href="/admin/markets/<%= match.id %>" class="btn btn-primary dz83-9">
             <%= t.add_market_admin %>
           </a>
         </div>

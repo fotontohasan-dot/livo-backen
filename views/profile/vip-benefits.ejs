@@ -1,6 +1,28 @@
 <%- include('../partials/head') %>
 <style nonce="<%= cspNonce %>">
   /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz70-1 { padding: 16px; padding-bottom: 100px; max-width: 600px; margin: 0 auto; }
+  .dz70-2 { color: var(--text-main); text-decoration: none; font-size: 20px; }
+  .dz70-3 { color: var(--text-main); font-size: 18px; font-weight: bold; }
+  .dz70-4 { background: linear-gradient(135deg,#f59e0b,#d97706); border-radius: 16px; padding: 24px; margin-bottom: 16px; text-align: center; }
+  .dz70-5 { color: #fff; font-size: 22px; font-weight: 900; }
+  .dz70-6 { color: rgba(255,255,255,0.9); font-size: 13px; margin-top: 2px; }
+  .dz70-7 { margin-top: 8px; background: rgba(0,0,0,0.2); display: inline-block; padding: 4px 12px; border-radius: 20px; color: #fff; font-size: 11px; font-weight: 700; }
+  .dz70-8 { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 18px; margin-bottom: 16px; }
+  .dz70-9 { color: var(--text-main); font-weight: bold; margin-bottom: 14px; }
+  .dz70-10 { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .dz70-11 { color: var(--text-muted); font-size: 13px; }
+  .dz70-12 { color: #10b981; font-weight: bold; font-size: 13px; }
+  .dz70-13 { color: var(--text-main); font-weight: bold; font-size: 13px; }
+  .dz70-14 { display: flex; justify-content: space-between; padding: 10px 0; }
+  .dz70-15 { color: var(--text-main); font-weight: bold; font-size: 12px; text-align: right; max-width: 60%; }
+  .dz70-16 { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 18px; }
+  .dz70-17 { display: flex; justify-content: space-between; padding: 8px 0; }
+  .dz70-18 { color: #f59e0b; font-weight: bold; font-size: 13px; }
+  .dz70-19 { font-size: .72rem; color: var(--text-muted); text-align: center; margin-top: 1rem; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). Only declarations whose properties are free of any
      !important rule in the site CSS were moved; otherwise such a rule
      would suddenly start winning and change the layout. */
@@ -9,73 +31,73 @@
 </style>
 
 <%- include('../partials/navbar') %>
-<div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto;">
+<div class="container dz70-1">
   <%- include('../partials/flash') %>
 
   <div class="im71-1">
-    <a href="/profile/vip" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
-    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;"><%= benefits.icon %> <%= benefits.name %> বেনিফিটস</h1>
+    <a class="dz70-2" href="/profile/vip">←</a>
+    <h1 class="dz70-3"><%= benefits.icon %> <%= benefits.name %> বেনিফিটস</h1>
   </div>
 
-  <div style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:16px;padding:24px;margin-bottom:16px;text-align:center;">
+  <div class="dz70-4">
     <div class="im71-2"><%= benefits.icon %></div>
-    <div style="color:#fff;font-size:22px;font-weight:900;"><%= benefits.name %></div>
-    <div style="color:rgba(255,255,255,0.9);font-size:13px;margin-top:2px;">VIP লেভেল <%= benefits.level %></div>
+    <div class="dz70-5"><%= benefits.name %></div>
+    <div class="dz70-6">VIP লেভেল <%= benefits.level %></div>
     <% if (vip && vip.level === benefits.level) { %>
-      <div style="margin-top:8px;background:rgba(0,0,0,0.2);display:inline-block;padding:4px 12px;border-radius:20px;color:#fff;font-size:11px;font-weight:700;">✅ আপনার বর্তমান লেভেল</div>
+      <div class="dz70-7">✅ আপনার বর্তমান লেভেল</div>
     <% } %>
   </div>
 
-  <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;margin-bottom:16px;">
-    <div style="color:var(--text-main);font-weight:bold;margin-bottom:14px;">🎁 এই লেভেলের সুবিধাসমূহ</div>
+  <div class="dz70-8">
+    <div class="dz70-9">🎁 এই লেভেলের সুবিধাসমূহ</div>
 
-    <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
-      <span style="color:var(--text-muted);font-size:13px;">💰 ক্যাশব্যাক (অতিরিক্ত)</span>
-      <span style="color:#10b981;font-weight:bold;font-size:13px;">+<%= benefits.cashbackPercent %>%</span>
+    <div class="dz70-10">
+      <span class="dz70-11">💰 ক্যাশব্যাক (অতিরিক্ত)</span>
+      <span class="dz70-12">+<%= benefits.cashbackPercent %>%</span>
     </div>
-    <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
-      <span style="color:var(--text-muted);font-size:13px;">🏧 উইথড্র লিমিট</span>
-      <span style="color:var(--text-main);font-weight:bold;font-size:13px;"><%= benefits.withdrawalLimit > 0 ? Number(benefits.withdrawalLimit).toLocaleString('bn-BD') + ' কয়েন/দিন' : 'সীমাহীন' %></span>
+    <div class="dz70-10">
+      <span class="dz70-11">🏧 উইথড্র লিমিট</span>
+      <span class="dz70-13"><%= benefits.withdrawalLimit > 0 ? Number(benefits.withdrawalLimit).toLocaleString('bn-BD') + ' কয়েন/দিন' : 'সীমাহীন' %></span>
     </div>
-    <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
-      <span style="color:var(--text-muted);font-size:13px;">💳 ডিপোজিট বোনাস</span>
-      <span style="color:var(--text-main);font-weight:bold;font-size:13px;">+<%= benefits.depositBonusPercent %>%</span>
+    <div class="dz70-10">
+      <span class="dz70-11">💳 ডিপোজিট বোনাস</span>
+      <span class="dz70-13">+<%= benefits.depositBonusPercent %>%</span>
     </div>
-    <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
-      <span style="color:var(--text-muted);font-size:13px;">🎂 জন্মদিন বোনাস</span>
-      <span style="color:var(--text-main);font-weight:bold;font-size:13px;"><%= Number(benefits.birthdayBonus).toLocaleString('bn-BD') %> কয়েন</span>
+    <div class="dz70-10">
+      <span class="dz70-11">🎂 জন্মদিন বোনাস</span>
+      <span class="dz70-13"><%= Number(benefits.birthdayBonus).toLocaleString('bn-BD') %> কয়েন</span>
     </div>
-    <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
-      <span style="color:var(--text-muted);font-size:13px;">☎️ প্রায়োরিটি সাপোর্ট</span>
+    <div class="dz70-10">
+      <span class="dz70-11">☎️ প্রায়োরিটি সাপোর্ট</span>
       <span style="color:<%= benefits.prioritySupport ? '#10b981' : 'var(--text-muted)' %>;font-weight:bold;font-size:13px;"><%= benefits.prioritySupport ? '✅ আছে' : '❌ নেই' %></span>
     </div>
-    <div style="display:flex;justify-content:space-between;padding:10px 0;">
-      <span style="color:var(--text-muted);font-size:13px;">🎉 এক্সক্লুসিভ ইভেন্ট</span>
-      <span style="color:var(--text-main);font-weight:bold;font-size:12px;text-align:right;max-width:60%;"><%= benefits.exclusiveEvents || 'নেই' %></span>
+    <div class="dz70-14">
+      <span class="dz70-11">🎉 এক্সক্লুসিভ ইভেন্ট</span>
+      <span class="dz70-15"><%= benefits.exclusiveEvents || 'নেই' %></span>
     </div>
   </div>
 
-  <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;">
-    <div style="color:var(--text-main);font-weight:bold;margin-bottom:14px;">🎁 বোনাস সময়সূচী</div>
-    <div style="display:flex;justify-content:space-between;padding:8px 0;">
-      <span style="color:var(--text-muted);font-size:13px;">🔓 আপগ্রেড বোনাস (একবার)</span>
-      <span style="color:#f59e0b;font-weight:bold;font-size:13px;"><%= Number(benefits.upgradeBonus).toLocaleString('bn-BD') %></span>
+  <div class="dz70-16">
+    <div class="dz70-9">🎁 বোনাস সময়সূচী</div>
+    <div class="dz70-17">
+      <span class="dz70-11">🔓 আপগ্রেড বোনাস (একবার)</span>
+      <span class="dz70-18"><%= Number(benefits.upgradeBonus).toLocaleString('bn-BD') %></span>
     </div>
-    <div style="display:flex;justify-content:space-between;padding:8px 0;">
-      <span style="color:var(--text-muted);font-size:13px;">☀️ দৈনিক বোনাস</span>
-      <span style="color:#f59e0b;font-weight:bold;font-size:13px;"><%= Number(benefits.dailyBonus).toLocaleString('bn-BD') %></span>
+    <div class="dz70-17">
+      <span class="dz70-11">☀️ দৈনিক বোনাস</span>
+      <span class="dz70-18"><%= Number(benefits.dailyBonus).toLocaleString('bn-BD') %></span>
     </div>
-    <div style="display:flex;justify-content:space-between;padding:8px 0;">
-      <span style="color:var(--text-muted);font-size:13px;">📅 সাপ্তাহিক বোনাস</span>
-      <span style="color:#f59e0b;font-weight:bold;font-size:13px;"><%= Number(benefits.weeklyBonus).toLocaleString('bn-BD') %></span>
+    <div class="dz70-17">
+      <span class="dz70-11">📅 সাপ্তাহিক বোনাস</span>
+      <span class="dz70-18"><%= Number(benefits.weeklyBonus).toLocaleString('bn-BD') %></span>
     </div>
-    <div style="display:flex;justify-content:space-between;padding:8px 0;">
-      <span style="color:var(--text-muted);font-size:13px;">🗓️ মাসিক বোনাস</span>
-      <span style="color:#f59e0b;font-weight:bold;font-size:13px;"><%= Number(benefits.monthlyBonus).toLocaleString('bn-BD') %></span>
+    <div class="dz70-17">
+      <span class="dz70-11">🗓️ মাসিক বোনাস</span>
+      <span class="dz70-18"><%= Number(benefits.monthlyBonus).toLocaleString('bn-BD') %></span>
     </div>
   </div>
 
-  <p style="font-size:.72rem;color:var(--text-muted);text-align:center;margin-top:1rem;">
+  <p class="dz70-19">
     ন্যূনতম টার্নওভার প্রয়োজন: <%= Number(benefits.minTurnover).toLocaleString('bn-BD') %>
   </p>
 </div>

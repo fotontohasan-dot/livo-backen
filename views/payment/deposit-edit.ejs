@@ -1,6 +1,12 @@
 <%- include('../partials/head') %>
 <style nonce="<%= cspNonce %>">
   /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz96-1 { color: var(--text-muted); font-size: 12px; }
+  .dz96-2 { color: var(--text-accent); font-size: 18px; font-weight: 800; }
+  .dz96-3 { color: var(--text-muted); font-size: 12px; margin-top: 4px; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). A declaration was moved only when no !important rule in
      the site CSS can match this element for that property. */
   .ix96-1 { background-color: #e61e26; }
@@ -20,9 +26,9 @@
     <%- include('../partials/flash') %>
 
     <div class="ix96-3">
-      <div style="color: var(--text-muted); font-size: 12px;">অ্যামাউন্ট</div>
-      <div style="color: var(--text-accent); font-size: 18px; font-weight: 800;">৳<%= Number(request.amount).toLocaleString('bn-BD') %></div>
-      <div style="color: var(--text-muted); font-size: 12px; margin-top: 4px;">মেথড: <%= request.method %></div>
+      <div class="dz96-1">অ্যামাউন্ট</div>
+      <div class="dz96-2">৳<%= Number(request.amount).toLocaleString('bn-BD') %></div>
+      <div class="dz96-3">মেথড: <%= request.method %></div>
     </div>
 
     <form action="/payment/deposit/<%= request.id %>/edit" method="POST">

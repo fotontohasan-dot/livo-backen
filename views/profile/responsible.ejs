@@ -1,6 +1,24 @@
 <%- include('../partials/head') %>
 <style nonce="<%= cspNonce %>">
   /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz63-1 { padding: 16px; padding-bottom: 100px; max-width: 600px; margin: 0 auto; }
+  .dz63-2 { color: var(--text-main); text-decoration: none; font-size: 20px; }
+  .dz63-3 { color: var(--text-main); font-size: 18px; font-weight: bold; }
+  .dz63-4 { background: linear-gradient(135deg,#0ea5e9,#0284c7); border-radius: 16px; padding: 20px; margin-bottom: 16px; text-align: center; }
+  .dz63-5 { color: var(--text-main); font-size: 16px; font-weight: bold; margin-bottom: 4px; }
+  .dz63-6 { color: rgba(255,255,255,0.9); font-size: 13px; }
+  .dz63-7 { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+  .dz63-8 { color: var(--text-main); font-weight: bold; margin-bottom: 6px; }
+  .dz63-9 { color: var(--text-muted); font-size: 12px; margin-bottom: 12px; }
+  .dz63-10 { background: rgba(16,185,129,0.1); border: 1px solid #10b981; border-radius: 8px; padding: 10px; margin-bottom: 12px; color: #10b981; font-size: 13px; }
+  .dz63-11 { width: 100%; background: #1e1e1e; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 8px; margin-bottom: 10px; }
+  .dz63-12 { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; }
+  .dz63-13 { background: rgba(239,68,68,0.1); border: 1px solid #ef4444; border-radius: 8px; padding: 10px; color: #ef4444; font-size: 13px; }
+  .dz63-14 { width: 100%; justify-content: center; background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid #ef4444; }
+  .dz63-15 { font-size: .75rem; color: var(--text-muted); text-align: center; margin-top: 1rem; line-height: 1.6; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). Only declarations whose properties are free of any
      !important rule in the site CSS were moved; otherwise such a rule
      would suddenly start winning and change the layout. */
@@ -10,65 +28,64 @@
 </style>
 
 <%- include('../partials/navbar') %>
-<div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto;">
+<div class="container dz63-1">
   <%- include('../partials/flash') %>
 
   <div class="im64-1">
-    <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
-    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">🛡️ দায়িত্বশীল গেমিং</h1>
+    <a class="dz63-2" href="/profile">←</a>
+    <h1 class="dz63-3">🛡️ দায়িত্বশীল গেমিং</h1>
   </div>
 
   <!-- ব্যানার -->
-  <div style="background:linear-gradient(135deg,#0ea5e9,#0284c7);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center;">
+  <div class="dz63-4">
     <div class="im64-2">🛡️</div>
-    <div style="color:var(--text-main);font-size:16px;font-weight:bold;margin-bottom:4px;">নিরাপদ ও নিয়ন্ত্রিত খেলা</div>
-    <div style="color:rgba(255,255,255,0.9);font-size:13px;">নিজের জন্য সীমা নির্ধারণ করুন</div>
+    <div class="dz63-5">নিরাপদ ও নিয়ন্ত্রিত খেলা</div>
+    <div class="dz63-6">নিজের জন্য সীমা নির্ধারণ করুন</div>
   </div>
 
   <!-- দৈনিক ডিপোজিট সীমা -->
-  <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;margin-bottom:16px;">
-    <div style="color:var(--text-main);font-weight:bold;margin-bottom:6px;">💰 দৈনিক ডিপোজিট সীমা</div>
-    <div style="color:var(--text-muted);font-size:12px;margin-bottom:12px;">
+  <div class="dz63-7">
+    <div class="dz63-8">💰 দৈনিক ডিপোজিট সীমা</div>
+    <div class="dz63-9">
       প্রতিদিন সর্বোচ্চ কত টাকা ডিপোজিট করতে পারবেন তা ঠিক করুন। এর বেশি ডিপোজিট আটকে যাবে।
     </div>
     <% if (rg && rg.daily_deposit_limit) { %>
-      <div style="background:rgba(16,185,129,0.1);border:1px solid #10b981;border-radius:8px;padding:10px;margin-bottom:12px;color:#10b981;font-size:13px;">
+      <div class="dz63-10">
         বর্তমান সীমা: <strong><%= Number(rg.daily_deposit_limit).toLocaleString('bn-BD') %> টাকা</strong>
       </div>
     <% } %>
     <form action="/profile/responsible/deposit-limit" method="POST">
-      <input type="number" name="limit" placeholder="যেমন: 5000 (খালি রাখলে সীমা সরে যাবে)" min="0"
-             style="width:100%;background:#1e1e1e;border:1px solid #333;color:#fff;padding:12px;border-radius:8px;margin-bottom:10px;">
+      <input class="dz63-11" type="number" name="limit" placeholder="যেমন: 5000 (খালি রাখলে সীমা সরে যাবে)" min="0">
       <button type="submit" class="btn btn-primary im64-3">সীমা সেট করুন</button>
     </form>
   </div>
 
   <!-- সেল্ফ এক্সক্লুশন -->
-  <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;">
-    <div style="color:var(--text-main);font-weight:bold;margin-bottom:6px;">⏸️ অ্যাকাউন্ট বিরতি (Self-Exclusion)</div>
-    <div style="color:var(--text-muted);font-size:12px;margin-bottom:12px;">
+  <div class="dz63-12">
+    <div class="dz63-8">⏸️ অ্যাকাউন্ট বিরতি (Self-Exclusion)</div>
+    <div class="dz63-9">
       নির্দিষ্ট সময়ের জন্য নিজের অ্যাকাউন্ট বন্ধ রাখুন। এই সময়ে লগইন করা যাবে না। বিরতি শুরু হলে সাথে সাথে লগআউট হবে।
     </div>
     <% if (rg && rg.self_exclude_until && (new Date(rg.self_exclude_until) > new Date())) { %>
-      <div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:8px;padding:10px;color:#ef4444;font-size:13px;">
+      <div class="dz63-13">
         অ্যাকাউন্ট বন্ধ আছে <%= new Date(rg.self_exclude_until).toLocaleDateString('bn-BD') %> পর্যন্ত।
       </div>
     <% } else { %>
       <form action="/profile/responsible/self-exclude" method="POST" data-confirm="আপনি কি নিশ্চিত? এই সময়ে লগইন করা যাবে না।">
-        <select name="days" style="width:100%;background:#1e1e1e;border:1px solid #333;color:#fff;padding:12px;border-radius:8px;margin-bottom:10px;">
+        <select class="dz63-11" name="days">
           <option value="1">১ দিন</option>
           <option value="7">৭ দিন</option>
           <option value="30">৩০ দিন</option>
           <option value="90">৯০ দিন</option>
         </select>
-        <button type="submit" class="btn" style="width:100%;justify-content:center;background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid #ef4444;">
+        <button type="submit" class="btn dz63-14">
           অ্যাকাউন্ট বিরতি নিন
         </button>
       </form>
     <% } %>
   </div>
 
-  <p style="font-size:.75rem;color:var(--text-muted);text-align:center;margin-top:1rem;line-height:1.6;">
+  <p class="dz63-15">
     জুয়া আসক্তি তৈরি করতে পারে। দায়িত্বের সাথে খেলুন।<br>
     সাহায্য দরকার হলে সাপোর্টে যোগাযোগ করুন।
   </p>

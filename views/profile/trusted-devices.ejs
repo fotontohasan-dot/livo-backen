@@ -1,6 +1,33 @@
 <%- include('../partials/head') %>
 <style nonce="<%= cspNonce %>">
   /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz62-1 { padding: 16px; padding-bottom: 100px; }
+  .dz62-2 { color: var(--text-main); text-decoration: none; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .dz62-3 { color: var(--text-main); font-size: 20px; font-weight: 800; letter-spacing: 0.5px; }
+  .dz62-4 { color: var(--text-accent); }
+  .dz62-5 { background: var(--bg-card); border-radius: 20px; padding: 20px; border: 1px solid var(--border-glass); margin-bottom: 16px; }
+  .dz62-6 { color: var(--text-muted); font-size: 12.5px; margin: 0; }
+  .dz62-7 { margin-bottom: 16px; }
+  .dz62-8 { width: 100%; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #ef4444; padding: 12px; border-radius: 12px; font-size: 13px; font-weight: 800; cursor: pointer; }
+  .dz62-9 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .dz62-10 { color: var(--text-main); font-size: 15px; font-weight: 800; }
+  .dz62-11 { background: rgba(16,185,129,0.15); color: #10b981; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 20px; }
+  .dz62-12 { background: rgba(245,158,11,0.15); color: var(--text-accent); font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 20px; }
+  .dz62-13 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 11.5px; color: var(--text-muted); margin-bottom: 14px; }
+  .dz62-14 { color: var(--text-main); }
+  .dz62-15 { width: 14px; color: #10b981; }
+  .dz62-16 { color: #10b981; }
+  .dz62-17 { background: rgba(255,255,255,0.06); border: none; color: var(--text-main); padding: 8px 12px; border-radius: 10px; font-size: 11px; font-weight: 700; cursor: pointer; }
+  .dz62-18 { display: inline; }
+  .dz62-19 { display: inline; margin-left: auto; }
+  .dz62-20 { background: rgba(239,68,68,0.1); border: none; color: #ef4444; padding: 8px 12px; border-radius: 10px; font-size: 11px; font-weight: 700; cursor: pointer; }
+  .dz62-21 { display: none; margin-top: 10px; gap: 8px; }
+  .dz62-22 { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); color: var(--text-main); padding: 8px 12px; border-radius: 10px; font-size: 12px; }
+  .dz62-23 { background: var(--gold); border: none; color: #000; padding: 8px 14px; border-radius: 10px; font-size: 11px; font-weight: 800; cursor: pointer; }
+  .dz62-24 { text-align: center; padding: 40px 0; color: var(--text-muted); font-size: 13px; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). Only declarations whose properties are free of any
      !important rule in the site CSS were moved; otherwise such a rule
      would suddenly start winning and change the layout. */
@@ -14,26 +41,25 @@
 </style>
 
 
-<div class="container" style="padding: 16px; padding-bottom: 100px;">
+<div class="container dz62-1">
   <div class="im63-1">
-    <a href="/profile/security" style="color:var(--text-main); text-decoration: none; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+    <a class="dz62-2" href="/profile/security">
       <i class="fas fa-chevron-left"></i>
     </a>
-    <h1 style="color:var(--text-main); font-size: 20px; font-weight: 800; letter-spacing: 0.5px;">
-      <i class="fas fa-shield-halved" style="color: var(--text-accent);"></i> <%= t.trusted_devices_title %>
+    <h1 class="dz62-3">
+      <i class="fas fa-shield-halved dz62-4"></i> <%= t.trusted_devices_title %>
     </h1>
   </div>
 
   <%- include('../partials/flash') %>
 
-  <div style="background: var(--bg-card); border-radius: 20px; padding: 20px; border: 1px solid var(--border-glass); margin-bottom: 16px;">
-    <p style="color: var(--text-muted); font-size: 12.5px; margin: 0;"><%= t.trusted_devices_subtitle %></p>
+  <div class="dz62-5">
+    <p class="dz62-6"><%= t.trusted_devices_subtitle %></p>
   </div>
 
   <% if (devices && devices.filter(d => !d.is_current).length > 0) { %>
-    <form method="POST" action="/profile/trusted-devices/remove-all-others"
-      data-confirm="<%= t.remove_all_other_confirm %>" style="margin-bottom:16px;">
-      <button type="submit" style="width:100%; background: rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; padding:12px; border-radius:12px; font-size:13px; font-weight:800; cursor:pointer;">
+    <form class="dz62-7" method="POST" action="/profile/trusted-devices/remove-all-others" data-confirm="<%= t.remove_all_other_confirm %>">
+      <button class="dz62-8" type="submit">
         <i class="fas fa-right-from-bracket"></i> <%= t.remove_all_other_devices %>
       </button>
     </form>
@@ -45,11 +71,11 @@
 
         <div class="im63-2">
           <div class="im63-3">
-            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;" id="dev-name-<%= d.id %>">
-              <i class="fas <%= d.device_type === 'Mobile' ? 'fa-mobile-screen' : (d.device_type === 'Tablet' ? 'fa-tablet-screen-button' : 'fa-desktop') %>" style="color: var(--text-accent);"></i>
-              <span style="color:var(--text-main); font-size:15px; font-weight:800;"><%= d.display_name %></span>
-              <% if (d.is_current) { %><span style="background:rgba(16,185,129,0.15); color:#10b981; font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px;"><%= t.current_device_badge %></span><% } %>
-              <% if (d.is_new_device) { %><span style="background:rgba(245,158,11,0.15); color: var(--text-accent); font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px;"><%= t.new_device_badge %></span><% } %>
+            <div class="dz62-9" id="dev-name-<%= d.id %>">
+              <i class="fas <%= d.device_type === 'Mobile' ? 'fa-mobile-screen' : (d.device_type === 'Tablet' ? 'fa-tablet-screen-button' : 'fa-desktop') %> dz62-4"></i>
+              <span class="dz62-10"><%= d.display_name %></span>
+              <% if (d.is_current) { %><span class="dz62-11"><%= t.current_device_badge %></span><% } %>
+              <% if (d.is_new_device) { %><span class="dz62-12"><%= t.new_device_badge %></span><% } %>
             </div>
           </div>
           <span style="flex-shrink:0; background: <%= d.is_trusted ? 'rgba(16,185,129,0.15)' : 'rgba(148,163,184,0.15)' %>; color: <%= d.is_trusted ? '#10b981' : 'var(--text-muted)' %>; font-size:11px; font-weight:800; padding:5px 10px; border-radius:20px; white-space:nowrap;">
@@ -57,23 +83,22 @@
           </span>
         </div>
 
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; font-size:11.5px; color:var(--text-muted); margin-bottom:14px;">
-          <div><i class="fas fa-globe im63-4"></i> <%= t.device_browser_os %>: <span style="color:var(--text-main);"><%= d.browser || '-' %> / <%= d.os || '-' %></span></div>
-          <div><i class="fas fa-location-dot im63-4"></i> <%= t.device_ip_location %>: <span style="color:var(--text-main);"><%= d.ip || '-' %><%= d.location ? ' • ' + d.location : '' %></span></div>
-          <div><i class="fas fa-right-to-bracket im63-4"></i> <%= t.device_logged_in_since %>: <span style="color:var(--text-main);"><%= new Date(d.created_at).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span></div>
-          <div><i class="fas fa-clock im63-4"></i> <%= t.device_last_active %>: <span style="color:var(--text-main);"><%= new Date(d.last_activity).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span></div>
+        <div class="dz62-13">
+          <div><i class="fas fa-globe im63-4"></i> <%= t.device_browser_os %>: <span class="dz62-14"><%= d.browser || '-' %> / <%= d.os || '-' %></span></div>
+          <div><i class="fas fa-location-dot im63-4"></i> <%= t.device_ip_location %>: <span class="dz62-14"><%= d.ip || '-' %><%= d.location ? ' • ' + d.location : '' %></span></div>
+          <div><i class="fas fa-right-to-bracket im63-4"></i> <%= t.device_logged_in_since %>: <span class="dz62-14"><%= new Date(d.created_at).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span></div>
+          <div><i class="fas fa-clock im63-4"></i> <%= t.device_last_active %>: <span class="dz62-14"><%= new Date(d.last_activity).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span></div>
           <% if (d.is_trusted && d.trusted_at) { %>
-            <div class="im63-5"><i class="fas fa-shield-check" style="width:14px; color:#10b981;"></i> <%= t.trusted_since %>: <span style="color:#10b981;"><%= new Date(d.trusted_at).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span></div>
+            <div class="im63-5"><i class="fas fa-shield-check dz62-15"></i> <%= t.trusted_since %>: <span class="dz62-16"><%= new Date(d.trusted_at).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span></div>
           <% } %>
         </div>
 
         <div class="im63-6">
-          <button type="button" data-rename-device="<%= d.id %>" data-rename-name="<%= d.display_name || '' %>"
-            style="background: rgba(255,255,255,0.06); border:none; color:var(--text-main); padding:8px 12px; border-radius:10px; font-size:11px; font-weight:700; cursor:pointer;">
+          <button class="dz62-17" type="button" data-rename-device="<%= d.id %>" data-rename-name="<%= d.display_name || '' %>">
             <i class="fas fa-pen"></i> <%= t.rename_device %>
           </button>
 
-          <form method="POST" action="/profile/trusted-devices/<%= d.id %>/trust" style="display:inline;">
+          <form class="dz62-18" method="POST" action="/profile/trusted-devices/<%= d.id %>/trust">
             <input type="hidden" name="trusted" value="<%= d.is_trusted ? 'false' : 'true' %>">
             <button type="submit" style="background: <%= d.is_trusted ? 'rgba(148,163,184,0.12)' : 'rgba(16,185,129,0.12)' %>; border:none; color: <%= d.is_trusted ? 'var(--text-muted)' : '#10b981' %>; padding:8px 12px; border-radius:10px; font-size:11px; font-weight:700; cursor:pointer;">
               <i class="fas <%= d.is_trusted ? 'fa-shield' : 'fa-shield-check' %>"></i> <%= d.is_trusted ? t.mark_untrusted : t.mark_trusted %>
@@ -81,8 +106,8 @@
           </form>
 
           <% if (!d.is_current) { %>
-            <form method="POST" action="/profile/trusted-devices/<%= d.id %>/remove" data-confirm="<%= t.remove_device_confirm %>" style="display:inline; margin-left:auto;">
-              <button type="submit" style="background: rgba(239,68,68,0.1); border:none; color:#ef4444; padding:8px 12px; border-radius:10px; font-size:11px; font-weight:700; cursor:pointer;">
+            <form class="dz62-19" method="POST" action="/profile/trusted-devices/<%= d.id %>/remove" data-confirm="<%= t.remove_device_confirm %>">
+              <button class="dz62-20" type="submit">
                 <i class="fas fa-trash"></i> <%= t.remove_device %>
               </button>
             </form>
@@ -90,15 +115,14 @@
         </div>
 
         <!-- ইনলাইন রিনেম ফর্ম (JS দিয়ে টগল হয়, prompt() সাপোর্ট না থাকলে ফলব্যাক) -->
-        <form method="POST" action="/profile/trusted-devices/<%= d.id %>/rename" id="rename-form-<%= d.id %>" style="display:none; margin-top:10px; gap:8px;">
-          <input type="text" name="label" maxlength="100" placeholder="<%= t.rename_device_prompt %>"
-            style="flex:1; background: rgba(255,255,255,0.05); border:1px solid var(--border-glass); color:var(--text-main); padding:8px 12px; border-radius:10px; font-size:12px;">
-          <button type="submit" style="background: var(--gold); border:none; color:#000; padding:8px 14px; border-radius:10px; font-size:11px; font-weight:800; cursor:pointer;">✓</button>
+        <form class="dz62-21" method="POST" action="/profile/trusted-devices/<%= d.id %>/rename" id="rename-form-<%= d.id %>">
+          <input class="dz62-22" type="text" name="label" maxlength="100" placeholder="<%= t.rename_device_prompt %>">
+          <button class="dz62-23" type="submit">✓</button>
         </form>
       </div>
     <% }) %>
   <% } else { %>
-    <div style="text-align:center; padding: 40px 0; color: var(--text-muted); font-size: 13px;">
+    <div class="dz62-24">
       <i class="fas fa-mobile-screen im63-7"></i>
       <%= t.no_trusted_devices %>
     </div>

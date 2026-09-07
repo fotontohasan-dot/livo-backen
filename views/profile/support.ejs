@@ -35,7 +35,7 @@
   </div>
 
   <div class="sh-card">
-    <div class="sh-card-title"><i class="fas fa-circle-info" style="color: var(--text-accent);"></i> <%= t.faq_title %></div>
+    <div class="sh-card-title"><i class="fas fa-circle-info dz78-1"></i> <%= t.faq_title %></div>
     <details class="sh-faq"><summary><%= t.faq_deposit_time_q %></summary><div class="sh-faq-body"><%= t.faq_deposit_time_a %></div></details>
     <details class="sh-faq"><summary><%= t.faq_withdraw_req_q %></summary><div class="sh-faq-body"><%= t.faq_withdraw_req_a %></div></details>
     <details class="sh-faq"><summary><%= t.faq_kyc_q %></summary><div class="sh-faq-body"><%= t.faq_kyc_a %></div></details>
@@ -43,6 +43,10 @@
 </div>
 
 <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz78-1 { color: var(--text-accent); }
   /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). Only declarations whose properties are free of any
      !important rule in the site CSS were moved; otherwise such a rule

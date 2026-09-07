@@ -12,7 +12,7 @@
   <!-- ==================== WALLET SUMMARY CARD ==================== -->
   <div class="wh-card wh-summary-card">
     <div class="wh-card-title-row">
-      <div class="wh-card-title"><i class="fas fa-wallet" style="color: var(--text-accent);"></i> <%= t.wallet_summary %></div>
+      <div class="wh-card-title"><i class="fas fa-wallet dz92-1"></i> <%= t.wallet_summary %></div>
       <button data-refresh-wallet id="whRefreshBtn" title="<%= t.refresh %>" class="wh-icon-btn"><i class="fas fa-sync-alt" id="whRefreshIcon"></i></button>
     </div>
     <div id="whBalanceText" class="wh-total-balance">৳ <%= Number(coins).toLocaleString('bn-BD') %></div>
@@ -49,7 +49,7 @@
   <!-- ==================== MERGED WALLET PAGES ==================== -->
   <div class="wh-card">
     <div class="wh-card-title-row">
-      <div class="wh-card-title"><i class="fas fa-layer-group" style="color: var(--text-accent);"></i> <%= t.all_wallet_pages %></div>
+      <div class="wh-card-title"><i class="fas fa-layer-group dz92-1"></i> <%= t.all_wallet_pages %></div>
     </div>
     <div class="wh-link-list">
       <a href="/payment/deposit" class="wh-link-item"><i class="fas fa-plus-circle"></i><span><%= t.deposit %></span><i class="fas fa-chevron-right wh-chev"></i></a>
@@ -64,7 +64,7 @@
   <!-- ==================== WALLET STATISTICS ==================== -->
   <div class="wh-card">
     <div class="wh-card-title-row">
-      <div class="wh-card-title"><i class="fas fa-chart-pie" style="color: var(--text-accent);"></i> <%= t.wallet_stats %></div>
+      <div class="wh-card-title"><i class="fas fa-chart-pie dz92-1"></i> <%= t.wallet_stats %></div>
     </div>
     <div class="wh-grid-3">
       <div class="wh-stat-box">
@@ -93,7 +93,7 @@
   <!-- ==================== RECENT TRANSACTIONS ==================== -->
   <div class="wh-card">
     <div class="wh-card-title-row">
-      <div class="wh-card-title"><i class="fas fa-list-ul" style="color: var(--text-accent);"></i> <%= t.recent_transactions %></div>
+      <div class="wh-card-title"><i class="fas fa-list-ul dz92-1"></i> <%= t.recent_transactions %></div>
       <a href="/payment/history" class="wh-mini-btn"><%= t.view_all %> <i class="fas fa-chevron-right im93-2"></i></a>
     </div>
     <% if (recentTx && recentTx.length > 0) { %>
@@ -124,6 +124,10 @@
 </div>
 
 <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz92-1 { color: var(--text-accent); }
   /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). Only declarations whose properties are free of any
      !important rule in the site CSS were moved; otherwise such a rule

@@ -1,6 +1,13 @@
 <%- include('partials/head') %>
 <style nonce="<%= cspNonce %>">
   /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz100-1 { color: var(--text-accent); }
+  .dz100-2 { color: var(--muted); margin-bottom: 1.5rem; }
+  .dz100-3 { color: var(--text-accent); font-weight: 700; }
+  .dz100-4 { color: var(--muted); }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). Only declarations whose properties are free of any
      !important rule in the site CSS were moved; otherwise such a rule
      would suddenly start winning and change the layout. */
@@ -25,7 +32,7 @@
         <div class="card-body">
           <div class="im101-2">
             <div class="stat-card im101-3">
-              <div class="stat-number" style="color: var(--text-accent)"><%= tournament.prize_pool %></div>
+              <div class="stat-number dz100-1"><%= tournament.prize_pool %></div>
               <div class="stat-label">Prize Pool 🏆</div>
             </div>
             <div class="stat-card im101-3">
@@ -37,7 +44,7 @@
               <div class="stat-label">Participants</div>
             </div>
           </div>
-          <p style="color:var(--muted);margin-bottom:1.5rem"><%= tournament.description %></p>
+          <p class="dz100-2"><%= tournament.description %></p>
           <% if(locals.user && !joined && tournament.status !== 'completed') { %>
             <button data-join-tournament class="btn btn-primary">🏆 Join Tournament</button>
           <% } else if(joined) { %>
@@ -58,7 +65,7 @@
                   <div class="avatar"><%= p.username[0].toUpperCase() %></div>
                   <%= p.username %>
                 </td>
-                <td style="color: var(--text-accent);font-weight:700"><%= p.points %></td>
+                <td class="dz100-3"><%= p.points %></td>
               </tr>
             <% }) %>
           </tbody>
@@ -72,19 +79,19 @@
         <div class="card-body">
           <div class="im101-5">
             <div class="im101-6">
-              <span style="color:var(--muted)">Sport</span>
+              <span class="dz100-4">Sport</span>
               <span><%= tournament.sport %></span>
             </div>
             <div class="im101-6">
-              <span style="color:var(--muted)">Start Date</span>
+              <span class="dz100-4">Start Date</span>
               <span><%= new Date(tournament.start_date).toLocaleDateString() %></span>
             </div>
             <div class="im101-6">
-              <span style="color:var(--muted)">End Date</span>
+              <span class="dz100-4">End Date</span>
               <span><%= new Date(tournament.end_date).toLocaleDateString() %></span>
             </div>
             <div class="im101-6">
-              <span style="color:var(--muted)">Max Players</span>
+              <span class="dz100-4">Max Players</span>
               <span><%= tournament.max_participants %></span>
             </div>
           </div>

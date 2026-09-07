@@ -1,6 +1,16 @@
 <%- include('../partials/head') %>
 <style nonce="<%= cspNonce %>">
   /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz51-1 { text-align: center; padding: 40px 20px; border-radius: 24px; }
+  .dz51-2 { color: var(--text-main); margin-bottom: 10px; }
+  .dz51-3 { color: var(--text-muted); font-size: 14px; margin-bottom: 30px; }
+  .dz51-4 { padding: 20px; border-radius: 16px; background: rgba(245, 158, 11, 0.05); border: 1px dashed var(--gold); }
+  .dz51-5 { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+  .dz51-6 { font-family: 'Teko', sans-serif; font-size: 36px; color: var(--text-accent); font-weight: 700; letter-spacing: 4px; }
+  .dz51-7 { margin-top: 15px; border-radius: 20px; padding: 8px 30px; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). Only declarations whose properties are free of any
      !important rule in the site CSS were moved; otherwise such a rule
      would suddenly start winning and change the layout. */
@@ -12,17 +22,17 @@
 <%- include('../partials/navbar') %>
 
 <div class="container page im51-1">
-    <div class="card glass" style="text-align: center; padding: 40px 20px; border-radius: 24px;">
+    <div class="card glass dz51-1">
         <div class="im51-2">✉️</div>
-        <h2 style="color: var(--text-main); margin-bottom: 10px;"><%= t.invite_friends_title %></h2>
-        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 30px;"><%= t.invite_friends_desc %></p>
+        <h2 class="dz51-2"><%= t.invite_friends_title %></h2>
+        <p class="dz51-3"><%= t.invite_friends_desc %></p>
 
-        <div class="glass" style="padding: 20px; border-radius: 16px; background: rgba(245, 158, 11, 0.05); border: 1px dashed var(--gold);">
-            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;"><%= t.your_referral_code %></p>
-            <div style="font-family: 'Teko', sans-serif; font-size: 36px; color: var(--text-accent); font-weight: 700; letter-spacing: 4px;">
+        <div class="glass dz51-4">
+            <p class="dz51-5"><%= t.your_referral_code %></p>
+            <div class="dz51-6">
                 <%= referralCode %>
             </div>
-            <button data-copy-ref class="btn btn-primary" style="margin-top: 15px; border-radius: 20px; padding: 8px 30px;"><%= t.copy %></button>
+            <button data-copy-ref class="btn btn-primary dz51-7"><%= t.copy %></button>
         </div>
 
         <div class="im51-3">

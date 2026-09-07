@@ -1,6 +1,32 @@
 <%- include('../partials/head') %>
 <style nonce="<%= cspNonce %>">
   /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz55-1 { padding: 16px; padding-bottom: 100px; max-width: 600px; margin: 0 auto; }
+  .dz55-2 { color: var(--text-main); text-decoration: none; font-size: 20px; }
+  .dz55-3 { color: var(--text-main); font-size: 18px; font-weight: bold; }
+  .dz55-4 { background: linear-gradient(135deg,#0B7EB2,#026598); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+  .dz55-5 { color: #fff; font-size: 16px; font-weight: bold; margin-bottom: 4px; }
+  .dz55-6 { color: rgba(255,255,255,0.9); font-size: 12px; margin-bottom: 14px; }
+  .dz55-7 { background: rgba(0,0,0,0.2); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+  .dz55-8 { display: flex; justify-content: space-between; padding: 4px 0; }
+  .dz55-9 { color: rgba(255,255,255,0.85); font-size: 13px; }
+  .dz55-10 { color: #fff; font-size: 13px; font-weight: bold; }
+  .dz55-11 { color: #fff; font-size: 15px; font-weight: bold; }
+  .dz55-12 { text-align: center; color: #d1fae5; font-size: 13px; font-weight: bold; }
+  .dz55-13 { width: 100%; background: #fff; color: #0284c7; border: none; border-radius: 10px; padding: 12px; font-weight: bold; font-size: 14px; cursor: pointer; }
+  .dz55-14 { text-align: center; color: rgba(255,255,255,0.85); font-size: 12px; }
+  .dz55-15 { color: rgba(255,255,255,0.85); font-size: 13px; text-align: center; }
+  .dz55-16 { background: linear-gradient(135deg,#7c3aed,#5b21b6); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+  .dz55-17 { text-align: center; color: #ddd6fe; font-size: 13px; font-weight: bold; }
+  .dz55-18 { width: 100%; background: #fff; color: #5b21b6; border: none; border-radius: 10px; padding: 12px; font-weight: bold; font-size: 14px; cursor: pointer; }
+  .dz55-19 { margin-top: 14px; border-top: 1px solid rgba(255,255,255,0.15); padding-top: 12px; }
+  .dz55-20 { display: flex; justify-content: space-between; padding: 5px 0; font-size: 12px; }
+  .dz55-21 { color: rgba(255,255,255,0.8); }
+  .dz55-22 { color: #fde68a; font-weight: bold; }
+  .dz55-23 { font-size: .75rem; color: var(--text-muted); text-align: center; line-height: 1.6; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). Only declarations whose properties are free of any
      !important rule in the site CSS were moved; otherwise such a rule
      would suddenly start winning and change the layout. */
@@ -9,90 +35,90 @@
 </style>
 
 <%- include('../partials/navbar') %>
-<div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto;">
+<div class="container dz55-1">
   <%- include('../partials/flash') %>
 
   <div class="im56-1">
-    <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
-    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">📅 সাপ্তাহিক ও মাসিক রিওয়ার্ড</h1>
+    <a class="dz55-2" href="/profile">←</a>
+    <h1 class="dz55-3">📅 সাপ্তাহিক ও মাসিক রিওয়ার্ড</h1>
   </div>
 
   <!-- সাপ্তাহিক ক্যাশব্যাক -->
-  <div style="background:linear-gradient(135deg,#0B7EB2,#026598);border-radius:16px;padding:20px;margin-bottom:16px;">
-    <div style="color:#fff;font-size:16px;font-weight:bold;margin-bottom:4px;">🗓️ সাপ্তাহিক ক্যাশব্যাক</div>
-    <div style="color:rgba(255,255,255,0.9);font-size:12px;margin-bottom:14px;">গত ৭ দিনের নিট লসের ১০% (সর্বোচ্চ ৫০,০০০)</div>
+  <div class="dz55-4">
+    <div class="dz55-5">🗓️ সাপ্তাহিক ক্যাশব্যাক</div>
+    <div class="dz55-6">গত ৭ দিনের নিট লসের ১০% (সর্বোচ্চ ৫০,০০০)</div>
 
     <% if (weekly) { %>
-      <div style="background:rgba(0,0,0,0.2);border-radius:10px;padding:12px;margin-bottom:12px;">
-        <div style="display:flex;justify-content:space-between;padding:4px 0;">
-          <span style="color:rgba(255,255,255,0.85);font-size:13px;">গত ৭ দিনের নিট লস</span>
-          <span style="color:#fff;font-size:13px;font-weight:bold;"><%= Number(weekly.netLoss).toLocaleString('bn-BD') %></span>
+      <div class="dz55-7">
+        <div class="dz55-8">
+          <span class="dz55-9">গত ৭ দিনের নিট লস</span>
+          <span class="dz55-10"><%= Number(weekly.netLoss).toLocaleString('bn-BD') %></span>
         </div>
-        <div style="display:flex;justify-content:space-between;padding:4px 0;">
-          <span style="color:rgba(255,255,255,0.85);font-size:13px;">ক্যাশব্যাক (১০%)</span>
-          <span style="color:#fff;font-size:15px;font-weight:bold;"><%= Number(weekly.amount).toLocaleString('bn-BD') %> কয়েন</span>
+        <div class="dz55-8">
+          <span class="dz55-9">ক্যাশব্যাক (১০%)</span>
+          <span class="dz55-11"><%= Number(weekly.amount).toLocaleString('bn-BD') %> কয়েন</span>
         </div>
       </div>
       <% if (weekly.claimed) { %>
-        <div style="text-align:center;color:#d1fae5;font-size:13px;font-weight:bold;">✅ এই সপ্তাহের ক্যাশব্যাক নেওয়া হয়েছে</div>
+        <div class="dz55-12">✅ এই সপ্তাহের ক্যাশব্যাক নেওয়া হয়েছে</div>
       <% } else if (weekly.available) { %>
         <form class="im56-2" action="/profile/periodic/weekly" method="POST">
-          <button type="submit" style="width:100%;background:#fff;color:#0284c7;border:none;border-radius:10px;padding:12px;font-weight:bold;font-size:14px;cursor:pointer;">
+          <button class="dz55-13" type="submit">
             🗓️ সাপ্তাহিক ক্যাশব্যাক ক্লেইম করুন
           </button>
         </form>
       <% } else { %>
-        <div style="text-align:center;color:rgba(255,255,255,0.85);font-size:12px;">এই সপ্তাহে ক্যাশব্যাক পাওয়ার মতো যথেষ্ট লস হয়নি।</div>
+        <div class="dz55-14">এই সপ্তাহে ক্যাশব্যাক পাওয়ার মতো যথেষ্ট লস হয়নি।</div>
       <% } %>
     <% } else { %>
-      <div style="color:rgba(255,255,255,0.85);font-size:13px;text-align:center;">তথ্য লোড করা যায়নি।</div>
+      <div class="dz55-15">তথ্য লোড করা যায়নি।</div>
     <% } %>
   </div>
 
   <!-- মাসিক রিওয়ার্ড -->
-  <div style="background:linear-gradient(135deg,#7c3aed,#5b21b6);border-radius:16px;padding:20px;margin-bottom:16px;">
-    <div style="color:#fff;font-size:16px;font-weight:bold;margin-bottom:4px;">📆 মাসিক রিওয়ার্ড</div>
-    <div style="color:rgba(255,255,255,0.9);font-size:12px;margin-bottom:14px;">গত মাসের মোট বাজির উপর টিয়ার বোনাস</div>
+  <div class="dz55-16">
+    <div class="dz55-5">📆 মাসিক রিওয়ার্ড</div>
+    <div class="dz55-6">গত মাসের মোট বাজির উপর টিয়ার বোনাস</div>
 
     <% if (monthly) { %>
-      <div style="background:rgba(0,0,0,0.2);border-radius:10px;padding:12px;margin-bottom:12px;">
-        <div style="display:flex;justify-content:space-between;padding:4px 0;">
-          <span style="color:rgba(255,255,255,0.85);font-size:13px;">গত মাসের মোট বাজি</span>
-          <span style="color:#fff;font-size:13px;font-weight:bold;"><%= Number(monthly.turnover).toLocaleString('bn-BD') %></span>
+      <div class="dz55-7">
+        <div class="dz55-8">
+          <span class="dz55-9">গত মাসের মোট বাজি</span>
+          <span class="dz55-10"><%= Number(monthly.turnover).toLocaleString('bn-BD') %></span>
         </div>
-        <div style="display:flex;justify-content:space-between;padding:4px 0;">
-          <span style="color:rgba(255,255,255,0.85);font-size:13px;">প্রাপ্য বোনাস</span>
-          <span style="color:#fff;font-size:15px;font-weight:bold;"><%= Number(monthly.bonus).toLocaleString('bn-BD') %> কয়েন</span>
+        <div class="dz55-8">
+          <span class="dz55-9">প্রাপ্য বোনাস</span>
+          <span class="dz55-11"><%= Number(monthly.bonus).toLocaleString('bn-BD') %> কয়েন</span>
         </div>
       </div>
 
       <% if (monthly.claimed) { %>
-        <div style="text-align:center;color:#ddd6fe;font-size:13px;font-weight:bold;">✅ গত মাসের রিওয়ার্ড নেওয়া হয়েছে</div>
+        <div class="dz55-17">✅ গত মাসের রিওয়ার্ড নেওয়া হয়েছে</div>
       <% } else if (monthly.available) { %>
         <form class="im56-2" action="/profile/periodic/monthly" method="POST">
-          <button type="submit" style="width:100%;background:#fff;color:#5b21b6;border:none;border-radius:10px;padding:12px;font-weight:bold;font-size:14px;cursor:pointer;">
+          <button class="dz55-18" type="submit">
             📆 মাসিক রিওয়ার্ড ক্লেইম করুন
           </button>
         </form>
       <% } else { %>
-        <div style="text-align:center;color:rgba(255,255,255,0.85);font-size:12px;">গত মাসে যথেষ্ট বাজি হয়নি।</div>
+        <div class="dz55-14">গত মাসে যথেষ্ট বাজি হয়নি।</div>
       <% } %>
 
       <!-- টিয়ার তালিকা -->
-      <div style="margin-top:14px;border-top:1px solid rgba(255,255,255,0.15);padding-top:12px;">
+      <div class="dz55-19">
         <% monthly.tiers.forEach(t => { %>
-          <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;">
-            <span style="color:rgba(255,255,255,0.8);"><%= Number(t.min).toLocaleString('bn-BD') %>+ বাজি</span>
-            <span style="color:#fde68a;font-weight:bold;"><%= t.bonus %> কয়েন</span>
+          <div class="dz55-20">
+            <span class="dz55-21"><%= Number(t.min).toLocaleString('bn-BD') %>+ বাজি</span>
+            <span class="dz55-22"><%= t.bonus %> কয়েন</span>
           </div>
         <% }) %>
       </div>
     <% } else { %>
-      <div style="color:rgba(255,255,255,0.85);font-size:13px;text-align:center;">তথ্য লোড করা যায়নি।</div>
+      <div class="dz55-15">তথ্য লোড করা যায়নি।</div>
     <% } %>
   </div>
 
-  <p style="font-size:.75rem;color:var(--text-muted);text-align:center;line-height:1.6;">
+  <p class="dz55-23">
     সাপ্তাহিক ক্যাশব্যাক সপ্তাহে একবার, মাসিক রিওয়ার্ড মাসে একবার ক্লেইম করা যায়।
   </p>
 

@@ -14,8 +14,8 @@
                 <%= t.type === 'deposit' ? '💰' : t.type === 'withdraw' ? '💸' : t.type === 'lucky_wheel' ? '🎡' : t.type === 'bet' ? '🎲' : '✨' %>
             </div>
             <div>
-              <div style="color:var(--text-main);font-size:14px"><%= t.description || t.type %></div>
-              <div style="color:var(--text-muted);font-size:12px"><%= new Date(t.created_at).toLocaleDateString('bn-BD') %></div>
+              <div class="dz60-1"><%= t.description || t.type %></div>
+              <div class="dz60-2"><%= new Date(t.created_at).toLocaleDateString('bn-BD') %></div>
             </div>
           </div>
           <div style="color:<%= t.amount > 0 ? '#10b981' : '#ef4444' %>; font-weight:bold; font-size:16px; font-family: 'Teko', sans-serif;">
@@ -27,6 +27,13 @@
   <% } else if (typeof loadError !== 'undefined' && loadError) { %>
     <%# loadError হলে খালি-অবস্থার বার্তা দেখানো যাবে না, কারণ সেটা জানা নেই। EJS মন্তব্য ব্যবহার করা হচ্ছে ইচ্ছাকৃতভাবে; HTML মন্তব্য আউটপুটে থেকে যেত আর ওই বার্তাটাই পেজে ফিরে আসত। %>
     <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz60-1 { color: var(--text-main); font-size: 14px; }
+  .dz60-2 { color: var(--text-muted); font-size: 12px; }
+  .dz60-3 { text-align: center; padding: 40px; color: var(--text-muted); }
+  .dz60-4 { font-size: 48px; margin-bottom: 12px; }
   /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). A declaration was moved only when no !important rule in
      the site CSS can match this element for that property. */
@@ -50,8 +57,8 @@
       <div><%= t.common_history_load_failed %></div>
     </div>
   <% } else { %>
-    <div style="text-align:center;padding:40px;color:var(--text-muted)">
-      <div style="font-size:48px;margin-bottom:12px">📭</div>
+    <div class="dz60-3">
+      <div class="dz60-4">📭</div>
       <div>কোনো লেনদেন নেই</div>
     </div>
   <% } %>

@@ -1,6 +1,15 @@
 <%- include('partials/head') %>
 <style nonce="<%= cspNonce %>">
   /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz85-1 { padding: 1rem; padding-bottom: 100px; max-width: 800px; margin: 0 auto; }
+  .dz85-2 { font-size: 0.75rem; color: var(--text-muted); }
+  .dz85-3 { width: 8px; height: 8px; background: var(--gold); border-radius: 50%; }
+  .dz85-4 { color: var(--text-main); font-weight: 600; margin-bottom: 2px; }
+  .dz85-5 { color: var(--text-muted); font-size: 0.9rem; }
+  .dz85-6 { padding: 3rem; text-align: center; color: var(--text-muted); }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). Only declarations whose properties are free of any
      !important rule in the site CSS were moved; otherwise such a rule
      would suddenly start winning and change the layout. */
@@ -14,7 +23,7 @@
 
 <%- include('partials/navbar') %>
 
-<div class="container" style="padding:1rem;padding-bottom:100px;max-width:800px;margin:0 auto;">
+<div class="container dz85-1">
   <%- include('partials/flash') %>
 
   <h1 class="im86-1">🔔 <%= t.notifications_title %></h1>
@@ -28,20 +37,20 @@
           </div>
           <div class="im86-4">
             <div class="im86-5">
-              <div style="font-size:0.75rem;color:var(--text-muted);">
+              <div class="dz85-2">
                 <%= new Date(n.created_at).toLocaleString('bn-BD') %>
               </div>
               <% if (!n.is_read) { %>
-                <span style="width:8px;height:8px;background:var(--gold);border-radius:50%;"></span>
+                <span class="dz85-3"></span>
               <% } %>
             </div>
-            <div style="color:var(--text-main);font-weight:600;margin-bottom:2px;"><%= n.title %></div>
-            <div style="color:var(--text-muted);font-size:0.9rem;"><%= n.message %></div>
+            <div class="dz85-4"><%= n.title %></div>
+            <div class="dz85-5"><%= n.message %></div>
           </div>
         </div>
       <% }) %>
     <% } else { %>
-      <div class="glass-card" style="padding:3rem;text-align:center;color:var(--text-muted);">
+      <div class="glass-card dz85-6">
         <div class="im86-6">🔔</div>
         <p><%= t.no_notifications %></p>
       </div>

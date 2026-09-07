@@ -6,6 +6,15 @@
   <title>পেমেন্ট ম্যানেজমেন্ট • Livo Admin</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz91-1 { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+  .dz91-2 { align-items: center; gap: 10px; margin-bottom: 14px; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); border-radius: 12px; padding: 10px 14px; }
+  .dz91-3 { font-size: 12px; font-weight: 700; color: #f59e0b; }
+  .dz91-4 { margin-left: auto; }
+  .dz91-5 { overflow-x: auto; }
+  .dz91-6 { text-align: right; }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
     .pay-tabs { display: flex; gap: 4px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 16px; }
@@ -30,13 +39,13 @@
       <%- include('../admin/partials/header', { pageTitle: 'পেমেন্ট অনুমোদন', pageSubtitle: 'পেন্ডিং ডিপোজিট ও উইথড্র রিকোয়েস্ট অনুমোদন/বাতিল করুন — এটাই একমাত্র অনুমোদন কিউ' }) %>
       <%- include('../admin/partials/load-error') %>
 
-      <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
+      <div class="dz91-1">
         <a href="/payment/admin/summary" class="btn"><i class="fas fa-chart-bar"></i> হিস্টোরি ও দৈনিক সামারি</a>
       </div>
 
-      <div id="paymentBulkBar" class="hidden" style="align-items:center;gap:10px;margin-bottom:14px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:12px;padding:10px 14px;">
-        <span style="font-size:12px;font-weight:700;color:#f59e0b;"><span id="paymentBulkCount">0</span>টা রিকোয়েস্ট নির্বাচিত</span>
-        <button type="button" data-pay-bulk="approve" class="btn btn-sm btn-green" style="margin-left:auto;"><i class="fas fa-check"></i> নির্বাচিতগুলো অনুমোদন করুন</button>
+      <div id="paymentBulkBar" class="hidden dz91-2">
+        <span class="dz91-3"><span id="paymentBulkCount">0</span>টা রিকোয়েস্ট নির্বাচিত</span>
+        <button type="button" data-pay-bulk="approve" class="btn btn-sm btn-green dz91-4"><i class="fas fa-check"></i> নির্বাচিতগুলো অনুমোদন করুন</button>
         <button type="button" data-pay-bulk="reject" class="btn btn-sm btn-red"><i class="fas fa-xmark"></i> নির্বাচিতগুলো বাতিল করুন</button>
         <button type="button" data-pay-clear class="btn btn-sm">বাতিল</button>
       </div>
@@ -51,9 +60,9 @@
         <div id="depositPendingStrip"></div>
         <div class="admin-card">
           <div class="admin-card-header">ডিপোজিট রিকোয়েস্ট</div>
-          <div style="overflow-x:auto;">
+          <div class="dz91-5">
             <table class="admin-table" id="depositTable">
-              <thead><tr><th><input type="checkbox" class="pay-select-all" data-table="depositTable" ></th><th>ইউজার</th><th>মেথড</th><th>পরিমাণ</th><th>TrxID</th><th>নম্বর</th><th>তারিখ</th><th>স্ট্যাটাস</th><th style="text-align:right;">অ্যাকশন</th></tr></thead>
+              <thead><tr><th><input type="checkbox" class="pay-select-all" data-table="depositTable" ></th><th>ইউজার</th><th>মেথড</th><th>পরিমাণ</th><th>TrxID</th><th>নম্বর</th><th>তারিখ</th><th>স্ট্যাটাস</th><th class="dz91-6">অ্যাকশন</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
@@ -65,9 +74,9 @@
         <div id="withdrawPendingStrip"></div>
         <div class="admin-card">
           <div class="admin-card-header">উইথড্র রিকোয়েস্ট</div>
-          <div style="overflow-x:auto;">
+          <div class="dz91-5">
             <table class="admin-table" id="withdrawTable">
-              <thead><tr><th><input type="checkbox" class="pay-select-all" data-table="withdrawTable" ></th><th>ইউজার</th><th>মেথড</th><th>পরিমাণ</th><th>TrxID</th><th>নম্বর</th><th>তারিখ</th><th>স্ট্যাটাস</th><th style="text-align:right;">অ্যাকশন</th></tr></thead>
+              <thead><tr><th><input type="checkbox" class="pay-select-all" data-table="withdrawTable" ></th><th>ইউজার</th><th>মেথড</th><th>পরিমাণ</th><th>TrxID</th><th>নম্বর</th><th>তারিখ</th><th>স্ট্যাটাস</th><th class="dz91-6">অ্যাকশন</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>

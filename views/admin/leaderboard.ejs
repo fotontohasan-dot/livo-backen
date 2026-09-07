@@ -6,6 +6,33 @@
   <title><%= t('admin_title_leaderboard') %></title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz25-1 { padding: 12px 16px; margin-bottom: 14px; background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.3); color: #10b981; font-weight: 700; font-size: 13px; }
+  .dz25-2 { padding: 12px 16px; margin-bottom: 14px; background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #ef4444; font-weight: 700; font-size: 13px; }
+  .dz25-3 { margin-bottom: 14px; }
+  .dz25-4 { color: #f59e0b; }
+  .dz25-5 { color: #10b981; }
+  .dz25-6 { padding: 14px; margin-bottom: 14px; }
+  .dz25-7 { display: flex; gap: 10px; flex-wrap: wrap; }
+  .dz25-8 { flex: 1; min-width: 220px; }
+  .dz25-9 { max-width: 200px; }
+  .dz25-10 { margin-bottom: 20px; }
+  .dz25-11 { overflow-x: auto; }
+  .dz25-12 { text-align: right; }
+  .dz25-13 { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+  .dz25-14 { color: var(--text-muted); }
+  .dz25-15 { font-weight: 700; }
+  .dz25-16 { font-size: 11px; color: var(--text-muted); }
+  .dz25-17 { font-weight: 700; color: #f59e0b; }
+  .dz25-18 { text-align: right; white-space: nowrap; }
+  .dz25-19 { display: inline; }
+  .dz25-20 { display: flex; justify-content: center; gap: 10px; margin-bottom: 24px; }
+  .dz25-21 { padding: 9px 12px; color: var(--text-muted); font-size: 12px; }
+  .dz25-22 { float: right; margin-left: 8px; }
+  .dz25-23 { float: right; }
+  .dz25-24 { padding: 0 14px 14px; }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
     .lb-rank { font-weight: 800; }
@@ -23,28 +50,28 @@
       <%- include('./partials/header', { pageTitle: 'লিডারবোর্ড ম্যানেজমেন্ট', pageSubtitle: 'পয়েন্ট র‍্যাঙ্কিং, রেফারেল কনটেস্ট প্রাইজ ও মডারেশন — এক জায়গায়' }) %>
 
       <% if (saved) { %>
-        <div class="admin-card" style="padding:12px 16px;margin-bottom:14px;background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.3);color:#10b981;font-weight:700;font-size:13px;">
+        <div class="admin-card dz25-1">
           <i class="fas fa-check-circle"></i> <%= t('admin_msg_updated_successfully') %>
         </div>
       <% } %>
       <% if (saveError) { %>
-        <div class="admin-card" style="padding:12px 16px;margin-bottom:14px;background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.3);color:#ef4444;font-weight:700;font-size:13px;">
+        <div class="admin-card dz25-2">
           <i class="fas fa-circle-exclamation"></i> <%= saveError %>
         </div>
       <% } %>
 
-      <div class="grid grid-4" style="margin-bottom:14px;">
+      <div class="grid grid-4 dz25-3">
         <div class="stat-card"><div class="stat-label"><%= t('admin_stat_total_users_role_user') %></div><div class="stat-number"><%= total %></div></div>
         <div class="stat-card"><div class="stat-label"><%= t('admin_label_on_this_page') %></div><div class="stat-number"><%= entries.length %></div></div>
-        <div class="stat-card"><div class="stat-label"><%= t('admin_public_top50') %></div><div class="stat-number" style="color:#f59e0b;">50</div></div>
-        <div class="stat-card"><div class="stat-label"><%= t('admin_current_month_contest') %></div><div class="stat-number" style="color:#10b981;"><%= contest.monthName || '—' %></div></div>
+        <div class="stat-card"><div class="stat-label"><%= t('admin_public_top50') %></div><div class="stat-number dz25-4">50</div></div>
+        <div class="stat-card"><div class="stat-label"><%= t('admin_current_month_contest') %></div><div class="stat-number dz25-5"><%= contest.monthName || '—' %></div></div>
       </div>
 
       <!-- ==================== পয়েন্ট লিডারবোর্ড: সার্চ/ফিল্টার ==================== -->
-      <div class="admin-card" style="padding:14px;margin-bottom:14px;">
-        <form method="GET" action="/admin/leaderboard" style="display:flex;gap:10px;flex-wrap:wrap;">
-          <input class="input" style="flex:1;min-width:220px;" type="text" name="search" value="<%= search || '' %>" placeholder="<%= t('admin_ph_search_user_email_phone') %>">
-          <select class="select" style="max-width:200px;" name="status">
+      <div class="admin-card dz25-6">
+        <form class="dz25-7" method="GET" action="/admin/leaderboard">
+          <input class="input dz25-8" type="text" name="search" value="<%= search || '' %>" placeholder="<%= t('admin_ph_search_user_email_phone') %>">
+          <select class="select dz25-9" name="status">
             <option value=""><%= t('admin_filter_all_status') %></option>
             <option value="active" <%= status === 'active' ? 'selected' : '' %>><%= t('admin_status_active_ranked') %></option>
             <option value="banned" <%= status === 'banned' ? 'selected' : '' %>><%= t('admin_status_banned') %></option>
@@ -57,9 +84,9 @@
       </div>
 
       <!-- ==================== পয়েন্ট লিডারবোর্ড: টেবিল ==================== -->
-      <div class="admin-card" style="margin-bottom:20px;">
+      <div class="admin-card dz25-10">
         <div class="admin-card-header">পয়েন্ট র‍্যাঙ্কিং (মোট <%= total %> জন ইউজার)</div>
-        <div style="overflow-x:auto;">
+        <div class="dz25-11">
           <table class="admin-table">
             <thead>
               <tr>
@@ -69,7 +96,7 @@
                 <th><%= t('admin_col_coins') %></th>
                 <th><%= t('admin_col_wins_total_bets') %></th>
                 <th><%= t('admin_col_status') %></th>
-                <th style="text-align:right;"><%= t('admin_col_action') %></th>
+                <th class="dz25-12"><%= t('admin_col_action') %></th>
               </tr>
             </thead>
             <tbody>
@@ -80,17 +107,17 @@
                       <% if (u.rank) { %>
                         <span class="lb-rank <%= u.rank == 1 ? 'lb-rank-1' : (u.rank == 2 ? 'lb-rank-2' : (u.rank == 3 ? 'lb-rank-3' : '')) %>">#<%= u.rank %></span>
                         <% if (u.rank <= 50) { %>
-                          <div style="font-size:10px;color:var(--text-muted);margin-top:2px;"><%= t('admin_in_public_top50') %></div>
+                          <div class="dz25-13"><%= t('admin_in_public_top50') %></div>
                         <% } %>
                       <% } else { %>
-                        <span style="color:var(--text-muted);">—</span>
+                        <span class="dz25-14">—</span>
                       <% } %>
                     </td>
                     <td>
-                      <div style="font-weight:700;">@<%= u.username %></div>
-                      <div style="font-size:11px;color:var(--text-muted);">#<%= u.id %><% if (u.email) { %> · <%= u.email %><% } %></div>
+                      <div class="dz25-15">@<%= u.username %></div>
+                      <div class="dz25-16">#<%= u.id %><% if (u.email) { %> · <%= u.email %><% } %></div>
                     </td>
-                    <td style="font-weight:700;color:#f59e0b;"><%= Number(u.total_points || 0).toLocaleString('en-US') %></td>
+                    <td class="dz25-17"><%= Number(u.total_points || 0).toLocaleString('en-US') %></td>
                     <td><%= Number(u.coins || 0).toLocaleString('en-US') %></td>
                     <td><%= u.wins %> / <%= u.total_bets %></td>
                     <td>
@@ -100,9 +127,9 @@
                         <span class="badge badge-green"><%= t('admin_status_active') %></span>
                       <% } %>
                     </td>
-                    <td style="text-align:right;white-space:nowrap;">
+                    <td class="dz25-18">
                       <a class="btn btn-sm" href="/admin/users/<%= u.id %>"><%= t('admin_col_profile') %></a>
-                      <form method="POST" action="/admin/leaderboard/<%= u.id %>/toggle-ban" style="display:inline" data-confirm="<%= u.is_banned ? 'আনব্যান' : 'ব্যান' %> করবেন? এটা পাবলিক লিডারবোর্ডের র‍্যাঙ্কিংও বদলে দেবে।">
+                      <form class="dz25-19" method="POST" action="/admin/leaderboard/<%= u.id %>/toggle-ban" data-confirm="<%= u.is_banned ? 'আনব্যান' : 'ব্যান' %> করবেন? এটা পাবলিক লিডারবোর্ডের র‍্যাঙ্কিংও বদলে দেবে।">
                         <input type="hidden" name="page" value="<%= page %>">
                         <input type="hidden" name="search" value="<%= search || '' %>">
                         <input type="hidden" name="status" value="<%= status || '' %>">
@@ -119,24 +146,24 @@
         </div>
       </div>
 
-      <div style="display:flex;justify-content:center;gap:10px;margin-bottom:24px;">
+      <div class="dz25-20">
         <% if (page > 1) { %>
           <a class="btn" href="/admin/leaderboard?page=<%= page - 1 %>&search=<%= encodeURIComponent(search || '') %>&status=<%= status || '' %>">&larr; <%= t('admin_pagination_prev') %></a>
         <% } %>
-        <span style="padding:9px 12px;color:var(--text-muted);font-size:12px;">পেজ <%= page %> / <%= totalPages %></span>
+        <span class="dz25-21">পেজ <%= page %> / <%= totalPages %></span>
         <% if (page < totalPages) { %>
           <a class="btn" href="/admin/leaderboard?page=<%= page + 1 %>&search=<%= encodeURIComponent(search || '') %>&status=<%= status || '' %>"><%= t('admin_pagination_next') %> &rarr;</a>
         <% } %>
       </div>
 
       <!-- ==================== রেফারেল কনটেস্ট (প্রাইজ/রিওয়ার্ড) ==================== -->
-      <div class="admin-card" style="margin-bottom:20px;">
+      <div class="admin-card dz25-10">
         <div class="admin-card-header">
           চলতি মাসের রেফারেল কনটেস্ট<% if (contest.monthName) { %> — <%= contest.monthName %><% } %>
-          <a href="/admin/leaderboard/contest/payouts" class="btn btn-sm" style="float:right;margin-left:8px;"><i class="fas fa-money-check-dollar"></i> <%= t('admin_payout_tracking') %></a>
-          <button type="button" class="btn btn-sm" style="float:right;" data-load-history><i class="fas fa-clock-rotate-left"></i> <%= t('admin_previous_months') %></button>
+          <a href="/admin/leaderboard/contest/payouts" class="btn btn-sm dz25-22"><i class="fas fa-money-check-dollar"></i> <%= t('admin_payout_tracking') %></a>
+          <button type="button" class="btn btn-sm dz25-23" data-load-history><i class="fas fa-clock-rotate-left"></i> <%= t('admin_previous_months') %></button>
         </div>
-        <div style="overflow-x:auto;">
+        <div class="dz25-11">
           <table class="admin-table">
             <thead>
               <tr><th><%= t('admin_col_rank') %></th><th><%= t('admin_col_user') %></th><th><%= t('admin_col_referrals') %></th><th><%= t('admin_col_prize') %></th></tr>
@@ -157,7 +184,7 @@
             </tbody>
           </table>
         </div>
-        <div id="contestHistory" style="padding:0 14px 14px;"></div>
+        <div class="dz25-24" id="contestHistory"></div>
       </div>
 
     </div>

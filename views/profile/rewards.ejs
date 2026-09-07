@@ -1,6 +1,51 @@
 <%- include('../partials/head') %>
 <style nonce="<%= cspNonce %>">
   /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz75-1 { max-width: 600px; margin: 0 auto; padding: 15px; }
+  .dz75-2 { font-size: 1.4rem; font-weight: 800; margin-bottom: 1rem; text-align: center; color: var(--text-accent); }
+  .dz75-3 { color: var(--text-accent); font-size: 11.5px; font-weight: 700; text-decoration: none; }
+  .dz75-4 { padding: .9rem; }
+  .dz75-5 { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+  .dz75-6 { flex: 0 0 auto; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 72px; }
+  .dz75-7 { font-size: 10px; color: var(--text-main); font-weight: 700; text-align: center; line-height: 1.3; }
+  .dz75-8 { text-align: center; color: var(--muted); font-size: 12.5px; padding: 14px 0; }
+  .dz75-9 { background: linear-gradient(135deg,#4B75C6,#2B48A7); border: none; }
+  .dz75-10 { padding: 1rem 1.1rem; display: flex; align-items: center; gap: 14px; }
+  .dz75-11 { color: #fff; font-weight: 800; font-size: 14px; }
+  .dz75-12 { color: rgba(255,255,255,0.85); font-size: 11.5px; margin-top: 2px; }
+  .dz75-13 { color: #fff; font-size: 13px; font-weight: 700; background: rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 16px; white-space: nowrap; }
+  .dz75-14 { text-align: center; padding: 1.2rem; }
+  .dz75-15 { font-size: .8rem; color: var(--muted); }
+  .dz75-16 { font-size: 2rem; font-weight: 900; color: var(--text-accent); margin: .3rem 0; }
+  .dz75-17 { position: relative; background: rgba(255,255,255,0.1); border-radius: 20px; height: 16px; overflow: hidden; margin: .6rem 0; }
+  .dz75-18 { width: 0%; height: 100%; background: var(--grad-gold,linear-gradient(90deg,#f59e0b,#fbbf24)); transition: width 1s ease-out; }
+  .dz75-19 { font-size: .78rem; font-weight: 800; color: var(--text-accent); }
+  .dz75-20 { font-size: .78rem; color: var(--muted); margin-top: 2px; }
+  .dz75-21 { margin-bottom: 1rem; border: 1px solid var(--gold); }
+  .dz75-22 { font-size: .85rem; color: var(--text-main); }
+  .dz75-23 { font-size: 1.8rem; font-weight: 900; color: #10b981; margin: .3rem 0; }
+  .dz75-24 { width: 100%; background: rgba(255,255,255,0.1); color: var(--muted); cursor: not-allowed; }
+  .dz75-25 { font-size: .9rem; color: var(--muted); }
+  .dz75-26 { text-decoration: none; display: flex; align-items: center; gap: 12px; background: linear-gradient(135deg,#C92034,#CE465C); border-radius: 16px; padding: 12px 14px; }
+  .dz75-27 { color: rgba(255,255,255,0.85); font-size: 11.5px; margin-top: 1px; }
+  .dz75-28 { background: linear-gradient(135deg,#C51B26,#C5532C); border-radius: 16px; padding: 12px 14px; }
+  .dz75-29 { color: #ff2331; font-size: 13px; font-weight: 700; background: #fff; border: none; padding: 6px 12px; border-radius: 16px; white-space: nowrap; cursor: pointer; }
+  .dz75-30 { display: none; grid-template-columns: repeat(4,1fr); gap: 8px; margin-top: 12px; }
+  .dz75-31 { display: none; color: #fff; font-weight: 700; font-size: 13px; text-align: center; margin-top: 10px; }
+  .dz75-32 { display: flex; align-items: center; gap: 12px; background: linear-gradient(135deg,#BE28A2,#C2479A); border-radius: 16px; padding: 12px 14px; }
+  .dz75-33 { color: #c81aa0; font-size: 13px; font-weight: 700; background: #fff; border: none; padding: 6px 12px; border-radius: 16px; white-space: nowrap; cursor: pointer; }
+  .dz75-34 { font-size: .72rem; color: var(--muted); text-align: center; margin-top: 10px; }
+  .dz75-35 { padding: 0; }
+  .dz75-36 { width: 100%; border-collapse: collapse; }
+  .dz75-37 { border-bottom: 1px solid var(--border-glass); }
+  .dz75-38 { padding: .7rem; text-align: left; font-size: .8rem; color: var(--muted); }
+  .dz75-39 { padding: .7rem; text-align: right; font-size: .8rem; color: var(--muted); }
+  .dz75-40 { padding: .7rem; text-align: right; font-weight: 700; color: var(--text-accent); }
+  .dz75-41 { font-size: .75rem; color: var(--muted); text-align: center; margin-top: 1rem; line-height: 1.6; }
+  .dz75-42 { text-align: center; padding: 2rem; color: var(--muted); }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). Only declarations whose properties are free of any
      !important rule in the site CSS were moved; otherwise such a rule
      would suddenly start winning and change the layout. */
@@ -16,10 +61,10 @@
 </style>
 
 <%- include('../partials/navbar') %>
-<div class="container page" style="max-width:600px;margin:0 auto;padding:15px;">
+<div class="container page dz75-1">
   <%- include('../partials/flash') %>
 
-  <h1 style="font-size:1.4rem;font-weight:800;margin-bottom:1rem;text-align:center;color: var(--text-accent);">
+  <h1 class="dz75-2">
     <%= t.daily_reward_title %>
   </h1>
 
@@ -28,20 +73,20 @@
   <div class="card im76-1">
     <div class="card-header im76-2">
       <span><%= t.achievements_label %> (<%= badgesPreview.earnedCount %>/<%= badgesPreview.totalCount %>)</span>
-      <a href="/profile/badges" style="color: var(--text-accent);font-size:11.5px;font-weight:700;text-decoration:none;"><%= t.view_all_arrow %></a>
+      <a class="dz75-3" href="/profile/badges"><%= t.view_all_arrow %></a>
     </div>
-    <div class="card-body" style="padding:.9rem;">
+    <div class="card-body dz75-4">
       <% if (badgesPreview.earned.length > 0) { %>
-      <div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;">
+      <div class="dz75-5">
         <% badgesPreview.earned.forEach(function(b) { %>
-        <div title="<%= b.desc %>" style="flex:0 0 auto;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:72px;">
+        <div class="dz75-6" title="<%= b.desc %>">
           <span class="im76-3"><%= b.icon %></span>
-          <span style="font-size:10px;color:var(--text-main);font-weight:700;text-align:center;line-height:1.3;"><%= b.name %></span>
+          <span class="dz75-7"><%= b.name %></span>
         </div>
         <% }); %>
       </div>
       <% } else { %>
-      <div style="text-align:center;color:var(--muted);font-size:12.5px;padding:14px 0;"><%= t.no_badges_yet %></div>
+      <div class="dz75-8"><%= t.no_badges_yet %></div>
       <% } %>
     </div>
   </div>
@@ -50,14 +95,14 @@
   <!-- ==================== রেফারেল সামারি ==================== -->
   <% if (typeof referralSummary !== 'undefined' && referralSummary) { %>
   <a class="im76-4" href="/profile/referral">
-    <div class="card" style="background:linear-gradient(135deg,#4B75C6,#2B48A7);border:none;">
-      <div class="card-body" style="padding:1rem 1.1rem;display:flex;align-items:center;gap:14px;">
+    <div class="card dz75-9">
+      <div class="card-body dz75-10">
         <div class="im76-5">👥</div>
         <div class="im76-6">
-          <div style="color:#fff;font-weight:800;font-size:14px;"><%= t.referral_program %></div>
-          <div style="color:rgba(255,255,255,0.85);font-size:11.5px;margin-top:2px;"><%= referralSummary.totalInvites %> <%= t.invited_total_commission %> <%= Number(referralSummary.totalCommission).toLocaleString('bn-BD') %><%= t.taka %></div>
+          <div class="dz75-11"><%= t.referral_program %></div>
+          <div class="dz75-12"><%= referralSummary.totalInvites %> <%= t.invited_total_commission %> <%= Number(referralSummary.totalCommission).toLocaleString('bn-BD') %><%= t.taka %></div>
         </div>
-        <div style="color:#fff;font-size:13px;font-weight:700;background:rgba(255,255,255,0.2);padding:6px 12px;border-radius:16px;white-space:nowrap;"><%= t.details_arrow %></div>
+        <div class="dz75-13"><%= t.details_arrow %></div>
       </div>
     </div>
   </a>
@@ -66,9 +111,9 @@
   <% if (reward) { %>
     <!-- আজকের টার্নওভার -->
     <div class="card im76-1">
-      <div class="card-body" style="text-align:center;padding:1.2rem;">
-        <div style="font-size:.8rem;color:var(--muted);"><%= t.todays_sports_turnover %></div>
-        <div style="font-size:2rem;font-weight:900;color: var(--text-accent);margin:.3rem 0;">
+      <div class="card-body dz75-14">
+        <div class="dz75-15"><%= t.todays_sports_turnover %></div>
+        <div class="dz75-16">
           <%= Number(reward.turnover).toLocaleString('bn-BD') %>
         </div>
 
@@ -84,23 +129,23 @@
         %>
 
         <!-- প্রোগ্রেস বার (১ থেকে ১০০ পর্যন্ত অ্যানিমেটেড) -->
-        <div style="position:relative;background:rgba(255,255,255,0.1);border-radius:20px;height:16px;overflow:hidden;margin:.6rem 0;">
-          <div id="turnoverProgressFill" data-target="<%= pct %>" style="width:0%;height:100%;background:var(--grad-gold,linear-gradient(90deg,#f59e0b,#fbbf24));transition:width 1s ease-out;"></div>
+        <div class="dz75-17">
+          <div class="dz75-18" id="turnoverProgressFill" data-target="<%= pct %>"></div>
         </div>
-        <div style="font-size:.78rem;font-weight:800;color: var(--text-accent);"><span id="turnoverProgressPct">0</span>%</div>
-        <div style="font-size:.78rem;color:var(--muted);margin-top:2px;"><%= nextText %></div>
+        <div class="dz75-19"><span id="turnoverProgressPct">0</span>%</div>
+        <div class="dz75-20"><%= nextText %></div>
       </div>
     </div>
 
     <!-- বর্তমান প্রাপ্য বোনাস + ক্লেইম -->
-    <div class="card" style="margin-bottom:1rem;border:1px solid var(--gold);">
-      <div class="card-body" style="text-align:center;padding:1.2rem;">
+    <div class="card dz75-21">
+      <div class="card-body dz75-14">
         <% if (reward.currentTier) { %>
-          <div style="font-size:.85rem;color:var(--text-main);"><%= t.your_current_bonus %></div>
-          <div style="font-size:1.8rem;font-weight:900;color:#10b981;margin:.3rem 0;">
+          <div class="dz75-22"><%= t.your_current_bonus %></div>
+          <div class="dz75-23">
             <%= reward.currentTier.bonus_amount %><%= t.coins %></div>
           <% if (reward.claimed) { %>
-            <button class="btn" style="width:100%;background:rgba(255,255,255,0.1);color:var(--muted);cursor:not-allowed;" disabled>
+            <button class="btn dz75-24" disabled>
               <%= t.reward_claimed_today %> (<%= reward.claimedAmount %> <%= t.coins %>)
             </button>
           <% } else { %>
@@ -111,7 +156,7 @@
             </form>
           <% } %>
         <% } else { %>
-          <div style="font-size:.9rem;color:var(--muted);">
+          <div class="dz75-25">
             <%= t.bet_more_for_reward %><br>
             <%= t.min_tier_label %> <%= reward.tiers.length ? Number(reward.tiers[0].min_turnover).toLocaleString('bn-BD') : '5,000' %><%= t.turnover %></div>
         <% } %>
@@ -121,68 +166,68 @@
     <!-- ==================== বোনাস (৩টি ফিচার) ==================== -->
     <div class="card im76-1">
       <div class="card-header"><%= t.bonus_ticket %></div>
-      <div class="card-body" style="padding:.9rem;">
+      <div class="card-body dz75-4">
         <div class="im76-8">
 
           <!-- লাকি হুইল -->
-          <a href="/profile/wheel" style="text-decoration:none;display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#C92034,#CE465C);border-radius:16px;padding:12px 14px;">
+          <a class="dz75-26" href="/profile/wheel">
             <div class="im76-5">🎡</div>
             <div class="im76-6">
-              <div style="color:#fff;font-weight:800;font-size:14px;"><%= t.lucky_wheel %></div>
-              <div style="color:rgba(255,255,255,0.85);font-size:11.5px;margin-top:1px;"><%= t.spin_daily_win_coins %></div>
+              <div class="dz75-11"><%= t.lucky_wheel %></div>
+              <div class="dz75-27"><%= t.spin_daily_win_coins %></div>
             </div>
-            <div style="color:#fff;font-size:13px;font-weight:700;background:rgba(255,255,255,0.2);padding:6px 12px;border-radius:16px;white-space:nowrap;"><%= t.spin %></div>
+            <div class="dz75-13"><%= t.spin %></div>
           </a>
 
           <!-- সোনার ডিম -->
-          <div id="goldenEggCard" style="background:linear-gradient(135deg,#C51B26,#C5532C);border-radius:16px;padding:12px 14px;">
+          <div class="dz75-28" id="goldenEggCard">
             <div class="im76-9">
               <div class="im76-5">🥚</div>
               <div class="im76-6">
-                <div style="color:#fff;font-weight:800;font-size:14px;"><%= t.golden_egg %></div>
-                <div id="goldenEggStatus" style="color:rgba(255,255,255,0.85);font-size:11.5px;margin-top:1px;"><%= t.loading_dots %></div>
+                <div class="dz75-11"><%= t.golden_egg %></div>
+                <div class="dz75-27" id="goldenEggStatus"><%= t.loading_dots %></div>
               </div>
-              <button id="goldenEggBtn" type="button" style="color:#ff2331;font-size:13px;font-weight:700;background:#fff;border:none;padding:6px 12px;border-radius:16px;white-space:nowrap;cursor:pointer;" disabled><%= t.crack_egg %></button>
+              <button class="dz75-29" id="goldenEggBtn" type="button" disabled><%= t.crack_egg %></button>
             </div>
-            <div id="goldenEggGrid" style="display:none;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px;"></div>
-            <div id="goldenEggResult" style="display:none;color:#fff;font-weight:700;font-size:13px;text-align:center;margin-top:10px;"></div>
+            <div class="dz75-30" id="goldenEggGrid"></div>
+            <div class="dz75-31" id="goldenEggResult"></div>
           </div>
 
           <!-- রেড কার্ড -->
-          <div id="redCardCard" style="display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#BE28A2,#C2479A);border-radius:16px;padding:12px 14px;">
+          <div class="dz75-32" id="redCardCard">
             <div class="im76-5">🧧</div>
             <div class="im76-6">
-              <div style="color:#fff;font-weight:800;font-size:14px;"><%= t.red_card %></div>
-              <div id="redCardStatus" style="color:rgba(255,255,255,0.85);font-size:11.5px;margin-top:1px;"><%= t.loading_dots %></div>
+              <div class="dz75-11"><%= t.red_card %></div>
+              <div class="dz75-27" id="redCardStatus"><%= t.loading_dots %></div>
             </div>
-            <button id="redCardBtn" type="button" style="color:#c81aa0;font-size:13px;font-weight:700;background:#fff;border:none;padding:6px 12px;border-radius:16px;white-space:nowrap;cursor:pointer;" disabled><%= t.open %></button>
+            <button class="dz75-33" id="redCardBtn" type="button" disabled><%= t.open %></button>
           </div>
 
         </div>
-        <div style="font-size:.72rem;color:var(--muted);text-align:center;margin-top:10px;"><%= t.unlock_egg_card_notice %></div>
+        <div class="dz75-34"><%= t.unlock_egg_card_notice %></div>
       </div>
     </div>
 
     <!-- টিয়ার তালিকা (আলাদা রাখা হয়েছে) -->
     <div class="card">
       <div class="card-header"><%= t.tier_list %></div>
-      <div class="card-body" style="padding:0;">
-        <table style="width:100%;border-collapse:collapse;">
+      <div class="card-body dz75-35">
+        <table class="dz75-36">
           <thead>
-            <tr style="border-bottom:1px solid var(--border-glass);">
-              <th style="padding:.7rem;text-align:left;font-size:.8rem;color:var(--muted);"><%= t.daily_turnover %></th>
-              <th style="padding:.7rem;text-align:right;font-size:.8rem;color:var(--muted);"><%= t.bonus_label %></th>
+            <tr class="dz75-37">
+              <th class="dz75-38"><%= t.daily_turnover %></th>
+              <th class="dz75-39"><%= t.bonus_label %></th>
             </tr>
           </thead>
           <tbody>
             <% reward.tiers.forEach(t => { 
               const reached = reward.turnover >= Number(t.min_turnover);
             %>
-              <tr style="border-bottom:1px solid var(--border-glass);">
+              <tr class="dz75-37">
                 <td style="padding:.7rem;font-size:.9rem;color:<%= reached ? '#10b981' : 'var(--text-main)' %>;">
                   <%= reached ? '✅ ' : '' %><%= Number(t.min_turnover).toLocaleString('bn-BD') %>+
                 </td>
-                <td style="padding:.7rem;text-align:right;font-weight:700;color: var(--text-accent);">
+                <td class="dz75-40">
                   <%= t.bonus_amount %><%= t.taka %></td>
               </tr>
             <% }) %>
@@ -191,13 +236,13 @@
       </div>
     </div>
 
-    <p style="font-size:.75rem;color:var(--muted);text-align:center;margin-top:1rem;line-height:1.6;">
+    <p class="dz75-41">
       <%= t.turnover_resets_midnight %><br>
       <%= t.sports_only_once_daily %>
     </p>
 
   <% } else { %>
-    <div class="card"><div class="card-body" style="text-align:center;padding:2rem;color:var(--muted);">
+    <div class="card"><div class="card-body dz75-42">
       <%= t.reward_load_failed %>
     </div></div>
   <% } %>

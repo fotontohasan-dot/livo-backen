@@ -1,6 +1,11 @@
 <%- include('../partials/head') %>
 <script src="https://cdn.tailwindcss.com"></script>
 <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz94-1 { background: rgba(230,30,38,0.1); border: 1.5px solid #e61e26; }
+  .dz94-2 { letter-spacing: 4px; }
   @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap');
 
   body {
@@ -146,7 +151,7 @@
     <% var pinLocked = (typeof pinStatus !== 'undefined') && pinStatus && pinStatus.locked; %>
 
     <% if (pinNotConfigured) { %>
-      <div class="rounded-xl p-4 mb-6" style="background: rgba(230,30,38,0.1); border: 1.5px solid #e61e26;">
+      <div class="rounded-xl p-4 mb-6 dz94-1">
         <div class="flex items-center gap-2 mb-2">
           <i class="fas fa-shield-alt red-theme-text"></i>
           <span class="font-bold red-theme-text"><%= t.withdraw_pin_required %></span>
@@ -157,7 +162,7 @@
         </a>
       </div>
     <% } else if (pinLocked) { %>
-      <div class="rounded-xl p-4 mb-6" style="background: rgba(230,30,38,0.1); border: 1.5px solid #e61e26;">
+      <div class="rounded-xl p-4 mb-6 dz94-1">
         <div class="flex items-center gap-2 mb-2">
           <i class="fas fa-lock red-theme-text"></i>
           <span class="font-bold red-theme-text"><%= t.withdraw_pin_locked %></span>
@@ -167,7 +172,7 @@
     <% } %>
 
     <% if (locked) { %>
-      <div class="rounded-xl p-4 mb-6" style="background: rgba(230,30,38,0.1); border: 1.5px solid #e61e26;">
+      <div class="rounded-xl p-4 mb-6 dz94-1">
         <div class="flex items-center gap-2 mb-2">
           <i class="fas fa-lock red-theme-text"></i>
           <span class="font-bold red-theme-text"><%= t.withdrawal_currently_locked %></span>
@@ -261,7 +266,7 @@
         <div>
           <label class="block text-main font-bold mb-2"><i class="fas fa-shield-alt red-theme-text"></i> Withdraw PIN</label>
           <div class="relative">
-              <input type="password" id="withdrawPinField" name="withdraw_pin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" autocomplete="off" placeholder="<%= t.enter_6_digit_pin %>" class="input-field pr-12 text-right" style="letter-spacing:4px;" required>
+              <input type="password" id="withdrawPinField" name="withdraw_pin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" autocomplete="off" placeholder="<%= t.enter_6_digit_pin %>" class="input-field pr-12 text-right dz94-2" required>
               <button type="button" data-reveal-field="withdrawPinField" data-reveal-icon="withdrawPinEye" class="absolute right-4 top-1/2 -translate-y-1/2 text-muted">
                   <i class="fas fa-eye-slash" id="withdrawPinEye"></i>
               </button>

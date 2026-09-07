@@ -2,6 +2,12 @@
 <%- include('../partials/navbar') %>
 
 <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz105-1 { text-align: center; padding: 40px; }
+  .dz105-2 { font-size: 40px; }
+  .dz105-3 { color: #888; margin-top: 10px; }
     body { background:#0a0a0a; color:#fff; margin-bottom:70px; }
     .game-container { padding:15px; max-width:800px; margin:0 auto; }
     .game-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; background:#141414; padding:12px 15px; border-radius:12px; border:1px solid rgba(230,0,0,0.2); }
@@ -39,9 +45,9 @@
 
     <div id="gameCanvas" class="game-canvas-area">
         <div id="gameUI">
-            <div style="text-align:center;padding:40px;">
-                <div style="font-size:40px;">🎮</div>
-                <p style="color:#888;margin-top:10px;">গেম লোড হচ্ছে...</p>
+            <div class="dz105-1">
+                <div class="dz105-2">🎮</div>
+                <p class="dz105-3">গেম লোড হচ্ছে...</p>
             </div>
         </div>
     </div>

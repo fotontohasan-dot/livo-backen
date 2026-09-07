@@ -1,6 +1,11 @@
 <%- include('partials/head') %>
 <style nonce="<%= cspNonce %>">
   /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz1-1 { color: var(--text-muted); font-size: 12px; margin-bottom: 24px; }
+  .dz1-2 { padding: 20px; line-height: 1.7; color: var(--text-muted); }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). A declaration was moved only when no !important rule in
      the site CSS can match this element for that property. */
   .ix1-1 { padding: 16px; padding-bottom: 100px; max-width: 800px; margin: 0 auto; }
@@ -12,9 +17,9 @@
 
 <div class="container ix1-1">
   <h1 class="ix1-2"><%= t.privacy_page_title %></h1>
-  <p style="color:var(--text-muted);font-size:12px;margin-bottom:24px"><%= t.privacy_updated_date %></p>
+  <p class="dz1-1"><%= t.privacy_updated_date %></p>
 
-  <div class="glass-card" style="padding:20px;line-height:1.7;color:var(--text-muted)">
+  <div class="glass-card dz1-2">
     <h3 class="ix1-3"><%= t.privacy_sec1_h %></h3>
     <p><%= t.privacy_sec1_p %></p>
 

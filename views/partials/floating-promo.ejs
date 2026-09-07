@@ -6,6 +6,12 @@
 %>
 
 <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz2-1 { left: 20px; top: 6px; }
+  .dz2-2 { right: 20px; top: 0px; }
+  .dz2-3 { left: 50%; top: -8px; transform: translateX(-50%); }
   #lpPromo { position: fixed; right: 12px; bottom: 100px; z-index: 9990; width: 60px; height: 60px; cursor: pointer; animation: lpFloat 3s ease-in-out infinite; }
   #lpPromo.hide { display: none !important; }
   @keyframes lpFloat { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-9px);} }
@@ -89,7 +95,7 @@
 
 <div id="lpPopup"><div class="pp-box"><button class="pp-close" id="lpPopClose">×</button><div class="pp-scroll"><div id="lpPopupBody"></div><div class="pp-dots" id="lpPopupDots"></div></div><div class="pp-actions"><button class="pp-prev" id="lpPopPrev"><%= t.previous %></button><button class="pp-next" id="lpPopNext"><%= t.next %></button></div></div></div>
 
-<div class="dr-overlay" id="drRedOverlay"><div class="dr-box dr-red"><button class="dr-close" id="drRedClose">×</button><div class="dr-banner-wrap"><div class="dr-crown">👑</div><div class="dr-banner"><%= t.prize %></div></div><div class="dr-subtitle"><%= t.red_packet_desc %></div><div class="dr-timer"><span class="t-label"><%= t.time_remaining %></span><span class="t-cell" id="drRedH">00</span><span class="t-colon">:</span><span class="t-cell" id="drRedM">00</span><span class="t-colon">:</span><span class="t-cell" id="drRedS">00</span></div><div class="dr-red-stack"><div class="env e1"></div><div class="env e2"></div><div class="env e3"></div><div class="coin" style="left:20px;top:6px;"></div><div class="coin" style="right:20px;top:0px;"></div><div class="coin" style="left:50%;top:-8px;transform:translateX(-50%);"></div></div><div id="drRedResult"></div><button class="dr-claim" id="drRedBtn"><%= t.claim %></button><div class="dr-hint"><%= t.claim_once_per_day %></div></div></div>
+<div class="dr-overlay" id="drRedOverlay"><div class="dr-box dr-red"><button class="dr-close" id="drRedClose">×</button><div class="dr-banner-wrap"><div class="dr-crown">👑</div><div class="dr-banner"><%= t.prize %></div></div><div class="dr-subtitle"><%= t.red_packet_desc %></div><div class="dr-timer"><span class="t-label"><%= t.time_remaining %></span><span class="t-cell" id="drRedH">00</span><span class="t-colon">:</span><span class="t-cell" id="drRedM">00</span><span class="t-colon">:</span><span class="t-cell" id="drRedS">00</span></div><div class="dr-red-stack"><div class="env e1"></div><div class="env e2"></div><div class="env e3"></div><div class="coin dz2-1"></div><div class="coin dz2-2"></div><div class="coin dz2-3"></div></div><div id="drRedResult"></div><button class="dr-claim" id="drRedBtn"><%= t.claim %></button><div class="dr-hint"><%= t.claim_once_per_day %></div></div></div>
 
 <div class="dr-overlay" id="drEggOverlay"><div class="dr-box dr-egg"><button class="dr-close" id="drEggClose">×</button><div class="dr-banner-wrap"><div class="dr-crown">👑</div><div class="dr-banner"><%= t.prize %></div></div><div class="dr-subtitle"><%= t.golden_egg_desc %></div><div class="dr-timer"><span class="t-label"><%= t.time_remaining %></span><span class="t-cell" id="drEggH">00</span><span class="t-colon">:</span><span class="t-cell" id="drEggM">00</span><span class="t-colon">:</span><span class="t-cell" id="drEggS">00</span></div><div class="dr-eggs" id="drEggGrid"></div><div id="drEggResult"></div><div class="dr-hint" id="drEggHint"><%= t.tap_an_egg %></div></div></div>
 

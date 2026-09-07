@@ -1,6 +1,27 @@
 <%- include('../partials/head') %>
 <style nonce="<%= cspNonce %>">
   /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz61-1 { padding: 16px; padding-bottom: 100px; max-width: 600px; margin: 0 auto; }
+  .dz61-2 { color: var(--text-main); text-decoration: none; font-size: 20px; }
+  .dz61-3 { color: var(--text-main); font-size: 18px; font-weight: bold; }
+  .dz61-4 { background: linear-gradient(135deg,#ec4899,#db2777); border-radius: 16px; padding: 24px; margin-bottom: 16px; text-align: center; }
+  .dz61-5 { color: #fff; font-size: 16px; font-weight: bold; }
+  .dz61-6 { color: rgba(255,255,255,0.9); font-size: 13px; margin-top: 4px; }
+  .dz61-7 { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+  .dz61-8 { color: var(--text-main); font-weight: bold; margin-bottom: 12px; }
+  .dz61-9 { background: #25D366; color: #0B3B1E; text-decoration: none; text-align: center; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 13px; }
+  .dz61-10 { background: #1773E9; color: #fff; text-decoration: none; text-align: center; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 13px; }
+  .dz61-11 { background: #007DBC; color: #fff; text-decoration: none; text-align: center; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 13px; }
+  .dz61-12 { background: #475569; color: #fff; border: none; text-align: center; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 13px; cursor: pointer; }
+  .dz61-13 { width: 100%; background: #1e1e1e; border: 1px solid #333; color: #94a3b8; padding: 10px; border-radius: 8px; margin-top: 12px; font-size: 12px; }
+  .dz61-14 { background: rgba(245,158,11,0.1); border: 1px solid var(--gold,#f59e0b); border-radius: 16px; padding: 20px; text-align: center; }
+  .dz61-15 { color: #10b981; font-size: 14px; font-weight: bold; }
+  .dz61-16 { color: var(--text-muted); font-size: 12px; margin-top: 4px; }
+  .dz61-17 { color: var(--text-main); font-size: 13px; margin-bottom: 12px; }
+  .dz61-18 { font-size: .75rem; color: var(--text-muted); text-align: center; margin-top: 1rem; line-height: 1.6; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). Only declarations whose properties are free of any
      !important rule in the site CSS were moved; otherwise such a rule
      would suddenly start winning and change the layout. */
@@ -12,18 +33,18 @@
 </style>
 
 <%- include('../partials/navbar') %>
-<div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto;">
+<div class="container dz61-1">
   <%- include('../partials/flash') %>
 
   <div class="im62-1">
-    <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
-    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">📤 শেয়ার করে বোনাস</h1>
+    <a class="dz61-2" href="/profile">←</a>
+    <h1 class="dz61-3">📤 শেয়ার করে বোনাস</h1>
   </div>
 
-  <div style="background:linear-gradient(135deg,#ec4899,#db2777);border-radius:16px;padding:24px;margin-bottom:16px;text-align:center;">
+  <div class="dz61-4">
     <div class="im62-2">📤</div>
-    <div style="color:#fff;font-size:16px;font-weight:bold;">শেয়ার করুন, বোনাস নিন</div>
-    <div style="color:rgba(255,255,255,0.9);font-size:13px;margin-top:4px;">
+    <div class="dz61-5">শেয়ার করুন, বোনাস নিন</div>
+    <div class="dz61-6">
       প্রতিদিন শেয়ার করে <strong><%= share ? share.bonus : 20 %> কয়েন</strong> পান
     </div>
   </div>
@@ -31,37 +52,32 @@
   <% const shareUrl = baseUrl + (user && user.referral_code ? '/register?ref=' + user.referral_code : '/'); %>
 
   <!-- শেয়ার বাটন -->
-  <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;margin-bottom:16px;">
-    <div style="color:var(--text-main);font-weight:bold;margin-bottom:12px;">যেখানে শেয়ার করবেন</div>
+  <div class="dz61-7">
+    <div class="dz61-8">যেখানে শেয়ার করবেন</div>
     <div class="im62-3">
-      <a href="https://wa.me/?text=<%= encodeURIComponent('Livo-তে খেলুন আর জিতুন! ' + shareUrl) %>" target="_blank"
-         style="background:#25D366;color:#0B3B1E;text-decoration:none;text-align:center;padding:12px;border-radius:10px;font-weight:bold;font-size:13px;">
+      <a class="dz61-9" href="https://wa.me/?text=<%= encodeURIComponent('Livo-তে খেলুন আর জিতুন! ' + shareUrl) %>" target="_blank">
         WhatsApp
       </a>
-      <a href="https://www.facebook.com/sharer/sharer.php?u=<%= encodeURIComponent(shareUrl) %>" target="_blank"
-         style="background:#1773E9;color:#fff;text-decoration:none;text-align:center;padding:12px;border-radius:10px;font-weight:bold;font-size:13px;">
+      <a class="dz61-10" href="https://www.facebook.com/sharer/sharer.php?u=<%= encodeURIComponent(shareUrl) %>" target="_blank">
         Facebook
       </a>
-      <a href="https://t.me/share/url?url=<%= encodeURIComponent(shareUrl) %>&text=<%= encodeURIComponent('Livo-তে খেলুন আর জিতুন!') %>" target="_blank"
-         style="background:#007DBC;color:#fff;text-decoration:none;text-align:center;padding:12px;border-radius:10px;font-weight:bold;font-size:13px;">
+      <a class="dz61-11" href="https://t.me/share/url?url=<%= encodeURIComponent(shareUrl) %>&text=<%= encodeURIComponent('Livo-তে খেলুন আর জিতুন!') %>" target="_blank">
         Telegram
       </a>
-      <button data-copy-link
-         style="background:#475569;color:#fff;border:none;text-align:center;padding:12px;border-radius:10px;font-weight:bold;font-size:13px;cursor:pointer;">
+      <button class="dz61-12" data-copy-link>
         লিংক কপি
       </button>
     </div>
-    <input type="text" id="shareLink" value="<%= shareUrl %>" readonly
-           style="width:100%;background:#1e1e1e;border:1px solid #333;color:#94a3b8;padding:10px;border-radius:8px;margin-top:12px;font-size:12px;">
+    <input class="dz61-13" type="text" id="shareLink" value="<%= shareUrl %>" readonly>
   </div>
 
   <!-- বোনাস ক্লেইম -->
-  <div style="background:rgba(245,158,11,0.1);border:1px solid var(--gold,#f59e0b);border-radius:16px;padding:20px;text-align:center;">
+  <div class="dz61-14">
     <% if (share && share.claimed) { %>
-      <div style="color:#10b981;font-size:14px;font-weight:bold;">✅ আজকের শেয়ার বোনাস নেওয়া হয়েছে</div>
-      <div style="color:var(--text-muted);font-size:12px;margin-top:4px;">আগামীকাল আবার আসুন</div>
+      <div class="dz61-15">✅ আজকের শেয়ার বোনাস নেওয়া হয়েছে</div>
+      <div class="dz61-16">আগামীকাল আবার আসুন</div>
     <% } else { %>
-      <div style="color:var(--text-main);font-size:13px;margin-bottom:12px;">উপরে শেয়ার করার পর নিচের বাটনে বোনাস নিন</div>
+      <div class="dz61-17">উপরে শেয়ার করার পর নিচের বাটনে বোনাস নিন</div>
       <form class="im62-4" action="/profile/share/claim" method="POST">
         <button type="submit" class="btn btn-primary im62-5">
           🎁 শেয়ার বোনাস নিন (<%= share ? share.bonus : 20 %> কয়েন)
@@ -70,7 +86,7 @@
     <% } %>
   </div>
 
-  <p style="font-size:.75rem;color:var(--text-muted);text-align:center;margin-top:1rem;line-height:1.6;">
+  <p class="dz61-18">
     আপনার রেফারেল লিংক শেয়ার করুন — বন্ধু জয়েন করলে রেফারেল বোনাসও পাবেন!
   </p>
 

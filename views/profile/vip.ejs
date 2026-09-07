@@ -1,6 +1,36 @@
 <%- include('../partials/head') %>
 <style nonce="<%= cspNonce %>">
   /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz65-1 { padding: 16px; padding-bottom: 100px; max-width: 600px; margin: 0 auto; }
+  .dz65-2 { color: var(--text-main); text-decoration: none; font-size: 20px; }
+  .dz65-3 { color: var(--text-main); font-size: 18px; font-weight: bold; }
+  .dz65-4 { background: linear-gradient(135deg,#f59e0b,#d97706); border-radius: 16px; padding: 24px; margin-bottom: 16px; text-align: center; }
+  .dz65-5 { color: var(--text-main); font-size: 22px; font-weight: 900; }
+  .dz65-6 { color: rgba(255,255,255,0.9); font-size: 13px; margin-top: 2px; }
+  .dz65-7 { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+  .dz65-8 { color: var(--text-muted); font-size: 13px; }
+  .dz65-9 { color: #f59e0b; font-size: 14px; font-weight: bold; }
+  .dz65-10 { background: rgba(255,255,255,0.1); border-radius: 20px; height: 14px; overflow: visible; }
+  .dz65-11 { width: 0%; height: 100%; border-radius: 20px; background: linear-gradient(90deg,#f59e0b,#fbbf24); transition: width 1s ease; }
+  .dz65-12 { position: absolute; top: -26px; left: 0%; transform: translateX(-50%); background: #1e293b; color: #fbbf24; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 8px; white-space: nowrap; border: 1px solid #f59e0b; transition: left 1s ease; }
+  .dz65-13 { position: absolute; top: -26px; right: 0; color: #4ade80; font-size: 12px; font-weight: 800; opacity: 0; transition: opacity .3s, transform .6s; pointer-events: none; }
+  .dz65-14 { color: var(--text-muted); font-size: 11px; text-align: center; margin-top: 2px; }
+  .dz65-15 { color: #f59e0b; font-weight: bold; }
+  .dz65-16 { color: var(--text-muted); font-size: 12px; text-align: center; margin-top: 8px; }
+  .dz65-17 { color: var(--text-main); }
+  .dz65-18 { color: #f59e0b; }
+  .dz65-19 { color: #10b981; font-size: 13px; text-align: center; font-weight: bold; margin-top: 8px; }
+  .dz65-20 { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 18px; }
+  .dz65-21 { color: var(--text-main); font-weight: bold; margin-bottom: 12px; }
+  .dz65-22 { color: var(--text-muted); font-size: 11px; margin-top: 2px; }
+  .dz65-23 { color: #10b981; font-size: 12px; font-weight: bold; }
+  .dz65-24 { color: var(--text-muted); font-size: 10px; }
+  .dz65-25 { color: var(--text-muted); font-size: 11px; }
+  .dz65-26 { font-size: .75rem; color: var(--text-muted); text-align: center; margin-top: 1rem; line-height: 1.6; }
+  .dz65-27 { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 30px; text-align: center; color: var(--text-muted); }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). Only declarations whose properties are free of any
      !important rule in the site CSS were moved; otherwise such a rule
      would suddenly start winning and change the layout. */
@@ -12,61 +42,59 @@
 </style>
 
 <%- include('../partials/navbar') %>
-<div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto;">
+<div class="container dz65-1">
   <%- include('../partials/flash') %>
 
   <div class="im66-1">
-    <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
-    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;"><%= t.vip_program %></h1>
+    <a class="dz65-2" href="/profile">←</a>
+    <h1 class="dz65-3"><%= t.vip_program %></h1>
   </div>
 
   <% if (vip) { %>
     <!-- বর্তমান <%= t.level_paren %> কার্ড -->
-    <div style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:16px;padding:24px;margin-bottom:16px;text-align:center;">
+    <div class="dz65-4">
       <div class="im66-2">👑</div>
-      <div style="color:var(--text-main);font-size:22px;font-weight:900;"><%= vip.current.name %></div>
-      <div style="color:rgba(255,255,255,0.9);font-size:13px;margin-top:2px;"><%= t.vip_level %> <%= vip.level %></div>
+      <div class="dz65-5"><%= vip.current.name %></div>
+      <div class="dz65-6"><%= t.vip_level %> <%= vip.level %></div>
     </div>
 
     <!-- প্রোগ্রেস -->
-    <div id="vipProgressBox" style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;margin-bottom:16px;"
-         data-progress="<%= vip.progress %>" data-total-turnover="<%= vip.totalTurnover %>" data-to-next="<%= vip.toNext %>"
-         data-next-name="<%= vip.next ? vip.next.name : '' %>" data-is-max="<%= vip.next ? '0' : '1' %>">
+    <div class="dz65-7" id="vipProgressBox" data-progress="<%= vip.progress %>" data-total-turnover="<%= vip.totalTurnover %>" data-to-next="<%= vip.toNext %>" data-next-name="<%= vip.next ? vip.next.name : '' %>" data-is-max="<%= vip.next ? '0' : '1' %>">
       <div class="im66-3">
-        <span style="color:var(--text-muted);font-size:13px;"><%= t.total_turnover %></span>
-        <span id="vipTurnoverText" style="color:#f59e0b;font-size:14px;font-weight:bold;"><%= Number(vip.totalTurnover).toLocaleString('bn-BD') %></span>
+        <span class="dz65-8"><%= t.total_turnover %></span>
+        <span class="dz65-9" id="vipTurnoverText"><%= Number(vip.totalTurnover).toLocaleString('bn-BD') %></span>
       </div>
 
       <!-- বার + ভাসমান সংখ্যা -->
       <div class="im66-4">
-        <div style="background:rgba(255,255,255,0.1);border-radius:20px;height:14px;overflow:visible;">
-          <div id="vipProgressFill" style="width:0%;height:100%;border-radius:20px;background:linear-gradient(90deg,#f59e0b,#fbbf24);transition:width 1s ease;"></div>
+        <div class="dz65-10">
+          <div class="dz65-11" id="vipProgressFill"></div>
         </div>
         <!-- ভাসমান প্রোগ্রেস নাম্বার -->
-        <div id="vipProgressFloat" style="position:absolute;top:-26px;left:0%;transform:translateX(-50%);background:#1e293b;color:#fbbf24;font-size:11px;font-weight:800;padding:2px 8px;border-radius:8px;white-space:nowrap;border:1px solid #f59e0b;transition:left 1s ease;">
+        <div class="dz65-12" id="vipProgressFloat">
           0 / 1000
         </div>
         <!-- +পরিমাণ পপ-আপ (লাইভ বৃদ্ধি দেখানোর জন্য) -->
-        <div id="vipDeltaPop" style="position:absolute;top:-26px;right:0;color:#4ade80;font-size:12px;font-weight:800;opacity:0;transition:opacity .3s, transform .6s;pointer-events:none;">+0</div>
+        <div class="dz65-13" id="vipDeltaPop">+0</div>
       </div>
 
-      <div style="color:var(--text-muted);font-size:11px;text-align:center;margin-top:2px;">
-        <%= t.progress_label %> <span id="vipProgressNum" style="color:#f59e0b;font-weight:bold;">0</span> / ১০০০
+      <div class="dz65-14">
+        <%= t.progress_label %> <span class="dz65-15" id="vipProgressNum">0</span> / ১০০০
       </div>
 
       <% if (vip.next) { %>
-        <div style="color:var(--text-muted);font-size:12px;text-align:center;margin-top:8px;">
-          <%= t.next_level %> <strong style="color:var(--text-main);"><%= vip.next.name %></strong> <%= t.need_more %>
-          <strong id="vipToNextText" style="color:#f59e0b;"><%= Number(vip.toNext).toLocaleString('bn-BD') %></strong> <%= t.turnover_required %>
+        <div class="dz65-16">
+          <%= t.next_level %> <strong class="dz65-17"><%= vip.next.name %></strong> <%= t.need_more %>
+          <strong class="dz65-18" id="vipToNextText"><%= Number(vip.toNext).toLocaleString('bn-BD') %></strong> <%= t.turnover_required %>
         </div>
       <% } else { %>
-        <div id="vipMaxMsg" style="color:#10b981;font-size:13px;text-align:center;font-weight:bold;margin-top:8px;"><%= t.max_vip_reached %></div>
+        <div class="dz65-19" id="vipMaxMsg"><%= t.max_vip_reached %></div>
       <% } %>
     </div>
 
     <!-- সব <%= t.level_paren %> তালিকা -->
-    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;">
-      <div style="color:var(--text-main);font-weight:bold;margin-bottom:12px;"><%= t.vip_levels %></div>
+    <div class="dz65-20">
+      <div class="dz65-21"><%= t.vip_levels %></div>
       <% vip.levels.forEach(l => {
         const isCurrent = l.level === vip.level;
         const reached = vip.totalTurnover >= Number(l.min_turnover);
@@ -76,29 +104,29 @@
             <div style="color:<%= reached ? 'var(--text-main)' : 'var(--text-muted)' %>;font-size:14px;font-weight:bold;">
               <%= reached ? '✅' : '🔒' %> <%= l.name %> (<%= t.level_paren %> <%= l.level %>)
             </div>
-            <div style="color:var(--text-muted);font-size:11px;margin-top:2px;">
+            <div class="dz65-22">
               <%= t.turnover_label %> <%= Number(l.min_turnover).toLocaleString('bn-BD') %>
             </div>
           </div>
           <div class="im66-5">
             <% if (l.upgrade_bonus > 0) { %>
-              <div style="color:#10b981;font-size:12px;font-weight:bold;">+<%= l.upgrade_bonus %></div>
-              <div style="color:var(--text-muted);font-size:10px;"><%= t.upgrade_bonus %></div>
+              <div class="dz65-23">+<%= l.upgrade_bonus %></div>
+              <div class="dz65-24"><%= t.upgrade_bonus %></div>
             <% } else { %>
-              <div style="color:var(--text-muted);font-size:11px;"><%= t.starting_level %></div>
+              <div class="dz65-25"><%= t.starting_level %></div>
             <% } %>
           </div>
         </div>
       <% }) %>
     </div>
 
-    <p style="font-size:.75rem;color:var(--text-muted);text-align:center;margin-top:1rem;line-height:1.6;">
+    <p class="dz65-26">
       <%= t.vip_note_1 %><br>
       <%= t.vip_note_2 %>
     </p>
 
   <% } else { %>
-    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:30px;text-align:center;color: var(--text-muted);">
+    <div class="dz65-27">
       <%= t.vip_load_failed %>
     </div>
   <% } %>

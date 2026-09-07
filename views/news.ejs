@@ -1,6 +1,10 @@
 <%- include('partials/head') %>
 <style nonce="<%= cspNonce %>">
   /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz49-1 { color: var(--muted); grid-column: 1/-1; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). Only declarations whose properties are free of any
      !important rule in the site CSS were moved; otherwise such a rule
      would suddenly start winning and change the layout. */
@@ -25,7 +29,7 @@
   </div>
   <div class="grid grid-3">
     <% if(news.length === 0) { %>
-      <p style="color:var(--muted);grid-column:1/-1"><%= t.no_news %></p>
+      <p class="dz49-1"><%= t.no_news %></p>
     <% } %>
     <% news.forEach(n => { %>
       <a href="/news/<%= n.id %>" class="news-card">
