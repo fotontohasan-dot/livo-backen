@@ -2147,5 +2147,21 @@
   "msn_in_progress": "In progress...",
   "msn_none": "No missions right now.",
   "msn_info_1": "Missions reset at midnight every day.",
-  "msn_info_2": "Both casino games and sports count towards missions."
+  "msn_info_2": "Both casino games and sports count towards missions.",
+  "shr_title": "Share for a Bonus",
+  "shr_heading": "Share and claim a bonus",
+  "shr_daily": "Share daily and get {value} coins",
+  "shr_where": "Where to share",
+  "shr_message": "Play and win on Livo!",
+  "shr_copy_link": "Copy link",
+  "shr_claimed": "Today's share bonus has been claimed",
+  "shr_come_back": "Come back tomorrow",
+  "shr_after_share": "After sharing above, claim your bonus with the button below",
+  "shr_claim_button": "Claim share bonus ({value} coins)",
+  "shr_footer": "Share your referral link — you also earn a referral bonus when a friend joins!",
+  "wal_tx_deposit": "Deposit",
+  "wal_tx_withdraw": "Withdrawal",
+  "head_default_title": "Livo - Top Sports Prediction and Casino Platform",
+  "head_default_description": "Play Bangladesh's best sports prediction and casino games on Livo. Win real rewards, with safe and fast deposits and withdrawals.",
+  "head_default_keywords": "Livo, sports prediction, online casino, Bangladesh betting, cricket prediction, live casino, online gaming Bangladesh"
 }

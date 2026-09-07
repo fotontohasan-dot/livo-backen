@@ -5,14 +5,14 @@
 
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
     <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
-    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">📤 শেয়ার করে বোনাস</h1>
+    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">📤 <%= t('shr_title') %></h1>
   </div>
 
   <div style="background:linear-gradient(135deg,#ec4899,#db2777);border-radius:16px;padding:24px;margin-bottom:16px;text-align:center;">
     <div style="font-size:44px;margin-bottom:6px;">📤</div>
-    <div style="color:#fff;font-size:16px;font-weight:bold;">শেয়ার করুন, বোনাস নিন</div>
+    <div style="color:#fff;font-size:16px;font-weight:bold;"><%= t('shr_heading') %></div>
     <div style="color:rgba(255,255,255,0.9);font-size:13px;margin-top:4px;">
-      প্রতিদিন শেয়ার করে <strong><%= share ? share.bonus : 20 %> কয়েন</strong> পান
+      <%- t('shr_daily').replace('{value}', '<strong>' + (share ? share.bonus : 20) + '</strong>') %>
     </div>
   </div>
 
@@ -20,9 +20,9 @@
 
   <!-- শেয়ার বাটন -->
   <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;margin-bottom:16px;">
-    <div style="color:var(--text-main);font-weight:bold;margin-bottom:12px;">যেখানে শেয়ার করবেন</div>
+    <div style="color:var(--text-main);font-weight:bold;margin-bottom:12px;"><%= t('shr_where') %></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-      <a href="https://wa.me/?text=<%= encodeURIComponent('Livo-তে খেলুন আর জিতুন! ' + shareUrl) %>" target="_blank"
+      <a href="https://wa.me/?text=<%= encodeURIComponent(t('shr_message') + ' ' + shareUrl) %>" target="_blank"
          style="background:#25D366;color:#0B3B1E;text-decoration:none;text-align:center;padding:12px;border-radius:10px;font-weight:bold;font-size:13px;">
         WhatsApp
       </a>
@@ -30,13 +30,13 @@
          style="background:#1773E9;color:#fff;text-decoration:none;text-align:center;padding:12px;border-radius:10px;font-weight:bold;font-size:13px;">
         Facebook
       </a>
-      <a href="https://t.me/share/url?url=<%= encodeURIComponent(shareUrl) %>&text=<%= encodeURIComponent('Livo-তে খেলুন আর জিতুন!') %>" target="_blank"
+      <a href="https://t.me/share/url?url=<%= encodeURIComponent(shareUrl) %>&text=<%= encodeURIComponent(t('shr_message')) %>" target="_blank"
          style="background:#007DBC;color:#fff;text-decoration:none;text-align:center;padding:12px;border-radius:10px;font-weight:bold;font-size:13px;">
         Telegram
       </a>
       <button data-copy-link
          style="background:#475569;color:#fff;border:none;text-align:center;padding:12px;border-radius:10px;font-weight:bold;font-size:13px;cursor:pointer;">
-        লিংক কপি
+        <%= t('shr_copy_link') %>
       </button>
     </div>
     <input type="text" id="shareLink" value="<%= shareUrl %>" readonly
@@ -46,20 +46,20 @@
   <!-- বোনাস ক্লেইম -->
   <div style="background:rgba(245,158,11,0.1);border:1px solid var(--gold,#f59e0b);border-radius:16px;padding:20px;text-align:center;">
     <% if (share && share.claimed) { %>
-      <div style="color:#10b981;font-size:14px;font-weight:bold;">✅ আজকের শেয়ার বোনাস নেওয়া হয়েছে</div>
-      <div style="color:var(--text-muted);font-size:12px;margin-top:4px;">আগামীকাল আবার আসুন</div>
+      <div style="color:#10b981;font-size:14px;font-weight:bold;">✅ <%= t('shr_claimed') %></div>
+      <div style="color:var(--text-muted);font-size:12px;margin-top:4px;"><%= t('shr_come_back') %></div>
     <% } else { %>
-      <div style="color:var(--text-main);font-size:13px;margin-bottom:12px;">উপরে শেয়ার করার পর নিচের বাটনে বোনাস নিন</div>
+      <div style="color:var(--text-main);font-size:13px;margin-bottom:12px;"><%= t('shr_after_share') %></div>
       <form action="/profile/share/claim" method="POST" style="margin:0;">
         <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;font-weight:700;">
-          🎁 শেয়ার বোনাস নিন (<%= share ? share.bonus : 20 %> কয়েন)
+          🎁 <%= t('shr_claim_button').replace('{value}', share ? share.bonus : 20) %>
         </button>
       </form>
     <% } %>
   </div>
 
   <p style="font-size:.75rem;color:var(--text-muted);text-align:center;margin-top:1rem;line-height:1.6;">
-    আপনার রেফারেল লিংক শেয়ার করুন — বন্ধু জয়েন করলে রেফারেল বোনাসও পাবেন!
+    <%= t('shr_footer') %>
   </p>
 
 </div>
