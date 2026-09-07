@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ডিপোজিট ট্রানজেকশন • Livo Admin</title>
+  <title><%= t('dep_title') %> • Livo Admin</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style nonce="<%= cspNonce %>">
     * { box-sizing: border-box; }
@@ -53,7 +53,7 @@
   <div class="admin-wrap">
     <%- include('../admin/partials/sidebar', { active: 'deposits' }) %>
     <div class="admin-content">
-      <%- include('../admin/partials/header', { pageTitle: 'ডিপোজিট রিপোর্ট', pageSubtitle: 'মেথড-ভিত্তিক অনুমোদিত ডিপোজিটের আয় রিপোর্ট — অনুমোদনের জন্য পেমেন্ট অনুমোদন পেজে যান' }) %>
+      <%- include('../admin/partials/header', { pageTitle: t('dep_page_title'), pageSubtitle: t('dep_page_sub') }) %>
       <%- include('../admin/partials/load-error') %>
 
       <!-- মেথড ট্যাব — routes/payment.js-এর VALID_METHODS থেকে আসে, এখানে আর হার্ডকোড নেই -->
@@ -71,7 +71,7 @@
         <div class="dep-total-card <%= method === m.key ? 'active' : '' %>">
           <div class="label"><%= m.label %> — Total Deposit</div>
           <div class="value">৳<%= Number(tt.total).toLocaleString('en-US') %></div>
-          <div class="sub"><%= tt.cnt %>টা approved লেনদেন</div>
+          <div class="sub"><%= t('dep_approved_count').replace('{count}', tt.cnt) %></div>
         </div>
         <% }); %>
       </div>
@@ -79,34 +79,34 @@
       <!-- ডেট ফিল্টার -->
       <form class="dep-filters" method="GET" action="/payment/admin/deposits">
         <input type="hidden" name="method" value="<%= method %>">
-        <a class="dep-preset <%= quick === 'today' ? 'active' : '' %>" href="/payment/admin/deposits?method=<%= method %>&quick=today">আজ</a>
-        <a class="dep-preset <%= quick === '7d' ? 'active' : '' %>" href="/payment/admin/deposits?method=<%= method %>&quick=7d">৭ দিন</a>
-        <a class="dep-preset <%= quick === '30d' ? 'active' : '' %>" href="/payment/admin/deposits?method=<%= method %>&quick=30d">৩০ দিন</a>
-        <a class="dep-preset <%= quick === '90d' ? 'active' : '' %>" href="/payment/admin/deposits?method=<%= method %>&quick=90d">৯০ দিন</a>
-        <a class="dep-preset <%= quick === 'year' ? 'active' : '' %>" href="/payment/admin/deposits?method=<%= method %>&quick=year">এই বছর</a>
+        <a class="dep-preset <%= quick === 'today' ? 'active' : '' %>" href="/payment/admin/deposits?method=<%= method %>&quick=today"><%= t('dep_quick_today') %></a>
+        <a class="dep-preset <%= quick === '7d' ? 'active' : '' %>" href="/payment/admin/deposits?method=<%= method %>&quick=7d"><%= t('dep_quick_7d') %></a>
+        <a class="dep-preset <%= quick === '30d' ? 'active' : '' %>" href="/payment/admin/deposits?method=<%= method %>&quick=30d"><%= t('dep_quick_30d') %></a>
+        <a class="dep-preset <%= quick === '90d' ? 'active' : '' %>" href="/payment/admin/deposits?method=<%= method %>&quick=90d"><%= t('dep_quick_90d') %></a>
+        <a class="dep-preset <%= quick === 'year' ? 'active' : '' %>" href="/payment/admin/deposits?method=<%= method %>&quick=year"><%= t('dep_quick_year') %></a>
         <span style="width:1px;height:20px;background:rgba(255,255,255,0.1);"></span>
         <input type="date" name="from" value="<%= from %>">
         <input type="date" name="to" value="<%= to %>">
         <input type="hidden" name="quick" value="custom">
-        <button type="submit">কাস্টম রেঞ্জ প্রয়োগ করুন</button>
+        <button type="submit"><%= t('dep_apply_range') %></button>
       </form>
 
       <!-- ট্রানজেকশন লিস্ট -->
       <table class="dep-table">
         <thead>
           <tr>
-            <th>ইউজার</th>
-            <th>পরিমাণ</th>
-            <th>ট্রানজেকশন আইডি</th>
-            <th>অ্যাকাউন্ট নম্বর</th>
-            <th>স্ট্যাটাস</th>
-            <th>সময়</th>
-            <th>অ্যাকশন</th>
+            <th><%= t('dep_col_user') %></th>
+            <th><%= t('dep_col_amount') %></th>
+            <th><%= t('dep_col_txid') %></th>
+            <th><%= t('dep_col_account') %></th>
+            <th><%= t('dep_col_status') %></th>
+            <th><%= t('dep_col_time') %></th>
+            <th><%= t('dep_col_action') %></th>
           </tr>
         </thead>
         <tbody>
           <% if (requests.length === 0) { %>
-            <tr><td colspan="7" class="dep-empty">এই রেঞ্জে <%= method %> দিয়ে কোনো ডিপোজিট নেই</td></tr>
+            <tr><td colspan="7" class="dep-empty"><%= t('dep_empty').replace('{method}', method) %></td></tr>
           <% } %>
           <% requests.forEach(r => { %>
             <tr>
@@ -119,10 +119,10 @@
               <td class="dep-actions">
                 <% if (r.status === 'pending') { %>
                   <form action="/payment/admin/approve/<%= r.id %>" method="POST">
-                    <button type="submit" class="dep-btn-approve"><i class="fas fa-check"></i> অনুমোদন</button>
+                    <button type="submit" class="dep-btn-approve"><i class="fas fa-check"></i> <%= t('dep_approve') %></button>
                   </form>
-                  <form action="/payment/admin/reject/<%= r.id %>" method="POST" data-confirm="বাতিল করবেন?">
-                    <button type="submit" class="dep-btn-reject"><i class="fas fa-xmark"></i> বাতিল</button>
+                  <form action="/payment/admin/reject/<%= r.id %>" method="POST" data-confirm="<%= t('dep_reject_confirm') %>">
+                    <button type="submit" class="dep-btn-reject"><i class="fas fa-xmark"></i> <%= t('dep_reject') %></button>
                   </form>
                 <% } else { %>
                   —
