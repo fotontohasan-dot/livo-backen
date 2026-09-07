@@ -663,7 +663,15 @@ body.light-mode .promo-banner {
       <div class="jackpot-tagline"><%= t.jackpot_tagline %></div>
     </div>
     <div class="jackpot-girl">
-      <video src="/videos/jackpot-girl.mp4" poster="/images/hero/mega-jackpot.svg" style="width:130px; border-radius:8px; display:block;" autoplay loop muted playsinline></video>
+      <!-- ৩.৯MB MP4 ছিল, দেখানো হচ্ছে ১৩০px চওড়ায় — public/-এর ৭৫% ওজন একটা
+           সাজসজ্জার ভিডিওতে। preload="none" দিলে ব্রাউজার আগে থেকে ডাউনলোড করে না,
+           poster-টাই প্রথমে দেখায়। WebM (VP9) ট্রান্সকোড থাকলে সেটা আগে চেষ্টা হয়,
+           নাহলে MP4 fallback। ট্রান্সকোড না হওয়া পর্যন্তও preload="none"-ই বড় লাভ। -->
+      <video poster="/images/hero/mega-jackpot.svg" style="width:130px; border-radius:8px; display:block;"
+             autoplay loop muted playsinline preload="none">
+        <source src="/videos/jackpot-girl.webm" type="video/webm">
+        <source src="/videos/jackpot-girl.mp4" type="video/mp4">
+      </video>
     </div>
   </div>
 </div>

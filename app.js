@@ -14,6 +14,8 @@ const sentryService = require('./services/sentry');
 sentryService.init();
 
 const express = require('express');
+const { getBaseUrl } = require('./utils/publicUrl');
+const fs = require('fs');
 const http = require('http');
 const { initSocket } = require('./services/socket');
 const session = require('express-session');
@@ -67,9 +69,24 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+// অ্যাসেট ভার্সন — টেমপ্লেটে Date.now() ব্যবহার করলে প্রতি রিকোয়েস্টে ইউআরএল
+// বদলাত, ফলে ক্যাশ কখনো হিট করত না। ডিপ্লয়ের কমিট SHA প্রতি ডিপ্লয়ে একবারই
+// বদলায় — ঠিক যতবার বদলানো দরকার।
+const ASSET_VERSION = process.env.RENDER_GIT_COMMIT || process.env.ASSET_VERSION || 'dev';
+app.use((req, res, next) => {
+  res.locals.assetVersion = ASSET_VERSION;
+  next();
+});
+
+// maxAge:'0' + etag:false মানে ছিল ব্রাউজার ক্যাশ সম্পূর্ণ বন্ধ — প্রতিটা পেজ
+// লোডে পুরো CSS, সব ছবি ও SVG আবার ডাউনলোড হতো। বাংলাদেশের মোবাইল নেটওয়ার্কে
+// এটা সরাসরি ইউজার হারানো। অ্যাসেট ইউআরএলে `?v=<assetVersion>` থাকায়
+// ডিপ্লয়ে ইউআরএল বদলায়, তাই দীর্ঘ ক্যাশ নিরাপদ।
+//
 app.use(express.static(path.join(__dirname, 'public'), {
-  maxAge: '0',
-  etag: false
+  maxAge: '30d',
+  etag: true,
+  immutable: true
 }));
 
 const cspDirectives = {
@@ -372,6 +389,87 @@ const financialLimiter = rateLimit({
 });
 
 app.use(generalLimiter);
+
+// এই তিনটে রুট ইচ্ছাকৃতভাবে generalLimiter-এর *পরে*। tests/security/
+// supplyChainAndAbuse.test.js একটা রিগ্রেশন গার্ড রাখে: /csp-report ছাড়া
+// কোনো রুট যেন গ্লোবাল রেট-লিমিটারের আগে মাউন্ট না হয়। আগের সংস্করণে
+// এগুলো static-এর আগে বসানো ছিল বলে সেই গার্ডটা ভাঙত।
+//
+// robots.txt ও sitemap.xml আর public/-এ নেই (মুছে ফেলা হয়েছে), তাই
+// express.static ওদের ধরে না এবং এখানে পৌঁছাতে সমস্যা নেই। কিন্তু
+// service-worker.js-এর সোর্স ফাইলটা static-এর নাগালে থাকলে static-ই আগে
+// সাড়া দিত এবং __ASSET_VERSION__ প্রতিস্থাপিত না হয়েই চলে যেত — তাই
+// সোর্সটা public/ থেকে assets/-এ সরানো হয়েছে।
+
+// service-worker.js স্ট্যাটিক ফাইল হিসেবে সার্ভ করলে CACHE_NAME-এ ডিপ্লয় ভার্সন
+// বসানো যায় না। তাই এখানে ফাইলটা পড়ে প্লেসহোল্ডার প্রতিস্থাপন করা হয়।
+// SW ফাইল নিজে কখনো ক্যাশ করা হয় না — নাহলে নতুন SW কখনো ইনস্টল হতো না।
+const swPath = path.join(__dirname, 'assets', 'service-worker.js');
+app.get('/service-worker.js', (req, res) => {
+  fs.readFile(swPath, 'utf8', (err, source) => {
+    if (err) return res.status(404).end();
+    res.type('application/javascript')
+      .set('Cache-Control', 'no-cache, no-store, must-revalidate')
+      .send(source.replace(/__ASSET_VERSION__/g, ASSET_VERSION));
+  });
+});
+
+// robots.txt ও sitemap.xml আগে public/-এ স্ট্যাটিক ফাইল ছিল, যাতে হোস্টনেম
+// হার্ডকোড করা — কাস্টম ডোমেইনে গেলে দুটোই নীরবে ভুল ডোমেইন নির্দেশ করত।
+// এখন চলমান বেস-ইউআরএল থেকে জেনারেট হয়, তাই ডোমেইন বদলালেও কিছু করতে হয় না।
+const SITEMAP_ENTRIES = [
+  { path: '/',            changefreq: 'daily',   priority: '1.0' },
+  { path: '/promotions',  changefreq: 'daily',   priority: '0.8' },
+  { path: '/login',       changefreq: 'monthly', priority: '0.5' },
+  { path: '/register',    changefreq: 'monthly', priority: '0.7' },
+  { path: '/help-center', changefreq: 'weekly',  priority: '0.5' },
+  { path: '/terms',       changefreq: 'yearly',  priority: '0.3' },
+  { path: '/privacy',     changefreq: 'yearly',  priority: '0.3' },
+  { path: '/sports',      changefreq: 'daily',   priority: '0.9' },
+  { path: '/matches',     changefreq: 'daily',   priority: '0.9' },
+  { path: '/news',        changefreq: 'daily',   priority: '0.6' },
+  { path: '/tournaments', changefreq: 'weekly',  priority: '0.6' },
+  { path: '/rules',       changefreq: 'yearly',  priority: '0.3' }
+];
+
+app.get('/sitemap.xml', (req, res) => {
+  const base = getBaseUrl(req);
+  const urls = SITEMAP_ENTRIES.map(e =>
+    `  <url>\n    <loc>${base}${e.path}</loc>\n    <changefreq>${e.changefreq}</changefreq>\n    <priority>${e.priority}</priority>\n  </url>`
+  ).join('\n');
+  res.type('application/xml').send(
+`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls}
+</urlset>
+`);
+});
+
+app.get('/robots.txt', (req, res) => {
+  const base = getBaseUrl(req);
+  res.type('text/plain').send(
+`User-agent: *
+Allow: /
+Allow: /promotions
+Allow: /login
+Allow: /register
+Allow: /terms
+Allow: /privacy
+Allow: /help-center
+
+# ব্যক্তিগত/অ্যাডমিন/API রুট ইনডেক্স করা থেকে বিরত রাখা হলো
+Disallow: /admin
+Disallow: /profile
+Disallow: /api/
+Disallow: /coins
+Disallow: /notifications
+Disallow: /payment
+Disallow: /leaderboard
+
+Sitemap: ${base}/sitemap.xml
+`);
+});
+
 app.use('/login', loginLimiter);
 app.use('/register', loginLimiter);
 app.use('/admin/login', loginLimiter);
@@ -383,7 +481,6 @@ app.use('/profile/update', financialLimiter);
 app.use('/profile/update-personal', financialLimiter);
 
 // ভাষা সেটিং
-const fs = require('fs');
 const LOCALES_DIR = path.join(__dirname, 'locales');
 function loadTranslations() {
   return {
