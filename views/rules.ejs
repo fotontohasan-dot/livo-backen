@@ -1,21 +1,30 @@
 <%- include('partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). A declaration was moved only when no !important rule in
+     the site CSS can match this element for that property. */
+  .ix86-1 { padding: 20px; padding-bottom: 100px; max-width: 700px; margin: 20px auto; border-radius: 15px; }
+  .ix86-2 { color: var(--text-accent); font-size: 24px; font-weight: 800; margin-bottom: 6px; }
+  .ix86-3 { color: var(--text-accent); font-size: 16px; margin: 20px 0 8px; }
+</style>
+
 <%- include('partials/navbar') %>
 
-<div class="glass-card" style="padding:20px;padding-bottom:100px;max-width:700px;margin:20px auto; border-radius: 15px;">
-  <h1 style="color: var(--text-accent);font-size:24px;font-weight:800;margin-bottom:6px"><%= t('rules_page_title') %></h1>
+<div class="glass-card ix86-1">
+  <h1 class="ix86-2"><%= t('rules_page_title') %></h1>
   <p style="color:var(--text-muted);font-size:12px;margin-bottom:24px"><%= t('rules_updated_date') %></p>
 
   <div style="color:var(--text-main);font-size:14px;line-height:1.8">
-    <h3 style="color: var(--text-accent);font-size:16px;margin:20px 0 8px"><%= t('rules_sec1_h') %></h3>
+    <h3 class="ix86-3"><%= t('rules_sec1_h') %></h3>
     <p><%= t('rules_sec1_p') %></p>
 
-    <h3 style="color: var(--text-accent);font-size:16px;margin:20px 0 8px"><%= t('rules_sec2_h') %></h3>
+    <h3 class="ix86-3"><%= t('rules_sec2_h') %></h3>
     <p><%= t('rules_sec2_p') %></p>
 
-    <h3 style="color: var(--text-accent);font-size:16px;margin:20px 0 8px"><%= t('rules_sec3_h') %></h3>
+    <h3 class="ix86-3"><%= t('rules_sec3_h') %></h3>
     <p><%= t('rules_sec3_p') %></p>
 
-    <h3 style="color: var(--text-accent);font-size:16px;margin:20px 0 8px"><%= t('rules_sec4_h') %></h3>
+    <h3 class="ix86-3"><%= t('rules_sec4_h') %></h3>
     <p><%= t('rules_sec4_p') %></p>
   </div>
 </div>

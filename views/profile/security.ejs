@@ -1,11 +1,11 @@
 <%- include('../partials/head') %>
 
-<div class="container" style="padding: 16px; padding-bottom: 100px;">
+<div class="container ix71-1">
   <div class="im72-1">
-    <a href="/profile" style="color:var(--text-main); text-decoration: none; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+    <a class="ix71-2" href="/profile">
       <i class="fas fa-chevron-left"></i>
     </a>
-    <h1 style="color:var(--text-main); font-size: 20px; font-weight: 800; letter-spacing: 0.5px;"><%= t.security_center %></h1>
+    <h1 class="ix71-3"><%= t.security_center %></h1>
   </div>
 
   <%- include('../partials/flash') %>
@@ -59,8 +59,8 @@
       }
     ];
   %>
-  <div style="background: var(--bg-card); border-radius: 20px; padding: 18px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
-    <h3 style="color: var(--text-accent); font-size: 14px; margin: 0 0 14px; display:flex; align-items:center; gap:8px;">
+  <div class="ix71-4">
+    <h3 class="ix71-5">
       <i class="fas fa-shield-halved"></i> <%= lang === 'bn' ? 'নিরাপত্তা ওভারভিউ' : 'Security Overview' %>
     </h3>
     <div class="im72-2">
@@ -80,7 +80,7 @@
   </div>
 
   <!-- Tab Buttons -->
-  <div style="display: flex; gap: 10px; margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 5px; border-radius: 12px; border: 1px solid var(--border-glass);">
+  <div class="ix71-6">
     <button data-switch-tab="personal" id="btn-personal" class="sec-tab active" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;"><%= t.personal_info %></button>
     <button data-switch-tab="bank" id="btn-bank" class="sec-tab" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;"><%= t.menu_withdraw %></button>
     <button data-switch-tab="security" id="btn-security" class="sec-tab" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;"><%= t.security %></button>
@@ -89,41 +89,41 @@
 
   <!-- Personal Information Tab -->
   <div id="tab-personal" class="sec-content">
-    <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
-      <h3 style="color: var(--text-accent); font-size: 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+    <div class="ix71-7">
+      <h3 class="ix71-8">
         <i class="fas fa-id-card"></i> <%= t.personal_info %>
       </h3>
       <form class="im72-4" action="/profile/update-personal" method="POST">
         <div>
-          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.username_fixed %></label>
+          <label class="ix71-9"><%= t.username_fixed %></label>
           <input type="text" value="<%= user.username %>" disabled style="width: 100%; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 15px; color: var(--text-muted); font-size: 14px;">
         </div>
         <div>
-          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.email %></label>
+          <label class="ix71-9"><%= t.email %></label>
           <input type="email" value="<%= user.email %>" disabled style="width: 100%; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 15px; color: var(--text-muted); font-size: 14px;">
         </div>
         <div>
-          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.full_name %></label>
+          <label class="ix71-9"><%= t.full_name %></label>
           <input type="text" name="full_name" value="<%= user.full_name || '' %>" placeholder="<%= t.full_name_placeholder %>" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 14px; outline: none; border-color: <%= user.full_name ? 'var(--border-glass)' : 'rgba(245, 158, 11, 0.3)' %>;">
         </div>
         <div>
-          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.phone %></label>
+          <label class="ix71-9"><%= t.phone %></label>
           <input type="text" name="phone" value="<%= user.phone || '' %>" placeholder="01XXXXXXXXX" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 14px; outline: none;">
         </div>
-        <button type="submit" class="btn btn-primary" style="margin-top: 10px; border-radius: 12px; padding: 14px; font-weight: 800;"><%= t.update_info %></button>
+        <button type="submit" class="btn btn-primary ix71-10"><%= t.update_info %></button>
       </form>
     </div>
   </div>
 
   <!-- Bank Card Tab -->
   <div id="tab-bank" class="sec-content" style="display: none;">
-    <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
-      <h3 style="color: var(--text-accent); font-size: 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+    <div class="ix71-7">
+      <h3 class="ix71-8">
         <i class="fas fa-credit-card"></i> <%= t.bank_cards_wallets %>
       </h3>
       <% if (bankCards && bankCards.length > 0) { %>
         <% bankCards.forEach(card => { %>
-          <div style="background: rgba(255,255,255,0.03); border-radius: 12px; padding: 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+          <div class="ix71-11">
             <div>
               <div style="color:var(--text-main); font-size: 14px; font-weight: 600;"><%= card.bank_name %></div>
               <div style="color: var(--text-muted); font-size: 12px;"><%= card.account_number %></div>
@@ -136,22 +136,22 @@
           </div>
         <% }) %>
       <% } else { %>
-        <div style="text-align: center; padding: 40px 20px; background: rgba(255,255,255,0.02); border-radius: 16px; margin-bottom: 25px; border: 1px dashed var(--border-glass);">
+        <div class="ix71-12">
           <i class="fas fa-university" style="font-size: 40px; color: var(--text-muted); margin-bottom: 15px;"></i>
           <p style="color: var(--text-muted); font-size: 13px;"><%= t.no_cards_msg %></p>
         </div>
       <% } %>
 
       <!-- Add Card Form -->
-      <div style="border-top: 1px solid var(--border-glass); padding-top: 25px;">
-        <h4 style="color:var(--text-main); font-size: 14px; margin-bottom: 15px;"><%= t.add_new_card %></h4>
+      <div class="ix71-13">
+        <h4 class="ix71-14"><%= t.add_new_card %></h4>
         <form class="im72-5" action="/profile/add-bank-card" method="POST">
-          <select name="bank_name" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 14px; outline: none;">
-            <option value="" style="background: #121212;"><%= t.select_payment_method %></option>
-            <option value="bKash" style="background: #121212;">bKash</option>
-            <option value="Nagad" style="background: #121212;">Nagad</option>
-            <option value="Rocket" style="background: #121212;">Rocket</option>
-            <option value="Bank Account" style="background: #121212;">Local Bank</option>
+          <select class="ix71-15" name="bank_name" required>
+            <option class="ix71-16" value=""><%= t.select_payment_method %></option>
+            <option class="ix71-16" value="bKash">bKash</option>
+            <option class="ix71-16" value="Nagad">Nagad</option>
+            <option class="ix71-16" value="Rocket">Rocket</option>
+            <option class="ix71-16" value="Bank Account">Local Bank</option>
           </select>
           <input type="text" name="account_number" placeholder="<%= t.account_number_placeholder_alt %>" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 14px; outline: none;">
           <input type="text" name="holder_name" placeholder="<%= t.holder_name_placeholder %>" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 14px; outline: none;">
@@ -165,13 +165,13 @@
   <div id="tab-security" class="sec-content" style="display: none;">
 
     <!-- ==================== Email Verification কার্ড ==================== -->
-    <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
-      <h3 style="color: var(--text-accent); font-size: 16px; margin-bottom: 6px; display: flex; align-items: center; gap: 10px;">
+    <div class="ix71-7">
+      <h3 class="ix71-17">
         <i class="fas fa-envelope-circle-check"></i> <%= lang === 'bn' ? 'ইমেইল ভেরিফিকেশন' : 'Email Verification' %>
       </h3>
       <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 18px;"><%= lang === 'bn' ? 'অ্যাকাউন্ট রিকভারি ও গুরুত্বপূর্ণ নোটিফিকেশনের জন্য ইমেইল ভেরিফাই করুন' : 'Verify your email for account recovery and important notifications' %></p>
 
-      <div style="display:flex; justify-content:space-between; align-items:center; background: rgba(255,255,255,0.03); border-radius: 12px; padding: 15px; gap: 12px;">
+      <div class="ix71-18">
         <div class="im72-3">
           <div style="color:var(--text-muted); font-size:12px; margin-bottom:4px;"><%= user.email || (lang === 'bn' ? 'কোনো ইমেইল যুক্ত নেই' : 'No email on account') %></div>
           <% if (!emailStatus || !emailStatus.hasEmail) { %>
@@ -184,42 +184,42 @@
         </div>
         <% if (emailStatus && emailStatus.hasEmail && !emailStatus.verified) { %>
           <form method="POST" action="/resend-verification">
-            <button type="submit" class="btn btn-primary" style="border-radius:10px; padding:10px 16px; font-weight:800; font-size:12px; white-space:nowrap;"><%= lang === 'bn' ? 'পুনরায় পাঠান' : 'Resend' %></button>
+            <button type="submit" class="btn btn-primary ix71-19"><%= lang === 'bn' ? 'পুনরায় পাঠান' : 'Resend' %></button>
           </form>
         <% } %>
       </div>
     </div>
 
-    <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
-      <h3 style="color: var(--text-accent); font-size: 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+    <div class="ix71-7">
+      <h3 class="ix71-8">
         <i class="fas fa-lock"></i> <%= t.change_password_title %>
       </h3>
       <form class="im72-4" action="/profile/change-password" method="POST">
         <div>
-          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.current_password %></label>
-          <input type="password" name="currentPassword" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 14px; outline: none;">
+          <label class="ix71-9"><%= t.current_password %></label>
+          <input class="ix71-15" type="password" name="currentPassword" required>
         </div>
         <div>
-          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.new_password %></label>
-          <input type="password" name="newPassword" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 14px; outline: none;">
+          <label class="ix71-9"><%= t.new_password %></label>
+          <input class="ix71-15" type="password" name="newPassword" required>
         </div>
         <div>
-          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.confirm_new_password %></label>
-          <input type="password" name="confirmPassword" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 14px; outline: none;">
+          <label class="ix71-9"><%= t.confirm_new_password %></label>
+          <input class="ix71-15" type="password" name="confirmPassword" required>
         </div>
-        <button type="submit" class="btn btn-primary" style="margin-top: 10px; border-radius: 12px; padding: 14px; font-weight: 800;"><%= t.change_password_btn %></button>
+        <button type="submit" class="btn btn-primary ix71-10"><%= t.change_password_btn %></button>
       </form>
     </div>
 
     <!-- ==================== Withdraw PIN কার্ড ==================== -->
-    <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
-      <h3 style="color: var(--text-accent); font-size: 16px; margin-bottom: 6px; display: flex; align-items: center; gap: 10px;">
+    <div class="ix71-7">
+      <h3 class="ix71-17">
         <i class="fas fa-shield-alt"></i> <%= t.withdraw_pin_title %>
       </h3>
       <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 18px;"><%= t.withdraw_pin_subtitle %></p>
 
       <!-- Status -->
-      <div style="display:flex; justify-content:space-between; align-items:center; background: rgba(255,255,255,0.03); border-radius: 12px; padding: 15px; margin-bottom: 20px; gap: 12px;">
+      <div class="ix71-20">
         <div>
           <div style="color:var(--text-muted); font-size:12px; margin-bottom:4px;"><%= t.withdraw_pin_status %></div>
           <div style="font-weight:700; font-size: 14px; color: <%= (pinStatus && pinStatus.configured) ? '#10b981' : '#ef4444' %>;">
@@ -255,15 +255,15 @@
       <!-- Create PIN Form -->
       <form id="pinFormcreate" action="/profile/withdraw-pin/create" method="POST" style="display:none; flex-direction: column; gap: 15px;" data-pin-submit>
         <div>
-          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.new_pin %></label>
-          <input type="password" name="pin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 16px; outline: none; letter-spacing:6px; text-align:center;">
+          <label class="ix71-9"><%= t.new_pin %></label>
+          <input class="ix71-21" type="password" name="pin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off">
         </div>
         <div>
-          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.confirm_new_pin %></label>
-          <input type="password" name="confirmPin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 16px; outline: none; letter-spacing:6px; text-align:center;">
+          <label class="ix71-9"><%= t.confirm_new_pin %></label>
+          <input class="ix71-21" type="password" name="confirmPin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off">
         </div>
         <div class="im72-7">
-          <button type="submit" class="btn btn-primary pin-submit-btn" style="flex:1; border-radius: 12px; padding: 14px; font-weight: 800;"><%= t.create_pin_btn %></button>
+          <button type="submit" class="btn btn-primary pin-submit-btn ix71-22"><%= t.create_pin_btn %></button>
           <button type="button" data-pin-cancel style="flex:0 0 auto; padding: 14px 18px; border-radius: 12px; font-weight: 700; background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid var(--border-glass); cursor:pointer;"><%= t.cancel_btn %></button>
         </div>
       </form>
@@ -271,19 +271,19 @@
       <!-- Change PIN Form -->
       <form id="pinFormchange" action="/profile/withdraw-pin/change" method="POST" style="display:none; flex-direction: column; gap: 15px;" data-pin-submit>
         <div>
-          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.current_pin %></label>
-          <input type="password" name="currentPin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 16px; outline: none; letter-spacing:6px; text-align:center;">
+          <label class="ix71-9"><%= t.current_pin %></label>
+          <input class="ix71-21" type="password" name="currentPin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off">
         </div>
         <div>
-          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.new_pin %></label>
-          <input type="password" name="newPin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 16px; outline: none; letter-spacing:6px; text-align:center;">
+          <label class="ix71-9"><%= t.new_pin %></label>
+          <input class="ix71-21" type="password" name="newPin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off">
         </div>
         <div>
-          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.confirm_new_pin %></label>
-          <input type="password" name="confirmNewPin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 16px; outline: none; letter-spacing:6px; text-align:center;">
+          <label class="ix71-9"><%= t.confirm_new_pin %></label>
+          <input class="ix71-21" type="password" name="confirmNewPin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off">
         </div>
         <div class="im72-7">
-          <button type="submit" class="btn btn-primary pin-submit-btn" style="flex:1; border-radius: 12px; padding: 14px; font-weight: 800;"><%= t.change_pin_btn %></button>
+          <button type="submit" class="btn btn-primary pin-submit-btn ix71-22"><%= t.change_pin_btn %></button>
           <button type="button" data-pin-cancel style="flex:0 0 auto; padding: 14px 18px; border-radius: 12px; font-weight: 700; background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid var(--border-glass); cursor:pointer;"><%= t.cancel_btn %></button>
         </div>
       </form>
@@ -291,16 +291,16 @@
       <!-- Reset PIN Form (PIN ভুলে গেলে — অ্যাকাউন্ট পাসওয়ার্ড দিয়ে যাচাই) -->
       <form id="pinFormreset" action="/profile/withdraw-pin/reset" method="POST" style="display:none; flex-direction: column; gap: 15px;" data-pin-submit>
         <div>
-          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.account_password %></label>
-          <input type="password" name="accountPassword" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 14px; outline: none;">
+          <label class="ix71-9"><%= t.account_password %></label>
+          <input class="ix71-15" type="password" name="accountPassword" required autocomplete="off">
         </div>
         <div>
-          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.new_pin %></label>
-          <input type="password" name="newPin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 16px; outline: none; letter-spacing:6px; text-align:center;">
+          <label class="ix71-9"><%= t.new_pin %></label>
+          <input class="ix71-21" type="password" name="newPin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off">
         </div>
         <div>
-          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.confirm_new_pin %></label>
-          <input type="password" name="confirmNewPin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 16px; outline: none; letter-spacing:6px; text-align:center;">
+          <label class="ix71-9"><%= t.confirm_new_pin %></label>
+          <input class="ix71-21" type="password" name="confirmNewPin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off">
         </div>
         <div class="im72-7">
           <button type="submit" class="btn btn-primary pin-submit-btn" style="flex:1; border-radius: 12px; padding: 14px; font-weight: 800; background: var(--grad-gold); color:#000;"><%= t.reset_pin_btn %></button>
@@ -312,8 +312,8 @@
 
   <!-- Devices Tab -->
   <div id="tab-devices" class="sec-content" style="display: none;">
-    <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
-      <h3 style="color: var(--text-accent); font-size: 16px; margin-bottom: 6px; display: flex; align-items: center; gap: 10px;">
+    <div class="ix71-7">
+      <h3 class="ix71-17">
         <i class="fas fa-mobile-screen-button"></i> <%= t.active_devices_title %>
       </h3>
       <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 18px;"><%= t.active_devices_subtitle %></p>
@@ -324,9 +324,9 @@
             <div class="im72-8">
               <div class="im72-9">
                 <div class="im72-10">
-                  <span style="color:var(--text-main); font-size:14px; font-weight:700;"><i class="fas <%= d.device_type === 'Mobile' ? 'fa-mobile-screen' : (d.device_type === 'Tablet' ? 'fa-tablet-screen-button' : 'fa-desktop') %>"></i> <%= d.device_name %></span>
-                  <% if (d.is_current) { %><span style="background:rgba(16,185,129,0.15); color:#10b981; font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px;"><%= t.current_device_badge %></span><% } %>
-                  <% if (d.is_new_device) { %><span style="background:rgba(245,158,11,0.15); color: var(--text-accent); font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px;"><%= t.new_device_badge %></span><% } %>
+                  <span class="ix71-23"><i class="fas <%= d.device_type === 'Mobile' ? 'fa-mobile-screen' : (d.device_type === 'Tablet' ? 'fa-tablet-screen-button' : 'fa-desktop') %>"></i> <%= d.device_name %></span>
+                  <% if (d.is_current) { %><span class="ix71-24"><%= t.current_device_badge %></span><% } %>
+                  <% if (d.is_new_device) { %><span class="ix71-25"><%= t.new_device_badge %></span><% } %>
                 </div>
                 <div style="color:var(--text-muted); font-size:11px; margin-top:6px;"><%= d.ip %></div>
                 <div style="color:var(--text-muted); font-size:11px; margin-top:2px;"><%= t.device_last_active %>: <%= new Date(d.last_activity).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></div>
@@ -350,18 +350,18 @@
       <% } %>
     </div>
 
-    <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
+    <div class="ix71-7">
       <div class="im72-11">
-        <h3 style="color: var(--text-accent); font-size: 16px; display: flex; align-items: center; gap: 10px; margin:0;">
+        <h3 class="ix71-26">
           <i class="fas fa-clock-rotate-left"></i> <%= t.recent_login_activity %>
         </h3>
-        <a href="/profile/login-history" style="color:var(--text-muted); font-size:12px; text-decoration:none;"><%= t.view_full_login_history %> <i class="fas fa-chevron-right"></i></a>
+        <a class="ix71-27" href="/profile/login-history"><%= t.view_full_login_history %> <i class="fas fa-chevron-right"></i></a>
       </div>
       <% if (recentLogins && recentLogins.length) { %>
         <% recentLogins.forEach(function(l) { %>
-          <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+          <div class="ix71-28">
             <div>
-              <div style="color:var(--text-main); font-size:13px; font-weight:600;"><%= l.browser %> · <%= l.os %> <% if (l.is_new_device) { %><span style="color: var(--text-accent); font-size:10px; font-weight:800;">• <%= t.new_device_badge %></span><% } %></div>
+              <div style="color:var(--text-main); font-size:13px; font-weight:600;"><%= l.browser %> · <%= l.os %> <% if (l.is_new_device) { %><span class="ix71-29">• <%= t.new_device_badge %></span><% } %></div>
               <div style="color:var(--text-muted); font-size:11px; margin-top:3px;"><%= l.ip %></div>
             </div>
             <div style="color:var(--text-muted); font-size:11px; text-align:right;"><%= new Date(l.created_at).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></div>
@@ -373,8 +373,8 @@
     </div>
 
     <% if (typeof recentActivity !== 'undefined' && recentActivity.length > 0) { %>
-    <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
-      <h3 style="color: var(--text-accent); font-size: 16px; display: flex; align-items: center; gap: 10px; margin:0 0 18px 0;">
+    <div class="ix71-7">
+      <h3 class="ix71-30">
         <i class="fas fa-list-check"></i> সাম্প্রতিক অ্যাক্টিভিটি
       </h3>
       <% recentActivity.forEach(function(a) {
@@ -385,10 +385,10 @@
         else if (a.kind === 'vip_upgrade') { icon = 'fa-crown'; label = 'VIP আপগ্রেড'; }
         else if (a.kind === 'reward_claim') { icon = 'fa-gift'; label = 'রিওয়ার্ড ক্লেইম'; }
       %>
-      <div style="display:flex; align-items:center; gap:12px; padding:9px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
-        <span style="width:34px; height:34px; border-radius:50%; background:rgba(245,158,11,0.12); color: var(--text-accent); display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0;"><i class="fas <%= icon %>"></i></span>
-        <span style="flex:1; color:var(--text-main); font-size:12.5px; font-weight:600;"><%= label %><% if (a.amount) { %> — ৳<%= Number(a.amount).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %><% } %></span>
-        <span style="color:var(--text-muted); font-size:11px; white-space:nowrap;"><%= new Date(a.created_at).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) %></span>
+      <div class="ix71-31">
+        <span class="ix71-32"><i class="fas <%= icon %>"></i></span>
+        <span class="ix71-33"><%= label %><% if (a.amount) { %> — ৳<%= Number(a.amount).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %><% } %></span>
+        <span class="ix71-34"><%= new Date(a.created_at).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) %></span>
       </div>
       <% }); %>
     </div>
@@ -399,6 +399,43 @@
 
 
 <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). A declaration was moved only when no !important rule in
+     the site CSS can match this element for that property. */
+  .ix71-1 { padding: 16px; padding-bottom: 100px; }
+  .ix71-2 { color: var(--text-main); text-decoration: none; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .ix71-3 { color: var(--text-main); font-size: 20px; font-weight: 800; letter-spacing: 0.5px; }
+  .ix71-4 { background: var(--bg-card); border-radius: 20px; padding: 18px; border: 1px solid var(--border-glass); margin-bottom: 20px; }
+  .ix71-5 { color: var(--text-accent); font-size: 14px; margin: 0 0 14px; display: flex; align-items: center; gap: 8px; }
+  .ix71-6 { display: flex; gap: 10px; margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 5px; border-radius: 12px; border: 1px solid var(--border-glass); }
+  .ix71-7 { background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px; }
+  .ix71-8 { color: var(--text-accent); font-size: 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+  .ix71-9 { color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px; }
+  .ix71-10 { margin-top: 10px; border-radius: 12px; padding: 14px; font-weight: 800; }
+  .ix71-11 { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+  .ix71-12 { text-align: center; padding: 40px 20px; background: rgba(255,255,255,0.02); border-radius: 16px; margin-bottom: 25px; border: 1px dashed var(--border-glass); }
+  .ix71-13 { border-top: 1px solid var(--border-glass); padding-top: 25px; }
+  .ix71-14 { color: var(--text-main); font-size: 14px; margin-bottom: 15px; }
+  .ix71-15 { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: var(--text-main); font-size: 14px; outline: none; }
+  .ix71-16 { background: #121212; }
+  .ix71-17 { color: var(--text-accent); font-size: 16px; margin-bottom: 6px; display: flex; align-items: center; gap: 10px; }
+  .ix71-18 { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); border-radius: 12px; padding: 15px; gap: 12px; }
+  .ix71-19 { border-radius: 10px; padding: 10px 16px; font-weight: 800; font-size: 12px; white-space: nowrap; }
+  .ix71-20 { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); border-radius: 12px; padding: 15px; margin-bottom: 20px; gap: 12px; }
+  .ix71-21 { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: var(--text-main); font-size: 16px; outline: none; letter-spacing: 6px; text-align: center; }
+  .ix71-22 { flex: 1; border-radius: 12px; padding: 14px; font-weight: 800; }
+  .ix71-23 { color: var(--text-main); font-size: 14px; font-weight: 700; }
+  .ix71-24 { background: rgba(16,185,129,0.15); color: #10b981; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 20px; }
+  .ix71-25 { background: rgba(245,158,11,0.15); color: var(--text-accent); font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 20px; }
+  .ix71-26 { color: var(--text-accent); font-size: 16px; display: flex; align-items: center; gap: 10px; margin: 0; }
+  .ix71-27 { color: var(--text-muted); font-size: 12px; text-decoration: none; }
+  .ix71-28 { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .ix71-29 { color: var(--text-accent); font-size: 10px; font-weight: 800; }
+  .ix71-30 { color: var(--text-accent); font-size: 16px; display: flex; align-items: center; gap: 10px; margin: 0 0 18px 0; }
+  .ix71-31 { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .ix71-32 { width: 34px; height: 34px; border-radius: 50%; background: rgba(245,158,11,0.12); color: var(--text-accent); display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+  .ix71-33 { flex: 1; color: var(--text-main); font-size: 12.5px; font-weight: 600; }
+  .ix71-34 { color: var(--text-muted); font-size: 11px; white-space: nowrap; }
   /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). Only declarations whose properties are free of any
      !important rule in the site CSS were moved; otherwise such a rule

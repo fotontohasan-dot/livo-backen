@@ -13,7 +13,7 @@
   <% }) %>
 
   <% if (scrolling.length) { %>
-    <div class="livo-announce-scroll" style="background:#17181d;border-bottom:1px solid rgba(234,179,8,0.25);overflow:hidden;white-space:nowrap;padding:8px 0;">
+    <div class="livo-announce-scroll ix4-1">
       <div style="display:inline-block;padding-left:100%;animation:livoScrollAnnounce 28s linear infinite;color:#EAB308;font-size:12.5px;font-weight:600;">
         <% scrolling.forEach(function(a, i) { %>
           <span class="im4-1"><i class="fas fa-circle im4-2"></i><%= annLang === 'en' && a.message_en ? a.message_en : a.message_bn %></span>
@@ -21,6 +21,10 @@
       </div>
     </div>
     <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). A declaration was moved only when no !important rule in
+     the site CSS can match this element for that property. */
+  .ix4-1 { background: #17181d; border-bottom: 1px solid rgba(234,179,8,0.25); overflow: hidden; white-space: nowrap; padding: 8px 0; }
   /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). Only declarations whose properties are free of any
      !important rule in the site CSS were moved; otherwise such a rule

@@ -1,11 +1,11 @@
 <%- include('../partials/head') %>
 
-<div style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto">
-  <h1 style="color: var(--text-accent);font-size:22px;font-weight:800;margin-bottom:16px">💬 <%= t.chat_support %></h1>
+<div class="ix74-1">
+  <h1 class="ix74-2">💬 <%= t.chat_support %></h1>
 
   <!-- ==================== দ্রুত সাহায্য (help-center পেজের সেম কালার/ডিজাইন) ==================== -->
-  <div style="background:linear-gradient(135deg,#1a2a6c 0%,#2a5298 100%);border-radius:16px;padding:18px 16px 16px;margin-bottom:14px;position:relative;overflow:hidden">
-    <div style="position:absolute;left:0;right:0;bottom:0;height:3px;background:linear-gradient(90deg,#ff8a00,#e52e71)"></div>
+  <div class="ix74-3">
+    <div class="ix74-4"></div>
     <div style="color:#fff;font-weight:800;font-size:18px;margin-bottom:12px">দ্রুত সাহায্য</div>
     <div style="color:rgba(255,255,255,0.85);font-size:12px;font-weight:700;margin-bottom:8px;letter-spacing:.3px">ক্যাটাগরি</div>
     <div id="quick-category-row" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch">
@@ -19,6 +19,13 @@
     </div>
   </div>
   <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). A declaration was moved only when no !important rule in
+     the site CSS can match this element for that property. */
+  .ix74-1 { padding: 16px; padding-bottom: 100px; max-width: 600px; margin: 0 auto; }
+  .ix74-2 { color: var(--text-accent); font-size: 22px; font-weight: 800; margin-bottom: 16px; }
+  .ix74-3 { background: linear-gradient(135deg,#1a2a6c 0%,#2a5298 100%); border-radius: 16px; padding: 18px 16px 16px; margin-bottom: 14px; position: relative; overflow: hidden; }
+  .ix74-4 { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: linear-gradient(90deg,#ff8a00,#e52e71); }
     .qc-chip{
       flex:0 0 auto; white-space:nowrap; background:rgba(255,255,255,0.12); color:#fff;
       border:1px solid rgba(255,255,255,0.25); border-radius:10px; padding:10px 14px;

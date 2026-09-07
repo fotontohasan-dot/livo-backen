@@ -1,17 +1,24 @@
 <%- include('../partials/head') %>
 <%- include('../partials/navbar') %>
 
-<div class="container" style="padding: 15px; padding-bottom: 100px;">
+<div class="container ix53-1">
     <!-- Promotion Header -->
-    <div style="background: linear-gradient(135deg, #009625, #006519); border-radius: 24px; padding: 30px 20px; margin-bottom: 25px; text-align: center; border: 1px solid rgba(255,255,255,0.1); position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+    <div class="ix53-2">
         <div class="im53-1">🎁</div>
-        <h1 style="color:var(--text-main); font-size: 24px; font-weight: 800; margin-bottom: 8px;"><%= t.promotion_center %></h1>
+        <h1 class="ix53-3"><%= t.promotion_center %></h1>
         <p style="color: rgba(255,255,255,0.8); font-size: 13px;"><%= t.best_offers_msg %></p>
     </div>
 
     <!-- Category Filter -->
-    <div style="display: flex; gap: 10px; margin-bottom: 25px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none;">
+    <div class="ix53-4">
         <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). A declaration was moved only when no !important rule in
+     the site CSS can match this element for that property. */
+  .ix53-1 { padding: 15px; padding-bottom: 100px; }
+  .ix53-2 { background: linear-gradient(135deg, #009625, #006519); border-radius: 24px; padding: 30px 20px; margin-bottom: 25px; text-align: center; border: 1px solid rgba(255,255,255,0.1); position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+  .ix53-3 { color: var(--text-main); font-size: 24px; font-weight: 800; margin-bottom: 8px; }
+  .ix53-4 { display: flex; gap: 10px; margin-bottom: 25px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; }
   /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). Only declarations whose properties are free of any
      !important rule in the site CSS were moved; otherwise such a rule
