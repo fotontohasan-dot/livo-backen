@@ -6,16 +6,16 @@
   <!-- ==================== দ্রুত সাহায্য (help-center পেজের সেম কালার/ডিজাইন) ==================== -->
   <div style="background:linear-gradient(135deg,#1a2a6c 0%,#2a5298 100%);border-radius:16px;padding:18px 16px 16px;margin-bottom:14px;position:relative;overflow:hidden">
     <div style="position:absolute;left:0;right:0;bottom:0;height:3px;background:linear-gradient(90deg,#ff8a00,#e52e71)"></div>
-    <div style="color:#fff;font-weight:800;font-size:18px;margin-bottom:12px">দ্রুত সাহায্য</div>
-    <div style="color:rgba(255,255,255,0.85);font-size:12px;font-weight:700;margin-bottom:8px;letter-spacing:.3px">ক্যাটাগরি</div>
+    <div style="color:#fff;font-weight:800;font-size:18px;margin-bottom:12px"><%= t('chat_quick_help') %></div>
+    <div style="color:rgba(255,255,255,0.85);font-size:12px;font-weight:700;margin-bottom:8px;letter-spacing:.3px"><%= t('chat_category') %></div>
     <div id="quick-category-row" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch">
-      <button data-quick-msg="ডিপোজিট সমস্যা" class="qc-chip">💳 ডিপোজিট সমস্যা</button>
-      <button data-quick-msg="উইথড্র সমস্যা" class="qc-chip">💵 উইথড্র সমস্যা</button>
-      <button data-quick-msg="বোনাস সমস্যা" class="qc-chip">🎁 বোনাস সমস্যা</button>
-      <button data-quick-msg="লগইন সমস্যা" class="qc-chip">🔑 লগইন সমস্যা</button>
-      <button data-quick-msg="অ্যাকাউন্ট ভেরিফিকেশন" class="qc-chip">🪪 KYC ভেরিফিকেশন</button>
-      <button data-quick-msg="টিকেট ইস্যু" class="qc-chip">🎫 টিকেট ইস্যু</button>
-      <button data-quick-msg="ফুটবল ইস্যু" class="qc-chip">⚽ ফুটবল ইস্যু</button>
+      <button data-quick-msg="<%= t('chat_deposit_issue') %>" class="qc-chip">💳 <%= t('chat_deposit_issue') %></button>
+      <button data-quick-msg="<%= t('chat_withdraw_issue') %>" class="qc-chip">💵 <%= t('chat_withdraw_issue') %></button>
+      <button data-quick-msg="<%= t('chat_bonus_issue') %>" class="qc-chip">🎁 <%= t('chat_bonus_issue') %></button>
+      <button data-quick-msg="<%= t('chat_login_issue') %>" class="qc-chip">🔑 <%= t('chat_login_issue') %></button>
+      <button data-quick-msg="<%= t('chat_kyc_issue') %>" class="qc-chip">🪪 <%= t('chat_kyc_issue') %></button>
+      <button data-quick-msg="<%= t('chat_ticket_issue') %>" class="qc-chip">🎫 <%= t('chat_ticket_issue') %></button>
+      <button data-quick-msg="<%= t('chat_football_issue') %>" class="qc-chip">⚽ <%= t('chat_football_issue') %></button>
     </div>
   </div>
   <style nonce="<%= cspNonce %>">
@@ -28,8 +28,8 @@
   </style>
 
   <div style="display:flex;gap:8px;margin-bottom:12px">
-    <button id="mode-bot" data-chat-mode="bot" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border-glass);background:var(--grad-gold);color:#000;font-weight:bold;cursor:pointer;font-size:13px">🤖 বট সহায়তা</button>
-    <button id="mode-agent" data-chat-mode="agent" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border-glass);background:rgba(255,255,255,0.08);color:var(--text-main);font-weight:bold;cursor:pointer;font-size:13px">👤 লাইভ এজেন্ট</button>
+    <button id="mode-bot" data-chat-mode="bot" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border-glass);background:var(--grad-gold);color:#000;font-weight:bold;cursor:pointer;font-size:13px">🤖 <%= t('chat_mode_bot') %></button>
+    <button id="mode-agent" data-chat-mode="agent" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border-glass);background:rgba(255,255,255,0.08);color:var(--text-main);font-weight:bold;cursor:pointer;font-size:13px">👤 <%= t('chat_mode_agent') %></button>
   </div>
 
   <div id="chat-container" style="background:rgba(255,255,255,0.03);border:1px solid var(--border-glass);border-radius:16px;display:flex;flex-direction:column;height:70vh">
@@ -37,7 +37,7 @@
 
     <div style="padding:12px;border-top:1px solid var(--border-glass)">
       <div id="file-preview" style="display:none;margin-bottom:8px">
-        <img id="preview-img" alt="<%= t.attachment_preview || 'সংযুক্ত ছবির প্রিভিউ' %>" style="display:none;max-height:100px;border-radius:8px;margin-bottom:4px"/>
+        <img id="preview-img" alt="<%= t('attachment_preview') %>" style="display:none;max-height:100px;border-radius:8px;margin-bottom:4px"/>
         <span id="preview-name" style="font-size:12px;color:var(--text-muted)"></span>
         <button data-clear-file style="color:#ef4444;font-size:12px;margin-left:8px;background:none;border:none;cursor:pointer">✕ <%= t.cancel %></button>
       </div>
