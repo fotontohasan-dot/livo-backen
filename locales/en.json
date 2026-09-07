@@ -1879,5 +1879,12 @@
   "psum_col_net": "Net",
   "psum_col_user": "User",
   "psum_no_data": "No data for this period",
-  "psum_no_users": "No users for this period"
+  "psum_no_users": "No users for this period",
+  "sec_recent_activity": "Recent Activity",
+  "sec_activity_generic": "Activity",
+  "sec_activity_login": "Login",
+  "sec_activity_deposit": "Deposit",
+  "sec_activity_withdraw": "Withdrawal",
+  "sec_activity_vip_upgrade": "VIP Upgrade",
+  "sec_activity_reward_claim": "Reward Claim"
 }

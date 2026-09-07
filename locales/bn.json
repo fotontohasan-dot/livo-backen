@@ -1879,5 +1879,12 @@
   "psum_col_net": "নেট",
   "psum_col_user": "ইউজার",
   "psum_no_data": "এই সময়ে কোনো তথ্য নেই",
-  "psum_no_users": "এই সময়ে কোনো ইউজার নেই"
+  "psum_no_users": "এই সময়ে কোনো ইউজার নেই",
+  "sec_recent_activity": "সাম্প্রতিক অ্যাক্টিভিটি",
+  "sec_activity_generic": "অ্যাক্টিভিটি",
+  "sec_activity_login": "লগইন",
+  "sec_activity_deposit": "ডিপোজিট",
+  "sec_activity_withdraw": "উইথড্র",
+  "sec_activity_vip_upgrade": "VIP আপগ্রেড",
+  "sec_activity_reward_claim": "রিওয়ার্ড ক্লেইম"
 }
