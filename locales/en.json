@@ -1855,5 +1855,7 @@
   "auth_password_needs_letter_and_number": "❌ Password must contain at least one letter and one number.",
   "auth_password_too_simple": "❌ That password is too simple. Do not repeat the same character.",
   "auth_password_too_common": "❌ That password is too common and easily guessed. Please choose another.",
-  "auth_password_contains_identity": "❌ Your password cannot contain your username or email."
+  "auth_password_contains_identity": "❌ Your password cannot contain your username or email.",
+  "selected_document_preview": "Preview of the selected document",
+  "attachment_preview": "Preview of the attached image"
 }

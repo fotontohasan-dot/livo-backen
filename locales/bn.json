@@ -1855,5 +1855,7 @@
   "auth_password_needs_letter_and_number": "❌ পাসওয়ার্ডে অন্তত একটি অক্ষর ও একটি সংখ্যা থাকতে হবে।",
   "auth_password_too_simple": "❌ পাসওয়ার্ডটি খুব সহজ। একই অক্ষর বারবার ব্যবহার করবেন না।",
   "auth_password_too_common": "❌ এই পাসওয়ার্ডটি খুব পরিচিত ও সহজে অনুমানযোগ্য। অন্য একটি বেছে নিন।",
-  "auth_password_contains_identity": "❌ পাসওয়ার্ডে আপনার ইউজারনেম বা ইমেইল ব্যবহার করা যাবে না।"
+  "auth_password_contains_identity": "❌ পাসওয়ার্ডে আপনার ইউজারনেম বা ইমেইল ব্যবহার করা যাবে না।",
+  "selected_document_preview": "নির্বাচিত ডকুমেন্টের প্রিভিউ",
+  "attachment_preview": "সংযুক্ত ছবির প্রিভিউ"
 }

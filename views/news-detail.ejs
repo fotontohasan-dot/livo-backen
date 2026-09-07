@@ -5,7 +5,7 @@
     <div>
       <div class="card">
         <% if(article.image) { %>
-          <img src="<%= article.image %>" style="width:100%;max-height:400px;object-fit:cover;" alt="">
+          <img src="<%= article.image %>" style="width:100%;max-height:400px;object-fit:cover;" alt="<%= article.title %>">
         <% } %>
         <div class="card-body">
           <h1 style="font-size:1.6rem;font-weight:800;margin-bottom:.75rem"><%= article.title %></h1>
