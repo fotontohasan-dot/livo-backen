@@ -101,7 +101,11 @@ const cspDirectives = {
   // ধাপ ২-এ scriptSrcAttr আগেই 'none' হয়েছিল। দুটো মিলে এখন reflected বা
   // stored XSS দিয়ে স্ক্রিপ্ট চালানোর পথ ব্রাউজারই বন্ধ করে — আমাদের
   // এস্কেপিং প্রতিটা পথে নিখুঁত ছিল কি না তার উপর আর নির্ভর করতে হয় না।
-  scriptSrc: ["'self'", "https://cdn.tailwindcss.com", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
+  // cdn.tailwindcss.com সরানো হয়েছে — Tailwind এখন বিল্ড-টাইমে কম্পাইল করা
+  // স্ট্যাটিক CSS (public/css/tailwind.css)। একটা কম বাইরের স্ক্রিপ্ট-সোর্স
+  // মানে একটা কম সাপ্লাই-চেইন নির্ভরতা: ওই CDN কম্প্রোমাইজ হলে আক্রমণকারী
+  // আমাদের প্রতিটা পেজে ইচ্ছেমতো JS চালাতে পারত।
+  scriptSrc: ["'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
   // ইনলাইন ইভেন্ট হ্যান্ডলার সম্পূর্ণ নিষিদ্ধ — এখন প্রয়োগ করা নীতিতেই।
   //
   // docs/CSP.md ধাপ ২ শেষ: টেমপ্লেটে থাকা ২৫০টা onclick/onchange/onsubmit

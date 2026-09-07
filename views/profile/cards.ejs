@@ -1,5 +1,9 @@
 <%- include('../partials/head') %>
-<script src="https://cdn.tailwindcss.com"></script>
+<!-- Tailwind এখন বিল্ড-টাইমে কম্পাইল করা স্ট্যাটিক CSS (npm run build:css)।
+     আগে এখানে cdn.tailwindcss.com ছিল, যা Tailwind-এর ডকুমেন্টেশনেই প্রোডাকশনের
+     জন্য নিষিদ্ধ: ব্রাউজারে JIT কম্পাইলার চালাত (~৪০০KB JS + প্রতি লোডে কম্পাইল),
+     CDN ডাউন হলে স্টাইল ভেঙে যেত, আর CSP-তে বাইরের স্ক্রিপ্ট-সোর্স অনুমোদন করাত। -->
+<link rel="stylesheet" href="/css/tailwind.css?v=<%= locals.assetVersion || 'dev' %>">
 <style nonce="<%= cspNonce %>">
   @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap');
 

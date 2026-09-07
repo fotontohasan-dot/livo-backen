@@ -81,6 +81,11 @@ jobs:
     - name: Dependency audit
       run: npm audit --audit-level=high
 
+    # Tailwind এখন বিল্ড-টাইমে কম্পাইল হয় (আগে ব্রাউজারে CDN থেকে JIT চলত)।
+    # টেস্টের আগে বিল্ড করা হয়, কারণ রেন্ডার-টেস্টগুলো তৈরি ফাইলটা প্রত্যাশা করে।
+    - name: Build CSS
+      run: npm run build:css
+
     - name: Run tests
       # continue-on-error ইচ্ছাকৃতভাবে সরানো হয়েছে: ওটা থাকলে ধাপটা ব্যর্থ হলেও
       # "সবুজ" দেখাত এবং লাল CI নিয়ে PR merge হয়ে যেত। এখন টেস্ট ফেল করলে ধাপ

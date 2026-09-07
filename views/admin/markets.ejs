@@ -4,7 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= match ? match.team_a + ' vs ' + match.team_b : 'Markets' %> • Livo Admin</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind এখন বিল্ড-টাইমে কম্পাইল করা স্ট্যাটিক CSS (npm run build:css)।
+       আগে এখানে cdn.tailwindcss.com ছিল, যা Tailwind-এর ডকুমেন্টেশনেই প্রোডাকশনের
+       জন্য নিষিদ্ধ: ব্রাউজারে JIT কম্পাইলার চালাত (~৪০০KB JS + প্রতি লোডে কম্পাইল),
+       CDN ডাউন হলে স্টাইল ভেঙে যেত, আর CSP-তে বাইরের স্ক্রিপ্ট-সোর্স অনুমোদন করাত। -->
+  <link rel="stylesheet" href="/css/tailwind.css?v=<%= locals.assetVersion || 'dev' %>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <%- include('./partials/pwa-head') %>
 </head>
