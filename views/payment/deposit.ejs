@@ -208,7 +208,7 @@
   </div>
 </div>
 
-<script id="activeMethodsData" type="application/json"><%- JSON.stringify(activeMethods || []) %></script>
+<script id="activeMethodsData" type="application/json"><%- jsonScriptSafe(activeMethods || []) %></script>
 <script src="/socket.io/socket.io.js"></script>
 <script src="/js/views/payment-deposit.js"></script>
 
