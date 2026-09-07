@@ -118,10 +118,13 @@ async function placeAccumulator(userId, stake, selections, lang = 'bn') {
       [userId, -stake, `অ্যাকুমুলেটর বাজি (${verified.length} সিলেকশন)`]
     );
 
+    // টার্নওভার আগে COMMIT-এর পরে fire-and-forget করা হতো — ব্যর্থ হলে স্টেক কাটা
+    // গেছে অথচ ওয়েজারিং প্রগ্রেস এগোয়নি, শুধু একটা console.error থাকত। এখন একই
+    // ট্রানজেকশনে, COMMIT-এর আগে — বেট আর টার্নওভার হয় একসাথে টেকে, নয় একসাথে
+    // রোলব্যাক হয় (coin_transactions ইনসার্টে যে সমস্যাটা আগেই ঠিক করা হয়েছিল)।
+    await addTurnover(client, userId, 'sports', stake);
     await client.query('COMMIT');
 
-    // রিওয়ার্ড সার্ভিসগুলো (স্পোর্টস টার্নওভার)
-    addTurnover(userId, 'sports', stake).catch(e => console.error('turnover:', e.message));
     distributeCommission(userId, stake).catch(e => console.error('commission:', e.message));
     addBet(userId, stake, 'sports').catch(e => console.error('cashback:', e.message));
     addVipTurnover(userId, stake).catch(e => console.error('vip:', e.message));

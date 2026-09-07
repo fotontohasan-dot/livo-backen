@@ -265,12 +265,16 @@ router.post('/:id/bet', isAuth, requireFeature('sports_betting'), async (req, re
       [userId, -stake, `বেট: ${m.rows[0].name}`]
     );
 
+    // টার্নওভার আগে COMMIT-এর পরে fire-and-forget করা হতো — ব্যর্থ হলে স্টেক কাটা
+    // গেছে অথচ ওয়েজারিং প্রগ্রেস এগোয়নি, শুধু একটা console.error থাকত। এখন একই
+    // ট্রানজেকশনে, COMMIT-এর আগে — বেট আর টার্নওভার হয় একসাথে টেকে, নয় একসাথে
+    // রোলব্যাক হয় (coin_transactions ইনসার্টে যে সমস্যাটা আগেই ঠিক করা হয়েছিল)।
+    await addTurnover(client, userId, 'sports', stake);
     await client.query('COMMIT');
 
     if (req.session.user) req.session.user.coins = upd.rows[0].coins;
     broadcastDemoStats().catch(e => console.error('demo stats:', e.message));
 
-    addTurnover(userId, 'sports', stake).catch(e => console.error('turnover:', e.message));
     updateDailyTurnover(userId, stake).catch(e => console.error('dailyReward:', e.message));
     distributeCommission(userId, stake).catch(e => console.error('commission:', e.message));
     addBet(userId, stake, 'sports').catch(e => console.error('cashback:', e.message));

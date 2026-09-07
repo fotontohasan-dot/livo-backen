@@ -78,29 +78,31 @@ async function addTurnover(clientOrUserId, categoryOrUserId, stakeOrCategory, ma
       // টার্নওভার প্রগ্রেস বাস্তবের চেয়ে কম দেখাত। column = column + $1 করলে
       // যোগটা DB-তেই হয়, তাই সমান্তরাল আপডেটেও কোনো স্টেক হারায় না।
       if (category === 'sports') {
-        await pool.query(
+        await db.query(
           `UPDATE bonuses SET sports_done = sports_done + $1, updated_at = NOW() WHERE id = $2 AND status = 'active'`,
           [Number(stake), b.id]
         );
       } else if (Number(b.casino_required) > 0) {
         // casino_required 0 হলে (daily reward) ক্যাসিনো গণনা হবে না
-        await pool.query(
+        await db.query(
           `UPDATE bonuses SET casino_done = casino_done + $1, updated_at = NOW() WHERE id = $2 AND status = 'active'`,
           [Number(stake), b.id]
         );
       }
 
       // শর্ত পূরণ হয়েছে কিনা চেক করে completed করা
-      await checkAndComplete(b.id);
+      await checkAndComplete(b.id, db);
     }
   } catch (err) {
     console.error('addTurnover error:', err.message);
+    // ট্রানজেকশনের ভেতরে চললে কলার যেন রোলব্যাক করতে পারে — নীরবে গিলে ফেলা হয় না।
+    if (client) throw err;
   }
 }
 
 // একটা বোনাসের শর্ত পূরণ হয়েছে কিনা দেখে status আপডেট
-async function checkAndComplete(bonusId) {
-  const r = await pool.query(`SELECT * FROM bonuses WHERE id = $1`, [bonusId]);
+async function checkAndComplete(bonusId, db = pool) {
+  const r = await db.query(`SELECT * FROM bonuses WHERE id = $1`, [bonusId]);
   const b = r.rows[0];
   if (!b || b.status !== 'active') return;
 
@@ -116,7 +118,7 @@ async function checkAndComplete(bonusId) {
   }
 
   if (done) {
-    await pool.query(`UPDATE bonuses SET status = 'completed', updated_at = NOW() WHERE id = $1`, [bonusId]);
+    await db.query(`UPDATE bonuses SET status = 'completed', updated_at = NOW() WHERE id = $1`, [bonusId]);
   }
 }
 
