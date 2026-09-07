@@ -1848,5 +1848,8 @@
   "auth_kyc_pending": "আপনার KYC যাচাই এখনো অপেক্ষমাণ। অনুমোদনের পর উইথড্র করতে পারবেন।",
   "payment_invalid_account_number": "অ্যাকাউন্ট নম্বরটি সঠিক নয়। মোবাইল ওয়ালেটের জন্য ১১ ডিজিটের নম্বর দিন।",
   "payment_withdraw_over_request_limit": "একবারে সর্বোচ্চ {value} টাকা তোলা যাবে।",
-  "payment_withdraw_over_daily_limit": "আজকের উইথড্র সীমা প্রায় শেষ। আজ আর সর্বোচ্চ {value} টাকা তোলা যাবে।"
+  "payment_withdraw_over_daily_limit": "আজকের উইথড্র সীমা প্রায় শেষ। আজ আর সর্বোচ্চ {value} টাকা তোলা যাবে।",
+  "payment_forfeit_success": "বোনাস বাতিল হয়েছে। এখন আপনি উইথড্র করতে পারবেন।",
+  "payment_forfeit_none": "বাতিল করার মতো কোনো সক্রিয় বোনাস নেই।",
+  "payment_forfeit_error": "বোনাস বাতিল করা যায়নি। একটু পরে আবার চেষ্টা করুন।"
 }

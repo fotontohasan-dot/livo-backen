@@ -13,7 +13,7 @@ const { requireFeature } = require('../middleware/featureGate');
 //   • উইথড্র বন্ধ করার পরেও অ্যাডমিনকে পুরনো pending রিকোয়েস্ট নিষ্পত্তি
 //     করতে দিতে হবে, নাহলে ইউজারের টাকা আটকে থাকে।
 // অর্থাৎ ফিচার বন্ধ = নতুন রিকোয়েস্ট নেওয়া বন্ধ, চলমান টাকা আটকে ফেলা নয়।
-const { createBonus, canWithdraw } = require('../services/turnover');
+const { createBonus, canWithdraw, forfeitBonuses } = require('../services/turnover');
 const { getSetting } = require('../services/settings');
 const { processReferralDeposit } = require('../services/referral');
 const crypto = require('crypto');
@@ -618,6 +618,32 @@ router.post('/withdraw', isAuth, requireFeature('withdrawal'), requireWithdrawal
     res.redirect('/payment/withdraw');
   } finally {
     client.release();
+  }
+});
+
+// ==================== বোনাস বাতিল ====================
+// একটাও active বোনাস থাকলে canWithdraw() পুরো উইথড্র আটকায় — এমনকি ইউজারের
+// নিজের আমানতও। আগে বেরোনোর কোনো পথ ছিল না, তাই বোনাস নেওয়া মানে ছিল অনির্দিষ্টকাল
+// টাকা আটকে যাওয়া। এখন ইউজার বোনাস কয়েন ফিরিয়ে দিয়ে লক খুলতে পারে।
+router.post('/bonus/forfeit', isAuth, paymentLimiter, async (req, res) => {
+  try {
+    const result = await forfeitBonuses(req.session.user.id);
+    if (result.forfeited === 0) {
+      req.flash('error', req.t('payment_forfeit_none'));
+      return res.redirect('/payment/withdraw');
+    }
+    // সেশনের ব্যালেন্স সিঙ্ক করে রাখা, নাহলে পরের পেজে পুরনো অঙ্ক দেখাবে
+    try {
+      const bal = await pool.query('SELECT coins FROM users WHERE id = $1', [req.session.user.id]);
+      if (req.session.user) req.session.user.coins = Number(bal.rows[0]?.coins) || 0;
+    } catch (e) { /* শুধু প্রদর্শনের মান — ব্যর্থ হলেও forfeit সফলই */ }
+
+    req.flash('success', req.t('payment_forfeit_success'));
+    return res.redirect('/payment/withdraw');
+  } catch (err) {
+    console.error('bonus forfeit error:', err.message);
+    req.flash('error', req.t('payment_forfeit_error'));
+    return res.redirect('/payment/withdraw');
   }
 });
 

@@ -145,4 +145,55 @@ async function canWithdraw(userId) {
   return { allowed: false, pending };
 }
 
-module.exports = { createBonus, addTurnover, canWithdraw, RULES };
+// ==================== ৪. বোনাস বাতিল (forfeit) ====================
+// একটাও active বোনাস থাকলে পুরো উইথড্র বন্ধ — এমনকি ইউজারের নিজের আমানতও।
+// আগে বেরোনোর কোনো পথ ছিল না। এখন ইউজার বোনাস কয়েন ফিরিয়ে দিয়ে লক খুলতে পারে।
+async function forfeitBonuses(userId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // ইউজার সারি লক — একই সময়ে দুটো forfeit বা forfeit+withdraw রেস আটকাতে
+    await client.query('SELECT id FROM users WHERE id = $1 FOR UPDATE', [userId]);
+
+    const res = await client.query(
+      `SELECT id, bonus_amount FROM bonuses WHERE user_id = $1 AND status = 'active' FOR UPDATE`,
+      [userId]
+    );
+    if (res.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { forfeited: 0, deducted: 0 };
+    }
+
+    const totalBonus = res.rows.reduce((sum, b) => sum + Math.round(Number(b.bonus_amount) || 0), 0);
+
+    // ব্যালেন্স ঋণাত্মক হতে দেওয়া যাবে না — বোনাস ইতিমধ্যে খেলে ফেললে যতটুকু আছে ততটুকুই কাটে
+    const balRes = await client.query('SELECT coins FROM users WHERE id = $1', [userId]);
+    const balance = Math.round(Number(balRes.rows[0]?.coins) || 0);
+    const deducted = Math.max(0, Math.min(totalBonus, balance));
+
+    if (deducted > 0) {
+      await client.query('UPDATE users SET coins = coins - $1 WHERE id = $2', [deducted, userId]);
+      await client.query(
+        `INSERT INTO coin_transactions (user_id, amount, type, description)
+         VALUES ($1, $2, 'bonus_forfeit', 'বোনাস বাতিল করে উইথড্র আনলক')`,
+        [userId, -deducted]
+      );
+    }
+
+    await client.query(
+      `UPDATE bonuses SET status = 'forfeited', updated_at = NOW()
+       WHERE user_id = $1 AND status = 'active'`,
+      [userId]
+    );
+
+    await client.query('COMMIT');
+    return { forfeited: res.rows.length, deducted };
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = { createBonus, addTurnover, canWithdraw, forfeitBonuses, RULES };
