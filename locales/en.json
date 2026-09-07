@@ -2069,5 +2069,21 @@
   "hist_won": "Won",
   "hist_lost": "Lost",
   "hist_odd": "Odds",
-  "hist_match": "Match"
+  "hist_match": "Match",
+  "fb_title": "Free Bet",
+  "fb_coins": "Free bet coins",
+  "fb_sub": "Claim to receive bonus coins and enjoy playing",
+  "fb_rules_heading": "Conversion rules",
+  "fb_rule_1": "Coins are added to your balance as soon as you claim",
+  "fb_rule_2": "Turnover requirements must be met before withdrawal",
+  "fb_rule_3": "Sports betting: 5x turnover on the bonus",
+  "fb_rule_4": "Casino games: 35x turnover on the bonus",
+  "fb_amount_coins": "{value} coins",
+  "fb_claim": "Claim",
+  "fb_none": "You have no free bets right now.",
+  "fb_none_sub": "Complete missions or wait for an offer!",
+  "fb_used_heading": "Used free bets",
+  "fb_used": "Used",
+  "fb_info_1": "Claiming a free bet adds bonus coins to your balance.",
+  "fb_info_2": "Turnover must be met before withdrawal (sports 5x / casino 35x)."
 }
