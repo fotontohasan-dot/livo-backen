@@ -15,6 +15,15 @@
   /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). Every migrated declaration was proved cascade-equivalent:
      see tools/cascade-check.js. */
+  .sp27-1.sp27-1 { display: grid; gap: 20px; }
+  .sp27-2.sp27-2 { height: 140px; background: linear-gradient(135deg, #f59e0b, #ef4444); display: flex; align-items: center; justify-content: center; position: relative; }
+  .sp27-3.sp27-3 { display: flex; justify-content: space-between; align-items: center; }
+  .sp27-4.sp27-4 { display: flex; align-items: center; gap: 5px; }
+  .sp27-5.sp27-5 { height: 140px; background: linear-gradient(135deg, #8b5cf6, #3b82f6); display: flex; align-items: center; justify-content: center; position: relative; }
+  .sp27-6.sp27-6 { height: 140px; background: linear-gradient(135deg, #10b981, #06b6d4); display: flex; align-items: center; justify-content: center; position: relative; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
   .dz53-1 { color: rgba(255,255,255,0.8); font-size: 13px; }
   .dz53-2 { flex: 0 0 auto; padding: 10px 20px; background: var(--grad-gold); color: #000; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; }
   .dz53-3 { flex: 0 0 auto; padding: 10px 20px; background: rgba(255,255,255,0.05); color: var(--text-main); border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; border: 1px solid var(--border-glass); }
@@ -49,11 +58,11 @@
     </div>
 
     <!-- Promo Cards -->
-    <div style="display: grid; gap: 20px;">
+    <div class="sp27-1">
 
         <!-- Welcome Bonus -->
         <div class="promo-card dz53-4">
-            <div style="height: 140px; background: linear-gradient(135deg, #f59e0b, #ef4444); display: flex; align-items: center; justify-content: center; position: relative;">
+            <div class="sp27-2">
                 <div class="dz53-5">
                     <div class="dz53-6">১০০%</div>
                     <div class="dz53-7">ওয়েলকাম বোনাস</div>
@@ -63,8 +72,8 @@
             <div class="dz53-9">
                 <h3 class="dz53-10"><%= t.promo_welcome_title %></h3>
                 <p class="dz53-11"><%= t.promo_welcome_desc %></p>
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div style="display: flex; align-items: center; gap: 5px;">
+                <div class="sp27-3">
+                    <div class="sp27-4">
                         <i class="fas fa-clock dz53-12"></i>
                         <span class="dz53-13"><%= t.valid_until %>: <%= t.lifetime %></span>
                     </div>
@@ -75,7 +84,7 @@
 
         <!-- Referral Bonus -->
         <div class="promo-card dz53-4">
-            <div style="height: 140px; background: linear-gradient(135deg, #8b5cf6, #3b82f6); display: flex; align-items: center; justify-content: center; position: relative;">
+            <div class="sp27-5">
                 <div class="dz53-5">
                     <div class="dz53-6">৳৩,০০০</div>
                     <div class="dz53-7">রেফারেল বোনাস</div>
@@ -85,8 +94,8 @@
             <div class="dz53-9">
                 <h3 class="dz53-10"><%= t.promo_referral_title %></h3>
                 <p class="dz53-11"><%= t.promo_referral_desc %></p>
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div style="display: flex; align-items: center; gap: 5px;">
+                <div class="sp27-3">
+                    <div class="sp27-4">
                         <i class="fas fa-clock dz53-12"></i>
                         <span class="dz53-13"><%= t.valid_until %>: <%= t.lifetime %></span>
                     </div>
@@ -97,7 +106,7 @@
 
         <!-- Cashback Bonus -->
         <div class="promo-card dz53-4">
-            <div style="height: 140px; background: linear-gradient(135deg, #10b981, #06b6d4); display: flex; align-items: center; justify-content: center; position: relative;">
+            <div class="sp27-6">
                 <div class="dz53-5">
                     <div class="dz53-6">১০%</div>
                     <div class="dz53-7">ডেইলি ক্যাশব্যাক</div>
@@ -106,8 +115,8 @@
             <div class="dz53-9">
                 <h3 class="dz53-10"><%= t.promo_cashback_title %></h3>
                 <p class="dz53-11"><%= t.promo_cashback_desc %></p>
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div style="display: flex; align-items: center; gap: 5px;">
+                <div class="sp27-3">
+                    <div class="sp27-4">
                         <i class="fas fa-clock dz53-12"></i>
                         <span class="dz53-13"><%= t.valid_until %>: <%= t.daily %></span>
                     </div>

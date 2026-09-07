@@ -5,6 +5,10 @@
   /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). Every migrated declaration was proved cascade-equivalent:
      see tools/cascade-check.js. */
+  .sp26-1.sp26-1 { display: none; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
   .dz48-1 { flex: 1; overflow: hidden; }
   .dz48-2 { font-size: 12px; color: var(--text-muted); white-space: nowrap; animation: marquee-text 18s linear infinite; }
   .dz48-3 { font-family: 'Teko', sans-serif; font-size: 30px; color: var(--gold-hover); line-height: 1.1; margin: 8px 0 3px 0; text-transform: uppercase; }
@@ -568,7 +572,7 @@ body.light-mode .promo-banner {
 <%- include('partials/flash') %>
 
 <!-- ===== Secondary Filter Pills (শুধু Slots/Live/Sports/Poker ক্যাটাগরিতে দেখাবে) ===== -->
-<div class="secondary-tabs-container" id="secondaryTabs" style="display:none;">
+<div class="secondary-tabs-container sp26-1" id="secondaryTabs">
   <div class="secondary-tab-item active" data-secondary="hot"><i class="fas fa-fire"></i> <%= t.cat_hot %></div>
   <div class="secondary-tab-item" data-secondary="favorites"><i class="fas fa-star"></i> <%= t.cat_favorites %></div>
   <div class="secondary-tab-item" data-secondary="recent"><i class="fas fa-clock-rotate-left"></i> <%= t.cat_recent %></div>

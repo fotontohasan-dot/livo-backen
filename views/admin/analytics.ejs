@@ -10,6 +10,10 @@
   /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). Every migrated declaration was proved cascade-equivalent:
      see tools/cascade-check.js. */
+  .sp13-1.sp13-1.sp13-1 { font-size: 15px; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
   .dz28-1 { display: flex; gap: 8px; }
   .dz28-2 { background: var(--gold,#EAB308); color: #1a1a1a; }
   .dz28-3 { background: #1e293b; color: #fff; text-decoration: none; }
@@ -95,7 +99,7 @@
         </div>
         <div class="card">
           <div class="label"><%= t('admin_stat_server_uptime') %></div>
-          <div class="val" style="font-size:15px;"><%= data.health ? data.health.checks.uptime.message : '-' %></div>
+          <div class="val sp13-1"><%= data.health ? data.health.checks.uptime.message : '-' %></div>
         </div>
       </div>
 

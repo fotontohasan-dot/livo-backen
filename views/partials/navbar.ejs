@@ -2,6 +2,13 @@
   /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). Every migrated declaration was proved cascade-equivalent:
      see tools/cascade-check.js. */
+  .sp1-1.sp1-1.sp1-1 { color: var(--text-accent) !important; }
+  .sp1-2.sp1-2.sp1-2 { color: var(--red-text) !important; }
+  .sp1-3.sp1-3.sp1-3 { color: var(--green) !important; }
+  .sp1-4.sp1-4.sp1-4 { color: var(--text-accent); font-family: 'Teko', sans-serif; font-size: 1.8rem; letter-spacing: 1px; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
   .qq1-1 { padding: 20px; border-bottom: 1px solid var(--border-glass); display: flex; align-items: center; justify-content: space-between; }
   .qq1-2 { display: flex; align-items: center; gap: 12px; }
   .qq1-3 { color: var(--text-accent); font-family: 'Teko', sans-serif; font-size: 1.8rem; }
@@ -59,13 +66,13 @@
   <a href="/news" class="menu-item"><i class="fas fa-newspaper"></i> <%= t.menu_news %></a>
   <a href="/profile" class="menu-item"><i class="fas fa-user"></i> <%= t.menu_profile %></a>
   <% if(locals.user && user.role === 'admin') { %>
-  <a href="/admin" class="menu-item" style="color: var(--text-accent) !important;"><i class="fas fa-cog"></i> <%= t.menu_admin %></a>
+  <a href="/admin" class="menu-item sp1-1"><i class="fas fa-cog"></i> <%= t.menu_admin %></a>
   <% } %>
   <% if(locals.user) { %>
-  <a href="/logout" class="menu-item" style="color:var(--red-text) !important;"><i class="fas fa-sign-out-alt"></i> <%= t.logout %></a>
+  <a href="/logout" class="menu-item sp1-2"><i class="fas fa-sign-out-alt"></i> <%= t.logout %></a>
   <% } else { %>
-  <a href="/login" class="menu-item" style="color:var(--green) !important;"><i class="fas fa-sign-in-alt"></i> <%= t.login %></a>
-  <a href="/register" class="menu-item" style="color: var(--text-accent) !important;"><i class="fas fa-user-plus"></i> <%= t.register %></a>
+  <a href="/login" class="menu-item sp1-3"><i class="fas fa-sign-in-alt"></i> <%= t.login %></a>
+  <a href="/register" class="menu-item sp1-1"><i class="fas fa-user-plus"></i> <%= t.register %></a>
   <% } %>
 </div>
 
@@ -76,7 +83,7 @@
 <nav class="navbar qq1-13">
   <div class="qq1-2">
     <button class="qq1-14" data-navbar-action="toggle-menu"><i class="fas fa-bars"></i></button>
-    <div class="nav-brand" style="color: var(--text-accent); font-family: 'Teko', sans-serif; font-size: 1.8rem; letter-spacing: 1px;"><%= siteName %></div>
+    <div class="nav-brand sp1-4"><%= siteName %></div>
   </div>
   <div class="qq1-2">
         

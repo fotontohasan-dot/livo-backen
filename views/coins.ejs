@@ -3,6 +3,10 @@
   /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). Every migrated declaration was proved cascade-equivalent:
      see tools/cascade-check.js. */
+  .sp43-1.sp43-1 { text-align: center; color: var(--muted); }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
   .dz84-1 { font-size: .8rem; color: var(--muted); }
   .dz84-2 { font-size: .75rem; background: var(--card2); padding: 3px 8px; border-radius: 20px; }
   .dz84-3 { font-weight: 700; }
@@ -31,7 +35,7 @@
           <thead><tr><th><%= t.date %></th><th><%= t.type %></th><th><%= t.description %></th><th><%= t.amount %></th></tr></thead>
           <tbody>
             <% if(transactions.length === 0) { %>
-              <tr><td colspan="4" style="text-align:center;color:var(--muted)"><%= t.no_transactions_yet %></td></tr>
+              <tr><td class="sp43-1" colspan="4"><%= t.no_transactions_yet %></td></tr>
             <% } %>
             <% transactions.forEach(t => { %>
               <tr>

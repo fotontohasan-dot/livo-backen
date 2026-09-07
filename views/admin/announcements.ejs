@@ -9,6 +9,11 @@
   /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). Every migrated declaration was proved cascade-equivalent:
      see tools/cascade-check.js. */
+  .sp12-1.sp12-1 { display: none; }
+  .sp12-2.sp12-2 { background: var(--gold,#EAB308); color: #1a1a1a; padding: 9px 18px; font-size: 13px; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
   .dz26-1 { background: rgba(239,68,68,0.1); border: 1px solid #ef4444; color: #f87171; padding: 10px 14px; border-radius: 10px; margin-bottom: 12px; font-size: 13px; }
   .dz26-2 { background: rgba(16,185,129,0.1); border: 1px solid #10b981; color: #10b981; padding: 10px 14px; border-radius: 10px; margin-bottom: 12px; font-size: 13px; }
   .dz26-3 { color: #fff; font-size: 14px; }
@@ -74,14 +79,14 @@
               </select>
             </div>
           </div>
-          <div class="ann-grid" id="roleField" style="display:none;">
+          <div class="ann-grid sp12-1" id="roleField">
             <div>
               <label class="ann-label"><%= t('admin_col_role') %></label>
               <select name="target_role"><option value="user"><%= t('admin_role_user') %></option><option value="admin"><%= t('admin_role_admin') %></option></select>
             </div>
             <div></div>
           </div>
-          <div class="ann-grid" id="userField" style="display:none;">
+          <div class="ann-grid sp12-1" id="userField">
             <div><label class="ann-label"><%= t('admin_ann_target_user_id') %></label><input type="number" name="target_user_id" placeholder="<%= t('admin_ph_example_1024') %>"></div>
             <div></div>
           </div>
@@ -97,7 +102,7 @@
             <div><label class="ann-label"><%= t('admin_field_schedule_start') %></label><input type="datetime-local" name="starts_at"></div>
             <div><label class="ann-label"><%= t('admin_field_expire_optional') %></label><input type="datetime-local" name="expires_at"></div>
           </div>
-          <button type="submit" class="btn-xs" style="background:var(--gold,#EAB308);color:#1a1a1a;padding:9px 18px;font-size:13px;" data-loading-label="তৈরি হচ্ছে..."><%= t('admin_ann_create_btn') %></button>
+          <button type="submit" class="btn-xs sp12-2" data-loading-label="তৈরি হচ্ছে..."><%= t('admin_ann_create_btn') %></button>
         </form>
       </div>
 

@@ -9,6 +9,15 @@
   /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). Every migrated declaration was proved cascade-equivalent:
      see tools/cascade-check.js. */
+  .sp45-1.sp45-1 { padding: .6rem; text-align: left; color: var(--muted); font-size: .8rem; }
+  .sp45-2.sp45-2 { padding: .6rem; font-weight: 600; }
+  .sp45-3.sp45-3 { padding: .6rem; color: #10b981; font-weight: 700; }
+  .sp45-4.sp45-4 { padding: .6rem; color: #ff4444; font-weight: 700; }
+  .sp45-5.sp45-5 { padding: .6rem; color: var(--text-accent); font-weight: 700; }
+  .sp45-6.sp45-6 { padding: 1.5rem; text-align: center; color: var(--muted); }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
   .dz93-1 { margin-bottom: 1.5rem; }
   .dz93-2 { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1rem; }
   .dz93-3 { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
@@ -84,24 +93,24 @@
         <table class="table dz93-16">
           <thead>
             <tr class="dz93-17">
-              <th style="padding:.6rem;text-align:left;color:var(--muted);font-size:.8rem;">তারিখ</th>
-              <th style="padding:.6rem;text-align:left;color:var(--muted);font-size:.8rem;">ডিপোজিট</th>
-              <th style="padding:.6rem;text-align:left;color:var(--muted);font-size:.8rem;">উইথড্র</th>
-              <th style="padding:.6rem;text-align:left;color:var(--muted);font-size:.8rem;">নেট</th>
+              <th class="sp45-1">তারিখ</th>
+              <th class="sp45-1">ডিপোজিট</th>
+              <th class="sp45-1">উইথড্র</th>
+              <th class="sp45-1">নেট</th>
             </tr>
           </thead>
           <tbody>
             <% if(daily && daily.length > 0) { %>
               <% daily.forEach(d => { %>
                 <tr class="dz93-17">
-                  <td style="padding:.6rem;font-weight:600;"><%= new Date(d.day).toLocaleDateString('bn-BD', {day:'2-digit', month:'short', year:'numeric'}) %></td>
-                  <td style="padding:.6rem;color:#10b981;font-weight:700;">৳ <%= Number(d.deposit_total).toLocaleString('en-BD') %></td>
-                  <td style="padding:.6rem;color:#ff4444;font-weight:700;">৳ <%= Number(d.withdraw_total).toLocaleString('en-BD') %></td>
-                  <td style="padding:.6rem;color: var(--text-accent);font-weight:700;">৳ <%= Number(d.deposit_total - d.withdraw_total).toLocaleString('en-BD') %></td>
+                  <td class="sp45-2"><%= new Date(d.day).toLocaleDateString('bn-BD', {day:'2-digit', month:'short', year:'numeric'}) %></td>
+                  <td class="sp45-3">৳ <%= Number(d.deposit_total).toLocaleString('en-BD') %></td>
+                  <td class="sp45-4">৳ <%= Number(d.withdraw_total).toLocaleString('en-BD') %></td>
+                  <td class="sp45-5">৳ <%= Number(d.deposit_total - d.withdraw_total).toLocaleString('en-BD') %></td>
                 </tr>
               <% }) %>
             <% } else { %>
-              <tr><td colspan="4" style="padding:1.5rem;text-align:center;color:var(--muted);">এই সময়ে কোনো লেনদেন নেই</td></tr>
+              <tr><td class="sp45-6" colspan="4">এই সময়ে কোনো লেনদেন নেই</td></tr>
             <% } %>
           </tbody>
         </table>
@@ -114,24 +123,24 @@
         <table class="table dz93-16">
           <thead>
             <tr class="dz93-17">
-              <th style="padding:.6rem;text-align:left;color:var(--muted);font-size:.8rem;">ইউজার</th>
-              <th style="padding:.6rem;text-align:left;color:var(--muted);font-size:.8rem;">মোট ডিপোজিট</th>
-              <th style="padding:.6rem;text-align:left;color:var(--muted);font-size:.8rem;">মোট উইথড্র</th>
-              <th style="padding:.6rem;text-align:left;color:var(--muted);font-size:.8rem;">নেট</th>
+              <th class="sp45-1">ইউজার</th>
+              <th class="sp45-1">মোট ডিপোজিট</th>
+              <th class="sp45-1">মোট উইথড্র</th>
+              <th class="sp45-1">নেট</th>
             </tr>
           </thead>
           <tbody>
             <% if(users && users.length > 0) { %>
               <% users.forEach(u => { %>
                 <tr class="dz93-17">
-                  <td style="padding:.6rem;font-weight:600;"><%= u.username %></td>
-                  <td style="padding:.6rem;color:#10b981;font-weight:700;">৳ <%= Number(u.total_deposit).toLocaleString('en-BD') %></td>
-                  <td style="padding:.6rem;color:#ff4444;font-weight:700;">৳ <%= Number(u.total_withdraw).toLocaleString('en-BD') %></td>
-                  <td style="padding:.6rem;color: var(--text-accent);font-weight:700;">৳ <%= Number(u.total_deposit - u.total_withdraw).toLocaleString('en-BD') %></td>
+                  <td class="sp45-2"><%= u.username %></td>
+                  <td class="sp45-3">৳ <%= Number(u.total_deposit).toLocaleString('en-BD') %></td>
+                  <td class="sp45-4">৳ <%= Number(u.total_withdraw).toLocaleString('en-BD') %></td>
+                  <td class="sp45-5">৳ <%= Number(u.total_deposit - u.total_withdraw).toLocaleString('en-BD') %></td>
                 </tr>
               <% }) %>
             <% } else { %>
-              <tr><td colspan="4" style="padding:1.5rem;text-align:center;color:var(--muted);">এই সময়ে কোনো ইউজার নেই</td></tr>
+              <tr><td class="sp45-6" colspan="4">এই সময়ে কোনো ইউজার নেই</td></tr>
             <% } %>
           </tbody>
         </table>

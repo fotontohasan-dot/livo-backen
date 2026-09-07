@@ -56,8 +56,9 @@ const path = require('path');
 // 1617 (7ab19c2) → ৪৫টা view-এ !important-নিরাপদ ঘোষণা ক্লাসে সরানো
 // 1503 (71f29b9) → selector-ভিত্তিক নিরাপত্তা যাচাই
 // 184  (a63192f) → tools/cascade-check.js দিয়ে cascade-সমতা প্রমাণ করে
-// 155  (এই কমিট) → partial-এও নিজস্ব nonce style ব্লক; checker-এর index bug ফিক্স
-const MAX_INLINE_STYLES = 155;
+// 155  (f3f932d) → partial-এও নিজস্ব nonce style ব্লক; checker index bug ফিক্স
+// 116  (এই কমিট) → ক্লাস পুনরাবৃত্তি করে specificity বাড়ানো (!important ছাড়া)
+const MAX_INLINE_STYLES = 116;
 
 const ROOT = path.join(__dirname, '..', '..');
 const SCAN_DIRS = ['views', 'public'];
