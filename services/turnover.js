@@ -8,16 +8,21 @@ const { getSetting } = require('./settings');
 // ==================== বোনাসের গুণ (multiplier) নিয়ম ====================
 // deposit.sports এখন অ্যাডমিন প্যানেলের 'turnover_multiplier' সেটিং থেকে আসে (ডিফল্ট ৫x)
 const RULES = {
-  deposit: { sports: 5, casino: 35 },  // ডিপোজিট বোনাস: স্পোর্টস ৫x (ডিফল্ট), ক্যাসিনো ৩৫x
-  daily:   { sports: 3, casino: 0 }    // দৈনিক রিওয়ার্ড: স্পোর্টস ৩x, ক্যাসিনো প্রযোজ্য নয়
+  deposit:  { sports: 5, casino: 35 },  // ডিপোজিট বোনাস: স্পোর্টস ৫x (ডিফল্ট), ক্যাসিনো ৩৫x
+  daily:    { sports: 3, casino: 0 },   // দৈনিক রিওয়ার্ড: স্পোর্টস ৩x, ক্যাসিনো প্রযোজ্য নয়
+  // রেফারেল বোনাস আগে সরাসরি ব্যালেন্সে যেত, `bonuses` টেবিলে কোনো সারি হতো না,
+  // তাই canWithdraw() কিছুই আটকাত না — ভুয়া অ্যাকাউন্ট বানিয়ে ন্যূনতম ডিপোজিট
+  // করেই বোনাস তুলে নেওয়া যেত। এখন এটাও টার্নওভার-লকড।
+  referral: { sports: 3, casino: 0 }
 };
 
 // ==================== ১. বোনাস তৈরি ====================
 // ডিপোজিট বোনাস বা দৈনিক রিওয়ার্ড দেওয়ার সময় এটা ডাকা হবে।
 // type = 'deposit' বা 'daily'
-async function createBonus(client, userId, type, bonusAmount) {
+async function createBonus(client, userId, type, bonusAmount, options = {}) {
+  if (!RULES[type]) return;
   const rule = { ...RULES[type] };
-  if (!rule || bonusAmount <= 0) return;
+  if (bonusAmount <= 0) return;
 
   if (type === 'deposit') {
     rule.sports = Number(await getSetting('turnover_multiplier')) || rule.sports;
@@ -28,10 +33,13 @@ async function createBonus(client, userId, type, bonusAmount) {
 
   // client থাকলে (transaction-এর ভেতর) সেটা ব্যবহার করি, নাহলে সরাসরি pool
   const db = client || pool;
+  // status = 'pending_review' হলে বোনাস তৈরি হয় কিন্তু ওয়েজারিং শুরু হয় না এবং
+  // canWithdraw()-ও এটাকে গোনে না — অ্যাডমিন ছাড় দিলে তবেই 'active' হবে।
+  const status = options.status === 'pending_review' ? 'pending_review' : 'active';
   await db.query(
     `INSERT INTO bonuses (user_id, bonus_type, bonus_amount, sports_required, casino_required, status)
-     VALUES ($1, $2, $3, $4, $5, 'active')`,
-    [userId, type, bonusAmount, sportsReq, casinoReq]
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [userId, type, bonusAmount, sportsReq, casinoReq, status]
   );
 }
 
@@ -39,13 +47,26 @@ async function createBonus(client, userId, type, bonusAmount) {
 // category = 'sports' বা 'casino'
 // stake = বেটের পরিমাণ
 // প্রতিটা active বোনাসের done বাড়ানো হবে; required পূরণ হলে completed।
-async function addTurnover(userId, category, stake) {
+// আগে এটা সবসময় pool ব্যবহার করত এবং কলাররা COMMIT-এর পরে fire-and-forget
+// করে ডাকত — ব্যর্থ হলে টাকা কাটা গেছে অথচ ওয়েজারিং এগোয়নি, শুধু একটা
+// console.error থাকত। এখন createBonus-এর মতো ঐচ্ছিক `client` নেওয়া যায়, তাই
+// একই ট্রানজেকশনে COMMIT-এর আগে চালানো যায় — বেট আর টার্নওভার হয় একসাথে
+// টেকে, নয় একসাথে রোলব্যাক হয়।
+// পুরনো signature addTurnover(userId, category, stake) কাজ করে যাবে।
+async function addTurnover(clientOrUserId, categoryOrUserId, stakeOrCategory, maybeStake) {
+  const hasClient = !!(clientOrUserId && typeof clientOrUserId.query === 'function');
+  const client = hasClient ? clientOrUserId : null;
+  const userId = hasClient ? categoryOrUserId : clientOrUserId;
+  const category = hasClient ? stakeOrCategory : categoryOrUserId;
+  const stake = hasClient ? maybeStake : stakeOrCategory;
+
   if (!['sports', 'casino'].includes(category)) return;
   if (!stake || stake <= 0) return;
 
+  const db = client || pool;
   try {
     // এই ইউজারের সব active বোনাস
-    const res = await pool.query(
+    const res = await db.query(
       `SELECT * FROM bonuses WHERE user_id = $1 AND status = 'active' ORDER BY created_at ASC`,
       [userId]
     );
