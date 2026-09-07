@@ -235,6 +235,16 @@ describe('A-Z User Journey', () => {
        ON CONFLICT (key) DO UPDATE SET value = 'open'`
     );
 
+    // উইথড্রয়ে এখন KYC গেট আছে (middleware/auth.js → requireApprovedKyc)।
+    // আগে টাকা তোলার পথে পরিচয় যাচাই বলে কিছুই ছিল না — ইমেইল ভেরিফাই আর
+    // PIN-ই ছিল একমাত্র গেট। এই জার্নিতে KYC ধাপটা নেই, তাই এখানে সরাসরি
+    // একটা অ্যাপ্রুভড রেকর্ড বসানো হচ্ছে; গেটের নিজস্ব আচরণ আলাদা টেস্টে যাচাই হয়।
+    await pool.query(
+      `INSERT INTO kyc_requests (user_id, full_name, document_type, document_number, status)
+       VALUES ($1, 'Journey Test User', 'nid', '1234567890', 'approved')`,
+      [userId]
+    );
+
     const before = Number((await pool.query('SELECT coins FROM users WHERE id=$1', [userId])).rows[0].coins);
     const csrf = await csrfFor(agent, '/payment/withdraw');
     const res = await agent.post('/payment/withdraw').type('form').send({

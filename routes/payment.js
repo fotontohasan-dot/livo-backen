@@ -14,6 +14,7 @@ const { requireFeature } = require('../middleware/featureGate');
 //     করতে দিতে হবে, নাহলে ইউজারের টাকা আটকে থাকে।
 // অর্থাৎ ফিচার বন্ধ = নতুন রিকোয়েস্ট নেওয়া বন্ধ, চলমান টাকা আটকে ফেলা নয়।
 const { createBonus, canWithdraw } = require('../services/turnover');
+const { getSetting } = require('../services/settings');
 const { processReferralDeposit } = require('../services/referral');
 const crypto = require('crypto');
 const sslcommerz = require('../services/sslcommerz');
@@ -29,7 +30,7 @@ const { verifyPin, getPinStatus } = require('../services/withdrawPin');
 const { scanTransaction } = require('../services/fraudDetection');
 const { isSessionNewDevice } = require('../services/deviceTracking');
 const { checkIp } = require('../services/vpnDetection');
-const { isAuth, requireVerifiedEmail, requireAdmin } = require('../middleware/auth');
+const { isAuth, requireVerifiedEmail, requireApprovedKyc, requireAdmin } = require('../middleware/auth');
 const RedisRateLimitStore = require('../services/redisRateLimitStore');
 const queue = require('../services/queue');
 const cache = require('../services/cache');
@@ -450,7 +451,31 @@ router.get('/withdraw', isAuth, requireFeature('withdrawal'), attachWithdrawalWi
 });
 
 
-router.post('/withdraw', isAuth, requireFeature('withdrawal'), requireWithdrawalWindow(), requireVerifiedEmail, paymentLimiter, async (req, res) => {
+// মেথড অনুযায়ী অ্যাকাউন্ট নম্বরের ফরম্যাট। আগে যাচাই ছিল শুধু "খালি নয়" —
+// অর্থাৎ টাইপো বা আবর্জনা নম্বরে টাকা পাঠানোর রিকোয়েস্টও গৃহীত হতো।
+const ACCOUNT_PATTERNS = {
+  bkash:  /^01[3-9]\d{8}$/,
+  nagad:  /^01[3-9]\d{8}$/,
+  rocket: /^01[3-9]\d{8}$/,
+  upay:   /^01[3-9]\d{8}$/,
+  bank:   /^\d{6,20}$/
+};
+
+function accountNumberValid(method, accountNumber) {
+  const pattern = ACCOUNT_PATTERNS[method];
+  if (!pattern) return true; // অজানা মেথড আগেই VALID_METHODS-এ আটকে যায়
+  return pattern.test(String(accountNumber).replace(/[\s-]/g, ''));
+}
+
+// site_settings থেকে সীমা — অ্যাডমিন প্যানেল থেকে বদলানো যায়। মান না থাকলে
+// নিরাপদ ডিফল্ট, কারণ আগে কোনো সিলিংই ছিল না (একবারে পুরো ব্যালেন্স তোলা যেত)।
+async function withdrawLimits() {
+  const perRequest = Number(await getSetting('max_withdraw_per_request')) || 50000;
+  const perDay = Number(await getSetting('max_withdraw_per_day')) || 100000;
+  return { perRequest, perDay };
+}
+
+router.post('/withdraw', isAuth, requireFeature('withdrawal'), requireWithdrawalWindow(), requireVerifiedEmail, requireApprovedKyc, paymentLimiter, async (req, res) => {
   const { method, account_number, withdraw_pin } = req.body;
   const amount = parseAmount(req.body.amount);
   const userId = req.session.user.id;
@@ -465,6 +490,35 @@ router.post('/withdraw', isAuth, requireFeature('withdrawal'), requireWithdrawal
   }
   if (amount < 200) {
     req.flash('error', req.t('payment_min_withdraw_200'));
+    return res.redirect('/payment/withdraw');
+  }
+  if (!accountNumberValid(method, account_number)) {
+    req.flash('error', req.t('payment_invalid_account_number'));
+    return res.redirect('/payment/withdraw');
+  }
+
+  // সিলিং যাচাই — প্রতি রিকোয়েস্ট ও প্রতি ব্যবসায়িক দিন।
+  try {
+    const limits = await withdrawLimits();
+    if (amount > limits.perRequest) {
+      req.flash('error', req.t('payment_withdraw_over_request_limit').replace('{value}', limits.perRequest));
+      return res.redirect('/payment/withdraw');
+    }
+    const todayRes = await pool.query(
+      `SELECT COALESCE(SUM(amount), 0) AS total FROM payment_requests
+       WHERE user_id = $1 AND type = 'withdraw' AND status IN ('pending','approved')
+         AND created_at >= $2 AND created_at < $3`,
+      [userId, businessTime.startOfDay(), businessTime.endOfDay()]
+    );
+    const already = Number(todayRes.rows[0].total) || 0;
+    if (already + amount > limits.perDay) {
+      req.flash('error', req.t('payment_withdraw_over_daily_limit').replace('{value}', Math.max(0, limits.perDay - already)));
+      return res.redirect('/payment/withdraw');
+    }
+  } catch (e) {
+    // ডিপোজিট লিমিটের মতোই fail-closed — সীমা যাচাই করা না গেলে টাকা ছাড়া হয় না।
+    console.error('withdraw limit check error:', e.message);
+    req.flash('error', req.t('payment_generic_error'));
     return res.redirect('/payment/withdraw');
   }
 

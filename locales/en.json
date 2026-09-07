@@ -1843,5 +1843,10 @@
   "admin_permission_escalation_blocked": "You cannot grant permissions you do not have yourself.",
   "kyc_status_load_error": "Your KYC status could not be loaded because of a server problem. If you have already submitted, refresh this page before submitting again.",
   "payment_withdraw_load_error": "The withdraw page could not be loaded. Please try again later.",
-  "cards_load_error": "Your saved wallets could not be loaded. Your cards have not been removed — please refresh the page."
+  "cards_load_error": "Your saved wallets could not be loaded. Your cards have not been removed — please refresh the page.",
+  "auth_kyc_required": "Please complete KYC verification before withdrawing.",
+  "auth_kyc_pending": "Your KYC verification is still pending. You can withdraw once it is approved.",
+  "payment_invalid_account_number": "That account number is not valid. Mobile wallets need an 11-digit number.",
+  "payment_withdraw_over_request_limit": "The maximum per withdrawal is {value} taka.",
+  "payment_withdraw_over_daily_limit": "You have nearly reached today's withdrawal limit. You can withdraw up to {value} taka more today."
 }

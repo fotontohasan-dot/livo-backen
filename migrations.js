@@ -691,7 +691,9 @@ async function runMigrations() {
       ('max_bet', '50000'),
       ('turnover_multiplier', '3'),
       ('deposit_commission_percent', '0'),
-      ('withdraw_commission_percent', '0')
+      ('withdraw_commission_percent', '0'),
+      ('max_withdraw_per_request', '50000'),
+      ('max_withdraw_per_day', '100000')
       ON CONFLICT (key) DO NOTHING;
     `);
 
@@ -835,6 +837,10 @@ async function runMigrations() {
     }
 
     await pool.query(`ALTER TABLE kyc_requests ADD COLUMN IF NOT EXISTS reject_reason TEXT`);
+    // জন্মতারিখ ছাড়া ১৮+ যাচাই করার কোনো উপায় ছিল না — age-gate কেবল একটা কুকি,
+    // আইনি অর্থে বয়স যাচাই নয়। KYC অ্যাপ্রুভালে এই মাঠ থেকেই users.age_verified সেট হবে।
+    await pool.query(`ALTER TABLE kyc_requests ADD COLUMN IF NOT EXISTS date_of_birth DATE`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS age_verified BOOLEAN DEFAULT false`);
 
     // একজন ইউজারের একসাথে একটাই pending KYC রিকোয়েস্ট থাকতে পারে।
     //
