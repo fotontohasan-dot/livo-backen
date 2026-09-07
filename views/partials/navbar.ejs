@@ -1,28 +1,49 @@
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .qq1-1 { padding: 20px; border-bottom: 1px solid var(--border-glass); display: flex; align-items: center; justify-content: space-between; }
+  .qq1-2 { display: flex; align-items: center; gap: 12px; }
+  .qq1-3 { color: var(--text-accent); font-family: 'Teko', sans-serif; font-size: 1.8rem; }
+  .qq1-4 { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text-accent); border: 1px solid var(--border-glass); cursor: pointer; background: none; }
+  .qq1-5 { background: none; border: none; color: var(--text-main); font-size: 22px; cursor: pointer; }
+  .qq1-6 { padding: 10px 20px; border-bottom: 1px solid var(--border-glass); display: flex; justify-content: center; }
+  .qq1-7 { background: var(--bg-glass); border-radius: 20px; padding: 2px; border: 1px solid var(--border-glass); width: 100%; display: flex; }
+  .qq1-8 { border: none; padding: 8px 0; border-radius: 18px; flex: 1; text-align: center; }
+  .qq1-9 { padding: 15px 20px; border-bottom: 1px solid var(--border-glass); display: flex; align-items: center; gap: 12px; }
+  .qq1-10 { width: 45px; height: 45px; border-radius: 50%; background: var(--grad-primary); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem; color: var(--text-inverse); box-shadow: 0 0 10px var(--primary-glow); }
+  .qq1-11 { font-weight: 700; color: var(--text-main); }
+  .qq1-12 { color: var(--text-accent); font-size: .85rem; font-family: 'Teko',sans-serif; }
+  .qq1-13 { position: relative; z-index: 1000; }
+  .qq1-14 { background: none; border: none; color: var(--text-main); font-size: 24px; cursor: pointer; padding: 0 12px; }
+  .qq1-15 { display: flex; gap: 4px; }
+  .qq1-16 { display: flex; gap: 8px; }
+</style>
 <div class="side-menu" id="sideMenu">
-  <div style="padding:20px;border-bottom:1px solid var(--border-glass);display:flex;align-items:center;justify-content:space-between;">
-    <div style="display:flex;align-items:center;gap:12px;">
-      <span class="nav-brand" style="color: var(--text-accent); font-family: 'Teko', sans-serif; font-size: 1.8rem;"><%= siteName %></span>
-      <button id="theme-toggle-side" class="glass" style="width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text-accent); border: 1px solid var(--border-glass); cursor: pointer; background: none;">
+  <div class="qq1-1">
+    <div class="qq1-2">
+      <span class="nav-brand qq1-3"><%= siteName %></span>
+      <button id="theme-toggle-side" class="glass qq1-4">
         <i class="fas fa-moon nav-theme-icon"></i>
       </button>
     </div>
-        <button id="lvClose" style="background:none;border:none;color:var(--text-main);font-size:22px;cursor:pointer;">✕</button>
+        <button class="qq1-5" id="lvClose">✕</button>
 
   </div>
-  <div style="padding:10px 20px; border-bottom:1px solid var(--border-glass); display:flex; justify-content:center;">
-    <div class="lang-switch" style="background: var(--bg-glass); border-radius: 20px; padding: 2px; border: 1px solid var(--border-glass); width: 100%; display: flex;">
-      <a href="/lang/bn" class="lang-btn <%= lang === 'bn' ? 'active' : '' %>" style="border:none; padding: 8px 0; border-radius: 18px; flex:1; text-align:center;">BN</a>
-      <a href="/lang/en" class="lang-btn <%= lang === 'en' ? 'active' : '' %>" style="border:none; padding: 8px 0; border-radius: 18px; flex:1; text-align:center;">EN</a>
+  <div class="qq1-6">
+    <div class="lang-switch qq1-7">
+      <a href="/lang/bn" class="lang-btn <%= lang === 'bn' ? 'active' : '' %> qq1-8">BN</a>
+      <a href="/lang/en" class="lang-btn <%= lang === 'en' ? 'active' : '' %> qq1-8">EN</a>
     </div>
   </div>
   <% if(locals.user) { %>
-  <div style="padding:15px 20px;border-bottom:1px solid var(--border-glass);display:flex;align-items:center;gap:12px;">
-    <div style="width:45px;height:45px;border-radius:50%;background:var(--grad-primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;color:var(--text-inverse);box-shadow: 0 0 10px var(--primary-glow);">
+  <div class="qq1-9">
+    <div class="qq1-10">
       <%= user.username[0].toUpperCase() %>
     </div>
     <div>
-      <div style="font-weight:700;color:var(--text-main);"><%= user.username %></div>
-      <div style="color: var(--text-accent);font-size:.85rem;font-family:'Teko',sans-serif;">💰 <%= t.balance %>: <span class="js-balance"><%= user.coins %></span></div>
+      <div class="qq1-11"><%= user.username %></div>
+      <div class="qq1-12">💰 <%= t.balance %>: <span class="js-balance"><%= user.coins %></span></div>
     </div>
   </div>
   <% } %>
@@ -52,12 +73,12 @@
 
 
 <% if (locals.currentPage === 'home') { %>
-<nav class="navbar" style="position:relative; z-index:1000;">
-  <div style="display:flex;align-items:center;gap:12px;">
-    <button data-navbar-action="toggle-menu" style="background:none;border:none;color:var(--text-main);font-size:24px;cursor:pointer;padding:0 12px;"><i class="fas fa-bars"></i></button>
+<nav class="navbar qq1-13">
+  <div class="qq1-2">
+    <button class="qq1-14" data-navbar-action="toggle-menu"><i class="fas fa-bars"></i></button>
     <div class="nav-brand" style="color: var(--text-accent); font-family: 'Teko', sans-serif; font-size: 1.8rem; letter-spacing: 1px;"><%= siteName %></div>
   </div>
-  <div style="display:flex;align-items:center;gap:12px;">
+  <div class="qq1-2">
         
 
     <% if(locals.user) { %>
@@ -72,7 +93,7 @@
         <i class="fas fa-sync-alt"></i>
       </button>
 
-      <div style="display:flex; gap: 4px;">
+      <div class="qq1-15">
         <a href="/notifications" class="nav-icon-link">
           <i class="fas fa-bell"></i>
           <span class="badge-dot"></span>
@@ -83,7 +104,7 @@
       </div>
     <% } else { %>
       <!-- Auth Buttons -->
-      <div style="display:flex; gap: 8px;">
+      <div class="qq1-16">
         <a href="/login" class="nav-btn-auth nav-btn-login"><%= t.login %></a>
         <a href="/register" class="nav-btn-auth nav-btn-register"><%= t.register %></a>
       </div>

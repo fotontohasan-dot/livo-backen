@@ -134,9 +134,16 @@ function resolve(html, sheets) {
   for (const sh of sheets) collect(sh.text, sh.name, rules);
   $('style').each((i, el) => collect($(el).html() || '', 'page-style', rules));
 
+  // <style>/<script> elements are not compared: a migration may legitimately
+  // add a page-local <style>, and counting it would shift every later index
+  // and make the two documents look different everywhere.
   const ids = new Map();
   const meta = {};
-  $('*').each((i, el) => {
+  let i = 0;
+  $('*').each((_, el) => {
+    const tn = (el.tagName || '').toLowerCase();
+    if (tn === 'style' || tn === 'script') return;
+    i += 1;
     ids.set(el, i);
     meta[i] = { tag: el.tagName, style: ($(el).attr('style') || ''), cls: ($(el).attr('class') || '') };
   });

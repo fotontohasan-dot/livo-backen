@@ -1,3 +1,15 @@
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .qq2-1 { width: 62%; }
+  .qq2-2 { width: 50%; }
+  .qq2-3 { width: 30%; }
+  .qq2-4 { width: 20%; }
+  .qq2-5 { background: var(--gold); }
+  .qq2-6 { background: var(--primary); }
+  .qq2-7 { background: var(--secondary); }
+</style>
 <%
 /* ==========================================================================
    টুর্নামেন্ট শোকেস — সাজসজ্জার সেকশন।
@@ -36,7 +48,7 @@ const tshowWinners = [
       <!-- হেডার: সময়ের রেল + নিজের অবস্থান -->
       <div class="tshow-hero">
         <div class="tshow-rail">
-          <div class="tshow-rail-track"><div class="tshow-rail-fill" style="width:62%"></div></div>
+          <div class="tshow-rail-track"><div class="tshow-rail-fill qq2-1"></div></div>
           <div class="tshow-rail-text"><%= t.tshow_ends_in %> <b><%= t.tshow_sample_remaining %></b></div>
         </div>
 
@@ -63,13 +75,13 @@ const tshowWinners = [
         </div>
 
         <div class="tshow-split">
-          <i class="p1" style="width:50%"></i><i class="p2" style="width:30%"></i><i class="p3" style="width:20%"></i>
+          <i class="p1 qq2-2"></i><i class="p2 qq2-3"></i><i class="p3 qq2-4"></i>
         </div>
 
         <div class="tshow-key">
-          <div><span class="amt">৳২৫,০০০</span><span class="sw" style="background:var(--gold)"></span><%= t.tshow_first %></div>
-          <div><span class="amt">৳১৫,০০০</span><span class="sw" style="background:var(--primary)"></span><%= t.tshow_second %></div>
-          <div><span class="amt">৳১০,০০০</span><span class="sw" style="background:var(--secondary)"></span><%= t.tshow_third %></div>
+          <div><span class="amt">৳২৫,০০০</span><span class="sw qq2-5"></span><%= t.tshow_first %></div>
+          <div><span class="amt">৳১৫,০০০</span><span class="sw qq2-6"></span><%= t.tshow_second %></div>
+          <div><span class="amt">৳১০,০০০</span><span class="sw qq2-7"></span><%= t.tshow_third %></div>
         </div>
       </div>
     </div>
