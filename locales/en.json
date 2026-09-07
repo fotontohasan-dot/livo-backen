@@ -2013,5 +2013,22 @@
   "dep_empty": "No deposits via {method} in this range",
   "dep_approve": "Approve",
   "dep_reject": "Reject",
-  "dep_reject_confirm": "Reject this?"
+  "dep_reject_confirm": "Reject this?",
+  "faq_heading": "Help and Frequently Asked Questions (FAQ)",
+  "faq_intro": "Answers to the most commonly asked questions are below.",
+  "faq_q_deposit": "How do I deposit?",
+  "faq_a_deposit": "Go to the deposit page, choose a payment method (bKash/Nagad/Rocket), send the money, then enter the transaction ID. An admin will verify it and add your coins.",
+  "faq_q_withdraw": "How do I withdraw?",
+  "faq_a_withdraw": "Go to the withdrawal page and enter the amount and your account number. The minimum withdrawal is 200 taka. Once an admin approves it, the money will be sent.",
+  "faq_q_timing": "How long do deposits and withdrawals take?",
+  "faq_a_timing": "Usually processed within a few minutes to a few hours. It may take a little longer at busy times.",
+  "faq_q_daily_bonus": "How do I get the daily bonus?",
+  "faq_a_daily_bonus": "You can claim the daily bonus once a day from the coins page. It can only be claimed once per day.",
+  "faq_q_winnings": "Where do my winnings go?",
+  "faq_a_winnings": "Winnings are added to your account balance immediately. Refresh the page to see the update.",
+  "faq_q_security": "Is my account secure?",
+  "faq_a_security": "Your password is stored encrypted. Never share your password or OTP with anyone.",
+  "faq_q_more_help": "Need more help?",
+  "faq_a_more_help": "Contact our support team on live chat. We are ready to help.",
+  "faq_live_chat": "Live chat"
 }

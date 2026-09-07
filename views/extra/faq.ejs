@@ -2,43 +2,43 @@
 <%- include('../partials/navbar') %>
 
 <div class="container" style="padding-top: 20px;">
-  <h2>❓ সাহায্য ও সাধারণ প্রশ্ন (FAQ)</h2>
-  <p style="color:var(--text-muted);">নিচে সবচেয়ে বেশি জিজ্ঞাসিত প্রশ্নের উত্তর দেওয়া হলো।</p>
+  <h2>❓ <%= t('faq_heading') %></h2>
+  <p style="color:var(--text-muted);"><%= t('faq_intro') %></p>
 
   <div class="card" style="margin-bottom:12px; padding:15px;">
-    <strong>💰 কিভাবে ডিপোজিট করব?</strong>
-    <p style="margin-top:8px; color:var(--text-muted);">ডিপোজিট পেজে গিয়ে পেমেন্ট মেথড (বিকাশ/নগদ/রকেট) বেছে টাকা পাঠান, তারপর ট্রানজেকশন আইডি দিন। অ্যাডমিন যাচাই করে কয়েন যোগ করবে।</p>
+    <strong>💰 <%= t('faq_q_deposit') %></strong>
+    <p style="margin-top:8px; color:var(--text-muted);"><%= t('faq_a_deposit') %></p>
   </div>
 
   <div class="card" style="margin-bottom:12px; padding:15px;">
-    <strong>🏦 কিভাবে উইথড্র করব?</strong>
-    <p style="margin-top:8px; color:var(--text-muted);">উইথড্র পেজে গিয়ে পরিমাণ ও অ্যাকাউন্ট নাম্বার দিন। সর্বনিম্ন উইথড্র ২০০ টাকা। অ্যাডমিন অনুমোদন করলে টাকা পাঠানো হবে।</p>
+    <strong>🏦 <%= t('faq_q_withdraw') %></strong>
+    <p style="margin-top:8px; color:var(--text-muted);"><%= t('faq_a_withdraw') %></p>
   </div>
 
   <div class="card" style="margin-bottom:12px; padding:15px;">
-    <strong>⏱️ ডিপোজিট/উইথড্র কতক্ষণে হয়?</strong>
-    <p style="margin-top:8px; color:var(--text-muted);">সাধারণত কয়েক মিনিট থেকে কয়েক ঘণ্টার মধ্যে প্রসেস হয়। ব্যস্ত সময়ে একটু বেশি লাগতে পারে।</p>
+    <strong>⏱️ <%= t('faq_q_timing') %></strong>
+    <p style="margin-top:8px; color:var(--text-muted);"><%= t('faq_a_timing') %></p>
   </div>
 
   <div class="card" style="margin-bottom:12px; padding:15px;">
-    <strong>🎁 ডেইলি বোনাস কিভাবে পাব?</strong>
-    <p style="margin-top:8px; color:var(--text-muted);">প্রতিদিন একবার কয়েন পেজ থেকে ডেইলি বোনাস নিতে পারবেন। দিনে একবারই নেওয়া যায়।</p>
+    <strong>🎁 <%= t('faq_q_daily_bonus') %></strong>
+    <p style="margin-top:8px; color:var(--text-muted);"><%= t('faq_a_daily_bonus') %></p>
   </div>
 
   <div class="card" style="margin-bottom:12px; padding:15px;">
-    <strong>🎮 বেট/গেমে জিতলে টাকা কোথায় যায়?</strong>
-    <p style="margin-top:8px; color:var(--text-muted);">জেতা কয়েন সাথে সাথেই আপনার অ্যাকাউন্ট ব্যালেন্সে যোগ হয়ে যায়। পেজ রিফ্রেশ করলে আপডেট দেখবেন।</p>
+    <strong>🎮 <%= t('faq_q_winnings') %></strong>
+    <p style="margin-top:8px; color:var(--text-muted);"><%= t('faq_a_winnings') %></p>
   </div>
 
   <div class="card" style="margin-bottom:12px; padding:15px;">
-    <strong>🔒 আমার অ্যাকাউন্ট কি নিরাপদ?</strong>
-    <p style="margin-top:8px; color:var(--text-muted);">আপনার পাসওয়ার্ড এনক্রিপ্ট করা থাকে। কখনো কারো সাথে পাসওয়ার্ড বা OTP শেয়ার করবেন না।</p>
+    <strong>🔒 <%= t('faq_q_security') %></strong>
+    <p style="margin-top:8px; color:var(--text-muted);"><%= t('faq_a_security') %></p>
   </div>
 
   <div class="card" style="margin-bottom:12px; padding:15px;">
-    <strong>💬 আরও সাহায্য দরকার?</strong>
-    <p style="margin-top:8px; color:var(--text-muted);">লাইভ চ্যাটে আমাদের সাপোর্ট টিমের সাথে যোগাযোগ করুন। আমরা সাহায্য করতে প্রস্তুত।</p>
-    <a href="/profile/chat" class="btn btn-success btn-sm" style="margin-top:8px;">💬 লাইভ চ্যাট</a>
+    <strong>💬 <%= t('faq_q_more_help') %></strong>
+    <p style="margin-top:8px; color:var(--text-muted);"><%= t('faq_a_more_help') %></p>
+    <a href="/profile/chat" class="btn btn-success btn-sm" style="margin-top:8px;">💬 <%= t('faq_live_chat') %></a>
   </div>
 
 </div>
