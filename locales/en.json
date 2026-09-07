@@ -670,7 +670,7 @@
   "auth_email_or_phone_required": "❌ Please provide at least an email or phone number.",
   "auth_email_format_invalid": "❌ Please enter a valid email address.",
   "auth_phone_format_invalid": "❌ Please enter a valid phone number format.",
-  "auth_password_min_length": "❌ Password must be at least 8 characters.",
+  "auth_password_min_length": "❌ Password must be at least 10 characters.",
   "auth_password_mismatch": "❌ Passwords do not match.",
   "auth_email_already_registered": "❌ This email is already registered.",
   "auth_phone_already_registered": "❌ This phone number is already registered.",
@@ -1851,5 +1851,9 @@
   "payment_withdraw_over_daily_limit": "You have nearly reached today's withdrawal limit. You can withdraw up to {value} taka more today.",
   "payment_forfeit_success": "Bonus forfeited. You can now withdraw.",
   "payment_forfeit_none": "You have no active bonus to forfeit.",
-  "payment_forfeit_error": "Could not forfeit the bonus. Please try again shortly."
+  "payment_forfeit_error": "Could not forfeit the bonus. Please try again shortly.",
+  "auth_password_needs_letter_and_number": "❌ Password must contain at least one letter and one number.",
+  "auth_password_too_simple": "❌ That password is too simple. Do not repeat the same character.",
+  "auth_password_too_common": "❌ That password is too common and easily guessed. Please choose another.",
+  "auth_password_contains_identity": "❌ Your password cannot contain your username or email."
 }

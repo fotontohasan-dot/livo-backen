@@ -670,7 +670,7 @@
   "auth_email_or_phone_required": "❌ ইমেইল অথবা ফোন নাম্বার অন্তত একটি দিতে হবে।",
   "auth_email_format_invalid": "❌ সঠিক ইমেইল ফরম্যাট দিন।",
   "auth_phone_format_invalid": "❌ সঠিক ফোন নাম্বার ফরম্যাট দিন।",
-  "auth_password_min_length": "❌ পাসওয়ার্ড কমপক্ষে ৮ অক্ষর হতে হবে।",
+  "auth_password_min_length": "❌ পাসওয়ার্ড কমপক্ষে ১০ অক্ষর হতে হবে।",
   "auth_password_mismatch": "❌ পাসওয়ার্ড মিলছে না।",
   "auth_email_already_registered": "❌ এই ইমেইল আগেই নিবন্ধিত।",
   "auth_phone_already_registered": "❌ এই ফোন নাম্বার আগেই নিবন্ধিত।",
@@ -1851,5 +1851,9 @@
   "payment_withdraw_over_daily_limit": "আজকের উইথড্র সীমা প্রায় শেষ। আজ আর সর্বোচ্চ {value} টাকা তোলা যাবে।",
   "payment_forfeit_success": "বোনাস বাতিল হয়েছে। এখন আপনি উইথড্র করতে পারবেন।",
   "payment_forfeit_none": "বাতিল করার মতো কোনো সক্রিয় বোনাস নেই।",
-  "payment_forfeit_error": "বোনাস বাতিল করা যায়নি। একটু পরে আবার চেষ্টা করুন।"
+  "payment_forfeit_error": "বোনাস বাতিল করা যায়নি। একটু পরে আবার চেষ্টা করুন।",
+  "auth_password_needs_letter_and_number": "❌ পাসওয়ার্ডে অন্তত একটি অক্ষর ও একটি সংখ্যা থাকতে হবে।",
+  "auth_password_too_simple": "❌ পাসওয়ার্ডটি খুব সহজ। একই অক্ষর বারবার ব্যবহার করবেন না।",
+  "auth_password_too_common": "❌ এই পাসওয়ার্ডটি খুব পরিচিত ও সহজে অনুমানযোগ্য। অন্য একটি বেছে নিন।",
+  "auth_password_contains_identity": "❌ পাসওয়ার্ডে আপনার ইউজারনেম বা ইমেইল ব্যবহার করা যাবে না।"
 }
