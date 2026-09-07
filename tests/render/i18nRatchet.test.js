@@ -23,7 +23,7 @@ const VIEWS = path.join(__dirname, '..', '..', 'views');
 const BENGALI = /[\u0980-\u09FF]/;
 
 // বর্তমান পরিমাপ (২০২৬-০৯-০৭)। কমলে নিচের সংখ্যা কমিয়ে দিন — সেটাই ratchet.
-const BASELINE_USER_LINES = 300;
+const BASELINE_USER_LINES = 273;
 const BASELINE_ADMIN_LINES = 673;
 
 /** কমেন্ট বাদ দেওয়া হয়: ডেভেলপারদের জন্য লেখা বাংলা কমেন্ট ব্যবহারকারী দেখেন না,
