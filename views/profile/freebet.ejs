@@ -1,15 +1,24 @@
 <%- include('../partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im65-1 { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .im65-2 { font-size: 40px; margin-bottom: 8px; }
+</style>
+
 <%- include('../partials/navbar') %>
 <div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto;">
   <%- include('../partials/flash') %>
 
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+  <div class="im65-1">
     <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
     <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">🎁 ফ্রি বেট</h1>
   </div>
 
   <div style="background:linear-gradient(135deg,#10b981,#059669);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center;">
-    <div style="font-size:40px;margin-bottom:8px;">🎁</div>
+    <div class="im65-2">🎁</div>
     <div style="color:var(--text-main);font-size:16px;font-weight:bold;margin-bottom:4px;">ফ্রি বেট কয়েন</div>
     <div style="color:rgba(255,255,255,0.9);font-size:13px;">ক্লেইম করে বোনাস কয়েন পান, খেলে উপভোগ করুন</div>
   </div>

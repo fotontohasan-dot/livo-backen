@@ -1,7 +1,16 @@
 <%- include('../partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im50-1 { padding-top: 20px; }
+  .im50-2 { margin-top: 8px; }
+</style>
+
 <%- include('../partials/navbar') %>
 
-<div class="container" style="padding-top: 20px;">
+<div class="container im50-1">
   <h2>❓ সাহায্য ও সাধারণ প্রশ্ন (FAQ)</h2>
   <p style="color:var(--text-muted);">নিচে সবচেয়ে বেশি জিজ্ঞাসিত প্রশ্নের উত্তর দেওয়া হলো।</p>
 
@@ -38,7 +47,7 @@
   <div class="card" style="margin-bottom:12px; padding:15px;">
     <strong>💬 আরও সাহায্য দরকার?</strong>
     <p style="margin-top:8px; color:var(--text-muted);">লাইভ চ্যাটে আমাদের সাপোর্ট টিমের সাথে যোগাযোগ করুন। আমরা সাহায্য করতে প্রস্তুত।</p>
-    <a href="/profile/chat" class="btn btn-success btn-sm" style="margin-top:8px;">💬 লাইভ চ্যাট</a>
+    <a href="/profile/chat" class="btn btn-success btn-sm im50-2">💬 লাইভ চ্যাট</a>
   </div>
 
 </div>

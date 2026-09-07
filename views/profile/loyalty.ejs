@@ -1,9 +1,21 @@
 <%- include('../partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im81-1 { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .im81-2 { font-size: 40px; margin-bottom: 4px; }
+  .im81-3 { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .im81-4 { margin: 0; }
+  .im81-5 { width: 100%; justify-content: center; }
+</style>
+
 <%- include('../partials/navbar') %>
 <div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto;">
   <%- include('../partials/flash') %>
 
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+  <div class="im81-1">
     <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
     <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">⭐ লয়্যালটি পয়েন্ট</h1>
   </div>
@@ -11,7 +23,7 @@
   <% if (loyalty) { %>
     <!-- পয়েন্ট কার্ড -->
     <div style="background:linear-gradient(135deg,#7c3aed,#a855f7);border-radius:16px;padding:24px;margin-bottom:16px;text-align:center;">
-      <div style="font-size:40px;margin-bottom:4px;">⭐</div>
+      <div class="im81-2">⭐</div>
       <div style="color:rgba(255,255,255,0.9);font-size:13px;">আপনার পয়েন্ট</div>
       <div style="color:var(--text-main);font-size:34px;font-weight:900;"><%= Number(loyalty.points).toLocaleString('bn-BD') %></div>
       <div style="color:rgba(255,255,255,0.9);font-size:13px;margin-top:4px;">
@@ -22,7 +34,7 @@
     <!-- VIP লেভেল প্রোগ্রেস -->
     <% if (vip) { %>
     <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;margin-bottom:16px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <div class="im81-3">
         <div style="color:var(--text-main);font-weight:bold;">👑 VIP <%= vip.current ? vip.current.name : '০' %> (লেভেল <%= vip.level %>)</div>
         <a href="/profile/vip" style="color:#f59e0b;font-size:12px;">বিস্তারিত →</a>
       </div>
@@ -53,7 +65,7 @@
             <div style="color:var(--text-muted);font-size:11px;"><%= item.pts %> পয়েন্ট লাগবে</div>
           </div>
           <% if (loyalty.points >= item.pts) { %>
-            <form action="/profile/loyalty/redeem" method="POST" style="margin:0;">
+            <form class="im81-4" action="/profile/loyalty/redeem" method="POST">
               <input type="hidden" name="points" value="<%= item.pts %>">
               <button type="submit" style="background:#10b981;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:bold;cursor:pointer;">রিডিম</button>
             </form>
@@ -74,7 +86,7 @@
         <form action="/profile/loyalty/redeem" method="POST">
           <input type="number" name="points" placeholder="কত পয়েন্ট রূপান্তর করবেন" min="<%= loyalty.minRedeem %>" max="<%= loyalty.points %>" required
                  style="width:100%;background:#1e1e1e;border:1px solid #333;color:#fff;padding:12px;border-radius:8px;margin-bottom:10px;">
-          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">🔄 রূপান্তর করুন</button>
+          <button type="submit" class="btn btn-primary im81-5">🔄 রূপান্তর করুন</button>
         </form>
       <% } else { %>
         <div style="background:rgba(148,163,184,0.1);border-radius:8px;padding:12px;color: var(--text-muted);font-size:13px;text-align:center;">

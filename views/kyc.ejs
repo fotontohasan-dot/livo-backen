@@ -1,4 +1,16 @@
 <%- include('partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im91-1 { margin-bottom: 4px; }
+  .im91-2 { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .im91-3 { margin-bottom: 12px; }
+  .im91-4 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  .im91-5 { margin-bottom: 20px; }
+</style>
+
 <%- include('partials/navbar') %>
 
 <div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto">
@@ -34,8 +46,8 @@
       <h2 style="color: var(--text-accent);font-size:18px;font-weight:800;margin-bottom:6px"><%= t.kyc_pending_title %></h2>
       <p style="color:var(--text-muted);font-size:13px;margin-bottom:14px"><%= t.kyc_pending_desc %></p>
       <div style="text-align:left;background:rgba(255,255,255,0.03);border-radius:12px;padding:14px;font-size:12px;color:var(--text-muted)">
-        <div style="margin-bottom:4px"><b style="color:var(--text-muted)"><%= t.name_label %></b> <%= kyc.full_name %></div>
-        <div style="margin-bottom:4px"><b style="color:var(--text-muted)"><%= t.document_number_label %></b> <%= kyc.document_number %></div>
+        <div class="im91-1"><b style="color:var(--text-muted)"><%= t.name_label %></b> <%= kyc.full_name %></div>
+        <div class="im91-1"><b style="color:var(--text-muted)"><%= t.document_number_label %></b> <%= kyc.document_number %></div>
         <div><b style="color:var(--text-muted)"><%= t.submitted_on %></b> <%= new Date(kyc.created_at).toLocaleDateString('bn-BD') %></div>
       </div>
     </div>
@@ -68,15 +80,15 @@
     <form id="kycForm" action="/extra/kyc" method="POST" class="glass-card" style="padding:22px 18px;border-radius:20px;border:1px solid rgba(255,255,255,0.08)" data-kyc-form>
 
       <!-- ধাপ ১ -->
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <div class="im91-2">
         <div style="width:26px;height:26px;border-radius:50%;background:var(--gold);color:#1a1a1a;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
         <span style="color:var(--text-main);font-weight:700;font-size:14px"><%= t.personal_information %></span>
       </div>
-      <div style="margin-bottom:12px">
+      <div class="im91-3">
         <label style="color:var(--text-muted);font-size:12px;display:block;margin-bottom:5px"><%= t.full_name_on_document %></label>
         <input type="text" name="full_name" required maxlength="60" class="form-input" placeholder="<%= t.name_example_placeholder %>" value="<%= kyc ? kyc.full_name : '' %>">
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+      <div class="im91-4">
         <div>
           <label style="color:var(--text-muted);font-size:12px;display:block;margin-bottom:5px"><%= t.document_type %></label>
           <select name="document_type" required class="form-input">
@@ -92,7 +104,7 @@
       </div>
 
       <!-- ধাপ ২ -->
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <div class="im91-2">
         <div style="width:26px;height:26px;border-radius:50%;background:var(--gold);color:#1a1a1a;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
         <span style="color:var(--text-main);font-weight:700;font-size:14px"><%= t.upload_document_photo %></span>
       </div>
@@ -106,10 +118,10 @@
       </label>
       <input type="file" id="documentFile" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" style="display:none" data-kyc-file>
       <div id="uploadError" style="color:#f87171;font-size:12px;margin-bottom:16px;display:none"></div>
-      <div style="margin-bottom:20px"></div>
+      <div class="im91-5"></div>
 
       <!-- ধাপ ৩ -->
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <div class="im91-2">
         <div style="width:26px;height:26px;border-radius:50%;background:var(--gold);color:#1a1a1a;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
         <span style="color:var(--text-main);font-weight:700;font-size:14px"><%= t.submit_kyc %></span>
       </div>

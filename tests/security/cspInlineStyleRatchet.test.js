@@ -53,7 +53,8 @@ const path = require('path');
 //
 // সীমা নামানোর ইতিহাস (প্রতিটা মাইগ্রেশনের পরে এখানে লাইন যোগ করুন):
 // 1832/106 (053f9c2) → শুরুর বেসলাইন
-const MAX_INLINE_STYLES = 1832;
+// 1617     (এই কমিট) → ৪৫টা view-এ !important-নিরাপদ ঘোষণা ক্লাসে সরানো
+const MAX_INLINE_STYLES = 1617;
 
 const ROOT = path.join(__dirname, '..', '..');
 const SCAN_DIRS = ['views', 'public'];

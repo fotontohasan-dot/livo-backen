@@ -1,16 +1,27 @@
 <%- include('../partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im77-1 { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .im77-2 { font-size: 40px; margin-bottom: 8px; }
+  .im77-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .im77-4 { display: flex; gap: 8px; align-items: center; }
+</style>
+
 <%- include('../partials/navbar') %>
 <div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto;">
   <%- include('../partials/flash') %>
 
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+  <div class="im77-1">
     <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
     <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;"><%= t.invite_friends_title %></h1>
   </div>
 
   <!-- ব্যানার -->
   <div style="background:linear-gradient(135deg,#10b981,#06b6d4);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center;">
-    <div style="font-size:40px;margin-bottom:8px;">🎁</div>
+    <div class="im77-2">🎁</div>
     <div style="color:var(--text-main);font-size:16px;font-weight:bold;margin-bottom:4px;"><%= t.refer_and_earn %></div>
     <div style="color:rgba(255,255,255,0.9);font-size:13px;">
       বন্ধুর প্রথম ডিপোজিটে বোনাস + আজীবন কমিশন (২.৫% / ১.৫% / ০.৮%)
@@ -18,7 +29,7 @@
   </div>
 
   <!-- পরিসংখ্যান -->
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
+  <div class="im77-3">
     <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:14px;text-align:center;">
       <div style="color:#f59e0b;font-size:22px;font-weight:bold;"><%= stats.totalReferrals %></div>
       <div style="color:var(--text-muted);font-size:11px;margin-top:4px;"><%= t.total_referrals %></div>
@@ -43,7 +54,7 @@
   <!-- রেফারেল কোড -->
   <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;margin-bottom:14px;">
     <div style="color:var(--text-muted);font-size:13px;margin-bottom:8px;"><%= t.your_referral_code %></div>
-    <div style="display:flex;gap:8px;align-items:center;">
+    <div class="im77-4">
       <div id="ref-code" style="flex:1;background:rgba(255,255,255,0.1);border-radius:8px;padding:12px;color:#f59e0b;font-size:18px;font-weight:bold;letter-spacing:2px;text-align:center;">
         <%= user.referral_code || 'N/A' %>
       </div>
@@ -54,7 +65,7 @@
   <!-- রেফারেল লিংক -->
   <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;margin-bottom:16px;">
     <div style="color:var(--text-muted);font-size:13px;margin-bottom:8px;"><%= t.your_referral_link %></div>
-    <div style="display:flex;gap:8px;align-items:center;">
+    <div class="im77-4">
       <div style="flex:1;background:rgba(255,255,255,0.1);border-radius:8px;padding:10px;color:var(--text-main);font-size:12px;word-break:break-all;" id="ref-link">
         <%= baseUrl %>/register?ref=<%= user.referral_code %>
       </div>

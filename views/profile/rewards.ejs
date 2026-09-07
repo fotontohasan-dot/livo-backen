@@ -1,4 +1,20 @@
 <%- include('../partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im76-1 { margin-bottom: 1rem; }
+  .im76-2 { display: flex; align-items: center; justify-content: space-between; }
+  .im76-3 { font-size: 22px; }
+  .im76-4 { text-decoration: none; display: block; margin-bottom: 1rem; }
+  .im76-5 { font-size: 26px; }
+  .im76-6 { flex: 1; min-width: 0; }
+  .im76-7 { width: 100%; justify-content: center; font-weight: 700; }
+  .im76-8 { display: flex; flex-direction: column; gap: 12px; }
+  .im76-9 { display: flex; align-items: center; gap: 12px; }
+</style>
+
 <%- include('../partials/navbar') %>
 <div class="container page" style="max-width:600px;margin:0 auto;padding:15px;">
   <%- include('../partials/flash') %>
@@ -9,8 +25,8 @@
 
   <!-- ==================== অ্যাচিভমেন্ট প্রিভিউ ==================== -->
   <% if (typeof badgesPreview !== 'undefined' && badgesPreview.totalCount > 0) { %>
-  <div class="card" style="margin-bottom:1rem;">
-    <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+  <div class="card im76-1">
+    <div class="card-header im76-2">
       <span><%= t.achievements_label %> (<%= badgesPreview.earnedCount %>/<%= badgesPreview.totalCount %>)</span>
       <a href="/profile/badges" style="color: var(--text-accent);font-size:11.5px;font-weight:700;text-decoration:none;"><%= t.view_all_arrow %></a>
     </div>
@@ -19,7 +35,7 @@
       <div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;">
         <% badgesPreview.earned.forEach(function(b) { %>
         <div title="<%= b.desc %>" style="flex:0 0 auto;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:72px;">
-          <span style="font-size:22px;"><%= b.icon %></span>
+          <span class="im76-3"><%= b.icon %></span>
           <span style="font-size:10px;color:var(--text-main);font-weight:700;text-align:center;line-height:1.3;"><%= b.name %></span>
         </div>
         <% }); %>
@@ -33,11 +49,11 @@
 
   <!-- ==================== রেফারেল সামারি ==================== -->
   <% if (typeof referralSummary !== 'undefined' && referralSummary) { %>
-  <a href="/profile/referral" style="text-decoration:none;display:block;margin-bottom:1rem;">
+  <a class="im76-4" href="/profile/referral">
     <div class="card" style="background:linear-gradient(135deg,#4B75C6,#2B48A7);border:none;">
       <div class="card-body" style="padding:1rem 1.1rem;display:flex;align-items:center;gap:14px;">
-        <div style="font-size:26px;">👥</div>
-        <div style="flex:1;min-width:0;">
+        <div class="im76-5">👥</div>
+        <div class="im76-6">
           <div style="color:#fff;font-weight:800;font-size:14px;"><%= t.referral_program %></div>
           <div style="color:rgba(255,255,255,0.85);font-size:11.5px;margin-top:2px;"><%= referralSummary.totalInvites %> <%= t.invited_total_commission %> <%= Number(referralSummary.totalCommission).toLocaleString('bn-BD') %><%= t.taka %></div>
         </div>
@@ -49,7 +65,7 @@
 
   <% if (reward) { %>
     <!-- আজকের টার্নওভার -->
-    <div class="card" style="margin-bottom:1rem;">
+    <div class="card im76-1">
       <div class="card-body" style="text-align:center;padding:1.2rem;">
         <div style="font-size:.8rem;color:var(--muted);"><%= t.todays_sports_turnover %></div>
         <div style="font-size:2rem;font-weight:900;color: var(--text-accent);margin:.3rem 0;">
@@ -89,7 +105,7 @@
             </button>
           <% } else { %>
             <form action="/profile/rewards/claim" method="POST">
-              <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;font-weight:700;">
+              <button type="submit" class="btn btn-primary im76-7">
                 <%= t.claim_reward %>
               </button>
             </form>
@@ -103,15 +119,15 @@
     </div>
 
     <!-- ==================== বোনাস (৩টি ফিচার) ==================== -->
-    <div class="card" style="margin-bottom:1rem;">
+    <div class="card im76-1">
       <div class="card-header"><%= t.bonus_ticket %></div>
       <div class="card-body" style="padding:.9rem;">
-        <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="im76-8">
 
           <!-- লাকি হুইল -->
           <a href="/profile/wheel" style="text-decoration:none;display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#C92034,#CE465C);border-radius:16px;padding:12px 14px;">
-            <div style="font-size:26px;">🎡</div>
-            <div style="flex:1;min-width:0;">
+            <div class="im76-5">🎡</div>
+            <div class="im76-6">
               <div style="color:#fff;font-weight:800;font-size:14px;"><%= t.lucky_wheel %></div>
               <div style="color:rgba(255,255,255,0.85);font-size:11.5px;margin-top:1px;"><%= t.spin_daily_win_coins %></div>
             </div>
@@ -120,9 +136,9 @@
 
           <!-- সোনার ডিম -->
           <div id="goldenEggCard" style="background:linear-gradient(135deg,#C51B26,#C5532C);border-radius:16px;padding:12px 14px;">
-            <div style="display:flex;align-items:center;gap:12px;">
-              <div style="font-size:26px;">🥚</div>
-              <div style="flex:1;min-width:0;">
+            <div class="im76-9">
+              <div class="im76-5">🥚</div>
+              <div class="im76-6">
                 <div style="color:#fff;font-weight:800;font-size:14px;"><%= t.golden_egg %></div>
                 <div id="goldenEggStatus" style="color:rgba(255,255,255,0.85);font-size:11.5px;margin-top:1px;"><%= t.loading_dots %></div>
               </div>
@@ -134,8 +150,8 @@
 
           <!-- রেড কার্ড -->
           <div id="redCardCard" style="display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#BE28A2,#C2479A);border-radius:16px;padding:12px 14px;">
-            <div style="font-size:26px;">🧧</div>
-            <div style="flex:1;min-width:0;">
+            <div class="im76-5">🧧</div>
+            <div class="im76-6">
               <div style="color:#fff;font-weight:800;font-size:14px;"><%= t.red_card %></div>
               <div id="redCardStatus" style="color:rgba(255,255,255,0.85);font-size:11.5px;margin-top:1px;"><%= t.loading_dots %></div>
             </div>

@@ -6,7 +6,7 @@
   <div class="wh-topbar">
     <a href="/profile" class="wh-back"><i class="fas fa-arrow-left"></i></a>
     <span class="wh-title"><%= t.wallet_hub %></span>
-    <span style="width:40px;"></span>
+    <span class="im93-1"></span>
   </div>
 
   <!-- ==================== WALLET SUMMARY CARD ==================== -->
@@ -94,7 +94,7 @@
   <div class="wh-card">
     <div class="wh-card-title-row">
       <div class="wh-card-title"><i class="fas fa-list-ul" style="color: var(--text-accent);"></i> <%= t.recent_transactions %></div>
-      <a href="/payment/history" class="wh-mini-btn"><%= t.view_all %> <i class="fas fa-chevron-right" style="font-size:9px;"></i></a>
+      <a href="/payment/history" class="wh-mini-btn"><%= t.view_all %> <i class="fas fa-chevron-right im93-2"></i></a>
     </div>
     <% if (recentTx && recentTx.length > 0) { %>
     <div class="wh-tx-list">
@@ -124,6 +124,12 @@
 </div>
 
 <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im93-1 { width: 40px; }
+  .im93-2 { font-size: 9px; }
 .wh-wrap { padding: 15px; padding-bottom: 100px; }
 .wh-topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 .wh-back { color: var(--text-main); text-decoration: none; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; }

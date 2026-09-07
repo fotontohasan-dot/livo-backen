@@ -6,7 +6,7 @@
   <div class="sh-topbar">
     <a href="/profile" class="sh-back"><i class="fas fa-arrow-left"></i></a>
     <span class="sh-title"><%= t.support_center %></span>
-    <span style="width:40px;"></span>
+    <span class="im79-1"></span>
   </div>
 
   <div class="sh-card">
@@ -43,6 +43,11 @@
 </div>
 
 <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im79-1 { width: 40px; }
 .sh-wrap { padding: 15px; padding-bottom: 100px; }
 .sh-topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 .sh-back { color: var(--text-main); text-decoration: none; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; }

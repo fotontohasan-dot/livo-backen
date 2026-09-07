@@ -1,15 +1,27 @@
 <%- include('../partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im62-1 { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .im62-2 { font-size: 44px; margin-bottom: 6px; }
+  .im62-3 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .im62-4 { margin: 0; }
+  .im62-5 { width: 100%; justify-content: center; font-weight: 700; }
+</style>
+
 <%- include('../partials/navbar') %>
 <div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto;">
   <%- include('../partials/flash') %>
 
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+  <div class="im62-1">
     <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
     <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">📤 শেয়ার করে বোনাস</h1>
   </div>
 
   <div style="background:linear-gradient(135deg,#ec4899,#db2777);border-radius:16px;padding:24px;margin-bottom:16px;text-align:center;">
-    <div style="font-size:44px;margin-bottom:6px;">📤</div>
+    <div class="im62-2">📤</div>
     <div style="color:#fff;font-size:16px;font-weight:bold;">শেয়ার করুন, বোনাস নিন</div>
     <div style="color:rgba(255,255,255,0.9);font-size:13px;margin-top:4px;">
       প্রতিদিন শেয়ার করে <strong><%= share ? share.bonus : 20 %> কয়েন</strong> পান
@@ -21,7 +33,7 @@
   <!-- শেয়ার বাটন -->
   <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;margin-bottom:16px;">
     <div style="color:var(--text-main);font-weight:bold;margin-bottom:12px;">যেখানে শেয়ার করবেন</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+    <div class="im62-3">
       <a href="https://wa.me/?text=<%= encodeURIComponent('Livo-তে খেলুন আর জিতুন! ' + shareUrl) %>" target="_blank"
          style="background:#25D366;color:#0B3B1E;text-decoration:none;text-align:center;padding:12px;border-radius:10px;font-weight:bold;font-size:13px;">
         WhatsApp
@@ -50,8 +62,8 @@
       <div style="color:var(--text-muted);font-size:12px;margin-top:4px;">আগামীকাল আবার আসুন</div>
     <% } else { %>
       <div style="color:var(--text-main);font-size:13px;margin-bottom:12px;">উপরে শেয়ার করার পর নিচের বাটনে বোনাস নিন</div>
-      <form action="/profile/share/claim" method="POST" style="margin:0;">
-        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;font-weight:700;">
+      <form class="im62-4" action="/profile/share/claim" method="POST">
+        <button type="submit" class="btn btn-primary im62-5">
           🎁 শেয়ার বোনাস নিন (<%= share ? share.bonus : 20 %> কয়েন)
         </button>
       </form>

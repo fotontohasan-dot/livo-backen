@@ -1,9 +1,19 @@
 <%- include('../partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im51-1 { padding-top: 20px; }
+  .im51-2 { font-size: 60px; margin-bottom: 20px; }
+  .im51-3 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 30px; }
+</style>
+
 <%- include('../partials/navbar') %>
 
-<div class="container page" style="padding-top: 20px;">
+<div class="container page im51-1">
     <div class="card glass" style="text-align: center; padding: 40px 20px; border-radius: 24px;">
-        <div style="font-size: 60px; margin-bottom: 20px;">✉️</div>
+        <div class="im51-2">✉️</div>
         <h2 style="color: var(--text-main); margin-bottom: 10px;"><%= t.invite_friends_title %></h2>
         <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 30px;"><%= t.invite_friends_desc %></p>
 
@@ -15,7 +25,7 @@
             <button data-copy-ref class="btn btn-primary" style="margin-top: 15px; border-radius: 20px; padding: 8px 30px;"><%= t.copy %></button>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 30px;">
+        <div class="im51-3">
             <div class="stat-card">
                 <div class="stat-value"><%= referralCount %></div>
                 <div class="stat-label"><%= t.total_referrals %></div>

@@ -1,9 +1,18 @@
 <%- include('../partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im56-1 { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .im56-2 { margin: 0; }
+</style>
+
 <%- include('../partials/navbar') %>
 <div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto;">
   <%- include('../partials/flash') %>
 
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+  <div class="im56-1">
     <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
     <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">📅 সাপ্তাহিক ও মাসিক রিওয়ার্ড</h1>
   </div>
@@ -27,7 +36,7 @@
       <% if (weekly.claimed) { %>
         <div style="text-align:center;color:#d1fae5;font-size:13px;font-weight:bold;">✅ এই সপ্তাহের ক্যাশব্যাক নেওয়া হয়েছে</div>
       <% } else if (weekly.available) { %>
-        <form action="/profile/periodic/weekly" method="POST" style="margin:0;">
+        <form class="im56-2" action="/profile/periodic/weekly" method="POST">
           <button type="submit" style="width:100%;background:#fff;color:#0284c7;border:none;border-radius:10px;padding:12px;font-weight:bold;font-size:14px;cursor:pointer;">
             🗓️ সাপ্তাহিক ক্যাশব্যাক ক্লেইম করুন
           </button>
@@ -60,7 +69,7 @@
       <% if (monthly.claimed) { %>
         <div style="text-align:center;color:#ddd6fe;font-size:13px;font-weight:bold;">✅ গত মাসের রিওয়ার্ড নেওয়া হয়েছে</div>
       <% } else if (monthly.available) { %>
-        <form action="/profile/periodic/monthly" method="POST" style="margin:0;">
+        <form class="im56-2" action="/profile/periodic/monthly" method="POST">
           <button type="submit" style="width:100%;background:#fff;color:#5b21b6;border:none;border-radius:10px;padding:12px;font-weight:bold;font-size:14px;cursor:pointer;">
             📆 মাসিক রিওয়ার্ড ক্লেইম করুন
           </button>

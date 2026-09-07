@@ -1,7 +1,7 @@
 <%- include('../partials/head') %>
 
 <div class="container" style="padding: 16px; padding-bottom: 100px;">
-  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+  <div class="im72-1">
     <a href="/profile" style="color:var(--text-main); text-decoration: none; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
       <i class="fas fa-chevron-left"></i>
     </a>
@@ -63,11 +63,11 @@
     <h3 style="color: var(--text-accent); font-size: 14px; margin: 0 0 14px; display:flex; align-items:center; gap:8px;">
       <i class="fas fa-shield-halved"></i> <%= lang === 'bn' ? 'নিরাপত্তা ওভারভিউ' : 'Security Overview' %>
     </h3>
-    <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px;">
+    <div class="im72-2">
       <% scItems.forEach(function(it) { %>
         <div data-switch-tab="<%= it.tab %>" style="cursor:pointer; background: rgba(255,255,255,0.03); border-radius: 14px; padding: 12px; border: 1px solid <%= it.ok ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.3)' %>; display:flex; gap:10px; align-items:flex-start;">
           <i class="fas <%= it.icon %>" style="font-size:16px; margin-top:2px; color: <%= it.ok ? '#10b981' : '#ef4444' %>;"></i>
-          <div style="min-width:0;">
+          <div class="im72-3">
             <div style="color:var(--text-main); font-size:12px; font-weight:700; display:flex; align-items:center; gap:6px;">
               <%= it.label %>
               <i class="fas <%= it.ok ? 'fa-circle-check' : 'fa-triangle-exclamation' %>" style="font-size:10px; color: <%= it.ok ? '#10b981' : '#ef4444' %>;"></i>
@@ -93,7 +93,7 @@
       <h3 style="color: var(--text-accent); font-size: 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
         <i class="fas fa-id-card"></i> <%= t.personal_info %>
       </h3>
-      <form action="/profile/update-personal" method="POST" style="display: flex; flex-direction: column; gap: 15px;">
+      <form class="im72-4" action="/profile/update-personal" method="POST">
         <div>
           <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.username_fixed %></label>
           <input type="text" value="<%= user.username %>" disabled style="width: 100%; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 15px; color: var(--text-muted); font-size: 14px;">
@@ -145,7 +145,7 @@
       <!-- Add Card Form -->
       <div style="border-top: 1px solid var(--border-glass); padding-top: 25px;">
         <h4 style="color:var(--text-main); font-size: 14px; margin-bottom: 15px;"><%= t.add_new_card %></h4>
-        <form action="/profile/add-bank-card" method="POST" style="display: flex; flex-direction: column; gap: 12px;">
+        <form class="im72-5" action="/profile/add-bank-card" method="POST">
           <select name="bank_name" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 14px; outline: none;">
             <option value="" style="background: #121212;"><%= t.select_payment_method %></option>
             <option value="bKash" style="background: #121212;">bKash</option>
@@ -172,7 +172,7 @@
       <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 18px;"><%= lang === 'bn' ? 'অ্যাকাউন্ট রিকভারি ও গুরুত্বপূর্ণ নোটিফিকেশনের জন্য ইমেইল ভেরিফাই করুন' : 'Verify your email for account recovery and important notifications' %></p>
 
       <div style="display:flex; justify-content:space-between; align-items:center; background: rgba(255,255,255,0.03); border-radius: 12px; padding: 15px; gap: 12px;">
-        <div style="min-width:0;">
+        <div class="im72-3">
           <div style="color:var(--text-muted); font-size:12px; margin-bottom:4px;"><%= user.email || (lang === 'bn' ? 'কোনো ইমেইল যুক্ত নেই' : 'No email on account') %></div>
           <% if (!emailStatus || !emailStatus.hasEmail) { %>
             <div style="font-weight:700; font-size: 14px; color: var(--text-muted);"><i class="fas fa-circle-minus"></i> <%= lang === 'bn' ? 'প্রযোজ্য নয়' : 'Not applicable' %></div>
@@ -194,7 +194,7 @@
       <h3 style="color: var(--text-accent); font-size: 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
         <i class="fas fa-lock"></i> <%= t.change_password_title %>
       </h3>
-      <form action="/profile/change-password" method="POST" style="display: flex; flex-direction: column; gap: 15px;">
+      <form class="im72-4" action="/profile/change-password" method="POST">
         <div>
           <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.current_password %></label>
           <input type="password" name="currentPassword" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 14px; outline: none;">
@@ -241,7 +241,7 @@
       </div>
 
       <!-- Action Buttons -->
-      <div style="display:flex; gap:10px; margin-bottom: 20px; flex-wrap:wrap;">
+      <div class="im72-6">
         <% if (!(pinStatus && pinStatus.configured)) { %>
           <button type="button" data-pin-form="create" id="pinToggleBtn-create" class="btn btn-primary" style="flex:1; min-width:130px; border-radius:12px; padding:12px; font-weight:800;"><%= t.create_pin_btn %></button>
         <% } else { %>
@@ -262,7 +262,7 @@
           <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.confirm_new_pin %></label>
           <input type="password" name="confirmPin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 16px; outline: none; letter-spacing:6px; text-align:center;">
         </div>
-        <div style="display:flex; gap:10px;">
+        <div class="im72-7">
           <button type="submit" class="btn btn-primary pin-submit-btn" style="flex:1; border-radius: 12px; padding: 14px; font-weight: 800;"><%= t.create_pin_btn %></button>
           <button type="button" data-pin-cancel style="flex:0 0 auto; padding: 14px 18px; border-radius: 12px; font-weight: 700; background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid var(--border-glass); cursor:pointer;"><%= t.cancel_btn %></button>
         </div>
@@ -282,7 +282,7 @@
           <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.confirm_new_pin %></label>
           <input type="password" name="confirmNewPin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 16px; outline: none; letter-spacing:6px; text-align:center;">
         </div>
-        <div style="display:flex; gap:10px;">
+        <div class="im72-7">
           <button type="submit" class="btn btn-primary pin-submit-btn" style="flex:1; border-radius: 12px; padding: 14px; font-weight: 800;"><%= t.change_pin_btn %></button>
           <button type="button" data-pin-cancel style="flex:0 0 auto; padding: 14px 18px; border-radius: 12px; font-weight: 700; background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid var(--border-glass); cursor:pointer;"><%= t.cancel_btn %></button>
         </div>
@@ -302,7 +302,7 @@
           <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.confirm_new_pin %></label>
           <input type="password" name="confirmNewPin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" required autocomplete="off" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color:var(--text-main); font-size: 16px; outline: none; letter-spacing:6px; text-align:center;">
         </div>
-        <div style="display:flex; gap:10px;">
+        <div class="im72-7">
           <button type="submit" class="btn btn-primary pin-submit-btn" style="flex:1; border-radius: 12px; padding: 14px; font-weight: 800; background: var(--grad-gold); color:#000;"><%= t.reset_pin_btn %></button>
           <button type="button" data-pin-cancel style="flex:0 0 auto; padding: 14px 18px; border-radius: 12px; font-weight: 700; background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid var(--border-glass); cursor:pointer;"><%= t.cancel_btn %></button>
         </div>
@@ -321,9 +321,9 @@
       <% if (activeSessions && activeSessions.length) { %>
         <% activeSessions.forEach(function(d) { %>
           <div style="background: rgba(255,255,255,0.03); border-radius: 14px; padding: 15px; margin-bottom: 12px; border: 1px solid <%= d.is_current ? 'rgba(16,185,129,0.3)' : 'var(--border-glass)' %>;">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
-              <div style="flex:1; min-width:0;">
-                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <div class="im72-8">
+              <div class="im72-9">
+                <div class="im72-10">
                   <span style="color:var(--text-main); font-size:14px; font-weight:700;"><i class="fas <%= d.device_type === 'Mobile' ? 'fa-mobile-screen' : (d.device_type === 'Tablet' ? 'fa-tablet-screen-button' : 'fa-desktop') %>"></i> <%= d.device_name %></span>
                   <% if (d.is_current) { %><span style="background:rgba(16,185,129,0.15); color:#10b981; font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px;"><%= t.current_device_badge %></span><% } %>
                   <% if (d.is_new_device) { %><span style="background:rgba(245,158,11,0.15); color: var(--text-accent); font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px;"><%= t.new_device_badge %></span><% } %>
@@ -351,7 +351,7 @@
     </div>
 
     <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+      <div class="im72-11">
         <h3 style="color: var(--text-accent); font-size: 16px; display: flex; align-items: center; gap: 10px; margin:0;">
           <i class="fas fa-clock-rotate-left"></i> <%= t.recent_login_activity %>
         </h3>
@@ -399,6 +399,21 @@
 
 
 <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im72-1 { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .im72-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .im72-3 { min-width: 0; }
+  .im72-4 { display: flex; flex-direction: column; gap: 15px; }
+  .im72-5 { display: flex; flex-direction: column; gap: 12px; }
+  .im72-6 { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+  .im72-7 { display: flex; gap: 10px; }
+  .im72-8 { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .im72-9 { flex: 1; min-width: 0; }
+  .im72-10 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .im72-11 { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
 .sec-tab {
   background: transparent;
   color: var(--text-muted);

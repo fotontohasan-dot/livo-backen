@@ -1,7 +1,20 @@
 <%- include('../partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im96-1 { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .im96-2 { margin-bottom: 16px; }
+  .im96-3 { display: flex; gap: 8px; align-items: center; }
+  .im96-4 { display: flex; flex-direction: column; gap: 10px; }
+  .im96-5 { display: flex; justify-content: space-between; align-items: center; }
+  .im96-6 { text-align: right; }
+</style>
+
 
 <div class="container" style="padding: 15px; padding-bottom: 100px;">
-  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+  <div class="im96-1">
     <a href="/profile" style="color:var(--text-main); text-decoration: none; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
       <i class="fas fa-chevron-left"></i>
     </a>
@@ -13,7 +26,7 @@
   <%- include('../partials/flash') %>
 
   <!-- কুইক ডেট ফিল্টার -->
-  <form method="GET" action="/payment/history" style="margin-bottom: 16px;">
+  <form class="im96-2" method="GET" action="/payment/history">
     <% if (filter.type) { %><input type="hidden" name="type" value="<%= filter.type %>"><% } %>
     <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 10px;">
       <button type="submit" name="quick" value="today" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.quick === 'today' ? 'var(--grad-gold)' : 'var(--bg-card)' %>; color: <%= filter.quick === 'today' ? '#000' : 'var(--text-main)' %>;">আজ</button>
@@ -21,7 +34,7 @@
       <button type="submit" name="quick" value="7days" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.quick === '7days' ? 'var(--grad-gold)' : 'var(--bg-card)' %>; color: <%= filter.quick === '7days' ? '#000' : 'var(--text-main)' %>;">গত ৭ দিন</button>
       <a href="/payment/history<%= filter.type ? '?type=' + filter.type : '' %>" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: var(--bg-card); color: var(--text-main); text-decoration:none;">সব</a>
     </div>
-    <div style="display: flex; gap: 8px; align-items: center;">
+    <div class="im96-3">
       <input type="date" name="from" value="<%= filter.from %>" style="flex:1; background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 10px; padding: 8px 10px; color: var(--text-main); font-size: 12px;">
       <span style="color: var(--text-muted); font-size: 12px;">থেকে</span>
       <input type="date" name="to" value="<%= filter.to %>" style="flex:1; background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 10px; padding: 8px 10px; color: var(--text-main); font-size: 12px;">
@@ -39,14 +52,14 @@
   <% } %>
 
   <!-- রেকর্ড লিস্ট -->
-  <div style="display: flex; flex-direction: column; gap: 10px;">
+  <div class="im96-4">
     <% if (requests && requests.length) { %>
       <% requests.forEach(function (tx) { %>
         <% var statusColor = tx.status === 'approved' ? '#10b981' : tx.status === 'rejected' ? '#ef4444' : '#f59e0b'; %>
         <% var statusText = tx.status === 'approved' ? 'সফল' : tx.status === 'rejected' ? 'বাতিল' : 'পেন্ডিং'; %>
         <% if (tx.status === 'cancelled') { statusColor = '#ef4444'; statusText = 'বাতিলকৃত'; } %>
         <div style="background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 14px; padding: 14px 16px;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div class="im96-5">
             <div>
               <div style="color:var(--text-main); font-size: 14px; font-weight: 700;">
                 <%= tx.type === 'deposit' ? '⬇️ ডিপোজিট' : '⬆️ উইথড্র' %>
@@ -55,7 +68,7 @@
               <div style="color: var(--text-muted); font-size: 11px; margin-top: 3px;"><%= tx.method || '-' %> · <%= new Date(tx.created_at).toLocaleString('bn-BD') %></div>
               <% if (tx.transaction_id) { %><div style="color: var(--text-muted); font-size: 11px; margin-top: 2px;">TrxID: <%= tx.transaction_id %></div><% } %>
             </div>
-            <div style="text-align: right;">
+            <div class="im96-6">
               <div style="color: var(--text-accent); font-size: 15px; font-weight: 800;">৳<%= Number(tx.amount).toLocaleString('bn-BD') %></div>
               <div style="color: <%= statusColor %>; font-size: 11px; font-weight: 700; margin-top: 3px;"><%= statusText %></div>
             </div>

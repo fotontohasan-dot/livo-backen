@@ -1,9 +1,21 @@
 <%- include('../partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im66-1 { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .im66-2 { font-size: 44px; margin-bottom: 4px; }
+  .im66-3 { display: flex; justify-content: space-between; margin-bottom: 8px; }
+  .im66-4 { position: relative; margin: 14px 0 6px; }
+  .im66-5 { text-align: right; }
+</style>
+
 <%- include('../partials/navbar') %>
 <div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto;">
   <%- include('../partials/flash') %>
 
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+  <div class="im66-1">
     <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
     <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;"><%= t.vip_program %></h1>
   </div>
@@ -11,7 +23,7 @@
   <% if (vip) { %>
     <!-- বর্তমান <%= t.level_paren %> কার্ড -->
     <div style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:16px;padding:24px;margin-bottom:16px;text-align:center;">
-      <div style="font-size:44px;margin-bottom:4px;">👑</div>
+      <div class="im66-2">👑</div>
       <div style="color:var(--text-main);font-size:22px;font-weight:900;"><%= vip.current.name %></div>
       <div style="color:rgba(255,255,255,0.9);font-size:13px;margin-top:2px;"><%= t.vip_level %> <%= vip.level %></div>
     </div>
@@ -20,13 +32,13 @@
     <div id="vipProgressBox" style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;margin-bottom:16px;"
          data-progress="<%= vip.progress %>" data-total-turnover="<%= vip.totalTurnover %>" data-to-next="<%= vip.toNext %>"
          data-next-name="<%= vip.next ? vip.next.name : '' %>" data-is-max="<%= vip.next ? '0' : '1' %>">
-      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+      <div class="im66-3">
         <span style="color:var(--text-muted);font-size:13px;"><%= t.total_turnover %></span>
         <span id="vipTurnoverText" style="color:#f59e0b;font-size:14px;font-weight:bold;"><%= Number(vip.totalTurnover).toLocaleString('bn-BD') %></span>
       </div>
 
       <!-- বার + ভাসমান সংখ্যা -->
-      <div style="position:relative;margin:14px 0 6px;">
+      <div class="im66-4">
         <div style="background:rgba(255,255,255,0.1);border-radius:20px;height:14px;overflow:visible;">
           <div id="vipProgressFill" style="width:0%;height:100%;border-radius:20px;background:linear-gradient(90deg,#f59e0b,#fbbf24);transition:width 1s ease;"></div>
         </div>
@@ -68,7 +80,7 @@
               <%= t.turnover_label %> <%= Number(l.min_turnover).toLocaleString('bn-BD') %>
             </div>
           </div>
-          <div style="text-align:right;">
+          <div class="im66-5">
             <% if (l.upgrade_bonus > 0) { %>
               <div style="color:#10b981;font-size:12px;font-weight:bold;">+<%= l.upgrade_bonus %></div>
               <div style="color:var(--text-muted);font-size:10px;"><%= t.upgrade_bonus %></div>

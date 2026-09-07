@@ -1,8 +1,17 @@
 <%- include('partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im90-1 { justify-content: center; font-size: 1.2rem; }
+  .im90-2 { text-align: center; letter-spacing: 6px; font-size: 1.2rem; }
+</style>
+
 <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg-dark);">
   <div style="width:100%;max-width:400px;padding:1rem;">
     <div class="card glass">
-      <div class="card-header" style="justify-content:center;font-size:1.2rem;">🔐 অতিরিক্ত ভেরিফিকেশন প্রয়োজন</div>
+      <div class="card-header im90-1">🔐 অতিরিক্ত ভেরিফিকেশন প্রয়োজন</div>
       <div class="card-body">
         <p style="color:var(--text-muted);font-size:.88rem;margin-bottom:16px;text-align:center;">
           নিরাপত্তার কারণে (VPN/Proxy/Tor শনাক্ত হয়েছে) আপনার ইমেইলে পাঠানো ৬ ডিজিটের কোডটি দিন।
@@ -11,7 +20,7 @@
         <form action="/verify-access" method="POST">
           <div class="form-group">
             <label class="form-label">ভেরিফিকেশন কোড</label>
-            <input type="text" name="code" class="form-input" placeholder="যেমন: 123456" inputmode="numeric" maxlength="6" autofocus required style="text-align:center;letter-spacing:6px;font-size:1.2rem;">
+            <input type="text" name="code" class="form-input im90-2" placeholder="যেমন: 123456" inputmode="numeric" maxlength="6" autofocus required>
           </div>
           <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;">নিশ্চিত করুন ✅</button>
         </form>

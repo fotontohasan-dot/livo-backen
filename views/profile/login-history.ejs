@@ -1,7 +1,18 @@
 <%- include('../partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im78-1 { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .im78-2 { display: flex; flex-direction: column; gap: 10px; }
+  .im78-3 { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .im78-4 { display: flex; justify-content: space-between; gap: 10px; margin-top: 18px; }
+</style>
+
 
 <div class="container" style="padding: 15px; padding-bottom: 100px;">
-  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+  <div class="im78-1">
     <a href="/profile/security" style="color:var(--text-main); text-decoration: none; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
       <i class="fas fa-chevron-left"></i>
     </a>
@@ -10,11 +21,11 @@
 
   <%- include('../partials/flash') %>
 
-  <div style="display: flex; flex-direction: column; gap: 10px;">
+  <div class="im78-2">
     <% if (logins && logins.length) { %>
       <% logins.forEach(function(l) { %>
         <div style="background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 14px; padding: 14px 16px;">
-          <div style="display: flex; justify-content: space-between; align-items:flex-start; gap:10px;">
+          <div class="im78-3">
             <div>
               <div style="color:var(--text-main); font-size: 13px; font-weight: 700;">
                 <i class="fas <%= l.deviceType === 'Mobile' ? 'fa-mobile-screen' : (l.deviceType === 'Tablet' ? 'fa-tablet-screen-button' : 'fa-desktop') %>"></i>
@@ -37,7 +48,7 @@
   </div>
 
   <% if ((page && page > 1) || hasMore) { %>
-    <div style="display:flex; justify-content:space-between; gap:10px; margin-top: 18px;">
+    <div class="im78-4">
       <% if (page > 1) { %>
         <a href="/profile/login-history?page=<%= page - 1 %>" style="flex:1; text-align:center; background: var(--bg-card); border:1px solid var(--border-glass); color:var(--text-main); padding:12px; border-radius:12px; font-size:12px; font-weight:700; text-decoration:none;"><%= t.back_to_page_prev %></a>
       <% } %>

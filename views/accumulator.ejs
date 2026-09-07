@@ -1,9 +1,24 @@
 <%- include('partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im47-1 { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .im47-2 { margin-bottom: 8px; }
+  .im47-3 { display: flex; flex-wrap: wrap; gap: 6px; }
+  .im47-4 { margin-top: 24px; }
+  .im47-5 { display: flex; justify-content: space-between; margin-bottom: 6px; }
+  .im47-6 { margin-top: 8px; }
+  .im47-7 { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .im47-8 { display: flex; gap: 8px; align-items: center; }
+</style>
+
 <%- include('partials/navbar') %>
 <div class="container" style="padding:16px;padding-bottom:120px;max-width:600px;margin:0 auto;">
   <%- include('partials/flash') %>
 
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+  <div class="im47-1">
     <a href="/matches" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
     <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">🎯 <%= t.accumulator_bet %></h1>
   </div>
@@ -25,9 +40,9 @@
         <% m.markets.forEach(mk => {
           const runners = mk.odds && typeof mk.odds === 'object' ? Object.keys(mk.odds) : [];
         %>
-          <div style="margin-bottom:8px;">
+          <div class="im47-2">
             <div style="color:var(--text-muted);font-size:12px;margin-bottom:5px;"><%= mk.market_name %></div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;">
+            <div class="im47-3">
               <% runners.forEach(rn => {
                 const odd = mk.odds[rn];
               %>
@@ -54,21 +69,21 @@
 
   <!-- আমার অ্যাকুমুলেটর হিস -->
   <% if (myAccas && myAccas.length > 0) { %>
-    <div style="margin-top:24px;">
+    <div class="im47-4">
       <div style="color:var(--text-main);font-weight:bold;margin-bottom:10px;">📜 <%= t.my_accumulators %></div>
       <% myAccas.forEach(a => {
         const color = a.status === 'won' ? '#10b981' : a.status === 'lost' ? '#ef4444' : '#f59e0b';
         const label = a.status === 'won' ? t.won : a.status === 'lost' ? t.lost : t.running;
       %>
         <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:14px;margin-bottom:10px;">
-          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+          <div class="im47-5">
             <span style="color:var(--text-main);font-size:13px;font-weight:600;"><%= a.selection_count %> <%= t.selections_label %> <%= a.boost_percent > 0 ? '(+' + a.boost_percent + '% ' + t.boost_label + ')' : '' %></span>
             <span style="color:<%= color %>;font-size:12px;font-weight:bold;"><%= label %></span>
           </div>
           <div style="color:var(--text-muted);font-size:11px;">
             <%= t.stake_label %>: <%= a.stake %> · <%= t.total_odds_label %>: <%= a.total_odd %> · <%= t.potential_win_label %>: <span style="color:#f59e0b;"><%= a.potential_win %></span>
           </div>
-          <div style="margin-top:8px;">
+          <div class="im47-6">
             <% a.selections.forEach(s => {
               const sc = s.status === 'won' ? '#10b981' : s.status === 'lost' ? '#ef4444' : '#94a3b8';
             %>
@@ -84,12 +99,12 @@
 
 <!-- বট স্লিপ (নিচে ভাসমান) -->
 <div id="betSlip" style="position:fixed;bottom:60px;left:0;right:0;background:#111;border-top:2px solid #f59e0b;padding:14px 16px;display:none;z-index:100;max-width:600px;margin:0 auto;">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+  <div class="im47-7">
     <span style="color:var(--text-main);font-weight:bold;font-size:14px;"><%= t.bet_slip %> (<span id="slipCount">0</span>)</span>
     <button data-acca-action="clear" style="background:none;border:none;color:#ef4444;font-size:12px;cursor:pointer;"><%= t.clear_all %></button>
   </div>
   <div id="slipItems" style="max-height:120px;overflow-y:auto;margin-bottom:8px;"></div>
-  <div style="display:flex;gap:8px;align-items:center;">
+  <div class="im47-8">
     <input type="number" id="slipStake" placeholder="<%= t.stake_placeholder_short %>" min="10" style="flex:1;background:#1e1e1e;border:1px solid #333;color:#fff;padding:10px;border-radius:8px;">
     <button data-acca-action="place" style="background:#f59e0b;color:#000;border:none;border-radius:8px;padding:10px 16px;font-weight:bold;font-size:13px;cursor:pointer;"><%= t.place_bet %></button>
   </div>

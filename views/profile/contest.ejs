@@ -1,9 +1,20 @@
 <%- include('../partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im60-1 { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .im60-2 { font-size: 40px; margin-bottom: 6px; }
+  .im60-3 { display: flex; align-items: center; gap: 10px; }
+  .im60-4 { margin-top: 24px; }
+</style>
+
 <%- include('../partials/navbar') %>
 <div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto;">
   <%- include('../partials/flash') %>
 
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+  <div class="im60-1">
     <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
     <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">🏆 রেফারেল কনটেস্</h1>
   </div>
@@ -11,7 +22,7 @@
   <% if (contest) { %>
     <!-- ব্যানার -->
     <div style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center;">
-      <div style="font-size:40px;margin-bottom:6px;">🏆</div>
+      <div class="im60-2">🏆</div>
       <div style="color:var(--text-main);font-size:16px;font-weight:bold;">মাসিক রেফারেল কনটেস্ট</div>
       <div style="color:rgba(255,255,255,0.9);font-size:13px;margin-top:2px;"><%= contest.monthName %></div>
       <div style="color:rgba(255,255,255,0.9);font-size:12px;margin-top:6px;">সবচেয়ে বেশি রেফার করুন, বড় প্রাইজ জিতুন!</div>
@@ -39,7 +50,7 @@
           const medal = l.rank === 1 ? '🥇' : l.rank === 2 ? '🥈' : l.rank === 3 ? '🥉' : l.rank + '.';
         %>
           <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;margin-bottom:6px;border-radius:10px;background:<%= l.isMe ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.03)' %>;border:1px solid <%= l.isMe ? '#f59e0b' : 'transparent' %>;">
-            <div style="display:flex;align-items:center;gap:10px;">
+            <div class="im60-3">
               <span style="color:var(--text-muted);font-size:14px;font-weight:bold;min-width:24px;"><%= medal %></span>
               <span style="color:var(--text-main);font-size:13px;"><%= l.username %><%= l.isMe ? ' (আপনি)' : '' %></span>
             </div>
@@ -69,7 +80,7 @@
 
     <!-- পাস্ট কনটেস্ট রেজাল্ট -->
     <% if (pastContests && pastContests.length > 0) { %>
-      <div style="margin-top:24px;">
+      <div class="im60-4">
         <div style="color:var(--text-main);font-weight:bold;font-size:15px;margin-bottom:12px;">📜 আগের মাসের ফলাফল</div>
         <% pastContests.forEach(pc => { %>
           <div style="background:rgba(255,255,255,0.05);border-radius:14px;padding:16px;margin-bottom:12px;">

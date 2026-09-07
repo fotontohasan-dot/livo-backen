@@ -1,18 +1,30 @@
 <%- include('../partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im68-1 { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .im68-2 { margin-bottom: 16px; }
+  .im68-3 { display: flex; gap: 8px; align-items: center; }
+  .im68-4 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+  .im68-5 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+</style>
+
 <div class="container" style="padding:16px;padding-bottom:100px">
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+  <div class="im68-1">
     <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px">←</a>
     <h1 style="color:var(--text-main);font-size:18px;font-weight:bold">💰 প্রফিট এন্ড লস</h1>
   </div>
 
-  <form method="GET" action="/profile/stats" style="margin-bottom: 16px;">
+  <form class="im68-2" method="GET" action="/profile/stats">
     <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 10px;">
       <button type="submit" name="quick" value="today" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); background: <%= filter.quick === 'today' ? 'linear-gradient(90deg,#f59e0b,#fbbf24)' : 'rgba(255,255,255,0.05)' %>; color: <%= filter.quick === 'today' ? '#000' : 'var(--text-main)' %>;">আজ</button>
       <button type="submit" name="quick" value="yesterday" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); background: <%= filter.quick === 'yesterday' ? 'linear-gradient(90deg,#f59e0b,#fbbf24)' : 'rgba(255,255,255,0.05)' %>; color: <%= filter.quick === 'yesterday' ? '#000' : 'var(--text-main)' %>;">গতকাল</button>
       <button type="submit" name="quick" value="7days" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); background: <%= filter.quick === '7days' ? 'linear-gradient(90deg,#f59e0b,#fbbf24)' : 'rgba(255,255,255,0.05)' %>; color: <%= filter.quick === '7days' ? '#000' : 'var(--text-main)' %>;">গত ৭ দিন</button>
       <a href="/profile/stats" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color:var(--text-main); text-decoration:none;">সব</a>
     </div>
-    <div style="display: flex; gap: 8px; align-items: center;">
+    <div class="im68-3">
       <input type="date" name="from" value="<%= filter.from %>" style="flex:1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px 10px; color:var(--text-main); font-size: 12px;">
       <span style="color:var(--text-muted); font-size: 12px;">থেকে</span>
       <input type="date" name="to" value="<%= filter.to %>" style="flex:1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px 10px; color:var(--text-main); font-size: 12px;">
@@ -20,7 +32,7 @@
     </div>
   </form>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+  <div class="im68-4">
     <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;text-align:center;border:1px solid rgba(255,255,255,0.1)">
       <div style="color:var(--text-muted);font-size:12px;margin-bottom:8px">মোট বেট</div>
       <div style="color:#f59e0b;font-size:28px;font-weight:bold"><%= stats.total %></div>
@@ -36,7 +48,7 @@
     <div style="color:var(--text-main);font-size:32px;font-weight:bold"><%= stats.net_profit >= 0 ? '+' : '' %>৳<%= stats.net_profit.toLocaleString('bn-BD') %></div>
   </div>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">
+  <div class="im68-5">
     <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:16px;border:1px solid rgba(255,255,255,0.1)">
       <div style="color:var(--text-muted);font-size:11px;margin-bottom:6px">মোট স্টেক</div>
       <div style="color:var(--text-main);font-size:18px;font-weight:bold">৳<%= stats.total_staked.toLocaleString('bn-BD') %></div>

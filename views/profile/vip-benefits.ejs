@@ -1,15 +1,24 @@
 <%- include('../partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im71-1 { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .im71-2 { font-size: 44px; margin-bottom: 4px; }
+</style>
+
 <%- include('../partials/navbar') %>
 <div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto;">
   <%- include('../partials/flash') %>
 
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+  <div class="im71-1">
     <a href="/profile/vip" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
     <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;"><%= benefits.icon %> <%= benefits.name %> বেনিফিটস</h1>
   </div>
 
   <div style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:16px;padding:24px;margin-bottom:16px;text-align:center;">
-    <div style="font-size:44px;margin-bottom:4px;"><%= benefits.icon %></div>
+    <div class="im71-2"><%= benefits.icon %></div>
     <div style="color:#fff;font-size:22px;font-weight:900;"><%= benefits.name %></div>
     <div style="color:rgba(255,255,255,0.9);font-size:13px;margin-top:2px;">VIP লেভেল <%= benefits.level %></div>
     <% if (vip && vip.level === benefits.level) { %>

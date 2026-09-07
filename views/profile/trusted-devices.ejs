@@ -1,7 +1,21 @@
 <%- include('../partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im63-1 { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .im63-2 { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+  .im63-3 { flex: 1; min-width: 0; }
+  .im63-4 { width: 14px; }
+  .im63-5 { grid-column: 1 / -1; }
+  .im63-6 { display: flex; gap: 8px; flex-wrap: wrap; }
+  .im63-7 { font-size: 32px; display: block; margin-bottom: 10px; opacity: 0.4; }
+</style>
+
 
 <div class="container" style="padding: 16px; padding-bottom: 100px;">
-  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+  <div class="im63-1">
     <a href="/profile/security" style="color:var(--text-main); text-decoration: none; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
       <i class="fas fa-chevron-left"></i>
     </a>
@@ -29,8 +43,8 @@
     <% devices.forEach(function(d) { %>
       <div class="trusted-device-card" style="background: var(--bg-card); border-radius: 18px; padding: 18px; margin-bottom: 14px; border: 1px solid <%= d.is_trusted ? 'rgba(16,185,129,0.35)' : 'var(--border-glass)' %>;">
 
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom: 10px;">
-          <div style="flex:1; min-width:0;">
+        <div class="im63-2">
+          <div class="im63-3">
             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;" id="dev-name-<%= d.id %>">
               <i class="fas <%= d.device_type === 'Mobile' ? 'fa-mobile-screen' : (d.device_type === 'Tablet' ? 'fa-tablet-screen-button' : 'fa-desktop') %>" style="color: var(--text-accent);"></i>
               <span style="color:var(--text-main); font-size:15px; font-weight:800;"><%= d.display_name %></span>
@@ -44,16 +58,16 @@
         </div>
 
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; font-size:11.5px; color:var(--text-muted); margin-bottom:14px;">
-          <div><i class="fas fa-globe" style="width:14px;"></i> <%= t.device_browser_os %>: <span style="color:var(--text-main);"><%= d.browser || '-' %> / <%= d.os || '-' %></span></div>
-          <div><i class="fas fa-location-dot" style="width:14px;"></i> <%= t.device_ip_location %>: <span style="color:var(--text-main);"><%= d.ip || '-' %><%= d.location ? ' • ' + d.location : '' %></span></div>
-          <div><i class="fas fa-right-to-bracket" style="width:14px;"></i> <%= t.device_logged_in_since %>: <span style="color:var(--text-main);"><%= new Date(d.created_at).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span></div>
-          <div><i class="fas fa-clock" style="width:14px;"></i> <%= t.device_last_active %>: <span style="color:var(--text-main);"><%= new Date(d.last_activity).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span></div>
+          <div><i class="fas fa-globe im63-4"></i> <%= t.device_browser_os %>: <span style="color:var(--text-main);"><%= d.browser || '-' %> / <%= d.os || '-' %></span></div>
+          <div><i class="fas fa-location-dot im63-4"></i> <%= t.device_ip_location %>: <span style="color:var(--text-main);"><%= d.ip || '-' %><%= d.location ? ' • ' + d.location : '' %></span></div>
+          <div><i class="fas fa-right-to-bracket im63-4"></i> <%= t.device_logged_in_since %>: <span style="color:var(--text-main);"><%= new Date(d.created_at).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span></div>
+          <div><i class="fas fa-clock im63-4"></i> <%= t.device_last_active %>: <span style="color:var(--text-main);"><%= new Date(d.last_activity).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span></div>
           <% if (d.is_trusted && d.trusted_at) { %>
-            <div style="grid-column: 1 / -1;"><i class="fas fa-shield-check" style="width:14px; color:#10b981;"></i> <%= t.trusted_since %>: <span style="color:#10b981;"><%= new Date(d.trusted_at).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span></div>
+            <div class="im63-5"><i class="fas fa-shield-check" style="width:14px; color:#10b981;"></i> <%= t.trusted_since %>: <span style="color:#10b981;"><%= new Date(d.trusted_at).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span></div>
           <% } %>
         </div>
 
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <div class="im63-6">
           <button type="button" data-rename-device="<%= d.id %>" data-rename-name="<%= d.display_name || '' %>"
             style="background: rgba(255,255,255,0.06); border:none; color:var(--text-main); padding:8px 12px; border-radius:10px; font-size:11px; font-weight:700; cursor:pointer;">
             <i class="fas fa-pen"></i> <%= t.rename_device %>
@@ -85,7 +99,7 @@
     <% }) %>
   <% } else { %>
     <div style="text-align:center; padding: 40px 0; color: var(--text-muted); font-size: 13px;">
-      <i class="fas fa-mobile-screen" style="font-size:32px; display:block; margin-bottom:10px; opacity:0.4;"></i>
+      <i class="fas fa-mobile-screen im63-7"></i>
       <%= t.no_trusted_devices %>
     </div>
   <% } %>

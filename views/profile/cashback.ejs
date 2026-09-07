@@ -1,16 +1,26 @@
 <%- include('../partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im57-1 { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .im57-2 { font-size: 40px; margin-bottom: 8px; }
+  .im57-3 { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+</style>
+
 <%- include('../partials/navbar') %>
 <div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto;">
   <%- include('../partials/flash') %>
 
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+  <div class="im57-1">
     <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
     <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">💸 ক্যাশব্যাক</h1>
   </div>
 
   <!-- ব্যানার -->
   <div style="background:linear-gradient(135deg,#8b5cf6,#6366f1);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center;">
-    <div style="font-size:40px;margin-bottom:8px;">💸</div>
+    <div class="im57-2">💸</div>
     <div style="color:var(--text-main);font-size:16px;font-weight:bold;margin-bottom:4px;">দৈনিক ক্যাশব্যাক</div>
     <div style="color:rgba(255,255,255,0.9);font-size:13px;">
       প্রতিদিন আপনার নিট লোকসানের ৫% পরদিন ফেরত পান
@@ -22,7 +32,7 @@
 
     <% ['sports','casino','live'].forEach(function(cat) { var c = cashback.byCategory[cat]; %>
     <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:16px;margin-bottom:12px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <div class="im57-3">
         <span style="color:var(--text-main);font-size:14px;font-weight:bold;"><%= c.label %></span>
         <% if (c.claimed) { %>
           <span style="color:#10b981;font-size:12px;">✅ নেওয়া হয়েছে</span>

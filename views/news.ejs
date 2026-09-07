@@ -1,9 +1,21 @@
 <%- include('partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im49-1 { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
+  .im49-2 { font-size: 1.8rem; font-weight: 800; }
+  .im49-3 { display: flex; gap: .75rem; flex-wrap: wrap; }
+  .im49-4 { display: flex; align-items: center; justify-content: center; font-size: 3rem; }
+  .im49-5 { margin-top: .5rem; display: flex; gap: .75rem; }
+</style>
+
 <%- include('partials/navbar') %>
 <div class="container page">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
-    <h1 style="font-size:1.8rem;font-weight:800;">📰 <%= t.sports_news %></h1>
-    <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+  <div class="im49-1">
+    <h1 class="im49-2">📰 <%= t.sports_news %></h1>
+    <div class="im49-3">
       <% ['','football','cricket','basketball','tennis'].forEach(s => { %>
         <a href="/news?sport=<%= s %>" class="btn btn-sm <%= (locals.sport||'')===s?'btn-primary':'btn-outline' %>">
           <%= s ? t[s] || s : t.all %>
@@ -20,11 +32,11 @@
         <% if(n.image) { %>
           <img src="<%= n.image %>" class="news-img" alt="" loading="lazy">
         <% } else { %>
-          <div class="news-img" style="display:flex;align-items:center;justify-content:center;font-size:3rem;">📰</div>
+          <div class="news-img im49-4">📰</div>
         <% } %>
         <div class="news-body">
           <div class="news-title"><%= n.title %></div>
-          <div class="news-meta" style="margin-top:.5rem;display:flex;gap:.75rem;">
+          <div class="news-meta im49-5">
             <span><%= t.author_label %>: <%= n.author %></span>
             <span><%= t.views_label %>: <%= n.views %></span>
             <span><%= new Date(n.created_at).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US') %></span>

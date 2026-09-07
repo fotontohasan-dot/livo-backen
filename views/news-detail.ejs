@@ -1,4 +1,13 @@
 <%- include('partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im104-1 { font-size: 1.6rem; font-weight: 800; margin-bottom: .75rem; }
+  .im104-2 { font-size: .85rem; font-weight: 600; }
+</style>
+
 <%- include('partials/navbar') %>
 <div class="container page">
   <div class="layout-main">
@@ -8,7 +17,7 @@
           <img src="<%= article.image %>" style="width:100%;max-height:400px;object-fit:cover;" alt="">
         <% } %>
         <div class="card-body">
-          <h1 style="font-size:1.6rem;font-weight:800;margin-bottom:.75rem"><%= article.title %></h1>
+          <h1 class="im104-1"><%= article.title %></h1>
           <div style="display:flex;gap:1rem;font-size:.8rem;color:var(--muted);margin-bottom:1.5rem;">
             <span>📝 <%= article.author %></span>
             <span>👁️ <%= article.views %> views</span>
@@ -30,7 +39,7 @@
           <% } %>
           <% related.forEach(r => { %>
             <a href="/news/<%= r.id %>" style="display:block;padding:.75rem 1rem;border-bottom:1px solid var(--border);text-decoration:none;color:var(--text);">
-              <div style="font-size:.85rem;font-weight:600"><%= r.title %></div>
+              <div class="im104-2"><%= r.title %></div>
               <div style="font-size:.75rem;color:var(--muted);margin-top:3px">
                 <%= new Date(r.created_at).toLocaleDateString() %>
               </div>
