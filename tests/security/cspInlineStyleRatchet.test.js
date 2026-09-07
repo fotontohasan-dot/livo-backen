@@ -53,7 +53,13 @@ const path = require('path');
 //
 // সীমা নামানোর ইতিহাস (প্রতিটা মাইগ্রেশনের পরে এখানে লাইন যোগ করুন):
 // 1832/106 (053f9c2) → শুরুর বেসলাইন
-const MAX_INLINE_STYLES = 1832;
+// 1617 (7ab19c2) → ৪৫টা view-এ !important-নিরাপদ ঘোষণা ক্লাসে সরানো
+// 1503 (71f29b9) → selector-ভিত্তিক নিরাপত্তা যাচাই
+// 184  (a63192f) → tools/cascade-check.js দিয়ে cascade-সমতা প্রমাণ করে
+// 155  (f3f932d) → partial-এও নিজস্ব nonce style ব্লক; checker index bug ফিক্স
+// 116  (6b146d0) → ক্লাস পুনরাবৃত্তি করে specificity বাড়ানো (!important ছাড়া)
+// 86   (এই কমিট) → JS স্ট্রিং-এর মার্কআপ, প্রতিদ্বন্দ্বী নিয়ম নেই এমন ক্ষেত্রে
+const MAX_INLINE_STYLES = 86;
 
 const ROOT = path.join(__dirname, '..', '..');
 const SCAN_DIRS = ['views', 'public'];

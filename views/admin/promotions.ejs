@@ -6,6 +6,16 @@
   <title><%= t('admin_title_promotions') %></title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz20-1 { padding: 16px; margin-bottom: 16px; }
+  .dz20-2 { font-weight: 800; color: var(--text-main); font-size: 13px; margin-bottom: 12px; }
+  .dz20-3 { color: #f59e0b; }
+  .dz20-4 { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  .dz20-5 { font-weight: 700; color: #fff; font-size: 13px; }
+  .dz20-6 { color: #94a3b8; font-size: 11px; margin-top: 4px; }
+  .dz20-7 { grid-column: 1/-1; }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
     .promo-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
@@ -24,9 +34,9 @@
       <%- include('./partials/load-error') %>
       <%- include('./partials/header', { pageTitle: 'প্রমোশন ব্যানার', pageSubtitle: 'হোমপেজের প্রমোশনাল ব্যানার পরিচালনা করুন' }) %>
 
-      <div class="admin-card" style="padding:16px;margin-bottom:16px;">
-        <div style="font-weight:800;color:var(--text-main);font-size:13px;margin-bottom:12px;"><i class="fas fa-plus-circle" style="color:#f59e0b;"></i> <%= t('admin_promo_add_heading') %></div>
-        <form method="POST" action="/admin/promotions/add" style="display:grid;grid-template-columns:1fr;gap:10px;">
+      <div class="admin-card dz20-1">
+        <div class="dz20-2"><i class="fas fa-plus-circle dz20-3"></i> <%= t('admin_promo_add_heading') %></div>
+        <form class="dz20-4" method="POST" action="/admin/promotions/add">
           <input class="input" type="text" name="title" placeholder="<%= t('admin_field_banner_title_optional') %>">
           <input class="input" type="text" name="image_url" placeholder="<%= t('admin_field_image_url') %>" required>
           <input class="input" type="text" name="link_url" placeholder="<%= t('admin_field_click_link_optional') %>">
@@ -41,8 +51,8 @@
             <div class="admin-card promo-card">
               <img alt="" src="<%= p.image_url %>" data-img-fallback="fade">
               <div class="promo-body">
-                <div style="font-weight:700;color:#fff;font-size:13px;"><%= p.title || 'শিরোনাম নেই' %></div>
-                <div style="color:#94a3b8;font-size:11px;margin-top:4px;">পজিশন: <%= p.position %> · <%= p.active ? 'সক্রিয়' : 'নিষ্ক্রিয়' %></div>
+                <div class="dz20-5"><%= p.title || 'শিরোনাম নেই' %></div>
+                <div class="dz20-6">পজিশন: <%= p.position %> · <%= p.active ? 'সক্রিয়' : 'নিষ্ক্রিয়' %></div>
                 <div class="promo-actions">
                   <form method="POST" action="/admin/promotions/<%= p.id %>/toggle">
                     <button class="btn btn-sm <%= p.active ? 'btn-green' : '' %>" type="submit"><%= p.active ? 'সক্রিয়' : 'নিষ্ক্রিয়' %></button>
@@ -55,7 +65,7 @@
             </div>
           <% }) %>
         <% } else { %>
-          <div class="empty-state" style="grid-column:1/-1;"><%= t('admin_empty_promotions') %></div>
+          <div class="empty-state dz20-7"><%= t('admin_empty_promotions') %></div>
         <% } %>
       </div>
     </div>

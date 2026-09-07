@@ -1,30 +1,50 @@
 <%- include('partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz100-1 { color: var(--text-accent); }
+  .dz100-2 { color: var(--muted); margin-bottom: 1.5rem; }
+  .dz100-3 { color: var(--text-accent); font-weight: 700; }
+  .dz100-4 { color: var(--muted); }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im101-1 { margin-bottom: 1.5rem; }
+  .im101-2 { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
+  .im101-3 { flex: 1; min-width: 100px; }
+  .im101-4 { display: flex; align-items: center; gap: .75rem; }
+  .im101-5 { display: flex; flex-direction: column; gap: .75rem; font-size: .85rem; }
+  .im101-6 { display: flex; justify-content: space-between; }
+</style>
+
 <%- include('partials/navbar') %>
 <div class="container page">
   <%- include('partials/flash') %>
   <div class="layout-main">
     <div>
-      <div class="card" style="margin-bottom:1.5rem;">
+      <div class="card im101-1">
         <div class="card-header">
           <%= tournament.name %>
           <span class="status-badge status-<%= tournament.status %>"><%= tournament.status %></span>
         </div>
         <div class="card-body">
-          <div style="display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;">
-            <div class="stat-card" style="flex:1;min-width:100px;">
-              <div class="stat-number" style="color: var(--text-accent)"><%= tournament.prize_pool %></div>
+          <div class="im101-2">
+            <div class="stat-card im101-3">
+              <div class="stat-number dz100-1"><%= tournament.prize_pool %></div>
               <div class="stat-label">Prize Pool 🏆</div>
             </div>
-            <div class="stat-card" style="flex:1;min-width:100px;">
+            <div class="stat-card im101-3">
               <div class="stat-number"><%= tournament.entry_fee || 'Free' %></div>
               <div class="stat-label">Entry Fee</div>
             </div>
-            <div class="stat-card" style="flex:1;min-width:100px;">
+            <div class="stat-card im101-3">
               <div class="stat-number"><%= participants.length %></div>
               <div class="stat-label">Participants</div>
             </div>
           </div>
-          <p style="color:var(--muted);margin-bottom:1.5rem"><%= tournament.description %></p>
+          <p class="dz100-2"><%= tournament.description %></p>
           <% if(locals.user && !joined && tournament.status !== 'completed') { %>
             <button data-join-tournament class="btn btn-primary">🏆 Join Tournament</button>
           <% } else if(joined) { %>
@@ -41,11 +61,11 @@
             <% participants.forEach((p, i) => { %>
               <tr>
                 <td><span class="rank-<%= i+1 %>">#<%= i+1 %></span></td>
-                <td style="display:flex;align-items:center;gap:.75rem;">
+                <td class="im101-4">
                   <div class="avatar"><%= p.username[0].toUpperCase() %></div>
                   <%= p.username %>
                 </td>
-                <td style="color: var(--text-accent);font-weight:700"><%= p.points %></td>
+                <td class="dz100-3"><%= p.points %></td>
               </tr>
             <% }) %>
           </tbody>
@@ -57,21 +77,21 @@
       <div class="card">
         <div class="card-header">ℹ️ Tournament Info</div>
         <div class="card-body">
-          <div style="display:flex;flex-direction:column;gap:.75rem;font-size:.85rem;">
-            <div style="display:flex;justify-content:space-between;">
-              <span style="color:var(--muted)">Sport</span>
+          <div class="im101-5">
+            <div class="im101-6">
+              <span class="dz100-4">Sport</span>
               <span><%= tournament.sport %></span>
             </div>
-            <div style="display:flex;justify-content:space-between;">
-              <span style="color:var(--muted)">Start Date</span>
+            <div class="im101-6">
+              <span class="dz100-4">Start Date</span>
               <span><%= new Date(tournament.start_date).toLocaleDateString() %></span>
             </div>
-            <div style="display:flex;justify-content:space-between;">
-              <span style="color:var(--muted)">End Date</span>
+            <div class="im101-6">
+              <span class="dz100-4">End Date</span>
               <span><%= new Date(tournament.end_date).toLocaleDateString() %></span>
             </div>
-            <div style="display:flex;justify-content:space-between;">
-              <span style="color:var(--muted)">Max Players</span>
+            <div class="im101-6">
+              <span class="dz100-4">Max Players</span>
               <span><%= tournament.max_participants %></span>
             </div>
           </div>

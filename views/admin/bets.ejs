@@ -1,3 +1,9 @@
+<style nonce="<%= cspNonce %>">
+  /* Runtime-generated markup: these inline styles live in JS strings, so
+     cascade-check cannot see them. Migrated only where no rule in the site
+     CSS can set the same longhand on this tag/class at all. */
+  .js1.js1.js1 { display: inline; }
+</style>
 <%
 function fmtCompact(n) {
   n = Number(n) || 0;
@@ -13,11 +19,11 @@ function betRow(b) {
   const matchName = b.title || (b.team_a ? (b.team_a + ' vs ' + b.team_b) : 'N/A');
   const actions = b.status === 'pending'
     ? '<div class="flex items-center justify-center gap-x-2">' +
-        '<form method="POST" action="/admin/bets/' + b.id + '/settle" data-confirm="এই বেট WIN হিসেবে সেটেল করবেন?" style="display:inline">' +
+        '<form class="js1" method="POST" action="/admin/bets/' + b.id + '/settle" data-confirm="এই বেট WIN হিসেবে সেটেল করবেন?">' +
           '<input type="hidden" name="result" value="won">' +
           '<button type="submit" class="px-4 py-1.5 text-xs font-semibold rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white transition-colors">WIN</button>' +
         '</form>' +
-        '<form method="POST" action="/admin/bets/' + b.id + '/settle" data-confirm="এই বেট LOSE হিসেবে সেটেল করবেন?" style="display:inline">' +
+        '<form class="js1" method="POST" action="/admin/bets/' + b.id + '/settle" data-confirm="এই বেট LOSE হিসেবে সেটেল করবেন?">' +
           '<input type="hidden" name="result" value="lost">' +
           '<button type="submit" class="px-4 py-1.5 text-xs font-semibold rounded-xl bg-rose-500 hover:bg-rose-600 text-white transition-colors">LOSE</button>' +
         '</form>' +

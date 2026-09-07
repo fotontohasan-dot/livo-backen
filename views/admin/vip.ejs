@@ -6,6 +6,26 @@
   <title><%= t('admin_title_vip') %></title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz23-1 { margin-bottom: 14px; }
+  .dz23-2 { color: #f59e0b; }
+  .dz23-3 { color: #10b981; }
+  .dz23-4 { color: #3b82f6; }
+  .dz23-5 { color: #a855f7; }
+  .dz23-6 { margin-bottom: 16px; }
+  .dz23-7 { float: right; font-size: 12px; color: #f59e0b; text-decoration: none; }
+  .dz23-8 { overflow-x: auto; }
+  .dz23-9 { font-weight: 700; }
+  .dz23-10 { margin-bottom: 8px; }
+  .dz23-11 { display: flex; justify-content: space-between; align-items: center; }
+  .dz23-12 { font-weight: 800; color: var(--text-main); font-size: 14px; }
+  .dz23-13 { padding: 6px 14px; font-size: 12px; }
+  .dz23-14 { margin-top: 10px; }
+  .dz23-15 { width: 100%; }
+  .dz23-16 { display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 12px; }
+  .dz23-17 { font-weight: 800; color: var(--text-main); font-size: 14px; margin-bottom: 8px; }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
     .vip-level-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
@@ -34,16 +54,16 @@
       <% } %>
 
       <!-- ==================== Analytics Dashboard ==================== -->
-      <div class="grid grid-4" style="margin-bottom:14px;">
-        <div class="stat-card"><div class="stat-label"><%= t('admin_stat_total_vip_levels') %></div><div class="stat-number" style="color:#f59e0b;"><%= levels.length %></div></div>
-        <div class="stat-card"><div class="stat-label"><%= t('admin_stat_total_users_all_levels') %></div><div class="stat-number" style="color:#10b981;"><%= analytics.perLevel.reduce((a,l)=>a+l.userCount,0) %></div></div>
-        <div class="stat-card"><div class="stat-label"><%= t('admin_stat_total_upgrades') %></div><div class="stat-number" style="color:#3b82f6;"><%= analytics.upgradeStats.reduce((a,u)=>a+u.upgradeCount,0) %></div></div>
-        <div class="stat-card"><div class="stat-label"><%= t('admin_stat_total_vip_bonus') %></div><div class="stat-number" style="color:#a855f7;"><%= Math.round(analytics.grandTotalBonus).toLocaleString('bn-BD') %></div></div>
+      <div class="grid grid-4 dz23-1">
+        <div class="stat-card"><div class="stat-label"><%= t('admin_stat_total_vip_levels') %></div><div class="stat-number dz23-2"><%= levels.length %></div></div>
+        <div class="stat-card"><div class="stat-label"><%= t('admin_stat_total_users_all_levels') %></div><div class="stat-number dz23-3"><%= analytics.perLevel.reduce((a,l)=>a+l.userCount,0) %></div></div>
+        <div class="stat-card"><div class="stat-label"><%= t('admin_stat_total_upgrades') %></div><div class="stat-number dz23-4"><%= analytics.upgradeStats.reduce((a,u)=>a+u.upgradeCount,0) %></div></div>
+        <div class="stat-card"><div class="stat-label"><%= t('admin_stat_total_vip_bonus') %></div><div class="stat-number dz23-5"><%= Math.round(analytics.grandTotalBonus).toLocaleString('bn-BD') %></div></div>
       </div>
 
-      <div class="admin-card" style="margin-bottom:16px;">
-        <div class="admin-card-header"><%= t('admin_stats_per_level') %> <a href="/admin/vip/history" style="float:right;font-size:12px;color:#f59e0b;text-decoration:none;"><i class="fas fa-history"></i> <%= t('admin_btn_view_full_history') %></a></div>
-        <div style="overflow-x:auto;">
+      <div class="admin-card dz23-6">
+        <div class="admin-card-header"><%= t('admin_stats_per_level') %> <a class="dz23-7" href="/admin/vip/history"><i class="fas fa-history"></i> <%= t('admin_btn_view_full_history') %></a></div>
+        <div class="dz23-8">
           <table class="admin-table">
             <thead>
               <tr>
@@ -54,7 +74,7 @@
             <tbody>
               <% analytics.perLevel.forEach(l => { %>
                 <tr>
-                  <td style="font-weight:700;"><%= l.icon %> <%= l.name %> (<%= l.level %>)</td>
+                  <td class="dz23-9"><%= l.icon %> <%= l.name %> (<%= l.level %>)</td>
                   <td><%= l.userCount %></td>
                   <td><%= Math.round(l.totalTurnover).toLocaleString('bn-BD') %></td>
                   <td><%= Math.round(l.totalUpgradeBonus).toLocaleString('bn-BD') %></td>
@@ -70,15 +90,15 @@
       </div>
 
       <!-- ==================== Level Management (CRUD) ==================== -->
-      <div class="admin-card-header" style="margin-bottom:8px;"><%= t('admin_vip_level_management') %></div>
+      <div class="admin-card-header dz23-10"><%= t('admin_vip_level_management') %></div>
 
       <% levels.forEach(l => { %>
         <div class="vip-level-card <%= l.is_active === false ? 'inactive' : '' %>">
           <form method="POST" action="/admin/vip/save">
             <input type="hidden" name="level" value="<%= l.level %>">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-              <div style="font-weight:800;color:var(--text-main);font-size:14px;"><%= l.icon || '👑' %> লেভেল <%= l.level %> <% if (l.is_active === false) { %><span class="badge badge-red"><%= t('admin_status_inactive') %></span><% } else { %><span class="badge badge-green"><%= t('admin_status_active') %></span><% } %></div>
-              <button type="submit" class="btn btn-primary" style="padding:6px 14px;font-size:12px;"><i class="fas fa-save"></i> <%= t('admin_btn_save') %></button>
+            <div class="dz23-11">
+              <div class="dz23-12"><%= l.icon || '👑' %> লেভেল <%= l.level %> <% if (l.is_active === false) { %><span class="badge badge-red"><%= t('admin_status_inactive') %></span><% } else { %><span class="badge badge-green"><%= t('admin_status_active') %></span><% } %></div>
+              <button type="submit" class="btn btn-primary dz23-13"><i class="fas fa-save"></i> <%= t('admin_btn_save') %></button>
             </div>
             <div class="vip-form-grid">
               <div><label><%= t('admin_col_name') %></label><input class="input" type="text" name="name" value="<%= l.name %>" required></div>
@@ -93,15 +113,15 @@
               <div><label><%= t('admin_field_deposit_bonus_pct') %></label><input class="input" type="number" step="0.01" name="deposit_bonus_percent" value="<%= l.deposit_bonus_percent || 0 %>"></div>
               <div><label><%= t('admin_field_birthday_bonus') %></label><input class="input" type="number" step="0.01" name="birthday_bonus" value="<%= l.birthday_bonus || 0 %>"></div>
             </div>
-            <div style="margin-top:10px;">
+            <div class="dz23-14">
               <label><%= t('admin_field_exclusive_event') %></label>
-              <input class="input" type="text" name="exclusive_events" value="<%= l.exclusive_events || '' %>" style="width:100%;">
+              <input class="input dz23-15" type="text" name="exclusive_events" value="<%= l.exclusive_events || '' %>">
             </div>
             <div class="vip-toggle-row">
-              <label style="display:flex;align-items:center;gap:6px;color:var(--text-muted);font-size:12px;">
+              <label class="dz23-16">
                 <input type="checkbox" name="priority_support" <%= l.priority_support ? 'checked' : '' %>> <%= t('admin_field_priority_support') %>
               </label>
-              <label style="display:flex;align-items:center;gap:6px;color:var(--text-muted);font-size:12px;">
+              <label class="dz23-16">
                 <input type="checkbox" name="is_active" <%= l.is_active !== false ? 'checked' : '' %>> <%= t('admin_field_level_active') %>
               </label>
             </div>
@@ -110,7 +130,7 @@
       <% }) %>
 
       <div class="vip-level-card">
-        <div style="font-weight:800;color:var(--text-main);font-size:14px;margin-bottom:8px;"><i class="fas fa-plus"></i> <%= t('admin_vip_add_level_heading') %></div>
+        <div class="dz23-17"><i class="fas fa-plus"></i> <%= t('admin_vip_add_level_heading') %></div>
         <form method="POST" action="/admin/vip/save">
           <div class="vip-form-grid">
             <div><label><%= t('admin_field_level_number') %></label><input class="input" type="number" name="level" required></div>
@@ -123,7 +143,7 @@
             <div><label><%= t('admin_field_monthly_bonus') %></label><input class="input" type="number" step="0.01" name="monthly_bonus" value="0"></div>
             <div><label><%= t('admin_field_cashback_pct') %></label><input class="input" type="number" step="0.01" name="cashback_percent" value="0"></div>
           </div>
-          <button type="submit" class="btn btn-primary" style="margin-top:10px;"><i class="fas fa-plus"></i> <%= t('admin_btn_create_level') %></button>
+          <button type="submit" class="btn btn-primary dz23-14"><i class="fas fa-plus"></i> <%= t('admin_btn_create_level') %></button>
         </form>
       </div>
 

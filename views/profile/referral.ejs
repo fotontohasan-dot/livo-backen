@@ -1,112 +1,158 @@
 <%- include('../partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz76-1 { padding: 16px; padding-bottom: 100px; max-width: 600px; margin: 0 auto; }
+  .dz76-2 { color: var(--text-main); text-decoration: none; font-size: 20px; }
+  .dz76-3 { color: var(--text-main); font-size: 18px; font-weight: bold; }
+  .dz76-4 { background: linear-gradient(135deg,#10b981,#06b6d4); border-radius: 16px; padding: 20px; margin-bottom: 16px; text-align: center; }
+  .dz76-5 { color: var(--text-main); font-size: 16px; font-weight: bold; margin-bottom: 4px; }
+  .dz76-6 { color: rgba(255,255,255,0.9); font-size: 13px; }
+  .dz76-7 { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 14px; text-align: center; }
+  .dz76-8 { color: #f59e0b; font-size: 22px; font-weight: bold; }
+  .dz76-9 { color: var(--text-muted); font-size: 11px; margin-top: 4px; }
+  .dz76-10 { color: #10b981; font-size: 22px; font-weight: bold; }
+  .dz76-11 { color: var(--text-accent); font-size: 22px; font-weight: bold; }
+  .dz76-12 { background: rgba(245,158,11,0.1); border: 1px solid #f59e0b; border-radius: 12px; padding: 14px; margin-bottom: 16px; text-align: center; }
+  .dz76-13 { color: var(--text-main); font-size: 13px; }
+  .dz76-14 { color: #f59e0b; font-size: 24px; font-weight: bold; margin-top: 4px; }
+  .dz76-15 { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 18px; margin-bottom: 14px; }
+  .dz76-16 { color: var(--text-muted); font-size: 13px; margin-bottom: 8px; }
+  .dz76-17 { flex: 1; background: rgba(255,255,255,0.1); border-radius: 8px; padding: 12px; color: #f59e0b; font-size: 18px; font-weight: bold; letter-spacing: 2px; text-align: center; }
+  .dz76-18 { background: #8b5cf6; color: #fff; border: none; border-radius: 8px; padding: 12px 16px; cursor: pointer; }
+  .dz76-19 { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 18px; margin-bottom: 16px; }
+  .dz76-20 { flex: 1; background: rgba(255,255,255,0.1); border-radius: 8px; padding: 10px; color: var(--text-main); font-size: 12px; word-break: break-all; }
+  .dz76-21 { background: #10b981; color: #fff; border: none; border-radius: 8px; padding: 12px 16px; cursor: pointer; }
+  .dz76-22 { color: var(--text-main); font-weight: bold; margin-bottom: 12px; }
+  .dz76-23 { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .dz76-24 { color: var(--text-muted); font-size: 10px; }
+  .dz76-25 { color: #10b981; font-size: 11px; }
+  .dz76-26 { color: #f59e0b; font-size: 11px; }
+  .dz76-27 { color: var(--text-muted); font-size: 11px; }
+  .dz76-28 { color: var(--text-muted); font-size: 13px; text-align: center; padding: 10px; }
+  .dz76-29 { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 18px; }
+  .dz76-30 { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .dz76-31 { color: var(--text-main); font-size: 12px; }
+  .dz76-32 { color: #10b981; font-size: 14px; font-weight: bold; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im77-1 { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .im77-2 { font-size: 40px; margin-bottom: 8px; }
+  .im77-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .im77-4 { display: flex; gap: 8px; align-items: center; }
+</style>
+
 <%- include('../partials/navbar') %>
-<div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto;">
+<div class="container dz76-1">
   <%- include('../partials/flash') %>
 
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-    <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
-    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;"><%= t.invite_friends_title %></h1>
+  <div class="im77-1">
+    <a class="dz76-2" href="/profile">←</a>
+    <h1 class="dz76-3"><%= t.invite_friends_title %></h1>
   </div>
 
   <!-- ব্যানার -->
-  <div style="background:linear-gradient(135deg,#10b981,#06b6d4);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center;">
-    <div style="font-size:40px;margin-bottom:8px;">🎁</div>
-    <div style="color:var(--text-main);font-size:16px;font-weight:bold;margin-bottom:4px;"><%= t.refer_and_earn %></div>
-    <div style="color:rgba(255,255,255,0.9);font-size:13px;">
+  <div class="dz76-4">
+    <div class="im77-2">🎁</div>
+    <div class="dz76-5"><%= t.refer_and_earn %></div>
+    <div class="dz76-6">
       বন্ধুর প্রথম ডিপোজিটে বোনাস + আজীবন কমিশন (২.৫% / ১.৫% / ০.৮%)
     </div>
   </div>
 
   <!-- পরিসংখ্যান -->
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
-    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:14px;text-align:center;">
-      <div style="color:#f59e0b;font-size:22px;font-weight:bold;"><%= stats.totalReferrals %></div>
-      <div style="color:var(--text-muted);font-size:11px;margin-top:4px;"><%= t.total_referrals %></div>
+  <div class="im77-3">
+    <div class="dz76-7">
+      <div class="dz76-8"><%= stats.totalReferrals %></div>
+      <div class="dz76-9"><%= t.total_referrals %></div>
     </div>
-    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:14px;text-align:center;">
-      <div style="color:#10b981;font-size:22px;font-weight:bold;"><%= stats.successfulReferrals %></div>
-      <div style="color:var(--text-muted);font-size:11px;margin-top:4px;"><%= t.successful_referrals %></div>
+    <div class="dz76-7">
+      <div class="dz76-10"><%= stats.successfulReferrals %></div>
+      <div class="dz76-9"><%= t.successful_referrals %></div>
     </div>
-    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:14px;text-align:center;">
-      <div style="color:var(--text-accent);font-size:22px;font-weight:bold;"><%= Number(stats.totalEarnings).toLocaleString('bn-BD') %></div>
-      <div style="color:var(--text-muted);font-size:11px;margin-top:4px;"><%= t.total_earnings %></div>
+    <div class="dz76-7">
+      <div class="dz76-11"><%= Number(stats.totalEarnings).toLocaleString('bn-BD') %></div>
+      <div class="dz76-9"><%= t.total_earnings %></div>
     </div>
   </div>
 
   <!-- পরের বোনাস তথ্য -->
-  <div style="background:rgba(245,158,11,0.1);border:1px solid #f59e0b;border-radius:12px;padding:14px;margin-bottom:16px;text-align:center;">
-    <div style="color:var(--text-main);font-size:13px;"><%= t.next_referral_reward %></div>
-    <div style="color:#f59e0b;font-size:24px;font-weight:bold;margin-top:4px;"><%= stats.nextBonus %> কয়েন</div>
-    <div style="color:var(--text-muted);font-size:11px;margin-top:4px;"><%= t.referral_condition %></div>
+  <div class="dz76-12">
+    <div class="dz76-13"><%= t.next_referral_reward %></div>
+    <div class="dz76-14"><%= stats.nextBonus %> কয়েন</div>
+    <div class="dz76-9"><%= t.referral_condition %></div>
   </div>
 
   <!-- রেফারেল কোড -->
-  <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;margin-bottom:14px;">
-    <div style="color:var(--text-muted);font-size:13px;margin-bottom:8px;"><%= t.your_referral_code %></div>
-    <div style="display:flex;gap:8px;align-items:center;">
-      <div id="ref-code" style="flex:1;background:rgba(255,255,255,0.1);border-radius:8px;padding:12px;color:#f59e0b;font-size:18px;font-weight:bold;letter-spacing:2px;text-align:center;">
+  <div class="dz76-15">
+    <div class="dz76-16"><%= t.your_referral_code %></div>
+    <div class="im77-4">
+      <div class="dz76-17" id="ref-code">
         <%= user.referral_code || 'N/A' %>
       </div>
-      <button data-referral-action="copy" style="background:#8b5cf6;color:#fff;border:none;border-radius:8px;padding:12px 16px;cursor:pointer;"><%= t.copy_short %></button>
+      <button class="dz76-18" data-referral-action="copy"><%= t.copy_short %></button>
     </div>
   </div>
 
   <!-- রেফারেল লিংক -->
-  <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;margin-bottom:16px;">
-    <div style="color:var(--text-muted);font-size:13px;margin-bottom:8px;"><%= t.your_referral_link %></div>
-    <div style="display:flex;gap:8px;align-items:center;">
-      <div style="flex:1;background:rgba(255,255,255,0.1);border-radius:8px;padding:10px;color:var(--text-main);font-size:12px;word-break:break-all;" id="ref-link">
+  <div class="dz76-19">
+    <div class="dz76-16"><%= t.your_referral_link %></div>
+    <div class="im77-4">
+      <div class="dz76-20" id="ref-link">
         <%= baseUrl %>/register?ref=<%= user.referral_code %>
       </div>
-      <button data-referral-action="share" style="background:#10b981;color:#fff;border:none;border-radius:8px;padding:12px 16px;cursor:pointer;"><%= t.share %></button>
+      <button class="dz76-21" data-referral-action="share"><%= t.share %></button>
     </div>
   </div>
 
   <!-- আমার টিম -->
-  <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;margin-bottom:16px;">
-    <div style="color:var(--text-main);font-weight:bold;margin-bottom:12px;"><%= t.my_team %></div>
+  <div class="dz76-19">
+    <div class="dz76-22"><%= t.my_team %></div>
     <% if (stats.team && stats.team.length > 0) { %>
       <% stats.team.forEach(t => { %>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+        <div class="dz76-23">
           <div>
-            <div style="color:var(--text-main);font-size:13px;"><%= t.username %></div>
-            <div style="color:var(--text-muted);font-size:10px;"><%= new Date(t.created_at).toLocaleDateString('bn-BD') %></div>
+            <div class="dz76-13"><%= t.username %></div>
+            <div class="dz76-24"><%= new Date(t.created_at).toLocaleDateString('bn-BD') %></div>
           </div>
           <div>
             <% if (t.signup_bonus_paid) { %>
-              <span style="color:#10b981;font-size:11px;"><%= t.successful %></span>
+              <span class="dz76-25"><%= t.successful %></span>
             <% } else if (t.first_deposit_done) { %>
-              <span style="color:#f59e0b;font-size:11px;"><%= t.deposited %></span>
+              <span class="dz76-26"><%= t.deposited %></span>
             <% } else { %>
-              <span style="color:var(--text-muted);font-size:11px;"><%= t.awaiting %></span>
+              <span class="dz76-27"><%= t.awaiting %></span>
             <% } %>
           </div>
         </div>
       <% }) %>
     <% } else { %>
-      <div style="color:var(--text-muted);font-size:13px;text-align:center;padding:10px;"><%= t.no_referrals_yet %></div>
+      <div class="dz76-28"><%= t.no_referrals_yet %></div>
     <% } %>
   </div>
 
   <!-- আয়ের হিস্ট্রি -->
-  <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;">
-    <div style="color:var(--text-main);font-weight:bold;margin-bottom:12px;"><%= t.earnings_history %></div>
+  <div class="dz76-29">
+    <div class="dz76-22"><%= t.earnings_history %></div>
     <% if (stats.history && stats.history.length > 0) { %>
       <% stats.history.forEach(h => { %>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+        <div class="dz76-30">
           <div>
-            <div style="color:var(--text-main);font-size:12px;">
+            <div class="dz76-31">
               <%= h.reason === 'signup' ? '🎁 রেফার বোনাস' : `💸 কমিশন (লেভেল ${h.level})` %>
             </div>
-            <div style="color:var(--text-muted);font-size:10px;">
+            <div class="dz76-24">
               <%= h.from_username || 'ইউজার' %> · <%= new Date(h.created_at).toLocaleDateString('bn-BD') %>
             </div>
           </div>
-          <div style="color:#10b981;font-size:14px;font-weight:bold;">+<%= Number(h.amount).toLocaleString('bn-BD') %></div>
+          <div class="dz76-32">+<%= Number(h.amount).toLocaleString('bn-BD') %></div>
         </div>
       <% }) %>
     <% } else { %>
-      <div style="color:var(--text-muted);font-size:13px;text-align:center;padding:10px;"><%= t.no_earnings_yet %></div>
+      <div class="dz76-28"><%= t.no_earnings_yet %></div>
     <% } %>
   </div>
 </div>

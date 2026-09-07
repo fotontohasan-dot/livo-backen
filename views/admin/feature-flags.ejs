@@ -29,7 +29,7 @@ function toggleCell(f) {
     ? t('admin_ff_confirm_critical').replace('{value}', String(tk(f.labelKey, f.label)).replace(/"/g, ''))
     : (on ? t('admin_ff_confirm_disable').replace('{value}', String(tk(f.labelKey, f.label)).replace(/"/g, '')) : '');
   const onsubmit = confirmMsg ? ' data-confirm="' + esc(confirmMsg) + '"' : '';
-  return '<form method="POST" action="/admin/feature-flags/' + f.id + '/toggle" style="display:inline"' + onsubmit + '>' +
+  return '<form class="js1" method="POST" action="/admin/feature-flags/' + f.id + '/toggle"' + onsubmit + '>' +
     '<button type="submit" aria-pressed="' + (on ? 'true' : 'false') +
       '" title="' + esc(on ? t('admin_ff_click_to_disable') : t('admin_ff_click_to_enable')) + '"' +
       ' class="ff-toggle ' + (on ? 'ff-on' : 'ff-off') + '">' +
@@ -43,7 +43,7 @@ function flagCard(f) {
   const by = f.updated_by_username ? esc(f.updated_by_username) : '';
   // managed=false → অ্যাডমিনের হাতে তৈরি কাস্টম ফ্ল্যাগ; শুধু এগুলোই ডিলিট করা যায়।
   const del = f.managed ? '' :
-    '<form method="POST" action="/admin/feature-flags/' + f.id + '/delete" style="display:inline"' +
+    '<form class="js1" method="POST" action="/admin/feature-flags/' + f.id + '/delete"' +
     ' data-confirm="' + esc(t('admin_ff_confirm_delete')) + '">' +
     '<button type="submit" class="ff-del" aria-label="' + esc(t('admin_ui_delete')) + '" title="' + esc(t('admin_ui_delete')) + '">&times;</button></form>';
 
@@ -109,7 +109,7 @@ const groupHtml = allGroups.map(function (g) {
     </div>
   </div>
 
-  <div id="ffNoResult" class="ff-empty" style="display:none">${esc(t('admin_ff_no_result'))}</div>
+  <div id="ffNoResult" class="ff-empty js2">${esc(t('admin_ff_no_result'))}</div>
 
   ${groupHtml}
 

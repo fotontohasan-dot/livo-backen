@@ -1,4 +1,22 @@
 <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz3-1 { background: var(--bg-surface); border-top: 1px solid var(--border-glass); color: var(--text-muted); padding: 20px 14px 70px; margin-top: 20px; }
+  .dz3-2 { max-width: 900px; margin: 0 auto; }
+  .dz3-3 { text-align: center; }
+  .dz3-4 { font-size: 1.3rem; font-weight: 700; margin-bottom: 10px; }
+  .dz3-5 { display: flex; flex-wrap: wrap; gap: 2px 4px; justify-content: center; align-items: center; margin-bottom: 12px; }
+  .dz3-6 { display: flex; gap: 8px; justify-content: center; margin-bottom: 16px; }
+  .dz3-7 { padding: 6px 12px; font-size: 11px; font-weight: 600; }
+  .dz3-8 { margin-bottom: 16px; }
+  .dz3-9 { font-size: 13px; font-weight: 700; margin-bottom: 8px; text-align: center; }
+  .dz3-10 { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
+  .dz3-11 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 6px; }
+  .dz3-12 { font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+  .dz3-13 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .dz3-14 { padding-top: 14px; margin-top: 10px; border-top: 1px solid var(--border-glass); text-align: center; }
+  .dz3-15 { font-size: 10px; color: var(--text-muted); letter-spacing: 0.3px; margin-bottom: 8px; line-height: 1.6; }
 .footer-badge {
   padding: 9px 4px;
   border-radius: 10px;
@@ -70,28 +88,28 @@ body.light-mode .footer-badge-responsible i { color: var(--secondary); }
 body.light-mode .footer-link:hover, body.light-mode .footer-link:focus { color: var(--text-accent); }
 </style>
 
-<footer style="background:var(--bg-surface);border-top:1px solid var(--border-glass);color:var(--text-muted);padding:20px 14px 70px;margin-top:20px;">
-  <div style="max-width:900px;margin:0 auto;">
+<footer class="dz3-1">
+  <div class="dz3-2">
 
     <!-- Brand and Links -->
-    <div style="text-align:center;">
-      <div class="text-main" style="font-size:1.3rem;font-weight:700;margin-bottom:10px;"><%= siteName %></div>
-      <div style="display:flex;flex-wrap:wrap;gap:2px 4px;justify-content:center;align-items:center;margin-bottom:12px;">
+    <div class="dz3-3">
+      <div class="text-main dz3-4"><%= siteName %></div>
+      <div class="dz3-5">
         <a href="/privacy" class="footer-link"><%= t.privacy_policy %></a>
         <a href="/terms" class="footer-link"><%= t.terms_conditions %></a>
         <a href="/rules" class="footer-link"><%= t.rules_regulation %></a>
         <a href="/kyc" class="footer-link"><%= t.kyc %></a>
       </div>
-      <div style="display:flex;gap:8px;justify-content:center;margin-bottom:16px;">
+      <div class="dz3-6">
         <div class="footer-18plus" title="18+">18+</div>
-        <div class="footer-license" style="padding:6px 12px;font-size:11px;font-weight:600;">Curacao Licensed</div>
+        <div class="footer-license dz3-7">Curacao Licensed</div>
       </div>
     </div>
 
     <!-- লাইসেন্স সেকশন -->
-    <div style="margin-bottom:16px;">
-      <h3 class="text-main" style="font-size:13px;font-weight:700;margin-bottom:8px;text-align:center;"><%= t.footer_license_title %></h3>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+    <div class="dz3-8">
+      <h3 class="text-main dz3-9"><%= t.footer_license_title %></h3>
+      <div class="dz3-10">
         <div class="footer-badge"><i class="fas fa-shield-alt"></i>BMM</div>
         <div class="footer-badge"><i class="fas fa-shield-alt"></i>iTech Labs</div>
         <div class="footer-badge"><i class="fas fa-certificate"></i>GLI Certified</div>
@@ -101,11 +119,11 @@ body.light-mode .footer-link:hover, body.light-mode .footer-link:focus { color: 
       </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px;">
+    <div class="dz3-11">
       <!-- সুরক্ষা করা সেকশন -->
       <div>
-        <h3 class="text-main" style="font-size:12px;font-weight:700;margin-bottom:6px;"><%= t.footer_security_title %></h3>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+        <h3 class="text-main dz3-12"><%= t.footer_security_title %></h3>
+        <div class="dz3-13">
           <div class="footer-badge footer-badge-security"><i class="fas fa-lock"></i>iovation</div>
           <div class="footer-badge footer-badge-security"><i class="fas fa-user-shield"></i>ThreatMetrix</div>
         </div>
@@ -113,8 +131,8 @@ body.light-mode .footer-link:hover, body.light-mode .footer-link:focus { color: 
 
       <!-- দায়িত্বশীলভাবে খেলুন সেকশন -->
       <div>
-        <h3 class="text-main" style="font-size:12px;font-weight:700;margin-bottom:6px;"><%= t.footer_responsible_gaming_title %></h3>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+        <h3 class="text-main dz3-12"><%= t.footer_responsible_gaming_title %></h3>
+        <div class="dz3-13">
           <div class="footer-badge footer-badge-responsible"><i class="fas fa-heart"></i>GamCare</div>
           <div class="footer-badge footer-badge-responsible"><i class="fas fa-hand-paper"></i>BeGambleAware</div>
         </div>
@@ -122,8 +140,8 @@ body.light-mode .footer-link:hover, body.light-mode .footer-link:focus { color: 
     </div>
 
     <!-- Copyright -->
-    <div style="padding-top:14px;margin-top:10px;border-top:1px solid var(--border-glass);text-align:center;">
-      <p style="font-size:10px;color:var(--text-muted);letter-spacing:0.3px;margin-bottom:8px;line-height:1.6;">
+    <div class="dz3-14">
+      <p class="dz3-15">
         <%= t.responsible_gaming_msg %>
       </p>
       <p class="footer-copyright">

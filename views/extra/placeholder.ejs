@@ -1,11 +1,26 @@
 <%- include('../partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz52-1 { color: var(--text-main); }
+  .dz52-2 { color: var(--text-muted); margin-top: 10px; }
+  .dz52-3 { margin-top: 30px; border-radius: 20px; padding: 10px 30px; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im52-1 { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; text-align: center; }
+  .im52-2 { font-size: 80px; margin-bottom: 20px; }
+</style>
+
 <%- include('../partials/navbar') %>
 
-<div class="container page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; text-align: center;">
-    <div style="font-size: 80px; margin-bottom: 20px;">🚧</div>
-    <h2 style="color: var(--text-main);"><%= title %></h2>
-    <p style="color: var(--text-muted); margin-top: 10px;">এই ফিচারটি শীঘ্রই আসছে। আমাদের সাথেই থাকুন!</p>
-    <a href="/" class="btn btn-primary" style="margin-top: 30px; border-radius: 20px; padding: 10px 30px;">হোমে ফিরে যান</a>
+<div class="container page im52-1">
+    <div class="im52-2">🚧</div>
+    <h2 class="dz52-1"><%= title %></h2>
+    <p class="dz52-2">এই ফিচারটি শীঘ্রই আসছে। আমাদের সাথেই থাকুন!</p>
+    <a href="/" class="btn btn-primary dz52-3">হোমে ফিরে যান</a>
 </div>
 
 <%- include('../partials/bottom-nav') %>

@@ -6,6 +6,35 @@
   <title>ডিপোজিট/উইথড্র সামারি • Livo Admin</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .sp45-1.sp45-1 { padding: .6rem; text-align: left; color: var(--muted); font-size: .8rem; }
+  .sp45-2.sp45-2 { padding: .6rem; font-weight: 600; }
+  .sp45-3.sp45-3 { padding: .6rem; color: #10b981; font-weight: 700; }
+  .sp45-4.sp45-4 { padding: .6rem; color: #ff4444; font-weight: 700; }
+  .sp45-5.sp45-5 { padding: .6rem; color: var(--text-accent); font-weight: 700; }
+  .sp45-6.sp45-6 { padding: 1.5rem; text-align: center; color: var(--muted); }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz93-1 { margin-bottom: 1.5rem; }
+  .dz93-2 { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1rem; }
+  .dz93-3 { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .dz93-4 { font-size: .8rem; color: var(--muted); }
+  .dz93-5 { margin-left: 5px; padding: 5px; border-radius: 6px; background: #111; color: #fff; border: 1px solid var(--border); }
+  .dz93-6 { padding: 6px 14px; font-size: .8rem; background: var(--gold); color: #000; }
+  .dz93-7 { margin-top: .75rem; font-size: .8rem; color: var(--muted); }
+  .dz93-8 { display: grid; grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+  .dz93-9 { font-size: .75rem; color: var(--muted); }
+  .dz93-10 { font-size: 1.4rem; font-weight: 800; color: #10b981; }
+  .dz93-11 { font-size: .7rem; color: var(--muted); }
+  .dz93-12 { font-size: 1.4rem; font-weight: 800; color: #ff4444; }
+  .dz93-13 { font-size: 1.4rem; font-weight: 800; color: var(--text-accent); }
+  .dz93-14 { overflow-x: auto; }
+  .dz93-15 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; }
+  .dz93-16 { width: 100%; border-collapse: collapse; }
+  .dz93-17 { border-bottom: 1px solid var(--border); }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; color: #e2e8f0; }
     .card { background: #171b23; border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; }
@@ -19,69 +48,69 @@
   <%- include('../admin/partials/sidebar', { active: 'payments' }) %>
   <div class="admin-content">
 
-    <div class="card" style="margin-bottom:1.5rem;">
+    <div class="card dz93-1">
       <div class="card-body">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem;">
+        <div class="dz93-2">
           <a href="/payment/admin/summary?quick=today" class="btn" style="padding:6px 14px;font-size:.8rem;<%= quick==='today' ? 'background:var(--gold);color:#000;' : '' %>">আজ</a>
           <a href="/payment/admin/summary?quick=7d" class="btn" style="padding:6px 14px;font-size:.8rem;<%= quick==='7d' ? 'background:var(--gold);color:#000;' : '' %>">গত ৭ দিন</a>
           <a href="/payment/admin/summary?quick=30d" class="btn" style="padding:6px 14px;font-size:.8rem;<%= quick==='30d' ? 'background:var(--gold);color:#000;' : '' %>">গত ৩০ দিন</a>
           <a href="/payment/admin/summary?quick=all" class="btn" style="padding:6px 14px;font-size:.8rem;<%= quick==='all' ? 'background:var(--gold);color:#000;' : '' %>">সব সময়</a>
         </div>
-        <form method="GET" action="/payment/admin/summary" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <form class="dz93-3" method="GET" action="/payment/admin/summary">
           <input type="hidden" name="quick" value="custom">
-          <label style="font-size:.8rem;color:var(--muted);">থেকে
-            <input type="date" name="from" value="<%= from %>" style="margin-left:5px;padding:5px;border-radius:6px;background:#111;color:#fff;border:1px solid var(--border);">
+          <label class="dz93-4">থেকে
+            <input class="dz93-5" type="date" name="from" value="<%= from %>">
           </label>
-          <label style="font-size:.8rem;color:var(--muted);">পর্যন্ত
-            <input type="date" name="to" value="<%= to %>" style="margin-left:5px;padding:5px;border-radius:6px;background:#111;color:#fff;border:1px solid var(--border);">
+          <label class="dz93-4">পর্যন্ত
+            <input class="dz93-5" type="date" name="to" value="<%= to %>">
           </label>
-          <button class="btn" style="padding:6px 14px;font-size:.8rem;background:var(--gold);color:#000;">দেখুন</button>
+          <button class="btn dz93-6">দেখুন</button>
         </form>
-        <div style="margin-top:.75rem;font-size:.8rem;color:var(--muted);">সময়সীমা: <%= from %> থেকে <%= to %> পর্যন্ত</div>
+        <div class="dz93-7">সময়সীমা: <%= from %> থেকে <%= to %> পর্যন্ত</div>
       </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem;">
+    <div class="dz93-8">
       <div class="card"><div class="card-body">
-        <div style="font-size:.75rem;color:var(--muted);">মোট ডিপোজিট</div>
-        <div style="font-size:1.4rem;font-weight:800;color:#10b981;">৳ <%= Number(grand.total_deposit).toLocaleString('en-BD') %></div>
-        <div style="font-size:.7rem;color:var(--muted);"><%= grand.deposit_count %> টি লেনদেন</div>
+        <div class="dz93-9">মোট ডিপোজিট</div>
+        <div class="dz93-10">৳ <%= Number(grand.total_deposit).toLocaleString('en-BD') %></div>
+        <div class="dz93-11"><%= grand.deposit_count %> টি লেনদেন</div>
       </div></div>
       <div class="card"><div class="card-body">
-        <div style="font-size:.75rem;color:var(--muted);">মোট উইথড্র</div>
-        <div style="font-size:1.4rem;font-weight:800;color:#ff4444;">৳ <%= Number(grand.total_withdraw).toLocaleString('en-BD') %></div>
-        <div style="font-size:.7rem;color:var(--muted);"><%= grand.withdraw_count %> টি লেনদেন</div>
+        <div class="dz93-9">মোট উইথড্র</div>
+        <div class="dz93-12">৳ <%= Number(grand.total_withdraw).toLocaleString('en-BD') %></div>
+        <div class="dz93-11"><%= grand.withdraw_count %> টি লেনদেন</div>
       </div></div>
       <div class="card"><div class="card-body">
-        <div style="font-size:.75rem;color:var(--muted);">নেট (ডিপোজিট - উইথড্র)</div>
-        <div style="font-size:1.4rem;font-weight:800;color: var(--text-accent);">৳ <%= Number(grand.total_deposit - grand.total_withdraw).toLocaleString('en-BD') %></div>
+        <div class="dz93-9">নেট (ডিপোজিট - উইথড্র)</div>
+        <div class="dz93-13">৳ <%= Number(grand.total_deposit - grand.total_withdraw).toLocaleString('en-BD') %></div>
       </div></div>
     </div>
 
-    <div class="card" style="margin-bottom:1.5rem;">
-      <div class="card-body" style="overflow-x:auto;">
-        <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:1rem;">📅 দৈনিক হিসাব</h2>
-        <table class="table" style="width:100%;border-collapse:collapse;">
+    <div class="card dz93-1">
+      <div class="card-body dz93-14">
+        <h2 class="dz93-15">📅 দৈনিক হিসাব</h2>
+        <table class="table dz93-16">
           <thead>
-            <tr style="border-bottom:1px solid var(--border);">
-              <th style="padding:.6rem;text-align:left;color:var(--muted);font-size:.8rem;">তারিখ</th>
-              <th style="padding:.6rem;text-align:left;color:var(--muted);font-size:.8rem;">ডিপোজিট</th>
-              <th style="padding:.6rem;text-align:left;color:var(--muted);font-size:.8rem;">উইথড্র</th>
-              <th style="padding:.6rem;text-align:left;color:var(--muted);font-size:.8rem;">নেট</th>
+            <tr class="dz93-17">
+              <th class="sp45-1">তারিখ</th>
+              <th class="sp45-1">ডিপোজিট</th>
+              <th class="sp45-1">উইথড্র</th>
+              <th class="sp45-1">নেট</th>
             </tr>
           </thead>
           <tbody>
             <% if(daily && daily.length > 0) { %>
               <% daily.forEach(d => { %>
-                <tr style="border-bottom:1px solid var(--border);">
-                  <td style="padding:.6rem;font-weight:600;"><%= new Date(d.day).toLocaleDateString('bn-BD', {day:'2-digit', month:'short', year:'numeric'}) %></td>
-                  <td style="padding:.6rem;color:#10b981;font-weight:700;">৳ <%= Number(d.deposit_total).toLocaleString('en-BD') %></td>
-                  <td style="padding:.6rem;color:#ff4444;font-weight:700;">৳ <%= Number(d.withdraw_total).toLocaleString('en-BD') %></td>
-                  <td style="padding:.6rem;color: var(--text-accent);font-weight:700;">৳ <%= Number(d.deposit_total - d.withdraw_total).toLocaleString('en-BD') %></td>
+                <tr class="dz93-17">
+                  <td class="sp45-2"><%= new Date(d.day).toLocaleDateString('bn-BD', {day:'2-digit', month:'short', year:'numeric'}) %></td>
+                  <td class="sp45-3">৳ <%= Number(d.deposit_total).toLocaleString('en-BD') %></td>
+                  <td class="sp45-4">৳ <%= Number(d.withdraw_total).toLocaleString('en-BD') %></td>
+                  <td class="sp45-5">৳ <%= Number(d.deposit_total - d.withdraw_total).toLocaleString('en-BD') %></td>
                 </tr>
               <% }) %>
             <% } else { %>
-              <tr><td colspan="4" style="padding:1.5rem;text-align:center;color:var(--muted);">এই সময়ে কোনো লেনদেন নেই</td></tr>
+              <tr><td class="sp45-6" colspan="4">এই সময়ে কোনো লেনদেন নেই</td></tr>
             <% } %>
           </tbody>
         </table>
@@ -89,29 +118,29 @@
     </div>
 
     <div class="card">
-      <div class="card-body" style="overflow-x:auto;">
-        <h2 style="font-size:1.1rem;font-weight:700;margin-bottom:1rem;">👥 ইউজার অনুযায়ী হিসাব</h2>
-        <table class="table" style="width:100%;border-collapse:collapse;">
+      <div class="card-body dz93-14">
+        <h2 class="dz93-15">👥 ইউজার অনুযায়ী হিসাব</h2>
+        <table class="table dz93-16">
           <thead>
-            <tr style="border-bottom:1px solid var(--border);">
-              <th style="padding:.6rem;text-align:left;color:var(--muted);font-size:.8rem;">ইউজার</th>
-              <th style="padding:.6rem;text-align:left;color:var(--muted);font-size:.8rem;">মোট ডিপোজিট</th>
-              <th style="padding:.6rem;text-align:left;color:var(--muted);font-size:.8rem;">মোট উইথড্র</th>
-              <th style="padding:.6rem;text-align:left;color:var(--muted);font-size:.8rem;">নেট</th>
+            <tr class="dz93-17">
+              <th class="sp45-1">ইউজার</th>
+              <th class="sp45-1">মোট ডিপোজিট</th>
+              <th class="sp45-1">মোট উইথড্র</th>
+              <th class="sp45-1">নেট</th>
             </tr>
           </thead>
           <tbody>
             <% if(users && users.length > 0) { %>
               <% users.forEach(u => { %>
-                <tr style="border-bottom:1px solid var(--border);">
-                  <td style="padding:.6rem;font-weight:600;"><%= u.username %></td>
-                  <td style="padding:.6rem;color:#10b981;font-weight:700;">৳ <%= Number(u.total_deposit).toLocaleString('en-BD') %></td>
-                  <td style="padding:.6rem;color:#ff4444;font-weight:700;">৳ <%= Number(u.total_withdraw).toLocaleString('en-BD') %></td>
-                  <td style="padding:.6rem;color: var(--text-accent);font-weight:700;">৳ <%= Number(u.total_deposit - u.total_withdraw).toLocaleString('en-BD') %></td>
+                <tr class="dz93-17">
+                  <td class="sp45-2"><%= u.username %></td>
+                  <td class="sp45-3">৳ <%= Number(u.total_deposit).toLocaleString('en-BD') %></td>
+                  <td class="sp45-4">৳ <%= Number(u.total_withdraw).toLocaleString('en-BD') %></td>
+                  <td class="sp45-5">৳ <%= Number(u.total_deposit - u.total_withdraw).toLocaleString('en-BD') %></td>
                 </tr>
               <% }) %>
             <% } else { %>
-              <tr><td colspan="4" style="padding:1.5rem;text-align:center;color:var(--muted);">এই সময়ে কোনো ইউজার নেই</td></tr>
+              <tr><td class="sp45-6" colspan="4">এই সময়ে কোনো ইউজার নেই</td></tr>
             <% } %>
           </tbody>
         </table>

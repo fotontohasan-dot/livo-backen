@@ -1,44 +1,81 @@
 <%- include('partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz47-1 { padding: 16px; padding-bottom: 120px; max-width: 600px; margin: 0 auto; }
+  .dz47-2 { color: var(--text-main); text-decoration: none; font-size: 20px; }
+  .dz47-3 { color: var(--text-main); font-size: 18px; font-weight: bold; }
+  .dz47-4 { background: linear-gradient(135deg,#7c3aed,#5b21b6); border-radius: 16px; padding: 16px; margin-bottom: 16px; text-align: center; }
+  .dz47-5 { color: var(--text-main); font-size: 15px; font-weight: bold; }
+  .dz47-6 { color: rgba(255,255,255,0.9); font-size: 12px; margin-top: 4px; }
+  .dz47-7 { color: var(--text-muted); font-size: 13px; margin-bottom: 10px; }
+  .dz47-8 { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+  .dz47-9 { color: var(--text-main); font-size: 14px; font-weight: 600; margin-bottom: 10px; }
+  .dz47-10 { color: var(--text-muted); font-size: 11px; }
+  .dz47-11 { color: var(--text-muted); font-size: 12px; margin-bottom: 5px; }
+  .dz47-12 { background: #1e1e1e; border: 1px solid #333; color: #fff; border-radius: 8px; padding: 8px 12px; font-size: 12px; cursor: pointer; }
+  .dz47-13 { color: #f59e0b; font-weight: bold; }
+  .dz47-14 { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 30px; text-align: center; color: var(--text-muted); }
+  .dz47-15 { color: var(--text-main); font-weight: bold; margin-bottom: 10px; }
+  .dz47-16 { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 14px; margin-bottom: 10px; }
+  .dz47-17 { color: var(--text-main); font-size: 13px; font-weight: 600; }
+  .dz47-18 { color: #f59e0b; }
+  .dz47-19 { position: fixed; bottom: 60px; left: 0; right: 0; background: #111; border-top: 2px solid #f59e0b; padding: 14px 16px; display: none; z-index: 100; max-width: 600px; margin: 0 auto; }
+  .dz47-20 { color: var(--text-main); font-weight: bold; font-size: 14px; }
+  .dz47-21 { background: none; border: none; color: #ef4444; font-size: 12px; cursor: pointer; }
+  .dz47-22 { max-height: 120px; overflow-y: auto; margin-bottom: 8px; }
+  .dz47-23 { flex: 1; background: #1e1e1e; border: 1px solid #333; color: #fff; padding: 10px; border-radius: 8px; }
+  .dz47-24 { background: #f59e0b; color: #000; border: none; border-radius: 8px; padding: 10px 16px; font-weight: bold; font-size: 13px; cursor: pointer; }
+  .dz47-25 { color: var(--text-muted); font-size: 11px; margin-top: 6px; text-align: center; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im47-1 { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .im47-2 { margin-bottom: 8px; }
+  .im47-3 { display: flex; flex-wrap: wrap; gap: 6px; }
+  .im47-4 { margin-top: 24px; }
+  .im47-5 { display: flex; justify-content: space-between; margin-bottom: 6px; }
+  .im47-6 { margin-top: 8px; }
+  .im47-7 { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .im47-8 { display: flex; gap: 8px; align-items: center; }
+</style>
+
 <%- include('partials/navbar') %>
-<div class="container" style="padding:16px;padding-bottom:120px;max-width:600px;margin:0 auto;">
+<div class="container dz47-1">
   <%- include('partials/flash') %>
 
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-    <a href="/matches" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
-    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">🎯 <%= t.accumulator_bet %></h1>
+  <div class="im47-1">
+    <a class="dz47-2" href="/matches">←</a>
+    <h1 class="dz47-3">🎯 <%= t.accumulator_bet %></h1>
   </div>
 
   <!-- ব্যানার -->
-  <div style="background:linear-gradient(135deg,#7c3aed,#5b21b6);border-radius:16px;padding:16px;margin-bottom:16px;text-align:center;">
-    <div style="color:var(--text-main);font-size:15px;font-weight:bold;"><%= t.accumulator_desc %></div>
-    <div style="color:rgba(255,255,255,0.9);font-size:12px;margin-top:4px;">
+  <div class="dz47-4">
+    <div class="dz47-5"><%= t.accumulator_desc %></div>
+    <div class="dz47-6">
       <%= t.accumulator_boost_msg %>
     </div>
   </div>
 
   <% if (matches && matches.length > 0) { %>
-    <div style="color:var(--text-muted);font-size:13px;margin-bottom:10px;"><%= t.select_selection_msg %></div>
+    <div class="dz47-7"><%= t.select_selection_msg %></div>
 
     <% matches.forEach(m => { %>
-      <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:14px;margin-bottom:12px;">
-        <div style="color:var(--text-main);font-size:14px;font-weight:600;margin-bottom:10px;"><%= m.title %> <span style="color:var(--text-muted);font-size:11px;">(<%= m.sport %>)</span></div>
+      <div class="dz47-8">
+        <div class="dz47-9"><%= m.title %> <span class="dz47-10">(<%= m.sport %>)</span></div>
         <% m.markets.forEach(mk => {
           const runners = mk.odds && typeof mk.odds === 'object' ? Object.keys(mk.odds) : [];
         %>
-          <div style="margin-bottom:8px;">
-            <div style="color:var(--text-muted);font-size:12px;margin-bottom:5px;"><%= mk.market_name %></div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          <div class="im47-2">
+            <div class="dz47-11"><%= mk.market_name %></div>
+            <div class="im47-3">
               <% runners.forEach(rn => {
                 const odd = mk.odds[rn];
               %>
-                <button type="button" class="acca-pick"
-                        data-match="<%= m.match_id %>"
-                        data-market="<%= mk.market_id %>"
-                        data-mname="<%= mk.market_name %>"
-                        data-runner="<%= rn %>"
-                        data-odd="<%= odd %>"
-                        style="background:#1e1e1e;border:1px solid #333;color:#fff;border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer;">
-                  <%= rn %> <span style="color:#f59e0b;font-weight:bold;"><%= odd %></span>
+                <button type="button" class="acca-pick dz47-12" data-match="<%= m.match_id %>" data-market="<%= mk.market_id %>" data-mname="<%= mk.market_name %>" data-runner="<%= rn %>" data-odd="<%= odd %>">
+                  <%= rn %> <span class="dz47-13"><%= odd %></span>
                 </button>
               <% }) %>
             </div>
@@ -47,28 +84,28 @@
       </div>
     <% }) %>
   <% } else { %>
-    <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:30px;text-align:center;color: var(--text-muted);">
+    <div class="dz47-14">
       <%= t.no_open_markets_msg %>
     </div>
   <% } %>
 
   <!-- আমার অ্যাকুমুলেটর হিস -->
   <% if (myAccas && myAccas.length > 0) { %>
-    <div style="margin-top:24px;">
-      <div style="color:var(--text-main);font-weight:bold;margin-bottom:10px;">📜 <%= t.my_accumulators %></div>
+    <div class="im47-4">
+      <div class="dz47-15">📜 <%= t.my_accumulators %></div>
       <% myAccas.forEach(a => {
         const color = a.status === 'won' ? '#10b981' : a.status === 'lost' ? '#ef4444' : '#f59e0b';
         const label = a.status === 'won' ? t.won : a.status === 'lost' ? t.lost : t.running;
       %>
-        <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:14px;margin-bottom:10px;">
-          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-            <span style="color:var(--text-main);font-size:13px;font-weight:600;"><%= a.selection_count %> <%= t.selections_label %> <%= a.boost_percent > 0 ? '(+' + a.boost_percent + '% ' + t.boost_label + ')' : '' %></span>
+        <div class="dz47-16">
+          <div class="im47-5">
+            <span class="dz47-17"><%= a.selection_count %> <%= t.selections_label %> <%= a.boost_percent > 0 ? '(+' + a.boost_percent + '% ' + t.boost_label + ')' : '' %></span>
             <span style="color:<%= color %>;font-size:12px;font-weight:bold;"><%= label %></span>
           </div>
-          <div style="color:var(--text-muted);font-size:11px;">
-            <%= t.stake_label %>: <%= a.stake %> · <%= t.total_odds_label %>: <%= a.total_odd %> · <%= t.potential_win_label %>: <span style="color:#f59e0b;"><%= a.potential_win %></span>
+          <div class="dz47-10">
+            <%= t.stake_label %>: <%= a.stake %> · <%= t.total_odds_label %>: <%= a.total_odd %> · <%= t.potential_win_label %>: <span class="dz47-18"><%= a.potential_win %></span>
           </div>
-          <div style="margin-top:8px;">
+          <div class="im47-6">
             <% a.selections.forEach(s => {
               const sc = s.status === 'won' ? '#10b981' : s.status === 'lost' ? '#ef4444' : '#94a3b8';
             %>
@@ -83,17 +120,17 @@
 </div>
 
 <!-- বট স্লিপ (নিচে ভাসমান) -->
-<div id="betSlip" style="position:fixed;bottom:60px;left:0;right:0;background:#111;border-top:2px solid #f59e0b;padding:14px 16px;display:none;z-index:100;max-width:600px;margin:0 auto;">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-    <span style="color:var(--text-main);font-weight:bold;font-size:14px;"><%= t.bet_slip %> (<span id="slipCount">0</span>)</span>
-    <button data-acca-action="clear" style="background:none;border:none;color:#ef4444;font-size:12px;cursor:pointer;"><%= t.clear_all %></button>
+<div class="dz47-19" id="betSlip">
+  <div class="im47-7">
+    <span class="dz47-20"><%= t.bet_slip %> (<span id="slipCount">0</span>)</span>
+    <button class="dz47-21" data-acca-action="clear"><%= t.clear_all %></button>
   </div>
-  <div id="slipItems" style="max-height:120px;overflow-y:auto;margin-bottom:8px;"></div>
-  <div style="display:flex;gap:8px;align-items:center;">
-    <input type="number" id="slipStake" placeholder="<%= t.stake_placeholder_short %>" min="10" style="flex:1;background:#1e1e1e;border:1px solid #333;color:#fff;padding:10px;border-radius:8px;">
-    <button data-acca-action="place" style="background:#f59e0b;color:#000;border:none;border-radius:8px;padding:10px 16px;font-weight:bold;font-size:13px;cursor:pointer;"><%= t.place_bet %></button>
+  <div class="dz47-22" id="slipItems"></div>
+  <div class="im47-8">
+    <input class="dz47-23" type="number" id="slipStake" placeholder="<%= t.stake_placeholder_short %>" min="10">
+    <button class="dz47-24" data-acca-action="place"><%= t.place_bet %></button>
   </div>
-  <div id="slipInfo" style="color:var(--text-muted);font-size:11px;margin-top:6px;text-align:center;"></div>
+  <div class="dz47-25" id="slipInfo"></div>
 </div>
 
 <script type="application/json" id="accumulatorConfig"><%- jsonScriptSafe({ minStake: t.min_stake_msg, minSelections: t.min_selections_msg, totalOdds: t.total_odds_label, boost: t.boost_label, potentialWin: t.potential_win_label, error: t.server_error }) %></script>

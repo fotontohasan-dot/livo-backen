@@ -1,3 +1,10 @@
+<style nonce="<%= cspNonce %>">
+  /* Runtime-generated markup: these inline styles live in JS strings, so
+     cascade-check cannot see them. Migrated only where no rule in the site
+     CSS can set the same longhand on this tag/class at all. */
+  .js1.js1.js1 { width: ' + Math.round((s.count / maxSignalCount) * 100) + '%; }
+  .js2.js2.js2 { height: ' + h + 'px; }
+</style>
 <%
 function escapeHtml(str) {
   return String(str == null ? '' : str)
@@ -34,7 +41,7 @@ const maxSignalCount = Math.max(1, ...topSignals.map(s => s.count));
 const signalRows = topSignals.map(s =>
   '<div class="flex items-center gap-3 py-2">' +
     '<div class="w-40 text-xs text-slate-600 flex-shrink-0 truncate">' + escapeHtml(SIGNAL_LABELS[s.type] || s.type) + '</div>' +
-    '<div class="flex-1 bg-slate-100 rounded-full h-2.5 overflow-hidden"><div class="bg-red-400 h-full rounded-full" style="width:' + Math.round((s.count / maxSignalCount) * 100) + '%"></div></div>' +
+    '<div class="flex-1 bg-slate-100 rounded-full h-2.5 overflow-hidden"><div class="bg-red-400 h-full rounded-full js1"></div></div>' +
     '<div class="w-8 text-xs font-semibold text-slate-700 text-right">' + s.count + '</div>' +
   '</div>'
 ).join('') || '<div class="text-xs text-slate-400 py-3 text-center">কোনো সিগন্যাল ডেটা নেই</div>';
@@ -55,7 +62,7 @@ const trendBars = trend.map(point => {
   const label = new Date(point.day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   return '<div class="flex flex-col items-center gap-1 flex-1">' +
     '<div class="text-[10px] text-slate-400">' + point.count + '</div>' +
-    '<div class="w-full bg-red-400 rounded-t-md" style="height:' + h + 'px" title="' + label + ': ' + point.count + '"></div>' +
+    '<div class="w-full bg-red-400 rounded-t-md js2" title="' + label + ': ' + point.count + '"></div>' +
     '<div class="text-[9px] text-slate-400 rotate-0">' + label + '</div>' +
   '</div>';
 }).join('') || '<div class="text-xs text-slate-400 py-8 text-center w-full">গত ১৪ দিনে কোনো ফ্ল্যাগ তৈরি হয়নি</div>';

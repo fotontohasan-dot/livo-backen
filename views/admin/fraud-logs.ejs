@@ -1,3 +1,9 @@
+<style nonce="<%= cspNonce %>">
+  /* Runtime-generated markup: these inline styles live in JS strings, so
+     cascade-check cannot see them. Migrated only where no rule in the site
+     CSS can set the same longhand on this tag/class at all. */
+  .js1.js1.js1 { display: inline; }
+</style>
 <%
 function escapeHtml(str) {
   return String(str == null ? '' : str)
@@ -25,11 +31,11 @@ function logRow(l) {
   const userLabel = l.username ? escapeHtml(l.username) + ' <span class="text-slate-400">(#' + l.user_id + ')</span>' : '#' + l.user_id;
   const actions = l.status === 'open'
     ? '<div class="flex gap-1.5 justify-center">' +
-        '<form method="POST" action="/admin/fraud-logs/' + l.id + '/review" style="display:inline">' +
+        '<form class="js1" method="POST" action="/admin/fraud-logs/' + l.id + '/review">' +
           '<input type="hidden" name="action" value="reviewed">' +
           '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white">Reviewed</button>' +
         '</form>' +
-        '<form method="POST" action="/admin/fraud-logs/' + l.id + '/review" style="display:inline">' +
+        '<form class="js1" method="POST" action="/admin/fraud-logs/' + l.id + '/review">' +
           '<input type="hidden" name="action" value="dismiss">' +
           '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-400 hover:bg-slate-500 text-white">Dismiss</button>' +
         '</form>' +

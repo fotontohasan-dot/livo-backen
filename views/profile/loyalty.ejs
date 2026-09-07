@@ -1,35 +1,77 @@
 <%- include('../partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz80-1 { padding: 16px; padding-bottom: 100px; max-width: 600px; margin: 0 auto; }
+  .dz80-2 { color: var(--text-main); text-decoration: none; font-size: 20px; }
+  .dz80-3 { color: var(--text-main); font-size: 18px; font-weight: bold; }
+  .dz80-4 { background: linear-gradient(135deg,#7c3aed,#a855f7); border-radius: 16px; padding: 24px; margin-bottom: 16px; text-align: center; }
+  .dz80-5 { color: rgba(255,255,255,0.9); font-size: 13px; }
+  .dz80-6 { color: var(--text-main); font-size: 34px; font-weight: 900; }
+  .dz80-7 { color: rgba(255,255,255,0.9); font-size: 13px; margin-top: 4px; }
+  .dz80-8 { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 18px; margin-bottom: 16px; }
+  .dz80-9 { color: var(--text-main); font-weight: bold; }
+  .dz80-10 { color: #f59e0b; font-size: 12px; }
+  .dz80-11 { background: rgba(255,255,255,0.1); border-radius: 20px; height: 10px; overflow: hidden; margin-bottom: 6px; }
+  .dz80-12 { color: var(--text-muted); font-size: 11px; }
+  .dz80-13 { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+  .dz80-14 { color: var(--text-main); font-weight: bold; margin-bottom: 12px; }
+  .dz80-15 { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.04); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; }
+  .dz80-16 { color: var(--text-main); font-size: 13px; font-weight: 600; }
+  .dz80-17 { background: #10b981; color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: bold; cursor: pointer; }
+  .dz80-18 { color: var(--text-main); font-weight: bold; margin-bottom: 6px; }
+  .dz80-19 { color: var(--text-muted); font-size: 12px; margin-bottom: 12px; }
+  .dz80-20 { width: 100%; background: #1e1e1e; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 8px; margin-bottom: 10px; }
+  .dz80-21 { background: rgba(148,163,184,0.1); border-radius: 8px; padding: 12px; color: var(--text-muted); font-size: 13px; text-align: center; }
+  .dz80-22 { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 18px; }
+  .dz80-23 { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .dz80-24 { color: var(--text-main); font-size: 13px; }
+  .dz80-25 { color: var(--text-muted); font-size: 13px; text-align: center; padding: 10px; }
+  .dz80-26 { font-size: .75rem; color: var(--text-muted); text-align: center; margin-top: 1rem; line-height: 1.6; }
+  .dz80-27 { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 30px; text-align: center; color: var(--text-muted); }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im81-1 { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .im81-2 { font-size: 40px; margin-bottom: 4px; }
+  .im81-3 { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .im81-4 { margin: 0; }
+  .im81-5 { width: 100%; justify-content: center; }
+</style>
+
 <%- include('../partials/navbar') %>
-<div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto;">
+<div class="container dz80-1">
   <%- include('../partials/flash') %>
 
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-    <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
-    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">⭐ লয়্যালটি পয়েন্ট</h1>
+  <div class="im81-1">
+    <a class="dz80-2" href="/profile">←</a>
+    <h1 class="dz80-3">⭐ লয়্যালটি পয়েন্ট</h1>
   </div>
 
   <% if (loyalty) { %>
     <!-- পয়েন্ট কার্ড -->
-    <div style="background:linear-gradient(135deg,#7c3aed,#a855f7);border-radius:16px;padding:24px;margin-bottom:16px;text-align:center;">
-      <div style="font-size:40px;margin-bottom:4px;">⭐</div>
-      <div style="color:rgba(255,255,255,0.9);font-size:13px;">আপনার পয়েন্ট</div>
-      <div style="color:var(--text-main);font-size:34px;font-weight:900;"><%= Number(loyalty.points).toLocaleString('bn-BD') %></div>
-      <div style="color:rgba(255,255,255,0.9);font-size:13px;margin-top:4px;">
+    <div class="dz80-4">
+      <div class="im81-2">⭐</div>
+      <div class="dz80-5">আপনার পয়েন্ট</div>
+      <div class="dz80-6"><%= Number(loyalty.points).toLocaleString('bn-BD') %></div>
+      <div class="dz80-7">
         = <%= Number(loyalty.coinValue).toLocaleString('bn-BD') %> কয়েন মূল্য
       </div>
     </div>
 
     <!-- VIP লেভেল প্রোগ্রেস -->
     <% if (vip) { %>
-    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;margin-bottom:16px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <div style="color:var(--text-main);font-weight:bold;">👑 VIP <%= vip.current ? vip.current.name : '০' %> (লেভেল <%= vip.level %>)</div>
-        <a href="/profile/vip" style="color:#f59e0b;font-size:12px;">বিস্তারিত →</a>
+    <div class="dz80-8">
+      <div class="im81-3">
+        <div class="dz80-9">👑 VIP <%= vip.current ? vip.current.name : '০' %> (লেভেল <%= vip.level %>)</div>
+        <a class="dz80-10" href="/profile/vip">বিস্তারিত →</a>
       </div>
-      <div style="background:rgba(255,255,255,0.1);border-radius:20px;height:10px;overflow:hidden;margin-bottom:6px;">
+      <div class="dz80-11">
         <div style="width:<%= vip.progress %>%;height:100%;background:linear-gradient(90deg,#f59e0b,#fbbf24);"></div>
       </div>
-      <div style="color:var(--text-muted);font-size:11px;">
+      <div class="dz80-12">
         <% if (vip.next) { %>
           পরের লেভেলের জন্য আরও <%= Number(vip.toNext).toLocaleString('bn-BD') %> টার্নওভার লাগবে
         <% } else { %>
@@ -40,58 +82,57 @@
     <% } %>
 
     <!-- রিডেমশন শপ -->
-    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;margin-bottom:16px;">
-      <div style="color:var(--text-main);font-weight:bold;margin-bottom:12px;">🛍️ রিডেমশন শপ</div>
+    <div class="dz80-13">
+      <div class="dz80-14">🛍️ রিডেমশন শপ</div>
       <% [
         { pts: 100, label: '১০ কয়েন ক্যাশ', coins: 10 },
         { pts: 500, label: '৫০ কয়েন ক্যাশ', coins: 50 },
         { pts: 1000, label: '১০০ কয়েন ক্যাশ + ব্যাজ বোনাস', coins: 100 }
       ].forEach(function(item) { %>
-        <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.04);border-radius:10px;padding:12px 14px;margin-bottom:8px;">
+        <div class="dz80-15">
           <div>
-            <div style="color:var(--text-main);font-size:13px;font-weight:600;"><%= item.label %></div>
-            <div style="color:var(--text-muted);font-size:11px;"><%= item.pts %> পয়েন্ট লাগবে</div>
+            <div class="dz80-16"><%= item.label %></div>
+            <div class="dz80-12"><%= item.pts %> পয়েন্ট লাগবে</div>
           </div>
           <% if (loyalty.points >= item.pts) { %>
-            <form action="/profile/loyalty/redeem" method="POST" style="margin:0;">
+            <form class="im81-4" action="/profile/loyalty/redeem" method="POST">
               <input type="hidden" name="points" value="<%= item.pts %>">
-              <button type="submit" style="background:#10b981;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:bold;cursor:pointer;">রিডিম</button>
+              <button class="dz80-17" type="submit">রিডিম</button>
             </form>
           <% } else { %>
-            <span style="color:var(--text-muted);font-size:11px;">পয়েন্ট কম</span>
+            <span class="dz80-12">পয়েন্ট কম</span>
           <% } %>
         </div>
       <% }); %>
     </div>
 
     <!-- কাস্টম রূপান্তর -->
-    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;margin-bottom:16px;">
-      <div style="color:var(--text-main);font-weight:bold;margin-bottom:6px;">🔄 কাস্টম রূপান্তর</div>
-      <div style="color:var(--text-muted);font-size:12px;margin-bottom:12px;">
+    <div class="dz80-13">
+      <div class="dz80-18">🔄 কাস্টম রূপান্তর</div>
+      <div class="dz80-19">
         ১০০ পয়েন্ট = ১০ কয়েন। সর্বনিম্ন <%= loyalty.minRedeem %> পয়েন্ট রূপান্তর করা যায়।
       </div>
       <% if (loyalty.points >= loyalty.minRedeem) { %>
         <form action="/profile/loyalty/redeem" method="POST">
-          <input type="number" name="points" placeholder="কত পয়েন্ট রূপান্তর করবেন" min="<%= loyalty.minRedeem %>" max="<%= loyalty.points %>" required
-                 style="width:100%;background:#1e1e1e;border:1px solid #333;color:#fff;padding:12px;border-radius:8px;margin-bottom:10px;">
-          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">🔄 রূপান্তর করুন</button>
+          <input class="dz80-20" type="number" name="points" placeholder="কত পয়েন্ট রূপান্তর করবেন" min="<%= loyalty.minRedeem %>" max="<%= loyalty.points %>" required>
+          <button type="submit" class="btn btn-primary im81-5">🔄 রূপান্তর করুন</button>
         </form>
       <% } else { %>
-        <div style="background:rgba(148,163,184,0.1);border-radius:8px;padding:12px;color: var(--text-muted);font-size:13px;text-align:center;">
+        <div class="dz80-21">
           রূপান্তরের জন্য কমপক্ষে <%= loyalty.minRedeem %> পয়েন্ট দরকার। আরও খেলুন!
         </div>
       <% } %>
     </div>
 
     <!-- হিস্ট্রি -->
-    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:18px;">
-      <div style="color:var(--text-main);font-weight:bold;margin-bottom:12px;">📜 পয়েন্ট হিস্ট্রি</div>
+    <div class="dz80-22">
+      <div class="dz80-14">📜 পয়েন্ট হিস্ট্রি</div>
       <% if (loyalty.history && loyalty.history.length > 0) { %>
         <% loyalty.history.forEach(h => { %>
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+          <div class="dz80-23">
             <div>
-              <div style="color:var(--text-main);font-size:13px;"><%= h.reason === 'earn' ? '🎮 খেলে অর্জন' : '🔄 রূপান্তর' %></div>
-              <div style="color:var(--text-muted);font-size:11px;"><%= new Date(h.created_at).toLocaleDateString('bn-BD') %></div>
+              <div class="dz80-24"><%= h.reason === 'earn' ? '🎮 খেলে অর্জন' : '🔄 রূপান্তর' %></div>
+              <div class="dz80-12"><%= new Date(h.created_at).toLocaleDateString('bn-BD') %></div>
             </div>
             <div style="font-size:14px;font-weight:bold;color:<%= h.points >= 0 ? '#10b981' : '#ef4444' %>;">
               <%= h.points >= 0 ? '+' : '' %><%= h.points %>
@@ -99,17 +140,17 @@
           </div>
         <% }) %>
       <% } else { %>
-        <div style="color:var(--text-muted);font-size:13px;text-align:center;padding:10px;">এখনো কোনো পয়েন্ট হিস্ট্রি নেই।</div>
+        <div class="dz80-25">এখনো কোনো পয়েন্ট হিস্ট্রি নেই।</div>
       <% } %>
     </div>
 
-    <p style="font-size:.75rem;color:var(--text-muted);text-align:center;margin-top:1rem;line-height:1.6;">
+    <p class="dz80-26">
       প্রতি ১০০ বাজিতে ১ পয়েন্ট জমা হয়।<br>
       গেম ও স্পোর্টস — দুটোতেই পয়েন্ট পাওয়া যায়।
     </p>
 
   <% } else { %>
-    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:30px;text-align:center;color: var(--text-muted);">
+    <div class="dz80-27">
       পয়েন্ট তথ্য লোড করা যায়নি। পরে আবার চেষ্টা করুন।
     </div>
   <% } %>
