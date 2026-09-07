@@ -129,12 +129,29 @@ describe('CSRF Protection (middleware/csrf.js)', () => {
       expect(res.text || '').not.toContain('CSRF');
     });
 
-    test('/api/* এক্সেম্পট — CSRF এরর কোড দেয় না', async () => {
+    // এক্সেম্পশন আগে পাথ-প্রিফিক্স ('/api/') দিয়ে হতো, অর্থাৎ পুরো /api/*
+    // CSRF-মুক্ত ছিল। আজ ওখানে state-changing রুট নেই বলে সেটা নিরাপদ ছিল,
+    // কিন্তু কেউ একটা সেশন-অথেন্টিকেটেড POST যোগ করলেই সেটা নীরবে অরক্ষিত
+    // হয়ে যেত। এখন এক্সেম্পশনের শর্ত হলো API-key হেডারের উপস্থিতি।
+    test('x-api-key হেডারসহ /api/* এক্সেম্পট — CSRF এরর কোড দেয় না', async () => {
       const res = await freshRequest()
         .post('/api/v1/nonexistent-endpoint')
         .set('User-Agent', REALISTIC_UA)
+        .set('x-api-key', 'some-api-key-value')
         .send({});
       expect(res.body && res.body.code).not.toBe('CSRF_TOKEN_INVALID');
+    });
+
+    test('হেডার ছাড়া সেশন-ভিত্তিক POST /api/* এখন CSRF-সুরক্ষিত', async () => {
+      // এটাই ছিল টাইম-বোমা: প্রিফিক্স-ভিত্তিক এক্সেম্পশনে এই রিকোয়েস্ট
+      // টোকেন ছাড়াই পাস পেত। ভবিষ্যতে কেউ প্রিফিক্স ফিরিয়ে আনলে এই
+      // টেস্টটাই লাল হবে।
+      const { agent } = await getCsrfAgent('/login');
+      const res = await agent
+        .post('/api/v1/nonexistent-endpoint')
+        .set('User-Agent', REALISTIC_UA)
+        .send({});
+      expect(res.status).toBe(403);
     });
   });
 
