@@ -74,6 +74,13 @@ jobs:
     - name: Scan for committed credentials
       run: npm run scan:secrets
 
+    # আজ ০টা ভালনারেবিলিটি, কিন্তু নতুন CVE প্রকাশ হলে কেউ জানত না — CI-তে
+    # কোনো ডিপেন্ডেন্সি স্ক্যানই ছিল না। high/critical-এ বিল্ড লাল হয়;
+    # moderate ও নিচেরগুলো রিপোর্টে দেখা যায় কিন্তু আটকায় না, নাহলে
+    # ট্রানজিটিভ নয়েজে গেটটা উপেক্ষিত হয়ে যেত।
+    - name: Dependency audit
+      run: npm audit --audit-level=high
+
     - name: Run tests
       # continue-on-error ইচ্ছাকৃতভাবে সরানো হয়েছে: ওটা থাকলে ধাপটা ব্যর্থ হলেও
       # "সবুজ" দেখাত এবং লাল CI নিয়ে PR merge হয়ে যেত। এখন টেস্ট ফেল করলে ধাপ
