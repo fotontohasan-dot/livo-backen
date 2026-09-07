@@ -107,10 +107,19 @@ const MAX_BONUS = 15000;
 // এবং SSLCommerz অটো-ক্রেডিট দুই জায়গা থেকেই এই একই ফাংশন কল হয়
 async function creditApprovedDeposit(client, request) {
   let bonusGiven = 0;
+  // অঙ্কটা একবারই নরমালাইজ হয় এবং নিচে সব জায়গায় এই একটাই ভ্যারিয়েবল ব্যবহার হয়।
+  // আগে coins-এ গোল করা মান, total_deposited-এ কাঁচা মান (pg থেকে NUMERIC = স্ট্রিং),
+  // আর বোনাসে আবার কাঁচা মান — একই ফাংশনে তিন রকম হিসাব হতো।
   const amount = Math.round(Number(request.amount));
 
+  // একই ইউজারের দুটো pending ডিপোজিট দুই অ্যাডমিন একসাথে অ্যাপ্রুভ করলে দুটোই
+  // `before = 0` পড়ত এবং দুটোই ১০০% প্রথম-ডিপোজিট বোনাস পেত। লক শুধু নিজের
+  // payment_requests সারিতে ছিল, ইউজার সারিতে নয় — তাই ইউজার সারিটাই সিরিয়ালাইজেশন
+  // পয়েন্ট হিসেবে লক করা হয়।
+  await client.query('SELECT id FROM users WHERE id = $1 FOR UPDATE', [request.user_id]);
+
   await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [amount, request.user_id]);
-  await client.query('UPDATE users SET total_deposited = COALESCE(total_deposited,0) + $1 WHERE id=$2', [request.amount, request.user_id]);
+  await client.query('UPDATE users SET total_deposited = COALESCE(total_deposited,0) + $1 WHERE id=$2', [amount, request.user_id]);
   // ইউজারের /profile/transactions পেজ coin_transactions টেবিল থেকে পড়ে — এই ইনসার্ট ছাড়া
   // অনুমোদিত ডিপোজিট কখনো সেই হিস্ট্রিতে দেখা যেত না (ব্যালেন্স ঠিকই বাড়ত, শুধু রেকর্ড থাকত না)।
   await client.query(
@@ -118,8 +127,9 @@ async function creditApprovedDeposit(client, request) {
     [request.user_id, amount, `ডিপোজিট অনুমোদন (${request.method})`]
   );
 
-  // ডিপোজিট করলে ইউজারের ডেমো ব্যালেন্সও একই পরিমাণ বেড়ে যাবে (স্বয়ংক্রিয়)
-  await client.query('UPDATE users SET demo_balance = COALESCE(demo_balance,0) + $1 WHERE id=$2', [amount, request.user_id]);
+  // ডেমো ব্যালেন্স ইচ্ছাকৃতভাবে আর বাড়ানো হয় না। ডেমো মোড ফ্রি খেলার জন্য —
+  // আসল ডিপোজিটের সাথে বাড়ালে broadcastDemoStats()-এর সব পরিসংখ্যান আসল
+  // টাকার প্রবাহে দূষিত হতো এবং ডেমো/রিয়াল আলাদা করার অর্থই থাকত না।
   broadcastDemoStats().catch(e => console.error('demo stats broadcast:', e.message));
 
   if (request.want_bonus) {
@@ -128,10 +138,11 @@ async function creditApprovedDeposit(client, request) {
       [request.user_id, request.id]
     );
     const before = parseInt(cnt.rows[0].count);
-    const isFriday = new Date().getDay() === 5;
+    // ব্যবসায়িক টাইমজোনে (Asia/Dhaka) শুক্রবার — সার্ভার TZ (UTC) নয়।
+    const isFriday = businessTime.businessWeekday() === 5;
     const pct = bonusPercentFor(before, isFriday);
 
-    bonusGiven = Math.min(MAX_BONUS, Math.floor(request.amount * pct / 100));
+    bonusGiven = Math.min(MAX_BONUS, Math.floor(amount * pct / 100));
 
     if (bonusGiven > 0) {
       await client.query('SAVEPOINT bonus_sp');

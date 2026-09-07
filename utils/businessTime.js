@@ -73,8 +73,19 @@ function tzOffsetMinutes(at = new Date()) {
  * SQL-এ ব্যবহারের জন্য টাইমজোন নাম। `DATE(created_at AT TIME ZONE $tz)`
  * লেখার সময় হার্ডকোড না করে এখান থেকে নিলে সব জায়গায় একই সংজ্ঞা থাকে।
  */
+/**
+ * ব্যবসায়িক টাইমজোনে সপ্তাহের দিন (0=রবি ... 5=শুক্র ... 6=শনি)।
+ *
+ * `new Date().getDay()` সার্ভারের টাইমজোন ব্যবহার করে (Render-এ UTC), যার ফলে
+ * শুক্রবারের ৮০% রিলোড উইন্ডো বাংলাদেশ সময়ে ৬ ঘণ্টা সরে যেত — বৃহস্পতিবার
+ * রাতের ডিপোজিট বোনাস পেত না, শনিবার ভোরেরটা অনুচিতভাবে পেত।
+ */
+function businessWeekday(date = new Date()) {
+  return new Date(`${businessDay(date)}T12:00:00Z`).getUTCDay();
+}
+
 function sqlTimezone() {
   return BUSINESS_TZ;
 }
 
-module.exports = { today, businessDay, addDays, startOfDay, endOfDay, sqlTimezone, tzOffsetMinutes, BUSINESS_TZ };
+module.exports = { today, businessDay, businessWeekday, addDays, startOfDay, endOfDay, sqlTimezone, tzOffsetMinutes, BUSINESS_TZ };
