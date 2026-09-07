@@ -64,21 +64,30 @@
        জাতীয় হেল্পলাইন আছে কিনা তা আমি যাচাই করতে পারিনি, আর ভুল নম্বর
        দেওয়া কোনো নম্বর না দেওয়ার চেয়ে খারাপ। মালিক যাচাই করে নম্বর
        যোগ করলে এখানেই বসবে। -->
-  <div class="card" style="margin-bottom:1rem;">
+  <style nonce="<%= cspNonce %>">
+    /* ইনলাইন style অ্যাট্রিবিউটের বদলে ক্লাস — tests/security/
+       cspInlineStyleRatchet.test.js ইনলাইন style-এর সংখ্যা পাহারা দেয়,
+       যাতে CSP-র style-src-attr একদিন কড়া করা যায়। নতুন মার্কআপ যোগ
+       করলে সেটা যেন ওই অগ্রগতি পিছিয়ে না দেয়। */
+    .rg-help-card { margin-bottom: 1rem; }
+    .rg-help-title { color: var(--text-main); font-weight: bold; margin-bottom: 6px; }
+    .rg-help-text { color: var(--text-muted); font-size: 12px; line-height: 1.7; margin: 0 0 8px 0; }
+    .rg-help-text:last-of-type { margin-bottom: 10px; }
+    .rg-help-btn {
+      width: 100%;
+      justify-content: center;
+      background: rgba(16, 185, 129, 0.12);
+      color: #10b981;
+      border: 1px solid #10b981;
+    }
+  </style>
+  <div class="card rg-help-card">
     <div class="card-body">
-      <div style="color:var(--text-main);font-weight:bold;margin-bottom:6px;">🤝 <%= t('rg_help_heading') %></div>
-      <p style="color:var(--text-muted);font-size:12px;line-height:1.7;margin:0 0 8px 0;">
-        <%= t('rg_help_intro') %>
-      </p>
-      <p style="color:var(--text-muted);font-size:12px;line-height:1.7;margin:0 0 8px 0;">
-        <%= t('rg_help_signs') %>
-      </p>
-      <p style="color:var(--text-muted);font-size:12px;line-height:1.7;margin:0 0 10px 0;">
-        <%= t('rg_help_selfcheck') %>
-      </p>
-      <a href="/profile/support" class="btn" style="width:100%;justify-content:center;background:rgba(16,185,129,0.12);color:#10b981;border:1px solid #10b981;">
-        <%= t('rg_help_support') %>
-      </a>
+      <div class="rg-help-title">🤝 <%= t('rg_help_heading') %></div>
+      <p class="rg-help-text"><%= t('rg_help_intro') %></p>
+      <p class="rg-help-text"><%= t('rg_help_signs') %></p>
+      <p class="rg-help-text"><%= t('rg_help_selfcheck') %></p>
+      <a href="/profile/support" class="btn rg-help-btn"><%= t('rg_help_support') %></a>
     </div>
   </div>
 
