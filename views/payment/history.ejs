@@ -6,7 +6,7 @@
       <i class="fas fa-chevron-left"></i>
     </a>
     <h1 style="color:var(--text-main); font-size: 20px; font-weight: 800;">
-      <%= filter.type === 'deposit' ? 'ডিপোজিট রেকর্ড' : filter.type === 'withdraw' ? 'উইথড্র রেকর্ড' : 'ট্রানজেকশন রেকর্ড' %>
+      <%= filter.type === 'deposit' ? t('hist_deposit_record') : filter.type === 'withdraw' ? t('hist_withdraw_record') : t('hist_tx_record') %>
     </h1>
   </div>
 
@@ -16,16 +16,16 @@
   <form method="GET" action="/payment/history" style="margin-bottom: 16px;">
     <% if (filter.type) { %><input type="hidden" name="type" value="<%= filter.type %>"><% } %>
     <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 10px;">
-      <button type="submit" name="quick" value="today" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.quick === 'today' ? 'var(--grad-gold)' : 'var(--bg-card)' %>; color: <%= filter.quick === 'today' ? '#000' : 'var(--text-main)' %>;">আজ</button>
-      <button type="submit" name="quick" value="yesterday" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.quick === 'yesterday' ? 'var(--grad-gold)' : 'var(--bg-card)' %>; color: <%= filter.quick === 'yesterday' ? '#000' : 'var(--text-main)' %>;">গতকাল</button>
-      <button type="submit" name="quick" value="7days" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.quick === '7days' ? 'var(--grad-gold)' : 'var(--bg-card)' %>; color: <%= filter.quick === '7days' ? '#000' : 'var(--text-main)' %>;">গত ৭ দিন</button>
-      <a href="/payment/history<%= filter.type ? '?type=' + filter.type : '' %>" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: var(--bg-card); color: var(--text-main); text-decoration:none;">সব</a>
+      <button type="submit" name="quick" value="today" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.quick === 'today' ? 'var(--grad-gold)' : 'var(--bg-card)' %>; color: <%= filter.quick === 'today' ? '#000' : 'var(--text-main)' %>;"><%= t('hist_today') %></button>
+      <button type="submit" name="quick" value="yesterday" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.quick === 'yesterday' ? 'var(--grad-gold)' : 'var(--bg-card)' %>; color: <%= filter.quick === 'yesterday' ? '#000' : 'var(--text-main)' %>;"><%= t('hist_yesterday') %></button>
+      <button type="submit" name="quick" value="7days" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.quick === '7days' ? 'var(--grad-gold)' : 'var(--bg-card)' %>; color: <%= filter.quick === '7days' ? '#000' : 'var(--text-main)' %>;"><%= t('hist_7days') %></button>
+      <a href="/payment/history<%= filter.type ? '?type=' + filter.type : '' %>" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: var(--bg-card); color: var(--text-main); text-decoration:none;"><%= t('hist_all') %></a>
     </div>
     <div style="display: flex; gap: 8px; align-items: center;">
       <input type="date" name="from" value="<%= filter.from %>" style="flex:1; background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 10px; padding: 8px 10px; color: var(--text-main); font-size: 12px;">
-      <span style="color: var(--text-muted); font-size: 12px;">থেকে</span>
+      <span style="color: var(--text-muted); font-size: 12px;"><%= t('hist_from') %></span>
       <input type="date" name="to" value="<%= filter.to %>" style="flex:1; background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 10px; padding: 8px 10px; color: var(--text-main); font-size: 12px;">
-      <button type="submit" style="background: var(--grad-gold); border: none; color: #000; padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 800;">ফিল্টার</button>
+      <button type="submit" style="background: var(--grad-gold); border: none; color: #000; padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 800;"><%= t('hist_filter') %></button>
     </div>
   </form>
 
@@ -43,35 +43,35 @@
     <% if (requests && requests.length) { %>
       <% requests.forEach(function (tx) { %>
         <% var statusColor = tx.status === 'approved' ? '#10b981' : tx.status === 'rejected' ? '#ef4444' : '#f59e0b'; %>
-        <% var statusText = tx.status === 'approved' ? 'সফল' : tx.status === 'rejected' ? 'বাতিল' : 'পেন্ডিং'; %>
-        <% if (tx.status === 'cancelled') { statusColor = '#ef4444'; statusText = 'বাতিলকৃত'; } %>
+        <% var statusText = tx.status === 'approved' ? t('hist_status_success') : tx.status === 'rejected' ? t('hist_status_rejected') : t('hist_status_pending'); %>
+        <% if (tx.status === 'cancelled') { statusColor = '#ef4444'; statusText = t('hist_status_cancelled'); } %>
         <div style="background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 14px; padding: 14px 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>
               <div style="color:var(--text-main); font-size: 14px; font-weight: 700;">
-                <%= tx.type === 'deposit' ? '⬇️ ডিপোজিট' : '⬆️ উইথড্র' %>
-                <% if (tx.gateway === 'sslcommerz') { %><span style="font-size: 10px; color: var(--text-accent); font-weight: 600;"> (অটো)</span><% } %>
+                <%= tx.type === 'deposit' ? '⬇️ ' + t('hist_deposit') : '⬆️ ' + t('hist_withdraw') %>
+                <% if (tx.gateway === 'sslcommerz') { %><span style="font-size: 10px; color: var(--text-accent); font-weight: 600;"> (<%= t('hist_auto') %>)</span><% } %>
               </div>
-              <div style="color: var(--text-muted); font-size: 11px; margin-top: 3px;"><%= tx.method || '-' %> · <%= new Date(tx.created_at).toLocaleString('bn-BD') %></div>
+              <div style="color: var(--text-muted); font-size: 11px; margin-top: 3px;"><%= tx.method || '-' %> · <%= new Date(tx.created_at).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></div>
               <% if (tx.transaction_id) { %><div style="color: var(--text-muted); font-size: 11px; margin-top: 2px;">TrxID: <%= tx.transaction_id %></div><% } %>
             </div>
             <div style="text-align: right;">
-              <div style="color: var(--text-accent); font-size: 15px; font-weight: 800;">৳<%= Number(tx.amount).toLocaleString('bn-BD') %></div>
+              <div style="color: var(--text-accent); font-size: 15px; font-weight: 800;">৳<%= Number(tx.amount).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></div>
               <div style="color: <%= statusColor %>; font-size: 11px; font-weight: 700; margin-top: 3px;"><%= statusText %></div>
             </div>
           </div>
           <% if (tx.type === 'deposit' && tx.status === 'pending') { %>
             <div style="display: flex; gap: 8px; margin-top: 10px; border-top: 1px solid var(--border-glass); padding-top: 10px;">
-              <a href="/payment/deposit/<%= tx.id %>/edit" style="flex:1; text-align:center; padding: 7px 0; border-radius: 8px; font-size: 12px; font-weight: 700; background: var(--bg-glass); color: var(--text-main); text-decoration:none; border: 1px solid var(--border-glass);">✏️ এডিট</a>
-              <form method="POST" action="/payment/deposit/<%= tx.id %>/cancel" style="flex:1;" data-confirm="আপনি কি নিশ্চিত এই ডিপোজিট রিকোয়েস্ট বাতিল করতে চান?">
-                <button type="submit" style="width:100%; padding: 7px 0; border-radius: 8px; font-size: 12px; font-weight: 700; background: rgba(239,68,68,0.12); color: #ef4444; border: 1px solid rgba(239,68,68,0.3);">✖ ক্যান্সেল</button>
+              <a href="/payment/deposit/<%= tx.id %>/edit" style="flex:1; text-align:center; padding: 7px 0; border-radius: 8px; font-size: 12px; font-weight: 700; background: var(--bg-glass); color: var(--text-main); text-decoration:none; border: 1px solid var(--border-glass);">✏️ <%= t('hist_edit') %></a>
+              <form method="POST" action="/payment/deposit/<%= tx.id %>/cancel" style="flex:1;" data-confirm="<%= t('hist_cancel_confirm') %>">
+                <button type="submit" style="width:100%; padding: 7px 0; border-radius: 8px; font-size: 12px; font-weight: 700; background: rgba(239,68,68,0.12); color: #ef4444; border: 1px solid rgba(239,68,68,0.3);">✖ <%= t('hist_cancel') %></button>
               </form>
             </div>
           <% } %>
         </div>
       <% }) %>
     <% } else if (!(typeof loadError !== 'undefined' && loadError)) { %>
-      <div style="text-align:center; padding: 40px 0; color: var(--text-muted); font-size: 13px;">এই সময়ে কোনো রেকর্ড নেই</div>
+      <div style="text-align:center; padding: 40px 0; color: var(--text-muted); font-size: 13px;"><%= t('hist_no_records') %></div>
     <% } %>
   </div>
 </div>
