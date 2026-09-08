@@ -25,8 +25,8 @@
         <div class="promo-card" style="background: var(--bg-card); border-radius: 20px; overflow: hidden; border: 1px solid var(--border-glass); box-shadow: 0 5px 20px rgba(0,0,0,0.2);">
             <div style="height: 140px; background: linear-gradient(135deg, #f59e0b, #ef4444); display: flex; align-items: center; justify-content: center; position: relative;">
                 <div style="text-align: center; color:var(--text-main); text-shadow: 0 2px 10px rgba(0,0,0,0.3);">
-                    <div style="font-size: 40px; font-weight: 900; line-height: 1;">১০০%</div>
-                    <div style="font-size: 14px; font-weight: 700; margin-top: 5px; text-transform: uppercase; letter-spacing: 1px;">ওয়েলকাম বোনাস</div>
+                    <div style="font-size: 40px; font-weight: 900; line-height: 1;"><%= (100).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %>%</div>
+                    <div style="font-size: 14px; font-weight: 700; margin-top: 5px; text-transform: uppercase; letter-spacing: 1px;"><%= t('promo_welcome_bonus') %></div>
                 </div>
                 <div style="position: absolute; top: 15px; left: 15px; background: rgba(0,0,0,0.4); padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; color: #fff;">NEW USER</div>
             </div>
@@ -47,8 +47,8 @@
         <div class="promo-card" style="background: var(--bg-card); border-radius: 20px; overflow: hidden; border: 1px solid var(--border-glass); box-shadow: 0 5px 20px rgba(0,0,0,0.2);">
             <div style="height: 140px; background: linear-gradient(135deg, #8b5cf6, #3b82f6); display: flex; align-items: center; justify-content: center; position: relative;">
                 <div style="text-align: center; color:var(--text-main); text-shadow: 0 2px 10px rgba(0,0,0,0.3);">
-                    <div style="font-size: 40px; font-weight: 900; line-height: 1;">৳৩,০০০</div>
-                    <div style="font-size: 14px; font-weight: 700; margin-top: 5px; text-transform: uppercase; letter-spacing: 1px;">রেফারেল বোনাস</div>
+                    <div style="font-size: 40px; font-weight: 900; line-height: 1;"><%= '৳' + (3000).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></div>
+                    <div style="font-size: 14px; font-weight: 700; margin-top: 5px; text-transform: uppercase; letter-spacing: 1px;"><%= t('promo_referral_bonus') %></div>
                 </div>
                 <div style="position: absolute; top: 15px; left: 15px; background: rgba(0,0,0,0.4); padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; color: #fff;">HOT</div>
             </div>
@@ -69,8 +69,8 @@
         <div class="promo-card" style="background: var(--bg-card); border-radius: 20px; overflow: hidden; border: 1px solid var(--border-glass); box-shadow: 0 5px 20px rgba(0,0,0,0.2);">
             <div style="height: 140px; background: linear-gradient(135deg, #10b981, #06b6d4); display: flex; align-items: center; justify-content: center; position: relative;">
                 <div style="text-align: center; color:var(--text-main); text-shadow: 0 2px 10px rgba(0,0,0,0.3);">
-                    <div style="font-size: 40px; font-weight: 900; line-height: 1;">১০%</div>
-                    <div style="font-size: 14px; font-weight: 700; margin-top: 5px; text-transform: uppercase; letter-spacing: 1px;">ডেইলি ক্যাশব্যাক</div>
+                    <div style="font-size: 40px; font-weight: 900; line-height: 1;"><%= (10).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %>%</div>
+                    <div style="font-size: 14px; font-weight: 700; margin-top: 5px; text-transform: uppercase; letter-spacing: 1px;"><%= t('promo_daily_cashback') %></div>
                 </div>
             </div>
             <div style="padding: 20px;">

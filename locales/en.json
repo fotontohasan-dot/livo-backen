@@ -2234,5 +2234,22 @@
   "app_name": "LIVO Mobile App",
   "app_desc": "Use the app for faster and easier access",
   "app_download_android": "Download for Android",
-  "app_coming_soon": "Coming soon..."
+  "app_coming_soon": "Coming soon...",
+  "promo_welcome_bonus": "Welcome bonus",
+  "promo_referral_bonus": "Referral bonus",
+  "promo_daily_cashback": "Daily cashback",
+  "ref_tagline": "Bonus on your friend's first deposit + lifetime commission (2.5% / 1.5% / 0.8%)",
+  "ref_coins": "{value} coins",
+  "ref_signup_bonus": "Referral bonus",
+  "ref_commission": "Commission (level {level})",
+  "ref_user": "User",
+  "fb_page_title": "Suggestions and Feedback",
+  "fb_label": "Write your feedback",
+  "fb_placeholder": "Write between 20 and 200 words...",
+  "fb_submit": "Submit",
+  "mnt_title": "Under maintenance",
+  "mnt_heading": "The site is temporarily under maintenance",
+  "mnt_desc": "We are improving our service. Please try again shortly.",
+  "txn_title": "Transaction history",
+  "txn_none": "No transactions"
 }

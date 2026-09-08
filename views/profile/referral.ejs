@@ -13,7 +13,7 @@
     <div style="font-size:40px;margin-bottom:8px;">🎁</div>
     <div style="color:var(--text-main);font-size:16px;font-weight:bold;margin-bottom:4px;"><%= t.refer_and_earn %></div>
     <div style="color:rgba(255,255,255,0.9);font-size:13px;">
-      বন্ধুর প্রথম ডিপোজিটে বোনাস + আজীবন কমিশন (২.৫% / ১.৫% / ০.৮%)
+      <%= t('ref_tagline') %>
     </div>
   </div>
 
@@ -36,7 +36,7 @@
   <!-- পরের বোনাস তথ্য -->
   <div style="background:rgba(245,158,11,0.1);border:1px solid #f59e0b;border-radius:12px;padding:14px;margin-bottom:16px;text-align:center;">
     <div style="color:var(--text-main);font-size:13px;"><%= t.next_referral_reward %></div>
-    <div style="color:#f59e0b;font-size:24px;font-weight:bold;margin-top:4px;"><%= stats.nextBonus %> কয়েন</div>
+    <div style="color:#f59e0b;font-size:24px;font-weight:bold;margin-top:4px;"><%= t('ref_coins').replace('{value}', stats.nextBonus) %></div>
     <div style="color:var(--text-muted);font-size:11px;margin-top:4px;"><%= t.referral_condition %></div>
   </div>
 
@@ -70,7 +70,7 @@
         <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
           <div>
             <div style="color:var(--text-main);font-size:13px;"><%= t.username %></div>
-            <div style="color:var(--text-muted);font-size:10px;"><%= new Date(t.created_at).toLocaleDateString('bn-BD') %></div>
+            <div style="color:var(--text-muted);font-size:10px;"><%= new Date(t.created_at).toLocaleDateString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></div>
           </div>
           <div>
             <% if (t.signup_bonus_paid) { %>
@@ -96,10 +96,10 @@
         <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
           <div>
             <div style="color:var(--text-main);font-size:12px;">
-              <%= h.reason === 'signup' ? '🎁 রেফার বোনাস' : `💸 কমিশন (লেভেল ${h.level})` %>
+              <%= h.reason === 'signup' ? '🎁 ' + t('ref_signup_bonus') : '💸 ' + t('ref_commission').replace('{level}', h.level) %>
             </div>
             <div style="color:var(--text-muted);font-size:10px;">
-              <%= h.from_username || 'ইউজার' %> · <%= new Date(h.created_at).toLocaleDateString('bn-BD') %>
+              <%= h.from_username || t('ref_user') %> · <%= new Date(h.created_at).toLocaleDateString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %>
             </div>
           </div>
           <div style="color:#10b981;font-size:14px;font-weight:bold;">+<%= Number(h.amount).toLocaleString('bn-BD') %></div>
