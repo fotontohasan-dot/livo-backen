@@ -49,7 +49,7 @@
           <i class="fas fa-circle-xmark"></i> <%= t.kyc_rejected_title %>
         </div>
         <p style="color:#fca5a5;font-size:12.5px;margin:0">
-          <b><%= t.reason_label %></b> <%= kyc.reject_reason && kyc.reject_reason.trim() ? kyc.reject_reason : 'নির্দিষ্ট করা হয়নি — অনুগ্রহ করে সাপোর্টে যোগাযোগ করুন।' %>
+          <b><%= t.reason_label %></b> <%= kyc.reject_reason && kyc.reject_reason.trim() ? kyc.reject_reason : t('kyc_reason_unspecified') %>
         </p>
       </div>
     <% } %>
@@ -102,7 +102,7 @@
       <label id="uploadBox" for="documentFile" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border:2px dashed rgba(234,179,8,0.4);border-radius:16px;padding:28px 16px;cursor:pointer;margin-bottom:8px;background:rgba(255,255,255,0.02);text-align:center">
         <i id="uploadIcon" class="fas fa-cloud-arrow-up" style="color: var(--text-accent);font-size:26px"></i>
         <span id="uploadText" style="color:var(--text-muted);font-size:13px"><%= t.tap_to_upload %></span>
-        <img id="previewImg" alt="<%= t.selected_document_preview || 'নির্বাচিত ডকুমেন্টের প্রিভিউ' %>" style="display:none;max-width:140px;max-height:140px;border-radius:10px;margin-top:6px" />
+        <img id="previewImg" alt="<%= t('selected_document_preview') %>" style="display:none;max-width:140px;max-height:140px;border-radius:10px;margin-top:6px" />
       </label>
       <input type="file" id="documentFile" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" style="display:none" data-kyc-file>
       <div id="uploadError" style="color:#f87171;font-size:12px;margin-bottom:16px;display:none"></div>

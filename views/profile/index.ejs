@@ -258,7 +258,7 @@ body.light-mode .mc-grid-card{background:rgba(0,0,0,.04);border-color:rgba(0,0,0
     <div class="pf-header-balance-row">
       <div>
         <div class="pf-header-balance-label"><%= t.total_balance %></div>
-        <div id="balanceText" class="pf-header-balance-value">৳ <%= Number(user.coins).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></div>
+        <div id="balanceText" class="pf-header-balance-value">৳ <%= Number(user.coins).toLocaleString(lang === 'en' ? 'en-US' : 'bn-BD') %></div>
         <div class="pf-wallet-updated"><%= t.last_updated %> <span id="lastUpdatedText"><%= t.just_now %></span></div>
       </div>
       <button data-profile-action="refresh-balance" id="refreshBtn" title="<%= t.refresh %>" class="pf-icon-btn pf-header-refresh"><i class="fas fa-sync-alt" id="refreshIcon"></i></button>
@@ -437,7 +437,7 @@ body.light-mode .mc-grid-card{background:rgba(0,0,0,.04);border-color:rgba(0,0,0
 
 
 <!-- Custom Copy Alert -->
-<div id="copyToast" style="display:none; position:fixed; bottom:100px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.8); color:#fff; padding:10px 20px; border-radius:30px; font-size:14px; z-index:9999; font-weight:bold;">কপি হয়েছে! ✅</div>
+<div id="copyToast" style="display:none; position:fixed; bottom:100px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.8); color:#fff; padding:10px 20px; border-radius:30px; font-size:14px; z-index:9999; font-weight:bold;"><%= t('prof_copied') %> ✅</div>
 
 <script type="application/json" id="profileConfig"><%- jsonScriptSafe({
   uid: 100000 + user.id,

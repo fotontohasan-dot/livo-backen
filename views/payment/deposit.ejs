@@ -86,7 +86,7 @@
 
   <div class="p-4 max-w-[480px] mx-auto">
 
-    <form action="/payment/deposit" method="POST" id="depositForm" data-loading-target="depSubmitBtn" data-loading-label="জমা হচ্ছে...">
+    <form action="/payment/deposit" method="POST" id="depositForm" data-loading-target="depSubmitBtn" data-loading-label="<%= t('dep_submitting') %>">
 
       <input type="hidden" name="method" id="methodInput" value="">
 
@@ -114,7 +114,7 @@
             <button type="button" class="channel-btn selected border-2 border-glass bg-surface rounded-xl py-3 text-sm font-bold transition-all" data-select-channel><%= t.channel_1 %></button>
             <button type="button" class="channel-btn border-2 border-glass bg-surface rounded-xl py-3 text-sm font-bold transition-all" data-select-channel><%= t.channel_4 %></button>
             <button type="button" class="channel-btn border-2 border-glass bg-surface rounded-xl py-3 text-sm font-bold transition-all" data-select-channel><%= t.channel_5 %></button>
-            <button type="button" class="channel-btn border-2 border-glass bg-surface rounded-xl py-3 text-sm font-bold transition-all" data-select-channel><%= t.channel_1 %>০</button>
+            <button type="button" class="channel-btn border-2 border-glass bg-surface rounded-xl py-3 text-sm font-bold transition-all" data-select-channel><%= t('channel_10') %></button>
           </div>
         </div>
 

@@ -2270,5 +2270,14 @@
   "sec_this_device_only": "This device only",
   "sec_verify_email_desc": "Verify your email for account recovery and important notifications",
   "sec_no_email_on_account": "No email on account",
-  "sec_resend": "Resend"
+  "sec_resend": "Resend",
+  "csrf_expired": "Your session has expired, or the form was opened a long time ago. Please refresh the page and try again.",
+  "csrf_home": "Go to homepage",
+  "csrf_back": "Go back",
+  "kyc_reason_unspecified": "Not specified — please contact support.",
+  "ph_coming_soon": "This feature is coming soon. Stay tuned!",
+  "ph_back_home": "Back to home",
+  "prof_copied": "Copied!",
+  "dep_submitting": "Submitting...",
+  "hc_kyc_msg": "Account verification"
 }
