@@ -16,6 +16,9 @@
   .ck-btn[disabled] { background: rgba(255,255,255,.08); color: var(--text-muted); cursor: not-allowed; }
   .ck-msg { margin-top: 12px; font-size: 13px; color: #ff6b6b; }
   .ck-hint { font-size: 11px; color: var(--text-muted); margin-top: 10px; }
+  /* বোতামের চেহারায় একটা লিংক — ইনলাইন style অ্যাট্রিবিউট এড়াতে ক্লাস
+     (docs/CSP.md, style-src-attr হার্ডেনিং)। */
+  .ck-btn-link { display: block; text-align: center; text-decoration: none; line-height: 1.4; }
 </style>
 
 <div class="ck-wrap">
@@ -32,7 +35,7 @@
 
     <% if (order.status === 'paid') { %>
       <div class="ck-hint"><%= t.tickets_already_paid || 'This order is already paid.' %></div>
-      <a class="ck-btn" href="/tickets/my-tickets" style="display:block;text-align:center;text-decoration:none;line-height:1.4">
+      <a class="ck-btn ck-btn-link" href="/tickets/my-tickets">
         <%= t.tickets_my_tickets || 'My tickets' %>
       </a>
     <% } else { %>

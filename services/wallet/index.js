@@ -147,7 +147,15 @@ async function applyMutation({
       await client.query('ROLLBACK');
       if (idempotency.isDuplicateError(err)) {
         // অন্য একটা সমান্তরাল রিকোয়েস্ট আমাদের আগে জিতেছে — তার ফলাফলই সত্য।
-        const existing = await idempotency.findExisting(pool, provider, providerTxId);
+        //
+        // লুকআপটা ইচ্ছাকৃতভাবে `client` দিয়ে, `pool` দিয়ে নয়। pool ব্যবহার করলে
+        // এখানে একটা **দ্বিতীয়** কানেকশন চাওয়া হতো, অথচ বর্তমান client-টা
+        // তখনো ছাড়া হয়নি (release হয় নিচের finally-তে)। প্রোভাইডার যখন একই
+        // tx_id একসাথে অনেকবার পাঠায়, তখন পুলের সব কানেকশনই এই অবস্থায় আটকে
+        // যেত — প্রত্যেকে এমন একটা ফ্রি কানেকশনের অপেক্ষায়, যেটা কেবল
+        // তারা নিজেরাই ছাড়তে পারত। ক্লাসিক পুল ডেডলক, এবং ঠিক সেই
+        // পরিস্থিতিতেই যেটা এই কোডের সামলানোর কথা।
+        const existing = await idempotency.findExisting(client, provider, providerTxId);
         if (existing) {
           return { duplicate: true, balance: Number(existing.balance_after), transaction: existing };
         }

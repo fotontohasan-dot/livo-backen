@@ -21,21 +21,19 @@ const statusPill = (s) => {
 
   ${(success||[]).map(m=>'<div class="mb-4 px-4 py-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-2xl text-sm">'+esc(m)+'</div>').join('')}
   ${(error||[]).map(m=>'<div class="mb-4 px-4 py-3 bg-red-50 border border-red-200 text-red-700 rounded-2xl text-sm">'+esc(m)+'</div>').join('')}
-  ${typeof loadError !== 'undefined' && loadError ? '<div class="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 text-amber-700 rounded-2xl text-sm">তালিকা লোড করা যায়নি।</div>' : ''}
+  ${typeof loadError !== 'undefined' && loadError ? '<div class="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 text-amber-700 rounded-2xl text-sm">' + esc(t('adm_load_failed')) + '</div>' : ''}
 
   <div class="flex items-center justify-between mb-5">
     <div>
       <h1 class="text-xl font-semibold text-slate-800">Casino Providers</h1>
       <p class="text-sm text-slate-500 mt-1">
-        একটি প্রোভাইডার সক্রিয় হয় শুধু <code>.env</code>-এ তার
-        <code>PROVIDER_&lt;NAME&gt;_*</code> credential বসালে। বসানোর পর পরের বুটে
-        স্বয়ংক্রিয়ভাবে sync হয় — অথবা নিচের Sync Now চাপুন।
+        ${esc(t('adm_prov_intro'))}
       </p>
     </div>
     <a href="/admin/games" class="text-sm text-indigo-600 hover:underline">← Games</a>
   </div>
 
-  <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden mb-8">
+  <div class="bg-white border border-slate-200 rounded-2xl overflow-x-auto mb-8">
     <table class="w-full text-sm">
       <thead class="bg-slate-50 text-slate-500 text-xs uppercase">
         <tr>
@@ -67,13 +65,13 @@ const statusPill = (s) => {
               </button>
             </form>
           </td>
-        </tr>`).join('') : '<tr><td colspan="6" class="px-4 py-10 text-center text-slate-400">কোনো অ্যাডাপ্টার রেজিস্টার করা নেই।</td></tr>'}
+        </tr>`).join('') : '<tr><td colspan="6" class="px-4 py-10 text-center text-slate-400">' + esc(t('adm_prov_none')) + '</td></tr>'}
       </tbody>
     </table>
   </div>
 
   <h2 class="text-sm font-semibold text-slate-700 mb-3">Sync history</h2>
-  <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+  <div class="bg-white border border-slate-200 rounded-2xl overflow-x-auto">
     <table class="w-full text-sm">
       <thead class="bg-slate-50 text-slate-500 text-xs uppercase">
         <tr>
@@ -96,7 +94,7 @@ const statusPill = (s) => {
           <td class="px-4 py-3 text-right">${l.games_updated || 0}</td>
           <td class="px-4 py-3 text-right">${l.games_removed || 0}</td>
           <td class="px-4 py-3 text-red-600 text-xs">${esc(l.error_message || '')}</td>
-        </tr>`).join('') : '<tr><td colspan="7" class="px-4 py-10 text-center text-slate-400">এখনো কোনো sync চালানো হয়নি।</td></tr>'}
+        </tr>`).join('') : '<tr><td colspan="7" class="px-4 py-10 text-center text-slate-400">' + esc(t('adm_sync_none')) + '</td></tr>'}
       </tbody>
     </table>
   </div>

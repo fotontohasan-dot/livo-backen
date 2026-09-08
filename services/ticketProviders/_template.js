@@ -13,6 +13,7 @@
 // ⚠️ কোনো credential হার্ডকোড নয় — সব process.env থেকে।
 // ---------------------------------------------------------------------------
 
+const { fetchWithTimeout } = require('../../utils/httpClient');
 const NAME = 'template-ticket-provider';
 
 function env(suffix) {
@@ -33,7 +34,7 @@ module.exports = {
    *   categories: [{ name, price, currency, totalQty, maxPerUser }] }
    */
   async fetchEvents() {
-    const res = await fetch(`${env('API_URL')}/events`, {
+    const res = await fetchWithTimeout(`${env('API_URL')}/events`, {
       headers: { 'X-Api-Key': env('API_KEY') }
     });
     if (!res.ok) throw new Error(`${NAME} fetchEvents HTTP ${res.status}`);

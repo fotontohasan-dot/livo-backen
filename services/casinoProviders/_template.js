@@ -14,6 +14,7 @@
 //    সবকিছু process.env থেকে; isEnabled() শুধু সেগুলোর উপস্থিতিই দেখে।
 // ---------------------------------------------------------------------------
 
+const { fetchWithTimeout } = require('../../utils/httpClient');
 const { normalizeAll } = require('./normalizedGame');
 
 // অ্যাডাপ্টারের নাম = games.provider কলামে যা লেখা হবে, এবং env key-র ভিত্তি।
@@ -41,7 +42,7 @@ module.exports = {
    * আগের sync করা গেমগুলো অক্ষত থাকে (মুছে যায় না)।
    */
   async fetchGames() {
-    const res = await fetch(`${env('API_URL')}/games`, {
+    const res = await fetchWithTimeout(`${env('API_URL')}/games`, {
       method: 'GET',
       headers: { 'X-Agent-Id': env('AGENT_ID') }
     });

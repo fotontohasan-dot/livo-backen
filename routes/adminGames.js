@@ -380,22 +380,23 @@ router.post('/sync', rbac.requirePermission('games_manage'), async (req, res) =>
     const out = await syncAll(only);
 
     if (out.skipped) {
-      req.flash('error', 'কোনো ক্যাসিনো প্রোভাইডার কনফিগার করা নেই (.env দেখুন)');
+      req.flash('error', req.t('admin_casino_no_providers'));
     } else {
+      // সারাংশটা সংখ্যা ও প্রোভাইডারের নাম — অনুবাদযোগ্য অংশটুকু locale থেকে।
       const summary = out.results
         .map(r => r.status === 'success'
-          ? `${r.provider}: +${r.added} নতুন, ${r.updated} হালনাগাদ, ${r.removed} নিষ্ক্রিয়`
-          : `${r.provider}: ব্যর্থ`)
+          ? `${r.provider}: +${r.added}/${r.updated}/${r.removed}`
+          : `${r.provider}: ${req.t('admin_casino_sync_failed')}`)
         .join(' | ');
-      req.flash('success', summary);
+      req.flash('success', req.t('admin_casino_sync_summary').replace('{value}', summary));
     }
     await logAdminAction(
       req.session.user.id, req.session.user.username,
-      'CASINO_GAME_SYNC', `ম্যানুয়াল গেম sync চালানো হয়েছে${only ? ` (${only})` : ''}`, req.ip
+      'CASINO_GAME_SYNC', `Manual casino game sync${only ? ` (${only})` : ''}`, req.ip
     );
   } catch (err) {
     console.error('manual casino sync error:', err && err.stack ? err.stack : err);
-    req.flash('error', publicMessage(err, 'Sync ব্যর্থ হয়েছে'));
+    req.flash('error', publicMessage(err, req.t('admin_casino_sync_failed')));
   }
   res.redirect('/admin/games/providers');
 });
@@ -416,7 +417,7 @@ router.post('/:id/admin-disabled', rbac.requirePermission('games_manage'), async
     await logAdminAction(
       req.session.user.id, req.session.user.username,
       'GAME_ADMIN_DISABLED_TOGGLED',
-      `${r.rows[0].name} → ${r.rows[0].admin_disabled ? 'বন্ধ' : 'চালু'}`, req.ip
+      `${r.rows[0].name} -> ${r.rows[0].admin_disabled ? 'disabled' : 'enabled'}`, req.ip
     );
     res.json({ ok: true, adminDisabled: r.rows[0].admin_disabled });
   } catch (err) {

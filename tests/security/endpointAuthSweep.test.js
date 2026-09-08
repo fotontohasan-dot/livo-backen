@@ -35,6 +35,13 @@ const ROUTER_PREFIX = {
 const PUBLIC_ALLOWLIST = [
   /^\/payment\/sslcommerz\//,   // gateway callback (server-side  )
   /^\/extra\/faq$/, /^\/games\/api\/recent-wins$/,
+  // গেম লবি ব্রাউজ করা ইচ্ছাকৃতভাবে public — লগইন ছাড়াই কী কী গেম আছে দেখা
+  // যায় (রেজিস্ট্রেশনের আগে দেখতে পারাটাই লবির উদ্দেশ্য)। টাকার সাথে সম্পর্কিত
+  // কিছুই এখানে নেই: প্রকৃত খেলা /games/launch/... দিয়ে হয়, যেটা isAuth-এ মোড়া।
+  /^\/games\/$/, /^\/games\/api\/list$/,
+  // টিকেট ইভেন্ট তালিকা ও একক ইভেন্ট পেজও public — কেনার ধাপগুলো
+  // (reserve, checkout, my-tickets) isAuth-এ মোড়া।
+  /^\/tickets\/$/, /^\/tickets\/event\//, /^\/tickets\/verify\//,
   /^\/matches/, /^\/tournaments\/$/, /^\/news/, /^\/leaderboard\/$/,
   /^\/sports/, /^\/api\/v1\//, /^\/help-center/,
   // guard line-এর উপরে ঘোষিত admin authentication পেজগুলো ইচ্ছাকৃত public
