@@ -29,7 +29,7 @@
 <div class="game-container">
     <div class="demo-toggle-wrap">
         <div id="demoSwitch" class="demo-switch" data-toggle-demo></div>
-        <span id="demoLabel" class="demo-label">🎮 ডেমো মোড (প্র্যাকটিস, রিয়েল টাকা লাগবে না)</span>
+        <span id="demoLabel" class="demo-label">🎮 <%= t('play_demo_mode') %></span>
     </div>
 
     <div class="game-header">
@@ -41,24 +41,24 @@
         <div id="gameUI">
             <div style="text-align:center;padding:40px;">
                 <div style="font-size:40px;">🎮</div>
-                <p style="color:#888;margin-top:10px;">গেম লোড হচ্ছে...</p>
+                <p style="color:#888;margin-top:10px;"><%= t('play_loading') %></p>
             </div>
         </div>
     </div>
 
     <div class="bet-controls">
         <div class="quick-bet">
-            <button type="button" class="quick-btn" data-set-bet="10">১০</button>
-            <button type="button" class="quick-btn" data-set-bet="50">৫০</button>
-            <button type="button" class="quick-btn" data-set-bet="100">১০০</button>
-            <button type="button" class="quick-btn" data-set-bet="500">৫০০</button>
-            <button type="button" class="quick-btn" data-set-bet="1000">১০০০</button>
+            <button type="button" class="quick-btn" data-set-bet="10"><%= (10).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></button>
+            <button type="button" class="quick-btn" data-set-bet="50"><%= (50).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></button>
+            <button type="button" class="quick-btn" data-set-bet="100"><%= (100).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></button>
+            <button type="button" class="quick-btn" data-set-bet="500"><%= (500).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></button>
+            <button type="button" class="quick-btn" data-set-bet="1000"><%= (1000).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></button>
         </div>
         <div class="bet-input-group">
-            <label>বাজি:</label>
+            <label><%= t('play_bet_label') %></label>
             <input type="number" id="betAmount" value="<%= minBet %>" min="<%= minBet %>" max="<%= maxBet %>" step="1">
         </div>
-        <button id="mainGameBtn" class="bet-btn">খেলুন</button>
+        <button id="mainGameBtn" class="bet-btn"><%= t('play_play') %></button>
     </div>
 </div>
 
