@@ -20,7 +20,7 @@
     <%- include('./partials/sidebar', { active: 'activity' }) %>
     <div class="admin-content">
       <%- include('./partials/load-error') %>
-      <%- include('./partials/header', { pageTitle: 'অ্যাক্টিভিটি লগ', pageSubtitle: 'অ্যাডমিনদের কার্যকলাপের ইতিহাস' }) %>
+      <%- include('./partials/header', { pageTitle: t('aac_title'), pageSubtitle: t('aac_sub') }) %>
 
       <form class="activity-filters" method="GET" action="/admin/activity">
         <div class="input-icon-wrap">

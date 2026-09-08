@@ -18,8 +18,8 @@
   <div class="admin-content">
     <%- include('./partials/load-error') %>
   <%- include('./partials/header', {
-    pageTitle: match ? (match.team_a + ' vs ' + match.team_b) : 'মার্কেট',
-    pageSubtitle: match ? (match.sport || 'Cricket') : 'বেটিং মার্কেট পরিচালনা করুন'
+    pageTitle: match ? (match.team_a + ' vs ' + match.team_b) : t('amk_title'),
+    pageSubtitle: match ? (match.sport || 'Cricket') : t('amk_sub')
   }) %>
 
   <main class="flex-1">

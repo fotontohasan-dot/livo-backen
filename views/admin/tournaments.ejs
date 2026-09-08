@@ -16,7 +16,7 @@
     <%- include('./partials/sidebar', { active: 'tournaments' }) %>
     <div class="admin-content">
       <%- include('./partials/load-error') %>
-      <%- include('./partials/header', { pageTitle: 'টুর্নামেন্ট', pageSubtitle: 'টুর্নামেন্ট তৈরি ও পরিচালনা করুন' }) %>
+      <%- include('./partials/header', { pageTitle: t('ato_title'), pageSubtitle: t('ato_sub') }) %>
 
       <div class="grid grid-4" style="margin-bottom:14px;">
         <div class="stat-card"><div class="stat-label"><%= t('admin_label_total') %></div><div class="stat-number"><%= stats.total || 0 %></div></div>
@@ -71,7 +71,7 @@
                           <option value="cancelled" <%= tour.status === 'cancelled' ? 'selected' : '' %>><%= t('admin_btn_cancel') %></option>
                         </select>
                       </form>
-                      <form method="POST" action="/admin/tournaments/<%= tour.id %>/delete" style="display:inline-block;" data-confirm="মুছে ফেলবেন?">
+                      <form method="POST" action="/admin/tournaments/<%= tour.id %>/delete" style="display:inline-block;" data-confirm="<%= t('ash_delete_confirm') %>">
                         <button class="btn btn-sm btn-red" type="submit"><i class="fas fa-trash"></i></button>
                       </form>
                     </td>

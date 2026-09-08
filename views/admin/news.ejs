@@ -19,7 +19,7 @@
     <%- include('./partials/sidebar', { active: 'news' }) %>
     <div class="admin-content">
       <%- include('./partials/load-error') %>
-      <%- include('./partials/header', { pageTitle: 'নিউজ', pageSubtitle: 'স্পোর্টস নিউজ পোস্ট ও পরিচালনা করুন' }) %>
+      <%- include('./partials/header', { pageTitle: t('anw_title'), pageSubtitle: t('anw_sub') }) %>
 
       <div class="admin-card" style="padding:16px;margin-bottom:16px;">
         <div style="font-weight:800;color:var(--text-main);font-size:13px;margin-bottom:12px;"><i class="fas fa-newspaper" style="color:#f59e0b;"></i> <%= t('admin_news_add_heading') %></div>
@@ -41,13 +41,13 @@
               <div style="flex:1;min-width:0;">
                 <div style="font-weight:700;color:#fff;font-size:13px;"><%= n.title %></div>
                 <div style="color:#94a3b8;font-size:11px;margin-top:3px;">
-                  <%= n.sport || 'সাধারণ' %> · <%= n.views || 0 %> ভিউ · <%= n.created_at ? new Date(n.created_at).toLocaleDateString('bn-BD') : '—' %>
+                  <%= n.sport || t('anw_general') %> · <%= n.views || 0 %> <%= t('anw_views') %> · <%= n.created_at ? new Date(n.created_at).toLocaleDateString(locals.lang === 'en' ? 'en-US' : 'bn-BD') : '—' %>
                 </div>
                 <div style="color:#94a3b8;font-size:12px;margin-top:4px;max-height:36px;overflow:hidden;">
                   <%= (n.content || '').slice(0, 120) %><%= (n.content || '').length > 120 ? '...' : '' %>
                 </div>
               </div>
-              <form method="POST" action="/admin/news/<%= n.id %>/delete" data-confirm="মুছে ফেলবেন?">
+              <form method="POST" action="/admin/news/<%= n.id %>/delete" data-confirm="<%= t('ash_delete_confirm') %>">
                 <button class="btn btn-sm btn-red" type="submit" aria-label="<%= t('admin_ui_delete') %>" title="<%= t('admin_ui_delete') %>"><i class="fas fa-trash"></i></button>
               </form>
             </div>

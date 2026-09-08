@@ -64,7 +64,7 @@
                     </td>
                     <td>
                       <div style="font-weight:700;">@<%= r.referred_username %></div>
-                      <div style="font-size:11px;color:var(--text-muted);">যোগদান: <%= r.referred_joined_at ? new Date(r.referred_joined_at).toLocaleDateString('bn-BD') : '—' %></div>
+                      <div style="font-size:11px;color:var(--text-muted);"><%= t('arf_joined') %> <%= r.referred_joined_at ? new Date(r.referred_joined_at).toLocaleDateString(locals.lang === 'en' ? 'en-US' : 'bn-BD') : '—' %></div>
                     </td>
                     <td>
                       <% if (r.signup_bonus_paid) { %>
@@ -73,7 +73,7 @@
                         <span class="badge badge-amber"><%= t('admin_status_pending') %></span>
                       <% } %>
                       <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">
-                        <%= r.first_deposit_done ? 'ডিপোজিট সম্পন্ন' : 'ডিপোজিট বাকি' %>
+                        <%= r.first_deposit_done ? t('arf_dep_done') : t('arf_dep_pending') %>
                       </div>
                     </td>
                     <td style="font-weight:700;">৳ <%= Number(r.commission_earned || 0).toLocaleString('en-US') %></td>
@@ -96,7 +96,7 @@
         <% if (page > 1) { %>
           <a class="btn" href="/admin/referrals?page=<%= page - 1 %>&search=<%= encodeURIComponent(search || '') %>&status=<%= status || '' %>">&larr; <%= t('admin_pagination_prev') %></a>
         <% } %>
-        <span style="padding:9px 12px;color:var(--text-muted);font-size:12px;">পেজ <%= page %> / <%= totalPages %></span>
+        <span style="padding:9px 12px;color:var(--text-muted);font-size:12px;"><%= t('ash_page_x_y').replace('{page}', page).replace('{pages}', totalPages) %></span>
         <% if (page < totalPages) { %>
           <a class="btn" href="/admin/referrals?page=<%= page + 1 %>&search=<%= encodeURIComponent(search || '') %>&status=<%= status || '' %>"><%= t('admin_pagination_next') %> &rarr;</a>
         <% } %>

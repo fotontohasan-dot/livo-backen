@@ -45,7 +45,7 @@ const userRows = topUsers.map(u =>
     '<td class="px-5 py-3 text-sm font-mono font-bold ' + (u.max_score >= 70 ? 'text-red-600' : (u.max_score >= 40 ? 'text-amber-600' : 'text-slate-600')) + '">' + u.max_score + '</td>' +
     '<td class="px-5 py-3 text-sm text-slate-500">' + u.flag_count + '</td>' +
     '<td class="px-5 py-3 text-xs text-slate-400">' + new Date(u.last_flag_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + '</td>' +
-    '<td class="px-5 py-3 text-center"><a href="/admin/fraud-logs?user_id=' + u.user_id + '" class="text-xs text-blue-600 hover:underline">ফ্ল্যাগ দেখুন</a></td>' +
+    '<td class="px-5 py-3 text-center"><a href="/admin/fraud-logs?user_id=' + u.user_id + '" class="text-xs text-blue-600 hover:underline">' + t("afm_view_flags") + '</a></td>' +
   '</tr>'
 ).join('') || '<tr><td colspan="5" class="px-5 py-8 text-center text-slate-400 text-sm">' + t("frm_no_open_flags") + '</td></tr>';
 

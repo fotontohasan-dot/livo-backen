@@ -24,7 +24,7 @@
     <%- include('./partials/sidebar', { active: 'vip' }) %>
     <div class="admin-content">
       <%- include('./partials/load-error') %>
-      <%- include('./partials/header', { pageTitle: 'VIP সিস্টেম ম্যানেজমেন্ট', pageSubtitle: 'VIP লেভেল, বোনাস, ক্যাশব্যাক ও বেনিফিটস পরিচালনা করুন' }) %>
+      <%- include('./partials/header', { pageTitle: t('avp_title'), pageSubtitle: t('avp_sub') }) %>
 
       <% if (typeof success !== 'undefined' && success && success.length) { %>
         <% success.forEach(function(m) { %><div class="flash-box flash-success"><%= m %></div><% }) %>
@@ -77,7 +77,7 @@
           <form method="POST" action="/admin/vip/save">
             <input type="hidden" name="level" value="<%= l.level %>">
             <div style="display:flex;justify-content:space-between;align-items:center;">
-              <div style="font-weight:800;color:var(--text-main);font-size:14px;"><%= l.icon || '👑' %> লেভেল <%= l.level %> <% if (l.is_active === false) { %><span class="badge badge-red"><%= t('admin_status_inactive') %></span><% } else { %><span class="badge badge-green"><%= t('admin_status_active') %></span><% } %></div>
+              <div style="font-weight:800;color:var(--text-main);font-size:14px;"><%= l.icon || '👑' %> <%= t('avp_level') %> <%= l.level %> <% if (l.is_active === false) { %><span class="badge badge-red"><%= t('admin_status_inactive') %></span><% } else { %><span class="badge badge-green"><%= t('admin_status_active') %></span><% } %></div>
               <button type="submit" class="btn btn-primary" style="padding:6px 14px;font-size:12px;"><i class="fas fa-save"></i> <%= t('admin_btn_save') %></button>
             </div>
             <div class="vip-form-grid">

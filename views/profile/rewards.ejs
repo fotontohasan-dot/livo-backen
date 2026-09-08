@@ -59,11 +59,11 @@
         <% 
           // পরের টিয়ারের দিকে প্রোগ্রেস হিসাব
           let pct = 100;
-          let nextText = 'সর্বোচ্চ টিয়ার অর্জিত!';
+          let nextText = t('arw_max_tier');
           if (reward.nextTier) {
             const target = Number(reward.nextTier.min_turnover);
             pct = Math.min(100, Math.floor((reward.turnover / target) * 100));
-            nextText = `পরের টিয়ার: ${Number(target).toLocaleString('bn-BD')} (বোনাস ${reward.nextTier.bonus_amount})`;
+            nextText = t('arw_next_tier').replace('{target}', Number(target).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD')).replace('{bonus}', reward.nextTier.bonus_amount);
           }
         %>
 

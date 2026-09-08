@@ -47,7 +47,7 @@
                   <form method="POST" action="/admin/promotions/<%= p.id %>/toggle">
                     <button class="btn btn-sm <%= p.active ? 'btn-green' : '' %>" type="submit"><%= p.active ? t('apr_active') : t('apr_inactive') %></button>
                   </form>
-                  <form method="POST" action="/admin/promotions/<%= p.id %>/delete" data-confirm="মুছে ফেলবেন?">
+                  <form method="POST" action="/admin/promotions/<%= p.id %>/delete" data-confirm="<%= t('ash_delete_confirm') %>">
                     <button class="btn btn-sm btn-red" type="submit"><i class="fas fa-trash"></i></button>
                   </form>
                 </div>

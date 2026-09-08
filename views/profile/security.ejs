@@ -26,7 +26,7 @@
         icon: 'fa-key',
         label: t('sec_password'),
         ok: true,
-        sub: passwordChangedAt ? (t('sec_last_changed') + new Date(passwordChangedAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'bn-BD')) : (lang === 'bn' ? 'কখনো পরিবর্তন হয়নি' : 'Never changed'),
+        sub: passwordChangedAt ? (t('sec_last_changed') + new Date(passwordChangedAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'bn-BD')) : t('asec_never_changed'),
         tab: 'security'
       },
       {

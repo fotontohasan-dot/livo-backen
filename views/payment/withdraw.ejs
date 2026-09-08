@@ -206,7 +206,7 @@
       </div>
     <% } %>
 
-    <form action="/payment/withdraw" method="POST" id="withdrawForm" data-loading-target="withdrawSubmitBtn" data-loading-label="উইথড্র অনুরোধ পাঠানো হচ্ছে...">
+    <form action="/payment/withdraw" method="POST" id="withdrawForm" data-loading-target="withdrawSubmitBtn" data-loading-label="<%= t('awd_sending') %>">
       <!-- Withdrawal Form -->
       <% var formGated = locked || pinNotConfigured || pinLocked || windowClosed; %>
       <fieldset <%= formGated ? 'disabled' : '' %> class="space-y-5 <%= formGated ? 'opacity-50' : '' %>">

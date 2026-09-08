@@ -28,7 +28,7 @@
                 <i class="fas fa-shield-halved text-white text-3xl"></i>
             </div>
             <h1 class="text-3xl font-bold text-white"><%= t('admin_2fa_verify_heading') %></h1>
-            <p class="text-slate-400 mt-2"><%= username %> হিসেবে লগইন করতে আপনার অথেনটিকেটর অ্যাপের ৬-ডিজিট কোড দিন</p>
+            <p class="text-slate-400 mt-2"><%= t('a2f_verify_hint').replace('{user}', username) %></p>
         </div>
 
         <div class="bg-slate-800 border border-slate-700 rounded-3xl p-8 admin-card">

@@ -66,9 +66,9 @@
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2"><%= t('admin_2fa_code_or_backup') %></label>
                         <input type="text" name="token" maxlength="20" required
-                            class="otp-input w-full bg-slate-900 border border-slate-700 text-white py-3 rounded-2xl focus:outline-none focus:border-red-500" placeholder="------ বা XXXXX-XXXXX">
+                            class="otp-input w-full bg-slate-900 border border-slate-700 text-white py-3 rounded-2xl focus:outline-none focus:border-red-500" placeholder="<%= t('a2f_code_placeholder') %>">
                     </div>
-                    <button type="submit" data-confirm="আপনি কি নিশ্চিত 2FA বন্ধ করতে চান? এতে অ্যাকাউন্টের নিরাপত্তা কমে যাবে।"
+                    <button type="submit" data-confirm="<%= t('a2f_disable_confirm') %>"
                         class="w-full bg-red-600 hover:bg-red-700 transition-all text-white font-semibold py-3 rounded-2xl text-sm">
                         <i class="fas fa-lock-open"></i> <%= t('admin_2fa_disable_btn') %>
                     </button>
