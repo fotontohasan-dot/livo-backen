@@ -21,7 +21,7 @@ function dlqRow(j) {
         '<form method="POST" action="/admin/queue-dlq/' + j.id + '/requeue" style="display:inline">' +
           '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-blue-500 hover:bg-blue-600 text-white">Requeue</button>' +
         '</form>' +
-        '<form method="POST" action="/admin/queue-dlq/' + j.id + '/purge" style="display:inline" data-confirm="স্থায়ীভাবে মুছে ফেলবেন?">' +
+        '<form method="POST" action="/admin/queue-dlq/' + j.id + '/purge" style="display:inline" data-confirm="' + t("adq_purge_confirm") + '">' +
           '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-red-500 hover:bg-red-600 text-white">Purge</button>' +
         '</form>' +
       '</div>' +
@@ -29,7 +29,7 @@ function dlqRow(j) {
   '</tr>';
 }
 
-const rows = (jobs || []).map(dlqRow).join('') || '<tr><td colspan="7" class="px-6 py-10 text-center text-slate-400">Dead Letter Queue খালি — কোনো স্থায়ীভাবে ব্যর্থ জব নেই</td></tr>';
+const rows = (jobs || []).map(dlqRow).join('') || '<tr><td colspan="7" class="px-6 py-10 text-center text-slate-400">' + t("adq_empty") + '</td></tr>';
 const f = filters || {};
 %>
 <%- include('partials/admin-layout', {
@@ -40,7 +40,7 @@ const f = filters || {};
     <div class="flex items-center justify-between flex-wrap gap-3">
         <div>
             <h1 class="text-2xl font-semibold text-slate-900">Dead Letter Queue</h1>
-            <p class="text-slate-500 mt-1 text-sm">max_attempts শেষ হওয়া স্থায়ীভাবে ব্যর্থ জব — এখান থেকে Requeue বা স্থায়ীভাবে Purge করা যাবে</p>
+            <p class="text-slate-500 mt-1 text-sm">${t('adq_subtitle')}</p>
         </div>
         <a href="/admin/queue-jobs" class="px-4 py-2 rounded-2xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200">
             <i class="fas fa-arrow-left mr-1"></i>Job Queue Dashboard
@@ -49,19 +49,19 @@ const f = filters || {};
 
     <form method="GET" action="/admin/queue-dlq" class="flex flex-wrap gap-3">
         <select name="type" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
-            <option value="">সব টাইপ</option>
+            <option value="">${t('ash_all_types')}</option>
             ${(types || []).map(type => '<option value="' + type + '" ' + (f.type === type ? 'selected' : '') + '>' + type + '</option>').join('')}
         </select>
-        <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">ফিল্টার</button>
-        ${f.type ? '<a href="/admin/queue-dlq" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">রিসেট</a>' : ''}
+        <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">${t('ash_filter')}</button>
+        ${f.type ? '<a href="/admin/queue-dlq" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">' + t("ash_reset") + '</a>' : ''}
         ${(jobs && jobs.length) ? `
-        <form method="POST" action="/admin/queue-dlq/purge-all" data-confirm="সব DLQ জব স্থায়ীভাবে মুছে ফেলতে চান? এই অ্যাকশন ফেরানো যাবে না।" style="margin-left:auto" class="flex items-center gap-2">
+        <form method="POST" action="/admin/queue-dlq/purge-all" data-confirm="${t('adq_purge_all_confirm')}" style="margin-left:auto" class="flex items-center gap-2">
             <select name="olderThanDays" class="border border-slate-200 px-3 py-2.5 rounded-2xl text-xs">
-                <option value="">সব</option>
-                <option value="7">৭ দিনের পুরনো</option>
-                <option value="30">৩০ দিনের পুরনো</option>
+                <option value="">${t('adq_all')}</option>
+                <option value="7">${t('adq_older_7')}</option>
+                <option value="30">${t('adq_older_30')}</option>
             </select>
-            <button type="submit" class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-2xl text-sm font-semibold"><i class="fas fa-trash mr-1"></i>সব Purge করুন</button>
+            <button type="submit" class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-2xl text-sm font-semibold"><i class="fas fa-trash mr-1"></i>${t('adq_purge_all')}</button>
         </form>` : ''}
     </form>
 
@@ -83,9 +83,9 @@ const f = filters || {};
     </div>
 
     <div class="flex justify-center gap-3">
-        ${page > 1 ? '<a href="/admin/queue-dlq?page=' + (page - 1) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">← আগের পেজ</a>' : ''}
-        <span class="px-4 py-2 text-sm text-slate-500">পেজ ${page} / ${totalPages}</span>
-        ${page < totalPages ? '<a href="/admin/queue-dlq?page=' + (page + 1) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">পরের পেজ →</a>' : ''}
+        ${page > 1 ? '<a href="/admin/queue-dlq?page=' + (page - 1) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">← ' + t("ash_prev_page") + '</a>' : ''}
+        <span class="px-4 py-2 text-sm text-slate-500">${t('ash_page_x_y').replace('{page}', page).replace('{pages}', totalPages)}</span>
+        ${page < totalPages ? '<a href="/admin/queue-dlq?page=' + (page + 1) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">' + t("ash_next_page") + ' →</a>' : ''}
     </div>
 </div>
 `
