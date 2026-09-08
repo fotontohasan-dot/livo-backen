@@ -22,9 +22,14 @@ const VIEWS = path.join(__dirname, '..', '..', 'views');
 // বাংলা ইউনিকোড রেঞ্জ
 const BENGALI = /[\u0980-\u09FF]/;
 
+// ৳ (U+09F3) বাংলা ব্লকের ভেতরে পড়ে, কিন্তু এটা BDT-র মুদ্রা প্রতীক —
+// ইংরেজি পাতাতেও ৳ই থাকবে, অনুবাদের কিছু নেই। এটা না বাদ দিলে
+// baseline কখনো শূন্যে নামতে পারত না এবং সংখ্যাটা বিভ্রান্তিকর হতো।
+const TAKA_SIGN = /\u09F3/g;
+
 // বর্তমান পরিমাপ (২০২৬-০৯-০৭)। কমলে নিচের সংখ্যা কমিয়ে দিন — সেটাই ratchet.
-const BASELINE_USER_LINES = 104;
-const BASELINE_ADMIN_LINES = 173;
+const BASELINE_USER_LINES = 47;
+const BASELINE_ADMIN_LINES = 132;
 
 /** কমেন্ট বাদ দেওয়া হয়: ডেভেলপারদের জন্য লেখা বাংলা কমেন্ট ব্যবহারকারী দেখেন না,
  *  আর কোডবেসে সেগুলো ইচ্ছাকৃত ও উপকারী। শুধু রেন্ডার হওয়া টেক্সটই গোনা হয়। */
@@ -32,6 +37,7 @@ function stripComments(source) {
   return source
     .replace(/<!--[\s\S]*?-->/g, '')   // HTML/EJS কমেন্ট
     .replace(/\/\*[\s\S]*?\*\//g, '')  // CSS/JS ব্লক কমেন্ট
+    .replace(/<%#[\s\S]*?%>/g, '')     // EJS কমেন্ট
     .replace(/^\s*\/\/.*$/gm, '');     // JS লাইন কমেন্ট
 }
 
@@ -49,7 +55,7 @@ function countBengaliLines(files) {
   const perFile = [];
   for (const file of files) {
     const lines = stripComments(fs.readFileSync(file, 'utf8')).split('\n');
-    const n = lines.filter((l) => BENGALI.test(l)).length;
+    const n = lines.filter((l) => BENGALI.test(l.replace(TAKA_SIGN, ''))).length;
     if (n > 0) {
       total += n;
       perFile.push([path.relative(VIEWS, file), n]);
