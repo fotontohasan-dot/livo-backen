@@ -39,23 +39,23 @@ function escapeHtml(str) {
     <!-- ডেমো (প্র্যাকটিস) কারেন্সি উইজেট -->
     <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 mb-8">
         <div class="flex items-center justify-between mb-4">
-            <h3 class="font-semibold text-slate-800">🎮 ডেমো কারেন্সি ওভারভিউ <span class="text-xs font-normal text-emerald-600">● লাইভ</span></h3>
+            <h3 class="font-semibold text-slate-800">🎮 ${t('adb_demo_overview')} <span class="text-xs font-normal text-emerald-600">● ${t('adb_live')}</span></h3>
         </div>
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div class="p-4 rounded-2xl bg-slate-50">
-                <p class="text-xs text-slate-500">মোট ডেমো</p>
+                <p class="text-xs text-slate-500">${t('adb_total_demo')}</p>
                 <p class="text-xl font-bold text-slate-900 mt-1" id="demo-total">${Number(demoStats.totalDemo || 0).toLocaleString('en-US')}</p>
             </div>
             <div class="p-4 rounded-2xl bg-slate-50">
-                <p class="text-xs text-slate-500">ব্যবহারকারীদের কাছে থাকা ডেমো</p>
+                <p class="text-xs text-slate-500">${t('adb_user_held_demo')}</p>
                 <p class="text-xl font-bold text-blue-600 mt-1" id="demo-held">${Number(demoStats.userHeldDemo || 0).toLocaleString('en-US')}</p>
             </div>
             <div class="p-4 rounded-2xl bg-slate-50">
-                <p class="text-xs text-slate-500">ক্যাসিনো বেট ডেমো</p>
+                <p class="text-xs text-slate-500">${t('adb_casino_demo')}</p>
                 <p class="text-xl font-bold text-purple-600 mt-1" id="demo-casino">${Number(demoStats.casinoDemoWagered || 0).toLocaleString('en-US')}</p>
             </div>
             <div class="p-4 rounded-2xl bg-slate-50">
-                <p class="text-xs text-slate-500">স্পোর্টস বেটিং ডেমো</p>
+                <p class="text-xs text-slate-500">${t('adb_sports_demo')}</p>
                 <p class="text-xl font-bold text-orange-600 mt-1" id="demo-sports">${Number(demoStats.sportsDemoWagered || 0).toLocaleString('en-US')}</p>
             </div>
         </div>
@@ -64,11 +64,11 @@ function escapeHtml(str) {
     <!-- ==================== Date Range Filter / Export / Auto Refresh ==================== -->
     <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 mb-8 flex items-center justify-between flex-wrap gap-4">
         <form method="get" action="/admin" class="flex items-center gap-2 flex-wrap">
-            <label class="text-xs text-slate-500 font-medium">থেকে</label>
+            <label class="text-xs text-slate-500 font-medium">${t('adb_from')}</label>
             <input type="date" name="from" value="${dateRange.from}" class="text-sm border border-slate-200 rounded-xl px-3 py-1.5">
-            <label class="text-xs text-slate-500 font-medium">পর্যন্ত</label>
+            <label class="text-xs text-slate-500 font-medium">${t('adb_to')}</label>
             <input type="date" name="to" value="${dateRange.to}" class="text-sm border border-slate-200 rounded-xl px-3 py-1.5">
-            <button type="submit" class="text-sm font-semibold bg-slate-800 text-white px-4 py-1.5 rounded-xl hover:bg-slate-900"><i class="fas fa-filter mr-1"></i>ফিল্টার</button>
+            <button type="submit" class="text-sm font-semibold bg-slate-800 text-white px-4 py-1.5 rounded-xl hover:bg-slate-900"><i class="fas fa-filter mr-1"></i>${t('adb_filter')}</button>
             <a href="/admin/dashboard/export.csv?from=${dateRange.from}&to=${dateRange.to}" class="text-sm font-semibold bg-emerald-600 text-white px-4 py-1.5 rounded-xl hover:bg-emerald-700"><i class="fas fa-download mr-1"></i>Export CSV</a>
         </form>
         <div class="flex items-center gap-2">
@@ -92,20 +92,20 @@ function escapeHtml(str) {
         </div>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div class="p-4 rounded-2xl bg-slate-50">
-                <p class="text-xs text-slate-500">মোট বাজি</p>
+                <p class="text-xs text-slate-500">${t('adb_total_bets')}</p>
                 <p class="text-xl font-bold text-slate-900 mt-1">${betStatistics.totalBets.toLocaleString('en-US')}</p>
                 <p class="text-[11px] text-slate-400 mt-0.5">Won ${betStatistics.wonCount} · Lost ${betStatistics.lostCount} · Pending ${betStatistics.pendingCount}</p>
             </div>
             <div class="p-4 rounded-2xl bg-slate-50">
-                <p class="text-xs text-slate-500">উইন রেট</p>
+                <p class="text-xs text-slate-500">${t('adb_win_rate')}</p>
                 <p class="text-xl font-bold text-blue-600 mt-1">${betStatistics.winRatePercent}%</p>
             </div>
             <div class="p-4 rounded-2xl bg-slate-50">
-                <p class="text-xs text-slate-500">মোট স্টেক / পেআউট</p>
+                <p class="text-xs text-slate-500">${t('adb_stake_payout')}</p>
                 <p class="text-lg font-bold text-slate-900 mt-1">৳ ${betStatistics.totalStake.toLocaleString('en-US')} / ৳ ${betStatistics.totalPayout.toLocaleString('en-US')}</p>
             </div>
             <div class="p-4 rounded-2xl ${betStatistics.houseProfit >= 0 ? 'bg-emerald-50' : 'bg-red-50'}">
-                <p class="text-xs text-slate-500">হাউজ প্রফিট</p>
+                <p class="text-xs text-slate-500">${t('adb_house_profit')}</p>
                 <p class="text-xl font-bold ${betStatistics.houseProfit >= 0 ? 'text-emerald-600' : 'text-red-600'} mt-1">৳ ${betStatistics.houseProfit.toLocaleString('en-US')}</p>
             </div>
         </div>
@@ -115,28 +115,28 @@ function escapeHtml(str) {
     <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 mb-8">
         <div class="flex items-center justify-between mb-4">
             <h3 class="font-semibold text-slate-800">🔌 API Usage <span class="text-xs font-normal text-slate-400">${dateRange.from} → ${dateRange.to}</span></h3>
-            <a href="/admin/api-logs" class="text-xs font-semibold text-blue-600 hover:underline">সব দেখুন <i class="fas fa-arrow-right ml-1"></i></a>
+            <a href="/admin/api-logs" class="text-xs font-semibold text-blue-600 hover:underline">${t('adb_view_all')} <i class="fas fa-arrow-right ml-1"></i></a>
         </div>
         <div class="grid grid-cols-3 gap-4 mb-4">
             <div class="p-4 rounded-2xl bg-slate-50">
-                <p class="text-xs text-slate-500">মোট রিকোয়েস্ট</p>
+                <p class="text-xs text-slate-500">${t('adb_total_requests')}</p>
                 <p class="text-xl font-bold text-slate-900 mt-1" id="api-total-requests">${apiUsageStats.totalRequests.toLocaleString('en-US')}</p>
             </div>
             <div class="p-4 rounded-2xl bg-slate-50">
-                <p class="text-xs text-slate-500">গড় রেসপন্স টাইম</p>
+                <p class="text-xs text-slate-500">${t('adb_avg_response')}</p>
                 <p class="text-xl font-bold text-blue-600 mt-1" id="api-avg-response">${apiUsageStats.avgResponseMs} ms</p>
             </div>
             <div class="p-4 rounded-2xl ${apiUsageStats.errorRatePercent > 5 ? 'bg-red-50' : 'bg-slate-50'}">
-                <p class="text-xs text-slate-500">এরর রেট</p>
+                <p class="text-xs text-slate-500">${t('adb_error_rate')}</p>
                 <p class="text-xl font-bold ${apiUsageStats.errorRatePercent > 5 ? 'text-red-600' : 'text-slate-900'} mt-1" id="api-error-rate">${apiUsageStats.errorRatePercent}%</p>
             </div>
         </div>
         ${(apiUsageStats.topEndpoints && apiUsageStats.topEndpoints.length) ? apiUsageStats.topEndpoints.map(e =>
           '<div class="flex items-center justify-between py-2 border-t border-slate-50 text-sm">' +
             '<span class="font-mono text-xs text-slate-600">' + escapeHtml(e.method) + ' ' + escapeHtml(e.endpoint) + '</span>' +
-            '<span class="text-xs text-slate-400">' + e.count + ' রিকোয়েস্ট · ' + e.avgMs + ' ms</span>' +
+            '<span class="text-xs text-slate-400">' + e.count + ' ' + t('adb_requests_unit') + ' · ' + e.avgMs + ' ms</span>' +
           '</div>'
-        ).join('') : '<p class="text-sm text-slate-400 text-center py-3">এই রেঞ্জে কোনো API রিকোয়েস্ট নেই</p>'}
+        ).join('') : '<p class="text-sm text-slate-400 text-center py-3">' + t("adb_no_api_requests") + '</p>'}
     </div>
 
     <!-- ==================== Server Health / Queue Health / Backup Health ==================== -->
@@ -154,7 +154,7 @@ function escapeHtml(str) {
                 <div class="p-3 rounded-xl bg-slate-50"><p class="text-xs text-slate-500">Disk</p><p class="font-semibold" id="sh-disk">${serverHealth.disk ? serverHealth.disk.usedPercent + '% (' + serverHealth.disk.freeMb + ' MB free)' : 'N/A'}</p></div>
             </div>
             ${(serverHealth.issues && serverHealth.issues.length) ? '<div class="mt-3 text-xs text-amber-700 bg-amber-50 rounded-xl p-3 space-y-1">' + serverHealth.issues.map(i => '<div><i class="fas fa-triangle-exclamation mr-1"></i>' + escapeHtml(i) + '</div>').join('') + '</div>' : ''}
-            ` : '<p class="text-sm text-slate-400 text-center py-3">সার্ভার হেলথ ডেটা পাওয়া যায়নি</p>'}
+            ` : '<p class="text-sm text-slate-400 text-center py-3">' + t("adb_no_health") + '</p>'}
         </div>
 
         <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5">
@@ -167,7 +167,7 @@ function escapeHtml(str) {
                 <div class="p-3 rounded-xl bg-slate-50"><p class="text-xs text-slate-500">Failed</p><p class="font-semibold" id="qh-failed">${queueStatus.failed || 0}</p></div>
             </div>
             ${(queueHealth && queueHealth.issues && queueHealth.issues.length) ? '<div class="mt-3 text-xs text-amber-700 bg-amber-50 rounded-xl p-3 space-y-1">' + queueHealth.issues.map(i => '<div><i class="fas fa-triangle-exclamation mr-1"></i>' + escapeHtml(i) + '</div>').join('') + '</div>' : ''}
-            <a href="/admin/queue-jobs" class="mt-3 inline-block text-xs font-semibold text-blue-600 hover:underline">বিস্তারিত মনিটরিং ড্যাশবোর্ড <i class="fas fa-arrow-right ml-1"></i></a>
+            <a href="/admin/queue-jobs" class="mt-3 inline-block text-xs font-semibold text-blue-600 hover:underline">${t('adb_detailed_monitoring')} <i class="fas fa-arrow-right ml-1"></i></a>
         </div>
 
         <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5">
@@ -176,19 +176,19 @@ function escapeHtml(str) {
                 ${backupHealth ? `<span class="px-2.5 py-1 text-xs font-bold rounded-full ${backupHealth.level === 'healthy' ? 'bg-emerald-100 text-emerald-700' : (backupHealth.level === 'warning' ? 'bg-amber-100 text-amber-700' : (backupHealth.level === 'unknown' ? 'bg-slate-100 text-slate-500' : 'bg-red-100 text-red-700'))}" id="backup-health-badge">${backupHealth.level.toUpperCase()}</span>` : '<span class="px-2.5 py-1 text-xs font-bold rounded-full bg-slate-100 text-slate-500">N/A</span>'}
             </div>
             <div class="grid grid-cols-2 gap-3 text-sm">
-                <div class="p-3 rounded-xl bg-slate-50"><p class="text-xs text-slate-500">শেষ সফল</p><p class="font-semibold" id="bh-last-success">${(backupHealth && backupHealth.lastSuccessAt) ? new Date(backupHealth.lastSuccessAt).toLocaleString('bn-BD') : '—'}</p></div>
-                <div class="p-3 rounded-xl bg-slate-50"><p class="text-xs text-slate-500">শেষ ব্যর্থ</p><p class="font-semibold" id="bh-last-failed">${(backupHealth && backupHealth.lastFailedAt) ? new Date(backupHealth.lastFailedAt).toLocaleString('bn-BD') : '—'}</p></div>
+                <div class="p-3 rounded-xl bg-slate-50"><p class="text-xs text-slate-500">${t('adb_last_success')}</p><p class="font-semibold" id="bh-last-success">${(backupHealth && backupHealth.lastSuccessAt) ? new Date(backupHealth.lastSuccessAt).toLocaleString('bn-BD') : '—'}</p></div>
+                <div class="p-3 rounded-xl bg-slate-50"><p class="text-xs text-slate-500">${t('adb_last_failed')}</p><p class="font-semibold" id="bh-last-failed">${(backupHealth && backupHealth.lastFailedAt) ? new Date(backupHealth.lastFailedAt).toLocaleString('bn-BD') : '—'}</p></div>
             </div>
             ${(backupHealth && backupHealth.issues && backupHealth.issues.length) ? '<div class="mt-3 text-xs text-amber-700 bg-amber-50 rounded-xl p-3 space-y-1">' + backupHealth.issues.map(i => '<div><i class="fas fa-triangle-exclamation mr-1"></i>' + escapeHtml(i) + '</div>').join('') + '</div>' : ''}
-            <a href="/admin/backups" class="mt-3 inline-block text-xs font-semibold text-blue-600 hover:underline">ব্যাকআপ তালিকা <i class="fas fa-arrow-right ml-1"></i></a>
+            <a href="/admin/backups" class="mt-3 inline-block text-xs font-semibold text-blue-600 hover:underline">${t('adb_backup_list')} <i class="fas fa-arrow-right ml-1"></i></a>
         </div>
     </div>
     <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 mb-8">
         <div class="flex items-center justify-between mb-4">
-            <h3 class="font-semibold text-slate-800">🛡️ Fraud Alerts <span class="text-xs font-normal text-slate-400">ওপেন ফ্ল্যাগ</span></h3>
+            <h3 class="font-semibold text-slate-800">🛡️ Fraud Alerts <span class="text-xs font-normal text-slate-400">${t('adb_open_flags')}</span></h3>
             <div class="flex items-center gap-3">
-                <a href="/admin/fraud-monitoring" class="text-xs font-semibold text-blue-600 hover:underline">মনিটরিং ড্যাশবোর্ড</a>
-                <a href="/admin/fraud-logs" class="text-xs font-semibold text-blue-600 hover:underline">সব দেখুন <i class="fas fa-arrow-right ml-1"></i></a>
+                <a href="/admin/fraud-monitoring" class="text-xs font-semibold text-blue-600 hover:underline">${t('adb_monitoring_dash')}</a>
+                <a href="/admin/fraud-logs" class="text-xs font-semibold text-blue-600 hover:underline">${t('adb_view_all')} <i class="fas fa-arrow-right ml-1"></i></a>
             </div>
         </div>
         <div class="grid grid-cols-3 gap-4 mb-4">
@@ -215,14 +215,14 @@ function escapeHtml(str) {
             '</div>' +
             '<span class="px-2.5 py-1 text-xs font-bold rounded-full ' + riskClass + ' ml-3 flex-shrink-0">' + f.risk_level.toUpperCase() + '</span>' +
           '</div>';
-        }).join('') : '<p class="text-sm text-slate-400 text-center py-3">কোনো ওপেন ফ্রড ফ্ল্যাগ নেই</p>'}
+        }).join('') : '<p class="text-sm text-slate-400 text-center py-3">' + t("adb_no_fraud_flags") + '</p>'}
     </div>
 
     <!-- ==================== Duplicate Account Detection — উইজেট ==================== -->
     <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 mb-8">
         <div class="flex items-center justify-between mb-4">
-            <h3 class="font-semibold text-slate-800">🧬 Duplicate Accounts <span class="text-xs font-normal text-slate-400">ওপেন ফ্ল্যাগ</span></h3>
-            <a href="/admin/duplicate-accounts" class="text-xs font-semibold text-blue-600 hover:underline">সব দেখুন <i class="fas fa-arrow-right ml-1"></i></a>
+            <h3 class="font-semibold text-slate-800">🧬 Duplicate Accounts <span class="text-xs font-normal text-slate-400">${t('adb_open_flags')}</span></h3>
+            <a href="/admin/duplicate-accounts" class="text-xs font-semibold text-blue-600 hover:underline">${t('adb_view_all')} <i class="fas fa-arrow-right ml-1"></i></a>
         </div>
         <div class="grid grid-cols-3 gap-4 mb-4">
             <div class="p-4 rounded-2xl ${dupAlerts.high > 0 ? 'bg-red-50' : 'bg-slate-50'}">
@@ -249,7 +249,7 @@ function escapeHtml(str) {
             '</div>' +
             '<span class="px-2.5 py-1 text-xs font-bold rounded-full ' + riskClass + ' ml-3 flex-shrink-0">' + score + ' / 100</span>' +
           '</div>';
-        }).join('') : '<p class="text-sm text-slate-400 text-center py-3">কোনো ওপেন ডুপ্লিকেট ফ্ল্যাগ নেই</p>'}
+        }).join('') : '<p class="text-sm text-slate-400 text-center py-3">' + t("adb_no_dup_flags") + '</p>'}
     </div>
 
     <!-- Stats Grid -->
@@ -276,7 +276,7 @@ function escapeHtml(str) {
                 <div>
                     <p class="text-sm font-medium text-slate-500">Active Users</p>
                     <p class="metric-value text-slate-900 mt-2">${Number(stats.active_users_now || 0).toLocaleString('en-US')}</p>
-                    <p class="text-slate-400 text-xs font-semibold mt-1">গত ১৫ মিনিটে</p>
+                    <p class="text-slate-400 text-xs font-semibold mt-1">${t('adb_last_15min')}</p>
                 </div>
                 <div class="w-11 h-11 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center">
                     <i class="fas fa-signal text-xl"></i>
@@ -350,7 +350,7 @@ function escapeHtml(str) {
                 <div>
                     <p class="text-sm font-medium text-slate-500">Pending Withdraw Requests</p>
                     <p class="metric-value text-red-600 mt-2">${stats.pending_withdrawals || 0}</p>
-                    <p class="text-slate-400 text-xs font-semibold mt-1">রিভিউ করতে ক্লিক করুন</p>
+                    <p class="text-slate-400 text-xs font-semibold mt-1">${t('adb_click_review')}</p>
                 </div>
                 <div class="w-11 h-11 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center">
                     <i class="fas fa-hand-holding-usd text-xl"></i>
@@ -503,7 +503,7 @@ function escapeHtml(str) {
                         <p class="text-slate-600">${escapeHtml(b.username)} • ৳ ${Number(b.stake).toLocaleString('en-US')} on ${escapeHtml(b.title || (b.team_a + ' vs ' + b.team_b))}</p>
                     </div>
                 </div>`).join('')}
-                ${(recentWithdrawals.length === 0 && recentBets.length === 0) ? '<p class="text-slate-400 text-sm">এখনো কোনো সাম্প্রতিক কার্যকলাপ নেই।</p>' : ''}
+                ${(recentWithdrawals.length === 0 && recentBets.length === 0) ? '<p class="text-slate-400 text-sm">' + t("adb_no_activity") + '</p>' : ''}
             </div>
         </div>
     </div>
