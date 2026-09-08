@@ -843,6 +843,81 @@ async function runMigrations() {
       console.log(`✅ ইন-হাউস গেম সারি মুছে ফেলা হয়েছে (${purged.rowCount}টি)`);
     }
 
+    // ==================== PHASE 4 — ইভেন্ট টিকেট ====================
+    // সম্পূর্ণ নতুন মডিউল। এই রিপোতে আগে "ticket" শব্দটা শুধু সাপোর্ট
+    // টিকেট ও bet slip আইকনে ছিল — ইভেন্ট টিকেট বিক্রির কোনো কোড ছিল না।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS ticket_events (
+        id BIGSERIAL PRIMARY KEY,
+        provider TEXT, provider_event_id TEXT,
+        title TEXT NOT NULL, competition TEXT,
+        home_team TEXT, away_team TEXT,
+        venue TEXT, city TEXT, country TEXT,
+        event_date TIMESTAMPTZ NOT NULL,
+        banner_url TEXT, status TEXT DEFAULT 'on_sale',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE (provider, provider_event_id)
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_ticket_events_date ON ticket_events(event_date);`);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS ticket_categories (
+        id BIGSERIAL PRIMARY KEY,
+        event_id BIGINT NOT NULL REFERENCES ticket_events(id) ON DELETE CASCADE,
+        name TEXT NOT NULL, price NUMERIC(12,2) NOT NULL,
+        currency TEXT DEFAULT 'BDT',
+        total_qty INTEGER NOT NULL, sold_qty INTEGER DEFAULT 0,
+        max_per_user INTEGER DEFAULT 4
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_ticket_cat_event ON ticket_categories(event_id);`);
+
+    // ইনভেন্টরির সবচেয়ে গুরুত্বপূর্ণ গার্ড: sold_qty কখনো total_qty ছাড়াতে
+    // পারবে না। অ্যাপ্লিকেশন-লেভেল চেক (SELECT ... FOR UPDATE) মূল প্রতিরক্ষা,
+    // কিন্তু ভবিষ্যতের কোনো নতুন কোড-পথ ওই চেক ভুলে গেলে ডাটাবেসই থামাবে।
+    await pool.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ticket_categories_qty_check') THEN
+          ALTER TABLE ticket_categories ADD CONSTRAINT ticket_categories_qty_check
+            CHECK (sold_qty >= 0 AND sold_qty <= total_qty);
+        END IF;
+      END $$;
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS ticket_orders (
+        id BIGSERIAL PRIMARY KEY,
+        order_ref TEXT UNIQUE NOT NULL,
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        event_id BIGINT NOT NULL REFERENCES ticket_events(id),
+        category_id BIGINT NOT NULL REFERENCES ticket_categories(id),
+        qty INTEGER NOT NULL, unit_price NUMERIC(12,2) NOT NULL,
+        total NUMERIC(12,2) NOT NULL,
+        status TEXT DEFAULT 'reserved',
+        reserved_until TIMESTAMPTZ,
+        payment_request_id BIGINT REFERENCES payment_requests(id),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_ticket_orders_user ON ticket_orders(user_id, created_at DESC);`);
+    // expiry worker-এর কোয়েরি — মেয়াদোত্তীর্ণ reserved অর্ডার খোঁজা
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_ticket_orders_expiry ON ticket_orders(status, reserved_until);`);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS issued_tickets (
+        id BIGSERIAL PRIMARY KEY,
+        order_id BIGINT NOT NULL REFERENCES ticket_orders(id) ON DELETE CASCADE,
+        ticket_code TEXT UNIQUE NOT NULL,
+        qr_url TEXT, seat_label TEXT,
+        status TEXT DEFAULT 'valid',
+        used_at TIMESTAMPTZ
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_issued_tickets_order ON issued_tickets(order_id);`);
+    console.log('✅ ইভেন্ট টিকেট টেবিলগুলো ready');
+
     // ==================== PHASE 3 — প্রোভাইডার গেম ক্যাটালগ ====================
     // games টেবিল আগে ইন-হাউস গেমের জন্য ছিল (name/slug/emoji/category)।
     // এখন এটাই প্রোভাইডার sync-এর গন্তব্য, তাই কলামগুলো যোগ করা হচ্ছে।

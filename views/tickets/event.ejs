@@ -1,0 +1,74 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+
+<%#
+  PHASE 4 — একটি ইভেন্ট ও তার টিকেট ক্যাটাগরি।
+
+  "available" সংখ্যাটা কেবল দেখানোর জন্য — এটা কখনো ইনভেন্টরির সিদ্ধান্ত নয়।
+  আসল চেক সার্ভারে, রিজার্ভেশনের ট্রানজেকশনের ভেতরে (SELECT ... FOR UPDATE)।
+  ফলে পেজ লোড হওয়ার পর কেউ শেষ টিকেটটা কিনে নিলেও ওভারসেল হয় না।
+%>
+<style nonce="<%= cspNonce %>">
+  .tk-wrap { padding: 14px 12px 90px; }
+  .tk-banner { width: 100%; aspect-ratio: 16/7; object-fit: cover; border-radius: 14px; display: block; margin-bottom: 14px; }
+  .tk-title { font-size: 1.35rem; font-weight: 800; }
+  .tk-meta { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+  .tk-cat { background: var(--bg-card); border: 1px solid var(--border-glass);
+    border-radius: 12px; padding: 12px 14px; margin-top: 12px; }
+  .tk-cat-top { display: flex; justify-content: space-between; align-items: center; }
+  .tk-cat-name { font-weight: 700; font-size: 14px; color: var(--text-main); }
+  .tk-cat-price { font-weight: 700; color: var(--gold); }
+  .tk-cat-left { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+  .tk-buy { display: flex; gap: 8px; margin-top: 10px; }
+  .tk-qty { width: 72px; padding: 8px 10px; border-radius: 10px;
+    border: 1px solid var(--border-glass); background: var(--bg-main); color: var(--text-main); }
+  .tk-btn { flex: 1; padding: 9px; border-radius: 10px; border: 0;
+    background: var(--gold); color: #000; font-weight: 700; font-size: 13px; cursor: pointer; }
+  .tk-btn[disabled] { background: rgba(255,255,255,.08); color: var(--text-muted); cursor: not-allowed; }
+  .tk-note { font-size: 11px; color: var(--text-muted); margin-top: 14px; }
+  .tk-msg { margin-top: 12px; font-size: 13px; color: #ff6b6b; }
+</style>
+
+<div class="tk-wrap">
+  <% if (event.banner_url) { %><img class="tk-banner" src="<%= event.banner_url %>" alt="" aria-hidden="true"><% } %>
+  <div class="tk-title"><%= event.title %></div>
+  <div class="tk-meta"><%= event.competition || '' %></div>
+  <div class="tk-meta"><%= [event.venue, event.city, event.country].filter(Boolean).join(', ') %></div>
+  <div class="tk-meta"><%= new Date(event.event_date).toLocaleString('en-GB') %></div>
+
+  <% categories.forEach(function (c) { %>
+    <div class="tk-cat">
+      <div class="tk-cat-top">
+        <div class="tk-cat-name"><%= c.name %></div>
+        <div class="tk-cat-price">৳ <%= Number(c.price).toLocaleString('en-US') %></div>
+      </div>
+      <div class="tk-cat-left">
+        <%= Number(c.available) %> <%= t.tickets_available || 'available' %> ·
+        <%= t.tickets_max_per_user || 'max' %> <%= c.max_per_user %>
+      </div>
+      <div class="tk-buy">
+        <input class="tk-qty" type="number" min="1" max="<%= c.max_per_user %>" value="1"
+               data-qty-for="<%= c.id %>" <%= Number(c.available) < 1 ? 'disabled' : '' %>>
+        <button type="button" class="tk-btn" data-reserve="<%= c.id %>"
+                <%= Number(c.available) < 1 ? 'disabled' : '' %>>
+          <%= Number(c.available) < 1 ? (t.tickets_sold_out || 'Sold out') : (t.tickets_reserve || 'Reserve') %>
+        </button>
+      </div>
+    </div>
+  <% }); %>
+
+  <div class="tk-note">
+    <%= t.tickets_reservation_note || 'Reserved tickets are held for' %> <%= reservationMinutes %> <%= t.minutes || 'minutes' %>.
+  </div>
+  <div class="tk-msg" id="tkMsg" hidden></div>
+</div>
+
+<%- include('../partials/bottom-nav') %>
+
+<script type="application/json" id="ticketEventConfig"><%- jsonScriptSafe({
+  csrfToken: locals.csrfToken || '',
+  loggedIn: !!user
+}) %></script>
+<script src="/js/views/tickets-event.js"></script>
+</body>
+</html>

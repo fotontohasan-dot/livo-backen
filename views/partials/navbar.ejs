@@ -58,6 +58,9 @@
   <%# PHASE 1: নির্দিষ্ট ইন-হাউস গেমের হার্ডকোড লিংক সরানো হয়েছে — মেনু এখন
       লবিতে পাঠায়, লবি DB থেকে গেম পড়ে। %>
   <a href="/games" class="menu-item"><i class="fas fa-dice"></i> <%= t.menu_casino || 'Casino' %></a>
+  <% if (typeof features === 'undefined' || features.tickets) { %>
+  <a href="/tickets" class="menu-item"><i class="fas fa-ticket"></i> <%= t.menu_tickets %></a>
+  <% } %>
   <a href="/matches" class="menu-item"><i class="fas fa-futbol"></i> <%= t.menu_sports %></a>
   <a href="/tournaments" class="menu-item"><i class="fas fa-trophy"></i> <%= t.menu_tournament %></a>
   <a href="/payment/deposit" class="menu-item"><i class="fas fa-wallet"></i> <%= t.menu_deposit %></a>

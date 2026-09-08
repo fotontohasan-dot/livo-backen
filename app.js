@@ -915,6 +915,7 @@ app.use('/leaderboard', require('./routes/leaderboard'));
 app.use('/admin', require('./routes/adminHealthFix'));
 app.use('/admin', require('./routes/admin'));
 app.use('/admin/games', require('./middleware/auth').isAdmin, require('./routes/adminGames'));
+app.use('/admin/tickets', require('./middleware/auth').isAdmin, require('./routes/adminTickets'));
 app.use('/admin/telegram', require('./middleware/auth').isAdmin, require('./routes/adminTelegram'));
 app.use('/admin/leaderboard', require('./middleware/auth').isAdmin, require('./routes/adminLeaderboard'));
 app.use('/notifications', require('./routes/notifications'));
@@ -926,6 +927,8 @@ app.use('/games', require('./routes/games'));
 // সেশন, CSRF বা ভাষা-মিডলওয়্যার প্রযোজ্য নয়, অথেন্টিকেশন সম্পূর্ণ আলাদা
 // (HMAC + IP allow-list — middleware/providerAuth.js)।
 app.use('/provider', require('./routes/providerWallet'));
+// PHASE 4 — ইভেন্ট টিকেট (ইউজার ও অ্যাডমিন)।
+app.use('/tickets', require('./routes/tickets'));
 app.use('/api', require('./routes/api'));
 // ==================== OpenAPI / Swagger UI ====================
 const swaggerUi = require('swagger-ui-express');

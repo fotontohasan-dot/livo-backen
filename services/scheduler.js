@@ -168,6 +168,21 @@ function buildJobDefinitions() {
       }
     },
 
+    ticket_reservation_expiry: {
+      label: 'Ticket Reservation Expiry',
+      description: 'মেয়াদোত্তীর্ণ অপরিশোধিত টিকেট রিজার্ভেশন বাতিল করে ইনভেন্টরি ছেড়ে দেয়',
+      // ঘন ঘন চালানো দরকার: একটা আটকে থাকা reservation মানে একটা টিকেট
+      // বিক্রি না হয়ে পড়ে থাকা। ১ মিনিটের গ্রানুলারিটি যথেষ্ট।
+      defaultIntervalMs: 2 * MIN,
+      defaultEnabled: true,
+      maxRetries: 1,
+      handler: async () => {
+        const { expireReservations } = require('./tickets');
+        const r = await expireReservations();
+        return `${r.orders}টা মেয়াদোত্তীর্ণ রিজার্ভেশন বাতিল, ${r.released}টা টিকেট ইনভেন্টরিতে ফেরত`;
+      }
+    },
+
     casino_game_sync: {
       label: 'Casino Game Sync',
       description: 'সক্রিয় ক্যাসিনো প্রোভাইডারের গেম ক্যাটালগ sync করে (services/casinoGameSync.js)',

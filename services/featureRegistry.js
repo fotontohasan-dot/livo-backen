@@ -48,6 +48,13 @@ const FEATURES = [
     enforcement: ['routes/providerWallet.js']
   },
 
+  {
+    key: 'tickets', label: 'Event Tickets', labelKey: 'admin_ff_name_tickets', descriptionKey: 'admin_ff_desc_tickets', category: 'gaming', icon: 'fa-ticket', order: 12,
+    defaultEnabled: false,
+    description: 'ইভেন্ট/ফুটবল টিকেট — ইভেন্ট তালিকা, রিজার্ভেশন, চেকআউট ও QR টিকেট',
+    enforcement: ['routes/tickets.js']
+  },
+
   // ---------------- Sports ----------------
   {
     key: 'sports', label: 'Sports', labelKey: 'admin_ff_name_sports', descriptionKey: 'admin_ff_desc_sports', category: 'sports', icon: 'fa-futbol', order: 20,

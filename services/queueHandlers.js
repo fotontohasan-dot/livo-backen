@@ -153,4 +153,37 @@ queue.registerHandler('provider_wallet_effects', async (payload) => {
   }
 });
 
+// ==================== TICKET ISSUE (PHASE 4) ====================
+// পেমেন্ট সফল হওয়ার পর টিকেট তৈরি, QR জেনারেশন ও Cloudinary আপলোড।
+// চেকআউট রেসপন্স এর জন্য অপেক্ষা করে না — QR তৈরি ও আপলোড ধীর কাজ।
+//
+// issueTickets() নিজে idempotent: ইতিমধ্যে ইস্যু হওয়া টিকেট আবার তৈরি করে
+// না। জব রিট্রাই হলে ডুপ্লিকেট টিকেট মানেই ইনভেন্টরির চেয়ে বেশি টিকেট
+// ছাড়া হয়ে যাওয়া — তাই গার্ডটা সার্ভিস লেয়ারেই, জবের উপর ভরসা করে নয়।
+queue.registerHandler('ticket_issue', async (payload) => {
+  const tickets = require('./tickets');
+  const { orderId } = payload;
+  if (!orderId) throw new Error('ticket_issue job payload-এ orderId নেই');
+
+  const issued = await tickets.issueTickets(orderId);
+
+  // ডেলিভারি — ইন-অ্যাপ নোটিফিকেশন। ব্যর্থ হলেও জব ব্যর্থ ধরা হয় না,
+  // নাহলে রিট্রাইয়ে issueTickets আবার চলত (idempotent হলেও অপ্রয়োজনীয়)।
+  try {
+    const o = await pool.query(
+      `SELECT o.user_id, o.order_ref, e.title FROM ticket_orders o
+         JOIN ticket_events e ON e.id = o.event_id WHERE o.id = $1`, [orderId]
+    );
+    if (o.rows.length) {
+      await pool.query(
+        `INSERT INTO notifications (user_id, title, message, type) VALUES ($1,$2,$3,'info')`,
+        [o.rows[0].user_id, 'টিকেট ইস্যু হয়েছে',
+         `${o.rows[0].title} — অর্ডার ${o.rows[0].order_ref} (${issued.length}টি টিকেট)`]
+      );
+    }
+  } catch (e) {
+    console.error('ticket_issue notification error:', e.message);
+  }
+});
+
 module.exports = {}; // require করলেই উপরের registerHandler কলগুলো চলে — কোনো এক্সপোর্ট লাগে না

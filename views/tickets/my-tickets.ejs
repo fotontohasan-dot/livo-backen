@@ -1,0 +1,58 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+
+<%#
+  PHASE 4 — ইউজারের টিকেট।
+  QR-এর URL ticket_events/issued_tickets থেকেই আসে (Cloudinary CDN, অথবা
+  Cloudinary কনফিগার না থাকলে data-URL) — কোনো পথ ক্লায়েন্টে অনুমান করা হয় না।
+%>
+<style nonce="<%= cspNonce %>">
+  .mt-wrap { padding: 14px 12px 90px; }
+  .mt-title { font-size: 1.3rem; font-weight: 800; margin-bottom: 14px; }
+  .mt-order { background: var(--bg-card); border: 1px solid var(--border-glass);
+    border-radius: 14px; padding: 14px 16px; margin-bottom: 12px; }
+  .mt-name { font-weight: 700; font-size: 14px; color: var(--text-main); }
+  .mt-meta { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+  .mt-status { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 999px;
+    border: 1px solid var(--border-glass); color: var(--text-muted); margin-top: 8px; }
+  .mt-tickets { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  .mt-ticket { text-align: center; }
+  .mt-ticket img { width: 110px; height: 110px; border-radius: 8px; background: #fff; }
+  .mt-code { font-size: 10px; color: var(--text-muted); margin-top: 4px; font-family: monospace; }
+  .mt-used { font-size: 10px; color: #ff6b6b; }
+  .mt-empty { text-align: center; padding: 48px 16px; color: var(--text-muted); font-size: 13px; }
+</style>
+
+<div class="mt-wrap">
+  <div class="mt-title"><%= t.tickets_my_tickets || 'My tickets' %></div>
+
+  <% if (!orders.length) { %>
+    <div class="mt-empty"><%= t.tickets_none_yet || 'You have no tickets yet.' %></div>
+  <% } %>
+
+  <% orders.forEach(function (o) { %>
+    <div class="mt-order">
+      <div class="mt-name"><%= o.title %></div>
+      <div class="mt-meta"><%= o.venue || '' %> · <%= new Date(o.event_date).toLocaleString('en-GB') %></div>
+      <div class="mt-meta"><%= o.category_name %> × <%= o.qty %> · ৳ <%= Number(o.total).toLocaleString('en-US') %></div>
+      <div class="mt-meta">#<%= o.order_ref %></div>
+      <span class="mt-status"><%= o.status %></span>
+
+      <% if (o.tickets && o.tickets.length) { %>
+        <div class="mt-tickets">
+          <% o.tickets.forEach(function (tk) { %>
+            <div class="mt-ticket">
+              <% if (tk.qr) { %><img src="<%= tk.qr %>" alt="" aria-hidden="true"><% } %>
+              <div class="mt-code"><%= tk.code %></div>
+              <% if (tk.status !== 'valid') { %><div class="mt-used"><%= tk.status %></div><% } %>
+            </div>
+          <% }); %>
+        </div>
+      <% } %>
+    </div>
+  <% }); %>
+</div>
+
+<%- include('../partials/bottom-nav') %>
+</body>
+</html>
