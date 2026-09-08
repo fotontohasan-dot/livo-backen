@@ -819,21 +819,28 @@ async function runMigrations() {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
-    const gamesCount = await pool.query('SELECT COUNT(*) AS cnt FROM games');
-    if (parseInt(gamesCount.rows[0].cnt) === 0) {
-      const seedGames = [
-        { name: 'Online Ludo', slug: 'ludo', emoji: '🎯', category: 'sports', provider: 'Jili', badge: null },
-        { name: 'Fortune Tiger', slug: 'fortune-tiger', emoji: '🐯', category: 'slots', provider: 'PG Soft', badge: 'hot' },
-        { name: 'Aviator', slug: 'aviator', emoji: '✈️', category: 'slots', provider: 'Spribe', badge: 'hot' },
-        { name: 'Crazy Time', slug: 'crazy-time', emoji: '🎡', category: 'live', provider: 'Pragmatic Play', badge: 'hot' }
-      ];
-      for (let i = 0; i < seedGames.length; i++) {
-        const g = seedGames[i];
-        await pool.query(
-          `INSERT INTO games (name, slug, emoji, category, provider, badge, sort_order) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (slug) DO NOTHING`,
-          [g.name, g.slug, g.emoji, g.category, g.provider, g.badge, i]
-        );
-      }
+    // PHASE 1 — ইন-হাউস গেম অপসারণ
+    // ------------------------------------------------------------------
+    // আগে এখানে ৪টি গেম seed করা হতো এবং routes/games.js-এর ক্যাটালগে আরও
+    // ১১৮টি হার্ডকোড ছিল। সব ইন-হাউস গেম সরে যাওয়ায় এই seed-ও অর্থহীন —
+    // লবি এখন সম্পূর্ণভাবে প্রোভাইডার sync-নির্ভর (PHASE 3)।
+    //
+    // পুরনো ইনস্টলেশনে টেবিলে যে legacy সারিগুলো আছে সেগুলো একবারই মুছতে হবে।
+    // শর্তহীন `DELETE FROM games` প্রতিটা বুটে চললে PHASE 3-এর sync করা
+    // গেমও মুছে যেত, তাই একটা site_settings মার্কার দিয়ে এটা ঠিক একবার চলে।
+    // টেবিল নিজে থাকছে — PHASE 3-এ নতুন কলাম পাবে। game_rounds / bets /
+    // demo_transactions-এর ঐতিহাসিক ডেটা ইচ্ছাকৃতভাবে অক্ষত রাখা হয়েছে
+    // (অডিট ও রিপোর্টের জন্য), শুধু নতুন লেখা বন্ধ।
+    const inhousePurged = await pool.query(
+      `SELECT 1 FROM site_settings WHERE key = 'inhouse_games_purged_at'`
+    );
+    if (inhousePurged.rowCount === 0) {
+      const purged = await pool.query('DELETE FROM games');
+      await pool.query(
+        `INSERT INTO site_settings (key, value) VALUES ('inhouse_games_purged_at', NOW()::text)
+         ON CONFLICT (key) DO NOTHING`
+      );
+      console.log(`✅ ইন-হাউস গেম সারি মুছে ফেলা হয়েছে (${purged.rowCount}টি)`);
     }
 
     await pool.query(`ALTER TABLE kyc_requests ADD COLUMN IF NOT EXISTS reject_reason TEXT`);
