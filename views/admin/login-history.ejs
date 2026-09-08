@@ -12,18 +12,18 @@ function deviceBadge(l) {
 function logRow(l) {
   const userLabel = l.username ? escapeHtml(l.username) + ' <span class="text-slate-400">(#' + l.user_id + ')</span>' : '#' + (l.user_id || '-');
   const newBadge = l.is_new_device
-    ? '<span class="px-2.5 py-1 text-xs font-bold rounded-full bg-amber-100 text-amber-700">নতুন ডিভাইস</span>'
+    ? '<span class="px-2.5 py-1 text-xs font-bold rounded-full bg-amber-100 text-amber-700">' + t("alh_new_device") + '</span>'
     : '<span class="text-xs text-slate-400">-</span>';
   return '<tr class="hover:bg-slate-50 align-top">' +
     '<td class="px-6 py-4"><a href="/admin/users/' + (l.user_id || '') + '" class="font-semibold text-blue-600 hover:underline">' + userLabel + '</a></td>' +
     '<td class="px-6 py-4 text-sm text-slate-700">' + deviceBadge(l) + '</td>' +
     '<td class="px-6 py-4 text-sm font-mono text-slate-600">' + escapeHtml(l.ip) + '</td>' +
-    '<td class="px-6 py-4 text-sm text-slate-600">' + escapeHtml(l.location || 'অজানা') + '</td>' +
+    '<td class="px-6 py-4 text-sm text-slate-600">' + escapeHtml(l.location || t('alh_unknown')) + '</td>' +
     '<td class="px-6 py-4">' + newBadge + '</td>' +
     '<td class="px-6 py-4 text-xs text-slate-400">' + fmtDate(l.created_at) + '</td>' +
   '</tr>';
 }
-const rows = (logs || []).map(logRow).join('') || '<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400">কোনো লগইন রেকর্ড পাওয়া যায়নি</td></tr>';
+const rows = (logs || []).map(logRow).join('') || '<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400">' + t("alh_no_records") + '</td></tr>';
 const f = filters || {};
 function qs(overrides) {
   const merged = Object.assign({ q: f.q, new_device: f.new_device, from: f.from, to: f.to }, overrides);
@@ -38,21 +38,21 @@ function qs(overrides) {
     <div class="flex items-center justify-between mb-6">
         <div>
             <h1 class="text-2xl font-semibold text-slate-900">Login History</h1>
-            <p class="text-slate-500 mt-1 text-sm">মোট ${total || 0}টি লগইন রেকর্ড — সব ইউজারের ডিভাইস, IP ও আনুমানিক লোকেশনসহ</p>
+            <p class="text-slate-500 mt-1 text-sm">${t('alh_subtitle').replace('{n}', total || 0)}</p>
         </div>
     </div>
 
     <form method="GET" action="/admin/login-history" class="flex flex-wrap gap-3 mb-6">
-        <input type="text" name="q" value="${escapeHtml(f.q || '')}" placeholder="ইউজারনেম, IP, বা লোকেশন দিয়ে খুঁজুন"
+        <input type="text" name="q" value="${escapeHtml(f.q || '')}" placeholder="${t('alh_search')}"
                class="flex-1 min-w-[220px] border border-slate-200 px-4 py-2.5 rounded-2xl text-sm outline-none focus:border-blue-300">
         <select name="new_device" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
-            <option value="">সব লগইন</option>
-            <option value="1" ${f.new_device === '1' ? 'selected' : ''}>শুধু নতুন ডিভাইস</option>
+            <option value="">${t('alh_all_logins')}</option>
+            <option value="1" ${f.new_device === '1' ? 'selected' : ''}>${t('alh_new_only')}</option>
         </select>
         <input type="date" name="from" value="${escapeHtml(f.from || '')}" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
         <input type="date" name="to" value="${escapeHtml(f.to || '')}" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
-        <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">ফিল্টার</button>
-        ${(f.q || f.new_device || f.from || f.to) ? '<a href="/admin/login-history" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">রিসেট</a>' : ''}
+        <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">${t('ash_filter')}</button>
+        ${(f.q || f.new_device || f.from || f.to) ? '<a href="/admin/login-history" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">' + t("ash_reset") + '</a>' : ''}
     </form>
 
     <div class="bg-white rounded-3xl border border-slate-100 overflow-x-auto modern-table">
@@ -72,9 +72,9 @@ function qs(overrides) {
     </div>
 
     <div class="flex justify-center gap-3 mt-6">
-        ${page > 1 ? '<a href="/admin/login-history?page=' + (page - 1) + '&' + qs({}) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">← আগের পেজ</a>' : ''}
-        <span class="px-4 py-2 text-sm text-slate-500">পেজ ${page} / ${totalPages}</span>
-        ${page < totalPages ? '<a href="/admin/login-history?page=' + (page + 1) + '&' + qs({}) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">পরের পেজ →</a>' : ''}
+        ${page > 1 ? '<a href="/admin/login-history?page=' + (page - 1) + '&' + qs({}) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">← ' + t("ash_prev_page") + '</a>' : ''}
+        <span class="px-4 py-2 text-sm text-slate-500">${t('ash_page_x_y').replace('{page}', page).replace('{pages}', totalPages)}</span>
+        ${page < totalPages ? '<a href="/admin/login-history?page=' + (page + 1) + '&' + qs({}) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">' + t("ash_next_page") + ' →</a>' : ''}
     </div>
 </div>
 `
