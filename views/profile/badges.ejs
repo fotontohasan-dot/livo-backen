@@ -5,7 +5,7 @@
 
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
     <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
-    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">🏆 ব্যাজ ও অর্জন</h1>
+    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">🏆 <%= t('bdg_title') %></h1>
   </div>
 
   <% 
@@ -17,7 +17,7 @@
   <div style="background:linear-gradient(135deg,#0ea5e9,#6366f1);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center;">
     <div style="font-size:40px;margin-bottom:6px;">🏆</div>
     <div style="color:var(--text-main);font-size:22px;font-weight:900;"><%= earnedCount %> / <%= total %></div>
-    <div style="color:rgba(255,255,255,0.9);font-size:13px;">ব্যাজ অর্জন করেছেন</div>
+    <div style="color:rgba(255,255,255,0.9);font-size:13px;"><%= t('bdg_earned') %></div>
   </div>
 
   <!-- ব্যাজ গ্রিড -->
@@ -29,9 +29,9 @@
         <div style="color:var(--text-muted);font-size:11px;margin-top:3px;line-height:1.4;"><%= b.desc %></div>
         <div style="margin-top:8px;">
           <% if (b.earned) { %>
-            <span style="color:#10b981;font-size:11px;font-weight:bold;">✅ অর্জিত (+<%= b.reward %>)</span>
+            <span style="color:#10b981;font-size:11px;font-weight:bold;">✅ <%= t('bdg_unlocked').replace('{value}', b.reward) %></span>
           <% } else { %>
-            <span style="color:var(--text-muted);font-size:11px;">🔒 +<%= b.reward %> কয়েন</span>
+            <span style="color:var(--text-muted);font-size:11px;">🔒 <%= t('bdg_locked').replace('{value}', b.reward) %></span>
           <% } %>
         </div>
       </div>
@@ -39,8 +39,8 @@
   </div>
 
   <p style="font-size:.75rem;color:var(--text-muted);text-align:center;margin-top:1rem;line-height:1.6;">
-    খেলতে খেলতে স্বয়ংক্রিয়ভাবে ব্যাজ আনলক হয়।<br>
-    প্রতিটি ব্যাজে বোনাস কয়েন পাওয়া যায়।
+    <%= t('bdg_info_1') %><br>
+    <%= t('bdg_info_2') %>
   </p>
 
 </div>
