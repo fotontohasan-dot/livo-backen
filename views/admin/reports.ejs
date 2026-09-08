@@ -21,9 +21,9 @@ const userData = JSON.stringify((userTrend || []).map(r => r.count));
         <h2 class="text-2xl font-semibold">Reports & Analytics</h2>
         <form method="GET" action="/admin/reports" class="flex items-center gap-2 text-sm">
             <input type="date" name="from" value="${escapeHtml(from)}" class="border px-3 py-2 rounded-xl">
-            <span class="text-slate-400">থেকে</span>
+            <span class="text-slate-400">${t('arp_from')}</span>
             <input type="date" name="to" value="${escapeHtml(to)}" class="border px-3 py-2 rounded-xl">
-            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold">ফিল্টার</button>
+            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold">${t('ash_filter')}</button>
         </form>
     </div>
 
@@ -31,7 +31,7 @@ const userData = JSON.stringify((userTrend || []).map(r => r.count));
         <div class="bg-white p-5 rounded-2xl border"><p class="text-xs text-slate-500">মোট ডিপোজিট</p><p class="text-2xl font-bold text-emerald-600 mt-1">৳ ${Number(deposits.total).toLocaleString('en-US')}</p><p class="text-xs text-slate-400 mt-1">${deposits.cnt} টি</p></div>
         <div class="bg-white p-5 rounded-2xl border"><p class="text-xs text-slate-500">মোট উইথড্র</p><p class="text-2xl font-bold text-red-500 mt-1">৳ ${Number(withdrawals.total).toLocaleString('en-US')}</p><p class="text-xs text-slate-400 mt-1">${withdrawals.cnt} টি</p></div>
         <div class="bg-white p-5 rounded-2xl border"><p class="text-xs text-slate-500">নেট রেভিনিউ (GGR)</p><p class="text-2xl font-bold ${netRevenue >= 0 ? 'text-emerald-600' : 'text-red-600'} mt-1">৳ ${Number(netRevenue).toLocaleString('en-US')}</p><p class="text-xs text-slate-400 mt-1">${bets.cnt} টি বেট</p></div>
-        <div class="bg-white p-5 rounded-2xl border"><p class="text-xs text-slate-500">নতুন ইউজার</p><p class="text-2xl font-bold mt-1">${Number(newUsers).toLocaleString('en-US')}</p><p class="text-xs text-slate-400 mt-1">${from} থেকে ${to}</p></div>
+        <div class="bg-white p-5 rounded-2xl border"><p class="text-xs text-slate-500">${t('arp_new_users')}</p><p class="text-2xl font-bold mt-1">${Number(newUsers).toLocaleString('en-US')}</p><p class="text-xs text-slate-400 mt-1">${from} থেকে ${to}</p></div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
