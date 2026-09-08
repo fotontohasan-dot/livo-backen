@@ -22,12 +22,12 @@
 
   <div class="fa-crown-banner">
     <div class="crown">👑</div>
-    <div class="ribbon">লাকি হুইল</div>
+    <div class="ribbon"><%= t('whl_title') %></div>
   </div>
 
-  <div style="color:var(--text-muted);font-size:13px;margin-bottom:6px;">দিনে একবার ঘুরিয়ে কয়েন জিতুন!</div>
+  <div style="color:var(--text-muted);font-size:13px;margin-bottom:6px;"><%= t('whl_sub') %></div>
   <div style="color:#f59e0b;font-size:13px;font-weight:bold;margin-bottom:20px;">
-    আজকের রিমেইনিং স্পিন: <%= remainingToday || 0 %> / ১
+    <%= t('whl_remaining').replace('{n}', remainingToday || 0) %>
   </div>
 
   <!-- হুইল -->
@@ -42,13 +42,13 @@
 
   <% if (status && status.locked) { %>
     <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:16px;color: var(--text-muted);font-size:14px;">
-      🔒 হুইল লক করা আছে।<br>
-      আজ ডিপোজিট করুন — তাহলেই স্পিন আনলক হবে।
+      🔒 <%= t('whl_locked') %><br>
+      <%= t('whl_locked_sub') %>
     </div>
   <% } else if (!(status && status.canSpin)) { %>
     <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:16px;color: var(--text-muted);font-size:14px;">
-      ✅ আজ স্পিন করা হয়ে গেছে<% if (status && status.prize) { %> — পেয়েছেন <strong style="color:#f59e0b;"><%= status.prize %> কয়েন</strong><% } %>।<br>
-      আগামীকাল আবার আসুন।
+      ✅ <%= t('whl_done') %><% if (status && status.prize) { %> <%- t('whl_won').replace('{value}', '<strong style="color:#f59e0b;">' + status.prize + '</strong>') %><% } %><br>
+      <%= t('whl_come_back') %>
     </div>
   <% } %>
 
@@ -56,16 +56,16 @@
 
   <!-- স্পিন হিস্ট্রি / প্রাইজ লগ -->
   <div style="margin-top:30px;text-align:left;">
-    <div style="color:var(--text-main);font-size:15px;font-weight:bold;margin-bottom:10px;">🧾 স্পিন হিস্ট্রি</div>
+    <div style="color:var(--text-main);font-size:15px;font-weight:bold;margin-bottom:10px;">🧾 <%= t('whl_history') %></div>
     <% if (history && history.length) { %>
       <% history.forEach(function(h) { %>
         <div style="display:flex;justify-content:space-between;background:rgba(255,255,255,0.05);border-radius:10px;padding:10px 14px;margin-bottom:8px;">
           <span style="color:var(--text-muted);font-size:13px;"><%= h.spin_date %></span>
-          <span style="color:#f59e0b;font-size:13px;font-weight:bold;">+<%= h.prize %> কয়েন</span>
+          <span style="color:#f59e0b;font-size:13px;font-weight:bold;"><%= t('whl_coins').replace('{value}', h.prize) %></span>
         </div>
       <% }); %>
     <% } else { %>
-      <div style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px;">এখনো কোনো স্পিন করা হয়নি।</div>
+      <div style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px;"><%= t('whl_no_history') %></div>
     <% } %>
   </div>
 
