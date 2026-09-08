@@ -85,7 +85,7 @@ router.get('/checkout/:ref', isAuth, async (req, res) => {
     const orders = await tickets.myOrders(req.session.user.id);
     const order = orders.find(o => o.order_ref === req.params.ref);
     if (!order) {
-      req.flash('error', req.t('common_not_found'));
+      req.flash('error', req.t('common_server_error_short'));
       return res.redirect('/tickets');
     }
     res.render('tickets/checkout', {

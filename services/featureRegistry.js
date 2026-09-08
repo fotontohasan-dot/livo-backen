@@ -43,14 +43,14 @@ const FEATURES = [
 
   {
     key: 'provider_wallet', label: 'Provider Wallet API', labelKey: 'admin_ff_name_provider_wallet', descriptionKey: 'admin_ff_desc_provider_wallet', category: 'gaming', icon: 'fa-right-left', order: 11,
-    defaultEnabled: false,
+    defaultEnabled: true,
     description: 'থার্ড-পার্টি প্রোভাইডারের seamless wallet কলব্যাক (balance/bet/win/rollback)',
     enforcement: ['routes/providerWallet.js']
   },
 
   {
     key: 'tickets', label: 'Event Tickets', labelKey: 'admin_ff_name_tickets', descriptionKey: 'admin_ff_desc_tickets', category: 'gaming', icon: 'fa-ticket', order: 12,
-    defaultEnabled: false,
+    defaultEnabled: true,
     description: 'ইভেন্ট/ফুটবল টিকেট — ইভেন্ট তালিকা, রিজার্ভেশন, চেকআউট ও QR টিকেট',
     enforcement: ['routes/tickets.js']
   },

@@ -211,6 +211,21 @@ describe('A-Z User Journey', () => {
     expect(bet.body.success).toBe(true);
     const betRow = await pool.query(`SELECT * FROM bets WHERE user_id=$1 AND match_id=$2`, [userId, matchIns.rows[0].id]);
     expect(betRow.rows.length).toBe(1);
+
+    // বাজির পার্শ্ব-প্রতিক্রিয়া (ব্যাজ পুরস্কার) অ্যাসিনক্রোনাস — সেগুলো
+    // coin_transactions-এ ক্রেডিট লেখে। আগে ইন-হাউস গেমের ধাপটা এখানে থাকায়
+    // ব্যাজগুলো এই ধাপেই বসে যেত। সেটা সরে যাওয়ার পর পুরস্কারগুলো পরের
+    // ধাপে (১৩. Withdraw) ঢুকে পড়ছিল — ঠিক before ও after ব্যালেন্স পড়ার
+    // মাঝখানে — ফলে withdraw-এর হিসাব মিলত না। এটা টেস্টের রেস, অ্যাপের বাগ নয়;
+    // তাই এখানে পুরস্কারগুলো থিতু হওয়া পর্যন্ত সীমিত সময় অপেক্ষা করা হচ্ছে।
+    let lastBalance = null;
+    for (let i = 0; i < 40; i++) {
+      const b = await pool.query('SELECT coins FROM users WHERE id=$1', [userId]);
+      const current = Number(b.rows[0].coins);
+      if (current === lastBalance) break;   // পরপর দুইবার একই — আর কিছু আসছে না
+      lastBalance = current;
+      await new Promise(r => setTimeout(r, 100));
+    }
   });
 
   test('13. Withdraw', async () => {

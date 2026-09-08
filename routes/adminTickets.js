@@ -68,10 +68,10 @@ router.post('/events', rbac.requirePermission(PERM), async (req, res) => {
     );
     await logAdminAction(req.session.user.id, req.session.user.username,
       'TICKET_EVENT_CREATED', `${r.rows[0].title} (#${r.rows[0].id})`, req.ip);
-    req.flash('success', 'ইভেন্ট তৈরি হয়েছে');
+    req.flash('success', req.t('admin_ticket_event_created'));
   } catch (err) {
     console.error('ticket event create error:', err.message);
-    req.flash('error', publicMessage(err, 'ইভেন্ট তৈরি করা যায়নি'));
+    req.flash('error', publicMessage(err, req.t('admin_ticket_event_create_failed')));
   }
   res.redirect('/admin/tickets');
 });
@@ -91,10 +91,10 @@ router.post('/events/:id/categories', rbac.requirePermission(PERM), async (req, 
        VALUES ($1,$2,$3,$4,$5)`,
       [req.params.id, String(name).trim().slice(0, 100), p, qty, parseInt(max_per_user, 10) || 4]
     );
-    req.flash('success', 'ক্যাটাগরি যোগ হয়েছে');
+    req.flash('success', req.t('admin_ticket_category_added'));
   } catch (err) {
     console.error('ticket category create error:', err.message);
-    req.flash('error', publicMessage(err, 'ক্যাটাগরি যোগ করা যায়নি'));
+    req.flash('error', publicMessage(err, req.t('admin_ticket_category_add_failed')));
   }
   res.redirect('/admin/tickets');
 });
@@ -105,10 +105,10 @@ router.post('/events/:id/status', rbac.requirePermission(PERM), async (req, res)
     const status = ['on_sale', 'paused', 'closed'].includes(req.body.status) ? req.body.status : 'paused';
     await pool.query('UPDATE ticket_events SET status = $1 WHERE id = $2', [status, req.params.id]);
     await logAdminAction(req.session.user.id, req.session.user.username,
-      'TICKET_EVENT_STATUS', `ইভেন্ট #${req.params.id} → ${status}`, req.ip);
-    req.flash('success', 'স্ট্যাটাস বদলানো হয়েছে');
+      'TICKET_EVENT_STATUS', `Event #${req.params.id} -> ${status}`, req.ip);
+    req.flash('success', req.t('admin_ticket_status_changed'));
   } catch (err) {
-    req.flash('error', publicMessage(err, 'স্ট্যাটাস বদলানো যায়নি'));
+    req.flash('error', publicMessage(err, req.t('admin_ticket_status_change_failed')));
   }
   res.redirect('/admin/tickets');
 });
@@ -122,10 +122,10 @@ router.post('/orders/:id/refund', rbac.requirePermission(PERM), async (req, res)
     const order = await tickets.refundOrder(req.params.id, { refundToBalance: true });
     await logAdminAction(req.session.user.id, req.session.user.username,
       'TICKET_ORDER_REFUNDED', `${order.order_ref} — ৳${order.total}`, req.ip);
-    req.flash('success', `${order.order_ref} রিফান্ড হয়েছে`);
+    req.flash('success', req.t('admin_ticket_refunded').replace('{value}', order.order_ref));
   } catch (err) {
     console.error('ticket refund error:', err.message);
-    req.flash('error', publicMessage(err, 'রিফান্ড করা যায়নি'));
+    req.flash('error', publicMessage(err, req.t('admin_ticket_refund_failed')));
   }
   res.redirect('/admin/tickets');
 });
