@@ -107,8 +107,10 @@ describe('ফিচার ফ্ল্যাগ — সার্ভার-সা
   describe('রাউটার-লেভেল গেট — সাব-পাথও বাদ পড়ে না', () => {
     test('games OFF হলে সাব-রুট ও API দুটোই ব্লক হয়', async () => {
       await setFlag('games', false);
-      expect((await agent.get('/games/play')).status).toBe(403);
+      // PHASE 1: /games/play আর নেই। রাউটার-লেভেল গেটটাই যাচাই করা লক্ষ্য —
+      // অস্তিত্বহীন সাব-পাথেও ফ্ল্যাগ বন্ধ থাকলে 404 নয়, 403 আসতে হবে।
       expect((await agent.get('/games/api/recent-wins')).status).toBe(403);
+      expect((await agent.get('/games/anything')).status).toBe(403);
     });
 
     test('leaderboard OFF হলে পাবলিক পেজ ব্লক হয়', async () => {

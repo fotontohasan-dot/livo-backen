@@ -1,0 +1,109 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+
+<%#
+  PHASE 3 — সম্পূর্ণ ডাটাবেস-চালিত লবি।
+
+  এই ফাইলে একটাও গেমের নাম, ছবি বা ক্যাটাগরি হার্ডকোড নেই। ক্যাটাগরি ট্যাব
+  আসে games.category-র DISTINCT থেকে, প্রোভাইডার ফিল্টার games.provider থেকে।
+  ফলে নতুন প্রোভাইডার sync হলে এই টেমপ্লেট না বদলেই নতুন ট্যাব ও নতুন গেম
+  দেখা যায়।
+
+  প্রথম পেজ সার্ভার-সাইডে রেন্ডার হয় (দ্রুত first paint ও SEO), পরের পেজগুলো
+  /games/api/list থেকে infinite scroll-এ আসে।
+%>
+
+<style nonce="<%= cspNonce %>">
+  .lobby-wrap { padding: 14px 12px 90px; }
+  .lobby-title { font-size: 1.5rem; font-weight: 800; margin-bottom: 12px; }
+  .lobby-controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+  .lobby-search { width: 100%; padding: 10px 14px; border-radius: 12px;
+    border: 1px solid var(--border-glass); background: var(--bg-card);
+    color: var(--text-main); font-size: 14px; outline: none; }
+  .lobby-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+  .lobby-tab { flex: 0 0 auto; padding: 7px 14px; border-radius: 999px; font-size: 13px;
+    border: 1px solid var(--border-glass); background: var(--bg-card);
+    color: var(--text-muted); cursor: pointer; white-space: nowrap; }
+  .lobby-tab.active { background: var(--gold); color: #000; font-weight: 700; border-color: var(--gold); }
+  .game-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
+  .game-card { display: block; border-radius: 12px; overflow: hidden;
+    background: var(--bg-card); border: 1px solid var(--border-glass); text-decoration: none; }
+  .game-card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; display: block; }
+  .game-thumb-fallback { width: 100%; aspect-ratio: 1/1; display: flex; align-items: center;
+    justify-content: center; font-size: 26px; background: rgba(255,255,255,.04); }
+  .game-meta { padding: 7px 8px; }
+  .game-name { font-size: 12px; font-weight: 700; color: var(--text-main);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .game-provider { font-size: 10px; color: var(--text-muted); }
+  .lobby-empty { grid-column: 1/-1; text-align: center; padding: 48px 16px;
+    color: var(--text-muted); font-size: 13px; }
+  .lobby-more { display: block; width: 100%; margin-top: 16px; padding: 11px;
+    border-radius: 12px; border: 1px solid var(--border-glass);
+    background: var(--bg-card); color: var(--text-main); font-size: 13px; cursor: pointer; }
+</style>
+
+<div class="lobby-wrap">
+  <div class="lobby-title"><%= t.menu_casino %></div>
+
+  <div class="lobby-controls">
+    <input id="lobbySearch" class="lobby-search" type="search"
+           placeholder="<%= t.search || 'Search' %>" value="<%= selected.q %>">
+
+    <%# ক্যাটাগরি ট্যাব — সম্পূর্ণভাবে DB থেকে %>
+    <div class="lobby-tabs" id="categoryTabs">
+      <button type="button" class="lobby-tab <%= selected.category === 'all' ? 'active' : '' %>"
+              data-filter="category" data-value="all"><%= t.all %></button>
+      <% categories.forEach(function (c) { %>
+        <button type="button" class="lobby-tab <%= selected.category === c ? 'active' : '' %>"
+                data-filter="category" data-value="<%= c %>"><%= c %></button>
+      <% }); %>
+    </div>
+
+    <%# প্রোভাইডার ফিল্টার — একটাও প্রোভাইডার sync না হলে এই সারি খালি থাকে %>
+    <% if (providers.length) { %>
+    <div class="lobby-tabs" id="providerTabs">
+      <button type="button" class="lobby-tab <%= selected.provider === 'all' ? 'active' : '' %>"
+              data-filter="provider" data-value="all"><%= t.all %></button>
+      <% providers.forEach(function (p) { %>
+        <button type="button" class="lobby-tab <%= selected.provider === p ? 'active' : '' %>"
+                data-filter="provider" data-value="<%= p %>"><%= p %></button>
+      <% }); %>
+    </div>
+    <% } %>
+  </div>
+
+  <div class="game-grid" id="gameGrid">
+    <% if (!games.length) { %>
+      <div class="lobby-empty"><%= t.no_games_found %></div>
+    <% } %>
+    <% games.forEach(function (g) { %>
+      <a class="game-card" href="/games/launch/<%= encodeURIComponent(g.provider) %>/<%= encodeURIComponent(g.provider_game_id) %>">
+        <% if (g.thumbnail_url) { %>
+          <img src="<%= g.thumbnail_url %>" alt="" aria-hidden="true" loading="lazy" decoding="async">
+        <% } else { %>
+          <div class="game-thumb-fallback">🎲</div>
+        <% } %>
+        <div class="game-meta">
+          <div class="game-name"><%= g.name %></div>
+          <div class="game-provider"><%= g.provider %></div>
+        </div>
+      </a>
+    <% }); %>
+  </div>
+
+  <% if (hasMore) { %>
+    <button type="button" class="lobby-more" id="lobbyMore"><%= t.load_more || 'Load more' %></button>
+  <% } %>
+</div>
+
+<%- include('../partials/bottom-nav') %>
+
+<script type="application/json" id="lobbyConfig"><%- jsonScriptSafe({
+  page: page,
+  hasMore: hasMore,
+  selected: selected,
+  noGamesFound: t.no_games_found
+}) %></script>
+<script src="/js/views/games-lobby.js"></script>
+</body>
+</html>

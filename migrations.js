@@ -819,22 +819,201 @@ async function runMigrations() {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
-    const gamesCount = await pool.query('SELECT COUNT(*) AS cnt FROM games');
-    if (parseInt(gamesCount.rows[0].cnt) === 0) {
-      const seedGames = [
-        { name: 'Online Ludo', slug: 'ludo', emoji: '🎯', category: 'sports', provider: 'Jili', badge: null },
-        { name: 'Fortune Tiger', slug: 'fortune-tiger', emoji: '🐯', category: 'slots', provider: 'PG Soft', badge: 'hot' },
-        { name: 'Aviator', slug: 'aviator', emoji: '✈️', category: 'slots', provider: 'Spribe', badge: 'hot' },
-        { name: 'Crazy Time', slug: 'crazy-time', emoji: '🎡', category: 'live', provider: 'Pragmatic Play', badge: 'hot' }
-      ];
-      for (let i = 0; i < seedGames.length; i++) {
-        const g = seedGames[i];
-        await pool.query(
-          `INSERT INTO games (name, slug, emoji, category, provider, badge, sort_order) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (slug) DO NOTHING`,
-          [g.name, g.slug, g.emoji, g.category, g.provider, g.badge, i]
-        );
-      }
+    // PHASE 1 — ইন-হাউস গেম অপসারণ
+    // ------------------------------------------------------------------
+    // আগে এখানে ৪টি গেম seed করা হতো এবং routes/games.js-এর ক্যাটালগে আরও
+    // ১১৮টি হার্ডকোড ছিল। সব ইন-হাউস গেম সরে যাওয়ায় এই seed-ও অর্থহীন —
+    // লবি এখন সম্পূর্ণভাবে প্রোভাইডার sync-নির্ভর (PHASE 3)।
+    //
+    // পুরনো ইনস্টলেশনে টেবিলে যে legacy সারিগুলো আছে সেগুলো একবারই মুছতে হবে।
+    // শর্তহীন `DELETE FROM games` প্রতিটা বুটে চললে PHASE 3-এর sync করা
+    // গেমও মুছে যেত, তাই একটা site_settings মার্কার দিয়ে এটা ঠিক একবার চলে।
+    // টেবিল নিজে থাকছে — PHASE 3-এ নতুন কলাম পাবে। game_rounds / bets /
+    // demo_transactions-এর ঐতিহাসিক ডেটা ইচ্ছাকৃতভাবে অক্ষত রাখা হয়েছে
+    // (অডিট ও রিপোর্টের জন্য), শুধু নতুন লেখা বন্ধ।
+    const inhousePurged = await pool.query(
+      `SELECT 1 FROM site_settings WHERE key = 'inhouse_games_purged_at'`
+    );
+    if (inhousePurged.rowCount === 0) {
+      const purged = await pool.query('DELETE FROM games');
+      await pool.query(
+        `INSERT INTO site_settings (key, value) VALUES ('inhouse_games_purged_at', NOW()::text)
+         ON CONFLICT (key) DO NOTHING`
+      );
+      console.log(`✅ ইন-হাউস গেম সারি মুছে ফেলা হয়েছে (${purged.rowCount}টি)`);
     }
+
+    // ==================== PHASE 4 — ইভেন্ট টিকেট ====================
+    // সম্পূর্ণ নতুন মডিউল। এই রিপোতে আগে "ticket" শব্দটা শুধু সাপোর্ট
+    // টিকেট ও bet slip আইকনে ছিল — ইভেন্ট টিকেট বিক্রির কোনো কোড ছিল না।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS ticket_events (
+        id BIGSERIAL PRIMARY KEY,
+        provider TEXT, provider_event_id TEXT,
+        title TEXT NOT NULL, competition TEXT,
+        home_team TEXT, away_team TEXT,
+        venue TEXT, city TEXT, country TEXT,
+        event_date TIMESTAMPTZ NOT NULL,
+        banner_url TEXT, status TEXT DEFAULT 'on_sale',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE (provider, provider_event_id)
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_ticket_events_date ON ticket_events(event_date);`);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS ticket_categories (
+        id BIGSERIAL PRIMARY KEY,
+        event_id BIGINT NOT NULL REFERENCES ticket_events(id) ON DELETE CASCADE,
+        name TEXT NOT NULL, price NUMERIC(12,2) NOT NULL,
+        currency TEXT DEFAULT 'BDT',
+        total_qty INTEGER NOT NULL, sold_qty INTEGER DEFAULT 0,
+        max_per_user INTEGER DEFAULT 4
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_ticket_cat_event ON ticket_categories(event_id);`);
+
+    // ইনভেন্টরির সবচেয়ে গুরুত্বপূর্ণ গার্ড: sold_qty কখনো total_qty ছাড়াতে
+    // পারবে না। অ্যাপ্লিকেশন-লেভেল চেক (SELECT ... FOR UPDATE) মূল প্রতিরক্ষা,
+    // কিন্তু ভবিষ্যতের কোনো নতুন কোড-পথ ওই চেক ভুলে গেলে ডাটাবেসই থামাবে।
+    await pool.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ticket_categories_qty_check') THEN
+          ALTER TABLE ticket_categories ADD CONSTRAINT ticket_categories_qty_check
+            CHECK (sold_qty >= 0 AND sold_qty <= total_qty);
+        END IF;
+      END $$;
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS ticket_orders (
+        id BIGSERIAL PRIMARY KEY,
+        order_ref TEXT UNIQUE NOT NULL,
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        event_id BIGINT NOT NULL REFERENCES ticket_events(id),
+        category_id BIGINT NOT NULL REFERENCES ticket_categories(id),
+        qty INTEGER NOT NULL, unit_price NUMERIC(12,2) NOT NULL,
+        total NUMERIC(12,2) NOT NULL,
+        status TEXT DEFAULT 'reserved',
+        reserved_until TIMESTAMPTZ,
+        payment_request_id BIGINT REFERENCES payment_requests(id),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_ticket_orders_user ON ticket_orders(user_id, created_at DESC);`);
+    // expiry worker-এর কোয়েরি — মেয়াদোত্তীর্ণ reserved অর্ডার খোঁজা
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_ticket_orders_expiry ON ticket_orders(status, reserved_until);`);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS issued_tickets (
+        id BIGSERIAL PRIMARY KEY,
+        order_id BIGINT NOT NULL REFERENCES ticket_orders(id) ON DELETE CASCADE,
+        ticket_code TEXT UNIQUE NOT NULL,
+        qr_url TEXT, seat_label TEXT,
+        status TEXT DEFAULT 'valid',
+        used_at TIMESTAMPTZ
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_issued_tickets_order ON issued_tickets(order_id);`);
+    console.log('✅ ইভেন্ট টিকেট টেবিলগুলো ready');
+
+    // ==================== PHASE 3 — প্রোভাইডার গেম ক্যাটালগ ====================
+    // games টেবিল আগে ইন-হাউস গেমের জন্য ছিল (name/slug/emoji/category)।
+    // এখন এটাই প্রোভাইডার sync-এর গন্তব্য, তাই কলামগুলো যোগ করা হচ্ছে।
+    // ধ্বংসাত্মক কিছু নয় — সব ADD COLUMN IF NOT EXISTS, পুরনো কলাম অটুট।
+    await pool.query(`
+      ALTER TABLE games
+        ADD COLUMN IF NOT EXISTS provider         TEXT,
+        ADD COLUMN IF NOT EXISTS provider_game_id TEXT,
+        ADD COLUMN IF NOT EXISTS sub_category     TEXT,
+        ADD COLUMN IF NOT EXISTS thumbnail_url    TEXT,
+        ADD COLUMN IF NOT EXISTS rtp              NUMERIC(5,2),
+        ADD COLUMN IF NOT EXISTS has_demo         BOOLEAN DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS is_mobile        BOOLEAN DEFAULT TRUE,
+        ADD COLUMN IF NOT EXISTS admin_disabled   BOOLEAN DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS last_synced_at   TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS raw_meta         JSONB;
+    `);
+
+    // sync worker-এর UPSERT ঠিক এই কনস্ট্রেইন্টের উপর দাঁড়িয়ে
+    // (ON CONFLICT (provider, provider_game_id))। এটা ছাড়া প্রতিটা sync
+    // ডুপ্লিকেট সারি তৈরি করত।
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS uniq_provider_game
+        ON games(provider, provider_game_id);
+    `);
+    // লবির প্রধান কোয়েরির (ক্যাটাগরি + সক্রিয় + সাজানো) জন্য কভারিং ইনডেক্স
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_games_lobby
+        ON games(category, is_active, admin_disabled, sort_order);
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS provider_sync_log (
+        id            BIGSERIAL PRIMARY KEY,
+        provider      TEXT NOT NULL,
+        started_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        finished_at   TIMESTAMPTZ,
+        status        TEXT,
+        games_added   INTEGER DEFAULT 0,
+        games_updated INTEGER DEFAULT 0,
+        games_removed INTEGER DEFAULT 0,
+        error_message TEXT
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_sync_log_provider ON provider_sync_log(provider, started_at DESC);`);
+    console.log('✅ games প্রোভাইডার কলাম ও provider_sync_log ready');
+
+    // ==================== PHASE 2 — Seamless Wallet ====================
+    // প্রোভাইডার গেমের প্রতিটা আর্থিক কলব্যাকের সম্পূর্ণ trail। এটাই
+    // idempotency-র ভিত্তি: UNIQUE (provider, provider_tx_id) না থাকলে
+    // ডুপ্লিকেট কলে দুবার ব্যালেন্স বদলে যেত (services/wallet/idempotency.js
+    // দেখুন — SELECT-চেক race condition-এ যথেষ্ট নয়)।
+    //
+    // balance_before / balance_after ইচ্ছাকৃতভাবে সংরক্ষিত: প্রোভাইডারের সাথে
+    // রিকনসিলিয়েশনে "আমাদের হিসাবে তখন ব্যালেন্স কত ছিল" প্রশ্নটা সবচেয়ে
+    // বেশি আসে, আর সেটা পরে পুনর্গণনা করা যায় না।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS provider_transactions (
+        id                BIGSERIAL PRIMARY KEY,
+        provider          TEXT NOT NULL,
+        provider_tx_id    TEXT NOT NULL,
+        round_id          TEXT,
+        user_id           INTEGER NOT NULL REFERENCES users(id),
+        game_id           TEXT,
+        type              TEXT NOT NULL,
+        amount            NUMERIC(18,2) NOT NULL,
+        currency          TEXT NOT NULL DEFAULT 'BDT',
+        balance_before    NUMERIC(18,2) NOT NULL,
+        balance_after     NUMERIC(18,2) NOT NULL,
+        status            TEXT NOT NULL DEFAULT 'completed',
+        raw_payload       JSONB,
+        created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE (provider, provider_tx_id)
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_provider_tx_round ON provider_transactions(provider, round_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_provider_tx_user  ON provider_transactions(user_id, created_at DESC);`);
+
+    // গেম লঞ্চের সময় তৈরি টোকেন। প্রোভাইডার কলব্যাকে এই টোকেনই ফেরত পাঠায়,
+    // তাই একটা কলব্যাক কখনো নিজের ইচ্ছেমতো user_id দাবি করতে পারে না।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS game_sessions (
+        id             BIGSERIAL PRIMARY KEY,
+        session_token  TEXT UNIQUE NOT NULL,
+        user_id        INTEGER NOT NULL REFERENCES users(id),
+        provider       TEXT NOT NULL,
+        game_id        TEXT NOT NULL,
+        mode           TEXT NOT NULL DEFAULT 'real',
+        ip             TEXT,
+        expires_at     TIMESTAMPTZ NOT NULL,
+        closed_at      TIMESTAMPTZ,
+        created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_game_sessions_user ON game_sessions(user_id, created_at DESC);`);
+    console.log('✅ provider_transactions ও game_sessions ready');
 
     await pool.query(`ALTER TABLE kyc_requests ADD COLUMN IF NOT EXISTS reject_reason TEXT`);
     // জন্মতারিখ ছাড়া ১৮+ যাচাই করার কোনো উপায় ছিল না — age-gate কেবল একটা কুকি,

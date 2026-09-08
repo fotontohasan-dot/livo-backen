@@ -98,7 +98,7 @@ const definition = {
         properties: {
           id:        { type: 'integer', example: 10 },
           name:      { type: 'string',  example: 'Aviator' },
-          slug:      { type: 'string',  example: 'aviator' },
+          slug:      { type: 'string',  example: 'provider-slug:game-id' },
           emoji:     { type: 'string',  example: '✈️' },
           category:  { type: 'string',  example: 'slots' },
           provider:  { type: 'string',  example: 'Spribe' },
@@ -293,29 +293,8 @@ const definition = {
       }
     },
 
-    // ═══════════════════ GAMES ═══════════════════
-    '/games/play': {
-      get: {
-        tags: ['Games'], summary: 'Games lobby list',
-        parameters: [
-          { name: 'category', in: 'query', schema: { type: 'string', example: 'slots' } },
-          { name: 'provider', in: 'query', schema: { type: 'string' } }
-        ],
-        responses: {
-          200: { description: 'Game list', content: { 'application/json': { schema: { type: 'array', items: { '$ref': '#/components/schemas/Game' } } } } }
-        }
-      }
-    },
-    '/games/{slug}': {
-      get: {
-        tags: ['Games'], summary: 'Single game info by slug',
-        parameters: [{ name: 'slug', in: 'path', required: true, schema: { type: 'string', example: 'aviator' } }],
-        responses: {
-          200: { description: 'Game detail', content: { 'application/json': { schema: { '$ref': '#/components/schemas/Game' } } } },
-          404: { '$ref': '#/components/responses/NotFound' }
-        }
-      }
-    },
+    // PHASE 1: ইন-হাউস গেম রুট (/games/play, /games/{slug}) সরানো হয়েছে।
+    // প্রোভাইডার লঞ্চ ও ওয়ালেট এন্ডপয়েন্ট পরবর্তী ফেজে ডকুমেন্ট হবে।
 
     // ═══════════════════ PAYMENT ═══════════════════
     '/payment/deposit': {

@@ -187,17 +187,13 @@ describe('A-Z User Journey', () => {
   });
 
   test('12b. Games/Sports', async () => {
-    const gamesPage = await agent.get('/games/play?game=slots');
-    expect(gamesPage.status).toBe(200);
-    const before = await pool.query('SELECT coins FROM users WHERE id=$1', [userId]);
-    const csrf = await csrfFor(agent, '/games/play?game=slots');
-    const play = await agent.post('/games/play').type('form').send({
-      gameSlug: 'slots', amount: '50', _csrf: csrf
-    });
-    expect(play.status).toBe(200);
-    expect(play.body.success).toBe(true);
-    const after = await pool.query('SELECT coins FROM users WHERE id=$1', [userId]);
-    expect(Number(after.rows[0].coins)).not.toBe(Number(before.rows[0].coins));
+    // PHASE 1: ইন-হাউস গেম সরে গেছে — /games/play বা সার্ভার-সাইড সেটেলমেন্ট
+    // আর নেই। যা টিকে আছে (recent-wins) সেটাই এখানে যাচাই করা হয়; প্রকৃত
+    // গেমপ্লে-র কভারেজ প্রোভাইডার ওয়ালেট API-র টেস্টে (PHASE 2) আছে।
+    const wins = await agent.get('/games/api/recent-wins');
+    expect(wins.status).toBe(200);
+    expect(wins.body.success).toBe(true);
+    expect(Array.isArray(wins.body.wins)).toBe(true);
 
     const matchIns = await pool.query(`INSERT INTO matches (title, team_a, team_b, sport, status) VALUES ('Journey Test Match','X','Y','cricket','live') RETURNING id`);
     // মার্কেটে রানারের অডস অবশ্যই থাকতে হবে। আগে খালি `'{}'` দিয়েও বাজি বসত,

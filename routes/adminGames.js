@@ -318,4 +318,111 @@ router.post('/sort', rbac.requirePermission('games_manage'), async (req, res) =>
   }
 });
 
+// ==================== PHASE 3 — প্রোভাইডার ব্যবস্থাপনা ====================
+//
+// এখানে অ্যাডমিন যা করতে পারেন:
+//   • কোন প্রোভাইডার কনফিগার করা আছে ও সক্রিয় — দেখা (টগল করার জায়গা .env,
+//     কারণ credential ছাড়া "চালু" করার কোনো অর্থ নেই; UI-তে মিথ্যা টগল
+//     দেখানোর চেয়ে সত্যিকারের অবস্থা দেখানো ভালো)
+//   • "Sync Now" — সাথে সাথে ক্যাটালগ টেনে আনা
+//   • শেষ কয়েকটা sync-এর ফলাফল (provider_sync_log)
+
+// ==================== GET /admin/games/providers ====================
+router.get('/providers', rbac.requirePermission('games_manage'), async (req, res) => {
+  try {
+    const registry = require('../services/casinoProviders');
+    const { recentLogs } = require('../services/casinoGameSync');
+
+    const enabled = new Set(registry.getEnabledProviders().map(a => a.name));
+    const counts = await pool.query(
+      `SELECT provider,
+              COUNT(*)::int AS total,
+              COUNT(*) FILTER (WHERE is_active AND NOT admin_disabled)::int AS live,
+              MAX(last_synced_at) AS last_synced
+         FROM games WHERE provider IS NOT NULL GROUP BY provider`
+    );
+    const byProvider = new Map(counts.rows.map(r => [r.provider, r]));
+
+    const providers = registry.ADAPTERS.map(a => {
+      const c = byProvider.get(a.name) || { total: 0, live: 0, last_synced: null };
+      return {
+        name: a.name,
+        enabled: enabled.has(a.name),
+        total: c.total,
+        live: c.live,
+        lastSynced: c.last_synced
+      };
+    });
+
+    res.render('admin/gameProviders', {
+      providers,
+      logs: await recentLogs(20),
+      success: req.flash('success'),
+      error: req.flash('error'),
+      active: 'games'
+    });
+  } catch (err) {
+    console.error('admin game providers error:', err && err.stack ? err.stack : err);
+    res.render('admin/gameProviders', {
+      loadError: true, providers: [], logs: [],
+      success: [], error: [], active: 'games'
+    });
+  }
+});
+
+// ==================== POST /admin/games/sync ====================
+// ম্যানুয়াল sync। ইচ্ছাকৃতভাবে await করা হয় — অ্যাডমিন বোতাম চাপার পর
+// ফলাফল দেখতে চান; ব্যাকগ্রাউন্ডে ছেড়ে দিলে "কিছু হলো কি না" বোঝা যেত না।
+router.post('/sync', rbac.requirePermission('games_manage'), async (req, res) => {
+  try {
+    const { syncAll } = require('../services/casinoGameSync');
+    const only = (req.body.provider || '').trim() || undefined;
+    const out = await syncAll(only);
+
+    if (out.skipped) {
+      req.flash('error', 'কোনো ক্যাসিনো প্রোভাইডার কনফিগার করা নেই (.env দেখুন)');
+    } else {
+      const summary = out.results
+        .map(r => r.status === 'success'
+          ? `${r.provider}: +${r.added} নতুন, ${r.updated} হালনাগাদ, ${r.removed} নিষ্ক্রিয়`
+          : `${r.provider}: ব্যর্থ`)
+        .join(' | ');
+      req.flash('success', summary);
+    }
+    await logAdminAction(
+      req.session.user.id, req.session.user.username,
+      'CASINO_GAME_SYNC', `ম্যানুয়াল গেম sync চালানো হয়েছে${only ? ` (${only})` : ''}`, req.ip
+    );
+  } catch (err) {
+    console.error('manual casino sync error:', err && err.stack ? err.stack : err);
+    req.flash('error', publicMessage(err, 'Sync ব্যর্থ হয়েছে'));
+  }
+  res.redirect('/admin/games/providers');
+});
+
+// ==================== POST /admin/games/:id/admin-disabled ====================
+// sync কখনো admin_disabled কলামে লেখে না (services/casinoGameSync.js দেখুন),
+// তাই অ্যাডমিনের এই সিদ্ধান্ত পরের sync-এ মুছে যায় না।
+router.post('/:id/admin-disabled', rbac.requirePermission('games_manage'), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isFinite(id)) return res.status(400).json({ ok: false });
+    const r = await pool.query(
+      `UPDATE games SET admin_disabled = NOT COALESCE(admin_disabled, false)
+        WHERE id = $1 RETURNING name, admin_disabled`,
+      [id]
+    );
+    if (!r.rows.length) return res.status(404).json({ ok: false });
+    await logAdminAction(
+      req.session.user.id, req.session.user.username,
+      'GAME_ADMIN_DISABLED_TOGGLED',
+      `${r.rows[0].name} → ${r.rows[0].admin_disabled ? 'বন্ধ' : 'চালু'}`, req.ip
+    );
+    res.json({ ok: true, adminDisabled: r.rows[0].admin_disabled });
+  } catch (err) {
+    console.error('admin_disabled toggle error:', err && err.stack ? err.stack : err);
+    res.status(500).json({ ok: false });
+  }
+});
+
 module.exports = router;
