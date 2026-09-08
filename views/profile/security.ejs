@@ -135,6 +135,11 @@
             </form>
           </div>
         <% }) %>
+      <% } else if (typeof loadError !== 'undefined' && loadError) { %>
+        <div role="alert" class="data-load-error-box">
+          <i class="fas fa-triangle-exclamation"></i>
+          <p><%= t.cards_load_error %></p>
+        </div>
       <% } else { %>
         <div style="text-align: center; padding: 40px 20px; background: rgba(255,255,255,0.02); border-radius: 16px; margin-bottom: 25px; border: 1px dashed var(--border-glass);">
           <i class="fas fa-university" style="font-size: 40px; color: var(--text-muted); margin-bottom: 15px;"></i>

@@ -31,6 +31,8 @@
           </div>
         </div>
       <% }) %>
+    <% } else if (typeof loadError !== 'undefined' && loadError) { %>
+      <div role="alert" class="data-load-error-cell"><%= t.common_history_load_failed %></div>
     <% } else { %>
       <div style="text-align:center; padding: 40px 0; color: var(--text-muted); font-size: 13px;"><%= t.no_login_history %></div>
     <% } %>

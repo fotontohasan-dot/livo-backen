@@ -717,7 +717,8 @@ router.get('/admin/deposits', requireAdmin, requirePermission('payments_view'), 
       from: fromStr,
       to: toStr,
       totals,
-      requests: listResult.rows
+      requests: listResult.rows,
+      loadError: false
     });
   } catch (err) {
     console.error('deposits admin error:', err.message);

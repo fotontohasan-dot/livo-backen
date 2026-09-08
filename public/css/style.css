@@ -1096,3 +1096,39 @@ body .keep-color * {
   color: inherit !important;
   -webkit-text-fill-color: currentColor !important;
 }
+
+/* ডেটা লোড ব্যর্থতার সাধারণ ব্যানার — profile/payment পেজগুলোতে "খালি"
+   আর "জানা যায়নি" আলাদা দেখাতে ব্যবহৃত হয় (loadError: true হলে)। */
+.data-load-error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid #ef4444;
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 16px;
+  color: #ef4444;
+  font-size: 13px;
+  text-align: center;
+}
+.data-load-error-cell {
+  text-align: center;
+  padding: 40px 0;
+  color: #f87171;
+  font-size: 13px;
+}
+.data-load-error-box {
+  text-align: center;
+  padding: 40px 20px;
+  background: rgba(239, 68, 68, 0.06);
+  border-radius: 16px;
+  margin-bottom: 25px;
+  border: 1px dashed #ef4444;
+}
+.data-load-error-box i {
+  font-size: 40px;
+  color: #ef4444;
+  margin-bottom: 15px;
+}
+.data-load-error-box p {
+  color: #ef4444;
+  font-size: 13px;
+}

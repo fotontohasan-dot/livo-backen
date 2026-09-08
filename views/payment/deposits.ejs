@@ -105,7 +105,9 @@
           </tr>
         </thead>
         <tbody>
-          <% if (requests.length === 0) { %>
+          <% if (typeof loadError !== 'undefined' && loadError) { %>
+            <tr><td colspan="7" class="dep-empty data-load-error-cell" role="alert"><%= t.common_stats_load_failed %></td></tr>
+          <% } else if (requests.length === 0) { %>
             <tr><td colspan="7" class="dep-empty">এই রেঞ্জে <%= method %> দিয়ে কোনো ডিপোজিট নেই</td></tr>
           <% } %>
           <% requests.forEach(r => { %>

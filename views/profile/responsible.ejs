@@ -8,6 +8,15 @@
     <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">🛡️ দায়িত্বশীল গেমিং</h1>
   </div>
 
+  <% if (typeof loadError !== 'undefined' && loadError) { %>
+    <!-- আপনার বর্তমান সীমা/self-exclusion অবস্থা লোড করা যায়নি — নিচের ফর্মগুলো
+         "কোনো সীমা নেই"-এর বদলে "জানা যায়নি" ধরে নিতে হবে, নাহলে ইউজার ভাবতে
+         পারেন তার আগের self-exclusion উঠে গেছে। -->
+    <div role="alert" class="data-load-error">
+      <%= t.common_stats_load_failed %>
+    </div>
+  <% } %>
+
   <!-- ব্যানার -->
   <div style="background:linear-gradient(135deg,#0ea5e9,#0284c7);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center;">
     <div style="font-size:40px;margin-bottom:8px;">🛡️</div>

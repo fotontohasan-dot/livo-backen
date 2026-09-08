@@ -3,6 +3,12 @@
 <div class="container page" style="max-width:600px;margin:0 auto;padding:15px;">
   <%- include('../partials/flash') %>
 
+  <% if (typeof loadError !== 'undefined' && loadError) { %>
+    <div role="alert" class="data-load-error">
+      <%= t.common_stats_load_failed %>
+    </div>
+  <% } %>
+
   <h1 style="font-size:1.4rem;font-weight:800;margin-bottom:1rem;text-align:center;color: var(--text-accent);">
     <%= t.daily_reward_title %>
   </h1>

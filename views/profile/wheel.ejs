@@ -40,7 +40,14 @@
     <button id="spinBtn" class="fa-go-btn" <%= (status && status.canSpin) ? '' : 'disabled' %>>GO</button>
   </div>
 
-  <% if (status && status.locked) { %>
+  <% if (typeof loadError !== 'undefined' && loadError) { %>
+    <!-- error-fallback status অবজেক্টে canSpin:false থাকে, যা নিচের
+         "আজ স্পিন করা হয়ে গেছে" শাখায় পড়ে যেত — ইউজার ভাবত সে স্পিন করে
+         ফেলেছে, অথচ আসলে ডেটা লোডই হয়নি। তাই আলাদা শাখা। -->
+    <div role="alert" class="data-load-error">
+      <%= t.common_stats_load_failed %>
+    </div>
+  <% } else if (status && status.locked) { %>
     <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:16px;color: var(--text-muted);font-size:14px;">
       🔒 হুইল লক করা আছে।<br>
       আজ ডিপোজিট করুন — তাহলেই স্পিন আনলক হবে।

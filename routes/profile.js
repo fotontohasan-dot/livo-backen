@@ -564,12 +564,15 @@ router.get('/security', isAuth, async (req, res) => {
 
     res.render('profile/security', {
       user: req.session.user, bankCards: cards.rows, pinStatus, activeSessions, recentLogins,
-      emailStatus, passwordChangedAt, recentActivity
+      emailStatus, passwordChangedAt, recentActivity, loadError: false
     });
   } catch (err) {
+    // খালি bankCards দেখলে ইউজার ভাবতে পারে তার সংরক্ষিত ওয়ালেট মুছে
+    // গেছে — এটাই withdraw-এর গন্তব্য, তাই "খালি" আর "জানা যায়নি" আলাদা।
+    console.error('security page error:', err.message);
     res.render('profile/security', {
       user: req.session.user, bankCards: [], pinStatus: { configured: false, locked: false }, activeSessions: [], recentLogins: [],
-      emailStatus: { verified: true, hasEmail: false, lastSentAt: null }, passwordChangedAt: null, recentActivity: []
+      emailStatus: { verified: true, hasEmail: false, lastSentAt: null }, passwordChangedAt: null, recentActivity: [], loadError: true
     });
   }
 });
@@ -603,10 +606,10 @@ router.get('/login-history', isAuth, async (req, res) => {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = 20;
     const logins = await listLoginHistory(req.session.user.id, limit, (page - 1) * limit);
-    res.render('profile/login-history', { user: req.session.user, logins, page, hasMore: logins.length === limit });
+    res.render('profile/login-history', { user: req.session.user, logins, page, hasMore: logins.length === limit, loadError: false });
   } catch (err) {
     console.error('login-history load error:', err.message);
-    res.render('profile/login-history', { user: req.session.user, logins: [], page: 1, hasMore: false });
+    res.render('profile/login-history', { user: req.session.user, logins: [], page: 1, hasMore: false, loadError: true });
   }
 });
 
@@ -725,10 +728,10 @@ router.get('/responsible', isAuth, async (req, res) => {
       `SELECT daily_deposit_limit, self_exclude_until FROM users WHERE id = $1`,
       [req.session.user.id]
     );
-    res.render('profile/responsible', { user: req.session.user, rg: u.rows[0] || {} });
+    res.render('profile/responsible', { user: req.session.user, rg: u.rows[0] || {}, loadError: false });
   } catch (err) {
     console.error('responsible page error:', err.message);
-    res.render('profile/responsible', { user: req.session.user, rg: {} });
+    res.render('profile/responsible', { user: req.session.user, rg: {}, loadError: true });
   }
 });
 
@@ -783,10 +786,10 @@ router.get('/wheel', isAuth, requireFeature('lucky_wheel'), async (req, res) => 
     const segmentCount = getSegments().length;
     const status = await canSpin(req.session.user.id);
     const history = await getWheelHistory(req.session.user.id);
-    res.render('profile/wheel', { user: req.session.user, segmentCount, status, history, remainingToday: status.canSpin ? 1 : 0 });
+    res.render('profile/wheel', { user: req.session.user, segmentCount, status, history, remainingToday: status.canSpin ? 1 : 0, loadError: false });
   } catch (err) {
     console.error('wheel page error:', err.message);
-    res.render('profile/wheel', { user: req.session.user, segmentCount: 0, status: { canSpin: false }, history: [], remainingToday: 0 });
+    res.render('profile/wheel', { user: req.session.user, segmentCount: 0, status: { canSpin: false }, history: [], remainingToday: 0, loadError: true });
   }
 });
 
@@ -836,10 +839,10 @@ router.get('/wheel/result', isAuth, requireFeature('lucky_wheel'), async (req, r
 router.get('/missions', isAuth, requireFeature('missions'), async (req, res) => {
   try {
     const missions = await getMissions(req.session.user.id);
-    res.render('profile/missions', { user: req.session.user, missions });
+    res.render('profile/missions', { user: req.session.user, missions, loadError: false });
   } catch (err) {
     console.error('missions page error:', err.message);
-    res.render('profile/missions', { user: req.session.user, missions: { daily: [], weekly: [], special: [] } });
+    res.render('profile/missions', { user: req.session.user, missions: { daily: [], weekly: [], special: [] }, loadError: true });
   }
 });
 
@@ -868,10 +871,10 @@ router.get('/rewards', isAuth, requireFeature('daily_rewards'), async (req, res)
       const rs = await getReferralStats(req.session.user.id);
       referralSummary = { totalInvites: rs.totalReferrals, totalCommission: rs.totalEarnings };
     } catch (e) { console.error('rewards referral summary error:', e.message); }
-    res.render('profile/rewards', { user: req.session.user, reward, badgesPreview, referralSummary });
+    res.render('profile/rewards', { user: req.session.user, reward, badgesPreview, referralSummary, loadError: false });
   } catch (err) {
     console.error('rewards page error:', err.message);
-    res.render('profile/rewards', { user: req.session.user, reward: null, badgesPreview: { earned: [], earnedCount: 0, totalCount: 0 }, referralSummary: null });
+    res.render('profile/rewards', { user: req.session.user, reward: null, badgesPreview: { earned: [], earnedCount: 0, totalCount: 0 }, referralSummary: null, loadError: true });
   }
 });
 
@@ -932,10 +935,10 @@ router.post('/daily-rewards/golden-egg/claim', isAuth, requireFeature('daily_rew
 router.get('/cashback', isAuth, requireFeature('cashback'), async (req, res) => {
   try {
     const cashback = await getCashbackStatus(req.session.user.id);
-    res.render('profile/cashback', { user: req.session.user, cashback });
+    res.render('profile/cashback', { user: req.session.user, cashback, loadError: false });
   } catch (err) {
     console.error('cashback page error:', err.message);
-    res.render('profile/cashback', { user: req.session.user, cashback: null });
+    res.render('profile/cashback', { user: req.session.user, cashback: null, loadError: true });
   }
 });
 
@@ -954,10 +957,10 @@ router.post('/cashback/claim', isAuth, requireFeature('cashback'), async (req, r
 router.get('/vip', isAuth, requireFeature('vip'), async (req, res) => {
   try {
     const vip = await getVipStatus(req.session.user.id);
-    res.render('profile/vip', { user: req.session.user, vip });
+    res.render('profile/vip', { user: req.session.user, vip, loadError: false });
   } catch (err) {
     console.error('vip page error:', err.message);
-    res.render('profile/vip', { user: req.session.user, vip: null });
+    res.render('profile/vip', { user: req.session.user, vip: null, loadError: true });
   }
 });
 
@@ -1125,10 +1128,10 @@ router.get('/loyalty', isAuth, async (req, res) => {
   try {
     const loyalty = await getLoyalty(req.session.user.id);
     const vip = await getVipStatus(req.session.user.id);
-    res.render('profile/loyalty', { user: req.session.user, loyalty, vip });
+    res.render('profile/loyalty', { user: req.session.user, loyalty, vip, loadError: false });
   } catch (err) {
     console.error('loyalty page error:', err.message);
-    res.render('profile/loyalty', { user: req.session.user, loyalty: null, vip: null });
+    res.render('profile/loyalty', { user: req.session.user, loyalty: null, vip: null, loadError: true });
   }
 });
 
@@ -1147,10 +1150,10 @@ router.post('/loyalty/redeem', isAuth, async (req, res) => {
 router.get('/streak', isAuth, async (req, res) => {
   try {
     const streak = await getStreak(req.session.user.id);
-    res.render('profile/streak', { user: req.session.user, streak });
+    res.render('profile/streak', { user: req.session.user, streak, loadError: false });
   } catch (err) {
     console.error('streak page error:', err.message);
-    res.render('profile/streak', { user: req.session.user, streak: null });
+    res.render('profile/streak', { user: req.session.user, streak: null, loadError: true });
   }
 });
 
@@ -1158,10 +1161,10 @@ router.get('/streak', isAuth, async (req, res) => {
 router.get('/badges', isAuth, async (req, res) => {
   try {
     const badges = await getBadges(req.session.user.id);
-    res.render('profile/badges', { user: req.session.user, badges });
+    res.render('profile/badges', { user: req.session.user, badges, loadError: false });
   } catch (err) {
     console.error('badges page error:', err.message);
-    res.render('profile/badges', { user: req.session.user, badges: [] });
+    res.render('profile/badges', { user: req.session.user, badges: [], loadError: true });
   }
 });
 
@@ -1169,10 +1172,10 @@ router.get('/badges', isAuth, async (req, res) => {
 router.get('/freebet', isAuth, requireFeature('free_bet'), async (req, res) => {
   try {
     const freebets = await getAllFreeBets(req.session.user.id);
-    res.render('profile/freebet', { user: req.session.user, freebets });
+    res.render('profile/freebet', { user: req.session.user, freebets, loadError: false });
   } catch (err) {
     console.error('freebet page error:', err.message);
-    res.render('profile/freebet', { user: req.session.user, freebets: [] });
+    res.render('profile/freebet', { user: req.session.user, freebets: [], loadError: true });
   }
 });
 
@@ -1192,10 +1195,10 @@ router.get('/periodic', isAuth, async (req, res) => {
   try {
     const weekly = await getWeeklyStatus(req.session.user.id);
     const monthly = await getMonthlyStatus(req.session.user.id);
-    res.render('profile/periodic', { user: req.session.user, weekly, monthly });
+    res.render('profile/periodic', { user: req.session.user, weekly, monthly, loadError: false });
   } catch (err) {
     console.error('periodic page error:', err.message);
-    res.render('profile/periodic', { user: req.session.user, weekly: null, monthly: null });
+    res.render('profile/periodic', { user: req.session.user, weekly: null, monthly: null, loadError: true });
   }
 });
 
@@ -1226,11 +1229,11 @@ router.get('/share', isAuth, async (req, res) => {
   try {
     const share = await getShareStatus(req.session.user.id);
     const baseUrl = getBaseUrl(req);
-    res.render('profile/share', { user: req.session.user, share, baseUrl });
+    res.render('profile/share', { user: req.session.user, share, baseUrl, loadError: false });
   } catch (err) {
     console.error('share page error:', err.message);
     const baseUrl = getBaseUrl(req);
-    res.render('profile/share', { user: req.session.user, share: null, baseUrl });
+    res.render('profile/share', { user: req.session.user, share: null, baseUrl, loadError: true });
   }
 });
 
@@ -1250,10 +1253,10 @@ router.get('/contest', isAuth, async (req, res) => {
   try {
     const contest = await getLeaderboard(req.session.user.id);
     const pastContests = await getPastContests(req.session.user.id);
-    res.render('profile/contest', { user: req.session.user, contest, pastContests });
+    res.render('profile/contest', { user: req.session.user, contest, pastContests, loadError: false });
   } catch (err) {
     console.error('contest page error:', err.message);
-    res.render('profile/contest', { user: req.session.user, contest: null, pastContests: [] });
+    res.render('profile/contest', { user: req.session.user, contest: null, pastContests: [], loadError: true });
   }
 });
 

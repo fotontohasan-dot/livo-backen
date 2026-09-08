@@ -3,6 +3,12 @@
 <div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto;">
   <%- include('../partials/flash') %>
 
+  <% if (typeof loadError !== 'undefined' && loadError) { %>
+    <div role="alert" class="data-load-error">
+      <%= t.common_stats_load_failed %>
+    </div>
+  <% } %>
+
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
     <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
     <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">🔥 উইন স্ট্রিক বোনাস</h1>
