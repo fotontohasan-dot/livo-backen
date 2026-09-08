@@ -16,7 +16,7 @@
     <%- include('./partials/sidebar', { active: 'referrals' }) %>
     <div class="admin-content">
       <%- include('./partials/load-error') %>
-      <%- include('./partials/header', { pageTitle: 'রেফারেল ম্যানেজমেন্ট', pageSubtitle: 'রেফারার/রেফার্ড ইউজার, বোনাস ও কমিশন স্ট্যাটাস' }) %>
+      <%- include('./partials/header', { pageTitle: t('arf_page_title'), pageSubtitle: t('arf_page_sub') }) %>
 
       <div class="grid grid-4" style="margin-bottom:14px;">
         <div class="stat-card"><div class="stat-label"><%= t('admin_stat_total_referrals') %></div><div class="stat-number"><%= summary.totalReferrals %></div></div>
@@ -41,7 +41,7 @@
       </div>
 
       <div class="admin-card">
-        <div class="admin-card-header">সকল রেফারেল (মোট <%= total %>টা)</div>
+        <div class="admin-card-header"><%= t('arf_all_referrals').replace('{n}', total) %></div>
         <div style="overflow-x:auto;">
           <table class="admin-table">
             <thead>
@@ -60,7 +60,7 @@
                   <tr>
                     <td>
                       <div style="font-weight:700;">@<%= r.referrer_username %></div>
-                      <div style="font-size:11px;color:var(--text-muted);">কোড: <%= r.referrer_code || '-' %></div>
+                      <div style="font-size:11px;color:var(--text-muted);"><%= t('arf_code') %> <%= r.referrer_code || '-' %></div>
                     </td>
                     <td>
                       <div style="font-weight:700;">@<%= r.referred_username %></div>
