@@ -44,14 +44,14 @@
     <%- include('./partials/sidebar', { active: 'queues' }) %>
     <div class="admin-content">
       <%- include('./partials/load-error') %>
-      <%- include('./partials/header', { pageTitle: 'Queue Dashboard', pageSubtitle: 'Background Job Queue — Health, Statistics ও Dead Letter Queue' }) %>
+      <%- include('./partials/header', { pageTitle: 'Queue Dashboard', pageSubtitle: t('aqu_sub') }) %>
 
       <div id="redisBanner" class="redis-banner <%= health.redisConnected ? 'up' : 'down' %>">
         <i class="fas <%= health.redisConnected ? 'fa-check-circle' : 'fa-triangle-exclamation' %>"></i>
         <span id="redisBannerText">
           <%= health.redisConnected
-            ? 'Redis সংযুক্ত — Background Queue System সচল আছে'
-            : 'Redis সংযুক্ত নেই — সব Job আপাতত সরাসরি (inline fallback) মোডে চলছে' %>
+            ? t('aqu_redis_ok')
+            : t('aqu_redis_off') %>
         </span>
       </div>
 
@@ -76,7 +76,7 @@
       <div class="admin-card">
         <div class="admin-card-header">
           <i class="fas fa-skull-crossbones" style="color:#ef4444;margin-right:6px;"></i>
-          Dead Letter Queue — সব রিট্রাই শেষ হয়ে যাওয়া জব (<%= deadLetterJobs.length %>)
+          <%= t('aqu_dlq') %> (<%= deadLetterJobs.length %>)
         </div>
         <% if (deadLetterJobs && deadLetterJobs.length > 0) { %>
           <div style="overflow-x:auto;">

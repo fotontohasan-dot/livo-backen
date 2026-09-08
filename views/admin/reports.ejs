@@ -28,9 +28,9 @@ const userData = JSON.stringify((userTrend || []).map(r => r.count));
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-5 mb-6">
-        <div class="bg-white p-5 rounded-2xl border"><p class="text-xs text-slate-500">মোট ডিপোজিট</p><p class="text-2xl font-bold text-emerald-600 mt-1">৳ ${Number(deposits.total).toLocaleString('en-US')}</p><p class="text-xs text-slate-400 mt-1">${deposits.cnt} টি</p></div>
-        <div class="bg-white p-5 rounded-2xl border"><p class="text-xs text-slate-500">মোট উইথড্র</p><p class="text-2xl font-bold text-red-500 mt-1">৳ ${Number(withdrawals.total).toLocaleString('en-US')}</p><p class="text-xs text-slate-400 mt-1">${withdrawals.cnt} টি</p></div>
-        <div class="bg-white p-5 rounded-2xl border"><p class="text-xs text-slate-500">নেট রেভিনিউ (GGR)</p><p class="text-2xl font-bold ${netRevenue >= 0 ? 'text-emerald-600' : 'text-red-600'} mt-1">৳ ${Number(netRevenue).toLocaleString('en-US')}</p><p class="text-xs text-slate-400 mt-1">${bets.cnt} টি বেট</p></div>
+        <div class="bg-white p-5 rounded-2xl border"><p class="text-xs text-slate-500">${t('arp_total_deposit')}</p><p class="text-2xl font-bold text-emerald-600 mt-1">৳ ${Number(deposits.total).toLocaleString('en-US')}</p><p class="text-xs text-slate-400 mt-1">${deposits.cnt} টি</p></div>
+        <div class="bg-white p-5 rounded-2xl border"><p class="text-xs text-slate-500">${t('arp_total_withdraw')}</p><p class="text-2xl font-bold text-red-500 mt-1">৳ ${Number(withdrawals.total).toLocaleString('en-US')}</p><p class="text-xs text-slate-400 mt-1">${withdrawals.cnt} টি</p></div>
+        <div class="bg-white p-5 rounded-2xl border"><p class="text-xs text-slate-500">${t('arp_net_revenue')}</p><p class="text-2xl font-bold ${netRevenue >= 0 ? 'text-emerald-600' : 'text-red-600'} mt-1">৳ ${Number(netRevenue).toLocaleString('en-US')}</p><p class="text-xs text-slate-400 mt-1">${bets.cnt} টি বেট</p></div>
         <div class="bg-white p-5 rounded-2xl border"><p class="text-xs text-slate-500">${t('arp_new_users')}</p><p class="text-2xl font-bold mt-1">${Number(newUsers).toLocaleString('en-US')}</p><p class="text-xs text-slate-400 mt-1">${from} থেকে ${to}</p></div>
     </div>
 

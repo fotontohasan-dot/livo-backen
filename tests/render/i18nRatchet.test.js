@@ -28,8 +28,8 @@ const BENGALI = /[\u0980-\u09FF]/;
 const TAKA_SIGN = /\u09F3/g;
 
 // বর্তমান পরিমাপ (২০২৬-০৯-০৭)। কমলে নিচের সংখ্যা কমিয়ে দিন — সেটাই ratchet.
-const BASELINE_USER_LINES = 47;
-const BASELINE_ADMIN_LINES = 96;
+const BASELINE_USER_LINES = 43;
+const BASELINE_ADMIN_LINES = 59;
 
 /** কমেন্ট বাদ দেওয়া হয়: ডেভেলপারদের জন্য লেখা বাংলা কমেন্ট ব্যবহারকারী দেখেন না,
  *  আর কোডবেসে সেগুলো ইচ্ছাকৃত ও উপকারী। শুধু রেন্ডার হওয়া টেক্সটই গোনা হয়। */

@@ -82,7 +82,7 @@
             <div><label class="ann-label"><%= t('admin_field_schedule_start') %></label><input type="datetime-local" name="starts_at"></div>
             <div><label class="ann-label"><%= t('admin_field_expire_optional') %></label><input type="datetime-local" name="expires_at"></div>
           </div>
-          <button type="submit" class="btn-xs" style="background:var(--gold,#EAB308);color:#1a1a1a;padding:9px 18px;font-size:13px;" data-loading-label="তৈরি হচ্ছে..."><%= t('admin_ann_create_btn') %></button>
+          <button type="submit" class="btn-xs" style="background:var(--gold,#EAB308);color:#1a1a1a;padding:9px 18px;font-size:13px;" data-loading-label="<%= t('aan_creating') %>"><%= t('admin_ann_create_btn') %></button>
         </form>
       </div>
 
@@ -95,10 +95,10 @@
               <td>#<%= a.id %></td>
               <td><span class="type-badge type-<%= a.type %>"><%= a.type %></span></td>
               <td style="max-width:260px;white-space:normal;"><%= (a.message_bn||'').slice(0,80) %></td>
-              <td><%= a.target_type === 'all' ? 'সকলে' : (a.target_type === 'role' ? 'Role: ' + a.target_role : 'User #' + a.target_user_id) %></td>
+              <td><%= a.target_type === 'all' ? t('aan_all') : (a.target_type === 'role' ? 'Role: ' + a.target_role : 'User #' + a.target_user_id) %></td>
               <td style="font-size:11px;">
-                শুরু: <%= a.starts_at ? new Date(a.starts_at).toLocaleString('bn-BD') : '-' %><br>
-                শেষ: <%= a.expires_at ? new Date(a.expires_at).toLocaleString('bn-BD') : 'কখনো না' %>
+                <%= t('aan_starts') %> <%= a.starts_at ? new Date(a.starts_at).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') : '-' %><br>
+                <%= t('aan_ends') %> <%= a.expires_at ? new Date(a.expires_at).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') : t('aan_never') %>
               </td>
               <td>
                 <% const expired = a.expires_at && new Date(a.expires_at) < new Date(); %>
@@ -113,7 +113,7 @@
                 <form method="POST" action="/admin/announcements/<%= a.id %>/expire-now" style="display:inline;">
                   <button class="btn-xs" style="background:#f59e0b;color:#1a1a1a;"><%= t('admin_ann_expire_now') %></button>
                 </form>
-                <form method="POST" action="/admin/announcements/<%= a.id %>/delete" style="display:inline;" data-confirm="ডিলিট করবেন?">
+                <form method="POST" action="/admin/announcements/<%= a.id %>/delete" style="display:inline;" data-confirm="<%= t('aan_delete_confirm') %>">
                   <button class="btn-xs" style="background:#ef4444;color:#fff;"><%= t('admin_btn_delete') %></button>
                 </form>
               </td>
