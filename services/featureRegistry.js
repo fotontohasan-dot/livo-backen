@@ -41,6 +41,13 @@ const FEATURES = [
     enforcement: ['routes/games.js']
   },
 
+  {
+    key: 'provider_wallet', label: 'Provider Wallet API', labelKey: 'admin_ff_name_provider_wallet', descriptionKey: 'admin_ff_desc_provider_wallet', category: 'gaming', icon: 'fa-right-left', order: 11,
+    defaultEnabled: false,
+    description: 'থার্ড-পার্টি প্রোভাইডারের seamless wallet কলব্যাক (balance/bet/win/rollback)',
+    enforcement: ['routes/providerWallet.js']
+  },
+
   // ---------------- Sports ----------------
   {
     key: 'sports', label: 'Sports', labelKey: 'admin_ff_name_sports', descriptionKey: 'admin_ff_desc_sports', category: 'sports', icon: 'fa-futbol', order: 20,

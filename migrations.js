@@ -843,6 +843,56 @@ async function runMigrations() {
       console.log(`✅ ইন-হাউস গেম সারি মুছে ফেলা হয়েছে (${purged.rowCount}টি)`);
     }
 
+    // ==================== PHASE 2 — Seamless Wallet ====================
+    // প্রোভাইডার গেমের প্রতিটা আর্থিক কলব্যাকের সম্পূর্ণ trail। এটাই
+    // idempotency-র ভিত্তি: UNIQUE (provider, provider_tx_id) না থাকলে
+    // ডুপ্লিকেট কলে দুবার ব্যালেন্স বদলে যেত (services/wallet/idempotency.js
+    // দেখুন — SELECT-চেক race condition-এ যথেষ্ট নয়)।
+    //
+    // balance_before / balance_after ইচ্ছাকৃতভাবে সংরক্ষিত: প্রোভাইডারের সাথে
+    // রিকনসিলিয়েশনে "আমাদের হিসাবে তখন ব্যালেন্স কত ছিল" প্রশ্নটা সবচেয়ে
+    // বেশি আসে, আর সেটা পরে পুনর্গণনা করা যায় না।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS provider_transactions (
+        id                BIGSERIAL PRIMARY KEY,
+        provider          TEXT NOT NULL,
+        provider_tx_id    TEXT NOT NULL,
+        round_id          TEXT,
+        user_id           INTEGER NOT NULL REFERENCES users(id),
+        game_id           TEXT,
+        type              TEXT NOT NULL,
+        amount            NUMERIC(18,2) NOT NULL,
+        currency          TEXT NOT NULL DEFAULT 'BDT',
+        balance_before    NUMERIC(18,2) NOT NULL,
+        balance_after     NUMERIC(18,2) NOT NULL,
+        status            TEXT NOT NULL DEFAULT 'completed',
+        raw_payload       JSONB,
+        created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE (provider, provider_tx_id)
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_provider_tx_round ON provider_transactions(provider, round_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_provider_tx_user  ON provider_transactions(user_id, created_at DESC);`);
+
+    // গেম লঞ্চের সময় তৈরি টোকেন। প্রোভাইডার কলব্যাকে এই টোকেনই ফেরত পাঠায়,
+    // তাই একটা কলব্যাক কখনো নিজের ইচ্ছেমতো user_id দাবি করতে পারে না।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS game_sessions (
+        id             BIGSERIAL PRIMARY KEY,
+        session_token  TEXT UNIQUE NOT NULL,
+        user_id        INTEGER NOT NULL REFERENCES users(id),
+        provider       TEXT NOT NULL,
+        game_id        TEXT NOT NULL,
+        mode           TEXT NOT NULL DEFAULT 'real',
+        ip             TEXT,
+        expires_at     TIMESTAMPTZ NOT NULL,
+        closed_at      TIMESTAMPTZ,
+        created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_game_sessions_user ON game_sessions(user_id, created_at DESC);`);
+    console.log('✅ provider_transactions ও game_sessions ready');
+
     await pool.query(`ALTER TABLE kyc_requests ADD COLUMN IF NOT EXISTS reject_reason TEXT`);
     // জন্মতারিখ ছাড়া ১৮+ যাচাই করার কোনো উপায় ছিল না — age-gate কেবল একটা কুকি,
     // আইনি অর্থে বয়স যাচাই নয়। KYC অ্যাপ্রুভালে এই মাঠ থেকেই users.age_verified সেট হবে।

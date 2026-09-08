@@ -1259,6 +1259,8 @@
   "admin_ff_cat_security": "নিরাপত্তা",
   "admin_ff_cat_api": "API",
   "admin_nav_item_dashboard": "ড্যাশবোর্ড",
+  "admin_ff_name_provider_wallet": "প্রোভাইডার ওয়ালেট API",
+  "admin_ff_desc_provider_wallet": "থার্ড-পার্টি প্রোভাইডারের seamless wallet কলব্যাক (balance/bet/win/rollback)",
   "admin_ff_name_games": "ক্যাসিনো গেমস",
   "admin_ff_desc_games": "ক্যাসিনো/ইনস্ট্যান্ট গেমস — গেম তালিকা, রাউন্ড খেলা ও ক্যাশআউট",
   "admin_ff_name_sports": "স্পোর্টস",

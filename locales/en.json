@@ -1259,6 +1259,8 @@
   "admin_ff_cat_security": "Security",
   "admin_ff_cat_api": "API",
   "admin_nav_item_dashboard": "Dashboard",
+  "admin_ff_name_provider_wallet": "Provider Wallet API",
+  "admin_ff_desc_provider_wallet": "Third-party provider seamless wallet callbacks (balance/bet/win/rollback)",
   "admin_ff_name_games": "Casino Games",
   "admin_ff_desc_games": "Casino / instant games — game list, playing rounds and cashout",
   "admin_ff_name_sports": "Sports",

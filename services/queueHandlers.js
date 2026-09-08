@@ -99,4 +99,58 @@ queue.registerHandler('fraud_scan', async (payload) => {
   }
 });
 
+// ==================== PROVIDER WALLET EFFECTS ====================
+// PHASE 2: প্রোভাইডার ওয়ালেট কলব্যাকের (bet/win) পার্শ্ব-প্রতিক্রিয়া।
+//
+// আগে এই কলগুলো routes/games.js-এ ইনলাইনে ছিল — `.catch(console.error)` দিয়ে
+// fire-and-forget। প্রোভাইডার ওয়ালেটে সেটা চলে না: এন্ডপয়েন্টগুলোকে ২০০ms-এর
+// নিচে থাকতে হয়, আর fire-and-forget কাজ ব্যর্থ হলে নীরবে হারিয়ে যেত (কোনো
+// রিট্রাই নেই, কোনো দৃশ্যমানতা নেই)। কিউতে আনায় দুটোই ঠিক হলো — রেসপন্স আর
+// ব্লক হয় না, আর ব্যর্থ হলে queue নিজেই রিট্রাই করে ও DLQ-তে দেখা যায়।
+//
+// গুরুত্বপূর্ণ: এখানে কখনো ব্যালেন্স বদলানো হয় না। ব্যালেন্স মিউটেশনের
+// একমাত্র পথ services/wallet/index.js, এবং সেটা ইতিমধ্যেই commit হয়ে গেছে।
+// এই জব শুধু গৌণ হিসাব (turnover, cashback, VIP, mission, loyalty, badge)।
+// তাই জব ব্যর্থ বা রিট্রাই হলেও টাকার অঙ্কে কোনো প্রভাব পড়ে না।
+queue.registerHandler('provider_wallet_effects', async (payload) => {
+  const { kind, userId, gameId, amount } = payload;
+  if (!userId || !Number.isFinite(Number(amount))) return;
+  const amt = Number(amount);
+
+  // cashback-এর ক্যাটাগরি (casino বনাম live) আগে একটা হার্ডকোড স্লাগ-তালিকা
+  // থেকে ঠিক হতো। এখন games টেবিলের category-ই একমাত্র উৎস — যেটা প্রোভাইডার
+  // sync থেকে আসে, তাই নতুন লাইভ-ডিলার গেম এলে কোড বদলাতে হয় না।
+  let category = 'casino';
+  if (gameId) {
+    try {
+      const g = await pool.query('SELECT category FROM games WHERE provider_game_id = $1 LIMIT 1', [gameId]);
+      if (g.rows[0] && /live/i.test(g.rows[0].category || '')) category = 'live';
+    } catch (e) { /* কলাম/সারি না থাকলে ডিফল্ট casino — নন-ব্লকিং */ }
+  }
+
+  const { addTurnover } = require('./turnover');
+  const { distributeCommission } = require('./referral');
+  const { addBet, addWin } = require('./cashback');
+  const { addVipTurnover } = require('./vip');
+  const { updateMissionProgress } = require('./missions');
+  const { addPoints } = require('./loyalty');
+  const { recordGameResult } = require('./streak');
+  const { checkBadges } = require('./badges');
+
+  if (kind === 'bet') {
+    await addTurnover(userId, 'casino', amt);
+    await addBet(userId, amt, category);
+    await addVipTurnover(userId, amt);
+    await distributeCommission(userId, amt);
+    await updateMissionProgress(userId, amt);
+    await addPoints(userId, amt);
+  } else if (kind === 'win') {
+    if (amt > 0) await addWin(userId, amt, category);
+    await recordGameResult(userId, amt > 0, amt);
+    await checkBadges(userId);
+  } else {
+    throw new Error(`অজানা provider_wallet_effects kind: "${kind}"`);
+  }
+});
+
 module.exports = {}; // require করলেই উপরের registerHandler কলগুলো চলে — কোনো এক্সপোর্ট লাগে না

@@ -68,7 +68,17 @@ if (!SESSION_SECRET) {
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+// প্রোভাইডার কলব্যাকের HMAC স্বাক্ষর *কাঁচা* বডির উপর হিসাব হয় — JSON.parse
+// করে আবার stringify করলে key-order বা whitespace বদলে যায় এবং স্বাক্ষর কখনো
+// মিলত না। তাই শুধু /provider/ পাথের জন্য মূল বাইটগুলো ধরে রাখা হচ্ছে
+// (middleware/providerAuth.js এটাই ব্যবহার করে)। অন্য কোনো রুটে কিছু বদলায় না।
+app.use(express.json({
+  verify: (req, res, buf) => {
+    if (req.originalUrl && req.originalUrl.startsWith('/provider/')) {
+      req.rawBody = buf.toString('utf8');
+    }
+  }
+}));
 // অ্যাসেট ভার্সন — টেমপ্লেটে Date.now() ব্যবহার করলে প্রতি রিকোয়েস্টে ইউআরএল
 // বদলাত, ফলে ক্যাশ কখনো হিট করত না। ডিপ্লয়ের কমিট SHA প্রতি ডিপ্লয়ে একবারই
 // বদলায় — ঠিক যতবার বদলানো দরকার।
@@ -911,6 +921,11 @@ app.use('/notifications', require('./routes/notifications'));
 app.use('/help-center', require('./routes/help-center'));
 app.use('/payment', require('./routes/payment'));
 app.use('/games', require('./routes/games'));
+// PHASE 2 — প্রোভাইডার seamless wallet কলব্যাক। ইচ্ছাকৃতভাবে ইউজার-ফেসিং
+// রুটের পাশে মাউন্ট করা হয়নি বরং নিজস্ব /provider প্রিফিক্সে: এখানে কোনো
+// সেশন, CSRF বা ভাষা-মিডলওয়্যার প্রযোজ্য নয়, অথেন্টিকেশন সম্পূর্ণ আলাদা
+// (HMAC + IP allow-list — middleware/providerAuth.js)।
+app.use('/provider', require('./routes/providerWallet'));
 app.use('/api', require('./routes/api'));
 // ==================== OpenAPI / Swagger UI ====================
 const swaggerUi = require('swagger-ui-express');
