@@ -52,7 +52,7 @@ jobs:
       CLOUDINARY_CLOUD_NAME: livo_test_cloud
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v7
       with:
         # secret scan-এর জন্য পূর্ণ history দরকার; shallow clone-এ history-তে
         # থাকা credential ধরাই পড়ে না (SECURITY_INCIDENT.md দ্রষ্টব্য)
