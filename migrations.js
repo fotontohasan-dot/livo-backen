@@ -843,6 +843,53 @@ async function runMigrations() {
       console.log(`✅ ইন-হাউস গেম সারি মুছে ফেলা হয়েছে (${purged.rowCount}টি)`);
     }
 
+    // ==================== PHASE 3 — প্রোভাইডার গেম ক্যাটালগ ====================
+    // games টেবিল আগে ইন-হাউস গেমের জন্য ছিল (name/slug/emoji/category)।
+    // এখন এটাই প্রোভাইডার sync-এর গন্তব্য, তাই কলামগুলো যোগ করা হচ্ছে।
+    // ধ্বংসাত্মক কিছু নয় — সব ADD COLUMN IF NOT EXISTS, পুরনো কলাম অটুট।
+    await pool.query(`
+      ALTER TABLE games
+        ADD COLUMN IF NOT EXISTS provider         TEXT,
+        ADD COLUMN IF NOT EXISTS provider_game_id TEXT,
+        ADD COLUMN IF NOT EXISTS sub_category     TEXT,
+        ADD COLUMN IF NOT EXISTS thumbnail_url    TEXT,
+        ADD COLUMN IF NOT EXISTS rtp              NUMERIC(5,2),
+        ADD COLUMN IF NOT EXISTS has_demo         BOOLEAN DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS is_mobile        BOOLEAN DEFAULT TRUE,
+        ADD COLUMN IF NOT EXISTS admin_disabled   BOOLEAN DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS last_synced_at   TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS raw_meta         JSONB;
+    `);
+
+    // sync worker-এর UPSERT ঠিক এই কনস্ট্রেইন্টের উপর দাঁড়িয়ে
+    // (ON CONFLICT (provider, provider_game_id))। এটা ছাড়া প্রতিটা sync
+    // ডুপ্লিকেট সারি তৈরি করত।
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS uniq_provider_game
+        ON games(provider, provider_game_id);
+    `);
+    // লবির প্রধান কোয়েরির (ক্যাটাগরি + সক্রিয় + সাজানো) জন্য কভারিং ইনডেক্স
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_games_lobby
+        ON games(category, is_active, admin_disabled, sort_order);
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS provider_sync_log (
+        id            BIGSERIAL PRIMARY KEY,
+        provider      TEXT NOT NULL,
+        started_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        finished_at   TIMESTAMPTZ,
+        status        TEXT,
+        games_added   INTEGER DEFAULT 0,
+        games_updated INTEGER DEFAULT 0,
+        games_removed INTEGER DEFAULT 0,
+        error_message TEXT
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_sync_log_provider ON provider_sync_log(provider, started_at DESC);`);
+    console.log('✅ games প্রোভাইডার কলাম ও provider_sync_log ready');
+
     // ==================== PHASE 2 — Seamless Wallet ====================
     // প্রোভাইডার গেমের প্রতিটা আর্থিক কলব্যাকের সম্পূর্ণ trail। এটাই
     // idempotency-র ভিত্তি: UNIQUE (provider, provider_tx_id) না থাকলে

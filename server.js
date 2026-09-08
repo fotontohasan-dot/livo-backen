@@ -105,6 +105,12 @@ const PORT = process.env.PORT || 3000;
 function startBackgroundWork() {
   setTimeout(() => {
     syncMatches().catch(err => console.error('Initial match sync failed:', err));
+    // PHASE 3 — বুট-টাইম ক্যাসিনো গেম sync। উদ্দেশ্য: একটা নতুন প্রোভাইডারের
+    // credential .env-এ বসিয়ে ডিপ্লয় করলেই অ্যাডমিনকে কিছু না করেই গেম
+    // লবিতে চলে আসবে। ইচ্ছাকৃতভাবে await করা হয় না এবং কখনো throw করে না —
+    // ক্যাটালগ sync-এর জন্য সার্ভার বুট আটকে থাকা গ্রহণযোগ্য নয়।
+    require('./services/casinoGameSync').syncNewProvidersOnBoot()
+      .catch(err => console.error('Initial casino game sync failed:', err.message));
     try { require('./services/queueHandlers'); queueService.startWorker(); } catch (e) { console.error('queue worker start error:', e.message); }
     // queues/index.js (BullMQ, activity-log/fraud-scan/admin queue dashboard) — REDIS_URL
     // না থাকলে নিরাপদে false রিটার্ন করে স্কিপ করে (connection.js দেখুন)।

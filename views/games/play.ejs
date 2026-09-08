@@ -1,0 +1,47 @@
+<%- include('../partials/head') %>
+
+<%#
+  PHASE 3 — গেম কন্টেইনার।
+
+  এখানে ইচ্ছাকৃতভাবে কোনো গেম-লজিক নেই। RNG, বাজি, ফলাফল — সবই প্রোভাইডারের
+  iframe-এর ভেতরে; আমাদের দিক থেকে টাকার একমাত্র পথ seamless wallet কলব্যাক
+  (routes/providerWallet.js)।
+
+  navbar ইচ্ছাকৃতভাবে বাদ: ছোট স্ক্রিনে গেমের জন্য পুরো উচ্চতা দরকার।
+  বেরোনোর জন্য উপরে একটা বার আছে।
+%>
+
+<style nonce="<%= cspNonce %>">
+  html, body { height: 100%; margin: 0; }
+  .play-bar { display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+    background: var(--bg-card); border-bottom: 1px solid var(--border-glass); }
+  .play-back { color: var(--text-main); text-decoration: none; font-size: 18px; }
+  .play-name { font-size: 14px; font-weight: 700; color: var(--text-main);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .play-mode { margin-left: auto; font-size: 11px; color: var(--text-muted);
+    border: 1px solid var(--border-glass); border-radius: 999px; padding: 3px 9px; }
+  .play-frame-wrap { position: absolute; top: 45px; bottom: 0; left: 0; right: 0; }
+  .play-frame { width: 100%; height: 100%; border: 0; display: block; }
+</style>
+
+<div class="play-bar">
+  <a class="play-back" href="/games" aria-label="Back">&#8592;</a>
+  <div class="play-name"><%= game.name %></div>
+  <div class="play-mode"><%= mode === 'demo' ? 'DEMO' : (t.balance || 'Real') %></div>
+</div>
+
+<div class="play-frame-wrap">
+  <%#
+    sandbox: প্রোভাইডারের কন্টেন্ট আমাদের পেজে টপ-লেভেল নেভিগেশন করতে বা
+    আমাদের origin-এর স্টোরেজে হাত দিতে পারবে না। allow-same-origin দরকার,
+    নাহলে বেশিরভাগ গেম ক্লায়েন্ট নিজের সেশন স্টোরেজই ব্যবহার করতে পারে না।
+  %>
+  <iframe class="play-frame" src="<%= launchUrl %>"
+          allow="autoplay; fullscreen; clipboard-write"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+          referrerpolicy="no-referrer"
+          title="<%= game.name %>"></iframe>
+</div>
+
+</body>
+</html>
