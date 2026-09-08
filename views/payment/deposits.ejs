@@ -6,6 +6,10 @@
   <title><%= t('dep_title') %> • Livo Admin</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz97-1 { width: 1px; height: 20px; background: rgba(255,255,255,0.1); }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
     .dep-tabs { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
@@ -84,7 +88,7 @@
         <a class="dep-preset <%= quick === '30d' ? 'active' : '' %>" href="/payment/admin/deposits?method=<%= method %>&quick=30d"><%= t('dep_quick_30d') %></a>
         <a class="dep-preset <%= quick === '90d' ? 'active' : '' %>" href="/payment/admin/deposits?method=<%= method %>&quick=90d"><%= t('dep_quick_90d') %></a>
         <a class="dep-preset <%= quick === 'year' ? 'active' : '' %>" href="/payment/admin/deposits?method=<%= method %>&quick=year"><%= t('dep_quick_year') %></a>
-        <span style="width:1px;height:20px;background:rgba(255,255,255,0.1);"></span>
+        <span class="dz97-1"></span>
         <input type="date" name="from" value="<%= from %>">
         <input type="date" name="to" value="<%= to %>">
         <input type="hidden" name="quick" value="custom">

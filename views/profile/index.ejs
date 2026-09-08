@@ -1,6 +1,29 @@
 <%- include('../partials/head') %>
 
 <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz58-1 { margin: 0; }
+  .dz58-2 { color: var(--text-accent); }
+  .dz58-3 { background: rgba(45,212,191,.15); color: #2dd4bf; }
+  .dz58-4 { background: rgba(248,113,113,.15); color: #f87171; }
+  .dz58-5 { background: rgba(129,140,248,.15); color: #818cf8; }
+  .dz58-6 { background: rgba(56,189,248,.15); color: #38bdf8; }
+  .dz58-7 { background: rgba(192,132,252,.15); color: #c084fc; }
+  .dz58-8 { background: rgba(34,197,94,.15); color: #22c55e; }
+  .dz58-9 { background: rgba(236,72,153,.15); color: #ec4899; }
+  .dz58-10 { background: rgba(245,166,35,.15); color: var(--text-accent); }
+  .dz58-11 { background: rgba(148,163,184,.15); color: var(--text-muted); }
+  .dz58-12 { background: rgba(251,146,60,.15); color: #fb923c; }
+  .dz58-13 { display: none; position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px; border-radius: 30px; font-size: 14px; z-index: 9999; font-weight: bold; }
+  .dz58-14 { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px); background: #1c2533; color: #fff; padding: 9px 20px; border-radius: 30px; font-size: 12.5px; font-weight: 600; border: 1px solid var(--gold); opacity: 0; transition: all .25s; z-index: 9999; pointer-events: none; white-space: nowrap; }
+  .dz58-15 { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 10000; align-items: center; justify-content: center; padding: 20px; }
+  .dz58-16 { background: #12121f; border-radius: 20px; padding: 20px; max-width: 420px; width: 100%; max-height: 80vh; overflow-y: auto; border: 1px solid rgba(255,255,255,.08); }
+  .dz58-17 { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .dz58-18 { color: #fff; font-weight: 800; font-size: 15px; }
+  .dz58-19 { background: none; border: none; color: rgba(255,255,255,.6); font-size: 18px; cursor: pointer; }
+  .dz58-20 { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
 /* ──────────────────── Profile CSS ──────────────────── */
 :root{--gold:#f5a623;--gold2:#ffd166;--gg:linear-gradient(135deg,#f5d67d,#f5a623,#d97706)}
 .pf-wrap{max-width:520px;margin:0 auto;padding:0 0 110px;background:transparent}
@@ -203,7 +226,7 @@ body.light-mode .mc-grid-card{background:rgba(0,0,0,.04);border-color:rgba(0,0,0
   <div class="pf-verify-banner">
     <i class="fas fa-triangle-exclamation"></i>
     <div class="pf-verify-text"><%= t.email_not_verified_notice %></div>
-    <form action="/resend-verification" method="POST" style="margin:0;">
+    <form class="dz58-1" action="/resend-verification" method="POST">
       <button type="submit" class="pf-verify-btn"><%= t.send_link %></button>
     </form>
   </div>
@@ -258,7 +281,7 @@ body.light-mode .mc-grid-card{background:rgba(0,0,0,.04);border-color:rgba(0,0,0
     <div class="pf-header-balance-row">
       <div>
         <div class="pf-header-balance-label"><%= t.total_balance %></div>
-        <div id="balanceText" class="pf-header-balance-value">৳ <%= Number(user.coins).toLocaleString(lang === 'en' ? 'en-US' : 'bn-BD') %></div>
+        <div id="balanceText" class="pf-header-balance-value">৳ <%= Number(user.coins).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></div>
         <div class="pf-wallet-updated"><%= t.last_updated %> <span id="lastUpdatedText"><%= t.just_now %></span></div>
       </div>
       <button data-profile-action="refresh-balance" id="refreshBtn" title="<%= t.refresh %>" class="pf-icon-btn pf-header-refresh"><i class="fas fa-sync-alt" id="refreshIcon"></i></button>
@@ -292,24 +315,24 @@ body.light-mode .mc-grid-card{background:rgba(0,0,0,.04);border-color:rgba(0,0,0
        চারটে একই /profile/rewards পেজে যেত বলে সেটাও একটা এন্ট্রি।
        প্রতিটা টাইলে আইকনের পাশাপাশি টেক্সট লেবেল আছে, এবং ন্যূনতম টাচ টার্গেট ৬৪px। -->
   <div class="mc-grid-card">
-    <div class="mc-grid-title"><i class="fas fa-table-cells-large" style="color: var(--text-accent);"></i> <%= t.member_center %></div>
+    <div class="mc-grid-title"><i class="fas fa-table-cells-large dz58-2"></i> <%= t.member_center %></div>
 
     <div class="mc-section-label"><i class="fas fa-wallet"></i> <%= t.wallet_and_transactions %></div>
     <div class="mc-flat-grid">
       <a href="/profile/transactions" class="mc-tile">
-        <span class="mc-tile-icon" style="background:rgba(45,212,191,.15);color:#2dd4bf;"><i class="fas fa-receipt"></i></span>
+        <span class="mc-tile-icon dz58-3"><i class="fas fa-receipt"></i></span>
         <span class="mc-tile-label"><%= t.transactions %></span>
       </a>
       <a href="/payment/history" class="mc-tile">
-        <span class="mc-tile-icon" style="background:rgba(248,113,113,.15);color:#f87171;"><i class="fas fa-arrow-up-from-bracket"></i></span>
+        <span class="mc-tile-icon dz58-4"><i class="fas fa-arrow-up-from-bracket"></i></span>
         <span class="mc-tile-label"><%= t.deposit_withdraw %></span>
       </a>
       <a href="/profile/account-record" class="mc-tile">
-        <span class="mc-tile-icon" style="background:rgba(129,140,248,.15);color:#818cf8;"><i class="fas fa-book"></i></span>
+        <span class="mc-tile-icon dz58-5"><i class="fas fa-book"></i></span>
         <span class="mc-tile-label"><%= t.account_record %></span>
       </a>
       <a href="/profile/cards" class="mc-tile">
-        <span class="mc-tile-icon" style="background:rgba(56,189,248,.15);color:#38bdf8;"><i class="fas fa-credit-card"></i></span>
+        <span class="mc-tile-icon dz58-6"><i class="fas fa-credit-card"></i></span>
         <span class="mc-tile-label"><%= t.my_cards %></span>
       </a>
     </div>
@@ -317,18 +340,18 @@ body.light-mode .mc-grid-card{background:rgba(0,0,0,.04);border-color:rgba(0,0,0
     <div class="mc-section-label"><i class="fas fa-chart-line"></i> <%= t.activity_and_records %></div>
     <div class="mc-flat-grid">
       <a href="/profile/history" class="mc-tile">
-        <span class="mc-tile-icon" style="background:rgba(192,132,252,.15);color:#c084fc;"><i class="fas fa-clock-rotate-left"></i></span>
+        <span class="mc-tile-icon dz58-7"><i class="fas fa-clock-rotate-left"></i></span>
         <span class="mc-tile-label"><%= t.betting_record %></span>
       </a>
       <a href="/profile/stats" class="mc-tile">
-        <span class="mc-tile-icon" style="background:rgba(34,197,94,.15);color:#22c55e;"><i class="fas fa-chart-pie"></i></span>
+        <span class="mc-tile-icon dz58-8"><i class="fas fa-chart-pie"></i></span>
         <span class="mc-tile-label"><%= t.profit_loss %></span>
       </a>
       <a href="/notifications" class="mc-tile">
         <% if (typeof notifPreview !== 'undefined' && notifPreview.unreadCount > 0) { %>
         <span class="mc-tile-badge"><%= notifPreview.unreadCount %></span>
         <% } %>
-        <span class="mc-tile-icon" style="background:rgba(236,72,153,.15);color:#ec4899;"><i class="fas fa-bell"></i></span>
+        <span class="mc-tile-icon dz58-9"><i class="fas fa-bell"></i></span>
         <span class="mc-tile-label"><%= t.notifications %></span>
       </a>
     </div>
@@ -339,38 +362,38 @@ body.light-mode .mc-grid-card{background:rgba(0,0,0,.04);border-color:rgba(0,0,0
         <% if (typeof rewardBadge !== 'undefined' && rewardBadge > 0) { %>
         <span class="mc-tile-badge"><%= rewardBadge %></span>
         <% } %>
-        <span class="mc-tile-icon" style="background:rgba(245,166,35,.15);color: var(--text-accent);"><i class="fas fa-gift"></i></span>
+        <span class="mc-tile-icon dz58-10"><i class="fas fa-gift"></i></span>
         <span class="mc-tile-label"><%= t.reward_center %></span>
       </a>
       <a href="/profile/missions" class="mc-tile">
         <% if (typeof missionBadge !== 'undefined' && missionBadge > 0) { %>
         <span class="mc-tile-badge"><%= missionBadge %></span>
         <% } %>
-        <span class="mc-tile-icon" style="background:rgba(45,212,191,.15);color:#2dd4bf;"><i class="fas fa-flag-checkered"></i></span>
+        <span class="mc-tile-icon dz58-3"><i class="fas fa-flag-checkered"></i></span>
         <span class="mc-tile-label"><%= t.missions %></span>
       </a>
       <a href="/profile/cashback" class="mc-tile">
-        <span class="mc-tile-icon" style="background:rgba(245,166,35,.15);color: var(--text-accent);"><i class="fas fa-coins"></i></span>
+        <span class="mc-tile-icon dz58-10"><i class="fas fa-coins"></i></span>
         <span class="mc-tile-label"><%= t.cashback %></span>
       </a>
       <a href="/profile/vip" class="mc-tile">
-        <span class="mc-tile-icon" style="background:rgba(192,132,252,.15);color:#c084fc;"><i class="fas fa-crown"></i></span>
+        <span class="mc-tile-icon dz58-7"><i class="fas fa-crown"></i></span>
         <span class="mc-tile-label"><%= t.vip_center %></span>
       </a>
       <a href="/profile/wheel" class="mc-tile">
-        <span class="mc-tile-icon" style="background:rgba(236,72,153,.15);color:#ec4899;"><i class="fas fa-circle-dot"></i></span>
+        <span class="mc-tile-icon dz58-9"><i class="fas fa-circle-dot"></i></span>
         <span class="mc-tile-label"><%= t.lucky_spin %></span>
       </a>
       <a href="/profile/badges" class="mc-tile">
-        <span class="mc-tile-icon" style="background:rgba(245,166,35,.15);color: var(--text-accent);"><i class="fas fa-trophy"></i></span>
+        <span class="mc-tile-icon dz58-10"><i class="fas fa-trophy"></i></span>
         <span class="mc-tile-label"><%= t.achievements %></span>
       </a>
       <a href="/profile/freebet" class="mc-tile">
-        <span class="mc-tile-icon" style="background:rgba(34,197,94,.15);color:#22c55e;"><i class="fas fa-ticket"></i></span>
+        <span class="mc-tile-icon dz58-8"><i class="fas fa-ticket"></i></span>
         <span class="mc-tile-label"><%= t.free_bet %></span>
       </a>
       <a href="/profile/referral" class="mc-tile">
-        <span class="mc-tile-icon" style="background:rgba(56,189,248,.15);color:#38bdf8;"><i class="fas fa-user-plus"></i></span>
+        <span class="mc-tile-icon dz58-6"><i class="fas fa-user-plus"></i></span>
         <span class="mc-tile-label"><%= t.invite_friends %></span>
       </a>
     </div>
@@ -381,7 +404,7 @@ body.light-mode .mc-grid-card{background:rgba(0,0,0,.04);border-color:rgba(0,0,0
         <% if (typeof security !== 'undefined' && security && (security.score || 0) < 60) { %>
         <span class="mc-tile-badge amber">!</span>
         <% } %>
-        <span class="mc-tile-icon" style="background:rgba(56,189,248,.15);color:#38bdf8;"><i class="fas fa-shield-halved"></i></span>
+        <span class="mc-tile-icon dz58-6"><i class="fas fa-shield-halved"></i></span>
         <span class="mc-tile-label"><%= t.security_center %></span>
         <span class="mc-tile-sub"><%= t.login_history %></span>
       </a>
@@ -389,15 +412,15 @@ body.light-mode .mc-grid-card{background:rgba(0,0,0,.04);border-color:rgba(0,0,0
         <% if (typeof security !== 'undefined' && security && security.kycStatus !== 'approved') { %>
         <span class="mc-tile-badge amber">!</span>
         <% } %>
-        <span class="mc-tile-icon" style="background:rgba(34,197,94,.15);color:#22c55e;"><i class="fas fa-id-card"></i></span>
+        <span class="mc-tile-icon dz58-8"><i class="fas fa-id-card"></i></span>
         <span class="mc-tile-label"><%= t.kyc_verification %></span>
       </a>
       <a href="/profile/responsible" class="mc-tile">
-        <span class="mc-tile-icon" style="background:rgba(148,163,184,.15);color: var(--text-muted);"><i class="fas fa-hand"></i></span>
+        <span class="mc-tile-icon dz58-11"><i class="fas fa-hand"></i></span>
         <span class="mc-tile-label"><%= t.responsible_gaming %></span>
       </a>
       <a href="/profile/loyalty" class="mc-tile">
-        <span class="mc-tile-icon" style="background:rgba(245,166,35,.15);color: var(--text-accent);"><i class="fas fa-star"></i></span>
+        <span class="mc-tile-icon dz58-10"><i class="fas fa-star"></i></span>
         <span class="mc-tile-label"><%= t.loyalty_points %></span>
       </a>
     </div>
@@ -405,19 +428,19 @@ body.light-mode .mc-grid-card{background:rgba(0,0,0,.04);border-color:rgba(0,0,0
     <div class="mc-section-label"><i class="fas fa-headset"></i> <%= t.support %></div>
     <div class="mc-flat-grid">
       <a href="/profile/chat" class="mc-tile">
-        <span class="mc-tile-icon" style="background:rgba(34,197,94,.15);color:#22c55e;"><i class="fas fa-headset"></i></span>
+        <span class="mc-tile-icon dz58-8"><i class="fas fa-headset"></i></span>
         <span class="mc-tile-label"><%= t.customer_service %></span>
       </a>
       <a href="/help-center" class="mc-tile">
-        <span class="mc-tile-icon" style="background:rgba(56,189,248,.15);color:#38bdf8;"><i class="fas fa-circle-question"></i></span>
+        <span class="mc-tile-icon dz58-6"><i class="fas fa-circle-question"></i></span>
         <span class="mc-tile-label"><%= t.help_center %></span>
       </a>
       <a href="/profile/feedback" class="mc-tile">
-        <span class="mc-tile-icon" style="background:rgba(251,146,60,.15);color:#fb923c;"><i class="fas fa-comment-dots"></i></span>
+        <span class="mc-tile-icon dz58-12"><i class="fas fa-comment-dots"></i></span>
         <span class="mc-tile-label"><%= t.feedback %></span>
       </a>
       <a href="/profile/app-download" class="mc-tile">
-        <span class="mc-tile-icon" style="background:rgba(129,140,248,.15);color:#818cf8;"><i class="fas fa-mobile-screen-button"></i></span>
+        <span class="mc-tile-icon dz58-5"><i class="fas fa-mobile-screen-button"></i></span>
         <span class="mc-tile-label"><%= t.app_download %></span>
       </a>
     </div>
@@ -437,7 +460,7 @@ body.light-mode .mc-grid-card{background:rgba(0,0,0,.04);border-color:rgba(0,0,0
 
 
 <!-- Custom Copy Alert -->
-<div id="copyToast" style="display:none; position:fixed; bottom:100px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.8); color:#fff; padding:10px 20px; border-radius:30px; font-size:14px; z-index:9999; font-weight:bold;"><%= t('prof_copied') %> ✅</div>
+<div class="dz58-13" id="copyToast"><%= t('prof_copied') %> ✅</div>
 
 <script type="application/json" id="profileConfig"><%- jsonScriptSafe({
   uid: 100000 + user.id,
@@ -448,15 +471,15 @@ body.light-mode .mc-grid-card{background:rgba(0,0,0,.04);border-color:rgba(0,0,0
 
 <a href="/payment/deposit" class="pf-sticky-deposit" title="<%= t.quick_deposit %>"><i class="fas fa-plus"></i></a>
 
-<div id="copyToast" style="position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:#1c2533;color:#fff;padding:9px 20px;border-radius:30px;font-size:12.5px;font-weight:600;border:1px solid var(--gold);opacity:0;transition:all .25s;z-index:9999;pointer-events:none;white-space:nowrap"></div>
+<div class="dz58-14" id="copyToast"></div>
 
-<div id="avatarModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10000;align-items:center;justify-content:center;padding:20px">
-  <div style="background:#12121f;border-radius:20px;padding:20px;max-width:420px;width:100%;max-height:80vh;overflow-y:auto;border:1px solid rgba(255,255,255,.08)">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <span style="color:#fff;font-weight:800;font-size:15px"><%= t.choose_avatar %></span>
-      <button type="button" data-profile-action="avatar-close" style="background:none;border:none;color:rgba(255,255,255,.6);font-size:18px;cursor:pointer">✕</button>
+<div class="dz58-15" id="avatarModal">
+  <div class="dz58-16">
+    <div class="dz58-17">
+      <span class="dz58-18"><%= t.choose_avatar %></span>
+      <button class="dz58-19" type="button" data-profile-action="avatar-close">✕</button>
     </div>
-    <div id="avatarGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px"></div>
+    <div class="dz58-20" id="avatarGrid"></div>
   </div>
 </div>
 

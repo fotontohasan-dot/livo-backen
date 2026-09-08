@@ -1,3 +1,9 @@
+<style nonce="<%= cspNonce %>">
+  /* Runtime-generated markup: these inline styles live in JS strings, so
+     cascade-check cannot see them. Migrated only where no rule in the site
+     CSS can set the same longhand on this tag/class at all. */
+  .js1.js1.js1 { display: inline; }
+</style>
 <%
 function escapeHtml(str) {
   return String(str == null ? '' : str)
@@ -38,7 +44,7 @@ function userRow(u) {
     '<td class="px-6 py-4">' +
       '<div class="flex items-center justify-center gap-x-1.5 flex-wrap">' +
         '<a href="/admin/users/' + u.id + '" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-blue-500 hover:bg-blue-600 text-white transition-colors">View</a>' +
-        '<form method="POST" action="/admin/users/' + u.id + '/ban" style="display:inline" data-confirm="' + t("auu_status_confirm") + '">' +
+        '<form class="js1" method="POST" action="/admin/users/' + u.id + '/ban" data-confirm="' + t("auu_status_confirm") + '">' +
           '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl ' + banColor + ' text-white transition-colors">' + banLabel + '</button>' +
         '</form>' +
       '</div>' +
@@ -63,14 +69,14 @@ const rows = (users || []).map(userRow).join('') || '<tr><td colspan="7" class="
         <input type="text" name="search" value="${escapeHtml(search || '')}" placeholder="${t('auu_search_placeholder')}"
                class="flex-1 min-w-[220px] border border-slate-200 px-4 py-2.5 rounded-2xl text-sm outline-none focus:border-blue-300">
         <select name="status" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
-            <option value="">${t('ash_all_status')}</option>
+            <option value="">${t('adg_all_status')}</option>
             <option value="active" ${status === 'active' ? 'selected' : ''}>Active</option>
             <option value="banned" ${status === 'banned' ? 'selected' : ''}>Banned</option>
             <option value="email_verified" ${status === 'email_verified' ? 'selected' : ''}>Email Verified</option>
             <option value="email_unverified" ${status === 'email_unverified' ? 'selected' : ''}>Email Unverified</option>
         </select>
         <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">${t('auu_search')}</button>
-        ${(search || status) ? '<a href="/admin/users" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">' + t("ash_reset") + '</a>' : ''}
+        ${(search || status) ? '<a href="/admin/users" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">' + t("adg_reset") + '</a>' : ''}
     </form>
 
     <div id="bulkActionBar" class="hidden items-center gap-3 mb-4 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
@@ -78,7 +84,7 @@ const rows = (users || []).map(userRow).join('') || '<tr><td colspan="7" class="
         <button type="button" data-users-action="bulk-ban" class="ml-auto px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold">
             <i class="fas fa-ban"></i> ${t('auu_ban_selected')}
         </button>
-        <button type="button" data-users-action="clear" class="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-medium">${t('auu_cancel')}</button>
+        <button type="button" data-users-action="clear" class="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-medium">${t('dep_reject')}</button>
     </div>
 
     <div class="bg-white rounded-3xl border border-slate-100 overflow-x-auto modern-table">
@@ -99,9 +105,9 @@ const rows = (users || []).map(userRow).join('') || '<tr><td colspan="7" class="
     </div>
 
     <div class="flex justify-center gap-3 mt-6">
-        ${page > 1 ? '<a href="/admin/users?page=' + (page - 1) + '&search=' + encodeURIComponent(search || '') + '&status=' + (status || '') + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">← ' + t("ash_prev_page") + '</a>' : ''}
+        ${page > 1 ? '<a href="/admin/users?page=' + (page - 1) + '&search=' + encodeURIComponent(search || '') + '&status=' + (status || '') + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">← ' + t("aal_prev_page") + '</a>' : ''}
         <span class="px-4 py-2 text-sm text-slate-500">${t('ash_page_x_y').replace('{page}', page).replace('{pages}', totalPages)}</span>
-        ${page < totalPages ? '<a href="/admin/users?page=' + (page + 1) + '&search=' + encodeURIComponent(search || '') + '&status=' + (status || '') + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">' + t("ash_next_page") + ' →</a>' : ''}
+        ${page < totalPages ? '<a href="/admin/users?page=' + (page + 1) + '&search=' + encodeURIComponent(search || '') + '&status=' + (status || '') + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">' + t("aal_next_page") + ' →</a>' : ''}
     </div>
 </div>
 

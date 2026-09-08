@@ -1,44 +1,59 @@
 <%- include('../partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz50-1 { color: var(--text-muted); }
+  .dz50-2 { margin-bottom: 12px; padding: 15px; }
+  .dz50-3 { margin-top: 8px; color: var(--text-muted); }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im50-1 { padding-top: 20px; }
+  .im50-2 { margin-top: 8px; }
+</style>
+
 <%- include('../partials/navbar') %>
 
-<div class="container" style="padding-top: 20px;">
+<div class="container im50-1">
   <h2>❓ <%= t('faq_heading') %></h2>
-  <p style="color:var(--text-muted);"><%= t('faq_intro') %></p>
+  <p class="dz50-1"><%= t('faq_intro') %></p>
 
-  <div class="card" style="margin-bottom:12px; padding:15px;">
+  <div class="card dz50-2">
     <strong>💰 <%= t('faq_q_deposit') %></strong>
-    <p style="margin-top:8px; color:var(--text-muted);"><%= t('faq_a_deposit') %></p>
+    <p class="dz50-3"><%= t('faq_a_deposit') %></p>
   </div>
 
-  <div class="card" style="margin-bottom:12px; padding:15px;">
+  <div class="card dz50-2">
     <strong>🏦 <%= t('faq_q_withdraw') %></strong>
-    <p style="margin-top:8px; color:var(--text-muted);"><%= t('faq_a_withdraw') %></p>
+    <p class="dz50-3"><%= t('faq_a_withdraw') %></p>
   </div>
 
-  <div class="card" style="margin-bottom:12px; padding:15px;">
+  <div class="card dz50-2">
     <strong>⏱️ <%= t('faq_q_timing') %></strong>
-    <p style="margin-top:8px; color:var(--text-muted);"><%= t('faq_a_timing') %></p>
+    <p class="dz50-3"><%= t('faq_a_timing') %></p>
   </div>
 
-  <div class="card" style="margin-bottom:12px; padding:15px;">
+  <div class="card dz50-2">
     <strong>🎁 <%= t('faq_q_daily_bonus') %></strong>
-    <p style="margin-top:8px; color:var(--text-muted);"><%= t('faq_a_daily_bonus') %></p>
+    <p class="dz50-3"><%= t('faq_a_daily_bonus') %></p>
   </div>
 
-  <div class="card" style="margin-bottom:12px; padding:15px;">
+  <div class="card dz50-2">
     <strong>🎮 <%= t('faq_q_winnings') %></strong>
-    <p style="margin-top:8px; color:var(--text-muted);"><%= t('faq_a_winnings') %></p>
+    <p class="dz50-3"><%= t('faq_a_winnings') %></p>
   </div>
 
-  <div class="card" style="margin-bottom:12px; padding:15px;">
+  <div class="card dz50-2">
     <strong>🔒 <%= t('faq_q_security') %></strong>
-    <p style="margin-top:8px; color:var(--text-muted);"><%= t('faq_a_security') %></p>
+    <p class="dz50-3"><%= t('faq_a_security') %></p>
   </div>
 
-  <div class="card" style="margin-bottom:12px; padding:15px;">
+  <div class="card dz50-2">
     <strong>💬 <%= t('faq_q_more_help') %></strong>
-    <p style="margin-top:8px; color:var(--text-muted);"><%= t('faq_a_more_help') %></p>
-    <a href="/profile/chat" class="btn btn-success btn-sm" style="margin-top:8px;">💬 <%= t('faq_live_chat') %></a>
+    <p class="dz50-3"><%= t('faq_a_more_help') %></p>
+    <a href="/profile/chat" class="btn btn-success btn-sm im50-2">💬 <%= t('faq_live_chat') %></a>
   </div>
 
 </div>

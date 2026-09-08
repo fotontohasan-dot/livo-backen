@@ -7,11 +7,11 @@ function esc(s) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
-function ticketListItem(t) {
-  return '<div class="px-4 py-3.5 mx-1 mb-1 rounded-2xl cursor-pointer border border-transparent hover:bg-slate-50" data-ticket-id="' + Number(t.userId) + '" id="ticket-item-' + Number(t.userId) + '">' +
-    '<div class="flex justify-between"><div class="font-semibold text-sm">' + esc(t.username) + '</div>' +
-    '<div class="text-[10px] px-2 py-0.5 rounded ' + (t.status === 'Open' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700') + '">' + esc(t.status) + '</div></div>' +
-    '<div class="text-xs text-slate-400 mt-1 line-clamp-1">' + esc(String(t.lastMessage || '').slice(0, 60)) + '</div>' +
+function ticketListItem(ticket) {
+  return '<div class="px-4 py-3.5 mx-1 mb-1 rounded-2xl cursor-pointer border border-transparent hover:bg-slate-50" data-ticket-id="' + Number(ticket.userId) + '" id="ticket-item-' + Number(ticket.userId) + '">' +
+    '<div class="flex justify-between"><div class="font-semibold text-sm">' + esc(ticket.username) + '</div>' +
+    '<div class="text-[10px] px-2 py-0.5 rounded ' + (ticket.status === 'Open' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700') + '">' + esc(ticket.status) + '</div></div>' +
+    '<div class="text-xs text-slate-400 mt-1 line-clamp-1">' + esc(String(ticket.lastMessage || '').slice(0, 60)) + '</div>' +
   '</div>';
 }
 const ticketsHtml = (tickets || []).map(ticketListItem).join('') || '<div class="text-center text-slate-400 py-10 text-sm">' + t("asu_no_tickets") + '</div>';

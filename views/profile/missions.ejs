@@ -1,25 +1,58 @@
 <%- include('../partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz68-1 { padding: 16px; padding-bottom: 100px; max-width: 600px; margin: 0 auto; }
+  .dz68-2 { color: var(--text-main); text-decoration: none; font-size: 20px; }
+  .dz68-3 { color: var(--text-main); font-size: 18px; font-weight: bold; }
+  .dz68-4 { background: linear-gradient(135deg,#6366f1,#8b5cf6); border-radius: 16px; padding: 20px; margin-bottom: 16px; text-align: center; }
+  .dz68-5 { color: var(--text-main); font-size: 16px; font-weight: bold; margin-bottom: 4px; }
+  .dz68-6 { color: rgba(255,255,255,0.9); font-size: 13px; }
+  .dz68-7 { flex: 1; padding: 10px; border-radius: 10px; border: none; background: #10b981; color: #fff; font-weight: bold; font-size: 13px; cursor: pointer; }
+  .dz68-8 { flex: 1; padding: 10px; border-radius: 10px; border: none; background: rgba(255,255,255,0.08); color: var(--text-main); font-weight: bold; font-size: 13px; cursor: pointer; }
+  .dz68-9 { color: var(--text-main); font-size: 14px; font-weight: 600; }
+  .dz68-10 { color: #f59e0b; font-size: 13px; font-weight: bold; }
+  .dz68-11 { background: rgba(255,255,255,0.1); border-radius: 20px; height: 10px; overflow: hidden; margin-bottom: 6px; }
+  .dz68-12 { color: var(--text-muted); font-size: 11px; }
+  .dz68-13 { color: #10b981; font-size: 12px; font-weight: bold; }
+  .dz68-14 { margin: 0; }
+  .dz68-15 { background: #10b981; color: #fff; border: none; border-radius: 8px; padding: 6px 16px; font-size: 12px; font-weight: bold; cursor: pointer; }
+  .dz68-16 { color: var(--text-muted); font-size: 12px; }
+  .dz68-17 { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 30px; text-align: center; color: var(--text-muted); }
+  .dz68-18 { font-size: .75rem; color: var(--text-muted); text-align: center; margin-top: 1rem; line-height: 1.6; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im69-1 { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .im69-2 { font-size: 40px; margin-bottom: 8px; }
+  .im69-3 { display: flex; gap: 8px; margin-bottom: 16px; }
+  .im69-4 { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .im69-5 { display: flex; justify-content: space-between; align-items: center; }
+</style>
+
 <%- include('../partials/navbar') %>
-<div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto;">
+<div class="container dz68-1">
   <%- include('../partials/flash') %>
 
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-    <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
-    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">🎯 <%= t('msn_title') %></h1>
+  <div class="im69-1">
+    <a class="dz68-2" href="/profile">←</a>
+    <h1 class="dz68-3">🎯 <%= t('msn_title') %></h1>
   </div>
 
   <!-- ব্যানার -->
-  <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center;">
-    <div style="font-size:40px;margin-bottom:8px;">🎯</div>
-    <div style="color:var(--text-main);font-size:16px;font-weight:bold;margin-bottom:4px;"><%= t('msn_today') %></div>
-    <div style="color:rgba(255,255,255,0.9);font-size:13px;"><%= t('msn_sub') %></div>
+  <div class="dz68-4">
+    <div class="im69-2">🎯</div>
+    <div class="dz68-5"><%= t('msn_today') %></div>
+    <div class="dz68-6">প্রতিদিন খলে মিশন শেষ করুন আর কয়েন জতুন</div>
   </div>
 
   <!-- ট্যাব -->
-  <div style="display:flex;gap:8px;margin-bottom:16px;">
-    <button class="mtab" data-tab="daily" style="flex:1;padding:10px;border-radius:10px;border:none;background:#10b981;color:#fff;font-weight:bold;font-size:13px;cursor:pointer;"><%= t('msn_daily') %></button>
-    <button class="mtab" data-tab="weekly" style="flex:1;padding:10px;border-radius:10px;border:none;background:rgba(255,255,255,0.08);color:var(--text-main);font-weight:bold;font-size:13px;cursor:pointer;"><%= t('msn_weekly') %></button>
-    <button class="mtab" data-tab="special" style="flex:1;padding:10px;border-radius:10px;border:none;background:rgba(255,255,255,0.08);color:var(--text-main);font-weight:bold;font-size:13px;cursor:pointer;"><%= t('msn_special') %></button>
+  <div class="im69-3">
+    <button class="mtab dz68-7" data-tab="daily"><%= t('msn_daily') %></button>
+    <button class="mtab dz68-8" data-tab="weekly"><%= t('msn_weekly') %></button>
+    <button class="mtab dz68-8" data-tab="special"><%= t('msn_special') %></button>
   </div>
 
   <% ['daily','weekly','special'].forEach(function(tab) { var list = missions && missions[tab] ? missions[tab] : []; %>
@@ -27,35 +60,35 @@
     <% if (list.length > 0) { %>
       <% list.forEach(m => { %>
         <div style="background:rgba(255,255,255,0.05);border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid <%= m.done && !m.claimed ? '#10b981' : 'transparent' %>;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <div style="color:var(--text-main);font-size:14px;font-weight:600;"><%= m.title %></div>
-            <div style="color:#f59e0b;font-size:13px;font-weight:bold;">+<%= m.reward %> 🪙</div>
+          <div class="im69-4">
+            <div class="dz68-9"><%= m.title %></div>
+            <div class="dz68-10">+<%= m.reward %> 🪙</div>
           </div>
 
-          <div style="background:rgba(255,255,255,0.1);border-radius:20px;height:10px;overflow:hidden;margin-bottom:6px;">
+          <div class="dz68-11">
             <div style="width:<%= m.pct %>%;height:100%;background:linear-gradient(90deg,#10b981,#34d399);transition:width .5s;"></div>
           </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div style="color:var(--text-muted);font-size:11px;">
+          <div class="im69-5">
+            <div class="dz68-12">
               <%= Number(m.progress).toLocaleString('bn-BD') %> / <%= Number(m.target).toLocaleString('bn-BD') %>
             </div>
 
             <% if (m.claimed) { %>
-              <span style="color:#10b981;font-size:12px;font-weight:bold;">✅ <%= t('msn_claimed') %></span>
+              <span class="dz68-13">✅ <%= t('cb_claimed') %></span>
             <% } else if (m.done) { %>
-              <form action="/profile/missions/claim/<%= m.id %>" method="POST" style="margin:0;">
-                <button type="submit" style="background:#10b981;color:#fff;border:none;border-radius:8px;padding:6px 16px;font-size:12px;font-weight:bold;cursor:pointer;">
+              <form class="dz68-14" action="/profile/missions/claim/<%= m.id %>" method="POST">
+                <button class="dz68-15" type="submit">
                   <%= t('msn_claim') %>
                 </button>
               </form>
             <% } else { %>
-              <span style="color:var(--text-muted);font-size:12px;"><%= t('msn_in_progress') %></span>
+              <span class="dz68-16"><%= t('msn_in_progress') %></span>
             <% } %>
           </div>
         </div>
       <% }) %>
     <% } else { %>
-      <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:30px;text-align:center;color: var(--text-muted);">
+      <div class="dz68-17">
         <%= t('msn_none') %>
       </div>
     <% } %>
@@ -64,7 +97,7 @@
 
   <script src="/js/views/profile-missions.js"></script>
 
-  <p style="font-size:.75rem;color:var(--text-muted);text-align:center;margin-top:1rem;line-height:1.6;">
+  <p class="dz68-18">
     ⏰ <%= t('msn_info_1') %><br>
     <%= t('msn_info_2') %>
   </p>

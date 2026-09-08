@@ -6,6 +6,24 @@
   <title><%= t('admin_title_contest_payouts') %></title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz36-1 { padding: 12px 16px; margin-bottom: 14px; background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.3); color: #10b981; font-weight: 700; font-size: 13px; }
+  .dz36-2 { padding: 12px 16px; margin-bottom: 14px; background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #ef4444; font-weight: 700; font-size: 13px; }
+  .dz36-3 { padding: 14px; margin-bottom: 14px; }
+  .dz36-4 { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .dz36-5 { font-size: 12px; color: var(--text-muted); }
+  .dz36-6 { max-width: 160px; }
+  .dz36-7 { font-size: 13px; color: var(--text-muted); font-weight: 600; }
+  .dz36-8 { margin-left: auto; }
+  .dz36-9 { margin-bottom: 20px; }
+  .dz36-10 { overflow-x: auto; }
+  .dz36-11 { text-align: right; }
+  .dz36-12 { font-size: 11px; color: var(--text-muted); }
+  .dz36-13 { text-align: right; white-space: nowrap; }
+  .dz36-14 { color: var(--text-muted); font-size: 11px; }
+  .dz36-15 { font-size: 13px; color: var(--text-muted); margin-top: 0; }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
   </style>
@@ -16,35 +34,35 @@
     <%- include('./partials/sidebar', { active: 'leaderboard' }) %>
     <div class="admin-content">
       <%- include('./partials/load-error') %>
-      <%- include('./partials/header', { pageTitle: t('acp_title'), pageSubtitle: t('acp_sub') }) %>
+      <%- include('./partials/header', { pageTitle: t("acp_title"), pageSubtitle: t("acp_sub") }) %>
 
       <% if (saved) { %>
-        <div class="admin-card" style="padding:12px 16px;margin-bottom:14px;background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.3);color:#10b981;font-weight:700;font-size:13px;">
+        <div class="admin-card dz36-1">
           <i class="fas fa-check-circle"></i> <%= t('admin_msg_updated_successfully') %>
         </div>
       <% } %>
       <% if (saveError) { %>
-        <div class="admin-card" style="padding:12px 16px;margin-bottom:14px;background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.3);color:#ef4444;font-weight:700;font-size:13px;">
+        <div class="admin-card dz36-2">
           <i class="fas fa-circle-exclamation"></i> <%= saveError %>
         </div>
       <% } %>
 
-      <div class="admin-card" style="padding:14px;margin-bottom:14px;">
-        <form method="GET" action="/admin/leaderboard/contest/payouts" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-          <label style="font-size:12px;color:var(--text-muted);"><%= t('admin_label_months_ago') %></label>
-          <select class="select" style="max-width:160px;" name="months" data-auto-submit>
+      <div class="admin-card dz36-3">
+        <form class="dz36-4" method="GET" action="/admin/leaderboard/contest/payouts">
+          <label class="dz36-5"><%= t('admin_label_months_ago') %></label>
+          <select class="select dz36-6" name="months" data-auto-submit>
             <% for (let i = 1; i <= 12; i++) { %>
               <option value="<%= i %>" <%= monthsBack === i ? 'selected' : '' %>><%= t('acp_months_ago').replace('{n}', i) %></option>
             <% } %>
           </select>
-          <span style="font-size:13px;color:var(--text-muted);font-weight:600;"><%= monthName || '—' %></span>
-          <a class="btn btn-sm" href="/admin/leaderboard" style="margin-left:auto;"><i class="fas fa-arrow-left"></i> <%= t('admin_back_to_leaderboard') %></a>
+          <span class="dz36-7"><%= monthName || '—' %></span>
+          <a class="btn btn-sm dz36-8" href="/admin/leaderboard"><i class="fas fa-arrow-left"></i> <%= t('admin_back_to_leaderboard') %></a>
         </form>
       </div>
 
-      <div class="admin-card" style="margin-bottom:20px;">
+      <div class="admin-card dz36-9">
         <div class="admin-card-header"><%= monthName || '—' %> — <%= t('acp_top5') %></div>
-        <div style="overflow-x:auto;">
+        <div class="dz36-10">
           <table class="admin-table">
             <thead>
               <tr>
@@ -54,7 +72,7 @@
                 <th><%= t('admin_col_prize') %></th>
                 <th><%= t('admin_col_status') %></th>
                 <th><%= t('admin_payout_details') %></th>
-                <th style="text-align:right;"><%= t('admin_col_action') %></th>
+                <th class="dz36-11"><%= t('admin_col_action') %></th>
               </tr>
             </thead>
             <tbody>
@@ -72,18 +90,18 @@
                         <span class="badge badge-amber"><%= t('admin_status_unpaid') %></span>
                       <% } %>
                     </td>
-                    <td style="font-size:11px;color:var(--text-muted);">
+                    <td class="dz36-12">
                       <% if (p.status === 'paid') { %>
                         <%= p.paid_at ? new Date(p.paid_at).toLocaleString('bn-BD') : '—' %><br>
                         by <%= p.paid_by_username || '—' %>
-                        <% if (p.notes) { %><br><%= t('acp_note') %> <%= p.notes %><% } %>
+                        <% if (p.notes) { %><br><%= t('abk_note') %> <%= p.notes %><% } %>
                       <% } else { %>—<% } %>
                     </td>
-                    <td style="text-align:right;white-space:nowrap;">
+                    <td class="dz36-13">
                       <% if (p.status === 'pending') { %>
                         <button type="button" class="btn btn-sm btn-green" data-markpaid-id="<%= p.id %>" data-markpaid-name="<%= p.username || '' %>"><i class="fas fa-check"></i> <%= t('admin_btn_mark_paid') %></button>
                       <% } else { %>
-                        <span style="color:var(--text-muted);font-size:11px;"><%= t('admin_label_final') %></span>
+                        <span class="dz36-14"><%= t('admin_label_final') %></span>
                       <% } %>
                     </td>
                   </tr>
@@ -98,7 +116,7 @@
 
       <div class="admin-card">
         <div class="admin-card-header"><%= t('admin_payout_history_heading') %></div>
-        <div style="overflow-x:auto;">
+        <div class="dz36-10">
           <table class="admin-table">
             <thead>
               <tr><th><%= t('admin_col_month') %></th><th><%= t('admin_col_rank') %></th><th><%= t('admin_col_user') %></th><th><%= t('admin_col_prize') %></th><th><%= t('admin_col_payout_date') %></th><th><%= t('admin_col_admin') %></th></tr>
@@ -135,7 +153,7 @@
       </div>
       <form method="POST" id="markPaidForm">
         <div class="modal-body">
-          <p style="font-size:13px;color:var(--text-muted);margin-top:0;"><span id="markPaidUsername"></span> <%= t('admin_confirm_prize_note') %></p>
+          <p class="dz36-15"><span id="markPaidUsername"></span> <%= t('admin_confirm_prize_note') %></p>
           <textarea class="input" name="notes" rows="2" placeholder="<%= t('admin_field_note_optional_trx') %>"></textarea>
           <input type="hidden" name="months" value="<%= monthsBack %>">
         </div>

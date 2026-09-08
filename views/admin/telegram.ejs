@@ -29,7 +29,7 @@ const categoryRows = (categories || []).map(key =>
 
 const lastTest = st.lastTestAt
   ? '<p class="text-xs mt-2 ' + (st.lastTestStatus === 'success' ? 'text-emerald-600' : 'text-red-500') + '">' +
-      '<i class="fas ' + (st.lastTestStatus === 'success' ? 'fa-check' : 'fa-xmark') + '"></i> ' + t("tg_last_test") + '' +
+      '<i class="fas ' + (st.lastTestStatus === 'success' ? 'fa-check' : 'fa-xmark') + '"></i> ' + t("tg_last_test") +
       escapeHtml(new Date(st.lastTestAt).toLocaleString('en-GB')) +
       (st.lastTestBot ? ' — ' + escapeHtml(st.lastTestBot) : '') +
       (st.lastTestStatus !== 'success' && st.lastTestError ? '<br>' + escapeHtml(st.lastTestError) : '') +

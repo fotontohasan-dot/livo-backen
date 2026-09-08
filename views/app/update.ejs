@@ -1,7 +1,15 @@
 <%- include('../partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im55-1 { margin-bottom: 1.5rem; }
+</style>
+
 <%- include('../partials/navbar') %>
 <div class="container page">
-  <h1 style="margin-bottom: 1.5rem;">App Update</h1>
+  <h1 class="im55-1">App Update</h1>
   <div class="card">
     <div class="card-body">
       <p>You are using the latest version.</p>

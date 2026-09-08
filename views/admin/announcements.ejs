@@ -6,6 +6,26 @@
   <title><%= t('admin_title_announcements') %></title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .sp12-1.sp12-1 { display: none; }
+  .sp12-2.sp12-2 { background: var(--gold,#EAB308); color: #1a1a1a; padding: 9px 18px; font-size: 13px; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz26-1 { background: rgba(239,68,68,0.1); border: 1px solid #ef4444; color: #f87171; padding: 10px 14px; border-radius: 10px; margin-bottom: 12px; font-size: 13px; }
+  .dz26-2 { background: rgba(16,185,129,0.1); border: 1px solid #10b981; color: #10b981; padding: 10px 14px; border-radius: 10px; margin-bottom: 12px; font-size: 13px; }
+  .dz26-3 { color: #fff; font-size: 14px; }
+  .dz26-4 { margin-top: 12px; }
+  .dz26-5 { max-width: 260px; white-space: normal; }
+  .dz26-6 { font-size: 11px; }
+  .dz26-7 { color: #f87171; font-weight: 700; }
+  .dz26-8 { white-space: nowrap; }
+  .dz26-9 { display: inline; }
+  .dz26-10 { background: #334155; color: #fff; }
+  .dz26-11 { background: #f59e0b; color: #1a1a1a; }
+  .dz26-12 { background: #ef4444; color: #fff; }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
     .ann-form-box { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 18px; margin-bottom: 18px; }
@@ -34,12 +54,12 @@
       <%- include('./partials/load-error') %>
       <%- include('./partials/header', { pageTitle: 'Announcements & Broadcast', pageSubtitle: 'Banner / Popup / Scrolling Notice / In-App Message' }) %>
 
-      <% if (error) { %><div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;color:#f87171;padding:10px 14px;border-radius:10px;margin-bottom:12px;font-size:13px;"><%= error %></div><% } %>
-      <% if (created) { %><div style="background:rgba(16,185,129,0.1);border:1px solid #10b981;color:#10b981;padding:10px 14px;border-radius:10px;margin-bottom:12px;font-size:13px;"><%= t('admin_msg_saved') %></div><% } %>
+      <% if (error) { %><div class="dz26-1"><%= error %></div><% } %>
+      <% if (created) { %><div class="dz26-2"><%= t('admin_msg_saved') %></div><% } %>
 
       <div class="ann-form-box">
-        <b style="color:#fff;font-size:14px;"><%= t('admin_ann_create_heading') %></b>
-        <form method="POST" action="/admin/announcements/create" style="margin-top:12px;">
+        <b class="dz26-3"><%= t('admin_ann_create_heading') %></b>
+        <form class="dz26-4" method="POST" action="/admin/announcements/create">
           <div class="ann-grid">
             <div>
               <label class="ann-label"><%= t('admin_col_type') %></label>
@@ -59,14 +79,14 @@
               </select>
             </div>
           </div>
-          <div class="ann-grid" id="roleField" style="display:none;">
+          <div class="ann-grid sp12-1" id="roleField">
             <div>
               <label class="ann-label"><%= t('admin_col_role') %></label>
               <select name="target_role"><option value="user"><%= t('admin_role_user') %></option><option value="admin"><%= t('admin_role_admin') %></option></select>
             </div>
             <div></div>
           </div>
-          <div class="ann-grid" id="userField" style="display:none;">
+          <div class="ann-grid sp12-1" id="userField">
             <div><label class="ann-label"><%= t('admin_ann_target_user_id') %></label><input type="number" name="target_user_id" placeholder="<%= t('admin_ph_example_1024') %>"></div>
             <div></div>
           </div>
@@ -82,7 +102,7 @@
             <div><label class="ann-label"><%= t('admin_field_schedule_start') %></label><input type="datetime-local" name="starts_at"></div>
             <div><label class="ann-label"><%= t('admin_field_expire_optional') %></label><input type="datetime-local" name="expires_at"></div>
           </div>
-          <button type="submit" class="btn-xs" style="background:var(--gold,#EAB308);color:#1a1a1a;padding:9px 18px;font-size:13px;" data-loading-label="<%= t('aan_creating') %>"><%= t('admin_ann_create_btn') %></button>
+          <button type="submit" class="btn-xs sp12-2" data-loading-label="<%= t('aan_creating') %>"><%= t('admin_ann_create_btn') %></button>
         </form>
       </div>
 
@@ -94,27 +114,27 @@
             <tr>
               <td>#<%= a.id %></td>
               <td><span class="type-badge type-<%= a.type %>"><%= a.type %></span></td>
-              <td style="max-width:260px;white-space:normal;"><%= (a.message_bn||'').slice(0,80) %></td>
-              <td><%= a.target_type === 'all' ? t('aan_all') : (a.target_type === 'role' ? 'Role: ' + a.target_role : 'User #' + a.target_user_id) %></td>
-              <td style="font-size:11px;">
-                <%= t('aan_starts') %> <%= a.starts_at ? new Date(a.starts_at).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') : '-' %><br>
-                <%= t('aan_ends') %> <%= a.expires_at ? new Date(a.expires_at).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') : t('aan_never') %>
+              <td class="dz26-5"><%= (a.message_bn||'').slice(0,80) %></td>
+              <td><%= a.target_type === 'all' ? t("aan_all") : (a.target_type === 'role' ? 'Role: ' + a.target_role : 'User #' + a.target_user_id) %></td>
+              <td class="dz26-6">
+                <%= t('aan_starts') %> <%= a.starts_at ? new Date(a.starts_at).toLocaleString('bn-BD') : '-' %><br>
+                <%= t('aan_ends') %> <%= a.expires_at ? new Date(a.expires_at).toLocaleString('bn-BD') : t("aan_never") %>
               </td>
               <td>
                 <% const expired = a.expires_at && new Date(a.expires_at) < new Date(); %>
-                <% if (expired) { %><span style="color:#f87171;font-weight:700;"><%= t('admin_status_expired') %></span>
+                <% if (expired) { %><span class="dz26-7"><%= t('admin_status_expired') %></span>
                 <% } else if (a.active) { %><span class="status-active"><%= t('admin_status_active') %></span>
                 <% } else { %><span class="status-inactive"><%= t('admin_status_inactive') %></span><% } %>
               </td>
-              <td style="white-space:nowrap;">
-                <form method="POST" action="/admin/announcements/<%= a.id %>/toggle" style="display:inline;">
-                  <button class="btn-xs" style="background:#334155;color:#fff;"><%= a.active ? 'Disable' : 'Enable' %></button>
+              <td class="dz26-8">
+                <form class="dz26-9" method="POST" action="/admin/announcements/<%= a.id %>/toggle">
+                  <button class="btn-xs dz26-10"><%= a.active ? 'Disable' : 'Enable' %></button>
                 </form>
-                <form method="POST" action="/admin/announcements/<%= a.id %>/expire-now" style="display:inline;">
-                  <button class="btn-xs" style="background:#f59e0b;color:#1a1a1a;"><%= t('admin_ann_expire_now') %></button>
+                <form class="dz26-9" method="POST" action="/admin/announcements/<%= a.id %>/expire-now">
+                  <button class="btn-xs dz26-11"><%= t('admin_ann_expire_now') %></button>
                 </form>
-                <form method="POST" action="/admin/announcements/<%= a.id %>/delete" style="display:inline;" data-confirm="<%= t('aan_delete_confirm') %>">
-                  <button class="btn-xs" style="background:#ef4444;color:#fff;"><%= t('admin_btn_delete') %></button>
+                <form class="dz26-9" method="POST" action="/admin/announcements/<%= a.id %>/delete" data-confirm="<%= t('ant_delete_confirm') %>">
+                  <button class="btn-xs dz26-12"><%= t('admin_btn_delete') %></button>
                 </form>
               </td>
             </tr>

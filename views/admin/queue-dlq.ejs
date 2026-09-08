@@ -1,3 +1,9 @@
+<style nonce="<%= cspNonce %>">
+  /* Runtime-generated markup: these inline styles live in JS strings, so
+     cascade-check cannot see them. Migrated only where no rule in the site
+     CSS can set the same longhand on this tag/class at all. */
+  .js1.js1.js1 { display: inline; }
+</style>
 <%
 function escapeHtml(str) {
   return String(str == null ? '' : str)
@@ -18,10 +24,10 @@ function dlqRow(j) {
     '<td class="px-6 py-4 text-xs text-slate-400">' + fmtDate(j.dead_lettered_at) + '</td>' +
     '<td class="px-6 py-4 text-center">' +
       '<div class="flex items-center justify-center gap-2">' +
-        '<form method="POST" action="/admin/queue-dlq/' + j.id + '/requeue" style="display:inline">' +
+        '<form class="js1" method="POST" action="/admin/queue-dlq/' + j.id + '/requeue">' +
           '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-blue-500 hover:bg-blue-600 text-white">Requeue</button>' +
         '</form>' +
-        '<form method="POST" action="/admin/queue-dlq/' + j.id + '/purge" style="display:inline" data-confirm="' + t("adq_purge_confirm") + '">' +
+        '<form class="js1" method="POST" action="/admin/queue-dlq/' + j.id + '/purge" data-confirm="' + t("adq_purge_confirm") + '">' +
           '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-red-500 hover:bg-red-600 text-white">Purge</button>' +
         '</form>' +
       '</div>' +
@@ -52,8 +58,8 @@ const f = filters || {};
             <option value="">${t('ash_all_types')}</option>
             ${(types || []).map(type => '<option value="' + type + '" ' + (f.type === type ? 'selected' : '') + '>' + type + '</option>').join('')}
         </select>
-        <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">${t('ash_filter')}</button>
-        ${f.type ? '<a href="/admin/queue-dlq" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">' + t("ash_reset") + '</a>' : ''}
+        <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">${t('st_filter')}</button>
+        ${f.type ? '<a href="/admin/queue-dlq" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">' + t("adg_reset") + '</a>' : ''}
         ${(jobs && jobs.length) ? `
         <form method="POST" action="/admin/queue-dlq/purge-all" data-confirm="${t('adq_purge_all_confirm')}" style="margin-left:auto" class="flex items-center gap-2">
             <select name="olderThanDays" class="border border-slate-200 px-3 py-2.5 rounded-2xl text-xs">
@@ -83,9 +89,9 @@ const f = filters || {};
     </div>
 
     <div class="flex justify-center gap-3">
-        ${page > 1 ? '<a href="/admin/queue-dlq?page=' + (page - 1) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">← ' + t("ash_prev_page") + '</a>' : ''}
+        ${page > 1 ? '<a href="/admin/queue-dlq?page=' + (page - 1) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">← ' + t("aal_prev_page") + '</a>' : ''}
         <span class="px-4 py-2 text-sm text-slate-500">${t('ash_page_x_y').replace('{page}', page).replace('{pages}', totalPages)}</span>
-        ${page < totalPages ? '<a href="/admin/queue-dlq?page=' + (page + 1) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">' + t("ash_next_page") + ' →</a>' : ''}
+        ${page < totalPages ? '<a href="/admin/queue-dlq?page=' + (page + 1) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">' + t("aal_next_page") + ' →</a>' : ''}
     </div>
 </div>
 `

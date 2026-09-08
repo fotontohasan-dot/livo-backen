@@ -1,3 +1,9 @@
+<style nonce="<%= cspNonce %>">
+  /* Runtime-generated markup: these inline styles live in JS strings, so
+     cascade-check cannot see them. Migrated only where no rule in the site
+     CSS can set the same longhand on this tag/class at all. */
+  .js1.js1.js1 { display: inline; }
+</style>
 <%
 function escapeHtml(str) {
   return String(str == null ? '' : str)
@@ -16,7 +22,7 @@ function fmtSize(bytes) {
   while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
   return n.toFixed(1) + ' ' + units[i];
 }
-function typeLabel(t) {
+function typeLabel(kind) {
   return t === 'database' ? '<span class="px-2.5 py-1 text-xs font-bold rounded-full bg-blue-100 text-blue-700">Database</span>'
     : t === 'uploads' ? '<span class="px-2.5 py-1 text-xs font-bold rounded-full bg-purple-100 text-purple-700">Uploads</span>'
     : '<span class="px-2.5 py-1 text-xs font-bold rounded-full bg-amber-100 text-amber-700">Config</span>';
@@ -28,15 +34,15 @@ function row(b) {
   const actions = b.status === 'completed' ? (
     '<div class="flex gap-2 justify-end flex-wrap">' +
       '<a href="/admin/backups/' + b.id + '/download" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200">Download</a>' +
-      '<form method="POST" action="/admin/backups/' + b.id + '/restore" data-confirm="' + t("abk_restore_confirm") + ' (' + escapeHtml(b.type) + ')।" style="display:inline">' +
+      '<form class="js1" method="POST" action="/admin/backups/' + b.id + '/restore" data-confirm="' + t("abk_restore_confirm") + ' (' + escapeHtml(b.type) + ')।">' +
         '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100">Restore</button>' +
       '</form>' +
-      '<form method="POST" action="/admin/backups/' + b.id + '/delete" data-confirm="' + t("abk_delete_confirm") + '" style="display:inline">' +
+      '<form class="js1" method="POST" action="/admin/backups/' + b.id + '/delete" data-confirm="' + t("abk_delete_confirm") + '">' +
         '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-red-50 text-red-600 hover:bg-red-100">Delete</button>' +
       '</form>' +
     '</div>'
   ) : (
-    '<form method="POST" action="/admin/backups/' + b.id + '/delete" data-confirm="' + t("abk_delete_short") + '" style="display:inline">' +
+    '<form class="js1" method="POST" action="/admin/backups/' + b.id + '/delete" data-confirm="' + t("abk_delete_short") + '">' +
       '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-red-50 text-red-600 hover:bg-red-100">Delete</button>' +
     '</form>'
   );
@@ -113,7 +119,7 @@ const rows = (backups || []).map(row).join('') || '<tr><td colspan="8" class="px
     </div>
 
     <div class="flex gap-2 mb-4">
-        <a href="/admin/backups" class="px-4 py-2 rounded-xl text-sm font-medium ${!filterType ? 'bg-slate-900 text-white' : 'bg-white border text-slate-600'}">${t('abk_all')}</a>
+        <a href="/admin/backups" class="px-4 py-2 rounded-xl text-sm font-medium ${!filterType ? 'bg-slate-900 text-white' : 'bg-white border text-slate-600'}">সব</a>
         <a href="/admin/backups?type=database" class="px-4 py-2 rounded-xl text-sm font-medium ${filterType === 'database' ? 'bg-slate-900 text-white' : 'bg-white border text-slate-600'}">Database</a>
         <a href="/admin/backups?type=uploads" class="px-4 py-2 rounded-xl text-sm font-medium ${filterType === 'uploads' ? 'bg-slate-900 text-white' : 'bg-white border text-slate-600'}">Uploads</a>
         <a href="/admin/backups?type=config" class="px-4 py-2 rounded-xl text-sm font-medium ${filterType === 'config' ? 'bg-slate-900 text-white' : 'bg-white border text-slate-600'}">Config</a>

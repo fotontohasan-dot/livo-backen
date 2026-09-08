@@ -1,3 +1,9 @@
+<style nonce="<%= cspNonce %>">
+  /* Runtime-generated markup: these inline styles live in JS strings, so
+     cascade-check cannot see them. Migrated only where no rule in the site
+     CSS can set the same longhand on this tag/class at all. */
+  .js1.js1.js1 { display: inline; }
+</style>
 <%
 function escapeHtml(str) {
   return String(str == null ? '' : str)
@@ -18,15 +24,15 @@ function row(tpl) {
     '<td class="px-5 py-4">' + langBadge(tpl.lang) + '</td>' +
     '<td class="px-5 py-4">' +
       '<div class="font-semibold text-slate-900 text-sm">' + escapeHtml(tpl.name) + '</div>' +
-      '<div class="text-xs text-slate-400 font-mono">' + escapeHtml(t.template_key) + '</div>' +
+      '<div class="text-xs text-slate-400 font-mono">' + escapeHtml(tpl.template_key) + '</div>' +
     '</td>' +
     '<td class="px-5 py-4 text-xs text-slate-500 max-w-xs truncate">' + escapeHtml((tpl.body || '').replace(/<[^>]+>/g, ' ').slice(0, 80)) + '...</td>' +
     '<td class="px-5 py-4">' +
-      '<span class="px-2.5 py-1 text-xs font-bold rounded-full ' + (tpl.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500') + '">' + (tpl.is_active ? t('ant_active') : t('ant_inactive')) + '</span>' +
+      '<span class="px-2.5 py-1 text-xs font-bold rounded-full ' + (tpl.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500') + '">' + (tpl.is_active ? t("tg_active") : t("snt_inactive")) + '</span>' +
     '</td>' +
     '<td class="px-5 py-4 text-right whitespace-nowrap">' +
       '<a href="/admin/notification-templates/' + tpl.id + '/edit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 mr-1.5">Edit</a>' +
-      '<form method="POST" action="/admin/notification-templates/' + tpl.id + '/delete" data-confirm="' + t("ant_delete_confirm") + '" style="display:inline">' +
+      '<form class="js1" method="POST" action="/admin/notification-templates/' + tpl.id + '/delete" data-confirm="' + t("ant_delete_confirm") + '">' +
         '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-red-50 text-red-600 hover:bg-red-100">Delete</button>' +
       '</form>' +
     '</td>' +
@@ -46,7 +52,7 @@ const f = filters || { channel: '', lang: '', q: '' };
             <p class="text-slate-500 mt-1 text-sm">${t('ant_subtitle')}</p>
         </div>
         <a href="/admin/notification-templates/new" class="px-5 py-2.5 bg-slate-900 text-white rounded-2xl text-sm font-semibold hover:bg-slate-800">
-            <i class="fas fa-plus mr-1"></i> ${t('ant_new')}
+            <i class="fas fa-plus mr-1"></i> ${t('ntf_new_title')}
         </a>
     </div>
 
@@ -61,23 +67,23 @@ const f = filters || { channel: '', lang: '', q: '' };
         </select>
         <select name="lang" class="border border-slate-200 px-3 py-2 rounded-xl text-sm">
             <option value="">${t('ant_all_langs')}</option>
-            <option value="bn" ${f.lang === 'bn' ? 'selected' : ''}>${t('ant_bengali')}</option>
+            <option value="bn" ${f.lang === 'bn' ? 'selected' : ''}>${t('ntf_bengali')}</option>
             <option value="en" ${f.lang === 'en' ? 'selected' : ''}>English</option>
         </select>
         <input type="text" name="q" value="${escapeHtml(f.q)}" placeholder="${t('ant_search_placeholder')}" class="border border-slate-200 px-3 py-2 rounded-xl text-sm flex-1 min-w-[180px]">
-        <button type="submit" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-200">${t('ant_filter')}</button>
+        <button type="submit" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-200">${t('st_filter')}</button>
     </form>
 
     <div class="bg-white rounded-3xl border border-slate-100 overflow-x-auto">
         <table class="w-full text-sm">
             <thead>
                 <tr class="border-b border-slate-100 text-left text-xs text-slate-400 uppercase">
-                    <th class="px-5 py-3">${t('ant_col_channel')}</th>
-                    <th class="px-5 py-3">${t('ant_col_lang')}</th>
+                    <th class="px-5 py-3">${t('ntf_channel')}</th>
+                    <th class="px-5 py-3">${t('ntf_language')}</th>
                     <th class="px-5 py-3">${t('ant_col_name')}</th>
                     <th class="px-5 py-3">${t('ant_col_body')}</th>
-                    <th class="px-5 py-3">${t('ant_col_status')}</th>
-                    <th class="px-5 py-3 text-right">${t('ant_col_action')}</th>
+                    <th class="px-5 py-3">${t('dep_col_status')}</th>
+                    <th class="px-5 py-3 text-right">${t('dep_col_action')}</th>
                 </tr>
             </thead>
             <tbody>${rows}</tbody>

@@ -6,6 +6,15 @@
   <title><%= t.admin_payment_methods_title %> • Livo Admin</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz30-1 { padding: 16px; margin-bottom: 16px; }
+  .dz30-2 { font-weight: 800; color: #fff; font-size: 13px; margin-bottom: 12px; }
+  .dz30-3 { color: #f59e0b; }
+  .dz30-4 { width: 100%; }
+  .dz30-5 { padding: 14px; margin-bottom: 16px; }
+  .dz30-6 { padding: 24px; text-align: center; color: #94a3b8; font-size: 13px; }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
     .pm-form { display: grid; grid-template-columns: 1fr; gap: 10px; }
@@ -46,9 +55,9 @@
       <%- include('./partials/header', { pageTitle: t.admin_payment_methods_title, pageSubtitle: t.admin_payment_methods_subtitle }) %>
 
       <!-- নতুন অ্যাকাউন্ট যোগ -->
-      <div class="admin-card" style="padding:16px;margin-bottom:16px;">
-        <div style="font-weight:800;color:#fff;font-size:13px;margin-bottom:12px;">
-          <i class="fas fa-plus-circle" style="color:#f59e0b;"></i> <%= t.add_payment_method %>
+      <div class="admin-card dz30-1">
+        <div class="dz30-2">
+          <i class="fas fa-plus-circle dz30-3"></i> <%= t.add_payment_method %>
         </div>
         <form method="POST" action="/payment/admin/payment-methods" class="pm-form" data-pm-form>
           <div class="pm-field">
@@ -72,14 +81,14 @@
             </select>
           </div>
           <div class="pm-field">
-            <button class="btn btn-blue" type="submit" style="width:100%;"><i class="fas fa-save"></i> <%= t.save %></button>
+            <button class="btn btn-blue dz30-4" type="submit"><i class="fas fa-save"></i> <%= t.save %></button>
           </div>
         </form>
         <p class="pm-note"><%= t.payment_methods_display_only_note %></p>
       </div>
 
       <!-- ফিল্টার -->
-      <div class="admin-card" style="padding:14px;margin-bottom:16px;">
+      <div class="admin-card dz30-5">
         <form method="GET" action="/payment/admin/payment-methods" class="pm-filters">
           <div class="pm-field">
             <label for="fMethod"><%= t.payment_method_label %></label>
@@ -106,7 +115,7 @@
       <div class="admin-card">
         <div class="admin-card-header"><i class="fas fa-money-check-dollar"></i> <%= t.admin_payment_methods_title %></div>
         <% if (!methods || methods.length === 0) { %>
-          <div class="empty-state" style="padding:24px;text-align:center;color:#94a3b8;font-size:13px;">
+          <div class="empty-state dz30-6">
             <%= t.no_payment_methods %>
           </div>
         <% } else { %>

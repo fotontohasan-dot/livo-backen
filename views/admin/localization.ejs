@@ -6,6 +6,26 @@
   <title><%= t('admin_title_localization') %></title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz46-1 { display: flex; }
+  .dz46-2 { max-width: 260px; }
+  .dz46-3 { background: var(--gold,#EAB308); color: #1a1a1a; margin-left: 6px; }
+  .dz46-4 { background: #1e293b; color: #fff; text-decoration: none; }
+  .dz46-5 { display: inline; }
+  .dz46-6 { background: #10b981; color: #fff; }
+  .dz46-7 { color: #fff; font-size: 13px; }
+  .dz46-8 { display: flex; gap: 8px; margin-top: 8px; }
+  .dz46-9 { background: var(--gold,#EAB308); color: #1a1a1a; }
+  .dz46-10 { background: #334155; color: #fff; }
+  .dz46-11 { background: #1e293b; color: #fff; cursor: pointer; }
+  .dz46-12 { display: none; }
+  .dz46-13 { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .dz46-14 { max-width: 220px; }
+  .dz46-15 { display: flex; gap: 6px; }
+  .dz46-16 { color: #10b981; font-size: 11px; font-weight: 700; }
+  .dz46-17 { background: #ef4444; color: #fff; }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
     .loc-toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; align-items: center; }
@@ -30,49 +50,49 @@
     <%- include('./partials/sidebar', { active: 'localization' }) %>
     <div class="admin-content">
       <%- include('./partials/load-error') %>
-      <%- include('./partials/header', { pageTitle: 'Localization Management', pageSubtitle: t('alo_sub') }) %>
+      <%- include('./partials/header', { pageTitle: 'Localization Management', pageSubtitle: t("alo_sub") }) %>
 
       <div class="loc-toolbar">
         <span class="stat-pill"><i class="fas fa-database"></i> <%= t('alo_total_key') %> <%= total %></span>
         <span class="stat-pill" style="<%= missingCount > 0 ? 'background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.3);color:#f87171;' : '' %>">
           <i class="fas fa-triangle-exclamation"></i> Missing Translation: <%= missingCount %>
         </span>
-        <form method="GET" action="/admin/localization" class="input-icon-wrap" style="display:flex;">
-          <input class="input cell-input" style="max-width:260px;" type="text" name="q" placeholder="<%= t('admin_ph_search_key_or_text') %>" value="<%= q %>">
-          <button class="btn-xs" style="background:var(--gold,#EAB308);color:#1a1a1a;margin-left:6px;"><%= t('admin_btn_search') %></button>
+        <form method="GET" action="/admin/localization" class="input-icon-wrap dz46-1">
+          <input class="input cell-input dz46-2" type="text" name="q" placeholder="<%= t('admin_ph_search_key_or_text') %>" value="<%= q %>">
+          <button class="btn-xs dz46-3"><%= t('admin_btn_search') %></button>
         </form>
-        <a href="/admin/localization/export/bn" class="btn-xs" style="background:#1e293b;color:#fff;text-decoration:none;"><i class="fas fa-download"></i> <%= t('admin_loc_export_bn') %></a>
-        <a href="/admin/localization/export/en" class="btn-xs" style="background:#1e293b;color:#fff;text-decoration:none;"><i class="fas fa-download"></i> <%= t('admin_loc_export_en') %></a>
-        <form method="POST" action="/admin/localization/refresh-cache" style="display:inline;">
-          <button class="btn-xs" style="background:#10b981;color:#fff;" data-loading-label="Refreshing..."><i class="fas fa-rotate"></i> <%= t('admin_btn_cache_refresh') %></button>
+        <a href="/admin/localization/export/bn" class="btn-xs dz46-4"><i class="fas fa-download"></i> <%= t('admin_loc_export_bn') %></a>
+        <a href="/admin/localization/export/en" class="btn-xs dz46-4"><i class="fas fa-download"></i> <%= t('admin_loc_export_en') %></a>
+        <form class="dz46-5" method="POST" action="/admin/localization/refresh-cache">
+          <button class="btn-xs dz46-6" data-loading-label="Refreshing..."><i class="fas fa-rotate"></i> <%= t('admin_btn_cache_refresh') %></button>
         </form>
       </div>
 
       <div class="import-box">
-        <b style="color:#fff;font-size:13px;"><%= t('admin_btn_import_json') %></b>
+        <b class="dz46-7"><%= t('admin_btn_import_json') %></b>
         <form method="POST" action="/admin/localization/import/bn" data-prep-import="bn">
           <input type="hidden" name="json" id="importJsonBn">
         </form>
         <form method="POST" action="/admin/localization/import/en" data-prep-import="en">
           <input type="hidden" name="json" id="importJsonEn">
         </form>
-        <textarea id="importTextarea" placeholder='{"key_name": "<%= t('alo_value') %>"}'></textarea>
-        <div style="display:flex;gap:8px;margin-top:8px;">
-          <button type="button" class="btn-xs" style="background:var(--gold,#EAB308);color:#1a1a1a;" data-submit-import="bn"><%= t('admin_loc_import_bn') %></button>
-          <button type="button" class="btn-xs" style="background:#334155;color:#fff;" data-submit-import="en"><%= t('admin_loc_import_en') %></button>
-          <label class="btn-xs" style="background:#1e293b;color:#fff;cursor:pointer;">
-            <%= t('admin_btn_load_from_file') %> <input type="file" accept=".json" style="display:none" data-load-file>
+        <textarea id="importTextarea" placeholder='{"key_name": "' + t("alo_value") + '"}'></textarea>
+        <div class="dz46-8">
+          <button type="button" class="btn-xs dz46-9" data-submit-import="bn"><%= t('admin_loc_import_bn') %></button>
+          <button type="button" class="btn-xs dz46-10" data-submit-import="en"><%= t('admin_loc_import_en') %></button>
+          <label class="btn-xs dz46-11">
+            <%= t('admin_btn_load_from_file') %> <input class="dz46-12" type="file" accept=".json" data-load-file>
           </label>
         </div>
       </div>
 
       <div class="import-box">
-        <b style="color:#fff;font-size:13px;"><%= t('admin_loc_create_key') %></b>
-        <form method="POST" action="/admin/localization/create" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
-          <input class="cell-input" style="max-width:220px;" type="text" name="key" placeholder="key_name (a-z, 0-9, _)" required>
-          <input class="cell-input" style="max-width:260px;" type="text" name="bn" placeholder="<%= t('admin_ph_bangla_text') %>">
-          <input class="cell-input" style="max-width:260px;" type="text" name="en" placeholder="<%= t('admin_ph_english_text') %>">
-          <button class="btn-xs" style="background:var(--gold,#EAB308);color:#1a1a1a;"><%= t('admin_btn_create') %></button>
+        <b class="dz46-7"><%= t('admin_loc_create_key') %></b>
+        <form class="dz46-13" method="POST" action="/admin/localization/create">
+          <input class="cell-input dz46-14" type="text" name="key" placeholder="key_name (a-z, 0-9, _)" required>
+          <input class="cell-input dz46-2" type="text" name="bn" placeholder="<%= t('admin_ph_bangla_text') %>">
+          <input class="cell-input dz46-2" type="text" name="en" placeholder="<%= t('admin_ph_english_text') %>">
+          <button class="btn-xs dz46-9"><%= t('admin_btn_create') %></button>
         </form>
       </div>
 
@@ -86,7 +106,7 @@
             <tr>
               <td><span class="key-code"><%= r.key %></span></td>
               <td>
-                <form method="POST" action="/admin/localization/update" class="row-form" style="display:flex;gap:6px;">
+                <form method="POST" action="/admin/localization/update" class="row-form dz46-15">
                   <input type="hidden" name="key" value="<%= r.key %>">
                   <input type="hidden" name="en" value="<%= r.en %>" class="en-mirror">
                   <input class="cell-input <%= r.missingBn ? 'missing' : '' %>" type="text" name="bn" value="<%= r.bn %>">
@@ -95,14 +115,14 @@
                   <input class="cell-input <%= r.missingEn ? 'missing' : '' %>" type="text" name="en_display" onInput="this.closest('tr').querySelector('.en-mirror').value=this.value" value="<%= r.en %>">
               </td>
               <td>
-                <% if (r.missingBn || r.missingEn) { %><span class="badge-missing"><%= t('admin_label_missing') %></span><% } else { %><span style="color:#10b981;font-size:11px;font-weight:700;"><%= t('admin_status_ok') %></span><% } %>
+                <% if (r.missingBn || r.missingEn) { %><span class="badge-missing"><%= t('admin_label_missing') %></span><% } else { %><span class="dz46-16"><%= t('admin_status_ok') %></span><% } %>
               </td>
               <td>
-                  <button type="submit" class="btn-xs" style="background:#10b981;color:#fff;"><%= t('admin_btn_save') %></button>
+                  <button type="submit" class="btn-xs dz46-6"><%= t('admin_btn_save') %></button>
                 </form>
-                <form method="POST" action="/admin/localization/delete" style="display:inline;" data-confirm="<%= t('alo_delete_confirm') %>">
+                <form class="dz46-5" method="POST" action="/admin/localization/delete" data-confirm="<%= t('alo_delete_confirm') %>">
                   <input type="hidden" name="key" value="<%= r.key %>">
-                  <button class="btn-xs" style="background:#ef4444;color:#fff;"><%= t('admin_btn_delete') %></button>
+                  <button class="btn-xs dz46-17"><%= t('admin_btn_delete') %></button>
                 </form>
               </td>
             </tr>

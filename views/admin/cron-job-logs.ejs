@@ -6,6 +6,14 @@
   <title><%= job.label %> — <%= t('acj_history') %> • Livo Admin</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz44-1 { color: #f59e0b; font-size: 12px; text-decoration: none; display: inline-block; margin-bottom: 12px; }
+  .dz44-2 { overflow-x: auto; }
+  .dz44-3 { font-size: 11px; }
+  .dz44-4 { font-size: 11px; color: var(--text-muted); max-width: 320px; white-space: normal; }
+  .dz44-5 { text-align: center; color: var(--text-muted); padding: 20px; }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
   </style>
@@ -18,11 +26,11 @@
       <%- include('./partials/load-error') %>
       <%- include('./partials/header', { pageTitle: job.label + ' — Execution History', pageSubtitle: job.description }) %>
 
-      <a href="/admin/cron-jobs" style="color:#f59e0b;font-size:12px;text-decoration:none;display:inline-block;margin-bottom:12px;"><i class="fas fa-arrow-left"></i> <%= t('admin_back_to_cron_monitor') %></a>
+      <a class="dz44-1" href="/admin/cron-jobs"><i class="fas fa-arrow-left"></i> <%= t('admin_back_to_cron_monitor') %></a>
 
       <div class="admin-card">
         <div class="admin-card-header"><%= t('acj_all_runs').replace('{n}', logs.length) %></div>
-        <div style="overflow-x:auto;">
+        <div class="dz44-2">
           <table class="admin-table">
             <thead><tr><th><%= t('admin_col_status') %></th><th><%= t('admin_col_attempts') %></th><th><%= t('admin_col_duration') %></th><th><%= t('admin_col_triggered_by') %></th><th><%= t('admin_col_message') %></th><th><%= t('admin_col_started') %></th><th><%= t('admin_col_finished') %></th></tr></thead>
             <tbody>
@@ -32,14 +40,14 @@
                     <td><span class="badge <%= l.status === 'success' ? 'badge-green' : 'badge-red' %>"><%= l.status %></span></td>
                     <td><%= l.attempts %></td>
                     <td><%= l.duration_ms %>ms</td>
-                    <td style="font-size:11px;"><%= l.triggered_by %></td>
-                    <td style="font-size:11px;color:var(--text-muted);max-width:320px;white-space:normal;"><%= l.message %></td>
-                    <td style="font-size:11px;"><%= new Date(l.started_at).toLocaleString('bn-BD') %></td>
-                    <td style="font-size:11px;"><%= l.finished_at ? new Date(l.finished_at).toLocaleString('bn-BD') : '—' %></td>
+                    <td class="dz44-3"><%= l.triggered_by %></td>
+                    <td class="dz44-4"><%= l.message %></td>
+                    <td class="dz44-3"><%= new Date(l.started_at).toLocaleString('bn-BD') %></td>
+                    <td class="dz44-3"><%= l.finished_at ? new Date(l.finished_at).toLocaleString('bn-BD') : '—' %></td>
                   </tr>
                 <% }) %>
               <% } else { %>
-                <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;"><%= t('admin_empty_job_logs') %></td></tr>
+                <tr><td class="dz44-5" colspan="7"><%= t('admin_empty_job_logs') %></td></tr>
               <% } %>
             </tbody>
           </table>

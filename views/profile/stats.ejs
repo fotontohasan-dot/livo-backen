@@ -1,59 +1,96 @@
 <%- include('../partials/head') %>
-<div class="container" style="padding:16px;padding-bottom:100px">
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-    <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px">←</a>
-    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold">💰 <%= t('st_title') %></h1>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz67-1 { padding: 16px; padding-bottom: 100px; }
+  .dz67-2 { color: var(--text-main); text-decoration: none; font-size: 20px; }
+  .dz67-3 { color: var(--text-main); font-size: 18px; font-weight: bold; }
+  .dz67-4 { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 10px; }
+  .dz67-5 { white-space: nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: var(--text-main); text-decoration: none; }
+  .dz67-6 { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px 10px; color: var(--text-main); font-size: 12px; }
+  .dz67-7 { color: var(--text-muted); font-size: 12px; }
+  .dz67-8 { background: linear-gradient(90deg,#f59e0b,#fbbf24); border: none; color: #000; padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 800; }
+  .dz67-9 { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.1); }
+  .dz67-10 { color: var(--text-muted); font-size: 12px; margin-bottom: 8px; }
+  .dz67-11 { color: #f59e0b; font-size: 28px; font-weight: bold; }
+  .dz67-12 { color: #10b981; font-size: 22px; font-weight: bold; }
+  .dz67-13 { color: #ef4444; }
+  .dz67-14 { color: rgba(255,255,255,0.85); font-size: 13px; margin-bottom: 6px; }
+  .dz67-15 { color: var(--text-main); font-size: 32px; font-weight: bold; }
+  .dz67-16 { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.1); }
+  .dz67-17 { color: var(--text-muted); font-size: 11px; margin-bottom: 6px; }
+  .dz67-18 { color: #10b981; font-size: 18px; font-weight: bold; }
+  .dz67-19 { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; margin-top: 16px; border: 1px solid rgba(255,255,255,0.1); }
+  .dz67-20 { color: var(--text-main); font-weight: bold; margin-bottom: 12px; }
+  .dz67-21 { background: rgba(255,255,255,0.1); border-radius: 10px; height: 12px; overflow: hidden; }
+  .dz67-22 { text-align: right; color: #f59e0b; font-size: 14px; margin-top: 6px; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im68-1 { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .im68-2 { margin-bottom: 16px; }
+  .im68-3 { display: flex; gap: 8px; align-items: center; }
+  .im68-4 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+  .im68-5 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+</style>
+
+<div class="container dz67-1">
+  <div class="im68-1">
+    <a class="dz67-2" href="/profile">←</a>
+    <h1 class="dz67-3">💰 <%= t('st_title') %></h1>
   </div>
 
-  <form method="GET" action="/profile/stats" style="margin-bottom: 16px;">
-    <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 10px;">
-      <button type="submit" name="quick" value="today" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); background: <%= filter.quick === 'today' ? 'linear-gradient(90deg,#f59e0b,#fbbf24)' : 'rgba(255,255,255,0.05)' %>; color: <%= filter.quick === 'today' ? '#000' : 'var(--text-main)' %>;"><%= t('st_today') %></button>
-      <button type="submit" name="quick" value="yesterday" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); background: <%= filter.quick === 'yesterday' ? 'linear-gradient(90deg,#f59e0b,#fbbf24)' : 'rgba(255,255,255,0.05)' %>; color: <%= filter.quick === 'yesterday' ? '#000' : 'var(--text-main)' %>;"><%= t('st_yesterday') %></button>
-      <button type="submit" name="quick" value="7days" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); background: <%= filter.quick === '7days' ? 'linear-gradient(90deg,#f59e0b,#fbbf24)' : 'rgba(255,255,255,0.05)' %>; color: <%= filter.quick === '7days' ? '#000' : 'var(--text-main)' %>;"><%= t('st_7days') %></button>
-      <a href="/profile/stats" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color:var(--text-main); text-decoration:none;"><%= t('st_all') %></a>
+  <form class="im68-2" method="GET" action="/profile/stats">
+    <div class="dz67-4">
+      <button type="submit" name="quick" value="today" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); background: <%= filter.quick === 'today' ? 'linear-gradient(90deg,#f59e0b,#fbbf24)' : 'rgba(255,255,255,0.05)' %>; color: <%= filter.quick === 'today' ? '#000' : 'var(--text-main)' %>;">আজ</button>
+      <button type="submit" name="quick" value="yesterday" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); background: <%= filter.quick === 'yesterday' ? 'linear-gradient(90deg,#f59e0b,#fbbf24)' : 'rgba(255,255,255,0.05)' %>; color: <%= filter.quick === 'yesterday' ? '#000' : 'var(--text-main)' %>;">গতকাল</button>
+      <button type="submit" name="quick" value="7days" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); background: <%= filter.quick === '7days' ? 'linear-gradient(90deg,#f59e0b,#fbbf24)' : 'rgba(255,255,255,0.05)' %>; color: <%= filter.quick === '7days' ? '#000' : 'var(--text-main)' %>;">গত ৭ দিন</button>
+      <a class="dz67-5" href="/profile/stats"><%= t('st_all') %></a>
     </div>
-    <div style="display: flex; gap: 8px; align-items: center;">
-      <input type="date" name="from" value="<%= filter.from %>" style="flex:1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px 10px; color:var(--text-main); font-size: 12px;">
-      <span style="color:var(--text-muted); font-size: 12px;"><%= t('st_from') %></span>
-      <input type="date" name="to" value="<%= filter.to %>" style="flex:1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px 10px; color:var(--text-main); font-size: 12px;">
-      <button type="submit" style="background: linear-gradient(90deg,#f59e0b,#fbbf24); border: none; color: #000; padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 800;"><%= t('st_filter') %></button>
+    <div class="im68-3">
+      <input class="dz67-6" type="date" name="from" value="<%= filter.from %>">
+      <span class="dz67-7"><%= t('st_from') %></span>
+      <input class="dz67-6" type="date" name="to" value="<%= filter.to %>">
+      <button class="dz67-8" type="submit"><%= t('st_filter') %></button>
     </div>
   </form>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
-    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;text-align:center;border:1px solid rgba(255,255,255,0.1)">
-      <div style="color:var(--text-muted);font-size:12px;margin-bottom:8px"><%= t('st_total_bets') %></div>
-      <div style="color:#f59e0b;font-size:28px;font-weight:bold"><%= stats.total %></div>
+  <div class="im68-4">
+    <div class="dz67-9">
+      <div class="dz67-10"><%= t('st_total_bets') %></div>
+      <div class="dz67-11"><%= stats.total %></div>
     </div>
-    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;text-align:center;border:1px solid rgba(255,255,255,0.1)">
-      <div style="color:var(--text-muted);font-size:12px;margin-bottom:8px"><%= t('st_win_loss') %></div>
-      <div style="color:#10b981;font-size:22px;font-weight:bold"><%= stats.won %> <span style="color:#ef4444">/ <%= stats.lost %></span></div>
+    <div class="dz67-9">
+      <div class="dz67-10"><%= t('st_win_loss') %></div>
+      <div class="dz67-12"><%= stats.won %> <span class="dz67-13">/ <%= stats.lost %></span></div>
     </div>
   </div>
 
   <div style="background: <%= stats.net_profit >= 0 ? 'linear-gradient(135deg,#10b981,#059669)' : 'linear-gradient(135deg,#ef4444,#b91c1c)' %>;border-radius:16px;padding:20px;text-align:center">
-    <div style="color:rgba(255,255,255,0.85);font-size:13px;margin-bottom:6px"><%= t('st_net') %></div>
-    <div style="color:var(--text-main);font-size:32px;font-weight:bold"><%= stats.net_profit >= 0 ? '+' : '' %>৳<%= stats.net_profit.toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></div>
+    <div class="dz67-14"><%= t('st_net') %></div>
+    <div class="dz67-15"><%= stats.net_profit >= 0 ? '+' : '' %>৳<%= stats.net_profit.toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></div>
   </div>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">
-    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:16px;border:1px solid rgba(255,255,255,0.1)">
-      <div style="color:var(--text-muted);font-size:11px;margin-bottom:6px"><%= t('st_total_staked') %></div>
-      <div style="color:var(--text-main);font-size:18px;font-weight:bold">৳<%= stats.total_staked.toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></div>
+  <div class="im68-5">
+    <div class="dz67-16">
+      <div class="dz67-17"><%= t('st_total_staked') %></div>
+      <div class="dz67-3">৳<%= stats.total_staked.toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></div>
     </div>
-    <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:16px;border:1px solid rgba(255,255,255,0.1)">
-      <div style="color:var(--text-muted);font-size:11px;margin-bottom:6px"><%= t('st_total_won') %></div>
-      <div style="color:#10b981;font-size:18px;font-weight:bold">৳<%= stats.total_won_amount.toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></div>
+    <div class="dz67-16">
+      <div class="dz67-17"><%= t('st_total_won') %></div>
+      <div class="dz67-18">৳<%= stats.total_won_amount.toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></div>
     </div>
   </div>
 
   <% const winRate = stats.total > 0 ? Math.round((stats.won / stats.total) * 100) : 0; %>
-  <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;margin-top:16px;border:1px solid rgba(255,255,255,0.1)">
-    <div style="color:var(--text-main);font-weight:bold;margin-bottom:12px"><%= t('st_win_rate') %></div>
-    <div style="background:rgba(255,255,255,0.1);border-radius:10px;height:12px;overflow:hidden">
+  <div class="dz67-19">
+    <div class="dz67-20"><%= t('st_win_rate') %></div>
+    <div class="dz67-21">
       <div style="background:linear-gradient(90deg,#f59e0b,#fbbf24);height:12px;width:<%= winRate %>%"></div>
     </div>
-    <div style="text-align:right;color:#f59e0b;font-size:14px;margin-top:6px"><%= winRate %>%</div>
+    <div class="dz67-22"><%= winRate %>%</div>
   </div>
 </div>
 <%- include('../partials/navbar') %>

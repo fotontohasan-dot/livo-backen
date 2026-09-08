@@ -6,6 +6,14 @@
   <title><%= t('admin_title_queues') %></title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz10-1 { color: #f59e0b; margin-right: 6px; }
+  .dz10-2 { color: #ef4444; margin-right: 6px; }
+  .dz10-3 { overflow-x: auto; }
+  .dz10-4 { font-size: 10px; color: var(--text-muted); }
+  .dz10-5 { font-size: 22px; color: #10b981; display: block; margin-bottom: 8px; }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
 
@@ -44,14 +52,14 @@
     <%- include('./partials/sidebar', { active: 'queues' }) %>
     <div class="admin-content">
       <%- include('./partials/load-error') %>
-      <%- include('./partials/header', { pageTitle: 'Queue Dashboard', pageSubtitle: t('aqu_sub') }) %>
+      <%- include('./partials/header', { pageTitle: 'Queue Dashboard', pageSubtitle: t("aqu_sub") }) %>
 
       <div id="redisBanner" class="redis-banner <%= health.redisConnected ? 'up' : 'down' %>">
         <i class="fas <%= health.redisConnected ? 'fa-check-circle' : 'fa-triangle-exclamation' %>"></i>
         <span id="redisBannerText">
           <%= health.redisConnected
-            ? t('aqu_redis_ok')
-            : t('aqu_redis_off') %>
+            ? t("aqu_redis_ok")
+            : t("aqu_redis_off") %>
         </span>
       </div>
 
@@ -59,7 +67,7 @@
         <% health.queues.forEach(q => { %>
           <div class="queue-card">
             <div class="queue-card-head">
-              <div class="queue-card-name"><i class="fas fa-layer-group" style="color:#f59e0b;margin-right:6px;"></i><%= q.name.replace('-', ' ') %></div>
+              <div class="queue-card-name"><i class="fas fa-layer-group dz10-1"></i><%= q.name.replace('-', ' ') %></div>
               <% if (q.paused) { %><span class="badge badge-amber"><%= t('admin_status_paused') %></span><% } %>
             </div>
             <div class="queue-stat-row">
@@ -75,11 +83,11 @@
 
       <div class="admin-card">
         <div class="admin-card-header">
-          <i class="fas fa-skull-crossbones" style="color:#ef4444;margin-right:6px;"></i>
+          <i class="fas fa-skull-crossbones dz10-2"></i>
           <%= t('aqu_dlq') %> (<%= deadLetterJobs.length %>)
         </div>
         <% if (deadLetterJobs && deadLetterJobs.length > 0) { %>
-          <div style="overflow-x:auto;">
+          <div class="dz10-3">
             <table class="admin-table">
               <thead>
                 <tr>
@@ -94,7 +102,7 @@
                     <td class="dlq-data"><%= JSON.stringify(j.job_data) %></td>
                     <td class="dlq-reason"><%= (j.failed_reason || '').slice(0, 120) %></td>
                     <td><%= j.attempts_made %></td>
-                    <td style="font-size:10px;color:var(--text-muted);"><%= new Date(j.created_at).toLocaleString('bn-BD') %></td>
+                    <td class="dz10-4"><%= new Date(j.created_at).toLocaleString('bn-BD') %></td>
                     <td>
                       <button class="btn btn-sm btn-green" data-dlq-retry="<%= j.id %>"><i class="fas fa-redo"></i> <%= t('admin_btn_retry') %></button>
                       <button class="btn btn-sm btn-red" data-dlq-delete="<%= j.id %>"><i class="fas fa-trash"></i></button>
@@ -105,7 +113,7 @@
             </table>
           </div>
         <% } else { %>
-          <div class="empty-state"><i class="fas fa-circle-check" style="font-size:22px;color:#10b981;display:block;margin-bottom:8px;"></i><%= t('admin_empty_dlq') %></div>
+          <div class="empty-state"><i class="fas fa-circle-check dz10-5"></i><%= t('admin_empty_dlq') %></div>
         <% } %>
       </div>
     </div>

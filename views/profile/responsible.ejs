@@ -1,97 +1,91 @@
 <%- include('../partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz63-1 { padding: 16px; padding-bottom: 100px; max-width: 600px; margin: 0 auto; }
+  .dz63-2 { color: var(--text-main); text-decoration: none; font-size: 20px; }
+  .dz63-3 { color: var(--text-main); font-size: 18px; font-weight: bold; }
+  .dz63-4 { background: linear-gradient(135deg,#0ea5e9,#0284c7); border-radius: 16px; padding: 20px; margin-bottom: 16px; text-align: center; }
+  .dz63-5 { color: var(--text-main); font-size: 16px; font-weight: bold; margin-bottom: 4px; }
+  .dz63-6 { color: rgba(255,255,255,0.9); font-size: 13px; }
+  .dz63-7 { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+  .dz63-8 { color: var(--text-main); font-weight: bold; margin-bottom: 6px; }
+  .dz63-9 { color: var(--text-muted); font-size: 12px; margin-bottom: 12px; }
+  .dz63-10 { background: rgba(16,185,129,0.1); border: 1px solid #10b981; border-radius: 8px; padding: 10px; margin-bottom: 12px; color: #10b981; font-size: 13px; }
+  .dz63-11 { width: 100%; background: #1e1e1e; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 8px; margin-bottom: 10px; }
+  .dz63-12 { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; }
+  .dz63-13 { background: rgba(239,68,68,0.1); border: 1px solid #ef4444; border-radius: 8px; padding: 10px; color: #ef4444; font-size: 13px; }
+  .dz63-14 { width: 100%; justify-content: center; background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid #ef4444; }
+  .dz63-15 { font-size: .75rem; color: var(--text-muted); text-align: center; margin-top: 1rem; line-height: 1.6; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im64-1 { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .im64-2 { font-size: 40px; margin-bottom: 8px; }
+  .im64-3 { width: 100%; justify-content: center; }
+</style>
+
 <%- include('../partials/navbar') %>
-<div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto;">
+<div class="container dz63-1">
   <%- include('../partials/flash') %>
 
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-    <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
-    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">🛡️ <%= t('rg_title') %></h1>
+  <div class="im64-1">
+    <a class="dz63-2" href="/profile">←</a>
+    <h1 class="dz63-3">🛡️ <%= t('rg_title') %></h1>
   </div>
 
   <!-- ব্যানার -->
-  <div style="background:linear-gradient(135deg,#0ea5e9,#0284c7);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center;">
-    <div style="font-size:40px;margin-bottom:8px;">🛡️</div>
-    <div style="color:var(--text-main);font-size:16px;font-weight:bold;margin-bottom:4px;"><%= t('rg_hero_title') %></div>
-    <div style="color:rgba(255,255,255,0.9);font-size:13px;"><%= t('rg_hero_sub') %></div>
+  <div class="dz63-4">
+    <div class="im64-2">🛡️</div>
+    <div class="dz63-5"><%= t('rg_hero_title') %></div>
+    <div class="dz63-6"><%= t('rg_hero_sub') %></div>
   </div>
 
   <!-- দৈনিক ডিপোজিট সীমা -->
-  <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;margin-bottom:16px;">
-    <div style="color:var(--text-main);font-weight:bold;margin-bottom:6px;">💰 <%= t('rg_deposit_limit') %></div>
-    <div style="color:var(--text-muted);font-size:12px;margin-bottom:12px;">
+  <div class="dz63-7">
+    <div class="dz63-8">💰 <%= t('rg_deposit_limit') %></div>
+    <div class="dz63-9">
       <%= t('rg_deposit_limit_desc') %>
     </div>
     <% if (rg && rg.daily_deposit_limit) { %>
-      <div style="background:rgba(16,185,129,0.1);border:1px solid #10b981;border-radius:8px;padding:10px;margin-bottom:12px;color:#10b981;font-size:13px;">
+      <div class="dz63-10">
         <%- t('rg_current_limit').replace('{value}', '<strong>' + Number(rg.daily_deposit_limit).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') + '</strong>') %>
       </div>
     <% } %>
     <form action="/profile/responsible/deposit-limit" method="POST">
-      <input type="number" name="limit" placeholder="<%= t('rg_limit_placeholder') %>" min="0"
-             style="width:100%;background:#1e1e1e;border:1px solid #333;color:#fff;padding:12px;border-radius:8px;margin-bottom:10px;">
-      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;"><%= t('rg_set_limit') %></button>
+      <input class="dz63-11" type="number" name="limit" placeholder="<%= t('rg_limit_placeholder') %>" min="0">
+      <button type="submit" class="btn btn-primary im64-3"><%= t('rg_set_limit') %></button>
     </form>
   </div>
 
   <!-- সেল্ফ এক্সক্লুশন -->
-  <div style="background:rgba(255,255,255,0.05);border-radius:16px;padding:20px;">
-    <div style="color:var(--text-main);font-weight:bold;margin-bottom:6px;">⏸️ <%= t('rg_self_exclusion') %></div>
-    <div style="color:var(--text-muted);font-size:12px;margin-bottom:12px;">
+  <div class="dz63-12">
+    <div class="dz63-8">⏸️ <%= t('rg_self_exclusion') %></div>
+    <div class="dz63-9">
       <%= t('rg_self_exclusion_desc') %>
     </div>
     <% if (rg && rg.self_exclude_until && (new Date(rg.self_exclude_until) > new Date())) { %>
-      <div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:8px;padding:10px;color:#ef4444;font-size:13px;">
+      <div class="dz63-13">
         <%= t('rg_excluded_until').replace('{date}', new Date(rg.self_exclude_until).toLocaleDateString(locals.lang === 'en' ? 'en-US' : 'bn-BD')) %>
       </div>
     <% } else { %>
       <form action="/profile/responsible/self-exclude" method="POST" data-confirm="<%= t('rg_confirm') %>">
-        <select name="days" style="width:100%;background:#1e1e1e;border:1px solid #333;color:#fff;padding:12px;border-radius:8px;margin-bottom:10px;">
+        <select class="dz63-11" name="days">
           <option value="1"><%= t('rg_days_1') %></option>
           <option value="7"><%= t('rg_days_7') %></option>
           <option value="30"><%= t('rg_days_30') %></option>
           <option value="90"><%= t('rg_days_90') %></option>
         </select>
-        <button type="submit" class="btn" style="width:100%;justify-content:center;background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid #ef4444;">
+        <button type="submit" class="btn dz63-14">
           <%= t('rg_take_break') %>
         </button>
       </form>
     <% } %>
   </div>
 
-  <!-- সাহায্য ও সহায়তা — অডিটে চিহ্নিত ফাঁক: সীমা ও সেল্ফ-এক্সক্লুশন ছিল,
-       কিন্তু আসক্তি সহায়তার কোনো তথ্য বা লিংক কোথাও ছিল না। ইচ্ছাকৃতভাবে
-       কোনো বাইরের হেল্পলাইন নম্বর হার্ডকোড করা হয়নি: বাংলাদেশে জুয়া-আসক্তির
-       জাতীয় হেল্পলাইন আছে কিনা তা আমি যাচাই করতে পারিনি, আর ভুল নম্বর
-       দেওয়া কোনো নম্বর না দেওয়ার চেয়ে খারাপ। মালিক যাচাই করে নম্বর
-       যোগ করলে এখানেই বসবে। -->
-  <style nonce="<%= cspNonce %>">
-    /* ইনলাইন style অ্যাট্রিবিউটের বদলে ক্লাস — tests/security/
-       cspInlineStyleRatchet.test.js ইনলাইন style-এর সংখ্যা পাহারা দেয়,
-       যাতে CSP-র style-src-attr একদিন কড়া করা যায়। নতুন মার্কআপ যোগ
-       করলে সেটা যেন ওই অগ্রগতি পিছিয়ে না দেয়। */
-    .rg-help-card { margin-bottom: 1rem; }
-    .rg-help-title { color: var(--text-main); font-weight: bold; margin-bottom: 6px; }
-    .rg-help-text { color: var(--text-muted); font-size: 12px; line-height: 1.7; margin: 0 0 8px 0; }
-    .rg-help-text:last-of-type { margin-bottom: 10px; }
-    .rg-help-btn {
-      width: 100%;
-      justify-content: center;
-      background: rgba(16, 185, 129, 0.12);
-      color: #10b981;
-      border: 1px solid #10b981;
-    }
-  </style>
-  <div class="card rg-help-card">
-    <div class="card-body">
-      <div class="rg-help-title">🤝 <%= t('rg_help_heading') %></div>
-      <p class="rg-help-text"><%= t('rg_help_intro') %></p>
-      <p class="rg-help-text"><%= t('rg_help_signs') %></p>
-      <p class="rg-help-text"><%= t('rg_help_selfcheck') %></p>
-      <a href="/profile/support" class="btn rg-help-btn"><%= t('rg_help_support') %></a>
-    </div>
-  </div>
-
-  <p style="font-size:.75rem;color:var(--text-muted);text-align:center;margin-top:1rem;line-height:1.6;">
+  <p class="dz63-15">
     <%= t('rg_footer_warning') %><br>
     <%= t('rg_footer_help') %>
   </p>

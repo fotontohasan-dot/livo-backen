@@ -1,11 +1,47 @@
 <%- include('../partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz95-1 { padding: 15px; padding-bottom: 100px; }
+  .dz95-2 { color: var(--text-main); text-decoration: none; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .dz95-3 { color: var(--text-main); font-size: 20px; font-weight: 800; }
+  .dz95-4 { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 10px; }
+  .dz95-5 { white-space: nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: var(--bg-card); color: var(--text-main); text-decoration: none; }
+  .dz95-6 { flex: 1; background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 10px; padding: 8px 10px; color: var(--text-main); font-size: 12px; }
+  .dz95-7 { color: var(--text-muted); font-size: 12px; }
+  .dz95-8 { background: var(--grad-gold); border: none; color: #000; padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 800; }
+  .dz95-9 { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.35); border-radius: 14px; padding: 14px; margin-bottom: 12px; color: #f87171; font-size: 13px; font-weight: 600; text-align: center; }
+  .dz95-10 { background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 14px; padding: 14px 16px; }
+  .dz95-11 { color: var(--text-main); font-size: 14px; font-weight: 700; }
+  .dz95-12 { font-size: 10px; color: var(--text-accent); font-weight: 600; }
+  .dz95-13 { color: var(--text-muted); font-size: 11px; margin-top: 3px; }
+  .dz95-14 { color: var(--text-muted); font-size: 11px; margin-top: 2px; }
+  .dz95-15 { color: var(--text-accent); font-size: 15px; font-weight: 800; }
+  .dz95-16 { display: flex; gap: 8px; margin-top: 10px; border-top: 1px solid var(--border-glass); padding-top: 10px; }
+  .dz95-17 { flex: 1; text-align: center; padding: 7px 0; border-radius: 8px; font-size: 12px; font-weight: 700; background: var(--bg-glass); color: var(--text-main); text-decoration: none; border: 1px solid var(--border-glass); }
+  .dz95-18 { flex: 1; }
+  .dz95-19 { width: 100%; padding: 7px 0; border-radius: 8px; font-size: 12px; font-weight: 700; background: rgba(239,68,68,0.12); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+  .dz95-20 { text-align: center; padding: 40px 0; color: var(--text-muted); font-size: 13px; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im96-1 { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .im96-2 { margin-bottom: 16px; }
+  .im96-3 { display: flex; gap: 8px; align-items: center; }
+  .im96-4 { display: flex; flex-direction: column; gap: 10px; }
+  .im96-5 { display: flex; justify-content: space-between; align-items: center; }
+  .im96-6 { text-align: right; }
+</style>
 
-<div class="container" style="padding: 15px; padding-bottom: 100px;">
-  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
-    <a href="/profile" style="color:var(--text-main); text-decoration: none; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+
+<div class="container dz95-1">
+  <div class="im96-1">
+    <a class="dz95-2" href="/profile">
       <i class="fas fa-chevron-left"></i>
     </a>
-    <h1 style="color:var(--text-main); font-size: 20px; font-weight: 800;">
+    <h1 class="dz95-3">
       <%= filter.type === 'deposit' ? t('hist_deposit_record') : filter.type === 'withdraw' ? t('hist_withdraw_record') : t('hist_tx_record') %>
     </h1>
   </div>
@@ -13,19 +49,19 @@
   <%- include('../partials/flash') %>
 
   <!-- কুইক ডেট ফিল্টার -->
-  <form method="GET" action="/payment/history" style="margin-bottom: 16px;">
+  <form class="im96-2" method="GET" action="/payment/history">
     <% if (filter.type) { %><input type="hidden" name="type" value="<%= filter.type %>"><% } %>
-    <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 10px;">
-      <button type="submit" name="quick" value="today" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.quick === 'today' ? 'var(--grad-gold)' : 'var(--bg-card)' %>; color: <%= filter.quick === 'today' ? '#000' : 'var(--text-main)' %>;"><%= t('hist_today') %></button>
-      <button type="submit" name="quick" value="yesterday" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.quick === 'yesterday' ? 'var(--grad-gold)' : 'var(--bg-card)' %>; color: <%= filter.quick === 'yesterday' ? '#000' : 'var(--text-main)' %>;"><%= t('hist_yesterday') %></button>
-      <button type="submit" name="quick" value="7days" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.quick === '7days' ? 'var(--grad-gold)' : 'var(--bg-card)' %>; color: <%= filter.quick === '7days' ? '#000' : 'var(--text-main)' %>;"><%= t('hist_7days') %></button>
-      <a href="/payment/history<%= filter.type ? '?type=' + filter.type : '' %>" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: var(--bg-card); color: var(--text-main); text-decoration:none;"><%= t('hist_all') %></a>
+    <div class="dz95-4">
+      <button type="submit" name="quick" value="today" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.quick === 'today' ? 'var(--grad-gold)' : 'var(--bg-card)' %>; color: <%= filter.quick === 'today' ? '#000' : 'var(--text-main)' %>;">আজ</button>
+      <button type="submit" name="quick" value="yesterday" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.quick === 'yesterday' ? 'var(--grad-gold)' : 'var(--bg-card)' %>; color: <%= filter.quick === 'yesterday' ? '#000' : 'var(--text-main)' %>;">গতকাল</button>
+      <button type="submit" name="quick" value="7days" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.quick === '7days' ? 'var(--grad-gold)' : 'var(--bg-card)' %>; color: <%= filter.quick === '7days' ? '#000' : 'var(--text-main)' %>;">গত ৭ দিন</button>
+      <a class="dz95-5" href="/payment/history<%= filter.type ? '?type=' + filter.type : '' %>"><%= t('hist_all') %></a>
     </div>
-    <div style="display: flex; gap: 8px; align-items: center;">
-      <input type="date" name="from" value="<%= filter.from %>" style="flex:1; background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 10px; padding: 8px 10px; color: var(--text-main); font-size: 12px;">
-      <span style="color: var(--text-muted); font-size: 12px;"><%= t('hist_from') %></span>
-      <input type="date" name="to" value="<%= filter.to %>" style="flex:1; background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 10px; padding: 8px 10px; color: var(--text-main); font-size: 12px;">
-      <button type="submit" style="background: var(--grad-gold); border: none; color: #000; padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 800;"><%= t('hist_filter') %></button>
+    <div class="im96-3">
+      <input class="dz95-6" type="date" name="from" value="<%= filter.from %>">
+      <span class="dz95-7"><%= t('hist_from') %></span>
+      <input class="dz95-6" type="date" name="to" value="<%= filter.to %>">
+      <button class="dz95-8" type="submit"><%= t('hist_filter') %></button>
     </div>
   </form>
 
@@ -33,45 +69,45 @@
        থাকলে "ডেটাবেস ডাউন" আর "এই সময়ে সত্যিই কোনো লেনদেন নেই" ইউজারের
        কাছে হুবহু একরকম দেখাত। টাকার পেজে ওই দুটো গুলিয়ে ফেলা বিপজ্জনক। -->
   <% if (typeof loadError !== 'undefined' && loadError) { %>
-    <div id="historyLoadError" role="alert" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.35);border-radius:14px;padding:14px;margin-bottom:12px;color:#f87171;font-size:13px;font-weight:600;text-align:center">
+    <div class="dz95-9" id="historyLoadError" role="alert">
       <i class="fas fa-triangle-exclamation"></i> <%= t.common_history_load_failed %>
     </div>
   <% } %>
 
   <!-- রেকর্ড লিস্ট -->
-  <div style="display: flex; flex-direction: column; gap: 10px;">
+  <div class="im96-4">
     <% if (requests && requests.length) { %>
       <% requests.forEach(function (tx) { %>
         <% var statusColor = tx.status === 'approved' ? '#10b981' : tx.status === 'rejected' ? '#ef4444' : '#f59e0b'; %>
         <% var statusText = tx.status === 'approved' ? t('hist_status_success') : tx.status === 'rejected' ? t('hist_status_rejected') : t('hist_status_pending'); %>
         <% if (tx.status === 'cancelled') { statusColor = '#ef4444'; statusText = t('hist_status_cancelled'); } %>
-        <div style="background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 14px; padding: 14px 16px;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="dz95-10">
+          <div class="im96-5">
             <div>
-              <div style="color:var(--text-main); font-size: 14px; font-weight: 700;">
+              <div class="dz95-11">
                 <%= tx.type === 'deposit' ? '⬇️ ' + t('hist_deposit') : '⬆️ ' + t('hist_withdraw') %>
-                <% if (tx.gateway === 'sslcommerz') { %><span style="font-size: 10px; color: var(--text-accent); font-weight: 600;"> (<%= t('hist_auto') %>)</span><% } %>
+                <% if (tx.gateway === 'sslcommerz') { %><span class="dz95-12"> (<%= t('hist_auto') %>)</span><% } %>
               </div>
-              <div style="color: var(--text-muted); font-size: 11px; margin-top: 3px;"><%= tx.method || '-' %> · <%= new Date(tx.created_at).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></div>
-              <% if (tx.transaction_id) { %><div style="color: var(--text-muted); font-size: 11px; margin-top: 2px;">TrxID: <%= tx.transaction_id %></div><% } %>
+              <div class="dz95-13"><%= tx.method || '-' %> · <%= new Date(tx.created_at).toLocaleString('bn-BD') %></div>
+              <% if (tx.transaction_id) { %><div class="dz95-14">TrxID: <%= tx.transaction_id %></div><% } %>
             </div>
-            <div style="text-align: right;">
-              <div style="color: var(--text-accent); font-size: 15px; font-weight: 800;">৳<%= Number(tx.amount).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></div>
+            <div class="im96-6">
+              <div class="dz95-15">৳<%= Number(tx.amount).toLocaleString('bn-BD') %></div>
               <div style="color: <%= statusColor %>; font-size: 11px; font-weight: 700; margin-top: 3px;"><%= statusText %></div>
             </div>
           </div>
           <% if (tx.type === 'deposit' && tx.status === 'pending') { %>
-            <div style="display: flex; gap: 8px; margin-top: 10px; border-top: 1px solid var(--border-glass); padding-top: 10px;">
-              <a href="/payment/deposit/<%= tx.id %>/edit" style="flex:1; text-align:center; padding: 7px 0; border-radius: 8px; font-size: 12px; font-weight: 700; background: var(--bg-glass); color: var(--text-main); text-decoration:none; border: 1px solid var(--border-glass);">✏️ <%= t('hist_edit') %></a>
-              <form method="POST" action="/payment/deposit/<%= tx.id %>/cancel" style="flex:1;" data-confirm="<%= t('hist_cancel_confirm') %>">
-                <button type="submit" style="width:100%; padding: 7px 0; border-radius: 8px; font-size: 12px; font-weight: 700; background: rgba(239,68,68,0.12); color: #ef4444; border: 1px solid rgba(239,68,68,0.3);">✖ <%= t('hist_cancel') %></button>
+            <div class="dz95-16">
+              <a class="dz95-17" href="/payment/deposit/<%= tx.id %>/edit">✏️ <%= t('hist_edit') %></a>
+              <form class="dz95-18" method="POST" action="/payment/deposit/<%= tx.id %>/cancel" data-confirm="<%= t('hist_cancel_confirm') %>">
+                <button class="dz95-19" type="submit">✖ <%= t('hist_cancel') %></button>
               </form>
             </div>
           <% } %>
         </div>
       <% }) %>
     <% } else if (!(typeof loadError !== 'undefined' && loadError)) { %>
-      <div style="text-align:center; padding: 40px 0; color: var(--text-muted); font-size: 13px;"><%= t('hist_no_records') %></div>
+      <div class="dz95-20"><%= t('hist_no_records') %></div>
     <% } %>
   </div>
 </div>

@@ -3,6 +3,29 @@
 <%- include('partials/navbar') %>
 
 <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz82-1 { padding-top: 14px; }
+  .dz82-2 { display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg,#7c3aed,#5b21b6); border-radius: 14px; padding: 14px 16px; margin-bottom: 14px; text-decoration: none; }
+  .dz82-3 { color: var(--text-white); font-size: 15px; font-weight: bold; }
+  .dz82-4 { color: rgba(255,255,255,0.85); font-size: 12px; margin-top: 2px; }
+  .dz82-5 { color: var(--text-white); font-size: 22px; }
+  .dz82-6 { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 8px; }
+  .dz82-7 { min-width: 75px; text-decoration: none; padding: 10px 6px; flex-shrink: 0; }
+  .dz82-8 { min-width: 90px; text-decoration: none; padding: 10px 6px; flex-shrink: 0; }
+  .dz82-9 { min-width: 85px; text-decoration: none; padding: 10px 6px; flex-shrink: 0; }
+  .dz82-10 { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; font-size: 11px; color: var(--text-muted); }
+  .dz82-11 { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #10b981; }
+  .dz82-12 { display: none; }
+  .dz82-13 { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--red); animation: livedot 1.5s infinite; }
+  .dz82-14 { margin-left: auto; background: var(--red); color: var(--text-white); padding: 2px 8px; border-radius: 6px; font-size: 11px; }
+  .dz82-15 { margin-top: 18px; }
+  .dz82-16 { margin-left: auto; background: var(--grad-gold); color: #000; padding: 2px 8px; border-radius: 6px; font-size: 11px; }
+  .dz82-17 { display: none; text-align: center; padding: 40px 20px; }
+  .dz82-18 { font-size: 48px; margin-bottom: 12px; }
+  .dz82-19 { font-size: 16px; font-weight: 600; color: var(--text-main); }
+  .dz82-20 { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
   @keyframes livedot {
     0%, 100% { opacity: 1; transform: scale(1); }
     50% { opacity: 0.4; transform: scale(1.5); }
@@ -75,53 +98,53 @@
   }
 </style>
 
-<div class="container" style="padding-top: 14px;">
+<div class="container dz82-1">
   <!-- Accumulator Banner -->
-  <a href="/accumulator" style="display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#7c3aed,#5b21b6);border-radius:14px;padding:14px 16px;margin-bottom:14px;text-decoration:none;">
+  <a class="dz82-2" href="/accumulator">
     <div>
-      <div style="color:var(--text-white);font-size:15px;font-weight:bold;">🎯 <%= t.accumulator_bet %></div>
-      <div style="color:rgba(255,255,255,0.85);font-size:12px;margin-top:2px;"><%= t.accumulator_desc %></div>
+      <div class="dz82-3">🎯 <%= t.accumulator_bet %></div>
+      <div class="dz82-4"><%= t.accumulator_desc %></div>
     </div>
-    <span style="color:var(--text-white);font-size:22px;">›</span>
+    <span class="dz82-5">›</span>
   </a>
 
   <!-- Sport Tabs -->
-  <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:12px;margin-bottom:8px;">
-    <a href="/matches" class="cat-item <%= sport === 'all' ? 'active' : '' %>" style="min-width:75px;text-decoration:none;padding:10px 6px;flex-shrink:0;">
+  <div class="dz82-6">
+    <a href="/matches" class="cat-item <%= sport === 'all' ? 'active' : '' %> dz82-7">
       <div>🏆</div><%= t.all %>
     </a>
-    <a href="/matches/worldcup" class="cat-item <%= currentPage === 'worldcup' ? 'active' : '' %>" style="min-width:90px;text-decoration:none;padding:10px 6px;flex-shrink:0;">
+    <a href="/matches/worldcup" class="cat-item <%= currentPage === 'worldcup' ? 'active' : '' %> dz82-8">
       <div>⚽</div><%= t.world_cup %>
     </a>
-    <a href="/matches/football" class="cat-item <%= (currentPage === 'football' && sport === 'football') ? 'active' : '' %>" style="min-width:85px;text-decoration:none;padding:10px 6px;flex-shrink:0;">
+    <a href="/matches/football" class="cat-item <%= (currentPage === 'football' && sport === 'football') ? 'active' : '' %> dz82-9">
       <div>⚽</div>Football
     </a>
-    <a href="/matches/cricket" class="cat-item <%= currentPage === 'cricket' ? 'active' : '' %>" style="min-width:85px;text-decoration:none;padding:10px 6px;flex-shrink:0;">
+    <a href="/matches/cricket" class="cat-item <%= currentPage === 'cricket' ? 'active' : '' %> dz82-9">
       <div>🏏</div>Cricket
     </a>
   </div>
 
   <!-- Live connection status -->
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:11px;color:var(--text-muted);">
-    <span id="liveDot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981;"></span>
+  <div class="dz82-10">
+    <span class="dz82-11" id="liveDot"></span>
     <span id="liveStatus"><%= t.connection_status %></span>
   </div>
 
   <!-- Live section -->
-  <div id="liveSection" style="display:none;">
+  <div class="dz82-12" id="liveSection">
     <div class="section-title">
-      <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red);animation:livedot 1.5s infinite;"></span>
+      <span class="dz82-13"></span>
       <%= t.live_now %>
-      <span id="liveCount" class="badge" style="margin-left:auto;background:var(--red);color:var(--text-white);padding:2px 8px;border-radius:6px;font-size:11px;">0</span>
+      <span id="liveCount" class="badge dz82-14">0</span>
     </div>
     <div id="liveList"></div>
   </div>
 
   <!-- Upcoming section -->
-  <div id="upcomingSection" style="margin-top:18px;">
+  <div class="dz82-15" id="upcomingSection">
     <div class="section-title">
       📅 <%= t.upcoming_matches %>
-      <span id="upcomingCount" class="badge" style="margin-left:auto;background:var(--grad-gold);color:#000;padding:2px 8px;border-radius:6px;font-size:11px;">0</span>
+      <span id="upcomingCount" class="badge dz82-16">0</span>
     </div>
     <div id="upcomingList">
       <div class="skeleton"></div>
@@ -131,10 +154,10 @@
   </div>
 
   <!-- Empty state -->
-  <div id="emptyState" class="card" style="display:none;text-align:center;padding:40px 20px;">
-    <div style="font-size:48px;margin-bottom:12px;">⚽🏏</div>
-    <div style="font-size:16px;font-weight:600;color:var(--text-main);"><%= t.no_matches_found %></div>
-    <div style="font-size:13px;color:var(--text-muted);margin-top:6px;"><%= t.check_back_later %></div>
+  <div id="emptyState" class="card dz82-17">
+    <div class="dz82-18">⚽🏏</div>
+    <div class="dz82-19"><%= t.no_matches_found %></div>
+    <div class="dz82-20"><%= t.check_back_later %></div>
   </div>
 
 </div>

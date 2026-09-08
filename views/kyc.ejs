@@ -1,42 +1,89 @@
 <%- include('partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz90-1 { padding: 16px; padding-bottom: 100px; max-width: 600px; margin: 0 auto; }
+  .dz90-2 { color: var(--text-accent); font-size: 24px; font-weight: 800; margin-bottom: 6px; }
+  .dz90-3 { color: var(--text-muted); font-size: 13px; margin-bottom: 20px; }
+  .dz90-4 { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.35); border-radius: 16px; padding: 16px; margin-bottom: 20px; color: #f87171; font-size: 13px; font-weight: 600; }
+  .dz90-5 { padding: 28px 20px; text-align: center; border: 1px solid rgba(16,185,129,0.35); border-radius: 20px; background: rgba(16,185,129,0.06); }
+  .dz90-6 { width: 64px; height: 64px; border-radius: 50%; background: rgba(16,185,129,0.15); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; }
+  .dz90-7 { color: #10b981; font-size: 26px; }
+  .dz90-8 { color: #10b981; font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+  .dz90-9 { color: var(--text-muted); font-size: 13px; }
+  .dz90-10 { padding: 28px 20px; text-align: center; border: 1px solid rgba(234,179,8,0.35); border-radius: 20px; background: rgba(234,179,8,0.06); }
+  .dz90-11 { width: 64px; height: 64px; border-radius: 50%; background: rgba(234,179,8,0.15); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; }
+  .dz90-12 { color: var(--text-accent); font-size: 24px; }
+  .dz90-13 { color: var(--text-accent); font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+  .dz90-14 { color: var(--text-muted); font-size: 13px; margin-bottom: 14px; }
+  .dz90-15 { text-align: left; background: rgba(255,255,255,0.03); border-radius: 12px; padding: 14px; font-size: 12px; color: var(--text-muted); }
+  .dz90-16 { color: var(--text-muted); }
+  .dz90-17 { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.35); border-radius: 16px; padding: 16px; margin-bottom: 20px; }
+  .dz90-18 { display: flex; align-items: center; gap: 8px; color: #f87171; font-weight: 700; font-size: 14px; margin-bottom: 6px; }
+  .dz90-19 { color: #fca5a5; font-size: 12.5px; margin: 0; }
+  .dz90-20 { padding: 16px 18px; border-radius: 16px; margin-bottom: 20px; background: rgba(234,179,8,0.06); border: 1px solid rgba(234,179,8,0.25); }
+  .dz90-21 { color: var(--text-accent); font-weight: 700; font-size: 13px; margin-bottom: 8px; }
+  .dz90-22 { margin: 0; padding-left: 18px; color: var(--text-muted); font-size: 12.5px; line-height: 1.9; }
+  .dz90-23 { padding: 22px 18px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); }
+  .dz90-24 { width: 26px; height: 26px; border-radius: 50%; background: var(--gold); color: #1a1a1a; font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .dz90-25 { color: var(--text-main); font-weight: 700; font-size: 14px; }
+  .dz90-26 { color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 5px; }
+  .dz90-27 { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border: 2px dashed rgba(234,179,8,0.4); border-radius: 16px; padding: 28px 16px; cursor: pointer; margin-bottom: 8px; background: rgba(255,255,255,0.02); text-align: center; }
+  .dz90-28 { color: var(--text-accent); font-size: 26px; }
+  .dz90-29 { display: none; max-width: 140px; max-height: 140px; border-radius: 10px; margin-top: 6px; }
+  .dz90-30 { display: none; }
+  .dz90-31 { color: #f87171; font-size: 12px; margin-bottom: 16px; display: none; }
+  .dz90-32 { width: 100%; padding: 14px; font-size: 14px; border-radius: 14px; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im91-1 { margin-bottom: 4px; }
+  .im91-2 { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .im91-3 { margin-bottom: 12px; }
+  .im91-4 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  .im91-5 { margin-bottom: 20px; }
+</style>
+
 <%- include('partials/navbar') %>
 
-<div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto">
-  <h1 style="color: var(--text-accent);font-size:24px;font-weight:800;margin-bottom:6px"><%= t.kyc_verification_title %></h1>
-  <p style="color:var(--text-muted);font-size:13px;margin-bottom:20px"><%= t.kyc_intro %></p>
+<div class="container dz90-1">
+  <h1 class="dz90-2"><%= t.kyc_verification_title %></h1>
+  <p class="dz90-3"><%= t.kyc_intro %></p>
 
   <% if (typeof loadError !== 'undefined' && loadError) { %>
     <!-- ===== লোড ব্যর্থ =====
          ডেটাবেস পড়া যায়নি, তাই বর্তমান KYC অবস্থা অজানা। নিচে ফর্মটা দেখানো
          হয় ঠিকই, কিন্তু এই ব্যানার ছাড়া সেটা "আপনি জমা দেননি"-র মতোই দেখাত —
          আর ইউজার ইতিমধ্যে approved থাকলেও আবার জমা দিয়ে বসত। -->
-    <div id="kycLoadError" role="alert" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.35);border-radius:16px;padding:16px;margin-bottom:20px;color:#f87171;font-size:13px;font-weight:600">
+    <div class="dz90-4" id="kycLoadError" role="alert">
       <i class="fas fa-triangle-exclamation"></i> <%= t.kyc_status_load_error %>
     </div>
   <% } %>
 
   <% if (kyc && kyc.status === 'approved') { %>
     <!-- ===== অনুমোদিত ===== -->
-    <div class="glass-card" style="padding:28px 20px;text-align:center;border:1px solid rgba(16,185,129,0.35);border-radius:20px;background:rgba(16,185,129,0.06)">
-      <div style="width:64px;height:64px;border-radius:50%;background:rgba(16,185,129,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
-        <i class="fas fa-check" style="color:#10b981;font-size:26px"></i>
+    <div class="glass-card dz90-5">
+      <div class="dz90-6">
+        <i class="fas fa-check dz90-7"></i>
       </div>
-      <h2 style="color:#10b981;font-size:18px;font-weight:800;margin-bottom:6px"><%= t.kyc_approved_title %></h2>
-      <p style="color:var(--text-muted);font-size:13px"><%= t.kyc_approved_desc %></p>
+      <h2 class="dz90-8"><%= t.kyc_approved_title %></h2>
+      <p class="dz90-9"><%= t.kyc_approved_desc %></p>
     </div>
 
   <% } else if (kyc && kyc.status === 'pending') { %>
     <!-- ===== পর্যালোচনাধীন ===== -->
-    <div class="glass-card" style="padding:28px 20px;text-align:center;border:1px solid rgba(234,179,8,0.35);border-radius:20px;background:rgba(234,179,8,0.06)">
-      <div style="width:64px;height:64px;border-radius:50%;background:rgba(234,179,8,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
-        <i class="fas fa-hourglass-half" style="color: var(--text-accent);font-size:24px"></i>
+    <div class="glass-card dz90-10">
+      <div class="dz90-11">
+        <i class="fas fa-hourglass-half dz90-12"></i>
       </div>
-      <h2 style="color: var(--text-accent);font-size:18px;font-weight:800;margin-bottom:6px"><%= t.kyc_pending_title %></h2>
-      <p style="color:var(--text-muted);font-size:13px;margin-bottom:14px"><%= t.kyc_pending_desc %></p>
-      <div style="text-align:left;background:rgba(255,255,255,0.03);border-radius:12px;padding:14px;font-size:12px;color:var(--text-muted)">
-        <div style="margin-bottom:4px"><b style="color:var(--text-muted)"><%= t.name_label %></b> <%= kyc.full_name %></div>
-        <div style="margin-bottom:4px"><b style="color:var(--text-muted)"><%= t.document_number_label %></b> <%= kyc.document_number %></div>
-        <div><b style="color:var(--text-muted)"><%= t.submitted_on %></b> <%= new Date(kyc.created_at).toLocaleDateString('bn-BD') %></div>
+      <h2 class="dz90-13"><%= t.kyc_pending_title %></h2>
+      <p class="dz90-14"><%= t.kyc_pending_desc %></p>
+      <div class="dz90-15">
+        <div class="im91-1"><b class="dz90-16"><%= t.name_label %></b> <%= kyc.full_name %></div>
+        <div class="im91-1"><b class="dz90-16"><%= t.document_number_label %></b> <%= kyc.document_number %></div>
+        <div><b class="dz90-16"><%= t.submitted_on %></b> <%= new Date(kyc.created_at).toLocaleDateString('bn-BD') %></div>
       </div>
     </div>
 
@@ -44,20 +91,20 @@
     <!-- ===== ফর্ম (নতুন অথবা রিজেক্টেড হলে পুনরায় জমা) ===== -->
 
     <% if (kyc && kyc.status === 'rejected') { %>
-      <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.35);border-radius:16px;padding:16px;margin-bottom:20px">
-        <div style="display:flex;align-items:center;gap:8px;color:#f87171;font-weight:700;font-size:14px;margin-bottom:6px">
+      <div class="dz90-17">
+        <div class="dz90-18">
           <i class="fas fa-circle-xmark"></i> <%= t.kyc_rejected_title %>
         </div>
-        <p style="color:#fca5a5;font-size:12.5px;margin:0">
-          <b><%= t.reason_label %></b> <%= kyc.reject_reason && kyc.reject_reason.trim() ? kyc.reject_reason : t('kyc_reason_unspecified') %>
+        <p class="dz90-19">
+          <b><%= t.reason_label %></b> <%= kyc.reject_reason && kyc.reject_reason.trim() ? kyc.reject_reason : t("kyc_reason_unspecified") %>
         </p>
       </div>
     <% } %>
 
     <!-- আপলোড গাইডলাইন -->
-    <div class="glass-card" style="padding:16px 18px;border-radius:16px;margin-bottom:20px;background:rgba(234,179,8,0.06);border:1px solid rgba(234,179,8,0.25)">
-      <div style="color: var(--text-accent);font-weight:700;font-size:13px;margin-bottom:8px"><i class="fas fa-circle-info"></i> <%= t.before_upload_note %></div>
-      <ul style="margin:0;padding-left:18px;color:var(--text-muted);font-size:12.5px;line-height:1.9">
+    <div class="glass-card dz90-20">
+      <div class="dz90-21"><i class="fas fa-circle-info"></i> <%= t.before_upload_note %></div>
+      <ul class="dz90-22">
         <li><%= t.kyc_doc_types_note %></li>
         <li><%= t.kyc_photo_clear_note %></li>
         <li><%= t.kyc_format_note %></li>
@@ -65,20 +112,20 @@
       </ul>
     </div>
 
-    <form id="kycForm" action="/extra/kyc" method="POST" class="glass-card" style="padding:22px 18px;border-radius:20px;border:1px solid rgba(255,255,255,0.08)" data-kyc-form>
+    <form id="kycForm" action="/extra/kyc" method="POST" class="glass-card dz90-23" data-kyc-form>
 
       <!-- ধাপ ১ -->
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-        <div style="width:26px;height:26px;border-radius:50%;background:var(--gold);color:#1a1a1a;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
-        <span style="color:var(--text-main);font-weight:700;font-size:14px"><%= t.personal_information %></span>
+      <div class="im91-2">
+        <div class="dz90-24">1</div>
+        <span class="dz90-25"><%= t.personal_information %></span>
       </div>
-      <div style="margin-bottom:12px">
-        <label style="color:var(--text-muted);font-size:12px;display:block;margin-bottom:5px"><%= t.full_name_on_document %></label>
+      <div class="im91-3">
+        <label class="dz90-26"><%= t.full_name_on_document %></label>
         <input type="text" name="full_name" required maxlength="60" class="form-input" placeholder="<%= t.name_example_placeholder %>" value="<%= kyc ? kyc.full_name : '' %>">
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+      <div class="im91-4">
         <div>
-          <label style="color:var(--text-muted);font-size:12px;display:block;margin-bottom:5px"><%= t.document_type %></label>
+          <label class="dz90-26"><%= t.document_type %></label>
           <select name="document_type" required class="form-input">
             <option value="NID"><%= t.doc_nid %></option>
             <option value="Passport"><%= t.doc_passport %></option>
@@ -86,35 +133,35 @@
           </select>
         </div>
         <div>
-          <label style="color:var(--text-muted);font-size:12px;display:block;margin-bottom:5px"><%= t.document_number %></label>
+          <label class="dz90-26"><%= t.document_number %></label>
           <input type="text" name="document_number" required maxlength="30" class="form-input" placeholder="<%= t.enter_number %>">
         </div>
       </div>
 
       <!-- ধাপ ২ -->
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-        <div style="width:26px;height:26px;border-radius:50%;background:var(--gold);color:#1a1a1a;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
-        <span style="color:var(--text-main);font-weight:700;font-size:14px"><%= t.upload_document_photo %></span>
+      <div class="im91-2">
+        <div class="dz90-24">2</div>
+        <span class="dz90-25"><%= t.upload_document_photo %></span>
       </div>
 
       <input type="hidden" name="document_url" id="documentUrl" value="">
 
-      <label id="uploadBox" for="documentFile" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border:2px dashed rgba(234,179,8,0.4);border-radius:16px;padding:28px 16px;cursor:pointer;margin-bottom:8px;background:rgba(255,255,255,0.02);text-align:center">
-        <i id="uploadIcon" class="fas fa-cloud-arrow-up" style="color: var(--text-accent);font-size:26px"></i>
-        <span id="uploadText" style="color:var(--text-muted);font-size:13px"><%= t.tap_to_upload %></span>
-        <img id="previewImg" alt="<%= t('selected_document_preview') %>" style="display:none;max-width:140px;max-height:140px;border-radius:10px;margin-top:6px" />
+      <label class="dz90-27" id="uploadBox" for="documentFile">
+        <i id="uploadIcon" class="fas fa-cloud-arrow-up dz90-28"></i>
+        <span class="dz90-9" id="uploadText"><%= t.tap_to_upload %></span>
+        <img class="dz90-29" id="previewImg" />
       </label>
-      <input type="file" id="documentFile" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" style="display:none" data-kyc-file>
-      <div id="uploadError" style="color:#f87171;font-size:12px;margin-bottom:16px;display:none"></div>
-      <div style="margin-bottom:20px"></div>
+      <input class="dz90-30" type="file" id="documentFile" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" data-kyc-file>
+      <div class="dz90-31" id="uploadError"></div>
+      <div class="im91-5"></div>
 
       <!-- ধাপ ৩ -->
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-        <div style="width:26px;height:26px;border-radius:50%;background:var(--gold);color:#1a1a1a;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
-        <span style="color:var(--text-main);font-weight:700;font-size:14px"><%= t.submit_kyc %></span>
+      <div class="im91-2">
+        <div class="dz90-24">3</div>
+        <span class="dz90-25"><%= t.submit_kyc %></span>
       </div>
 
-      <button type="submit" id="submitBtn" class="btn btn-gold" style="width:100%;padding:14px;font-size:14px;border-radius:14px" disabled>
+      <button type="submit" id="submitBtn" class="btn btn-gold dz90-32" disabled>
         <span id="submitBtnText"><%= t.upload_photo_first %></span>
       </button>
     </form>

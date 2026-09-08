@@ -3,7 +3,7 @@
 
     <div class="bg-white rounded-3xl border border-slate-100 p-6">
         <h3 class="font-semibold text-slate-800 border-b pb-3 mb-4">📢 ${t('ano_broadcast_new')}</h3>
-        <p class="text-sm text-slate-500 mb-4">এই মেসেজটি সাথে সাথে সব ইউজারকে (বর্তমানে <strong>${totalUsers}</strong> জন) রিয়েল-টাইমে পাঠানো হবে — যারা অনলাইনে আছে তারা সাথে সাথে দেখবে, যারা অফলাইনে আছে তারা পরে লগইন করলে Notification History-তে দেখতে পাবে।</p>
+        <p class="text-sm text-slate-500 mb-4">${t('ano_broadcast_desc').replace('{n}', totalUsers)} — যারা অনলাইনে আছে তারা সাথে সাথে দেখবে, যারা অফলাইনে আছে তারা পরে লগইন করলে Notification History-তে দেখতে পাবে।</p>
 
         <form method="POST" action="/admin/notifications/broadcast" class="space-y-4">
             <div>
