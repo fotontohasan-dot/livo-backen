@@ -38,21 +38,21 @@
 
   <div class="im69-1">
     <a class="dz68-2" href="/profile">←</a>
-    <h1 class="dz68-3">🎯 ডেইলি মিশন</h1>
+    <h1 class="dz68-3">🎯 <%= t('msn_title') %></h1>
   </div>
 
   <!-- ব্যানার -->
   <div class="dz68-4">
     <div class="im69-2">🎯</div>
-    <div class="dz68-5">আজকের মিশন সম্পন্ন করুন</div>
+    <div class="dz68-5"><%= t('msn_today') %></div>
     <div class="dz68-6">প্রতিদিন খলে মিশন শেষ করুন আর কয়েন জতুন</div>
   </div>
 
   <!-- ট্যাব -->
   <div class="im69-3">
-    <button class="mtab dz68-7" data-tab="daily">ডেইলি</button>
-    <button class="mtab dz68-8" data-tab="weekly">উইকলি</button>
-    <button class="mtab dz68-8" data-tab="special">স্পেশাল</button>
+    <button class="mtab dz68-7" data-tab="daily"><%= t('msn_daily') %></button>
+    <button class="mtab dz68-8" data-tab="weekly"><%= t('msn_weekly') %></button>
+    <button class="mtab dz68-8" data-tab="special"><%= t('msn_special') %></button>
   </div>
 
   <% ['daily','weekly','special'].forEach(function(tab) { var list = missions && missions[tab] ? missions[tab] : []; %>
@@ -74,22 +74,22 @@
             </div>
 
             <% if (m.claimed) { %>
-              <span class="dz68-13">✅ নেওয়া হয়েছে</span>
+              <span class="dz68-13">✅ <%= t('cb_claimed') %></span>
             <% } else if (m.done) { %>
               <form class="dz68-14" action="/profile/missions/claim/<%= m.id %>" method="POST">
                 <button class="dz68-15" type="submit">
-                  ক্লেইম করুন
+                  <%= t('msn_claim') %>
                 </button>
               </form>
             <% } else { %>
-              <span class="dz68-16">চলমান...</span>
+              <span class="dz68-16"><%= t('msn_in_progress') %></span>
             <% } %>
           </div>
         </div>
       <% }) %>
     <% } else { %>
       <div class="dz68-17">
-        এই মুহূর্তে কোনো মিশন নেই।
+        <%= t('msn_none') %>
       </div>
     <% } %>
   </div>
@@ -98,8 +98,8 @@
   <script src="/js/views/profile-missions.js"></script>
 
   <p class="dz68-18">
-    ⏰ প্রতিদিন রাত ১২টায় মিশন রিসেট হয়।<br>
-    গেম বা স্পোর্টস — দুটোই মিশনে গণনা হয়।
+    ⏰ <%= t('msn_info_1') %><br>
+    <%= t('msn_info_2') %>
   </p>
 
 </div>

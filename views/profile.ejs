@@ -65,7 +65,7 @@
     <p class="text-muted im105-5"><%= profileUser.email %></p>
 
     <div class="balance-section glass dz104-4">
-        <p class="text-muted im105-6">মোট ব্যালেন্স</p>
+        <p class="text-muted im105-6"><%= t('prof_total_balance') %></p>
         <div class="dz104-5">৳ <%= profileUser.coins %></div>
     </div>
 
@@ -73,15 +73,15 @@
     <div class="im105-7">
         <a href="/payment/deposit" class="btn btn-primary dz104-6">
             <i class="fas fa-wallet im105-8"></i>
-            <span>জমা দিন</span>
+            <span><%= t('prof_deposit') %></span>
         </a>
         <a href="/payment/withdraw" class="btn glass dz104-7">
             <i class="fas fa-money-bill-transfer im105-8"></i>
-            <span>উত্তোলন</span>
+            <span><%= t('prof_withdraw') %></span>
         </a>
         <a href="/profile/security" class="btn glass dz104-8">
             <i class="fas fa-credit-card im105-8"></i>
-            <span>আমার কার্ড</span>
+            <span><%= t('prof_my_cards') %></span>
         </a>
     </div>
   </div>
@@ -95,15 +95,15 @@
             <i class="fas fa-users"></i>
         </div>
         <div>
-            <p class="dz104-12">রেফারেল কোড</p>
+            <p class="dz104-12"><%= t('prof_referral_code') %></p>
             <div class="dz104-13">
               <%= profileUser.referral_code %>
             </div>
         </div>
       </div>
       <div class="im105-10">
-        <button data-ref-action="copy" class="btn glass dz104-14">কপি</button>
-        <button data-ref-action="share" class="btn btn-primary dz104-15">শেয়ার</button>
+        <button data-ref-action="copy" class="btn glass dz104-14"><%= t('prof_copy') %></button>
+        <button data-ref-action="share" class="btn btn-primary dz104-15"><%= t('prof_share') %></button>
       </div>
     </div>
   </div>
@@ -115,37 +115,37 @@
         <div class="dz104-17">
             <i class="fas fa-history"></i>
         </div>
-        <span class="dz104-18">বেটিং রেকর্ড</span>
+        <span class="dz104-18"><%= t('hist_betting_record') %></span>
     </a>
     <a href="/payment/history" class="glass dz104-16">
         <div class="dz104-19">
             <i class="fas fa-file-invoice-dollar"></i>
         </div>
-        <span class="dz104-18">লেনদেন</span>
+        <span class="dz104-18"><%= t('prof_transactions') %></span>
     </a>
     <a href="/leaderboard" class="glass dz104-16">
         <div class="dz104-20">
             <i class="fas fa-gift"></i>
         </div>
-        <span class="dz104-18">পুরস্কার</span>
+        <span class="dz104-18"><%= t('prof_rewards') %></span>
     </a>
     <a href="/profile/security" class="glass dz104-16">
         <div class="dz104-21">
             <i class="fas fa-shield-alt"></i>
         </div>
-        <span class="dz104-18">নিরাপত্তা</span>
+        <span class="dz104-18"><%= t('prof_security') %></span>
     </a>
     <a href="/chat" class="glass dz104-16">
         <div class="dz104-22">
             <i class="fas fa-headset"></i>
         </div>
-        <span class="dz104-18">সাপোর্ট</span>
+        <span class="dz104-18"><%= t('prof_support') %></span>
     </a>
     <a href="/logout" class="glass dz104-16">
         <div class="dz104-23">
             <i class="fas fa-sign-out-alt"></i>
         </div>
-        <span class="dz104-18">লগআউট</span>
+        <span class="dz104-18"><%= t('prof_logout') %></span>
     </a>
   </div>
 </div>

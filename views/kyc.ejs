@@ -96,7 +96,7 @@
           <i class="fas fa-circle-xmark"></i> <%= t.kyc_rejected_title %>
         </div>
         <p class="dz90-19">
-          <b><%= t.reason_label %></b> <%= kyc.reject_reason && kyc.reject_reason.trim() ? kyc.reject_reason : 'নির্দিষ্ট করা হয়নি — অনুগ্রহ করে সাপোর্টে যোগাযোগ করুন।' %>
+          <b><%= t.reason_label %></b> <%= kyc.reject_reason && kyc.reject_reason.trim() ? kyc.reject_reason : t("kyc_reason_unspecified") %>
         </p>
       </div>
     <% } %>

@@ -30,7 +30,7 @@
 
   <div class="im74-1">
     <a class="dz73-2" href="/profile">←</a>
-    <h1 class="dz73-3">🏆 ব্যাজ ও অর্জন</h1>
+    <h1 class="dz73-3">🏆 <%= t('bdg_title') %></h1>
   </div>
 
   <% 
@@ -42,7 +42,7 @@
   <div class="dz73-4">
     <div class="im74-2">🏆</div>
     <div class="dz73-5"><%= earnedCount %> / <%= total %></div>
-    <div class="dz73-6">ব্যাজ অর্জন করেছেন</div>
+    <div class="dz73-6"><%= t('bdg_earned') %></div>
   </div>
 
   <!-- ব্যাজ গ্রিড -->
@@ -64,8 +64,8 @@
   </div>
 
   <p class="dz73-11">
-    খেলতে খেলতে স্বয়ংক্রিয়ভাবে ব্যাজ আনলক হয়।<br>
-    প্রতিটি ব্যাজে বোনাস কয়েন পাওয়া যায়।
+    <%= t('bdg_info_1') %><br>
+    <%= t('bdg_info_2') %>
   </p>
 
 </div>

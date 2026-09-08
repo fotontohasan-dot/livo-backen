@@ -42,57 +42,57 @@
   <div class="dz70-4">
     <div class="im71-2"><%= benefits.icon %></div>
     <div class="dz70-5"><%= benefits.name %></div>
-    <div class="dz70-6">VIP লেভেল <%= benefits.level %></div>
+    <div class="dz70-6">VIP <%= t('loy_level') %> <%= benefits.level %></div>
     <% if (vip && vip.level === benefits.level) { %>
-      <div class="dz70-7">✅ আপনার বর্তমান লেভেল</div>
+      <div class="dz70-7">✅ <%= t('vipb_current') %></div>
     <% } %>
   </div>
 
   <div class="dz70-8">
-    <div class="dz70-9">🎁 এই লেভেলের সুবিধাসমূহ</div>
+    <div class="dz70-9">🎁 <%= t('vipb_benefits_heading') %></div>
 
     <div class="dz70-10">
-      <span class="dz70-11">💰 ক্যাশব্যাক (অতিরিক্ত)</span>
+      <span class="dz70-11">💰 <%= t('vipb_cashback') %></span>
       <span class="dz70-12">+<%= benefits.cashbackPercent %>%</span>
     </div>
     <div class="dz70-10">
-      <span class="dz70-11">🏧 উইথড্র লিমিট</span>
-      <span class="dz70-13"><%= benefits.withdrawalLimit > 0 ? Number(benefits.withdrawalLimit).toLocaleString('bn-BD') + ' কয়েন/দিন' : 'সীমাহীন' %></span>
+      <span class="dz70-11">🏧 <%= t('vipb_withdraw_limit') %></span>
+      <span class="dz70-13"><%= benefits.withdrawalLimit > 0 ? Number(benefits.withdrawalLimit).toLocaleString('bn-BD') + ' কয়েন/দিন' : t("vipb_unlimited") %></span>
     </div>
     <div class="dz70-10">
-      <span class="dz70-11">💳 ডিপোজিট বোনাস</span>
+      <span class="dz70-11">💳 <%= t('vipb_deposit_bonus') %></span>
       <span class="dz70-13">+<%= benefits.depositBonusPercent %>%</span>
     </div>
     <div class="dz70-10">
-      <span class="dz70-11">🎂 জন্মদিন বোনাস</span>
+      <span class="dz70-11">🎂 <%= t('vipb_birthday_bonus') %></span>
       <span class="dz70-13"><%= Number(benefits.birthdayBonus).toLocaleString('bn-BD') %> কয়েন</span>
     </div>
     <div class="dz70-10">
-      <span class="dz70-11">☎️ প্রায়োরিটি সাপোর্ট</span>
-      <span style="color:<%= benefits.prioritySupport ? '#10b981' : 'var(--text-muted)' %>;font-weight:bold;font-size:13px;"><%= benefits.prioritySupport ? '✅ আছে' : '❌ নেই' %></span>
+      <span class="dz70-11">☎️ <%= t('vipb_priority_support') %></span>
+      <span style="color:<%= benefits.prioritySupport ? '#10b981' : 'var(--text-muted)' %>;font-weight:bold;font-size:13px;"><%= benefits.prioritySupport ? '✅ ' + t("vipb_yes") : '❌ ' + t("vipb_no") %></span>
     </div>
     <div class="dz70-14">
-      <span class="dz70-11">🎉 এক্সক্লুসিভ ইভেন্ট</span>
-      <span class="dz70-15"><%= benefits.exclusiveEvents || 'নেই' %></span>
+      <span class="dz70-11">🎉 <%= t('vipb_exclusive_events') %></span>
+      <span class="dz70-15"><%= benefits.exclusiveEvents || t("vipb_no") %></span>
     </div>
   </div>
 
   <div class="dz70-16">
-    <div class="dz70-9">🎁 বোনাস সময়সূচী</div>
+    <div class="dz70-9">🎁 <%= t('vipb_schedule_heading') %></div>
     <div class="dz70-17">
-      <span class="dz70-11">🔓 আপগ্রেড বোনাস (একবার)</span>
+      <span class="dz70-11">🔓 <%= t('vipb_upgrade_bonus') %></span>
       <span class="dz70-18"><%= Number(benefits.upgradeBonus).toLocaleString('bn-BD') %></span>
     </div>
     <div class="dz70-17">
-      <span class="dz70-11">☀️ দৈনিক বোনাস</span>
+      <span class="dz70-11">☀️ <%= t('vipb_daily_bonus') %></span>
       <span class="dz70-18"><%= Number(benefits.dailyBonus).toLocaleString('bn-BD') %></span>
     </div>
     <div class="dz70-17">
-      <span class="dz70-11">📅 সাপ্তাহিক বোনাস</span>
+      <span class="dz70-11">📅 <%= t('vipb_weekly_bonus') %></span>
       <span class="dz70-18"><%= Number(benefits.weeklyBonus).toLocaleString('bn-BD') %></span>
     </div>
     <div class="dz70-17">
-      <span class="dz70-11">🗓️ মাসিক বোনাস</span>
+      <span class="dz70-11">🗓️ <%= t('vipb_monthly_bonus') %></span>
       <span class="dz70-18"><%= Number(benefits.monthlyBonus).toLocaleString('bn-BD') %></span>
     </div>
   </div>

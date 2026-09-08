@@ -15,12 +15,12 @@
       <div class="wh-card-title"><i class="fas fa-wallet dz92-1"></i> <%= t.wallet_summary %></div>
       <button data-refresh-wallet id="whRefreshBtn" title="<%= t.refresh %>" class="wh-icon-btn"><i class="fas fa-sync-alt" id="whRefreshIcon"></i></button>
     </div>
-    <div id="whBalanceText" class="wh-total-balance">৳ <%= Number(coins).toLocaleString('bn-BD') %></div>
+    <div id="whBalanceText" class="wh-total-balance">৳ <%= Number(coins).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></div>
 
     <div class="wh-grid-4">
       <div class="wh-mini">
         <span class="wh-mini-label"><%= t.main_balance %></span>
-        <span class="wh-mini-value">৳ <%= Number(coins).toLocaleString('bn-BD') %></span>
+        <span class="wh-mini-value">৳ <%= Number(coins).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></span>
       </div>
       <div class="wh-mini">
         <span class="wh-mini-label"><%= t.bonus_balance %></span>
@@ -32,7 +32,7 @@
       </div>
       <div class="wh-mini">
         <span class="wh-mini-label"><%= t.withdrawable %></span>
-        <span class="wh-mini-value">৳ <%= Number(coins).toLocaleString('bn-BD') %></span>
+        <span class="wh-mini-value">৳ <%= Number(coins).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></span>
       </div>
     </div>
     <div class="wh-updated"><%= t.last_updated %> <span id="whUpdatedText"><%= t.just_now %></span></div>
@@ -40,8 +40,8 @@
 
   <!-- ==================== QUICK ACTIONS ==================== -->
   <div class="wh-quick-actions">
-    <a href="/payment/deposit" class="wh-qa wh-qa-primary"><i class="fas fa-plus-circle"></i><span><%= t.deposit %></span></a>
-    <a href="/payment/withdraw" class="wh-qa"><i class="fas fa-hand-holding-usd"></i><span><%= t.withdraw %></span></a>
+    <a href="/payment/deposit" class="wh-qa wh-qa-primary"><i class="fas fa-plus-circle"></i><span><%= t('deposit') %></span></a>
+    <a href="/payment/withdraw" class="wh-qa"><i class="fas fa-hand-holding-usd"></i><span><%= t('withdraw') %></span></a>
     <a href="/profile/cards" class="wh-qa"><i class="fas fa-credit-card"></i><span><%= t.my_cards_count %><% if (cardCount > 0) { %> (<%= cardCount %>)<% } %></span></a>
     <a href="/payment/history" class="wh-qa"><i class="fas fa-clock-rotate-left"></i><span><%= t.transaction_history %></span></a>
   </div>
@@ -52,8 +52,8 @@
       <div class="wh-card-title"><i class="fas fa-layer-group dz92-1"></i> <%= t.all_wallet_pages %></div>
     </div>
     <div class="wh-link-list">
-      <a href="/payment/deposit" class="wh-link-item"><i class="fas fa-plus-circle"></i><span><%= t.deposit %></span><i class="fas fa-chevron-right wh-chev"></i></a>
-      <a href="/payment/withdraw" class="wh-link-item"><i class="fas fa-hand-holding-usd"></i><span><%= t.withdraw %></span><i class="fas fa-chevron-right wh-chev"></i></a>
+      <a href="/payment/deposit" class="wh-link-item"><i class="fas fa-plus-circle"></i><span><%= t('deposit') %></span><i class="fas fa-chevron-right wh-chev"></i></a>
+      <a href="/payment/withdraw" class="wh-link-item"><i class="fas fa-hand-holding-usd"></i><span><%= t('withdraw') %></span><i class="fas fa-chevron-right wh-chev"></i></a>
       <a href="/profile/cards" class="wh-link-item"><i class="fas fa-credit-card"></i><span><%= t.bank_cards %></span><i class="fas fa-chevron-right wh-chev"></i></a>
       <a href="/payment/history" class="wh-link-item"><i class="fas fa-receipt"></i><span><%= t.transaction_history %></span><i class="fas fa-chevron-right wh-chev"></i></a>
       <a href="/payment/history?type=deposit" class="wh-link-item"><i class="fas fa-file-arrow-up"></i><span><%= t.deposit_history %></span><i class="fas fa-chevron-right wh-chev"></i></a>
@@ -69,22 +69,22 @@
     <div class="wh-grid-3">
       <div class="wh-stat-box">
         <span class="wh-stat-label"><%= t.total_deposit %></span>
-        <span class="wh-stat-value">৳ <%= Number(walletStats.totalDeposit).toLocaleString('bn-BD') %></span>
+        <span class="wh-stat-value">৳ <%= Number(walletStats.totalDeposit).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></span>
       </div>
       <div class="wh-stat-box">
         <span class="wh-stat-label"><%= t.total_withdraw %></span>
-        <span class="wh-stat-value">৳ <%= Number(walletStats.totalWithdraw).toLocaleString('bn-BD') %></span>
+        <span class="wh-stat-value">৳ <%= Number(walletStats.totalWithdraw).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></span>
       </div>
       <div class="wh-stat-box">
         <span class="wh-stat-label"><%= t.current_balance %></span>
-        <span class="wh-stat-value">৳ <%= Number(coins).toLocaleString('bn-BD') %></span>
+        <span class="wh-stat-value">৳ <%= Number(coins).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></span>
       </div>
     </div>
     <div class="wh-30d-row">
       <div class="wh-30d-title"><%= t.last_30_days %></div>
       <div class="wh-30d-grid">
-        <div><span class="wh-mini-label"><%= t.deposit %></span><span class="wh-mini-value">৳ <%= Number(walletStats.deposit30d).toLocaleString('bn-BD') %></span></div>
-        <div><span class="wh-mini-label"><%= t.withdraw %></span><span class="wh-mini-value">৳ <%= Number(walletStats.withdraw30d).toLocaleString('bn-BD') %></span></div>
+        <div><span class="wh-mini-label"><%= t('deposit') %></span><span class="wh-mini-value">৳ <%= Number(walletStats.deposit30d).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></span></div>
+        <div><span class="wh-mini-label"><%= t('withdraw') %></span><span class="wh-mini-value">৳ <%= Number(walletStats.withdraw30d).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></span></div>
         <div><span class="wh-mini-label"><%= t.pending %></span><span class="wh-mini-value"><%= walletStats.pendingCount %></span></div>
       </div>
     </div>
@@ -106,11 +106,11 @@
       <a href="/payment/history?type=<%= tx.type %>" class="wh-tx-item">
         <span class="wh-tx-icon"><i class="fas <%= typeIcon %>"></i></span>
         <span class="wh-tx-mid">
-          <span class="wh-tx-type"><%= tx.type === 'deposit' ? 'ডিপোজিট' : 'উইথড্র' %> <span class="wh-tx-method"><%= tx.method || '' %></span></span>
+          <span class="wh-tx-type"><%= tx.type === 'deposit' ? t('wal_tx_deposit') : t('wal_tx_withdraw') %> <span class="wh-tx-method"><%= tx.method || '' %></span></span>
           <span class="wh-tx-date"><%= new Date(tx.created_at).toLocaleDateString('bn-BD', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) %></span>
         </span>
         <span class="wh-tx-right">
-          <span class="wh-tx-amount">৳ <%= Number(tx.amount).toLocaleString('bn-BD') %></span>
+          <span class="wh-tx-amount">৳ <%= Number(tx.amount).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></span>
           <span class="wh-badge <%= badgeClass %>"><%= badgeText %></span>
         </span>
       </a>

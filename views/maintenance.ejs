@@ -3,7 +3,7 @@
 <head>
  <meta charset="UTF-8">
  <meta name="viewport" content="width=device-width, initial-scale=1.0">
- <title>রক্ষণাবেক্ষণ চলছে - <%= siteName %></title>
+ <title><%= t('mnt_title') %> - <%= siteName %></title>
  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&display=swap" rel="stylesheet">
  <style nonce="<%= cspNonce %>">
    * { margin:0; padding:0; box-sizing:border-box; }
@@ -31,8 +31,8 @@
 <body>
   <div class="box">
     <div class="icon">🛠️</div>
-    <h1>সাইটটি সাময়িক রক্ষণাবেক্ষণে আছে</h1>
-    <p>আমরা সেবার মান উন্নত করার কাজ করছি। অনুগ্রহ করে কিছুক্ষণ পর আবার চেষ্টা করুন।</p>
+    <h1><%= t('mnt_heading') %></h1>
+    <p><%= t('mnt_desc') %></p>
   </div>
 </body>
 </html>

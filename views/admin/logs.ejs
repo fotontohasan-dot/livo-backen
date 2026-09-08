@@ -44,7 +44,7 @@
     <%- include('./partials/sidebar', { active: 'logs' }) %>
     <div class="admin-content">
       <%- include('./partials/load-error') %>
-      <%- include('./partials/header', { pageTitle: 'Unified Log Viewer', pageSubtitle: 'Admin, Login, Error, Fraud, Bot, Security — সব লগ একসাথে সার্চ ও ফিল্টার করুন' }) %>
+      <%- include('./partials/header', { pageTitle: 'Unified Log Viewer', pageSubtitle: t("alg_sub") }) %>
 
       <% if (typeof success !== 'undefined' && success && success.length) { %>
         <% success.forEach(function(m) { %><div class="flash-box flash-success"><%= m %></div><% }) %>
@@ -103,7 +103,7 @@
       </div>
 
       <div class="admin-card">
-        <div class="admin-card-header">লগ এন্ট্রি (মোট <%= total %>, পেজ <%= page %>/<%= totalPages %>)</div>
+        <div class="admin-card-header"><%= t('alg_entries').replace('{n}', total).replace('{page}', page).replace('{pages}', totalPages) %></div>
         <div class="dz31-10">
           <table class="admin-table">
             <thead>

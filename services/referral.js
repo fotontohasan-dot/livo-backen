@@ -17,6 +17,12 @@
 
 const { pool } = require('../db');
 const { getSetting } = require('./settings');
+const { createBonus } = require('./turnover');
+const { evaluateDuplicateAccount } = require('./duplicateDetection');
+
+// এর উপরে risk score উঠলে রেফারেল বোনাস স্বয়ংক্রিয়ভাবে ছাড় না দিয়ে
+// অ্যাডমিন রিভিউয়ের জন্য আটকে রাখা হয়।
+const REFERRAL_REVIEW_RISK_THRESHOLD = 50;
 
 const MIN_DEPOSIT_FOR_BONUS = 500;          // বোনাস পেতে রেফারের ন্যূনতম ডিপোজিট
 // ডিফল্ট রেট (Tier 1,2,3) — অ্যাডমিন প্যানেল থেকে (/admin/settings) পরিবর্তন করা না থাকলে এই মানই ব্যবহার হয়।
@@ -98,11 +104,32 @@ async function processReferralDeposit(client, referredUserId, depositAmount) {
 
     const bonus = signupBonusFor(thisIsNumber);
 
+    // ==================== পেআউটের আগে duplicate-account গেট ====================
+    // duplicateDetection আগে শুধু রেজিস্ট্রেশনে চলত এবং কেবল ফ্ল্যাগ বানাত।
+    // রেফারেল পেআউটই সবচেয়ে বড় প্রলোভন (৫০+ রেফারে জনপ্রতি ১৫০০ কয়েন), তাই
+    // টাকা ছাড়ার ঠিক আগে আরেকবার যাচাই — একই ডিভাইস/IP/পেমেন্ট অ্যাকাউন্ট হলে
+    // বোনাস pending_review-তে যায়, অ্যাডমিন ছাড় দিলে তবেই active হবে।
+    let flagged = false;
+    try {
+      const flag = await evaluateDuplicateAccount(referredUserId, {});
+      flagged = !!(flag && Number(flag.risk_score) >= REFERRAL_REVIEW_RISK_THRESHOLD);
+    } catch (e) {
+      console.error('referral duplicate check error:', e.message);
+    }
+
     // রেফারারকে বোনাস কয়েন
-    await client.query(
-      `UPDATE users SET coins = coins + $1 WHERE id = $2`,
-      [bonus, ref.referrer_id]
-    );
+    // pending_review হলে কয়েন এখনই দেওয়া হয় না — অ্যাডমিন ছাড় দিলে তখন যাবে।
+    if (!flagged) {
+      await client.query(
+        `UPDATE users SET coins = coins + $1 WHERE id = $2`,
+        [bonus, ref.referrer_id]
+      );
+    }
+
+    // টার্নওভার লক — এই সারিটা না থাকলে canWithdraw() রেফারেল বোনাস আটকাতে পারে না,
+    // অর্থাৎ বোনাস তাৎক্ষণিকভাবে তোলা যায় (ভুয়া রেফার ফার্মিংয়ের মূল ফাঁক)।
+    await createBonus(client, ref.referrer_id, 'referral', bonus,
+      flagged ? { status: 'pending_review' } : {});
     // কমিশন হিস্ট্রি (অডিট)
     await client.query(
       `INSERT INTO referral_commissions (earner_id, from_user_id, level, amount, reason)
@@ -119,7 +146,9 @@ async function processReferralDeposit(client, referredUserId, depositAmount) {
     await client.query(
       `INSERT INTO notifications (user_id, title, message, type)
        VALUES ($1, 'রেফারেল বোনাস!', $2, 'success')`,
-      [ref.referrer_id, `আপনার রেফার করা বন্ধু ডিপোজিট করেছে! আপনি ${bonus} কয়েন বোনাস পেয়েছেন।`]
+      [ref.referrer_id, flagged
+        ? `আপনার রেফারেল বোনাস (${bonus} কয়েন) যাচাইয়ের জন্য অপেক্ষমাণ। অনুমোদনের পর যোগ হবে।`
+        : `আপনার রেফার করা বন্ধু ডিপোজিট করেছে! আপনি ${bonus} কয়েন বোনাস পেয়েছেন। (উইথড্রর আগে টার্নওভার শর্ত পূরণ করতে হবে)`]
     );
   } catch (e) {
     console.error('processReferralDeposit error:', e.message);

@@ -42,71 +42,71 @@
 
   <div class="im57-1">
     <a class="dz56-2" href="/profile">←</a>
-    <h1 class="dz56-3">💸 ক্যাশব্যাক</h1>
+    <h1 class="dz56-3">💸 <%= t('cb_title') %></h1>
   </div>
 
   <!-- ব্যানার -->
   <div class="dz56-4">
     <div class="im57-2">💸</div>
-    <div class="dz56-5">দৈনিক ক্যাশব্যাক</div>
+    <div class="dz56-5"><%= t('cb_daily') %></div>
     <div class="dz56-6">
-      প্রতিদিন আপনার নিট লোকসানের ৫% পরদিন ফেরত পান
+      <%= t('cb_daily_desc') %>
     </div>
   </div>
 
   <% if (cashback) { %>
-    <div class="dz56-7">গতকালের হিসাব (<%= cashback.yesterday %>)</div>
+    <div class="dz56-7"><%= t('cb_yesterday').replace('{date}', cashback.yesterday) %></div>
 
     <% ['sports','casino','live'].forEach(function(cat) { var c = cashback.byCategory[cat]; %>
     <div class="dz56-8">
       <div class="im57-3">
         <span class="dz56-9"><%= c.label %></span>
         <% if (c.claimed) { %>
-          <span class="dz56-10">✅ নেওয়া হয়েছে</span>
+          <span class="dz56-10">✅ <%= t('cb_claimed') %></span>
         <% } %>
       </div>
       <div class="dz56-11">
-        <span class="dz56-12">নিট লোকসান</span>
-        <span class="dz56-13"><%= Number(c.netLoss).toLocaleString('bn-BD') %> কয়েন</span>
+        <span class="dz56-12"><%= t('cb_net_loss') %></span>
+        <span class="dz56-13"><%= Number(c.netLoss).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %> কয়েন</span>
       </div>
       <div class="dz56-14">
-        <span class="dz56-12">ক্যাশব্যাক (৫%)</span>
-        <span class="dz56-15"><%= Number(c.amount).toLocaleString('bn-BD') %> কয়েন</span>
+        <span class="dz56-12"><%= t('cb_cashback_5') %></span>
+        <span class="dz56-15"><%= Number(c.amount).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %> কয়েন</span>
       </div>
       <% if (c.available) { %>
         <form action="/profile/cashback/claim" method="POST">
           <input type="hidden" name="category" value="<%= cat %>">
           <button type="submit" class="btn btn-primary dz56-16">
-            💸 <%= Number(c.amount).toLocaleString('bn-BD') %> কয়েন ক্লেইম করুন
+            💸 <%= t('cb_claim').replace('{value}', Number(c.amount).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD')) %>
           </button>
         </form>
       <% } else if (!c.claimed) { %>
-        <div class="dz56-17">লোকসান নেই বা সর্বনিম্ন ১০ কয়েনের কম</div>
+        <div class="dz56-17"><%= t('cb_none') %></div>
       <% } %>
     </div>
     <% }); %>
 
     <!-- সাপ্তাহিক/মাসিক সামারি -->
     <div class="dz56-18">
-      <div class="dz56-19">📊 সামারি</div>
+      <div class="dz56-19">📊 <%= t('cb_summary') %></div>
       <div class="dz56-20">
-        <span class="dz56-12">গত ৭ দিনে মোট ক্যাশব্যাক</span>
-        <span class="dz56-21"><%= Number(cashback.weekly.cashbackEarned).toLocaleString('bn-BD') %> কয়েন</span>
+        <span class="dz56-12"><%= t('cb_weekly_total') %></span>
+        <span class="dz56-21"><%= Number(cashback.weekly.cashbackEarned).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %> কয়েন</span>
       </div>
       <div class="dz56-22">
-        <span class="dz56-12">গত ৩০ দিনে মোট ক্যাশব্যাক</span>
-        <span class="dz56-21"><%= Number(cashback.monthly.cashbackEarned).toLocaleString('bn-BD') %> কয়েন</span>
+        <span class="dz56-12"><%= t('cb_monthly_total') %></span>
+        <span class="dz56-21"><%= Number(cashback.monthly.cashbackEarned).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %> কয়েন</span>
       </div>
     </div>
 
     <p class="dz56-23">
-      ⏰ প্রতিদিন গতকালের লোকসানের উপর ক্যাশব্যাক পাওয়া যায়।<br>
-      নিট লোকসান = মোট বাজি − মোট জয়। সর্বনিম্ন ১০ কয়েন লাগবে।
+      ⏰ <%= t('cb_info_daily') %><br>
+      <%= t('cb_info_formula') %>
     </p>
 
   <% } else { %>
     <div class="dz56-24">
-      ক্যাশব্যাক তথ্য লোড করা যায়নি। পরে আবার চেষ্টা করুন।
+      <%= t('cb_load_error') %>
     </div>
   <% } %>
 

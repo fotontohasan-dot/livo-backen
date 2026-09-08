@@ -37,23 +37,23 @@
 
   <div class="im65-1">
     <a class="dz64-2" href="/profile">←</a>
-    <h1 class="dz64-3">🎁 ফ্রি বেট</h1>
+    <h1 class="dz64-3">🎁 <%= t('fb_title') %></h1>
   </div>
 
   <div class="dz64-4">
     <div class="im65-2">🎁</div>
-    <div class="dz64-5">ফ্রি বেট কয়েন</div>
-    <div class="dz64-6">ক্লেইম করে বোনাস কয়েন পান, খেলে উপভোগ করুন</div>
+    <div class="dz64-5"><%= t('fb_coins') %></div>
+    <div class="dz64-6"><%= t('fb_sub') %></div>
   </div>
 
   <!-- কনভার্সন রুলস -->
   <div class="dz64-7">
-    <div class="dz64-8">📋 কনভার্সন রুলস</div>
+    <div class="dz64-8">📋 <%= t('fb_rules_heading') %></div>
     <div class="dz64-9">
-      • ক্লেইম করলে সাথে সাথে কয়েন ব্যালেন্সে যোগ হয়<br>
-      • উত্তোলনের আগে টার্নওভার শর্ত পূরণ করতে হবে<br>
-      • স্পোর্টস বেটিং: বোনাসের ৫x টার্নওভার<br>
-      • ক্যাসিনো গেম: বোনাসের ৩৫x টার্নওভার
+      • <%= t('fb_rule_1') %><br>
+      • <%= t('fb_rule_2') %><br>
+      • <%= t('fb_rule_3') %><br>
+      • <%= t('fb_rule_4') %>
     </div>
   </div>
 
@@ -66,37 +66,37 @@
     <% active.forEach(f => { %>
       <div class="dz64-10">
         <div>
-          <div class="dz64-3">🎁 <%= f.amount %> কয়েন</div>
+          <div class="dz64-3">🎁 <%= t('fb_amount_coins').replace('{value}', f.amount) %></div>
           <div class="dz64-11"><%= new Date(f.created_at).toLocaleDateString('bn-BD') %></div>
         </div>
         <form class="dz64-12" action="/profile/freebet/claim/<%= f.id %>" method="POST">
           <button class="dz64-13" type="submit">
-            ক্লেইম
+            <%= t('fb_claim') %>
           </button>
         </form>
       </div>
     <% }) %>
   <% } else { %>
     <div class="dz64-14">
-      এখন কোনো ফ বেট নেই।<br>মিশন সম্পন্ন করুন ব অফারের জন্য অপেক্ষা করুন!
+      <%= t('fb_none') %><br><%= t('fb_none_sub') %>
     </div>
   <% } %>
 
   <% if (used.length > 0) { %>
     <div class="dz64-15">
-      <div class="dz64-16">📜 ব্যবহৃত ফ্রি বেট</div>
+      <div class="dz64-16">📜 <%= t('fb_used_heading') %></div>
       <% used.forEach(f => { %>
         <div class="dz64-17">
-          <div class="dz64-18"><%= f.amount %> কয়েন</div>
-          <span class="dz64-19">✅ ব্যবহৃত</span>
+          <div class="dz64-18"><%= t('fb_amount_coins').replace('{value}', f.amount) %></div>
+          <span class="dz64-19">✅ <%= t('fb_used') %></span>
         </div>
       <% }) %>
     </div>
   <% } %>
 
   <p class="dz64-20">
-    ফ্রি বেট ক্লেইম করলে বোনাস কয়েন ব্যালেন যোগ হয়।<br>
-    উত্তোলনর আগে টার্নওভার পূরণ করতে হবে (স্পর্টস ৫x / ক্যাসিন ৩৫x)।
+    <%= t('fb_info_1') %><br>
+    <%= t('fb_info_2') %>
   </p>
 
 </div>

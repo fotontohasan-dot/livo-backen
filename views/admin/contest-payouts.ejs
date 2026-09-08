@@ -34,7 +34,7 @@
     <%- include('./partials/sidebar', { active: 'leaderboard' }) %>
     <div class="admin-content">
       <%- include('./partials/load-error') %>
-      <%- include('./partials/header', { pageTitle: 'রেফারেল কনটেস্ট পেআউট', pageSubtitle: 'মাসিক টপ-৫ বিজয়ীর প্রাইজ প্রদানের অবস্থা ও হিস্ট্রি' }) %>
+      <%- include('./partials/header', { pageTitle: t("acp_title"), pageSubtitle: t("acp_sub") }) %>
 
       <% if (saved) { %>
         <div class="admin-card dz36-1">
@@ -52,7 +52,7 @@
           <label class="dz36-5"><%= t('admin_label_months_ago') %></label>
           <select class="select dz36-6" name="months" data-auto-submit>
             <% for (let i = 1; i <= 12; i++) { %>
-              <option value="<%= i %>" <%= monthsBack === i ? 'selected' : '' %>><%= i %> মাস আগে</option>
+              <option value="<%= i %>" <%= monthsBack === i ? 'selected' : '' %>><%= t('acp_months_ago').replace('{n}', i) %></option>
             <% } %>
           </select>
           <span class="dz36-7"><%= monthName || '—' %></span>
@@ -61,7 +61,7 @@
       </div>
 
       <div class="admin-card dz36-9">
-        <div class="admin-card-header"><%= monthName || '—' %> — টপ ৫ বিজয়ী</div>
+        <div class="admin-card-header"><%= monthName || '—' %> — <%= t('acp_top5') %></div>
         <div class="dz36-10">
           <table class="admin-table">
             <thead>
@@ -94,7 +94,7 @@
                       <% if (p.status === 'paid') { %>
                         <%= p.paid_at ? new Date(p.paid_at).toLocaleString('bn-BD') : '—' %><br>
                         by <%= p.paid_by_username || '—' %>
-                        <% if (p.notes) { %><br>নোট: <%= p.notes %><% } %>
+                        <% if (p.notes) { %><br><%= t('abk_note') %> <%= p.notes %><% } %>
                       <% } else { %>—<% } %>
                     </td>
                     <td class="dz36-13">

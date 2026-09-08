@@ -157,9 +157,20 @@ describe('admin/user-detail.ejs — ইনলাইন কোড সরানো
     // ব্যান, Withdraw PIN রিসেট, ইউজার ডিলিট — তিনটেই অপরিবর্তনীয় বা
     // ব্যয়বহুল, তাই confirm হারিয়ে গেলে চুপচাপ ক্ষতি হত।
     expect(count(userDetail, /data-confirm=/g)).toBe(3);
-    expect(userDetail).toMatch(/data-confirm="\$\{banLabel\} করবেন\?"/);
-    expect(userDetail).toMatch(/Withdraw PIN রিসেট করবেন\?/);
-    expect(userDetail).toMatch(/স্থায়ীভাবে ডিলিট করবেন\?/);
+    // বার্তাগুলো এখন locale ফাইলে (i18n মাইগ্রেশন), তাই ভিউতে t()-কল দেখা যায়,
+    // হুবহু বাংলা টেক্সট নয়। যেটা এখানে আসলে পাহারা দেওয়া দরকার তা হলো —
+    // তিনটে ধ্বংসাত্মক ফর্মের প্রতিটাতেই একটা অ-খালি confirm আছে।
+    expect(userDetail).toMatch(/data-confirm="\$\{banLabel\} \$\{t\('aud_confirm_suffix'\)\}"/);
+    expect(userDetail).toMatch(/data-confirm="\$\{t\('aud_pin_reset_confirm'\)\}"/);
+    expect(userDetail).toMatch(/data-confirm="\$\{t\('aud_delete_confirm'\)\}"/);
+
+    // locale-এ কী-গুলো আছে এবং খালি নয় — নাহলে confirm বক্স ফাঁকা দেখাত
+    const bn = require('../../locales/bn.json');
+    const en = require('../../locales/en.json');
+    for (const key of ['aud_confirm_suffix', 'aud_pin_reset_confirm', 'aud_delete_confirm']) {
+      expect(String(bn[key] || '').trim().length).toBeGreaterThan(0);
+      expect(String(en[key] || '').trim().length).toBeGreaterThan(0);
+    }
   });
 
   test('মডাল hook আছে — নিজস্ব স্ক্রিপ্ট ফাইল লাগেনি', () => {

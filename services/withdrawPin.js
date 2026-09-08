@@ -13,6 +13,7 @@
 
 const bcrypt = require('bcryptjs');
 const { pool } = require('../db');
+const { BCRYPT_COST } = require('../utils/passwordPolicy');
 const auditLog = require('./auditLog');
 
 const PIN_LENGTH = 6;
@@ -44,7 +45,7 @@ function isWeakPin(pin) {
 }
 
 async function hashPin(pin) {
-  return bcrypt.hash(pin, 10);
+  return bcrypt.hash(pin, BCRYPT_COST);
 }
 
 async function comparePin(pin, hash) {

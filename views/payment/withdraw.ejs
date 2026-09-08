@@ -112,7 +112,7 @@
                                 <p class="text-xs text-muted"><%= c.account_number %></p>
                             </div>
                         </div>
-                        <form action="/profile/cards/delete/<%= c.id %>" method="POST" data-confirm="আপনি কি নিশ্চিত?">
+                        <form action="/profile/cards/delete/<%= c.id %>" method="POST" data-confirm="<%= t('wd_confirm_delete') %>">
                             <button type="submit" class="delete-btn">
                                 <i class="far fa-times-circle"></i>
                             </button>
@@ -207,7 +207,7 @@
       </div>
     <% } %>
 
-    <form action="/payment/withdraw" method="POST" id="withdrawForm" data-loading-target="withdrawSubmitBtn" data-loading-label="উইথড্র অনুরোধ পাঠানো হচ্ছে...">
+    <form action="/payment/withdraw" method="POST" id="withdrawForm" data-loading-target="withdrawSubmitBtn" data-loading-label="<%= t('awd_sending') %>">
       <!-- Withdrawal Form -->
       <% var formGated = locked || pinNotConfigured || pinLocked || windowClosed; %>
       <fieldset <%= formGated ? 'disabled' : '' %> class="space-y-5 <%= formGated ? 'opacity-50' : '' %>">
@@ -275,7 +275,7 @@
         </div>
 
         <button type="submit" id="withdrawSubmitBtn" <%= (!cards || cards.length === 0 || formGated) ? 'disabled' : '' %> class="w-full red-theme-bg text-white py-4 rounded-lg font-bold text-lg mt-6 shadow-lg active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
-            <%= locked ? 'টার্নওভার সম্পন্ন করুন' : 'জমা দিন' %>
+            <%= locked ? t('wd_complete_turnover') : t('wd_submit') %>
         </button>
       </fieldset>
     </form>

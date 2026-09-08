@@ -49,10 +49,10 @@
  <div class="error-box">
    <div class="error-icon">🚫</div>
    <h1>Invalid or Expired CSRF Token</h1>
-   <p>আপনার সেশনের মেয়াদ শেষ হয়ে গেছে অথবা ফর্মটি অনেকক্ষণ আগে খোলা হয়েছিল। পেজটি রিফ্রেশ করে আবার চেষ্টা করুন।</p>
-   <a href="/" class="btn-home">🏠 হোমপেজে যান</a>
+   <p><%= t('csrf_expired') %></p>
+   <a href="/" class="btn-home">🏠 <%= t('csrf_home') %></a>
    <br>
-   <a href="/" data-history-back="1" class="btn-back">← ফিরে যান</a>
+   <a href="/" data-history-back="1" class="btn-back">← <%= t('csrf_back') %></a>
  </div>
 <script src="/js/views/errors-csrf.js"></script>
 </body>

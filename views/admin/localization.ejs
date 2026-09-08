@@ -50,10 +50,10 @@
     <%- include('./partials/sidebar', { active: 'localization' }) %>
     <div class="admin-content">
       <%- include('./partials/load-error') %>
-      <%- include('./partials/header', { pageTitle: 'Localization Management', pageSubtitle: 'bn.json ও en.json — সব Text Key এক জায়গায়' }) %>
+      <%- include('./partials/header', { pageTitle: 'Localization Management', pageSubtitle: t("alo_sub") }) %>
 
       <div class="loc-toolbar">
-        <span class="stat-pill"><i class="fas fa-database"></i> মোট Key: <%= total %></span>
+        <span class="stat-pill"><i class="fas fa-database"></i> <%= t('alo_total_key') %> <%= total %></span>
         <span class="stat-pill" style="<%= missingCount > 0 ? 'background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.3);color:#f87171;' : '' %>">
           <i class="fas fa-triangle-exclamation"></i> Missing Translation: <%= missingCount %>
         </span>
@@ -76,7 +76,7 @@
         <form method="POST" action="/admin/localization/import/en" data-prep-import="en">
           <input type="hidden" name="json" id="importJsonEn">
         </form>
-        <textarea id="importTextarea" placeholder='{"key_name": "মান"}'></textarea>
+        <textarea id="importTextarea" placeholder='{"key_name": "' + t("alo_value") + '"}'></textarea>
         <div class="dz46-8">
           <button type="button" class="btn-xs dz46-9" data-submit-import="bn"><%= t('admin_loc_import_bn') %></button>
           <button type="button" class="btn-xs dz46-10" data-submit-import="en"><%= t('admin_loc_import_en') %></button>
@@ -120,7 +120,7 @@
               <td>
                   <button type="submit" class="btn-xs dz46-6"><%= t('admin_btn_save') %></button>
                 </form>
-                <form class="dz46-5" method="POST" action="/admin/localization/delete" data-confirm="এই Key ডিলিট করবেন?">
+                <form class="dz46-5" method="POST" action="/admin/localization/delete" data-confirm="<%= t('alo_delete_confirm') %>">
                   <input type="hidden" name="key" value="<%= r.key %>">
                   <button class="btn-xs dz46-17"><%= t('admin_btn_delete') %></button>
                 </form>

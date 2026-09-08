@@ -22,7 +22,7 @@ function fmtSize(bytes) {
   while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
   return n.toFixed(1) + ' ' + units[i];
 }
-function typeLabel(t) {
+function typeLabel(kind) {
   return t === 'database' ? '<span class="px-2.5 py-1 text-xs font-bold rounded-full bg-blue-100 text-blue-700">Database</span>'
     : t === 'uploads' ? '<span class="px-2.5 py-1 text-xs font-bold rounded-full bg-purple-100 text-purple-700">Uploads</span>'
     : '<span class="px-2.5 py-1 text-xs font-bold rounded-full bg-amber-100 text-amber-700">Config</span>';
@@ -34,15 +34,15 @@ function row(b) {
   const actions = b.status === 'completed' ? (
     '<div class="flex gap-2 justify-end flex-wrap">' +
       '<a href="/admin/backups/' + b.id + '/download" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200">Download</a>' +
-      '<form class="js1" method="POST" action="/admin/backups/' + b.id + '/restore" data-confirm="এই ব্যাকআপ থেকে রিস্টোর করবেন? বিদ্যমান ডেটা মোছা হবে না, শুধু নতুন/মিসিং ডেটা যোগ হবে (' + escapeHtml(b.type) + ')।">' +
+      '<form class="js1" method="POST" action="/admin/backups/' + b.id + '/restore" data-confirm="' + t("abk_restore_confirm") + ' (' + escapeHtml(b.type) + ')।">' +
         '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100">Restore</button>' +
       '</form>' +
-      '<form class="js1" method="POST" action="/admin/backups/' + b.id + '/delete" data-confirm="এই ব্যাকআপ ফাইলটি স্থায়ীভাবে ডিলিট করবেন?">' +
+      '<form class="js1" method="POST" action="/admin/backups/' + b.id + '/delete" data-confirm="' + t("abk_delete_confirm") + '">' +
         '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-red-50 text-red-600 hover:bg-red-100">Delete</button>' +
       '</form>' +
     '</div>'
   ) : (
-    '<form class="js1" method="POST" action="/admin/backups/' + b.id + '/delete" data-confirm="মুছে ফেলবেন?">' +
+    '<form class="js1" method="POST" action="/admin/backups/' + b.id + '/delete" data-confirm="' + t("abk_delete_short") + '">' +
       '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-red-50 text-red-600 hover:bg-red-100">Delete</button>' +
     '</form>'
   );
@@ -60,7 +60,7 @@ function row(b) {
     '<td class="px-6 py-4 text-right">' + actions + '</td>' +
   '</tr>';
 }
-const rows = (backups || []).map(row).join('') || '<tr><td colspan="8" class="px-6 py-10 text-center text-slate-400">কোনো ব্যাকআপ নেই — উপরের বাটন দিয়ে প্রথম ব্যাকআপ নিন</td></tr>';
+const rows = (backups || []).map(row).join('') || '<tr><td colspan="8" class="px-6 py-10 text-center text-slate-400">' + t("abk_no_backups") + '</td></tr>';
 %>
 <%- include('partials/admin-layout', {
     title: 'Backup & Restore',
@@ -70,17 +70,17 @@ const rows = (backups || []).map(row).join('') || '<tr><td colspan="8" class="px
     <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
             <h1 class="text-2xl font-semibold text-slate-900">Backup &amp; Restore System</h1>
-            <p class="text-slate-500 mt-1 text-sm">Database, Uploaded Files ও Configuration — Manual/Scheduled Backup, One-Click Restore</p>
+            <p class="text-slate-500 mt-1 text-sm">${t('abk_subtitle')}</p>
         </div>
-        ${!encryptionEnabled ? '<span class="px-4 py-2 bg-amber-50 text-amber-700 rounded-2xl text-sm font-semibold"><i class="fas fa-triangle-exclamation"></i> BACKUP_ENCRYPTION_KEY সেট নেই — ব্যাকআপ এনক্রিপ্ট হচ্ছে না</span>' : '<span class="px-4 py-2 bg-emerald-50 text-emerald-700 rounded-2xl text-sm font-semibold"><i class="fas fa-lock"></i> Encryption চালু</span>'}
+        ${!encryptionEnabled ? '<span class="px-4 py-2 bg-amber-50 text-amber-700 rounded-2xl text-sm font-semibold"><i class="fas fa-triangle-exclamation"></i> ' + t("abk_no_enc_key") + '</span>' : '<span class="px-4 py-2 bg-emerald-50 text-emerald-700 rounded-2xl text-sm font-semibold"><i class="fas fa-lock"></i> ' + t("abk_enc_on") + '</span>'}
     </div>
 
-    ${created ? '<div class="mb-4 px-4 py-3 bg-emerald-50 text-emerald-700 rounded-2xl text-sm font-medium">✅ ' + escapeHtml(created) + ' টি ব্যাকআপ তৈরি হয়েছে</div>' : ''}
+    ${created ? '<div class="mb-4 px-4 py-3 bg-emerald-50 text-emerald-700 rounded-2xl text-sm font-medium">✅ ' + escapeHtml(created) + ' ' + t("abk_created_suffix") + '</div>' : ''}
     ${restored ? (locals.skipped
       // আংশিক রিস্টোর কখনো সবুজ "সম্পন্ন" ব্যানারে দেখানো হয় না — সারি বাদ পড়লে সেটা
       // স্পষ্টভাবে সতর্কতা হিসেবে দেখাতে হবে, নাহলে অ্যাডমিন ডেটা-হারানো টের পায় না।
-      ? '<div class="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl text-sm font-medium">⚠️ ' + escapeHtml(restored) + ' রিস্টোর <b>আংশিকভাবে</b> সম্পন্ন হয়েছে — ' + escapeHtml(locals.skipped) + ' টি সারি ঢোকানো যায়নি।</div>'
-      : '<div class="mb-4 px-4 py-3 bg-blue-50 text-blue-700 rounded-2xl text-sm font-medium">✅ ' + escapeHtml(restored) + ' রিস্টোর সম্পন্ন হয়েছে</div>') : ''}
+      ? '<div class="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl text-sm font-medium">⚠️ ' + escapeHtml(restored) + ' ' + t("abk_restore_partial_a") + ' ' + escapeHtml(locals.skipped) + ' ' + t("abk_restore_partial_b") + '</div>'
+      : '<div class="mb-4 px-4 py-3 bg-blue-50 text-blue-700 rounded-2xl text-sm font-medium">✅ ' + escapeHtml(restored) + ' ' + t("abk_restore_done") + '</div>') : ''}
     ${error ? '<div class="mb-4 px-4 py-3 bg-red-50 text-red-700 rounded-2xl text-sm font-medium">❌ ' + escapeHtml(error) + '</div>' : ''}
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -89,7 +89,7 @@ const rows = (backups || []).map(row).join('') || '<tr><td colspan="8" class="px
             <button type="submit" class="w-full text-left bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition">
                 <i class="fas fa-database text-blue-600 text-xl"></i>
                 <p class="font-semibold text-slate-900 mt-2">Database Backup</p>
-                <p class="text-xs text-slate-400 mt-1">এখনই একটা ম্যানুয়াল DB ব্যাকআপ নিন</p>
+                <p class="text-xs text-slate-400 mt-1">${t('abk_manual_db')}</p>
             </button>
         </form>
         <form method="POST" action="/admin/backups/create">
@@ -97,7 +97,7 @@ const rows = (backups || []).map(row).join('') || '<tr><td colspan="8" class="px
             <button type="submit" class="w-full text-left bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition">
                 <i class="fas fa-folder text-purple-600 text-xl"></i>
                 <p class="font-semibold text-slate-900 mt-2">Uploads Backup</p>
-                <p class="text-xs text-slate-400 mt-1">public/uploads ফোল্ডারের tar.gz ব্যাকআপ</p>
+                <p class="text-xs text-slate-400 mt-1">${t('abk_uploads')}</p>
             </button>
         </form>
         <form method="POST" action="/admin/backups/create">
@@ -105,7 +105,7 @@ const rows = (backups || []).map(row).join('') || '<tr><td colspan="8" class="px
             <button type="submit" class="w-full text-left bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition">
                 <i class="fas fa-gear text-amber-600 text-xl"></i>
                 <p class="font-semibold text-slate-900 mt-2">Config Backup</p>
-                <p class="text-xs text-slate-400 mt-1">সাইট সেটিংস (secret ছাড়া)</p>
+                <p class="text-xs text-slate-400 mt-1">${t('abk_config')}</p>
             </button>
         </form>
         <form method="POST" action="/admin/backups/create">
@@ -113,7 +113,7 @@ const rows = (backups || []).map(row).join('') || '<tr><td colspan="8" class="px
             <button type="submit" class="w-full text-left bg-blue-600 text-white p-5 rounded-3xl shadow-sm hover:bg-blue-700 transition">
                 <i class="fas fa-shield-halved text-xl"></i>
                 <p class="font-semibold mt-2">Full Backup</p>
-                <p class="text-xs text-blue-100 mt-1">তিনটাই একসাথে নিন</p>
+                <p class="text-xs text-blue-100 mt-1">${t('abk_all_three')}</p>
             </button>
         </form>
     </div>
@@ -144,12 +144,12 @@ const rows = (backups || []).map(row).join('') || '<tr><td colspan="8" class="px
     </div>
 
     <div class="bg-slate-50 border border-slate-100 rounded-3xl p-5 text-sm text-slate-500 mt-6">
-        <p class="font-semibold text-slate-700 mb-2">নোট:</p>
+        <p class="font-semibold text-slate-700 mb-2">${t('abk_note')}</p>
         <ul class="list-disc list-inside space-y-1">
-            <li>Restore নন-ডেস্ট্রাক্টিভ — বিদ্যমান রেকর্ড কখনো মোছে/ওভাররাইট হয় না, শুধু মিসিং ডেটা যোগ হয়</li>
-            <li>প্রতিটা ব্যাকআপ SHA-256 checksum দিয়ে ভেরিফাই হয় রিস্টোরের আগে — ফাইল কারাপ্টেড হলে রিস্টোর বাতিল হয়ে যাবে</li>
-            <li>Scheduled ব্যাকআপ চালু করতে .env-এ BACKUP_SCHEDULE_HOURS সেট করুন (ডিফল্ট: প্রতি ২৪ ঘণ্টা)</li>
-            <li>Encryption চালু করতে .env-এ BACKUP_ENCRYPTION_KEY সেট করুন</li>
+            <li>${t('abk_note_1')}</li>
+            <li>${t('abk_note_2')}</li>
+            <li>${t('abk_note_3')}</li>
+            <li>${t('abk_note_4')}</li>
         </ul>
     </div>
 </div>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= job.label %> — হিস্ট্রি • Livo Admin</title>
+  <title><%= job.label %> — <%= t('acj_history') %> • Livo Admin</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style nonce="<%= cspNonce %>">
   /* Inline style attributes migrated to classes (CSP style-src-attr
@@ -29,7 +29,7 @@
       <a class="dz44-1" href="/admin/cron-jobs"><i class="fas fa-arrow-left"></i> <%= t('admin_back_to_cron_monitor') %></a>
 
       <div class="admin-card">
-        <div class="admin-card-header">সব রান (মোট <%= logs.length %>টি সাম্প্রতিক)</div>
+        <div class="admin-card-header"><%= t('acj_all_runs').replace('{n}', logs.length) %></div>
         <div class="dz44-2">
           <table class="admin-table">
             <thead><tr><th><%= t('admin_col_status') %></th><th><%= t('admin_col_attempts') %></th><th><%= t('admin_col_duration') %></th><th><%= t('admin_col_triggered_by') %></th><th><%= t('admin_col_message') %></th><th><%= t('admin_col_started') %></th><th><%= t('admin_col_finished') %></th></tr></thead>

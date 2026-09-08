@@ -39,7 +39,7 @@
 <div class="container dz67-1">
   <div class="im68-1">
     <a class="dz67-2" href="/profile">←</a>
-    <h1 class="dz67-3">💰 প্রফিট এন্ড লস</h1>
+    <h1 class="dz67-3">💰 <%= t('st_title') %></h1>
   </div>
 
   <form class="im68-2" method="GET" action="/profile/stats">
@@ -47,46 +47,46 @@
       <button type="submit" name="quick" value="today" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); background: <%= filter.quick === 'today' ? 'linear-gradient(90deg,#f59e0b,#fbbf24)' : 'rgba(255,255,255,0.05)' %>; color: <%= filter.quick === 'today' ? '#000' : 'var(--text-main)' %>;">আজ</button>
       <button type="submit" name="quick" value="yesterday" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); background: <%= filter.quick === 'yesterday' ? 'linear-gradient(90deg,#f59e0b,#fbbf24)' : 'rgba(255,255,255,0.05)' %>; color: <%= filter.quick === 'yesterday' ? '#000' : 'var(--text-main)' %>;">গতকাল</button>
       <button type="submit" name="quick" value="7days" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); background: <%= filter.quick === '7days' ? 'linear-gradient(90deg,#f59e0b,#fbbf24)' : 'rgba(255,255,255,0.05)' %>; color: <%= filter.quick === '7days' ? '#000' : 'var(--text-main)' %>;">গত ৭ দিন</button>
-      <a class="dz67-5" href="/profile/stats">সব</a>
+      <a class="dz67-5" href="/profile/stats"><%= t('st_all') %></a>
     </div>
     <div class="im68-3">
       <input class="dz67-6" type="date" name="from" value="<%= filter.from %>">
-      <span class="dz67-7">থেকে</span>
+      <span class="dz67-7"><%= t('st_from') %></span>
       <input class="dz67-6" type="date" name="to" value="<%= filter.to %>">
-      <button class="dz67-8" type="submit">ফিল্টার</button>
+      <button class="dz67-8" type="submit"><%= t('st_filter') %></button>
     </div>
   </form>
 
   <div class="im68-4">
     <div class="dz67-9">
-      <div class="dz67-10">মোট বেট</div>
+      <div class="dz67-10"><%= t('st_total_bets') %></div>
       <div class="dz67-11"><%= stats.total %></div>
     </div>
     <div class="dz67-9">
-      <div class="dz67-10">জয় / হার</div>
+      <div class="dz67-10"><%= t('st_win_loss') %></div>
       <div class="dz67-12"><%= stats.won %> <span class="dz67-13">/ <%= stats.lost %></span></div>
     </div>
   </div>
 
   <div style="background: <%= stats.net_profit >= 0 ? 'linear-gradient(135deg,#10b981,#059669)' : 'linear-gradient(135deg,#ef4444,#b91c1c)' %>;border-radius:16px;padding:20px;text-align:center">
-    <div class="dz67-14">নেট লাভ/ক্ষতি (সেটেল হওয়া বেট থেকে)</div>
-    <div class="dz67-15"><%= stats.net_profit >= 0 ? '+' : '' %>৳<%= stats.net_profit.toLocaleString('bn-BD') %></div>
+    <div class="dz67-14"><%= t('st_net') %></div>
+    <div class="dz67-15"><%= stats.net_profit >= 0 ? '+' : '' %>৳<%= stats.net_profit.toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></div>
   </div>
 
   <div class="im68-5">
     <div class="dz67-16">
-      <div class="dz67-17">মোট স্টেক</div>
-      <div class="dz67-3">৳<%= stats.total_staked.toLocaleString('bn-BD') %></div>
+      <div class="dz67-17"><%= t('st_total_staked') %></div>
+      <div class="dz67-3">৳<%= stats.total_staked.toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></div>
     </div>
     <div class="dz67-16">
-      <div class="dz67-17">মোট জিতেছে</div>
-      <div class="dz67-18">৳<%= stats.total_won_amount.toLocaleString('bn-BD') %></div>
+      <div class="dz67-17"><%= t('st_total_won') %></div>
+      <div class="dz67-18">৳<%= stats.total_won_amount.toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></div>
     </div>
   </div>
 
   <% const winRate = stats.total > 0 ? Math.round((stats.won / stats.total) * 100) : 0; %>
   <div class="dz67-19">
-    <div class="dz67-20">জয়ের হার</div>
+    <div class="dz67-20"><%= t('st_win_rate') %></div>
     <div class="dz67-21">
       <div style="background:linear-gradient(90deg,#f59e0b,#fbbf24);height:12px;width:<%= winRate %>%"></div>
     </div>

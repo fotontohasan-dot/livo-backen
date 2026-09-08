@@ -44,14 +44,14 @@ function logRow(l) {
     '<td class="px-5 py-3 text-xs text-slate-500">' + escapeHtml(l.location || '-') + '</td>' +
   '</tr>';
 }
-const rows = (logs || []).map(logRow).join('') || '<tr><td colspan="9" class="px-6 py-10 text-center text-slate-400">কোনো audit log পাওয়া যায়নি</td></tr>';
+const rows = (logs || []).map(logRow).join('') || '<tr><td colspan="9" class="px-6 py-10 text-center text-slate-400">' + t("aal_no_logs") + '</td></tr>';
 const f = filters || {};
 const qs = Object.keys(f).map(k => k + '=' + encodeURIComponent(f[k] || '')).join('&');
 
 const rc = riskCounts || { low: 0, medium: 0, high: 0, critical: 0 };
 const catRows = (categoryCounts || []).map(c =>
   '<div class="flex justify-between text-sm py-1.5 border-b border-slate-100"><span class="text-slate-600">' + escapeHtml(CATEGORY_LABELS[c.category] || c.category) + '</span><span class="font-semibold text-slate-800">' + c.count + '</span></div>'
-).join('') || '<div class="text-xs text-slate-400 py-2">কোনো ডেটা নেই</div>';
+).join('') || '<div class="text-xs text-slate-400 py-2">' + t("aal_no_data") + '</div>';
 
 const categoryOptions = (categories || []).map(c => '<option value="' + c + '" ' + (f.category === c ? 'selected' : '') + '>' + (CATEGORY_LABELS[c] || c) + '</option>').join('');
 const riskOptions = (riskLevels || []).map(r => '<option value="' + r + '" ' + (f.riskLevel === r ? 'selected' : '') + '>' + r.toUpperCase() + '</option>').join('');
@@ -64,7 +64,7 @@ const riskOptions = (riskLevels || []).map(r => '<option value="' + r + '" ' + (
     <div class="flex items-center justify-between flex-wrap gap-3">
         <div>
             <h1 class="text-2xl font-semibold text-slate-900">Audit Log Dashboard</h1>
-            <p class="text-slate-500 mt-1 text-sm">মোট ${total || 0}টি এন্ট্রি — User, Admin ও System-এর সব গুরুত্বপূর্ণ action</p>
+            <p class="text-slate-500 mt-1 text-sm">${t('aal_subtitle').replace('{n}', total || 0)}</p>
         </div>
         <div class="flex gap-2">
             <a href="/admin/audit-logs/export.csv?${qs}" class="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-sm font-semibold"><i class="fas fa-file-csv mr-1"></i>CSV</a>
@@ -87,31 +87,31 @@ const riskOptions = (riskLevels || []).map(r => '<option value="' + r + '" ' + (
 
         <div class="lg:col-span-3 space-y-4">
             <form method="GET" action="/admin/audit-logs" class="bg-white rounded-3xl border border-slate-100 p-5 flex flex-wrap gap-3">
-                <input type="text" name="q" value="${escapeHtml(f.q)}" placeholder="সার্চ (actor, action, details)" class="flex-1 min-w-[200px] border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+                <input type="text" name="q" value="${escapeHtml(f.q)}" placeholder="${t('aal_search')}" class="flex-1 min-w-[200px] border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
                 <select name="actorType" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
-                    <option value="">সব Actor</option>
+                    <option value="">${t('aal_all_actor')}</option>
                     <option value="user" ${f.actorType === 'user' ? 'selected' : ''}>User</option>
                     <option value="admin" ${f.actorType === 'admin' ? 'selected' : ''}>Admin</option>
                     <option value="system" ${f.actorType === 'system' ? 'selected' : ''}>System</option>
                 </select>
                 <select name="category" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
-                    <option value="">সব Category</option>
+                    <option value="">${t('aal_all_category')}</option>
                     ${categoryOptions}
                 </select>
                 <select name="status" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
-                    <option value="">সব Status</option>
+                    <option value="">${t('aal_all_status')}</option>
                     <option value="success" ${f.status === 'success' ? 'selected' : ''}>Success</option>
                     <option value="failure" ${f.status === 'failure' ? 'selected' : ''}>Failure</option>
                 </select>
                 <select name="riskLevel" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
-                    <option value="">সব Risk</option>
+                    <option value="">${t('aal_all_risk')}</option>
                     ${riskOptions}
                 </select>
-                <input type="text" name="action" value="${escapeHtml(f.action)}" placeholder="Action টাইপ" class="w-40 border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
+                <input type="text" name="action" value="${escapeHtml(f.action)}" placeholder="${t('aal_action_type')}" class="w-40 border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
                 <input type="date" name="from" value="${escapeHtml(f.from || '')}" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
                 <input type="date" name="to" value="${escapeHtml(f.to || '')}" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
-                <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">ফিল্টার</button>
-                ${(f.q || f.actorType || f.category || f.status || f.riskLevel || f.action || f.from || f.to) ? '<a href="/admin/audit-logs" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">রিসেট</a>' : ''}
+                <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">${t('aal_filter')}</button>
+                ${(f.q || f.actorType || f.category || f.status || f.riskLevel || f.action || f.from || f.to) ? '<a href="/admin/audit-logs" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">' + t("aal_reset") + '</a>' : ''}
             </form>
 
             <div class="bg-white rounded-3xl border border-slate-100 overflow-x-auto modern-table">
@@ -134,9 +134,9 @@ const riskOptions = (riskLevels || []).map(r => '<option value="' + r + '" ' + (
             </div>
 
             <div class="flex justify-center gap-3">
-                ${page > 1 ? '<a href="/admin/audit-logs?page=' + (page - 1) + '&' + qs + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">← আগের পেজ</a>' : ''}
-                <span class="px-4 py-2 text-sm text-slate-500">পেজ ${page} / ${totalPages}</span>
-                ${page < totalPages ? '<a href="/admin/audit-logs?page=' + (page + 1) + '&' + qs + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">পরের পেজ →</a>' : ''}
+                ${page > 1 ? '<a href="/admin/audit-logs?page=' + (page - 1) + '&' + qs + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">← ' + t("aal_prev_page") + '</a>' : ''}
+                <span class="px-4 py-2 text-sm text-slate-500">${t('aal_page_x_y').replace('{page}', page).replace('{pages}', totalPages)}</span>
+                ${page < totalPages ? '<a href="/admin/audit-logs?page=' + (page + 1) + '&' + qs + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">' + t("aal_next_page") + ' →</a>' : ''}
             </div>
         </div>
     </div>
@@ -149,7 +149,7 @@ const riskOptions = (riskLevels || []).map(r => '<option value="' + r + '" ' + (
             <h3 style="font-weight:700; font-size:16px; color:#1e293b; margin:0;"><i class="fas fa-circle-info" style="color:#6366f1; margin-right:8px;"></i>Audit Log Details</h3>
             <button data-log-close style="background:none; border:none; font-size:18px; color:#94a3b8; cursor:pointer;">&times;</button>
         </div>
-        <div id="auditLogModalBody" style="padding:24px; font-size:13px; color:#334155;">লোড হচ্ছে...</div>
+        <div id="auditLogModalBody" style="padding:24px; font-size:13px; color:#334155;">${t('aal_loading')}</div>
     </div>
 </div>
 <script src="/js/views/admin-audit-logs.js"></script>

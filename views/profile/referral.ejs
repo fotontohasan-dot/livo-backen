@@ -59,7 +59,7 @@
     <div class="im77-2">🎁</div>
     <div class="dz76-5"><%= t.refer_and_earn %></div>
     <div class="dz76-6">
-      বন্ধুর প্রথম ডিপোজিটে বোনাস + আজীবন কমিশন (২.৫% / ১.৫% / ০.৮%)
+      <%= t('ref_tagline') %>
     </div>
   </div>
 
@@ -112,19 +112,19 @@
   <div class="dz76-19">
     <div class="dz76-22"><%= t.my_team %></div>
     <% if (stats.team && stats.team.length > 0) { %>
-      <% stats.team.forEach(t => { %>
+      <% stats.team.forEach(member => { %>
         <div class="dz76-23">
           <div>
-            <div class="dz76-13"><%= t.username %></div>
-            <div class="dz76-24"><%= new Date(t.created_at).toLocaleDateString('bn-BD') %></div>
+            <div class="dz76-13"><%= member.username %></div>
+            <div class="dz76-24"><%= new Date(member.created_at).toLocaleDateString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></div>
           </div>
           <div>
-            <% if (t.signup_bonus_paid) { %>
-              <span class="dz76-25"><%= t.successful %></span>
-            <% } else if (t.first_deposit_done) { %>
-              <span class="dz76-26"><%= t.deposited %></span>
+            <% if (member.signup_bonus_paid) { %>
+              <span class="dz76-25"><%= t('successful') %></span>
+            <% } else if (member.first_deposit_done) { %>
+              <span class="dz76-26"><%= t('deposited') %></span>
             <% } else { %>
-              <span class="dz76-27"><%= t.awaiting %></span>
+              <span class="dz76-27"><%= t('awaiting') %></span>
             <% } %>
           </div>
         </div>
@@ -142,10 +142,10 @@
         <div class="dz76-30">
           <div>
             <div class="dz76-31">
-              <%= h.reason === 'signup' ? '🎁 রেফার বোনাস' : `💸 কমিশন (লেভেল ${h.level})` %>
+              <%= h.reason === 'signup' ? '🎁 ' + t('ref_signup_bonus') : '💸 ' + t('ref_commission').replace('{level}', h.level) %>
             </div>
             <div class="dz76-24">
-              <%= h.from_username || 'ইউজার' %> · <%= new Date(h.created_at).toLocaleDateString('bn-BD') %>
+              <%= h.from_username || t('ref_user') %> · <%= new Date(h.created_at).toLocaleDateString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %>
             </div>
           </div>
           <div class="dz76-32">+<%= Number(h.amount).toLocaleString('bn-BD') %></div>

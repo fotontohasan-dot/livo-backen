@@ -30,9 +30,16 @@ process.on('unhandledRejection', (reason) => {
   console.error('⚠️ Unhandled Rejection:', reason && reason.stack ? reason.stack : reason);
   sentryService.captureException(reason instanceof Error ? reason : new Error(String(reason)), { source: 'unhandledRejection' });
 });
+// unhandledRejection-এ প্রসেস চালু রাখা তুলনামূলক গ্রহণযোগ্য, কিন্তু
+// uncaughtException আলাদা: Node-এর ডকুমেন্টেশন স্পষ্টভাবে বলে এর পর প্রসেস
+// undefined state-এ থাকে। টাকার প্ল্যাটফর্মে এর মানে অর্ধেক-কমিট হওয়া
+// ট্রানজেকশন আর ফাঁস হওয়া DB কানেকশন — corrupted প্রসেস চালিয়ে যাওয়ার চেয়ে
+// বেরিয়ে যাওয়া নিরাপদ। Sentry-কে পাঠানোর জন্য ২ সেকেন্ড সময় দিয়ে exit;
+// Render/Docker restart policy সাথে সাথেই আবার তুলে দেয়।
 process.on('uncaughtException', (err) => {
   console.error('⚠️ Uncaught Exception:', err && err.stack ? err.stack : err);
   sentryService.captureException(err, { source: 'uncaughtException' });
+  setTimeout(() => process.exit(1), 2000).unref();
 });
 // গ্রেসফুল শাটডাউন। আগে শুধু SIGTERM হ্যান্ডেল হতো (SIGINT নয়, অর্থাৎ Ctrl+C-তে
 // ব্যাকগ্রাউন্ড কাজ ও কানেকশন গুছিয়ে বন্ধ হতো না), আর হ্যান্ডলারটা সরাসরি

@@ -21,7 +21,7 @@
 <div class="container dz79-1">
   <div class="im80-1">
     <a class="dz79-2" href="/profile">←</a>
-    <h1 class="dz79-3">💬 পরামর্শ ও প্রতিক্রিয়া</h1>
+    <h1 class="dz79-3">💬 <%= t('fb_page_title') %></h1>
   </div>
 
   <%- include('../partials/flash') %>
@@ -29,11 +29,11 @@
   <div class="dz79-4">
     <form class="dz79-5" action="/profile/feedback" method="POST" id="feedback-form">
       <div>
-        <label class="dz79-6">আপনার মতামত লিখুন</label>
-        <textarea class="dz79-7" name="message" id="feedback-message" required rows="6" placeholder="২০ থেকে ২০০ শব্দের মধ্যে লিখুন..."></textarea>
+        <label class="dz79-6"><%= t('fb_label') %></label>
+        <textarea class="dz79-7" name="message" id="feedback-message" required rows="6" placeholder="<%= t('fb_placeholder') %>"></textarea>
       </div>
       <button class="dz79-8" type="submit" id="feedback-submit">
-        জমা দিন
+        <%= t('prof_deposit') %>
       </button>
     </form>
   </div>

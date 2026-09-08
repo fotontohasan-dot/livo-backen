@@ -38,14 +38,14 @@
 
   <div class="im62-1">
     <a class="dz61-2" href="/profile">←</a>
-    <h1 class="dz61-3">📤 শেয়ার করে বোনাস</h1>
+    <h1 class="dz61-3">📤 <%= t('shr_title') %></h1>
   </div>
 
   <div class="dz61-4">
     <div class="im62-2">📤</div>
-    <div class="dz61-5">শেয়ার করুন, বোনাস নিন</div>
+    <div class="dz61-5"><%= t('shr_heading') %></div>
     <div class="dz61-6">
-      প্রতিদিন শেয়ার করে <strong><%= share ? share.bonus : 20 %> কয়েন</strong> পান
+      প্রতিদিন <%= t('prof_share') %> করে <strong><%= share ? share.bonus : 20 %> কয়েন</strong> পান
     </div>
   </div>
 
@@ -53,19 +53,19 @@
 
   <!-- শেয়ার বাটন -->
   <div class="dz61-7">
-    <div class="dz61-8">যেখানে শেয়ার করবেন</div>
+    <div class="dz61-8"><%= t('shr_where') %></div>
     <div class="im62-3">
-      <a class="dz61-9" href="https://wa.me/?text=<%= encodeURIComponent('Livo-তে খেলুন আর জিতুন! ' + shareUrl) %>" target="_blank">
+      <a class="dz61-9" href="https://wa.me/?text=<%= encodeURIComponent(t("shr_message") + ' ' + shareUrl) %>" target="_blank">
         WhatsApp
       </a>
       <a class="dz61-10" href="https://www.facebook.com/sharer/sharer.php?u=<%= encodeURIComponent(shareUrl) %>" target="_blank">
         Facebook
       </a>
-      <a class="dz61-11" href="https://t.me/share/url?url=<%= encodeURIComponent(shareUrl) %>&text=<%= encodeURIComponent('Livo-তে খেলুন আর জিতুন!') %>" target="_blank">
+      <a class="dz61-11" href="https://t.me/share/url?url=<%= encodeURIComponent(shareUrl) %>&text=<%= encodeURIComponent(t("shr_message")) %>" target="_blank">
         Telegram
       </a>
       <button class="dz61-12" data-copy-link>
-        লিংক কপি
+        <%= t('shr_copy_link') %>
       </button>
     </div>
     <input class="dz61-13" type="text" id="shareLink" value="<%= shareUrl %>" readonly>
@@ -74,20 +74,20 @@
   <!-- বোনাস ক্লেইম -->
   <div class="dz61-14">
     <% if (share && share.claimed) { %>
-      <div class="dz61-15">✅ আজকের শেয়ার বোনাস নেওয়া হয়েছে</div>
-      <div class="dz61-16">আগামীকাল আবার আসুন</div>
+      <div class="dz61-15">✅ <%= t('shr_claimed') %></div>
+      <div class="dz61-16"><%= t('shr_come_back') %></div>
     <% } else { %>
-      <div class="dz61-17">উপরে শেয়ার করার পর নিচের বাটনে বোনাস নিন</div>
+      <div class="dz61-17"><%= t('shr_after_share') %></div>
       <form class="im62-4" action="/profile/share/claim" method="POST">
         <button type="submit" class="btn btn-primary im62-5">
-          🎁 শেয়ার বোনাস নিন (<%= share ? share.bonus : 20 %> কয়েন)
+          🎁 <%= t('prof_share') %> বোনাস নিন (<%= share ? share.bonus : 20 %> কয়েন)
         </button>
       </form>
     <% } %>
   </div>
 
   <p class="dz61-18">
-    আপনার রেফারেল লিংক শেয়ার করুন — বন্ধু জয়েন করলে রেফারেল বোনাসও পাবেন!
+    <%= t('shr_footer') %>
   </p>
 
 </div>

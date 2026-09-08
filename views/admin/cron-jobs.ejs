@@ -49,7 +49,7 @@
     <%- include('./partials/sidebar', { active: 'cron-jobs' }) %>
     <div class="admin-content">
       <%- include('./partials/load-error') %>
-      <%- include('./partials/header', { pageTitle: 'Cron Jobs Monitor', pageSubtitle: 'সব Scheduled Job-এর অবস্থা, লগ ও ম্যানুয়াল কন্ট্রোল' }) %>
+      <%- include('./partials/header', { pageTitle: 'Cron Jobs Monitor', pageSubtitle: t('acj_sub') }) %>
 
       <% if (typeof success !== 'undefined' && success && success.length) { %>
         <% success.forEach(function(m) { %><div class="flash-box flash-success"><%= m %></div><% }) %>
@@ -82,7 +82,7 @@
           </div>
 
           <div class="cron-meta">
-            <div><%= t('admin_col_interval') %><b><%= Math.round(job.interval_ms/60000) %> মিনিট</b></div>
+            <div><%= t('admin_col_interval') %><b><%= Math.round(job.interval_ms/60000) %> <%= t('acj_minutes') %></b></div>
             <div><%= t('admin_col_max_retries') %><b><%= job.max_retries %></b></div>
             <div><%= t('admin_col_last_run') %><b><%= job.last_run_at ? new Date(job.last_run_at).toLocaleString('bn-BD') : '—' %></b></div>
             <div><%= t('admin_col_next_run') %><b><%= job.next_run_at ? new Date(job.next_run_at).toLocaleString('bn-BD') : '—' %></b></div>

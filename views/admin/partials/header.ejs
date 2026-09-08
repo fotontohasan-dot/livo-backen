@@ -51,7 +51,7 @@
 <div class="admin-topbar">
   <button class="admin-hamburger" data-admin-sidebar="toggle"><i class="fas fa-bars"></i></button>
   <div>
-    <div class="admin-page-title"><%= typeof pageTitle !== 'undefined' ? pageTitle : 'অ্যাডমিন' %></div>
+    <div class="admin-page-title"><%= typeof pageTitle !== 'undefined' ? pageTitle : t('ahd_admin') %></div>
     <% if (typeof pageSubtitle !== 'undefined' && pageSubtitle) { %>
       <div class="admin-page-subtitle"><%= pageSubtitle %></div>
     <% } %>

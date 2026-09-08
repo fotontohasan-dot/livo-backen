@@ -13,7 +13,7 @@ function escapeHtml(str) {
   <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
     <div>
       <h1 class="text-xl font-bold text-slate-800">🛡️ Roles & Permissions</h1>
-      <p class="text-sm text-slate-500">Super Admin, Admin, Moderator, Support, Finance ও Custom Role ম্যানেজ করুন</p>
+      <p class="text-sm text-slate-500">${t('aro_subtitle')}</p>
     </div>
     <div class="flex gap-2 flex-wrap">
       <a href="/admin/roles/matrix" class="px-4 py-2 bg-slate-800 text-white rounded-xl text-sm font-semibold"><i class="fas fa-table-cells"></i> Permission Matrix</a>
@@ -29,11 +29,11 @@ function escapeHtml(str) {
   ${error ? `<div class="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl text-sm">${escapeHtml(error)}</div>` : ''}
 
   <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm mb-6">
-    <p class="text-sm font-bold text-slate-700 mb-3">নতুন Custom Role তৈরি করুন</p>
+    <p class="text-sm font-bold text-slate-700 mb-3">${t('aro_new_custom')}</p>
     <form method="POST" action="/admin/roles" class="grid grid-cols-1 md:grid-cols-3 gap-2">
-      <input type="text" name="name" placeholder="Role নাম (যেমন: Content Editor)" required class="border px-3 py-2.5 rounded-xl text-sm md:col-span-1">
-      <input type="text" name="description" placeholder="বিবরণ (ঐচ্ছিক)" class="border px-3 py-2.5 rounded-xl text-sm md:col-span-1">
-      <button type="submit" class="px-4 py-2.5 bg-slate-800 text-white rounded-xl text-sm font-semibold">তৈরি করুন (পরে পারমিশন সেট করুন)</button>
+      <input type="text" name="name" placeholder="${t('aro_name_placeholder')}" required class="border px-3 py-2.5 rounded-xl text-sm md:col-span-1">
+      <input type="text" name="description" placeholder="${t('aro_desc_placeholder')}" class="border px-3 py-2.5 rounded-xl text-sm md:col-span-1">
+      <button type="submit" class="px-4 py-2.5 bg-slate-800 text-white rounded-xl text-sm font-semibold">${t('aro_create')}</button>
     </form>
   </div>
 
@@ -48,7 +48,7 @@ function escapeHtml(str) {
             </div>
             <p class="text-xs text-slate-400 font-mono mt-0.5">${escapeHtml(role.key)}</p>
             <p class="text-xs text-slate-500 mt-1.5">${escapeHtml(role.description || '—')}</p>
-            <p class="text-xs text-slate-400 mt-1.5"><i class="fas fa-users"></i> ${role.user_count} জন ইউজার</p>
+            <p class="text-xs text-slate-400 mt-1.5"><i class="fas fa-users"></i> ${t('aro_user_count').replace('{n}', role.user_count)}</p>
           </div>
         </div>
         <div class="flex gap-2 mt-4 flex-wrap">
@@ -58,12 +58,12 @@ function escapeHtml(str) {
             <button type="submit" class="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-xs font-semibold"><i class="fas fa-copy"></i> Clone</button>
           </form>
           ${!role.is_system ? `
-          <form method="POST" action="/admin/roles/${role.id}/delete" data-confirm="Role '${escapeHtml(role.name)}' ডিলিট করবেন?" class="inline-flex">
+          <form method="POST" action="/admin/roles/${role.id}/delete" data-confirm="${t('aro_delete_confirm').replace('{name}', escapeHtml(role.name))}" class="inline-flex">
             <button type="submit" class="px-3 py-1.5 bg-red-100 text-red-600 rounded-lg text-xs font-semibold"><i class="fas fa-trash"></i> Delete</button>
           </form>` : ''}
         </div>
       </div>
-    `).join('') || '<p class="text-slate-400 text-center py-10 col-span-2">কোনো Role পাওয়া যায়নি।</p>'}
+    `).join('') || '<p class="text-slate-400 text-center py-10 col-span-2">' + t("aro_no_roles") + '</p>'}
   </div>
 </div>
 `

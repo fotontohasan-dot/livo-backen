@@ -34,7 +34,7 @@
     <%- include('./partials/sidebar', { active: 'referrals' }) %>
     <div class="admin-content">
       <%- include('./partials/load-error') %>
-      <%- include('./partials/header', { pageTitle: 'রেফারেল ম্যানেজমেন্ট', pageSubtitle: 'রেফারার/রেফার্ড ইউজার, বোনাস ও কমিশন স্ট্যাটাস' }) %>
+      <%- include('./partials/header', { pageTitle: t('arf_page_title'), pageSubtitle: t('arf_page_sub') }) %>
 
       <div class="grid grid-4 dz27-1">
         <div class="stat-card"><div class="stat-label"><%= t('admin_stat_total_referrals') %></div><div class="stat-number"><%= summary.totalReferrals %></div></div>
@@ -59,7 +59,7 @@
       </div>
 
       <div class="admin-card">
-        <div class="admin-card-header">সকল রেফারেল (মোট <%= total %>টা)</div>
+        <div class="admin-card-header"><%= t('arf_all_referrals').replace('{n}', total) %></div>
         <div class="dz27-8">
           <table class="admin-table">
             <thead>
@@ -78,11 +78,11 @@
                   <tr>
                     <td>
                       <div class="dz27-10">@<%= r.referrer_username %></div>
-                      <div class="dz27-11">কোড: <%= r.referrer_code || '-' %></div>
+                      <div class="dz27-11"><%= t('arf_code') %> <%= r.referrer_code || '-' %></div>
                     </td>
                     <td>
                       <div class="dz27-10">@<%= r.referred_username %></div>
-                      <div class="dz27-11">যোগদান: <%= r.referred_joined_at ? new Date(r.referred_joined_at).toLocaleDateString('bn-BD') : '—' %></div>
+                      <div class="dz27-11"><%= t('arf_joined') %> <%= r.referred_joined_at ? new Date(r.referred_joined_at).toLocaleDateString(locals.lang === 'en' ? 'en-US' : 'bn-BD') : '—' %></div>
                     </td>
                     <td>
                       <% if (r.signup_bonus_paid) { %>
@@ -91,7 +91,7 @@
                         <span class="badge badge-amber"><%= t('admin_status_pending') %></span>
                       <% } %>
                       <div class="dz27-12">
-                        <%= r.first_deposit_done ? 'ডিপোজিট সম্পন্ন' : 'ডিপোজিট বাকি' %>
+                        <%= r.first_deposit_done ? t('arf_dep_done') : t('arf_dep_pending') %>
                       </div>
                     </td>
                     <td class="dz27-10">৳ <%= Number(r.commission_earned || 0).toLocaleString('en-US') %></td>
@@ -114,7 +114,7 @@
         <% if (page > 1) { %>
           <a class="btn" href="/admin/referrals?page=<%= page - 1 %>&search=<%= encodeURIComponent(search || '') %>&status=<%= status || '' %>">&larr; <%= t('admin_pagination_prev') %></a>
         <% } %>
-        <span class="dz27-15">পেজ <%= page %> / <%= totalPages %></span>
+        <span class="dz27-15"><%= t('ash_page_x_y').replace('{page}', page).replace('{pages}', totalPages) %></span>
         <% if (page < totalPages) { %>
           <a class="btn" href="/admin/referrals?page=<%= page + 1 %>&search=<%= encodeURIComponent(search || '') %>&status=<%= status || '' %>"><%= t('admin_pagination_next') %> &rarr;</a>
         <% } %>

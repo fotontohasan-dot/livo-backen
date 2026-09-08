@@ -40,86 +40,87 @@
 
   <div class="im56-1">
     <a class="dz55-2" href="/profile">←</a>
-    <h1 class="dz55-3">📅 সাপ্তাহিক ও মাসিক রিওয়ার্ড</h1>
+    <h1 class="dz55-3">📅 <%= t('per_title') %></h1>
   </div>
 
   <!-- সাপ্তাহিক ক্যাশব্যাক -->
   <div class="dz55-4">
-    <div class="dz55-5">🗓️ সাপ্তাহিক ক্যাশব্যাক</div>
-    <div class="dz55-6">গত ৭ দিনের নিট লসের ১০% (সর্বোচ্চ ৫০,০০০)</div>
+    <div class="dz55-5">🗓️ <%= t('per_weekly_cashback') %></div>
+    <div class="dz55-6"><%= t('per_weekly_desc') %></div>
 
     <% if (weekly) { %>
       <div class="dz55-7">
         <div class="dz55-8">
-          <span class="dz55-9">গত ৭ দিনের নিট লস</span>
+          <span class="dz55-9"><%= t('per_net_loss_7d') %></span>
           <span class="dz55-10"><%= Number(weekly.netLoss).toLocaleString('bn-BD') %></span>
         </div>
         <div class="dz55-8">
-          <span class="dz55-9">ক্যাশব্যাক (১০%)</span>
+          <span class="dz55-9"><%= t('per_cashback_10') %></span>
           <span class="dz55-11"><%= Number(weekly.amount).toLocaleString('bn-BD') %> কয়েন</span>
         </div>
       </div>
       <% if (weekly.claimed) { %>
-        <div class="dz55-12">✅ এই সপ্তাহের ক্যাশব্যাক নেওয়া হয়েছে</div>
+        <div class="dz55-12">✅ <%= t('per_weekly_claimed') %></div>
       <% } else if (weekly.available) { %>
         <form class="im56-2" action="/profile/periodic/weekly" method="POST">
           <button class="dz55-13" type="submit">
-            🗓️ সাপ্তাহিক ক্যাশব্যাক ক্লেইম করুন
+            🗓️ <%= t('per_weekly_claim') %>
           </button>
         </form>
       <% } else { %>
-        <div class="dz55-14">এই সপ্তাহে ক্যাশব্যাক পাওয়ার মতো যথেষ্ট লস হয়নি।</div>
+        <div class="dz55-14">এই সপ্তাহে <%= t('cb_title') %> পাওয়ার মতো যথেষ্ট লস হয়নি।</div>
       <% } %>
     <% } else { %>
-      <div class="dz55-15">তথ্য লোড করা যায়নি।</div>
+      <div class="dz55-15"><%= t('per_load_error') %></div>
     <% } %>
   </div>
 
   <!-- মাসিক রিওয়ার্ড -->
   <div class="dz55-16">
-    <div class="dz55-5">📆 মাসিক রিওয়ার্ড</div>
-    <div class="dz55-6">গত মাসের মোট বাজির উপর টিয়ার বোনাস</div>
+    <div class="dz55-5">📆 <%= t('per_monthly_reward') %></div>
+    <div class="dz55-6"><%= t('per_monthly_desc') %></div>
 
     <% if (monthly) { %>
       <div class="dz55-7">
         <div class="dz55-8">
-          <span class="dz55-9">গত মাসের মোট বাজি</span>
+          <span class="dz55-9"><%= t('per_monthly_total_bet') %></span>
           <span class="dz55-10"><%= Number(monthly.turnover).toLocaleString('bn-BD') %></span>
         </div>
         <div class="dz55-8">
-          <span class="dz55-9">প্রাপ্য বোনাস</span>
+          <span class="dz55-9"><%= t('per_bonus_due') %></span>
           <span class="dz55-11"><%= Number(monthly.bonus).toLocaleString('bn-BD') %> কয়েন</span>
         </div>
       </div>
 
       <% if (monthly.claimed) { %>
-        <div class="dz55-17">✅ গত মাসের রিওয়ার্ড নেওয়া হয়েছে</div>
+        <div class="dz55-17">✅ <%= t('per_monthly_claimed') %></div>
       <% } else if (monthly.available) { %>
         <form class="im56-2" action="/profile/periodic/monthly" method="POST">
           <button class="dz55-18" type="submit">
-            📆 মাসিক রিওয়ার্ড ক্লেইম করুন
+            📆 <%= t('per_monthly_claim') %>
           </button>
         </form>
       <% } else { %>
-        <div class="dz55-14">গত মাসে যথেষ্ট বাজি হয়নি।</div>
+        <div class="dz55-14"><%= t('per_monthly_none') %></div>
       <% } %>
 
       <!-- টিয়ার তালিকা -->
       <div class="dz55-19">
-        <% monthly.tiers.forEach(t => { %>
+        <%# লুপ ভ্যারিয়েবলের নাম `t` ছিল, যা অনুবাদক t()-কে ঢেকে দিত %>
+        <% monthly.tiers.forEach(tier => { %>
           <div class="dz55-20">
-            <span class="dz55-21"><%= Number(t.min).toLocaleString('bn-BD') %>+ বাজি</span>
-            <span class="dz55-22"><%= t.bonus %> কয়েন</span>
+            <span class="dz55-21"><%= t('per_tier_bet').replace('{value}', Number(tier.min).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD')) %></span>
+            <span class="dz55-22"><%= t('per_coins').replace('{value}', tier.bonus) %></span>
           </div>
         <% }) %>
       </div>
     <% } else { %>
-      <div class="dz55-15">তথ্য লোড করা যায়নি।</div>
+      <div class="dz55-15"><%= t('per_load_error') %></div>
     <% } %>
   </div>
 
   <p class="dz55-23">
-    সাপ্তাহিক ক্যাশব্যাক সপ্তাহে একবার, মাসিক রিওয়ার্ড মাসে একবার ক্লেইম করা যায়।
+    <%= t('per_footer') %>
   </p>
 
 </div>

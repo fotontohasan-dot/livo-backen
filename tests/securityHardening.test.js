@@ -171,7 +171,7 @@ describe('#32 maintenance mode রিস্টার্টে রিসেট �
 });
 
 describe('#43 service worker ব্যক্তিগত পেইজ ক্যাশ করে না', () => {
-  const sw = read('public', 'service-worker.js');
+  const sw = read('assets', 'service-worker.js');
 
   test('ব্যক্তিগত রুটগুলো বাদ যায়', () => {
     for (const route of ['/profile', '/wallet', '/payment', '/kyc', '/history']) {

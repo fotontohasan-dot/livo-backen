@@ -33,21 +33,21 @@
 
   <div class="im58-1">
     <a class="dz57-2" href="/profile/vip">←</a>
-    <h1 class="dz57-3">📜 VIP হিস্ট্রি</h1>
+    <h1 class="dz57-3">📜 <%= t('viph_title') %></h1>
   </div>
 
   <div class="im58-2">
     <div class="dz57-4">
-      <div class="dz57-5">মোট ক্লেইম</div>
+      <div class="dz57-5"><%= t('viph_total_claims') %></div>
       <div class="dz57-6"><%= rewardHistory.total %></div>
     </div>
     <div class="dz57-4">
-      <div class="dz57-5">মোট আপগ্রেড</div>
+      <div class="dz57-5"><%= t('viph_total_upgrades') %></div>
       <div class="dz57-7"><%= upgradeHistory.total %></div>
     </div>
   </div>
 
-  <div class="dz57-8">🎁 রিওয়ার্ড / ক্লেইম হিস্ট্রি</div>
+  <div class="dz57-8">🎁 <%= t('viph_reward_history') %></div>
   <% if (rewardHistory.rows && rewardHistory.rows.length > 0) { %>
     <% rewardHistory.rows.forEach(r => { %>
       <div class="dz57-9">
@@ -66,22 +66,22 @@
       </div>
     <% } %>
   <% } else { %>
-    <div class="dz57-13">এখনো কোনো VIP রিওয়ার্ড ক্লেইম করা হয়নি।</div>
+    <div class="dz57-13"><%= t('viph_no_rewards') %></div>
   <% } %>
 
-  <div class="dz57-14">⬆️ VIP আপগ্রেড হিস্ট্রি</div>
+  <div class="dz57-14">⬆️ <%= t('viph_upgrade_history') %></div>
   <% if (upgradeHistory.rows && upgradeHistory.rows.length > 0) { %>
     <% upgradeHistory.rows.forEach(u => { %>
       <div class="dz57-9">
         <div>
-          <div class="dz57-10">লেভেল <%= u.from_level %> → লেভেল <%= u.to_level %></div>
+          <div class="dz57-10"><%= t('loy_level') %> <%= u.from_level %> → <%= t('loy_level') %> <%= u.to_level %></div>
           <div class="dz57-11"><%= new Date(u.created_at).toLocaleString('bn-BD') %></div>
         </div>
         <div class="dz57-15">+<%= Number(u.bonus).toLocaleString('bn-BD') %></div>
       </div>
     <% }) %>
   <% } else { %>
-    <div class="dz57-13">এখনো কোনো VIP আপগ্রেড হয়নি।</div>
+    <div class="dz57-13"><%= t('viph_no_upgrades') %></div>
   <% } %>
 </div>
 <%- include('../partials/bottom-nav') %>

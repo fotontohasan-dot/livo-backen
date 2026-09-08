@@ -16,52 +16,52 @@
     var scItems = [
       {
         icon: 'fa-envelope-circle-check',
-        label: lang === 'bn' ? 'ইমেইল ভেরিফিকেশন' : 'Email Verification',
+        label: t('sec_email_verification'),
         ok: !emailStatus || !emailStatus.hasEmail || emailStatus.verified,
-        sub: (!emailStatus || !emailStatus.hasEmail) ? (lang === 'bn' ? 'প্রযোজ্য নয়' : 'Not applicable')
-             : (emailStatus.verified ? (lang === 'bn' ? 'ভেরিফাইড' : 'Verified') : (lang === 'bn' ? 'ভেরিফাই করা হয়নি' : 'Not verified')),
+        sub: (!emailStatus || !emailStatus.hasEmail) ? t('sec_not_applicable')
+             : (emailStatus.verified ? t('sec_verified') : t('sec_not_verified')),
         tab: 'security'
       },
       {
         icon: 'fa-key',
-        label: lang === 'bn' ? 'পাসওয়ার্ড' : 'Password',
+        label: t('sec_password'),
         ok: true,
-        sub: passwordChangedAt ? ((lang === 'bn' ? 'শেষ পরিবর্তন: ' : 'Last changed: ') + new Date(passwordChangedAt).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US')) : (lang === 'bn' ? 'কখনো পরিবর্তন হয়নি' : 'Never changed'),
+        sub: passwordChangedAt ? (t('sec_last_changed') + new Date(passwordChangedAt).toLocaleDateString(locals.lang === 'en' ? 'en-US' : 'bn-BD')) : t('asec_never_changed'),
         tab: 'security'
       },
       {
         icon: 'fa-shield-halved',
         label: t.withdraw_pin_title,
         ok: !!(pinStatus && pinStatus.configured) && !(pinStatus && pinStatus.locked),
-        sub: (pinStatus && pinStatus.locked) ? (lang === 'bn' ? 'সাময়িক লক' : 'Temporarily locked') : ((pinStatus && pinStatus.configured) ? t.pin_configured : t.pin_not_configured),
+        sub: (pinStatus && pinStatus.locked) ? t('sec_temporarily_locked') : ((pinStatus && pinStatus.configured) ? t.pin_configured : t.pin_not_configured),
         tab: 'security'
       },
       {
         icon: 'fa-mobile-screen-button',
         label: t.active_devices_title,
         ok: true,
-        sub: (activeSessions ? activeSessions.length : 0) + (lang === 'bn' ? 'টি ডিভাইস সক্রিয়' : ' active'),
+        sub: (activeSessions ? activeSessions.length : 0) + t('sec_devices_active'),
         tab: 'devices'
       },
       {
         icon: 'fa-right-from-bracket',
-        label: lang === 'bn' ? 'অন্যান্য সেশন' : 'Other Sessions',
+        label: t('sec_other_sessions'),
         ok: scActiveOtherCount === 0,
-        sub: scActiveOtherCount > 0 ? (scActiveOtherCount + (lang === 'bn' ? 'টি অন্য সেশন সক্রিয়' : ' other sessions active')) : (lang === 'bn' ? 'শুধু এই ডিভাইস' : 'This device only'),
+        sub: scActiveOtherCount > 0 ? (scActiveOtherCount + t('sec_other_sessions_active')) : t('sec_this_device_only'),
         tab: 'devices'
       },
       {
         icon: 'fa-clock-rotate-left',
         label: t.recent_login_activity,
         ok: true,
-        sub: (recentLogins ? recentLogins.length : 0) + (lang === 'bn' ? 'টি সাম্প্রতিক লগইন' : ' recent logins'),
+        sub: (recentLogins ? recentLogins.length : 0) + t('sec_recent_logins_count'),
         tab: 'devices'
       }
     ];
   %>
   <div class="ix71-4">
     <h3 class="ix71-5">
-      <i class="fas fa-shield-halved"></i> <%= lang === 'bn' ? 'নিরাপত্তা ওভারভিউ' : 'Security Overview' %>
+      <i class="fas fa-shield-halved"></i> <%= t('sec_overview') %>
     </h3>
     <div class="im72-2">
       <% scItems.forEach(function(it) { %>
@@ -167,24 +167,24 @@
     <!-- ==================== Email Verification কার্ড ==================== -->
     <div class="ix71-7">
       <h3 class="ix71-17">
-        <i class="fas fa-envelope-circle-check"></i> <%= lang === 'bn' ? 'ইমেইল ভেরিফিকেশন' : 'Email Verification' %>
+        <i class="fas fa-envelope-circle-check"></i> <%= t('sec_email_verification') %>
       </h3>
-      <p class="dz71-13"><%= lang === 'bn' ? 'অ্যাকাউন্ট রিকভারি ও গুরুত্বপূর্ণ নোটিফিকেশনের জন্য ইমেইল ভেরিফাই করুন' : 'Verify your email for account recovery and important notifications' %></p>
+      <p class="dz71-13"><%= t('sec_verify_email_desc') %></p>
 
       <div class="ix71-18">
         <div class="im72-3">
-          <div class="dz71-14"><%= user.email || (lang === 'bn' ? 'কোনো ইমেইল যুক্ত নেই' : 'No email on account') %></div>
+          <div class="dz71-14"><%= user.email || t('sec_no_email_on_account') %></div>
           <% if (!emailStatus || !emailStatus.hasEmail) { %>
-            <div class="dz71-15"><i class="fas fa-circle-minus"></i> <%= lang === 'bn' ? 'প্রযোজ্য নয়' : 'Not applicable' %></div>
+            <div class="dz71-15"><i class="fas fa-circle-minus"></i> <%= t('sec_not_applicable') %></div>
           <% } else if (emailStatus.verified) { %>
-            <div class="dz71-16"><i class="fas fa-circle-check"></i> <%= lang === 'bn' ? 'ভেরিফাইড' : 'Verified' %></div>
+            <div class="dz71-16"><i class="fas fa-circle-check"></i> <%= t('sec_verified') %></div>
           <% } else { %>
-            <div class="dz71-17"><i class="fas fa-circle-xmark"></i> <%= lang === 'bn' ? 'ভেরিফাই করা হয়নি' : 'Not verified' %></div>
+            <div class="dz71-17"><i class="fas fa-circle-xmark"></i> <%= t('sec_not_verified') %></div>
           <% } %>
         </div>
         <% if (emailStatus && emailStatus.hasEmail && !emailStatus.verified) { %>
           <form method="POST" action="/resend-verification">
-            <button type="submit" class="btn btn-primary ix71-19"><%= lang === 'bn' ? 'পুনরায় পাঠান' : 'Resend' %></button>
+            <button type="submit" class="btn btn-primary ix71-19"><%= t('sec_resend') %></button>
           </form>
         <% } %>
       </div>
@@ -233,7 +233,7 @@
           <% if (pinStatus && pinStatus.locked) { %>
             <div class="dz71-19">
               <i class="fas fa-lock"></i> <%= t.pin_locked_msg %>
-              (<%= Math.max(1, Math.ceil((pinStatus.remainingMs || 0) / 60000)) %> <%= lang === 'bn' ? 'মিনিট বাকি' : 'min left' %>)
+              (<%= Math.max(1, Math.ceil((pinStatus.remainingMs || 0) / 60000)) %> <%= t('sec_min_left') %>)
             </div>
           <% } %>
         </div>
@@ -375,15 +375,15 @@
     <% if (typeof recentActivity !== 'undefined' && recentActivity.length > 0) { %>
     <div class="ix71-7">
       <h3 class="ix71-30">
-        <i class="fas fa-list-check"></i> সাম্প্রতিক অ্যাক্টিভিটি
+        <i class="fas fa-list-check"></i> <%= t('sec_recent_activity') %>
       </h3>
       <% recentActivity.forEach(function(a) {
-        let icon = 'fa-circle-info', label = 'অ্যাক্টিভিটি';
-        if (a.kind === 'login') { icon = 'fa-right-to-bracket'; label = 'লগইন'; }
-        else if (a.kind === 'deposit') { icon = 'fa-plus-circle'; label = 'ডিপোজিট'; }
-        else if (a.kind === 'withdraw') { icon = 'fa-hand-holding-usd'; label = 'উইথড্র'; }
-        else if (a.kind === 'vip_upgrade') { icon = 'fa-crown'; label = 'VIP আপগ্রেড'; }
-        else if (a.kind === 'reward_claim') { icon = 'fa-gift'; label = 'রিওয়ার্ড ক্লেইম'; }
+        let icon = 'fa-circle-info', label = t('sec_activity_generic');
+        if (a.kind === 'login') { icon = 'fa-right-to-bracket'; label = t('sec_activity_login'); }
+        else if (a.kind === 'deposit') { icon = 'fa-plus-circle'; label = t('sec_activity_deposit'); }
+        else if (a.kind === 'withdraw') { icon = 'fa-hand-holding-usd'; label = t('sec_activity_withdraw'); }
+        else if (a.kind === 'vip_upgrade') { icon = 'fa-crown'; label = t('sec_activity_vip_upgrade'); }
+        else if (a.kind === 'reward_claim') { icon = 'fa-gift'; label = t('sec_activity_reward_claim'); }
       %>
       <div class="ix71-31">
         <span class="ix71-32"><i class="fas <%= icon %>"></i></span>

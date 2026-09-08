@@ -235,6 +235,12 @@ router.post('/play', isAuth, async (req, res) => {
         await client.query('INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, $3, $4)',
           [userId, -betAmount, 'casino_bet', `${supportedGames[gameSlug] || gameSlug} বাজি`]);
       }
+      // টার্নওভার আগে COMMIT-এর পরে fire-and-forget করা হতো — ব্যর্থ হলে স্টেক কাটা
+      // গেছে অথচ ওয়েজারিং প্রগ্রেস এগোয়নি, শুধু একটা console.error থাকত। এখন একই
+      // ট্রানজেকশনে, COMMIT-এর আগে — বেট আর টার্নওভার হয় একসাথে টেকে, নয় একসাথে
+      // রোলব্যাক হয়।
+      // ডেমো বাজি কখনো ওয়েজারিং প্রগ্রেসে গোনা হয় না।
+      if (!isDemo) await addTurnover(client, userId, 'casino', betAmount);
       await client.query('COMMIT');
 
       if (isDemo) {
@@ -243,7 +249,6 @@ router.post('/play', isAuth, async (req, res) => {
         return res.json({ success: true, message: req.t('games_started_demo'), demo: true, newBalance: req.session.user.demo_balance });
       }
 
-      addTurnover(userId, 'casino', betAmount).catch(e => console.error('turnover:', e.message));
       distributeCommission(userId, betAmount).catch(e => console.error('commission:', e.message));
       addBet(userId, betAmount, cashbackCategory(gameSlug)).catch(e => console.error('cashback:', e.message));
       addVipTurnover(userId, betAmount).catch(e => console.error('vip:', e.message));
@@ -318,11 +323,15 @@ router.post('/play', isAuth, async (req, res) => {
       await client.query('INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, $3, $4)',
                          [userId, winAmount, 'game_play', `${supportedGames[gameSlug] || gameSlug} জয়`]);
     }
+    // টার্নওভার আগে COMMIT-এর পরে fire-and-forget করা হতো — ব্যর্থ হলে স্টেক কাটা
+    // গেছে অথচ ওয়েজারিং প্রগ্রেস এগোয়নি, শুধু একটা console.error থাকত। এখন একই
+    // ট্রানজেকশনে, COMMIT-এর আগে — বেট আর টার্নওভার হয় একসাথে টেকে, নয় একসাথে
+    // রোলব্যাক হয় (coin_transactions ইনসার্টে যে সমস্যাটা আগেই ঠিক করা হয়েছিল)।
+    await addTurnover(client, userId, 'casino', betAmount);
     await client.query('COMMIT');
     req.session.user.coins = Number(balUpd.rows[0].balance);
     broadcastDemoStats().catch(e => console.error('demo stats:', e.message));
 
-    addTurnover(userId, 'casino', betAmount).catch(e => console.error('turnover:', e.message));
     distributeCommission(userId, betAmount).catch(e => console.error('commission:', e.message));
     addBet(userId, betAmount, cashbackCategory(gameSlug)).catch(e => console.error('cashback:', e.message));
     addVipTurnover(userId, betAmount).catch(e => console.error('vip:', e.message));

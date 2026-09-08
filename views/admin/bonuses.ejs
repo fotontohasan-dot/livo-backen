@@ -29,7 +29,7 @@
     <%- include('./partials/sidebar', { active: 'bonuses' }) %>
     <div class="admin-content">
       <%- include('./partials/load-error') %>
-      <%- include('./partials/header', { pageTitle: 'বোনাস ম্যানেজমেন্ট', pageSubtitle: 'ইউজারদের ম্যানুয়াল বোনাস দিন ও পরিচালনা করুন' }) %>
+      <%- include('./partials/header', { pageTitle: t('abo_title'), pageSubtitle: t('abo_sub') }) %>
 
       <div class="grid grid-4 dz19-1">
         <div class="stat-card"><div class="stat-label"><%= t('admin_status_active') %></div><div class="stat-number dz19-2"><%= stats.active || 0 %></div></div>
@@ -76,7 +76,7 @@
                     <td><%= b.created_at ? new Date(b.created_at).toLocaleDateString('bn-BD') : '—' %></td>
                     <td class="dz19-9">
                       <% if (b.status === 'active') { %>
-                        <form method="POST" action="/admin/bonuses/<%= b.id %>/cancel" data-confirm="বাতিল করবেন?">
+                        <form method="POST" action="/admin/bonuses/<%= b.id %>/cancel" data-confirm="<%= t('abo_cancel_confirm') %>">
                           <button class="btn btn-sm btn-red" type="submit"><%= t('admin_btn_cancel') %></button>
                         </form>
                       <% } %>

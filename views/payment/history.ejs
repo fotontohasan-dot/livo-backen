@@ -42,7 +42,7 @@
       <i class="fas fa-chevron-left"></i>
     </a>
     <h1 class="dz95-3">
-      <%= filter.type === 'deposit' ? 'ডিপোজিট রেকর্ড' : filter.type === 'withdraw' ? 'উইথড্র রেকর্ড' : 'ট্রানজেকশন রেকর্ড' %>
+      <%= filter.type === 'deposit' ? t('hist_deposit_record') : filter.type === 'withdraw' ? t('hist_withdraw_record') : t('hist_tx_record') %>
     </h1>
   </div>
 
@@ -55,13 +55,13 @@
       <button type="submit" name="quick" value="today" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.quick === 'today' ? 'var(--grad-gold)' : 'var(--bg-card)' %>; color: <%= filter.quick === 'today' ? '#000' : 'var(--text-main)' %>;">আজ</button>
       <button type="submit" name="quick" value="yesterday" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.quick === 'yesterday' ? 'var(--grad-gold)' : 'var(--bg-card)' %>; color: <%= filter.quick === 'yesterday' ? '#000' : 'var(--text-main)' %>;">গতকাল</button>
       <button type="submit" name="quick" value="7days" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.quick === '7days' ? 'var(--grad-gold)' : 'var(--bg-card)' %>; color: <%= filter.quick === '7days' ? '#000' : 'var(--text-main)' %>;">গত ৭ দিন</button>
-      <a class="dz95-5" href="/payment/history<%= filter.type ? '?type=' + filter.type : '' %>">সব</a>
+      <a class="dz95-5" href="/payment/history<%= filter.type ? '?type=' + filter.type : '' %>"><%= t('hist_all') %></a>
     </div>
     <div class="im96-3">
       <input class="dz95-6" type="date" name="from" value="<%= filter.from %>">
-      <span class="dz95-7">থেকে</span>
+      <span class="dz95-7"><%= t('hist_from') %></span>
       <input class="dz95-6" type="date" name="to" value="<%= filter.to %>">
-      <button class="dz95-8" type="submit">ফিল্টার</button>
+      <button class="dz95-8" type="submit"><%= t('hist_filter') %></button>
     </div>
   </form>
 
@@ -79,14 +79,14 @@
     <% if (requests && requests.length) { %>
       <% requests.forEach(function (tx) { %>
         <% var statusColor = tx.status === 'approved' ? '#10b981' : tx.status === 'rejected' ? '#ef4444' : '#f59e0b'; %>
-        <% var statusText = tx.status === 'approved' ? 'সফল' : tx.status === 'rejected' ? 'বাতিল' : 'পেন্ডিং'; %>
-        <% if (tx.status === 'cancelled') { statusColor = '#ef4444'; statusText = 'বাতিলকৃত'; } %>
+        <% var statusText = tx.status === 'approved' ? t('hist_status_success') : tx.status === 'rejected' ? t('hist_status_rejected') : t('hist_status_pending'); %>
+        <% if (tx.status === 'cancelled') { statusColor = '#ef4444'; statusText = t('hist_status_cancelled'); } %>
         <div class="dz95-10">
           <div class="im96-5">
             <div>
               <div class="dz95-11">
-                <%= tx.type === 'deposit' ? '⬇️ ডিপোজিট' : '⬆️ উইথড্র' %>
-                <% if (tx.gateway === 'sslcommerz') { %><span class="dz95-12"> (অটো)</span><% } %>
+                <%= tx.type === 'deposit' ? '⬇️ ' + t('hist_deposit') : '⬆️ ' + t('hist_withdraw') %>
+                <% if (tx.gateway === 'sslcommerz') { %><span class="dz95-12"> (<%= t('hist_auto') %>)</span><% } %>
               </div>
               <div class="dz95-13"><%= tx.method || '-' %> · <%= new Date(tx.created_at).toLocaleString('bn-BD') %></div>
               <% if (tx.transaction_id) { %><div class="dz95-14">TrxID: <%= tx.transaction_id %></div><% } %>
@@ -98,16 +98,16 @@
           </div>
           <% if (tx.type === 'deposit' && tx.status === 'pending') { %>
             <div class="dz95-16">
-              <a class="dz95-17" href="/payment/deposit/<%= tx.id %>/edit">✏️ এডিট</a>
-              <form class="dz95-18" method="POST" action="/payment/deposit/<%= tx.id %>/cancel" data-confirm="আপনি কি নিশ্চিত এই ডিপোজিট রিকোয়েস্ট বাতিল করতে চান?">
-                <button class="dz95-19" type="submit">✖ ক্যান্সেল</button>
+              <a class="dz95-17" href="/payment/deposit/<%= tx.id %>/edit">✏️ <%= t('hist_edit') %></a>
+              <form class="dz95-18" method="POST" action="/payment/deposit/<%= tx.id %>/cancel" data-confirm="<%= t('hist_cancel_confirm') %>">
+                <button class="dz95-19" type="submit">✖ <%= t('hist_cancel') %></button>
               </form>
             </div>
           <% } %>
         </div>
       <% }) %>
     <% } else if (!(typeof loadError !== 'undefined' && loadError)) { %>
-      <div class="dz95-20">এই সময়ে কোনো রেকর্ড নেই</div>
+      <div class="dz95-20"><%= t('hist_no_records') %></div>
     <% } %>
   </div>
 </div>

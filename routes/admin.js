@@ -82,7 +82,8 @@ const { emitToUser, broadcastToAllUsers } = require('../services/notify');
 const bcrypt = require('bcryptjs');
 // routes/auth.js-এর মতোই — অস্তিত্বহীন অ্যাডমিন username/email-এ bcrypt.compare() না চালালে
 // টাইমিং দিয়ে বৈধ অ্যাডমিন অ্যাকাউন্ট এনিউমারেট করা যায়, তাই ডামি হ্যাশের বিপরীতে তুলনা।
-const DUMMY_BCRYPT_HASH = bcrypt.hashSync('dummy-password-for-constant-time-compare', 10);
+const { BCRYPT_COST } = require('../utils/passwordPolicy');
+const DUMMY_BCRYPT_HASH = bcrypt.hashSync('dummy-password-for-constant-time-compare', BCRYPT_COST);
 const { getDemoStats } = require('../services/socket');
 const {
   generateTotpSetup,

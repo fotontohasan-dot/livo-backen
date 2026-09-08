@@ -39,10 +39,10 @@
 
   <div class="fa-crown-banner">
     <div class="crown">👑</div>
-    <div class="ribbon">লাকি হুইল</div>
+    <div class="ribbon"><%= t('whl_title') %></div>
   </div>
 
-  <div class="dz69-4">দিনে একবার ঘুরিয়ে কয়েন জিতুন!</div>
+  <div class="dz69-4"><%= t('whl_sub') %></div>
   <div class="dz69-5">
     আজকের রিমেইনিং স্পিন: <%= remainingToday || 0 %> / ১
   </div>
@@ -59,13 +59,13 @@
 
   <% if (status && status.locked) { %>
     <div class="dz69-6">
-      🔒 হুইল লক করা আছে।<br>
-      আজ ডিপোজিট করুন — তাহলেই স্পিন আনলক হবে।
+      🔒 <%= t('whl_locked') %><br>
+      <%= t('whl_locked_sub') %>
     </div>
   <% } else if (!(status && status.canSpin)) { %>
     <div class="dz69-6">
-      ✅ আজ স্পিন করা হয়ে গেছে<% if (status && status.prize) { %> — পেয়েছেন <strong class="dz69-7"><%= status.prize %> কয়েন</strong><% } %>।<br>
-      আগামীকাল আবার আসুন।
+      ✅ <%= t('whl_done') %><% if (status && status.prize) { %> — পেয়েছেন <strong class="dz69-7"><%= status.prize %> কয়েন</strong><% } %>।<br>
+      <%= t('whl_come_back') %>
     </div>
   <% } %>
 
@@ -73,7 +73,7 @@
 
   <!-- স্পিন হিস্ট্রি / প্রাইজ লগ -->
   <div class="dz69-9">
-    <div class="dz69-10">🧾 স্পিন হিস্ট্রি</div>
+    <div class="dz69-10">🧾 <%= t('whl_history') %></div>
     <% if (history && history.length) { %>
       <% history.forEach(function(h) { %>
         <div class="dz69-11">
@@ -82,7 +82,7 @@
         </div>
       <% }); %>
     <% } else { %>
-      <div class="dz69-14">এখনো কোনো স্পিন করা হয়নি।</div>
+      <div class="dz69-14"><%= t('whl_no_history') %></div>
     <% } %>
   </div>
 

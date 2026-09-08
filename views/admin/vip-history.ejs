@@ -28,12 +28,12 @@
     <%- include('./partials/sidebar', { active: 'vip' }) %>
     <div class="admin-content">
       <%- include('./partials/load-error') %>
-      <%- include('./partials/header', { pageTitle: 'VIP রিওয়ার্ড ও আপগ্রেড হিস্ট্রি', pageSubtitle: 'সব ইউজারের VIP ক্লেইম ও লেভেল পরিবর্তনের সম্পূর্ণ লগ' }) %>
+      <%- include('./partials/header', { pageTitle: t("avh_title"), pageSubtitle: t("avh_sub") }) %>
 
       <a class="dz7-1" href="/admin/vip"><i class="fas fa-arrow-left"></i> <%= t('admin_back_to_vip') %></a>
 
       <div class="admin-card dz7-2">
-        <div class="admin-card-header">রিওয়ার্ড / ক্লেইম হিস্ট্রি (মোট <%= rewardHistory.total %>)</div>
+        <div class="admin-card-header"><%= t('viph_reward_history') %> (মোট <%= rewardHistory.total %>)</div>
         <div class="dz7-3">
           <table class="admin-table">
             <thead><tr><th><%= t('admin_col_user') %></th><th><%= t('admin_col_vip_level') %></th><th><%= t('admin_col_type') %></th><th><%= t('admin_col_amount') %></th><th><%= t('admin_col_description') %></th><th><%= t('admin_col_date') %></th></tr></thead>
@@ -65,7 +65,7 @@
       </div>
 
       <div class="admin-card">
-        <div class="admin-card-header">VIP আপগ্রেড হিস্ট্রি (মোট <%= upgradeHistory.total %>)</div>
+        <div class="admin-card-header"><%= t('viph_upgrade_history') %> (মোট <%= upgradeHistory.total %>)</div>
         <div class="dz7-3">
           <table class="admin-table">
             <thead><tr><th><%= t('admin_col_user') %></th><th><%= t('admin_col_old_level') %></th><th><%= t('admin_col_new_level') %></th><th><%= t('admin_col_bonus') %></th><th><%= t('admin_col_turnover_at_upgrade') %></th><th><%= t('admin_col_date') %></th></tr></thead>

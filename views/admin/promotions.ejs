@@ -32,7 +32,7 @@
     <%- include('./partials/sidebar', { active: 'promotions' }) %>
     <div class="admin-content">
       <%- include('./partials/load-error') %>
-      <%- include('./partials/header', { pageTitle: 'প্রমোশন ব্যানার', pageSubtitle: 'হোমপেজের প্রমোশনাল ব্যানার পরিচালনা করুন' }) %>
+      <%- include('./partials/header', { pageTitle: t("apr_title"), pageSubtitle: t("apr_sub") }) %>
 
       <div class="admin-card dz20-1">
         <div class="dz20-2"><i class="fas fa-plus-circle dz20-3"></i> <%= t('admin_promo_add_heading') %></div>
@@ -51,13 +51,13 @@
             <div class="admin-card promo-card">
               <img alt="" src="<%= p.image_url %>" data-img-fallback="fade">
               <div class="promo-body">
-                <div class="dz20-5"><%= p.title || 'শিরোনাম নেই' %></div>
-                <div class="dz20-6">পজিশন: <%= p.position %> · <%= p.active ? 'সক্রিয়' : 'নিষ্ক্রিয়' %></div>
+                <div class="dz20-5"><%= p.title || t("apr_no_title") %></div>
+                <div class="dz20-6"><%= t('apr_position') %> <%= p.position %> · <%= p.active ? t("tg_active") : t("snt_inactive") %></div>
                 <div class="promo-actions">
                   <form method="POST" action="/admin/promotions/<%= p.id %>/toggle">
-                    <button class="btn btn-sm <%= p.active ? 'btn-green' : '' %>" type="submit"><%= p.active ? 'সক্রিয়' : 'নিষ্ক্রিয়' %></button>
+                    <button class="btn btn-sm <%= p.active ? 'btn-green' : '' %>" type="submit"><%= p.active ? t("tg_active") : t("snt_inactive") %></button>
                   </form>
-                  <form method="POST" action="/admin/promotions/<%= p.id %>/delete" data-confirm="মুছে ফেলবেন?">
+                  <form method="POST" action="/admin/promotions/<%= p.id %>/delete" data-confirm="<%= t('abk_delete_short') %>">
                     <button class="btn btn-sm btn-red" type="submit"><i class="fas fa-trash"></i></button>
                   </form>
                 </div>

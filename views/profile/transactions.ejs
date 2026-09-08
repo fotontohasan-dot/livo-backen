@@ -2,7 +2,7 @@
 <div class="container ix60-1">
   <div class="im61-1">
     <a class="ix60-2" href="/profile">←</a>
-    <h1 class="ix60-3">💳 লেনদেন ইতিহাস</h1>
+    <h1 class="ix60-3">💳 <%= t('txn_title') %></h1>
   </div>
 
   <% if (transactions && transactions.length > 0) { %>
@@ -59,7 +59,7 @@
   <% } else { %>
     <div class="dz60-3">
       <div class="dz60-4">📭</div>
-      <div>কোনো লেনদেন নেই</div>
+      <div><%= t('txn_none') %></div>
     </div>
   <% } %>
 </div>

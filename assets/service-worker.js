@@ -1,5 +1,13 @@
 // public/service-worker.js
-const CACHE_NAME = 'livo-cache-v1';
+// __ASSET_VERSION__ সার্ভ করার সময় app.js-এর /service-worker.js রুট প্রতিস্থাপন
+// করে (ডিপ্লয়ের কমিট SHA)। আগে এটা ফিক্সড 'v1' ছিল, তাই ডিপ্লয়ে ক্যাশ কখনো
+// পরিষ্কার হতো না — activate-এর ক্লিনআপ লজিক থাকা সত্ত্বেও কখনো ট্রিগার হতো না,
+// কারণ নামটাই বদলাত না।
+//
+// দ্রষ্টব্য: নিচের fetch হ্যান্ডলার ইতিমধ্যেই network-first (আগে fetch, ব্যর্থ
+// হলে ক্যাশ), তাই স্টেল CSS কেবল অফলাইনেই দেখা যেত — সমস্যাটা ধারণার চেয়ে ছোট।
+// তবু ডিপ্লয়ে পুরনো এন্ট্রি জমতে থাকা ঠিক নয়।
+const CACHE_NAME = 'livo-cache-__ASSET_VERSION__';
 const OFFLINE_URL = '/offline.html';
 // offline.html-এর CSS আলাদা ফাইলে সরানো হয়েছে (CSP style-src-elem কড়া
 // করার জন্য)। এটাও precache না করলে অফলাইন পেজটা স্টাইল ছাড়া দেখাত —

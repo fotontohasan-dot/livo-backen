@@ -30,7 +30,7 @@
     <%- include('./partials/sidebar', { active: 'news' }) %>
     <div class="admin-content">
       <%- include('./partials/load-error') %>
-      <%- include('./partials/header', { pageTitle: 'নিউজ', pageSubtitle: 'স্পোর্টস নিউজ পোস্ট ও পরিচালনা করুন' }) %>
+      <%- include('./partials/header', { pageTitle: t("anw_title"), pageSubtitle: t("anw_sub") }) %>
 
       <div class="admin-card dz16-1">
         <div class="dz16-2"><i class="fas fa-newspaper dz16-3"></i> <%= t('admin_news_add_heading') %></div>
@@ -52,13 +52,13 @@
               <div class="dz16-5">
                 <div class="dz16-6"><%= n.title %></div>
                 <div class="dz16-7">
-                  <%= n.sport || 'সাধারণ' %> · <%= n.views || 0 %> ভিউ · <%= n.created_at ? new Date(n.created_at).toLocaleDateString('bn-BD') : '—' %>
+                  <%= n.sport || t("anw_general") %> · <%= n.views || 0 %> <%= t('anw_views') %> · <%= n.created_at ? new Date(n.created_at).toLocaleDateString('bn-BD') : '—' %>
                 </div>
                 <div class="dz16-8">
                   <%= (n.content || '').slice(0, 120) %><%= (n.content || '').length > 120 ? '...' : '' %>
                 </div>
               </div>
-              <form method="POST" action="/admin/news/<%= n.id %>/delete" data-confirm="মুছে ফেলবেন?">
+              <form method="POST" action="/admin/news/<%= n.id %>/delete" data-confirm="<%= t('abk_delete_short') %>">
                 <button class="btn btn-sm btn-red" type="submit" aria-label="<%= t('admin_ui_delete') %>" title="<%= t('admin_ui_delete') %>"><i class="fas fa-trash"></i></button>
               </form>
             </div>

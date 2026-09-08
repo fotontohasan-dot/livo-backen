@@ -22,12 +22,33 @@ const request = require('supertest');
 const { app } = require('../helpers/app');
 
 const ROOT = path.join(__dirname, '..', '..');
-const sitemap = fs.readFileSync(path.join(ROOT, 'public', 'sitemap.xml'), 'utf8');
-const robots = fs.readFileSync(path.join(ROOT, 'public', 'robots.txt'), 'utf8');
+// sitemap.xml ও robots.txt আর public/-এ স্ট্যাটিক ফাইল নয় — দুটোতেই হোস্টনেম
+// হার্ডকোড করা ছিল, তাই কাস্টম ডোমেইনে গেলে নীরবে ভুল ডোমেইন নির্দেশ করত।
+// এখন app.js চলমান রিকোয়েস্টের বেস-ইউআরএল থেকে জেনারেট করে। ফলে এই টেস্টও
+// ডিস্ক থেকে না পড়ে আসল HTTP রেসপন্স যাচাই করে — যেটা আগের চেয়ে শক্ত,
+// কারণ ব্যবহারকারী/ক্রলার এই আউটপুটটাই পায়।
 const headPartial = fs.readFileSync(path.join(ROOT, 'views', 'partials', 'head.ejs'), 'utf8');
 const appSource = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
 
 describe('sitemap.xml', () => {
+  let sitemap;
+  let sitemapBase;
+
+  beforeAll(async () => {
+    const res = await request(app).get('/sitemap.xml');
+    expect(res.status).toBe(200);
+    sitemap = res.text;
+    // রেসপন্সে ডোমেইন এখন রিকোয়েস্ট থেকে আসে, তাই হার্ডকোড না করে
+    // প্রথম <loc> থেকেই বেসটা বের করে নেওয়া হয়।
+    sitemapBase = (sitemap.match(/<loc>(https?:\/\/[^/]+)/) || [])[1];
+    expect(sitemapBase).toBeTruthy();
+  });
+
+  test('XML কনটেন্ট-টাইপে সার্ভ হয়', async () => {
+    const res = await request(app).get('/sitemap.xml');
+    expect(res.headers['content-type']).toMatch(/xml/);
+  });
+
   test('সঠিক sitemaps.org namespace ব্যবহার করে', () => {
     expect(sitemap).toContain('http://www.sitemaps.org/schemas/sitemap/0.9');
     expect(sitemap).not.toContain('www.sitemap.org/schemas');
@@ -43,7 +64,7 @@ describe('sitemap.xml', () => {
 
   test('বড় পাবলিক পেজগুলো তালিকাভুক্ত', () => {
     for (const p of ['/', '/sports', '/matches', '/news', '/tournaments', '/help-center', '/terms', '/privacy']) {
-      expect(sitemap).toContain(`<loc>https://livo-backen.onrender.com${p}</loc>`);
+      expect(sitemap).toContain(`<loc>${sitemapBase}${p}</loc>`);
     }
   });
 
@@ -55,12 +76,20 @@ describe('sitemap.xml', () => {
 
   test('অথেন্টিকেশন-প্রয়োজন পেজ সাইটম্যাপে নেই', () => {
     for (const p of ['/admin', '/profile', '/accumulator', '/coins', '/notifications']) {
-      expect(sitemap).not.toContain(`<loc>https://livo-backen.onrender.com${p}</loc>`);
+      expect(sitemap).not.toContain(`<loc>${sitemapBase}${p}</loc>`);
     }
   });
 });
 
 describe('robots.txt', () => {
+  let robots;
+
+  beforeAll(async () => {
+    const res = await request(app).get('/robots.txt');
+    expect(res.status).toBe(200);
+    robots = res.text;
+  });
+
   test('ব্যক্তিগত/অ্যাডমিন রুট ইনডেক্স করা বন্ধ', () => {
     for (const p of ['/admin', '/profile', '/api/', '/payment']) {
       expect(robots).toContain(`Disallow: ${p}`);
