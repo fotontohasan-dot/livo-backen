@@ -1,43 +1,68 @@
 <%- include('partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz99-1 { padding: 0; margin-bottom: 1.5rem; }
+  .dz99-2 { text-align: center; padding: 3rem; color: var(--text-muted); }
+  .dz99-3 { padding: 15px; border-bottom: 1px solid var(--border-glass); display: flex; justify-content: space-between; align-items: center; }
+  .dz99-4 { font-size: 1rem; font-weight: 700; color: var(--text-main); }
+  .dz99-5 { padding: 15px; }
+  .dz99-6 { padding: 5px 12px; border-radius: 8px; font-size: 13px; color: var(--text-accent); border-color: rgba(245,158,11,0.2); }
+  .dz99-7 { padding: 5px 12px; border-radius: 8px; font-size: 13px; color: var(--text-accent); border-color: rgba(139,92,246,0.2); }
+  .dz99-8 { font-size: .85rem; color: var(--text-muted); margin-bottom: 15px; }
+  .dz99-9 { font-size: .8rem; color: var(--text-muted); display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+  .dz99-10 { width: 100%; border-radius: 12px; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im100-1 { font-size: 1.8rem; }
+  .im100-2 { display: flex; flex-direction: column; gap: 15px; }
+  .im100-3 { font-size: 3rem; margin-bottom: 1rem; opacity: 0.3; }
+  .im100-4 { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
+  .im100-5 { grid-column: 1/-1; }
+</style>
+
 <%- include('partials/navbar') %>
 <div class="container page">
-  <div class="section-header" style="padding:0; margin-bottom:1.5rem;">
-    <h1 class="section-title" style="font-size:1.8rem;"><i class="fas fa-trophy"></i> <%= t.menu_tournament %></h1>
+  <div class="section-header dz99-1">
+    <h1 class="section-title im100-1"><i class="fas fa-trophy"></i> <%= t.menu_tournament %></h1>
   </div>
 
   <%- include('partials/tournament-showcase') %>
 
-  <div style="display:flex; flex-direction:column; gap:15px;">
+  <div class="im100-2">
     <% if(tournaments.length === 0) { %>
-      <div class="card glass" style="text-align:center; padding:3rem; color:var(--text-muted);">
-        <i class="fas fa-ghost" style="font-size:3rem; margin-bottom:1rem; opacity:0.3;"></i>
+      <div class="card glass dz99-2">
+        <i class="fas fa-ghost im100-3"></i>
         <div><%= t.no_tournaments %></div>
       </div>
     <% } else { %>
       <% tournaments.forEach(tour => { %>
         <div class="card glass">
-          <div style="padding:15px; border-bottom:1px solid var(--border-glass); display:flex; justify-content:space-between; align-items:center;">
-            <h3 style="font-size:1rem; font-weight:700; color:var(--text-main);"><%= tour.name %></h3>
+          <div class="dz99-3">
+            <h3 class="dz99-4"><%= tour.name %></h3>
             <span class="status-badge status-<%= tour.status %>"><%= tour.status === 'open' ? t.running : tour.status %></span>
           </div>
-          <div class="card-body" style="padding:15px;">
-            <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
-              <div class="glass" style="padding:5px 12px; border-radius:8px; font-size:13px; color: var(--text-accent); border-color:rgba(245,158,11,0.2);">
+          <div class="card-body dz99-5">
+            <div class="im100-4">
+              <div class="glass dz99-6">
                 <i class="fas fa-coins"></i> <%= t.prize %>: <%= tour.prize_pool %>
               </div>
-              <div class="glass" style="padding:5px 12px; border-radius:8px; font-size:13px; color: var(--text-accent); border-color:rgba(139,92,246,0.2);">
+              <div class="glass dz99-7">
                 <i class="fas fa-futbol"></i> <%= (tour.sport || '').toUpperCase() %>
               </div>
             </div>
-            <p style="font-size:.85rem; color:var(--text-muted); margin-bottom:15px">
+            <p class="dz99-8">
               <%= tour.description %>
             </p>
-            <div style="font-size:.8rem; color:var(--text-muted); display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
+            <div class="dz99-9">
               <div><i class="fas fa-users"></i> <%= tour.participant_count %> / <%= tour.max_participants %> <%= t.participants %></div>
               <div><i class="fas fa-ticket-alt"></i> <%= t.entry_fee_label %>: <%= tour.entry_fee > 0 ? tour.entry_fee : t.free %></div>
-              <div style="grid-column:1/-1;"><i class="fas fa-calendar-alt"></i> <%= t.start %>: <%= new Date(tour.start_date).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US') %></div>
+              <div class="im100-5"><i class="fas fa-calendar-alt"></i> <%= t.start %>: <%= new Date(tour.start_date).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US') %></div>
             </div>
-            <a href="/tournaments/<%= tour.id %>" class="btn btn-primary" style="width:100%; border-radius:12px;"><%= t.details %></a>
+            <a href="/tournaments/<%= tour.id %>" class="btn btn-primary dz99-10"><%= t.details %></a>
           </div>
         </div>
       <% }) %>

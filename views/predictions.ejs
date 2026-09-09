@@ -2,6 +2,10 @@
 <%- include('partials/navbar') %>
 
 <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz102-1 { font-size: 40px; margin-bottom: 10px; }
     body { background:#0a0a14; color:#e8e8f0; font-family:'Hind Siliguri',sans-serif; margin-bottom:70px; }
     .container { padding:15px; max-width:600px; margin:0 auto; }
     .header { margin-bottom:20px; display:flex; align-items:center; gap:10px; }
@@ -63,7 +67,7 @@
         <% }) %>
     <% } else { %>
         <div class="empty-state">
-            <div style="font-size:40px;margin-bottom:10px;">🏟️</div>
+            <div class="dz102-1">🏟️</div>
             <p><%= t.no_predictions_msg %></p>
         </div>
     <% } %>

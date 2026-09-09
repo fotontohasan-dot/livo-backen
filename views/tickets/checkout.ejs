@@ -1,0 +1,67 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+
+<%# PHASE 4 — চেকআউট। ইনভেন্টরি ইতিমধ্যে ধরে রাখা আছে; এখানে শুধু পেমেন্ট। %>
+<style nonce="<%= cspNonce %>">
+  .ck-wrap { padding: 14px 12px 90px; max-width: 520px; margin: 0 auto; }
+  .ck-title { font-size: 1.3rem; font-weight: 800; margin-bottom: 14px; }
+  .ck-box { background: var(--bg-card); border: 1px solid var(--border-glass);
+    border-radius: 14px; padding: 14px 16px; }
+  .ck-row { display: flex; justify-content: space-between; padding: 7px 0; font-size: 13px; }
+  .ck-row span:first-child { color: var(--text-muted); }
+  .ck-total { border-top: 1px solid var(--border-glass); margin-top: 8px; padding-top: 10px;
+    font-weight: 700; font-size: 15px; }
+  .ck-btn { width: 100%; margin-top: 14px; padding: 12px; border-radius: 12px; border: 0;
+    background: var(--gold); color: #000; font-weight: 700; cursor: pointer; }
+  .ck-btn[disabled] { background: rgba(255,255,255,.08); color: var(--text-muted); cursor: not-allowed; }
+  .ck-msg { margin-top: 12px; font-size: 13px; color: #ff6b6b; }
+  .ck-hint { font-size: 11px; color: var(--text-muted); margin-top: 10px; }
+  /* বোতামের চেহারায় একটা লিংক — ইনলাইন style অ্যাট্রিবিউট এড়াতে ক্লাস
+     (docs/CSP.md, style-src-attr হার্ডেনিং)। */
+  .ck-btn-link { display: block; text-align: center; text-decoration: none; line-height: 1.4; }
+</style>
+
+<div class="ck-wrap">
+  <div class="ck-title"><%= t.tickets_checkout || 'Checkout' %></div>
+
+  <div class="ck-box">
+    <div class="ck-row"><span><%= t.tickets_event || 'Event' %></span><span><%= order.title %></span></div>
+    <div class="ck-row"><span><%= t.tickets_category || 'Category' %></span><span><%= order.category_name %></span></div>
+    <div class="ck-row"><span><%= t.tickets_quantity || 'Quantity' %></span><span><%= order.qty %></span></div>
+    <div class="ck-row"><span><%= t.tickets_unit_price || 'Unit price' %></span><span>৳ <%= Number(order.unit_price).toLocaleString('en-US') %></span></div>
+    <div class="ck-row ck-total"><span><%= t.total || 'Total' %></span><span>৳ <%= Number(order.total).toLocaleString('en-US') %></span></div>
+
+    <div class="ck-row"><span><%= t.balance %></span><span>৳ <%= Number(balance).toLocaleString('en-US') %></span></div>
+
+    <% if (order.status === 'paid') { %>
+      <div class="ck-hint"><%= t.tickets_already_paid || 'This order is already paid.' %></div>
+      <a class="ck-btn ck-btn-link" href="/tickets/my-tickets">
+        <%= t.tickets_my_tickets || 'My tickets' %>
+      </a>
+    <% } else { %>
+      <button type="button" class="ck-btn" id="ckPay"
+              <%= Number(balance) < Number(order.total) ? 'disabled' : '' %>>
+        <%= Number(balance) < Number(order.total)
+              ? (t.balance_insufficient)
+              : (t.tickets_pay_from_balance || 'Pay from balance') %>
+      </button>
+      <% if (order.reserved_until) { %>
+        <div class="ck-hint">
+          <%= t.tickets_hold_until || 'Held until' %>
+          <%= new Date(order.reserved_until).toLocaleTimeString('en-GB') %>
+        </div>
+      <% } %>
+    <% } %>
+    <div class="ck-msg" id="ckMsg" hidden></div>
+  </div>
+</div>
+
+<%- include('../partials/bottom-nav') %>
+
+<script type="application/json" id="ticketCheckoutConfig"><%- jsonScriptSafe({
+  csrfToken: locals.csrfToken || '',
+  orderRef: order.order_ref
+}) %></script>
+<script src="/js/views/tickets-checkout.js"></script>
+</body>
+</html>

@@ -1,6 +1,31 @@
 <%- include('../partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz73-1 { padding: 16px; padding-bottom: 100px; max-width: 600px; margin: 0 auto; }
+  .dz73-2 { color: var(--text-main); text-decoration: none; font-size: 20px; }
+  .dz73-3 { color: var(--text-main); font-size: 18px; font-weight: bold; }
+  .dz73-4 { background: linear-gradient(135deg,#0ea5e9,#6366f1); border-radius: 16px; padding: 20px; margin-bottom: 16px; text-align: center; }
+  .dz73-5 { color: var(--text-main); font-size: 22px; font-weight: 900; }
+  .dz73-6 { color: rgba(255,255,255,0.9); font-size: 13px; }
+  .dz73-7 { color: var(--text-main); font-size: 13px; font-weight: bold; }
+  .dz73-8 { color: var(--text-muted); font-size: 11px; margin-top: 3px; line-height: 1.4; }
+  .dz73-9 { color: #10b981; font-size: 11px; font-weight: bold; }
+  .dz73-10 { color: var(--text-muted); font-size: 11px; }
+  .dz73-11 { font-size: .75rem; color: var(--text-muted); text-align: center; margin-top: 1rem; line-height: 1.6; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im74-1 { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .im74-2 { font-size: 40px; margin-bottom: 6px; }
+  .im74-3 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .im74-4 { margin-top: 8px; }
+</style>
+
 <%- include('../partials/navbar') %>
-<div class="container" style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto;">
+<div class="container dz73-1">
   <%- include('../partials/flash') %>
 
   <% if (typeof loadError !== 'undefined' && loadError) { %>
@@ -9,9 +34,9 @@
     </div>
   <% } %>
 
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-    <a href="/profile" style="color:var(--text-main);text-decoration:none;font-size:20px;">←</a>
-    <h1 style="color:var(--text-main);font-size:18px;font-weight:bold;">🏆 ব্যাজ ও অর্জন</h1>
+  <div class="im74-1">
+    <a class="dz73-2" href="/profile">←</a>
+    <h1 class="dz73-3">🏆 <%= t('bdg_title') %></h1>
   </div>
 
   <% 
@@ -20,33 +45,33 @@
   %>
 
   <!-- সারাংশ -->
-  <div style="background:linear-gradient(135deg,#0ea5e9,#6366f1);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center;">
-    <div style="font-size:40px;margin-bottom:6px;">🏆</div>
-    <div style="color:var(--text-main);font-size:22px;font-weight:900;"><%= earnedCount %> / <%= total %></div>
-    <div style="color:rgba(255,255,255,0.9);font-size:13px;">ব্যাজ অর্জন করেছেন</div>
+  <div class="dz73-4">
+    <div class="im74-2">🏆</div>
+    <div class="dz73-5"><%= earnedCount %> / <%= total %></div>
+    <div class="dz73-6"><%= t('bdg_earned') %></div>
   </div>
 
   <!-- ব্যাজ গ্রিড -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+  <div class="im74-3">
     <% (badges || []).forEach(b => { %>
       <div style="background:<%= b.earned ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.04)' %>;border:1px solid <%= b.earned ? '#10b981' : 'rgba(255,255,255,0.08)' %>;border-radius:14px;padding:16px;text-align:center;<%= b.earned ? '' : 'opacity:0.55;' %>">
         <div style="font-size:38px;margin-bottom:6px;<%= b.earned ? '' : 'filter:grayscale(1);' %>"><%= b.icon %></div>
-        <div style="color:var(--text-main);font-size:13px;font-weight:bold;"><%= b.name %></div>
-        <div style="color:var(--text-muted);font-size:11px;margin-top:3px;line-height:1.4;"><%= b.desc %></div>
-        <div style="margin-top:8px;">
+        <div class="dz73-7"><%= b.name %></div>
+        <div class="dz73-8"><%= b.desc %></div>
+        <div class="im74-4">
           <% if (b.earned) { %>
-            <span style="color:#10b981;font-size:11px;font-weight:bold;">✅ অর্জিত (+<%= b.reward %>)</span>
+            <span class="dz73-9">✅ অর্জিত (+<%= b.reward %>)</span>
           <% } else { %>
-            <span style="color:var(--text-muted);font-size:11px;">🔒 +<%= b.reward %> কয়েন</span>
+            <span class="dz73-10">🔒 +<%= b.reward %> কয়েন</span>
           <% } %>
         </div>
       </div>
     <% }) %>
   </div>
 
-  <p style="font-size:.75rem;color:var(--text-muted);text-align:center;margin-top:1rem;line-height:1.6;">
-    খেলতে খেলতে স্বয়ংক্রিয়ভাবে ব্যাজ আনলক হয়।<br>
-    প্রতিটি ব্যাজে বোনাস কয়েন পাওয়া যায়।
+  <p class="dz73-11">
+    <%= t('bdg_info_1') %><br>
+    <%= t('bdg_info_2') %>
   </p>
 
 </div>

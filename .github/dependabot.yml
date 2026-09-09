@@ -1,0 +1,28 @@
+version: 2
+
+# CI-তে `npm audit --audit-level=high` নতুন CVE ধরে, কিন্তু ধরার পর কেউ
+# আপডেট না করলে বিল্ড শুধু লাল হয়ে বসে থাকে। Dependabot সেই আপডেটের PR
+# নিজেই খোলে, তাই ধরা আর ঠিক করা দুটোই স্বয়ংক্রিয়।
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    # প্যাচ ও মাইনর আপডেট একসাথে গুচ্ছ করা হয় — নাহলে প্রতি সপ্তাহে ডজনখানেক
+    # আলাদা PR আসে এবং কেউ আর পড়ে না। মেজর আপডেট আলাদা PR-এ থাকে, কারণ
+    # সেগুলো ব্রেকিং হতে পারে এবং হাতে যাচাই করা দরকার।
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    labels:
+      - "dependencies"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "dependencies"

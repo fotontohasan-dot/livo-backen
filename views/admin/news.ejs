@@ -6,6 +6,17 @@
   <title><%= t('admin_title_news') %></title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz16-1 { padding: 16px; margin-bottom: 16px; }
+  .dz16-2 { font-weight: 800; color: var(--text-main); font-size: 13px; margin-bottom: 12px; }
+  .dz16-3 { color: #f59e0b; }
+  .dz16-4 { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  .dz16-5 { flex: 1; min-width: 0; }
+  .dz16-6 { font-weight: 700; color: #fff; font-size: 13px; }
+  .dz16-7 { color: #94a3b8; font-size: 11px; margin-top: 3px; }
+  .dz16-8 { color: #94a3b8; font-size: 12px; margin-top: 4px; max-height: 36px; overflow: hidden; }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
     .news-row { display: flex; gap: 12px; padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
@@ -19,11 +30,11 @@
     <%- include('./partials/sidebar', { active: 'news' }) %>
     <div class="admin-content">
       <%- include('./partials/load-error') %>
-      <%- include('./partials/header', { pageTitle: 'নিউজ', pageSubtitle: 'স্পোর্টস নিউজ পোস্ট ও পরিচালনা করুন' }) %>
+      <%- include('./partials/header', { pageTitle: t("anw_title"), pageSubtitle: t("anw_sub") }) %>
 
-      <div class="admin-card" style="padding:16px;margin-bottom:16px;">
-        <div style="font-weight:800;color:var(--text-main);font-size:13px;margin-bottom:12px;"><i class="fas fa-newspaper" style="color:#f59e0b;"></i> <%= t('admin_news_add_heading') %></div>
-        <form method="POST" action="/admin/news/add" style="display:grid;grid-template-columns:1fr;gap:10px;">
+      <div class="admin-card dz16-1">
+        <div class="dz16-2"><i class="fas fa-newspaper dz16-3"></i> <%= t('admin_news_add_heading') %></div>
+        <form class="dz16-4" method="POST" action="/admin/news/add">
           <input class="input" type="text" name="title" placeholder="<%= t('admin_col_title') %>" required>
           <textarea class="input" name="content" rows="4" placeholder="<%= t('admin_col_details') %>"></textarea>
           <input class="input" type="text" name="image_url" placeholder="<%= t('admin_field_image_url_optional') %>">
@@ -38,16 +49,16 @@
           <% newsList.forEach(n => { %>
             <div class="news-row">
               <% if (n.image_url) { %><img alt="" src="<%= n.image_url %>" data-img-fallback="hide"><% } %>
-              <div style="flex:1;min-width:0;">
-                <div style="font-weight:700;color:#fff;font-size:13px;"><%= n.title %></div>
-                <div style="color:#94a3b8;font-size:11px;margin-top:3px;">
-                  <%= n.sport || 'সাধারণ' %> · <%= n.views || 0 %> ভিউ · <%= n.created_at ? new Date(n.created_at).toLocaleDateString('bn-BD') : '—' %>
+              <div class="dz16-5">
+                <div class="dz16-6"><%= n.title %></div>
+                <div class="dz16-7">
+                  <%= n.sport || t("anw_general") %> · <%= n.views || 0 %> <%= t('anw_views') %> · <%= n.created_at ? new Date(n.created_at).toLocaleDateString('bn-BD') : '—' %>
                 </div>
-                <div style="color:#94a3b8;font-size:12px;margin-top:4px;max-height:36px;overflow:hidden;">
+                <div class="dz16-8">
                   <%= (n.content || '').slice(0, 120) %><%= (n.content || '').length > 120 ? '...' : '' %>
                 </div>
               </div>
-              <form method="POST" action="/admin/news/<%= n.id %>/delete" data-confirm="মুছে ফেলবেন?">
+              <form method="POST" action="/admin/news/<%= n.id %>/delete" data-confirm="<%= t('abk_delete_short') %>">
                 <button class="btn btn-sm btn-red" type="submit" aria-label="<%= t('admin_ui_delete') %>" title="<%= t('admin_ui_delete') %>"><i class="fas fa-trash"></i></button>
               </form>
             </div>

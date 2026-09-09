@@ -63,60 +63,12 @@
       .replace(/'/g, '&#39;');
   }
 
-  // সার্ভারে যেসব গেমের আসল লজিক আছে — শুধু এগুলোই খেলা যায়। বাকিগুলো কার্ডে
-  // দেখা যাবে কিন্তু "শীঘ্রই" অবস্থায়, ক্লিক করলে কিছু হবে না। তালিকাটা
-  // services/gameRegistry.js থেকে আসে, লবি নিজে অনুমান করে না।
-  const PLAYABLE_SLUGS = new Set(cfg.playableSlugs || []);
-
-  const allGames = SERVER_GAMES.length > 0 ? SERVER_GAMES : [
-    { name: 'Aviator', emoji: '🎰', type: 'slots', slug: 'aviator', badge: 'hot', provider: 'Spribe' },
-    { name: 'Slots', emoji: '💎', type: 'slots', slug: 'slots', badge: 'pop', provider: 'Playtech' },
-    { name: 'Roulette', emoji: '🍭', type: 'live', slug: 'roulette', badge: 'new', provider: 'Playtech' },
-    { name: 'Andar Bahar', emoji: '⚡', type: 'live', slug: 'andar-bahar', badge: null, provider: 'Jili' },
-    { name: 'Teen Patti', emoji: '🔥', type: 'poker', slug: 'teen-patti', badge: 'hot', provider: 'Jili' },
-    { name: 'Blackjack', emoji: '🐉', type: 'live', slug: 'blackjack', badge: 'hot', provider: 'Playtech' },
-    { name: 'Poker', emoji: '🎴', type: 'poker', slug: 'poker', badge: 'pop', provider: 'Playtech' },
-    { name: 'Baccarat', emoji: '🃏', type: 'live', slug: 'baccarat', badge: 'new', provider: 'Playtech' },
-    { name: 'Crash Game', emoji: '🎲', type: 'slots', slug: 'crash-game', badge: null, provider: 'Playtech' },
-    { name: 'Starburst', emoji: '🎯', type: 'slots', slug: 'starburst', badge: 'hot', provider: 'NetEnt' },
-    { name: 'Book of Dead', emoji: '🎡', type: 'slots', slug: 'book-of-dead', badge: 'hot', provider: 'Play\'n GO' },
-    { name: 'Gonzo\'s Quest', emoji: '🚀', type: 'slots', slug: 'gonzos-quest', badge: 'pop', provider: 'NetEnt' },
-    { name: 'Mega Moolah', emoji: '👑', type: 'slots', slug: 'mega-moolah', badge: 'hot', provider: 'Microgaming' },
-    { name: 'Gates of Olympus', emoji: '🦁', type: 'slots', slug: 'gates-of-olympus', badge: 'hot', provider: 'Pragmatic Play' },
-    { name: 'Sweet Bonanza', emoji: '🐯', type: 'slots', slug: 'sweet-bonanza', badge: 'hot', provider: 'Pragmatic Play' },
-    { name: 'Legacy of Dead', emoji: '🌊', type: 'slots', slug: 'legacy-of-dead', badge: 'hot', provider: 'Play\'n GO' },
-    { name: 'Crazy Time', emoji: '⚓', type: 'live', slug: 'crazy-time', badge: 'hot', provider: 'Evolution' },
-    { name: 'Lightning Roulette', emoji: '🥷', type: 'live', slug: 'lightning-roulette', badge: 'new', provider: 'Evolution' },
-    { name: 'Monopoly Live', emoji: '🀄', type: 'live', slug: 'monopoly-live', badge: null, provider: 'Evolution' },
-    { name: 'Mega Ball', emoji: '🐺', type: 'live', slug: 'mega-ball', badge: null, provider: 'Evolution' },
-    { name: 'Dream Catcher', emoji: '🍀', type: 'live', slug: 'dream-catcher', badge: 'hot', provider: 'Evolution' },
-    { name: 'Super Sic Bo', emoji: '💰', type: 'live', slug: 'super-sic-bo', badge: 'pop', provider: 'Evolution' },
-    { name: 'Fan Tan', emoji: '🏆', type: 'live', slug: 'fan-tan', badge: 'new', provider: 'Evolution' },
-    { name: 'Bac Bo', emoji: '🎪', type: 'live', slug: 'bac-bo', badge: null, provider: 'Evolution' },
-    { name: 'Rummy', emoji: '🌟', type: 'poker', slug: 'rummy', badge: null, provider: 'Jili' },
-    { name: 'Call Break', emoji: '🎆', type: 'poker', slug: 'call-break', badge: 'hot', provider: 'Jili' },
-    { name: 'Dragon Tiger', emoji: '❄️', type: 'live', slug: 'dragon-tiger', badge: 'hot', provider: 'Jili' },
-    { name: 'JetX', emoji: '⛩️', type: 'slots', slug: 'jetx', badge: 'hot', provider: 'Spribe' },
-    { name: 'Plinko', emoji: '🍬', type: 'slots', slug: 'plinko', badge: null, provider: 'Spribe' },
-    { name: 'Super Ace', emoji: '👑', type: 'slots', slug: 'super-ace', badge: 'hot', provider: 'Jili' },
-    { name: 'Golden Empire', emoji: '🏛️', type: 'slots', slug: 'golden-empire', badge: null, provider: 'PG Soft' },
-    { name: 'Wild Bandito', emoji: '🤠', type: 'slots', slug: 'wild-bandito', badge: 'pop', provider: 'PG Soft' },
-    { name: 'Sweet Bonanza Xmas', emoji: '🎄', type: 'slots', slug: 'sweet-bonanza-xmas', badge: null, provider: 'Pragmatic Play' },
-    { name: 'Wild West Gold', emoji: '🐎', type: 'slots', slug: 'wild-west-gold', badge: 'hot', provider: 'Pragmatic Play' },
-    { name: 'Gonzo\'s Quest Megaways', emoji: '🗿', type: 'slots', slug: 'gonzos-quest-megaways', badge: null, provider: 'Evolution' },
-    { name: 'Mega Moolah Absolootly', emoji: '🐮', type: 'slots', slug: 'mega-moolah-absolootly', badge: null, provider: 'Microgaming' },
-    { name: 'Piggy Riches Megaways', emoji: '🐷', type: 'slots', slug: 'piggy-riches-megaways', badge: null, provider: 'Red Tiger' },
-    { name: 'Wanted Dead or a Wild', emoji: '🔫', type: 'slots', slug: 'wanted-dead-or-a-wild', badge: 'hot', provider: 'Hacksaw Gaming' },
-    { name: 'Money Train 4', emoji: '🚂', type: 'slots', slug: 'money-train-4', badge: 'pop', provider: 'Relax Gaming' },
-    { name: 'Mental', emoji: '🧠', type: 'slots', slug: 'mental', badge: null, provider: 'Nolimit City' },
-    { name: 'Bonanza Megaways', emoji: '⛏️', type: 'slots', slug: 'bonanza-megaways', badge: null, provider: 'Big Time Gaming' },
-    { name: 'Vikings Go Berzerk', emoji: '⚔️', type: 'slots', slug: 'vikings-go-berzerk', badge: null, provider: 'Yggdrasil' },
-    { name: 'Sakura Fortune', emoji: '🌸', type: 'slots', slug: 'sakura-fortune', badge: null, provider: 'Quickspin' },
-    { name: 'The Dog House', emoji: '🐶', type: 'slots', slug: 'the-dog-house', badge: null, provider: 'Betsoft' },
-    { name: 'Larry Gonna Make It', emoji: '🎲', type: 'slots', slug: 'larry-gonna-make-it', badge: null, provider: 'Wazdan' },
-    { name: 'Solar Queen', emoji: '☀️', type: 'slots', slug: 'solar-queen', badge: null, provider: 'Playson' },
-    { name: 'Rise of Egypt', emoji: '🏺', type: 'slots', slug: 'rise-of-egypt', badge: null, provider: 'Spinomenal' },
-  ];
+  // PHASE 1: আগে এখানে ১১৮টি গেমের একটা হার্ডকোড করা ফলব্যাক তালিকা ছিল এবং
+  // gameRegistry থেকে আসা PLAYABLE_SLUGS দিয়ে ঠিক হতো কোন কার্ড ক্লিক করা যাবে।
+  // ইন-হাউস গেম সরে যাওয়ায় দুটোরই আর অস্তিত্ব নেই — লবির একমাত্র উৎস সার্ভার:
+  // games টেবিল (PHASE 3-এ প্রোভাইডার sync থেকে ভরে)। তালিকা খালি হলে খালি
+  // স্টেটই দেখানো হবে, বানানো গেম নয়।
+  const allGames = SERVER_GAMES;
 
   const PROVIDER_META = {
     'Jili':             { mono: 'JILI', color: '#F5A623', logo: '/images/providers/jili.jpg' },
@@ -276,21 +228,28 @@
     }
 
     filtered.forEach(g => {
-      const playable = PLAYABLE_SLUGS.size === 0 || PLAYABLE_SLUGS.has(g.slug);
+      // PHASE 1: গেম "খেলা যায় কি না" আর কোড-সাইড স্লাগ তালিকা দিয়ে ঠিক হয় না।
+      // সার্ভারই সারির সাথে launch_url পাঠায় — সেটা থাকলে খেলা যায়, না থাকলে নয়।
+      const playable = !!g.launch_url;
       const badgeHTML = !playable
         ? `<div class="game-badge-premium badge-soon">শীঘ্রই</div>`
         : (g.badge ? `<div class="game-badge-premium badge-${escHtml(g.badge)}">${escHtml(g.badge)}</div>` : '');
       const isFav = favs.includes(g.slug);
       const card = document.createElement('a');
-      card.href = playable ? '/games/' + g.slug : 'javascript:void(0)';
+      card.href = playable ? g.launch_url : 'javascript:void(0)';
       card.className = 'game-card-premium' + (playable ? '' : ' game-card-soon');
       if (!playable) card.setAttribute('aria-disabled', 'true');
+      // থাম্বনেইল আর `/images/games/<slug>.svg` কনভেনশন থেকে অনুমান করা হয় না —
+      // প্রোভাইডার sync যে CDN URL দেয় সেটাই ব্যবহৃত হয়, না থাকলে ইমোজি ফলব্যাক।
+      const thumbHTML = g.thumbnail_url
+        ? `<img class="game-thumb-img" src="${escHtml(g.thumbnail_url)}" alt="" aria-hidden="true"
+               loading="lazy" decoding="async" width="300" height="300"
+               data-img-fallback="remove">`
+        : '';
       card.innerHTML = `
         <div class="game-thumb-wrapper">
           <i class="fa-star fav-star ${isFav ? 'fas active' : 'far'}" data-slug="${escHtml(g.slug)}"></i>
-          <img class="game-thumb-img" src="/images/games/${escHtml(g.slug)}.svg" alt="" aria-hidden="true"
-               loading="lazy" decoding="async" width="300" height="300"
-               data-img-fallback="remove">
+          ${thumbHTML}
           <span class="game-emoji">${escHtml(g.emoji)}</span>
           ${badgeHTML}
         </div>

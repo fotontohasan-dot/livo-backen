@@ -14,6 +14,8 @@ const sentryService = require('./services/sentry');
 sentryService.init();
 
 const express = require('express');
+const { getBaseUrl } = require('./utils/publicUrl');
+const fs = require('fs');
 const http = require('http');
 const { initSocket } = require('./services/socket');
 const session = require('express-session');
@@ -40,7 +42,9 @@ app.use(compression());
 const server = http.createServer(app);
 global.__livoServer = server; // গ্রেসফুল শাটডাউনে চলমান রিকোয়েস্ট শেষ করার জন্য
 
-app.set('trust proxy', 1);
+// প্রক্সি লেয়ার বদলালে (Cloudflare + Render = ২ hop) হার্ডকোডেড 1 ভুল হয়ে যায়,
+// তখন `secure` কুকি কখনো সেট হয় না এবং ব্যবহারকারী প্রতিবার লগআউট দেখে।
+app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS || 1));
 
 // services/envValidator.js (এই ফাইলের একদম শুরুতে, কোনো require-এর আগেই কল করা হয়) প্রোডাকশনে
 // SESSION_SECRET অনুপস্থিত/দুর্বল থাকলে ইতিমধ্যেই process.exit(1) করে বুট আটকে দেয় — অর্থাৎ
@@ -64,10 +68,35 @@ if (!SESSION_SECRET) {
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+// প্রোভাইডার কলব্যাকের HMAC স্বাক্ষর *কাঁচা* বডির উপর হিসাব হয় — JSON.parse
+// করে আবার stringify করলে key-order বা whitespace বদলে যায় এবং স্বাক্ষর কখনো
+// মিলত না। তাই শুধু /provider/ পাথের জন্য মূল বাইটগুলো ধরে রাখা হচ্ছে
+// (middleware/providerAuth.js এটাই ব্যবহার করে)। অন্য কোনো রুটে কিছু বদলায় না।
+app.use(express.json({
+  verify: (req, res, buf) => {
+    if (req.originalUrl && req.originalUrl.startsWith('/provider/')) {
+      req.rawBody = buf.toString('utf8');
+    }
+  }
+}));
+// অ্যাসেট ভার্সন — টেমপ্লেটে Date.now() ব্যবহার করলে প্রতি রিকোয়েস্টে ইউআরএল
+// বদলাত, ফলে ক্যাশ কখনো হিট করত না। ডিপ্লয়ের কমিট SHA প্রতি ডিপ্লয়ে একবারই
+// বদলায় — ঠিক যতবার বদলানো দরকার।
+const ASSET_VERSION = process.env.RENDER_GIT_COMMIT || process.env.ASSET_VERSION || 'dev';
+app.use((req, res, next) => {
+  res.locals.assetVersion = ASSET_VERSION;
+  next();
+});
+
+// maxAge:'0' + etag:false মানে ছিল ব্রাউজার ক্যাশ সম্পূর্ণ বন্ধ — প্রতিটা পেজ
+// লোডে পুরো CSS, সব ছবি ও SVG আবার ডাউনলোড হতো। বাংলাদেশের মোবাইল নেটওয়ার্কে
+// এটা সরাসরি ইউজার হারানো। অ্যাসেট ইউআরএলে `?v=<assetVersion>` থাকায়
+// ডিপ্লয়ে ইউআরএল বদলায়, তাই দীর্ঘ ক্যাশ নিরাপদ।
+//
 app.use(express.static(path.join(__dirname, 'public'), {
-  maxAge: '0',
-  etag: false
+  maxAge: '30d',
+  etag: true,
+  immutable: true
 }));
 
 const cspDirectives = {
@@ -82,7 +111,11 @@ const cspDirectives = {
   // ধাপ ২-এ scriptSrcAttr আগেই 'none' হয়েছিল। দুটো মিলে এখন reflected বা
   // stored XSS দিয়ে স্ক্রিপ্ট চালানোর পথ ব্রাউজারই বন্ধ করে — আমাদের
   // এস্কেপিং প্রতিটা পথে নিখুঁত ছিল কি না তার উপর আর নির্ভর করতে হয় না।
-  scriptSrc: ["'self'", "https://cdn.tailwindcss.com", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
+  // cdn.tailwindcss.com সরানো হয়েছে — Tailwind এখন বিল্ড-টাইমে কম্পাইল করা
+  // স্ট্যাটিক CSS (public/css/tailwind.css)। একটা কম বাইরের স্ক্রিপ্ট-সোর্স
+  // মানে একটা কম সাপ্লাই-চেইন নির্ভরতা: ওই CDN কম্প্রোমাইজ হলে আক্রমণকারী
+  // আমাদের প্রতিটা পেজে ইচ্ছেমতো JS চালাতে পারত।
+  scriptSrc: ["'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
   // ইনলাইন ইভেন্ট হ্যান্ডলার সম্পূর্ণ নিষিদ্ধ — এখন প্রয়োগ করা নীতিতেই।
   //
   // docs/CSP.md ধাপ ২ শেষ: টেমপ্লেটে থাকা ২৫০টা onclick/onchange/onsubmit
@@ -94,8 +127,8 @@ const cspDirectives = {
   // কোড চালানোর পথটা ব্রাউজার নিজেই বন্ধ করে — আমাদের এস্কেপিং ঠিক ছিল
   // কি না তার উপর আর নির্ভর করতে হয় না।
   //
-  // scriptSrc-এ এখনো 'unsafe-inline' আছে, কারণ ২৫৪টা ইনলাইন <script> ব্লক
-  // বাকি (ধাপ ৩)। দুটো ডিরেক্টিভ আলাদা, তাই একটা আগে শক্ত করা যায়।
+  // scriptSrc-এর ইনলাইন <script> মাইগ্রেশনও শেষ (বর্তমান সংখ্যা ০, উপরে দেখুন) —
+  // এই কমেন্টে আগে "২৫৪টা বাকি" লেখা ছিল, যা এখন স্টেল।
   scriptSrcAttr: ["'none'"],
   // styleSrc দুটো ডিরেক্টিভে ভাগ করা হয়েছে, ঠিক যেভাবে scriptSrc/
   // scriptSrcAttr ভাগ করা হয়েছিল। কারণ দুটো surface-এর অগ্রগতি আলাদা:
@@ -293,6 +326,21 @@ const sessionStore = process.env.DATABASE_URL ? new pgSession({
 }) : undefined;
 
 const isProd = process.env.NODE_ENV === 'production';
+
+// store না থাকলে express-session নীরবে MemoryStore ব্যবহার করে — একাধিক ইনস্ট্যান্স
+// বা রিস্টার্টে সব সেশন হারায়, অর্থাৎ ব্যবহারকারী "কিছুক্ষণ পরপর" লগআউট হয়।
+// প্রোডাকশনে এটা নীরবে চলতে দেওয়া যাবে না।
+if (isProd && !sessionStore) {
+  console.error('❌ প্রোডাকশনে session store নেই — MemoryStore-এ সেশন টিকবে না। DATABASE_URL সেট করুন।');
+  process.exit(1);
+}
+
+// rolling: true — প্রতি রিকোয়েস্টে মেয়াদ বাড়ে, তাই সক্রিয় ব্যবহারকারী কখনো কাটা
+// পড়ে না; কেবল টানা ৩০ দিন নিষ্ক্রিয় থাকলেই সেশন শেষ হয়। অ্যাডমিন সেশনও একই
+// নিয়মে চলে — "চিরকাল" নয়, কারণ ল্যাপটপ/কুকি চুরি হলে অসীম সেশন মানে অনির্দিষ্টকাল
+// অ্যাক্সেস (সিদ্ধান্ত: মালিকের "লগআউট না চাপলে লগইন থাকবে" চাহিদা পূরণ হয়,
+// শুধু নিষ্ক্রিয়তার একটা সীমা থাকে)।
+const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const sessionMiddleware = session({
   store: sessionStore,
   secret: SESSION_SECRET,
@@ -300,7 +348,7 @@ const sessionMiddleware = session({
   saveUninitialized: false,
   rolling: true,
   cookie: {
-    maxAge: 7 * 24 * 60 * 60 * 1000,
+    maxAge: SESSION_MAX_AGE_MS,
     httpOnly: true,
     secure: isProd,
     sameSite: 'lax'
@@ -355,6 +403,87 @@ const financialLimiter = rateLimit({
 });
 
 app.use(generalLimiter);
+
+// এই তিনটে রুট ইচ্ছাকৃতভাবে generalLimiter-এর *পরে*। tests/security/
+// supplyChainAndAbuse.test.js একটা রিগ্রেশন গার্ড রাখে: /csp-report ছাড়া
+// কোনো রুট যেন গ্লোবাল রেট-লিমিটারের আগে মাউন্ট না হয়। আগের সংস্করণে
+// এগুলো static-এর আগে বসানো ছিল বলে সেই গার্ডটা ভাঙত।
+//
+// robots.txt ও sitemap.xml আর public/-এ নেই (মুছে ফেলা হয়েছে), তাই
+// express.static ওদের ধরে না এবং এখানে পৌঁছাতে সমস্যা নেই। কিন্তু
+// service-worker.js-এর সোর্স ফাইলটা static-এর নাগালে থাকলে static-ই আগে
+// সাড়া দিত এবং __ASSET_VERSION__ প্রতিস্থাপিত না হয়েই চলে যেত — তাই
+// সোর্সটা public/ থেকে assets/-এ সরানো হয়েছে।
+
+// service-worker.js স্ট্যাটিক ফাইল হিসেবে সার্ভ করলে CACHE_NAME-এ ডিপ্লয় ভার্সন
+// বসানো যায় না। তাই এখানে ফাইলটা পড়ে প্লেসহোল্ডার প্রতিস্থাপন করা হয়।
+// SW ফাইল নিজে কখনো ক্যাশ করা হয় না — নাহলে নতুন SW কখনো ইনস্টল হতো না।
+const swPath = path.join(__dirname, 'assets', 'service-worker.js');
+app.get('/service-worker.js', (req, res) => {
+  fs.readFile(swPath, 'utf8', (err, source) => {
+    if (err) return res.status(404).end();
+    res.type('application/javascript')
+      .set('Cache-Control', 'no-cache, no-store, must-revalidate')
+      .send(source.replace(/__ASSET_VERSION__/g, ASSET_VERSION));
+  });
+});
+
+// robots.txt ও sitemap.xml আগে public/-এ স্ট্যাটিক ফাইল ছিল, যাতে হোস্টনেম
+// হার্ডকোড করা — কাস্টম ডোমেইনে গেলে দুটোই নীরবে ভুল ডোমেইন নির্দেশ করত।
+// এখন চলমান বেস-ইউআরএল থেকে জেনারেট হয়, তাই ডোমেইন বদলালেও কিছু করতে হয় না।
+const SITEMAP_ENTRIES = [
+  { path: '/',            changefreq: 'daily',   priority: '1.0' },
+  { path: '/promotions',  changefreq: 'daily',   priority: '0.8' },
+  { path: '/login',       changefreq: 'monthly', priority: '0.5' },
+  { path: '/register',    changefreq: 'monthly', priority: '0.7' },
+  { path: '/help-center', changefreq: 'weekly',  priority: '0.5' },
+  { path: '/terms',       changefreq: 'yearly',  priority: '0.3' },
+  { path: '/privacy',     changefreq: 'yearly',  priority: '0.3' },
+  { path: '/sports',      changefreq: 'daily',   priority: '0.9' },
+  { path: '/matches',     changefreq: 'daily',   priority: '0.9' },
+  { path: '/news',        changefreq: 'daily',   priority: '0.6' },
+  { path: '/tournaments', changefreq: 'weekly',  priority: '0.6' },
+  { path: '/rules',       changefreq: 'yearly',  priority: '0.3' }
+];
+
+app.get('/sitemap.xml', (req, res) => {
+  const base = getBaseUrl(req);
+  const urls = SITEMAP_ENTRIES.map(e =>
+    `  <url>\n    <loc>${base}${e.path}</loc>\n    <changefreq>${e.changefreq}</changefreq>\n    <priority>${e.priority}</priority>\n  </url>`
+  ).join('\n');
+  res.type('application/xml').send(
+`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls}
+</urlset>
+`);
+});
+
+app.get('/robots.txt', (req, res) => {
+  const base = getBaseUrl(req);
+  res.type('text/plain').send(
+`User-agent: *
+Allow: /
+Allow: /promotions
+Allow: /login
+Allow: /register
+Allow: /terms
+Allow: /privacy
+Allow: /help-center
+
+# ব্যক্তিগত/অ্যাডমিন/API রুট ইনডেক্স করা থেকে বিরত রাখা হলো
+Disallow: /admin
+Disallow: /profile
+Disallow: /api/
+Disallow: /coins
+Disallow: /notifications
+Disallow: /payment
+Disallow: /leaderboard
+
+Sitemap: ${base}/sitemap.xml
+`);
+});
+
 app.use('/login', loginLimiter);
 app.use('/register', loginLimiter);
 app.use('/admin/login', loginLimiter);
@@ -366,7 +495,6 @@ app.use('/profile/update', financialLimiter);
 app.use('/profile/update-personal', financialLimiter);
 
 // ভাষা সেটিং
-const fs = require('fs');
 const LOCALES_DIR = path.join(__dirname, 'locales');
 function loadTranslations() {
   return {
@@ -448,10 +576,24 @@ app.use((req, res, next) => {
   // সরাসরি JSON.stringify হয় (array/object/string/number সব ঠিকভাবে সিরিয়ালাইজ হয়), আর
   // </script>, <!--, লাইন-সেপারেটর ক্যারেক্টার escape করা হয় যাতে JSON স্ট্রিং-এর ভেতরের কোনো
   // ইউজার/অ্যাডমিন কনটেন্ট দিয়ে <script> ব্লক ভাঙা বা HTML ইনজেক্ট করা না যায়।
+  // সিঙ্গল কোট escape করা হয় — সিঙ্গল-কোটেড অ্যাট্রিবিউটে বসানো হলে যেন
+  // অ্যাট্রিবিউট ভেঙে বেরোনো না যায়।
+  //
+  // ডাবল কোট ইচ্ছাকৃতভাবে escape করা হয় *না*। অডিট নোটে `"` → \u0022-এর
+  // পরামর্শ ছিল, কিন্তু সেটা ভুল: এই ফাংশনের আউটপুট
+  // `<script type="application/json">` ব্লকে বসে এবং ব্রাউজার সেটা
+  // JSON.parse করে। JSON-এ ডাবল কোট কাঠামোগত ডেলিমিটার — সেগুলো
+  // \u0022 করে দিলে গোটা ডকুমেন্টই অবৈধ JSON হয়ে যায় এবং প্রতিটা কনফিগ
+  // ব্লক নীরবে খালি হয়ে যায়। (মাপা: tests/render/sharedBetEngine.test.js
+  // তখন লাল হয় — বাজি ইঞ্জিনের সব এরর বার্তা "undefined" হয়ে যায়।)
+  //
+  // ডাবল-কোটেড অ্যাট্রিবিউটে JSON বসানোর দরকার হলে সেটা অ্যাট্রিবিউট
+  // লেভেলে HTML-escape করতে হবে, এখানে নয়।
   res.locals.jsonScriptSafe = (value) => JSON.stringify(value === undefined ? null : value)
     .replace(/</g, '\\u003c')
     .replace(/>/g, '\\u003e')
     .replace(/&/g, '\\u0026')
+    .replace(/'/g, '\\u0027')
     .replace(/\u2028/g, '\\u2028')
     .replace(/\u2029/g, '\\u2029');
   // views/news-detail.ejs আগে একটা কখনো সংজ্ঞায়িত না-হওয়া escapeHtml() কল করত (ReferenceError,
@@ -773,12 +915,20 @@ app.use('/leaderboard', require('./routes/leaderboard'));
 app.use('/admin', require('./routes/adminHealthFix'));
 app.use('/admin', require('./routes/admin'));
 app.use('/admin/games', require('./middleware/auth').isAdmin, require('./routes/adminGames'));
+app.use('/admin/tickets', require('./middleware/auth').isAdmin, require('./routes/adminTickets'));
 app.use('/admin/telegram', require('./middleware/auth').isAdmin, require('./routes/adminTelegram'));
 app.use('/admin/leaderboard', require('./middleware/auth').isAdmin, require('./routes/adminLeaderboard'));
 app.use('/notifications', require('./routes/notifications'));
 app.use('/help-center', require('./routes/help-center'));
 app.use('/payment', require('./routes/payment'));
 app.use('/games', require('./routes/games'));
+// PHASE 2 — প্রোভাইডার seamless wallet কলব্যাক। ইচ্ছাকৃতভাবে ইউজার-ফেসিং
+// রুটের পাশে মাউন্ট করা হয়নি বরং নিজস্ব /provider প্রিফিক্সে: এখানে কোনো
+// সেশন, CSRF বা ভাষা-মিডলওয়্যার প্রযোজ্য নয়, অথেন্টিকেশন সম্পূর্ণ আলাদা
+// (HMAC + IP allow-list — middleware/providerAuth.js)।
+app.use('/provider', require('./routes/providerWallet'));
+// PHASE 4 — ইভেন্ট টিকেট (ইউজার ও অ্যাডমিন)।
+app.use('/tickets', require('./routes/tickets'));
 app.use('/api', require('./routes/api'));
 // ==================== OpenAPI / Swagger UI ====================
 const swaggerUi = require('swagger-ui-express');

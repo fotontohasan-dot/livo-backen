@@ -7,6 +7,22 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .sp13-1.sp13-1.sp13-1 { font-size: 15px; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz28-1 { display: flex; gap: 8px; }
+  .dz28-2 { background: var(--gold,#EAB308); color: #1a1a1a; }
+  .dz28-3 { background: #1e293b; color: #fff; text-decoration: none; }
+  .dz28-4 { color: #94a3b8; font-size: 12px; display: flex; align-items: center; gap: 5px; }
+  .dz28-5 { color: #94a3b8; font-size: 11px; }
+  .dz28-6 { color: #f87171; }
+  .dz28-7 { font-size: 6px; }
+  .dz28-8 { color: var(--text-main); font-size: 13px; }
+  .dz28-9 { margin-top: 10px; }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 18px; }
@@ -35,23 +51,23 @@
     <%- include('./partials/sidebar', { active: 'analytics' }) %>
     <div class="admin-content">
       <%- include('./partials/load-error') %>
-      <%- include('./partials/header', { pageTitle: 'Analytics Dashboard', pageSubtitle: 'Real-time statistics ও system health' }) %>
+      <%- include('./partials/header', { pageTitle: 'Analytics Dashboard', pageSubtitle: t('aal_sub') }) %>
 
       <div class="toolbar">
-        <form method="GET" action="/admin/analytics" style="display:flex;gap:8px;">
+        <form class="dz28-1" method="GET" action="/admin/analytics">
           <input type="date" name="from" value="<%= query.from || '' %>">
           <input type="date" name="to" value="<%= query.to || '' %>">
-          <button class="btn-xs" style="background:var(--gold,#EAB308);color:#1a1a1a;"><%= t('admin_btn_filter') %></button>
+          <button class="btn-xs dz28-2"><%= t('admin_btn_filter') %></button>
         </form>
-        <a href="/admin/analytics/export<%= query.from ? ('?from='+query.from+'&to='+(query.to||'')) : '' %>" class="btn-xs" style="background:#1e293b;color:#fff;text-decoration:none;"><i class="fas fa-download"></i> <%= t('admin_btn_export_csv') %></a>
-        <label style="color:#94a3b8;font-size:12px;display:flex;align-items:center;gap:5px;">
+        <a href="/admin/analytics/export<%= query.from ? ('?from='+query.from+'&to='+(query.to||'')) : '' %>" class="btn-xs dz28-3"><i class="fas fa-download"></i> <%= t('admin_btn_export_csv') %></a>
+        <label class="dz28-4">
           <input type="checkbox" id="autoRefreshToggle" checked> <%= t('admin_auto_refresh_30s') %>
         </label>
-        <span id="lastUpdated" style="color:#94a3b8;font-size:11px;"></span>
+        <span class="dz28-5" id="lastUpdated"></span>
       </div>
 
       <% if (!data) { %>
-        <div style="color:#f87171;"><%= t('admin_analytics_load_failed') %></div>
+        <div class="dz28-6"><%= t('admin_analytics_load_failed') %></div>
       <% } else { %>
 
       <div class="grid" id="realtimeGrid">
@@ -71,19 +87,19 @@
       <div class="grid">
         <div class="card">
           <div class="label"><%= t('admin_col_queue') %></div>
-          <span class="status-pill status-<%= data.health ? data.health.checks.queue.status : 'warning' %>"><i class="fas fa-circle" style="font-size:6px;"></i> <%= data.health ? data.health.checks.queue.status : 'unknown' %></span>
+          <span class="status-pill status-<%= data.health ? data.health.checks.queue.status : 'warning' %>"><i class="fas fa-circle dz28-7"></i> <%= data.health ? data.health.checks.queue.status : 'unknown' %></span>
         </div>
         <div class="card">
           <div class="label">Redis</div>
-          <span class="status-pill status-<%= data.health ? data.health.checks.redis.status : 'warning' %>"><i class="fas fa-circle" style="font-size:6px;"></i> <%= data.health ? data.health.checks.redis.status : 'unknown' %></span>
+          <span class="status-pill status-<%= data.health ? data.health.checks.redis.status : 'warning' %>"><i class="fas fa-circle dz28-7"></i> <%= data.health ? data.health.checks.redis.status : 'unknown' %></span>
         </div>
         <div class="card">
           <div class="label">Database</div>
-          <span class="status-pill status-<%= data.health ? data.health.checks.database.status : 'error' %>"><i class="fas fa-circle" style="font-size:6px;"></i> <%= data.health ? data.health.checks.database.status : 'unknown' %></span>
+          <span class="status-pill status-<%= data.health ? data.health.checks.database.status : 'error' %>"><i class="fas fa-circle dz28-7"></i> <%= data.health ? data.health.checks.database.status : 'unknown' %></span>
         </div>
         <div class="card">
           <div class="label"><%= t('admin_stat_server_uptime') %></div>
-          <div class="val" style="font-size:15px;"><%= data.health ? data.health.checks.uptime.message : '-' %></div>
+          <div class="val sp13-1"><%= data.health ? data.health.checks.uptime.message : '-' %></div>
         </div>
       </div>
 
@@ -104,9 +120,9 @@
       <div class="chart-card"><canvas id="growthChart"></canvas></div>
 
       <div class="chart-card">
-        <b style="color:var(--text-main);font-size:13px;"><%= t('admin_recent_activity') %></b>
+        <b class="dz28-8"><%= t('admin_recent_activity') %></b>
         <div class="table-scroll">
-          <table class="mini" style="margin-top:10px;">
+          <table class="mini dz28-9">
             <thead><tr><th><%= t('admin_col_admin') %></th><th><%= t('admin_col_action') %></th><th><%= t('admin_col_details') %></th><th><%= t('admin_col_time') %></th></tr></thead>
             <tbody>
               <% data.recentActivity.forEach(function(a) { %>

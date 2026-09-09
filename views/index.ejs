@@ -2,6 +2,26 @@
 <%- include('partials/navbar') %>
 
 <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .sp26-1.sp26-1 { display: none; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz48-1 { flex: 1; overflow: hidden; }
+  .dz48-2 { font-size: 12px; color: var(--text-muted); white-space: nowrap; animation: marquee-text 18s linear infinite; }
+  .dz48-3 { font-family: 'Teko', sans-serif; font-size: 30px; color: var(--gold-hover); line-height: 1.1; margin: 8px 0 3px 0; text-transform: uppercase; }
+  .dz48-4 { font-size: 11px; color: var(--text-muted); margin-bottom: 10px; font-weight: 500; }
+  .dz48-5 { background: var(--grad-gold); color: #000; font-weight: 800; font-size: 11px; border-radius: 20px; padding: 7px 18px; }
+  .dz48-6 { font-size: 9px; margin-left: 4px; }
+  .dz48-7 { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 0 12px 10px; }
+  .dz48-8 { font-size: 11px; color: var(--text-muted); margin-right: 2px; }
+  .dz48-9 { padding: 0 12px 15px 12px; }
+  .dz48-10 { position: relative; }
+  .dz48-11 { padding-right: 45px; border-radius: 30px; background: rgba(255,255,255,0.04); border-color: rgba(201, 162, 39,0.2); }
+  .dz48-12 { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+  .dz48-13 { width: 130px; border-radius: 8px; display: block; }
 @keyframes livedot {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.3; transform: scale(1.4); }
@@ -326,8 +346,8 @@ body.light-mode .promo-banner {
   <div class="marquee-label-premium">
     <i class="fas fa-bullhorn"></i> Announcement:
   </div>
-  <div style="flex:1; overflow:hidden;">
-    <div style="font-size:12px; color:var(--text-muted); white-space:nowrap; animation:marquee-text 18s linear infinite;">
+  <div class="dz48-1">
+    <div class="dz48-2">
       <%= t.home_marquee %>
     </div>
   </div>
@@ -337,15 +357,15 @@ body.light-mode .promo-banner {
 <div class="promo-banner">
   <div class="promo-banner-content">
     <div class="promo-banner-badge"><%= t.welcome_bonus %></div>
-    <h1 class="promo-banner-title" style="font-family:'Teko', sans-serif; font-size: 30px; color: var(--gold-hover); line-height: 1.1; margin: 8px 0 3px 0; text-transform: uppercase;">
+    <h1 class="promo-banner-title dz48-3">
       100% Welcome Bonus
     </h1>
-    <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px; font-weight: 500;">
+    <p class="dz48-4">
       <%= t.welcome_bonus_desc %> - Up to 50,000 BDT match bonus on first deposit.
     </p>
     <div>
-      <a href="/payment/deposit" class="btn" style="background: var(--grad-gold); color: #000; font-weight: 800; font-size: 11px; border-radius: 20px; padding: 7px 18px;">
-        <%= t.get_now %> <i class="fas fa-chevron-right" style="font-size: 9px; margin-left: 4px;"></i>
+      <a href="/payment/deposit" class="btn dz48-5">
+        <%= t.get_now %> <i class="fas fa-chevron-right dz48-6"></i>
       </a>
     </div>
   </div>
@@ -463,8 +483,8 @@ body.light-mode .promo-banner {
 </div>
 
 <!-- ===== Layout Switcher ===== -->
-<div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:0 12px 10px;">
-  <span style="font-size:11px;color:var(--text-muted);margin-right:2px;"><%= t.layout_label %></span>
+<div class="dz48-7">
+  <span class="dz48-8"><%= t.layout_label %></span>
   <button type="button" class="layout-btn" data-layout="compact" title="<%= t.layout_compact %>"><i class="fas fa-table-cells"></i></button>
   <button type="button" class="layout-btn active" data-layout="standard" title="<%= t.layout_standard %>"><i class="fas fa-table-cells-large"></i></button>
   <button type="button" class="layout-btn" data-layout="list" title="<%= t.layout_list %>"><i class="fas fa-list"></i></button>
@@ -542,17 +562,17 @@ body.light-mode .promo-banner {
 </style>
 
 <!-- ===== Search Bar ===== -->
-<div style="padding: 0 12px 15px 12px;">
-  <div style="position:relative;">
-    <input type="text" id="gameSearch" class="form-input" placeholder="<%= t.search_placeholder %>" style="padding-right:45px; border-radius: 30px; background: rgba(255,255,255,0.04); border-color: rgba(201, 162, 39,0.2);">
-    <i class="fas fa-search" style="position:absolute;right:18px;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
+<div class="dz48-9">
+  <div class="dz48-10">
+    <input type="text" id="gameSearch" class="form-input dz48-11" placeholder="<%= t.search_placeholder %>">
+    <i class="fas fa-search dz48-12"></i>
   </div>
 </div>
 
 <%- include('partials/flash') %>
 
 <!-- ===== Secondary Filter Pills (শুধু Slots/Live/Sports/Poker ক্যাটাগরিতে দেখাবে) ===== -->
-<div class="secondary-tabs-container" id="secondaryTabs" style="display:none;">
+<div class="secondary-tabs-container sp26-1" id="secondaryTabs">
   <div class="secondary-tab-item active" data-secondary="hot"><i class="fas fa-fire"></i> <%= t.cat_hot %></div>
   <div class="secondary-tab-item" data-secondary="favorites"><i class="fas fa-star"></i> <%= t.cat_favorites %></div>
   <div class="secondary-tab-item" data-secondary="recent"><i class="fas fa-clock-rotate-left"></i> <%= t.cat_recent %></div>
@@ -663,7 +683,7 @@ body.light-mode .promo-banner {
       <div class="jackpot-tagline"><%= t.jackpot_tagline %></div>
     </div>
     <div class="jackpot-girl">
-      <video src="/videos/jackpot-girl.mp4" poster="/images/hero/mega-jackpot.svg" style="width:130px; border-radius:8px; display:block;" autoplay loop muted playsinline></video>
+      <video class="dz48-13" src="/videos/jackpot-girl.mp4" poster="/images/hero/mega-jackpot.svg" autoplay loop muted playsinline></video>
     </div>
   </div>
 </div>
@@ -797,7 +817,6 @@ body.light-mode .promo-banner {
 
 <script type="application/json" id="indexConfig"><%- jsonScriptSafe({
   games: (typeof dbGames !== 'undefined' && dbGames) ? dbGames : [],
-  playableSlugs: (typeof playableSlugs !== 'undefined') ? playableSlugs : [],
   allLabel: t.all,
   noGamesFound: t.no_games_found
 }) %></script>

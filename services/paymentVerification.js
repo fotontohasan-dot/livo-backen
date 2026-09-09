@@ -26,7 +26,11 @@ const EXPECTED_CURRENCY = 'BDT';
  */
 function isExpectedCurrency(verification) {
   const currency = verification && (verification.currency_type || verification.currency);
-  if (!currency) return true;
+  if (!currency) {
+    // fail-open শুধু স্যান্ডবক্সে। প্রোডাকশনে currency ছাড়া রেসপন্স মানে
+    // যাচাই করা যায়নি — টাকার পথে "যাচাই করা যায়নি" কখনো "পাস" নয়।
+    return process.env.NODE_ENV !== 'production';
+  }
   return String(currency).toUpperCase() === EXPECTED_CURRENCY;
 }
 

@@ -18,7 +18,7 @@ function txnRow(t) {
     '<td class="px-6 py-4 text-sm">' + fmtDate(t.created_at) + '</td>' +
   '</tr>';
 }
-const rows = (transactions || []).map(txnRow).join('') || '<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400">কোনো ট্রানজেকশন নেই</td></tr>';
+const rows = (transactions || []).map(txnRow).join('') || '<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400">' + t("atr_no_txn") + '</td></tr>';
 %>
 <%- include('partials/admin-layout', { 
     title: 'Transactions Log', 
@@ -27,7 +27,7 @@ const rows = (transactions || []).map(txnRow).join('') || '<tr><td colspan="6" c
 <div class="max-w-7xl mx-auto">
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-semibold">All Transactions</h2>
-        <p class="text-sm text-slate-500">মোট ${total || 0} টি • পেজ ${page || 1} / ${totalPages || 1}</p>
+        <p class="text-sm text-slate-500">${t('atr_summary').replace('{n}', total || 0).replace('{page}', page || 1).replace('{pages}', totalPages || 1)}</p>
     </div>
     
     <div class="bg-white rounded-3xl border p-1 overflow-x-auto modern-table">
@@ -47,8 +47,8 @@ const rows = (transactions || []).map(txnRow).join('') || '<tr><td colspan="6" c
     </div>
 
     <div class="flex justify-center gap-3 mt-6">
-        ${page > 1 ? '<a href="/admin/transactions?page=' + (page - 1) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">← আগের পেজ</a>' : ''}
-        ${page < totalPages ? '<a href="/admin/transactions?page=' + (page + 1) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">পরের পেজ →</a>' : ''}
+        ${page > 1 ? '<a href="/admin/transactions?page=' + (page - 1) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">← ' + t("ash_prev_page") + '</a>' : ''}
+        ${page < totalPages ? '<a href="/admin/transactions?page=' + (page + 1) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">' + t("ash_next_page") + ' →</a>' : ''}
     </div>
 </div>
 ` 

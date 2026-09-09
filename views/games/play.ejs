@@ -1,116 +1,47 @@
 <%- include('../partials/head') %>
-<%- include('../partials/navbar') %>
+
+<%#
+  PHASE 3 — গেম কন্টেইনার।
+
+  এখানে ইচ্ছাকৃতভাবে কোনো গেম-লজিক নেই। RNG, বাজি, ফলাফল — সবই প্রোভাইডারের
+  iframe-এর ভেতরে; আমাদের দিক থেকে টাকার একমাত্র পথ seamless wallet কলব্যাক
+  (routes/providerWallet.js)।
+
+  navbar ইচ্ছাকৃতভাবে বাদ: ছোট স্ক্রিনে গেমের জন্য পুরো উচ্চতা দরকার।
+  বেরোনোর জন্য উপরে একটা বার আছে।
+%>
 
 <style nonce="<%= cspNonce %>">
-    body { background:#0a0a0a; color:#fff; margin-bottom:70px; }
-    .game-container { padding:15px; max-width:800px; margin:0 auto; }
-    .game-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; background:#141414; padding:12px 15px; border-radius:12px; border:1px solid rgba(230,0,0,0.2); }
-    .game-title { font-size:18px; font-weight:800; color:#ffd700; }
-    .balance-box { background:rgba(0,0,0,0.5); padding:5px 15px; border-radius:20px; font-weight:700; color:#ffd700; display:flex; align-items:center; gap:5px; border:1px solid rgba(255,215,0,0.3); }
-    .game-canvas-area { width:100%; aspect-ratio:16/9; background:#000; border-radius:12px; position:relative; overflow:hidden; display:flex; flex-direction:column; align-items:center; justify-content:center; border:2px solid rgba(230,0,0,0.4); box-shadow:0 0 20px rgba(230,0,0,0.15); }
-    .bet-controls { margin-top:15px; background:#141414; padding:15px; border-radius:12px; display:flex; flex-direction:column; gap:12px; border:1px solid rgba(255,255,255,0.07); }
-    .bet-input-group { display:flex; gap:10px; align-items:center; }
-    .bet-input-group label { white-space:nowrap; font-size:14px; color:#888; }
-    .bet-input-group input { flex:1; background:#1e1e1e; border:1px solid #333; color:white; padding:10px; border-radius:8px; outline:none; font-size:15px; }
-    .bet-btn { background:linear-gradient(90deg,#e60000,#ff1a1a); color:white; border:none; padding:13px; border-radius:8px; font-weight:700; cursor:pointer; font-size:15px; transition:.2s; }
-    .bet-btn:disabled { opacity:0.5; cursor:not-allowed; }
-    .quick-bet { display:flex; gap:8px; }
-    .quick-btn { padding:6px 12px; background:#1e1e1e; border:1px solid #333; color:#888; border-radius:6px; cursor:pointer; font-size:12px; }
-    .quick-btn:hover { border-color:#e60000; color:#e60000; }
-    .demo-toggle-wrap { display:flex; align-items:center; gap:8px; background:#141414; padding:10px 15px; border-radius:12px; margin-bottom:12px; border:1px solid rgba(255,255,255,0.07); }
-    .demo-switch { position:relative; width:44px; height:24px; background:#333; border-radius:20px; cursor:pointer; transition:.2s; flex-shrink:0; }
-    .demo-switch.active { background:#10b981; }
-    .demo-switch::after { content:''; position:absolute; top:2px; left:2px; width:20px; height:20px; background:#fff; border-radius:50%; transition:.2s; }
-    .demo-switch.active::after { left:22px; }
-    .demo-label { font-size:13px; color:#aaa; font-weight:600; }
-    .demo-label.active { color:#10b981; }
+  html, body { height: 100%; margin: 0; }
+  .play-bar { display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+    background: var(--bg-card); border-bottom: 1px solid var(--border-glass); }
+  .play-back { color: var(--text-main); text-decoration: none; font-size: 18px; }
+  .play-name { font-size: 14px; font-weight: 700; color: var(--text-main);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .play-mode { margin-left: auto; font-size: 11px; color: var(--text-muted);
+    border: 1px solid var(--border-glass); border-radius: 999px; padding: 3px 9px; }
+  .play-frame-wrap { position: absolute; top: 45px; bottom: 0; left: 0; right: 0; }
+  .play-frame { width: 100%; height: 100%; border: 0; display: block; }
 </style>
 
-<div class="game-container">
-    <div class="demo-toggle-wrap">
-        <div id="demoSwitch" class="demo-switch" data-toggle-demo></div>
-        <span id="demoLabel" class="demo-label">🎮 ডেমো মোড (প্র্যাকটিস, রিয়েল টাকা লাগবে না)</span>
-    </div>
-
-    <div class="game-header">
-        <div class="game-title">🎮 <%= gameDisplayName %></div>
-        <div class="balance-box">🪙 <span id="userBalance"><%= coins %></span></div>
-    </div>
-
-    <div id="gameCanvas" class="game-canvas-area">
-        <div id="gameUI">
-            <div style="text-align:center;padding:40px;">
-                <div style="font-size:40px;">🎮</div>
-                <p style="color:#888;margin-top:10px;">গেম লোড হচ্ছে...</p>
-            </div>
-        </div>
-    </div>
-
-    <div class="bet-controls">
-        <div class="quick-bet">
-            <button type="button" class="quick-btn" data-set-bet="10">১০</button>
-            <button type="button" class="quick-btn" data-set-bet="50">৫০</button>
-            <button type="button" class="quick-btn" data-set-bet="100">১০০</button>
-            <button type="button" class="quick-btn" data-set-bet="500">৫০০</button>
-            <button type="button" class="quick-btn" data-set-bet="1000">১০০০</button>
-        </div>
-        <div class="bet-input-group">
-            <label>বাজি:</label>
-            <input type="number" id="betAmount" value="<%= minBet %>" min="<%= minBet %>" max="<%= maxBet %>" step="1">
-        </div>
-        <button id="mainGameBtn" class="bet-btn">খেলুন</button>
-    </div>
+<div class="play-bar">
+  <a class="play-back" href="/games" aria-label="Back">&#8592;</a>
+  <div class="play-name"><%= game.name %></div>
+  <div class="play-mode"><%= mode === 'demo' ? 'DEMO' : (t.balance || 'Real') %></div>
 </div>
 
-<%- include('../partials/bottom-nav', { activePage: 'home' }) %>
+<div class="play-frame-wrap">
+  <%#
+    sandbox: প্রোভাইডারের কন্টেন্ট আমাদের পেজে টপ-লেভেল নেভিগেশন করতে বা
+    আমাদের origin-এর স্টোরেজে হাত দিতে পারবে না। allow-same-origin দরকার,
+    নাহলে বেশিরভাগ গেম ক্লায়েন্ট নিজের সেশন স্টোরেজই ব্যবহার করতে পারে না।
+  %>
+  <iframe class="play-frame" src="<%= launchUrl %>"
+          allow="autoplay; fullscreen; clipboard-write"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+          referrerpolicy="no-referrer"
+          title="<%= game.name %>"></iframe>
+</div>
 
-<script type="application/json" id="games-playConfig"><%- jsonScriptSafe({
-  gameSlug: gameSlug, coins: coins, demoBalance: demoBalance || 0,
-  gameDisplayName: gameDisplayName,
-  betErrors: {
-    generic: t('bet_error_generic'), limited: t('bet_error_rate_limited'),
-    expired: t('bet_error_session_expired'), network: t('bet_error_network'),
-    server: t('bet_error_server')
-  }
-}) %></script>
-<script src="/js/views/games-play.js"></script>
-<% if (gameSlug === 'aviator' || gameSlug === 'crash-game') { %>
-    <%- include('aviator') %>
-<% } else if (gameSlug === 'slots') { %>
-    <%- include('slots') %>
-<% } else if (gameSlug === 'roulette') { %>
-    <%- include('roulette') %>
-<% } else if (gameSlug === 'andar-bahar') { %>
-    <%- include('andar-bahar') %>
-<% } else if (gameSlug === 'teen-patti') { %>
-    <%- include('teen-patti') %>
-<% } else if (gameSlug === 'blackjack') { %>
-    <%- include('blackjack') %>
-<% } else if (gameSlug === 'poker') { %>
-    <%- include('poker') %>
-<% } else if (gameSlug === 'baccarat') { %>
-    <%- include('baccarat') %>
-<% } else if (gameSlug === 'ludo') { %>
-    <%- include('ludo') %>
-<% } else if (gameSlug === 'color-prediction') { %>
-    <%- include('color-prediction') %>
-<% } else if (gameSlug === 'lucky-spin' || gameSlug === 'wheel') { %>
-    <%- include('lucky-spin') %>
-<% } else if (gameSlug === 'mine') { %>
-    <%- include('mine') %>
-<% } else if (gameSlug === 'coin-flip') { %>
-    <%- include('coin-flip') %>
-<% } else if (gameSlug === 'dragon-tiger') { %>
-    <%- include('dragon-tiger') %>
-<% } else if (gameSlug === 'number-guess') { %>
-    <%- include('number-guess') %>
-<% } else if (gameSlug === 'hilo') { %>
-    <%- include('hilo') %>
-<% } else if (gameSlug === 'dice') { %>
-    <%- include('dice') %>
-<% } else if (gameSlug === 'card-war') { %>
-    <%- include('card-war') %>
-<% } else { %>
-    <!-- জেনেরিক গেম টেমপ্লেট: বাকি সব গেমের জন্য -->
-    <script src="/js/views/games-play-generic.js"></script>
-<% } %>
+</body>
+</html>

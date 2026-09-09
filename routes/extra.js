@@ -50,8 +50,12 @@ router.get('/invitation', isAuth, requireFeature('referral'), async (req, res) =
         const referrals = await pool.query('SELECT COUNT(*) FROM users WHERE referred_by_id = $1', [id]);
         res.render('extra/invitation', { referralCode, referralCount: parseInt(referrals.rows[0].count) });
     } catch (err) {
-        console.error(err);
-        res.render('extra/placeholder', { title: req.t('invite') });
+        // PHASE 5 cleanup: আগে এখানে extra/placeholder রেন্ডার হতো — অর্থাৎ
+        // DB সমস্যা হলে ইউজার একটা খালি "শীঘ্রই আসছে" পেজ দেখত এবং ভাবত
+        // ফিচারটাই তৈরি হয়নি, অথচ views/extra/invitation.ejs আগে থেকেই আছে।
+        // এখন অন্য সব রুটের মতোই সৎ এরর পেজ, যাতে সমস্যাটা ধরা পড়ে।
+        console.error('invitation page error:', err.message);
+        res.status(500).render('error', { message: req.t('common_server_error_short') });
     }
 });
 

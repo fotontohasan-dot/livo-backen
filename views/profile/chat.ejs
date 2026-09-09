@@ -1,24 +1,52 @@
 <%- include('../partials/head') %>
 
-<div style="padding:16px;padding-bottom:100px;max-width:600px;margin:0 auto">
-  <h1 style="color: var(--text-accent);font-size:22px;font-weight:800;margin-bottom:16px">💬 <%= t.chat_support %></h1>
+<div class="ix74-1">
+  <h1 class="ix74-2">💬 <%= t.chat_support %></h1>
 
   <!-- ==================== দ্রুত সাহায্য (help-center পেজের সেম কালার/ডিজাইন) ==================== -->
-  <div style="background:linear-gradient(135deg,#1a2a6c 0%,#2a5298 100%);border-radius:16px;padding:18px 16px 16px;margin-bottom:14px;position:relative;overflow:hidden">
-    <div style="position:absolute;left:0;right:0;bottom:0;height:3px;background:linear-gradient(90deg,#ff8a00,#e52e71)"></div>
-    <div style="color:#fff;font-weight:800;font-size:18px;margin-bottom:12px">দ্রুত সাহায্য</div>
-    <div style="color:rgba(255,255,255,0.85);font-size:12px;font-weight:700;margin-bottom:8px;letter-spacing:.3px">ক্যাটাগরি</div>
-    <div id="quick-category-row" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch">
-      <button data-quick-msg="ডিপোজিট সমস্যা" class="qc-chip">💳 ডিপোজিট সমস্যা</button>
-      <button data-quick-msg="উইথড্র সমস্যা" class="qc-chip">💵 উইথড্র সমস্যা</button>
-      <button data-quick-msg="বোনাস সমস্যা" class="qc-chip">🎁 বোনাস সমস্যা</button>
-      <button data-quick-msg="লগইন সমস্যা" class="qc-chip">🔑 লগইন সমস্যা</button>
-      <button data-quick-msg="অ্যাকাউন্ট ভেরিফিকেশন" class="qc-chip">🪪 KYC ভেরিফিকেশন</button>
-      <button data-quick-msg="টিকেট ইস্যু" class="qc-chip">🎫 টিকেট ইস্যু</button>
-      <button data-quick-msg="ফুটবল ইস্যু" class="qc-chip">⚽ ফুটবল ইস্যু</button>
+  <div class="ix74-3">
+    <div class="ix74-4"></div>
+    <div class="dz74-1"><%= t('chat_quick_help') %></div>
+    <div class="dz74-2"><%= t('chat_category') %></div>
+    <div class="dz74-3" id="quick-category-row">
+      <button data-quick-msg="<%= t('chat_deposit_issue') %>" class="qc-chip">💳 <%= t('chat_deposit_issue') %></button>
+      <button data-quick-msg="<%= t('chat_withdraw_issue') %>" class="qc-chip">💵 <%= t('chat_withdraw_issue') %></button>
+      <button data-quick-msg="<%= t('chat_bonus_issue') %>" class="qc-chip">🎁 <%= t('chat_bonus_issue') %></button>
+      <button data-quick-msg="<%= t('chat_login_issue') %>" class="qc-chip">🔑 <%= t('chat_login_issue') %></button>
+      <button data-quick-msg="<%= t('hc_kyc_msg') %>" class="qc-chip">🪪 <%= t('chat_kyc_issue') %></button>
+      <button data-quick-msg="<%= t('chat_ticket_issue') %>" class="qc-chip">🎫 <%= t('chat_ticket_issue') %></button>
+      <button data-quick-msg="<%= t('chat_football_issue') %>" class="qc-chip">⚽ <%= t('chat_football_issue') %></button>
     </div>
   </div>
   <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz74-1 { color: #fff; font-weight: 800; font-size: 18px; margin-bottom: 12px; }
+  .dz74-2 { color: rgba(255,255,255,0.85); font-size: 12px; font-weight: 700; margin-bottom: 8px; letter-spacing: .3px; }
+  .dz74-3 { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
+  .dz74-4 { display: flex; gap: 8px; margin-bottom: 12px; }
+  .dz74-5 { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--border-glass); background: var(--grad-gold); color: #000; font-weight: bold; cursor: pointer; font-size: 13px; }
+  .dz74-6 { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--border-glass); background: rgba(255,255,255,0.08); color: var(--text-main); font-weight: bold; cursor: pointer; font-size: 13px; }
+  .dz74-7 { background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 16px; display: flex; flex-direction: column; height: 70vh; }
+  .dz74-8 { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .dz74-9 { padding: 12px; border-top: 1px solid var(--border-glass); }
+  .dz74-10 { display: none; margin-bottom: 8px; }
+  .dz74-11 { display: none; max-height: 100px; border-radius: 8px; margin-bottom: 4px; }
+  .dz74-12 { font-size: 12px; color: var(--text-muted); }
+  .dz74-13 { color: #ef4444; font-size: 12px; margin-left: 8px; background: none; border: none; cursor: pointer; }
+  .dz74-14 { display: flex; gap: 8px; align-items: center; }
+  .dz74-15 { background: rgba(255,255,255,0.08); color: var(--text-main); padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 18px; }
+  .dz74-16 { display: none; }
+  .dz74-17 { flex: 1; background: rgba(255,255,255,0.08); border: 1px solid var(--border-glass); border-radius: 8px; padding: 10px 14px; color: var(--text-main); font-size: 14px; outline: none; }
+  .dz74-18 { background: var(--grad-gold); color: #000; padding: 10px 16px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 14px; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). A declaration was moved only when no !important rule in
+     the site CSS can match this element for that property. */
+  .ix74-1 { padding: 16px; padding-bottom: 100px; max-width: 600px; margin: 0 auto; }
+  .ix74-2 { color: var(--text-accent); font-size: 22px; font-weight: 800; margin-bottom: 16px; }
+  .ix74-3 { background: linear-gradient(135deg,#1a2a6c 0%,#2a5298 100%); border-radius: 16px; padding: 18px 16px 16px; margin-bottom: 14px; position: relative; overflow: hidden; }
+  .ix74-4 { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: linear-gradient(90deg,#ff8a00,#e52e71); }
     .qc-chip{
       flex:0 0 auto; white-space:nowrap; background:rgba(255,255,255,0.12); color:#fff;
       border:1px solid rgba(255,255,255,0.25); border-radius:10px; padding:10px 14px;
@@ -27,30 +55,27 @@
     .qc-chip:hover{ background:rgba(255,255,255,0.22); }
   </style>
 
-  <div style="display:flex;gap:8px;margin-bottom:12px">
-    <button id="mode-bot" data-chat-mode="bot" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border-glass);background:var(--grad-gold);color:#000;font-weight:bold;cursor:pointer;font-size:13px">🤖 বট সহায়তা</button>
-    <button id="mode-agent" data-chat-mode="agent" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border-glass);background:rgba(255,255,255,0.08);color:var(--text-main);font-weight:bold;cursor:pointer;font-size:13px">👤 লাইভ এজেন্ট</button>
+  <div class="dz74-4">
+    <button class="dz74-5" id="mode-bot" data-chat-mode="bot">🤖 <%= t('chat_mode_bot') %></button>
+    <button class="dz74-6" id="mode-agent" data-chat-mode="agent">👤 <%= t('chat_mode_agent') %></button>
   </div>
 
-  <div id="chat-container" style="background:rgba(255,255,255,0.03);border:1px solid var(--border-glass);border-radius:16px;display:flex;flex-direction:column;height:70vh">
-    <div id="messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px"></div>
+  <div class="dz74-7" id="chat-container">
+    <div class="dz74-8" id="messages"></div>
 
-    <div style="padding:12px;border-top:1px solid var(--border-glass)">
-      <div id="file-preview" style="display:none;margin-bottom:8px">
-        <img id="preview-img" style="display:none;max-height:100px;border-radius:8px;margin-bottom:4px"/>
-        <span id="preview-name" style="font-size:12px;color:var(--text-muted)"></span>
-        <button data-clear-file style="color:#ef4444;font-size:12px;margin-left:8px;background:none;border:none;cursor:pointer">✕ <%= t.cancel %></button>
+    <div class="dz74-9">
+      <div class="dz74-10" id="file-preview">
+        <img class="dz74-11" id="preview-img"/>
+        <span class="dz74-12" id="preview-name"></span>
+        <button class="dz74-13" data-clear-file>✕ <%= t.cancel %></button>
       </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <label style="background:rgba(255,255,255,0.08);color:var(--text-main);padding:10px 12px;border-radius:8px;cursor:pointer;font-size:18px">
+      <div class="dz74-14">
+        <label class="dz74-15">
           📎
-          <input type="file" id="file-input" style="display:none" accept="image/*,video/*">
+          <input class="dz74-16" type="file" id="file-input" accept="image/*,video/*">
         </label>
-        <input type="text" id="message-input"
-          style="flex:1;background:rgba(255,255,255,0.08);border:1px solid var(--border-glass);border-radius:8px;padding:10px 14px;color:var(--text-main);font-size:14px;outline:none"
-          placeholder="<%= t.message_placeholder %>">
-        <button id="send-button"
-          style="background:var(--grad-gold);color:#000;padding:10px 16px;border-radius:8px;border:none;font-weight:bold;cursor:pointer;font-size:14px">
+        <input class="dz74-17" type="text" id="message-input" placeholder="<%= t.message_placeholder %>">
+        <button class="dz74-18" id="send-button">
           <%= t.send %>
         </button>
       </div>

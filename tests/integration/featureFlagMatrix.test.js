@@ -36,7 +36,9 @@ const PROBE = {
   live_chat:      { get: '/chat' },
   ai_chatbot:     { post: '/help-center/api/chat' },
   news:           { get: '/news' },
-  notifications:  { get: '/notifications' }
+  notifications:  { get: '/notifications' },
+  provider_wallet:{ post: '/provider/mock-casino/balance' },
+  tickets:        { get: '/tickets' }
 };
 
 async function setFlag(key, enabled) {

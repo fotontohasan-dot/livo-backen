@@ -92,14 +92,13 @@ describe('Phase 16 — ব্যক্তিগত পেজ ইনডেক্�
     expect(appSrc).toMatch(/res\.locals\.currentPath = req\.path/);
   });
 
-  test('robots.txt এখনো সংবেদনশীল পথ disallow করে', () => {
-    const fs = require('fs');
-    const path = require('path');
-    const robots = fs.readFileSync(
-      path.join(__dirname, '..', '..', 'public', 'robots.txt'), 'utf8'
-    );
+  // robots.txt এখন app.js-এর একটা রুট থেকে জেনারেট হয় (হোস্টনেম হার্ডকোড
+  // এড়াতে), স্ট্যাটিক ফাইল নয় — তাই আসল রেসপন্সটাই যাচাই করা হয়।
+  test('robots.txt এখনো সংবেদনশীল পথ disallow করে', async () => {
+    const res = await request(app).get('/robots.txt');
+    expect(res.status).toBe(200);
     ['/admin', '/profile'].forEach((p) => {
-      expect(robots).toMatch(new RegExp('Disallow: ' + p));
+      expect(res.text).toMatch(new RegExp('Disallow: ' + p));
     });
   });
 });

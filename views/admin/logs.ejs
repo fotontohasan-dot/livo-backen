@@ -6,6 +6,26 @@
   <title><%= t('admin_title_log_viewer') %></title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz31-1 { margin-bottom: 16px; }
+  .dz31-2 { color: #f59e0b; }
+  .dz31-3 { color: #ef4444; }
+  .dz31-4 { color: #10b981; }
+  .dz31-5 { grid-column: span 2; }
+  .dz31-6 { background: #f59e0b; color: #000; padding: 8px 16px; border: none; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; }
+  .dz31-7 { padding: 8px 12px; border-radius: 8px; font-size: 12px; background: rgba(255,255,255,0.08); color: var(--text-muted); text-decoration: none; }
+  .dz31-8 { padding: 0 16px 14px; }
+  .dz31-9 { display: inline-block; padding: 8px 16px; border-radius: 8px; font-size: 12px; background: #10b981; color: #000; text-decoration: none; font-weight: 700; }
+  .dz31-10 { overflow-x: auto; }
+  .dz31-11 { font-size: 11px; white-space: nowrap; }
+  .dz31-12 { font-size: 11px; }
+  .dz31-13 { font-weight: 700; font-size: 11px; }
+  .dz31-14 { font-size: 10px; color: var(--text-muted); max-width: 260px; white-space: normal; word-break: break-all; }
+  .dz31-15 { text-align: center; color: var(--text-muted); padding: 24px; }
+  .dz31-16 { display: flex; gap: 8px; justify-content: center; padding: 14px; flex-wrap: wrap; }
+  .dz31-17 { margin-top: 16px; }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
     .log-filter-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; padding: 14px 16px; }
@@ -24,7 +44,7 @@
     <%- include('./partials/sidebar', { active: 'logs' }) %>
     <div class="admin-content">
       <%- include('./partials/load-error') %>
-      <%- include('./partials/header', { pageTitle: 'Unified Log Viewer', pageSubtitle: 'Admin, Login, Error, Fraud, Bot, Security — সব লগ একসাথে সার্চ ও ফিল্টার করুন' }) %>
+      <%- include('./partials/header', { pageTitle: 'Unified Log Viewer', pageSubtitle: t("alg_sub") }) %>
 
       <% if (typeof success !== 'undefined' && success && success.length) { %>
         <% success.forEach(function(m) { %><div class="flash-box flash-success"><%= m %></div><% }) %>
@@ -33,14 +53,14 @@
         <% error.forEach(function(m) { %><div class="flash-box flash-error"><%= m %></div><% }) %>
       <% } %>
 
-      <div class="grid grid-4" style="margin-bottom:16px;">
-        <div class="stat-card"><div class="stat-label"><%= t('admin_stat_total_logs') %></div><div class="stat-number" style="color:#f59e0b;"><%= categoryCounts.reduce((a,c)=>a+c.count,0) %></div></div>
-        <div class="stat-card"><div class="stat-label"><%= t('admin_severity_critical') %></div><div class="stat-number" style="color:#ef4444;"><%= (severityCounts.find(s=>s.severity==='critical')||{count:0}).count %></div></div>
-        <div class="stat-card"><div class="stat-label"><%= t('admin_severity_warning') %></div><div class="stat-number" style="color:#f59e0b;"><%= (severityCounts.find(s=>s.severity==='warning')||{count:0}).count %></div></div>
-        <div class="stat-card"><div class="stat-label"><%= t('admin_stat_filtered_results') %></div><div class="stat-number" style="color:#10b981;"><%= total %></div></div>
+      <div class="grid grid-4 dz31-1">
+        <div class="stat-card"><div class="stat-label"><%= t('admin_stat_total_logs') %></div><div class="stat-number dz31-2"><%= categoryCounts.reduce((a,c)=>a+c.count,0) %></div></div>
+        <div class="stat-card"><div class="stat-label"><%= t('admin_severity_critical') %></div><div class="stat-number dz31-3"><%= (severityCounts.find(s=>s.severity==='critical')||{count:0}).count %></div></div>
+        <div class="stat-card"><div class="stat-label"><%= t('admin_severity_warning') %></div><div class="stat-number dz31-2"><%= (severityCounts.find(s=>s.severity==='warning')||{count:0}).count %></div></div>
+        <div class="stat-card"><div class="stat-label"><%= t('admin_stat_filtered_results') %></div><div class="stat-number dz31-4"><%= total %></div></div>
       </div>
 
-      <div class="admin-card" style="margin-bottom:16px;">
+      <div class="admin-card dz31-1">
         <div class="admin-card-header"><%= t('admin_filter_search_heading') %></div>
         <form method="GET" action="/admin/logs" class="log-filter-form">
           <div>
@@ -69,23 +89,22 @@
           <div><label><%= t('admin_col_actor_user_id') %></label><input class="input" type="number" name="actor_id" value="<%= filters.actorId || '' %>"></div>
           <div><label><%= t('admin_field_date_from') %></label><input class="input" type="date" name="date_from" value="<%= filters.dateFrom || '' %>"></div>
           <div><label><%= t('admin_field_date_to') %></label><input class="input" type="date" name="date_to" value="<%= filters.dateTo || '' %>"></div>
-          <div style="grid-column:span 2;"><label><%= t('admin_field_search_log') %></label><input class="input" type="text" name="search" value="<%= filters.search || '' %>" placeholder="<%= t('admin_ph_any_word') %>"></div>
+          <div class="dz31-5"><label><%= t('admin_field_search_log') %></label><input class="input" type="text" name="search" value="<%= filters.search || '' %>" placeholder="<%= t('admin_ph_any_word') %>"></div>
           <div class="log-filter-actions">
-            <button type="submit" class="btn-sm" style="background:#f59e0b;color:#000;padding:8px 16px;border:none;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;"><i class="fas fa-filter"></i> <%= t('admin_btn_apply_filter') %></button>
-            <a href="/admin/logs" style="padding:8px 12px;border-radius:8px;font-size:12px;background:rgba(255,255,255,0.08);color:var(--text-muted);text-decoration:none;"><%= t('admin_btn_reset') %></a>
+            <button type="submit" class="btn-sm dz31-6"><i class="fas fa-filter"></i> <%= t('admin_btn_apply_filter') %></button>
+            <a class="dz31-7" href="/admin/logs"><%= t('admin_btn_reset') %></a>
           </div>
         </form>
-        <div style="padding:0 16px 14px;">
-          <a href="/admin/logs/export?<%= new URLSearchParams(Object.entries(filters).filter(([k,v])=>v!==null&&v!=='')).toString() %>"
-             style="display:inline-block;padding:8px 16px;border-radius:8px;font-size:12px;background:#10b981;color:#000;text-decoration:none;font-weight:700;">
+        <div class="dz31-8">
+          <a class="dz31-9" href="/admin/logs/export?<%= new URLSearchParams(Object.entries(filters).filter(([k,v])=>v!==null&&v!=='')).toString() %>">
             <i class="fas fa-file-csv"></i> <%= t('admin_btn_export_csv_filtered') %>
           </a>
         </div>
       </div>
 
       <div class="admin-card">
-        <div class="admin-card-header">লগ এন্ট্রি (মোট <%= total %>, পেজ <%= page %>/<%= totalPages %>)</div>
-        <div style="overflow-x:auto;">
+        <div class="admin-card-header"><%= t('alg_entries').replace('{n}', total).replace('{page}', page).replace('{pages}', totalPages) %></div>
+        <div class="dz31-10">
           <table class="admin-table">
             <thead>
               <tr><th><%= t('admin_col_time') %></th><th><%= t('admin_col_category') %></th><th><%= t('admin_col_severity') %></th><th><%= t('admin_col_actor') %></th><th><%= t('admin_col_action') %></th><th><%= t('admin_col_resource') %></th><th>IP</th><th><%= t('admin_col_metadata') %></th></tr>
@@ -94,29 +113,29 @@
               <% if (logs && logs.length > 0) { %>
                 <% logs.forEach(l => { %>
                   <tr>
-                    <td style="font-size:11px;white-space:nowrap;"><%= new Date(l.created_at).toLocaleString('bn-BD') %></td>
+                    <td class="dz31-11"><%= new Date(l.created_at).toLocaleString('bn-BD') %></td>
                     <td><span class="badge-cat"><%= l.category %></span></td>
                     <td><span class="badge <%= l.severity==='critical'?'badge-red':(l.severity==='warning'?'badge-amber':'badge-green') %>"><%= l.severity %></span></td>
-                    <td style="font-size:11px;">
+                    <td class="dz31-12">
                       <%= l.actor_type %><% if (l.actor_username) { %> — @<%= l.actor_username %><% } %><% if (l.actor_id) { %> (#<%= l.actor_id %>)<% } %>
                     </td>
-                    <td style="font-weight:700;font-size:11px;"><%= l.action %></td>
-                    <td style="font-size:11px;"><%= l.resource_type || '' %><% if (l.resource_id) { %> #<%= l.resource_id %><% } %></td>
-                    <td style="font-size:11px;"><%= l.ip_address || '—' %></td>
-                    <td style="font-size:10px;color:var(--text-muted);max-width:260px;white-space:normal;word-break:break-all;">
+                    <td class="dz31-13"><%= l.action %></td>
+                    <td class="dz31-12"><%= l.resource_type || '' %><% if (l.resource_id) { %> #<%= l.resource_id %><% } %></td>
+                    <td class="dz31-12"><%= l.ip_address || '—' %></td>
+                    <td class="dz31-14">
                       <%= l.metadata ? JSON.stringify(l.metadata).slice(0, 200) : '' %>
                     </td>
                   </tr>
                 <% }) %>
               <% } else { %>
-                <tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px;"><%= t('admin_empty_logs') %></td></tr>
+                <tr><td class="dz31-15" colspan="8"><%= t('admin_empty_logs') %></td></tr>
               <% } %>
             </tbody>
           </table>
         </div>
         <% if (totalPages > 1) { %>
           <% const qs = (p) => { const params = new URLSearchParams(Object.entries(filters).filter(([k,v])=>v!==null&&v!=='')); params.set('page', p); return params.toString(); } %>
-          <div style="display:flex;gap:8px;justify-content:center;padding:14px;flex-wrap:wrap;">
+          <div class="dz31-16">
             <% for (let p = 1; p <= totalPages; p++) { %>
               <a href="/admin/logs?<%= qs(p) %>" style="padding:5px 11px;border-radius:6px;font-size:12px;text-decoration:none;background:<%= p === page ? '#f59e0b' : 'rgba(255,255,255,0.05)' %>;color:<%= p === page ? '#000' : 'var(--text-muted)' %>;"><%= p %></a>
             <% } %>
@@ -124,9 +143,9 @@
         <% } %>
       </div>
 
-      <div class="admin-card" style="margin-top:16px;">
+      <div class="admin-card dz31-17">
         <div class="admin-card-header"><%= t('admin_category_breakdown') %></div>
-        <div style="overflow-x:auto;">
+        <div class="dz31-10">
           <table class="admin-table">
             <thead><tr><th><%= t('admin_col_category') %></th><th><%= t('admin_label_total') %></th></tr></thead>
             <tbody>

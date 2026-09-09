@@ -7,14 +7,14 @@ function esc(s) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
-function ticketListItem(t) {
-  return '<div class="px-4 py-3.5 mx-1 mb-1 rounded-2xl cursor-pointer border border-transparent hover:bg-slate-50" data-ticket-id="' + Number(t.userId) + '" id="ticket-item-' + Number(t.userId) + '">' +
-    '<div class="flex justify-between"><div class="font-semibold text-sm">' + esc(t.username) + '</div>' +
-    '<div class="text-[10px] px-2 py-0.5 rounded ' + (t.status === 'Open' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700') + '">' + esc(t.status) + '</div></div>' +
-    '<div class="text-xs text-slate-400 mt-1 line-clamp-1">' + esc(String(t.lastMessage || '').slice(0, 60)) + '</div>' +
+function ticketListItem(ticket) {
+  return '<div class="px-4 py-3.5 mx-1 mb-1 rounded-2xl cursor-pointer border border-transparent hover:bg-slate-50" data-ticket-id="' + Number(ticket.userId) + '" id="ticket-item-' + Number(ticket.userId) + '">' +
+    '<div class="flex justify-between"><div class="font-semibold text-sm">' + esc(ticket.username) + '</div>' +
+    '<div class="text-[10px] px-2 py-0.5 rounded ' + (ticket.status === 'Open' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700') + '">' + esc(ticket.status) + '</div></div>' +
+    '<div class="text-xs text-slate-400 mt-1 line-clamp-1">' + esc(String(ticket.lastMessage || '').slice(0, 60)) + '</div>' +
   '</div>';
 }
-const ticketsHtml = (tickets || []).map(ticketListItem).join('') || '<div class="text-center text-slate-400 py-10 text-sm">কোনো সাপোর্ট মেসেজ নেই</div>';
+const ticketsHtml = (tickets || []).map(ticketListItem).join('') || '<div class="text-center text-slate-400 py-10 text-sm">' + t("asu_no_tickets") + '</div>';
 // টিকেট লিস্টে এখন আর প্রতিটার পূর্ণ মেসেজ থ্রেড এমবেড করা হয় না (মেমোরি/পেজ-লোড খরচ কমাতে) —
 // শুধু userId/username/lastMessage/status; আসল মেসেজ থ্রেড ক্লিক করলে on-demand fetch হয়।
 const ticketsData = JSON.stringify((tickets || []).map(ticket => ({ userId: ticket.userId, username: ticket.username, status: ticket.status }))).replace(/</g, '\\u003c');
@@ -30,20 +30,20 @@ const curSearch = typeof search !== 'undefined' ? search : '';
     <div class="flex justify-between mb-6">
         <div>
             <h2 class="text-2xl font-semibold">Support Tickets</h2>
-            <p class="text-sm text-slate-600">${openCount || 0} open tickets · মোট ${total || 0}টা টিকেট</p>
+            <p class="text-sm text-slate-600">${openCount || 0} open tickets · ${t('asu_total_tickets').replace('{n}', total || 0)}</p>
         </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
         <div class="lg:col-span-5 bg-white rounded-3xl border border-slate-100 p-1">
             <form method="GET" action="/admin/support" class="p-4">
-                <input type="text" name="search" value="${esc(curSearch)}" placeholder="ইউজারনেম দিয়ে খুঁজুন..." class="w-full border px-4 py-2.5 rounded-2xl text-sm mb-4" data-filter-tickets>
+                <input type="text" name="search" value="${esc(curSearch)}" placeholder="${t('asu_search')}" class="w-full border px-4 py-2.5 rounded-2xl text-sm mb-4" data-filter-tickets>
             </form>
             <div id="ticketsList" class="max-h-[520px] overflow-auto px-2">${ticketsHtml}</div>
             <div class="flex items-center justify-center gap-2 py-3 border-t border-slate-100 text-xs">
-                ${curPage > 1 ? `<a class="px-3 py-1.5 rounded-xl bg-slate-100" href="/admin/support?page=${curPage - 1}&search=${encodeURIComponent(curSearch)}">← আগের</a>` : ''}
-                <span class="text-slate-400">পেজ ${curPage} / ${curTotalPages}</span>
-                ${curPage < curTotalPages ? `<a class="px-3 py-1.5 rounded-xl bg-slate-100" href="/admin/support?page=${curPage + 1}&search=${encodeURIComponent(curSearch)}">পরের →</a>` : ''}
+                ${curPage > 1 ? `<a class="px-3 py-1.5 rounded-xl bg-slate-100" href="/admin/support?page=${curPage - 1}&search=${encodeURIComponent(curSearch)}">← ${t('asu_prev')}</a>` : ''}
+                <span class="text-slate-400">${t('ash_page_x_y').replace('{page}', curPage).replace('{pages}', curTotalPages)}</span>
+                ${curPage < curTotalPages ? `<a class="px-3 py-1.5 rounded-xl bg-slate-100" href="/admin/support?page=${curPage + 1}&search=${encodeURIComponent(curSearch)}">${t('asu_next')} →</a>` : ''}
             </div>
         </div>
 
@@ -52,7 +52,7 @@ const curSearch = typeof search !== 'undefined' ? search : '';
                 <div class="flex items-center gap-3">
                     <div class="w-9 h-9 bg-slate-200 rounded-2xl flex-shrink-0"></div>
                     <div>
-                        <div id="chatUserName" class="font-semibold">একটা টিকেট বাছাই করুন</div>
+                        <div id="chatUserName" class="font-semibold">${t('asu_pick_ticket')}</div>
                         <div id="chatUserId" class="text-xs text-slate-500"></div>
                     </div>
                 </div>

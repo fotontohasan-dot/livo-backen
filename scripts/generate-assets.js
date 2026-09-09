@@ -306,10 +306,10 @@ const art = {
 
 /* slug/নাম → আর্ট ম্যাপিং (কীওয়ার্ড-ভিত্তিক, নতুন গেম যোগ হলেও কাজ করে) */
 const RULES = [
-  [/aviator|crash|jet|rocket|spaceman|fly/i, 'crash'],
+  [/crash|jet|rocket|spaceman|fly/i, 'crash'],
   [/roulette|dragon-?tiger|fan-?tan/i, 'roulette'],
   [/wheel|crazy-?time|dream-?catcher|monopoly|spin/i, 'wheel'],
-  [/blackjack|poker|teen-?patti|andar|rummy|call-?break|baccarat|bac-?bo|card/i, 'table'],
+  [/blackjack|poker|patti|andar|rummy|call-?break|baccarat|bac-?bo|card/i, 'table'],
   [/dice|sic-?bo|hilo/i, 'dice'],
   [/ludo|chess|board|carrom|snake/i, 'board'],
   [/mine|tower|goal/i, 'mines'],
@@ -380,12 +380,12 @@ const crest = () => svg(72, 72, `
 /* ==========================================================================
    RUN
    ========================================================================== */
-const SLUGS = process.argv.slice(2).length
-  ? process.argv.slice(2)
-  : ['aviator', 'slots', 'color-prediction', 'crazy-time', 'fortune-tiger', 'sweet-bonanza',
-     'gates-of-olympus', 'baccarat', 'roulette', 'dragon-tiger', 'teen-patti', 'andar-bahar',
-     'online-ludo', 'mines', 'plinko', 'dice', 'keno', 'fishing', 'jetx', 'mega-wheel',
-     'cricket-stars', 'spaceman'];
+// PHASE 1: গেম থাম্বনেইল আর কোড থেকে জেনারেট হয় না — প্রতিটি গেমের ছবি
+// প্রোভাইডার sync থেকে আসে এবং CDN URL হিসেবে games.thumbnail_url-এ থাকে।
+// তাই ডিফল্ট স্লাগ তালিকাটা সরানো হলো; জেনারেটর শুধু hero ও sports আঁকে।
+// প্লেসহোল্ডার দরকার হলে হাতে স্লাগ দিয়ে চালানো যায়:
+//   node scripts/generate-assets.js my-slug
+const SLUGS = process.argv.slice(2);
 
 console.log('Livo asset generator');
 write('hero/welcome-bonus.svg', hero());

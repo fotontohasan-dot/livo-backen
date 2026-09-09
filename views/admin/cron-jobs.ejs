@@ -6,6 +6,29 @@
   <title><%= t('admin_title_cron_jobs') %></title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz24-1 { margin-bottom: 16px; }
+  .dz24-2 { color: #f59e0b; }
+  .dz24-3 { color: #10b981; }
+  .dz24-4 { color: #ef4444; }
+  .dz24-5 { color: var(--text-muted); }
+  .dz24-6 { margin-bottom: 10px; }
+  .dz24-7 { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px; }
+  .dz24-8 { font-weight: 800; color: var(--text-main); font-size: 14px; }
+  .dz24-9 { color: var(--text-muted); font-size: 12px; margin-top: 4px; max-width: 600px; }
+  .dz24-10 { display: inline; }
+  .dz24-11 { background: #3b82f6; color: #fff; }
+  .dz24-12 { background: #ef4444; color: #fff; }
+  .dz24-13 { background: #10b981; color: #000; }
+  .dz24-14 { background: rgba(255,255,255,0.08); color: var(--text-muted); }
+  .dz24-15 { margin-top: 20px; }
+  .dz24-16 { overflow-x: auto; }
+  .dz24-17 { font-weight: 700; }
+  .dz24-18 { font-size: 11px; }
+  .dz24-19 { font-size: 11px; color: var(--text-muted); max-width: 260px; white-space: normal; }
+  .dz24-20 { text-align: center; color: var(--text-muted); padding: 20px; }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
     .cron-job-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 16px; margin-bottom: 12px; }
@@ -26,7 +49,7 @@
     <%- include('./partials/sidebar', { active: 'cron-jobs' }) %>
     <div class="admin-content">
       <%- include('./partials/load-error') %>
-      <%- include('./partials/header', { pageTitle: 'Cron Jobs Monitor', pageSubtitle: 'সব Scheduled Job-এর অবস্থা, লগ ও ম্যানুয়াল কন্ট্রোল' }) %>
+      <%- include('./partials/header', { pageTitle: 'Cron Jobs Monitor', pageSubtitle: t('acj_sub') }) %>
 
       <% if (typeof success !== 'undefined' && success && success.length) { %>
         <% success.forEach(function(m) { %><div class="flash-box flash-success"><%= m %></div><% }) %>
@@ -35,31 +58,31 @@
         <% error.forEach(function(m) { %><div class="flash-box flash-error"><%= m %></div><% }) %>
       <% } %>
 
-      <div class="grid grid-4" style="margin-bottom:16px;">
-        <div class="stat-card"><div class="stat-label"><%= t('admin_stat_total_jobs') %></div><div class="stat-number" style="color:#f59e0b;"><%= jobs.length %></div></div>
-        <div class="stat-card"><div class="stat-label"><%= t('admin_status_active') %></div><div class="stat-number" style="color:#10b981;"><%= jobs.filter(j=>j.enabled).length %></div></div>
-        <div class="stat-card"><div class="stat-label"><%= t('admin_stat_last_run_failed') %></div><div class="stat-number" style="color:#ef4444;"><%= jobs.filter(j=>j.last_status==='error').length %></div></div>
-        <div class="stat-card"><div class="stat-label"><%= t('admin_stat_dead_jobs') %></div><div class="stat-number" style="color:var(--text-muted);"><%= jobs.filter(j=>j.isDead).length %></div></div>
+      <div class="grid grid-4 dz24-1">
+        <div class="stat-card"><div class="stat-label"><%= t('admin_stat_total_jobs') %></div><div class="stat-number dz24-2"><%= jobs.length %></div></div>
+        <div class="stat-card"><div class="stat-label"><%= t('admin_status_active') %></div><div class="stat-number dz24-3"><%= jobs.filter(j=>j.enabled).length %></div></div>
+        <div class="stat-card"><div class="stat-label"><%= t('admin_stat_last_run_failed') %></div><div class="stat-number dz24-4"><%= jobs.filter(j=>j.last_status==='error').length %></div></div>
+        <div class="stat-card"><div class="stat-label"><%= t('admin_stat_dead_jobs') %></div><div class="stat-number dz24-5"><%= jobs.filter(j=>j.isDead).length %></div></div>
       </div>
 
-      <div class="admin-card-header" style="margin-bottom:10px;"><%= t('admin_all_scheduled_jobs') %></div>
+      <div class="admin-card-header dz24-6"><%= t('admin_all_scheduled_jobs') %></div>
 
       <% jobs.forEach(job => { %>
         <div class="cron-job-card <%= job.enabled ? '' : 'disabled' %> <%= job.isDead ? 'dead' : '' %>">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+          <div class="dz24-7">
             <div>
-              <div style="font-weight:800;color:var(--text-main);font-size:14px;">
-                <i class="fas fa-clock" style="color:#f59e0b;"></i> <%= job.label %>
+              <div class="dz24-8">
+                <i class="fas fa-clock dz24-2"></i> <%= job.label %>
                 <% if (job.isDead) { %><span class="badge badge-red"><%= t('admin_status_dead') %></span><% } %>
                 <% if (job.enabled) { %><span class="badge badge-green"><%= t('admin_status_active') %></span><% } else { %><span class="badge badge-red"><%= t('admin_status_inactive') %></span><% } %>
                 <% if (job.last_status === 'success') { %><span class="badge badge-green"><%= t('admin_last_run_success') %></span><% } else if (job.last_status === 'error') { %><span class="badge badge-red"><%= t('admin_last_run_failure') %></span><% } else { %><span class="badge badge-amber"><%= t('admin_never_run') %></span><% } %>
               </div>
-              <div style="color:var(--text-muted);font-size:12px;margin-top:4px;max-width:600px;"><%= job.description %></div>
+              <div class="dz24-9"><%= job.description %></div>
             </div>
           </div>
 
           <div class="cron-meta">
-            <div><%= t('admin_col_interval') %><b><%= Math.round(job.interval_ms/60000) %> মিনিট</b></div>
+            <div><%= t('admin_col_interval') %><b><%= Math.round(job.interval_ms/60000) %> <%= t('acj_minutes') %></b></div>
             <div><%= t('admin_col_max_retries') %><b><%= job.max_retries %></b></div>
             <div><%= t('admin_col_last_run') %><b><%= job.last_run_at ? new Date(job.last_run_at).toLocaleString('bn-BD') : '—' %></b></div>
             <div><%= t('admin_col_next_run') %><b><%= job.next_run_at ? new Date(job.next_run_at).toLocaleString('bn-BD') : '—' %></b></div>
@@ -73,45 +96,45 @@
           <% } %>
 
           <div class="cron-actions">
-            <form method="POST" action="/admin/cron-jobs/<%= job.key %>/run" style="display:inline;">
-              <button type="submit" class="btn-sm" style="background:#3b82f6;color:#fff;" <%= job.isDead ? 'disabled' : '' %>><i class="fas fa-play"></i> <%= t('admin_btn_run_now') %></button>
+            <form class="dz24-10" method="POST" action="/admin/cron-jobs/<%= job.key %>/run">
+              <button type="submit" class="btn-sm dz24-11" <%= job.isDead ? 'disabled' : '' %>><i class="fas fa-play"></i> <%= t('admin_btn_run_now') %></button>
             </form>
             <% if (job.enabled) { %>
-              <form method="POST" action="/admin/cron-jobs/<%= job.key %>/toggle" style="display:inline;">
+              <form class="dz24-10" method="POST" action="/admin/cron-jobs/<%= job.key %>/toggle">
                 <input type="hidden" name="enabled" value="false">
-                <button type="submit" class="btn-sm" style="background:#ef4444;color:#fff;"><%= t('admin_btn_deactivate') %></button>
+                <button type="submit" class="btn-sm dz24-12"><%= t('admin_btn_deactivate') %></button>
               </form>
             <% } else { %>
-              <form method="POST" action="/admin/cron-jobs/<%= job.key %>/toggle" style="display:inline;">
+              <form class="dz24-10" method="POST" action="/admin/cron-jobs/<%= job.key %>/toggle">
                 <input type="hidden" name="enabled" value="true">
-                <button type="submit" class="btn-sm" style="background:#10b981;color:#000;" <%= job.isDead ? 'disabled' : '' %>><%= t('admin_btn_activate') %></button>
+                <button type="submit" class="btn-sm dz24-13" <%= job.isDead ? 'disabled' : '' %>><%= t('admin_btn_activate') %></button>
               </form>
             <% } %>
-            <a href="/admin/cron-jobs/<%= job.key %>/logs" class="btn-sm" style="background:rgba(255,255,255,0.08);color:var(--text-muted);"><i class="fas fa-history"></i> <%= t('admin_btn_view_history') %></a>
+            <a href="/admin/cron-jobs/<%= job.key %>/logs" class="btn-sm dz24-14"><i class="fas fa-history"></i> <%= t('admin_btn_view_history') %></a>
           </div>
         </div>
       <% }) %>
 
-      <div class="admin-card" style="margin-top:20px;">
+      <div class="admin-card dz24-15">
         <div class="admin-card-header"><%= t('admin_recent_execution_log') %></div>
-        <div style="overflow-x:auto;">
+        <div class="dz24-16">
           <table class="admin-table">
             <thead><tr><th><%= t('admin_col_job') %></th><th><%= t('admin_col_status') %></th><th><%= t('admin_col_attempts') %></th><th><%= t('admin_col_duration') %></th><th><%= t('admin_col_triggered_by') %></th><th><%= t('admin_col_message') %></th><th><%= t('admin_col_time') %></th></tr></thead>
             <tbody>
               <% if (recentLogs && recentLogs.length > 0) { %>
                 <% recentLogs.forEach(l => { %>
                   <tr>
-                    <td style="font-weight:700;"><%= l.job_key %></td>
+                    <td class="dz24-17"><%= l.job_key %></td>
                     <td><span class="badge <%= l.status === 'success' ? 'badge-green' : 'badge-red' %>"><%= l.status %></span></td>
                     <td><%= l.attempts %></td>
                     <td><%= l.duration_ms %>ms</td>
-                    <td style="font-size:11px;"><%= l.triggered_by %></td>
-                    <td style="font-size:11px;color:var(--text-muted);max-width:260px;white-space:normal;"><%= l.message %></td>
-                    <td style="font-size:11px;"><%= new Date(l.started_at).toLocaleString('bn-BD') %></td>
+                    <td class="dz24-18"><%= l.triggered_by %></td>
+                    <td class="dz24-19"><%= l.message %></td>
+                    <td class="dz24-18"><%= new Date(l.started_at).toLocaleString('bn-BD') %></td>
                   </tr>
                 <% }) %>
               <% } else { %>
-                <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;"><%= t('admin_empty_logs_yet') %></td></tr>
+                <tr><td class="dz24-20" colspan="7"><%= t('admin_empty_logs_yet') %></td></tr>
               <% } %>
             </tbody>
           </table>

@@ -1,0 +1,104 @@
+<%
+// PHASE 3 — ক্যাসিনো প্রোভাইডার ও sync ইতিহাস।
+//
+// এখানে কোনো প্রোভাইডারের নাম হার্ডকোড নেই: তালিকাটা
+// services/casinoProviders/index.js-এর ADAPTERS থেকে আসে, আর "সক্রিয় কি না"
+// আসে অ্যাডাপ্টারের isEnabled() থেকে — অর্থাৎ .env-এ credential আছে কি না।
+function esc(s) { return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function dt(v) { return v ? new Date(v).toLocaleString('en-GB') : '—'; }
+const statusPill = (s) => {
+  const map = { success: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                failed: 'bg-red-50 text-red-700 border-red-200',
+                running: 'bg-amber-50 text-amber-700 border-amber-200' };
+  return '<span class="px-2 py-0.5 rounded-full text-xs border ' + (map[s] || 'bg-slate-50 text-slate-600 border-slate-200') + '">' + esc(s || 'unknown') + '</span>';
+};
+%>
+<%- include('partials/admin-layout', {
+  title: 'Casino Providers',
+  active: 'games',
+  body: `
+<div class="max-w-7xl mx-auto">
+
+  ${(success||[]).map(m=>'<div class="mb-4 px-4 py-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-2xl text-sm">'+esc(m)+'</div>').join('')}
+  ${(error||[]).map(m=>'<div class="mb-4 px-4 py-3 bg-red-50 border border-red-200 text-red-700 rounded-2xl text-sm">'+esc(m)+'</div>').join('')}
+  ${typeof loadError !== 'undefined' && loadError ? '<div class="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 text-amber-700 rounded-2xl text-sm">' + esc(t('adm_load_failed')) + '</div>' : ''}
+
+  <div class="flex items-center justify-between mb-5">
+    <div>
+      <h1 class="text-xl font-semibold text-slate-800">Casino Providers</h1>
+      <p class="text-sm text-slate-500 mt-1">
+        ${esc(t('adm_prov_intro'))}
+      </p>
+    </div>
+    <a href="/admin/games" class="text-sm text-indigo-600 hover:underline">← Games</a>
+  </div>
+
+  <div class="bg-white border border-slate-200 rounded-2xl overflow-x-auto mb-8">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-slate-500 text-xs uppercase">
+        <tr>
+          <th class="text-left px-4 py-3">Provider</th>
+          <th class="text-left px-4 py-3">Status</th>
+          <th class="text-right px-4 py-3">Games</th>
+          <th class="text-right px-4 py-3">Live in lobby</th>
+          <th class="text-left px-4 py-3">Last synced</th>
+          <th class="text-right px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${providers.length ? providers.map(p => `
+        <tr class="border-t border-slate-100">
+          <td class="px-4 py-3 font-medium text-slate-800">${esc(p.name)}</td>
+          <td class="px-4 py-3">${p.enabled
+            ? '<span class="px-2 py-0.5 rounded-full text-xs border bg-emerald-50 text-emerald-700 border-emerald-200">configured</span>'
+            : '<span class="px-2 py-0.5 rounded-full text-xs border bg-slate-50 text-slate-500 border-slate-200">no credentials</span>'}</td>
+          <td class="px-4 py-3 text-right">${p.total}</td>
+          <td class="px-4 py-3 text-right">${p.live}</td>
+          <td class="px-4 py-3 text-slate-500">${esc(dt(p.lastSynced))}</td>
+          <td class="px-4 py-3 text-right">
+            <form method="POST" action="/admin/games/sync">
+              <input type="hidden" name="_csrf" value="${esc(locals.csrfToken || "")}">
+              <input type="hidden" name="provider" value="${esc(p.name)}">
+              <button type="submit" ${p.enabled ? '' : 'disabled'}
+                class="px-3 py-1.5 rounded-xl text-xs font-semibold ${p.enabled ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}">
+                Sync Now
+              </button>
+            </form>
+          </td>
+        </tr>`).join('') : '<tr><td colspan="6" class="px-4 py-10 text-center text-slate-400">' + esc(t('adm_prov_none')) + '</td></tr>'}
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="text-sm font-semibold text-slate-700 mb-3">Sync history</h2>
+  <div class="bg-white border border-slate-200 rounded-2xl overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-slate-500 text-xs uppercase">
+        <tr>
+          <th class="text-left px-4 py-3">Started</th>
+          <th class="text-left px-4 py-3">Provider</th>
+          <th class="text-left px-4 py-3">Status</th>
+          <th class="text-right px-4 py-3">Added</th>
+          <th class="text-right px-4 py-3">Updated</th>
+          <th class="text-right px-4 py-3">Deactivated</th>
+          <th class="text-left px-4 py-3">Error</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${logs.length ? logs.map(l => `
+        <tr class="border-t border-slate-100">
+          <td class="px-4 py-3 text-slate-500">${esc(dt(l.started_at))}</td>
+          <td class="px-4 py-3">${esc(l.provider)}</td>
+          <td class="px-4 py-3">${statusPill(l.status)}</td>
+          <td class="px-4 py-3 text-right">${l.games_added || 0}</td>
+          <td class="px-4 py-3 text-right">${l.games_updated || 0}</td>
+          <td class="px-4 py-3 text-right">${l.games_removed || 0}</td>
+          <td class="px-4 py-3 text-red-600 text-xs">${esc(l.error_message || '')}</td>
+        </tr>`).join('') : '<tr><td colspan="7" class="px-4 py-10 text-center text-slate-400">' + esc(t('adm_sync_none')) + '</td></tr>'}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+`
+}) %>

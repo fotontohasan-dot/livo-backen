@@ -6,6 +6,22 @@
   <title><%= t('admin_title_tournaments') %></title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz34-1 { margin-bottom: 14px; }
+  .dz34-2 { color: #10b981; }
+  .dz34-3 { color: #f59e0b; }
+  .dz34-4 { color: var(--text-muted); }
+  .dz34-5 { padding: 16px; margin-bottom: 16px; }
+  .dz34-6 { font-weight: 800; color: var(--text-main); font-size: 13px; margin-bottom: 12px; }
+  .dz34-7 { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  .dz34-8 { font-size: 11px; color: var(--text-muted); }
+  .dz34-9 { overflow-x: auto; }
+  .dz34-10 { text-align: right; }
+  .dz34-11 { font-weight: 700; }
+  .dz34-12 { display: inline-block; }
+  .dz34-13 { width: auto; padding: 5px 8px; font-size: 11px; }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
   </style>
@@ -16,27 +32,27 @@
     <%- include('./partials/sidebar', { active: 'tournaments' }) %>
     <div class="admin-content">
       <%- include('./partials/load-error') %>
-      <%- include('./partials/header', { pageTitle: 'টুর্নামেন্ট', pageSubtitle: 'টুর্নামেন্ট তৈরি ও পরিচালনা করুন' }) %>
+      <%- include('./partials/header', { pageTitle: t("ato_title"), pageSubtitle: t("ato_sub") }) %>
 
-      <div class="grid grid-4" style="margin-bottom:14px;">
+      <div class="grid grid-4 dz34-1">
         <div class="stat-card"><div class="stat-label"><%= t('admin_label_total') %></div><div class="stat-number"><%= stats.total || 0 %></div></div>
-        <div class="stat-card"><div class="stat-label"><%= t('admin_status_live') %></div><div class="stat-number" style="color:#10b981;"><%= stats.live || 0 %></div></div>
-        <div class="stat-card"><div class="stat-label"><%= t('admin_status_upcoming') %></div><div class="stat-number" style="color:#f59e0b;"><%= stats.upcoming || 0 %></div></div>
-        <div class="stat-card"><div class="stat-label"><%= t('admin_status_completed') %></div><div class="stat-number" style="color:var(--text-muted);"><%= stats.completed || 0 %></div></div>
+        <div class="stat-card"><div class="stat-label"><%= t('admin_status_live') %></div><div class="stat-number dz34-2"><%= stats.live || 0 %></div></div>
+        <div class="stat-card"><div class="stat-label"><%= t('admin_status_upcoming') %></div><div class="stat-number dz34-3"><%= stats.upcoming || 0 %></div></div>
+        <div class="stat-card"><div class="stat-label"><%= t('admin_status_completed') %></div><div class="stat-number dz34-4"><%= stats.completed || 0 %></div></div>
       </div>
 
-      <div class="admin-card" style="padding:16px;margin-bottom:16px;">
-        <div style="font-weight:800;color:var(--text-main);font-size:13px;margin-bottom:12px;"><i class="fas fa-trophy" style="color:#f59e0b;"></i> <%= t('admin_tournament_create_heading') %></div>
-        <form method="POST" action="/admin/tournaments/add" style="display:grid;grid-template-columns:1fr;gap:10px;">
+      <div class="admin-card dz34-5">
+        <div class="dz34-6"><i class="fas fa-trophy dz34-3"></i> <%= t('admin_tournament_create_heading') %></div>
+        <form class="dz34-7" method="POST" action="/admin/tournaments/add">
           <input class="input" type="text" name="name" placeholder="<%= t('admin_field_tournament_name') %>" required>
           <input class="input" type="text" name="sport" placeholder="<%= t('admin_field_sport_example') %>">
           <textarea class="input" name="description" rows="2" placeholder="<%= t('admin_field_description_optional') %>"></textarea>
           <input class="input" type="number" name="entry_fee" placeholder="<%= t('admin_col_entry_fee') %>">
           <input class="input" type="number" name="prize_pool" placeholder="<%= t('admin_col_prize_pool') %>">
           <input class="input" type="number" name="max_participants" placeholder="<%= t('admin_field_max_participants') %>" value="100">
-          <label style="font-size:11px;color:var(--text-muted);"><%= t('admin_col_start_time') %></label>
+          <label class="dz34-8"><%= t('admin_col_start_time') %></label>
           <input class="input" type="datetime-local" name="start_date">
-          <label style="font-size:11px;color:var(--text-muted);"><%= t('admin_col_end_time') %></label>
+          <label class="dz34-8"><%= t('admin_col_end_time') %></label>
           <input class="input" type="datetime-local" name="end_date">
           <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> <%= t('admin_btn_create') %></button>
         </form>
@@ -44,14 +60,14 @@
 
       <div class="admin-card">
         <div class="admin-card-header"><%= t('admin_tournaments_all') %></div>
-        <div style="overflow-x:auto;">
+        <div class="dz34-9">
           <table class="admin-table">
-            <thead><tr><th><%= t('admin_col_name') %></th><th><%= t('admin_col_sport') %></th><th><%= t('admin_col_entry_fee') %></th><th><%= t('admin_col_prize_pool') %></th><th><%= t('admin_col_participants') %></th><th><%= t('admin_col_status') %></th><th style="text-align:right;"><%= t('admin_col_action') %></th></tr></thead>
+            <thead><tr><th><%= t('admin_col_name') %></th><th><%= t('admin_col_sport') %></th><th><%= t('admin_col_entry_fee') %></th><th><%= t('admin_col_prize_pool') %></th><th><%= t('admin_col_participants') %></th><th><%= t('admin_col_status') %></th><th class="dz34-10"><%= t('admin_col_action') %></th></tr></thead>
             <tbody>
               <% if (tournaments && tournaments.length > 0) { %>
                 <% tournaments.forEach(tour => { %>
                   <tr>
-                    <td style="font-weight:700;"><%= tour.name %></td>
+                    <td class="dz34-11"><%= tour.name %></td>
                     <td><%= tour.sport || '—' %></td>
                     <td><%= tour.entry_fee %></td>
                     <td><%= tour.prize_pool %></td>
@@ -62,16 +78,16 @@
                       <% } else if (tour.status === 'completed') { %><span class="badge"><%= t('admin_status_completed') %></span>
                       <% } else { %><span class="badge badge-red"><%= t('admin_btn_cancel') %></span><% } %>
                     </td>
-                    <td style="text-align:right;">
-                      <form method="POST" action="/admin/tournaments/<%= tour.id %>/status" style="display:inline-block;">
-                        <select name="status" class="select" style="width:auto;padding:5px 8px;font-size:11px;" data-auto-submit>
+                    <td class="dz34-10">
+                      <form class="dz34-12" method="POST" action="/admin/tournaments/<%= tour.id %>/status">
+                        <select name="status" class="select dz34-13" data-auto-submit>
                           <option value="upcoming" <%= tour.status === 'upcoming' ? 'selected' : '' %>><%= t('admin_status_upcoming') %></option>
                           <option value="live" <%= tour.status === 'live' ? 'selected' : '' %>><%= t('admin_status_live') %></option>
                           <option value="completed" <%= tour.status === 'completed' ? 'selected' : '' %>><%= t('admin_status_completed') %></option>
                           <option value="cancelled" <%= tour.status === 'cancelled' ? 'selected' : '' %>><%= t('admin_btn_cancel') %></option>
                         </select>
                       </form>
-                      <form method="POST" action="/admin/tournaments/<%= tour.id %>/delete" style="display:inline-block;" data-confirm="মুছে ফেলবেন?">
+                      <form class="dz34-12" method="POST" action="/admin/tournaments/<%= tour.id %>/delete" data-confirm="<%= t('abk_delete_short') %>">
                         <button class="btn btn-sm btn-red" type="submit"><i class="fas fa-trash"></i></button>
                       </form>
                     </td>

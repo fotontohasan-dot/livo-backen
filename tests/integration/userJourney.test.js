@@ -187,17 +187,13 @@ describe('A-Z User Journey', () => {
   });
 
   test('12b. Games/Sports', async () => {
-    const gamesPage = await agent.get('/games/play?game=slots');
-    expect(gamesPage.status).toBe(200);
-    const before = await pool.query('SELECT coins FROM users WHERE id=$1', [userId]);
-    const csrf = await csrfFor(agent, '/games/play?game=slots');
-    const play = await agent.post('/games/play').type('form').send({
-      gameSlug: 'slots', amount: '50', _csrf: csrf
-    });
-    expect(play.status).toBe(200);
-    expect(play.body.success).toBe(true);
-    const after = await pool.query('SELECT coins FROM users WHERE id=$1', [userId]);
-    expect(Number(after.rows[0].coins)).not.toBe(Number(before.rows[0].coins));
+    // PHASE 1: ইন-হাউস গেম সরে গেছে — /games/play বা সার্ভার-সাইড সেটেলমেন্ট
+    // আর নেই। যা টিকে আছে (recent-wins) সেটাই এখানে যাচাই করা হয়; প্রকৃত
+    // গেমপ্লে-র কভারেজ প্রোভাইডার ওয়ালেট API-র টেস্টে (PHASE 2) আছে।
+    const wins = await agent.get('/games/api/recent-wins');
+    expect(wins.status).toBe(200);
+    expect(wins.body.success).toBe(true);
+    expect(Array.isArray(wins.body.wins)).toBe(true);
 
     const matchIns = await pool.query(`INSERT INTO matches (title, team_a, team_b, sport, status) VALUES ('Journey Test Match','X','Y','cricket','live') RETURNING id`);
     // মার্কেটে রানারের অডস অবশ্যই থাকতে হবে। আগে খালি `'{}'` দিয়েও বাজি বসত,
@@ -215,6 +211,21 @@ describe('A-Z User Journey', () => {
     expect(bet.body.success).toBe(true);
     const betRow = await pool.query(`SELECT * FROM bets WHERE user_id=$1 AND match_id=$2`, [userId, matchIns.rows[0].id]);
     expect(betRow.rows.length).toBe(1);
+
+    // বাজির পার্শ্ব-প্রতিক্রিয়া (ব্যাজ পুরস্কার) অ্যাসিনক্রোনাস — সেগুলো
+    // coin_transactions-এ ক্রেডিট লেখে। আগে ইন-হাউস গেমের ধাপটা এখানে থাকায়
+    // ব্যাজগুলো এই ধাপেই বসে যেত। সেটা সরে যাওয়ার পর পুরস্কারগুলো পরের
+    // ধাপে (১৩. Withdraw) ঢুকে পড়ছিল — ঠিক before ও after ব্যালেন্স পড়ার
+    // মাঝখানে — ফলে withdraw-এর হিসাব মিলত না। এটা টেস্টের রেস, অ্যাপের বাগ নয়;
+    // তাই এখানে পুরস্কারগুলো থিতু হওয়া পর্যন্ত সীমিত সময় অপেক্ষা করা হচ্ছে।
+    let lastBalance = null;
+    for (let i = 0; i < 40; i++) {
+      const b = await pool.query('SELECT coins FROM users WHERE id=$1', [userId]);
+      const current = Number(b.rows[0].coins);
+      if (current === lastBalance) break;   // পরপর দুইবার একই — আর কিছু আসছে না
+      lastBalance = current;
+      await new Promise(r => setTimeout(r, 100));
+    }
   });
 
   test('13. Withdraw', async () => {
@@ -233,6 +244,16 @@ describe('A-Z User Journey', () => {
     await pool.query(
       `INSERT INTO site_settings (key, value) VALUES ('withdrawal_window_mode', 'open')
        ON CONFLICT (key) DO UPDATE SET value = 'open'`
+    );
+
+    // উইথড্রয়ে এখন KYC গেট আছে (middleware/auth.js → requireApprovedKyc)।
+    // আগে টাকা তোলার পথে পরিচয় যাচাই বলে কিছুই ছিল না — ইমেইল ভেরিফাই আর
+    // PIN-ই ছিল একমাত্র গেট। এই জার্নিতে KYC ধাপটা নেই, তাই এখানে সরাসরি
+    // একটা অ্যাপ্রুভড রেকর্ড বসানো হচ্ছে; গেটের নিজস্ব আচরণ আলাদা টেস্টে যাচাই হয়।
+    await pool.query(
+      `INSERT INTO kyc_requests (user_id, full_name, document_type, document_number, status)
+       VALUES ($1, 'Journey Test User', 'nid', '1234567890', 'approved')`,
+      [userId]
     );
 
     const before = Number((await pool.query('SELECT coins FROM users WHERE id=$1', [userId])).rows[0].coins);

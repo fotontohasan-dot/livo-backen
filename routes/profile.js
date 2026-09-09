@@ -5,6 +5,7 @@ const { pool } = require('../db');
 const { redirectBack } = require('../utils/redirectBack');
 const { isAuth } = require('../middleware/auth');
 const { requireFeature } = require('../middleware/featureGate');
+const { validatePassword, BCRYPT_COST } = require('../utils/passwordPolicy');
 const bcrypt = require('bcryptjs');
 const { getTodayReward, claimDailyReward } = require('../services/dailyReward');
 const { getReferralStats } = require('../services/referral');
@@ -396,8 +397,9 @@ router.post('/change-password', isAuth, accountSecurityLimiter, async (req, res)
     // মাস্টার অডিট: registration (routes/auth.js:251) ও reset-password (routes/auth.js:855)
     // দুটোই new_password-এ ≥8 ক্যারেক্টার বাধ্যতামূলক করে, কিন্তু এই self-service
     // change-password পথে কোনো length চেক-ই ছিল না — বাকি ফ্লো-গুলোর সাথে সামঞ্জস্য রাখা হলো।
-    if (!np || np.length < 8) {
-      req.flash('error', req.t('profile_password_too_short'));
+    const policy = validatePassword(np, { username: req.session.user.username });
+    if (!policy.valid) {
+      req.flash('error', req.t(policy.reason));
       return res.redirect('/profile/security');
     }
 
@@ -406,7 +408,7 @@ router.post('/change-password', isAuth, accountSecurityLimiter, async (req, res)
       req.flash('error', req.t('profile_current_password_wrong'));
       return res.redirect('/profile/security');
     }
-    const hashed = await bcrypt.hash(np, 10);
+    const hashed = await bcrypt.hash(np, BCRYPT_COST);
     await pool.query(`UPDATE users SET password=$1, password_changed_at=NOW() WHERE id=$2`, [hashed, req.session.user.id]);
     await logAdminAction(req.session.user.id, req.session.user.username, 'PASSWORD_CHANGED', `ইউজার #${req.session.user.id} নিজের পাসওয়ার্ড পরিবর্তন করেছে`, req.ip);
     // forgot-password রিসেট ফ্লো (routes/auth.js) আগে থেকেই অন্য সব সেশন রিভোক করে, যাতে

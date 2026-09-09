@@ -1,3 +1,9 @@
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .qq4-1 { margin: 16px 0; padding: 14px 16px; border-radius: 12px; background: #7f1d1d; border: 1px solid #ef4444; color: #fee2e2; font-weight: 600; }
+</style>
 <%#
   ডেটা লোড ব্যর্থ হলে দেখানো ব্যানার।
 
@@ -10,7 +16,7 @@
   ভ্যারিয়েবলটা পাঠানো হয়নি সেখানে ReferenceError হবে না, স্বাভাবিক empty-state আচরণ অক্ষত থাকে।
 -%>
 <% if (locals.loadError) { %>
-  <div role="alert" style="margin:16px 0;padding:14px 16px;border-radius:12px;background:#7f1d1d;border:1px solid #ef4444;color:#fee2e2;font-weight:600;">
+  <div class="qq4-1" role="alert">
     <%= t('admin_load_error_part1') %>
     <u><%= t('admin_load_error_part2') %></u><%= t('admin_load_error_part3') %>
   </div>

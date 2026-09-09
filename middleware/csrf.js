@@ -13,9 +13,39 @@ const crypto = require('crypto');
 
 // এই পাথগুলোতে সেশন/কুকি-ভিত্তিক অথ ব্যবহার হয় না (API-key বা এক্সটার্নাল ওয়েবহুক) —
 // তাই CSRF চেক এখানে প্রযোজ্য না।
+//
+// আগে এখানে '/api/' প্রিফিক্স ছিল, অর্থাৎ পুরো /api/* CSRF-এক্সেম্পট। আজকের
+// routes/api.js-এ state-changing রুট নেই বলে সেটা নিরাপদ ছিল, কিন্তু কেউ
+// `router.post('/bet', isAuth, ...)` যোগ করলেই সেটা **নীরবে** অরক্ষিত হয়ে যেত।
+// এক্সেম্পশন এখন পাথ নয়, অথ মেকানিজম দেখে হয় — নিচের isApiKeyRequest() দ্রষ্টব্য।
 const EXEMPT_PREFIXES = [
-  '/api/'            // পাবলিক API — API key দিয়ে অথেন্টিকেটেড (routes/api.js + middleware/apiKeyAuth)
+  // ক্যাসিনো প্রোভাইডারের seamless wallet কলব্যাক (routes/providerWallet.js)।
+  // কলার একটা এক্সটার্নাল সার্ভার — কোনো ব্রাউজার সেশন বা ambient কুকি নেই,
+  // তাই CSRF টোকেন এখানে অর্থহীন। উপরের যুক্তি অনুযায়ী এক্সেম্পশন সাধারণত
+  // অথ-মেকানিজম দেখে হওয়া উচিত, কিন্তু প্রোভাইডাররা নিজেদের স্বাক্ষর-হেডারের
+  // নাম নিজেরাই ঠিক করে (x-signature, x-sign, sign — একেকজন একেকটা), তাই
+  // হেডার-ভিত্তিক শনাক্তি এখানে ভঙ্গুর হতো। বদলে পুরো প্রিফিক্সটা একটা
+  // ডেডিকেটেড রাউটারে আবদ্ধ, যেখানে প্রতিটা রুটে providerAuth বাধ্যতামূলক:
+  // HMAC স্বাক্ষর + IP allow-list + ৩০ সেকেন্ডের timestamp উইন্ডো।
+  '/provider/'
 ];
+
+// API-key হেডার বহনকারী রিকোয়েস্ট কখনো ব্রাউজারের ambient কুকি-অথ ব্যবহার করে না,
+// তাই সেখানে CSRF ধারণাটাই প্রযোজ্য নয়।
+//
+// এখানে *যাচাই সফল হয়েছে* কিনা দেখা হয় না, শুধু হেডারটা আছে কিনা — কারণ
+// csrfProtection গ্লোবালি মাউন্ট করা (app.js), অর্থাৎ রুট-লেভেল requireApiKey()
+// চলার অনেক আগেই এটা চলে। হেডারের উপস্থিতি দেখাই যথেষ্ট নিরাপদ: `x-api-key`
+// একটা কাস্টম হেডার, আর ক্রস-অরিজিন রিকোয়েস্টে কাস্টম হেডার বসাতে হলে CORS
+// preflight লাগে যা সার্ভারকে অনুমোদন করতে হয়। অর্থাৎ একটা ক্ষতিকর সাইট
+// শিকারের ব্রাউজার দিয়ে এই হেডার পাঠাতেই পারে না — এটা নিজেই একটা বৈধ
+// CSRF প্রতিরোধ। ভুল key হলে requireApiKey() পরে 401 দেবে; CSRF-এর কাজ শেষ।
+//
+// `authorization` হেডার ইচ্ছাকৃতভাবে বাদ: সেটা কিছু ক্ষেত্রে ব্রাউজার নিজেই
+// (Basic auth) পাঠাতে পারে, তাই ওটাকে অ-ব্রাউজার সংকেত ধরা যায় না।
+function isApiKeyRequest(req) {
+  return typeof req.headers['x-api-key'] === 'string' && req.headers['x-api-key'].length > 0;
+}
 const EXEMPT_EXACT = [
   '/health', '/ready', '/telegram-webhook', // টেলিগ্রাম-নিজস্ব secret-token যাচাই থাকে, CSRF প্রযোজ্য না
   // পেমেন্ট গেটওয়ের কলব্যাক/IPN — গেটওয়ে পোস্ট করে, ব্রাউজার সেশন/টোকেন থাকে না।
@@ -32,6 +62,7 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 function isExempt(req) {
   if (SAFE_METHODS.has(req.method)) return true;
+  if (isApiKeyRequest(req)) return true;
   if (EXEMPT_EXACT.includes(req.path)) return true;
   return EXEMPT_PREFIXES.some(prefix => req.path.startsWith(prefix));
 }

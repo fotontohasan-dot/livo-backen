@@ -168,6 +168,42 @@ function buildJobDefinitions() {
       }
     },
 
+    ticket_reservation_expiry: {
+      label: 'Ticket Reservation Expiry',
+      description: 'মেয়াদোত্তীর্ণ অপরিশোধিত টিকেট রিজার্ভেশন বাতিল করে ইনভেন্টরি ছেড়ে দেয়',
+      // ঘন ঘন চালানো দরকার: একটা আটকে থাকা reservation মানে একটা টিকেট
+      // বিক্রি না হয়ে পড়ে থাকা। ১ মিনিটের গ্রানুলারিটি যথেষ্ট।
+      defaultIntervalMs: 2 * MIN,
+      defaultEnabled: true,
+      maxRetries: 1,
+      handler: async () => {
+        const { expireReservations } = require('./tickets');
+        const r = await expireReservations();
+        return `${r.orders}টা মেয়াদোত্তীর্ণ রিজার্ভেশন বাতিল, ${r.released}টা টিকেট ইনভেন্টরিতে ফেরত`;
+      }
+    },
+
+    casino_game_sync: {
+      label: 'Casino Game Sync',
+      description: 'সক্রিয় ক্যাসিনো প্রোভাইডারের গেম ক্যাটালগ sync করে (services/casinoGameSync.js)',
+      // ইন্টারভালটা CASINO_SYNC_INTERVAL_MINUTES থেকে আসে (ডিফল্ট ৬ ঘণ্টা) —
+      // গেম ক্যাটালগ দিনে কয়েকবারের বেশি বদলায় না, আর প্রোভাইডারদের
+      // list-games এন্ডপয়েন্টে সাধারণত কড়া rate limit থাকে।
+      defaultIntervalMs: require('./casinoProviders').getSyncIntervalMs(),
+      defaultEnabled: true,
+      maxRetries: 2,
+      handler: async () => {
+        const { syncAll } = require('./casinoGameSync');
+        const out = await syncAll();
+        if (out.skipped) return 'কোনো ক্যাসিনো প্রোভাইডার কনফিগার করা নেই — কিছু করা হয়নি';
+        return out.results
+          .map(r => r.status === 'success'
+            ? `${r.provider}: +${r.added}/${r.updated} হালনাগাদ/${r.removed} নিষ্ক্রিয়`
+            : `${r.provider}: ব্যর্থ (${r.error})`)
+          .join('; ');
+      }
+    },
+
     system_health_check: {
       label: 'System Health Check',
       description: 'DB/Redis/Queue/Email চেক করে; overall status "error" হলে Telegram-এ অ্যাডমিনকে সতর্ক করে',

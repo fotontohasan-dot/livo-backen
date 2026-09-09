@@ -171,7 +171,7 @@ describe('#32 maintenance mode রিস্টার্টে রিসেট �
 });
 
 describe('#43 service worker ব্যক্তিগত পেইজ ক্যাশ করে না', () => {
-  const sw = read('public', 'service-worker.js');
+  const sw = read('assets', 'service-worker.js');
 
   test('ব্যক্তিগত রুটগুলো বাদ যায়', () => {
     for (const route of ['/profile', '/wallet', '/payment', '/kyc', '/history']) {
@@ -226,17 +226,36 @@ describe('#44 CSRF টোকেন শুধু same-origin', () => {
 });
 
 describe('#8 লেজার ইনভেরিয়েন্ট — বাজি দুবার বিয়োগ হয় না', () => {
+  // ইন-হাউস গেম সরে যাওয়ার পর (PHASE 1) routes/games.js-এ আর কোনো ব্যালেন্স
+  // মিউটেশন নেই — সব ডেবিট/ক্রেডিট এখন services/wallet/index.js দিয়ে যায়
+  // (প্রোভাইডার seamless wallet)। ইনভেরিয়েন্টটা অপরিবর্তিত, শুধু ঠিকানা বদলেছে।
   const games = read('routes', 'games.js');
-  const code = games.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
+  const gamesCode = games.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
+  const wallet = read('services', 'wallet', 'index.js');
+  const code = wallet.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
+
+  test('routes/games.js আর ব্যালেন্স বা লেজারে লেখে না', () => {
+    expect(gamesCode).not.toMatch(/UPDATE users SET coins/);
+    expect(gamesCode).not.toMatch(/INSERT INTO coin_transactions/);
+  });
 
   test('game_play-তে netChange লেখা হয় না', () => {
-    expect(code).not.toMatch(/\[userId, netChange, 'game_play'/);
+    expect(code).not.toMatch(/netChange/);
   });
 
   test('casino_bet ডেবিট + game_play ক্রেডিট মডেল', () => {
-    expect(code).toMatch(/\[userId, -betAmount, 'casino_bet'/);
-    expect(code).toMatch(/\[userId, winAmount, 'game_play'/);
-    expect(code).toMatch(/if \(winAmount > 0\)/);
+    // bet ঋণাত্মক delta সহ 'casino_bet', win ধনাত্মক delta সহ 'game_play'।
+    // লেজারে যা লেখা হয় সেটাই ব্যালেন্সের পরিবর্তন — একই `delta` ভেরিয়েবল
+    // দুই জায়গাতেই ব্যবহৃত, তাই দুটো কখনো আলাদা হতে পারে না।
+    expect(code).toMatch(/delta: -amt,[\s\S]*?ledgerType: 'casino_bet'/);
+    expect(code).toMatch(/delta: amt,[\s\S]*?ledgerType: 'game_play'/);
+    expect(code).toMatch(/INSERT INTO coin_transactions \(user_id, amount, type, description\)/);
+    expect(code).toMatch(/\[userId, delta, ledgerType, ledgerDescription\]/);
+  });
+
+  test('ব্যালেন্স মিউটেশন সবসময় row lock-এর ভেতরে', () => {
+    expect(code).toMatch(/FOR UPDATE/);
+    expect(code).toMatch(/UNIQUE|idempotency/);
   });
 
   test('ব্যাজের বাজি-গণনা হেরে যাওয়া বাজিও ধরে', () => {

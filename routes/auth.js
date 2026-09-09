@@ -10,7 +10,8 @@ const { normalizeEmail, normalizeUsername, normalizePhone, normalizeIdentifier }
 // এরর মেসেজ দুই ক্ষেত্রেই এক, এই টাইমিং পার্থক্য দিয়েই ইমেইল/ফোন অস্তিত্ব যাচাই (এনিউমারেশন) করা যায়।
 // তাই ইউজার না থাকলেও একটা ডামি হ্যাশের বিপরীতে bcrypt.compare() চালানো হয়, যাতে দুই পথের সময়
 // প্রায় সমান থাকে।
-const DUMMY_BCRYPT_HASH = bcrypt.hashSync('dummy-password-for-constant-time-compare', 10);
+const { validatePassword, BCRYPT_COST } = require('../utils/passwordPolicy');
+const DUMMY_BCRYPT_HASH = bcrypt.hashSync('dummy-password-for-constant-time-compare', BCRYPT_COST);
 const rateLimit = require('express-rate-limit');
 const { logEvent: logAuditEvent } = require('../services/auditLog');
 const { pool } = require('../db');
@@ -136,10 +137,11 @@ router.get('/', async (req, res) => {
       console.error('Homepage games fetch error:', gErr.message);
       dbGames = [];
     }
-    // কোন গেম আসলে খেলা যায় সেটা সার্ভারই বলে দেয় — লবি নিজে অনুমান করে না।
-    // লজিক না থাকা গেম কার্ডে "শীঘ্রই" ব্যাজ পায় এবং ক্লিক করা যায় না।
-    const playableSlugs = require('../services/gameRegistry').playableSlugs();
-    res.render('index', { user: req.session.user || null, dbGames, playableSlugs });
+    // PHASE 1: ইন-হাউস গেম সরে যাওয়ায় "কোন স্লাগ খেলা যায়" বলে আলাদা কোনো
+    // কোড-সাইড তালিকা আর নেই। গেম খেলা যাবে কি না তা সম্পূর্ণভাবে games
+    // টেবিলের সারি দিয়েই নির্ধারিত — টেবিলে থাকা মানেই sync হয়ে আসা,
+    // সক্রিয় প্রোভাইডার গেম।
+    res.render('index', { user: req.session.user || null, dbGames });
   } catch (err) {
     console.error('Error rendering index:', err);
     res.status(500).send('Render Error');
@@ -262,8 +264,11 @@ router.post('/register', async (req, res) => {
       req.flash('error', req.t('auth_phone_format_invalid'));
       return res.redirect('/register');
     }
-    if (password.length < 8) {
-      req.flash('error', req.t('auth_password_min_length'));
+    // নীতি এক জায়গায় (utils/passwordPolicy.js) — দৈর্ঘ্য, কমপ্লেক্সিটি,
+    // কমন-পাসওয়ার্ড ব্লকলিস্ট ও নিজের পরিচয় ব্যবহারের যাচাই একসাথে।
+    const policy = validatePassword(password, { username, email });
+    if (!policy.valid) {
+      req.flash('error', req.t(policy.reason));
       return res.redirect('/register');
     }
     if (confirmPassword && password !== confirmPassword) {
@@ -286,7 +291,7 @@ router.post('/register', async (req, res) => {
       }
     }
 
-    const hashed = await bcrypt.hash(password, 10);
+    const hashed = await bcrypt.hash(password, BCRYPT_COST);
 
     let referredById = null;
     if (ref) {
@@ -438,7 +443,7 @@ async function findOrCreateGoogleUser(profile) {
     }
   }
 
-  const unusablePassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
+  const unusablePassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), BCRYPT_COST);
   const baseUsername = ((profile.email || '').split('@')[0] || 'user').replace(/[^A-Za-z0-9_.]/g, '').slice(0, 15) || 'user';
   let username = baseUsername;
   let suffix = 0;
@@ -912,8 +917,9 @@ router.post('/reset-password/:token', resetLimiter, async (req, res) => {
   const { password, confirmPassword } = req.body;
   const { token } = req.params;
   try {
-    if (!password || password.length < 8) {
-      req.flash('error', req.t('auth_password_min_length'));
+    const policy = validatePassword(password);
+    if (!policy.valid) {
+      req.flash('error', req.t(policy.reason));
       return res.redirect(`/reset-password/${token}`);
     }
     if (password !== confirmPassword) {
@@ -921,7 +927,7 @@ router.post('/reset-password/:token', resetLimiter, async (req, res) => {
       return res.redirect(`/reset-password/${token}`);
     }
 
-    const hashed = await bcrypt.hash(password, 10);
+    const hashed = await bcrypt.hash(password, BCRYPT_COST);
 
     // টোকেন যাচাই + পাসওয়ার্ড আপডেট + টোকেন invalidate — সব একটাই atomic UPDATE-এ।
     // আগে আলাদা SELECT ... তারপর UPDATE ছিল; দুটোর মাঝে কোনো লক ছিল না, তাই একই টোকেন নিয়ে

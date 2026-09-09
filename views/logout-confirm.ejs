@@ -5,7 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="csrf-token" content="<%= locals.csrfToken || '' %>">
   <title><%= typeof t === 'function' ? t('auth_logout_confirm_title') : 'Logout' %></title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind এখন বিল্ড-টাইমে কম্পাইল করা স্ট্যাটিক CSS (npm run build:css)।
+       আগে এখানে cdn.tailwindcss.com ছিল, যা Tailwind-এর ডকুমেন্টেশনেই প্রোডাকশনের
+       জন্য নিষিদ্ধ: ব্রাউজারে JIT কম্পাইলার চালাত (~৪০০KB JS + প্রতি লোডে কম্পাইল),
+       CDN ডাউন হলে স্টাইল ভেঙে যেত, আর CSP-তে বাইরের স্ক্রিপ্ট-সোর্স অনুমোদন করাত। -->
+  <link rel="stylesheet" href="/css/tailwind.css?v=<%= locals.assetVersion || 'dev' %>">
 </head>
 <body class="bg-[#0f172a] text-slate-200 min-h-screen flex items-center justify-center p-6">
   <div class="w-full max-w-sm bg-[#1e293b] border border-[#334155] rounded-xl p-6 text-center">

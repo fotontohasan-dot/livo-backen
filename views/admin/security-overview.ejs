@@ -38,7 +38,7 @@ function logRow(l) {
 const s = stats || {};
 const emailNotVerified = Math.max(0, (s.emailUsers || 0) - (s.emailVerified || 0));
 const pinNotConfigured = Math.max(0, (s.totalUsers || 0) - (s.pinConfigured || 0));
-const rows = (recentLogs || []).map(logRow).join('') || '<tr><td colspan="5" class="px-6 py-10 text-center text-slate-400">এখনো কোনো নিরাপত্তা-সম্পর্কিত কার্যকলাপ নেই</td></tr>';
+const rows = (recentLogs || []).map(logRow).join('') || '<tr><td colspan="5" class="px-6 py-10 text-center text-slate-400">' + t("aso_no_activity") + '</td></tr>';
 
 function statCard(icon, label, value, sub, tone) {
   const toneMap = {
@@ -65,10 +65,10 @@ function statCard(icon, label, value, sub, tone) {
     <div class="flex items-center justify-between mb-6">
         <div>
             <h1 class="text-2xl font-semibold text-slate-900">Security Overview</h1>
-            <p class="text-slate-500 mt-1 text-sm">প্ল্যাটফর্মজুড়ে ইউজার নিরাপত্তা স্ট্যাটাসের সারসংক্ষেপ ও সাম্প্রতিক নিরাপত্তা কার্যকলাপ</p>
+            <p class="text-slate-500 mt-1 text-sm">${t('aso_subtitle')}</p>
         </div>
         <a href="/admin/activity" class="px-5 py-2.5 bg-slate-100 text-slate-700 rounded-2xl text-sm font-semibold hover:bg-slate-200">
-            <i class="fas fa-list mr-1"></i> ফুল অ্যাক্টিভিটি লগ
+            <i class="fas fa-list mr-1"></i> ${t('aso_full_log')}
         </a>
     </div>
 
@@ -83,8 +83,8 @@ function statCard(icon, label, value, sub, tone) {
     <!-- Recent Security Activity -->
     <div class="bg-white rounded-3xl border border-slate-100 overflow-x-auto modern-table">
         <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h3 class="font-semibold text-slate-800">সাম্প্রতিক নিরাপত্তা কার্যকলাপ</h3>
-            <span class="text-xs text-slate-400">সর্বশেষ ২৫টি এন্ট্রি — সব পরিবর্তন Activity Log-এ সংরক্ষিত হয়</span>
+            <h3 class="font-semibold text-slate-800">${t('aso_recent')}</h3>
+            <span class="text-xs text-slate-400">${t('aso_last_25')}</span>
         </div>
         <table class="w-full text-sm">
             <thead class="bg-slate-50">

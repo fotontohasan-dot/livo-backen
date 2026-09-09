@@ -1,3 +1,9 @@
+<style nonce="<%= cspNonce %>">
+  /* Runtime-generated markup: these inline styles live in JS strings, so
+     cascade-check cannot see them. Migrated only where no rule in the site
+     CSS can set the same longhand on this tag/class at all. */
+  .js1.js1.js1 { display: inline; }
+</style>
 <%
 function escapeHtml(str) {
   return String(str == null ? '' : str)
@@ -25,11 +31,11 @@ function logRow(l) {
   const userLabel = l.username ? escapeHtml(l.username) + ' <span class="text-slate-400">(#' + l.user_id + ')</span>' : '#' + l.user_id;
   const actions = l.status === 'open'
     ? '<div class="flex gap-1.5 justify-center">' +
-        '<form method="POST" action="/admin/fraud-logs/' + l.id + '/review" style="display:inline">' +
+        '<form class="js1" method="POST" action="/admin/fraud-logs/' + l.id + '/review">' +
           '<input type="hidden" name="action" value="reviewed">' +
           '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white">Reviewed</button>' +
         '</form>' +
-        '<form method="POST" action="/admin/fraud-logs/' + l.id + '/review" style="display:inline">' +
+        '<form class="js1" method="POST" action="/admin/fraud-logs/' + l.id + '/review">' +
           '<input type="hidden" name="action" value="dismiss">' +
           '<button type="submit" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-400 hover:bg-slate-500 text-white">Dismiss</button>' +
         '</form>' +
@@ -45,7 +51,7 @@ function logRow(l) {
     '<td class="px-6 py-4 text-center">' + actions + '</td>' +
   '</tr>';
 }
-const rows = (logs || []).map(logRow).join('') || '<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400">কোনো ফ্রড ফ্ল্যাগ পাওয়া যায়নি</td></tr>';
+const rows = (logs || []).map(logRow).join('') || '<tr><td colspan="6" class="px-6 py-10 text-center text-slate-400">' + t("afl_no_flags") + '</td></tr>';
 const f = filters || {};
 function qs(overrides) {
   const merged = Object.assign({ risk_level: f.risk_level, status: f.status, user_id: f.user_id, from: f.from, to: f.to }, overrides);
@@ -60,29 +66,29 @@ function qs(overrides) {
     <div class="flex items-center justify-between mb-6">
         <div>
             <h1 class="text-2xl font-semibold text-slate-900">Fraud Log</h1>
-            <p class="text-slate-500 mt-1 text-sm">মোট ${total || 0}টি ফ্রড ফ্ল্যাগ — শুধু রিভিউয়ের জন্য, অটোমেটিক ব্লক হয় না</p>
+            <p class="text-slate-500 mt-1 text-sm">${t('afl_subtitle').replace('{n}', total || 0)}</p>
         </div>
     </div>
 
     <form method="GET" action="/admin/fraud-logs" class="flex flex-wrap gap-3 mb-6">
         <select name="risk_level" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
-            <option value="">সব ঝুঁকির মাত্রা</option>
+            <option value="">${t('ash_all_risk')}</option>
             <option value="high" ${f.risk_level === 'high' ? 'selected' : ''}>High</option>
             <option value="medium" ${f.risk_level === 'medium' ? 'selected' : ''}>Medium</option>
             <option value="low" ${f.risk_level === 'low' ? 'selected' : ''}>Low</option>
         </select>
         <select name="status" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
-            <option value="">সব স্ট্যাটাস</option>
+            <option value="">${t('ash_all_status')}</option>
             <option value="open" ${f.status === 'open' ? 'selected' : ''}>Open</option>
             <option value="reviewed" ${f.status === 'reviewed' ? 'selected' : ''}>Reviewed</option>
             <option value="dismissed" ${f.status === 'dismissed' ? 'selected' : ''}>Dismissed</option>
         </select>
-        <input type="text" name="user_id" value="${escapeHtml(f.user_id || '')}" placeholder="ইউজার ID"
+        <input type="text" name="user_id" value="${escapeHtml(f.user_id || '')}" placeholder="${t('ash_user_id')}"
                class="w-32 border border-slate-200 px-4 py-2.5 rounded-2xl text-sm outline-none focus:border-blue-300">
         <input type="date" name="from" value="${escapeHtml(f.from || '')}" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
         <input type="date" name="to" value="${escapeHtml(f.to || '')}" class="border border-slate-200 px-4 py-2.5 rounded-2xl text-sm">
-        <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">ফিল্টার</button>
-        ${(f.risk_level || f.status || f.user_id || f.from || f.to) ? '<a href="/admin/fraud-logs" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">রিসেট</a>' : ''}
+        <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl text-sm font-semibold">${t('ash_filter')}</button>
+        ${(f.risk_level || f.status || f.user_id || f.from || f.to) ? '<a href="/admin/fraud-logs" class="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-2xl text-sm font-medium">' + t("ash_reset") + '</a>' : ''}
     </form>
 
     <div class="bg-white rounded-3xl border border-slate-100 overflow-x-auto modern-table">
@@ -102,9 +108,9 @@ function qs(overrides) {
     </div>
 
     <div class="flex justify-center gap-3 mt-6">
-        ${page > 1 ? '<a href="/admin/fraud-logs?page=' + (page - 1) + '&' + qs({}) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">← আগের পেজ</a>' : ''}
-        <span class="px-4 py-2 text-sm text-slate-500">পেজ ${page} / ${totalPages}</span>
-        ${page < totalPages ? '<a href="/admin/fraud-logs?page=' + (page + 1) + '&' + qs({}) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">পরের পেজ →</a>' : ''}
+        ${page > 1 ? '<a href="/admin/fraud-logs?page=' + (page - 1) + '&' + qs({}) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">← ' + t("ash_prev_page") + '</a>' : ''}
+        <span class="px-4 py-2 text-sm text-slate-500">${t('ash_page_x_y').replace('{page}', page).replace('{pages}', totalPages)}</span>
+        ${page < totalPages ? '<a href="/admin/fraud-logs?page=' + (page + 1) + '&' + qs({}) + '" class="px-4 py-2 bg-white border rounded-xl text-sm font-medium">' + t("ash_next_page") + ' →</a>' : ''}
     </div>
 </div>
 `

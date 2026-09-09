@@ -1,0 +1,48 @@
+<%- include('../partials/head') %>
+<%- include('../partials/navbar') %>
+
+<%# PHASE 4 — ইভেন্ট তালিকা। সব ডেটা ticket_events থেকে; কিছুই হার্ডকোড নয়। %>
+<style nonce="<%= cspNonce %>">
+  .tk-wrap { padding: 14px 12px 90px; }
+  .tk-title { font-size: 1.5rem; font-weight: 800; margin-bottom: 14px; }
+  .tk-card { display: block; text-decoration: none; background: var(--bg-card);
+    border: 1px solid var(--border-glass); border-radius: 14px;
+    overflow: hidden; margin-bottom: 12px; }
+  .tk-banner { width: 100%; aspect-ratio: 16/6; object-fit: cover; display: block; }
+  .tk-body { padding: 12px 14px; }
+  .tk-name { font-size: 15px; font-weight: 700; color: var(--text-main); }
+  .tk-sub { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+  .tk-row { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+  .tk-price { font-size: 14px; font-weight: 700; color: var(--gold); }
+  .tk-left { font-size: 11px; color: var(--text-muted); }
+  .tk-empty { text-align: center; padding: 48px 16px; color: var(--text-muted); font-size: 13px; }
+</style>
+
+<div class="tk-wrap">
+  <div class="tk-title"><%= t.menu_tickets || 'Tickets' %></div>
+
+  <% if (!events.length) { %>
+    <div class="tk-empty"><%= t.tickets_no_events || 'No events on sale right now.' %></div>
+  <% } %>
+
+  <% events.forEach(function (e) { %>
+    <a class="tk-card" href="/tickets/event/<%= e.id %>">
+      <% if (e.banner_url) { %><img class="tk-banner" src="<%= e.banner_url %>" alt="" aria-hidden="true" loading="lazy"><% } %>
+      <div class="tk-body">
+        <div class="tk-name"><%= e.title %></div>
+        <div class="tk-sub">
+          <%= e.competition || '' %><%= e.competition && e.venue ? ' · ' : '' %><%= e.venue || '' %>
+        </div>
+        <div class="tk-sub"><%= new Date(e.event_date).toLocaleString('en-GB') %></div>
+        <div class="tk-row">
+          <span class="tk-price">৳ <%= Number(e.min_price).toLocaleString('en-US') %>+</span>
+          <span class="tk-left"><%= Number(e.available) %> <%= t.tickets_available || 'available' %></span>
+        </div>
+      </div>
+    </a>
+  <% }); %>
+</div>
+
+<%- include('../partials/bottom-nav') %>
+</body>
+</html>

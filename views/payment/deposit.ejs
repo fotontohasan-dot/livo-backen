@@ -1,5 +1,9 @@
 <%- include('../partials/head') %>
-<script src="https://cdn.tailwindcss.com"></script>
+<!-- Tailwind এখন বিল্ড-টাইমে কম্পাইল করা স্ট্যাটিক CSS (npm run build:css)।
+     আগে এখানে cdn.tailwindcss.com ছিল, যা Tailwind-এর ডকুমেন্টেশনেই প্রোডাকশনের
+     জন্য নিষিদ্ধ: ব্রাউজারে JIT কম্পাইলার চালাত (~৪০০KB JS + প্রতি লোডে কম্পাইল),
+     CDN ডাউন হলে স্টাইল ভেঙে যেত, আর CSP-তে বাইরের স্ক্রিপ্ট-সোর্স অনুমোদন করাত। -->
+<link rel="stylesheet" href="/css/tailwind.css?v=<%= locals.assetVersion || 'dev' %>">
 <style nonce="<%= cspNonce %>">
   @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap');
 
@@ -82,7 +86,7 @@
 
   <div class="p-4 max-w-[480px] mx-auto">
 
-    <form action="/payment/deposit" method="POST" id="depositForm" data-loading-target="depSubmitBtn" data-loading-label="জমা হচ্ছে...">
+    <form action="/payment/deposit" method="POST" id="depositForm" data-loading-target="depSubmitBtn" data-loading-label="<%= t('dep_submitting') %>">
 
       <input type="hidden" name="method" id="methodInput" value="">
 
@@ -110,7 +114,7 @@
             <button type="button" class="channel-btn selected border-2 border-glass bg-surface rounded-xl py-3 text-sm font-bold transition-all" data-select-channel><%= t.channel_1 %></button>
             <button type="button" class="channel-btn border-2 border-glass bg-surface rounded-xl py-3 text-sm font-bold transition-all" data-select-channel><%= t.channel_4 %></button>
             <button type="button" class="channel-btn border-2 border-glass bg-surface rounded-xl py-3 text-sm font-bold transition-all" data-select-channel><%= t.channel_5 %></button>
-            <button type="button" class="channel-btn border-2 border-glass bg-surface rounded-xl py-3 text-sm font-bold transition-all" data-select-channel><%= t.channel_1 %>০</button>
+            <button type="button" class="channel-btn border-2 border-glass bg-surface rounded-xl py-3 text-sm font-bold transition-all" data-select-channel><%= t('channel_10') %></button>
           </div>
         </div>
 
@@ -208,7 +212,7 @@
   </div>
 </div>
 
-<script id="activeMethodsData" type="application/json"><%- JSON.stringify(activeMethods || []) %></script>
+<script id="activeMethodsData" type="application/json"><%- jsonScriptSafe(activeMethods || []) %></script>
 <script src="/socket.io/socket.io.js"></script>
 <script src="/js/views/payment-deposit.js"></script>
 

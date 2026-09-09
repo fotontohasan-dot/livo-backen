@@ -1,54 +1,86 @@
 <%- include('../partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Every migrated declaration was proved cascade-equivalent:
+     see tools/cascade-check.js. */
+  .dz72-1 { padding: 15px; padding-bottom: 100px; }
+  .dz72-2 { color: var(--text-main); text-decoration: none; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .dz72-3 { color: var(--text-main); font-size: 20px; font-weight: 800; }
+  .dz72-4 { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 10px; }
+  .dz72-5 { white-space: nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: var(--bg-card); color: var(--text-main); text-decoration: none; }
+  .dz72-6 { flex: 1; background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 10px; padding: 8px 10px; color: var(--text-main); font-size: 12px; }
+  .dz72-7 { color: var(--text-muted); font-size: 12px; }
+  .dz72-8 { background: var(--grad-gold); border: none; color: #000; padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 800; }
+  .dz72-9 { background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 14px; padding: 14px 16px; }
+  .dz72-10 { color: var(--text-main); font-size: 13px; font-weight: 700; }
+  .dz72-11 { color: var(--text-muted); font-size: 11px; margin-top: 6px; }
+  .dz72-12 { color: var(--text-muted); font-size: 11px; }
+  .dz72-13 { color: var(--text-accent); font-size: 14px; font-weight: 800; }
+  .dz72-14 { color: #10b981; }
+  .dz72-15 { text-align: center; padding: 40px 0; color: var(--text-muted); font-size: 13px; }
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Only declarations whose properties are free of any
+     !important rule in the site CSS were moved; otherwise such a rule
+     would suddenly start winning and change the layout. */
+  .im73-1 { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .im73-2 { margin-bottom: 16px; }
+  .im73-3 { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .im73-4 { display: flex; gap: 8px; }
+  .im73-5 { display: flex; flex-direction: column; gap: 10px; }
+  .im73-6 { display: flex; justify-content: space-between; }
+  .im73-7 { display: flex; justify-content: space-between; margin-top: 8px; align-items: center; }
+</style>
 
-<div class="container" style="padding: 15px; padding-bottom: 100px;">
-  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
-    <a href="/profile" style="color:var(--text-main); text-decoration: none; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+
+<div class="container dz72-1">
+  <div class="im73-1">
+    <a class="dz72-2" href="/profile">
       <i class="fas fa-chevron-left"></i>
     </a>
-    <h1 style="color:var(--text-main); font-size: 20px; font-weight: 800;">বেটিং রেকর্ড</h1>
+    <h1 class="dz72-3"><%= t('hist_betting_record') %></h1>
   </div>
 
   <%- include('../partials/flash') %>
 
-  <form method="GET" action="/profile/history" style="margin-bottom: 16px;">
-    <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 10px;">
+  <form class="im73-2" method="GET" action="/profile/history">
+    <div class="dz72-4">
       <button type="submit" name="quick" value="today" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.quick === 'today' ? 'var(--grad-gold)' : 'var(--bg-card)' %>; color: <%= filter.quick === 'today' ? '#000' : 'var(--text-main)' %>;">আজ</button>
       <button type="submit" name="quick" value="yesterday" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.quick === 'yesterday' ? 'var(--grad-gold)' : 'var(--bg-card)' %>; color: <%= filter.quick === 'yesterday' ? '#000' : 'var(--text-main)' %>;">গতকাল</button>
       <button type="submit" name="quick" value="7days" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.quick === '7days' ? 'var(--grad-gold)' : 'var(--bg-card)' %>; color: <%= filter.quick === '7days' ? '#000' : 'var(--text-main)' %>;">গত ৭ দিন</button>
-      <a href="/profile/history" style="white-space:nowrap; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: var(--bg-card); color: var(--text-main); text-decoration:none;">সব</a>
+      <a class="dz72-5" href="/profile/history"><%= t('hist_all') %></a>
     </div>
-    <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 10px;">
-      <input type="date" name="from" value="<%= filter.from %>" style="flex:1; background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 10px; padding: 8px 10px; color: var(--text-main); font-size: 12px;">
-      <span style="color: var(--text-muted); font-size: 12px;">থেকে</span>
-      <input type="date" name="to" value="<%= filter.to %>" style="flex:1; background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 10px; padding: 8px 10px; color: var(--text-main); font-size: 12px;">
-      <button type="submit" style="background: var(--grad-gold); border: none; color: #000; padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 800;">ফিল্টার</button>
+    <div class="im73-3">
+      <input class="dz72-6" type="date" name="from" value="<%= filter.from %>">
+      <span class="dz72-7"><%= t('hist_from') %></span>
+      <input class="dz72-6" type="date" name="to" value="<%= filter.to %>">
+      <button class="dz72-8" type="submit"><%= t('hist_filter') %></button>
     </div>
-    <div style="display: flex; gap: 8px;">
+    <div class="im73-4">
       <button type="submit" name="status" value="won" style="flex:1; padding: 8px; border-radius: 10px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.status === 'won' ? '#10b981' : 'var(--bg-card)' %>; color: <%= filter.status === 'won' ? 'var(--text-main)' : 'var(--text-main)' %>;">জয়</button>
       <button type="submit" name="status" value="lost" style="flex:1; padding: 8px; border-radius: 10px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.status === 'lost' ? '#ef4444' : 'var(--bg-card)' %>; color: <%= filter.status === 'lost' ? 'var(--text-main)' : 'var(--text-main)' %>;">হার</button>
       <button type="submit" name="status" value="pending" style="flex:1; padding: 8px; border-radius: 10px; font-size: 12px; font-weight: 700; border: 1px solid var(--border-glass); background: <%= filter.status === 'pending' ? '#f59e0b' : 'var(--bg-card)' %>; color: <%= filter.status === 'pending' ? '#000' : 'var(--text-main)' %>;">পেন্ডিং</button>
     </div>
   </form>
 
-  <div style="display: flex; flex-direction: column; gap: 10px;">
+  <div class="im73-5">
     <% if (bets && bets.length) { %>
       <% bets.forEach(function (b) { %>
         <% var sc = b.status === 'won' ? '#10b981' : b.status === 'lost' ? '#ef4444' : '#f59e0b'; %>
-        <% var st = b.status === 'won' ? 'জয়' : b.status === 'lost' ? 'হার' : 'পেন্ডিং'; %>
-        <div style="background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 14px; padding: 14px 16px;">
-          <div style="display: flex; justify-content: space-between;">
-            <div style="color:var(--text-main); font-size: 13px; font-weight: 700;"><%= b.team_a && b.team_b ? (b.team_a + ' vs ' + b.team_b) : (b.title || 'ম্যাচ') %></div>
+        <% var st = b.status === 'won' ? t('hist_won') : b.status === 'lost' ? t('hist_lost') : t('hist_status_pending'); %>
+        <div class="dz72-9">
+          <div class="im73-6">
+            <div class="dz72-10"><%= b.team_a && b.team_b ? (b.team_a + ' vs ' + b.team_b) : (b.title || t('hist_match')) %></div>
             <div style="color: <%= sc %>; font-size: 12px; font-weight: 800;"><%= st %></div>
           </div>
-          <div style="color: var(--text-muted); font-size: 11px; margin-top: 6px;"><%= b.runner %> · অড <%= b.odd %></div>
-          <div style="display: flex; justify-content: space-between; margin-top: 8px; align-items: center;">
-            <div style="color: var(--text-muted); font-size: 11px;"><%= new Date(b.created_at).toLocaleString('bn-BD') %></div>
-            <div style="color: var(--text-accent); font-size: 14px; font-weight: 800;">৳<%= b.stake %> <% if (b.status === 'won') { %><span style="color:#10b981">→ ৳<%= Math.floor(b.stake * b.odd) %></span><% } %></div>
+          <div class="dz72-11"><%= b.runner %> · <%= t('hist_odd') %> <%= b.odd %></div>
+          <div class="im73-7">
+            <div class="dz72-12"><%= new Date(b.created_at).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') %></div>
+            <div class="dz72-13">৳<%= b.stake %> <% if (b.status === 'won') { %><span class="dz72-14">→ ৳<%= Math.floor(b.stake * b.odd) %></span><% } %></div>
           </div>
         </div>
       <% }) %>
     <% } else { %>
-      <div style="text-align:center; padding: 40px 0; color: var(--text-muted); font-size: 13px;">এই সময়ে কোনো বেট নেই</div>
+      <div class="dz72-15"><%= t('hist_no_bets') %></div>
     <% } %>
   </div>
 </div>

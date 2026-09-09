@@ -44,8 +44,8 @@ function fraudRow(fl) {
   const statusColor = fl.status === 'open' ? 'bg-blue-100 text-blue-700' : fl.status === 'reviewed' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500';
   const actions = fl.status === 'open'
     ? '<div class="flex gap-1.5 mt-2">' +
-        '<form method="POST" action="/admin/fraud-logs/' + fl.id + '/review" style="display:inline"><input type="hidden" name="action" value="reviewed"><button type="submit" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white">Reviewed</button></form>' +
-        '<form method="POST" action="/admin/fraud-logs/' + fl.id + '/review" style="display:inline"><input type="hidden" name="action" value="dismiss"><button type="submit" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-400 hover:bg-slate-500 text-white">Dismiss</button></form>' +
+        '<form class="js1" method="POST" action="/admin/fraud-logs/' + fl.id + '/review"><input type="hidden" name="action" value="reviewed"><button type="submit" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white">Reviewed</button></form>' +
+        '<form class="js1" method="POST" action="/admin/fraud-logs/' + fl.id + '/review"><input type="hidden" name="action" value="dismiss"><button type="submit" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-400 hover:bg-slate-500 text-white">Dismiss</button></form>' +
       '</div>'
     : '';
   return '<div class="px-6 py-4 border-b border-slate-100">' +
@@ -58,17 +58,17 @@ function fraudRow(fl) {
     actions +
   '</div>';
 }
-const betsHtml = (bets || []).map(betRow).join('') || '<tr><td colspan="5" class="px-4 py-6 text-center text-slate-400 text-sm">কোনো বেট নেই</td></tr>';
-const paymentsHtml = (payments || []).map(paymentRow).join('') || '<tr><td colspan="5" class="px-4 py-6 text-center text-slate-400 text-sm">কোনো পেমেন্ট নেই</td></tr>';
-const sameIpHtml = (sameIp || []).map(ipRow).join('') || '<div class="px-4 py-4 text-center text-slate-400 text-xs">একই আইপিতে অন্য কোনো ইউজার নেই</div>';
-const fraudFlagsHtml = ((fraudStatus && fraudStatus.flags) || []).map(fraudRow).join('') || '<div class="px-6 py-4 text-center text-slate-400 text-xs">কোনো ফ্রড ফ্ল্যাগ নেই</div>';
+const betsHtml = (bets || []).map(betRow).join('') || '<tr><td colspan="5" class="px-4 py-6 text-center text-slate-400 text-sm">' + t("aud_no_bets") + '</td></tr>';
+const paymentsHtml = (payments || []).map(paymentRow).join('') || '<tr><td colspan="5" class="px-4 py-6 text-center text-slate-400 text-sm">' + t("aud_no_payments") + '</td></tr>';
+const sameIpHtml = (sameIp || []).map(ipRow).join('') || '<div class="px-4 py-4 text-center text-slate-400 text-xs">' + t("aud_no_same_ip") + '</div>';
+const fraudFlagsHtml = ((fraudStatus && fraudStatus.flags) || []).map(fraudRow).join('') || '<div class="px-6 py-4 text-center text-slate-400 text-xs">' + t("aud_no_fraud_flags") + '</div>';
 const riskLevel = (fraudStatus && fraudStatus.currentRiskLevel) || 'none';
 const riskHeaderColor = riskLevel === 'high' ? 'bg-red-100 text-red-700' : riskLevel === 'medium' ? 'bg-amber-100 text-amber-700' : riskLevel === 'low' ? 'bg-slate-100 text-slate-600' : 'bg-emerald-100 text-emerald-700';
-const riskHeaderLabel = riskLevel === 'none' ? 'ঝুঁকিমুক্ত' : riskLevel.toUpperCase() + ' ঝুঁকি';
+const riskHeaderLabel = riskLevel === 'none' ? t("aud_risk_free") : riskLevel.toUpperCase() + t("aud_risk_suffix");
 
-const loginHistRows = ((deviceOverview && deviceOverview.recentLogins) || []).map(loginHistRow).join('') || '<tr><td colspan="3" class="px-4 py-6 text-center text-slate-400 text-xs">কোনো লগইন রেকর্ড নেই</td></tr>';
-const deviceSessRows = ((deviceOverview && deviceOverview.activeSessions) || []).map(deviceSessRow).join('') || '<tr><td colspan="3" class="px-4 py-6 text-center text-slate-400 text-xs">কোনো সক্রিয় ডিভাইস নেই</td></tr>';
-const banLabel = u.is_banned ? 'Unban ইউজার' : 'Ban ইউজার';
+const loginHistRows = ((deviceOverview && deviceOverview.recentLogins) || []).map(loginHistRow).join('') || '<tr><td colspan="3" class="px-4 py-6 text-center text-slate-400 text-xs">' + t("aud_no_login_records") + '</td></tr>';
+const deviceSessRows = ((deviceOverview && deviceOverview.activeSessions) || []).map(deviceSessRow).join('') || '<tr><td colspan="3" class="px-4 py-6 text-center text-slate-400 text-xs">' + t("aud_no_active_devices") + '</td></tr>';
+const banLabel = u.is_banned ? t("aud_unban") : t("aud_ban");
 const banColor = u.is_banned ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700';
 %>
 <%- include('partials/admin-layout', {
@@ -89,7 +89,7 @@ const banColor = u.is_banned ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-6
                 <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                     <div>
                         <h1 class="text-2xl font-bold text-slate-900">${escapeHtml(u.username)}</h1>
-                        <p class="text-slate-500 mt-1 text-sm">#${u.id} • ${escapeHtml(u.email || u.phone || 'যোগাযোগের তথ্য নেই')}</p>
+                        <p class="text-slate-500 mt-1 text-sm">#${u.id} • ${escapeHtml(u.email || u.phone || t("aud_no_contact"))}</p>
                     </div>
                     <span class="px-4 py-2 rounded-2xl text-sm font-semibold ${u.is_banned ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}">
                         ${u.is_banned ? '🚫 Banned' : '✅ Active'}
@@ -103,26 +103,26 @@ const banColor = u.is_banned ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-6
     </div>
 
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div class="bg-white border border-slate-100 rounded-2xl p-5"><div class="text-slate-500 text-xs">বর্তমান কয়েন</div><div class="text-2xl font-bold mt-1 text-emerald-600">৳ ${Number(u.coins || 0).toLocaleString('en-US')}</div></div>
-        <div class="bg-white border border-slate-100 rounded-2xl p-5"><div class="text-slate-500 text-xs">মোট ডিপোজিট</div><div class="text-2xl font-bold mt-1">৳ ${Number(stats.totalDeposit || 0).toLocaleString('en-US')}</div></div>
-        <div class="bg-white border border-slate-100 rounded-2xl p-5"><div class="text-slate-500 text-xs">মোট বেট (${stats.betCount || 0})</div><div class="text-2xl font-bold mt-1">৳ ${Number(stats.totalBet || 0).toLocaleString('en-US')}</div></div>
-        <div class="bg-white border border-slate-100 rounded-2xl p-5"><div class="text-slate-500 text-xs">যোগ দিয়েছেন</div><div class="text-lg font-semibold mt-1">${fmtDate(u.created_at)}</div></div>
+        <div class="bg-white border border-slate-100 rounded-2xl p-5"><div class="text-slate-500 text-xs">${t('aud_current_coins')}</div><div class="text-2xl font-bold mt-1 text-emerald-600">৳ ${Number(u.coins || 0).toLocaleString('en-US')}</div></div>
+        <div class="bg-white border border-slate-100 rounded-2xl p-5"><div class="text-slate-500 text-xs">${t('psum_total_deposit')}</div><div class="text-2xl font-bold mt-1">৳ ${Number(stats.totalDeposit || 0).toLocaleString('en-US')}</div></div>
+        <div class="bg-white border border-slate-100 rounded-2xl p-5"><div class="text-slate-500 text-xs">${t('st_total_bets')} (${stats.betCount || 0})</div><div class="text-2xl font-bold mt-1">৳ ${Number(stats.totalBet || 0).toLocaleString('en-US')}</div></div>
+        <div class="bg-white border border-slate-100 rounded-2xl p-5"><div class="text-slate-500 text-xs">${t('aud_joined')}</div><div class="text-lg font-semibold mt-1">${fmtDate(u.created_at)}</div></div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2 space-y-6">
             <div class="bg-white border border-slate-100 rounded-3xl p-6">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="font-semibold text-slate-800"><i class="fas fa-user text-blue-500 mr-2"></i>প্রোফাইল তথ্য</h3>
-                    <button type="button" data-modal-open="editProfileModal" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100"><i class="fas fa-pen"></i> এডিট করুন</button>
+                    <h3 class="font-semibold text-slate-800"><i class="fas fa-user text-blue-500 mr-2"></i>${t('aud_profile_info')}</h3>
+                    <button type="button" data-modal-open="editProfileModal" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100"><i class="fas fa-pen"></i> ${t('hist_edit')} করুন</button>
                 </div>
                 <div class="grid grid-cols-2 gap-y-4 text-sm">
-                    <div><div class="text-slate-400 text-xs">পূর্ণ নাম</div><div class="font-medium mt-0.5">${escapeHtml(u.full_name || 'দেওয়া হয়নি')}</div></div>
-                    <div><div class="text-slate-400 text-xs">ফোন</div><div class="font-medium mt-0.5">${escapeHtml(u.phone || 'দেওয়া হয়নি')}</div></div>
-                    <div><div class="text-slate-400 text-xs">ইমেইল</div><div class="font-medium mt-0.5">${escapeHtml(u.email || 'দেওয়া হয়নি')} ${u.email ? (u.email_verified ? '<span class="text-emerald-600 text-xs">(ভেরিফায়েড)</span>' : '<span class="text-amber-600 text-xs">(অভেরিফায়েড)</span>') : ''}</div></div>
-                    <div><div class="text-slate-400 text-xs">রেফারেল</div><div class="font-medium mt-0.5">${referralCount} জনকে রেফার করেছেন</div></div>
-                    <div><div class="text-slate-400 text-xs">শেষ লগইন IP</div><div class="font-medium mt-0.5">${escapeHtml(u.last_ip || '-')}</div></div>
-                    <div><div class="text-slate-400 text-xs">KYC স্ট্যাটাস</div><div class="font-medium mt-0.5 capitalize">${escapeHtml(u.kyc_status || 'none')}</div></div>
+                    <div><div class="text-slate-400 text-xs">${t('aud_full_name')}</div><div class="font-medium mt-0.5">${escapeHtml(u.full_name || t("aud_not_provided"))}</div></div>
+                    <div><div class="text-slate-400 text-xs">${t('aud_phone')}</div><div class="font-medium mt-0.5">${escapeHtml(u.phone || t("aud_not_provided"))}</div></div>
+                    <div><div class="text-slate-400 text-xs">${t('aud_email')}</div><div class="font-medium mt-0.5">${escapeHtml(u.email || t("aud_not_provided"))} ${u.email ? (u.email_verified ? '<span class="text-emerald-600 text-xs">(ভেরিফায়েড)</span>' : '<span class="text-amber-600 text-xs">(' + t("aud_unverified") + ')</span>') : ''}</div></div>
+                    <div><div class="text-slate-400 text-xs">${t('aud_referral')}</div><div class="font-medium mt-0.5">${t('aud_referred_count').replace('{n}', referralCount)}</div></div>
+                    <div><div class="text-slate-400 text-xs">${t('aud_last_ip')}</div><div class="font-medium mt-0.5">${escapeHtml(u.last_ip || '-')}</div></div>
+                    <div><div class="text-slate-400 text-xs">${t('aud_kyc_status')}</div><div class="font-medium mt-0.5 capitalize">${escapeHtml(u.kyc_status || 'none')}</div></div>
                     <div>
                         <div class="text-slate-400 text-xs">Withdraw PIN</div>
                         <div class="font-medium mt-0.5">
@@ -137,31 +137,31 @@ const banColor = u.is_banned ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-6
             </div>
 
             <div class="bg-white border border-slate-100 rounded-3xl overflow-x-auto">
-                <h3 class="font-semibold text-slate-800 px-6 pt-6 pb-3"><i class="fas fa-dice text-purple-500 mr-2"></i>সাম্প্রতিক বেট</h3>
+                <h3 class="font-semibold text-slate-800 px-6 pt-6 pb-3"><i class="fas fa-dice text-purple-500 mr-2"></i>${t('aud_recent_bets')}</h3>
                 <table class="w-full"><tbody>${betsHtml}</tbody></table>
             </div>
 
             <div class="bg-white border border-slate-100 rounded-3xl overflow-x-auto">
-                <h3 class="font-semibold text-slate-800 px-6 pt-6 pb-3"><i class="fas fa-wallet text-emerald-500 mr-2"></i>পেমেন্ট হিস্ট্রি</h3>
+                <h3 class="font-semibold text-slate-800 px-6 pt-6 pb-3"><i class="fas fa-wallet text-emerald-500 mr-2"></i>${t('aud_payment_history')}</h3>
                 <table class="w-full"><tbody>${paymentsHtml}</tbody></table>
             </div>
 
             ${(sameIp && sameIp.length) ? `
             <div class="bg-white border border-amber-200 rounded-3xl overflow-hidden">
-                <h3 class="font-semibold text-amber-700 px-6 pt-6 pb-3"><i class="fas fa-exclamation-triangle mr-2"></i>একই IP-তে অন্য অ্যাকাউন্ট (${sameIp.length})</h3>
+                <h3 class="font-semibold text-amber-700 px-6 pt-6 pb-3"><i class="fas fa-exclamation-triangle mr-2"></i>${t('aud_same_ip_accounts')} (${sameIp.length})</h3>
                 <div>${sameIpHtml}</div>
             </div>` : ''}
 
             <div class="bg-white border border-slate-100 rounded-3xl overflow-hidden">
                 <div class="flex items-center justify-between px-6 pt-6 pb-3">
-                    <h3 class="font-semibold text-slate-800"><i class="fas fa-shield-halved text-red-500 mr-2"></i>ফ্রড ফ্ল্যাগ (${(fraudStatus && fraudStatus.flags && fraudStatus.flags.length) || 0})</h3>
-                    <a href="/admin/fraud-logs?user_id=${u.id}" class="text-xs text-blue-600 hover:underline">সব লগ দেখুন →</a>
+                    <h3 class="font-semibold text-slate-800"><i class="fas fa-shield-halved text-red-500 mr-2"></i>${t('aud_fraud_flags')} (${(fraudStatus && fraudStatus.flags && fraudStatus.flags.length) || 0})</h3>
+                    <a href="/admin/fraud-logs?user_id=${u.id}" class="text-xs text-blue-600 hover:underline">${t('aud_all_logs')} →</a>
                 </div>
                 <div>${fraudFlagsHtml}</div>
             </div>
 
             <div class="bg-white border border-slate-100 rounded-3xl overflow-hidden">
-                <h3 class="font-semibold text-slate-800 px-6 pt-6 pb-3"><i class="fas fa-mobile-screen-button text-indigo-500 mr-2"></i>সক্রিয় ডিভাইস (${(deviceOverview && deviceOverview.activeSessions && deviceOverview.activeSessions.length) || 0})</h3>
+                <h3 class="font-semibold text-slate-800 px-6 pt-6 pb-3"><i class="fas fa-mobile-screen-button text-indigo-500 mr-2"></i>${t('aud_active_devices')} (${(deviceOverview && deviceOverview.activeSessions && deviceOverview.activeSessions.length) || 0})</h3>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead><tr class="bg-slate-50 border-b border-slate-100">
@@ -175,7 +175,7 @@ const banColor = u.is_banned ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-6
             </div>
 
             <div class="bg-white border border-slate-100 rounded-3xl overflow-hidden">
-                <h3 class="font-semibold text-slate-800 px-6 pt-6 pb-3"><i class="fas fa-clock-rotate-left text-indigo-500 mr-2"></i>সাম্প্রতিক লগইন হিস্ট্রি</h3>
+                <h3 class="font-semibold text-slate-800 px-6 pt-6 pb-3"><i class="fas fa-clock-rotate-left text-indigo-500 mr-2"></i>${t('aud_login_history')}</h3>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead><tr class="bg-slate-50 border-b border-slate-100">
@@ -190,33 +190,33 @@ const banColor = u.is_banned ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-6
         </div>
 
         <div class="bg-white border border-slate-100 rounded-3xl p-6 h-fit">
-            <h3 class="font-semibold text-slate-800 mb-4"><i class="fas fa-bolt text-amber-500 mr-2"></i>দ্রুত অ্যাকশন</h3>
+            <h3 class="font-semibold text-slate-800 mb-4"><i class="fas fa-bolt text-amber-500 mr-2"></i>${t('aud_quick_actions')}</h3>
             <div class="space-y-3">
                 <form method="POST" action="/admin/users/${u.id}/coins/add" class="flex gap-2">
-                    <input type="number" name="amount" placeholder="পরিমাণ" required class="flex-1 border px-3 py-2.5 rounded-xl text-sm">
-                    <button type="submit" class="px-4 bg-emerald-600 text-white rounded-xl text-sm font-semibold">+ যোগ</button>
+                    <input type="number" name="amount" placeholder="${t('dep_col_amount')}" required class="flex-1 border px-3 py-2.5 rounded-xl text-sm">
+                    <button type="submit" class="px-4 bg-emerald-600 text-white rounded-xl text-sm font-semibold">+ ${t('aud_add')}</button>
                 </form>
                 <form method="POST" action="/admin/users/${u.id}/coins/remove" class="flex gap-2">
-                    <input type="number" name="amount" placeholder="পরিমাণ" required class="flex-1 border px-3 py-2.5 rounded-xl text-sm">
-                    <button type="submit" class="px-4 bg-orange-500 text-white rounded-xl text-sm font-semibold">− কমান</button>
+                    <input type="number" name="amount" placeholder="${t('dep_col_amount')}" required class="flex-1 border px-3 py-2.5 rounded-xl text-sm">
+                    <button type="submit" class="px-4 bg-orange-500 text-white rounded-xl text-sm font-semibold">− ${t('aud_subtract')}</button>
                 </form>
                 <form method="POST" action="/admin/users/${u.id}/freebet" class="flex gap-2">
-                    <input type="number" name="amount" placeholder="ফ্রি বেট (৳)" required class="flex-1 border px-3 py-2.5 rounded-xl text-sm">
+                    <input type="number" name="amount" placeholder="${t('aud_free_bet')}" required class="flex-1 border px-3 py-2.5 rounded-xl text-sm">
                     <button type="submit" class="px-4 bg-blue-600 text-white rounded-xl text-sm font-semibold">🎁</button>
                 </form>
-                <form method="POST" action="/admin/users/${u.id}/ban" data-confirm="${banLabel} করবেন?">
+                <form method="POST" action="/admin/users/${u.id}/ban" data-confirm="${banLabel} ${t('aud_confirm_suffix')}">
                     <button type="submit" class="w-full py-3 rounded-2xl font-medium text-white ${banColor}">
                         <i class="fas fa-ban mr-1.5"></i>${banLabel}
                     </button>
                 </form>
-                <form method="POST" action="/admin/users/${u.id}/withdraw-pin/reset" data-confirm="এই ইউজারের Withdraw PIN রিসেট করবেন? ইউজারকে আবার নতুন PIN সেট করতে হবে।">
+                <form method="POST" action="/admin/users/${u.id}/withdraw-pin/reset" data-confirm="${t('aud_pin_reset_confirm')}">
                     <button type="submit" class="w-full py-3 rounded-2xl font-medium text-white bg-purple-600 hover:bg-purple-700">
-                        <i class="fas fa-key mr-1.5"></i>Withdraw PIN রিসেট করুন
+                        <i class="fas fa-key mr-1.5"></i>${t('aud_pin_reset')}
                     </button>
                 </form>
-                <form method="POST" action="/admin/users/${u.id}/delete" data-confirm="এই ইউজার স্থায়ীভাবে ডিলিট করবেন? এটা আর ফেরত আনা যাবে না!">
+                <form method="POST" action="/admin/users/${u.id}/delete" data-confirm="${t('aud_delete_confirm')}">
                     <button type="submit" class="w-full py-3 rounded-2xl font-medium text-red-600 bg-red-50 hover:bg-red-100">
-                        <i class="fas fa-trash mr-1.5"></i>ইউজার ডিলিট করুন
+                        <i class="fas fa-trash mr-1.5"></i>${t('aud_delete_user')}
                     </button>
                 </form>
             </div>
@@ -225,28 +225,28 @@ const banColor = u.is_banned ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-6
 </div>
 
 <div class="modal-overlay" id="editProfileModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:100;padding:16px;">
-    <div style="background:#fff;border-radius:20px;width:100%;max-width:420px;">
+    <div class="js2">
         <div style="padding:16px 20px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
-            <h3 style="font-weight:700;font-size:14px;margin:0;">প্রোফাইল তথ্য এডিট করুন</h3>
+            <h3 style="font-weight:700;font-size:14px;margin:0;">${t('aud_edit_profile')}</h3>
             <button type="button" data-modal-close="editProfileModal" style="background:none;border:none;cursor:pointer;color:#64748b;"><i class="fas fa-times"></i></button>
         </div>
         <form method="POST" action="/admin/users/${u.id}/edit-profile" style="padding:20px;">
             <div style="margin-bottom:14px;">
-                <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:5px;">ইউজারনেম</label>
-                <input type="text" name="username" value="${escapeHtml(u.username || '')}" required pattern="[A-Za-z0-9_.]{3,20}" title="৩-২০ ক্যারেক্টার, শুধু লেটার/সংখ্যা/আন্ডারস্কোর/ডট" style="width:100%;border:1px solid #e2e8f0;padding:10px 12px;border-radius:10px;font-size:13px;">
+                <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:5px;">${t('aud_username')}</label>
+                <input type="text" name="username" value="${escapeHtml(u.username || '')}" required pattern="[A-Za-z0-9_.]{3,20}" title="${t('aud_username_title')}" style="width:100%;border:1px solid #e2e8f0;padding:10px 12px;border-radius:10px;font-size:13px;">
             </div>
             <div style="margin-bottom:14px;">
-                <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:5px;">ইমেইল</label>
+                <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:5px;">${t('aud_email')}</label>
                 <input type="email" name="email" value="${escapeHtml(u.email || '')}" style="width:100%;border:1px solid #e2e8f0;padding:10px 12px;border-radius:10px;font-size:13px;">
-                <p style="font-size:11px;color:#f59e0b;margin:5px 0 0;">ইমেইল বদলালে সেটা আবার অভেরিফায়েড (unverified) হয়ে যাবে — ইউজারকে নতুন করে ভেরিফাই করতে হবে।</p>
+                <p style="font-size:11px;color:#f59e0b;margin:5px 0 0;">${t('aud_email_warning')}</p>
             </div>
             <div style="margin-bottom:16px;">
-                <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:5px;">ফোন</label>
-                <input type="text" name="phone" value="${escapeHtml(u.phone || '')}" pattern="[0-9+\\-\\s]{6,20}" title="৬-২০ ক্যারেক্টার, সংখ্যা/+/-" style="width:100%;border:1px solid #e2e8f0;padding:10px 12px;border-radius:10px;font-size:13px;">
+                <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:5px;">${t('aud_phone')}</label>
+                <input type="text" name="phone" value="${escapeHtml(u.phone || '')}" pattern="[0-9+\\-\\s]{6,20}" title="${t('aud_phone_title')}" style="width:100%;border:1px solid #e2e8f0;padding:10px 12px;border-radius:10px;font-size:13px;">
             </div>
-            <div style="display:flex;gap:8px;justify-content:flex-end;">
-                <button type="button" data-modal-close="editProfileModal" style="padding:9px 16px;border-radius:10px;font-size:12px;font-weight:700;background:#f1f5f9;border:none;cursor:pointer;">বাতিল</button>
-                <button type="submit" style="padding:9px 16px;border-radius:10px;font-size:12px;font-weight:700;background:#2563eb;color:#fff;border:none;cursor:pointer;">সেভ করুন</button>
+            <div class="js3">
+                <button type="button" data-modal-close="editProfileModal" style="padding:9px 16px;border-radius:10px;font-size:12px;font-weight:700;background:#f1f5f9;border:none;cursor:pointer;">${t('dep_reject')}</button>
+                <button type="submit" style="padding:9px 16px;border-radius:10px;font-size:12px;font-weight:700;background:#2563eb;color:#fff;border:none;cursor:pointer;">${t('aud_save')}</button>
             </div>
         </form>
     </div>

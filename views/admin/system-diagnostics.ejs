@@ -1,3 +1,9 @@
+<style nonce="<%= cspNonce %>">
+  /* Runtime-generated markup: these inline styles live in JS strings, so
+     cascade-check cannot see them. Migrated only where no rule in the site
+     CSS can set the same longhand on this tag/class at all. */
+  .js1.js1.js1 { width: ' + c.usedPercent + '%; }
+</style>
 <%
 function escapeHtml(str) {
   return String(str == null ? '' : str)
@@ -18,11 +24,11 @@ function statusLabel(status) {
   return 'Error';
 }
 function serviceCard(label, icon, c) {
-  if (!c) c = { status: 'error', message: 'ডেটা নেই' };
+  if (!c) c = { status: 'error', message: t('asd_no_data') };
   const col = statusColor(c.status);
   let extra = '';
   if (typeof c.usedPercent === 'number') {
-    extra = '<div class="mt-3 w-full bg-slate-100 rounded-full h-2 overflow-hidden"><div class="h-2 rounded-full ' + col.dot + '" style="width:' + c.usedPercent + '%"></div></div>';
+    extra = '<div class="mt-3 w-full bg-slate-100 rounded-full h-2 overflow-hidden"><div class="h-2 rounded-full ' + col.dot + ' js1"></div></div>';
   }
   return '<div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">' +
     '<div class="flex items-center justify-between mb-3">' +
@@ -54,11 +60,11 @@ var overallCol = data ? statusColor(data.overall) : statusColor('error');
     <div class="flex items-center justify-between flex-wrap gap-3">
         <div>
             <h2 class="text-2xl font-semibold text-slate-900">Server Health</h2>
-            <p class="text-slate-500 mt-1 text-sm">ডাটাবেজ, রেডিস, কিউ, ইমেইল, ডিস্ক ও মেমরির রিয়েল-টাইম স্বাস্থ্য</p>
+            <p class="text-slate-500 mt-1 text-sm">${t('asd_subtitle')}</p>
         </div>
         <div class="flex items-center gap-3 flex-wrap">
             ${data ? `<span class="px-4 py-2 rounded-2xl text-sm font-bold ${overallCol.badge}"><i class="fas ${overallCol.icon}"></i> Overall: ${statusLabel(data.overall)}</span>` : ''}
-            <a href="/admin/system-diagnostics" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-sm font-semibold"><i class="fas fa-rotate-right"></i> রিফ্রেশ</a>
+            <a href="/admin/system-diagnostics" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-sm font-semibold"><i class="fas fa-rotate-right"></i> ${t('asd_refresh')}</a>
             <a href="/health" target="_blank" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-sm font-semibold"><i class="fas fa-arrow-up-right-from-square"></i> /health JSON</a>
         </div>
     </div>
@@ -80,10 +86,10 @@ var overallCol = data ? statusColor(data.overall) : statusColor('error');
             <p class="text-sm font-bold text-slate-800">Uptime</p>
         </div>
         <p class="text-lg font-mono text-slate-700">${escapeHtml((checks.uptime && checks.uptime.message) || '—')}</p>
-        <p class="text-xs text-slate-400 mt-1">সার্ভার চালু হয়েছে: ${checks.uptime && checks.uptime.startedAt ? new Date(checks.uptime.startedAt).toLocaleString('bn-BD') : '—'}</p>
+        <p class="text-xs text-slate-400 mt-1">${t('asd_started_at')} ${checks.uptime && checks.uptime.startedAt ? new Date(checks.uptime.startedAt).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') : '—'}</p>
     </div>
 
-    <p class="text-xs text-slate-400 text-center">সর্বশেষ চেক: ${data && data.timestamp ? new Date(data.timestamp).toLocaleString('bn-BD') : '—'}</p>
+    <p class="text-xs text-slate-400 text-center">${t('asd_last_check')} ${data && data.timestamp ? new Date(data.timestamp).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') : '—'}</p>
 </div>
 `
 }) %>
