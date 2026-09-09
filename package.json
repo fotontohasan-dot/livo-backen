@@ -34,7 +34,7 @@
     "dotenv": "^16.0.3",
     "ejs": "^3.1.10",
     "exceljs": "^4.4.0",
-    "express": "^4.22.2",
+    "express": "^5.2.1",
     "express-rate-limit": "^7.4.1",
     "express-session": "^1.17.3",
     "geoip-lite": "^2.0.3",
