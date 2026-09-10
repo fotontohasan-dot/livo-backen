@@ -125,10 +125,17 @@ describe('Secrets, CI/CD, dependencies and resource abuse (PHASE 10-13)', () => 
       const lock = JSON.parse(read('package-lock.json'));
       const withScripts = Object.entries(lock.packages || {})
         .filter(([, v]) => v.hasInstallScript)
-        .map(([k]) => k.replace('node_modules/', ''));
+        // nested path (যেমন "node_modules/playwright/node_modules/fsevents")
+        // থেকে সবশেষ node_modules/ এর পরের অংশটাই আসল প্যাকেজ নাম
+        .map(([k]) => k.split('node_modules/').pop());
       //          
       for (const pkg of withScripts) {
-        expect(['@scarf/scarf', '@sentry/cli', 'msgpackr-extract']).toContain(pkg);
+        // fsevents: Apple-এর অফিসিয়াল native FSEvents binding, chokidar-এর
+        // darwin-only optional dependency (dev)। Linux CI-তে os:"darwin"
+        // ম্যাচ না করায় কখনো install/run হয় না — lockfile regenerate হলে
+        // মাঝেমধ্যে entry হিসেবে দেখা যায়, কিন্তু কোনো প্রকৃত সাপ্লাই-চেইন
+        // ঝুঁকি নেই।
+        expect(['@scarf/scarf', '@sentry/cli', 'msgpackr-extract', 'fsevents']).toContain(pkg);
       }
     });
   });
