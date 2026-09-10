@@ -136,9 +136,15 @@
       .catch(function () {
         if (seq !== refreshSeq) return;
         var errBox = document.getElementById('methodError');
+        var emptyBox = document.getElementById('methodEmpty');
         // আগের তালিকা থাকলে সেটাই রাখা হয় — একটা ব্যর্থ রিফ্রেশে ইউজারের
         // স্ক্রিন খালি করে দেওয়ার দরকার নেই।
-        if (errBox && !activeMethods.length) errBox.classList.remove('hidden');
+        if (errBox && !activeMethods.length) {
+          errBox.classList.remove('hidden');
+          // "কোনো মেথড নেই" আর "লোড ব্যর্থ" — দুটো বার্তা একসাথে দেখানো
+          // যাবে না, তাই error দেখানোর সময় empty অবশ্যই লুকাতে হবে।
+          if (emptyBox) emptyBox.classList.add('hidden');
+        }
       })
       .finally(function () {
         if (seq === refreshSeq && loading) loading.classList.add('hidden');
