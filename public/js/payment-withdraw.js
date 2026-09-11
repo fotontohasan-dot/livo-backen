@@ -39,6 +39,10 @@
 
     document.querySelectorAll('[data-sync-wallet]').forEach(function (el) {
       el.addEventListener('change', syncWallet);
+      // পেজ লোডেই প্রথম ওয়ালেট আগে থেকে সিলেক্ট করা থাকে (views/payment/withdraw.ejs),
+      // কিন্তু 'change' ইভেন্ট তখন ফায়ার হয় না — তাই hidden method/account_number
+      // ফিল্ড খালি থেকে যেত যতক্ষণ না ইউজার নিজে ম্যানুয়ালি dropdown বদলাত।
+      syncWallet();
     });
 
     document.querySelectorAll('[data-reveal-field]').forEach(function (btn) {

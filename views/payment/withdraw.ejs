@@ -223,8 +223,8 @@
           <div>
             <label class="block text-main font-bold mb-2"><%= t.select_ewallet %></label>
             <select id="walletSelect" class="w-full p-4 border-2 border-glass rounded-xl focus:outline-none bg-surface text-main font-bold" required data-sync-wallet>
-              <option value="" disabled selected><%= t.choose_linked_wallet %></option>
-              <% cards.forEach(c => {
+              <option value="" disabled><%= t.choose_linked_wallet %></option>
+              <% cards.forEach((c, i) => {
                    const bn = (c.bank_name || '').toLowerCase();
                    let methodCode = 'bank';
                    if (bn.includes('bkash')) methodCode = 'bkash';
@@ -232,7 +232,7 @@
                    else if (bn.includes('rocket')) methodCode = 'rocket';
                    else if (bn.includes('upay')) methodCode = 'upay';
               %>
-                <option value="<%= c.id %>" data-method="<%= methodCode %>" data-number="<%= c.account_number %>">
+                <option value="<%= c.id %>" data-method="<%= methodCode %>" data-number="<%= c.account_number %>" <%= i === 0 ? 'selected' : '' %>>
                   <%= c.bank_name %> — <%= c.account_number %>
                 </option>
               <% }) %>
