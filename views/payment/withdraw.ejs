@@ -80,12 +80,20 @@
     </div>
   </div>
 
-  <!-- Sub Header / Tab -->
-  <div class="bg-surface py-3 flex justify-center items-center gap-2 border-b-2 border-red-600 mb-4">
-    <div class="w-8 h-8 bg-pink-600 rounded-lg flex items-center justify-center text-white text-xs">
-        <i class="fas fa-wallet"></i>
-    </div>
-    <span class="text-red-600 font-bold">E wallet</span>
+  <!-- Sub Header / Tabs -->
+  <div class="bg-surface flex items-stretch border-b-2 border-red-600 mb-4 sticky top-[60px] z-40">
+    <button type="button" class="flex-1 py-3 flex justify-center items-center gap-2 border-b-2 border-red-600 -mb-[2px]">
+        <div class="w-8 h-8 bg-pink-600 rounded-lg flex items-center justify-center text-white text-xs">
+            <i class="fas fa-wallet"></i>
+        </div>
+        <span class="text-red-600 font-bold">E wallet</span>
+    </button>
+    <button type="button" class="flex-1 py-3 flex justify-center items-center gap-2 text-muted">
+        <div class="w-8 h-8 bg-yellow-500 rounded-lg flex items-center justify-center text-white text-xs">
+            <i class="fab fa-bitcoin"></i>
+        </div>
+        <span class="font-bold">Crypto Wallet</span>
+    </button>
   </div>
 
   <!-- FAB Add -->
@@ -95,25 +103,25 @@
 
   <div class="px-4">
 
-    <!-- Bound Wallet Section -->
-    <div class="mb-6">
-        <h2 class="text-muted font-bold mb-4"><%= t.linked_ewallet_count %> (<%= cards ? cards.length : 0 %>/5)</h2>
+    <!-- Bound Wallet Section (enlarged) -->
+    <div class="mb-8 bg-surface rounded-2xl p-6 border border-glass shadow-sm">
+        <h2 class="text-muted font-bold mb-5 text-base"><%= t.linked_ewallet_count %> (<%= cards ? cards.length : 0 %>/5)</h2>
 
         <% if (cards && cards.length > 0) { %>
-            <div class="space-y-3">
+            <div class="space-y-4">
                 <% cards.forEach(c => { %>
-                    <div class="bg-surface rounded-xl p-4 border border-glass flex items-center justify-between shadow-sm">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center text-red-600">
+                    <div class="bg-surface rounded-xl p-5 border border-glass flex items-center justify-between shadow-sm">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-red-50 rounded-lg flex items-center justify-center text-red-600 text-lg">
                                 <i class="fas fa-university"></i>
                             </div>
                             <div>
-                                <p class="font-bold text-sm text-main"><%= c.bank_name %></p>
-                                <p class="text-xs text-muted"><%= c.account_number %></p>
+                                <p class="font-bold text-base text-main"><%= c.bank_name %></p>
+                                <p class="text-sm text-muted"><%= c.account_number %></p>
                             </div>
                         </div>
                         <form action="/profile/cards/delete/<%= c.id %>" method="POST" data-confirm="<%= t('wd_confirm_delete') %>">
-                            <button type="submit" class="delete-btn">
+                            <button type="submit" class="delete-btn text-xl">
                                 <i class="far fa-times-circle"></i>
                             </button>
                         </form>
@@ -121,29 +129,32 @@
                 <% }) %>
             </div>
         <% } else { %>
-            <div class="flex flex-col items-center py-8">
-                <img src="https://img.icons8.com/illustrations/64/credit-card.png" class="opacity-20 mb-2" alt="empty">
+            <div class="flex flex-col items-center py-10">
+                <img src="https://img.icons8.com/illustrations/64/credit-card.png" class="opacity-20 mb-3" alt="empty">
                 <p class="text-gray-400 font-bold"><%= t.empty_ewallet %></p>
             </div>
         <% } %>
+
+        <!-- Balance / Refresh (moved inside E-wallet section, centered & prominent) -->
+        <div class="mt-6 pt-6 border-t border-glass text-center">
+            <div class="text-muted space-y-1 mb-4">
+                <p><%= t.daily_withdraw_limit %></p>
+                <p><%= t.main_wallet_label %>৳ <%= (coins || 0).toFixed(2) %></p>
+                <p><%= t.available_amount_label %> ৳ <%= (coins || 0).toFixed(2) %></p>
+            </div>
+            <div class="flex flex-col items-center">
+                <button data-reload class="w-full max-w-xs py-4 bg-blue-100 text-blue-600 rounded-full font-bold flex items-center justify-center gap-2 text-lg">
+                    <i class="fas fa-sync-alt"></i> <%= t.refresh_your_balance %>
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- Instructions Section -->
     <div class="text-[13px] text-main leading-snug mb-6">
-        <p class="text-muted mb-2"><%= t.withdrawal_time_24h %></p>
         <p class="font-bold mb-1"><%= t.dear_member_greeting %></p>
         <p class="font-bold mb-2"><%= t.your_word %><span class="red-theme-text uppercase"><%= siteName %></span> <%= t.withdraw_wallet_check_notice %></p>
         <p class="font-bold mb-4"><%= t.withdraw_double_check %></p>
-
-        <div class="text-muted space-y-1">
-            <p><%= t.daily_withdraw_limit %></p>
-            <p><%= t.main_wallet_label %>৳ <%= (coins || 0).toFixed(2) %></p>
-            <p><%= t.available_amount_label %> ৳ <%= (coins || 0).toFixed(2) %></p>
-        </div>
-
-        <button data-reload class="w-full mt-4 py-2.5 bg-blue-100 text-blue-600 rounded-full font-bold flex items-center justify-center gap-2 text-sm">
-            <i class="fas fa-sync-alt"></i> <%= t.refresh_your_balance %>
-        </button>
     </div>
 
     <% var locked = (typeof withdrawLock !== 'undefined') && withdrawLock && withdrawLock.allowed === false; %>
@@ -194,16 +205,27 @@
       var ww = locals.withdrawalWindow || { open: true };
       var windowClosed = ww.open === false;
     %>
+    <%
+      // 23:00–07:00 সময়সূচি সতর্কতা বার্তাটি শুধু তখনই দেখানো হয় যখন
+      // windowClosed সত্যিই true (অর্থাৎ এডমিন প্যানেল থেকে override
+      // "Force open" না থাকলে এবং প্রকৃত সময়সূচি অনুযায়ী উইথড্র বন্ধ থাকলে)।
+      // এডমিন "Force open" চালু রাখলে windowClosed false থাকবে, তাই বার্তাটি
+      // স্বয়ংক্রিয়ভাবে হাইড থাকবে — কিন্তু লক সত্যিই সক্রিয় হলে ইউজার
+      // সবসময় সঠিক বার্তা দেখবে, কখনও প্রতারিত হবে না।
+    %>
     <% if (windowClosed) { %>
-      <div class="mx-4 mb-4 rounded-2xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm text-amber-200" role="status">
-        <div class="font-bold mb-1">
-          <i class="fas fa-clock"></i> <%= t.withdraw_window_status_closed %>
+      <div class="rounded-xl p-4 mb-6 dz94-1">
+        <div class="flex items-center gap-2 mb-2">
+          <i class="fas fa-clock red-theme-text"></i>
+          <span class="font-bold red-theme-text"><%= t.withdrawal_currently_locked %></span>
         </div>
-        <% if (ww.reason === 'scheduled_closed') { %>
-          <%= t.withdraw_window_closed_scheduled.replace('{start}', ww.start).replace('{end}', ww.end) %>
-        <% } else { %>
-          <%= t.withdraw_window_closed_manual %>
-        <% } %>
+        <p class="text-sm text-main">
+          <% if (ww.reason === 'scheduled_closed') { %>
+            <%= t.withdraw_window_closed_scheduled.replace('{start}', ww.start).replace('{end}', ww.end) %>
+          <% } else { %>
+            <%= t.withdraw_window_closed_manual %>
+          <% } %>
+        </p>
       </div>
     <% } %>
 
@@ -255,12 +277,14 @@
           </div>
         </div>
 
-        <div class="relative">
-            <span class="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-main"><%= t.password %></span>
-            <input type="password" id="secPassword" name="password" placeholder="<%= t.password %>" class="input-field pl-24 text-right" required>
-            <button type="button" data-reveal-field="secPassword" data-reveal-icon="eyeIcon" class="absolute right-4 top-1/2 -translate-y-1/2 text-muted">
-                <i class="fas fa-eye-slash" id="eyeIcon"></i>
-            </button>
+        <div>
+          <label class="block text-main font-bold mb-2"><%= t.password %></label>
+          <div class="relative">
+              <input type="password" id="secPassword" name="password" placeholder="<%= t.password %>" class="input-field pr-12 text-right" required>
+              <button type="button" data-reveal-field="secPassword" data-reveal-icon="eyeIcon" class="absolute right-4 top-1/2 -translate-y-1/2 text-muted">
+                  <i class="fas fa-eye-slash" id="eyeIcon"></i>
+              </button>
+          </div>
         </div>
 
         <div>
@@ -274,9 +298,11 @@
           <p class="text-muted text-xs mt-2"><i class="fas fa-info-circle"></i> <%= t.withdraw_pin_verify_notice %></p>
         </div>
 
-        <button type="submit" id="withdrawSubmitBtn" <%= (!cards || cards.length === 0 || formGated) ? 'disabled' : '' %> class="w-full red-theme-bg text-white py-4 rounded-lg font-bold text-lg mt-6 shadow-lg active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
-            <%= locked ? t('wd_complete_turnover') : t('wd_submit') %>
-        </button>
+        <div class="flex justify-center mt-8">
+          <button type="submit" id="withdrawSubmitBtn" <%= (!cards || cards.length === 0 || formGated) ? 'disabled' : '' %> class="w-full max-w-sm red-theme-bg text-white py-6 rounded-full font-bold text-2xl shadow-lg active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+              <%= locked ? t('wd_complete_turnover') : t('wd_submit') %>
+          </button>
+        </div>
       </fieldset>
     </form>
   </div>
