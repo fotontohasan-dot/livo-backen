@@ -520,7 +520,7 @@
   "payment_channel": "Payment Channel",
   "fast_amount": "Quick Amount",
   "with_bonus_turnover": "With bonus (turnover applies)",
-  "deposit_manually_next": "Deposit manually (Next)",
+  "deposit_manually_next": "Deposit",
   "send_money_to_number": "Send money to this number:",
   "transaction_id": "Transaction ID",
   "your_sending_number": "Your number (the one you sent from)",

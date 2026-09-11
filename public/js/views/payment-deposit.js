@@ -101,6 +101,16 @@
     updateStep2();
   }
 
+  // অ্যামাউন্ট বৈধ কিনা (১০০–৫০,০০০ টাকা) — সিলেক্ট করা প্রিসেট এবং সরাসরি
+  // টাইপ করা মান দুটোর জন্যই এই একই ফাংশন ব্যবহার হয়, যাতে বাটনের enable/
+  // disable অবস্থা সবসময় প্রকৃত ইনপুটের সাথে সিঙ্ক থাকে।
+  function isAmountValid() {
+    var input = document.getElementById('amountInput');
+    if (!input) return false;
+    var amt = parseFloat(input.value);
+    return !isNaN(amt) && amt >= 100 && amt <= 50000;
+  }
+
   function updateStep2() {
     var acc = currentAccount();
     var numEl = document.getElementById('displayNumber');
@@ -110,7 +120,10 @@
     if (numEl) numEl.textContent = acc ? acc.accountNumber : '—';
     if (nameEl) nameEl.textContent = acc ? ((PM_META[acc.method] || {}).label || acc.method) : '—';
     if (submitBtn) submitBtn.disabled = !acc;
-    if (nextBtn) nextBtn.disabled = !acc;
+    // Next বাটন শুধু পেমেন্ট মেথড সিলেক্ট থাকলেই না, অ্যামাউন্ট বৈধ থাকলেও
+    // enable হবে — আগে এটা শুধু মেথডের উপর নির্ভর করত, তাই অ্যামাউন্ট
+    // টাইপ/সিলেক্ট করার পরও অনেক সময় বাটন সঠিকভাবে সাড়া দিত না।
+    if (nextBtn) nextBtn.disabled = !acc || !isAmountValid();
     // অ্যাডমিন নম্বরটা মুছে/নিষ্ক্রিয় করে দিলে ইউজার যেন আর ওই নম্বরের
     // স্ক্রিনে বসে না থাকেন — ধাপ ১-এ ফিরিয়ে আনা হয়।
     if (!acc) {
@@ -164,13 +177,25 @@
       b.classList.remove('selected');
     });
     el.classList.add('selected');
+    updateStep2();
+  }
+
+  // ইউজার ইনপুট বক্সে সরাসরি টাইপ করলে: (১) কোনো প্রিসেট বাটনের মান মিলে গেলে
+  // সেটাকে "selected" দেখানো, না মিললে সব প্রিসেট থেকে selected তুলে দেওয়া,
+  // (২) Next বাটনের enable/disable অবস্থা সাথে সাথে আপডেট করা।
+  function syncAmountUI() {
+    var input = document.getElementById('amountInput');
+    var typed = input ? String(parseInt(input.value, 10)) : '';
+    document.querySelectorAll('.amount-btn').forEach(function (b) {
+      b.classList.toggle('selected', b.getAttribute('data-amt') === typed);
+    });
+    updateStep2();
   }
 
   function goToStep2() {
     if (!currentAccount()) { return; }
-    const amt = document.getElementById('amountInput').value;
-    if(!amt || amt < 100) {
-      alert('সর্বনিম্ন ১০০ টাকা জমা দিন');
+    if (!isAmountValid()) {
+      alert('অ্যামাউন্ট ১০০ থেকে ৫০,০০০ টাকার মধ্যে দিন');
       return;
     }
     document.getElementById('step1').style.display = 'none';
@@ -232,6 +257,21 @@
     document.querySelectorAll('.amount-btn').forEach(function(b){
       b.addEventListener('click', function(){ setAmount(parseInt(b.getAttribute('data-amt')), b); });
     });
+
+    var amtInput = document.getElementById('amountInput');
+    if (amtInput) {
+      amtInput.addEventListener('input', syncAmountUI);
+      // ইনপুট বক্সে থাকা অবস্থায় Enter চাপলে যেন পুরো ফর্ম (step 2-এর
+      // hidden required ফিল্ডসহ) সাবমিট হয়ে না যায় — তার বদলে "Next"
+      // ক্লিক করার মতোই আচরণ করবে।
+      amtInput.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter') {
+          ev.preventDefault();
+          goToStep2();
+        }
+      });
+    }
+
         var nb = document.getElementById('depNextBtn');
     if (nb) nb.addEventListener('click', goToStep2);
     document.querySelectorAll('.channel-btn').forEach(function(b){
