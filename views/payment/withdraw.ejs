@@ -219,7 +219,13 @@
           <i class="fas fa-clock red-theme-text"></i>
           <span class="font-bold red-theme-text"><%= t.withdrawal_currently_locked %></span>
         </div>
-        <p class="text-sm text-main"><%= t.withdraw_window_closed_notice %></p>
+        <p class="text-sm text-main">
+          <% if (ww.reason === 'scheduled_closed') { %>
+            <%= t.withdraw_window_closed_scheduled.replace('{start}', ww.start).replace('{end}', ww.end) %>
+          <% } else { %>
+            <%= t.withdraw_window_closed_manual %>
+          <% } %>
+        </p>
       </div>
     <% } %>
 
@@ -268,6 +274,16 @@
                 <span class="text-muted font-bold">৳</span>
             </div>
             <input type="number" name="amount" placeholder="<%= t.enter_amount %>" min="100" max="50000" class="w-full pl-10 p-4 border-2 border-glass rounded-xl focus:outline-none bg-surface text-lg font-bold text-red-600" required>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-main font-bold mb-2"><%= t.password %></label>
+          <div class="relative">
+              <input type="password" id="secPassword" name="password" placeholder="<%= t.password %>" class="input-field pr-12 text-right" required>
+              <button type="button" data-reveal-field="secPassword" data-reveal-icon="eyeIcon" class="absolute right-4 top-1/2 -translate-y-1/2 text-muted">
+                  <i class="fas fa-eye-slash" id="eyeIcon"></i>
+              </button>
           </div>
         </div>
 
