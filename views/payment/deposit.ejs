@@ -75,6 +75,25 @@
     background-color: rgba(230, 30, 38, 0.08) !important;
     box-shadow: 0 0 0 2px rgba(230, 30, 38, 0.25);
   }
+
+  /* অ্যামাউন্ট ইনপুট: টেক্সট মাঝখানে, স্পষ্ট রঙ/সাইজে দেখানোর জন্য */
+  #amountInput {
+    text-align: center;
+    color: var(--text-main) !important;
+    caret-color: #e61e26;
+    letter-spacing: 0.5px;
+  }
+  /* নাম্বার ইনপুটের ডিফল্ট স্পিনার (▲▼) সরিয়ে দেওয়া হলো — এটা মাঝের
+     টেক্সটকে ডান দিকে ঠেলে দিয়ে সেন্টার-অ্যালাইনমেন্ট নষ্ট করছিল এবং
+     কিছু ব্রাউজার/থিমে মানটা অস্পষ্ট করে ফেলছিল। */
+  #amountInput::-webkit-outer-spin-button,
+  #amountInput::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  #amountInput[type="number"] {
+    -moz-appearance: textfield;
+  }
 </style>
 
 <div class="min-h-screen pb-32 text-main">
@@ -135,7 +154,7 @@
             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <span class="text-muted font-bold text-lg">৳</span>
             </div>
-            <input type="number" name="amount" id="amountInput" value="200" placeholder="<%= t.amount_range_hint %>" min="100" max="50000" class="block w-full pl-10 pr-4 py-4 border-2 border-glass rounded-2xl text-lg font-bold text-main bg-surface focus:outline-none" required>
+            <input type="number" name="amount" id="amountInput" value="200" placeholder="<%= t.amount_range_hint %>" min="100" max="50000" class="block w-full pl-10 pr-10 py-4 border-2 border-glass rounded-2xl text-lg font-bold text-main bg-surface focus:outline-none" required>
           </div>
         </div>
 

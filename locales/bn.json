@@ -520,7 +520,7 @@
   "payment_channel": "পেমেন্ট চ্যানেল",
   "fast_amount": "অ্যামাউন্ট সিলেকশন (Fast Amount)",
   "with_bonus_turnover": "বোনাস সহ (টার্নওভার প্রযোজ্য)",
-  "deposit_manually_next": "ম্যানুয়ালি জমা দিন (Next)",
+  "deposit_manually_next": "জমা দিন",
   "send_money_to_number": "নিচের নম্বরে টাকা পাঠান:",
   "transaction_id": "ট্রানজেকশন আইডি",
   "your_sending_number": "আপনার নম্বর (যেটা থেকে পাঠিয়েছেন)",
