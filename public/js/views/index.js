@@ -185,6 +185,9 @@
     const c = document.getElementById('gameContainer');
     if (!c) return;
     c.innerHTML = '';
+    // গেম কার্ড/গ্রিড হোমপেজে আপাতত দেখানো হচ্ছে না — #gameContainer ভবিষ্যতের
+    // API কানেক্টিভিটির জন্য খালি রাখা হয়েছে। নিচের সব রেন্ডার লজিক বাইপাস।
+    return;
 
     const searchQ = document.getElementById('gameSearch') ? document.getElementById('gameSearch').value.toLowerCase() : '';
     const favs = getFavorites();
