@@ -24,6 +24,7 @@ const METHOD_KEYS = ['bkash', 'nagad', 'rocket', 'upay', 'bank', 'crypto'];
 const MOBILE_METHODS = new Set(['bkash', 'nagad', 'rocket', 'upay']);
 
 const STATUSES = ['active', 'inactive'];
+const ACCOUNT_TYPES = ['agent', 'personal'];
 
 const ACTIVE_CACHE_KEY = 'payment_methods:active';
 const ACTIVE_CACHE_TTL = 30; // সেকেন্ড — mutation-এ সঙ্গে সঙ্গে invalidate হয়
@@ -75,16 +76,17 @@ function invalidateActiveCache() {
 async function listActivePublic() {
   return cache.getOrSet(ACTIVE_CACHE_KEY, ACTIVE_CACHE_TTL, async () => {
     const r = await pool.query(
-      `SELECT id, method, account_number, account_name
+      `SELECT id, method, account_number, account_name, account_type
        FROM payment_methods
        WHERE status = 'active' AND deleted_at IS NULL
-       ORDER BY method ASC, id ASC`
+       ORDER BY account_type ASC, method ASC, id ASC`
     );
     return r.rows.map(row => ({
       id: row.id,
       method: row.method,
       accountNumber: row.account_number,
-      accountName: row.account_name || null
+      accountName: row.account_name || null,
+      accountType: row.account_type || 'personal'
     }));
   });
 }
@@ -96,7 +98,7 @@ async function listForAdmin({ method, status } = {}) {
   if (method && isValidMethod(method)) { params.push(method); where.push(`method = $${params.length}`); }
   if (status && STATUSES.includes(status)) { params.push(status); where.push(`status = $${params.length}`); }
   const r = await pool.query(
-    `SELECT id, method, account_number, account_name, status, created_at, updated_at
+    `SELECT id, method, account_number, account_name, account_type, status, created_at, updated_at
      FROM payment_methods WHERE ${where.join(' AND ')}
      ORDER BY method ASC, id ASC`,
     params
@@ -118,17 +120,18 @@ async function getById(id) {
 // সব ফাংশন explicit allowlist নেয় — req.body সরাসরি কখনো পাস করা হয় না,
 // তাই created_by/updated_by/status/internal কলাম mass-assignment করা যায় না।
 
-async function create({ method, accountNumber, accountName, status }, adminId) {
+async function create({ method, accountNumber, accountName, status, accountType }, adminId) {
   if (!isValidMethod(method)) throw new PublicError('অবৈধ পেমেন্ট মেথড।');
   const normalized = normalizeAccountNumber(method, accountNumber);
   const finalStatus = STATUSES.includes(status) ? status : 'active';
+  const finalType = ACCOUNT_TYPES.includes(accountType) ? accountType : 'personal';
   const name = accountName ? String(accountName).trim().slice(0, 60) : null;
 
   try {
     const r = await pool.query(
-      `INSERT INTO payment_methods (method, account_number, account_name, status, created_by, updated_by)
-       VALUES ($1, $2, $3, $4, $5, $5) RETURNING *`,
-      [method, normalized, name, finalStatus, adminId || null]
+      `INSERT INTO payment_methods (method, account_number, account_name, status, account_type, created_by, updated_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $6) RETURNING *`,
+      [method, normalized, name, finalStatus, finalType, adminId || null]
     );
     await invalidateActiveCache();
     return r.rows[0];
@@ -138,7 +141,7 @@ async function create({ method, accountNumber, accountName, status }, adminId) {
   }
 }
 
-async function update(id, { method, accountNumber, accountName, status }, adminId) {
+async function update(id, { method, accountNumber, accountName, status, accountType }, adminId) {
   const existing = await getById(id);
   if (!existing) throw new PublicError('পেমেন্ট মেথড পাওয়া যায়নি।');
 
@@ -152,6 +155,9 @@ async function update(id, { method, accountNumber, accountName, status }, adminI
   const nextStatus = status === undefined ? existing.status : status;
   if (!STATUSES.includes(nextStatus)) throw new PublicError('অবৈধ স্ট্যাটাস।');
 
+  const nextType = accountType === undefined ? (existing.account_type || 'personal') : accountType;
+  if (!ACCOUNT_TYPES.includes(nextType)) throw new PublicError('অবৈধ অ্যাকাউন্ট ক্যাটাগরি।');
+
   const nextName = accountName === undefined
     ? existing.account_name
     : (accountName ? String(accountName).trim().slice(0, 60) : null);
@@ -160,9 +166,9 @@ async function update(id, { method, accountNumber, accountName, status }, adminI
     const r = await pool.query(
       `UPDATE payment_methods
        SET method = $1, account_number = $2, account_name = $3, status = $4,
-           updated_by = $5, updated_at = NOW()
-       WHERE id = $6 AND deleted_at IS NULL RETURNING *`,
-      [nextMethod, nextAccount, nextName, nextStatus, adminId || null, existing.id]
+           account_type = $5, updated_by = $6, updated_at = NOW()
+       WHERE id = $7 AND deleted_at IS NULL RETURNING *`,
+      [nextMethod, nextAccount, nextName, nextStatus, nextType, adminId || null, existing.id]
     );
     await invalidateActiveCache();
     return { before: existing, after: r.rows[0] };
@@ -202,6 +208,7 @@ module.exports = {
   METHOD_KEYS,
   MOBILE_METHODS,
   STATUSES,
+  ACCOUNT_TYPES,
   ACTIVE_CACHE_KEY,
   isValidMethod,
   normalizeAccountNumber,

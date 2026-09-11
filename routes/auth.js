@@ -252,10 +252,6 @@ router.post('/register', async (req, res) => {
       req.flash('error', req.t('auth_username_format_invalid'));
       return res.redirect('/register');
     }
-    if (!email && !phone) {
-      req.flash('error', req.t('auth_email_or_phone_required'));
-      return res.redirect('/register');
-    }
     if (email && !/^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+$/.test(email)) {
       req.flash('error', req.t('auth_email_format_invalid'));
       return res.redirect('/register');

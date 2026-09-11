@@ -193,6 +193,14 @@
           </form>
         <% } %>
       </div>
+
+      <% if (!emailStatus || !emailStatus.hasEmail) { %>
+        <form method="POST" action="/profile/add-email" class="ix71-21">
+          <input type="email" name="email" class="dz71-4 ix71-22" placeholder="<%= t('profile_add_email_placeholder') %>"
+                 autocomplete="email" required>
+          <button type="submit" class="btn btn-primary"><%= t('profile_add_email_btn') %></button>
+        </form>
+      <% } %>
     </div>
 
     <div class="ix71-7">
@@ -411,6 +419,8 @@
   .dz71-2 { color: var(--text-muted); font-size: 11px; margin-top: 3px; }
   .dz71-3 { flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s; }
   .dz71-4 { width: 100%; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 15px; color: var(--text-muted); font-size: 14px; }
+  .ix71-21 { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .ix71-22 { flex: 1; min-width: 200px; }
   .dz71-5 { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: var(--text-main); font-size: 14px; outline: none; }
   .dz71-6 { display: none; }
   .dz71-7 { color: var(--text-main); font-size: 14px; font-weight: 600; }

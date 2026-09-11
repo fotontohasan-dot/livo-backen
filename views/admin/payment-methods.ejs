@@ -74,6 +74,13 @@
                    inputmode="numeric" autocomplete="off" placeholder="01XXXXXXXXX" required>
           </div>
           <div class="pm-field">
+            <label for="pmAccountType"><%= t.account_type_label %></label>
+            <select class="pm-input" id="pmAccountType" name="account_type">
+              <option value="personal"><%= t.account_type_personal %></option>
+              <option value="agent"><%= t.account_type_agent %></option>
+            </select>
+          </div>
+          <div class="pm-field">
             <label for="pmStatus"><%= t.status_label %></label>
             <select class="pm-input" id="pmStatus" name="status">
               <option value="active"><%= t.status_active %></option>
@@ -125,6 +132,7 @@
                 <tr>
                   <th><%= t.payment_method_label %></th>
                   <th><%= t.account_number_label %></th>
+                  <th><%= t.account_type_label %></th>
                   <th><%= t.status_label %></th>
                   <th><%= t.updated_label %></th>
                   <th><%= t.actions_label %></th>
@@ -135,6 +143,11 @@
                   <tr>
                     <td><%= m.method %></td>
                     <td class="pm-account"><%= m.account_number %></td>
+                    <td>
+                      <span class="badge <%= m.account_type === 'agent' ? 'badge-blue' : 'badge-gray' %>">
+                        <%= m.account_type === 'agent' ? t.account_type_agent : t.account_type_personal %>
+                      </span>
+                    </td>
                     <td>
                       <% if (m.status === 'active') { %>
                         <span class="badge badge-green"><%= t.status_active %></span>
@@ -165,7 +178,7 @@
                     </td>
                   </tr>
                   <tr class="pm-edit-row" id="pm-edit-<%= m.id %>">
-                    <td colspan="5">
+                    <td colspan="6">
                       <form method="POST" action="/payment/admin/payment-methods/<%= m.id %>/update" class="pm-form" data-pm-form>
                         <div class="pm-field">
                           <label for="editMethod<%= m.id %>"><%= t.payment_method_label %></label>
@@ -179,6 +192,13 @@
                           <label for="editAccount<%= m.id %>"><%= t.account_number_label %></label>
                           <input class="pm-input pm-account" id="editAccount<%= m.id %>" type="text"
                                  name="account_number" value="<%= m.account_number %>" autocomplete="off" required>
+                        </div>
+                        <div class="pm-field">
+                          <label for="editAccountType<%= m.id %>"><%= t.account_type_label %></label>
+                          <select class="pm-input" id="editAccountType<%= m.id %>" name="account_type">
+                            <option value="personal" <%= m.account_type !== 'agent' ? 'selected' : '' %>><%= t.account_type_personal %></option>
+                            <option value="agent" <%= m.account_type === 'agent' ? 'selected' : '' %>><%= t.account_type_agent %></option>
+                          </select>
                         </div>
                         <div class="pm-field">
                           <label for="editStatus<%= m.id %>"><%= t.status_label %></label>

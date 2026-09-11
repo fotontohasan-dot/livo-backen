@@ -346,7 +346,7 @@ describe('Authentication Security', () => {
       expect(res.rows).toHaveLength(1);
     });
 
-    test('ইমেইল ও ফোন দুটোই না দিলে অ্যাকাউন্ট তৈরি হয় না', async () => {
+    test('ইমেইল ও ফোন দুটোই না দিলেও শুধু username+password দিয়ে অ্যাকাউন্ট তৈরি হয় (ইচ্ছাকৃত — পরে প্রোফাইল থেকে যোগ করা যায়)', async () => {
       const { agent, token } = await getCsrfAgent('/register');
       const username = uniqueUsername();
       await agent
@@ -358,8 +358,10 @@ describe('Authentication Security', () => {
           confirmPassword: 'SecurePass123',
           _csrf: token
         });
-      const res = await pool.query('SELECT id FROM users WHERE username=$1', [username]);
-      expect(res.rows).toHaveLength(0);
+      const res = await pool.query('SELECT id, email, phone FROM users WHERE username=$1', [username]);
+      expect(res.rows).toHaveLength(1);
+      expect(res.rows[0].email).toBeNull();
+      expect(res.rows[0].phone).toBeNull();
     });
 
     test('SQL ইনজেকশন-সদৃশ ইনপুটে ইউজার টেবিল অক্ষত থাকে', async () => {

@@ -2177,6 +2177,9 @@ async function runMigrations() {
     await pool.query(`ALTER TABLE payment_methods ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP`);
     await pool.query(`ALTER TABLE payment_methods ADD COLUMN IF NOT EXISTS created_by INTEGER`);
     await pool.query(`ALTER TABLE payment_methods ADD COLUMN IF NOT EXISTS updated_by INTEGER`);
+    // এজেন্ট বনাম পার্সোনাল অ্যাকাউন্ট — ইউজার ডিপোজিট পেজের "আমানতের মোড"
+    // সেকশনে এই দুই ক্যাটাগরিতে ভাগ করে দেখানোর জন্য।
+    await pool.query(`ALTER TABLE payment_methods ADD COLUMN IF NOT EXISTS account_type VARCHAR(10) NOT NULL DEFAULT 'personal'`);
 
     await pool.query(`
       ALTER TABLE payment_methods DROP CONSTRAINT IF EXISTS payment_methods_status_check
@@ -2184,6 +2187,13 @@ async function runMigrations() {
     await pool.query(`
       ALTER TABLE payment_methods
       ADD CONSTRAINT payment_methods_status_check CHECK (status IN ('active','inactive'))
+    `);
+    await pool.query(`
+      ALTER TABLE payment_methods DROP CONSTRAINT IF EXISTS payment_methods_account_type_check
+    `);
+    await pool.query(`
+      ALTER TABLE payment_methods
+      ADD CONSTRAINT payment_methods_account_type_check CHECK (account_type IN ('agent','personal'))
     `);
 
     // একই মেথডে একই নম্বর দুইবার থাকা যাবে না। soft-deleted সারি বাদ, নাহলে
