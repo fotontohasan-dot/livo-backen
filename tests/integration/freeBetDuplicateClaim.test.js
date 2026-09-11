@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { pool } = require('../../db');
 const freebet = require('../../services/freebet');
+const { uniquePhone } = require('../helpers/app');
 
 // ==================== Phase 8: free bet claim ====================
 //
@@ -37,11 +38,17 @@ async function childTables() {
 }
 
 async function makeUser() {
+  // আগে phone = '9' + Date.now() + random digit দিয়ে বানানো হতো। দুটো
+  // makeUser() কল (owner, attacker) একই মিলিসেকেন্ডে ঘটলে phone নাম্বার
+  // একই হয়ে যেত (৯ ভাগের ১ সম্ভাবনায়), আর "users_phone_key" unique
+  // constraint ভেঙে টেস্ট flaky হয়ে যেত। tests/helpers/app.js-এর
+  // uniquePhone() একটা ফাইল-ব্যাকড sequence ব্যবহার করে, তাই একই
+  // প্রসেসে যতবার-ই দ্রুত কল হোক না কেন সংঘর্ষ হয় না।
   const r = await pool.query(
     `INSERT INTO users (username, phone, password, coins)
      VALUES ($1, $2, 'x', 0) RETURNING id`,
     ['fb_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-     '9' + Date.now().toString().slice(-9) + Math.floor(Math.random() * 9)]
+     uniquePhone()]
   );
   return r.rows[0].id;
 }
