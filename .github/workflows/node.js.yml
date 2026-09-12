@@ -15,6 +15,45 @@ permissions:
   contents: read
 
 jobs:
+  # PHASE 0.5 — credential স্ক্যান আলাদা জব হিসেবে।
+  #
+  # আগে স্ক্যানটা build জবের ভেতরে একটা ধাপ ছিল। সমস্যা: build জব Postgres
+  # সার্ভিস কন্টেইনার ও পুরো npm ci-র উপর নির্ভরশীল, তাই ডাটাবেস বা
+  # ডিপেন্ডেন্সি সমস্যায় জব আগেই মরে গেলে স্ক্যানটা কখনো চলতই না — অর্থাৎ
+  # ঠিক যে পরিস্থিতিতে সতর্কতা সবচেয়ে দরকার, সেখানেই সেটা নীরব থাকত।
+  #
+  # এখন এটা স্বাধীন, দ্রুত (কোনো সার্ভিস নেই, কোনো npm install নেই) এবং
+  # প্রতিটা PR-এ চলে। secret পাওয়া গেলে scripts/scanSecrets.js নন-জিরো
+  # এক্সিট করে, ফলে জব লাল হয় ও merge আটকায়।
+  #
+  # স্ক্রিপ্টটা কখনো secret-এর প্রকৃত মান ছাপে না — শুধু অবস্থান ও ধরন।
+  # তাই CI লগ নিজেই একটা নতুন leak হয়ে যায় না।
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        # history scan-এর জন্য পূর্ণ history দরকার; shallow clone-এ
+        # history-তে থাকা credential ধরাই পড়ে না।
+        fetch-depth: 0
+
+    - name: Use Node.js 22.x
+      uses: actions/setup-node@v5
+      with:
+        node-version: 22.x
+
+    # কোনো npm ci নয় — স্ক্রিপ্টটা শুধু Node-এর বিল্ট-ইন মডিউল ব্যবহার করে,
+    # তাই ডিপেন্ডেন্সি ইনস্টল করা অপ্রয়োজনীয় এবং সেটা ব্যর্থ হলেও যেন
+    # নিরাপত্তা-স্ক্যান আটকে না যায়।
+    - name: Scan working tree for committed credentials
+      run: node scripts/scanSecrets.js
+
+    # SECURITY_INCIDENT.md অনুযায়ী history পরিষ্কার করা হয়েছে কিনা সেটাও
+    # প্রতিটা PR-এ যাচাই হয়। history পরিষ্কার হওয়ার আগে এই ধাপ লাল থাকবে —
+    # এটাই উদ্দেশ্য: কাজটা বাকি আছে সেটা যেন দৃশ্যমান থাকে।
+    - name: Scan git history for credentials
+      run: node scripts/scanSecrets.js --history
+
   build:
     runs-on: ubuntu-latest
 

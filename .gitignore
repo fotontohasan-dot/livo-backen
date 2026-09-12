@@ -31,3 +31,7 @@ jest-output.log
 *.sql.gz
 backup-*.json
 backup-*.bin
+
+# PHASE 0 — git-filter-repo-র জন্য বানানো secret ম্যাপিং ফাইল।
+# ভুল করেও যেন কখনো commit না হয় (docs/SECRET_HISTORY_PURGE.md দেখুন)।
+replacements.txt
