@@ -176,7 +176,6 @@ async function restoreSession(page, cookies) {
 
 test.describe('গুরুত্বপূর্ণ ইউজার ফ্লো', () => {
   const username = uniqueUsername();
-  const phone = uniquePhone();
   const password = 'SecurePass123';
   let sessionCookies = null;
 
@@ -184,7 +183,6 @@ test.describe('গুরুত্বপূর্ণ ইউজার ফ্লো
     const issues = attachErrorTracking(page);
     await page.goto('/register', { waitUntil: 'domcontentloaded' });
     await page.fill('#username', username);
-    await page.fill('#phone', phone);
     await page.fill('#password', password);
     await page.fill('#confirmPassword', password);
     await solveCaptchaIfPresent(page);
@@ -210,16 +208,17 @@ test.describe('গুরুত্বপূর্ণ ইউজার ফ্লো
 
   test('লগআউট তারপর লগইন — সেশন সঠিকভাবে পুনঃস্থাপিত হয়', async ({ page }) => {
     const issues = attachErrorTracking(page);
-    // লগইন ফর্মের identifier ফিল্ড শুধু email/phone গ্রহণ করে (routes/auth.js:
-    // WHERE email = $1 OR phone = $1) — username নয়, তাই এখানে username নয়, phone দেওয়া হচ্ছে।
-    await loginAs(page, phone, password);
+    // লগইন ফর্মের identifier ফিল্ড email/phone/username তিনটাই গ্রহণ করে (routes/auth.js:
+    // WHERE email = $1 OR phone = $1 OR username = $1)। রেজিস্ট্রেশনে এখন email/phone
+    // বাধ্যতামূলক নয়, তাই এখানে username দিয়ে লগইন যাচাই করা হচ্ছে।
+    await loginAs(page, username, password);
     expect(page.url()).not.toContain('/login');
     assertClean(issues);
   });
 
   test('ভুল পাসওয়ার্ডে লগইন প্রত্যাখ্যাত হয় (5xx/uncaught error ছাড়াই)', async ({ page }) => {
     const issues = attachErrorTracking(page);
-    await loginAs(page, phone, 'WrongPassword999');
+    await loginAs(page, username, 'WrongPassword999');
     expect(page.url()).toContain('/login');
     assertClean(issues);
   });

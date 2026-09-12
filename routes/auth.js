@@ -570,6 +570,9 @@ router.post('/login', async (req, res) => {
 
   try {
     // LOWER(email) — পুরোনো রেকর্ড মিশ্র-কেসে জমা থাকতে পারে, সেগুলোতেও লগইন কাজ করবে।
+    // username = $1 — email/phone ছাড়া রেজিস্টার করা অ্যাকাউন্টের (এখন সম্ভব, যেহেতু
+    // রেজিস্ট্রেশনে email/phone আর বাধ্যতামূলক নয়) একমাত্র লগইন-পথ username, তাই এটা
+    // যোগ না করলে সেই অ্যাকাউন্টগুলো তৈরি হওয়ার পরই চিরতরে লক হয়ে যেত।
     const loginIdentifier = normalizeIdentifier(identifier);
     const result = await pool.query(
       // নিরাপত্তা: is_banned / self_exclude_until / email_verified কলামগুলো আগে SELECT-এ ছিল না,
@@ -578,7 +581,7 @@ router.post('/login', async (req, res) => {
       // step-up ভেরিফিকেশনও কখনো ট্রিগার হতো না। কলামগুলো এখন স্পষ্টভাবে লোড করা হচ্ছে।
       `SELECT id, username, email, phone, password, role,
               is_banned, self_exclude_until, email_verified
-         FROM users WHERE LOWER(email) = $1 OR phone = $1`,
+         FROM users WHERE LOWER(email) = $1 OR phone = $1 OR username = $1`,
       [loginIdentifier]
     );
     const user = result.rows[0];
