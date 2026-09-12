@@ -3,6 +3,17 @@ const cache = require('../../services/cache');
 const cacheKeys = require('../../services/cacheKeys');
 const { app, getCsrfAgent, extractCsrfToken, uniqueUsername, uniquePhone, REALISTIC_UA, fakeIp, wrapAgentWithIp, freshRequest } = require('../helpers/app');
 const request = require('supertest');
+// অ্যাকাউন্ট-থ্রটল টেস্টের জন্য: failed_login_attempts রেকর্ড হয় queue-এর মাধ্যমে
+// (services/fraudDetection.js -> scanFailedLogin -> queue.enqueue('fraud_scan', ...)),
+// আর সেই জব প্রসেস করার হ্যান্ডলারটা registerHandler() হয় services/queueHandlers.js-এ,
+// যেটা require হয় শুধু server.js বুট হওয়ার সময় — supertest-এর জন্য app.js require করলে
+// ওটা কখনো লোডই হয় না। ফলে আগে এই থ্রটল-টেস্টগুলো কখনো failed_login_attempts আসলে
+// রেকর্ড হওয়ার আগেই পরের রিকোয়েস্ট পাঠাত (worker-ও চলত না), আর টেস্টটা পাস করত শুধু
+// এই কারণে যে তখনও username দিয়ে লগইন-লুকআপ কাজ করত না (routes/auth.js user-ই খুঁজে
+// পেত না, তাই throttle লজিক পর্যন্ত পৌঁছাতই না)। এখন username দিয়ে লগইন কাজ করার পর
+// থ্রটল লজিক আসলেই এক্সিকিউট হয়, তাই queue-টাও বাস্তবের মতোই ড্রেইন করা দরকার।
+require('../../services/queueHandlers');
+const queue = require('../../services/queue');
 
 // অথেন্টিকেশন সুরক্ষার আচরণ যাচাই (পাসওয়ার্ড স্টোরেজ, সেশন, এনুমারেশন, বট-হানিপট)।
 // tests/auth.test.js মূল ফ্লো কভার করে; এখানে শুধু সুরক্ষা-নির্দিষ্ট দিকগুলো যোগ করা হয়েছে।
@@ -243,6 +254,7 @@ describe('Authentication Security', () => {
           .type('form')
           .send({ identifier: username, password: 'DefinitelyWrongPass999', _csrf: token });
       }
+      while (await queue.processOneBatch() > 0) { /* সব pending fraud_scan জব শেষ না হওয়া পর্যন্ত ড্রেইন করা */ }
 
       // এখন সঠিক পাসওয়ার্ড দিলেও থ্রটলড থাকার কথা
       const { agent, token } = await getCsrfAgent('/login');
@@ -268,6 +280,7 @@ describe('Authentication Security', () => {
           .type('form')
           .send({ identifier: username, password: 'DefinitelyWrongPass999', _csrf: token });
       }
+      while (await queue.processOneBatch() > 0) { /* সব pending fraud_scan জব ড্রেইন করা */ }
 
       const a = await getCsrfAgent('/login');
       const throttledRes = await a.agent
@@ -346,7 +359,7 @@ describe('Authentication Security', () => {
       expect(res.rows).toHaveLength(1);
     });
 
-    test('ইমেইল ও ফোন দুটোই না দিলে অ্যাকাউন্ট তৈরি হয় না', async () => {
+    test('ইমেইল ও ফোন দুটোই না দিলেও শুধু username+password দিয়ে অ্যাকাউন্ট তৈরি হয় (ইচ্ছাকৃত — পরে প্রোফাইল থেকে যোগ করা যায়)', async () => {
       const { agent, token } = await getCsrfAgent('/register');
       const username = uniqueUsername();
       await agent
@@ -358,8 +371,10 @@ describe('Authentication Security', () => {
           confirmPassword: 'SecurePass123',
           _csrf: token
         });
-      const res = await pool.query('SELECT id FROM users WHERE username=$1', [username]);
-      expect(res.rows).toHaveLength(0);
+      const res = await pool.query('SELECT id, email, phone FROM users WHERE username=$1', [username]);
+      expect(res.rows).toHaveLength(1);
+      expect(res.rows[0].email).toBeNull();
+      expect(res.rows[0].phone).toBeNull();
     });
 
     test('SQL ইনজেকশন-সদৃশ ইনপুটে ইউজার টেবিল অক্ষত থাকে', async () => {

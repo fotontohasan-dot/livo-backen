@@ -18,6 +18,7 @@
 
   var activeMethods = [];
   var selectedAccountId = null;
+  var depositMode = 'personal';
   // স্টেল ইভেন্ট গার্ড — দেরিতে পৌঁছানো পুরনো রেসপন্স যেন নতুন অবস্থাকে
   // চাপা দিতে না পারে (একাধিক socket ইভেন্ট দ্রুত এলে সম্ভব)।
   var refreshSeq = 0;
@@ -31,12 +32,20 @@
 
   function el(tag, cls) { var n = document.createElement(tag); if (cls) n.className = cls; return n; }
 
+  function methodsForMode() {
+    // পুরনো ডেটায় accountType না থাকলে (ক্যাশ/পুরনো সেশন) সেটাকে personal
+    // ধরা হয় — কোনো অ্যাকাউন্ট নিঃশব্দে হারিয়ে যাবে না।
+    return activeMethods.filter(function (m) { return (m.accountType || 'personal') === depositMode; });
+  }
+
   function renderMethods() {
     var grid = document.getElementById('methodGrid');
     var empty = document.getElementById('methodEmpty');
     var errBox = document.getElementById('methodError');
     if (!grid) return;
     grid.innerHTML = '';
+
+    var visibleMethods = methodsForMode();
 
     if (!activeMethods.length) {
       grid.classList.add('hidden');
@@ -46,11 +55,21 @@
       updateStep2();
       return;
     }
+
+    if (!visibleMethods.length) {
+      grid.classList.add('hidden');
+      if (errBox) errBox.classList.add('hidden');
+      if (empty) empty.classList.remove('hidden');
+      selectedAccountId = null;
+      updateStep2();
+      return;
+    }
+
     grid.classList.remove('hidden');
     if (empty) empty.classList.add('hidden');
     if (errBox) errBox.classList.add('hidden');
 
-    activeMethods.forEach(function (item) {
+    visibleMethods.forEach(function (item) {
       var meta = PM_META[item.method] || { label: item.method, short: '••', color: '#475569' };
       var card = el('div', 'method-card border-2 border-glass bg-surface rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer');
       card.setAttribute('role', 'button');
@@ -78,9 +97,19 @@
       grid.appendChild(card);
     });
 
-    // আগের নির্বাচন এখনো বৈধ কিনা; না হলে প্রথমটা
-    var stillThere = activeMethods.some(function (m) { return m.id === selectedAccountId; });
-    selectAccount(stillThere ? selectedAccountId : activeMethods[0].id);
+    // আগের নির্বাচন এখনো বৈধ কিনা (এবং বর্তমান মোডের মধ্যেই আছে কিনা); না হলে প্রথমটা
+    var stillThere = visibleMethods.some(function (m) { return m.id === selectedAccountId; });
+    selectAccount(stillThere ? selectedAccountId : visibleMethods[0].id);
+  }
+
+  function setDepositMode(mode) {
+    if (mode !== 'agent' && mode !== 'personal') return;
+    depositMode = mode;
+    var personalBtn = document.getElementById('modePersonalBtn');
+    var agentBtn = document.getElementById('modeAgentBtn');
+    if (personalBtn) personalBtn.classList.toggle('selected', mode === 'personal');
+    if (agentBtn) agentBtn.classList.toggle('selected', mode === 'agent');
+    renderMethods();
   }
 
   function currentAccount() {
@@ -274,6 +303,9 @@
 
         var nb = document.getElementById('depNextBtn');
     if (nb) nb.addEventListener('click', goToStep2);
+    document.querySelectorAll('.deposit-mode-btn').forEach(function (b) {
+      b.addEventListener('click', function () { setDepositMode(b.getAttribute('data-mode')); });
+    });
     document.querySelectorAll('.channel-btn').forEach(function(b){
       b.addEventListener('click', function(){ selectChannel(b); });
     });

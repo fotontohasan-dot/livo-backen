@@ -75,10 +75,9 @@ test.afterAll(async () => {
 });
 
 /** ব্রাউজার দিয়ে একটা পূর্ণ রেজিস্ট্রেশন — POST-এর আসল HTTP স্ট্যাটাসসহ ফেরত দেয়। */
-async function registerViaBrowser(page, username, phone) {
+async function registerViaBrowser(page, username) {
   await page.goto('/register', { waitUntil: 'domcontentloaded' });
   await page.fill('#username', username);
-  await page.fill('#phone', phone);
   await page.fill('#password', 'SecurePass123');
   await page.fill('#confirmPassword', 'SecurePass123');
   await solveCaptchaIfPresent(page);
@@ -92,7 +91,7 @@ async function registerViaBrowser(page, username, phone) {
 
 test('Test A — স্বাভাবিক রেজিস্ট্রেশন সফল হয় (429 নয়) এবং DB-তে ইউজার তৈরি হয়', async ({ page }) => {
   const username = uniqueUsername();
-  const response = await registerViaBrowser(page, username, uniquePhone());
+  const response = await registerViaBrowser(page, username);
 
   expect(response.status(), 'রেট-লিমিট লিক করলে এখানে 429 আসত').toBeLessThan(400);
   expect(page.url()).not.toContain('/register');
@@ -143,7 +142,7 @@ test('Test B — একই IP থেকে অতিরিক্ত রেজি
 
 test('Test C — নতুন আইসোলেটেড কনটেক্সট আগের টেস্টের কোটায় বিষাক্ত হয় না', async ({ page }) => {
   const username = uniqueUsername();
-  const response = await registerViaBrowser(page, username, uniquePhone());
+  const response = await registerViaBrowser(page, username);
 
   expect(response.status(), 'আগের ফ্লাড টেস্টের কোটা এই টেস্টে লিক করেছে').toBeLessThan(400);
   const row = await pool.query('SELECT id FROM users WHERE username = $1', [username]);

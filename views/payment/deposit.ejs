@@ -66,6 +66,16 @@
     box-shadow: 0 0 0 2px rgba(230, 30, 38, 0.25);
   }
 
+  .deposit-mode-btn {
+    transition: all 0.2s ease;
+  }
+  .deposit-mode-btn.selected {
+    background-color: #e61e26 !important;
+    color: #fff !important;
+    border-color: #e61e26 !important;
+    box-shadow: 0 0 0 2px rgba(230, 30, 38, 0.25);
+  }
+
   .amount-btn {
     position: relative;
   }
@@ -80,8 +90,15 @@
   #amountInput {
     text-align: center;
     color: var(--text-main) !important;
+    -webkit-text-fill-color: var(--text-main) !important;
+    background-color: var(--bg-surface, var(--bg-dark)) !important;
     caret-color: #e61e26;
     letter-spacing: 0.5px;
+    opacity: 1 !important;
+  }
+  #amountInput::placeholder {
+    color: var(--text-muted) !important;
+    opacity: 0.7 !important;
   }
   /* নাম্বার ইনপুটের ডিফল্ট স্পিনার (▲▼) সরিয়ে দেওয়া হলো — এটা মাঝের
      টেক্সটকে ডান দিকে ঠেলে দিয়ে সেন্টার-অ্যালাইনমেন্ট নষ্ট করছিল এবং
@@ -93,6 +110,11 @@
   }
   #amountInput[type="number"] {
     -moz-appearance: textfield;
+  }
+
+  /* সাবমিট বাটন — উপরের চেকবক্স/টার্মস থেকে একটু ফাঁকা রেখে নিচে বসানো */
+  #depSubmitBtn {
+    margin-top: 6px;
   }
 </style>
 
@@ -123,6 +145,15 @@
           </div>
           <div id="methodLoading" class="hidden rounded-2xl border border-glass bg-surface p-5 text-center text-sm text-muted">
             <i class="fas fa-circle-notch fa-spin"></i> <%= t.loading %>
+          </div>
+        </div>
+
+        <!-- Deposit Mode (এজেন্ট / পার্সোনাল) — নিচের পেমেন্ট মেথড গ্রিড এই সিলেকশন অনুযায়ী ফিল্টার হয় -->
+        <div class="mb-6">
+          <label class="block text-muted font-bold mb-3 text-[15px]"><%= t.deposit_mode %></label>
+          <div class="grid grid-cols-2 gap-3">
+            <button type="button" id="modePersonalBtn" class="deposit-mode-btn selected border-2 border-glass bg-surface rounded-xl py-3 text-sm font-bold transition-all" data-mode="personal"><%= t.deposit_mode_personal %></button>
+            <button type="button" id="modeAgentBtn" class="deposit-mode-btn border-2 border-glass bg-surface rounded-xl py-3 text-sm font-bold transition-all" data-mode="agent"><%= t.deposit_mode_agent %></button>
           </div>
         </div>
 

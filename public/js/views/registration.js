@@ -10,9 +10,6 @@
     var MSG = {
       usernameRequired: cfg.errUsernameRequired,
       usernameFormat: cfg.errUsernameFormat,
-      atLeastOne: cfg.errAtLeastOne,
-      emailInvalid: cfg.errEmailInvalid,
-      phoneInvalid: cfg.errPhoneInvalid,
       passwordLength: cfg.errPasswordLength,
       passwordMismatch: cfg.errPasswordMismatch,
       creating: cfg.creatingAccount
@@ -35,14 +32,10 @@
     var submitted = false;
 
     var username = document.getElementById('username');
-    var email = document.getElementById('email');
-    var phone = document.getElementById('phone');
     var password = document.getElementById('password');
     var confirmPassword = document.getElementById('confirmPassword');
 
     var usernameError = document.getElementById('usernameError');
-    var emailError = document.getElementById('emailError');
-    var phoneError = document.getElementById('phoneError');
     var passwordError = document.getElementById('passwordError');
     var confirmError = document.getElementById('confirmError');
     var confirmOk = document.getElementById('confirmOk');
@@ -61,7 +54,7 @@
     }
 
     // ইউজার ঠিক করা শুরু করলেই সংশ্লিষ্ট এরর সরে যাবে
-    [[username, usernameError], [email, emailError], [phone, phoneError], [password, passwordError]]
+    [[username, usernameError], [password, passwordError]]
       .forEach(function (pair) {
         pair[0].addEventListener('input', function () { clearError(pair[0], pair[1]); });
       });
@@ -85,28 +78,13 @@
       if (submitted) { e.preventDefault(); return; }
 
       var valid = true;
-      var emailVal = email.value.trim();
-      var phoneVal = phone.value.trim();
 
       // ব্যাকএন্ডের নিয়মের সাথে হুবহু মিল রাখা হয়েছে (routes/auth.js):
-      // username আবশ্যক ও ৩-২০ ক্যারেক্টার, email অথবা phone অন্তত একটি, password ≥ ৮
+      // username আবশ্যক ও ৩-২০ ক্যারেক্টার, password ≥ ৮
       if (!username.value.trim()) {
         showError(username, usernameError, MSG.usernameRequired); valid = false;
       } else if (!/^[a-zA-Z0-9_.]{3,20}$/.test(username.value.trim())) {
         showError(username, usernameError, MSG.usernameFormat); valid = false;
-      }
-
-      if (!emailVal && !phoneVal) {
-        showError(email, emailError, MSG.atLeastOne);
-        showError(phone, phoneError, MSG.atLeastOne);
-        valid = false;
-      } else {
-        if (emailVal && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
-          showError(email, emailError, MSG.emailInvalid); valid = false;
-        }
-        if (phoneVal && !/^01\d{9}$/.test(phoneVal)) {
-          showError(phone, phoneError, MSG.phoneInvalid); valid = false;
-        }
       }
 
       if (password.value.length < 8) {

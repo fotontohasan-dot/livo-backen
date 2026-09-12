@@ -907,7 +907,8 @@ router.post('/admin/payment-methods', requireAdmin, requirePermission('payment_m
       method: req.body.method,
       accountNumber: req.body.account_number,
       accountName: req.body.account_name,
-      status: req.body.status
+      status: req.body.status,
+      accountType: req.body.account_type
     }, req.session.user.id);
     await auditPaymentMethod(req, 'PAYMENT_METHOD_CREATED', row);
     afterPaymentMethodMutation();
@@ -928,7 +929,8 @@ router.post('/admin/payment-methods/:id/update', requireAdmin, requirePermission
       method: req.body.method,
       accountNumber: req.body.account_number,
       accountName: req.body.account_name,
-      status: req.body.status
+      status: req.body.status,
+      accountType: req.body.account_type
     }, req.session.user.id);
     await auditPaymentMethod(req, 'PAYMENT_METHOD_UPDATED', after, {
       previous: {

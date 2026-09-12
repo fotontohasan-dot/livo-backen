@@ -294,7 +294,7 @@ describe('ইউজার ডিপোজিট পেজ', () => {
     const user = await makeUser('pmpayload');
     const res = await user.agent.get('/payment/deposit/methods');
     for (const m of res.body.methods) {
-      expect(Object.keys(m).sort()).toEqual(['accountName', 'accountNumber', 'id', 'method']);
+      expect(Object.keys(m).sort()).toEqual(['accountName', 'accountNumber', 'accountType', 'id', 'method']);
     }
   });
 

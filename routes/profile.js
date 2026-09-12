@@ -28,6 +28,9 @@ const { logAdminAction } = require('../services/fraudDetection');
 const cache = require('../services/cache');
 const cacheKeys = require('../services/cacheKeys');
 const { createLimiter } = require('../middleware/rateLimitFactory');
+const { issueToken } = require('../utils/tokens');
+const { normalizeEmail } = require('../utils/identity');
+const { sendQueuedEmail } = require('../services/email');
 
 // পাসওয়ার্ড, উইথড্র-পিন, ব্যাংক কার্ড — অ্যাকাউন্ট-টেকওভার সংশ্লিষ্ট সংবেদনশীল অ্যাকশন,
 // প্রতি ইউজারে ১৫ মিনিটে সর্বোচ্চ ৬ বার (আগে শুধু generalLimiter-এর ৩০০/১৫মিনিট দিয়ে
@@ -350,6 +353,44 @@ router.post('/update-personal', isAuth, async (req, res) => {
 
     req.flash('success', req.t('profile_info_updated'));
   } catch (err) {
+    req.flash('error', req.t('common_update_failed_x'));
+  }
+  res.redirect('/profile/security');
+});
+
+// রেজিস্ট্রেশনের সময় ইমেইল না দিলে, ইউজার পরে প্রোফাইল থেকে নিজের ইমেইল
+// যোগ করতে পারেন। যোগ করা মাত্র সেটা unverified থাকে এবং ভেরিফিকেশন
+// লিংক পাঠানো হয় — /register-এর ফ্লো-র সাথে সামঞ্জস্যপূর্ণ।
+router.post('/add-email', isAuth, accountSecurityLimiter, async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body.email);
+    if (!email || !/^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+$/.test(email)) {
+      req.flash('error', req.t('auth_email_format_invalid'));
+      return res.redirect('/profile/security');
+    }
+    const existing = await pool.query('SELECT id FROM users WHERE LOWER(email) = $1 AND id != $2', [email, req.session.user.id]);
+    if (existing.rows.length > 0) {
+      req.flash('error', req.t('auth_email_already_registered'));
+      return res.redirect('/profile/security');
+    }
+
+    const { token, tokenHash } = issueToken();
+    const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // ২৪ ঘণ্টা
+    await pool.query(
+      `UPDATE users SET email=$1, email_verified=false, verification_token=$2,
+       verification_token_expiry=$3, last_verification_sent_at=NOW() WHERE id=$4`,
+      [email, tokenHash, expiry, req.session.user.id]
+    );
+    req.session.user.email = email;
+    req.session.user.email_verified = false;
+
+    const verifyUrl = buildUrl(req, `/verify-email/${token}`);
+    sendQueuedEmail('verification', email, { verifyUrl })
+      .catch(e => console.error('add-email verification email error:', e.message));
+
+    req.flash('success', req.t('profile_email_added_check_inbox'));
+  } catch (err) {
+    console.error('add-email error:', err.message);
     req.flash('error', req.t('common_update_failed_x'));
   }
   res.redirect('/profile/security');

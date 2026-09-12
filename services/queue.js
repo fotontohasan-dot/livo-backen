@@ -413,6 +413,7 @@ async function purgeAllDeadLetter(olderThanDays = null) {
 module.exports = {
   registerHandler,
   enqueue,
+  processOneBatch,
   startWorker,
   stopWorker,
   retryJob,
