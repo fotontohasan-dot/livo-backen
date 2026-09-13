@@ -62,7 +62,7 @@
         <div class="cd-item">
           <div class="ic"><i class="fas fa-wallet"></i></div>
           <div><h3><%= c.bank_name %></h3><p><%= c.account_number %></p></div>
-          <form action="/profile/cards/delete/<%= c.id %>" method="POST" onsubmit="return confirm('আপনি কি নিশ্চিত?')">
+          <form action="/profile/cards/delete/<%= c.id %>" method="POST" class="card-delete-form">
             <button type="submit" class="del"><i class="far fa-times-circle"></i></button>
           </form>
         </div>
@@ -82,7 +82,7 @@
         <div class="cd-item">
           <div class="ic"><i class="fab fa-bitcoin"></i></div>
           <div><h3><%= c.bank_name %></h3><p><%= c.account_number %></p></div>
-          <form action="/profile/cards/delete/<%= c.id %>" method="POST" onsubmit="return confirm('আপনি কি নিশ্চিত?')">
+          <form action="/profile/cards/delete/<%= c.id %>" method="POST" class="card-delete-form">
             <button type="submit" class="del"><i class="far fa-times-circle"></i></button>
           </form>
         </div>
@@ -97,22 +97,22 @@
 </div>
 
 <div class="fab-container">
-  <button onclick="toggleModal(true)" class="fab-btn"><i class="fas fa-plus"></i></button>
+  <button id="fabAddBtn" class="fab-btn"><i class="fas fa-plus"></i></button>
 </div>
 
-<div id="modalOverlay" class="overlay" onclick="toggleModal(false)"></div>
+<div id="modalOverlay" class="overlay"></div>
 <div id="bottomSheet" class="bottom-sheet">
   <div class="sheet-inner">
     <div class="sheet-handle"></div>
     <div class="sheet-head">
       <div><h2>নতুন যোগ করুন</h2><p>Add New Wallet</p></div>
-      <button onclick="toggleModal(false)"><i class="fas fa-times"></i></button>
+      <button id="closeSheetBtn"><i class="fas fa-times"></i></button>
     </div>
 
     <form action="/profile/cards/add" method="POST">
       <div class="kind-toggle">
-        <div class="kind-btn active" id="kindEwallet" onclick="setKind('ewallet')">ই-ওয়ালেট</div>
-        <div class="kind-btn" id="kindCrypto" onclick="setKind('crypto')">ক্রিপ্টো</div>
+        <div class="kind-btn active" id="kindEwallet">ই-ওয়ালেট</div>
+        <div class="kind-btn" id="kindCrypto">ক্রিপ্টো</div>
       </div>
       <input type="hidden" name="wallet_kind" id="walletKindInput" value="ewallet">
 
@@ -143,7 +143,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="<%= cspNonce %>">
   function toggleModal(show) {
     var modal = document.getElementById('bottomSheet');
     var overlay = document.getElementById('modalOverlay');
@@ -163,6 +163,29 @@
       sel.innerHTML = '<option value="" disabled selected>E-wallet সিলেক্ট করুন</option><option value="bKash">bKash</option><option value="Nagad">Nagad</option><option value="Rocket">Rocket</option><option value="Upay">Upay</option><option value="Bank Account">Bank Account</option>';
     }
   }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    var fabBtn = document.getElementById('fabAddBtn');
+    if (fabBtn) fabBtn.addEventListener('click', function(){ toggleModal(true); });
+
+    var overlay = document.getElementById('modalOverlay');
+    if (overlay) overlay.addEventListener('click', function(){ toggleModal(false); });
+
+    var closeBtn = document.getElementById('closeSheetBtn');
+    if (closeBtn) closeBtn.addEventListener('click', function(){ toggleModal(false); });
+
+    var kindEwallet = document.getElementById('kindEwallet');
+    if (kindEwallet) kindEwallet.addEventListener('click', function(){ setKind('ewallet'); });
+
+    var kindCrypto = document.getElementById('kindCrypto');
+    if (kindCrypto) kindCrypto.addEventListener('click', function(){ setKind('crypto'); });
+
+    document.querySelectorAll('.card-delete-form').forEach(function(f){
+      f.addEventListener('submit', function(e){
+        if (!confirm('আপনি কি নিশ্চিত?')) e.preventDefault();
+      });
+    });
+  });
 </script>
 
 <%- include('../partials/bottom-nav') %>

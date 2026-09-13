@@ -94,27 +94,27 @@
       <div class="dep-section">
         <div class="dep-label">আমানতের মোড</div>
         <div class="method-grid" id="methodGrid">
-          <div class="method-tile selected" data-method="nagad" onclick="selectMethod('nagad', this)">
+          <div class="method-tile selected" data-method="nagad">
             <div class="method-icon" style="background:#F47321;">নগদ</div>
             <div class="method-name">NAGAD</div>
           </div>
-          <div class="method-tile" data-method="bkash" onclick="selectMethod('bkash', this)">
+          <div class="method-tile" data-method="bkash">
             <div class="method-icon" style="background:#D12053;">bK</div>
             <div class="method-name">Bkash</div>
           </div>
-          <div class="method-tile" data-method="rocket" onclick="selectMethod('rocket', this)">
+          <div class="method-tile" data-method="rocket">
             <div class="method-icon" style="background:#6C2EB5;">RK</div>
             <div class="method-name">ROCKET</div>
           </div>
-          <div class="method-tile" data-method="nagad" data-agent="1" onclick="selectMethod('nagad', this)">
+          <div class="method-tile" data-method="nagad" data-agent="1">
             <div class="method-icon" style="background:#F47321;">SM</div>
             <div class="method-name">Send Money<br>Nagad</div>
           </div>
-          <div class="method-tile" data-method="bkash" data-agent="1" onclick="selectMethod('bkash', this)">
+          <div class="method-tile" data-method="bkash" data-agent="1">
             <div class="method-icon" style="background:#D12053;">SM</div>
             <div class="method-name">Send Money<br>Bkash</div>
           </div>
-          <div class="method-tile" data-method="crypto" onclick="selectMethod('crypto', this)">
+          <div class="method-tile" data-method="crypto">
             <div class="method-icon" style="background:#26A17B;">₮</div>
             <div class="method-name">USDT<br>+5%</div>
           </div>
@@ -147,12 +147,12 @@
       <div class="dep-section" style="margin-top:18px;">
         <div class="dep-label">কার্যক্রম</div>
         <label class="activity-row">
-          <input type="radio" name="want_bonus_choice" value="bonus" onclick="document.getElementById('wantBonusHidden').value='yes'">
+          <input type="radio" name="want_bonus_choice" value="bonus">
           <span>প্রথম জমার বোনাস সর্বোচ্চ ৫০% পর্যন্ত</span>
           <span class="amt">≥ ৳ 100.00</span>
         </label>
         <label class="activity-row">
-          <input type="radio" name="want_bonus_choice" value="none" checked onclick="document.getElementById('wantBonusHidden').value='no'">
+          <input type="radio" name="want_bonus_choice" value="none" checked>
           <span>কোনও প্রচারে অংশ নেওয়া যায় না</span>
         </label>
         <input type="hidden" name="want_bonus" id="wantBonusHidden" value="no">
@@ -187,7 +187,7 @@
   </form>
 </div>
 
-<script>
+<script nonce="<%= cspNonce %>">
   var CHANNELS_BY_METHOD = <%- JSON.stringify(channelsByMethod || {}) %>;
   var METHOD_LABELS = { nagad: 'Nagad', bkash: 'Bkash', rocket: 'Rocket', upay: 'Upay', crypto: 'USDT' };
   var currentMethod = 'nagad';
@@ -228,6 +228,19 @@
 
   document.addEventListener('DOMContentLoaded', function(){
     renderChannels('nagad');
+
+    document.querySelectorAll('.method-tile').forEach(function(tile){
+      tile.addEventListener('click', function(){
+        var method = tile.getAttribute('data-method');
+        selectMethod(method, tile);
+      });
+    });
+
+    document.querySelectorAll('input[name="want_bonus_choice"]').forEach(function(radio){
+      radio.addEventListener('click', function(){
+        document.getElementById('wantBonusHidden').value = radio.value === 'bonus' ? 'yes' : 'no';
+      });
+    });
 
     document.querySelectorAll('.amount-btn').forEach(function(b){
       b.addEventListener('click', function(){

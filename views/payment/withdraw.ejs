@@ -54,10 +54,10 @@
   </div>
 
   <div class="wd-tabs">
-    <div class="wd-tab active" id="tabEwallet" onclick="switchTab('ewallet')">
+    <div class="wd-tab active" id="tabEwallet">
       <span class="dot" style="background:#E6007E;">e</span> E wallet
     </div>
-    <div class="wd-tab" id="tabCrypto" onclick="switchTab('crypto')">
+    <div class="wd-tab" id="tabCrypto">
       <span class="dot" style="background:#F7931A;">₿</span> ক্রিপ্টো ওয়ালেট
     </div>
   </div>
@@ -75,7 +75,7 @@
             <div class="ic"><i class="fas fa-wallet"></i></div>
             <div><b><%= c.bank_name %></b><small><%= c.account_number %></small></div>
           </div>
-          <form action="/profile/cards/delete/<%= c.id %>" method="POST" onsubmit="return confirm('আপনি কি নিশ্চিত?')">
+          <form action="/profile/cards/delete/<%= c.id %>" method="POST" class="card-delete-form">
             <button type="submit" class="del"><i class="far fa-times-circle"></i></button>
           </form>
         </div>
@@ -94,7 +94,7 @@
             <div class="ic"><i class="fab fa-bitcoin"></i></div>
             <div><b><%= c.bank_name %></b><small><%= c.account_number %></small></div>
           </div>
-          <form action="/profile/cards/delete/<%= c.id %>" method="POST" onsubmit="return confirm('আপনি কি নিশ্চিত?')">
+          <form action="/profile/cards/delete/<%= c.id %>" method="POST" class="card-delete-form">
             <button type="submit" class="del"><i class="far fa-times-circle"></i></button>
           </form>
         </div>
@@ -112,7 +112,7 @@
     <p class="muted">দৈনিক উত্তোলন ৯৯,৯৯৯ (বার), অবশিষ্ট উত্তোলন ৯৯,৯৯৯ (বার)</p>
     <p class="muted">প্রধান ওয়ালেট :৳ <%= (coins || 0).toFixed(2) %></p>
     <p class="muted">উপলব্ধ পরিমাণ : ৳ <%= (coins || 0).toFixed(2) %></p>
-    <button onclick="location.reload()" class="refresh-btn"><i class="fas fa-sync-alt"></i> আপনার ব্যালেন্স রিফ্রেশ করুন</button>
+    <button id="refreshBalanceBtn" class="refresh-btn"><i class="fas fa-sync-alt"></i> আপনার ব্যালেন্স রিফ্রেশ করুন</button>
   </div>
 
   <% if (!hasWithdrawPin) { %>
@@ -147,14 +147,14 @@
     <div class="field-group field-with-icon">
       <label>লেনদেন পাসওয়ার্ড</label>
       <input type="password" id="secPassword" name="password" placeholder="লেনদেন পাসওয়ার্ড" required>
-      <button type="button" class="toggle-eye" onclick="togglePwd('secPassword','eye1')"><i class="fas fa-eye-slash" id="eye1"></i></button>
+      <button type="button" class="toggle-eye" id="toggleEye1"><i class="fas fa-eye-slash" id="eye1"></i></button>
     </div>
 
     <% if (hasWithdrawPin) { %>
       <div class="field-group field-with-icon">
         <label>Withdraw PIN</label>
         <input type="password" id="secPin" name="withdraw_pin" maxlength="6" placeholder="আপনার ৬-ডিজিট Withdraw PIN দিন" required>
-        <button type="button" class="toggle-eye" onclick="togglePwd('secPin','eye2')"><i class="fas fa-eye-slash" id="eye2"></i></button>
+        <button type="button" class="toggle-eye" id="toggleEye2"><i class="fas fa-eye-slash" id="eye2"></i></button>
       </div>
       <p class="pin-note">🛈 প্রতিটি উত্তোলনের আগে আপনার Withdraw PIN যাচাই করা হবে।</p>
     <% } %>
@@ -163,7 +163,7 @@
   </form>
 </div>
 
-<script>
+<script nonce="<%= cspNonce %>">
   function togglePwd(inputId, iconId) {
     var el = document.getElementById(inputId);
     var icon = document.getElementById(iconId);
@@ -176,6 +176,26 @@
     document.getElementById('panelEwallet').style.display = tab === 'ewallet' ? 'block' : 'none';
     document.getElementById('panelCrypto').style.display = tab === 'crypto' ? 'block' : 'none';
   }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    document.getElementById('tabEwallet').addEventListener('click', function(){ switchTab('ewallet'); });
+    document.getElementById('tabCrypto').addEventListener('click', function(){ switchTab('crypto'); });
+
+    var refreshBtn = document.getElementById('refreshBalanceBtn');
+    if (refreshBtn) refreshBtn.addEventListener('click', function(){ location.reload(); });
+
+    var eye1 = document.getElementById('toggleEye1');
+    if (eye1) eye1.addEventListener('click', function(){ togglePwd('secPassword','eye1'); });
+
+    var eye2 = document.getElementById('toggleEye2');
+    if (eye2) eye2.addEventListener('click', function(){ togglePwd('secPin','eye2'); });
+
+    document.querySelectorAll('.card-delete-form').forEach(function(f){
+      f.addEventListener('submit', function(e){
+        if (!confirm('আপনি কি নিশ্চিত?')) e.preventDefault();
+      });
+    });
+  });
 </script>
 
 <%- include('../partials/bottom-nav') %>
