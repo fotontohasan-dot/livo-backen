@@ -17,9 +17,9 @@
   .dz58-11 { background: rgba(148,163,184,.15); color: var(--text-muted); }
   .dz58-12 { background: rgba(251,146,60,.15); color: #fb923c; }
   .dz58-13 { display: none; position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px; border-radius: 30px; font-size: 14px; z-index: 9999; font-weight: bold; }
-  .dz58-14 { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px); background: #1c2533; color: #fff; padding: 9px 20px; border-radius: 30px; font-size: 12.5px; font-weight: 600; border: 1px solid var(--gold); opacity: 0; transition: all .25s; z-index: 9999; pointer-events: none; white-space: nowrap; }
+  .dz58-14 { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--bg-surface-elevated); color: #fff; padding: 9px 20px; border-radius: 30px; font-size: 12.5px; font-weight: 600; border: 1px solid var(--gold); opacity: 0; transition: all .25s; z-index: 9999; pointer-events: none; white-space: nowrap; }
   .dz58-15 { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 10000; align-items: center; justify-content: center; padding: 20px; }
-  .dz58-16 { background: #12121f; border-radius: 20px; padding: 20px; max-width: 420px; width: 100%; max-height: 80vh; overflow-y: auto; border: 1px solid rgba(255,255,255,.08); }
+  .dz58-16 { background: var(--bg-surface-elevated); border-radius: 20px; padding: 20px; max-width: 420px; width: 100%; max-height: 80vh; overflow-y: auto; border: 1px solid rgba(255,255,255,.08); }
   .dz58-17 { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
   .dz58-18 { color: #fff; font-weight: 800; font-size: 15px; }
   .dz58-19 { background: none; border: none; color: rgba(255,255,255,.6); font-size: 18px; cursor: pointer; }
@@ -34,7 +34,7 @@
 .pf-verify-btn{background:rgba(239,68,68,.8);color:#fff;border:none;padding:6px 14px;border-radius:20px;font-size:12.5px;font-weight:700;cursor:pointer}
 
 /* Header */
-.pf-header{background:linear-gradient(160deg,#1a2235,#0d1117);padding:16px 14px 20px;position:relative;overflow:hidden}
+.pf-header{background:linear-gradient(160deg,var(--bg-surface-elevated),var(--bg-dark));padding:16px 14px 20px;position:relative;overflow:hidden}
 .pf-header-glow{position:absolute;top:-60px;right:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(245,166,35,.18),transparent 70%);border-radius:50%;pointer-events:none}
 .pf-header-top{display:flex;align-items:center;gap:14px;position:relative;z-index:2}
 .pf-header-balance-row{display:flex;align-items:flex-end;justify-content:space-between;margin-top:18px;position:relative;z-index:2}
@@ -44,8 +44,8 @@
 .pf-quick-row.pf-header-quick-row{margin:16px 0 0}
 .pf-avatar-wrap{position:relative;flex-shrink:0}
 .pf-avatar{width:68px;height:68px;border-radius:50%;background:var(--gg);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:#000;border:3px solid rgba(245,166,35,.5);box-shadow:0 0 20px rgba(245,166,35,.25);overflow:hidden;cursor:pointer;background-size:cover;background-position:center}
-.pf-avatar-edit-btn{position:absolute;bottom:-2px;right:-2px;background:#111;border:2px solid var(--gold);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer;color: var(--text-accent)}
-.pf-online-dot{position:absolute;top:2px;left:2px;width:12px;height:12px;background:#22c55e;border-radius:50%;border:2px solid #0d1117;animation:pdot 2s infinite}
+.pf-avatar-edit-btn{position:absolute;bottom:-2px;right:-2px;background:var(--bg-dark);border:2px solid var(--gold);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer;color: var(--text-accent)}
+.pf-online-dot{position:absolute;top:2px;left:2px;width:12px;height:12px;background:#22c55e;border-radius:50%;border:2px solid var(--bg-dark);animation:pdot 2s infinite}
 @keyframes pdot{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.4)}50%{box-shadow:0 0 0 5px rgba(34,197,94,0)}}
 .pf-user-info{flex:1;min-width:0}
 .pf-username-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
@@ -54,7 +54,7 @@
 .pf-user-id{color:rgba(255,255,255,.4);font-size:11.5px;margin-top:3px;display:flex;align-items:center;gap:5px}
 .pf-copy-id-btn{background:none;border:none;color: var(--text-accent);cursor:pointer;padding:0;font-size:11px}
 .pf-notif-btn{position:relative;background:rgba(255,255,255,.08);border:none;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.8);font-size:17px;cursor:pointer;flex-shrink:0;text-decoration:none}
-.pf-notif-dot{position:absolute;top:4px;right:4px;background:#e53935;color:#fff;font-size:9px;font-weight:800;min-width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1.5px solid #0d1117;padding:0 2px}
+.pf-notif-dot{position:absolute;top:4px;right:4px;background:#e53935;color:#fff;font-size:9px;font-weight:800;min-width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--bg-dark);padding:0 2px}
 
 /* Profile completion */
 .pf-completion{margin:10px 0 0;padding:8px 12px;background:rgba(255,255,255,.05);border-radius:10px;display:flex;align-items:center;gap:10px;font-size:12px;color:rgba(255,255,255,.6)}
@@ -129,7 +129,7 @@
 .mc-tile-label{color:rgba(255,255,255,.78);font-size:10.5px;font-weight:700;text-align:center;line-height:1.25;
   overflow-wrap:anywhere;hyphens:auto;max-width:100%}
 .mc-tile-badge{position:absolute;top:4px;right:8px;background:#e53935;color:#fff;font-size:9px;font-weight:800;
-  min-width:16px;height:16px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px;border:1.5px solid #12121f;z-index:1}
+  min-width:16px;height:16px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px;border:1.5px solid var(--bg-surface-elevated);z-index:1}
 .mc-tile-badge.amber{background:#f59e0b;color:#14110A}
 .mc-tile-sub{color:rgba(255,255,255,.4);font-size:9px;font-weight:600;text-align:center;line-height:1.2;margin-top:-3px}
 @media (max-width:339px){.mc-flat-grid{grid-template-columns:repeat(3,1fr)}}
@@ -166,7 +166,7 @@
 .pf-sticky-deposit:active{transform:scale(.93)}
 
 /* Toast */
-#pf-toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:#1c2533;color:#fff;padding:9px 20px;border-radius:30px;font-size:12.5px;font-weight:600;border:1px solid var(--gold);opacity:0;transition:all .25s;z-index:9999;pointer-events:none;white-space:nowrap}
+#pf-toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg-surface-elevated);color:#fff;padding:9px 20px;border-radius:30px;font-size:12.5px;font-weight:600;border:1px solid var(--gold);opacity:0;transition:all .25s;z-index:9999;pointer-events:none;white-space:nowrap}
 
 /* Spinning */
 .spinning{animation:sp360 .7s linear infinite}
@@ -191,18 +191,18 @@
 
 /* Light mode */
 body.light-mode .pf-header{background:linear-gradient(160deg,#e5e7eb,#d1d5db)}
-body.light-mode .pf-username{color:#111}
+body.light-mode .pf-username{color:var(--text-main)}
 body.light-mode .mc-tile-label{color:#374151}
 body.light-mode .pf-card{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.08)}
 body.light-mode .pf-vip-info{color: var(--text-muted)}
 body.light-mode .pf-wi-label{color: var(--text-muted)}
-body.light-mode .pf-wi-value{color:#111}
+body.light-mode .pf-wi-value{color:var(--text-main)}
 body.light-mode .pf-balance-label{color: var(--text-muted)}
-body.light-mode .mc-grid-title{color:#111}
+body.light-mode .mc-grid-title{color:var(--text-main)}
 body.light-mode .mc-section-label{color:rgba(0,0,0,.6)}
 body.light-mode .mc-tile-badge{border-color:#fff}
 body.light-mode .mc-tile-sub{color:rgba(0,0,0,.6)}
-body.light-mode .pf-card-title{color:#111}
+body.light-mode .pf-card-title{color:var(--text-main)}
 body.light-mode .pf-completion{background:rgba(0,0,0,.04);color:rgba(0,0,0,.65)}
 body.light-mode .pf-footer{color:rgba(0,0,0,.5)}
 body.light-mode .pf-header-balance-label{color:rgba(0,0,0,.65)}
