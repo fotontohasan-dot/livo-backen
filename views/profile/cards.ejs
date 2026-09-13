@@ -1,222 +1,169 @@
 <%- include('../partials/head') %>
-<!-- Tailwind এখন বিল্ড-টাইমে কম্পাইল করা স্ট্যাটিক CSS (npm run build:css)।
-     আগে এখানে cdn.tailwindcss.com ছিল, যা Tailwind-এর ডকুমেন্টেশনেই প্রোডাকশনের
-     জন্য নিষিদ্ধ: ব্রাউজারে JIT কম্পাইলার চালাত (~৪০০KB JS + প্রতি লোডে কম্পাইল),
-     CDN ডাউন হলে স্টাইল ভেঙে যেত, আর CSP-তে বাইরের স্ক্রিপ্ট-সোর্স অনুমোদন করাত। -->
-<link rel="stylesheet" href="/css/tailwind.css?v=<%= locals.assetVersion || 'dev' %>">
-<style nonce="<%= cspNonce %>">
+<style>
   @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap');
 
-  body {
-    background-color: #f3f4f6 !important;
-    color: #1f2937 !important;
-    font-family: 'Hind Siliguri', sans-serif;
-  }
-  .red-theme-bg { background-color: #e61e26; }
-  .red-theme-text { color: #e61e26; }
+  body { background-color: var(--bg-dark) !important; color: var(--text-main) !important; font-family: 'Hind Siliguri', sans-serif; }
+  .cd-wrap { max-width: 480px; margin: 0 auto; padding-bottom: 110px; }
+  .cd-topbar { background: #000; color: #fff; padding: 14px 16px; display: flex; align-items: center; gap: 14px; position: sticky; top: 0; z-index: 50; }
+  .cd-topbar a { color: #fff; text-decoration: none; }
+  .cd-topbar h1 { font-size: 16px; font-weight: 700; margin: 0; }
 
-  .bottom-sheet {
-    transform: translateY(100%);
-    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .bottom-sheet.active {
-    transform: translateY(0);
-  }
-  .overlay {
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.3s ease;
-  }
-  .overlay.active {
-    opacity: 1;
-    visibility: visible;
-  }
+  .cd-section { padding: 18px 16px 0; }
+  .cd-count { font-size: 13px; font-weight: 600; margin-bottom: 14px; }
+  .cd-count b { color: #e61e26; }
 
-  .navbar, .bottom-nav {
-    max-width: 480px;
-    margin: 0 auto;
-  }
+  .cd-item { background: var(--bg-surface); border: 1px solid var(--border-glass); border-radius: 18px; padding: 16px; display: flex; align-items: center; gap: 14px; margin-bottom: 12px; position: relative; overflow: hidden; }
+  .cd-item .ic { width: 48px; height: 48px; border-radius: 14px; background: rgba(230,30,38,0.12); color: #e61e26; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .cd-item h3 { font-size: 16px; margin: 0 0 2px; }
+  .cd-item p { color: var(--text-muted); font-family: monospace; font-size: 13px; margin: 0; letter-spacing: 1px; }
+  .cd-item .del { color: #e61e26; background: none; border: none; font-size: 18px; margin-left: auto; }
 
-  .fab-container {
-    position: fixed;
-    bottom: 100px;
-    left: 0;
-    right: 0;
-    display: flex;
-    justify-content: center;
-    z-index: 50;
-    pointer-events: none;
-  }
-  .fab-btn {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background-color: #e61e26;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    box-shadow: 0 8px 25px rgba(230, 30, 38, 0.4);
-    pointer-events: auto;
-    transition: all 0.3s ease;
-  }
-  .fab-btn:active {
-    transform: scale(0.9) rotate(90deg);
-  }
+  .cd-empty { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+  .cd-empty .icon-circle { width: 110px; height: 110px; border-radius: 50%; background: var(--bg-surface); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; }
+  .cd-empty h3 { color: var(--text-main); font-size: 18px; margin-bottom: 6px; }
 
-  .card-item {
-    transition: all 0.3s ease;
-  }
+  .fab-container { position: fixed; bottom: 100px; left: 0; right: 0; display: flex; justify-content: center; z-index: 50; pointer-events: none; }
+  .fab-btn { width: 58px; height: 58px; border-radius: 50%; background: #e61e26; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 22px; border: none; box-shadow: 0 8px 22px rgba(230,30,38,0.4); pointer-events: auto; }
 
-  .delete-btn {
-    color: #e61e26;
-    font-size: 20px;
-    cursor: pointer;
-    opacity: 0.6;
-    transition: opacity 0.2s;
-  }
-  .delete-btn:hover {
-    opacity: 1;
-  }
+  .overlay { opacity: 0; visibility: hidden; transition: all 0.3s ease; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; }
+  .overlay.active { opacity: 1; visibility: visible; }
+  .bottom-sheet { transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.4,0,0.2,1); position: fixed; bottom: 0; left: 0; right: 0; max-width: 480px; margin: 0 auto; background: var(--bg-surface); border-radius: 28px 28px 0 0; z-index: 101; border-top: 1px solid var(--border-glass); }
+  .bottom-sheet.active { transform: translateY(0); }
+  .sheet-inner { padding: 26px; }
+  .sheet-handle { width: 44px; height: 5px; background: var(--border-glass); border-radius: 10px; margin: 0 auto 20px; }
+  .sheet-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .sheet-head h2 { font-size: 20px; margin: 0; }
+  .sheet-head p { color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 2px 0 0; }
+  .sheet-head button { width: 38px; height: 38px; border-radius: 50%; border: none; background: var(--bg-dark); color: var(--text-muted); }
+
+  .kind-toggle { display: flex; gap: 8px; margin-bottom: 18px; }
+  .kind-btn { flex: 1; text-align: center; padding: 10px; border-radius: 12px; border: 2px solid var(--border-glass); font-weight: 700; cursor: pointer; color: var(--text-muted); }
+  .kind-btn.active { border-color: #e61e26; color: #e61e26; }
+
+  .sheet-field { margin-bottom: 16px; }
+  .sheet-field label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
+  .sheet-field select, .sheet-field input { width: 100%; padding: 14px; border-radius: 16px; border: 2px solid var(--border-glass); background: var(--bg-dark); color: var(--text-main); font-weight: 700; }
+  .sheet-field select:focus, .sheet-field input:focus { outline: none; border-color: #e61e26; }
+  .sheet-submit { width: 100%; padding: 15px; border: none; border-radius: 16px; background: #e61e26; color: #fff; font-weight: 800; font-size: 16px; }
 </style>
 
-<div class="min-h-screen pb-32">
-  <!-- Top Bar -->
-  <div class="red-theme-bg text-white px-4 py-4 flex items-center gap-4 sticky top-0 z-50 shadow-md">
-    <a href="/profile" class="text-xl"><i class="fas fa-chevron-left"></i></a>
-    <h1 class="text-lg font-bold"><%= t('cards_title') %></h1>
+<div class="cd-wrap">
+  <div class="cd-topbar">
+    <a href="/profile"><i class="fas fa-chevron-left"></i></a>
+    <h1>আমার কার্ড / ই-ওয়ালেট</h1>
   </div>
 
-  <div class="p-4 max-w-[480px] mx-auto">
-    <%- include('../partials/flash') %>
+  <%- include('../partials/flash') %>
 
-    <div class="mb-6">
-        <div class="flex items-center justify-between mb-6">
-            <h2 class="text-gray-400 text-sm font-bold uppercase tracking-wider"><%= t('cards_saved') %></h2>
-            <p class="text-[13px] font-bold"><%= t('cards_added_count') %> <span class="red-theme-text font-black"><%= (typeof loadError !== 'undefined' && loadError) ? '—' : (cards ? cards.length : 0) %></span></p>
+  <div class="cd-section">
+    <div class="cd-count">ই-ওয়ালেট যোগ করা হয়েছে: <b><%= cards ? cards.length : 0 %></b></div>
+    <% if (cards && cards.length > 0) { %>
+      <% cards.forEach(function(c){ %>
+        <div class="cd-item">
+          <div class="ic"><i class="fas fa-wallet"></i></div>
+          <div><h3><%= c.bank_name %></h3><p><%= c.account_number %></p></div>
+          <form action="/profile/cards/delete/<%= c.id %>" method="POST" onsubmit="return confirm('আপনি কি নিশ্চিত?')">
+            <button type="submit" class="del"><i class="far fa-times-circle"></i></button>
+          </form>
         </div>
+      <% }) %>
+    <% } else { %>
+      <div class="cd-empty">
+        <div class="icon-circle"><i class="fas fa-wallet" style="font-size:36px; opacity:0.25;"></i></div>
+        <h3>খালি ই-ওয়ালেট</h3>
+      </div>
+    <% } %>
+  </div>
 
-        <% if (typeof loadError !== 'undefined' && loadError) { %>
-            <!-- লোড ব্যর্থ। খালি-অবস্থার চিত্রটা দেখানো যাবে না: ইউজার
-                 ভাববে তার কার্ড মুছে গেছে আর নতুন করে যোগ করতে যাবে। -->
-            <div id="cardsLoadError" role="alert" class="rounded-2xl border border-red-500/40 bg-red-500/10 p-5 text-center text-sm text-red-400 font-bold">
-                <i class="fas fa-triangle-exclamation"></i> <%= t.cards_load_error %>
-            </div>
-        <% } else if (cards && cards.length > 0) { %>
-            <div class="grid gap-4">
-                <% cards.forEach(c => { %>
-                    <div class="card-item bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex items-center gap-5 relative overflow-hidden">
-                        <div class="absolute top-0 left-0 w-2 h-full red-theme-bg opacity-10"></div>
-                        <div class="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center red-theme-text text-2xl shadow-inner">
-                            <i class="fas fa-wallet"></i>
-                        </div>
-                        <div class="flex-1">
-                            <h3 class="font-black text-gray-800 text-lg leading-tight mb-1"><%= c.bank_name %></h3>
-                            <p class="text-gray-500 font-mono text-sm tracking-widest"><%= c.account_number %></p>
-                            <div class="flex items-center gap-2 mt-2">
-                                <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                                <span class="text-gray-400 text-[11px] font-bold uppercase tracking-tighter"><%= c.holder_name %></span>
-                            </div>
-                        </div>
-                        <form action="/profile/cards/delete/<%= c.id %>" method="POST" data-confirm="<%= t('cards_delete_confirm') %>">
-                            <button type="submit" class="delete-btn">
-                                <i class="far fa-times-circle"></i>
-                            </button>
-                        </form>
-                    </div>
-                <% }) %>
-            </div>
-        <% } else { %>
-            <!-- Empty State -->
-            <div class="flex flex-col items-center justify-center py-24 text-center">
-                <div class="relative mb-8">
-                    <div class="w-40 h-40 bg-white rounded-full flex items-center justify-center shadow-xl shadow-gray-200/50">
-                        <i class="fas fa-credit-card text-7xl text-gray-100"></i>
-                    </div>
-                    <div class="absolute -bottom-2 -right-2 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg border border-gray-50">
-                        <i class="fas fa-plus text-gray-300"></i>
-                    </div>
-                </div>
-                <h3 class="text-gray-800 font-black text-2xl mb-2"><%= t('cards_empty_title') %></h3>
-                <p class="text-[15px] text-gray-400 px-10 leading-relaxed"><%= t('cards_empty_desc') %></p>
-            </div>
-        <% } %>
-    </div>
+  <div class="cd-section">
+    <div class="cd-count">ক্রিপ্টো ওয়ালেট যোগ করা হয়েছে: <b><%= cryptoCards ? cryptoCards.length : 0 %></b></div>
+    <% if (cryptoCards && cryptoCards.length > 0) { %>
+      <% cryptoCards.forEach(function(c){ %>
+        <div class="cd-item">
+          <div class="ic"><i class="fab fa-bitcoin"></i></div>
+          <div><h3><%= c.bank_name %></h3><p><%= c.account_number %></p></div>
+          <form action="/profile/cards/delete/<%= c.id %>" method="POST" onsubmit="return confirm('আপনি কি নিশ্চিত?')">
+            <button type="submit" class="del"><i class="far fa-times-circle"></i></button>
+          </form>
+        </div>
+      <% }) %>
+    <% } else { %>
+      <div class="cd-empty">
+        <div class="icon-circle"><i class="fab fa-bitcoin" style="font-size:36px; opacity:0.25;"></i></div>
+        <h3>খালি ওয়ালেট তালিকা</h3>
+      </div>
+    <% } %>
   </div>
 </div>
 
-<!-- Floating Plus Button -->
 <div class="fab-container">
-    <button class="fab-btn">
-        <i class="fas fa-plus"></i>
-    </button>
+  <button onclick="toggleModal(true)" class="fab-btn"><i class="fas fa-plus"></i></button>
 </div>
 
-<!-- Bottom Sheet Modal -->
-<div id="modalOverlay" class="overlay fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[100]"></div>
-<div id="bottomSheet" class="bottom-sheet fixed bottom-0 left-0 right-0 max-w-[480px] mx-auto bg-white rounded-t-[40px] z-[101] shadow-2xl border-t border-gray-50">
-    <div class="p-8 pb-12">
-        <!-- Handle -->
-        <div class="w-12 h-1.5 bg-gray-100 rounded-full mx-auto mb-8"></div>
-
-        <div class="flex items-center justify-between mb-8">
-            <div>
-                <h2 class="text-2xl font-black text-gray-800 tracking-tight"><%= t('cards_add_new') %></h2>
-                <p class="text-gray-400 text-xs font-bold mt-1 uppercase tracking-widest">Add New E-Wallet</p>
-            </div>
-            <button data-cards-close class="w-12 h-12 flex items-center justify-center bg-gray-50 rounded-full text-gray-400 hover:text-red-500 transition-colors">
-                <i class="fas fa-times text-xl"></i>
-            </button>
-        </div>
-
-        <form action="/profile/cards/add" method="POST" class="space-y-6">
-            <div>
-                <label class="block text-gray-500 text-[13px] font-bold mb-2 ml-1 uppercase tracking-wider"><%= t('cards_wallet_type') %></label>
-                <div class="relative">
-                    <select name="bank_name" class="w-full p-4 border-2 border-gray-50 rounded-2xl focus:outline-none focus:border-red-500 bg-gray-50 font-bold appearance-none text-gray-700" required>
-                        <option value="" disabled selected><%= t('cards_select_wallet') %></option>
-                        <option value="bKash">bKash</option>
-                        <option value="Nagad">Nagad</option>
-                        <option value="Rocket">Rocket</option>
-                        <option value="Upay">Upay</option>
-                        <option value="Bank Account">Bank Account</option>
-                    </select>
-                    <div class="absolute inset-y-0 right-4 flex items-center pointer-events-none text-gray-400">
-                        <i class="fas fa-chevron-down"></i>
-                    </div>
-                </div>
-            </div>
-
-            <div>
-                <label class="block text-gray-500 text-[13px] font-bold mb-2 ml-1 uppercase tracking-wider"><%= t('cards_account_number') %></label>
-                <input type="text" name="account_number" placeholder="<%= t('cards_account_placeholder') %>" class="w-full p-4 border-2 border-gray-50 rounded-2xl focus:outline-none focus:border-red-500 bg-gray-50 font-bold text-gray-700" required>
-            </div>
-
-            <div>
-                <!-- এই ফিল্ডটা "পাসওয়ার্ড" লেবেল ও type="password" নিয়ে ছিল, অথচ
-                     এর name="holder_name" এবং routes/profile.js একে সরাসরি
-                     bank_cards.holder_name কলামে প্লেইনটেক্সটে সেভ করে।
-                     অর্থাৎ ব্যবহারকারী নিজের পাসওয়ার্ড টাইপ করতেন আর সেটা
-                     হ্যাশ ছাড়াই ডাটাবেসে জমা হতো — কার্ড তালিকায় দেখানোও হতো।
-                     ফিল্ডটা আসলে অ্যাকাউন্ট হোল্ডারের নামের জন্য (isValidName
-                     দিয়েই যাচাই হয়), তাই লেবেল ও type ঠিক করা হলো। -->
-                <label class="block text-gray-500 text-[13px] font-bold mb-2 ml-1 uppercase tracking-wider"><%= t('cards_holder_name') %></label>
-                <input type="text" name="holder_name" placeholder="<%= t('cards_holder_placeholder') %>" class="w-full p-4 border-2 border-gray-50 rounded-2xl focus:outline-none focus:border-red-500 bg-gray-50 font-bold text-gray-700" required>
-
-            </div>
-
-            <div class="pt-4">
-                <button type="submit" class="w-full red-theme-bg text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:shadow-red-500/30 transition-all active:scale-95">
-                    <%= t('cards_confirm') %>
-                </button>
-            </div>
-        </form>
+<div id="modalOverlay" class="overlay" onclick="toggleModal(false)"></div>
+<div id="bottomSheet" class="bottom-sheet">
+  <div class="sheet-inner">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head">
+      <div><h2>নতুন যোগ করুন</h2><p>Add New Wallet</p></div>
+      <button onclick="toggleModal(false)"><i class="fas fa-times"></i></button>
     </div>
+
+    <form action="/profile/cards/add" method="POST">
+      <div class="kind-toggle">
+        <div class="kind-btn active" id="kindEwallet" onclick="setKind('ewallet')">ই-ওয়ালেট</div>
+        <div class="kind-btn" id="kindCrypto" onclick="setKind('crypto')">ক্রিপ্টো</div>
+      </div>
+      <input type="hidden" name="wallet_kind" id="walletKindInput" value="ewallet">
+
+      <div class="sheet-field" id="ewalletTypeField">
+        <label>ওয়ালেট টাইপ</label>
+        <select name="bank_name" required>
+          <option value="" disabled selected>E-wallet সিলেক্ট করুন</option>
+          <option value="bKash">bKash</option>
+          <option value="Nagad">Nagad</option>
+          <option value="Rocket">Rocket</option>
+          <option value="Upay">Upay</option>
+          <option value="Bank Account">Bank Account</option>
+        </select>
+      </div>
+
+      <div class="sheet-field">
+        <label>অ্যাকাউন্ট/নাম্বার</label>
+        <input type="text" name="account_number" placeholder="আপনার নম্বর বা ওয়ালেট অ্যাড্রেস লিখুন" required>
+      </div>
+
+      <div class="sheet-field">
+        <label>পাসওয়ার্ড</label>
+        <input type="password" name="holder_name" placeholder="আপনার পাসওয়ার্ড লিখুন" required>
+      </div>
+
+      <button type="submit" class="sheet-submit">ওয়ালেট নিশ্চিত করুন</button>
+    </form>
+  </div>
 </div>
 
-<script src="/js/views/profile-cards.js"></script>
-
+<script>
+  function toggleModal(show) {
+    var modal = document.getElementById('bottomSheet');
+    var overlay = document.getElementById('modalOverlay');
+    if (!modal || !overlay) return;
+    modal.classList.toggle('active', show);
+    overlay.classList.toggle('active', show);
+    document.body.style.overflow = show ? 'hidden' : '';
+  }
+  function setKind(kind) {
+    document.getElementById('walletKindInput').value = kind;
+    document.getElementById('kindEwallet').classList.toggle('active', kind === 'ewallet');
+    document.getElementById('kindCrypto').classList.toggle('active', kind === 'crypto');
+    var sel = document.querySelector('#ewalletTypeField select');
+    if (kind === 'crypto') {
+      sel.innerHTML = '<option value="USDT (TRC20)">USDT (TRC20)</option><option value="USDT (BEP20)">USDT (BEP20)</option><option value="Bitcoin">Bitcoin</option>';
+    } else {
+      sel.innerHTML = '<option value="" disabled selected>E-wallet সিলেক্ট করুন</option><option value="bKash">bKash</option><option value="Nagad">Nagad</option><option value="Rocket">Rocket</option><option value="Upay">Upay</option><option value="Bank Account">Bank Account</option>';
+    }
+  }
+</script>
 
 <%- include('../partials/bottom-nav') %>
 </body></html>
