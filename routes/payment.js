@@ -154,9 +154,19 @@ router.post('/deposit', requireLogin, async (req, res) => {
 
 router.get('/withdraw', requireLogin, async (req, res) => {
   try {
-    const result = await pool.query('SELECT coins, withdraw_pin_hash FROM users WHERE id=$1', [req.session.user.id]);
-    const coins = result.rows[0]?.coins || 0;
-    const hasWithdrawPin = !!(result.rows[0] && result.rows[0].withdraw_pin_hash);
+    let coins = 0;
+    let hasWithdrawPin = false;
+    try {
+      const result = await pool.query('SELECT coins, withdraw_pin_hash FROM users WHERE id=$1', [req.session.user.id]);
+      coins = result.rows[0]?.coins || 0;
+      hasWithdrawPin = !!(result.rows[0] && result.rows[0].withdraw_pin_hash);
+    } catch (e) {
+      // withdraw_pin_hash কলাম না থাকলে (migration.sql না চালানো থাকলে) শুধু coins আনি
+      try {
+        const fallback = await pool.query('SELECT coins FROM users WHERE id=$1', [req.session.user.id]);
+        coins = fallback.rows[0]?.coins || 0;
+      } catch (e2) { /* keep defaults */ }
+    }
     let ewalletCards = [];
     let cryptoCards = [];
     try {
