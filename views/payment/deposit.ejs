@@ -89,6 +89,7 @@
 
   <form action="/payment/deposit" method="POST" id="depositForm">
     <input type="hidden" name="channel_id" id="channelIdInput" value="">
+    <input type="hidden" name="method" id="methodInput" value="nagad">
 
     <div id="step1">
       <div class="dep-section">
@@ -223,6 +224,7 @@
     el.classList.add('selected');
     document.getElementById('methodLabelText').textContent = METHOD_LABELS[method] || method;
     document.getElementById('selectedMethodName').textContent = METHOD_LABELS[method] || method;
+    document.getElementById('methodInput').value = method; // পোস্ট বডিতে method আগে কখনো যেতোই না
     renderChannels(method);
   }
 
