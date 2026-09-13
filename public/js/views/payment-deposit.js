@@ -136,8 +136,12 @@
   function isAmountValid() {
     var input = document.getElementById('amountInput');
     if (!input) return false;
-    var amt = parseFloat(input.value);
-    return !isNaN(amt) && amt >= 100 && amt <= 50000;
+    var amt = Number(input.value);
+    // সার্ভার (parseAmount) শুধু পূর্ণসংখ্যা গ্রহণ করে — ক্লায়েন্টেও একই
+    // নিয়ম রাখা হলো, নইলে দশমিক অ্যামাউন্ট এখানে "বৈধ" মনে হয়ে ফর্ম
+    // সাবমিট হয়, তারপর সার্ভার নীরবে বাতিল করে (amount===null) এবং
+    // একটা বিভ্রান্তিকর "সব ফিল্ড পূরণ করুন" বার্তা দেখায়।
+    return Number.isInteger(amt) && amt >= 100 && amt <= 50000;
   }
 
   function updateStep2() {
@@ -329,6 +333,29 @@
       document.body.appendChild(f);
       f.submit();
     });
+
+    // ==================== সাবমিট বাটন: প্রসেসিং স্টেট + ডুপ্লিকেট গার্ড ====================
+    // ui-hooks.js-এর `data-loading-target` হ্যান্ডলার `window.LivoToast` না
+    // থাকলে চুপচাপ কিছুই করে না (এই কোডবেসে LivoToast আদৌ ডিফাইন করা নেই)।
+    // ফলে বাটন সাবমিটের সময় disable হতো না — দ্রুত দুইবার ক্লিকে দুটো
+    // রিকোয়েস্ট চলে যেতে পারত। এটা নেটিভ ফর্ম সাবমিট (preventDefault নেই),
+    // তাই ব্রাউজার স্বাভাবিকভাবেই পরের পেজে যাবে; শুধু মাঝের মুহূর্তে বাটন
+    // disable করে দ্বিতীয় ক্লিক আটকানো হচ্ছে।
+    var depositForm = document.getElementById('depositForm');
+    if (depositForm) {
+      depositForm.addEventListener('submit', function (ev) {
+        var btn = document.getElementById('depSubmitBtn');
+        if (!btn) return;
+        if (btn.disabled) { ev.preventDefault(); return; } // ইতিমধ্যে প্রসেসিং চলছে
+        btn.disabled = true;
+        btn.dataset.originalLabel = btn.textContent;
+        var label = depositForm.getAttribute('data-loading-label');
+        if (label) btn.textContent = label;
+        // সার্ভার-সাইড ভ্যালিডেশন ব্যর্থ হলে (৪xx/৫xx নয়, req.flash + redirect)
+        // এই একই পেজ আবার লোড হয় — তখন বাটন এমনিতেই তার আসল, enabled
+        // অবস্থায় ফিরে আসবে কারণ পুরো DOM নতুন করে রেন্ডার হচ্ছে।
+      });
+    }
   });
 
 // চ্যানেল কার্ড — আগে প্রতিটাতে ইনলাইন onclick ছিল।
