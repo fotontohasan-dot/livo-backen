@@ -12,13 +12,13 @@
     color: var(--text-main) !important;
     font-family: 'Hind Siliguri', sans-serif;
   }
-  .red-theme-bg { background-color: #e61e26; }
-  .red-theme-text { color: #e61e26; }
-  .red-theme-border { border-color: #e61e26; }
+  .red-theme-bg { background-color: var(--red); }
+  .red-theme-text { color: var(--red); }
+  .red-theme-border { border-color: var(--red); }
 
   input:focus {
-    border-color: #e61e26 !important;
-    box-shadow: 0 0 0 2px rgba(230, 30, 38, 0.1);
+    border-color: var(--red) !important;
+    box-shadow: 0 0 0 2px rgba(214, 40, 40, 0.1);
   }
   .step-2 { display: none; }
 
@@ -32,9 +32,9 @@
     position: relative;
   }
   .method-card.selected {
-    border-color: #e61e26 !important;
-    background-color: rgba(230, 30, 38, 0.08) !important;
-    box-shadow: 0 0 0 2px rgba(230, 30, 38, 0.25);
+    border-color: var(--red) !important;
+    background-color: rgba(214, 40, 40, 0.08) !important;
+    box-shadow: 0 0 0 2px rgba(214, 40, 40, 0.25);
   }
   .method-card .check-badge {
     position: absolute;
@@ -43,7 +43,7 @@
     width: 22px;
     height: 22px;
     border-radius: 50%;
-    background: #e61e26;
+    background: var(--red);
     color: #fff;
     display: none;
     align-items: center;
@@ -60,30 +60,30 @@
     position: relative;
   }
   .channel-btn.selected {
-    background-color: #e61e26 !important;
+    background-color: var(--red) !important;
     color: #fff !important;
-    border-color: #e61e26 !important;
-    box-shadow: 0 0 0 2px rgba(230, 30, 38, 0.25);
+    border-color: var(--red) !important;
+    box-shadow: 0 0 0 2px rgba(214, 40, 40, 0.25);
   }
 
   .deposit-mode-btn {
     transition: all 0.2s ease;
   }
   .deposit-mode-btn.selected {
-    background-color: #e61e26 !important;
+    background-color: var(--red) !important;
     color: #fff !important;
-    border-color: #e61e26 !important;
-    box-shadow: 0 0 0 2px rgba(230, 30, 38, 0.25);
+    border-color: var(--red) !important;
+    box-shadow: 0 0 0 2px rgba(214, 40, 40, 0.25);
   }
 
   .amount-btn {
     position: relative;
   }
   .amount-btn.selected {
-    border-color: #e61e26 !important;
-    color: #e61e26 !important;
-    background-color: rgba(230, 30, 38, 0.08) !important;
-    box-shadow: 0 0 0 2px rgba(230, 30, 38, 0.25);
+    border-color: var(--red) !important;
+    color: var(--red) !important;
+    background-color: rgba(214, 40, 40, 0.08) !important;
+    box-shadow: 0 0 0 2px rgba(214, 40, 40, 0.25);
   }
 
   /* অ্যামাউন্ট ইনপুট: টেক্সট মাঝখানে, স্পষ্ট রঙ/সাইজে দেখানোর জন্য */
@@ -92,7 +92,7 @@
     color: var(--text-main) !important;
     -webkit-text-fill-color: var(--text-main) !important;
     background-color: var(--bg-surface, var(--bg-dark)) !important;
-    caret-color: #e61e26;
+    caret-color: var(--red);
     letter-spacing: 0.5px;
     opacity: 1 !important;
   }
@@ -126,6 +126,7 @@
   </div>
 
   <div class="p-4 max-w-[480px] mx-auto">
+    <%- include('../partials/flash') %>
 
     <form action="/payment/deposit" method="POST" id="depositForm" data-loading-target="depSubmitBtn" data-loading-label="<%= t('dep_submitting') %>">
 
