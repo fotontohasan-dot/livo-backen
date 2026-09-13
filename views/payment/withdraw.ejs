@@ -12,7 +12,8 @@
 
   .wd-tabs { display: flex; background: var(--bg-surface); }
   .wd-tab { flex: 1; text-align: center; padding: 12px 0; font-weight: 700; color: var(--text-muted); border-bottom: 3px solid transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
-  .wd-tab.active { color: #e61e26; border-color: #e61e26; }
+  .wd-tab.active { color: #E6007E; border-color: #E6007E; }
+  .wd-tab#tabCrypto.active { color: #F7931A; border-color: #F7931A; }
   .wd-tab .dot { width: 22px; height: 22px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; }
 
   .fab-add { position: absolute; right: 16px; top: 130px; width: 44px; height: 44px; background: #e61e26; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 4px 10px rgba(230,30,38,0.35); z-index: 10; text-decoration: none; }
@@ -55,7 +56,7 @@
 
   <div class="wd-tabs">
     <div class="wd-tab active" id="tabEwallet" onclick="switchTab('ewallet')">
-      <span class="dot" style="background:#e61e26;">e</span> E wallet
+      <span class="dot" style="background:#E6007E;">e</span> E wallet
     </div>
     <div class="wd-tab" id="tabCrypto" onclick="switchTab('crypto')">
       <span class="dot" style="background:#F7931A;">₿</span> ক্রিপ্টো ওয়ালেট
