@@ -22,41 +22,16 @@ const { getRewardStatus, claimRedPacket, claimGoldenEgg } = require('../services
 router.get('/', isAuth, async (req, res) => {
   try {
     const user = await pool.query(`SELECT * FROM users WHERE id=$1`, [req.session.user.id]);
-    const predictions = await pool.query(`
-      SELECT p.*, m.title, m.team_a, m.team_b, m.result
-      FROM predictions p
-      JOIN matches m ON p.match_id = m.id
-      WHERE p.user_id = $1
-      ORDER BY p.created_at DESC LIMIT 10
-    `, [req.session.user.id]);
 
-    const tournaments = await pool.query(`
-      SELECT
-        COALESCE(t.name, 'টুর্নমেন্ট') as name,
-        COALESCE(t.sport, 'General') as sport,
-        COALESCE(tp.points, 0) as points,
-        tp.joined_at as joined_at
-      FROM tournament_participants tp
-      JOIN tournaments t ON tp.tournament_id = t.id
-      WHERE tp.user_id = $1
-      ORDER BY tp.joined_at DESC
-    `, [req.session.user.id]);
-
-    const stats = await pool.query(`
-      SELECT
-        COUNT(*) as total,
-        COUNT(CASE WHEN status='won' THEN 1 END) as won,
-        COALESCE(SUM(CASE WHEN status='won' THEN points_earned ELSE 0 END), 0) as total_earned
-      FROM predictions
-      WHERE user_id = $1
-    `, [req.session.user.id]);
-
+    // আগে এখানে 'predictions' নামের একটা টেবিল থেকে (predictions/tournaments/stats)
+    // ডেটা আনার চেষ্টা হতো, কিন্তু ডাটাবেজে ওই টেবিলটাই নেই (আসল টেবিলের নাম 'bets' —
+    // দেখুন routes/api.js-এর একই নোট)। ফলে প্রতিবার /profile লোড করতেই query fail
+    // করত, catch ব্লক ধরত, আর ইউজারকে flash এরর সহ হোমে ফেরত পাঠাত। যাচাই করে
+    // দেখা গেছে views/profile/index.ejs টেমপ্লেট এই তিনটার একটাও ব্যবহার করে না,
+    // তাই মৃত কোড হিসেবে বাদ দেওয়া হলো।
     res.render('profile/index', {
       user: user.rows[0],
-      profileUser: user.rows[0],
-      predictions: predictions.rows,
-      tournaments: tournaments.rows,
-      stats: stats.rows[0]
+      profileUser: user.rows[0]
     });
   } catch (err) {
     console.error('Profile error:', err);
