@@ -9,6 +9,7 @@ const rbac = require('../services/rbac');
 const { logEvent: logAuditEvent } = require('../services/auditLog');
 const { PublicError, publicMessage } = require('../utils/safeError');
 const businessTime = require('../utils/businessTime');
+const { requireFeature } = require('../middleware/featureGate');
 
 const { isAuth } = require('../middleware/auth');
 
@@ -77,7 +78,7 @@ const MAX_BONUS = 15000;
 
 const VALID_METHODS = ['bkash', 'nagad', 'rocket', 'upay', 'bank', 'crypto'];
 
-router.get('/deposit', requireLogin, async (req, res) => {
+router.get('/deposit', requireLogin, requireFeature('deposit'), async (req, res) => {
   let channelsByMethod = {};
   try {
     const ch = await pool.query(
@@ -124,7 +125,7 @@ router.get('/deposit/methods', requireLogin, async (req, res) => {
   }
 });
 
-router.post('/deposit', requireLogin, async (req, res) => {
+router.post('/deposit', requireLogin, requireFeature('deposit'), async (req, res) => {
   const { method, transaction_id, account_number } = req.body;
   const wantBonus = req.body.want_bonus === 'yes';
   const amount = parseAmount(req.body.amount);
@@ -361,7 +362,7 @@ router.get('/wallet', requireLogin, async (req, res) => {
   }
 });
 
-router.get('/withdraw', requireLogin, async (req, res) => {
+router.get('/withdraw', requireLogin, requireFeature('withdrawal'), async (req, res) => {
   try {
     let coins = 0;
     let hasWithdrawPin = false;
@@ -399,7 +400,7 @@ router.get('/withdraw', requireLogin, async (req, res) => {
 });
 
 
-router.post('/withdraw', requireLogin, async (req, res) => {
+router.post('/withdraw', requireLogin, requireFeature('withdrawal'), async (req, res) => {
   const { method, account_number, password, withdraw_pin } = req.body;
   const amount = parseAmount(req.body.amount);
   const userId = req.session.user.id;
