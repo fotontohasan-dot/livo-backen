@@ -368,8 +368,7 @@ router.get('/withdraw', requireLogin, requireFeature('withdrawal'), async (req, 
     let hasWithdrawPin = false;
     try {
       const result = await pool.query('SELECT coins, withdraw_pin_hash FROM users WHERE id=$1', [req.session.user.id]);
-      // pg NUMERIC কলাম স্ট্রিং হিসেবে ফেরত আসে (precision নষ্ট এড়াতে) — Number()
-      // না করলে view-তে (coins || 0).toFixed(2) স্ট্রিং-এ toFixed খুঁজে ক্র্যাশ করে।
+      // pg NUMERIC কলাম string হিসেবে আসে — Number() না করলে view-তে .toFixed() ক্র্যাশ করে
       coins = Number(result.rows[0]?.coins) || 0;
       hasWithdrawPin = !!(result.rows[0] && result.rows[0].withdraw_pin_hash);
     } catch (e) {
@@ -501,8 +500,14 @@ router.post('/withdraw', requireLogin, requireFeature('withdrawal'), async (req,
 });
 
 router.get('/history', requireLogin, async (req, res) => {
+  const type = ['deposit', 'withdraw'].includes(req.query.type) ? req.query.type : null;
+  const filter = {
+    type: type || '',
+    quick: ['today', 'yesterday', '7days'].includes(req.query.quick) ? req.query.quick : '',
+    from: req.query.from || '',
+    to: req.query.to || ''
+  };
   try {
-    const type = ['deposit', 'withdraw'].includes(req.query.type) ? req.query.type : null;
     const result = type
       ? await pool.query(
           `SELECT * FROM payment_requests WHERE user_id=$1 AND type=$2 ORDER BY created_at DESC LIMIT 50`,
@@ -512,13 +517,16 @@ router.get('/history', requireLogin, async (req, res) => {
           `SELECT * FROM payment_requests WHERE user_id=$1 ORDER BY created_at DESC LIMIT 50`,
           [req.session.user.id]
         );
-    res.render('payment/history', { user: req.session.user, requests: result.rows });
+    res.render('payment/history', { user: req.session.user, requests: result.rows, filter });
   } catch (err) {
-    res.render('payment/history', { user: req.session.user, requests: [] });
+    console.error('history error:', err.message);
+    // আগে এখানে loadError পাঠানো হতো না — ব্যর্থতাকে "খালি তালিকা" হিসেবে দেখানো হতো,
+    // যেটা "সত্যিই কোনো রেকর্ড নেই"-র থেকে আলাদা করা যেত না।
+    res.render('payment/history', { user: req.session.user, requests: [], filter, loadError: true });
   }
 });
 
-router.get('/admin/payments', requireAdmin, async (req, res) => {
+router.get('/admin/payments', rbac.requirePermission('payments_view'), async (req, res) => {
   try {
     // আনবাউন্ডেড কোয়েরি ছিল — এখন সাম্প্রতিক ২,০০০টায় সীমাবদ্ধ (মেমরি/লেটেন্সি নিরাপত্তা)।
     const result = await pool.query(
@@ -534,10 +542,11 @@ router.get('/admin/payments', requireAdmin, async (req, res) => {
 // এই একই ফাংশন `creditApprovedDeposit` নামে ইমপোর্ট করে (require('./payment')
 // থেকে destructure), কিন্তু ফাংশনটা আগে এই ফাইলে কখনো export-ই হতো না —
 // ফলে সেই রুটটা প্রতিবার কল করলেই "creditApprovedDeposit is not a function"
-// দিয়ে 500 দিত। এখন তিনটা approve পাথই (একক রুট, বাল্ক, admin/api) এই একই
-// ফাংশন ব্যবহার করে — লজিক তিন জায়গায় আলাদা করে লিখে ফলাফল ফাঁক থাকার ঝুঁকি নেই।
-// কলার আগেই SELECT ... FOR UPDATE করে pending নিশ্চিত করে রাখবে; এই ফাংশন
-// শুধু ক্রেডিট + স্ট্যাটাস আপডেট + নোটিফিকেশন করে, নিজে BEGIN/COMMIT করে না।
+// দিয়ে 500 দিত। এখন approve-এর সব পাথই (একক রুট, বাল্ক, admin/api,
+// gatewayReconcile) এই একই ফাংশন ব্যবহার করে — লজিক আলাদা জায়গায় লিখে
+// ফলাফল ফাঁক থাকার ঝুঁকি নেই। কলার আগেই SELECT ... FOR UPDATE করে pending
+// নিশ্চিত করে রাখবে; এই ফাংশন শুধু ক্রেডিট + স্ট্যাটাস আপডেট + নোটিফিকেশন
+// করে, নিজে BEGIN/COMMIT করে না।
 async function creditApprovedDeposit(client, request) {
   let bonusGiven = 0;
 
@@ -585,8 +594,10 @@ async function creditApprovedDeposit(client, request) {
   return { bonusGiven, notification: notifRes.rows[0] };
 }
 
-router.post('/admin/approve/:id', requireAdmin, async (req, res) => {
-  const { id } = req.params;
+// নিজের কানেকশন/ট্রানজেকশন খোলে, row-level লক (FOR UPDATE) দিয়ে concurrency-safe —
+// একই id-তে একসাথে একাধিকবার কল হলেও ঠিক একবারই ক্রেডিট/স্ট্যাটাস-বদল হবে।
+// একক রুট ও বাল্ক রুট দুটোই এই একই ফাংশন কল করে।
+async function approvePaymentRequestById(id) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -594,161 +605,129 @@ router.post('/admin/approve/:id', requireAdmin, async (req, res) => {
     const request = result.rows[0];
     if (!request || request.status !== 'pending') {
       await client.query('ROLLBACK');
-      req.flash('error', 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে');
-      return res.redirect('/payment/admin/payments');
+      return { success: false, reason: 'not_found_or_processed' };
     }
-
-    await creditApprovedDeposit(client, request);
+    const extra = await creditApprovedDeposit(client, request);
     await client.query('COMMIT');
-    req.flash('success', 'অনুমোদন হয়েছে');
-    res.redirect('/payment/admin/payments');
+    return { success: true, request, ...extra };
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('approve error:', err.message);
-    req.flash('error', 'সমস্যা হয়েছে');
-    res.redirect('/payment/admin/payments');
+    console.error('approvePaymentRequestById error:', err.message);
+    return { success: false, reason: 'error', error: err.message };
   } finally {
     client.release();
   }
+}
+
+async function rejectPaymentRequestById(id) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await client.query('SELECT * FROM payment_requests WHERE id=$1 FOR UPDATE', [id]);
+    const request = result.rows[0];
+    if (!request || request.status !== 'pending') {
+      await client.query('ROLLBACK');
+      return { success: false, reason: 'not_found_or_processed' };
+    }
+    if (request.type === 'withdraw') {
+      await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
+      await client.query(
+        `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'withdraw_refund',$3)`,
+        [request.user_id, request.amount, `উইথড্র বাতিল, ফেরত (#${request.id})`]
+      );
+    }
+    await client.query(`UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE id=$1`, [id]);
+    const message = `আপনার ${request.amount} টাকার রিকোয়েস্ট বাতিল হয়েছে।`;
+    const notifRes = await client.query(
+      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'error') RETURNING *`,
+      [request.user_id, 'পেমেন্ট বাতিল', message]
+    );
+    await client.query('COMMIT');
+    return { success: true, request, notification: notifRes.rows[0] };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('rejectPaymentRequestById error:', err.message);
+    return { success: false, reason: 'error', error: err.message };
+  } finally {
+    client.release();
+  }
+}
+
+router.post('/admin/approve/:id', requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  const result = await approvePaymentRequestById(id);
+  if (!result.success) {
+    req.flash('error', 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে');
+    return res.redirect('/payment/admin/payments');
+  }
+  req.flash('success', 'অনুমোদন হয়েছে');
+  res.redirect('/payment/admin/payments');
 });
 
 router.post('/admin/reject/:id', requireAdmin, async (req, res) => {
   const { id } = req.params;
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    const result = await client.query('SELECT * FROM payment_requests WHERE id=$1 FOR UPDATE', [id]);
-    const request = result.rows[0];
-    if (!request || request.status !== 'pending') {
-      await client.query('ROLLBACK');
-      req.flash('error', 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে');
-      return res.redirect('/payment/admin/payments');
-    }
-    if (request.type === 'withdraw') {
-      await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
-      await client.query(
-        `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'withdraw_refund',$3)`,
-        [request.user_id, request.amount, `উইথড্র বাতিল, ফেরত (#${request.id})`]
-      );
-    }
-    await client.query(`UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE id=$1`, [id]);
-    await client.query(
-      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'error')`,
-      [request.user_id, 'পেমেন্ট বাতিল', `আপনার ${request.amount} টাকার রিকোয়েস্ট বাতিল হয়েছে।`]
-    );
-    await client.query('COMMIT');
-    req.flash('error', 'বাতিল করা হয়েছে');
-    res.redirect('/payment/admin/payments');
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('reject error:', err.message);
-    res.redirect('/payment/admin/payments');
-  } finally {
-    client.release();
+  const result = await rejectPaymentRequestById(id);
+  if (!result.success) {
+    req.flash('error', 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে');
+    return res.redirect('/payment/admin/payments');
   }
+  req.flash('error', 'বাতিল করা হয়েছে');
+  res.redirect('/payment/admin/payments');
 });
 
-// ==================== বাল্ক পেমেন্ট approve/reject ====================
-// একক /admin/approve/:id, /admin/reject/:id-এর ঠিক একই লেনদেন-লজিক পুনর্ব্যবহার
-// করা হয়েছে — শুধু একাধিক id-এর ওপর লুপ করে, প্রতিটা id নিজস্ব ট্রানজেকশনে
-// (একটা ব্যর্থ হলে বাকিগুলো আটকায় না — partial failure)।
-
-async function approveOnePaymentRequest(id) {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    const result = await client.query('SELECT * FROM payment_requests WHERE id=$1 FOR UPDATE', [id]);
-    const request = result.rows[0];
-    if (!request || request.status !== 'pending') {
-      await client.query('ROLLBACK');
-      return { ok: false, id };
-    }
-
-    await creditApprovedDeposit(client, request);
-    await client.query('COMMIT');
-    return { ok: true, id, request };
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('bulk approve one error:', err.message);
-    return { ok: false, id };
-  } finally {
-    client.release();
-  }
-}
-
-async function rejectOnePaymentRequest(id) {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    const result = await client.query('SELECT * FROM payment_requests WHERE id=$1 FOR UPDATE', [id]);
-    const request = result.rows[0];
-    if (!request || request.status !== 'pending') {
-      await client.query('ROLLBACK');
-      return { ok: false, id };
-    }
-    if (request.type === 'withdraw') {
-      await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
-      await client.query(
-        `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'withdraw_refund',$3)`,
-        [request.user_id, request.amount, `উইথড্র বাতিল, ফেরত (#${request.id})`]
-      );
-    }
-    await client.query(`UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE id=$1`, [id]);
-    await client.query(
-      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'error')`,
-      [request.user_id, 'পেমেন্ট বাতিল', `আপনার ${request.amount} টাকার রিকোয়েস্ট বাতিল হয়েছে।`]
-    );
-    await client.query('COMMIT');
-    return { ok: true, id, request };
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('bulk reject one error:', err.message);
-    return { ok: false, id };
-  } finally {
-    client.release();
-  }
-}
-
+// --- বাল্ক অ্যাকশন — single approve/reject-এর concurrency-safe ফাংশনগুলোই
+// পুনরায় ব্যবহার করে, যাতে ক্রেডিট-লজিক দুই জায়গায় আলাদাভাবে না লেখা হয়। ---
 function parseBulkIds(body) {
-  const ids = Array.isArray(body.ids) ? body.ids : [];
-  return ids.map((v) => parseInt(v, 10)).filter((n) => Number.isInteger(n) && n > 0);
+  const ids = Array.isArray(body.ids) ? body.ids : (body.ids ? [body.ids] : []);
+  return [...new Set(ids.map((x) => parseInt(x, 10)).filter((x) => Number.isInteger(x) && x > 0))];
+}
+
+async function logBulkPaymentAction(req, actionType, label, succeeded, failed, ids) {
+  try {
+    await pool.query(
+      `INSERT INTO admin_logs (admin_id, admin_username, action_type, details, ip_address) VALUES ($1,$2,$3,$4,$5)`,
+      [req.session.user.id, req.session.user.username, actionType,
+       `${label}: ${succeeded}টা সফল, ${failed}টা ব্যর্থ (আইডি: ${ids.join(',')})`, req.ip]
+    );
+  } catch (e) {
+    console.error('admin_logs insert error:', e.message);
+  }
 }
 
 router.post('/admin/payments/bulk-approve', rbac.requirePermission('payments_approve'), async (req, res) => {
-  const ids = parseBulkIds(req.body);
-  if (ids.length === 0) return res.status(400).json({ success: false, error: 'কোনো আইডি নির্বাচিত হয়নি' });
-
-  let succeeded = 0, failed = 0;
-  for (const id of ids) {
-    const r = await approveOnePaymentRequest(id);
-    if (r.ok) succeeded++; else failed++;
+  const cleanIds = parseBulkIds(req.body);
+  if (cleanIds.length === 0) {
+    return res.status(400).json({ success: false, error: 'কোনো আইডি নির্বাচন করা হয়নি' });
   }
-
-  await pool.query(
-    `INSERT INTO admin_logs (admin_id, admin_username, action_type, details, ip_address) VALUES ($1,$2,$3,$4,$5)`,
-    [req.session.user.id, req.session.user.username, 'BULK_PAYMENT_APPROVE', `${succeeded}টা approved, ${failed}টা ব্যর্থ (ids: ${ids.join(',')})`, req.ip]
-  ).catch((e) => console.error('admin_logs write error:', e.message));
-
-  res.json({ success: true, succeeded, failed });
+  const results = [];
+  for (const id of cleanIds) {
+    const r = await approvePaymentRequestById(id);
+    results.push({ id, success: r.success });
+  }
+  const succeeded = results.filter((r) => r.success).length;
+  const failed = results.length - succeeded;
+  await logBulkPaymentAction(req, 'BULK_PAYMENT_APPROVE', 'বাল্ক পেমেন্ট অনুমোদন', succeeded, failed, cleanIds);
+  res.json({ success: true, total: cleanIds.length, succeeded, failed, results });
 });
 
-router.post('/admin/payments/bulk-reject', rbac.requirePermission('payments_approve'), async (req, res) => {
-  const ids = parseBulkIds(req.body);
-  if (ids.length === 0) return res.status(400).json({ success: false, error: 'কোনো আইডি নির্বাচিত হয়নি' });
-
-  let succeeded = 0, failed = 0;
-  for (const id of ids) {
-    const r = await rejectOnePaymentRequest(id);
-    if (r.ok) succeeded++; else failed++;
+router.post('/admin/payments/bulk-reject', rbac.requirePermission('payments_reject'), async (req, res) => {
+  const cleanIds = parseBulkIds(req.body);
+  if (cleanIds.length === 0) {
+    return res.status(400).json({ success: false, error: 'কোনো আইডি নির্বাচন করা হয়নি' });
   }
-
-  await pool.query(
-    `INSERT INTO admin_logs (admin_id, admin_username, action_type, details, ip_address) VALUES ($1,$2,$3,$4,$5)`,
-    [req.session.user.id, req.session.user.username, 'BULK_PAYMENT_REJECT', `${succeeded}টা rejected, ${failed}টা ব্যর্থ (ids: ${ids.join(',')})`, req.ip]
-  ).catch((e) => console.error('admin_logs write error:', e.message));
-
-  res.json({ success: true, succeeded, failed });
+  const results = [];
+  for (const id of cleanIds) {
+    const r = await rejectPaymentRequestById(id);
+    results.push({ id, success: r.success });
+  }
+  const succeeded = results.filter((r) => r.success).length;
+  const failed = results.length - succeeded;
+  await logBulkPaymentAction(req, 'BULK_PAYMENT_REJECT', 'বাল্ক পেমেন্ট বাতিল', succeeded, failed, cleanIds);
+  res.json({ success: true, total: cleanIds.length, succeeded, failed, results });
 });
 
 router.creditApprovedDeposit = creditApprovedDeposit;
 module.exports = router;
+module.exports.creditApprovedDeposit = creditApprovedDeposit;
+module.exports.approvePaymentRequestById = approvePaymentRequestById;
+module.exports.rejectPaymentRequestById = rejectPaymentRequestById;
