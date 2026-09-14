@@ -145,13 +145,18 @@
         <div style="color:var(--text-main);font-size:11px;font-weight:600">Help Center</div>
       </a>
 
+      <a href="/logout" style="text-decoration:none; text-align:center">
+        <div style="width:58px;height:58px;border-radius:50%;background:rgba(229,57,53,0.14);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:#e53935;font-size:22px"><i class="fas fa-right-from-bracket"></i></div>
+        <div style="color:#e53935;font-size:11px;font-weight:600">Logout</div>
+      </a>
+
     </div>
   </div>
 
 
   <div style="text-align: center; margin-top: 30px; padding-bottom: 20px;">
     <div style="color: var(--text-muted); font-size: 12px;"><%= t.version %> 2.1.0</div>
-    <div style="color: var(--text-muted); font-size: 11px; margin-top: 5px;">© 2024 <%= siteName %> Gaming</div>
+    <div style="color: var(--text-muted); font-size: 11px; margin-top: 5px;">© <%= new Date().getFullYear() %> <%= siteName %> Gaming</div>
   </div>
 
 </div>
