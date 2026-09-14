@@ -1,0 +1,145 @@
+<%
+// views/payment/admin-payment-methods.ejs — অ্যাডমিন ডিপোজিট অ্যাকাউন্ট (payment_methods) CRUD।
+// services/paymentMethods.js-এর উপর পাতলা UI। বিদ্যমান admin-layout partial
+// পুনর্ব্যবহার করা হয়েছে (feature-flags.ejs-এর প্যাটার্নে) — নতুন কোনো ইনলাইন
+// style="..." যোগ করা হয়নি (CSP ইনলাইন-স্টাইল র‍্যাচেট, tests/security/
+// cspInlineStyleRatchet.test.js)।
+function esc(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+const allMethods = (typeof methods !== 'undefined' && methods) ? methods : [];
+const allMethodKeys = (typeof methodKeys !== 'undefined' && methodKeys) ? methodKeys : [];
+const allAccountTypes = (typeof accountTypes !== 'undefined' && accountTypes) ? accountTypes : [];
+const flt = (typeof filter !== 'undefined' && filter) ? filter : { method: '', status: '' };
+const flashSuccess = (typeof success !== 'undefined' && success && success[0]) || null;
+const flashError = (typeof error !== 'undefined' && error && error[0]) || null;
+
+function methodOptions(selected) {
+  return allMethodKeys.map((m) =>
+    '<option value="' + esc(m) + '"' + (m === selected ? ' selected' : '') + '>' + esc(m) + '</option>'
+  ).join('');
+}
+
+function accountTypeOptions(selected) {
+  return allAccountTypes.map((a) =>
+    '<option value="' + esc(a) + '"' + (a === selected ? ' selected' : '') + '>' + esc(a) + '</option>'
+  ).join('');
+}
+
+function statusBadge(status) {
+  const active = status === 'active';
+  return '<span class="pm-badge ' + (active ? 'pm-badge-on' : 'pm-badge-off') + '">' +
+    esc(active ? t('status_active') : t('status_inactive')) + '</span>';
+}
+
+function rowHtml(m) {
+  return '<tr>' +
+    '<td><form class="pm-inline-form" method="POST" action="/payment/admin/payment-methods/' + m.id + '/update">' +
+      '<select name="method" aria-label="' + esc(t('payment_method_label')) + '">' + methodOptions(m.method) + '</select>' +
+    '</td>' +
+    '<td><input type="text" name="account_number" value="' + esc(m.account_number) + '" aria-label="' + esc(t('account_number_label')) + '"></td>' +
+    '<td><input type="text" name="account_name" value="' + esc(m.account_name || '') + '" placeholder="—"></td>' +
+    '<td><select name="account_type">' + accountTypeOptions(m.account_type) + '</select></td>' +
+    '<td>' + statusBadge(m.status) + '</td>' +
+    '<td class="pm-actions">' +
+      '<input type="hidden" name="status" value="' + esc(m.status) + '">' +
+      '<button type="submit" class="ui-btn ui-btn-ghost pm-btn-sm">' + esc(t('update_label')) + '</button>' +
+    '</form>' +
+    '<form class="pm-inline-form" method="POST" action="/payment/admin/payment-methods/' + m.id + '/status">' +
+      '<input type="hidden" name="status" value="' + (m.status === 'active' ? 'inactive' : 'active') + '">' +
+      '<button type="submit" class="ui-btn ui-btn-ghost pm-btn-sm">' +
+        esc(m.status === 'active' ? t('disable_label') : t('enable_label')) + '</button>' +
+    '</form>' +
+    '<form class="pm-inline-form" method="POST" action="/payment/admin/payment-methods/' + m.id + '/delete" data-confirm="' + esc(t('confirm_delete_payment_method')) + '">' +
+      '<button type="submit" class="ui-btn ui-btn-danger pm-btn-sm">' + esc(t('delete_label')) + '</button>' +
+    '</form>' +
+    '</td>' +
+  '</tr>';
+}
+
+const tableRows = allMethods.map(rowHtml).join('') ||
+  '<tr><td colspan="6" class="ui-empty">' + esc(t('no_payment_methods')) + '</td></tr>';
+%>
+<%- include('../admin/partials/admin-layout', {
+    title: t('admin_payment_methods_title'),
+    active: 'payment-methods',
+    body: `
+<div class="pm-wrap">
+  <div class="pm-head">
+    <div>
+      <h1 class="pm-h1">${esc(t('admin_payment_methods_title'))}</h1>
+      <p class="pm-sub">${esc(t('admin_payment_methods_subtitle'))}</p>
+    </div>
+  </div>
+
+  ${flashSuccess ? '<div class="pm-alert pm-alert-ok">✅ ' + esc(flashSuccess) + '</div>' : ''}
+  ${flashError ? '<div class="pm-alert pm-alert-err">⚠️ ' + esc(flashError) + '</div>' : ''}
+
+  <p class="pm-note">${esc(t('payment_methods_display_only_note'))}</p>
+
+  <div class="ui-card pm-create-card">
+    <h2 class="pm-h2">${esc(t('add_payment_method'))}</h2>
+    <form method="POST" action="/payment/admin/payment-methods" class="pm-create-form">
+      <select name="method" aria-label="${esc(t('payment_method_label'))}" required>${methodOptions('')}</select>
+      <input type="text" name="account_number" placeholder="${esc(t('account_number_label'))}" required>
+      <input type="text" name="account_name" placeholder="${esc(t('payment_method_label'))} — name (optional)">
+      <select name="account_type" aria-label="account type">${accountTypeOptions('personal')}</select>
+      <select name="status" aria-label="${esc(t('status_label'))}">
+        <option value="active">${esc(t('status_active'))}</option>
+        <option value="inactive">${esc(t('status_inactive'))}</option>
+      </select>
+      <button type="submit" class="ui-btn ui-btn-primary">${esc(t('add_payment_method'))}</button>
+    </form>
+  </div>
+
+  <div class="ui-card ui-table-wrap pm-table-card">
+    <table class="ui-table">
+      <thead>
+        <tr>
+          <th>${esc(t('payment_method_label'))}</th>
+          <th>${esc(t('account_number_label'))}</th>
+          <th>Name</th>
+          <th>Type</th>
+          <th>${esc(t('status_label'))}</th>
+          <th>${esc(t('actions_label'))}</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${tableRows}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style nonce="${cspNonce}">
+  .pm-wrap { max-width: 1100px; margin: 0 auto; }
+  .pm-head { margin-bottom: 16px; }
+  .pm-h1 { font-size: 1.5rem; font-weight: 600; color: #0f172a; margin: 0 0 4px; }
+  .pm-h2 { font-size: 1rem; font-weight: 700; color: #0f172a; margin: 0 0 12px; }
+  .pm-sub { color: #64748b; font-size: 13px; margin: 0; max-width: 60ch; }
+  .pm-note { color: #94a3b8; font-size: 12px; margin: 0 0 16px; max-width: 75ch; }
+  .pm-alert { padding: 12px 16px; border-radius: 14px; font-size: 13px; font-weight: 600; margin-bottom: 14px; }
+  .pm-alert-ok { background: #ecfdf5; color: #047857; }
+  .pm-alert-err { background: #fef2f2; color: #b91c1c; }
+  .pm-create-card { padding: 16px 18px; margin-bottom: 20px; }
+  .pm-create-form { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  @media (min-width: 900px) { .pm-create-form { grid-template-columns: repeat(6, 1fr); align-items: center; } }
+  .pm-create-form input, .pm-create-form select {
+    border: 1px solid #e2e8f0; padding: 10px 12px; border-radius: 12px; font-size: 13px; min-height: 44px;
+  }
+  .pm-table-card { padding: 0; }
+  .pm-inline-form { display: inline-block; margin: 0 4px 4px 0; }
+  .pm-inline-form select, .pm-inline-form input {
+    border: 1px solid #e2e8f0; border-radius: 10px; padding: 6px 8px; font-size: 12px; min-width: 90px;
+  }
+  .pm-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .pm-btn-sm { min-height: 32px; padding: 0 10px; font-size: 11px; }
+  .pm-badge { display: inline-flex; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+  .pm-badge-on { background: #ecfdf5; color: #047857; }
+  .pm-badge-off { background: #fef2f2; color: #b91c1c; }
+</style>
+`
+}) %>

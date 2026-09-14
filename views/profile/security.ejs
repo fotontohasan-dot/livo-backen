@@ -12,9 +12,9 @@
 
   <!-- Tab Buttons -->
   <div style="display: flex; gap: 10px; margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 5px; border-radius: 12px; border: 1px solid var(--border-glass);">
-    <button onclick="switchTab('personal')" id="btn-personal" class="sec-tab active" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;"><%= t.personal_info %></button>
-    <button onclick="switchTab('bank')" id="btn-bank" class="sec-tab" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;"><%= t.menu_withdraw %></button>
-    <button onclick="switchTab('security')" id="btn-security" class="sec-tab" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;"><%= t.security %></button>
+    <button id="btn-personal" class="sec-tab active" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;"><%= t.personal_info %></button>
+    <button id="btn-bank" class="sec-tab" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;"><%= t.menu_withdraw %></button>
+    <button id="btn-security" class="sec-tab" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;"><%= t.security %></button>
   </div>
 
   <!-- Personal Information Tab -->
@@ -58,7 +58,7 @@
               <div style="color: #fff; font-size: 14px; font-weight: 600;"><%= card.bank_name %></div>
               <div style="color: var(--text-muted); font-size: 12px;"><%= card.account_number %></div>
             </div>
-            <form action="/profile/delete-bank-card/<%= card.id %>" method="POST" onsubmit="return confirm('<%= t.delete_card_confirm %>')">
+            <form action="/profile/delete-bank-card/<%= card.id %>" method="POST" class="delete-card-form" data-confirm-msg="<%= t.delete_card_confirm %>">
               <button type="submit" style="background: rgba(239, 68, 68, 0.1); border: none; width: 32px; height: 32px; border-radius: 8px; color: #ef4444; cursor: pointer;">
                 <i class="fas fa-trash-alt"></i>
               </button>
@@ -145,13 +145,30 @@
 }
 </style>
 
-<script>
+<script nonce="<%= cspNonce %>">
 function switchTab(tab) {
   document.querySelectorAll('.sec-content').forEach(c => c.style.display = 'none');
   document.querySelectorAll('.sec-tab').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + tab).style.display = 'block';
   document.getElementById('btn-' + tab).classList.add('active');
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+  var btnPersonal = document.getElementById('btn-personal');
+  if (btnPersonal) btnPersonal.addEventListener('click', function () { switchTab('personal'); });
+
+  var btnBank = document.getElementById('btn-bank');
+  if (btnBank) btnBank.addEventListener('click', function () { switchTab('bank'); });
+
+  var btnSecurity = document.getElementById('btn-security');
+  if (btnSecurity) btnSecurity.addEventListener('click', function () { switchTab('security'); });
+
+  document.querySelectorAll('.delete-card-form').forEach(function (f) {
+    f.addEventListener('submit', function (e) {
+      if (!confirm(f.getAttribute('data-confirm-msg') || 'আপনি কি নিশ্চিত?')) e.preventDefault();
+    });
+  });
+});
 </script>
 
 <%- include('../partials/navbar') %>

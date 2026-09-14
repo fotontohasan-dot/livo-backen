@@ -19,6 +19,16 @@ const { getLeaderboard, getPastContests } = require('../services/contest');
 const { getRewardStatus, claimRedPacket, claimGoldenEgg } = require('../services/redpacket');
 
 
+router.get('/api/balance', isAuth, async (req, res) => {
+  try {
+    const u = await pool.query('SELECT coins FROM users WHERE id=$1', [req.session.user.id]);
+    res.json({ coins: Number(u.rows[0]?.coins) || 0 });
+  } catch (err) {
+    console.error('profile/api/balance error:', err.message);
+    res.status(500).json({ error: 'ব্যালেন্স লোড করা যায়নি।' });
+  }
+});
+
 router.get('/', isAuth, async (req, res) => {
   try {
     const user = await pool.query(`SELECT * FROM users WHERE id=$1`, [req.session.user.id]);
@@ -116,16 +126,50 @@ router.post('/change-password', isAuth, async (req, res) => {
   }
 });
 
+// 'predictions' নামে কোনো টেবিল নেই — বাজির আসল টেবিলের নাম 'bets' (দ্রষ্টব্য:
+// routes/api.js, routes/admin.js একই টেবিল ব্যবহার করে)। আগে এই দুটো রুট সবসময়
+// DB এরর দিয়ে ব্যর্থ হতো এবং নিঃশব্দে /profile-এ রিডাইরেক্ট করত (ইউজারের কাছে
+// মনে হতো বাটনে কিছুই হচ্ছে না)। এছাড়া views/profile/history.ejs ও stats.ejs
+// একটা `filter` অবজেক্ট আশা করে (quick/from/to/status) যা আগে পাঠানোই হতো না।
+function resolveDateRange(query) {
+  const { quick, from, to } = query;
+  const fmt = (d) => d.toISOString().slice(0, 10);
+  let dateFrom = from || '', dateTo = to || '';
+  const today = new Date();
+  if (quick === 'today') {
+    dateFrom = dateTo = fmt(today);
+  } else if (quick === 'yesterday') {
+    const y = new Date(today); y.setDate(y.getDate() - 1);
+    dateFrom = dateTo = fmt(y);
+  } else if (quick === '7days') {
+    const d7 = new Date(today); d7.setDate(d7.getDate() - 7);
+    dateFrom = fmt(d7); dateTo = fmt(today);
+  }
+  return { dateFrom, dateTo };
+}
+
 router.get('/history', isAuth, async (req, res) => {
   try {
-    const predictions = await pool.query(`
-      SELECT p.*, m.title FROM predictions p
-      JOIN matches m ON p.match_id = m.id
-      WHERE p.user_id = $1
-      ORDER BY p.created_at DESC
-    `, [req.session.user.id]);
-    res.render('profile/history', { predictions: predictions.rows, user: req.session.user });
+    const { quick = '', status = '' } = req.query;
+    const { dateFrom, dateTo } = resolveDateRange(req.query);
+
+    let sql = `SELECT b.*, m.title, m.team_a, m.team_b
+               FROM bets b LEFT JOIN matches m ON b.match_id = m.id
+               WHERE b.user_id = $1`;
+    const params = [req.session.user.id];
+    if (dateFrom) { params.push(dateFrom); sql += ` AND b.created_at::date >= $${params.length}`; }
+    if (dateTo) { params.push(dateTo); sql += ` AND b.created_at::date <= $${params.length}`; }
+    if (['won', 'lost', 'pending'].includes(status)) { params.push(status); sql += ` AND b.status = $${params.length}`; }
+    sql += ` ORDER BY b.created_at DESC LIMIT 100`;
+
+    const bets = await pool.query(sql, params);
+    res.render('profile/history', {
+      bets: bets.rows,
+      user: req.session.user,
+      filter: { quick, from: req.query.from || '', to: req.query.to || '', status }
+    });
   } catch (err) {
+    console.error('profile/history error:', err.message);
     req.flash('error', 'ইতিহাস লোড করতে সমস্যা হয়েছে।');
     res.redirect('/profile');
   }
@@ -133,15 +177,37 @@ router.get('/history', isAuth, async (req, res) => {
 
 router.get('/stats', isAuth, async (req, res) => {
   try {
-    const stats = await pool.query(`
-      SELECT
-        COUNT(*) as total,
-        COUNT(CASE WHEN status='won' THEN 1 END) as won,
-        COALESCE(SUM(CASE WHEN status='won' THEN points_earned ELSE 0 END), 0) as total_earned
-      FROM predictions WHERE user_id=$1
-    `, [req.session.user.id]);
-    res.render('profile/stats', { stats: stats.rows[0], user: req.session.user });
+    const { quick = '' } = req.query;
+    const { dateFrom, dateTo } = resolveDateRange(req.query);
+
+    let sql = `SELECT
+        COUNT(*)::int AS total,
+        COUNT(*) FILTER (WHERE status = 'won')::int AS won,
+        COUNT(*) FILTER (WHERE status = 'lost')::int AS lost,
+        COALESCE(SUM(stake), 0) AS total_staked,
+        COALESCE(SUM(stake * odd) FILTER (WHERE status = 'won'), 0) AS total_won_amount
+      FROM bets WHERE user_id = $1`;
+    const params = [req.session.user.id];
+    if (dateFrom) { params.push(dateFrom); sql += ` AND created_at::date >= $${params.length}`; }
+    if (dateTo) { params.push(dateTo); sql += ` AND created_at::date <= $${params.length}`; }
+
+    const result = await pool.query(sql, params);
+    const row = result.rows[0];
+    const stats = {
+      total: row.total,
+      won: row.won,
+      lost: row.lost,
+      total_staked: Number(row.total_staked),
+      total_won_amount: Number(row.total_won_amount),
+      net_profit: Number(row.total_won_amount) - Number(row.total_staked)
+    };
+    res.render('profile/stats', {
+      stats,
+      user: req.session.user,
+      filter: { quick, from: req.query.from || '', to: req.query.to || '' }
+    });
   } catch (err) {
+    console.error('profile/stats error:', err.message);
     req.flash('error', 'স্ট্যাটস লোড করতে সমস্যা হয়েছে।');
     res.redirect('/profile');
   }
