@@ -15,9 +15,23 @@ function requireLogin(req, res, next) {
   next();
 }
 
-function requireAdmin(req, res, next) {
-  if (!req.session.user || req.session.user.role !== 'admin') return res.redirect('/');
-  next();
+async function requireAdmin(req, res, next) {
+  if (!req.session.user) return res.redirect('/');
+  if (req.session.user.role === 'admin') return next();
+  // সেশন তৈরির পর কাউকে সরাসরি DB-তে admin করা হলে (যেমন টেস্টের
+  // register→UPDATE role প্যাটার্ন, বা ম্যানুয়াল প্রমোশনের পরপরই যদি
+  // ওই ইউজার রি-লগইন না করে থাকেন) — সেশনে cached পুরনো role থেকে যায়,
+  // ফলে আসল admin-ও ব্লক হয়ে যেতেন। এখানে একবার DB থেকে ঝালিয়ে দেখা হয়,
+  // শুধু তখনই যখন সেশন ইতিমধ্যে 'admin' বলছে না (তাই সাধারণ পথে এক্সট্রা
+  // কোয়েরি লাগে না)।
+  try {
+    const row = await pool.query('SELECT role FROM users WHERE id=$1', [req.session.user.id]);
+    if (row.rows[0] && row.rows[0].role === 'admin') {
+      req.session.user.role = 'admin';
+      return next();
+    }
+  } catch (e) { /* নিচের fail-closed redirect-এ যাবে */ }
+  return res.redirect('/');
 }
 
 function parseAmount(raw) {
@@ -289,19 +303,73 @@ router.post('/admin/payment-methods/:id/delete', rbac.requirePermission('payment
   res.redirect('/payment/admin/payment-methods');
 });
 
+// ইউজার ওয়ালেট হাব — views/payment/wallet.ejs আগে থেকেই ছিল, কিন্তু কোনো
+// রুট সেটা রেন্ডার করত না (/payment/wallet 404 করত)।
+router.get('/wallet', requireLogin, async (req, res) => {
+  const userId = req.session.user.id;
+  try {
+    const u = await pool.query('SELECT coins FROM users WHERE id=$1', [userId]);
+    const coins = Number(u.rows[0]?.coins) || 0;
+
+    let cardCount = 0;
+    try {
+      const cardRes = await pool.query('SELECT COUNT(*) FROM bank_cards WHERE user_id=$1', [userId]);
+      cardCount = parseInt(cardRes.rows[0].count, 10) || 0;
+    } catch (e) { /* bank_cards টেবিল/কলাম না থাকলেও ওয়ালেট পেজ ভাঙবে না */ }
+
+    const statsRes = await pool.query(
+      `SELECT
+         COALESCE(SUM(amount) FILTER (WHERE type='deposit' AND status='approved'), 0) AS total_deposit,
+         COALESCE(SUM(amount) FILTER (WHERE type='withdraw' AND status='approved'), 0) AS total_withdraw,
+         COALESCE(SUM(amount) FILTER (WHERE type='deposit' AND status='approved' AND created_at >= $2), 0) AS deposit_30d,
+         COALESCE(SUM(amount) FILTER (WHERE type='withdraw' AND status='approved' AND created_at >= $2), 0) AS withdraw_30d,
+         COUNT(*) FILTER (WHERE status='pending') AS pending_count
+       FROM payment_requests WHERE user_id = $1`,
+      [userId, businessTime.startOfDay(businessTime.addDays(businessTime.today(), -30))]
+    );
+    const s = statsRes.rows[0];
+    const walletStats = {
+      totalDeposit: Number(s.total_deposit) || 0,
+      totalWithdraw: Number(s.total_withdraw) || 0,
+      deposit30d: Number(s.deposit_30d) || 0,
+      withdraw30d: Number(s.withdraw_30d) || 0,
+      pendingCount: parseInt(s.pending_count, 10) || 0
+    };
+
+    const txRes = await pool.query(
+      `SELECT type, method, amount, status, created_at FROM payment_requests WHERE user_id=$1 ORDER BY created_at DESC LIMIT 10`,
+      [userId]
+    );
+
+    res.render('payment/wallet', {
+      user: req.session.user,
+      coins,
+      cardCount,
+      walletStats,
+      recentTx: txRes.rows
+    });
+  } catch (err) {
+    console.error('wallet load error:', err.message);
+    req.flash('error', 'ওয়ালেট লোড করতে সমস্যা হয়েছে, আবার চেষ্টা করুন।');
+    return res.redirect('/profile');
+  }
+});
+
 router.get('/withdraw', requireLogin, async (req, res) => {
   try {
     let coins = 0;
     let hasWithdrawPin = false;
     try {
       const result = await pool.query('SELECT coins, withdraw_pin_hash FROM users WHERE id=$1', [req.session.user.id]);
-      coins = result.rows[0]?.coins || 0;
+      // pg NUMERIC কলাম স্ট্রিং হিসেবে ফেরত আসে (precision নষ্ট এড়াতে) — Number()
+      // না করলে view-তে (coins || 0).toFixed(2) স্ট্রিং-এ toFixed খুঁজে ক্র্যাশ করে।
+      coins = Number(result.rows[0]?.coins) || 0;
       hasWithdrawPin = !!(result.rows[0] && result.rows[0].withdraw_pin_hash);
     } catch (e) {
       // withdraw_pin_hash কলাম না থাকলে (migration.sql না চালানো থাকলে) শুধু coins আনি
       try {
         const fallback = await pool.query('SELECT coins FROM users WHERE id=$1', [req.session.user.id]);
-        coins = fallback.rows[0]?.coins || 0;
+        coins = Number(fallback.rows[0]?.coins) || 0;
       } catch (e2) { /* keep defaults */ }
     }
     let ewalletCards = [];

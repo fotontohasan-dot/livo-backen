@@ -19,6 +19,16 @@ const { getLeaderboard, getPastContests } = require('../services/contest');
 const { getRewardStatus, claimRedPacket, claimGoldenEgg } = require('../services/redpacket');
 
 
+router.get('/api/balance', isAuth, async (req, res) => {
+  try {
+    const u = await pool.query('SELECT coins FROM users WHERE id=$1', [req.session.user.id]);
+    res.json({ coins: Number(u.rows[0]?.coins) || 0 });
+  } catch (err) {
+    console.error('profile/api/balance error:', err.message);
+    res.status(500).json({ error: 'ব্যালেন্স লোড করা যায়নি।' });
+  }
+});
+
 router.get('/', isAuth, async (req, res) => {
   try {
     const user = await pool.query(`SELECT * FROM users WHERE id=$1`, [req.session.user.id]);

@@ -2251,6 +2251,31 @@ async function runMigrations() {
     `);
     console.log('✅ users.preferred_language কলাম ready');
 
+    // ---- payment_channels: ডিপোজিট পেজে মেথড-প্রতি একাধিক চ্যানেল/নম্বর ----
+    // routes/payment.js-এর /deposit রুট (channelsByMethod) আর deposit.ejs-এর
+    // চ্যানেল-সিলেক্টর UI অনেক আগে থেকেই এই টেবিল ধরে কোড করা, কিন্তু টেবিলটা
+    // আসলে কখনো তৈরিই হয়নি — ফলে payment_requests-এ channel_id কলাম না থাকায়
+    // **প্রতিটা ডিপোজিট সাবমিশনই ব্যর্থ হচ্ছিল** (INSERT-এ অনস্তিত্ব কলাম রেফারেন্স),
+    // channel_id null পাঠানো হলেও। টেবিল খালি থাকলে চ্যানেল-সিলেক্টর UI নিজে থেকেই
+    // লুকিয়ে থাকে (channelsByMethod খালি) — শুধু কোর ডিপোজিট ফ্লো আবার কাজ করার
+    // জন্য টেবিল+কলাম থাকাটাই যথেষ্ট, সিড করার দরকার নেই (payment_methods-ই
+    // মূল নম্বরের উৎস)।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS payment_channels (
+        id SERIAL PRIMARY KEY,
+        method VARCHAR(20) NOT NULL,
+        channel_label VARCHAR(100) NOT NULL,
+        receive_number TEXT NOT NULL,
+        active BOOLEAN DEFAULT true,
+        sort_order INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_payment_channels_method_active ON payment_channels(method, active, sort_order);`);
+    await pool.query(`ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS channel_id INTEGER REFERENCES payment_channels(id);`);
+    console.log('✅ payment_channels টেবিল ও payment_requests.channel_id কলাম ready');
+
   } catch (err) {
     // PHASE 2 fix: আগে error গিলে ফেলা হত, ফলে caller (server.js) migration
     // ব্যর্থ হওয়ার পরেও "migration done" ছাপত এবং broken schema নিয়ে listen করত।
