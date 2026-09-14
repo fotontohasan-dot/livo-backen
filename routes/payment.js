@@ -4,6 +4,10 @@ const { pool } = require('../db');
 const bcrypt = require('bcryptjs');
 const { createBonus, canWithdraw } = require('../services/turnover');
 const { processReferralDeposit } = require('../services/referral');
+const paymentMethods = require('../services/paymentMethods');
+const rbac = require('../services/rbac');
+const { logEvent: logAuditEvent } = require('../services/auditLog');
+const { PublicError, publicMessage } = require('../utils/safeError');
 
 function requireLogin(req, res, next) {
   if (!req.session.user) return res.redirect('/login');
@@ -52,18 +56,7 @@ const MAX_BONUS = 15000;
 
 const VALID_METHODS = ['bkash', 'nagad', 'rocket', 'upay', 'bank', 'crypto'];
 
-const DEPOSIT_NUMBERS = [
-  '01781732144',
-  '01714275156',
-  '01840199199',
-  '01620992072'
-];
-let depositRotation = 0;
-
 router.get('/deposit', requireLogin, async (req, res) => {
-  const current = DEPOSIT_NUMBERS[depositRotation % DEPOSIT_NUMBERS.length];
-  depositRotation = (depositRotation + 1) % DEPOSIT_NUMBERS.length;
-
   let channelsByMethod = {};
   try {
     const ch = await pool.query(
@@ -77,11 +70,37 @@ router.get('/deposit', requireLogin, async (req, res) => {
     console.error('load payment_channels error:', e.message);
   }
 
+  // নম্বর এখন payment_methods (অ্যাডমিন-নিয়ন্ত্রিত) থেকে আসে — আগের
+  // হার্ডকোড করা DEPOSIT_NUMBERS/rotation সরানো হয়েছে। ক্যোয়ারি ব্যর্থ হলে
+  // পেজ ভাঙে না — শুধু একটা এরর ব্যানার দেখায় (নিচে loadError)।
+  let payNumber = '';
+  let loadError = false;
+  try {
+    const methods = await paymentMethods.listActivePublic();
+    const preferred = methods.find(m => m.method === 'bkash') || methods[0];
+    payNumber = preferred ? preferred.accountNumber : '';
+  } catch (e) {
+    console.error('load payment_methods error:', e.message);
+    loadError = true;
+  }
+
   res.render('payment/deposit', {
     user: req.session.user,
-    payNumber: current,
-    channelsByMethod
+    payNumber,
+    channelsByMethod,
+    loadError
   });
+});
+
+// ইউজার ডিপোজিট পেজ — active পেমেন্ট মেথড/নম্বরের JSON তালিকা (পাবলিক ফিল্ড মাত্র)
+router.get('/deposit/methods', requireLogin, async (req, res) => {
+  try {
+    const methods = await paymentMethods.listActivePublic();
+    res.json({ success: true, methods });
+  } catch (err) {
+    console.error('deposit/methods error:', err.message);
+    res.status(500).json({ success: false, error: 'পেমেন্ট মেথড লোড করা যায়নি।' });
+  }
 });
 
 router.post('/deposit', requireLogin, async (req, res) => {
@@ -150,6 +169,116 @@ router.post('/deposit', requireLogin, async (req, res) => {
     req.flash('error', 'সমস্যা হয়েছে');
     res.redirect('/payment/deposit');
   }
+});
+
+// ==================== অ্যাডমিন: পেমেন্ট মেথড (ডিপোজিট অ্যাকাউন্ট) ম্যানেজমেন্ট ====================
+// services/paymentMethods.js-এর উপর পাতলা রুট লেয়ার — সব ভ্যালিডেশন/normalization
+// ওই সার্ভিসেই। এখানে শুধু: permission গেট, allowlisted ইনপুট (mass-assignment
+// প্রতিরোধ), CSRF (গ্লোবাল middleware/csrf.js), আর প্রতিটা mutation-এ audit log।
+
+function paymentMethodActor(req) {
+  return {
+    id: req.session && req.session.user ? req.session.user.id : null,
+    username: req.session && req.session.user ? req.session.user.username : 'UNKNOWN'
+  };
+}
+
+async function auditPaymentMethodEvent(req, action, record) {
+  const actor = paymentMethodActor(req);
+  await logAuditEvent({
+    req,
+    actorType: 'admin',
+    actorId: actor.id,
+    actorUsername: actor.username,
+    action,
+    category: 'settings',
+    riskLevel: 'medium',
+    details: {
+      recordId: record.id,
+      method: record.method,
+      accountNumberMasked: paymentMethods.maskAccountNumber(record.account_number)
+    }
+  });
+}
+
+router.get('/admin/payment-methods', rbac.requirePermission('payment_methods_manage'), async (req, res) => {
+  try {
+    const { method, status } = req.query;
+    const methods = await paymentMethods.listForAdmin({ method, status });
+    res.render('payment/admin-payment-methods', {
+      user: req.session.user,
+      methods,
+      methodKeys: paymentMethods.METHOD_KEYS,
+      accountTypes: paymentMethods.ACCOUNT_TYPES,
+      filter: { method: method || '', status: status || '' }
+    });
+  } catch (err) {
+    console.error('admin payment-methods list error:', err.message);
+    res.render('payment/admin-payment-methods', {
+      user: req.session.user,
+      methods: [],
+      methodKeys: paymentMethods.METHOD_KEYS,
+      accountTypes: paymentMethods.ACCOUNT_TYPES,
+      filter: { method: '', status: '' }
+    });
+  }
+});
+
+router.post('/admin/payment-methods', rbac.requirePermission('payment_methods_manage'), async (req, res) => {
+  try {
+    // allowlist — req.body সরাসরি পাস করা হয় না, তাই created_by/deleted_at/id
+    // ইত্যাদি ক্লায়েন্ট mass-assign করতে পারে না।
+    const created = await paymentMethods.create({
+      method: req.body.method,
+      accountNumber: req.body.account_number,
+      accountName: req.body.account_name,
+      status: req.body.status,
+      accountType: req.body.account_type
+    }, req.session.user.id);
+    await auditPaymentMethodEvent(req, 'PAYMENT_METHOD_CREATED', created);
+    req.flash('success', 'পেমেন্ট মেথড তৈরি হয়েছে।');
+  } catch (err) {
+    req.flash('error', publicMessage(err, 'পেমেন্ট মেথড তৈরি করা যায়নি।'));
+  }
+  res.redirect('/payment/admin/payment-methods');
+});
+
+router.post('/admin/payment-methods/:id/update', rbac.requirePermission('payment_methods_manage'), async (req, res) => {
+  try {
+    const { after } = await paymentMethods.update(req.params.id, {
+      method: req.body.method,
+      accountNumber: req.body.account_number,
+      accountName: req.body.account_name,
+      status: req.body.status,
+      accountType: req.body.account_type
+    }, req.session.user.id);
+    if (after) await auditPaymentMethodEvent(req, 'PAYMENT_METHOD_UPDATED', after);
+    req.flash('success', 'পেমেন্ট মেথড আপডেট হয়েছে।');
+  } catch (err) {
+    req.flash('error', publicMessage(err, 'পেমেন্ট মেথড আপডেট করা যায়নি।'));
+  }
+  res.redirect('/payment/admin/payment-methods');
+});
+
+router.post('/admin/payment-methods/:id/status', rbac.requirePermission('payment_methods_manage'), async (req, res) => {
+  try {
+    const { after } = await paymentMethods.setStatus(req.params.id, req.body.status, req.session.user.id);
+    if (after) await auditPaymentMethodEvent(req, 'PAYMENT_METHOD_STATUS_CHANGED', after);
+  } catch (err) {
+    req.flash('error', publicMessage(err, 'স্ট্যাটাস বদলানো যায়নি।'));
+  }
+  res.redirect('/payment/admin/payment-methods');
+});
+
+router.post('/admin/payment-methods/:id/delete', rbac.requirePermission('payment_methods_manage'), async (req, res) => {
+  try {
+    const removed = await paymentMethods.remove(req.params.id, req.session.user.id);
+    await auditPaymentMethodEvent(req, 'PAYMENT_METHOD_DELETED', removed);
+    req.flash('success', 'পেমেন্ট মেথড মুছে ফেলা হয়েছে।');
+  } catch (err) {
+    req.flash('error', publicMessage(err, 'মুছে ফেলা যায়নি।'));
+  }
+  res.redirect('/payment/admin/payment-methods');
 });
 
 router.get('/withdraw', requireLogin, async (req, res) => {
@@ -308,8 +437,9 @@ router.get('/history', requireLogin, async (req, res) => {
 
 router.get('/admin/payments', requireAdmin, async (req, res) => {
   try {
+    // আনবাউন্ডেড কোয়েরি ছিল — এখন সাম্প্রতিক ২,০০০টায় সীমাবদ্ধ (মেমরি/লেটেন্সি নিরাপত্তা)।
     const result = await pool.query(
-      `SELECT pr.*, u.username FROM payment_requests pr JOIN users u ON pr.user_id = u.id ORDER BY pr.created_at DESC`
+      `SELECT pr.*, u.username FROM payment_requests pr JOIN users u ON pr.user_id = u.id ORDER BY pr.created_at DESC LIMIT 2000`
     );
     res.render('payment/admin', { user: req.session.user, requests: result.rows });
   } catch (err) {
