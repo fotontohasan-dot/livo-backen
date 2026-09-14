@@ -403,6 +403,10 @@ router.post('/cashback/claim', isAuth, async (req, res) => {
 });
 
 // ==================== VIP ====================
+router.get('/support', isAuth, (req, res) => {
+  res.render('profile/support', { user: req.session.user });
+});
+
 router.get('/vip', isAuth, async (req, res) => {
   try {
     const vip = await getVipStatus(req.session.user.id);
@@ -410,6 +414,16 @@ router.get('/vip', isAuth, async (req, res) => {
   } catch (err) {
     console.error('vip page error:', err.message);
     res.render('profile/vip', { user: req.session.user, vip: null });
+  }
+});
+
+router.get('/api/vip-progress', isAuth, async (req, res) => {
+  try {
+    const vip = await getVipStatus(req.session.user.id);
+    res.json({ success: true, vip });
+  } catch (err) {
+    console.error('vip-progress error:', err.message);
+    res.status(500).json({ success: false, error: 'VIP তথ্য লোড করা যায়নি।' });
   }
 });
 
@@ -501,6 +515,28 @@ router.post('/security/withdraw-pin', isAuth, async (req, res) => {
       return res.redirect('/profile/security');
     }
     const hash = await bcrypt.hash(new_pin, 10);
+    await pool.query('UPDATE users SET withdraw_pin_hash=$1 WHERE id=$2', [hash, req.session.user.id]);
+    req.flash('success', '✅ উইথড্র পিন সেট করা হয়েছে!');
+  } catch (err) {
+    req.flash('error', '❌ পিন সেট করতে সমস্যা হয়েছে।');
+  }
+  res.redirect('/profile/security');
+});
+
+// রোডম্যাপ-নাম alias — উপরের /security/withdraw-pin-এর মতোই লজিক, শুধু
+// ফিল্ড নাম pin/confirmPin (উপরেরটা new_pin/confirm_pin)।
+router.post('/withdraw-pin/create', isAuth, async (req, res) => {
+  try {
+    const { pin, confirmPin } = req.body;
+    if (!pin || !/^\d{6}$/.test(pin)) {
+      req.flash('error', '৬ ডিজিটের পিন দিন');
+      return res.redirect('/profile/security');
+    }
+    if (pin !== confirmPin) {
+      req.flash('error', 'পিন দুটি মিলছে না');
+      return res.redirect('/profile/security');
+    }
+    const hash = await bcrypt.hash(pin, 10);
     await pool.query('UPDATE users SET withdraw_pin_hash=$1 WHERE id=$2', [hash, req.session.user.id]);
     req.flash('success', '✅ উইথড্র পিন সেট করা হয়েছে!');
   } catch (err) {

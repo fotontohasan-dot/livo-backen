@@ -10,9 +10,15 @@ const { logEvent: logAuditEvent } = require('../services/auditLog');
 const { PublicError, publicMessage } = require('../utils/safeError');
 const businessTime = require('../utils/businessTime');
 
+const { isAuth } = require('../middleware/auth');
+
 function requireLogin(req, res, next) {
-  if (!req.session.user) return res.redirect('/login');
-  next();
+  // middleware/auth.js-এর isAuth পুনর্ব্যবহার — এই ফাইলের নিজস্ব সংস্করণে
+  // শুধু সেশনের অস্তিত্ব দেখা হতো, ব্যান/self-exclude যাচাই হতো না। ফলে
+  // ব্যান করার পরও পুরনো সেশন দিয়ে ডিপোজিট/উইথড্র/ওয়ালেট রুটে ঢোকা যেত
+  // (isAuth-এই একমাত্র সঠিক, cache-ব্যাকড যাচাইটা আছে — ডুপ্লিকেট না করে
+  // এখানে পুনর্ব্যবহার করা হলো)।
+  return isAuth(req, res, next);
 }
 
 async function requireAdmin(req, res, next) {
@@ -523,6 +529,61 @@ router.get('/admin/payments', requireAdmin, async (req, res) => {
   }
 });
 
+// approve-এর মূল ক্রেডিট-লজিক — routes/admin.js-এর /api/deposits/:id/approve
+// এই একই ফাংশন `creditApprovedDeposit` নামে ইমপোর্ট করে (require('./payment')
+// থেকে destructure), কিন্তু ফাংশনটা আগে এই ফাইলে কখনো export-ই হতো না —
+// ফলে সেই রুটটা প্রতিবার কল করলেই "creditApprovedDeposit is not a function"
+// দিয়ে 500 দিত। এখন তিনটা approve পাথই (একক রুট, বাল্ক, admin/api) এই একই
+// ফাংশন ব্যবহার করে — লজিক তিন জায়গায় আলাদা করে লিখে ফলাফল ফাঁক থাকার ঝুঁকি নেই।
+// কলার আগেই SELECT ... FOR UPDATE করে pending নিশ্চিত করে রাখবে; এই ফাংশন
+// শুধু ক্রেডিট + স্ট্যাটাস আপডেট + নোটিফিকেশন করে, নিজে BEGIN/COMMIT করে না।
+async function creditApprovedDeposit(client, request) {
+  let bonusGiven = 0;
+
+  if (request.type === 'deposit') {
+    await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
+    await client.query(
+      `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'deposit',$3)`,
+      [request.user_id, request.amount, `ডিপোজিট অনুমোদন (#${request.id})`]
+    );
+    await client.query('UPDATE users SET total_deposited = COALESCE(total_deposited,0) + $1 WHERE id=$2', [request.amount, request.user_id]);
+
+    if (request.want_bonus) {
+      const cnt = await client.query(
+        `SELECT COUNT(*) FROM payment_requests WHERE user_id=$1 AND type='deposit' AND status='approved' AND id <> $2`,
+        [request.user_id, request.id]
+      );
+      const before = parseInt(cnt.rows[0].count);
+      const isFriday = new Date().getDay() === 5;
+      const pct = bonusPercentFor(before, isFriday);
+      bonusGiven = Math.min(MAX_BONUS, Math.floor(request.amount * pct / 100));
+      if (bonusGiven > 0) {
+        await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [bonusGiven, request.user_id]);
+        await client.query(
+          `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'deposit_bonus',$3)`,
+          [request.user_id, bonusGiven, `ডিপোজিট বোনাস (#${request.id})`]
+        );
+        await createBonus(client, request.user_id, 'deposit', bonusGiven);
+      }
+    }
+    await processReferralDeposit(client, request.user_id, request.amount);
+  }
+
+  await client.query(`UPDATE payment_requests SET status='approved', updated_at=NOW() WHERE id=$1`, [request.id]);
+
+  const message = request.type === 'deposit'
+    ? (bonusGiven > 0
+      ? `আপনার ${request.amount} টাকার ডিপোজিট + ${bonusGiven} বোনাস যোগ হয়েছে! (টার্নওভার প্রযোজ্য)`
+      : `আপনার ${request.amount} টাকার ডিপোজিট অনুমোদন হয়েছে!`)
+    : `আপনার ${request.amount} টাকার উইথড্র অনুমোদন হয়েছে!`;
+  const notifRes = await client.query(
+    `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'success') RETURNING *`,
+    [request.user_id, 'পেমেন্ট অনুমোদন', message]
+  );
+
+  return { bonusGiven, notification: notifRes.rows[0] };
+}
+
 router.post('/admin/approve/:id', requireAdmin, async (req, res) => {
   const { id } = req.params;
   const client = await pool.connect();
@@ -536,49 +597,7 @@ router.post('/admin/approve/:id', requireAdmin, async (req, res) => {
       return res.redirect('/payment/admin/payments');
     }
 
-    let bonusGiven = 0;
-
-    if (request.type === 'deposit') {
-      // আসল কয়েন যোগ
-      await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
-      await client.query('UPDATE users SET total_deposited = COALESCE(total_deposited,0) + $1 WHERE id=$2', [request.amount, request.user_id]);
-
-      // বোনাস নিলে — রিলোড নিয়ম অনুযায়ী শতাংশ
-      if (request.want_bonus) {
-        // এই ডিপোজিটের আগে কতগুলো approved ডিপোজিট হয়েছে
-        const cnt = await client.query(
-          `SELECT COUNT(*) FROM payment_requests WHERE user_id=$1 AND type='deposit' AND status='approved' AND id <> $2`,
-          [request.user_id, request.id]
-        );
-        const before = parseInt(cnt.rows[0].count);
-        const isFriday = new Date().getDay() === 5; // 5 = শুক্রবার
-        const pct = bonusPercentFor(before, isFriday);
-
-        bonusGiven = Math.min(MAX_BONUS, Math.floor(request.amount * pct / 100));
-
-        if (bonusGiven > 0) {
-          await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [bonusGiven, request.user_id]);
-          await createBonus(client, request.user_id, 'deposit', bonusGiven);
-        }
-      }
-
-      await processReferralDeposit(client, request.user_id, request.amount);
-    }
-
-    await client.query(`UPDATE payment_requests SET status='approved', updated_at=NOW() WHERE id=$1`, [id]);
-
-    let message;
-    if (request.type === 'deposit') {
-      message = bonusGiven > 0
-        ? `আপনার ${request.amount} টাকার ডিপোজিট + ${bonusGiven} বোনাস যোগ হয়েছে! (টার্নওভার প্রযোজ্য)`
-        : `আপনার ${request.amount} টাকার ডিপোজিট অনুমোদন হয়েছে!`;
-    } else {
-      message = `আপনার ${request.amount} টাকার উইথড্র অনুমোদন হয়েছে!`;
-    }
-    await client.query(
-      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'success')`,
-      [request.user_id, 'পেমেন্ট অনুমোদন', message]
-    );
+    await creditApprovedDeposit(client, request);
     await client.query('COMMIT');
     req.flash('success', 'অনুমোদন হয়েছে');
     res.redirect('/payment/admin/payments');
@@ -606,6 +625,10 @@ router.post('/admin/reject/:id', requireAdmin, async (req, res) => {
     }
     if (request.type === 'withdraw') {
       await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
+      await client.query(
+        `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'withdraw_refund',$3)`,
+        [request.user_id, request.amount, `উইথড্র বাতিল, ফেরত (#${request.id})`]
+      );
     }
     await client.query(`UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE id=$1`, [id]);
     await client.query(
@@ -640,39 +663,7 @@ async function approveOnePaymentRequest(id) {
       return { ok: false, id };
     }
 
-    let bonusGiven = 0;
-    if (request.type === 'deposit') {
-      await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
-      await client.query('UPDATE users SET total_deposited = COALESCE(total_deposited,0) + $1 WHERE id=$2', [request.amount, request.user_id]);
-
-      if (request.want_bonus) {
-        const cnt = await client.query(
-          `SELECT COUNT(*) FROM payment_requests WHERE user_id=$1 AND type='deposit' AND status='approved' AND id <> $2`,
-          [request.user_id, request.id]
-        );
-        const before = parseInt(cnt.rows[0].count);
-        const isFriday = new Date().getDay() === 5;
-        const pct = bonusPercentFor(before, isFriday);
-        bonusGiven = Math.min(MAX_BONUS, Math.floor(request.amount * pct / 100));
-        if (bonusGiven > 0) {
-          await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [bonusGiven, request.user_id]);
-          await createBonus(client, request.user_id, 'deposit', bonusGiven);
-        }
-      }
-      await processReferralDeposit(client, request.user_id, request.amount);
-    }
-
-    await client.query(`UPDATE payment_requests SET status='approved', updated_at=NOW() WHERE id=$1`, [id]);
-
-    const message = request.type === 'deposit'
-      ? (bonusGiven > 0
-        ? `আপনার ${request.amount} টাকার ডিপোজিট + ${bonusGiven} বোনাস যোগ হয়েছে! (টার্নওভার প্রযোজ্য)`
-        : `আপনার ${request.amount} টাকার ডিপোজিট অনুমোদন হয়েছে!`)
-      : `আপনার ${request.amount} টাকার উইথড্র অনুমোদন হয়েছে!`;
-    await client.query(
-      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'success')`,
-      [request.user_id, 'পেমেন্ট অনুমোদন', message]
-    );
+    await creditApprovedDeposit(client, request);
     await client.query('COMMIT');
     return { ok: true, id, request };
   } catch (err) {
@@ -696,6 +687,10 @@ async function rejectOnePaymentRequest(id) {
     }
     if (request.type === 'withdraw') {
       await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
+      await client.query(
+        `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1,$2,'withdraw_refund',$3)`,
+        [request.user_id, request.amount, `উইথড্র বাতিল, ফেরত (#${request.id})`]
+      );
     }
     await client.query(`UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE id=$1`, [id]);
     await client.query(
@@ -754,4 +749,5 @@ router.post('/admin/payments/bulk-reject', rbac.requirePermission('payments_appr
   res.json({ success: true, succeeded, failed });
 });
 
+router.creditApprovedDeposit = creditApprovedDeposit;
 module.exports = router;
