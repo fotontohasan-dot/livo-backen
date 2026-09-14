@@ -556,4 +556,134 @@ router.post('/admin/reject/:id', requireAdmin, async (req, res) => {
   }
 });
 
+// ==================== বাল্ক পেমেন্ট approve/reject ====================
+// একক /admin/approve/:id, /admin/reject/:id-এর ঠিক একই লেনদেন-লজিক পুনর্ব্যবহার
+// করা হয়েছে — শুধু একাধিক id-এর ওপর লুপ করে, প্রতিটা id নিজস্ব ট্রানজেকশনে
+// (একটা ব্যর্থ হলে বাকিগুলো আটকায় না — partial failure)।
+
+async function approveOnePaymentRequest(id) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await client.query('SELECT * FROM payment_requests WHERE id=$1 FOR UPDATE', [id]);
+    const request = result.rows[0];
+    if (!request || request.status !== 'pending') {
+      await client.query('ROLLBACK');
+      return { ok: false, id };
+    }
+
+    let bonusGiven = 0;
+    if (request.type === 'deposit') {
+      await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
+      await client.query('UPDATE users SET total_deposited = COALESCE(total_deposited,0) + $1 WHERE id=$2', [request.amount, request.user_id]);
+
+      if (request.want_bonus) {
+        const cnt = await client.query(
+          `SELECT COUNT(*) FROM payment_requests WHERE user_id=$1 AND type='deposit' AND status='approved' AND id <> $2`,
+          [request.user_id, request.id]
+        );
+        const before = parseInt(cnt.rows[0].count);
+        const isFriday = new Date().getDay() === 5;
+        const pct = bonusPercentFor(before, isFriday);
+        bonusGiven = Math.min(MAX_BONUS, Math.floor(request.amount * pct / 100));
+        if (bonusGiven > 0) {
+          await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [bonusGiven, request.user_id]);
+          await createBonus(client, request.user_id, 'deposit', bonusGiven);
+        }
+      }
+      await processReferralDeposit(client, request.user_id, request.amount);
+    }
+
+    await client.query(`UPDATE payment_requests SET status='approved', updated_at=NOW() WHERE id=$1`, [id]);
+
+    const message = request.type === 'deposit'
+      ? (bonusGiven > 0
+        ? `আপনার ${request.amount} টাকার ডিপোজিট + ${bonusGiven} বোনাস যোগ হয়েছে! (টার্নওভার প্রযোজ্য)`
+        : `আপনার ${request.amount} টাকার ডিপোজিট অনুমোদন হয়েছে!`)
+      : `আপনার ${request.amount} টাকার উইথড্র অনুমোদন হয়েছে!`;
+    await client.query(
+      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'success')`,
+      [request.user_id, 'পেমেন্ট অনুমোদন', message]
+    );
+    await client.query('COMMIT');
+    return { ok: true, id, request };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('bulk approve one error:', err.message);
+    return { ok: false, id };
+  } finally {
+    client.release();
+  }
+}
+
+async function rejectOnePaymentRequest(id) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await client.query('SELECT * FROM payment_requests WHERE id=$1 FOR UPDATE', [id]);
+    const request = result.rows[0];
+    if (!request || request.status !== 'pending') {
+      await client.query('ROLLBACK');
+      return { ok: false, id };
+    }
+    if (request.type === 'withdraw') {
+      await client.query('UPDATE users SET coins = coins + $1 WHERE id=$2', [request.amount, request.user_id]);
+    }
+    await client.query(`UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE id=$1`, [id]);
+    await client.query(
+      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, $2, $3, 'error')`,
+      [request.user_id, 'পেমেন্ট বাতিল', `আপনার ${request.amount} টাকার রিকোয়েস্ট বাতিল হয়েছে।`]
+    );
+    await client.query('COMMIT');
+    return { ok: true, id, request };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('bulk reject one error:', err.message);
+    return { ok: false, id };
+  } finally {
+    client.release();
+  }
+}
+
+function parseBulkIds(body) {
+  const ids = Array.isArray(body.ids) ? body.ids : [];
+  return ids.map((v) => parseInt(v, 10)).filter((n) => Number.isInteger(n) && n > 0);
+}
+
+router.post('/admin/payments/bulk-approve', rbac.requirePermission('payments_approve'), async (req, res) => {
+  const ids = parseBulkIds(req.body);
+  if (ids.length === 0) return res.status(400).json({ success: false, error: 'কোনো আইডি নির্বাচিত হয়নি' });
+
+  let succeeded = 0, failed = 0;
+  for (const id of ids) {
+    const r = await approveOnePaymentRequest(id);
+    if (r.ok) succeeded++; else failed++;
+  }
+
+  await pool.query(
+    `INSERT INTO admin_logs (admin_id, admin_username, action_type, details, ip_address) VALUES ($1,$2,$3,$4,$5)`,
+    [req.session.user.id, req.session.user.username, 'BULK_PAYMENT_APPROVE', `${succeeded}টা approved, ${failed}টা ব্যর্থ (ids: ${ids.join(',')})`, req.ip]
+  ).catch((e) => console.error('admin_logs write error:', e.message));
+
+  res.json({ success: true, succeeded, failed });
+});
+
+router.post('/admin/payments/bulk-reject', rbac.requirePermission('payments_approve'), async (req, res) => {
+  const ids = parseBulkIds(req.body);
+  if (ids.length === 0) return res.status(400).json({ success: false, error: 'কোনো আইডি নির্বাচিত হয়নি' });
+
+  let succeeded = 0, failed = 0;
+  for (const id of ids) {
+    const r = await rejectOnePaymentRequest(id);
+    if (r.ok) succeeded++; else failed++;
+  }
+
+  await pool.query(
+    `INSERT INTO admin_logs (admin_id, admin_username, action_type, details, ip_address) VALUES ($1,$2,$3,$4,$5)`,
+    [req.session.user.id, req.session.user.username, 'BULK_PAYMENT_REJECT', `${succeeded}টা rejected, ${failed}টা ব্যর্থ (ids: ${ids.join(',')})`, req.ip]
+  ).catch((e) => console.error('admin_logs write error:', e.message));
+
+  res.json({ success: true, succeeded, failed });
+});
+
 module.exports = router;
