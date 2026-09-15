@@ -526,6 +526,95 @@ router.get('/history', requireLogin, async (req, res) => {
   }
 });
 
+const DEPOSIT_METHOD_META = {
+  bkash:  { icon: 'fa-mobile-screen', label: 'bKash' },
+  nagad:  { icon: 'fa-mobile-screen', label: 'Nagad' },
+  rocket: { icon: 'fa-mobile-screen', label: 'Rocket' },
+  upay:   { icon: 'fa-mobile-screen', label: 'Upay' },
+  bank:   { icon: 'fa-university',    label: 'Bank Transfer' },
+  crypto: { icon: 'fa-coins',         label: 'Crypto' }
+};
+
+function resolveDepositDateRange(query) {
+  const { quick, from, to } = query;
+  const fmt = (d) => d.toISOString().slice(0, 10);
+  let dateFrom = from || '', dateTo = to || '';
+  const today = new Date();
+  if (quick === 'today') {
+    dateFrom = dateTo = fmt(today);
+  } else if (quick === '7d') {
+    const d = new Date(today); d.setDate(d.getDate() - 7);
+    dateFrom = fmt(d); dateTo = fmt(today);
+  } else if (quick === '30d') {
+    const d = new Date(today); d.setDate(d.getDate() - 30);
+    dateFrom = fmt(d); dateTo = fmt(today);
+  } else if (quick === '90d') {
+    const d = new Date(today); d.setDate(d.getDate() - 90);
+    dateFrom = fmt(d); dateTo = fmt(today);
+  } else if (quick === 'year') {
+    dateFrom = `${today.getFullYear()}-01-01`; dateTo = fmt(today);
+  }
+  return { dateFrom, dateTo };
+}
+
+// মেথড-ভিত্তিক ডিপোজিট রিপোর্ট — আগে এই পেজেই তিন জায়গায় আলাদা করে
+// ['bkash','nagad','rocket'] হার্ডকোড ছিল (ট্যাব, টোটাল কোয়েরি, ফলব্যাক),
+// VALID_METHODS-এ থাকা upay/bank/crypto কোথাও ধরা পড়ত না — সবসময় HTTP 200
+// আসায় লুকিয়ে থাকত। এখন VALID_METHODS-ই একমাত্র সত্যের উৎস।
+router.get('/admin/deposits', rbac.requirePermission('payments_view'), async (req, res) => {
+  const methods = VALID_METHODS.map((key) => ({ key, ...(DEPOSIT_METHOD_META[key] || { icon: 'fa-coins', label: key }) }));
+  const rawMethod = String(req.query.method || '');
+  const method = VALID_METHODS.includes(rawMethod) ? rawMethod : 'bkash';
+  const { dateFrom, dateTo } = resolveDepositDateRange(req.query);
+  const quick = req.query.quick || '';
+  const from = dateFrom;
+  const to = dateTo;
+
+  try {
+    const params = [method];
+    let dateClause = '';
+    if (dateFrom && dateTo) {
+      dateClause = ` AND pr.created_at::date BETWEEN $2 AND $3`;
+      params.push(dateFrom, dateTo);
+    }
+
+    const listRes = await pool.query(
+      `SELECT pr.*, u.username FROM payment_requests pr JOIN users u ON pr.user_id = u.id
+       WHERE pr.type = 'deposit' AND pr.method = $1${dateClause}
+       ORDER BY pr.created_at DESC LIMIT 500`,
+      params
+    );
+
+    const totalsRes = await pool.query(
+      `SELECT method, COUNT(*) AS cnt, COALESCE(SUM(amount),0) AS total
+       FROM payment_requests
+       WHERE type='deposit' AND status='approved' AND method = ANY($1::text[])
+       ${dateFrom && dateTo ? 'AND created_at::date BETWEEN $2 AND $3' : ''}
+       GROUP BY method`,
+      dateFrom && dateTo ? [VALID_METHODS, dateFrom, dateTo] : [VALID_METHODS]
+    );
+    const totals = {};
+    VALID_METHODS.forEach((m) => { totals[m] = { total: 0, cnt: 0 }; });
+    totalsRes.rows.forEach((r) => { totals[r.method] = { total: Number(r.total), cnt: parseInt(r.cnt, 10) }; });
+
+    res.render('payment/deposits', {
+      user: req.session.user,
+      methods, method, quick, from, to,
+      totals,
+      requests: listRes.rows
+    });
+  } catch (err) {
+    console.error('admin deposits load error:', err.message);
+    res.render('payment/deposits', {
+      user: req.session.user,
+      methods, method, quick, from, to,
+      totals: Object.fromEntries(VALID_METHODS.map((m) => [m, { total: 0, cnt: 0 }])),
+      requests: [],
+      loadError: true
+    });
+  }
+});
+
 router.get('/admin/payments', rbac.requirePermission('payments_view'), async (req, res) => {
   try {
     // আনবাউন্ডেড কোয়েরি ছিল — এখন সাম্প্রতিক ২,০০০টায় সীমাবদ্ধ (মেমরি/লেটেন্সি নিরাপত্তা)।
@@ -534,7 +623,8 @@ router.get('/admin/payments', rbac.requirePermission('payments_view'), async (re
     );
     res.render('payment/admin', { user: req.session.user, requests: result.rows });
   } catch (err) {
-    res.render('payment/admin', { user: req.session.user, requests: [] });
+    console.error('admin payments load error:', err.message);
+    res.render('payment/admin', { user: req.session.user, requests: [], loadError: true });
   }
 });
 
