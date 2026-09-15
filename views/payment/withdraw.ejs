@@ -112,9 +112,9 @@
     <p class="bold">আপনার <%= siteName %> অ্যাকাউন্টে উত্তোলনের আগে অনুগ্রহ করে আপনার ওয়ালেট (বিকাশ/নগদ/রকেট ইত্যাদি) সঠিকভাবে সংযুক্ত হয়েছে কিনা তা যাচাই করুন। ভুল ওয়ালেট সংযোগের কারণে টাকা স্থানান্তরে বিলম্ব বা ব্যর্থতা ঘটতে পারে।</p>
     <p class="bold">🔒 দয়া করে আবার পরীক্ষা করুন এবং নিরাপদে উত্তোলন সম্পন্ন করুন! 💰</p>
     <p class="muted">দৈনিক উত্তোলন ৯৯,৯৯৯ (বার), অবশিষ্ট উত্তোলন ৯৯,৯৯৯ (বার)</p>
-    <p class="muted">প্রধান ওয়ালেট :৳ <%= (coins || 0).toFixed(2) %></p>
-    <p class="muted">উপলব্ধ পরিমাণ : ৳ <%= (coins || 0).toFixed(2) %></p>
-    <button id="refreshBalanceBtn" class="refresh-btn"><i class="fas fa-sync-alt"></i> আপনার ব্যালেন্স রিফ্রেশ করুন</button>
+    <p class="muted">প্রধান ওয়ালেট :৳ <span id="mainWalletAmt"><%= (coins || 0).toFixed(2) %></span></p>
+    <p class="muted">উপলব্ধ পরিমাণ : ৳ <span id="availableAmt"><%= (coins || 0).toFixed(2) %></span></p>
+    <button id="refreshBalanceBtn" class="refresh-btn"><i class="fas fa-sync-alt" id="refreshIcon"></i> আপনার ব্যালেন্স রিফ্রেশ করুন</button>
   </div>
 
   <% if (!hasWithdrawPin) { %>
@@ -191,7 +191,29 @@
     document.getElementById('tabCrypto').addEventListener('click', function(){ switchTab('crypto'); });
 
     var refreshBtn = document.getElementById('refreshBalanceBtn');
-    if (refreshBtn) refreshBtn.addEventListener('click', function(){ location.reload(); });
+    if (refreshBtn) refreshBtn.addEventListener('click', function(){
+      // আগে এখানে শুধু পুরো পেজ location.reload() করা হতো — মোবাইল
+      // নেটওয়ার্কে ধীর/ব্যর্থ হলে বাটনে চাপ দিলে কিছুই হচ্ছে না বলে মনে হতো।
+      // এখন সরাসরি ব্যালেন্স API কল করে সংখ্যাগুলো আপডেট করা হয়, ব্যর্থ
+      // হলে ফলব্যাক হিসেবে পুরো পেজ রিলোড হয়।
+      var icon = document.getElementById('refreshIcon');
+      if (icon) icon.classList.add('fa-spin');
+      fetch('/profile/api/balance', { headers: { 'Accept': 'application/json' } })
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+          if (data && data.success) {
+            var val = Number(data.coins || 0).toFixed(2);
+            var w = document.getElementById('mainWalletAmt');
+            var a = document.getElementById('availableAmt');
+            if (w) w.textContent = val;
+            if (a) a.textContent = val;
+          } else {
+            location.reload();
+          }
+        })
+        .catch(function(){ location.reload(); })
+        .finally(function(){ if (icon) icon.classList.remove('fa-spin'); });
+    });
 
     var eye1 = document.getElementById('toggleEye1');
     if (eye1) eye1.addEventListener('click', function(){ togglePwd('secPassword','eye1'); });

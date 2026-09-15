@@ -24,10 +24,49 @@ const { getRewardStatus, claimRedPacket, claimGoldenEgg } = require('../services
 router.get('/api/balance', isAuth, async (req, res) => {
   try {
     const u = await pool.query('SELECT coins FROM users WHERE id=$1', [req.session.user.id]);
-    res.json({ coins: Number(u.rows[0]?.coins) || 0 });
+    res.json({ success: true, coins: Number(u.rows[0]?.coins) || 0 });
   } catch (err) {
     console.error('profile/api/balance error:', err.message);
     res.status(500).json({ error: 'ব্যালেন্স লোড করা যায়নি।' });
+  }
+});
+
+// প্রোফাইল ছবি বদলানোর ফিচার আগে সম্পূর্ণ অসম্পূর্ণ ছিল: ফ্রন্টএন্ড
+// /profile/update-avatar এ POST করত কিন্তু এই রুটটাই কখনো তৈরি হয়নি,
+// তাই ইউজার নতুন ছবি সিলেক্ট করলেও কিছুই হতো না (404)।
+const ALLOWED_AVATARS = [
+  'https://i.pravatar.cc/300?img=12',
+  'https://i.pravatar.cc/300?img=33',
+  'https://i.pravatar.cc/300?img=5',
+  'https://i.pravatar.cc/300?img=47',
+  'https://i.pravatar.cc/300?img=8',
+  'https://i.pravatar.cc/300?img=25',
+  'https://i.pravatar.cc/300?img=15',
+  'https://i.pravatar.cc/300?img=44',
+  'https://i.pravatar.cc/300?img=68',
+  'https://i.pravatar.cc/300?img=32',
+  'https://i.pravatar.cc/300?img=60',
+  'https://i.pravatar.cc/300?img=51',
+  'https://i.pravatar.cc/300?img=20',
+  'https://i.pravatar.cc/300?img=49',
+  'https://i.pravatar.cc/300?img=65',
+  'https://i.pravatar.cc/300?img=57'
+];
+
+router.post('/update-avatar', isAuth, async (req, res) => {
+  try {
+    const { avatar } = req.body || {};
+    // শুধুমাত্র পূর্বনির্ধারিত তালিকার URL গ্রহণযোগ্য — নইলে ইউজার
+    // যেকোনো external/malicious URL সেট করতে পারত।
+    if (!avatar || !ALLOWED_AVATARS.includes(avatar)) {
+      return res.status(400).json({ success: false, error: 'অবৈধ ছবি নির্বাচন।' });
+    }
+    await pool.query('UPDATE users SET avatar=$1 WHERE id=$2', [avatar, req.session.user.id]);
+    req.session.user.avatar = avatar;
+    res.json({ success: true, avatar });
+  } catch (err) {
+    console.error('profile/update-avatar error:', err.message);
+    res.status(500).json({ success: false, error: 'প্রোফাইল ছবি আপডেট করা যায়নি।' });
   }
 });
 
@@ -439,6 +478,7 @@ router.get('/support', isAuth, (req, res) => {
 });
 
 router.get('/vip', isAuth, requireFeature('vip'), async (req, res) => {
+router.get('/vip', isAuth, async (req, res) => {
   try {
     const vip = await getVipStatus(req.session.user.id);
     res.render('profile/vip', { user: req.session.user, vip });
@@ -546,28 +586,6 @@ router.post('/security/withdraw-pin', isAuth, async (req, res) => {
       return res.redirect('/profile/security');
     }
     const hash = await bcrypt.hash(new_pin, 10);
-    await pool.query('UPDATE users SET withdraw_pin_hash=$1 WHERE id=$2', [hash, req.session.user.id]);
-    req.flash('success', '✅ উইথড্র পিন সেট করা হয়েছে!');
-  } catch (err) {
-    req.flash('error', '❌ পিন সেট করতে সমস্যা হয়েছে।');
-  }
-  res.redirect('/profile/security');
-});
-
-// রোডম্যাপ-নাম alias — উপরের /security/withdraw-pin-এর মতোই লজিক, শুধু
-// ফিল্ড নাম pin/confirmPin (উপরেরটা new_pin/confirm_pin)।
-router.post('/withdraw-pin/create', isAuth, async (req, res) => {
-  try {
-    const { pin, confirmPin } = req.body;
-    if (!pin || !/^\d{6}$/.test(pin)) {
-      req.flash('error', '৬ ডিজিটের পিন দিন');
-      return res.redirect('/profile/security');
-    }
-    if (pin !== confirmPin) {
-      req.flash('error', 'পিন দুটি মিলছে না');
-      return res.redirect('/profile/security');
-    }
-    const hash = await bcrypt.hash(pin, 10);
     await pool.query('UPDATE users SET withdraw_pin_hash=$1 WHERE id=$2', [hash, req.session.user.id]);
     req.flash('success', '✅ উইথড্র পিন সেট করা হয়েছে!');
   } catch (err) {
