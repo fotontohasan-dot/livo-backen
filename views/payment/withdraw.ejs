@@ -45,6 +45,8 @@
 
   .submit-btn { display: block; width: calc(100% - 32px); margin: 8px 16px 0; background: #e61e26; color: #fff; border: none; padding: 15px; border-radius: 14px; font-size: 16px; font-weight: 800; }
   .pin-note { font-size: 12px; color: var(--text-muted); padding: 0 16px 8px; }
+  .rounded-msg-box { background: #fef2f2; color: #b91c1c; border-radius: 14px; padding: 12px 16px; font-size: 13px; font-weight: 600; margin: 16px; }
+  #withdrawSubmitBtn:disabled { opacity: 0.55; cursor: not-allowed; }
 </style>
 
 <div class="wd-wrap">
@@ -159,7 +161,14 @@
       <p class="pin-note">🛈 প্রতিটি উত্তোলনের আগে আপনার Withdraw PIN যাচাই করা হবে।</p>
     <% } %>
 
-    <button type="submit" class="submit-btn">উত্তোলন করুন</button>
+    <% if (typeof withdrawalWindow !== 'undefined' && withdrawalWindow && !withdrawalWindow.open) { %>
+      <div class="rounded-msg-box dep-section" role="alert">
+        <i class="fas fa-triangle-exclamation"></i>
+        <%= withdrawalWindow.reason === 'forced_closed' ? t('withdraw_window_closed_manual') : t('withdraw_window_closed_scheduled').replace('{start}', withdrawalWindow.start || '').replace('{end}', withdrawalWindow.end || '') %>
+      </div>
+    <% } %>
+
+    <button type="submit" id="withdrawSubmitBtn" class="submit-btn"<% if (typeof withdrawalWindow !== 'undefined' && withdrawalWindow && !withdrawalWindow.open) { %> disabled<% } %>>উত্তোলন করুন</button>
   </form>
 </div>
 

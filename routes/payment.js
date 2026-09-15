@@ -10,6 +10,9 @@ const { logEvent: logAuditEvent } = require('../services/auditLog');
 const { PublicError, publicMessage } = require('../utils/safeError');
 const businessTime = require('../utils/businessTime');
 const { requireFeature } = require('../middleware/featureGate');
+const { verifyPin } = require('../services/withdrawPin');
+const withdrawalWindowSvc = require('../services/withdrawalWindow');
+const { requireWithdrawalWindow, attachWithdrawalWindow } = require('../middleware/withdrawalWindow');
 
 const { isAuth } = require('../middleware/auth');
 
@@ -312,6 +315,37 @@ router.post('/admin/payment-methods/:id/delete', rbac.requirePermission('payment
 
 // ইউজার ওয়ালেট হাব — views/payment/wallet.ejs আগে থেকেই ছিল, কিন্তু কোনো
 // রুট সেটা রেন্ডার করত না (/payment/wallet 404 করত)।
+router.get('/admin/withdrawal-window', rbac.requirePermission('withdrawal_window_manage'), async (req, res) => {
+  try {
+    const config = await withdrawalWindowSvc.readConfig();
+    const state = await withdrawalWindowSvc.getState();
+    res.render('admin/withdrawal-window', { user: req.session.user, config, state });
+  } catch (err) {
+    console.error('withdrawal-window admin load error:', err.message);
+    res.render('admin/withdrawal-window', { user: req.session.user, config: null, state: { open: true, timezone: 'Asia/Dhaka' }, loadError: true });
+  }
+});
+
+router.post('/admin/withdrawal-window', rbac.requirePermission('withdrawal_window_manage'), async (req, res) => {
+  const result = await withdrawalWindowSvc.saveConfig(req.body);
+  if (!result.ok) {
+    req.flash('error', result.error || 'সেভ করা যায়নি');
+  } else {
+    req.flash('success', 'সেভ হয়েছে');
+    logAuditEvent({
+      req,
+      actorType: 'admin',
+      actorId: req.session.user.id,
+      actorUsername: req.session.user.username,
+      action: 'WITHDRAWAL_WINDOW_UPDATED',
+      category: 'settings',
+      riskLevel: 'medium',
+      details: { mode: req.body.mode, start: req.body.start, end: req.body.end, timezone: req.body.timezone }
+    }).catch((e) => console.error('audit log error:', e.message));
+  }
+  res.redirect('/payment/admin/withdrawal-window');
+});
+
 router.get('/wallet', requireLogin, async (req, res) => {
   const userId = req.session.user.id;
   try {
@@ -362,7 +396,7 @@ router.get('/wallet', requireLogin, async (req, res) => {
   }
 });
 
-router.get('/withdraw', requireLogin, requireFeature('withdrawal'), async (req, res) => {
+router.get('/withdraw', requireLogin, requireFeature('withdrawal'), attachWithdrawalWindow(), async (req, res) => {
   try {
     let coins = 0;
     let hasWithdrawPin = false;
@@ -399,7 +433,7 @@ router.get('/withdraw', requireLogin, requireFeature('withdrawal'), async (req, 
 });
 
 
-router.post('/withdraw', requireLogin, requireFeature('withdrawal'), async (req, res) => {
+router.post('/withdraw', requireLogin, requireFeature('withdrawal'), requireWithdrawalWindow(), async (req, res) => {
   const { method, account_number, password, withdraw_pin } = req.body;
   const amount = parseAmount(req.body.amount);
   const userId = req.session.user.id;
@@ -434,9 +468,17 @@ router.post('/withdraw', requireLogin, requireFeature('withdrawal'), async (req,
         req.flash('error', 'উইথড্র পিন দিন');
         return res.redirect('/payment/withdraw');
       }
-      const okPin = await bcrypt.compare(withdraw_pin, row.withdraw_pin_hash);
-      if (!okPin) {
-        req.flash('error', 'উইথড্র পিন সঠিক নয়');
+      // bcrypt.compare সরাসরি করলে ব্রুট-ফোর্স লকআউট হতো না — verifyPin-এ
+      // ব্যর্থ চেষ্টা গোনা ও ১৫-মিনিট লক-আউট আগে থেকেই বিল্ট-ইন আছে (PIN
+      // পাল্টানোর নিজস্ব রুটেও এটাই ব্যবহার হয়), এখানে শুধু কল করা হয়নি এতদিন।
+      const pinCheck = await verifyPin(userId, withdraw_pin, req.ip);
+      if (!pinCheck.success) {
+        if (pinCheck.locked) {
+          const mins = Math.ceil((pinCheck.remainingMs || 0) / 60000);
+          req.flash('error', `অনেকবার ভুল পিন — ${mins} মিনিট পর আবার চেষ্টা করুন।`);
+        } else {
+          req.flash('error', 'উইথড্র পিন সঠিক নয়');
+        }
         return res.redirect('/payment/withdraw');
       }
     }
@@ -744,23 +786,51 @@ async function rejectPaymentRequestById(id) {
 }
 
 router.post('/admin/approve/:id', requireAdmin, async (req, res) => {
-  const { id } = req.params;
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id) || id <= 0) {
+    req.flash('error', 'অবৈধ রিকোয়েস্ট আইডি');
+    return res.redirect('/payment/admin/payments');
+  }
   const result = await approvePaymentRequestById(id);
   if (!result.success) {
     req.flash('error', 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে');
     return res.redirect('/payment/admin/payments');
   }
+  await logAuditEvent({
+    req,
+    actorType: 'admin',
+    actorId: req.session.user.id,
+    actorUsername: req.session.user.username,
+    action: 'PAYMENT_APPROVED',
+    category: 'financial',
+    riskLevel: 'high',
+    details: { requestId: id, userId: result.request.user_id, type: result.request.type, amount: result.request.amount }
+  }).catch((e) => console.error('audit log error:', e.message));
   req.flash('success', 'অনুমোদন হয়েছে');
   res.redirect('/payment/admin/payments');
 });
 
 router.post('/admin/reject/:id', requireAdmin, async (req, res) => {
-  const { id } = req.params;
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id) || id <= 0) {
+    req.flash('error', 'অবৈধ রিকোয়েস্ট আইডি');
+    return res.redirect('/payment/admin/payments');
+  }
   const result = await rejectPaymentRequestById(id);
   if (!result.success) {
     req.flash('error', 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে');
     return res.redirect('/payment/admin/payments');
   }
+  await logAuditEvent({
+    req,
+    actorType: 'admin',
+    actorId: req.session.user.id,
+    actorUsername: req.session.user.username,
+    action: 'PAYMENT_REJECTED',
+    category: 'financial',
+    riskLevel: 'medium',
+    details: { requestId: id, userId: result.request.user_id, type: result.request.type, amount: result.request.amount }
+  }).catch((e) => console.error('audit log error:', e.message));
   req.flash('error', 'বাতিল করা হয়েছে');
   res.redirect('/payment/admin/payments');
 });
