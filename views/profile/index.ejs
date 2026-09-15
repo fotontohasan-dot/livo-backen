@@ -32,6 +32,17 @@
             <i class="fas fa-copy" style="font-size: 9px;"></i>
           </button>
         </div>
+        <div style="display:none;">
+          <span id="profileUrlText"><%= baseUrl %>/profile</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; margin-top: 6px;">
+          <button type="button" data-profile-action="copy-profile-url" aria-label="<%= t.copy_profile_url || 'Copy profile link' %>" style="background: rgba(255,255,255,0.08); border: none; padding: 4px 8px; border-radius: 6px; color: var(--gold); cursor: pointer; font-size: 10px; display:flex; align-items:center; gap:4px;">
+            <i class="fas fa-link" style="font-size: 9px;"></i> <%= t.copy_link || 'Copy Link' %>
+          </button>
+          <button type="button" data-profile-action="share-profile-url" aria-label="<%= t.share_profile || 'Share profile' %>" style="background: rgba(255,255,255,0.08); border: none; padding: 4px 8px; border-radius: 6px; color: var(--gold); cursor: pointer; font-size: 10px; display:flex; align-items:center; gap:4px;">
+            <i class="fas fa-share-alt" style="font-size: 9px;"></i> <%= t.share || 'Share' %>
+          </button>
+        </div>
         <div style="display: flex; align-items: center; gap: 6px; margin-top: 8px;">
            <div style="flex: 1; height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden;">
               <div style="width: <%= (user.total_points % 1000) / 10 %>%; height: 100%; background: var(--grad-gold); border-radius: 10px;"></div>
@@ -251,8 +262,8 @@
 </div>
 <div id="copyToast" style="position:fixed; left:50%; bottom:90px; transform:translateX(-50%) translateY(20px); background:#000; color:#fff; padding:8px 16px; border-radius:20px; font-size:13px; opacity:0; transition:all .25s; z-index:250; pointer-events:none;"></div>
 
-<script type="application/json" id="profileConfig"><%- jsonScriptSafe({ uid: user.id, siteName: siteName || '', locale: (typeof lang !== 'undefined' && lang === 'bn') ? 'bn-BD' : 'en-US' }) %></script>
-<script nonce="<%= cspNonce %>" src="/js/profile-index.js"></script>
+<script type="application/json" id="profileConfig"><%- jsonScriptSafe({ uid: 100000 + user.id, siteName: siteName, locale: lang === "bn" ? "bn-BD" : "en-US" }) %></script>
+<script src="/js/profile-index.js"></script>
 
 <%- include('../partials/navbar') %>
 <%- include('../partials/bottom-nav') %>

@@ -104,9 +104,11 @@ router.get('/', isAuth, async (req, res) => {
     // করত, catch ব্লক ধরত, আর ইউজারকে flash এরর সহ হোমে ফেরত পাঠাত। যাচাই করে
     // দেখা গেছে views/profile/index.ejs টেমপ্লেট এই তিনটার একটাও ব্যবহার করে না,
     // তাই মৃত কোড হিসেবে বাদ দেওয়া হলো।
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
     res.render('profile/index', {
       user: user.rows[0],
-      profileUser: user.rows[0]
+      profileUser: user.rows[0],
+      baseUrl
     });
   } catch (err) {
     console.error('Profile error:', err);
