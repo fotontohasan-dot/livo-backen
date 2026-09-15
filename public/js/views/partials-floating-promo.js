@@ -25,11 +25,50 @@
   function drCloseEggFn(){ var e=_g('drEggOverlay'); if(e) e.style.display='none'; }
   function drPickEgg(idx){ if(_eggClaimed||lpStatus.goldenEgg.claimed) return; _eggClaimed=true; var hint=_g('drEggHint'); if(hint) hint.textContent='অপেক্ষা করুন...'; fetch('/profile/daily-rewards/golden-egg/claim',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pickedIndex:idx})}).then(function(r){return r.json();}).then(function(d){ if(d.ok){ lpStatus.goldenEgg.claimed=true; var items=document.querySelectorAll('#drEggGrid .dr-egg-item'); for(var i=0;i<items.length;i++){ items[i].classList.add('opened'); if(i===d.pickedIndex) items[i].classList.add('win'); items[i].querySelector('.egg-amt').textContent=d.reveal[i]; items[i].onclick=null; } _g('drEggResult').innerHTML='<div class="dr-success">🎉 আপনি পেলেন '+d.amount+' কয়েন!</div>'; if(window.confetti) confetti({particleCount:150,spread:90,origin:{y:0.6}}); if(hint) hint.textContent='অন্যান্য ডিমে আরও বড় পুরস্কার ছিল!'; setTimeout(drCloseEggFn,4000); }else{ if(hint) hint.textContent=d.message||'সমস্যা'; _eggClaimed=false; } }).catch(function(){ _eggClaimed=false; if(hint) hint.textContent='সমস্যা হয়েছে'; }); }
 
+  // ===== WebP support detection + resolver =====
+  // Accepts either a plain PNG path string, or an { webp, src } pair.
+  // Falls back to the 3200px PNG (`p.src` / the string itself) whenever
+  // WebP isn't supported or the WebP file 404s.
+  var _webpSupport = null;
+  function supportsWebP(){
+    if (_webpSupport !== null) return _webpSupport;
+    try {
+      var canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 1;
+      _webpSupport = canvas.toDataURL('image/webp').indexOf('data:image/webp') === 0;
+    } catch (e) { _webpSupport = false; }
+    return _webpSupport;
+  }
+  function pngFallbackOf(p){ return (typeof p === 'string') ? p : p.src; }
+  function resolveImgSrc(p){
+    if (typeof p === 'string') {
+      // Derive the WebP variant from the PNG path, e.g. foo.png -> foo.webp
+      return supportsWebP() ? p.replace(/\.(png|jpe?g)$/i, '.webp') : p;
+    }
+    return (supportsWebP() && p.webp) ? p.webp : p.src;
+  }
+
   var LP_IMG = cfg.images || [];
-  var LP_TIT = ["সদস্য উদযাপন দিবস","VIP সদস্যদের জন্য আরও সুবিধা","এখনই অযাপ ডাউনলোড করুন"];
-  var LP_TXT = ["প্রতি মাসের ১০ তারিখ বিশাল নগদ পুরস্কার!","প্রতি মাসে সর্বোচ্চ বোনাস + সপ্তাহিক রিওয়ার্ড।","অ্যাপ ডাউনলোড করে জিতে নিন আকর্ষণীয় বোনাস!"];
+  var LP_TIT = ["রহস্যময় পুরস্কার — ৫০০ কোটি টাকা!","সদস্য উদযাপন দিবস","প্রথম জমায় ৫০% পর্যন্ত বোনাস","বন্ধুকে আমন্ত্রণ জানান, পান ৫০০ টাকা"];
+  var LP_TXT = ["প্রতি মাসের ২০ তারিখ — ৫০০ কোটি টাকার ফ্রি এক্সক্লুসিভ পুরস্কার, পরবর্তী সৌভাগ্যবান ব্যক্তি হতে পারেন আপনি।","প্রতি মাসের ১০ তারিখ — ৮০০ কোটি টাকার নগদ পুরস্কার, যত বেশি বাজি তত বেশি ভাগ্যবান।","আপনার প্রথম জমায় সর্বোচ্চ ৫০% পর্যন্ত বোনাস — একটি অনন্য সুযোগ মিস করবেন না।","প্রতিটি বন্ধুর প্রথম ডিপোজিটে আপনি পাবেন ৫০০ টাকা বোনাস, এজেন্ট কমিশন সর্বোচ্চ ১.০% পর্যন্ত।"];
   var lpCur=0, lpSlide=null;
-  function lpRender(){ var b=_g('lpPopupBody'); if(!b) return; b.innerHTML='<img class="pp-img" src="'+LP_IMG[lpCur]+'"><div class="pp-caption"><h2>'+LP_TIT[lpCur]+'</h2><p>'+LP_TXT[lpCur]+'</p></div>'; var dt=''; for(var i=0;i<LP_IMG.length;i++) dt+='<span class="'+(i===lpCur?'on':'')+'"></span>'; _g('lpPopupDots').innerHTML=dt; }
+  function lpRender(){
+    var b=_g('lpPopupBody'); if(!b) return;
+    var raw = LP_IMG[lpCur];
+    var chosenSrc = resolveImgSrc(raw);
+    var fallbackSrc = pngFallbackOf(raw);
+    var img = document.createElement('img');
+    img.className = 'pp-img';
+    img.src = chosenSrc;
+    img.onerror = function(){ this.onerror = null; this.src = fallbackSrc; };
+    var caption = document.createElement('div');
+    caption.className = 'pp-caption';
+    caption.innerHTML = '<h2>'+LP_TIT[lpCur]+'</h2><p>'+LP_TXT[lpCur]+'</p>';
+    b.innerHTML = '';
+    b.appendChild(img);
+    b.appendChild(caption);
+    var dt=''; for(var i=0;i<LP_IMG.length;i++) dt+='<span class="'+(i===lpCur?'on':'')+'"></span>'; _g('lpPopupDots').innerHTML=dt;
+  }
   function lpStop(){ if(lpSlide){clearInterval(lpSlide);lpSlide=null;} }
   function lpNextFn(){ lpStop(); if(lpCur<LP_IMG.length-1){lpCur++;lpRender();}else{lpClosePopupFn();} }
   function lpPrevFn(){ lpStop(); if(lpCur>0){lpCur--;lpRender();} }
@@ -64,12 +103,19 @@
       function schedule(){ if(!promo) return; if(hideT) clearTimeout(hideT); hideT=setTimeout(function(){ promo.classList.add('hide'); if(panel) panel.classList.remove('open'); if(showT) clearTimeout(showT); showT=setTimeout(function(){ promo.classList.remove('hide'); schedule(); },90000); },90000); }
       lpTimer('drRedH','drRedM','drRedS'); lpTimer('drEggH','drEggM','drEggS');
       fetch('/profile/daily-rewards/status').then(function(r){return r.json();}).then(function(d){ if(d&&d.ok&&d.status) lpStatus=d.status; }).catch(function(){});
-      var LP_SESSION_KEY = 'lpPopupShownThisSession';
-  var alreadyShown = false;
-  try { alreadyShown = sessionStorage.getItem(LP_SESSION_KEY) === '1'; } catch(e) { alreadyShown = false; }
-  if (!alreadyShown) {
-    setTimeout(function(){ lpShowPopup(); try { sessionStorage.setItem(LP_SESSION_KEY, '1'); } catch(e){} }, 1200);
-  }
+
+      // ===== 24h localStorage popup gate (replaces the old once-per-session check) =====
+      var LP_STORAGE_KEY = 'bk_last_popup';
+      var LP_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24h
+      var now = Date.now();
+      var last = 0;
+      try { last = parseInt(localStorage.getItem(LP_STORAGE_KEY), 10) || 0; } catch (e) { last = 0; }
+      if (now - last > LP_INTERVAL_MS) {
+        setTimeout(function(){
+          lpShowPopup();
+          try { localStorage.setItem(LP_STORAGE_KEY, String(Date.now())); } catch (e) {}
+        }, 1200);
+      }
 
       schedule();
     } catch(e){ console.log('promo err',e); }

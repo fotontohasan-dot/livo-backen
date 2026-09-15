@@ -1,9 +1,17 @@
-<!-- ভাসমান প্রোমো + প্যানেল + দৈনিক রিওয়ার্ (গ্লাস মডাল) -->
+<!-- ভাসমান প্রোমো + প্যানেল + দৈনিক রিওয়ার্ড (গ্লাস মডাল) -->
 <%
-  popup_01_500cr_mystery_modal_ULTRA_4K.png
-popup_02_800cr_member_day_modal_ULTRA_4K.png
-popup_03_first_deposit_50pct_modal_ULTRA_4K.png
-popup_04_invite_500taka_modal_ULTRA_4K.png
+  // এই ৪টা পপআপ ইমেজ /public/images/popups/-এ রাখা আছে (PNG + সমনামের .webp জোড়া,
+  // client-এর resolveImgSrc() স্বয়ংক্রিয়ভাবে WebP সমর্থন থাকলে .webp বেছে নেয়,
+  // না থাকলে .png-এ fallback করে)। যে পেজ এই partial include করে সে চাইলে
+  // popupImg1..4 locals পাস করে ওভাররাইড করতে পারবে; না করলে এই ডিফল্টগুলো ব্যবহৃত হয়।
+  const popupImg1 = typeof locals.popupImg1 !== 'undefined' && locals.popupImg1
+    ? locals.popupImg1 : '/images/popups/popup_01_500cr_mystery_modal.png';
+  const popupImg2 = typeof locals.popupImg2 !== 'undefined' && locals.popupImg2
+    ? locals.popupImg2 : '/images/popups/popup_02_800cr_member_day_modal.png';
+  const popupImg3 = typeof locals.popupImg3 !== 'undefined' && locals.popupImg3
+    ? locals.popupImg3 : '/images/popups/popup_03_first_deposit_50pct_modal.png';
+  const popupImg4 = typeof locals.popupImg4 !== 'undefined' && locals.popupImg4
+    ? locals.popupImg4 : '/images/popups/popup_04_invite_500taka_modal.png';
 %>
 
 <style nonce="<%= cspNonce %>">
@@ -32,14 +40,41 @@ popup_04_invite_500taka_modal_ULTRA_4K.png
   .lp-ic-egg    { background: linear-gradient(135deg,#a855f7,#6b21a8); }
   .lp-ic-packet { background: linear-gradient(135deg,#ef4444,#991b1b); }
 
+  /* ===== Popup modal: responsive 320px -> 3200px, WebP-ready image ===== */
   #lpPopup { position: fixed; inset: 0; background: rgba(0,0,0,0.55); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 10010; display: none; align-items: center; justify-content: center; padding: 22px; }
-  #lpPopup .pp-box { background: #fff; border-radius: 18px; max-width: 340px; width: 100%; max-height: 85vh; position: relative; overflow: hidden; display: flex; flex-direction: column; }
+  #lpPopup .pp-box { background: #fff; border-radius: 18px; max-width: min(480px, 95vw); width: 100%; max-height: 85vh; position: relative; overflow: hidden; display: flex; flex-direction: column; margin: 0 auto; }
   #lpPopup .pp-scroll { overflow-y: auto; flex: 1; }
-  #lpPopup .pp-img { width: 100%; display: block; }
+  #lpPopup .pp-img {
+    width: 100%;
+    height: auto;
+    display: block;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
   #lpPopup .pp-caption { padding: 14px 18px 4px; text-align: center; }
   #lpPopup .pp-caption h2 { font-size: 16px; font-weight: 800; margin: 0 0 5px; color: #111; }
   #lpPopup .pp-caption p { font-size: 12px; margin: 0; color: #555; line-height: 1.5; }
-  #lpPopup .pp-close { position: absolute; top: 10px; right: 10px; width: 38px; height: 38px; background: rgba(0,0,0,0.55); color: #fff; border: 2px solid #fff; border-radius: 50%; font-size: 22px; font-weight: bold; cursor: pointer; z-index: 5; }
+
+  /* ===== Cross / close button ===== */
+  #lpPopup .pp-close {
+    position: absolute;
+    top: -14px;
+    right: -14px;
+    width: 42px;
+    height: 42px;
+    background: linear-gradient(135deg, #ff6b6b, #c81d1d);
+    color: #fff;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    font-size: 22px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 5;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    transition: transform 0.25s ease;
+  }
+  #lpPopup .pp-close:hover { transform: rotate(90deg); }
+
   #lpPopup .pp-actions { display: flex; gap: 8px; padding: 12px 16px; background: #fff; border-top: 1px solid #eee; }
   #lpPopup .pp-actions button { flex: 1; padding: 12px; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; }
   #lpPopup .pp-prev { background: #eee; color: #444; }
@@ -111,5 +146,5 @@ popup_04_invite_500taka_modal_ULTRA_4K.png
 <div id="lpPromo"><div class="lp-dot"></div><div class="lp-pack">🧧</div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.9.3/confetti.browser.min.js"></script>
-<script type="application/json" id="partials-floating-promoConfig"><%- jsonScriptSafe({ images: [popupImg1, popupImg2, popupImg3] }) %></script>
+<script type="application/json" id="partials-floating-promoConfig"><%- jsonScriptSafe({ images: [popupImg1, popupImg2, popupImg3, popupImg4] }) %></script>
 <script src="/js/views/partials-floating-promo.js"></script>
