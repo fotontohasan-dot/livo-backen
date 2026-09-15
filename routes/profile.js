@@ -557,7 +557,6 @@ router.get('/support', isAuth, (req, res) => {
 });
 
 router.get('/vip', isAuth, requireFeature('vip'), async (req, res) => {
-router.get('/vip', isAuth, async (req, res) => {
   try {
     const vip = await getVipStatus(req.session.user.id);
     res.render('profile/vip', { user: req.session.user, vip });
