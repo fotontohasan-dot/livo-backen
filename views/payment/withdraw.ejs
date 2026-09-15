@@ -110,9 +110,9 @@
     <p class="bold">আপনার <%= siteName %> অ্যাকাউন্টে উত্তোলনের আগে অনুগ্রহ করে আপনার ওয়ালেট (বিকাশ/নগদ/রকেট ইত্যাদি) সঠিকভাবে সংযুক্ত হয়েছে কিনা তা যাচাই করুন। ভুল ওয়ালেট সংযোগের কারণে টাকা স্থানান্তরে বিলম্ব বা ব্যর্থতা ঘটতে পারে।</p>
     <p class="bold">🔒 দয়া করে আবার পরীক্ষা করুন এবং নিরাপদে উত্তোলন সম্পন্ন করুন! 💰</p>
     <p class="muted">দৈনিক উত্তোলন ৯৯,৯৯৯ (বার), অবশিষ্ট উত্তোলন ৯৯,৯৯৯ (বার)</p>
-    <p class="muted">প্রধান ওয়ালেট :৳ <%= (coins || 0).toFixed(2) %></p>
-    <p class="muted">উপলব্ধ পরিমাণ : ৳ <%= (coins || 0).toFixed(2) %></p>
-    <button id="refreshBalanceBtn" class="refresh-btn"><i class="fas fa-sync-alt"></i> আপনার ব্যালেন্স রিফ্রেশ করুন</button>
+    <p class="muted">প্রধান ওয়ালেট :৳ <span id="mainWalletAmt"><%= (coins || 0).toFixed(2) %></span></p>
+    <p class="muted">উপলব্ধ পরিমাণ : ৳ <span id="availableAmt"><%= (coins || 0).toFixed(2) %></span></p>
+    <button type="button" id="refreshBalanceBtn" class="refresh-btn"><i class="fas fa-sync-alt"></i> আপনার ব্যালেন্স রিফ্রেশ করুন</button>
   </div>
 
   <% if (!hasWithdrawPin) { %>
@@ -182,7 +182,32 @@
     document.getElementById('tabCrypto').addEventListener('click', function(){ switchTab('crypto'); });
 
     var refreshBtn = document.getElementById('refreshBalanceBtn');
-    if (refreshBtn) refreshBtn.addEventListener('click', function(){ location.reload(); });
+    if (refreshBtn) refreshBtn.addEventListener('click', function () {
+      // আগে শুধু location.reload() করা হতো — সার্ভিস ওয়ার্কার বা ব্রাউজার
+      // ক্যাশে আটকে গেলে ইউজারের কাছে মনে হতো বাটনটা "কাজ করছে না" (কোনো
+      // দৃশ্যমান পরিবর্তন নেই)। এখন সরাসরি সার্ভার থেকে ব্যালেন্স ফেচ করে
+      // DOM-এ বসানো হয়, সাথে বাটনে স্পষ্ট লোডিং/সফল/ব্যর্থ অবস্থা দেখানো হয়।
+      var icon = refreshBtn.querySelector('i');
+      refreshBtn.disabled = true;
+      if (icon) icon.classList.add('fa-spin');
+      fetch('/profile/api/balance', { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+        .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+        .then(function (data) {
+          var amt = (Number(data.coins) || 0).toFixed(2);
+          var mainEl = document.getElementById('mainWalletAmt');
+          var availEl = document.getElementById('availableAmt');
+          if (mainEl) mainEl.textContent = amt;
+          if (availEl) availEl.textContent = amt;
+        })
+        .catch(function () {
+          // ফেচ ব্যর্থ হলে পুরনো ব্যবহারে ফিরে গিয়ে পুরো পেজ রিলোড করা হয়
+          location.reload();
+        })
+        .finally(function () {
+          refreshBtn.disabled = false;
+          if (icon) icon.classList.remove('fa-spin');
+        });
+    });
 
     var eye1 = document.getElementById('toggleEye1');
     if (eye1) eye1.addEventListener('click', function(){ togglePwd('secPassword','eye1'); });
