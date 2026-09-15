@@ -161,7 +161,7 @@ const cspDirectives = {
   ],
   styleSrcAttr: ["'unsafe-inline'"],
   fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "data:"],
-  imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://i.pravatar.cc", "https://img.icons8.com", "https://i.postimg.cc"],
+  imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://i.pravatar.cc", "https://img.icons8.com"],
   mediaSrc: ["'self'", "https://res.cloudinary.com"],
   connectSrc: ["'self'", "wss:", "ws:"],
   objectSrc: ["'none'"],
