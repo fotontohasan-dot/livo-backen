@@ -3,6 +3,7 @@ const router = express.Router();
 const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
 const { requireFeature } = require('../middleware/featureGate');
+const { revokeAllOtherSessions, revokeDeviceSession } = require('../services/deviceTracking');
 const bcrypt = require('bcryptjs');
 const { getTodayReward, claimDailyReward } = require('../services/dailyReward');
 const { getReferralStats } = require('../services/referral');
@@ -111,6 +112,10 @@ router.post('/change-password', isAuth, async (req, res) => {
       req.flash('error', '❌ নতুন পাসওয়ার মিলছে না।');
       return res.redirect('/profile/security');
     }
+    if (!np || np.length < 8) {
+      req.flash('error', '❌ নতুন পাসওয়ার্ড কমপক্ষে ৮ ক্যারেক্টার হতে হবে।');
+      return res.redirect('/profile/security');
+    }
 
     const user = await pool.query(`SELECT * FROM users WHERE id=$1`, [req.session.user.id]);
     if (!(await bcrypt.compare(cp, user.rows[0].password))) {
@@ -118,7 +123,18 @@ router.post('/change-password', isAuth, async (req, res) => {
       return res.redirect('/profile/security');
     }
     const hashed = await bcrypt.hash(np, 10);
-    await pool.query(`UPDATE users SET password=$1 WHERE id=$2`, [hashed, req.session.user.id]);
+    await pool.query(`UPDATE users SET password=$1, password_changed_at=NOW() WHERE id=$2`, [hashed, req.session.user.id]);
+
+    // পাসওয়ার্ড বদলানোর আসল নিরাপত্তা-উদ্দেশ্য: চলমান অন্য সেশনগুলো কেটে
+    // দেওয়া। নাহলে পাসওয়ার্ড ফাঁস হয়ে থাকলেও আক্রমণকারীর পুরনো কুকি বৈধ
+    // থেকেই যেত — পাসওয়ার্ড বদলানো কার্যত অর্থহীন হয়ে পড়ত। routes/auth.js-এর
+    // password-reset ফ্লো এটা আগে থেকেই করে; change-password ফ্লো করত না।
+    try {
+      await revokeAllOtherSessions(req.session.user.id, req.sessionID, 'PASSWORD_CHANGE');
+    } catch (e) {
+      console.error('revokeAllOtherSessions error:', e.message);
+    }
+
     req.flash('success', '✅ পাসওয়ার্ড পরিবর্তন হয়েছে!');
     res.redirect('/profile/security');
   } catch (err) {
@@ -221,6 +237,20 @@ router.get('/security', isAuth, async (req, res) => {
   } catch (err) {
     res.render('profile/security', { user: req.session.user, bankCards: [] });
   }
+});
+
+// একটা ডিভাইস সেশন লগআউট — মালিকানা যাচাই revokeDeviceSession-এর ভেতরেই
+// (WHERE id=$1 AND user_id=$2), তাই URL-এর :id অন্য কারো হলে চুপচাপ কিছুই
+// হয় না, 404/403 leak করে না (কোন id গুলো বৈধ তা অনুমান করা ঠেকাতে)।
+router.post('/devices/:id/logout', isAuth, async (req, res) => {
+  try {
+    await revokeDeviceSession(req.session.user.id, parseInt(req.params.id, 10), req.session.user.username);
+    req.flash('success', '✅ ডিভাইস লগআউট করা হয়েছে।');
+  } catch (err) {
+    console.error('device logout error:', err.message);
+    req.flash('error', '❌ লগআউট করা যায়নি।');
+  }
+  res.redirect('/profile/security');
 });
 
 // ==================== দায়িত্বশীল গেমিং ====================
