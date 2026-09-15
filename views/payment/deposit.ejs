@@ -125,6 +125,10 @@
             <div class="method-icon" style="background:#D12053;">SM</div>
             <div class="method-name">Send Money<br>Bkash</div>
           </div>
+          <div class="method-tile" data-method="upay">
+            <div class="method-icon" style="background:#8FCB2E;">UP</div>
+            <div class="method-name">Upay</div>
+          </div>
           <div class="method-tile" data-method="crypto">
             <div class="method-icon" style="background:#26A17B;">₮</div>
             <div class="method-name">USDT<br>+5%</div>
@@ -159,7 +163,7 @@
         <div class="dep-label">কার্যক্রম</div>
         <label class="activity-row">
           <input type="radio" name="want_bonus_choice" value="bonus">
-          <span>প্রথম জমার বোনাস সর্বোচ্চ ৫০% পর্যন্ত</span>
+          <span>প্রথম জমার বোনাস সর্বোচ্চ ১০০% পর্যন্ত</span>
           <span class="amt">≥ ৳ 100.00</span>
         </label>
         <label class="activity-row">
@@ -209,6 +213,13 @@
     var list = CHANNELS_BY_METHOD[method] || [];
     if (list.length === 0) {
       document.getElementById('channelIdInput').value = '';
+      // আগে এখানে চুপচাপ কিছু না দেখিয়ে ফিরে যেত — ইউজারের কাছে মনে হতো
+      // মেথড ট্যাপ করাই কাজ করছে না, কারণ কোনো নম্বর/চ্যানেল দেখাত না।
+      var msg = document.createElement('div');
+      msg.style.cssText = 'grid-column:1/-1; color:var(--text-muted); font-size:12px; padding:8px 0;';
+      msg.textContent = 'এই মুহূর্তে এই মেথডের জন্য কোনো চ্যানেল উপলব্ধ নেই। অন্য মেথড বেছে নিন।';
+      grid.appendChild(msg);
+      document.getElementById('displayNumber').textContent = '—';
       return;
     }
     list.forEach(function(ch, idx){
