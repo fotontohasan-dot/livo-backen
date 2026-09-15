@@ -16,6 +16,7 @@ const { getAllFreeBets, claimFreeBet } = require('../services/freebet');
 const { getWeeklyStatus, claimWeekly, getMonthlyStatus, claimMonthly } = require('../services/periodicReward');
 const { getShareStatus, claimShare } = require('../services/social');
 const { getLeaderboard, getPastContests } = require('../services/contest');
+const { listLoginHistory } = require('../services/deviceTracking');
 const { getRewardStatus, claimRedPacket, claimGoldenEgg } = require('../services/redpacket');
 
 
@@ -223,6 +224,25 @@ router.get('/security', isAuth, async (req, res) => {
 });
 
 // ==================== দায়িত্বশীল গেমিং ====================
+router.get('/login-history', isAuth, async (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = 20;
+  const offset = (page - 1) * limit;
+  try {
+    const rows = await listLoginHistory(req.session.user.id, limit + 1, offset);
+    const hasMore = rows.length > limit;
+    res.render('profile/login-history', {
+      user: req.session.user,
+      logins: rows.slice(0, limit),
+      page,
+      hasMore
+    });
+  } catch (err) {
+    console.error('profile/login-history error:', err.message);
+    res.render('profile/login-history', { user: req.session.user, logins: [], page: 1, hasMore: false, loadError: true });
+  }
+});
+
 router.get('/responsible', isAuth, async (req, res) => {
   try {
     const u = await pool.query(
