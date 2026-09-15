@@ -5,6 +5,29 @@ const { isAuth } = require('../middleware/auth');
 const { requireFeature } = require('../middleware/featureGate');
 const { revokeAllOtherSessions, revokeDeviceSession } = require('../services/deviceTracking');
 const bcrypt = require('bcryptjs');
+const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// প্রোফাইল ছবি — শুধু image/* মাইমটাইপ, ৩MB পর্যন্ত। memoryStorage ব্যবহার
+// করা হচ্ছে (chat.js-এর মতো) যাতে ডিস্কে অস্থায়ী ফাইল না লেখা লাগে, বাফার
+// সরাসরি Cloudinary-তে স্ট্রিম হয়।
+const AVATAR_ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp'];
+const avatarUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 3 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!AVATAR_ALLOWED_MIME.includes(file.mimetype)) {
+      return cb(new Error('unsupported_type'));
+    }
+    cb(null, true);
+  }
+});
 const { getTodayReward, claimDailyReward } = require('../services/dailyReward');
 const { getReferralStats } = require('../services/referral');
 const { getCashbackStatus, claimCashback } = require('../services/cashback');
@@ -89,6 +112,42 @@ router.get('/', isAuth, async (req, res) => {
     console.error('Profile error:', err);
     req.flash('error', 'প্রোফাইল লোড করতে সমস্যা হয়েছে।');
     res.redirect('/');
+  }
+});
+
+// প্রোফাইল ছবি পরিবর্তন — আগে এই ফিচারটাই কোডবেসে ছিল না (শুধু ইউজারনেমের
+// প্রথম অক্ষর দিয়ে অ্যাভাটার দেখানো হতো), তাই "নতুন ছবি সিলেক্ট করা যাচ্ছে না"
+// অভিযোগ আসছিল — বাটন/ইনপুট আদৌ ছিল না। এখন multer দিয়ে ফাইল রিসিভ করে
+// Cloudinary-তে আপলোড হয় এবং users.avatar কলামে URL সেভ হয়।
+router.post('/avatar', isAuth, function (req, res, next) {
+  avatarUpload.single('avatar')(req, res, function (err) {
+    if (err) {
+      req.flash('error', 'ছবি আপলোড ব্যর্থ — শুধু JPG/PNG/WEBP, সর্বোচ্চ ৩MB');
+      return res.redirect('/profile');
+    }
+    next();
+  });
+}, async (req, res) => {
+  if (!req.file) {
+    req.flash('error', 'কোনো ছবি নির্বাচন করা হয়নি');
+    return res.redirect('/profile');
+  }
+  try {
+    const result = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { folder: 'livo/avatars', resource_type: 'image', timeout: 20000, transformation: [{ width: 400, height: 400, crop: 'fill', gravity: 'face' }] },
+        (error, result) => (error ? reject(error) : resolve(result))
+      );
+      stream.end(req.file.buffer);
+    });
+    await pool.query('UPDATE users SET avatar=$1 WHERE id=$2', [result.secure_url, req.session.user.id]);
+    req.session.user.avatar = result.secure_url;
+    req.flash('success', 'প্রোফাইল ছবি পরিবর্তন হয়েছে');
+    res.redirect('/profile');
+  } catch (e) {
+    console.error('avatar upload error:', e.message);
+    req.flash('error', 'ছবি আপলোড ব্যর্থ হয়েছে, আবার চেষ্টা করুন');
+    res.redirect('/profile');
   }
 });
 
