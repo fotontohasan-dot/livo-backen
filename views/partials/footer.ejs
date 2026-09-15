@@ -151,3 +151,17 @@ body.light-mode .footer-link:hover, body.light-mode .footer-link:focus { color: 
 
   </div>
 </footer>
+
+<script>
+  // WebP Fallback Logic
+  const supportsWebP = canvas.toDataURL('image/webp').includes('webp');
+  img.src = supportsWebP ? p.webp : p.src; // 3200px PNG fallback
+
+  // 24h localStorage Logic
+  const lastPopup = localStorage.getItem('bk_last_popup');
+  const now = Date.now();
+  if (!lastPopup || (now - lastPopup > 24 * 60 * 60 * 1000)) {
+    localStorage.setItem('bk_last_popup', now);
+    autoShow();
+  }
+</script>
