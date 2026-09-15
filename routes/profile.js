@@ -31,6 +31,45 @@ router.get('/api/balance', isAuth, async (req, res) => {
   }
 });
 
+// প্রোফাইল ছবি বদলানোর ফিচার আগে সম্পূর্ণ অসম্পূর্ণ ছিল: ফ্রন্টএন্ড
+// /profile/update-avatar এ POST করত কিন্তু এই রুটটাই কখনো তৈরি হয়নি,
+// তাই ইউজার নতুন ছবি সিলেক্ট করলেও কিছুই হতো না (404)।
+const ALLOWED_AVATARS = [
+  'https://i.pravatar.cc/300?img=12',
+  'https://i.pravatar.cc/300?img=33',
+  'https://i.pravatar.cc/300?img=5',
+  'https://i.pravatar.cc/300?img=47',
+  'https://i.pravatar.cc/300?img=8',
+  'https://i.pravatar.cc/300?img=25',
+  'https://i.pravatar.cc/300?img=15',
+  'https://i.pravatar.cc/300?img=44',
+  'https://i.pravatar.cc/300?img=68',
+  'https://i.pravatar.cc/300?img=32',
+  'https://i.pravatar.cc/300?img=60',
+  'https://i.pravatar.cc/300?img=51',
+  'https://i.pravatar.cc/300?img=20',
+  'https://i.pravatar.cc/300?img=49',
+  'https://i.pravatar.cc/300?img=65',
+  'https://i.pravatar.cc/300?img=57'
+];
+
+router.post('/update-avatar', isAuth, async (req, res) => {
+  try {
+    const { avatar } = req.body || {};
+    // শুধুমাত্র পূর্বনির্ধারিত তালিকার URL গ্রহণযোগ্য — নইলে ইউজার
+    // যেকোনো external/malicious URL সেট করতে পারত।
+    if (!avatar || !ALLOWED_AVATARS.includes(avatar)) {
+      return res.status(400).json({ success: false, error: 'অবৈধ ছবি নির্বাচন।' });
+    }
+    await pool.query('UPDATE users SET avatar=$1 WHERE id=$2', [avatar, req.session.user.id]);
+    req.session.user.avatar = avatar;
+    res.json({ success: true, avatar });
+  } catch (err) {
+    console.error('profile/update-avatar error:', err.message);
+    res.status(500).json({ success: false, error: 'প্রোফাইল ছবি আপডেট করা যায়নি।' });
+  }
+});
+
 router.get('/', isAuth, async (req, res) => {
   try {
     const user = await pool.query(`SELECT * FROM users WHERE id=$1`, [req.session.user.id]);
