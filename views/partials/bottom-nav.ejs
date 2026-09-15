@@ -77,6 +77,13 @@
     background: var(--red); border-radius: 50%; border: 2px solid var(--bg-nav);
     box-shadow: 0 0 6px rgba(200,59,59,0.6);
   }
+  /* মাস্টার ব্যাজ ডট — প্রোফাইল আইকনে যেকোনো নোটিফিকেশন (রিওয়ার্ড/মিশন/ইনটারনাল মেসেজ)
+     আসলে জ্বলে ওঠে; public/js/badges-realtime.js নিয়ন্ত্রণ করে। */
+  .pub-nav-item .pub-master-dot {
+    position: absolute; top: 2px; right: 18%; width: 9px; height: 9px;
+    background: var(--red); border-radius: 50%; border: 2px solid var(--bg-nav);
+    box-shadow: 0 0 6px rgba(200,59,59,0.6); display: none;
+  }
 </style>
 
 <nav class="pub-bottom-nav" id="pubBottomNav">
@@ -111,6 +118,7 @@
   </a>
   <a href="/profile" class="pub-nav-item <%= locals.currentPage === 'profile' ? 'active' : '' %>">
     <i class="fas fa-circle-user"></i>
+    <span class="pub-master-dot" data-badge="master-dot"></span>
     <span><%= t.nav_profile %></span>
     <span class="pub-active-bar"></span>
   </a>

@@ -270,7 +270,14 @@ const initSocket = (server, sessionMiddleware) => {
 
         if (isAdmin) {
           // অ্যাডমিন → নির্দিষ্ট ইউজারের কাছে
-          if (receiverId) io.to(`user:${receiverId}`).emit("new_message", payload);
+          if (receiverId) {
+            io.to(`user:${receiverId}`).emit("new_message", payload);
+            // 'ইনটারনাল মেসেজ' আইকনের ব্যাজ সাথে সাথে আপডেট (chat_messages আনরিড কাউন্ট)
+            try {
+              const { emitBadgeUpdate } = require('./notify');
+              emitBadgeUpdate(receiverId);
+            } catch (e) { console.error('chat badge emit error:', e.message); }
+          }
         } else {
           // ইউজার → সব অ্যাডমিনের কাছে
           io.to("admins").emit("new_message", payload);
@@ -318,7 +325,11 @@ const initSocket = (server, sessionMiddleware) => {
   });
 
   console.log("✅ Socket.io initialized");
+  return io;
 };
+
+// অন্য মডিউল (যেমন services/notify.js) থেকে ইতিমধ্যে ইনিশিয়ালাইজড io ইনস্ট্যান্স পেতে
+const getIo = () => io;
 
 // ===== লাইভ স্কোর আপডেট (আগের মতোই) =====
 const updateLiveScore = async (matchId, scoreData) => {
@@ -392,4 +403,4 @@ const broadcastDemoStats = async () => {
   }
 };
 
-module.exports = { initSocket, invalidateSocketAuth, emitPaymentMethodsUpdated, updateLiveScore, getDemoStats, broadcastDemoStats, emitAdminAlert, notifyUserSeen, notifyAdminsSeen, allowChatMessage, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_SEC };
+module.exports = { initSocket, getIo, invalidateSocketAuth, emitPaymentMethodsUpdated, updateLiveScore, getDemoStats, broadcastDemoStats, emitAdminAlert, notifyUserSeen, notifyAdminsSeen, allowChatMessage, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_SEC };

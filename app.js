@@ -359,7 +359,10 @@ app.use(cookieParser());
 
 // session middleware রেডি হওয়ার পর socket.io ইনিশিয়ালাইজ করা হচ্ছে,
 // যাতে socket connection-এও একই লগইন session ব্যবহার করে ইউজার/অ্যাডমিন যাচাই করা যায়
-initSocket(server, sessionMiddleware);
+const ioInstance = initSocket(server, sessionMiddleware);
+// notifications-এর রিয়েল-টাইম push (services/notify.js) একই io ইনস্ট্যান্স ব্যবহার করবে,
+// যাতে notifyUser/broadcastToAllUsers/emitBadgeUpdate সরাসরি ইউজারের সকেট রুমে পৌঁছাতে পারে
+require('./services/notify').initNotifyIo(ioInstance);
 
 app.use(flash());
 app.use(sentryService.userContextMiddleware); // লগইন করা থাকলে Sentry ইভেন্টে ইউজার কনটেক্সট যোগ হবে

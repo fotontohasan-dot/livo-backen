@@ -200,12 +200,23 @@ async function claimMission(userId, missionId, lang = 'bn') {
       `INSERT INTO coin_transactions (user_id, amount, type, description) VALUES ($1, $2, 'mission', $3)`,
       [userId, finalReward, `মিশন: ${d.title}`]
     );
-    await client.query(
-      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1, 'মিশন সম্পন্ন!', $2, 'success')`,
+    // category='mission' — 'মিশন' আইকনের ব্যাজে গণনা হবে (services/notify.js দেখুন)
+    const notifResult = await client.query(
+      `INSERT INTO notifications (user_id, title, message, type, category)
+       VALUES ($1, 'মিশন সম্পন্ন!', $2, 'success', 'mission') RETURNING *`,
       [userId, `আপনি "${d.title}" মিশন শেষ করে ${finalReward} কয়েন পেয়েছেন!`]
     );
+    const notifRow = notifResult.rows[0];
 
     await client.query('COMMIT');
+
+    // COMMIT-এর পরে রিয়েল-টাইম push
+    try {
+      const { emitToUser, emitBadgeUpdate } = require('./notify');
+      emitToUser(userId, notifRow);
+      emitBadgeUpdate(userId);
+    } catch (e) { console.error('mission notify emit error:', e.message); }
+
     return { success: true, reward: finalReward, message: t(lang, 'reward_coins_received').replace('{value}', finalReward) };
   } catch (e) {
     await client.query('ROLLBACK');

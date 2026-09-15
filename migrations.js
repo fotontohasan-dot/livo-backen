@@ -118,6 +118,18 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_notif_user_unread ON notifications(user_id) WHERE is_read = false;`);
 
+    // রিয়েল-টাইম ব্যাজ সিস্টেম: প্রতিটা নোটিফিকেশন কোন আইকনের ব্যাজে গণনা হবে তা চিহ্নিত করতে
+    // 'category' যোগ করা হলো — 'reward' (গেম স্পিন/মিশন/অ্যাডমিন পুরস্কার), 'mission' (মিশন সংক্রান্ত),
+    // 'message' (অ্যাডমিন থেকে পাঠানো ইনটারনাল/ঘোষণা বার্তা), 'general' (বাকি সব, ডিফল্ট)।
+    await pool.query(`
+      ALTER TABLE notifications
+      ADD COLUMN IF NOT EXISTS category VARCHAR(20) DEFAULT 'general';
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_notif_user_category_unread
+      ON notifications(user_id, category) WHERE is_read = false;
+    `);
+
     // অ্যাডমিন ব্রডকাস্ট নোটিফিকেশনের আলাদা অডিট লগ (কে কখন কী পাঠিয়েছে, কতজনকে)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS notification_broadcasts (

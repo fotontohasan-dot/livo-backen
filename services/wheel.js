@@ -102,6 +102,7 @@ async function spin(userId, lang = 'bn') {
       [userId, today(), prize]
     );
 
+    let notifRow;
     if (prize > 0) {
       await client.query(`UPDATE users SET coins = coins + $1 WHERE id = $2`, [prize, userId]);
       await client.query(
@@ -109,20 +110,30 @@ async function spin(userId, lang = 'bn') {
          VALUES ($1, $2, 'lucky_wheel', 'লাকি হুইল পুরস্কার')`,
         [userId, prize]
       );
-      await client.query(
-        `INSERT INTO notifications (user_id, title, message, type)
-         VALUES ($1, 'লাকি হুইল!', $2, 'success')`,
+      // category='reward' — 'রিওয়ার্ড সেন্টার' আইকনের ব্যাজে গণনা হবে (services/notify.js দেখুন)
+      const r = await client.query(
+        `INSERT INTO notifications (user_id, title, message, type, category)
+         VALUES ($1, 'লাকি হুইল!', $2, 'success', 'reward') RETURNING *`,
         [userId, `আপনি লাকি হুইলে ${prize} কয়েন জিতেছেন!`]
       );
+      notifRow = r.rows[0];
     } else {
-      await client.query(
-        `INSERT INTO notifications (user_id, title, message, type)
-         VALUES ($1, 'লাকি হুইল', $2, 'info')`,
+      const r = await client.query(
+        `INSERT INTO notifications (user_id, title, message, type, category)
+         VALUES ($1, 'লাকি হুইল', $2, 'info', 'reward') RETURNING *`,
         [userId, 'এবার কিছু পাননি। আগামীকাল আবার চেষ্টা করুন!']
       );
+      notifRow = r.rows[0];
     }
 
     await client.query('COMMIT');
+
+    // COMMIT-এর পরে রিয়েল-টাইম push — ট্রানজেকশন রোলব্যাক হলে যেন মিথ্যা নোটিফিকেশন না যায়
+    try {
+      const { emitToUser, emitBadgeUpdate } = require('./notify');
+      emitToUser(userId, notifRow);
+      emitBadgeUpdate(userId);
+    } catch (e) { console.error('wheel notify emit error:', e.message); }
 
     // ফ্রন্টএন্ডে কোন ঘরে থামবে তার ইনডেক্স
     const index = SEGMENTS.findIndex(s => s.prize === prize);

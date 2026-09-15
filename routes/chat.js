@@ -193,7 +193,11 @@ router.get('/history', isAuth, requireFeature('live_chat'), async (req, res) => 
       `UPDATE chat_messages SET is_read = true WHERE receiver_id = $1 AND is_admin = true AND is_read = false`,
       [userId]
     );
-    if (upd.rowCount > 0) notifyAdminsSeen(userId);
+    if (upd.rowCount > 0) {
+      notifyAdminsSeen(userId);
+      // ইউজার চ্যাট খুলে মেসেজ পড়ে ফেললে 'ইনটারনাল মেসেজ' ব্যাজ সাথে সাথে ক্লিয়ার হবে
+      require('../services/notify').emitBadgeUpdate(userId);
+    }
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: req.t('common_server_error_short') });

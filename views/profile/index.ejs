@@ -97,7 +97,10 @@
     <div class="mc-flat-grid">
 
       <a href="/profile/rewards" class="mc-tile">
-        <div class="mc-tile-icon"><i class="fas fa-trophy"></i></div>
+        <div class="mc-tile-icon">
+          <i class="fas fa-trophy"></i>
+          <span class="mc-tile-badge" data-badge="reward" style="display:none;"></span>
+        </div>
         <span class="mc-tile-label">Reward Center</span>
       </a>
 
@@ -132,8 +135,19 @@
       </a>
 
       <a href="/profile/missions" class="mc-tile">
-        <div class="mc-tile-icon"><i class="fas fa-bullseye"></i></div>
+        <div class="mc-tile-icon">
+          <i class="fas fa-bullseye"></i>
+          <span class="mc-tile-badge" data-badge="mission" style="display:none;"></span>
+        </div>
         <span class="mc-tile-label">Mission</span>
+      </a>
+
+      <a href="/profile/chat" class="mc-tile">
+        <div class="mc-tile-icon">
+          <i class="fas fa-envelope"></i>
+          <span class="mc-tile-badge" data-badge="message" style="display:none;"></span>
+        </div>
+        <span class="mc-tile-label">Internal Message</span>
       </a>
 
       <a href="/profile/badges" class="mc-tile">
@@ -264,9 +278,11 @@
 .mc-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-decoration:none;min-height:64px}
 .mc-tile-label{color:var(--text-main);font-size:11px;font-weight:600;text-align:center;overflow-wrap:anywhere}
 .mc-tile-sublabel{color:var(--text-muted);font-size:9px;text-align:center;overflow-wrap:anywhere}
-.mc-tile-icon{width:58px;height:58px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--gold)}
+.mc-tile-icon{width:58px;height:58px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--gold);position:relative}
 .mc-tile-icon-danger{background:rgba(229,57,53,0.14);color:#e53935}
 .mc-tile-label-danger{color:#e53935}
+/* মেম্বার সেন্টার আইকন ব্যাজ — public/js/badges-realtime.js এইগুলোর টেক্সট/দৃশ্যমানতা নিয়ন্ত্রণ করে */
+.mc-tile-badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:10px;background:#e53935;color:#fff;font-size:10px;font-weight:800;line-height:18px;text-align:center;border:2px solid var(--bg-card,#10251a);box-shadow:0 0 6px rgba(229,57,53,0.6)}
 </style>
 
 <script src="/js/profile-index.js" nonce="<%= cspNonce %>"></script>

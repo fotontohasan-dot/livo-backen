@@ -26,6 +26,20 @@ router.get('/', isAuth, async (req, res) => {
   }
 });
 
+// ===== মেম্বার সেন্টার আইকন ব্যাজ =====
+// পেজ লোডের সময় প্রাথমিক ব্যাজ সংখ্যা আনতে ব্যবহৃত হয় (রিওয়ার্ড সেন্টার/মিশন/ইনটারনাল
+// মেসেজ + প্রোফাইল আইকনের মাস্টার টোটাল)। এরপর WebSocket-এর 'badges:update' ইভেন্ট
+// রিয়েল-টাইমে এই সংখ্যাগুলো আপডেট রাখে।
+router.get('/badges', isAuth, async (req, res) => {
+  try {
+    const { getBadgeCounts } = require('../services/notify');
+    const counts = await getBadgeCounts(req.session.user.id);
+    res.json(counts);
+  } catch (err) {
+    res.json({ reward: 0, mission: 0, message: 0, total: 0 });
+  }
+});
+
 router.get('/count', isAuth, async (req, res) => {
   try {
     const uid = req.session.user.id;

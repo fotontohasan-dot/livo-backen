@@ -89,6 +89,13 @@
   <meta name="csrf-token" content="<%= locals.csrfToken || '' %>">
   <script src="/js/csrf-inject.js"></script>
   <script src="/js/ui-hooks.js" defer></script>
+  <% if (locals.user) { %>
+  <!-- মেম্বার সেন্টার আইকনের রিয়েল-টাইম ব্যাজ (রিওয়ার্ড সেন্টার/মিশন/ইনটারনাল মেসেজ +
+       প্রোফাইল আইকনের মাস্টার ব্যাজ) — সব পেজেই লোড হয় যাতে সাইটের যেকোনো জায়গা থেকে
+       নেভিগেট করলেও ব্যাজ আপ-টু-ডেট থাকে। -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/badges-realtime.js" defer></script>
+  <% } %>
 </head>
 <body>
 <script src="/js/views/partials-head.js"></script>

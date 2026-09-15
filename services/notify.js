@@ -35,15 +35,18 @@ function emitToUser(userId, notificationRow) {
 }
 
 // নতুন নোটিফিকেশন — DB-তে সেভ + (ইউজার অনলাইন থাকলে) রিয়েল-টাইম push, দুটোই একসাথে
-async function notifyUser(userId, { title, message, type = 'info' } = {}) {
+// category: 'reward' | 'mission' | 'message' | 'general' — মেম্বার সেন্টারের কোন আইকনের
+// ব্যাজে এই নোটিফিকেশনটা গণনা হবে তা নির্ধারণ করে (দেখুন getBadgeCounts)।
+async function notifyUser(userId, { title, message, type = 'info', category = 'general' } = {}) {
   if (!userId) return null;
   try {
     const result = await pool.query(
-      `INSERT INTO notifications (user_id, title, message, type) VALUES ($1,$2,$3,$4) RETURNING *`,
-      [userId, title || '', message || '', type]
+      `INSERT INTO notifications (user_id, title, message, type, category) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+      [userId, title || '', message || '', type, category]
     );
     const row = result.rows[0];
     emitToUser(userId, row);
+    emitBadgeUpdate(userId);
     return row;
   } catch (err) {
     console.error('notifyUser error:', err.message);
@@ -51,15 +54,69 @@ async function notifyUser(userId, { title, message, type = 'info' } = {}) {
   }
 }
 
+// ===== রিয়েল-টাইম ব্যাজ সিস্টেম =====
+// মেম্বার সেন্টারের 'রিওয়ার্ড সেন্টার', 'মিশন' ও 'ইনটারনাল মেসেজ' আইকনের আনরিড সংখ্যা +
+// প্রোফাইল আইকনের মাস্টার ব্যাজ (সবগুলোর যোগফল)। notifications টেবিলের category কলাম দিয়ে
+// reward/mission গণনা হয়; ইনটারনাল মেসেজ chat_messages টেবিলের admin→user আনরিড রো থেকে।
+async function getBadgeCounts(userId) {
+  if (!userId) return { reward: 0, mission: 0, message: 0, total: 0 };
+  try {
+    const [notifRes, msgRes] = await Promise.all([
+      pool.query(
+        `SELECT category, COUNT(*)::int AS count
+         FROM notifications
+         WHERE user_id = $1 AND is_read = false AND category IN ('reward','mission')
+         GROUP BY category`,
+        [userId]
+      ),
+      pool.query(
+        `SELECT COUNT(*)::int AS count FROM chat_messages
+         WHERE receiver_id = $1 AND is_admin = true AND is_read = false`,
+        [userId]
+      ),
+    ]);
+
+    const counts = { reward: 0, mission: 0 };
+    for (const row of notifRes.rows) {
+      if (row.category === 'reward') counts.reward = row.count;
+      if (row.category === 'mission') counts.mission = row.count;
+    }
+    const messageCount = msgRes.rows[0] ? msgRes.rows[0].count : 0;
+
+    return {
+      reward: counts.reward,
+      mission: counts.mission,
+      message: messageCount,
+      total: counts.reward + counts.mission + messageCount,
+    };
+  } catch (err) {
+    console.error('getBadgeCounts error:', err.message);
+    return { reward: 0, mission: 0, message: 0, total: 0 };
+  }
+}
+
+// আনরিড সংখ্যা পুনরায় গণনা করে সেই ইউজারের রুমে push করে — নোটিফিকেশন তৈরি হওয়া,
+// অ্যাডমিনের মেসেজ পাঠানো, বা কোনো কিছু "read" হিসেবে চিহ্নিত হওয়ার পরে ডাকা হয়,
+// যাতে সব ট্যাব/ডিভাইসে ব্যাজ সাথে সাথে সিঙ্ক থাকে।
+async function emitBadgeUpdate(userId) {
+  if (!io || !userId) return;
+  try {
+    const counts = await getBadgeCounts(userId);
+    io.to(`user:${userId}`).emit('badges:update', counts);
+  } catch (err) {
+    console.error('emitBadgeUpdate error:', err.message);
+  }
+}
+
 // অ্যাডমিন ব্রডকাস্ট — সব ইউজারের জন্য একসাথে (DB-তে প্রতিটা ইউজারের জন্য একটা করে রো,
 // অফলাইন ইউজাররাও পরে লগইন করলে দেখতে পাবে; অনলাইন সবাইকে সাথে সাথে push)
-async function broadcastToAllUsers({ title, message, type = 'announcement' } = {}) {
+async function broadcastToAllUsers({ title, message, type = 'announcement', category = 'message' } = {}) {
   try {
     const result = await pool.query(
-      `INSERT INTO notifications (user_id, title, message, type)
-       SELECT id, $1, $2, $3 FROM users
+      `INSERT INTO notifications (user_id, title, message, type, category)
+       SELECT id, $1, $2, $3, $4 FROM users
        RETURNING user_id, id, title, message, type, is_read, created_at`,
-      [title || '', message || '', type]
+      [title || '', message || '', type, category]
     );
     if (io) {
       try {
@@ -68,10 +125,15 @@ async function broadcastToAllUsers({ title, message, type = 'announcement' } = {
           title,
           message,
           type,
+          category,
           is_read: false,
           created_at: new Date(),
           broadcast: true,
         });
+        // ব্রডকাস্ট সব অনলাইন ইউজারের কাছে যায় — প্রতিটার জন্য আলাদা করে DB থেকে গুনে
+        // পাঠানো ব্যয়বহুল, তাই ক্লায়েন্টকে শুধু ইঙ্গিত দেওয়া হচ্ছে যে ব্যাজ রিফ্রেশ করতে হবে
+        // (client badges:refresh ইভেন্ট শুনে /notifications/badges থেকে প্রকৃত সংখ্যা আনবে)।
+        io.emit('badges:refresh', { category });
       } catch (err) {
         console.error('broadcast emit error:', err.message);
       }
@@ -94,4 +156,4 @@ function notifyAdmins(type, { title, message } = {}) {
   }
 }
 
-module.exports = { initNotifyIo, notifyUser, emitToUser, broadcastToAllUsers, notifyAdmins };
+module.exports = { initNotifyIo, notifyUser, emitToUser, broadcastToAllUsers, notifyAdmins, getBadgeCounts, emitBadgeUpdate };
