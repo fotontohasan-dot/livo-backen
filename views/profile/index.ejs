@@ -65,8 +65,8 @@
           </div>
           <div id="lastUpdatedText" style="color: var(--text-muted); font-size: 10px;"></div>
         </div>
-        <a href="/profile/transactions" style="background: rgba(245, 158, 11, 0.1); color: var(--gold); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none;">
-          <i class="fas fa-history"></i>
+        <a href="#" data-profile-action="refresh-balance" style="background: rgba(245, 158, 11, 0.1); color: var(--gold); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none;">
+          <i class="fas fa-sync-alt" id="refreshIcon"></i>
         </a>
       </div>
 
@@ -262,8 +262,17 @@
 </div>
 <div id="copyToast" style="position:fixed; left:50%; bottom:90px; transform:translateX(-50%) translateY(20px); background:#000; color:#fff; padding:8px 16px; border-radius:20px; font-size:13px; opacity:0; transition:all .25s; z-index:250; pointer-events:none;"></div>
 
-<script type="application/json" id="profileConfig"><%- jsonScriptSafe({ uid: 100000 + user.id, siteName: siteName, locale: lang === "bn" ? "bn-BD" : "en-US" }) %></script>
-<script src="/js/profile-index.js"></script>
+<script type="application/json" id="profileConfig"><%- jsonScriptSafe({ uid: 100000 + user.id, siteName: siteName || '', locale: (typeof lang !== 'undefined' && lang === 'bn') ? 'bn-BD' : 'en-US' }) %></script>
+
+<style nonce="<%= cspNonce %>">
+  .mc-flat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px 8px}
+  @media (max-width:339px){.mc-flat-grid{grid-template-columns:repeat(3,1fr)}}
+  @media (min-width:768px){.mc-flat-grid{grid-template-columns:repeat(6,1fr)}}
+  .mc-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-decoration:none;text-align:center;min-height:64px;padding:4px}
+  .mc-tile i{width:52px;height:52px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:20px}
+  .mc-tile-label{color:var(--text-main);font-size:11px;font-weight:600;overflow-wrap:anywhere;white-space:normal;line-height:1.3}
+</style>
 
 <%- include('../partials/navbar') %>
 <%- include('../partials/bottom-nav') %>
+<script nonce="<%= cspNonce %>" src="/js/profile-index.js"></script>
