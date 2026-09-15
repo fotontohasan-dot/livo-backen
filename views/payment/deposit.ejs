@@ -209,27 +209,38 @@
 
   function renderChannels(method) {
     var grid = document.getElementById('channelGrid');
+    if (!grid) return;
     grid.innerHTML = '';
     var list = CHANNELS_BY_METHOD[method] || [];
-    if (list.length === 0) {
-      document.getElementById('channelIdInput').value = '';
+    var idInput = document.getElementById('channelIdInput');
+    if (!Array.isArray(list) || list.length === 0) {
+      if (idInput) idInput.value = '';
       return;
     }
-    list.forEach(function(ch, idx){
+    list.forEach(function (ch, idx) {
+      // ডিফেন্সিভ: কোনো রো-তে id/label/number অনুপস্থিত থাকলে সেটা স্কিপ করা
+      // হয় — আগে এখানে ch.channel_label/ch.id সরাসরি ব্যবহার হতো, একটা রো
+      // malformed হলেই পুরো forEach থ্রো করত এবং ফাংশনটাই ব্যর্থ হয়ে যেত।
+      if (!ch || ch.id === undefined || ch.id === null) return;
       var btn = document.createElement('div');
       btn.className = 'channel-btn' + (idx === 0 ? ' selected' : '');
-      btn.textContent = ch.channel_label;
+      btn.textContent = ch.channel_label || '';
       btn.setAttribute('data-id', ch.id);
-      btn.onclick = function(){
-        document.querySelectorAll('.channel-btn').forEach(function(b){ b.classList.remove('selected'); });
+      btn.addEventListener('click', function () {
+        document.querySelectorAll('.channel-btn').forEach(function (b) { b.classList.remove('selected'); });
         btn.classList.add('selected');
-        document.getElementById('channelIdInput').value = ch.id;
-        document.getElementById('displayNumber').textContent = ch.receive_number;
-      };
+        if (idInput) idInput.value = ch.id;
+        var disp = document.getElementById('displayNumber');
+        if (disp) disp.textContent = ch.receive_number || '';
+      });
       grid.appendChild(btn);
     });
-    document.getElementById('channelIdInput').value = list[0].id;
-    document.getElementById('displayNumber').textContent = list[0].receive_number;
+    var first = list[0];
+    if (first) {
+      if (idInput) idInput.value = first.id != null ? first.id : '';
+      var disp0 = document.getElementById('displayNumber');
+      if (disp0) disp0.textContent = first.receive_number || '';
+    }
   }
 
   function selectMethod(method, el) {
@@ -239,50 +250,77 @@
     document.getElementById('methodLabelText').textContent = METHOD_LABELS[method] || method;
     document.getElementById('selectedMethodName').textContent = METHOD_LABELS[method] || method;
     document.getElementById('methodInput').value = method; // পোস্ট বডিতে method আগে কখনো যেতোই না
-    renderChannels(method);
+    // renderChannels ব্যর্থ হলেও (অপ্রত্যাশিত ডেটা শেপ) মেথড সিলেকশন নিজে
+    // যেন ভেঙে না যায় — এই try/catch না থাকলে একটা ব্যর্থ চ্যানেল-রেন্ডার
+    // পুরো ট্যাপটাকেই "কাজ করছে না" বানিয়ে দিত।
+    try { renderChannels(method); } catch (e) { /* channel UI silently skipped */ }
   }
 
   document.addEventListener('DOMContentLoaded', function(){
-    renderChannels('nagad');
+    // ==================== প্রতিটা ফিচার আলাদাভাবে বাইন্ড করা হচ্ছে ====================
+    // আগে সব কটা হ্যান্ডলার একটাই try ছাড়া ব্লকে পরপর বাঁধা হতো — শুরুর দিকে
+    // renderChannels('nagad') বা যেকোনো একটা getElementById কল ব্যর্থ/থ্রো
+    // করলে (যেমন অপ্রত্যাশিত payment_channels ডেটা শেপ) পুরো
+    // DOMContentLoaded কলব্যাক থেমে যেত, ফলে নিচের method-tile, amount-btn,
+    // এবং depNextBtn — এই তিনটার কোনোটাই আর বাইন্ড হতো না। ইউজারের কাছে এটা
+    // দেখাত যেন পেমেন্ট মেথড ট্যাপ, অ্যামাউন্ট সিলেক্ট, আর Next বাটন —
+    // তিনটাই একসাথে "কাজ করছে না"। প্রতিটা ব্লক এখন নিজের try/catch-এ
+    // আলাদা, তাই একটা ব্যর্থ হলেও বাকিগুলো ঠিকই কাজ করবে।
+    try { renderChannels('nagad'); } catch (e) { console.error('renderChannels init error:', e); }
 
-    document.querySelectorAll('.method-tile').forEach(function(tile){
-      tile.addEventListener('click', function(){
-        var method = tile.getAttribute('data-method');
-        selectMethod(method, tile);
+    try {
+      document.querySelectorAll('.method-tile').forEach(function(tile){
+        tile.addEventListener('click', function(){
+          var method = tile.getAttribute('data-method');
+          selectMethod(method, tile);
+        });
       });
-    });
+    } catch (e) { console.error('method-tile bind error:', e); }
 
-    document.querySelectorAll('input[name="want_bonus_choice"]').forEach(function(radio){
-      radio.addEventListener('click', function(){
-        document.getElementById('wantBonusHidden').value = radio.value === 'bonus' ? 'yes' : 'no';
+    try {
+      document.querySelectorAll('input[name="want_bonus_choice"]').forEach(function(radio){
+        radio.addEventListener('click', function(){
+          document.getElementById('wantBonusHidden').value = radio.value === 'bonus' ? 'yes' : 'no';
+        });
       });
-    });
+    } catch (e) { console.error('bonus radio bind error:', e); }
 
-    document.querySelectorAll('.amount-btn').forEach(function(b){
-      b.addEventListener('click', function(){
-        document.getElementById('amountInput').value = b.getAttribute('data-amt');
-        document.querySelectorAll('.amount-btn').forEach(function(x){ x.classList.remove('selected'); });
-        b.classList.add('selected');
+    try {
+      document.querySelectorAll('.amount-btn').forEach(function(b){
+        b.addEventListener('click', function(){
+          document.getElementById('amountInput').value = b.getAttribute('data-amt');
+          document.querySelectorAll('.amount-btn').forEach(function(x){ x.classList.remove('selected'); });
+          b.classList.add('selected');
+        });
       });
-    });
+    } catch (e) { console.error('amount-btn bind error:', e); }
 
-    document.getElementById('depNextBtn').addEventListener('click', function(){
-      var amt = document.getElementById('amountInput').value;
-      if (!amt || amt < 100) { alert('সর্বনিম্ন ১০০ টাকা জমা দিন'); return; }
-      document.getElementById('step1').style.display = 'none';
-      document.getElementById('step2').style.display = 'block';
-      window.scrollTo(0,0);
-    });
+    try {
+      var nextBtn = document.getElementById('depNextBtn');
+      if (nextBtn) nextBtn.addEventListener('click', function(){
+        var amt = document.getElementById('amountInput').value;
+        if (!amt || amt < 100) { alert('সর্বনিম্ন ১০০ টাকা জমা দিন'); return; }
+        document.getElementById('step1').style.display = 'none';
+        document.getElementById('step2').style.display = 'block';
+        window.scrollTo(0,0);
+      });
+    } catch (e) { console.error('next-btn bind error:', e); }
 
-    document.getElementById('depBackBtn').addEventListener('click', function(){
-      document.getElementById('step1').style.display = 'block';
-      document.getElementById('step2').style.display = 'none';
-    });
+    try {
+      var backBtn = document.getElementById('depBackBtn');
+      if (backBtn) backBtn.addEventListener('click', function(){
+        document.getElementById('step1').style.display = 'block';
+        document.getElementById('step2').style.display = 'none';
+      });
+    } catch (e) { console.error('back-btn bind error:', e); }
 
-    document.getElementById('depCopyBtn').addEventListener('click', function(){
-      var num = document.getElementById('displayNumber').textContent;
-      navigator.clipboard.writeText(num).then(function(){ alert('নম্বর কপি হয়েছে: ' + num); });
-    });
+    try {
+      var copyBtn = document.getElementById('depCopyBtn');
+      if (copyBtn) copyBtn.addEventListener('click', function(){
+        var num = document.getElementById('displayNumber').textContent;
+        navigator.clipboard.writeText(num).then(function(){ alert('নম্বর কপি হয়েছে: ' + num); });
+      });
+    } catch (e) { console.error('copy-btn bind error:', e); }
   });
 </script>
 
