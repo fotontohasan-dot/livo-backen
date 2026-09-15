@@ -3,7 +3,7 @@ const router = express.Router();
 const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
 const { requireFeature } = require('../middleware/featureGate');
-const { revokeAllOtherSessions, revokeDeviceSession } = require('../services/deviceTracking');
+const { revokeAllOtherSessions, revokeDeviceSession, listLoginHistory } = require('../services/deviceTracking');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
@@ -33,7 +33,7 @@ const { getReferralStats } = require('../services/referral');
 const { getCashbackStatus, claimCashback } = require('../services/cashback');
 const { getVipStatus } = require('../services/vip');
 const { getMissions, claimMission } = require('../services/missions');
-const { getSegments, canSpin, spin, getHistory: getWheelHistory } = require('../services/wheel');
+const { getSegments, canSpin, spin, getHistory: getWheelHistory, getTodayResult } = require('../services/wheel');
 const { getLoyalty, redeemPoints } = require('../services/loyalty');
 const { getStreak } = require('../services/streak');
 const { getBadges } = require('../services/badges');
@@ -352,6 +352,24 @@ router.post('/devices/:id/logout', isAuth, async (req, res) => {
   res.redirect('/profile/security');
 });
 
+router.get('/login-history', isAuth, async (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = 20;
+  try {
+    const logins = await listLoginHistory(req.session.user.id, limit + 1, (page - 1) * limit);
+    const hasMore = logins.length > limit;
+    res.render('profile/login-history', {
+      user: req.session.user,
+      logins: logins.slice(0, limit),
+      page,
+      hasMore
+    });
+  } catch (err) {
+    console.error('login-history load error:', err.message);
+    res.render('profile/login-history', { user: req.session.user, logins: [], page, hasMore: false, loadError: true });
+  }
+});
+
 // ==================== দায়িত্বশীল গেমিং ====================
 router.get('/login-history', isAuth, async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
@@ -436,9 +454,29 @@ router.get('/wheel', isAuth, requireFeature('lucky_wheel'), async (req, res) => 
 router.post('/wheel/spin', isAuth, async (req, res) => {
   try {
     const result = await spin(req.session.user.id);
-    res.json(result);
+    // স্পিন রেসপন্সে prize/message পাঠানো হতো না (message-এও প্রাইজের
+    // অঙ্ক বাংলা টেক্সটে বসানো থাকত, যেমন "৫ কয়েন জিতেছেন!") — ক্লায়েন্ট
+    // অ্যানিমেশন শেষ হওয়ার আগেই DevTools Network থেকে ফলাফল পড়া যেত।
+    // ব্যর্থতার (already-spun/locked) মেসেজ প্রাইজ প্রকাশ করে না, তাই
+    // সেটা রাখা নিরাপদ — শুধু সফল স্পিনেই message বাদ দেওয়া হলো।
+    if (result.success) {
+      res.json({ success: true, index: result.index });
+    } else {
+      res.json({ success: false, message: result.message });
+    }
   } catch (err) {
     console.error('wheel spin error:', err.message);
+    res.json({ success: false, message: 'সার্ভার ত্রুটি।' });
+  }
+});
+
+router.get('/wheel/result', isAuth, async (req, res) => {
+  try {
+    const result = await getTodayResult(req.session.user.id, req.lang || 'bn');
+    if (!result) return res.json({ success: false, message: 'আজ এখনো স্পিন করেননি।' });
+    res.json({ success: true, prize: result.prize, message: result.message });
+  } catch (err) {
+    console.error('wheel result error:', err.message);
     res.json({ success: false, message: 'সার্ভার ত্রুটি।' });
   }
 });
@@ -557,7 +595,6 @@ router.get('/support', isAuth, (req, res) => {
 });
 
 router.get('/vip', isAuth, requireFeature('vip'), async (req, res) => {
-router.get('/vip', isAuth, async (req, res) => {
   try {
     const vip = await getVipStatus(req.session.user.id);
     res.render('profile/vip', { user: req.session.user, vip });
@@ -665,6 +702,28 @@ router.post('/security/withdraw-pin', isAuth, async (req, res) => {
       return res.redirect('/profile/security');
     }
     const hash = await bcrypt.hash(new_pin, 10);
+    await pool.query('UPDATE users SET withdraw_pin_hash=$1 WHERE id=$2', [hash, req.session.user.id]);
+    req.flash('success', '✅ উইথড্র পিন সেট করা হয়েছে!');
+  } catch (err) {
+    req.flash('error', '❌ পিন সেট করতে সমস্যা হয়েছে।');
+  }
+  res.redirect('/profile/security');
+});
+
+// রোডম্যাপ-নাম alias — উপরের /security/withdraw-pin-এর মতোই লজিক, শুধু
+// ফিল্ড নাম pin/confirmPin (উপরেরটা new_pin/confirm_pin)।
+router.post('/withdraw-pin/create', isAuth, async (req, res) => {
+  try {
+    const { pin, confirmPin } = req.body;
+    if (!pin || !/^\d{6}$/.test(pin)) {
+      req.flash('error', '৬ ডিজিটের পিন দিন');
+      return res.redirect('/profile/security');
+    }
+    if (pin !== confirmPin) {
+      req.flash('error', 'পিন দুটি মিলছে না');
+      return res.redirect('/profile/security');
+    }
+    const hash = await bcrypt.hash(pin, 10);
     await pool.query('UPDATE users SET withdraw_pin_hash=$1 WHERE id=$2', [hash, req.session.user.id]);
     req.flash('success', '✅ উইথড্র পিন সেট করা হয়েছে!');
   } catch (err) {
