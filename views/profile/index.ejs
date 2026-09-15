@@ -14,6 +14,13 @@
           <% } else { %>
             <%= user.username.charAt(0).toUpperCase() %>
           <% } %>
+        <div id="avatarCircle" style="width: 80px; height: 80px; border-radius: 50%; background: var(--grad-gold); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800; color: #000; box-shadow: 0 0 20px rgba(245, 158, 11, 0.5); border: 3px solid rgba(255,255,255,0.1);">
+          <%= user.username.charAt(0).toUpperCase() %>
+        <div id="avatarCircle" data-profile-action="avatar-open" style="width: 80px; height: 80px; border-radius: 50%; background: <%= user.avatar ? 'transparent' : 'var(--grad-gold)' %>; background-image: <%= user.avatar ? "url('" + user.avatar + "')" : 'none' %>; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800; color: #000; box-shadow: 0 0 20px rgba(245, 158, 11, 0.5); border: 3px solid rgba(255,255,255,0.1); cursor: pointer;">
+          <% if (!user.avatar) { %><%= user.username.charAt(0).toUpperCase() %><% } %>
+        </div>
+        <div data-profile-action="avatar-open" style="position: absolute; bottom: -5px; right: -5px; background: #000; border: 2px solid var(--gold); border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer;">
+          <i class="fas fa-camera" style="font-size: 12px; color: var(--gold);"></i>
         </div>
         <button type="button" id="avatarEditBtn" aria-label="Change profile photo" style="position: absolute; bottom: -5px; right: -5px; background: #000; border: 2px solid var(--gold); border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--gold); cursor: pointer;">
           <i class="fas fa-camera"></i>
@@ -23,12 +30,22 @@
         </form>
       </div>
 
-      <div style="flex: 1;">
-        <a href="/profile/vip" style="display: flex; align-items: center; gap: 10px; text-decoration: none;">
-          <span style="color: #fff; font-size: 20px; font-weight: 800; letter-spacing: 0.5px;"><%= user.username %></span>
+      <div style="flex: 1; min-width: 0;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span id="usernameText" style="color: #fff; font-size: 20px; font-weight: 800; letter-spacing: 0.5px; overflow-wrap:anywhere;"><%= user.username %></span>
+          <button type="button" data-profile-action="copy-username" aria-label="<%= t.copy_username || 'Copy username' %>" style="background: rgba(255,255,255,0.08); border: none; width: 24px; height: 24px; border-radius: 6px; color: var(--gold); cursor: pointer; flex-shrink:0;">
+            <i class="fas fa-copy" style="font-size: 10px;"></i>
+          </button>
+        </div>
+        <a href="/profile/vip" class="pf-vip-badge-sm" style="display: inline-flex; align-items: center; gap: 6px; text-decoration: none; margin-top: 6px;">
           <span style="background: var(--gold); color: #000; font-size: 10px; padding: 2px 10px; border-radius: 20px; font-weight: 900; text-transform: uppercase;">VIP<%= user.vip_level || 0 %></span>
         </a>
-        <div style="color: rgba(255,255,255,0.6); font-size: 12px; margin-top: 4px;">ID: <%= 100000 + user.id %></div>
+        <div style="display:flex; align-items:center; gap:6px; color: rgba(255,255,255,0.6); font-size: 12px; margin-top: 6px;">
+          <span>ID: <%= 100000 + user.id %></span>
+          <button type="button" data-profile-action="copy-uid" aria-label="<%= t.copy_uid || 'Copy ID' %>" style="background: rgba(255,255,255,0.08); border: none; width: 20px; height: 20px; border-radius: 6px; color: var(--gold); cursor: pointer;">
+            <i class="fas fa-copy" style="font-size: 9px;"></i>
+          </button>
+        </div>
         <div style="display: flex; align-items: center; gap: 6px; margin-top: 8px;">
            <div style="flex: 1; height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden;">
               <div style="width: <%= (user.total_points % 1000) / 10 %>%; height: 100%; background: var(--grad-gold); border-radius: 10px;"></div>
@@ -43,7 +60,13 @@
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <div>
           <div style="color: rgba(255,255,255,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 1px;"><%= t.total_balance %></div>
-          <div style="color: var(--gold); font-size: 30px; font-weight: 800; font-family: 'Teko', sans-serif; line-height: 1.2;">৳ <%= user.coins.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div id="balanceText" style="color: var(--gold); font-size: 30px; font-weight: 800; font-family: 'Teko', sans-serif; line-height: 1.2;">৳ <%= user.coins.toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US') %></div>
+            <button type="button" data-profile-action="refresh-balance" aria-label="<%= t.refresh_balance || 'Refresh balance' %>" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px;">
+              <i id="refreshIcon" class="fas fa-sync-alt" style="font-size: 13px;"></i>
+            </button>
+          </div>
+          <div id="lastUpdatedText" style="color: var(--text-muted); font-size: 10px;"></div>
         </div>
         <a href="/profile/transactions" style="background: rgba(245, 158, 11, 0.1); color: var(--gold); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none;">
           <i class="fas fa-history"></i>
@@ -67,100 +90,150 @@
     </div>
   </div>
 
-  <!-- Member Center (matches reference screenshot: single 4x4 grid) -->
+  <!-- Member Center: flat grid, every feature is one tap away -->
   <div style="background: var(--bg-card); border-radius: 20px; padding: 20px; border: 1px solid var(--border-glass);">
-    <div style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;">Member Center</div>
+    <div style="color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;"><%= t.member_center %></div>
 
-    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px 10px;">
+    <div class="mc-flat-grid">
 
-      <a href="/profile/rewards" style="text-decoration:none; text-align:center">
-        <div style="width:58px;height:58px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:22px"><i class="fas fa-trophy"></i></div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600">Reward Center</div>
+      <a href="/profile/rewards" class="mc-tile">
+        <div class="mc-tile-icon"><i class="fas fa-trophy"></i></div>
+        <span class="mc-tile-label">Reward Center</span>
       </a>
 
-      <a href="/profile/history" style="text-decoration:none; text-align:center">
-        <div style="width:58px;height:58px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:22px"><i class="fas fa-clipboard-list"></i></div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600">Betting Record</div>
+      <a href="/profile/history" class="mc-tile">
+        <div class="mc-tile-icon"><i class="fas fa-clipboard-list"></i></div>
+        <span class="mc-tile-label">Betting Record</span>
       </a>
 
-      <a href="/profile/stats" style="text-decoration:none; text-align:center">
-        <div style="width:58px;height:58px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:22px"><i class="fas fa-chart-pie"></i></div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600">Profit And Loss</div>
+      <a href="/profile/stats" class="mc-tile">
+        <div class="mc-tile-icon"><i class="fas fa-chart-pie"></i></div>
+        <span class="mc-tile-label">Profit And Loss</span>
       </a>
 
-      <a href="/payment/history?type=deposit" style="text-decoration:none; text-align:center">
-        <div style="width:58px;height:58px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:22px"><i class="fas fa-file-invoice-dollar"></i></div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600">Deposit Record</div>
+      <a href="/payment/history?type=deposit" class="mc-tile">
+        <div class="mc-tile-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+        <span class="mc-tile-label">Deposit Record</span>
       </a>
 
-      <a href="/payment/history?type=withdraw" style="text-decoration:none; text-align:center">
-        <div style="width:58px;height:58px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:22px"><i class="fas fa-hand-holding-usd"></i></div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600">Withdrawal Record</div>
+      <a href="/payment/history?type=withdraw" class="mc-tile">
+        <div class="mc-tile-icon"><i class="fas fa-hand-holding-usd"></i></div>
+        <span class="mc-tile-label">Withdrawal Record</span>
       </a>
 
-      <a href="/profile/transactions" style="text-decoration:none; text-align:center">
-        <div style="width:58px;height:58px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:22px"><i class="fas fa-file-alt"></i></div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600">Account Record</div>
+      <a href="/profile/transactions" class="mc-tile">
+        <div class="mc-tile-icon"><i class="fas fa-file-alt"></i></div>
+        <span class="mc-tile-label">Account Record</span>
       </a>
 
-      <a href="/profile/security" style="text-decoration:none; text-align:center">
-        <div style="width:58px;height:58px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:22px"><i class="fas fa-user"></i></div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600">My Account</div>
+      <a href="/profile/wheel" class="mc-tile">
+        <div class="mc-tile-icon"><i class="fas fa-dharmachakra"></i></div>
+        <span class="mc-tile-label">Lucky Wheel</span>
       </a>
 
-      <a href="/profile/security" style="text-decoration:none; text-align:center">
-        <div style="width:58px;height:58px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:22px"><i class="fas fa-shield-alt"></i></div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600">Security Center</div>
+      <a href="/profile/missions" class="mc-tile">
+        <div class="mc-tile-icon"><i class="fas fa-bullseye"></i></div>
+        <span class="mc-tile-label">Mission</span>
       </a>
 
-      <a href="/profile/referral" style="text-decoration:none; text-align:center">
-        <div style="width:58px;height:58px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:22px"><i class="fas fa-user-plus"></i></div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600">Invite Friends</div>
+      <a href="/profile/badges" class="mc-tile">
+        <div class="mc-tile-icon"><i class="fas fa-medal"></i></div>
+        <span class="mc-tile-label">Badges</span>
       </a>
 
-      <a href="/profile/missions" style="text-decoration:none; text-align:center">
-        <div style="width:58px;height:58px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:22px"><i class="fas fa-bullseye"></i></div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600">Mission</div>
+      <a href="/profile/loyalty" class="mc-tile">
+        <div class="mc-tile-icon"><i class="fas fa-gem"></i></div>
+        <span class="mc-tile-label">Loyalty</span>
       </a>
 
-      <a href="/profile/cashback" style="text-decoration:none; text-align:center">
-        <div style="width:58px;height:58px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:22px"><i class="fas fa-coins"></i></div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600">Rebate</div>
+      <a href="/profile/streak" class="mc-tile">
+        <div class="mc-tile-icon"><i class="fas fa-fire"></i></div>
+        <span class="mc-tile-label">Daily Streak</span>
       </a>
 
-      <a href="/notifications" style="text-decoration:none; text-align:center">
-        <div style="width:58px;height:58px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:22px"><i class="fas fa-envelope"></i></div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600">Internal Message</div>
+      <a href="/profile/freebet" class="mc-tile">
+        <div class="mc-tile-icon"><i class="fas fa-ticket-alt"></i></div>
+        <span class="mc-tile-label">Free Bet</span>
       </a>
 
-      <a href="/profile/feedback" style="text-decoration:none; text-align:center">
-        <div style="width:58px;height:58px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:22px"><i class="fas fa-comment-alt"></i></div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600">Suggestion</div>
+      <a href="/profile/periodic" class="mc-tile">
+        <div class="mc-tile-icon"><i class="fas fa-calendar-check"></i></div>
+        <span class="mc-tile-label">Periodic Reward</span>
       </a>
 
-      <a href="/profile/app-download" style="text-decoration:none; text-align:center">
-        <div style="width:58px;height:58px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:22px"><i class="fas fa-mobile-alt"></i></div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600">Download APP</div>
+      <a href="/profile/cashback" class="mc-tile">
+        <div class="mc-tile-icon"><i class="fas fa-coins"></i></div>
+        <span class="mc-tile-label">Rebate</span>
       </a>
 
-      <a href="/chat" style="text-decoration:none; text-align:center">
-        <div style="width:58px;height:58px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:22px"><i class="fas fa-headset"></i></div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600">Customer Service</div>
+      <a href="/profile/contest" class="mc-tile">
+        <div class="mc-tile-icon"><i class="fas fa-flag-checkered"></i></div>
+        <span class="mc-tile-label">Contest</span>
       </a>
 
-      <a href="/rules" style="text-decoration:none; text-align:center">
-        <div style="width:58px;height:58px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--gold);font-size:22px"><i class="fas fa-question-circle"></i></div>
-        <div style="color:var(--text-main);font-size:11px;font-weight:600">Help Center</div>
+      <a href="/profile/referral" class="mc-tile">
+        <div class="mc-tile-icon"><i class="fas fa-user-plus"></i></div>
+        <span class="mc-tile-label">Invite Friends</span>
       </a>
 
-      <a href="/logout" style="text-decoration:none; text-align:center">
-        <div style="width:58px;height:58px;border-radius:50%;background:rgba(229,57,53,0.14);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:#e53935;font-size:22px"><i class="fas fa-right-from-bracket"></i></div>
-        <div style="color:#e53935;font-size:11px;font-weight:600">Logout</div>
+      <a href="/profile/share" class="mc-tile">
+        <div class="mc-tile-icon"><i class="fas fa-share-alt"></i></div>
+        <span class="mc-tile-label">Share</span>
+      </a>
+
+      <a href="/profile/responsible" class="mc-tile">
+        <div class="mc-tile-icon"><i class="fas fa-hand-holding-heart"></i></div>
+        <span class="mc-tile-label">Responsible Gaming</span>
+      </a>
+
+      <a href="/extra/kyc" class="mc-tile">
+        <div class="mc-tile-icon"><i class="fas fa-id-card"></i></div>
+        <span class="mc-tile-label">KYC Verification</span>
+      </a>
+
+      <a href="/profile/vip" class="mc-tile">
+        <div class="mc-tile-icon"><i class="fas fa-crown"></i></div>
+        <span class="mc-tile-label">VIP</span>
+      </a>
+
+      <a href="/profile/security" class="mc-tile">
+        <div class="mc-tile-icon"><i class="fas fa-shield-alt"></i></div>
+        <span class="mc-tile-label">সিকিউরিটি সেন্টার</span>
+        <span class="mc-tile-sublabel">পাসওয়ার্ড · লগইন হিস্টোরি</span>
+      </a>
+
+      <a href="/notifications" class="mc-tile">
+        <div class="mc-tile-icon"><i class="fas fa-envelope"></i></div>
+        <span class="mc-tile-label">Internal Message</span>
+      </a>
+
+      <a href="/profile/feedback" class="mc-tile">
+        <div class="mc-tile-icon"><i class="fas fa-comment-alt"></i></div>
+        <span class="mc-tile-label">Suggestion</span>
+      </a>
+
+      <a href="/profile/app-download" class="mc-tile">
+        <div class="mc-tile-icon"><i class="fas fa-mobile-alt"></i></div>
+        <span class="mc-tile-label">Download APP</span>
+      </a>
+
+      <a href="/profile/chat" class="mc-tile">
+        <div class="mc-tile-icon"><i class="fas fa-headset"></i></div>
+        <span class="mc-tile-label">Customer Service</span>
+      </a>
+
+      <a href="/help-center" class="mc-tile">
+        <div class="mc-tile-icon"><i class="fas fa-question-circle"></i></div>
+        <span class="mc-tile-label">Help Center</span>
+      </a>
+
+      <a href="/logout" class="mc-tile">
+        <div class="mc-tile-icon mc-tile-icon-danger"><i class="fas fa-right-from-bracket"></i></div>
+        <span class="mc-tile-label"><%= t.logout %></span>
       </a>
 
     </div>
   </div>
-
 
   <div style="text-align: center; margin-top: 30px; padding-bottom: 20px;">
     <div style="color: var(--text-muted); font-size: 12px;"><%= t.version %> 2.1.0</div>
@@ -181,6 +254,35 @@
     });
   });
 </script>
+<div id="copyToast" style="position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(20px); opacity:0; transition:0.3s; background:#000; color:#fff; padding:10px 18px; border-radius:20px; font-size:13px; z-index:999; pointer-events:none;"></div>
+<script type="application/json" id="profileConfig"><%- JSON.stringify({ uid: 100000 + user.id, siteName: siteName, locale: lang === 'bn' ? 'bn-BD' : 'en-US' }) %></script>
+
+<style nonce="<%= cspNonce %>">
+.mc-flat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px 8px}
+@media (max-width:339px){.mc-flat-grid{grid-template-columns:repeat(3,1fr)}}
+@media (min-width:768px){.mc-flat-grid{grid-template-columns:repeat(6,1fr)}}
+.mc-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-decoration:none;min-height:64px}
+.mc-tile-label{color:var(--text-main);font-size:11px;font-weight:600;text-align:center;overflow-wrap:anywhere}
+.mc-tile-sublabel{color:var(--text-muted);font-size:9px;text-align:center;overflow-wrap:anywhere}
+.mc-tile-icon{width:58px;height:58px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--gold)}
+.mc-tile-icon-danger{background:rgba(229,57,53,0.14);color:#e53935}
+.mc-tile-label-danger{color:#e53935}
+</style>
+
+<script src="/js/profile-index.js" nonce="<%= cspNonce %>"></script>
+<div id="avatarModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:200; align-items:center; justify-content:center; padding:20px;">
+  <div style="background:var(--bg-card, #10251a); border-radius:20px; padding:20px; max-width:360px; width:100%; border:1px solid rgba(245,158,11,0.3);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <span style="color:#fff; font-weight:800;">প্রোফাইল ছবি বাছাই করুন</span>
+      <span data-profile-action="avatar-close" style="color:#fff; cursor:pointer; font-size:18px;">&times;</span>
+    </div>
+    <div id="avatarGrid" style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px;"></div>
+  </div>
+</div>
+<div id="copyToast" style="position:fixed; left:50%; bottom:90px; transform:translateX(-50%) translateY(20px); background:#000; color:#fff; padding:8px 16px; border-radius:20px; font-size:13px; opacity:0; transition:all .25s; z-index:250; pointer-events:none;"></div>
+
+<script type="application/json" id="profileConfig"><%- jsonScriptSafe({ uid: user.id, siteName: siteName || '', locale: (typeof lang !== 'undefined' && lang === 'bn') ? 'bn-BD' : 'en-US' }) %></script>
+<script nonce="<%= cspNonce %>" src="/js/profile-index.js"></script>
 
 <%- include('../partials/navbar') %>
 <%- include('../partials/bottom-nav') %>

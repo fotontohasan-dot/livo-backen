@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
+const { requireFeature } = require('../middleware/featureGate');
+const { revokeAllOtherSessions, revokeDeviceSession } = require('../services/deviceTracking');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
@@ -39,16 +41,56 @@ const { getAllFreeBets, claimFreeBet } = require('../services/freebet');
 const { getWeeklyStatus, claimWeekly, getMonthlyStatus, claimMonthly } = require('../services/periodicReward');
 const { getShareStatus, claimShare } = require('../services/social');
 const { getLeaderboard, getPastContests } = require('../services/contest');
+const { listLoginHistory } = require('../services/deviceTracking');
 const { getRewardStatus, claimRedPacket, claimGoldenEgg } = require('../services/redpacket');
 
 
 router.get('/api/balance', isAuth, async (req, res) => {
   try {
     const u = await pool.query('SELECT coins FROM users WHERE id=$1', [req.session.user.id]);
-    res.json({ coins: Number(u.rows[0]?.coins) || 0 });
+    res.json({ success: true, coins: Number(u.rows[0]?.coins) || 0 });
   } catch (err) {
     console.error('profile/api/balance error:', err.message);
     res.status(500).json({ error: 'ব্যালেন্স লোড করা যায়নি।' });
+  }
+});
+
+// প্রোফাইল ছবি বদলানোর ফিচার আগে সম্পূর্ণ অসম্পূর্ণ ছিল: ফ্রন্টএন্ড
+// /profile/update-avatar এ POST করত কিন্তু এই রুটটাই কখনো তৈরি হয়নি,
+// তাই ইউজার নতুন ছবি সিলেক্ট করলেও কিছুই হতো না (404)।
+const ALLOWED_AVATARS = [
+  'https://i.pravatar.cc/300?img=12',
+  'https://i.pravatar.cc/300?img=33',
+  'https://i.pravatar.cc/300?img=5',
+  'https://i.pravatar.cc/300?img=47',
+  'https://i.pravatar.cc/300?img=8',
+  'https://i.pravatar.cc/300?img=25',
+  'https://i.pravatar.cc/300?img=15',
+  'https://i.pravatar.cc/300?img=44',
+  'https://i.pravatar.cc/300?img=68',
+  'https://i.pravatar.cc/300?img=32',
+  'https://i.pravatar.cc/300?img=60',
+  'https://i.pravatar.cc/300?img=51',
+  'https://i.pravatar.cc/300?img=20',
+  'https://i.pravatar.cc/300?img=49',
+  'https://i.pravatar.cc/300?img=65',
+  'https://i.pravatar.cc/300?img=57'
+];
+
+router.post('/update-avatar', isAuth, async (req, res) => {
+  try {
+    const { avatar } = req.body || {};
+    // শুধুমাত্র পূর্বনির্ধারিত তালিকার URL গ্রহণযোগ্য — নইলে ইউজার
+    // যেকোনো external/malicious URL সেট করতে পারত।
+    if (!avatar || !ALLOWED_AVATARS.includes(avatar)) {
+      return res.status(400).json({ success: false, error: 'অবৈধ ছবি নির্বাচন।' });
+    }
+    await pool.query('UPDATE users SET avatar=$1 WHERE id=$2', [avatar, req.session.user.id]);
+    req.session.user.avatar = avatar;
+    res.json({ success: true, avatar });
+  } catch (err) {
+    console.error('profile/update-avatar error:', err.message);
+    res.status(500).json({ success: false, error: 'প্রোফাইল ছবি আপডেট করা যায়নি।' });
   }
 });
 
@@ -169,6 +211,10 @@ router.post('/change-password', isAuth, async (req, res) => {
       req.flash('error', '❌ নতুন পাসওয়ার মিলছে না।');
       return res.redirect('/profile/security');
     }
+    if (!np || np.length < 8) {
+      req.flash('error', '❌ নতুন পাসওয়ার্ড কমপক্ষে ৮ ক্যারেক্টার হতে হবে।');
+      return res.redirect('/profile/security');
+    }
 
     const user = await pool.query(`SELECT * FROM users WHERE id=$1`, [req.session.user.id]);
     if (!(await bcrypt.compare(cp, user.rows[0].password))) {
@@ -176,7 +222,18 @@ router.post('/change-password', isAuth, async (req, res) => {
       return res.redirect('/profile/security');
     }
     const hashed = await bcrypt.hash(np, 10);
-    await pool.query(`UPDATE users SET password=$1 WHERE id=$2`, [hashed, req.session.user.id]);
+    await pool.query(`UPDATE users SET password=$1, password_changed_at=NOW() WHERE id=$2`, [hashed, req.session.user.id]);
+
+    // পাসওয়ার্ড বদলানোর আসল নিরাপত্তা-উদ্দেশ্য: চলমান অন্য সেশনগুলো কেটে
+    // দেওয়া। নাহলে পাসওয়ার্ড ফাঁস হয়ে থাকলেও আক্রমণকারীর পুরনো কুকি বৈধ
+    // থেকেই যেত — পাসওয়ার্ড বদলানো কার্যত অর্থহীন হয়ে পড়ত। routes/auth.js-এর
+    // password-reset ফ্লো এটা আগে থেকেই করে; change-password ফ্লো করত না।
+    try {
+      await revokeAllOtherSessions(req.session.user.id, req.sessionID, 'PASSWORD_CHANGE');
+    } catch (e) {
+      console.error('revokeAllOtherSessions error:', e.message);
+    }
+
     req.flash('success', '✅ পাসওয়ার্ড পরিবর্তন হয়েছে!');
     res.redirect('/profile/security');
   } catch (err) {
@@ -281,7 +338,40 @@ router.get('/security', isAuth, async (req, res) => {
   }
 });
 
+// একটা ডিভাইস সেশন লগআউট — মালিকানা যাচাই revokeDeviceSession-এর ভেতরেই
+// (WHERE id=$1 AND user_id=$2), তাই URL-এর :id অন্য কারো হলে চুপচাপ কিছুই
+// হয় না, 404/403 leak করে না (কোন id গুলো বৈধ তা অনুমান করা ঠেকাতে)।
+router.post('/devices/:id/logout', isAuth, async (req, res) => {
+  try {
+    await revokeDeviceSession(req.session.user.id, parseInt(req.params.id, 10), req.session.user.username);
+    req.flash('success', '✅ ডিভাইস লগআউট করা হয়েছে।');
+  } catch (err) {
+    console.error('device logout error:', err.message);
+    req.flash('error', '❌ লগআউট করা যায়নি।');
+  }
+  res.redirect('/profile/security');
+});
+
 // ==================== দায়িত্বশীল গেমিং ====================
+router.get('/login-history', isAuth, async (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = 20;
+  const offset = (page - 1) * limit;
+  try {
+    const rows = await listLoginHistory(req.session.user.id, limit + 1, offset);
+    const hasMore = rows.length > limit;
+    res.render('profile/login-history', {
+      user: req.session.user,
+      logins: rows.slice(0, limit),
+      page,
+      hasMore
+    });
+  } catch (err) {
+    console.error('profile/login-history error:', err.message);
+    res.render('profile/login-history', { user: req.session.user, logins: [], page: 1, hasMore: false, loadError: true });
+  }
+});
+
 router.get('/responsible', isAuth, async (req, res) => {
   try {
     const u = await pool.query(
@@ -331,7 +421,7 @@ router.post('/responsible/self-exclude', isAuth, async (req, res) => {
 });
 
 // ==================== লাকি হুইল ====================
-router.get('/wheel', isAuth, async (req, res) => {
+router.get('/wheel', isAuth, requireFeature('lucky_wheel'), async (req, res) => {
   try {
     const segments = getSegments();
     const status = await canSpin(req.session.user.id);
@@ -354,7 +444,7 @@ router.post('/wheel/spin', isAuth, async (req, res) => {
 });
 
 // ==================== ডেইলি মিশন ====================
-router.get('/missions', isAuth, async (req, res) => {
+router.get('/missions', isAuth, requireFeature('missions'), async (req, res) => {
   try {
     const missions = await getMissions(req.session.user.id);
     res.render('profile/missions', { user: req.session.user, missions });
@@ -364,7 +454,7 @@ router.get('/missions', isAuth, async (req, res) => {
   }
 });
 
-router.post('/missions/claim/:id', isAuth, async (req, res) => {
+router.post('/missions/claim/:id', isAuth, requireFeature('missions'), async (req, res) => {
   try {
     const result = await claimMission(req.session.user.id, parseInt(req.params.id));
     req.flash(result.success ? 'success' : 'error', result.message);
@@ -376,7 +466,7 @@ router.post('/missions/claim/:id', isAuth, async (req, res) => {
 });
 
 // ==================== দৈনিক রিওয়ার্ড ====================
-router.get('/rewards', isAuth, async (req, res) => {
+router.get('/rewards', isAuth, requireFeature('daily_rewards'), async (req, res) => {
   try {
     const reward = await getTodayReward(req.session.user.id);
     res.render('profile/rewards', { user: req.session.user, reward });
@@ -398,7 +488,7 @@ router.post('/rewards/claim', isAuth, async (req, res) => {
 });
 
 // ==================== লাল প্যাকট + সোনার ডিম (JSON API) ====================
-router.get('/daily-rewards/status', isAuth, async (req, res) => {
+router.get('/daily-rewards/status', isAuth, requireFeature('daily_rewards'), async (req, res) => {
   try {
     const status = await getRewardStatus(req.session.user.id);
     res.json({ ok: true, status });
@@ -408,7 +498,7 @@ router.get('/daily-rewards/status', isAuth, async (req, res) => {
   }
 });
 
-router.post('/daily-rewards/red-packet/claim', isAuth, async (req, res) => {
+router.post('/daily-rewards/red-packet/claim', isAuth, requireFeature('daily_rewards'), async (req, res) => {
   try {
     const result = await claimRedPacket(req.session.user.id);
     if (result.ok) {
@@ -422,7 +512,7 @@ router.post('/daily-rewards/red-packet/claim', isAuth, async (req, res) => {
   }
 });
 
-router.post('/daily-rewards/golden-egg/claim', isAuth, async (req, res) => {
+router.post('/daily-rewards/golden-egg/claim', isAuth, requireFeature('daily_rewards'), async (req, res) => {
   try {
     let idx = parseInt(req.body.pickedIndex, 10);
     if (isNaN(idx) || idx < 0 || idx > 7) idx = 0;
@@ -440,7 +530,7 @@ router.post('/daily-rewards/golden-egg/claim', isAuth, async (req, res) => {
 
 
 // ==================== ক্যাশবক ====================
-router.get('/cashback', isAuth, async (req, res) => {
+router.get('/cashback', isAuth, requireFeature('cashback'), async (req, res) => {
   try {
     const cashback = await getCashbackStatus(req.session.user.id);
     res.render('profile/cashback', { user: req.session.user, cashback });
@@ -450,7 +540,7 @@ router.get('/cashback', isAuth, async (req, res) => {
   }
 });
 
-router.post('/cashback/claim', isAuth, async (req, res) => {
+router.post('/cashback/claim', isAuth, requireFeature('cashback'), async (req, res) => {
   try {
     const result = await claimCashback(req.session.user.id, req.body.category);
     req.flash(result.success ? 'success' : 'error', result.message);
@@ -462,6 +552,11 @@ router.post('/cashback/claim', isAuth, async (req, res) => {
 });
 
 // ==================== VIP ====================
+router.get('/support', isAuth, (req, res) => {
+  res.render('profile/support', { user: req.session.user });
+});
+
+router.get('/vip', isAuth, requireFeature('vip'), async (req, res) => {
 router.get('/vip', isAuth, async (req, res) => {
   try {
     const vip = await getVipStatus(req.session.user.id);
@@ -472,8 +567,18 @@ router.get('/vip', isAuth, async (req, res) => {
   }
 });
 
+router.get('/api/vip-progress', isAuth, requireFeature('vip'), async (req, res) => {
+  try {
+    const vip = await getVipStatus(req.session.user.id);
+    res.json({ success: true, vip });
+  } catch (err) {
+    console.error('vip-progress error:', err.message);
+    res.status(500).json({ success: false, error: 'VIP তথ্য লোড করা যায়নি।' });
+  }
+});
+
 // ==================== রেফারেল ====================
-router.get('/referral', isAuth, async (req, res) => {
+router.get('/referral', isAuth, requireFeature('referral'), async (req, res) => {
   try {
     const stats = await getReferralStats(req.session.user.id);
     const baseUrl = `${req.protocol}://${req.get('host')}`;
@@ -654,7 +759,7 @@ router.get('/badges', isAuth, async (req, res) => {
 });
 
 // ==================== ফ্রি বেট ====================
-router.get('/freebet', isAuth, async (req, res) => {
+router.get('/freebet', isAuth, requireFeature('free_bet'), async (req, res) => {
   try {
     const freebets = await getAllFreeBets(req.session.user.id);
     res.render('profile/freebet', { user: req.session.user, freebets });
@@ -664,7 +769,7 @@ router.get('/freebet', isAuth, async (req, res) => {
   }
 });
 
-router.post('/freebet/claim/:id', isAuth, async (req, res) => {
+router.post('/freebet/claim/:id', isAuth, requireFeature('free_bet'), async (req, res) => {
   try {
     const result = await claimFreeBet(req.session.user.id, parseInt(req.params.id));
     req.flash(result.success ? 'success' : 'error', result.message);
