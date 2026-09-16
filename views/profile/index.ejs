@@ -8,26 +8,12 @@
 
     <div style="display: flex; align-items: center; gap: 20px; position: relative; z-index: 1;">
       <div style="position: relative;">
-        <div id="avatarCircle" style="width: 80px; height: 80px; border-radius: 50%; background: var(--grad-gold); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800; color: #000; box-shadow: 0 0 20px rgba(245, 158, 11, 0.5); border: 3px solid rgba(255,255,255,0.1); overflow: hidden;">
-          <% if (user.avatar) { %>
-            <img src="<%= user.avatar %>" alt="avatar" style="width:100%; height:100%; object-fit:cover;">
-          <% } else { %>
-            <%= user.username.charAt(0).toUpperCase() %>
-          <% } %>
-        <div id="avatarCircle" style="width: 80px; height: 80px; border-radius: 50%; background: var(--grad-gold); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800; color: #000; box-shadow: 0 0 20px rgba(245, 158, 11, 0.5); border: 3px solid rgba(255,255,255,0.1);">
-          <%= user.username.charAt(0).toUpperCase() %>
         <div id="avatarCircle" data-profile-action="avatar-open" style="width: 80px; height: 80px; border-radius: 50%; background: <%= user.avatar ? 'transparent' : 'var(--grad-gold)' %>; background-image: <%= user.avatar ? "url('" + user.avatar + "')" : 'none' %>; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800; color: #000; box-shadow: 0 0 20px rgba(245, 158, 11, 0.5); border: 3px solid rgba(255,255,255,0.1); cursor: pointer;">
           <% if (!user.avatar) { %><%= user.username.charAt(0).toUpperCase() %><% } %>
         </div>
         <div data-profile-action="avatar-open" style="position: absolute; bottom: -5px; right: -5px; background: #000; border: 2px solid var(--gold); border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer;">
           <i class="fas fa-camera" style="font-size: 12px; color: var(--gold);"></i>
         </div>
-        <button type="button" id="avatarEditBtn" aria-label="Change profile photo" style="position: absolute; bottom: -5px; right: -5px; background: #000; border: 2px solid var(--gold); border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--gold); cursor: pointer;">
-          <i class="fas fa-camera"></i>
-        </button>
-        <form id="avatarForm" action="/profile/avatar" method="POST" enctype="multipart/form-data" style="display:none;">
-          <input type="file" id="avatarInput" name="avatar" accept="image/png,image/jpeg,image/webp">
-        </form>
       </div>
 
       <div style="flex: 1; min-width: 0;">
@@ -44,6 +30,17 @@
           <span>ID: <%= 100000 + user.id %></span>
           <button type="button" data-profile-action="copy-uid" aria-label="<%= t.copy_uid || 'Copy ID' %>" style="background: rgba(255,255,255,0.08); border: none; width: 20px; height: 20px; border-radius: 6px; color: var(--gold); cursor: pointer;">
             <i class="fas fa-copy" style="font-size: 9px;"></i>
+          </button>
+        </div>
+        <div style="display:none;">
+          <span id="profileUrlText"><%= baseUrl %>/profile</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; margin-top: 6px;">
+          <button type="button" data-profile-action="copy-profile-url" aria-label="<%= t.copy_profile_url || 'Copy profile link' %>" style="background: rgba(255,255,255,0.08); border: none; padding: 4px 8px; border-radius: 6px; color: var(--gold); cursor: pointer; font-size: 10px; display:flex; align-items:center; gap:4px;">
+            <i class="fas fa-link" style="font-size: 9px;"></i> <%= t.copy_link || 'Copy Link' %>
+          </button>
+          <button type="button" data-profile-action="share-profile-url" aria-label="<%= t.share_profile || 'Share profile' %>" style="background: rgba(255,255,255,0.08); border: none; padding: 4px 8px; border-radius: 6px; color: var(--gold); cursor: pointer; font-size: 10px; display:flex; align-items:center; gap:4px;">
+            <i class="fas fa-share-alt" style="font-size: 9px;"></i> <%= t.share || 'Share' %>
           </button>
         </div>
         <div style="display: flex; align-items: center; gap: 6px; margin-top: 8px;">
@@ -68,8 +65,8 @@
           </div>
           <div id="lastUpdatedText" style="color: var(--text-muted); font-size: 10px;"></div>
         </div>
-        <a href="#" data-profile-action="refresh-balance" style="background: rgba(245, 158, 11, 0.1); color: var(--gold); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none;">
-          <i class="fas fa-sync-alt" id="refreshIcon"></i>
+        <a href="/profile/transactions" style="background: rgba(245, 158, 11, 0.1); color: var(--gold); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none;">
+          <i class="fas fa-history"></i>
         </a>
       </div>
 
@@ -256,20 +253,8 @@
 
 </div>
 
-<script nonce="<%= cspNonce %>">
-  document.addEventListener('DOMContentLoaded', function () {
-    var editBtn = document.getElementById('avatarEditBtn');
-    var fileInput = document.getElementById('avatarInput');
-    var form = document.getElementById('avatarForm');
-    if (!editBtn || !fileInput || !form) return;
-    editBtn.addEventListener('click', function () { fileInput.click(); });
-    fileInput.addEventListener('change', function () {
-      if (fileInput.files && fileInput.files.length > 0) form.submit();
-    });
-  });
-</script>
 <div id="copyToast" style="position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(20px); opacity:0; transition:0.3s; background:#000; color:#fff; padding:10px 18px; border-radius:20px; font-size:13px; z-index:999; pointer-events:none;"></div>
-<script type="application/json" id="profileConfig"><%- JSON.stringify({ uid: 100000 + user.id, siteName: siteName, locale: lang === 'bn' ? 'bn-BD' : 'en-US' }) %></script>
+<script type="application/json" id="profileConfig"><%- jsonScriptSafe({ uid: 100000 + user.id, siteName: siteName, locale: lang === "bn" ? "bn-BD" : "en-US" }) %></script>
 
 <style nonce="<%= cspNonce %>">
 .mc-flat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px 8px}
@@ -285,7 +270,6 @@
 .mc-tile-badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:10px;background:#e53935;color:#fff;font-size:10px;font-weight:800;line-height:18px;text-align:center;border:2px solid var(--bg-card,#10251a);box-shadow:0 0 6px rgba(229,57,53,0.6)}
 </style>
 
-<script src="/js/profile-index.js" nonce="<%= cspNonce %>"></script>
 <div id="avatarModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:200; align-items:center; justify-content:center; padding:20px;">
   <div style="background:var(--bg-card, #10251a); border-radius:20px; padding:20px; max-width:360px; width:100%; border:1px solid rgba(245,158,11,0.3);">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
@@ -295,19 +279,7 @@
     <div id="avatarGrid" style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px;"></div>
   </div>
 </div>
-<div id="copyToast" style="position:fixed; left:50%; bottom:90px; transform:translateX(-50%) translateY(20px); background:#000; color:#fff; padding:8px 16px; border-radius:20px; font-size:13px; opacity:0; transition:all .25s; z-index:250; pointer-events:none;"></div>
-
-<script type="application/json" id="profileConfig"><%- jsonScriptSafe({ uid: 100000 + user.id, siteName: siteName || '', locale: (typeof lang !== 'undefined' && lang === 'bn') ? 'bn-BD' : 'en-US' }) %></script>
-
-<style nonce="<%= cspNonce %>">
-  .mc-flat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px 8px}
-  @media (max-width:339px){.mc-flat-grid{grid-template-columns:repeat(3,1fr)}}
-  @media (min-width:768px){.mc-flat-grid{grid-template-columns:repeat(6,1fr)}}
-  .mc-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-decoration:none;text-align:center;min-height:64px;padding:4px}
-  .mc-tile i{width:52px;height:52px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:20px}
-  .mc-tile-label{color:var(--text-main);font-size:11px;font-weight:600;overflow-wrap:anywhere;white-space:normal;line-height:1.3}
-</style>
 
 <%- include('../partials/navbar') %>
 <%- include('../partials/bottom-nav') %>
-<script nonce="<%= cspNonce %>" src="/js/profile-index.js"></script>
+<script src="/js/profile-index.js"></script>
