@@ -1,5 +1,17 @@
 <%- include('../partials/head') %>
 <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Class selectors are repeated so the generated rules keep
+     the specificity the inline declarations had, without !important —
+     JS-set element.style still wins. */
+  .rs4-1.rs4-1.rs4-1 { background:#E6007E; }
+  .rs4-2.rs4-2.rs4-2 { background:#F7931A; }
+  .rs4-3.rs4-3.rs4-3 { font-size:40px; opacity:0.2; margin-bottom:8px; }
+  .rs4-4.rs4-4.rs4-4 { margin-top:10px; }
+  .rs4-5.rs4-5.rs4-5 { color:#fbbf24; }
+  .rs4-6.rs4-6.rs4-6 { color:#60a5fa; }
+</style>
+<style nonce="<%= cspNonce %>">
   @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap');
 
   body { background-color: var(--bg-dark) !important; color: var(--text-main) !important; font-family: 'Hind Siliguri', sans-serif; }
@@ -57,10 +69,10 @@
 
   <div class="wd-tabs">
     <div class="wd-tab active" id="tabEwallet">
-      <span class="dot" style="background:#E6007E;">e</span> E wallet
+      <span class="dot rs4-1">e</span> E wallet
     </div>
     <div class="wd-tab" id="tabCrypto">
-      <span class="dot" style="background:#F7931A;">₿</span> ক্রিপ্টো ওয়ালেট
+      <span class="dot rs4-2">₿</span> ক্রিপ্টো ওয়ালেট
     </div>
   </div>
 
@@ -83,7 +95,7 @@
         </div>
       <% }) %>
     <% } else { %>
-      <div class="empty-wallet"><i class="fas fa-wallet" style="font-size:40px; opacity:0.2; margin-bottom:8px;"></i><span>খালি ই-ওয়ালেট</span></div>
+      <div class="empty-wallet"><i class="fas fa-wallet rs4-3"></i><span>খালি ই-ওয়ালেট</span></div>
     <% } %>
   </div>
 
@@ -102,7 +114,7 @@
         </div>
       <% }) %>
     <% } else { %>
-      <div class="empty-wallet"><i class="fab fa-bitcoin" style="font-size:40px; opacity:0.2; margin-bottom:8px;"></i><span>খালি ওয়ালেট তালিকা</span></div>
+      <div class="empty-wallet"><i class="fab fa-bitcoin rs4-3"></i><span>খালি ওয়ালেট তালিকা</span></div>
     <% } %>
   </div>
 
@@ -119,12 +131,12 @@
   </div>
 
   <% if (!hasWithdrawPin) { %>
-    <div class="instr" style="margin-top:10px;">
-      <p style="color:#fbbf24;">⚠️ উত্তোলনের আগে আপনার Withdraw PIN সেট করুন — <a href="/profile/security" style="color:#60a5fa;">এখানে সেট করুন</a></p>
+    <div class="instr rs4-4">
+      <p class="rs4-5">⚠️ উত্তোলনের আগে আপনার Withdraw PIN সেট করুন — <a class="rs4-6" href="/profile/security">এখানে সেট করুন</a></p>
     </div>
   <% } %>
 
-  <form action="/payment/withdraw" method="POST" style="margin-top:10px;">
+  <form class="rs4-4" action="/payment/withdraw" method="POST">
     <div class="field-group">
       <label>পেমেন্ট মেথড</label>
       <select name="method" required>

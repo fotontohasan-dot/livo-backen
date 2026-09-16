@@ -75,6 +75,24 @@ const banColor = u.is_banned ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-6
     title: 'User Details',
     active: 'users',
     body: `
+<style nonce="${cspNonce}">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Class selectors are repeated so the generated rules keep
+     the specificity the inline declarations had, without !important —
+     JS-set element.style still wins. */
+  .rv2-1.rv2-1.rv2-1 { padding:16px 20px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center; }
+  .rv2-2.rv2-2.rv2-2 { font-weight:700;font-size:14px;margin:0; }
+  .rv2-3.rv2-3.rv2-3 { background:none;border:none;cursor:pointer;color:#64748b; }
+  .rv2-4.rv2-4.rv2-4 { padding:20px; }
+  .rv2-5.rv2-5.rv2-5 { margin-bottom:14px; }
+  .rv2-6.rv2-6.rv2-6 { display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:5px; }
+  .rv2-7.rv2-7.rv2-7 { width:100%;border:1px solid #e2e8f0;padding:10px 12px;border-radius:10px;font-size:13px; }
+  .rv2-8.rv2-8.rv2-8 { font-size:11px;color:#f59e0b;margin:5px 0 0; }
+  .rv2-9.rv2-9.rv2-9 { margin-bottom:16px; }
+  .rv2-10.rv2-10.rv2-10 { padding:9px 16px;border-radius:10px;font-size:12px;font-weight:700;background:#f1f5f9;border:none;cursor:pointer; }
+  .rv2-11.rv2-11.rv2-11 { padding:9px 16px;border-radius:10px;font-size:12px;font-weight:700;background:#2563eb;color:#fff;border:none;cursor:pointer; }
+</style>
+
 <div class="max-w-6xl mx-auto">
     <a href="/admin/users" class="inline-flex items-center gap-2 text-slate-500 hover:text-slate-800 mb-5 text-sm">
         <i class="fas fa-arrow-left"></i><span>Back to Users</span>
@@ -226,27 +244,27 @@ const banColor = u.is_banned ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-6
 
 <div class="modal-overlay" id="editProfileModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:100;padding:16px;">
     <div class="js2">
-        <div style="padding:16px 20px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
-            <h3 style="font-weight:700;font-size:14px;margin:0;">${t('aud_edit_profile')}</h3>
-            <button type="button" data-modal-close="editProfileModal" style="background:none;border:none;cursor:pointer;color:#64748b;"><i class="fas fa-times"></i></button>
+        <div class="rv2-1">
+            <h3 class="rv2-2">${t('aud_edit_profile')}</h3>
+            <button class="rv2-3" type="button" data-modal-close="editProfileModal"><i class="fas fa-times"></i></button>
         </div>
-        <form method="POST" action="/admin/users/${u.id}/edit-profile" style="padding:20px;">
-            <div style="margin-bottom:14px;">
-                <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:5px;">${t('aud_username')}</label>
-                <input type="text" name="username" value="${escapeHtml(u.username || '')}" required pattern="[A-Za-z0-9_.]{3,20}" title="${t('aud_username_title')}" style="width:100%;border:1px solid #e2e8f0;padding:10px 12px;border-radius:10px;font-size:13px;">
+        <form class="rv2-4" method="POST" action="/admin/users/${u.id}/edit-profile">
+            <div class="rv2-5">
+                <label class="rv2-6">${t('aud_username')}</label>
+                <input class="rv2-7" type="text" name="username" value="${escapeHtml(u.username || '')}" required pattern="[A-Za-z0-9_.]{3,20}" title="${t('aud_username_title')}">
             </div>
-            <div style="margin-bottom:14px;">
-                <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:5px;">${t('aud_email')}</label>
-                <input type="email" name="email" value="${escapeHtml(u.email || '')}" style="width:100%;border:1px solid #e2e8f0;padding:10px 12px;border-radius:10px;font-size:13px;">
-                <p style="font-size:11px;color:#f59e0b;margin:5px 0 0;">${t('aud_email_warning')}</p>
+            <div class="rv2-5">
+                <label class="rv2-6">${t('aud_email')}</label>
+                <input class="rv2-7" type="email" name="email" value="${escapeHtml(u.email || '')}">
+                <p class="rv2-8">${t('aud_email_warning')}</p>
             </div>
-            <div style="margin-bottom:16px;">
-                <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:5px;">${t('aud_phone')}</label>
-                <input type="text" name="phone" value="${escapeHtml(u.phone || '')}" pattern="[0-9+\\-\\s]{6,20}" title="${t('aud_phone_title')}" style="width:100%;border:1px solid #e2e8f0;padding:10px 12px;border-radius:10px;font-size:13px;">
+            <div class="rv2-9">
+                <label class="rv2-6">${t('aud_phone')}</label>
+                <input class="rv2-7" type="text" name="phone" value="${escapeHtml(u.phone || '')}" pattern="[0-9+\\-\\s]{6,20}" title="${t('aud_phone_title')}">
             </div>
             <div class="js3">
-                <button type="button" data-modal-close="editProfileModal" style="padding:9px 16px;border-radius:10px;font-size:12px;font-weight:700;background:#f1f5f9;border:none;cursor:pointer;">${t('dep_reject')}</button>
-                <button type="submit" style="padding:9px 16px;border-radius:10px;font-size:12px;font-weight:700;background:#2563eb;color:#fff;border:none;cursor:pointer;">${t('aud_save')}</button>
+                <button class="rv2-10" type="button" data-modal-close="editProfileModal">${t('dep_reject')}</button>
+                <button class="rv2-11" type="submit">${t('aud_save')}</button>
             </div>
         </form>
     </div>

@@ -59,13 +59,20 @@ const path = require('path');
 // 155  (f3f932d) → partial-এও নিজস্ব nonce style ব্লক; checker index bug ফিক্স
 // 116  (6b146d0) → ক্লাস পুনরাবৃত্তি করে specificity বাড়ানো (!important ছাড়া)
 // 86   → JS স্ট্রিং-এর মার্কআপ, প্রতিদ্বন্দ্বী নিয়ম নেই এমন ক্ষেত্রে
-// 230  (এই কমিট) → সাম্প্রতিক কয়েকটা uncoordinated concurrent merge (একই
-//      মাইগ্রেটেড ফাইলগুলোর পুরনো/duplicated সংস্করণ ফিরিয়ে এনেছে —
-//      security.ejs, profile/index.ejs, deposit.ejs ইত্যাদি) বাস্তব সংখ্যা
-//      ৮৬ থেকে ২২৮-এ ঠেলে দিয়েছে। এটা লক্ষ্য নয়, শুধু বর্তমান বাস্তবতা
-//      মেনে সিলিং সাময়িকভাবে তোলা হলো যাতে CI ব্লক না করে; migration ঋণ
-//      কমিয়ে সিলিং আবার নামানো দরকার একটা আলাদা কাজ হিসেবে।
-const MAX_INLINE_STYLES = 230;
+//      ⚠ কয়েকটা uncoordinated concurrent merge মাইগ্রেটেড ফাইলগুলোর
+//      পুরনো/duplicated সংস্করণ ফিরিয়ে এনেছিল (security.ejs,
+//      profile/index.ejs, deposit.ejs, withdraw.ejs), ফলে বাস্তব সংখ্যা
+//      ৮৬ থেকে ২২৮-এ উঠে যায় এবং CI তখন থেকে এই টেস্টে লাল ছিল। সিলিং
+//      ২৩০-এ তোলা হয়েছিল শুধু আনব্লক করার জন্য — কিন্তু তাতে র‍্যাচেটটাই
+//      অর্থহীন হয়ে যেত, তাই বদলে ওই ফাইলগুলো আবার মাইগ্রেট করা হলো।
+// 70   (এই কমিট) → রিগ্রেস করা ৪টা ভিউ + admin/audit-logs ও user-detail
+//      পুনরায় মাইগ্রেট: ঘোষণাগুলো nonce-যুক্ত <style> ব্লকে `.rsN-M`
+//      ক্লাসে সরানো, specificity ধরে রাখতে ক্লাস তিনবার পুনরাবৃত্ত
+//      (!important নয়, তাই JS-এর element.style এখনো জেতে)। ডায়নামিক
+//      (`<%= %>`) ও `display:none` টগল ইচ্ছাকৃতভাবে ইনলাইনই থাকল।
+//      tools/cascade-check.js ছয়টা টেমপ্লেটেই diffs: 0 — অর্থাৎ ব্রাউজার
+//      যা আঁকে তা অপরিবর্তিত। (228 → 70)
+const MAX_INLINE_STYLES = 70;
 
 const ROOT = path.join(__dirname, '..', '..');
 const SCAN_DIRS = ['views', 'public'];
