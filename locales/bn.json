@@ -109,6 +109,8 @@
   "upload_fail": "আপলোড ব্যর্থ হয়েছে",
   "personal_info": "ব্যক্তিগত তথ্য",
   "security": "নিরাপত্তা",
+  "security_settings_title": "নিরাপত্তা সেটিংস",
+  "bank_transfer": "ব্যাংক ট্রান্সফার",
   "username_fixed": "ইউজারনেম (স্থির)",
   "email": "ইমেইল",
   "full_name": "পূর্ণ নাম",

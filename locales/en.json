@@ -109,6 +109,8 @@
   "upload_fail": "Upload failed",
   "personal_info": "Personal Information",
   "security": "Security",
+  "security_settings_title": "Security Settings",
+  "bank_transfer": "Bank Transfer",
   "username_fixed": "Username (fixed)",
   "email": "Email",
   "full_name": "Full Name",
