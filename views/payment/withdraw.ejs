@@ -63,7 +63,7 @@
 
 <div class="wd-wrap">
   <div class="wd-topbar">
-    <div class="left"><a href="/profile"><i class="fas fa-chevron-left"></i></a><h1>উত্তোলন</h1></div>
+    <div class="left"><a href="/profile"><i class="fas fa-chevron-left"></i></a><h1><%= t.wd2_title %></h1></div>
     <div class="wd-icons"><i class="fas fa-file-alt"></i><i class="fas fa-headset"></i></div>
   </div>
 
@@ -72,7 +72,7 @@
       <span class="dot rt2-1">e</span> E wallet
     </div>
     <div class="wd-tab" id="tabCrypto">
-      <span class="dot rt2-2">₿</span> ক্রিপ্টো ওয়ালেট
+      <span class="dot rt2-2">₿</span> <%= t.wd2_crypto_wallet %>
     </div>
   </div>
 
@@ -81,7 +81,7 @@
   <%- include('../partials/flash') %>
 
   <div class="wd-section" id="panelEwallet">
-    <div class="wd-label">আবদ্ধ E wallet (<%= cards ? cards.length : 0 %>/5)</div>
+    <div class="wd-label"><%= t.wd2_linked_ewallet %> (<%= cards ? cards.length : 0 %>/5)</div>
     <% if (cards && cards.length > 0) { %>
       <% cards.forEach(function(c){ %>
         <div class="wallet-card">
@@ -95,12 +95,12 @@
         </div>
       <% }) %>
     <% } else { %>
-      <div class="empty-wallet"><i class="fas fa-wallet rt2-3"></i><span>খালি ই-ওয়ালেট</span></div>
+      <div class="empty-wallet"><i class="fas fa-wallet rt2-3"></i><span><%= t.wd2_empty_ewallet %></span></div>
     <% } %>
   </div>
 
   <div class="wd-section" id="panelCrypto" style="display:none;">
-    <div class="wd-label">ক্রিপ্টো ওয়ালেট (<%= cryptoCards ? cryptoCards.length : 0 %>/5)</div>
+    <div class="wd-label"><%= t.wd2_crypto_wallet %> (<%= cryptoCards ? cryptoCards.length : 0 %>/5)</div>
     <% if (cryptoCards && cryptoCards.length > 0) { %>
       <% cryptoCards.forEach(function(c){ %>
         <div class="wallet-card">
@@ -114,19 +114,19 @@
         </div>
       <% }) %>
     <% } else { %>
-      <div class="empty-wallet"><i class="fab fa-bitcoin rt2-3"></i><span>খালি ওয়ালেট তালিকা</span></div>
+      <div class="empty-wallet"><i class="fab fa-bitcoin rt2-3"></i><span><%= t.wd2_empty_wallets %></span></div>
     <% } %>
   </div>
 
   <div class="instr">
-    <p class="muted">উত্তোলন সময়: ২৪ ঘণ্টা</p>
-    <p class="bold">💬 প্রিয় সদস্য, শুভেচ্ছা! 🎯</p>
-    <p class="bold">আপনার <%= siteName %> অ্যাকাউন্টে উত্তোলনের আগে অনুগ্রহ করে আপনার ওয়ালেট (বিকাশ/নগদ/রকেট ইত্যাদি) সঠিকভাবে সংযুক্ত হয়েছে কিনা তা যাচাই করুন। ভুল ওয়ালেট সংযোগের কারণে টাকা স্থানান্তরে বিলম্ব বা ব্যর্থতা ঘটতে পারে।</p>
-    <p class="bold">🔒 দয়া করে আবার পরীক্ষা করুন এবং নিরাপদে উত্তোলন সম্পন্ন করুন! 💰</p>
-    <p class="muted">দৈনিক উত্তোলন ৯৯,৯৯৯ (বার), অবশিষ্ট উত্তোলন ৯৯,৯৯৯ (বার)</p>
-    <p class="muted">প্রধান ওয়ালেট :৳ <span id="mainWalletAmt"><%= (coins || 0).toFixed(2) %></span></p>
-    <p class="muted">উপলব্ধ পরিমাণ : ৳ <span id="availableAmt"><%= (coins || 0).toFixed(2) %></span></p>
-    <button type="button" id="refreshBalanceBtn" class="refresh-btn"><i class="fas fa-sync-alt" id="refreshIcon"></i> আপনার ব্যালেন্স রিফ্রেশ করুন</button>
+    <p class="muted"><%= t.wd2_hours %></p>
+    <p class="bold"><%= t.wd2_greeting %></p>
+    <p class="bold">আপনার <%= siteName %> অ্যাকাউন্টে <%= t.wd2_title %>ের আগে অনুগ্রহ করে আপনার ওয়ালেট (বিকাশ/নগদ/রকেট ইত্যাদি) সঠিকভাবে সংযুক্ত হয়েছে কিনা তা যাচাই করুন। ভুল ওয়ালেট সংযোগের কারণে টাকা স্থানান্তরে বিলম্ব বা ব্যর্থতা ঘটতে পারে।</p>
+    <p class="bold"><%= t.wd2_check_again %></p>
+    <p class="muted"><%= t.wd2_daily_limits %></p>
+    <p class="muted"><%= t.wd2_main_wallet %>৳ <span id="mainWalletAmt"><%= (coins || 0).toFixed(2) %></span></p>
+    <p class="muted"><%= t.wd2_available %>৳ <span id="availableAmt"><%= (coins || 0).toFixed(2) %></span></p>
+    <button type="button" id="refreshBalanceBtn" class="refresh-btn"><i class="fas fa-sync-alt" id="refreshIcon"></i> <%= t.wd2_refresh_balance %></button>
   </div>
 
   <%
@@ -139,7 +139,7 @@
   %>
   <% if (!hasWithdrawPin) { %>
     <div class="instr rt2-4" id="pinNotConfiguredNotice">
-      <p class="rt2-5">⚠️ উত্তোলনের আগে আপনার Withdraw PIN সেট করুন — <a class="rt2-6" href="/profile/security">এখানে সেট করুন</a></p>
+      <p class="rt2-5">⚠️ <%= t.wd2_title %>ের আগে আপনার Withdraw PIN সেট করুন — <a class="rt2-6" href="/profile/security"><%= t.wd2_set_here %></a></p>
     </div>
   <% } %>
 
@@ -178,23 +178,23 @@
     <input type="hidden" name="account_number" id="accountNumberField">
 
     <div class="field-group">
-      <label>পরিমাণ (১০০ ~ ৫০,০০০)</label>
-      <input type="number" name="amount" placeholder="টাকার পরিমাণ লিখুন" min="100" max="50000" required>
+      <label><%= t.wd2_amount_label %></label>
+      <input type="number" name="amount" placeholder="<%= t.wd2_amount_placeholder %>" min="100" max="50000" required>
     </div>
 
     <div class="field-group field-with-icon">
-      <label>লেনদেন পাসওয়ার্ড</label>
-      <input type="password" id="secPassword" name="password" placeholder="লেনদেন পাসওয়ার্ড" required>
+      <label><%= t.wd2_tx_password %></label>
+      <input type="password" id="secPassword" name="password" placeholder="<%= t.wd2_tx_password %>" required>
       <button type="button" class="toggle-eye" data-reveal-field="secPassword" data-reveal-icon="eyeIcon"><i class="fas fa-eye-slash" id="eyeIcon"></i></button>
     </div>
 
     <% if (hasWithdrawPin) { %>
       <div class="field-group field-with-icon">
         <label>Withdraw PIN</label>
-        <input type="password" id="withdrawPinField" name="withdraw_pin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" autocomplete="off" placeholder="আপনার ৬-ডিজিট Withdraw PIN দিন" required>
+        <input type="password" id="withdrawPinField" name="withdraw_pin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" autocomplete="off" placeholder="<%= t.wd2_pin_placeholder %>" required>
         <button type="button" class="toggle-eye" data-reveal-field="withdrawPinField" data-reveal-icon="withdrawPinEye"><i class="fas fa-eye-slash" id="withdrawPinEye"></i></button>
       </div>
-      <p class="pin-note">🛈 প্রতিটি উত্তোলনের আগে আপনার Withdraw PIN যাচাই করা হবে।</p>
+      <p class="pin-note"><%= t.wd2_pin_note %></p>
     <% } %>
 
     <% if (typeof withdrawalWindow !== 'undefined' && withdrawalWindow && !withdrawalWindow.open) { %>
@@ -211,7 +211,7 @@
       </div>
     <% } %>
 
-    <button type="submit" id="withdrawSubmitBtn" class="submit-btn"<% if (formGated) { %> disabled<% } %>>উত্তোলন করুন</button>
+    <button type="submit" id="withdrawSubmitBtn" class="submit-btn"<% if (formGated) { %> disabled<% } %>><%= t.wd2_submit_btn %></button>
   </form>
 </div>
 

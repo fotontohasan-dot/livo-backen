@@ -49,26 +49,26 @@
 
   <div class="im60-1">
     <a class="dz59-2" href="/profile">←</a>
-    <h1 class="dz59-3">🏆 রেফারেল কনটেস্</h1>
+    <h1 class="dz59-3"><%= t.ct_title %></h1>
   </div>
 
   <% if (contest) { %>
     <!-- ব্যানার -->
     <div class="dz59-4">
       <div class="im60-2">🏆</div>
-      <div class="dz59-5">মাসিক রেফারেল কনটেস্ট</div>
+      <div class="dz59-5"><%= t.ct_monthly %></div>
       <div class="dz59-6"><%= contest.monthName %></div>
-      <div class="dz59-7">সবচেয়ে বেশি রেফার করুন, বড় প্রাইজ জিতুন!</div>
+      <div class="dz59-7"><%= t.ct_tagline %></div>
     </div>
 
     <!-- প্রাইজ তালিকা -->
     <div class="dz59-8">
-      <div class="dz59-9">🎁 এই মাসের প্রইজ</div>
+      <div class="dz59-9"><%= t.ct_prizes %></div>
       <% contest.prizes.forEach(p => {
         const medal = p.rank === 1 ? '🥇' : p.rank === 2 ? '🥈' : p.rank === 3 ? '🥉' : '🏅';
       %>
         <div class="dz59-10">
-          <span class="dz59-11"><%= medal %> <%= p.rank %>ম স্থান</span>
+          <span class="dz59-11"><%= medal %> <%= p.rank %><%= t.ct_place_suffix %></span>
           <span class="dz59-12"><%= p.prize %></span>
         </div>
       <% }) %>
@@ -76,7 +76,7 @@
 
     <!-- লিডারবোর্ড -->
     <div class="dz59-13">
-      <div class="dz59-9">📊 লিডারবোর্ (এই মাস)</div>
+      <div class="dz59-9"><%= t.ct_leaderboard %></div>
 
       <% if (contest.leaders.length > 0) { %>
         <% contest.leaders.forEach(l => {
@@ -85,36 +85,36 @@
           <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;margin-bottom:6px;border-radius:10px;background:<%= l.isMe ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.03)' %>;border:1px solid <%= l.isMe ? '#f59e0b' : 'transparent' %>;">
             <div class="im60-3">
               <span class="dz59-14"><%= medal %></span>
-              <span class="dz59-11"><%= l.username %><%= l.isMe ? ' (আপনি)' : '' %></span>
+              <span class="dz59-11"><%= l.username %><%= l.isMe ? t.ct_you_suffix : '' %></span>
             </div>
-            <span class="dz59-15"><%= l.referrals %> রেফার</span>
+            <span class="dz59-15"><%= l.referrals %><%= t.ct_referrals_suffix %></span>
           </div>
         <% }) %>
       <% } else { %>
-        <div class="dz59-16">এই মাসে এখনো কেউ রেফার করেনি। আপনিই প্রথম হোন!</div>
+        <div class="dz59-16"><%= t.ct_nobody_yet %></div>
       <% } %>
 
       <!-- আমার অবস্থান (টপ ২০-তে না থাকলে) -->
       <% if (contest.myRank) { %>
         <div class="dz59-17">
-          এই মাসে আপনার রেফার: <strong class="dz59-18"><%= contest.myRank.referrals %></strong> জন — লিডারবোর্ডে উঠতে আরও রেফার করুন!
+          <%= t.ct_your_referrals %> <strong class="dz59-18"><%= contest.myRank.referrals %></strong> <%= t.ct_refer_more %>
         </div>
       <% } %>
     </div>
 
     <p class="dz59-19">
-      মাস শেষে শীর্ষ রেফারকারীদের প্রাইজ দেওয়া হবে।<br>
-      আপনার রেফারেল লিংক বন্ধুদের সাথে শেয়ার করুন!
+      <%= t.ct_prizes_at_month_end %><br>
+      <%= t.ct_share_link %>
     </p>
 
     <a class="dz59-20" href="/profile/referral">
-      🔗 আমার রেফারেল লিংক দেখুন
+      <%= t.ct_view_my_link %>
     </a>
 
     <!-- পাস্ট কনটেস্ট রেজাল্ট -->
     <% if (pastContests && pastContests.length > 0) { %>
       <div class="im60-4">
-        <div class="dz59-21">📜 আগের মাসের ফলাফল</div>
+        <div class="dz59-21"><%= t.ct_past_results %></div>
         <% pastContests.forEach(pc => { %>
           <div class="dz59-22">
             <div class="dz59-23"><%= pc.monthName %></div>
@@ -122,8 +122,8 @@
               const medal = l.rank === 1 ? '🥇' : l.rank === 2 ? '🥈' : l.rank === 3 ? '🥉' : l.rank + '.';
             %>
               <div style="display:flex;justify-content:space-between;padding:6px 0;<%= l.isMe ? 'color:#f59e0b;' : 'color:var(--text-muted);' %>font-size:13px;">
-                <span><%= medal %> <%= l.username %><%= l.isMe ? ' (আপনি)' : '' %></span>
-                <span><%= l.referrals %> রেফার<% if (l.prize) { %> — <%= l.prize %><% } %></span>
+                <span><%= medal %> <%= l.username %><%= l.isMe ? t.ct_you_suffix : '' %></span>
+                <span><%= l.referrals %><%= t.ct_referrals_suffix %><% if (l.prize) { %> — <%= l.prize %><% } %></span>
               </div>
             <% }); %>
           </div>
@@ -133,7 +133,7 @@
 
   <% } else { %>
     <div class="dz59-24">
-      কনটেস্ট তথ্য লোড করা যায়নি। পরে আবার চেষ্টা করুন।
+      <%= t.ct_load_failed %>
     </div>
   <% } %>
 

@@ -52,7 +52,7 @@
 <div class="cd-wrap">
   <div class="cd-topbar">
     <a href="/profile"><i class="fas fa-chevron-left"></i></a>
-    <h1>আমার কার্ড / ই-ওয়ালেট</h1>
+    <h1><%= t.cw_title %></h1>
   </div>
 
   <%- include('../partials/flash') %>
@@ -68,7 +68,7 @@
     </div>
   <% } else { %>
   <div class="cd-section">
-    <div class="cd-count">ই-ওয়ালেট যোগ করা হয়েছে: <b><%= cards ? cards.length : 0 %></b></div>
+    <div class="cd-count"><%= t.cw_ewallet_count %> <b><%= cards ? cards.length : 0 %></b></div>
     <% if (cards && cards.length > 0) { %>
       <% cards.forEach(function(c){ %>
         <div class="cd-item">
@@ -82,13 +82,13 @@
     <% } else { %>
       <div class="cd-empty">
         <div class="icon-circle"><i class="fas fa-wallet" style="font-size:36px; opacity:0.25;"></i></div>
-        <h3>খালি ই-ওয়ালেট</h3>
+        <h3><%= t.cw_empty_ewallet %></h3>
       </div>
     <% } %>
   </div>
 
   <div class="cd-section">
-    <div class="cd-count">ক্রিপ্টো ওয়ালেট যোগ করা হয়েছে: <b><%= cryptoCards ? cryptoCards.length : 0 %></b></div>
+    <div class="cd-count"><%= t.cw_crypto_count %> <b><%= cryptoCards ? cryptoCards.length : 0 %></b></div>
     <% if (cryptoCards && cryptoCards.length > 0) { %>
       <% cryptoCards.forEach(function(c){ %>
         <div class="cd-item">
@@ -102,7 +102,7 @@
     <% } else { %>
       <div class="cd-empty">
         <div class="icon-circle"><i class="fab fa-bitcoin" style="font-size:36px; opacity:0.25;"></i></div>
-        <h3>খালি ওয়ালেট তালিকা</h3>
+        <h3><%= t.cw_empty_wallets %></h3>
       </div>
     <% } %>
   </div>
@@ -118,21 +118,21 @@
   <div class="sheet-inner">
     <div class="sheet-handle"></div>
     <div class="sheet-head">
-      <div><h2>নতুন যোগ করুন</h2><p>Add New Wallet</p></div>
+      <div><h2><%= t.cw_add_new %></h2><p>Add New Wallet</p></div>
       <button id="closeSheetBtn"><i class="fas fa-times"></i></button>
     </div>
 
     <form action="/profile/cards/add" method="POST">
       <div class="kind-toggle">
-        <div class="kind-btn active" id="kindEwallet">ই-ওয়ালেট</div>
-        <div class="kind-btn" id="kindCrypto">ক্রিপ্টো</div>
+        <div class="kind-btn active" id="kindEwallet"><%= t.cw_ewallet %></div>
+        <div class="kind-btn" id="kindCrypto"><%= t.cw_crypto %></div>
       </div>
       <input type="hidden" name="wallet_kind" id="walletKindInput" value="ewallet">
 
       <div class="sheet-field" id="ewalletTypeField">
-        <label>ওয়ালেট টাইপ</label>
+        <label><%= t.cw_wallet_type %></label>
         <select name="bank_name" required>
-          <option value="" disabled selected>E-wallet সিলেক্ট করুন</option>
+          <option value="" disabled selected><%= t.cw_select_ewallet %></option>
           <option value="bKash">bKash</option>
           <option value="Nagad">Nagad</option>
           <option value="Rocket">Rocket</option>
@@ -142,16 +142,16 @@
       </div>
 
       <div class="sheet-field">
-        <label>অ্যাকাউন্ট/নাম্বার</label>
-        <input type="text" name="account_number" placeholder="আপনার নম্বর বা ওয়ালেট অ্যাড্রেস লিখুন" required>
+        <label><%= t.cw_account_label %></label>
+        <input type="text" name="account_number" placeholder="<%= t.cw_account_placeholder %>" required>
       </div>
 
       <div class="sheet-field">
-        <label>পাসওয়ার্ড</label>
-        <input type="password" name="holder_name" placeholder="আপনার পাসওয়ার্ড লিখুন" required>
+        <label><%= t.cw_password_label %></label>
+        <input type="password" name="holder_name" placeholder="<%= t.cw_password_placeholder %>" required>
       </div>
 
-      <button type="submit" class="sheet-submit">ওয়ালেট নিশ্চিত করুন</button>
+      <button type="submit" class="sheet-submit"><%= t.cw_confirm_wallet %></button>
     </form>
   </div>
 </div>
@@ -173,7 +173,7 @@
     if (kind === 'crypto') {
       sel.innerHTML = '<option value="USDT (TRC20)">USDT (TRC20)</option><option value="USDT (BEP20)">USDT (BEP20)</option><option value="Bitcoin">Bitcoin</option>';
     } else {
-      sel.innerHTML = '<option value="" disabled selected>E-wallet সিলেক্ট করুন</option><option value="bKash">bKash</option><option value="Nagad">Nagad</option><option value="Rocket">Rocket</option><option value="Upay">Upay</option><option value="Bank Account">Bank Account</option>';
+      sel.innerHTML = '<option value="" disabled selected><%= t.cw_select_ewallet %></option><option value="bKash">bKash</option><option value="Nagad">Nagad</option><option value="Rocket">Rocket</option><option value="Upay">Upay</option><option value="Bank Account">Bank Account</option>';
     }
   }
 
@@ -195,7 +195,7 @@
 
     document.querySelectorAll('.card-delete-form').forEach(function(f){
       f.addEventListener('submit', function(e){
-        if (!confirm('আপনি কি নিশ্চিত?')) e.preventDefault();
+        if (!confirm('<%= t.cw_are_you_sure %>')) e.preventDefault();
       });
     });
   });

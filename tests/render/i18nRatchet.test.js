@@ -28,7 +28,9 @@ const BENGALI = /[\u0980-\u09FF]/;
 const TAKA_SIGN = /\u09F3/g;
 
 // বর্তমান পরিমাপ (২০২৬-০৯-০৭)। কমলে নিচের সংখ্যা কমিয়ে দিন — সেটাই ratchet.
-const BASELINE_USER_LINES = 80;
+// ২০২৬-০৯-১৬: deposit, withdraw, cards ও contest — চারটে ভিউ t()-এ সরানো
+// হয়েছে (১৪০ → ৬৫ লাইন), তাই সিলিংটাও নামানো হলো।
+const BASELINE_USER_LINES = 65;
 const BASELINE_ADMIN_LINES = 25;
 
 /** কমেন্ট বাদ দেওয়া হয়: ডেভেলপারদের জন্য লেখা বাংলা কমেন্ট ব্যবহারকারী দেখেন না,

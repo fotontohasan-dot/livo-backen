@@ -99,7 +99,7 @@
 <div class="dep-wrap">
   <div class="dep-topbar">
     <a href="/profile"><i class="fas fa-chevron-left"></i></a>
-    <h1>জমা দিন</h1>
+    <h1><%= t.dp_title %></h1>
   </div>
 
   <%- include('../partials/flash') %>
@@ -118,10 +118,10 @@
 
     <div id="step1">
       <div class="dep-section">
-        <div class="dep-label">আমানতের মোড</div>
+        <div class="dep-label"><%= t.dp_mode_label %></div>
         <div class="method-grid" id="methodGrid">
           <div class="method-tile selected" data-method="nagad">
-            <div class="method-icon rt1-1">নগদ</div>
+            <div class="method-icon rt1-1"><%= t.dp_cash_label %></div>
             <div class="method-name">NAGAD</div>
           </div>
           <div class="method-tile" data-method="bkash">
@@ -153,16 +153,16 @@
 
       <div class="warn-box">
         অনুগ্রহ করে আপনার (<span id="methodLabelText">Nagad</span>) একাউন্টের মাধ্যমে অর্থ স্থানান্তর করুন এবং পেমেন্ট পাতায় (TRX ID) অনুলিপি করে সঠিকভাবে পূরণ করুন।
-        ⚠️⚠️⚠️ যদি আপনি (TRX ID) না লিখেন বা ভুল লিখেন, তাহলে আপনার লেনদেন সফলভাবে সম্পন্ন হবে না।
+        <%= t.dp_trx_warning %>
       </div>
 
       <div class="dep-section">
-        <div class="dep-label">পেমেন্ট চ্যানেল</div>
+        <div class="dep-label"><%= t.dp_channel_label %></div>
         <div class="channel-grid" id="channelGrid"></div>
       </div>
 
       <div class="dep-section rt1-6">
-        <div class="dep-label">জমা পরিমাণ</div>
+        <div class="dep-label"><%= t.dp_amount_label %></div>
         <div class="amount-grid" id="amountGrid">
           <% [100,200,300,500,1000,3000,5000,10000,20000,30000,50000].forEach(function(amt){ %>
             <div class="amount-btn <%= amt === 200 ? 'selected' : '' %>" data-amt="<%= amt %>"><%= amt.toLocaleString('en-US') %></div>
@@ -175,43 +175,43 @@
       </div>
 
       <div class="dep-section rt1-6">
-        <div class="dep-label">কার্যক্রম</div>
+        <div class="dep-label"><%= t.dp_activity_label %></div>
         <label class="activity-row">
           <input type="radio" name="want_bonus_choice" value="bonus">
-          <span>প্রথম জমার বোনাস সর্বোচ্চ ১০০% পর্যন্ত</span>
+          <span><%= t.dp_first_bonus %></span>
           <span class="amt">≥ ৳ 100.00</span>
         </label>
         <label class="activity-row">
           <input type="radio" name="want_bonus_choice" value="none" checked>
-          <span>কোনও প্রচারে অংশ নেওয়া যায় না</span>
+          <span><%= t.dp_no_promo %></span>
         </label>
         <input type="hidden" name="want_bonus" id="wantBonusHidden" value="no">
       </div>
 
-      <button type="button" class="next-btn" id="depNextBtn">পরবর্তী (Next)</button>
+      <button type="button" class="next-btn" id="depNextBtn"><%= t.dp_next_btn %></button>
     </div>
 
     <div id="step2" class="step-2">
       <div class="trx-box">
-        <p class="rt1-7">নিচের নম্বরে টাকা পাঠান:</p>
+        <p class="rt1-7"><%= t.dp_send_to_number %></p>
         <div class="trx-number" id="displayNumber"><%= payNumber %></div>
-        <button type="button" id="depCopyBtn" class="copy-btn"><i class="far fa-copy"></i> কপি করুন</button>
+        <button type="button" id="depCopyBtn" class="copy-btn"><i class="far fa-copy"></i> <%= t.dp_copy_btn %></button>
         <p class="rt1-8">📲 <b id="selectedMethodName">Nagad</b> Personal</p>
-        <p class="rt1-9">⚠️ Send Money করুন, তারপর নিচের ফর্ম পূরণ করুন।</p>
+        <p class="rt1-9"><%= t.dp_send_then_fill %></p>
       </div>
 
       <div class="field-group">
-        <label>ট্রানজেকশন আইডি</label>
-        <input type="text" name="transaction_id" placeholder="TrxID লিখুন" required>
+        <label><%= t.dp_trx_label %></label>
+        <input type="text" name="transaction_id" placeholder="<%= t.dp_trx_placeholder %>" required>
       </div>
       <div class="field-group">
-        <label>আপনার নম্বর (যেটা থেকে পাঠিয়েছেন)</label>
+        <label><%= t.dp_your_number_label %></label>
         <input type="text" name="account_number" placeholder="01XXXXXXXXX" required>
       </div>
 
       <div class="step2-btns">
-        <button type="button" class="btn-back" id="depBackBtn">পিছনে</button>
-        <button type="submit" class="btn-submit">সাবমিট করুন</button>
+        <button type="button" class="btn-back" id="depBackBtn"><%= t.dp_back_btn %></button>
+        <button type="submit" class="btn-submit"><%= t.dp_submit_btn %></button>
       </div>
     </div>
   </form>
@@ -234,7 +234,7 @@
       // মেথড ট্যাপ করাই কাজ করছে না, কারণ কোনো নম্বর/চ্যানেল দেখাত না।
       var msg = document.createElement('div');
       msg.style.cssText = 'grid-column:1/-1; color:var(--text-muted); font-size:12px; padding:8px 0;';
-      msg.textContent = 'এই মুহূর্তে এই মেথডের জন্য কোনো চ্যানেল উপলব্ধ নেই। অন্য মেথড বেছে নিন।';
+      msg.textContent = '<%= t.dp_no_channel %>';
       grid.appendChild(msg);
       var disp = document.getElementById('displayNumber');
       if (disp) disp.textContent = '—';
@@ -322,7 +322,7 @@
       var nextBtn = document.getElementById('depNextBtn');
       if (nextBtn) nextBtn.addEventListener('click', function(){
         var amt = document.getElementById('amountInput').value;
-        if (!amt || amt < 100) { alert('সর্বনিম্ন ১০০ টাকা জমা দিন'); return; }
+        if (!amt || amt < 100) { alert('<%= t.dp_min_amount_alert %>'); return; }
         document.getElementById('step1').style.display = 'none';
         document.getElementById('step2').style.display = 'block';
         window.scrollTo(0,0);
@@ -341,7 +341,7 @@
       var copyBtn = document.getElementById('depCopyBtn');
       if (copyBtn) copyBtn.addEventListener('click', function(){
         var num = document.getElementById('displayNumber').textContent;
-        navigator.clipboard.writeText(num).then(function(){ alert('নম্বর কপি হয়েছে: ' + num); });
+        navigator.clipboard.writeText(num).then(function(){ alert('<%= t.dp_number_copied %>' + num); });
       });
     } catch (e) { console.error('copy-btn bind error:', e); }
   });
