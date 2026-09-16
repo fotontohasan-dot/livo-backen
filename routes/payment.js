@@ -14,16 +14,24 @@ const { verifyPin } = require('../services/withdrawPin');
 const withdrawalWindowSvc = require('../services/withdrawalWindow');
 const { requireWithdrawalWindow, attachWithdrawalWindow } = require('../middleware/withdrawalWindow');
 
-const { isAuth } = require('../middleware/auth');
+const { isAuth, requireVerifiedEmail, requireApprovedKyc } = require('../middleware/auth');
+const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
+const { getBaseUrl } = require('../utils/publicUrl');
+const sslcommerz = require('../services/sslcommerz');
+const paymentVerification = require('../services/paymentVerification');
+const RedisRateLimitStore = require('../services/redisRateLimitStore');
 
-function requireLogin(req, res, next) {
-  // middleware/auth.js-এর isAuth পুনর্ব্যবহার — এই ফাইলের নিজস্ব সংস্করণে
-  // শুধু সেশনের অস্তিত্ব দেখা হতো, ব্যান/self-exclude যাচাই হতো না। ফলে
-  // ব্যান করার পরও পুরনো সেশন দিয়ে ডিপোজিট/উইথড্র/ওয়ালেট রুটে ঢোকা যেত
-  // (isAuth-এই একমাত্র সঠিক, cache-ব্যাকড যাচাইটা আছে — ডুপ্লিকেট না করে
-  // এখানে পুনর্ব্যবহার করা হলো)।
-  return isAuth(req, res, next);
-}
+// ডিপোজিট/উইথড্র/গেটওয়ে endpoint-গুলোর জন্য rate limit। bd8b1b2-এর rewrite-এ এটা
+// হারিয়ে গিয়েছিল, ফলে পেমেন্ট রুটগুলো সম্পূর্ণ unthrottled ছিল।
+const paymentLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  message: (req) => req.t('common_rate_limited'),
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new RedisRateLimitStore('rl:payment:')
+});
 
 async function requireAdmin(req, res, next) {
   if (!req.session.user) return res.redirect('/');
@@ -81,7 +89,7 @@ const MAX_BONUS = 15000;
 
 const VALID_METHODS = ['bkash', 'nagad', 'rocket', 'upay', 'bank', 'crypto'];
 
-router.get('/deposit', requireLogin, requireFeature('deposit'), async (req, res) => {
+router.get('/deposit', isAuth, requireFeature('deposit'), async (req, res) => {
   let channelsByMethod = {};
   try {
     const ch = await pool.query(
@@ -118,7 +126,7 @@ router.get('/deposit', requireLogin, requireFeature('deposit'), async (req, res)
 });
 
 // ইউজার ডিপোজিট পেজ — active পেমেন্ট মেথড/নম্বরের JSON তালিকা (পাবলিক ফিল্ড মাত্র)
-router.get('/deposit/methods', requireLogin, async (req, res) => {
+router.get('/deposit/methods', isAuth, async (req, res) => {
   try {
     const methods = await paymentMethods.listActivePublic();
     res.json({ success: true, methods });
@@ -128,7 +136,7 @@ router.get('/deposit/methods', requireLogin, async (req, res) => {
   }
 });
 
-router.post('/deposit', requireLogin, requireFeature('deposit'), async (req, res) => {
+router.post('/deposit', isAuth, requireFeature('deposit'), async (req, res) => {
   const { method, transaction_id, account_number } = req.body;
   const wantBonus = req.body.want_bonus === 'yes';
   const amount = parseAmount(req.body.amount);
@@ -159,6 +167,35 @@ router.post('/deposit', requireLogin, requireFeature('deposit'), async (req, res
   if (amount < 100) {
     req.flash('error', 'সর্বনিম্ন ডিপোজিট ১০০ টাকা');
     return res.redirect('/payment/deposit');
+  }
+
+  // ==== Duplicate Transaction ID ব্লক ====
+  // bd8b1b2-এর rewrite-এ এই চেকটা সম্পূর্ণ হারিয়ে গিয়েছিল — অর্থাৎ যেকোনো
+  // TrxID যতবার খুশি, যেকোনো অ্যাকাউন্ট থেকে দাবি করা যাচ্ছিল।
+  //
+  // দুটো আলাদা নিয়ম, কারণ ঝুঁকিও আলাদা:
+  //
+  //   ১. **অন্য ইউজারের ব্যবহার করা TrxID** — status যাই হোক, সবসময় ব্লক।
+  //      একই পেমেন্ট রেফারেন্স দুই অ্যাকাউন্টে বসানো মানে payment identity
+  //      confusion — কোন জমাটা আসলে কার, রেকর্ড থেকে আর বলা যায় না।
+  //
+  //   ২. **নিজের rejected TrxID** — আবার সাবমিট করা যাবে। টাইপো করে reject
+  //      হওয়া আইডি শুদ্ধ করে দেওয়ার বৈধ প্রয়োজন আছে, আর নিজের রেকর্ডে
+  //      পরিচয়-বিভ্রান্তির ঝুঁকি নেই।
+  try {
+    const dupCheck = await pool.query(
+      `SELECT id FROM payment_requests
+       WHERE type='deposit' AND method=$1 AND transaction_id=$2
+         AND (user_id <> $3 OR status <> 'rejected')
+       LIMIT 1`,
+      [method, transaction_id, userId]
+    );
+    if (dupCheck.rows.length > 0) {
+      req.flash('error', req.t('payment_duplicate_transaction_id'));
+      return res.redirect('/payment/deposit');
+    }
+  } catch (e) {
+    console.error('duplicate trx_id check error:', e.message);
   }
 
   // দৈনিক লিমিট-চেক ও INSERT একই ট্রানজেকশনে, users রো-তে FOR UPDATE লক সহ —
@@ -346,7 +383,7 @@ router.post('/admin/withdrawal-window', rbac.requirePermission('withdrawal_windo
   res.redirect('/payment/admin/withdrawal-window');
 });
 
-router.get('/wallet', requireLogin, async (req, res) => {
+router.get('/wallet', isAuth, async (req, res) => {
   const userId = req.session.user.id;
   try {
     const u = await pool.query('SELECT coins FROM users WHERE id=$1', [userId]);
@@ -396,7 +433,7 @@ router.get('/wallet', requireLogin, async (req, res) => {
   }
 });
 
-router.get('/withdraw', requireLogin, requireFeature('withdrawal'), attachWithdrawalWindow(), async (req, res) => {
+router.get('/withdraw', isAuth, requireFeature('withdrawal'), attachWithdrawalWindow(), async (req, res) => {
   try {
     let coins = 0;
     let hasWithdrawPin = false;
@@ -433,7 +470,7 @@ router.get('/withdraw', requireLogin, requireFeature('withdrawal'), attachWithdr
 });
 
 
-router.post('/withdraw', requireLogin, requireFeature('withdrawal'), requireWithdrawalWindow(), async (req, res) => {
+router.post('/withdraw', isAuth, requireFeature('withdrawal'), requireWithdrawalWindow(), async (req, res) => {
   const { method, account_number, password, withdraw_pin } = req.body;
   const amount = parseAmount(req.body.amount);
   const userId = req.session.user.id;
@@ -541,7 +578,7 @@ router.post('/withdraw', requireLogin, requireFeature('withdrawal'), requireWith
   }
 });
 
-router.get('/history', requireLogin, async (req, res) => {
+router.get('/history', isAuth, async (req, res) => {
   const type = ['deposit', 'withdraw'].includes(req.query.type) ? req.query.type : null;
   const filter = {
     type: type || '',
@@ -884,6 +921,238 @@ router.post('/admin/payments/bulk-reject', rbac.requirePermission('payments_reje
   const failed = results.length - succeeded;
   await logBulkPaymentAction(req, 'BULK_PAYMENT_REJECT', 'বাল্ক পেমেন্ট বাতিল', succeeded, failed, cleanIds);
   res.json({ success: true, total: cleanIds.length, succeeded, failed, results });
+});
+
+// ---------------------------------------------------------------------------
+// SSLCommerz গেটওয়ে রুট। commit bd8b1b2-এর rewrite এগুলো সম্পূর্ণ মুছে দিয়েছিল,
+// যদিও services/sslcommerz.js আর middleware/csrf.js-এর CSRF-exemption রয়ে
+// গিয়েছিল। ফলে গেটওয়ের success/fail/cancel/ipn কলব্যাক ৪০৪ পাচ্ছিল এবং অনলাইন
+// ডিপোজিট কখনো ক্রেডিট হতো না। bd8b1b2~1 থেকে অপরিবর্তিত অবস্থায় ফেরানো হলো।
+// ---------------------------------------------------------------------------
+// একই টাকা দিয়ে সীমাহীন ক্রেডিট। এখন verification-এর tran_id অবশ্যই যে রিকোয়েস্টটা ক্রেডিট হচ্ছে
+// তার gateway_tran_id-র সমান হতে হবে। গেটওয়ে tran_id না দিলে fail-closed (ক্রেডিট হবে না)।
+function isVerificationForRequest(verification, request) {
+  const returnedTran = verification && (verification.tran_id || verification.tranId);
+  if (!returnedTran) return false;
+  return String(returnedTran) === String(request.gateway_tran_id);
+}
+
+router.post('/sslcommerz/init', isAuth, requireFeature('deposit'), paymentLimiter, async (req, res) => {
+  const wantBonus = req.body.want_bonus === 'yes';
+  const amount = parseAmount(req.body.amount);
+  const userId = req.session.user.id;
+
+  if (amount === null || amount < 100) {
+    req.flash('error', req.t('payment_min_deposit_100'));
+    return res.redirect('/payment/deposit');
+  }
+
+  const tranId = `LIVO${userId}${Date.now()}${crypto.randomBytes(3).toString('hex')}`;
+
+  try {
+    await pool.query(
+      `INSERT INTO payment_requests (user_id, type, method, amount, status, want_bonus, gateway, gateway_tran_id)
+       VALUES ($1, 'deposit', 'sslcommerz', $2, 'pending', $3, 'sslcommerz', $4)`,
+      [userId, amount, wantBonus, tranId]
+    );
+
+    const baseUrl = getBaseUrl(req);
+    const gatewayUrl = await sslcommerz.initPayment({
+      amount,
+      tranId,
+      customer: {
+        name: req.session.user.username,
+        email: req.session.user.email,
+        phone: req.session.user.phone
+      },
+      baseUrl
+    });
+
+    res.redirect(gatewayUrl);
+  } catch (err) {
+    console.error('sslcommerz init error:', err.message);
+    // গেটওয়ে সেশন শুরু করা যায়নি (timeout/network/config এরর) — উপরে ইতিমধ্যে ঢোকানো
+    // pending রো-টা চিরস্থায়ীভাবে pending থেকে যাওয়ার বদলে rejected করে দেওয়া হচ্ছে,
+    // নাহলে ইউজারের history/admin ড্যাশবোর্ডে একটা কখনো-সেটল-না-হওয়া রো থেকে যায়।
+    await pool.query(
+      `UPDATE payment_requests SET status='rejected', updated_at=NOW() WHERE gateway_tran_id=$1 AND status='pending'`,
+      [tranId]
+    ).catch((e) => console.error('sslcommerz init cleanup error:', e.message));
+    req.flash('error', req.t('payment_gateway_init_failed'));
+    res.redirect('/payment/deposit');
+  }
+});
+
+// SSLCommerz পেমেন্ট সফল হলে ইউজারের ব্রাউজার এখানে রিডাইরেক্ট হয়ে আসে
+router.post('/sslcommerz/success', async (req, res) => {
+  const { tran_id, val_id } = req.body;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await client.query(
+      `SELECT * FROM payment_requests WHERE gateway_tran_id=$1 FOR UPDATE`, [tran_id]
+    );
+    const request = result.rows[0];
+
+    if (!request) {
+      await client.query('ROLLBACK');
+      req.flash('error', req.t('payment_transaction_not_found'));
+      return res.redirect('/payment/deposit');
+    }
+    if (request.status !== 'pending') {
+      await client.query('ROLLBACK');
+      return res.redirect('/payment/history'); // আগেই IPN দিয়ে ক্রেডিট হয়ে গেছে
+    }
+
+    const verification = await sslcommerz.validatePayment(val_id);
+    const validStatus = verification.status === 'VALID' || verification.status === 'VALIDATED';
+    // অঙ্ক তুলনা সবসময় স্টোর-কারেন্সির (BDT) মানের সাথে — currency_amount নয়।
+    const amountMatches = paymentVerification.amountMatchesRequest(verification, request.amount);
+    const tranMatches = isVerificationForRequest(verification, request);
+    // আগে currency কখনো যাচাই হতো না — অন্য মুদ্রায় সেটল হওয়া ট্রানজেকশনের সংখ্যাগত
+    // তুলনা পাস করে যেতে পারত যদিও আসল মূল্য বহুগুণ কম।
+    const currencyMatches = paymentVerification.isExpectedCurrency(verification);
+
+    if (!validStatus || !amountMatches || !tranMatches || !currencyMatches) {
+      await client.query(
+        `UPDATE payment_requests SET status='rejected', gateway_val_id=$1, gateway_response=$2, updated_at=NOW() WHERE id=$3`,
+        [val_id, JSON.stringify(verification), request.id]
+      );
+      await client.query('COMMIT');
+      req.flash('error', req.t('payment_verification_failed'));
+      return res.redirect('/payment/deposit');
+    }
+
+    await client.query(
+      `UPDATE payment_requests SET gateway_val_id=$1, gateway_response=$2 WHERE id=$3`,
+      [val_id, JSON.stringify(verification), request.id]
+    );
+    await creditApprovedDeposit(client, request);
+    await client.query('COMMIT');
+
+    if (req.session.user) {
+      const u = await pool.query('SELECT coins FROM users WHERE id=$1', [request.user_id]);
+      req.session.user.coins = u.rows[0].coins;
+    }
+    req.flash('success', req.t('payment_deposit_success_amount').replace('{value}', request.amount));
+    res.redirect('/payment/history');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('sslcommerz success error:', err.message);
+    req.flash('error', req.t('payment_error_contact_support'));
+    res.redirect('/payment/deposit');
+  } finally {
+    client.release();
+  }
+});
+
+// fail/cancel কলব্যাক দুটো CSRF-এক্সেম্পট (middleware/csrf.js) এবং /success ও /ipn-এর মতো
+// গেটওয়ে ভ্যালিডেশনও করে না — আগে শুধু tran_id মিললেই pending রিকোয়েস্ট rejected করে দিত।
+// অর্থাৎ কারো tran_id জানা থাকলে (এটা গোপন নয় — গেটওয়েতে যায়, /payment/history-তেও দেখা যায়)
+// সে অন্যের চলমান ডিপোজিট বাতিল করে দিতে পারত। এখন দুই স্তরের যাচাই:
+//   ১) লগইন করা ইউজারের নিজের রিকোয়েস্ট হলে সরাসরি বাতিল করা যায় (user_id দিয়ে স্কোপড),
+//   ২) সেশন না থাকলে (গেটওয়ে সরাসরি সার্ভার-টু-সার্ভার পোস্ট করলে) গেটওয়েতে ভ্যালিডেট করে
+//      নিশ্চিত হওয়া হয় যে পেমেন্টটা আসলেই সফল হয়নি — তবেই rejected করা হয়।
+async function rejectPendingGatewayRequest(req, tranId) {
+  if (!tranId) return false;
+
+  const sessionUserId = req.session && req.session.user ? req.session.user.id : null;
+  if (sessionUserId) {
+    const scoped = await pool.query(
+      `UPDATE payment_requests SET status='rejected', updated_at=NOW()
+       WHERE gateway_tran_id=$1 AND status='pending' AND user_id=$2`,
+      [tranId, sessionUserId]
+    );
+    return scoped.rowCount > 0;
+  }
+
+  const existing = await pool.query(
+    `SELECT id FROM payment_requests WHERE gateway_tran_id=$1 AND status='pending'`,
+    [tranId]
+  );
+  if (!existing.rows[0]) return false;
+
+  // সেশন নেই — গেটওয়ের কাছে যাচাই না করে কিছুতেই স্ট্যাটাস বদলানো হবে না।
+  let verification = null;
+  try {
+    verification = await sslcommerz.validateByTransactionId(tranId);
+  } catch (e) {
+    console.error('sslcommerz fail/cancel validation error:', e.message);
+    return false;
+  }
+  const paidStatus = verification && (verification.status === 'VALID' || verification.status === 'VALIDATED');
+  if (paidStatus) return false; // আসলে পেমেন্ট সফল — /ipn এটাকে ক্রেডিট করবে, এখানে হাত দেওয়া যাবে না
+
+  const updated = await pool.query(
+    `UPDATE payment_requests SET status='rejected', gateway_response=$2, updated_at=NOW()
+     WHERE gateway_tran_id=$1 AND status='pending'`,
+    [tranId, JSON.stringify(verification || {})]
+  );
+  return updated.rowCount > 0;
+}
+
+router.post('/sslcommerz/fail', async (req, res) => {
+  try {
+    await rejectPendingGatewayRequest(req, req.body.tran_id);
+  } catch (e) { console.error('sslcommerz fail error:', e.message); }
+  req.flash('error', req.t('payment_failed'));
+  res.redirect('/payment/deposit');
+});
+
+router.post('/sslcommerz/cancel', async (req, res) => {
+  try {
+    await rejectPendingGatewayRequest(req, req.body.tran_id);
+  } catch (e) { console.error('sslcommerz cancel error:', e.message); }
+  req.flash('error', req.t('payment_cancelled'));
+  res.redirect('/payment/deposit');
+});
+
+// সার্ভার-টু-সার্ভার IPN — ব্যাকআপ হিসেবে, যদি ইউজারের ব্রাউজার success_url এ ফিরে না আসে
+router.post('/sslcommerz/ipn', async (req, res) => {
+  const { tran_id, val_id } = req.body;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await client.query(
+      `SELECT * FROM payment_requests WHERE gateway_tran_id=$1 FOR UPDATE`, [tran_id]
+    );
+    const request = result.rows[0];
+    if (!request || request.status !== 'pending') {
+      await client.query('ROLLBACK');
+      return res.sendStatus(200);
+    }
+
+    const verification = await sslcommerz.validatePayment(val_id);
+    const validStatus = verification.status === 'VALID' || verification.status === 'VALIDATED';
+    // অঙ্ক তুলনা সবসময় স্টোর-কারেন্সির (BDT) মানের সাথে — currency_amount নয়।
+    const amountMatches = paymentVerification.amountMatchesRequest(verification, request.amount);
+    const tranMatches = isVerificationForRequest(verification, request);
+    // আগে currency কখনো যাচাই হতো না — অন্য মুদ্রায় সেটল হওয়া ট্রানজেকশনের সংখ্যাগত
+    // তুলনা পাস করে যেতে পারত যদিও আসল মূল্য বহুগুণ কম।
+    const currencyMatches = paymentVerification.isExpectedCurrency(verification);
+
+    if (validStatus && amountMatches && tranMatches && currencyMatches) {
+      await client.query(
+        `UPDATE payment_requests SET gateway_val_id=$1, gateway_response=$2 WHERE id=$3`,
+        [val_id, JSON.stringify(verification), request.id]
+      );
+      await creditApprovedDeposit(client, request);
+    }
+    await client.query('COMMIT');
+    res.sendStatus(200);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('sslcommerz ipn error:', err.message);
+    // IPN হলো ব্রাউজার success_url-এ ফিরে না এলে ব্যাকআপ ডেলিভারি পথ (উপরের কমেন্ট দ্রষ্টব্য)।
+    // আগে এখানে সবসময় 200 রিটার্ন হতো — অভ্যন্তরীণ ব্যর্থতাতেও (DB এরর, গেটওয়ে timeout) —
+    // ফলে SSLCommerz সেটাকে "ডেলিভারড" ধরে নিয়ে আর রিট্রাই করত না, আর যে ডিপোজিট আসলে
+    // সফল হয়েছিল সেটা চিরস্থায়ীভাবে pending থেকে যেতে পারত। এখন শুধু "কিছু করার নেই"
+    // কেসগুলোতেই (রিকোয়েস্ট নেই / ইতিমধ্যে প্রসেসড — try ব্লকের প্রথম দিকে) 200 যায়;
+    // সত্যিকারের অভ্যন্তরীণ ব্যর্থতায় 500 যায় যাতে গেটওয়ে তার নিজস্ব রিট্রাই নীতি অনুযায়ী আবার পাঠায়।
+    res.sendStatus(500);
+  } finally {
+    client.release();
+  }
 });
 
 router.creditApprovedDeposit = creditApprovedDeposit;

@@ -3,6 +3,9 @@ const router = express.Router();
 const { pool } = require('../db');
 const { isAuth } = require('../middleware/auth');
 const { requireFeature } = require('../middleware/featureGate');
+// রেফারেল/শেয়ার লিংক ক্লায়েন্টের Host হেডার থেকে বানানো হয় না —
+// utils/publicUrl.js-এর নোট দ্রষ্টব্য (Host header poisoning)।
+const { getBaseUrl } = require('../utils/publicUrl');
 const { revokeAllOtherSessions, revokeDeviceSession, listLoginHistory } = require('../services/deviceTracking');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
@@ -103,7 +106,7 @@ router.get('/', isAuth, async (req, res) => {
     // করত, catch ব্লক ধরত, আর ইউজারকে flash এরর সহ হোমে ফেরত পাঠাত। যাচাই করে
     // দেখা গেছে views/profile/index.ejs টেমপ্লেট এই তিনটার একটাও ব্যবহার করে না,
     // তাই মৃত কোড হিসেবে বাদ দেওয়া হলো।
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const baseUrl = getBaseUrl(req);
     res.render('profile/index', {
       user: user.rows[0],
       profileUser: user.rows[0],
@@ -619,7 +622,7 @@ router.get('/api/vip-progress', isAuth, requireFeature('vip'), async (req, res) 
 router.get('/referral', isAuth, requireFeature('referral'), async (req, res) => {
   try {
     const stats = await getReferralStats(req.session.user.id);
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const baseUrl = getBaseUrl(req);
     res.render('profile/referral', {
       user: req.session.user,
       referralCount: stats.totalReferrals,
@@ -628,7 +631,7 @@ router.get('/referral', isAuth, requireFeature('referral'), async (req, res) => 
     });
   } catch (err) {
     console.error('referral page error:', err.message);
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const baseUrl = getBaseUrl(req);
     res.render('profile/referral', {
       user: req.session.user,
       referralCount: 0,
@@ -878,11 +881,11 @@ router.post('/periodic/monthly', isAuth, async (req, res) => {
 router.get('/share', isAuth, async (req, res) => {
   try {
     const share = await getShareStatus(req.session.user.id);
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const baseUrl = getBaseUrl(req);
     res.render('profile/share', { user: req.session.user, share, baseUrl });
   } catch (err) {
     console.error('share page error:', err.message);
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const baseUrl = getBaseUrl(req);
     res.render('profile/share', { user: req.session.user, share: null, baseUrl });
   }
 });
