@@ -117,8 +117,8 @@ const cspDirectives = {
   // আমাদের প্রতিটা পেজে ইচ্ছেমতো JS চালাতে পারত।
   // www.chatbase.co — views/index.ejs-এর সাপোর্ট-চ্যাট উইজেট। বুটস্ট্র্যাপ
   // স্নিপেটটা রানটাইমে <script src="https://www.chatbase.co/embed.min.js">
-  // যোগ করে; origin-টা এখানে না থাকলে nonce দেওয়া সত্ত্বেও ব্রাউজার ওই
-  // বাইরের ফাইলটা ব্লক করত, অর্থাৎ উইজেটটা কখনোই লোড হতো না।
+  // যোগ করে; origin-টা এখানে না থাকলে ব্রাউজার সেটা ব্লক করত, অর্থাৎ
+  // উইজেটটা কখনোই লোড হতো না।
   scriptSrc: ["'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://www.chatbase.co"],
   // ইনলাইন ইভেন্ট হ্যান্ডলার সম্পূর্ণ নিষিদ্ধ — এখন প্রয়োগ করা নীতিতেই।
   //

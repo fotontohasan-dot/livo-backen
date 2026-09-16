@@ -305,6 +305,18 @@
 
 </div>
 
+<script nonce="<%= cspNonce %>">
+  document.addEventListener('DOMContentLoaded', function () {
+    var editBtn = document.getElementById('avatarEditBtn');
+    var fileInput = document.getElementById('avatarInput');
+    var form = document.getElementById('avatarForm');
+    if (!editBtn || !fileInput || !form) return;
+    editBtn.addEventListener('click', function () { fileInput.click(); });
+    fileInput.addEventListener('change', function () {
+      if (fileInput.files && fileInput.files.length > 0) form.submit();
+    });
+  });
+</script>
 <div class="rs2-41" id="copyToast"></div>
 <script type="application/json" id="profileConfig"><%- jsonScriptSafe({ uid: 100000 + user.id, siteName: siteName, locale: lang === "bn" ? "bn-BD" : "en-US" }) %></script>
 

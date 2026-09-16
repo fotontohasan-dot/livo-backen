@@ -101,10 +101,22 @@ async function getStreak(userId) {
     [userId]
   )).rows;
 
+  // views/profile/streak.ejs মাইলস্টোনের তালিকা আর পরের মাইলস্টোনের গুণক
+  // দুটোই রেন্ডার করে। ফিক্সড-বোনাস নিয়ম থেকে ডায়নামিক নিয়মে যাওয়ার সময়
+  // এই দুটো ফিল্ড বাদ পড়ে গিয়েছিল, ফলে `streak.milestones.forEach` undefined-এ
+  // throw করত এবং /profile/streak সবসময় ৫০০ দিত। এখন বর্তমান নিয়ম থেকেই
+  // ডেরাইভ করা হচ্ছে — প্রতি STREAK_INTERVAL জয়ে বাজির STREAK_PERCENT অংশ।
+  const milestones = [1, 2, 3, 4, 5].map((i) => ({
+    streak: i * STREAK_INTERVAL,
+    multiplier: STREAK_PERCENT
+  }));
+
   return {
     current,
     best,
     nextMilestone: next,
+    nextMultiplier: STREAK_PERCENT,
+    milestones,
     nextBonusNote: `বাজির ২০% (সর্বনিম্ন ${STREAK_MIN_BONUS}, সর্বোচ্চ ${STREAK_MAX_BONUS} কয়েন)`,
     interval: STREAK_INTERVAL,
     minBonus: STREAK_MIN_BONUS,
