@@ -1,91 +1,133 @@
 <%- include('../partials/head') %>
+<style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Class selectors are repeated so the generated rules keep
+     the specificity the inline declarations had, without !important —
+     JS-set element.style still wins. */
+  .rs1-1.rs1-1.rs1-1 { padding: 16px; padding-bottom: 100px; }
+  .rs1-2.rs1-2.rs1-2 { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .rs1-3.rs1-3.rs1-3 { color: #fff; text-decoration: none; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .rs1-4.rs1-4.rs1-4 { color: #fff; font-size: 20px; font-weight: 800; letter-spacing: 0.5px; }
+  .rs1-5.rs1-5.rs1-5 { display: flex; gap: 10px; margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 5px; border-radius: 12px; border: 1px solid var(--border-glass); }
+  .rs1-6.rs1-6.rs1-6 { flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s; }
+  .rs1-7.rs1-7.rs1-7 { background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px; }
+  .rs1-8.rs1-8.rs1-8 { color: var(--gold); font-size: 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+  .rs1-9.rs1-9.rs1-9 { display: flex; flex-direction: column; gap: 15px; }
+  .rs1-10.rs1-10.rs1-10 { color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px; }
+  .rs1-11.rs1-11.rs1-11 { width: 100%; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 15px; color: rgba(255,255,255,0.5); font-size: 14px; }
+  .rs1-12.rs1-12.rs1-12 { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none; }
+  .rs1-13.rs1-13.rs1-13 { margin-top: 10px; border-radius: 12px; padding: 14px; font-weight: 800; }
+  .rs1-14.rs1-14.rs1-14 { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+  .rs1-15.rs1-15.rs1-15 { color: #fff; font-size: 14px; font-weight: 600; }
+  .rs1-16.rs1-16.rs1-16 { color: var(--text-muted); font-size: 12px; }
+  .rs1-17.rs1-17.rs1-17 { background: rgba(239, 68, 68, 0.1); border: none; width: 32px; height: 32px; border-radius: 8px; color: #ef4444; cursor: pointer; }
+  .rs1-18.rs1-18.rs1-18 { text-align: center; padding: 40px 20px; background: rgba(255,255,255,0.02); border-radius: 16px; margin-bottom: 25px; border: 1px dashed var(--border-glass); }
+  .rs1-19.rs1-19.rs1-19 { font-size: 40px; color: var(--text-muted); margin-bottom: 15px; }
+  .rs1-20.rs1-20.rs1-20 { color: var(--text-muted); font-size: 13px; }
+  .rs1-21.rs1-21.rs1-21 { border-top: 1px solid var(--border-glass); padding-top: 25px; }
+  .rs1-22.rs1-22.rs1-22 { color: #fff; font-size: 14px; margin-bottom: 15px; }
+  .rs1-23.rs1-23.rs1-23 { display: flex; flex-direction: column; gap: 12px; }
+  .rs1-24.rs1-24.rs1-24 { background: #121212; }
+  .rs1-25.rs1-25.rs1-25 { margin-top: 5px; border-radius: 12px; padding: 14px; font-weight: 800; background: var(--grad-gold); color: #000; }
+  .rs1-26.rs1-26.rs1-26 { background: var(--bg-card); border-radius: 20px; padding: 20px; border: 1px solid var(--border-glass); margin-top: 20px; margin-bottom: 20px; }
+  .rs1-27.rs1-27.rs1-27 { display: flex; justify-content: space-between; align-items: center; text-decoration: none; }
+  .rs1-28.rs1-28.rs1-28 { display: flex; align-items: center; gap: 12px; }
+  .rs1-29.rs1-29.rs1-29 { width: 40px; height: 40px; border-radius: 50%; background: rgba(245,158,11,0.12); display: flex; align-items: center; justify-content: center; color: var(--gold); }
+  .rs1-30.rs1-30.rs1-30 { color: var(--text-main); font-size: 13px; font-weight: 700; }
+  .rs1-31.rs1-31.rs1-31 { color: var(--text-muted); font-size: 11px; margin-top: 2px; }
+  .rs1-32.rs1-32.rs1-32 { color: var(--text-muted); }
+  .rs1-33.rs1-33.rs1-33 { background: var(--bg-card); border-radius: 20px; padding: 20px; border: 1px solid var(--border-glass); margin-top: 20px; }
+  .rs1-34.rs1-34.rs1-34 { color: var(--gold); font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
+  .rs1-35.rs1-35.rs1-35 { margin-bottom: 15px; }
+  .rs1-36.rs1-36.rs1-36 { border-radius: 12px; padding: 14px; font-weight: 800; }
+</style>
 
-<div class="container" style="padding: 16px; padding-bottom: 100px;">
-  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
-    <a href="/profile" style="color: #fff; text-decoration: none; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+<div class="container rs1-1">
+  <div class="rs1-2">
+    <a class="rs1-3" href="/profile">
       <i class="fas fa-chevron-left"></i>
     </a>
-    <h1 style="color: #fff; font-size: 20px; font-weight: 800; letter-spacing: 0.5px;"><%= t.security_settings_title %></h1>
+    <h1 class="rs1-4"><%= t.security_settings_title %></h1>
   </div>
 
   <%- include('../partials/flash') %>
 
   <!-- Tab Buttons -->
-  <div style="display: flex; gap: 10px; margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 5px; border-radius: 12px; border: 1px solid var(--border-glass);">
-    <button id="btn-personal" class="sec-tab active" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;"><%= t.personal_info %></button>
-    <button id="btn-bank" class="sec-tab" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;"><%= t.menu_withdraw %></button>
-    <button id="btn-security" class="sec-tab" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s;"><%= t.security %></button>
+  <div class="rs1-5">
+    <button id="btn-personal" class="sec-tab active rs1-6"><%= t.personal_info %></button>
+    <button id="btn-bank" class="sec-tab rs1-6"><%= t.menu_withdraw %></button>
+    <button id="btn-security" class="sec-tab rs1-6"><%= t.security %></button>
   </div>
 
   <!-- Personal Information Tab -->
   <div id="tab-personal" class="sec-content">
-    <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
-      <h3 style="color: var(--gold); font-size: 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+    <div class="rs1-7">
+      <h3 class="rs1-8">
         <i class="fas fa-id-card"></i> <%= t.personal_info %>
       </h3>
-      <form action="/profile/update-personal" method="POST" style="display: flex; flex-direction: column; gap: 15px;">
+      <form class="rs1-9" action="/profile/update-personal" method="POST">
         <div>
-          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.username_fixed %></label>
-          <input type="text" value="<%= user.username %>" disabled style="width: 100%; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 15px; color: rgba(255,255,255,0.5); font-size: 14px;">
+          <label class="rs1-10"><%= t.username_fixed %></label>
+          <input class="rs1-11" type="text" value="<%= user.username %>" disabled>
         </div>
         <div>
-          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.email %></label>
-          <input type="email" value="<%= user.email %>" disabled style="width: 100%; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 15px; color: rgba(255,255,255,0.5); font-size: 14px;">
+          <label class="rs1-10"><%= t.email %></label>
+          <input class="rs1-11" type="email" value="<%= user.email %>" disabled>
         </div>
         <div>
-          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.full_name %></label>
+          <label class="rs1-10"><%= t.full_name %></label>
           <input type="text" name="full_name" value="<%= user.full_name || '' %>" placeholder="<%= t.full_name_placeholder %>" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none; border-color: <%= user.full_name ? 'var(--border-glass)' : 'rgba(245, 158, 11, 0.3)' %>;">
         </div>
         <div>
-          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.phone %></label>
-          <input type="text" name="phone" value="<%= user.phone || '' %>" placeholder="01XXXXXXXXX" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
+          <label class="rs1-10"><%= t.phone %></label>
+          <input class="rs1-12" type="text" name="phone" value="<%= user.phone || '' %>" placeholder="01XXXXXXXXX">
         </div>
-        <button type="submit" class="btn btn-primary" style="margin-top: 10px; border-radius: 12px; padding: 14px; font-weight: 800;"><%= t.update_info %></button>
+        <button type="submit" class="btn btn-primary rs1-13"><%= t.update_info %></button>
       </form>
     </div>
   </div>
 
   <!-- Bank Card Tab -->
   <div id="tab-bank" class="sec-content" style="display: none;">
-    <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
-      <h3 style="color: var(--gold); font-size: 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+    <div class="rs1-7">
+      <h3 class="rs1-8">
         <i class="fas fa-credit-card"></i> <%= t.bank_cards_wallets %>
       </h3>
       <% if (bankCards && bankCards.length > 0) { %>
         <% bankCards.forEach(card => { %>
-          <div style="background: rgba(255,255,255,0.03); border-radius: 12px; padding: 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+          <div class="rs1-14">
             <div>
-              <div style="color: #fff; font-size: 14px; font-weight: 600;"><%= card.bank_name %></div>
-              <div style="color: var(--text-muted); font-size: 12px;"><%= card.account_number %></div>
+              <div class="rs1-15"><%= card.bank_name %></div>
+              <div class="rs1-16"><%= card.account_number %></div>
             </div>
             <form action="/profile/delete-bank-card/<%= card.id %>" method="POST" class="delete-card-form" data-confirm-msg="<%= t.delete_card_confirm %>">
-              <button type="submit" style="background: rgba(239, 68, 68, 0.1); border: none; width: 32px; height: 32px; border-radius: 8px; color: #ef4444; cursor: pointer;">
+              <button class="rs1-17" type="submit">
                 <i class="fas fa-trash-alt"></i>
               </button>
             </form>
           </div>
         <% }) %>
       <% } else { %>
-        <div style="text-align: center; padding: 40px 20px; background: rgba(255,255,255,0.02); border-radius: 16px; margin-bottom: 25px; border: 1px dashed var(--border-glass);">
-          <i class="fas fa-university" style="font-size: 40px; color: var(--text-muted); margin-bottom: 15px;"></i>
-          <p style="color: var(--text-muted); font-size: 13px;"><%= t.no_cards_msg %></p>
+        <div class="rs1-18">
+          <i class="fas fa-university rs1-19"></i>
+          <p class="rs1-20"><%= t.no_cards_msg %></p>
         </div>
       <% } %>
 
       <!-- Add Card Form -->
-      <div style="border-top: 1px solid var(--border-glass); padding-top: 25px;">
-        <h4 style="color: #fff; font-size: 14px; margin-bottom: 15px;"><%= t.add_new_card %></h4>
-        <form action="/profile/add-bank-card" method="POST" style="display: flex; flex-direction: column; gap: 12px;">
-          <select name="bank_name" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
-            <option value="" style="background: #121212;"><%= t.select_payment_method %></option>
-            <option value="bKash" style="background: #121212;">bKash</option>
-            <option value="Nagad" style="background: #121212;">Nagad</option>
-            <option value="Rocket" style="background: #121212;">Rocket</option>
-            <option value="Bank Account" style="background: #121212;">Local Bank</option>
+      <div class="rs1-21">
+        <h4 class="rs1-22"><%= t.add_new_card %></h4>
+        <form class="rs1-23" action="/profile/add-bank-card" method="POST">
+          <select class="rs1-12" name="bank_name" required>
+            <option class="rs1-24" value=""><%= t.select_payment_method %></option>
+            <option class="rs1-24" value="bKash">bKash</option>
+            <option class="rs1-24" value="Nagad">Nagad</option>
+            <option class="rs1-24" value="Rocket">Rocket</option>
+            <option class="rs1-24" value="Bank Account">Local Bank</option>
           </select>
-          <input type="text" name="account_number" placeholder="<%= t.account_number_placeholder_alt %>" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
-          <input type="text" name="holder_name" placeholder="<%= t.holder_name_placeholder %>" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
-          <button type="submit" class="btn btn-secondary" style="margin-top: 5px; border-radius: 12px; padding: 14px; font-weight: 800; background: var(--grad-gold); color: #000;"><%= t.add_card_btn %></button>
+          <input class="rs1-12" type="text" name="account_number" placeholder="<%= t.account_number_placeholder_alt %>" required>
+          <input class="rs1-12" type="text" name="holder_name" placeholder="<%= t.holder_name_placeholder %>" required>
+          <button type="submit" class="btn btn-secondary rs1-25"><%= t.add_card_btn %></button>
         </form>
       </div>
     </div>
@@ -93,57 +135,57 @@
 
   <!-- Security Tab -->
   <div id="tab-security" class="sec-content" style="display: none;">
-    <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
-      <h3 style="color: var(--gold); font-size: 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+    <div class="rs1-7">
+      <h3 class="rs1-8">
         <i class="fas fa-lock"></i> <%= t.change_password_title %>
       </h3>
-      <form action="/profile/change-password" method="POST" style="display: flex; flex-direction: column; gap: 15px;">
+      <form class="rs1-9" action="/profile/change-password" method="POST">
         <div>
-          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.current_password %></label>
-          <input type="password" name="currentPassword" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
+          <label class="rs1-10"><%= t.current_password %></label>
+          <input class="rs1-12" type="password" name="currentPassword" required>
         </div>
         <div>
-          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.new_password %></label>
-          <input type="password" name="newPassword" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
+          <label class="rs1-10"><%= t.new_password %></label>
+          <input class="rs1-12" type="password" name="newPassword" required>
         </div>
         <div>
-          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;"><%= t.confirm_new_password %></label>
-          <input type="password" name="confirmPassword" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
+          <label class="rs1-10"><%= t.confirm_new_password %></label>
+          <input class="rs1-12" type="password" name="confirmPassword" required>
         </div>
-        <button type="submit" class="btn btn-primary" style="margin-top: 10px; border-radius: 12px; padding: 14px; font-weight: 800;"><%= t.change_password_btn %></button>
+        <button type="submit" class="btn btn-primary rs1-13"><%= t.change_password_btn %></button>
       </form>
     </div>
   </div>
 
   <!-- Recent login activity — links out to the full login history page -->
-  <div style="background: var(--bg-card); border-radius: 20px; padding: 20px; border: 1px solid var(--border-glass); margin-top: 20px; margin-bottom: 20px;">
-    <a href="/profile/login-history" style="display: flex; justify-content: space-between; align-items: center; text-decoration: none;">
-      <div style="display: flex; align-items: center; gap: 12px;">
-        <div style="width: 40px; height: 40px; border-radius: 50%; background: rgba(245,158,11,0.12); display: flex; align-items: center; justify-content: center; color: var(--gold);">
+  <div class="rs1-26">
+    <a class="rs1-27" href="/profile/login-history">
+      <div class="rs1-28">
+        <div class="rs1-29">
           <i class="fas fa-desktop"></i>
         </div>
         <div>
-          <div style="color: var(--text-main); font-size: 13px; font-weight: 700;"><%= t.login_history_title %></div>
-          <div style="color: var(--text-muted); font-size: 11px; margin-top: 2px;">ডিভাইস, IP ও সময় দেখুন</div>
+          <div class="rs1-30"><%= t.login_history_title %></div>
+          <div class="rs1-31">ডিভাইস, IP ও সময় দেখুন</div>
         </div>
       </div>
-      <i class="fas fa-chevron-right" style="color: var(--text-muted);"></i>
+      <i class="fas fa-chevron-right rs1-32"></i>
     </a>
   </div>
 
   <!-- Withdraw PIN (separate from login password; verified on every withdrawal) -->
-  <div style="background: var(--bg-card); border-radius: 20px; padding: 20px; border: 1px solid var(--border-glass); margin-top: 20px;">
-    <div style="color: var(--gold); font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;">🔒 Withdraw PIN</div>
+  <div class="rs1-33">
+    <div class="rs1-34">🔒 Withdraw PIN</div>
     <form action="/profile/security/withdraw-pin" method="POST">
-      <div style="margin-bottom: 15px;">
-        <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;">নতুন ৬-ডিজিট পিন</label>
-        <input type="password" name="new_pin" maxlength="6" pattern="\d{6}" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
+      <div class="rs1-35">
+        <label class="rs1-10">নতুন ৬-ডিজিট পিন</label>
+        <input class="rs1-12" type="password" name="new_pin" maxlength="6" pattern="\d{6}" required>
       </div>
-      <div style="margin-bottom: 15px;">
-        <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;">পিন নিশ্চিত করুন</label>
-        <input type="password" name="confirm_pin" maxlength="6" pattern="\d{6}" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
+      <div class="rs1-35">
+        <label class="rs1-10">পিন নিশ্চিত করুন</label>
+        <input class="rs1-12" type="password" name="confirm_pin" maxlength="6" pattern="\d{6}" required>
       </div>
-      <button type="submit" class="btn btn-primary" style="border-radius: 12px; padding: 14px; font-weight: 800;">পিন সেট করুন</button>
+      <button type="submit" class="btn btn-primary rs1-36">পিন সেট করুন</button>
     </form>
   </div>
 
