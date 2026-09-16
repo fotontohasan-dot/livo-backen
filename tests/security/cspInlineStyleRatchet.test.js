@@ -69,7 +69,10 @@ const path = require('path');
 // জেতে)। যেসব style ডায়নামিক (`<%= %>`) বা JS-এর show/hide টগল
 // (`display:none`), সেগুলো ইচ্ছাকৃতভাবে ইনলাইনই রাখা হয়েছে।
 // 70   (এই কমিট) → রিগ্রেশন করা ৪+২টা ভিউ পুনরায় মাইগ্রেট (227 → 70)
-const MAX_INLINE_STYLES = 70;
+// 67   (এই কমিট) → profile/security.ejs পুনরুদ্ধারের সময় বাকি সাতটা
+//      শর্তনির্ভর ইনলাইন style ক্লাস-নামে সরানো হলো (রঙের বদলে ক্লাস
+//      টগল হয়), তাই ঘোষণাগুলো আর ইনলাইন থাকার দরকার নেই।
+const MAX_INLINE_STYLES = 67;
 
 const ROOT = path.join(__dirname, '..', '..');
 const SCAN_DIRS = ['views', 'public'];
