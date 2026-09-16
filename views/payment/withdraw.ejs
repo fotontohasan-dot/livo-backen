@@ -1,5 +1,17 @@
 <%- include('../partials/head') %>
 <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Class selectors are repeated so the generated rules keep
+     the specificity the inline declarations had, without !important —
+     JS-set element.style still wins. */
+  .rt2-1.rt2-1.rt2-1 { background:#E6007E; }
+  .rt2-2.rt2-2.rt2-2 { background:#F7931A; }
+  .rt2-3.rt2-3.rt2-3 { font-size:40px; opacity:0.2; margin-bottom:8px; }
+  .rt2-4.rt2-4.rt2-4 { margin-top:10px; }
+  .rt2-5.rt2-5.rt2-5 { color:#fbbf24; }
+  .rt2-6.rt2-6.rt2-6 { color:#60a5fa; }
+</style>
+<style nonce="<%= cspNonce %>">
   @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap');
 
   body { background-color: var(--bg-dark) !important; color: var(--text-main) !important; font-family: 'Hind Siliguri', sans-serif; }
@@ -57,10 +69,10 @@
 
   <div class="wd-tabs">
     <div class="wd-tab active" id="tabEwallet">
-      <span class="dot" style="background:#E6007E;">e</span> E wallet
+      <span class="dot rt2-1">e</span> E wallet
     </div>
     <div class="wd-tab" id="tabCrypto">
-      <span class="dot" style="background:#F7931A;">₿</span> ক্রিপ্টো ওয়ালেট
+      <span class="dot rt2-2">₿</span> ক্রিপ্টো ওয়ালেট
     </div>
   </div>
 
@@ -77,13 +89,13 @@
             <div class="ic"><i class="fas fa-wallet"></i></div>
             <div><b><%= c.bank_name %></b><small><%= c.account_number %></small></div>
           </div>
-          <form action="/profile/cards/delete/<%= c.id %>" method="POST" class="card-delete-form">
+          <form action="/profile/cards/delete/<%= c.id %>" method="POST" class="card-delete-form" data-confirm="<%= t('wd_confirm_delete') %>">
             <button type="submit" class="del"><i class="far fa-times-circle"></i></button>
           </form>
         </div>
       <% }) %>
     <% } else { %>
-      <div class="empty-wallet"><i class="fas fa-wallet" style="font-size:40px; opacity:0.2; margin-bottom:8px;"></i><span>খালি ই-ওয়ালেট</span></div>
+      <div class="empty-wallet"><i class="fas fa-wallet rt2-3"></i><span>খালি ই-ওয়ালেট</span></div>
     <% } %>
   </div>
 
@@ -96,13 +108,13 @@
             <div class="ic"><i class="fab fa-bitcoin"></i></div>
             <div><b><%= c.bank_name %></b><small><%= c.account_number %></small></div>
           </div>
-          <form action="/profile/cards/delete/<%= c.id %>" method="POST" class="card-delete-form">
+          <form action="/profile/cards/delete/<%= c.id %>" method="POST" class="card-delete-form" data-confirm="<%= t('wd_confirm_delete') %>">
             <button type="submit" class="del"><i class="far fa-times-circle"></i></button>
           </form>
         </div>
       <% }) %>
     <% } else { %>
-      <div class="empty-wallet"><i class="fab fa-bitcoin" style="font-size:40px; opacity:0.2; margin-bottom:8px;"></i><span>খালি ওয়ালেট তালিকা</span></div>
+      <div class="empty-wallet"><i class="fab fa-bitcoin rt2-3"></i><span>খালি ওয়ালেট তালিকা</span></div>
     <% } %>
   </div>
 
@@ -114,50 +126,73 @@
     <p class="muted">দৈনিক উত্তোলন ৯৯,৯৯৯ (বার), অবশিষ্ট উত্তোলন ৯৯,৯৯৯ (বার)</p>
     <p class="muted">প্রধান ওয়ালেট :৳ <span id="mainWalletAmt"><%= (coins || 0).toFixed(2) %></span></p>
     <p class="muted">উপলব্ধ পরিমাণ : ৳ <span id="availableAmt"><%= (coins || 0).toFixed(2) %></span></p>
-    <button type="button" id="refreshBalanceBtn" class="refresh-btn"><i class="fas fa-sync-alt"></i> আপনার ব্যালেন্স রিফ্রেশ করুন</button>
-    <button id="refreshBalanceBtn" class="refresh-btn"><i class="fas fa-sync-alt" id="refreshIcon"></i> আপনার ব্যালেন্স রিফ্রেশ করুন</button>
+    <button type="button" id="refreshBalanceBtn" class="refresh-btn"><i class="fas fa-sync-alt" id="refreshIcon"></i> আপনার ব্যালেন্স রিফ্রেশ করুন</button>
   </div>
 
+  <%
+    // সাবমিট বোতামের গেট। তিনটে শর্তের যেকোনো একটাতেই ফর্ম পাঠানো অর্থহীন,
+    // কারণ সার্ভার নিশ্চিতভাবে বাতিল করবে: উইথড্র উইন্ডো বন্ধ, PIN সেট নেই,
+    // অথবা কোনো সংরক্ষিত কার্ড/ওয়ালেট নেই (টাকা পাঠানোর গন্তব্যই নেই)।
+    const windowClosed = typeof withdrawalWindow !== 'undefined' && withdrawalWindow && !withdrawalWindow.open;
+    const noDestination = !((cards && cards.length) || (cryptoCards && cryptoCards.length));
+    const formGated = windowClosed || !hasWithdrawPin || noDestination;
+  %>
   <% if (!hasWithdrawPin) { %>
-    <div class="instr" style="margin-top:10px;">
-      <p style="color:#fbbf24;">⚠️ উত্তোলনের আগে আপনার Withdraw PIN সেট করুন — <a href="/profile/security" style="color:#60a5fa;">এখানে সেট করুন</a></p>
+    <div class="instr rt2-4" id="pinNotConfiguredNotice">
+      <p class="rt2-5">⚠️ উত্তোলনের আগে আপনার Withdraw PIN সেট করুন — <a class="rt2-6" href="/profile/security">এখানে সেট করুন</a></p>
     </div>
   <% } %>
 
-  <form action="/payment/withdraw" method="POST" style="margin-top:10px;">
+  <form class="rt2-4" action="/payment/withdraw" method="POST" id="withdrawForm"
+        data-loading-target="withdrawSubmitBtn" data-loading-label="<%= t('awd_sending') %>"
+        data-confirm="<%= t('withdraw_submit_confirm') %>">
+    <%
+      // গন্তব্য শুধু সংরক্ষিত ওয়ালেট থেকেই বাছা যায়। আগে এখানে একটা খোলা
+      // method dropdown আর হাতে-টাইপ করা account_number ছিল — অর্থাৎ
+      // /profile/cards-এ যাচাই করা ওয়ালেটের বাইরে যেকোনো নম্বরে টাকা
+      // পাঠানোর রিকোয়েস্ট করা যেত, আর টাইপো ধরার কোনো উপায় ছিল না।
+      const withdrawWallets = [].concat(cards || [], cryptoCards || []);
+    %>
     <div class="field-group">
-      <label>পেমেন্ট মেথড</label>
-      <select name="method" required>
-        <option value="bkash">bKash</option>
-        <option value="nagad">Nagad</option>
-        <option value="rocket">Rocket</option>
-        <option value="upay">Upay</option>
-        <option value="bank"><%= t.bank_transfer %></option>
-        <option value="crypto">USDT (TRC20)</option>
+      <label><%= t.select_ewallet %></label>
+      <select id="walletSelect" name="wallet_id" required data-sync-wallet>
+        <option value="" disabled<%= withdrawWallets.length ? '' : ' selected' %>><%= t.choose_linked_wallet %></option>
+        <% withdrawWallets.forEach(function (c, i) {
+             const bn = (c.bank_name || '').toLowerCase();
+             let methodCode = 'bank';
+             if (c.wallet_kind === 'crypto') methodCode = 'crypto';
+             else if (bn.includes('bkash')) methodCode = 'bkash';
+             else if (bn.includes('nagad')) methodCode = 'nagad';
+             else if (bn.includes('rocket')) methodCode = 'rocket';
+             else if (bn.includes('upay')) methodCode = 'upay';
+        %>
+          <option value="<%= c.id %>" data-method="<%= methodCode %>" data-number="<%= c.account_number %>"<%= i === 0 ? ' selected' : '' %>>
+            <%= c.bank_name %> — <%= c.account_number %>
+          </option>
+        <% }) %>
       </select>
     </div>
+
+    <%# সার্ভারে এই দুটোই যায়; ইউজার নিজে টাইপ করতে পারে না। %>
+    <input type="hidden" name="method" id="methodField">
+    <input type="hidden" name="account_number" id="accountNumberField">
 
     <div class="field-group">
       <label>পরিমাণ (১০০ ~ ৫০,০০০)</label>
       <input type="number" name="amount" placeholder="টাকার পরিমাণ লিখুন" min="100" max="50000" required>
     </div>
 
-    <div class="field-group">
-      <label>আপনার নম্বর</label>
-      <input type="text" name="account_number" placeholder="01XXXXXXXXX" required>
-    </div>
-
     <div class="field-group field-with-icon">
       <label>লেনদেন পাসওয়ার্ড</label>
       <input type="password" id="secPassword" name="password" placeholder="লেনদেন পাসওয়ার্ড" required>
-      <button type="button" class="toggle-eye" id="toggleEye1"><i class="fas fa-eye-slash" id="eye1"></i></button>
+      <button type="button" class="toggle-eye" data-reveal-field="secPassword" data-reveal-icon="eyeIcon"><i class="fas fa-eye-slash" id="eyeIcon"></i></button>
     </div>
 
     <% if (hasWithdrawPin) { %>
       <div class="field-group field-with-icon">
         <label>Withdraw PIN</label>
-        <input type="password" id="secPin" name="withdraw_pin" maxlength="6" placeholder="আপনার ৬-ডিজিট Withdraw PIN দিন" required>
-        <button type="button" class="toggle-eye" id="toggleEye2"><i class="fas fa-eye-slash" id="eye2"></i></button>
+        <input type="password" id="withdrawPinField" name="withdraw_pin" inputmode="numeric" pattern="\d{6}" maxlength="6" minlength="6" autocomplete="off" placeholder="আপনার ৬-ডিজিট Withdraw PIN দিন" required>
+        <button type="button" class="toggle-eye" data-reveal-field="withdrawPinField" data-reveal-icon="withdrawPinEye"><i class="fas fa-eye-slash" id="withdrawPinEye"></i></button>
       </div>
       <p class="pin-note">🛈 প্রতিটি উত্তোলনের আগে আপনার Withdraw PIN যাচাই করা হবে।</p>
     <% } %>
@@ -169,91 +204,18 @@
       </div>
     <% } %>
 
-    <button type="submit" id="withdrawSubmitBtn" class="submit-btn"<% if (typeof withdrawalWindow !== 'undefined' && withdrawalWindow && !withdrawalWindow.open) { %> disabled<% } %>>উত্তোলন করুন</button>
+    <% if (noDestination) { %>
+      <div class="rounded-msg-box dep-section" role="alert" id="noCardNotice">
+        <i class="fas fa-triangle-exclamation"></i>
+        <%= t('withdraw_no_saved_card') %>
+      </div>
+    <% } %>
+
+    <button type="submit" id="withdrawSubmitBtn" class="submit-btn"<% if (formGated) { %> disabled<% } %>>উত্তোলন করুন</button>
   </form>
 </div>
 
-<script nonce="<%= cspNonce %>">
-  function togglePwd(inputId, iconId) {
-    var el = document.getElementById(inputId);
-    var icon = document.getElementById(iconId);
-    if (el.type === 'password') { el.type = 'text'; icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); }
-    else { el.type = 'password'; icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); }
-  }
-  function switchTab(tab) {
-    document.getElementById('tabEwallet').classList.toggle('active', tab === 'ewallet');
-    document.getElementById('tabCrypto').classList.toggle('active', tab === 'crypto');
-    document.getElementById('panelEwallet').style.display = tab === 'ewallet' ? 'block' : 'none';
-    document.getElementById('panelCrypto').style.display = tab === 'crypto' ? 'block' : 'none';
-  }
-
-  document.addEventListener('DOMContentLoaded', function(){
-    document.getElementById('tabEwallet').addEventListener('click', function(){ switchTab('ewallet'); });
-    document.getElementById('tabCrypto').addEventListener('click', function(){ switchTab('crypto'); });
-
-    var refreshBtn = document.getElementById('refreshBalanceBtn');
-    if (refreshBtn) refreshBtn.addEventListener('click', function () {
-      // আগে শুধু location.reload() করা হতো — সার্ভিস ওয়ার্কার বা ব্রাউজার
-      // ক্যাশে আটকে গেলে ইউজারের কাছে মনে হতো বাটনটা "কাজ করছে না" (কোনো
-      // দৃশ্যমান পরিবর্তন নেই)। এখন সরাসরি সার্ভার থেকে ব্যালেন্স ফেচ করে
-      // DOM-এ বসানো হয়, সাথে বাটনে স্পষ্ট লোডিং/সফল/ব্যর্থ অবস্থা দেখানো হয়।
-      var icon = refreshBtn.querySelector('i');
-      refreshBtn.disabled = true;
-      if (icon) icon.classList.add('fa-spin');
-      fetch('/profile/api/balance', { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
-        .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
-        .then(function (data) {
-          var amt = (Number(data.coins) || 0).toFixed(2);
-          var mainEl = document.getElementById('mainWalletAmt');
-          var availEl = document.getElementById('availableAmt');
-          if (mainEl) mainEl.textContent = amt;
-          if (availEl) availEl.textContent = amt;
-        })
-        .catch(function () {
-          // ফেচ ব্যর্থ হলে পুরনো ব্যবহারে ফিরে গিয়ে পুরো পেজ রিলোড করা হয়
-          location.reload();
-        })
-        .finally(function () {
-          refreshBtn.disabled = false;
-          if (icon) icon.classList.remove('fa-spin');
-        });
-    if (refreshBtn) refreshBtn.addEventListener('click', function(){
-      // আগে এখানে শুধু পুরো পেজ location.reload() করা হতো — মোবাইল
-      // নেটওয়ার্কে ধীর/ব্যর্থ হলে বাটনে চাপ দিলে কিছুই হচ্ছে না বলে মনে হতো।
-      // এখন সরাসরি ব্যালেন্স API কল করে সংখ্যাগুলো আপডেট করা হয়, ব্যর্থ
-      // হলে ফলব্যাক হিসেবে পুরো পেজ রিলোড হয়।
-      var icon = document.getElementById('refreshIcon');
-      if (icon) icon.classList.add('fa-spin');
-      fetch('/profile/api/balance', { headers: { 'Accept': 'application/json' } })
-        .then(function(r){ return r.json(); })
-        .then(function(data){
-          if (data && data.success) {
-            var val = Number(data.coins || 0).toFixed(2);
-            var w = document.getElementById('mainWalletAmt');
-            var a = document.getElementById('availableAmt');
-            if (w) w.textContent = val;
-            if (a) a.textContent = val;
-          } else {
-            location.reload();
-          }
-        })
-        .catch(function(){ location.reload(); })
-        .finally(function(){ if (icon) icon.classList.remove('fa-spin'); });
-    });
-
-    var eye1 = document.getElementById('toggleEye1');
-    if (eye1) eye1.addEventListener('click', function(){ togglePwd('secPassword','eye1'); });
-
-    var eye2 = document.getElementById('toggleEye2');
-    if (eye2) eye2.addEventListener('click', function(){ togglePwd('secPin','eye2'); });
-
-    document.querySelectorAll('.card-delete-form').forEach(function(f){
-      f.addEventListener('submit', function(e){
-        if (!confirm('আপনি কি নিশ্চিত?')) e.preventDefault();
-      });
-    });
-  });
-</script>
+<script src="/js/payment-withdraw.js"></script>
 
 <%- include('../partials/bottom-nav') %>
 </body></html>
