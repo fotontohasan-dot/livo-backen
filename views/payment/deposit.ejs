@@ -117,6 +117,10 @@
             <div class="method-icon" style="background:#6C2EB5;">RK</div>
             <div class="method-name">ROCKET</div>
           </div>
+          <div class="method-tile" data-method="upay">
+            <div class="method-icon" style="background:#8FCB2E;">Up</div>
+            <div class="method-name">Upay</div>
+          </div>
           <div class="method-tile" data-method="nagad" data-agent="1">
             <div class="method-icon" style="background:#F47321;">SM</div>
             <div class="method-name">Send Money<br>Nagad</div>
@@ -124,11 +128,6 @@
           <div class="method-tile" data-method="bkash" data-agent="1">
             <div class="method-icon" style="background:#D12053;">SM</div>
             <div class="method-name">Send Money<br>Bkash</div>
-          </div>
-          <div class="method-tile" data-method="upay">
-            <div class="method-icon" style="background:#D4145A;">Up</div>
-            <div class="method-icon" style="background:#8FCB2E;">UP</div>
-            <div class="method-name">Upay</div>
           </div>
           <div class="method-tile" data-method="crypto">
             <div class="method-icon" style="background:#26A17B;">₮</div>
@@ -216,15 +215,14 @@
     var idInput = document.getElementById('channelIdInput');
     if (!Array.isArray(list) || list.length === 0) {
       if (idInput) idInput.value = '';
-    if (list.length === 0) {
-      document.getElementById('channelIdInput').value = '';
       // আগে এখানে চুপচাপ কিছু না দেখিয়ে ফিরে যেত — ইউজারের কাছে মনে হতো
       // মেথড ট্যাপ করাই কাজ করছে না, কারণ কোনো নম্বর/চ্যানেল দেখাত না।
       var msg = document.createElement('div');
       msg.style.cssText = 'grid-column:1/-1; color:var(--text-muted); font-size:12px; padding:8px 0;';
       msg.textContent = 'এই মুহূর্তে এই মেথডের জন্য কোনো চ্যানেল উপলব্ধ নেই। অন্য মেথড বেছে নিন।';
       grid.appendChild(msg);
-      document.getElementById('displayNumber').textContent = '—';
+      var disp = document.getElementById('displayNumber');
+      if (disp) disp.textContent = '—';
       return;
     }
     list.forEach(function (ch, idx) {
