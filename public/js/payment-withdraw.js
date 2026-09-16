@@ -51,6 +51,60 @@
       });
     });
 
+    initTabs();
+    initBalanceRefresh();
+  }
+
+  // E-wallet / ক্রিপ্টো ট্যাব। টেমপ্লেটের ইনলাইন <script> থেকে সরানো হলো।
+  function switchTab(tab) {
+    var tabEwallet = document.getElementById('tabEwallet');
+    var tabCrypto = document.getElementById('tabCrypto');
+    var panelEwallet = document.getElementById('panelEwallet');
+    var panelCrypto = document.getElementById('panelCrypto');
+    if (!tabEwallet || !tabCrypto || !panelEwallet || !panelCrypto) return;
+    tabEwallet.classList.toggle('active', tab === 'ewallet');
+    tabCrypto.classList.toggle('active', tab === 'crypto');
+    panelEwallet.style.display = tab === 'ewallet' ? 'block' : 'none';
+    panelCrypto.style.display = tab === 'crypto' ? 'block' : 'none';
+  }
+
+  function initTabs() {
+    var tabEwallet = document.getElementById('tabEwallet');
+    var tabCrypto = document.getElementById('tabCrypto');
+    if (tabEwallet) tabEwallet.addEventListener('click', function () { switchTab('ewallet'); });
+    if (tabCrypto) tabCrypto.addEventListener('click', function () { switchTab('crypto'); });
+  }
+
+  function initBalanceRefresh() {
+    var refreshBtn = document.getElementById('refreshBalanceBtn');
+    if (!refreshBtn) return;
+    refreshBtn.addEventListener('click', function () {
+      // আগে শুধু location.reload() করা হতো — সার্ভিস ওয়ার্কার বা ব্রাউজার
+      // ক্যাশে আটকে গেলে ইউজারের কাছে মনে হতো বাটনটা "কাজ করছে না" (কোনো
+      // দৃশ্যমান পরিবর্তন নেই)। এখন সরাসরি সার্ভার থেকে ব্যালেন্স ফেচ করে
+      // DOM-এ বসানো হয়, সাথে বাটনে স্পষ্ট লোডিং অবস্থা দেখানো হয়।
+      var icon = document.getElementById('refreshIcon');
+      refreshBtn.disabled = true;
+      if (icon) icon.classList.add('fa-spin');
+      fetch('/profile/api/balance', { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+        .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+        .then(function (data) {
+          if (!data || data.success === false) { location.reload(); return; }
+          var amt = (Number(data.coins) || 0).toFixed(2);
+          var mainEl = document.getElementById('mainWalletAmt');
+          var availEl = document.getElementById('availableAmt');
+          if (mainEl) mainEl.textContent = amt;
+          if (availEl) availEl.textContent = amt;
+        })
+        .catch(function () {
+          // ফেচ ব্যর্থ হলে পুরনো ব্যবহারে ফিরে গিয়ে পুরো পেজ রিলোড করা হয়
+          location.reload();
+        })
+        .finally(function () {
+          refreshBtn.disabled = false;
+          if (icon) icon.classList.remove('fa-spin');
+        });
+    });
   }
 
   if (document.readyState === 'loading') {
