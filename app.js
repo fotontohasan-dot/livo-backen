@@ -115,7 +115,11 @@ const cspDirectives = {
   // স্ট্যাটিক CSS (public/css/tailwind.css)। একটা কম বাইরের স্ক্রিপ্ট-সোর্স
   // মানে একটা কম সাপ্লাই-চেইন নির্ভরতা: ওই CDN কম্প্রোমাইজ হলে আক্রমণকারী
   // আমাদের প্রতিটা পেজে ইচ্ছেমতো JS চালাতে পারত।
-  scriptSrc: ["'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
+  // www.chatbase.co — views/index.ejs-এর সাপোর্ট-চ্যাট উইজেট। বুটস্ট্র্যাপ
+  // স্নিপেটটা রানটাইমে <script src="https://www.chatbase.co/embed.min.js">
+  // যোগ করে; origin-টা এখানে না থাকলে ব্রাউজার সেটা ব্লক করত, অর্থাৎ
+  // উইজেটটা কখনোই লোড হতো না।
+  scriptSrc: ["'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://www.chatbase.co"],
   // ইনলাইন ইভেন্ট হ্যান্ডলার সম্পূর্ণ নিষিদ্ধ — এখন প্রয়োগ করা নীতিতেই।
   //
   // docs/CSP.md ধাপ ২ শেষ: টেমপ্লেটে থাকা ২৫০টা onclick/onchange/onsubmit
@@ -139,7 +143,7 @@ const cspDirectives = {
   //     সরানো হয়েছে। তাই এখানে 'unsafe-inline' আর দরকার নেই — stored XSS
   //     দিয়ে `<style>` ইনজেক্ট করে CSS চালানোর পথটা ব্রাউজারই বন্ধ করে।
   //
-  //   style-src-attr — ইনলাইন `style="..."` অ্যাট্রিবিউট। এখনো ১৮৩২টা
+  //   style-src-attr — ইনলাইন `style="..."` অ্যাট্রিবিউট। এখনো ৭০টা
   //     বাকি, তাই এখানে 'unsafe-inline' বহাল। সংখ্যাটা
   //     tests/security/cspInlineStyleRatchet.test.js একমুখী রাখে; ০-তে
   //     নামলে এই ডিরেক্টিভটাও 'none' হবে।
@@ -161,9 +165,12 @@ const cspDirectives = {
   ],
   styleSrcAttr: ["'unsafe-inline'"],
   fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "data:"],
-  imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://i.pravatar.cc", "https://img.icons8.com"],
+  imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://i.pravatar.cc", "https://img.icons8.com", "https://www.chatbase.co"],
   mediaSrc: ["'self'", "https://res.cloudinary.com"],
-  connectSrc: ["'self'", "wss:", "ws:"],
+  connectSrc: ["'self'", "wss:", "ws:", "https://www.chatbase.co"],
+  // frame-src লেখা না থাকলে default-src 'self'-এ নেমে যেত এবং chatbase-এর
+  // iframe ব্লক হতো — উইজেট লোড হয়েও খুলত না।
+  frameSrc: ["'self'", "https://www.chatbase.co"],
   objectSrc: ["'none'"],
   frameAncestors: ["'self'"],
   baseUri: ["'self'"],

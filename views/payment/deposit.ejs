@@ -1,5 +1,20 @@
 <%- include('../partials/head') %>
 <style nonce="<%= cspNonce %>">
+  /* Inline style attributes migrated to classes (CSP style-src-attr
+     hardening). Class selectors are repeated so the generated rules keep
+     the specificity the inline declarations had, without !important —
+     JS-set element.style still wins. */
+  .rt1-1.rt1-1.rt1-1 { background:#F47321; }
+  .rt1-2.rt1-2.rt1-2 { background:#D12053; }
+  .rt1-3.rt1-3.rt1-3 { background:#6C2EB5; }
+  .rt1-4.rt1-4.rt1-4 { background:#8FCB2E; }
+  .rt1-5.rt1-5.rt1-5 { background:#26A17B; }
+  .rt1-6.rt1-6.rt1-6 { margin-top:18px; }
+  .rt1-7.rt1-7.rt1-7 { color:var(--text-muted); font-size:13px; margin-bottom:10px; }
+  .rt1-8.rt1-8.rt1-8 { margin-top:14px; font-size:13px; color:var(--text-muted); }
+  .rt1-9.rt1-9.rt1-9 { font-size:12px; color:#f87171; }
+</style>
+<style nonce="<%= cspNonce %>">
   @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap');
 
   body {
@@ -106,31 +121,31 @@
         <div class="dep-label">আমানতের মোড</div>
         <div class="method-grid" id="methodGrid">
           <div class="method-tile selected" data-method="nagad">
-            <div class="method-icon" style="background:#F47321;">নগদ</div>
+            <div class="method-icon rt1-1">নগদ</div>
             <div class="method-name">NAGAD</div>
           </div>
           <div class="method-tile" data-method="bkash">
-            <div class="method-icon" style="background:#D12053;">bK</div>
+            <div class="method-icon rt1-2">bK</div>
             <div class="method-name">Bkash</div>
           </div>
           <div class="method-tile" data-method="rocket">
-            <div class="method-icon" style="background:#6C2EB5;">RK</div>
+            <div class="method-icon rt1-3">RK</div>
             <div class="method-name">ROCKET</div>
           </div>
           <div class="method-tile" data-method="upay">
-            <div class="method-icon" style="background:#8FCB2E;">Up</div>
+            <div class="method-icon rt1-4">Up</div>
             <div class="method-name">Upay</div>
           </div>
           <div class="method-tile" data-method="nagad" data-agent="1">
-            <div class="method-icon" style="background:#F47321;">SM</div>
+            <div class="method-icon rt1-1">SM</div>
             <div class="method-name">Send Money<br>Nagad</div>
           </div>
           <div class="method-tile" data-method="bkash" data-agent="1">
-            <div class="method-icon" style="background:#D12053;">SM</div>
+            <div class="method-icon rt1-2">SM</div>
             <div class="method-name">Send Money<br>Bkash</div>
           </div>
           <div class="method-tile" data-method="crypto">
-            <div class="method-icon" style="background:#26A17B;">₮</div>
+            <div class="method-icon rt1-5">₮</div>
             <div class="method-name">USDT<br>+5%</div>
           </div>
         </div>
@@ -146,7 +161,7 @@
         <div class="channel-grid" id="channelGrid"></div>
       </div>
 
-      <div class="dep-section" style="margin-top:18px;">
+      <div class="dep-section rt1-6">
         <div class="dep-label">জমা পরিমাণ</div>
         <div class="amount-grid" id="amountGrid">
           <% [100,200,300,500,1000,3000,5000,10000,20000,30000,50000].forEach(function(amt){ %>
@@ -159,7 +174,7 @@
         </div>
       </div>
 
-      <div class="dep-section" style="margin-top:18px;">
+      <div class="dep-section rt1-6">
         <div class="dep-label">কার্যক্রম</div>
         <label class="activity-row">
           <input type="radio" name="want_bonus_choice" value="bonus">
@@ -178,11 +193,11 @@
 
     <div id="step2" class="step-2">
       <div class="trx-box">
-        <p style="color:var(--text-muted); font-size:13px; margin-bottom:10px;">নিচের নম্বরে টাকা পাঠান:</p>
+        <p class="rt1-7">নিচের নম্বরে টাকা পাঠান:</p>
         <div class="trx-number" id="displayNumber"><%= payNumber %></div>
         <button type="button" id="depCopyBtn" class="copy-btn"><i class="far fa-copy"></i> কপি করুন</button>
-        <p style="margin-top:14px; font-size:13px; color:var(--text-muted);">📲 <b id="selectedMethodName">Nagad</b> Personal</p>
-        <p style="font-size:12px; color:#f87171;">⚠️ Send Money করুন, তারপর নিচের ফর্ম পূরণ করুন।</p>
+        <p class="rt1-8">📲 <b id="selectedMethodName">Nagad</b> Personal</p>
+        <p class="rt1-9">⚠️ Send Money করুন, তারপর নিচের ফর্ম পূরণ করুন।</p>
       </div>
 
       <div class="field-group">

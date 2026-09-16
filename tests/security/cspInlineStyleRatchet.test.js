@@ -58,8 +58,18 @@ const path = require('path');
 // 184  (a63192f) → tools/cascade-check.js দিয়ে cascade-সমতা প্রমাণ করে
 // 155  (f3f932d) → partial-এও নিজস্ব nonce style ব্লক; checker index bug ফিক্স
 // 116  (6b146d0) → ক্লাস পুনরাবৃত্তি করে specificity বাড়ানো (!important ছাড়া)
-// 86   (এই কমিট) → JS স্ট্রিং-এর মার্কআপ, প্রতিদ্বন্দ্বী নিয়ম নেই এমন ক্ষেত্রে
-const MAX_INLINE_STYLES = 86;
+// 86   (6b146d0-পরবর্তী) → JS স্ট্রিং-এর মার্কআপ, প্রতিদ্বন্দ্বী নিয়ম নেই এমন ক্ষেত্রে
+//
+// ⚠ এরপর সীমাটা মানা হয়নি: profile/index.ejs, profile/security.ejs,
+// payment/deposit.ejs ও withdraw.ejs নতুন করে লেখা হয়েছিল এবং তাতে ইনলাইন
+// style ২২৭-এ ফিরে গিয়েছিল। CI তখন থেকেই এই টেস্টে লাল ছিল। সীমা বাড়িয়ে
+// দিলে র‍্যাচেটটাই অর্থহীন হয়ে যেত, তাই বদলে ওই ফাইলগুলো আবার মাইগ্রেট করা
+// হলো (nonce-যুক্ত <style> ব্লকে `.rsN-M` ক্লাস, specificity ধরে রাখতে
+// ক্লাস তিনবার পুনরাবৃত্ত — !important নয়, তাই JS-এর element.style এখনো
+// জেতে)। যেসব style ডায়নামিক (`<%= %>`) বা JS-এর show/hide টগল
+// (`display:none`), সেগুলো ইচ্ছাকৃতভাবে ইনলাইনই রাখা হয়েছে।
+// 70   (এই কমিট) → রিগ্রেশন করা ৪+২টা ভিউ পুনরায় মাইগ্রেট (227 → 70)
+const MAX_INLINE_STYLES = 70;
 
 const ROOT = path.join(__dirname, '..', '..');
 const SCAN_DIRS = ['views', 'public'];
