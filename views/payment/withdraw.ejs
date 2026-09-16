@@ -129,8 +129,16 @@
     <button type="button" id="refreshBalanceBtn" class="refresh-btn"><i class="fas fa-sync-alt" id="refreshIcon"></i> আপনার ব্যালেন্স রিফ্রেশ করুন</button>
   </div>
 
+  <%
+    // সাবমিট বোতামের গেট। তিনটে শর্তের যেকোনো একটাতেই ফর্ম পাঠানো অর্থহীন,
+    // কারণ সার্ভার নিশ্চিতভাবে বাতিল করবে: উইথড্র উইন্ডো বন্ধ, PIN সেট নেই,
+    // অথবা কোনো সংরক্ষিত কার্ড/ওয়ালেট নেই (টাকা পাঠানোর গন্তব্যই নেই)।
+    const windowClosed = typeof withdrawalWindow !== 'undefined' && withdrawalWindow && !withdrawalWindow.open;
+    const noDestination = !((cards && cards.length) || (cryptoCards && cryptoCards.length));
+    const formGated = windowClosed || !hasWithdrawPin || noDestination;
+  %>
   <% if (!hasWithdrawPin) { %>
-    <div class="instr rt2-4">
+    <div class="instr rt2-4" id="pinNotConfiguredNotice">
       <p class="rt2-5">⚠️ উত্তোলনের আগে আপনার Withdraw PIN সেট করুন — <a class="rt2-6" href="/profile/security">এখানে সেট করুন</a></p>
     </div>
   <% } %>
@@ -180,7 +188,14 @@
       </div>
     <% } %>
 
-    <button type="submit" id="withdrawSubmitBtn" class="submit-btn"<% if (typeof withdrawalWindow !== 'undefined' && withdrawalWindow && !withdrawalWindow.open) { %> disabled<% } %>>উত্তোলন করুন</button>
+    <% if (noDestination) { %>
+      <div class="rounded-msg-box dep-section" role="alert" id="noCardNotice">
+        <i class="fas fa-triangle-exclamation"></i>
+        <%= t('withdraw_no_saved_card') %>
+      </div>
+    <% } %>
+
+    <button type="submit" id="withdrawSubmitBtn" class="submit-btn"<% if (formGated) { %> disabled<% } %>>উত্তোলন করুন</button>
   </form>
 </div>
 

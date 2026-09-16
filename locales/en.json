@@ -841,6 +841,8 @@
   "profile_password_changed": "✅ Password changed! You have been logged out of all other devices.",
   "profile_password_change_failed": "❌ Could not change the password.",
   "common_history_load_failed": "Could not load the history.",
+  "withdraw_no_saved_card": "Add at least one e-wallet or crypto wallet before withdrawing.",
+  "common_cards_load_failed": "Couldn't load your cards. Please try again shortly.",
   "common_stats_load_failed": "Could not load the statistics.",
   "profile_device_logged_out": "✅ Logged out from that device.",
   "profile_device_not_found": "❌ Device not found.",

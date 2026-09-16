@@ -649,7 +649,10 @@ router.get('/transactions', isAuth, async (req, res) => {
     );
     res.render('profile/transactions', { user: req.session.user, transactions: result.rows });
   } catch (err) {
-    res.render('profile/transactions', { user: req.session.user, transactions: [] });
+    // loadError ছাড়া টেমপ্লেট "কোনো লেনদেন নেই" দেখাত — যেটা জানা নেই এমন
+    // একটা দাবি। ব্যবহারকারী ভাবত তার লেজার খালি, আসলে কোয়েরিটাই ব্যর্থ।
+    console.error('transactions page error:', err.message);
+    res.render('profile/transactions', { user: req.session.user, transactions: [], loadError: true });
   }
 });
 
@@ -661,7 +664,8 @@ router.get('/account-record', isAuth, async (req, res) => {
     );
     res.render('profile/transactions', { user: req.session.user, transactions: result.rows });
   } catch (err) {
-    res.render('profile/transactions', { user: req.session.user, transactions: [] });
+    console.error('account-record page error:', err.message);
+    res.render('profile/transactions', { user: req.session.user, transactions: [], loadError: true });
   }
 });
 
@@ -675,7 +679,9 @@ router.get('/cards', isAuth, async (req, res) => {
     const cryptoCards = result.rows.filter(c => c.wallet_kind === 'crypto');
     res.render('profile/cards', { user: req.session.user, cards, cryptoCards });
   } catch (err) {
-    res.render('profile/cards', { user: req.session.user, cards: [], cryptoCards: [] });
+    // একই কারণ: loadError ছাড়া পেজটা "খালি ই-ওয়ালেট" আর গণনা ০ দেখাত।
+    console.error('cards page error:', err.message);
+    res.render('profile/cards', { user: req.session.user, cards: [], cryptoCards: [], loadError: true });
   }
 });
 

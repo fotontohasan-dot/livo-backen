@@ -21,6 +21,8 @@
   .cd-empty { text-align: center; padding: 40px 20px; color: var(--text-muted); }
   .cd-empty .icon-circle { width: 110px; height: 110px; border-radius: 50%; background: var(--bg-surface); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; }
   .cd-empty h3 { color: var(--text-main); font-size: 18px; margin-bottom: 6px; }
+  .cd-load-error { text-align: center; padding: 40px; color: #f87171; }
+  .cd-load-error-icon { font-size: 48px; margin-bottom: 12px; }
 
   .fab-container { position: fixed; bottom: 100px; left: 0; right: 0; display: flex; justify-content: center; z-index: 50; pointer-events: none; }
   .fab-btn { width: 58px; height: 58px; border-radius: 50%; background: #e61e26; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 22px; border: none; box-shadow: 0 8px 22px rgba(230,30,38,0.4); pointer-events: auto; }
@@ -55,6 +57,16 @@
 
   <%- include('../partials/flash') %>
 
+  <% if (typeof loadError !== 'undefined' && loadError) { %>
+    <%# লোড ব্যর্থ হলে গণনা বা "খালি" — কোনোটাই দেখানো যাবে না, দুটোই এমন দাবি
+        যা আমরা জানি না। EJS মন্তব্য ইচ্ছাকৃত: HTML মন্তব্য আউটপুটে থেকে যেত। %>
+    <div class="cd-section">
+      <div id="cardsLoadError" role="alert" class="cd-load-error">
+        <div class="cd-load-error-icon">⚠️</div>
+        <div><%= t.common_cards_load_failed %></div>
+      </div>
+    </div>
+  <% } else { %>
   <div class="cd-section">
     <div class="cd-count">ই-ওয়ালেট যোগ করা হয়েছে: <b><%= cards ? cards.length : 0 %></b></div>
     <% if (cards && cards.length > 0) { %>
@@ -94,6 +106,7 @@
       </div>
     <% } %>
   </div>
+  <% } %>
 </div>
 
 <div class="fab-container">

@@ -10,7 +10,7 @@ const { logEvent: logAuditEvent } = require('../services/auditLog');
 const { PublicError, publicMessage } = require('../utils/safeError');
 const businessTime = require('../utils/businessTime');
 const { requireFeature } = require('../middleware/featureGate');
-const { verifyPin } = require('../services/withdrawPin');
+const { verifyPin, getPinStatus } = require('../services/withdrawPin');
 const withdrawalWindowSvc = require('../services/withdrawalWindow');
 const { requireWithdrawalWindow, attachWithdrawalWindow } = require('../middleware/withdrawalWindow');
 
@@ -435,19 +435,25 @@ router.get('/wallet', isAuth, async (req, res) => {
 
 router.get('/withdraw', isAuth, requireFeature('withdrawal'), attachWithdrawalWindow(), async (req, res) => {
   try {
-    let coins = 0;
+    // ব্যালেন্স আর PIN স্ট্যাটাস আলাদা করে আনা হয়। আগে দুটো একসাথে
+    // `SELECT coins, withdraw_pin_hash` দিয়ে আনা হতো আর ব্যর্থ হলে একটা
+    // fallback ০ কয়েন বসিয়ে দিত — অর্থাৎ ব্যালেন্স আনা না গেলেও পেজটা
+    // "৳ ০.০০" দেখিয়ে রেন্ডার হয়ে যেত। টাকার পেজে এটা সবচেয়ে খারাপ
+    // ধরনের নীরব ব্যর্থতা, তাই এখন এরর উপরের catch-এ যায়।
+    //
+    // pg ড্রাইভার NUMERIC(14,2) কলাম স্ট্রিং হিসেবে ফেরত দেয় ("1499.00"),
+    // Number() না করলে টেমপ্লেটের (coins || 0).toFixed(2) ক্র্যাশ করত।
+    const result = await pool.query('SELECT coins FROM users WHERE id=$1', [req.session.user.id]);
+    const coins = Number(result.rows[0]?.coins) || 0;
+
+    // PIN স্ট্যাটাস আনতে না পারা মারাত্মক নয় — সেক্ষেত্রে fail-closed ধরে
+    // নেওয়া হয় (PIN নেই), ফলে ফর্মটা gated থাকে।
     let hasWithdrawPin = false;
     try {
-      const result = await pool.query('SELECT coins, withdraw_pin_hash FROM users WHERE id=$1', [req.session.user.id]);
-      // pg NUMERIC কলাম string হিসেবে আসে — Number() না করলে view-তে .toFixed() ক্র্যাশ করে
-      coins = Number(result.rows[0]?.coins) || 0;
-      hasWithdrawPin = !!(result.rows[0] && result.rows[0].withdraw_pin_hash);
+      const pinStatus = await getPinStatus(req.session.user.id);
+      hasWithdrawPin = !!(pinStatus && pinStatus.configured);
     } catch (e) {
-      // withdraw_pin_hash কলাম না থাকলে (migration.sql না চালানো থাকলে) শুধু coins আনি
-      try {
-        const fallback = await pool.query('SELECT coins FROM users WHERE id=$1', [req.session.user.id]);
-        coins = Number(fallback.rows[0]?.coins) || 0;
-      } catch (e2) { /* keep defaults */ }
+      console.error('withdraw pin status error:', e.message);
     }
     let ewalletCards = [];
     let cryptoCards = [];
@@ -464,8 +470,11 @@ router.get('/withdraw', isAuth, requireFeature('withdrawal'), attachWithdrawalWi
       hasWithdrawPin
     });
   } catch (err) {
+    // আগে নীরবে '/'-এ ফেলে দেওয়া হতো, কোনো বার্তা ছাড়া — ইউজারের কাছে
+    // মনে হতো লিংকটাই কাজ করছে না।
     console.error('withdraw GET error:', err.message);
-    res.redirect('/');
+    req.flash('error', req.t('payment_withdraw_load_error'));
+    res.redirect('/profile');
   }
 });
 
