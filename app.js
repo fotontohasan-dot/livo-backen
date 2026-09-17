@@ -119,7 +119,14 @@ const cspDirectives = {
   // স্নিপেটটা রানটাইমে <script src="https://www.chatbase.co/embed.min.js">
   // যোগ করে; origin-টা এখানে না থাকলে ব্রাউজার সেটা ব্লক করত, অর্থাৎ
   // উইজেটটা কখনোই লোড হতো না।
-  scriptSrc: ["'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://www.chatbase.co"],
+    scriptSrc: [
+    "'self'",
+    "https://cdn.jsdelivr.net",
+    "https://cdnjs.cloudflare.com",
+    "https://www.chatbase.co",
+    (req, res) => `'nonce-${res.locals.cspNonce}'`
+  ],
+
   // ইনলাইন ইভেন্ট হ্যান্ডলার সম্পূর্ণ নিষিদ্ধ — এখন প্রয়োগ করা নীতিতেই।
   //
   // docs/CSP.md ধাপ ২ শেষ: টেমপ্লেটে থাকা ২৫০টা onclick/onchange/onsubmit
