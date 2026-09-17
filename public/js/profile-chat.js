@@ -19,7 +19,7 @@
   var messagesDiv, messageInput, sendButton, fileInput, filePreview, previewImg, previewName;
   var selectedFile = null;
   var selectedFileType = null;
-  var botMode = true;
+  var botMode = false; // বট মোড টগল বাটন সরানো হয়েছে — AI সাপোর্ট এখন সরাসরি Chatbase iframe দিয়ে হয়, এই সকেট-চ্যাট শুধু লাইভ এজেন্টের জন্য
 
   function readConfig() {
     var el = document.getElementById('chatConfig');
@@ -34,20 +34,6 @@
   function t(key, fallback) {
     var value = config.t && config.t[key];
     return value == null || value === '' ? (fallback || '') : value;
-  }
-
-  function setMode(isBot) {
-    botMode = isBot;
-    var bot = document.getElementById('mode-bot');
-    var agent = document.getElementById('mode-agent');
-    if (bot) {
-      bot.style.background = isBot ? 'var(--grad-gold)' : 'rgba(255,255,255,0.08)';
-      bot.style.color = isBot ? '#000' : '#fff';
-    }
-    if (agent) {
-      agent.style.background = !isBot ? 'var(--grad-gold)' : 'rgba(255,255,255,0.08)';
-      agent.style.color = !isBot ? '#000' : '#fff';
-    }
   }
 
   function sendQuickMessage(text) {
@@ -225,13 +211,6 @@
     document.querySelectorAll('[data-quick-msg]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         sendQuickMessage(btn.getAttribute('data-quick-msg'));
-      });
-    });
-
-    // বট / লাইভ এজেন্ট টগল
-    document.querySelectorAll('[data-chat-mode]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        setMode(btn.getAttribute('data-chat-mode') === 'bot');
       });
     });
 
