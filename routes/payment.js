@@ -132,7 +132,7 @@ router.get('/deposit/methods', isAuth, async (req, res) => {
     res.json({ success: true, methods });
   } catch (err) {
     console.error('deposit/methods error:', err.message);
-    res.status(500).json({ success: false, error: 'পেমেন্ট মেথড লোড করা যায়নি।' });
+    res.status(500).json({ success: false, error: req.t('payment_methods_load_failed') });
   }
 });
 
@@ -145,11 +145,11 @@ router.post('/deposit', isAuth, requireFeature('deposit'), async (req, res) => {
   if (!Number.isInteger(channelId)) channelId = null;
 
   if (!VALID_METHODS.includes(method)) {
-    req.flash('error', 'অকার্যকর পেমেন্ট মেথড');
+    req.flash('error', req.t('payment_invalid_method'));
     return res.redirect('/payment/deposit');
   }
   if (!method || amount === null || !transaction_id || !account_number) {
-    req.flash('error', 'সব তথ্য সঠিকভাবে দিন');
+    req.flash('error', req.t('payment_all_fields_required'));
     return res.redirect('/payment/deposit');
   }
 
@@ -165,7 +165,7 @@ router.post('/deposit', isAuth, requireFeature('deposit'), async (req, res) => {
     }
   }
   if (amount < 100) {
-    req.flash('error', 'সর্বনিম্ন ডিপোজিট ১০০ টাকা');
+    req.flash('error', req.t('payment_min_deposit_100'));
     return res.redirect('/payment/deposit');
   }
 
@@ -202,6 +202,31 @@ router.post('/deposit', isAuth, requireFeature('deposit'), async (req, res) => {
   // আগে দুটো আলাদা pool.query() ছিল, তাই একই মুহূর্তে দুটো রিকোয়েস্ট একসাথে
   // লিমিট চেক পাস করে দুটোই ঢুকে যেতে পারত (race condition)। দিনের সীমানাও
   // এখন ব্যবসায়িক টাইমজোন (Asia/Dhaka) থেকে, DB সার্ভারের CURRENT_DATE (UTC) নয়।
+  // ডিপোজিট সীমা প্রাক-লেনদেন যাচাই। fail-closed: ডেটাবেজ অ্যাক্সেস ব্যর্থ হলে
+  // ডিপোজিট ব্লক করা হয়, চুপচাপ পার করা হয় না।
+  let depositLimitOk = false;
+  try {
+    const limitRow = await pool.query('SELECT daily_deposit_limit FROM users WHERE id=$1', [userId]);
+    const limit = limitRow.rows[0] && limitRow.rows[0].daily_deposit_limit ? Number(limitRow.rows[0].daily_deposit_limit) : null;
+    if (limit) {
+      const todayDep = await pool.query(
+        `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests
+         WHERE user_id = $1 AND type = 'deposit' AND status != 'rejected' AND created_at >= $2`,
+        [userId, businessTime.startOfDay()]
+      );
+      const already = Number(todayDep.rows[0].total);
+      if (already + amount > limit) {
+        req.flash('error', req.t('payment_deposit_limit_hit').replace('{value}', limit).replace('{value2}', Math.max(0, limit - already)));
+        return res.redirect('/payment/deposit');
+      }
+    }
+    depositLimitOk = true;
+  } catch (e) {
+    console.error('deposit limit check error:', e.message);
+    req.flash('error', req.t('payment_limit_check_failed'));
+    return res.redirect('/payment/deposit');
+  }
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -217,7 +242,7 @@ router.post('/deposit', isAuth, requireFeature('deposit'), async (req, res) => {
       const already = Number(todayDep.rows[0].total);
       if (already + amount > limit) {
         await client.query('ROLLBACK');
-        req.flash('error', `দৈনিক ডিপোজিট সীমা ${limit} টাকা। আজ আর ${Math.max(0, limit - already)} টাকা ডিপোজিট করতে পারবেন।`);
+        req.flash('error', req.t('payment_deposit_limit_hit').replace('{value}', limit).replace('{value2}', Math.max(0, limit - already)));
         return res.redirect('/payment/deposit');
       }
     }
@@ -228,12 +253,12 @@ router.post('/deposit', isAuth, requireFeature('deposit'), async (req, res) => {
     );
     await client.query('COMMIT');
     await notifyAdmins('নতুন ডিপোজিট রিকোয়েস্ট', `${req.session.user.username} ${amount} টাকা ডিপোজিট চেয়েছে (${method})।`);
-    req.flash('success', 'ডিপোজিট রিকোয়েস্ট পাঠানো হয়েছে!');
+    req.flash('success', req.t('payment_deposit_request_sent'));
     res.redirect('/payment/history');
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('deposit error:', err.message);
-    req.flash('error', 'সমস্যা হয়েছে');
+    req.flash('error', req.t('payment_generic_error'));
     res.redirect('/payment/deposit');
   } finally {
     client.release();
@@ -305,9 +330,9 @@ router.post('/admin/payment-methods', rbac.requirePermission('payment_methods_ma
       accountType: req.body.account_type
     }, req.session.user.id);
     await auditPaymentMethodEvent(req, 'PAYMENT_METHOD_CREATED', created);
-    req.flash('success', 'পেমেন্ট মেথড তৈরি হয়েছে।');
+    req.flash('success', req.t('payment_method_created'));
   } catch (err) {
-    req.flash('error', publicMessage(err, 'পেমেন্ট মেথড তৈরি করা যায়নি।'));
+    req.flash('error', publicMessage(err, req.t('payment_method_create_failed')));
   }
   res.redirect('/payment/admin/payment-methods');
 });
@@ -322,9 +347,9 @@ router.post('/admin/payment-methods/:id/update', rbac.requirePermission('payment
       accountType: req.body.account_type
     }, req.session.user.id);
     if (after) await auditPaymentMethodEvent(req, 'PAYMENT_METHOD_UPDATED', after);
-    req.flash('success', 'পেমেন্ট মেথড আপডেট হয়েছে।');
+    req.flash('success', req.t('payment_method_updated'));
   } catch (err) {
-    req.flash('error', publicMessage(err, 'পেমেন্ট মেথড আপডেট করা যায়নি।'));
+    req.flash('error', publicMessage(err, req.t('payment_method_update_failed')));
   }
   res.redirect('/payment/admin/payment-methods');
 });
@@ -334,7 +359,7 @@ router.post('/admin/payment-methods/:id/status', rbac.requirePermission('payment
     const { after } = await paymentMethods.setStatus(req.params.id, req.body.status, req.session.user.id);
     if (after) await auditPaymentMethodEvent(req, 'PAYMENT_METHOD_STATUS_CHANGED', after);
   } catch (err) {
-    req.flash('error', publicMessage(err, 'স্ট্যাটাস বদলানো যায়নি।'));
+    req.flash('error', publicMessage(err, req.t('common_status_change_failed')));
   }
   res.redirect('/payment/admin/payment-methods');
 });
@@ -343,9 +368,9 @@ router.post('/admin/payment-methods/:id/delete', rbac.requirePermission('payment
   try {
     const removed = await paymentMethods.remove(req.params.id, req.session.user.id);
     await auditPaymentMethodEvent(req, 'PAYMENT_METHOD_DELETED', removed);
-    req.flash('success', 'পেমেন্ট মেথড মুছে ফেলা হয়েছে।');
+    req.flash('success', req.t('payment_method_deleted'));
   } catch (err) {
-    req.flash('error', publicMessage(err, 'মুছে ফেলা যায়নি।'));
+    req.flash('error', publicMessage(err, req.t('common_delete_failed')));
   }
   res.redirect('/payment/admin/payment-methods');
 });
@@ -366,9 +391,9 @@ router.get('/admin/withdrawal-window', rbac.requirePermission('withdrawal_window
 router.post('/admin/withdrawal-window', rbac.requirePermission('withdrawal_window_manage'), async (req, res) => {
   const result = await withdrawalWindowSvc.saveConfig(req.body);
   if (!result.ok) {
-    req.flash('error', result.error || 'সেভ করা যায়নি');
+    req.flash('error', result.error || req.t('common_save_failed'));
   } else {
-    req.flash('success', 'সেভ হয়েছে');
+    req.flash('success', req.t('tg_saved'));
     logAuditEvent({
       req,
       actorType: 'admin',
@@ -428,7 +453,7 @@ router.get('/wallet', isAuth, async (req, res) => {
     });
   } catch (err) {
     console.error('wallet load error:', err.message);
-    req.flash('error', 'ওয়ালেট লোড করতে সমস্যা হয়েছে, আবার চেষ্টা করুন।');
+    req.flash('error', req.t('payment_wallet_load_failed'));
     return res.redirect('/profile');
   }
 });
@@ -485,15 +510,15 @@ router.post('/withdraw', isAuth, requireFeature('withdrawal'), requireWithdrawal
   const userId = req.session.user.id;
 
   if (!VALID_METHODS.includes(method)) {
-    req.flash('error', 'অকার্যকর পেমেন্ট মেথড');
+    req.flash('error', req.t('payment_invalid_method'));
     return res.redirect('/payment/withdraw');
   }
   if (!method || amount === null || !account_number) {
-    req.flash('error', 'সব তথ্য সঠিকভাবে দিন');
+    req.flash('error', req.t('payment_all_fields_required'));
     return res.redirect('/payment/withdraw');
   }
   if (amount < 200) {
-    req.flash('error', 'সর্বনিম্ন উইথড্র ২০০ টাকা');
+    req.flash('error', req.t('payment_min_withdraw_200'));
     return res.redirect('/payment/withdraw');
   }
 
@@ -504,14 +529,14 @@ router.post('/withdraw', isAuth, requireFeature('withdrawal'), requireWithdrawal
     if (password && row && row.password) {
       const okPass = await bcrypt.compare(password, row.password);
       if (!okPass) {
-        req.flash('error', 'পাসওয়ার্ড সঠিক নয়');
+        req.flash('error', req.t('payment_password_incorrect'));
         return res.redirect('/payment/withdraw');
       }
     }
     // ---- Separate withdrawal PIN check ----
     if (row && row.withdraw_pin_hash) {
       if (!withdraw_pin) {
-        req.flash('error', 'উইথড্র পিন দিন');
+        req.flash('error', req.t('payment_pin_required'));
         return res.redirect('/payment/withdraw');
       }
       // bcrypt.compare সরাসরি করলে ব্রুট-ফোর্স লকআউট হতো না — verifyPin-এ
@@ -521,9 +546,9 @@ router.post('/withdraw', isAuth, requireFeature('withdrawal'), requireWithdrawal
       if (!pinCheck.success) {
         if (pinCheck.locked) {
           const mins = Math.ceil((pinCheck.remainingMs || 0) / 60000);
-          req.flash('error', `অনেকবার ভুল পিন — ${mins} মিনিট পর আবার চেষ্টা করুন।`);
+          req.flash('error', req.t('payment_pin_locked').replace('{value}', mins));
         } else {
-          req.flash('error', 'উইথড্র পিন সঠিক নয়');
+          req.flash('error', req.t('payment_pin_incorrect'));
         }
         return res.redirect('/payment/withdraw');
       }
@@ -547,6 +572,8 @@ router.post('/withdraw', isAuth, requireFeature('withdrawal'), requireWithdrawal
     }
   } catch (e) {
     console.error('turnover check error:', e.message);
+    req.flash('error', req.t('payment_turnover_check_failed'));
+    return res.redirect('/payment/withdraw');
   }
 
   const client = await pool.connect();
@@ -560,7 +587,7 @@ router.post('/withdraw', isAuth, requireFeature('withdrawal'), requireWithdrawal
 
     if (upd.rowCount === 0) {
       await client.query('ROLLBACK');
-      req.flash('error', 'পর্যাপ্ত কয়েন নেই');
+      req.flash('error', req.t('payment_insufficient_coins'));
       return res.redirect('/payment/withdraw');
     }
 
@@ -575,12 +602,12 @@ router.post('/withdraw', isAuth, requireFeature('withdrawal'), requireWithdrawal
 
     await notifyAdmins('নতুন উইথড্র রিকোয়েস্ট', `${req.session.user.username} ${amount} টাকা উইথড্র চেয়েছে (${method})।`);
 
-    req.flash('success', 'উইথড্র রিকোয়েস্ট পাঠানো হয়েছে!');
+    req.flash('success', req.t('payment_withdraw_request_sent'));
     res.redirect('/payment/history');
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('withdraw error:', err.message);
-    req.flash('error', 'সমস্যা হয়েছে');
+    req.flash('error', req.t('payment_generic_error'));
     res.redirect('/payment/withdraw');
   } finally {
     client.release();
@@ -834,12 +861,12 @@ async function rejectPaymentRequestById(id) {
 router.post('/admin/approve/:id', requireAdmin, async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isInteger(id) || id <= 0) {
-    req.flash('error', 'অবৈধ রিকোয়েস্ট আইডি');
+    req.flash('error', req.t('payment_invalid_request_id'));
     return res.redirect('/payment/admin/payments');
   }
   const result = await approvePaymentRequestById(id);
   if (!result.success) {
-    req.flash('error', 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে');
+    req.flash('error', req.t('payment_request_not_found_or_processed'));
     return res.redirect('/payment/admin/payments');
   }
   await logAuditEvent({
@@ -852,19 +879,19 @@ router.post('/admin/approve/:id', requireAdmin, async (req, res) => {
     riskLevel: 'high',
     details: { requestId: id, userId: result.request.user_id, type: result.request.type, amount: result.request.amount }
   }).catch((e) => console.error('audit log error:', e.message));
-  req.flash('success', 'অনুমোদন হয়েছে');
+  req.flash('success', req.t('payment_approved'));
   res.redirect('/payment/admin/payments');
 });
 
 router.post('/admin/reject/:id', requireAdmin, async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isInteger(id) || id <= 0) {
-    req.flash('error', 'অবৈধ রিকোয়েস্ট আইডি');
+    req.flash('error', req.t('payment_invalid_request_id'));
     return res.redirect('/payment/admin/payments');
   }
   const result = await rejectPaymentRequestById(id);
   if (!result.success) {
-    req.flash('error', 'রিকোয়েস্ট পাওয়া যায়নি অথবা আগেই প্রসেস হয়েছে');
+    req.flash('error', req.t('payment_request_not_found_or_processed'));
     return res.redirect('/payment/admin/payments');
   }
   await logAuditEvent({
@@ -877,7 +904,7 @@ router.post('/admin/reject/:id', requireAdmin, async (req, res) => {
     riskLevel: 'medium',
     details: { requestId: id, userId: result.request.user_id, type: result.request.type, amount: result.request.amount }
   }).catch((e) => console.error('audit log error:', e.message));
-  req.flash('error', 'বাতিল করা হয়েছে');
+  req.flash('error', req.t('payment_rejected'));
   res.redirect('/payment/admin/payments');
 });
 
@@ -903,7 +930,7 @@ async function logBulkPaymentAction(req, actionType, label, succeeded, failed, i
 router.post('/admin/payments/bulk-approve', rbac.requirePermission('payments_approve'), async (req, res) => {
   const cleanIds = parseBulkIds(req.body);
   if (cleanIds.length === 0) {
-    return res.status(400).json({ success: false, error: 'কোনো আইডি নির্বাচন করা হয়নি' });
+    return res.status(400).json({ success: false, error: req.t('payment_no_ids_selected') });
   }
   const results = [];
   for (const id of cleanIds) {
@@ -919,7 +946,7 @@ router.post('/admin/payments/bulk-approve', rbac.requirePermission('payments_app
 router.post('/admin/payments/bulk-reject', rbac.requirePermission('payments_reject'), async (req, res) => {
   const cleanIds = parseBulkIds(req.body);
   if (cleanIds.length === 0) {
-    return res.status(400).json({ success: false, error: 'কোনো আইডি নির্বাচন করা হয়নি' });
+    return res.status(400).json({ success: false, error: req.t('payment_no_ids_selected') });
   }
   const results = [];
   for (const id of cleanIds) {
