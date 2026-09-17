@@ -202,6 +202,31 @@ router.post('/deposit', isAuth, requireFeature('deposit'), async (req, res) => {
   // আগে দুটো আলাদা pool.query() ছিল, তাই একই মুহূর্তে দুটো রিকোয়েস্ট একসাথে
   // লিমিট চেক পাস করে দুটোই ঢুকে যেতে পারত (race condition)। দিনের সীমানাও
   // এখন ব্যবসায়িক টাইমজোন (Asia/Dhaka) থেকে, DB সার্ভারের CURRENT_DATE (UTC) নয়।
+  // ডিপোজিট সীমা প্রাক-লেনদেন যাচাই। fail-closed: ডেটাবেজ অ্যাক্সেস ব্যর্থ হলে
+  // ডিপোজিট ব্লক করা হয়, চুপচাপ পার করা হয় না।
+  let depositLimitOk = false;
+  try {
+    const limitRow = await pool.query('SELECT daily_deposit_limit FROM users WHERE id=$1', [userId]);
+    const limit = limitRow.rows[0] && limitRow.rows[0].daily_deposit_limit ? Number(limitRow.rows[0].daily_deposit_limit) : null;
+    if (limit) {
+      const todayDep = await pool.query(
+        `SELECT COALESCE(SUM(amount),0) AS total FROM payment_requests
+         WHERE user_id = $1 AND type = 'deposit' AND status != 'rejected' AND created_at >= $2`,
+        [userId, businessTime.startOfDay()]
+      );
+      const already = Number(todayDep.rows[0].total);
+      if (already + amount > limit) {
+        req.flash('error', req.t('payment_deposit_limit_hit').replace('{value}', limit).replace('{value2}', Math.max(0, limit - already)));
+        return res.redirect('/payment/deposit');
+      }
+    }
+    depositLimitOk = true;
+  } catch (e) {
+    console.error('deposit limit check error:', e.message);
+    req.flash('error', req.t('payment_limit_check_failed'));
+    return res.redirect('/payment/deposit');
+  }
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -547,6 +572,8 @@ router.post('/withdraw', isAuth, requireFeature('withdrawal'), requireWithdrawal
     }
   } catch (e) {
     console.error('turnover check error:', e.message);
+    req.flash('error', req.t('payment_turnover_check_failed'));
+    return res.redirect('/payment/withdraw');
   }
 
   const client = await pool.connect();

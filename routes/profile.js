@@ -12,6 +12,17 @@ const { logAdminAction } = require('../services/fraudDetection');
 const { createLimiter } = require('../middleware/rateLimitFactory');
 const cache = require('../services/cache');
 
+// একটা ইউজার ১ মিনিটে সর্বোচ্চ ১০বার claim করতে পারবে। এটা ছাড়া spin/daily
+// reward/red packet endpoints-গুলো শুধু generalLimiter-এর আওতায় পড়ত।
+const claimLimiter = createLimiter('claim', {
+  windowMs: 60 * 1000,
+  max: 10,
+  keyGenerator: (req) => (req.session && req.session.user ? String(req.session.user.id) : req.ip),
+  handler: (req, res) => {
+    res.status(429).json({ ok: false, success: false, message: req.t('common_rate_limited_soft') });
+  }
+});
+
 // PIN তৈরি/পরিবর্তন/রিসেট — প্রতি ইউজারে ১৫ মিনিটে সর্বোচ্চ ৬ বার। এটা ছাড়া
 // রুটগুলো কেবল generalLimiter-এর ৩০০/১৫মিনিটের আওতায় পড়ত, যা PIN অনুমান
 // করার জন্য কার্যত কোনো বাধা নয়।
@@ -518,7 +529,7 @@ router.get('/wheel', isAuth, requireFeature('lucky_wheel'), async (req, res) => 
   }
 });
 
-router.post('/wheel/spin', isAuth, async (req, res) => {
+router.post('/wheel/spin', isAuth, claimLimiter, async (req, res) => {
   try {
     const result = await spin(req.session.user.id, req.lang);
     // স্পিন রেসপন্সে prize/message পাঠানো হতো না (message-এও প্রাইজের
@@ -559,7 +570,7 @@ router.get('/missions', isAuth, requireFeature('missions'), async (req, res) => 
   }
 });
 
-router.post('/missions/claim/:id', isAuth, requireFeature('missions'), async (req, res) => {
+router.post('/missions/claim/:id', isAuth, requireFeature('missions'), claimLimiter, async (req, res) => {
   try {
     const result = await claimMission(req.session.user.id, parseInt(req.params.id), req.lang);
     req.flash(result.success ? 'success' : 'error', result.message);
@@ -603,7 +614,7 @@ router.get('/daily-rewards/status', isAuth, requireFeature('daily_rewards'), asy
   }
 });
 
-router.post('/daily-rewards/red-packet/claim', isAuth, requireFeature('daily_rewards'), async (req, res) => {
+router.post('/daily-rewards/red-packet/claim', isAuth, requireFeature('daily_rewards'), claimLimiter, async (req, res) => {
   try {
     const result = await claimRedPacket(req.session.user.id, req.lang);
     if (result.ok) {
@@ -617,7 +628,7 @@ router.post('/daily-rewards/red-packet/claim', isAuth, requireFeature('daily_rew
   }
 });
 
-router.post('/daily-rewards/golden-egg/claim', isAuth, requireFeature('daily_rewards'), async (req, res) => {
+router.post('/daily-rewards/golden-egg/claim', isAuth, requireFeature('daily_rewards'), claimLimiter, async (req, res) => {
   try {
     let idx = parseInt(req.body.pickedIndex, 10);
     if (isNaN(idx) || idx < 0 || idx > 7) idx = 0;
