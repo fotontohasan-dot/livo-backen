@@ -130,7 +130,7 @@
   <div class="instr">
     <p class="muted"><%= t.wd2_hours %></p>
     <p class="bold"><%= t.wd2_greeting %></p>
-    <p class="bold">আপনার <%= siteName %> অ্যাকাউন্টে <%= t.wd2_title %>ের আগে অনুগ্রহ করে আপনার ওয়ালেট (বিকাশ/নগদ/রকেট ইত্যাদি) সঠিকভাবে সংযুক্ত হয়েছে কিনা তা যাচাই করুন। ভুল ওয়ালেট সংযোগের কারণে টাকা স্থানান্তরে বিলম্ব বা ব্যর্থতা ঘটতে পারে।</p>
+    <p class="bold">আপনার <%= siteName %> অ্যাকাউন্টে <%= t.wd2_title %><%= lang === 'en' ? ' ' : 'ের ' %>আগে অনুগ্রহ করে আপনার ওয়ালেট (বিকাশ/নগদ/রকেট ইত্যাদি) সঠিকভাবে সংযুক্ত হয়েছে কিনা তা যাচাই করুন। ভুল ওয়ালেট সংযোগের কারণে টাকা স্থানান্তরে বিলম্ব বা ব্যর্থতা ঘটতে পারে।</p>
     <p class="bold"><%= t.wd2_check_again %></p>
     <p class="muted"><%= t.wd2_daily_limits %></p>
     <p class="muted"><%= t.wd2_main_wallet %>৳ <span id="mainWalletAmt"><%= (coins || 0).toFixed(2) %></span></p>
@@ -148,7 +148,7 @@
   %>
   <% if (!hasWithdrawPin) { %>
     <div class="instr rt2-4" id="pinNotConfiguredNotice">
-      <p class="rt2-5">⚠️ <%= t.wd2_title %>ের আগে আপনার Withdraw PIN সেট করুন — <a class="rt2-6" href="/profile/security"><%= t.wd2_set_here %></a></p>
+      <p class="rt2-5">⚠️ <%= t.wd2_title %><%= lang === 'en' ? ' ' : 'ের ' %>আগে আপনার Withdraw PIN সেট করুন — <a class="rt2-6" href="/profile/security"><%= t.wd2_set_here %></a></p>
     </div>
   <% } %>
 
@@ -206,19 +206,8 @@
       <p class="pin-note"><%= t.wd2_pin_note %></p>
     <% } %>
 
-    <% if (typeof withdrawalWindow !== 'undefined' && withdrawalWindow && !withdrawalWindow.open) { %>
-      <div class="rounded-msg-box dep-section" role="alert">
-        <i class="fas fa-triangle-exclamation"></i>
-        <%= withdrawalWindow.reason === 'forced_closed' ? t('withdraw_window_closed_manual') : t('withdraw_window_closed_scheduled').replace('{start}', withdrawalWindow.start || '').replace('{end}', withdrawalWindow.end || '') %>
-      </div>
-    <% } %>
-
-    <% if (noDestination) { %>
-      <div class="rounded-msg-box dep-section" role="alert" id="noCardNotice">
-        <i class="fas fa-triangle-exclamation"></i>
-        <%= t('withdraw_no_saved_card') %>
-      </div>
-    <% } %>
+    <%# বন্ধ-সময় ও "ওয়ালেট যোগ করুন" বার্তা দুটো ইচ্ছাকৃতভাবে লুকানো (ইউজারের অনুরোধে);
+        সাবমিট বাটন gate (formGated) আগের মতোই কাজ করছে — শর্ত পূরণ না হলে বাটন disabled। %>
 
     <button type="submit" id="withdrawSubmitBtn" class="submit-btn"<% if (formGated) { %> disabled<% } %>><%= t.wd2_submit_btn %></button>
   </form>
