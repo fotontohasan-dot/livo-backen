@@ -57,10 +57,19 @@
 
   .submit-btn { display: block; width: calc(100% - 32px); margin: 8px 16px 0; background: #e61e26; color: #fff; border: none; padding: 15px; border-radius: 14px; font-size: 16px; font-weight: 800; }
   .pin-note { font-size: 12px; color: var(--text-muted); padding: 0 16px 8px; }
-  .rounded-msg-box { background: #fef2f2; color: #b91c1c; border-radius: 14px; padding: 12px 16px; font-size: 13px; font-weight: 600; margin: 16px; }
+  .rounded-msg-box { background: rgba(230,30,38,0.15); border: 1px solid rgba(230,30,38,0.55); color: #fff; border-radius: 14px; padding: 12px 16px; font-size: 13px; font-weight: 600; margin: 16px; line-height: 1.6; }
+  .ic.has-logo { background: transparent; overflow: hidden; padding: 0; }
+  .ic.has-logo img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
   #withdrawSubmitBtn:disabled { opacity: 0.55; cursor: not-allowed; }
 </style>
 
+<%
+  // wallet নাম থেকে লোগো ফাইলের নাম (না মিললে খালি → আগের আইকন দেখাবে)
+  function walletLogo(n){ n=(n||'').toLowerCase();
+    if(n.includes('bkash'))return 'bkash'; if(n.includes('nagad'))return 'nagad';
+    if(n.includes('rocket'))return 'rocket'; if(n.includes('upay'))return 'upay';
+    if(n.includes('usdt')||n.includes('tether'))return 'usdt'; return ''; }
+%>
 <div class="wd-wrap">
   <div class="wd-topbar">
     <div class="left"><a href="/profile"><i class="fas fa-chevron-left"></i></a><h1><%= t.wd2_title %></h1></div>
@@ -86,7 +95,7 @@
       <% cards.forEach(function(c){ %>
         <div class="wallet-card">
           <div class="info">
-            <div class="ic"><i class="fas fa-wallet"></i></div>
+            <div class="ic<% if (walletLogo(c.bank_name)) { %> has-logo<% } %>"><% if (walletLogo(c.bank_name)) { %><img src="/images/<%= walletLogo(c.bank_name) %>.png" alt="<%= c.bank_name %>"><% } else { %><i class="fas fa-wallet"></i><% } %></div>
             <div><b><%= c.bank_name %></b><small><%= c.account_number %></small></div>
           </div>
           <form action="/profile/cards/delete/<%= c.id %>" method="POST" class="card-delete-form" data-confirm="<%= t('wd_confirm_delete') %>">
@@ -105,7 +114,7 @@
       <% cryptoCards.forEach(function(c){ %>
         <div class="wallet-card">
           <div class="info">
-            <div class="ic"><i class="fab fa-bitcoin"></i></div>
+            <div class="ic<% if (walletLogo(c.bank_name)) { %> has-logo<% } %>"><% if (walletLogo(c.bank_name)) { %><img src="/images/<%= walletLogo(c.bank_name) %>.png" alt="<%= c.bank_name %>"><% } else { %><i class="fab fa-bitcoin"></i><% } %></div>
             <div><b><%= c.bank_name %></b><small><%= c.account_number %></small></div>
           </div>
           <form action="/profile/cards/delete/<%= c.id %>" method="POST" class="card-delete-form" data-confirm="<%= t('wd_confirm_delete') %>">
