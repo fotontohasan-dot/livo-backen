@@ -192,6 +192,23 @@ async function runMigrations() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_sender ON chat_messages(sender_id);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_receiver ON chat_messages(receiver_id);`);
 
+    // AI Agent Chat (Chatbase) ও Human/Admin Live Chat — এই দুইটি বিদ্যমান সিস্টেমকে
+    // একটি seamless handoff flow-এ যুক্ত করার জন্য প্রতিটি user-এর জন্য একটাই
+    // lightweight support-status রাখা হচ্ছে। নতুন conversation টেবিল তৈরি করা হয়নি —
+    // বিদ্যমান users/chat_messages কাঠামোর উপরেই ভিত্তি করা হয়েছে।
+    // ai        → ইউজার এখনো শুধু AI (Chatbase) এজেন্টের সাথে
+    // waiting   → ইউজার "Talk to Live Agent" চেপেছে, কোনো admin এখনো accept করেনি
+    // connected → কোনো admin conversation-টা খুলে/accept করেছে
+    // resolved  → admin conversation resolve/close করেছে
+    await pool.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS support_status VARCHAR(20) NOT NULL DEFAULT 'ai';
+    `);
+    await pool.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS support_status_updated_at TIMESTAMP;
+    `);
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS news (
         id SERIAL PRIMARY KEY,
