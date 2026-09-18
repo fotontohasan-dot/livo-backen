@@ -45,6 +45,12 @@
   }
   .method-icon { width: 44px; height: 44px; border-radius: 10px; margin: 0 auto 6px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; font-size: 13px; }
   .method-name { font-size: 11px; font-weight: 700; color: var(--text-main); }
+  /* লোগো ছবি লোড হলে (has-logo) টেক্সট-ব্যাজ লুকিয়ে ছবি দেখায়; ছবি না থাকলে রঙিন টেক্সট-ব্যাজই থাকে */
+  .method-icon { overflow: hidden; }
+  .method-icon img { display: none; width: 100%; height: 100%; object-fit: contain; }
+  .method-icon.has-logo.has-logo.has-logo.has-logo { background: transparent; }
+  .method-icon.has-logo img { display: block; }
+  .method-icon.has-logo .method-txt { display: none; }
 
   .warn-box { background: transparent; border: none; color: #e61e26; font-size: 14px; font-weight: 600; padding: 0; margin: 16px; line-height: 1.7; }
 
@@ -120,32 +126,34 @@
       <div class="dep-section">
         <div class="dep-label"><%= t.dp_mode_label %></div>
         <div class="method-grid" id="methodGrid">
-          <div class="deposit-section">
-  <h2>Deposit mode</h2>
-  <div class="deposit-grid">
-    <div class="card selected" data-method="nagad">
-      <img src="/images/nagad.png"><p>NAGAD</p>
-    </div>
-    <div class="card" data-method="bkash">
-      <img src="/images/bkash.png"><p>Bkash</p>
-    </div>
-    <div class="card" data-method="rocket">
-      <img src="/images/rocket.png"><p>ROCKET</p>
-    </div>
-    <div class="card" data-method="upay">
-      <img src="/images/upay.png"><p>Upay</p>
-    </div>
-    <div class="card" data-method="send-nagad">
-      <img src="/images/nagad.png"><p>Send Money Nagad</p>
-    </div>
-    <div class="card" data-method="send-bkash">
-      <img src="/images/bkash.png"><p>Send Money Bkash</p>
-    </div>
-    <div class="card" data-method="usdt">
-      <img src="/images/usdt.png"><p>USDT +5%</p>
-    </div>
-  </div>
-</div>
+          <div class="method-tile selected" data-method="nagad">
+            <div class="method-icon rt1-1"><span class="method-txt"><%= t.dp_cash_label %></span><img src="/images/nagad.png" alt="Nagad"></div>
+            <div class="method-name">NAGAD</div>
+          </div>
+          <div class="method-tile" data-method="bkash">
+            <div class="method-icon rt1-2"><span class="method-txt">bK</span><img src="/images/bkash.png" alt="Bkash"></div>
+            <div class="method-name">Bkash</div>
+          </div>
+          <div class="method-tile" data-method="rocket">
+            <div class="method-icon rt1-3"><span class="method-txt">RK</span><img src="/images/rocket.png" alt="Rocket"></div>
+            <div class="method-name">ROCKET</div>
+          </div>
+          <div class="method-tile" data-method="upay">
+            <div class="method-icon rt1-4"><span class="method-txt">Up</span><img src="/images/upay.png" alt="Upay"></div>
+            <div class="method-name">Upay</div>
+          </div>
+          <div class="method-tile" data-method="nagad" data-agent="1">
+            <div class="method-icon rt1-1"><span class="method-txt">SM</span><img src="/images/nagad.png" alt="Nagad"></div>
+            <div class="method-name">Send Money<br>Nagad</div>
+          </div>
+          <div class="method-tile" data-method="bkash" data-agent="1">
+            <div class="method-icon rt1-2"><span class="method-txt">SM</span><img src="/images/bkash.png" alt="Bkash"></div>
+            <div class="method-name">Send Money<br>Bkash</div>
+          </div>
+          <div class="method-tile" data-method="crypto">
+            <div class="method-icon rt1-5"><span class="method-txt">₮</span><img src="/images/usdt.png" alt="USDT"></div>
+            <div class="method-name">USDT<br>+5%</div>
+          </div>
         </div>
       </div>
 
@@ -288,6 +296,14 @@
     // তিনটাই একসাথে "কাজ করছে না"। প্রতিটা ব্লক এখন নিজের try/catch-এ
     // আলাদা, তাই একটা ব্যর্থ হলেও বাকিগুলো ঠিকই কাজ করবে।
     try { renderChannels('nagad'); } catch (e) { console.error('renderChannels init error:', e); }
+
+    try {
+      document.querySelectorAll('.method-icon img').forEach(function(img){
+        var ok = function(){ img.parentNode.classList.add('has-logo'); };
+        if (img.complete && img.naturalWidth > 0) ok();
+        else img.addEventListener('load', ok);
+      });
+    } catch (e) { console.error('logo init error:', e); }
 
     try {
       document.querySelectorAll('.method-tile').forEach(function(tile){
