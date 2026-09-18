@@ -21,6 +21,36 @@
   .sc-pin-icon.is-idle { color: var(--text-muted); }
   .sc-device { background: rgba(255,255,255,0.03); border-radius: 14px; padding: 15px; margin-bottom: 12px; border: 1px solid var(--border-glass); }
   .sc-device.is-current { border-color: rgba(16,185,129,0.3); }
+
+  /* ==================== Safety Score card + Checklist — fixed light surface, স্ক্রিনশট অনুযায়ী ==================== */
+  .sc-score-card { background: #fff; border-radius: 20px; padding: 20px; display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+  .sc-gauge { width: 92px; height: 92px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: conic-gradient(#4F8CFF calc(var(--sc-pct) * 1%), #E9EDF0 0); }
+  .sc-gauge-inner { width: 72px; height: 72px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: #171717; }
+  .sc-gauge-inner span { font-size: 12px; font-weight: 700; margin-left: 2px; }
+  .sc-score-body { flex: 1; min-width: 0; }
+  .sc-score-title { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 800; color: #171717; flex-wrap: wrap; }
+  .sc-score-title .lvl-low { color: #D62828; }
+  .sc-score-title .lvl-medium { color: #C97D0E; }
+  .sc-score-title .lvl-high { color: #10b981; }
+  .sc-bolt { font-size: 13px; }
+  .sc-bolt.is-on.lvl-low { color: #D62828; }
+  .sc-bolt.is-on.lvl-medium { color: #C97D0E; }
+  .sc-bolt.is-on.lvl-high { color: #10b981; }
+  .sc-bolt.is-off { color: #D6DBDE; }
+  .sc-score-meta { color: #6B7280; font-size: 12.5px; margin-top: 6px; line-height: 1.6; }
+  .sc-warning-banner { color: #D62828; font-weight: 800; font-size: 14px; text-align: center; padding: 4px 10px 16px; line-height: 1.6; }
+  .sc-checklist { background: #fff; border-radius: 20px; overflow: hidden; margin-bottom: 20px; }
+  .sc-check-row { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-bottom: 1px solid #F0F2F1; text-decoration: none; }
+  .sc-check-row:last-child { border-bottom: none; }
+  .sc-check-icon { font-size: 22px; width: 32px; text-align: center; flex-shrink: 0; color: #9CA3AF; }
+  .sc-check-icon.is-ok { color: #10b981; }
+  .sc-check-body { flex: 1; min-width: 0; }
+  .sc-check-title { display: flex; align-items: center; gap: 6px; font-size: 14.5px; font-weight: 800; color: #171717; }
+  .sc-check-badge { font-size: 13px; }
+  .sc-check-badge.is-bad { color: #D62828; }
+  .sc-check-badge.is-ok { color: #10b981; }
+  .sc-check-sub { color: #9CA3AF; font-size: 12.5px; margin-top: 3px; }
+  .sc-check-chevron { color: #C7CBCF; font-size: 14px; flex-shrink: 0; }
 </style>
 
 <div class="container ix71-1">
@@ -33,73 +63,98 @@
 
   <%- include('../partials/flash') %>
 
-  <!-- ==================== Security Center Overview — ৬টি নিরাপত্তা আইটেমের স্ট্যাটাস একনজরে ==================== -->
+  <!-- ==================== Safety Score + Checklist — নিরাপত্তা শতাংশ ও উন্নতির তালিকা ==================== -->
   <%
-    var scActiveOtherCount = (activeSessions || []).filter(function(d){ return !d.is_current; }).length;
-    var scItems = [
+    var scScore = (typeof safetyScore === 'number') ? safetyScore : 0;
+    var scLevel = safetyLevel || 'low';
+    var scLevelLabel = scLevel === 'high' ? t('sec_safety_high') : (scLevel === 'medium' ? t('sec_safety_medium') : t('sec_safety_low'));
+    var scBoltsOn = Math.round(scScore / 20);
+    var scChecklist = [
       {
-        icon: 'fa-envelope-circle-check',
-        label: t('sec_email_verification'),
-        ok: !emailStatus || !emailStatus.hasEmail || emailStatus.verified,
-        sub: (!emailStatus || !emailStatus.hasEmail) ? t('sec_not_applicable')
-             : (emailStatus.verified ? t('sec_verified') : t('sec_not_verified')),
-        tab: 'security'
+        icon: 'fa-user', ok: !!personalInfoComplete,
+        label: t('sec_personal_info_title'),
+        sub: personalInfoComplete ? t('sec_personal_info_complete') : t('sec_personal_info_incomplete'),
+        kind: 'tab', target: 'personal'
       },
       {
-        icon: 'fa-key',
-        label: t('sec_password'),
-        ok: true,
-        sub: passwordChangedAt ? (t('sec_last_changed') + new Date(passwordChangedAt).toLocaleDateString(locals.lang === 'en' ? 'en-US' : 'bn-BD')) : t('asec_never_changed'),
-        tab: 'security'
+        icon: 'fa-coins', ok: !!hasCryptoWallet,
+        label: t('sec_add_crypto_wallet'),
+        sub: hasCryptoWallet ? t('sec_crypto_wallet_added') : t('sec_add_crypto_wallet_desc'),
+        kind: 'link', target: '/profile/cards'
       },
       {
-        icon: 'fa-shield-halved',
-        label: t.withdraw_pin_title,
-        ok: !!(pinStatus && pinStatus.configured) && !(pinStatus && pinStatus.locked),
-        sub: (pinStatus && pinStatus.locked) ? t('sec_temporarily_locked') : ((pinStatus && pinStatus.configured) ? t.pin_configured : t.pin_not_configured),
-        tab: 'security'
+        icon: 'fa-wallet', ok: !!hasEwallet,
+        label: t('sec_bind_ewallet'),
+        sub: hasEwallet ? t('sec_ewallet_added') : t('sec_bind_ewallet_desc'),
+        kind: 'link', target: '/profile/cards'
       },
       {
-        icon: 'fa-mobile-screen-button',
-        label: t.active_devices_title,
-        ok: true,
-        sub: (activeSessions ? activeSessions.length : 0) + t('sec_devices_active'),
-        tab: 'devices'
+        icon: 'fa-lock', ok: !!passwordChangedAt,
+        label: t('sec_change_login_password'),
+        sub: t('sec_password_mix_hint'),
+        kind: 'tab', target: 'security'
       },
       {
-        icon: 'fa-right-from-bracket',
-        label: t('sec_other_sessions'),
-        ok: scActiveOtherCount === 0,
-        sub: scActiveOtherCount > 0 ? (scActiveOtherCount + t('sec_other_sessions_active')) : t('sec_this_device_only'),
-        tab: 'devices'
-      },
-      {
-        icon: 'fa-clock-rotate-left',
-        label: t.recent_login_activity,
-        ok: true,
-        sub: (recentLogins ? recentLogins.length : 0) + t('sec_recent_logins_count'),
-        tab: 'devices'
+        icon: 'fa-shield-halved', ok: !!(pinStatus && pinStatus.configured),
+        label: t('sec_transaction_password'),
+        sub: (pinStatus && pinStatus.configured) ? t('sec_transaction_password_set') : t('sec_transaction_password_desc'),
+        kind: 'tab', target: 'security'
       }
     ];
   %>
-  <div class="ix71-4">
-    <h3 class="ix71-5">
-      <i class="fas fa-shield-halved"></i> <%= t('sec_overview') %>
-    </h3>
-    <div class="im72-2">
-      <% scItems.forEach(function(it) { %>
-        <div data-switch-tab="<%= it.tab %>" class="sc-card <%= it.ok ? 'is-ok' : 'is-bad' %>">
-          <i class="fas <%= it.icon %> sc-card-icon <%= it.ok ? 'is-ok' : 'is-bad' %>"></i>
-          <div class="im72-3">
-            <div class="dz71-1">
-              <%= it.label %>
-              <i class="fas <%= it.ok ? 'fa-circle-check' : 'fa-triangle-exclamation' %> sc-card-badge <%= it.ok ? 'is-ok' : 'is-bad' %>"></i>
-            </div>
-            <div class="dz71-2"><%= it.sub %></div>
-          </div>
-        </div>
-      <% }) %>
+  <style nonce="<%= cspNonce %>">
+    /* স্কোর অনুযায়ী গেজের পূরণ — শতাংশ প্রতি রিকোয়েস্টে বদলায় বলে ক্লাসে না রেখে
+       এই ছোট nonce ব্লকে; ইনলাইন style="..." অ্যাট্রিবিউট নয়, তাই CSP ratchet অক্ষত থাকে। */
+    #sc-gauge-fill { background: conic-gradient(#4F8CFF <%= scScore %>%, #E9EDF0 0); }
+  </style>
+  <div class="sc-score-card">
+    <div id="sc-gauge-fill" class="sc-gauge">
+      <div class="sc-gauge-inner"><%= scScore %><span>%</span></div>
     </div>
+    <div class="sc-score-body">
+      <div class="sc-score-title">
+        <%= t('sec_safety_score') %>: <span class="lvl-<%= scLevel %>"><%= scLevelLabel %></span>
+        <% for (var b = 1; b <= 5; b++) { %>
+          <i class="fas fa-bolt sc-bolt <%= b <= scBoltsOn ? ('is-on lvl-' + scLevel) : 'is-off' %>"></i>
+        <% } %>
+      </div>
+      <div class="sc-score-meta">
+        <%= t('sec_last_login_ip') %>: <%= (lastLogin && lastLogin.ip) ? lastLogin.ip : '—' %><br>
+        <%= t('sec_last_login_time') %>: <%= (lastLogin && lastLogin.created_at) ? new Date(lastLogin.created_at).toLocaleString(locals.lang === 'en' ? 'en-US' : 'bn-BD') : '—' %>
+      </div>
+    </div>
+  </div>
+
+  <% if (scScore < 80) { %>
+    <div class="sc-warning-banner"><%= t('sec_improve_warning') %></div>
+  <% } %>
+
+  <div class="sc-checklist">
+    <% scChecklist.forEach(function(it) { %>
+      <% if (it.kind === 'tab') { %>
+        <a href="#" data-switch-tab="<%= it.target %>" class="sc-check-row">
+      <% } else { %>
+        <a href="<%= it.target %>" class="sc-check-row">
+      <% } %>
+        <i class="fas <%= it.icon %> sc-check-icon <%= it.ok ? 'is-ok' : '' %>"></i>
+        <div class="sc-check-body">
+          <div class="sc-check-title">
+            <%= it.label %>
+            <i class="fas <%= it.ok ? 'fa-circle-check' : 'fa-circle-exclamation' %> sc-check-badge <%= it.ok ? 'is-ok' : 'is-bad' %>"></i>
+          </div>
+          <div class="sc-check-sub"><%= it.sub %></div>
+        </div>
+        <i class="fas fa-chevron-right sc-check-chevron"></i>
+      </a>
+    <% }) %>
+    <a href="/logout" class="sc-check-row">
+      <i class="fas fa-power-off sc-check-icon"></i>
+      <div class="sc-check-body">
+        <div class="sc-check-title"><%= t('sec_logout_title') %></div>
+        <div class="sc-check-sub"><%= t('sec_logout_desc') %></div>
+      </div>
+      <i class="fas fa-chevron-right sc-check-chevron"></i>
+    </a>
   </div>
 
   <!-- Tab Buttons -->
