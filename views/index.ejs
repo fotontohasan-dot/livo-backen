@@ -821,5 +821,10 @@ body.light-mode .promo-banner {
   noGamesFound: t.no_games_found
 }) %></script>
 
-<%- include('partials/chatbase-widget') %>
+<!-- চ্যাটবেসের ফ্লোটিং bubble এখান থেকে সরানো হলো — এটা bottom navigation
+     bar-এর "Support" আইকনের উপর বসে পুরো নেভ বার ঢেকে দিচ্ছিল (Chatbase
+     bubble-এর নিজস্ব উচ্চ z-index সাইট-ওয়াইড সব কিছুর উপরে থাকে, এবং
+     bottom-nav-এর উচ্চতা হিসাব করে না)। AI চ্যাট এখন /chat পেজেই
+     (profile/chat.ejs) embedded iframe হিসেবে আছে — bottom nav-এর
+     "Support" আইকন দিয়েই যেতে হবে, হোমপেজে আলাদা bubble দরকার নেই। -->
 </body></html>
