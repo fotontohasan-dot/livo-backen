@@ -360,7 +360,9 @@ router.get('/stats', isAuth, async (req, res) => {
 
 router.get('/security', isAuth, async (req, res) => {
   try {
-    const cards = await pool.query('SELECT id, user_id, bank_name, account_number, holder_name, created_at FROM bank_cards WHERE user_id = $1 ORDER BY created_at DESC', [req.session.user.id]);
+    const cards = await pool.query('SELECT id, user_id, bank_name, account_number, holder_name, wallet_kind, created_at FROM bank_cards WHERE user_id = $1 ORDER BY created_at DESC', [req.session.user.id]);
+    const hasCryptoWallet = cards.rows.some(c => c.wallet_kind === 'crypto');
+    const hasEwallet = cards.rows.some(c => c.wallet_kind !== 'crypto');
     let pinStatus = { configured: false, locked: false };
     try { pinStatus = await getPinStatus(req.session.user.id); } catch (e) {}
 
@@ -409,17 +411,27 @@ router.get('/security', isAuth, async (req, res) => {
       });
     } catch (e) { console.error('security recent activity error:', e.message); }
 
+    const personalInfoComplete = !!(req.session.user.full_name && req.session.user.phone);
+    const lastLogin = recentLogins[0] || null;
+
+    // ==================== নিরাপত্তা শতাংশ — ৫টি আইটেম, প্রতিটি ২০% ====================
+    const safetyChecks = [personalInfoComplete, hasCryptoWallet, hasEwallet, !!passwordChangedAt, !!(pinStatus && pinStatus.configured)];
+    const safetyScore = safetyChecks.filter(Boolean).length * 20;
+    const safetyLevel = safetyScore >= 80 ? 'high' : (safetyScore >= 40 ? 'medium' : 'low');
+
     res.render('profile/security', {
-      user: req.session.user, bankCards: cards.rows, pinStatus, activeSessions, recentLogins,
-      emailStatus, passwordChangedAt, recentActivity, loadError: false
+      user: req.session.user, bankCards: cards.rows, hasCryptoWallet, hasEwallet, pinStatus, activeSessions, recentLogins,
+      emailStatus, passwordChangedAt, recentActivity, loadError: false,
+      personalInfoComplete, lastLogin, safetyScore, safetyLevel
     });
   } catch (err) {
     // খালি bankCards দেখলে ইউজার ভাবতে পারে তার সংরক্ষিত ওয়ালেট মুছে
     // গেছে — এটাই withdraw-এর গন্তব্য, তাই "খালি" আর "জানা যায়নি" আলাদা।
     console.error('security page error:', err.message);
     res.render('profile/security', {
-      user: req.session.user, bankCards: [], pinStatus: { configured: false, locked: false }, activeSessions: [], recentLogins: [],
-      emailStatus: { verified: true, hasEmail: false, lastSentAt: null }, passwordChangedAt: null, recentActivity: [], loadError: true
+      user: req.session.user, bankCards: [], hasCryptoWallet: false, hasEwallet: false, pinStatus: { configured: false, locked: false }, activeSessions: [], recentLogins: [],
+      emailStatus: { verified: true, hasEmail: false, lastSentAt: null }, passwordChangedAt: null, recentActivity: [], loadError: true,
+      personalInfoComplete: false, lastLogin: null, safetyScore: 0, safetyLevel: 'low'
     });
   }
 });
