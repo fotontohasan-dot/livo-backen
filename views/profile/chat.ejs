@@ -19,7 +19,7 @@
     </div>
   </div>
   <!-- ==================== AI সাপোর্ট এজেন্ট (Chatbase) — এখানেই এমবেড, আর কোথাও ভাসমান না ==================== -->
-  <div class="ix74-3" style="padding: 0; overflow: hidden;">
+  <div class="ix74-3 support-panel" id="ai-support-panel" style="padding: 0; overflow: hidden;">
     <div class="dz74-1" style="padding: 14px 16px 0;">🤖 AI সাপোর্ট এজেন্ট</div>
     <iframe
       src="https://www.chatbase.co/chatbot-iframe/pSj_7j1MVN7taO6OD7NHh"
@@ -28,6 +28,11 @@
       frameborder="0"
       allow="microphone"
     ></iframe>
+    <div style="padding: 12px 16px 16px;">
+      <button type="button" id="talk-to-live-agent" class="dz74-5" style="width: 100%;">
+        🎧 <%= t('chat_talk_to_live_agent') %>
+      </button>
+    </div>
   </div>
   <style nonce="<%= cspNonce %>">
   /* Inline style attributes migrated to classes (CSP style-src-attr
@@ -66,11 +71,12 @@
     .qc-chip:hover{ background:rgba(255,255,255,0.22); }
   </style>
 
-  <div class="dz74-4">
+  <div class="dz74-4" id="live-agent-panel" style="display:none;">
     <div class="dz74-6" style="cursor: default;">👤 <%= t('chat_mode_agent') %></div>
+    <div id="support-status-banner" style="flex:1; text-align:right; font-size:12px; color: var(--text-muted); align-self:center;"></div>
   </div>
 
-  <div class="dz74-7" id="chat-container">
+  <div class="dz74-7" id="chat-container" style="display:none;">
     <div class="dz74-8" id="messages"></div>
 
     <div class="dz74-9">
@@ -108,7 +114,10 @@
     q_account: t.q_account,
     q_about: t.q_about,
     q_event: t.q_event,
-    upload_fail: t.upload_fail
+    upload_fail: t.upload_fail,
+    chat_status_waiting: t.chat_status_waiting,
+    chat_status_connected: t.chat_status_connected,
+    chat_status_resolved: t.chat_status_resolved
   }
 }) %></script>
 <script src="/js/profile-chat.js"></script>
