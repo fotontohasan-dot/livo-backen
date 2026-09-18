@@ -27,11 +27,13 @@
   .fab-container { position: fixed; bottom: 100px; left: 0; right: 0; display: flex; justify-content: center; z-index: 50; pointer-events: none; }
   .fab-btn { width: 58px; height: 58px; border-radius: 50%; background: #e61e26; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 22px; border: none; box-shadow: 0 8px 22px rgba(230,30,38,0.4); pointer-events: auto; }
 
-  .overlay { opacity: 0; visibility: hidden; transition: all 0.3s ease; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; }
+  .overlay { opacity: 0; visibility: hidden; transition: all 0.3s ease; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; }
   .overlay.active { opacity: 1; visibility: visible; }
-  .bottom-sheet { transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.4,0,0.2,1); position: fixed; bottom: 0; left: 0; right: 0; max-width: 480px; margin: 0 auto; background: var(--bg-surface); border-radius: 28px 28px 0 0; z-index: 101; border-top: 1px solid var(--border-glass); }
+  /* z-index ১০১ ছিল, কিন্তু .pub-bottom-nav-এর z-index ৯০০ — নেভ শিটের ওপরে বসে Save বাটন ঢেকে দিত।
+     এখন overlay ও শিট দুটোই নেভের ওপরে; শিটের উচ্চতা সীমিত + ভেতরে স্ক্রল, তাই ছোট স্ক্রিনেও বাটন পৌঁছানো যায়। */
+  .bottom-sheet { transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.4,0,0.2,1); position: fixed; bottom: 0; left: 0; right: 0; max-width: 480px; margin: 0 auto; background: var(--bg-surface); border-radius: 28px 28px 0 0; z-index: 1001; border-top: 1px solid var(--border-glass); max-height: 92vh; max-height: 92dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
   .bottom-sheet.active { transform: translateY(0); }
-  .sheet-inner { padding: 26px; }
+  .sheet-inner { padding: 26px 26px 12px; }
   .sheet-handle { width: 44px; height: 5px; background: var(--border-glass); border-radius: 10px; margin: 0 auto 20px; }
   .sheet-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
   .sheet-head h2 { font-size: 20px; margin: 0; }
@@ -46,9 +48,28 @@
   .sheet-field label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
   .sheet-field select, .sheet-field input { width: 100%; padding: 14px; border-radius: 16px; border: 2px solid var(--border-glass); background: var(--bg-dark); color: var(--text-main); font-weight: 700; }
   .sheet-field select:focus, .sheet-field input:focus { outline: none; border-color: #e61e26; }
+  /* Save বাটন শিটের নিচে sticky — স্ক্রল করলেও সবসময় দেখা যায়; নিচে safe-area জায়গা */
+  .sheet-actions { position: sticky; bottom: 0; z-index: 2; margin: 0 -26px; padding: 12px 26px calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--bg-surface); border-top: 1px solid var(--border-glass); }
   .sheet-submit { width: 100%; padding: 15px; border: none; border-radius: 16px; background: #e61e26; color: #fff; font-weight: 800; font-size: 16px; }
+
+  /* ওয়ালেট তালিকার আইটেমে লোগো (পেজে যেমন আছে তেমন আইকনের জায়গায়) */
+  .cd-item .ic.has-logo { background: transparent; padding: 0; overflow: hidden; }
+  .cd-item .ic.has-logo img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
+
+  /* Add-new শিটে নির্বাচিত ওয়ালেটের লোগো প্রিভিউ */
+  .wallet-logo-preview { display: none; align-items: center; gap: 10px; margin-top: 10px; }
+  .wallet-logo-preview.show { display: flex; }
+  .wallet-logo-preview img { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; }
+  .wallet-logo-preview span { font-weight: 700; font-size: 14px; }
 </style>
 
+<%
+  // wallet নাম থেকে লোগো ফাইলের নাম (না মিললে খালি → আগের আইকন দেখাবে)
+  function walletLogo(n){ n=(n||'').toLowerCase();
+    if(n.includes('bkash'))return 'bkash'; if(n.includes('nagad'))return 'nagad';
+    if(n.includes('rocket'))return 'rocket'; if(n.includes('upay'))return 'upay';
+    if(n.includes('usdt')||n.includes('tether'))return 'usdt'; return ''; }
+%>
 <div class="cd-wrap">
   <div class="cd-topbar">
     <a href="/profile"><i class="fas fa-chevron-left"></i></a>
@@ -72,7 +93,7 @@
     <% if (cards && cards.length > 0) { %>
       <% cards.forEach(function(c){ %>
         <div class="cd-item">
-          <div class="ic"><i class="fas fa-wallet"></i></div>
+          <div class="ic<% if (walletLogo(c.bank_name)) { %> has-logo<% } %>"><% if (walletLogo(c.bank_name)) { %><img src="/images/<%= walletLogo(c.bank_name) %>.png" alt="<%= c.bank_name %>"><% } else { %><i class="fas fa-wallet"></i><% } %></div>
           <div><h3><%= c.bank_name %></h3><p><%= c.account_number %></p></div>
           <form action="/profile/cards/delete/<%= c.id %>" method="POST" class="card-delete-form">
             <button type="submit" class="del"><i class="far fa-times-circle"></i></button>
@@ -92,7 +113,7 @@
     <% if (cryptoCards && cryptoCards.length > 0) { %>
       <% cryptoCards.forEach(function(c){ %>
         <div class="cd-item">
-          <div class="ic"><i class="fab fa-bitcoin"></i></div>
+          <div class="ic<% if (walletLogo(c.bank_name)) { %> has-logo<% } %>"><% if (walletLogo(c.bank_name)) { %><img src="/images/<%= walletLogo(c.bank_name) %>.png" alt="<%= c.bank_name %>"><% } else { %><i class="fab fa-bitcoin"></i><% } %></div>
           <div><h3><%= c.bank_name %></h3><p><%= c.account_number %></p></div>
           <form action="/profile/cards/delete/<%= c.id %>" method="POST" class="card-delete-form">
             <button type="submit" class="del"><i class="far fa-times-circle"></i></button>
@@ -139,6 +160,7 @@
           <option value="Upay">Upay</option>
           <option value="Bank Account">Bank Account</option>
         </select>
+        <div class="wallet-logo-preview" id="walletLogoPreview"><img alt="" id="walletLogoImg"><span id="walletLogoName"></span></div>
       </div>
 
       <div class="sheet-field">
@@ -151,7 +173,9 @@
         <input type="password" name="holder_name" placeholder="<%= t.cw_password_placeholder %>" required>
       </div>
 
-      <button type="submit" class="sheet-submit"><%= t.cw_confirm_wallet %></button>
+      <div class="sheet-actions">
+        <button type="submit" class="sheet-submit"><%= t.cw_confirm_wallet %></button>
+      </div>
     </form>
   </div>
 </div>
@@ -192,6 +216,28 @@
 
     var kindCrypto = document.getElementById('kindCrypto');
     if (kindCrypto) kindCrypto.addEventListener('click', function(){ setKind('crypto'); });
+
+    // লোগো প্রিভিউ: select বদলালে (এবং ই-ওয়ালেট/ক্রিপ্টো টগলে options রিসেট হলেও) আপডেট হয়।
+    var LOGO_MAP = { bkash: 'bkash', nagad: 'nagad', rocket: 'rocket', upay: 'upay', usdt: 'usdt', tether: 'usdt' };
+    function updateLogoPreview() {
+      var sel = document.querySelector('#ewalletTypeField select');
+      var box = document.getElementById('walletLogoPreview');
+      var img = document.getElementById('walletLogoImg');
+      var nm = document.getElementById('walletLogoName');
+      if (!sel || !box || !img || !nm) return;
+      var v = (sel.value || '').toLowerCase(), file = '';
+      for (var k in LOGO_MAP) { if (v.indexOf(k) !== -1) { file = LOGO_MAP[k]; break; } }
+      if (!file) { box.classList.remove('show'); return; }
+      img.src = '/images/' + file + '.png';
+      nm.textContent = sel.value;
+      box.classList.add('show');
+    }
+    var typeField = document.getElementById('ewalletTypeField');
+    if (typeField) typeField.addEventListener('change', updateLogoPreview);
+    var kE = document.getElementById('kindEwallet'), kC = document.getElementById('kindCrypto');
+    if (kE) kE.addEventListener('click', updateLogoPreview);
+    if (kC) kC.addEventListener('click', updateLogoPreview);
+    updateLogoPreview();
 
     document.querySelectorAll('.card-delete-form').forEach(function(f){
       f.addEventListener('submit', function(e){
