@@ -55,6 +55,17 @@ const notifyAdminsSeen = (userId) => {
   catch (err) { console.error('notifyAdminsSeen error:', err.message); }
 };
 
+// ===== AI Agent Chat ↔ Human/Admin Live Chat হ্যান্ডঅফ স্ট্যাটাস =====
+// বিদ্যমান user:<id> room-এ ইউজারকে, ও বিদ্যমান admins room-এ সব admin-কে পাঠানো হয় —
+// নতুন কোনো রুম/চ্যানেল তৈরি করা হয়নি।
+const notifySupportStatus = (userId, status) => {
+  if (!io || !userId) return;
+  try {
+    io.to(`user:${userId}`).emit('support_status', { status });
+    io.to('admins').emit('support_status', { userId: Number(userId), status });
+  } catch (err) { console.error('notifySupportStatus error:', err.message); }
+};
+
 let io;
 
 // ===== অ্যাডমিন প্যানেলে রিয়েল-টাইম নোটিফিকেশন (ডিপোজিট/উইথড্র/চ্যাট) =====
@@ -403,4 +414,4 @@ const broadcastDemoStats = async () => {
   }
 };
 
-module.exports = { initSocket, getIo, invalidateSocketAuth, emitPaymentMethodsUpdated, updateLiveScore, getDemoStats, broadcastDemoStats, emitAdminAlert, notifyUserSeen, notifyAdminsSeen, allowChatMessage, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_SEC };
+module.exports = { initSocket, getIo, invalidateSocketAuth, emitPaymentMethodsUpdated, updateLiveScore, getDemoStats, broadcastDemoStats, emitAdminAlert, notifyUserSeen, notifyAdminsSeen, notifySupportStatus, allowChatMessage, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_SEC };
