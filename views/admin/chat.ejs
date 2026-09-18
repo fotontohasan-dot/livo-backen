@@ -124,6 +124,18 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
+                    <button data-chat-action="accept-live"
+                            id="btn-accept-live"
+                            class="text-xs px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 flex items-center gap-1.5 hidden">
+                        <i class="fas fa-headset"></i>
+                        <span><%= t('admin_chat_btn_accept') %></span>
+                    </button>
+                    <button data-chat-action="resolve-live"
+                            id="btn-resolve-live"
+                            class="text-xs px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 flex items-center gap-1.5 hidden">
+                        <i class="fas fa-check"></i>
+                        <span><%= t('admin_chat_btn_resolve') %></span>
+                    </button>
                     <button data-chat-action="view-profile" 
                             class="text-xs px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-white flex items-center gap-1.5">
                         <i class="fas fa-user"></i>
@@ -217,7 +229,15 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script type="application/json" id="adminChatConfig"><%- jsonScriptSafe({ adminId: user.id }) %></script>
+<script type="application/json" id="adminChatConfig"><%- jsonScriptSafe({
+  adminId: user.id,
+  statusLabels: {
+    admin_chat_status_ai: t('admin_chat_status_ai'),
+    admin_chat_status_waiting: t('admin_chat_status_waiting'),
+    admin_chat_status_connected: t('admin_chat_status_connected'),
+    admin_chat_status_resolved: t('admin_chat_status_resolved')
+  }
+}) %></script>
 <script src="/js/admin-chat.js"></script>
   </div>
 </div>
