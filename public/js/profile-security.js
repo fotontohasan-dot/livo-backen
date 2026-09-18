@@ -45,8 +45,12 @@
 
     // ট্যাব সুইচ — ট্যাব বাটন ও উপরের স্ট্যাটাস কার্ড, দুটোই
     document.querySelectorAll('[data-switch-tab]').forEach(function (el) {
-      el.addEventListener('click', function () {
+      el.addEventListener('click', function (e) {
+        // sc-check-row এখন <a href="#">, tab সুইচের সাথে পেজ-টপে জাম্প ঠেকাতে preventDefault
+        if (el.tagName === 'A') e.preventDefault();
         switchTab(el.getAttribute('data-switch-tab'));
+        var target = document.getElementById('tab-' + el.getAttribute('data-switch-tab'));
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     });
 
