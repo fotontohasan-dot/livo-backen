@@ -21,6 +21,54 @@
   var selectedFileType = null;
   var botMode = false; // বট মোড টগল বাটন সরানো হয়েছে — AI সাপোর্ট এখন সরাসরি Chatbase iframe দিয়ে হয়, এই সকেট-চ্যাট শুধু লাইভ এজেন্টের জন্য
 
+  // ==== AI Agent Chat ↔ Human/Admin Live Chat হ্যান্ডঅফ ====
+  // নতুন কোনো chat UI নয় — বিদ্যমান AI প্যানেল (Chatbase iframe) ও বিদ্যমান
+  // live-agent প্যানেল (#chat-container, ইতিমধ্যে নিচে আছে) এর মধ্যে টগল করা হয়,
+  // এবং users.support_status অনুযায়ী একটা ছোট status ব্যানার দেখানো হয়।
+  var aiPanel, liveAgentPanelHeader, talkToLiveAgentBtn, statusBanner;
+
+  function showAiView() {
+    if (aiPanel) aiPanel.style.display = '';
+    if (liveAgentPanelHeader) liveAgentPanelHeader.style.display = 'none';
+    if (messagesDiv && messagesDiv.parentElement) messagesDiv.parentElement.style.display = 'none';
+  }
+
+  function showLiveAgentView() {
+    if (aiPanel) aiPanel.style.display = 'none';
+    if (liveAgentPanelHeader) liveAgentPanelHeader.style.display = 'flex';
+    if (messagesDiv && messagesDiv.parentElement) messagesDiv.parentElement.style.display = 'flex';
+  }
+
+  function applyStatus(status) {
+    if (statusBanner) {
+      if (status === 'waiting') statusBanner.textContent = t('chat_status_waiting');
+      else if (status === 'connected') statusBanner.textContent = t('chat_status_connected');
+      else if (status === 'resolved') statusBanner.textContent = t('chat_status_resolved');
+      else statusBanner.textContent = '';
+    }
+    // 'ai' ছাড়া বাকি সব অবস্থাতেই (waiting/connected/resolved) ইউজার একবার
+    // handoff শুরু করে ফেলেছে — history/continuity বজায় রাখতে live প্যানেলই দেখানো হয়।
+    if (status === 'waiting' || status === 'connected' || status === 'resolved') {
+      showLiveAgentView();
+    } else {
+      showAiView();
+    }
+  }
+
+  function fetchStatus() {
+    fetch('/chat/status')
+      .then(function (res) { return res.json(); })
+      .then(function (data) { applyStatus(data && data.status); })
+      .catch(function () { /* ব্যর্থ হলে ডিফল্ট AI ভিউ-ই থাকবে */ });
+  }
+
+  function talkToLiveAgent() {
+    fetch('/chat/live-agent', { method: 'POST' })
+      .then(function (res) { return res.json(); })
+      .then(function (data) { applyStatus(data && data.status); })
+      .catch(function () { /* নেটওয়ার্ক সমস্যা হলে ব্যানার আপডেট না-ও হতে পারে, কিন্তু existing chat ভেঙে যাবে না */ });
+  }
+
   function readConfig() {
     var el = document.getElementById('chatConfig');
     if (!el) return {};
@@ -204,6 +252,15 @@
     previewName = document.getElementById('preview-name');
     if (!messagesDiv || !messageInput || !sendButton) return;
 
+    aiPanel = document.getElementById('ai-support-panel');
+    liveAgentPanelHeader = document.getElementById('live-agent-panel');
+    talkToLiveAgentBtn = document.getElementById('talk-to-live-agent');
+    statusBanner = document.getElementById('support-status-banner');
+    if (talkToLiveAgentBtn) talkToLiveAgentBtn.addEventListener('click', talkToLiveAgent);
+    // ডিফল্ট: AI প্যানেল দেখানো, তারপর প্রকৃত status অনুযায়ী দরকার হলে live প্যানেলে সুইচ
+    showAiView();
+    fetchStatus();
+
     socket = window.io();
     socket.emit('join', userId);
 
@@ -265,6 +322,11 @@
         appendMessage(data.message, true, data.createdAt, data.fileUrl, data.fileType);
         scrollToBottom();
       }
+    });
+
+    // অ্যাডমিন accept/resolve করলে (routes/chat.js) রিয়েল-টাইমে ব্যানার/প্যানেল আপডেট
+    socket.on('support_status', function (data) {
+      applyStatus(data && data.status);
     });
   }
 

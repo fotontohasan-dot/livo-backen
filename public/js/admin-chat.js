@@ -14,6 +14,7 @@
   'use strict';
 
   var adminId = null;
+  var statusLabels = {};
 
   function readJsonBlock(id) {
     var el = document.getElementById(id);
@@ -24,9 +25,29 @@
   const socket = io();
 
   let currentUserId = null;
+  let currentSupportStatus = null;
   let selectedFile = null;
   let selectedFileType = null;
   let seenByCurrentUser = false;
+
+  // AI Agent Chat ↔ Human/Admin Live Chat হ্যান্ডঅফের status লেবেল/ব্যাজ রং।
+  // নতুন কিছু নয় — বিদ্যমান users.support_status মান অনুযায়ী শুধু প্রদর্শন।
+  const STATUS_LABEL_KEY = {
+    ai: 'admin_chat_status_ai',
+    waiting: 'admin_chat_status_waiting',
+    connected: 'admin_chat_status_connected',
+    resolved: 'admin_chat_status_resolved'
+  };
+  const STATUS_BADGE_CLASS = {
+    ai: 'bg-gray-700 text-gray-300',
+    waiting: 'bg-orange-500/20 text-orange-400',
+    connected: 'bg-emerald-500/20 text-emerald-400',
+    resolved: 'bg-blue-500/20 text-blue-400'
+  };
+  function statusLabel(status) {
+    const key = STATUS_LABEL_KEY[status] || STATUS_LABEL_KEY.ai;
+    return (statusLabels && statusLabels[key]) || status || '';
+  }
 
   // ===== নিরাপত্তা: স্টোরড XSS প্রতিরোধ =====
   // চ্যাটের message, username এবং file_url — তিনটাই সম্পূর্ণ ইউজার-নিয়ন্ত্রিত মান,
@@ -81,6 +102,8 @@
                   ? user.last_message
                   : (user.last_file_url ? '📎 ফাইল পাঠানো হয়েছে' : 'No messages yet');
               const prefix = user.last_is_admin ? 'আপনি: ' : '';
+              const status = user.support_status || 'ai';
+              const badgeClass = STATUS_BADGE_CLASS[status] || STATUS_BADGE_CLASS.ai;
 
               div.innerHTML = `
                   <div class="w-9 h-9 bg-gray-700 rounded-full flex-shrink-0 flex items-center justify-center relative">
@@ -88,9 +111,9 @@
                       ${isUnread ? '<span class="absolute -top-0.5 -right-0.5 w-3 h-3 bg-yellow-500 rounded-full border-2 border-gray-900"></span>' : ''}
                   </div>
                   <div class="flex-1 min-w-0">
-                      <div class="flex items-center justify-between">
+                      <div class="flex items-center justify-between gap-2">
                           <div class="font-medium truncate ${isUnread ? 'text-white font-bold' : 'text-gray-300'}">${escapeHtml(user.username)}</div>
-                          <div class="text-[10px] text-gray-500">${user.last_message_time ? new Date(user.last_message_time).toLocaleTimeString('bn-BD', {hour:'2-digit', minute:'2-digit'}) : ''}</div>
+                          <span class="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${badgeClass}">${escapeHtml(statusLabel(status))}</span>
                       </div>
                       <div class="flex items-center justify-between gap-2">
                           <div class="text-xs truncate ${isUnread ? 'text-gray-100 font-semibold' : 'text-gray-500'}">${prefix}${escapeHtml(lastPreview)}</div>
@@ -99,7 +122,7 @@
                   </div>
               `;
 
-              div.onclick = () => selectUser(user.id, user.username, div);
+              div.onclick = () => selectUser(user.id, user.username, div, status);
               container.appendChild(div);
           });
       } catch (e) {
@@ -120,8 +143,18 @@
     });
   }
 
-  function selectUser(userId, username, el) {
+  function updateActionButtons() {
+      const acceptBtn = document.getElementById('btn-accept-live');
+      const resolveBtn = document.getElementById('btn-resolve-live');
+      if (!acceptBtn || !resolveBtn) return;
+      const status = currentSupportStatus || 'ai';
+      acceptBtn.classList.toggle('hidden', !(status === 'ai' || status === 'waiting'));
+      resolveBtn.classList.toggle('hidden', !(status === 'waiting' || status === 'connected'));
+  }
+
+  function selectUser(userId, username, el, status) {
       currentUserId = userId;
+      currentSupportStatus = status || 'ai';
       seenByCurrentUser = false;
 
       // Highlight selected
@@ -134,6 +167,7 @@
       document.getElementById('user-info-panel').classList.remove('hidden');
 
       document.getElementById('chat-header').textContent = username;
+      updateActionButtons();
 
       // Load user info (you can enhance this with real API)
       document.getElementById('info-username').textContent = username;
@@ -143,6 +177,35 @@
       document.getElementById('info-balance').textContent = '—';
 
       loadChatHistory(userId);
+  }
+
+  // "Talk to Live Agent" থেকে আসা conversation admin এই বাটনে accept করে —
+  // ব্যাকএন্ডে (routes/chat.js) atomic UPDATE ... WHERE support_status IN ('ai','waiting')
+  // থাকায় দুইজন admin একসাথে একই conversation accept করতে পারবে না।
+  async function acceptLiveAgent() {
+      if (!currentUserId) return;
+      try {
+          const res = await fetch(`/chat/admin/accept/${currentUserId}`, { method: 'POST' });
+          const data = await res.json();
+          if (data && data.status) {
+              currentSupportStatus = data.status;
+              updateActionButtons();
+              loadConversations();
+          }
+      } catch (e) { console.error(e); }
+  }
+
+  async function resolveLiveAgent() {
+      if (!currentUserId) return;
+      try {
+          const res = await fetch(`/chat/admin/resolve/${currentUserId}`, { method: 'POST' });
+          const data = await res.json();
+          if (data && data.status) {
+              currentSupportStatus = data.status;
+              updateActionButtons();
+              loadConversations();
+          }
+      } catch (e) { console.error(e); }
   }
 
   async function loadChatHistory(userId) {
@@ -343,6 +406,16 @@
       loadConversations();
   });
 
+  // অন্য admin conversation accept/resolve করলে, বা ইউজার নতুন করে "Talk to Live
+  // Agent" চাপলে — এই admin-এর লিস্ট/বাটন রিয়েল-টাইমে সিঙ্ক থাকা
+  socket.on('support_status', (data) => {
+      loadConversations();
+      if (data && currentUserId && data.userId === currentUserId) {
+          currentSupportStatus = data.status;
+          updateActionButtons();
+      }
+  });
+
   // পেজ প্রস্তুত হলে boot() এটাকে ডাকে — আগে এই তিনটে স্টেটমেন্ট
   // স্ক্রিপ্টের top level-এ ছিল, ইনলাইন ব্লক হিসেবে DOM-এর পরে চলত বলে।
   function start() {
@@ -360,6 +433,8 @@
         else if (action === 'view-profile') viewUserProfile();
         else if (action === 'quick-ban') quickBanUser();
         else if (action === 'clear-file') clearFile();
+        else if (action === 'accept-live') acceptLiveAgent();
+        else if (action === 'resolve-live') resolveLiveAgent();
       });
     });
   }
@@ -367,6 +442,7 @@
   function boot() {
     var config = readJsonBlock('adminChatConfig') || {};
     adminId = config.adminId;
+    statusLabels = config.statusLabels || {};
     initHooks();
     start();
   }
