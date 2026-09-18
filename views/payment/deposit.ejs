@@ -120,34 +120,32 @@
       <div class="dep-section">
         <div class="dep-label"><%= t.dp_mode_label %></div>
         <div class="method-grid" id="methodGrid">
-          <div class="method-tile selected" data-method="nagad">
-            <div class="method-icon rt1-1"><%= t.dp_cash_label %></div>
-            <div class="method-name">NAGAD</div>
-          </div>
-          <div class="method-tile" data-method="bkash">
-            <div class="method-icon rt1-2">bK</div>
-            <div class="method-name">Bkash</div>
-          </div>
-          <div class="method-tile" data-method="rocket">
-            <div class="method-icon rt1-3">RK</div>
-            <div class="method-name">ROCKET</div>
-          </div>
-          <div class="method-tile" data-method="upay">
-            <div class="method-icon rt1-4">Up</div>
-            <div class="method-name">Upay</div>
-          </div>
-          <div class="method-tile" data-method="nagad" data-agent="1">
-            <div class="method-icon rt1-1">SM</div>
-            <div class="method-name">Send Money<br>Nagad</div>
-          </div>
-          <div class="method-tile" data-method="bkash" data-agent="1">
-            <div class="method-icon rt1-2">SM</div>
-            <div class="method-name">Send Money<br>Bkash</div>
-          </div>
-          <div class="method-tile" data-method="crypto">
-            <div class="method-icon rt1-5">₮</div>
-            <div class="method-name">USDT<br>+5%</div>
-          </div>
+          <div class="deposit-section">
+  <h2>Deposit mode</h2>
+  <div class="deposit-grid">
+    <div class="card selected" data-method="nagad">
+      <img src="/images/nagad.png"><p>NAGAD</p>
+    </div>
+    <div class="card" data-method="bkash">
+      <img src="/images/bkash.png"><p>Bkash</p>
+    </div>
+    <div class="card" data-method="rocket">
+      <img src="/images/rocket.png"><p>ROCKET</p>
+    </div>
+    <div class="card" data-method="upay">
+      <img src="/images/upay.png"><p>Upay</p>
+    </div>
+    <div class="card" data-method="send-nagad">
+      <img src="/images/nagad.png"><p>Send Money Nagad</p>
+    </div>
+    <div class="card" data-method="send-bkash">
+      <img src="/images/bkash.png"><p>Send Money Bkash</p>
+    </div>
+    <div class="card" data-method="usdt">
+      <img src="/images/usdt.png"><p>USDT +5%</p>
+    </div>
+  </div>
+</div>
         </div>
       </div>
 
