@@ -5,7 +5,7 @@ const { pool } = require('../db');
 const { requireFeature } = require('../middleware/featureGate');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
-const { notifyUserSeen, notifyAdminsSeen } = require('../services/socket');
+const { notifyUserSeen, notifyAdminsSeen, notifySupportStatus } = require('../services/socket');
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -204,10 +204,115 @@ router.get('/history', isAuth, requireFeature('live_chat'), async (req, res) => 
   }
 });
 
+// ==================== AI Agent Chat ↔ Human/Admin Live Chat হ্যান্ডঅফ ====================
+// এই চারটি রুট নতুন কোনো chat/conversation সিস্টেম তৈরি করে না — বিদ্যমান
+// users.support_status কলাম (উপরে migrations.js) ও বিদ্যমান socket infra
+// (services/socket.js-এর user:<id>/admins room) ব্যবহার করে শুধু AI ও Human
+// chat-এর মধ্যে একটি স্পষ্ট status/handoff যুক্ত করা হচ্ছে।
+const SUPPORT_STATUSES = ['ai', 'waiting', 'connected', 'resolved'];
+
+// ইউজার নিজের বর্তমান support_status জানতে চাইলে (পেজ লোড/রিফ্রেশে)
+router.get('/status', isAuth, requireFeature('live_chat'), async (req, res) => {
+  try {
+    const result = await pool.query('SELECT support_status FROM users WHERE id = $1', [req.session.user.id]);
+    const status = (result.rows[0] && result.rows[0].support_status) || 'ai';
+    res.json({ status });
+  } catch (err) {
+    res.status(500).json({ error: req.t('common_server_error_short') });
+  }
+});
+
+// "Talk to Live Agent" — ইউজার নিজের জন্যই status বদলাতে পারে, session থেকে userId
+// নেওয়া হয় (client থেকে userId কখনো বিশ্বাস করা হয় না)।
+router.post('/live-agent', isAuth, requireFeature('live_chat'), async (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const current = await pool.query('SELECT support_status FROM users WHERE id = $1', [userId]);
+    const currentStatus = current.rows[0] && current.rows[0].support_status;
+    // ইতিমধ্যে waiting/connected থাকলে আবার waiting-এ ফেরত পাঠানো হবে না (একই user-এর
+    // জন্য একাধিক active human support request তৈরি হওয়া আটকানো — রিকোয়ারমেন্ট #4)
+    if (currentStatus === 'waiting' || currentStatus === 'connected') {
+      return res.json({ status: currentStatus });
+    }
+    await pool.query(
+      `UPDATE users SET support_status = 'waiting', support_status_updated_at = NOW() WHERE id = $1`,
+      [userId]
+    );
+    notifySupportStatus(userId, 'waiting');
+    // অ্যাডমিন প্যানেলে "নতুন লাইভ সাপোর্ট অনুরোধ" alert — বিদ্যমান emitAdminAlert/Telegram
+    // ইনফ্রা পুনর্ব্যবহার, নতুন কিছু নয়
+    try {
+      const { emitAdminAlert } = require('../services/socket');
+      emitAdminAlert('chat', {
+        title: req.t ? req.t('admin_chat_live_request_title') : 'Live agent requested',
+        message: req.session.user.username || ''
+      });
+    } catch (e) { /* alert ব্যর্থ হলেও handoff চলবে */ }
+    res.json({ status: 'waiting' });
+  } catch (err) {
+    console.error('chat live-agent error:', err.message);
+    res.status(500).json({ error: req.t('common_server_error_short') });
+  }
+});
+
+// Admin conversation accept করলে (existing admin chat-এ কনভারসেশন খোলা) status → connected
+router.post('/admin/accept/:userId', isAdmin, requireSupportView, async (req, res) => {
+  try {
+    const rawUserId = String(req.params.userId || '');
+    if (!/^[0-9]+$/.test(rawUserId)) return res.status(400).json({ error: 'invalid user id' });
+    const targetUserId = parseInt(rawUserId, 10);
+    if (!Number.isSafeInteger(targetUserId) || targetUserId <= 0) {
+      return res.status(400).json({ error: 'invalid user id' });
+    }
+    // একই সময়ে দুইজন admin যেন একই conversation accept করতে না পারে — শুধুমাত্র
+    // 'ai' বা 'waiting' অবস্থা থেকেই 'connected'-এ যাওয়া যাবে, একটি atomic UPDATE দিয়ে।
+    // conversation ইতিমধ্যে অন্য admin accept করে ফেললে (status আর 'waiting' নেই),
+    // এই UPDATE কোনো row বদলাবে না এবং already-connected জানানো হবে।
+    const result = await pool.query(
+      `UPDATE users SET support_status = 'connected', support_status_updated_at = NOW()
+       WHERE id = $1 AND support_status IN ('ai', 'waiting')
+       RETURNING support_status`,
+      [targetUserId]
+    );
+    if (result.rowCount === 0) {
+      const cur = await pool.query('SELECT support_status FROM users WHERE id = $1', [targetUserId]);
+      return res.json({ status: (cur.rows[0] && cur.rows[0].support_status) || 'connected', alreadyHandled: true });
+    }
+    notifySupportStatus(targetUserId, 'connected');
+    res.json({ status: 'connected' });
+  } catch (err) {
+    console.error('chat admin/accept error:', err.message);
+    res.status(500).json({ error: req.t('common_server_error_short') });
+  }
+});
+
+// Admin conversation resolve/close করলে status → resolved (পরের বার ইউজার নতুন করে
+// "Talk to Live Agent" চাপলে আবার waiting থেকে শুরু হবে)
+router.post('/admin/resolve/:userId', isAdmin, requireSupportView, async (req, res) => {
+  try {
+    const rawUserId = String(req.params.userId || '');
+    if (!/^[0-9]+$/.test(rawUserId)) return res.status(400).json({ error: 'invalid user id' });
+    const targetUserId = parseInt(rawUserId, 10);
+    if (!Number.isSafeInteger(targetUserId) || targetUserId <= 0) {
+      return res.status(400).json({ error: 'invalid user id' });
+    }
+    await pool.query(
+      `UPDATE users SET support_status = 'resolved', support_status_updated_at = NOW() WHERE id = $1`,
+      [targetUserId]
+    );
+    notifySupportStatus(targetUserId, 'resolved');
+    res.json({ status: 'resolved' });
+  } catch (err) {
+    console.error('chat admin/resolve error:', err.message);
+    res.status(500).json({ error: req.t('common_server_error_short') });
+  }
+});
+
 router.get('/admin/conversations', isAdmin, requireSupportView, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT u.id, u.username,
+        u.support_status,
         lm.message AS last_message,
         lm.created_at AS last_message_time,
         lm.file_url AS last_file_url,
