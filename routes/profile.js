@@ -105,21 +105,57 @@ router.post('/change-password', isAuth, async (req, res) => {
 
     if (confirmPassword && np !== confirmPassword) {
       req.flash('error', '❌ নতুন পাসওয়ার মিলছে না।');
-      return res.redirect('/profile/security/security');
+      return res.redirect('/profile/security/login-password');
     }
 
     const user = await pool.query(`SELECT * FROM users WHERE id=$1`, [req.session.user.id]);
     if (!(await bcrypt.compare(cp, user.rows[0].password))) {
       req.flash('error', '❌ বর্তমান পাসওয়ার্ড ভুল।');
-      return res.redirect('/profile/security/security');
+      return res.redirect('/profile/security/login-password');
     }
     const hashed = await bcrypt.hash(np, 10);
     await pool.query(`UPDATE users SET password=$1 WHERE id=$2`, [hashed, req.session.user.id]);
     req.flash('success', '✅ পাসওয়ার্ড পরিবর্তন হয়েছে!');
-    res.redirect('/profile/security/security');
+    res.redirect('/profile/security/login-password');
   } catch (err) {
     req.flash('error', '❌ পাসওয়ার্ড পরিবর্তন করতে সমস্যা হয়েছে।');
-    res.redirect('/profile/security/security');
+    res.redirect('/profile/security/login-password');
+  }
+});
+
+// ট্রানজেকশন (ফান্ডস) পাসওয়ার্ড — এটা লগইন পাসওয়ার্ড থেকে সম্পূর্ণ আলাদা,
+// আলাদা কলামে (users.transaction_password) সংরক্ষিত হয়। প্রথমবার সেট করার
+// সময় "বর্তমান পাসওয়ার্ড" চাওয়া হয় না (তখনও কিছু সেট করাই নেই); আগে থেকে
+// একটা থাকলে সেটা যাচাই করে তবেই বদলানো যায়। ফর্মে কয়টা ফিল্ড দেখানো হবে
+// সেটাও এই একই শর্তে (user.transaction_password আছে কিনা) security.ejs-এ ঠিক হয়।
+router.post('/set-transaction-password', isAuth, async (req, res) => {
+  try {
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+
+    if (!newPassword || newPassword !== confirmPassword) {
+      req.flash('error', '❌ নতুন পাসওয়ার্ড মিলছে না।');
+      return res.redirect('/profile/security/transaction-password');
+    }
+
+    const userRes = await pool.query(`SELECT * FROM users WHERE id=$1`, [req.session.user.id]);
+    const existing = userRes.rows[0];
+
+    if (existing.transaction_password) {
+      // আগে থেকে সেট করা থাকলে বর্তমান ট্রানজেকশন পাসওয়ার্ড যাচাই বাধ্যতামূলক
+      if (!currentPassword || !(await bcrypt.compare(currentPassword, existing.transaction_password))) {
+        req.flash('error', '❌ বর্তমান ট্রানজেকশন পাসওয়ার্ড ভুল।');
+        return res.redirect('/profile/security/transaction-password');
+      }
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await pool.query(`UPDATE users SET transaction_password=$1 WHERE id=$2`, [hashed, req.session.user.id]);
+    req.flash('success', existing.transaction_password ? '✅ ট্রানজেকশন পাসওয়ার্ড পরিবর্তন হয়েছে!' : '✅ ট্রানজেকশন পাসওয়ার্ড সেট করা হয়েছে!');
+    res.redirect('/profile/security/transaction-password');
+  } catch (err) {
+    console.error('set-transaction-password error:', err.message);
+    req.flash('error', '❌ ট্রানজেকশন পাসওয়ার্ড সেট করতে সমস্যা হয়েছে।');
+    res.redirect('/profile/security/transaction-password');
   }
 });
 
@@ -213,20 +249,18 @@ router.get('/stats', isAuth, async (req, res) => {
   }
 });
 
-// ট্যাব সিলেকশন এখন সার্ভার-সাইডে URL প্যারাম দিয়ে ঠিক হয় (/profile/security/bank
-// ইত্যাদি) — ফলে প্রতিটা ট্যাবে ক্লিক করলে আসল পেজ নেভিগেশন হয় (URL বদলায়,
-// ব্রাউজার ব্যাক/ফরওয়ার্ড ও রিফ্রেশ ঠিকঠাক কাজ করে), আগের মতো একই পেজের
-// ভেতর JS দিয়ে টগল করা কন্টেন্ট নয়।
-const SECURITY_TABS = ['personal', 'bank', 'security'];
+// ট্যাব সিলেকশন সার্ভার-সাইডে URL প্যারাম দিয়ে ঠিক হয় (/profile/security/bank
+// ইত্যাদি) — প্রতিটা ক্যাটাগরি এখন নিজের আলাদা, একক পেজ (কোনো পাশাপাশি
+// ট্যাব-বার/অন্য ফিচারের অপশন দেখায় না, একটাতে ক্লিক করলে একটাই ফিচার খোলে)।
+const SECURITY_TABS = ['personal', 'bank', 'login-password', 'transaction-password'];
 
-// Safety Score / Checklist — স্ক্রিনশটের ডিজাইন অনুযায়ী। এই স্কিমায় ক্রিপ্টো
-// ওয়ালেট বা ট্রানজেকশন পিন-এর জন্য আলাদা কোনো টেবিল/কলাম নেই, তাই যেগুলোর
-// বাস্তব ডেটা আছে (personal info, bank card) সেগুলো দিয়েই আসল অবস্থা চেক
-// করা হয়; বাকিগুলো (transaction password) ফিচার তৈরি না হওয়া পর্যন্ত
-// "সম্পন্ন হয়নি" হিসেবেই দেখানো হয়।
+// Safety Score / Checklist — স্ক্রিনশটের ডিজাইন অনুযায়ী। ক্রিপ্টো ওয়ালেট/
+// ই-ওয়ালেটের জন্য বাস্তব ডেটা bank_cards টেবিল থেকে; ট্রানজেকশন পাসওয়ার্ড
+// সেট হয়েছে কিনা সেটা users.transaction_password কলাম থেকে।
 function buildSecurityChecklist(user, bankCards) {
   const personalInfoComplete = !!(user.full_name && user.phone);
   const hasWallet = bankCards.length > 0;
+  const hasTxnPassword = !!user.transaction_password;
 
   const checklist = [
     {
@@ -251,13 +285,13 @@ function buildSecurityChecklist(user, bankCards) {
       icon: 'fa-lock', ok: false,
       label: 'Change Login Password',
       sub: 'Suggested: mix of letters and numbers',
-      kind: 'tab', target: 'security'
+      kind: 'tab', target: 'login-password'
     },
     {
-      icon: 'fa-shield-halved', ok: false,
+      icon: 'fa-shield-halved', ok: hasTxnPassword,
       label: 'Transaction Password',
-      sub: 'Set a funds password to improve transaction security',
-      kind: 'tab', target: 'security'
+      sub: hasTxnPassword ? 'ট্রানজেকশন পাসওয়ার্ড সেট করা আছে।' : 'Set a funds password to improve transaction security',
+      kind: 'tab', target: 'transaction-password'
     }
   ];
 
