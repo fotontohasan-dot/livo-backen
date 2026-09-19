@@ -359,7 +359,7 @@ router.get('/stats', isAuth, async (req, res) => {
 });
 
 const SECURITY_TABS = ['personal', 'bank', 'security', 'devices'];
-router.get('/security/:tab?', isAuth, async (req, res) => {
+router.get('/security{/:tab}', isAuth, async (req, res) => {
   const activeTab = SECURITY_TABS.includes(req.params.tab) ? req.params.tab : 'personal';
   try {
     const cards = await pool.query('SELECT id, user_id, bank_name, account_number, holder_name, wallet_kind, created_at FROM bank_cards WHERE user_id = $1 ORDER BY created_at DESC', [req.session.user.id]);
