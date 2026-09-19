@@ -50,10 +50,11 @@
     </div>
     <div class="sc-score-body">
       <div class="sc-score-title">
-        Safety Score: <span class="lvl-<%= safetyLevel %>"><%= safetyLevel === 'high' ? 'High' : (safetyLevel === 'medium' ? 'Medium' : 'Low') %></span>
+        <% var lvlColor = safetyLevel === 'high' ? 'var(--green)' : (safetyLevel === 'medium' ? 'var(--gold)' : 'var(--red)'); %>
+        Safety Score: <span class="lvl-<%= safetyLevel %>" style="color: <%= lvlColor %> !important;"><%= safetyLevel === 'high' ? 'High' : (safetyLevel === 'medium' ? 'Medium' : 'Low') %></span>
         <% var scBoltsOn = Math.round(safetyScore / 20); %>
         <% for (var b = 1; b <= 5; b++) { %>
-          <i class="fas fa-bolt sc-bolt <%= b <= scBoltsOn ? ('is-on lvl-' + safetyLevel) : 'is-off' %>"></i>
+          <i class="fas fa-bolt sc-bolt <%= b <= scBoltsOn ? ('is-on lvl-' + safetyLevel) : 'is-off' %>" style="color: <%= b <= scBoltsOn ? lvlColor : 'rgba(255,255,255,0.15)' %> !important;"></i>
         <% } %>
       </div>
       <div class="sc-score-meta">
@@ -64,17 +65,17 @@
   </div>
 
   <% if (safetyScore < 80) { %>
-    <div class="sc-warning-banner">Your account security level is <%= safetyLevel %>, improve your security info</div>
+    <div class="sc-warning-banner" style="color: var(--red) !important;">Your account security level is <%= safetyLevel %>, improve your security info</div>
   <% } %>
 
   <div class="sc-checklist">
     <% checklist.forEach(function(it) { %>
       <a href="/profile/security/<%= it.target %>" class="sc-check-row">
-        <i class="fas <%= it.icon %> sc-check-icon <%= it.ok ? 'is-ok' : '' %>"></i>
+        <i class="fas <%= it.icon %> sc-check-icon <%= it.ok ? 'is-ok' : '' %>" style="color: <%= it.ok ? 'var(--green)' : 'var(--text-muted)' %> !important;"></i>
         <div class="sc-check-body">
           <div class="sc-check-title">
             <%= it.label %>
-            <i class="fas <%= it.ok ? 'fa-circle-check' : 'fa-circle-exclamation' %> sc-check-badge <%= it.ok ? 'is-ok' : 'is-bad' %>"></i>
+            <i class="fas <%= it.ok ? 'fa-circle-check' : 'fa-circle-exclamation' %> sc-check-badge <%= it.ok ? 'is-ok' : 'is-bad' %>" style="color: <%= it.ok ? 'var(--green)' : 'var(--red)' %> !important;"></i>
           </div>
           <div class="sc-check-sub"><%= it.sub %></div>
         </div>
