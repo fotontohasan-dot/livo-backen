@@ -1,5 +1,5 @@
 <%- include('../partials/head') %>
-<style>
+<style nonce="<%= cspNonce %>">
   /* Safety Score + Checklist — সাইটের নিজস্ব থিম টোকেন (--bg-card, --border-glass,
      --gold, --text-main, --text-muted, --green, --red) দিয়েই, নতুন কোনো রঙ
      হার্ডকোড না করে। */
@@ -42,7 +42,7 @@
   <%- include('../partials/flash') %>
 
   <!-- ==================== Safety Score + Checklist ==================== -->
-  <style>#sc-gauge-fill { background: conic-gradient(var(--gold) <%= safetyScore %>%, rgba(255,255,255,0.08) 0); }</style>
+  <style nonce="<%= cspNonce %>">#sc-gauge-fill { background: conic-gradient(var(--gold) <%= safetyScore %>%, rgba(255,255,255,0.08) 0); }</style>
   <div class="sc-score-card">
     <div id="sc-gauge-fill" class="sc-gauge">
       <div class="sc-gauge-inner"><%= safetyScore %><span>%</span></div>
@@ -199,7 +199,7 @@
 
 </div>
 
-<style>
+<style nonce="<%= cspNonce %>">
 .sec-tab {
   background: transparent;
   color: var(--text-muted);
