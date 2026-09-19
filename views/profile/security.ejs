@@ -41,7 +41,8 @@
 
   <%- include('../partials/flash') %>
 
-  <!-- ==================== Safety Score + Checklist ==================== -->
+  <% if (!isDetailView) { %>
+  <!-- ==================== Safety Score + Checklist (শুধু হাব পেজে: /profile/security) ==================== -->
   <style nonce="<%= cspNonce %>">#sc-gauge-fill { background: conic-gradient(var(--gold) <%= safetyScore %>%, rgba(255,255,255,0.08) 0); }</style>
   <div class="sc-score-card">
     <div id="sc-gauge-fill" class="sc-gauge">
@@ -90,15 +91,16 @@
     </a>
   </div>
 
-  <!-- Tab Buttons — আসল লিংক, প্রতিটাতে ক্লিক করলে ফুল পেজ নেভিগেশন হয়
-       (URL বদলায়, সার্ভার থেকে activeTab অনুযায়ী রেন্ডার হয়ে আসে,
-       ব্রাউজার ব্যাক/ফরওয়ার্ড ও রিফ্রেশ স্বাভাবিকভাবে কাজ করে) -->
+  <% } else { %>
+  <!-- ==================== dedicated tab পেজ (/profile/security/:tab) — checklist/score card এখানে দেখানো হয় না, শুধু নিজের সেকশন ==================== -->
   <div style="display: flex; gap: 10px; margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 5px; border-radius: 12px; border: 1px solid var(--border-glass);">
     <a href="/profile/security/personal" id="btn-personal" class="sec-tab <%= activeTab === 'personal' ? 'active' : '' %>" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s; text-align: center; text-decoration: none;"><%= t.personal_info %></a>
     <a href="/profile/security/bank" id="btn-bank" class="sec-tab <%= activeTab === 'bank' ? 'active' : '' %>" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s; text-align: center; text-decoration: none;"><%= t.menu_withdraw %></a>
     <a href="/profile/security/security" id="btn-security" class="sec-tab <%= activeTab === 'security' ? 'active' : '' %>" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s; text-align: center; text-decoration: none;"><%= t.security %></a>
   </div>
+  <% } %>
 
+  <% if (isDetailView) { %>
   <!-- Personal Information Tab -->
   <div id="tab-personal" class="sec-content" style="<%= activeTab === 'personal' ? '' : 'display: none;' %>">
     <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
@@ -196,6 +198,7 @@
       </form>
     </div>
   </div>
+  <% } %>
 
 </div>
 
