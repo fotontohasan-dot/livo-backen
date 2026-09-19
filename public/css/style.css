@@ -1132,3 +1132,26 @@ body .keep-color * {
   color: #ef4444;
   font-size: 13px;
 }
+body {
+ background-color: #006a4e !important; 
+}
+
+button, 
+input[type="button"], 
+input[type="submit"], 
+.btn, 
+[class*="btn-"] {
+ background-color: #f42a41 !important; 
+ color: #ffffff !important; 
+ border-color: #f42a41 !important;
+ font-weight: bold;
+}
+
+button:hover, 
+input[type="button"]:hover, 
+input[type="submit"]:hover, 
+.btn:hover, 
+[class*="btn-"]:hover {
+ background-color: #d32035 !important;
+ color: #ffffff !important;
+}
