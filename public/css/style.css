@@ -11,9 +11,9 @@
   --primary-glow: rgba(0, 143, 90, 0.35);
   --secondary: #006A4E;
   --accent: #008F5A;
-  --gold: #D4A72C;
-  --gold-hover: #E9C25A;
-  --gold-soft: rgba(212, 167, 44, 0.14);
+  --gold: #10b981;
+  --gold-hover: #16d69a;
+  --gold-soft: rgba(214, 40, 40, 0.14);
   --green: #10b981;
   --red: #D62828;
   /* --red যখন background-fill (badge/live-indicator) সেটার সাথে brand-accurate থাকা
@@ -40,12 +40,12 @@
      ব্র্যান্ড-নির্ভুল থাকা দরকার (বাটন/ব্যাজে তার ওপর --text-inverse বসে); সারফেসের ওপর
      সরাসরি টেক্সট রঙ হিসেবে ব্যবহারের জন্য এই আলাদা টোকেন — dark থিমে গোল্ডের কনট্রাস্ট
      এমনিতেই যথেষ্ট (~7-8:1) তাই একই মান রাখা হয়েছে। */
-  --text-accent: #D4A72C;
+  --text-accent: #10b981;
 
   /* Gradients */
   --grad-primary: linear-gradient(135deg, #006A4E, #008F5A);
   --grad-secondary: linear-gradient(135deg, #0F3A28, #0A1C14);
-  --grad-gold: linear-gradient(135deg, #D4A72C, #E9C25A);
+  --grad-gold: linear-gradient(135deg, #D62828, #10b981);
   --grad-dark: linear-gradient(180deg, #10291D, #0A1C14);
   --grad-surface: linear-gradient(135deg, rgba(245,241,230,0.05), rgba(245,241,230,0.01));
 
@@ -101,9 +101,9 @@ body.light-mode {
   --primary-glow: rgba(0, 106, 78, 0.22);
   --secondary: #008F5A;
   --accent: #006A4E;
-  --gold: #B8891A;
-  --gold-hover: #D4A72C;
-  --gold-soft: #FBF3DC;
+  --gold: #006A4E;
+  --gold-hover: #008F5A;
+  --gold-soft: #FBE3E3;
   --red-text: #D62828;
   --warning: #C97D0E;
 
@@ -122,7 +122,7 @@ body.light-mode {
 
   --grad-primary: linear-gradient(135deg, #006A4E, #008F5A);
   --grad-secondary: linear-gradient(135deg, #008F5A, #006A4E);
-  --grad-gold: linear-gradient(135deg, #B8891A, #D4A72C);
+  --grad-gold: linear-gradient(135deg, #D62828, #006A4E);
   --grad-dark: linear-gradient(180deg, #FFFFFF, #F1F4F1);
   --grad-surface: linear-gradient(135deg, rgba(255,255,255,0.8), rgba(255,255,255,0.4));
   --shadow-card: 0 2px 14px rgba(24, 27, 25, 0.08);
