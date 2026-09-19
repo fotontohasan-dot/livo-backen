@@ -203,7 +203,7 @@ router.post('/update-personal', isAuth, async (req, res) => {
   } catch (err) {
     req.flash('error', req.t('common_update_failed_x'));
   }
-  res.redirect('/profile/security');
+  res.redirect('/profile/security/personal');
 });
 
 router.post('/add-bank-card', isAuth, async (req, res) => {
@@ -217,7 +217,7 @@ router.post('/add-bank-card', isAuth, async (req, res) => {
   } catch (err) {
     req.flash('error', req.t('profile_card_add_failed'));
   }
-  res.redirect('/profile/security');
+  res.redirect('/profile/security/bank');
 });
 
 router.post('/delete-bank-card/:id', isAuth, async (req, res) => {
@@ -227,7 +227,7 @@ router.post('/delete-bank-card/:id', isAuth, async (req, res) => {
   } catch (err) {
     req.flash('error', req.t('profile_card_delete_failed'));
   }
-  res.redirect('/profile/security');
+  res.redirect('/profile/security/bank');
 });
 
 router.post('/change-password', isAuth, async (req, res) => {
@@ -238,17 +238,17 @@ router.post('/change-password', isAuth, async (req, res) => {
 
     if (confirmPassword && np !== confirmPassword) {
       req.flash('error', req.t('profile_password_mismatch'));
-      return res.redirect('/profile/security');
+      return res.redirect('/profile/security/security');
     }
     if (!np || np.length < 8) {
       req.flash('error', req.t('profile_password_min_length'));
-      return res.redirect('/profile/security');
+      return res.redirect('/profile/security/security');
     }
 
     const user = await pool.query(`SELECT * FROM users WHERE id=$1`, [req.session.user.id]);
     if (!(await bcrypt.compare(cp, user.rows[0].password))) {
       req.flash('error', req.t('profile_current_password_wrong'));
-      return res.redirect('/profile/security');
+      return res.redirect('/profile/security/security');
     }
     const hashed = await bcrypt.hash(np, 10);
     await pool.query(`UPDATE users SET password=$1, password_changed_at=NOW() WHERE id=$2`, [hashed, req.session.user.id]);
@@ -264,10 +264,10 @@ router.post('/change-password', isAuth, async (req, res) => {
     }
 
     req.flash('success', req.t('profile_password_changed_ok'));
-    res.redirect('/profile/security');
+    res.redirect('/profile/security/security');
   } catch (err) {
     req.flash('error', req.t('profile_password_change_failed'));
-    res.redirect('/profile/security');
+    res.redirect('/profile/security/security');
   }
 });
 
@@ -358,7 +358,9 @@ router.get('/stats', isAuth, async (req, res) => {
   }
 });
 
-router.get('/security', isAuth, async (req, res) => {
+const SECURITY_TABS = ['personal', 'bank', 'security', 'devices'];
+router.get('/security/:tab?', isAuth, async (req, res) => {
+  const activeTab = SECURITY_TABS.includes(req.params.tab) ? req.params.tab : 'personal';
   try {
     const cards = await pool.query('SELECT id, user_id, bank_name, account_number, holder_name, wallet_kind, created_at FROM bank_cards WHERE user_id = $1 ORDER BY created_at DESC', [req.session.user.id]);
     const hasCryptoWallet = cards.rows.some(c => c.wallet_kind === 'crypto');
@@ -422,7 +424,7 @@ router.get('/security', isAuth, async (req, res) => {
     res.render('profile/security', {
       user: req.session.user, bankCards: cards.rows, hasCryptoWallet, hasEwallet, pinStatus, activeSessions, recentLogins,
       emailStatus, passwordChangedAt, recentActivity, loadError: false,
-      personalInfoComplete, lastLogin, safetyScore, safetyLevel
+      personalInfoComplete, lastLogin, safetyScore, safetyLevel, activeTab
     });
   } catch (err) {
     // খালি bankCards দেখলে ইউজার ভাবতে পারে তার সংরক্ষিত ওয়ালেট মুছে
@@ -431,7 +433,7 @@ router.get('/security', isAuth, async (req, res) => {
     res.render('profile/security', {
       user: req.session.user, bankCards: [], hasCryptoWallet: false, hasEwallet: false, pinStatus: { configured: false, locked: false }, activeSessions: [], recentLogins: [],
       emailStatus: { verified: true, hasEmail: false, lastSentAt: null }, passwordChangedAt: null, recentActivity: [], loadError: true,
-      personalInfoComplete: false, lastLogin: null, safetyScore: 0, safetyLevel: 'low'
+      personalInfoComplete: false, lastLogin: null, safetyScore: 0, safetyLevel: 'low', activeTab
     });
   }
 });
@@ -447,7 +449,7 @@ router.post('/devices/:id/logout', isAuth, async (req, res) => {
     console.error('device logout error:', err.message);
     req.flash('error', req.t('profile_device_logout_failed'));
   }
-  res.redirect('/profile/security');
+  res.redirect('/profile/security/devices');
 });
 
 router.post('/devices/logout-all-others', isAuth, async (req, res) => {
@@ -458,7 +460,7 @@ router.post('/devices/logout-all-others', isAuth, async (req, res) => {
     console.error('logout-all-others error:', err.message);
     req.flash('error', req.t('common_retry_error'));
   }
-  res.redirect('/profile/security');
+  res.redirect('/profile/security/devices');
 });
 
 router.get('/login-history', isAuth, async (req, res) => {
@@ -791,11 +793,11 @@ router.post('/security/withdraw-pin', isAuth, async (req, res) => {
     const { new_pin, confirm_pin } = req.body;
     if (!new_pin || !/^\d{6}$/.test(new_pin)) {
       req.flash('error', req.t('profile_pin_six_digits'));
-      return res.redirect('/profile/security');
+      return res.redirect('/profile/security/security');
     }
     if (new_pin !== confirm_pin) {
       req.flash('error', req.t('profile_pins_do_not_match'));
-      return res.redirect('/profile/security');
+      return res.redirect('/profile/security/security');
     }
     const hash = await bcrypt.hash(new_pin, 10);
     await pool.query('UPDATE users SET withdraw_pin_hash=$1 WHERE id=$2', [hash, req.session.user.id]);
@@ -803,7 +805,7 @@ router.post('/security/withdraw-pin', isAuth, async (req, res) => {
   } catch (err) {
     req.flash('error', req.t('profile_pin_set_failed'));
   }
-  res.redirect('/profile/security');
+  res.redirect('/profile/security/security');
 });
 
 // রোডম্যাপ-নাম alias — উপরের /security/withdraw-pin-এর মতোই লজিক, শুধু
@@ -815,27 +817,27 @@ router.post('/withdraw-pin/create', isAuth, accountSecurityLimiter, async (req, 
     const status = await getPinStatus(userId);
     if (status.configured) {
       req.flash('error', req.t('pin_already_set'));
-      return res.redirect('/profile/security');
+      return res.redirect('/profile/security/security');
     }
 
     const { pin, confirmPin } = req.body;
     if (!pin || !confirmPin || pin !== confirmPin) {
       req.flash('error', req.t('pin_mismatch'));
-      return res.redirect('/profile/security');
+      return res.redirect('/profile/security/security');
     }
     if (isWeakPin(pin)) {
       req.flash('error', req.t('pin_too_weak_detail'));
-      return res.redirect('/profile/security');
+      return res.redirect('/profile/security/security');
     }
 
     await createPin(userId, pin, req.ip);
     await logAdminAction(userId, req.session.user.username, 'WITHDRAW_PIN_CREATED', `ইউজার #${userId} নিজের Withdraw PIN তৈরি করেছে`, req.ip);
     req.flash('success', req.t('pin_created'));
-    res.redirect('/profile/security');
+    res.redirect('/profile/security/security');
   } catch (err) {
     console.error('withdraw-pin create error:', err.message);
     req.flash('error', req.t('pin_create_failed'));
-    res.redirect('/profile/security');
+    res.redirect('/profile/security/security');
   }
 });
 
@@ -848,19 +850,19 @@ router.post('/withdraw-pin/change', isAuth, accountSecurityLimiter, async (req, 
     const status = await getPinStatus(userId);
     if (!status.configured) {
       req.flash('error', req.t('pin_not_created_yet'));
-      return res.redirect('/profile/security');
+      return res.redirect('/profile/security/security');
     }
     if (status.locked) {
       req.flash('error', req.t('pin_locked_minutes').replace('{value}', Math.ceil(status.remainingMs / 60000)));
-      return res.redirect('/profile/security');
+      return res.redirect('/profile/security/security');
     }
     if (!newPin || !confirmNewPin || newPin !== confirmNewPin) {
       req.flash('error', req.t('pin_new_mismatch'));
-      return res.redirect('/profile/security');
+      return res.redirect('/profile/security/security');
     }
     if (isWeakPin(newPin)) {
       req.flash('error', req.t('pin_too_weak'));
-      return res.redirect('/profile/security');
+      return res.redirect('/profile/security/security');
     }
 
     const check = await verifyPin(userId, currentPin, req.ip);
@@ -870,17 +872,17 @@ router.post('/withdraw-pin/change', isAuth, accountSecurityLimiter, async (req, 
       } else {
         req.flash('error', req.t('pin_current_wrong'));
       }
-      return res.redirect('/profile/security');
+      return res.redirect('/profile/security/security');
     }
 
     await updatePin(userId, newPin, req.ip, 'changed');
     await logAdminAction(userId, req.session.user.username, 'WITHDRAW_PIN_CHANGED', `ইউজার #${userId} নিজের Withdraw PIN পরিবর্তন করেছে`, req.ip);
     req.flash('success', req.t('pin_changed'));
-    res.redirect('/profile/security');
+    res.redirect('/profile/security/security');
   } catch (err) {
     console.error('withdraw-pin change error:', err.message);
     req.flash('error', req.t('pin_change_failed'));
-    res.redirect('/profile/security');
+    res.redirect('/profile/security/security');
   }
 });
 
@@ -892,27 +894,27 @@ router.post('/withdraw-pin/reset', isAuth, accountSecurityLimiter, async (req, r
 
     if (!newPin || !confirmNewPin || newPin !== confirmNewPin) {
       req.flash('error', req.t('pin_new_mismatch'));
-      return res.redirect('/profile/security');
+      return res.redirect('/profile/security/security');
     }
     if (isWeakPin(newPin)) {
       req.flash('error', req.t('pin_too_weak'));
-      return res.redirect('/profile/security');
+      return res.redirect('/profile/security/security');
     }
 
     const u = await pool.query('SELECT password FROM users WHERE id=$1', [userId]);
     if (!u.rows[0] || !(await bcrypt.compare(accountPassword || '', u.rows[0].password))) {
       req.flash('error', req.t('profile_account_password_wrong'));
-      return res.redirect('/profile/security');
+      return res.redirect('/profile/security/security');
     }
 
     await updatePin(userId, newPin, req.ip, 'reset');
     await logAdminAction(userId, req.session.user.username, 'WITHDRAW_PIN_RESET', `ইউজার #${userId} নিজের Withdraw PIN রিসেট করেছে`, req.ip);
     req.flash('success', req.t('pin_reset_done'));
-    res.redirect('/profile/security');
+    res.redirect('/profile/security/security');
   } catch (err) {
     console.error('withdraw-pin reset error:', err.message);
     req.flash('error', req.t('pin_reset_failed'));
-    res.redirect('/profile/security');
+    res.redirect('/profile/security/security');
   }
 });
 
