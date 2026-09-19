@@ -45,7 +45,7 @@ describe('Profile routes', () => {
       .type('form')
       .send({ current_password: 'WrongOldPass1!', new_password: 'NewPass123!', confirmPassword: 'NewPass123!', _csrf: token });
     expect(res.status).toBe(302);
-    expect(res.headers.location).toBe('/profile/security');
+    expect(res.headers.location).toBe('/profile/security/security');
   });
 
   test('POST /profile/change-password succeeds and new login works', async () => {
@@ -59,7 +59,7 @@ describe('Profile routes', () => {
       .type('form')
       .send({ current_password: 'SecurePass123', new_password: 'NewPass456!', confirmPassword: 'NewPass456!', _csrf: token });
     expect(res.status).toBe(302);
-    expect(res.headers.location).toBe('/profile/security');
+    expect(res.headers.location).toBe('/profile/security/security');
 
     await agent.get('/logout').set('User-Agent', REALISTIC_UA);
     const { agent: loginAgent, token: loginToken } = await getCsrfAgent('/login');
