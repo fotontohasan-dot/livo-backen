@@ -23,34 +23,37 @@
   .sc-device.is-current { border-color: rgba(16,185,129,0.3); }
 
   /* ==================== Safety Score card + Checklist — fixed light surface, স্ক্রিনশট অনুযায়ী ==================== */
-  .sc-score-card { background: #fff; border-radius: 20px; padding: 20px; display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
-  .sc-gauge { width: 92px; height: 92px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: conic-gradient(#4F8CFF calc(var(--sc-pct) * 1%), #E9EDF0 0); }
-  .sc-gauge-inner { width: 72px; height: 72px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: #171717; }
+  /* সাইটের ডার্ক-গ্রিন থিম টোকেন (--bg-card, --border-glass, --text-main ইত্যাদি)
+     ব্যবহার করে — আগে এই কার্ডগুলো #fff হার্ডকোড করা ছিল, যেটা সাইটের বাকি
+     অংশের সাথে না মিলে আলাদা "সাদা" প্যাচের মতো দেখাচ্ছিল। */
+  .sc-score-card { background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 20px; padding: 20px; display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+  .sc-gauge { width: 92px; height: 92px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: conic-gradient(var(--text-accent) calc(var(--sc-pct) * 1%), rgba(255,255,255,0.08) 0); }
+  .sc-gauge-inner { width: 72px; height: 72px; border-radius: 50%; background: var(--bg-surface-elevated); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: var(--text-main); }
   .sc-gauge-inner span { font-size: 12px; font-weight: 700; margin-left: 2px; }
   .sc-score-body { flex: 1; min-width: 0; }
-  .sc-score-title { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 800; color: #171717; flex-wrap: wrap; }
-  .sc-score-title .lvl-low { color: #D62828; }
-  .sc-score-title .lvl-medium { color: #C97D0E; }
-  .sc-score-title .lvl-high { color: #10b981; }
+  .sc-score-title { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 800; color: var(--text-main); flex-wrap: wrap; }
+  .sc-score-title .lvl-low { color: var(--red-text); }
+  .sc-score-title .lvl-medium { color: var(--warning); }
+  .sc-score-title .lvl-high { color: var(--green); }
   .sc-bolt { font-size: 13px; }
-  .sc-bolt.is-on.lvl-low { color: #D62828; }
-  .sc-bolt.is-on.lvl-medium { color: #C97D0E; }
-  .sc-bolt.is-on.lvl-high { color: #10b981; }
-  .sc-bolt.is-off { color: #D6DBDE; }
-  .sc-score-meta { color: #6B7280; font-size: 12.5px; margin-top: 6px; line-height: 1.6; }
-  .sc-warning-banner { color: #D62828; font-weight: 800; font-size: 14px; text-align: center; padding: 4px 10px 16px; line-height: 1.6; }
-  .sc-checklist { background: #fff; border-radius: 20px; overflow: hidden; margin-bottom: 20px; }
-  .sc-check-row { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-bottom: 1px solid #F0F2F1; text-decoration: none; }
+  .sc-bolt.is-on.lvl-low { color: var(--red-text); }
+  .sc-bolt.is-on.lvl-medium { color: var(--warning); }
+  .sc-bolt.is-on.lvl-high { color: var(--green); }
+  .sc-bolt.is-off { color: rgba(255,255,255,0.15); }
+  .sc-score-meta { color: var(--text-muted); font-size: 12.5px; margin-top: 6px; line-height: 1.6; }
+  .sc-warning-banner { color: var(--red-text); font-weight: 800; font-size: 14px; text-align: center; padding: 4px 10px 16px; line-height: 1.6; }
+  .sc-checklist { background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 20px; overflow: hidden; margin-bottom: 20px; }
+  .sc-check-row { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-bottom: 1px solid var(--border-glass); text-decoration: none; }
   .sc-check-row:last-child { border-bottom: none; }
-  .sc-check-icon { font-size: 22px; width: 32px; text-align: center; flex-shrink: 0; color: #9CA3AF; }
-  .sc-check-icon.is-ok { color: #10b981; }
+  .sc-check-icon { font-size: 22px; width: 32px; text-align: center; flex-shrink: 0; color: var(--text-muted); }
+  .sc-check-icon.is-ok { color: var(--green); }
   .sc-check-body { flex: 1; min-width: 0; }
-  .sc-check-title { display: flex; align-items: center; gap: 6px; font-size: 14.5px; font-weight: 800; color: #171717; }
+  .sc-check-title { display: flex; align-items: center; gap: 6px; font-size: 14.5px; font-weight: 800; color: var(--text-main); }
   .sc-check-badge { font-size: 13px; }
-  .sc-check-badge.is-bad { color: #D62828; }
-  .sc-check-badge.is-ok { color: #10b981; }
-  .sc-check-sub { color: #9CA3AF; font-size: 12.5px; margin-top: 3px; }
-  .sc-check-chevron { color: #C7CBCF; font-size: 14px; flex-shrink: 0; }
+  .sc-check-badge.is-bad { color: var(--red-text); }
+  .sc-check-badge.is-ok { color: var(--green); }
+  .sc-check-sub { color: var(--text-muted); font-size: 12.5px; margin-top: 3px; }
+  .sc-check-chevron { color: var(--text-muted); font-size: 14px; flex-shrink: 0; }
 </style>
 
 <div class="container ix71-1">
@@ -105,7 +108,7 @@
   <style nonce="<%= cspNonce %>">
     /* স্কোর অনুযায়ী গেজের পূরণ — শতাংশ প্রতি রিকোয়েস্টে বদলায় বলে ক্লাসে না রেখে
        এই ছোট nonce ব্লকে; ইনলাইন style="..." অ্যাট্রিবিউট নয়, তাই CSP ratchet অক্ষত থাকে। */
-    #sc-gauge-fill { background: conic-gradient(#4F8CFF <%= scScore %>%, #E9EDF0 0); }
+    #sc-gauge-fill { background: conic-gradient(var(--text-accent) <%= scScore %>%, rgba(255,255,255,0.08) 0); }
   </style>
   <div class="sc-score-card">
     <div id="sc-gauge-fill" class="sc-gauge">
@@ -132,7 +135,7 @@
   <div class="sc-checklist">
     <% scChecklist.forEach(function(it) { %>
       <% if (it.kind === 'tab') { %>
-        <a href="#" data-switch-tab="<%= it.target %>" class="sc-check-row">
+        <a href="/profile/security/<%= it.target %>" class="sc-check-row">
       <% } else { %>
         <a href="<%= it.target %>" class="sc-check-row">
       <% } %>
@@ -157,16 +160,16 @@
     </a>
   </div>
 
-  <!-- Tab Buttons -->
+  <!-- Tab Buttons — এখন আসল লিংক, প্রতিটা আলাদা পেজে ফুল নেভিগেশন (URL বদলায়, ব্রাউজার ব্যাক কাজ করে) -->
   <div class="ix71-6">
-    <button data-switch-tab="personal" id="btn-personal" class="sec-tab active dz71-3"><%= t.personal_info %></button>
-    <button data-switch-tab="bank" id="btn-bank" class="sec-tab dz71-3"><%= t.menu_withdraw %></button>
-    <button data-switch-tab="security" id="btn-security" class="sec-tab dz71-3"><%= t.security %></button>
-    <button data-switch-tab="devices" id="btn-devices" class="sec-tab dz71-3"><%= t.devices_tab %></button>
+    <a href="/profile/security/personal" id="btn-personal" class="sec-tab dz71-3 <%= activeTab === 'personal' ? 'active' : '' %>"><%= t.personal_info %></a>
+    <a href="/profile/security/bank" id="btn-bank" class="sec-tab dz71-3 <%= activeTab === 'bank' ? 'active' : '' %>"><%= t.menu_withdraw %></a>
+    <a href="/profile/security/security" id="btn-security" class="sec-tab dz71-3 <%= activeTab === 'security' ? 'active' : '' %>"><%= t.security %></a>
+    <a href="/profile/security/devices" id="btn-devices" class="sec-tab dz71-3 <%= activeTab === 'devices' ? 'active' : '' %>"><%= t.devices_tab %></a>
   </div>
 
   <!-- Personal Information Tab -->
-  <div id="tab-personal" class="sec-content">
+  <div id="tab-personal" class="sec-content <%= activeTab === 'personal' ? 'active-tab' : '' %>">
     <div class="ix71-7">
       <h3 class="ix71-8">
         <i class="fas fa-id-card"></i> <%= t.personal_info %>
@@ -194,7 +197,7 @@
   </div>
 
   <!-- Bank Card Tab -->
-  <div id="tab-bank" class="sec-content dz71-6">
+  <div id="tab-bank" class="sec-content <%= activeTab === 'bank' ? 'active-tab' : '' %>">
     <div class="ix71-7">
       <h3 class="ix71-8">
         <i class="fas fa-credit-card"></i> <%= t.bank_cards_wallets %>
@@ -245,7 +248,7 @@
   </div>
 
   <!-- Security Tab -->
-  <div id="tab-security" class="sec-content dz71-6">
+  <div id="tab-security" class="sec-content <%= activeTab === 'security' ? 'active-tab' : '' %>">
 
     <!-- ==================== Email Verification কার্ড ==================== -->
     <div class="ix71-7">
@@ -402,7 +405,7 @@
   </div>
 
   <!-- Devices Tab -->
-  <div id="tab-devices" class="sec-content dz71-6">
+  <div id="tab-devices" class="sec-content <%= activeTab === 'devices' ? 'active-tab' : '' %>">
     <div class="ix71-7">
       <h3 class="ix71-17">
         <i class="fas fa-mobile-screen-button"></i> <%= t.active_devices_title %>
@@ -501,6 +504,11 @@
   .ix71-22 { flex: 1; min-width: 200px; }
   .dz71-5 { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: var(--text-main); font-size: 14px; outline: none; }
   .dz71-6 { display: none; }
+  /* এখন ট্যাব সিলেকশন সার্ভার-সাইডে (activeTab) ঠিক হয়, তাই ভিজিবিলিটিও
+     সার্ভার-রেন্ডারড ক্লাসে — .active-tab না থাকলে হাইড, থাকলে শো। */
+  .sec-content { display: none; }
+  .sec-content.active-tab { display: block; }
+  .sec-tab { text-decoration: none; display: flex; align-items: center; justify-content: center; }
   .dz71-7 { color: var(--text-main); font-size: 14px; font-weight: 600; }
   .dz71-8 { color: var(--text-muted); font-size: 12px; }
   .dz71-9 { background: rgba(239, 68, 68, 0.1); border: none; width: 32px; height: 32px; border-radius: 8px; color: #ef4444; cursor: pointer; }
