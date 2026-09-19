@@ -4,14 +4,21 @@ const path = require('path');
 // views/profile/security.ejs থেকে ১৭টা ইনলাইন হ্যান্ডলার আর একটা ইনলাইন
 // <script> ব্লক সরিয়ে /js/profile-security.js-এ নেওয়া হয়েছে (docs/CSP.md ধাপ ২)।
 //
-// এই ধরনের মাইগ্রেশনের আসল ঝুঁকি নীরব ভাঙন: onclick সরানো হলো কিন্তু
-// addEventListener-এর selector মিলল না — পেজ দেখতে ঠিকই থাকে, বাটন কাজ করে না।
-// তাই টেমপ্লেটের প্রতিটা data-* hook আর JS-এর প্রতিটা selector দুই দিক থেকে
-// মিলিয়ে দেখা হয়।
+// পরে ট্যাব-সুইচিং (data-switch-tab + JS-চালিত show/hide) সরিয়ে আসল
+// সার্ভার-রেন্ডারড পেজ নেভিগেশন (/profile/security/:tab) দিয়ে বদলানো হয়েছে —
+// প্রতিটা ট্যাব/চেকলিস্ট আইটেম এখন আসল <a href> লিংক, ক্লিক করলে পুরো পেজ
+// রিলোড হয়ে সার্ভার থেকে activeTab অনুযায়ী সঠিক সেকশন খোলা অবস্থায় আসে।
+// রাউটার routes/profile.js-এ।
+//
+// এই ধরনের মাইগ্রেশনের আসল ঝুঁকি নীরব ভাঙন: hook সরানো হলো কিন্তু বাকি
+// রেফারেন্স (JS selector, redirect টার্গেট) মিলল না — পেজ দেখতে ঠিকই থাকে,
+// বাটন কাজ করে না। তাই টেমপ্লেটের প্রতিটা data-* hook আর JS-এর প্রতিটা
+// selector দুই দিক থেকে মিলিয়ে দেখা হয়।
 
 const ROOT = path.join(__dirname, '..', '..');
 const template = fs.readFileSync(path.join(ROOT, 'views', 'profile', 'security.ejs'), 'utf8');
 const script = fs.readFileSync(path.join(ROOT, 'public', 'js', 'profile-security.js'), 'utf8');
+const routes = fs.readFileSync(path.join(ROOT, 'routes', 'profile.js'), 'utf8');
 
 const count = (src, re) => (src.match(re) || []).length;
 
@@ -29,17 +36,49 @@ describe('profile/security.ejs — ইনলাইন কোড সরানো 
   });
 });
 
-describe('profile/security.ejs — প্রতিটা কন্ট্রোল এখনো যুক্ত', () => {
-  test('চারটে ট্যাব বাটন + স্ট্যাটাস কার্ড data-switch-tab পেয়েছে', () => {
-    ['personal', 'bank', 'security', 'devices'].forEach(function (tab) {
-      expect(template).toContain(`data-switch-tab="${tab}"`);
-      expect(template).toContain(`id="btn-${tab}"`);
-    });
-    // স্ট্যাটাস কার্ডটা ডাইনামিক ট্যাব নেয়
-    expect(template).toContain('data-switch-tab="<%= it.tab %>"');
-    expect(count(template, /data-switch-tab=/g)).toBe(5);
+describe('profile/security.ejs — ট্যাব এখন আসল পেজ লিংক (data-switch-tab নয়)', () => {
+  test('data-switch-tab আর টেমপ্লেটে নেই — সব বাদ দেওয়া হয়েছে', () => {
+    expect(template).not.toMatch(/data-switch-tab=/);
   });
 
+  test('চারটে ট্যাব বাটন /profile/security/:tab এ লিংক করে', () => {
+    ['personal', 'bank', 'security', 'devices'].forEach(function (tab) {
+      expect(template).toContain(`href="/profile/security/${tab}"`);
+      expect(template).toContain(`id="btn-${tab}"`);
+    });
+  });
+
+  test('অ্যাক্টিভ ট্যাব সার্ভার-সাইড activeTab ভেরিয়েবল থেকে ঠিক হয়', () => {
+    expect(template).toContain("activeTab === 'personal'");
+    expect(template).toContain("activeTab === 'bank'");
+    expect(template).toContain("activeTab === 'security'");
+    expect(template).toContain("activeTab === 'devices'");
+  });
+
+  test('চেকলিস্ট আইটেমগুলো (tab kind) আসল href দিয়ে সংশ্লিষ্ট পেজে যায়', () => {
+    expect(template).toContain('href="/profile/security/<%= it.target %>"');
+  });
+});
+
+describe('routes/profile.js — /security/:tab রাউট ও রিডাইরেক্ট টার্গেট', () => {
+  test('GET /security/:tab? রাউট আছে, বৈধ ট্যাব লিস্ট আছে', () => {
+    expect(routes).toMatch(/router\.get\('\/security\/:tab\?'/);
+    expect(routes).toContain("SECURITY_TABS");
+  });
+
+  test('personal/bank/security/devices — প্রতিটা POST হ্যান্ডলার নিজের ট্যাবে redirect করে', () => {
+    expect(routes).toContain("res.redirect('/profile/security/personal')");
+    expect(routes).toContain("res.redirect('/profile/security/bank')");
+    expect(routes).toContain("res.redirect('/profile/security/security')");
+    expect(routes).toContain("res.redirect('/profile/security/devices')");
+  });
+
+  test('কোনো হ্যান্ডলার আর /profile/security (ট্যাব ছাড়া) এ redirect করে না', () => {
+    expect(routes).not.toMatch(/redirect\('\/profile\/security'\)/);
+  });
+});
+
+describe('profile/security.ejs — বাকি প্রতিটা কন্ট্রোল এখনো যুক্ত', () => {
   test('তিনটে PIN ফর্ম খোলার বাটন data-pin-form পেয়েছে', () => {
     ['create', 'change', 'reset'].forEach(function (type) {
       expect(template).toContain(`data-pin-form="${type}"`);
@@ -61,21 +100,20 @@ describe('profile/security.ejs — প্রতিটা কন্ট্রো�
     expect(count(template, /data-confirm=/g)).toBe(3);
   });
 
-  test('মোট hook সংখ্যা আগের ১৭টা হ্যান্ডলারের সমান', () => {
+  test('মোট JS-hook সংখ্যা (ট্যাব-সুইচ বাদে) আগের মতোই ধরে রাখা হয়েছে', () => {
     const hooks =
-      count(template, /data-switch-tab=/g) +
       count(template, /data-pin-form=/g) +
       count(template, /data-pin-submit/g) +
       count(template, /data-pin-cancel/g) +
       count(template, /data-confirm=/g);
-    expect(hooks).toBe(17);
+    expect(hooks).toBe(12);
   });
 });
 
 describe('profile-security.js — টেমপ্লেটের প্রতিটা hook হ্যান্ডল করে', () => {
   test('প্রতিটা data-* selector JS-এ আছে', () => {
     // পেজ-নির্দিষ্ট hook পেজের স্ক্রিপ্টে
-    ['[data-switch-tab]', '[data-pin-form]', '[data-pin-cancel]', '[data-pin-submit]']
+    ['[data-pin-form]', '[data-pin-cancel]', '[data-pin-submit]']
       .forEach(function (sel) {
         expect(script).toContain(sel);
       });
@@ -86,8 +124,11 @@ describe('profile-security.js — টেমপ্লেটের প্রতি
     expect(script).not.toContain('form[data-confirm]');
   });
 
-  test('আগের ফাংশনগুলোর আচরণ ধরে রাখা হয়েছে', () => {
-    expect(script).toMatch(/function switchTab/);
+  test('switchTab আর নেই — ট্যাব এখন সার্ভার নেভিগেশন দিয়ে হয়', () => {
+    expect(script).not.toMatch(/function switchTab/);
+  });
+
+  test('PIN ফর্মের ফাংশনগুলোর আচরণ ধরে রাখা হয়েছে', () => {
     expect(script).toMatch(/function showPinForm/);
     expect(script).toMatch(/function hidePinForms/);
     expect(script).toMatch(/function handlePinSubmit/);
