@@ -269,6 +269,13 @@ function buildSecurityChecklist(user, bankCards) {
 }
 
 router.get('/security{/:tab}', isAuth, async (req, res) => {
+  // '/profile/security' (no :tab) → hub page: শুধু Safety Score + checklist,
+  // কোনো ফর্ম/ট্যাব কন্টেন্ট থাকে না।
+  // '/profile/security/personal|bank|security' → dedicated page: শুধু সেই
+  // একটা সেকশনের ফর্ম, হাবের Safety Score/checklist আর দেখানো হয় না।
+  // ফলে checklist আইটেমে ক্লিক করলে আসলেই আলাদা একটা পেজে যায়, নিচে
+  // স্ক্রল করে আগের কন্টেন্টের সাথে জোড়া লাগা কিছু দেখায় না।
+  const isDetailView = !!req.params.tab;
   const activeTab = SECURITY_TABS.includes(req.params.tab) ? req.params.tab : 'personal';
   try {
     const [userRes, cards] = await Promise.all([
@@ -278,7 +285,7 @@ router.get('/security{/:tab}', isAuth, async (req, res) => {
     const user = userRes.rows[0] || req.session.user;
     const { checklist, safetyScore, safetyLevel } = buildSecurityChecklist(user, cards.rows);
     res.render('profile/security', {
-      user, bankCards: cards.rows, activeTab,
+      user, bankCards: cards.rows, activeTab, isDetailView,
       checklist, safetyScore, safetyLevel,
       lastLogin: { ip: user.last_ip, created_at: user.last_login }
     });
@@ -286,7 +293,7 @@ router.get('/security{/:tab}', isAuth, async (req, res) => {
     console.error('security page error:', err.message);
     const { checklist, safetyScore, safetyLevel } = buildSecurityChecklist(req.session.user, []);
     res.render('profile/security', {
-      user: req.session.user, bankCards: [], activeTab,
+      user: req.session.user, bankCards: [], activeTab, isDetailView,
       checklist, safetyScore, safetyLevel,
       lastLogin: { ip: null, created_at: null }
     });
