@@ -1155,3 +1155,20 @@ input[type="submit"]:hover,
  background-color: #d32035 !important;
  color: #ffffff !important;
 }
+.container,
+.card,
+.glass,
+.banner-container,
+.announcement,
+.hero-section {
+ max-width: 100% !important;
+ margin: 0 !important;
+ padding: 0 !important;
+ border: none !important;
+ border-radius: 0 !important;
+ box-shadow: none !important;
+}
+
+body {
+ overflow-x: hidden;
+}
