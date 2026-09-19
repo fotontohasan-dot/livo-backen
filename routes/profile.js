@@ -219,13 +219,77 @@ router.get('/stats', isAuth, async (req, res) => {
 // ভেতর JS দিয়ে টগল করা কন্টেন্ট নয়।
 const SECURITY_TABS = ['personal', 'bank', 'security'];
 
+// Safety Score / Checklist — স্ক্রিনশটের ডিজাইন অনুযায়ী। এই স্কিমায় ক্রিপ্টো
+// ওয়ালেট বা ট্রানজেকশন পিন-এর জন্য আলাদা কোনো টেবিল/কলাম নেই, তাই যেগুলোর
+// বাস্তব ডেটা আছে (personal info, bank card) সেগুলো দিয়েই আসল অবস্থা চেক
+// করা হয়; বাকিগুলো (transaction password) ফিচার তৈরি না হওয়া পর্যন্ত
+// "সম্পন্ন হয়নি" হিসেবেই দেখানো হয়।
+function buildSecurityChecklist(user, bankCards) {
+  const personalInfoComplete = !!(user.full_name && user.phone);
+  const hasWallet = bankCards.length > 0;
+
+  const checklist = [
+    {
+      icon: 'fa-user', ok: personalInfoComplete,
+      label: 'Personal Info',
+      sub: personalInfoComplete ? 'আপনার তথ্য সম্পূর্ণ।' : 'Complete your personal info.',
+      kind: 'tab', target: 'personal'
+    },
+    {
+      icon: 'fa-coins', ok: hasWallet,
+      label: 'Add Crypto Wallet',
+      sub: hasWallet ? 'ওয়ালেট যোগ করা হয়েছে।' : 'Please use a trusted crypto wallet.',
+      kind: 'tab', target: 'bank'
+    },
+    {
+      icon: 'fa-wallet', ok: hasWallet,
+      label: 'Bind E-Wallet',
+      sub: hasWallet ? 'ই-ওয়ালেট যুক্ত করা হয়েছে।' : 'Bind an e-wallet for withdrawals.',
+      kind: 'tab', target: 'bank'
+    },
+    {
+      icon: 'fa-lock', ok: false,
+      label: 'Change Login Password',
+      sub: 'Suggested: mix of letters and numbers',
+      kind: 'tab', target: 'security'
+    },
+    {
+      icon: 'fa-shield-halved', ok: false,
+      label: 'Transaction Password',
+      sub: 'Set a funds password to improve transaction security',
+      kind: 'tab', target: 'security'
+    }
+  ];
+
+  const okCount = checklist.filter(it => it.ok).length;
+  const safetyScore = Math.round((okCount / checklist.length) * 100);
+  const safetyLevel = safetyScore >= 80 ? 'high' : (safetyScore >= 40 ? 'medium' : 'low');
+
+  return { checklist, safetyScore, safetyLevel };
+}
+
 router.get('/security{/:tab}', isAuth, async (req, res) => {
   const activeTab = SECURITY_TABS.includes(req.params.tab) ? req.params.tab : 'personal';
   try {
-    const cards = await pool.query('SELECT * FROM bank_cards WHERE user_id = $1 ORDER BY created_at DESC', [req.session.user.id]);
-    res.render('profile/security', { user: req.session.user, bankCards: cards.rows, activeTab });
+    const [userRes, cards] = await Promise.all([
+      pool.query('SELECT * FROM users WHERE id = $1', [req.session.user.id]),
+      pool.query('SELECT * FROM bank_cards WHERE user_id = $1 ORDER BY created_at DESC', [req.session.user.id])
+    ]);
+    const user = userRes.rows[0] || req.session.user;
+    const { checklist, safetyScore, safetyLevel } = buildSecurityChecklist(user, cards.rows);
+    res.render('profile/security', {
+      user, bankCards: cards.rows, activeTab,
+      checklist, safetyScore, safetyLevel,
+      lastLogin: { ip: user.last_ip, created_at: user.last_login }
+    });
   } catch (err) {
-    res.render('profile/security', { user: req.session.user, bankCards: [], activeTab });
+    console.error('security page error:', err.message);
+    const { checklist, safetyScore, safetyLevel } = buildSecurityChecklist(req.session.user, []);
+    res.render('profile/security', {
+      user: req.session.user, bankCards: [], activeTab,
+      checklist, safetyScore, safetyLevel,
+      lastLogin: { ip: null, created_at: null }
+    });
   }
 });
 
