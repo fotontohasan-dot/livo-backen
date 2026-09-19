@@ -69,7 +69,7 @@ describe('routes/profile.js — /security/:tab রাউট ও রিডাই�
   test('personal/bank/security/devices — প্রতিটা POST হ্যান্ডলার নিজের ট্যাবে redirect করে', () => {
     expect(routes).toContain("res.redirect('/profile/security/personal')");
     expect(routes).toContain("res.redirect('/profile/security/bank')");
-    expect(routes).toContain("res.redirect('/profile/security/security')");
+    expect(routes).toContain("res.redirect('/profile/security/login-password')");
     expect(routes).toContain("res.redirect('/profile/security/devices')");
   });
 
