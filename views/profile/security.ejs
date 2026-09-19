@@ -1,4 +1,35 @@
 <%- include('../partials/head') %>
+<style>
+  /* Safety Score + Checklist — সাইটের নিজস্ব থিম টোকেন (--bg-card, --border-glass,
+     --gold, --text-main, --text-muted, --green, --red) দিয়েই, নতুন কোনো রঙ
+     হার্ডকোড না করে। */
+  .sc-score-card { background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 20px; padding: 20px; display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+  .sc-gauge { width: 92px; height: 92px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.08); }
+  .sc-gauge-inner { width: 72px; height: 72px; border-radius: 50%; background: var(--bg-surface); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: var(--text-main); }
+  .sc-gauge-inner span { font-size: 12px; font-weight: 700; margin-left: 2px; }
+  .sc-score-body { flex: 1; min-width: 0; }
+  .sc-score-title { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 800; color: var(--text-main); flex-wrap: wrap; }
+  .sc-score-title .lvl-low { color: var(--red); }
+  .sc-score-title .lvl-medium { color: var(--gold); }
+  .sc-score-title .lvl-high { color: var(--green); }
+  .sc-bolt.is-on.lvl-low { color: var(--red); }
+  .sc-bolt.is-on.lvl-medium { color: var(--gold); }
+  .sc-bolt.is-on.lvl-high { color: var(--green); }
+  .sc-bolt.is-off { color: rgba(255,255,255,0.15); }
+  .sc-score-meta { color: var(--text-muted); font-size: 12.5px; margin-top: 6px; line-height: 1.6; }
+  .sc-warning-banner { color: var(--red); font-weight: 800; font-size: 14px; text-align: center; padding: 4px 10px 16px; line-height: 1.6; }
+  .sc-checklist { background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 20px; overflow: hidden; margin-bottom: 20px; }
+  .sc-check-row { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-bottom: 1px solid var(--border-glass); text-decoration: none; }
+  .sc-check-row:last-child { border-bottom: none; }
+  .sc-check-icon { font-size: 22px; width: 32px; text-align: center; flex-shrink: 0; color: var(--text-muted); }
+  .sc-check-icon.is-ok { color: var(--green); }
+  .sc-check-body { flex: 1; min-width: 0; }
+  .sc-check-title { display: flex; align-items: center; gap: 6px; font-size: 14.5px; font-weight: 800; color: var(--text-main); }
+  .sc-check-badge.is-bad { color: var(--red); }
+  .sc-check-badge.is-ok { color: var(--green); }
+  .sc-check-sub { color: var(--text-muted); font-size: 12.5px; margin-top: 3px; }
+  .sc-check-chevron { color: var(--text-muted); font-size: 14px; flex-shrink: 0; }
+</style>
 
 <div class="container" style="padding: 16px; padding-bottom: 100px;">
   <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
@@ -9,6 +40,55 @@
   </div>
 
   <%- include('../partials/flash') %>
+
+  <!-- ==================== Safety Score + Checklist ==================== -->
+  <style>#sc-gauge-fill { background: conic-gradient(var(--gold) <%= safetyScore %>%, rgba(255,255,255,0.08) 0); }</style>
+  <div class="sc-score-card">
+    <div id="sc-gauge-fill" class="sc-gauge">
+      <div class="sc-gauge-inner"><%= safetyScore %><span>%</span></div>
+    </div>
+    <div class="sc-score-body">
+      <div class="sc-score-title">
+        Safety Score: <span class="lvl-<%= safetyLevel %>"><%= safetyLevel === 'high' ? 'High' : (safetyLevel === 'medium' ? 'Medium' : 'Low') %></span>
+        <% var scBoltsOn = Math.round(safetyScore / 20); %>
+        <% for (var b = 1; b <= 5; b++) { %>
+          <i class="fas fa-bolt sc-bolt <%= b <= scBoltsOn ? ('is-on lvl-' + safetyLevel) : 'is-off' %>"></i>
+        <% } %>
+      </div>
+      <div class="sc-score-meta">
+        Last Login IP: <%= (lastLogin && lastLogin.ip) ? lastLogin.ip : '—' %><br>
+        Last Login Time: <%= (lastLogin && lastLogin.created_at) ? new Date(lastLogin.created_at).toLocaleString() : '—' %>
+      </div>
+    </div>
+  </div>
+
+  <% if (safetyScore < 80) { %>
+    <div class="sc-warning-banner">Your account security level is <%= safetyLevel %>, improve your security info</div>
+  <% } %>
+
+  <div class="sc-checklist">
+    <% checklist.forEach(function(it) { %>
+      <a href="/profile/security/<%= it.target %>" class="sc-check-row">
+        <i class="fas <%= it.icon %> sc-check-icon <%= it.ok ? 'is-ok' : '' %>"></i>
+        <div class="sc-check-body">
+          <div class="sc-check-title">
+            <%= it.label %>
+            <i class="fas <%= it.ok ? 'fa-circle-check' : 'fa-circle-exclamation' %> sc-check-badge <%= it.ok ? 'is-ok' : 'is-bad' %>"></i>
+          </div>
+          <div class="sc-check-sub"><%= it.sub %></div>
+        </div>
+        <i class="fas fa-chevron-right sc-check-chevron"></i>
+      </a>
+    <% }) %>
+    <a href="/logout" class="sc-check-row">
+      <i class="fas fa-power-off sc-check-icon"></i>
+      <div class="sc-check-body">
+        <div class="sc-check-title">Log Out</div>
+        <div class="sc-check-sub">Log out securely</div>
+      </div>
+      <i class="fas fa-chevron-right sc-check-chevron"></i>
+    </a>
+  </div>
 
   <!-- Tab Buttons — আসল লিংক, প্রতিটাতে ক্লিক করলে ফুল পেজ নেভিগেশন হয়
        (URL বদলায়, সার্ভার থেকে activeTab অনুযায়ী রেন্ডার হয়ে আসে,
