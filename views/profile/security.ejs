@@ -91,18 +91,12 @@
     </a>
   </div>
 
-  <% } else { %>
-  <!-- ==================== dedicated tab পেজ (/profile/security/:tab) — checklist/score card এখানে দেখানো হয় না, শুধু নিজের সেকশন ==================== -->
-  <div style="display: flex; gap: 10px; margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 5px; border-radius: 12px; border: 1px solid var(--border-glass);">
-    <a href="/profile/security/personal" id="btn-personal" class="sec-tab <%= activeTab === 'personal' ? 'active' : '' %>" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s; text-align: center; text-decoration: none;"><%= t.personal_info %></a>
-    <a href="/profile/security/bank" id="btn-bank" class="sec-tab <%= activeTab === 'bank' ? 'active' : '' %>" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s; text-align: center; text-decoration: none;"><%= t.menu_withdraw %></a>
-    <a href="/profile/security/security" id="btn-security" class="sec-tab <%= activeTab === 'security' ? 'active' : '' %>" style="flex: 1; padding: 10px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.3s; text-align: center; text-decoration: none;"><%= t.security %></a>
-  </div>
   <% } %>
 
   <% if (isDetailView) { %>
-  <!-- Personal Information Tab -->
-  <div id="tab-personal" class="sec-content" style="<%= activeTab === 'personal' ? '' : 'display: none;' %>">
+  <% if (activeTab === 'personal') { %>
+  <!-- Personal Information — একক পেজ -->
+  <div id="tab-personal" class="sec-content">
     <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
       <h3 style="color: var(--gold); font-size: 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
         <i class="fas fa-id-card"></i> <%= t.personal_info %>
@@ -128,9 +122,11 @@
       </form>
     </div>
   </div>
+  <% } %>
 
-  <!-- Bank Card Tab -->
-  <div id="tab-bank" class="sec-content" style="<%= activeTab === 'bank' ? '' : 'display: none;' %>">
+  <% if (activeTab === 'bank') { %>
+  <!-- Bank / Wallet — একক পেজ -->
+  <div id="tab-bank" class="sec-content">
     <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
       <h3 style="color: var(--gold); font-size: 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
         <i class="fas fa-credit-card"></i> <%= t.bank_cards_wallets %>
@@ -174,9 +170,12 @@
       </div>
     </div>
   </div>
+  <% } %>
 
-  <!-- Security Tab -->
-  <div id="tab-security" class="sec-content" style="<%= activeTab === 'security' ? '' : 'display: none;' %>">
+  <% if (activeTab === 'login-password') { %>
+  <!-- লগইন পাসওয়ার্ড পরিবর্তন — একক পেজ। লগইন পাসওয়ার্ড সবসময়ই সেট করা
+       থাকে (অ্যাকাউন্ট খোলার সময় থেকেই), তাই এখানে সবসময় ৩টা ফিল্ড। -->
+  <div id="tab-login-password" class="sec-content">
     <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
       <h3 style="color: var(--gold); font-size: 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
         <i class="fas fa-lock"></i> <%= t.change_password_title %>
@@ -200,18 +199,40 @@
   </div>
   <% } %>
 
-</div>
+  <% if (activeTab === 'transaction-password') { %>
+  <!-- ট্রানজেকশন (ফান্ডস) পাসওয়ার্ড — একক পেজ, লগইন পাসওয়ার্ড থেকে সম্পূর্ণ
+       আলাদা। এখনো সেট করা না থাকলে (user.transaction_password খালি) শুধু
+       ২টা ফিল্ড (নতুন + নিশ্চিত করুন) — বর্তমান পাসওয়ার্ড চাওয়া হয় না, কারণ
+       তখনও কিছু সেট করাই নেই। আগে থেকে সেট থাকলে ৩টা ফিল্ড (বর্তমান + নতুন +
+       নিশ্চিত করুন), যাচাই ছাড়া বদলানো যায় না। -->
+  <% var hasTxnPwd = !!user.transaction_password; %>
+  <div id="tab-transaction-password" class="sec-content">
+    <div style="background: var(--bg-card); border-radius: 20px; padding: 25px; border: 1px solid var(--border-glass); margin-bottom: 20px;">
+      <h3 style="color: var(--gold); font-size: 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+        <i class="fas fa-shield-halved"></i> <%= hasTxnPwd ? 'ট্রানজেকশন পাসওয়ার্ড পরিবর্তন করুন' : 'ট্রানজেকশন পাসওয়ার্ড সেট করুন' %>
+      </h3>
+      <form action="/profile/set-transaction-password" method="POST" style="display: flex; flex-direction: column; gap: 15px;">
+        <% if (hasTxnPwd) { %>
+        <div>
+          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;">বর্তমান ট্রানজেকশন পাসওয়ার্ড</label>
+          <input type="password" name="currentPassword" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
+        </div>
+        <% } %>
+        <div>
+          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;">নতুন ট্রানজেকশন পাসওয়ার্ড</label>
+          <input type="password" name="newPassword" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
+        </div>
+        <div>
+          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;">নতুন ট্রানজেকশন পাসওয়ার্ড নিশ্চিত করুন</label>
+          <input type="password" name="confirmPassword" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 12px; padding: 12px 15px; color: #fff; font-size: 14px; outline: none;">
+        </div>
+        <button type="submit" class="btn btn-primary" style="margin-top: 10px; border-radius: 12px; padding: 14px; font-weight: 800;"><%= hasTxnPwd ? 'পাসওয়ার্ড পরিবর্তন করুন' : 'পাসওয়ার্ড সেট করুন' %></button>
+      </form>
+    </div>
+  </div>
+  <% } %>
+  <% } %>
 
-<style nonce="<%= cspNonce %>">
-.sec-tab {
-  background: transparent;
-  color: var(--text-muted);
-}
-.sec-tab.active {
-  background: var(--grad-gold);
-  color: #000;
-  box-shadow: 0 5px 15px rgba(245, 158, 11, 0.2);
-}
-</style>
+</div>
 
 <%- include('../partials/navbar') %>
