@@ -8,14 +8,9 @@
 (function () {
   'use strict';
 
-  function switchTab(tab) {
-    document.querySelectorAll('.sec-content').forEach(function (c) { c.style.display = 'none'; });
-    document.querySelectorAll('.sec-tab').forEach(function (b) { b.classList.remove('active'); });
-    var content = document.getElementById('tab-' + tab);
-    var btn = document.getElementById('btn-' + tab);
-    if (content) content.style.display = 'block';
-    if (btn) btn.classList.add('active');
-  }
+  // ট্যাব সুইচ এখন আর JS-এ না — প্রতিটা ট্যাব/চেকলিস্ট আইটেম আসল
+  // <a href="/profile/security/..."> লিংক, তাই ক্লিক করলে সার্ভার থেকেই
+  // সঠিক ট্যাব activeTab হয়ে রেন্ডার হয়ে আসে (routes/profile.js দ্রষ্টব্য)।
 
   // ==================== Withdraw PIN ফর্ম টগল ====================
   function hidePinForms() {
@@ -42,17 +37,6 @@
     // data-loading-*) এখন public/js/ui-hooks.js সামলায় — partials/head.ejs ও
     // admin-layout.ejs দুটোতেই লোড হয়। এখানে আবার বাঁধলে হ্যান্ডলার দুবার
     // চলত: confirm দুবার দেখাত, ফর্ম দুবার সাবমিট হত।
-
-    // ট্যাব সুইচ — ট্যাব বাটন ও উপরের স্ট্যাটাস কার্ড, দুটোই
-    document.querySelectorAll('[data-switch-tab]').forEach(function (el) {
-      el.addEventListener('click', function (e) {
-        // sc-check-row এখন <a href="#">, tab সুইচের সাথে পেজ-টপে জাম্প ঠেকাতে preventDefault
-        if (el.tagName === 'A') e.preventDefault();
-        switchTab(el.getAttribute('data-switch-tab'));
-        var target = document.getElementById('tab-' + el.getAttribute('data-switch-tab'));
-        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
-    });
 
     // PIN ফর্ম খোলা
     document.querySelectorAll('[data-pin-form]').forEach(function (el) {
