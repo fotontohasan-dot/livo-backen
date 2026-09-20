@@ -414,4 +414,17 @@ const broadcastDemoStats = async () => {
   }
 };
 
-module.exports = { initSocket, getIo, invalidateSocketAuth, emitPaymentMethodsUpdated, updateLiveScore, getDemoStats, broadcastDemoStats, emitAdminAlert, notifyUserSeen, notifyAdminsSeen, notifySupportStatus, allowChatMessage, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_SEC };
+// ===== টিকার/অ্যানাউন্সমেন্ট রিয়েল-টাইম সংকেত =====
+// অ্যাডমিন কোনো announcement তৈরি/টগল/মুছলে সব কানেক্টেড ক্লায়েন্টকে জানানো হয়;
+// পে-লোডে বার্তার কন্টেন্ট নেই ইচ্ছাকৃতভাবে — ক্লায়েন্ট GET /api/ticker/active
+// থেকেই sanitized তালিকা আনে, socket শুধু "রিফ্রেশ করো" সংকেত দেয়।
+const emitTickerUpdate = (payload = {}) => {
+  if (!io) return;
+  try {
+    io.emit('new_notice', { updatedAt: Date.now(), ...payload });
+  } catch (err) {
+    console.error('emitTickerUpdate error:', err.message);
+  }
+};
+
+module.exports = { initSocket, getIo, invalidateSocketAuth, emitPaymentMethodsUpdated, updateLiveScore, getDemoStats, broadcastDemoStats, emitAdminAlert, notifyUserSeen, notifyAdminsSeen, notifySupportStatus, allowChatMessage, emitTickerUpdate, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_SEC };
