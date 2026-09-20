@@ -101,7 +101,7 @@ const { getPinStatus, adminResetPin } = require('../services/withdrawPin');
 const { runAllChecks } = require('../services/healthCheck');
 // HIGH-3: ban/demote হলে socket layer-এর auth cache সঙ্গে সঙ্গে invalidate করতে হয়,
 // নাহলে খোলা socket connection সর্বোচ্চ TTL সময় পর্যন্ত পুরনো privilege ধরে রাখত।
-const { invalidateSocketAuth } = require('../services/socket');
+const { invalidateSocketAuth, emitTickerUpdate } = require('../services/socket');
 const { getUserFraudStatus, getFraudDashboardStats } = require('../services/fraudDetection');
 const { logEvent: logAuditEvent, listAuditLogs, getAuditLogById, exportAuditLogs, getCategoryCounts, getRiskCounts, VALID_CATEGORIES, VALID_RISK_LEVELS } = require('../services/auditLog');
 const { listDuplicateFlags, reviewDuplicateFlag, scanAllUsers } = require('../services/duplicateDetection');
@@ -5126,6 +5126,7 @@ router.post('/announcements/create', rbac.requirePermission('settings_edit'), as
       ]
     );
     await logAdminAction(req.session.user.id, req.session.user.username, 'ANNOUNCEMENT_CREATED', `নতুন ${type} announcement তৈরি হয়েছে (#${r.rows[0].id})`, req.ip);
+    emitTickerUpdate({ id: r.rows[0].id, type: type || 'banner' });
     res.redirect('/admin/announcements?created=1');
   } catch (err) {
     console.error('Announcement create error:', err.message);
@@ -5148,6 +5149,7 @@ router.post('/announcements/:id/update', rbac.requirePermission('settings_edit')
       ]
     );
     await logAdminAction(req.session.user.id, req.session.user.username, 'ANNOUNCEMENT_UPDATED', `Announcement আপডেট হয়েছে (#${req.params.id})`, req.ip);
+    emitTickerUpdate({ id: req.params.id, type: type || 'banner' });
     res.redirect('/admin/announcements?created=1');
   } catch (err) {
     console.error('Announcement update error:', err.message);
@@ -5159,6 +5161,7 @@ router.post('/announcements/:id/toggle', rbac.requirePermission('settings_edit')
   try {
     const r = await pool.query('UPDATE announcements SET active = NOT active, updated_at = NOW() WHERE id = $1 RETURNING active', [req.params.id]);
     await logAdminAction(req.session.user.id, req.session.user.username, 'ANNOUNCEMENT_TOGGLED', `Announcement #${req.params.id} ${r.rows[0].active ? 'সক্রিয়' : 'নিষ্ক্রিয়'} করা হয়েছে`, req.ip);
+    emitTickerUpdate({ id: req.params.id });
     res.redirect('/admin/announcements');
   } catch (err) {
     res.redirect('/admin/announcements?error=toggle_failed');
@@ -5179,6 +5182,7 @@ router.post('/announcements/:id/delete', rbac.requirePermission('settings_edit')
   try {
     await pool.query('DELETE FROM announcements WHERE id = $1', [req.params.id]);
     await logAdminAction(req.session.user.id, req.session.user.username, 'ANNOUNCEMENT_DELETED', `Announcement #${req.params.id} ডিলিট করা হয়েছে`, req.ip);
+    emitTickerUpdate({ id: req.params.id });
     res.redirect('/admin/announcements');
   } catch (err) {
     res.redirect('/admin/announcements?error=delete_failed');
