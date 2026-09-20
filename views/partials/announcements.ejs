@@ -13,12 +13,14 @@
   <% }) %>
 
   <% if (scrolling.length) { %>
-    <div class="livo-announce-scroll ix4-1">
-      <div class="dz4-4">
-        <% scrolling.forEach(function(a, i) { %>
-          <span class="im4-1"><i class="fas fa-circle im4-2"></i><%= annLang === 'en' && a.message_en ? a.message_en : a.message_bn %></span>
-        <% }) %>
+    <div class="bk-ticker" id="bkTicker">
+      <div class="bk-ticker-bell"><i class="fas fa-bell"></i></div>
+      <div class="bk-ticker-track">
+        <div class="bk-ticker-text" id="bkNotice">
+          <% scrolling.forEach(function(a, i) { %><span><%= annLang === 'en' && a.message_en ? a.message_en : a.message_bn %></span><% if (i < scrolling.length - 1) { %><span class="bk-ticker-sep">&nbsp;&nbsp;★&nbsp;&nbsp;</span><% } %><% }) %>
+        </div>
       </div>
+      <a href="/app/update" class="bk-ticker-app"><i class="fas fa-download"></i> APP</a>
     </div>
     <style nonce="<%= cspNonce %>">
   /* Inline style attributes migrated to classes (CSP style-src-attr
@@ -44,7 +46,65 @@
      !important rule in the site CSS were moved; otherwise such a rule
      would suddenly start winning and change the layout. */
   .im4-1 { margin-right: 60px; }
-  .im4-2 { font-size: 5px; vertical-align: middle; margin-right: 8px; }@keyframes livoScrollAnnounce { from { transform: translateX(0); } to { transform: translateX(-100%); } }</style>
+  .im4-2 { font-size: 5px; vertical-align: middle; margin-right: 8px; }@keyframes livoScrollAnnounce { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+
+  /* ===== bk666-স্টাইল টিকার বার ===== */
+  .bk-ticker {
+    display: flex;
+    align-items: center;
+    height: 38px;
+    background: #1a1a1a;
+    overflow: hidden;
+    /* GPU লেয়ারে প্রোমোট করা — sub-pixel scroll-এর সময় স্ক্রিনশট-২-এর মতো লাইন গ্লিচ আটকায় */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+  .bk-ticker-bell {
+    flex: 0 0 auto;
+    margin: 0 10px;
+    color: #FFC107;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+  }
+  .bk-ticker-track {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    transform: translateZ(0);
+  }
+  .bk-ticker-text {
+    display: inline-block;
+    white-space: nowrap;
+    color: #fff;
+    font-size: 12.5px;
+    font-weight: 500;
+    animation: scrollLeft 20s linear infinite;
+    will-change: transform;
+  }
+  .bk-ticker-sep { color: #FFC107; }
+  .bk-ticker-app {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0 10px 0 8px;
+    padding: 4px 12px;
+    background: #FFD700;
+    color: #000;
+    font-size: 11px;
+    font-weight: 800;
+    border-radius: 12px;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  @keyframes scrollLeft {
+    0% { transform: translateX(100%); }
+    100% { transform: translateX(-100%); }
+  }
+</style>
   <% } %>
 
   <% inapp.forEach(function(a) { %>
