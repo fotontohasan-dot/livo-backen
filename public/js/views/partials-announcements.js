@@ -21,4 +21,34 @@ function livoDismissAnnouncement(id, el) {
           livoDismissAnnouncement(id, el);
         });
       });
+
+      // ===== bk666 টিকার: রিফ্রেশ ছাড়াই রিয়েল-টাইম আপডেট =====
+      var bkNotice = document.getElementById('bkNotice');
+      if (!bkNotice) return;
+
+      function loadNotice() {
+        fetch('/api/ticker/active')
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            var notices = (data && data.notices) || [];
+            if (!notices.length) return;
+            bkNotice.innerHTML = notices
+              .map(function (n) {
+                var span = document.createElement('span');
+                span.textContent = n.message;
+                return span.outerHTML;
+              })
+              .join('<span class="bk-ticker-sep">&nbsp;&nbsp;★&nbsp;&nbsp;</span>');
+            // অ্যানিমেশন রিস্টার্ট — নতুন কন্টেন্ট শুরু থেকে স্ক্রল হয়
+            bkNotice.style.animation = 'none';
+            void bkNotice.offsetWidth; // reflow
+            bkNotice.style.animation = '';
+          })
+          .catch(function () {});
+      }
+
+      if (window.io) {
+        var socket = window.io();
+        socket.on('new_notice', loadNotice);
+      }
     });
