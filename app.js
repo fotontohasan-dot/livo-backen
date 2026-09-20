@@ -936,6 +936,7 @@ app.use('/admin/tickets', require('./middleware/auth').isAdmin, require('./route
 app.use('/admin/telegram', require('./middleware/auth').isAdmin, require('./routes/adminTelegram'));
 app.use('/admin/leaderboard', require('./middleware/auth').isAdmin, require('./routes/adminLeaderboard'));
 app.use('/notifications', require('./routes/notifications'));
+app.use('/api/ticker', require('./routes/ticker'));
 app.use('/help-center', require('./routes/help-center'));
 app.use('/payment', require('./routes/payment'));
 app.use('/games', require('./routes/games'));
