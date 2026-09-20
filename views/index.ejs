@@ -341,17 +341,11 @@ body.light-mode .promo-banner {
      তার CTA/স্ট্যাট ব্লকসহ সম্পূর্ণ সেকশনটা বাদ দেওয়া হয়েছে। সংশ্লিষ্ট .hero-* CSS
      শুধু এই সেকশনেই ব্যবহৃত হতো, তাই সেটাও একসাথে সরানো হলো। -->
 
-<!-- ===== Marquee Ticker ===== -->
-<div class="marquee-container-premium">
-  <div class="marquee-label-premium">
-    <i class="fas fa-bullhorn"></i> Announcement:
-  </div>
-  <div class="dz48-1">
-    <div class="dz48-2">
-      <%= t.home_marquee %>
-    </div>
-  </div>
-</div>
+<!-- ===== টিকার বার (bk666-স্টাইল), হেডার/নেভবারের ঠিক নিচে =====
+     পুরনো স্ট্যাটিক মার্কি (t.home_marquee) সরিয়ে partials/announcements.ejs-এর
+     ডায়নামিক 'scrolling' টিকার ব্যবহার করা হলো, যাতে একই জায়গায় দুটো টিকার
+     না দেখায় এবং অ্যাডমিন প্যানেল থেকে তৈরি নোটিশ এখানে রিয়েল-টাইমে আসে। -->
+<%- include('partials/announcements') %>
 
 <!-- ===== Large FA999-style Promotional Welcome Banner ===== -->
 <div class="promo-banner">
