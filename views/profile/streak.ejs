@@ -76,7 +76,17 @@
           <div style="color:<%= reached ? 'var(--text-main)' : 'var(--text-muted)' %>;font-size:14px;font-weight:bold;">
             <%= reached ? '✅' : '🔒' %> <%= t('stk_wins_in_row').replace('{n}', m.streak) %>
           </div>
-          <div class="dz66-13"><%= m.multiplier %>x 🪙</div>
+          <% if (reached) { %>
+            <div class="dz66-13"><%= m.multiplier %>x 🪙</div>
+          <% } else { %>
+            <!-- লক করা মাইলস্টোনে গুণক (multiplier) না দেখিয়ে শুধু "Claim" দেখানো হচ্ছে।
+                 বোনাস এখনো সার্ভার-সাইডে অটো-ক্রেডিট হয় (services/streak.js), এই
+                 বাটনে কোনো ক্লিক-হ্যান্ডলার নেই — শুধু ভিজ্যুয়াল ইঙ্গিত যে মাইলস্টোনে
+                 পৌঁছালে বোনাস "claim" হয়ে যাবে। -->
+            <button type="button" disabled style="background:rgba(255,255,255,0.06);color:var(--text-muted);border:1px solid rgba(255,255,255,0.12);border-radius:999px;padding:5px 14px;font-size:12px;font-weight:700;cursor:not-allowed;">
+              <%= t('claim') %>
+            </button>
+          <% } %>
         </div>
       <% }) %>
     </div>
