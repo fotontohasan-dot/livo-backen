@@ -5,18 +5,20 @@
 const { pool } = require('../db');
 
 // পুরনো নিয়ম (ফিক্সড): 3win=50, 5win=150, 7win=400, 10win=1000 — বাতিল
-// আগের ডায়নামিক নিয়ম বাজির ২০% বোনাস দিত (১০০ কয়েন বাজিতে ২০ কয়েন বোনাস) — যা
-// লয়্যালটি বোনাস হিসেবে অস্বাভাবিক বেশি ছিল। এখন যৌক্তিক মানে নামানো হলো:
-// প্রতি ৩টা টানা জয়ে (৩, ৬, ৯...) বাজির উপর ভিত্তি করে ডায়নামিক বোনাস।
-// Bonus = Min(Max(বাজি × 5%, ১), ৫)
+// এরপর ২০% (১০০ বাজিতে ২০ বোনাস) → ৫% (১০০ বাজিতে ৫ বোনাস) → এখন ০.০৫%
+// (১০০ কয়েন বাজিতে ০.০৫ কয়েন বোনাস)। coins কলাম NUMERIC(14,2), তাই ফ্র্যাকশনাল
+// মান নিরাপদে সাপোর্ট করে — তাই আর Math.round দিয়ে পূর্ণসংখ্যায় বৃত্তাকার করা
+// হয় না, শুধু ২ দশমিক ঘরে রাউন্ড করা হয়।
+// Bonus = Min(Max(বাজি × 0.05%, ০.০৫), ৫)
 const STREAK_INTERVAL = 3;
-const STREAK_MIN_BONUS = 1;
+const STREAK_MIN_BONUS = 0.05;
 const STREAK_MAX_BONUS = 5;
-const STREAK_PERCENT = 0.05;
+const STREAK_PERCENT = 0.0005;
 
 function calcStreakBonus(betAmount) {
   const raw = Number(betAmount || 0) * STREAK_PERCENT;
-  return Math.min(STREAK_MAX_BONUS, Math.max(STREAK_MIN_BONUS, Math.round(raw)));
+  const bounded = Math.min(STREAK_MAX_BONUS, Math.max(STREAK_MIN_BONUS, raw));
+  return Math.round(bounded * 100) / 100; // ২ দশমিক ঘর পর্যন্ত (coins NUMERIC(14,2))
 }
 
 // গেমের ফলাফল রেকর্ড করা।
@@ -119,7 +121,7 @@ async function getStreak(userId) {
     nextMilestone: next,
     nextMultiplier: STREAK_PERCENT,
     milestones,
-    nextBonusNote: `বাজির ৫% (সর্বনিম্ন ${STREAK_MIN_BONUS}, সর্বোচ্চ ${STREAK_MAX_BONUS} কয়েন)`,
+    nextBonusNote: `বাজির ০.০৫% (সর্বনিম্ন ${STREAK_MIN_BONUS}, সর্বোচ্চ ${STREAK_MAX_BONUS} কয়েন)`,
     interval: STREAK_INTERVAL,
     minBonus: STREAK_MIN_BONUS,
     maxBonus: STREAK_MAX_BONUS,
