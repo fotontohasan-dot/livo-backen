@@ -67,6 +67,9 @@ if (!SESSION_SECRET) {
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+// ই-ওয়ালেট কলব্যাক (bKash/Nagad/Rocket/Upay): স্বাক্ষর যাচাইয়ের জন্য raw body লাগে,
+// তাই গ্লোবাল body parser-এর আগে মাউন্ট। সেশন/CSRF/কুকি এই রুটে প্রযোজ্য নয় (সার্ভার-টু-সার্ভার)
+app.use('/wallet-callback', require('./routes/walletCallback'));
 app.use(express.urlencoded({ extended: true }));
 // প্রোভাইডার কলব্যাকের HMAC স্বাক্ষর *কাঁচা* বডির উপর হিসাব হয় — JSON.parse
 // করে আবার stringify করলে key-order বা whitespace বদলে যায় এবং স্বাক্ষর কখনো

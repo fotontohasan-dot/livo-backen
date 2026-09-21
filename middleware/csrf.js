@@ -57,6 +57,8 @@ const EXEMPT_EXACT = [
   '/payment/sslcommerz/cancel',
   '/payment/sslcommerz/ipn'
 ];
+// ই-ওয়ালেট কলব্যাক: ব্রাউজার নয়, ওয়ালেট সার্ভার পাঠায়; স্বাক্ষর দিয়ে সুরক্ষিত
+const EXEMPT_WALLET_CALLBACK = /^\/wallet-callback\/(bkash|nagad|rocket|upay)$/;
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -64,6 +66,7 @@ function isExempt(req) {
   if (SAFE_METHODS.has(req.method)) return true;
   if (isApiKeyRequest(req)) return true;
   if (EXEMPT_EXACT.includes(req.path)) return true;
+  if (EXEMPT_WALLET_CALLBACK.test(req.path)) return true;
   return EXEMPT_PREFIXES.some(prefix => req.path.startsWith(prefix));
 }
 
