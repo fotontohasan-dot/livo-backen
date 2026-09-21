@@ -55,6 +55,12 @@ async function runMigrations() {
     // লগইন পাসওয়ার্ড থেকে আলাদা — হ্যাশ করে সংরক্ষণ (bcrypt), NULL মানে এখনো সেট করা হয়নি।
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS transaction_password TEXT;`);
 
+    // ==================== ওয়ালেট প্রোভাইডার একাউন্ট অ্যাক্টিভেশন ====================
+    // প্রোভাইডার প্রথমবার callback পাঠালে (একাউন্ট activate) এই flag সেট হয়।
+    // email_verified-এর মতোই — এক-দিকমুখী (false → true), আবার false-এ ফেরে না।
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS provider_wallet_activated BOOLEAN DEFAULT false;`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS provider_wallet_activated_at TIMESTAMP;`);
+
     // ==================== Google Sign-In (OAuth 2.0 / OpenID Connect) ====================
     // google_id = Google-এর 'sub' (স্থায়ী, ইউনিক আইডেন্টিফায়ার) — কখনো Google পাসওয়ার্ড স্টোর করা হয় না।
     // auth_provider শুধু তথ্যমূলক (কোন মাধ্যমে অ্যাকাউন্ট তৈরি হয়েছিল), লগইন-যোগ্যতা নির্ধারণ করে না —
