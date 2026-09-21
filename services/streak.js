@@ -5,12 +5,14 @@
 const { pool } = require('../db');
 
 // পুরনো নিয়ম (ফিক্সড): 3win=50, 5win=150, 7win=400, 10win=1000 — বাতিল
-// নতুন নিয়ম: প্রতি ৩টা টানা জয়ে (৩, ৬, ৯...) বাজির পরিমাণ অনুযায়ী ডায়নামিক বোনাস
-// Bonus = Min(Max(বাজি × 20%, ২), ২০)
+// আগের ডায়নামিক নিয়ম বাজির ২০% বোনাস দিত (১০০ কয়েন বাজিতে ২০ কয়েন বোনাস) — যা
+// লয়্যালটি বোনাস হিসেবে অস্বাভাবিক বেশি ছিল। এখন যৌক্তিক মানে নামানো হলো:
+// প্রতি ৩টা টানা জয়ে (৩, ৬, ৯...) বাজির উপর ভিত্তি করে ডায়নামিক বোনাস।
+// Bonus = Min(Max(বাজি × 5%, ১), ৫)
 const STREAK_INTERVAL = 3;
-const STREAK_MIN_BONUS = 2;
-const STREAK_MAX_BONUS = 20;
-const STREAK_PERCENT = 0.20;
+const STREAK_MIN_BONUS = 1;
+const STREAK_MAX_BONUS = 5;
+const STREAK_PERCENT = 0.05;
 
 function calcStreakBonus(betAmount) {
   const raw = Number(betAmount || 0) * STREAK_PERCENT;
@@ -117,7 +119,7 @@ async function getStreak(userId) {
     nextMilestone: next,
     nextMultiplier: STREAK_PERCENT,
     milestones,
-    nextBonusNote: `বাজির ২০% (সর্বনিম্ন ${STREAK_MIN_BONUS}, সর্বোচ্চ ${STREAK_MAX_BONUS} কয়েন)`,
+    nextBonusNote: `বাজির ৫% (সর্বনিম্ন ${STREAK_MIN_BONUS}, সর্বোচ্চ ${STREAK_MAX_BONUS} কয়েন)`,
     interval: STREAK_INTERVAL,
     minBonus: STREAK_MIN_BONUS,
     maxBonus: STREAK_MAX_BONUS,
