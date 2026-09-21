@@ -121,6 +121,38 @@ function fail(req, res, err) {
 
 // ==================== এন্ডপয়েন্ট ====================
 
+// প্রোভাইডার একাউন্ট প্রথমবার activate করলে এই কলব্যাক পাঠায়। balance/bet/win-এর
+// মতোই providerAuth (IP allow-list + HMAC) বাধ্যতামূলক — এটাও external সার্ভার
+// থেকে আসা কল, ব্যবহারকারীর ব্রাউজার সেশন নয়। idempotent: দ্বিতীয়বার এলে flag
+// আগে থেকেই true থাকলে চুপচাপ 200 রিটার্ন করে, দ্বিতীয়বার আপডেট চালায় না।
+router.post('/:provider/account/activate', walletLimiter, providerAuth, async (req, res) => {
+  try {
+    const parsed = parseRequest(req, 'account_activate');
+    const { userId } = await resolveUser(parsed);
+
+    const result = await pool.query(
+      `UPDATE users
+          SET provider_wallet_activated = true,
+              provider_wallet_activated_at = COALESCE(provider_wallet_activated_at, NOW())
+        WHERE id = $1
+        RETURNING provider_wallet_activated, provider_wallet_activated_at`,
+      [userId]
+    );
+
+    if (!result.rows.length) {
+      throw new wallet.WalletError(wallet.CODES.USER_NOT_FOUND, 'user not found', 404);
+    }
+
+    return ok(req, res, {
+      user_id: userId,
+      activated: result.rows[0].provider_wallet_activated,
+      activated_at: result.rows[0].provider_wallet_activated_at
+    });
+  } catch (err) {
+    return fail(req, res, err);
+  }
+});
+
 router.post('/:provider/balance', walletLimiter, providerAuth, async (req, res) => {
   try {
     const parsed = parseRequest(req, 'balance');

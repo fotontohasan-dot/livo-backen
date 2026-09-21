@@ -1191,6 +1191,81 @@ router.post('/sslcommerz/ipn', async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// Single-Wallet Callback — নতুন পেমেন্ট প্রোভাইডারের সার্ভার-টু-সার্ভার কলব্যাক।
+// প্যাটার্ন হুবহু /sslcommerz/ipn অনুসরণ করে: gateway_tran_id দিয়ে pending
+// request লক করা, provider-এর কাছে গিয়ে independently verify করা, amount/
+// currency মিলিয়ে তবেই credit করা। **কখনো callback body-কে সরাসরি বিশ্বাস
+// করে ব্যালেন্স বদলানো হয় না** — নাহলে যে কেউ raw POST পাঠিয়ে টাকা ঢোকাতে
+// পারবে।
+//
+// TODO (পূরণ করা আবশ্যিক, নাহলে এই এন্ডপয়েন্ট প্রোডাকশনে চালু করা যাবে না):
+//   ১. signature/HMAC ভেরিফিকেশন — প্রোভাইডারের ডকুমেন্টেশন অনুযায়ী
+//      services/sslcommerz.js-এর ধাঁচে একটা services/<provider>.js বানিয়ে
+//      সেখানে validatePayment()/verifySignature() লিখুন।
+//   ২. req.body থেকে exact field নাম বসান (এখন placeholder হিসেবে
+//      trackingId, userId, status ধরা হয়েছে — প্রোভাইডার হয়তো ভিন্ন নাম
+//      পাঠায়, যেমন tran_id, ref_id, txn_status)।
+//   ৩. status-এর exact string ভ্যালু বসান (এখন 'SUCCESS'/'FAILED' ধরা)।
+//   ৪. amount ভেরিফিকেশন যোগ করুন — request.amount-এর সাথে প্রোভাইডারের
+//      পাঠানো amount না মিললে credit করবেন না (দেখুন উপরে amountMatches)।
+// ---------------------------------------------------------------------------
+router.post('/single-wallet/callback', async (req, res) => {
+  // TODO: এখানে req.body / req.headers থেকে signature verify করুন।
+  // ভেরিফিকেশন ছাড়া এই endpoint কখনো লাইভ রাখবেন না।
+
+  const { trackingId, userId, status } = req.body || {};
+
+  if (!trackingId || !userId || !status) {
+    return res.status(400).json({ success: false, error: 'MISSING_FIELDS' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const result = await client.query(
+      `SELECT * FROM payment_requests WHERE gateway_tran_id=$1 AND user_id=$2 FOR UPDATE`,
+      [trackingId, userId]
+    );
+    const request = result.rows[0];
+
+    if (!request || request.status !== 'pending') {
+      await client.query('ROLLBACK');
+      // ইতিমধ্যে প্রসেসড বা অস্তিত্বহীন — গেটওয়েকে বলা হচ্ছে "গ্রহণ করা হয়েছে"
+      // যাতে অহেতুক রিট্রাই লুপ না হয় (sslcommerz/ipn-এর একই যুক্তি দেখুন)।
+      return res.sendStatus(200);
+    }
+
+    // TODO: এখানে প্রোভাইডারের সার্ভারে গিয়ে independently verify করুন
+    // (callback body কখনো একা যথেষ্ট নয়) এবং amount/currency মিলান।
+    const isSuccess = status === 'SUCCESS';
+
+    if (isSuccess) {
+      await client.query(
+        `UPDATE payment_requests SET gateway_response=$1 WHERE id=$2`,
+        [JSON.stringify(req.body), request.id]
+      );
+      await creditApprovedDeposit(client, request);
+    } else {
+      await client.query(
+        `UPDATE payment_requests SET status='rejected', gateway_response=$1, updated_at=NOW() WHERE id=$2`,
+        [JSON.stringify(req.body), request.id]
+      );
+    }
+
+    await client.query('COMMIT');
+    return res.sendStatus(200);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('single-wallet callback error:', err.message);
+    // ব্যর্থতায় 500 — গেটওয়ে যেন নিজের রিট্রাই নীতি অনুযায়ী আবার পাঠায়।
+    return res.sendStatus(500);
+  } finally {
+    client.release();
+  }
+});
+
 router.creditApprovedDeposit = creditApprovedDeposit;
 module.exports = router;
 module.exports.creditApprovedDeposit = creditApprovedDeposit;
