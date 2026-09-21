@@ -148,6 +148,7 @@
       <a href="/profile/rewards" class="mc-tile">
         <div class="mc-tile-icon">
           <i class="fas fa-trophy"></i>
+          <span class="mc-tile-star"><i class="fas fa-star"></i></span>
           <span class="mc-tile-badge" data-badge="reward" style="display:none;"></span>
         </div>
         <span class="mc-tile-label">Reward Center</span>
@@ -159,27 +160,36 @@
       </a>
 
       <a href="/profile/stats" class="mc-tile">
-        <div class="mc-tile-icon"><i class="fas fa-chart-pie"></i></div>
+        <div class="mc-tile-icon"><i class="fas fa-shuffle"></i></div>
         <span class="mc-tile-label">Profit And Loss</span>
       </a>
 
       <a href="/payment/history?type=deposit" class="mc-tile">
-        <div class="mc-tile-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+        <div class="mc-tile-icon"><i class="fas fa-file-arrow-up"></i></div>
         <span class="mc-tile-label">Deposit Record</span>
       </a>
 
       <a href="/payment/history?type=withdraw" class="mc-tile">
-        <div class="mc-tile-icon"><i class="fas fa-hand-holding-usd"></i></div>
+        <div class="mc-tile-icon"><i class="fas fa-file-arrow-down"></i></div>
         <span class="mc-tile-label">Withdrawal Record</span>
       </a>
 
       <a href="/profile/transactions" class="mc-tile">
-        <div class="mc-tile-icon"><i class="fas fa-file-alt"></i></div>
+        <div class="mc-tile-icon"><i class="fas fa-clock-rotate-left"></i></div>
         <span class="mc-tile-label">Account Record</span>
       </a>
 
+      <!-- আমার অ্যাকাউন্ট: রেফারেন্স ছবিতে আছে কিন্তু routes/profile.js-এ এর জন্য কোনো
+           পেজ/রুট নেই (শুধু POST /update, /update-personal আছে, কোনো GET পেজ নেই)।
+           তাই বানোয়াট লিংক না দিয়ে আপাতত /profile (এই পেজেই) পয়েন্ট করা হলো —
+           প্রকৃত "এডিট অ্যাকাউন্ট" পেজ বানালে href বদলে দিও। -->
+      <a href="/profile" class="mc-tile">
+        <div class="mc-tile-icon"><i class="fas fa-user"></i></div>
+        <span class="mc-tile-label">আমার অ্যাকাউন্ট</span>
+      </a>
+
       <a href="/profile/security" class="mc-tile">
-        <div class="mc-tile-icon"><i class="fas fa-shield-alt"></i></div>
+        <div class="mc-tile-icon"><i class="fas fa-user-shield"></i></div>
         <span class="mc-tile-label">সিকিউরিটি সেন্টার</span>
         <span class="mc-tile-sublabel">পাসওয়ার্ড · লগইন হিস্টোরি</span>
       </a>
@@ -191,7 +201,7 @@
 
       <a href="/profile/missions" class="mc-tile">
         <div class="mc-tile-icon">
-          <i class="fas fa-bullseye"></i>
+          <i class="fas fa-gift"></i>
           <span class="mc-tile-badge" data-badge="mission" style="display:none;"></span>
         </div>
         <span class="mc-tile-label">Mission</span>
@@ -204,19 +214,22 @@
 
       <a href="/notifications" class="mc-tile">
         <div class="mc-tile-icon">
-          <i class="fas fa-envelope"></i>
+          <i class="fas fa-at"></i>
           <span class="mc-tile-badge" data-badge="message" style="display:none;"></span>
         </div>
         <span class="mc-tile-label">Internal Message</span>
       </a>
 
       <a href="/profile/feedback" class="mc-tile">
-        <div class="mc-tile-icon"><i class="fas fa-comment-alt"></i></div>
+        <div class="mc-tile-icon">
+          <i class="fas fa-comment-alt"></i>
+          <span class="mc-tile-star"><i class="fas fa-star"></i></span>
+        </div>
         <span class="mc-tile-label">Suggestion</span>
       </a>
 
       <a href="/profile/app-download" class="mc-tile">
-        <div class="mc-tile-icon"><i class="fas fa-mobile-alt"></i></div>
+        <div class="mc-tile-icon"><i class="fas fa-mobile-screen-button"></i></div>
         <span class="mc-tile-label">Download APP</span>
       </a>
 
@@ -316,17 +329,20 @@
 <script type="application/json" id="profileConfig"><%- jsonScriptSafe({ uid: 100000 + user.id, siteName: siteName, locale: lang === "bn" ? "bn-BD" : "en-US" }) %></script>
 
 <style nonce="<%= cspNonce %>">
-.mc-flat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px 8px}
+.rs2-36{background:#ffffff;border:1px solid #eee0c2}
+.rs2-37{color:#8a7a55}
+.mc-flat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:26px 8px}
 @media (max-width:339px){.mc-flat-grid{grid-template-columns:repeat(3,1fr)}}
 @media (min-width:768px){.mc-flat-grid{grid-template-columns:repeat(6,1fr)}}
-.mc-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-decoration:none;min-height:64px}
-.mc-tile-label{color:var(--text-main);font-size:11px;font-weight:600;text-align:center;overflow-wrap:anywhere}
-.mc-tile-sublabel{color:var(--text-muted);font-size:9px;text-align:center;overflow-wrap:anywhere}
-.mc-tile-icon{width:58px;height:58px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--gold);position:relative}
-.mc-tile-icon-danger{background:rgba(229,57,53,0.14);color:#e53935}
-.mc-tile-label-danger{color:#e53935}
+.mc-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-decoration:none;min-height:64px}
+.mc-tile-label{color:#1c1c1c;font-size:13px;font-weight:700;text-align:center;overflow-wrap:anywhere}
+.mc-tile-sublabel{color:#8a7a55;font-size:9px;text-align:center;overflow-wrap:anywhere}
+.mc-tile-icon{width:62px;height:62px;border-radius:50%;background:#f6e9c9;display:flex;align-items:center;justify-content:center;font-size:24px;color:#c99a3b;position:relative}
+.mc-tile-icon-danger{background:#f6e9c9;color:#c99a3b}
+.mc-tile-label-danger{color:#1c1c1c}
+.mc-tile-star{position:absolute;top:-2px;right:6px;color:#c99a3b;font-size:11px}
 /* মেম্বার সেন্টার আইকন ব্যাজ — public/js/badges-realtime.js এইগুলোর টেক্সট/দৃশ্যমানতা নিয়ন্ত্রণ করে */
-.mc-tile-badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:10px;background:#e53935;color:#fff;font-size:10px;font-weight:800;line-height:18px;text-align:center;border:2px solid var(--bg-card,#10251a);box-shadow:0 0 6px rgba(229,57,53,0.6)}
+.mc-tile-badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:10px;background:#e53935;color:#fff;font-size:10px;font-weight:800;line-height:18px;text-align:center;border:2px solid #fff;box-shadow:0 0 6px rgba(229,57,53,0.6)}
 </style>
 
 <div id="avatarModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:200; align-items:center; justify-content:center; padding:20px;">
