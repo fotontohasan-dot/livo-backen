@@ -39,7 +39,7 @@
   .rs2-33.rs2-33.rs2-33 { background: var(--grad-gold); color: #1a1400; padding: 12px 6px; border-radius: 0; text-align: center; text-decoration: none; font-size: 12.5px; font-weight: 800; display: flex; flex-direction: row; gap: 6px; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(212,167,44,0.3); }
   .rs2-34.rs2-34.rs2-34 { background: rgba(255,255,255,0.07); color: var(--gold); padding: 12px 6px; border-radius: 0; text-align: center; text-decoration: none; font-size: 12.5px; font-weight: 800; border: 1px solid rgba(245, 158, 11, 0.3); display: flex; flex-direction: row; gap: 6px; align-items: center; justify-content: center; }
   .rs2-35.rs2-35.rs2-35 { background: rgba(255,255,255,0.07); color: #fff; padding: 12px 6px; border-radius: 0; text-align: center; text-decoration: none; font-size: 12.5px; font-weight: 800; border: 1px solid rgba(255,255,255,0.12); display: flex; flex-direction: row; gap: 6px; align-items: center; justify-content: center; }
-  .rs2-36.rs2-36.rs2-36 { background: #ffffff; border-radius: 20px; padding: 20px; border: 1px solid #eee0c2; }
+  .rs2-36.rs2-36.rs2-36 { background: #10291D; border-radius: 20px; padding: 20px; border: 1px solid #1E4633; }
   .rs2-37.rs2-37.rs2-37 { color: #8a7a55; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
   .rs2-38.rs2-38.rs2-38 { text-align: center; margin-top: 30px; padding-bottom: 20px; }
   .rs2-39.rs2-39.rs2-39 { color: var(--text-muted); font-size: 12px; }
@@ -301,26 +301,26 @@
 <script type="application/json" id="profileConfig"><%- jsonScriptSafe({ uid: 100000 + user.id, siteName: siteName, locale: lang === "bn" ? "bn-BD" : "en-US" }) %></script>
 
 <style nonce="<%= cspNonce %>">
-.rs2-36{background:#ffffff;border:1px solid #eee0c2}
-.rs2-37{color:#8a7a55}
+.rs2-36{background:#10291D;border:1px solid #1E4633}
+.rs2-37{color:#8FA396}
 .mc-flat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px 8px;align-items:start;justify-items:center}
 @media (max-width:339px){.mc-flat-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (min-width:768px){.mc-flat-grid{grid-template-columns:repeat(6,minmax(0,1fr))}}
 .mc-tile{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:8px;text-decoration:none;width:100%;min-width:0;align-self:start}
-.mc-tile-label{color:#1c1c1c;font-size:12px;font-weight:700;line-height:1.25;text-align:center;overflow-wrap:anywhere;width:100%;min-height:calc(1.25em * 2);display:block}
+.mc-tile-label{color:#F2F5F3;font-size:12px;font-weight:700;line-height:1.25;text-align:center;overflow-wrap:anywhere;width:100%;min-height:calc(1.25em * 2);display:block}
 .mc-tile-sublabel{display:none}
-.mc-tile-icon{flex:0 0 62px;width:62px;height:62px;border-radius:50%;background:linear-gradient(145deg,#143324 0%,#0A1C14 100%);border:2px solid #10b981;display:flex;align-items:center;justify-content:center;font-size:25px;color:#ffffff;position:relative;box-shadow:0 4px 12px rgba(10,28,20,0.35)}
+.mc-tile-icon{flex:0 0 62px;width:62px;height:62px;border-radius:50%;background:linear-gradient(145deg,#008F5A 0%,#006A4E 100%);border:2px solid #34d399;display:flex;align-items:center;justify-content:center;font-size:25px;color:#ffffff;position:relative;box-shadow:0 4px 12px rgba(0,0,0,0.45)}
 .mc-tile-icon i,.mc-tile-icon i::before{color:#ffffff !important;-webkit-text-fill-color:#ffffff !important;opacity:1 !important;filter:drop-shadow(0 0 4px rgba(16,185,129,0.65))}
-.mc-tile-icon-danger{background:linear-gradient(145deg,#5a1414 0%,#2a0808 100%);border-color:#F26B6B;box-shadow:0 4px 12px rgba(214,40,40,0.35)}
+.mc-tile-icon-danger{background:linear-gradient(145deg,#D62828 0%,#8f1a1a 100%);border-color:#F26B6B;box-shadow:0 4px 12px rgba(214,40,40,0.35)}
 .mc-tile-icon-danger i,.mc-tile-icon-danger i::before{filter:drop-shadow(0 0 4px rgba(242,107,107,0.65))}
 .mc-tile-star{position:absolute;top:-3px;right:3px;color:#FFD54A;font-size:12px;text-shadow:0 0 3px rgba(0,0,0,0.6)}
 .mc-tile-star i,.mc-tile-star i::before{filter:none !important;color:#FFD54A !important;-webkit-text-fill-color:#FFD54A !important}
-.mc-tile-label-danger{color:#B71C1C}
+.mc-tile-label-danger{color:#F26B6B}
 /* style.css-এর `body:not(.light-mode) * { color:#fff !important }` সব লেখা সাদা করে দেয় —
    সাদা কার্ডের ওপর লেবেল অদৃশ্য হয়ে যেত। একই সিলেক্টর-ফর্ম ব্যবহার করে (উচ্চ specificity) লেবেল/হেডিং গাঢ় করা হলো */
-body:not(.light-mode) .rs2-36 .mc-tile .mc-tile-label{color:#1c1c1c !important;-webkit-text-fill-color:#1c1c1c !important}
-body:not(.light-mode) .rs2-36 .mc-tile .mc-tile-label-danger{color:#B71C1C !important;-webkit-text-fill-color:#B71C1C !important}
-body:not(.light-mode) .rs2-36 .rs2-37{color:#8a7a55 !important;-webkit-text-fill-color:#8a7a55 !important}
+body:not(.light-mode) .rs2-36 .mc-tile .mc-tile-label{color:#F2F5F3 !important;-webkit-text-fill-color:#F2F5F3 !important}
+body:not(.light-mode) .rs2-36 .mc-tile .mc-tile-label-danger{color:#F26B6B !important;-webkit-text-fill-color:#F26B6B !important}
+body:not(.light-mode) .rs2-36 .rs2-37{color:#8FA396 !important;-webkit-text-fill-color:#8FA396 !important}
 body:not(.light-mode) .rs2-36 .mc-tile-icon i{color:#ffffff !important;-webkit-text-fill-color:#ffffff !important}
 body:not(.light-mode) .rs2-36 .mc-tile-star i{color:#FFD54A !important;-webkit-text-fill-color:#FFD54A !important}
 /* মেম্বার সেন্টার আইকন ব্যাজ — public/js/badges-realtime.js এইগুলোর টেক্সট/দৃশ্যমানতা নিয়ন্ত্রণ করে */
