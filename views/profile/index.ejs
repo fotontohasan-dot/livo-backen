@@ -303,13 +303,13 @@
 <style nonce="<%= cspNonce %>">
 .rs2-36{background:#ffffff;border:1px solid #eee0c2}
 .rs2-37{color:#8a7a55}
-.mc-flat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:26px 8px}
-@media (max-width:339px){.mc-flat-grid{grid-template-columns:repeat(3,1fr)}}
-@media (min-width:768px){.mc-flat-grid{grid-template-columns:repeat(6,1fr)}}
-.mc-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-decoration:none;min-height:64px}
-.mc-tile-label{color:#1c1c1c;font-size:13px;font-weight:700;text-align:center;overflow-wrap:anywhere}
-.mc-tile-sublabel{color:#6b5d3f;font-size:9px;text-align:center;overflow-wrap:anywhere}
-.mc-tile-icon{width:62px;height:62px;border-radius:50%;background:linear-gradient(135deg,#006A4E,#008F5A);display:flex;align-items:center;justify-content:center;font-size:24px;color:#ffffff;position:relative;box-shadow:0 3px 10px rgba(0,106,78,0.35)}
+.mc-flat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px 8px;align-items:start;justify-items:center}
+@media (max-width:339px){.mc-flat-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (min-width:768px){.mc-flat-grid{grid-template-columns:repeat(6,minmax(0,1fr))}}
+.mc-tile{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:8px;text-decoration:none;width:100%;min-width:0;align-self:start}
+.mc-tile-label{color:#1c1c1c;font-size:12px;font-weight:700;line-height:1.25;text-align:center;overflow-wrap:anywhere;width:100%;min-height:calc(1.25em * 2);display:block}
+.mc-tile-sublabel{display:none}
+.mc-tile-icon{flex:0 0 62px;width:62px;height:62px;border-radius:50%;background:linear-gradient(135deg,#006A4E,#008F5A);display:flex;align-items:center;justify-content:center;font-size:24px;color:#ffffff;position:relative;box-shadow:0 3px 10px rgba(0,106,78,0.35)}
 .mc-tile-icon i,.mc-tile-icon i::before{color:#ffffff !important;-webkit-text-fill-color:#ffffff !important;opacity:1 !important}
 .mc-tile-icon-danger{background:linear-gradient(135deg,#B71C1C,#D62828);box-shadow:0 3px 10px rgba(214,40,40,0.35)}
 .mc-tile-star{position:absolute;top:-2px;right:4px;color:#FFD54A;font-size:12px;text-shadow:0 0 3px rgba(0,0,0,0.35)}
