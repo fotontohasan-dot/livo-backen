@@ -39,8 +39,8 @@
   .rs2-33.rs2-33.rs2-33 { background: var(--grad-gold); color: #1a1400; padding: 12px 6px; border-radius: 0; text-align: center; text-decoration: none; font-size: 12.5px; font-weight: 800; display: flex; flex-direction: row; gap: 6px; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(212,167,44,0.3); }
   .rs2-34.rs2-34.rs2-34 { background: rgba(255,255,255,0.07); color: var(--gold); padding: 12px 6px; border-radius: 0; text-align: center; text-decoration: none; font-size: 12.5px; font-weight: 800; border: 1px solid rgba(245, 158, 11, 0.3); display: flex; flex-direction: row; gap: 6px; align-items: center; justify-content: center; }
   .rs2-35.rs2-35.rs2-35 { background: rgba(255,255,255,0.07); color: #fff; padding: 12px 6px; border-radius: 0; text-align: center; text-decoration: none; font-size: 12.5px; font-weight: 800; border: 1px solid rgba(255,255,255,0.12); display: flex; flex-direction: row; gap: 6px; align-items: center; justify-content: center; }
-  .rs2-36.rs2-36.rs2-36 { background: var(--bg-card); border-radius: 20px; padding: 20px; border: 1px solid var(--border-glass); }
-  .rs2-37.rs2-37.rs2-37 { color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
+  .rs2-36.rs2-36.rs2-36 { background: #ffffff; border-radius: 20px; padding: 20px; border: 1px solid #eee0c2; }
+  .rs2-37.rs2-37.rs2-37 { color: #8a7a55; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
   .rs2-38.rs2-38.rs2-38 { text-align: center; margin-top: 30px; padding-bottom: 20px; }
   .rs2-39.rs2-39.rs2-39 { color: var(--text-muted); font-size: 12px; }
   .rs2-40.rs2-40.rs2-40 { color: var(--text-muted); font-size: 11px; margin-top: 5px; }
@@ -179,11 +179,12 @@
         <span class="mc-tile-label">Account Record</span>
       </a>
 
-      <!-- আমার অ্যাকাউন্ট: রেফারেন্স ছবিতে আছে কিন্তু routes/profile.js-এ এর জন্য কোনো
-           পেজ/রুট নেই (শুধু POST /update, /update-personal আছে, কোনো GET পেজ নেই)।
-           তাই বানোয়াট লিংক না দিয়ে আপাতত /profile (এই পেজেই) পয়েন্ট করা হলো —
-           প্রকৃত "এডিট অ্যাকাউন্ট" পেজ বানালে href বদলে দিও। -->
-      <a href="/profile" class="mc-tile">
+      <!-- আমার অ্যাকাউন্ট: /profile/security{/:tab}-এর 'personal' ট্যাব
+           (views/profile/security.ejs, activeTab==='personal') ইউজারনেম,
+           পূর্ণ নাম, ফোন নম্বর দেখায় ও POST /profile/update-personal দিয়ে
+           এডিট করা যায় — এটাই আসল "personal account info" পেজ। আগে এটা
+           নিজের /profile পেজেই (প্রোফাইল হোম) পয়েন্ট করত, যা ভুল ছিল। -->
+      <a href="/profile/security/personal" class="mc-tile">
         <div class="mc-tile-icon"><i class="fas fa-user"></i></div>
         <span class="mc-tile-label">আমার অ্যাকাউন্ট</span>
       </a>
@@ -336,11 +337,11 @@
 @media (min-width:768px){.mc-flat-grid{grid-template-columns:repeat(6,1fr)}}
 .mc-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-decoration:none;min-height:64px}
 .mc-tile-label{color:#1c1c1c;font-size:13px;font-weight:700;text-align:center;overflow-wrap:anywhere}
-.mc-tile-sublabel{color:#8a7a55;font-size:9px;text-align:center;overflow-wrap:anywhere}
-.mc-tile-icon{width:62px;height:62px;border-radius:50%;background:#f6e9c9;display:flex;align-items:center;justify-content:center;font-size:24px;color:#c99a3b;position:relative}
-.mc-tile-icon-danger{background:#f6e9c9;color:#c99a3b}
+.mc-tile-sublabel{color:#6b5d3f;font-size:9px;text-align:center;overflow-wrap:anywhere}
+.mc-tile-icon{width:62px;height:62px;border-radius:50%;background:#f6e9c9;display:flex;align-items:center;justify-content:center;font-size:24px;color:#8a6314;position:relative}
+.mc-tile-icon-danger{background:#f6e9c9;color:#c0392b}
 .mc-tile-label-danger{color:#1c1c1c}
-.mc-tile-star{position:absolute;top:-2px;right:6px;color:#c99a3b;font-size:11px}
+.mc-tile-star{position:absolute;top:-2px;right:6px;color:#8a6314;font-size:11px}
 /* মেম্বার সেন্টার আইকন ব্যাজ — public/js/badges-realtime.js এইগুলোর টেক্সট/দৃশ্যমানতা নিয়ন্ত্রণ করে */
 .mc-tile-badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:10px;background:#e53935;color:#fff;font-size:10px;font-weight:800;line-height:18px;text-align:center;border:2px solid #fff;box-shadow:0 0 6px rgba(229,57,53,0.6)}
 </style>
