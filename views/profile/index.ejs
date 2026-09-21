@@ -316,6 +316,13 @@
 .mc-tile-star{position:absolute;top:-3px;right:3px;color:#FFD54A;font-size:12px;text-shadow:0 0 3px rgba(0,0,0,0.6)}
 .mc-tile-star i,.mc-tile-star i::before{filter:none !important;color:#FFD54A !important;-webkit-text-fill-color:#FFD54A !important}
 .mc-tile-label-danger{color:#B71C1C}
+/* style.css-এর `body:not(.light-mode) * { color:#fff !important }` সব লেখা সাদা করে দেয় —
+   সাদা কার্ডের ওপর লেবেল অদৃশ্য হয়ে যেত। একই সিলেক্টর-ফর্ম ব্যবহার করে (উচ্চ specificity) লেবেল/হেডিং গাঢ় করা হলো */
+body:not(.light-mode) .rs2-36 .mc-tile .mc-tile-label{color:#1c1c1c !important;-webkit-text-fill-color:#1c1c1c !important}
+body:not(.light-mode) .rs2-36 .mc-tile .mc-tile-label-danger{color:#B71C1C !important;-webkit-text-fill-color:#B71C1C !important}
+body:not(.light-mode) .rs2-36 .rs2-37{color:#8a7a55 !important;-webkit-text-fill-color:#8a7a55 !important}
+body:not(.light-mode) .rs2-36 .mc-tile-icon i{color:#ffffff !important;-webkit-text-fill-color:#ffffff !important}
+body:not(.light-mode) .rs2-36 .mc-tile-star i{color:#FFD54A !important;-webkit-text-fill-color:#FFD54A !important}
 /* মেম্বার সেন্টার আইকন ব্যাজ — public/js/badges-realtime.js এইগুলোর টেক্সট/দৃশ্যমানতা নিয়ন্ত্রণ করে */
 .mc-tile-badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:10px;background:#e53935;color:#fff;font-size:10px;font-weight:800;line-height:18px;text-align:center;border:2px solid #fff;box-shadow:0 0 6px rgba(229,57,53,0.6)}
 </style>
