@@ -523,42 +523,11 @@ body .pf-url-btn.is-share {
 body .pf-completion-track { background: var(--bg-surface-elevated); border-radius: 999px; height: 6px; }
 body .pf-completion-fill { background: var(--grad-primary); border-radius: 999px; height: 100%; }
 
-/* মেম্বার সেন্টার — রেফারেন্সের মতো সারি-তালিকা (chevron সহ) */
-body .mc-grid-card {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-glass);
-  border-radius: 16px;
-}
-body .mc-section-label {
-  font-size: 11px; font-weight: 700; letter-spacing: .3px;
-  color: var(--text-muted) !important; -webkit-text-fill-color: var(--text-muted) !important;
-}
-body .mc-flat-grid { display: flex; flex-direction: column; gap: 0; }
-body .mc-tile {
-  position: relative;
-  display: flex; align-items: center; gap: 12px;
-  flex-direction: row; text-align: left;
-  padding: 13px 10px; border-radius: 0;
-  border: none; border-bottom: 1px solid var(--border-glass);
-  background: transparent; text-decoration: none;
-}
-body .mc-flat-grid .mc-tile:last-child { border-bottom: none; }
-body .mc-tile::after {
-  content: "\f054"; font-family: "Font Awesome 6 Free"; font-weight: 900;
-  margin-left: auto; font-size: 11px;
-  color: var(--text-muted); opacity: .7;
-}
-body .mc-tile-icon {
-  width: 30px; height: 30px; flex: 0 0 auto;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 8px; font-size: 13px;
-}
-body .mc-tile-label { font-size: 13px; font-weight: 600; color: var(--text-main) !important; -webkit-text-fill-color: var(--text-main) !important; }
-body .mc-tile-badge {
-  position: static; margin-left: 6px;
-  background: var(--red); color: #fff !important; -webkit-text-fill-color: #fff !important;
-  border-radius: 999px; padding: 1px 7px; font-size: 10px; font-weight: 800;
-}
+/* মেম্বার সেন্টার — এখন views/profile/index.ejs-এর ভেতরের ইনলাইন <style> ব্লক
+   (৪-কলাম গ্রিড, cream circle icon) ব্যবহার হয়। আগের এই সিঙ্গেল-কলাম
+   লিস্ট-স্টাইলটা (body .mc-tile ইত্যাদি, উচ্চ specificity + !important)
+   ইনলাইন গ্রিড স্টাইলকে override করে ফেলে একের নিচে এক সারি বানিয়ে ফেলছিল,
+   তাই পুরোপুরি সরিয়ে ফেলা হলো। */
 body .pf-verify-banner {
   background: rgba(214, 40, 40, .10);
   border: 1px solid rgba(214, 40, 40, .35);
