@@ -28,11 +28,15 @@ const REQUIRED_DESTINATIONS = [
   '/profile/cards',
   '/profile/vip',
   '/profile/rewards',
-  '/profile/wheel',
   '/profile/cashback',
   '/profile/missions',
-  '/profile/badges',
   '/profile/security',
+  // দ্রষ্টব্য: /profile/wheel, /profile/badges, /profile/loyalty,
+  // /profile/streak, /profile/freebet, /profile/periodic, /profile/contest
+  // ইচ্ছাকৃতভাবে এই তালিকায় নেই — এগুলো এখন প্রোফাইল হোমপেজের সরাসরি টাইল না,
+  // বরং "Reward Center" (/profile/rewards, যেটা এই তালিকাতেই আছে) পেজের
+  // ভেতরে নেস্ট করা। কভারেজ: tests/render/rewardsNestedFeatures.test.js
+  //
   // দ্রষ্টব্য: /profile/login-history ইচ্ছাকৃতভাবে এই তালিকায় নেই — এখন সেটা
   // সিকিউরিটি সেন্টারের ভেতর দিয়ে পৌঁছানো হয়, প্রোফাইল হোমপেজের সরাসরি টাইল নয়।
   // কভারেজ: tests/render/loginHistoryAndWheel.test.js

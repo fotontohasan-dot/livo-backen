@@ -45,6 +45,10 @@
   .dz75-40 { padding: .7rem; text-align: right; font-weight: 700; color: var(--text-accent); }
   .dz75-41 { font-size: .75rem; color: var(--muted); text-align: center; margin-top: 1rem; line-height: 1.6; }
   .dz75-42 { text-align: center; padding: 2rem; color: var(--muted); }
+  .dz75-43 { text-decoration: none; display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); border-radius: 16px; padding: 12px 14px; }
+  .dz75-44 { color: var(--text-main); font-weight: 800; font-size: 14px; }
+  .dz75-45 { color: var(--muted); font-size: 11.5px; margin-top: 1px; }
+  .dz75-46 { color: var(--text-accent); font-size: 12px; font-weight: 700; background: rgba(245,158,11,0.12); padding: 6px 12px; border-radius: 16px; white-space: nowrap; }
   /* Inline style attributes migrated to classes (CSP style-src-attr
      hardening). Only declarations whose properties are free of any
      !important rule in the site CSS were moved; otherwise such a rule
@@ -211,6 +215,64 @@
 
         </div>
         <div class="dz75-34"><%= t.unlock_egg_card_notice %></div>
+      </div>
+    </div>
+
+    <!-- ==================== আরও রিওয়ার্ড ও ফিচার ====================
+         মেম্বার সেন্টারের ফ্ল্যাট গ্রিড থেকে সরিয়ে এই "Daily Reward" পেজেই
+         নেস্ট করা হলো: Lucky Wheel/Badges আগে থেকেই এই পেজে আছে (উপরে বোনাস
+         কার্ড ও অ্যাচিভমেন্ট প্রিভিউতে), বাকি ৫টা (Loyalty, Daily Streak,
+         Free Bet, Periodic Reward, Contest) এখানে যোগ করা হলো। -->
+    <div class="card im76-1">
+      <div class="card-header">আরও রিওয়ার্ড ও ফিচার</div>
+      <div class="card-body dz75-4">
+        <div class="im76-8">
+
+          <a class="dz75-43" href="/profile/loyalty">
+            <div class="im76-5">💎</div>
+            <div class="im76-6">
+              <div class="dz75-44"><%= t.loy_title %></div>
+              <div class="dz75-45"><%= t.loy_your_points %></div>
+            </div>
+            <div class="dz75-46"><%= t.loy_details %></div>
+          </a>
+
+          <a class="dz75-43" href="/profile/streak">
+            <div class="im76-5">🔥</div>
+            <div class="im76-6">
+              <div class="dz75-44"><%= t.stk_title %></div>
+              <div class="dz75-45"><%= t.stk_current %></div>
+            </div>
+            <div class="dz75-46">→</div>
+          </a>
+
+          <a class="dz75-43" href="/profile/freebet">
+            <div class="im76-5">🎟️</div>
+            <div class="im76-6">
+              <div class="dz75-44"><%= t.fb_title %></div>
+              <div class="dz75-45"><%= t.fb_sub %></div>
+            </div>
+            <div class="dz75-46"><%= t.fb_claim %></div>
+          </a>
+
+          <a class="dz75-43" href="/profile/periodic">
+            <div class="im76-5">🗓️</div>
+            <div class="im76-6">
+              <div class="dz75-44"><%= t.per_title %></div>
+              <div class="dz75-45"><%= t.per_weekly_cashback %> · <%= t.per_monthly_reward %></div>
+            </div>
+            <div class="dz75-46">→</div>
+          </a>
+
+          <a class="dz75-43" href="/profile/contest">
+            <div class="im76-5">🏆</div>
+            <div class="im76-6">
+              <div class="dz75-44"><%= t.ct_title %></div>
+            </div>
+            <div class="dz75-46">→</div>
+          </a>
+
+        </div>
       </div>
     </div>
 
