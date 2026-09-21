@@ -19,16 +19,16 @@
     </div>
   </div>
   <!-- ==================== AI সাপোর্ট এজেন্ট (Chatbase) — এখানেই এমবেড, আর কোথাও ভাসমান না ==================== -->
-  <div class="ix74-3 support-panel" id="ai-support-panel" style="padding: 0; overflow: hidden;">
-    <div class="dz74-1" style="padding: 14px 16px 0;">🤖 AI সাপোর্ট এজেন্ট</div>
+  <div class="ix74-3 support-panel" id="ai-support-panel">
+    <div class="dz74-1 ai-panel-title">🤖 AI সাপোর্ট এজেন্ট</div>
     <iframe
       src="https://www.chatbase.co/chatbot-iframe/pSj_7j1MVN7taO6OD7NHh"
       width="100%"
-      style="height: 100%; min-height: 700px; border: 0; display: block; margin-top: 10px;"
+      class="ai-panel-iframe"
       frameborder="0"
       allow="microphone"
     ></iframe>
-    <div style="padding: 12px 16px 16px;">
+    <div class="ai-panel-footer">
       <button type="button" id="talk-to-live-agent" class="dz74-5" style="width: 100%;">
         🎧 <%= t('chat_talk_to_live_agent') %>
       </button>
@@ -44,8 +44,8 @@
   .dz74-4 { display: flex; gap: 8px; margin-bottom: 12px; }
   .dz74-5 { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--border-glass); background: var(--grad-gold); color: #000; font-weight: bold; cursor: pointer; font-size: 13px; }
   .dz74-6 { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--border-glass); background: rgba(255,255,255,0.08); color: var(--text-main); font-weight: bold; cursor: pointer; font-size: 13px; }
-  .dz74-7 { background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 16px; display: flex; flex-direction: column; height: 70vh; }
-  .dz74-8 { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .dz74-7 { background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 16px; display: flex; flex-direction: column; height: calc(100vh - 210px); height: calc(100dvh - 210px); min-height: 300px; max-height: 560px; overflow: hidden; }
+  .dz74-8 { flex: 1; min-height: 0; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
   .dz74-9 { padding: 12px; border-top: 1px solid var(--border-glass); }
   .dz74-10 { display: none; margin-bottom: 8px; }
   .dz74-11 { display: none; max-height: 100px; border-radius: 8px; margin-bottom: 4px; }
@@ -62,6 +62,15 @@
   .ix74-1 { padding: 16px; padding-bottom: 100px; max-width: 600px; margin: 0 auto; }
   .ix74-2 { color: var(--text-accent); font-size: 22px; font-weight: 800; margin-bottom: 16px; }
   .ix74-3 { background: var(--grad-primary); border-radius: 16px; padding: 18px 16px 16px; margin-bottom: 14px; position: relative; overflow: hidden; }
+
+  /* AI সাপোর্ট প্যানেল: স্ক্রিনের (ভিউপোর্ট) ভেতরেই থাকবে — নিচের নেভ বারের উপরে,
+     iframe নিজে ভেতরে স্ক্রল করবে, পুরো প্যানেল স্ক্রিনের বাইরে যাবে না। */
+  .support-panel { padding: 0; overflow: hidden; }
+  #ai-support-panel { display: flex; flex-direction: column;
+    height: calc(100vh - 210px); height: calc(100dvh - 210px); min-height: 380px; max-height: 560px; }
+  .ai-panel-title { padding: 14px 16px 0; flex: 0 0 auto; }
+  .ai-panel-iframe { flex: 1 1 auto; min-height: 0; width: 100%; height: 100%; border: 0; display: block; margin-top: 10px; }
+  .ai-panel-footer { flex: 0 0 auto; padding: 10px 16px 14px; }
   .ix74-4 { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: linear-gradient(90deg, var(--gold), var(--red-text)); }
     .qc-chip{
       flex:0 0 auto; white-space:nowrap; background:rgba(255,255,255,0.12); color:#fff;
