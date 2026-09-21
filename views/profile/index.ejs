@@ -309,10 +309,11 @@
 .mc-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-decoration:none;min-height:64px}
 .mc-tile-label{color:#1c1c1c;font-size:13px;font-weight:700;text-align:center;overflow-wrap:anywhere}
 .mc-tile-sublabel{color:#6b5d3f;font-size:9px;text-align:center;overflow-wrap:anywhere}
-.mc-tile-icon{width:62px;height:62px;border-radius:50%;background:#f6e9c9;display:flex;align-items:center;justify-content:center;font-size:24px;color:#8a6314;position:relative}
-.mc-tile-icon-danger{background:#f6e9c9;color:#c0392b}
-.mc-tile-label-danger{color:#1c1c1c}
-.mc-tile-star{position:absolute;top:-2px;right:6px;color:#8a6314;font-size:11px}
+.mc-tile-icon{width:62px;height:62px;border-radius:50%;background:linear-gradient(135deg,#006A4E,#008F5A);display:flex;align-items:center;justify-content:center;font-size:24px;color:#ffffff;position:relative;box-shadow:0 3px 10px rgba(0,106,78,0.35)}
+.mc-tile-icon i,.mc-tile-icon i::before{color:#ffffff !important;-webkit-text-fill-color:#ffffff !important;opacity:1 !important}
+.mc-tile-icon-danger{background:linear-gradient(135deg,#B71C1C,#D62828);box-shadow:0 3px 10px rgba(214,40,40,0.35)}
+.mc-tile-star{position:absolute;top:-2px;right:4px;color:#FFD54A;font-size:12px;text-shadow:0 0 3px rgba(0,0,0,0.35)}
+.mc-tile-label-danger{color:#B71C1C}
 /* মেম্বার সেন্টার আইকন ব্যাজ — public/js/badges-realtime.js এইগুলোর টেক্সট/দৃশ্যমানতা নিয়ন্ত্রণ করে */
 .mc-tile-badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:10px;background:#e53935;color:#fff;font-size:10px;font-weight:800;line-height:18px;text-align:center;border:2px solid #fff;box-shadow:0 0 6px rgba(229,57,53,0.6)}
 </style>
