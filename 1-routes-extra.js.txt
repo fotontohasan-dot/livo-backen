@@ -1,0 +1,24 @@
+ফাইল: routes/extra.js
+======================
+
+--- যোগ করুন (উপরের দিকে, বাকি require গুলোর সাথে) ---
+
+const { buildUrl } = require('../utils/publicUrl');
+
+
+--- বদলান: /invitation রুটের ভেতরে ---
+
+আগে ছিল:
+--------
+        const { id, referral_code } = userResult.rows[0] || {};
+        const referralCode = referral_code || 'N/A';
+        const referrals = await pool.query('SELECT COUNT(*) FROM users WHERE referred_by_id = $1', [id]);
+        res.render('extra/invitation', { referralCode, referralCount: parseInt(referrals.rows[0].count) });
+
+এখন হবে:
+--------
+        const { id, referral_code } = userResult.rows[0] || {};
+        const referralCode = referral_code || 'N/A';
+        const referrals = await pool.query('SELECT COUNT(*) FROM users WHERE referred_by_id = $1', [id]);
+        const referralLink = buildUrl(req, `/register?ref=${encodeURIComponent(referralCode)}`);
+        res.render('extra/invitation', { referralCode, referralLink, referralCount: parseInt(referrals.rows[0].count) });
