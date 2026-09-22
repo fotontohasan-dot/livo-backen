@@ -3,7 +3,7 @@
 // আনা হয়েছে যাতে CSP-র script-src থেকে unsafe-inline সরানো যায়।
 // এই ব্লকে কোনো সার্ভার-সাইড মান ছিল না, তাই ফাইলটা স্ট্যাটিক।
 
-function livoDismissAnnouncement(id, el) {
+function bet420DismissAnnouncement(id, el) {
       fetch('/announcements/' + id + '/dismiss', { method: 'POST' }).catch(()=>{});
       if (el) el.remove();
     }
@@ -18,7 +18,7 @@ function livoDismissAnnouncement(id, el) {
           var sel = btn.getAttribute('data-dismiss-target');
           var byId = btn.getAttribute('data-dismiss-id');
           var el = sel ? btn.closest(sel) : (byId ? document.getElementById(byId) : null);
-          livoDismissAnnouncement(id, el);
+          bet420DismissAnnouncement(id, el);
         });
       });
 

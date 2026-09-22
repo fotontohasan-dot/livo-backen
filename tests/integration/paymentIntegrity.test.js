@@ -198,7 +198,7 @@ describe('ব্যালেন্স invariant', () => {
 describe('গেটওয়ে ট্রানজেকশন idempotency (বিদ্যমান সুরক্ষা অক্ষত)', () => {
   test('একই gateway_tran_id দুইবার ব্যবহার করা যায় না', async () => {
     const userId = await makeUser();
-    const tranId = `LIVOTEST${Date.now()}`;
+    const tranId = `BET420TEST${Date.now()}`;
 
     await pool.query(
       `INSERT INTO payment_requests (user_id, type, method, amount, status, gateway_tran_id)

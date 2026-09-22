@@ -2,7 +2,7 @@
 // ---------------------------------------------------------------------------
 // পোস্ট-মাস্টার-অডিট — Task 2: ব্রাউজার/E2E কভারেজ (Playwright/Chromium)।
 //
-// একটা বাস্তব app.js ইনস্ট্যান্সের (NODE_ENV=development, livo_test DB) বিরুদ্ধে সত্যিকারের
+// একটা বাস্তব app.js ইনস্ট্যান্সের (NODE_ENV=development, bet420_test DB) বিরুদ্ধে সত্যিকারের
 // Chromium ব্রাউজার দিয়ে চালানো — কোনো mock নেই। প্রতিটা টেস্টে HTTP 5xx, uncaught console
 // error, এবং ব্যর্থ same-origin নেটওয়ার্ক রিকোয়েস্ট ধরা হয় (attachErrorTracking())।
 //
@@ -18,7 +18,7 @@ const speakeasy = require('speakeasy');
 const bcrypt = require('bcryptjs');
 const { Pool } = require('pg');
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/livo_test' });
+const pool = new Pool({ connectionString: process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/bet420_test' });
 
 function uniqueUsername() {
   // ইউজারনেম রেজেক্স (client + server উভয় দিকেই) সর্বোচ্চ ২০ ক্যারেক্টার অনুমতি দেয়
@@ -139,7 +139,7 @@ test.beforeEach(async ({ context }) => {
   // প্রতিটা টেস্ট নিজস্ব ক্লায়েন্ট IP পায় → নিজস্ব রেট-লিমিট বাকেট (উপরের ব্যাখ্যা দেখো)
   await context.setExtraHTTPHeaders({ 'X-Forwarded-For': fakeIp() });
   await context.addCookies([{
-    name: 'livo_age_verified', value: '1', domain: 'localhost', path: '/'
+    name: 'bet420_age_verified', value: '1', domain: 'localhost', path: '/'
   }]);
   await context.route('**/*', (route) => {
     try {
@@ -301,7 +301,7 @@ test.describe('গুরুত্বপূর্ণ ইউজার ফ্লো
 
     // আসল Cloudinary আপলোড এই sandbox-এ সম্ভব না (কোনো লাইভ credential নেই) — সফল আপলোডের
     // পরের client-state সরাসরি সেট করে দেওয়া হচ্ছে, ঠিক client JS যা করত (routes/extra.js-এর
-    // isSafeCloudinaryUrl() ফিক্সের সাথে মিলিয়ে সঠিক cloud_name + livo/chat ফোল্ডার সহ URL)।
+    // isSafeCloudinaryUrl() ফিক্সের সাথে মিলিয়ে সঠিক cloud_name + bet420/chat ফোল্ডার সহ URL)।
     // views/kyc.ejs-এর client JS-এ `uploadedOk` একটা script-লোকাল `let` ভেরিয়েবল (window-এ
     // attach হয় না), তাই বাইরে থেকে সরাসরি সেট করা যায় না — আর ফর্মের onsubmit হ্যান্ডলার
     // (handleKycSubmit) uploadedOk false থাকলে submit আটকে দেয়। যেহেতু এই sandbox-এ আসল
@@ -316,9 +316,9 @@ test.describe('গুরুত্বপূর্ণ ইউজার ফ্লো
       page.waitForResponse((r) => r.url().includes('/extra/kyc') && r.request().method() === 'POST'),
       page.evaluate((cloudName) => {
         document.getElementById('documentUrl').value =
-          `https://res.cloudinary.com/${cloudName}/image/upload/v1/livo/chat/e2e-test.jpg`;
+          `https://res.cloudinary.com/${cloudName}/image/upload/v1/bet420/chat/e2e-test.jpg`;
         document.getElementById('kycForm').submit();
-      }, process.env.CLOUDINARY_CLOUD_NAME || 'livo_test_cloud')
+      }, process.env.CLOUDINARY_CLOUD_NAME || 'bet420_test_cloud')
     ]);
     // DB assertion-এর আগে HTTP ফল যাচাই — আপলোড URL বাতিল/রেট-লিমিট/সার্ভার এরর হলে
     // ব্যর্থতাটা এখানেই সঠিক কারণসহ ধরা পড়বে, "সারি পাওয়া যায়নি" হয়ে নয়।

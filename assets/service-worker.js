@@ -7,7 +7,7 @@
 // দ্রষ্টব্য: নিচের fetch হ্যান্ডলার ইতিমধ্যেই network-first (আগে fetch, ব্যর্থ
 // হলে ক্যাশ), তাই স্টেল CSS কেবল অফলাইনেই দেখা যেত — সমস্যাটা ধারণার চেয়ে ছোট।
 // তবু ডিপ্লয়ে পুরনো এন্ট্রি জমতে থাকা ঠিক নয়।
-const CACHE_NAME = 'livo-cache-__ASSET_VERSION__';
+const CACHE_NAME = 'bet420-cache-__ASSET_VERSION__';
 const OFFLINE_URL = '/offline.html';
 // offline.html-এর CSS আলাদা ফাইলে সরানো হয়েছে (CSP style-src-elem কড়া
 // করার জন্য)। এটাও precache না করলে অফলাইন পেজটা স্টাইল ছাড়া দেখাত —
@@ -58,13 +58,13 @@ self.addEventListener('push', (event) => {
     chat: 'নতুন সাপোর্ট মেসেজ'
   };
 
-  const title = data.title || LABELS[data.type] || 'Livo অ্যাডমিন';
+  const title = data.title || LABELS[data.type] || 'Bet420 অ্যাডমিন';
   const options = {
     body: data.message || 'নতুন নোটিফিকেশন এসেছে',
     icon: '/icon-192.png',
     badge: '/icon-192.png',
     vibrate: [150, 60, 150, 60, 150],
-    tag: 'livo-admin-alert', // একই টাইপের একাধিক নোটিফিকেশন স্ট্যাক না হয়ে আপডেট হবে
+    tag: 'bet420-admin-alert', // একই টাইপের একাধিক নোটিফিকেশন স্ট্যাক না হয়ে আপডেট হবে
     renotify: true,
     data: { url: data.url || '/admin/dashboard' }
   };

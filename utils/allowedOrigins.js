@@ -5,7 +5,7 @@
 // দুই লেয়ারে একই পলিসি থাকা দরকার, তাই সেটা এখানে একবারই সংজ্ঞায়িত করা হচ্ছে।
 
 const DEFAULT_ORIGINS = [
-  'https://livo-backen.onrender.com',
+  'https://bet420-backen.onrender.com',
   'http://localhost:3000',
 ];
 

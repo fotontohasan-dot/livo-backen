@@ -40,7 +40,7 @@ function bootApp(port) {
       ...process.env,
       NODE_ENV: 'development',
       PORT: String(port),
-      DATABASE_URL: process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/livo_test',
+      DATABASE_URL: process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/bet420_test',
       DATABASE_SSL: 'false',
       SESSION_SECRET: 'graceful_shutdown_test_secret_key_long_enough',
       REDIS_ENABLED: 'false',

@@ -265,7 +265,7 @@ describe('গ্রেসফুল শাটডাউন', () => {
     expect(block).toMatch(/scheduler'\)\.stop\(\)/);
     expect(block).toMatch(/stopWorker\(\)/);
     expect(block).toMatch(/shutdownQueueSystem\(\)/);
-    expect(block).toMatch(/__livoServer/);
+    expect(block).toMatch(/__bet420Server/);
     expect(block).toMatch(/pool\.end\(\)/);
   });
 

@@ -37,7 +37,7 @@ const postcss = require('postcss');
 const cheerio = require('cheerio');
 const CSSselect = require('css-select');
 
-const ROOT = '/home/claude/livo-backen';
+const ROOT = '/home/claude/bet420-backen';
 
 // --- shorthand expansion -----------------------------------------------
 // Comparing raw property names would miss `background-color: x !important`

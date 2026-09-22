@@ -138,10 +138,10 @@ describe('payment/withdraw.ejs — ইনলাইন কোড সরানো 
     expect(withdrawJs).not.toContain('form[data-confirm]');
   });
 
-  test('LivoToast না থাকলেও সাবমিট ভাঙে না', () => {
-    // আগে `onsubmit="LivoToast.setLoading(...)"` — LivoToast না থাকলে
+  test('Bet420Toast না থাকলেও সাবমিট ভাঙে না', () => {
+    // আগে `onsubmit="Bet420Toast.setLoading(...)"` — Bet420Toast না থাকলে
     // TypeError হয়ে সাবমিট আটকে যেত।
-    expect(sharedJs).toMatch(/if \(btn && window\.LivoToast\)/);
+    expect(sharedJs).toMatch(/if \(btn && window\.Bet420Toast\)/);
   });
 });
 

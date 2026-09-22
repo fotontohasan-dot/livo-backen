@@ -102,7 +102,7 @@
       }
 
       submitted = true;
-      LivoToast.setLoading(submitBtn, true, MSG.creating);
+      Bet420Toast.setLoading(submitBtn, true, MSG.creating);
     });
   })();
 })();

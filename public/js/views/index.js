@@ -101,27 +101,27 @@
   // শুধুমাত্র এই ক্যাটাগরিগুলোতে উপরে Hot | Favorite | Recent সেকেন্ডারি ট্যাব দেখাবে।
   // Live Casino এবং Sports-এ কোনো সেকেন্ডারি ট্যাব থাকবে না — শুধু প্রোভাইডার লিস্ট ও গেম গ্রিড দেখাবে।
   const SECONDARY_TAB_CATEGORIES = ['slots'];
-  let selectedLayout = localStorage.getItem('livo_game_layout') || 'standard';
+  let selectedLayout = localStorage.getItem('bet420_game_layout') || 'standard';
 
   // ==================== ফেভারিটস / রিসেন্ট (localStorage-ভিত্তিক) ====================
   function getFavorites() {
-    try { return JSON.parse(localStorage.getItem('livo_favorites') || '[]'); } catch (e) { return []; }
+    try { return JSON.parse(localStorage.getItem('bet420_favorites') || '[]'); } catch (e) { return []; }
   }
   function toggleFavorite(slug) {
     let favs = getFavorites();
     if (favs.includes(slug)) favs = favs.filter(s => s !== slug);
     else favs.push(slug);
-    localStorage.setItem('livo_favorites', JSON.stringify(favs));
+    localStorage.setItem('bet420_favorites', JSON.stringify(favs));
     renderGames();
   }
   function getRecent() {
-    try { return JSON.parse(localStorage.getItem('livo_recent') || '[]'); } catch (e) { return []; }
+    try { return JSON.parse(localStorage.getItem('bet420_recent') || '[]'); } catch (e) { return []; }
   }
   function pushRecent(slug) {
     let recent = getRecent().filter(s => s !== slug);
     recent.unshift(slug);
     recent = recent.slice(0, 20);
-    localStorage.setItem('livo_recent', JSON.stringify(recent));
+    localStorage.setItem('bet420_recent', JSON.stringify(recent));
   }
 
   // ==================== বাম পাশের প্রোভাইডার কলাম (Slots/Live/Sports/Poker ক্যাটাগরির জন্য) ====================
@@ -323,7 +323,7 @@
   document.querySelectorAll('.layout-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       selectedLayout = btn.dataset.layout;
-      localStorage.setItem('livo_game_layout', selectedLayout);
+      localStorage.setItem('bet420_game_layout', selectedLayout);
       applyLayout();
     });
   });

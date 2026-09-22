@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Livo — Reference Theme Overrides
+   Bet420 — Reference Theme Overrides
    সাপ্লাই করা হোমপেজ/স্পোর্টস/গেমস/প্রোফাইল স্ক্রিনশট অনুযায়ী visual layer।
    শুধু presentation — কোনো markup/logic/endpoint পরিবর্তন করে না।
    সব সিলেক্টর `body`-প্রিফিক্সড যাতে ভিউ-ইনলাইন <style> ব্লকের ওপরে জেতে।
@@ -262,7 +262,7 @@ body .jackpot-title,
 body #jp-num { color: var(--gold-hover) !important; -webkit-text-fill-color: var(--gold-hover) !important; }
 body .jackpot-tagline { color: rgba(255, 255, 255, .78) !important; -webkit-text-fill-color: rgba(255,255,255,.78) !important; }
 
-/* ---------- 11-13. Why Livo / trust cards --------------------------------- */
+/* ---------- 11-13. Why Bet420 / trust cards --------------------------------- */
 body .why-us-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 body .why-us-card,
 body .trust-badge-item {
@@ -572,4 +572,4 @@ body .navbar .nav-refresh-btn {
   background: transparent; border: none;
   color: var(--text-main) !important; font-size: 15px; cursor: pointer;
 }
-body .nav-refresh-btn.spinning i { animation: livoSpin .7s linear infinite; }
+body .nav-refresh-btn.spinning i { animation: bet420Spin .7s linear infinite; }

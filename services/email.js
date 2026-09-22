@@ -22,12 +22,12 @@ const transporter = nodemailer.createTransport({
 
 async function sendOTP(email, otp) {
   await transporter.sendMail({
-    from: `"LIVO" <${process.env.EMAIL_USER}>`,
+    from: `"BET420" <${process.env.EMAIL_USER}>`,
     to: email,
-    subject: 'LIVO - আপনার OTP কোড',
+    subject: 'BET420 - আপনার OTP কোড',
     html: `
       <div style="font-family:sans-serif;max-width:400px;margin:auto;padding:20px;border:1px solid #eee;border-radius:10px">
-        <h2 style="color:#e53e3e">LIVO</h2>
+        <h2 style="color:#e53e3e">BET420</h2>
         <p>আপনার OTP কোড:</p>
         <h1 style="color:#e53e3e;letter-spacing:10px">${otp}</h1>
         <p>এই কোড ৫ মিনিটের মধ্যে ব্যবহার করুন।</p>
@@ -38,12 +38,12 @@ async function sendOTP(email, otp) {
 
 async function sendPasswordReset(email, resetUrl) {
   await transporter.sendMail({
-    from: `"LIVO" <${process.env.EMAIL_USER}>`,
+    from: `"BET420" <${process.env.EMAIL_USER}>`,
     to: email,
-    subject: 'LIVO - পাসওয়ার্ড রিসেট',
+    subject: 'BET420 - পাসওয়ার্ড রিসেট',
     html: `
       <div style="font-family:sans-serif;max-width:420px;margin:auto;padding:20px;border:1px solid #eee;border-radius:10px">
-        <h2 style="color:#e53e3e">LIVO</h2>
+        <h2 style="color:#e53e3e">BET420</h2>
         <p>আপনার অ্যাকাউন্টের পাসওয়ার্ড রিসেট করার অনুরোধ পাওয়া গেছে।</p>
         <p>নিচের বাটনে ক্লিক করে নতুন পাসওয়ার্ড সেট করুন:</p>
         <p style="text-align:center;margin:24px 0">
@@ -57,12 +57,12 @@ async function sendPasswordReset(email, resetUrl) {
 
 async function sendVerificationEmail(email, verifyUrl) {
   await transporter.sendMail({
-    from: `"LIVO" <${process.env.EMAIL_USER}>`,
+    from: `"BET420" <${process.env.EMAIL_USER}>`,
     to: email,
-    subject: 'LIVO - আপনার ইমেইল ভেরিফাই করুন',
+    subject: 'BET420 - আপনার ইমেইল ভেরিফাই করুন',
     html: `
       <div style="font-family:sans-serif;max-width:420px;margin:auto;padding:20px;border:1px solid #eee;border-radius:10px">
-        <h2 style="color:#e53e3e">LIVO</h2>
+        <h2 style="color:#e53e3e">BET420</h2>
         <p>আপনার অ্যাকাউন্টের ইমেইল ভেরিফাই করতে নিচের বাটনে ক্লিক করুন:</p>
         <p style="text-align:center;margin:24px 0">
           <a href="${verifyUrl}" style="background:#e53e3e;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:bold;display:inline-block">ইমেইল ভেরিফাই করুন</a>
@@ -76,12 +76,12 @@ async function sendVerificationEmail(email, verifyUrl) {
 async function sendNewDeviceAlert(email, { username, deviceName, ip, location, time }) {
   const timeStr = new Date(time).toLocaleString('bn-BD', { dateStyle: 'medium', timeStyle: 'short' });
   await transporter.sendMail({
-    from: `"LIVO" <${process.env.EMAIL_USER}>`,
+    from: `"BET420" <${process.env.EMAIL_USER}>`,
     to: email,
-    subject: 'LIVO - নতুন ডিভাইস থেকে লগইন শনাক্ত হয়েছে',
+    subject: 'BET420 - নতুন ডিভাইস থেকে লগইন শনাক্ত হয়েছে',
     html: `
       <div style="font-family:sans-serif;max-width:440px;margin:auto;padding:20px;border:1px solid #eee;border-radius:10px">
-        <h2 style="color:#e53e3e">LIVO</h2>
+        <h2 style="color:#e53e3e">BET420</h2>
         <p>প্রিয় ${username || ''},</p>
         <p>আপনার অ্যাকাউন্টে একটা নতুন ডিভাইস থেকে লগইন হয়েছে:</p>
         <table style="width:100%;font-size:14px;color:#333;margin:16px 0;border-collapse:collapse">

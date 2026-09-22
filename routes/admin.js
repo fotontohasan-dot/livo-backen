@@ -3686,7 +3686,7 @@ router.get('/roles/export', rbac.requirePermission('roles_manage'), async (req, 
     const data = rbac.exportRoles(roles);
     await logAdminAction(req.session.user.id, req.session.user.username, 'ROLES_EXPORTED', `${data.length}টা Role এক্সপোর্ট করা হয়েছে`, req.ip);
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="livo-roles-${new Date().toISOString().slice(0, 10)}.json"`);
+    res.setHeader('Content-Disposition', `attachment; filename="bet420-roles-${new Date().toISOString().slice(0, 10)}.json"`);
     res.send(JSON.stringify(data, null, 2));
   } catch (err) {
     console.error('role management error:', err && err.stack ? err.stack : err);
@@ -3991,7 +3991,7 @@ router.post('/notification-templates/:id/test-send', rbac.requirePermission('set
         socketTimeout: 10000
       });
       await transporter.sendMail({
-        from: `"LIVO (Test)" <${process.env.EMAIL_USER}>`,
+        from: `"BET420 (Test)" <${process.env.EMAIL_USER}>`,
         to: target,
         subject: `[TEST] ${rendered.subject || tmpl.name}`,
         html: rendered.body

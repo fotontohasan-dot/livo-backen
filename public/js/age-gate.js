@@ -6,7 +6,7 @@
  * ⚠️ এটি আইনগত অর্থে age verification নয়, এবং সেভাবে উপস্থাপন করা যাবে না।
  *
  * যা আসলে হয়: ইউজার "হ্যাঁ" চাপলে ব্রাউজারে একটা কুকি
- * (`livo_age_verified=1`) বসে। কুকিটা সম্পূর্ণ ক্লায়েন্ট-সাইড — যে কেউ
+ * (`bet420_age_verified=1`) বসে। কুকিটা সম্পূর্ণ ক্লায়েন্ট-সাইড — যে কেউ
  * DevTools খুলে নিজেই বসিয়ে নিতে পারে, বা সরাসরি কোনো URL-এ গিয়ে ওভারলে
  * এড়াতে পারে। সার্ভার এই কুকির উপর কোনো সিদ্ধান্ত নেয় না, কোথাও সংরক্ষণও
  * করে না।
@@ -25,7 +25,7 @@
 (function () {
   'use strict';
 
-  var COOKIE_NAME = 'livo_age_verified';
+  var COOKIE_NAME = 'bet420_age_verified';
   var COOKIE_DAYS = 365;
 
   function getCookie(name) {

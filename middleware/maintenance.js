@@ -34,7 +34,7 @@ function maintenanceMiddleware(req, res, next) {
   getSetting('maintenance_mode')
     .then(on => {
       if (on !== 'true' && on !== true) return next();
-      return res.status(503).render('maintenance', { siteName: 'Livo' });
+      return res.status(503).render('maintenance', { siteName: 'Bet420' });
     })
     .catch(e => {
       console.error('maintenance check error:', e && e.stack ? e.stack : e);

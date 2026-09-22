@@ -12,14 +12,14 @@
   var el = document.getElementById('admin-partials-flashConfig');
   if (el) { try { cfg = JSON.parse(el.textContent) || {}; } catch (e) { cfg = {}; } }
 
-  window.LivoToast = (function () {
-          function ensureRoot() { return document.getElementById('livo-toast-root'); }
+  window.Bet420Toast = (function () {
+          function ensureRoot() { return document.getElementById('bet420-toast-root'); }
           function show(message, type, duration) {
             type = type || 'info'; duration = duration || 4000;
             const root = ensureRoot();
             if (!root || !message) return;
             const el = document.createElement('div');
-            el.className = 'livo-toast ' + type;
+            el.className = 'bet420-toast ' + type;
             const icon = type === 'success' ? 'fa-circle-check' : (type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-info');
             el.innerHTML = '<i class="fas ' + icon + '"></i><span></span>';
             el.querySelector('span').textContent = message;
@@ -31,19 +31,19 @@
           function setLoading(btn, loading, loadingText) {
             if (!btn) return;
             if (loading) {
-              if (!btn.dataset.livoOriginalHtml) btn.dataset.livoOriginalHtml = btn.innerHTML;
+              if (!btn.dataset.bet420OriginalHtml) btn.dataset.bet420OriginalHtml = btn.innerHTML;
               btn.disabled = true;
-              btn.innerHTML = '<span class="livo-spinner"></span>' + (loadingText || 'অপেক্ষা করুন...');
+              btn.innerHTML = '<span class="bet420-spinner"></span>' + (loadingText || 'অপেক্ষা করুন...');
             } else {
               btn.disabled = false;
-              if (btn.dataset.livoOriginalHtml) btn.innerHTML = btn.dataset.livoOriginalHtml;
+              if (btn.dataset.bet420OriginalHtml) btn.innerHTML = btn.dataset.bet420OriginalHtml;
             }
           }
           return { show: show, setLoading: setLoading };
         })();
         document.addEventListener('DOMContentLoaded', function () {
           
-          (cfg.success || []).forEach(function (msg) { window.LivoToast.show(msg, 'success'); });
-          (cfg.error || []).forEach(function (msg) { window.LivoToast.show(msg, 'error'); });
+          (cfg.success || []).forEach(function (msg) { window.Bet420Toast.show(msg, 'success'); });
+          (cfg.error || []).forEach(function (msg) { window.Bet420Toast.show(msg, 'error'); });
         });
 })();

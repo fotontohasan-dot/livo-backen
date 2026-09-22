@@ -8,12 +8,12 @@ pool and runs migrations on require().
 ## Setup (local)
 1. Create a dedicated test database (never point this at production):
    ```
-   createdb livo_test
+   createdb bet420_test
    ```
 2. Copy `.env.test` (already committed with dummy/test-only values) or export
    equivalents yourself:
    ```
-   DATABASE_URL=postgres://postgres:postgres@localhost:5432/livo_test
+   DATABASE_URL=postgres://postgres:postgres@localhost:5432/bet420_test
    SESSION_SECRET=test_secret_key_for_ci_only
    NODE_ENV=test
    REDIS_ENABLED=false

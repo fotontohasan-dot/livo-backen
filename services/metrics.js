@@ -16,12 +16,12 @@ try {
 const register = client ? new client.Registry() : null;
 
 if (client) {
-  client.collectDefaultMetrics({ register, prefix: 'livo_' }); // CPU, মেমরি, event loop lag, GC ইত্যাদি Node-এর ডিফল্ট মেট্রিক্স
+  client.collectDefaultMetrics({ register, prefix: 'bet420_' }); // CPU, মেমরি, event loop lag, GC ইত্যাদি Node-এর ডিফল্ট মেট্রিক্স
 }
 
 // ==================== HTTP রিকোয়েস্ট মেট্রিক্স ====================
 const httpRequestDuration = client && new client.Histogram({
-  name: 'livo_http_request_duration_seconds',
+  name: 'bet420_http_request_duration_seconds',
   help: 'HTTP রিকোয়েস্ট রেসপন্স টাইম (সেকেন্ডে)',
   labelNames: ['method', 'route', 'status_code'],
   buckets: [0.01, 0.05, 0.1, 0.3, 0.5, 1, 2, 5],
@@ -29,31 +29,31 @@ const httpRequestDuration = client && new client.Histogram({
 });
 
 const httpRequestsTotal = client && new client.Counter({
-  name: 'livo_http_requests_total',
+  name: 'bet420_http_requests_total',
   help: 'মোট HTTP রিকোয়েস্ট সংখ্যা',
   labelNames: ['method', 'route', 'status_code'],
   registers: [register]
 });
 
 const httpErrorsTotal = client && new client.Counter({
-  name: 'livo_http_errors_total',
+  name: 'bet420_http_errors_total',
   help: 'মোট HTTP এরর রেসপন্স (status >= 400) সংখ্যা',
   labelNames: ['method', 'route', 'status_code'],
   registers: [register]
 });
 
 // ==================== অ্যাপ্লিকেশন-লেভেল Gauge ====================
-const activeUsersGauge = client && new client.Gauge({ name: 'livo_active_users', help: 'গত ১৫ মিনিটে সক্রিয় ইউজার সংখ্যা', registers: [register] });
-const dbUpGauge = client && new client.Gauge({ name: 'livo_db_up', help: 'Database কানেকশন সচল কিনা (1=up, 0=down)', registers: [register] });
-const dbPoolTotalGauge = client && new client.Gauge({ name: 'livo_db_pool_total', help: 'Postgres pool-এর মোট কানেকশন', registers: [register] });
-const dbPoolIdleGauge = client && new client.Gauge({ name: 'livo_db_pool_idle', help: 'Postgres pool-এর অলস কানেকশন', registers: [register] });
-const dbPoolWaitingGauge = client && new client.Gauge({ name: 'livo_db_pool_waiting', help: 'Postgres pool-এ অপেক্ষমান রিকোয়েস্ট', registers: [register] });
-const redisUpGauge = client && new client.Gauge({ name: 'livo_redis_up', help: 'Redis কানেক্টেড কিনা (1=connected, 0=down/disabled)', registers: [register] });
-const queuePendingGauge = client && new client.Gauge({ name: 'livo_queue_pending_jobs', help: 'Job queue-তে pending জব সংখ্যা', registers: [register] });
-const queueProcessingGauge = client && new client.Gauge({ name: 'livo_queue_processing_jobs', help: 'Job queue-তে processing জব সংখ্যা', registers: [register] });
-const queueFailedGauge = client && new client.Gauge({ name: 'livo_queue_failed_jobs', help: 'Job queue-তে failed জব সংখ্যা', registers: [register] });
-const queueCompletedGauge = client && new client.Gauge({ name: 'livo_queue_completed_jobs', help: 'Job queue-তে completed জব সংখ্যা', registers: [register] });
-const queueWorkerUpGauge = client && new client.Gauge({ name: 'livo_queue_worker_up', help: 'Background job worker চলছে কিনা (1=running, 0=stopped)', registers: [register] });
+const activeUsersGauge = client && new client.Gauge({ name: 'bet420_active_users', help: 'গত ১৫ মিনিটে সক্রিয় ইউজার সংখ্যা', registers: [register] });
+const dbUpGauge = client && new client.Gauge({ name: 'bet420_db_up', help: 'Database কানেকশন সচল কিনা (1=up, 0=down)', registers: [register] });
+const dbPoolTotalGauge = client && new client.Gauge({ name: 'bet420_db_pool_total', help: 'Postgres pool-এর মোট কানেকশন', registers: [register] });
+const dbPoolIdleGauge = client && new client.Gauge({ name: 'bet420_db_pool_idle', help: 'Postgres pool-এর অলস কানেকশন', registers: [register] });
+const dbPoolWaitingGauge = client && new client.Gauge({ name: 'bet420_db_pool_waiting', help: 'Postgres pool-এ অপেক্ষমান রিকোয়েস্ট', registers: [register] });
+const redisUpGauge = client && new client.Gauge({ name: 'bet420_redis_up', help: 'Redis কানেক্টেড কিনা (1=connected, 0=down/disabled)', registers: [register] });
+const queuePendingGauge = client && new client.Gauge({ name: 'bet420_queue_pending_jobs', help: 'Job queue-তে pending জব সংখ্যা', registers: [register] });
+const queueProcessingGauge = client && new client.Gauge({ name: 'bet420_queue_processing_jobs', help: 'Job queue-তে processing জব সংখ্যা', registers: [register] });
+const queueFailedGauge = client && new client.Gauge({ name: 'bet420_queue_failed_jobs', help: 'Job queue-তে failed জব সংখ্যা', registers: [register] });
+const queueCompletedGauge = client && new client.Gauge({ name: 'bet420_queue_completed_jobs', help: 'Job queue-তে completed জব সংখ্যা', registers: [register] });
+const queueWorkerUpGauge = client && new client.Gauge({ name: 'bet420_queue_worker_up', help: 'Background job worker চলছে কিনা (1=running, 0=stopped)', registers: [register] });
 
 // ==================== Route path normalize — /users/123 কে /users/:id বানায়, যাতে লেবেল কার্ডিনালিটি না বাড়ে ====================
 function normalizeRoute(req) {

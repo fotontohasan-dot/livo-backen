@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Livo — Team Crest Renderer
+   Bet420 — Team Crest Renderer
    দলের নাম থেকে একটি generic ব্যাজ (initials + স্থিতিশীল রঙ) আঁকে।
    কোনো আসল ক্লাব/লিগ লোগো ব্যবহার বা অনুকরণ করা হয় না — ট্রেডমার্ক-নিরাপদ।
 
@@ -56,7 +56,7 @@
     });
   }
 
-  window.LivoCrest = { render: render, svg: crestSVG };
+  window.Bet420Crest = { render: render, svg: crestSVG };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () { render(); });

@@ -983,7 +983,7 @@ router.post('/sslcommerz/init', isAuth, requireFeature('deposit'), paymentLimite
     return res.redirect('/payment/deposit');
   }
 
-  const tranId = `LIVO${userId}${Date.now()}${crypto.randomBytes(3).toString('hex')}`;
+  const tranId = `BET420${userId}${Date.now()}${crypto.randomBytes(3).toString('hex')}`;
 
   try {
     await pool.query(

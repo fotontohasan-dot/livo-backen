@@ -26,7 +26,7 @@ tree — deleting the file in a later commit does not remove it from history.
 | # | Credential | Where | Still reachable from `main` |
 |---|---|---|---|
 | 1 | Neon PostgreSQL connection string — user `neondb_owner`, host prefix `ep-bitter-truth-…`, db `neondb`, password 16 chars | `.env` added in `b30e398`, deleted in `c5a54a0` | **YES** |
-| 2 | Render PostgreSQL connection string — user `livo_db_opct_user`, host prefix `dpg-d8ghl7rbc2fs73ej8k70-a.orego…`, db `livo_db_opct`, password 32 chars | `.env` added in `8fb3db6`, deleted in `27cfce8`; also hardcoded in `db.js` until `4ed6f3b` | **YES** |
+| 2 | Render PostgreSQL connection string — user `bet420_db_opct_user`, host prefix `dpg-d8ghl7rbc2fs73ej8k70-a.orego…`, db `bet420_db_opct`, password 32 chars | `.env` added in `8fb3db6`, deleted in `27cfce8`; also hardcoded in `db.js` until `4ed6f3b` | **YES** |
 | 3 | `SESSION_SECRET` — 55 characters, high entropy | `.env` added in `8fb3db6` | **YES** |
 
 The Render credential additionally appears across roughly a dozen commits
@@ -41,7 +41,7 @@ has been since the commit date — the earliest is `2026-06-04`.
 
 `-----BEGIN RSA PRIVATE KEY-----` also matches in history, but only inside
 `node_modules/` test fixtures from a dependency that was committed and later
-removed. That is a library's own test key, not a Livo key.
+removed. That is a library's own test key, not a Bet420 key.
 
 ---
 
@@ -63,7 +63,7 @@ substitute for rotation, because the values are already public.
 1. **Neon database** — reset the `neondb_owner` password in the Neon console,
    or delete the role and create a new one. Update `DATABASE_URL` in the
    deployment environment.
-2. **Render database** — rotate the `livo_db_opct` credentials in the Render
+2. **Render database** — rotate the `bet420_db_opct` credentials in the Render
    dashboard and update `DATABASE_URL` there.
 3. **SESSION_SECRET** — generate a new one:
    `openssl rand -hex 32`. Note this invalidates every active session and
@@ -112,25 +112,25 @@ and commit in place:
 #       <literal-secret>==>***REMOVED***
 #    Take the values from your Neon and Render dashboards, or from
 #    `git show 8fb3db6` and `git show b30e398` locally. Never commit this file.
-cat > ~/livo-replacements.txt <<'EOF'
+cat > ~/bet420-replacements.txt <<'EOF'
 <neon-connection-string>==>***REMOVED***
 <render-connection-string>==>***REMOVED***
 <old-session-secret>==>***REMOVED***
 EOF
 
 # 2. Work on a fresh mirror clone, never on your working repo
-git clone --mirror https://github.com/fotontohasan-dot/livo-backen.git livo-mirror
-cd livo-mirror
+git clone --mirror https://github.com/fotontohasan-dot/bet420-backen.git bet420-mirror
+cd bet420-mirror
 
 # 3. Rewrite
-git filter-repo --replace-text ~/livo-replacements.txt
+git filter-repo --replace-text ~/bet420-replacements.txt
 
 # 4. Verify before publishing anything
 git log --all -p | grep -c 'neondb_owner:npg_'   # expect 0
-git log --all -p | grep -c 'livo_db_opct_user:O' # expect 0
+git log --all -p | grep -c 'bet420_db_opct_user:O' # expect 0
 
 # 5. Only then publish, and delete the replacements file
-rm ~/livo-replacements.txt
+rm ~/bet420-replacements.txt
 ```
 
 Publishing the rewrite requires a force push, which this audit deliberately
@@ -156,5 +156,5 @@ is step 1 and this is step 3.
   placeholder values in tests and views.
 - Full history (1,596 commits, ~35 MB of diff): the three items above are the
   only real credentials found. No AWS keys, no GitHub tokens, no Anthropic or
-  OpenAI keys, no Slack tokens, no JWTs, no Livo private keys.
+  OpenAI keys, no Slack tokens, no JWTs, no Bet420 private keys.
 - Telegram bot tokens found in history are the fake fixtures used by tests.

@@ -34,14 +34,14 @@
       });
     });
 
-    // সাবমিটের সময় নির্দিষ্ট বাটনে লোডিং স্টেট। LivoToast না থাকলে চুপচাপ
-    // এড়িয়ে যায় — আগে ইনলাইন সংস্করণে `LivoToast.setLoading(...)` সরাসরি
+    // সাবমিটের সময় নির্দিষ্ট বাটনে লোডিং স্টেট। Bet420Toast না থাকলে চুপচাপ
+    // এড়িয়ে যায় — আগে ইনলাইন সংস্করণে `Bet420Toast.setLoading(...)` সরাসরি
     // ডাকা হত, ফলে স্ক্রিপ্টটা লোড না হলে TypeError-এ সাবমিটই আটকে যেত।
     document.querySelectorAll('form[data-loading-target]').forEach(function (form) {
       form.addEventListener('submit', function () {
         var btn = document.getElementById(form.getAttribute('data-loading-target'));
-        if (btn && window.LivoToast) {
-          window.LivoToast.setLoading(btn, true, form.getAttribute('data-loading-label') || '');
+        if (btn && window.Bet420Toast) {
+          window.Bet420Toast.setLoading(btn, true, form.getAttribute('data-loading-label') || '');
         }
       });
     });
@@ -49,8 +49,8 @@
     // বাটনে সরাসরি লোডিং লেবেল (ফর্ম নয়, বাটন নিজেই)
     document.querySelectorAll('[data-loading-label]:not(form)').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        if (window.LivoToast) {
-          window.LivoToast.setLoading(btn, true, btn.getAttribute('data-loading-label'));
+        if (window.Bet420Toast) {
+          window.Bet420Toast.setLoading(btn, true, btn.getAttribute('data-loading-label'));
         }
       });
     });
@@ -89,14 +89,14 @@
     // রানটাইমে বানায়, অর্থাৎ init() চলার সময় DOM-এ থাকেই না — তাই
     // querySelectorAll নয়, ডকুমেন্ট-লেভেল ডেলিগেশন।
     //
-    // প্রতিটা গেম নিজের নির্বাচন-ফাংশনটা window.LivoGameSelect-এ রেজিস্টার
+    // প্রতিটা গেম নিজের নির্বাচন-ফাংশনটা window.Bet420GameSelect-এ রেজিস্টার
     // করে (আগে ফাংশনগুলো গ্লোবাল ছিল বলেই অ্যাট্রিবিউট থেকে ডাকা যেত)।
     document.addEventListener('click', function (e) {
       if (!e.target || !e.target.closest) return;
       var el = e.target.closest('[data-game-select]');
       if (!el) return;
-      if (typeof window.LivoGameSelect === 'function') {
-        window.LivoGameSelect(el.getAttribute('data-game-select'), el);
+      if (typeof window.Bet420GameSelect === 'function') {
+        window.Bet420GameSelect(el.getAttribute('data-game-select'), el);
       }
     });
 

@@ -33,9 +33,9 @@ describe('শেয়ার্ড অরিজিন পলিসি', () => {
 
   test('অজানা origin প্রত্যাখ্যান করে', () => {
     expect(isAllowedOrigin('https://evil.example')).toBe(false);
-    expect(isAllowedOrigin('https://livo-backen.onrender.com.evil.example')).toBe(false);
+    expect(isAllowedOrigin('https://bet420-backen.onrender.com.evil.example')).toBe(false);
     // সাবস্ট্রিং নয়, পুরো মান মিলতে হবে।
-    expect(isAllowedOrigin('https://evil.example/livo-backen.onrender.com')).toBe(false);
+    expect(isAllowedOrigin('https://evil.example/bet420-backen.onrender.com')).toBe(false);
   });
 
   test('Origin: "null" কখনো অনুমোদিত নয়', () => {

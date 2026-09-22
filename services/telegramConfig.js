@@ -324,7 +324,7 @@ async function testConnection({ botToken, chatId, sendMessage = false } = {}) {
       if (!chat) return { success: false, error: 'Chat ID সেট করা নেই — টেস্ট মেসেজ পাঠানো যায়নি।', botUsername };
       const sent = await callTelegram('sendMessage', token, {
         chat_id: chat,
-        text: '✅ <b>Livo Admin</b> — Telegram ইন্টিগ্রেশন টেস্ট মেসেজ। কানেকশন ঠিক আছে।',
+        text: '✅ <b>Bet420 Admin</b> — Telegram ইন্টিগ্রেশন টেস্ট মেসেজ। কানেকশন ঠিক আছে।',
         parse_mode: 'HTML'
       });
       if (!sent.ok) {

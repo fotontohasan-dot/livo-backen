@@ -83,14 +83,14 @@ describe('announcements partial — দুই রকম বন্ধ করা�
   test('ব্যানার closest() দিয়ে, পপআপ id দিয়ে খোঁজা হয়', () => {
     // দুটোর DOM কাঠামো আলাদা: ব্যানারটা বাটনের পূর্বপুরুষ, পপআপ ওভারলে নয়।
     // একটাই কৌশল ব্যবহার করলে একটা নীরবে বন্ধ হত না।
-    expect(src).toContain('data-dismiss-target=".livo-announce-banner"');
-    expect(src).toContain('data-dismiss-id="livoAnnouncePopupOverlay"');
+    expect(src).toContain('data-dismiss-target=".bet420-announce-banner"');
+    expect(src).toContain('data-dismiss-id="bet420AnnouncePopupOverlay"');
     expect(count(src, /data-dismiss-announcement=/g)).toBe(2); // দুটো বাটন
     expect(withScripts(src)).toContain('[data-dismiss-announcement]'); // সিলেক্টর
     const block = bindingBlock(src, 'data-dismiss-announcement');
     expect(block).toMatch(/btn\.closest\(sel\)/);
     expect(block).toMatch(/document\.getElementById\(byId\)/);
-    expect(block).toMatch(/function\s+livoDismissAnnouncement\s*\(/);
+    expect(block).toMatch(/function\s+bet420DismissAnnouncement\s*\(/);
   });
 
   test('dismiss id সার্ভারে পাঠানো হয়', () => {

@@ -16,7 +16,7 @@ const REDIS_HOST = process.env.REDIS_HOST || '127.0.0.1';
 const REDIS_PORT = parseInt(process.env.REDIS_PORT || '6379', 10);
 const REDIS_PASSWORD = process.env.REDIS_PASSWORD || undefined;
 const REDIS_DB = parseInt(process.env.REDIS_DB || '0', 10);
-const REDIS_PREFIX = process.env.REDIS_PREFIX || 'livo:';
+const REDIS_PREFIX = process.env.REDIS_PREFIX || 'bet420:';
 const REDIS_CONNECT_TIMEOUT_MS = parseInt(process.env.REDIS_CONNECT_TIMEOUT_MS || '3000', 10);
 const REDIS_MAX_RETRIES = parseInt(process.env.REDIS_MAX_RETRIES || '5', 10); // এর বেশি চেষ্টার পর থামিয়ে দেওয়া হবে (লগ স্প্যাম আটকাতে)
 

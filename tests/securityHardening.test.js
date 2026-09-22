@@ -89,12 +89,12 @@ describe('#2 Host হেডার থেকে লিংক বানানো �
   test('কনফিগার করা URL ব্যবহার হয়, Host উপেক্ষা করা হয়', () => {
     jest.resetModules();
     const prev = process.env.PUBLIC_APP_URL;
-    process.env.PUBLIC_APP_URL = 'https://livo.example/';
+    process.env.PUBLIC_APP_URL = 'https://bet420.example/';
     try {
       const publicUrl = require('../utils/publicUrl');
       const fakeReq = { protocol: 'http', get: () => 'attacker.example' };
       expect(publicUrl.buildUrl(fakeReq, '/reset-password/abc'))
-        .toBe('https://livo.example/reset-password/abc');
+        .toBe('https://bet420.example/reset-password/abc');
       expect(publicUrl.getBaseUrl(fakeReq)).not.toMatch(/attacker/);
     } finally {
       if (prev === undefined) delete process.env.PUBLIC_APP_URL;
@@ -108,7 +108,7 @@ describe('#2 Host হেডার থেকে লিংক বানানো �
     const prevEnv = process.env.NODE_ENV;
     const prevUrl = process.env.PUBLIC_APP_URL;
     process.env.NODE_ENV = 'production';
-    process.env.PUBLIC_APP_URL = 'http://livo.example';
+    process.env.PUBLIC_APP_URL = 'http://bet420.example';
     try {
       const publicUrl = require('../utils/publicUrl');
       expect(() => publicUrl.getBaseUrl(null)).toThrow(/https/);

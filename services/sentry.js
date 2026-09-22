@@ -31,7 +31,7 @@ function init() {
     Sentry.init({
       dsn: DSN,
       environment: ENVIRONMENT,
-      release: `livo-backend@${RELEASE}`,
+      release: `bet420-backend@${RELEASE}`,
       tracesSampleRate: TRACES_SAMPLE_RATE,
       integrations: [
         Sentry.httpIntegration(),

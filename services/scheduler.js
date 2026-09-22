@@ -356,7 +356,7 @@ async function runJob(key, { triggeredBy = 'schedule' } = {}) {
 /** জব-কী থেকে স্থিতিশীল 32-bit লক আইডি (pg_try_advisory_lock int নেয়)। */
 function advisoryLockId(key) {
   let hash = 0;
-  const prefixed = `livo:cron:${key}`;
+  const prefixed = `bet420:cron:${key}`;
   for (let i = 0; i < prefixed.length; i++) {
     hash = ((hash << 5) - hash + prefixed.charCodeAt(i)) | 0;
   }

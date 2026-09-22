@@ -184,9 +184,9 @@ describe('Chat admin authorization & upload security (PHASE 6/7)', () => {
     test('KYC document_url শুধু নির্দিষ্ট Cloudinary path গ্রহণ করে', async () => {
       const user = await makeUser('user');
       const bad = [
-        'http://res.cloudinary.com/x/livo/chat/a.png',   // http
-        'https://evil.com/livo/chat/a.png',              //  host
-        'https://res.cloudinary.com/other/livo/chat/a.png', //  cloud
+        'http://res.cloudinary.com/x/bet420/chat/a.png',   // http
+        'https://evil.com/bet420/chat/a.png',              //  host
+        'https://res.cloudinary.com/other/bet420/chat/a.png', //  cloud
         'https://res.cloudinary.com/x/other/a.png',      //  path
       ];
       for (const url of bad) {

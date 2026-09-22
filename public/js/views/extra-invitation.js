@@ -11,7 +11,7 @@
 function wireShareButtons() {
   var link = cfg.referralLink || '';
   if (!link) return;
-  var message = 'LIVO-তে যোগ দিন এবং বোনাস নিন! আমার রেফারেল কোড: ' + (cfg.referralCode || '');
+  var message = 'BET420-তে যোগ দিন এবং বোনাস নিন! আমার রেফারেল কোড: ' + (cfg.referralCode || '');
   var combined = encodeURIComponent(message + ' ' + link);
   var encLink = encodeURIComponent(link);
 

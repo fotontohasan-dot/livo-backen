@@ -49,7 +49,7 @@ describe('telegramConfig: isValidChatId', () => {
   });
 
   test('@channelusername গ্রহণ করে', () => {
-    expect(tg.isValidChatId('@livo_alerts')).toBe(true);
+    expect(tg.isValidChatId('@bet420_alerts')).toBe(true);
   });
 
   test('খালি বা অবৈধ ইনপুট বাতিল করে', () => {

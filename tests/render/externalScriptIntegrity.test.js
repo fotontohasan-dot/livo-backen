@@ -82,18 +82,18 @@ describe('partials/head — দুটো ব্লকই টিকে আছে'
 
   test('থিম কোড হারায়নি', () => {
     // এটাই সেই কোড যা একবার ওভাররাইটে হারিয়ে গিয়েছিল।
-    expect(js).toMatch(/livo-theme/);
+    expect(js).toMatch(/bet420-theme/);
     expect(js).toMatch(/light-mode/);
   });
 
   test('টোস্ট সিস্টেম ও ফ্ল্যাশ বার্তা আছে', () => {
-    expect(js).toMatch(/window\.LivoToast\s*=/);
+    expect(js).toMatch(/window\.Bet420Toast\s*=/);
     expect(js).toMatch(/cfg\.success/);
     expect(js).toMatch(/cfg\.error/);
   });
 
   test('থিম কোড টোস্ট কোডের আগে চলে', () => {
     // থিম কোড body-তে class বসায়, তাই আগে চলা দরকার।
-    expect(js.indexOf('livo-theme')).toBeLessThan(js.indexOf('window.LivoToast'));
+    expect(js.indexOf('bet420-theme')).toBeLessThan(js.indexOf('window.Bet420Toast'));
   });
 });

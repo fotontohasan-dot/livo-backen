@@ -25,14 +25,14 @@ async function handleFileSelect(e) {
   if (!allowedTypes.includes(file.type)) {
     errBox.textContent = 'শুধু JPG, PNG বা WEBP ছবি আপলোড করা যাবে।';
     errBox.style.display = 'block';
-    LivoToast.show(errBox.textContent, 'error');
+    Bet420Toast.show(errBox.textContent, 'error');
     setSubmitState(false, 'প্রথমে ছবি আপলোড করুন');
     return;
   }
   if (file.size > 20 * 1024 * 1024) {
     errBox.textContent = 'ফাইলের সাইজ ২০MB-এর বেশি হতে পারবে না।';
     errBox.style.display = 'block';
-    LivoToast.show(errBox.textContent, 'error');
+    Bet420Toast.show(errBox.textContent, 'error');
     setSubmitState(false, 'প্রথমে ছবি আপলোড করুন');
     return;
   }
@@ -63,12 +63,12 @@ async function handleFileSelect(e) {
     document.getElementById('uploadIcon').style.color = '#10b981';
     document.getElementById('uploadText').textContent = 'ছবি আপলোড সম্পন্ন ✓';
     uploadedOk = true;
-    LivoToast.show('ছবি আপলোড সম্পন্ন হয়েছে', 'success');
+    Bet420Toast.show('ছবি আপলোড সম্পন্ন হয়েছে', 'success');
     setSubmitState(true, 'KYC জমা দিন');
   } catch (err) {
     errBox.textContent = err.message || 'আপলোড ব্যর্থ হয়েছে, আবার চেষ্টা করুন।';
     errBox.style.display = 'block';
-    LivoToast.show(errBox.textContent, 'error');
+    Bet420Toast.show(errBox.textContent, 'error');
     document.getElementById('uploadIcon').className = 'fas fa-cloud-arrow-up';
     document.getElementById('uploadIcon').style.color = 'var(--gold)';
     document.getElementById('uploadText').textContent = 'ছবি আপলোড করতে এখানে ট্যাপ করুন';
@@ -82,7 +82,7 @@ function handleKycSubmit(e) {
     const errBox = document.getElementById('uploadError');
     errBox.textContent = 'জমা দেওয়ার আগে ডকুমেন্টের ছবি আপলোড করুন।';
     errBox.style.display = 'block';
-    LivoToast.show(errBox.textContent, 'error');
+    Bet420Toast.show(errBox.textContent, 'error');
     return false;
   }
   setSubmitState(false, 'জমা হচ্ছে...');
