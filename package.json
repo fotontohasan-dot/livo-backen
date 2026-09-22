@@ -29,7 +29,7 @@
     "cloudinary": "^2.11.0",
     "compression": "^1.8.2",
     "connect-flash": "^0.1.1",
-    "connect-pg-simple": "^9.0.1",
+    "connect-pg-simple": "^10.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
