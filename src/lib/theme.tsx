@@ -5,7 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 export type ThemeMode = 'dark' | 'light' | 'system';
 type ResolvedTheme = 'dark' | 'light';
 
-const STORAGE_KEY = 'livo-theme';
+const STORAGE_KEY = 'bet420-theme';
 
 interface ThemeContextValue {
   mode: ThemeMode;

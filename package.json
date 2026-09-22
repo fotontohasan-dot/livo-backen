@@ -1,10 +1,10 @@
 {
-  "name": "livo-backen",
+  "name": "bet420-backen",
   "version": "1.0.0",
   "engines": {
     "node": ">=22.0.0 <23"
   },
-  "description": "Livo — casino (third-party provider games), sports betting, event tickets and wallet platform",
+  "description": "Bet420 — casino (third-party provider games), sports betting, event tickets and wallet platform",
   "main": "app.js",
   "scripts": {
     "start": "node server.js",

@@ -24,7 +24,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: livo_test
+          POSTGRES_DB: bet420_test
         ports:
           - 5432:5432
         options: >-
@@ -35,7 +35,7 @@ jobs:
 
     env:
       NODE_ENV: test
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432/livo_test
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/bet420_test
       # postgres:16 সার্ভিস কন্টেইনারে SSL বন্ধ থাকে, তাই CI-তে প্লেইন TCP কানেকশন।
       # NODE_ENV=test হলে db.js এমনিতেই SSL বন্ধ করে; এখানে স্পষ্ট করে লেখা হলো যাতে
       # কনফিগারেশনটা ওয়ার্কফ্লো পড়েই বোঝা যায়।
@@ -49,7 +49,7 @@ jobs:
       # সেট না থাকলে যেকোনো document_url বাতিল হয়, তাই KYC সাবমিশন E2E-তে কখনো
       # সফল হতো না। টেস্টও এই একই ডিফল্ট নামই ব্যবহার করে (কোনো লাইভ Cloudinary
       # ক্রেডেনশিয়াল নয় — শুধু URL যাচাইয়ের জন্য টেন্যান্ট নাম)।
-      CLOUDINARY_CLOUD_NAME: livo_test_cloud
+      CLOUDINARY_CLOUD_NAME: bet420_test_cloud
 
     steps:
     - uses: actions/checkout@v7

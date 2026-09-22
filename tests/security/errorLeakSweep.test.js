@@ -163,25 +163,25 @@ describe('error-leak সুইপ — ইন্টারনাল এরর ব�
   // ------------------------------------------------------------------
   test('system diagnostics পুরোপুরি ব্যর্থ হলে পেজে ইন্টারনাল এরর রেন্ডার হয় না', async () => {
     const healthCheck = require('../../services/healthCheck');
-    const dbLeak = 'password authentication failed for user "livo_prod" host=10.0.0.7';
+    const dbLeak = 'password authentication failed for user "bet420_prod" host=10.0.0.7';
     jest.spyOn(healthCheck, 'runAllChecks').mockRejectedValue(new Error(dbLeak));
 
     const res = await admin.agent.get('/admin/system-diagnostics');
     expect(res.status).toBe(200);
-    expect(res.text).not.toContain('livo_prod');
+    expect(res.text).not.toContain('bet420_prod');
     expect(res.text).not.toContain('10.0.0.7');
     expect(res.text).not.toContain('password authentication failed');
   });
 
   test('system diagnostics JSON API-ও একইভাবে জেনেরিক বার্তা দেয়', async () => {
     const healthCheck = require('../../services/healthCheck');
-    const dbLeak = 'password authentication failed for user "livo_prod" host=10.0.0.7';
+    const dbLeak = 'password authentication failed for user "bet420_prod" host=10.0.0.7';
     jest.spyOn(healthCheck, 'runAllChecks').mockRejectedValue(new Error(dbLeak));
 
     const res = await admin.agent.get('/admin/api/system-diagnostics');
     expect(res.status).toBe(500);
     const body = JSON.stringify(res.body);
-    expect(body).not.toContain('livo_prod');
+    expect(body).not.toContain('bet420_prod');
     expect(body).not.toContain('10.0.0.7');
   });
 

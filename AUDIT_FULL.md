@@ -1,6 +1,6 @@
-# Livo Backend — Complete A-to-Z Repository Audit
+# Bet420 Backend — Complete A-to-Z Repository Audit
 
-**Repo:** fotontohasan-dot/livo-backen — commit `af3495f28eb26287ef70bd576bff90a23a540bce`
+**Repo:** fotontohasan-dot/bet420-backen — commit `af3495f28eb26287ef70bd576bff90a23a540bce`
 **Scale:** 20 route files (~8,300 lines), 57 service files (~8,900 lines), 12 middleware files (736 lines), 265 EJS views, 64 DB tables (1,353-line migrations.js), 37 production dependencies.
 
 **Methodology note:** This audit is based on direct inspection of the code (grep across the full tree, full reads of the areas exercised during the automated-test work earlier in this engagement — auth, payment, admin, backup, security middleware, RBAC, audit logging, cache, rate limiting), plus targeted structural checks (file existence, route counts, table counts, exports) for every remaining module listed in the brief. Every module below either has a direct evidence citation (file/line, grep result, or a passing/failing automated test) or is explicitly marked **Not Verifiable** where deep runtime behavior wasn't traced line-by-line. Nothing is guessed. Six confirmed P0 bugs were found and fixed as part of getting the automated test suite green (see §9); this report reflects the **post-fix** state of the repo unless noted otherwise.

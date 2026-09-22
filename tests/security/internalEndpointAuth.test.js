@@ -75,7 +75,7 @@ describe('ইন্টারনাল/অ্যাডমিন এন্ডপ�
   // ------------------------------------------------------------------
   test('/ready ব্যর্থ হলে DB কানেকশন বিবরণ ফাঁস করে না', async () => {
     const healthCheck = require('../../services/healthCheck');
-    const dbLeak = 'DB not ready: connect ECONNREFUSED db-primary.internal:5432 database "livo_prod"';
+    const dbLeak = 'DB not ready: connect ECONNREFUSED db-primary.internal:5432 database "bet420_prod"';
     const spy = jest.spyOn(healthCheck, 'readiness').mockRejectedValue(new Error(dbLeak));
     try {
       const res = await freshRequest().get('/ready');
@@ -83,7 +83,7 @@ describe('ইন্টারনাল/অ্যাডমিন এন্ডপ�
       expect(res.body).toHaveProperty('status', 'not_ready'); // প্রোবের কনট্র্যাক্ট অক্ষত
       const body = JSON.stringify(res.body);
       expect(body).not.toContain('db-primary.internal');
-      expect(body).not.toContain('livo_prod');
+      expect(body).not.toContain('bet420_prod');
       expect(body).not.toContain('ECONNREFUSED');
     } finally {
       spy.mockRestore();

@@ -58,7 +58,7 @@ describe('পাসওয়ার্ড নীতি (utils/passwordPolicy.js)'
   describe('গ্রহণ', () => {
     test.each([
       'SecurePass123',
-      'livoUser4821x',
+      'bet420User4821x',
       'Tk9mn2qwerty',
       'my-long-pass-42'
     ])('%s → গৃহীত', (password) => {

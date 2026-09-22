@@ -29,7 +29,7 @@ describe('2FA / TOTP (services/twofactor.js)', () => {
 
     test('otpauth URL-এ issuer ও username থাকে', async () => {
       const setup = await generateTotpSetup('alice');
-      expect(decodeURIComponent(setup.otpauthUrl)).toContain('Livo Admin');
+      expect(decodeURIComponent(setup.otpauthUrl)).toContain('Bet420 Admin');
       expect(decodeURIComponent(setup.otpauthUrl)).toContain('alice');
     });
   });

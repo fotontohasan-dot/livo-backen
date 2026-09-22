@@ -1,6 +1,6 @@
 {
-  "name": "Livo অ্যাডমিন প্যানেল",
-  "short_name": "Livo Admin",
+  "name": "Bet420 অ্যাডমিন প্যানেল",
+  "short_name": "Bet420 Admin",
   "start_url": "/admin/dashboard?source=pwa",
   "scope": "/",
   "display": "standalone",

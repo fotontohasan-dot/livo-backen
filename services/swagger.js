@@ -3,15 +3,15 @@
 
 const swaggerJsdoc = require('swagger-jsdoc');
 
-const BASE_URL = process.env.BASE_URL || 'https://livo-backen.onrender.com';
+const BASE_URL = process.env.BASE_URL || 'https://bet420-backen.onrender.com';
 
 const definition = {
   openapi: '3.0.3',
   info: {
-    title: 'Livo API',
+    title: 'Bet420 API',
     version: '1.0.0',
     description: `
-## Livo Platform REST API — v1
+## Bet420 Platform REST API — v1
 
 সব endpoint \`/api/v1\` prefix-এর অধীনে পাওয়া যাবে।
 
@@ -33,7 +33,7 @@ const definition = {
 | Financial | 20 req/min |
 | API | 60 req/min |
     `.trim(),
-    contact: { name: 'Livo Support', url: BASE_URL },
+    contact: { name: 'Bet420 Support', url: BASE_URL },
     license: { name: 'Private' }
   },
   servers: [

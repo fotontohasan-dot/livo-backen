@@ -38,19 +38,19 @@ function bulkBanSelected() {
     .then(function (r) { return r.json(); })
     .then(function (data) {
       if (data.success) {
-        if (typeof LivoToast !== 'undefined') {
-          LivoToast.show(data.succeeded + 'টা সফল, ' + data.failed + 'টা ব্যর্থ', data.failed > 0 ? 'info' : 'success');
+        if (typeof Bet420Toast !== 'undefined') {
+          Bet420Toast.show(data.succeeded + 'টা সফল, ' + data.failed + 'টা ব্যর্থ', data.failed > 0 ? 'info' : 'success');
         } else {
           alert(data.succeeded + 'টা সফল, ' + data.failed + 'টা ব্যর্থ');
         }
         setTimeout(function () { window.location.reload(); }, 900);
       } else {
-        if (typeof LivoToast !== 'undefined') LivoToast.show(data.error || 'সমস্যা হয়েছে', 'error');
+        if (typeof Bet420Toast !== 'undefined') Bet420Toast.show(data.error || 'সমস্যা হয়েছে', 'error');
         else alert(data.error || 'সমস্যা হয়েছে');
       }
     })
     .catch(function () {
-      if (typeof LivoToast !== 'undefined') LivoToast.show('নেটওয়ার্ক সমস্যা হয়েছে', 'error');
+      if (typeof Bet420Toast !== 'undefined') Bet420Toast.show('নেটওয়ার্ক সমস্যা হয়েছে', 'error');
       else alert('নেটওয়ার্ক সমস্যা হয়েছে');
     });
 }

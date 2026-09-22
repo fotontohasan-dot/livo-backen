@@ -8,8 +8,8 @@ import { ThemeProvider, THEME_INIT_SCRIPT } from "@/lib/theme";
 // নেটওয়ার্ক নির্ভরতা নেই, বিল্ড সম্পূর্ণ অফলাইনে চলে।
 
 export const metadata: Metadata = {
-  title: "Livo – Premium Gaming",
-  description: "Experience the next level of gaming with Livo.",
+  title: "Bet420 – Premium Gaming",
+  description: "Experience the next level of gaming with Bet420.",
 };
 
 export default function RootLayout({

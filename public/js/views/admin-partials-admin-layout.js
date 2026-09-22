@@ -30,7 +30,7 @@ function openMobileSidebar() {
 
         // ---- নেভিগেশন গ্রুপ কোলাপস + মনে রাখা ----
         (function () {
-            var KEY = 'livoAdminNavOpen';
+            var KEY = 'bet420AdminNavOpen';
             function saved() {
                 try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { return {}; }
             }

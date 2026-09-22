@@ -34,7 +34,7 @@ const COMMON_PASSWORDS = new Set([
   'letmein123', 'monkey1234', 'dragon1234', 'master1234',
   'abc12345', 'abcd1234', 'abcd12345', 'a1234567',
   'bangladesh', 'bangladesh1', 'bangladesh123', 'dhaka12345',
-  'livo123456', 'livo1234567', 'casino1234', 'cricket123'
+  'bet420123456', 'bet4201234567', 'casino1234', 'cricket123'
 ]);
 
 /**

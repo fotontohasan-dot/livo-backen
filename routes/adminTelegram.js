@@ -211,7 +211,7 @@ router.post('/test-notification', telegramTestLimiter, rbac.requirePermission('s
     const category = telegramConfig.CATEGORIES.includes(String(req.body.category)) ? String(req.body.category) : null;
     const actor = actorOf(req);
     const result = await notifyTelegram(
-      `🧪 <b>Livo Admin — টেস্ট নোটিফিকেশন</b>\nপাঠিয়েছেন: ${actor.username}${category ? `\nক্যাটাগরি: ${telegramConfig.CATEGORY_LABELS[category]}` : ''}`,
+      `🧪 <b>Bet420 Admin — টেস্ট নোটিফিকেশন</b>\nপাঠিয়েছেন: ${actor.username}${category ? `\nক্যাটাগরি: ${telegramConfig.CATEGORY_LABELS[category]}` : ''}`,
       { category }
     );
 

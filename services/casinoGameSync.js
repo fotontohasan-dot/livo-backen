@@ -56,7 +56,7 @@ async function uploadThumbnail(sourceUrl, publicId) {
       api_secret: process.env.CLOUDINARY_API_SECRET
     });
     const res = await cloudinary.uploader.upload(sourceUrl, {
-      folder: 'livo/games',
+      folder: 'bet420/games',
       public_id: publicId,
       overwrite: false,
       resource_type: 'image'

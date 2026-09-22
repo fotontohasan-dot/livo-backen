@@ -77,7 +77,7 @@ function getEncryptionKey() {
     throw new Error(`BACKUP_ENCRYPTION_KEY খুব ছোট — অন্তত ${MIN_KEY_LENGTH} অক্ষর দরকার।`);
   }
   // যেকোনো length-এর পাসফ্রেজকে scrypt দিয়ে ঠিক ৩২ বাইট AES-256 কী-তে ডিরাইভ করা হয়
-  return crypto.scryptSync(ENC_KEY_RAW, 'livo-backup-salt', 32);
+  return crypto.scryptSync(ENC_KEY_RAW, 'bet420-backup-salt', 32);
 }
 
 function isEncryptionEnabled() {

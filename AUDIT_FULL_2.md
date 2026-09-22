@@ -1,6 +1,6 @@
-# Livo Backend — Security Audit II (A→Z Continuation)
+# Bet420 Backend — Security Audit II (A→Z Continuation)
 
-**Repo:** fotontohasan-dot/livo-backen — commit `173f915d6e044a5e3437c21b195dbcaff66f42e9`
+**Repo:** fotontohasan-dot/bet420-backen — commit `173f915d6e044a5e3437c21b195dbcaff66f42e9`
 **Scope:** This continues `AUDIT_FULL.md`, covering everything that report left flagged as "Not Verifiable" or "sampled, not exhaustive": a complete IDOR/ownership sweep across every route, XSS across all 270 EJS views (including every admin template), file upload/path traversal/content-type/size validation, an exhaustive SQL-injection and dynamic-SQL sweep plus DB constraints/transactions/race conditions, SSRF/open redirects and every external integration, authentication/session/CSRF edge cases, queues/workers/scheduler/graceful shutdown, pagination/unbounded queries/resource exhaustion, logging/audit-trail completeness, secrets/configuration, and the four admin route files the first pass never opened (`adminGames.js`, `adminHealthFix.js`, `adminLeaderboard.js`, `adminTelegram.js`).
 
 **Methodology:** Eight independent, read-only research passes ran in parallel, each scoped to one attack surface. Each was briefed with `AUDIT_FULL.md`'s prior findings so it extended rather than repeated that work, and each was required to cite file and line for every claim and to list representative SAFE examples alongside anything flagged. **No file in the repository was modified as part of producing this report.**

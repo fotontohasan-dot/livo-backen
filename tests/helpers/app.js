@@ -125,7 +125,7 @@ function uniqueUsername(prefix = 'tu') {
 // (তাই কেউ tmp ফাইল মুছে ফেললেও পুরনো রানের নাম্বারের সাথে ধাক্কা লাগে না), আর
 // ৫ ডিজিট ক্রম এক রানের ভেতরে অনন্যতা দেয় (১,০০,০০০ কল পর্যন্ত — পুরো সুইট এর
 // ধারেকাছেও যায় না)।
-const PHONE_SEQ_FILE = path.join(os.tmpdir(), 'livo-test-phone-seq');
+const PHONE_SEQ_FILE = path.join(os.tmpdir(), 'bet420-test-phone-seq');
 
 function nextPhoneSeq() {
   fs.appendFileSync(PHONE_SEQ_FILE, '\0');

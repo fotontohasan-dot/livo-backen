@@ -82,7 +82,7 @@
       var up = all.filter(function (m) { return m.status !== 'live'; }).slice(0, 12);
       LIVE.innerHTML = live.length ? live.map(card).join('') : '<div class="sp-empty">' + esc(T.empty) + '</div>';
       UP.innerHTML = up.length ? up.map(card).join('') : '<div class="sp-empty">' + esc(T.empty) + '</div>';
-      if (window.LivoCrest) window.LivoCrest.render();
+      if (window.Bet420Crest) window.Bet420Crest.render();
     }
 
     TABS.addEventListener('click', function (e) {

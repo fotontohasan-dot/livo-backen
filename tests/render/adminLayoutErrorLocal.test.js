@@ -57,12 +57,12 @@ describe('admin-layout: স্ট্রিং error লোকাল থাকল
 
   test('ফ্ল্যাশ মেসেজ (অ্যারে) টোস্ট হিসেবে দেখানো আগের মতোই কাজ করে', async () => {
     // পারমিশন-বিহীন অ্যাকশনে rbac ফ্ল্যাশ সেট করে /admin-এ রিডাইরেক্ট করে; পরের পেজ-লোডে
-    // সেই অ্যারে-ফ্ল্যাশটা LivoToast.show(...) হিসেবে রেন্ডার হওয়ার কথা।
+    // সেই অ্যারে-ফ্ল্যাশটা Bet420Toast.show(...) হিসেবে রেন্ডার হওয়ার কথা।
     const res = await admin.agent.get('/admin');
     expect(res.status).toBe(200);
     // docs/CSP.md ধাপ ৩-এ টোস্ট কোডটা public/js/views/-এ সরানো হয়েছে;
     // পেজ + তার লোড করা স্ক্রিপ্ট একসাথে দেখা হয়।
-    expect(withScripts(res.text)).toContain('LivoToast');
+    expect(withScripts(res.text)).toContain('Bet420Toast');
     // ফ্ল্যাশ বার্তাগুলো এখন JSON ডেটা ব্লকে যায়
     expect(res.text).toMatch(/id="admin-partials-flashConfig"/);
   });

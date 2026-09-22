@@ -24,7 +24,7 @@ async function makeUser({ admin = false, roleKey = null } = {}) {
 }
 
 async function seedKey({ enabled = true, scopes = ['read:matches'] } = {}) {
-  const raw = 'livo_test_' + crypto.randomBytes(16).toString('hex');
+  const raw = 'bet420_test_' + crypto.randomBytes(16).toString('hex');
   const row = (await pool.query(
     `INSERT INTO api_keys (name, key_hash, scopes, enabled) VALUES ($1,$2,$3,$4) RETURNING *`,
     ['regression-' + Date.now(), hashKey(raw), scopes, enabled]

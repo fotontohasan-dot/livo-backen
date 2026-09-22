@@ -9,7 +9,7 @@ function tgResult(html, ok) {
 }
 
 async function runTest(sendMessage) {
-  tgResult('<span class="livo-spinner"></span> টেস্ট চলছে...', true);
+  tgResult('<span class="bet420-spinner"></span> টেস্ট চলছে...', true);
   try {
     const res = await fetch('/admin/telegram/test', {
       method: 'POST',
@@ -28,7 +28,7 @@ async function runTest(sendMessage) {
 }
 
 async function sendTest(category) {
-  tgResult('<span class="livo-spinner"></span> নোটিফিকেশন পাঠানো হচ্ছে...', true);
+  tgResult('<span class="bet420-spinner"></span> নোটিফিকেশন পাঠানো হচ্ছে...', true);
   try {
     const res = await fetch('/admin/telegram/test-notification', {
       method: 'POST',

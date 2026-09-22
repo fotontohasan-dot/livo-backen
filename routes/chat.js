@@ -161,7 +161,7 @@ router.post('/upload', isAuth, requireFeature('live_chat'), upload.single('file'
       // সম্পূর্ণ unbounded নয়, কিন্তু একটা চ্যাট আপলোড রিকোয়েস্টের জন্য যথেষ্ট দীর্ঘ। এখানে স্পষ্টভাবে
       // ছোট করা হলো, SSLCommerz/Google OAuth-এর সাথে সামঞ্জস্যপূর্ণ bounded ওয়েট রাখতে।
       const stream = cloudinary.uploader.upload_stream(
-        { folder: 'livo/chat', resource_type: isVideo ? 'video' : 'image', timeout: 20000 },
+        { folder: 'bet420/chat', resource_type: isVideo ? 'video' : 'image', timeout: 20000 },
         (error, result) => error ? reject(error) : resolve(result)
       );
       stream.end(req.file.buffer);

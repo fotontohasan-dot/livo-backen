@@ -3,7 +3,7 @@ const QRCode = require('qrcode');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 
-const ISSUER = 'Livo Admin';
+const ISSUER = 'Bet420 Admin';
 
 // ==================== নতুন TOTP সিক্রেট + QR কোড তৈরি ====================
 async function generateTotpSetup(username) {

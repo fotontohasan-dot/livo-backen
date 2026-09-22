@@ -16,7 +16,7 @@
   function shareLink() {
     const link = cfg.baseUrl + '/register?ref=' + encodeURIComponent(cfg.referralCode);
     if (navigator.share) {
-      navigator.share({ title: 'LIVO ত যোগ দিন', text: 'আমার রেফারেল লিংক দিয়ে রেজিস্টার করুন!', url: link });
+      navigator.share({ title: 'BET420 ত যোগ দিন', text: 'আমার রেফারেল লিংক দিয়ে রেজিস্টার করুন!', url: link });
     } else {
       navigator.clipboard.writeText(link).then(() => alert('লিংক কপি হয়েছে!'));
     }

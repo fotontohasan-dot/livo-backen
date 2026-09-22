@@ -324,7 +324,7 @@ async function makeQrUrl(code) {
       api_secret: process.env.CLOUDINARY_API_SECRET
     });
     const up = await cloudinary.uploader.upload(dataUrl, {
-      folder: 'livo/tickets', public_id: code, overwrite: false
+      folder: 'bet420/tickets', public_id: code, overwrite: false
     });
     return up.secure_url || dataUrl;
   } catch (e) {

@@ -68,8 +68,8 @@ async function gracefulShutdown(signal) {
   try { await require('./queues').shutdownQueueSystem(); } catch (e) {}
   // ৩. HTTP সার্ভার নতুন কানেকশন নেওয়া বন্ধ করে চলমানগুলো শেষ করুক
   try {
-    if (global.__livoServer) {
-      await new Promise((resolve) => global.__livoServer.close(resolve));
+    if (global.__bet420Server) {
+      await new Promise((resolve) => global.__bet420Server.close(resolve));
     }
   } catch (e) {}
   // ৪. ডাটাবেজ/ক্যাশ কানেকশন বন্ধ (lazy require — হ্যান্ডলারটা ইম্পোর্টের আগেই সংজ্ঞায়িত)

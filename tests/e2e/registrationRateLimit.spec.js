@@ -24,7 +24,7 @@
 const { test, expect, request: apiRequest } = require('@playwright/test');
 const { Pool } = require('pg');
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/livo_test' });
+const pool = new Pool({ connectionString: process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/bet420_test' });
 
 const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:3000';
 
@@ -60,7 +60,7 @@ test.describe.configure({ mode: 'serial' });
 test.beforeEach(async ({ context }) => {
   // প্রতিটা টেস্ট নিজের IP বাকেট পায় — এটাই আইসোলেশন কৌশল
   await context.setExtraHTTPHeaders({ 'X-Forwarded-For': fakeIp() });
-  await context.addCookies([{ name: 'livo_age_verified', value: '1', domain: 'localhost', path: '/' }]);
+  await context.addCookies([{ name: 'bet420_age_verified', value: '1', domain: 'localhost', path: '/' }]);
   await context.route('**/*', (route) => {
     try {
       const url = new URL(route.request().url());

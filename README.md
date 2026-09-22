@@ -1,4 +1,4 @@
-# Livo Backend
+# Bet420 Backend
 
 স্পোর্টস ম্যাচ প্রেডিকশন প্ল্যাটফর্ম — Express (EJS views) + PostgreSQL ব্যাকএন্ড, সাথে একটা Next.js অংশ (`src/`) ও Telegram bot (`telegram-bot.js`)।
 
@@ -151,7 +151,7 @@ npm run dev       # nodemon দিয়ে, ডেভেলপমেন্ট�
 হয় না)। তাই **ফ্রেশ ক্লোনে `.env` না বানিয়ে Compose চালালে সেটা শুরুই হবে না**:
 
 ```
-env file /path/to/livo-backen/.env not found
+env file /path/to/bet420-backen/.env not found
 ```
 
 টেমপ্লেট থেকে কপি করে নাও, তারপর ভ্যালু বসাও:
@@ -234,7 +234,7 @@ docker compose up -d --build     # development টার্গেট + nodemon +
 App, PostgreSQL, Redis চালু হবে। মনিটরিং স্ট্যাক (Prometheus + Grafana) একই কমান্ডে চালু হয়:
 
 - Prometheus: `http://localhost:9090` — `/metrics` স্ক্র্যাপ করে (`METRICS_TOKEN` দিয়ে; টোকেন না দিলে প্রতিটা স্ক্র্যাপ 401 হবে)
-- Grafana: `http://localhost:${GRAFANA_PORT:-3001}` — লগইন `GRAFANA_ADMIN_USER`/`GRAFANA_ADMIN_PASSWORD` (`.env`-এ সেট করা বাধ্যতামূলক); "Livo" ফোল্ডারে "Livo — Application Overview" ড্যাশবোর্ড অটো-ইম্পোর্ট হয়ে থাকবে (CPU, Memory, Request Rate, Response Time, Error Rate, Redis, PostgreSQL, Queue, Active Users, API Metrics)
+- Grafana: `http://localhost:${GRAFANA_PORT:-3001}` — লগইন `GRAFANA_ADMIN_USER`/`GRAFANA_ADMIN_PASSWORD` (`.env`-এ সেট করা বাধ্যতামূলক); "Bet420" ফোল্ডারে "Bet420 — Application Overview" ড্যাশবোর্ড অটো-ইম্পোর্ট হয়ে থাকবে (CPU, Memory, Request Rate, Response Time, Error Rate, Redis, PostgreSQL, Queue, Active Users, API Metrics)
 
 মনিটরিং স্ট্যাক ছাড়া শুধু app+db+redis চালাতে চাইলে:
 

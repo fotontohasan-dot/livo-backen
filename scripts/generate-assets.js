@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /* ==========================================================================
-   Livo — Reference Asset Generator
+   Bet420 — Reference Asset Generator
    রেফারেন্স স্ক্রিনশটের ভিজ্যুয়াল ল্যাঙ্গুয়েজে original SVG আর্টওয়ার্ক তৈরি করে।
    কোনো তৃতীয় পক্ষের ব্র্যান্ড/ক্লাব লোগো বা প্রোভাইডার গেম আর্ট কপি করা হয় না —
-   সবই generic, in-house, Livo palette-এ আঁকা।
+   সবই generic, in-house, Bet420 palette-এ আঁকা।
 
    চালাতে:  node scripts/generate-assets.js
    আউটপুট:  public/images/hero, public/images/games, public/images/sports
@@ -115,7 +115,7 @@ const S = 300;
 
 /* একই ক্যাটাগরির দুটি গেম যেন হুবহু এক না দেখায় — slug থেকে স্থিতিশীল
    accent টোন ও ব্যাকড্রপ ভ্যারিয়েশন তৈরি হয়। */
-let CURRENT = 'livo';
+let CURRENT = 'bet420';
 const TONES = ['#D62828', '#008F5A', '#1F6FB2', '#D4A72C', '#5B2E8F', '#0F766E', '#B45309', '#0E7490'];
 const hashOf = (str) => [...str].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7);
 
@@ -292,7 +292,7 @@ const art = {
     <circle cx="128" cy="72" r="12" fill="${C.red}"/>
     <path d="M128 84 q-16 40 6 76 q16 26 -4 58" stroke="${C.red}" stroke-width="2.5" fill="none" opacity=".55" stroke-dasharray="5 5"/>`),
 
-  generic: (slug = 'livo') => {
+  generic: (slug = 'bet420') => {
     const H = [...slug].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7);
     const tone = ['#D62828', '#008F5A', '#1F6FB2', '#D4A72C', '#5B2E8F', '#0F766E'][H % 6];
     const mono = slug.split('-').map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'L';
@@ -387,7 +387,7 @@ const crest = () => svg(72, 72, `
 //   node scripts/generate-assets.js my-slug
 const SLUGS = process.argv.slice(2);
 
-console.log('Livo asset generator');
+console.log('Bet420 asset generator');
 write('hero/welcome-bonus.svg', hero());
 write('hero/mega-jackpot.svg', jackpot());
 
@@ -398,8 +398,8 @@ SLUGS.forEach(slug => {
   counts[kind] = (counts[kind] || 0) + 1;
   write(`games/${slug}.svg`, art[kind](slug));
 });
-CURRENT = 'livo';
-write('games/_fallback.svg', art.generic('livo'));
+CURRENT = 'bet420';
+write('games/_fallback.svg', art.generic('bet420'));
 
 Object.entries(sports).forEach(([name, fn]) => write(`sports/${name}.svg`, fn()));
 write('sports/crest.svg', crest());

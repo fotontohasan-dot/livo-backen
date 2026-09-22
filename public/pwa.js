@@ -54,7 +54,7 @@
     return ('standalone' in window.navigator) && window.navigator.standalone;
   }
   if (isIos() && !isInStandaloneMode()) {
-    if (!localStorage.getItem('livo_ios_install_hint_dismissed')) {
+    if (!localStorage.getItem('bet420_ios_install_hint_dismissed')) {
       const bar = document.createElement('div');
       bar.style.cssText = [
         'position:fixed', 'left:12px', 'right:12px', 'bottom:12px', 'z-index:9999',
@@ -64,7 +64,7 @@
         'align-items:center', 'gap:10px', 'border:1px solid rgba(245,158,11,0.4)'
       ].join(';');
       bar.innerHTML = '📲 অ্যাপ হিসেবে ইনস্টল করতে নিচের শেয়ার বাটনে ট্যাপ করে "Add to Home Screen" বেছে নিন।' +
-        '<button style="margin-left:auto;background:none;border:none;color:#f59e0b;font-weight:700;font-size:16px;" onclick="this.parentElement.remove();localStorage.setItem(\'livo_ios_install_hint_dismissed\',\'1\')">✕</button>';
+        '<button style="margin-left:auto;background:none;border:none;color:#f59e0b;font-weight:700;font-size:16px;" onclick="this.parentElement.remove();localStorage.setItem(\'bet420_ios_install_hint_dismissed\',\'1\')">✕</button>';
       document.body.appendChild(bar);
     }
   }

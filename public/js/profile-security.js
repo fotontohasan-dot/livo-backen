@@ -28,7 +28,7 @@
 
   function handlePinSubmit(form) {
     var btn = form.querySelector('.pin-submit-btn');
-    if (window.LivoToast) window.LivoToast.setLoading(btn, true);
+    if (window.Bet420Toast) window.Bet420Toast.setLoading(btn, true);
     return true;
   }
 

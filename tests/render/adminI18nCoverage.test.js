@@ -29,9 +29,9 @@ const en = require('../../locales/en.json');
 
 // ইচ্ছাকৃতভাবে অনুবাদ না করা মান — প্রতিটার কারণ পাশে লেখা।
 const ALLOWED = new Set([
-  'Livo',                                    // ব্র্যান্ড নাম
-  'Livo Admin',                              // ব্র্যান্ড নাম
-  'Livo Betting Platform • Admin Dashboard', // ব্র্যান্ড ট্যাগলাইন
+  'Bet420',                                    // ব্র্যান্ড নাম
+  'Bet420 Admin',                              // ব্র্যান্ড নাম
+  'Bet420 Betting Platform • Admin Dashboard', // ব্র্যান্ড ট্যাগলাইন
   'বাংলা',                                    // ভাষা সুইচারের endonym — সবসময় নিজের ভাষাতেই দেখানো হয়
   'English',                                 // একই কারণ
   'Bangla (bn)',                             // locale ফাইলের কলাম শিরোনাম — ফাইলের নাম বোঝায়

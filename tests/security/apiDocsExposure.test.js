@@ -37,7 +37,7 @@ describe('API docs — unauthenticated exposure', () => {
     expect(res.status).not.toBe(200);
     expect([302, 401, 403, 404]).toContain(res.status);
     expect(res.text || '').not.toMatch(/swagger-ui/i);
-    expect(res.text || '').not.toMatch(/Livo API Docs/);
+    expect(res.text || '').not.toMatch(/Bet420 API Docs/);
   });
 });
 

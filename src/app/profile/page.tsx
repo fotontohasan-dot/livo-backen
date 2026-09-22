@@ -76,7 +76,7 @@ export default function ProfilePage() {
         <section className="card-premium p-4 sm:p-5 flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h3 className="text-xs sm:text-sm font-black text-accent-text tracking-widest uppercase">Appearance</h3>
-            <p className="text-[10px] sm:text-xs text-text-muted font-medium mt-0.5">Choose how Livo looks on this device</p>
+            <p className="text-[10px] sm:text-xs text-text-muted font-medium mt-0.5">Choose how Bet420 looks on this device</p>
           </div>
           <ThemeToggle />
         </section>

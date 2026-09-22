@@ -25,7 +25,7 @@ const { uniquePhone } = require('./app');
 // দিয়ে টেস্টের ভেতরে re-require করা যায় না — Jest তখন "Hooks cannot be defined inside
 // tests" বলে ব্যর্থ হয়।)
 function simulateNewTestFile() {
-  delete globalThis.__livoPhoneSeq;
+  delete globalThis.__bet420PhoneSeq;
 }
 
 describe('uniquePhone() — টেস্ট ফাইল জুড়ে অনন্যতা', () => {

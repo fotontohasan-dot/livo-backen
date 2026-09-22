@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-const RENDER_URL = process.env.RENDER_EXTERNAL_URL || 'https://livo-backen.onrender.com';
+const RENDER_URL = process.env.RENDER_EXTERNAL_URL || 'https://bet420-backen.onrender.com';
 
 // ==================== নিরাপত্তা: Webhook যাচাইকরণ ====================
 // Telegram প্রতিটি webhook request-এ এই secret token header হিসেবে পাঠাবে
@@ -82,7 +82,7 @@ function isDuplicateUpdate(updateId) {
 }
 
 const GITHUB_OWNER = 'fotontohasan-dot';
-const GITHUB_REPO = 'livo-backen';
+const GITHUB_REPO = 'bet420-backen';
 
 // নিরাপত্তা: AI-র বলা ফাইলপাথ সরাসরি GitHub API URL-এ বসানো যাবে না।
 // `..` দিয়ে repo-র বাইরে যাওয়া, `?`/`#` দিয়ে query বা ref বদলে দেওয়া
@@ -191,11 +191,11 @@ function auditTelegram({ action, status = 'success', riskLevel = 'medium', detai
   } catch (e) { /* non-fatal */ }
 }
 
-const SYSTEM_PROMPT = `তুমি Livo-র AI Assistant। Livo একটি অনলাইন গেমিং প্ল্যাটফর্ম Node.js/Express দিয়ে তৈরি।
-তুমি বাংলায় কথা বলবে এবং Livo-র admin Mahmud-কে সাহায্য করবে।
+const SYSTEM_PROMPT = `তুমি Bet420-র AI Assistant। Bet420 একটি অনলাইন গেমিং প্ল্যাটফর্ম Node.js/Express দিয়ে তৈরি।
+তুমি বাংলায় কথা বলবে এবং Bet420-র admin Mahmud-কে সাহায্য করবে।
 
 তুমি করতে পারবে:
-- Livo-র কোড সম্পর্কে সাহায্য করা
+- Bet420-র কোড সম্পর্কে সাহায্য করা
 - Bug fix করতে সাহায্য করা
 - নতুন feature এর পরামর্শ দেওয়া
 - GitHub repository থেকে ফাইল দেখা ও edit করা
@@ -472,7 +472,7 @@ async function handleMessage(msg) {
     conversations[chatId] = [];
     await telegramAPI('sendMessage', {
       chat_id: chatId,
-      text: '🎮 *Livo AI Assistant*\n\nআমি তোমার Livo প্ল্যাটফর্মের AI Assistant!\n\nআমি এখন GitHub থেকে ফাইল পড়তে ও edit করতে পারি! 🔥\n\nউদাহরণ:\n• "app.js দেখাও"\n• "telegram-bot.js এ নতুন feature যোগ করো"\n\n/clear - কথোপকথন মুছো',
+      text: '🎮 *Bet420 AI Assistant*\n\nআমি তোমার Bet420 প্ল্যাটফর্মের AI Assistant!\n\nআমি এখন GitHub থেকে ফাইল পড়তে ও edit করতে পারি! 🔥\n\nউদাহরণ:\n• "app.js দেখাও"\n• "telegram-bot.js এ নতুন feature যোগ করো"\n\n/clear - কথোপকথন মুছো',
       parse_mode: 'Markdown'
     });
     return;

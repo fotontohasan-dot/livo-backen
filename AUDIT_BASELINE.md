@@ -7,7 +7,7 @@ Phase 0 — বেসলাইন। এই ধাপে **কোনো অ্�
 
 | বিষয় | মান |
 |---|---|
-| Repository | `fotontohasan-dot/livo-backen` |
+| Repository | `fotontohasan-dot/bet420-backen` |
 | Baseline branch | `main` |
 | Baseline HEAD | `b84a26cc3534b91496bb3ad1781cf53d2504b99f` |
 | HEAD subject | Merge pull request #91 (theme contrast fix) |

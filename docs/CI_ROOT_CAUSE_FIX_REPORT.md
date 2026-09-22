@@ -1,7 +1,7 @@
 # CI / E2E ব্যর্থতার মূল-কারণ (root cause) ফিক্স রিপোর্ট
 
 **বেসলাইন কমিট:** `adb53bf` (Merge pull request #101)
-**পরিবেশ:** Node 22, PostgreSQL 16 (`livo_test`), Jest 94 suite, Playwright/Chromium
+**পরিবেশ:** Node 22, PostgreSQL 16 (`bet420_test`), Jest 94 suite, Playwright/Chromium
 
 ---
 

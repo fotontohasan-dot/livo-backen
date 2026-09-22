@@ -26,7 +26,7 @@ export default function HomePage() {
         <div className="flex items-center gap-3">
           <Menu className="text-icon-secondary" size={24} />
           <div className="text-2xl font-black italic tracking-tighter text-accent-text flex items-center gap-1">
-            LIVO
+            BET420
             <div className="w-1.5 h-1.5 bg-danger rounded-full animate-pulse mt-2" />
           </div>
         </div>
@@ -62,7 +62,7 @@ export default function HomePage() {
               transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
               className="whitespace-nowrap text-xs font-medium text-text-muted"
             >
-              🎉 Welcome to LIVO! Get 50% First Deposit Bonus 💰 Invite friends and earn 3000 BDT 🤝 Mystery bonuses distributed daily! 🏆
+              🎉 Welcome to BET420! Get 50% First Deposit Bonus 💰 Invite friends and earn 3000 BDT 🤝 Mystery bonuses distributed daily! 🏆
             </motion.div>
           </div>
         </div>
@@ -174,7 +174,7 @@ export default function HomePage() {
 
         {/* Footer info */}
         <footer className="pt-8 pb-4 text-center space-y-6">
-          <div className="text-3xl font-black italic tracking-tighter text-text-muted/30">LIVO</div>
+          <div className="text-3xl font-black italic tracking-tighter text-text-muted/30">BET420</div>
           <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-[10px] font-bold text-text-muted uppercase tracking-widest">
             <Link href="#">Privacy</Link>
             <Link href="#">Terms</Link>
@@ -195,7 +195,7 @@ export default function HomePage() {
             ) : null}
           </div>
           <p className="text-[9px] text-text-muted/60 leading-relaxed max-w-[280px] mx-auto font-medium">
-            © 2024 LIVO Gaming. All Rights Reserved. Play responsibly and within your limits.
+            © 2024 BET420 Gaming. All Rights Reserved. Play responsibly and within your limits.
           </p>
         </footer>
       </main>

@@ -55,10 +55,10 @@ document.addEventListener('keydown', function (e) {
       icon.className = 'fas ' + (light ? 'fa-sun' : 'fa-moon') + ' nav-theme-icon';
     });
   }
-  applyTheme(localStorage.getItem('livo-theme') || 'dark');
+  applyTheme(localStorage.getItem('bet420-theme') || 'dark');
   function handleToggle() {
     var next = document.body.classList.contains('light-mode') ? 'dark' : 'light';
-    localStorage.setItem('livo-theme', next);
+    localStorage.setItem('bet420-theme', next);
     applyTheme(next);
   }
   if (btnNav) btnNav.addEventListener('click', handleToggle);

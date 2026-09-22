@@ -1,9 +1,9 @@
 apiVersion: 1
 
 providers:
-  - name: 'Livo Default Dashboards'
+  - name: 'Bet420 Default Dashboards'
     orgId: 1
-    folder: 'Livo'
+    folder: 'Bet420'
     type: file
     disableDeletion: false
     updateIntervalSeconds: 30

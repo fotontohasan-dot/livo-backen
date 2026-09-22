@@ -40,7 +40,7 @@ const { backUrl } = require('./utils/redirectBack');
 const app = express();
 app.use(compression());
 const server = http.createServer(app);
-global.__livoServer = server; // গ্রেসফুল শাটডাউনে চলমান রিকোয়েস্ট শেষ করার জন্য
+global.__bet420Server = server; // গ্রেসফুল শাটডাউনে চলমান রিকোয়েস্ট শেষ করার জন্য
 
 // প্রক্সি লেয়ার বদলালে (Cloudflare + Render = ২ hop) হার্ডকোডেড 1 ভুল হয়ে যায়,
 // তখন `secure` কুকি কখনো সেট হয় না এবং ব্যবহারকারী প্রতিবার লগআউট দেখে।
@@ -643,7 +643,7 @@ app.use((req, res, next) => {
   req.t = t_func;
   req.lang = lang;
   res.locals.lang = lang;
-  res.locals.siteName = 'Livo';
+  res.locals.siteName = 'Bet420';
   // views/partials/head.ejs এটা দেখে সিদ্ধান্ত নেয় পেজটা noindex হবে কি না।
   // req.path ব্যবহার করা হয় (query string ছাড়া), কারণ সিদ্ধান্তটা রুট
   // নিয়ে, প্যারামিটার নিয়ে নয়।
@@ -1028,7 +1028,7 @@ const swaggerCspHeader = (req, res, next) => {
 };
 
 app.get('/api/docs.json', apiDocsGate, apiDocsAuth, (req, res) => res.json(swaggerSpec));
-app.use('/api/docs', apiDocsGate, apiDocsAuth, swaggerCspHeader, swaggerUi.serve, swaggerUi.setup(swaggerSpec, { customSiteTitle: 'Livo API Docs' }));
+app.use('/api/docs', apiDocsGate, apiDocsAuth, swaggerCspHeader, swaggerUi.serve, swaggerUi.setup(swaggerSpec, { customSiteTitle: 'Bet420 API Docs' }));
 app.use('/accumulator', require('./routes/accumulator'));
 app.use('/chat', require('./routes/chat'));
 app.use('/extra', require('./routes/extra'));
@@ -1132,7 +1132,7 @@ app.use((err, req, res, next) => {
 
   res.status(statusCode).render('error', {
     message,
-    siteName: 'Livo'
+    siteName: 'Bet420'
   });
 });
 
@@ -1140,7 +1140,7 @@ app.use((req, res) => {
   const notFoundMsg = (res.locals && res.locals.t && res.locals.t.page_not_found) ? res.locals.t.page_not_found : 'Page Not Found / পৃষ্ঠাটি পাওয়া যায়নি';
   res.status(404).render('error', {
     message: notFoundMsg,
-    siteName: 'Livo'
+    siteName: 'Bet420'
   });
 });
 

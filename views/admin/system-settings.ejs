@@ -84,7 +84,7 @@ const tabButtons = tabs.map((t, i) =>
         ${tabPanel('smtp', 'SMTP Settings', 'fa-envelope',
             field('smtp_host', 'SMTP Host', 'text', s.smtp_host, {placeholder:'smtp.gmail.com'}) +
             field('smtp_port', 'SMTP Port', 'number', s.smtp_port, {placeholder:'587'}) +
-            field('smtp_from_name', 'From Name', 'text', s.smtp_from_name, {placeholder:'LIVO'}) +
+            field('smtp_from_name', 'From Name', 'text', s.smtp_from_name, {placeholder:'BET420'}) +
             field('smtp_from_email', 'From Email', 'email', s.smtp_from_email) +
             '<div class="sm:col-span-2">' + toggle('smtp_secure', 'Use TLS/SSL', s.smtp_secure, null) + '</div>' +
             '<p class="sm:col-span-2 text-xs text-slate-400">' + t("asy_smtp_note") + '</p>'

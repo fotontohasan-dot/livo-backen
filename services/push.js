@@ -73,7 +73,7 @@ async function sendPushToAdmins(type, title, message) {
 
     const payload = JSON.stringify({
       type,
-      title: title || 'Livo অ্যাডমিন',
+      title: title || 'Bet420 অ্যাডমিন',
       message: message || 'নতুন নোটিফিকেশন',
       url: type === 'deposit' ? '/payment/admin/payments?tab=deposit'
          : type === 'withdraw' ? '/payment/admin/payments?tab=withdraw'

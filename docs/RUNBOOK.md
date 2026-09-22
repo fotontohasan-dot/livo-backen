@@ -1,4 +1,4 @@
-# Livo — প্রোডাকশন রানবুক
+# Bet420 — প্রোডাকশন রানবুক
 
 ডিপ্লয়, ভেরিফিকেশন, ব্যাকআপ/রিস্টোর, রিকভারি ও রোলব্যাক — এক জায়গায়।
 পূর্ণ Environment Variable তালিকা ও Docker ব্যাখ্যা `README.md`-এ আছে; এই ফাইলটা
@@ -12,7 +12,7 @@
 ## ১. ফ্রেশ ডিপ্লয়মেন্ট
 
 ```bash
-git clone <repo-url> && cd livo-backen
+git clone <repo-url> && cd bet420-backen
 cp .env.example .env      # তারপর .env-এ আসল মান বসাও (নিচের ধাপ ২)
 docker compose -f docker-compose.yml up -d --build
 ```
