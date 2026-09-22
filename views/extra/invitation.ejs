@@ -1,55 +1,62 @@
-<%- include('../partials/head') %>
-<style nonce="<%= cspNonce %>">
-  /* Inline style attributes migrated to classes (CSP style-src-attr
-     hardening). Every migrated declaration was proved cascade-equivalent:
-     see tools/cascade-check.js. */
-  .dz51-1 { text-align: center; padding: 40px 20px; border-radius: 24px; }
-  .dz51-2 { color: var(--text-main); margin-bottom: 10px; }
-  .dz51-3 { color: var(--text-muted); font-size: 14px; margin-bottom: 30px; }
-  .dz51-4 { padding: 20px; border-radius: 16px; background: rgba(245, 158, 11, 0.05); border: 1px dashed var(--gold); }
-  .dz51-5 { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
-  .dz51-6 { font-family: 'Teko', sans-serif; font-size: 36px; color: var(--text-accent); font-weight: 700; letter-spacing: 4px; }
-  .dz51-7 { margin-top: 15px; border-radius: 20px; padding: 8px 30px; }
-  /* Inline style attributes migrated to classes (CSP style-src-attr
-     hardening). Only declarations whose properties are free of any
-     !important rule in the site CSS were moved; otherwise such a rule
-     would suddenly start winning and change the layout. */
-  .im51-1 { padding-top: 20px; }
-  .im51-2 { font-size: 60px; margin-bottom: 20px; }
-  .im51-3 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 30px; }
+<%#
+  ⚠️ এটা সম্পূর্ণ ফাইল নয় — শুধু পরিবর্তিত/যোগ হওয়া অংশ (fragment)।
+  আসল views/extra/invitation.ejs-এর সঠিক জায়গায় নিচের তিনটা অংশ বসান।
+%>
+
+<%# ===== (১) <style> ব্লকের ভেতরে, .im51-* রুলগুলোর পরে যোগ করুন ===== %>
+<style>
+  /* সোশ্যাল শেয়ার বাটন গ্রিড */
+  .sh51-title { margin-top: 30px; font-size: 13px; color: var(--text-muted); text-align: center; }
+  .sh51-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
+  .sh51-btn { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 4px; border-radius: 14px; text-decoration: none; font-size: 12px; color: #fff; border: none; }
+  .sh51-btn svg { width: 22px; height: 22px; fill: #fff; }
+  .sh51-whatsapp { background: #25D366; }
+  .sh51-messenger { background: #0084FF; }
+  .sh51-facebook  { background: #1877F2; }
+  .sh51-instagram { background: linear-gradient(45deg,#f58529,#dd2a7b,#8134af,#515bd4); }
+  .sh51-viber     { background: #7360F2; }
+  .sh51-imo       { background: #23A2E1; }
 </style>
 
-<%- include('../partials/navbar') %>
 
-<div class="container page im51-1">
-    <div class="card glass dz51-1">
-        <div class="im51-2">✉️</div>
-        <h2 class="dz51-2"><%= t.invite_friends_title %></h2>
-        <p class="dz51-3"><%= t.invite_friends_desc %></p>
+<%# ===== (২) স্ট্যাটস কার্ড (bonus_earned) দেখানোর div-এর ঠিক পরে, ===== %>
+<%#     মূল কন্টেইনার </div></div> বন্ধ হওয়ার আগে যোগ করুন             %>
 
-        <div class="glass dz51-4">
-            <p class="dz51-5"><%= t.your_referral_code %></p>
-            <div class="dz51-6">
-                <%= referralCode %>
-            </div>
-            <button data-copy-ref class="btn btn-primary dz51-7"><%= t.copy %></button>
-        </div>
-
-        <div class="im51-3">
-            <div class="stat-card">
-                <div class="stat-value"><%= referralCount %></div>
-                <div class="stat-label"><%= t.total_referrals %></div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value">৳ ০</div>
-                <div class="stat-label"><%= t.bonus_earned %></div>
-            </div>
-        </div>
-    </div>
+<p class="sh51-title"><%= t.share %></p>
+<div class="sh51-grid">
+    <a class="sh51-btn sh51-whatsapp" data-share="whatsapp" rel="noopener" target="_blank">
+        <svg viewBox="0 0 24 24"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.5 2 12.04 2zm5.8 14.16c-.24.68-1.4 1.32-1.93 1.4-.5.08-1.13.11-1.82-.11-.42-.13-.96-.31-1.65-.6-2.9-1.25-4.8-4.15-4.94-4.34-.14-.19-1.18-1.57-1.18-3 0-1.42.75-2.12 1.02-2.41.27-.28.58-.35.78-.35h.56c.18 0 .42-.02.65.5.24.53.82 1.86.9 2 .07.14.12.3.02.48-.09.19-.14.3-.28.46-.14.16-.29.36-.42.48-.14.13-.29.28-.12.55.16.28.72 1.19 1.55 1.93 1.07.95 1.97 1.25 2.24 1.39.28.14.44.12.6-.07.16-.19.68-.79.87-1.06.18-.28.37-.23.62-.14.25.09 1.6.75 1.87.89.28.14.46.21.53.33.07.12.07.68-.17 1.36z"/></svg>
+        WhatsApp
+    </a>
+    <a class="sh51-btn sh51-messenger" data-share="messenger" rel="noopener">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.15 2 11.27c0 2.9 1.44 5.49 3.7 7.19V22l3.38-1.86c.9.25 1.86.38 2.92.38 5.52 0 10-4.15 10-9.27S17.52 2 12 2zm.99 12.46-2.55-2.72-4.98 2.72 5.48-5.82 2.61 2.72 4.92-2.72-5.48 5.82z"/></svg>
+        Messenger
+    </a>
+    <a class="sh51-btn sh51-facebook" data-share="facebook" rel="noopener" target="_blank">
+        <svg viewBox="0 0 24 24"><path d="M22 12.06C22 6.5 17.52 2 12 2S2 6.5 2 12.06c0 5 3.66 9.16 8.44 9.94v-7.03H7.9v-2.91h2.54V9.85c0-2.51 1.49-3.9 3.77-3.9 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56v1.87h2.78l-.45 2.91h-2.33V22c4.78-.78 8.44-4.94 8.44-9.94z"/></svg>
+        Facebook
+    </a>
+    <a class="sh51-btn sh51-instagram" data-share="instagram" rel="noopener">
+        <svg viewBox="0 0 24 24"><path d="M12 2.16c3.2 0 3.58.01 4.85.07 3.25.15 4.77 1.69 4.92 4.92.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.15 3.23-1.66 4.77-4.92 4.92-1.27.06-1.64.07-4.85.07s-3.58-.01-4.85-.07c-3.26-.15-4.77-1.7-4.92-4.92-.06-1.27-.07-1.65-.07-4.85s.01-3.58.07-4.85C2.38 3.9 3.9 2.38 7.15 2.23 8.42 2.17 8.8 2.16 12 2.16zm0 5.84a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0 6.6a2.6 2.6 0 1 1 0-5.2 2.6 2.6 0 0 1 0 5.2zm5.2-6.76a.94.94 0 1 1-1.88 0 .94.94 0 0 1 1.88 0z"/></svg>
+        Instagram
+    </a>
+    <a class="sh51-btn sh51-viber" data-share="viber" rel="noopener">
+        <svg viewBox="0 0 24 24"><path d="M12.03 2C6.93 2 3 5.5 3 10.2c0 2.86 1.5 5.4 3.86 6.98-.13 1.02-.5 2.7-.58 3.09-.1.48.18.47.38.34.15-.1 2.36-1.57 3.32-2.22.66.1 1.34.16 2.05.16 5.1 0 9.03-3.5 9.03-8.35C21 5.5 17.13 2 12.03 2z"/></svg>
+        Viber
+    </a>
+    <a class="sh51-btn sh51-imo" data-share="imo" rel="noopener">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-5.5 6.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm5.5 0a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm5.5 0a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/></svg>
+        imo
+    </a>
 </div>
 
-<script type="application/json" id="extra-invitationConfig"><%- jsonScriptSafe({ referralCode: referralCode, copied: t.referral_code_copied }) %></script>
-<script src="/js/views/extra-invitation.js"></script>
 
-<%- include('../partials/bottom-nav') %>
-</body></html>
+<%# ===== (৩) নিচের কনফিগ-স্ক্রিপ্ট লাইনটা সম্পূর্ণ প্রতিস্থাপন করুন ===== %>
+
+<%# আগে ছিল: %>
+<%#
+<script type="application/json" id="extra-invitationConfig"><%- jsonScriptSafe({ referralCode: referralCode, copied: t.referral_code_copied }) %></script>
+%>
+
+<%# এখন হবে: %>
+<script type="application/json" id="extra-invitationConfig"><%- jsonScriptSafe({ referralCode: referralCode, referralLink: referralLink, copied: t.referral_code_copied }) %></script>
