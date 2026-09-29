@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.127.0",
-    "@sentry/node": "^10.75.0",
+    "@sentry/node": "^11.0.0",
     "@tailwindcss/postcss": "^4.3.3",
     "bcryptjs": "^2.4.3",
     "bullmq": "^5.80.10",
