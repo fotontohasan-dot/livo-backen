@@ -99,7 +99,17 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: '30d',
   etag: true,
-  immutable: true
+  immutable: true,
+  // pwa.js ও manifest.json-এর ইউআরএলে সবসময় ?v= থাকে না (যেমন পুরনো ক্যাশড
+  // HTML)। 30d immutable মানে ব্রাউজার ফাইলটা ৩০ দিন আর সার্ভারকে জিজ্ঞেসই
+  // করে না — ফলে পুরনো pwa.js আটকে থাকত (সার্ভিস ওয়ার্কারের fetch-ও
+  // HTTP ক্যাশ ঘুরে একই পুরনো কপি পেত)। তাই এই দুটো প্রতিবার revalidate হবে।
+  setHeaders: (res, filePath) => {
+    const base = path.basename(filePath);
+    if (base === 'pwa.js' || base === 'manifest.json' || base === 'admin-manifest.json') {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  }
 }));
 
 const cspDirectives = {
