@@ -480,6 +480,15 @@ router.get('/withdraw', isAuth, requireFeature('withdrawal'), attachWithdrawalWi
     } catch (e) {
       console.error('withdraw pin status error:', e.message);
     }
+    // টার্নওভার লক। যাচাই ব্যর্থ হলে fail-closed: ফর্ম আটকে থাকে (POST-এও একই
+    // চেক আছে), তাই ভুল করে "আনলকড" দেখানোর সুযোগ নেই।
+    let withdrawLock = { allowed: true, pending: [] };
+    try {
+      withdrawLock = await canWithdraw(req.session.user.id);
+    } catch (e) {
+      console.error('withdraw turnover lookup error:', e.message);
+      withdrawLock = { allowed: false, pending: [], checkFailed: true };
+    }
     let ewalletCards = [];
     let cryptoCards = [];
     try {
@@ -492,7 +501,8 @@ router.get('/withdraw', isAuth, requireFeature('withdrawal'), attachWithdrawalWi
       coins,
       cards: ewalletCards,
       cryptoCards,
-      hasWithdrawPin
+      hasWithdrawPin,
+      withdrawLock
     });
   } catch (err) {
     // আগে নীরবে '/'-এ ফেলে দেওয়া হতো, কোনো বার্তা ছাড়া — ইউজারের কাছে
@@ -503,6 +513,20 @@ router.get('/withdraw', isAuth, requireFeature('withdrawal'), attachWithdrawalWi
   }
 });
 
+
+// উইথড্র পেজের টার্নওভার পপআপ এই এন্ডপয়েন্ট পোল করে — টার্নওভার পূরণ হলে
+// পেজ রিলোড ছাড়াই বাটন আনব্লক হয়। এটা শুধু UI-র জন্য; আসল গেট POST /withdraw-এ।
+router.get('/withdraw/turnover-status', isAuth, requireFeature('withdrawal'), async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  try {
+    const check = await canWithdraw(req.session.user.id);
+    res.json({ success: true, allowed: !!check.allowed, pending: check.pending || [] });
+  } catch (err) {
+    console.error('turnover-status error:', err.message);
+    // ব্যর্থ হলে আনলক বলা যাবে না
+    res.status(500).json({ success: false, allowed: false, pending: [] });
+  }
+});
 
 router.post('/withdraw', isAuth, requireFeature('withdrawal'), requireWithdrawalWindow(), async (req, res) => {
   const { method, account_number, password, withdraw_pin } = req.body;
@@ -560,11 +584,11 @@ router.post('/withdraw', isAuth, requireFeature('withdrawal'), requireWithdrawal
   try {
     const check = await canWithdraw(userId);
     if (!check.allowed) {
-      let msg = 'উত্তোলনের আগে বোনাসের টার্নওভার পূরণ করুন। বাকি: ';
+      let msg = req.t('payment_turnover_incomplete_prefix');
       const parts = [];
       check.pending.forEach(p => {
-        if (p.sportsLeft > 0) parts.push(`স্পোর্টস ${p.sportsLeft.toFixed(0)}`);
-        if (p.casinoLeft > 0) parts.push(`ক্যাসিনো ${p.casinoLeft.toFixed(0)}`);
+        if (p.sportsLeft > 0) parts.push(req.t('payment_turnover_sports_left').replace('{value}', p.sportsLeft.toFixed(0)));
+        if (p.casinoLeft > 0) parts.push(req.t('payment_turnover_casino_left').replace('{value}', p.casinoLeft.toFixed(0)));
       });
       msg += parts.join(', ');
       req.flash('error', msg);

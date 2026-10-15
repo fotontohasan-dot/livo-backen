@@ -3096,5 +3096,20 @@
   "apw_admin_title": "Bet420 Admin",
   "als_bengali": "Bengali",
   "asec_never_changed": "Never changed",
-  "awd_sending": "Sending withdrawal request..."
+  "awd_sending": "Sending withdrawal request...",
+  "to_modal_title": "Complete your turnover",
+  "to_modal_sub": "Withdrawals unlock automatically once the turnover below is complete.",
+  "to_sports_label": "Sports",
+  "to_casino_label": "Casino",
+  "to_left_label": "left",
+  "to_done_of": "done",
+  "to_type_deposit": "Deposit bonus",
+  "to_type_daily": "Daily reward",
+  "to_type_referral": "Referral bonus",
+  "to_play_sports": "Play Sports",
+  "to_play_casino": "Play Casino",
+  "to_close": "Close",
+  "to_view_details": "View details",
+  "to_unlocked": "✅ Turnover complete! You can withdraw now.",
+  "to_check_failed": "Couldn't verify turnover. Withdrawals are temporarily paused — please try again shortly."
 }

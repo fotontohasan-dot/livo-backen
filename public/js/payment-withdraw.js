@@ -53,6 +53,114 @@
 
     initTabs();
     initBalanceRefresh();
+    initTurnoverGate();
+  }
+
+  // ==== টার্নওভার গেট: পপআপ লাইভ আপডেট + পূরণ হলে স্বয়ংক্রিয় আনব্লক ====
+  // আসল বাধ্যবাধকতা সার্ভারে (POST /payment/withdraw → canWithdraw)। এই কোড শুধু
+  // UI: ইউজার অন্য ট্যাবে/পেজে বেট ধরে ফিরে এলে রিলোড ছাড়াই বাটন খুলে দেয়।
+  var POLL_MS = 15000;
+
+  function money(v) { return (Number(v) || 0).toFixed(2); }
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+
+  function addLine(row, label, left, required, done, L) {
+    var line = el('div', 'to-line');
+    line.appendChild(el('span', null, label));
+    line.appendChild(el('b', null, '\u09F3 ' + money(left) + ' ' + L.left));
+    row.appendChild(line);
+    var bar = el('progress', 'to-bar');
+    bar.max = Number(required) || 0;
+    bar.value = Number(done) || 0;
+    row.appendChild(bar);
+    row.appendChild(el('div', 'to-meta',
+      '\u09F3 ' + money(done) + ' / \u09F3 ' + money(required) + ' ' + L.done));
+  }
+
+  function renderPending(list, pending, L) {
+    while (list.firstChild) list.removeChild(list.firstChild);
+    pending.forEach(function (p) {
+      if (!(p.sportsLeft > 0 || p.casinoLeft > 0)) return;
+      var row = el('div', 'to-row');
+      row.appendChild(el('div', 'to-row-title', L.types[p.type] || p.type));
+      if (p.sportsLeft > 0) addLine(row, L.sports, p.sportsLeft, p.sportsRequired, p.sportsDone, L);
+      if (p.casinoLeft > 0) addLine(row, L.casino, p.casinoLeft, p.casinoRequired, p.casinoDone, L);
+      list.appendChild(row);
+    });
+  }
+
+  function unlockWithdraw(modal, L) {
+    var btn = document.getElementById('withdrawSubmitBtn');
+    var banner = document.getElementById('turnoverBanner');
+    var list = document.getElementById('turnoverList');
+    var actions = document.getElementById('turnoverActions');
+    var sub = document.getElementById('turnoverSub');
+    if (banner && banner.parentNode) banner.parentNode.removeChild(banner);
+    if (list) { while (list.firstChild) list.removeChild(list.firstChild); }
+    if (actions) actions.style.display = 'none';
+    if (sub) sub.style.display = 'none';
+    if (list) list.appendChild(el('div', 'to-unlocked', L.unlocked));
+    modal.setAttribute('data-locked', '0');
+    if (btn) {
+      btn.textContent = btn.getAttribute('data-label-ready') || btn.textContent;
+      // উইন্ডো বন্ধ / PIN নেই / ওয়ালেট নেই — এগুলো টার্নওভার দিয়ে খোলে না
+      if (btn.getAttribute('data-other-gates') !== '1') btn.disabled = false;
+    }
+  }
+
+  function initTurnoverGate() {
+    var modal = document.getElementById('turnoverModal');
+    if (!modal || modal.getAttribute('data-locked') !== '1') return;
+    var url = modal.getAttribute('data-status-url');
+    var list = document.getElementById('turnoverList');
+    if (!url || !list) return;
+
+    var L = {
+      sports: modal.getAttribute('data-l-sports'),
+      casino: modal.getAttribute('data-l-casino'),
+      left: modal.getAttribute('data-l-left'),
+      done: modal.getAttribute('data-l-done'),
+      unlocked: modal.getAttribute('data-l-unlocked'),
+      types: {
+        deposit: modal.getAttribute('data-l-type-deposit'),
+        daily: modal.getAttribute('data-l-type-daily'),
+        referral: modal.getAttribute('data-l-type-referral')
+      }
+    };
+    var timer = null;
+    var inFlight = false;
+
+    function check() {
+      if (inFlight || modal.getAttribute('data-locked') !== '1') return;
+      inFlight = true;
+      fetch(url, { credentials: 'same-origin', cache: 'no-store', headers: { 'Accept': 'application/json' } })
+        .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+        .then(function (data) {
+          if (!data || data.success !== true) return; // ব্যর্থ হলে লক বহাল
+          if (data.allowed === true) {
+            unlockWithdraw(modal, L);
+            if (timer) { clearInterval(timer); timer = null; }
+            modal.classList.add('show'); // সুখবর পপআপে দেখানো হয়, ইউজার নিজে বন্ধ করবে
+            modal.classList.remove('hidden');
+          } else {
+            renderPending(list, data.pending || [], L);
+          }
+        })
+        .catch(function () { /* নেটওয়ার্ক সমস্যা: লক বহাল, পরের পোলে আবার */ })
+        .finally(function () { inFlight = false; });
+    }
+
+    timer = setInterval(check, POLL_MS);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) check(); });
+    window.addEventListener('focus', check);
+    // প্রথম লোডে পপআপের "চেক-ফেইলড" অবস্থা থাকলে সাথে সাথে আবার চেষ্টা
+    check();
   }
 
   // E-wallet / ক্রিপ্টো ট্যাব। টেমপ্লেটের ইনলাইন <script> থেকে সরানো হলো।
