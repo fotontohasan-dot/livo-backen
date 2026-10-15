@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const { createBonus, canWithdraw } = require('../services/turnover');
 const { processReferralDeposit } = require('../services/referral');
 const paymentMethods = require('../services/paymentMethods');
+const trxIds = require('../services/transactionId');
 const rbac = require('../services/rbac');
 const { logEvent: logAuditEvent } = require('../services/auditLog');
 const { PublicError, publicMessage } = require('../utils/safeError');
@@ -137,7 +138,7 @@ router.get('/deposit/methods', isAuth, async (req, res) => {
 });
 
 router.post('/deposit', isAuth, requireFeature('deposit'), async (req, res) => {
-  const { method, transaction_id, account_number } = req.body;
+  const { method, account_number } = req.body;
   const wantBonus = req.body.want_bonus === 'yes';
   const amount = parseAmount(req.body.amount);
   const userId = req.session.user.id;
@@ -148,10 +149,17 @@ router.post('/deposit', isAuth, requireFeature('deposit'), async (req, res) => {
     req.flash('error', req.t('payment_invalid_method'));
     return res.redirect('/payment/deposit');
   }
-  if (!method || amount === null || !transaction_id || !account_number) {
+  // TrxID: trim + ফরম্যাট যাচাই। `key` (বড়হাতের রূপ) দিয়ে ডুপ্লিকেট তুলনা হয়।
+  const trx = trxIds.normalizeTransactionId(req.body.transaction_id);
+  if (!method || amount === null || (!trx.ok && trx.reason === 'missing') || !account_number) {
     req.flash('error', req.t('payment_all_fields_required'));
     return res.redirect('/payment/deposit');
   }
+  if (!trx.ok) {
+    req.flash('error', req.t('payment_invalid_transaction_id'));
+    return res.redirect('/payment/deposit');
+  }
+  const transaction_id = trx.value;
 
   if (channelId !== null) {
     try {
@@ -169,33 +177,25 @@ router.post('/deposit', isAuth, requireFeature('deposit'), async (req, res) => {
     return res.redirect('/payment/deposit');
   }
 
-  // ==== Duplicate Transaction ID ব্লক ====
-  // bd8b1b2-এর rewrite-এ এই চেকটা সম্পূর্ণ হারিয়ে গিয়েছিল — অর্থাৎ যেকোনো
-  // TrxID যতবার খুশি, যেকোনো অ্যাকাউন্ট থেকে দাবি করা যাচ্ছিল।
-  //
-  // দুটো আলাদা নিয়ম, কারণ ঝুঁকিও আলাদা:
-  //
-  //   ১. **অন্য ইউজারের ব্যবহার করা TrxID** — status যাই হোক, সবসময় ব্লক।
-  //      একই পেমেন্ট রেফারেন্স দুই অ্যাকাউন্টে বসানো মানে payment identity
-  //      confusion — কোন জমাটা আসলে কার, রেকর্ড থেকে আর বলা যায় না।
-  //
-  //   ২. **নিজের rejected TrxID** — আবার সাবমিট করা যাবে। টাইপো করে reject
-  //      হওয়া আইডি শুদ্ধ করে দেওয়ার বৈধ প্রয়োজন আছে, আর নিজের রেকর্ডে
-  //      পরিচয়-বিভ্রান্তির ঝুঁকি নেই।
+  // ==== Duplicate Transaction ID ব্লক (আগাম চেক) ====
+  // একই TrxID যেকোনো মেথড/ডিপোজিটে একবারের বেশি ব্যবহার করা যাবে না — তুলনা case ও
+  // whitespace-অসংবেদনশীল, আর মেথড-নিরপেক্ষ (services/transactionId.js)।
+  //   ১. অন্য ইউজারের ব্যবহার করা TrxID — status যাই হোক, সবসময় ব্লক।
+  //   ২. নিজের TrxID — rejected হলে আবার দেওয়া যাবে (টাইপো শোধরানোর বৈধ প্রয়োজন);
+  //      pending/approved হলে ব্লক।
+  // এই চেকটা শুধু দ্রুত ফিডব্যাকের জন্য; আসল গ্যারান্টি নিচের ট্রানজেকশনের ভেতরের
+  // লক+চেক এবং ডাটাবেজের unique index। আগে এটা fail-open ছিল (কোয়েরি ব্যর্থ হলে লগ
+  // করে এগিয়ে যেত) — এখন ব্যর্থ হলে সাবমিশন আটকায়।
   try {
-    const dupCheck = await pool.query(
-      `SELECT id FROM payment_requests
-       WHERE type='deposit' AND method=$1 AND transaction_id=$2
-         AND (user_id <> $3 OR status <> 'rejected')
-       LIMIT 1`,
-      [method, transaction_id, userId]
-    );
-    if (dupCheck.rows.length > 0) {
+    const dup = await trxIds.findDuplicate(pool, trx.key, userId);
+    if (dup) {
       req.flash('error', req.t('payment_duplicate_transaction_id'));
       return res.redirect('/payment/deposit');
     }
   } catch (e) {
     console.error('duplicate trx_id check error:', e.message);
+    req.flash('error', req.t('payment_generic_error'));
+    return res.redirect('/payment/deposit');
   }
 
   // দৈনিক লিমিট-চেক ও INSERT একই ট্রানজেকশনে, users রো-তে FOR UPDATE লক সহ —
@@ -247,6 +247,16 @@ router.post('/deposit', isAuth, requireFeature('deposit'), async (req, res) => {
       }
     }
 
+    // একই TrxID-র দুটো একসাথে আসা রিকোয়েস্ট (যেকোনো ইউজার/মেথড) এখানে সিরিয়াল হয়ে যায়;
+    // দ্বিতীয়টা প্রথমটার COMMIT-এর পর চেক চালিয়ে ডুপ্লিকেট দেখতে পায়।
+    await trxIds.lockKey(client, trx.key);
+    const dupInTx = await trxIds.findDuplicate(client, trx.key, userId);
+    if (dupInTx) {
+      await client.query('ROLLBACK');
+      req.flash('error', req.t('payment_duplicate_transaction_id'));
+      return res.redirect('/payment/deposit');
+    }
+
     await client.query(
       `INSERT INTO payment_requests (user_id, type, method, amount, transaction_id, account_number, status, want_bonus, channel_id) VALUES ($1, 'deposit', $2, $3, $4, $5, 'pending', $6, $7)`,
       [userId, method, amount, transaction_id, account_number, wantBonus, channelId]
@@ -256,7 +266,12 @@ router.post('/deposit', isAuth, requireFeature('deposit'), async (req, res) => {
     req.flash('success', req.t('payment_deposit_request_sent'));
     res.redirect('/payment/history');
   } catch (err) {
-    await client.query('ROLLBACK');
+    await client.query('ROLLBACK').catch(() => {});
+    if (trxIds.isUniqueViolation(err)) {
+      // ডাটাবেজের unique index ধরেছে — মানে অন্য কেউ ঠিক এই মুহূর্তে একই TrxID বসিয়েছে।
+      req.flash('error', req.t('payment_duplicate_transaction_id'));
+      return res.redirect('/payment/deposit');
+    }
     console.error('deposit error:', err.message);
     req.flash('error', req.t('payment_generic_error'));
     res.redirect('/payment/deposit');
@@ -496,6 +511,7 @@ router.get('/withdraw', isAuth, requireFeature('withdrawal'), attachWithdrawalWi
       ewalletCards = cardRes.rows.filter(c => c.wallet_kind !== 'crypto');
       cryptoCards = cardRes.rows.filter(c => c.wallet_kind === 'crypto');
     } catch (e) { /* wallet_kind column may not exist yet if migration hasn't run */ }
+
     res.render('payment/withdraw', {
       user: req.session.user,
       coins,
