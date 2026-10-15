@@ -799,12 +799,17 @@ if (process.env.ADMIN_RESET_TOKEN) {
         // দ্বিতীয় ধাপ ব্যর্থ হলে সিস্টেমে একজনও অ্যাডমিন থাকত না, আর টোকেন ফাঁস হলে বৈধ
         // অ্যাডমিনকে নীরবে সরিয়ে দেওয়া যেত। এখন কাউকে ডিমোট করা হয় না — লক্ষ্য অ্যাকাউন্টকে
         // শুধু admin করা/তৈরি করা হয়, আর সেটা যাচাই করার পরেই কমিট হয়।
-        const existing = await client.query('SELECT id FROM users WHERE LOWER(email) = LOWER($1)', [email]);
+        const existing = await client.query(
+          'SELECT id FROM users WHERE LOWER(email) = LOWER($1) ORDER BY (role = \'admin\') DESC, id ASC LIMIT 1',
+          [email]
+        );
         let targetId, resultLine;
         if (existing.rows.length > 0) {
           targetId = existing.rows[0].id;
           await client.query(
-            `UPDATE users SET password = $1, role = 'admin', email_verified = true, is_banned = false WHERE id = $2`,
+            // deleted_at পরিষ্কার না করলে সফট-ডিলিট করা অ্যাকাউন্টে রিকভারি "সম্পন্ন" বলত,
+            // কিন্তু লগইন (admin.deleted_at চেক) নীরবে ব্যর্থ হতো।
+            `UPDATE users SET password = $1, role = 'admin', email_verified = true, is_banned = false, deleted_at = NULL WHERE id = $2`,
             [hashed, targetId]
           );
           resultLine = `বিদ্যমান ইউজার #${targetId}-কে admin বানানো হলো।`;
@@ -821,11 +826,16 @@ if (process.env.ADMIN_RESET_TOKEN) {
 
         // কমিটের আগে যাচাই: অ্যাকাউন্টটা সত্যিই admin এবং লগইনযোগ্য অবস্থায় আছে তো?
         const verify = await client.query(
-          `SELECT role, is_banned FROM users WHERE id = $1`, [targetId]
+          `SELECT role, is_banned, deleted_at, password, email FROM users WHERE id = $1`, [targetId]
         );
-        if (!verify.rows[0] || verify.rows[0].role !== 'admin' || verify.rows[0].is_banned) {
+        if (!verify.rows[0] || verify.rows[0].role !== 'admin' || verify.rows[0].is_banned || verify.rows[0].deleted_at) {
           throw new Error('replacement admin verification failed');
         }
+        // সেভ হওয়া হ্যাশ দিয়ে আসলেই এই পাসওয়ার্ডে লগইন হবে কি না — কমিটের আগেই নিশ্চিত করা
+        if (!(await bcrypt.compare(password, verify.rows[0].password))) {
+          throw new Error('stored password hash does not match');
+        }
+        const storedEmail = verify.rows[0].email || email;
 
         await client.query('COMMIT');
         // অডিট ইভেন্ট ট্রানজ্যাকশনের বাইরে, কমিটের পরে — যাতে rollback হলে ভুল করে
@@ -836,6 +846,7 @@ if (process.env.ADMIN_RESET_TOKEN) {
         });
         res.type('text/plain').send(
           `সম্পন্ন।\n${resultLine}\n\nবিদ্যমান কোনো অ্যাডমিনকে ডিমোট করা হয়নি।\n` +
+          `লগইনে ব্যবহার করবে: ${storedEmail} (ইমেইল দিয়েই লগইন করো) এবং NEW_ADMIN_PASSWORD-এর মান।\n` +
           `এখন /admin/login-এ লগইন করো, তারপর ADMIN_RESET_TOKEN, NEW_ADMIN_EMAIL, NEW_ADMIN_PASSWORD মুছে ফেলো।`
         );
       } catch (err) {

@@ -62,6 +62,20 @@ describe('Admin Panel', () => {
     expect(res.status).toBe(200); // renders login page again with error, not a redirect
   });
 
+  // ফোনের কীবোর্ড সাজেশনে ইনপুটের শেষে স্পেস বসে যায়; সেটা বৈধ অ্যাডমিনকে আটকাত।
+  test('admin লগইন — username ও password-এর শেষের স্পেস সহ্য করে; ভুল পাসওয়ার্ড তবু ব্যর্থ', async () => {
+    const { username } = await makeAdminAgentWithToken();
+    const attempt = async (u, p) => {
+      const g = await getCsrfAgent('/admin/login');
+      return g.agent.post('/admin/login').type('form').send({ username: u, password: p, _csrf: g.token });
+    };
+    const okRes = await attempt(`${username} `, 'SecurePass123 ');
+    expect(okRes.status).toBe(302);
+    expect(okRes.headers.location).toMatch(/\/admin\/(2fa|login\/2fa)/);
+    const badRes = await attempt(`${username} `, 'WrongPass999');
+    expect(badRes.status).toBe(200);
+  });
+
   test('অস্তিত্বহীন admin username দিয়ে লগইনেও bcrypt.compare() চালানো হয় (টাইমিং এনিউমারেশন গার্ড)', async () => {
     const bcrypt = require('bcryptjs');
     const spy = jest.spyOn(bcrypt, 'compare');

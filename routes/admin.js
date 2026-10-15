@@ -219,7 +219,10 @@ const adminLoginLimiter = rateLimit({
 });
 
 router.post('/login', adminLoginLimiter, async (req, res) => {
-  const { username, password } = req.body;
+  // মোবাইল কীবোর্ডের সাজেশন/অটোকারেক্ট প্রায়ই শেষে একটা স্পেস বসিয়ে দেয় — ইমেইল/ইউজারনেমে
+  // সেটা থাকলে কোনো অ্যাডমিনই মিলত না, অথচ রিকভারি রুট ইমেইল trim করেই সেভ করে।
+  const username = String((req.body && req.body.username) || '').trim();
+  const password = String((req.body && req.body.password) || '');
 
   try {
     // ফর্মে "Username or Email" লেখা থাকলেও আগে শুধু username কলাম চেক হতো —
@@ -234,9 +237,18 @@ router.post('/login', adminLoginLimiter, async (req, res) => {
     );
 
     const admin = result.rows[0];
-    const isMatch = await bcrypt.compare(password, admin ? admin.password : DUMMY_BCRYPT_HASH);
+    let isMatch = await bcrypt.compare(password, admin ? admin.password : DUMMY_BCRYPT_HASH);
+    // রিকভারি রুট NEW_ADMIN_PASSWORD trim করে হ্যাশ করে; তাই ফোনে অটোমেটিক যোগ হওয়া
+    // শুরু/শেষের স্পেসের কারণে বৈধ পাসওয়ার্ড ফেরত না যায় — সেই ক্ষেত্রে trim করা রূপটাও মেলানো হয়।
+    if (admin && !isMatch && password !== password.trim()) {
+      isMatch = await bcrypt.compare(password.trim(), admin.password);
+    }
 
     if (!admin || !isMatch) {
+      // শুধু Render লগের ডায়াগনস্টিক — ব্যবহারকারীকে একই জেনেরিক বার্তা (enumeration নেই)।
+      // কোনো পাসওয়ার্ড/পূর্ণ ইমেইল লগ হয় না।
+      console.warn(`[admin-login] failed: reason=${admin ? 'bad_password' : 'no_admin_for_identifier'} ` +
+        `identifier=${username.slice(0, 2)}***(len ${username.length})`);
       // MEDIUM-2: ব্যর্থ admin login অবশ্যই audit করতে হবে (কোনো password/secret log নয়)
       await logAuditEvent({
         req, actorType: 'admin', actorId: admin ? admin.id : null,
