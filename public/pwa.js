@@ -66,6 +66,20 @@
       bar.innerHTML = '📲 অ্যাপ হিসেবে ইনস্টল করতে নিচের শেয়ার বাটনে ট্যাপ করে "Add to Home Screen" বেছে নিন।' +
         '<button style="margin-left:auto;background:none;border:none;color:#f59e0b;font-weight:700;font-size:16px;" onclick="this.parentElement.remove();localStorage.setItem(\'bet420_ios_install_hint_dismissed\',\'1\')">✕</button>';
       document.body.appendChild(bar);
+
+      // অটোমেটিক ৮ সেকেন্ড পর পপআপ সরিয়ে দেওয়া হয়
+      var autoDismissTimer = setTimeout(function () {
+        if (bar && bar.parentElement) {
+          bar.remove();
+        }
+      }, 8000);
+
+      // ম্যানুয়ালি বন্ধ করলে টাইমার ক্লিয়ার করা হয় (double-remove এড়াতে)
+      bar.addEventListener('click', function (e) {
+        if (e.target.tagName === 'BUTTON') {
+          clearTimeout(autoDismissTimer);
+        }
+      });
     }
   }
 })();
