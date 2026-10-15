@@ -739,6 +739,7 @@
   "payment_min_deposit_100": "Minimum deposit is 100 taka",
   "payment_daily_deposit_limit": "Daily deposit limit is {value1} taka. You can deposit {value2} taka more today.",
   "payment_duplicate_transaction_id": "This transaction ID has already been used.",
+  "payment_invalid_transaction_id": "Please enter a valid transaction ID (4–100 letters, numbers, - _ . : /).",
   "payment_deposit_request_sent": "Deposit request sent!",
   "payment_generic_error": "Something went wrong",
   "payment_min_withdraw_200": "Minimum withdrawal is 200 taka",

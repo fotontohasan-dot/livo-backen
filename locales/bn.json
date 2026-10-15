@@ -739,6 +739,7 @@
   "payment_min_deposit_100": "সর্বনিম্ন ডিপোজিট ১০০ টাকা",
   "payment_daily_deposit_limit": "দৈনিক ডিপোজিট সীমা {value1} টাকা। আজ আর {value2} টাকা ডিপোজিট করতে পারবেন।",
   "payment_duplicate_transaction_id": "এই ট্রানজেকশন আইডি আগে ব্যবহার করা হয়েছে।",
+  "payment_invalid_transaction_id": "অনুগ্রহ করে সঠিক ট্রানজেকশন আইডি দিন (৪–১০০টি অক্ষর/সংখ্যা; - _ . : / ব্যবহার করা যাবে)।",
   "payment_deposit_request_sent": "ডিপোজিট রিকোয়েস্ট পাঠানো হয়েছে!",
   "payment_generic_error": "সমস্যা হয়েছে",
   "payment_min_withdraw_200": "সর্বনিম্ন উইথড্র ২০০ টাকা",

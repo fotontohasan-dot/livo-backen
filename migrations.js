@@ -114,6 +114,36 @@ async function runMigrations() {
       WHERE type = 'deposit' AND status != 'rejected';
     `);
 
+    // মেথড-নিরপেক্ষ, case/whitespace-অসংবেদনশীল ইউনিকনেস: একই TrxID bkash-এ ব্যবহার হয়ে
+    // থাকলে nagad/rocket/bank/crypto-তে আর জমা দেওয়া যাবে না। এক্সপ্রেশনটা
+    // services/transactionId.js-এর KEY_SQL-এর সাথে হুবহু মিলতে হবে।
+    // আগে থেকেই ডুপ্লিকেট থাকলে ইনডেক্স বানানো যায় না (আর বানাতে গিয়ে ব্যর্থ হলে অ্যাপ বুট
+    // আটকে যেত) — তাই আগে যাচাই; ডুপ্লিকেট থাকলে ইতিহাস অক্ষত রেখে সতর্কবার্তা দিয়ে বাদ
+    // দেওয়া হয়। অ্যাপ-স্তরের চেক (routes/payment.js) তখনও নতুন ডুপ্লিকেট আটকায়।
+    {
+      const dupRows = await pool.query(`
+        SELECT COUNT(*)::int AS c FROM (
+          SELECT 1 FROM payment_requests
+          WHERE type = 'deposit' AND status != 'rejected' AND transaction_id IS NOT NULL
+          GROUP BY UPPER(BTRIM(transaction_id)) HAVING COUNT(*) > 1
+        ) d
+      `);
+      const dupCount = dupRows.rows[0] ? Number(dupRows.rows[0].c) : 0;
+      if (dupCount > 0) {
+        console.warn(
+          `⚠️ payment_requests: ${dupCount}টি TrxID একাধিক ডিপোজিটে ব্যবহৃত — ` +
+          `idx_pr_deposit_trxid_global_unique বানানো হয়নি। ডুপ্লিকেটগুলো পর্যালোচনা করে ` +
+          `(একটা রেখে বাকিগুলো reject করে) মাইগ্রেশন আবার চালান।`
+        );
+      } else {
+        await pool.query(`
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_pr_deposit_trxid_global_unique
+          ON payment_requests ((UPPER(BTRIM(transaction_id))))
+          WHERE type = 'deposit' AND status != 'rejected' AND transaction_id IS NOT NULL;
+        `);
+      }
+    }
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS notifications (
         id SERIAL PRIMARY KEY,
