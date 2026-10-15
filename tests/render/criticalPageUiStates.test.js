@@ -273,4 +273,33 @@ describe('Phase 13 — disabled state', () => {
     expect(res.status).toBe(200);
     expect(isDisabled(res.text)).toBe(false);
   });
+
+  // টার্নওভার লক: active বোনাস থাকলে বোতাম disabled + পপআপে বাকি পরিমাণ;
+  // বোনাস completed হলে এন্ডপয়েন্ট allowed:true দেয় (পপআপ এটাই দেখে আনব্লক করে)।
+  test('active বোনাস থাকলে বোতাম disabled, পপআপে টার্নওভার বাকি; পূরণ হলে আনলক', async () => {
+    const ins = await pool.query(
+      `INSERT INTO bonuses (user_id, bonus_type, bonus_amount, sports_required, casino_required, status)
+       VALUES ($1, 'deposit', 100, 500, 3500, 'active') RETURNING id`,
+      [pinUser.id]
+    );
+    try {
+      const res = await pinUser.agent.get('/payment/withdraw');
+      expect(res.status).toBe(200);
+      expect(isDisabled(res.text)).toBe(true);
+      expect(res.text).toContain('id="turnoverModal"');
+      expect(res.text).toMatch(/500\.00/);
+      expect(res.text).toMatch(/3500\.00/);
+
+      const locked = await pinUser.agent.get('/payment/withdraw/turnover-status');
+      expect(locked.body.allowed).toBe(false);
+
+      await pool.query(`UPDATE bonuses SET status='completed' WHERE id=$1`, [ins.rows[0].id]);
+      const open = await pinUser.agent.get('/payment/withdraw/turnover-status');
+      expect(open.body.allowed).toBe(true);
+      const page = await pinUser.agent.get('/payment/withdraw');
+      expect(isDisabled(page.text)).toBe(false);
+    } finally {
+      await pool.query('DELETE FROM bonuses WHERE id=$1', [ins.rows[0].id]);
+    }
+  });
 });

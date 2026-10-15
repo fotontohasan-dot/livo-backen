@@ -367,6 +367,39 @@ body.light-mode .promo-banner {
        alt="" aria-hidden="true" loading="eager" decoding="async" width="420" height="260">
 </div>
 
+<!-- ===== 3D Hero Particles Background ===== -->
+<div id="hero-3d" style="position:absolute; top:0; left:0; right:0; height:400px; z-index:-1;"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function() {
+  const container = document.getElementById('hero-3d');
+  if (!container) return;
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(75, window.innerWidth / 400, 0.1, 1000);
+  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+  renderer.setSize(window.innerWidth, 400);
+  container.appendChild(renderer.domElement);
+
+  const geometry = new THREE.BufferGeometry();
+  const count = 600;
+  const positions = new Float32Array(count * 3);
+  for (let i = 0; i < count * 3; i++) positions[i] = (Math.random() - 0.5) * 20;
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const material = new THREE.PointsMaterial({ size: 0.05, color: 0x00ffaa, transparent: true, opacity: 0.8 });
+  const points = new THREE.Points(geometry, material);
+  scene.add(points);
+  camera.position.z = 8;
+
+  function animate() {
+    requestAnimationFrame(animate);
+    points.rotation.y += 0.001;
+    points.rotation.x += 0.0005;
+    renderer.render(scene, camera);
+  }
+  animate();
+})();
+</script>
+
 <!-- ===== Deposit, Withdrawal, Reward, Rebate Highlighted Shortcuts ===== -->
 <div class="shortcut-bar">
   <a href="/payment/deposit" class="shortcut-item">
@@ -581,6 +614,23 @@ body.light-mode .promo-banner {
   </div>
   <div class="game-grid-premium" id="gameContainer"></div>
 </div>
+
+<!-- ===== 3D Card Tilt Effect ===== -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.game-card-premium').forEach(card => {
+    card.addEventListener('mousemove', e => {
+      const r = card.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width - 0.5;
+      const y = (e.clientY - r.top) / r.height - 0.5;
+      card.style.transform = `perspective(1000px) rotateY(${x * 12}deg) rotateX(${-y * 12}deg) scale(1.05)`;
+    });
+    card.addEventListener('mouseleave', () => {
+      card.style.transform = 'perspective(1000px) rotateY(0) rotateX(0) scale(1)';
+    });
+  });
+});
+</script>
 
 <!-- ===== Mega Jackpot + Recent Big Wins ===== -->
 <style nonce="<%= cspNonce %>">

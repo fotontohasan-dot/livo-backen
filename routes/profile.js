@@ -603,14 +603,28 @@ router.get('/account-record', isAuth, async (req, res) => {
 });
 
 router.get('/cards', isAuth, async (req, res) => {
+  // cards.ejs টেমপ্লেট `cards` (ই-ওয়ালেট) আর `cryptoCards` দুটো আলাদা
+  // ভ্যারিয়েবল আশা করে। আগে এখানে শুধু `cards` পাঠানো হতো —
+  // `cryptoCards` কখনোই পাস হতো না, তাই টেমপ্লেটের
+  // `cryptoCards.length` লাইনে EJS ReferenceError ছুঁড়ত এবং প্রতিবার
+  // এই পেজে গেলেই (বা নতুন নাম্বার অ্যাড করতে গেলে) generic ৫০০ এরর
+  // পেজ দেখাত। wallet_kind কলাম না থাকলেও (মাইগ্রেশন না চলে থাকলে)
+  // crash না করতে ক্যাচ করা হয়েছে, payment.js-এর /withdraw-এর মতো।
   try {
     const result = await pool.query(
       'SELECT * FROM bank_cards WHERE user_id = $1 ORDER BY created_at DESC',
       [req.session.user.id]
     );
-    res.render('profile/cards', { user: req.session.user, cards: result.rows });
+    let ewalletCards = result.rows;
+    let cryptoCards = [];
+    try {
+      ewalletCards = result.rows.filter(c => c.wallet_kind !== 'crypto');
+      cryptoCards = result.rows.filter(c => c.wallet_kind === 'crypto');
+    } catch (e) { /* wallet_kind column may not exist yet if migration hasn't run */ }
+    res.render('profile/cards', { user: req.session.user, cards: ewalletCards, cryptoCards });
   } catch (err) {
-    res.render('profile/cards', { user: req.session.user, cards: [] });
+    console.error('cards GET error:', err.message);
+    res.render('profile/cards', { user: req.session.user, cards: [], cryptoCards: [], loadError: true });
   }
 });
 

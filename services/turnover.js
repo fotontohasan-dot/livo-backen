@@ -139,7 +139,12 @@ async function canWithdraw(userId) {
   const pending = res.rows.map(b => ({
     type: b.bonus_type,
     sportsLeft: Math.max(0, Number(b.sports_required) - Number(b.sports_done)),
-    casinoLeft: Number(b.casino_required) > 0 ? Math.max(0, Number(b.casino_required) - Number(b.casino_done)) : 0
+    casinoLeft: Number(b.casino_required) > 0 ? Math.max(0, Number(b.casino_required) - Number(b.casino_done)) : 0,
+    // পপআপে প্রগ্রেস বার দেখানোর জন্য (শুধু যোগ হয়েছে — আগের ফিল্ড অপরিবর্তিত)
+    sportsRequired: Number(b.sports_required) || 0,
+    sportsDone: Number(b.sports_done) || 0,
+    casinoRequired: Number(b.casino_required) || 0,
+    casinoDone: Number(b.casino_done) || 0
   }));
 
   return { allowed: false, pending };

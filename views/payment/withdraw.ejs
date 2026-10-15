@@ -61,6 +61,28 @@
   .ic.has-logo { background: transparent; overflow: hidden; padding: 0; }
   .ic.has-logo img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
   #withdrawSubmitBtn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  /* ===== টার্নওভার লক: ব্যানার + পপআপ ===== */
+  .to-banner { display: flex; align-items: center; gap: 10px; margin: 12px 16px; padding: 12px 14px; border-radius: 14px; background: rgba(230,30,38,0.15); border: 1px solid rgba(230,30,38,0.55); color: #fff; font-size: 13px; font-weight: 600; line-height: 1.5; }
+  .to-banner i { color: #ff5a60; }
+  .to-banner-btn { margin-left: auto; flex-shrink: 0; background: #e61e26; color: #fff; border: 0; border-radius: 10px; padding: 7px 12px; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .to-modal { display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.72); align-items: center; justify-content: center; padding: 16px; }
+  .to-modal.show { display: flex; }
+  .to-card { width: 100%; max-width: 420px; max-height: 88vh; overflow-y: auto; background: var(--bg-card, #171b23); color: var(--text-main, #fff); border: 1px solid rgba(230,30,38,0.5); border-radius: 18px; padding: 18px 16px; box-shadow: 0 16px 48px rgba(0,0,0,0.5); }
+  .to-head { display: flex; align-items: center; gap: 10px; }
+  .to-head i { color: #ff5a60; font-size: 20px; }
+  .to-head h3 { margin: 0; font-size: 18px; font-weight: 800; }
+  .to-sub { margin: 8px 0 12px; font-size: 13px; opacity: 0.85; line-height: 1.5; }
+  .to-row { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; }
+  .to-row-title { font-weight: 800; font-size: 13px; margin-bottom: 6px; color: #fbbf24; }
+  .to-line { display: flex; justify-content: space-between; font-size: 13px; margin-top: 4px; }
+  .to-bar { width: 100%; height: 8px; margin-top: 4px; accent-color: #22c55e; }
+  .to-meta { font-size: 11px; opacity: 0.7; margin-top: 2px; }
+  .to-actions { display: flex; gap: 8px; margin: 12px 0 8px; }
+  .to-btn { flex: 1; text-align: center; border: 0; border-radius: 12px; padding: 11px 8px; font-size: 14px; font-weight: 700; cursor: pointer; text-decoration: none; display: block; }
+  .to-btn-primary { background: #e61e26; color: #fff; }
+  .to-btn-ghost { width: 100%; background: rgba(255,255,255,0.1); color: inherit; }
+  .to-unlocked { background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.6); border-radius: 12px; padding: 12px; font-weight: 700; font-size: 14px; text-align: center; margin-bottom: 8px; }
 </style>
 
 <%
@@ -144,8 +166,63 @@
     // অথবা কোনো সংরক্ষিত কার্ড/ওয়ালেট নেই (টাকা পাঠানোর গন্তব্যই নেই)।
     const windowClosed = typeof withdrawalWindow !== 'undefined' && withdrawalWindow && !withdrawalWindow.open;
     const noDestination = !((cards && cards.length) || (cryptoCards && cryptoCards.length));
-    const formGated = windowClosed || !hasWithdrawPin || noDestination;
+    // টার্নওভার লক: সার্ভার withdrawLock পাঠায় (routes/payment.js GET /withdraw)।
+    // যাচাই ব্যর্থ হলে (checkFailed) fail-closed — লক ধরা হয়।
+    const lockInfo = (typeof withdrawLock !== 'undefined' && withdrawLock) ? withdrawLock : { allowed: true, pending: [] };
+    const turnoverLocked = lockInfo.allowed === false;
+    const otherGates = windowClosed || !hasWithdrawPin || noDestination;
+    const formGated = turnoverLocked || otherGates;
+    const toNum = function (v) { return (Number(v) || 0).toFixed(2); };
+    const toTypeLabel = function (ty) {
+      const k = 'to_type_' + ty;
+      return (t[k] && t[k] !== k) ? t[k] : ty;
+    };
+    const lockedRows = (lockInfo.pending || []).filter(function (p) { return p.sportsLeft > 0 || p.casinoLeft > 0; });
   %>
+  <% if (turnoverLocked) { %>
+    <div class="to-banner" id="turnoverBanner">
+      <i class="fas fa-lock"></i>
+      <span><%= lockInfo.checkFailed ? t.to_check_failed : t.withdraw_turnover_notice %></span>
+      <button type="button" class="to-banner-btn" data-modal-open="turnoverModal"><%= t.to_view_details %></button>
+    </div>
+  <% } %>
+  <div class="to-modal<%= turnoverLocked ? ' show' : '' %>" id="turnoverModal" role="dialog" aria-modal="true" aria-labelledby="turnoverModalTitle"
+       data-locked="<%= turnoverLocked ? '1' : '0' %>"
+       data-status-url="/payment/withdraw/turnover-status"
+       data-l-sports="<%= t.to_sports_label %>" data-l-casino="<%= t.to_casino_label %>"
+       data-l-left="<%= t.to_left_label %>" data-l-done="<%= t.to_done_of %>"
+       data-l-type-deposit="<%= t.to_type_deposit %>" data-l-type-daily="<%= t.to_type_daily %>" data-l-type-referral="<%= t.to_type_referral %>"
+       data-l-unlocked="<%= t.to_unlocked %>" data-l-failed="<%= t.to_check_failed %>">
+    <div class="to-card">
+      <div class="to-head">
+        <i class="fas fa-lock"></i>
+        <h3 id="turnoverModalTitle"><%= t.to_modal_title %></h3>
+      </div>
+      <p class="to-sub" id="turnoverSub"><%= lockInfo.checkFailed ? t.to_check_failed : t.to_modal_sub %></p>
+      <div id="turnoverList">
+        <% lockedRows.forEach(function (p) { %>
+          <div class="to-row">
+            <div class="to-row-title"><%= toTypeLabel(p.type) %></div>
+            <% if (p.sportsLeft > 0) { %>
+              <div class="to-line"><span><%= t.to_sports_label %></span><b>৳ <%= toNum(p.sportsLeft) %> <%= t.to_left_label %></b></div>
+              <progress class="to-bar" max="<%= toNum(p.sportsRequired) %>" value="<%= toNum(p.sportsDone) %>"></progress>
+              <div class="to-meta">৳ <%= toNum(p.sportsDone) %> / ৳ <%= toNum(p.sportsRequired) %> <%= t.to_done_of %></div>
+            <% } %>
+            <% if (p.casinoLeft > 0) { %>
+              <div class="to-line"><span><%= t.to_casino_label %></span><b>৳ <%= toNum(p.casinoLeft) %> <%= t.to_left_label %></b></div>
+              <progress class="to-bar" max="<%= toNum(p.casinoRequired) %>" value="<%= toNum(p.casinoDone) %>"></progress>
+              <div class="to-meta">৳ <%= toNum(p.casinoDone) %> / ৳ <%= toNum(p.casinoRequired) %> <%= t.to_done_of %></div>
+            <% } %>
+          </div>
+        <% }) %>
+      </div>
+      <div class="to-actions" id="turnoverActions">
+        <a class="to-btn to-btn-primary" href="/sports"><%= t.to_play_sports %></a>
+        <a class="to-btn to-btn-primary" href="/games"><%= t.to_play_casino %></a>
+      </div>
+      <button type="button" class="to-btn to-btn-ghost" data-modal-close="turnoverModal"><%= t.to_close %></button>
+    </div>
+  </div>
   <% if (!hasWithdrawPin) { %>
     <div class="instr rt2-4" id="pinNotConfiguredNotice">
       <p class="rt2-5">⚠️ <%= t.wd2_title %><%= lang === 'en' ? ' ' : 'ের ' %>আগে আপনার Withdraw PIN সেট করুন — <a class="rt2-6" href="/profile/security"><%= t.wd2_set_here %></a></p>
@@ -209,7 +286,10 @@
     <%# বন্ধ-সময় ও "ওয়ালেট যোগ করুন" বার্তা দুটো ইচ্ছাকৃতভাবে লুকানো (ইউজারের অনুরোধে);
         সাবমিট বাটন gate (formGated) আগের মতোই কাজ করছে — শর্ত পূরণ না হলে বাটন disabled। %>
 
-    <button type="submit" id="withdrawSubmitBtn" class="submit-btn"<% if (formGated) { %> disabled<% } %>><%= t.wd2_submit_btn %></button>
+    <button type="submit" id="withdrawSubmitBtn" class="submit-btn"
+            data-other-gates="<%= otherGates ? '1' : '0' %>"
+            data-label-ready="<%= t.wd2_submit_btn %>"
+            <% if (formGated) { %> disabled<% } %>><%= turnoverLocked ? t.wd_complete_turnover : t.wd2_submit_btn %></button>
   </form>
 </div>
 
