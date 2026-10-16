@@ -14,4 +14,4 @@
 
 <!-- ==================== CSRF টোকেন ==================== -->
 <meta name="csrf-token" content="<%= locals.csrfToken || '' %>">
-<script src="/js/csrf-inject.js"></script>
+<script src="/js/csrf-inject.js?v=<%= locals.assetVersion || 'dev' %>"></script>

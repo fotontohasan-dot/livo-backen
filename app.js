@@ -371,6 +371,11 @@ const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const sessionMiddleware = session({
   store: sessionStore,
   secret: SESSION_SECRET,
+  // proxy: true — `secure` কুকি বসানো X-Forwarded-Proto হেডারের উপর নির্ভর করে, 'trust proxy'
+  // hop সংখ্যা ঠিক না থাকলেও। hop ভুল হলে (Cloudflare + Render = ২) express-session
+  // `req.secure` false দেখে Secure কুকি বসাতেই অস্বীকার করত — ফলে কোনো কুকিই যেত না এবং
+  // প্রতিটা রিকোয়েস্টে ইউজার/অ্যাডমিন "লগআউট" ও CSRF টোকেন মিসম্যাচ দেখত।
+  proxy: true,
   resave: false,
   saveUninitialized: false,
   rolling: true,
@@ -922,6 +927,25 @@ app.use((req, res, next) => {
 // ==================== CSRF টোকেন সুরক্ষা (Synchronizer Token Pattern) ====================
 const { csrfProtection } = require('./middleware/csrf');
 app.use(csrfProtection);
+
+// দীর্ঘক্ষণ খোলা ট্যাব/bfcache থেকে ফিরে আসা পেজের CSRF টোকেন পুরনো হয়ে যেতে পারে
+// (লগইনে সেশন রোটেট হলে, বা সেশন রিনিউ হলে)। public/js/csrf-inject.js এই এন্ডপয়েন্ট
+// থেকে নতুন টোকেন এনে মেটা ট্যাগ/ফর্ম/ফেচ হেডার আপডেট করে, তাই ইউজারকে পেজ রিফ্রেশ করতে হয় না।
+// GET-only, সেশন-বাউন্ড, কখনো ক্যাশ হয় না, আর cross-origin পড়া যায় না (CORS allow-list + SameSite)।
+app.get('/csrf-token', (req, res) => {
+  res.set('Cache-Control', 'no-store, private');
+  res.json({ token: res.locals.csrfToken || null, authenticated: !!(req.session && req.session.user) });
+});
+
+// সব ডায়নামিক HTML পেজ no-store — নইলে ব্রাউজার back/forward বা প্রক্সি ক্যাশ থেকে পুরনো
+// পেজ (পুরনো CSRF টোকেনসহ) দেখায়, আর ফর্ম সাবমিটে "Invalid or Expired CSRF Token" আসে।
+// স্ট্যাটিক ফাইল এর আগেই সার্ভ হয়ে গেছে, তাই তাদের ক্যাশিং অপরিবর্তিত।
+app.use((req, res, next) => {
+  if (req.method === 'GET' && !res.getHeader('Cache-Control')) {
+    res.setHeader('Cache-Control', 'no-store, private');
+  }
+  next();
+});
 
 // ==================== API GATEWAY ====================
 app.use(responseHelpers);

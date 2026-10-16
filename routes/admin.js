@@ -191,13 +191,21 @@ async function logAdminAction(adminId, adminUsername, actionType, details, ip = 
     } catch (e) { /* queue মডিউল লোড না হলেও সমস্যা নেই */ }
 }
 
-// ==================== অ্যাডমিন সেশনের জন্য কড়া কুকি পলিসি ====================
-// সাধারণ ইউজার সেশন থেকে আলাদা — অ্যাডমিন সেশন প্রোডাকশনে ৮ ঘণ্টা পর এক্সপায়ার হয়ে যাবে
-// এবং sameSite=strict থাকবে (cross-site request-এ কুকি পাঠানো হবে না)।
+// ==================== অ্যাডমিন সেশন পলিসি ====================
+// আগে প্রোডাকশনে অ্যাডমিন সেশন ৮ ঘণ্টা + SameSite=strict ছিল। দুটোই "বারবার লগআউট"-এর কারণ:
+//  • ৮ ঘণ্টা (rolling) — অ্যাডমিন একরাত নিষ্ক্রিয় থাকলেই সেশন শেষ।
+//  • SameSite=strict — পুশ নোটিফিকেশন/টেলিগ্রাম/ইমেইলের লিংক থেকে অ্যাডমিন পেজ খুললে
+//    ব্রাউজার কুকিই পাঠায় না, তাই লগইন পেজ দেখায়।
+// এখন ইউজার সেশনের মতোই (rolling) ৩০ দিন নিষ্ক্রিয়তার সীমা ও SameSite=lax।
+// কড়া করতে চাইলে ADMIN_SESSION_MAX_AGE_HOURS সেট করুন (যেমন 168 = ৭ দিন)।
+// নিরাপত্তা বজায় থাকে: লগইনে ২FA, প্রতি রিকোয়েস্টে DB থেকে role/ban যাচাই (middleware/auth.js),
+// ও সেশন রোটেশন — কুকির মেয়াদ বাড়ানো এগুলোর কোনোটা দুর্বল করে না।
 function applyAdminSessionPolicy(req) {
   if (process.env.NODE_ENV === 'production' && req.session && req.session.cookie) {
-    req.session.cookie.maxAge = 8 * 60 * 60 * 1000; // ৮ ঘণ্টা
-    req.session.cookie.sameSite = 'strict';
+    const hours = Number(process.env.ADMIN_SESSION_MAX_AGE_HOURS);
+    const maxAgeHours = Number.isFinite(hours) && hours > 0 ? hours : 30 * 24;
+    req.session.cookie.maxAge = maxAgeHours * 60 * 60 * 1000;
+    req.session.cookie.sameSite = 'lax';
   }
 }
 
