@@ -193,7 +193,7 @@
         <div class="dep-label"><%= t.dp_activity_label %></div>
         <label class="activity-row">
           <input type="radio" name="want_bonus_choice" value="bonus">
-          <span><%= t.dp_first_bonus %></span>
+          <span><%= (typeof bonusPct !== 'undefined' && bonusPct === 100) ? t.dp_first_bonus : String(t.dp_repeat_bonus).replace('{pct}', (typeof bonusPct !== 'undefined' ? bonusPct : 50)) %></span>
           <span class="amt">≥ ৳ 100.00</span>
         </label>
         <label class="activity-row">
