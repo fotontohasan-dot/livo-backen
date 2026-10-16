@@ -248,6 +248,13 @@ router.post('/live-agent', isAuth, requireFeature('live_chat'), async (req, res)
         message: req.session.user.username || ''
       });
     } catch (e) { /* alert ব্যর্থ হলেও handoff চলবে */ }
+    // emitAdminAlert শুধু অ্যাডমিন প্যানেলে যায়, Telegram-এ নয় — তাই এখানে আলাদা করে পাঠানো হচ্ছে
+    try {
+      const { notifyTelegram } = require('../services/telegramNotify');
+      const esc = (v) => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      notifyTelegram(`🙋 <b>লাইভ এজেন্ট রিকোয়েস্ট</b>\nইউজার: ${esc(req.session.user.username || 'ইউজার')}`, { category: 'support' })
+        .catch((e) => console.error('live-agent telegram error:', e.message));
+    } catch (e) { /* Telegram ব্যর্থ হলেও handoff চলবে */ }
     res.json({ status: 'waiting' });
   } catch (err) {
     console.error('chat live-agent error:', err.message);

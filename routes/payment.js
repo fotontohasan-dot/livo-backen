@@ -12,6 +12,7 @@ const { PublicError, publicMessage } = require('../utils/safeError');
 const businessTime = require('../utils/businessTime');
 const { requireFeature } = require('../middleware/featureGate');
 const { verifyPin, getPinStatus } = require('../services/withdrawPin');
+const { notifyTelegram } = require('../services/telegramNotify');
 const withdrawalWindowSvc = require('../services/withdrawalWindow');
 const { requireWithdrawalWindow, attachWithdrawalWindow } = require('../middleware/withdrawalWindow');
 
@@ -73,20 +74,41 @@ async function notifyAdmins(title, message) {
   }
 }
 
-// ==================== রিলোড বোনাসের হার ====================
+// ==================== ডিপোজিট বোনাসের হার ====================
 // কততম ডিপোজিট ও কোন বার অনুযায়ী বোনাস শতাংশ ঠিক হয়।
 //  ১ম ডিপোজিট: ১০০%
-//  ২য় ডিপোজিট: ৫০%
-//  শুক্রবার (যেকোনো ডিপোজিট): ৮০% (রিলোড)
-//  ৩য়+ সাধারণ দিন: ১৫%
+//  ২য় ডিপোজিট এবং তার পর সব সাধারণ দিনের ডিপোজিট: ৫০%
+//  শুক্রবার (১ম ডিপোজিটের পর যেকোনো ডিপোজিট): ৮০% (রিলোড)
 //  সর্বোচ্চ বোনাস ১৫০০০ কয়েন
 function bonusPercentFor(depositCountBefore, isFriday) {
   if (depositCountBefore === 0) return 100;   // প্রথম ডিপোজিট
   if (isFriday) return 80;                      // শুক্রবার রিলোড
-  if (depositCountBefore === 1) return 50;      // দ্বিতীয় ডিপোজিট
-  return 15;                                    // সাধারণ রিলোড
+  return 50;                                    // ২য় ও পরের সব ডিপোজিট
 }
 const MAX_BONUS = 15000;
+
+// এই ইউজারের approved ডিপোজিটের সংখ্যা — ডিপোজিট পেজের লেবেল ও আসল ক্রেডিট
+// (creditApprovedDeposit) একই হিসাব ব্যবহার করে, যাতে দুটো কখনো আলাদা না হয়।
+async function approvedDepositCount(db, userId, excludeRequestId = null) {
+  const r = await db.query(
+    `SELECT COUNT(*) FROM payment_requests WHERE user_id=$1 AND type='deposit' AND status='approved' AND ($2::int IS NULL OR id <> $2)`,
+    [userId, excludeRequestId]
+  );
+  return parseInt(r.rows[0].count, 10) || 0;
+}
+
+function escapeTelegramHtml(v) {
+  return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// অ্যাডমিনের Telegram-এ নোটিফিকেশন (ফায়ার-অ্যান্ড-ফরগেট — ব্যর্থ হলে ডিপোজিট/উইথড্র আটকায় না)
+function telegramAdminAlert(text, category) {
+  try {
+    notifyTelegram(text, { category }).catch((e) => console.error('payment telegram alert error:', e.message));
+  } catch (e) {
+    console.error('payment telegram alert error:', e.message);
+  }
+}
 
 const VALID_METHODS = ['bkash', 'nagad', 'rocket', 'upay', 'bank', 'crypto'];
 
@@ -104,11 +126,21 @@ router.get('/deposit', isAuth, requireFeature('deposit'), async (req, res) => {
     loadError = true;
   }
 
+  // এই ডিপোজিটে আসলে কত % বোনাস মিলবে — আগে লেবেলটা সবসময় "প্রথম জমায় ১০০%" স্ট্যাটিক লেখা ছিল
+  let bonusPct = 100;
+  try {
+    const before = await approvedDepositCount(pool, req.session.user.id);
+    bonusPct = bonusPercentFor(before, new Date().getDay() === 5);
+  } catch (e) {
+    console.error('deposit bonus pct error:', e.message);
+  }
+
   res.set('Cache-Control', 'no-store');
   res.render('payment/deposit', {
     user: req.session.user,
     accounts,
-    loadError
+    loadError,
+    bonusPct
   });
 });
 
@@ -251,6 +283,10 @@ router.post('/deposit', isAuth, requireFeature('deposit'), async (req, res) => {
     );
     await client.query('COMMIT');
     await notifyAdmins('নতুন ডিপোজিট রিকোয়েস্ট', `${req.session.user.username} ${amount} টাকা ডিপোজিট চেয়েছে (${method})।`);
+    telegramAdminAlert(
+      `💰 <b>নতুন ডিপোজিট রিকোয়েস্ট</b>\nইউজার: ${escapeTelegramHtml(req.session.user.username)}\nপরিমাণ: ${amount} টাকা\nমেথড: ${escapeTelegramHtml(method)}${wantBonus ? '\nবোনাস: নিতে চায়' : ''}`,
+      'deposit'
+    );
     req.flash('success', req.t('payment_deposit_request_sent'));
     res.redirect('/payment/history');
   } catch (err) {
@@ -629,6 +665,10 @@ router.post('/withdraw', isAuth, requireFeature('withdrawal'), requireWithdrawal
     if (req.session.user) req.session.user.coins = upd.rows[0].coins;
 
     await notifyAdmins('নতুন উইথড্র রিকোয়েস্ট', `${req.session.user.username} ${amount} টাকা উইথড্র চেয়েছে (${method})।`);
+    telegramAdminAlert(
+      `🏧 <b>নতুন উইথড্র রিকোয়েস্ট</b>\nইউজার: ${escapeTelegramHtml(req.session.user.username)}\nপরিমাণ: ${amount} টাকা\nমেথড: ${escapeTelegramHtml(method)}`,
+      'withdraw'
+    );
 
     req.flash('success', req.t('payment_withdraw_request_sent'));
     res.redirect('/payment/history');
@@ -792,11 +832,7 @@ async function creditApprovedDeposit(client, request) {
     await client.query('UPDATE users SET total_deposited = COALESCE(total_deposited,0) + $1 WHERE id=$2', [request.amount, request.user_id]);
 
     if (request.want_bonus) {
-      const cnt = await client.query(
-        `SELECT COUNT(*) FROM payment_requests WHERE user_id=$1 AND type='deposit' AND status='approved' AND id <> $2`,
-        [request.user_id, request.id]
-      );
-      const before = parseInt(cnt.rows[0].count);
+      const before = await approvedDepositCount(client, request.user_id, request.id);
       const isFriday = new Date().getDay() === 5;
       const pct = bonusPercentFor(before, isFriday);
       bonusGiven = Math.min(MAX_BONUS, Math.floor(request.amount * pct / 100));
