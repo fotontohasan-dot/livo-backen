@@ -4,7 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= t('admin_title_support_chat') %></title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind বিল্ড-টাইমে কম্পাইল করা CSS (npm run build:css)। আগে এখানে cdn.tailwindcss.com
+       স্ক্রিপ্ট ছিল, যেটা CSP আটকে দেয় — ফলে পুরো পেজের স্টাইল বাদ পড়ত, সব লেখা ডিফল্ট
+       কালো হয়ে ডার্ক ব্যাকগ্রাউন্ডে অদৃশ্য হয়ে যেত (বাকি অ্যাডমিন পেজগুলোর মতোই এখন এটাও কম্পাইল CSS ব্যবহার করে)। -->
+  <link rel="stylesheet" href="/css/tailwind.css?v=<%= locals.assetVersion || 'dev' %>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body class="bg-[#0f172a]">

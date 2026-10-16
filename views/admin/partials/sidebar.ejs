@@ -65,6 +65,9 @@
   .admin-table { width: 100%; border-collapse: collapse; font-size: 12px; }
   .admin-table th { text-align: left; padding: 8px 12px; color: #94a3b8; font-weight: 600; font-size: 10px; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.06); white-space: nowrap; }
   .admin-table td { padding: 9px 12px; color: #e2e8f0; border-bottom: 1px solid rgba(255,255,255,0.04); white-space: nowrap; }
+  /* TrxID — অনুমোদনের আগে অ্যাডমিনকে এটা মিলিয়ে দেখতে হয়, তাই ডার্ক ব্যাকগ্রাউন্ডে
+     মিশে না গিয়ে উজ্জ্বল হাইলাইট চিপ হিসেবে দেখানো হয় (ট্যাপ করলে পুরোটা সিলেক্ট হয়)। */
+  .trx-id { display: inline-block; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight: 800; font-size: 13px; letter-spacing: .4px; color: #fde68a; background: rgba(245,158,11,0.18); border: 1px solid rgba(245,158,11,0.6); border-radius: 8px; padding: 3px 9px; user-select: all; -webkit-user-select: all; }
   .badge { padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; }
   .badge-green { background: rgba(16,185,129,0.15); color: #10b981; }
   .badge-red { background: rgba(239,68,68,0.15); color: #ef4444; }
