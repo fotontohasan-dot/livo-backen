@@ -100,6 +100,10 @@
   .step2-btns button { flex: 1; padding: 15px; border-radius: 14px; font-weight: 800; font-size: 15px; border: none; }
   .btn-back { background: var(--bg-surface); color: var(--text-main); border: 1px solid var(--border-glass) !important; }
   .btn-submit { background: #e61e26; color: #fff; flex: 2 !important; }
+  .method-sub { font-size: 10px; font-weight: 800; letter-spacing: .4px; margin-top: 2px; padding: 1px 8px; border-radius: 999px; display: inline-block; }
+  .method-sub.agent { background: rgba(59,130,246,.15); color: #3b82f6; }
+  .method-sub.personal { background: rgba(230,30,38,.12); color: #e61e26; }
+  .next-btn[disabled] { opacity: .5; cursor: not-allowed; }
 </style>
 
 <div class="dep-wrap">
@@ -119,36 +123,41 @@
   <% } %>
 
   <form action="/payment/deposit" method="POST" id="depositForm">
-    <input type="hidden" name="channel_id" id="channelIdInput" value="">
     <input type="hidden" name="method" id="methodInput" value="nagad">
 
     <div id="step1">
       <div class="dep-section">
         <div class="dep-label"><%= t.dp_mode_label %></div>
         <div class="method-grid" id="methodGrid">
-          <div class="method-tile selected" data-method="nagad">
+          <div class="method-tile selected" data-method="nagad" data-type="agent">
             <div class="method-icon rt1-1"><span class="method-txt"><%= t.dp_cash_label %></span><img src="/images/nagad.png" alt="Nagad"></div>
             <div class="method-name">NAGAD</div>
+            <div class="method-sub agent">Agent</div>
           </div>
-          <div class="method-tile" data-method="bkash">
+          <div class="method-tile" data-method="bkash" data-type="agent">
             <div class="method-icon rt1-2"><span class="method-txt">bK</span><img src="/images/bkash.png" alt="Bkash"></div>
             <div class="method-name">Bkash</div>
+            <div class="method-sub agent">Agent</div>
           </div>
-          <div class="method-tile" data-method="rocket">
+          <div class="method-tile" data-method="rocket" data-type="agent">
             <div class="method-icon rt1-3"><span class="method-txt">RK</span><img src="/images/rocket.png" alt="Rocket"></div>
             <div class="method-name">ROCKET</div>
+            <div class="method-sub agent">Agent</div>
           </div>
-          <div class="method-tile" data-method="upay">
+          <div class="method-tile" data-method="upay" data-type="agent">
             <div class="method-icon rt1-4"><span class="method-txt">Up</span><img src="/images/upay.png" alt="Upay"></div>
             <div class="method-name">Upay</div>
+            <div class="method-sub agent">Agent</div>
           </div>
-          <div class="method-tile" data-method="nagad" data-agent="1">
+          <div class="method-tile" data-method="nagad" data-type="personal">
             <div class="method-icon rt1-1"><span class="method-txt">SM</span><img src="/images/nagad.png" alt="Nagad"></div>
             <div class="method-name">Send Money<br>Nagad</div>
+            <div class="method-sub personal">Personal</div>
           </div>
-          <div class="method-tile" data-method="bkash" data-agent="1">
+          <div class="method-tile" data-method="bkash" data-type="personal">
             <div class="method-icon rt1-2"><span class="method-txt">SM</span><img src="/images/bkash.png" alt="Bkash"></div>
             <div class="method-name">Send Money<br>Bkash</div>
+            <div class="method-sub personal">Personal</div>
           </div>
           <div class="method-tile" data-method="crypto">
             <div class="method-icon rt1-5"><span class="method-txt">₮</span><img src="/images/usdt.png" alt="USDT"></div>
@@ -200,9 +209,9 @@
     <div id="step2" class="step-2">
       <div class="trx-box">
         <p class="rt1-7"><%= t.dp_send_to_number %></p>
-        <div class="trx-number" id="displayNumber"><%= payNumber %></div>
+        <div class="trx-number" id="displayNumber">—</div>
         <button type="button" id="depCopyBtn" class="copy-btn"><i class="far fa-copy"></i> <%= t.dp_copy_btn %></button>
-        <p class="rt1-8">📲 <b id="selectedMethodName">Nagad</b> Personal</p>
+        <p class="rt1-8">📲 <b id="selectedMethodName">Nagad</b> <span id="selectedTypeName">Agent</span></p>
         <p class="rt1-9"><%= t.dp_send_then_fill %></p>
       </div>
 
@@ -224,65 +233,100 @@
 </div>
 
 <script nonce="<%= cspNonce %>">
-  var CHANNELS_BY_METHOD = <%- JSON.stringify(channelsByMethod || {}) %>;
+  // নম্বরের একমাত্র উৎস: অ্যাডমিনের payment_methods (সার্ভার-রেন্ডার করা প্রাথমিক তালিকা,
+  // এরপর /payment/deposit/methods থেকে নিয়মিত রিফ্রেশ — অ্যাডমিন নম্বর যোগ/বদলালে
+  // পেজ রিলোড ছাড়াই কয়েক সেকেন্ডে ইউজারের স্ক্রিনে আপডেট হয়)।
+  var ACCOUNTS = <%- JSON.stringify(accounts || []).replace(/</g, '\\u003c') %>;
   var METHOD_LABELS = { nagad: 'Nagad', bkash: 'Bkash', rocket: 'Rocket', upay: 'Upay', crypto: 'USDT' };
-  var currentMethod = 'nagad';
+  var TYPE_LABELS = { agent: 'Agent', personal: 'Personal' };
+  var current = { method: 'nagad', type: 'agent' };
+  var selectedAccountId = null;
+  var REFRESH_MS = 15000;
 
-  function renderChannels(method) {
+  function accountsFor(method, type) {
+    return (Array.isArray(ACCOUNTS) ? ACCOUNTS : []).filter(function (a) {
+      if (!a || a.method !== method) return false;
+      // crypto-র কোনো Agent/Personal ধারণা নেই — যেকোনো টাইপ চলবে
+      return method === 'crypto' || a.accountType === type;
+    });
+  }
+
+  function setNumberText(text) {
+    var disp = document.getElementById('displayNumber');
+    if (disp) disp.textContent = text;
+  }
+
+  function renderAccounts() {
     var grid = document.getElementById('channelGrid');
-    if (!grid) return;
-    grid.innerHTML = '';
-    var list = CHANNELS_BY_METHOD[method] || [];
-    var idInput = document.getElementById('channelIdInput');
-    if (!Array.isArray(list) || list.length === 0) {
-      if (idInput) idInput.value = '';
-      // আগে এখানে চুপচাপ কিছু না দেখিয়ে ফিরে যেত — ইউজারের কাছে মনে হতো
-      // মেথড ট্যাপ করাই কাজ করছে না, কারণ কোনো নম্বর/চ্যানেল দেখাত না।
-      var msg = document.createElement('div');
-      msg.style.cssText = 'grid-column:1/-1; color:var(--text-muted); font-size:12px; padding:8px 0;';
-      msg.textContent = '<%= t.dp_no_channel %>';
-      grid.appendChild(msg);
-      var disp = document.getElementById('displayNumber');
-      if (disp) disp.textContent = '—';
+    var nextBtn = document.getElementById('depNextBtn');
+    var list = accountsFor(current.method, current.type);
+
+    if (grid) grid.innerHTML = '';
+
+    if (list.length === 0) {
+      selectedAccountId = null;
+      setNumberText('—');
+      if (nextBtn) nextBtn.disabled = true;
+      if (grid) {
+        var msg = document.createElement('div');
+        msg.style.cssText = 'grid-column:1/-1; color:var(--text-muted); font-size:12px; padding:8px 0;';
+        msg.textContent = '<%= t.dp_no_channel %>';
+        grid.appendChild(msg);
+      }
       return;
     }
-    list.forEach(function (ch, idx) {
-      // ডিফেন্সিভ: কোনো রো-তে id/label/number অনুপস্থিত থাকলে সেটা স্কিপ করা
-      // হয় — আগে এখানে ch.channel_label/ch.id সরাসরি ব্যবহার হতো, একটা রো
-      // malformed হলেই পুরো forEach থ্রো করত এবং ফাংশনটাই ব্যর্থ হয়ে যেত।
-      if (!ch || ch.id === undefined || ch.id === null) return;
-      var btn = document.createElement('div');
-      btn.className = 'channel-btn' + (idx === 0 ? ' selected' : '');
-      btn.textContent = ch.channel_label || '';
-      btn.setAttribute('data-id', ch.id);
-      btn.addEventListener('click', function () {
-        document.querySelectorAll('.channel-btn').forEach(function (b) { b.classList.remove('selected'); });
-        btn.classList.add('selected');
-        if (idInput) idInput.value = ch.id;
-        var disp = document.getElementById('displayNumber');
-        if (disp) disp.textContent = ch.receive_number || '';
+
+    // আগে বেছে নেওয়া নম্বর এখনো active থাকলে সেটাই রাখি, না হলে প্রথমটা
+    var selected = list.filter(function (a) { return a.id === selectedAccountId; })[0] || list[0];
+    selectedAccountId = selected.id;
+    setNumberText(selected.accountNumber || '—');
+    if (nextBtn) nextBtn.disabled = false;
+
+    // একাধিক নম্বর থাকলেই কেবল বাছাইয়ের বাটন দেখাই
+    if (grid && list.length > 1) {
+      list.forEach(function (a, idx) {
+        var btn = document.createElement('div');
+        btn.className = 'channel-btn' + (a.id === selectedAccountId ? ' selected' : '');
+        btn.textContent = a.accountName || ('#' + (idx + 1) + ' ••' + String(a.accountNumber || '').slice(-3));
+        btn.addEventListener('click', function () {
+          selectedAccountId = a.id;
+          renderAccounts();
+        });
+        grid.appendChild(btn);
       });
-      grid.appendChild(btn);
-    });
-    var first = list[0];
-    if (first) {
-      if (idInput) idInput.value = first.id != null ? first.id : '';
-      var disp0 = document.getElementById('displayNumber');
-      if (disp0) disp0.textContent = first.receive_number || '';
     }
   }
 
-  function selectMethod(method, el) {
-    currentMethod = method;
-    document.querySelectorAll('.method-tile').forEach(function(t){ t.classList.remove('selected'); });
+  function selectMethod(method, type, el) {
+    current.method = method;
+    current.type = type || 'agent';
+    document.querySelectorAll('.method-tile').forEach(function (t) { t.classList.remove('selected'); });
     el.classList.add('selected');
-    document.getElementById('methodLabelText').textContent = METHOD_LABELS[method] || method;
-    document.getElementById('selectedMethodName').textContent = METHOD_LABELS[method] || method;
+    var label = METHOD_LABELS[method] || method;
+    var typeLabel = method === 'crypto' ? '' : (TYPE_LABELS[current.type] || '');
+    document.getElementById('methodLabelText').textContent = label;
+    document.getElementById('selectedMethodName').textContent = label;
+    var typeEl = document.getElementById('selectedTypeName');
+    if (typeEl) typeEl.textContent = typeLabel;
     document.getElementById('methodInput').value = method; // পোস্ট বডিতে method আগে কখনো যেতোই না
-    // renderChannels ব্যর্থ হলেও (অপ্রত্যাশিত ডেটা শেপ) মেথড সিলেকশন নিজে
-    // যেন ভেঙে না যায় — এই try/catch না থাকলে একটা ব্যর্থ চ্যানেল-রেন্ডার
-    // পুরো ট্যাপটাকেই "কাজ করছে না" বানিয়ে দিত।
-    try { renderChannels(method); } catch (e) { /* channel UI silently skipped */ }
+    selectedAccountId = null;
+    try { renderAccounts(); } catch (e) { /* UI silently skipped */ }
+  }
+
+  function refreshAccounts() {
+    fetch('/payment/deposit/methods', {
+      credentials: 'same-origin',
+      cache: 'no-store',
+      headers: { 'Accept': 'application/json' }
+    })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (d && d.success && Array.isArray(d.methods)) {
+          ACCOUNTS = d.methods;
+          renderAccounts();
+        }
+      })
+      .catch(function () { /* নেটওয়ার্ক ব্যর্থ হলে আগের তালিকাই থাকবে */ });
   }
 
   document.addEventListener('DOMContentLoaded', function(){
@@ -295,7 +339,12 @@
     // দেখাত যেন পেমেন্ট মেথড ট্যাপ, অ্যামাউন্ট সিলেক্ট, আর Next বাটন —
     // তিনটাই একসাথে "কাজ করছে না"। প্রতিটা ব্লক এখন নিজের try/catch-এ
     // আলাদা, তাই একটা ব্যর্থ হলেও বাকিগুলো ঠিকই কাজ করবে।
-    try { renderChannels('nagad'); } catch (e) { console.error('renderChannels init error:', e); }
+    try { renderAccounts(); } catch (e) { console.error('renderAccounts init error:', e); }
+    try {
+      setInterval(refreshAccounts, REFRESH_MS);
+      document.addEventListener('visibilitychange', function () { if (!document.hidden) refreshAccounts(); });
+      window.addEventListener('focus', refreshAccounts);
+    } catch (e) { console.error('refresh bind error:', e); }
 
     try {
       document.querySelectorAll('.method-icon img').forEach(function(img){
@@ -308,8 +357,7 @@
     try {
       document.querySelectorAll('.method-tile').forEach(function(tile){
         tile.addEventListener('click', function(){
-          var method = tile.getAttribute('data-method');
-          selectMethod(method, tile);
+          selectMethod(tile.getAttribute('data-method'), tile.getAttribute('data-type'), tile);
         });
       });
     } catch (e) { console.error('method-tile bind error:', e); }

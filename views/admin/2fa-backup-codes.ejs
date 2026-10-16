@@ -17,7 +17,7 @@
 
 <!-- ==================== CSRF টোকেন ==================== -->
 <meta name="csrf-token" content="<%= locals.csrfToken || '' %>">
-<script src="/js/csrf-inject.js"></script>
+<script src="/js/csrf-inject.js?v=<%= locals.assetVersion || 'dev' %>"></script>
   <script src="/js/ui-hooks.js" defer></script>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">

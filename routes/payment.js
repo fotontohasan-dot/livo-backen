@@ -91,45 +91,33 @@ const MAX_BONUS = 15000;
 const VALID_METHODS = ['bkash', 'nagad', 'rocket', 'upay', 'bank', 'crypto'];
 
 router.get('/deposit', isAuth, requireFeature('deposit'), async (req, res) => {
-  let channelsByMethod = {};
-  try {
-    const ch = await pool.query(
-      `SELECT * FROM payment_channels WHERE active = true ORDER BY method, sort_order, id`
-    );
-    ch.rows.forEach(row => {
-      if (!channelsByMethod[row.method]) channelsByMethod[row.method] = [];
-      channelsByMethod[row.method].push(row);
-    });
-  } catch (e) {
-    console.error('load payment_channels error:', e.message);
-  }
-
-  // নম্বর এখন payment_methods (অ্যাডমিন-নিয়ন্ত্রিত) থেকে আসে — আগের
-  // হার্ডকোড করা DEPOSIT_NUMBERS/rotation সরানো হয়েছে। ক্যোয়ারি ব্যর্থ হলে
+  // নম্বরের একমাত্র উৎস payment_methods (অ্যাডমিন-নিয়ন্ত্রিত, Agent/Personal টাইপসহ)।
+  // আগে প্রতিটা মেথডের নম্বর আসত পুরনো payment_channels টেবিল থেকে, যেখানে অ্যাডমিন প্যানেলের
+  // কোনো লেখা পৌঁছাত না — তাই নতুন নম্বর ইউজার পেজে আপডেট হতো না। ক্যোয়ারি ব্যর্থ হলে
   // পেজ ভাঙে না — শুধু একটা এরর ব্যানার দেখায় (নিচে loadError)।
-  let payNumber = '';
+  let accounts = [];
   let loadError = false;
   try {
-    const methods = await paymentMethods.listActivePublic();
-    const preferred = methods.find(m => m.method === 'bkash') || methods[0];
-    payNumber = preferred ? preferred.accountNumber : '';
+    accounts = await paymentMethods.listActivePublic();
   } catch (e) {
     console.error('load payment_methods error:', e.message);
     loadError = true;
   }
 
+  res.set('Cache-Control', 'no-store');
   res.render('payment/deposit', {
     user: req.session.user,
-    payNumber,
-    channelsByMethod,
+    accounts,
     loadError
   });
 });
 
-// ইউজার ডিপোজিট পেজ — active পেমেন্ট মেথড/নম্বরের JSON তালিকা (পাবলিক ফিল্ড মাত্র)
+// ইউজার ডিপোজিট পেজ — active পেমেন্ট মেথড/নম্বরের JSON তালিকা (পাবলিক ফিল্ড মাত্র)।
+// পেজটা এটা নিয়মিত পোল করে, তাই কখনো ক্যাশ করা যাবে না।
 router.get('/deposit/methods', isAuth, async (req, res) => {
   try {
     const methods = await paymentMethods.listActivePublic();
+    res.set('Cache-Control', 'no-store');
     res.json({ success: true, methods });
   } catch (err) {
     console.error('deposit/methods error:', err.message);

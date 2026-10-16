@@ -87,7 +87,7 @@
        fetch/XHR দিয়ে পাঠানো POST/PUT/PATCH/DELETE-এ X-CSRF-Token হেডার যোগ করে — কোনো
        আলাদা ফর্ম বা JS ফাইল ম্যানুয়ালি এডিট না করেই পুরো সাইটে CSRF টোকেন কভারেজ পাওয়া যায়। -->
   <meta name="csrf-token" content="<%= locals.csrfToken || '' %>">
-  <script src="/js/csrf-inject.js"></script>
+  <script src="/js/csrf-inject.js?v=<%= locals.assetVersion || 'dev' %>"></script>
   <script src="/js/ui-hooks.js" defer></script>
   <% if (locals.user) { %>
   <!-- মেম্বার সেন্টার আইকনের রিয়েল-টাইম ব্যাজ (রিওয়ার্ড সেন্টার/মিশন/ইনটারনাল মেসেজ +

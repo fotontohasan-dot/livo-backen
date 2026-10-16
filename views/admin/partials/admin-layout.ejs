@@ -163,7 +163,7 @@
          অ্যাকশন (যেমন KYC approve/reject, Cache Clear, Role save ইত্যাদি) 403 Invalid CSRF Token-এ
          আটকে যেত। নিচের স্ক্রিপ্ট head.ejs-এর মতোই ফর্ম/fetch/XHR-এ স্বয়ংক্রিয়ভাবে টোকেন বসায়। -->
     <meta name="csrf-token" content="<%= locals.csrfToken || '' %>">
-    <script src="/js/csrf-inject.js"></script>
+    <script src="/js/csrf-inject.js?v=<%= locals.assetVersion || 'dev' %>"></script>
 </head>
 <body class="bg-slate-50">
     <div id="bet420-toast-root"></div>

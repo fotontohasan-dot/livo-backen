@@ -18,8 +18,51 @@
 // docs/CSP.md, ধাপ ২।
 
 (function() {
-  var CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+  var META = document.querySelector('meta[name="csrf-token"]');
+  var CSRF_TOKEN = (META && META.getAttribute('content')) || '';
   if (!CSRF_TOKEN) return;
+
+  // ===== টোকেন রিফ্রেশ =====
+  // সেশন রোটেট হলে (লগইন), bfcache/back-forward থেকে পেজ ফিরলে, বা ট্যাব ঘণ্টার পর ঘণ্টা
+  // খোলা থাকলে পেজে বসানো টোকেন পুরনো হয়ে যায় এবং পরের POST-এ 403 "Invalid or Expired CSRF
+  // Token" আসে। তাই /csrf-token থেকে নতুন টোকেন এনে মেটা ট্যাগ ও সব ফর্ম-ফিল্ড আপডেট করা হয়।
+  var origFetchRef = window.fetch;
+  var refreshing = null;
+
+  function applyToken(token) {
+    if (!token || token === CSRF_TOKEN) return;
+    CSRF_TOKEN = token;
+    if (META) META.setAttribute('content', token);
+    document.querySelectorAll('input[name="_csrf"]').forEach(function(i) { i.value = token; });
+  }
+
+  function refreshToken() {
+    if (refreshing) return refreshing;
+    refreshing = origFetchRef.call(window, '/csrf-token', {
+      credentials: 'same-origin',
+      cache: 'no-store',
+      headers: { 'Accept': 'application/json' }
+    })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(d) { if (d && d.token) applyToken(d.token); return !!(d && d.token); })
+      .catch(function() { return false; })
+      .then(function(ok) { refreshing = null; return ok; });
+    return refreshing;
+  }
+
+  // bfcache থেকে ফিরলে (ব্যাক বাটন) এবং ট্যাবে ফিরে এলে টোকেন নবায়ন
+  window.addEventListener('pageshow', function(e) { if (e.persisted) refreshToken(); });
+  document.addEventListener('visibilitychange', function() { if (!document.hidden) refreshToken(); });
+  // দীর্ঘক্ষণ খোলা পেজের জন্য ১০ মিনিটে একবার
+  setInterval(refreshToken, 10 * 60 * 1000);
+
+  // ফর্ম সাবমিটের ঠিক আগে টোকেন ফিল্ড সর্বশেষ মানে সিঙ্ক রাখা
+  document.addEventListener('submit', function(e) {
+    var f = e.target;
+    if (!f || !f.querySelector) return;
+    var inp = f.querySelector('input[name="_csrf"]');
+    if (inp && inp.value !== CSRF_TOKEN) inp.value = CSRF_TOKEN;
+  }, true);
 
   function injectIntoForms() {
     document.querySelectorAll('form').forEach(function(form) {
@@ -56,11 +99,32 @@
     init = init || {};
     var method = (init.method || (typeof input === 'object' && input.method) || 'GET').toUpperCase();
     var url = (typeof input === 'string') ? input : (input && input.url) || '';
-    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) && isSameOrigin(url)) {
-      init.headers = new Headers(init.headers || {});
-      if (!init.headers.has('X-CSRF-Token')) init.headers.set('X-CSRF-Token', CSRF_TOKEN);
+    var mutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) && isSameOrigin(url);
+
+    function send() {
+      var opts = Object.assign({}, init);
+      if (mutating) {
+        opts.headers = new Headers(init.headers || (typeof input === 'object' && input.headers) || {});
+        if (!opts.headers.has('X-CSRF-Token') || opts._csrfRetry) opts.headers.set('X-CSRF-Token', CSRF_TOKEN);
+      }
+      return origFetch.call(window, input, opts);
     }
-    return origFetch.call(this, input, init);
+
+    if (!mutating) return send();
+
+    return send().then(function(res) {
+      // টোকেন মেয়াদোত্তীর্ণ হলে একবার নতুন টোকেন এনে স্বয়ংক্রিয়ভাবে পুনরায় চেষ্টা।
+      // শুধু string/FormData/JSON বডিতে নিরাপদ (Request অবজেক্টের বডি একবারই পড়া যায়)।
+      if (res.status !== 403 || typeof input !== 'string') return res;
+      return res.clone().json().then(function(body) {
+        if (!body || body.code !== 'CSRF_TOKEN_INVALID') return res;
+        return refreshToken().then(function(ok) {
+          if (!ok) return res;
+          init = Object.assign({}, init, { _csrfRetry: true });
+          return send();
+        });
+      }).catch(function() { return res; });
+    });
   };
 
   // XMLHttpRequest প্যাচ — legacy AJAX কভার করার জন্য
