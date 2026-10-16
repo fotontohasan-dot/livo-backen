@@ -96,7 +96,11 @@
           users.forEach(user => {
               const div = document.createElement('div');
               const isUnread = Number(user.unread_count) > 0;
-              div.className = `p-3.5 mx-1 rounded-2xl cursor-pointer flex items-center gap-3 hover:bg-gray-800 transition-colors ${currentUserId === user.id ? 'bg-gray-800' : ''}`;
+              // আনরিড কথোপকথন উজ্জ্বল অ্যাম্বার ব্যাকগ্রাউন্ড + বাম বর্ডারে হাইলাইট — সাপোর্ট মেসেজ মিস না হয়
+              const rowHighlight = isUnread
+                  ? 'bg-yellow-500/15 border-l-4 border-yellow-400 ring-1 ring-yellow-500/40'
+                  : (currentUserId === user.id ? 'bg-gray-800' : '');
+              div.className = `p-3.5 mx-1 rounded-2xl cursor-pointer flex items-center gap-3 hover:bg-gray-800 transition-colors ${rowHighlight}`;
 
               const lastPreview = user.last_message
                   ? user.last_message
@@ -112,11 +116,11 @@
                   </div>
                   <div class="flex-1 min-w-0">
                       <div class="flex items-center justify-between gap-2">
-                          <div class="font-medium truncate ${isUnread ? 'text-white font-bold' : 'text-gray-300'}">${escapeHtml(user.username)}</div>
+                          <div class="font-medium truncate ${isUnread ? 'text-white font-bold' : 'text-gray-200'}">${escapeHtml(user.username)}</div>
                           <span class="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${badgeClass}">${escapeHtml(statusLabel(status))}</span>
                       </div>
                       <div class="flex items-center justify-between gap-2">
-                          <div class="text-xs truncate ${isUnread ? 'text-gray-100 font-semibold' : 'text-gray-500'}">${prefix}${escapeHtml(lastPreview)}</div>
+                          <div class="text-xs truncate ${isUnread ? 'text-yellow-100 font-semibold' : 'text-gray-400'}">${prefix}${escapeHtml(lastPreview)}</div>
                           ${isUnread ? `<span class="flex-shrink-0 min-w-[18px] h-[18px] px-1 bg-yellow-500 text-black text-[10px] font-bold rounded-full flex items-center justify-center">${Number(user.unread_count) > 9 ? '9+' : Number(user.unread_count) || 0}</span>` : ''}
                       </div>
                   </div>
@@ -271,13 +275,13 @@
 
       if (text) {
           const bubble = document.createElement('div');
-          bubble.className = `px-4 py-2.5 rounded-3xl text-sm ${isAdmin ? 'bg-yellow-500 text-black' : 'bg-gray-800 text-white'}`;
+          bubble.className = `px-4 py-2.5 rounded-3xl text-sm ${isAdmin ? 'bg-yellow-500 text-black' : 'bg-slate-700 text-white font-medium ring-1 ring-yellow-400/60'}`;
           bubble.textContent = text;
           wrap.appendChild(bubble);
       }
 
       const timeEl = document.createElement('div');
-      timeEl.className = `text-[10px] text-gray-500 mt-1 px-1 ${isAdmin ? 'text-right' : ''}`;
+      timeEl.className = `text-[10px] text-gray-400 mt-1 px-1 ${isAdmin ? 'text-right' : ''}`;
       timeEl.textContent = new Date(timestamp).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
       wrap.appendChild(timeEl);
 
