@@ -96,6 +96,29 @@ app.use((req, res, next) => {
 // এটা সরাসরি ইউজার হারানো। অ্যাসেট ইউআরএলে `?v=<assetVersion>` থাকায়
 // ডিপ্লয়ে ইউআরএল বদলায়, তাই দীর্ঘ ক্যাশ নিরাপদ।
 //
+// রেন্ডার করা প্রতিটা HTML-এ স্থানীয় /js/*.js ও /css/*.css রেফারেন্সে ?v=<ডিপ্লয় ভার্সন> বসানো।
+// আগে এগুলো ৩০ দিনের immutable ক্যাশে ছিল আর URL বদলাত না — ফলে ডিপ্লয়ের পরও ব্রাউজার
+// পুরনো JS চালাত। ভিউ ফাইলে হাত না দিয়ে এখানে কেন্দ্রীয়ভাবে করা হয়েছে।
+const LOCAL_ASSET_RE = /(<(?:script|link)\b[^>]*?\b(?:src|href)=")(\/(?:js|css)\/[^"?]+\.(?:js|css))(")/g;
+app.use((req, res, next) => {
+  const origRender = res.render;
+  res.render = function (view, options, callback) {
+    let opts = options;
+    let cb = callback;
+    if (typeof opts === 'function') { cb = opts; opts = undefined; }
+    const self = this;
+    return origRender.call(this, view, opts, function (err, html) {
+      if (err) return cb ? cb(err) : req.next(err);
+      const out = typeof html === 'string'
+        ? html.replace(LOCAL_ASSET_RE, '$1$2?v=' + encodeURIComponent(ASSET_VERSION) + '$3')
+        : html;
+      if (cb) return cb(null, out);
+      return self.send(out);
+    });
+  };
+  next();
+});
+
 app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: '30d',
   etag: true,
@@ -107,6 +130,11 @@ app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders: (res, filePath) => {
     const base = path.basename(filePath);
     if (base === 'pwa.js' || base === 'manifest.json' || base === 'admin-manifest.json') {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+    // JS/CSS: আগে ৩০ দিনের immutable ক্যাশ ছিল আর ট্যাগে ?v= ছিল না — ফলে ডিপ্লয়ের পরও ব্রাউজার
+    // পুরনো admin-chat.js / payment-admin.js চালিয়ে যেত। এখন সবসময় ETag দিয়ে যাচাই (304 সস্তা)।
+    if (filePath.endsWith('.js') || filePath.endsWith('.css')) {
       res.setHeader('Cache-Control', 'no-cache');
     }
   }
