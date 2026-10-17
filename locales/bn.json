@@ -2301,6 +2301,7 @@
   "chat_status_resolved": "কথোপকথন সমাধান হয়েছে",
   "admin_chat_live_request_title": "লাইভ এজেন্টের অনুরোধ",
   "admin_chat_btn_accept": "গ্রহণ করুন",
+  "admin_chat_btn_back": "পেছনে",
   "admin_chat_btn_resolve": "সমাধান করুন",
   "admin_chat_status_ai": "AI সাপোর্ট",
   "admin_chat_status_waiting": "অপেক্ষমাণ",

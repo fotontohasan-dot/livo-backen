@@ -79,8 +79,37 @@
 
   socket.emit('join_admin');
 
+  // ওপরের চারটা কার্ড — সার্ভার থেকে রিয়েল-টাইম সংখ্যা (কোনো ডেমো/হার্ডকোড মান নেই)
+  async function loadStats() {
+      try {
+          const res = await fetch('/chat/admin/stats');
+          if (!res.ok) return;
+          const s = await res.json();
+          const map = { 'stat-total': s.total, 'stat-active': s.active, 'stat-pending': s.pending, 'stat-resolved': s.resolved };
+          Object.keys(map).forEach(function (id) {
+              const el = document.getElementById(id);
+              if (el) el.textContent = String(Number(map[id]) || 0);
+          });
+      } catch (e) { console.error(e); }
+  }
+
+  function isMobileView() { return window.innerWidth < 1024; }
+
+  // তালিকা ↔ কথোপকথন। মোবাইলে একবারে একটাই দেখা যায়; ডেস্কটপে পাশাপাশি।
+  function showConversationList() {
+      currentUserId = null;
+      currentSupportStatus = null;
+      const panel = document.getElementById('conversations-panel');
+      if (panel) panel.classList.remove('chat-mobile-hidden');
+      document.getElementById('chat-area').style.display = 'none';
+      document.getElementById('no-chat').style.display = '';
+      document.querySelectorAll('#conversations-list > div').forEach(d => d.classList.remove('bg-gray-800'));
+      loadConversations();
+  }
+
   // Load conversations
   async function loadConversations() {
+      loadStats();
       try {
           const res = await fetch('/chat/admin/conversations');
           const users = await res.json();
@@ -168,7 +197,13 @@
       // Show chat area
       document.getElementById('chat-area').style.display = 'flex';
       document.getElementById('no-chat').style.display = 'none';
-      document.getElementById('user-info-panel').classList.remove('hidden');
+      // user-info-panel-এর 'hidden lg:block' ক্লাস অপরিবর্তিত থাকে: ডেস্কটপে সাইডে দেখায়,
+      // মোবাইলে লুকানো থাকে (আগে এটা মোবাইলেও খুলে গিয়ে কথোপকথনকে চেপে ধরত)।
+      const panel = document.getElementById('conversations-panel');
+      if (panel) panel.classList.add('chat-mobile-hidden');
+      if (isMobileView()) {
+          window.scrollTo({ top: 0 });
+      }
 
       document.getElementById('chat-header').textContent = username;
       updateActionButtons();
@@ -426,6 +461,7 @@
     loadConversations();
     attachSearch();
     setTimeout(function () { loadConversations(); }, 800);
+    setInterval(loadStats, 30000);
   }
 
   function initHooks() {
@@ -434,6 +470,7 @@
         var action = btn.getAttribute('data-chat-action');
         if (action === 'refresh') refreshConversations();
         else if (action === 'export') exportChatLogs();
+        else if (action === 'back') showConversationList();
         else if (action === 'view-profile') viewUserProfile();
         else if (action === 'quick-ban') quickBanUser();
         else if (action === 'clear-file') clearFile();
