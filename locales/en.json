@@ -2301,6 +2301,7 @@
   "chat_status_resolved": "Conversation resolved",
   "admin_chat_live_request_title": "Live agent requested",
   "admin_chat_btn_accept": "Accept",
+  "admin_chat_btn_back": "Back",
   "admin_chat_btn_resolve": "Resolve",
   "admin_chat_status_ai": "AI support",
   "admin_chat_status_waiting": "Waiting",

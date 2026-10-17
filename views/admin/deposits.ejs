@@ -26,7 +26,7 @@ function depRow(d, isPending) {
   return '<tr id="dep-row-' + d.id + '">' +
     '<td class="px-6 py-4"><div class="font-semibold">' + safeUsername + '</div><div class="text-xs text-slate-500">#' + d.user_id + ' • DEP' + d.id + '</div></td>' +
     '<td class="px-6 py-4 font-mono font-semibold text-emerald-600">৳ ' + Number(d.amount).toLocaleString('en-US') + '</td>' +
-    '<td class="px-6 py-4">' + safeMethod + (d.transaction_id ? '<div class="mt-1"><span class="inline-block px-2 py-0.5 rounded-md bg-amber-300 text-black font-mono font-bold text-xs select-all">' + safeTrxId + '</span></div>' : '') + '</td>' +
+    '<td class="px-6 py-4">' + safeMethod + (d.transaction_id ? '<div class="mt-1"><span class="trx-id" role="button" tabindex="0" title="ট্যাপ করলে কপি হবে">' + safeTrxId + '</span></div>' : '') + '</td>' +
     '<td class="px-6 py-4 text-sm">' + fmtDate(d.created_at) + '</td>' +
     '<td class="px-6 py-4 text-center"><span class="px-3 py-1 text-xs font-bold rounded-full ' + statusColor + '">' + statusLabel + '</span></td>' +
     '<td class="px-6 py-4">' + actions + '</td>' +

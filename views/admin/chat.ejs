@@ -21,6 +21,16 @@
      see tools/cascade-check.js. */
   .qq21-1 { height: calc(100vh - 320px); min-height: 520px; }
   .qq21-2 { display: none; }
+  /* মোবাইলে একবারে একটাই প্যানেল: তালিকা অথবা কথোপকথন। ডেস্কটপে (lg+) আগের মতো পাশাপাশি। */
+  .chat-mobile-hidden { display: none; }
+  .chat-placeholder { display: none; }
+  @media (min-width: 1024px) {
+    .chat-mobile-hidden { display: flex; }
+    .chat-placeholder { display: flex; }
+  }
+  @media (max-width: 1023px) {
+    .qq21-1 { height: calc(100dvh - 150px); min-height: 480px; }
+  }
 </style>
 
 
@@ -49,7 +59,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-gray-400 text-sm"><%= t('admin_stat_total_conversations') %></p>
-                    <h3 class="text-3xl font-bold text-white mt-1" id="stat-total">124</h3>
+                    <h3 class="text-3xl font-bold text-white mt-1" id="stat-total">–</h3>
                 </div>
                 <div class="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center">
                     <i class="fas fa-comments text-blue-500 text-2xl"></i>
@@ -61,7 +71,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-gray-400 text-sm"><%= t('admin_stat_active_chats') %></p>
-                    <h3 class="text-3xl font-bold text-white mt-1" id="stat-active">18</h3>
+                    <h3 class="text-3xl font-bold text-white mt-1" id="stat-active">–</h3>
                 </div>
                 <div class="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center">
                     <i class="fas fa-headset text-green-500 text-2xl"></i>
@@ -73,7 +83,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-gray-400 text-sm"><%= t('admin_stat_pending_replies') %></p>
-                    <h3 class="text-3xl font-bold text-white mt-1" id="stat-pending">7</h3>
+                    <h3 class="text-3xl font-bold text-white mt-1" id="stat-pending">–</h3>
                 </div>
                 <div class="w-12 h-12 bg-orange-500/10 rounded-xl flex items-center justify-center">
                     <i class="fas fa-clock text-orange-500 text-2xl"></i>
@@ -85,7 +95,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-gray-400 text-sm"><%= t('admin_stat_resolved_today') %></p>
-                    <h3 class="text-3xl font-bold text-white mt-1" id="stat-resolved">42</h3>
+                    <h3 class="text-3xl font-bold text-white mt-1" id="stat-resolved">–</h3>
                 </div>
                 <div class="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center">
                     <i class="fas fa-check-circle text-emerald-500 text-2xl"></i>
@@ -98,7 +108,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 qq21-1">
         
         <!-- Conversations Sidebar -->
-        <div class="lg:col-span-4 bg-gray-900 border border-gray-800 rounded-2xl flex flex-col overflow-hidden">
+        <div id="conversations-panel" class="lg:col-span-4 bg-gray-900 border border-gray-800 rounded-2xl flex flex-col overflow-hidden">
             <div class="p-4 border-b border-gray-800">
                 <div class="relative">
                     <input type="text" id="search-conversation" 
@@ -116,13 +126,17 @@
         <!-- Chat Area -->
         <div class="lg:col-span-5 bg-gray-900 border border-gray-800 rounded-2xl flex flex-col overflow-hidden qq21-2" id="chat-area">
             <!-- Chat Header -->
-            <div class="px-5 py-4 border-b border-gray-800 flex items-center justify-between bg-gray-950">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-yellow-500/10 rounded-full flex items-center justify-center">
+            <div class="px-4 lg:px-5 py-4 border-b border-gray-800 flex items-center justify-between gap-2 flex-wrap bg-gray-950">
+                <div class="flex items-center gap-3 min-w-0">
+                    <button data-chat-action="back" aria-label="<%= t('admin_chat_btn_back') %>"
+                            class="lg:hidden w-9 h-9 flex-shrink-0 rounded-full bg-gray-800 hover:bg-gray-700 text-white flex items-center justify-center">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <div class="w-10 h-10 bg-yellow-500/10 rounded-full flex items-center justify-center flex-shrink-0">
                         <i class="fas fa-user text-yellow-500"></i>
                     </div>
                     <div>
-                        <div class="font-semibold text-white" id="chat-header"><%= t('admin_chat_select_conversation') %></div>
+                        <div class="font-semibold text-white truncate" id="chat-header"><%= t('admin_chat_select_conversation') %></div>
                         <div class="text-xs text-gray-500" id="chat-user-status"><%= t('admin_chat_online_now') %></div>
                     </div>
                 </div>
@@ -186,7 +200,7 @@
         </div>
 
         <!-- No Chat Selected -->
-        <div class="lg:col-span-5 bg-gray-900 border border-gray-800 rounded-2xl flex items-center justify-center" id="no-chat">
+        <div class="lg:col-span-5 bg-gray-900 border border-gray-800 rounded-2xl items-center justify-center chat-placeholder" id="no-chat">
             <div class="text-center">
                 <div class="mx-auto w-16 h-16 bg-gray-800 rounded-2xl flex items-center justify-center mb-4">
                     <i class="fas fa-comments text-3xl text-gray-600"></i>

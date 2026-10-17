@@ -153,6 +153,13 @@
         .bet420-spinner { width: 15px; height: 15px; border: 2.5px solid rgba(255,255,255,0.3); border-top-color: currentColor; border-radius: 50%; display: inline-block; vertical-align: -3px; margin-right: 6px; animation: bet420Spin .7s linear infinite; }
         @keyframes bet420Spin { to { transform: rotate(360deg); } }
         button:disabled { opacity: 0.75; cursor: not-allowed; }
+    /* TrxID চিপ — উজ্জ্বল হাইলাইট; ট্যাপ/ক্লিক করলে /js/admin-copy.js কপি করে দেয় */
+    .trx-id { display: inline-block; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight: 800; font-size: 13px; letter-spacing: .4px; color: #fde68a; background: rgba(245,158,11,0.18); border: 1px solid rgba(245,158,11,0.6); border-radius: 8px; padding: 3px 9px; user-select: all; -webkit-user-select: all; cursor: pointer; transition: background .15s, transform .15s; }
+    .trx-id:hover { background: rgba(245,158,11,0.32); }
+    .trx-id:active { transform: scale(0.97); }
+    .trx-id.copied { background: rgba(16,185,129,0.35); border-color: #10b981; color: #d1fae5; }
+    .trx-copy-toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: #10b981; color: #052e1a; font-weight: 700; font-size: 13px; padding: 9px 16px; border-radius: 10px; z-index: 9999; }
+    .trx-copy-ghost { position: fixed; left: -9999px; top: 0; opacity: 0; }
     </style>
 
     <!-- ==================== CSRF টোকেন (Synchronizer Token Pattern) ====================
@@ -333,6 +340,7 @@
     <script src="/js/views/admin-partials-admin-layout.js"></script>
 
     <%- include('./bottom-nav') %>
+    <script src="/js/admin-copy.js"></script>
     <script src="/js/ui-hooks.js"></script>
 </body>
 </html>

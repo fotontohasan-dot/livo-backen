@@ -67,7 +67,12 @@
   .admin-table td { padding: 9px 12px; color: #e2e8f0; border-bottom: 1px solid rgba(255,255,255,0.04); white-space: nowrap; }
   /* TrxID — অনুমোদনের আগে অ্যাডমিনকে এটা মিলিয়ে দেখতে হয়, তাই ডার্ক ব্যাকগ্রাউন্ডে
      মিশে না গিয়ে উজ্জ্বল হাইলাইট চিপ হিসেবে দেখানো হয় (ট্যাপ করলে পুরোটা সিলেক্ট হয়)। */
-  .trx-id { display: inline-block; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight: 800; font-size: 13px; letter-spacing: .4px; color: #fde68a; background: rgba(245,158,11,0.18); border: 1px solid rgba(245,158,11,0.6); border-radius: 8px; padding: 3px 9px; user-select: all; -webkit-user-select: all; }
+  .trx-id { display: inline-block; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight: 800; font-size: 13px; letter-spacing: .4px; color: #fde68a; background: rgba(245,158,11,0.18); border: 1px solid rgba(245,158,11,0.6); border-radius: 8px; padding: 3px 9px; user-select: all; -webkit-user-select: all; cursor: pointer; transition: background .15s, transform .15s; }
+  .trx-id:hover { background: rgba(245,158,11,0.32); }
+  .trx-id:active { transform: scale(0.97); }
+  .trx-id.copied { background: rgba(16,185,129,0.35); border-color: #10b981; color: #d1fae5; }
+  .trx-copy-toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: #10b981; color: #052e1a; font-weight: 700; font-size: 13px; padding: 9px 16px; border-radius: 10px; z-index: 9999; }
+  .trx-copy-ghost { position: fixed; left: -9999px; top: 0; opacity: 0; }
   .badge { padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; }
   .badge-green { background: rgba(16,185,129,0.15); color: #10b981; }
   .badge-red { background: rgba(239,68,68,0.15); color: #ef4444; }
@@ -108,3 +113,4 @@
 </div>
 
 <script src="/js/views/admin-partials-sidebar.js"></script>
+<script src="/js/admin-copy.js"></script>

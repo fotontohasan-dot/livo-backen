@@ -118,7 +118,7 @@
             <tr>
               <td><%= r.username %></td>
               <td>৳<%= Number(r.amount).toLocaleString('en-US') %></td>
-              <td><% if (r.transaction_id) { %><span class="trx-id"><%= r.transaction_id %></span><% } else { %>-<% } %></td>
+              <td><% if (r.transaction_id) { %><span class="trx-id" role="button" tabindex="0" title="ট্যাপ করলে কপি হবে"><%= r.transaction_id %></span><% } else { %>-<% } %></td>
               <td><%= r.account_number || '-' %></td>
               <td><span class="dep-status <%= r.status %>"><%= r.status %></span></td>
               <td><%= new Date(r.created_at).toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }) %></td>

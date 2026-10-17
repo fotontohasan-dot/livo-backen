@@ -57,7 +57,7 @@
         <td style="font-weight:700;">${escHtml(r.username)}</td>
         <td style="text-transform:capitalize;">${escHtml(r.method || '—')}</td>
         <td style="color:#f59e0b;font-weight:700;">৳ ${Number(r.amount).toLocaleString('en-US')}</td>
-        <td>${r.transaction_id ? `<span class="trx-id">${escHtml(r.transaction_id)}</span>` : '—'}</td>
+        <td>${r.transaction_id ? `<span class="trx-id" role="button" tabindex="0" title="ট্যাপ করলে কপি হবে">${escHtml(r.transaction_id)}</span>` : '—'}</td>
         <td>${escHtml(r.account_number || '—')}</td>
         <td>${r.created_at ? new Date(r.created_at).toLocaleString('bn-BD') : '—'}</td>
         <td>${statusBadge(r.status)}</td>

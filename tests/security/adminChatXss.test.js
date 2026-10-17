@@ -52,9 +52,10 @@ describe('অ্যাডমিন চ্যাট টেমপ্লেট — 
     expect(source).not.toMatch(/<%[=-]/);
   });
 
-  test('ছয়টা অ্যাকশন বাটনই data-chat-action দিয়ে যুক্ত', () => {
-    expect((view.match(/data-chat-action=/g) || []).length).toBe(6);
-    ['refresh', 'export', 'view-profile', 'quick-ban', 'clear-file'].forEach((a) => {
+  test('সব অ্যাকশন বাটনই data-chat-action দিয়ে যুক্ত', () => {
+    // view-profile দুইবার (হেডার + সাইড প্যানেল); back মোবাইলের ব্যাক বাটন
+    expect((view.match(/data-chat-action=/g) || []).length).toBe(9);
+    ['refresh', 'export', 'view-profile', 'quick-ban', 'clear-file', 'accept-live', 'resolve-live', 'back'].forEach((a) => {
       expect(view).toContain('data-chat-action="' + a + '"');
       expect(source).toContain("'" + a + "'");
     });

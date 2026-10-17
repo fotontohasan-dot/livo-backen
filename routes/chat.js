@@ -348,6 +348,49 @@ router.get('/admin/conversations', isAdmin, requireSupportView, async (req, res)
   }
 });
 
+// সাপোর্ট চ্যাট পেজের ওপরের চারটা কার্ড — আগে এগুলো HTML-এ হার্ডকোড করা ডেমো সংখ্যা
+// (124/18/7/42) ছিল। এখন সব ডেটাবেস থেকে রিয়েল-টাইমে হিসাব হয়:
+//  total    = যতজন ইউজার অন্তত একবার মেসেজ করেছেন/পেয়েছেন
+//  active   = এই মুহূর্তে লাইভ এজেন্টের অপেক্ষায় (waiting) বা কানেক্টেড (connected)
+//  pending  = যাদের সর্বশেষ মেসেজ ইউজারের পাঠানো, অর্থাৎ অ্যাডমিনের উত্তর বাকি
+//  resolved = আজ যাদের সমস্যা সমাধান (resolved) করা হয়েছে
+router.get('/admin/stats', isAdmin, requireSupportView, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT
+        COUNT(*)::int AS total,
+        COUNT(*) FILTER (WHERE support_status IN ('waiting', 'connected'))::int AS active,
+        COUNT(*) FILTER (WHERE last_is_admin = false)::int AS pending,
+        COUNT(*) FILTER (
+          WHERE support_status = 'resolved'
+            AND support_status_updated_at >= date_trunc('day', NOW())
+        )::int AS resolved_today
+      FROM (
+        SELECT u.support_status, u.support_status_updated_at, lm.is_admin AS last_is_admin
+        FROM users u
+        JOIN LATERAL (
+          SELECT is_admin
+          FROM chat_messages
+          WHERE sender_id = u.id OR receiver_id = u.id
+          ORDER BY created_at DESC, id DESC
+          LIMIT 1
+        ) lm ON true
+        WHERE u.role != 'admin'
+      ) c
+    `);
+    const row = result.rows[0] || {};
+    res.json({
+      total: row.total || 0,
+      active: row.active || 0,
+      pending: row.pending || 0,
+      resolved: row.resolved_today || 0
+    });
+  } catch (err) {
+    console.error('admin/stats error:', err.message);
+    res.status(500).json({ error: req.t('common_server_error_short') });
+  }
+});
+
 router.get('/admin/history/:userId', isAdmin, requireSupportView, async (req, res) => {
   try {
     // উপরের /history-এর মতোই বাউন্ড
