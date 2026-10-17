@@ -16,7 +16,7 @@ const ROOT = path.join(__dirname, '..', '..');
 
 // HTML/টেমপ্লেটে লোড করা সব লোকাল স্ক্রিপ্টের পাথ, যে ক্রমে আছে সেই ক্রমেই
 function scriptOrder(src) {
-  return [...src.matchAll(/<script src="(\/js\/[^"]+)"><\/script>/g)].map((m) => m[1]);
+  return [...src.matchAll(/<script src="(\/js\/[^"?]+)(?:\?[^"]*)?"><\/script>/g)].map((m) => m[1]);
 }
 
 function readScript(url) {
