@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= t('admin_title_popups') %></title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style nonce="<%= cspNonce %>">
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', 'Hind Siliguri', sans-serif; background: #0f1115; }
+    .pop-box { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 18px; margin-bottom: 18px; }
+    .pop-box h3 { margin: 0 0 12px; color: #fff; font-size: 15px; }
+    .pop-sub { color: #94a3b8; font-size: 12px; margin: -6px 0 12px; line-height: 1.5; }
+    .pop-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-bottom: 12px; }
+    .pop-label { color: #94a3b8; font-size: 11.5px; display: block; margin-bottom: 4px; }
+    .pop-box input[type=text], .pop-box input[type=number], .pop-box input[type=url], .pop-box input[type=datetime-local], .pop-box select, .pop-box textarea {
+      width: 100%; background: #0f1115; color: #e2e8f0; border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 9px 10px; font-size: 13px; }
+    .pop-box input[type=color] { width: 100%; height: 38px; background: #0f1115; border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 2px; }
+    .pop-check { display: flex; align-items: center; gap: 8px; color: #e2e8f0; font-size: 13px; padding: 8px 0; }
+    .pop-check input { width: 18px; height: 18px; accent-color: #EAB308; }
+    .pop-btn { padding: 9px 16px; border: none; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer; background: #EAB308; color: #1a1a1a; }
+    .pop-btn-sec { background: #334155; color: #fff; }
+    .pop-btn-danger { background: #ef4444; color: #fff; }
+    .pop-btn-sm { padding: 5px 10px; font-size: 11.5px; border-radius: 8px; }
+    .pop-inline { display: inline; }
+    .pop-msg-err { background: rgba(239,68,68,0.1); border: 1px solid #ef4444; color: #f87171; padding: 10px 14px; border-radius: 10px; margin-bottom: 12px; font-size: 13px; }
+    .pop-msg-ok { background: rgba(16,185,129,0.1); border: 1px solid #10b981; color: #10b981; padding: 10px 14px; border-radius: 10px; margin-bottom: 12px; font-size: 13px; }
+    .pop-msg-warn { background: rgba(245,158,11,0.1); border: 1px solid #f59e0b; color: #fbbf24; padding: 10px 14px; border-radius: 10px; margin-bottom: 12px; font-size: 12.5px; }
+    .pop-split { display: grid; grid-template-columns: 1fr; gap: 18px; }
+    @media (min-width: 1100px) { .pop-split { grid-template-columns: 1.4fr 1fr; align-items: start; } }
+    .pop-slide { display: grid; grid-template-columns: 84px 1fr; gap: 12px; padding: 12px; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; margin-bottom: 10px; background: rgba(255,255,255,0.02); }
+    .pop-slide.off { opacity: .55; }
+    .pop-thumb { width: 84px; height: 84px; object-fit: cover; border-radius: 10px; background: #1e293b; }
+    .pop-slide-title { color: #fff; font-weight: 700; font-size: 13px; }
+    .pop-slide-meta { color: #94a3b8; font-size: 11.5px; margin: 3px 0 8px; word-break: break-all; }
+    .pop-badge-on { color: #10b981; font-weight: 700; font-size: 11px; }
+    .pop-badge-off { color: #94a3b8; font-weight: 700; font-size: 11px; }
+    details.pop-edit { margin-top: 8px; }
+    details.pop-edit summary { cursor: pointer; color: #60a5fa; font-size: 12px; }
+    .pop-upload-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+    .pop-upload-status { font-size: 12px; color: #94a3b8; }
+    .pop-hidden { display: none; }
+    .pop-mb { margin-bottom: 12px; }
+    /* লাইভ প্রিভিউ — পাবলিক পপআপের মতো একই CSS ভেরিয়েবল */
+    .pop-preview-stage { position: relative; border-radius: 14px; padding: 22px; display: flex; justify-content: center; align-items: center; min-height: 380px; background: rgba(0,0,0,var(--pp-overlay, .55)); overflow: hidden; }
+    .pop-preview-stage.pos-top { align-items: flex-start; }
+    .pop-preview-stage.pos-bottom { align-items: flex-end; }
+    .pop-pv-box { width: 100%; max-width: min(var(--pp-maxw, 480px), 100%); background: var(--pp-bg, #fff); border-radius: var(--pp-radius, 18px); border: var(--pp-bw, 0px) solid var(--pp-bc, #fff); overflow: hidden; }
+    .pop-pv-media { width: 100%; }
+    .pop-pv-media.fixed { aspect-ratio: var(--pp-ratio); }
+    .pop-pv-img { width: 100%; display: block; height: auto; }
+    .pop-pv-media.fixed .pop-pv-img { height: 100%; object-fit: var(--pp-fit, cover); }
+    .pop-pv-cap { padding: 12px 16px 4px; text-align: center; color: #111; }
+    .pop-pv-cap b { display: block; font-size: 15px; }
+    .pop-pv-cap span { font-size: 12px; color: #555; }
+    .pop-pv-dots { display: flex; justify-content: center; gap: 6px; padding: 8px 0 12px; }
+    .pop-pv-dots i { width: 8px; height: 8px; border-radius: 50%; background: #ddd; display: block; }
+    .pop-pv-dots i.on { background: #e11d48; }
+    .pop-pv-nav { display: flex; gap: 8px; padding: 10px 14px; background: #fff; border-top: 1px solid #eee; }
+    .pop-pv-nav span { flex: 1; text-align: center; padding: 9px; border-radius: 9px; font-size: 13px; font-weight: 700; background: #eee; color: #444; }
+    .pop-pv-nav span.next { background: #e11d48; color: #fff; }
+  </style>
+  <%- include('./partials/pwa-head') %>
+</head>
+<body>
+  <div class="admin-wrap">
+    <%- include('./partials/sidebar', { active: 'popups' }) %>
+    <div class="admin-content">
+      <%- include('./partials/load-error') %>
+      <%- include('./partials/header', { pageTitle: t('admin_title_popups'), pageSubtitle: t('admin_popup_subtitle') }) %>
+
+      <% if (error) { %><div class="pop-msg-err"><%= error %></div><% } %>
+      <% if (saved) { %><div class="pop-msg-ok"><%= t('admin_msg_saved') %></div><% } %>
+      <% if (!cloudinaryReady) { %><div class="pop-msg-warn"><%= t('admin_popup_cloudinary_warn') %></div><% } %>
+
+      <div class="pop-split">
+        <div>
+          <!-- ============ সেটিংস: ফ্রেম + সময় ============ -->
+          <form method="POST" action="/admin/popups/settings" id="popSettingsForm" class="pop-box">
+            <h3><i class="fas fa-sliders"></i> <%= t('admin_popup_settings_heading') %></h3>
+
+            <label class="pop-check"><input type="checkbox" name="enabled" <%= settings.enabled ? 'checked' : '' %>> <%= t('admin_popup_enabled') %></label>
+
+            <h3><%= t('admin_popup_sect_timing') %></h3>
+            <div class="pop-grid">
+              <div><label class="pop-label"><%= t('admin_popup_delay') %></label>
+                <input type="number" name="delaySeconds" min="0" max="60" step="0.1" value="<%= settings.delaySeconds %>"></div>
+              <div><label class="pop-label"><%= t('admin_popup_slide_seconds') %></label>
+                <input type="number" name="slideSeconds" min="1" max="120" step="1" value="<%= settings.slideSeconds %>"></div>
+              <div><label class="pop-label"><%= t('admin_popup_interval') %></label>
+                <input type="number" name="showIntervalHours" min="0" max="720" step="1" value="<%= settings.showIntervalHours %>"></div>
+            </div>
+            <label class="pop-check"><input type="checkbox" name="autoAdvance" <%= settings.autoAdvance ? 'checked' : '' %>> <%= t('admin_popup_auto_advance') %></label>
+            <label class="pop-check"><input type="checkbox" name="autoClose" <%= settings.autoClose ? 'checked' : '' %>> <%= t('admin_popup_auto_close') %></label>
+
+            <h3><%= t('admin_popup_sect_frame') %></h3>
+            <div class="pop-grid">
+              <div><label class="pop-label"><%= t('admin_popup_shape') %></label>
+                <select name="shape">
+                  <% ['auto','portrait','tall','square','landscape','wide'].forEach(function (k) { %>
+                    <option value="<%= k %>" <%= settings.shape === k ? 'selected' : '' %>><%= t('admin_popup_shape_' + k) %></option>
+                  <% }) %>
+                </select></div>
+              <div><label class="pop-label"><%= t('admin_popup_fit') %></label>
+                <select name="imageFit">
+                  <option value="cover" <%= settings.imageFit === 'cover' ? 'selected' : '' %>><%= t('admin_popup_fit_cover') %></option>
+                  <option value="contain" <%= settings.imageFit === 'contain' ? 'selected' : '' %>><%= t('admin_popup_fit_contain') %></option>
+                </select></div>
+              <div><label class="pop-label"><%= t('admin_popup_position') %></label>
+                <select name="position">
+                  <% ['center','top','bottom'].forEach(function (k) { %>
+                    <option value="<%= k %>" <%= settings.position === k ? 'selected' : '' %>><%= t('admin_popup_pos_' + k) %></option>
+                  <% }) %>
+                </select></div>
+              <div><label class="pop-label"><%= t('admin_popup_animation') %></label>
+                <select name="animation">
+                  <% ['fade','zoom','slide','none'].forEach(function (k) { %>
+                    <option value="<%= k %>" <%= settings.animation === k ? 'selected' : '' %>><%= t('admin_popup_anim_' + k) %></option>
+                  <% }) %>
+                </select></div>
+              <div><label class="pop-label"><%= t('admin_popup_max_width') %></label>
+                <input type="number" name="maxWidthPx" min="200" max="900" step="10" value="<%= settings.maxWidthPx %>"></div>
+              <div><label class="pop-label"><%= t('admin_popup_radius') %></label>
+                <input type="number" name="radiusPx" min="0" max="48" step="1" value="<%= settings.radiusPx %>"></div>
+              <div><label class="pop-label"><%= t('admin_popup_border_width') %></label>
+                <input type="number" name="borderWidthPx" min="0" max="16" step="1" value="<%= settings.borderWidthPx %>"></div>
+              <div><label class="pop-label"><%= t('admin_popup_border_color') %></label>
+                <input type="color" name="borderColor" value="<%= settings.borderColor %>"></div>
+              <div><label class="pop-label"><%= t('admin_popup_frame_bg') %></label>
+                <input type="color" name="frameBg" value="<%= settings.frameBg %>"></div>
+              <div><label class="pop-label"><%= t('admin_popup_overlay') %></label>
+                <input type="number" name="overlayOpacity" min="0" max="95" step="5" value="<%= settings.overlayOpacity %>"></div>
+              <div><label class="pop-label"><%= t('admin_popup_blur') %></label>
+                <input type="number" name="blurPx" min="0" max="20" step="1" value="<%= settings.blurPx %>"></div>
+            </div>
+            <label class="pop-check"><input type="checkbox" name="showCaption" <%= settings.showCaption ? 'checked' : '' %>> <%= t('admin_popup_show_caption') %></label>
+            <label class="pop-check"><input type="checkbox" name="showDots" <%= settings.showDots ? 'checked' : '' %>> <%= t('admin_popup_show_dots') %></label>
+            <label class="pop-check"><input type="checkbox" name="showNav" <%= settings.showNav ? 'checked' : '' %>> <%= t('admin_popup_show_nav') %></label>
+
+            <button class="pop-btn" type="submit"><i class="fas fa-floppy-disk"></i> <%= t('admin_popup_save_settings') %></button>
+          </form>
+
+          <form method="POST" action="/admin/popups/reset-views" class="pop-box" data-confirm="<%= t('admin_popup_reset_confirm') %>">
+            <h3><i class="fas fa-rotate"></i> <%= t('admin_popup_reset_views') %></h3>
+            <p class="pop-sub"><%= t('admin_popup_reset_hint') %></p>
+            <button class="pop-btn pop-btn-sec" type="submit"><%= t('admin_popup_reset_views') %></button>
+          </form>
+
+          <!-- ============ নতুন স্লাইড ============ -->
+          <div class="pop-box">
+            <h3><i class="fas fa-plus"></i> <%= t('admin_popup_add_heading') %></h3>
+            <form method="POST" action="/admin/popups/slides/create" data-popup-slide-form>
+              <div class="pop-upload-row">
+                <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-popup-file>
+                <button type="button" class="pop-btn pop-btn-sec pop-btn-sm" data-popup-upload><%= t('admin_popup_upload') %></button>
+                <span class="pop-upload-status" data-popup-status></span>
+              </div>
+              <label class="pop-label"><%= t('admin_popup_or_url') %></label>
+              <input type="text" name="image_url" required data-popup-image-url placeholder="https://res.cloudinary.com/... <%= t('admin_popup_or_path') %> /images/popups/..." class="pop-mb">
+              <div class="pop-grid">
+                <div><label class="pop-label"><%= t('admin_popup_title_bn') %></label><input type="text" name="title_bn" maxlength="200"></div>
+                <div><label class="pop-label"><%= t('admin_popup_title_en') %></label><input type="text" name="title_en" maxlength="200"></div>
+                <div><label class="pop-label"><%= t('admin_popup_text_bn') %></label><input type="text" name="text_bn" maxlength="600"></div>
+                <div><label class="pop-label"><%= t('admin_popup_text_en') %></label><input type="text" name="text_en" maxlength="600"></div>
+                <div><label class="pop-label"><%= t('admin_popup_link') %></label><input type="text" name="link_url" maxlength="1000" placeholder="<%= t('admin_popup_ph_link') %>"></div>
+                <div><label class="pop-label"><%= t('admin_popup_duration') %></label><input type="number" name="duration_seconds" min="1" max="120" step="1"></div>
+                <div><label class="pop-label"><%= t('admin_popup_starts') %></label><input type="datetime-local" name="starts_at"></div>
+                <div><label class="pop-label"><%= t('admin_popup_expires') %></label><input type="datetime-local" name="expires_at"></div>
+              </div>
+              <button class="pop-btn" type="submit"><i class="fas fa-plus"></i> <%= t('admin_popup_add_btn') %></button>
+            </form>
+          </div>
+
+          <!-- ============ স্লাইড তালিকা ============ -->
+          <div class="pop-box">
+            <h3><i class="fas fa-images"></i> <%= t('admin_popup_slides_heading') %> (<%= slides.length %>)</h3>
+            <% if (!slides.length) { %><p class="pop-sub"><%= t('admin_popup_no_slides') %></p><% } %>
+            <% const dhaka = function (d) { return d ? new Date(new Date(d).getTime() + 6 * 3600 * 1000).toISOString().slice(0, 16) : ''; }; %>
+            <% slides.forEach(function (s, idx) { %>
+              <div class="pop-slide <%= s.active ? '' : 'off' %>">
+                <img class="pop-thumb" src="<%= s.image_url %>" alt="">
+                <div>
+                  <div class="pop-slide-title">#<%= idx + 1 %> · <%= s.title_bn || s.title_en || '—' %>
+                    <% if (s.active) { %><span class="pop-badge-on">● <%= t('admin_status_active') %></span><% } else { %><span class="pop-badge-off">○ <%= t('admin_status_inactive') %></span><% } %></div>
+                  <div class="pop-slide-meta"><%= s.image_url %></div>
+                  <form class="pop-inline" method="POST" action="/admin/popups/slides/<%= s.id %>/move"><input type="hidden" name="dir" value="up"><button class="pop-btn pop-btn-sec pop-btn-sm" <%= idx === 0 ? 'disabled' : '' %> title="<%= t('admin_popup_move_up') %>"><i class="fas fa-arrow-up"></i></button></form>
+                  <form class="pop-inline" method="POST" action="/admin/popups/slides/<%= s.id %>/move"><input type="hidden" name="dir" value="down"><button class="pop-btn pop-btn-sec pop-btn-sm" <%= idx === slides.length - 1 ? 'disabled' : '' %> title="<%= t('admin_popup_move_down') %>"><i class="fas fa-arrow-down"></i></button></form>
+                  <form class="pop-inline" method="POST" action="/admin/popups/slides/<%= s.id %>/toggle"><button class="pop-btn pop-btn-sec pop-btn-sm"><%= s.active ? t('admin_popup_disable') : t('admin_popup_enable') %></button></form>
+                  <form class="pop-inline" method="POST" action="/admin/popups/slides/<%= s.id %>/delete" data-confirm="<%= t('ant_delete_confirm') %>"><button class="pop-btn pop-btn-danger pop-btn-sm"><%= t('admin_btn_delete') %></button></form>
+
+                  <details class="pop-edit">
+                    <summary><%= t('admin_popup_edit') %></summary>
+                    <form method="POST" action="/admin/popups/slides/<%= s.id %>/update" data-popup-slide-form>
+                      <div class="pop-upload-row">
+                        <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-popup-file>
+                        <button type="button" class="pop-btn pop-btn-sec pop-btn-sm" data-popup-upload><%= t('admin_popup_upload') %></button>
+                        <span class="pop-upload-status" data-popup-status></span>
+                      </div>
+                      <label class="pop-label"><%= t('admin_popup_image') %></label>
+                      <input type="text" name="image_url" required data-popup-image-url value="<%= s.image_url %>">
+                      <div class="pop-grid">
+                        <div><label class="pop-label"><%= t('admin_popup_title_bn') %></label><input type="text" name="title_bn" maxlength="200" value="<%= s.title_bn || '' %>"></div>
+                        <div><label class="pop-label"><%= t('admin_popup_title_en') %></label><input type="text" name="title_en" maxlength="200" value="<%= s.title_en || '' %>"></div>
+                        <div><label class="pop-label"><%= t('admin_popup_text_bn') %></label><input type="text" name="text_bn" maxlength="600" value="<%= s.text_bn || '' %>"></div>
+                        <div><label class="pop-label"><%= t('admin_popup_text_en') %></label><input type="text" name="text_en" maxlength="600" value="<%= s.text_en || '' %>"></div>
+                        <div><label class="pop-label"><%= t('admin_popup_link') %></label><input type="text" name="link_url" maxlength="1000" value="<%= s.link_url || '' %>"></div>
+                        <div><label class="pop-label"><%= t('admin_popup_duration') %></label><input type="number" name="duration_seconds" min="1" max="120" step="1" value="<%= s.duration_seconds || '' %>"></div>
+                        <div><label class="pop-label"><%= t('admin_popup_starts') %></label><input type="datetime-local" name="starts_at" value="<%= dhaka(s.starts_at) %>"></div>
+                        <div><label class="pop-label"><%= t('admin_popup_expires') %></label><input type="datetime-local" name="expires_at" value="<%= dhaka(s.expires_at) %>"></div>
+                      </div>
+                      <button class="pop-btn pop-btn-sm" type="submit"><%= t('admin_popup_save_slide') %></button>
+                    </form>
+                  </details>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+        </div>
+
+        <!-- ============ লাইভ প্রিভিউ ============ -->
+        <div class="pop-box">
+          <h3><i class="fas fa-eye"></i> <%= t('admin_popup_preview') %></h3>
+          <p class="pop-sub"><%= t('admin_popup_preview_hint') %></p>
+          <div class="pop-preview-stage" id="popPvStage">
+            <div class="pop-pv-box" id="popPvBox">
+              <div class="pop-pv-media" id="popPvMedia"><img class="pop-pv-img" id="popPvImg" alt="" src="<%= (slides.find(function (s) { return s.active; }) || slides[0] || {}).image_url || '' %>"></div>
+              <div class="pop-pv-cap" id="popPvCap"><b><%= (slides.find(function (s) { return s.active; }) || slides[0] || {}).title_bn || '' %></b><span><%= (slides.find(function (s) { return s.active; }) || slides[0] || {}).text_bn || '' %></span></div>
+              <div class="pop-pv-dots" id="popPvDots"><i class="on"></i><i></i><i></i></div>
+              <div class="pop-pv-nav" id="popPvNav"><span><%= t('admin_popup_prev') %></span><span class="next"><%= t('admin_popup_next') %></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <script type="application/json" id="admin-popupsConfig"><%- jsonScriptSafe({ ratios: ratios, uploadingLabel: t('admin_popup_uploading'), uploadedLabel: t('admin_popup_uploaded'), pickFileLabel: t('admin_popup_err_no_file') }) %></script>
+  <script src="/js/views/admin-popups.js"></script>
+</body>
+</html>

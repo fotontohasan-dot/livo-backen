@@ -91,6 +91,7 @@ const NAV = [
       { href: '/admin/notifications',        label: 'Send Notification', labelKey: 'admin_nav_item_send_notification',     icon: 'fa-paper-plane',        active: 'notifications',          permission: 'support_reply' },
       { href: '/admin/notification-templates', label: 'Notification Templates', labelKey: 'admin_nav_item_notification_templates', icon: 'fa-envelope-open-text', active: 'notification-templates', permission: 'settings_edit' },
       { href: '/admin/announcements',        label: 'Announcements', labelKey: 'admin_nav_item_announcements',         icon: 'fa-bell',               active: 'announcements',          permission: 'games_manage' },
+      { href: '/admin/popups',               label: 'Popups', labelKey: 'admin_nav_item_popups',                icon: 'fa-window-restore',     active: 'popups',                 permission: 'settings_edit' },
       { href: '/admin/news',                 label: 'News', labelKey: 'admin_nav_item_news',                  icon: 'fa-newspaper',          active: 'news',                   permission: 'games_manage' }
     ]
   },

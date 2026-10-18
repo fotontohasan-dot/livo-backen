@@ -714,6 +714,19 @@ app.use((req, res, next) => {
   next();
 });
 
+// হোমপেজের পপআপ (স্লাইড + ফ্রেম + সময়) — অ্যাডমিন প্যানেল (/admin/popups) থেকে নিয়ন্ত্রিত।
+// শুধু GET / -এ লোড হয়; ব্যর্থ হলে null (ক্লায়েন্ট আগের ডিফল্টে ফিরে যায়)।
+app.use(async (req, res, next) => {
+  if (req.method !== 'GET' || req.path !== '/') return next();
+  try {
+    res.locals.promoPopup = await require('./services/promoPopup').getPublicConfig(req.lang);
+  } catch (err) {
+    console.error('promoPopup config error:', err.message);
+    res.locals.promoPopup = null;
+  }
+  next();
+});
+
 // ফিচার ফ্ল্যাগ → res.locals.features, যাতে নেভিগেশন/বাটন বন্ধ ফিচারের জন্য
 // লুকানো যায়। এটা শুধু UI স্তর; আসল প্রয়োগ requireFeature() মিডলওয়্যারে
 // (middleware/featureGate.js) — শুধু বাটন লুকিয়ে কিছু বন্ধ করা হয় না।
