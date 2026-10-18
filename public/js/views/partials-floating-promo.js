@@ -43,31 +43,114 @@
   function resolveImgSrc(p){
     if (typeof p === 'string') {
       // Derive the WebP variant from the PNG path, e.g. foo.png -> foo.webp
-      return supportsWebP() ? p.replace(/\.(png|jpe?g)$/i, '.webp') : p;
+      return (supportsWebP() && p.indexOf('/images/popups/') === 0) ? p.replace(/\.(png|jpe?g)$/i, '.webp') : p;
     }
     return (supportsWebP() && p.webp) ? p.webp : p.src;
   }
 
-  var LP_IMG = cfg.images || [];
+  // ===== অ্যাডমিন-নিয়ন্ত্রিত পপআপ (/admin/popups): স্লাইড + ফ্রেম + সময় সার্ভার থেকে আসে =====
+  // LP_TIT/LP_TXT শুধু ফলব্যাক — DB কনফিগ না এলে আগের ৪টা ছবি/লেখা দেখানো হয়।
   var LP_TIT = ["রহস্যময় পুরস্কার — ৫০০ কোটি টাকা!","সদস্য উদযাপন দিবস","প্রথম জমায় ৫০% পর্যন্ত বোনাস","বন্ধুকে আমন্ত্রণ জানান, পান ৫০০ টাকা"];
   var LP_TXT = ["প্রতি মাসের ২০ তারিখ — ৫০০ কোটি টাকার ফ্রি এক্সক্লুসিভ পুরস্কার, পরবর্তী সৌভাগ্যবান ব্যক্তি হতে পারেন আপনি।","প্রতি মাসের ১০ তারিখ — ৮০০ কোটি টাকার নগদ পুরস্কার, যত বেশি বাজি তত বেশি ভাগ্যবান।","আপনার প্রথম জমায় সর্বোচ্চ ৫০% পর্যন্ত বোনাস — একটি অনন্য সুযোগ মিস করবেন না।","প্রতিটি বন্ধুর প্রথম ডিপোজিটে আপনি পাবেন ৫০০ টাকা বোনাস, এজেন্ট কমিশন সর্বোচ্চ ১.০% পর্যন্ত।"];
-  var lpCur=0, lpSlide=null;
+  var POP = cfg.popup || null;
+  var PP_SLIDES = [];
+  var PP_RATIO = 0;
+  var PP_SET = { enabled: true, delaySeconds: 1.2, slideSeconds: 6, autoAdvance: true, autoClose: false, showIntervalHours: 24, resetVersion: 0,
+                 shape: 'auto', maxWidthPx: 480, radiusPx: 18, borderWidthPx: 0, borderColor: '#ffffff', frameBg: '#ffffff', overlayOpacity: 55, blurPx: 8,
+                 imageFit: 'cover', position: 'center', animation: 'fade', showCaption: true, showDots: true, showNav: true };
+  if (POP && POP.slides) {
+    PP_SLIDES = POP.slides;
+    PP_RATIO = Number(POP.ratio) || 0;
+    for (var k in (POP.settings || {})) { if (Object.prototype.hasOwnProperty.call(POP.settings, k)) PP_SET[k] = POP.settings[k]; }
+  } else {
+    var legacy = cfg.images || [];
+    for (var li = 0; li < legacy.length; li++) PP_SLIDES.push({ image: legacy[li], title: LP_TIT[li] || '', text: LP_TXT[li] || '', link: '', duration: 0 });
+  }
+  var lpCur = 0, lpSlide = null;
+
+  function safeLink(u){ return typeof u === 'string' && (/^\/(?!\/)/.test(u) || /^https:\/\//i.test(u)); }
+
+  // ফ্রেম: সব মান CSS ভেরিয়েবলে (CSSOM — CSP style-src-attr-এ বাধা নেই)
+  function lpApplyFrame(){
+    var e = _g('lpPopup'); if (!e) return;
+    var S = PP_SET;
+    e.style.setProperty('--pp-overlay', String((S.overlayOpacity == null ? 55 : S.overlayOpacity) / 100));
+    e.style.setProperty('--pp-blur', (S.blurPx == null ? 8 : S.blurPx) + 'px');
+    e.style.setProperty('--pp-align', S.position === 'top' ? 'flex-start' : (S.position === 'bottom' ? 'flex-end' : 'center'));
+    e.style.setProperty('--pp-maxw', (S.maxWidthPx || 480) + 'px');
+    e.style.setProperty('--pp-bg', S.frameBg || '#ffffff');
+    e.style.setProperty('--pp-radius', (S.radiusPx == null ? 18 : S.radiusPx) + 'px');
+    e.style.setProperty('--pp-bw', (S.borderWidthPx || 0) + 'px');
+    e.style.setProperty('--pp-bc', S.borderColor || '#ffffff');
+    e.style.setProperty('--pp-fit', S.imageFit === 'contain' ? 'contain' : 'cover');
+    if (PP_RATIO) {
+      e.style.setProperty('--pp-ratio', String(PP_RATIO));
+      // লম্বা ফ্রেম স্ক্রিনের ৬৫% উচ্চতার বেশি হবে না — প্রস্থ সেই অনুযায়ী কমে
+      e.style.setProperty('--pp-vhw', (65 * PP_RATIO).toFixed(2) + 'vh');
+    } else {
+      e.style.removeProperty('--pp-ratio');
+      e.style.removeProperty('--pp-vhw');
+    }
+    var multi = PP_SLIDES.length > 1;
+    var act = e.querySelector('.pp-actions'); if (act) act.style.display = (S.showNav !== false && multi) ? '' : 'none';
+    var dt = _g('lpPopupDots'); if (dt) dt.style.display = (S.showDots !== false && multi) ? '' : 'none';
+  }
+
   function lpRender(){
-    var b=_g('lpPopupBody'); if(!b) return;
-    var raw = LP_IMG[lpCur];
-    var chosenSrc = resolveImgSrc(raw);
-    var fallbackSrc = pngFallbackOf(raw);
+    var b = _g('lpPopupBody'); if (!b) return;
+    var s = PP_SLIDES[lpCur]; if (!s) return;
+    var raw = s.image;
     var img = document.createElement('img');
     img.className = 'pp-img';
-    img.src = chosenSrc;
-    img.onerror = function(){ this.onerror = null; this.src = fallbackSrc; };
-    var caption = document.createElement('div');
-    caption.className = 'pp-caption';
-    caption.innerHTML = '<h2>'+LP_TIT[lpCur]+'</h2><p>'+LP_TXT[lpCur]+'</p>';
+    img.alt = s.title || '';
+    img.src = resolveImgSrc(raw);
+    img.onerror = function(){ this.onerror = null; this.src = pngFallbackOf(raw); };
+    var media = document.createElement('div');
+    media.className = 'pp-media' + (PP_RATIO ? ' fixed' : '');
+    if (s.link && safeLink(s.link)) {
+      var a = document.createElement('a');
+      a.className = 'pp-link'; a.href = s.link; a.rel = 'noopener';
+      a.appendChild(img); media.appendChild(a);
+    } else {
+      media.appendChild(img);
+    }
     b.innerHTML = '';
-    b.appendChild(img);
-    b.appendChild(caption);
-    var dt=''; for(var i=0;i<LP_IMG.length;i++) dt+='<span class="'+(i===lpCur?'on':'')+'"></span>'; _g('lpPopupDots').innerHTML=dt;
+    b.className = 'pp-anim-' + (PP_SET.animation || 'fade');
+    b.appendChild(media);
+    if (PP_SET.showCaption !== false && (s.title || s.text)) {
+      var caption = document.createElement('div');
+      caption.className = 'pp-caption';
+      if (s.title) { var h = document.createElement('h2'); h.textContent = s.title; caption.appendChild(h); }
+      if (s.text) { var p = document.createElement('p'); p.textContent = s.text; caption.appendChild(p); }
+      b.appendChild(caption);
+    }
+    var dtEl = _g('lpPopupDots');
+    if (dtEl) {
+      dtEl.innerHTML = '';
+      for (var i = 0; i < PP_SLIDES.length; i++) { var sp = document.createElement('span'); if (i === lpCur) sp.className = 'on'; dtEl.appendChild(sp); }
+    }
+  }
+  function lpStop(){ if (lpSlide) { clearTimeout(lpSlide); lpSlide = null; } }
+  // অটো-স্লাইড: প্রতিটা স্লাইড নিজের সময় (বা ডিফল্ট সেকেন্ড) থাকে। অটো-ক্লোজ চালু থাকলেই শুধু শেষে বন্ধ হয়।
+  function lpSchedule(){
+    lpStop();
+    if (!PP_SET.autoAdvance && !PP_SET.autoClose) return;
+    var s = PP_SLIDES[lpCur];
+    var ms = ((s && s.duration) || PP_SET.slideSeconds || 6) * 1000;
+    lpSlide = setTimeout(function(){
+      if (lpCur < PP_SLIDES.length - 1) {
+        if (PP_SET.autoAdvance) { lpCur++; lpRender(); lpSchedule(); }
+      } else if (PP_SET.autoClose) {
+        lpClosePopupFn();
+      }
+    }, ms);
+  }
+  function lpNextFn(){ lpStop(); if (lpCur < PP_SLIDES.length - 1) { lpCur++; lpRender(); } else { lpClosePopupFn(); } }
+  function lpPrevFn(){ lpStop(); if (lpCur > 0) { lpCur--; lpRender(); } }
+  function lpClosePopupFn(){ lpStop(); var e = _g('lpPopup'); if (e) e.style.display = 'none'; }
+  function lpShowPopup(){
+    var e = _g('lpPopup'); if (!e || !PP_SLIDES.length) return;
+    lpStop(); lpCur = 0; lpApplyFrame(); lpRender(); e.style.display = 'flex'; lpSchedule();
   }
   function lpStop(){ if(lpSlide){clearInterval(lpSlide);lpSlide=null;} }
   function lpNextFn(){ lpStop(); if(lpCur<LP_IMG.length-1){lpCur++;lpRender();}else{lpClosePopupFn();} }
@@ -110,17 +193,22 @@
       lpTimer('drRedH','drRedM','drRedS'); lpTimer('drEggH','drEggM','drEggS');
       fetch('/profile/daily-rewards/status').then(function(r){return r.json();}).then(function(d){ if(d&&d.ok&&d.status) lpStatus=d.status; }).catch(function(){});
 
-      // ===== 24h localStorage popup gate (replaces the old once-per-session check) =====
-      var LP_STORAGE_KEY = 'bk_last_popup';
-      var LP_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24h
-      var now = Date.now();
-      var last = 0;
-      try { last = parseInt(localStorage.getItem(LP_STORAGE_KEY), 10) || 0; } catch (e) { last = 0; }
-      if (now - last > LP_INTERVAL_MS) {
-        setTimeout(function(){
-          lpShowPopup();
-          try { localStorage.setItem(LP_STORAGE_KEY, String(Date.now())); } catch (e) {}
-        }, 1200);
+      // ===== কতক্ষণ পর আবার দেখাবে: অ্যাডমিন সেটিংস (ঘণ্টা; ০ = প্রতিবার) + "সবাইকে আবার দেখাও" ভার্সন =====
+      if (PP_SET.enabled !== false && PP_SLIDES.length) {
+        var LP_STORAGE_KEY = 'bk_last_popup';
+        var LP_VER_KEY = 'bk_popup_ver';
+        var intervalMs = (PP_SET.showIntervalHours == null ? 24 : PP_SET.showIntervalHours) * 60 * 60 * 1000;
+        var ver = String(PP_SET.resetVersion || 0);
+        var now = Date.now();
+        var last = 0, lastVer = '';
+        try { last = parseInt(localStorage.getItem(LP_STORAGE_KEY), 10) || 0; lastVer = localStorage.getItem(LP_VER_KEY) || ''; } catch (e) { last = 0; lastVer = ''; }
+        var versionBumped = (lastVer !== ver) && !(lastVer === '' && ver === '0');
+        if (versionBumped || intervalMs === 0 || now - last > intervalMs) {
+          setTimeout(function(){
+            lpShowPopup();
+            try { localStorage.setItem(LP_STORAGE_KEY, String(Date.now())); localStorage.setItem(LP_VER_KEY, ver); } catch (e) {}
+          }, Math.max(0, (PP_SET.delaySeconds == null ? 1.2 : PP_SET.delaySeconds) * 1000));
+        }
       }
 
       schedule();

@@ -1254,6 +1254,47 @@ async function runMigrations() {
       );
     `);
 
+    // ==================== অ্যাডমিন-নিয়ন্ত্রিত হোমপেজ পপআপ ====================
+    // আগে ৪টা ছবি/টেক্সট কোডে হার্ডকোড ছিল। এখন ছবি, সময়, ফ্রেম সবই অ্যাডমিন প্যানেল (/admin/popups) থেকে।
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS promo_popup_settings (
+        id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+        settings JSONB NOT NULL DEFAULT '{}'::jsonb,
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`INSERT INTO promo_popup_settings (id, settings) VALUES (1, '{}'::jsonb) ON CONFLICT (id) DO NOTHING;`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS promo_popup_slides (
+        id SERIAL PRIMARY KEY,
+        image_url TEXT NOT NULL,
+        title_bn TEXT, title_en TEXT,
+        text_bn TEXT, text_en TEXT,
+        link_url TEXT,
+        duration_seconds INTEGER,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        active BOOLEAN NOT NULL DEFAULT true,
+        starts_at TIMESTAMP,
+        expires_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_promo_popup_slides_order ON promo_popup_slides(active, sort_order);`);
+    // টেবিল ফাঁকা থাকলে আগের ৪টা ডিফল্ট স্লাইড বসানো — যাতে ডিপ্লয়ের পর পপআপ আগের মতোই চলে
+    {
+      const cnt = await pool.query('SELECT COUNT(*)::int AS c FROM promo_popup_slides');
+      if (cnt.rows[0].c === 0) {
+        const seed = [{"img": "/images/popups/popup_01_500cr_mystery_modal.png", "t": "রহস্যময় পুরস্কার — ৫০০ কোটি টাকা!", "x": "প্রতি মাসের ২০ তারিখ — ৫০০ কোটি টাকার ফ্রি এক্সক্লুসিভ পুরস্কার, পরবর্তী সৌভাগ্যবান ব্যক্তি হতে পারেন আপনি।"}, {"img": "/images/popups/popup_02_800cr_member_day_modal.png", "t": "সদস্য উদযাপন দিবস", "x": "প্রতি মাসের ১০ তারিখ — ৮০০ কোটি টাকার নগদ পুরস্কার, যত বেশি বাজি তত বেশি ভাগ্যবান।"}, {"img": "/images/popups/popup_03_first_deposit_50pct_modal.png", "t": "প্রথম জমায় ৫০% পর্যন্ত বোনাস", "x": "আপনার প্রথম জমায় সর্বোচ্চ ৫০% পর্যন্ত বোনাস — একটি অনন্য সুযোগ মিস করবেন না।"}, {"img": "/images/popups/popup_04_invite_500taka_modal.png", "t": "বন্ধুকে আমন্ত্রণ জানান, পান ৫০০ টাকা", "x": "প্রতিটি বন্ধুর প্রথম ডিপোজিটে আপনি পাবেন ৫০০ টাকা বোনাস, এজেন্ট কমিশন সর্বোচ্চ ১.০% পর্যন্ত।"}];
+        for (let i = 0; i < seed.length; i++) {
+          await pool.query(
+            'INSERT INTO promo_popup_slides (image_url, title_bn, text_bn, sort_order) VALUES ($1, $2, $3, $4)',
+            [seed[i].img, seed[i].t, seed[i].x, i + 1]
+          );
+        }
+      }
+    }
+
     console.log("✅ All tables migration completed successfully");
 
     await pool.query(`ALTER TABLE login_logs ADD COLUMN IF NOT EXISTS device_signature VARCHAR(64)`);

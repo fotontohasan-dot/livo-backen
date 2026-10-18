@@ -41,9 +41,13 @@
   .lp-ic-packet { background: linear-gradient(135deg,#ef4444,#991b1b); }
 
   /* ===== Popup modal: responsive 320px -> 3200px, WebP-ready image ===== */
-  #lpPopup { position: fixed; inset: 0; background: rgba(0,0,0,0.55); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 10010; display: none; align-items: center; justify-content: center; padding: 22px; }
-  #lpPopup .pp-box { background: #fff; border-radius: 18px; max-width: min(480px, 95vw); width: 100%; max-height: 85vh; position: relative; overflow: hidden; display: flex; flex-direction: column; margin: 0 auto; }
+  /* ফ্রেম/ওভারলে/অ্যানিমেশন — মানগুলো অ্যাডমিন সেটিংস থেকে JS দিয়ে CSS ভেরিয়েবলে বসে (/admin/popups) */
+  #lpPopup { position: fixed; inset: 0; background: rgba(0,0,0,var(--pp-overlay, 0.55)); backdrop-filter: blur(var(--pp-blur, 8px)); -webkit-backdrop-filter: blur(var(--pp-blur, 8px)); z-index: 10010; display: none; align-items: var(--pp-align, center); justify-content: center; padding: 22px; }
+  #lpPopup .pp-box { background: var(--pp-bg, #fff); border-radius: var(--pp-radius, 18px); border: var(--pp-bw, 0px) solid var(--pp-bc, #fff); max-width: min(var(--pp-maxw, 480px), 95vw, var(--pp-vhw, 95vw)); width: 100%; max-height: 85vh; position: relative; overflow: hidden; display: flex; flex-direction: column; margin: 0 auto; }
   #lpPopup .pp-scroll { overflow-y: auto; flex: 1; }
+  #lpPopup .pp-media { width: 100%; overflow: hidden; }
+  #lpPopup .pp-media.fixed { aspect-ratio: var(--pp-ratio); }
+  #lpPopup .pp-link { display: block; width: 100%; height: 100%; }
   #lpPopup .pp-img {
     width: 100%;
     height: auto;
@@ -51,6 +55,13 @@
     image-rendering: -webkit-optimize-contrast;
     image-rendering: crisp-edges;
   }
+  #lpPopup .pp-media.fixed .pp-img { height: 100%; object-fit: var(--pp-fit, cover); }
+  @keyframes ppFade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes ppZoom { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+  @keyframes ppSlide { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: translateX(0); } }
+  #lpPopup .pp-anim-fade .pp-media { animation: ppFade 0.35s ease both; }
+  #lpPopup .pp-anim-zoom .pp-media { animation: ppZoom 0.35s ease both; }
+  #lpPopup .pp-anim-slide .pp-media { animation: ppSlide 0.35s ease both; }
   #lpPopup .pp-caption { padding: 14px 18px 4px; text-align: center; }
   #lpPopup .pp-caption h2 { font-size: 16px; font-weight: 800; margin: 0 0 5px; color: #111; }
   #lpPopup .pp-caption p { font-size: 12px; margin: 0; color: #555; line-height: 1.5; }
@@ -58,8 +69,8 @@
   /* ===== Cross / close button ===== */
   #lpPopup .pp-close {
     position: absolute;
-    top: -14px;
-    right: -14px;
+    top: 8px;
+    right: 8px;
     width: 42px;
     height: 42px;
     background: linear-gradient(135deg, #ff6b6b, #c81d1d);
@@ -146,5 +157,5 @@
 <div id="lpPromo"><div class="lp-dot"></div><div class="lp-pack">🧧</div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.9.3/confetti.browser.min.js"></script>
-<script type="application/json" id="partials-floating-promoConfig"><%- jsonScriptSafe({ images: [popupImg1, popupImg2, popupImg3, popupImg4] }) %></script>
+<script type="application/json" id="partials-floating-promoConfig"><%- jsonScriptSafe({ images: [popupImg1, popupImg2, popupImg3, popupImg4], popup: (typeof locals.promoPopup !== 'undefined' && locals.promoPopup) ? locals.promoPopup : null }) %></script>
 <script src="/js/views/partials-floating-promo.js"></script>

@@ -5117,6 +5117,182 @@ router.post('/localization/refresh-cache', rbac.requirePermission('settings_edit
   }
 });
 
+// ==================== হোমপেজ পপআপ ম্যানেজার (ছবি/ফ্রেম/সময় — সব অ্যাডমিন নিয়ন্ত্রিত) ====================
+const promoPopup = require('../services/promoPopup');
+const popupUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024, files: 1 }
+});
+
+// ফাইলের ভেতরের বাইট দেখে ছবি চেনা (এক্সটেনশন/Content-Type বিশ্বাস করা হয় না)
+function detectImageType(buf) {
+  if (!buf || buf.length < 12) return null;
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) return 'png';
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return 'jpg';
+  if (buf.slice(0, 4).toString('ascii') === 'RIFF' && buf.slice(8, 12).toString('ascii') === 'WEBP') return 'webp';
+  if (buf.slice(0, 3).toString('ascii') === 'GIF') return 'gif';
+  return null;
+}
+
+router.get('/popups', rbac.requirePermission('settings_edit'), async (req, res) => {
+  try {
+    const [settings, slides] = await Promise.all([promoPopup.getSettings(), promoPopup.listSlides()]);
+    res.render('admin/popups', {
+      settings, slides, ratios: promoPopup.SHAPES,
+      error: req.query.error ? req.t(String(req.query.error)) : '',
+      saved: req.query.saved === '1',
+      cloudinaryReady: !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET)
+    });
+  } catch (err) {
+    console.error('admin/popups load error:', err.message);
+    res.render('admin/popups', { loadError: true, settings: promoPopup.DEFAULTS, slides: [], ratios: promoPopup.SHAPES, error: '', saved: false, cloudinaryReady: false });
+  }
+});
+
+router.post('/popups/settings', rbac.requirePermission('settings_edit'), async (req, res) => {
+  try {
+    const current = await promoPopup.getSettings();
+    await promoPopup.saveSettings(promoPopup.settingsFromForm(req.body, current));
+    await logAdminAction(req.session.user.id, req.session.user.username, 'POPUP_SETTINGS_UPDATED', 'Homepage popup settings updated', req.ip);
+    res.redirect('/admin/popups?saved=1');
+  } catch (err) {
+    console.error('popup settings error:', err.message);
+    res.redirect('/admin/popups?error=admin_update_failed');
+  }
+});
+
+// "সবাইকে আবার দেখাও" — ২৪ ঘণ্টার গেট পার হয়ে সব ভিজিটর আবার পপআপ দেখবে
+router.post('/popups/reset-views', rbac.requirePermission('settings_edit'), async (req, res) => {
+  try {
+    await promoPopup.bumpResetVersion();
+    await logAdminAction(req.session.user.id, req.session.user.username, 'POPUP_RESET_VIEWS', 'Popup will show again to all visitors', req.ip);
+    res.redirect('/admin/popups?saved=1');
+  } catch (err) {
+    res.redirect('/admin/popups?error=admin_update_failed');
+  }
+});
+
+// ছবি আপলোড (Cloudinary) — fetch দিয়ে আসে, CSRF হেডারে; ফেরত দেয় শুধু URL
+router.post('/popups/upload', rbac.requirePermission('settings_edit'), popupUpload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: req.t('admin_popup_err_no_file') });
+    if (!detectImageType(req.file.buffer)) return res.status(400).json({ error: req.t('admin_popup_err_not_image') });
+    if (!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET)) {
+      return res.status(503).json({ error: req.t('admin_popup_err_no_cloudinary') });
+    }
+    const cloudinary = require('cloudinary').v2;
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET
+    });
+    const result = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { folder: 'bet420/popups', resource_type: 'image', timeout: 20000 },
+        (error, r) => (error ? reject(error) : resolve(r))
+      );
+      stream.end(req.file.buffer);
+    });
+    res.json({ url: result.secure_url });
+  } catch (err) {
+    console.error('popup upload error:', err.message);
+    res.status(500).json({ error: req.t('upload_fail') });
+  }
+});
+
+// Express 5 (path-to-regexp v8) পাথে ইনলাইন regex সমর্থন করে না — আইডি যাচাই এখানে
+router.use('/popups/slides/:id', (req, res, next) => {
+  if (req.params.id === 'create') return next();
+  if (!/^\d{1,9}$/.test(req.params.id)) return res.redirect('/admin/popups?error=admin_update_failed');
+  next();
+});
+
+router.post('/popups/slides/create', rbac.requirePermission('settings_edit'), async (req, res) => {
+  try {
+    const parsed = promoPopup.slideFromForm(req.body);
+    if (parsed.error) return res.redirect('/admin/popups?error=' + encodeURIComponent(parsed.error));
+    const v = parsed.value;
+    const max = await pool.query('SELECT COALESCE(MAX(sort_order), 0) + 1 AS n FROM promo_popup_slides');
+    const r = await pool.query(
+      `INSERT INTO promo_popup_slides (image_url, title_bn, title_en, text_bn, text_en, link_url, duration_seconds, starts_at, expires_at, sort_order)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+      [v.image_url, v.title_bn, v.title_en, v.text_bn, v.text_en, v.link_url, v.duration_seconds, v.starts_at, v.expires_at, max.rows[0].n]
+    );
+    promoPopup.invalidate();
+    await logAdminAction(req.session.user.id, req.session.user.username, 'POPUP_SLIDE_CREATED', 'Popup slide #' + r.rows[0].id + ' created', req.ip);
+    res.redirect('/admin/popups?saved=1');
+  } catch (err) {
+    console.error('popup slide create error:', err.message);
+    res.redirect('/admin/popups?error=admin_create_failed');
+  }
+});
+
+router.post('/popups/slides/:id/update', rbac.requirePermission('settings_edit'), async (req, res) => {
+  try {
+    const parsed = promoPopup.slideFromForm(req.body);
+    if (parsed.error) return res.redirect('/admin/popups?error=' + encodeURIComponent(parsed.error));
+    const v = parsed.value;
+    await pool.query(
+      `UPDATE promo_popup_slides SET image_url=$1, title_bn=$2, title_en=$3, text_bn=$4, text_en=$5, link_url=$6,
+              duration_seconds=$7, starts_at=$8, expires_at=$9, updated_at=NOW() WHERE id=$10`,
+      [v.image_url, v.title_bn, v.title_en, v.text_bn, v.text_en, v.link_url, v.duration_seconds, v.starts_at, v.expires_at, req.params.id]
+    );
+    promoPopup.invalidate();
+    await logAdminAction(req.session.user.id, req.session.user.username, 'POPUP_SLIDE_UPDATED', 'Popup slide #' + req.params.id + ' updated', req.ip);
+    res.redirect('/admin/popups?saved=1');
+  } catch (err) {
+    console.error('popup slide update error:', err.message);
+    res.redirect('/admin/popups?error=admin_update_failed');
+  }
+});
+
+router.post('/popups/slides/:id/toggle', rbac.requirePermission('settings_edit'), async (req, res) => {
+  try {
+    await pool.query('UPDATE promo_popup_slides SET active = NOT active, updated_at = NOW() WHERE id = $1', [req.params.id]);
+    promoPopup.invalidate();
+    res.redirect('/admin/popups?saved=1');
+  } catch (err) {
+    res.redirect('/admin/popups?error=admin_update_failed');
+  }
+});
+
+router.post('/popups/slides/:id/delete', rbac.requirePermission('settings_edit'), async (req, res) => {
+  try {
+    await pool.query('DELETE FROM promo_popup_slides WHERE id = $1', [req.params.id]);
+    promoPopup.invalidate();
+    await logAdminAction(req.session.user.id, req.session.user.username, 'POPUP_SLIDE_DELETED', 'Popup slide #' + req.params.id + ' deleted', req.ip);
+    res.redirect('/admin/popups?saved=1');
+  } catch (err) {
+    res.redirect('/admin/popups?error=admin_delete_failed');
+  }
+});
+
+// ক্রম বদলানো: dir=up|down — পাশের স্লাইডের সাথে sort_order অদলবদল (এক ট্রানজ্যাকশনে)
+router.post('/popups/slides/:id/move', rbac.requirePermission('settings_edit'), async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const dir = req.body.dir === 'up' ? 'up' : 'down';
+    await client.query('BEGIN');
+    const all = (await client.query('SELECT id FROM promo_popup_slides ORDER BY sort_order ASC, id ASC FOR UPDATE')).rows.map((r) => r.id);
+    const i = all.indexOf(Number(req.params.id));
+    const j = dir === 'up' ? i - 1 : i + 1;
+    if (i !== -1 && j >= 0 && j < all.length) {
+      [all[i], all[j]] = [all[j], all[i]];
+      for (let k = 0; k < all.length; k++) {
+        await client.query('UPDATE promo_popup_slides SET sort_order = $1 WHERE id = $2', [k + 1, all[k]]);
+      }
+    }
+    await client.query('COMMIT');
+    promoPopup.invalidate();
+    res.redirect('/admin/popups');
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    res.redirect('/admin/popups?error=admin_update_failed');
+  } finally {
+    client.release();
+  }
+});
+
 // ==================== Announcement / Broadcast System ====================
 router.get('/announcements', rbac.requirePermission('settings_edit'), async (req, res) => {
   try {
