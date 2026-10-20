@@ -64,7 +64,7 @@
   },
   "devDependencies": {
     "@playwright/test": "1.64.0",
-    "@sentry/cli": "^2.39.1",
+    "@sentry/cli": "^3.8.0",
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
